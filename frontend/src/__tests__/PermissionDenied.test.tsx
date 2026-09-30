@@ -3,6 +3,9 @@
  */
 import { render, screen } from "@testing-library/react";
 import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
+import zh from "@soulledger/core/messages/zh-Hans.json";
+import en from "@soulledger/core/messages/en.json";
+import egy from "@soulledger/core/messages/egy.json";
 
 // Mock the I18nContext so t() returns predictable strings
 jest.mock("@/src/contexts/I18nContext", () => ({
@@ -63,6 +66,18 @@ describe("PermissionDenied", () => {
 
     // Restore
     jest.requireMock("@/src/contexts/I18nContext").useI18n = original;
+  });
+
+  it("asks the reader to find the hall's administrator (Design E 组), in all three bundles", () => {
+    render(<PermissionDenied />);
+    // The mock returns unknown keys as-is: the sentence is drawn from its own key.
+    expect(screen.getByTestId("permission-denied-ask")).toHaveTextContent("permission.ask_admin");
+    expect(zh.permission.ask_admin).toBe("请找本殿管理员。");
+    expect(en.permission.ask_admin).toBe("Ask your hall's administrator.");
+    // Administrators hang off the tenant (User.tenant; the password-help task notifies the
+    // tenant's own ADMINs), so Design's `Per Pen` variant — not the court's `Wesekhet Pen`.
+    expect(egy.permission.ask_admin).toBe("Dbh Er Sab Hery En Per Pen");
+    expect(egy.permission.ask_admin).not.toContain("Wesekhet");
   });
 
   it("should render heading as an h1 element", () => {

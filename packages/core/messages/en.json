@@ -1038,6 +1038,7 @@
       "empty_title": "No entries this period",
       "empty_reason": "Nothing was recorded in {{month}}; opening = closing = {{opening}}.",
       "load_failed": "The journal failed to load",
+      "month_too_large": "Too many entries this month. Narrow the filters.",
       "row_hint": "Click a row for that soul's merit & demerit",
       "search": "Soul name or ID",
       "export": "Export",
@@ -1892,7 +1893,8 @@
   },
   "permission": {
     "denied_title": "Permission Denied",
-    "denied_message": "You don't have permission to access this page or perform this action."
+    "denied_message": "You don't have permission to access this page or perform this action.",
+    "ask_admin": "Ask your hall's administrator."
   },
   "icon_picker": {
     "select": "Select Icon",
