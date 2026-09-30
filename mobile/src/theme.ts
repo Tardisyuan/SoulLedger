@@ -111,7 +111,8 @@ export const radius = { none: 0, pill: 999 } as const;
  *   stampDrop / stampPress   a seal falls in (ease.drop), then presses 1.04 → 0.98 → 1
  *   coldStart*               补足 C18: JS takes over from the native splash; the home is
  *                            usable from 480 and the splash layer is gone at 720
- *   sheetIn                  a bottom sheet opens (dur.base; 第 2 轮 原型 06)
+ *   sheetIn / sheetOut       a bottom sheet opens (dur.base) / closes (dur.fast; 第 2 轮 原型 06)
+ *   sectionIn / sectionOut   a section's body appears (base, 4px down) / goes (fast) — 第 2 轮 4b
  */
 export const motion = {
   fade: 120,
@@ -126,6 +127,9 @@ export const motion = {
   coldStartInteractive: 480,
   coldStart: 720,
   sheetIn: 200,
+  sheetOut: 120,
+  sectionIn: 200,
+  sectionOut: 120,
 } as const;
 
 export interface Theme {

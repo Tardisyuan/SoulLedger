@@ -5,10 +5,13 @@
  */
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import {
+  ANIMATION_SOURCE,
   BottomSheetBackdrop,
   BottomSheetModal,
   BottomSheetView,
+  useBottomSheetInternal,
   useBottomSheetTimingConfigs,
+  useGestureEventsHandlersDefault,
   type BottomSheetBackdropProps,
 } from "@gorhom/bottom-sheet";
 import { Animated, BackHandler, Modal, Pressable, StyleSheet, View } from "react-native";
@@ -144,22 +147,63 @@ const styles = StyleSheet.create({
 
 /**
  * A bottom sheet (v2 动效, 交互与动效 第 2 轮 原型 06) on @gorhom/bottom-sheet: it opens
- * over 200ms (`motion.sheetIn`, 0 under reduce-motion), drags down to close, and also
+ * over 200ms (`motion.sheetIn`), closes over 120 (`motion.sheetOut`; both 0 under
+ * reduce-motion), drags down to close past 90pt or 0.6pt/ms (`useSheetGestures`), and also
  * closes on the scrim, on Android's back key, and from whatever button the caller puts
  * in it. Controlled — `open` in, `onClose` out, whichever way it was closed — so a
  * caller holds one boolean, as it did with the `Modal` this replaces. Square, no
  * shadow, a 1px top edge in `edge` (补足 A2). Needs `BottomSheetModalProvider` above
  * (navigation.tsx); the sheet renders in that provider, so it sees only its contexts.
  */
+/** 交互与动效 第 2 轮 原型 06: a release past 90pt, or faster than 0.6pt/ms downward, closes. */
+export const SHEET_CLOSE_DRAG_PT = 90;
+export const SHEET_CLOSE_SPEED_PT_PER_MS = 0.6;
+
+/** 第 2 轮 §一 ease.exit / ease.standard. */
+const EASE_EXIT = Easing.bezier(0.4, 0, 1, 1);
+const EASE_STANDARD = Easing.bezier(0.2, 0, 0, 1);
+
+/** `velocityY` is Gesture Handler's, in pt per SECOND. */
+export function sheetReleaseCloses(translationY: number, velocityY: number): boolean {
+  "worklet";
+  return translationY > SHEET_CLOSE_DRAG_PT || velocityY / 1000 > SHEET_CLOSE_SPEED_PT_PER_MS;
+}
+
+/**
+ * The library's own drag handling, with its release swapped for the prototype's: it
+ * decides by snap-point projection, which has no distance or speed to name. Closing
+ * runs `sheetOut` (fast 120), springing back `sheetIn` (base 200); both 0 under
+ * reduce-motion. The upward pull keeps the library's resistance (√d × 2.5: ≈16pt at 40).
+ */
+export function useSheetGestures() {
+  const handlers = useGestureEventsHandlersDefault();
+  const { animatedDetentsState, animateToPosition } = useBottomSheetInternal();
+  const { sheetIn, sheetOut } = useReducedMotionDurations();
+  const handleOnEnd: typeof handlers.handleOnEnd = useCallback(
+    (source, payload) => {
+      "worklet";
+      const { closedDetentPosition, highestDetentPosition } = animatedDetentsState.get();
+      if (closedDetentPosition === undefined || highestDetentPosition === undefined) return handlers.handleOnEnd(source, payload);
+      const close = sheetReleaseCloses(payload.translationY, payload.velocityY);
+      animateToPosition(close ? closedDetentPosition : highestDetentPosition, ANIMATION_SOURCE.GESTURE, 0, {
+        duration: close ? sheetOut : sheetIn,
+        easing: close ? EASE_EXIT : EASE_STANDARD,
+      });
+    },
+    [handlers, animatedDetentsState, animateToPosition, sheetIn, sheetOut]
+  );
+  return { ...handlers, handleOnEnd };
+}
+
 export function Sheet({ open, onClose, edge, closeLabel, children }: { open: boolean; onClose: () => void; edge: string; closeLabel: string; children: ReactNode }) {
   const t = useTheme();
   const ref = useRef<BottomSheetModal>(null);
-  const { sheetIn } = useReducedMotionDurations();
+  const { sheetIn, sheetOut } = useReducedMotionDurations();
   const timing = useBottomSheetTimingConfigs({ duration: sheetIn, easing: Easing.bezier(0, 0, 0.2, 1) });
   useEffect(() => {
     if (open) ref.current?.present();
-    else ref.current?.dismiss();
-  }, [open]);
+    else ref.current?.dismiss({ duration: sheetOut, easing: EASE_EXIT });
+  }, [open, sheetOut]);
   useEffect(() => {
     if (!open) return;
     const sub = BackHandler.addEventListener("hardwareBackPress", () => {
@@ -187,6 +231,7 @@ export function Sheet({ open, onClose, edge, closeLabel, children }: { open: boo
       ref={ref}
       onDismiss={onClose}
       animationConfigs={timing}
+      gestureEventsHandlersHook={useSheetGestures}
       backdropComponent={backdrop}
       backgroundStyle={{ backgroundColor: t.s1, borderRadius: 0, borderTopWidth: 1, borderTopColor: edge }}
       handleIndicatorStyle={{ backgroundColor: t.hair2 }}
