@@ -32,6 +32,9 @@ import { GFSDidot_400Regular } from "@expo-google-fonts/gfs-didot/400Regular";
 import { JosefinSlab_400Regular } from "@expo-google-fonts/josefin-slab/400Regular";
 import { NotoSansEgyptianHieroglyphs_400Regular } from "@expo-google-fonts/noto-sans-egyptian-hieroglyphs/400Regular";
 import { UnifrakturMaguntia_400Regular } from "@expo-google-fonts/unifrakturmaguntia/400Regular";
+import { MaShanZheng_400Regular } from "@expo-google-fonts/ma-shan-zheng/400Regular";
+import * as Font from "expo-font";
+import { useEffect, useState } from "react";
 
 import type { CivKey } from "./theme";
 
@@ -66,9 +69,9 @@ export const family = {
   /** 印文: 霞鹜篆书 · 花体首字母 · 圣书字 · GFS Didot. Never translated (补足 A6). */
   seal: { cn: "LXGWSeal_400", eu: "UnifrakturMaguntia_400Regular", eg: "NotoSansEgyptianHieroglyphs_400Regular", gr: "GFSDidot_400Regular" },
   /**
-   * 匾题字. 地府's is Ma Shan Zheng in the spec; its one file is 5.9 MB, so the App sets
-   * Han titles in the bundled Noto Serif SC subset — the spec stack's own second family
-   * (`plaqueFamily`) — until someone decides a subset of it is worth carrying.
+   * 匾题字. 地府's is Ma Shan Zheng (`PLAQUE_CN`), which is not here: it loads on demand
+   * (`usePlaqueFace`), and until it has, 地府 titles fall back to the spec stack's second
+   * family, the bundled Noto Serif SC subset.
    */
   plaque: { cn: "NotoSerifSC_400", eu: "UnifrakturMaguntia_400Regular", eg: "JosefinSlab_400Regular", gr: "Cinzel_400Regular" },
 } as const satisfies {
@@ -83,11 +86,41 @@ export const family = {
 const HAN = /[㐀-鿿豈-﫿]/;
 
 /**
- * A plaque title's family: the civilization's display face, or — for Han text, which
- * none of the Latin faces has — the Chinese serif, as the spec's stack falls back
- * (`'Josefin Slab','Noto Serif SC',serif`). React Native has no per-glyph stack.
+ * 地府's plaque face, Ma Shan Zheng — the whole font, 5.86 MB, not a subset (user decision
+ * 2026-09-30). It ships in the app like every font, but is registered only when a 地府 plaque
+ * is drawn: the other three civilizations never pay the load (`usePlaqueFace`).
  */
-export function plaqueFamily(civ: Exclude<CivKey, "neutral">, text: string): string {
+export const PLAQUE_CN = "MaShanZheng_400Regular";
+
+/**
+ * Whether 地府's plaque face is ready. For any other civilization: false, and nothing is
+ * loaded. A failed load leaves it false — the title stays in the fallback, never blank.
+ */
+export function usePlaqueFace(civ: CivKey): boolean {
+  const wanted = civ === "cn";
+  const [loaded, setLoaded] = useState(() => Font.isLoaded(PLAQUE_CN));
+  useEffect(() => {
+    if (!wanted || loaded) return;
+    let alive = true;
+    Font.loadAsync({ [PLAQUE_CN]: MaShanZheng_400Regular }).then(
+      () => alive && setLoaded(true),
+      () => {}
+    );
+    return () => {
+      alive = false;
+    };
+  }, [wanted, loaded]);
+  return wanted && loaded;
+}
+
+/**
+ * A plaque title's family. 地府: Ma Shan Zheng once `cnFaceReady`, else Noto Serif SC. The
+ * others: the civilization's display face, or — for Han text, which none of the Latin faces
+ * has — the Chinese serif, as the spec's stack falls back (`'Josefin Slab','Noto Serif SC',serif`).
+ * React Native has no per-glyph stack.
+ */
+export function plaqueFamily(civ: Exclude<CivKey, "neutral">, text: string, cnFaceReady = false): string {
+  if (civ === "cn") return cnFaceReady ? PLAQUE_CN : family.serifHan;
   return HAN.test(text) ? family.serifHan : family.plaque[civ];
 }
 
