@@ -3273,15 +3273,15 @@
       "body": "{{name}}: Shemes Renpi Er-Ek. Wen Medjat Ba Er Maa."
     },
     "social_warned_post": {
-      "title": "Hab Er Medu",
+      "title": "Sebayt Er Medu",
       "body": "Sebayt Er Medu-Ek: {{reason}}"
     },
     "social_warned_comment": {
-      "title": "Hab Er Wesheb",
+      "title": "Sebayt Er Wesheb",
       "body": "Sebayt Er Wesheb-Ek: {{reason}}"
     },
     "social_warned_user": {
-      "title": "Hab Er Aq",
+      "title": "Sebayt Er Aq",
       "body": "Sebayt Er Aq-Ek: {{reason}}"
     }
   },

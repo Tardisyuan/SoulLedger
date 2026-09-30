@@ -919,9 +919,9 @@ WARN_TEXT = {
     "en": {"POST": ("Your post was warned", "Your post received a warning: 注意言辞"),
            "COMMENT": ("Your comment was warned", "Your comment received a warning: 注意言辞"),
            "USER": ("Your account was warned", "Your account received a warning: 注意言辞")},
-    "egy": {"POST": ("Hab Er Medu", "Sebayt Er Medu-Ek: 注意言辞"),
-            "COMMENT": ("Hab Er Wesheb", "Sebayt Er Wesheb-Ek: 注意言辞"),
-            "USER": ("Hab Er Aq", "Sebayt Er Aq-Ek: 注意言辞")},
+    "egy": {"POST": ("Sebayt Er Medu", "Sebayt Er Medu-Ek: 注意言辞"),
+            "COMMENT": ("Sebayt Er Wesheb", "Sebayt Er Wesheb-Ek: 注意言辞"),
+            "USER": ("Sebayt Er Aq", "Sebayt Er Aq-Ek: 注意言辞")},
 }
 
 
