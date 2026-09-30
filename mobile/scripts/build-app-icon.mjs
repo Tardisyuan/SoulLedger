@@ -13,10 +13,13 @@
  *   mobile/assets/android-icon-foreground.png   1024, gold mark inside the 66/108 safe circle — adaptive foreground
  *   mobile/assets/android-icon-monochrome.png   1024, same geometry, alpha only — Android 13 themed icon
  *   mobile/assets/notification-icon.png         96, white mark on transparent
- *   frontend/app/icon.svg                       the browser-tab icon, vector
- *
- * NOT HERE: the splash frame. The cold start (src/coldStart.tsx) stamps the seal into the
- * empty frame the native splash shows, so the splash stays Design's frame.
+ *   mobile/assets/splash-mark.png               336, gold mark on transparent — the native splash
+ *                                               (app.json: imageWidth 112 → 3x; ground INK in both
+ *                                               modes, gold on paper is too faint). src/coldStart.tsx
+ *                                               draws this same PNG as its first frame.
+ *   frontend/app/icon.svg                       the browser-tab icon, vector — also the README's mark
+ *                                               (gold on an ink rounded square: GitHub would paint
+ *                                               the bare currentColor source black)
  */
 import { Buffer } from "node:buffer";
 import { readFileSync, writeFileSync } from "node:fs";
@@ -55,6 +58,9 @@ export function canvas({ size, share, color, ground, radius = 0 }) {
 const IOS = 0.61;
 const ADAPTIVE = 0.44;
 const NOTIFY = 0.86;
+// Android 12+ masks the splash icon to a circle: the mark's diagonal (≈ 1.37 × width) must
+// fit the 112pt image, so width ≤ 112 / 1.37 ≈ 73%. 0.7 leaves a hair of margin.
+const SPLASH = 0.7;
 
 const png = (svg, out, size) =>
   sharp(Buffer.from(svg)).resize(size, size).png().toFile(join(APP, "assets", out));
@@ -67,7 +73,8 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     png(canvas({ size: 1024, share: ADAPTIVE, color: GOLD }), "android-icon-foreground.png", 1024),
     png(canvas({ size: 1024, share: ADAPTIVE, color: "#000000" }), "android-icon-monochrome.png", 1024),
     png(canvas({ size: 96, share: NOTIFY, color: "#FFFFFF" }), "notification-icon.png", 96),
+    png(canvas({ size: 336, share: SPLASH, color: GOLD }), "splash-mark.png", 336),
   ]);
   writeFileSync(join(WEB, "app/icon.svg"), canvas({ size: 64, share: 0.72, color: GOLD, ground: INK, radius: 14 }) + "\n");
-  console.log("built 6 icon PNGs and frontend/app/icon.svg from assets/brand/soulledger-mark.svg");
+  console.log("built 6 icon PNGs, the splash mark and frontend/app/icon.svg from assets/brand/soulledger-mark.svg");
 }

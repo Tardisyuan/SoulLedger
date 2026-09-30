@@ -104,14 +104,11 @@ export const GUTTER_PT = 20;
 export const radius = { none: 0, pill: 999 } as const;
 /**
  * ms; reduce-motion sets every one to 0 (holds excepted, `useReducedMotionDurations`).
- * Opacity and translate only — the one scale is the seal's press (交互与动效 第 2 轮 §一
- * 「属性」: 「压实」允许缩放 60ms,减少动态效果时不缩放).
+ * Opacity and translate only — the one scale is the cold start's mark receding (0.96),
+ * which does not play under reduce motion at all.
  *
- *   stampDrop / stampPress   a seal falls in (ease.drop), then presses 1.04 → 0.98 → 1
- *   stampBloom               from the press on, the edge scan soaks in: opacity 0 → 0.95 → 0.8
- *                            (补足 C18 印泥 120–320; 第 2 轮 §一 晕开)
- *   coldStart*               补足 C18: JS takes over from the native splash; the home is
- *                            usable from 480 and the splash layer is gone at 720
+ *   coldStart*               补足 C18: JS takes over from the native splash; the mark recedes,
+ *                            the home is usable from 480 and the splash layer is gone at 720
  *   sheetIn / sheetOut       a bottom sheet opens (dur.base) / closes (dur.fast; 第 2 轮 原型 06)
  *   sectionIn / sectionOut   a section's body appears (base, 4px down) / goes (fast) — 第 2 轮 4b
  */
@@ -123,9 +120,6 @@ export const motion = {
   welcomeIn: 600,
   welcomeHold: 1200,
   welcomeOut: 240,
-  stampDrop: 120,
-  stampPress: 60,
-  stampBloom: 200,
   coldStartInteractive: 480,
   coldStart: 720,
   sheetIn: 200,
