@@ -109,7 +109,8 @@ describe("the entry", () => {
 
   it("sits in the life tab's header when enabled, left of the account icon", async () => {
     await boot(true);
-    const bar = screen.getByTestId("header-bar");
+    // v2: a tab's root wears the full plaque (PlaqueHeader), which has no `header-bar` row.
+    const bar = screen.getByTestId("plaque");
     const ids = (bar as unknown as { findAll: (p: (n: { props: { testID?: unknown } }) => boolean) => { props: { testID: string } }[] })
       .findAll((n) => n.props.testID === "assist-entry" || n.props.testID === "header-account")
       .map((n) => n.props.testID);
