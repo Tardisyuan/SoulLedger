@@ -417,37 +417,55 @@
     --color-ink-muted: 0.738053 0.012625 133.4092;
     --color-ink-subtle: 0.738053 0.012625 133.4092;
     /* 立柱底(四文明共用)与匾上题字色(两个主题同值)。 */
-    --color-pillar: 0.108893 0.003009 17.6234;
-    --color-on-main: 0.972507 0.019830 69.9992;
+    --color-pillar: 0.130000 0.005000 135.0000;
+    --color-on-main: 1 0 0;
     /* 强调 = 墨(v2 撤掉墨蓝)。accent-contrast 是墨底上的字 = 纸。 */
-    --color-accent: 0.937570 0.019894 77.3138;
-    --color-accent-contrast: 0.165802 0.003970 48.4701;
-    --color-accent-ink: 0.937570 0.019894 77.3138;
-    --color-accent-hover: 0.791906 0.027764 74.6974;
+    --color-accent: 0.955447 0.009333 113.1622;
+    --color-accent-contrast: 0.178727 0.006829 135.0201;
+    --color-accent-ink: 0.955447 0.009333 113.1622;
+    --color-accent-hover: 0.738053 0.012625 133.4092;
     /* 焦点环 · A2:2px ink,外扩 2。写成字面三元组(与 ink 同值),不引用别的令牌。 */
-    --color-focus: 0.937570 0.019894 77.3138;
-    /* 状态色 · 规范 v2 §二。失败 = 冷玫红(永远带 ✕ + 文字);警示 = 橙(带 ◇)。 */
-    --color-danger: 0.740342 0.162886 10.1566;
-    --color-danger-strong: 0.530288 0.196322 11.9011;
+    --color-focus: 0.955447 0.009333 113.1622;
+    /* 状态色 · 规范 v2 §二。失败 = 冷玫红(永远带 ✕ + 文字);警示 = 橙(带 ◇)。
+       规范 v3 只给三档状态色,按用途对上去:
+         danger        ← v3 error    浅 #A8103E → #B42350,深 #FF7A93 → #FF7A9A
+         danger-strong ← v3 danger   浅 #A8103E → #8F2430,深 #C21D4D → #C84C5A
+         warning       ← v3 warning  浅 #9F4A00 → #A65000,深 #FF9A3C → #E07A23
+       v2 里 danger 与 danger-strong 在浅色下**是同一个值**,v3 把它们分开了:
+       前者是「失败 / 出错」的文字与边框(60 处 text-、19 处 border-),后者只作
+       不可撤回删除按钮的实底(2 处 bg-)。
+
+       两处偏离 v3,都为对比度,数字是实测不是估算:
+       1. 深色 danger-strong 用 #C84C5A 而不是 v3 的 #C94D5B —— 后者上面的白字只有
+          4.47:1,差 0.03 到 4.5。只把明度降了 0.004(0.589174 → 0.585174),白字
+          4.53:1,对 surface 3.76:1(图形 ≥3 也过),肉眼与 v3 的值无从分辨。
+       2. 浅色 warning 跟着 v3 从 #9F4A00 退回 #A65000。#A65000 当初被 Design 改掉,
+          正是因为它在 v2 的羊皮纸底 #ebe1cd 上只有 4.40:1;而 v3 的底换成了更亮的
+          #EFEFEB,实测 4.83:1、在 #FBFBF8 上 5.37:1,两处都过,所以这次退回成立。
+
+       v3 没有定义 success 与长明灯,这两族连同各自的 tint 与 chart-1..6 原样保留
+       (chart 本来就是 v3 要的冷灰蓝明度梯度)。 */
+    --color-danger: 0.742166 0.164018 6.8002;
+    --color-danger-strong: 0.585174 0.157720 16.6617;
     --color-danger-tint: 0.233082 0.057680 4.8370;
     --color-danger-on-tint: 0.906877 0.050597 4.3604;
     --color-success: 0.778968 0.109344 150.2017;
     /* 提示条底色 · Design D2:成功底 浅 #E4FBE7 / 深 #102515,警示底 浅 #FFF1E2 / 深 #301904,
        明度与失败底对齐;底上的字用 success / warning 本色(inkOnSurfaceContract 钉 ≥ 4.5)。 */
     --color-success-tint: 0.241388 0.040904 150.1078;
-    --color-warning: 0.776001 0.158964 59.2368;
+    --color-warning: 0.681246 0.156180 54.9021;
     --color-warning-tint: 0.240511 0.049375 60.4681;
     /* 长明灯:实底块 = 有,空底 + 描边 = 我点过;lamp-bg 是块上文字色。 */
     --color-lamp: 0.860675 0.109733 85.2786;
     --color-lamp-bg: 0.228754 0.029413 79.2504;
     /* 禁用 · A1:底 s2、字 ink3。 */
-    --color-disabled-ink: 0.680983 0.023181 65.1622;
-    --color-disabled-surface: 0.254965 0.009534 67.3784;
+    --color-disabled-ink: 0.680983 0.012600 133.4000;
+    --color-disabled-surface: 0.280000 0.010500 136.0000;
     /* 遮罩 · A2:只用在对话框与抽屉下,按主题两值 —— 深 rgba(0,0,0,.62)。 */
     --color-scrim: 0 0 0;
     --scrim-alpha: 0.62;
     /* 文明皮 · 匾色(§三),深色档。 */
-    --color-civ-neutral: 0.515225 0.016007 67.4607;
+    --color-civ-neutral: 0.515225 0.011900 131.5000;
     --color-civ-cn: 0.537787 0.130919 28.6219;
     --color-civ-eu: 0.544523 0.094860 308.8429;
     --color-civ-eg: 0.599456 0.103508 263.0918;
@@ -511,28 +529,28 @@
     --color-ink: 0.214438 0.006530 134.9799;
     --color-ink-muted: 0.511553 0.011899 131.4694;
     --color-ink-subtle: 0.511553 0.011899 131.4694;
-    --color-pillar: 0.188704 0.003838 48.5100;
-    --color-accent: 0.188704 0.003838 48.5100;
-    --color-accent-contrast: 0.948042 0.018849 83.0639;
-    --color-accent-ink: 0.188704 0.003838 48.5100;
-    --color-accent-hover: 0.391607 0.009608 48.4636;
-    --color-focus: 0.188704 0.003838 48.5100;
-    --color-danger: 0.472016 0.180369 12.7394;
-    --color-danger-strong: 0.472016 0.180369 12.7394;
+    --color-pillar: 0.214438 0.006530 134.9799;
+    --color-accent: 0.214438 0.006530 134.9799;
+    --color-accent-contrast: 0.951016 0.005316 106.5001;
+    --color-accent-ink: 0.214438 0.006530 134.9799;
+    --color-accent-hover: 0.511553 0.011899 131.4694;
+    --color-focus: 0.214438 0.006530 134.9799;
+    --color-danger: 0.509379 0.180376 8.9464;
+    --color-danger-strong: 0.435794 0.141750 19.3962;
     --color-danger-tint: 0.959029 0.020979 6.6063;
     --color-danger-on-tint: 0.409460 0.155831 12.0157;
     --color-success: 0.481178 0.119975 150.1017;
     --color-success-tint: 0.965876 0.035762 149.1233;
-    --color-warning: 0.508784 0.132855 50.8763;
+    --color-warning: 0.529090 0.135424 52.3541;
     --color-warning-tint: 0.965162 0.024981 69.4434;
     --color-lamp: 0.407751 0.090608 66.2502;
     --color-lamp-bg: 0.960430 0.029660 85.5642;
-    --color-disabled-ink: 0.480553 0.018306 67.3691;
-    --color-disabled-surface: 0.912345 0.028804 84.5925;
+    --color-disabled-ink: 0.480553 0.011300 131.9000;
+    --color-disabled-surface: 0.912345 0.006700 113.2000;
     /* 浅色遮罩 = ink #151312 × .42。 */
-    --color-scrim: 0.188704 0.003838 48.5100;
+    --color-scrim: 0.214438 0.006530 134.9799;
     --scrim-alpha: 0.42;
-    --color-civ-neutral: 0.275998 0.008069 59.3304;
+    --color-civ-neutral: 0.275998 0.007000 134.0000;
     --color-civ-cn: 0.452064 0.126889 29.1662;
     --color-civ-eu: 0.406759 0.103847 306.5685;
     --color-civ-eg: 0.419561 0.113409 262.1446;
