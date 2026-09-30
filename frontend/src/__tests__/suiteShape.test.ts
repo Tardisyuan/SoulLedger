@@ -198,6 +198,7 @@ const COLLECTED_FILES = [
   "oneRealtimeSocketPerSession.test.ts",
   "permissionFormCategoryStability.test.tsx",
   "platformPortsSecureAndResume.test.ts",
+  "plaqueTitleStaysLargeText.test.ts",
   "presetNodeTypes.test.tsx",
   "QueryProviderDefaults.test.tsx",
   "ReactionBar.test.tsx",
