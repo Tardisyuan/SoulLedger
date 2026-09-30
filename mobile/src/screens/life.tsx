@@ -409,11 +409,19 @@ function LifePath({ state, planState, lex }: { state: string; planState: string 
               }
             />
             {i < LIFE_PATH.length - 1 ? (
-              <View style={styles.segment}>
-                <Svg width="100%" height={2}>
-                  <Line x1={0} y1={1} x2="100%" y2={1} stroke={i < at ? t.ink : t.inkSubtle} strokeWidth={2} strokeDasharray={i < at ? undefined : "4 3"} />
-                </Svg>
-              </View>
+              // Walked: a plain 2pt bar, not an SVG line. The SVG's percentage width rounded
+              // differently from its neighbours on some screen widths and the last walked
+              // segment sat a pixel low (user screenshot, 2026-09-30). Ahead stays SVG: RN
+              // has no dependable one-sided dashed border.
+              i < at ? (
+                <View testID={`path-seg-${i}`} style={[styles.segment, { backgroundColor: t.ink }]} />
+              ) : (
+                <View testID={`path-seg-${i}`} style={styles.segment}>
+                  <Svg width="100%" height={2}>
+                    <Line x1={0} y1={1} x2="100%" y2={1} stroke={t.inkSubtle} strokeWidth={2} strokeDasharray="4 3" />
+                  </Svg>
+                </View>
+              )
             ) : null}
           </Fragment>
         ))}
