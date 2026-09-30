@@ -7,6 +7,7 @@
  */
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { ReactNode } from "react";
+import { AxiosError, AxiosHeaders } from "axios";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { LedgerJournal } from "@soulledger/core/api";
 import LedgerPage from "@/app/ledger/page";
@@ -17,6 +18,8 @@ import { saveBlob } from "@/src/lib/saveBlob";
 
 jest.mock("@soulledger/core/api", () => ({
   ledgerApi: { journal: jest.fn(), journalMonth: jest.fn(), exportJournal: jest.fn() },
+  // The real classifier: the test feeds it the backend's real 400 shape.
+  isMonthTooLarge: jest.requireActual("@soulledger/core/api/ledger").isMonthTooLarge,
 }));
 jest.mock("@/src/lib/saveBlob", () => ({ saveBlob: jest.fn() }));
 
@@ -206,6 +209,31 @@ describe("加载中 / 空 / 失败 是三屏", () => {
     const alert = await screen.findByRole("alert");
     expect(alert).toHaveTextContent("功过总账加载失败");
     expect(screen.queryByTestId("four-pillars")).toBeNull();
+  });
+
+  // Design E 组. The body is apps/ledger/views.py's, byte for byte in shape:
+  // test_ledger_journal.py pins ("MONTH_TOO_LARGE", "all").
+  const refused = (status: number, data: Record<string, string>) =>
+    new AxiosError("refused", "ERR_BAD_REQUEST", undefined, undefined, {
+      status, data, statusText: "", headers: {}, config: { headers: new AxiosHeaders() },
+    } as never);
+
+  it("over the whole-month cap: its own sentence, no retry, no half a ledger", async () => {
+    mockedJournal.mockRejectedValue(refused(400, { error: "MONTH_TOO_LARGE", field: "all" }));
+    renderPage();
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("本月记录过多，请缩小筛选");
+    expect(alert).not.toHaveTextContent("功过总账加载失败");
+    expect(within(alert).queryByRole("button")).toBeNull();
+    expect(screen.queryByTestId("four-pillars")).toBeNull();
+  });
+
+  it("any other 400 is still the plain failure, with its retry", async () => {
+    mockedJournal.mockRejectedValue(refused(400, { error: "INVALID_PARAMETER", field: "month" }));
+    renderPage();
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("功过总账加载失败");
+    expect(alert).not.toHaveTextContent("本月记录过多");
   });
 
   it("does not call the endpoint when there is no user", () => {

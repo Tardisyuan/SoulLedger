@@ -1038,6 +1038,7 @@
       "empty_title": "本期没有流水",
       "empty_reason": "{{month}} 尚无功过登记;旧管 = 实在 = {{opening}}。",
       "load_failed": "功过总账加载失败",
+      "month_too_large": "本月记录过多，请缩小筛选",
       "row_hint": "整行可点 → 该户详情「乙 · 功过」",
       "search": "灵魂姓名或 ID",
       "export": "导出",
@@ -1892,7 +1893,8 @@
   },
   "permission": {
     "denied_title": "权限不足",
-    "denied_message": "您没有权限访问此页面或执行此操作。"
+    "denied_message": "您没有权限访问此页面或执行此操作。",
+    "ask_admin": "请找本殿管理员。"
   },
   "icon_picker": {
     "select": "选择图标",

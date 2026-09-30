@@ -214,6 +214,7 @@ const COLLECTED_FILES = [
   "soulMutationFeedback.test.tsx",
   "soulReadingCopyCoverage.test.tsx",
   "soulStateBadgeContract.test.ts",
+  "statusGlyphFont.test.ts",
   "statusTokenLayering.test.ts",
   "submitErrorFocus.test.tsx",
   "suiteShape.test.ts",

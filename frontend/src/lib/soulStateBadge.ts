@@ -56,7 +56,7 @@ export const SOUL_STATE_BADGE_CLASSES: Record<SoulState, string> = {
  * 字形按 C15 画:○ 在世、◇ 待审、▣ 受刑、↻ 轮回、◎ 永居。真实枚举与样张的对应:
  * ALIVE ○、JUDGING ◇、DISPOSED ▣(已处置 = 在界域里受刑)、REINCARNATING ↻、
  * SETTLED ◎(已终结 = 永居)。LOST(迷失)样张没画,取 ◌ —— 旧的 × 与判决的 ✕
- * 在颜色撤掉之后几乎同形。◈ 待处置没有对应的状态,不用。
+ * 在颜色撤掉之后几乎同形。◈ 待处置 Design 已从样张删掉(E 组),不新增这个状态。
  * ◇ 与判决「待定」共用:样张两处都画 ◇ + s2 底,意思都是「还要处理」。
  */
 export const SOUL_STATE_GLYPH: Record<SoulState, string> = {

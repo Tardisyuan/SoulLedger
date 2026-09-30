@@ -33,7 +33,7 @@ describe("badgeSpec", () => {
     expect(specs.filter((b) => b.glyph === "·")).toEqual([]);
     expect(SOUL_STATE_BADGES).toMatchObject({
       ALIVE: { glyph: "○" },
-      LOST: { glyph: "⊘", border: "dashed" },
+      LOST: { glyph: "◌", border: "dashed" },
       SETTLED: { glyph: "≡" },
     });
   });

@@ -871,7 +871,7 @@ export function Badge({ spec, label, raw, testID }: { spec: BadgeSpec; label: st
         { borderColor: t.inkSubtle, borderStyle: spec.border, backgroundColor: spec.pending ? t.s2 : "transparent" },
       ]}
     >
-      <Text style={[styles.badgeText, { color }]}>{spec.glyph}</Text>
+      <Text testID={testID ? `${testID}-glyph` : undefined} style={[styles.badgeText, styles.badgeGlyph, { color }]}>{spec.glyph}</Text>
       <Text style={[styles.badgeText, styles.shrink, { color }]}>{label}</Text>
       {raw ? <Text style={[styles.badgeRaw, { color }]}>{raw}</Text> : null}
     </View>
@@ -1116,6 +1116,8 @@ export const styles = StyleSheet.create({
   },
   badgeWraps: { flexWrap: "wrap" },
   badgeText: { fontFamily: family.ui[500], fontSize: 12, lineHeight: 18, letterSpacing: 0.9 },
+  // Design E 组: every status glyph from the one bundled font, never a per-glyph OS fallback.
+  badgeGlyph: { fontFamily: family.glyph, letterSpacing: 0 },
   badgeRaw: { fontFamily: family.mono[400], fontSize: 11, lineHeight: 16, opacity: 0.85 },
   quote: { borderLeftWidth: 2, paddingLeft: space[4], paddingVertical: 2 },
   quoteText: { fontSize: 15, lineHeight: 28 },

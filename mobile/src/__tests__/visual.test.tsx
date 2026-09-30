@@ -82,13 +82,16 @@ describe("the unrecognized-value badge", () => {
 describe("soul-state badges", () => {
   it.each([
     ["ALIVE", "在世", "○", "solid"],
-    ["LOST", "丢失", "⊘", "dashed"],
+    ["LOST", "丢失", "◌", "dashed"],
     ["SETTLED", "已结算", "≡", "solid"],
   ])("%s is named (%s) with its own glyph %s — not the unknown badge", (state, label, glyph, border) => {
     wrap(<EnumBadge testID="b" namespace={["soul_app", "soul_states"].join(".")} table={SOUL_STATE_BADGES} value={state} />);
     const badge = screen.getByTestId("b");
     expect(within(badge).getByText(label)).toBeTruthy();
     expect(within(badge).getByText(glyph)).toBeTruthy();
+    // Design E 组: the glyph is set in the one bundled glyph face, the label is not.
+    expect(flat(within(badge).getByText(glyph)).fontFamily).toBe("SoulLedgerGlyphs");
+    expect(flat(within(badge).getByText(label)).fontFamily).not.toBe("SoulLedgerGlyphs");
     expect(within(badge).queryByText("未识别取值")).toBeNull();
     expect(within(badge).queryByText(state)).toBeNull();
     expect(flat(badge).borderStyle).toBe(border);
@@ -116,7 +119,8 @@ describe("the Han serif", () => {
     const path = jest.requireActual<typeof import("path")>("path");
     const dir = path.join(__dirname, "..", "..", "assets", "fonts");
     // Beside it only the v2 seal face 霞鹜篆书 (scripts/import-v2-art.mjs), which is not a serif for quotes.
-    expect(fs.readdirSync(dir).filter((f: string) => f.endsWith(".ttf"))).toEqual(["LXGWSeal-Regular.ttf", "NotoSerifSC-Subset-400.ttf"]);
+    // And the 5 KB status-glyph face (Design E 组), which is not a serif either.
+    expect(fs.readdirSync(dir).filter((f: string) => f.endsWith(".ttf"))).toEqual(["LXGWSeal-Regular.ttf", "NotoSerifSC-Subset-400.ttf", "SoulLedgerGlyphs.ttf"]);
     expect(fs.statSync(path.join(dir, "NotoSerifSC-Subset-400.ttf")).size <= 1_500_000).toBe(true);
     // what App.tsx hands to useFonts must resolve — a require of a deleted file fails the import above
     expect(FONT_ASSETS.NotoSerifSC_400).toBeTruthy();

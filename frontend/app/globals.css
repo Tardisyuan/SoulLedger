@@ -2,6 +2,18 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* 状态字形 · Design E 组:「迷失」◌ 必须和 ✓✕◇↺ 出自同一款字体。Plex Mono 的 latin 子集
+   一个都没有;Noto Sans SC 有 ✓✕○▣◇◎↺↻ 却没有 ◌,于是 ◌ 落到系统字体(Windows 的
+   Segoe UI Symbol、Android 的 Roboto),邻居却来自 Noto Sans SC —— 宽度会跑。这款 5KB 的
+   DejaVu Sans 子集(scripts/build-glyph-font.py,许可证在同目录)排在三支字族的最前面,
+   unicode-range 只圈这九个码位,别的字一个不碰。App 用的是同一个文件的同一份字节。 */
+@font-face {
+  font-family: 'SoulLedger Glyphs';
+  src: url('/fonts/SoulLedgerGlyphs.ttf') format('truetype');
+  font-display: block;
+  unicode-range: U+2713, U+2715, U+25C7, U+21BA, U+25CC, U+25CB, U+25A3, U+21BB, U+25CE;
+}
+
 @theme {
   /* NO COLOUR TOKENS HERE, DELIBERATELY.
    *
@@ -164,14 +176,14 @@
   --animate-row-changed: row-changed 2000ms var(--ease-exit) both;
 
   --font-sans:
-    var(--font-sans-latin), 'Noto Sans SC Variable', ui-sans-serif, system-ui,
+    'SoulLedger Glyphs', var(--font-sans-latin), 'Noto Sans SC Variable', ui-sans-serif, system-ui,
     sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
     'Noto Color Emoji';
   --font-serif:
-    var(--font-serif-latin), 'Noto Serif SC Variable', ui-serif, Georgia,
+    'SoulLedger Glyphs', var(--font-serif-latin), 'Noto Serif SC Variable', ui-serif, Georgia,
     Cambria, 'Times New Roman', Times, serif;
   --font-mono:
-    var(--font-mono-latin), 'Noto Sans SC Variable', ui-monospace,
+    'SoulLedger Glyphs', var(--font-mono-latin), 'Noto Sans SC Variable', ui-monospace,
     SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
     monospace;
 
@@ -426,8 +438,8 @@
     --color-status-reincarnating: var(--color-chart-4);
     --color-status-lost: var(--color-ink-subtle);
     --color-status-settled: var(--color-ink-muted);
-    --color-karma-merit: var(--color-success);
-    --color-karma-demerit: var(--color-danger);
+    /* 功 / 过不给颜色(Design E 组):灵魂详情的功过数字与总账一样是 ink,靠列头与 +/− 区分。
+       --color-karma-* 两个令牌因此删掉 —— 冷玫红只表「失败」。 */
     --color-verdict-passed: var(--color-success);
     --color-verdict-failed: var(--color-danger);
     --color-verdict-purgatory: var(--color-warning);
