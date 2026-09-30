@@ -1,10 +1,18 @@
 /**
  * Transient feedback: the toast (bottom, 110pt up, 1.9s, success / failure)
  * and the sign-out confirmation sheet. Both only fade — 160ms / 120ms, or 0
- * under reduce-motion.
+ * under reduce-motion. And `Sheet`, v2's bottom sheet, at the end.
  */
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
-import { Animated, Modal, Pressable, StyleSheet, View } from "react-native";
+import {
+  BottomSheetBackdrop,
+  BottomSheetModal,
+  BottomSheetView,
+  useBottomSheetTimingConfigs,
+  type BottomSheetBackdropProps,
+} from "@gorhom/bottom-sheet";
+import { Animated, BackHandler, Modal, Pressable, StyleSheet, View } from "react-native";
+import { Easing } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Icon } from "./emblems";
@@ -133,3 +141,57 @@ const styles = StyleSheet.create({
   sheet: { borderTopWidth: 1, paddingTop: 24, paddingHorizontal: GUTTER, gap: 8 },
   sheetButtons: { marginTop: 12, gap: 12 },
 });
+
+/**
+ * A bottom sheet (v2 动效, 交互与动效 第 2 轮 原型 06) on @gorhom/bottom-sheet: it opens
+ * over 200ms (`motion.sheetIn`, 0 under reduce-motion), drags down to close, and also
+ * closes on the scrim, on Android's back key, and from whatever button the caller puts
+ * in it. Controlled — `open` in, `onClose` out, whichever way it was closed — so a
+ * caller holds one boolean, as it did with the `Modal` this replaces. Square, no
+ * shadow, a 1px top edge in `edge` (补足 A2). Needs `BottomSheetModalProvider` above
+ * (navigation.tsx); the sheet renders in that provider, so it sees only its contexts.
+ */
+export function Sheet({ open, onClose, edge, closeLabel, children }: { open: boolean; onClose: () => void; edge: string; closeLabel: string; children: ReactNode }) {
+  const t = useTheme();
+  const ref = useRef<BottomSheetModal>(null);
+  const { sheetIn } = useReducedMotionDurations();
+  const timing = useBottomSheetTimingConfigs({ duration: sheetIn, easing: Easing.bezier(0, 0, 0.2, 1) });
+  useEffect(() => {
+    if (open) ref.current?.present();
+    else ref.current?.dismiss();
+  }, [open]);
+  useEffect(() => {
+    if (!open) return;
+    const sub = BackHandler.addEventListener("hardwareBackPress", () => {
+      onClose();
+      return true;
+    });
+    return () => sub.remove();
+  }, [open, onClose]);
+  const backdrop = useCallback(
+    (props: BottomSheetBackdropProps) => (
+      <BottomSheetBackdrop
+        {...props}
+        appearsOnIndex={0}
+        disappearsOnIndex={-1}
+        opacity={1}
+        pressBehavior="close"
+        accessibilityLabel={closeLabel}
+        style={[props.style, { backgroundColor: t.scrim }]}
+      />
+    ),
+    [t.scrim, closeLabel]
+  );
+  return (
+    <BottomSheetModal
+      ref={ref}
+      onDismiss={onClose}
+      animationConfigs={timing}
+      backdropComponent={backdrop}
+      backgroundStyle={{ backgroundColor: t.s1, borderRadius: 0, borderTopWidth: 1, borderTopColor: edge }}
+      handleIndicatorStyle={{ backgroundColor: t.hair2 }}
+    >
+      <BottomSheetView>{children}</BottomSheetView>
+    </BottomSheetModal>
+  );
+}

@@ -1,4 +1,5 @@
 import { useFonts } from "expo-font";
+import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useState } from "react";
 import { StyleSheet } from "react-native";
@@ -15,6 +16,8 @@ import { SessionProvider } from "./src/session";
 // Installed at module load, before any core module can read a store.
 installMobilePlatform();
 installNotificationHandler();
+// The native splash (an empty seal frame) stays until the cold start draws the same frame over it (src/coldStart.tsx).
+void SplashScreen.preventAutoHideAsync().catch(() => {});
 
 export default function App() {
   const [hydrated, setHydrated] = useState(false);
