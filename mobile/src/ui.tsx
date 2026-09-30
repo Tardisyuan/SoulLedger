@@ -53,7 +53,7 @@ import { SafeAreaView, type Edge } from "react-native-safe-area-context";
 import { Emblem, Hero, Icon, LedgerUnreachable } from "./emblems";
 import { family, quoteFamily } from "./fonts";
 import { useI18n } from "./i18n";
-import { useOnline } from "./network";
+import { useOnline } from "./online";
 import { STACK_FONT_SCALE, badgeSpec, layoutFor, stacksLabel, type BadgeSpec, type Layout } from "./rules";
 import { GUTTER_PT, motion, radius, space, themeFor, type Theme } from "./theme";
 
