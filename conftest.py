@@ -166,3 +166,44 @@ def _block_embedding_service(monkeypatch):
         raise vectors.EmbeddingError("connection", f"network blocked in tests: {url}")
 
     monkeypatch.setattr(vectors, "_post", blocked)
+
+
+def _db_kind(item):
+    """'tx' for a transactional test, 'db' for a plain one, None for no database — pytest-django's own rule."""
+    marker = item.get_closest_marker("django_db")
+    if marker is not None and marker.kwargs.get("transaction"):
+        return "tx"
+    names = getattr(item, "fixturenames", ())
+    if "transactional_db" in names or "live_server" in names:
+        return "tx"
+    if marker is not None or "db" in names:
+        return "db"
+    return None
+
+
+@pytest.hookimpl(trylast=True)
+def pytest_collection_modifyitems(config, items):
+    """Refuse a run in which a plain database test comes after a transactional one.
+
+    A ``transaction=True`` test truncates every table when it ends, including
+    the rows data migrations seed (roles, permissions, menus), and nothing puts
+    them back. About twenty-five plain ``db`` tests read those rows. They pass
+    only because pytest-django sorts transactional tests last; any plugin that
+    reorders tests after that (testmon, random ordering) breaks them with a
+    ``DoesNotExist`` that points at the test, not at the order. 2026-09-30,
+    with transactional tests moved first: 25 failures in 8 files. Stop the run
+    at collection instead, naming the first test out of place. ``trylast`` so
+    this sees the final order; under xdist every worker collects the same list
+    and receives items in increasing index order, so the check holds there too.
+    """
+    seen_tx = None
+    for item in items:
+        kind = _db_kind(item)
+        if kind == "tx":
+            seen_tx = seen_tx or item.nodeid
+        elif kind == "db" and seen_tx:
+            raise pytest.UsageError(
+                f"{item.nodeid} (plain database test) is ordered after {seen_tx} (transactional). "
+                "A transactional test truncates the rows data migrations seed, so later plain tests "
+                "lose them. Something reordered tests after pytest-django; see conftest.py."
+            )

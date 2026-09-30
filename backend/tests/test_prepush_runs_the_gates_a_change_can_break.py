@@ -69,6 +69,14 @@ PYTHON_BIN fell back to a bare `python` without Django; the worktree has no
 a throwaway repository with a real worktree and a fake interpreter — no Django,
 no network, and git isolated from this machine's config (the hook runs pytest
 itself, and git may export GIT_DIR into it).
+
+The hook and scripts/run-gates.sh (2026-09-30)
+----------------------------------------------
+The gate logic moved out of the heredoc into `scripts/run-gates.sh`, so a
+session can run what a push would. The heredoc now only turns git's stdin into
+PREPUSH_CHANGED and execs the runner; every test above still goes through the
+heredoc, so the seam is unchanged. `TestJestSelection` pins what sends jest to a
+full run instead of `--findRelatedTests` + `frontend/jest.always-run.txt`.
 """
 
 import os
@@ -82,6 +90,7 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 GENERATOR = REPO_ROOT / "scripts" / "install-hooks.sh"
+RUNNER = REPO_ROOT / "scripts" / "run-gates.sh"
 
 
 def _hook_body() -> str:
@@ -132,13 +141,15 @@ class TestTheSeamIsReal:
     def test_the_generator_has_a_pre_push_hook(self):
         """Non-vacuity: every test below is meaningless over an empty body."""
         body = _hook_body()
-        assert "RUN_CORE" in body and "PREPUSH_CLASSIFY_ONLY" in body
-        assert len(body.splitlines()) > 100
+        assert "scripts/run-gates.sh" in body and "PREPUSH_CHANGED" in body
+        runner = RUNNER.read_text(encoding="utf-8")
+        assert "RUN_CORE" in runner and "PREPUSH_CLASSIFY_ONLY" in runner
+        assert len(runner.splitlines()) > 100
 
     def test_the_gates_read_the_same_variables_the_classifier_prints(self):
         """If a gate re-derived its own condition, this file would be testing a
         copy of the rule rather than the rule."""
-        body = _hook_body()
+        body = RUNNER.read_text(encoding="utf-8")
         for var in ("RUN_CORE", "RUN_FRONTEND", "RUN_BACKEND"):
             assert re.search(rf'^if \[ "\${var}" = 1 \]; then', body, re.M), (
                 f"no gate reads {var} directly"
@@ -196,12 +207,24 @@ class TestTheExistingPrefixesStillWork:
         """Deliberate — see the hook's comment. docs/ must not trigger a full run."""
         assert _classify(hook, ["docs/README.md", "scripts/status.sh"]) == NONE
 
+    @pytest.mark.parametrize(
+        "name", ["scripts/run-gates.sh", "scripts/install-hooks.sh", "scripts/gate-lock.sh"]
+    )
+    def test_the_gate_machinery_runs_the_backend_suite_that_tests_it(self, hook, name):
+        """This file is the machinery's only test, and it reads the scripts
+        rather than importing them. Until 2026-09-30 a push that changed only
+        the hook generator ran no gate at all."""
+        assert _classify(hook, [name]) == BACKEND
+
 
 # Everything the hook reads from the environment, plus git's own variables:
 # none of this machine's settings may leak into the throwaway repository.
 _STRIPPED = (
     "SKIP_PREPUSH", "PREPUSH_CHANGED", "PREPUSH_CLASSIFY_ONLY", "SECRET_KEY",
     "DEBUG", "PYTHON_BIN", "RUFF_BIN", "DATABASE_URL", "REDIS_URL", "PYTEST_PREPUSH_ARGS",
+    # The hook's own hand-off to run-gates.sh. These tests run inside a push, and
+    # a push to main must not make every "selective" assertion here read full.
+    "PREPUSH_RANGE", "PREPUSH_TO_MAIN", "GATES_FULL",
 )
 
 
@@ -225,7 +248,8 @@ def checkouts(tmp_path):
     (main / "backend").mkdir(parents=True)
     (main / "backend" / "manage.py").write_text("")
     (main / "scripts").mkdir()
-    (main / "scripts" / "install-hooks.sh").write_text(GENERATOR.read_text(encoding="utf-8"))
+    for name in ("install-hooks.sh", "run-gates.sh", "gate-lock.sh"):
+        (main / "scripts" / name).write_text((GENERATOR.parent / name).read_text(encoding="utf-8"))
     (main / ".gitignore").write_text(".prepush.env\nbackend/.env\n")
     _git(main, "init", "-q", "-b", "main")
     _git(main, "add", "-A")
@@ -337,6 +361,9 @@ class TestFromAWorktree:
         installed = main / ".git" / "hooks" / "pre-push"
         assert installed.read_text(encoding="utf-8") == _hook_body()
         assert os.access(installed, os.X_OK)
+        # The copy a branch without scripts/run-gates.sh falls back to.
+        copy = main / ".git" / "hooks" / "soulledger-gates" / "run-gates.sh"
+        assert copy.read_text(encoding="utf-8") == RUNNER.read_text(encoding="utf-8")
 
 
 def _fake_venv(checkout: Path, python_body: str) -> Path:
@@ -563,3 +590,161 @@ class TestWhatPytestIsInvokedWith:
         _, key = _pytest_line(hook, main, fake_backend, ["backend/apps/souls/views.py"])
         assert key == "ci-test-key-not-for-production-32-bytes-min"
         assert len(key.encode()) >= 32
+
+
+# ── jest: selective unless a rule says full (2026-09-30) ────────────────────
+#
+# The runner prints `classify-jest: full=<0|1>` and one `full because:` line per
+# rule that matched. Mutation-checked when written: see the report of that change.
+
+
+def _classify_jest(hook, changed: list[str], **extra) -> tuple[int, str]:
+    env = {k: v for k, v in os.environ.items() if k not in _STRIPPED}
+    env.update(PREPUSH_CHANGED="\n".join(changed), PREPUSH_CLASSIFY_ONLY="1", **extra)
+    proc = subprocess.run(
+        ["bash", str(hook)], cwd=REPO_ROOT, env=env, capture_output=True, text=True, timeout=60,
+    )
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    m = re.search(r"^classify-jest: full=(\d)$", proc.stdout, re.M)
+    assert m, f"no classify-jest line in hook output:\n{proc.stdout}"
+    return int(m.group(1)), proc.stdout
+
+
+class TestJestSelection:
+    @pytest.mark.parametrize(
+        "changed",
+        [
+            ["frontend/app/page.tsx"],
+            ["packages/core/src/index.ts"],
+            ["frontend/src/__tests__/suiteShape.test.ts"],
+            ["backend/apps/souls/views.py"],
+        ],
+    )
+    def test_an_ordinary_source_change_is_selective(self, hook, changed):
+        """The inverse of everything below: a rule set that always said full
+        would pass every other test in this class."""
+        assert _classify_jest(hook, changed)[0] == 0
+
+    @pytest.mark.parametrize(
+        "changed",
+        [
+            ["packages/core/messages/en.json"],
+            ["frontend/jest.config.js"],
+            ["frontend/tsconfig.json"],
+            ["packages/core/package.json"],
+            ["package-lock.json"],
+            ["frontend/src/__tests__/support/egyVocabulary.json"],
+            ["scripts/run-gates.sh"],
+            ["scripts/install-hooks.sh"],
+            # A path that no longer exists: deleted, or the old half of a rename.
+            ["frontend/src/components/NoSuchComponent.tsx"],
+            ["tsconfig.base.json"],
+            # One matching file among ordinary ones still counts.
+            ["frontend/app/page.tsx", "packages/core/messages/egy.json"],
+        ],
+    )
+    def test_what_jest_cannot_trace_forces_a_full_run_and_says_why(self, hook, changed):
+        full, out = _classify_jest(hook, changed)
+        assert full == 1, out
+        assert "full because:" in out
+
+    def test_gates_full_forces_it(self, hook):
+        assert _classify_jest(hook, ["frontend/app/page.tsx"], GATES_FULL="1")[0] == 1
+
+    def test_gates_full_0_does_not_force_selective(self, hook):
+        """There is no way to force a selective run. GATES_FULL=0 is not one."""
+        full, out = _classify_jest(
+            hook, ["packages/core/messages/en.json"], GATES_FULL="0"
+        )
+        assert full == 1, out
+        full, _ = _classify_jest(hook, ["frontend/app/page.tsx"], GATES_FULL="0", PREPUSH_TO_MAIN="1")
+        assert full == 1
+
+    def test_the_runner_names_the_file_that_forced_it(self, hook):
+        _, out = _classify_jest(hook, ["frontend/app/page.tsx", "packages/core/messages/egy.json"])
+        assert "language pack" in out and "packages/core/messages/egy.json" in out
+
+
+def _push(hook, cwd: Path, remote_ref: str) -> subprocess.CompletedProcess:
+    """Run the hook the way git does: the pushed refs on stdin, no seam."""
+    head = subprocess.run(
+        ["git", "rev-parse", "HEAD"], cwd=cwd, env=_clean_env(), capture_output=True, text=True,
+    ).stdout.strip()
+    base = subprocess.run(
+        ["git", "rev-parse", "HEAD~1"], cwd=cwd, env=_clean_env(), capture_output=True, text=True,
+    ).stdout.strip()
+    env = _clean_env(PREPUSH_CLASSIFY_ONLY="1")
+    return subprocess.run(
+        ["bash", str(hook)], cwd=cwd, env=env, input=f"refs/heads/wt {head} {remote_ref} {base}\n",
+        capture_output=True, text=True, timeout=60,
+    )
+
+
+class TestWhatTheHookHandsTheRunner:
+    def _commit_a_frontend_file(self, wt: Path):
+        (wt / "frontend" / "app").mkdir(parents=True)
+        (wt / "frontend" / "app" / "page.tsx").write_text("export default 1\n")
+        _git(wt, "add", "-A")
+        _git(wt, "commit", "-q", "-m", "page")
+
+    def test_a_push_to_main_is_full(self, hook, checkouts):
+        _, wt = checkouts
+        self._commit_a_frontend_file(wt)
+        proc = _push(hook, wt, "refs/heads/main")
+        assert proc.returncode == 0, proc.stdout + proc.stderr
+        assert "classify: core=0 frontend=1 backend=0" in proc.stdout, proc.stdout
+        assert "classify-jest: full=1" in proc.stdout
+        assert "refs/heads/main" in proc.stdout
+
+    def test_a_push_to_a_feature_branch_is_selective(self, hook, checkouts):
+        _, wt = checkouts
+        self._commit_a_frontend_file(wt)
+        proc = _push(hook, wt, "refs/heads/feature")
+        assert proc.returncode == 0, proc.stdout + proc.stderr
+        assert "classify-jest: full=0" in proc.stdout, proc.stdout
+
+    def test_a_checkout_without_the_runner_uses_the_installed_copy(self, hook, checkouts):
+        main, wt = checkouts
+        subprocess.run(
+            ["bash", str(main / "scripts" / "install-hooks.sh")],
+            cwd=main, env=_clean_env(), check=True, capture_output=True, timeout=60,
+        )
+        (wt / "scripts" / "run-gates.sh").unlink()
+        proc = _run(hook, wt, ["frontend/app/page.tsx"], PREPUSH_CLASSIFY_ONLY="1")
+        assert proc.returncode == 0, proc.stdout + proc.stderr
+        assert "using the copy installed with the hook" in proc.stdout
+        assert "classify: core=0 frontend=1 backend=0" in proc.stdout
+
+
+class TestRunGatesOutsideAPush:
+    def test_it_sees_committed_and_untracked_changes_since_base(self, checkouts):
+        _, wt = checkouts
+        base = subprocess.run(
+            ["git", "rev-parse", "HEAD"], cwd=wt, env=_clean_env(), capture_output=True, text=True,
+        ).stdout.strip()
+        (wt / "backend" / "x.py").write_text("")
+        _git(wt, "add", "-A")
+        _git(wt, "commit", "-q", "-m", "x")
+        (wt / "frontend" / "app").mkdir(parents=True)
+        (wt / "frontend" / "app" / "untracked.tsx").write_text("")
+        proc = subprocess.run(
+            ["bash", str(wt / "scripts" / "run-gates.sh"), "--base", base],
+            cwd=wt, env=_clean_env(PREPUSH_CLASSIFY_ONLY="1"),
+            capture_output=True, text=True, timeout=60,
+        )
+        assert proc.returncode == 0, proc.stdout + proc.stderr
+        assert "classify: core=0 frontend=1 backend=1" in proc.stdout, proc.stdout
+        assert "classify-jest: full=0" in proc.stdout
+
+    def test_full_flag(self, checkouts):
+        _, wt = checkouts
+        (wt / "frontend" / "app").mkdir(parents=True)
+        (wt / "frontend" / "app" / "untracked.tsx").write_text("")
+        proc = subprocess.run(
+            ["bash", str(wt / "scripts" / "run-gates.sh"), "--full", "--base", "HEAD"],
+            cwd=wt, env=_clean_env(PREPUSH_CLASSIFY_ONLY="1"),
+            capture_output=True, text=True, timeout=60,
+        )
+        assert proc.returncode == 0, proc.stdout + proc.stderr
+        assert "classify-jest: full=1" in proc.stdout
+        assert "--full" in proc.stdout

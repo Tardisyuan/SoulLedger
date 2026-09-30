@@ -247,10 +247,11 @@ def test_the_workflow_detail_does_not_query_once_per_approver(world):
 
 @pytest.fixture
 def scheduler_reader(world):
-    from apps.perm.models import Permission, Role, RolePermission
+    from apps.perm.models import RolePermission
+    from tests.perm_support import seeded_permission, seeded_role
 
-    role = Role.objects.get(name="JUDGE")
-    RolePermission.objects.get_or_create(role=role, permission=Permission.objects.get(codename="scheduler.read"))
+    role = seeded_role("JUDGE")
+    RolePermission.objects.get_or_create(role=role, permission=seeded_permission("scheduler.read"))
     return world["client_a"]
 
 

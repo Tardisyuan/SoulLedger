@@ -371,6 +371,7 @@ SoulLedger/
 ├── mobile/                ← 灵魂端 App(Expo);门禁见 CLAUDE.md 的 Build & Test
 └── scripts/
     ├── install-hooks.sh   ← 装 pre-commit / pre-push,clone 后必跑
+    ├── run-gates.sh       ← pre-push 实际跑的门禁(jest 选择性),会话里也能直接跑
     ├── start-frontend.sh
     ├── stop-frontend.sh
     └── start-backend.sh
