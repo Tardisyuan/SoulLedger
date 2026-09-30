@@ -22,8 +22,10 @@ import { getRefreshToken } from "@soulledger/core/platform";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { clearOutbox } from "./chat";
+import { rememberPlaqueFace } from "./fonts";
 import { setUnauthorizedHandler } from "./platform";
 import { hasRegisteredDevice, unregisterDevice } from "./push";
+import { civKeyOf } from "./theme";
 
 export type SessionState =
   | { status: "booting" }
@@ -90,6 +92,14 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (getRefreshToken()) soulApi.me().then(signedIn, stateAfterFailedMe).then(setState);
   }, []);
+
+  // 地府's plaque face starts loading the moment the session knows the soul is 地府's, and
+  // the next cold start loads it under the splash; any other soul, or none, loads nothing.
+  // Booting / unreachable / must-change-password decide nothing: the last answer stands.
+  useEffect(() => {
+    if (state.status === "signedIn") rememberPlaqueFace(civKeyOf(state.profile.civilization));
+    else if (state.status === "signedOut") rememberPlaqueFace(null);
+  }, [state]);
 
   const signIn = useCallback(
     async (soulCode: string, password: string) => {
