@@ -1029,6 +1029,8 @@
       "col_entry": "Sep",
       "col_basis": "Djedu",
       "subtotal": "Neb Hru",
+      "col_balance": "Sepy",
+      "all_shown": "Abed Pen · Sep {{n}} · Neb",
       "page_total": "Neb Dy · Sep {{n}}",
       "categories": "Iru · Tut",
       "category": "Iru",

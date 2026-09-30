@@ -108,6 +108,9 @@ const EXEMPT: Record<string, string> = {
     "Requests page 1..N in a loop and keeps every result — it renders a parent/child " +
     "tree, and a paged view would split a node from its children onto different pages. " +
     "The whole collection is on screen, so there is nothing left to page to.",
+  "app/ledger/page.tsx":
+    "规范 v2 补足 B10:功过总账按月不分页。后端 journal 仍每页 20 行,页面先取第 1 页拿总数、" +
+    "再并发取其余各页拼成整月 —— 整月都在屏上,没有下一页可去。",
 };
 
 const ROUTES = routeFiles(path.join(FRONTEND_ROOT, "app")).map((f) =>
@@ -175,13 +178,14 @@ describe("the scan is looking at something", () => {
     // judged the same way.
     // `app/corpus/page.tsx` left this list 2026-09-25: the reading page loads the
     // whole corpus (useAllStatutes) and requests no page of its own. The
-    // 功过总账 took its place — the same PageShell-slot shape.
-    const byShape = ["app/souls/page.tsx", "app/audit/page.tsx", "app/ledger/page.tsx", "app/tenants/page.tsx"];
+    // 功过总账 took its place — the same PageShell-slot shape — and left again 2026-09-30
+    // when B10 made it one unpaged month (it is in EXEMPT now).
+    const byShape = ["app/souls/page.tsx", "app/audit/page.tsx", "app/tenants/page.tsx"];
     for (const rel of byShape) {
       expect(REQUESTING).toContain(rel);
       expect(offersAWay(codeOf(rel))).toBe(true);
     }
-    // …and none of those four renders <Pagination> in its own code.
+    // …and none of those three renders <Pagination> in its own code.
     for (const rel of byShape) {
       expect(/<Pagination\b/.test(codeOf(rel))).toBe(false);
     }

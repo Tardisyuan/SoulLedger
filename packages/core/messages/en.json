@@ -1029,6 +1029,8 @@
       "col_entry": "Entry",
       "col_basis": "Basis",
       "subtotal": "Subtotal",
+      "col_balance": "Balance",
+      "all_shown": "{{n}} entries this month · all shown",
       "page_total": "Page total · {{n}} entries",
       "categories": "By category",
       "category": "Category",
