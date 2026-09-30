@@ -50,7 +50,7 @@ function Row({ name, detail, url, aside }: { name: ReactNode; detail?: string; u
           </span>
         ) : null}
       </span>
-      <span className={`text-right font-mono text-xs ${MUTED}`}>{aside}</span>
+      <span className={`max-w-48 break-words text-right font-mono text-xs ${MUTED}`}>{aside}</span>
     </li>
   );
 }
@@ -116,7 +116,7 @@ function Literature() {
     <>
       {LITERATURE_CIVILIZATIONS.map((civ) => (
         <div key={civ}>
-          <h3 className={`pt-3 text-xs ${MUTED}`}>{t(`home.civ_subtitle.${civ}`)}</h3>
+          <h3 className={`pt-3 text-2xs uppercase ${MUTED}`}>{t(`home.civ_subtitle.${civ}`)}</h3>
           <ul className="text-sm">
             {LITERATURE_CREDITS.filter((c) => c.civilization === civ).map((c) => (
               <Row key={c.title} name={c.title} detail={c.details.join(" · ")} url={c.url} />

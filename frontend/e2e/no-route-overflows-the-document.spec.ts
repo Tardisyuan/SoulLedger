@@ -51,6 +51,8 @@ const ROUTES = [
   "/scheduler",
   "/soul-credentials",
   "/rebirth-applications",
+  // 致谢页的开源软件一节有长的许可证声明(gsap 的一整句),393 下要折行不撑宽。
+  "/about",
   // 动态路由,fixture 现成(SOULS[0] 的详情、path、界域都在 ApiMock 里)。
   // 2026-09-25 行程条换成共享拓扑组件时,393 下它的 sr-only 状态字(absolute)
   // 从没有 `relative` 的横向滚动框里逃出来,把文档撑到 705px;这张表当时没有
