@@ -3,7 +3,7 @@
 import { FONT_CREDITS, IMAGE_CREDITS, LICENCE_LABELS, ORNAMENT_CREDITS, type Credit } from "@soulledger/core/config/credits";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { PageShell } from "@/src/components/ui/PageShell";
-import { LedgerHeading } from "@/src/components/souls/detail/SoulLedgerSections";
+import { SectionTitle } from "@/src/components/plaque/SectionTitle";
 
 /**
  * 关于 / 致谢(规范 v2 补足 C16):入口在用户菜单。数据在 packages/core 的
@@ -58,15 +58,30 @@ export default function AboutPage() {
   return (
     <PageShell title={t("about.title")} subtitle={t("about.intro")} variant="prose">
       <section>
-        <LedgerHeading mark="甲" title={t("about.fonts")} />
+        <div className="pt-6">
+          <SectionTitle>
+            <span aria-hidden="true">甲 · </span>
+            {t("about.fonts")}
+          </SectionTitle>
+        </div>
         <Rows credits={FONT_CREDITS} />
       </section>
       <section>
-        <LedgerHeading mark="乙" title={t("about.ornament")} />
+        <div className="pt-6">
+          <SectionTitle>
+            <span aria-hidden="true">乙 · </span>
+            {t("about.ornament")}
+          </SectionTitle>
+        </div>
         <Rows credits={ORNAMENT_CREDITS} />
       </section>
       <section>
-        <LedgerHeading mark="丙" title={t("about.images")} />
+        <div className="pt-6">
+          <SectionTitle>
+            <span aria-hidden="true">丙 · </span>
+            {t("about.images")}
+          </SectionTitle>
+        </div>
         <Rows credits={IMAGE_CREDITS} />
       </section>
     </PageShell>
