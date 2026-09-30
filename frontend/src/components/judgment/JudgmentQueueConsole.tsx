@@ -16,7 +16,7 @@ import { Seal } from "@/src/components/plaque/Seal";
 import { Button } from "@/src/components/ui/Button";
 import { usePermissions } from "@/src/hooks/usePermissions";
 import { QUEUE_SHORTCUTS } from "@/src/lib/queueShortcuts";
-import { verdictGlyph } from "@/src/lib/verdictGlyph";
+import { VERDICT_KEY_CLASS, VerdictKeyContent } from "@/src/components/judgment/JudgmentDesk";
 import {
   LedgerPanel,
   PriorCyclesPanel,
@@ -55,12 +55,13 @@ import {
  * there, and blurs first.
  */
 
-const VERDICTS: { code: VerdictCode; key: string; token: string }[] = [
-  { code: "PASSED", key: "1", token: "--color-verdict-passed" },
-  { code: "FAILED", key: "2", token: "--color-verdict-failed" },
-  { code: "PURGATORY", key: "3", token: "--color-verdict-purgatory" },
-  { code: "RETRY", key: "4", token: "--color-verdict-retry" },
+const VERDICTS: { code: VerdictCode; key: string }[] = [
+  { code: "PASSED", key: "1" },
+  { code: "FAILED", key: "2" },
+  { code: "PURGATORY", key: "3" },
+  { code: "RETRY", key: "4" },
 ];
+
 
 function isTextEntry(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
@@ -563,13 +564,12 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
               </p>
             )}
             {canRule && (
-            /* 第三类 F 组 2.8:四列(393 宽时两列),高 44;每个是键号 + 字形 + 文字,
-               字形取 `verdictGlyph`(与详情页同一张表),字色是各自的 `--color-verdict-*`。 */
+            /* 补足 B8:四列(393 宽时两列),同一个幽灵样式;字形取 `verdictGlyph`(与详情页同一张表)。 */
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
               {/* 落判即盖印:压实 60ms 放开缩放,减少动态效果时直接落定。首判之前印位空着
                   (invisible 占位,不让第一次落判把四个按钮挤窄一格)。 */}
               <span className={`max-sm:hidden ${stamp > 0 ? "" : "invisible"}`}>
-                <Seal size={44} stampKey={stamp} />
+                <Seal size={40} stampKey={stamp} />
               </span>
               <div className="grid flex-1 grid-cols-2 gap-2 sm:grid-cols-4">
               {VERDICTS.map((verdict) => (
@@ -577,40 +577,23 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
                   key={verdict.code}
                   type="button"
                   data-verdict={verdict.code}
+                  aria-keyshortcuts={verdict.key}
                   onClick={() => rule(verdict.code)}
-                  /* `active:translate-y-px` and the motion tokens, matching
-                     `Button`'s base — see its comment on the pressed nudge:
-                     "shared by all four variants so 'pressed' is one gesture
-                     in this UI rather than four". These four stayed
-                     hand-rolled for a good reason (each carries its own status
-                     colour), and the cost of that was shipping the most
-                     important buttons in the product with no pressed state at
-                     all — the exact defect `Button`'s header records as "0 of 190".
-
-                     NO overshoot, per globals.css — a bounce on a verdict
-                     button would be the app being pleased with itself while
-                     someone sentences a soul. */
-                  className={`flex h-11 items-center justify-center gap-2 px-3 border text-sm font-semibold transition-[color,background-color,border-color,transform] duration-state border-[oklch(var(--color-hairline-strong))] hover:bg-[oklch(var(--color-surface-2))] active:translate-y-px motion-reduce:active:translate-y-0`}
-                  style={{ color: `oklch(var(${verdict.token}))` }}
+                  /* 按下只换底色(line),不位移、不回弹:落判时界面不该显得得意。 */
+                  className={VERDICT_KEY_CLASS}
                 >
-                  <Keycap>{verdict.key}</Keycap>
-                  <span aria-hidden="true">{verdictGlyph(verdict.code)}</span>
-                  {/* A JSX position, so the component rather than the string
-                      helper: <DomainEnum> renders one span, carries the raw
-                      member in `title` itself, and shows translated
-                      "unrecognized" copy instead of a dotted key when a
-                      verdict is missing from the bundle. */}
-                  <DomainEnum namespace="judgment.verdicts" value={verdict.code} />
+                  <VerdictKeyContent code={verdict.code} keyHint={verdict.key} />
                 </button>
               ))}
               </div>
               <button
                 type="button"
                 onClick={defer}
-                className="flex h-11 items-center justify-center gap-2 px-4 border border-[oklch(var(--color-hairline-strong))] text-sm font-medium text-[oklch(var(--color-ink-muted))] transition-[color,background-color,border-color,transform] duration-state hover:bg-[oklch(var(--color-surface-2))] active:translate-y-px motion-reduce:active:translate-y-0"
+                aria-keyshortcuts="S"
+                className="flex h-10 items-center justify-center gap-2 px-4 border border-transparent text-sm font-semibold text-[oklch(var(--color-ink))] transition-[background-color] duration-fast hover:bg-[oklch(var(--color-surface-2))] active:bg-[oklch(var(--color-line))] max-sm:min-h-11"
               >
-                <Keycap>S</Keycap>
                 {t("judgment.queue.defer")}
+                <Keycap>S</Keycap>
               </button>
             </div>
             )}
@@ -680,7 +663,7 @@ function ConsoleNotice({ title, body, action }: { title: string; body: string; a
 /** 键帽:等宽、1px 当前色边。视觉提示,不进按钮的可访问名。 */
 function Keycap({ children }: { children: React.ReactNode }) {
   return (
-    <kbd aria-hidden="true" className="font-mono text-2xs border border-current px-1.5 opacity-70">
+    <kbd aria-hidden="true" className="font-mono text-2xs border border-current px-2 opacity-70">
       {children}
     </kbd>
   );

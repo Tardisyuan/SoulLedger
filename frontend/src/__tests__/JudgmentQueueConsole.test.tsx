@@ -312,9 +312,10 @@ describe("JudgmentQueueConsole", () => {
   it("the verdict buttons carry key, glyph and word; W's checkbox carries its keycap", async () => {
     renderConsole();
     await waitFor(() => expect(screen.getByText("第一位待判者")).toBeInTheDocument());
+    // 补足 B8:字形 + 文字在左,数字键在右。
     const passed = document.querySelector('[data-verdict="PASSED"]') as HTMLElement;
-    expect(passed.textContent).toMatch(/^1✓/);
-    expect((document.querySelector('[data-verdict="RETRY"]') as HTMLElement).textContent).toMatch(/^4↺/);
+    expect(passed.textContent).toMatch(/^✓.*1$/);
+    expect((document.querySelector('[data-verdict="RETRY"]') as HTMLElement).textContent).toMatch(/^↺.*4$/);
     const workflow = screen.getByRole("checkbox", { name: /judgment\.queue\.create_workflow/ });
     expect(workflow.closest("label")?.querySelector("kbd")?.textContent).toBe("W");
   });
@@ -575,20 +576,32 @@ describe("控制台不抢别人已经处理过的按键", () => {
   });
 });
 
-describe("裁决按钮有按压态", () => {
-  it("四个裁决键和跳过都带 active: 位移", async () => {
+describe("裁决按钮有按压态,且四个长得一样(补足 B8)", () => {
+  it("四个裁决键和延后都有 active: 底色,不位移", async () => {
     renderConsole();
     await screen.findByText("第一位待判者");
 
     // `Button` 的表头把这条记成「190 个里 0 个有 active」,而这四个是全产品
-    // 最重要的按钮,它们手搓所以没进那次修复。
+    // 最重要的按钮,它们手搓所以没进那次修复。v2 的按下态是换底色(line),不位移。
     for (const key of ["1", "2", "3", "4", "S"]) {
       const kbd = screen.getByText(key);
       const button = kbd.closest("button");
       expect(button).not.toBeNull();
-      expect(button!.className).toContain("active:translate-y-px");
-      // 减少动效下不许位移 —— 1px 也是未经请求的移动。
-      expect(button!.className).toContain("motion-reduce:active:translate-y-0");
+      expect(button!.className).toContain("active:bg-[oklch(var(--color-line))]");
+      expect(button!.className).not.toContain("translate-y");
+    }
+  });
+
+  it("落判不靠颜色:四个键同一串类名,没有内联颜色,也不读判决 / 危险色", async () => {
+    renderConsole();
+    await screen.findByText("第一位待判者");
+    const buttons = ["PASSED", "FAILED", "PURGATORY", "RETRY"].map(
+      (v) => document.querySelector(`[data-verdict="${v}"]`) as HTMLElement
+    );
+    expect(new Set(buttons.map((b) => b.className)).size).toBe(1);
+    for (const b of buttons) {
+      expect(b.getAttribute("style")).toBeNull();
+      expect(b.outerHTML).not.toMatch(/--color-(verdict|danger|success|warning)/);
     }
   });
 });

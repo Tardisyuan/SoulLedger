@@ -15,7 +15,8 @@ import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
 import { Kbd } from "@/src/components/judgment/JudgmentDesk";
 import { useHotkeys } from "@/src/lib/hotkeys";
-import { verdictGlyph, verdictInk } from "@/src/lib/verdictGlyph";
+import { VerdictBadge } from "@/src/components/ui/StatusBadge";
+import { TAB_BASE, TAB_OFF, TAB_ON } from "@/src/lib/tabClasses";
 import { JudgmentClaimQueue } from "@/src/components/judgment/JudgmentClaimQueue";
 
 /**
@@ -85,23 +86,21 @@ function JudgmentQueuePageContent() {
         </Link>
       }
       tabs={
-        /* 分段切换 Segmented:当前 = 墨底。`aria-pressed`,不是 role="tab" —— 它不控制
-           一组 tabpanel,只换同一张表的问题(同 app/notifications 那条的理由)。 */
-        <div className="my-2 inline-flex border border-[oklch(var(--color-block))] text-xs">
+        /* 补足 B9:两个标签,当前 = ink 字 600 + 2px ink 下划线,计数 11 等宽 ink3。
+           `aria-pressed`,不是 role="tab" —— 它不控制一组 tabpanel,只换同一张表的问题。 */
+        <div className="flex border-b border-[oklch(var(--color-line))]">
           {(["pending", "concluded"] as const).map((key) => (
             <button
               key={key}
               type="button"
               aria-pressed={tab === key}
               onClick={() => { setTab(key); setPage(1); }}
-              className={`flex items-center gap-2 px-3 py-1 ${
-                tab === key
-                  ? "bg-[oklch(var(--color-ink))] text-[oklch(var(--color-canvas))]"
-                  : "text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))]"
-              }`}
+              className={`${TAB_BASE} flex items-center gap-2 ${tab === key ? TAB_ON : TAB_OFF}`}
             >
               {t(key === "pending" ? "judgment.pending" : "judgment.concluded")}
-              {counts[key] !== undefined && <span className="font-mono tabular-nums">{counts[key]}</span>}
+              {counts[key] !== undefined && (
+                <span className="font-mono text-2xs font-normal tabular-nums text-[oklch(var(--color-ink-subtle))]">{counts[key]}</span>
+              )}
             </button>
           ))}
         </div>
@@ -157,13 +156,8 @@ function JudgmentQueuePageContent() {
               <td className="px-3 text-xs text-[oklch(var(--color-ink-muted))] whitespace-nowrap max-w-64 truncate" title={bench || undefined}>
                 {bench || <MissingValue kind="unrecorded" />}
               </td>
-              <td className={`px-3 text-xs whitespace-nowrap ${verdictInk(judgment.verdict)}`}>
-                {judgment.verdict && (
-                  <>
-                    <span aria-hidden="true">{verdictGlyph(judgment.verdict)} </span>
-                    <DomainEnum namespace="judgment.verdicts" value={judgment.verdict} />
-                  </>
-                )}
+              <td className="px-3 whitespace-nowrap">
+                {judgment.verdict && <VerdictBadge verdict={judgment.verdict} />}
               </td>
               <td className="px-3 text-right font-mono text-xs tabular-nums text-[oklch(var(--color-ink-muted))] whitespace-nowrap">
                 {formatDate(judgment.concluded_at ?? judgment.created_at)}
