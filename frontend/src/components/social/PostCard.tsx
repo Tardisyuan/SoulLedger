@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useDeletePost } from "@soulledger/core/hooks/useSocial";
-import { NameConfirmDialog } from "@/src/components/admin/NameConfirmDialog";
+import { ConfirmDialog } from "@/src/components/ui/Modal";
 import { ReactionBar } from "./ReactionBar";
 import type { Post } from "@soulledger/core/api";
 import { DomainEnum } from "@/src/components/ui/DomainValue";
@@ -103,15 +103,15 @@ export function PostCard({ post }: { post: Post }) {
       <ReactionBar postId={post.id} />
 
       {/* 作者自己删帖:软删但不进回收站(apps/social/apps.py 只登记官员删的),界面上拿不回来 ——
-          不可撤回,所以按规则走「输入名称以确认」。帖子没有名称,输入的是动作词。 */}
+          不可撤回。帖子没有名称,所以不走「输入名称以确认」而用普通确认框(2026-09-30 用户拍板:
+          让人打动作词「删除」只是多一步,不是多一层确认)。 */}
       {isAuthor && (
-        <NameConfirmDialog
+        <ConfirmDialog
           isOpen={showDeleteConfirm}
           title={t("common.confirm_delete")}
           message={t("social.delete_post_confirm")}
-          name={t("common.delete")}
-          actionLabel={t("common.delete")}
-          isPending={deletePost.isPending}
+          confirmText={<><span aria-hidden="true">✕</span>{t("common.confirm_delete")}</>}
+          confirmLoading={deletePost.isPending}
           onConfirm={handleDelete}
           onCancel={() => setShowDeleteConfirm(false)}
         />
