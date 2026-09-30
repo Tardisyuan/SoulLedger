@@ -1,7 +1,7 @@
 """助手管理页的请求 / 响应形状(docs/ARCHITECTURE-assist-admin.md)。API key 只写不读。"""
 from rest_framework import serializers
 
-from apps.soul_assist import config, corpus, vectors
+from apps.soul_assist import config, corpus, platforms, vectors
 from apps.soul_assist.models import OFFICER_SCREENS, SCREENS, AssistEvalCase, AssistEvalResult, AssistEvalRun
 from apps.soul_assist.serializers import MAX_QUESTION_LENGTH, AssistErrorSerializer
 
@@ -15,11 +15,21 @@ class PriceSerializer(serializers.Serializer):
     input = serializers.FloatField(min_value=0)
     output = serializers.FloatField(min_value=0)
     cache_read = serializers.FloatField(min_value=0, required=False)
+    source = serializers.ChoiceField(choices=("litellm", "manual"), required=False,
+                                     help_text="litellm = 预填的参考价(未改过);manual = 手填或改过。缺省按 manual")
+    as_of = serializers.DateField(required=False, allow_null=True, help_text="参考价取自 LiteLLM 价目表的日期")
+
+    def validate(self, attrs):
+        if attrs.get("as_of"):  # 存进 JSONField:写成 ISO 字符串
+            attrs["as_of"] = attrs["as_of"].isoformat()
+        return attrs
 
 
 class CandidateSerializer(serializers.Serializer):
-    """一套连接配置;没给的键沿用当前生效值。`api_key` 不给 = 沿用已存的 key。"""
+    """一套连接配置;没给的键沿用当前生效值。`api_key` 不给 = 沿用已存的 key。
+    `platform` 是预设时由它定 `provider` 与 `base_url`(不必再给;给了而不一致 → 400 `platform_locked`)。"""
 
+    platform = serializers.ChoiceField(choices=platforms.PLATFORM_IDS, required=False)
     provider = serializers.ChoiceField(choices=tuple(config.PROVIDERS), required=False)
     base_url = serializers.URLField(max_length=500, allow_blank=True, required=False)
     api_key = serializers.CharField(max_length=500, allow_blank=True, required=False, write_only=True,
@@ -27,6 +37,17 @@ class CandidateSerializer(serializers.Serializer):
     model = serializers.CharField(max_length=200, min_length=1, required=False)
     effort = serializers.ChoiceField(choices=config.EFFORTS, allow_blank=True, required=False)
     fallbacks = serializers.BooleanField(required=False)
+
+    def validate(self, attrs):
+        preset = platforms.PLATFORMS.get(attrs.get("platform"))
+        if preset and preset.provider:
+            fixed = {"provider": preset.provider, "base_url": preset.base_url}
+            clash = sorted(k for k, v in fixed.items() if k in attrs and attrs[k] != v)
+            if clash:
+                raise serializers.ValidationError({k: "由所选平台决定,不能改;要改请选「自定义」。" for k in clash},
+                                                  code="platform_locked")
+            attrs.update(fixed)
+        return attrs
 
 
 class ConfigUpdateSerializer(CandidateSerializer):
@@ -43,7 +64,7 @@ class ConfigUpdateSerializer(CandidateSerializer):
         if locked:
             raise serializers.ValidationError({name: "只读:评测身份由「创建评测身份」接口设置。" for name in locked},
                                               code="read_only_field")
-        return attrs
+        return super().validate(attrs)
 
 
 class ApiKeyStateSerializer(serializers.Serializer):
@@ -60,10 +81,21 @@ class ReadOnlySettingsSerializer(serializers.Serializer):
     retention_days = serializers.IntegerField()
 
 
+class PlatformSerializer(serializers.Serializer):
+    id = serializers.ChoiceField(choices=platforms.PLATFORM_IDS)
+    provider = serializers.ChoiceField(choices=tuple(config.PROVIDERS), allow_null=True, help_text="custom 为 null")
+    base_url = serializers.CharField(allow_null=True, help_text="custom 为 null")
+    tools = serializers.ChoiceField(choices=platforms.TOOLS, help_text="文档写明支持函数调用 = yes;model = 看模型")
+    needs_key = serializers.BooleanField()
+
+
 class ConfigSerializer(serializers.Serializer):
     enabled = serializers.BooleanField(help_text="实际生效:env 允许且页面开关为开")
     switch = serializers.BooleanField(help_text="页面上的总开关")
     env_enabled = serializers.BooleanField(help_text="部署的 ASSISTANT_ENABLED;为假时页面开关无效")
+    platform = serializers.ChoiceField(choices=platforms.PLATFORM_IDS,
+                                       help_text="存的平台;与当前连接对不上时按适配器 + 地址认,认不出是 custom")
+    platforms = PlatformSerializer(many=True, help_text="下拉里的预设(只读)")
     provider = serializers.CharField()
     base_url = serializers.CharField(allow_blank=True)
     model = serializers.CharField()
@@ -95,8 +127,35 @@ class ConnectivityResultSerializer(serializers.Serializer):
     error_kind = serializers.ChoiceField(choices=ERROR_KINDS, allow_null=True)
     latency_ms = serializers.IntegerField()
     tokens = serializers.DictField(child=serializers.IntegerField())
+    tools = serializers.BooleanField(allow_null=True,
+                                     help_text="连通时:模型真的调了一次测试工具为 true;没调或平台拒收工具为 false。未连通为 null")
     provider = serializers.CharField()
     model = serializers.CharField()
+
+
+class ModelEntrySerializer(serializers.Serializer):
+    name = serializers.CharField(help_text="模型名(平台 API 里的 id),填进「模型名」")
+    context = serializers.IntegerField(allow_null=True, help_text="平台给了上下文长度才有")
+
+
+class ModelListSerializer(serializers.Serializer):
+    status = serializers.ChoiceField(choices=("ok", "no_list", "failed"),
+                                     help_text="no_list = 平台不提供模型列表(404/405),不算出错")
+    error_kind = serializers.ChoiceField(choices=ERROR_KINDS, allow_null=True)
+    models = ModelEntrySerializer(many=True)
+
+
+class PriceReferenceRequestSerializer(serializers.Serializer):
+    platform = serializers.ChoiceField(choices=platforms.PLATFORM_IDS)
+    model = serializers.CharField(max_length=200)
+
+
+class PriceReferenceSerializer(serializers.Serializer):
+    found = serializers.BooleanField()
+    input = serializers.FloatField(allow_null=True, help_text="美元 / 百万 token")
+    output = serializers.FloatField(allow_null=True)
+    cache_read = serializers.FloatField(allow_null=True)
+    as_of = serializers.DateField(allow_null=True, help_text="价目表的取得日期;表取不到时为 null")
 
 
 class HallSerializer(serializers.Serializer):

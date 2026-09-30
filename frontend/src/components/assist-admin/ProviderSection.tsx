@@ -1,0 +1,396 @@
+"use client";
+
+import { useState } from "react";
+import {
+  assistAdminErrorCode,
+  type AssistAdminConfig,
+  type AssistAdminConnectivity,
+  type AssistAdminModelList,
+  type AssistAdminPlatformId,
+} from "@soulledger/core/api/assist-admin";
+import { useAssistPriceReference, useListAssistModels, useTestAssistConnection } from "@soulledger/core/hooks/useAssistAdmin";
+import { useI18n } from "@/src/contexts/I18nContext";
+import { Button } from "@/src/components/ui/Button";
+import { SelectField, TextField } from "@/src/components/ui/Field";
+import { MONO, SUBTLE, Section, Switch, count } from "./parts";
+import { connectionDraft, fingerprint, type Draft, type DraftKey } from "./draft";
+
+const WARN = "border-l-2 border-[oklch(var(--color-warning))] pl-3";
+const OK = "border-l-2 border-[oklch(var(--color-success))] pl-3";
+const BAD = "border-l-2 border-[oklch(var(--color-danger))] pl-3";
+const INK = "border-l-2 border-[oklch(var(--color-hairline))] pl-3";
+/** Canvas 2f's glyph for 「不提供模型列表」: a status mark (aria-hidden), not a missing value. */
+const NO_LIST_GLYPH = "—";
+
+type Price = NonNullable<Draft["prices"]>[string] & { source?: "litellm" | "manual"; as_of?: string | null };
+
+const hostOf = (url: string) => {
+  try {
+    return new URL(url).host;
+  } catch {
+    return url;
+  }
+};
+
+/**
+ * 「供应商」区块 (canvas provider-platforms, 2026-09-30): platform → key → model (fetch) → prices → test,
+ * top to bottom in the order an admin configures it. A preset fixes the adapter and base URL (read-only,
+ * collapsible); 「自定义」 edits them. The fields feed the page's one footer draft; the test lives here,
+ * under the prices, and a pass is reported up through `onTested` — changing platform, address, model or
+ * key still needs a passed test of that exact draft before the footer can save.
+ */
+export function ProviderSection({
+  config,
+  draft,
+  set,
+  onTested,
+  keyField,
+}: {
+  config: AssistAdminConfig;
+  draft: Draft;
+  set: (key: DraftKey, value: unknown) => void;
+  onTested: (fingerprint: string | null) => void;
+  keyField: React.ReactNode;
+}) {
+  const { t, formatDateTime } = useI18n();
+  const probe = useTestAssistConnection();
+  const listModels = useListAssistModels();
+  const priceRef = useAssistPriceReference();
+  const [tested, setTested] = useState<{ fp: string; result: AssistAdminConnectivity; at: string } | null>(null);
+  const [testError, setTestError] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [list, setList] = useState<AssistAdminModelList | null>(null);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+
+  const value = <K extends DraftKey>(key: K) => (key in draft ? draft[key] : (config as unknown as Record<string, unknown>)[key]) as Draft[K];
+  const platformId = value("platform") as AssistAdminPlatformId;
+  const platform = config.platforms.find((p) => p.id === platformId) ?? config.platforms[config.platforms.length - 1];
+  const custom = platform.provider == null;
+  const provider = value("provider") as string;
+  const baseUrl = (value("base_url") as string) ?? "";
+  const model = (value("model") as string) ?? "";
+  const name = (id: string) => t(`assist_admin.provider.platforms.${id}`);
+  const typeLabel = (p: string) => t(`assist_admin.provider.${p === "anthropic" ? "anthropic" : "openai_compatible"}`);
+
+  // Fetch is possible with a key typed in the draft, a saved key the backend may still use (same endpoint),
+  // or a platform that needs no key (Ollama).
+  const moved = "provider" in draft || "base_url" in draft;
+  const canFetch = !platform.needs_key || !!draft.api_key || (config.api_key.set && !moved && draft.api_key !== "");
+
+  const pick = (id: AssistAdminPlatformId) => {
+    const next = config.platforms.find((p) => p.id === id)!;
+    set("platform", id);
+    if (next.provider != null) {
+      set("provider", next.provider);
+      set("base_url", next.base_url);
+    }
+    // No key for Ollama: the saved key must not follow it there; going back to a keyed platform drops that.
+    if (!next.needs_key) set("api_key", "");
+    else if (draft.api_key === "") set("api_key", undefined);
+    setList(null);
+    setFetchError(null);
+    setOpen(false);
+  };
+
+  const prices = (value("prices") ?? {}) as Record<string, Price>;
+  const price = prices[model] as Price | undefined;
+  const fillReference = (forModel: string) => {
+    if (!forModel.trim()) return;
+    priceRef.mutate(
+      { platform: platformId, model: forModel },
+      {
+        onSuccess: (ref) => {
+          if (!ref.found || ref.input == null || ref.output == null) return;
+          const entry: Price = { input: ref.input, output: ref.output, source: "litellm", as_of: ref.as_of };
+          if (ref.cache_read != null) entry.cache_read = ref.cache_read;
+          set("prices", { ...prices, [forModel]: entry });
+        },
+      }
+    );
+  };
+  const setPrice = (field: "input" | "output", raw: string) => {
+    const base: Price = { ...(price ?? { input: 0, output: 0 }) };
+    delete base.as_of;
+    set("prices", { ...prices, [model]: { ...base, [field]: raw === "" ? NaN : Number(raw), source: "manual" } });
+  };
+  const shown = (v: unknown) => (typeof v === "number" && Number.isNaN(v) ? "" : String(v ?? ""));
+
+  const runFetch = () => {
+    setFetchError(null);
+    setList(null);
+    listModels.mutate(connectionDraft(draft), {
+      onSuccess: (result) => {
+        setSearch("");
+        setList(result);
+      },
+      onError: (err) => {
+        const code = assistAdminErrorCode(err);
+        setFetchError(t(code ? `assist_admin.errors.${code}` : "assist_admin.errors.test_failed"));
+      },
+    });
+  };
+  const choose = (id: string) => {
+    set("model", id);
+    setList(null);
+    if (!prices[id]) fillReference(id);
+  };
+
+  const runTest = () => {
+    const fp = fingerprint(draft);
+    setTestError(false);
+    probe.mutate(connectionDraft(draft), {
+      onSuccess: (result) => {
+        setTested({ fp, result, at: new Date().toISOString() });
+        onTested(result.ok ? fp : null);
+      },
+      onError: () => {
+        setTested(null);
+        setTestError(true);
+        onTested(null);
+      },
+    });
+  };
+  const stale = tested !== null && tested.fp !== fingerprint(draft);
+
+  const fetchMessage = (() => {
+    if (listModels.isPending) return { tone: INK, glyph: "…", text: t("assist_admin.provider.fetching") };
+    if (fetchError) return { tone: BAD, glyph: "✕", text: fetchError };
+    if (list?.status === "no_list")
+      return { tone: INK, glyph: NO_LIST_GLYPH, text: t("assist_admin.provider.fetch_no_list", { platform: custom ? hostOf(baseUrl) : name(platform.id) }) };
+    if (list?.status === "failed") {
+      const kind = list.error_kind ?? "other";
+      const text =
+        kind === "auth"
+          ? t("assist_admin.provider.fetch_err_key")
+          : kind === "connection" || kind === "timeout"
+            ? t("assist_admin.provider.fetch_err_conn", { host: hostOf(baseUrl || "https://api.anthropic.com") })
+            : t(`assist_admin.test.kind.${kind}`);
+      return { tone: BAD, glyph: "✕", text, code: kind };
+    }
+    if (!canFetch) return { tone: INK, glyph: "·", text: t("assist_admin.provider.fetch_need_key") };
+    return null;
+  })();
+
+  const models = list?.status === "ok" ? list.models : [];
+  const q = search.trim().toLowerCase();
+  const filtered = q ? models.filter((m) => m.name.toLowerCase().includes(q)) : models;
+
+  const r = tested?.result;
+  return (
+    <Section title={t("assist_admin.sections.provider")} id="aa-provider">
+      <div className="grid gap-3">
+        <div>
+          <SelectField
+            id="aa-platform"
+            label={t("assist_admin.provider.platform")}
+            value={platformId}
+            onChange={(e) => pick(e.target.value as AssistAdminPlatformId)}
+            options={config.platforms.map((p) => ({
+              value: p.id,
+              label: `${name(p.id)}　${t(`assist_admin.provider.tool_${p.tools}`)}`,
+            }))}
+          />
+          <p className={`mt-1 ${SUBTLE}`}>{t("assist_admin.provider.tool_legend", { test: t("assist_admin.test.run") })}</p>
+        </div>
+
+        {custom ? (
+          <>
+            <SelectField
+              id="aa-provider-type"
+              label={t("assist_admin.provider.type")}
+              value={provider}
+              onChange={(e) => set("provider", e.target.value)}
+              options={[
+                { value: "openai_compatible", label: t("assist_admin.provider.openai_compatible") },
+                { value: "anthropic", label: t("assist_admin.provider.anthropic") },
+              ]}
+            />
+            <TextField
+              id="aa-base-url"
+              label={t("assist_admin.provider.base_url")}
+              description={t("assist_admin.provider.base_url_hint")}
+              value={baseUrl}
+              onChange={(e) => set("base_url", e.target.value)}
+            />
+          </>
+        ) : (
+          <div data-testid="aa-preset">
+            <div className="flex min-w-0 items-baseline gap-2 text-xs text-[oklch(var(--color-ink-subtle))]">
+              {!open && (
+                <span className={`min-w-0 truncate ${MONO}`} title={platform.base_url ?? undefined} data-testid="aa-preset-summary">
+                  {typeLabel(platform.provider!)} · {platform.base_url}
+                </span>
+              )}
+              <button
+                type="button"
+                className="shrink-0 underline"
+                aria-expanded={open}
+                aria-controls="aa-preset-details"
+                onClick={() => setOpen((o) => !o)}
+              >
+                {open ? `${t("assist_admin.provider.details_hide")} ▾` : `${t("assist_admin.provider.details_show")} ▸`}
+              </button>
+            </div>
+            {open && (
+              <dl id="aa-preset-details" className="mt-2 grid gap-1 bg-[oklch(var(--color-surface-2))] p-3 text-sm">
+                <div className="flex flex-wrap gap-x-3">
+                  <dt className="text-[oklch(var(--color-ink-muted))]">{t("assist_admin.provider.type")}</dt>
+                  <dd>{typeLabel(platform.provider!)}</dd>
+                </div>
+                <div className="flex min-w-0 flex-wrap gap-x-3">
+                  <dt className="text-[oklch(var(--color-ink-muted))]">{t("assist_admin.provider.base_url")}</dt>
+                  <dd className={`min-w-0 break-all ${MONO}`}>{platform.base_url}</dd>
+                </div>
+                <p className={SUBTLE}>{t("assist_admin.provider.locked_note")}</p>
+              </dl>
+            )}
+          </div>
+        )}
+
+        {keyField}
+
+        <div>
+          <div className="flex min-w-0 items-end gap-2">
+            <TextField
+              id="aa-model"
+              className="min-w-0 flex-1"
+              label={t("assist_admin.provider.model")}
+              value={model}
+              onChange={(e) => set("model", e.target.value)}
+              onBlur={() => {
+                if ("model" in draft && !prices[model]) fillReference(model);
+              }}
+            />
+            <Button type="button" variant="ghost" className="shrink-0" disabled={!canFetch || listModels.isPending} onClick={runFetch}>
+              {t("assist_admin.provider.fetch_models")}
+            </Button>
+          </div>
+          {"model" in draft && <p className={`mt-1 ${SUBTLE}`}>{t("assist_admin.provider.model_was", { model: config.model })}</p>}
+          {fetchMessage && (
+            <div role="status" data-testid="aa-fetch-msg" className={`mt-2 text-sm ${fetchMessage.tone}`}>
+              <span aria-hidden="true" className={`${MONO} mr-2`}>
+                {fetchMessage.glyph}
+              </span>
+              {fetchMessage.text}
+              {"code" in fetchMessage && <span className={`${MONO} ${SUBTLE} ml-2`}>{fetchMessage.code}</span>}
+            </div>
+          )}
+          {list?.status === "ok" && (
+            <div className="mt-2 border border-[oklch(var(--color-hairline))]" data-testid="aa-model-list">
+              <div className="flex items-center gap-2 border-b border-[oklch(var(--color-hairline))] p-2">
+                <input
+                  type="search"
+                  aria-label={t("assist_admin.provider.fetch_search")}
+                  placeholder={t("assist_admin.provider.fetch_search")}
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="min-w-0 flex-1 bg-transparent text-sm outline-none"
+                />
+                <span className={`shrink-0 ${SUBTLE}`}>{t("assist_admin.provider.fetch_count", { n: count(models.length) })}</span>
+              </div>
+              <ul className="max-h-60 overflow-y-auto">
+                {filtered.map((m) => (
+                  <li key={m.name}>
+                    <button
+                      type="button"
+                      aria-pressed={m.name === model}
+                      onClick={() => choose(m.name)}
+                      className={`flex w-full min-w-0 items-center gap-3 px-3 py-2 text-left text-sm ${MONO} ${
+                        m.name === model ? "bg-[oklch(var(--color-surface-2))] shadow-[inset_2px_0_0_oklch(var(--color-ink))]" : ""
+                      }`}
+                    >
+                      <span className="min-w-0 flex-1 truncate" title={m.name}>
+                        {m.name}
+                      </span>
+                      {m.context != null && <span className={SUBTLE}>{Math.round(m.context / 1024)}K</span>}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              <p className={`border-t border-[oklch(var(--color-hairline))] p-2 ${SUBTLE}`}>{t("assist_admin.provider.fetch_manual_hint")}</p>
+            </div>
+          )}
+        </div>
+
+        <SelectField
+          id="aa-effort"
+          label={t("assist_admin.provider.effort")}
+          description={t("assist_admin.provider.effort_hint")}
+          value={value("effort") as string}
+          onChange={(e) => set("effort", e.target.value)}
+          options={["", "low", "medium", "high"].map((v) => ({ value: v, label: t(`assist_admin.provider.effort_${v || "default"}`) }))}
+        />
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-sm">{t("assist_admin.provider.fallbacks")}</p>
+            <p className={SUBTLE}>{t("assist_admin.provider.fallbacks_hint")}</p>
+          </div>
+          <Switch checked={value("fallbacks") as boolean} label={t("assist_admin.provider.fallbacks")} onChange={(on) => set("fallbacks", on)} />
+        </div>
+
+        <fieldset className={price ? undefined : WARN} data-testid="aa-price">
+          <legend className="text-sm">{t("assist_admin.provider.price", { model })}</legend>
+          <div className="mt-1 grid grid-cols-2 gap-3">
+            <TextField id="aa-price-in" type="number" min={0} step="any" label={t("assist_admin.provider.price_input")} value={shown(price?.input)} onChange={(e) => setPrice("input", e.target.value)} />
+            <TextField id="aa-price-out" type="number" min={0} step="any" label={t("assist_admin.provider.price_output")} value={shown(price?.output)} onChange={(e) => setPrice("output", e.target.value)} />
+          </div>
+          <p className="mt-1 flex flex-wrap gap-x-3 text-xs" data-testid="aa-price-note">
+            {!price ? (
+              <span className="font-semibold text-[oklch(var(--color-warning))]">! {t("assist_admin.provider.price_missing")}</span>
+            ) : price.source === "litellm" ? (
+              <span className="text-[oklch(var(--color-ink-subtle))]">{t("assist_admin.provider.price_ref", { date: price.as_of ?? "" })}</span>
+            ) : (
+              <>
+                <span className="text-[oklch(var(--color-ink-muted))]">{t("assist_admin.provider.price_manual")}</span>
+                <button type="button" className="underline" disabled={priceRef.isPending} onClick={() => fillReference(model)}>
+                  {t("assist_admin.provider.price_restore")}
+                </button>
+              </>
+            )}
+          </p>
+        </fieldset>
+
+        <div data-testid="aa-provider-test">
+          <Button type="button" variant="ghost" onClick={runTest} loading={probe.isPending}>
+            {tested ? t("assist_admin.test.again") : t("assist_admin.test.run")}
+          </Button>
+          {probe.isPending && (
+            <p role="status" className={`mt-2 border border-dashed border-[oklch(var(--color-ink-subtle))] px-3 py-2 text-sm`}>
+              {t("assist_admin.provider.test_probe")}
+            </p>
+          )}
+          {testError && (
+            <p role="alert" className="mt-2 text-xs text-[oklch(var(--color-danger))]">
+              {t("assist_admin.errors.test_failed")}
+            </p>
+          )}
+          {r && !probe.isPending && (
+            <div role="status" data-testid="aa-test-result" className={`mt-3 text-sm ${!r.ok ? BAD : r.tools ? OK : WARN}`}>
+              <p className="font-semibold">
+                {r.ok ? t(r.tools ? "assist_admin.provider.test_ok_tool_yes" : "assist_admin.provider.test_ok_tool_no") : t("assist_admin.test.failed")}
+              </p>
+              {r.ok && !r.tools && <p>{t("assist_admin.provider.test_no_tool")}</p>}
+              {!r.ok && r.error_kind && (
+                <p>
+                  {t(`assist_admin.test.kind.${r.error_kind}`)} <span className={MONO}>{r.error_kind}</span>
+                </p>
+              )}
+              <p className={`${MONO} ${SUBTLE}`}>
+                {t("assist_admin.test.detail", {
+                  provider: r.provider,
+                  model: r.model,
+                  latency: `${count(r.latency_ms)} ms`,
+                  input: count(r.tokens.input ?? 0),
+                  output: count(r.tokens.output ?? 0),
+                  at: formatDateTime(tested!.at),
+                })}
+              </p>
+              {stale && <p className="text-[oklch(var(--color-warning))]">{t("assist_admin.test.stale")}</p>}
+            </div>
+          )}
+        </div>
+      </div>
+    </Section>
+  );
+}
