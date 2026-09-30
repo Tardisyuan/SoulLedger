@@ -329,69 +329,63 @@ describe("the cold start (补足 C18)", () => {
   });
   const layout = () => fireEvent(screen.getByTestId("cold-start-skip", H), "layout", { nativeEvent: { layout: { width: 390, height: 844 } } });
 
-  it("stamps, hides the native splash only once its own first frame is laid out, is usable at 480 and gone at 720", async () => {
-    render(<ColdStart session={{ status: "signedOut" }} scheme="light" />);
+  it("hides the native splash only once its own first frame is laid out, is usable at 480 and gone at 720", async () => {
+    render(<ColdStart session={{ status: "signedOut" }} />);
     await act(async () => {});
     expect(screen.getByTestId("cold-start", H)).toBeTruthy();
     expect(hide).not.toHaveBeenCalled();
     layout();
     expect(hide).toHaveBeenCalledTimes(1);
-    // Before sign-in: the neutral seal — no glyph.
-    expect(screen.queryByTestId("cold-start-seal-glyph", H)).toBeNull();
+    act(() => jest.advanceTimersByTime(motion.coldStartInteractive - 1));
     expect(screen.getByTestId("cold-start", H).props.pointerEvents).toBe("auto");
-    act(() => jest.advanceTimersByTime(motion.coldStartInteractive));
+    act(() => jest.advanceTimersByTime(1));
     expect(screen.getByTestId("cold-start", H).props.pointerEvents).toBe("none");
     act(() => jest.advanceTimersByTime(motion.coldStart - motion.coldStartInteractive));
     expect(screen.queryByTestId("cold-start", H)).toBeNull();
   });
 
-  it("signed in: the civilization's seal and glyph", async () => {
-    render(<ColdStart session={signedIn()} scheme="dark" />);
+  it("frame 0 is the native splash's picture: app.json's image, at its imageWidth, on its ground — at rest", async () => {
+    const plugins = require("../../app.json").expo.plugins as unknown[];
+    const [, splash] = plugins.find((p) => Array.isArray(p) && p[0] === "expo-splash-screen") as [string, Record<string, never>];
+    // One picture in both modes: the gold mark is too faint on paper.
+    expect(splash).toMatchObject({ image: "./assets/splash-mark.png", backgroundColor: "#131211", dark: { image: "./assets/splash-mark.png", backgroundColor: "#131211" } });
+    render(<ColdStart session={signedIn()} />);
     await act(async () => {});
-    expect(screen.getByTestId("cold-start-seal-glyph", H).props.children).toBe("冥");
-    expect(flat(screen.getByTestId("cold-start-skip", H)).backgroundColor).toBe("#100e0d");
+    expect(flat(screen.getByTestId("cold-start-skip", H)).backgroundColor).toBe(splash.backgroundColor);
+    const mark = screen.getByTestId("cold-start-mark", H);
+    expect(mark.props.source).toBe(require("../../assets/splash-mark.png"));
+    expect(flat(mark)).toMatchObject({ width: splash.imageWidth, height: splash.imageWidth });
+    // Reanimated's jest mock never re-renders a style, so the tree shows the first frame.
+    expect(flat(screen.getByTestId("cold-start-mark-layer", H))).toMatchObject({ opacity: 1, transform: [{ translateY: 0 }, { scale: 1 }] });
+    // Signed in or not, the same mark: no seal, no glyph.
+    expect(screen.queryByTestId("cold-start-seal", H)).toBeNull();
   });
 
-  it("印泥 120–320: the civilization seal's edge scan soaks in to 0.8; the neutral seal has no scan to show", async () => {
-    // Reanimated's jest mock settles a timing at once and never re-renders a style, so the curve is
-    // read off the calls that build it; the first frame is read off the tree.
+  it("the mark recedes by 480 — up 8, to 0.96, out — and the ground fades 480 → 720", async () => {
+    // The curve is read off the calls that build it.
     const R = jest.requireMock("react-native-reanimated") as Record<string, (...a: unknown[]) => unknown>;
     const timing = jest.spyOn(R, "withTiming");
     const delay = jest.spyOn(R, "withDelay");
-    render(<ColdStart session={signedIn()} scheme="light" />);
+    render(<ColdStart session={{ status: "signedOut" }} />);
     await act(async () => {});
-    // Frame 0: the scan is not there yet — the seal lands on paper, then the ink soaks in.
-    expect(flat(screen.getByTestId("cold-start-seal-ring-layer", H)).opacity).toBe(0);
-    const soak = motion.stampBloom / 2;
-    expect(timing.mock.calls).toEqual(expect.arrayContaining([[0.95, { duration: soak }], [0.8, { duration: soak }]]));
-    // It starts at the press (120) and is done by 320.
-    expect(motion.stampDrop + motion.stampBloom).toBe(320);
-    expect(delay.mock.calls.filter(([ms]) => ms === motion.stampDrop).length).toBeGreaterThanOrEqual(2); // press and 印泥
+    const recede = { duration: motion.coldStartInteractive, easing: expect.anything() };
+    expect(timing.mock.calls).toEqual(expect.arrayContaining([[-8, recede], [0.96, recede], [0, recede]]));
+    expect(timing.mock.calls).toContainEqual([0, { duration: motion.coldStart - motion.coldStartInteractive, easing: expect.anything() }]);
+    expect(delay.mock.calls.map(([ms]) => ms)).toEqual([motion.coldStartInteractive]);
     timing.mockRestore();
     delay.mockRestore();
-    screen.unmount();
-    // Before sign-in: the neutral seal, and no scan layer at all (C18: 中性皮没有印泥层).
-    coldStart.played = false;
-    render(<ColdStart session={{ status: "signedOut" }} scheme="light" />);
-    await act(async () => {});
-    expect(screen.getByTestId("cold-start-seal", H)).toBeTruthy();
-    expect(screen.queryByTestId("cold-start-seal-ring-layer", H)).toBeNull();
-    screen.unmount();
-    // A seal outside the cold start has no such layer style: its scan is simply there.
-    render(<Seal testID="still" civ="cn" size={52} theme={themeFor("CHINESE", "light")} />);
-    expect(flat(screen.getByTestId("still-ring-layer", H)).opacity).toBeUndefined();
   });
 
   it("a tap skips to the end", async () => {
-    render(<ColdStart session={{ status: "signedOut" }} scheme="light" />);
+    render(<ColdStart session={{ status: "signedOut" }} />);
     await act(async () => {});
     fireEvent.press(screen.getByTestId("cold-start-skip", H));
     expect(screen.queryByTestId("cold-start", H)).toBeNull();
   });
 
-  it("reduce motion: no stamp — the splash hides and the app is there", async () => {
+  it("reduce motion: nothing plays — the splash hides and the app is there", async () => {
     reduced = true;
-    render(<ColdStart session={{ status: "signedOut" }} scheme="light" />);
+    render(<ColdStart session={{ status: "signedOut" }} />);
     await act(async () => {});
     expect(screen.queryByTestId("cold-start", H)).toBeNull();
     expect(hide).toHaveBeenCalledTimes(1);
@@ -399,14 +393,14 @@ describe("the cold start (补足 C18)", () => {
 
   it("the civilization's welcome is due: that plays instead, never both", async () => {
     const first = signedIn({ welcomed_civilizations: [] });
-    render(<ColdStart session={first} scheme="light" />);
+    render(<ColdStart session={first} />);
     await act(async () => {});
     expect(screen.queryByTestId("cold-start", H)).toBeNull();
     expect(hide).toHaveBeenCalledTimes(1);
   });
 
-  it("waits on a booting session, but only so long: then the neutral seal", async () => {
-    render(<ColdStart session={{ status: "booting" }} scheme="light" />);
+  it("waits on a booting session, but only so long", async () => {
+    render(<ColdStart session={{ status: "booting" }} />);
     await act(async () => {});
     expect(screen.queryByTestId("cold-start", H)).toBeNull();
     await act(async () => {
@@ -416,11 +410,11 @@ describe("the cold start (补足 C18)", () => {
   });
 
   it("once per process: a remount (sign out, sign in) is not a cold start", async () => {
-    const { unmount } = render(<ColdStart session={{ status: "signedOut" }} scheme="light" />);
+    const { unmount } = render(<ColdStart session={{ status: "signedOut" }} />);
     await act(async () => {});
     fireEvent.press(screen.getByTestId("cold-start-skip", H));
     unmount();
-    render(<ColdStart session={signedIn()} scheme="light" />);
+    render(<ColdStart session={signedIn()} />);
     await act(async () => {});
     expect(screen.queryByTestId("cold-start", H)).toBeNull();
   });

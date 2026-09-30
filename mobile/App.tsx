@@ -16,7 +16,7 @@ import { SessionProvider } from "./src/session";
 // Installed at module load, before any core module can read a store.
 installMobilePlatform();
 installNotificationHandler();
-// The native splash (an empty seal frame) stays until the cold start draws the same frame over it (src/coldStart.tsx).
+// The native splash (the balance mark on ink) stays until the cold start draws the same picture over it (src/coldStart.tsx).
 void SplashScreen.preventAutoHideAsync().catch(() => {});
 
 export default function App() {
