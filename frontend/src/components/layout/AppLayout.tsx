@@ -5,7 +5,8 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Popover } from "@base-ui/react/popover";
-import { notificationsApi, type Notification, type PaginatedResponse } from "@soulledger/core/api";
+import { LazyMotion, domMax } from "motion/react";
+import { notificationsApi, type Notification } from "@soulledger/core/api";
 import { notificationKeys } from "@soulledger/core/query_keys";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
@@ -14,71 +15,33 @@ import { authApi } from "@soulledger/core/api";
 import { SettingsDrawer } from "@/src/components/settings/SettingsDrawer";
 import { ConnectionBanner } from "@/src/components/connection-status";
 import { useSidebarMenus, type SidebarMenu } from "@/src/hooks/useSidebarMenus";
-import { useDrawerA11y } from "@/src/components/layout/useDrawerA11y";
-import { Breadcrumb } from "@/src/components/layout/Breadcrumb";
-import { SidebarGroup, groupOfPath } from "@/src/components/layout/SidebarMenuItem";
+import { Breadcrumb, useBreadcrumbs } from "@/src/components/layout/Breadcrumb";
+import { BottomBar, Pillar, groupOfPath } from "@/src/components/layout/Pillar";
 import { LogoutConfirmDialog } from "@/src/components/layout/LogoutConfirmDialog";
+import { Plaque } from "@/src/components/plaque/Plaque";
 import { useTheme } from "@/src/contexts/ThemeContext";
 import { DomainEnum } from "@/src/components/ui/DomainValue";
-// ≥ 1024 px shows the 200 px sidebar; below it (and in compact mode) the 56 px number rail.
-import { useWideViewport } from "@/src/hooks/useWideViewport";
-
-const NAV_MODE_KEY = "soulledger_nav_mode";
 
 /**
- * The shell, 规范 v1 §3「同一个壳」: 200 px sidebar + 40 px masthead
- * (breadcrumb · notifications · user menu) + content with 40 px side margins.
+ * The shell, 规范 v2「朱印」:左侧立柱(`Pillar`,60 / 88,四文明共用的近黑底)+ 页头匾
+ * (`Plaque`:匾色底、题字、印、纹样带,面包屑在匾的元数据位)+ 内容。
  *
- * - ≤ 1024 px the sidebar is the 56 px number rail (01–06); hovering a group
- *   floats its pages. The settings drawer's "compact" mode keeps the rail on
- *   wide screens too.
- * - < 768 px the sidebar is a drawer opened from ☰ in a 48 px masthead.
- * - The connection state left the masthead: it appears only when the link is
- *   down, as a warning bar under it (`ConnectionBanner`).
- * - Language / theme / settings / sign-out moved into the user menu (brief §4.4:
- *   eight masthead controls became three; nothing was removed).
+ * - < 768 px 立柱收成底栏(`BottomBar`:前 4 个一级项 +「更多」底部抽屉)。v1 的 ☰ 抽屉
+ *   与 56px 编号栏(以及设置里的「经典 / 紧凑」)一并撤掉 —— 立柱只有一种宽度规则。
+ * - 连接状态只在断开时出现,是匾下方的一条警示条(`ConnectionBanner`),浮在内容上,
+ *   不推动内容。
+ * - 语言 / 主题 / 设置 / 退出在用户菜单里(brief §4.4)。
  */
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const { t, formatDateTime } = useI18n();
-  const [navMode, setNavMode] = useState<"classic" | "compact">("classic");
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { user, logout } = useTenant();
   const { theme, toggleTheme } = useTheme();
   const router = useRouter();
   const queryClient = useQueryClient();
   const pathname = usePathname();
-  const [prevPathname, setPrevPathname] = useState(pathname);
-  const wide = useWideViewport();
-  const rail = navMode === "compact" || !wide;
-
-  // Close the mobile drawer on navigation (RouteProgress owns the progress bar).
-  useEffect(() => {
-    if (pathname !== prevPathname) {
-      setPrevPathname(pathname);
-      setMobileMenuOpen(false);
-    }
-  }, [pathname, prevPathname]);
-
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(NAV_MODE_KEY);
-      if (saved === "compact" || saved === "classic") setNavMode(saved);
-    } catch {
-      // localStorage unavailable (SSR or private browsing)
-    }
-  }, []);
-
-  const handleNavModeChange = (mode: "classic" | "compact") => {
-    setNavMode(mode);
-    try {
-      localStorage.setItem(NAV_MODE_KEY, mode);
-    } catch {
-      // localStorage unavailable
-    }
-  };
 
   const handleLogout = async () => {
     try { await authApi.logout(); } catch (err) { console.error("Logout failed:", err); }
@@ -103,8 +66,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     return out;
   }, [menus]);
 
-  // Accordion: one group open at a time; the current page's group by default,
-  // and again whenever navigation lands in another group.
+  // 二级栏:当前页所在的一级项默认打开;导航落进另一组时跟过去。点当前打开的那一项收起。
   const currentGroup = useMemo(() => groupOfPath(menus, pathname, allMenuPaths), [menus, pathname, allMenuPaths]);
   const [openGroup, setOpenGroup] = useState<number | null>(null);
   const [openFor, setOpenFor] = useState<number | null>(null);
@@ -112,6 +74,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     setOpenFor(currentGroup);
     setOpenGroup(currentGroup);
   }
+  const crumbs = useBreadcrumbs(menus);
+  const title = crumbs.length ? crumbs[crumbs.length - 1].label : t("nav.title");
 
   // `count`, not `results.length`: results is one page, the badge is the whole unread inbox. (FL-15)
   const { data: unread } = useQuery({
@@ -126,100 +90,39 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const unreadCount = unread?.count ?? 0;
   const notifications = unread?.results ?? [];
 
-  // `nav.mobile_menu` may be missing from a bundle; `t()` then echoes the key.
-  const mobileMenuName = t("nav.mobile_menu");
-  const drawerLabel = mobileMenuName === "nav.mobile_menu" ? "导航菜单" : mobileMenuName;
-  const { drawerRef, drawerProps } = useDrawerA11y<HTMLElement>({
-    open: mobileMenuOpen,
-    onClose: () => setMobileMenuOpen(false),
-    label: drawerLabel,
-  });
-
-  const sidebar = (collapsed: boolean) => (
-    <>
-      <Link
-        href="/"
-        prefetch={true}
-        className={`flex h-10 shrink-0 items-center border-b border-[oklch(var(--color-block))] font-mono text-2xs tracking-label text-[oklch(var(--color-ink))] ${collapsed ? "justify-center" : "px-3"}`}
-      >
-        {collapsed ? "SL" : "SOULLEDGER"}
-      </Link>
-      <nav aria-label={drawerLabel} className="flex-1 overflow-y-auto">
-        {menus.length === 0 && !collapsed ? (
-          <p className="px-3 py-4 text-xs text-[oklch(var(--color-ink-subtle))]">{t("menus.no_menus")}</p>
-        ) : null}
-        {menus.map((menu, index) => (
-          <SidebarGroup
-            key={menu.id}
-            menu={menu}
-            index={index}
-            collapsed={collapsed}
-            open={openGroup === menu.id}
-            onToggle={() => setOpenGroup((g) => (g === menu.id ? null : menu.id))}
-            allMenuPaths={allMenuPaths}
-          />
-        ))}
-      </nav>
-      {/* 底部原来的暗条删除;版本号放在最底一行。 */}
-      <p className={`shrink-0 border-t border-[oklch(var(--color-line))] py-2 font-mono text-2xs text-[oklch(var(--color-ink-subtle))] ${collapsed ? "text-center" : "px-3"}`}>
-        {collapsed ? "v0.1" : t("footer.version")}
-      </p>
-    </>
-  );
+  const onPlaque = "focus-ring-pillar text-xs text-[oklch(var(--color-on-main))] hover:underline";
 
   return (
-    <div className={`min-h-screen bg-[oklch(var(--color-canvas))] md:grid ${rail ? "md:grid-cols-[56px_1fr]" : "md:grid-cols-[200px_1fr]"}`}>
-      {/* Mobile scrim: a real button (it is a click target), hidden by `visibility` so it can fade. */}
-      <button
-        type="button"
-        aria-label={t("common.close")}
-        className={`fixed inset-0 z-scrim bg-[oklch(var(--color-scrim)/var(--scrim-alpha))] md:hidden transition-[opacity,visibility] duration-200 ${
-          mobileMenuOpen ? "visible opacity-100" : "invisible opacity-0"
-        }`}
-        onClick={() => setMobileMenuOpen(false)}
-      />
-
-      {/* Desktop / tablet: in the grid, sticky. */}
-      <aside className="sticky top-0 hidden h-screen flex-col border-r border-[oklch(var(--color-line))] bg-[oklch(var(--color-canvas))] md:flex">
-        {sidebar(rail)}
+    <LazyMotion features={domMax}>
+    <div className="min-h-screen bg-[oklch(var(--color-canvas))] md:grid md:grid-cols-[auto_1fr]">
+      <aside className="sticky top-0 hidden h-screen md:block">
+        <Pillar
+          menus={menus}
+          allMenuPaths={allMenuPaths}
+          currentId={currentGroup}
+          openId={openGroup}
+          onToggle={(id) => setOpenGroup((g) => (g === id ? null : id))}
+        />
       </aside>
 
-      {/* Phone: a drawer from ☰. */}
-      <aside
-        ref={drawerRef}
-        {...drawerProps}
-        className={`fixed left-0 top-0 z-sidebar flex h-full w-50 flex-col border-r border-[oklch(var(--color-line))] bg-[oklch(var(--color-canvas))] transition-transform duration-200 md:hidden ${
-          mobileMenuOpen ? "translate-x-0" : "-translate-x-full"
-        }`}
-      >
-        {sidebar(false)}
-      </aside>
-
-      <main className="min-w-0">
-        <header className="sticky top-0 z-masthead flex h-12 items-center gap-3 border-b border-[oklch(var(--color-block))] bg-[oklch(var(--color-canvas))] px-4 md:h-10 md:px-10">
-          <button
-            type="button"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="flex h-10 w-10 items-center justify-center text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))] md:hidden"
-            aria-label={mobileMenuOpen ? t("nav.collapse_menu") : t("nav.expand_menu")}
-            aria-expanded={mobileMenuOpen}
-          >
-            ☰
-          </button>
-
-          <Breadcrumb menus={menus} />
-
+      <main className="min-w-0 max-md:pb-14">
+        {/* 匾吸顶;连接警示条挂在匾的下沿、浮在内容上,不推动内容 —— 它在加载后一会儿
+            才出现,在文档流里那 28px 的位移曾把按钮从指针下挪走(E2E 头像测试 16 次里
+            1 次点空)。挂在匾里而不是另设一个吸顶锚点,匾的高度随题字档位变,锚点不用跟着算。 */}
+        <header className="sticky top-0 z-masthead">
+          {/* 只有一段时面包屑就是题字本身,不重复画。 */}
+          <Plaque title={title} meta={crumbs.length > 1 ? <Breadcrumb menus={menus} /> : undefined}>
           <div className="flex shrink-0 items-center gap-4 whitespace-nowrap">
             {user ? (
               <Popover.Root>
                 <Popover.Trigger
-                  className="flex items-center gap-1 text-xs text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))]"
+                  className={`flex items-center gap-1 ${onPlaque}`}
                   aria-label={unreadCount > 0 ? `${t("notifications.title")} (${unreadCount})` : t("notifications.title")}
                 >
                   <span className="hidden sm:inline">{t("notifications.title")}</span>
                   <span aria-hidden="true" className="sm:hidden">◔</span>
                   {unreadCount > 0 ? (
-                    <span className="font-mono text-2xs text-[oklch(var(--color-accent))]">{unreadCount > 99 ? "99+" : unreadCount}</span>
+                    <span className="font-mono text-2xs">{unreadCount > 99 ? "99+" : unreadCount}</span>
                   ) : null}
                 </Popover.Trigger>
                 <Popover.Portal>
@@ -256,7 +159,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               <Popover.Root open={userMenuOpen} onOpenChange={setUserMenuOpen}>
                 <Popover.Trigger
                   data-testid="user-menu"
-                  className="max-w-40 truncate text-xs text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))]"
+                  className={`max-w-40 truncate ${onPlaque}`}
                   title={user.display_name || user.username}
                 >
                   {user.display_name || user.username} ▾
@@ -319,39 +222,30 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 </Popover.Portal>
               </Popover.Root>
             ) : (
-              <Link href="/login" className="border border-[oklch(var(--color-ink))] px-3 py-1 text-xs font-medium text-[oklch(var(--color-ink))]">
+              <Link href="/login" className={`border border-[oklch(var(--color-on-main))] px-3 py-1 font-medium ${onPlaque}`}>
                 {t("auth.login")}
               </Link>
             )}
           </div>
-        </header>
-
-        {/* Zero-height sticky anchor: the banner floats over the page's top
-            padding instead of pushing the page down. It appears a moment
-            after load when the socket fails, and in the flow that 28px shift
-            moved buttons under the pointer mid-click — the E2E avatar test
-            clicked 编辑资料 into empty space 1 time in 16. */}
-        <div className="sticky top-12 z-filters h-0 md:top-10">
-          <div className="absolute inset-x-0 top-0">
+          </Plaque>
+          <div className="absolute inset-x-0 top-full z-filters">
             <ConnectionBanner />
           </div>
-        </div>
+        </header>
 
         <div data-testid="app-content" className="min-h-[calc(100vh-2.5rem)]">{children}</div>
       </main>
 
-      <SettingsDrawer
-        open={settingsOpen}
-        onClose={() => setSettingsOpen(false)}
-        navMode={navMode}
-        onNavModeChange={handleNavModeChange}
-      />
+      <BottomBar menus={menus} allMenuPaths={allMenuPaths} currentId={currentGroup} />
+
+      <SettingsDrawer open={settingsOpen} onClose={() => setSettingsOpen(false)} />
       <LogoutConfirmDialog
         open={logoutConfirmOpen}
         onClose={() => setLogoutConfirmOpen(false)}
         onConfirm={handleLogout}
       />
     </div>
+    </LazyMotion>
   );
 }
 

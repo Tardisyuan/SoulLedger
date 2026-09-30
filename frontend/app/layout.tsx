@@ -7,6 +7,7 @@ import "@fontsource-variable/noto-sans-sc";
 import "@fontsource-variable/noto-serif-sc";
 import "./globals.css";
 import { fontVariables } from "./fonts";
+import { plaqueFontVariables } from "@/src/components/plaque/fonts";
 import { ToastProvider } from "@/src/contexts/ToastContext";
 import { I18nProvider } from "@/src/contexts/I18nContext";
 import { BCP47_FOR_LOCALE, isLocale, LOCALE_COOKIE } from "@soulledger/core/config/locale";
@@ -82,7 +83,7 @@ export default async function RootLayout({
     // 实测过:不加这一行,首页在 dev overlay 里稳定报一条 "1 Issue"。
     <html
       lang={locale ? BCP47_FOR_LOCALE[locale] : BCP47_FOR_LOCALE["zh-Hans"]}
-      className={fontVariables}
+      className={`${fontVariables} ${plaqueFontVariables}`}
       suppressHydrationWarning
     >
       <head>

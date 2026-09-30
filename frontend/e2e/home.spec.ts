@@ -196,8 +196,9 @@ test.describe("Authenticated shell", () => {
     // Not redirected — the seeded cookie satisfied middleware.
     await expect(page).toHaveURL(/\/dashboard/);
 
-    // Two <aside>s since 规范 v1: the in-grid sidebar (md+) and the phone drawer. The visible one.
-    const sidebar = page.locator("aside:visible");
+    // 规范 v2:md+ 是立柱,< 768 是底栏,两者都是名为「导航菜单」的 <nav>,各在自己的宽度下
+    // 显示。取看得见的那一个。四个名字恰好是菜单顺序里的前四个 —— 底栏也放得下。
+    const sidebar = page.locator("nav[aria-label='导航菜单']:visible");
     await expect(sidebar).toBeVisible();
     for (const [name, href] of [
       ["灵魂", "/souls"],

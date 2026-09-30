@@ -177,7 +177,7 @@ export function UnsavedBar({
     <div
       role="region"
       aria-label={t("permissions.matrix.unsaved_region")}
-      className="sticky bottom-0 z-40 mt-3 flex flex-wrap items-center gap-3 border-t border-[oklch(var(--color-block))] bg-[oklch(var(--color-canvas))] px-4 py-2"
+      className="sticky bottom-(--bottom-bar) z-40 mt-3 flex flex-wrap items-center gap-3 border-t border-[oklch(var(--color-block))] bg-[oklch(var(--color-canvas))] px-4 py-2"
     >
       <span className="text-sm text-[oklch(var(--color-ink))]" aria-live="polite">
         {t("permissions.matrix.pending_cells", { n: String(count) })}

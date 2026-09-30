@@ -16,15 +16,9 @@ import {
   REFRESH_TOKEN_KEY,
   platform,
 } from "@soulledger/core/platform";
-import { CIVILIZATION_SHORT_CODES } from "@soulledger/core/config/civilizations";
+import { civSkinOf } from "@/src/lib/civSkin";
 
-const CIV_SKINS = new Set(Object.values(CIVILIZATION_SHORT_CODES));
-
-/** `CN_DIYU` → `cn`;不认得的代码与未登录 → `neutral`。 */
-export function civSkinOf(tenantCode: string | null): string {
-  const prefix = tenantCode?.split("_")[0].toLowerCase();
-  return prefix && CIV_SKINS.has(prefix) ? prefix : "neutral";
-}
+export { civSkinOf };
 
 // ── Types ────────────────────────────────────────────────────────────
 
@@ -39,6 +33,10 @@ export interface TenantInfo {
   id?: number;
   code: string;
   display_name: string;
+  /** `LoginTenantRefSerializer`(登录与 `/auth/profile/`):匾的文明与 1–2 个印文,空 = 文明默认。
+   *  可选:24 小时内缓存的旧用户信封里没有这两项。 */
+  civilization?: string;
+  seal_glyphs?: string[];
 }
 
 // Permissions stored separately in memory only (not localStorage) for security

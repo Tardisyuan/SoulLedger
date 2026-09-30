@@ -31,6 +31,7 @@ import { DeferDialog, ReassignDialog, claimRefusalMessage } from "@/src/componen
 import { ROW_LINK } from "@/components/ui/data-table";
 import { useHotkeys } from "@/src/lib/hotkeys";
 import { ClaimAvatar } from "@/src/components/judgment/ClaimAvatar";
+import { RowMark, ROW_MARK_ROW, isMinePending } from "@/src/components/judgment/RowMark";
 import { MISSING_LABEL_KEY } from "@/src/lib/domainDisplay";
 
 /**
@@ -326,6 +327,7 @@ export function JudgmentClaimQueue() {
                   const isFocus = focused === j.id;
                   const days = waitingDays(j);
                   const mine = j.claimed_by != null && j.claimed_by === user?.id;
+                  const marked = isMinePending(j, user?.id);
                   return (
                     <tr
                       key={j.id}
@@ -333,7 +335,7 @@ export function JudgmentClaimQueue() {
                       data-focused={isFocus ? "true" : undefined}
                       onFocus={() => setFocused(j.id)}
                       className={`relative h-7 max-sm:h-11 border-b border-[oklch(var(--color-rule))] hover:bg-[oklch(var(--color-surface-2))] ${
-                        isSel || isFocus ? "bg-[oklch(var(--color-surface-2))] shadow-[inset_3px_0_0_oklch(var(--color-accent))]" : ""
+                        isSel || isFocus ? "bg-[oklch(var(--color-surface-2))] shadow-[inset_3px_0_0_oklch(var(--color-accent))]" : marked ? ROW_MARK_ROW : ""
                       }`}
                     >
                       {canExecute && (
@@ -348,6 +350,7 @@ export function JudgmentClaimQueue() {
                         </td>
                       )}
                       <td className="px-2 font-medium text-[oklch(var(--color-ink))] whitespace-nowrap max-w-56 truncate" title={j.soul_name || undefined}>
+                        {marked && <RowMark />}
                         <Link href={`/judgment/${j.id}`} data-row-link={j.id} className={ROW_LINK}>
                           {j.soul_name ? j.soul_name : <MissingValue kind="unrecorded" reason="soul_name 未随判决返回" />}
                         </Link>

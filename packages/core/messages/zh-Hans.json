@@ -14,7 +14,8 @@
     "language": "界面语言",
     "theme_light": "切换到浅色模式",
     "theme_dark": "切换到深色模式",
-    "mobile_menu": "导航菜单"
+    "mobile_menu": "导航菜单",
+    "more": "更多"
   },
   "auth": {
     "login": "登录",
@@ -1122,7 +1123,9 @@
       "claimed_next": "打开下一件",
       "claimed_back": "回到队列",
       "session_deferred": "本次暂缓 {{n}} 件",
-      "restore_all": "全部放回队列"
+      "restore_all": "全部放回队列",
+      "key_claim": "认领当前这一件",
+      "reassigned": "已改派 · {{name}} → {{to}}"
     },
     "detail": {
       "loading": "加载审判中...",
@@ -2290,7 +2293,8 @@
       "rebirth_applications": "转生申请",
       "soul_inbox": "殿司收件箱",
       "sentence_requests": "受刑请求"
-    }
+    },
+    "queue": "分诊队列"
   },
   "tenant": {
     "civilizations": {

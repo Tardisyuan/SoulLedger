@@ -142,12 +142,23 @@ describe("civilization enters only the plaque colour (规范 v2 §1.8 收窄)", 
     expect(mainUnder(civ)).toBe(`var(--color-civ-${civ})`);
   });
 
-  it("a [data-civ] block sets --color-main and nothing else", () => {
+  // 文明皮是「匾色 + 匾纹 + 印形 + 题字 / 印文字体」(§三),所以 [data-civ] 块里除了匾色还有
+  // 素材与字体的变量(第二阶段,见 zhuyinShell.test)。这条守的仍是 §1.8 收窄那句话:**颜色**
+  // 里只有 --color-main 随文明变;非颜色的声明只能是那几类皮肤素材,别的一概不许。
+  const SKIN_ASSETS = /^--(band|band-compact|seal-body|seal-ring|seal-line|seal-line-small|seal-scan|section|font-plaque|font-seal)$/;
+
+  it("a [data-civ] block sets no colour but --color-main, and nothing but skin assets besides", () => {
     const blocks = [...CSS.matchAll(/\[data-civ="(\w+)"\]\s*\{([^}]*)\}/g)];
-    expect(blocks.map((b) => b[1]).sort()).toEqual(["cn", "eg", "eu", "gr"]);
+    expect([...new Set(blocks.map((b) => b[1]))].sort()).toEqual(["cn", "eg", "eu", "gr", "neutral"]);
+    const mainSetBy: string[] = [];
     for (const b of blocks) {
-      expect([...b[2].matchAll(/(--[\w-]+)\s*:/g)].map((d) => d[1])).toEqual(["--color-main"]);
+      const decls = [...b[2].matchAll(/(--[\w-]+)\s*:/g)].map((d) => d[1]);
+      const colours = decls.filter((d) => d.startsWith("--color-"));
+      expect(colours.filter((d) => d !== "--color-main")).toEqual([]);
+      if (colours.includes("--color-main")) mainSetBy.push(b[1]);
+      expect(decls.filter((d) => !d.startsWith("--color-") && !SKIN_ASSETS.test(d))).toEqual([]);
     }
+    expect(mainSetBy.sort()).toEqual(["cn", "eg", "eu", "gr"]);
   });
 
   it("no source file reads a civ token directly — they go through --color-main", () => {
