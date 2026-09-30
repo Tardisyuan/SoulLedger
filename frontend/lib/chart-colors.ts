@@ -126,11 +126,11 @@ const DARK: ChartColors = {
     demerit: "oklch(0.946168 0.032488 229.2456)",
   },
   CHART_CHROME: {
-    grid: "oklch(0.301893 0.012433 62.1505)",
-    axis: "oklch(0.937570 0.019894 77.3138)",
-    tick: "oklch(0.680983 0.023181 65.1622)",
-    tooltipBg: "oklch(0.207357 0.006191 56.0227)",
-    tooltipBorder: "oklch(0.937570 0.019894 77.3138)",
+    grid: "oklch(0.349944 0.013063 131.5941)",
+    axis: "oklch(0.955447 0.009333 113.1622)",
+    tick: "oklch(0.738053 0.012625 133.4092)",
+    tooltipBg: "oklch(0.226034 0.008836 137.8312)",
+    tooltipBorder: "oklch(0.955447 0.009333 113.1622)",
   },
 };
 
@@ -157,11 +157,11 @@ const LIGHT: ChartColors = {
     demerit: "oklch(0.259075 0.045425 251.0858)",
   },
   CHART_CHROME: {
-    grid: "oklch(0.864197 0.029618 82.5881)",
-    axis: "oklch(0.188704 0.003838 48.5100)",
-    tick: "oklch(0.480553 0.018306 67.3691)",
-    tooltipBg: "oklch(0.986497 0.013019 82.4021)",
-    tooltipBorder: "oklch(0.188704 0.003838 48.5100)",
+    grid: "oklch(0.863595 0.008432 121.6501)",
+    axis: "oklch(0.214438 0.006530 134.9799)",
+    tick: "oklch(0.511553 0.011899 131.4694)",
+    tooltipBg: "oklch(0.987257 0.003952 106.4716)",
+    tooltipBorder: "oklch(0.214438 0.006530 134.9799)",
   },
 };
 
