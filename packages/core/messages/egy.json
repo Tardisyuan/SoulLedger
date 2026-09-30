@@ -1457,7 +1457,7 @@
     "mark_all_error": "Nen Maa Seth Neb",
     "help_count_24h": "Sep {{n}} Em Unut 24",
     "help_open_users": "Wen Remetj",
-    "help_ignore": "Nen Ek · Imen",
+    "help_ignore": "Nen Djes · Nen Iri Khet",
     "open_case": "Wen Wedja"
   },
   "realms": {
@@ -2325,7 +2325,7 @@
     "connected": "Senb Seth",
     "connecting": "Em Senb…",
     "reconnecting": "Em Senb Wehem…",
-    "disconnected": "Nen Senb",
+    "disconnected": "Nen Em Senb",
     "failed": "Nen Senb Seth",
     "retry": "Senb Wehem"
   },
