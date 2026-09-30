@@ -296,7 +296,7 @@ export function ProviderSection({
                       type="button"
                       aria-pressed={m.name === model}
                       onClick={() => choose(m.name)}
-                      className={`flex w-full min-w-0 items-center gap-3 px-3 py-1.5 text-left text-sm ${MONO} ${
+                      className={`flex w-full min-w-0 items-center gap-3 px-3 py-2 text-left text-sm ${MONO} ${
                         m.name === model ? "bg-[oklch(var(--color-surface-2))] shadow-[inset_2px_0_0_oklch(var(--color-ink))]" : ""
                       }`}
                     >
