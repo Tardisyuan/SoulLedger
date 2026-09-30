@@ -6,7 +6,7 @@
  * The API key is write-only: the config response carries only `api_key.{set,
  * last4, set_at, source}`, and nothing here ever reads a key back.
  */
-import axios from "axios";
+import { refusalBody, streamAssist, type AssistStreamAbort, type AssistStreamFetch, type AssistTryStreamEvent } from "./assist-stream";
 import { api } from "./client";
 import type { components } from "./generated/schema";
 
@@ -41,6 +41,10 @@ export type AssistAdminEmbeddingCandidate = Schemas["EmbeddingCandidate"];
 export type AssistAdminEmbeddingTest = Schemas["EmbeddingTestResult"];
 export type AssistAdminEmbeddingRebuild = Schemas["EmbeddingRebuild"];
 export type AssistAdminEmbeddingErrorKind = Schemas["EmbeddingErrorKindEnum"];
+export type AssistAdminBackup = Schemas["BackupConfig"];
+export type AssistAdminBackupUpdate = Schemas["PatchedBackupUpdate"];
+export type AssistAdminApiKeyState = Schemas["ApiKeyState"];
+export type AssistAdminFallbackReason = Schemas["FallbackReasonEnum"];
 
 /** The `code`s the admin views answer 400/404 with (`_error` in admin_views.py). */
 export const ASSIST_ADMIN_ERROR_CODES = [
@@ -62,16 +66,18 @@ export const ASSIST_ADMIN_ERROR_CODES = [
   "untested_embedding",
   "rebuild_running",
   "embedding_unavailable",
+  // 备用供应商 (§13.5): PATCH config/backup/ (and the primary's PATCH) with a monthly cap and an unpriced backup model.
+  "unpriced_backup_model",
   // Not a `code` in the body: DRF answers a PATCH carrying `eval_soul_account` /
   // `eval_officer` with a field error (ConfigUpdateSerializer.validate). Mapped below.
   "read_only_field",
 ] as const;
 export type AssistAdminErrorCode = (typeof ASSIST_ADMIN_ERROR_CODES)[number];
 
+/** Reads an axios refusal and a 试问 stream's (`AssistStreamHttpError`) alike. */
 export function assistAdminErrorCode(error: unknown): AssistAdminErrorCode | null {
-  if (!axios.isAxiosError(error)) return null;
-  const body = error.response?.data as Record<string, unknown> | undefined;
-  if (!body || typeof body !== "object") return null;
+  const body = refusalBody(error);
+  if (!body) return null;
   if ((ASSIST_ADMIN_ERROR_CODES as readonly unknown[]).includes(body.code)) return body.code as AssistAdminErrorCode;
   if ("eval_soul_account" in body || "eval_officer" in body) return "read_only_field";
   return null;
@@ -105,6 +111,15 @@ export const assistAdminApi = {
   evalRun: (id: number) => api.get<AssistAdminEvalRunDetail>(`${BASE}/eval/runs/${id}/`).then((r) => r.data),
   /** 试问 (plan §3.3): one real, paid question as the eval identity; not counted in usage. Tool names only. */
   tryQuestion: (body: AssistAdminTryRequest) => api.post<AssistAdminTryResult>(`${BASE}/try/`, body).then((r) => r.data),
+  /** 试问, answered as it is written (§13); `done` carries the try result plus `provider_role` / `fallback_reason`. */
+  tryStream: (fetch: AssistStreamFetch, body: AssistAdminTryRequest, controller: AssistStreamAbort, onEvent: (event: AssistTryStreamEvent) => void) =>
+    streamAssist<AssistTryStreamEvent>({ fetch, path: `${BASE}/try/`, body, controller, onEvent, refresh: () => api.get(`${BASE}/config/`) }),
+  /** 备用供应商 (§13.5): same draft → test → save as the primary, with its own prices. DELETE keeps the platform keys. */
+  backup: () => api.get<AssistAdminBackup>(`${BASE}/config/backup/`).then((r) => r.data),
+  updateBackup: (body: AssistAdminBackupUpdate) => api.patch<AssistAdminBackup>(`${BASE}/config/backup/`, body).then((r) => r.data),
+  deleteBackup: () => api.delete<AssistAdminBackup>(`${BASE}/config/backup/`).then((r) => r.data),
+  testBackup: (body: AssistAdminCandidate) =>
+    api.post<AssistAdminConnectivity>(`${BASE}/config/backup/test/`, body).then((r) => r.data),
   /** The help corpus, read-only (plan §5): entries with their token estimates, and the largest prompt vs the threshold. */
   corpus: () => api.get<AssistAdminCorpus>(`${BASE}/corpus/`).then((r) => r.data),
   /** 向量模型 settings + rebuild status. The URL comes back redacted, like `base_url`. */

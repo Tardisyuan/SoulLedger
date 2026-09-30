@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   assistAdminApi,
+  type AssistAdminBackupUpdate,
   type AssistAdminCandidate,
   type AssistAdminConfigUpdate,
   type AssistAdminEmbedding,
@@ -151,4 +152,25 @@ export function useRebuildAssistEmbedding() {
       qc.setQueryData<AssistAdminEmbedding>(assistAdminKeys.embedding, (e) => (e ? { ...e, status: result.status } : e)),
     onError: () => void qc.invalidateQueries({ queryKey: assistAdminKeys.embedding }),
   });
+}
+
+/** 备用供应商 (§13.5): read with the config, saved by the same footer through its own PATCH. */
+export function useAssistBackup(enabled = true) {
+  return useQuery({ queryKey: assistAdminKeys.backup, queryFn: assistAdminApi.backup, enabled });
+}
+
+/** Save or remove: both answer with the new backup state. The config's `api_keys` may have gained a slot. */
+export function useUpdateAssistBackup() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: AssistAdminBackupUpdate | null) => (body ? assistAdminApi.updateBackup(body) : assistAdminApi.deleteBackup()),
+    onSuccess: (backup) => {
+      qc.setQueryData(assistAdminKeys.backup, backup);
+      void qc.invalidateQueries({ queryKey: assistAdminKeys.config });
+    },
+  });
+}
+
+export function useTestAssistBackup() {
+  return useMutation({ mutationFn: (body: AssistAdminCandidate) => assistAdminApi.testBackup(body) });
 }

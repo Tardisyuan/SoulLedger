@@ -409,8 +409,9 @@ npm run schema:generate --workspace @soulledger/core
 - 模型交回空文本时,固定的「答不了」作为一个 delta 发出,再 done。
 - OpenAPI:`(200, text/event-stream)` 的正文声明为 `AssistStreamEvent`(按 `event` 判别的 oneOf,描述**每一个**
   `data:` 行);生成的 TS 里 `event` 是字面量。`packages/core/src/api/assist-stream.ts` 是平台无关的解析器
-  (`parseAssistStream` / `AssistStreamParser` / `reduceAssistStream`):宿主自己发请求(web 的 fetch 流、
-  RN 的 expo/fetch 或 XHR),把收到的文本交给它。axios 两边都会把整个正文攒完,所以不在 core 里发请求。
+  (`parseAssistStream` / `AssistStreamParser` / `reduceAssistStream`)与 `streamAssist`:axios 两边都会把整个
+  正文攒完,所以宿主把自己的 `fetch` 传进来(web 用浏览器的,App 用 `expo/fetch` —— RN 自带的 fetch 没有可读的
+  `body`),其余(地址、token、401 刷新重试、首字 25 秒 / 整次 65 秒、解码、解析)都在 core 里。
 
 ### 13.3 停止与断开
 
