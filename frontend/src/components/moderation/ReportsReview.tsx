@@ -364,7 +364,8 @@ export function ReportsReview() {
                         {t("social_moderation.review.media_n", { n: String(it.mediaCount) })}
                       </span>
                     )}
-                    <span className={reportCount > 0 ? "text-[oklch(var(--color-danger))]" : "text-[oklch(var(--color-ink-subtle))]"}>
+                    {/* 被举报不是系统出错:冷玫红只给出错(规范 v2)。有举报时 ink + 加粗。 */}
+                    <span className={reportCount > 0 ? "font-semibold text-[oklch(var(--color-ink))]" : "text-[oklch(var(--color-ink-subtle))]"}>
                       {t("social_moderation.review.report_n", { n: String(reportCount) })}
                     </span>
                     {it.pending && (

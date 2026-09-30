@@ -173,7 +173,6 @@ describe("举报 · images (C-08 MediaTile)", () => {
     const img = within(tiles[1]).getByRole("img");
     expect(img).toHaveAttribute("alt", tZh("social_moderation.review.media_caption", { i: "2", w: "1080", h: "720" }));
     expect(img.getAttribute("src")).toMatch(/\/api\/v1\/social-media\/m2\/\?t=s2$/);
-    expect(img.closest("a")).toHaveAttribute("target", "_blank");
     expect(tiles[1].className).toContain("aspect-square");
     expect(tiles[1].className).not.toMatch(/rounded/);
     expect(within(tiles[0]).getByText("图 1 · 1080×720")).toBeInTheDocument();
@@ -191,6 +190,36 @@ describe("举报 · images (C-08 MediaTile)", () => {
     await waitFor(() => expect(grid()).not.toBeNull());
     expect(grid()).toHaveAttribute("data-columns", cols);
     expect(within(grid()!).getAllByRole("listitem")).toHaveLength(n);
+  });
+
+  it("v2 C15 查看器:点格子打开纯黑底原图,← → 切换,「关闭」与 Esc 关;开着时审阅快捷键不响应", async () => {
+    asRole("social.moderate");
+    apiMock.item.mockResolvedValue({ data: post({ id: "p1", moderation_status: "PUBLISHED", media: media(2), media_count: 2 }) });
+    renderPage();
+    await waitFor(() => expect(grid()).not.toBeNull());
+    const [first] = within(grid()!).getAllByRole("listitem");
+    fireEvent.click(within(first).getByRole("button"));
+
+    const viewer = await screen.findByRole("dialog");
+    expect(viewer).toHaveAttribute("data-media-viewer");
+    expect(viewer.className).toContain("bg-black");
+    const shown = () => within(viewer).getByRole("img").getAttribute("src") ?? "";
+    expect(shown()).toMatch(/m1\/\?t=s1$/);
+    expect(viewer).toHaveTextContent("图 1 · 1080×720 · 1 / 2");
+
+    fireEvent.keyDown(viewer, { key: "ArrowRight" });
+    expect(shown()).toMatch(/m2\/\?t=s2$/);
+    fireEvent.keyDown(viewer, { key: "ArrowRight" });
+    expect(shown()).toMatch(/m1\/\?t=s1$/);
+    fireEvent.keyDown(viewer, { key: "ArrowLeft" });
+    expect(shown()).toMatch(/m2\/\?t=s2$/);
+
+    // H 在查看器里不是「隐藏」:ReportsReview 在有 dialog 时不接快捷键。
+    fireEvent.keyDown(document.body, { key: "h" });
+    expect(screen.queryByText("隐藏与警告必须写理由")).toBeNull();
+
+    fireEvent.click(within(viewer).getByRole("button", { name: tZh("common.close") }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   });
 
   it("a text-only post has no grid", async () => {
