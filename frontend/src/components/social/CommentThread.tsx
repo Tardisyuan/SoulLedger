@@ -6,6 +6,7 @@ import { useComments, useCreateComment, useDeleteComment } from "@soulledger/cor
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { ConfirmDialog } from "@/src/components/ui/Modal";
+import { Button } from "@/src/components/ui/Button";
 import { ReactionBar } from "./ReactionBar";
 import type { Comment } from "@soulledger/core/api";
 
@@ -36,8 +37,8 @@ function CommentItem({ comment, postId, depth, onReply }: {
         </div>
         <p className="text-sm text-[oklch(var(--color-ink))] whitespace-pre-wrap">{comment.content}</p>
         <div className="flex items-center gap-3 mt-1">
-          <button onClick={() => onReply(comment.id)} className="text-xs text-[oklch(var(--color-accent-ink))] hover:underline">
-            Reply
+          <button type="button" onClick={() => onReply(comment.id)} className="text-xs text-[oklch(var(--color-ink))] underline underline-offset-2">
+            {t("soul_app.circle.comment.reply")}
           </button>
           <ReactionBar commentId={comment.id} />
           {isAuthor && (
@@ -45,7 +46,7 @@ function CommentItem({ comment, postId, depth, onReply }: {
               type="button"
               onClick={() => setShowDeleteConfirm(true)}
               aria-label={t("common.delete") || "Delete"}
-              className="text-xs text-[oklch(var(--color-ink-subtle))] hover:text-red-500 transition-colors"
+              className="text-xs text-[oklch(var(--color-ink-subtle))] underline underline-offset-2 hover:text-[oklch(var(--color-ink))] transition-colors"
             >
               {t("common.delete") || "Delete"}
             </button>
@@ -113,33 +114,40 @@ export function CommentThread({ postId }: { postId: string }) {
       <form onSubmit={handleSubmit} className="mb-4">
         {replyTo && (
           <div className="flex items-center gap-2 mb-2 text-xs text-[oklch(var(--color-ink-muted))]">
-            <span>Replying to comment</span>
-            <button type="button" onClick={() => setReplyTo(null)} className="text-[oklch(var(--color-accent-ink))] hover:underline">Cancel</button>
+            <span>
+              {t("soul_app.circle.comment.reply_to", {
+                name: (() => {
+                  const c = comments.find((x) => x.id === replyTo);
+                  return c ? c.author_name || c.author_username : "";
+                })(),
+              })}
+            </span>
+            <button type="button" onClick={() => setReplyTo(null)} className="text-[oklch(var(--color-ink))] underline underline-offset-2">
+              {t("common.cancel")}
+            </button>
           </div>
         )}
         <div className="flex gap-2">
           <input
             type="text" value={newComment} onChange={(e) => setNewComment(e.target.value)}
             placeholder={t("social.add_comment") || "Write a comment..."}
-            className="flex-1 bg-[oklch(var(--color-surface-2))] border border-[oklch(var(--color-hairline))] px-3 py-2 text-sm text-[oklch(var(--color-ink))] placeholder-[oklch(var(--color-ink-subtle))] focus:outline-hidden focus:border-[oklch(var(--color-accent))]"
+            aria-label={t("social.add_comment")}
+            className="h-8 min-w-0 flex-1 bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-ink-subtle))] px-3 text-sm text-[oklch(var(--color-ink))] placeholder-[oklch(var(--color-ink-subtle))]"
           />
-          <button
-            type="submit" disabled={!newComment.trim() || createComment.isPending}
-            className="px-4 py-2 bg-[oklch(var(--color-accent))] hover:bg-[oklch(var(--color-accent))] text-sm font-medium transition-colors disabled:opacity-50"
-          >
-            {createComment.isPending ? "..." : t("social.send") || "Send"}
-          </button>
+          <Button type="submit" variant="primary" disabled={!newComment.trim()} loading={createComment.isPending}>
+            {t("social.send") || "Send"}
+          </Button>
         </div>
       </form>
 
       {isLoading ? (
         <div className="space-y-3">
           {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="animate-pulse h-12 bg-[oklch(var(--color-hairline))]" />
+            <div key={i} className="h-12 bg-[oklch(var(--color-hairline))]" />
           ))}
         </div>
       ) : comments.length === 0 ? (
-        <p className="text-sm text-[oklch(var(--color-ink-subtle))] text-center py-4">
+        <p className="text-sm text-[oklch(var(--color-ink-subtle))] py-4">
           {t("social.no_comments") || "No comments yet"}
         </p>
       ) : (

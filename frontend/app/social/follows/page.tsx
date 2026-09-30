@@ -7,6 +7,7 @@ import { FollowButton } from "@/src/components/social/FollowButton";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
 import { PageShell } from "@/src/components/ui/PageShell";
+import { TAB_BASE, TAB_ON, TAB_OFF } from "@/src/lib/tabClasses";
 import { EmptyState } from "@/src/components/ui/EmptyState";
 import { DataTable, ROW_LINK } from "@/components/ui/data-table";
 
@@ -67,11 +68,8 @@ export default function FollowsPage() {
           // buttons and could not tell which view was showing.
           // `components/ui/data-grid/FilterBar.tsx:181` already does this.
           aria-pressed={tab === key}
-          className={`px-3 py-2 -mb-px text-sm font-medium border-b-2 transition-colors ${
-            tab === key
-              ? "border-[oklch(var(--color-accent))] text-[oklch(var(--color-accent-ink))]"
-              : "border-transparent text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))]"
-          }`}
+          // 规范 v2 A1 的标签页:与仪表盘同一组类名(src/lib/tabClasses)。
+          className={`${TAB_BASE} ${tab === key ? TAB_ON : TAB_OFF}`}
         >
           {key === "following" ? t("social.following") : t("social.followers")}
           {` (${key === "following" ? followingList.length : followersList.length})`}

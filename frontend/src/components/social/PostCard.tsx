@@ -12,7 +12,12 @@ import { DomainEnum } from "@/src/components/ui/DomainValue";
 import { Badge, type BadgeTone } from "@/src/components/ui/Badge";
 
 /**
- * Visibility, in the app's badge tones.
+ * Visibility — a domain enum, so every member is the neutral badge (规范 v2 补足 C15
+ * 「状态徽章 · 领域枚举 · 不用状态色」: 1px ink3 frame, ink text, told apart by the word).
+ * The four tones below were a v1 decision; the history is kept because the
+ * reason they left `dark:` pairs still holds.
+ *
+ * Visibility, in the app's badge tones (v1).
  *
  * These four used to be hand-written light/dark pairs — `bg-green-100
  * text-green-800 dark:bg-green-900/30 dark:text-green-400` and three more —
@@ -29,9 +34,9 @@ import { Badge, type BadgeTone } from "@/src/components/ui/Badge";
  * Square like every badge (规范 v1: round corners are for avatars only).
  */
 const VISIBILITY_TONES: Record<string, BadgeTone> = {
-  PUBLIC: "success",
-  TENANT: "info",
-  FOLLOWERS: "accent",
+  PUBLIC: "neutral",
+  TENANT: "neutral",
+  FOLLOWERS: "neutral",
   PRIVATE: "neutral",
 };
 
@@ -72,7 +77,7 @@ export function PostCard({ post }: { post: Post }) {
             type="button"
             onClick={() => setShowDeleteConfirm(true)}
             aria-label={t("common.delete") || "Delete"}
-            className="text-xs text-[oklch(var(--color-ink-subtle))] hover:text-[oklch(var(--color-status-error))] transition-colors"
+            className="text-xs text-[oklch(var(--color-ink-subtle))] underline underline-offset-2 hover:text-[oklch(var(--color-ink))] transition-colors"
           >
             {t("common.delete") || "Delete"}
           </button>
