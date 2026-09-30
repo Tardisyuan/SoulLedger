@@ -191,7 +191,7 @@ export function useOfficerAssist(wide: boolean) {
         .then(
           (res) => {
             if (waiting.current !== controller) return;
-            const mine: OfficerAssistMessage = { id: -Date.now(), role: "user", content: question, created_at: at };
+            const mine: OfficerAssistMessage = { id: -Date.now(), role: "user", content: question, interruption: "", created_at: at };
             setThread((th) => ({ id: res.conversation_id, messages: [...th.messages, mine, res.answer] }));
             setAnnounce(t("officer_assist.answered"));
             if (!openRef.current) setUnseen(true);

@@ -73,7 +73,8 @@ def test_the_soul_side_asks_as_the_eval_soul_and_is_marked_eval_everywhere(api, 
     assert (res.data["side"], res.data["model"]) == ("soul", "env-model")
     # 工具只给名字:结果(灵魂的数据)不在响应里
     assert set(res.data) == {"side", "answer", "tools_called", "retrieval", "retrieved_entries", "latency_ms", "tokens",
-                             "provider", "model"}
+                             "provider", "model", "provider_role", "fallback_reason"}
+    assert (res.data["provider_role"], res.data["fallback_reason"]) == ("primary", None)
     account = SoulAccount.objects.get(pk=ids["eval_soul_account"])
     assert AssistConversation.objects.filter(account=account, is_eval=True).count() == 1
     assert not AssistConversation.objects.filter(is_eval=False).exists()

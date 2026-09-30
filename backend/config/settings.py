@@ -449,9 +449,15 @@ ASSISTANT_MODEL = os.getenv("ASSISTANT_MODEL", "claude-opus-5")
 ASSISTANT_EFFORT = os.getenv("ASSISTANT_EFFORT", "low")
 # Anthropic 服务端拒答回退(beta server-side-fallback-2026-07-01);空串即关。
 ASSISTANT_ANTHROPIC_FALLBACKS = os.getenv("ASSISTANT_ANTHROPIC_FALLBACKS", "default")
-# 整次回答的上限。App 在 25 秒时按超时处理(设计稿「问一问」1e),服务端必须先放弃。
+# 非流式:整次回答的上限。流式:第一段文本的上限(首字截止)。App 在 25 秒时按超时处理
+# (设计稿「问一问」1e),服务端必须先放弃。取问题向量(至多 3 秒)也算在里面。
 ASSISTANT_TIMEOUT_SECONDS = float(os.getenv("ASSISTANT_TIMEOUT_SECONDS", "22"))
-# 全局同时进行的问答数。一次回答最长占一个线程约 22 秒;真正的上限是 PG 连接。
+# 流式的总上限(从收到提问算起;docs/ARCHITECTURE-soul-assist.md §13)。出过字以后到这里还没答完 →
+# 按「中断」收尾,已生成的部分照存。必须小于并发名额键的 TTL(service._Slot.TTL = 120)。
+ASSISTANT_STREAM_TOTAL_SECONDS = float(os.getenv("ASSISTANT_STREAM_TOTAL_SECONDS", "60"))
+# 配了备用供应商时,主用最多等这么久出第一段文本,剩下的首字预算(22 − 12)留给备用(§13)。
+ASSISTANT_PRIMARY_FIRST_TOKEN_SECONDS = float(os.getenv("ASSISTANT_PRIMARY_FIRST_TOKEN_SECONDS", "12"))
+# 全局同时进行的问答数。一次回答最长占一个线程约 22 秒(流式至多 60 秒);真正的上限是 PG 连接。
 ASSISTANT_MAX_CONCURRENT = int(os.getenv("ASSISTANT_MAX_CONCURRENT", "8"))
 # 每次送给模型的历史条数(user + assistant 各算一条)。
 ASSISTANT_HISTORY_TURNS = int(os.getenv("ASSISTANT_HISTORY_TURNS", "20"))
@@ -598,6 +604,8 @@ SPECTACULAR_SETTINGS = {
         # 助手管理页:`side` / `status` 都是别处已占的字段名。
         "AssistSideEnum": "apps.soul_assist.models.AssistUsage.SIDES",
         "AssistEvalRunStatusEnum": "apps.soul_assist.models.AssistEvalRun.STATUSES",
+        # 主用 / 备用(用量页的 by_provider.role 与试问结果的 provider_role 同一组)
+        "AssistProviderRoleEnum": "apps.soul_assist.models.AssistUsage.PROVIDER_ROLES",
         # 向量检索(§7.6):`error_kind` 在连通测试里已是供应商的那套;向量服务的另起名,供应商的保留原名。
         "ErrorKindEnum": "apps.soul_assist.admin_serializers.ERROR_KINDS",
         "EmbeddingErrorKindEnum": "apps.soul_assist.vectors.ERROR_KINDS",

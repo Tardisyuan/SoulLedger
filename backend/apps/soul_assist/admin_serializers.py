@@ -6,6 +6,7 @@ from apps.soul_assist.models import OFFICER_SCREENS, SCREENS, AssistEvalCase, As
 from apps.soul_assist.serializers import MAX_QUESTION_LENGTH, AssistErrorSerializer
 
 RETRIEVALS = ("vector", "fallback", "fallback_low_similarity")
+FALLBACK_REASONS = ("connection", "timeout", "rate_limited", "server_error", "quota", "circuit_open")
 ERROR_KINDS = ("auth", "model_not_found", "timeout", "rate_limited", "connection", "tools_unsupported", "other")
 
 
@@ -68,15 +69,17 @@ class ConfigUpdateSerializer(CandidateSerializer):
 
 
 class ApiKeyStateSerializer(serializers.Serializer):
-    set = serializers.BooleanField()
-    last4 = serializers.CharField(allow_null=True)
-    set_at = serializers.DateTimeField(allow_null=True)
+    set = serializers.BooleanField(help_text="有 key(清除过的格子为 false)")
+    last4 = serializers.CharField(allow_null=True, help_text="key 至少 12 个字符才给")
+    set_at = serializers.DateTimeField(allow_null=True, help_text="页面存入的时间;env 的 key 为 null")
     source = serializers.ChoiceField(choices=("page", "env"))
 
 
 class ReadOnlySettingsSerializer(serializers.Serializer):
     max_concurrent = serializers.IntegerField()
-    timeout_seconds = serializers.FloatField()
+    timeout_seconds = serializers.FloatField(help_text="非流式整次回答 / 流式第一段文本的上限")
+    stream_total_seconds = serializers.FloatField(help_text="流式整次回答的上限")
+    primary_first_token_seconds = serializers.FloatField(help_text="配了备用时,主用最多等这么久出第一段文本")
     history_turns = serializers.IntegerField()
     retention_days = serializers.IntegerField()
 
@@ -106,7 +109,10 @@ class ConfigSerializer(serializers.Serializer):
     monthly_cap = serializers.FloatField(allow_null=True)
     eval_spend_cap = serializers.FloatField()
     prices = serializers.DictField(child=PriceSerializer())
-    api_key = ApiKeyStateSerializer()
+    api_key = ApiKeyStateSerializer(help_text="当前连接那个平台的 key")
+    api_key_slot = serializers.CharField(help_text="当前连接的 key 存在哪一格:预设平台 id,或 custom:<主机[:端口]>")
+    api_keys = serializers.DictField(child=ApiKeyStateSerializer(),
+                                     help_text="每个存过 key 的平台一格(键同 api_key_slot):换到那个平台不必重填 key")
     eval_soul_account = serializers.UUIDField(allow_null=True, help_text="只读;由 POST eval/identities/ 设置")
     eval_officer = serializers.IntegerField(allow_null=True, help_text="只读;由 POST eval/identities/ 设置")
     month_rolls_over_at = serializers.CharField(help_text="月度上限按 UTC 月份滚动,写成北京时间给管理员看")
@@ -233,11 +239,14 @@ class EvalPreviewSerializer(serializers.Serializer):
 
 
 class TryRequestSerializer(serializers.Serializer):
-    """§3.3 试问:以评测身份问一句。`candidate` 不给 = 用生效配置;给了规则同连通测试(换地址要带 key)。"""
+    """§3.3 试问:以评测身份问一句。`candidate` 不给 = 用生效配置(连同备用与断路器);给了只测这一套,
+    规则同连通测试(换地址要带 key)。"""
 
     side = serializers.ChoiceField(choices=("soul", "officer"))
     question = serializers.CharField(max_length=MAX_QUESTION_LENGTH, trim_whitespace=True)
     candidate = CandidateSerializer(required=False)
+    stream = serializers.BooleanField(required=False,
+                                      help_text="true = Server-Sent Events,事件见 AssistTryStreamEvent")
 
 
 class TryResultSerializer(serializers.Serializer):
@@ -249,8 +258,15 @@ class TryResultSerializer(serializers.Serializer):
                                               help_text="检索进上下文的条目 id,近的在前;退回整份语料时为空")
     latency_ms = serializers.IntegerField()
     tokens = serializers.DictField(child=serializers.IntegerField())
-    provider = serializers.CharField()
+    provider = serializers.CharField(help_text="实际作答的那一家")
     model = serializers.CharField()
+    provider_role = serializers.ChoiceField(choices=("primary", "backup"))
+    fallback_reason = serializers.ChoiceField(choices=FALLBACK_REASONS, allow_null=True,
+                                              help_text="改用了备用的理由;主用答的为 null")
+
+
+class TryStreamDoneSerializer(TryResultSerializer):
+    event = serializers.CharField(help_text="done")
 
 
 class EvalStartSerializer(serializers.Serializer):
@@ -346,6 +362,26 @@ class UsageStatusSerializer(serializers.Serializer):
     busy = serializers.IntegerField()
     rate_limited = serializers.IntegerField()
     not_configured = serializers.IntegerField()
+    stopped = serializers.IntegerField(help_text="流式:灵魂停止或断开(已生成的部分照存、照计费)")
+    interrupted = serializers.IntegerField(help_text="流式:出过字以后供应商出错或到了总时长")
+
+
+class UsageFallbackReasonsSerializer(serializers.Serializer):
+    connection = serializers.IntegerField()
+    timeout = serializers.IntegerField()
+    rate_limited = serializers.IntegerField()
+    server_error = serializers.IntegerField(help_text="5xx")
+    quota = serializers.IntegerField(help_text="402 余额不足")
+    circuit_open = serializers.IntegerField(help_text="主用连续失败、断路器开着,没试主用")
+
+
+class UsageFallbacksSerializer(serializers.Serializer):
+    count = serializers.IntegerField(help_text="改用备用的请求数")
+    by_reason = UsageFallbackReasonsSerializer()
+
+
+class UsageProviderSerializer(UsageBucketSerializer):
+    role = serializers.ChoiceField(choices=("primary", "backup"))
 
 
 class FailureRatesSerializer(serializers.Serializer):
@@ -376,6 +412,8 @@ class UsageSerializer(serializers.Serializer):
     unpriced_models = serializers.ListField(child=serializers.CharField())
     requests = serializers.IntegerField()
     by_status = UsageStatusSerializer()
+    fallbacks = UsageFallbacksSerializer()
+    by_provider = UsageProviderSerializer(many=True, help_text="主用 / 备用各自的请求、token 与花费(各按自己的价目表)")
     failure_rates = FailureRatesSerializer()
     by_retrieval = UsageRetrievalSerializer(help_text="已答的请求按帮助条目的来源分(§7.5)")
     by_day = UsageDaySerializer(many=True)
@@ -470,3 +508,36 @@ class EmbeddingRebuildSerializer(serializers.Serializer):
     index = serializers.CharField(allow_null=True, help_text="PostgreSQL 上现有的 HNSW 索引名;行数未到阈值为 null")
     dropped = serializers.ListField(child=serializers.CharField(), help_text="删掉的旧模型 / 旧维度索引")
     status = EmbeddingStatusSerializer()
+
+
+# ── 备用供应商(docs/ARCHITECTURE-soul-assist.md §13)────────────────────────
+
+
+class BackupUpdateSerializer(CandidateSerializer):
+    """与主用的连接同一组字段,另加备用自己的价目表。连接变了要先测通**同一套**(`config/backup/test/`)。"""
+
+    prices = serializers.DictField(child=PriceSerializer(), required=False,
+                                   help_text="备用的价目表(模型名 → 每百万 token 价),与主用的分开")
+
+
+class BreakerSerializer(serializers.Serializer):
+    open = serializers.BooleanField(help_text="断开中:主用不试,直接用备用")
+    open_until = serializers.DateTimeField(allow_null=True)
+    consecutive_failures = serializers.IntegerField()
+    threshold = serializers.IntegerField()
+    open_seconds = serializers.IntegerField()
+
+
+class BackupConfigSerializer(serializers.Serializer):
+    configured = serializers.BooleanField()
+    platform = serializers.ChoiceField(choices=platforms.PLATFORM_IDS, allow_null=True)
+    provider = serializers.CharField(allow_null=True)
+    base_url = serializers.CharField(allow_null=True, allow_blank=True)
+    model = serializers.CharField(allow_null=True)
+    effort = serializers.CharField(allow_null=True, allow_blank=True)
+    fallbacks = serializers.BooleanField(allow_null=True)
+    prices = serializers.DictField(child=PriceSerializer())
+    api_key = ApiKeyStateSerializer(help_text="备用那个平台的 key;与主用同平台时就是同一格")
+    api_key_slot = serializers.CharField(allow_null=True)
+    breaker = BreakerSerializer(help_text="主用的断路器")
+    primary_first_token_seconds = serializers.FloatField()

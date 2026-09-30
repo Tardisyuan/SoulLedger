@@ -184,7 +184,7 @@ export function AssistProvider({
         .then(
           (res) => {
             if (waiting.current !== controller) return;
-            const mine: AssistMessage = { id: -Date.now(), role: "user", content: question, created_at: at };
+            const mine: AssistMessage = { id: -Date.now(), role: "user", content: question, interruption: "", created_at: at };
             setThread((th) => ({ id: res.conversation_id, screen, messages: [...(th.messages ?? []), mine, res.answer] }));
             AccessibilityInfo.announceForAccessibility(t("soul_app.assist.answered"));
           },

@@ -54,6 +54,9 @@ class AssistConversation(SoftDeleteMixin, models.Model):
 
 class AssistMessage(models.Model):
     ROLES = (("user", "user"), ("assistant", "assistant"))
+    #: 流式回答没有答完(docs/ARCHITECTURE-soul-assist.md §13):`stopped` = 灵魂停止或断开;
+    #: `interrupted` = 出过字以后供应商出错或到了总时长。空 = 答完了。存的是已经发出去的那部分。
+    INTERRUPTIONS = (("stopped", "stopped"), ("interrupted", "interrupted"))
 
     conversation = models.ForeignKey(AssistConversation, on_delete=models.CASCADE, related_name="messages")
     role = models.CharField(max_length=10, choices=ROLES)
@@ -61,6 +64,7 @@ class AssistMessage(models.Model):
     #: 这条回答调用过的工具名(按顺序)。只存名字,不存工具返回的数据 —— 回放历史也不回放它(§4.2)。
     tool_calls = models.JSONField(default=list, blank=True)
     tokens = models.JSONField(default=dict, blank=True)
+    interruption = models.CharField(max_length=12, choices=INTERRUPTIONS, blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
 
     class Meta:
@@ -76,9 +80,10 @@ class AssistConfig(models.Model):
 
     #: 页面改过的键 → 值;键见 `config.EDITABLE`。API key 不在这里。
     values = models.JSONField(default=dict, blank=True)
-    #: 密文存库(`ENCRYPTION_KEY`)。`api_key_set_at` 为空 = 没改过,用 env;不为空时 "" 表示已清除。
-    api_key = EncryptedCharField(max_length=1000, blank=True, default="")
-    api_key_set_at = models.DateTimeField(null=True, blank=True)
+    #: **按平台存的 API key**(用户 2026-10-01 定),整份 JSON 一起加密(`ENCRYPTION_KEY`):
+    #: `platforms.key_slot`(预设 id,或 `custom:<主机>`)→ {"key", "set_at"};"" = 已清除(不回到 env)。
+    #: 主用与备用共用;没存过的平台若正是 env 配的那个,用 env 的 key。读写走 `config.load_keys` / `save_changes`。
+    api_keys = EncryptedCharField(max_length=20000, blank=True, default="")
     #: 评测用的测试身份(§3.2);数据范围照正式规则走。
     eval_soul_account = models.ForeignKey("soul_accounts.SoulAccount", on_delete=models.SET_NULL, null=True,
                                           blank=True, related_name="+")
@@ -100,7 +105,14 @@ class AssistConfig(models.Model):
 class AssistUsage(models.Model):
     """每次提问一行,**不含任何原文**:成功、空回答与各种失败都记,用量页与月度上限只读这张表。"""
 
-    STATUSES = [(s, s) for s in ("ok", "empty", "unavailable", "busy", "rate_limited", "not_configured")]
+    #: stopped / interrupted:流式没答完(§13),token 与花费照记。failed_over:主用失败、改用了备用,
+    #: 而主用在失败前已经花了 token(工具轮成功、下一轮才失败)—— 只为记账,不算一次请求。
+    STATUSES = [(s, s) for s in ("ok", "empty", "unavailable", "busy", "rate_limited", "not_configured", "stopped",
+                                 "interrupted", "failed_over")]
+    PROVIDER_ROLES = (("primary", "primary"), ("backup", "backup"))
+    #: 改用备用的理由(`providers.SWITCHING_REASONS`);`circuit_open` = 断路器开着,没试主用。
+    FALLBACK_REASONS = [(s, s) for s in ("connection", "timeout", "rate_limited", "server_error", "quota",
+                                         "circuit_open")]
     #: 这一问的帮助条目怎么来的(§7.5):向量检索的 top-k;向量服务不通 / 超时 / 库里没有向量时的整份语料;
     #: 最近一条也不够像时的整份语料。没走到检索的失败(未开通、忙)为空。
     RETRIEVALS = [(s, s) for s in ("vector", "fallback", "fallback_low_similarity")]
@@ -115,6 +127,9 @@ class AssistUsage(models.Model):
     output_tokens = models.PositiveIntegerField(default=0)
     cache_read_tokens = models.PositiveIntegerField(default=0)
     retrieval = models.CharField(max_length=30, choices=RETRIEVALS, blank=True, default="")
+    #: 哪一家答的(花费按那一家的价目表算);没走到供应商的失败为空。
+    provider_role = models.CharField(max_length=10, choices=PROVIDER_ROLES, blank=True, default="")
+    fallback_reason = models.CharField(max_length=20, choices=FALLBACK_REASONS, blank=True, default="")
     #: 评测的请求:不计入用量与月度上限。
     is_eval = models.BooleanField(default=False)
 

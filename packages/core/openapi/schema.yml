@@ -130,6 +130,9 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AssistAnswer'
+            text/event-stream:
+              schema:
+                $ref: '#/components/schemas/AssistStreamEvent'
           description: ''
         '400':
           description: 字段校验失败
@@ -194,6 +197,102 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Config'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssistError'
+          description: ''
+  /api/v1/assist-admin/config/backup/:
+    get:
+      operationId: assist_admin_backup_retrieve
+      description: |-
+        主用在出第一段文本之前失败(连不上、超时、429、5xx、402)时改用的供应商。草稿 → 测试 → 保存,
+        与主用相同:连接的任何一项变了,都要先在 15 分钟内测通**同一套**(`config/backup/test/`)。
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BackupConfig'
+          description: ''
+    patch:
+      operationId: assist_admin_backup_update
+      description: |-
+        主用在出第一段文本之前失败(连不上、超时、429、5xx、402)时改用的供应商。草稿 → 测试 → 保存,
+        与主用相同:连接的任何一项变了,都要先在 15 分钟内测通**同一套**(`config/backup/test/`)。
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedBackupUpdate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedBackupUpdate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedBackupUpdate'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BackupConfig'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssistError'
+          description: ''
+    delete:
+      operationId: assist_admin_backup_delete
+      description: 删掉备用(连同它的 key)。之后主用失败就是失败,不再切换。
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BackupConfig'
+          description: ''
+  /api/v1/assist-admin/config/backup/test/:
+    post:
+      operationId: assist_admin_backup_test
+      description: 与主用的连通测试同一个探针;测通后 15 分钟内可以保存这一套为备用。
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Candidate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Candidate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Candidate'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConnectivityResult'
           description: ''
         '400':
           content:
@@ -786,6 +885,9 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TryResult'
+            text/event-stream:
+              schema:
+                $ref: '#/components/schemas/AssistTryStreamEvent'
           description: ''
         '400':
           content:
@@ -6484,6 +6586,9 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AssistAnswer'
+            text/event-stream:
+              schema:
+                $ref: '#/components/schemas/AssistStreamEvent'
           description: ''
         '400':
           description: 字段校验失败
@@ -16379,13 +16484,16 @@ components:
       properties:
         set:
           type: boolean
+          description: 有 key(清除过的格子为 false)
         last4:
           type: string
           nullable: true
+          description: key 至少 12 个字符才给
         set_at:
           type: string
           format: date-time
           nullable: true
+          description: 页面存入的时间;env 的 key 为 null
         source:
           $ref: '#/components/schemas/ApiKeyStateSourceEnum'
       required:
@@ -16946,6 +17054,10 @@ components:
           type: string
           format: uuid
           nullable: true
+        stream:
+          type: boolean
+          description: true = 以 Server-Sent Events 逐段返回(text/event-stream,事件见 AssistStreamEvent);缺省
+            false = 答完一次返回 JSON。进门的错误(未开通、限流、忙、会话不存在)两种都答 JSON 与状态码。
       required:
       - question
       - screen
@@ -17020,6 +17132,16 @@ components:
           $ref: '#/components/schemas/AssistMessageRoleEnum'
         content:
           type: string
+        interruption:
+          readOnly: true
+          description: |-
+            流式没答完:stopped = 停止或断开,interrupted = 出过字后出错或超时;空 = 答完了。内容是已发出的部分
+
+            * `stopped` - stopped
+            * `interrupted` - interrupted
+          oneOf:
+          - $ref: '#/components/schemas/InterruptionEnum'
+          - $ref: '#/components/schemas/BlankEnum'
         created_at:
           type: string
           format: date-time
@@ -17028,6 +17150,7 @@ components:
       - content
       - created_at
       - id
+      - interruption
       - role
     AssistMessageRoleEnum:
       enum:
@@ -17065,6 +17188,14 @@ components:
         * `openrouter` - openrouter
         * `ollama` - ollama
         * `custom` - custom
+    AssistProviderRoleEnum:
+      enum:
+      - primary
+      - backup
+      type: string
+      description: |-
+        * `primary` - primary
+        * `backup` - backup
     AssistRetrievalEnum:
       enum:
       - vector
@@ -17083,6 +17214,130 @@ components:
       description: |-
         * `soul` - soul
         * `officer` - officer
+    AssistStreamDelta:
+      type: object
+      properties:
+        event:
+          type: string
+          description: delta
+        text:
+          type: string
+          description: 接在已收到的文本后面
+      required:
+      - event
+      - text
+    AssistStreamDone:
+      type: object
+      description: |-
+        与非流式的 JSON 回答同形(`conversation_id` + `answer`),多一个用量。`conversation_id` 以这里为准:
+        续的会话在作答时被删,回答会落进新开的会话。
+      properties:
+        conversation_id:
+          type: string
+          format: uuid
+        answer:
+          $ref: '#/components/schemas/AssistMessage'
+        event:
+          type: string
+          description: done
+        usage:
+          $ref: '#/components/schemas/AssistUsageSummary'
+      required:
+      - answer
+      - conversation_id
+      - event
+      - usage
+    AssistStreamError:
+      type: object
+      properties:
+        event:
+          type: string
+          description: error
+        kind:
+          allOf:
+          - $ref: '#/components/schemas/AssistStreamErrorKindEnum'
+          description: |-
+            unavailable = 一个字都没出(同非流式的 503);interrupted = 出过字后断了
+
+            * `unavailable` - unavailable
+            * `interrupted` - interrupted
+        text_sent:
+          type: boolean
+          description: 出错前是否已经发过 delta
+        detail:
+          type: string
+        conversation_id:
+          type: string
+          format: uuid
+          description: interrupted 时:已发出的部分存在这个会话里
+        message_id:
+          type: integer
+          description: interrupted 时:存下的那条回答
+      required:
+      - detail
+      - event
+      - kind
+      - text_sent
+    AssistStreamErrorKindEnum:
+      enum:
+      - unavailable
+      - interrupted
+      type: string
+      description: |-
+        * `unavailable` - unavailable
+        * `interrupted` - interrupted
+    AssistStreamEvent:
+      oneOf:
+      - $ref: '#/components/schemas/AssistStreamMeta'
+      - $ref: '#/components/schemas/AssistStreamDelta'
+      - $ref: '#/components/schemas/AssistStreamDone'
+      - $ref: '#/components/schemas/AssistStreamError'
+      discriminator:
+        propertyName: event
+        mapping:
+          meta: '#/components/schemas/AssistStreamMeta'
+          delta: '#/components/schemas/AssistStreamDelta'
+          done: '#/components/schemas/AssistStreamDone'
+          error: '#/components/schemas/AssistStreamError'
+    AssistStreamMeta:
+      type: object
+      properties:
+        event:
+          type: string
+          description: meta
+        conversation_id:
+          type: string
+          format: uuid
+          description: 续的会话,或这次新开的会话(答完才落库)
+      required:
+      - conversation_id
+      - event
+    AssistTryStreamEvent:
+      oneOf:
+      - $ref: '#/components/schemas/AssistStreamMeta'
+      - $ref: '#/components/schemas/AssistStreamDelta'
+      - $ref: '#/components/schemas/TryStreamDone'
+      - $ref: '#/components/schemas/AssistStreamError'
+      discriminator:
+        propertyName: event
+        mapping:
+          meta: '#/components/schemas/AssistStreamMeta'
+          delta: '#/components/schemas/AssistStreamDelta'
+          done: '#/components/schemas/TryStreamDone'
+          error: '#/components/schemas/AssistStreamError'
+    AssistUsageSummary:
+      type: object
+      properties:
+        input_tokens:
+          type: integer
+        output_tokens:
+          type: integer
+        cache_read_tokens:
+          type: integer
+      required:
+      - cache_read_tokens
+      - input_tokens
+      - output_tokens
     AuditActionCount:
       type: object
       description: One row of `stats.action_distribution` — a `values("action").annotate(count=…)`.
@@ -17334,6 +17589,62 @@ components:
       - role
       - tenant
       - username
+    BackupConfig:
+      type: object
+      properties:
+        configured:
+          type: boolean
+        platform:
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/AssistPlatformEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        provider:
+          type: string
+          nullable: true
+        base_url:
+          type: string
+          nullable: true
+        model:
+          type: string
+          nullable: true
+        effort:
+          type: string
+          nullable: true
+        fallbacks:
+          type: boolean
+          nullable: true
+        prices:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/Price'
+        api_key:
+          allOf:
+          - $ref: '#/components/schemas/ApiKeyState'
+          description: 备用那个平台的 key;与主用同平台时就是同一格
+        api_key_slot:
+          type: string
+          nullable: true
+        breaker:
+          allOf:
+          - $ref: '#/components/schemas/Breaker'
+          description: 主用的断路器
+        primary_first_token_seconds:
+          type: number
+          format: double
+      required:
+      - api_key
+      - api_key_slot
+      - base_url
+      - breaker
+      - configured
+      - effort
+      - fallbacks
+      - model
+      - platform
+      - prices
+      - primary_first_token_seconds
+      - provider
     BalanceReading:
       type: object
       description: kind=BALANCE — the Chinese 功過格 account.
@@ -17359,6 +17670,28 @@ components:
     BlankEnum:
       enum:
       - ''
+    Breaker:
+      type: object
+      properties:
+        open:
+          type: boolean
+          description: 断开中:主用不试,直接用备用
+        open_until:
+          type: string
+          format: date-time
+          nullable: true
+        consecutive_failures:
+          type: integer
+        threshold:
+          type: integer
+        open_seconds:
+          type: integer
+      required:
+      - consecutive_failures
+      - open
+      - open_seconds
+      - open_until
+      - threshold
     Candidate:
       type: object
       description: |-
@@ -17727,7 +18060,17 @@ components:
           additionalProperties:
             $ref: '#/components/schemas/Price'
         api_key:
-          $ref: '#/components/schemas/ApiKeyState'
+          allOf:
+          - $ref: '#/components/schemas/ApiKeyState'
+          description: 当前连接那个平台的 key
+        api_key_slot:
+          type: string
+          description: 当前连接的 key 存在哪一格:预设平台 id,或 custom:<主机[:端口]>
+        api_keys:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/ApiKeyState'
+          description: 每个存过 key 的平台一格(键同 api_key_slot):换到那个平台不必重填 key
         eval_soul_account:
           type: string
           format: uuid
@@ -17749,6 +18092,8 @@ components:
           $ref: '#/components/schemas/ReadOnlySettings'
       required:
       - api_key
+      - api_key_slot
+      - api_keys
       - base_url
       - effort
       - enabled
@@ -19889,6 +20234,22 @@ components:
       - empty
       - rate_limited
       - unavailable
+    FallbackReasonEnum:
+      enum:
+      - connection
+      - timeout
+      - rate_limited
+      - server_error
+      - quota
+      - circuit_open
+      type: string
+      description: |-
+        * `connection` - connection
+        * `timeout` - timeout
+        * `rate_limited` - rate_limited
+        * `server_error` - server_error
+        * `quota` - quota
+        * `circuit_open` - circuit_open
     Follow:
       type: object
       properties:
@@ -20389,6 +20750,14 @@ components:
         * `REVEALED` - 已查看
         * `DELIVERED` - 已线下交付
         * `VOID` - 已作废
+    InterruptionEnum:
+      enum:
+      - stopped
+      - interrupted
+      type: string
+      description: |-
+        * `stopped` - stopped
+        * `interrupted` - interrupted
     Judgment:
       type: object
       description: |-
@@ -23203,6 +23572,10 @@ components:
           type: string
           format: uuid
           nullable: true
+        stream:
+          type: boolean
+          description: true = 以 Server-Sent Events 逐段返回(text/event-stream,事件见 AssistStreamEvent);缺省
+            false = 答完一次返回 JSON。进门的错误(未开通、限流、忙、会话不存在)两种都答 JSON 与状态码。
       required:
       - question
       - screen
@@ -24930,6 +25303,40 @@ components:
           type: integer
           readOnly: true
           nullable: true
+    PatchedBackupUpdate:
+      type: object
+      description: 与主用的连接同一组字段,另加备用自己的价目表。连接变了要先测通**同一套**(`config/backup/test/`)。
+      properties:
+        platform:
+          $ref: '#/components/schemas/AssistPlatformEnum'
+        provider:
+          $ref: '#/components/schemas/ProviderEnum'
+        base_url:
+          oneOf:
+          - type: string
+            format: uri
+            maxLength: 500
+          - type: string
+            maxLength: 0
+        api_key:
+          type: string
+          writeOnly: true
+          maxLength: 500
+        model:
+          type: string
+          maxLength: 200
+          minLength: 1
+        effort:
+          oneOf:
+          - $ref: '#/components/schemas/EffortEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        fallbacks:
+          type: boolean
+        prices:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/Price'
+          description: 备用的价目表(模型名 → 每百万 token 价),与主用的分开
     PatchedComment:
       type: object
       properties:
@@ -26978,6 +27385,15 @@ components:
         timeout_seconds:
           type: number
           format: double
+          description: 非流式整次回答 / 流式第一段文本的上限
+        stream_total_seconds:
+          type: number
+          format: double
+          description: 流式整次回答的上限
+        primary_first_token_seconds:
+          type: number
+          format: double
+          description: 配了备用时,主用最多等这么久出第一段文本
         history_turns:
           type: integer
         retention_days:
@@ -26985,7 +27401,9 @@ components:
       required:
       - history_turns
       - max_concurrent
+      - primary_first_token_seconds
       - retention_days
+      - stream_total_seconds
       - timeout_seconds
     Realm:
       type: object
@@ -30713,7 +31131,9 @@ components:
         * `MANUAL` - Manual
     TryRequest:
       type: object
-      description: §3.3 试问:以评测身份问一句。`candidate` 不给 = 用生效配置;给了规则同连通测试(换地址要带 key)。
+      description: |-
+        §3.3 试问:以评测身份问一句。`candidate` 不给 = 用生效配置(连同备用与断路器);给了只测这一套,
+        规则同连通测试(换地址要带 key)。
       properties:
         side:
           $ref: '#/components/schemas/AssistSideEnum'
@@ -30722,6 +31142,9 @@ components:
           maxLength: 1000
         candidate:
           $ref: '#/components/schemas/Candidate'
+        stream:
+          type: boolean
+          description: true = Server-Sent Events,事件见 AssistTryStreamEvent
       required:
       - question
       - side
@@ -30752,13 +31175,94 @@ components:
             type: integer
         provider:
           type: string
+          description: 实际作答的那一家
         model:
           type: string
+        provider_role:
+          $ref: '#/components/schemas/AssistProviderRoleEnum'
+        fallback_reason:
+          nullable: true
+          description: |-
+            改用了备用的理由;主用答的为 null
+
+            * `connection` - connection
+            * `timeout` - timeout
+            * `rate_limited` - rate_limited
+            * `server_error` - server_error
+            * `quota` - quota
+            * `circuit_open` - circuit_open
+          oneOf:
+          - $ref: '#/components/schemas/FallbackReasonEnum'
+          - $ref: '#/components/schemas/NullEnum'
       required:
       - answer
+      - fallback_reason
       - latency_ms
       - model
       - provider
+      - provider_role
+      - retrieval
+      - retrieved_entries
+      - side
+      - tokens
+      - tools_called
+    TryStreamDone:
+      type: object
+      properties:
+        side:
+          $ref: '#/components/schemas/AssistSideEnum'
+        answer:
+          type: string
+        tools_called:
+          type: array
+          items:
+            type: string
+          description: 按调用顺序的工具名,不含结果
+        retrieval:
+          $ref: '#/components/schemas/AssistRetrievalEnum'
+        retrieved_entries:
+          type: array
+          items:
+            type: string
+          description: 检索进上下文的条目 id,近的在前;退回整份语料时为空
+        latency_ms:
+          type: integer
+        tokens:
+          type: object
+          additionalProperties:
+            type: integer
+        provider:
+          type: string
+          description: 实际作答的那一家
+        model:
+          type: string
+        provider_role:
+          $ref: '#/components/schemas/AssistProviderRoleEnum'
+        fallback_reason:
+          nullable: true
+          description: |-
+            改用了备用的理由;主用答的为 null
+
+            * `connection` - connection
+            * `timeout` - timeout
+            * `rate_limited` - rate_limited
+            * `server_error` - server_error
+            * `quota` - quota
+            * `circuit_open` - circuit_open
+          oneOf:
+          - $ref: '#/components/schemas/FallbackReasonEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        event:
+          type: string
+          description: done
+      required:
+      - answer
+      - event
+      - fallback_reason
+      - latency_ms
+      - model
+      - provider
+      - provider_role
       - retrieval
       - retrieved_entries
       - side
@@ -30801,6 +31305,13 @@ components:
           type: integer
         by_status:
           $ref: '#/components/schemas/UsageStatus'
+        fallbacks:
+          $ref: '#/components/schemas/UsageFallbacks'
+        by_provider:
+          type: array
+          items:
+            $ref: '#/components/schemas/UsageProvider'
+          description: 主用 / 备用各自的请求、token 与花费(各按自己的价目表)
         failure_rates:
           $ref: '#/components/schemas/FailureRates'
         by_retrieval:
@@ -30824,11 +31335,13 @@ components:
       required:
       - by_day
       - by_hall
+      - by_provider
       - by_retrieval
       - by_side
       - by_status
       - cap
       - failure_rates
+      - fallbacks
       - month
       - phase4
       - requests
@@ -30862,6 +31375,42 @@ components:
       - input_tokens
       - output_tokens
       - requests
+    UsageFallbackReasons:
+      type: object
+      properties:
+        connection:
+          type: integer
+        timeout:
+          type: integer
+        rate_limited:
+          type: integer
+        server_error:
+          type: integer
+          description: 5xx
+        quota:
+          type: integer
+          description: 402 余额不足
+        circuit_open:
+          type: integer
+          description: 主用连续失败、断路器开着,没试主用
+      required:
+      - circuit_open
+      - connection
+      - quota
+      - rate_limited
+      - server_error
+      - timeout
+    UsageFallbacks:
+      type: object
+      properties:
+        count:
+          type: integer
+          description: 改用备用的请求数
+        by_reason:
+          $ref: '#/components/schemas/UsageFallbackReasons'
+      required:
+      - by_reason
+      - count
     UsageHall:
       type: object
       properties:
@@ -30894,6 +31443,33 @@ components:
       - output_tokens
       - requests
       - tenant_id
+    UsageProvider:
+      type: object
+      properties:
+        requests:
+          type: integer
+        answered:
+          type: integer
+        input_tokens:
+          type: integer
+        output_tokens:
+          type: integer
+        cache_read_tokens:
+          type: integer
+        cost:
+          type: number
+          format: double
+          description: 只含已定价模型
+        role:
+          $ref: '#/components/schemas/AssistProviderRoleEnum'
+      required:
+      - answered
+      - cache_read_tokens
+      - cost
+      - input_tokens
+      - output_tokens
+      - requests
+      - role
     UsageRetrieval:
       type: object
       properties:
@@ -30951,12 +31527,20 @@ components:
           type: integer
         not_configured:
           type: integer
+        stopped:
+          type: integer
+          description: 流式:灵魂停止或断开(已生成的部分照存、照计费)
+        interrupted:
+          type: integer
+          description: 流式:出过字以后供应商出错或到了总时长
       required:
       - busy
       - empty
+      - interrupted
       - not_configured
       - ok
       - rate_limited
+      - stopped
       - unavailable
     User:
       type: object

@@ -97,7 +97,7 @@ def _admin_routes():
 
 def test_the_route_list_is_not_empty():
     """下面那条 403 测试的主体清单来自 URLconf;清单空了它就恒绿。"""
-    assert len(_admin_routes()) == 18
+    assert len(_admin_routes()) == 20
 
 
 @pytest.mark.parametrize("role", ["MODERATOR", "JUDGE", "GUARDIAN", "VIEWER"])
@@ -115,8 +115,8 @@ def test_the_admin_reads_the_config(api):
     body = api.get(f"{BASE}config/").data
     assert body["model"] == "env-model" and body["enabled"] is True and body["env_enabled"] is True
     assert body["overridden"] == [] and body["api_key"]["source"] == "env"
-    assert body["read_only"] == {"max_concurrent": 8, "timeout_seconds": 22.0, "history_turns": 20,
-                                 "retention_days": 30}
+    assert body["read_only"] == {"max_concurrent": 8, "timeout_seconds": 22.0, "stream_total_seconds": 60.0,
+                                 "primary_first_token_seconds": 12.0, "history_turns": 20, "retention_days": 30}
 
 
 # ── API key:密文存库、只写不读、审计里没有 ─────────────────────────────────────
@@ -129,8 +129,8 @@ def test_the_api_key_is_ciphertext_in_the_table_and_never_echoed(api):
     assert response.data["api_key"] == {"set": True, "last4": "1234", "set_at": response.data["api_key"]["set_at"],
                                         "source": "page"}
     assert KEY not in json.dumps(api.get(f"{BASE}config/").data)
-    with connection.cursor() as cursor:
-        cursor.execute("select api_key from soul_assist_assistconfig")
+    with connection.cursor() as cursor:  # 按平台存的整份 JSON,一起加密(0009)
+        cursor.execute("select api_keys from soul_assist_assistconfig")
         stored = cursor.fetchone()[0]
     assert KEY not in stored and stored.startswith("gAAAA")  # Fernet 令牌
     assert config.effective().connection.api_key == KEY  # 读回来是明文,只在进程内
@@ -140,7 +140,8 @@ def test_the_audit_says_replaced_or_cleared_and_never_holds_the_key(api):
     _tested_patch(api, api_key=KEY)
     assert _patch(api, api_key="").status_code == 200  # 只清除 key 不必先测:key 泄露时要能立刻清掉
     rows = list(AuditLog.objects.filter(resource="assistant_config").order_by("id"))
-    assert [r.changes["api_key"] for r in rows] == ["replaced", "cleared"]
+    slot = config.key_slot(config.effective().connection)  # key 按平台记(test_assist_admin_keys.py)
+    assert [r.changes["api_keys"] for r in rows] == [{slot: "replaced"}, {slot: "cleared"}]
     assert all(KEY not in json.dumps(r.changes) and KEY not in r.description for r in rows)
     assert config.effective().connection.api_key == ""  # 清除 ≠ 回到 env
 

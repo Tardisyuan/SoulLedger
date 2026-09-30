@@ -20,12 +20,13 @@ _TOKENS = {"input_tokens": Sum("input_tokens"), "output_tokens": Sum("output_tok
            "cache_read_tokens": Sum("cache_read_tokens")}
 
 
-def record(side, tenant, status, model="", tokens=None, *, is_eval=False, retrieval=""):
+def record(side, tenant, status, model="", tokens=None, *, is_eval=False, retrieval="", provider_role="",
+           fallback_reason=""):
     from apps.soul_assist.models import AssistUsage
 
     tokens = tokens or {}
     AssistUsage.objects.create(side=side, tenant=tenant, status=status, model=model or "", is_eval=is_eval,
-                               retrieval=retrieval,
+                               retrieval=retrieval, provider_role=provider_role, fallback_reason=fallback_reason,
                                input_tokens=tokens.get("input", 0), output_tokens=tokens.get("output", 0),
                                cache_read_tokens=tokens.get("cache_read", 0))
 
@@ -44,12 +45,14 @@ def _rows(start, end):
 
 
 def _priced(prices, grouped):
-    """按模型分组的 token 行 → (总花费, 未定价的模型)。"""
+    """按(答的是哪一家 × 模型)分组的 token 行 → (总花费, 未定价的模型)。`prices` 是 `Prices`:
+    备用答的行按备用的价目表算(§13),同名模型在两家可以不同价。"""
     from apps.soul_assist.config import cost
 
     total, unpriced = 0.0, set()
     for g in grouped:
-        c = cost(prices, g["model"], g["input_tokens"] or 0, g["output_tokens"] or 0, g["cache_read_tokens"] or 0)
+        table = prices.backup if g.get("provider_role") == "backup" else prices.primary
+        c = cost(table, g["model"], g["input_tokens"] or 0, g["output_tokens"] or 0, g["cache_read_tokens"] or 0)
         if c is None:
             if (g["input_tokens"] or 0) + (g["output_tokens"] or 0):
                 unpriced.add(g["model"])
@@ -58,9 +61,22 @@ def _priced(prices, grouped):
     return total, unpriced
 
 
+class Prices:
+    """主用与备用两张价目表。只给一张 dict 的老调用方(评测)等于没有备用。"""
+
+    def __init__(self, primary, backup=None):
+        self.primary = primary or {}
+        self.backup = backup or {}
+
+    @classmethod
+    def of(cls, prices):
+        return prices if isinstance(prices, cls) else cls(prices)
+
+
 def month_spend(prices, month=None):
+    prices = Prices.of(prices)
     start, end = month_bounds(month)
-    grouped = _rows(start, end).order_by().values("model").annotate(**_TOKENS)
+    grouped = _rows(start, end).order_by().values("provider_role", "model").annotate(**_TOKENS)
     total, unpriced = _priced(prices, grouped)
     return {"cost": round(total, 6), "unpriced_models": sorted(unpriced)}
 
@@ -89,7 +105,7 @@ def enforce_cap():
     cfg = config.effective()
     if not cfg.enabled or cfg.monthly_cap is None:
         return False
-    spent = month_spend(cfg.prices)["cost"]
+    spent = month_spend(Prices(cfg.prices, cfg.backup_prices))["cost"]
     if spent < cfg.monthly_cap * ALERT_SHARE:
         return False
     month = _month_key()
@@ -157,14 +173,17 @@ def _notify_admins(title, message):
 
 
 _ANSWERED = Q(status__in=("ok", "empty"))
+#: 「主用失败前花掉的 token」那一行只记账,不是一次请求(AssistUsage.STATUSES)。
+_REQUEST = ~Q(status="failed_over")
 _COUNTS = ("requests", "answered", "input_tokens", "output_tokens", "cache_read_tokens")
+FALLBACK_REASONS = ("connection", "timeout", "rate_limited", "server_error", "quota", "circuit_open")
 
 
 def _grouped(rows, key, prices):
-    """按 `key` 分组的请求数、token 与花费(花费要按模型求,所以先按 key × 模型分组再合)。"""
+    """按 `key` 分组的请求数、token 与花费(花费要按哪一家 × 模型求,所以先这样分组再合)。"""
     out = {}
-    for g in rows.order_by().values(key, "model").annotate(requests=Count("id"), answered=Count("id", filter=_ANSWERED),
-                                                **_TOKENS):
+    for g in rows.order_by().values(*dict.fromkeys((key, "provider_role", "model"))).annotate(
+            requests=Count("id", filter=_REQUEST), answered=Count("id", filter=_ANSWERED), **_TOKENS):
         item = out.setdefault(g[key], {**dict.fromkeys(_COUNTS, 0), "_groups": []})
         for k in _COUNTS:
             item[k] += g[k] or 0
@@ -179,10 +198,14 @@ def report(prices, month=None):
     from apps.soul_assist import corpus
     from apps.tenants.models import Tenant
 
+    prices = Prices.of(prices)
     start, end = month_bounds(month)
     rows = _rows(start, end)
-    statuses = dict(rows.order_by().values_list("status").annotate(n=Count("id")))
+    statuses = dict(rows.filter(_REQUEST).order_by().values_list("status").annotate(n=Count("id")))
     retrievals = dict(rows.order_by().values_list("retrieval").annotate(n=Count("id")))
+    reasons = dict(rows.filter(provider_role="backup").exclude(fallback_reason="").order_by()
+                   .values_list("fallback_reason").annotate(n=Count("id")))
+    roles = _grouped(rows.exclude(provider_role=""), "provider_role", prices)
     total = sum(statuses.values())
     empty = statuses.get("empty", 0)
     answered = statuses.get("ok", 0) + empty
@@ -201,7 +224,11 @@ def report(prices, month=None):
         "spent": spend["cost"], "unpriced_models": spend["unpriced_models"],
         "requests": total,
         "by_status": {s: statuses.get(s, 0) for s in ("ok", "empty", "unavailable", "busy", "rate_limited",
-                                                       "not_configured")},
+                                                       "not_configured", "stopped", "interrupted")},
+        # 「改用备用」:备用答的(或试过备用的)请求数与理由分布;花费按主用 / 备用分开(§13)。
+        "fallbacks": {"count": sum(reasons.values()),
+                      "by_reason": {r: reasons.get(r, 0) for r in FALLBACK_REASONS}},
+        "by_provider": [{"role": role, **v} for role, v in sorted(roles.items())],
         "failure_rates": {"unavailable": share(statuses.get("unavailable", 0)),
                           "rate_limited": share(statuses.get("rate_limited", 0) + statuses.get("busy", 0)),
                           "empty": empty_share},

@@ -54,9 +54,12 @@ function makeConfig(over: Partial<AssistAdminConfig> = {}): AssistAdminConfig {
     model: "assist-medium", effort: "", fallbacks: false, soul_per_hour: 30, officer_per_hour: 30, monthly_cap: 300,
     eval_spend_cap: 5, prices: { "assist-medium": { input: 3, output: 15 }, "assist-large": { input: 6, output: 30 } },
     api_key: { set: true, last4: "8f3c", set_at: "2026-09-02T00:00:00Z", source: "page" },
+    api_key_slot: "custom:llm.example",
+    api_keys: { "custom:llm.example": { set: true, last4: "8f3c", set_at: "2026-09-02T00:00:00Z", source: "page" } },
     eval_soul_account: "11111111-1111-1111-1111-111111111111", eval_officer: 9,
     month_rolls_over_at: "每月 1 日 08:00(北京时间)", overridden: [],
-    read_only: { max_concurrent: 8, timeout_seconds: 22, history_turns: 20, retention_days: 30 },
+    read_only: { max_concurrent: 8, timeout_seconds: 22, stream_total_seconds: 60, primary_first_token_seconds: 12,
+      history_turns: 20, retention_days: 30 },
     ...over,
   };
 }
@@ -68,7 +71,10 @@ const HALLS = [
 
 const USAGE: AssistAdminUsage = {
   month: "2026-09", spent: 184.2, cap: 300, unpriced_models: ["mystery-model"], requests: 16742,
-  by_status: { ok: 15000, empty: 1500, unavailable: 100, busy: 42, rate_limited: 100, not_configured: 0 },
+  by_status: { ok: 15000, empty: 1500, unavailable: 100, busy: 42, rate_limited: 100, not_configured: 0, stopped: 0,
+    interrupted: 0 },
+  fallbacks: { count: 0, by_reason: { connection: 0, timeout: 0, rate_limited: 0, server_error: 0, quota: 0, circuit_open: 0 } },
+  by_provider: [],
   failure_rates: { unavailable: 0.006, rate_limited: 0.0085, empty: 0.118 },
   by_retrieval: { vector: 14000, fallback: 100, fallback_low_similarity: 400 },
   by_day: [{ date: "2026-09-01", requests: 500, answered: 480, input_tokens: 1000, output_tokens: 200, cache_read_tokens: 0, cost: 6.1 }],
