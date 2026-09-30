@@ -552,8 +552,10 @@ export function ReportsReview() {
         </section>
       )}
 
+      {/* 官员删除进全局回收站(DELETED_BY_OFFICER,30 天内可恢复)—— 可撤回,警示按钮(橙)。 */}
       <ConfirmDialog
         isOpen={deleting}
+        variant="warning"
         title={t("social_moderation.confirm_delete_title")}
         message={t("social_moderation.confirm_delete_body")}
         confirmText={t("social_moderation.actions.delete")}

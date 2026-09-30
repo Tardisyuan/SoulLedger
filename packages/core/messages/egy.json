@@ -3577,6 +3577,7 @@
       "placeholders": "Ren Ba Hena Ren Wesekhet Er Tepy Hab:",
       "saved": "Pet-Sesh Sau Seth",
       "deleted": "Pet-Sesh Fekh Seth",
+      "delete_confirm": "«{{title}}» Pet-Sesh Fekh. Nen Wehem Djer.",
       "empty_manage": "Nen Pet-Sesh Em Wesekhet Pen Djer. Sau Wesheb Er Pet-Sesh; Setep Er Hab."
     },
     "assign": {

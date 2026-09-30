@@ -209,7 +209,7 @@ class LedgerInheritanceView(APIView):
 
 class LedgerJournalView(APIView):
     """
-    GET /ledger/journal/?month=YYYY-MM&page=N[&civilization=][&category=][&search=]
+    GET /ledger/journal/?month=YYYY-MM&page=N[&all=1][&civilization=][&category=][&search=]
 
     功过总账:四柱(旧管 / 新收 / 开除 / 实在)、按类目的本期合计、本期流水一页。
     只读、按租户划界(`scope_to_tenant`,ADMIN 跨租户),口径见 apps/ledger/journal.py。
@@ -226,6 +226,14 @@ class LedgerJournalView(APIView):
         parameters=[
             OpenApiParameter("month", OpenApiTypes.STR, description="YYYY-MM; defaults to the current month"),
             OpenApiParameter("page", OpenApiTypes.INT, description="1-based page of the month's rows (20 per page)"),
+            OpenApiParameter(
+                "all",
+                OpenApiTypes.BOOL,
+                description=(
+                    "1/true: the whole month in one response (page ignored, page_size == count). "
+                    "Over apps.ledger.journal.WHOLE_MONTH_MAX rows it is a 400 MONTH_TOO_LARGE, never truncated."
+                ),
+            ),
             OpenApiParameter("civilization", OpenApiTypes.STR),
             OpenApiParameter("category", OpenApiTypes.STR),
             OpenApiParameter("search", OpenApiTypes.STR, description="灵魂姓名(包含)或灵魂 id(整条 UUID)"),
@@ -247,6 +255,7 @@ class LedgerJournalView(APIView):
                 civilization=params.get("civilization", ""),
                 category=params.get("category", ""),
                 search=params.get("search", ""),
+                whole_month=params.get("all", "").lower() in ("1", "true"),
             )
         except JournalParamError as exc:
             return _journal_param_error(exc)
@@ -254,8 +263,9 @@ class LedgerJournalView(APIView):
 
 
 def _journal_param_error(exc: JournalParamError) -> Response:
+    code = "MONTH_TOO_LARGE" if exc.field == "all" else "INVALID_PARAMETER"
     return Response(
-        {"error": "INVALID_PARAMETER", "field": exc.field, "message": str(exc)},
+        {"error": code, "field": exc.field, "message": str(exc)},
         status=status.HTTP_400_BAD_REQUEST,
     )
 
@@ -492,6 +502,9 @@ class LedgerOverviewStatsView(APIView):
                     name_egy=row["destination_realm__name_egy"],
                 ),
                 "civilization": row["destination_realm__civilization"],
+                # 界的类型决定仪表盘上那根柱的图案(规范 v2 A5:炼狱实底 / 天界半色 /
+                # 地狱斜线 / 中立空框,前端 `REALM_PATTERNS`)。与 realm_code 函数依赖,不改变分组。
+                "realm_type": row["destination_realm__realm_type"],
                 "count": row["count"],
             }
             for row in (
@@ -504,6 +517,7 @@ class LedgerOverviewStatsView(APIView):
                     "destination_realm__name_en",
                     "destination_realm__name_egy",
                     "destination_realm__civilization",
+                    "destination_realm__realm_type",
                 )
                 .annotate(count=Count("id"))
                 .order_by("destination_realm__realm_code")

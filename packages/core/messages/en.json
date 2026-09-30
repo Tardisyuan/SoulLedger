@@ -3577,6 +3577,7 @@
       "placeholders": "Filled in with the soul's and the hall's name before sending:",
       "saved": "Template saved",
       "deleted": "Template deleted",
+      "delete_confirm": "Deleting the template “{{title}}” cannot be undone.",
       "empty_manage": "This hall has no templates yet. Save a reply you write often, then insert it with one click."
     },
     "assign": {

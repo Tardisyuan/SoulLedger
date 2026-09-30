@@ -54,8 +54,10 @@ jest.mock("@/src/contexts/I18nContext", () => ({
 }));
 
 jest.mock("@/src/components/charts/LazyDashboardCharts", () => ({
-  LazyBarChart: ({ data, dataKey }: { data: unknown[]; dataKey: string }) => (
-    <div data-testid={`bar-${dataKey}`}>{data.length}</div>
+  LazyBarChart: ({ data, dataKey }: { data: { name?: string; pattern?: string }[]; dataKey: string }) => (
+    <div data-testid={`bar-${dataKey}`} data-patterns={data.map((d) => `${d.name}:${d.pattern}`).join(",")}>
+      {data.length}
+    </div>
   ),
 }));
 
@@ -82,7 +84,7 @@ const baseStats = {
     { tenant_code: "CN_DIYU", tenant_name: "地府", total_souls: 3, state_breakdown: { ALIVE: 2, JUDGING: 1 } },
     { tenant_code: "EG_DUAT", tenant_name: "", total_souls: 1, state_breakdown: { DISPOSED: 1 } },
   ],
-  souls_by_realm: [{ realm_code: "R1", realm_name: "Diyu", civilization: "CHINESE", count: 3 }],
+  souls_by_realm: [{ realm_code: "R1", realm_name: "Diyu", civilization: "CHINESE", realm_type: "HELL", count: 3 }],
   karma_distribution: [
     { label: "< -50", count: 2 },
     { label: "-5 to 5", count: 3 },
@@ -283,6 +285,20 @@ describe("DashboardPage overview", () => {
       expect(mockedNext).not.toHaveBeenCalled();
       expect(mockedDeathSummary).not.toHaveBeenCalled();
     });
+  });
+
+  it("draws each realm bar in its realm type's pattern (A5: 炼狱实底 / 天界半色 / 地狱斜线 / 中立空框)", async () => {
+    const realm = (code: string, realm_type: string, count: number) =>
+      ({ realm_code: code, realm_name: code, civilization: "CHINESE", realm_type, count });
+    mockedStats.mockResolvedValue({
+      data: {
+        ...baseStats,
+        souls_by_realm: [realm("H", "HELL", 4), realm("P", "PURGATORY", 3), realm("B", "BLISS", 2), realm("N", "NEUTRAL", 1)],
+      },
+    });
+    renderPage();
+    const chart = await screen.findByTestId("bar-count");
+    expect(chart).toHaveAttribute("data-patterns", "H:hatch,P:solid,B:half,N:outline");
   });
 
   it("shows a placeholder instead of a realm chart when there are no realms", async () => {

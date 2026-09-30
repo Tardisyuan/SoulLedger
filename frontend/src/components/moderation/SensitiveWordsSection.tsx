@@ -23,7 +23,8 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { Button } from "@/src/components/ui/Button";
 import { Badge } from "@/src/components/ui/Badge";
-import { ConfirmDialog, Modal } from "@/src/components/ui/Modal";
+import { Modal } from "@/src/components/ui/Modal";
+import { NameConfirmDialog } from "@/src/components/admin/NameConfirmDialog";
 import { Drawer } from "@/src/components/ui/Drawer";
 import { fieldControl } from "@/src/components/ui/Field";
 import { DataTable, ROW_LINK } from "@/components/ui/data-table";
@@ -140,6 +141,8 @@ export function SensitiveWordsSection() {
       }
     );
   };
+
+  const singleWord = selected.size === 1 ? rows.find((w) => selected.has(w.id))?.word : undefined;
 
   const removeSelected = () =>
     remove.mutate([...selected], {
@@ -432,12 +435,15 @@ export function SensitiveWordsSection() {
         )}
       </Drawer>
 
-      <ConfirmDialog
+      {/* 敏感词是硬删(SensitiveWord 无软删、不进回收站),不可撤回 → 输入名称以确认:
+          只删一个就输那个词,删多个输动作词。 */}
+      <NameConfirmDialog
         isOpen={confirming}
         title={t("social_moderation.words.confirm_title", { n: String(selected.size) })}
         message={t("social_moderation.confirm_remove_word_body")}
-        confirmText={t("social_moderation.words.delete_selected")}
-        confirmLoading={remove.isPending}
+        name={singleWord ?? t("social_moderation.words.delete_selected")}
+        actionLabel={t("social_moderation.words.delete_selected")}
+        isPending={remove.isPending}
         onConfirm={removeSelected}
         onCancel={() => setConfirming(false)}
       />

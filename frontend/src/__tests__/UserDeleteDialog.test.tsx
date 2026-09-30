@@ -113,7 +113,20 @@ describe("UserDeleteDialog", () => {
   it("renders cancel and delete buttons", () => {
     renderDialog();
     expect(screen.getByText(zh("common.cancel"))).toBeInTheDocument();
-    expect(screen.getByText(zh("common.delete"))).toBeInTheDocument();
+    expect(screen.getByTestId("name-confirm-action")).toHaveTextContent(zh("common.delete"));
+  });
+
+  it("is a type-the-name dialog: the delete stays disabled until the username is typed", () => {
+    // User 软删但不进回收站 —— 不可撤回,所以要输入用户名。
+    renderDialog();
+    const confirm = screen.getByTestId("name-confirm-action");
+    expect(confirm).toBeDisabled();
+    fireEvent.click(confirm);
+    expect(mockedDelete).not.toHaveBeenCalled();
+    fireEvent.change(screen.getByRole("textbox"), { target: { value: "testuse" } });
+    expect(confirm).toBeDisabled();
+    fireEvent.change(screen.getByRole("textbox"), { target: { value: "testuser" } });
+    expect(confirm).toBeEnabled();
   });
 
   it("calls onClose when cancel button is clicked", () => {
@@ -129,7 +142,8 @@ describe("UserDeleteDialog", () => {
     const onConfirm = jest.fn();
     const { invalidate } = renderDialog({ user: { ...mockUser, id: 42 }, onClose, onConfirm });
 
-    fireEvent.click(screen.getByText(zh("common.delete")));
+    fireEvent.change(screen.getByRole("textbox"), { target: { value: "testuser" } });
+    fireEvent.click(screen.getByTestId("name-confirm-action"));
 
     await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
     expect(mockedDelete).toHaveBeenCalledTimes(1);
@@ -145,7 +159,8 @@ describe("UserDeleteDialog", () => {
     const onConfirm = jest.fn();
     const { invalidate } = renderDialog({ onClose, onConfirm });
 
-    fireEvent.click(screen.getByText(zh("common.delete")));
+    fireEvent.change(screen.getByRole("textbox"), { target: { value: "testuser" } });
+    fireEvent.click(screen.getByTestId("name-confirm-action"));
 
     await waitFor(() => expect(mockedToast).toHaveBeenCalledWith(zh("users.delete_error"), "error"));
     expect(mockedDelete).toHaveBeenCalledWith("1");

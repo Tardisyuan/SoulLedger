@@ -1,15 +1,12 @@
 "use client";
 import { useMemo, useState } from "react";
-import {
-  CIVILIZATION_ICONS,
-  CIVILIZATION_ICON_FALLBACK,
-} from "@soulledger/core/config/civilizations";
 import { useQuery } from "@tanstack/react-query";
 import { actorsApi, Actor } from "@soulledger/core/api";
 import { cn } from "@/lib/utils";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { PageSection } from "@/components/ui/page-section";
+import { SectionTitle } from "@/src/components/plaque/SectionTitle";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChevronDown, Scale } from "lucide-react";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
@@ -237,27 +234,23 @@ function ActorsPageContent() {
                   data-civilization={civ}
                   className="border-t border-[oklch(var(--color-block))] first:border-t-0"
                 >
-                  {/* Civilization Header */}
-                  <button
-                    onClick={() => toggleCollapse(civ)}
-                    aria-expanded={!isCollapsed}
-                    className="w-full flex items-center gap-3 mb-2 py-3 hover:bg-[oklch(var(--color-surface-2))] transition-colors text-left"
-                  >
-                    <span className="text-md" aria-hidden="true">{CIVILIZATION_ICONS[civ] ?? CIVILIZATION_ICON_FALLBACK}</span>
-                    <div className="flex-1">
-                      {/* `font-semibold` 删掉,不是改样式:`--text-md--font-weight: 600`
-                          已经把 600 带进 `.text-md`,再写一次逐像素相同。留着的坏处是
-                          它读起来像「不写就不粗」,于是下一个人会在 `text-2xs` 上补一个
-                          ——而那一档同样自带 600。 */}
-                      <h2 className="text-md text-[oklch(var(--color-ink))]">
+                  {/* 文明 = 页面级分节标题(规范 v2 §四,SectionTitle):匾纹片段 + 节名 + 件数注记。
+                      此前是 <button> 里包 <h2> —— 标题进按钮是无效 HTML(按钮只收短语内容),
+                      读屏也只念出一个按钮。现在反过来:<h2> 里放折叠钮(披露模式)。
+                      文明 emoji 撤掉,节首的匾纹片段已经标明是哪个文明。 */}
+                  <div className="pt-3 mb-3">
+                    <SectionTitle aside={t("actors.count", { count: String(total) })}>
+                      <button
+                        type="button"
+                        onClick={() => toggleCollapse(civ)}
+                        aria-expanded={!isCollapsed}
+                        className="inline-flex items-center gap-2 text-left hover:underline underline-offset-2"
+                      >
                         <DomainEnum namespace="actors.civilizations" value={civ} />
-                      </h2>
-                      <p className="font-mono text-xs text-[oklch(var(--color-ink-subtle))]">
-                        {t("actors.count", { count: String(total) })}
-                      </p>
-                    </div>
-                    <ChevronDown className={`w-5 h-5 text-[oklch(var(--color-ink-muted))] transition-transform ${isCollapsed ? "-rotate-90" : ""}`} />
-                  </button>
+                        <ChevronDown aria-hidden="true" className={`w-4 h-4 text-[oklch(var(--color-ink-muted))] transition-transform ${isCollapsed ? "-rotate-90" : ""}`} />
+                      </button>
+                    </SectionTitle>
+                  </div>
 
                   {!isCollapsed && (
                     <div className="space-y-4">
@@ -281,9 +274,10 @@ function ActorsPageContent() {
                           >
                             <Scale aria-hidden="true" className="w-5 h-5 text-[oklch(var(--color-ink-subtle))] shrink-0" />
                             <div className="flex-1 min-w-0">
-                              <h3 className="text-sm font-semibold text-[oklch(var(--color-ink))] truncate">
+                              {/* span,不是 <h3>:这是表内小分组的折叠行(不用分节标题),而且标题不能进按钮。 */}
+                              <span className="block text-sm font-semibold text-[oklch(var(--color-ink))] truncate">
                                 {t("actors.assessors.title")}
-                              </h3>
+                              </span>
                             </div>
                             <span className={cn(roleBadgeClass(ROLE_BADGE_FALLBACK), "tabular-nums")}>
                               {t("actors.assessors.count", { count: String(bench.length) })}
