@@ -17,9 +17,9 @@ import type { CellFailure } from "./useMatrixCells";
  *   ＋ / − 未保存 — 2 px 强调色焦点环 + 字形
  *   ! 保存失败 — 危险色,原因在描述里(aria-describedby)与 title 上
  *   ◇ 引起冲突 — 警示色,这次改动会让某条审批流的某一步无人可批
- *   始终 — ADMIN 整列(第三类 F 组):降低不透明度的墨块,等宽字「始终」。服务端对 ADMIN
+ *   始终 — ADMIN 整列(第三类 F 组):s2 底、等宽字「始终」(补足 C15)。服务端对 ADMIN
  *          在读授权之前就答「有」(`admin_always_all`),所以这里点不动,悬停 / 聚焦说明原因
- *   ! 禁授 — 服务端禁止授予该角色的格子(`ROLE_FORBIDDEN_CODENAMES`),一开始就摆明;
+ *   ! 禁授 — 1px ink3 虚线框(C15)。服务端禁止授予该角色的格子(`ROLE_FORBIDDEN_CODENAMES`),一开始就摆明;
  *          与「!」保存失败(勾了之后被退回)区分:禁授是规则,拒绝是事后结果
  *
  * State is never colour alone: every non-plain state carries a glyph, and the
@@ -62,8 +62,10 @@ const CELL_CLASS: Record<CellState, string> = {
   failed: "border border-[oklch(var(--color-danger))] bg-[oklch(var(--color-danger-tint))] text-[oklch(var(--color-danger))]",
   conflict:
     "border border-[oklch(var(--color-warning))] bg-[oklch(var(--color-warning-tint))] text-[oklch(var(--color-warning))] outline-2 outline-offset-2 outline-[oklch(var(--color-accent))]",
-  lock: "bg-[oklch(var(--color-ink))] text-[oklch(var(--color-canvas))] opacity-72",
-  deny: "border border-[oklch(var(--color-danger))] bg-[oklch(var(--color-danger-tint))] text-[oklch(var(--color-danger))]",
+  // 补足 C15:「始终」是 s2 底、ink 字(不是降了不透明度的墨块);「! 禁授」是 1px ink3 虚线框,
+  // 不用反馈色 —— 它是一条规则,不是出错。
+  lock: "bg-[oklch(var(--color-surface-2))] text-[oklch(var(--color-ink))]",
+  deny: "border border-dashed border-[oklch(var(--color-ink-subtle))] text-[oklch(var(--color-ink))]",
 };
 
 /** The drawn square, also used by the legend. */
