@@ -212,6 +212,15 @@
   --text-display: 40px;
   --text-display--line-height: 48px;
   --text-display--font-weight: 400;
+  /* 规范 v3:展示字号,只给「当前这一判」与 App 本世余额两处。
+     行高 62/56 = 1.107,比 v2 的 display(48/40 = 1.2)更紧,因为这两处
+     只放一行且没有拉丁下伸部;拉丁标题用 `--text-display`,它的 1.2 已经
+     在 v3 第七轮被实测为**不够** —— 40px 下墨迹底边越界 1px,见 v3 落地
+     笔记。`--text-display--line-height` 的加高留到基础组件那一阶段改,
+     因为它会推动所有身份带的高度。 */
+  --text-display-lg: 56px;
+  --text-display-lg--line-height: 62px;
+  --text-display-lg--font-weight: 600;
 
   /* 间距 · 规范 v2 A2:2 / 4 / 8 / 12 / 16 / 24 / 32 / 48,即 Tailwind 的
      0.5 / 1 / 2 / 3 / 4 / 6 / 8 / 12(4px 基数,`--spacing` 保持 Tailwind 默认 0.25rem)。
@@ -235,6 +244,23 @@
      与正圆(`rounded-circle`,单选钮、头像)。守卫允许的值因此只有 0、9999px、50%。 */
   --radius-full: 9999px;
   --radius-circle: 50%;
+
+  /* 规范 v3 推翻了「圆角一律 0」。v3 只给两个非零档,用途是写死的:
+       control 4px  输入框与小控件
+       panel   8px  弹层、抽屉、资料舱
+     表格、身份带、案卷仍然是 0 —— 所以 `--radius-*: 0` 那一排**不动**,
+     v3 的两档是新名字,新代码按用途取名而不是按尺寸取名。
+     `designGuardContract` 现在只放行 0 / 9999px / 50%,这两档要等
+     基础组件那一阶段连同守卫一起放开,在那之前它们不会被任何调用点用到。 */
+  --radius-control: 4px;
+  --radius-panel: 8px;
+
+  /* 规范 v3 推翻了「全站无阴影,弹层靠 1px 墨框」。两档,用途同样写死:
+       raised   资料舱、批量操作条 —— 贴在页面上、但要读出「浮起一层」
+       overlay  弹窗、抽屉 —— 盖住页面
+     1px 墨框不撤,阴影是加在它之上的第二层线索。同样等基础组件阶段才有调用点。 */
+  --shadow-raised: 0 8px 24px rgba(20, 22, 18, 0.1);
+  --shadow-overlay: 0 24px 72px rgba(10, 11, 9, 0.28);
 
   --border-width-3: 3px;
 
@@ -367,18 +393,29 @@
      ═══════════════════════════════════════════════════════════════════════ */
   /* 深色是 :root,浅色是 .light;ThemeContext 按系统偏好或用户选择给 <html> 加类。 */
   :root {
-    /* 纸 / 墨 · 规范 v2 §一 深色 */
-    --color-canvas: 0.165802 0.003970 48.4701;
-    --color-surface-1: 0.207357 0.006191 56.0227;
-    --color-surface-2: 0.254965 0.009534 67.3784;
-    --color-surface-3: 0.301893 0.012433 62.1505;
-    --color-rule: 0.301893 0.012433 62.1505;
-    --color-line: 0.301893 0.012433 62.1505;
-    --color-line-strong: 0.680983 0.023181 65.1622;
-    --color-block: 0.937570 0.019894 77.3138;
-    --color-ink: 0.937570 0.019894 77.3138;
-    --color-ink-muted: 0.791906 0.027764 74.6974;
-    --color-ink-subtle: 0.680983 0.023181 65.1622;
+    /* 纸 / 墨 · 规范 v3 深色。
+       v2「朱印」的暖纸色(canvas #F4EDE0 系)整体换成 v3 的冷中性灰(canvas #EFEFEB 系)。
+       v3 只定义 5 个中性角色 —— canvas / surface / ink / muted / line —— 而这里有 9 档,
+       多出来的 surface-2、surface-3、rule、line-strong、block 按下面的规则映射,
+       **是推导不是规范**,定稿前要么让 Design 补,要么在改版页面上逐个核对:
+         surface-3 / rule / line   直接取 v3 的 line
+         block                     直接取 v3 的 ink
+         ink-muted / ink-subtle    都取 v3 的 muted(v3 只有一档次要文字;
+                                   这让 ink-subtle 的对比度从不足升到 5.48:1)
+         surface-2 / line-strong   保留 v2 的明度,只把色相与彩度挪到 v3 的中性族
+       转换用 sRGB→OKLab,逐个在 Chromium 的 canvas 上回读过十六进制值;
+       换算器先拿 v2 已有的 `#9a2f1f → 0.464883 0.145204 31.3776` 对过账,逐位相同。 */
+    --color-canvas: 0.178727 0.006829 135.0201;
+    --color-surface-1: 0.226034 0.008836 137.8312;
+    --color-surface-2: 0.280000 0.010500 136.0000;
+    --color-surface-3: 0.349944 0.013063 131.5941;
+    --color-rule: 0.349944 0.013063 131.5941;
+    --color-line: 0.349944 0.013063 131.5941;
+    --color-line-strong: 0.680983 0.012600 133.4000;
+    --color-block: 0.955447 0.009333 113.1622;
+    --color-ink: 0.955447 0.009333 113.1622;
+    --color-ink-muted: 0.738053 0.012625 133.4092;
+    --color-ink-subtle: 0.738053 0.012625 133.4092;
     /* 立柱底(四文明共用)与匾上题字色(两个主题同值)。 */
     --color-pillar: 0.108893 0.003009 17.6234;
     --color-on-main: 0.972507 0.019830 69.9992;
@@ -411,10 +448,10 @@
     --scrim-alpha: 0.62;
     /* 文明皮 · 匾色(§三),深色档。 */
     --color-civ-neutral: 0.515225 0.016007 67.4607;
-    --color-civ-cn: 0.529552 0.153564 32.1588;
-    --color-civ-eu: 0.519641 0.133015 304.1459;
-    --color-civ-eg: 0.514767 0.141865 264.7935;
-    --color-civ-gr: 0.512981 0.053880 205.7495;
+    --color-civ-cn: 0.537787 0.130919 28.6219;
+    --color-civ-eu: 0.544523 0.094860 308.8429;
+    --color-civ-eg: 0.599456 0.103508 263.0918;
+    --color-civ-gr: 0.581329 0.046847 188.4928;
     --color-main: var(--color-civ-neutral);
     /* 图表 · A5:灵魂状态的冷灰蓝明度梯度(OKLCH 色相 250、彩度 .045),先后有序;
        深色从亮到暗。chart-1 同时是去向 / 功过图案的基色。 */
@@ -451,18 +488,29 @@
   }
 
   .light {
-    /* 纸 / 墨 · 规范 v2 §一 浅色 */
-    --color-canvas: 0.948042 0.018849 83.0639;
-    --color-surface-1: 0.986497 0.013019 82.4021;
-    --color-surface-2: 0.912345 0.028804 84.5925;
-    --color-surface-3: 0.864197 0.029618 82.5881;
-    --color-rule: 0.864197 0.029618 82.5881;
-    --color-line: 0.864197 0.029618 82.5881;
-    --color-line-strong: 0.480553 0.018306 67.3691;
-    --color-block: 0.188704 0.003838 48.5100;
-    --color-ink: 0.188704 0.003838 48.5100;
-    --color-ink-muted: 0.391607 0.009608 48.4636;
-    --color-ink-subtle: 0.480553 0.018306 67.3691;
+    /* 纸 / 墨 · 规范 v3 浅色。
+       v2「朱印」的暖纸色(canvas #F4EDE0 系)整体换成 v3 的冷中性灰(canvas #EFEFEB 系)。
+       v3 只定义 5 个中性角色 —— canvas / surface / ink / muted / line —— 而这里有 9 档,
+       多出来的 surface-2、surface-3、rule、line-strong、block 按下面的规则映射,
+       **是推导不是规范**,定稿前要么让 Design 补,要么在改版页面上逐个核对:
+         surface-3 / rule / line   直接取 v3 的 line
+         block                     直接取 v3 的 ink
+         ink-muted / ink-subtle    都取 v3 的 muted(v3 只有一档次要文字;
+                                   这让 ink-subtle 的对比度从不足升到 5.48:1)
+         surface-2 / line-strong   保留 v2 的明度,只把色相与彩度挪到 v3 的中性族
+       转换用 sRGB→OKLab,逐个在 Chromium 的 canvas 上回读过十六进制值;
+       换算器先拿 v2 已有的 `#9a2f1f → 0.464883 0.145204 31.3776` 对过账,逐位相同。 */
+    --color-canvas: 0.951016 0.005316 106.5001;
+    --color-surface-1: 0.987257 0.003952 106.4716;
+    --color-surface-2: 0.912345 0.006700 113.2000;
+    --color-surface-3: 0.863595 0.008432 121.6501;
+    --color-rule: 0.863595 0.008432 121.6501;
+    --color-line: 0.863595 0.008432 121.6501;
+    --color-line-strong: 0.480553 0.011300 131.9000;
+    --color-block: 0.214438 0.006530 134.9799;
+    --color-ink: 0.214438 0.006530 134.9799;
+    --color-ink-muted: 0.511553 0.011899 131.4694;
+    --color-ink-subtle: 0.511553 0.011899 131.4694;
     --color-pillar: 0.188704 0.003838 48.5100;
     --color-accent: 0.188704 0.003838 48.5100;
     --color-accent-contrast: 0.948042 0.018849 83.0639;
@@ -485,10 +533,10 @@
     --color-scrim: 0.188704 0.003838 48.5100;
     --scrim-alpha: 0.42;
     --color-civ-neutral: 0.275998 0.008069 59.3304;
-    --color-civ-cn: 0.464883 0.145204 31.3776;
-    --color-civ-eu: 0.358447 0.109419 304.5324;
-    --color-civ-eg: 0.390292 0.130940 263.9175;
-    --color-civ-gr: 0.331542 0.034316 204.4908;
+    --color-civ-cn: 0.452064 0.126889 29.1662;
+    --color-civ-eu: 0.406759 0.103847 306.5685;
+    --color-civ-eg: 0.419561 0.113409 262.1446;
+    --color-civ-gr: 0.402622 0.045196 197.6316;
     /* 浅色从暗到亮。 */
     --color-chart-1: 0.259075 0.045425 251.0858;
     --color-chart-2: 0.360350 0.044648 250.3338;
