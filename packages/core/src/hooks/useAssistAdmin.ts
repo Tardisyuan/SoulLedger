@@ -10,6 +10,7 @@ import {
   type AssistAdminEmbeddingUpdate,
   type AssistAdminEvalSide,
   type AssistAdminHall,
+  type AssistAdminPlatformId,
   type AssistAdminTryRequest,
 } from "../api/assist-admin";
 import { assistAdminKeys } from "../query_keys";
@@ -36,6 +37,17 @@ export function useUpdateAssistAdminConfig() {
 
 export function useTestAssistConnection() {
   return useMutation({ mutationFn: (body: AssistAdminCandidate) => assistAdminApi.testConnection(body) });
+}
+
+export function useListAssistModels() {
+  return useMutation({ mutationFn: (body: AssistAdminCandidate) => assistAdminApi.listModels(body) });
+}
+
+export function useAssistPriceReference() {
+  return useMutation({
+    mutationFn: ({ platform, model }: { platform: AssistAdminPlatformId; model: string }) =>
+      assistAdminApi.priceReference(platform, model),
+  });
 }
 
 export function useAssistAdminHalls(enabled = true) {

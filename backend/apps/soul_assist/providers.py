@@ -156,9 +156,10 @@ class OpenAICompatibleProvider:
         for round_no in range(max_rounds + 1):
             last = round_no == max_rounds
             try:
+                # 不带工具时连 tool_choice 也不能给:OpenAI 拒收空的 tools 数组(连通测试的「不带工具再试」走这里)
+                with_tools = {"tools": specs, "tool_choice": "none" if last else "auto"} if specs else {}
                 response = self.client.with_options(timeout=_remaining(deadline)).chat.completions.create(
-                    model=model, messages=messages, tools=specs,
-                    tool_choice="none" if last else "auto", **_vendor_params(conn),
+                    model=model, messages=messages, **with_tools, **_vendor_params(conn),
                 )
             except ProviderError:
                 raise
@@ -234,9 +235,8 @@ class AnthropicProvider:
             try:
                 response = self._request(
                     self.client.with_options(timeout=_remaining(deadline)), conn,
-                    model=conn.model, max_tokens=self.MAX_TOKENS, system=blocks,
-                    messages=messages, tools=specs,
-                    tool_choice={"type": "none"} if last else {"type": "auto"},
+                    model=conn.model, max_tokens=self.MAX_TOKENS, system=blocks, messages=messages,
+                    **({"tools": specs, "tool_choice": {"type": "none"} if last else {"type": "auto"}} if specs else {}),
                 )
             except ProviderError:
                 raise

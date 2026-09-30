@@ -17,6 +17,10 @@ export type AssistAdminCandidate = Schemas["Candidate"];
 export type AssistAdminProvider = Schemas["ProviderEnum"];
 export type AssistAdminPrice = Schemas["Price"];
 export type AssistAdminConnectivity = Schemas["ConnectivityResult"];
+export type AssistAdminPlatformId = Schemas["AssistPlatformEnum"];
+export type AssistAdminPlatform = Schemas["Platform"];
+export type AssistAdminModelList = Schemas["ModelList"];
+export type AssistAdminPriceReference = Schemas["PriceReference"];
 export type AssistAdminHall = Schemas["Hall"];
 export type AssistAdminEvalIdentities = Schemas["EvalIdentities"];
 export type AssistAdminEvalSide = Schemas["EvalPreviewRequestSideEnum"];
@@ -81,6 +85,12 @@ export const assistAdminApi = {
   /** One real request with the candidate (unsaved) connection; the backend remembers it passed for 15 min. */
   testConnection: (body: AssistAdminCandidate) =>
     api.post<AssistAdminConnectivity>(`${BASE}/config/test/`, body).then((r) => r.data),
+  /** 「获取模型」: the saved key, if used, stays on the server. `status: "no_list"` is not an error. */
+  listModels: (body: AssistAdminCandidate) =>
+    api.post<AssistAdminModelList>(`${BASE}/config/models/`, body).then((r) => r.data),
+  /** LiteLLM reference price (USD per 1M tokens), cached server-side; `found: false` never blocks saving. */
+  priceReference: (platform: AssistAdminPlatformId, model: string) =>
+    api.get<AssistAdminPriceReference>(`${BASE}/config/price/`, { params: { platform, model } }).then((r) => r.data),
   halls: () => api.get<AssistAdminHall[]>(`${BASE}/halls/`).then((r) => r.data),
   updateHall: (id: number, assistant_enabled: boolean) =>
     api.patch<AssistAdminHall>(`${BASE}/halls/${id}/`, { assistant_enabled }).then((r) => r.data),
