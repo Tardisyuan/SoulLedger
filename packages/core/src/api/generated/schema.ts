@@ -10358,7 +10358,8 @@ export interface components {
             event_id: string;
         };
         ModelEntry: {
-            id: string;
+            /** @description 模型名(平台 API 里的 id),填进「模型名」 */
+            name: string;
             /** @description 平台给了上下文长度才有 */
             context: number | null;
         };

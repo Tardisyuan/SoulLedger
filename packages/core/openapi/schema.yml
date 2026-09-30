@@ -22816,15 +22816,16 @@ components:
     ModelEntry:
       type: object
       properties:
-        id:
+        name:
           type: string
+          description: 模型名(平台 API 里的 id),填进「模型名」
         context:
           type: integer
           nullable: true
           description: 平台给了上下文长度才有
       required:
       - context
-      - id
+      - name
     ModelList:
       type: object
       properties:
