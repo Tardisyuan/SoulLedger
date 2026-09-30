@@ -100,7 +100,7 @@ export function SentenceRequestActions({ plan, request }: { plan: SentencePlan; 
             </Button>
             <Button
               type="button"
-              variant={decision === "REJECT" ? "danger" : "primary"}
+              variant={decision === "REJECT" ? "secondary" : "primary"}
               loading={decide.isPending}
               onClick={submitDecision}
             >

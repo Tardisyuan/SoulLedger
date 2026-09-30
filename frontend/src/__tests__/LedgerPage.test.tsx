@@ -1,6 +1,6 @@
 /**
- * app/ledger/page.tsx —— 功过总账:四柱、按日分组的流水、日小计与本页合计、
- * 图例账,以及加载 / 空 / 失败三屏。
+ * app/ledger/page.tsx —— 功过总账(规范 v2 补足 B10):四柱、整月不分页的日记账与逐行结余,
+ * 以及加载 / 空 / 失败三屏。
  *
  * 真 I18nProvider(zh-Hans),不用回显键的替身:断言落在操作员读到的字上,
  * 一个缺失的键会作为原样的 key 出现在屏上并让断言红。
@@ -12,7 +12,7 @@ import type { LedgerJournal } from "@soulledger/core/api";
 import LedgerPage from "@/app/ledger/page";
 import { ledgerApi } from "@soulledger/core/api";
 import { I18nProvider } from "@/src/contexts/I18nContext";
-import { currentMonth, groupByDay, shiftMonth, signed } from "@/src/lib/ledgerJournal";
+import { currentMonth, runningBalances, shiftMonth, signed } from "@/src/lib/ledgerJournal";
 import { saveBlob } from "@/src/lib/saveBlob";
 
 jest.mock("@soulledger/core/api", () => ({
@@ -57,7 +57,8 @@ const JOURNAL: LedgerJournal = {
   ],
   page: 1,
   page_size: 20,
-  count: 214,
+  // 一页装得下:页面会按 count / page_size 把整月取全,这里只有这三行。
+  count: 3,
   results: [
     row("a", "2026-06-16", "MERIT", 40, "周慕云"),
     row("b", "2026-06-16", "DEMERIT", 120, "Marguerite Vey"),
@@ -93,24 +94,24 @@ describe("pure helpers", () => {
     expect(currentMonth(new Date(Date.UTC(2026, 5, 30, 23, 59)))).toBe("2026-06");
   });
 
-  it("groups consecutive rows by the server's day, keeping arrival order", () => {
-    expect(groupByDay(JOURNAL.results).map((g) => [g.day, g.rows.length])).toEqual([
-      ["2026-06-16", 2],
-      ["2026-06-15", 1],
-    ]);
+  it("walks the balance back from the closing, newest row first", () => {
+    // +40, −120, −25 arrive newest first; the newest row's balance is the closing.
+    expect(runningBalances(JOURNAL.results, 19692)).toEqual([19692, 19652, 19772]);
   });
 });
 
 describe("the four pillars", () => {
-  it("prints 旧管 + 新收 − 开除 = 实在, the double line only under 实在", async () => {
+  it("prints 旧管 + 新收 − 开除 = 实在, uncoloured, with s1 only under 实在 (B10)", async () => {
     mockedJournal.mockResolvedValue({ data: JOURNAL });
     renderPage();
     const pillars = await screen.findByTestId("four-pillars");
     const cells = Array.from(pillars.querySelectorAll("[data-pillar]"));
     expect(cells.map((c) => c.getAttribute("data-pillar"))).toEqual(["opening", "received", "disbursed", "closing"]);
     expect(cells.map((c) => c.querySelector("dd")?.textContent)).toEqual(["+18,420", "+3,912", "−2,640", "+19,692"]);
-    expect(cells[3].className).toContain("border-double");
-    expect(cells.slice(0, 3).some((c) => c.className.includes("border-double"))).toBe(false);
+    expect(cells[3].className).toContain("bg-[oklch(var(--color-surface-1))]");
+    expect(cells.slice(0, 3).some((c) => c.className.includes("surface-1"))).toBe(false);
+    // 收入、支出只写数字,不上色:四个数字都是 ink。
+    expect(pillars.innerHTML).not.toMatch(/--color-(karma|success|danger|warning)/);
     expect(screen.getByTestId("ledger-formula")).toHaveTextContent("旧管 + 新收 − 开除 = 实在 · 33 户 · 本期 214 条");
   });
 
@@ -127,17 +128,20 @@ describe("the four pillars", () => {
 });
 
 describe("the journal", () => {
-  it("groups by day with a single-line subtotal, and closes the page with a double-line total", async () => {
+  it("is one flat table with a running balance and a footer that says everything is shown", async () => {
     mockedJournal.mockResolvedValue({ data: JOURNAL });
     renderPage();
     const journal = await screen.findByTestId("ledger-journal");
-    const subtotals = within(journal).getAllByTestId("day-subtotal");
-    expect(subtotals.map((s) => s.textContent)).toEqual(["小计 +40 / −120", "小计 0 / −25"]);
-    const total = within(journal).getByTestId("page-total");
-    expect(total).toHaveTextContent("本页合计 · 3 条");
-    expect(total).toHaveTextContent("+40");
-    expect(total).toHaveTextContent("−145");
-    expect(total.className).toContain("border-double");
+    expect(within(journal).getAllByTestId("row-balance").map((b) => b.textContent)).toEqual([
+      "+19,692",
+      "+19,652",
+      "+19,772",
+    ]);
+    expect(within(journal).getByTestId("journal-foot")).toHaveTextContent("本月 3 条 · 已全部显示");
+    // v1 的按日小计与本页合计不再有。
+    expect(within(journal).queryByTestId("day-subtotal")).toBeNull();
+    expect(within(journal).queryByTestId("page-total")).toBeNull();
+    expect(journal.innerHTML).not.toMatch(/--color-(karma|success|danger)/);
   });
 
   it("makes the whole row one link to that soul's 乙 · 功过", async () => {
@@ -151,35 +155,32 @@ describe("the journal", () => {
     expect(within(rowEl as HTMLElement).getAllByRole("link")).toHaveLength(1);
   });
 
-  it("shows the basis when recorded and a typed miss (not blank) when not", async () => {
+  it("puts the basis into the summary when recorded, and nothing when not", async () => {
     mockedJournal.mockResolvedValue({ data: JOURNAL });
     const { container } = renderPage();
     await screen.findByTestId("ledger-journal");
     const rows = container.querySelectorAll("[data-journal-row]");
-    expect(rows[0]).toHaveTextContent("救濟門#7:賑濟窮民百錢");
-    expect(rows[1].querySelector('[data-missing="unrecorded"]')).not.toBeNull();
+    expect(rows[0]).toHaveTextContent("a 事目 · 救濟門#7:賑濟窮民百錢");
+    expect(rows[1]).toHaveTextContent("b 事目");
+    expect(rows[1]).not.toHaveTextContent("·  ·");
   });
 
-  it("feeds each category's merit and demerit into the legend ledger as separate rows", async () => {
-    mockedJournal.mockResolvedValue({ data: JOURNAL });
+  it("does not page: it fetches every page of the month and draws them all, with no pager", async () => {
+    mockedJournal.mockImplementation(({ page }: { page: number }) =>
+      Promise.resolve({
+        data:
+          page === 1
+            ? { ...JOURNAL, count: 23 }
+            : { ...JOURNAL, count: 23, page: 2, results: [row("d", "2026-06-02", "MERIT", 5, "林晚照")] },
+      })
+    );
     const { container } = renderPage();
-    await screen.findByTestId("ledger-journal");
-    const legend = container.querySelector("[data-legend-ledger]")!;
-    expect(Array.from(legend.querySelectorAll("[data-legend-row]"), (r) => r.getAttribute("data-legend-row"))).toEqual([
-      "CHARITY:M",
-      "DECEPTION:D",
-    ]);
-    expect(legend).toHaveTextContent("布施 · 收");
-    expect(legend).toHaveTextContent("1480");
-  });
-
-  it("offers the next page when there is one", async () => {
-    mockedJournal.mockResolvedValue({ data: JOURNAL });
-    renderPage();
-    await screen.findByTestId("ledger-journal");
-    expect(screen.getByText("1–20 / 214")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "下一页" }));
-    await waitFor(() => expect(mockedJournal).toHaveBeenLastCalledWith({ month: currentMonth(), page: 2 }));
+    await screen.findByRole("link", { name: "林晚照" });
+    expect(mockedJournal).toHaveBeenCalledWith({ month: currentMonth(), page: 1 });
+    expect(mockedJournal).toHaveBeenCalledWith({ month: currentMonth(), page: 2 });
+    expect(mockedJournal).toHaveBeenCalledTimes(2);
+    expect(container.querySelectorAll("[data-journal-row]")).toHaveLength(4);
+    expect(screen.queryByRole("button", { name: "下一页" })).toBeNull();
   });
 });
 

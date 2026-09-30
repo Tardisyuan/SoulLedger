@@ -1030,6 +1030,8 @@
       "col_entry": "条目",
       "col_basis": "依据",
       "subtotal": "小计",
+      "col_balance": "结余",
+      "all_shown": "本月 {{n}} 条 · 已全部显示",
       "page_total": "本页合计 · {{n}} 条",
       "categories": "按类目 · 图例账",
       "category": "类目",

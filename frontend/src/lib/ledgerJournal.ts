@@ -19,13 +19,17 @@ export function signed(n: number): string {
   return n > 0 ? `+${fmt(n)}` : n < 0 ? `−${fmt(n)}` : "0";
 }
 
-/** Rows grouped by the server's UTC `day`, newest day first — the order they arrive in. */
-export function groupByDay(rows: LedgerJournalRow[]): { day: string; rows: LedgerJournalRow[] }[] {
-  const out: { day: string; rows: LedgerJournalRow[] }[] = [];
-  for (const row of rows) {
-    const last = out[out.length - 1];
-    if (last && last.day === row.day) last.rows.push(row);
-    else out.push({ day: row.day, rows: [row] });
+/**
+ * 逐行结余(补足 B10「结余」列):行按时间倒序到来,最新一行之后的余额就是期末,
+ * 往下每一行再减去上一行的发生额(功 +、过 −)。只在拿到**整月**的行时成立 —— 页面
+ * 因此不分页。
+ */
+export function runningBalances(rows: LedgerJournalRow[], closing: number): number[] {
+  const out: number[] = [];
+  let balance = closing;
+  for (const r of rows) {
+    out.push(balance);
+    balance -= r.record_type === "MERIT" ? r.weight : -r.weight;
   }
   return out;
 }

@@ -22,9 +22,16 @@ jest.mock("@/src/contexts/I18nContext", () => ({
 }));
 
 describe("PermissionDenied", () => {
-  it("should render the lock emoji", () => {
+  it("draws no lock — C15 draws an in-page state, not an emoji", () => {
     render(<PermissionDenied />);
-    expect(screen.getByText("🔒")).toBeInTheDocument();
+    expect(screen.queryByText("🔒")).toBeNull();
+  });
+
+  it("names the missing permission code when given one, and only then", () => {
+    const { rerender } = render(<PermissionDenied />);
+    expect(screen.queryByTestId("permission-denied-code")).toBeNull();
+    rerender(<PermissionDenied permission="ledger.read" />);
+    expect(screen.getByTestId("permission-denied-code")).toHaveTextContent("ledger.read");
   });
 
   it("should render the denied title via i18n", () => {

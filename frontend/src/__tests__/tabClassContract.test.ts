@@ -91,8 +91,9 @@ describe("the five strips read it from there", () => {
    */
   const EXPECTED_IMPORTERS = [
     "app/dashboard/page.tsx",
-    // app/judgment/page.tsx 于 2026-09-25 离开:审判队列的「待审 / 已结案」改成规范 v1 的
-    // 分段切换 Segmented(墨底为当前),不再是下划线页签条。
+    // app/judgment/page.tsx 于 2026-09-25 离开(v1 分段切换),2026-09-30 回来:规范 v2 补足 B9
+    // 把「待审 / 已结案」重新画成下划线标签(ink 600 + 2px ink,计数 11 等宽)。
+    "app/judgment/page.tsx",
     // app/moderation/page.tsx 于 2026-09-25 离开:朋友圈审核四区(举报 / 敏感词 / 禁言 / 已处理)
     // 改成 E 组页头的分段切换(墨底为当前),与审判队列同一种写法。
     "app/notifications/page.tsx",

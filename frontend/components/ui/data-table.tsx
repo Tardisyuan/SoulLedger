@@ -4,6 +4,7 @@ import { Fragment } from 'react'
 import { ArrowDown, ArrowUp, ChevronsUpDown } from 'lucide-react'
 import { TableSkeleton } from './skeleton'
 import { Pagination } from '@/src/components/ui/Pagination'
+import { Button } from '@/src/components/ui/Button'
 import { useI18n } from '@/src/contexts/I18nContext'
 import { cn } from '@/lib/utils'
 import { useRowTransitions } from '@/src/hooks/useRowTransitions'
@@ -324,8 +325,9 @@ export function DataTable<T>({
               ))}
             </colgroup>
           )}
+          {/* 补足 C15 表格细节 / B9:表头 11 等宽 ink3,下沿 2px ink。 */}
           <thead className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">
-            <tr className="border-b border-[oklch(var(--color-block))]">
+            <tr className="border-b-2 border-[oklch(var(--color-ink))]">
               {selection && (
                 <th scope="col" className="w-10 p-0">
                   <label className="flex h-full min-h-8 items-center justify-center px-3 cursor-pointer">
@@ -397,21 +399,19 @@ export function DataTable<T>({
           {isError && (
             <tbody>
               <tr>
-                <td colSpan={colCount} className="px-3 py-6 bg-[oklch(var(--color-danger-tint))] shadow-[inset_3px_0_0_oklch(var(--color-danger))]">
-                  {/* 规范 v1 空状态「! 加载失败」:写原因,给重试;不靠颜色,前面有「!」。 */}
-                  <p className="text-[oklch(var(--color-danger))]">
-                    <span aria-hidden="true">! </span>
-                    {errorMessage ?? t('common.error')}
-                  </p>
-                  {onRetry && (
-                    <button
-                      type="button"
-                      onClick={onRetry}
-                      className="mt-3 text-[oklch(var(--color-accent-ink))] hover:underline"
-                    >
-                      {t('common.retry')}
-                    </button>
-                  )}
+                <td colSpan={colCount} className="px-3 py-8">
+                  {/* 补足 C15「出错」:冷玫红「✕ 原因」13 / 600 + 次按钮「重试」,在内容区里,不换整页。 */}
+                  <div className="flex flex-wrap items-center gap-3">
+                    <p className="text-sm font-semibold text-[oklch(var(--color-danger))]">
+                      <span aria-hidden="true">✕ </span>
+                      {errorMessage ?? t('common.error')}
+                    </p>
+                    {onRetry && (
+                      <Button type="button" variant="secondary" size="sm" onClick={onRetry}>
+                        {t('common.retry')}
+                      </Button>
+                    )}
+                  </div>
                 </td>
               </tr>
             </tbody>
@@ -420,21 +420,18 @@ export function DataTable<T>({
           {isEmpty && (
             <tbody>
               <tr>
-                <td colSpan={colCount} className="px-4 py-12 text-center">
-                  <p className="text-[oklch(var(--color-ink-subtle))]">
+                <td colSpan={colCount} className="px-3 py-8">
+                  {/* 补足 C15「空」:居左,一句话 15 / 600,给一条出路。 */}
+                  <p className="text-md font-semibold text-[oklch(var(--color-ink))]">
                     {isFiltered
                       ? (filteredEmptyMessage ?? t('table.no_results'))
                       : (emptyMessage ?? t('table.empty'))}
                   </p>
                   {isFiltered
                     ? onClearFilters && (
-                        <button
-                          type="button"
-                          onClick={onClearFilters}
-                          className="mt-3 text-[oklch(var(--color-accent-ink))] hover:underline"
-                        >
+                        <Button type="button" variant="secondary" size="sm" className="mt-3" onClick={onClearFilters}>
                           {t('filter.clear_all')}
-                        </button>
+                        </Button>
                       )
                     : emptyAction && <div className="mt-4">{emptyAction}</div>}
                 </td>

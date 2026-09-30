@@ -44,10 +44,11 @@ import { ConfirmDialog } from "@/src/components/ui/Modal";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatHistoricalDate } from "@/lib/utils";
 import { PageShell } from "@/src/components/ui/PageShell";
-import { soulStateBadgeClass, soulStateGlyph } from "@/src/lib/soulStateBadge";
+import { DOMAIN_BADGE, soulStateBadgeClass, soulStateGlyph } from "@/src/lib/soulStateBadge";
 
 /** 详情页头上那两个徽章的形状。颜色由调用点给,形状只有一种。 */
-const BADGE_SHAPE = "px-1.5 py-px font-mono text-2xs";
+/* D1:世数不是状态,更不给「轮回中」的色 —— 与状态徽章同一副 ink 字 / ink3 框。 */
+const BADGE_SHAPE = "px-2 py-px font-mono text-2xs";
 
 // 「还没到」的那一份,每种一个模块级常量。
 // 这不是洁癖:这些数组是 prop,`?? []` 每次渲染都造一个新数组,而下游
@@ -398,7 +399,7 @@ export default function SoulDetailPage() {
         {resolveEnumDisplay(t, "souls.states", soul?.current_state).label ?? t("common.value.unrecorded")}
       </span>
       {generation !== null && (
-        <span className={`${BADGE_SHAPE} bg-[oklch(var(--color-status-reincarnating)/0.1)] text-[oklch(var(--color-status-reincarnating))]`}>
+        <span className={`${BADGE_SHAPE} ${DOMAIN_BADGE}`}>
           {tf("souls.detail.generation", "Life {{n}}", { n: String(generation) })}
         </span>
       )}
@@ -506,7 +507,7 @@ export default function SoulDetailPage() {
 
       {/* 两栏账:宽屏 1 : 1.3,393 px 下单栏(规范 v1 `--cols`)。卡片撤掉,区块
           之间只有区块标压着的那条线。 */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.3fr] gap-x-10">
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.3fr] gap-x-8">
         {/* Left column: 甲 身份 · 乙 功过 · 操作 · 账号 · 受刑计划 */}
         <div className="min-w-0 space-y-6">
           <SoulInfoCard

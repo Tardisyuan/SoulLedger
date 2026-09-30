@@ -26,7 +26,7 @@ function QueueRoute() {
 
 export default function JudgmentQueuePage() {
   return (
-    <RequirePermission permissions="judgment.read" fallback={<PermissionDenied />}>
+    <RequirePermission permissions="judgment.read" fallback={<PermissionDenied permission="judgment.read" />}>
       {/* useSearchParams needs a Suspense boundary or the whole route opts out
           of static rendering (Next.js App Router). */}
       <Suspense fallback={null}>

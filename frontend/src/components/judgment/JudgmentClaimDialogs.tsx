@@ -263,7 +263,7 @@ export function ReassignDialog({
     >
       {isError ? (
         <p role="alert" className="text-sm text-[oklch(var(--color-danger))]">
-          <span aria-hidden="true">! </span>
+          <span aria-hidden="true">✕ </span>
           {t("judgment.claim.officers_unavailable")}
         </p>
       ) : isLoading ? (
@@ -297,7 +297,7 @@ export function ReassignDialog({
                   key={u.id}
                   data-officer={u.id}
                   className={cn(
-                    "flex min-h-11 items-center gap-3 border-b border-[oklch(var(--color-rule))] px-1 py-1.5 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-[oklch(var(--color-accent))]",
+                    "flex min-h-11 items-center gap-3 border-b border-[oklch(var(--color-rule))] px-1 py-2 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-[oklch(var(--color-accent))]",
                     self ? "opacity-50" : "cursor-pointer hover:bg-[oklch(var(--color-surface-2))]",
                     on && "bg-[oklch(var(--color-surface-2))] shadow-[inset_3px_0_0_oklch(var(--color-ink))]"
                   )}
@@ -331,7 +331,7 @@ export function ReassignDialog({
           </div>
           {touched && !to && (
             <p role="alert" className="text-xs text-[oklch(var(--color-danger))]">
-              <span aria-hidden="true">! </span>
+              <span aria-hidden="true">✕ </span>
               {t("judgment.claim.officer_required")}
             </p>
           )}
