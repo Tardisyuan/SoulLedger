@@ -4,14 +4,29 @@ import type { Locale } from "@soulledger/core/config/locale";
 import { useFocusEffect, useNavigation, useRoute, type NavigationProp, type RouteProp } from "@react-navigation/native";
 import * as Clipboard from "expo-clipboard";
 import { platform } from "@soulledger/core/platform";
-import { useCallback, useContext, useEffect, useReducer, useRef, useState, type ReactNode } from "react";
+import { Fragment, useCallback, useContext, useEffect, useReducer, useRef, useState, type ReactNode } from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import Svg, { Line } from "react-native-svg";
 
 import { Emblem, Icon } from "../emblems";
 import { family } from "../fonts";
 import { useToast } from "../feedback";
 import { useI18n } from "../i18n";
-import { APPLICATION_BADGES, SOUL_STATE_BADGES, formatStamp, lexiconKey, residenceOf, type Residence } from "../rules";
+import {
+  APPLICATION_BADGES,
+  LIFE_PATH,
+  LIFE_SECTIONS,
+  SOUL_STATE_BADGES,
+  formatStamp,
+  lexiconKey,
+  lifePathIndex,
+  lifeSectionsOpen,
+  residenceOf,
+  signedBalance,
+  type LifePathStep,
+  type LifeSectionKey,
+  type Residence,
+} from "../rules";
 import { SessionContext, useSession } from "../session";
 import { sealedTheme, type CivKey } from "../theme";
 import {
@@ -53,7 +68,7 @@ export function realmName(realm: { name_zh: string; name_en: string; name_local:
   return (locale === "zh-Hans" ? realm.name_zh : realm.name_en) || realm.name_local;
 }
 
-type SectionKey = "records" | "judgments" | "dispositions" | "applications";
+type SectionKey = Exclude<LifeSectionKey, "sentence" | "past_lives">;
 
 /** Skin by where the soul is (the theme already is); words by where it belongs. */
 export function useResidence(): Residence {
@@ -122,12 +137,12 @@ export function LifeSections({
   sentence,
 }: {
   life: MeLife;
-  /** 受刑 1b: the current life's sentence section, between judgments and dispositions. Past lives have none. */
+  /** 补足 B11: the current life's sentence section, fifth — after applications. Past lives have none. */
   sentence?: ReactNode;
   /** The lexicon: the soul's HOME civilization. */
   lex: CivKey;
   sealed?: boolean;
-  open?: Record<SectionKey, boolean>;
+  open?: Partial<Record<SectionKey, boolean>>;
   onToggle?: (key: SectionKey) => void;
   onOpenApplication?: (id: string) => void;
 }) {
@@ -176,7 +191,6 @@ export function LifeSections({
           <Empty text={tr("soul_app.life.no_judgments")} />
         )}
       </Section>
-      {sentence}
       <Section title={tr("soul_app.life.dispositions")} count={count(life.dispositions.length)} {...section("dispositions")}>
         {life.dispositions.length ? (
           life.dispositions.map((d, i) => (
@@ -243,6 +257,7 @@ export function LifeSections({
           <Empty text={tr("soul_app.life.no_applications")} />
         )}
       </Section>
+      {sentence}
     </>
   );
 }
@@ -260,13 +275,10 @@ function Identity({ me, residence }: { me: MeProfile; residence: Residence }) {
     );
   return (
     <View testID="identity" style={[styles.identity, { paddingHorizontal: gutter, borderBottomColor: t.hair }]}>
-      <View style={[styles.watermark, { opacity: t.scheme === "light" ? 0.1 : 0.07 }]} pointerEvents="none">
-        <Emblem civ={t.civ} size={300} stroke={t.mark} />
-      </View>
       <View style={styles.civRow}>
-        <Emblem civ={t.civ} size={15} stroke={t.mark} />
+        <Emblem civ={t.civ} size={15} stroke={t.inkMuted} />
         <View style={styles.shrink}>
-          <EnumValue namespace="souls.civilizations" value={me.civilization} tone="mark" variant="label" />
+          <EnumValue namespace="souls.civilizations" value={me.civilization} tone="muted" variant="label" />
         </View>
         <View style={[styles.tick, { backgroundColor: t.hair2 }]} />
         <Txt variant="label" tone="subtle">
@@ -326,37 +338,106 @@ function Identity({ me, residence }: { me: MeProfile; residence: Residence }) {
 }
 
 /**
- * The two scores side by side, in mono, with a hairline between — deliberately
- * not a bar or a balance: this is a ledger, not a score. Egypt relabels them
- * (feather side / heart side) and keeps the two integers the server sends.
+ * 补足 B11: the balance — merit less demerit, in mono 40, in ink: never coloured (a colour
+ * would make it a verdict). The two sides the server sends sit beside it, in the soul's
+ * home lexicon (Egypt: feather side / heart side). Under it, the life's path.
  */
-function Scores({ me, life, lex }: { me: MeProfile; life: MeLife | null; lex: CivKey }) {
+function Balance({ me, lex, planState }: { me: MeProfile; lex: CivKey; planState: string | undefined }) {
   const t = useTheme();
   const { t: tr } = useI18n();
-  const { gutter, compact, stack } = useLayout();
-  const cell = (word: "merit" | "demerit", value: number, type: string) => {
-    const n = life?.records.filter((r) => r.record_type === type).length;
-    return (
-      <View style={[styles.score, { paddingHorizontal: gutter }]} testID={`score-${word}`}>
-        <Txt variant="label" tone="subtle" style={styles.scoreLabel}>
-          {tr(lexiconKey(lex, word))}
-        </Txt>
-        <Txt variant="valueLg">{String(value)}</Txt>
-        {n !== undefined ? (
-          <Txt variant="label" tone="subtle" style={styles.noSpacing}>
-            {tr(compact ? "soul_app.life.record_count_short" : "soul_app.life.record_count", { count: String(n) })}
-          </Txt>
-        ) : null}
-      </View>
-    );
-  };
-  return (
-    <View style={[styles.scores, stack && styles.scoresStacked, { borderBottomColor: t.hair }]}>
-      {cell("merit", me.merit_score, "MERIT")}
-      <View style={stack ? { height: 1, backgroundColor: t.hair } : { width: 1, backgroundColor: t.hair }} />
-      {cell("demerit", me.demerit_score, "DEMERIT")}
+  const { gutter } = useLayout();
+  const side = (word: "merit" | "demerit", value: number) => (
+    <View testID={`score-${word}`} style={styles.side}>
+      <Txt variant="caption" tone="subtle">
+        {tr(lexiconKey(lex, word))}
+      </Txt>
+      <Txt variant="value" tone="muted">
+        {String(value)}
+      </Txt>
     </View>
   );
+  return (
+    <View testID="balance" style={[styles.balance, { paddingHorizontal: gutter, borderBottomColor: t.hair }]}>
+      <View style={styles.balanceHead}>
+        <Txt variant="caption" tone="subtle" style={styles.fill}>
+          {tr("souls.detail.balance")}
+        </Txt>
+        {side("merit", me.merit_score)}
+        {side("demerit", me.demerit_score)}
+      </View>
+      <Txt testID="balance-value" style={[styles.balanceValue, { color: t.ink }]}>
+        {signedBalance(me.merit_score, me.demerit_score)}
+      </Txt>
+      <LifePath state={me.current_state} planState={planState} lex={lex} />
+    </View>
+  );
+}
+
+const PATH_WORD: Record<LifePathStep, string> = {
+  ALIVE: "soul_app.soul_states.ALIVE",
+  JUDGING: "soul_app.soul_states.JUDGING",
+  DISPOSED: "soul_app.soul_states.DISPOSED",
+  SENTENCE: "soul_app.sentence.section_title",
+  REINCARNATING: "soul_app.soul_states.REINCARNATING",
+};
+
+/**
+ * B11's 行程缩略: the steps passed as solid ink dots on a solid line, where the soul is as
+ * a 12pt dot in 匾色, what is ahead hollow on a dashed line. No state to place it (LOST,
+ * SETTLED, unknown): nothing is drawn (`lifePathIndex`).
+ */
+function LifePath({ state, planState, lex }: { state: string; planState: string | undefined; lex: CivKey }) {
+  const t = useTheme();
+  const { t: tr } = useI18n();
+  const at = lifePathIndex(state, planState);
+  if (at === null) return null;
+  const word = (step: LifePathStep) => tr(step === "JUDGING" ? lexiconKey(lex, "judging") : PATH_WORD[step]);
+  const here = word(LIFE_PATH[at]);
+  return (
+    <View testID="life-path" accessible accessibilityLabel={`${tr("souls.detail.ledger.route_title")} · ${here}`} style={styles.path}>
+      <View style={styles.pathRow}>
+        {LIFE_PATH.map((step, i) => (
+          <Fragment key={step}>
+            <View
+              testID={`path-${step}${i < at ? "-done" : i === at ? "-here" : "-ahead"}`}
+              style={
+                i < at
+                  ? [styles.dot, { backgroundColor: t.ink }]
+                  : i === at
+                    ? [styles.dotHere, { backgroundColor: t.plaque }]
+                    : [styles.dot, styles.dotAhead, { borderColor: t.inkSubtle }]
+              }
+            />
+            {i < LIFE_PATH.length - 1 ? (
+              <View style={styles.segment}>
+                <Svg width="100%" height={2}>
+                  <Line x1={0} y1={1} x2="100%" y2={1} stroke={i < at ? t.ink : t.inkSubtle} strokeWidth={2} strokeDasharray={i < at ? undefined : "4 3"} />
+                </Svg>
+              </View>
+            ) : null}
+          </Fragment>
+        ))}
+      </View>
+      <Txt variant="caption" tone="muted">
+        {here}
+      </Txt>
+    </View>
+  );
+}
+
+/** Where the life page remembers which sections the soul opened or closed, per soul (B11). */
+export const LIFE_OPEN_PREFIX = "soul_app_life_open:";
+
+function readTouched(key: string): Partial<Record<LifeSectionKey, boolean>> {
+  try {
+    const raw = JSON.parse(platform().persistent.get(key) ?? "{}") as unknown;
+    if (!raw || typeof raw !== "object") return {};
+    return Object.fromEntries(
+      Object.entries(raw).filter(([k, v]) => (LIFE_SECTIONS as readonly string[]).includes(k) && typeof v === "boolean")
+    ) as Partial<Record<LifeSectionKey, boolean>>;
+  } catch {
+    return {};
+  }
 }
 
 /** Where a residing soul's app remembers WHERE it resides (a civilization), per soul. */
@@ -441,17 +522,21 @@ export function MyLifeScreen() {
   const life = useRemote(soulApi.life);
   const residence = useResidence();
   useReloadOnRefocus(life.reload);
-  const [open, setOpen] = useState<Record<SectionKey, boolean>>({
-    records: true,
-    judgments: false,
-    dispositions: false,
-    applications: false,
-  });
   const [refreshes, setRefreshes] = useState(0);
   const sentence = useSentencePlan({ landing, reloadKey: refreshes });
   const scroll = useScrollToLanding(landing);
+  const soulCode = state.status === "signedIn" ? state.profile.soul_code : "";
+  const memo = `${LIFE_OPEN_PREFIX}${soulCode}`;
+  const [touched, setTouched] = useState(() => readTouched(memo));
   if (state.status !== "signedIn") return null;
   const me = state.profile;
+  const planState = sentence.data?.state;
+  const open = lifeSectionsOpen(touched, planState);
+  const toggle = (key: LifeSectionKey) => {
+    const next = { ...touched, [key]: !open[key] };
+    setTouched(next);
+    platform().persistent.set(memo, JSON.stringify(next));
+  };
   const unrecorded = t("common.value.unrecorded");
 
   const refresh = () => {
@@ -470,7 +555,7 @@ export function MyLifeScreen() {
     >
       <Homecoming me={me} />
       <Identity me={me} residence={residence} />
-      <Scores me={me} life={life.data} lex={residence.home} />
+      <Balance me={me} lex={residence.home} planState={planState} />
       <Block>
         <DataRows>
           <DataRow label={t("soul_app.life.birth")} mono>
@@ -488,9 +573,17 @@ export function MyLifeScreen() {
             life={life.data}
             lex={residence.home}
             open={open}
-            onToggle={(key) => setOpen((o) => ({ ...o, [key]: !o[key] }))}
+            onToggle={toggle}
             onOpenApplication={(id) => navigation.navigate("ApplicationDetail", { id })}
-            sentence={<SentenceSection remote={sentence} landing={landing} onPlaced={(y) => scroll.place("section", y)} />}
+            sentence={
+              <SentenceSection
+                remote={sentence}
+                landing={landing}
+                open={open.sentence}
+                onToggle={() => toggle("sentence")}
+                onPlaced={(y) => scroll.place("section", y)}
+              />
+            }
           />
         </FadeIn>
       ) : life.error ? (
@@ -500,7 +593,7 @@ export function MyLifeScreen() {
           <Skeleton lines={4} testID="life-loading" />
         </Block>
       )}
-      <PastLivesSection lex={residence.home} reloadKey={refreshes} />
+      <PastLivesSection lex={residence.home} reloadKey={refreshes} open={open.past_lives} onToggle={() => toggle("past_lives")} />
       {/* Round 4: the language switch and sign-out that sat here moved to the settings page. */}
       <View style={styles.foot}>
         <EmblemDivider />
@@ -566,11 +659,20 @@ function PastLife({ life, open, onToggle, lex }: { life: MeLife; open: boolean; 
  * 前世, folded into the life tab as its last section (朋友圈 handoff 1a: the tab
  * went to 朋友圈). Closed until asked for; its lives open one at a time, sealed.
  */
-export function PastLivesSection({ lex, reloadKey }: { lex: CivKey; reloadKey: number }) {
+export function PastLivesSection({
+  lex,
+  reloadKey,
+  open: expanded,
+  onToggle,
+}: {
+  lex: CivKey;
+  reloadKey: number;
+  open: boolean;
+  onToggle: () => void;
+}) {
   const t = useTheme();
   const { t: tr } = useI18n();
   const lives = useRemote(soulApi.pastLives);
-  const [expanded, setExpanded] = useState(false);
   const [open, setOpen] = useState<number | null>(null);
   const { reload } = lives;
   useEffect(() => {
@@ -582,7 +684,7 @@ export function PastLivesSection({ lex, reloadKey }: { lex: CivKey; reloadKey: n
       title={tr("soul_app.past_lives.title")}
       count={lives.data ? (lives.data.length ? String(lives.data.length) : tr("soul_app.common.empty")) : undefined}
       open={expanded}
-      onToggle={() => setExpanded((v) => !v)}
+      onToggle={onToggle}
     >
       {lives.error && !lives.data ? (
         <SectionError testID="past-lives-error" onRetry={lives.reload} />
@@ -633,23 +735,29 @@ const styles = StyleSheet.create({
   appCard: { flexDirection: "row", alignItems: "center", gap: 12, borderWidth: 1, padding: 16 },
   appSummary: { gap: 6 },
   identity: { overflow: "hidden", paddingHorizontal: GUTTER, paddingTop: 24, paddingBottom: GUTTER, borderBottomWidth: 1 },
-  watermark: { position: "absolute", right: -70, top: -46 },
   civRow: { flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" },
   tick: { width: 1, height: 11 },
   nameRow: { flexDirection: "row", alignItems: "baseline", flexWrap: "wrap", columnGap: 12, marginTop: 11 },
   code: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 9, alignSelf: "flex-start" },
   codeText: { fontSize: 15, letterSpacing: 2.2, fontFamily: family.mono[500] },
   state: { marginTop: 16 },
-  scores: { flexDirection: "row", borderBottomWidth: 1 },
-  scoresStacked: { flexDirection: "column" },
+  balance: { paddingTop: 16, paddingBottom: 16, borderBottomWidth: 1 },
+  balanceHead: { flexDirection: "row", alignItems: "baseline", gap: 12, flexWrap: "wrap" },
+  side: { flexDirection: "row", alignItems: "baseline", gap: 4 },
+  /** B11: the balance at 40 / 48 in mono — the one number the page is for. */
+  balanceValue: { fontFamily: family.mono[400], fontSize: 40, lineHeight: 48 },
+  path: { marginTop: 12, gap: 8 },
+  pathRow: { flexDirection: "row", alignItems: "center" },
+  dot: { width: 8, height: 8 },
+  dotHere: { width: 12, height: 12 },
+  dotAhead: { borderWidth: 1.5, borderStyle: "dashed" },
+  segment: { flex: 1, height: 2 },
   residenceBox: { alignSelf: "flex-start", marginTop: 12, borderWidth: 1, borderStyle: "dashed", paddingHorizontal: 9, paddingVertical: 4 },
   residence: { fontSize: 11, lineHeight: 15, letterSpacing: 0.4 },
   residenceNote: { marginTop: 6 },
   homecomingWrap: { paddingTop: GUTTER, paddingBottom: GUTTER, borderBottomWidth: 1 },
   homecoming: { borderWidth: 1, borderLeftWidth: 3, padding: 16, gap: 12 },
   homecomingHead: { flexDirection: "row", alignItems: "center", gap: 8 },
-  score: { flex: 1, paddingHorizontal: GUTTER, paddingVertical: 18, gap: 4 },
-  scoreLabel: { letterSpacing: 1.8 },
   foot: { paddingTop: 24, paddingBottom: 32 },
   readOnly: { flexDirection: "row", gap: 9, paddingHorizontal: 16, paddingVertical: 12 },
   pastList: { borderWidth: 1 },

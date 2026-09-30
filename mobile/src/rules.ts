@@ -181,6 +181,72 @@ export function residenceOf(
   return home !== "neutral" ? { current, home, residing: true } : { current, home: current, residing: false };
 }
 
+// ── the life page (补足 B11) ───────────────────────────────────────────
+
+/** A sentence plan the soul is still inside: serving, between two stations, held, or there for good. */
+const UNDER_SENTENCE = new Set(["serving", "between", "waiting", "eternal"]);
+
+/** The six folding sections, in B11's order. */
+export const LIFE_SECTIONS = ["records", "judgments", "dispositions", "applications", "sentence", "past_lives"] as const;
+export type LifeSectionKey = (typeof LIFE_SECTIONS)[number];
+
+/**
+ * B11: exactly one section opens by default — 「受刑」 while the soul is under sentence,
+ * else 「功过记录」. Until the plan has loaded the soul is not known to be, so: records.
+ */
+export function defaultLifeSection(planState: string | null | undefined): LifeSectionKey {
+  return planState && UNDER_SENTENCE.has(planState) ? "sentence" : "records";
+}
+
+/** A section the soul opened or closed by hand wins over the default; the rest follow it. */
+export function lifeSectionsOpen(touched: Partial<Record<LifeSectionKey, boolean>>, planState: string | null | undefined) {
+  const first = defaultLifeSection(planState);
+  return Object.fromEntries(LIFE_SECTIONS.map((k) => [k, touched[k] ?? k === first])) as Record<LifeSectionKey, boolean>;
+}
+
+/**
+ * B11's 行程缩略: where this life has got to, as steps of the one road every soul walks.
+ * Read from `current_state` (and, once disposed, whether a sentence plan exists) — the
+ * App has no route of stops (`/me/` does not serve the officers' `path`), so this is the
+ * life's stage, not a map. LOST, SETTLED and an unknown state have no place on it: null,
+ * and nothing is drawn rather than a guess.
+ */
+export const LIFE_PATH = ["ALIVE", "JUDGING", "DISPOSED", "SENTENCE", "REINCARNATING"] as const;
+export type LifePathStep = (typeof LIFE_PATH)[number];
+
+export function lifePathIndex(state: string | null | undefined, planState: string | null | undefined): number | null {
+  switch (state) {
+    case "ALIVE":
+      return 0;
+    case "JUDGING":
+      return 1;
+    case "DISPOSED":
+      return planState && planState !== "none" ? 3 : 2;
+    case "REINCARNATING":
+      return 4;
+    default:
+      return null;
+  }
+}
+
+/** The balance as B11 prints it: signed, the minus a real minus (U+2212), zero bare. */
+export function signedBalance(merit: number, demerit: number): string {
+  const b = merit - demerit;
+  return b > 0 ? `+${b}` : b < 0 ? `\u2212${-b}` : "0";
+}
+
+/**
+ * The share of the current station's term already served, 0–1, for B11's one status-coloured
+ * bar. Null when there is nothing to measure: no start or end date, or a term for good.
+ */
+export function termServed(startedOn: string | null | undefined, endsOn: string | null | undefined, now: number): number | null {
+  if (!startedOn || !endsOn) return null;
+  const a = Date.parse(startedOn);
+  const b = Date.parse(endsOn);
+  if (Number.isNaN(a) || Number.isNaN(b) || b <= a) return null;
+  return Math.min(1, Math.max(0, (now - a) / (b - a)));
+}
+
 // ── layout ─────────────────────────────────────────────────────────────
 
 export const COMPACT_WIDTH = 340;
