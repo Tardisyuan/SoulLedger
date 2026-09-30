@@ -28,10 +28,10 @@ TENANT_LOCALE = {"CN_DIYU": "zh-Hans", "EG_DUAT": "egy", "EU_HEAVEN_HELL": "en",
 RESET_TEXT = {
     "zh-Hans": "您的验证码: {code}\n5 分钟内有效。如非本人操作,请忽略本邮件。",
     "en": "Your code: {code}\nValid for 5 minutes. If you did not ask for this, ignore this email.",
-    "egy": "Hesb Maa-Ek: {code}\nWenen At 5. Nen Djes: Imen.",
+    "egy": "Hesb Maa-Ek: {code}\nWenen At 5. Nen Djes: Nen Iri Khet.",
 }
 RESET_SUBJECT = {
-    "zh-Hans": "SoulLedger 密码重置验证码", "en": "SoulLedger Password reset code", "egy": "SoulLedger Hesb Maa Wehem Sekhem",
+    "zh-Hans": "SoulLedger 密码重置验证码", "en": "SoulLedger Password reset code", "egy": "SoulLedger Wehem Sekhem · Hesb Maa",
 }
 CREDENTIAL_TEXT = {
     "zh-Hans": (
@@ -46,10 +46,10 @@ CREDENTIAL_TEXT = {
     "egy": (
         "Ren Hesb Ba-Ek: {soul_code}\nSekhem Tepy: {password}\n"
         "Wenen Er {expires}. Khemen Sekhem Em Aq Tepy.\n"
-        "Sekhem Pen Hab Wa Djer. Wenen Khetem Seth Ky Nen Gem: Sab En Per-Ek Wehem Sekhem."
+        "Sekhem Pen: Hab Sep 1 Wa. Wenen Khetem Seth Ky Nen Gem: Sab En Per-Ek Wehem Sekhem."
     ),
 }
-CREDENTIAL_SUBJECT = {"zh-Hans": "SoulLedger 灵魂账号", "en": "SoulLedger Soul account", "egy": "SoulLedger Aq Ba"}
+CREDENTIAL_SUBJECT = {"zh-Hans": "SoulLedger 灵魂账号", "en": "SoulLedger Soul account", "egy": "SoulLedger Aq En Ba"}
 FOOTER = {
     "zh-Hans": "这封信由系统发出，不接收回复。",
     "en": "This message was sent by the system; replies are not received.",
