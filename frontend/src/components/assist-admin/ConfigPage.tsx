@@ -286,7 +286,7 @@ function ConfigForm({ config }: { config: AssistAdminConfig }) {
                       {t("assist_admin.key.replace")}
                     </Button>
                     {config.api_key.set && draft.api_key !== "" && (
-                      <Button type="button" size="sm" variant="danger" onClick={() => setConfirmClear(true)}>
+                      <Button type="button" size="sm" onClick={() => setConfirmClear(true)}>
                         {t("assist_admin.key.clear")}
                       </Button>
                     )}
@@ -405,7 +405,6 @@ function ConfigForm({ config }: { config: AssistAdminConfig }) {
         title={t("assist_admin.key.clear_title")}
         message={t("assist_admin.key.clear_body")}
         confirmText={t("assist_admin.key.clear")}
-        variant="danger"
         onCancel={() => setConfirmClear(false)}
         onConfirm={() => {
           set("api_key", "");
