@@ -170,7 +170,7 @@ export default function NotificationsPage() {
       title={
         <span className="inline-flex items-center gap-3">
           <span className="relative inline-flex shrink-0">
-            <Bell aria-hidden="true" className="w-6 h-6 text-[oklch(var(--color-accent-ink))]" />
+            <Bell aria-hidden="true" className="w-6 h-6 text-[oklch(var(--color-ink-subtle))]" />
             {unreadCount > 0 && (
               <Badge
                 tone="accent"
@@ -186,9 +186,10 @@ export default function NotificationsPage() {
       }
       actions={
         unreadCount > 0 ? (
+          // 次要按钮,不是主按钮:规范 v2 的主按钮(匾色实底)只给落判这一类决定(补足 B10)。
           <Button
             type="button"
-            variant="primary"
+            variant="secondary"
             loading={markAllReadMutation.isPending}
             onClick={handleMarkAllRead}
           >
@@ -397,7 +398,7 @@ export default function NotificationsPage() {
                     type="button"
                     variant="ghost"
                     size="sm"
-                    className="mt-2 text-[oklch(var(--color-accent-ink))]"
+                    className="mt-2"
                     /* This row's own pending state, not the mutation's.
                        `markReadMutation` is one object shared by every row, so
                        a bare `isPending` put a spinner on EVERY unread
