@@ -112,6 +112,16 @@ def _add_usage(total, **counts):
         total[key] = total.get(key, 0) + (value or 0)
 
 
+def _vendor_params(conn):
+    """DeepSeek turns thinking mode on by default, and in thinking mode every later request that carries
+    `tools` must send back each earlier turn's `reasoning_content` or the API answers 400 (api-docs.deepseek.com,
+    guides/thinking_mode, read 2026-09-30). History here keeps only the answer text (§4.2), so a second question
+    in a conversation would fail. Thinking also spends the 22 s budget. Turn it off for that host."""
+    if "deepseek.com" in (conn.base_url or ""):
+        return {"extra_body": {"thinking": {"type": "disabled"}}}
+    return {}
+
+
 class OpenAICompatibleProvider:
     """OpenAI Chat Completions 协议:OpenAI、Azure OpenAI、Ollama、DeepSeek 等只差 base_url。"""
 
@@ -148,7 +158,7 @@ class OpenAICompatibleProvider:
             try:
                 response = self.client.with_options(timeout=_remaining(deadline)).chat.completions.create(
                     model=model, messages=messages, tools=specs,
-                    tool_choice="none" if last else "auto",
+                    tool_choice="none" if last else "auto", **_vendor_params(conn),
                 )
             except ProviderError:
                 raise

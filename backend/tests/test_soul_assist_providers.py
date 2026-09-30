@@ -88,6 +88,22 @@ def test_openai_last_round_forbids_tools():
     assert [r["tool_choice"] for r in client.requests] == ["auto", "auto", "auto", "none"]
 
 
+def test_deepseek_gets_thinking_mode_off_and_others_get_nothing_extra():
+    from apps.soul_assist.config import Connection
+
+    def conn(base_url):
+        return Connection(provider="apps.soul_assist.providers.OpenAICompatibleProvider", base_url=base_url,
+                          api_key="k", model="deepseek-flash", effort="", fallbacks="")
+
+    deepseek = FakeClient([_oa(tool_calls=[_oa_call("c1", "me")]), _oa(content="答")])
+    _run(OpenAICompatibleProvider(deepseek, conn=conn("https://api.deepseek.com")), [])
+    assert [r.get("extra_body") for r in deepseek.requests] == [{"thinking": {"type": "disabled"}}] * 2
+
+    other = FakeClient([_oa(content="答")])
+    _run(OpenAICompatibleProvider(other, conn=conn("https://api.openai.com/v1")), [])
+    assert "extra_body" not in other.requests[0]
+
+
 def test_openai_errors_become_provider_errors():
     request = httpx2.Request("POST", "http://example.invalid")
     client = FakeClient([openai.APITimeoutError(request=request)])
