@@ -1,0 +1,440 @@
+{
+  "server": [
+    {
+      "name": "anthropic",
+      "licence": "MIT",
+      "url": "https://pypi.org/project/anthropic/"
+    },
+    {
+      "name": "celery",
+      "licence": "BSD-3-Clause",
+      "url": "https://pypi.org/project/celery/"
+    },
+    {
+      "name": "channels",
+      "licence": "BSD",
+      "url": "https://pypi.org/project/channels/"
+    },
+    {
+      "name": "channels-redis",
+      "licence": "BSD",
+      "url": "https://pypi.org/project/channels-redis/"
+    },
+    {
+      "name": "daphne",
+      "licence": "BSD",
+      "url": "https://pypi.org/project/daphne/"
+    },
+    {
+      "name": "dj-database-url",
+      "licence": "BSD-3-Clause",
+      "url": "https://pypi.org/project/dj-database-url/"
+    },
+    {
+      "name": "Django",
+      "licence": "BSD-3-Clause",
+      "url": "https://pypi.org/project/Django/"
+    },
+    {
+      "name": "django-celery-beat",
+      "licence": "BSD",
+      "url": "https://pypi.org/project/django-celery-beat/"
+    },
+    {
+      "name": "django-cors-headers",
+      "licence": "MIT",
+      "url": "https://pypi.org/project/django-cors-headers/"
+    },
+    {
+      "name": "django-filter",
+      "licence": "BSD License",
+      "url": "https://pypi.org/project/django-filter/"
+    },
+    {
+      "name": "djangorestframework",
+      "licence": "BSD-3-Clause",
+      "url": "https://pypi.org/project/djangorestframework/"
+    },
+    {
+      "name": "djangorestframework-simplejwt",
+      "licence": "MIT",
+      "url": "https://pypi.org/project/djangorestframework-simplejwt/"
+    },
+    {
+      "name": "drf-spectacular",
+      "licence": "BSD-3-Clause",
+      "url": "https://pypi.org/project/drf-spectacular/"
+    },
+    {
+      "name": "factory-boy",
+      "licence": "MIT",
+      "url": "https://pypi.org/project/factory-boy/"
+    },
+    {
+      "name": "httpcore2",
+      "licence": "BSD-3-Clause",
+      "url": "https://pypi.org/project/httpcore2/"
+    },
+    {
+      "name": "httpx2",
+      "licence": "BSD-3-Clause",
+      "url": "https://pypi.org/project/httpx2/"
+    },
+    {
+      "name": "ipython",
+      "licence": "BSD-3-Clause",
+      "url": "https://pypi.org/project/ipython/"
+    },
+    {
+      "name": "openai",
+      "licence": "Apache-2.0",
+      "url": "https://pypi.org/project/openai/"
+    },
+    {
+      "name": "pgvector",
+      "licence": "MIT",
+      "url": "https://pypi.org/project/pgvector/"
+    },
+    {
+      "name": "Pillow",
+      "licence": "MIT-CMU",
+      "url": "https://pypi.org/project/Pillow/"
+    },
+    {
+      "name": "psycopg2-binary",
+      "licence": "LGPL with exceptions",
+      "url": "https://pypi.org/project/psycopg2-binary/"
+    },
+    {
+      "name": "pytest",
+      "licence": "MIT",
+      "url": "https://pypi.org/project/pytest/"
+    },
+    {
+      "name": "pytest-asyncio",
+      "licence": "Apache-2.0",
+      "url": "https://pypi.org/project/pytest-asyncio/"
+    },
+    {
+      "name": "pytest-cov",
+      "licence": "MIT",
+      "url": "https://pypi.org/project/pytest-cov/"
+    },
+    {
+      "name": "pytest-django",
+      "licence": "BSD License",
+      "url": "https://pypi.org/project/pytest-django/"
+    },
+    {
+      "name": "python-dotenv",
+      "licence": "BSD-3-Clause",
+      "url": "https://pypi.org/project/python-dotenv/"
+    },
+    {
+      "name": "redis",
+      "licence": "MIT",
+      "url": "https://pypi.org/project/redis/"
+    },
+    {
+      "name": "requests",
+      "licence": "Apache-2.0",
+      "url": "https://pypi.org/project/requests/"
+    },
+    {
+      "name": "sentry-sdk",
+      "licence": "MIT",
+      "url": "https://pypi.org/project/sentry-sdk/"
+    }
+  ],
+  "web": [
+    {
+      "name": "@base-ui/react",
+      "licence": "MIT",
+      "url": "https://www.npmjs.com/package/@base-ui/react"
+    },
+    {
+      "name": "@dagrejs/dagre",
+      "licence": "MIT",
+      "url": "https://www.npmjs.com/package/@dagrejs/dagre"
+    },
+    {
+      "name": "@fontsource-variable/noto-sans-sc",
+      "licence": "OFL-1.1",
+      "url": "https://www.npmjs.com/package/@fontsource-variable/noto-sans-sc"
+    },
+    {
+      "name": "@fontsource-variable/noto-serif-sc",
+      "licence": "OFL-1.1",
+      "url": "https://www.npmjs.com/package/@fontsource-variable/noto-serif-sc"
+    },
+    {
+      "name": "@sentry/nextjs",
+      "licence": "MIT",
+      "url": "https://www.npmjs.com/package/@sentry/nextjs"
+    },
+    {
+      "name": "@tanstack/react-query",
+      "licence": "MIT",
+      "url": "https://www.npmjs.com/package/@tanstack/react-query"
+    },
+    {
+      "name": "@types/nprogress",
+      "licence": "MIT",
+      "url": "https://www.npmjs.com/package/@types/nprogress"
+    },
+    {
+      "name": "@xyflow/react",
+      "licence": "MIT",
+      "url": "https://www.npmjs.com/package/@xyflow/react"
+    },
+    {
+      "name": "axios",
+      "licence": "MIT",
+      "url": "https://www.npmjs.com/package/axios"
+    },
+    {
+      "name": "class-variance-authority",
+      "licence": "Apache-2.0",
+      "url": "https://www.npmjs.com/package/class-variance-authority"
+    },
+    {
+      "name": "clsx",
+      "licence": "MIT",
+      "url": "https://www.npmjs.com/package/clsx"
+    },
+    {
+      "name": "gsap",
+      "licence": "Standard 'no charge' license: https://gsap.com/standard-license.",
+      "url": "https://www.npmjs.com/package/gsap"
+    },
+    {
+      "name": "lucide-react",
+      "licence": "ISC",
+      "url": "https://www.npmjs.com/package/lucide-react"
+    },
+    {
+      "name": "motion",
+      "licence": "MIT",
+      "url": "https://www.npmjs.com/package/motion"
+    },
+    {
+      "name": "next",
+      "licence": "MIT",
+      "url": "https://www.npmjs.com/package/next"
+    },
+    {
+      "name": "nprogress",
+      "licence": "MIT",
+      "url": "https://www.npmjs.com/package/nprogress"
+    },
+    {
+      "name": "react",
+      "licence": "MIT",
+      "url": "https://www.npmjs.com/package/react"
+    },
+    {
+      "name": "react-dom",
+      "licence": "MIT",
+      "url": "https://www.npmjs.com/package/react-dom"
+    },
+    {
+      "name": "recharts",
+      "licence": "MIT",
+      "url": "https://www.npmjs.com/package/recharts"
+    },
+    {
+      "name": "tailwind-merge",
+      "licence": "MIT",
+      "url": "https://www.npmjs.com/package/tailwind-merge"
+    }
+  ],
+  "app": [
+    {
+      "name": "@expo-google-fonts/archivo",
+      "licence": "MIT AND OFL-1.1",
+      "url": "https://www.npmjs.com/package/@expo-google-fonts/archivo"
+    },
+    {
+      "name": "@expo-google-fonts/cinzel",
+      "licence": "MIT AND OFL-1.1",
+      "url": "https://www.npmjs.com/package/@expo-google-fonts/cinzel"
+    },
+    {
+      "name": "@expo-google-fonts/gfs-didot",
+      "licence": "MIT AND OFL-1.1",
+      "url": "https://www.npmjs.com/package/@expo-google-fonts/gfs-didot"
+    },
+    {
+      "name": "@expo-google-fonts/ibm-plex-mono",
+      "licence": "MIT AND OFL-1.1",
+      "url": "https://www.npmjs.com/package/@expo-google-fonts/ibm-plex-mono"
+    },
+    {
+      "name": "@expo-google-fonts/josefin-slab",
+      "licence": "MIT AND OFL-1.1",
+      "url": "https://www.npmjs.com/package/@expo-google-fonts/josefin-slab"
+    },
+    {
+      "name": "@expo-google-fonts/ma-shan-zheng",
+      "licence": "MIT AND OFL-1.1",
+      "url": "https://www.npmjs.com/package/@expo-google-fonts/ma-shan-zheng"
+    },
+    {
+      "name": "@expo-google-fonts/noto-sans-egyptian-hieroglyphs",
+      "licence": "MIT AND OFL-1.1",
+      "url": "https://www.npmjs.com/package/@expo-google-fonts/noto-sans-egyptian-hieroglyphs"
+    },
+    {
+      "name": "@expo-google-fonts/source-serif-4",
+      "licence": "MIT AND OFL-1.1",
+      "url": "https://www.npmjs.com/package/@expo-google-fonts/source-serif-4"
+    },
+    {
+      "name": "@expo-google-fonts/unifrakturmaguntia",
+      "licence": "MIT AND OFL-1.1",
+      "url": "https://www.npmjs.com/package/@expo-google-fonts/unifrakturmaguntia"
+    },
+    {
+      "name": "@gorhom/bottom-sheet",
+      "licence": "MIT",
+      "url": "https://www.npmjs.com/package/@gorhom/bottom-sheet"
+    },
+    {
+      "name": "@react-native-async-storage/async-storage",
+      "licence": "MIT",
+      "url": "https://www.npmjs.com/package/@react-native-async-storage/async-storage"
+    },
+    {
+      "name": "@react-navigation/bottom-tabs",
+      "licence": "MIT",
+      "url": "https://www.npmjs.com/package/@react-navigation/bottom-tabs"
+    },
+    {
+      "name": "@react-navigation/native",
+      "licence": "MIT",
+      "url": "https://www.npmjs.com/package/@react-navigation/native"
+    },
+    {
+      "name": "@react-navigation/native-stack",
+      "licence": "MIT",
+      "url": "https://www.npmjs.com/package/@react-navigation/native-stack"
+    },
+    {
+      "name": "expo",
+      "licence": "MIT",
+      "url": "https://www.npmjs.com/package/expo"
+    },
+    {
+      "name": "expo-clipboard",
+      "licence": "MIT",
+      "url": "https://www.npmjs.com/package/expo-clipboard"
+    },
+    {
+      "name": "expo-constants",
+      "licence": "MIT",
+      "url": "https://www.npmjs.com/package/expo-constants"
+    },
+    {
+      "name": "expo-font",
+      "licence": "MIT",
+      "url": "https://www.npmjs.com/package/expo-font"
+    },
+    {
+      "name": "expo-haptics",
+      "licence": "MIT",
+      "url": "https://www.npmjs.com/package/expo-haptics"
+    },
+    {
+      "name": "expo-image",
+      "licence": "MIT",
+      "url": "https://www.npmjs.com/package/expo-image"
+    },
+    {
+      "name": "expo-image-manipulator",
+      "licence": "MIT",
+      "url": "https://www.npmjs.com/package/expo-image-manipulator"
+    },
+    {
+      "name": "expo-image-picker",
+      "licence": "MIT",
+      "url": "https://www.npmjs.com/package/expo-image-picker"
+    },
+    {
+      "name": "expo-network",
+      "licence": "MIT",
+      "url": "https://www.npmjs.com/package/expo-network"
+    },
+    {
+      "name": "expo-notifications",
+      "licence": "MIT",
+      "url": "https://www.npmjs.com/package/expo-notifications"
+    },
+    {
+      "name": "expo-secure-store",
+      "licence": "MIT",
+      "url": "https://www.npmjs.com/package/expo-secure-store"
+    },
+    {
+      "name": "expo-splash-screen",
+      "licence": "MIT",
+      "url": "https://www.npmjs.com/package/expo-splash-screen"
+    },
+    {
+      "name": "expo-status-bar",
+      "licence": "MIT",
+      "url": "https://www.npmjs.com/package/expo-status-bar"
+    },
+    {
+      "name": "react",
+      "licence": "MIT",
+      "url": "https://www.npmjs.com/package/react"
+    },
+    {
+      "name": "react-native",
+      "licence": "MIT",
+      "url": "https://www.npmjs.com/package/react-native"
+    },
+    {
+      "name": "react-native-gesture-handler",
+      "licence": "MIT",
+      "url": "https://www.npmjs.com/package/react-native-gesture-handler"
+    },
+    {
+      "name": "react-native-reanimated",
+      "licence": "MIT",
+      "url": "https://www.npmjs.com/package/react-native-reanimated"
+    },
+    {
+      "name": "react-native-safe-area-context",
+      "licence": "MIT",
+      "url": "https://www.npmjs.com/package/react-native-safe-area-context"
+    },
+    {
+      "name": "react-native-screens",
+      "licence": "MIT",
+      "url": "https://www.npmjs.com/package/react-native-screens"
+    },
+    {
+      "name": "react-native-svg",
+      "licence": "MIT",
+      "url": "https://www.npmjs.com/package/react-native-svg"
+    },
+    {
+      "name": "react-native-worklets",
+      "licence": "MIT",
+      "url": "https://www.npmjs.com/package/react-native-worklets"
+    }
+  ],
+  "shared": [
+    {
+      "name": "axios",
+      "licence": "MIT",
+      "url": "https://www.npmjs.com/package/axios"
+    },
+    {
+      "name": "zod",
+      "licence": "MIT",
+      "url": "https://www.npmjs.com/package/zod"
+    }
+  ]
+}
