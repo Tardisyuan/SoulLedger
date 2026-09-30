@@ -165,6 +165,19 @@ export const nodeTypes: NodeTypes = {
  */
 type RouteData = { branch?: Branch; labelled?: boolean; conditionText?: string; isDefault?: boolean };
 
+/**
+ * 方向箭头:一个**内联**的 `<polygon>`,尖端落在目标端口上,填充取边自己的 stroke。
+ * 不用 `markerEnd`:xyflow 把 marker 放进独立的 `<defs>` 树,`oklch(var(--…))` 在那里
+ * 画不出来(p3b 遗留)。内联多边形与边同在文档 `:root` 下,var 解析、随主题实时切换。
+ * 下面的角度把「底边朝上、尖朝下」的基形转到从哪一侧进入目标。
+ */
+const ARROW_ROTATION: Record<string, number> = {
+  [Position.Top]: 0,
+  [Position.Right]: 90,
+  [Position.Bottom]: 180,
+  [Position.Left]: 270,
+};
+
 function RouteEdgeComponent({
   id,
   sourceX,
@@ -193,6 +206,12 @@ function RouteEdgeComponent({
   return (
     <>
       <BaseEdge id={id} path={path} style={{ ...style, strokeDasharray: fail ? "4 4" : undefined }} />
+      <polygon
+        data-edge-arrow=""
+        points={`${targetX - 4},${targetY - 6} ${targetX + 4},${targetY - 6} ${targetX},${targetY}`}
+        transform={`rotate(${ARROW_ROTATION[targetPosition] ?? 0} ${targetX} ${targetY})`}
+        style={{ fill: style?.stroke }}
+      />
       {route.labelled && (
         <EdgeLabelRenderer>
           <span
