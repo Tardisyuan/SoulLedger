@@ -26,7 +26,8 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 User = get_user_model()
 logger = logging.getLogger(__name__)
 
-from apps.authentication.mail import send_neutral_mail
+from apps.authentication.mail import MESSAGES as MAIL_MESSAGES
+from apps.authentication.mail import fill, mail_locale, send_neutral_mail
 from apps.authentication.models import UserRole, is_assignable_role
 from apps.core.csv_safe import csv_safe
 from apps.core.permissions import IsAdminPermission, TenantPermission
@@ -835,10 +836,12 @@ def reset_password_request(request):
 
     # Check if user exists (but always return success for security)
     #
-    # `.filter().count()`, not `.get()`. Since authentication 0016 `User.email`
+    # `.filter()[:2]`, not `.get()`. Since authentication 0016 `User.email`
     # is unique among live rows (case-insensitively), and `User.objects` sees only
-    # live rows, so more than one match should no longer happen; the count is
+    # live rows, so more than one match should no longer happen; exactly-one is
     # kept because a `.get()` that ever did meet two would be an uncaught 500.
+    # The one row is kept (not just counted) because the mail's language is
+    # chosen from it — see `apps/authentication/mail.py::mail_locale`.
     #
     # A soul's address gets here only through `sync_login_email`
     # (apps/soul_accounts/services.py), which copies the soul's contact email to
@@ -855,7 +858,8 @@ def reset_password_request(request):
     # pages that administrator instead. An officer's address is therefore
     # treated exactly like an unregistered one — same statements, same body —
     # so this endpoint does not become an "is this an officer?" oracle either.
-    if User.objects.filter(email=email, role=SELF_RESET_ROLE).count() == 1:
+    matches = list(User.objects.filter(email=email, role=SELF_RESET_ROLE)[:2])
+    if len(matches) == 1:
         # Generate secure 6-digit code, stored in the cache with a 5-minute TTL
         code = f"{secrets.randbelow(900000) + 100000:06d}"
         cache.set(f"pwd_reset:{email}", code, timeout=300)
@@ -866,13 +870,16 @@ def reset_password_request(request):
         # like success: a 500 only for registered addresses would disclose
         # exactly what the identical responses above exist to hide.
         try:
+            locale = mail_locale(user=matches[0])
+            pack = MAIL_MESSAGES[locale]["reset_code"]
             send_neutral_mail(
-                "SoulLedger 密码重置验证码",
-                f"您的验证码: {code}\n5 分钟内有效。如非本人操作,请忽略本邮件。",
-                heading="密码重置验证码",
-                rows=[("验证码", code)],
-                notes=["5 分钟内有效。如非本人操作,请忽略本邮件。"],
+                f"SoulLedger {pack['title']}",
+                fill(pack["text"], code=code),
+                heading=pack["title"],
+                rows=[(pack["code_label"], code)],
+                notes=[pack["note"]],
                 to=[email],
+                locale=locale,
             )
         except Exception:
             logger.error("password reset mail could not be sent", exc_info=False)

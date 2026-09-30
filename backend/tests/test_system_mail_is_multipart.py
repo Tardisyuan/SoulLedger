@@ -8,13 +8,13 @@
 - 中性皮:不带任何文明的匾色。
 """
 from datetime import UTC, datetime
-from types import SimpleNamespace
 
 import pytest
 from django.core import mail
 from django.core.cache import cache
 
 from apps.soul_accounts.delivery import EmailCredentialDelivery
+from tests.soul_account_support import dead_soul
 
 # 四个文明的匾色(frontend/src/__tests__/ledgerPaletteContract.test.ts 的 --color-civ-*,浅深两档)。
 CIV_MAIN_COLOURS = ["#9a2f1f", "#b3402c", "#4a2a6a", "#7a52a6"]
@@ -52,8 +52,10 @@ def test_the_reset_mail_keeps_its_text_and_adds_a_neutral_html_part(api_client, 
     _assert_neutral(html)
 
 
-def test_the_credential_mail_keeps_its_text_and_escapes_values_in_html():
-    soul = SimpleNamespace(contact_email="zhang@example.com")
+@pytest.mark.django_db
+def test_the_credential_mail_keeps_its_text_and_escapes_values_in_html(cn_tenant):
+    # 真灵魂而不是 SimpleNamespace:信的语言按灵魂的偏好 / 文明选(地府 → zh-Hans)。
+    soul = dead_soul(cn_tenant, contact_email="zhang@example.com")
     expires = datetime(2026, 10, 7, 8, 30, tzinfo=UTC)
     hostile = "<script>alert(1)</script>&"
     EmailCredentialDelivery().send(soul, hostile, "Pw<b>x", expires)
