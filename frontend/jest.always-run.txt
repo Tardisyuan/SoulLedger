@@ -42,6 +42,7 @@ src/__tests__/notifyPortCarriesTheToast.test.ts
 src/__tests__/officerAssist.test.tsx
 src/__tests__/oneRealtimeSocketPerSession.test.ts
 src/__tests__/paginatedPagesCanBePaged.test.ts
+src/__tests__/plaqueTitleStaysLargeText.test.ts
 src/__tests__/platformAdapterIsInstalled.test.tsx
 src/__tests__/proseLinkIsNotColourOnly.test.ts
 src/__tests__/proxyAuthGate.test.ts
