@@ -157,7 +157,11 @@ def test_closing_the_stream_stops_the_provider_and_stores_the_partial_as_stopped
     chunks = iter(response.streaming_content)
     assert b"event: meta" in next(chunks)
     assert "一" in next(chunks).decode()
-    response.close()  # WSGI 下 Django 在连接断开时就是这样做的
+    # 客户端断开。测试客户端把正文包在 `closing_iterator_wrapper` 里(`response._iterator`),关它就是关流:
+    # 它摘掉 close_old_connections 再调 response.close() → 关掉 SSE 的生成器。直接调 response.close() 不行:
+    # 那个包装的 finally 会先把 close_old_connections 接回去,随后 request_finished 在 PostgreSQL 上关掉本测试
+    # 事务的连接(SQLite 内存库不关,所以只在真 PG 上红过)。
+    response._iterator.close()
 
     assert FakeProvider.pulled == ["一"]  # 停下之后供应商不再被拉取
     stored = AssistMessage.objects.get(role="assistant")

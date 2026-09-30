@@ -487,4 +487,10 @@ contextvars 里跑(中间件在视图返回后就清掉了当前殿)。
   特别是 `stream_options.include_usage` 是否被每个 OpenAI 兼容平台接受 —— 不接受的平台会答 400,既不切换也流不出来。
 - Anthropic 服务端拒答回退(`fallbacks` beta)在流式下的事件形状。
 - 断开后「多产出一段」的上限取决于供应商两段之间的间隔;推理慢的模型在工具轮里断开,要等那一轮答完才停。
-- 真 PostgreSQL 上的断路器与名额只在全量里跑过一遍,没有专门的并发测试。
+- 断路器与并发名额没有专门的多进程 / 并发测试(断路器在 LocMem 与真 PG 全量里各跑过,计数的原子性依赖缓存的 `incr`)。
+
+### 13.9 门禁(2026-10-01,`faadaa58` 之后)
+
+SQLite 全量 `-n 4` 5871 passed / 30 skipped;真 PostgreSQL 全量 5893 passed / 7 skipped / **1 failed** —— 停止测试直接调了
+`response.close()`,测试客户端的包装先把 `close_old_connections` 接回去,PG 上关掉了测试事务的连接(SQLite 内存库不关)。
+改成关测试客户端的包装之后,四个新测试文件在真 PG 上 77 passed。跑完 115 上 `test_soulledger*` 残留 NONE。
