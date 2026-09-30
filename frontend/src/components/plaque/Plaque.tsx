@@ -70,7 +70,10 @@ export function Plaque({ title, meta, children }: { title: string; meta?: ReactN
         </div>
         {children}
       </div>
-      <div aria-hidden="true" className="plaque-band" />
+      {/* 纹样带是遮罩,遮罩会连它的伪元素一起遮,所以质感挂在外面这一层上(globals.css .plaque-tex)。 */}
+      <div aria-hidden="true" data-testid="plaque-band" className="plaque-tex">
+        <div className="plaque-band" />
+      </div>
     </div>
   );
 }

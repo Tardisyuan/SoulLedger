@@ -107,6 +107,13 @@ export function Pillar({
             onToggle={() => onToggle(menu.id)}
           />
         ))}
+        {/* 底部 40px 静态渐隐(C13「滚动」):吸在可视区底沿,内容没滚到底时提示下面还有;
+            它自己占 40px,所以滚到底时最后一项不被盖住。 */}
+        <div
+          aria-hidden="true"
+          data-testid="pillar-fade"
+          className="pointer-events-none sticky bottom-0 h-10 shrink-0 bg-linear-to-t from-[oklch(var(--color-pillar))] to-transparent"
+        />
       </nav>
       {open ? <SecondaryColumn menu={open} allMenuPaths={allMenuPaths} /> : null}
     </div>

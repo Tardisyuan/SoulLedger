@@ -22,7 +22,7 @@ jest.mock("@/src/contexts/I18nContext", () => ({
 }));
 
 import { Seal, sealGlyphsFor, DEFAULT_SEAL_GLYPHS } from "@/src/components/plaque/Seal";
-import { fitTier } from "@/src/components/plaque/Plaque";
+import { fitTier, Plaque } from "@/src/components/plaque/Plaque";
 import { labelTooLongForVerticalPillar, pillarIsWide } from "@/src/lib/pillar";
 
 const FRONTEND = path.join(__dirname, "..", "..");
@@ -135,7 +135,7 @@ describe("立柱横排阈值(C14)", () => {
 
 describe("文明皮的素材表(globals.css → public/v2)", () => {
   const css = fs.readFileSync(path.join(FRONTEND, "app", "globals.css"), "utf8");
-  const LAYERS = ["--band", "--band-compact", "--seal-body", "--seal-ring", "--seal-line", "--seal-line-small", "--seal-scan", "--section"];
+  const LAYERS = ["--band", "--band-compact", "--band-tex", "--band-tex-w", "--seal-body", "--seal-ring", "--seal-line", "--seal-line-small", "--seal-scan", "--section"];
 
   it.each(["cn", "eu", "eg", "gr"])("%s 的每一层都有声明", (civ) => {
     const blocks = [...css.matchAll(new RegExp(`\\[data-civ="${civ}"\\]\\s*\\{([^}]*)\\}`, "g"))].map((m) => m[1]).join("\n");
@@ -147,7 +147,7 @@ describe("文明皮的素材表(globals.css → public/v2)", () => {
 
   it("引用的每一个素材文件都在 public/ 里", () => {
     const urls = [...css.matchAll(/url\("(\/v2\/[^"]+)"\)/g)].map((m) => m[1]);
-    expect(urls.length).toBeGreaterThanOrEqual(4 * 9); // 4 文明 × (匾纹 2 + 印 4 + 扫描 2 + 分节 1)
+    expect(urls.length).toBeGreaterThanOrEqual(4 * 13); // 4 文明 × (匾纹 2 + 质感 4 + 印 4 + 扫描 2 + 分节 1)
     const missing = urls.filter((u) => !fs.existsSync(path.join(FRONTEND, "public", u)));
     expect(missing).toEqual([]);
   });
@@ -166,5 +166,35 @@ describe("文明皮的素材表(globals.css → public/v2)", () => {
   it("没配文明的素材不入库(bronze / wax / inkseal / 裁切前原图)", () => {
     const tex = fs.readdirSync(path.join(FRONTEND, "public", "v2", "textures"));
     expect(tex.filter((f) => /bronze|^wax|inkseal|source/.test(f))).toEqual([]);
+  });
+});
+
+describe("匾纹样带的质感(§四「质感」)", () => {
+  const css = fs.readFileSync(path.join(FRONTEND, "app", "globals.css"), "utf8");
+  const block = (civ: string) =>
+    [...css.matchAll(new RegExp(`\\[data-civ="${civ}"\\]\\s*\\{([^}]*)\\}`, "g"))].map((m) => m[1]).join("\n");
+
+  it.each([
+    ["cn", "paper"],
+    ["eu", "paper"],
+    ["eg", "papyrus"],
+    ["gr", "marble"],
+  ])("%s 用 %s,深色档用 *-w(只白颗粒)", (civ, tex) => {
+    expect(block(civ)).toContain(`--band-tex: image-set(url("/v2/textures/${tex}-1x.png")`);
+    expect(block(civ)).toContain(`--band-tex-w: image-set(url("/v2/textures/${tex}-w-1x.png")`);
+  });
+
+  it("默认(深色)取 -w,.light 取浅色档;中性皮没有这两个变量,于是不画", () => {
+    expect(css).toMatch(/\.plaque-tex::after\s*\{[^}]*var\(--band-tex-w, none\)/);
+    expect(css).toMatch(/\.light \.plaque-tex::after\s*\{[^}]*var\(--band-tex, none\)/);
+    expect(block("neutral")).not.toContain("--band-tex");
+  });
+
+  it("质感挂在纹样带外层:纹样带自己是遮罩,挂在它身上会被一起遮掉", () => {
+    render(<Plaque title="第五殿" />);
+    const outer = screen.getByTestId("plaque-band");
+    expect(outer).toHaveClass("plaque-tex");
+    expect(outer).not.toHaveClass("plaque-band");
+    expect(outer.firstElementChild).toHaveClass("plaque-band");
   });
 });
