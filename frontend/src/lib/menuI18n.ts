@@ -51,6 +51,8 @@ const LEAF_KEYS: Record<string, string> = {
   "/soul-inbox": "breadcrumb.menu.soul_inbox",
   // backend/apps/menus/migrations/0019_add_sentence_requests_menu.py
   "/sentence-requests": "breadcrumb.menu.sentence_requests",
+  // backend/apps/menus/migrations/0020_add_assistant_admin_menu.py
+  "/admin/assistant": "breadcrumb.menu.assistant_admin",
 };
 
 const DIRECTORY_KEYS: Record<string, string> = {

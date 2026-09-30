@@ -12,6 +12,7 @@ jest.mock("@/src/contexts/I18nContext", () => ({
         "icon_picker.clear": "Clear",
         "icon_picker.search": "Search icons...",
         "icon_picker.no_results": "No results found",
+        "common.close": "关闭",
       };
       return map[key] || key;
     },
@@ -46,9 +47,21 @@ describe("BaseModal", () => {
         <div>Content</div>
       </BaseModal>
     );
-    const closeBtn = screen.getByLabelText("Close");
+    const closeBtn = screen.getByLabelText("关闭");
     fireEvent.click(closeBtn);
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  // The label comes from the active locale, not a hard-coded English "Close":
+  // a zh-Hans screen reader heard "Close" while the visible text reads "Esc".
+  it("names the close button from i18n, not a literal English label", () => {
+    render(
+      <BaseModal isOpen={true} onClose={() => {}} title="Test Modal">
+        <div>Content</div>
+      </BaseModal>
+    );
+    expect(screen.getByRole("button", { name: "关闭" })).toHaveTextContent("Esc");
+    expect(screen.queryByLabelText("Close")).not.toBeInTheDocument();
   });
 
   it("renders title", () => {

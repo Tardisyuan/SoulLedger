@@ -90,6 +90,8 @@ interface SoulBase {
   create_time?: string;
   /** Soul's own dates against each other — see SoulDateProblem. */
   date_problems: SoulDateProblem[];
+  /** The assistant admin's eval soul (backend apps/soul_assist/eval_identities.py): listed, tagged 「评测专用 · 不能登录」. */
+  is_eval_identity: boolean;
 }
 
 /**

@@ -21,6 +21,10 @@ import { LogoutConfirmDialog } from "@/src/components/layout/LogoutConfirmDialog
 import { Plaque } from "@/src/components/plaque/Plaque";
 import { useTheme } from "@/src/contexts/ThemeContext";
 import { DomainEnum } from "@/src/components/ui/DomainValue";
+// 「问一问」的推开只在 ≥ 1024 px(canvas 1a);窄屏它是覆盖层。
+import { useWideViewport } from "@/src/hooks/useWideViewport";
+import { OfficerAssistEntry, OfficerAssistPanel } from "@/src/components/assist/OfficerAssist";
+import { useOfficerAssist } from "@/src/components/assist/useOfficerAssist";
 
 /**
  * The shell, 规范 v2「朱印」:左侧立柱(`Pillar`,60 / 88,四文明共用的近黑底)+ 页头匾
@@ -42,6 +46,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const pathname = usePathname();
+  const wide = useWideViewport();
+  const assist = useOfficerAssist(wide);
 
   const handleLogout = async () => {
     try { await authApi.logout(); } catch (err) { console.error("Logout failed:", err); }
@@ -113,6 +119,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           {/* 只有一段时面包屑就是题字本身,不重复画。 */}
           <Plaque title={title} meta={crumbs.length > 1 ? <Breadcrumb menus={menus} /> : undefined}>
           <div className="flex shrink-0 items-center gap-4 whitespace-nowrap">
+            {/* 问一问 (canvas 1b): the connection state left the masthead, so it leads the group. */}
+            <OfficerAssistEntry assist={assist} />
             {user ? (
               <Popover.Root>
                 <Popover.Trigger
@@ -233,10 +241,25 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        <div data-testid="app-content" className="min-h-[calc(100vh-2.5rem)]">{children}</div>
+        {/* 问一问 pushed (≥ 1024): the page gives up the panel's 420 px, and 1024–1279 its
+            40 px side padding drops to 24 (canvas 1a 一). The padding rule reaches into
+            PageShell's `md:px-10` by attribute, so no page has to know about the panel. */}
+        <div
+          ref={assist.mainRef}
+          tabIndex={-1}
+          data-testid="app-content"
+          data-assist-pushed={assist.pushed ? "" : undefined}
+          className={`min-h-[calc(100vh-2.5rem)] outline-none ${
+            assist.pushed ? "pr-[420px] max-xl:[&_[class~='md:px-10']]:px-6" : ""
+          }`}
+        >
+          {children}
+        </div>
       </main>
 
       <BottomBar menus={menus} allMenuPaths={allMenuPaths} currentId={currentGroup} />
+
+      <OfficerAssistPanel assist={assist} />
 
       <SettingsDrawer open={settingsOpen} onClose={() => setSettingsOpen(false)} />
       <LogoutConfirmDialog

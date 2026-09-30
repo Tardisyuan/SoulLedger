@@ -44,6 +44,324 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/assist/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description `AssistError` 与节流都答 `{detail, code}`:App 与 Web 按 code 分支(DRF 默认的 429 体没有 code)。 */
+        post: operations["officer_assist_ask"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/assist-admin/config/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["assist_admin_config_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["assist_admin_config_update"];
+        trace?: never;
+    };
+    "/api/v1/assist-admin/config/test/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["assist_admin_config_test"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/assist-admin/corpus/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["assist_admin_corpus"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/assist-admin/embedding/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["assist_admin_embedding_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * @description 地址、模型、截断维度任一变了,要先在 15 分钟内测通**同一套**(与供应商连接同一规则);k 与相似度下限不用。
+         *     换模型或维度保存后 `status.needs_rebuild` 为真:检索在重建前退回整份语料,不会拿旧向量去比。
+         */
+        patch: operations["assist_admin_embedding_update"];
+        trace?: never;
+    };
+    "/api/v1/assist-admin/embedding/rebuild/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 与 `manage.py sync_help_vectors` 同一个函数,同步执行(语料几十条,热模型约一两秒)。失败什么都不改。 */
+        post: operations["assist_admin_embedding_rebuild"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/assist-admin/embedding/test/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 对一句固定问题取向量:报延迟与返回维度。要了截断维度而返回的不是它 → `dims_mismatch`,判失败。 */
+        post: operations["assist_admin_embedding_test"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/assist-admin/eval/cases/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["v1_assist_admin_eval_cases_list"];
+        put?: never;
+        post: operations["v1_assist_admin_eval_cases_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/assist-admin/eval/cases/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["v1_assist_admin_eval_cases_retrieve"];
+        put: operations["v1_assist_admin_eval_cases_update"];
+        post?: never;
+        delete: operations["v1_assist_admin_eval_cases_destroy"];
+        options?: never;
+        head?: never;
+        patch: operations["v1_assist_admin_eval_cases_partial_update"];
+        trace?: never;
+    };
+    "/api/v1/assist-admin/eval/identities/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["assist_admin_eval_identities_ensure"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/assist-admin/eval/preview/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["assist_admin_eval_preview"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/assist-admin/eval/runs/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["assist_admin_eval_runs_list"];
+        put?: never;
+        post: operations["assist_admin_eval_run_start"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/assist-admin/eval/runs/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["v1_assist_admin_eval_runs_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/assist-admin/halls/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["assist_admin_halls_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/assist-admin/halls/{tenant_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["assist_admin_hall_update"];
+        trace?: never;
+    };
+    "/api/v1/assist-admin/try/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description §3.3 试问:以配置里的评测身份问一句,看回答与工具调用(只给工具名)。走正式的 `service.ask`
+         *     —— 数据范围、审计(`"eval": true`)与正式提问相同;会话标 `is_eval`,不进本人列表;用量标 `is_eval`,
+         *     不计用量与月度上限。不查总开关与每殿开关:与评测一样,管理员要在打开之前先试。
+         */
+        post: operations["assist_admin_try"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/assist-admin/usage/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["assist_admin_usage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/assist/conversations/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description `AssistError` 与节流都答 `{detail, code}`:App 与 Web 按 code 分支(DRF 默认的 429 体没有 code)。 */
+        get: operations["officer_assist_conversations_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/assist/conversations/{conversation_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** @description `AssistError` 与节流都答 `{detail, code}`:App 与 Web 按 code 分支(DRF 默认的 429 体没有 code)。 */
+        delete: operations["officer_assist_conversation_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/audit-logs/": {
         parameters: {
             query?: never;
@@ -2599,6 +2917,57 @@ export interface paths {
         put?: never;
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/assist/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description `AssistError` 与节流都答 `{detail, code}`:App 与 Web 按 code 分支(DRF 默认的 429 体没有 code)。 */
+        post: operations["v1_me_assist_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/assist/conversations/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description `AssistError` 与节流都答 `{detail, code}`:App 与 Web 按 code 分支(DRF 默认的 429 体没有 code)。 */
+        get: operations["v1_me_assist_conversations_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/assist/conversations/{conversation_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** @description `AssistError` 与节流都答 `{detail, code}`:App 与 Web 按 code 分支(DRF 默认的 429 体没有 code)。 */
+        delete: operations["v1_me_assist_conversations_destroy"];
         options?: never;
         head?: never;
         patch?: never;
@@ -7032,6 +7401,13 @@ export interface components {
             per_minute: number | null;
             per_hour: number | null;
         };
+        ApiKeyState: {
+            set: boolean;
+            last4: string | null;
+            /** Format: date-time */
+            set_at: string | null;
+            source: components["schemas"]["SourceEnum"];
+        };
         /**
          * @description Serializer for ApprovalNode.
          *
@@ -7291,6 +7667,69 @@ export interface components {
             readonly role: string;
             readonly in_hand: number;
         };
+        AssistAnswer: {
+            /** Format: uuid */
+            conversation_id: string;
+            answer: components["schemas"]["AssistMessage"];
+        };
+        AssistAsk: {
+            question: string;
+            screen: components["schemas"]["ScreenEnum"];
+            /** Format: uuid */
+            conversation_id?: string | null;
+        };
+        AssistConversation: {
+            /** Format: uuid */
+            readonly id: string;
+            readonly screen: components["schemas"]["ScreenEnum"];
+            /** Format: date-time */
+            readonly created_at: string;
+            /** Format: date-time */
+            readonly last_active_at: string;
+            readonly first_question: string;
+            readonly messages: components["schemas"]["AssistMessage"][];
+        };
+        AssistError: {
+            detail: string;
+            code: string;
+            /** Format: date-time */
+            retry_at?: string;
+        };
+        /**
+         * @description * `queued` - queued
+         *     * `running` - running
+         *     * `done` - done
+         *     * `stopped_at_cap` - stopped_at_cap
+         *     * `failed` - failed
+         * @enum {string}
+         */
+        AssistEvalRunStatusEnum: "queued" | "running" | "done" | "stopped_at_cap" | "failed";
+        AssistMessage: {
+            readonly id: number;
+            role: components["schemas"]["AssistMessageRoleEnum"];
+            content: string;
+            /** Format: date-time */
+            readonly created_at: string;
+        };
+        /**
+         * @description * `user` - user
+         *     * `assistant` - assistant
+         * @enum {string}
+         */
+        AssistMessageRoleEnum: "user" | "assistant";
+        /**
+         * @description * `vector` - vector
+         *     * `fallback` - fallback
+         *     * `fallback_low_similarity` - fallback_low_similarity
+         * @enum {string}
+         */
+        AssistRetrievalEnum: "vector" | "fallback" | "fallback_low_similarity";
+        /**
+         * @description * `soul` - soul
+         *     * `officer` - officer
+         * @enum {string}
+         */
+        AssistSideEnum: "soul" | "officer";
         /** @description One row of `stats.action_distribution` — a `values("action").annotate(count=…)`. */
         AuditActionCount: {
             action: string;
@@ -7413,6 +7852,15 @@ export interface components {
         };
         /** @enum {unknown} */
         BlankEnum: "";
+        /** @description 一套连接配置;没给的键沿用当前生效值。`api_key` 不给 = 沿用已存的 key。 */
+        Candidate: {
+            provider?: components["schemas"]["ProviderEnum"];
+            base_url?: string;
+            api_key?: string;
+            model?: string;
+            effort?: components["schemas"]["EffortEnum"] | components["schemas"]["BlankEnum"];
+            fallbacks?: boolean;
+        };
         /**
          * @description * `ROUTINE` - 常规审判
          *     * `APPEAL` - 申诉审判
@@ -7543,6 +7991,51 @@ export interface components {
             op: string;
             value: unknown;
         };
+        Config: {
+            /** @description 实际生效:env 允许且页面开关为开 */
+            enabled: boolean;
+            /** @description 页面上的总开关 */
+            switch: boolean;
+            /** @description 部署的 ASSISTANT_ENABLED;为假时页面开关无效 */
+            env_enabled: boolean;
+            provider: string;
+            base_url: string;
+            model: string;
+            effort: string;
+            fallbacks: boolean;
+            soul_per_hour: number;
+            officer_per_hour: number;
+            /** Format: double */
+            monthly_cap: number | null;
+            /** Format: double */
+            eval_spend_cap: number;
+            prices: {
+                [key: string]: components["schemas"]["Price"];
+            };
+            api_key: components["schemas"]["ApiKeyState"];
+            /**
+             * Format: uuid
+             * @description 只读;由 POST eval/identities/ 设置
+             */
+            eval_soul_account: string | null;
+            /** @description 只读;由 POST eval/identities/ 设置 */
+            eval_officer: number | null;
+            /** @description 月度上限按 UTC 月份滚动,写成北京时间给管理员看 */
+            month_rolls_over_at: string;
+            /** @description 页面改过(不再跟 env)的键 */
+            overridden: string[];
+            read_only: components["schemas"]["ReadOnlySettings"];
+        };
+        ConnectivityResult: {
+            ok: boolean;
+            error_kind: (components["schemas"]["ErrorKindEnum"] | components["schemas"]["NullEnum"]) | null;
+            latency_ms: number;
+            tokens: {
+                [key: string]: number;
+            };
+            provider: string;
+            model: string;
+        };
         Conversation: {
             /** Format: uuid */
             readonly id: string;
@@ -7596,6 +8089,21 @@ export interface components {
          * @enum {string}
          */
         ConversationKindEnum: "DIRECT" | "OFFICER_INBOX";
+        Corpus: {
+            entries: components["schemas"]["CorpusEntry"][];
+            prompts: components["schemas"]["CorpusPrompt"][];
+            /** @description 最大的一份 system prompt(一次请求实际带上的)的估计 */
+            total_tokens: number;
+            threshold: number;
+        };
+        CorpusEntry: {
+            id: string;
+            locale: string;
+            audience: string;
+            screens: string[];
+            civilizations: string[];
+            tokens: number;
+        };
         /**
          * @description * `HELL_LAW` - 冥律 — Hell Law (Chinese)
          *     * `GONGGUOGE` - 功過格 — Ledger of Merit and Demerit (Chinese)
@@ -7607,6 +8115,11 @@ export interface components {
          * @enum {string}
          */
         CorpusEnum: "HELL_LAW" | "GONGGUOGE" | "NEGATIVE_CONFESSION" | "DEADLY_SIN" | "INFERNO" | "GORGIAS" | "REPUBLIC_ER";
+        CorpusPrompt: {
+            locale: string;
+            audience: string;
+            tokens: number;
+        };
         CrossCivilizationDecision: {
             cross_civilization: boolean;
         };
@@ -8016,10 +8529,121 @@ export interface components {
          */
         DispositionSectionEnum: "pending" | "executing" | "expired";
         /**
+         * @description * `` -
+         *     * `low` - low
+         *     * `medium` - medium
+         *     * `high` - high
+         * @enum {string}
+         */
+        EffortEnum: "low" | "medium" | "high";
+        /**
          * @description * `taken` - taken
          * @enum {string}
          */
         EmailNotSyncedEnum: "taken";
+        /** @description 一套向量配置;没给的键沿用当前生效值。`embedding_dims` 为 null = 模型原生维度(不截断)。 */
+        EmbeddingCandidate: {
+            /** Format: uri */
+            embedding_url?: string;
+            embedding_model?: string;
+            embedding_dims?: number | null;
+        };
+        EmbeddingConfig: {
+            embedding_url: string;
+            embedding_model: string;
+            /** @description null = 模型原生维度 */
+            embedding_dims: number | null;
+            retrieval_k: number;
+            /**
+             * Format: double
+             * @description 最近一条的余弦相似度低于它,这一问退回整份语料(fallback_low_similarity)
+             */
+            retrieval_min_similarity: number;
+            /** @description 页面改过(不再跟 env)的键 */
+            overridden: string[];
+            status: components["schemas"]["EmbeddingStatus"];
+        };
+        EmbeddingError: {
+            detail: string;
+            code: string;
+            /** Format: date-time */
+            retry_at?: string;
+            error_kind: components["schemas"]["EmbeddingErrorKindEnum"];
+        };
+        /**
+         * @description * `timeout` - timeout
+         *     * `connection` - connection
+         *     * `model_not_found` - model_not_found
+         *     * `dims_mismatch` - dims_mismatch
+         *     * `bad_response` - bad_response
+         *     * `other` - other
+         * @enum {string}
+         */
+        EmbeddingErrorKindEnum: "timeout" | "connection" | "model_not_found" | "dims_mismatch" | "bad_response" | "other";
+        EmbeddingRebuild: {
+            /** @description 这次新嵌入或重嵌的条数 */
+            embedded: number;
+            unchanged: number;
+            /** @description 语料里已不存在而删掉的行 */
+            deleted: number;
+            model: string;
+            dims: number | null;
+            /** @description PostgreSQL 上现有的 HNSW 索引名;行数未到阈值为 null */
+            index: string | null;
+            /** @description 删掉的旧模型 / 旧维度索引 */
+            dropped: string[];
+            status: components["schemas"]["EmbeddingStatus"];
+        };
+        EmbeddingStatus: {
+            /** @description 两种语言、两端的语料条目总数 */
+            entries: number;
+            /** @description 按当前模型与维度、当前正文已嵌入的条数 */
+            embedded: number;
+            /** @description 当前模型 / 维度 / 正文下有条目没有向量。测试通过不会自动重建;重建完成前检索退回整份语料 */
+            needs_rebuild: boolean;
+            /** @description 当前配置:模型,截断时为「模型@维度」 */
+            model: string;
+            /** Format: date-time */
+            last_rebuild_at: string | null;
+            last_rebuild_model: string | null;
+            /**
+             * @description 上次重建失败的原因;那次没有换进任何向量。成功一次即清空
+             *
+             *     * `timeout` - timeout
+             *     * `connection` - connection
+             *     * `model_not_found` - model_not_found
+             *     * `dims_mismatch` - dims_mismatch
+             *     * `bad_response` - bad_response
+             *     * `other` - other
+             */
+            last_error: (components["schemas"]["EmbeddingErrorKindEnum"] | components["schemas"]["NullEnum"]) | null;
+            /** Format: date-time */
+            last_error_at: string | null;
+            /** @description 正在重建;此时再点重建答 409 rebuild_running */
+            rebuild_running: boolean;
+        };
+        EmbeddingTestResult: {
+            ok: boolean;
+            error_kind: (components["schemas"]["EmbeddingErrorKindEnum"] | components["schemas"]["NullEnum"]) | null;
+            latency_ms: number;
+            /** @description 返回的维度;失败时为 null */
+            dims: number | null;
+            embedding_url: string;
+            embedding_model: string;
+            /** @description 要求的截断维度;null = 原生 */
+            embedding_dims: number | null;
+        };
+        /**
+         * @description * `auth` - auth
+         *     * `model_not_found` - model_not_found
+         *     * `timeout` - timeout
+         *     * `rate_limited` - rate_limited
+         *     * `connection` - connection
+         *     * `tools_unsupported` - tools_unsupported
+         *     * `other` - other
+         * @enum {string}
+         */
+        ErrorKindEnum: "auth" | "model_not_found" | "timeout" | "rate_limited" | "connection" | "tools_unsupported" | "other";
         /**
          * @description `{"error": "..."}` — this codebase's other, non-DRF, one-line body.
          *
@@ -8029,6 +8653,198 @@ export interface components {
          */
         ErrorResponse: {
             error: string;
+        };
+        /** @description 落库的候选配置,**不含 key**。 */
+        EvalCandidateOut: {
+            readonly provider: string;
+            base_url: string;
+            model: string;
+            effort: string;
+            readonly fallbacks: boolean;
+        };
+        EvalCase: {
+            readonly id: number;
+            side: components["schemas"]["AssistSideEnum"];
+            locale?: components["schemas"]["EvalCaseLocaleEnum"];
+            screen: components["schemas"]["EvalCaseScreenEnum"];
+            question: string;
+            expected_tools?: string[];
+            must_include?: string[];
+            must_not_include?: string[];
+            /** @description 期望进入检索 top-k 的帮助条目 id(该端、该语言的语料里要有);全部进了才算命中。空 = 不计命中率 */
+            expected_entries?: string[];
+            active?: boolean;
+            /** Format: date-time */
+            readonly created_at: string;
+        };
+        /**
+         * @description * `zh-Hans` - zh-Hans
+         *     * `en` - en
+         * @enum {string}
+         */
+        EvalCaseLocaleEnum: "zh-Hans" | "en";
+        /**
+         * @description * `applications` - applications
+         *     * `sentence` - sentence
+         *     * `life` - life
+         *     * `letters` - letters
+         *     * `circle` - circle
+         *     * `settings` - settings
+         *     * `other` - other
+         *     * `actors` - actors
+         *     * `admin` - admin
+         *     * `audit` - audit
+         *     * `corpus` - corpus
+         *     * `cross-judgments` - cross-judgments
+         *     * `dashboard` - dashboard
+         *     * `death-sync` - death-sync
+         *     * `dispatch` - dispatch
+         *     * `disposition` - disposition
+         *     * `judgment` - judgment
+         *     * `ledger` - ledger
+         *     * `menus` - menus
+         *     * `moderation` - moderation
+         *     * `notifications` - notifications
+         *     * `organizations` - organizations
+         *     * `permissions` - permissions
+         *     * `profile` - profile
+         *     * `realms` - realms
+         *     * `rebirth-applications` - rebirth-applications
+         *     * `recycle-bin` - recycle-bin
+         *     * `scheduler` - scheduler
+         *     * `sentence-requests` - sentence-requests
+         *     * `social` - social
+         *     * `soul-credentials` - soul-credentials
+         *     * `soul-inbox` - soul-inbox
+         *     * `souls` - souls
+         *     * `tenants` - tenants
+         *     * `users` - users
+         *     * `welcome` - welcome
+         *     * `workflow` - workflow
+         * @enum {string}
+         */
+        EvalCaseScreenEnum: "applications" | "sentence" | "life" | "letters" | "circle" | "settings" | "other" | "actors" | "admin" | "audit" | "corpus" | "cross-judgments" | "dashboard" | "death-sync" | "dispatch" | "disposition" | "judgment" | "ledger" | "menus" | "moderation" | "notifications" | "organizations" | "permissions" | "profile" | "realms" | "rebirth-applications" | "recycle-bin" | "scheduler" | "sentence-requests" | "social" | "soul-credentials" | "soul-inbox" | "souls" | "tenants" | "users" | "welcome" | "workflow";
+        EvalIdentities: {
+            /** Format: uuid */
+            eval_soul_account: string;
+            eval_officer: number;
+            officer_username: string;
+            officer_role: string;
+            description: string;
+        };
+        EvalPreview: {
+            asks: number;
+            max_asks: number;
+            /** Format: double */
+            estimated_cost: number;
+            /** Format: double */
+            spend_cap: number;
+            candidates: components["schemas"]["EvalPreviewCandidate"][];
+            problems: components["schemas"]["ProblemsEnum"][];
+            /** @description problems 为空时才有;开始运行要带它 */
+            confirm_token: string | null;
+        };
+        EvalPreviewCandidate: {
+            candidate: number;
+            provider: string;
+            model: string;
+            asks: number;
+            input_tokens: number;
+            output_tokens: number;
+            /**
+             * Format: double
+             * @description 模型不在价目表里时为 null
+             */
+            estimated_cost: number | null;
+        };
+        EvalPreviewRequest: {
+            side: components["schemas"]["EvalPreviewRequestSideEnum"];
+            candidates: components["schemas"]["Candidate"][];
+        };
+        /**
+         * @description * `soul` - soul
+         *     * `officer` - officer
+         *     * `both` - both
+         * @enum {string}
+         */
+        EvalPreviewRequestSideEnum: "soul" | "officer" | "both";
+        EvalResult: {
+            readonly id: number;
+            candidate: number;
+            case?: number | null;
+            side: components["schemas"]["AssistSideEnum"];
+            question: string;
+            tools_called?: unknown;
+            answer?: string;
+            error?: string;
+            tools_ok?: boolean;
+            included?: unknown;
+            excluded?: unknown;
+            passed?: boolean;
+            retrieval?: string;
+            retrieved?: unknown;
+            retrieval_hit?: boolean | null;
+            latency_ms?: number;
+            tokens?: unknown;
+            /** Format: double */
+            cost?: number | null;
+        };
+        EvalRun: {
+            readonly id: number;
+            /** Format: date-time */
+            readonly created_at: string;
+            status?: components["schemas"]["AssistEvalRunStatusEnum"];
+            readonly candidates: components["schemas"]["EvalCandidateOut"][];
+            /** Format: double */
+            estimated_cost?: number;
+            total?: number;
+            done?: number;
+            readonly summary: components["schemas"]["EvalSummary"][];
+            /** Format: date-time */
+            finished_at?: string | null;
+        };
+        EvalRunDetail: {
+            readonly id: number;
+            /** Format: date-time */
+            readonly created_at: string;
+            status?: components["schemas"]["AssistEvalRunStatusEnum"];
+            readonly candidates: components["schemas"]["EvalCandidateOut"][];
+            /** Format: double */
+            estimated_cost?: number;
+            total?: number;
+            done?: number;
+            readonly summary: components["schemas"]["EvalSummary"][];
+            /** Format: date-time */
+            finished_at?: string | null;
+            readonly results: components["schemas"]["EvalResult"][];
+        };
+        EvalStart: {
+            confirm_token: string;
+        };
+        EvalSummary: {
+            candidate: number;
+            provider: string;
+            model: string;
+            cases: number;
+            passed: number;
+            errors: number;
+            /** Format: double */
+            tool_accuracy: number | null;
+            /** Format: double */
+            phrase_hit_rate: number | null;
+            /**
+             * Format: double
+             * @description 写了期望条目的已答用例里,期望条目进了检索 top-k 的比例;没有这样的用例为 null
+             */
+            retrieval_hit_rate: number | null;
+            /** @description 已答用例里退回整份语料的条数;早于检索的运行为 null */
+            retrieval_fallbacks: number | null;
+            /** Format: double */
+            mean_latency_ms: number | null;
+            /** Format: double */
+            cost: number | null;
+            input_tokens: number;
+            output_tokens: number;
         };
         /**
          * @description * `SOUL_CREATED` - Soul Created
@@ -8170,6 +8986,23 @@ export interface components {
             /** raw key */
             readonly _raw_key: string;
         };
+        FailureRates: {
+            /**
+             * Format: double
+             * @description 503 不可用 / 全部请求
+             */
+            unavailable: number;
+            /**
+             * Format: double
+             * @description 429(限流 + 忙) / 全部请求
+             */
+            rate_limited: number;
+            /**
+             * Format: double
+             * @description 「答不了」 / 答出的请求
+             */
+            empty: number;
+        };
         Follow: {
             /** Format: uuid */
             readonly id: string;
@@ -8235,6 +9068,14 @@ export interface components {
             culpa_record_count: number;
             poena: number | null;
             poena_missing: string[];
+        };
+        Hall: {
+            id: number;
+            code: string;
+            display_name: string;
+            /** @description 原属该殿的灵魂数 */
+            souls_homed: number;
+            assistant_enabled: boolean;
         };
         /**
          * @description 「已处理」的一行,帖子与评论同一形状(见 moderation_views.HandledContentViewSet)。
@@ -9249,6 +10090,7 @@ export interface components {
             demerit_score: number;
             readonly account: components["schemas"]["MeAccount"];
             readonly welcomed_civilizations: components["schemas"]["CivilizationEnum"][];
+            readonly assistant_enabled: boolean;
         };
         MeRealm: {
             realm_code: string;
@@ -9590,6 +10432,23 @@ export interface components {
         NotificationTypeEnum: "WORKFLOW_ASSIGNED" | "JUDGMENT_COMPLETED" | "SYSTEM" | "APPEAL_REQUIRED" | "REINCARNATION_COMPLETE" | "KARMIC_UPDATE" | "ROLE_ASSIGNED" | "DISPATCH_PROPOSED" | "DISPATCH_APPROVED" | "DISPATCH_REJECTED" | "CROSS_JUDGMENT_INVITED" | "JUDGMENT_CONCLUDED" | "DISPATCH_RETURN_BLOCKED" | "SENTENCE_NODE_ACTIVE" | "SENTENCE_NODE_DONE" | "SENTENCE_NODE_WAITING" | "SENTENCE_NODE_REFUSED" | "SENTENCE_PLAN_COMPLETED" | "CROSS_SENTENCE_SUBMITTED" | "SENTENCE_PLAN_AMENDED" | "SENTENCE_REQUEST_PENDING" | "SENTENCE_REQUEST_DECIDED" | "SENTENCE_PLAN_CANCELLED" | "PASSWORD_HELP_REQUESTED" | "SOUL_INBOX_ASSIGNED" | "JUDGMENT_REASSIGN_REQUESTED";
         /** @enum {unknown} */
         NullEnum: null;
+        OfficerAssistAsk: {
+            question: string;
+            screen: components["schemas"]["OfficerScreenEnum"];
+            /** Format: uuid */
+            conversation_id?: string | null;
+        };
+        OfficerAssistConversation: {
+            /** Format: uuid */
+            readonly id: string;
+            readonly screen: components["schemas"]["OfficerScreenEnum"];
+            /** Format: date-time */
+            readonly created_at: string;
+            /** Format: date-time */
+            readonly last_active_at: string;
+            readonly first_question: string;
+            readonly messages: components["schemas"]["AssistMessage"][];
+        };
         OfficerInbox: {
             /** Format: uuid */
             readonly id: string;
@@ -9672,6 +10531,41 @@ export interface components {
         OfficerReply: {
             body: string;
         };
+        /**
+         * @description * `actors` - actors
+         *     * `admin` - admin
+         *     * `audit` - audit
+         *     * `corpus` - corpus
+         *     * `cross-judgments` - cross-judgments
+         *     * `dashboard` - dashboard
+         *     * `death-sync` - death-sync
+         *     * `dispatch` - dispatch
+         *     * `disposition` - disposition
+         *     * `judgment` - judgment
+         *     * `ledger` - ledger
+         *     * `menus` - menus
+         *     * `moderation` - moderation
+         *     * `notifications` - notifications
+         *     * `organizations` - organizations
+         *     * `permissions` - permissions
+         *     * `profile` - profile
+         *     * `realms` - realms
+         *     * `rebirth-applications` - rebirth-applications
+         *     * `recycle-bin` - recycle-bin
+         *     * `scheduler` - scheduler
+         *     * `sentence-requests` - sentence-requests
+         *     * `social` - social
+         *     * `soul-credentials` - soul-credentials
+         *     * `soul-inbox` - soul-inbox
+         *     * `souls` - souls
+         *     * `tenants` - tenants
+         *     * `users` - users
+         *     * `welcome` - welcome
+         *     * `workflow` - workflow
+         *     * `other` - other
+         * @enum {string}
+         */
+        OfficerScreenEnum: "actors" | "admin" | "audit" | "corpus" | "cross-judgments" | "dashboard" | "death-sync" | "dispatch" | "disposition" | "judgment" | "ledger" | "menus" | "moderation" | "notifications" | "organizations" | "permissions" | "profile" | "realms" | "rebirth-applications" | "recycle-bin" | "scheduler" | "sentence-requests" | "social" | "soul-credentials" | "soul-inbox" | "souls" | "tenants" | "users" | "welcome" | "workflow" | "other";
         /**
          * @description * `claim` - claim
          *     * `reassign` - reassign
@@ -10550,6 +11444,25 @@ export interface components {
             /** Format: date-time */
             readonly update_time?: string;
         };
+        /** @description 一套连接配置;没给的键沿用当前生效值。`api_key` 不给 = 沿用已存的 key。 */
+        PatchedConfigUpdate: {
+            provider?: components["schemas"]["ProviderEnum"];
+            base_url?: string;
+            api_key?: string;
+            model?: string;
+            effort?: components["schemas"]["EffortEnum"] | components["schemas"]["BlankEnum"];
+            fallbacks?: boolean;
+            enabled?: boolean;
+            soul_per_hour?: number;
+            officer_per_hour?: number;
+            /** Format: double */
+            monthly_cap?: number | null;
+            /** Format: double */
+            eval_spend_cap?: number;
+            prices?: {
+                [key: string]: components["schemas"]["Price"];
+            };
+        };
         /**
          * @description Serializer for CrossTenantJudgment.
          *
@@ -10721,6 +11634,31 @@ export interface components {
             /** @description The soul has been reborn since the life this disposition belongs to. */
             readonly soul_reborn?: boolean;
         };
+        /** @description 一套向量配置;没给的键沿用当前生效值。`embedding_dims` 为 null = 模型原生维度(不截断)。 */
+        PatchedEmbeddingUpdate: {
+            /** Format: uri */
+            embedding_url?: string;
+            embedding_model?: string;
+            embedding_dims?: number | null;
+            retrieval_k?: number;
+            /** Format: double */
+            retrieval_min_similarity?: number;
+        };
+        PatchedEvalCase: {
+            readonly id?: number;
+            side?: components["schemas"]["AssistSideEnum"];
+            locale?: components["schemas"]["EvalCaseLocaleEnum"];
+            screen?: components["schemas"]["EvalCaseScreenEnum"];
+            question?: string;
+            expected_tools?: string[];
+            must_include?: string[];
+            must_not_include?: string[];
+            /** @description 期望进入检索 top-k 的帮助条目 id(该端、该语言的语料里要有);全部进了才算命中。空 = 不计命中率 */
+            expected_entries?: string[];
+            active?: boolean;
+            /** Format: date-time */
+            readonly created_at?: string;
+        };
         /** @description Serializer for ExternalApiKey (hides key_hash, shows raw_key on create). */
         PatchedExternalApiKey: {
             /** Format: uuid */
@@ -10745,6 +11683,9 @@ export interface components {
             readonly usage_count?: number;
             /** raw key */
             readonly _raw_key?: string;
+        };
+        PatchedHallUpdate: {
+            assistant_enabled?: boolean;
         };
         PatchedInboxReplyTemplate: {
             /** Format: uuid */
@@ -11043,6 +11984,7 @@ export interface components {
             readonly life_index?: number;
             readonly inherited_merit?: number;
             readonly inherited_demerit?: number;
+            readonly is_eval_identity?: boolean;
         };
         /** @description 长度、敏感词、重名在 `soul_circle.rename` 里判,各有自己的 `code`;这里只要一个字符串。 */
         PatchedSoulDisplayNameRequest: {
@@ -11275,6 +12217,16 @@ export interface components {
             field_permissions: number;
             data_scopes: number;
         };
+        Phase4: {
+            corpus_tokens: number;
+            corpus_threshold: number;
+            corpus_reached: boolean;
+            /** Format: double */
+            empty_share: number;
+            /** Format: double */
+            empty_threshold: number;
+            empty_reached: boolean;
+        };
         /**
          * @description * `OFFENCE` - Offence — counts against the soul
          *     * `MERIT` - Merit — counts for the soul
@@ -11334,6 +12286,31 @@ export interface components {
             width: number;
             height: number;
         };
+        /** @description 每百万 token 的价格,单位由管理员自定(与月度上限同一单位)。`cache_read` 不填按 `input` 算。 */
+        Price: {
+            /** Format: double */
+            input: number;
+            /** Format: double */
+            output: number;
+            /** Format: double */
+            cache_read?: number;
+        };
+        /**
+         * @description * `unpriced_model` - unpriced_model
+         *     * `no_cases` - no_cases
+         *     * `too_many_asks` - too_many_asks
+         *     * `over_spend_cap` - over_spend_cap
+         *     * `no_eval_soul` - no_eval_soul
+         *     * `no_eval_officer` - no_eval_officer
+         * @enum {string}
+         */
+        ProblemsEnum: "unpriced_model" | "no_cases" | "too_many_asks" | "over_spend_cap" | "no_eval_soul" | "no_eval_officer";
+        /**
+         * @description * `anthropic` - anthropic
+         *     * `openai_compatible` - openai_compatible
+         * @enum {string}
+         */
+        ProviderEnum: "anthropic" | "openai_compatible";
         ProvisionRequest: {
             /** Format: uuid */
             soul_id: string;
@@ -11418,6 +12395,13 @@ export interface components {
          * @enum {string}
          */
         ReactionTypeEnum: "LIKE" | "LOVE" | "RESPECT" | "SYMPATHY" | "ETERNAL_LIGHT";
+        ReadOnlySettings: {
+            max_concurrent: number;
+            /** Format: double */
+            timeout_seconds: number;
+            history_turns: number;
+            retention_days: number;
+        };
         /**
          * @description Serializer mixin that dynamically filters fields based on FieldPermission rules.
          *
@@ -12093,6 +13077,17 @@ export interface components {
          */
         ScopeEnum: "GLOBAL" | "ORG";
         /**
+         * @description * `applications` - applications
+         *     * `sentence` - sentence
+         *     * `life` - life
+         *     * `letters` - letters
+         *     * `circle` - circle
+         *     * `settings` - settings
+         *     * `other` - other
+         * @enum {string}
+         */
+        ScreenEnum: "applications" | "sentence" | "life" | "letters" | "circle" | "settings" | "other";
+        /**
          * @description `seatable-actors/` 的只读最小字段集:入席表单只需要认得出是谁;顾问席混着几种神祇,
          *     所以带上 `role`(ActorRole)。
          */
@@ -12471,6 +13466,7 @@ export interface components {
             readonly life_index: number;
             readonly inherited_merit: number;
             readonly inherited_demerit: number;
+            readonly is_eval_identity: boolean;
         };
         SoulAccount: {
             /** Format: uuid */
@@ -12635,6 +13631,7 @@ export interface components {
             readonly date_problems: components["schemas"]["SoulDateProblem"][];
             readonly has_date_warning: boolean;
             readonly has_record_error: boolean;
+            readonly is_eval_identity: boolean;
         };
         SoulLoginRequest: {
             soul_code: string;
@@ -12898,6 +13895,12 @@ export interface components {
             count: number;
         };
         /**
+         * @description * `page` - page
+         *     * `env` - env
+         * @enum {string}
+         */
+        SourceEnum: "page" | "env";
+        /**
          * @description One citable article.
          *
          *     `display_text` is where a *derived* article becomes readable: for the
@@ -13071,6 +14074,27 @@ export interface components {
          * @enum {string}
          */
         TriggerEnum: "SCHEDULE" | "MANUAL";
+        /** @description §3.3 试问:以评测身份问一句。`candidate` 不给 = 用生效配置;给了规则同连通测试(换地址要带 key)。 */
+        TryRequest: {
+            side: components["schemas"]["AssistSideEnum"];
+            question: string;
+            candidate?: components["schemas"]["Candidate"];
+        };
+        TryResult: {
+            side: components["schemas"]["AssistSideEnum"];
+            answer: string;
+            /** @description 按调用顺序的工具名,不含结果 */
+            tools_called: string[];
+            retrieval: components["schemas"]["AssistRetrievalEnum"];
+            /** @description 检索进上下文的条目 id,近的在前;退回整份语料时为空 */
+            retrieved_entries: string[];
+            latency_ms: number;
+            tokens: {
+                [key: string]: number;
+            };
+            provider: string;
+            model: string;
+        };
         /**
          * @description kind=UNAVAILABLE — the tenant's civilization is not mapped, so this
          *     ledger gets no reading rather than a guessed one. `reason_code` is a
@@ -13084,6 +14108,79 @@ export interface components {
             kind: "UNAVAILABLE";
             civilization: string;
             reason_code: string;
+        };
+        Usage: {
+            month: string;
+            /** Format: double */
+            spent: number;
+            /** Format: double */
+            cap: number | null;
+            unpriced_models: string[];
+            requests: number;
+            by_status: components["schemas"]["UsageStatus"];
+            failure_rates: components["schemas"]["FailureRates"];
+            /** @description 已答的请求按帮助条目的来源分(§7.5) */
+            by_retrieval: components["schemas"]["UsageRetrieval"];
+            by_day: components["schemas"]["UsageDay"][];
+            by_side: components["schemas"]["UsageSide"][];
+            by_hall: components["schemas"]["UsageHall"][];
+            phase4: components["schemas"]["Phase4"];
+        };
+        UsageDay: {
+            requests: number;
+            answered: number;
+            input_tokens: number;
+            output_tokens: number;
+            cache_read_tokens: number;
+            /**
+             * Format: double
+             * @description 只含已定价模型
+             */
+            cost: number;
+            /** Format: date */
+            date: string;
+        };
+        UsageHall: {
+            requests: number;
+            answered: number;
+            input_tokens: number;
+            output_tokens: number;
+            cache_read_tokens: number;
+            /**
+             * Format: double
+             * @description 只含已定价模型
+             */
+            cost: number;
+            tenant_id: number | null;
+            code: string | null;
+        };
+        UsageRetrieval: {
+            vector: number;
+            /** @description 向量服务不通、超时,或库里没有向量 */
+            fallback: number;
+            /** @description 最近一条也低于相似度下限 */
+            fallback_low_similarity: number;
+        };
+        UsageSide: {
+            requests: number;
+            answered: number;
+            input_tokens: number;
+            output_tokens: number;
+            cache_read_tokens: number;
+            /**
+             * Format: double
+             * @description 只含已定价模型
+             */
+            cost: number;
+            side: components["schemas"]["AssistSideEnum"];
+        };
+        UsageStatus: {
+            ok: number;
+            empty: number;
+            unavailable: number;
+            busy: number;
+            rate_limited: number;
+            not_configured: number;
         };
         /**
          * @description The serializer behind `PATCH /auth/profile/` — what a user may change
@@ -13201,6 +14298,7 @@ export interface components {
             readonly create_time: string;
             /** Format: uri */
             avatar?: string | null;
+            readonly is_eval_identity: boolean;
         };
         /**
          * @description 分语言的类型按请求语言重渲染 title / message(见 `apps/notifications/messages.py`)。
@@ -13639,6 +14737,759 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Actor"];
+                };
+            };
+        };
+    };
+    officer_assist_ask: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OfficerAssistAsk"];
+                "application/x-www-form-urlencoded": components["schemas"]["OfficerAssistAsk"];
+                "multipart/form-data": components["schemas"]["OfficerAssistAsk"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistAnswer"];
+                };
+            };
+            /** @description 字段校验失败 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistError"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistError"];
+                };
+            };
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistError"];
+                };
+            };
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistError"];
+                };
+            };
+        };
+    };
+    assist_admin_config_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Config"];
+                };
+            };
+        };
+    };
+    assist_admin_config_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedConfigUpdate"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedConfigUpdate"];
+                "multipart/form-data": components["schemas"]["PatchedConfigUpdate"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Config"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistError"];
+                };
+            };
+        };
+    };
+    assist_admin_config_test: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["Candidate"];
+                "application/x-www-form-urlencoded": components["schemas"]["Candidate"];
+                "multipart/form-data": components["schemas"]["Candidate"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConnectivityResult"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistError"];
+                };
+            };
+        };
+    };
+    assist_admin_corpus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Corpus"];
+                };
+            };
+        };
+    };
+    assist_admin_embedding_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmbeddingConfig"];
+                };
+            };
+        };
+    };
+    assist_admin_embedding_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedEmbeddingUpdate"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedEmbeddingUpdate"];
+                "multipart/form-data": components["schemas"]["PatchedEmbeddingUpdate"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmbeddingConfig"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistError"];
+                };
+            };
+        };
+    };
+    assist_admin_embedding_rebuild: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmbeddingRebuild"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistError"];
+                };
+            };
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmbeddingError"];
+                };
+            };
+        };
+    };
+    assist_admin_embedding_test: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["EmbeddingCandidate"];
+                "application/x-www-form-urlencoded": components["schemas"]["EmbeddingCandidate"];
+                "multipart/form-data": components["schemas"]["EmbeddingCandidate"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmbeddingTestResult"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistError"];
+                };
+            };
+        };
+    };
+    v1_assist_admin_eval_cases_list: {
+        parameters: {
+            query?: {
+                /** @description Which field to use when ordering the results. */
+                ordering?: string;
+                /** @description A search term. */
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvalCase"][];
+                };
+            };
+        };
+    };
+    v1_assist_admin_eval_cases_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EvalCase"];
+                "application/x-www-form-urlencoded": components["schemas"]["EvalCase"];
+                "multipart/form-data": components["schemas"]["EvalCase"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvalCase"];
+                };
+            };
+        };
+    };
+    v1_assist_admin_eval_cases_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvalCase"];
+                };
+            };
+        };
+    };
+    v1_assist_admin_eval_cases_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EvalCase"];
+                "application/x-www-form-urlencoded": components["schemas"]["EvalCase"];
+                "multipart/form-data": components["schemas"]["EvalCase"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvalCase"];
+                };
+            };
+        };
+    };
+    v1_assist_admin_eval_cases_destroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    v1_assist_admin_eval_cases_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedEvalCase"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedEvalCase"];
+                "multipart/form-data": components["schemas"]["PatchedEvalCase"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvalCase"];
+                };
+            };
+        };
+    };
+    assist_admin_eval_identities_ensure: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvalIdentities"];
+                };
+            };
+        };
+    };
+    assist_admin_eval_preview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EvalPreviewRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["EvalPreviewRequest"];
+                "multipart/form-data": components["schemas"]["EvalPreviewRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvalPreview"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistError"];
+                };
+            };
+        };
+    };
+    assist_admin_eval_runs_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvalRun"][];
+                };
+            };
+        };
+    };
+    assist_admin_eval_run_start: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EvalStart"];
+                "application/x-www-form-urlencoded": components["schemas"]["EvalStart"];
+                "multipart/form-data": components["schemas"]["EvalStart"];
+            };
+        };
+        responses: {
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvalRun"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistError"];
+                };
+            };
+        };
+    };
+    v1_assist_admin_eval_runs_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvalRunDetail"];
+                };
+            };
+        };
+    };
+    assist_admin_halls_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Hall"][];
+                };
+            };
+        };
+    };
+    assist_admin_hall_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenant_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedHallUpdate"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedHallUpdate"];
+                "multipart/form-data": components["schemas"]["PatchedHallUpdate"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Hall"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistError"];
+                };
+            };
+        };
+    };
+    assist_admin_try: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TryRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["TryRequest"];
+                "multipart/form-data": components["schemas"]["TryRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TryResult"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistError"];
+                };
+            };
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistError"];
+                };
+            };
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistError"];
+                };
+            };
+        };
+    };
+    assist_admin_usage: {
+        parameters: {
+            query?: {
+                /** @description YYYY-MM,缺省本月 */
+                month?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Usage"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistError"];
+                };
+            };
+        };
+    };
+    officer_assist_conversations_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OfficerAssistConversation"][];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistError"];
+                };
+            };
+        };
+    };
+    officer_assist_conversation_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistError"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistError"];
                 };
             };
         };
@@ -17729,6 +19580,133 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SoulError"];
+                };
+            };
+        };
+    };
+    v1_me_assist_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssistAsk"];
+                "application/x-www-form-urlencoded": components["schemas"]["AssistAsk"];
+                "multipart/form-data": components["schemas"]["AssistAsk"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistAnswer"];
+                };
+            };
+            /** @description 字段校验失败 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistError"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistError"];
+                };
+            };
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistError"];
+                };
+            };
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistError"];
+                };
+            };
+        };
+    };
+    v1_me_assist_conversations_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistConversation"][];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistError"];
+                };
+            };
+        };
+    };
+    v1_me_assist_conversations_destroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistError"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistError"];
                 };
             };
         };

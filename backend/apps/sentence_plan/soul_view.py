@@ -93,9 +93,11 @@ def soul_plan(account):
             "started_on": node.activated_at.date() if node.activated_at else None,
             "ends_on": _ends_on(node, status),
         })
+    statuses = {s["status"] for s in stations}
     return {
-        "state": plan_state(plan, {s["status"] for s in stations}),
-        "rebirth_open": soul.home_civilization in REBIRTH_CAPABLE_CIVILIZATIONS,
+        "state": plan_state(plan, statuses),
+        # 永久刑期 = 不转生(与 `SentencePlanService._complete` 同一条:还有 ETERNAL 节点就不开放)。
+        "rebirth_open": soul.home_civilization in REBIRTH_CAPABLE_CIVILIZATIONS and "eternal" not in statuses,
         "stations": stations,
     }
 
