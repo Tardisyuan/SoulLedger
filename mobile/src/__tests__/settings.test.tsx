@@ -505,7 +505,9 @@ describe("about / credits (spec v2 C16)", () => {
     expect(within(screen.getByTestId("oss-app-expo")).getByText("MIT")).toBeTruthy();
     expect(screen.queryByTestId("oss-app-@soulledger/core")).toBeNull();
 
-    expect(within(screen.getByTestId("literature-INFERNO")).getByText(/Longfellow 1867 translation/)).toBeTruthy();
+    expect(within(screen.getByTestId("literature-Inferno IV-XXXIV")).getByText(/Longfellow 1867 translation/)).toBeTruthy();
+    expect(within(screen.getByTestId("literature-《抱朴子·微旨》")).getByText("参照")).toBeTruthy();
+    expect(within(screen.getByTestId("literature-《太微仙君功過格》")).queryByText("参照")).toBeNull();
     expect(within(screen.getByTestId("service-Anthropic Claude")).getByText("默认")).toBeTruthy();
     expect(within(screen.getByTestId("service-OpenAI Chat Completions")).queryByText("默认")).toBeNull();
     expect(screen.getByText("均按部署配置")).toBeTruthy();
