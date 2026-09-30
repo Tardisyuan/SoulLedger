@@ -96,7 +96,8 @@
     "group_shared": "两端共用",
     "undeclared": "未声明",
     "by_deployment": "均按部署配置",
-    "default": "默认"
+    "default": "默认",
+    "reference": "参照"
   },
   "souls": {
     "title": "灵魂",

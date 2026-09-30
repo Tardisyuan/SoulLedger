@@ -4,7 +4,35 @@
     "corpus": "GONGGUOGE",
     "title": "《太微仙君功過格》",
     "details": ["又玄子序", "金大定十一年（1171）", "《正統道藏》洞真部戒律類雨字號"],
-    "url": "https://ctext.org/wiki.pl?if=gb&chapter=199527"
+    "url": "https://ctext.org/wiki.pl?if=en&chapter=199527"
+  },
+  {
+    "civilization": "CHINESE",
+    "corpus": "GONGGUOGE",
+    "kind": "reference",
+    "title": "《抱朴子·微旨》",
+    "details": ["紀＝三百日、算＝三日"]
+  },
+  {
+    "civilization": "CHINESE",
+    "corpus": "GONGGUOGE",
+    "kind": "reference",
+    "title": "《太上感應篇》",
+    "details": ["三百善地仙／一千三百善天仙"]
+  },
+  {
+    "civilization": "CHINESE",
+    "corpus": "GONGGUOGE",
+    "kind": "reference",
+    "title": "《十戒功過格》",
+    "details": ["清", "三十文為一功"]
+  },
+  {
+    "civilization": "CHINESE",
+    "corpus": "GONGGUOGE",
+    "kind": "reference",
+    "title": "《文昌帝君功過格·凡例》",
+    "details": ["倍率規則"]
   },
   {
     "civilization": "EUROPEAN",

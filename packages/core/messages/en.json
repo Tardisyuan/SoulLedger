@@ -96,7 +96,8 @@
     "group_shared": "Shared",
     "undeclared": "Not declared",
     "by_deployment": "All configured per deployment",
-    "default": "Default"
+    "default": "Default",
+    "reference": "Cited for comparison"
   },
   "souls": {
     "title": "Souls",
