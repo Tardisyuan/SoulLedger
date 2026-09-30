@@ -23,7 +23,7 @@ jest.mock("@/src/contexts/I18nContext", () => ({
 
 import { Seal, sealGlyphsFor, DEFAULT_SEAL_GLYPHS } from "@/src/components/plaque/Seal";
 import { fitTier } from "@/src/components/plaque/Plaque";
-import { labelTooLongForVerticalPillar, pillarIsWide } from "@/src/lib/pillar";
+import { labelTooLongForVerticalPillar, pillarIsWide } from "@soulledger/core/domain/pillar";
 
 const FRONTEND = path.join(__dirname, "..", "..");
 

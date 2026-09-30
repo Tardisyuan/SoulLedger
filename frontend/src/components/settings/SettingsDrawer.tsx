@@ -23,7 +23,7 @@ interface SettingsDrawerProps {
 
 /*
  * 「导航模式 · 经典 / 紧凑」也撤掉了(规范 v2):v1 的 200px 侧栏与 56px 编号栏换成了立柱,
- * 立柱的宽度由标签长度决定(竖排 60 / 横排 88,`src/lib/pillar.ts`),没有可选的第二种。
+ * 立柱的宽度由标签长度决定(竖排 60 / 横排 88,`@soulledger/core/domain/pillar`),没有可选的第二种。
  * localStorage 里旧的 `soulledger_nav_mode` 从此没有代码读。
  */
 export function SettingsDrawer({ open, onClose }: SettingsDrawerProps) {
