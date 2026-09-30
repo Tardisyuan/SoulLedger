@@ -38,6 +38,18 @@ describe("AboutPage", () => {
     expect(container.textContent).not.toMatch(/CC BY/);
   });
 
+  it("names all four seal-edge scans, each CC0 with its own Commons source (README / A7, 2026-09-30)", () => {
+    renderIn("zh-Hans");
+    const met = screen.getAllByText("The Metropolitan Museum of Art").map((el) => el.closest("li") as HTMLElement);
+    expect(met).toHaveLength(3);
+    for (const [row, id] of met.map((r, i) => [r, ["DP153679", "227192", "DP270679"][i]] as const)) {
+      expect(within(row).getByRole("link", { name: "CC0 1.0" })).toBeInTheDocument();
+      const href = within(row).getByRole("link", { name: "来源" }).getAttribute("href") ?? "";
+      expect(href.startsWith("https://commons.wikimedia.org/wiki/File:")).toBe(true);
+      expect(href).toContain(id);
+    }
+  });
+
   it("keeps proper names as written in egy", async () => {
     renderIn("egy");
     // egy 是懒加载的包:先等它到,否则量到的是 zh 回退。

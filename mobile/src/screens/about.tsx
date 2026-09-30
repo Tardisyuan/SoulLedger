@@ -32,7 +32,7 @@ function Group({ title, credits }: { title: string; credits: Credit[] }) {
       {credits.map((c) => {
         const licence = c.licence === "PD" ? null : LICENCE_LABELS[c.licence];
         return (
-          <View key={c.name} testID={`credit-${c.name}`} style={[styles.row, { borderBottomColor: theme.hair }]}>
+          <View key={`${c.name} · ${c.detail ?? ""}`} testID={`credit-${c.name}`} style={[styles.row, { borderBottomColor: theme.hair }]}>
             <Txt variant="body">{c.name}</Txt>
             {c.detail ? (
               <Txt variant="caption" tone="subtle">
