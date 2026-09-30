@@ -84,7 +84,7 @@ const offenders = (keys: string[], bad: Rule) =>
   keys.filter((k) => bad(EGY[k], k)).map((k) => `${k}: ${EGY[k]}`);
 
 /** 技术词原样引用(词表「技术词不转写」):缩写与角色码。 */
-const CAPS_ALLOWED = new Set(["IP", "PNG", "JPEG", "MB", "MODERATOR", "ID"]);
+const CAPS_ALLOWED = new Set(["IP", "PNG", "JPEG", "MB", "MODERATOR", "ID", "GLM"]); // GLM: 智谱的模型名,平台下拉(2026-09-30)
 
 /** 已确认改掉的英文残留。新发现一个,改掉之后加进来。 */
 const ENGLISH_RESIDUE = [
@@ -260,6 +260,9 @@ const TECHNICAL: Record<string, string[]> = {
   "souls.preview.hint": ["J", "K", "Esc"],
   // 审阅详情的快捷键提示(C 组 08)。
   "social_moderation.review.shortcuts": ["J", "K", "A", "H", "W"],
+  // 助手管理「供应商」区块(画布 provider-platforms,2026-09-30):价目表来源名、平台名里的缩写。
+  "assist_admin.provider.price_ref": ["LiteLLM"],
+  "assist_admin.provider.platforms.glm": ["GLM"],
 };
 
 /** 空白切出的记号去掉两端标点(括号、引号、逗号、句点……),留下可与 TECHNICAL 比对的原形。 */
@@ -465,6 +468,10 @@ const ROOTS_TWELVE = [
   "Wekha", //         检索(本义「寻」;与 Gem 命中成对)
   "Shad", //          截断(本义「割」)
   "Aa", //            数量 / 维度 —— 早已在用而一直没登记,Design 在 1l 补登
+  // 助手「供应商」区块那一批(2026-09-30,画布 provider-platforms 的 egy 表):Design 在表里直接写的两个 -Ek 复合词
+  // (「你的」,同 Wa-Ek 的构词)。待 Design 在词表里正式确认。
+  "Djes-Ek", //       你自己(手填模型名 / 手动填写)
+  "Setep-Ek", //      你所选的(模型)
 ];
 /**
  * 第十节「专名照用」。只作专名,不是词根:四文明名每个只留一个写法(Sherer / Kemet / Haunebut / Europa),
@@ -484,6 +491,8 @@ const PROPER_NAMES = [
   "IP", "JPEG", "MB", "PNG", "WebP", "Webhook", "MODERATOR", "A", "N",
   // 词表第十三节:厂商名原样引用(兼容写 Mi OpenAI),不再用 Iru Wa / Iru Sen(要看下拉顺序才读得懂)。
   "Anthropic", "OpenAI",
+  // 同一条规则用于「供应商」区块的平台下拉(画布 provider-platforms,2026-09-30):厂商 / 产品名原样。
+  "DeepSeek", "Qwen", "Kimi", "Doubao", "Gemini", "SiliconFlow", "OpenRouter", "Ollama",
 ];
 const PARTICLES = [
   "Em", "Nen", "Seth", "Tepy", "Pehwy", "Wehem", "Pen", "Ky", "Neb", "Wa",

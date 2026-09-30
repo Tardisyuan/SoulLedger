@@ -1,26 +1,22 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import {
-  assistAdminErrorCode,
-  type AssistAdminConfig,
-  type AssistAdminConnectivity,
-} from "@soulledger/core/api/assist-admin";
+import { assistAdminErrorCode, type AssistAdminConfig } from "@soulledger/core/api/assist-admin";
 import {
   useAssistAdminConfig,
   useAssistEmbedding,
-  useTestAssistConnection,
   useUpdateAssistAdminConfig,
   useUpdateAssistEmbedding,
 } from "@soulledger/core/hooks/useAssistAdmin";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { Button } from "@/src/components/ui/Button";
-import { SelectField, TextField } from "@/src/components/ui/Field";
+import { TextField } from "@/src/components/ui/Field";
 import { ConfirmDialog } from "@/src/components/ui/Modal";
 import { QueryError } from "@/src/components/ui/PageError";
 import { ListSkeleton } from "@/components/ui/skeleton";
-import { AssistAdminTabs, MONO, MUTED, SUBTLE, Section, Switch, count } from "./parts";
+import { AssistAdminTabs, MONO, MUTED, SUBTLE, Section, Switch } from "./parts";
+import { ProviderSection } from "./ProviderSection";
 import { HallSwitches } from "./HallSwitches";
 import { EvalPanel } from "./EvalPanel";
 import { TryPanel } from "./TryPanel";
@@ -68,12 +64,11 @@ export function AssistAdminConfigPage() {
 function ConfigForm({ config }: { config: AssistAdminConfig }) {
   const { t, formatDate, formatDateTime } = useI18n();
   const [draft, setDraftState] = useState<Draft>({});
-  const [tested, setTested] = useState<{ fp: string; result: AssistAdminConnectivity; at: string } | null>(null);
+  const [testedFp, setTestedFp] = useState<string | null>(null);
   const [replacingKey, setReplacingKey] = useState(false);
   const [confirmClear, setConfirmClear] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const save = useUpdateAssistAdminConfig();
-  const probe = useTestAssistConnection();
   // 向量模型 (1a 六): a second draft behind the same footer, saved through its own PATCH.
   const embedding = useAssistEmbedding();
   const saveEmbedding = useUpdateAssistEmbedding();
@@ -90,7 +85,6 @@ function ConfigForm({ config }: { config: AssistAdminConfig }) {
   const nConfig = Object.keys(draft).length;
   const nEmbedding = Object.keys(edraft).length;
   const n = nConfig + nEmbedding;
-  const testedFp = tested?.result.ok ? tested.fp : null;
   const block = saveBlock(draft, testedFp, invalidDraft(draft)) ?? embeddingSaveBlock(edraft, eTestedFp);
   const saving = save.isPending || saveEmbedding.isPending;
   const canSave = n > 0 && block === null && !saving;
@@ -136,25 +130,6 @@ function ConfigForm({ config }: { config: AssistAdminConfig }) {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  const runTest = () => {
-    const fp = fingerprint(draft);
-    probe.mutate(connectionDraft(draft), {
-      onSuccess: (result) => setTested({ fp, result, at: new Date().toISOString() }),
-      onError: (err) => {
-        const code = assistAdminErrorCode(err);
-        setTested(null);
-        setSaveError(t(code ? `assist_admin.errors.${code}` : "assist_admin.errors.test_failed"));
-      },
-    });
-  };
-
-  const model = value("model") as string;
-  const prices = (value("prices") ?? {}) as NonNullable<Draft["prices"]>;
-  const price = prices[model];
-  const setPrice = (field: "input" | "output", raw: string) => {
-    const next = { ...(price ?? { input: 0, output: 0 }), [field]: raw === "" ? NaN : Number(raw) };
-    set("prices", { ...prices, [model]: next });
-  };
   const numberInput = (key: "soul_per_hour" | "officer_per_hour" | "eval_spend_cap", raw: string) =>
     set(key, raw === "" ? NaN : Number(raw));
   const shown = (v: unknown) => (typeof v === "number" && Number.isNaN(v) ? "" : String(v ?? ""));
@@ -165,7 +140,6 @@ function ConfigForm({ config }: { config: AssistAdminConfig }) {
     : !switchOn
       ? t("assist_admin.halls.inactive")
       : null;
-  const stale = tested !== null && tested.fp !== fingerprint(draft);
 
   return (
     <div>
@@ -197,56 +171,12 @@ function ConfigForm({ config }: { config: AssistAdminConfig }) {
             <HallSwitches inactiveReason={hallsInactive} />
           </Section>
 
-          <Section title={t("assist_admin.sections.provider")} id="aa-provider">
-            <div className="grid gap-3">
-              <SelectField
-                id="aa-provider-type"
-                label={t("assist_admin.provider.type")}
-                value={value("provider") as string}
-                onChange={(e) => set("provider", e.target.value)}
-                options={[
-                  { value: "openai_compatible", label: t("assist_admin.provider.openai_compatible") },
-                  { value: "anthropic", label: t("assist_admin.provider.anthropic") },
-                ]}
-              />
-              <TextField
-                id="aa-base-url"
-                label={t("assist_admin.provider.base_url")}
-                description={t("assist_admin.provider.base_url_hint")}
-                value={value("base_url") as string}
-                onChange={(e) => set("base_url", e.target.value)}
-              />
-              <TextField
-                id="aa-model"
-                label={t("assist_admin.provider.model")}
-                description={"model" in draft ? t("assist_admin.provider.model_was", { model: config.model }) : undefined}
-                value={model}
-                onChange={(e) => set("model", e.target.value)}
-              />
-              <SelectField
-                id="aa-effort"
-                label={t("assist_admin.provider.effort")}
-                description={t("assist_admin.provider.effort_hint")}
-                value={value("effort") as string}
-                onChange={(e) => set("effort", e.target.value)}
-                options={["", "low", "medium", "high"].map((v) => ({ value: v, label: t(`assist_admin.provider.effort_${v || "default"}`) }))}
-              />
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-sm">{t("assist_admin.provider.fallbacks")}</p>
-                  <p className={SUBTLE}>{t("assist_admin.provider.fallbacks_hint")}</p>
-                </div>
-                <Switch checked={value("fallbacks") as boolean} label={t("assist_admin.provider.fallbacks")} onChange={(on) => set("fallbacks", on)} />
-              </div>
-              <fieldset>
-                <legend className="text-sm">{t("assist_admin.provider.price", { model })}</legend>
-                <div className="mt-1 grid grid-cols-2 gap-3">
-                  <TextField id="aa-price-in" type="number" min={0} step="any" label={t("assist_admin.provider.price_input")} value={shown(price?.input)} onChange={(e) => setPrice("input", e.target.value)} />
-                  <TextField id="aa-price-out" type="number" min={0} step="any" label={t("assist_admin.provider.price_output")} value={shown(price?.output)} onChange={(e) => setPrice("output", e.target.value)} />
-                </div>
-                <p className={`mt-1 ${SUBTLE}`}>{price ? t("assist_admin.provider.price_hint") : t("assist_admin.provider.unpriced")}</p>
-              </fieldset>
-
+          <ProviderSection
+            config={config}
+            draft={draft}
+            set={set}
+            onTested={setTestedFp}
+            keyField={
               <div>
                 <p className="text-sm">{t("assist_admin.key.title")}</p>
                 <p className="text-sm" data-testid="aa-key-state">
@@ -293,8 +223,8 @@ function ConfigForm({ config }: { config: AssistAdminConfig }) {
                   </div>
                 )}
               </div>
-            </div>
-          </Section>
+            }
+          />
 
           {embedding.data && (
             <EmbeddingSection
@@ -341,36 +271,6 @@ function ConfigForm({ config }: { config: AssistAdminConfig }) {
         </div>
 
         <div>
-          <Section title={t("assist_admin.sections.connectivity")} id="aa-connectivity">
-            <p className={SUBTLE}>{t("assist_admin.test.hint")}</p>
-            <div className="mt-2">
-              <Button type="button" onClick={runTest} loading={probe.isPending}>
-                {tested ? t("assist_admin.test.again") : t("assist_admin.test.run")}
-              </Button>
-            </div>
-            {tested && (
-              <div role="status" className={`mt-3 border-l-2 pl-3 text-sm ${tested.result.ok ? "border-[oklch(var(--color-success))]" : "border-[oklch(var(--color-danger))]"}`}>
-                <p>{tested.result.ok ? t("assist_admin.test.ok") : t("assist_admin.test.failed")}</p>
-                {!tested.result.ok && tested.result.error_kind && (
-                  <p>
-                    {t(`assist_admin.test.kind.${tested.result.error_kind}`)} <span className={MONO}>{tested.result.error_kind}</span>
-                  </p>
-                )}
-                <p className={`${MONO} ${SUBTLE}`}>
-                  {t("assist_admin.test.detail", {
-                    provider: tested.result.provider,
-                    model: tested.result.model,
-                    latency: `${count(tested.result.latency_ms)} ms`,
-                    input: count(tested.result.tokens.input ?? 0),
-                    output: count(tested.result.tokens.output ?? 0),
-                    at: formatDateTime(tested.at),
-                  })}
-                </p>
-                {stale && <p className="text-[oklch(var(--color-warning))]">{t("assist_admin.test.stale")}</p>}
-              </div>
-            )}
-          </Section>
-
           <EvalPanel
             config={config}
             draftConnection={connectionDraft(draft)}
