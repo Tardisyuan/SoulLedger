@@ -8691,6 +8691,7 @@ export interface components {
          *     * `circle` - circle
          *     * `settings` - settings
          *     * `other` - other
+         *     * `about` - about
          *     * `actors` - actors
          *     * `admin` - admin
          *     * `audit` - audit
@@ -8723,7 +8724,7 @@ export interface components {
          *     * `workflow` - workflow
          * @enum {string}
          */
-        EvalCaseScreenEnum: "applications" | "sentence" | "life" | "letters" | "circle" | "settings" | "other" | "actors" | "admin" | "audit" | "corpus" | "cross-judgments" | "dashboard" | "death-sync" | "dispatch" | "disposition" | "judgment" | "ledger" | "menus" | "moderation" | "notifications" | "organizations" | "permissions" | "profile" | "realms" | "rebirth-applications" | "recycle-bin" | "scheduler" | "sentence-requests" | "social" | "soul-credentials" | "soul-inbox" | "souls" | "tenants" | "users" | "welcome" | "workflow";
+        EvalCaseScreenEnum: "applications" | "sentence" | "life" | "letters" | "circle" | "settings" | "other" | "about" | "actors" | "admin" | "audit" | "corpus" | "cross-judgments" | "dashboard" | "death-sync" | "dispatch" | "disposition" | "judgment" | "ledger" | "menus" | "moderation" | "notifications" | "organizations" | "permissions" | "profile" | "realms" | "rebirth-applications" | "recycle-bin" | "scheduler" | "sentence-requests" | "social" | "soul-credentials" | "soul-inbox" | "souls" | "tenants" | "users" | "welcome" | "workflow";
         EvalIdentities: {
             /** Format: uuid */
             eval_soul_account: string;
@@ -10532,7 +10533,8 @@ export interface components {
             body: string;
         };
         /**
-         * @description * `actors` - actors
+         * @description * `about` - about
+         *     * `actors` - actors
          *     * `admin` - admin
          *     * `audit` - audit
          *     * `corpus` - corpus
@@ -10565,7 +10567,7 @@ export interface components {
          *     * `other` - other
          * @enum {string}
          */
-        OfficerScreenEnum: "actors" | "admin" | "audit" | "corpus" | "cross-judgments" | "dashboard" | "death-sync" | "dispatch" | "disposition" | "judgment" | "ledger" | "menus" | "moderation" | "notifications" | "organizations" | "permissions" | "profile" | "realms" | "rebirth-applications" | "recycle-bin" | "scheduler" | "sentence-requests" | "social" | "soul-credentials" | "soul-inbox" | "souls" | "tenants" | "users" | "welcome" | "workflow" | "other";
+        OfficerScreenEnum: "about" | "actors" | "admin" | "audit" | "corpus" | "cross-judgments" | "dashboard" | "death-sync" | "dispatch" | "disposition" | "judgment" | "ledger" | "menus" | "moderation" | "notifications" | "organizations" | "permissions" | "profile" | "realms" | "rebirth-applications" | "recycle-bin" | "scheduler" | "sentence-requests" | "social" | "soul-credentials" | "soul-inbox" | "souls" | "tenants" | "users" | "welcome" | "workflow" | "other";
         /**
          * @description * `claim` - claim
          *     * `reassign` - reassign

@@ -19,7 +19,7 @@ SCREENS = ("applications", "sentence", "life", "letters", "circle", "settings", 
 #: 官员端 Web 的「问一问」来自哪一段路由(`frontend/app/<段>/`)。`tests/test_officer_assist_corpus.py`
 #: 把它钉在前端的目录上:加一个页面而不加这里 → 红。
 OFFICER_SCREENS = (
-    "actors", "admin", "audit", "corpus", "cross-judgments", "dashboard", "death-sync", "dispatch",
+    "about", "actors", "admin", "audit", "corpus", "cross-judgments", "dashboard", "death-sync", "dispatch",
     "disposition", "judgment", "ledger", "menus", "moderation", "notifications", "organizations",
     "permissions", "profile", "realms", "rebirth-applications", "recycle-bin", "scheduler",
     "sentence-requests", "social", "soul-credentials", "soul-inbox", "souls", "tenants", "users",
