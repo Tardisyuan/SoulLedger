@@ -161,17 +161,38 @@ jest.mock("expo-splash-screen", () => ({ preventAutoHideAsync: jest.fn(async () 
 // and dismiss() do nothing — so a closed sheet would still be on screen and "closing it
 // works" could never go red. This double keeps the one behaviour the app depends on:
 // nothing until present(); dismiss() hides it and calls onDismiss, as the real one does.
+// It also keeps the real one's trap (traced on the emulator, 2026-10-01): dismiss() on a sheet
+// that is not up leaves the modal stuck, and every later present() shows nothing.
+// `global.__sheetSelfClose()` closes every open sheet the way a drag or the scrim does.
 jest.mock("@gorhom/bottom-sheet", () => {
   const React = require("react");
   const Pass = ({ children }) => children;
+  const selfClosers = new Set();
+  global.__sheetSelfClose = () => selfClosers.forEach((close) => close());
   const BottomSheetModal = React.forwardRef(function BottomSheetModal({ children, onDismiss }, ref) {
     const [open, setOpen] = React.useState(false);
     const was = React.useRef(false);
+    const isOpen = React.useRef(false);
+    const stuck = React.useRef(false);
+    isOpen.current = open;
     React.useEffect(() => {
       if (was.current && !open) onDismiss?.();
       was.current = open;
     }, [open, onDismiss]);
-    React.useImperativeHandle(ref, () => ({ present: () => setOpen(true), dismiss: () => setOpen(false) }));
+    React.useEffect(() => {
+      const close = () => isOpen.current && setOpen(false);
+      selfClosers.add(close);
+      return () => selfClosers.delete(close);
+    }, []);
+    React.useImperativeHandle(ref, () => ({
+      present: () => {
+        if (!stuck.current) setOpen(true);
+      },
+      dismiss: () => {
+        if (!isOpen.current) stuck.current = true;
+        setOpen(false);
+      },
+    }));
     return open ? children : null;
   });
   return {
