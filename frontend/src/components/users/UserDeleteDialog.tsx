@@ -3,7 +3,7 @@
 import { useMutation } from "@tanstack/react-query";
 import { usersApi, type User } from "@soulledger/core/api";
 import { userKeys } from "@soulledger/core/query_keys";
-import { BaseModal } from "@/src/components/ui/Modal";
+import { NameConfirmDialog } from "@/src/components/admin/NameConfirmDialog";
 import { RoleName } from "@/src/components/users/RoleName";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useQueryClient } from "@tanstack/react-query";
@@ -16,6 +16,11 @@ interface UserDeleteDialogProps {
   onConfirm?: () => void;
 }
 
+/**
+ * 删除用户。User 是软删(AuditUserFields),但**不进回收站**(apps/core/recycle_bin.py 没有
+ * 登记它),界面上拿不回来 —— 不可撤回,所以按规则走「输入名称以确认」:输入用户名,
+ * 危险按钮在名字对上之前禁用。此前是一对手搓按钮,确认键是 10% 红底。
+ */
 export function UserDeleteDialog({ user, isOpen, onClose, onConfirm }: UserDeleteDialogProps) {
   const { t } = useI18n();
   const queryClient = useQueryClient();
@@ -24,81 +29,47 @@ export function UserDeleteDialog({ user, isOpen, onClose, onConfirm }: UserDelet
     mutationFn: (id: string) => usersApi.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: userKeys.all });
-      showToast(t("users.delete_success") || "用户已删除", "success");
+      showToast(t("users.delete_success"), "success");
       onClose();
       onConfirm?.();
     },
     onError: () => {
-      showToast(t("users.delete_error") || "用户删除失败", "error");
+      showToast(t("users.delete_error"), "error");
     },
   });
 
-  const handleConfirm = () => {
-    if (user) {
-      deleteMutation.mutate(String(user.id));
-    }
-  };
-
-  const footer = (
-    <div className="flex gap-3">
-      <button
-        type="button"
-        onClick={onClose}
-        disabled={deleteMutation.isPending}
-        className="flex-1 px-4 py-2 bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-hairline))] text-[oklch(var(--color-ink-muted))] hover:bg-[oklch(var(--color-surface-3))] disabled:opacity-50 text-sm transition-colors"
-      >
-        {t("common.cancel") || "取消"}
-      </button>
-      <button
-        type="button"
-        onClick={handleConfirm}
-        disabled={deleteMutation.isPending}
-        /* Was `bg-red-500 … text-white` — the filled-danger recipe Button.tsx's
-                 own docstring measures at ~3.59:1 in dark mode and replaced with the
-                 10%-tint `danger` variant for 15 other buttons. This one was missed. */
-              className="flex-1 px-4 py-2 bg-[oklch(var(--color-status-error)/0.1)] text-[oklch(var(--color-status-error))] border border-[oklch(var(--color-status-error)/0.3)] hover:bg-[oklch(var(--color-status-error)/0.2)] disabled:opacity-50 text-sm font-medium transition-colors"
-      >
-        {deleteMutation.isPending ? (
-          <span className="flex items-center justify-center gap-2">
-            <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-            </svg>
-            {t("common.submitting") || "提交中..."}
-          </span>
-        ) : (t("common.delete") || "删除")}
-      </button>
-    </div>
-  );
-
   return (
-    <BaseModal
+    <NameConfirmDialog
       isOpen={isOpen}
-      onClose={onClose}
-      title={t("users.delete_title") || "确认删除"}
-      footer={footer}
-    >
-      <div className="space-y-4">
-        <p className="text-sm text-[oklch(var(--color-ink))]">
-          {t("users.delete_confirm") || "确定要删除以下用户吗？此操作无法撤销。"}
-        </p>
-        {user && (
-          <div className="bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-hairline))] p-3 space-y-1">
-            <p className="text-sm font-medium text-[oklch(var(--color-ink))]">
-              <span className="text-[oklch(var(--color-ink-subtle))]">{t("users.username") || "用户名"}: </span>
-              {user.username}
-            </p>
-            <p className="text-sm text-[oklch(var(--color-ink))]">
-              <span className="text-[oklch(var(--color-ink-subtle))]">{t("users.email") || "邮箱"}: </span>
-              {user.email}
-            </p>
-            <p className="text-sm text-[oklch(var(--color-ink))]">
-              <span className="text-[oklch(var(--color-ink-subtle))]">{t("users.role") || "角色"}: </span>
-              <RoleName value={user.role} />
-            </p>
-          </div>
-        )}
-      </div>
-    </BaseModal>
+      title={t("users.delete_title")}
+      name={user?.username ?? ""}
+      actionLabel={t("common.delete")}
+      isPending={deleteMutation.isPending}
+      onCancel={onClose}
+      onConfirm={() => {
+        if (user) deleteMutation.mutate(String(user.id));
+      }}
+      message={
+        <div className="space-y-4">
+          <p>{t("users.delete_confirm")}</p>
+          {user && (
+            <div className="border border-[oklch(var(--color-hairline))] p-3 space-y-1">
+              <p className="font-medium">
+                <span className="text-[oklch(var(--color-ink-subtle))]">{t("users.username")}: </span>
+                {user.username}
+              </p>
+              <p>
+                <span className="text-[oklch(var(--color-ink-subtle))]">{t("users.email")}: </span>
+                {user.email}
+              </p>
+              <p>
+                <span className="text-[oklch(var(--color-ink-subtle))]">{t("users.role")}: </span>
+                <RoleName value={user.role} />
+              </p>
+            </div>
+          )}
+        </div>
+      }
+    />
   );
 }
