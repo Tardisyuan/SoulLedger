@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useComments, useCreateComment, useDeleteComment } from "@soulledger/core/hooks/useSocial";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
-import { ConfirmDialog } from "@/src/components/ui/Modal";
+import { NameConfirmDialog } from "@/src/components/admin/NameConfirmDialog";
 import { Button } from "@/src/components/ui/Button";
 import { ReactionBar } from "./ReactionBar";
 import type { Comment } from "@soulledger/core/api";
@@ -54,14 +54,17 @@ function CommentItem({ comment, postId, depth, onReply }: {
         </div>
       </div>
 
+      {/* 同 PostCard:作者自删不进回收站,不可撤回 → 输入名称(动作词)以确认。 */}
       {isAuthor && (
-        <ConfirmDialog
+        <NameConfirmDialog
           isOpen={showDeleteConfirm}
-          title={t("common.confirm_delete") || "Confirm Delete"}
-          message={t("social.delete_comment_confirm") || "Are you sure you want to delete this comment? This cannot be undone."}
+          title={t("common.confirm_delete")}
+          message={t("social.delete_comment_confirm")}
+          name={t("common.delete")}
+          actionLabel={t("common.delete")}
+          isPending={deleteComment.isPending}
           onConfirm={handleDelete}
           onCancel={() => setShowDeleteConfirm(false)}
-          confirmText={deleteComment.isPending ? (t("common.deleting") || "Deleting...") : (t("common.delete") || "Delete")}
         />
       )}
     </div>

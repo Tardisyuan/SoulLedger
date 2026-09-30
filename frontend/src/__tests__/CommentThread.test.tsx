@@ -84,14 +84,16 @@ describe("CommentThread delete UI", () => {
     render(<CommentThread postId="post-1" />);
     fireEvent.click(screen.getByText("common.delete"));
 
-    // `alertdialog`, not `dialog`. ConfirmDialog moved from @headlessui's
-    // generic Dialog to Base UI's AlertDialog, which is the accurate role for
-    // a question the operator has to answer — and which, unlike a plain
-    // dialog, does not let a stray click on the backdrop quietly answer
-    // "cancel" for them.
-    const dialog = screen.getByRole("alertdialog");
-    const confirmButtons = within(dialog).getAllByText("common.delete");
-    fireEvent.click(confirmButtons[confirmButtons.length - 1]);
+    // 作者自删不进回收站,不可撤回 → NameConfirmDialog(规范 v2「输入名称以确认」)。
+    // 名称没对上之前危险按钮禁用、点了也不删;这里输入的是动作词(t 回 key)。
+    const dialog = screen.getByRole("dialog");
+    const confirm = within(dialog).getByTestId("name-confirm-action");
+    expect(confirm).toBeDisabled();
+    fireEvent.click(confirm);
+    expect(mockDeleteMutate).not.toHaveBeenCalled();
+    fireEvent.change(within(dialog).getByRole("textbox"), { target: { value: "common.delete" } });
+    expect(confirm).toBeEnabled();
+    fireEvent.click(confirm);
 
     await waitFor(() => expect(mockDeleteMutate).toHaveBeenCalledWith(
       "comment-1",
