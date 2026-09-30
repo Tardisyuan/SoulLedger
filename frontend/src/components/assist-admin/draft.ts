@@ -19,8 +19,11 @@ import type {
 export type Draft = AssistAdminConfigUpdate;
 export type DraftKey = keyof Draft;
 
-/** `CONNECTION_KEYS` in backend/apps/soul_assist/config.py: change any of them and the save needs a passed test. */
-export const CONNECTION_KEYS = ["provider", "base_url", "api_key", "model", "effort", "fallbacks"] as const;
+/**
+ * `CONNECTION_KEYS` in backend/apps/soul_assist/config.py: change any of them and the save needs a passed test.
+ * `platform` rides along: the backend derives a preset's adapter and address from it, so the test must see it.
+ */
+export const CONNECTION_KEYS = ["platform", "provider", "base_url", "api_key", "model", "effort", "fallbacks"] as const;
 
 const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
 
@@ -54,9 +57,12 @@ export function needsTest(draft: Draft): boolean {
   return !(keys.length === 1 && draft.api_key === "");
 }
 
-/** Moving provider or address without a new key: the backend refuses (`api_key_required`). */
+/**
+ * Moving provider or address without saying which key goes with it: the backend refuses (`api_key_required`).
+ * `""` counts as saying so — it is how a keyless platform (Ollama) leaves the saved key behind.
+ */
 export function keyRequired(draft: Draft): boolean {
-  return ("provider" in draft || "base_url" in draft) && !draft.api_key;
+  return ("provider" in draft || "base_url" in draft) && draft.api_key === undefined;
 }
 
 export type SaveBlock = "untested_connection" | "api_key_required" | "invalid" | null;
