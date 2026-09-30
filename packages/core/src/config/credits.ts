@@ -100,11 +100,14 @@ export const OSS_CREDITS: Record<OssGroup, OssCredit[]> = OSS;
  * 文献出处:律条语料的出处串(后端 `apps/actors/mythology` 各 `*_SOURCE`,埃及取判官行的
  * `ASSESSOR_PAPYRUS` / `ASSESSOR_SOURCE_EDITION`)拆成的书名与细节。手拆,但每个字段都逐字
  * 出自那些串 —— `backend/tests/test_credits_literature_quotes_the_corpus.py` 守着,
- * 并要求种子命令写入的每个语料至少有一条。只列语料的底本;注释里为对照提到的书不列。
+ * 并要求种子命令写入的每个语料至少有一条。
+ * `kind: "reference"`:语料逐条注记里为对照提到的书(用户 2026-10-01 定:要列,标「参照」,
+ * 与底本分开)。字段逐字出自注记原文;注记里出现的每个《书名》都得记上;同一文明下底本在前。
  */
 export interface LiteratureCredit {
   civilization: "CHINESE" | "EUROPEAN" | "EGYPTIAN" | "GREEK";
   corpus: string;
+  kind?: "reference";
   title: string;
   details: string[];
   url?: string;

@@ -70,7 +70,14 @@ describe("AboutPage", () => {
     expect(inferno).toHaveTextContent("Longfellow 1867 translation");
     expect(within(inferno).getByRole("link", { name: "来源" })).toHaveAttribute("href", "https://www.gutenberg.org/ebooks/1001");
     expect(screen.getByRole("heading", { level: 3, name: "中国" })).toBeInTheDocument();
-    expect(screen.getByText("《太微仙君功過格》")).toBeInTheDocument();
+    const primary = screen.getByText("《太微仙君功過格》").closest("li") as HTMLElement;
+    expect(primary).not.toHaveTextContent("参照");
+    const refs = ["《抱朴子·微旨》", "《太上感應篇》", "《十戒功過格》", "《文昌帝君功過格·凡例》"].map(
+      (title) => screen.getByText(title).closest("li") as HTMLElement
+    );
+    for (const row of refs) expect(row).toHaveTextContent("参照");
+    // 底本在前,参照在后。
+    for (const row of refs) expect(primary.compareDocumentPosition(row) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 
     expect(screen.getByText("均按部署配置")).toBeInTheDocument();
     expect(screen.getByText("Anthropic Claude").closest("li")).toHaveTextContent("默认");

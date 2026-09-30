@@ -119,7 +119,7 @@ function Literature() {
           <h3 className={`pt-3 text-2xs uppercase ${MUTED}`}>{t(`home.civ_subtitle.${civ}`)}</h3>
           <ul className="text-sm">
             {LITERATURE_CREDITS.filter((c) => c.civilization === civ).map((c) => (
-              <Row key={c.title} name={c.title} detail={c.details.join(" · ")} url={c.url} />
+              <Row key={c.title} name={c.title} detail={c.details.join(" · ")} url={c.url} aside={c.kind === "reference" ? t("about.reference") : null} />
             ))}
           </ul>
         </div>

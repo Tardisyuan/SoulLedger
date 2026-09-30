@@ -136,7 +136,12 @@ export function AboutScreen() {
               {t(`home.civ_subtitle.${civ}`)}
             </Txt>
             {LITERATURE_CREDITS.filter((c) => c.civilization === civ).map((c) => (
-              <Row key={c.title} testID={`literature-${c.corpus}`} name={c.title} detail={c.details.join(" · ")}>
+              <Row key={c.title} testID={`literature-${c.title}`} name={c.title} detail={c.details.join(" · ")}>
+                {c.kind === "reference" ? (
+                  <Txt variant="caption" tone="muted">
+                    {t("about.reference")}
+                  </Txt>
+                ) : null}
                 {c.url ? <Link label={t("about.source")} url={c.url} /> : null}
               </Row>
             ))}
