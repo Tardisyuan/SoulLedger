@@ -32,9 +32,6 @@
   "app/realms/page.tsx": {
     "space": 2
   },
-  "app/soul-inbox/page.tsx": {
-    "space": 2
-  },
   "app/souls/[id]/page.tsx": {
     "space": 2
   },

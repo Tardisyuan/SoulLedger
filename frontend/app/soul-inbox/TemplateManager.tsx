@@ -100,7 +100,7 @@ export function TemplateManager({ isOpen, onClose }: { isOpen: boolean; onClose:
                     aria-label={`${t("common.edit")} ${tpl.title}`}>
                     {t("common.edit")}
                   </Button>
-                  <Button type="button" size="sm" variant="danger" loading={remove.isPending && remove.variables === tpl.id}
+                  <Button type="button" size="sm" variant="ghost" loading={remove.isPending && remove.variables === tpl.id}
                     aria-label={`${t("common.delete")} ${tpl.title}`}
                     onClick={() =>
                       remove.mutate(tpl.id, {
