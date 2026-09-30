@@ -5,9 +5,6 @@
   "app/corpus/page.tsx": {
     "space": 3
   },
-  "app/cross-judgments/[id]/page.tsx": {
-    "space": 2
-  },
   "app/dashboard/loading.tsx": {
     "space": 1
   },
@@ -19,15 +16,6 @@
   },
   "app/dispatch/propose/page.tsx": {
     "space": 4
-  },
-  "app/disposition/page.tsx": {
-    "space": 1
-  },
-  "app/judgment/[id]/page.tsx": {
-    "space": 4
-  },
-  "app/ledger/page.tsx": {
-    "space": 1
   },
   "app/moderation/page.tsx": {
     "space": 1
@@ -51,9 +39,6 @@
     "space": 2
   },
   "app/soul-inbox/page.tsx": {
-    "space": 2
-  },
-  "app/souls/[id]/page.tsx": {
     "space": 2
   },
   "app/welcome/loading.tsx": {
@@ -80,32 +65,8 @@
   "src/components/connection-status.tsx": {
     "space": 1
   },
-  "src/components/cross-judgments/CrossJudgmentStops.tsx": {
-    "space": 2
-  },
   "src/components/dashboard/BalanceHistogram.tsx": {
     "space": 2
-  },
-  "src/components/judgment/CorpusCitedBy.tsx": {
-    "space": 1
-  },
-  "src/components/judgment/JudgmentClaimDialogs.tsx": {
-    "space": 1
-  },
-  "src/components/judgment/JudgmentClaimQueue.tsx": {
-    "space": 1
-  },
-  "src/components/judgment/JudgmentDesk.tsx": {
-    "space": 5
-  },
-  "src/components/judgment/JudgmentPlacement.tsx": {
-    "space": 1
-  },
-  "src/components/judgment/JudgmentQueueConsole.tsx": {
-    "space": 1
-  },
-  "src/components/judgment/JudgmentQueueContext.tsx": {
-    "space": 1
   },
   "src/components/layout/AppLayout.tsx": {
     "space": 1
@@ -122,37 +83,10 @@
   "src/components/realms/RouteTopology.tsx": {
     "space": 1
   },
-  "src/components/sentence-plan/AmendmentPlanChanges.tsx": {
-    "space": 1
-  },
   "src/components/social/CommentThread.tsx": {
     "palette": 1
   },
   "src/components/social/ProfileCard.tsx": {
-    "space": 2
-  },
-  "src/components/souls/DateProblemsPanel.tsx": {
-    "space": 2
-  },
-  "src/components/souls/RebirthFormSelect.tsx": {
-    "space": 3
-  },
-  "src/components/souls/SoulKarmaLedgerCard.tsx": {
-    "space": 3
-  },
-  "src/components/souls/SoulLifecycleRowShell.tsx": {
-    "space": 3
-  },
-  "src/components/souls/SoulLifecycleTimeline.tsx": {
-    "space": 4
-  },
-  "src/components/souls/SoulReadingPanel.tsx": {
-    "space": 3
-  },
-  "src/components/souls/detail/SoulInfoCard.tsx": {
-    "space": 2
-  },
-  "src/components/souls/detail/SoulLedgerSections.tsx": {
     "space": 2
   },
   "src/components/ui/Badge.tsx": {
