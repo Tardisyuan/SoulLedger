@@ -8,7 +8,7 @@ import { useSaveJudgmentDraft } from "@soulledger/core/hooks/useJudgments";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { Button } from "@/src/components/ui/Button";
 import { DomainEnum } from "@/src/components/ui/DomainValue";
-import { verdictGlyph, verdictInk } from "@/src/lib/verdictGlyph";
+import { VerdictBadge } from "@/src/components/ui/StatusBadge";
 import { MISSING_LABEL_KEY } from "@/src/lib/domainDisplay";
 import { placementDraftFields, type Placement } from "@/src/components/judgment/JudgmentPlacement";
 
@@ -172,9 +172,8 @@ export function DraftConflictBanner({
       <p className="mt-1 text-[oklch(var(--color-ink-muted))]">{t("judgment.draft.conflict_body")}</p>
       <p className="mt-2 text-2xs uppercase font-mono text-[oklch(var(--color-ink-subtle))]">{t("judgment.draft.server_version")}</p>
       {current.draft_verdict && (
-        <p className={`text-xs ${verdictInk(current.draft_verdict)}`}>
-          <span aria-hidden="true">{verdictGlyph(current.draft_verdict)} </span>
-          <DomainEnum namespace="judgment.verdicts" value={current.draft_verdict} />
+        <p className="text-xs">
+          <VerdictBadge verdict={current.draft_verdict} />
         </p>
       )}
       <blockquote className="mt-1 pl-3 border-l-2 border-[oklch(var(--color-ink))] font-serif text-md font-normal text-[oklch(var(--color-ink))] whitespace-pre-wrap">

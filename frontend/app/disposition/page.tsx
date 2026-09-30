@@ -20,7 +20,7 @@ import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
 import { formatHistoricalDate } from "@/lib/utils";
 import { termState, type TermState } from "@/src/lib/dispositionTerm";
-import { verdictGlyph, verdictInk } from "@/src/lib/verdictGlyph";
+import { VerdictBadge as DomainVerdictBadge } from "@/src/components/ui/StatusBadge";
 
 /**
  * 处置(规范 v1 第三类 A·07):一页三段 —— 待执行 → 执行中 → 期满,就是处置本身的时间顺序。
@@ -245,12 +245,7 @@ function VerdictBadge({ verdict }: { verdict: Disposition["verdict"] }) {
       </span>
     );
   }
-  return (
-    <span className={`justify-self-start border border-current px-1.5 font-mono text-2xs whitespace-nowrap ${verdictInk(verdict)}`}>
-      <span aria-hidden="true">{verdictGlyph(verdict)} </span>
-      <DomainEnum namespace="judgment.verdicts" value={verdict} />
-    </span>
-  );
+  return <DomainVerdictBadge verdict={verdict} className="justify-self-start" />;
 }
 
 /**
