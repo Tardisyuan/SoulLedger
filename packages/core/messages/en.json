@@ -3201,7 +3201,6 @@
       "letters_card": "Write to {{hall}} · an officer replies in the hall's name",
       "letters_note": "This conversation is not carried over; you write the letter yourself.",
       "new": "New conversation",
-      "retention": "Conversations are deleted automatically after 30 days.",
       "history_end": "Conversations are kept 30 days, then deleted automatically.",
       "history_empty": "No questions yet.",
       "today": "Today",
