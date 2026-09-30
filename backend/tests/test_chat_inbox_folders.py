@@ -50,10 +50,11 @@ def _row(api, conversation_id):
 
 def _grant(role_name, codename):
     from apps.perm.cache import invalidate_all_permissions
-    from apps.perm.models import Permission, Role, RolePermission
+    from apps.perm.models import RolePermission
+    from tests.perm_support import seeded_grants, seeded_permission, seeded_role
 
-    role, _ = Role.objects.get_or_create(name=role_name, defaults={"display_name": role_name.title()})
-    RolePermission.objects.get_or_create(role=role, permission=Permission.objects.get(codename=codename))
+    seeded_grants()
+    RolePermission.objects.get_or_create(role=seeded_role(role_name), permission=seeded_permission(codename))
     invalidate_all_permissions()
 
 

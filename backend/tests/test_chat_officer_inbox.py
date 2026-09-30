@@ -212,7 +212,9 @@ def test_the_inbox_menu_follows_the_codename(cn_tenant):
     """menus/0018:`/soul-inbox` 挂在「灵魂业务」下,持有 soul_inbox.read 才看得见。
     变异:把迁移里的 permission 改成 `soul.read` → JUDGE 也看得见,红。"""
     from apps.menus.models import Menu
+    from tests.perm_support import seeded_menus
 
+    seeded_menus()
     menu = Menu.objects.get(path="/soul-inbox")
     assert (menu.parent.name, menu.permission) == ("灵魂业务", "soul_inbox.read")
     assert "殿司收件箱" in _menu_names(_moderator(cn_tenant, "cn_mod"))
