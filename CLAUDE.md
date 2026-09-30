@@ -126,7 +126,67 @@ worktree 里没有 `.venv`(gitignored),就用主 checkout 的,和 `.prepush.env`
 `python: … (PYTHON_BIN override; backend/.venv not used)`。**旧的 `.prepush.env`
 若还写着 vision 的路径,覆盖会赢** —— 看钩子输出里那一行,或删掉那两行。
 **改了 `scripts/install-hooks.sh` 要在主 checkout 重跑 `bash scripts/install-hooks.sh`**:
-钩子是生成出来的副本,源文件变了它不会跟着变。
+钩子是生成出来的副本,源文件变了它不会跟着变。**2026-09-30 起钩子只剩一层壳**:它把 git 的
+stdin 变成改动文件清单(`PREPUSH_CHANGED`),然后 `exec` 被推送的 checkout 里的
+`scripts/run-gates.sh` —— 门禁逻辑只有这一份,改它当场生效,不用重装。重装只在改了壳本身、
+或要更新壳旁边那份备用副本(`.git/hooks/soulledger-gates/`,给还没有 `run-gates.sh` 的
+老分支用)时才需要。
+
+**pre-push 只跑受影响的 jest(2026-09-30 起);其余门禁照旧全跑。**
+会话里要跑「推送时会跑的那一套」,直接跑同一个脚本,它自己拿门禁锁:
+
+    scripts/run-gates.sh                 # 与 base 比:已提交 + 已暂存 + 未暂存 + 未跟踪
+    scripts/run-gates.sh --base <ref>    # base 默认是与 origin/main 的 merge-base
+    scripts/run-gates.sh --full          # jest 也全跑
+    scripts/run-gates.sh --help
+
+- **怎么选**:`jest --findRelatedTests <改动文件>`,**加上** `frontend/jest.always-run.txt` 里的
+  51 个测试。`--roots` 在命令行上补了 `packages/core`:`jest.config.js` 的 roots 只有 `frontend/`,
+  于是改了 core 的文件 `--findRelatedTests` 返回**空**、不报错 —— 实测 `useSouls.ts` 不补是 0 个、
+  补了是 20 个,总测试文件数两种都是 196。
+- **always-run 清单**是「读文件而不是 import」的测试(`readFileSync` / `readdirSync` /
+  `execSync` / `git` …,或 import 了这样一个 `support/` 模块):契约测试、egy 词表、语言包对齐、
+  设计守卫。import 图看不见它们读的文件,所以每次都跑。清单是**推导**的,不是手写的:
+  `src/__tests__/jestAlwaysRunList.test.ts` 用同一条正则扫测试源码,少一条、多一条都红。
+  2026-09-30 验过:加一个 `readFileSync` 的一次性测试 → 红;清单里塞一个不存在的文件 → 红。
+  新写了读文件的测试,把它加进清单(守卫会点名)。
+- **什么强制全跑**(输出里逐条写明是哪条规则、哪个文件):`--full`、`GATES_FULL=1`、
+  **推到 `refs/heads/main`**、语言包(`packages/core/messages/**`)、`frontend/` 或 `packages/core/`
+  下的 JSON / MD / YAML、这两处的顶层配置文件(jest / ts / next / eslint 配置、package.json,
+  也包括 `jest.always-run.txt` 本身)、根上的 JS 依赖树(package*.json、.nvmrc)、删掉或改名的文件、
+  不认识的根文件、以及门禁脚本本身(`run-gates.sh` / `install-hooks.sh`)。
+  `--affected` 就是默认行为;**没有任何办法强制选择性运行** —— `GATES_FULL=0` 不是开关。
+- **后端 pytest 仍然全跑**,tsc / eslint / core / mobile / ruff / makemigrations 也是。
+  pytest-testmon 做进去并实测过(2026-09-30,`-n 4`,同一棵树),**没有采用**,因为安全的版本比全跑慢:
+
+      全量,不记录            5647 passed   130 s
+      全量,testmon 记录       5647 passed   277 s   (xdist 能跑,但记录开销 2.1 倍)
+      选择性,什么都没改        1145 passed   101 s   (读文件的 59 个后端测试文件必须每次跑)
+
+  而且 testmon 只把**测试运行期间**执行到的行算作依赖,Django 在 import 时求值的东西
+  (模型字段、serializer 的 Meta、viewset 的类属性、urls、常量表)它看不见:把 souls 的
+  router 前缀改掉,`apps/souls` 177 条里红 72 条,testmon 只选中其中 4 条。要安全就得在
+  模块级改动时全跑 —— 按最近 150 个后端提交算,约四分之三会落到全跑上。
+- **推只改门禁脚本的提交,现在会跑后端**:这些脚本唯一的测试是
+  `backend/tests/test_prepush_runs_the_gates_a_change_can_break.py`,它读脚本而不 import。
+  此前这样的推送什么都不跑。
+- 验证(2026-09-30,6 个真实提交各跑选择性与全量,再各注入一处会让测试红的改动)。
+  方法:在本分支尖端上 `git revert` 该提交再 `cherry-pick` 回来,`--base` 取 revert 那一格,
+  于是改动集恰好是那个提交的 diff,依赖是今天的;`127dff04` revert 冲突,改用 `PREPUSH_CHANGED`
+  给出它的文件清单。时间是锁拿到之后的门禁时间(负载 5–12)。注入的破坏各让选择性与全量
+  **红在同一组测试上**:
+
+      提交       内容              jest 选中/总数        门禁时间 选择性/全量   注入破坏 → 两边都红
+      905bbe84   前端组件           53/197 文件 (1437/3295 条)  19 s / 33 s   Breadcrumb 不再跳过无页前缀 → AppLayout.test
+      c1fc7d77   core hook         104/197 (2066/3295)        76 s / 74 s   useBatchRecycleSouls 判断取反 → useSouls.test 4 条
+      40dfcdc4   语言包            全量(规则:语言包)            102 s / 78 s  egy.json 一个值 → egyLexiconRules 2 条
+      8b50dca9   后端 view         不涉及 jest;pytest 全量      108 s / 122 s views.py 分支取反 → 6 条
+      4033dcc1   迁移              不涉及 jest;pytest 全量+往返  565 s / 497 s 0002 反向不删官员会话 → 1 条
+      127dff04   语料 md + 语言包   全量(规则)                   254 s / 267 s md 加一个未知 code → 语料测试 2 条
+
+  jest 本身:选择性 9 s 对全量 25 s(组件那条);core 那条选中 58 个相关文件,和全量差不多快。
+  后端两列本来就是同一条命令,差值是噪声。c1fc7d77 那条的 `useSouls.test.ts` **不在** always-run
+  里,只能靠 `--roots` 补上 core 之后的关联选中 —— 不补那一项,这次破坏在选择性运行里会是绿的。
 
 pip-audit 不装进 venv(CI 也是临时装):`cd backend && uvx pip-audit --strict --desc
 -r requirements.lock --no-deps --disable-pip`,与 CI 同一条参数。
@@ -181,7 +241,11 @@ cd backend && SECRET_KEY=ci-test-key-not-for-production-32-bytes-min \
 # 同一时刻只跑一个重门禁,后来的每分钟打印一次在等谁。几个会话同时跑门禁时每个慢 2–3 倍
 # (2026-09-29:空闲 19 分钟的 SQLite 全量,负载 50 下 38 分钟才到 77%)。GATE_LOCK=0 跳过。
 # 自己跑的全量脚本也应先 `. scripts/gate-lock.sh; gate_lock "<说明>"`。
+# **只锁吃 CPU 的门禁**(SQLite pytest、jest、playwright、build、tsc),**真 PG 那条不拿锁**:
+# 它慢在和 115 的网络往返,本机几乎空闲 —— 2026-09-30 一次真 PG 全量拿着锁两小时,负载只有 2.7,
+# 别的会话全在排队。脚本里只把 CPU 那段包在锁里;SQLite 与 PG 并行跑时 PG 那半在锁外。
 # 手动复现钩子那条:在上面的命令后加 `--no-cov -m "not migration" -n 4`。
+# 整套推送门禁(含选择性 jest)一条命令:`scripts/run-gates.sh`,见上面那节。
 cd backend && DATABASE_URL="sqlite:///:memory:" .venv/bin/python manage.py makemigrations --check --dry-run
 cd backend && .venv/bin/ruff check .
 cd backend && uvx pip-audit --strict --desc -r requirements.lock --no-deps --disable-pip
@@ -255,6 +319,7 @@ cd frontend && npx playwright test --project=firefox
 cd frontend && npx playwright test --project=mobile-chrome
 
 # 真 PostgreSQL 上跑一遍 —— 上面那条 SQLite 命令跑不到的东西在这里
+# (这条不拿 gate lock,理由见上面「只锁吃 CPU 的门禁」。)
 # 不设 DATABASE_URL,让 Django 读 .env 指向 115;pytest-django 自建测试库
 # 再删掉,不碰真库。`--create-db` 是必需的:陈旧的 test_soulledger 会造成上千条
 # 「环境错误」,那正是这条路径当初被判成不可用的原因。
@@ -368,7 +433,7 @@ transactions, constraints, or column widths, run it against PostgreSQL.
 - CI runs E2E separately (local can run on demand)
 - CI has a separate `mobile` job (`ci.yml:183-199`): `npm ci`, then mobile typecheck / lint / test.
   Locally pre-push runs the same three only when `^mobile/` or `frontend/app/globals.css` changed
-  (`scripts/install-hooks.sh:176`)
+  (`scripts/run-gates.sh:169`)
 
 ## Verification & Root Cause
 

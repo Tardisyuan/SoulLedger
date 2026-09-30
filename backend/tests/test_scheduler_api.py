@@ -26,11 +26,12 @@ def _bearer(user):
 
 @pytest.fixture
 def judge_with_manage(judge_user):
-    from apps.perm.models import Permission, Role, RolePermission
+    from apps.perm.models import RolePermission
+    from tests.perm_support import seeded_permission, seeded_role
 
-    role = Role.objects.get(name="JUDGE")
+    role = seeded_role("JUDGE")
     for codename in ("scheduler.read", "scheduler.manage"):
-        RolePermission.objects.create(role=role, permission=Permission.objects.get(codename=codename))
+        RolePermission.objects.create(role=role, permission=seeded_permission(codename))
     return judge_user
 
 
