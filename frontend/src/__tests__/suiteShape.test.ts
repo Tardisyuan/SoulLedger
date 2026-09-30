@@ -191,6 +191,7 @@ const COLLECTED_FILES = [
   "platformPortsSecureAndResume.test.ts",
   "presetNodeTypes.test.tsx",
   "QueryProviderDefaults.test.tsx",
+  "ReactionBar.test.tsx",
   "proseLinkIsNotColourOnly.test.ts",
   "readingQuantityContract.test.tsx",
   "reducedMotionContract.test.ts",

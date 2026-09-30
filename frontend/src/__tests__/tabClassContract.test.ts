@@ -98,6 +98,10 @@ describe("the five strips read it from there", () => {
     "app/notifications/page.tsx",
     // 2026-09-20:定时任务的「任务 / 运行历史」两个页签,第八条。
     "app/scheduler/page.tsx",
+    // 2026-09-30(v2 第三批):动态与关注两页的页签此前各写一份强调色下划线,v2 没有强调色,
+    // 改读这里的 A1 类名。
+    "app/social/follows/page.tsx",
+    "app/social/page.tsx",
     "app/workflow/[id]/page.tsx",
     "app/workflow/page.tsx",
   ];
