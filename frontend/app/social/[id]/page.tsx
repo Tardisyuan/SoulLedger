@@ -40,7 +40,8 @@ export default function PostDetailPage() {
            one — so a fetch failure would read as a post that does not
            exist. `--color-status-error` replaces the `text-red-400` that
            went dead in light mode. */
-        <p role="alert" className="text-sm text-[oklch(var(--color-status-error))]">
+        <p role="alert" className="text-sm text-[oklch(var(--color-danger))]">
+          <span aria-hidden="true">✕ </span>
           {String(error)}
         </p>
       ) : !post ? (

@@ -1,32 +1,8 @@
 {
-  "app/(auth)/login/page.tsx": {
-    "space": 6
-  },
-  "app/corpus/page.tsx": {
-    "space": 3
-  },
-  "app/dashboard/loading.tsx": {
-    "space": 1
-  },
-  "app/dashboard/page.tsx": {
-    "space": 2
-  },
-  "app/moderation/page.tsx": {
-    "space": 1
-  },
   "app/page.tsx": {
     "space": 7
   },
   "app/permissions/loading.tsx": {
-    "space": 1
-  },
-  "app/profile/page.tsx": {
-    "space": 2
-  },
-  "app/soul-inbox/page.tsx": {
-    "space": 2
-  },
-  "app/welcome/loading.tsx": {
     "space": 1
   },
   "components/LanguageSwitcher.tsx": {
@@ -47,23 +23,8 @@
   "src/components/connection-status.tsx": {
     "space": 1
   },
-  "src/components/dashboard/BalanceHistogram.tsx": {
-    "space": 2
-  },
   "src/components/layout/AppLayout.tsx": {
     "space": 1
-  },
-  "src/components/moderation/MediaGrid.tsx": {
-    "space": 2
-  },
-  "src/components/moderation/MutesSection.tsx": {
-    "space": 1
-  },
-  "src/components/social/CommentThread.tsx": {
-    "palette": 1
-  },
-  "src/components/social/ProfileCard.tsx": {
-    "space": 2
   },
   "src/components/ui/Badge.tsx": {
     "space": 1
@@ -73,8 +34,5 @@
   },
   "src/components/ui/PageShell.tsx": {
     "space": 9
-  },
-  "src/components/welcome/WelcomeChecklist.tsx": {
-    "space": 2
   }
 }

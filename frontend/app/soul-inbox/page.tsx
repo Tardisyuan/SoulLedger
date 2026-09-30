@@ -192,7 +192,7 @@ function Composer({
 
   return (
     <div className="mt-4 border border-[oklch(var(--color-block))] bg-[oklch(var(--color-surface-1))]">
-      <div className={`flex flex-wrap items-center gap-3 px-3 py-1.5 border-b ${LINE} text-xs text-[oklch(var(--color-ink-muted))]`}>
+      <div className={`flex flex-wrap items-center gap-3 px-3 py-2 border-b ${LINE} text-xs text-[oklch(var(--color-ink-muted))]`}>
         <label htmlFor={id} className="font-medium text-[oklch(var(--color-ink))]">
           {label}
         </label>
@@ -242,7 +242,7 @@ function Composer({
                       e.preventDefault();
                       insert(s);
                     }}
-                    className={`px-3 py-1.5 border-b ${RULE} cursor-pointer aria-selected:bg-[oklch(var(--color-surface-2))]`}
+                    className={`px-3 py-2 border-b ${RULE} cursor-pointer aria-selected:bg-[oklch(var(--color-surface-2))]`}
                   >
                     <span className="font-mono text-xs">{s.code}</span>
                     {s.display_title && <span className="ml-2 text-sm">{s.display_title}</span>}

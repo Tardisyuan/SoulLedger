@@ -6,6 +6,7 @@
  *
  * 没有 `min-h-screen` —— AppLayout 给的槽位已经是 min-h-[calc(100vh-4rem)],
  * 再写一次就永远多出 64px 死滚动(见 PageShell 文件头第 3 条)。
+ * 骨架屏是静态的(补足 C15「静态,不闪光」):没有,数据到了直接换。
  * 也没有 `rounded-*` —— borderRadius 表里除 full/focus 之外全部是 0,写了
  * 也不圆,只会让读代码的人以为这里是圆的。
  */
@@ -13,10 +14,10 @@ export default function Loading() {
   return (
     <div className="bg-[oklch(var(--color-canvas))]">
       <header className="border-b border-[oklch(var(--color-hairline))]">
-        <div className="max-w-page mx-auto px-6 pt-10 pb-6">
+        <div className="max-w-page mx-auto px-6 pt-8 pb-6">
           {/* h-10 对着 text-lg 的 32px × 1.2 行高;h-6 对着 text-sm 的副标题。 */}
-          <div className="h-10 w-80 bg-[oklch(var(--color-hairline))] animate-pulse" />
-          <div className="h-6 w-96 bg-[oklch(var(--color-hairline))] animate-pulse mt-3" />
+          <div className="h-10 w-80 bg-[oklch(var(--color-hairline))]" />
+          <div className="h-6 w-96 bg-[oklch(var(--color-hairline))] mt-3" />
         </div>
       </header>
 
@@ -24,14 +25,14 @@ export default function Loading() {
         {/* Stats skeleton */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-24 bg-[oklch(var(--color-hairline))] animate-pulse" />
+            <div key={i} className="h-24 bg-[oklch(var(--color-hairline))]" />
           ))}
         </div>
 
         {/* Content skeleton */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 h-48 bg-[oklch(var(--color-hairline))] animate-pulse" />
-          <div className="h-48 bg-[oklch(var(--color-hairline))] animate-pulse" />
+          <div className="lg:col-span-2 h-48 bg-[oklch(var(--color-hairline))]" />
+          <div className="h-48 bg-[oklch(var(--color-hairline))]" />
         </div>
       </div>
     </div>

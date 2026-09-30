@@ -133,4 +133,13 @@ describe("立柱:当前项不只靠匾色", () => {
     rerender(<Harness menus={[LEAF, menu({ id: 9, name: "组织与领域", path: "/organizations" })]} />);
     expect(screen.getByTestId("pillar")).toHaveAttribute("data-wide", "true");
   });
+
+  it("底部 40px 静态渐隐(C13):吸底、不挡点击、在所有项之后,读屏不念", () => {
+    render(<Harness menus={[LEAF, OTHER]} />);
+    const fade = screen.getByTestId("pillar-fade");
+    expect(fade).toHaveAttribute("aria-hidden", "true");
+    expect(fade).toHaveClass("sticky", "bottom-0", "h-10", "pointer-events-none");
+    expect(fade.className).toMatch(/from-\[oklch\(var\(--color-pillar\)\)\]/);
+    expect(screen.getByTestId("pillar").lastElementChild).toBe(fade);
+  });
 });

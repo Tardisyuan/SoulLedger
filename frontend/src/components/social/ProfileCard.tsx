@@ -63,8 +63,8 @@ export function ProfileCard({ profile }: { profile: UserProfile }) {
       <dl className="grid grid-cols-[1fr_auto] max-w-sm text-sm">
         {counts.map(([n, label]) => (
           <div key={label} className="contents">
-            <dt className="py-1.5 border-b border-[oklch(var(--color-rule))] text-[oklch(var(--color-ink-subtle))]">{label}</dt>
-            <dd className="py-1.5 border-b border-[oklch(var(--color-rule))] text-right font-mono tabular-nums text-[oklch(var(--color-ink))]">{n}</dd>
+            <dt className="py-2 border-b border-[oklch(var(--color-rule))] text-[oklch(var(--color-ink-subtle))]">{label}</dt>
+            <dd className="py-2 border-b border-[oklch(var(--color-rule))] text-right font-mono tabular-nums text-[oklch(var(--color-ink))]">{n}</dd>
           </div>
         ))}
       </dl>
