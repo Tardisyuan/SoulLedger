@@ -128,6 +128,21 @@ describe("death registration status filter", () => {
     expect(mockReplace).toHaveBeenLastCalledWith("/death-sync");
   });
 
+  it("a status that matches nothing gives a way out: 清除筛选 drops the parameter (C15 空状态给一条出路)", async () => {
+    mockSearch = new URLSearchParams("status=FAILED");
+    mockGet.mockResolvedValue({ data: { count: 0, next: null, previous: null, results: [] } });
+    renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: "filter.clear_all" }));
+    expect(mockReplace).toHaveBeenLastCalledWith("/death-sync");
+  });
+
+  it("an unfiltered empty list offers no clear-filters button", async () => {
+    mockGet.mockResolvedValue({ data: { count: 0, next: null, previous: null, results: [] } });
+    renderPage();
+    await screen.findByText("death_sync.no_registrations");
+    expect(screen.queryByRole("button", { name: "filter.clear_all" })).toBeNull();
+  });
+
   it("shows the server's anomaly count as a shortcut to that status, and nothing at zero", async () => {
     mockSummary.mockResolvedValue({ data: { anomaly_status: "FAILED", anomaly_count: 4 } });
     renderPage();

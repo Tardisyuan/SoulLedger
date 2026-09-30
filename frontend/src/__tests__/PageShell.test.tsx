@@ -394,10 +394,11 @@ const H2_ROLE_EXEMPTIONS = new Map<string, string>([]);
  *
  * 2026-09-25 `/realms` 的卡片网格换成了树表(第三类 B),卡内那个 `<h3>` 随卡片
  * 一起删了,条目已删。上面描述两种约定的段落照原样留作记录。
+ *
+ * 2026-09-30 `/actors` 的四十二陪审折叠行里那个 `<h3>` 改成了 `<span>`:它在 `<button>`
+ * 里面(标题不能进按钮,按钮只收短语内容),而那一行是表内小分组、不是分节。最后一条删掉。
  */
-const H3_ROLE_EXEMPTIONS = new Map<string, string>([
-  ["app/actors/page.tsx", "text-sm font-semibold"],
-]);
+const H3_ROLE_EXEMPTIONS = new Map<string, string>([]);
 
 /**
  * `density` —— 统一是默认,不是唯一。
@@ -693,7 +694,8 @@ describe("PageShell density", () => {
     expect(found.filter((h) => h.file.startsWith("src/")).length).toBeGreaterThanOrEqual(8);
     // `app/` 的下限 2026-09-25 由 3 降到 2:/realms 的每界域一张卡片(卡内一个 <h3>)
     // 换成了树表 —— 那个 <h3> 连同卡片一起没了,不是被改成了别的标签。
-    expect(found.filter((h) => h.file.startsWith("app/")).length).toBeGreaterThanOrEqual(2);
+    // 2026-09-30 再降到 1:/actors 陪审折叠行的 <h3> 在 <button> 里(无效 HTML),改成了 <span>。
+    expect(found.filter((h) => h.file.startsWith("app/")).length).toBeGreaterThanOrEqual(1);
 
     // 三个角色**各自**都要真的在树上被看到。少了任何一档,这条守卫对那一档就是
     // 从未运行过的,而它照样绿 —— 和下面 density 那条的 `observed` 是同一个理由。
