@@ -53,6 +53,10 @@ export const FONT_ASSETS = {
   // Loaded with the rest at boot, under the native splash — from the bundle, not the network,
   // so there is no "load on demand" to win. Together ≈ 1.56 MB, 1.0 MB of it the hieroglyphs.
   LXGWSeal_400: require("../assets/fonts/LXGWSeal-Regular.ttf"),
+  // Status glyphs (Design E 组): ✓✕◇↺◌○▣↻◎≡? from ONE font. Archivo has only ≡ and ?, so each
+  // fell back to the OS per glyph — ◌ from one font, its neighbours from another. 5 KB, the same
+  // bytes the web serves (scripts/build-glyph-font.py; DejaVu Sans subset, licence beside it).
+  SoulLedgerGlyphs: require("../assets/fonts/SoulLedgerGlyphs.ttf"),
   UnifrakturMaguntia_400Regular,
   NotoSansEgyptianHieroglyphs_400Regular,
   GFSDidot_400Regular,
@@ -67,6 +71,8 @@ export const family = {
   mono: { 400: "IBMPlexMono_400Regular", 500: "IBMPlexMono_500Medium" },
   serif: "SourceSerif4_400Regular",
   serifHan: "NotoSerifSC_400",
+  /** Badge glyphs only (`Badge` in ui.tsx) — the family has no letters beyond `?`. */
+  glyph: "SoulLedgerGlyphs",
   /** 印文: 霞鹜篆书 · 花体首字母 · 圣书字 · GFS Didot. Never translated (补足 A6). */
   seal: { cn: "LXGWSeal_400", eu: "UnifrakturMaguntia_400Regular", eg: "NotoSansEgyptianHieroglyphs_400Regular", gr: "GFSDidot_400Regular" },
   /**
@@ -80,6 +86,7 @@ export const family = {
   mono: Record<number, FontName>;
   serif: FontName;
   serifHan: FontName;
+  glyph: FontName;
   seal: Record<Exclude<CivKey, "neutral">, FontName>;
   plaque: Record<Exclude<CivKey, "neutral">, FontName>;
 };

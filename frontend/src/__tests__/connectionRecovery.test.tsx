@@ -16,7 +16,7 @@
  */
 import { render, screen, fireEvent } from "@testing-library/react";
 
-import { ConnectionStatus } from "@/src/components/connection-status";
+import { ConnectionBanner, ConnectionStatus } from "@/src/components/connection-status";
 
 const mockReconnect = jest.fn();
 let mockStatus = "connected";
@@ -108,5 +108,28 @@ describe("the connection indicator", () => {
     jest.spyOn(require("@/src/contexts/TenantContext"), "useTenant").mockReturnValue({ user: null });
     const { container } = render(<ConnectionStatus />);
     expect(container).toBeEmptyDOMElement();
+  });
+});
+
+describe("the connection bar (Design E 组: global state, top of the viewport)", () => {
+  // The signed-out case above spies useTenant to null; clearAllMocks does not undo a spy.
+  beforeEach(() => jest.restoreAllMocks());
+
+  it("spans the whole viewport from its very top, at a fixed 28 px the 问一问 panel starts below", () => {
+    mockStatus = "failed";
+    render(<ConnectionBanner />);
+    const bar = screen.getByTestId("connection-banner");
+    for (const c of ["fixed", "inset-x-0", "top-0", "h-7"]) expect(bar.className.split(/\s+/)).toContain(c);
+    // Absence: it is no longer hung off the plaque's lower edge.
+    expect(bar.className).not.toMatch(/top-full|absolute/);
+  });
+
+  it("is not there while connected or still connecting", () => {
+    for (const s of ["connected", "connecting"]) {
+      mockStatus = s;
+      const { container, unmount } = render(<ConnectionBanner />);
+      expect(container).toBeEmptyDOMElement();
+      unmount();
+    }
   });
 });

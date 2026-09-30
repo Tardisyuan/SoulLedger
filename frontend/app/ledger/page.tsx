@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { ledgerApi, type LedgerJournal, type LedgerJournalParams, type LedgerJournalRow } from "@soulledger/core/api";
+import { isMonthTooLarge, ledgerApi, type LedgerJournal, type LedgerJournalParams, type LedgerJournalRow } from "@soulledger/core/api";
 import { CIVILIZATION_OPTIONS } from "@soulledger/core/config/civilizations";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
@@ -37,7 +37,8 @@ import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
  *
  * 整月一次请求:`ledgerApi.journalMonth` 带 `all=1`,后端给出本月全部行。超过后端上限
  * (`WHOLE_MONTH_MAX`)时后端答 400 而不是截断 —— 截断的整月会让「结余」列从错的期末倒推 ——
- * 这里落到失败屏,不画半本账。
+ * 这里落到失败屏,不画半本账;失败屏说的是专门的一句「本月记录过多,请缩小筛选」(Design E 组),
+ * 不给「重试」—— 同一组筛选重试还是同一个 400。
  */
 
 const RECORD_CATEGORIES = [
@@ -77,12 +78,14 @@ function LedgerPageContent() {
     ...(category && { category }),
     ...(search && { search }),
   };
-  const { data, isLoading, isError, refetch } = useQuery({
+  const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["ledger", "journal", "month", filters],
     queryFn: async () => (await ledgerApi.journalMonth(filters)).data,
     enabled: !!user,
     placeholderData: keepPreviousData,
   });
+  // Design E 组: its own sentence, and no 重试 — only narrower filters get this month in.
+  const tooLarge = isError && isMonthTooLarge(error);
 
   const exportCsv = async () => {
     if (exporting) return;
@@ -164,7 +167,9 @@ function LedgerPageContent() {
         </>
       }
     >
-      {isError && !data ? (
+      {tooLarge ? (
+        <QueryError detail={t("ledger.journal.month_too_large")} />
+      ) : isError && !data ? (
         <QueryError onRetry={() => refetch()} detail={t("ledger.journal.load_failed")} />
       ) : isLoading || !data ? (
         <LedgerSkeleton />

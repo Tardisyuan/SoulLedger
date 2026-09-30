@@ -10,8 +10,8 @@ import { MissingValue } from "@/src/components/ui/DomainValue";
  */
 export const TONE_DOT: Record<string, string> = {
   neutral: "bg-[oklch(var(--color-ink-subtle))]",
-  merit: "bg-[oklch(var(--color-karma-merit))]",
-  demerit: "bg-[oklch(var(--color-karma-demerit))]",
+  merit: "bg-[oklch(var(--color-ink))]",
+  demerit: "bg-[oklch(var(--color-ink))]",
   info: "bg-[oklch(var(--color-status-info))]",
   accent: "bg-[oklch(var(--color-accent))]",
 };

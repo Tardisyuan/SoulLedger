@@ -1038,6 +1038,7 @@
       "empty_title": "Nen Sep Em Abed Pen",
       "empty_reason": "Nen Sep {{month}} Djer; Tepy = Sepy = {{opening}}.",
       "load_failed": "Nen Ini Sesh Nefer Hena Isfet",
+      "month_too_large": "Sesh Abed Pen Ky Er Pehwy. Setep Nedjes.",
       "row_hint": "Wen → Mekher Ba · Nefer Hena Isfet",
       "search": "Hehy Ren / Ren Hesb",
       "export": "Bek Seth",
@@ -1456,7 +1457,7 @@
     "mark_all_error": "Nen Maa Seth Neb",
     "help_count_24h": "Sep {{n}} Em Unut 24",
     "help_open_users": "Wen Remetj",
-    "help_ignore": "Nen Ek · Imen",
+    "help_ignore": "Nen Djes · Nen Iri Khet",
     "open_case": "Wen Wedja"
   },
   "realms": {
@@ -1917,6 +1918,7 @@
   },
   "permission": {
     "denied_message": "Nen Was Ek Er Per Pen, Nen Er Iri Aha Pen.",
+    "ask_admin": "Dbh Er Sab Hery En Per Pen",
     "denied_title": "Nen Was"
   },
   "welcome": {
@@ -1981,7 +1983,7 @@
     "life": "Ankh {{n}}",
     "fields": {
       "soul": "Ba",
-      "soul_code": "Ren Ba",
+      "soul_code": "Ren Hesb Ba",
       "cycle": "Ankh",
       "reason": "Khet",
       "expires_at": "Wenen Er",
@@ -2050,7 +2052,7 @@
     },
     "reveal": {
       "confirm_title": "Maa Sekhem Tepy?",
-      "confirm_body": "Maa Wa Djer. Er Smen, Per Hemsu Nen Sesh Sekhem Djer; Khetem Per Pen, Nen Sab Maa Djer. Djeret Er Ba {{name}} (Ren {{code}}, Ankh {{n}}) Emu.",
+      "confirm_body": "Maa Wa Djer. Er Smen, Per Hemsu Nen Sesh Sekhem Djer; Khetem Per Pen, Nen Sab Maa Djer. Djeret Er Ba {{name}} (Ren Hesb Ba {{code}}, Ankh {{n}}) Emu.",
       "confirm": "Smen Seth, Maa",
       "shown_title": "Sekhem Tepy (Wa Djer)",
       "shown_warning": "Khetem Per, Nen Maa Djer. Djeret Emu; Ba Khemen Sekhem Em Aq Tepy.",
@@ -2323,7 +2325,7 @@
     "connected": "Senb Seth",
     "connecting": "Em Senb…",
     "reconnecting": "Em Senb Wehem…",
-    "disconnected": "Nen Senb",
+    "disconnected": "Nen Em Senb",
     "failed": "Nen Senb Seth",
     "retry": "Senb Wehem"
   },
@@ -2526,14 +2528,14 @@
     },
     "login": {
       "title": "Aq Ba",
-      "subtitle": "Iri Ren Ba Hab Hena Sekhem Tepy",
-      "soul_code": "Ren Ba",
+      "subtitle": "Iri Ren Hesb Ba Hab Hena Sekhem Tepy",
+      "soul_code": "Ren Hesb Ba",
       "password": "Sekhem",
       "submit": "Aq",
       "submitting": "Em Maa…",
-      "required": "Sesh Ren Ba Hena Sekhem",
+      "required": "Sesh Ren Hesb Ba Hena Sekhem",
       "soul_code_hint": "Sesh 10",
-      "verifying": "Em Maa Ren Ba Hena Sekhem. Nen Per Em Per Pen."
+      "verifying": "Em Maa Ren Hesb Ba Hena Sekhem. Nen Per Em Per Pen."
     },
     "change_password": {
       "title": "Khemen Sekhem Tepy",
@@ -2556,14 +2558,14 @@
     },
     "forgot_password": {
       "link": "Nen Rekh Sekhem",
-      "email_intro": "Sesh Wat Sesh Em Aq Ba Ek. Ren Maa Sesh 6 Hab Er Wat Sesh Pen.",
+      "email_intro": "Sesh Wat Sesh Em Aq Ba Ek. Hesb Maa Sesh 6 Hab Er Wat Sesh Pen.",
       "email": "Wat Sesh",
       "email_invalid": "Wat Sesh Nen Maat",
-      "send": "Hab Ren Maa",
+      "send": "Hab Hesb Maa",
       "sending": "Em Hab…",
-      "sent_neutral": "Ren Maa Hab Seth Er Aq Ba Neb Em Wat Sesh Pen",
-      "code": "Ren Maa",
-      "code_format": "Ren Maa: Sesh 6",
+      "sent_neutral": "Hesb Maa Hab Seth Er Aq Ba Neb Em Wat Sesh Pen",
+      "code": "Hesb Maa",
+      "code_format": "Hesb Maa: Sesh 6",
       "resend": "Wehem Hab",
       "ask_hall": "Wat Sesh Pen: Nen Wehem Sekhem. Dbh Er Wesekhet Ek: Wehem Sekhem",
       "submit": "Wehem Sekhem",
@@ -2572,7 +2574,7 @@
       "no_email_link": "Nen Wat Sesh?",
       "step2_kicker": "Wehem Sekhem · 2 / 2",
       "step2_title": "Sekhem Renpi",
-      "sent_to": "Hab Er {{email}}. Ren Maa Mut Er Khet 5:00.",
+      "sent_to": "Hab Er {{email}}. Hesb Maa Mut Er Khet 5:00.",
       "expires_left": "Mut Er Khet {{time}}",
       "strength": "Wser · {{level}}. Sesh 8 Er Hry.",
       "strength_weak": "Nen Wser",
@@ -2582,15 +2584,15 @@
       "no_email_kicker": "Wehem Sekhem",
       "no_email_title": "Dbh Er Wesekhet",
       "no_email_body": "Nen Wat Sesh Em Aq Ba: Nen Wehem Sekhem Em Pen.",
-      "no_email_step_1": "Sesh Er Wesekhet Ek: Ren Ek Hena Ren Ba.",
+      "no_email_step_1": "Sesh Er Wesekhet Ek: Ren Ek Hena Ren Hesb Ba.",
       "no_email_step_2": "Wesekhet Maa Ek, Wehem Sekhem; Hab Er Ek Sekhem Tepy.",
       "no_email_note": "Nen Aq: Nen Sesh Em Pen. Dbh Ba Ky En Wesekhet Ek.",
       "back_to_login": "Wehem Er Aq",
-      "err_expired_title": "Ren Maa Mut",
+      "err_expired_title": "Hesb Maa Mut",
       "err_expired_body": "Wehem Hab. Sekhem Renpi Wenen.",
-      "err_wrong_title": "Ren Maa Nen Maat",
+      "err_wrong_title": "Hesb Maa Nen Maat",
       "err_wrong_left": "Wehem Iri {{n}}.",
-      "err_exhausted_title": "Ren Maa Nen Maat Menmen",
+      "err_exhausted_title": "Hesb Maa Nen Maat Menmen",
       "err_exhausted_body": "Nen Wenen; Wehem Hab.",
       "err_weak_title": "Sekhem Nen Wser",
       "err_weak_body": "Sesh 8 Er Hry.",
@@ -2612,7 +2614,7 @@
     "life": {
       "title": "Sesh Ek",
       "cycle": "Ankh {{cycle}}",
-      "soul_code": "Ren Ba",
+      "soul_code": "Ren Hesb Ba",
       "civilization": "Taui",
       "state": "Kheperu",
       "birth": "Mesut",
@@ -2646,8 +2648,8 @@
       "execution": "Iri",
       "birth_name": "Ren Mesut {{name}}",
       "record_count": "Sesh {{count}}",
-      "copy_code": "Senn Ren Ba",
-      "code_copied": "Ren Ba Senn Seth",
+      "copy_code": "Senn Ren Hesb Ba",
+      "code_copied": "Ren Hesb Ba Senn Seth",
       "code_copy_failed": "Nen Senn",
       "residing": "Hemes Em {{current}} · Taui Tepy {{home}}",
       "record_count_short": "Sesh {{count}}",
@@ -2718,7 +2720,7 @@
       "new_result": "Wedja Renpi"
     },
     "errors": {
-      "invalid_credentials": "Ren Ba Er Sekhem Nen Maat",
+      "invalid_credentials": "Ren Hesb Ba Er Sekhem Nen Maat",
       "initial_password_expired": "Sekhem Tepy Mut. Dbh Sab Er Wehem Sekhem",
       "rate_limited": "Aq Menmen. Wehem Er Khet",
       "invalid_old_password": "Sekhem Tepy Nen Maat",
@@ -2741,7 +2743,7 @@
       "screen_title": "Nen Aq Er Medjat",
       "screen_body": "Sesh Ek Wenen. Nen Gem Emu.",
       "section": "Aat Pen Nen Gem. Ky Wenen.",
-      "offline": "Nen Senb",
+      "offline": "Nen Em Senb",
       "sentence_in_progress": "Wetep Ek Nen Neb Seth. Dbh Wehem Mesut Em Khet Wetep"
     },
     "lexicon": {
@@ -2772,7 +2774,7 @@
     },
     "logout": {
       "title": "Per Aq?",
-      "body": "Aq Djer: Ren Ba Hena Sekhem Ek. Sekhem Tepy Mut.",
+      "body": "Aq Djer: Ren Hesb Ba Hena Sekhem Ek. Sekhem Tepy Mut.",
       "cancel": "Wenen Em Medjat"
     },
     "form_notes": {
@@ -2875,7 +2877,7 @@
       "new": "Gem Ba",
       "empty": {
         "title": "Nen Shemes Djer",
-        "body": "Ba Em Senb Medu Wa. Gem Ba Em Ren Ba."
+        "body": "Ba Em Senb Medu Wa. Gem Ba Em Ren Hesb Ba."
       },
       "hall": {
         "hint": "Sesh Er Wesekhet. Sab Weshed Em Ren-Ef.",
@@ -2897,9 +2899,9 @@
       },
       "find": {
         "title": "Gem Ba",
-        "by_code": "Em Ren Ba",
-        "code_placeholder": "Ren Ba Sesh 10",
-        "code_hint": "Sesh 10 Neb. Ren Ba Em Taui Neb; Gem Ba Neb.",
+        "by_code": "Em Ren Hesb Ba",
+        "code_placeholder": "Ren Hesb Ba Sesh 10",
+        "code_hint": "Sesh 10 Neb. Ren Hesb Ba Em Taui Neb; Gem Ba Neb.",
         "not_found": "Nen Gem.",
         "from_circle": "Em Shemsu",
         "circle_hint": "Ba Taui Pen, Em Nehes Ek Er Nehes Ek.",
@@ -2956,7 +2958,7 @@
         "chat_unavailable": "Nen Shemes Emu. Wehem Iri Er Khet.",
         "chat_not_configured": "Nen Shemes Dy.",
         "not_found": "Nen Gem.",
-        "invalid_code": "Ren Ba: Sesh 10.",
+        "invalid_code": "Ren Hesb Ba: Sesh 10.",
         "self": "Nen Sesh Er Ek Djes-Ef."
       }
     },
@@ -3073,9 +3075,9 @@
       },
       "search": {
         "title": "Hehy Ba",
-        "hint": "Ren Er Ren Ba Neb",
-        "scope": "Em {{civ}} Wa. Ren Ba: 10 Neb.",
-        "by_code": "Ren Ba Mi",
+        "hint": "Ren Er Ren Hesb Ba Neb",
+        "scope": "Em {{civ}} Wa. Ren Hesb Ba: 10 Neb.",
+        "by_code": "Ren Hesb Ba Mi",
         "count": "Ba {{n}}",
         "not_found": "Nen Gem",
         "result_note": "Ren Hena Taui Wa."
@@ -3805,21 +3807,21 @@
     "aria": "Khetem En {{court}}"
   },
   "soul_mail": {
-    "footer": "Shemes Pen Hab In Hemsu. Nen Wesheb.",
+    "footer": "Shemes Pen Hab In Hemsu. Nen Shesep Wesheb.",
     "reset_code": {
-      "title": "Ren Maa Wehem Sekhem",
-      "code_label": "Ren Maa",
-      "note": "Wenen At 5. Nen Ek: Imen.",
-      "text": "Ren Maa Ek: {{code}}\nWenen At 5. Nen Ek: Imen."
+      "title": "Wehem Sekhem · Hesb Maa",
+      "code_label": "Hesb Maa",
+      "note": "Wenen At 5. Nen Djes: Nen Iri Khet.",
+      "text": "Hesb Maa-Ek: {{code}}\nWenen At 5. Nen Djes: Nen Iri Khet."
     },
     "credential": {
-      "title": "Aq Ba",
-      "soul_code_label": "Ren Ba",
+      "title": "Aq En Ba",
+      "soul_code_label": "Ren Hesb Ba",
       "password_label": "Sekhem Tepy",
       "expires_label": "Wenen Er",
       "note_change": "Khemen Sekhem Em Aq Tepy.",
-      "note_once": "Sekhem Pen Hab Wa Djer. Mut Er Nen Gem: Sab Wehem Sekhem.",
-      "text": "Ren Ba Ek: {{soul_code}}\nSekhem Tepy: {{password}}\nWenen Er {{expires_at}}. Khemen Sekhem Em Aq Tepy.\nSekhem Pen Hab Wa Djer. Mut Er Nen Gem: Sab Wehem Sekhem."
+      "note_once": "Sekhem Pen: Hab Sep 1 Wa. Wenen Khetem Seth Ky Nen Gem: Sab En Per-Ek Wehem Sekhem.",
+      "text": "Ren Hesb Ba-Ek: {{soul_code}}\nSekhem Tepy: {{password}}\nWenen Er {{expires_at}}. Khemen Sekhem Em Aq Tepy.\nSekhem Pen: Hab Sep 1 Wa. Wenen Khetem Seth Ky Nen Gem: Sab En Per-Ek Wehem Sekhem."
     }
   },
   "officer_assist": {
