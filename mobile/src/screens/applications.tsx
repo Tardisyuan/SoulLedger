@@ -18,6 +18,7 @@ import { useToast } from "../feedback";
 import { useI18n } from "../i18n";
 import { APPLICATION_BADGES, buildFlow, formatStamp, lexiconKey, wasAppealed, type FlowStep } from "../rules";
 import { SessionContext } from "../session";
+import { space } from "../theme";
 import {
   Block,
   Button,
@@ -635,48 +636,51 @@ export function ApplicationDetailScreen({ id, landed }: { id: string; landed?: b
   );
 }
 
+const REASON_INDENT = 14 + space[2];
+
 const styles = StyleSheet.create({
   fill: { flex: 1 },
   pressed: { opacity: 0.8 },
   gap4: { marginTop: 4 },
   gap10: { marginTop: 12 },
-  cooldown: { marginTop: 6, marginLeft: 22 },
-  appRow: { flexDirection: "row", alignItems: "center", gap: 16, paddingHorizontal: GUTTER, paddingVertical: 18, borderBottomWidth: 1 },
-  stack: { gap: 22 },
+  /** Under DisabledReason's words: its icon (14) and gap (8) in from the edge. */
+  cooldown: { marginTop: 8, marginLeft: REASON_INDENT },
+  appRow: { flexDirection: "row", alignItems: "center", gap: 16, paddingHorizontal: GUTTER, paddingVertical: 16, borderBottomWidth: 1 },
+  stack: { gap: 24 },
   note: { borderLeftWidth: 2, paddingLeft: 12 },
   heading: { marginBottom: 12 },
-  headingTight: { marginBottom: 11 },
+  headingTight: { marginBottom: 12 },
   headingRow: { flexDirection: "row", alignItems: "center", flexWrap: "wrap", columnGap: 8, marginBottom: 12 },
   meta: { fontSize: 11 },
-  forms: { gap: 1 },
-  formCard: { flexDirection: "row", alignItems: "flex-start", gap: 13, paddingVertical: 15, paddingHorizontal: 16, borderLeftWidth: 2 },
+  forms: { gap: 2 },
+  formCard: { flexDirection: "row", alignItems: "flex-start", gap: 12, paddingVertical: 16, paddingHorizontal: 16, borderLeftWidth: 2 },
   dot: { marginTop: 4 },
   formName: { flexDirection: "row", alignItems: "baseline", flexWrap: "wrap", columnGap: 8 },
   formCode: { fontSize: 11, letterSpacing: 1.1 },
   statement: { marginTop: 4 },
   formTitle: { marginTop: 16 },
   landingRule: { position: "absolute", left: 0, top: 0, bottom: 0, width: 3 },
-  landingTag: { position: "absolute", top: 12, right: 12, borderWidth: 1, paddingHorizontal: 6, paddingVertical: 2 },
+  landingTag: { position: "absolute", top: 12, right: 12, borderWidth: 1, paddingHorizontal: 8, paddingVertical: 2 },
   landingTagText: { fontSize: 11, letterSpacing: 0.4 },
   badgeRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 8 },
   badgeItem: { flexShrink: 0, maxWidth: "100%" },
-  handler: { borderWidth: 1, paddingHorizontal: 12, paddingVertical: 3 },
+  handler: { borderWidth: 1, paddingHorizontal: 12, paddingVertical: 4 },
   handlerText: { letterSpacing: 0.4 },
-  residenceNote: { flexDirection: "row", gap: 9, paddingVertical: 16, borderBottomWidth: 1 },
-  nudge: { marginTop: 3 },
+  residenceNote: { flexDirection: "row", gap: 8, paddingVertical: 16, borderBottomWidth: 1 },
+  nudge: { marginTop: 4 },
   facts: { marginTop: 16 },
   step: { flexDirection: "row", columnGap: 16 },
   rail: { width: 22, alignItems: "center" },
-  stepDot: { width: 11, height: 11, marginTop: 5 },
+  stepDot: { width: 11, height: 11, marginTop: 4 },
   stepLine: { flex: 1, width: 1, marginVertical: 4 },
   stepLineDashed: { flex: 1, width: 0, marginVertical: 4, borderLeftWidth: 1, borderStyle: "dashed" },
-  stepDotLarge: { width: 16, height: 16, marginTop: 3 },
+  stepDotLarge: { width: 16, height: 16, marginTop: 4 },
   railStacked: { width: 16 },
-  terminal: { alignItems: "center", gap: 12, paddingHorizontal: 28, paddingVertical: 40 },
+  terminal: { alignItems: "center", gap: 12, paddingHorizontal: 24, paddingVertical: 32 },
   center: { textAlign: "center" },
-  stepGap: { paddingBottom: 22 },
+  stepGap: { paddingBottom: 24 },
   stepName: { fontSize: 15, lineHeight: 21 },
-  stepWhen: { fontSize: 12, marginTop: 3 },
+  stepWhen: { fontSize: 12, marginTop: 4 },
   hint: { marginTop: 8 },
   appealBlock: { gap: 16, paddingBottom: 32 },
 });

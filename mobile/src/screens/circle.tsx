@@ -741,7 +741,7 @@ function ReactionBar({ post, status, onReact }: { post: SoulPost; status: SoulSo
         </View>
       ) : null}
       <Sheet open={asking} onClose={() => setAsking(false)} edge={t.lamp} closeLabel={tr("soul_app.circle.react.lamp_cancel")}>
-        <View testID="lamp-sheet" accessibilityViewIsModal style={[styles.sheetBody, { paddingBottom: 28 + insets.bottom }]}>
+        <View testID="lamp-sheet" accessibilityViewIsModal style={[styles.sheetBody, { paddingBottom: 24 + insets.bottom }]}>
           <View style={styles.line}>
             <Icon name="lampLit" size={22} color={t.lamp} strokeWidth={1.2} />
             <Txt variant="title" style={styles.sheetTitle}>
@@ -860,7 +860,7 @@ function DeleteSheet({ target, onClose, onDeleted }: { target: { kind: "post" | 
       <View style={[styles.scrim, { backgroundColor: t.scrim }]}>
         <Pressable style={styles.fill} onPress={close} accessibilityLabel={tr("soul_app.common.cancel")} />
         {asking ? (
-          <View testID="delete-confirm-sheet" accessibilityViewIsModal style={[styles.sheet, { backgroundColor: t.s1, borderTopColor: t.negStrong, paddingBottom: 28 + insets.bottom }]}>
+          <View testID="delete-confirm-sheet" accessibilityViewIsModal style={[styles.sheet, { backgroundColor: t.s1, borderTopColor: t.negStrong, paddingBottom: 24 + insets.bottom }]}>
             <Txt variant="title" style={styles.sheetTitle}>
               {tr(target?.kind === "post" ? "soul_app.circle.delete.post_title" : "soul_app.circle.delete.comment_title")}
             </Txt>
@@ -1093,20 +1093,20 @@ const styles = StyleSheet.create({
   fill: { flex: 1 },
   center: { textAlign: "center" },
   noSpacing: { letterSpacing: 0 },
-  pad: { paddingVertical: 22 },
+  pad: { paddingVertical: 24 },
   mono: { fontSize: 11, lineHeight: 16 },
   line: { flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" },
-  meta: { marginTop: 5 },
+  meta: { marginTop: 4 },
   name: { fontSize: 15, lineHeight: 20, flexShrink: 1 },
   card: { paddingVertical: 16, borderBottomWidth: 1 },
-  cardHead: { flexDirection: "row", gap: 11, alignItems: "flex-start" },
+  cardHead: { flexDirection: "row", gap: 12, alignItems: "flex-start" },
   body: { marginTop: 12, fontSize: 15, lineHeight: 27 },
-  note: { marginTop: 12, borderWidth: 1, borderStyle: "dashed", paddingHorizontal: 11, paddingVertical: 9 },
-  cardFoot: { flexDirection: "row", alignItems: "center", gap: 12, marginTop: 13, flexWrap: "wrap" },
-  summary: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
-  chip: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1 },
+  note: { marginTop: 12, borderWidth: 1, borderStyle: "dashed", paddingHorizontal: 12, paddingVertical: 8 },
+  cardFoot: { flexDirection: "row", alignItems: "center", gap: 12, marginTop: 12, flexWrap: "wrap" },
+  summary: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  chip: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 8, paddingVertical: 4, borderWidth: 1 },
   chipCount: { fontSize: 11, lineHeight: 15 },
-  tagNeg: { borderWidth: 1, paddingHorizontal: 6, paddingVertical: 2 },
+  tagNeg: { borderWidth: 1, paddingHorizontal: 8, paddingVertical: 2 },
   tagNegText: { fontSize: 11, lineHeight: 14, letterSpacing: 0.8 },
   subTabs: { flexDirection: "row", borderBottomWidth: 1 },
   subTab: { flex: 1, minHeight: 44, alignItems: "center", justifyContent: "center", borderBottomWidth: 2 },
@@ -1114,38 +1114,38 @@ const styles = StyleSheet.create({
   entry: { paddingVertical: 12, borderBottomWidth: 1 },
   entryBox: { minHeight: 40, borderWidth: 1, justifyContent: "center", paddingHorizontal: 12 },
   entryText: { fontSize: 15 },
-  banner: { paddingVertical: 16, borderBottomWidth: 1, borderLeftWidth: 3, gap: 5 },
+  banner: { paddingVertical: 16, borderBottomWidth: 1, borderLeftWidth: 3, gap: 4 },
   empty: { paddingVertical: 48, paddingHorizontal: 32, alignItems: "stretch", gap: 4 },
   more: { alignItems: "center", paddingVertical: 20 },
-  form: { paddingVertical: 18 },
-  postInput: { minHeight: 150, borderWidth: 1, padding: 13, fontSize: 15, lineHeight: 27, textAlignVertical: "top" },
-  counter: { alignItems: "flex-end", marginTop: 6 },
+  form: { paddingVertical: 16 },
+  postInput: { minHeight: 150, borderWidth: 1, padding: 12, fontSize: 15, lineHeight: 27, textAlignVertical: "top" },
+  counter: { alignItems: "flex-end", marginTop: 8 },
   formLabel: { marginTop: 20, marginBottom: 12 },
-  radios: { gap: 1, borderWidth: 1 },
-  radio: { flexDirection: "row", gap: 12, alignItems: "flex-start", paddingHorizontal: 16, paddingVertical: 13, borderLeftWidth: 2 },
+  radios: { gap: 2, borderWidth: 1 },
+  radio: { flexDirection: "row", gap: 12, alignItems: "flex-start", paddingHorizontal: 16, paddingVertical: 12, borderLeftWidth: 2 },
   dot: { marginTop: 4 },
   scope: { marginTop: 12, marginBottom: 20 },
-  lock: { flexDirection: "row", gap: 9, alignItems: "flex-start", borderWidth: 1, borderStyle: "dashed", paddingHorizontal: 13, paddingVertical: 12 },
-  nudge: { marginTop: 3 },
-  lockUntil: { marginTop: 6 },
+  lock: { flexDirection: "row", gap: 8, alignItems: "flex-start", borderWidth: 1, borderStyle: "dashed", paddingHorizontal: 12, paddingVertical: 12 },
+  nudge: { marginTop: 4 },
+  lockUntil: { marginTop: 8 },
   bar: { paddingVertical: 12, borderBottomWidth: 1 },
   lampPill: { borderWidth: 2, borderRadius: radius.pill },
-  reaction: { minWidth: 44, minHeight: 40, paddingHorizontal: 12, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, borderWidth: 1 },
-  lampNote: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 9 },
+  reaction: { minWidth: 44, minHeight: 40, paddingHorizontal: 12, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, borderWidth: 1 },
+  lampNote: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 8 },
   scrim: { flex: 1 },
-  sheet: { borderTopWidth: 1, paddingTop: 22, paddingHorizontal: 20, gap: 12 },
+  sheet: { borderTopWidth: 1, paddingTop: 24, paddingHorizontal: 20, gap: 12 },
   /** In a `Sheet`: the edge and the ground are the sheet's; its drag handle sits above. */
   sheetBody: { paddingTop: 8, paddingHorizontal: 20, gap: 12 },
   sheetTitle: { flexShrink: 1 },
   lampButton: { minHeight: 46, alignItems: "center", justifyContent: "center", marginTop: 8 },
   lampButtonText: { fontSize: 15, letterSpacing: 0.6 },
   commentsHead: { paddingTop: 16, paddingBottom: 8 },
-  comment: { flexDirection: "row", gap: 12, paddingVertical: 13, borderBottomWidth: 1 },
+  comment: { flexDirection: "row", gap: 12, paddingVertical: 12, borderBottomWidth: 1 },
   commentName: { fontSize: 13, lineHeight: 18 },
-  commentBody: { marginTop: 5, fontSize: 15, lineHeight: 24 },
+  commentBody: { marginTop: 4, fontSize: 15, lineHeight: 24 },
   commentMore: { width: 32, height: 32, alignItems: "center", justifyContent: "center" },
-  replyTo: { marginTop: 3 },
-  replyButton: { marginTop: 6, alignSelf: "flex-start", paddingVertical: 4 },
+  replyTo: { marginTop: 4 },
+  replyButton: { marginTop: 8, alignSelf: "flex-start", paddingVertical: 4 },
   replying: { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 2, paddingBottom: 8 },
   menu: { borderTopWidth: 1 },
   menuRow: { minHeight: 54, flexDirection: "row", alignItems: "center", paddingHorizontal: 20, borderBottomWidth: 1 },
