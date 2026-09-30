@@ -8,10 +8,18 @@
  *   答 seal and a footnote. Only what the soul wrote is in the serif.
  *   The only motion is opacity (the fade in, the breathing seal), and
  *   reduce-motion stills it.
+ *
+ * Streaming (canvas「问一问 · 流式输出」): three dots while waiting (「还在查……」
+ * after 20 s), then the text as it arrives — each fragment fades in over 120 ms,
+ * a static ▍ at the end — with progressive Markdown (core's `assistBlocks`).
+ * The send button turns into 「■ 停止」. Scrolled up, the view stops following
+ * and offers 「↓ 最新」. Reduced motion: no fade, no cursor, still dots, and a
+ * whole paragraph at a time.
  */
+import { assistBlocks, assistShownText } from "@soulledger/core/api/assist-stream";
 import { assistAnswerLocale, isEmptyAnswer, type AssistConversation, type AssistMessage, type AssistScreen } from "@soulledger/core/api/soul-assist";
-import { useEffect, useState, type ReactNode } from "react";
-import { KeyboardAvoidingView, Modal, Pressable, ScrollView, StyleSheet, TextInput, View } from "react-native";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { KeyboardAvoidingView, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AskGlyph, useAssist, type Assist } from "./assist";
@@ -19,13 +27,16 @@ import { Icon } from "./emblems";
 import { quoteFamily } from "./fonts";
 import { useI18n } from "./i18n";
 import { useCurrentHall } from "./screens/letters";
-import { Button, Loader, Skeleton, Txt, useLayout, useReducedMotion, useTheme } from "./ui";
+import { Button, Skeleton, Txt, useLayout, useReducedMotion, useTheme } from "./ui";
 
 /** Canvas 1a 一: the page's header stays visible above the sheet. */
 const PAGE_PEEK = 56;
-/** 1e: the second line and 「取消」 after this long. */
-const SECOND_LINE_MS = 6000;
 const MAX_QUESTION = 1000;
+/** A2: a new fragment fades in over 120 ms, in three steps of its colour's alpha (nested text has no opacity). */
+const FADE_STEP_MS = 40;
+const FADE_ALPHA = ["55", "AA", ""];
+/** A1: the three dots brighten one after another, 400 ms each. */
+const DOT_MS = 400;
 
 const SCREEN_TITLE: Record<AssistScreen, string> = {
   applications: "soul_app.tabs.applications",
@@ -188,6 +199,9 @@ function Conversation({ assist }: { assist: Assist }) {
   const { t: tr, locale } = useI18n();
   const { thread, pending, failure } = assist;
   const messages = thread.messages;
+  // A4: follow new text while at the bottom; scrolled up, stop and offer 「↓ 最新」.
+  const scroller = useRef<ScrollView>(null);
+  const [follow, setFollow] = useState(true);
 
   if (failure?.kind === "not_configured") return <NotConfigured assist={assist} />;
   if (!messages) return <Skeleton lines={4} testID="assist-loading" />;
@@ -197,7 +211,18 @@ function Conversation({ assist }: { assist: Assist }) {
   const suggestions = SUGGESTIONS[assistAnswerLocale(locale)][thread.screen] ?? [];
   return (
     <>
-      <ScrollView style={styles.fill} contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        ref={scroller}
+        testID="assist-scroll"
+        style={styles.fill}
+        contentContainerStyle={styles.body}
+        keyboardShouldPersistTaps="handled"
+        scrollEventThrottle={100}
+        onScroll={({ nativeEvent: n }) => setFollow(n.contentSize.height - n.contentOffset.y - n.layoutMeasurement.height <= 8)}
+        onContentSizeChange={() => {
+          if (follow) scroller.current?.scrollToEnd({ animated: false });
+        }}
+      >
         {fresh ? (
           <View testID="assist-empty" style={styles.gap}>
             <Txt variant="caption" tone="subtle">
@@ -216,16 +241,37 @@ function Conversation({ assist }: { assist: Assist }) {
             ))}
           </View>
         ) : null}
-        {messages.map((m) => (m.role === "user" ? <Question key={m.id} text={m.content} meta={clock(m.created_at)} /> : <Answer key={m.id} message={m} assist={assist} />))}
+        {messages.map((m) =>
+          m.role === "user" ? (
+            <Question key={m.id} text={m.content} meta={clock(m.created_at)} />
+          ) : (
+            <Answer key={m.id} message={m} assist={assist} onRetry={m.id === assist.retryable ? assist.retryInterrupted : undefined} />
+          )
+        )}
         {pending ? (
           <>
             <Question text={pending.question} meta={`${clock(pending.at)} · ${tr("soul_app.assist.sent")}`} />
-            <Waiting onCancel={assist.cancel} />
+            {pending.text ? <Streaming text={pending.text} /> : <Waiting slow={pending.slow} />}
           </>
         ) : null}
         {failure?.kind === "unanswered" ? <Unanswered failure={failure} assist={assist} /> : null}
         {failure?.kind === "limited" ? <Limited retryAt={failure.retryAt} /> : null}
       </ScrollView>
+      {!follow && pending ? (
+        <Pressable
+          testID="assist-jump"
+          accessibilityRole="button"
+          onPress={() => {
+            setFollow(true);
+            scroller.current?.scrollToEnd({ animated: false });
+          }}
+          style={[styles.jump, { borderColor: t.hair2, backgroundColor: t.s0 }]}
+        >
+          <Txt variant="label" tone="muted">
+            {tr("soul_app.assist.jump_latest")}
+          </Txt>
+        </Pressable>
+      ) : null}
       <Composer assist={assist} />
     </>
   );
@@ -247,7 +293,7 @@ function Question({ text, meta }: { text: string; meta: string }) {
 }
 
 /** 答 seal, time, the answer full width in the interface face, and the footnote. 1i: egy reads it as English. */
-function Answer({ message, assist }: { message: AssistMessage; assist: Assist }) {
+function Answer({ message, assist, onRetry }: { message: AssistMessage; assist: Assist; onRetry?: () => void }) {
   const t = useTheme();
   const { t: tr, locale } = useI18n();
   const english = assistAnswerLocale(locale) === "en";
@@ -266,9 +312,21 @@ function Answer({ message, assist }: { message: AssistMessage; assist: Assist })
           {clock(message.created_at)}
         </Txt>
       </View>
-      <Txt testID="assist-answer-text" variant="bodyLg" accessibilityLanguage={english ? "en" : "zh-Hans"} style={styles.answerText}>
-        {message.content}
-      </Txt>
+      <AnswerText testID="assist-answer-text" text={message.content} english={english} />
+      {message.interruption === "stopped" ? (
+        // A6: not a failure — small ink3, no retry.
+        <Txt testID="assist-stopped" variant="label" tone="subtle">
+          {tr("soul_app.assist.stopped")}
+        </Txt>
+      ) : message.interruption === "interrupted" ? (
+        // A7: the warning colour (not the cool rose), and 「重试」 on the latest answer only (A9).
+        <View testID="assist-interrupted" style={[styles.interrupted, { borderColor: t.warn, backgroundColor: t.warnBg }]}>
+          <Txt variant="label" style={[styles.fill, { color: t.warn }]}>
+            {`! ${tr("soul_app.assist.interrupted")}`}
+          </Txt>
+          {onRetry ? <HeadButton testID="assist-retry-interrupted" label={tr("soul_app.common.retry")} onPress={onRetry} /> : null}
+        </View>
+      ) : null}
       {isEmptyAnswer(message.content) ? <LettersCard assist={assist} /> : null}
       <Txt variant="label" tone="subtle">
         {tr("soul_app.assist.footnote")}
@@ -277,30 +335,105 @@ function Answer({ message, assist }: { message: AssistMessage; assist: Assist })
   );
 }
 
-/** 1e: breathing seal and one line; after 6 s a second line and 「取消」. */
-function Waiting({ onCancel }: { onCancel: () => void }) {
-  const { t: tr } = useI18n();
-  const [long, setLong] = useState(false);
+/**
+ * Progressive Markdown (A3): each line a block — a list item, or a paragraph — and `**bold**` once closed.
+ * While `streaming`, the newest fragment fades in (A2) and a static ▍ in ink3 sits at the end; reduced
+ * motion shows whole paragraphs only, with neither (A11). `testID` is on the whole text, in one string.
+ */
+function AnswerText({ text, english, streaming = false, testID }: { text: string; english: boolean; streaming?: boolean; testID?: string }) {
+  const t = useTheme();
+  const reduced = useReducedMotion();
+  const shown = assistShownText(text, streaming, reduced);
+  const blocks = assistBlocks(shown, streaming);
+  const [seen, setSeen] = useState({ length: shown.length, fresh: 0 });
+  if (seen.length !== shown.length) setSeen({ length: shown.length, fresh: Math.max(0, shown.length - seen.length) });
+  const fresh = streaming && !reduced ? seen.fresh : 0;
+  const last = blocks.length - 1;
+  return (
+    <View testID={testID} accessibilityLabel={shown} accessibilityLanguage={english ? "en" : "zh-Hans"} style={styles.gap4}>
+      {blocks.map((b, i) => (
+        <View key={i} style={[b.kind === "li" ? styles.item : null, b.gap ? styles.paraGap : null]}>
+          {b.kind === "li" ? (
+            <Txt variant="bodyLg" tone="subtle" importantForAccessibility="no">
+              {b.marker}
+            </Txt>
+          ) : null}
+          <Txt variant="bodyLg" style={styles.answerText}>
+            {b.spans.map((sp, j) => {
+              const tail = i === last && j === b.spans.length - 1 ? Math.min(fresh, sp.text.length) : 0;
+              return (
+                <Text key={j} style={sp.bold ? styles.bold : undefined}>
+                  {tail ? sp.text.slice(0, sp.text.length - tail) : sp.text}
+                  {tail ? <FadeIn key={shown.length} text={sp.text.slice(sp.text.length - tail)} color={t.ink} /> : null}
+                </Text>
+              );
+            })}
+            {i === last && streaming && !reduced ? (
+              <Text testID="assist-cursor" style={{ color: t.inkSubtle }} accessibilityElementsHidden importantForAccessibility="no">
+                ▍
+              </Text>
+            ) : null}
+          </Txt>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+/** One fragment's 120 ms fade, as its colour's alpha in three steps. */
+function FadeIn({ text, color }: { text: string; color: string }) {
+  const [step, setStep] = useState(0);
   useEffect(() => {
-    const timer = setTimeout(() => setLong(true), SECOND_LINE_MS);
+    if (step >= FADE_ALPHA.length - 1) return;
+    const timer = setTimeout(() => setStep((n) => n + 1), FADE_STEP_MS);
     return () => clearTimeout(timer);
-  }, []);
+  }, [step]);
+  return <Text style={{ color: `${color}${FADE_ALPHA[step]}` }}>{text}</Text>;
+}
+
+/** The answer being written (A2, A10): busy for assistive tech; it is announced once, when done. */
+function Streaming({ text }: { text: string }) {
+  const t = useTheme();
+  const { locale } = useI18n();
+  return (
+    <View testID="assist-streaming" style={styles.answer} accessibilityState={{ busy: true }}>
+      <View style={styles.answerHead}>
+        <AskGlyph color={t.plaque} glyph="答" />
+      </View>
+      <AnswerText text={text} streaming english={assistAnswerLocale(locale) === "en"} />
+    </View>
+  );
+}
+
+/** A1: three dots brightening in turn (still under reduced motion), and one line; 「还在查……」 after 20 s. */
+function Waiting({ slow }: { slow: boolean }) {
+  const { t: tr } = useI18n();
   return (
     <View testID="assist-waiting" style={styles.answer}>
       <View style={styles.answerHead}>
-        <Loader size={20} />
-        <Txt variant="body" tone="muted" style={styles.fill}>
-          {tr("soul_app.assist.waiting")}
+        <Dots />
+        <Txt testID="assist-waiting-text" variant="body" tone="muted" style={styles.fill}>
+          {tr(slow ? "soul_app.assist.still_searching" : "soul_app.assist.waiting")}
         </Txt>
       </View>
-      {long ? (
-        <View style={styles.row}>
-          <Txt testID="assist-waiting-long" variant="caption" tone="subtle" style={styles.fill}>
-            {tr("soul_app.assist.waiting_long")}
-          </Txt>
-          <HeadButton testID="assist-cancel" label={tr("soul_app.common.cancel")} onPress={onCancel} />
-        </View>
-      ) : null}
+    </View>
+  );
+}
+
+function Dots() {
+  const t = useTheme();
+  const reduced = useReducedMotion();
+  const [lit, setLit] = useState(0);
+  useEffect(() => {
+    if (reduced) return;
+    const timer = setInterval(() => setLit((n) => (n + 1) % 3), DOT_MS);
+    return () => clearInterval(timer);
+  }, [reduced]);
+  return (
+    <View testID="assist-dots" style={styles.dots} importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
+      {[0, 1, 2].map((i) => (
+        <View key={i} style={[styles.dot, { backgroundColor: t.inkSubtle, opacity: reduced || i === lit ? 1 : 0.3 }]} />
+      ))}
     </View>
   );
 }
@@ -404,15 +537,15 @@ function Intro({ onAck }: { onAck: () => void }) {
   );
 }
 
-/** The box. One question at a time: locked while waiting (1e). */
+/** The box. It stays open while an answer is written (A5); only the button waits: 「■ 停止」 until done. */
 function Composer({ assist }: { assist: Assist }) {
   const t = useTheme();
   const { t: tr } = useI18n();
-  const locked = !!assist.pending;
-  const ready = !locked && assist.draft.trim().length > 0;
+  const busy = !!assist.pending;
+  const ready = !busy && assist.draft.trim().length > 0;
   return (
     <View style={[styles.composer, { borderTopColor: t.hair }]}>
-      {locked ? (
+      {busy ? (
         <Txt testID="assist-locked" variant="label" tone="subtle">
           {tr("soul_app.assist.wait_lock")}
         </Txt>
@@ -421,7 +554,6 @@ function Composer({ assist }: { assist: Assist }) {
         <TextInput
           testID="assist-input"
           accessibilityLabel={tr("soul_app.assist.placeholder")}
-          editable={!locked}
           value={assist.draft}
           onChangeText={assist.setDraft}
           placeholder={tr("soul_app.assist.placeholder")}
@@ -431,17 +563,29 @@ function Composer({ assist }: { assist: Assist }) {
           cursorColor={t.ink}
           style={[styles.input, { color: t.ink, backgroundColor: t.s1, borderColor: t.hair, fontFamily: quoteFamily(assist.draft) }]}
         />
-        <Pressable
-          testID="assist-send"
-          accessibilityRole="button"
-          accessibilityLabel={tr("soul_app.assist.send")}
-          accessibilityState={{ disabled: !ready }}
-          disabled={!ready}
-          onPress={() => assist.ask(assist.draft)}
-          style={[styles.send, { borderColor: ready ? t.ink : t.hair }]}
-        >
-          <Icon name="send" size={18} color={ready ? t.ink : t.inkSubtle} strokeWidth={1.4} />
-        </Pressable>
+        {busy ? (
+          <Pressable
+            testID="assist-stop"
+            accessibilityRole="button"
+            accessibilityLabel={tr("soul_app.assist.stop_aria")}
+            onPress={assist.stop}
+            style={({ pressed }) => [styles.stop, { borderColor: t.ink }, pressed && { backgroundColor: t.s2 }]}
+          >
+            <Txt variant="label">{`■ ${tr("soul_app.assist.stop")}`}</Txt>
+          </Pressable>
+        ) : (
+          <Pressable
+            testID="assist-send"
+            accessibilityRole="button"
+            accessibilityLabel={tr("soul_app.assist.send")}
+            accessibilityState={{ disabled: !ready }}
+            disabled={!ready}
+            onPress={() => assist.ask(assist.draft)}
+            style={[styles.send, { borderColor: ready ? t.ink : t.hair }]}
+          >
+            <Icon name="send" size={18} color={ready ? t.ink : t.inkSubtle} strokeWidth={1.4} />
+          </Pressable>
+        )}
       </View>
     </View>
   );
@@ -580,6 +724,15 @@ const styles = StyleSheet.create({
   answer: { gap: 8 },
   answerHead: { flexDirection: "row", alignItems: "center", gap: 8 },
   answerText: { flexShrink: 1 },
+  gap4: { gap: 4 },
+  paraGap: { marginTop: 8 },
+  item: { flexDirection: "row", gap: 8 },
+  bold: { fontWeight: "600" },
+  dots: { flexDirection: "row", gap: 2, width: 20, justifyContent: "center" },
+  dot: { width: 4, height: 4 },
+  interrupted: { flexDirection: "row", alignItems: "center", borderWidth: 1, paddingLeft: 8, gap: 8 },
+  stop: { minHeight: 44, borderWidth: 1, paddingHorizontal: 12, alignItems: "center", justifyContent: "center" },
+  jump: { position: "absolute", right: 12, bottom: 72, borderWidth: 1, paddingHorizontal: 8, paddingVertical: 4 },
   en: { borderWidth: 1, borderStyle: "dotted", paddingHorizontal: 4 },
   enText: { fontSize: 10, lineHeight: 14, letterSpacing: 0.6 },
   card: { borderWidth: 1, padding: 16, gap: 12 },
