@@ -10,7 +10,7 @@ import { useReducedMotionDurations } from "@/src/hooks/useReducedMotionDurations
 import { useDrawerA11y } from "@/src/components/layout/useDrawerA11y";
 import { isMenuPathActive } from "@/src/lib/menuPath";
 import { menuGlossParts } from "@/src/lib/menuI18n";
-import { pillarIsWide } from "@/src/lib/pillar";
+import { pillarIsWide } from "@soulledger/core/domain/pillar";
 import { MOTION_EASINGS } from "@/lib/motion";
 
 /**
@@ -21,7 +21,7 @@ import { MOTION_EASINGS } from "@/lib/motion";
  * - 底色 pillar 四文明共用;只有**当前项**进匾色(onMain 字)。当前项的色块是当前项的子元素,
  *   用 motion 的 layoutId 从旧项移到新项(交互与动效第 2 轮 §三 3 推荐的方案 B:项高不固定时
  *   —— egy 横排、分组展开 —— 也落得准)。减少动态效果时时长为 0,色块直接出现。
- * - 任一项超过 4 个汉字或 8 个拉丁字符 → 整根横排 88(`src/lib/pillar.ts`)。
+ * - 任一项超过 4 个汉字或 8 个拉丁字符 → 整根横排 88(`@soulledger/core/domain/pillar`)。
  * - 立柱里的焦点环用 `.focus-ring-pillar`(onMain、内缩 4):ink 环在近黑的立柱上会消失。
  * - 内容超出高度时整根纵向滚动;当前项在进入页面时滚进视野。
  * - 宽度 < 768 时立柱收成底栏(`BottomBar`),规则见那里。
