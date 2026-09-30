@@ -22,20 +22,6 @@ const TYPED_NAME_DIALOGS = [
   "src/components/admin/NameConfirmDialog.tsx",
 ];
 
-/**
- * 管理页的调用点由 v2/web-p3b 同期收回(cd5c6880 已清掉),本分支上它们还是旧样子。
- * **集成后这张表应当为空** —— 下面第二条断言会在它们清掉之后逼着删掉这几行。
- */
-const PENDING_ON_P3B = [
-  "app/dispatch/[id]/page.tsx",
-  "app/menus/page.tsx",
-  "app/recycle-bin/page.tsx",
-  "app/workflow/page.tsx",
-  "src/components/permissions/DeleteConfirmModal.tsx",
-  "src/components/permissions/RolesSection.tsx",
-  "src/components/workflow/page/DeleteTemplateModal.tsx",
-];
-
 function walk(dir: string, out: string[] = []): string[] {
   for (const name of readdirSync(dir)) {
     if (SKIP.has(name)) continue;
@@ -63,13 +49,8 @@ describe("solid danger buttons live only in type-the-name dialogs", () => {
   });
 
   it("no other file asks for variant=\"danger\"", () => {
-    const allowed = new Set([...TYPED_NAME_DIALOGS, ...PENDING_ON_P3B]);
+    const allowed = new Set(TYPED_NAME_DIALOGS);
     expect(users.filter((f) => !allowed.has(f))).toEqual([]);
-  });
-
-  it("the pending list only names files that still need it", () => {
-    // Once p3b's branch lands, these files stop matching and the list must shrink with them.
-    expect(PENDING_ON_P3B.filter((f) => !users.includes(f))).toEqual([]);
   });
 
   it("ConfirmDialog never asks for a name, so its default danger renders as secondary", () => {
