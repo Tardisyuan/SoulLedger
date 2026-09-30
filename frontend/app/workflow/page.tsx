@@ -302,7 +302,7 @@ export default function WorkflowPage() {
                               <RequirePermission permissions="workflow.update">
                                 <Button
                                   type="button"
-                                  variant="primary"
+                                  variant="secondary"
                                   onClick={() => {
                                     setEditingTemplateId(String(tmpl.id));
                                     setTab("editor");
@@ -314,7 +314,7 @@ export default function WorkflowPage() {
                               <RequirePermission permissions="workflow.delete">
                                 <Button
                                   type="button"
-                                  variant="danger"
+                                  variant="secondary"
                                   onClick={() => {
                                     setConfirmingTemplate(tmpl);
                                     setConfirmModalOpen(true);

@@ -337,7 +337,7 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
                 {isProposed && (
                   <>
                     <RequirePermission permissions="dispatch.reject">
-                      <Button type="button" variant="danger" onClick={() => setShowRejectModal(true)}>
+                      <Button type="button" variant="secondary" onClick={() => setShowRejectModal(true)}>
                         {t("dispatch.reject")}
                       </Button>
                     </RequirePermission>
@@ -426,7 +426,7 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
             </Button>
             <Button
               type="button"
-              variant="danger"
+              variant="secondary"
               onClick={() => rejectMutation.mutate()}
               loading={rejectMutation.isPending}
             >

@@ -389,7 +389,8 @@
       "copied": "Copied ✓"
     },
     "field_required": "This field is required",
-    "dismiss": "Dismiss"
+    "dismiss": "Dismiss",
+    "type_name_to_confirm": "Type “{{name}}” to confirm"
   },
   "pagination": {
     "info": "Page {{page}} / {{total}} ({{count}} records)",
