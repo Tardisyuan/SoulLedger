@@ -24,7 +24,8 @@ import { KIND_GLYPH, ROLE_GLYPH, type Branch, type NodeRole } from "@/src/compon
  * already module-scope (a fresh object each render would defeat this
  * entirely), so the memo was the only piece missing.
  *
- * A square box on the canvas, 1 px block border, no fill of its own: the five
+ * A square box on the canvas, 1 px ink3 border (补足 C15; a branch ◇ node is
+ * dashed), no fill of its own: the five
  * per-type border colours are gone, because 规范 v1 keeps colour for state and
  * the type is already printed in the header. What the header adds is the
  * mono glyph of the node's ROLE in the flow (▷ entry, □ step, ◇ branch,
@@ -77,8 +78,8 @@ function EditableNodeComponent({
       data-role={role}
       data-issues={issues > 0 ? issues : undefined}
       className={`relative min-w-[180px] px-3 py-2 border bg-[oklch(var(--color-canvas))] text-[oklch(var(--color-ink))] cursor-pointer transition-[outline-color] duration-state ${
-        issues > 0 ? "border-[oklch(var(--color-danger))]" : "border-[oklch(var(--color-block))]"
-      } ${selected ? "outline-2 outline-offset-2 outline-[oklch(var(--color-focus))]" : ""} ${
+        issues > 0 ? "border-[oklch(var(--color-danger))]" : "border-[oklch(var(--color-ink-subtle))]"
+      } ${role === "branch" ? "border-dashed" : ""} ${selected ? "outline-2 outline-offset-2 outline-[oklch(var(--color-focus))]" : ""} ${
         dragging ? "outline-1 outline-[oklch(var(--color-ink))]" : ""
       }`}
     >
