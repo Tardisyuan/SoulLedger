@@ -6,7 +6,8 @@
  * 字体的函数;C14 写的就是字数。汉字按 `\p{Script=Han}` 数,其余(字母、空格、标点)
  * 按拉丁字符数 —— 「Sesh Nefer Isfet」是 16 个,「组织与领域」是 5 个汉字,都改横排。
  *
- * C14 要求与 App 底栏共用一个判断函数;App 在 `mobile/`,这份目前只有 Web 在用。
+ * C14 要求与 App 底栏共用一个判断函数,所以它在 core:Web 立柱(`frontend/src/components/layout/Pillar.tsx`)
+ * 与 App 底栏(`mobile/src/chrome.tsx` TabBar —— 宽时四格一起改成两行 11)都从这里引入。
  */
 const HAN = /\p{Script=Han}/u;
 

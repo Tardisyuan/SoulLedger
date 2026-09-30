@@ -31,9 +31,9 @@ export function LanguageSwitch() {
             accessibilityRole="button"
             accessibilityState={{ selected: on }}
             onPress={() => setLocale(l)}
-            style={[styles.language, { borderColor: on ? t.accent : "transparent" }]}
+            style={[styles.language, { borderColor: on ? t.ink : "transparent" }]}
           >
-            <Txt variant="label" tone={on ? "accent" : "subtle"} style={styles.languageText}>
+            <Txt variant="label" tone={on ? "ink" : "subtle"} style={styles.languageText}>
               {LOCALE_LABELS[l]}
             </Txt>
           </Pressable>
@@ -226,7 +226,7 @@ export function ExpiryBox({ expiresAt, now }: { expiresAt: string | null; now: n
   const expiry = expiryOf(expiresAt, now);
   if (!expiry) return null;
   const warn = expiry.warning;
-  const hours = <Txt variant="value" tone={warn ? "negInk" : "subtle"} style={styles.inlineMono}>{String(expiry.hoursLeft)}</Txt>;
+  const hours = <Txt variant="value" tone={warn ? "warn" : "subtle"} style={styles.inlineMono}>{String(expiry.hoursLeft)}</Txt>;
   return (
     <View
       testID="expiry-box"
@@ -234,20 +234,20 @@ export function ExpiryBox({ expiresAt, now }: { expiresAt: string | null; now: n
       style={[
         styles.expiry,
         warn
-          ? { borderColor: theme.negStrong, backgroundColor: theme.negBg }
-          : { borderColor: theme.accent, backgroundColor: theme.s1 },
+          ? { borderColor: theme.warn, backgroundColor: theme.warnBg }
+          : { borderColor: theme.inkSubtle, backgroundColor: theme.s1 },
       ]}
     >
-      <Txt variant="label" tone={warn ? "negInk" : "muted"}>
+      <Txt variant="label" tone={warn ? "warn" : "muted"}>
         {t("soul_app.change_password.expires_label")}
       </Txt>
-      <Txt variant="value" tone={warn ? "negInk" : "accent"} style={styles.expiryValue}>
+      <Txt variant="value" tone={warn ? "warn" : "ink"} style={styles.expiryValue}>
         {formatStamp(expiresAt)}
       </Txt>
       <Interp
         testID="expiry-remaining"
         variant="label"
-        tone={warn ? "negInk" : "subtle"}
+        tone={warn ? "warn" : "subtle"}
         style={styles.noSpacing}
         text={t(
           expiry.expired
@@ -344,12 +344,12 @@ export function ChangePasswordScreen() {
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
-  brand: { alignItems: "center", paddingTop: 44, paddingBottom: 36 },
-  appName: { marginTop: 22, letterSpacing: 1.6 },
+  brand: { alignItems: "center", paddingTop: 48, paddingBottom: 32 },
+  appName: { marginTop: 24, letterSpacing: 1.6 },
   wordmark: { marginTop: 8, fontSize: 12, letterSpacing: 2.2 },
-  login: { borderTopWidth: 1, marginHorizontal: 28, paddingTop: 28 },
+  login: { borderTopWidth: 1, marginHorizontal: 24, paddingTop: 24 },
   lead: { marginTop: 8 },
-  gapTop: { marginTop: 18 },
+  gapTop: { marginTop: 16 },
   fields: { marginTop: 20, gap: 16 },
   dimmed: { opacity: 0.6 },
   submit: { marginTop: 24 },
@@ -357,13 +357,13 @@ const styles = StyleSheet.create({
   underline: { textDecorationLine: "underline" },
   resetNotice: { gap: 4, borderWidth: 1, borderLeftWidth: 3, paddingVertical: 12, paddingHorizontal: 12 },
   resetTitle: { fontFamily: family.ui[600], fontSize: 15, lineHeight: 20 },
-  footer: { borderTopWidth: 1, marginHorizontal: 28, marginTop: 28, paddingTop: 24, paddingBottom: 30 },
+  footer: { borderTopWidth: 1, marginHorizontal: 24, marginTop: 24, paddingTop: 24, paddingBottom: 32 },
   languages: { flexDirection: "row", justifyContent: "center", flexWrap: "wrap" },
   languagesStacked: { flexDirection: "column", alignItems: "stretch" },
   language: { minWidth: 56, minHeight: 44, borderWidth: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 12 },
   languageText: { fontSize: 12, letterSpacing: 0 },
-  stack: { gap: 18, paddingHorizontal: GUTTER + 8 },
-  expiry: { borderWidth: 1, borderLeftWidth: 3, paddingVertical: 12, paddingHorizontal: 16, gap: 5 },
+  stack: { gap: 16, paddingHorizontal: GUTTER + 8 },
+  expiry: { borderWidth: 1, borderLeftWidth: 3, paddingVertical: 12, paddingHorizontal: 16, gap: 4 },
   expiryValue: { fontSize: 15, lineHeight: 22, fontFamily: family.mono[500] },
   inlineMono: { fontSize: 11 },
   noSpacing: { letterSpacing: 0 },

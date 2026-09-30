@@ -38,6 +38,7 @@ import { Sheet, useToast } from "../feedback";
 import { quoteFamily } from "../fonts";
 import { useI18n } from "../i18n";
 import { formatStamp } from "../rules";
+import { radius } from "../theme";
 import {
   Button,
   Interp,
@@ -53,6 +54,7 @@ import {
   useReloadOnRefocus,
   useRemote,
   useTheme,
+  shade,
 } from "../ui";
 import type { AppStackParams } from "./applications";
 import { ComposeMediaTray, MediaGrid, MediaViewer, pickImages, uploadBody, type PickedImage } from "./circleMedia";
@@ -122,7 +124,7 @@ function ReactionMark({ type, size, color }: { type: SoulReactionType; size: num
   return <Txt style={{ fontSize: size, lineHeight: size + 3, color, width: size + 1, textAlign: "center" }}>{REACTIONS.find((r) => r.type === type)?.glyph}</Txt>;
 }
 
-/** The five counts, non-zero only; the lamp in gold, mine in the accent. */
+/** The five counts, non-zero only; the lamp in gold, mine in ink. */
 function ReactionSummary({ post }: { post: SoulPost }) {
   const t = useTheme();
   const shown = REACTIONS.filter((r) => post.reaction_counts[r.type] > 0);
@@ -131,12 +133,12 @@ function ReactionSummary({ post }: { post: SoulPost }) {
     <View style={styles.summary}>
       {shown.map((r) => {
         const lamp = r.type === "ETERNAL_LIGHT";
-        const color = lamp ? t.lamp : post.my_reaction === r.type ? t.accent : t.inkMuted;
+        const color = lamp ? t.lamp : post.my_reaction === r.type ? t.ink : t.inkMuted;
         return (
           <View
             key={r.type}
             testID={`count-${r.type}`}
-            style={[styles.chip, { borderColor: lamp ? t.lamp : post.my_reaction === r.type ? t.accent : t.hair2, backgroundColor: lamp ? t.lampBg : "transparent" }]}
+            style={[styles.chip, { borderColor: lamp ? t.lamp : post.my_reaction === r.type ? t.ink : t.hair2, backgroundColor: lamp ? t.lampBg : "transparent" }]}
           >
             <ReactionMark type={r.type} size={12} color={color} />
             <Txt variant="value" style={[styles.chipCount, { color }]}>
@@ -201,7 +203,7 @@ export function PostCard({ post, onPress, onAuthor, full }: { post: SoulPost; on
           <View style={[styles.line, styles.meta]}>
             <Mono>{formatStamp(post.create_time) ?? ""}</Mono>
             <Tag text={tr(visLabel(post.visibility))} tone="quiet" />
-            {pending ? <Tag testID={`pending-${post.id}`} text={tr("soul_app.circle.post.pending")} tone="accent" /> : null}
+            {pending ? <Tag testID={`pending-${post.id}`} text={tr("soul_app.circle.post.pending")} tone="waiting" /> : null}
             {hidden ? (
               <View style={[styles.tagNeg, { borderColor: t.neg }]}>
                 <Txt style={[styles.tagNegText, { color: t.neg }]}>{tr("soul_app.circle.post.hidden")}</Txt>
@@ -465,7 +467,7 @@ export function CircleScreen() {
               accessibilityRole="tab"
               accessibilityState={{ selected: on }}
               onPress={() => setFollowing(f)}
-              style={[styles.subTab, { borderBottomColor: on ? t.mark : "transparent" }]}
+              style={[styles.subTab, { borderBottomColor: on ? t.ink : "transparent" }]}
             >
               <Txt variant="label" tone={on ? "ink" : "subtle"} style={styles.subTabText}>
                 {tr(f ? "soul_app.circle.feed.following" : "soul_app.circle.feed.tenant")}
@@ -487,7 +489,7 @@ export function CircleScreen() {
         </View>
       </Pressable>
       {justPending ? (
-        <View testID="pending-banner" style={[styles.banner, { paddingHorizontal: gutter, borderBottomColor: t.hair, borderLeftColor: t.accent, backgroundColor: t.s1 }]}>
+        <View testID="pending-banner" style={[styles.banner, { paddingHorizontal: gutter, borderBottomColor: t.hair, borderLeftColor: t.ink, backgroundColor: t.s1 }]}>
           <Txt variant="bodyLg">{tr("soul_app.circle.compose.pending_title")}</Txt>
           <Txt variant="caption" tone="muted">
             {tr("soul_app.circle.compose.pending_body")}
@@ -645,7 +647,7 @@ export function ComposePostScreen() {
                 accessibilityRole="radio"
                 accessibilityState={{ checked: on }}
                 onPress={() => setVisibility(o.value)}
-                style={[styles.radio, { backgroundColor: t.s0, borderLeftColor: on ? t.mark : "transparent" }]}
+                style={[styles.radio, { backgroundColor: t.s0, borderLeftColor: on ? t.ink : "transparent" }]}
               >
                 <View style={styles.dot}>
                   <RadioMark on={on} />
@@ -703,7 +705,7 @@ function ReactionBar({ post, status, onReact }: { post: SoulPost; status: SoulSo
         {REACTIONS.map((r) => {
           const lamp = r.type === "ETERNAL_LIGHT";
           const on = post.my_reaction === r.type;
-          const color = on ? (lamp ? t.lamp : t.accent) : t.inkSubtle;
+          const color = on ? (lamp ? t.lamp : t.ink) : t.inkSubtle;
           return (
             <Pressable
               key={r.type}
@@ -716,8 +718,10 @@ function ReactionBar({ post, status, onReact }: { post: SoulPost; status: SoulSo
               style={[
                 styles.reaction,
                 on
-                  ? { borderColor: lamp ? t.lamp : t.accent, borderStyle: "solid", backgroundColor: lamp ? t.lampBg : "transparent" }
+                  ? { borderColor: lamp ? t.lamp : t.ink, borderStyle: "solid", backgroundColor: lamp ? t.lampBg : "transparent" }
                   : { borderColor: t.hair2, borderStyle: lit ? "dotted" : "solid", opacity: lit ? 0.5 : 1 },
+                // 补足 C17: the lamp is last and the one pill — 2px in its gold, lit or not.
+                lamp && [styles.lampPill, { borderColor: t.lamp }],
               ]}
             >
               {lamp ? <Icon name={on ? "lampLit" : "lamp"} size={13} color={color} strokeWidth={1.2} /> : <ReactionMark type={r.type} size={13} color={color} />}
@@ -737,7 +741,7 @@ function ReactionBar({ post, status, onReact }: { post: SoulPost; status: SoulSo
         </View>
       ) : null}
       <Sheet open={asking} onClose={() => setAsking(false)} edge={t.lamp} closeLabel={tr("soul_app.circle.react.lamp_cancel")}>
-        <View testID="lamp-sheet" accessibilityViewIsModal style={[styles.sheetBody, { paddingBottom: 28 + insets.bottom }]}>
+        <View testID="lamp-sheet" accessibilityViewIsModal style={[styles.sheetBody, { paddingBottom: 24 + insets.bottom }]}>
           <View style={styles.line}>
             <Icon name="lampLit" size={22} color={t.lamp} strokeWidth={1.2} />
             <Txt variant="title" style={styles.sheetTitle}>
@@ -795,7 +799,7 @@ function CommentRow({
             {c.author.display_name}
           </Txt>
           <Mono>{formatStamp(c.create_time) ?? ""}</Mono>
-          {c.moderation_status === "PENDING" ? <Tag testID={`comment-pending-${c.id}`} text={tr("soul_app.circle.comment.pending")} tone="accent" /> : null}
+          {c.moderation_status === "PENDING" ? <Tag testID={`comment-pending-${c.id}`} text={tr("soul_app.circle.comment.pending")} tone="waiting" /> : null}
         </View>
         {parent ? (
           <Txt testID={`reply-to-${c.id}`} variant="caption" tone="subtle" style={styles.replyTo}>
@@ -856,7 +860,7 @@ function DeleteSheet({ target, onClose, onDeleted }: { target: { kind: "post" | 
       <View style={[styles.scrim, { backgroundColor: t.scrim }]}>
         <Pressable style={styles.fill} onPress={close} accessibilityLabel={tr("soul_app.common.cancel")} />
         {asking ? (
-          <View testID="delete-confirm-sheet" accessibilityViewIsModal style={[styles.sheet, { backgroundColor: t.s1, borderTopColor: t.negStrong, paddingBottom: 28 + insets.bottom }]}>
+          <View testID="delete-confirm-sheet" accessibilityViewIsModal style={[styles.sheet, { backgroundColor: t.s1, borderTopColor: t.negStrong, paddingBottom: 24 + insets.bottom }]}>
             <Txt variant="title" style={styles.sheetTitle}>
               {tr(target?.kind === "post" ? "soul_app.circle.delete.post_title" : "soul_app.circle.delete.comment_title")}
             </Txt>
@@ -1071,9 +1075,9 @@ export function PostScreen({ id }: { id: string }) {
                   accessibilityState={{ disabled: !draft.trim() || sending || !status.data }}
                   disabled={!draft.trim() || sending || !status.data}
                   onPress={press}
-                  style={({ pressed }) => [styles.send, { backgroundColor: pressed ? t.mark : t.accent, opacity: draft.trim() ? 1 : 0.6 }]}
+                  style={({ pressed }) => [styles.send, { backgroundColor: pressed ? shade(t.plaque) : t.plaque, opacity: draft.trim() ? 1 : 0.6 }]}
                 >
-                  <Txt style={[styles.sendText, { color: t.onAccent }]}>{tr("soul_app.circle.comment.send")}</Txt>
+                  <Txt style={[styles.sendText, { color: t.onPlaque }]}>{tr("soul_app.circle.comment.send")}</Txt>
                 </Pressable>
               </View>
             </>
@@ -1089,20 +1093,20 @@ const styles = StyleSheet.create({
   fill: { flex: 1 },
   center: { textAlign: "center" },
   noSpacing: { letterSpacing: 0 },
-  pad: { paddingVertical: 22 },
+  pad: { paddingVertical: 24 },
   mono: { fontSize: 11, lineHeight: 16 },
   line: { flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" },
-  meta: { marginTop: 5 },
+  meta: { marginTop: 4 },
   name: { fontSize: 15, lineHeight: 20, flexShrink: 1 },
   card: { paddingVertical: 16, borderBottomWidth: 1 },
-  cardHead: { flexDirection: "row", gap: 11, alignItems: "flex-start" },
+  cardHead: { flexDirection: "row", gap: 12, alignItems: "flex-start" },
   body: { marginTop: 12, fontSize: 15, lineHeight: 27 },
-  note: { marginTop: 12, borderWidth: 1, borderStyle: "dashed", paddingHorizontal: 11, paddingVertical: 9 },
-  cardFoot: { flexDirection: "row", alignItems: "center", gap: 12, marginTop: 13, flexWrap: "wrap" },
-  summary: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
-  chip: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1 },
+  note: { marginTop: 12, borderWidth: 1, borderStyle: "dashed", paddingHorizontal: 12, paddingVertical: 8 },
+  cardFoot: { flexDirection: "row", alignItems: "center", gap: 12, marginTop: 12, flexWrap: "wrap" },
+  summary: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  chip: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 8, paddingVertical: 4, borderWidth: 1 },
   chipCount: { fontSize: 11, lineHeight: 15 },
-  tagNeg: { borderWidth: 1, paddingHorizontal: 6, paddingVertical: 2 },
+  tagNeg: { borderWidth: 1, paddingHorizontal: 8, paddingVertical: 2 },
   tagNegText: { fontSize: 11, lineHeight: 14, letterSpacing: 0.8 },
   subTabs: { flexDirection: "row", borderBottomWidth: 1 },
   subTab: { flex: 1, minHeight: 44, alignItems: "center", justifyContent: "center", borderBottomWidth: 2 },
@@ -1110,37 +1114,38 @@ const styles = StyleSheet.create({
   entry: { paddingVertical: 12, borderBottomWidth: 1 },
   entryBox: { minHeight: 40, borderWidth: 1, justifyContent: "center", paddingHorizontal: 12 },
   entryText: { fontSize: 15 },
-  banner: { paddingVertical: 16, borderBottomWidth: 1, borderLeftWidth: 3, gap: 5 },
+  banner: { paddingVertical: 16, borderBottomWidth: 1, borderLeftWidth: 3, gap: 4 },
   empty: { paddingVertical: 48, paddingHorizontal: 32, alignItems: "stretch", gap: 4 },
   more: { alignItems: "center", paddingVertical: 20 },
-  form: { paddingVertical: 18 },
-  postInput: { minHeight: 150, borderWidth: 1, padding: 13, fontSize: 15, lineHeight: 27, textAlignVertical: "top" },
-  counter: { alignItems: "flex-end", marginTop: 6 },
+  form: { paddingVertical: 16 },
+  postInput: { minHeight: 150, borderWidth: 1, padding: 12, fontSize: 15, lineHeight: 27, textAlignVertical: "top" },
+  counter: { alignItems: "flex-end", marginTop: 8 },
   formLabel: { marginTop: 20, marginBottom: 12 },
-  radios: { gap: 1, borderWidth: 1 },
-  radio: { flexDirection: "row", gap: 12, alignItems: "flex-start", paddingHorizontal: 16, paddingVertical: 13, borderLeftWidth: 2 },
+  radios: { gap: 2, borderWidth: 1 },
+  radio: { flexDirection: "row", gap: 12, alignItems: "flex-start", paddingHorizontal: 16, paddingVertical: 12, borderLeftWidth: 2 },
   dot: { marginTop: 4 },
   scope: { marginTop: 12, marginBottom: 20 },
-  lock: { flexDirection: "row", gap: 9, alignItems: "flex-start", borderWidth: 1, borderStyle: "dashed", paddingHorizontal: 13, paddingVertical: 12 },
-  nudge: { marginTop: 3 },
-  lockUntil: { marginTop: 6 },
+  lock: { flexDirection: "row", gap: 8, alignItems: "flex-start", borderWidth: 1, borderStyle: "dashed", paddingHorizontal: 12, paddingVertical: 12 },
+  nudge: { marginTop: 4 },
+  lockUntil: { marginTop: 8 },
   bar: { paddingVertical: 12, borderBottomWidth: 1 },
-  reaction: { minWidth: 44, minHeight: 40, paddingHorizontal: 12, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, borderWidth: 1 },
-  lampNote: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 9 },
+  lampPill: { borderWidth: 2, borderRadius: radius.pill },
+  reaction: { minWidth: 44, minHeight: 40, paddingHorizontal: 12, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, borderWidth: 1 },
+  lampNote: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 8 },
   scrim: { flex: 1 },
-  sheet: { borderTopWidth: 1, paddingTop: 22, paddingHorizontal: 20, gap: 12 },
+  sheet: { borderTopWidth: 1, paddingTop: 24, paddingHorizontal: 20, gap: 12 },
   /** In a `Sheet`: the edge and the ground are the sheet's; its drag handle sits above. */
   sheetBody: { paddingTop: 8, paddingHorizontal: 20, gap: 12 },
   sheetTitle: { flexShrink: 1 },
   lampButton: { minHeight: 46, alignItems: "center", justifyContent: "center", marginTop: 8 },
   lampButtonText: { fontSize: 15, letterSpacing: 0.6 },
   commentsHead: { paddingTop: 16, paddingBottom: 8 },
-  comment: { flexDirection: "row", gap: 12, paddingVertical: 13, borderBottomWidth: 1 },
+  comment: { flexDirection: "row", gap: 12, paddingVertical: 12, borderBottomWidth: 1 },
   commentName: { fontSize: 13, lineHeight: 18 },
-  commentBody: { marginTop: 5, fontSize: 15, lineHeight: 24 },
+  commentBody: { marginTop: 4, fontSize: 15, lineHeight: 24 },
   commentMore: { width: 32, height: 32, alignItems: "center", justifyContent: "center" },
-  replyTo: { marginTop: 3 },
-  replyButton: { marginTop: 6, alignSelf: "flex-start", paddingVertical: 4 },
+  replyTo: { marginTop: 4 },
+  replyButton: { marginTop: 8, alignSelf: "flex-start", paddingVertical: 4 },
   replying: { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 2, paddingBottom: 8 },
   menu: { borderTopWidth: 1 },
   menuRow: { minHeight: 54, flexDirection: "row", alignItems: "center", paddingHorizontal: 20, borderBottomWidth: 1 },

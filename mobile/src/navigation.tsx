@@ -66,10 +66,11 @@ function MainTabs() {
     <Tabs.Navigator
       tabBar={(props) => <TabBar {...props} />}
       screenOptions={({ route, navigation }) => ({
+        // v2 补足 B11 / C15: every tab's root wears the full plaque; its actions sit where the account icon was.
         header: () =>
           route.name === "Letters" ? (
             // Chat handoff 1e: iOS "new" is a framed plus in the bar; Android has the FAB, and search here.
-            <AppHeader
+            <PlaqueHeader
               title={t(TAB_TITLES[route.name])}
               action={{
                 icon: ANDROID ? "search" : "plus",
@@ -81,18 +82,15 @@ function MainTabs() {
             />
           ) : route.name === "Circle" ? (
             // 1a: find people and my page; settings stay on the life tab.
-            <AppHeader
+            <PlaqueHeader
               title={t(TAB_TITLES[route.name])}
               action={[
                 { icon: "search", label: t("soul_app.circle.search.title"), testID: "circle-search-open", onPress: () => navigation.navigate("CircleSearch") },
                 { icon: "person", label: t("soul_app.circle.me.title"), testID: "circle-me", onPress: () => navigation.navigate("MyCircle") },
               ]}
             />
-          ) : route.name === "Life" ? (
-            // v2 样板页: the life tab wears the plaque (本世页 is the App's specimen page).
-            <PlaqueHeader title={t(TAB_TITLES[route.name])} onAccount={() => navigation.navigate("Settings")} />
           ) : (
-            <AppHeader title={t(TAB_TITLES[route.name])} onAccount={() => navigation.navigate("Settings")} />
+            <PlaqueHeader title={t(TAB_TITLES[route.name])} onAccount={() => navigation.navigate("Settings")} />
           ),
       })}
     >
@@ -240,7 +238,7 @@ export function RootNavigator() {
   const base = scheme === "light" ? DefaultTheme : DarkTheme;
   const navTheme: NavTheme = {
     ...base,
-    colors: { ...base.colors, primary: theme.accent, background: theme.s0, card: theme.s0, text: theme.ink, border: theme.hair },
+    colors: { ...base.colors, primary: theme.ink, background: theme.s0, card: theme.s0, text: theme.ink, border: theme.hair },
   };
 
   let body;
