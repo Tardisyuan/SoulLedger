@@ -15,6 +15,7 @@ src/__tests__/accessTokenNeverBecomesACookie.test.ts
 src/__tests__/arrowNotDoubled.test.ts
 src/__tests__/chartColourContract.test.ts
 src/__tests__/civilizationMapCoverage.test.ts
+src/__tests__/creditsOssDrift.test.ts
 src/__tests__/cssTokenReferenceContract.test.ts
 src/__tests__/dangerButtonPlacement.test.ts
 src/__tests__/dataGridToneContract.test.ts

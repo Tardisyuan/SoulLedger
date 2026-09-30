@@ -153,6 +153,7 @@ const COLLECTED_FILES = [
   "civilizationMapCoverage.test.ts",
   "civilizationSigilContract.test.ts",
   "connectionRecovery.test.tsx",
+  "creditsOssDrift.test.ts",
   "cssTokenReferenceContract.test.ts",
   "ledgerPaletteContract.test.ts",
   "dispatchApproveConfirms.test.tsx",
