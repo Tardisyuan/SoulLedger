@@ -3738,5 +3738,23 @@
   },
   "seal": {
     "aria": "{{court}}之印"
+  },
+  "soul_mail": {
+    "footer": "这封信由系统发出，不接收回复。",
+    "reset_code": {
+      "title": "密码重置验证码",
+      "code_label": "验证码",
+      "note": "5 分钟内有效。如非本人操作,请忽略本邮件。",
+      "text": "您的验证码: {{code}}\n5 分钟内有效。如非本人操作,请忽略本邮件。"
+    },
+    "credential": {
+      "title": "灵魂账号",
+      "soul_code_label": "灵魂编号",
+      "password_label": "初始密码",
+      "expires_label": "有效期至",
+      "note_change": "首次登录后须修改密码。",
+      "note_once": "该密码只发送这一次;过期或遗失请联系所属文明的官员重置。",
+      "text": "您的灵魂编号:{{soul_code}}\n初始密码:{{password}}\n有效期至 {{expires_at}}。首次登录后须修改密码。\n该密码只发送这一次;过期或遗失请联系所属文明的官员重置。"
+    }
   }
 }
