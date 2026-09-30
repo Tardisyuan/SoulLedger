@@ -523,6 +523,8 @@
     --seal-line-small: url("/v2/svg/seal-cn-line-small.svg");
     --seal-scan: image-set(url("/v2/textures/scan-cnseal-1x.png") 1x, url("/v2/textures/scan-cnseal-2x.png") 2x);
     --section: url("/v2/svg/section-cn.svg");
+    --band-tex: image-set(url("/v2/textures/paper-1x.png") 1x, url("/v2/textures/paper-2x.png") 2x);
+    --band-tex-w: image-set(url("/v2/textures/paper-w-1x.png") 1x, url("/v2/textures/paper-w-2x.png") 2x);
     --font-plaque: var(--font-ma-shan-zheng), var(--font-serif);
     --font-seal: var(--font-lxgw-seal), var(--font-serif);
   }
@@ -535,6 +537,8 @@
     --seal-line-small: url("/v2/svg/seal-eu-line-small.svg");
     --seal-scan: image-set(url("/v2/textures/scan-wax-1x.png") 1x, url("/v2/textures/scan-wax-2x.png") 2x);
     --section: url("/v2/svg/section-eu.svg");
+    --band-tex: image-set(url("/v2/textures/paper-1x.png") 1x, url("/v2/textures/paper-2x.png") 2x);
+    --band-tex-w: image-set(url("/v2/textures/paper-w-1x.png") 1x, url("/v2/textures/paper-w-2x.png") 2x);
     --font-plaque: var(--font-unifraktur), var(--font-serif);
     --font-seal: var(--font-unifraktur), var(--font-serif);
   }
@@ -547,6 +551,8 @@
     --seal-line-small: url("/v2/svg/seal-eg-line-small.svg");
     --seal-scan: image-set(url("/v2/textures/scan-clay-1x.png") 1x, url("/v2/textures/scan-clay-2x.png") 2x);
     --section: url("/v2/svg/section-eg.svg");
+    --band-tex: image-set(url("/v2/textures/papyrus-1x.png") 1x, url("/v2/textures/papyrus-2x.png") 2x);
+    --band-tex-w: image-set(url("/v2/textures/papyrus-w-1x.png") 1x, url("/v2/textures/papyrus-w-2x.png") 2x);
     --font-plaque: var(--font-josefin-slab), var(--font-serif);
     --font-seal: var(--font-hieroglyphs), var(--font-serif);
   }
@@ -559,6 +565,8 @@
     --seal-line-small: url("/v2/svg/seal-gr-line-small.svg");
     --seal-scan: image-set(url("/v2/textures/scan-cyl-1x.png") 1x, url("/v2/textures/scan-cyl-2x.png") 2x);
     --section: url("/v2/svg/section-gr.svg");
+    --band-tex: image-set(url("/v2/textures/marble-1x.png") 1x, url("/v2/textures/marble-2x.png") 2x);
+    --band-tex-w: image-set(url("/v2/textures/marble-w-1x.png") 1x, url("/v2/textures/marble-w-2x.png") 2x);
     --font-plaque: var(--font-cinzel), var(--font-serif);
     --font-seal: var(--font-gfs-didot), var(--font-serif);
   }
@@ -572,6 +580,23 @@
     html {
       --bottom-bar: 56px;
     }
+  }
+
+  /* 匾纹样带的质感(规范 v2 §四「质感」):只铺在纹样带这 22px 里,盖住纹样与匾色底;
+     地府 / 欧洲纸、埃及纸莎草、希腊大理石,128px 平铺。深色档(默认)用 *-w —— 只有白颗粒,
+     60% 已烤进 PNG 的 alpha,这里不再乘透明度。中性皮没有 --band-tex,于是不画。 */
+  .plaque-tex {
+    position: relative;
+  }
+  .plaque-tex::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: var(--band-tex-w, none) left top / 128px 128px repeat;
+  }
+  .light .plaque-tex::after {
+    background-image: var(--band-tex, none);
   }
 
   /* 匾纹样带 · 480×22,横向平铺;≤ 393 用 compact(去点缀,埃及再去莲花扇形)。 */
