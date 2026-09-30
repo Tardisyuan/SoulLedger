@@ -101,7 +101,8 @@ export function ConnectionBanner() {
       className="fixed inset-x-0 top-0 z-drawer flex h-7 items-center gap-3 border-b border-[oklch(var(--color-line))] bg-[oklch(var(--color-warning-tint))] px-4 text-xs text-[oklch(var(--color-warning))] md:px-8"
     >
       <span aria-hidden="true">!</span>
-      <span className="flex-1 truncate">{t(`connection.${status}`)}</span>
+      {/* Fixed 28 px: a long egy / en reason is cut, and readable in full on hover. */}
+      <span className="flex-1 truncate" title={t(`connection.${status}`)}>{t(`connection.${status}`)}</span>
       {canRetry ? (
         <button type="button" onClick={reconnect} className="underline underline-offset-2">
           {t("connection.retry")}
