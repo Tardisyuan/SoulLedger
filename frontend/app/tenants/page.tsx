@@ -10,11 +10,16 @@ import { Badge } from "@/src/components/ui/Badge";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
 import { RequireAdmin } from "@/src/components/rbac/RequirePermission";
 import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
+import { Button } from "@/src/components/ui/Button";
+import { SealGlyphsDialog } from "@/src/components/tenants/SealGlyphsDialog";
+import { DEFAULT_SEAL_GLYPHS, type SealCiv } from "@/src/components/plaque/Seal";
+import { civSkinOf } from "@/src/lib/civSkin";
 
 function TenantsPageContent() {
   const { t } = useI18n();
   const { user } = useTenant();
   const [page, setPage] = useState(1);
+  const [editingSeal, setEditingSeal] = useState<Tenant | null>(null);
 
   // tenantsApi.list() (lib/api/tenants.ts) doesn't forward a `page` param, so this
   // calls the shared `api` client directly to reach `/tenants/?page=`.
@@ -50,6 +55,8 @@ function TenantsPageContent() {
           { key: "display_name", header: t("menus.name") },
           { key: "code", header: t("tenants.code") || "Code" },
           { key: "status", header: t("menus.status") },
+          { key: "seal_glyphs", header: t("tenants.seal.column") },
+          { key: "actions", header: t("users.actions"), align: "right" },
         ]}
         data={tenants}
         isLoading={isLoading}
@@ -68,6 +75,14 @@ function TenantsPageContent() {
                 {tenant.is_active ? t("tenants.active") : t("tenants.inactive")}
               </Badge>
             </td>
+            <td className="px-4 py-3">
+              <SealGlyphsCell tenant={tenant} />
+            </td>
+            <td className="px-4 py-3 text-right">
+              <Button type="button" variant="ghost" size="sm" onClick={() => setEditingSeal(tenant)}>
+                {t("tenants.seal.edit")}
+              </Button>
+            </td>
           </>
         )}
         emptyMessage={t("tenants.no_tenants")}
@@ -76,10 +91,30 @@ function TenantsPageContent() {
         totalCount={count}
         onPageChange={setPage}
       />
+      {/* 印字(补足 A6):只有管理员能改,这一页整页已在 RequireAdmin 后面。
+          key 让每次打开都从这一行的现值起步,而不是上一次输入的残留。 */}
+      {editingSeal ? (
+        <SealGlyphsDialog key={editingSeal.code} tenant={editingSeal} onClose={() => setEditingSeal(null)} />
+      ) : null}
     </PageShell>
   );
 }
 
+/** 印字一栏:配了就写配的字;没配写「默认「冥」」,淡色 —— 不配不是空,是文明默认。 */
+function SealGlyphsCell({ tenant }: { tenant: Tenant }) {
+  const { t } = useI18n();
+  const glyphs = tenant.seal_glyphs ?? [];
+  if (glyphs.length > 0) {
+    return <span className="text-[oklch(var(--color-ink))]">{glyphs.join(" ")}</span>;
+  }
+  const skin = civSkinOf(tenant.code);
+  const fallback = skin in DEFAULT_SEAL_GLYPHS ? DEFAULT_SEAL_GLYPHS[skin as SealCiv].join("") : null;
+  return (
+    <span className="text-xs text-[oklch(var(--color-ink-subtle))]">
+      {fallback ? t("tenants.seal.default", { glyph: fallback }) : "—"}
+    </span>
+  );
+}
 
 /* `RequireAdmin`,不是 `RequirePermission permissions="ADMIN"` —— 后者把角色名当
    码名用,只因为 `hasPermission` 对 ADMIN 短路才碰巧成立(见 RequirePermission.tsx

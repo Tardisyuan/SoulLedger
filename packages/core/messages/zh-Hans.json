@@ -2251,7 +2251,18 @@
     "subtitle": "各文明体系的租户配置",
     "list": "租户列表",
     "no_tenants": "暂无租户",
-    "code": "编码"
+    "code": "编码",
+    "seal": {
+      "column": "印字",
+      "default": "默认「{{glyph}}」",
+      "edit": "改印字",
+      "title": "{{name}} · 印字",
+      "hint_one": "一个字;留空用文明默认「{{glyph}}」。印文不翻译。",
+      "hint_two": "最多两个字,竖排;留空用文明默认「{{glyph}}」。印文不翻译。",
+      "preview": "预览",
+      "saved": "印字已保存",
+      "save_failed": "没能保存印字"
+    }
   },
   "table": {
     "empty": "暂无数据",

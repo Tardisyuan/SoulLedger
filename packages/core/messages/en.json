@@ -2251,7 +2251,18 @@
     "subtitle": "Tenant configuration per civilization",
     "list": "Tenant list",
     "no_tenants": "No tenants",
-    "code": "Code"
+    "code": "Code",
+    "seal": {
+      "column": "Seal glyphs",
+      "default": "Default “{{glyph}}”",
+      "edit": "Edit seal glyphs",
+      "title": "{{name}} · seal glyphs",
+      "hint_one": "One glyph; leave empty for the civilization default “{{glyph}}”. Seal glyphs are not translated.",
+      "hint_two": "Up to two glyphs, stacked; leave empty for the civilization default “{{glyph}}”. Seal glyphs are not translated.",
+      "preview": "Preview",
+      "saved": "Seal glyphs saved",
+      "save_failed": "Could not save the seal glyphs"
+    }
   },
   "table": {
     "empty": "No data",
