@@ -47,6 +47,7 @@ import {
   type ViewStyle,
   useWindowDimensions,
 } from "react-native";
+import Reanimated, { Easing as REasing, FadeOut, Keyframe } from "react-native-reanimated";
 import { SafeAreaView, type Edge } from "react-native-safe-area-context";
 
 import { Emblem, Hero, Icon, LedgerUnreachable } from "./emblems";
@@ -130,7 +131,8 @@ export const TYPE = {
   body: { fontSize: 13, lineHeight: 20, fontFamily: family.ui[400] },
   bodyLg: { fontSize: 15, lineHeight: 24, fontFamily: family.ui[500] },
   label: { fontSize: 12, lineHeight: 18, fontFamily: family.ui[500], letterSpacing: 1 },
-  section: { fontSize: 13, lineHeight: 20, fontFamily: family.ui[600], letterSpacing: 1.75 },
+  /** 补足 B11: a section's title, 15 / 600 on its 48pt row. */
+  section: { fontSize: 15, lineHeight: 24, fontFamily: family.ui[600] },
   caption: { fontSize: 12, lineHeight: 18, fontFamily: family.ui[400] },
   value: { fontSize: 13, lineHeight: 20, fontFamily: family.mono[400] },
   valueLg: { fontSize: 28, lineHeight: 36, fontFamily: family.mono[500] },
@@ -287,32 +289,59 @@ export function Block({
 }
 
 /**
+ * 交互与动效 第 2 轮 4b: a section's body appears — opacity 0 → 1, 4pt down into place, over
+ * `sectionIn` (base 200) — and goes over `sectionOut` (fast 120). Its height changes at
+ * once, never animated (no layout jump). A zero duration (reduce motion) is no animation.
+ */
+export function sectionTransitions(inMs: number, outMs: number) {
+  return {
+    entering: inMs
+      ? new Keyframe({
+          0: { opacity: 0, transform: [{ translateY: -4 }] },
+          100: { opacity: 1, transform: [{ translateY: 0 }], easing: REasing.bezier(0, 0, 0.2, 1) },
+        }).duration(inMs)
+      : undefined,
+    exiting: outMs ? FadeOut.duration(outMs) : undefined,
+  };
+}
+
+/**
  * A titled part of a screen. With `onToggle` its header is a disclosure — a
- * button whose accessibility state says expanded or not, and nothing else.
+ * button whose accessibility state says expanded or not, and nothing else. Its body
+ * moves only when the soul toggles it: a section open on arrival just is.
+ * `highlighted`: the block a push landed on — s1 ground and a 3pt ink rule down its left.
  */
 export function Section({
   title,
   count,
+  countTestID,
   open = true,
   onToggle,
+  highlighted,
+  onLayout,
   children,
   testID,
 }: {
   title: string;
   count?: string;
+  countTestID?: string;
   open?: boolean;
   onToggle?: () => void;
+  highlighted?: boolean;
+  onLayout?: (e: LayoutChangeEvent) => void;
   children: ReactNode;
   testID?: string;
 }) {
   const t = useTheme();
   const { gutter } = useLayout();
+  const { sectionIn, sectionOut } = useReducedMotionDurations();
+  const [toggled, setToggled] = useState(false);
   const pad = { paddingHorizontal: gutter };
   const header = (
     <>
       <Txt variant="section">{title}</Txt>
       {count ? (
-        <Txt variant="value" tone="subtle" style={styles.count}>
+        <Txt testID={countTestID} variant="value" tone="subtle" style={styles.count}>
           {count}
         </Txt>
       ) : null}
@@ -324,14 +353,25 @@ export function Section({
       ) : null}
     </>
   );
+  const motion = toggled ? sectionTransitions(sectionIn, sectionOut) : { entering: undefined, exiting: undefined };
   return (
-    <View testID={testID} style={{ borderBottomWidth: 1, borderBottomColor: t.hair }}>
+    <View
+      testID={testID}
+      onLayout={onLayout}
+      style={[{ borderBottomWidth: 1, borderBottomColor: t.hair }, highlighted && { backgroundColor: t.s1 }]}
+    >
+      {highlighted ? (
+        <View testID={testID ? `${testID}-rule` : undefined} pointerEvents="none" style={[styles.sectionRule, { backgroundColor: t.ink }]} />
+      ) : null}
       {onToggle ? (
         <Pressable
           testID={testID ? `${testID}-toggle` : undefined}
           accessibilityRole="button"
           accessibilityState={{ expanded: open }}
-          onPress={onToggle}
+          onPress={() => {
+            setToggled(true);
+            onToggle();
+          }}
           style={({ pressed }) => [styles.sectionHeader, pad, pressed && styles.pressed]}
         >
           {header}
@@ -339,7 +379,11 @@ export function Section({
       ) : (
         <View style={[styles.sectionHeader, pad]}>{header}</View>
       )}
-      {open ? <View style={[styles.sectionBody, pad]}>{children}</View> : null}
+      {open ? (
+        <Reanimated.View testID={testID ? `${testID}-body` : undefined} entering={motion.entering} exiting={motion.exiting} style={[styles.sectionBody, pad]}>
+          {children}
+        </Reanimated.View>
+      ) : null}
     </View>
   );
 }
@@ -981,7 +1025,8 @@ export const styles = StyleSheet.create({
   pressed: { opacity: 0.8 },
   noSpacing: { letterSpacing: 0 },
   block: { paddingHorizontal: GUTTER, paddingVertical: GUTTER },
-  count: { marginLeft: space[3] },
+  count: { marginLeft: space[3], fontSize: 11, lineHeight: 16 },
+  sectionRule: { position: "absolute", left: 0, top: 0, bottom: 0, width: 3 },
   // B11: a section's title row is 48 high.
   sectionHeader: { minHeight: 48, flexDirection: "row", alignItems: "center", paddingHorizontal: GUTTER, paddingVertical: space[3] },
   sectionBody: { paddingHorizontal: GUTTER, paddingBottom: space[4] },

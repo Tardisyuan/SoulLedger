@@ -26,7 +26,7 @@ jest.unmock("../coldStart");
 // expo-font's registry, as the native side keeps it: a name is loaded once loadAsync for it
 // has resolved, and not before. `__state.fail` makes the next load reject, as a missing file would.
 jest.mock("expo-font", () => {
-  const actual = jest.requireActual("expo-font");
+  const actual = jest.requireActual<object>("expo-font");
   const loaded = new Set();
   const state = { fail: false };
   return {
@@ -212,7 +212,8 @@ describe("the tab bar (补足 B11 / C14)", () => {
     const routes = ["Life", "Applications", "Letters", "Circle"].map((name) => ({ key: `${name}-k`, name }));
     const descriptors = Object.fromEntries(routes.map((r, i) => [r.key, { options: { title: titles[i] } }]));
     const navigation = { emit: () => ({ defaultPrevented: false }), navigate: jest.fn() };
-    return <TabBar {...({ state: { index, routes }, descriptors, navigation, insets: {} } as never)} />;
+    const props = { state: { index, routes }, descriptors, navigation, insets: {} } as unknown as Parameters<typeof TabBar>[0];
+    return <TabBar {...props} />;
   };
   const label = (name: string) => flat(screen.getByTestId(`tab-${name}-label`));
 

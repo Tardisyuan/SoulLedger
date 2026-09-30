@@ -17,12 +17,13 @@ import {
   type SentenceStationStatus,
 } from "@soulledger/core/api/soul";
 import { useNavigation, type NavigationProp } from "@react-navigation/native";
-import { useEffect, type ReactNode } from "react";
-import { Pressable, StyleSheet, View, type LayoutChangeEvent } from "react-native";
+import { useEffect, useState, type ReactNode } from "react";
+import { Pressable, StyleSheet, View } from "react-native";
 import Svg, { Line } from "react-native-svg";
 
 import { Emblem, Node } from "../emblems";
 import { useI18n } from "../i18n";
+import { termServed } from "../rules";
 import { civKeyOf } from "../theme";
 import {
   Button,
@@ -30,6 +31,7 @@ import {
   GUTTER,
   Screen,
   ScreenError,
+  Section,
   Skeleton,
   SmallButton,
   Txt,
@@ -234,28 +236,6 @@ function Axis({ plan }: { plan: MeSentencePlan }) {
   );
 }
 
-/** The 3px mark rule down the section's left — "the block to read on this page" — and, on a landing, the tag. */
-function Ruled({
-  landed,
-  children,
-  testID,
-  onLayout,
-}: {
-  landed: boolean;
-  children: ReactNode;
-  testID?: string;
-  onLayout?: (e: LayoutChangeEvent) => void;
-}) {
-  const theme = useTheme();
-  const { gutter } = useLayout();
-  return (
-    <View testID={testID} onLayout={onLayout} style={[styles.ruled, { paddingHorizontal: gutter, borderBottomColor: theme.hair }, landed && { backgroundColor: theme.s1 }]}>
-      <View testID={landed ? "sentence-landing-rule" : undefined} pointerEvents="none" style={[styles.rule, { backgroundColor: theme.mark }]} />
-      {children}
-    </View>
-  );
-}
-
 function ApplyRow({ plan }: { plan: MeSentencePlan }) {
   const { t } = useI18n();
   const navigation = useNavigation<NavigationProp<AppStackParams>>();
@@ -264,8 +244,9 @@ function ApplyRow({ plan }: { plan: MeSentencePlan }) {
 }
 
 /**
- * 1b: on the life page, between judgments and dispositions. One axis, the
- * current station in full; the rest behind 「全部」.
+ * 补足 B11: the fifth of the life page's six folding sections. One axis, the current
+ * station in full, and — the page's one status colour — how much of its term is served;
+ * the rest behind 「全部」. A push landing opens it, whatever the soul folded.
  */
 export type SentenceRemote = ReturnType<typeof useSentencePlan>;
 
@@ -285,15 +266,38 @@ export function useSentencePlan({ landing, reloadKey }: { landing?: SentenceLand
   return remote;
 }
 
+/** B11: the served share of the current station's term, in warn — the only status colour on the page. */
+function Served({ station }: { station: MeSentenceStation }) {
+  const theme = useTheme();
+  const [now] = useState(() => Date.now());
+  const served = station.is_eternal ? null : termServed(station.started_on, station.ends_on, now);
+  if (served === null) return null;
+  const pct = `${Math.round(served * 100)}%` as const;
+  return (
+    <View testID="sentence-served" accessible accessibilityRole="progressbar" accessibilityValue={{ min: 0, max: 100, now: Math.round(served * 100) }} style={styles.served}>
+      <View style={[styles.servedTrack, { backgroundColor: theme.s2 }]}>
+        <View testID="sentence-served-bar" style={[styles.servedBar, { width: pct, backgroundColor: theme.warn }]} />
+      </View>
+      <Txt variant="value" tone="muted">
+        {pct}
+      </Txt>
+    </View>
+  );
+}
+
 export function SentenceSection({
   remote,
   landing,
   onPlaced,
+  open = true,
+  onToggle,
 }: {
   remote: SentenceRemote;
   landing?: SentenceLanding;
   /** The section's top within its parent — the life page scrolls a landing to it. */
   onPlaced?: (y: number) => void;
+  open?: boolean;
+  onToggle?: () => void;
 }) {
   const { t } = useI18n();
   const navigation = useNavigation<NavigationProp<AppStackParams>>();
@@ -302,22 +306,27 @@ export function SentenceSection({
   const hasPlan = !!plan && plan.state !== "none";
   const final = plan?.state === "eternal";
   return (
-    <Ruled landed={!!landing} testID="section-sentence" onLayout={onPlaced && ((e) => onPlaced(e.nativeEvent.layout.y))}>
-      <View style={styles.head}>
-        <Txt variant="section">{t("soul_app.sentence.section_title")}</Txt>
-        {hasPlan && current && !final ? (
-          <Txt testID="sentence-progress" variant="value" tone="subtle">
-            {t("soul_app.sentence.progress", { cur: String(current.n), total: String(plan.stations.length) })}
-          </Txt>
-        ) : null}
-        <View style={styles.fill} />
-        {landing ? <NewTag testID="sentence-landing-tag" /> : null}
-        {hasPlan ? (
-          <Pressable testID="sentence-all" accessibilityRole="button" hitSlop={8} onPress={() => navigation.navigate("Sentence", { landing })}>
-            <Txt variant="caption" tone="accent">{`${t("soul_app.sentence.all")} →`}</Txt>
-          </Pressable>
-        ) : null}
-      </View>
+    <Section
+      testID="section-sentence"
+      title={t("soul_app.sentence.section_title")}
+      count={hasPlan && current && !final ? t("soul_app.sentence.progress", { cur: String(current.n), total: String(plan.stations.length) }) : undefined}
+      countTestID="sentence-progress"
+      open={open || !!landing}
+      onToggle={onToggle}
+      highlighted={!!landing}
+      onLayout={onPlaced && ((e) => onPlaced(e.nativeEvent.layout.y))}
+    >
+      {landing || hasPlan ? (
+        <View style={styles.head}>
+          {landing ? <NewTag testID="sentence-landing-tag" /> : null}
+          <View style={styles.fill} />
+          {hasPlan ? (
+            <Pressable testID="sentence-all" accessibilityRole="button" hitSlop={8} onPress={() => navigation.navigate("Sentence", { landing })}>
+              <Txt variant="caption" tone="ink" style={styles.link}>{`${t("soul_app.sentence.all")} →`}</Txt>
+            </Pressable>
+          ) : null}
+        </View>
+      ) : null}
       {plan ? (
         !hasPlan ? (
           <Empty testID="sentence-empty" text={t("soul_app.sentence.empty")} />
@@ -328,6 +337,7 @@ export function SentenceSection({
               <>
                 <StationDetail station={current} fresh={isNew(landing, current, plan)} landing={landing} />
                 <StatusText station={current} />
+                {OCCUPYING.includes(current.status) ? <Served station={current} /> : null}
               </>
             ) : null}
             {plan.state === "completed" && plan.rebirth_open ? <Txt variant="bodyLg">{t("soul_app.sentence.all_done_title")}</Txt> : null}
@@ -349,7 +359,7 @@ export function SentenceSection({
           </Txt>
         </View>
       )}
-    </Ruled>
+    </Section>
   );
 }
 
@@ -530,9 +540,11 @@ export function SentenceBlocked() {
 const styles = StyleSheet.create({
   fill: { flex: 1 },
   shrink: { flexShrink: 1 },
-  ruled: { borderBottomWidth: 1, paddingVertical: 16, gap: 12 },
-  rule: { position: "absolute", left: 0, top: 0, bottom: 0, width: 3 },
-  head: { flexDirection: "row", alignItems: "center", gap: 12, flexWrap: "wrap" },
+  head: { flexDirection: "row", alignItems: "center", gap: 12, flexWrap: "wrap", marginBottom: 8 },
+  link: { textDecorationLine: "underline" },
+  served: { flexDirection: "row", alignItems: "center", gap: 12 },
+  servedTrack: { flex: 1, height: 6 },
+  servedBar: { height: 6 },
   sectionBody: { gap: 12 },
   newTag: { borderWidth: 1, paddingHorizontal: 5, paddingVertical: 1 },
   newTagText: { fontSize: 11, lineHeight: 14 },
