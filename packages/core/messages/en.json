@@ -3750,5 +3750,23 @@
   },
   "seal": {
     "aria": "Seal of {{court}}"
+  },
+  "soul_mail": {
+    "footer": "This message was sent by the system; replies are not received.",
+    "reset_code": {
+      "title": "Password reset code",
+      "code_label": "Code",
+      "note": "Valid for 5 minutes. If you did not ask for this, ignore this email.",
+      "text": "Your code: {{code}}\nValid for 5 minutes. If you did not ask for this, ignore this email."
+    },
+    "credential": {
+      "title": "Soul account",
+      "soul_code_label": "Soul code",
+      "password_label": "Initial password",
+      "expires_label": "Valid until",
+      "note_change": "You must change the password at first sign-in.",
+      "note_once": "This password is sent only once; if it expires or is lost, ask an officer of your civilization to reset it.",
+      "text": "Your soul code: {{soul_code}}\nInitial password: {{password}}\nValid until {{expires_at}}. You must change the password at first sign-in.\nThis password is sent only once; if it expires or is lost, ask an officer of your civilization to reset it."
+    }
   }
 }
