@@ -8,11 +8,11 @@ import { useTenant } from "@/src/contexts/TenantContext";
 import { showToast } from "@/src/components/ui/Toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageShell } from "@/src/components/ui/PageShell";
+import { SectionTitle } from "@/src/components/plaque/SectionTitle";
 import { Button } from "@/src/components/ui/Button";
 import { Badge, type BadgeTone } from "@/src/components/ui/Badge";
 import { TextField, fieldControl } from "@/src/components/ui/Field";
 import { cn } from "@/lib/utils";
-import { LedgerHeading } from "@/src/components/souls/detail/SoulLedgerSections";
 
 /**
  * Role → badge tone. `GUARDIAN` and the roles below it used to reach for
@@ -124,13 +124,13 @@ export default function ProfilePage() {
           className="mb-6 py-2 border-b border-[oklch(var(--color-rule))] flex items-center justify-between gap-4"
         >
           <p className="text-sm text-[oklch(var(--color-danger))]">
-            <span aria-hidden="true">! </span>
+            <span aria-hidden="true">✕ </span>
             {t("profile.load_failed")}
           </p>
           <button
             type="button"
             onClick={() => refetch()}
-            className="text-sm text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))] transition-colors shrink-0"
+            className="text-sm text-[oklch(var(--color-ink))] underline underline-offset-2 shrink-0"
           >
             {t("error.retry")}
           </button>
@@ -139,7 +139,12 @@ export default function ProfilePage() {
 
       {/* 规范 v1:区块标压线,行线代替卡片;标签在左,值在右,393 px 下同样两列。 */}
       <section className="mb-6">
-        <LedgerHeading mark="甲" title={t("profile.basic_info")} />
+        <div className="pt-6">
+          <SectionTitle>
+            <span aria-hidden="true">甲 · </span>
+            {t("profile.basic_info")}
+          </SectionTitle>
+        </div>
         <dl className="grid grid-cols-[8rem_1fr] max-sm:grid-cols-[6rem_1fr] text-sm">
           <dt className={DT}>{t("profile.username")}</dt>
           <dd className={DD}>
@@ -211,7 +216,12 @@ export default function ProfilePage() {
 
       {/* Change Password Section */}
       <section>
-        <LedgerHeading mark="乙" title={t("profile.change_password")} />
+        <div className="pt-6">
+          <SectionTitle>
+            <span aria-hidden="true">乙 · </span>
+            {t("profile.change_password")}
+          </SectionTitle>
+        </div>
         <div className="pt-3">
         {!isLoading && !showPasswordForm ? (
           <Button variant="secondary" type="button" onClick={() => setShowPasswordForm(true)}>
@@ -276,8 +286,8 @@ export default function ProfilePage() {
 }
 
 /** 一对 dt / dd 的行线与字色(与灵魂详情「甲 · 身份」同一份写法)。 */
-const DT = "py-1.5 border-b border-[oklch(var(--color-rule))] text-[oklch(var(--color-ink-subtle))] self-stretch flex items-center";
-const DD = "py-1.5 border-b border-[oklch(var(--color-rule))] text-[oklch(var(--color-ink))] min-w-0 flex items-center gap-2";
+const DT = "py-2 border-b border-[oklch(var(--color-rule))] text-[oklch(var(--color-ink-subtle))] self-stretch flex items-center";
+const DD = "py-2 border-b border-[oklch(var(--color-rule))] text-[oklch(var(--color-ink))] min-w-0 flex items-center gap-2";
 
 /**
  * 一条可就地编辑的账行。邮箱 / 名 / 姓原是三段逐字相同的标记,只差字段名;

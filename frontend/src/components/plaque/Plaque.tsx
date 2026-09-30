@@ -33,8 +33,20 @@ export function fitTier(el: HTMLElement): 0 | 1 | 2 {
 }
 
 
-export function Plaque({ title, meta, children }: { title: string; meta?: ReactNode; children?: ReactNode }) {
-  const ref = useRef<HTMLDivElement>(null);
+export function Plaque({
+  title,
+  meta,
+  children,
+  heading = false,
+}: {
+  title: string;
+  meta?: ReactNode;
+  children?: ReactNode;
+  /** 壳外页(登录)没有 PageShell,那一页唯一的 <h1> 就是匾题字。 */
+  heading?: boolean;
+}) {
+  const ref = useRef<HTMLHeadingElement & HTMLDivElement>(null);
+  const Title = heading ? "h1" : "div";
   const [tier, setTier] = useState<0 | 1 | 2>(0);
 
   useLayoutEffect(() => {
@@ -63,14 +75,17 @@ export function Plaque({ title, meta, children }: { title: string; meta?: ReactN
       <div className="flex min-h-12 items-center gap-3 px-4 py-1 md:px-8">
         <Seal size={40} />
         <div className="flex min-w-0 flex-1 items-baseline gap-3">
-          <div ref={ref} data-tier={tier} title={title} className={tierClass(tier)}>
+          <Title ref={ref} data-tier={tier} title={title} className={tierClass(tier)}>
             {title}
-          </div>
+          </Title>
           {meta ? <div className="min-w-0 shrink max-md:hidden">{meta}</div> : null}
         </div>
         {children}
       </div>
-      <div aria-hidden="true" className="plaque-band" />
+      {/* 纹样带是遮罩,遮罩会连它的伪元素一起遮,所以质感挂在外面这一层上(globals.css .plaque-tex)。 */}
+      <div aria-hidden="true" data-testid="plaque-band" className="plaque-tex">
+        <div className="plaque-band" />
+      </div>
     </div>
   );
 }

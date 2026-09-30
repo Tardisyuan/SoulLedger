@@ -13,6 +13,27 @@ export interface LegendLedgerRow {
   swatchClass: string;
 }
 
+/**
+ * 生命周期图例的色块(规范 v2 补足 A5 + Design D 组):在世 → 审判中 → 已处置 → 轮回中 →
+ * 已终结占冷灰蓝梯度第 1–5 档、实底;迷失不进梯度 —— 它是偏离流程的异常 —— 用第 1 档色
+ * 的**空框**,排在最后(`orderLifecycle`)。与 `lib/chart-colors.ts` 的 CHART_TOKENS.STATE_COLORS
+ * / STATE_PATTERNS 同一张表;Tailwind 要字面类名,所以这里写死,LegendLedger.test 对账。
+ */
+export const STATE_SWATCH: Record<string, string> = {
+  ALIVE: "bg-[oklch(var(--color-chart-1))]",
+  JUDGING: "bg-[oklch(var(--color-chart-2))]",
+  DISPOSED: "bg-[oklch(var(--color-chart-3))]",
+  REINCARNATING: "bg-[oklch(var(--color-chart-4))]",
+  SETTLED: "bg-[oklch(var(--color-chart-5))]",
+  LOST: "border-2 border-[oklch(var(--color-chart-1))]",
+};
+
+/** 五个生命周期状态按先后,其余(本版本不认得的)随后,迷失永远最后。 */
+export function orderLifecycle(lifecycle: readonly string[], present: readonly string[]): string[] {
+  const extra = present.filter((s) => !lifecycle.includes(s) && s !== "LOST");
+  return [...lifecycle, ...extra, ...(present.includes("LOST") ? ["LOST"] : [])];
+}
+
 export function sharePercent(count: number, total: number): string {
   return total > 0 ? `${Math.round((count / total) * 100)}%` : "0%";
 }

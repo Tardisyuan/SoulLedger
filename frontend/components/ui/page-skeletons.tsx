@@ -27,13 +27,12 @@
  * 1.021:1 against the page and is invisible to anyone who is not looking
  * straight at it.
  *
- * `animate-pulse` is left as-is rather than moved onto a motion token. The
- * universal `prefers-reduced-motion` block in `app/globals.css` already
- * collapses it, and a skeleton that has stopped pulsing still reads as a
- * skeleton — the shape is doing the work, not the animation.
+ * No `animate-pulse` (规范 v2 补足 C15:「静态,不闪光」). The note that used to
+ * stand here already said why dropping it costs nothing: a skeleton that has
+ * stopped pulsing still reads as a skeleton — the shape is doing the work, not
+ * the animation.
  */
 
-/* 规范 v2:骨架屏静态,不闪。 */
 const BLOCK = "bg-[oklch(var(--color-hairline))]";
 
 function PageHead({ withTabs }: { withTabs?: boolean }) {

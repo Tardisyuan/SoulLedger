@@ -787,7 +787,10 @@ describe("PageShell density", () => {
     expect(files.filter((f) => path.basename(f) === "page.tsx").length).toBeGreaterThan(20);
     expect(files.filter((f) => path.basename(f) === "loading.tsx").length).toBeGreaterThan(10);
 
-    const RHYTHM = { table: "space-y-6", document: "space-y-10" } as const;
+    // document 档 v1 是 space-y-10(40);规范 v2 A2 的刻度里没有 40(2/4/8/12/16/24/32/48),
+    // spacing-rhythm 守卫也不再放行 10,所以换成 48 = space-y-12。2026-09-30 全树唯一一处
+    // document 档区块间距是 app/corpus/page.tsx。
+    const RHYTHM = { table: "space-y-6", document: "space-y-12" } as const;
     const offenders: string[] = [];
     const observed = { table: 0, document: 0 };
 
