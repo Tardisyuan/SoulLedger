@@ -69,7 +69,9 @@ class Provider(Protocol):
 - 内部消息格式用一种中性结构,两个适配器各自翻译成 OpenAI Chat Completions / Anthropic Messages 的格式。**翻译层是最容易出错的地方,要有单元测试**(注入假的 SDK 客户端,断言请求体与响应解析)。
 - 配置全部来自环境变量:`ASSISTANT_PROVIDER`(`openai_compat` / `anthropic`)、`ASSISTANT_BASE_URL`、`ASSISTANT_API_KEY`、`ASSISTANT_MODEL`。换厂商只改配置。
 - **超时与重试显式设置。** SDK 默认超时 10 分钟、重试 2 次;这里设 `timeout` 使整个请求不超过 **22 秒**,`max_retries=0`。超时返回 503 `assistant_unavailable`。App 的设计稿(画布「灵魂簿 App · 问一问」1e)在 25 秒时按超时处理;服务端必须先于客户端放弃,否则客户端已提示超时、服务端仍在占线程与配额。
-- **客户端「取消」不中断服务端。** 灵魂在等待中点取消,请求照常跑完并落库;下次打开这个会话能看到那条回答。
+  **流式(§13)把 22 秒拆成两个截止时刻:首字 22 秒、整次 60 秒。**
+- **客户端「取消」不中断服务端**(非流式)。灵魂在等待中点取消,请求照常跑完并落库;下次打开这个会话能看到那条回答。
+  **流式不同(§13):关流即停止**,服务端不再调用供应商,已生成的部分按 `stopped` 存下。
 - Anthropic 默认模型 `claude-opus-5`,`output_config.effort="low"`(帮助台不需要深推理);system prompt 加 `cache_control`。OpenAI 兼容后端的缓存各家不同,不统一处理。
 - `FakeProvider` 按脚本返回,只用于测试。
 - **兼容性未逐家实测。** 各家的工具调用质量差别大(Ollama 小模型尤其不稳)。启用某个供应商前,先跑 §8 的行为评测。
@@ -100,7 +102,7 @@ class Provider(Protocol):
 
 | 方法与路径 | 说明 |
 |---|---|
-| `POST /api/v1/me/assist/` | body `{question, screen, conversation_id?}`;返回 `{conversation_id, answer}`,非流式 |
+| `POST /api/v1/me/assist/` | body `{question, screen, conversation_id?, stream?}`;缺省返回 `{conversation_id, answer}`(非流式);`stream: true` 返回 Server-Sent Events(§13) |
 | `GET /api/v1/me/assist/conversations/` | 本人会话列表 |
 | `DELETE /api/v1/me/assist/conversations/<id>/` | 软删除本人会话;别人的答 404 |
 
@@ -351,8 +353,8 @@ npm run schema:generate --workspace @soulledger/core
 
 ## 10. 明确不做
 
-写操作;流式输出;把其他灵魂写的内容(帖子、书信)放进上下文;考据文档进灵魂端;官员端(阶段 3 另写计划)。
-(pgvector 原在此列,2026-09-29 用户改为现在就上,见 §7。)
+写操作;把其他灵魂写的内容(帖子、书信)放进上下文;考据文档进灵魂端;官员端(阶段 3 另写计划)。
+(pgvector 原在此列,2026-09-29 用户改为现在就上,见 §7;流式输出原在此列,2026-10-01 用户改为现在就做,见 §13。)
 
 ## 11. 未核实
 
@@ -377,3 +379,112 @@ npm run schema:generate --workspace @soulledger/core
   - 中文帮助与固定回复用了半角标点(同上)。
 - **阶段 1.5(真实 key 行为评测)未做**:需要供应商 key。
 - **阶段 3(官员端)**:计划见 `docs/ARCHITECTURE-officer-assist.md`,待拍板。
+
+## 13. 流式回答与备用供应商(2026-10-01 用户定,`feat/assist-streaming-failover`)
+
+### 13.1 怎么开启
+
+灵魂端 `POST /api/v1/me/assist/`、官员端 `POST /api/v1/assist/`、管理页试问 `POST /api/v1/assist-admin/try/`,
+请求体多一个 **`stream: true`**(缺省 false = 原来的 JSON,现有客户端不用改)。选请求体里的开关而不是
+`Accept: text/event-stream`:DRF 的内容协商遇到它会在进视图之前答 406,而开关在 OpenAPI 的请求体里有类型。
+
+**进门的失败两种方式都一样**:未开通 503、限流 429、忙 429、会话不存在 404、字段错误 400 —— 都是 JSON 与状态码,
+在响应开始之前就定了(视图先把事件生成器走到 meta)。开始之后的失败只能是事件。
+
+### 13.2 事件
+
+`Content-Type: text/event-stream; charset=utf-8`,`Cache-Control: no-cache`,`X-Accel-Buffering: no`。
+每个事件一行 `event: <名>`、一行 `data: <JSON>`、一个空行;JSON 里也带 `event`。顺序 **meta → delta\* → done | error**。
+
+| 事件 | data |
+|---|---|
+| `meta` | `{event, conversation_id}` —— 续的会话,或这次新开的会话(id 先定下,答完才落库) |
+| `delta` | `{event, text}` —— 接在已收到的文本后面 |
+| `done` | `{event, conversation_id, answer, usage}` —— `answer` 与非流式同形(`AssistMessage`),`usage` 是 `{input_tokens, output_tokens, cache_read_tokens}`;`conversation_id` 以这里为准(续的会话在作答时被删,回答落进新会话)。试问的 done 是 `TryResult` 的字段 |
+| `error` | `{event, kind, text_sent, detail, conversation_id?, message_id?}` —— `kind: unavailable`(一个字都没出,相当于非流式的 503;什么都不存)或 `interrupted`(出过字后出错或到了总时长;已生成的部分存为一条 `interruption: "interrupted"` 的回答,`message_id` 指向它) |
+
+- **工具轮不流式。** 工具名与工具结果都不发;模型最后写的文本边生成边发。**偏离**:同一轮里模型若先写一句
+  「我查一下」再调工具,这句已经发出去了,也留在回答里(与下一轮的文本隔一个空行)。不发它就得把整轮攒完,
+  等于不流式。
+- 模型交回空文本时,固定的「答不了」作为一个 delta 发出,再 done。
+- OpenAPI:`(200, text/event-stream)` 的正文声明为 `AssistStreamEvent`(按 `event` 判别的 oneOf,描述**每一个**
+  `data:` 行);生成的 TS 里 `event` 是字面量。`packages/core/src/api/assist-stream.ts` 是平台无关的解析器
+  (`parseAssistStream` / `AssistStreamParser` / `reduceAssistStream`):宿主自己发请求(web 的 fetch 流、
+  RN 的 expo/fetch 或 XHR),把收到的文本交给它。axios 两边都会把整个正文攒完,所以不在 core 里发请求。
+
+### 13.3 停止与断开
+
+**停止 = 客户端关掉连接。** Django(ASGI,daphne)在断开时取消请求任务,取消抛进 `sse._async`,它在请求自己的
+线程里关掉同步的事件生成器 → GeneratorExit → 供应商的流被关掉(HTTP 连接断开,不再生成)→ 已生成的部分存为
+`interruption: "stopped"`,用量记一行 `stopped`。停止要等同步线程正在等的那一段文本到了才生效(线程停在 socket 读上,
+从外面打断不了)—— 2026-10-01 本机实测(daphne,一段 0.5 秒的假供应商):读到第 2 段时断开,供应商又产出了正在路上的
+第 3 段,之后不再被调用;存下的是 3 段,并发名额归零。
+
+**用量按真实的算**:已完成的工具轮用供应商报的数;被关掉的那一轮没收到用量,输入按请求体、输出按收到的文本粗估
+(`usage.estimate_tokens`;Anthropic 的输入取 `message_start` 里的真数)。连都没连上的请求不算钱。
+没走到供应商就停了(响应头之前就断开)不记用量。
+
+ASGI 下同步迭代器会被 Django **整个读完**再发,所以 `sse.response` 在 ASGI 下给异步迭代器,每一步
+`sync_to_async(thread_sensitive=True)` 回到请求线程;WSGI(测试客户端)下给同步迭代器。每一步都在视图当时的
+contextvars 里跑(中间件在视图返回后就清掉了当前殿)。
+
+### 13.4 时间
+
+| | 值 | 设置 |
+|---|---|---|
+| 首字截止(流式)/ 整次(非流式) | **22 秒**(不变) | `ASSISTANT_TIMEOUT_SECONDS` |
+| 流式整次 | **60 秒** | `ASSISTANT_STREAM_TOTAL_SECONDS` |
+| 有备用时主用的首字预算 | **12 秒**(剩下 10 秒给备用) | `ASSISTANT_PRIMARY_FIRST_TOKEN_SECONDS` |
+
+都从收到提问算起,取问题向量(至多 3 秒)算在里面。每一段到了先看钟再发:到点之后才到的那一段不发。
+单次读的超时 = 此刻适用的截止时刻剩下的时间,所以超时最多晚一个「两段之间的间隔」(ponytail:要精确就另起一个
+看门的线程去关流)。客户端:首字 25 秒、整次 65 秒放弃(`ASSIST_STREAM_FIRST_TEXT_MS` / `ASSIST_STREAM_TOTAL_MS`),
+都晚于服务端,所以正常情况下由服务端的 error 事件说明原因。并发名额(8)从进门占到流结束,名额键 TTL 120 秒 > 60 秒;
+调供应商前、每个工具之后都释放 PG 连接(同非流式)。
+
+### 13.5 备用供应商与断路器
+
+- **配置**:`/api/v1/assist-admin/config/backup/`(GET / PATCH / DELETE)与 `config/backup/test/`(POST),只许 ADMIN。
+  字段与主用的连接相同(`platform` 或 `provider` + `base_url`、`api_key`、`model`、`effort`、`fallbacks`),另有备用自己的
+  `prices`(同名模型在两家可以不同价)。草稿 → 测试 → 保存:连接的任何一项变了,都要先在 15 分钟内测通**同一套**;
+  设了月度上限时备用的模型必须有价(`unpriced_backup_model`,主用的 PATCH 也查)。存在 `AssistConfig.values["backup"]`。
+- **何时切换**:主用在**第一段文本发出之前**失败,且原因是 连不上(`connection`)/ 超时(`timeout`)/ 429(`rate_limited`)/
+  5xx(`server_error`)/ 402(`quota`)。401 / 403 / 404 / 不支持工具 / 其他 4xx 与配置错误**不**切换(那是这边配错了,
+  备用救不了,切过去只会藏起错误)。出过字之后出错:`error` / `interrupted`,不切换。非流式同一规则(「第一段文本」即整个回答)。
+  流读到一半的网络错误不经 SDK 包装,按 HTTP 库的异常类名认出超时与断连。
+- **断路器**:主用连续失败 **3** 次(只数可切换的失败,且只在配了备用时数)→ 之后 **60 秒**内直接用备用
+  (`fallback_reason = circuit_open`)→ 到时再试主用:成功清零;失败则计数仍 ≥3,立刻再断开。放在 Django 缓存里,多进程共享;
+  键带主用连接的指纹,换了主用配置就是新的断路器。ponytail:「连续」而非滑动窗口,并发的成功会把计数清零。
+- **记账**:`AssistUsage` 多了 `provider_role`(primary / backup)与 `fallback_reason`;备用的花费按备用的价目表算,计入月度上限。
+  主用失败前已经花了 token(工具轮成功、下一轮才 5xx)→ 另记一行 `failed_over`(只记账,不算一次请求)。
+  用量页多了 `fallbacks {count, by_reason}` 与 `by_provider [{role, requests, answered, tokens…, cost}]`,`by_status` 多了
+  `stopped` / `interrupted`。试问结果多了 `provider_role`、`fallback_reason`(没给候选时走生效配置,含备用与断路器)。
+  评测只测它的候选,不切换。
+
+### 13.6 API key 按平台存(用户 2026-10-01 追加)
+
+`AssistConfig.api_keys`:平台 → `{key, set_at}` 的 JSON,整份 Fernet 加密;取代原来的单个 `api_key`(迁移 0009 把它搬进
+**它当时发往的那台主机**的格子 —— 115 的配置早于「平台」字段,地址是 api.deepseek.com,所以落在 `deepseek`)。
+
+- **格子按 key 真正发往的主机认**(`platforms.key_slot`):主机与某个预设的地址相同 → 预设 id;否则 `custom:<主机[:端口]>`。
+  不填地址时按 SDK 的默认地址(Anthropic → api.anthropic.com)。一个 key 因此只会发回存它时的那台主机。
+- 换平台而不给 key:那个平台存过 key 就用它(换回 DeepSeek 不必重贴);没存过才 400 `api_key_required`。
+  给了 key 就存进新连接那一格。主用与备用共用这些格子(备用与主用同平台 → 同一个 key);删备用不删 key。
+- env 的 key 算 env 配的那个平台的(没被页面覆盖时);页面「清除」存成空串 = 没有 key,不回到 env。
+- 管理页:`config/` 的 `api_key`(当前平台)、`api_key_slot`、`api_keys: {格子: {set, last4, set_at, source}}`;
+  `config/backup/` 的 `api_key` 与 `api_key_slot`。永不含 key 本身。审计:`changes.api_keys = {格子: "replaced" | "cleared"}`。
+
+### 13.7 部署
+
+- `nginx.conf` 为三个提问路径单独一个 location:`proxy_buffering off`、`proxy_cache off`、读超时 120 秒;后端响应另带
+  `X-Accel-Buffering: no`。2026-10-01 实测:`nginx:alpine` 容器 + 仓库的这份配置(只把上游换成本机的 daphne),
+  事件每 0.5 秒一个到达,没有攒批;`nginx -t` 通过。
+- daphne 对每个 `http.response.body` 消息立即写出:同日直连 daphne 实测同上。`runserver` 在装了 daphne 的项目里就是它。
+
+### 13.8 未核实
+
+- 两家真 SDK 的流式没有对真实供应商跑过(测试注入假的 SDK 对象;事件形状按 SDK 1.8 / 3.19 的源码与类型写)。
+  特别是 `stream_options.include_usage` 是否被每个 OpenAI 兼容平台接受 —— 不接受的平台会答 400,既不切换也流不出来。
+- Anthropic 服务端拒答回退(`fallbacks` beta)在流式下的事件形状。
+- 断开后「多产出一段」的上限取决于供应商两段之间的间隔;推理慢的模型在工具轮里断开,要等那一轮答完才停。
+- 真 PostgreSQL 上的断路器与名额只在全量里跑过一遍,没有专门的并发测试。
