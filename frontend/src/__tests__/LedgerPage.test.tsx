@@ -16,7 +16,7 @@ import { currentMonth, runningBalances, shiftMonth, signed } from "@/src/lib/led
 import { saveBlob } from "@/src/lib/saveBlob";
 
 jest.mock("@soulledger/core/api", () => ({
-  ledgerApi: { journal: jest.fn(), exportJournal: jest.fn() },
+  ledgerApi: { journal: jest.fn(), journalMonth: jest.fn(), exportJournal: jest.fn() },
 }));
 jest.mock("@/src/lib/saveBlob", () => ({ saveBlob: jest.fn() }));
 
@@ -26,7 +26,8 @@ jest.mock("@/src/contexts/TenantContext", () => ({
   useTenant: () => ({ user: mockUser }),
 }));
 
-const mockedJournal = ledgerApi.journal as jest.Mock;
+const mockedJournal = ledgerApi.journalMonth as jest.Mock;
+const mockedJournalPage = ledgerApi.journal as jest.Mock;
 const mockedExport = ledgerApi.exportJournal as jest.Mock;
 const mockedSave = saveBlob as jest.Mock;
 
@@ -79,6 +80,7 @@ function renderPage() {
 beforeEach(() => {
   mockUser = { id: 1, role: "VIEWER", permissions: ["ledger.read"] };
   mockedJournal.mockReset();
+  mockedJournalPage.mockReset();
   mockedExport.mockReset();
   mockedSave.mockReset();
 });
@@ -119,10 +121,10 @@ describe("the four pillars", () => {
     mockedJournal.mockResolvedValue({ data: JOURNAL });
     renderPage();
     await screen.findByTestId("four-pillars");
-    expect(mockedJournal).toHaveBeenLastCalledWith({ month: currentMonth(), page: 1 });
+    expect(mockedJournal).toHaveBeenLastCalledWith({ month: currentMonth() });
     fireEvent.click(screen.getByRole("button", { name: "上一月" }));
     await waitFor(() =>
-      expect(mockedJournal).toHaveBeenLastCalledWith({ month: shiftMonth(currentMonth(), -1), page: 1 })
+      expect(mockedJournal).toHaveBeenLastCalledWith({ month: shiftMonth(currentMonth(), -1) })
     );
   });
 });
@@ -165,20 +167,16 @@ describe("the journal", () => {
     expect(rows[1]).not.toHaveTextContent("·  ·");
   });
 
-  it("does not page: it fetches every page of the month and draws them all, with no pager", async () => {
-    mockedJournal.mockImplementation(({ page }: { page: number }) =>
-      Promise.resolve({
-        data:
-          page === 1
-            ? { ...JOURNAL, count: 23 }
-            : { ...JOURNAL, count: 23, page: 2, results: [row("d", "2026-06-02", "MERIT", 5, "林晚照")] },
-      })
-    );
+  it("does not page: one whole-month request, every row drawn, no pager", async () => {
+    mockedJournal.mockResolvedValue({
+      data: { ...JOURNAL, count: 4, page_size: 4, results: [...JOURNAL.results, row("d", "2026-06-02", "MERIT", 5, "林晚照")] },
+    });
     const { container } = renderPage();
     await screen.findByRole("link", { name: "林晚照" });
-    expect(mockedJournal).toHaveBeenCalledWith({ month: currentMonth(), page: 1 });
-    expect(mockedJournal).toHaveBeenCalledWith({ month: currentMonth(), page: 2 });
-    expect(mockedJournal).toHaveBeenCalledTimes(2);
+    expect(mockedJournal).toHaveBeenCalledTimes(1);
+    expect(mockedJournal).toHaveBeenCalledWith({ month: currentMonth() });
+    // 分页的 journal 一次都不调:整月不再靠 ⌈N/20⌉ 页拼接。
+    expect(mockedJournalPage).not.toHaveBeenCalled();
     expect(container.querySelectorAll("[data-journal-row]")).toHaveLength(4);
     expect(screen.queryByRole("button", { name: "下一页" })).toBeNull();
   });
@@ -224,7 +222,7 @@ describe("搜索与导出:同一组筛选", () => {
     await screen.findByTestId("four-pillars");
     fireEvent.change(screen.getByRole("searchbox", { name: "灵魂姓名或 ID" }), { target: { value: " 沈青梧 " } });
     await waitFor(() =>
-      expect(mockedJournal).toHaveBeenLastCalledWith({ month: currentMonth(), search: "沈青梧", page: 1 })
+      expect(mockedJournal).toHaveBeenLastCalledWith({ month: currentMonth(), search: "沈青梧" })
     );
   });
 

@@ -35,10 +35,9 @@ import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
  * 已经表达方向;「结余」一列是逐行倒推的余额(最新一行 = 期末)。导出 CSV 是幽灵按钮。
  * v1 的按日小计、本页合计与右侧图例账,B10 都没有画,随分页一起撤掉。
  *
- * 后端的 journal 仍是每页 20 行(`PAGE_SIZE`),没有「整月」的开关 —— 所以这里先取第 1 页
- * 拿到总数,再并发取其余各页拼起来。
- * ponytail: 一月 N 条要 ⌈N/20⌉ 个请求;后端给 journal 加 `page_size=all`(或整月不分页)之后
- * 换成一次请求,`fetchWholeMonth` 整个删掉。
+ * 整月一次请求:`ledgerApi.journalMonth` 带 `all=1`,后端给出本月全部行。超过后端上限
+ * (`WHOLE_MONTH_MAX`)时后端答 400 而不是截断 —— 截断的整月会让「结余」列从错的期末倒推 ——
+ * 这里落到失败屏,不画半本账。
  */
 
 const RECORD_CATEGORIES = [
@@ -52,18 +51,6 @@ const JOURNAL_COLS =
   "grid grid-cols-[minmax(0,1fr)_4rem_4rem_5rem] md:grid-cols-[3.5rem_minmax(0,1fr)_5rem_minmax(0,1.3fr)_4.5rem_4.5rem_5rem] gap-x-3";
 /** B10:超过 500 行时表头吸顶(C15 表格细节)。 */
 const STICKY_AFTER = 500;
-
-/** 本月全部行:第 1 页给总数,其余页并发取回,按页序拼接(服务端已按时间倒序)。 */
-async function fetchWholeMonth(filters: LedgerJournalParams): Promise<LedgerJournal> {
-  const first = (await ledgerApi.journal({ ...filters, page: 1 })).data;
-  const pages = Math.ceil(first.count / Math.max(first.page_size, 1));
-  const rest = await Promise.all(
-    Array.from({ length: Math.max(pages - 1, 0) }, (_, i) =>
-      ledgerApi.journal({ ...filters, page: i + 2 }).then((r) => r.data.results)
-    )
-  );
-  return { ...first, results: [...first.results, ...rest.flat()] };
-}
 
 function LedgerPageContent() {
   const { t } = useI18n();
@@ -92,7 +79,7 @@ function LedgerPageContent() {
   };
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["ledger", "journal", "month", filters],
-    queryFn: () => fetchWholeMonth(filters),
+    queryFn: async () => (await ledgerApi.journalMonth(filters)).data,
     enabled: !!user,
     placeholderData: keepPreviousData,
   });
