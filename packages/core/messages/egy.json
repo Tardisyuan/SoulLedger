@@ -389,7 +389,8 @@
       "copied": "Em Sesh ✓"
     },
     "field_required": "Medu Pen Em Tepy",
-    "dismiss": "Khetem"
+    "dismiss": "Khetem",
+    "type_name_to_confirm": "Sesh {{name}} Er Smen"
   },
   "pagination": {
     "info": "Per {{page}} / {{total}} (Sesh {{count}})",

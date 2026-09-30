@@ -478,6 +478,7 @@ export default function PermissionsPage() {
           onClose={() => { setIsDeleteOpen(false); setDeletingPerm(null); }}
           title={t("permissions.confirm_delete")}
           message={t("permissions.confirm_delete_message")}
+          name={deletingPerm?.codename ?? ""}
           isPending={deleteMutation.isPending}
           onConfirm={() => deletingPerm && deleteMutation.mutate(deletingPerm.id)}
         />

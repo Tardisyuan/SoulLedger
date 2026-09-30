@@ -91,6 +91,31 @@ describe("RecycleBinPage hard-delete gate", () => {
     expect(await screen.findByText("recycle_bin.hard_delete_confirm_title")).toBeInTheDocument();
   });
 
+  it("keeps the danger button disabled until the entry's name is typed exactly (规范 v2 A1)", async () => {
+    mockUser = { role: "JUDGE", permissions: [...READ_RESTORE, "recycle_bin.hard_delete"] };
+    (recycleBinApi.hardDelete as jest.Mock).mockResolvedValue({ data: {} });
+    renderPage();
+
+    await screen.findByText("旧菜单");
+    fireEvent.click(screen.getByRole("button", { name: "souls.detail.more_actions" }));
+    fireEvent.click(within(screen.getByRole("menu")).getByRole("menuitem", { name: "recycle_bin.hard_delete" }));
+
+    const action = await screen.findByTestId("name-confirm-action");
+    const input = screen.getByLabelText("common.type_name_to_confirm(旧菜单)");
+    expect(action).toBeDisabled();
+    expect(action).toHaveTextContent("✕");
+
+    fireEvent.change(input, { target: { value: "旧菜" } });
+    expect(action).toBeDisabled();
+    fireEvent.click(action);
+    expect(recycleBinApi.hardDelete).not.toHaveBeenCalled();
+
+    fireEvent.change(input, { target: { value: "旧菜单" } });
+    expect(action).toBeEnabled();
+    fireEvent.click(action);
+    await waitFor(() => expect(recycleBinApi.hardDelete).toHaveBeenCalledWith("MENU", 7));
+  });
+
   it("disables the item and says why while the row is inside its retention window", async () => {
     mockUser = { role: "JUDGE", permissions: [...READ_RESTORE, "recycle_bin.hard_delete"] };
     (recycleBinApi.list as jest.Mock).mockResolvedValue({

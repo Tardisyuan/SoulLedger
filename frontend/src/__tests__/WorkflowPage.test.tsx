@@ -266,8 +266,12 @@ describe("WorkflowPage template deletion", () => {
   it("deletes the template once confirmed", async () => {
     await openDeleteDialog();
 
-    const dialogButtons = screen.getAllByText("common.confirm_delete");
-    fireEvent.click(dialogButtons[dialogButtons.length - 1]);
+    // 规范 v2:删模板要逐字输入模板名,危险按钮在那之前是禁用的。
+    const action = screen.getByTestId("name-confirm-action");
+    fireEvent.click(action);
+    expect(mockedTemplateDelete).not.toHaveBeenCalled();
+    fireEvent.change(screen.getByRole("textbox", { name: /common.type_name_to_confirm/ }), { target: { value: "Custom Tribunal" } });
+    fireEvent.click(action);
 
     await waitFor(() => expect(mockedTemplateDelete).toHaveBeenCalledWith("7"));
   });
@@ -276,8 +280,12 @@ describe("WorkflowPage template deletion", () => {
     mockedTemplateDelete.mockRejectedValue(new Error("403"));
     await openDeleteDialog();
 
-    const dialogButtons = screen.getAllByText("common.confirm_delete");
-    fireEvent.click(dialogButtons[dialogButtons.length - 1]);
+    // 规范 v2:删模板要逐字输入模板名,危险按钮在那之前是禁用的。
+    const action = screen.getByTestId("name-confirm-action");
+    fireEvent.click(action);
+    expect(mockedTemplateDelete).not.toHaveBeenCalled();
+    fireEvent.change(screen.getByRole("textbox", { name: /common.type_name_to_confirm/ }), { target: { value: "Custom Tribunal" } });
+    fireEvent.click(action);
 
     await waitFor(() => expect(mockShowToast).toHaveBeenCalledWith("workflow.delete_error", "error"));
   });

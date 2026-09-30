@@ -1,20 +1,17 @@
 "use client";
 
 import { useI18n } from "@/src/contexts/I18nContext";
-import { BaseModal } from "@/src/components/ui/Modal";
-import { Button } from "@/src/components/ui/Button";
+import { NameConfirmDialog } from "@/src/components/admin/NameConfirmDialog";
 
 /**
- * The delete confirmation used for both a permission and a role. The two were
- * byte-identical apart from their title and body copy, so the only thing a
- * caller supplies is those two strings — the footer's two buttons, their
- * variants and their pending copy are shared by construction rather than by
- * two people happening to spell them the same way.
+ * 删除权限的确认。删除不进回收站,所以按规范 v2 走「输入名称以确认」:要逐字输入权限码,
+ * 危险按钮在那之前是禁用的。
  */
 export function DeleteConfirmModal({
   isOpen,
   title,
   message,
+  name,
   isPending,
   onClose,
   onConfirm,
@@ -22,6 +19,8 @@ export function DeleteConfirmModal({
   isOpen: boolean;
   title: string;
   message: string;
+  /** 要逐字输入的权限码。 */
+  name: string;
   isPending: boolean;
   onClose: () => void;
   onConfirm: () => void;
@@ -29,34 +28,15 @@ export function DeleteConfirmModal({
   const { t } = useI18n();
 
   return (
-    <BaseModal
+    <NameConfirmDialog
       isOpen={isOpen}
-      onClose={onClose}
       title={title}
-      footer={
-        <div className="flex gap-3">
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={onClose}
-            disabled={isPending}
-            className="flex-1"
-          >
-            {t("permissions.cancel_delete")}
-          </Button>
-          <Button
-            type="button"
-            variant="danger"
-            onClick={onConfirm}
-            disabled={isPending}
-            className="flex-1"
-          >
-            {isPending ? t("permissions.deleting") : t("permissions.confirm_delete_action")}
-          </Button>
-        </div>
-      }
-    >
-      <p className="text-[oklch(var(--color-ink))] text-sm">{message}</p>
-    </BaseModal>
+      message={message}
+      name={name}
+      actionLabel={isPending ? t("permissions.deleting") : t("permissions.confirm_delete_action")}
+      isPending={isPending}
+      onCancel={onClose}
+      onConfirm={onConfirm}
+    />
   );
 }
