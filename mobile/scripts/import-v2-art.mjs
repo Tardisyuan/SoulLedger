@@ -10,8 +10,7 @@
  *                         after stripping they equal Design's project files byte for byte)
  *   assets/v2/*.png       seal edge scans (the v2 seal), 1x + @2x
  *   assets/fonts/LXGWSeal-Regular.ttf + LXGWSeal-OFL.txt   地府印文 (SIL OFL 1.1)
- *   assets/*.png          app icon (light / dark / tinted), Android adaptive foreground and
- *                         monochrome, notification icon, rasterized from deliver/icons/*.svg with sharp (librsvg)
+ *   The app / web icons are NOT imported any more — see scripts/build-app-icon.mjs.
  *
  * NOT IMPORTED (Design: 不入库): textures/bronze, wax, inkseal (round-4 alternatives) and
  * scan-cnseal-source.png (the crop's source). svg/section-* has no App caller yet. svg/band-*
@@ -23,10 +22,7 @@ import { copyFileSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { createRequire } from "node:module";
 
-const require = createRequire(import.meta.url);
-const sharp = require("sharp");
 
 const SRC = process.argv[2] ?? join(homedir(), "Downloads/SoulLedger-deliver");
 const APP = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -67,19 +63,5 @@ for (const name of ["scan-cnseal", "scan-wax", "scan-clay", "scan-cyl"]) {
 copyFileSync(join(SRC, "fonts/LXGWSeal-Regular.ttf"), join(APP, "assets/fonts/LXGWSeal-Regular.ttf"));
 copyFileSync(join(SRC, "fonts/LXGWSeal-OFL.txt"), join(APP, "assets/fonts/LXGWSeal-OFL.txt"));
 
-// ── icons and splash → PNG ──────────────────────────────────────────────
-const png = (rel, out, size) =>
-  sharp(Buffer.from(read(`icons/${rel}.svg`)), { density: 72 * (size / Number(read(`icons/${rel}.svg`).match(/width="(\d+)"/)[1])) })
-    .resize(size, size)
-    .png()
-    .toFile(join(APP, "assets", out));
 
-await Promise.all([
-  png("app-icon-light", "icon.png", 1024),
-  png("app-icon-dark", "icon-dark.png", 1024),
-  png("app-icon-mono", "icon-mono.png", 1024),
-  png("android-adaptive-foreground", "android-icon-foreground.png", 1024),
-  png("app-icon-mono", "android-icon-monochrome.png", 1024),
-  png("notification-android", "notification-icon.png", 96),
-]);
-console.log(`imported ${Object.keys(svg).length} SVGs, 20 textures, LXGW Seal and 6 icon PNGs from ${SRC}`);
+console.log(`imported ${Object.keys(svg).length} SVGs, 20 textures and LXGW Seal from ${SRC}`);
