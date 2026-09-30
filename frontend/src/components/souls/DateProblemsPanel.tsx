@@ -107,7 +107,7 @@ export function DateProblemsPanel({ soulId, soulProblems, records, onChanged }: 
   }
 
   return (
-    <div className="bg-[oklch(var(--color-surface-1))] p-5 border border-[oklch(var(--color-hairline))]">
+    <div className="bg-[oklch(var(--color-surface-1))] p-4 border border-[oklch(var(--color-hairline))]">
       <h2 className="text-2xs text-[oklch(var(--color-ink-muted))] uppercase mb-3">
         {t("souls.detail.date_problems.title")}
       </h2>
@@ -140,7 +140,7 @@ export function DateProblemsPanel({ soulId, soulProblems, records, onChanged }: 
                   </span>
                 </span>
                 <span className="flex items-center gap-2">
-                  <span className="bg-[oklch(var(--color-surface-3))] text-[oklch(var(--color-ink))] text-xs px-1.5 py-0.5">
+                  <span className="bg-[oklch(var(--color-surface-3))] text-[oklch(var(--color-ink))] text-xs px-2 py-0.5">
                     {group.length}
                   </span>
                   <span className="text-[oklch(var(--color-ink-subtle))] text-xs" aria-hidden="true">

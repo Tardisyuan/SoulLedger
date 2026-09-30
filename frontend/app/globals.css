@@ -2,6 +2,18 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* 状态字形 · Design E 组:「迷失」◌ 必须和 ✓✕◇↺ 出自同一款字体。Plex Mono 的 latin 子集
+   一个都没有;Noto Sans SC 有 ✓✕○▣◇◎↺↻ 却没有 ◌,于是 ◌ 落到系统字体(Windows 的
+   Segoe UI Symbol、Android 的 Roboto),邻居却来自 Noto Sans SC —— 宽度会跑。这款 5KB 的
+   DejaVu Sans 子集(scripts/build-glyph-font.py,许可证在同目录)排在三支字族的最前面,
+   unicode-range 只圈这九个码位,别的字一个不碰。App 用的是同一个文件的同一份字节。 */
+@font-face {
+  font-family: 'SoulLedger Glyphs';
+  src: url('/fonts/SoulLedgerGlyphs.ttf') format('truetype');
+  font-display: block;
+  unicode-range: U+2713, U+2715, U+25C7, U+21BA, U+25CC, U+25CB, U+25A3, U+21BB, U+2261;
+}
+
 @theme {
   /* NO COLOUR TOKENS HERE, DELIBERATELY.
    *
@@ -91,12 +103,32 @@
    * triples and `@layer base` outranked `@theme`. Nothing re-declares these, and
    * their values are complete CSS values rather than fragments — verified in the
    * production stylesheet, not assumed. */
-  --ease-enter: cubic-bezier(0.16, 1, 0.3, 1);
-  --ease-exit: cubic-bezier(0.7, 0, 0.84, 0);
+  /* 规范 v2「朱印」动效令牌(交互与动效第 2 轮 §一):五档时长、四条缓动,全站只用这几档。
+   *   instant 0    勾选、开关、键盘焦点;减少动态效果时所有档都等于它
+   *   fast    120  出场、悬停、行内状态、toast 出场、内容淡入
+   *   base    200  进场、弹层、抽屉、立柱指示块、分节展开
+   *   slow    320  落判盖印、长明灯点亮
+   *   ritual  600  按住确认
+   * 缓动:standard 同一元素 A→B;enter 进场;exit 出场(比进场短一档);drop 只给盖印下落。
+   * 上面 v1 那段说「只要两条缓动、不要回弹」—— v2 多出的 standard 与 drop 都不回弹,
+   * 结论仍成立。
+   *
+   * 旧的三个名字(press / state / settle)是 v1 按「做什么」起的,调用点有一百多处,
+   * 保留为 v2 档位的别名:press、state 都是 fast(悬停与行内状态),settle 是 base
+   * (进出场)。新代码写 v2 的名字。 */
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-enter: cubic-bezier(0, 0, 0.2, 1);
+  --ease-exit: cubic-bezier(0.4, 0, 1, 1);
+  --ease-drop: cubic-bezier(0.55, 0, 1, 0.45);
 
-  --transition-duration-press: 100ms;
-  --transition-duration-state: 160ms;
-  --transition-duration-settle: 240ms;
+  --transition-duration-instant: 0ms;
+  --transition-duration-fast: 120ms;
+  --transition-duration-base: 200ms;
+  --transition-duration-slow: 320ms;
+  --transition-duration-ritual: 600ms;
+  --transition-duration-press: 120ms;
+  --transition-duration-state: 120ms;
+  --transition-duration-settle: 200ms;
 
   /* THE TABLE ROWS, and the one of the three that is not decoration.
    *
@@ -144,38 +176,47 @@
   --animate-row-changed: row-changed 2000ms var(--ease-exit) both;
 
   --font-sans:
-    var(--font-sans-latin), 'Noto Sans SC Variable', ui-sans-serif, system-ui,
+    'SoulLedger Glyphs', var(--font-sans-latin), 'Noto Sans SC Variable', ui-sans-serif, system-ui,
     sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
     'Noto Color Emoji';
   --font-serif:
-    var(--font-serif-latin), 'Noto Serif SC Variable', ui-serif, Georgia,
+    'SoulLedger Glyphs', var(--font-serif-latin), 'Noto Serif SC Variable', ui-serif, Georgia,
     Cambria, 'Times New Roman', Times, serif;
   --font-mono:
-    var(--font-mono-latin), 'Noto Sans SC Variable', ui-monospace,
+    'SoulLedger Glyphs', var(--font-mono-latin), 'Noto Sans SC Variable', ui-monospace,
     SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
     monospace;
 
-  /* 字号七档 · 规范 v1 §1.4(替换原八档)。`--text-*: initial` 清掉 Tailwind 的默认档,
-     只剩这七个名字;字重只用 400 / 500 / 600。字体由调用处的 font-mono / font-serif 定:
-     2xs 与 xl 用等宽,quote 只给引文(衬线),其余 Archivo / Noto Sans。 */
+  /* 字号七档 · 规范 v2 补足 A3:11 / 12 / 13 / 15 / 20 / 28 / 40。
+     和 v1 的对照:11、12、13、20、28 不变;16(md)并入 15;22(lg)并入 20;
+     v1 的 quote(20/32,衬线引文)按 A3 归入 read 档 —— 判词、律条、书信正文是 15/24
+     衬线,调用处写 `font-serif text-md font-normal`;新增 display 40/48,**只给匾题字和
+     登录页**(eslint.config.mjs 的 DISPLAY_ALLOW 守着)。
+     `--text-*: initial` 清掉 Tailwind 的默认档,只剩这七个名字;字重只用 400 / 500 / 600。 */
   --text-*: initial;
   --text-2xs: 11px;
   --text-2xs--line-height: 16px;
   --text-2xs--letter-spacing: 0.1em;
   --text-xs: 12px;
-  --text-xs--line-height: 16px;
+  --text-xs--line-height: 18px;
   --text-sm: 13px;
   --text-sm--line-height: 20px;
-  --text-md: 16px;
+  --text-md: 15px;
   --text-md--line-height: 24px;
   --text-md--font-weight: 600;
-  --text-quote: 20px;
-  --text-quote--line-height: 32px;
-  --text-lg: 22px;
+  --text-lg: 20px;
   --text-lg--line-height: 28px;
   --text-lg--font-weight: 600;
   --text-xl: 28px;
-  --text-xl--line-height: 32px;
+  --text-xl--line-height: 36px;
+  --text-display: 40px;
+  --text-display--line-height: 48px;
+  --text-display--font-weight: 400;
+
+  /* 间距 · 规范 v2 A2:2 / 4 / 8 / 12 / 16 / 24 / 32 / 48,即 Tailwind 的
+     0.5 / 1 / 2 / 3 / 4 / 6 / 8 / 12(4px 基数,`--spacing` 保持 Tailwind 默认 0.25rem)。
+     这张表的执法在 eslint.config.mjs 的 RHYTHM_OK;v1 的 1.5 / 10 / 14 在遗留页面里
+     记进了基线,逐页改版时还。 */
 
   --tracking-label: 0.1em;
   --tracking-meta: 0.04em;
@@ -190,7 +231,10 @@
   --radius-xl: 0;
   --radius-2xl: 0;
   --radius-3xl: 0;
+  /* 规范 v2 A2:圆角一律 0,例外只有两种形状 —— 胶囊(`rounded-full`,长明灯、抽屉把手)
+     与正圆(`rounded-circle`,单选钮、头像)。守卫允许的值因此只有 0、9999px、50%。 */
   --radius-full: 9999px;
+  --radius-circle: 50%;
 
   --border-width-3: 3px;
 
@@ -258,8 +302,8 @@
      failed, because an undeclared custom property with a fallback is valid CSS. */
   --z-index-toast: 90;
 
-  /* 规范 v1 §1.7:页面内零阴影,只有浮层(弹层、抽屉、菜单)用这一档。值按主题,在下面 :root / .light 里。 */
-  --shadow-overlay: var(--overlay-shadow);
+  /* 规范 v2 A2:全站不用阴影,浮层也不用 —— 层级靠 1px ink 框(`border-[oklch(var(--color-ink))]`)。
+     v1 的 `shadow-overlay` 这一档因此删掉,守卫(no-page-shadow)不再放行它。 */
   --container-prose: 720px;
   --container-page: 1200px;
 }
@@ -306,64 +350,96 @@
   }
 
   /* ═══════════════════════════════════════════════════════════════════════
-     色板 · SoulLedger 规范 v1「账簿 × 卷宗」(Claude Design,2026-09-24 定稿)。
-     每个颜色令牌是 OKLCH 三元组 `L C H`,消费处在 oklch() 里包 var() 取用;
-     值由设计稿交付的 hex 换算(design-cache/web-ledger/spec.dc.html 的 L / D 两表)。
+     色板 · SoulLedger 规范 v2「朱印」(Claude Design,2026-09-29 定稿;design-cache/v2/
+     spec-final.dc.html §一「Web · 四文明共用」与 §二 状态色)。
+     每个颜色令牌是 OKLCH 三元组 `L C H`,消费处在 oklch() 里包 var() 取用;值由设计稿
+     交付的 hex 换算,`src/__tests__/ledgerPaletteContract.test.ts` 逐个换回 hex 对账。
 
-     撤销了:按租户染色的整条面板梯度(--color-civ-* 每租户值)、文明标记色
-     --civ-mark / --civ-ink、琥珀强调色。文明只靠编号法、行程形状与称谓区分,
-     不进颜色层(规范 v1 §1.8,第 4 节第 06 条)。
+     名字沿用 v1(调用点上千处),值换成 v2:
+       canvas = bg · surface-1 = s1 · surface-2 = s2 · ink / ink-muted / ink-subtle = ink / ink2 / ink3
+       line = line · line-strong = ink3(输入框边框,非文字对比 ≥ 3)· block = ink(表头下 2px 实线)
+       surface-3 / rule:v2 没有这两档,surface-3 取 line 值(幽灵按钮「按下」底色),rule 并入 line。
+     v2 没有强调色:v1 的墨蓝 accent 撤掉,accent 家族指向 ink(选中、链接、筛选生效都是墨),
+     焦点环也是 ink(A2)。用户自选强调色一并撤掉(见 SettingsDrawer)。
+
+     文明只进匾色(§1.8 收窄):`--color-main` 由 <html data-civ="…"> 选,只给匾、立柱当前项、
+     印、行首色标、主按钮五处用;其余一切四文明共用。没有 data-civ(登录前)= 中性皮。
      ═══════════════════════════════════════════════════════════════════════ */
-  /* 深色为默认:ThemeContext 挂载时给 <html> 加 .dark。 */
+  /* 深色是 :root,浅色是 .light;ThemeContext 按系统偏好或用户选择给 <html> 加类。 */
   :root {
-    /* 纸 / 墨 · 规范 v1 §1.1 */
-    --color-canvas: 0.159322 0.006555 270.9811;
-    --color-surface-1: 0.191373 0.010618 268.1287;
-    --color-surface-2: 0.230759 0.014296 266.9490;
-    --color-surface-3: 0.280819 0.017571 266.3324;
-    /* 五种线 · 规范 v1 §1.5:rule 行线(账页红格)、line 结构线、block 区块边界 / 合计线 */
-    --color-rule: 0.296939 0.015156 4.5359;
-    --color-line: 0.301015 0.017256 266.3777;
-    --color-line-strong: 0.548593 0.016241 268.3709;
-    --color-block: 0.844951 0.010232 267.3470;
-    --color-ink: 0.934113 0.004173 271.3676;
-    --color-ink-muted: 0.778696 0.012177 264.4963;
-    --color-ink-subtle: 0.649150 0.015962 264.4570;
-    /* 强调 = 墨蓝:链接、焦点、选中、筛选生效。主按钮是墨色实底,不用强调色。 */
-    --color-accent: 0.766991 0.118326 264.1625;
-    --color-accent-contrast: 0.159322 0.006555 270.9811;
-    --color-danger: 0.727654 0.139960 28.8863;
-    --color-danger-tint: 0.231434 0.032948 26.0838;
-    --color-success: 0.765836 0.131731 152.8502;
-    --color-success-tint: 0.238515 0.027888 158.7330;
-    --color-warning: 0.806698 0.138580 78.5222;
-    --color-warning-tint: 0.251046 0.029877 76.8628;
-    --color-disabled-ink: 0.441913 0.015618 266.5527;
-    --color-disabled-surface: 0.209123 0.010375 268.1867;
-    /* 设置抽屉的强调色选择器写 accent / accent-ink / accent-hover 三个行内值(默认墨蓝)。
-       焦点环不跟它走:写死成墨蓝本身,用户挑一个浅色也拿不走焦点指示。 */
-    --color-accent-ink: 0.766991 0.118326 264.1625;
-    --color-accent-hover: 0.778696 0.012177 264.4963;
-    --color-focus: 0.766991 0.118326 264.1625;
-    --overlay-shadow: 0 12px 32px rgba(0, 0, 0, 0.55);
-    /* 弹层遮罩:墨色 + 按主题的不透明度(规范 v1:深 .62 / 浅 .42)。 */
+    /* 纸 / 墨 · 规范 v2 §一 深色 */
+    --color-canvas: 0.165802 0.003970 48.4701;
+    --color-surface-1: 0.207357 0.006191 56.0227;
+    --color-surface-2: 0.254965 0.009534 67.3784;
+    --color-surface-3: 0.301893 0.012433 62.1505;
+    --color-rule: 0.301893 0.012433 62.1505;
+    --color-line: 0.301893 0.012433 62.1505;
+    --color-line-strong: 0.680983 0.023181 65.1622;
+    --color-block: 0.937570 0.019894 77.3138;
+    --color-ink: 0.937570 0.019894 77.3138;
+    --color-ink-muted: 0.791906 0.027764 74.6974;
+    --color-ink-subtle: 0.680983 0.023181 65.1622;
+    /* 立柱底(四文明共用)与匾上题字色(两个主题同值)。 */
+    --color-pillar: 0.108893 0.003009 17.6234;
+    --color-on-main: 0.972507 0.019830 69.9992;
+    /* 强调 = 墨(v2 撤掉墨蓝)。accent-contrast 是墨底上的字 = 纸。 */
+    --color-accent: 0.937570 0.019894 77.3138;
+    --color-accent-contrast: 0.165802 0.003970 48.4701;
+    --color-accent-ink: 0.937570 0.019894 77.3138;
+    --color-accent-hover: 0.791906 0.027764 74.6974;
+    /* 焦点环 · A2:2px ink,外扩 2。写成字面三元组(与 ink 同值),不引用别的令牌。 */
+    --color-focus: 0.937570 0.019894 77.3138;
+    /* 状态色 · 规范 v2 §二。失败 = 冷玫红(永远带 ✕ + 文字);警示 = 橙(带 ◇)。 */
+    --color-danger: 0.740342 0.162886 10.1566;
+    --color-danger-strong: 0.530288 0.196322 11.9011;
+    --color-danger-tint: 0.233082 0.057680 4.8370;
+    --color-danger-on-tint: 0.906877 0.050597 4.3604;
+    --color-success: 0.778968 0.109344 150.2017;
+    /* 提示条底色 · Design D2:成功底 浅 #E4FBE7 / 深 #102515,警示底 浅 #FFF1E2 / 深 #301904,
+       明度与失败底对齐;底上的字用 success / warning 本色(inkOnSurfaceContract 钉 ≥ 4.5)。 */
+    --color-success-tint: 0.241388 0.040904 150.1078;
+    --color-warning: 0.776001 0.158964 59.2368;
+    --color-warning-tint: 0.240511 0.049375 60.4681;
+    /* 长明灯:实底块 = 有,空底 + 描边 = 我点过;lamp-bg 是块上文字色。 */
+    --color-lamp: 0.860675 0.109733 85.2786;
+    --color-lamp-bg: 0.228754 0.029413 79.2504;
+    /* 禁用 · A1:底 s2、字 ink3。 */
+    --color-disabled-ink: 0.680983 0.023181 65.1622;
+    --color-disabled-surface: 0.254965 0.009534 67.3784;
+    /* 遮罩 · A2:只用在对话框与抽屉下,按主题两值 —— 深 rgba(0,0,0,.62)。 */
     --color-scrim: 0 0 0;
     --scrim-alpha: 0.62;
+    /* 文明皮 · 匾色(§三),深色档。 */
+    --color-civ-neutral: 0.515225 0.016007 67.4607;
+    --color-civ-cn: 0.529552 0.153564 32.1588;
+    --color-civ-eu: 0.519641 0.133015 304.1459;
+    --color-civ-eg: 0.514767 0.141865 264.7935;
+    --color-civ-gr: 0.512981 0.053880 205.7495;
+    --color-main: var(--color-civ-neutral);
+    /* 图表 · A5:灵魂状态的冷灰蓝明度梯度(OKLCH 色相 250、彩度 .045),先后有序;
+       深色从亮到暗。chart-1 同时是去向 / 功过图案的基色。 */
+    --color-chart-1: 0.946168 0.032488 229.2456;
+    --color-chart-2: 0.869674 0.044412 250.4438;
+    --color-chart-3: 0.800399 0.044801 248.3861;
+    --color-chart-4: 0.740999 0.045000 249.5047;
+    --color-chart-5: 0.690172 0.045147 250.6443;
+    --color-chart-6: 0.650533 0.044564 249.6206;
     /* 旧名 → 新令牌。消费点仍按旧名写的逐步改;新代码直接用新名。 */
     --color-surface-4: var(--color-surface-3);
     --color-hairline: var(--color-line);
     --color-hairline-strong: var(--color-line-strong);
     --color-hairline-tertiary: var(--color-line-strong);
     --color-ink-tertiary: var(--color-ink-subtle);
-    /* 领域状态 = 颜色 + 字形(规范 v1 §1.2)。颜色只取五个语义色,字形在徽章里。 */
+    /* 领域状态 = 颜色 + 字形。「轮回中」· Design D1:图表里取梯度第 4 档(浅 #53687F / 深 #96AEC7);
+       图表以外不给颜色 —— 徽章是「↻ 轮回中」、ink 字、1px ink3 框,逐页改版时换过去。 */
     --color-status-alive: var(--color-success);
     --color-status-judging: var(--color-warning);
     --color-status-disposed: var(--color-ink);
-    --color-status-reincarnating: var(--color-accent);
+    --color-status-reincarnating: var(--color-chart-4);
     --color-status-lost: var(--color-ink-subtle);
     --color-status-settled: var(--color-ink-muted);
-    --color-karma-merit: var(--color-success);
-    --color-karma-demerit: var(--color-danger);
+    /* 功 / 过不给颜色(Design E 组):灵魂详情的功过数字与总账一样是 ink,靠列头与 +/− 区分。
+       --color-karma-* 两个令牌因此删掉 —— 冷玫红只表「失败」。 */
     --color-verdict-passed: var(--color-success);
     --color-verdict-failed: var(--color-danger);
     --color-verdict-purgatory: var(--color-warning);
@@ -375,38 +451,234 @@
   }
 
   .light {
-    /* 纸 / 墨 · 规范 v1 §1.1 */
-    --color-canvas: 0.969997 0.012328 91.5173;
-    --color-surface-1: 0.988238 0.006936 88.6415;
-    --color-surface-2: 0.934657 0.020976 88.7229;
-    --color-surface-3: 0.894669 0.027836 90.9194;
-    /* 五种线 · 规范 v1 §1.5:rule 行线(账页红格)、line 结构线、block 区块边界 / 合计线 */
-    --color-rule: 0.843587 0.036004 35.3407;
-    --color-line: 0.845691 0.026923 90.1212;
-    --color-line-strong: 0.633680 0.021250 90.6205;
-    --color-block: 0.208789 0.004235 264.4766;
-    --color-ink: 0.208789 0.004235 264.4766;
-    --color-ink-muted: 0.397873 0.008784 268.4341;
-    --color-ink-subtle: 0.516707 0.010128 264.4796;
-    /* 强调 = 墨蓝:链接、焦点、选中、筛选生效。主按钮是墨色实底,不用强调色。 */
-    --color-accent: 0.438650 0.140636 259.8917;
-    --color-accent-contrast: 1.000000 0 0;
-    --color-danger: 0.501282 0.178318 28.7047;
-    --color-danger-tint: 0.924799 0.025066 39.3606;
-    --color-success: 0.455753 0.098259 151.6573;
-    --color-success-tint: 0.928130 0.023827 133.4666;
-    --color-warning: 0.466535 0.098749 74.2741;
-    --color-warning-tint: 0.921846 0.044778 87.1880;
-    --color-disabled-ink: 0.711581 0.020387 93.7435;
-    --color-disabled-surface: 0.937147 0.015278 90.2386;
-    /* 设置抽屉的强调色选择器写 accent / accent-ink / accent-hover 三个行内值(默认墨蓝)。
-       焦点环不跟它走:写死成墨蓝本身,用户挑一个浅色也拿不走焦点指示。 */
-    --color-accent-ink: 0.438650 0.140636 259.8917;
-    --color-accent-hover: 0.397873 0.008784 268.4341;
-    --color-focus: 0.438650 0.140636 259.8917;
-    --overlay-shadow: 0 12px 32px rgba(23, 24, 26, 0.18);
-    --color-scrim: 0.208789 0.004235 264.4766;
+    /* 纸 / 墨 · 规范 v2 §一 浅色 */
+    --color-canvas: 0.948042 0.018849 83.0639;
+    --color-surface-1: 0.986497 0.013019 82.4021;
+    --color-surface-2: 0.912345 0.028804 84.5925;
+    --color-surface-3: 0.864197 0.029618 82.5881;
+    --color-rule: 0.864197 0.029618 82.5881;
+    --color-line: 0.864197 0.029618 82.5881;
+    --color-line-strong: 0.480553 0.018306 67.3691;
+    --color-block: 0.188704 0.003838 48.5100;
+    --color-ink: 0.188704 0.003838 48.5100;
+    --color-ink-muted: 0.391607 0.009608 48.4636;
+    --color-ink-subtle: 0.480553 0.018306 67.3691;
+    --color-pillar: 0.188704 0.003838 48.5100;
+    --color-accent: 0.188704 0.003838 48.5100;
+    --color-accent-contrast: 0.948042 0.018849 83.0639;
+    --color-accent-ink: 0.188704 0.003838 48.5100;
+    --color-accent-hover: 0.391607 0.009608 48.4636;
+    --color-focus: 0.188704 0.003838 48.5100;
+    --color-danger: 0.472016 0.180369 12.7394;
+    --color-danger-strong: 0.472016 0.180369 12.7394;
+    --color-danger-tint: 0.959029 0.020979 6.6063;
+    --color-danger-on-tint: 0.409460 0.155831 12.0157;
+    --color-success: 0.481178 0.119975 150.1017;
+    --color-success-tint: 0.965876 0.035762 149.1233;
+    --color-warning: 0.508784 0.132855 50.8763;
+    --color-warning-tint: 0.965162 0.024981 69.4434;
+    --color-lamp: 0.407751 0.090608 66.2502;
+    --color-lamp-bg: 0.960430 0.029660 85.5642;
+    --color-disabled-ink: 0.480553 0.018306 67.3691;
+    --color-disabled-surface: 0.912345 0.028804 84.5925;
+    /* 浅色遮罩 = ink #151312 × .42。 */
+    --color-scrim: 0.188704 0.003838 48.5100;
     --scrim-alpha: 0.42;
+    --color-civ-neutral: 0.275998 0.008069 59.3304;
+    --color-civ-cn: 0.464883 0.145204 31.3776;
+    --color-civ-eu: 0.358447 0.109419 304.5324;
+    --color-civ-eg: 0.390292 0.130940 263.9175;
+    --color-civ-gr: 0.331542 0.034316 204.4908;
+    /* 浅色从暗到亮。 */
+    --color-chart-1: 0.259075 0.045425 251.0858;
+    --color-chart-2: 0.360350 0.044648 250.3338;
+    --color-chart-3: 0.440635 0.045391 248.8937;
+    --color-chart-4: 0.509215 0.044595 251.0144;
+    --color-chart-5: 0.570530 0.044052 249.7496;
+    --color-chart-6: 0.620712 0.045066 249.6583;
+  }
+
+  /* 文明皮:只换匾色这一个值。选择器挂在 <html> 上(TenantContext 按租户写 data-civ),
+     与 .light 同一个元素,所以 var() 取到的是当前主题那一档。 */
+  [data-civ="cn"] {
+    --color-main: var(--color-civ-cn);
+  }
+  [data-civ="eu"] {
+    --color-main: var(--color-civ-eu);
+  }
+  [data-civ="eg"] {
+    --color-main: var(--color-civ-eg);
+  }
+  [data-civ="gr"] {
+    --color-main: var(--color-civ-gr);
+  }
+
+  /* 文明皮的其余三样 —— 匾纹、印形、两款字体(规范 v2 §三、§四;素材在 public/v2/)。
+     与匾色同一个开关:<html data-civ> 给整页,印组件在自己的根元素上也写 data-civ,所以
+     一枚别的文明的印放在本页也拿到它自己的形与色。素材全是单色 currentColor 的 SVG,
+     这里一律当 CSS 遮罩用,颜色由遮罩下面的底色给,所以换主题不用换文件。
+     字体变量来自 src/components/plaque/fonts.ts(next/font,按需加载)。
+     中性皮(登录前、不认得的租户)没有印,匾纹只留上下两道细线(见 .plaque-band)。 */
+  :root,
+  [data-civ="neutral"] {
+    --band: none;
+    --band-compact: none;
+    --font-plaque: var(--font-serif);
+    --font-seal: var(--font-serif);
+  }
+  [data-civ="cn"] {
+    --band: url("/v2/svg/band-cn.svg");
+    --band-compact: url("/v2/svg/band-cn-compact.svg");
+    --seal-body: url("/v2/svg/seal-cn-body.svg");
+    --seal-ring: url("/v2/svg/seal-cn-ring.svg");
+    --seal-line: url("/v2/svg/seal-cn-line.svg");
+    --seal-line-small: url("/v2/svg/seal-cn-line-small.svg");
+    --seal-scan: image-set(url("/v2/textures/scan-cnseal-1x.png") 1x, url("/v2/textures/scan-cnseal-2x.png") 2x);
+    --section: url("/v2/svg/section-cn.svg");
+    --band-tex: image-set(url("/v2/textures/paper-1x.png") 1x, url("/v2/textures/paper-2x.png") 2x);
+    --band-tex-w: image-set(url("/v2/textures/paper-w-1x.png") 1x, url("/v2/textures/paper-w-2x.png") 2x);
+    --font-plaque: var(--font-ma-shan-zheng), var(--font-serif);
+    --font-seal: var(--font-lxgw-seal), var(--font-serif);
+  }
+  [data-civ="eu"] {
+    --band: url("/v2/svg/band-eu.svg");
+    --band-compact: url("/v2/svg/band-eu-compact.svg");
+    --seal-body: url("/v2/svg/seal-eu-body.svg");
+    --seal-ring: url("/v2/svg/seal-eu-ring.svg");
+    --seal-line: url("/v2/svg/seal-eu-line.svg");
+    --seal-line-small: url("/v2/svg/seal-eu-line-small.svg");
+    --seal-scan: image-set(url("/v2/textures/scan-wax-1x.png") 1x, url("/v2/textures/scan-wax-2x.png") 2x);
+    --section: url("/v2/svg/section-eu.svg");
+    --band-tex: image-set(url("/v2/textures/paper-1x.png") 1x, url("/v2/textures/paper-2x.png") 2x);
+    --band-tex-w: image-set(url("/v2/textures/paper-w-1x.png") 1x, url("/v2/textures/paper-w-2x.png") 2x);
+    --font-plaque: var(--font-unifraktur), var(--font-serif);
+    --font-seal: var(--font-unifraktur), var(--font-serif);
+  }
+  [data-civ="eg"] {
+    --band: url("/v2/svg/band-eg.svg");
+    --band-compact: url("/v2/svg/band-eg-compact.svg");
+    --seal-body: url("/v2/svg/seal-eg-body.svg");
+    --seal-ring: url("/v2/svg/seal-eg-ring.svg");
+    --seal-line: url("/v2/svg/seal-eg-line.svg");
+    --seal-line-small: url("/v2/svg/seal-eg-line-small.svg");
+    --seal-scan: image-set(url("/v2/textures/scan-clay-1x.png") 1x, url("/v2/textures/scan-clay-2x.png") 2x);
+    --section: url("/v2/svg/section-eg.svg");
+    --band-tex: image-set(url("/v2/textures/papyrus-1x.png") 1x, url("/v2/textures/papyrus-2x.png") 2x);
+    --band-tex-w: image-set(url("/v2/textures/papyrus-w-1x.png") 1x, url("/v2/textures/papyrus-w-2x.png") 2x);
+    --font-plaque: var(--font-josefin-slab), var(--font-serif);
+    --font-seal: var(--font-hieroglyphs), var(--font-serif);
+  }
+  [data-civ="gr"] {
+    --band: url("/v2/svg/band-gr.svg");
+    --band-compact: url("/v2/svg/band-gr-compact.svg");
+    --seal-body: url("/v2/svg/seal-gr-body.svg");
+    --seal-ring: url("/v2/svg/seal-gr-ring.svg");
+    --seal-line: url("/v2/svg/seal-gr-line.svg");
+    --seal-line-small: url("/v2/svg/seal-gr-line-small.svg");
+    --seal-scan: image-set(url("/v2/textures/scan-cyl-1x.png") 1x, url("/v2/textures/scan-cyl-2x.png") 2x);
+    --section: url("/v2/svg/section-gr.svg");
+    --band-tex: image-set(url("/v2/textures/marble-1x.png") 1x, url("/v2/textures/marble-2x.png") 2x);
+    --band-tex-w: image-set(url("/v2/textures/marble-w-1x.png") 1x, url("/v2/textures/marble-w-2x.png") 2x);
+    --font-plaque: var(--font-cinzel), var(--font-serif);
+    --font-seal: var(--font-gfs-didot), var(--font-serif);
+  }
+
+  /* 宽度 < 768 时立柱收成固定在底部的 56px 底栏(AppLayout 的 BottomBar)。页面里吸底的
+     操作条(审判队列的裁决条、批量条)写 `bottom-(--bottom-bar)`,落在底栏上方而不是被它盖住。 */
+  html {
+    --bottom-bar: 0px;
+  }
+  @media (max-width: 767.98px) {
+    html {
+      --bottom-bar: 56px;
+    }
+  }
+
+  /* 匾纹样带的质感(规范 v2 §四「质感」):只铺在纹样带这 22px 里,盖住纹样与匾色底;
+     地府 / 欧洲纸、埃及纸莎草、希腊大理石,128px 平铺。深色档(默认)用 *-w —— 只有白颗粒,
+     60% 已烤进 PNG 的 alpha,这里不再乘透明度。中性皮没有 --band-tex,于是不画。 */
+  .plaque-tex {
+    position: relative;
+  }
+  .plaque-tex::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: var(--band-tex-w, none) left top / 128px 128px repeat;
+  }
+  .light .plaque-tex::after {
+    background-image: var(--band-tex, none);
+  }
+
+  /* 匾纹样带 · 480×22,横向平铺;≤ 393 用 compact(去点缀,埃及再去莲花扇形)。 */
+  .plaque-band {
+    height: 22px;
+    background: oklch(var(--color-on-main));
+    mask: var(--band) left center / 480px 22px repeat-x;
+  }
+  @media (max-width: 393px) {
+    .plaque-band {
+      mask-image: var(--band-compact);
+    }
+  }
+  /* 中性皮:无匾纹,只留上下两道细线。 */
+  :root:not([data-civ]) .plaque-band,
+  [data-civ="neutral"] .plaque-band {
+    background: none;
+    mask: none;
+    border-block: 1px solid oklch(var(--color-on-main));
+    height: 6px;
+    margin-block: 8px;
+  }
+
+  /* 页面级分节纹 · 48×12,线色 ink3,只用在页面级分节上(表内小分组仍是细线)。
+     中性皮没有分节纹,退成一道细线。 */
+  .section-rule {
+    width: 48px;
+    height: 12px;
+    flex: none;
+    background: oklch(var(--color-ink-subtle));
+    mask: var(--section, linear-gradient(transparent 11px, black 11px)) center / 48px 12px no-repeat;
+  }
+
+  /* 印 · 叠放 body → ring(扫描遮罩)→ line(≤ 32 用 line-small)→ 印文。 */
+  .seal {
+    position: relative;
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    color: oklch(var(--color-on-main));
+  }
+  .seal-layer {
+    position: absolute;
+    inset: 0;
+    mask: var(--seal-mask) center / 100% 100% no-repeat;
+  }
+  .seal-body {
+    --seal-mask: var(--seal-body);
+    background: oklch(var(--color-main));
+  }
+  .seal-ring {
+    --seal-mask: var(--seal-ring);
+    background: var(--seal-scan) center / 100% 100%;
+    opacity: 0.8;
+  }
+  .seal-line {
+    --seal-mask: var(--seal-line);
+    background: oklch(var(--color-on-main));
+  }
+  .seal[data-small] .seal-line {
+    --seal-mask: var(--seal-line-small);
+  }
+  .seal-glyphs {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    font-family: var(--font-seal);
+    line-height: 1;
   }
 }
 
@@ -544,8 +816,68 @@ html.theme-switching *::after {
   button {
     @apply transition-colors duration-state;
   }
+  /* A1 输入框:s1 底、1px ink3 边框(非文字对比 ≥ 3,行线 line 过不了)、占位字 ink3。 */
   input, select, textarea {
-    @apply bg-[oklch(var(--color-surface-1))] border-[oklch(var(--color-hairline))] text-[oklch(var(--color-ink))] placeholder-[oklch(var(--color-ink-subtle))];
+    @apply bg-[oklch(var(--color-surface-1))] border-[oklch(var(--color-line-strong))] text-[oklch(var(--color-ink))] placeholder-[oklch(var(--color-ink-subtle))];
+  }
+  /* A1「复选 · 单选」:原生 <input> 直接画成规范的样子,不另造组件 —— 全站 26 个文件
+     写的都是原生控件,在这一层改,它们一起变,键盘、表单、读屏行为仍是平台的。
+     选中 = ink 实底(不用匾色,匾色只有五处用法);单选是正圆,这是 A2 圆角规则的例外之一。
+     复选的 ✓ / − 是一张按主题换色的 SVG:勾的颜色 = 纸色(bg),而 data: URI 里读不到
+     CSS 变量,所以这里是 bg 两个 hex 的镜像 —— 改 --color-canvas 要连这两处一起改。
+     在 base 层,所以调用点的 h-4 / w-3.5 等尺寸类照样生效。 */
+  input[type="checkbox"],
+  input[type="radio"] {
+    appearance: none;
+    flex: none;
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    border: 1.5px solid oklch(var(--color-line-strong));
+    background: transparent center / 12px 12px no-repeat;
+    cursor: pointer;
+    vertical-align: middle;
+    transition: background-color var(--transition-duration-instant), border-color var(--transition-duration-instant);
+  }
+  input[type="radio"] {
+    border-radius: 50%;
+  }
+  input[type="checkbox"]:checked,
+  input[type="checkbox"]:indeterminate {
+    border-color: oklch(var(--color-ink));
+    background-color: oklch(var(--color-ink));
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 6.2 5 8.6 9.6 3.4' fill='none' stroke='%23100e0d' stroke-width='1.8'/%3E%3C/svg%3E");
+  }
+  input[type="checkbox"]:indeterminate {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 6h7' fill='none' stroke='%23100e0d' stroke-width='1.8'/%3E%3C/svg%3E");
+  }
+  .light input[type="checkbox"]:checked {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 6.2 5 8.6 9.6 3.4' fill='none' stroke='%23f4ede0' stroke-width='1.8'/%3E%3C/svg%3E");
+  }
+  .light input[type="checkbox"]:indeterminate {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 6h7' fill='none' stroke='%23f4ede0' stroke-width='1.8'/%3E%3C/svg%3E");
+  }
+  input[type="radio"]:checked {
+    border-color: oklch(var(--color-ink));
+    background-image: radial-gradient(circle, oklch(var(--color-ink)) 0 3.5px, transparent 4px);
+  }
+  input[type="checkbox"]:disabled,
+  input[type="radio"]:disabled {
+    cursor: not-allowed;
+    border-color: oklch(var(--color-line));
+    background-color: oklch(var(--color-disabled-surface));
+  }
+  input[type="checkbox"][aria-invalid="true"],
+  input[type="radio"][aria-invalid="true"] {
+    border: 2px solid oklch(var(--color-danger));
+  }
+
+  /* A1「日期 · 原生控件」:根元素声明 color-scheme,原生日历与滚动条随主题变色。 */
+  :root {
+    color-scheme: dark;
+  }
+  :root.light {
+    color-scheme: light;
   }
 }
 
@@ -652,16 +984,16 @@ html.theme-switching *::after {
 :focus-visible {
   outline: 2px solid oklch(var(--color-focus)) !important;
   outline-offset: 2px;
-  /* 方角(规范 v1 第 4 节表态 2):环与控件同形,不再「方里套圆」。 */
-  border-radius: 0;
+  /* 规范 v2 A2:环跟着元素形状走(outline 本来就沿 border-radius 画),所以这里不再
+     把圆角压成 0 —— v1 那一行会把单选钮的焦点环画成方的。输入框也不再收紧偏移:
+     A1 的输入焦点是「边框改 ink,外加 2px ink 焦点框」,两层是有意的。 */
 }
 
-/* Inputs carry their own accent border on focus; a ring plus a border reads
-   as a double outline, so tighten the offset there. */
-input:focus-visible,
-textarea:focus-visible,
-select:focus-visible {
-  outline-offset: 0;
+/* 立柱里的焦点环 · A2:立柱当前项是匾色、立柱底近黑,ink 环在深色下会消失,所以立柱里
+   一律用 onMain、内缩 4px。立柱组件还没有(下一阶段),先把这一档做成类名等它来用。 */
+.focus-ring-pillar:focus-visible {
+  outline-color: oklch(var(--color-on-main)) !important;
+  outline-offset: -4px;
 }
 
 /* ── nprogress ────────────────────────────────────────────────────────────
@@ -791,13 +1123,13 @@ select:focus-visible {
   padding: 14px 16px;
   /* 0, like every other step in the table. */
   border-radius: 0;
-  border: 1px solid oklch(var(--toast-accent) / 0.4);
-  border-left: 3px solid oklch(var(--toast-accent));
+  /* 规范 v2:弹层一律 s1 底 + 1px ink 框、无阴影。状态只由图标(字形 + 状态色)说,
+     不再画 3px 状态色左边线 —— 行首 3px 色标在 v2 是「待我处理」的专用记号。 */
+  border: 1px solid oklch(var(--color-ink));
   background: oklch(var(--color-surface-1));
   color: oklch(var(--color-ink));
-  /* The tokens, not a fourth spelling. `settle` is the tier for something
-     arriving on screen, and `enter` is the curve for arriving. */
-  animation: toast-in var(--transition-duration-settle) var(--ease-enter);
+  /* 动效 v2:toast 进场 base 200、ease.enter、位移 12px;出场 fast 120、ease.exit。 */
+  animation: toast-in var(--transition-duration-base) var(--ease-enter);
   pointer-events: auto;
   /* NO `font-family`. Inheriting from `body` is what makes the toast follow
      --font-sans; the private copy is exactly how it would stop. */
@@ -857,17 +1189,18 @@ select:focus-visible {
   opacity: 0;
   transform: translateY(-6px);
   transition:
-    opacity var(--transition-duration-state) var(--ease-exit),
-    transform var(--transition-duration-state) var(--ease-exit);
+    opacity var(--transition-duration-fast) var(--ease-exit),
+    transform var(--transition-duration-fast) var(--ease-exit);
 }
 
+/* 只动 opacity 与 translate(动效 v2「属性」一条:缩放只留给盖印那 60ms)。 */
 @keyframes toast-in {
   from {
     opacity: 0;
-    transform: translateY(-10px) scale(0.96);
+    transform: translateY(-12px);
   }
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: none;
   }
 }

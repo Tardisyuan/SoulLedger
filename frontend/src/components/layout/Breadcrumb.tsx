@@ -57,9 +57,10 @@ const linkable = (href: string) => (PAGELESS_PREFIXES.has(href) ? undefined : hr
 // 面包屑段落的中文原名旁边配的译名（见 src/lib/menuI18n.ts 里的解释：菜单名
 // 是数据库自由文本，没有 i18n 字段，导航本身永远保持中文原文；面包屑和页面
 // H1 是仅有的两处例外，补一个"译名 中文原名"的对照）。
-type Crumb = { label: string; gloss?: string; href?: string };
+export type Crumb = { label: string; gloss?: string; href?: string };
 
-export function Breadcrumb({ menus }: { menus: SidebarMenu[] }) {
+/** 当前路由的面包屑各段。匾的题字取最后一段(AppLayout),面包屑本身画全部。 */
+export function useBreadcrumbs(menus: SidebarMenu[]): Crumb[] {
   const pathname = usePathname();
   const { t, locale } = useI18n();
 
@@ -118,6 +119,16 @@ export function Breadcrumb({ menus }: { menus: SidebarMenu[] }) {
       });
   }
 
+  return crumbs;
+}
+
+export function Breadcrumb({ menus }: { menus: SidebarMenu[] }) {
+  const { t } = useI18n();
+  const crumbs = useBreadcrumbs(menus);
+  const label = (key: string, fallback: string) => {
+    const value = t(key);
+    return value === key ? fallback : value;
+  };
   if (crumbs.length === 0) return <div className="flex-1" />;
 
   return (
@@ -126,14 +137,16 @@ export function Breadcrumb({ menus }: { menus: SidebarMenu[] }) {
       className="flex-1 min-w-0"
     >
       {/* 规范 v1「页头 · 面包屑」:等宽、斜杠分隔;链接悬停下划线,当前页 600 不可点
-          (aria-current)。不再有首页图标 —— 侧栏第一项就是概览。 */}
-      <ol className="flex items-center gap-2 font-mono text-xs min-w-0 overflow-hidden">
+          (aria-current)。不再有首页图标 —— 侧栏第一项就是概览。
+          规范 v2:面包屑住在匾上(匾的元数据位,等宽 11),字色一律 onMain —— 匾色底上
+          ink 系列读不出来;层级靠字重与下划线,不靠深浅。 */}
+      <ol className="flex items-center gap-2 font-mono text-2xs min-w-0 overflow-hidden text-[oklch(var(--color-on-main))]">
         {crumbs.map((crumb, i) => {
           const isLast = i === crumbs.length - 1;
           return (
             <li key={`${crumb.label}-${i}`} className="flex items-center gap-1 min-w-0">
               {i > 0 ? (
-                <span aria-hidden="true" className="shrink-0 text-[oklch(var(--color-ink-subtle))]">
+                <span aria-hidden="true" className="shrink-0">
                   /
                 </span>
               ) : null}
@@ -152,26 +165,22 @@ export function Breadcrumb({ menus }: { menus: SidebarMenu[] }) {
                    * 两处:那条规则按行匹配,而它自己的表头写明了代价 ——「跨行写开的
                    * 元素这条规则看不见」。这里就是那个代价的实例。 */
                   title={crumb.label}
-                  className="truncate text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))] hover:underline"
+                  className="focus-ring-pillar truncate text-[oklch(var(--color-on-main))] underline-offset-2 hover:text-[oklch(var(--color-on-main))] hover:underline"
                 >
                   {crumb.label}
                   {crumb.gloss && (
-                    <span className="ml-1 text-[oklch(var(--color-ink-subtle))]">{crumb.gloss}</span>
+                    <span className="ml-1">{crumb.gloss}</span>
                   )}
                 </Link>
               ) : (
                 <span
                   title={crumb.label}
-                  className={`truncate ${
-                    isLast
-                      ? "text-[oklch(var(--color-ink))] font-semibold"
-                      : "text-[oklch(var(--color-ink-subtle))]"
-                  }`}
+                  className={`truncate ${isLast ? "font-semibold" : ""}`}
                   aria-current={isLast ? "page" : undefined}
                 >
                   {crumb.label}
                   {crumb.gloss && (
-                    <span className="ml-1 font-normal text-[oklch(var(--color-ink-subtle))]">{crumb.gloss}</span>
+                    <span className="ml-1 font-normal">{crumb.gloss}</span>
                   )}
                 </span>
               )}

@@ -6,228 +6,29 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { useDrawerA11y } from "@/src/components/layout/useDrawerA11y";
 import { X, Sun, Moon } from "lucide-react";
 
-/**
- * The swatch and the colour it applies, as ONE fact.
- *
- * Each entry used to carry a `class` beside its `value` — `bg-amber-500` next
- * to `#f59e0b` — and the square was painted from the class while the accent
- * was set from the value. `tailwind.config.js` records what that cost: while
- * an `amber` override was in the theme, `bg-amber-500` was one step brighter
- * than `#f59e0b`, so **the square you clicked and the colour you got were
- * different**. Removing the override made them agree again, by luck rather
- * than by construction — two spellings of one colour, either of which could
- * drift.
- *
- * They are painted from `value` now. There is nothing left to disagree.
+/*
+ * 规范 v2 撤掉了「用户自选强调色」(2026-09-30 拍板,不加替代开关):v2 没有强调色,
+ * 选中、链接、焦点都是墨,文明只进匾色。这里原有的色板、自定义 hex 输入、以及
+ * 挂载时把 `soulledger_accent_color` 写回 `--color-accent` 的 `useAccentColor`
+ * 一并删除 —— 旧用户 localStorage 里存着的那个值从此没有任何代码去读,等于被忽略。
  */
-/**
- * "Nothing chosen": the stylesheet's own accent (规范 v1 ink blue, one value per
- * theme). Not a hex — choosing it removes the inline tokens instead of writing some.
- */
-const INK_DEFAULT = "default";
 
-const ACCENT_COLORS = [
-  // 规范 v1 的强调色。选它 = 清掉行内覆盖,回到样式表按主题给的墨蓝(深浅两值不同,
-  // 所以不能写成一个 hex)。
-  { name: "Ink", value: INK_DEFAULT },
-  { name: "Amber", value: "#f59e0b" },
-  { name: "Blue", value: "#3b82f6" },
-  { name: "Green", value: "#22c55e" },
-  { name: "Purple", value: "#a855f7" },
-  { name: "Red", value: "#ef4444" },
-  { name: "Rose", value: "#f43f5e" },
-];
-
-/**
- * The accent is THREE tokens, and the picker used to write one.
- *
- * `applyAccentColor` set `--color-accent` only. `--color-accent-hover` and
- * `--color-accent-ink` kept their amber values, and those are not decorative:
- * measured 2026-09-01, `--color-accent-ink` is read at **92 sites** (it is the
- * text/link accent) and `--color-accent-hover` at 10. So picking Blue turned
- * the button fills blue and left every accent heading, link and hover amber —
- * a feature that looked like it worked because the part you clicked did.
- *
- * WHY ONE WRITE WAS THE EASY MISTAKE. The drawer writes inline custom
- * properties on `documentElement`, which apply to BOTH themes at once, and
- * `--color-accent` is the one accent token declared identically in `:root` and
- * `.light` — so writing it needs no theme awareness. `--color-accent-ink` does:
- * dark declares it equal to the accent, light declares a darkened value
- * (`32 92% 31%`) because the accent itself measures 2.13:1 on white. That is
- * why the theme is a parameter here, and why the values are re-applied when
- * the theme flips.
- */
-function accentTokens(hex: string, theme: string): Record<string, string> {
-  const [h, sPct, lPct] = hexToHslTriple(hex).split(" ");
-  const hue = parseInt(h, 10);
-  const sat = parseInt(sPct, 10);
-  const light = parseInt(lPct, 10);
-
-  // Hover: the shipped amber pair is 50% → 58% lightness. Same step, clamped
-  // so a very light accent does not hover to white.
-  const hover = `${hue} ${Math.min(100, sat + 4)}% ${Math.min(72, light + 8)}%`;
-
-  // Ink: in dark mode the accent sits on a dark surface and is already legible
-  // (the stylesheet declares ink = accent there). In light mode it has to be
-  // darkened until black-on-white-grade contrast is reached — solved rather
-  // than guessed, against white, targeting 5.5:1 so the tenant-tinted surfaces
-  // (which are darker than white) still clear the 4.5 floor. That margin is
-  // the same one the shipped amber carries: 5.84 on white, 4.81 on the worst
-  // tinted surface.
-  const ink =
-    theme === "light"
-      ? `${hue} ${sat}% ${solveInkLightness(hue, sat)}%`
-      : `${hue} ${sat}% ${light}%`;
-
-  // The three triples are derived in HSL and written in OKLCH — see
-  // `hexToOklch`. The conversion is exact through sRGB, so what lands on
-  // `documentElement` is the same colour the arithmetic above chose.
-  return {
-    "--color-accent": hslTripleToOklch(`${hue} ${sat}% ${light}%`),
-    "--color-accent-hover": hslTripleToOklch(hover),
-    "--color-accent-ink": hslTripleToOklch(ink),
-  };
-}
-
-/** Relative luminance of an `H S% L%` triple, per WCAG. */
-function luminance(h: number, s: number, l: number): number {
-  const S = s / 100;
-  const L = l / 100;
-  const c = (1 - Math.abs(2 * L - 1)) * S;
-  const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
-  const m = L - c / 2;
-  const [r, g, b] = (
-    [
-      [c, x, 0],
-      [x, c, 0],
-      [0, c, x],
-      [0, x, c],
-      [x, 0, c],
-      [c, 0, x],
-    ] as const
-  )[Math.floor(h / 60) % 6].map((v) => v + m);
-  const lin = (v: number) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4);
-  return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
-}
-
-/** The highest lightness at this hue that still clears 5.5:1 on white. */
-function solveInkLightness(hue: number, sat: number): number {
-  for (let l = 60; l >= 5; l -= 1) {
-    const ratio = 1.05 / (luminance(hue, sat, l) + 0.05);
-    if (ratio >= 5.5) return l;
-  }
-  return 5;
-}
-
-/** Whether black text on this colour clears AA, i.e. the colour is light enough.
- *  Dark mode reads the accent itself as link / selection text on a near-black
- *  canvas (only light mode solves a darker accent-ink), so a pick that fails
- *  this would be unreadable there. */
-export function accentTakesBlackText(hex: string): boolean {
-  const [h, sPct, lPct] = hexToHslTriple(hex).split(" ");
-  const lum = luminance(parseInt(h, 10), parseInt(sPct, 10), parseInt(lPct, 10));
-  return (lum + 0.05) / 0.05 >= 4.5;
-}
-
-const NAV_MODE_KEY = "soulledger_nav_mode";
-const ACCENT_COLOR_KEY = "soulledger_accent_color";
-
-/** `--transition-duration-settle`, the length of both drawer keyframes. */
-const MOUNT_LINGER_MS = 240;
-
-/**
- * `#f59e0b` -> `0.770351 0.164635 70.6613`, the OKLCH triple the stylesheet's
- * tokens are written in since the HSL migration.
- *
- * IT GOES THROUGH HSL ON THE WAY, AND THAT IS DELIBERATE. `hexToHslTriple`
- * rounds H, S and L to whole numbers, so `#f59e0b` (245, 158, 11) has always
- * been written out as `38 92% 50%` = (245, 159, 10) — the inline style has
- * never rendered quite the hex it was given. Converting the hex straight to
- * OKLCH would fix that and move two channels by 1/255 on every accent-coloured
- * pixel in the app, which is a colour change wearing a refactor's clothes.
- * The lossy step is kept so the migration renders the same pixels; it is a
- * separate decision, and the value to fix is `hexToHslTriple`, not this.
- *
- * The derived tokens below (hover, ink) stay in HSL for the same reason: their
- * arithmetic — "+4 saturation, +8 lightness", "solve for the lightness that
- * clears 5.5:1" — is measured in HSL coordinates, and re-deriving it in OKLCH
- * would pick different colours rather than the same ones spelled differently.
- * This function is the boundary where a finished triple becomes CSS.
- */
-export function hexToOklch(hex: string): string {
-  return hslTripleToOklch(hexToHslTriple(hex));
-}
-
-/** `38 92% 50%` -> `0.770351 0.164635 70.6613`. sRGB is the pivot: both spaces
- *  describe the same 8-bit colour, so the round trip is exact. */
-function hslTripleToOklch(triple: string): string {
-  const [h, sPct, lPct] = triple.split(" ");
-  const hue = parseFloat(h);
-  const sat = parseFloat(sPct) / 100;
-  const light = parseFloat(lPct) / 100;
-  const a = sat * Math.min(light, 1 - light);
-  const chan = (n: number) => {
-    const k = (n + hue / 30) % 12;
-    return light - a * Math.max(-1, Math.min(k - 3, 9 - k, 1));
-  };
-  const rgb = [0, 8, 4].map((n) => Math.round(255 * chan(n)));
-  const lin = rgb.map((v) => {
-    const c = v / 255;
-    return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
-  });
-  const [lr, lg, lb] = lin;
-  const cbrt = (v: number) => Math.cbrt(v);
-  const l_ = cbrt(0.4122214708 * lr + 0.5363325363 * lg + 0.0514459929 * lb);
-  const m_ = cbrt(0.2119034982 * lr + 0.6806995451 * lg + 0.1073969566 * lb);
-  const s_ = cbrt(0.0883024619 * lr + 0.2817188376 * lg + 0.6299787005 * lb);
-  const L = 0.2104542553 * l_ + 0.793617785 * m_ - 0.0040720468 * s_;
-  const A = 1.9779984951 * l_ - 2.428592205 * m_ + 0.4505937099 * s_;
-  const B = 0.0259040371 * l_ + 0.7827717662 * m_ - 0.808675766 * s_;
-  const C = Math.hypot(A, B);
-  if (C < 1e-6) return `${trim(L, 6)} 0 0`;
-  const H = ((Math.atan2(B, A) * 180) / Math.PI + 360) % 360;
-  return `${trim(L, 6)} ${trim(C, 6)} ${trim(H, 4)}`;
-}
-
-function trim(value: number, digits: number): string {
-  const s = value.toFixed(digits).replace(/0+$/, "").replace(/\.$/, "");
-  return s === "" || s === "-" ? "0" : s;
-}
-
-// Convert hex to an `H S% L%` triple — still the coordinate system every
-// derivation below is measured in; see `hexToOklch` for why.
-function hexToHslTriple(hex: string): string {
-  const r = parseInt(hex.slice(1, 3), 16) / 255;
-  const g = parseInt(hex.slice(3, 5), 16) / 255;
-  const b = parseInt(hex.slice(5, 7), 16) / 255;
-  const max = Math.max(r, g, b);
-  const min = Math.min(r, g, b);
-  let h = 0, s = 0;
-  const l = (max + min) / 2;
-  if (max !== min) {
-    const d = max - min;
-    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-    switch (max) {
-      case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
-      case g: h = ((b - r) / d + 2) / 6; break;
-      case b: h = ((r - g) / d + 4) / 6; break;
-    }
-  }
-  return `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
-}
+/** `--transition-duration-settle` (规范 v2 base 200), the length of both drawer keyframes. */
+const MOUNT_LINGER_MS = 200;
 
 interface SettingsDrawerProps {
   open: boolean;
   onClose: () => void;
-  navMode: "classic" | "compact";
-  onNavModeChange: (mode: "classic" | "compact") => void;
 }
 
-export function SettingsDrawer({ open, onClose, navMode, onNavModeChange }: SettingsDrawerProps) {
+/*
+ * 「导航模式 · 经典 / 紧凑」也撤掉了(规范 v2):v1 的 200px 侧栏与 56px 编号栏换成了立柱,
+ * 立柱的宽度由标签长度决定(竖排 60 / 横排 88,`@soulledger/core/domain/pillar`),没有可选的第二种。
+ * localStorage 里旧的 `soulledger_nav_mode` 从此没有代码读。
+ */
+export function SettingsDrawer({ open, onClose }: SettingsDrawerProps) {
   const { t } = useI18n();
   const { theme, toggleTheme } = useTheme();
-  const [accentColor, setAccentColor] = useState(INK_DEFAULT);
-  const [customHex, setCustomHex] = useState("");
 
   // The drawer's name comes from the heading it already renders, not from a
   // second copy of the same string: `aria-labelledby` cannot drift from what
@@ -289,64 +90,6 @@ export function SettingsDrawer({ open, onClose, navMode, onNavModeChange }: Sett
     return () => clearTimeout(timer);
   }, [open]);
 
-  // Re-applied on theme change, not only on pick: `--color-accent-ink` is
-  // theme-dependent (see `accentTokens`), and an inline custom property set
-  // for one theme would be wrong in the other the moment the user flips it.
-  useEffect(() => {
-    let saved: string | null = null;
-    try {
-      saved = localStorage.getItem(ACCENT_COLOR_KEY);
-    } catch {
-      // localStorage unavailable (SSR or private browsing)
-    }
-    if (!saved || !/^#[0-9a-fA-F]{6}$/.test(saved)) return;
-    setAccentColor(saved);
-    for (const [name, value] of Object.entries(accentTokens(saved, theme))) {
-      document.documentElement.style.setProperty(name, value);
-    }
-  }, [theme]);
-
-  const applyAccentColor = (color: string) => {
-    if (color === INK_DEFAULT) {
-      setAccentColor(INK_DEFAULT);
-      try {
-        localStorage.removeItem(ACCENT_COLOR_KEY);
-      } catch {
-        // localStorage unavailable
-      }
-      clearAccentTokens();
-      return;
-    }
-    if (!/^#[0-9a-fA-F]{6}$/.test(color)) return;
-    setAccentColor(color);
-    try {
-      localStorage.setItem(ACCENT_COLOR_KEY, color);
-    } catch {
-      // localStorage unavailable
-    }
-    for (const [name, value] of Object.entries(accentTokens(color, theme))) {
-      document.documentElement.style.setProperty(name, value);
-    }
-  };
-
-  const [customHexError, setCustomHexError] = useState<string | null>(null);
-
-  const handleCustomHex = () => {
-    if (!/^#[0-9A-Fa-f]{6}$/.test(customHex)) {
-      setCustomHexError(t("settings.accent_hex_invalid"));
-      return;
-    }
-    // The presets all pass; the free-text field is the hole. In dark mode the
-    // accent is read as text on a near-black canvas as it stands, so a colour
-    // too dark for black text on it is too dark for that — see accentTakesBlackText.
-    if (!accentTakesBlackText(customHex)) {
-      setCustomHexError(t("settings.accent_hex_too_dark"));
-      return;
-    }
-    setCustomHexError(null);
-    applyAccentColor(customHex);
-  };
-
   if (!present) return null;
 
   return (
@@ -358,7 +101,7 @@ export function SettingsDrawer({ open, onClose, navMode, onNavModeChange }: Sett
       <button
         type="button"
         aria-label={t("common.close")}
-        className={`fixed inset-0 bg-black/50 z-drawer ${
+        className={`fixed inset-0 bg-[oklch(var(--color-scrim)/var(--scrim-alpha))] z-drawer ${
           open ? "animate-scrim-in" : "animate-scrim-out"
         }`}
         onClick={onClose}
@@ -368,7 +111,7 @@ export function SettingsDrawer({ open, onClose, navMode, onNavModeChange }: Sett
       <div
         ref={drawerRef}
         {...drawerProps}
-        className={`fixed right-0 top-0 h-full w-80 bg-[oklch(var(--color-surface-1))] border-l border-[oklch(var(--color-hairline))] z-drawer shadow-overlay overflow-y-auto ${
+        className={`fixed right-0 top-0 h-full w-80 bg-[oklch(var(--color-surface-1))] border-l border-[oklch(var(--color-ink))] z-drawer overflow-y-auto ${
           open ? "animate-drawer-in" : "animate-drawer-out"
         }`}
       >
@@ -417,115 +160,8 @@ export function SettingsDrawer({ open, onClose, navMode, onNavModeChange }: Sett
               </button>
             </div>
           </div>
-
-          {/* Accent Color Section */}
-          <div className="mb-6">
-            <h3 className="text-2xs uppercase text-[oklch(var(--color-ink-muted))] mb-3">{t("settings.accent_color") || "Accent Color"}</h3>
-            <div className="grid grid-cols-3 gap-2 mb-3">
-              {ACCENT_COLORS.map((color) => (
-                <button
-                  key={color.value}
-                  onClick={() => applyAccentColor(color.value)}
-                  // The default swatch paints the palette's own ink blue: --color-focus is
-                  // that value written as a literal the picker never overrides.
-                  style={{ backgroundColor: color.value === INK_DEFAULT ? "oklch(var(--color-focus))" : color.value }}
-                  className={`h-10 transition-colors ${
-                    accentColor === color.value
-                      ? "ring-2 ring-offset-2 ring-offset-surface-1 ring-[oklch(var(--color-accent))] scale-105"
-                      : "hover:scale-105"
-                  }`}
-                  title={t(`settings.colors.${color.name.toLowerCase()}`) || color.name}
-                />
-              ))}
-            </div>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={customHex}
-                onChange={(e) => setCustomHex(e.target.value)}
-                placeholder="#ff5500"
-                className="flex-1 bg-[oklch(var(--color-surface-2))] border border-[oklch(var(--color-hairline))] px-3 py-2 text-sm text-[oklch(var(--color-ink))] placeholder-[oklch(var(--color-ink-subtle))] focus:outline-hidden focus:border-[oklch(var(--color-accent))]"
-              />
-              <button
-                onClick={handleCustomHex}
-                aria-describedby={customHexError ? "accent-hex-error" : undefined}
-                className="px-4 py-2 bg-[oklch(var(--color-surface-2))] border border-[oklch(var(--color-hairline))] text-sm text-[oklch(var(--color-ink-muted))] hover:bg-[oklch(var(--color-surface-3))] hover:text-[oklch(var(--color-ink))] transition-colors"
-              >
-                {t("settings.apply") || "Apply"}
-              </button>
-            </div>
-            {customHexError && (
-              <p
-                id="accent-hex-error"
-                role="alert"
-                className="mt-2 text-xs text-[oklch(var(--color-status-error))]"
-              >
-                {customHexError}
-              </p>
-            )}
-          </div>
-
-          {/* Navigation Mode Section */}
-          <div className="mb-6">
-            <h3 className="text-2xs uppercase text-[oklch(var(--color-ink-muted))] mb-3">{t("settings.nav_mode") || "Navigation Mode"}</h3>
-            <div className="flex gap-2">
-              <button
-                onClick={() => onNavModeChange("classic")}
-                className={`flex-1 py-2 px-3 text-sm transition-colors ${
-                  navMode === "classic"
-                    ? "bg-[oklch(var(--color-ink))] text-[oklch(var(--color-canvas))]"
-                    : "bg-[oklch(var(--color-surface-2))] text-[oklch(var(--color-ink-muted))] hover:bg-[oklch(var(--color-surface-3))]"
-                }`}
-              >
-                {t("settings.classic") || "Classic"}
-              </button>
-              <button
-                onClick={() => onNavModeChange("compact")}
-                className={`flex-1 py-2 px-3 text-sm transition-colors ${
-                  navMode === "compact"
-                    ? "bg-[oklch(var(--color-ink))] text-[oklch(var(--color-canvas))]"
-                    : "bg-[oklch(var(--color-surface-2))] text-[oklch(var(--color-ink-muted))] hover:bg-[oklch(var(--color-surface-3))]"
-                }`}
-              >
-                {t("settings.compact") || "Compact"}
-              </button>
-            </div>
-            <p className="text-xs text-[oklch(var(--color-ink-subtle))] mt-2">
-              {navMode === "compact"
-                ? (t("settings.compact_desc") || "Icons only with tooltips on hover")
-                : (t("settings.classic_desc") || "Full sidebar with icons and labels")}
-            </p>
-          </div>
         </div>
       </div>
     </>
   );
-}
-
-/** Remove every inline accent token, so the stylesheet's per-theme ink blue applies. */
-function clearAccentTokens() {
-  for (const name of ["--color-accent", "--color-accent-hover", "--color-accent-ink"]) {
-    document.documentElement.style.removeProperty(name);
-  }
-}
-
-/**
- * On mount: a saved pick writes its three tokens; nothing saved writes nothing
- * (it used to write the old amber default inline, which overrode the palette on
- * every page). The drawer re-applies a saved pick on theme change.
- */
-export function useAccentColor() {
-  useEffect(() => {
-    let saved: string | null = null;
-    try {
-      saved = localStorage.getItem(ACCENT_COLOR_KEY);
-    } catch {
-      // localStorage unavailable (SSR or private browsing)
-    }
-    if (!saved || !/^#[0-9a-fA-F]{6}$/.test(saved)) return;
-    const theme = document.documentElement.classList.contains("light") ? "light" : "dark";
-    for (const [name, value] of Object.entries(accentTokens(saved, theme))) {
-      document.documentElement.style.setProperty(name, value);
-    }
-  }, []);
 }

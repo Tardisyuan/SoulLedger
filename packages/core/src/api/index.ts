@@ -78,7 +78,7 @@ export {
 } from "./judgment";
 
 // Ledger
-export { ledgerApi, type LedgerStatsOverview, type LedgerRecord, type LedgerSummary, type LedgerReading, type LedgerRecalculation, type LedgerInheritance, type LedgerInheritanceNotApplicable, type LedgerJournal, type LedgerJournalRow, type LedgerJournalCategory, type LedgerJournalParams } from "./ledger";
+export { ledgerApi, isMonthTooLarge, type LedgerStatsOverview, type LedgerRecord, type LedgerSummary, type LedgerReading, type LedgerRecalculation, type LedgerInheritance, type LedgerInheritanceNotApplicable, type LedgerJournal, type LedgerJournalRow, type LedgerJournalCategory, type LedgerJournalParams } from "./ledger";
 
 // Realms
 export { realmsApi, type Realm, type RealmOccupancy, type RealmCapacityResult } from "./realms";

@@ -32,7 +32,7 @@
  */
 import { render, screen, fireEvent } from "@testing-library/react";
 import { useState } from "react";
-import { SidebarGroup } from "@/src/components/layout/SidebarMenuItem";
+import { Pillar } from "@/src/components/layout/Pillar";
 import type { SidebarMenu } from "@/src/hooks/useSidebarMenus";
 
 const mockPathname = jest.fn(() => "/souls");
@@ -83,58 +83,63 @@ const PARENT = menu({
   children: [menu({ id: 4, name: "菜单", path: "/menus", icon: "List" })],
 });
 
-/** The sidebar's accordion state lives in AppLayout; this harness holds it for one group. */
-function Group({ menu, collapsed = false }: { menu: SidebarMenu; collapsed?: boolean }) {
-  const [open, setOpen] = useState(false);
-  return <SidebarGroup menu={menu} index={0} collapsed={collapsed} open={open} onToggle={() => setOpen((o) => !o)} />;
+/** 二级栏的开合在 AppLayout 里;这个外壳替它持有一组。 */
+function Harness({ menus, currentId = null }: { menus: SidebarMenu[]; currentId?: number | null }) {
+  const [openId, setOpenId] = useState<number | null>(null);
+  return (
+    <Pillar
+      menus={menus}
+      allMenuPaths={["/souls", "/judgment", "/menus"]}
+      currentId={currentId}
+      openId={openId}
+      onToggle={(id) => setOpenId((o) => (o === id ? null : id))}
+    />
+  );
 }
 
-describe("折叠侧栏:编号不是名字", () => {
-  it("折叠时每一项仍然有可访问名称", () => {
-    render(<Group menu={LEAF} collapsed />);
-
-    // 缺席断言在这条里是主角:改动前这里**没有任何**可访问名称,
-    // `getByRole("link", { name })` 是唯一能区分「名字在」和「名字不在」的问法
-    // ——按可见文字找会在展开态误绿。
+describe("立柱:当前项不只靠匾色", () => {
+  it("竖排时每一项仍然以文字为名", () => {
+    render(<Harness menus={[LEAF, OTHER]} />);
     expect(screen.getByRole("link", { name: "灵魂" })).toBeInTheDocument();
-    // 而可见文字确实不在:这条同时钉住「折叠仍然是折叠」,免得把名字加回去
-    // 变成把布局改回去。
-    expect(screen.queryByText("灵魂")).not.toBeInTheDocument();
-  });
-
-  it("展开时名称也在,而不是只在折叠时才补", () => {
-    render(<Group menu={LEAF} />);
-    expect(screen.getByRole("link", { name: "灵魂" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "审判" })).toBeInTheDocument();
   });
 
   it("当前页用 aria-current 说出来,不只靠底色", () => {
-    render(<Group menu={LEAF} />);
+    render(<Harness menus={[LEAF, OTHER]} currentId={LEAF.id} />);
     expect(screen.getByRole("link", { name: "灵魂" })).toHaveAttribute("aria-current", "page");
   });
 
   it("不是当前页的就不许挂 aria-current", () => {
-    render(<Group menu={OTHER} />);
+    render(<Harness menus={[LEAF, OTHER]} currentId={LEAF.id} />);
     expect(screen.getByRole("link", { name: "审判" })).not.toHaveAttribute("aria-current");
   });
 
-  it("折叠时有子项的那个按钮也仍然有名字", () => {
-    // 上一条不能替代这条:展开态下按钮里有可见文字「设置」,
-    // `getByRole("button", { name: "设置" })` 靠内容就能找到它 —— 实测把
-    // `aria-label` 从按钮上删掉,那一条依然绿。折叠态没有可见文字,所以
-    // `aria-label` 是唯一的名字来源,这条才真的在检验它。
-    render(<Group menu={PARENT} collapsed />);
-
-    expect(screen.getByRole("button", { name: "设置" })).toBeInTheDocument();
-    expect(screen.queryByText("设置")).not.toBeInTheDocument();
-  });
-
-  it("有子项的那个按钮报告自己的展开状态", () => {
-    render(<Group menu={PARENT} />);
+  it("有子项的一级项是按钮,报告二级栏的开合,打开后二级页面可达", () => {
+    render(<Harness menus={[LEAF, PARENT]} />);
 
     const toggle = screen.getByRole("button", { name: "设置" });
     expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByRole("link", { name: "菜单" })).not.toBeInTheDocument();
 
     fireEvent.click(toggle);
     expect(toggle).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByRole("link", { name: "菜单" })).toHaveAttribute("href", "/menus");
+  });
+
+  it("任一项超过 4 个汉字,整根改横排(C14)", () => {
+    const { rerender } = render(<Harness menus={[LEAF, OTHER]} />);
+    expect(screen.getByTestId("pillar")).not.toHaveAttribute("data-wide");
+
+    rerender(<Harness menus={[LEAF, menu({ id: 9, name: "组织与领域", path: "/organizations" })]} />);
+    expect(screen.getByTestId("pillar")).toHaveAttribute("data-wide", "true");
+  });
+
+  it("底部 40px 静态渐隐(C13):吸底、不挡点击、在所有项之后,读屏不念", () => {
+    render(<Harness menus={[LEAF, OTHER]} />);
+    const fade = screen.getByTestId("pillar-fade");
+    expect(fade).toHaveAttribute("aria-hidden", "true");
+    expect(fade).toHaveClass("sticky", "bottom-0", "h-10", "pointer-events-none");
+    expect(fade.className).toMatch(/from-\[oklch\(var\(--color-pillar\)\)\]/);
+    expect(screen.getByTestId("pillar").lastElementChild).toBe(fade);
   });
 });

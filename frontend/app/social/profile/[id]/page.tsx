@@ -13,7 +13,7 @@ import { PageShell } from "@/src/components/ui/PageShell";
 import { EmptyState } from "@/src/components/ui/EmptyState";
 import { QueryError } from "@/src/components/ui/PageError";
 import { Skeleton } from "@/components/ui/skeleton";
-import { LedgerHeading } from "@/src/components/souls/detail/SoulLedgerSections";
+import { SectionTitle } from "@/src/components/plaque/SectionTitle";
 
 export default function UserProfilePage() {
   const { t } = useI18n();
@@ -97,14 +97,16 @@ export default function UserProfilePage() {
              `--color-status-error` replaces `text-red-400`, which was a raw
              palette value and went pale in light mode. */
           <p role="alert" className="text-sm text-[oklch(var(--color-danger))]">
-            <span aria-hidden="true">! </span>
+            <span aria-hidden="true">✕ </span>
             {String(profileError)}
           </p>
         ) : profile ? (
           <ProfileCard profile={profile} />
         ) : null}
 
-        <LedgerHeading title={t("social.user_posts")} count={postsData?.count} />
+        <div className="pt-6">
+          <SectionTitle aside={postsData?.count}>{t("social.user_posts")}</SectionTitle>
+        </div>
 
         {postsLoading ? (
           <div className="space-y-3">

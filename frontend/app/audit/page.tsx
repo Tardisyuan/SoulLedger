@@ -19,7 +19,7 @@ import {
 } from "@/lib/auditGrouping";
 import { TreeName } from "@/src/components/ui/TreeRow";
 import { usePermissions } from "@/src/hooks/usePermissions";
-import { FilterChipSelect, FilterChipToggle } from "@/src/components/ui/FilterChip";
+import { FilterChipSelect } from "@/src/components/ui/FilterChip";
 import { fieldControl } from "@/src/components/ui/Field";
 import { Button } from "@/src/components/ui/Button";
 import { cn } from "@/lib/utils";
@@ -92,7 +92,6 @@ export default function AuditPage() {
   const [resourceFilter, setResourceFilter] = useState("");
   const [datePreset, setDatePreset] = useState<DatePreset>("");
   const [ordering, setOrdering] = useState("");
-  const [compact, setCompact] = useState(false);
 
   // Presets are always "N days ago through now" — there is no end bound to
   // compute, so this only ever produces `dateFrom` (`end_date` was dead: the
@@ -291,7 +290,8 @@ export default function AuditPage() {
       title={title}
       filters={
         /* 筛选签(规范 v1 §2),与灵魂列表同一套:搜索框用共享的 `fieldControl`,
-           三个枚举筛选各是一枚「维度 · 值 ×」,紧凑是一枚开关签。
+           三个枚举筛选各是一枚「维度 · 值 ×」。
+           原来还有一枚「紧凑」开关签:v2 规定紧凑行高只给审判队列,2026-09-30 撤掉。
            这里原来是 data-grid 的 `FilterBar` —— 一块自带边框和底色的面板,
            里面的签是自绘的 listbox。 */
         <>
@@ -331,9 +331,6 @@ export default function AuditPage() {
             clearLabel={t("filter.clear_one", { name: t("audit.timestamp") })}
             onChange={(v) => { setDatePreset(v as DatePreset); setPage(1); }}
           />
-          <FilterChipToggle pressed={compact} onPressedChange={setCompact}>
-            {t("audit.compact")}
-          </FilterChipToggle>
           {isFiltered && (
             <Button type="button" variant="ghost" size="sm" onClick={clearFilters}>
               {t("audit.clear_filters")}
@@ -354,7 +351,6 @@ export default function AuditPage() {
           if (i > 0 && localDayKey(rows[i - 1].group.time) === day) return null;
           return `${formatDate(r.group.time, { year: "numeric", month: "long", day: "numeric", weekday: "short" })} · ${dayCounts.get(day) ?? 0}`;
         }}
-        density={compact ? "compact" : "comfortable"}
         isLoading={isLoading}
         isError={isError}
         onRetry={() => refetch()}

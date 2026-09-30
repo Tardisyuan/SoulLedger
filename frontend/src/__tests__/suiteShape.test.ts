@@ -40,6 +40,7 @@ import path from "node:path";
 // is the record of a deliberate set; adding a test file means adding a line
 // here, and removing one means removing a line here on purpose.
 const COLLECTED_FILES = [
+  "AboutPage.test.tsx",
   "ActorsPage.test.tsx",
   "AppLayout.test.tsx",
   "AuditPage.test.tsx",
@@ -91,6 +92,9 @@ const COLLECTED_FILES = [
   "RequirePermission.test.tsx",
   "SchedulerPage.test.tsx",
   "RoleFormModal.test.tsx",
+  // 2026-09-30 v2 管理页(v2-web-p3b):租户印字编辑、审批流节点框。
+  "SealGlyphsDialog.test.tsx",
+  "EditableNodeFrame.test.tsx",
   "selectionIsNotColourOnly.test.tsx",
   "SettingsDrawer.test.tsx",
   "Skeleton.test.tsx",
@@ -123,6 +127,7 @@ const COLLECTED_FILES = [
   "Spinner.test.tsx",
   "TenantContext.test.tsx",
   "Toast.test.tsx",
+  "OrganizationsPage.test.tsx",
   "UserDeleteDialog.test.tsx",
   "UsersPage.locate.test.tsx",
   "UsersPage.roleBadge.test.tsx",
@@ -158,8 +163,11 @@ const COLLECTED_FILES = [
   "crossJudgmentActivate.test.tsx",
   "crossJudgmentDetailFetchBudget.test.tsx",
   "dataGridToneContract.test.ts",
+  "dangerButtonPlacement.test.ts",
   "dialogsAreNotHandRolled.test.ts",
   "designGuardContract.test.ts",
+  "rootAttributes.test.tsx",
+  "motionTokens.test.ts",
   "domainDisplayContract.test.tsx",
   "domainDisplayRendering.test.tsx",
   "domainNamespaceContract.test.ts",
@@ -191,6 +199,7 @@ const COLLECTED_FILES = [
   "platformPortsSecureAndResume.test.ts",
   "presetNodeTypes.test.tsx",
   "QueryProviderDefaults.test.tsx",
+  "ReactionBar.test.tsx",
   "proseLinkIsNotColourOnly.test.ts",
   "readingQuantityContract.test.tsx",
   "reducedMotionContract.test.ts",
@@ -205,6 +214,7 @@ const COLLECTED_FILES = [
   "soulMutationFeedback.test.tsx",
   "soulReadingCopyCoverage.test.tsx",
   "soulStateBadgeContract.test.ts",
+  "statusGlyphFont.test.ts",
   "statusTokenLayering.test.ts",
   "submitErrorFocus.test.tsx",
   "suiteShape.test.ts",
@@ -231,6 +241,7 @@ const COLLECTED_FILES = [
   "useSouls.test.ts",
   "workflowAutoLayoutMotion.test.tsx",
   "workflowEditorEdgeRouting.test.tsx",
+  "workflowRouteEdgeArrow.test.tsx",
   "workflowEngineEditor.test.tsx",
   "workflowEdgeArrowSingleSource.test.ts",
   "workflowEditorLayout.test.ts",
@@ -238,6 +249,7 @@ const COLLECTED_FILES = [
   "workflowTemplateLore.test.ts",
   "wsClient.reconnect.test.ts",
   "wsClient.test.ts",
+  "zhuyinShell.test.tsx",
 ];
 
 /** Floor, not a pin — `it.each` makes the real test count larger and it moves

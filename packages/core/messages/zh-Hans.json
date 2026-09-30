@@ -14,7 +14,8 @@
     "language": "界面语言",
     "theme_light": "切换到浅色模式",
     "theme_dark": "切换到深色模式",
-    "mobile_menu": "导航菜单"
+    "mobile_menu": "导航菜单",
+    "more": "更多"
   },
   "auth": {
     "login": "登录",
@@ -75,6 +76,16 @@
   },
   "footer": {
     "version": "灵魂账本 v0.1"
+  },
+  "about": {
+    "title": "关于与致谢",
+    "intro": "本应用用到的字体、纹样与图像,以及它们的授权。",
+    "fonts": "字体",
+    "ornament": "纹样",
+    "images": "印的残边",
+    "licence": "授权",
+    "public_domain": "公有领域",
+    "source": "来源"
   },
   "souls": {
     "title": "灵魂",
@@ -187,7 +198,7 @@
       "render_judgment": "执行审判",
       "start_judgment": "开始审判",
       "verdict_passed": "善行通过",
-      "verdict_failed": "恶行失败",
+      "verdict_failed": "恶行不过",
       "verdict_purgatory": "待定",
       "verdict_retry": "重审",
       "reincarnate": "轮回 →",
@@ -378,7 +389,8 @@
       "copied": "已复制 ✓"
     },
     "field_required": "此项为必填",
-    "dismiss": "知道了"
+    "dismiss": "知道了",
+    "type_name_to_confirm": "输入「{{name}}」以确认"
   },
   "pagination": {
     "info": "第 {{page}} / {{total}} 页 ({{count}} 条记录)",
@@ -866,7 +878,7 @@
     },
     "verdicts": {
       "passed": "通过",
-      "failed": "失败",
+      "failed": "不过",
       "confirmed": "确认",
       "rejected": "拒绝",
       "skipped": "跳过"
@@ -1018,12 +1030,15 @@
       "col_entry": "条目",
       "col_basis": "依据",
       "subtotal": "小计",
+      "col_balance": "结余",
+      "all_shown": "本月 {{n}} 条 · 已全部显示",
       "page_total": "本页合计 · {{n}} 条",
       "categories": "按类目 · 图例账",
       "category": "类目",
       "empty_title": "本期没有流水",
       "empty_reason": "{{month}} 尚无功过登记;旧管 = 实在 = {{opening}}。",
       "load_failed": "功过总账加载失败",
+      "month_too_large": "本月记录过多，请缩小筛选",
       "row_hint": "整行可点 → 该户详情「乙 · 功过」",
       "search": "灵魂姓名或 ID",
       "export": "导出",
@@ -1044,7 +1059,7 @@
     "view": "查看",
     "verdicts": {
       "passed": "通过",
-      "failed": "失败",
+      "failed": "不过",
       "purgatory": "待定",
       "retry": "重审"
     },
@@ -1112,7 +1127,9 @@
       "claimed_next": "打开下一件",
       "claimed_back": "回到队列",
       "session_deferred": "本次暂缓 {{n}} 件",
-      "restore_all": "全部放回队列"
+      "restore_all": "全部放回队列",
+      "key_claim": "认领当前这一件",
+      "reassigned": "已改派 · {{name}} → {{to}}"
     },
     "detail": {
       "loading": "加载审判中...",
@@ -1358,6 +1375,9 @@
       "draft": "草稿 · 未提交",
       "filtered_by": "按裁决「{{verdict}}」过滤；已满的与不适用的列出但不可选。",
       "not_applicable": "不适用于{{verdict}}"
+    },
+    "row_mark": {
+      "mine": "待我处理"
     }
   },
   "audit": {
@@ -1378,7 +1398,6 @@
     "date_all": "全部时间",
     "date_7d": "近 7 天",
     "date_30d": "近 30 天",
-    "compact": "紧凑",
     "events_from_writes": "本事件包含 {{count}} 条写入",
     "actions": {
       "CREATE": "创建",
@@ -1824,25 +1843,7 @@
     "title": "设置",
     "theme": "主题",
     "light": "浅色",
-    "dark": "深色",
-    "accent_color": "强调色",
-    "apply": "应用",
-    "nav_mode": "导航模式",
-    "classic": "经典",
-    "compact": "紧凑",
-    "classic_desc": "带图标和标签的完整侧边栏",
-    "compact_desc": "仅图标，悬停时显示工具提示",
-    "colors": {
-      "ink": "墨蓝（默认）",
-      "amber": "琥珀",
-      "blue": "蓝色",
-      "green": "绿色",
-      "purple": "紫色",
-      "red": "红色",
-      "rose": "玫瑰"
-    },
-    "accent_hex_invalid": "请输入 6 位十六进制颜色，例如 #ff5500",
-    "accent_hex_too_dark": "这个颜色太深，主按钮上的黑色文字会看不清"
+    "dark": "深色"
   },
   "admin": {
     "ledger_stats": "功德统计",
@@ -1886,7 +1887,8 @@
   },
   "permission": {
     "denied_title": "权限不足",
-    "denied_message": "您没有权限访问此页面或执行此操作。"
+    "denied_message": "您没有权限访问此页面或执行此操作。",
+    "ask_admin": "请找本殿管理员。"
   },
   "icon_picker": {
     "select": "选择图标",
@@ -2247,7 +2249,18 @@
     "subtitle": "各文明体系的租户配置",
     "list": "租户列表",
     "no_tenants": "暂无租户",
-    "code": "编码"
+    "code": "编码",
+    "seal": {
+      "column": "印字",
+      "default": "默认「{{glyph}}」",
+      "edit": "改印字",
+      "title": "{{name}} · 印字",
+      "hint_one": "一个字;留空用文明默认「{{glyph}}」。印文不翻译。",
+      "hint_two": "最多两个字,竖排;留空用文明默认「{{glyph}}」。印文不翻译。",
+      "preview": "预览",
+      "saved": "印字已保存",
+      "save_failed": "没能保存印字"
+    }
   },
   "table": {
     "empty": "暂无数据",
@@ -2291,7 +2304,8 @@
       "soul_inbox": "殿司收件箱",
       "sentence_requests": "受刑请求",
       "assistant_admin": "助手管理"
-    }
+    },
+    "queue": "分诊队列"
   },
   "tenant": {
     "civilizations": {
@@ -2723,6 +2737,7 @@
       "screen_title": "簿册未能连上",
       "screen_body": "你的记录仍在。只是此刻取不到。",
       "section": "这一段没取到。其余部分照常显示。",
+      "offline": "已离线",
       "sentence_in_progress": "受刑计划尚未完成，完成后才能申请转生"
     },
     "lexicon": {
@@ -3606,6 +3621,7 @@
       "placeholders": "发送前替换为灵魂名与殿名:",
       "saved": "模板已保存",
       "deleted": "模板已删除",
+      "delete_confirm": "删除模板「{{title}}」后无法恢复。",
       "empty_manage": "这个殿司还没有模板。常用的回复存成模板,回复时一键插入。"
     },
     "assign": {
@@ -3778,6 +3794,27 @@
     "amend": {
       "title": "结案时对受刑计划的改动",
       "hint": "这是加减项审判：结案不建处置，改动作为一条请求交原审判官批准；不带改动则不生成请求。"
+    }
+  },
+  "seal": {
+    "aria": "{{court}}之印"
+  },
+  "soul_mail": {
+    "footer": "这封信由系统发出，不接收回复。",
+    "reset_code": {
+      "title": "密码重置验证码",
+      "code_label": "验证码",
+      "note": "5 分钟内有效。如非本人操作,请忽略本邮件。",
+      "text": "您的验证码: {{code}}\n5 分钟内有效。如非本人操作,请忽略本邮件。"
+    },
+    "credential": {
+      "title": "灵魂账号",
+      "soul_code_label": "灵魂编号",
+      "password_label": "初始密码",
+      "expires_label": "有效期至",
+      "note_change": "首次登录后须修改密码。",
+      "note_once": "该密码只发送这一次;过期或遗失请联系所属文明的官员重置。",
+      "text": "您的灵魂编号:{{soul_code}}\n初始密码:{{password}}\n有效期至 {{expires_at}}。首次登录后须修改密码。\n该密码只发送这一次;过期或遗失请联系所属文明的官员重置。"
     }
   },
   "officer_assist": {

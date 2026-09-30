@@ -101,7 +101,7 @@ export function Switch({
 export function EvalIdentityTag() {
   const { t } = useI18n();
   return (
-    <Badge data-eval-identity="" className="ml-1.5 border-dashed text-[oklch(var(--color-ink-subtle))] border-[oklch(var(--color-ink-subtle))]">
+    <Badge data-eval-identity="" className="ml-2 border-dashed text-[oklch(var(--color-ink-subtle))] border-[oklch(var(--color-ink-subtle))]">
       {t("assist_admin.identities.tag")}
     </Badge>
   );

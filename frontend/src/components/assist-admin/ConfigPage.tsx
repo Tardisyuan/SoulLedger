@@ -176,7 +176,7 @@ function ConfigForm({ config }: { config: AssistAdminConfig }) {
       )}
       {embedding.data && <RebuildNotice embedding={embedding.data} />}
 
-      <div className="grid gap-x-10 lg:grid-cols-2">
+      <div className="grid gap-x-12 lg:grid-cols-2">
         <div>
           <Section title={t("assist_admin.sections.switches")} id="aa-switches">
             <div className="mb-4 flex items-start justify-between gap-4">
@@ -286,7 +286,7 @@ function ConfigForm({ config }: { config: AssistAdminConfig }) {
                       {t("assist_admin.key.replace")}
                     </Button>
                     {config.api_key.set && draft.api_key !== "" && (
-                      <Button type="button" size="sm" variant="danger" onClick={() => setConfirmClear(true)}>
+                      <Button type="button" size="sm" onClick={() => setConfirmClear(true)}>
                         {t("assist_admin.key.clear")}
                       </Button>
                     )}
@@ -405,7 +405,6 @@ function ConfigForm({ config }: { config: AssistAdminConfig }) {
         title={t("assist_admin.key.clear_title")}
         message={t("assist_admin.key.clear_body")}
         confirmText={t("assist_admin.key.clear")}
-        variant="danger"
         onCancel={() => setConfirmClear(false)}
         onConfirm={() => {
           set("api_key", "");

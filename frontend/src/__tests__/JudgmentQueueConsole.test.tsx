@@ -14,6 +14,7 @@ import { render, screen, waitFor, act, fireEvent, within } from "@testing-librar
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { JudgmentQueueConsole } from "@/src/components/judgment/JudgmentQueueConsole";
 import { judgmentApi } from "@soulledger/core/api";
+import { isMinePending } from "@/src/components/judgment/RowMark";
 
 const mockPush = jest.fn();
 const mockShowToast = jest.fn();
@@ -84,7 +85,15 @@ function cursor(judgment: typeof JUDGMENT | null, remaining = 2) {
 }
 
 jest.mock("@soulledger/core/api", () => ({
-  judgmentApi: { next: jest.fn(), conclude: jest.fn().mockResolvedValue({ data: {} }) },
+  judgmentApi: {
+    next: jest.fn(),
+    conclude: jest.fn().mockResolvedValue({ data: {} }),
+    // 「我认领的」分组(QueueMinePanel)读 `?group=mine`;认领与改派是 claims.py 的两个动作。
+    list: jest.fn().mockResolvedValue({ data: { count: 0, next: null, previous: null, results: [] } }),
+    claim: jest.fn().mockResolvedValue({ data: {} }),
+    reassign: jest.fn().mockResolvedValue({ data: {} }),
+    assignableOfficers: jest.fn().mockResolvedValue({ data: [] }),
+  },
 }));
 
 // The hook raises its toasts through the core `notify` port; point it here so
@@ -102,7 +111,7 @@ jest.mock("next/navigation", () => ({
 // 控制台现在把裁决控件挂在 `judgment.execute` 上(后端 views.py:82 就是这么
 // 分的)。`usePermissions` 读 `useTenant().user`,所以这里给一个握着该权限的
 // 用户;下面「只读」那一组自己把它换成不握的。
-const mockUser: { role: string; permissions: string[] } | null = {
+const mockUser: { id?: number; role: string; permissions: string[] } | null = {
   role: "JUDGE",
   permissions: ["judgment.read", "judgment.execute"],
 };
@@ -303,9 +312,10 @@ describe("JudgmentQueueConsole", () => {
   it("the verdict buttons carry key, glyph and word; W's checkbox carries its keycap", async () => {
     renderConsole();
     await waitFor(() => expect(screen.getByText("第一位待判者")).toBeInTheDocument());
+    // 补足 B8:字形 + 文字在左,数字键在右。
     const passed = document.querySelector('[data-verdict="PASSED"]') as HTMLElement;
-    expect(passed.textContent).toMatch(/^1✓/);
-    expect((document.querySelector('[data-verdict="RETRY"]') as HTMLElement).textContent).toMatch(/^4↺/);
+    expect(passed.textContent).toMatch(/^✓.*1$/);
+    expect((document.querySelector('[data-verdict="RETRY"]') as HTMLElement).textContent).toMatch(/^↺.*4$/);
     const workflow = screen.getByRole("checkbox", { name: /judgment\.queue\.create_workflow/ });
     expect(workflow.closest("label")?.querySelector("kbd")?.textContent).toBe("W");
   });
@@ -369,9 +379,9 @@ describe("JudgmentQueueConsole", () => {
 
     expect(screen.getByText("judgment.queue.keyboard_map")).toBeInTheDocument();
     expect(screen.getByText("judgment.queue.key_verdicts")).toBeInTheDocument();
-    // Design's six, in order — no U (withdrawn with the undo window), and W / R listed.
+    // Design's six plus C (v2 claim, 2026-09-30), in order — no U (withdrawn with the undo window).
     const listed = Array.from(document.querySelectorAll("[data-shortcut]")).map((el) => el.getAttribute("data-shortcut"));
-    expect(listed).toEqual(["1–4", "S", "W", "R", "N", "?"]);
+    expect(listed).toEqual(["1–4", "C", "S", "W", "R", "N", "?"]);
   });
 
   it("says the queue is clear rather than showing an error", async () => {
@@ -401,7 +411,7 @@ describe("JudgmentQueueConsole", () => {
  */
 describe("the decision bar", () => {
   const stickyBar = (container: HTMLElement) =>
-    container.querySelector<HTMLElement>(".sticky.bottom-0");
+    container.querySelector<HTMLElement>(".sticky.bottom-\\(--bottom-bar\\)");
 
   it("keeps every verdict control inside the sticky bar", async () => {
     const { container } = renderConsole();
@@ -566,20 +576,32 @@ describe("控制台不抢别人已经处理过的按键", () => {
   });
 });
 
-describe("裁决按钮有按压态", () => {
-  it("四个裁决键和跳过都带 active: 位移", async () => {
+describe("裁决按钮有按压态,且四个长得一样(补足 B8)", () => {
+  it("四个裁决键和延后都有 active: 底色,不位移", async () => {
     renderConsole();
     await screen.findByText("第一位待判者");
 
     // `Button` 的表头把这条记成「190 个里 0 个有 active」,而这四个是全产品
-    // 最重要的按钮,它们手搓所以没进那次修复。
+    // 最重要的按钮,它们手搓所以没进那次修复。v2 的按下态是换底色(line),不位移。
     for (const key of ["1", "2", "3", "4", "S"]) {
       const kbd = screen.getByText(key);
       const button = kbd.closest("button");
       expect(button).not.toBeNull();
-      expect(button!.className).toContain("active:translate-y-px");
-      // 减少动效下不许位移 —— 1px 也是未经请求的移动。
-      expect(button!.className).toContain("motion-reduce:active:translate-y-0");
+      expect(button!.className).toContain("active:bg-[oklch(var(--color-line))]");
+      expect(button!.className).not.toContain("translate-y");
+    }
+  });
+
+  it("落判不靠颜色:四个键同一串类名,没有内联颜色,也不读判决 / 危险色", async () => {
+    renderConsole();
+    await screen.findByText("第一位待判者");
+    const buttons = ["PASSED", "FAILED", "PURGATORY", "RETRY"].map(
+      (v) => document.querySelector(`[data-verdict="${v}"]`) as HTMLElement
+    );
+    expect(new Set(buttons.map((b) => b.className)).size).toBe(1);
+    for (const b of buttons) {
+      expect(b.getAttribute("style")).toBeNull();
+      expect(b.outerHTML).not.toMatch(/--color-(verdict|danger|success|warning)/);
     }
   });
 });
@@ -633,5 +655,134 @@ describe("审批流复选框不跨案子", () => {
       JUDGMENT.id,
       expect.objectContaining({ create_workflow: true })
     );
+  });
+});
+
+/**
+ * 规范 v2 这一轮用户拍板的三项队列功能:C 键认领、改派、「我认领的」独立分组
+ * (B9 里 Design 列为「新功能待定」;动效沿用交互与动效第三节 2c)。后端早就有
+ * (apps/judgment/claims.py 的 claim / reassign / assignable-officers,列表 `?group=mine`),
+ * 缺的只是队列页上的这三个动作。
+ */
+describe("队列页:认领 · 改派 · 我认领的", () => {
+  const mockClaim = judgmentApi.claim as jest.Mock;
+  const mockReassign = judgmentApi.reassign as jest.Mock;
+  const mockList = judgmentApi.list as jest.Mock;
+  const mockOfficers = judgmentApi.assignableOfficers as jest.Mock;
+  const ME = 5;
+  const mine = (j: typeof JUDGMENT) => ({ ...j, claimed_by: ME, claimed_by_name: "我" });
+
+  beforeEach(() => {
+    currentUser = { id: ME, role: "JUDGE", permissions: ["judgment.read", "judgment.execute"] };
+    mockList.mockResolvedValue({ data: { count: 0, next: null, previous: null, results: [] } });
+  });
+
+  it("C 认领屏上这一件,并说一声", async () => {
+    renderConsole();
+    await screen.findByText("第一位待判者");
+    await act(async () => {
+      fireEvent.keyDown(window, { key: "c" });
+    });
+    expect(mockClaim).toHaveBeenCalledWith(JUDGMENT.id);
+    await waitFor(() => expect(mockShowToast).toHaveBeenCalledWith("judgment.claim.done_claim:1", "success"));
+  });
+
+  it("焦点在备注框里时 c 是一个字,不是认领", async () => {
+    renderConsole();
+    await screen.findByText("第一位待判者");
+    const notes = screen.getByPlaceholderText("judgment.queue.notes_placeholder");
+    notes.focus();
+    await act(async () => {
+      fireEvent.keyDown(notes, { key: "c" });
+    });
+    expect(mockClaim).not.toHaveBeenCalled();
+  });
+
+  it("已经有人认领的这一件:写出是谁,C 不再发请求", async () => {
+    mockNext.mockResolvedValue(cursor({ ...JUDGMENT, claimed_by: 99, claimed_by_name: "钟馗" } as typeof JUDGMENT));
+    renderConsole();
+    await screen.findByText("judgment.claim.claimed_by:钟馗");
+    expect(within(screen.getByTestId("queue-claim")).queryByRole("button", { name: /judgment.claim.claim/ })).toBeNull();
+    await act(async () => {
+      fireEvent.keyDown(window, { key: "c" });
+    });
+    expect(mockClaim).not.toHaveBeenCalled();
+  });
+
+  it("没有落判权限的人:C 什么也不做,也没有「我认领的」", async () => {
+    currentUser = { id: ME, role: "VIEWER", permissions: ["judgment.read"] };
+    renderConsole();
+    await screen.findByText("第一位待判者");
+    await act(async () => {
+      fireEvent.keyDown(window, { key: "c" });
+    });
+    expect(mockClaim).not.toHaveBeenCalled();
+    expect(screen.queryByTestId("queue-mine")).toBeNull();
+  });
+
+  it("改派只给握着 judgment.assign 的人", async () => {
+    renderConsole();
+    await screen.findByText("第一位待判者");
+    expect(within(screen.getByTestId("queue-claim")).queryByRole("button", { name: "judgment.claim.reassign" })).toBeNull();
+  });
+
+  it("改派屏上这一件:按选中的人发请求,toast 写「谁 → 谁」,这一件本次不再出现", async () => {
+    currentUser = { id: ME, role: "MODERATOR", permissions: ["judgment.read", "judgment.execute", "judgment.assign"] };
+    mockOfficers.mockResolvedValue({ data: [{ id: 7, username: "zhongkui", display_name: "钟馗", role: "JUDGE", in_hand: 2 }] });
+    renderConsole();
+    await screen.findByText("第一位待判者");
+
+    fireEvent.click(within(screen.getByTestId("queue-claim")).getByRole("button", { name: "judgment.claim.reassign" }));
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.click(await within(dialog).findByRole("radio", { name: /钟馗/ }));
+    await act(async () => {
+      fireEvent.click(within(dialog).getByRole("button", { name: "judgment.claim.reassign_confirm" }));
+    });
+
+    expect(mockReassign).toHaveBeenCalledWith(JUDGMENT.id, 7);
+    await waitFor(() => expect(mockShowToast).toHaveBeenCalledWith("judgment.queue.reassigned:第一位待判者,钟馗", "success"));
+    // 交出去的那一件进了跳过名单:队列前进到下一件,而且不算「延后」(R 不会放它回来)。
+    await screen.findByText("第二位待判者");
+    expect(mockNext).toHaveBeenLastCalledWith(expect.objectContaining({ skip: [JUDGMENT.id] }));
+    expect(screen.queryByTestId("session-deferred")).toBeNull();
+  });
+
+  it("「我认领的」:每行带行首色标与读屏文字「待我处理」", async () => {
+    mockList.mockResolvedValue({ data: { count: 2, next: null, previous: null, results: [mine(JUDGMENT), mine(NEXT_JUDGMENT)] } });
+    renderConsole();
+    const panel = await screen.findByTestId("queue-mine");
+    await waitFor(() => expect(within(panel).getAllByTestId("queue-mine-row")).toHaveLength(2));
+    expect(mockList).toHaveBeenCalledWith({ group: "mine", ordering: "created_at" });
+    expect(within(panel).getAllByTestId("row-mark")).toHaveLength(2);
+    expect(within(panel).getAllByText("judgment.row_mark.mine")).toHaveLength(2);
+  });
+
+  it("刚认领的那一件排到「我认领的」最上面", async () => {
+    // 服务端按入队时间排:认领之前只有第二件,认领之后第一件排在它后面。
+    mockList.mockResolvedValue({ data: { count: 1, next: null, previous: null, results: [mine(NEXT_JUDGMENT)] } });
+    renderConsole();
+    await screen.findByText("第一位待判者");
+    mockList.mockResolvedValue({ data: { count: 2, next: null, previous: null, results: [mine(NEXT_JUDGMENT), mine(JUDGMENT)] } });
+    await act(async () => {
+      fireEvent.keyDown(window, { key: "c" });
+    });
+    const panel = screen.getByTestId("queue-mine");
+    await waitFor(() => expect(within(panel).getAllByTestId("queue-mine-row")).toHaveLength(2));
+    expect(within(panel).getAllByTestId("queue-mine-row")[0]).toHaveTextContent("第一位待判者");
+  });
+});
+
+describe("行首色标只表示「待我处理」(B12)", () => {
+  it("未结案且认领人是我 → 有", () => {
+    expect(isMinePending({ concluded_at: null, claimed_by: 5 }, 5)).toBe(true);
+  });
+
+  it.each([
+    ["已结案", { concluded_at: "2026-09-30T00:00:00Z", claimed_by: 5 }, 5],
+    ["别人认领", { concluded_at: null, claimed_by: 6 }, 5],
+    ["无人认领", { concluded_at: null, claimed_by: null }, 5],
+    ["没登录", { concluded_at: null, claimed_by: 5 }, undefined],
+  ] as const)("%s → 没有", (_label, judgment, user) => {
+    expect(isMinePending(judgment, user)).toBe(false);
   });
 });

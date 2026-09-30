@@ -37,7 +37,9 @@ export interface LoginUser {
   username: string;
   email: string;
   role: UserRole;
-  tenant: { code: string; display_name: string } | null;
+  /** `civilization` picks the 匾 skin; `seal_glyphs` empty = civilization default. Optional: a
+   *  user rehydrated from a pre-v2 stored session (24h TTL) has neither — fall back to defaults. */
+  tenant: { code: string; display_name: string; civilization?: string; seal_glyphs?: string[] } | null;
   display_name: string;
   permissions: string[];
 }

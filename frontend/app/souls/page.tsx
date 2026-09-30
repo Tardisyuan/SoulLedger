@@ -276,7 +276,6 @@ export default function SoulsPage() {
           is looking for a row, not deciding on each one. Decision surfaces
           (the judgment list) stay `comfortable`. */}
       <DataTable<SoulListItem>
-        density="compact"
         linkedRows
         caption={t("souls.title")}
         columns={[
@@ -344,12 +343,8 @@ export default function SoulsPage() {
               <DomainEnum namespace="souls.civilizations" value={soul.civilization} />
             </td>
             <td className="px-4 py-3">
-              {/* The lifecycle table keeps its own tints: these are
-                  soul-lifecycle tokens (`--color-status-alive` / `-judging` /
-                  `-settled` …), not the system-feedback four, and `Badge`'s
-                  tone table is the feedback layer. Only the geometry moves.
-                  The table itself is src/lib/soulStateBadge.ts — it was two
-                  byte-identical copies, one here and one on the detail page. */}
+              {/* 领域枚举徽章(补足 C15):ink 字 + ink3 框,审判中加 s2 底,不用状态色。
+                  表在 src/lib/soulStateBadge.ts —— 它曾是这里与详情页两份逐字相同的拷贝。 */}
               <Badge
                 title={soul.current_state}
                 glyph={soulStateGlyph(soul.current_state)}

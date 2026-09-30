@@ -7,8 +7,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { LedgerHeading } from "./SoulLedgerSections";
 
 /** 一对 dt/dd 的行线与字色(规范 v1 灵魂详情「甲 · 身份」)。 */
-const DT = "py-1.5 border-b border-[oklch(var(--color-rule))] text-[oklch(var(--color-ink-subtle))]";
-const DD = "py-1.5 border-b border-[oklch(var(--color-rule))] text-[oklch(var(--color-ink))] min-w-0";
+const DT = "py-2 border-b border-[oklch(var(--color-rule))] text-[oklch(var(--color-ink-subtle))]";
+const DD = "py-2 border-b border-[oklch(var(--color-rule))] text-[oklch(var(--color-ink))] min-w-0";
 
 /**
  * 甲 · 身份: civilization, birth, death, origin — ledger rows, no card.

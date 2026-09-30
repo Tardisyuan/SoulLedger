@@ -64,7 +64,7 @@ export function BaseModal({ isOpen, onClose, title, children, footer, dismissOnO
       <Dialog.Portal>
         {/* Backdrop */}
         <Dialog.Backdrop
-          className="fixed inset-0 z-dialog bg-[oklch(var(--color-scrim)/var(--scrim-alpha))] transition-opacity duration-150 ease-out data-ending-style:opacity-0 data-starting-style:opacity-0"
+          className="fixed inset-0 z-dialog bg-[oklch(var(--color-scrim)/var(--scrim-alpha))] transition-opacity duration-base ease-enter data-ending-style:duration-fast data-ending-style:ease-exit data-ending-style:opacity-0 data-starting-style:opacity-0"
         />
 
       {/* Centered panel.
@@ -85,14 +85,14 @@ export function BaseModal({ isOpen, onClose, title, children, footer, dismissOnO
        * 至少整个面板还能滚,而不是把内容藏到视口外。 */}
         <Dialog.Viewport className="fixed inset-0 z-dialog flex w-screen items-end justify-center overflow-y-auto sm:items-center sm:p-4">
           <Dialog.Popup
-            className="flex max-h-[calc(100dvh-2rem)] w-full sm:max-w-[440px] flex-col bg-[oklch(var(--color-canvas))] border border-[oklch(var(--color-line))] shadow-overlay transition-opacity duration-150 ease-out data-ending-style:opacity-0 data-starting-style:opacity-0"
+            className="flex max-h-[calc(100dvh-2rem)] w-full sm:max-w-[440px] flex-col bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-ink))] transition-[opacity,translate] duration-base ease-enter data-ending-style:duration-fast data-ending-style:ease-exit data-ending-style:opacity-0 data-ending-style:translate-y-2 data-starting-style:opacity-0 data-starting-style:translate-y-2"
           >
             {/* Header */}
             {/* 规范 v1 §3.3:标题 16/600,下接区块边界线;右上角写 Esc(键盘上真正关它的那个键)。 */}
             <div className="flex shrink-0 items-center justify-between gap-3 px-6 py-3 border-b border-[oklch(var(--color-block))]">
-              <Dialog.Title className="text-[oklch(var(--color-ink))] text-md">{title}</Dialog.Title>
+              <Dialog.Title className="text-[oklch(var(--color-ink))] text-lg">{title}</Dialog.Title>
               <Dialog.Close
-                className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))] hover:text-[oklch(var(--color-ink))] border border-[oklch(var(--color-line))] px-1.5 py-0.5"
+                className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))] hover:text-[oklch(var(--color-ink))] border border-[oklch(var(--color-line))] px-1 py-0.5"
                 aria-label={t("common.close")}
               >
                 Esc
@@ -101,11 +101,11 @@ export function BaseModal({ isOpen, onClose, title, children, footer, dismissOnO
 
             {/* Body —— 唯一允许收缩与滚动的一段。header 与 footer 都是 `shrink-0`,
              * 因为「关闭」和「提交」在任何视口高度下都必须留在屏幕上。 */}
-            <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">{children}</div>
+            <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">{children}</div>
 
             {/* Footer */}
             {footer && (
-              <div className="shrink-0 px-6 pb-5 border-t border-[oklch(var(--color-line))] pt-4">
+              <div className="shrink-0 px-6 pb-4 border-t border-[oklch(var(--color-line))] pt-4">
                 {footer}
               </div>
             )}
@@ -323,7 +323,8 @@ interface ConfirmDialogProps {
   message: string;
   onConfirm: () => void;
   onCancel: () => void;
-  confirmText?: string;
+  /** 可以带 `<span aria-hidden>✕</span>`:无名称的不可撤回删除(删帖、删评论、多选删敏感词)就这么用。 */
+  confirmText?: React.ReactNode;
   cancelText?: string;
   variant?: "danger" | "warning" | "info";
   /**
@@ -365,8 +366,12 @@ export function ConfirmDialog({
   // `info` is mapped rather than dropped: the prop still accepts it, and no
   // call site has ever passed it (only `danger`, the default, and one
   // `warning` in app/souls/[id]/page.tsx).
+  //
+  // 规范 v2 补足 A1:实底红「危险」按钮只出现在「输入名称以确认」的对话框里。这个对话框
+  // 从不要求输入名称,所以 `danger`(也是默认值)画成次按钮 —— 后果写在标题和正文里,
+  // 不写在按钮的颜色里。守卫:src/__tests__/dangerButtonPlacement.test.ts。
   const variantButton = {
-    danger: "danger",
+    danger: "secondary",
     warning: "warning",
     info: "primary",
   } as const;
@@ -389,20 +394,20 @@ export function ConfirmDialog({
   return (
     <AlertDialog.Root open={isOpen} onOpenChange={(open) => { if (!open) onCancel(); }}>
       <AlertDialog.Portal>
-        <AlertDialog.Backdrop className="fixed inset-0 z-dialog bg-[oklch(var(--color-scrim)/var(--scrim-alpha))] transition-opacity duration-150 ease-out data-ending-style:opacity-0 data-starting-style:opacity-0" />
+        <AlertDialog.Backdrop className="fixed inset-0 z-dialog bg-[oklch(var(--color-scrim)/var(--scrim-alpha))] transition-opacity duration-base ease-enter data-ending-style:duration-fast data-ending-style:ease-exit data-ending-style:opacity-0 data-starting-style:opacity-0" />
         {/* 与上面的 Modal 同一套约束,理由见那里。这个对话框的内容通常很短,
          * 但 `message` 是调用方传进来的任意文本 —— 「通常很短」不是约束。 */}
         <AlertDialog.Viewport className="fixed inset-0 z-dialog flex w-screen items-end justify-center overflow-y-auto sm:items-center sm:p-4">
-          <AlertDialog.Popup className="flex max-h-[calc(100dvh-2rem)] w-full sm:max-w-[440px] flex-col bg-[oklch(var(--color-canvas))] border border-[oklch(var(--color-line))] shadow-overlay transition-opacity duration-150 ease-out data-ending-style:opacity-0 data-starting-style:opacity-0">
-            <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
-              <AlertDialog.Title className="text-md text-[oklch(var(--color-ink))] pb-2 mb-3 border-b border-[oklch(var(--color-block))]">
+          <AlertDialog.Popup className="flex max-h-[calc(100dvh-2rem)] w-full sm:max-w-[440px] flex-col bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-ink))] transition-[opacity,translate] duration-base ease-enter data-ending-style:duration-fast data-ending-style:ease-exit data-ending-style:opacity-0 data-ending-style:translate-y-2 data-starting-style:opacity-0 data-starting-style:translate-y-2">
+            <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
+              <AlertDialog.Title className="text-lg text-[oklch(var(--color-ink))] pb-2 mb-3 border-b border-[oklch(var(--color-block))]">
                 {title}
               </AlertDialog.Title>
               <AlertDialog.Description className="text-sm text-[oklch(var(--color-ink-muted))]">
                 {message}
               </AlertDialog.Description>
             </div>
-            <div className="shrink-0 px-6 pb-5 flex justify-end gap-2">
+            <div className="shrink-0 px-6 pb-4 flex justify-end gap-2">
               <Button
                 type="button"
                 variant="ghost"

@@ -11,24 +11,25 @@
  * 加载态若不占住那个高度,数据落地时整页会往下跳一格。
  *
  * 没有 `min-h-screen` —— AppLayout 的槽位已经是 min-h-[calc(100vh-4rem)]。
+ * 静态,不闪光(规范 v2 补足 C15):没有 animate-pulse,数据到了直接换。
  */
 export default function Loading() {
   return (
     <div className="bg-[oklch(var(--color-canvas))]">
       <header className="border-b border-[oklch(var(--color-hairline))]">
-        <div className="max-w-page mx-auto px-6 pt-10 pb-6">
+        <div className="max-w-page mx-auto px-6 pt-8 pb-6">
           <div className="flex items-start gap-4">
-            <div className="h-10 w-64 bg-[oklch(var(--color-hairline))] animate-pulse" />
-            <div className="ml-auto h-9 w-32 bg-[oklch(var(--color-hairline))] animate-pulse" />
+            <div className="h-10 w-64 bg-[oklch(var(--color-hairline))]" />
+            <div className="ml-auto h-9 w-32 bg-[oklch(var(--color-hairline))]" />
           </div>
-          <div className="h-6 w-96 bg-[oklch(var(--color-hairline))] animate-pulse mt-3" />
+          <div className="h-6 w-96 bg-[oklch(var(--color-hairline))] mt-3" />
         </div>
       </header>
 
       <div className="border-b border-[oklch(var(--color-hairline))]">
         <div className="max-w-page mx-auto px-6 flex items-center gap-1">
-          <div className="h-10 w-24 bg-[oklch(var(--color-hairline))] animate-pulse" />
-          <div className="h-10 w-24 bg-[oklch(var(--color-hairline))] animate-pulse" />
+          <div className="h-10 w-24 bg-[oklch(var(--color-hairline))]" />
+          <div className="h-10 w-24 bg-[oklch(var(--color-hairline))]" />
         </div>
       </div>
 
@@ -36,12 +37,12 @@ export default function Loading() {
         {/* 四张 KPI 卡。h-28 = 11px 标签 + 8px 间隔 + 56px 数字 + 16px 上下内距。 */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-28 bg-[oklch(var(--color-hairline))] animate-pulse" />
+            <div key={i} className="h-28 bg-[oklch(var(--color-hairline))]" />
           ))}
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="h-72 bg-[oklch(var(--color-hairline))] animate-pulse" />
-          <div className="h-72 bg-[oklch(var(--color-hairline))] animate-pulse" />
+          <div className="h-72 bg-[oklch(var(--color-hairline))]" />
+          <div className="h-72 bg-[oklch(var(--color-hairline))]" />
         </div>
       </div>
     </div>

@@ -1,32 +1,23 @@
 {
-  "app/not-found.tsx": {
-    "type": 2
+  "components/LanguageSwitcher.tsx": {
+    "space": 2
   },
   "components/ui/data-grid/ActionsMenu.tsx": {
-    "space": 1
+    "space": 2
   },
   "components/ui/data-grid/FilterBar.tsx": {
-    "space": 1
+    "space": 2
   },
   "components/ui/data-table.tsx": {
     "space": 1
   },
-  "src/components/judgment/JudgmentQueueConsole.tsx": {
+  "src/components/layout/AppLayout.tsx": {
     "space": 1
   },
-  "src/components/social/CommentThread.tsx": {
-    "palette": 1
-  },
-  "src/components/souls/DateProblemsPanel.tsx": {
+  "src/components/ui/Badge.tsx": {
     "space": 1
   },
-  "src/components/souls/SoulKarmaLedgerCard.tsx": {
+  "src/components/ui/DomainValue.tsx": {
     "space": 1
-  },
-  "src/components/souls/SoulLifecycleTimeline.tsx": {
-    "space": 2
-  },
-  "src/components/ui/Modal.tsx": {
-    "space": 4
   }
 }

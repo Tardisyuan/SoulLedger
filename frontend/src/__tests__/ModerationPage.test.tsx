@@ -173,7 +173,6 @@ describe("举报 · images (C-08 MediaTile)", () => {
     const img = within(tiles[1]).getByRole("img");
     expect(img).toHaveAttribute("alt", tZh("social_moderation.review.media_caption", { i: "2", w: "1080", h: "720" }));
     expect(img.getAttribute("src")).toMatch(/\/api\/v1\/social-media\/m2\/\?t=s2$/);
-    expect(img.closest("a")).toHaveAttribute("target", "_blank");
     expect(tiles[1].className).toContain("aspect-square");
     expect(tiles[1].className).not.toMatch(/rounded/);
     expect(within(tiles[0]).getByText("图 1 · 1080×720")).toBeInTheDocument();
@@ -191,6 +190,36 @@ describe("举报 · images (C-08 MediaTile)", () => {
     await waitFor(() => expect(grid()).not.toBeNull());
     expect(grid()).toHaveAttribute("data-columns", cols);
     expect(within(grid()!).getAllByRole("listitem")).toHaveLength(n);
+  });
+
+  it("v2 C15 查看器:点格子打开纯黑底原图,← → 切换,「关闭」与 Esc 关;开着时审阅快捷键不响应", async () => {
+    asRole("social.moderate");
+    apiMock.item.mockResolvedValue({ data: post({ id: "p1", moderation_status: "PUBLISHED", media: media(2), media_count: 2 }) });
+    renderPage();
+    await waitFor(() => expect(grid()).not.toBeNull());
+    const [first] = within(grid()!).getAllByRole("listitem");
+    fireEvent.click(within(first).getByRole("button"));
+
+    const viewer = await screen.findByRole("dialog");
+    expect(viewer).toHaveAttribute("data-media-viewer");
+    expect(viewer.className).toContain("bg-black");
+    const shown = () => within(viewer).getByRole("img").getAttribute("src") ?? "";
+    expect(shown()).toMatch(/m1\/\?t=s1$/);
+    expect(viewer).toHaveTextContent("图 1 · 1080×720 · 1 / 2");
+
+    fireEvent.keyDown(viewer, { key: "ArrowRight" });
+    expect(shown()).toMatch(/m2\/\?t=s2$/);
+    fireEvent.keyDown(viewer, { key: "ArrowRight" });
+    expect(shown()).toMatch(/m1\/\?t=s1$/);
+    fireEvent.keyDown(viewer, { key: "ArrowLeft" });
+    expect(shown()).toMatch(/m2\/\?t=s2$/);
+
+    // H 在查看器里不是「隐藏」:ReportsReview 在有 dialog 时不接快捷键。
+    fireEvent.keyDown(document.body, { key: "h" });
+    expect(screen.queryByText("隐藏与警告必须写理由")).toBeNull();
+
+    fireEvent.click(within(viewer).getByRole("button", { name: tZh("common.close") }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   });
 
   it("a text-only post has no grid", async () => {
@@ -408,7 +437,10 @@ describe("举报 · the C-08 review layout", () => {
     fireEvent.click(screen.getByRole("button", { name: tZh("social_moderation.actions.delete") }));
     expect(apiMock.resolveReport).not.toHaveBeenCalled();
     const dialog = await screen.findByRole("alertdialog");
-    fireEvent.click(within(dialog).getByRole("button", { name: tZh("social_moderation.actions.delete") }));
+    const confirm = within(dialog).getByRole("button", { name: tZh("social_moderation.actions.delete") });
+    // 官员删除进回收站(可撤回)→ 警示按钮(橙),不是次按钮、也不是实底红。
+    expect(confirm.className).toContain("--color-warning");
+    fireEvent.click(confirm);
     await waitFor(() => expect(apiMock.resolveReport).toHaveBeenCalledWith("r1", "DELETE", undefined, undefined));
   });
 
@@ -485,10 +517,32 @@ describe("敏感词 · E-08b", () => {
     fireEvent.click(within(row).getByRole("checkbox", { name: tZh("social_moderation.words.select_row", { word: "还阳" }) }));
     fireEvent.click(screen.getByRole("button", { name: tZh("social_moderation.words.delete_selected") }));
     expect(apiMock.removeWords).not.toHaveBeenCalled();
-    const dialog = await screen.findByRole("alertdialog");
-    fireEvent.click(within(dialog).getByRole("button", { name: tZh("social_moderation.words.delete_selected") }));
+    // 敏感词硬删、不进回收站 → 输入名称以确认;只选一个时输的是那个词本身。
+    const dialog = await screen.findByRole("dialog");
+    const confirm = within(dialog).getByTestId("name-confirm-action");
+    expect(confirm).toBeDisabled();
+    fireEvent.change(within(dialog).getByRole("textbox"), { target: { value: "还阳" } });
+    fireEvent.click(confirm);
     await waitFor(() => expect(apiMock.removeWords).toHaveBeenCalledWith(["w1"]));
     expect(apiMock.removeWord).not.toHaveBeenCalled();
+  });
+
+  it("deleting several words has no one name to type: a plain confirm with ✕, no textbox", async () => {
+    asRole("social.moderate");
+    apiMock.words.mockResolvedValue(page(words));
+    apiMock.removeWords.mockResolvedValue({ data: { deleted: 2 } });
+    renderPage();
+    fireEvent.click(segment("words"));
+    await screen.findByText("还阳");
+    for (const box of screen.getAllByRole("checkbox", { name: /./ }).filter((b) => b.closest("tbody"))) fireEvent.click(box);
+    const n = words.length;
+    fireEvent.click(screen.getByRole("button", { name: tZh("social_moderation.words.delete_selected") }));
+    const dialog = await screen.findByRole("alertdialog");
+    expect(dialog).toHaveTextContent(tZh("social_moderation.words.confirm_title", { n: String(n) }));
+    expect(within(dialog).queryByRole("textbox")).toBeNull();
+    expect(within(dialog).queryByTestId("name-confirm-action")).toBeNull();
+    fireEvent.click(within(dialog).getByRole("button", { name: tZh("common.confirm_delete") }));
+    await waitFor(() => expect(apiMock.removeWords).toHaveBeenCalledWith(words.map((w) => w.id)));
   });
 
   it("an empty list offers 从其他文明复制 to ADMIN only", async () => {

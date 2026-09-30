@@ -33,7 +33,7 @@ describe("badgeSpec", () => {
     expect(specs.filter((b) => b.glyph === "·")).toEqual([]);
     expect(SOUL_STATE_BADGES).toMatchObject({
       ALIVE: { glyph: "○" },
-      LOST: { glyph: "⊘", border: "dashed", tone: "neg" },
+      LOST: { glyph: "◌", border: "dashed" },
       SETTLED: { glyph: "≡" },
     });
   });
@@ -46,7 +46,7 @@ describe("badgeSpec", () => {
   });
 
   it("the unknown shape is its own: dotted border and a question mark, used by no known state", () => {
-    expect(UNKNOWN_BADGE).toEqual({ tone: "unknown", glyph: "?", border: "dotted" });
+    expect(UNKNOWN_BADGE).toEqual({ glyph: "?", border: "dotted", unknown: true });
     const known = [...Object.values(APPLICATION_BADGES), ...Object.values(SOUL_STATE_BADGES)];
     expect(known.filter((b) => b.glyph === "?" || b.border === "dotted")).toEqual([]);
   });

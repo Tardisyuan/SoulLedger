@@ -60,7 +60,7 @@ function AskIcon() {
   );
 }
 
-/** 1b: after the connection state, before notifications; outlined, never the accent fill. */
+/** 1b: first in the plaque's action group; outlined in the on-plaque ink (规范 v2 §匾), never a fill. */
 export function OfficerAssistEntry({ assist }: { assist: OfficerAssist }) {
   const { t } = useI18n();
   if (!assist.visible) return null;
@@ -74,21 +74,27 @@ export function OfficerAssistEntry({ assist }: { assist: OfficerAssist }) {
       aria-expanded={assist.open}
       aria-label={t("officer_assist.entry_label", { shortcut })}
       title={shortcut}
-      className="relative flex h-7 items-center gap-1.5 border border-[oklch(var(--color-line))] px-2 text-xs text-[oklch(var(--color-ink-muted))] hover:bg-[oklch(var(--color-surface-2))] hover:text-[oklch(var(--color-ink))] aria-expanded:bg-[oklch(var(--color-surface-2))] aria-expanded:text-[oklch(var(--color-ink))] max-lg:w-8 max-lg:justify-center max-lg:px-0"
+      className="focus-ring-pillar relative flex h-7 items-center gap-1 border border-[oklch(var(--color-on-main)/0.6)] px-2 text-xs text-[oklch(var(--color-on-main))] hover:bg-[oklch(var(--color-on-main)/0.12)] aria-expanded:bg-[oklch(var(--color-on-main)/0.12)] max-lg:w-8 max-lg:justify-center max-lg:px-0"
     >
       <AskIcon />
       <span className="hidden lg:inline">{t("officer_assist.entry")}</span>
       {assist.unseen ? (
-        <span data-testid="officer-assist-unseen" aria-hidden="true" className="absolute -right-0.5 -top-0.5 h-1.5 w-1.5 bg-[oklch(var(--color-accent))]" />
+        <span data-testid="officer-assist-unseen" aria-hidden="true" className="absolute -right-0.5 -top-0.5 h-1.5 w-1.5 bg-[oklch(var(--color-on-main))]" />
       ) : null}
     </button>
   );
 }
 
-export function OfficerAssistPanel({ assist }: { assist: OfficerAssist }) {
+/**
+ * Design E 组: the panel starts below the connection bar (global state at the top of the
+ * viewport, 28 px, see ConnectionBanner) rather than under it — `belowBanner` moves its top
+ * edge down by exactly that bar. Pushed or overlaid, same rule.
+ */
+export function OfficerAssistPanel({ assist, belowBanner = false }: { assist: OfficerAssist; belowBanner?: boolean }) {
   const { t } = useI18n();
   if (!assist.open) return null;
   const label = t("officer_assist.title");
+  const top = belowBanner ? "top-7" : "top-0";
 
   if (assist.pushed) {
     return (
@@ -96,7 +102,8 @@ export function OfficerAssistPanel({ assist }: { assist: OfficerAssist }) {
         ref={assist.panelRef}
         aria-label={label}
         data-testid="officer-assist-panel"
-        className="fixed bottom-0 right-0 top-10 z-masthead flex w-[420px] flex-col border-l border-[oklch(var(--color-block))] bg-[oklch(var(--color-canvas))]"
+        data-assist-mode="pushed"
+        className={`fixed ${top} bottom-0 right-0 z-masthead flex w-[420px] flex-col border-l border-[oklch(var(--color-ink))] bg-[oklch(var(--color-canvas))]`}
       >
         <PanelBody assist={assist} />
       </aside>
@@ -116,7 +123,8 @@ export function OfficerAssistPanel({ assist }: { assist: OfficerAssist }) {
           data-testid="officer-assist-panel"
           initialFocus={assist.inputRef}
           finalFocus={assist.entryRef}
-          className="fixed inset-y-0 right-0 z-dialog flex w-[min(420px,100vw)] flex-col border-l border-[oklch(var(--color-block))] bg-[oklch(var(--color-canvas))] shadow-overlay"
+          data-assist-mode="overlay"
+          className={`fixed ${top} bottom-0 right-0 z-dialog flex w-[min(420px,100vw)] flex-col border-l border-[oklch(var(--color-ink))] bg-[oklch(var(--color-canvas))]`}
         >
           <PanelBody assist={assist} />
         </Dialog.Popup>
@@ -165,7 +173,9 @@ function PanelBody({ assist }: { assist: OfficerAssist }) {
   const hasThread = assist.thread.messages.length > 0 || assist.pending !== null;
   return (
     <>
-      <div className="flex h-10 shrink-0 items-center gap-2 border-b border-[oklch(var(--color-block))] px-3">
+      {/* Design E 组: a fixed 48 px head on a 1px ink rule, no pattern band — the band belongs
+          to the plaque alone, so this head does not follow the plaque's height. */}
+      <div data-testid="officer-assist-head" className="flex h-12 shrink-0 items-center gap-2 border-b border-[oklch(var(--color-ink))] px-3">
         {history ? (
           <HeadButton onClick={() => assist.setView("chat")} label={t("officer_assist.back_label")}>←</HeadButton>
         ) : (
@@ -361,7 +371,7 @@ function Composer({ assist }: { assist: OfficerAssist }) {
   const send = () => assist.ask(assist.draft);
   return (
     <div className="shrink-0 border-t border-[oklch(var(--color-block))] p-3">
-      <div className="flex items-end gap-2 border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] px-2 py-1.5">
+      <div className="flex items-end gap-2 border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] px-2 py-1">
         <textarea
           ref={assist.inputRef}
           rows={2}
@@ -391,7 +401,7 @@ function Composer({ assist }: { assist: OfficerAssist }) {
           </svg>
         </button>
       </div>
-      <p className="mt-1.5 font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">
+      <p className="mt-2 font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">
         {t("officer_assist.input_hint", { enter: "Enter", shift_enter: "Shift+Enter", esc: "Esc" })}
       </p>
     </div>

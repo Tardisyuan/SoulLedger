@@ -319,7 +319,7 @@ export function RealmOptionsPanel({ realms }: { realms: QueueRealm[] }) {
       {realms.length === 0 ? (
         <p className="text-sm text-[oklch(var(--color-ink-tertiary))]">{t("judgment.queue.realms_empty")}</p>
       ) : (
-        <ul className="flex flex-wrap gap-1.5">
+        <ul className="flex flex-wrap gap-2">
           {realms.map((realm) => (
             <li key={realm.id}>
               <EnumBadge

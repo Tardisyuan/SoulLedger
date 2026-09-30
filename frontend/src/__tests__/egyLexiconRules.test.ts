@@ -18,6 +18,10 @@
  * 定稿同时把后定的值**回填**到早先各节的行里,所以全表十节 824 行、779 个键,每个键全表只有一个值。
  * 夹具现为 778 个键:`judgment.queue.skew_discarded` 随审判队列撤回窗口一起删除(2026-09-25),
  * 包里已无此键,夹具同步删去那一行;定稿全表本身未改。
+ * 2026-09-30 再减 4 个到 774:规范 v2 撤掉用户自选强调色,settings.accent_color / apply /
+ * accent_hex_invalid / accent_hex_too_dark 连同 settings.colors 一起从三份包里删除。
+ * 2026-09-30 再减 3 个到 771:v2 立柱取代侧栏,导航模式(经典 / 紧凑)的 settings.nav_mode / classic_desc /
+ * compact_desc 已无代码读,从三份包里删除。
  * 第十节「egy 旧词审定 · 277 个」没有逐键修订表,只给了义项与替换规则(ROOTS_TEN / PROPER_NAMES / ABOLISHED_TEN_WORDS);
  * 按规则改包时有 38 个夹具键的旧值含被换掉的旧词,夹具里这 38 条随包回填为新值,键数不变。
  * 第十一节「第二轮复核」同样只给义项(ROOTS_ELEVEN、En 与 -I 进小词、Asura 进专名、Per Aa 废止、功德写 Nefer);
@@ -28,12 +32,13 @@
  * 由 / 被 In,En 只作属格);夹具里 5 条随包回填,键数不变;旧账清单清空。
  * 第十三节(助手管理页之后,2026-09-29):厂商名原样引用、Sedjem 作「通知」必带后置受者、「上限」写 Er Pehwy;
  * 夹具里 2 条随包回填(soul_app.settings.push_unavailable / push_denied),键数不变。
+ * 第十七节「单写的 Ek · 96 键」给了逐键写法;夹具里 21 条随包回填,键数不变。
  *
  * 夹具 support/egyLexiconRevisions.json 以定稿全表为准生成,不手抄:取画布导出的 lexicon.json,
  * 按 SECTIONS 十节的行序遍历 [键, 中文, 修订后 egy, 理由],每键取首次出现的位置、写修订后 egy
  * (生成时断言同键各行值相同),`JSON.stringify(table, null, 2)` 落盘。改定稿就整份重生成。这里钉住:
  *
- * - 修订表 778 个键与包里逐字一致(键 → 修订后 egy);
+ * - 修订表 771 个键与包里逐字一致(键 → 修订后 egy);
  * - 无撇号、无全大写词(技术词白名单除外)、无已知英文残留;
  * - 已废止写法不再出现;
  * - 加载一律 Ini(同键中文含「加载 / 载入」);
@@ -122,13 +127,15 @@ const ABOLISHED_TEN_WORDS = [
 ];
 /** 整词匹配:连字符两侧也算词内,所以 Heri-Tep 里的 Tep、Kemet-Shen 里的 Kemet 都不会误中。 */
 const ABOLISHED_TEN = new RegExp(`(?<![A-Za-z-])(${ABOLISHED_TEN_WORDS.join("|")})(?![A-Za-z-])`);
-
 /**
  * 第十一节:Per Aa 是「法老」(大房子),不能表示服务器 —— 服务器一律 Per Hemsu;第十二节把宫殿义的
  * workflow.editor.court_code 改写 Wesekhet,Per Aa 于是整个废止。按两词词组查:Aa 单独出现由封闭词汇拦下
  * (第十二节:ID 写 Ren Hesb,Aa 的其余写法全部作废,包里已无 Aa)。
  */
 const PER_AA = /(?<![A-Za-z-])Per Aa(?![A-Za-z-])/;
+
+/** 第十六、十七节:Ek 只作后缀(Sesh-Ek 你的、Er-Ek 给你、Shesep-Ek 你已);单独的「你」写 Djes-Ek。 */
+const BARE_EK = /(?<![A-Za-z-])Ek(?![A-Za-z])/;
 
 /**
  * 第十一节:功 = Nefer、过 = Isfet,Maat 只作「真 / 实」与女神名。第十四节把功过格、功过台账也改写 Sesh Nefer Isfet,
@@ -140,7 +147,7 @@ const PER_AA = /(?<![A-Za-z-])Per Aa(?![A-Za-z-])/;
 const maatOutsideEvidence = (v: string) => /\bMaat\b/.test(prose(v).replace(/〔[^〕]*〕/g, "").replace(/\bMedu Maat\b/g, ""));
 
 /**
- * 第十三节:Unemu 只剩「色」一个义项(强调色 Unemu Tepy)。它曾担的裁决 / 判(Wedja)、功过(Nefer Isfet)、
+ * 第十三节:Unemu 只剩「色」一个义项(当时是强调色 Unemu Tepy;规范 v2 撤掉强调色后,剩「配色」一处)。它曾担的裁决 / 判(Wedja)、功过(Nefer Isfet)、
  * 余额(Sepy)、称重(Dens)等 42 键已逐键改写;第十四节把最后一键 souls.balance_withheld 改写 Sepy Imen,放行清单随之删除。
  */
 const hasUnemu = (v: string) => /\bUnemu\b/.test(prose(v));
@@ -226,7 +233,7 @@ const isDispatchKey = (k: string) => /^dispatch\.|\.DISPATCH_|\.dispatch$/.test(
  * 技术词原样引用(词表「技术词 cron / webhook / ms / 权限键名不转写」):每条只放行它自己的
  * 那几个记号 —— 权限键名、命令 / 方法名、时间单位、占位示例里的代码值、版本号、色值。
  * 放行按键不按词:`soul` 在示例里是分类代码,在别处就是该大写的词。
- * 修订表 778 个键里除这些技术词外**没有**大小写违例,所以不需要为修订表另设豁免。
+ * 修订表 771 个键里除这些技术词外**没有**大小写违例,所以不需要为修订表另设豁免。
  */
 const TECHNICAL: Record<string, string[]> = {
   "soul_accounts.credentials.manage_hint": ["soul_account.manage"],
@@ -246,7 +253,6 @@ const TECHNICAL: Record<string, string[]> = {
   "welcome.minutes_ago": ["m"],
   "welcome.hours_ago": ["h"],
   "footer.version": ["v0.1"],
-  "settings.accent_hex_invalid": ["#ff5500"],
   "ledger.copy_resource_id": ["{resource}"],
   "menus.gate_visible_nonadmin": ["menu.manage"],
   "menus.gate_permission_nonadmin": ["menu.manage"],
@@ -281,6 +287,8 @@ const PHRASE_RE = new RegExp(
  * 一条文案里的词:去占位符、去该键的技术词,取字母串;连字符复合词(Wa-Ek)算一个词。
  * 第十节:后置小词 -Ef(其 / 它的)接在任何词后都合规,所以 Iri-Ef 拆成 Iri 与 -Ef 两个词。
  * 第十一节:-I(我的)同理,Sedjem-I 拆成 Sedjem 与 -I。
+ * 第十五节(Design E 组):-Ek(你的)必须接在词后 —— Hesb Maa-Ek、Ren Hesb Ba-Ek、Per-Ek —— 同样拆开。
+ * 第十七节:独立的 Ek 废止(「你」写 Djes-Ek、「我」写 -I),Ek 从小词表删除;连字符形(Djes-Ek、Er-Ek)照拆。
  */
 const words = (k: string) => {
   const text = prose(EGY[k]);
@@ -291,7 +299,7 @@ const words = (k: string) => {
     .filter((t) => !(TECHNICAL[k] ?? []).includes(bare(t)))
     .flatMap((t) => t.match(/[A-Za-z]+(?:-[A-Za-z]+)*/g) ?? [])
     .flatMap((w) => {
-      const m = /^(.+)(-Ef|-I)$/.exec(w);
+      const m = /^(.+)(-Ef|-I|-Ek)$/.exec(w);
       return m ? [m[1], m[2]] : [w];
     });
   return [...phrases, ...rest];
@@ -444,7 +452,7 @@ const ROOTS_ELEVEN = [
 ];
 /**
  * 第十二节「36 词逐键审定」的新登记:新词根 Hem、Imy-Ra;Sia 已在第十节表里,这里正式登记「解读 / 领会」义项;
- * 其余是组合写法。Iwen(颜色)没有登记:第十节已把它换成 Unemu,accent_hex_too_dark 写 Unemu(待 Design 确认)。
+ * 其余是组合写法。Iwen(颜色)没有登记:第十节已把它换成 Unemu(当时写在 accent_hex_too_dark 里;规范 v2 连键一起删了)。
  */
 const ROOTS_TWELVE = [
   "Sia", //           解读 / 领会
@@ -487,13 +495,15 @@ const PROPER_NAMES = [
 ];
 const PARTICLES = [
   "Em", "Nen", "Seth", "Tepy", "Pehwy", "Wehem", "Pen", "Ky", "Neb", "Wa",
-  "Ek", "Er", "Hena", "Djer", "Emu", "Dy", "Djes-Ef", "Er Hry",
+  "Er", "Hena", "Djer", "Emu", "Dy", "Djes-Ef", "Er Hry",
   // 第十节:如 / 同(例如 Mi)、是(与 Nen 相对)、后置的「其 / 它的」(Iri-Ef;-Es 换成 -Ef,界面不分性别)。
   "Mi", "Iu", "-Ef",
   // 第十一节:属格 En(只用在两个名词之间,Sesh En Ba;形容词尾的「的」不写);后置 -I(我的,Sedjem-I)。
   "En", "-I",
   // 第十四节:In 表「由 / 被」(触发人 Iri In);En 从此只作属格。
   "In",
+  // 第十五节(Design E 组):后置 -Ek(你的),接在词后(Hesb Maa-Ek)。
+  "-Ek",
 ];
 const LEXICON = new Set([
   ...[...ROOTS, ...ROOTS_MOD, ...ROOTS_FIX, ...ROOTS_SPLIT, ...ROOTS_CLOSE, ...ROOTS_FINAL, ...ROOTS_LATE, ...ROOTS_APP, ...ROOTS_NINE, ...ROOTS_TEN, ...ROOTS_ELEVEN, ...ROOTS_TWELVE, ...PROPER_NAMES, ...PARTICLES].flatMap((e) => e.split(/ \/ | /)),
@@ -527,9 +537,10 @@ describe("egy 词表规则", () => {
     expect(KEYS.length).toBeGreaterThan(1800);
   });
 
-  it("修订表 778 个键与包里逐字一致", () => {
+  it("修订表 771 个键与包里逐字一致", () => {
     const table = REVISIONS as Record<string, string>;
-    expect(Object.keys(table)).toHaveLength(778);
+    // 778 → 774:规范 v2 撤掉强调色,settings 里四个键连同修订一起删除。
+    expect(Object.keys(table)).toHaveLength(771);
     const drift = Object.entries(table)
       .filter(([k, v]) => EGY[k] !== v)
       .map(([k, v]) => `${k}: 表=${v} 包=${EGY[k]}`);
@@ -601,8 +612,9 @@ describe("egy 词表规则", () => {
 
   it("Unemu 只表「色」:中文不含「色」的键不出现 Unemu", () => {
     expect(offenders(KEYS, (v, k) => hasUnemu(v) && !isColourZh(ZH[k] ?? ""))).toEqual([]);
-    // 空扫保护:「色」义的 Unemu 仍在(强调色)。
-    expect(hasUnemu(EGY["settings.accent_color"] ?? "")).toBe(true);
+    // 空扫保护:「色」义的 Unemu 仍在。规范 v2 撤掉了强调色(settings.accent_color 连同键一起删了),
+    // 剩下的那一处是 App 暂居结束时的「配色」。
+    expect(hasUnemu(EGY["soul_app.homecoming.body"] ?? "")).toBe(true);
   });
 
   it("Hemsu 只表系统:中文含「判官」的键不出现 Hemsu(判官 Sab Wedja)", () => {
@@ -617,6 +629,18 @@ describe("egy 词表规则", () => {
     expect(hasHemsu(EGY["welcome.system_version"] ?? "")).toBe(true);
     expect(hasHemsu(EGY["error.description"] ?? "")).toBe(true);
     expect(hasHemsu(EGY["scheduler.run.enqueue_failed"] ?? "")).toBe(true);
+  });
+
+  it("废止名单按整词匹配:废止的 Shems 不误拦 Shemes(书信)、Shemsu(随从)(第十五节门禁提醒)", () => {
+    // 两个合规词与废止词只差一个字母 / 一个后缀;子串匹配会把它们一起拦下。
+    expect(ABOLISHED_TEN.test("Shems")).toBe(true);
+    expect(ABOLISHED_TEN.test("Shems Pen")).toBe(true);
+    expect(ABOLISHED_TEN.test("Shemes Pen Hab In Hemsu.")).toBe(false);
+    expect(ABOLISHED_TEN.test("Nen Ini Shemsu.")).toBe(false);
+    // 空扫保护:两个合规词确实在包里,名单里也确实还有 Shems。
+    expect(ABOLISHED_TEN_WORDS).toContain("Shems");
+    expect(KEYS.some((k) => /\bShemes\b/.test(EGY[k]))).toBe(true);
+    expect(KEYS.some((k) => /\bShemsu\b/.test(EGY[k]))).toBe(true);
   });
 
   it("第十节「换掉」清单与旧账清单不重叠:换净了才能进废止名单", () => {
@@ -681,6 +705,16 @@ describe("egy 词表规则", () => {
   it("否定一律 Nen:单词 Ma 不出现", () => {
     // 第十四节改写了最后一个非否定的 Ma(escalate_reason_placeholder),白名单随之删除。
     expect(offenders(KEYS, (v) => /\b[Mm]a\b/.test(prose(v)))).toEqual([]);
+  });
+
+  it("Ek 只作后缀:前面没有连字符的 Ek 一律拦下(第十六、十七节)", () => {
+    // 整词匹配:-Ek 后缀、Djes-Ek、Er-Ek 合法;Ekh 之类的长词不误中。
+    expect(BARE_EK.test("Sesh Ek Wenen.")).toBe(true);
+    expect(BARE_EK.test("Ek Hemes Em Taui Ky.")).toBe(true);
+    expect(BARE_EK.test("Djes-Ek, Er-Ek, Sesh-Ek.")).toBe(false);
+    expect(offenders(KEYS, (v) => BARE_EK.test(prose(v)))).toEqual([]);
+    // 空扫保护:-Ek 后缀确实在包里。
+    expect(KEYS.some((k) => /[A-Za-z]-Ek\b/.test(EGY[k]))).toBe(true);
   });
 
   it("加载一律 Ini:中文含「加载 / 载入」的键必含 Ini", () => {

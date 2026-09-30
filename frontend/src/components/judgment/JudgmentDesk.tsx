@@ -17,7 +17,8 @@ import { useToast } from "@/src/contexts/ToastContext";
 import { DomainEnum, DomainNumber, DomainText } from "@/src/components/ui/DomainValue";
 import { DeferDialog, claimRefusalMessage } from "@/src/components/judgment/JudgmentClaimDialogs";
 import { useHotkeys } from "@/src/lib/hotkeys";
-import { verdictGlyph, verdictInk } from "@/src/lib/verdictGlyph";
+import { VerdictBadge } from "@/src/components/ui/StatusBadge";
+import { verdictGlyph } from "@/src/lib/verdictGlyph";
 
 /**
  * 审判台(规范 v1 第三类 A·01)的几个原语:键帽、队列进度条、区块标、引用签、律条检索。
@@ -29,12 +30,36 @@ export function Kbd({ children }: { children: ReactNode }) {
   return (
     <kbd
       aria-hidden="true"
-      className="font-mono text-2xs border border-current px-1.5 opacity-70"
+      className="font-mono text-2xs border border-current px-2 opacity-70"
     >
       {children}
     </kbd>
   );
 }
+
+/**
+ * 落判键(补足 B8):四个同一个样式 —— 幽灵按钮,高 40、1px ink3 框、13 / 600、ink 字;
+ * 左边字形(15)+ 文字,右边数字键(11 等宽 ink3)。落判不靠颜色区分对错:✕ 也是 ink,
+ * 冷玫红只给系统出错。焦点环交给全局 `:focus-visible`(2px ink 外扩 2)。
+ * 审判详情页的裁决键组用同一串,两处长得一样。
+ */
+export const VERDICT_KEY_CLASS =
+  "flex h-10 w-full items-center gap-2 px-3 border border-[oklch(var(--color-line-strong))] text-sm font-semibold text-[oklch(var(--color-ink))] transition-[background-color] duration-fast hover:bg-[oklch(var(--color-surface-2))] active:bg-[oklch(var(--color-line))] max-sm:min-h-11";
+
+/** 字形 + 文字 + 右侧数字键,两处落判键共用。 */
+export function VerdictKeyContent({ code, keyHint }: { code: NonNullable<Judgment["verdict"]>; keyHint: string }) {
+  return (
+    <>
+      <span aria-hidden="true" className="text-md font-normal">{verdictGlyph(code)}</span>
+      {/* <DomainEnum>:原始枚举留在 title 上,缺译文时显示「未识别」而不是点号键名。 */}
+      <DomainEnum namespace="judgment.verdicts" value={code} />
+      <kbd aria-hidden="true" className="ml-auto font-mono text-2xs font-normal text-[oklch(var(--color-ink-subtle))]">
+        {keyHint}
+      </kbd>
+    </>
+  );
+}
+
 
 /**
  * 队列进度条 QueueBar:3 px 墨线。数据来自 `GET /judgment/next/?at=<id>` —— 服务端把 `at`
@@ -63,7 +88,7 @@ export function QueueBar({ judgmentId, canDefer = false }: { judgmentId: string;
   return (
     <div
       data-testid="queue-bar"
-      className="flex flex-wrap items-center gap-3 px-4 md:px-10 py-2 border-b border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] font-mono text-xs text-[oklch(var(--color-ink-muted))]"
+      className="flex flex-wrap items-center gap-3 px-4 md:px-8 py-2 border-b border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] font-mono text-xs text-[oklch(var(--color-ink-muted))]"
     >
       <span className="font-semibold text-[oklch(var(--color-ink))] tabular-nums">{label}</span>
       <span
@@ -83,7 +108,7 @@ export function QueueBar({ judgmentId, canDefer = false }: { judgmentId: string;
         <button
           type="button"
           onClick={() => setAsking(true)}
-          className="inline-flex items-center gap-1.5 hover:text-[oklch(var(--color-ink))] max-sm:min-h-11"
+          className="inline-flex items-center gap-2 hover:text-[oklch(var(--color-ink))] max-sm:min-h-11"
         >
           <Kbd>S</Kbd>
           {t("judgment.claim.defer")}
@@ -153,10 +178,7 @@ export function PrecedentsPanel({ judgmentId }: { judgmentId: string }) {
                 {p.same_court && ` · ${t("judgment.precedents.same_court")}`}
                 {p.shared_statutes > 0 && ` · ${t("judgment.precedents.shared", { n: String(p.shared_statutes) })}`}
               </span>
-              <span className={`justify-self-end border border-current px-1.5 font-mono text-2xs whitespace-nowrap ${verdictInk(p.verdict)}`}>
-                <span aria-hidden="true">{verdictGlyph(p.verdict)} </span>
-                <DomainEnum namespace="judgment.verdicts" value={p.verdict} />
-              </span>
+              <VerdictBadge verdict={p.verdict} className="justify-self-end" />
             </li>
           ))}
         </ul>
@@ -390,7 +412,7 @@ export function CiteFromCorpus({
 
   if (citeId && !handled && judgment.is_final) {
     return (
-      <p role="status" data-testid="cite-from-corpus-closed" className="px-4 md:px-10 py-2 text-xs text-[oklch(var(--color-ink-subtle))]">
+      <p role="status" data-testid="cite-from-corpus-closed" className="px-4 md:px-8 py-2 text-xs text-[oklch(var(--color-ink-subtle))]">
         {t("judgment.desk.cite_from_corpus_closed")}
       </p>
     );

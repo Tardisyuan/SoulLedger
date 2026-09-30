@@ -79,7 +79,7 @@ export function AssistPanel() {
   if (!assist) return null;
   return (
     <Modal visible={!!assist.openFrom} transparent animationType={reduced ? "none" : "fade"} onRequestClose={assist.close}>
-      <View style={styles.scrim}>
+      <View style={[styles.scrim, { backgroundColor: t.scrim }]}>
         {full ? null : (
           <Pressable
             testID="assist-scrim"
@@ -120,20 +120,20 @@ function Sheet({ assist }: { assist: Assist }) {
   );
 }
 
-/** 1c / 1i / 1j: the 问 seal in the civilization's mark, the name, 「助手 · 只读」, and 历史. */
+/** 1c / 1i / 1j: the 问 seal in 匾色 (v2 has no mark), the name, 「助手 · 只读」, and 历史; a 1px ink rule under it. */
 function Head({ view, setView, assist }: { view: "chat" | "history"; setView: (v: "chat" | "history") => void; assist: Assist }) {
   const t = useTheme();
   const { t: tr } = useI18n();
   const history = view === "history";
   return (
-    <View style={[styles.head, { borderBottomColor: t.mark }]}>
+    <View style={[styles.head, { borderBottomColor: t.ink }]}>
       {history ? (
         <Pressable testID="assist-back" accessibilityRole="button" accessibilityLabel={tr("common.back")} onPress={() => setView("chat")} style={styles.icon}>
           <Icon name="back" size={17} color={t.inkMuted} strokeWidth={1.4} />
         </Pressable>
       ) : (
         <View style={styles.seal}>
-          <AskGlyph color={t.mark} />
+          <AskGlyph color={t.plaque} />
         </View>
       )}
       <View style={styles.headText}>
@@ -254,7 +254,7 @@ function Answer({ message, assist }: { message: AssistMessage; assist: Assist })
   return (
     <View testID="assist-answer" style={styles.answer}>
       <View style={styles.answerHead}>
-        <AskGlyph color={t.mark} glyph="答" />
+        <AskGlyph color={t.plaque} glyph="答" />
         {english && locale !== "en" ? (
           <View testID="assist-en" style={[styles.en, { borderColor: t.inkSubtle }]}>
             <Txt variant="label" tone="subtle" style={styles.enText}>
@@ -387,7 +387,7 @@ function Intro({ onAck }: { onAck: () => void }) {
         <Txt variant="title">{tr("soul_app.assist.intro_title")}</Txt>
         {items.map(([n, title, body]) => (
           <View key={n} style={[styles.introItem, { borderTopColor: t.hair }]}>
-            <Txt variant="value" tone="mark" importantForAccessibility="no">
+            <Txt variant="value" tone="ink" importantForAccessibility="no">
               {n}
             </Txt>
             <View style={styles.fill}>
@@ -438,16 +438,16 @@ function Composer({ assist }: { assist: Assist }) {
           accessibilityState={{ disabled: !ready }}
           disabled={!ready}
           onPress={() => assist.ask(assist.draft)}
-          style={[styles.send, { borderColor: ready ? t.accent : t.hair }]}
+          style={[styles.send, { borderColor: ready ? t.ink : t.hair }]}
         >
-          <Icon name="send" size={18} color={ready ? t.accent : t.inkSubtle} strokeWidth={1.4} />
+          <Icon name="send" size={18} color={ready ? t.ink : t.inkSubtle} strokeWidth={1.4} />
         </Pressable>
       </View>
     </View>
   );
 }
 
-/** 1f: start page (mark hairline) + mono time + first question in the serif; delete is a 44pt target, no swipe. */
+/** 1f: start page (ink hairline) + mono time + first question in the serif; delete is a 44pt target, no swipe. */
 function History({ assist, onOpened }: { assist: Assist; onOpened: () => void }) {
   const t = useTheme();
   const { t: tr } = useI18n();
@@ -493,7 +493,7 @@ function History({ assist, onOpened }: { assist: Assist; onOpened: () => void })
               style={styles.fill}
             >
               <View style={styles.answerHead}>
-                <View style={[styles.screenTag, { borderLeftColor: t.mark }]}>
+                <View style={[styles.screenTag, { borderLeftColor: t.ink }]}>
                   <Txt variant="label" tone="muted">
                     {tr(SCREEN_TITLE[c.screen])}
                   </Txt>
@@ -554,7 +554,7 @@ function History({ assist, onOpened }: { assist: Assist; onOpened: () => void })
 function Confirm({ children }: { children: ReactNode }) {
   const t = useTheme();
   return (
-    <View style={[StyleSheet.absoluteFill, styles.confirmScrim]}>
+    <View style={[StyleSheet.absoluteFill, styles.confirmScrim, { backgroundColor: t.scrim }]}>
       <View testID="assist-delete-sheet" accessibilityViewIsModal style={[styles.confirm, { backgroundColor: t.s1, borderTopColor: t.negStrong }]}>
         {children}
       </View>
@@ -564,17 +564,17 @@ function Confirm({ children }: { children: ReactNode }) {
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
-  scrim: { flex: 1, backgroundColor: "rgba(0,0,0,0.6)" },
+  scrim: { flex: 1 },
   sheet: { flex: 1, borderTopWidth: 1 },
-  head: { minHeight: 56, flexDirection: "row", alignItems: "center", paddingHorizontal: 6, borderBottomWidth: 1 },
+  head: { minHeight: 56, flexDirection: "row", alignItems: "center", paddingHorizontal: 4, borderBottomWidth: 1 },
   seal: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
   headText: { flex: 1, paddingHorizontal: 4 },
-  headButton: { minHeight: 44, minWidth: 44, paddingHorizontal: 10, alignItems: "center", justifyContent: "center" },
+  headButton: { minHeight: 44, minWidth: 44, paddingHorizontal: 12, alignItems: "center", justifyContent: "center" },
   icon: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
-  body: { padding: 20, gap: 18 },
-  gap: { gap: 10 },
-  row: { flexDirection: "row", alignItems: "center", gap: 10 },
-  suggestion: { borderWidth: 1, paddingHorizontal: 14, paddingVertical: 12 },
+  body: { padding: 20, gap: 16 },
+  gap: { gap: 12 },
+  row: { flexDirection: "row", alignItems: "center", gap: 8 },
+  suggestion: { borderWidth: 1, paddingHorizontal: 16, paddingVertical: 12 },
   question: { alignSelf: "flex-end", maxWidth: "85%", borderRightWidth: 2, paddingRight: 12, gap: 2 },
   meta: { fontSize: 11, textAlign: "right" },
   answer: { gap: 8 },
@@ -582,13 +582,13 @@ const styles = StyleSheet.create({
   answerText: { flexShrink: 1 },
   en: { borderWidth: 1, borderStyle: "dotted", paddingHorizontal: 4 },
   enText: { fontSize: 10, lineHeight: 14, letterSpacing: 0.6 },
-  card: { borderWidth: 1, padding: 14, gap: 10 },
+  card: { borderWidth: 1, padding: 16, gap: 12 },
   introItem: { flexDirection: "row", gap: 12, borderTopWidth: 1, paddingTop: 12 },
-  composer: { borderTopWidth: 1, paddingHorizontal: 12, paddingVertical: 10, gap: 6 },
-  input: { flex: 1, minHeight: 44, maxHeight: 120, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 10, fontSize: 15 },
+  composer: { borderTopWidth: 1, paddingHorizontal: 12, paddingVertical: 8, gap: 4 },
+  input: { flex: 1, minHeight: 44, maxHeight: 120, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 8, fontSize: 15 },
   send: { width: 44, height: 44, borderWidth: 1, alignItems: "center", justifyContent: "center" },
-  historyRow: { flexDirection: "row", alignItems: "center", gap: 6, paddingVertical: 12, borderBottomWidth: 1 },
-  screenTag: { borderLeftWidth: 2, paddingLeft: 6 },
-  confirmScrim: { backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "flex-end" },
-  confirm: { borderTopWidth: 1, padding: 20, gap: 10 },
+  historyRow: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 12, borderBottomWidth: 1 },
+  screenTag: { borderLeftWidth: 2, paddingLeft: 8 },
+  confirmScrim: { justifyContent: "flex-end" },
+  confirm: { borderTopWidth: 1, padding: 20, gap: 12 },
 });

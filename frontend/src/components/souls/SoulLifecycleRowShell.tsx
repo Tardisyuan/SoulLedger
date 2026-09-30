@@ -10,8 +10,8 @@ import { MissingValue } from "@/src/components/ui/DomainValue";
  */
 export const TONE_DOT: Record<string, string> = {
   neutral: "bg-[oklch(var(--color-ink-subtle))]",
-  merit: "bg-[oklch(var(--color-karma-merit))]",
-  demerit: "bg-[oklch(var(--color-karma-demerit))]",
+  merit: "bg-[oklch(var(--color-ink))]",
+  demerit: "bg-[oklch(var(--color-ink))]",
   info: "bg-[oklch(var(--color-status-info))]",
   accent: "bg-[oklch(var(--color-accent))]",
 };
@@ -49,7 +49,7 @@ export function RowShell({ date, dotClassName, dashed, hideConnector, highlight,
           <span
             className={
               terminalVariant === "filled"
-                ? `w-3.5 h-3.5 mt-1.5 ring-2 ring-[oklch(var(--color-status-settled)/0.35)] ${dotClassName}`
+                ? `w-3.5 h-3.5 mt-2 ring-2 ring-[oklch(var(--color-status-settled)/0.35)] ${dotClassName}`
                 : `w-2.5 h-2.5 mt-2 ${dotClassName}`
             }
             aria-hidden="true"
@@ -61,8 +61,8 @@ export function RowShell({ date, dotClassName, dashed, hideConnector, highlight,
           />
         )}
       </div>
-      <div className="flex-1 min-w-0 py-1.5">{children}</div>
-      {right && <div className="shrink-0 text-right py-1.5 pl-2">{right}</div>}
+      <div className="flex-1 min-w-0 py-2">{children}</div>
+      {right && <div className="shrink-0 text-right py-2 pl-2">{right}</div>}
     </div>
   );
 }

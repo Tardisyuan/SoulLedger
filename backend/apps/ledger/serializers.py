@@ -13,6 +13,8 @@ Every shape below was read off the function that builds it:
 from drf_spectacular.utils import PolymorphicProxySerializer, extend_schema_field
 from rest_framework import serializers
 
+from apps.realms.models import RealmType
+
 
 class LedgerErrorSerializer(serializers.Serializer):
     """`{"error": "NOT_FOUND", "message": "Soul not found"}`.
@@ -322,6 +324,8 @@ class SoulsByRealmSerializer(serializers.Serializer):
     realm_code = serializers.CharField()
     realm_name = serializers.CharField()
     civilization = serializers.CharField()
+    #: `Realm.realm_type`(HELL / PURGATORY / BLISS / NEUTRAL)—— 前端按它选图案。
+    realm_type = serializers.ChoiceField(choices=RealmType.choices)
     count = serializers.IntegerField()
 
 

@@ -1,6 +1,6 @@
 /**
- * Every soul lifecycle state gets its OWN colour, and it is the colour named
- * after it.
+ * (v1) Every soul lifecycle state got its OWN colour. v2 C15 retired that —
+ * domain badges are ink on ink3 now — but the defect below is why the table is one file.
  *
  * WHY THIS FILE EXISTS. `app/souls/page.tsx` and `app/souls/[id]/page.tsx` each
  * carried a `STATE_COLORS` map; `diff` of the two ranges exited 0. Both painted
@@ -29,7 +29,7 @@ import {
   UNKNOWN_SOUL_STATE_BADGE_CLASS,
   soulStateBadgeClass,
 } from "@/src/lib/soulStateBadge";
-import { VERDICT_GLYPH } from "@/src/lib/verdictGlyph";
+import { VERDICT_BADGE_CLASSES, VERDICT_GLYPH } from "@/src/lib/verdictGlyph";
 import { ROOT_TOKENS, readSoulStates } from "./support/globalsCssTokens";
 
 /** `{utility: [token, alpha]}` for every `x-[oklch(var(--t)/a)]` in a class string. */
@@ -53,57 +53,67 @@ describe("the table covers the states the API can actually send", () => {
   });
 });
 
-describe("no two states share a colour", () => {
-  it("gives all six distinct classes", () => {
-    // THE DEFECT. DISPOSED and LOST held the same string in both copies of this
-    // table, so 已处置 and 迷失 rendered identically.
-    const values = Object.values(SOUL_STATE_BADGE_CLASSES);
-    expect(new Set(values).size).toBe(values.length);
-  });
+/**
+ * 规范 v2 补足 C15 / B8 推翻了 v1「每个状态穿自己的颜色」:领域枚举徽章一律 ink 字 +
+ * 1px ink3 框,**颜色不参与**;「还要处理」的两种(灵魂「审判中」= 样张的「待审」、
+ * 判决「待定」)加 s2 底。区分全靠字形与文字 —— 所以 v1 那条「六个状态六种颜色」
+ * 的断言改成了「六个状态六个字形」,而颜色这一侧改成断言**缺席**:任何
+ * `--color-status-*` / `--color-verdict-*` / 危险色回到徽章里都是红的。
+ */
+const INK = ["--color-ink", "1"];
+const INK3 = ["--color-line-strong", "1"];
+const S2 = ["--color-surface-2", "1"];
+const PENDING_STATES = ["JUDGING"];
+const PENDING_VERDICTS = ["PURGATORY"];
 
-  it("gives all six distinct tokens, not just distinct strings", () => {
-    // The stronger half: two states could differ only in tint depth while
-    // naming one token, which is the same defect wearing different arithmetic.
-    const inks = Object.values(SOUL_STATE_BADGE_CLASSES).map((c) => utilities(c).text[0]);
-    expect(new Set(inks).size).toBe(inks.length);
-  });
-});
-
-describe("each state wears the token named after it", () => {
-  it.each(readSoulStates())("%s", (state) => {
-    const token = `--color-status-${state.toLowerCase()}`;
-    // Declared in globals.css, read through the one parser. An undefined
-    // custom property drops the whole declaration with no error anywhere.
-    expect(ROOT_TOKENS[token]).toBeDefined();
-
+describe("domain badges carry no status colour (C15)", () => {
+  it.each(readSoulStates())("%s is ink on an ink3 frame", (state) => {
     const found = utilities(SOUL_STATE_BADGE_CLASSES[state as keyof typeof SOUL_STATE_BADGE_CLASSES]);
-    // Equality, not "contains": "the right token is present" stays true while
-    // the wrong one sits beside it.
-    // 规范 v1 §2: no fill — text and border in the state's own token.
-    expect(found.text).toEqual([token, "1"]);
-    expect(found.border).toEqual([token, "1"]);
-    expect(Object.keys(found).sort()).toEqual(["border", "text"]);
+    expect(found.text).toEqual(INK);
+    expect(found.border).toEqual(INK3);
+    // Equality on the key set: "ink is present" stays true while a status fill sits beside it.
+    const pending = PENDING_STATES.includes(state);
+    expect(Object.keys(found).sort()).toEqual(pending ? ["bg", "border", "text"] : ["border", "text"]);
+    if (pending) expect(found.bg).toEqual(S2);
   });
 
-  it("every state has its own glyph, and no two share one (§1.2: not colour alone)", () => {
-    const states = readSoulStates();
-    const glyphs = states.map((s) => SOUL_STATE_GLYPH[s as keyof typeof SOUL_STATE_GLYPH]);
-    expect(glyphs.every(Boolean)).toBe(true);
-    expect(new Set(glyphs).size).toBe(states.length);
+  it.each(Object.keys(VERDICT_BADGE_CLASSES))("verdict %s is ink on an ink3 frame, ✕ included", (verdict) => {
+    const found = utilities(VERDICT_BADGE_CLASSES[verdict as keyof typeof VERDICT_BADGE_CLASSES]);
+    expect(found.text).toEqual(INK);
+    expect(found.border).toEqual(INK3);
+    const pending = PENDING_VERDICTS.includes(verdict);
+    expect(Object.keys(found).sort()).toEqual(pending ? ["bg", "border", "text"] : ["border", "text"]);
   });
 
-  // 灵魂详情页「丙 · 审判」把判决字形与页头的状态字形画在同一页上,所以两张表
-  // 不仅各自不重,彼此也不能相交 —— 否则 ◇ 补过 与某个状态会读成同一件事。
-  it("every verdict has its own glyph, none shared with a soul state", () => {
-    const verdicts = Object.keys(VERDICT_GLYPH) as (keyof typeof VERDICT_GLYPH)[];
-    expect(verdicts.sort()).toEqual(["FAILED", "PASSED", "PURGATORY", "RETRY"]);
-    const glyphs = verdicts.map((v) => VERDICT_GLYPH[v]);
-    expect(glyphs.every(Boolean)).toBe(true);
-    expect(new Set(glyphs).size).toBe(verdicts.length);
-    const stateGlyphs = new Set(Object.values(SOUL_STATE_GLYPH));
-    expect(glyphs.filter((g) => stateGlyphs.has(g))).toEqual([]);
+  it("no badge class names a status, verdict or danger token", () => {
+    const all = [...Object.values(SOUL_STATE_BADGE_CLASSES), ...Object.values(VERDICT_BADGE_CLASSES)].join(" ");
+    expect(all).not.toMatch(/--color-(status|verdict|danger|success|warning|accent|chart)/);
   });
 });
+
+describe("glyphs carry the distinction colour no longer does", () => {
+  it("every state has its own glyph, and no two share one", () => {
+    const glyphs = STATES.map((s) => SOUL_STATE_GLYPH[s as keyof typeof SOUL_STATE_GLYPH]);
+    expect(glyphs.every(Boolean)).toBe(true);
+    expect(new Set(glyphs).size).toBe(STATES.length);
+  });
+
+  it("draws C15's glyphs for the real enum", () => {
+    expect(SOUL_STATE_GLYPH).toEqual({ ALIVE: "○", JUDGING: "◇", DISPOSED: "▣", REINCARNATING: "↻", LOST: "◌", SETTLED: "≡" });
+    expect(VERDICT_GLYPH).toEqual({ PASSED: "✓", FAILED: "✕", PURGATORY: "◇", RETRY: "↺" });
+  });
+
+  // 灵魂详情页把判决与状态画在同一页。C15 两处都画 ◇,意思都是「还要处理」,
+  // 且都带 s2 底 —— 那是唯一允许的共用字形;别的相交会让两件事读成一件。
+  it("verdicts and states share only ◇, and only between the two pending values", () => {
+    const stateGlyphs = new Set(Object.values(SOUL_STATE_GLYPH));
+    const shared = Object.values(VERDICT_GLYPH).filter((g) => stateGlyphs.has(g));
+    expect(shared).toEqual(["◇"]);
+    expect(SOUL_STATE_GLYPH.JUDGING).toBe("◇");
+    expect(VERDICT_GLYPH.PURGATORY).toBe("◇");
+  });
+});
+
 
 describe("the unknown-state fill is not one of the six", () => {
   it("names neither a lifecycle token nor any state's colour", () => {

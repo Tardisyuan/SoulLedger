@@ -35,10 +35,14 @@ def _web_segments():
             if not p.relative_to(FRONTEND_APP).parts[0].startswith("(")}
 
 
+
+
 def test_officer_screens_are_the_web_route_segments():
     """加一个页面而不加 OFFICER_SCREENS(或反过来)→ 红。"""
     segments = _web_segments()
     assert len(segments) >= 25  # 目录找错了会得到空集,而空集与空集相等
+    # 曾有具名例外 NO_SCREEN = {"about"}:关于页归到 "other"。2026-09-30 用户拍板给它一个页面 id,
+    # 例外随之删掉 —— 现在每个有页面的段都有助手页面 id,没有例外。
     assert set(OFFICER_SCREENS) - {"other"} == segments
 
 

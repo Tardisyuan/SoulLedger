@@ -217,7 +217,7 @@ export function SoulLifecycleTimeline({
               key={tabKey}
               type="button"
               onClick={() => setTab(tabKey)}
-              className={`px-2.5 py-1 text-sm transition-colors ${
+              className={`px-3 py-1 text-sm transition-colors ${
                 tab === tabKey
                   ? "bg-[oklch(var(--color-ink))] text-[oklch(var(--color-canvas))] font-medium"
                   : "bg-[oklch(var(--color-surface-2))] text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))]"
@@ -230,7 +230,7 @@ export function SoulLifecycleTimeline({
                   : tf("souls.detail.timeline.tab_judgment", "仅裁决")}
             </button>
           ))}
-          <label className="flex items-center gap-1.5 text-sm text-[oklch(var(--color-ink-muted))] ml-2 cursor-pointer select-none">
+          <label className="flex items-center gap-2 text-sm text-[oklch(var(--color-ink-muted))] ml-2 cursor-pointer select-none">
             <input
               type="checkbox"
               checked={includeSystemEvents}
@@ -273,7 +273,7 @@ export function SoulLifecycleTimeline({
                   dotClassName={row.type === "MERIT" ? TONE_DOT.merit : TONE_DOT.demerit}
                   right={
                     <div>
-                      <div className={`text-sm font-semibold ${positive ? "text-[oklch(var(--color-karma-merit))]" : "text-[oklch(var(--color-karma-demerit))]"}`}>
+                      <div className="text-sm font-semibold text-[oklch(var(--color-ink))]">
                         {positive ? "+" : ""}
                         {row.effectiveSigned}
                       </div>
@@ -372,7 +372,7 @@ export function SoulLifecycleTimeline({
                     <button
                       type="button"
                       onClick={() => openJudgment && onOpenJudgmentQueue(openJudgment.id)}
-                      className="px-3 py-1.5 bg-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-ink-muted))] text-[oklch(var(--color-canvas))] text-sm font-medium transition-colors"
+                      className="px-3 py-2 bg-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-ink-muted))] text-[oklch(var(--color-canvas))] text-sm font-medium transition-colors"
                     >
                       {tf("souls.detail.timeline.open_in_queue", "在审判队列中打开")}
                     </button>
@@ -392,7 +392,7 @@ export function SoulLifecycleTimeline({
 
             // cycle-band divider
             return (
-              <div key={row.id} className="my-2 pl-16">
+              <div key={row.id} className="my-2 pl-12">
                 <div className="flex items-center gap-2 py-1 px-2 bg-[oklch(var(--color-surface-2))] text-xs text-[oklch(var(--color-ink-muted))]">
                   <span className="font-semibold text-[oklch(var(--color-ink))]">
                     {tf("souls.detail.timeline.cycle_band", "第 {{n}} 世", { n: String(row.cycleNumber) })}

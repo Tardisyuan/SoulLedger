@@ -52,6 +52,7 @@ jest.mock("@soulledger/core/api", () => ({
 jest.mock("@/src/components/connection-status", () => ({
   ConnectionStatus: () => null,
   ConnectionBanner: () => null,
+  useConnectionBannerShown: () => false,
 }));
 
 jest.mock("@/src/hooks/useSidebarMenus", () => ({

@@ -2,9 +2,7 @@
  * Tests for SettingsDrawer component
  */
 import { render, screen, fireEvent } from "@testing-library/react";
-import { SettingsDrawer, useAccentColor } from "@/src/components/settings/SettingsDrawer";
-import { renderHook } from "@testing-library/react";
-import { HUE_READBACK_SLACK_DEG, hslHueOfOklch } from "./support/globalsCssTokens";
+import { SettingsDrawer } from "@/src/components/settings/SettingsDrawer";
 
 jest.mock("@/src/contexts/I18nContext", () => ({
   useI18n: () => ({
@@ -14,19 +12,6 @@ jest.mock("@/src/contexts/I18nContext", () => ({
         "settings.theme": "Theme",
         "settings.light": "Light",
         "settings.dark": "Dark",
-        "settings.accent_color": "Accent Color",
-        "settings.nav_mode": "Navigation Mode",
-        "settings.classic": "Classic",
-        "settings.compact": "Compact",
-        "settings.classic_desc": "Full sidebar with icons and labels",
-        "settings.compact_desc": "Icons only with tooltips on hover",
-        "settings.apply": "Apply",
-        "settings.colors.amber": "Amber",
-        "settings.colors.blue": "Blue",
-        "settings.colors.green": "Green",
-        "settings.colors.purple": "Purple",
-        "settings.colors.red": "Red",
-        "settings.colors.rose": "Rose",
       };
       return map[key] || key;
     },
@@ -52,8 +37,6 @@ jest.mock("lucide-react", () => ({
 const defaultProps = {
   open: true,
   onClose: jest.fn(),
-  navMode: "classic" as const,
-  onNavModeChange: jest.fn(),
 };
 
 function renderDrawer(overrides = {}) {
@@ -91,8 +74,8 @@ describe("SettingsDrawer", () => {
   it("calls onClose when backdrop is clicked", () => {
     const onClose = jest.fn();
     renderDrawer({ onClose });
-    // The backdrop is the first div with fixed inset-0
-    const backdrop = document.querySelector(".fixed.inset-0.bg-black\\/50");
+    // The backdrop is the full-screen button (规范 v2: scrim token, not bg-black/50)
+    const backdrop = document.querySelector("button.fixed.inset-0");
     expect(backdrop).toBeTruthy();
     fireEvent.click(backdrop!);
     expect(onClose).toHaveBeenCalledTimes(1);
@@ -105,170 +88,35 @@ describe("SettingsDrawer", () => {
     expect(screen.getByText("Dark")).toBeInTheDocument();
   });
 
-  it("renders accent color section", () => {
+  it("没有「导航模式」一节 —— 立柱只有一种宽度规则(规范 v2)", () => {
     renderDrawer();
-    expect(screen.getByText("Accent Color")).toBeInTheDocument();
-  });
-
-  it("renders navigation mode section", () => {
-    renderDrawer();
-    expect(screen.getByText("Navigation Mode")).toBeInTheDocument();
-    expect(screen.getByText("Classic")).toBeInTheDocument();
-    expect(screen.getByText("Compact")).toBeInTheDocument();
-  });
-
-  it("shows classic description when navMode is classic", () => {
-    renderDrawer({ navMode: "classic" });
-    expect(screen.getByText("Full sidebar with icons and labels")).toBeInTheDocument();
-  });
-
-  it("shows compact description when navMode is compact", () => {
-    renderDrawer({ navMode: "compact" });
-    expect(screen.getByText("Icons only with tooltips on hover")).toBeInTheDocument();
-  });
-
-  it("calls onNavModeChange when classic button is clicked", () => {
-    const onNavModeChange = jest.fn();
-    renderDrawer({ onNavModeChange });
-    fireEvent.click(screen.getByText("Classic"));
-    expect(onNavModeChange).toHaveBeenCalledWith("classic");
-  });
-
-  it("calls onNavModeChange when compact button is clicked", () => {
-    const onNavModeChange = jest.fn();
-    renderDrawer({ onNavModeChange });
-    fireEvent.click(screen.getByText("Compact"));
-    expect(onNavModeChange).toHaveBeenCalledWith("compact");
-  });
-
-  it("renders accent color preset buttons", () => {
-    renderDrawer();
-    // Ink blue (the palette default, 规范 v1) + Amber, Blue, Green, Purple, Red, Rose
-    const colorButtons = document.querySelectorAll(".grid.grid-cols-3 button");
-    expect(colorButtons.length).toBe(7);
-  });
-
-  it("renders custom hex input", () => {
-    renderDrawer();
-    const hexInput = screen.getByPlaceholderText("#ff5500");
-    expect(hexInput).toBeInTheDocument();
-  });
-
-  it("renders apply button for custom hex", () => {
-    renderDrawer();
-    expect(screen.getByText("Apply")).toBeInTheDocument();
+    expect(screen.queryByText("Navigation Mode")).not.toBeInTheDocument();
   });
 });
 
 /**
- * The accent is three tokens, and this is what keeps it that way.
- *
- * `applyAccentColor` used to set `--color-accent` alone. The other two are not
- * decorative: measured 2026-09-01, `--color-accent-ink` is read at **92 sites**
- * (every accent heading, link and eyebrow) and `--color-accent-hover` at 10.
- * Picking Blue turned the fills blue and left all of that amber — the feature
- * looked like it worked because the square you clicked did change.
- *
- * The theme is part of it: `--color-accent-ink` is declared equal to the accent
- * in dark and darkened in light (the accent measures 2.13:1 on white), and the
- * drawer writes INLINE properties on documentElement, which apply to both.
+ * 规范 v2 撤掉了用户自选强调色(2026-09-30),不加替代开关。这里断的是**不在**:
+ * 没有那一节、没有色块、没有 hex 输入;旧用户 localStorage 里存着的选择被忽略 ——
+ * 打开抽屉之后 <html> 上没有任何行内的 accent 令牌。
  */
-describe("the accent picker writes the whole accent, not a third of it", () => {
-  const readToken = (name: string) =>
-    document.documentElement.style.getPropertyValue(name);
-
-  beforeEach(() => {
+describe("the accent picker is gone (规范 v2)", () => {
+  afterEach(() => {
+    localStorage.clear();
     document.documentElement.removeAttribute("style");
-    // The drawer persists the accent and re-applies it on mount, so without
-    // this the next test reads the previous test's colour back out of storage.
-    try {
-      localStorage.clear();
-    } catch {
-      // jsdom without storage
-    }
   });
 
-  it("sets accent, hover and ink together", () => {
+  it("renders no accent section, no swatches and no hex input", () => {
     renderDrawer();
-
-    const blue = document.querySelectorAll<HTMLButtonElement>(".grid.grid-cols-3 button")[2];
-    fireEvent.click(blue);
-
-    expect(readToken("--color-accent")).not.toBe("");
-    // These two were left at their amber values by the old code.
-    expect(readToken("--color-accent-hover")).not.toBe("");
-    expect(readToken("--color-accent-ink")).not.toBe("");
-    // All three must share the chosen hue — the failure being pinned is
-    // exactly "the fill moved and the text did not".
-    //
-    // `v.split(" ")[0]` USED TO BE THE HUE AND IS NOW THE LIGHTNESS. The
-    // drawer wrote `H S% L%`; since the OKLCH migration it writes `L C H`, so
-    // reading component 0 compared the three tokens' LIGHTNESSES — which
-    // differ by design (hover is +8, light-mode ink is solved down for
-    // contrast) and would have reddened this on correct code. Reading
-    // component 2 instead would compare OKLCH hues, which are NOT equal for
-    // the same HSL hue at three lightnesses. `hslHueOfOklch` converts back to
-    // the coordinate `accentTokens` derives in, which is the only reading
-    // under which "all three share the chosen hue" is the same sentence it
-    // was before.
-    const accent = hslHueOfOklch(readToken("--color-accent"));
-    for (const token of ["--color-accent-hover", "--color-accent-ink"]) {
-      expect(Math.abs(hslHueOfOklch(readToken(token)) - accent)).toBeLessThan(
-        HUE_READBACK_SLACK_DEG
-      );
-    }
-    // And the lightnesses are NOT all equal, which is what makes the check
-    // above a hue check rather than a "the three strings are identical" check.
-    const lightnessOf = (v: string) => v.trim().split(" ")[0];
-    expect(lightnessOf(readToken("--color-accent-hover"))).not.toBe(
-      lightnessOf(readToken("--color-accent"))
-    );
+    expect(screen.queryByText("settings.accent_color")).not.toBeInTheDocument();
+    expect(screen.queryByPlaceholderText("#ff5500")).not.toBeInTheDocument();
+    expect(document.querySelectorAll(".grid.grid-cols-3 button")).toHaveLength(0);
   });
 
-  it("writes nothing inline when nothing was chosen, so the palette's ink blue shows", () => {
-    // It used to write the old amber default onto <html> on every mount, which
-    // overrode the stylesheet everywhere — the primary button came out amber.
-    renderHook(() => useAccentColor());
+  it("ignores a stored pick from before v2", () => {
+    localStorage.setItem("soulledger_accent_color", "#3b82f6");
+    renderDrawer();
     for (const token of ["--color-accent", "--color-accent-hover", "--color-accent-ink"]) {
-      expect(readToken(token)).toBe("");
+      expect(document.documentElement.style.getPropertyValue(token)).toBe("");
     }
-  });
-
-  it("choosing the ink-blue default removes a previous pick", () => {
-    renderDrawer();
-    const swatches = document.querySelectorAll<HTMLButtonElement>(".grid.grid-cols-3 button");
-    fireEvent.click(swatches[2]);
-    expect(readToken("--color-accent")).not.toBe("");
-    fireEvent.click(swatches[0]);
-    for (const token of ["--color-accent", "--color-accent-hover", "--color-accent-ink"]) {
-      expect(readToken(token)).toBe("");
-    }
-  });
-
-  it("refuses a custom hex too dark for the black label on primary buttons", () => {
-    renderDrawer();
-
-    const before = readToken("--color-accent");
-    fireEvent.change(screen.getByPlaceholderText("#ff5500"), {
-      target: { value: "#101010" },
-    });
-    fireEvent.click(screen.getByText("Apply"));
-
-    expect(screen.getByRole("alert")).toBeInTheDocument();
-    // And it must not have applied it. Primary buttons label the accent fill
-    // with text-black; #101010 behind black text is unreadable.
-    expect(readToken("--color-accent")).toBe(before);
-  });
-
-  it("still accepts a legible custom hex", () => {
-    renderDrawer();
-
-    fireEvent.change(screen.getByPlaceholderText("#ff5500"), {
-      target: { value: "#ffaa00" },
-    });
-    fireEvent.click(screen.getByText("Apply"));
-
-    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
-    expect(readToken("--color-accent")).not.toBe("");
   });
 });

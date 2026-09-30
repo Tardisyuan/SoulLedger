@@ -60,6 +60,28 @@ class TestLedgerStatsOverview:
         data = response.json()
         assert isinstance(data["souls_by_realm"], list)
 
+    def test_each_realm_row_carries_its_realm_type(self):
+        """规范 v2 A5:仪表盘按界的类型画图案(炼狱实底 / 天界半色 / 地狱斜线 / 中立空框),
+        所以每行必须带 `realm_type`,且是那个界自己的类型,不是按位置或按文明猜的。"""
+        from apps.disposition.models import Disposition
+        from apps.realms.models import Realm, RealmType
+
+        realms = {
+            kind: Realm.objects.create(
+                realm_code=f"T_{kind}", name_local=kind, civilization="CHINA", realm_type=kind, tenant=self.tenant
+            )
+            for kind in (RealmType.HELL, RealmType.BLISS)
+        }
+        for i, kind in enumerate((RealmType.HELL, RealmType.HELL, RealmType.BLISS)):
+            soul = Soul.objects.create(name=f"去{i}", tenant=self.tenant, current_state=SoulState.DISPOSED)
+            Disposition.objects.create(soul=soul, tenant=self.tenant, destination_realm=realms[kind], is_executed=True)
+
+        rows = self.client.get("/api/v1/ledger/stats/overview/").json()["souls_by_realm"]
+        assert {r["realm_code"]: (r["realm_type"], r["count"]) for r in rows} == {
+            "T_HELL": ("HELL", 2),
+            "T_BLISS": ("BLISS", 1),
+        }
+
     def test_karma_distribution_buckets(self):
         """Karma distribution has correct bucket structure."""
         # Create souls with different karma balances

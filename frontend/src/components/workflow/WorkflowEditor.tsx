@@ -1474,11 +1474,17 @@ export default function WorkflowEditor({
               before this appears; the 450ms is travel. `role="status"` so the
               change is announced once rather than polled, and it renders
               nothing at all when still — an empty live region is not a layout
-              shift because the row's height comes from the buttons. */}
+              shift because the row's height comes from the buttons.
+              `whitespace-nowrap` is what keeps that true: in the editor's
+              narrow column the word wrapped to two lines, and two lines of
+              text-xs were exactly 32px under 规范 v1 (16px leading) — the
+              buttons' height, by coincidence. v2's 18px leading made it 36,
+              the canvas slid 4px down mid-press, and Flip animated every card
+              from the old spot (workflow-auto-layout-motion caught it). */}
           <span
             role="status"
             aria-live="polite"
-            className="text-xs text-[oklch(var(--color-ink-muted))]"
+            className="whitespace-nowrap text-xs text-[oklch(var(--color-ink-muted))]"
           >
             {relayouting ? t("workflow.editor.relayouting") : ""}
           </span>

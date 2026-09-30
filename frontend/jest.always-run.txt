@@ -9,7 +9,6 @@ src/__tests__/Button.test.tsx
 src/__tests__/Field.test.tsx
 src/__tests__/PageShell.test.tsx
 src/__tests__/SchedulerPage.test.tsx
-src/__tests__/SettingsDrawer.test.tsx
 src/__tests__/Spinner.test.tsx
 src/__tests__/a11yEngineBaseline.test.tsx
 src/__tests__/accessTokenNeverBecomesACookie.test.ts
@@ -17,6 +16,7 @@ src/__tests__/arrowNotDoubled.test.ts
 src/__tests__/chartColourContract.test.ts
 src/__tests__/civilizationMapCoverage.test.ts
 src/__tests__/cssTokenReferenceContract.test.ts
+src/__tests__/dangerButtonPlacement.test.ts
 src/__tests__/dataGridToneContract.test.ts
 src/__tests__/designGuardContract.test.ts
 src/__tests__/dialogsAreNotHandRolled.test.ts
@@ -35,6 +35,7 @@ src/__tests__/jestRunsNextVendoredReact.test.ts
 src/__tests__/ledgerPaletteContract.test.ts
 src/__tests__/loginStatutes.test.ts
 src/__tests__/menuCacheRootsAreInvalidatedTogether.test.ts
+src/__tests__/motionTokens.test.ts
 src/__tests__/notifyKeysExistInTheBundles.test.ts
 src/__tests__/notifyPortCarriesTheToast.test.ts
 src/__tests__/officerAssist.test.tsx
@@ -47,6 +48,7 @@ src/__tests__/reducedMotionContract.test.ts
 src/__tests__/roleForbiddenCodenamesMatchBackend.test.ts
 src/__tests__/soulLifecycleEventCopy.test.tsx
 src/__tests__/soulStateBadgeContract.test.ts
+src/__tests__/statusGlyphFont.test.ts
 src/__tests__/statusTokenLayering.test.ts
 src/__tests__/suiteShape.test.ts
 src/__tests__/tabClassContract.test.ts
@@ -54,3 +56,4 @@ src/__tests__/truncatedValuesAreRecoverable.test.ts
 src/__tests__/viewportHeightContract.test.ts
 src/__tests__/workflowAutoLayoutMotion.test.tsx
 src/__tests__/workflowEdgeArrowSingleSource.test.ts
+src/__tests__/zhuyinShell.test.tsx

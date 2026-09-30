@@ -132,12 +132,26 @@ describe("设计系统守卫:每条规则单独可证伪", () => {
   const cases: Array<[string, string, string]> = [
     ["design-system/type-scale", "旧档字号(Tailwind 默认名)", '<div className="text-base" />'],
     ["design-system/type-scale", "旧档字号(八档时代的名字)", '<div className="text-03" />'],
+    // 规范 v2 A3 把 v1 的 quote(20/32)并进 15 的 read 档,这个名字不再生成 CSS。
+    ["design-system/type-scale", "v1 的 text-quote", '<div className="text-quote" />'],
+    // A3「40 只给匾题字和登录页」:探针路径 src/__design_guard_probe__.tsx 两者都不是。
+    ["design-system/type-scale", "匾与登录页以外的 text-display", '<div className="text-display" />'],
+    // v2 A2 的间距表去掉了 v1 的 1.5 / 10 / 14。
+    ["design-system/spacing-rhythm", "v1 的 6px(1.5)", '<div className="gap-1.5" />'],
+    ["design-system/spacing-rhythm", "v1 的 40px(10)", '<div className="py-10" />'],
     ["design-system/spacing-rhythm", "节奏外间距", '<div className="p-5" />'],
     ["design-system/dead-radius", "归零的死圆角", '<div className="rounded-lg" />'],
     ["design-system/dead-radius", "头像以外的圆角(规范 v1:圆角只给头像)", '<div className="rounded-full" />'],
     ["design-system/dead-radius", "焦点环圆角(规范 v1:焦点环方角)", '<div className="rounded-focus" />'],
+    // 规范 v2 A2:正圆也只给单选钮与头像,和胶囊一样走 ROUND_ALLOW。
+    ["design-system/dead-radius", "名单外的正圆", '<div className="rounded-circle" />'],
+    // 圆角任意值只允许 0 / 9999px / 50%。
+    ["design-system/dead-radius", "圆角任意值 4px", '<div className="rounded-[4px]" />'],
+    ["design-system/dead-radius", "单角的圆角任意值", '<div className="rounded-tl-[2px]" />'],
     ["design-system/no-page-shadow", "页面内阴影(规范 v1 §1.7)", '<div className="shadow-lg" />'],
     ["design-system/no-page-shadow", "页面内任意值阴影", '<div className="shadow-[0_4px_8px_black]" />'],
+    // 规范 v2 A2:浮层也不用阴影,v1 放行的这一档撤掉。
+    ["design-system/no-page-shadow", "浮层阴影(v2 撤掉)", '<div className="shadow-overlay" />'],
     ["design-system/no-raw-palette", "裸调色板", '<div className="bg-red-500" />'],
     // 具名色阶之外的第二种形状。这条规则原本只认 `bg-amber-500`,任意值里的
     // 三元组它一次也没匹配上 —— 而 app/organizations/page.tsx 那 8 处正是这种
@@ -171,7 +185,9 @@ describe("设计系统守卫:每条规则单独可证伪", () => {
   // classTokens 会在 `/` 处截断,截断后的残段不能被误判成字面颜色。
   const CLEAN =
     'export const P = () => (<div className="p-4 gap-6 mx-auto text-sm text-2xs bg-[oklch(var(--color-surface-1))] text-[oklch(var(--color-ink))] border-[oklch(var(--color-hairline))] ' +
-    'bg-[oklch(var(--color-accent))] border-[oklch(var(--color-line)/0.4)] shadow-overlay shadow-none shadow-[inset_3px_0_0_oklch(var(--color-ink))]" />);\n';
+    'bg-[oklch(var(--color-accent))] border-[oklch(var(--color-line)/0.4)] shadow-none shadow-[inset_3px_0_0_oklch(var(--color-ink))] ' +
+    // 规范 v2 A2 新放行的:48px(12)、以及圆角任意值里的三种合法值。
+    'p-12 gap-0.5 rounded-[0] rounded-[9999px] rounded-[50%]" />);\n';
   let fired: Array<Array<string | null>>;
   let clean: Msg[];
 
@@ -203,6 +219,20 @@ describe("设计系统守卫:每条规则单独可证伪", () => {
   it("放行被批准的词汇 —— 否则第三波迁完仍然是红的,规则就会被删掉", () => {
     expect(clean.filter((m) => m.ruleId?.startsWith("design-system/"))).toEqual([]);
   });
+});
+
+describe("text-display 只在匾与登录页放行(规范 v2 A3)", () => {
+  const PROBE = 'export const P = () => (<h1 className="text-display" />);\n';
+  const typeHits = (filePath: string) =>
+    lintAll([PROBE], filePath)[0].filter((m) => m.ruleId === "design-system/type-scale");
+
+  it.each(["app/(auth)/login/__probe__.tsx", "src/components/plaque/__probe__.tsx"])("%s 放行", (filePath) => {
+    expect(typeHits(filePath)).toEqual([]);
+  }, 60_000);
+
+  it.each(["app/judgment/__probe__.tsx", "src/components/ui/__probe__.tsx"])("%s 报红", (filePath) => {
+    expect(typeHits(filePath)).toHaveLength(1);
+  }, 60_000);
 });
 
 describe("LEGACY 基线", () => {
@@ -366,8 +396,8 @@ describe("tailwind-merge 认识七档字号", () => {
 
   it("字阶的来源确实读到了东西", () => {
     // 不是 `> 0`:空遍历会让下面每一条 it.each 悄悄不存在,而套件仍然是绿的。
-    // 七档是规范 v1 §1.4 的形状,加一档要在这里改一次,那是刻意的。
-    expect(scale).toEqual(["2xs", "lg", "md", "quote", "sm", "xl", "xs"]);
+    // 七档是规范 v2 A3 的形状(11/12/13/15/20/28/40),加一档要在这里改一次,那是刻意的。
+    expect(scale).toEqual(["2xs", "display", "lg", "md", "sm", "xl", "xs"]);
   });
 
   it.each(scale)("text-%s 不与文字色互相吞掉", (step) => {

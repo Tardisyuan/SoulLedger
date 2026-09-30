@@ -664,7 +664,7 @@ const SUBJECTS: Subject[] = [
   {
     id: "settings/SettingsDrawer",
     ui: () => (
-      <SettingsDrawer open onClose={() => {}} navMode="classic" onNavModeChange={() => {}} />
+      <SettingsDrawer open onClose={() => {}} />
     ),
   },
   {

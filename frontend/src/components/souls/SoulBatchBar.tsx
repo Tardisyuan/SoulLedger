@@ -164,7 +164,7 @@ export function SoulBatchBar({
       <div
         role="region"
         aria-label={t("souls.batch.region")}
-        className="sticky bottom-0 z-10 mt-3 flex flex-wrap items-center gap-3 border-t border-[oklch(var(--color-block))] bg-[oklch(var(--color-canvas))] px-4 py-2"
+        className="sticky bottom-(--bottom-bar) z-10 mt-3 flex flex-wrap items-center gap-3 border-t border-[oklch(var(--color-block))] bg-[oklch(var(--color-canvas))] px-4 py-2"
       >
         <span className="font-mono text-xs text-[oklch(var(--color-ink))]" aria-live="polite">
           {t("souls.batch.selected", { n: String(count) })}
@@ -184,7 +184,7 @@ export function SoulBatchBar({
           {t("souls.batch.export")}
         </Button>
         {canRecycle && (
-          <Button type="button" variant="danger" size="sm" onClick={() => setConfirming(true)} disabled={count === 0}>
+          <Button type="button" variant="secondary" size="sm" onClick={() => setConfirming(true)} disabled={count === 0}>
             {t("souls.detail.confirm_delete_action")}
           </Button>
         )}
@@ -203,7 +203,7 @@ export function SoulBatchBar({
             <Button type="button" variant="ghost" onClick={close} disabled={recycle.isPending}>
               {t("common.cancel")}
             </Button>
-            <Button type="button" variant="danger" onClick={submit} loading={recycle.isPending}>
+            <Button type="button" variant="secondary" onClick={submit} loading={recycle.isPending}>
               {t("souls.detail.confirm_delete_action")}
             </Button>
           </div>

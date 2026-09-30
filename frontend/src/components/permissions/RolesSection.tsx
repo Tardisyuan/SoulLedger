@@ -290,7 +290,7 @@ function RoleDrawerBody({ role, onClose, onOpenMatrix }: { role: Role; onClose: 
           {menuOpen && (
             <div
               id="role-drawer-more"
-              className="absolute bottom-full left-0 z-10 mb-1 flex min-w-48 flex-col border border-[oklch(var(--color-block))] bg-[oklch(var(--color-canvas))] shadow-overlay"
+              className="absolute bottom-full left-0 z-10 mb-1 flex min-w-48 flex-col border border-[oklch(var(--color-ink))] bg-[oklch(var(--color-surface-1))]"
             >
               <button
                 type="button"
@@ -345,7 +345,7 @@ function RoleDrawerBody({ role, onClose, onOpenMatrix }: { role: Role; onClose: 
             <Button type="button" variant="ghost" onClick={() => setDeleting(false)} disabled={del.isPending}>
               {t("common.cancel")}
             </Button>
-            <Button type="button" variant="danger" onClick={confirmDelete} loading={del.isPending} disabled={refusal !== null}>
+            <Button type="button" variant="secondary" onClick={confirmDelete} loading={del.isPending} disabled={refusal !== null}>
               {t("permissions.roles.recycle_action")}
             </Button>
           </div>

@@ -3,7 +3,9 @@
 import type { Disposition, Judgment, Reincarnation, SoulEvent } from "@soulledger/core/api";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { DomainEnum, MissingValue } from "@/src/components/ui/DomainValue";
-import { verdictGlyph, verdictInk } from "@/src/lib/verdictGlyph";
+import { VerdictBadge } from "@/src/components/ui/StatusBadge";
+import { useTenant } from "@/src/contexts/TenantContext";
+import { ROW_MARK_ROW, RowMark, isMinePending } from "@/src/components/judgment/RowMark";
 import { latest } from "./soulProgress";
 
 /**
@@ -43,7 +45,7 @@ export function LedgerHeading({
 
 /** 一条账行:四列,行线分隔。与 `LedgerHeading` 的列宽同一份。 */
 const ROW = "grid grid-cols-[6rem_1fr_1fr_5rem] max-sm:grid-cols-[5rem_1fr_1fr_3.5rem] gap-x-2";
-const CELL = "py-1.5 border-b border-[oklch(var(--color-rule))] min-w-0";
+const CELL = "py-2 border-b border-[oklch(var(--color-rule))] min-w-0";
 const TIME = `${CELL} font-mono text-xs`;
 
 /**
@@ -62,6 +64,7 @@ export function SoulLedgerSections({
   events: SoulEvent[];
 }) {
   const { t, formatDate, formatDateTime } = useI18n();
+  const { user } = useTenant();
   const byNewest = <T,>(items: T[], at: (x: T) => string | null | undefined) =>
     [...items].sort((a, b) => (at(b) ?? "").localeCompare(at(a) ?? ""));
 
@@ -90,17 +93,20 @@ export function SoulLedgerSections({
       {byNewest(judgments, (j) => j.concluded_at ?? j.created_at).map((j) => {
         const bench = [j.court, j.judge_name].filter(Boolean).join(" · ");
         return (
-        <div key={j.id} className={ROW} data-testid="ledger-judgment-row">
-          <span className={TIME}>{formatDate(j.concluded_at ?? j.created_at)}</span>
+        /* 行首色标(补足 B12):只在「未结案 + 认领人是我」的审判行上;别的行不加、不变灰。 */
+        <div
+          key={j.id}
+          className={`${ROW} relative ${isMinePending(j, user?.id) ? ROW_MARK_ROW : ""}`}
+          data-testid="ledger-judgment-row"
+        >
+          {isMinePending(j, user?.id) && <RowMark />}
+          <span className={`${TIME} pl-2`}>{formatDate(j.concluded_at ?? j.created_at)}</span>
           <span title={bench || undefined} className={`${CELL} col-span-2 truncate`}>
             {bench || <MissingValue kind="unrecorded" />}
           </span>
-          <span className={`${CELL} text-right ${verdictInk(j.verdict)}`}>
+          <span className={`${CELL} text-right`}>
             {j.verdict ? (
-              <>
-                <span aria-hidden="true">{verdictGlyph(j.verdict)} </span>
-                <DomainEnum namespace="judgment.verdicts" value={j.verdict} />
-              </>
+              <VerdictBadge verdict={j.verdict} />
             ) : (
               t("souls.detail.ledger.verdict_pending")
             )}
@@ -109,7 +115,7 @@ export function SoulLedgerSections({
         );
       })}
       {quoted && (
-        <div className="py-4 border-b border-[oklch(var(--color-rule))] grid md:grid-cols-[5rem_1fr] gap-x-4 gap-y-1.5">
+        <div className="py-4 border-b border-[oklch(var(--color-rule))] grid md:grid-cols-[5rem_1fr] gap-x-4 gap-y-2">
           <span className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))] pt-1">
             {t("souls.detail.ledger.verdict_words")}
           </span>
@@ -117,7 +123,7 @@ export function SoulLedgerSections({
             {/* 全页唯一的衬线(规范 v1 §1.4:20/32 只给引文)。 */}
             <blockquote
               data-testid="soul-verdict-quote"
-              className="pl-3 border-l-2 border-[oklch(var(--color-ink))] font-serif text-quote text-[oklch(var(--color-ink))] text-pretty"
+              className="pl-3 border-l-2 border-[oklch(var(--color-ink))] font-serif text-md font-normal text-[oklch(var(--color-ink))] text-pretty"
             >
               {quoted.notes}
             </blockquote>

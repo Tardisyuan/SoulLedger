@@ -112,18 +112,21 @@ def validate_email_is_unclaimed(value, instance=None):
     return value
 
 
-class TenantInfoSerializer(serializers.Serializer):
-    """Nested tenant info in login response."""
-    code = serializers.CharField()
-    display_name = serializers.CharField()
-
-
 class LoginTenantRefSerializer(serializers.Serializer):
-    """Schema-only: the two keys `UserWithTenantSerializer.get_tenant` returns
-    (no `id`, unlike `UserTenantRefSerializer`)."""
+    """The user's tenant in the login payload and on `GET /auth/profile/`
+    (no `id`, unlike `UserTenantRefSerializer`).
+
+    `civilization` picks the Web's 匾 skin; `seal_glyphs` are the 1–2 admin-set
+    seal characters, empty meaning "use the civilization default"."""
 
     code = serializers.CharField()
     display_name = serializers.CharField()
+    civilization = serializers.CharField()
+    seal_glyphs = serializers.ListField(child=serializers.CharField())
+
+
+def user_tenant_ref(user):
+    return LoginTenantRefSerializer(user.tenant).data if user.tenant_id else None
 
 
 class UserWithTenantSerializer(serializers.ModelSerializer):
@@ -137,9 +140,7 @@ class UserWithTenantSerializer(serializers.ModelSerializer):
 
     @extend_schema_field(LoginTenantRefSerializer(allow_null=True))
     def get_tenant(self, obj):
-        if obj.tenant:
-            return {"code": obj.tenant.code, "display_name": obj.tenant.display_name}
-        return None
+        return user_tenant_ref(obj)
 
     @extend_schema_field(serializers.ListField(child=serializers.CharField()))
     def get_permissions(self, obj):
@@ -338,10 +339,18 @@ class UserSerializer(serializers.ModelSerializer):
     `validate_organization`.
     """
 
+    #: Read-only, same shape as the login payload's `user.tenant` —
+    #: the Web re-reads civilization / seal_glyphs here after an admin edit.
+    tenant = serializers.SerializerMethodField()
+
     class Meta:
         model = User
-        fields = ["id", "username", "email", "role", "first_name", "last_name", "is_active", "display_name", "organization", "position"]
+        fields = ["id", "username", "email", "role", "tenant", "first_name", "last_name", "is_active", "display_name", "organization", "position"]
         read_only_fields = ["id", "is_active", "username", "role"]
+
+    @extend_schema_field(LoginTenantRefSerializer(allow_null=True))
+    def get_tenant(self, obj):
+        return user_tenant_ref(obj)
 
     def validate_email(self, value):
         """See `validate_email_is_unclaimed`. This is the path the attack used:

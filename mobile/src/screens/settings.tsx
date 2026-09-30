@@ -35,9 +35,11 @@ import {
   Hairline,
   Loader,
   Notice,
+  RadioMark,
   Screen,
   SectionError,
   Skeleton,
+  SwitchMark,
   Txt,
   useLayout,
   useRemote,
@@ -57,7 +59,7 @@ const selfName = (l: Locale) => LOCALE_LABELS[l];
 
 function Heading({ children }: { children: string }) {
   return (
-    <Txt variant="section" tone="accent" style={styles.heading}>
+    <Txt variant="section" style={styles.heading}>
       {children}
     </Txt>
   );
@@ -75,14 +77,12 @@ function LanguageRow({ l, selected, busy, onPick }: { l: Locale; selected: boole
       onPress={onPick}
       style={({ pressed }) => [
         styles.row,
-        { paddingHorizontal: gutter, borderBottomColor: theme.hair, borderLeftColor: selected ? theme.mark : "transparent" },
+        { paddingHorizontal: gutter, borderBottomColor: theme.hair, borderLeftColor: selected ? theme.ink : "transparent" },
         pressed && styles.pressed,
       ]}
     >
-      {/* 单选(第三类 F 组):方框,选中时放墨色小方块 —— 墨色,不是强调色。 */}
-      <View style={[styles.radio, { borderColor: selected ? theme.ink : theme.hair2 }]}>
-        {selected ? <View style={[styles.radioDot, { backgroundColor: theme.ink }]} /> : null}
-      </View>
+      {/* 单选:墨色,不是强调色(第三类 F 组);v2 起是圆的(补足 A2),不再和复选框同形。 */}
+      <RadioMark on={selected} />
       <View style={styles.fill}>
         <Txt variant="bodyLg">{selfName(l)}</Txt>
         <Txt variant="caption" tone="subtle">
@@ -91,8 +91,8 @@ function LanguageRow({ l, selected, busy, onPick }: { l: Locale; selected: boole
       </View>
       {busy ? <Loader testID="language-saving" size={20} /> : null}
       {selected && !busy ? (
-        <View style={[styles.current, { borderColor: theme.accent }]}>
-          <Txt variant="label" tone="accent" style={styles.currentText}>
+        <View style={[styles.current, { borderColor: theme.ink }]}>
+          <Txt variant="label" style={styles.currentText}>
             {t("soul_app.settings.current")}
           </Txt>
         </View>
@@ -215,16 +215,8 @@ function Toggle({
           {note}
         </Txt>
       </View>
-      {/* Handoff 3c: square, like everything else — the knob's side and the accent fill say "on". */}
-      <View
-        style={[
-          stack ? styles.trackLarge : styles.track,
-          { borderColor: value ? theme.accent : theme.hair2, backgroundColor: value ? theme.accent : theme.s2 },
-          value ? styles.trackOn : null,
-        ]}
-      >
-        <View style={[stack ? styles.knobLarge : styles.knob, { backgroundColor: value ? theme.s0 : theme.inkSubtle }]} />
-      </View>
+      {/* Handoff 3c: square, like everything else — the knob's side and the ink fill (补足 A1) say "on". */}
+      <SwitchMark on={value} large={stack} />
     </Pressable>
   );
 }
@@ -310,6 +302,7 @@ export function SettingsScreen() {
   const askLogout = useAskLogout();
   const { state } = useSession();
   const { gutter } = useLayout();
+  const navigation = useNavigation<NavigationProp<AppStackParams>>();
   const remote = useRemote(soulApi.notificationSettings);
   // The last settings the SERVER confirmed; a toggle shows its new value at once and falls back on failure.
   const [settings, setSettings] = useState<NotificationSettings | null>(null);
@@ -337,8 +330,8 @@ export function SettingsScreen() {
           </Txt>
         </View>
         <View style={styles.civRow}>
-          <Emblem civ={theme.civ} size={13} stroke={theme.mark} />
-          <EnumValue namespace="souls.civilizations" value={me.civilization} tone="mark" variant="label" />
+          <Emblem civ={theme.civ} size={13} stroke={theme.inkMuted} />
+          <EnumValue namespace="souls.civilizations" value={me.civilization} tone="muted" variant="label" />
         </View>
       </View>
 
@@ -370,6 +363,7 @@ export function SettingsScreen() {
 
       <View style={[styles.end, { paddingHorizontal: gutter }]}>
         <EmblemDivider />
+        <Button testID="open-about" kind="secondary" title={t("about.title")} onPress={() => navigation.navigate("About")} />
         <Button testID="logout" kind="secondary" title={t("soul_app.life.logout")} onPress={askLogout} style={styles.logout} />
         <Txt variant="value" tone="subtle" style={styles.version}>
           {t("soul_app.settings.version", { version: Constants.expoConfig?.version ?? "" })}
@@ -403,7 +397,7 @@ export function NotificationPrimerScreen() {
   return (
     <Screen testID="push-primer" edges={["top", "left", "right", "bottom"]}>
       <View style={[styles.primerHead, { paddingHorizontal: gutter, borderBottomColor: theme.hair }]}>
-        <Icon name="info" size={26} color={theme.mark} strokeWidth={1.2} />
+        <Icon name="info" size={26} color={theme.inkSubtle} strokeWidth={1.2} />
         <Txt variant="title" style={styles.center}>
           {t("soul_app.push.primer_title")}
         </Txt>
@@ -415,8 +409,8 @@ export function NotificationPrimerScreen() {
         <Heading>{t("soul_app.push.will_notify")}</Heading>
         {CATEGORIES.map(({ key, icon }) => (
           <View key={key} style={styles.primerItem}>
-            <View style={[styles.glyph, { borderColor: theme.mark }]}>
-              <Icon name={icon} size={12} color={theme.mark} strokeWidth={1.3} />
+            <View style={[styles.glyph, { borderColor: theme.inkSubtle }]}>
+              <Icon name={icon} size={12} color={theme.inkMuted} strokeWidth={1.3} />
             </View>
             <View style={styles.fill}>
               <Txt variant="bodyLg">{t(`soul_app.push.primer_${key}`)}</Txt>
@@ -450,39 +444,32 @@ const styles = StyleSheet.create({
   fill: { flex: 1 },
   center: { textAlign: "center" },
   pressed: { opacity: 0.8 },
-  heading: { paddingTop: 22, paddingBottom: 10 },
-  identity: { paddingVertical: GUTTER, borderBottomWidth: 1, gap: 6 },
-  nameRow: { flexDirection: "row", alignItems: "baseline", flexWrap: "wrap", columnGap: 10 },
+  heading: { paddingTop: 24, paddingBottom: 12 },
+  identity: { paddingVertical: GUTTER, borderBottomWidth: 1, gap: 8 },
+  nameRow: { flexDirection: "row", alignItems: "baseline", flexWrap: "wrap", columnGap: 12 },
   code: { letterSpacing: 1.6 },
-  civRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  civRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   group: { borderBottomWidth: 1 },
   row: { minHeight: 54, flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, borderBottomWidth: 1, borderLeftWidth: 2 },
-  toggleStacked: { gap: 10, paddingVertical: 14, borderBottomWidth: 1 },
-  radio: { width: 16, height: 16, borderWidth: 1, alignItems: "center", justifyContent: "center" },
-  radioDot: { width: 8, height: 8 },
-  current: { borderWidth: 1, paddingHorizontal: 6, paddingVertical: 1 },
-  currentText: { fontSize: 10.5, letterSpacing: 0.4 },
-  saveLine: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 12, borderWidth: 1, borderLeftWidth: 2, paddingHorizontal: 12, paddingVertical: 10 },
-  saveFailed: { marginTop: 12, borderWidth: 1, borderLeftWidth: 3, padding: 14, gap: 12 },
+  toggleStacked: { gap: 12, paddingVertical: 16, borderBottomWidth: 1 },
+  current: { borderWidth: 1, paddingHorizontal: 8, paddingVertical: 2 },
+  currentText: { fontSize: 11, letterSpacing: 0.4 },
+  saveLine: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 12, borderWidth: 1, borderLeftWidth: 2, paddingHorizontal: 12, paddingVertical: 12 },
+  saveFailed: { marginTop: 12, borderWidth: 1, borderLeftWidth: 3, padding: 16, gap: 12 },
   saveRow: { flexDirection: "row", gap: 8 },
-  saveActions: { flexDirection: "row", gap: 10 },
-  foot: { paddingTop: 12, paddingBottom: 18 },
-  track: { width: 44, height: 26, borderWidth: 1, padding: 2, justifyContent: "center" },
-  trackLarge: { width: 58, height: 34, borderWidth: 1, padding: 3, justifyContent: "center" },
-  trackOn: { alignItems: "flex-end" },
-  knob: { width: 20, height: 20 },
-  knobLarge: { width: 26, height: 26 },
+  saveActions: { flexDirection: "row", gap: 12 },
+  foot: { paddingTop: 12, paddingBottom: 16 },
   dimmed: { opacity: 0.55 },
   notice: { paddingBottom: 12 },
-  denied: { borderWidth: 1, borderLeftWidth: 3, padding: 14, gap: 12 },
-  end: { paddingTop: 26, paddingBottom: 34, gap: 16, alignItems: "stretch" },
+  denied: { borderWidth: 1, borderLeftWidth: 3, padding: 16, gap: 12 },
+  end: { paddingTop: 24, paddingBottom: 32, gap: 16, alignItems: "stretch" },
   logout: { alignSelf: "center", minWidth: 160 },
   version: { textAlign: "center", fontSize: 11 },
-  primerHead: { alignItems: "center", gap: 12, paddingTop: 34, paddingBottom: 26, borderBottomWidth: 1 },
-  primerList: { paddingBottom: 18, borderBottomWidth: 1, gap: 14 },
+  primerHead: { alignItems: "center", gap: 12, paddingTop: 32, paddingBottom: 24, borderBottomWidth: 1 },
+  primerList: { paddingBottom: 16, borderBottomWidth: 1, gap: 16 },
   primerItem: { flexDirection: "row", gap: 12, alignItems: "flex-start" },
   primerRule: { marginVertical: 2 },
-  glyph: { width: 18, height: 18, marginTop: 3, borderWidth: 1, alignItems: "center", justifyContent: "center" },
+  glyph: { width: 18, height: 18, marginTop: 4, borderWidth: 1, alignItems: "center", justifyContent: "center" },
   never: { fontSize: 11, lineHeight: 14, letterSpacing: 0 },
-  primerButtons: { gap: 10 },
+  primerButtons: { gap: 12 },
 });

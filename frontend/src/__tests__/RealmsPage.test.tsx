@@ -109,8 +109,9 @@ it("draws the Duat as 称心二岔: trunk to the weighing, the pass road, and th
   expect(pass.querySelector('[data-terminal="dashed"]')).toBeNull();
   expect(fail.getAttribute("data-terminal")).toBe("dashed");
   expect(fail.querySelector('[data-mark][data-terminal="dashed"]')).not.toBeNull();
-  // 通向终点的那一段是虚线,不是 3px 墨线。
-  expect(fail.querySelector('[class*="border-t-[3px]"]')).toBeNull();
+  // 通向终点的那一段是虚线,不是墨实线(实线段是 border-t-2 且不带 border-dashed)。
+  expect(fail.querySelector('[class*="border-t-2"]:not([class*="border-dashed"])')).toBeNull();
+  expect(fail.querySelector('[class*="border-t-2"][class*="border-dashed"]')).not.toBeNull();
   // 第二次死亡不是地方:不计在押(过那条路的站照常写 0)。
   expect(pass.textContent).toMatch(/0/);
   expect(fail.textContent).not.toMatch(/\d/);

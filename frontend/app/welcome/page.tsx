@@ -16,6 +16,7 @@ import { DomainEnum } from "@/src/components/ui/DomainValue";
 import { RoleName } from "@/src/components/users/RoleName";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { WelcomeChecklist } from "@/src/components/welcome/WelcomeChecklist";
+import { SectionTitle } from "@/src/components/plaque/SectionTitle";
 import {
   Users,
   Scale,
@@ -23,8 +24,6 @@ import {
   Activity,
   Sparkles,
   ArrowRight,
-  Zap,
-  Clock,
   TrendingUp,
   Shield,
   Globe
@@ -134,40 +133,33 @@ export default function WelcomePage() {
 
   const greeting = getGreeting();
 
-  // 四个图标的颜色现在**就是它们各自计数的那个状态的 token**,而不是四个
-  // 挑出来还算好看的裸调色板值。迁移前它们是 accent / amber-400 /
-  // emerald-400 / blue-400 —— 后三个在浅色下过淡(整条 400 档是给深底用的),
-  // 而 `text-[oklch(var(--color-accent))]` 作为**文字**在浅色下是 2.14:1,
-  // globals.css 的 --color-accent-ink 就是为这件事存在的。
-  //
-  // DISPOSED 那处 `text-blue-400` 值得单说:globals.css:235 写着
-  // `--color-status-disposed: 285 55% 66%`,注释是「was a second blue」——
-  // 蓝是 DISPOSED **被移走**的那个值,让位给 PURGATORY。这一处是那次搬迁
-  // 漏下的最后一个蓝,它一直在渲染一个已经改判给别人的颜色。
+  // 四个图标一律 ink-subtle(规范 v2):v1 让它们取各自计数的那个状态的 token,
+  // 而 v2 定了「反馈色不进领域枚举」—— 在世 / 审判中 / 已处置是领域状态,不是
+  // 成功 / 警示 / 失败;也没有强调色了。四张卡靠标签区分,图标只是标记。
   const quickStats: QuickStat[] = [
     {
       label: t("dashboard.total_souls"),
       value: stats?.total_souls ?? "-",
       icon: <Users className="w-5 h-5" />,
-      color: "text-[oklch(var(--color-accent-ink))]",
+      color: "text-[oklch(var(--color-ink-subtle))]",
     },
     {
       label: t("dashboard.under_judgment"),
       value: stats?.state_distribution?.find(s => s.state === "JUDGING")?.count ?? "-",
       icon: <Scale className="w-5 h-5" />,
-      color: "text-[oklch(var(--color-status-judging))]",
+      color: "text-[oklch(var(--color-ink-subtle))]",
     },
     {
       label: t("dashboard.alive"),
       value: stats?.state_distribution?.find(s => s.state === "ALIVE")?.count ?? "-",
       icon: <Activity className="w-5 h-5" />,
-      color: "text-[oklch(var(--color-status-alive))]",
+      color: "text-[oklch(var(--color-ink-subtle))]",
     },
     {
       label: t("dashboard.disposed"),
       value: stats?.state_distribution?.find(s => s.state === "DISPOSED")?.count ?? "-",
       icon: <ScrollText className="w-5 h-5" />,
-      color: "text-[oklch(var(--color-status-disposed))]",
+      color: "text-[oklch(var(--color-ink-subtle))]",
     },
   ];
 
@@ -249,10 +241,9 @@ export default function WelcomePage() {
             source of truth to wire it to.
             The grid collapsed with it — one panel does not need three columns. */}
         <div className="bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-hairline))] p-4">
-            <h2 className="text-md text-[oklch(var(--color-ink))] mb-4 flex items-center gap-2">
-              <Zap className="w-5 h-5 text-[oklch(var(--color-accent-ink))]" />
-              {t("welcome.quick_actions")}
-            </h2>
+            <div className="mb-4">
+              <SectionTitle>{t("welcome.quick_actions")}</SectionTitle>
+            </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               {quickActions.map((action, i) => (
                 <Link
@@ -270,18 +261,20 @@ export default function WelcomePage() {
 
         {/* Recent Activity */}
         <div className="bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-hairline))] p-4">
-          <h2 className="text-md text-[oklch(var(--color-ink))] mb-4 flex items-center gap-2">
-            <Clock className="w-5 h-5 text-[oklch(var(--color-accent-ink))]" />
-            {t("welcome.recent_activity")}
-          </h2>
+          <div className="mb-4">
+            <SectionTitle>{t("welcome.recent_activity")}</SectionTitle>
+          </div>
+          {activities.length === 0 ? (
+            <p className="text-sm text-[oklch(var(--color-ink-subtle))]">{t("dashboard.no_activity")}</p>
+          ) : null}
           <div className="space-y-3">
             {activities.map((activity) => (
               <div
                 key={activity.id}
                 className="flex items-start gap-4 p-3 bg-[oklch(var(--color-surface-2))] hover:bg-[oklch(var(--color-surface-3))] transition-colors"
               >
-                <div className="w-10 h-10 bg-[oklch(var(--color-accent)/0.1)] flex items-center justify-center shrink-0">
-                  <Activity className="w-5 h-5 text-[oklch(var(--color-accent-ink))]" />
+                <div className="w-10 h-10 bg-[oklch(var(--color-surface-1))] flex items-center justify-center shrink-0">
+                  <Activity className="w-5 h-5 text-[oklch(var(--color-ink-subtle))]" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
@@ -300,7 +293,7 @@ export default function WelcomePage() {
           </div>
           <Link
             href="/audit"
-            className="mt-4 text-sm text-[oklch(var(--color-accent-ink))] hover:underline flex items-center gap-1"
+            className="mt-4 text-sm text-[oklch(var(--color-ink))] underline underline-offset-2 flex items-center gap-1"
           >
             {t("welcome.view_all_activity")}
             <ArrowRight className="w-4 h-4" />

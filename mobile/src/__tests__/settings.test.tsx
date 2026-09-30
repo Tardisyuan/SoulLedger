@@ -11,7 +11,7 @@ import { act, fireEvent, render, screen, waitFor, within } from "@testing-librar
 import Constants from "expo-constants";
 import * as Notifications from "expo-notifications";
 import * as SecureStore from "expo-secure-store";
-import { StyleSheet } from "react-native";
+import { Linking, StyleSheet } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { I18nProvider } from "../i18n";
@@ -464,5 +464,28 @@ describe("tapping a notification", () => {
     fireEvent.changeText(screen.getByTestId("login-password"), "a-password");
     fireEvent.press(screen.getByTestId("login-submit"));
     expect(await screen.findByTestId("landing-highlight")).toBeTruthy();
+  });
+});
+
+describe("about / credits (spec v2 C16)", () => {
+  it("settings opens it; Turin S 2312 is CC0 with its Commons page, and nothing says CC BY", async () => {
+    const open = jest.spyOn(Linking, "openURL").mockResolvedValue(true);
+    signedIn();
+    renderApp();
+    await screen.findByTestId("profile-card");
+    fireEvent.press(screen.getByTestId("header-account"));
+    fireEvent.press(await screen.findByTestId("open-about"));
+    await screen.findByTestId("about");
+    expect(route()?.name).toBe("About");
+
+    const turin = screen.getByTestId("credit-Museo Egizio, Torino");
+    expect(within(turin).getByText("CC0 1.0 ↗")).toBeTruthy();
+    expect(screen.queryByText(/CC BY/)).toBeNull();
+    fireEvent.press(screen.getByTestId("credit-source-Museo Egizio, Torino"));
+    expect(open).toHaveBeenCalledWith(expect.stringContaining("commons.wikimedia.org/wiki/File:Stamped_clay_sealing"));
+    expect(screen.getByText("Owen Jones")).toBeTruthy();
+    expect(screen.getByText("LXGW Seal")).toBeTruthy();
+    open.mockRestore();
+    await act(async () => {});
   });
 });

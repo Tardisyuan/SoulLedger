@@ -33,32 +33,39 @@ import type { SoulListItem } from "@soulledger/core/api";
 export type SoulState = SoulListItem["current_state"];
 
 /**
- * Every state draws its own `--color-status-<state>` token as text + a 1 px
- * border, no fill (规范 v1 §2 徽章). The tokens resolve to the five semantic
- * colours (§1.2: 存活 success · 审判中 warning · 已处置 ink · 轮回中 accent ·
- * 迷失 ink-subtle), and every state also has a glyph below — colour is never the
- * only channel. `lib/chart-colors.ts` mirrors the same tokens for the charts.
+ * 规范 v2 补足 C15「状态徽章 · 领域枚举」:全部 1px ink3 框、ink 字,**不用状态色** ——
+ * 靠字形和文字区分,颜色不参与(D1:轮回中只在图表里有颜色)。「还要处理」的一种
+ * (审判中 = 规范的「待审」)加 s2 底。`--color-status-*` 仍在 globals.css 里,
+ * 读者只剩图表(`lib/chart-colors.ts`)。
  */
+const DOMAIN_BADGE = "text-[oklch(var(--color-ink))] border border-[oklch(var(--color-line-strong))]";
+/** 「还要处理」的领域值:待审、待定(判决)。 */
+export const DOMAIN_BADGE_PENDING = `${DOMAIN_BADGE} bg-[oklch(var(--color-surface-2))]`;
+export { DOMAIN_BADGE };
+
 export const SOUL_STATE_BADGE_CLASSES: Record<SoulState, string> = {
-  ALIVE: "text-[oklch(var(--color-status-alive))] border border-[oklch(var(--color-status-alive))]",
-  JUDGING: "text-[oklch(var(--color-status-judging))] border border-[oklch(var(--color-status-judging))]",
-  DISPOSED: "text-[oklch(var(--color-status-disposed))] border border-[oklch(var(--color-status-disposed))]",
-  REINCARNATING: "text-[oklch(var(--color-status-reincarnating))] border border-[oklch(var(--color-status-reincarnating))]",
-  LOST: "text-[oklch(var(--color-status-lost))] border border-[oklch(var(--color-status-lost))]",
-  SETTLED: "text-[oklch(var(--color-status-settled))] border border-[oklch(var(--color-status-settled))]",
+  ALIVE: DOMAIN_BADGE,
+  JUDGING: DOMAIN_BADGE_PENDING,
+  DISPOSED: DOMAIN_BADGE,
+  REINCARNATING: DOMAIN_BADGE,
+  LOST: DOMAIN_BADGE,
+  SETTLED: DOMAIN_BADGE,
 };
 
 /**
- * 规范 v1 §1.2:领域状态 = 颜色 + 字形,不单靠颜色。已处置 ■(墨)与轮回中 ↻(强调)
- * 从此一眼可分;SETTLED(已结清)不在规范的五态里,用 □ 与「已处置」■ 成对。
+ * 字形按 C15 画:○ 在世、◇ 待审、▣ 受刑、↻ 轮回、◎ 永居(Design E 组改为 ≡)。真实枚举与样张的对应:
+ * ALIVE ○、JUDGING ◇、DISPOSED ▣(已处置 = 在界域里受刑)、REINCARNATING ↻、
+ * SETTLED ≡(已终结 = 永居;Design E 组:◎ 与迷失的 ◌ 同属圆形、小字号易混,≡ 像账簿结账划的线,与 App 一致)。LOST(迷失)样张没画,取 ◌ —— 旧的 × 与判决的 ✕
+ * 在颜色撤掉之后几乎同形。◈ 待处置 Design 已从样张删掉(E 组),不新增这个状态。
+ * ◇ 与判决「待定」共用:样张两处都画 ◇ + s2 底,意思都是「还要处理」。
  */
 export const SOUL_STATE_GLYPH: Record<SoulState, string> = {
   ALIVE: "○",
-  JUDGING: "◐",
-  DISPOSED: "■",
+  JUDGING: "◇",
+  DISPOSED: "▣",
   REINCARNATING: "↻",
-  LOST: "×",
-  SETTLED: "□",
+  LOST: "◌",
+  SETTLED: "≡",
 };
 
 /** The glyph for a state off the wire; an unknown state gets "?" rather than a guess. */

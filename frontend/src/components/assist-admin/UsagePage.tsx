@@ -54,7 +54,7 @@ function UsageBody({ usage }: { usage: AssistAdminUsage }) {
   const p4 = usage.phase4;
 
   return (
-    <div className="grid gap-x-10 lg:grid-cols-2">
+    <div className="grid gap-x-12 lg:grid-cols-2">
       <div>
         <Section title={t("assist_admin.usage.spent")} id="aa-spent">
           {usage.unpriced_models.length > 0 && (

@@ -122,3 +122,72 @@ VirtualizedList.prototype._scheduleCellsToRenderUpdate = function () {
     this._updateCellsToRender();
   }
 };
+
+// v2 motion libraries — native modules with no JS implementation under jest — get
+// their own published mocks, as their docs give them. Reanimated 4's mock still
+// imports react-native-worklets, whose real entry calls into the native module at
+// load, so worklets takes its own mock first.
+require("react-native-gesture-handler/jestSetup");
+jest.mock("react-native-worklets", () => require("react-native-worklets/src/mock"));
+jest.mock("react-native-reanimated", () => require("react-native-reanimated/mock"));
+
+// expo-network: the OS's view of the network. `__set` changes it and tells the listeners,
+// as the OS does; `getNetworkStateAsync` answers from the same state. Connected by default.
+jest.mock("expo-network", () => {
+  const listeners = new Set();
+  const state = { current: { type: "WIFI", isConnected: true, isInternetReachable: true } };
+  return {
+    __set: (next) => {
+      state.current = { ...state.current, ...next };
+      listeners.forEach((fn) => fn(state.current));
+    },
+    __reset: () => {
+      listeners.clear();
+      state.current = { type: "WIFI", isConnected: true, isInternetReachable: true };
+    },
+    getNetworkStateAsync: jest.fn(async () => state.current),
+    addNetworkStateListener: (fn) => {
+      listeners.add(fn);
+      return { remove: () => listeners.delete(fn) };
+    },
+  };
+});
+
+// expo-splash-screen: a native module with no JS side under jest. A double that records
+// what was asked (jest.fn) and does nothing else.
+jest.mock("expo-splash-screen", () => ({ preventAutoHideAsync: jest.fn(async () => true), hideAsync: jest.fn(async () => true) }));
+
+// @gorhom/bottom-sheet: its published mock renders a modal's children ALWAYS — present()
+// and dismiss() do nothing — so a closed sheet would still be on screen and "closing it
+// works" could never go red. This double keeps the one behaviour the app depends on:
+// nothing until present(); dismiss() hides it and calls onDismiss, as the real one does.
+jest.mock("@gorhom/bottom-sheet", () => {
+  const React = require("react");
+  const Pass = ({ children }) => children;
+  const BottomSheetModal = React.forwardRef(function BottomSheetModal({ children, onDismiss }, ref) {
+    const [open, setOpen] = React.useState(false);
+    const was = React.useRef(false);
+    React.useEffect(() => {
+      if (was.current && !open) onDismiss?.();
+      was.current = open;
+    }, [open, onDismiss]);
+    React.useImperativeHandle(ref, () => ({ present: () => setOpen(true), dismiss: () => setOpen(false) }));
+    return open ? children : null;
+  });
+  return {
+    __esModule: true,
+    default: Pass,
+    BottomSheetModal,
+    BottomSheetModalProvider: Pass,
+    BottomSheetView: Pass,
+    BottomSheetBackdrop: () => null,
+    useBottomSheetTimingConfigs: (config) => config,
+  };
+});
+
+// The cold start (src/coldStart.tsx) plays once per process; for every suite but its own
+// (which unmocks it) that once has already happened — otherwise it would sit over each
+// rendered app, with timers. A mock, not `require(...).coldStart.played = true`: requiring
+// it here loads ui.tsx before a suite's own jest.mock of @react-navigation/native, and
+// the circle feed then fetched twice (2026-09-30, two suites red).
+jest.mock("./src/coldStart", () => ({ coldStart: { played: true }, ColdStart: () => null }));

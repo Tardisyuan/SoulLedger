@@ -24,6 +24,7 @@ import { useToast } from "@/src/contexts/ToastContext";
 import { Button } from "@/src/components/ui/Button";
 import { Badge } from "@/src/components/ui/Badge";
 import { ConfirmDialog, Modal } from "@/src/components/ui/Modal";
+import { NameConfirmDialog } from "@/src/components/admin/NameConfirmDialog";
 import { Drawer } from "@/src/components/ui/Drawer";
 import { fieldControl } from "@/src/components/ui/Field";
 import { DataTable, ROW_LINK } from "@/components/ui/data-table";
@@ -141,6 +142,8 @@ export function SensitiveWordsSection() {
     );
   };
 
+  const singleWord = selected.size === 1 ? rows.find((w) => selected.has(w.id))?.word : undefined;
+
   const removeSelected = () =>
     remove.mutate([...selected], {
       onSuccess: () => {
@@ -214,7 +217,6 @@ export function SensitiveWordsSection() {
 
       <DataTable<SensitiveWord>
         caption={t("social_moderation.tabs.words")}
-        density="compact"
         linkedRows
         columns={[
           { key: "word", header: t("social_moderation.words.col_word") },
@@ -282,7 +284,7 @@ export function SensitiveWordsSection() {
         <div
           role="region"
           aria-label={t("social_moderation.words.batch_region")}
-          className="sticky bottom-0 z-10 flex flex-wrap items-center gap-3 border-t border-[oklch(var(--color-block))] bg-[oklch(var(--color-canvas))] px-4 py-2"
+          className="sticky bottom-(--bottom-bar) z-10 flex flex-wrap items-center gap-3 border-t border-[oklch(var(--color-block))] bg-[oklch(var(--color-canvas))] px-4 py-2"
         >
           <span className="font-mono text-xs text-[oklch(var(--color-ink))]" aria-live="polite">
             {t("souls.batch.selected", { n: String(selected.size) })}
@@ -291,7 +293,7 @@ export function SensitiveWordsSection() {
           <Button type="button" variant="secondary" size="sm" onClick={() => setBatchAction("REVIEW")}>
             {t("social_moderation.words.change_action")}
           </Button>
-          <Button type="button" variant="danger" size="sm" onClick={() => setConfirming(true)}>
+          <Button type="button" variant="secondary" size="sm" onClick={() => setConfirming(true)}>
             {t("social_moderation.words.delete_selected")}
           </Button>
           <Button type="button" variant="ghost" size="sm" onClick={() => setSelected(new Set())}>
@@ -432,15 +434,30 @@ export function SensitiveWordsSection() {
         )}
       </Drawer>
 
-      <ConfirmDialog
-        isOpen={confirming}
-        title={t("social_moderation.words.confirm_title", { n: String(selected.size) })}
-        message={t("social_moderation.confirm_remove_word_body")}
-        confirmText={t("social_moderation.words.delete_selected")}
-        confirmLoading={remove.isPending}
-        onConfirm={removeSelected}
-        onCancel={() => setConfirming(false)}
-      />
+      {/* 敏感词是硬删(SensitiveWord 无软删、不进回收站),不可撤回。只删一个 → 输入那个词以确认;
+          删多个时没有一个名称可输 → 普通确认框(2026-09-30 用户拍板,不再让人打动作词)。 */}
+      {singleWord !== undefined ? (
+        <NameConfirmDialog
+          isOpen={confirming}
+          title={t("social_moderation.words.confirm_title", { n: "1" })}
+          message={t("social_moderation.confirm_remove_word_body")}
+          name={singleWord}
+          actionLabel={t("social_moderation.words.delete_selected")}
+          isPending={remove.isPending}
+          onConfirm={removeSelected}
+          onCancel={() => setConfirming(false)}
+        />
+      ) : (
+        <ConfirmDialog
+          isOpen={confirming}
+          title={t("social_moderation.words.confirm_title", { n: String(selected.size) })}
+          message={t("social_moderation.confirm_remove_word_body")}
+          confirmText={<><span aria-hidden="true">✕</span>{t("common.confirm_delete")}</>}
+          confirmLoading={remove.isPending}
+          onConfirm={removeSelected}
+          onCancel={() => setConfirming(false)}
+        />
+      )}
     </div>
   );
 }

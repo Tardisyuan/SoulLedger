@@ -73,7 +73,7 @@ describe("LoginPage", () => {
 
     const alert = await screen.findByTestId("login-error");
     expect(alert).toHaveAttribute("role", "alert");
-    expect(alert).toHaveTextContent("! auth.error_invalid_credentials");
+    expect(alert).toHaveTextContent("✕ auth.error_invalid_credentials");
     // One surface: E2E reads this text with a strict locator.
     expect(screen.getAllByText("auth.error_invalid_credentials")).toHaveLength(1);
     expect(mockShowToast).not.toHaveBeenCalled();
@@ -90,7 +90,7 @@ describe("LoginPage", () => {
     fillAndSubmit();
 
     const alert = await screen.findByTestId("login-error");
-    expect(alert).toHaveTextContent('! auth.error_attempts_left(3)');
+    expect(alert).toHaveTextContent('✕ auth.error_attempts_left(3)');
     // The count replaces the bare message; it is not shown beside it.
     expect(screen.queryByText("auth.error_invalid_credentials")).not.toBeInTheDocument();
   });
@@ -103,7 +103,7 @@ describe("LoginPage", () => {
     fillAndSubmit();
 
     const alert = await screen.findByTestId("login-error");
-    expect(alert).toHaveTextContent('! auth.error_locked(11)');
+    expect(alert).toHaveTextContent('✕ auth.error_locked(11)');
     expect(alert).not.toHaveTextContent("auth.error_login_failed");
   });
 
@@ -161,6 +161,18 @@ describe("LoginPage", () => {
     ]);
     expect(rows.filter((r) => r.getAttribute("aria-current") === "true")).toEqual([rows[2]]);
     expect(screen.getByText("auth.civilization_note")).toBeInTheDocument();
+  });
+
+  it("v2 C15: the page's only <h1> is the product name on a neutral plaque — no seal before sign-in", async () => {
+    render(<LoginPage />);
+    await waitFor(() => expect(mockedCivs).toHaveBeenCalled());
+    const plaque = screen.getByTestId("plaque");
+    const h1 = screen.getByRole("heading", { level: 1 });
+    expect(plaque).toContainElement(h1);
+    expect(h1).toHaveTextContent("nav.title");
+    expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
+    // 登录前不知道文明:印不出现(中性皮)。
+    expect(within(plaque).queryByRole("img")).not.toBeInTheDocument();
   });
 
   it("leaves the list out when the endpoint fails, and still signs in", async () => {

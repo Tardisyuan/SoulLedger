@@ -11,7 +11,7 @@ import { resolveEnumDisplay } from "@/src/lib/domainDisplay";
 import { DataTable } from "@/components/ui/data-table";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { Button } from "@/src/components/ui/Button";
-import { ConfirmDialog } from "@/src/components/ui/Modal";
+import { NameConfirmDialog } from "@/src/components/admin/NameConfirmDialog";
 import { EmptyState } from "@/src/components/ui/EmptyState";
 import { badgeVariants } from "@/src/components/ui/Badge";
 import { ActionsMenu } from "@/components/ui/data-grid/ActionsMenu";
@@ -108,7 +108,6 @@ export default function RecycleBinPage() {
           is looking for a row, not deciding on each one. Decision surfaces
           (the judgment list) stay `comfortable`. */}
       <DataTable<RecycleBinEntry>
-        density="compact"
           caption={t("recycle_bin.title")}
           columns={[
             { key: "type", header: t("recycle_bin.col_type") },
@@ -243,23 +242,10 @@ export default function RecycleBinPage() {
           emptyMessage={t("recycle_bin.empty")}
         />
 
-        {/* `ConfirmDialog`, not a hand-rolled `fixed inset-0`.
-         *
-         * What this div was missing: `role="dialog"`, `aria-modal`, a focus
-         * move on open, Escape, a focus trap, and focus return to the trigger.
-         * Focus stayed on the page behind the scrim and Tab walked the list
-         * underneath — on the **permanent hard delete**, the single most
-         * irreversible action in this application.
-         *
-         * The 2026-09-01 round converted exactly this shape in
-         * `app/dispatch/[id]`, and its own comment named this file as one of
-         * the dialects it was consolidating ("recycle-bin's `z-9999`, since
-         * renamed `z-dialog`"). It was named and not converted.
-         *
-         * `ConfirmDialog` is `AlertDialog` underneath, so an outside click
-         * does not dismiss it — the right default here for the same reason
-         * that comment gives. */}
-        <ConfirmDialog
+        {/* 彻底删除是这个应用里最不可撤回的动作,所以走「输入名称以确认」(规范 v2 A1):
+            逐字输入条目名之前危险按钮是禁用的。对话框本身是 BaseModal,焦点圈定、Esc、
+            焦点归还都在那里;点遮罩不关(dismissOnOutsideClick=false)。 */}
+        <NameConfirmDialog
           isOpen={confirmHardDelete !== null}
           title={t("recycle_bin.hard_delete_confirm_title")}
           message={
@@ -267,9 +253,9 @@ export default function RecycleBinPage() {
               ? t("recycle_bin.hard_delete_confirm_message", { name: confirmHardDelete.label })
               : ""
           }
-          confirmText={t("recycle_bin.hard_delete")}
-          variant="danger"
-          confirmLoading={hardDeleteMutation.isPending}
+          name={confirmHardDelete?.label ?? ""}
+          actionLabel={t("recycle_bin.hard_delete")}
+          isPending={hardDeleteMutation.isPending}
           onCancel={() => setConfirmHardDelete(null)}
           onConfirm={() => confirmHardDelete && hardDeleteMutation.mutate(confirmHardDelete)}
         />

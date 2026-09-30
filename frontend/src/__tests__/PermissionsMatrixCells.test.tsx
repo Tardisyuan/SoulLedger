@@ -206,6 +206,8 @@ describe("saving", () => {
       const locked = cell("ADMIN", codename);
       expect(stateOf(locked)).toBe("lock");
       expect(glyphOf(locked)).toBe("permissions.matrix.lock_word");
+      // 补足 C15:「始终」是 s2 底,不是降了不透明度的墨块。
+      expect(locked.querySelector("[data-cell-state]")!.className).toMatch(/color-surface-2/);
       expect(locked).toHaveAttribute("aria-checked", "true");
       expect(locked).toHaveAttribute("aria-disabled", "true");
       // Focusable (not `disabled`), so the explanation is reachable from the keyboard too.
@@ -235,6 +237,10 @@ describe("saving", () => {
     const denied = cell("MODERATOR", "user.manage");
     expect(stateOf(denied)).toBe("deny");
     expect(glyphOf(denied)).toBe("! permissions.matrix.deny_word");
+    // 补足 C15:禁授是规则,不是出错 —— 虚线 ink3 框,不用反馈色(「!」保存失败才用 danger)。
+    const denyMark = denied.querySelector("[data-cell-state]")!;
+    expect(denyMark.className).toMatch(/border-dashed/);
+    expect(denyMark.className).not.toMatch(/color-danger/);
     expect(denied).toHaveAttribute("aria-checked", "false");
     expect(denied).toHaveAccessibleDescription(/permissions\.matrix\.deny_hint:用户管理 role_forbidden_permission/);
     fireEvent.click(denied);

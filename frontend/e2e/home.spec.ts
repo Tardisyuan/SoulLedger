@@ -43,7 +43,23 @@ test.describe("Home page", () => {
     await expect(page.getByText("万古轮回皆有录")).toHaveCount(0);
   });
 
+  test("with no saved choice the theme follows the system (规范 v2)", async ({ page }) => {
+    const html = page.locator("html");
+    await page.emulateMedia({ colorScheme: "light" });
+    await page.goto("/");
+    await expect(html).toHaveClass(/light/);
+    await expect(html).not.toHaveClass(/dark/);
+
+    // And keeps following it while the page is open.
+    await page.emulateMedia({ colorScheme: "dark" });
+    await expect(html).toHaveClass(/dark/);
+    await expect(html).not.toHaveClass(/light/);
+  });
+
   test("theme toggle flips the root theme class", async ({ page }) => {
+    // v1 defaulted to dark; v2 follows the system, so pin the system to dark
+    // to start from the same place the toggle sequence below assumes.
+    await page.emulateMedia({ colorScheme: "dark" });
     await page.goto("/");
 
     const html = page.locator("html");
@@ -180,8 +196,9 @@ test.describe("Authenticated shell", () => {
     // Not redirected — the seeded cookie satisfied middleware.
     await expect(page).toHaveURL(/\/dashboard/);
 
-    // Two <aside>s since 规范 v1: the in-grid sidebar (md+) and the phone drawer. The visible one.
-    const sidebar = page.locator("aside:visible");
+    // 规范 v2:md+ 是立柱,< 768 是底栏,两者都是名为「导航菜单」的 <nav>,各在自己的宽度下
+    // 显示。取看得见的那一个。四个名字恰好是菜单顺序里的前四个 —— 底栏也放得下。
+    const sidebar = page.locator("nav[aria-label='导航菜单']:visible");
     await expect(sidebar).toBeVisible();
     for (const [name, href] of [
       ["灵魂", "/souls"],

@@ -35,13 +35,13 @@ import Svg, { Path } from "react-native-svg";
 import { useChat, type Outgoing } from "../chat";
 import { useCommittedSend } from "../composing";
 import { bubbleStamp, chatMode, dayOf, daysLeft, type ChatMode } from "../chatRules";
-import { HeaderBand } from "../chrome";
+import { PlaqueFrame } from "../chrome";
 import { CORNER, Icon } from "../emblems";
 import { family, quoteFamily } from "../fonts";
 import { useI18n } from "../i18n";
 import { formatStamp } from "../rules";
 import type { CivKey } from "../theme";
-import { Button, Interp, Loader, Notice, Skeleton, SmallButton, Txt, useReducedMotion, useTheme } from "../ui";
+import { Button, Interp, Loader, Notice, Skeleton, SmallButton, Txt, shade, useReducedMotion, useTheme } from "../ui";
 import type { AppStackParams } from "./applications";
 import { useNow } from "./auth";
 import { ANDROID, Glyph, Tag, hallOf, useCurrentHall, wash } from "./letters";
@@ -150,8 +150,10 @@ export function ConversationScreen({ id, landed }: { id: string; landed?: boolea
 
   if (!c || !mode) {
     return (
-      <View style={[styles.fill, { backgroundColor: t.s0, paddingTop: insets.top }]}>
-        <Header onBack={navigation.goBack} title="" />
+      <View style={[styles.fill, { backgroundColor: t.s0 }]}>
+        <PlaqueFrame testID="header">
+          <Header onBack={navigation.goBack} title="" />
+        </PlaqueFrame>
         <View style={styles.pad}>
           {chat.availability === "not_configured" ? (
             <Notice tone="neutral" testID="chat-not-configured">
@@ -205,7 +207,8 @@ export function ConversationScreen({ id, landed }: { id: string; landed?: boolea
       keyboardVerticalOffset={-insets.bottom}
       testID={`conversation-${mode.kind}`}
     >
-      <View style={{ paddingTop: insets.top, backgroundColor: t.s0 }}>
+      {/* v2 补足 C15: a sub-page's title bar is the simplified plaque. */}
+      <PlaqueFrame testID="header">
         {inbox ? (
           <HallHeader hall={hallOf(c, locale)} sealed={mode.kind === "hall_sealed"} onBack={navigation.goBack} />
         ) : (
@@ -217,7 +220,7 @@ export function ConversationScreen({ id, landed }: { id: string; landed?: boolea
             right={sealed ? <Tag testID="closed-tag" text={tr("soul_app.chat.badge.closed")} tone="quiet" /> : null}
           />
         )}
-      </View>
+      </PlaqueFrame>
       {unavailable ? (
         <View testID="chat-unavailable" style={[styles.unavailable, { backgroundColor: t.s1, borderBottomColor: t.hair }]}>
           <View style={[styles.square, { backgroundColor: t.neg }]} />
@@ -335,24 +338,18 @@ function Header({ onBack, title, subtitle, muted, right }: { onBack: () => void;
         ) : null}
       </View>
       {right ?? (ANDROID ? null : <View style={styles.icon} />)}
-      <HeaderBand />
     </View>
   );
 }
 
 function HallHeader({ hall, sealed, onBack }: { hall: string; sealed: boolean; onBack: () => void }) {
-  const t = useTheme();
   const { t: tr } = useI18n();
   return (
     <View
-      style={[
-        styles.hallHeader,
-        { borderBottomColor: sealed ? t.hair : t.hair2, backgroundColor: t.s1 },
-        !sealed && { borderLeftWidth: 3, borderLeftColor: t.mark },
-      ]}
+      style={styles.hallHeader}
     >
       <BackButton onBack={onBack} />
-      <Glyph text={tr("soul_app.chat.section.hall")} tone={sealed ? "subtle" : "mark"} dotted={sealed} />
+      <Glyph text={tr("soul_app.chat.section.hall")} tone={sealed ? "subtle" : "ink"} dotted={sealed} />
       <View style={styles.fill}>
         <Txt accessibilityRole="header" variant="nav" tone={sealed ? "muted" : "ink"}>
           {tr("soul_app.chat.hall.title", { hall })}
@@ -459,15 +456,15 @@ function Bubble({ m, mine, read, landed, now }: { m: ChatMessage; mine?: boolean
         style={[
           styles.bubble,
           mine
-            ? { borderColor: t.accent, backgroundColor: wash(t) }
+            ? { borderColor: t.inkSubtle, backgroundColor: wash(t) }
             : landed
-              ? { borderColor: t.mark, borderLeftWidth: 3, backgroundColor: t.s1 }
+              ? { borderColor: t.ink, borderLeftWidth: 3, backgroundColor: t.s1 }
               : { borderColor: t.hair2, backgroundColor: t.s1 },
         ]}
       >
         {landed && !reduced ? (
-          <Animated.View pointerEvents="none" style={[styles.newTag, { borderColor: t.mark, backgroundColor: t.s0, opacity: fade }]}>
-            <Txt testID="landing-tag" style={[styles.newTagText, { color: t.mark }]}>
+          <Animated.View pointerEvents="none" style={[styles.newTag, { borderColor: t.ink, backgroundColor: t.s0, opacity: fade }]}>
+            <Txt testID="landing-tag" style={[styles.newTagText, { color: t.ink }]}>
               {tr("soul_app.chat.new_marker")}
             </Txt>
           </Animated.View>
@@ -511,7 +508,7 @@ function PendingBubble({ o, onResend, now }: { o: Outgoing; onResend: () => void
             ? { borderColor: t.negStrong, backgroundColor: t.negBg }
             : queued
               ? { borderColor: t.hair2, backgroundColor: t.s1, opacity: 0.7 }
-              : { borderColor: t.accent, backgroundColor: wash(t) },
+              : { borderColor: t.inkSubtle, backgroundColor: wash(t) },
         ]}
       >
         <Body text={o.body} dim={failed || queued} />
@@ -522,7 +519,7 @@ function PendingBubble({ o, onResend, now }: { o: Outgoing; onResend: () => void
           </Txt>
           {resendable ? (
             <Pressable testID="resend" accessibilityRole="button" onPress={onResend} hitSlop={10}>
-              <Txt variant="label" tone="accent" style={styles.metaText}>
+              <Txt variant="label" tone="ink" style={[styles.metaText, styles.underline]}>
                 {tr("soul_app.chat.receipt.retry")}
               </Txt>
             </Pressable>
@@ -536,7 +533,7 @@ function PendingBubble({ o, onResend, now }: { o: Outgoing; onResend: () => void
 function OfficerBubble({ m, hall, sealed, now }: { m: ChatMessage; hall: string; sealed: boolean; now: number }) {
   const t = useTheme();
   const { t: tr } = useI18n();
-  const line = sealed ? t.hair2 : t.mark;
+  const line = sealed ? t.hair2 : t.ink;
   // Who replied and their position, as the backend stamped them on the event (either may be missing).
   const byline = tr("soul_app.chat.hall.officer_byline", { hall, role: m.officerTitle ?? "", name: m.officer ?? "" }).replace(/\s+/g, " ").trim();
   return (
@@ -544,8 +541,8 @@ function OfficerBubble({ m, hall, sealed, now }: { m: ChatMessage; hall: string;
       <View testID="officer-bubble" style={[styles.bubble, styles.officer, { borderColor: line, borderLeftWidth: 3, backgroundColor: t.s1 }]}>
         <LetterCorners civ={t.civ} stroke={line} />
         <View style={styles.byline}>
-          {sealed ? null : <Glyph text={tr("soul_app.chat.section.hall")} tone="mark" size={16} />}
-          <Txt style={[styles.bylineText, { color: sealed ? t.inkSubtle : t.mark }]}>{byline}</Txt>
+          {sealed ? null : <Glyph text={tr("soul_app.chat.section.hall")} tone="ink" size={16} />}
+          <Txt style={[styles.bylineText, { color: sealed ? t.inkSubtle : t.ink }]}>{byline}</Txt>
         </View>
         <Txt style={[styles.officerBody, { fontFamily: quoteFamily(m.body), color: sealed ? t.inkMuted : t.ink }]}>{m.body}</Txt>
         <Txt variant="value" tone="subtle" style={[styles.metaTime, styles.officerTime]}>
@@ -612,7 +609,7 @@ function Dock({
   const t = useTheme();
   const { t: tr } = useI18n();
   const input = useRef<TextInput>(null);
-  const pad = { paddingBottom: 14 + bottom, borderTopColor: t.hair };
+  const pad = { paddingBottom: 16 + bottom, borderTopColor: t.hair };
   const { press, onEndEditing } = useCommittedSend(input, draft, onSend);
   switch (mode.kind) {
     case "outgoing_locked":
@@ -677,13 +674,13 @@ function Dock({
               { minHeight: size, minWidth: size },
               secondary
                 ? { borderWidth: 1, borderColor: t.hair2, backgroundColor: pressed ? t.s1 : "transparent" }
-                : { backgroundColor: pressed ? t.mark : t.accent },
+                : { backgroundColor: pressed ? shade(t.plaque) : t.plaque },
             ]}
           >
             {ANDROID ? (
-              <Icon name="send" size={20} color={secondary ? t.inkSubtle : t.onAccent} strokeWidth={1.5} />
+              <Icon name="send" size={20} color={secondary ? t.inkSubtle : t.onPlaque} strokeWidth={1.5} />
             ) : (
-              <Txt testID={secondary ? "send-secondary" : "send-primary"} style={[styles.sendText, { color: secondary ? t.inkSubtle : t.onAccent }]}>
+              <Txt testID={secondary ? "send-secondary" : "send-primary"} style={[styles.sendText, { color: secondary ? t.inkSubtle : t.onPlaque }]}>
                 {tr("soul_app.chat.compose.send")}
               </Txt>
             )}
@@ -699,46 +696,47 @@ const styles = StyleSheet.create({
   centered: { alignItems: "center" },
   pad: { padding: 20 },
   noSpacing: { letterSpacing: 0 },
-  inlineMono: { fontSize: 12.5, lineHeight: 19 },
-  header: { minHeight: 52, flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 6 },
+  underline: { textDecorationLine: "underline" },
+  inlineMono: { fontSize: 12, lineHeight: 19 },
+  header: { minHeight: 52, flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 8 },
   icon: { width: ANDROID ? 48 : 44, height: ANDROID ? 48 : 44, alignItems: "center", justifyContent: "center" },
   subtitle: { fontSize: 11, lineHeight: 15 },
-  hallHeader: { flexDirection: "row", alignItems: "center", gap: 11, paddingVertical: 10, paddingRight: 16, borderBottomWidth: 1 },
-  hallSub: { fontSize: 11.5, lineHeight: 17, marginTop: 2 },
-  unavailable: { flexDirection: "row", alignItems: "center", gap: 9, paddingHorizontal: 16, paddingVertical: 9, borderBottomWidth: 1 },
+  hallHeader: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, paddingRight: 16 },
+  hallSub: { fontSize: 11, lineHeight: 17, marginTop: 2 },
+  unavailable: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 16, paddingVertical: 8, borderBottomWidth: 1 },
   square: { width: 9, height: 9 },
-  smallButton: { borderWidth: 1, paddingHorizontal: 10, paddingVertical: 5, minHeight: ANDROID ? 48 : 32, justifyContent: "center" },
-  band: { paddingHorizontal: 20, paddingVertical: 14, borderBottomWidth: 1 },
-  bandRow: { flexDirection: "row", gap: 9, alignItems: "flex-start" },
-  bandButton: { marginTop: 13 },
+  smallButton: { borderWidth: 1, paddingHorizontal: 12, paddingVertical: 4, minHeight: ANDROID ? 48 : 32, justifyContent: "center" },
+  band: { paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 1 },
+  bandRow: { flexDirection: "row", gap: 8, alignItems: "flex-start" },
+  bandButton: { marginTop: 12 },
   nudge: { marginTop: 2 },
   // flex-end in the inverted list is the visual top: a short thread starts under the band, as before.
-  thread: { paddingHorizontal: 20, paddingVertical: 18, flexGrow: 1, justifyContent: "flex-end" },
+  thread: { paddingHorizontal: 20, paddingVertical: 16, flexGrow: 1, justifyContent: "flex-end" },
   sealed: { opacity: 0.88 },
   older: { alignItems: "center", paddingBottom: 16 },
   day: { textAlign: "center", fontSize: 11, marginBottom: 16 },
   bubbleRow: { flexDirection: "row", marginBottom: 16 },
   mineRow: { justifyContent: "flex-end" },
-  bubble: { maxWidth: "76%", borderWidth: 1, paddingHorizontal: 14, paddingVertical: 12 },
-  officer: { maxWidth: "82%", padding: 22 },
+  bubble: { maxWidth: "76%", borderWidth: 1, paddingHorizontal: 16, paddingVertical: 12 },
+  officer: { maxWidth: "82%", padding: 24 },
   corner: { position: "absolute" },
   body: { fontSize: 15, lineHeight: 26 },
-  meta: { flexDirection: "row", alignItems: "center", gap: 7, marginTop: 7 },
+  meta: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 8 },
   metaMine: { justifyContent: "flex-end" },
-  metaTime: { fontSize: 10.5, lineHeight: 14 },
-  metaText: { fontSize: 10, lineHeight: 14, letterSpacing: 0 },
-  newTag: { position: "absolute", right: 10, top: -9, borderWidth: 1, paddingHorizontal: 6, paddingVertical: 1 },
-  newTagText: { fontFamily: family.ui[500], fontSize: 9.5, lineHeight: 13, letterSpacing: 1.1 },
-  byline: { flexDirection: "row", alignItems: "center", gap: 7 },
-  bylineText: { fontFamily: family.ui[600], fontSize: 11.5, lineHeight: 16, letterSpacing: 1.1 },
-  officerBody: { fontSize: 15.5, lineHeight: 28, marginTop: 9 },
-  officerTime: { marginTop: 9 },
+  metaTime: { fontSize: 11, lineHeight: 14 },
+  metaText: { fontSize: 11, lineHeight: 14, letterSpacing: 0 },
+  newTag: { position: "absolute", right: 10, top: -9, borderWidth: 1, paddingHorizontal: 8, paddingVertical: 2 },
+  newTagText: { fontFamily: family.ui[500], fontSize: 11, lineHeight: 16, letterSpacing: 1.1 },
+  byline: { flexDirection: "row", alignItems: "center", gap: 8 },
+  bylineText: { fontFamily: family.ui[600], fontSize: 11, lineHeight: 16, letterSpacing: 1.1 },
+  officerBody: { fontSize: 15, lineHeight: 28, marginTop: 8 },
+  officerTime: { marginTop: 8 },
   rejected: { marginTop: 2 },
-  dock: { paddingHorizontal: 20, paddingTop: 14, borderTopWidth: 1 },
-  composer: { flexDirection: "row", gap: 10, alignItems: "flex-end" },
-  input: { flex: 1, borderWidth: 1, paddingHorizontal: 13, paddingTop: 11, paddingBottom: 11, fontSize: 14, lineHeight: 20, maxHeight: 140 },
+  dock: { paddingHorizontal: 20, paddingTop: 16, borderTopWidth: 1 },
+  composer: { flexDirection: "row", gap: 12, alignItems: "flex-end" },
+  input: { flex: 1, borderWidth: 1, paddingHorizontal: 12, paddingTop: 12, paddingBottom: 12, fontSize: 15, lineHeight: 20, maxHeight: 140 },
   send: { paddingHorizontal: ANDROID ? 0 : 16, alignItems: "center", justifyContent: "center" },
-  sendText: { fontFamily: family.ui[600], fontSize: 13.5, lineHeight: 18 },
-  lockedLine: { minHeight: 44, borderWidth: 1, borderStyle: "dotted", justifyContent: "center", paddingHorizontal: 13 },
-  nextAt: { flexDirection: "row", gap: 8, alignItems: "flex-start", marginTop: 11 },
+  sendText: { fontFamily: family.ui[600], fontSize: 13, lineHeight: 18 },
+  lockedLine: { minHeight: 44, borderWidth: 1, borderStyle: "dotted", justifyContent: "center", paddingHorizontal: 12 },
+  nextAt: { flexDirection: "row", gap: 8, alignItems: "flex-start", marginTop: 12 },
 });

@@ -8,7 +8,7 @@ import { judgmentKeys } from "@soulledger/core/query_keys";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { Button } from "@/src/components/ui/Button";
 import { DomainEnum, DomainText } from "@/src/components/ui/DomainValue";
-import { verdictGlyph, verdictInk } from "@/src/lib/verdictGlyph";
+import { VerdictBadge } from "@/src/components/ui/StatusBadge";
 
 /**
  * 语料页右栏「被引用」清单:`GET /judgment/?statute=<id>&ordering=-created_at`,分页。
@@ -35,20 +35,15 @@ export function CorpusCitedBy({ statuteId }: { statuteId: string }) {
     <div data-testid="corpus-cited-list">
       <ul>
         {data.results.map((j) => (
-          <li key={j.id} className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-2 py-1.5 border-b border-[oklch(var(--color-rule))]">
+          <li key={j.id} className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-2 py-2 border-b border-[oklch(var(--color-rule))]">
             <Link href={`/judgment/${j.id}`} className="min-w-0 truncate text-sm text-[oklch(var(--color-ink))] hover:underline" title={j.soul_name || undefined}>
               <DomainText value={j.soul_name} />
             </Link>
-            <span className={`justify-self-end font-mono text-2xs whitespace-nowrap ${verdictInk(j.verdict)}`}>
-              {j.verdict ? (
-                <>
-                  <span aria-hidden="true">{verdictGlyph(j.verdict)} </span>
-                  <DomainEnum namespace="judgment.verdicts" value={j.verdict} />
-                </>
-              ) : (
-                t("judgment.corpus.cited_by_open")
-              )}
-            </span>
+            {j.verdict ? (
+              <VerdictBadge verdict={j.verdict} className="justify-self-end" />
+            ) : (
+              <span className="justify-self-end font-mono text-2xs whitespace-nowrap">{t("judgment.corpus.cited_by_open")}</span>
+            )}
             <span className="col-span-2 font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">
               {(j.concluded_at ?? j.created_at).slice(0, 10)}
             </span>

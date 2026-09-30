@@ -160,6 +160,52 @@ class TestParameters:
         assert not {r["id"] for r in first["results"]} & {r["id"] for r in second["results"]}
 
 
+
+@pytest.mark.django_db
+class TestWholeMonth:
+    """`all=1`:B10 的总账不分页,前端一次请求取整月。超上限明确 400,不截断。"""
+
+    def _many(self, cn, n):
+        soul = Soul.objects.create(name="多", tenant=cn, current_state=SoulState.ALIVE)
+        for i in range(n):
+            _record(soul, RecordType.MERIT, 1, dt.datetime(2026, 6, 1, tzinfo=UTC) + dt.timedelta(hours=i))
+
+    def test_the_whole_month_comes_in_one_response(self, api_client, judge_user, cn):
+        self._many(cn, 23)
+        _login(api_client, judge_user, "ledger.read")
+        body = api_client.get(URL, {"month": "2026-06", "all": "1", "page": "2"}).json()
+        assert (len(body["results"]), body["count"], body["page"], body["page_size"]) == (23, 23, 1, 23)
+        assert len({r["id"] for r in body["results"]}) == 23
+        assert body["received"] == sum(r["weight"] for r in body["results"])
+
+    def test_another_tenants_rows_stay_out_of_the_whole_month(self, api_client, judge_user, souls):
+        other = Soul.objects.create(name="外", tenant=plan.tenant("EG_DUAT"), current_state=SoulState.ALIVE)
+        _record(other, RecordType.MERIT, 50, dt.datetime(2026, 6, 2, tzinfo=UTC))
+        _login(api_client, judge_user, "ledger.read")
+        body = api_client.get(URL, {"month": "2026-06", "all": "true"}).json()
+        assert body["count"] == 3
+        assert "外" not in {r["soul_name"] for r in body["results"]}
+
+    def test_without_ledger_read_the_whole_month_is_refused(self, api_client, django_user_model, cn, souls):
+        clerk = django_user_model.objects.create(username="clerk-wm", role="LEDGERLESS_WM", tenant=cn)
+        _login(api_client, clerk)
+        assert api_client.get(URL, {"month": "2026-06", "all": "1"}).status_code == 403
+
+    def test_over_the_limit_is_a_400_not_a_truncated_month(self, api_client, judge_user, cn, monkeypatch):
+        from apps.ledger import journal
+
+        monkeypatch.setattr(journal, "WHOLE_MONTH_MAX", 5)
+        self._many(cn, 6)
+        _login(api_client, judge_user, "ledger.read")
+        resp = api_client.get(URL, {"month": "2026-06", "all": "1"})
+        assert resp.status_code == 400
+        assert (resp.json()["error"], resp.json()["field"]) == ("MONTH_TOO_LARGE", "all")
+        assert "results" not in resp.json()
+        # 正好在上限上仍给全量。
+        monkeypatch.setattr(journal, "WHOLE_MONTH_MAX", 6)
+        assert len(api_client.get(URL, {"month": "2026-06", "all": "1"}).json()["results"]) == 6
+
+
 @pytest.mark.django_db
 class TestSearch:
     """「灵魂姓名或 ID」收窄的是整张账,不只是流水:四柱、类目与行数同一组筛选。"""

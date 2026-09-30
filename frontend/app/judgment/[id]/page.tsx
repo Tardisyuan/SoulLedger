@@ -36,7 +36,10 @@ import {
   PrecedentsPanel,
   QueueBar,
   StatuteSearch,
+  VERDICT_KEY_CLASS,
+  VerdictKeyContent,
 } from "@/src/components/judgment/JudgmentDesk";
+import { Seal } from "@/src/components/plaque/Seal";
 import { useHotkeys } from "@/src/lib/hotkeys";
 import { verdictGlyph } from "@/src/lib/verdictGlyph";
 import type { SentenceRequestChanges } from "@soulledger/core/api/sentence-plans";
@@ -128,42 +131,13 @@ type VerdictMember = "PASSED" | "FAILED" | "PURGATORY" | "RETRY";
  *  suspends it, the one that sends it back. */
 const VERDICTS: readonly VerdictMember[] = ["PASSED", "FAILED", "PURGATORY", "RETRY"];
 
-/**
- * Verdict → ink. `--color-verdict-*`, never `--color-status-*`: the two alias
- * to identical triples today and are separate layers on purpose, which is what
- * `src/__tests__/statusTokenLayering.test.ts` keeps visible.
+/*
+ * 规范 v2 补足 B8:判决不靠颜色区分。v1 这里有三张按判决上色的表(字色、选中下沿、落印带
+ * 上沿),各自读 `--color-verdict-*`;v2 把四个裁决键画成同一个幽灵样式(`VERDICT_KEY_CLASS`,
+ * 与审判队列共用),选中 = 2px ink 外框外扩 2,落印带上沿一律墨色,落定的判决写成 ink 字 +
+ * 印。✕ 也是 ink:冷玫红只给系统出错,不给判决。
  */
-const VERDICT_INK: Record<VerdictMember, string> = {
-  PASSED: "text-[oklch(var(--color-verdict-passed))]",
-  FAILED: "text-[oklch(var(--color-verdict-failed))]",
-  PURGATORY: "text-[oklch(var(--color-verdict-purgatory))]",
-  RETRY: "text-[oklch(var(--color-verdict-retry))]",
-};
-
-/**
- * VerdictBar 的选中态(规范 v1 §2.9):s2 底 + 下沿 3 px 裁决色。画成 inset 阴影 —— 那是一条线,
- * 不是高度(eslint 的 PAGE_SHADOW 只放行 inset);四格因此同高,选中不挪动任何东西。
- * 选中从不只靠颜色:单选框本身被选中,且字形(✓ ✕ ◇ ↺)始终在。
- */
-const VERDICT_MARK: Record<VerdictMember, string> = {
-  PASSED: "bg-[oklch(var(--color-surface-2))] shadow-[inset_0_-3px_0_oklch(var(--color-verdict-passed))]",
-  FAILED: "bg-[oklch(var(--color-surface-2))] shadow-[inset_0_-3px_0_oklch(var(--color-verdict-failed))]",
-  PURGATORY: "bg-[oklch(var(--color-surface-2))] shadow-[inset_0_-3px_0_oklch(var(--color-verdict-purgatory))]",
-  RETRY: "bg-[oklch(var(--color-surface-2))] shadow-[inset_0_-3px_0_oklch(var(--color-verdict-retry))]",
-};
-
-/**
- * The band's top edge, per-side rather than all-sides: the band
- * has TWO live borders (3px above, 1px below) and an all-sides `border-color`
- * would paint the bottom one too, leaving the winner to the order Tailwind
- * happens to emit `border-{color}` and `border-b-{color}` in.
- */
-const VERDICT_SEAL: Record<VerdictMember, string> = {
-  PASSED: "border-t-[oklch(var(--color-verdict-passed))]",
-  FAILED: "border-t-[oklch(var(--color-verdict-failed))]",
-  PURGATORY: "border-t-[oklch(var(--color-verdict-purgatory))]",
-  RETRY: "border-t-[oklch(var(--color-verdict-retry))]",
-};
+const VERDICT_CHOSEN = "outline-solid outline-2 outline-offset-2 outline-[oklch(var(--color-ink))]";
 
 /**
  * THE SEAL BAND'S BOX, and the whole reason it is a constant.
@@ -194,6 +168,8 @@ export default function JudgmentDetailPage({ params }: PageProps) {
   const [selectedVerdict, setSelectedVerdict] = useState<string>("");
   const [notes, setNotes] = useState("");
   const [createWorkflow, setCreateWorkflow] = useState(false);
+  /** 本次会话里落过几次判;0 = 进页时已结案,印直接是落定的样子,不播。 */
+  const [stamp, setStamp] = useState(0);
   const [planDraft, setPlanDraft] = useState<ChangesDraft>(EMPTY_DRAFT);
   const [placement, setPlacement] = useState<Placement>(EMPTY_PLACEMENT);
   const previousLink = useRef<HTMLAnchorElement>(null);
@@ -244,6 +220,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
      * behind the back link, which is now the only way out and should be right
      * when it is reached. */
     onSuccess: () => {
+      setStamp((n) => n + 1); // 落判即盖印:落印带翻成结案态时,印按这一次的 key 落下
       queryClient.invalidateQueries({ queryKey: judgmentKeys.all });
       showToast(t("judgment.detail.conclude_success"), "success");
     },
@@ -487,7 +464,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
   );
 
   const CURSOR_LINK =
-    "inline-flex items-center gap-1.5 font-mono text-xs text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))]";
+    "inline-flex items-center gap-2 font-mono text-xs text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))]";
   /* 三栏共用的栏距:桌面 28 px 内边、栏间一条结构线;393 下纵向堆叠,线改在栏的下沿。 */
   const COLUMN = "min-w-0 py-6 lg:px-6 border-b lg:border-b-0 border-[oklch(var(--color-line))]";
 
@@ -604,7 +581,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
             ) : (
               <ul>
                 {priorLives.map((life) => (
-                  <li key={life.id} className="py-1.5 border-b border-[oklch(var(--color-rule))] text-sm">
+                  <li key={life.id} className="py-2 border-b border-[oklch(var(--color-rule))] text-sm">
                     <div className="flex justify-between gap-2">
                       <span>{t("judgment.queue.cycle")} {life.cycle_count}</span>
                       <span className="font-mono text-xs tabular-nums text-[oklch(var(--color-ink-subtle))]">
@@ -628,7 +605,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
                 reads as an aside, and italic is then unavailable for what italic
                 is for. */}
             {judgment.confession ? (
-              <p className="font-serif text-quote text-[oklch(var(--color-ink))] mt-2">{judgment.confession}</p>
+              <p className="font-serif text-md font-normal text-[oklch(var(--color-ink))] mt-2">{judgment.confession}</p>
             ) : (
               <p className="text-sm text-[oklch(var(--color-ink-subtle))] mt-2">
                 <MissingValue kind="unrecorded" />
@@ -667,13 +644,14 @@ export default function JudgmentDetailPage({ params }: PageProps) {
             data-seal-band=""
             data-sealed={isFinal ? "true" : "false"}
             className={`mt-6 ${SEAL_BAND} transition-colors duration-settle ease-enter ${
-              isFinal && ordered ? VERDICT_SEAL[ordered] : "border-t-hairline-strong"
+              isFinal && ordered ? "border-t-[oklch(var(--color-block))]" : "border-t-hairline-strong"
             }`}
           >
             {isFinal && ordered ? (
               <>
+                <Seal size={72} stampKey={stamp} className="shrink-0" />
                 <div className="min-w-0 flex-1">
-                  <p className={`text-xl ${VERDICT_INK[ordered]}`}>
+                  <p className="text-xl text-[oklch(var(--color-ink))]">
                     <span aria-hidden="true">{verdictGlyph(ordered)} </span>
                     <DomainEnum namespace="judgment.verdicts" value={judgment.verdict} />
                   </p>
@@ -729,20 +707,8 @@ export default function JudgmentDetailPage({ params }: PageProps) {
               const isOrdered = ordered === member;
               const isChosen = selectedVerdict === member;
               const marked = isFinal ? isOrdered : isChosen;
-              const clause = (
-                <>
-                  <Kbd>{index + 1}</Kbd>
-                  <span aria-hidden="true" className={`font-mono text-md ${VERDICT_INK[member]}`}>
-                    {verdictGlyph(member)}
-                  </span>
-                  <span className="font-medium text-[oklch(var(--color-ink))]">
-                    <DomainEnum namespace="judgment.verdicts" value={member} />
-                  </span>
-                </>
-              );
-              const tile = `flex items-center gap-2 h-12 px-3 border border-[oklch(var(--color-block))] ${
-                marked ? VERDICT_MARK[member] : ""
-              }`;
+              const clause = <VerdictKeyContent code={member} keyHint={String(index + 1)} />;
+              const tile = `${VERDICT_KEY_CLASS} ${marked ? VERDICT_CHOSEN : ""}`;
 
               return (
                 <li key={member}>
@@ -756,7 +722,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
                        carries the ring instead, on the same `--color-focus`
                        token globals.css uses. */
                     <label
-                      className={`${tile} cursor-pointer hover:bg-[oklch(var(--color-surface-2))] focus-within:outline-solid focus-within:outline-2 focus-within:outline-[oklch(var(--color-focus))]`}
+                      className={`${tile} cursor-pointer focus-within:outline-solid focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[oklch(var(--color-focus))]`}
                     >
                       <input
                         ref={index === 0 ? firstClauseRef : undefined}
@@ -784,7 +750,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
             /* 判词是「有人说过的话」,所以衬线(规范 v1 表态 1:判词、忏悔录、古典语料)。
                这里原先是 sans,理由是「法庭自己写的字」;规范 v1 把判词划进了引文。 */
             judgment.notes ? (
-              <blockquote className="mt-3 pl-3 border-l-2 border-[oklch(var(--color-ink))] font-serif text-quote text-[oklch(var(--color-ink))] max-w-[72ch]">
+              <blockquote className="mt-3 pl-3 border-l-2 border-[oklch(var(--color-ink))] font-serif text-md font-normal text-[oklch(var(--color-ink))] max-w-[72ch]">
                 {judgment.notes}
               </blockquote>
             ) : (
@@ -797,7 +763,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
               <label htmlFor={notesId} className="sr-only">
                 {t("judgment.detail.notes")}
               </label>
-              {/* 衬线输入 QuoteInput:判词是正被说出的话,所以输入框本身用衬线、字号 text-quote。 */}
+              {/* 衬线输入 QuoteInput:判词是正被说出的话,所以输入框本身用衬线、字号 text-md font-normal。 */}
               <textarea
                 id={notesId}
                 value={notes}
@@ -808,7 +774,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
                 }}
                 rows={4}
                 placeholder={t("judgment.detail.notes_placeholder")}
-                className="block w-full mt-3 border border-[oklch(var(--color-block))] bg-[oklch(var(--color-surface-1))] px-3 py-2 font-serif text-quote text-[oklch(var(--color-ink))] placeholder:text-[oklch(var(--color-ink-subtle))] transition-[border-color] duration-state focus-visible:border-[oklch(var(--color-accent))] resize-y"
+                className="block w-full mt-3 border border-[oklch(var(--color-block))] bg-[oklch(var(--color-surface-1))] px-3 py-2 font-serif text-md font-normal text-[oklch(var(--color-ink))] placeholder:text-[oklch(var(--color-ink-subtle))] transition-[border-color] duration-state focus-visible:border-[oklch(var(--color-accent))] resize-y"
               />
               {/* During a conflict the last saved time is the OTHER version's baseline, not this text's. */}
               {!draft.conflict && <DraftStatusLine status={draft.status} savedAt={judgment.draft_saved_at} />}
@@ -922,7 +888,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
           basis is a fact to show, not a box to hide. On an open case, only
           once grounds exist, so a pending proceeding grows no empty panel. */}
       {(isFinal || citations.length > 0) && (
-        <div className="mt-10">
+        <div className="mt-12">
           <JudgmentGroundsPanel citations={citations} />
         </div>
       )}
@@ -934,7 +900,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
 /** `76px 标签 | 值`, one rule apart. */
 function MetaRow({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="grid grid-cols-[76px_1fr] items-baseline gap-3 py-1.5">
+    <div className="grid grid-cols-[76px_1fr] items-baseline gap-3 py-2">
       <dt className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))]">{label}</dt>
       <dd className="text-sm text-[oklch(var(--color-ink))] min-w-0 wrap-break-word">{children}</dd>
     </div>

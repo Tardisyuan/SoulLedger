@@ -76,7 +76,7 @@ def test_a_new_message_is_pushed_to_the_other_side_only(pair, matrix):  # noqa: 
 @pytest.mark.parametrize("locale, expected", [
     ("zh-Hans", "前世之甲 给你写了一封信,打开灵魂簿查看。"),
     ("en", "前世之甲 wrote you a letter. Open Soul Ledger to read it."),
-    ("egy", "前世之甲: Shemes Renpi Er Ek. Wen Medjat Ba Er Maa."),
+    ("egy", "前世之甲: Shemes Renpi Er-Ek. Wen Medjat Ba Er Maa."),
 ])
 def test_the_name_is_the_senders_life_in_this_conversation(cn_tenant, matrix, locale, expected,  # noqa: F811
                                                          django_capture_on_commit_callbacks):
