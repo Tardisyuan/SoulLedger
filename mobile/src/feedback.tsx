@@ -98,7 +98,7 @@ export function LogoutProvider({ children, onConfirm }: { children: ReactNode; o
           <View
             testID="confirm-sheet"
             accessibilityViewIsModal
-            style={[styles.sheet, { backgroundColor: t.s1, borderTopColor: t.hair2, paddingBottom: 30 + insets.bottom }]}
+            style={[styles.sheet, { backgroundColor: t.s1, borderTopColor: t.hair2, paddingBottom: 32 + insets.bottom }]}
           >
             <Txt variant="title">
               {tr("soul_app.logout.title")}

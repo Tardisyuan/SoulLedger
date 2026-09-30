@@ -1063,7 +1063,7 @@ export const styles = StyleSheet.create({
   reveal: { width: 52, alignItems: "center", justifyContent: "center", borderLeftWidth: 1 },
   revealRow: { minHeight: 60, alignItems: "center", justifyContent: "center", borderWidth: 1 },
   iconRow: { flexDirection: "row", gap: space[2], alignItems: "flex-start" },
-  iconNudge: { marginTop: 3 },
+  iconNudge: { marginTop: 4 },
   buttonWrap: { gap: space[3] },
   // A1: App buttons are 44 high, 13 / 600 — one size for all three kinds.
   button: {
@@ -1108,7 +1108,7 @@ export const styles = StyleSheet.create({
   quoteText: { fontSize: 15, lineHeight: 28 },
   quoteCompact: { paddingLeft: space[3] },
   original: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: space[2], marginTop: space[2] },
-  originalTag: { borderWidth: 1, borderStyle: "dashed", paddingHorizontal: space[1], paddingVertical: 1 },
+  originalTag: { borderWidth: 1, borderStyle: "dashed", paddingHorizontal: space[1], paddingVertical: 2 },
   originalText: { fontSize: 11, lineHeight: 16, letterSpacing: 0.4 },
   skeleton: { gap: space[3], paddingVertical: space[4] },
   radio: { width: 16, height: 16, borderWidth: 1.5, borderRadius: radius.pill, alignItems: "center", justifyContent: "center" },

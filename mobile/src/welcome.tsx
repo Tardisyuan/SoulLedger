@@ -131,7 +131,7 @@ export function Welcome({ profile, scheme }: { profile: MeProfile; scheme: Color
 }
 
 const styles = StyleSheet.create({
-  top: { ...StyleSheet.absoluteFill, alignItems: "center", justifyContent: "center", gap: 16, paddingHorizontal: 28 },
+  top: { ...StyleSheet.absoluteFill, alignItems: "center", justifyContent: "center", gap: 16, paddingHorizontal: 24 },
   text: { alignSelf: "stretch" },
   center: { textAlign: "center" },
 });

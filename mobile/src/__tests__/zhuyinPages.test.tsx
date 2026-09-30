@@ -19,7 +19,7 @@ import { installMobilePlatform, persistentStore } from "../platform";
 import { defaultLifeSection, lifePathIndex, lifeSectionsOpen, signedBalance, termServed } from "../rules";
 import { LIFE_OPEN_PREFIX } from "../screens/life";
 import { SessionProvider } from "../session";
-import { themeFor } from "../theme";
+import { GUTTER_PT, space, themeFor } from "../theme";
 import { SectionError, Skeleton, ThemeContext, sectionTransitions } from "../ui";
 import { PROFILE, life, stubApi } from "./stubApi";
 
@@ -222,5 +222,38 @@ describe("a part that failed, and one still loading (补足 C15)", () => {
     wrap(<Skeleton testID="sk" lines={3} />);
     const bars = (screen.getByTestId("sk") as unknown as { children: { props: { style?: unknown } }[] }).children;
     expect(bars.map((b) => flat(b).backgroundColor)).toEqual(Array(3).fill(themeFor("CHINESE", "light").s2));
+  });
+});
+
+/**
+ * 补足 A2: every padding, margin and gap written as a number in the App is a step of the
+ * scale (2 4 8 12 16 24 32 48), 0, or the screen gutter 20. Read from the source, so a
+ * new odd value fails here, not by eye. Not covered: computed values (`gutter - 3`,
+ * `14 + space[2]` — a border or an icon to line up with, named where it is written) and
+ * negative ones (the focus ring's -4 reaches out past its own box).
+ */
+describe("spacing sits on the v2 scale (补足 A2)", () => {
+  it("no literal padding / margin / gap off the scale anywhere under src/", () => {
+    const fs = jest.requireActual<typeof import("fs")>("fs");
+    const path = jest.requireActual<typeof import("path")>("path");
+    const root = path.join(__dirname, "..");
+    const files: string[] = [];
+    const walk = (dir: string) => {
+      for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+        const full = path.join(dir, e.name);
+        if (e.isDirectory()) {
+          if (e.name !== "__tests__") walk(full);
+        } else if (/\.tsx?$/.test(e.name)) files.push(full);
+      }
+    };
+    walk(root);
+    const allowed = new Set<number>([0, ...space, GUTTER_PT]);
+    const off = files.flatMap((f) =>
+      [...fs.readFileSync(f, "utf8").matchAll(/\b((?:padding|margin)(?:Horizontal|Vertical|Top|Bottom|Left|Right)?|gap|rowGap|columnGap): (\d+(?:\.\d+)?)\b(?!\s*[-+*/])/g)]
+        .filter((m) => !allowed.has(Number(m[2])))
+        .map((m) => `${path.relative(root, f)} ${m[1]}: ${m[2]}`)
+    );
+    expect(files.length).toBeGreaterThan(20);
+    expect(off).toEqual([]);
   });
 });

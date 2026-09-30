@@ -427,11 +427,12 @@ describe("the conversation's eight states", () => {
     expect(screen.getByTestId("conversation-hall")).toBeTruthy();
     // The byline: the hall's display name, the officer's position, the officer — as the backend stamped them.
     expect(within(screen.getByTestId("officer-bubble")).getByText("第五殿 · 判官 崔珏")).toBeTruthy();
-    // 文明气质 1f: the officer's letter is paper — four corners, 4 in, mirrored; the body padded 22.
+    // 文明气质 1f: the officer's letter is paper — four corners, 4 in, mirrored; the body padded 24
+    // (1f drew 22; 补足 A2 puts it on the scale, still clear of the corners).
     const bubble = screen.getByTestId("officer-bubble");
     expect(["tl", "tr", "bl", "br"].map((k) => within(bubble).getByTestId(`letter-corner-${k}`))).toHaveLength(4);
     expect(StyleSheet.flatten(within(bubble).getByTestId("letter-corner-br").props.style)).toMatchObject({ right: 4, bottom: 4 });
-    expect(StyleSheet.flatten(bubble.props.style)).toMatchObject({ padding: 22 });
+    expect(StyleSheet.flatten(bubble.props.style)).toMatchObject({ padding: 24 });
     expect(screen.getByTestId("compose").props.placeholder).toBe("向殿司陈情……");
   });
 

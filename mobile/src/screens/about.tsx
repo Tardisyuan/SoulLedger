@@ -74,8 +74,8 @@ export function AboutScreen() {
 
 const styles = StyleSheet.create({
   intro: { paddingTop: 16 },
-  heading: { paddingTop: 22, paddingBottom: 8 },
-  row: { paddingVertical: 10, borderBottomWidth: 1, gap: 2 },
+  heading: { paddingTop: 24, paddingBottom: 8 },
+  row: { paddingVertical: 12, borderBottomWidth: 1, gap: 2 },
   links: { flexDirection: "row", flexWrap: "wrap", gap: 16, marginTop: 2 },
   link: { textDecorationLine: "underline" },
   end: { height: 32 },
