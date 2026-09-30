@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-Hans">
+<html lang="{{ lang }}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -22,7 +22,7 @@
 </tr>{% endfor %}
 </table>
 {% for note in notes %}<p style="margin:12px 0 0 0;font-size:13px;line-height:20px;color:#151312;">{{ note }}</p>{% endfor %}
-<p style="margin:20px 0 0 0;padding-top:8px;border-top:1px solid #dcd1bd;font-size:12px;line-height:18px;color:#4a4441;">这封信由系统发出，不接收回复。</p>
+<p style="margin:20px 0 0 0;padding-top:8px;border-top:1px solid #dcd1bd;font-size:12px;line-height:18px;color:#4a4441;">{{ footer }}</p>
 </td></tr>
 </table>
 </td></tr>
