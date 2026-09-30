@@ -29,9 +29,6 @@
   "app/permissions/page.tsx": {
     "space": 1
   },
-  "app/profile/page.tsx": {
-    "space": 2
-  },
   "app/realms/page.tsx": {
     "space": 2
   },
