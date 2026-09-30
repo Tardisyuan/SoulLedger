@@ -36,20 +36,36 @@ OUTPUT_PER_ROUND = 400
 
 
 def probe(conn: config.Connection) -> dict:
-    """用候选配置发一条最小请求(带一个工具,测得出「不支持工具调用」)。不走进程缓存的客户端:
-    候选的 key 不该留在缓存里。"""
+    """用候选配置发一条最小请求,并请模型调一次测试工具(设计稿 4a–4g)。不走进程缓存的客户端:
+    候选的 key 不该留在缓存里。
+
+    - 模型调了 `ping` → `tools=True`;答了但没调 → `tools=False`。
+    - 平台以「不支持工具」拒收(`tools_unsupported`)→ 不带工具再发一次;通了就是「连通 · 工具 ✕」:
+      `ok=True`、`tools=False`,可以保存(连接本身是通的)。"""
     start = time.monotonic()
-    try:
+    deadline = start + settings.ASSISTANT_TIMEOUT_SECONDS
+
+    def ask(tools):
         provider = import_string(conn.provider)(conn=conn)
-        result = provider.answer(
-            system="Connectivity check. Reply with the single word OK.", facts="FACTS: none",
-            history=[Turn("user", "ping")], tools=[ToolSpec("ping", "Connectivity check. Returns {}.")],
-            call_tool=lambda name: "{}", max_rounds=1, deadline=start + settings.ASSISTANT_TIMEOUT_SECONDS,
+        return provider.answer(
+            system=("Connectivity check. Call the ping tool once, then reply with the single word OK." if tools
+                    else "Connectivity check. Reply with the single word OK."),
+            facts="FACTS: none", history=[Turn("user", "ping")], tools=tools,
+            call_tool=lambda name: "{}", max_rounds=1, deadline=deadline,
         )
+
+    try:
+        try:
+            result = ask([ToolSpec("ping", "Connectivity check. Returns {}.")])
+            tools = bool(result.tool_calls)
+        except ProviderError as exc:
+            if exc.kind != "tools_unsupported":
+                raise
+            result, tools = ask([]), False
     except ProviderError as exc:
-        return {"ok": False, "error_kind": exc.kind, "latency_ms": _ms(start), "tokens": {}}
+        return {"ok": False, "error_kind": exc.kind, "latency_ms": _ms(start), "tokens": {}, "tools": None}
     config.remember_tested(conn)
-    return {"ok": True, "error_kind": None, "latency_ms": _ms(start), "tokens": result.usage}
+    return {"ok": True, "error_kind": None, "latency_ms": _ms(start), "tokens": result.usage, "tools": tools}
 
 
 def _ms(start):

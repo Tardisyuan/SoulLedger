@@ -15,7 +15,7 @@ from rest_framework.views import APIView
 
 from apps.core.tenant import ADMIN_ROLE
 from apps.soul_accounts.authentication import OfficerJWTAuthentication
-from apps.soul_assist import config, corpus, eval_identities, evals, service, usage, vectors
+from apps.soul_assist import config, corpus, eval_identities, evals, platforms, service, usage, vectors
 from apps.soul_assist.admin_serializers import (
     CandidateSerializer,
     ConfigSerializer,
@@ -37,6 +37,9 @@ from apps.soul_assist.admin_serializers import (
     EvalStartSerializer,
     HallSerializer,
     HallUpdateSerializer,
+    ModelListSerializer,
+    PriceReferenceRequestSerializer,
+    PriceReferenceSerializer,
     TryRequestSerializer,
     TryResultSerializer,
     UsageSerializer,
@@ -73,6 +76,7 @@ def _config_body(eff: config.Effective):
         # 地址里的 `user:pass@` 是凭证,与 key 一样只写不读;回传去敏形式时按「没改」处理(config.unredact)。
         "base_url": config.redact_url(eff.connection.base_url),
         "enabled": eff.enabled, "switch": eff.switch, "env_enabled": eff.env_enabled,
+        "platforms": platforms.table(),
         # 末 4 位只在 key 足够长时给:短 key 的末 4 位就是它的一大半。
         "api_key": {"set": bool(key), "last4": key[-4:] if len(key) >= 12 else None,
                     "set_at": eff.api_key_set_at, "source": "page" if eff.api_key_set_at else "env"},
@@ -138,6 +142,32 @@ class ConfigTestView(AdminView):
         result = evals.probe(conn)
         return Response(ConnectivityResultSerializer({
             **result, "provider": config.provider_name(conn.provider), "model": conn.model}).data)
+
+
+class ConfigModelsView(AdminView):
+    @extend_schema(operation_id="assist_admin_config_models", request=CandidateSerializer,
+                   responses={200: ModelListSerializer, 400: AssistErrorSerializer})
+    def post(self, request):
+        """「获取模型」:用候选连接列平台上的模型。key 不给就用已存的 —— 在服务器上用,不回给浏览器;
+        换了平台 / 地址而不给 key 同样 400 `api_key_required`(已存的 key 不发往新地址)。"""
+        body = CandidateSerializer(data=request.data)
+        body.is_valid(raise_exception=True)
+        try:
+            conn = config.candidate(body.validated_data, config.effective().connection)
+        except config.KeyRequiredError:
+            return _key_required()
+        return Response(ModelListSerializer(platforms.list_models(conn)).data)
+
+
+class ConfigPriceView(AdminView):
+    @extend_schema(operation_id="assist_admin_config_price", parameters=[PriceReferenceRequestSerializer],
+                   responses={200: PriceReferenceSerializer})
+    def get(self, request):
+        """参考价:LiteLLM 公开价目表,美元 / 百万 token,服务器取、缓存 24 小时。查不到 `found=false`,不拦保存。"""
+        body = PriceReferenceRequestSerializer(data=request.query_params)
+        body.is_valid(raise_exception=True)
+        data = body.validated_data
+        return Response(PriceReferenceSerializer(platforms.reference_price(data["platform"], data["model"])).data)
 
 
 def _halls():
