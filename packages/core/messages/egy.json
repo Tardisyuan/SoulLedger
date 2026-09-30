@@ -4087,7 +4087,8 @@
       "empty_share": "Nen Medu",
       "reached": "Kheper Seth",
       "not_reached": "Nen Kheper Djer",
-      "rate_fallback": "Wekha Nen Wenen"
+      "rate_fallback": "Wekha Nen Wenen",
+      "fallback_note": "Wekha Nen Wenen: Nen Ini Medu Khent, Hehy Medu Em Medu Seth Neb."
     },
     "embedding": {
       "url": "Wat",
@@ -4117,7 +4118,10 @@
       "retry_rebuild": "Wehem Iri",
       "needs_rebuild": "Khent Em Sia Tepy: Wehem Iri Khent.",
       "until_rebuilt": "Nen Wehem Iri Seth Djer: Hehy Medu Em Medu Seth Neb.",
-      "fallback_note": "Nen Ini Medu Khent: Hehy Medu Em Medu Seth Neb Djes-Ef; Wesheb Wenen."
+      "fallback_note": "Nen Ini Medu Khent: Hehy Medu Em Medu Seth Neb Djes-Ef; Wesheb Wenen.",
+      "floor": "Mi Er Tepy",
+      "floor_hint": "Sep Tepy Nen Er Mi Er Tepy: Hehy Medu Em Medu Seth Neb.",
+      "rebuild_body": "Iri Seth Neb, Er Khemen; Nen Wehem Iri: Khent Wenen. Em Wehem Iri: Hehy Medu Wesheb Wenen."
     }
   }
 }
