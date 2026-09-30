@@ -76,14 +76,13 @@ describe("PostCard delete UI", () => {
     render(<PostCard post={basePost} />);
     fireEvent.click(screen.getByText("common.delete"));
 
-    // 作者自删不进回收站,不可撤回 → NameConfirmDialog(规范 v2「输入名称以确认」)。
-    // 名称没对上之前危险按钮禁用、点了也不删;这里输入的是动作词(t 回 key)。
-    const dialog = screen.getByRole("dialog");
-    const confirm = within(dialog).getByTestId("name-confirm-action");
-    expect(confirm).toBeDisabled();
-    fireEvent.click(confirm);
-    expect(mockDeleteMutate).not.toHaveBeenCalled();
-    fireEvent.change(within(dialog).getByRole("textbox"), { target: { value: "common.delete" } });
+    // 作者自删不可撤回,但帖子没有名称 → 普通确认框(2026-09-30 用户拍板):不打字,
+    // 按钮带 ✕ 和「确认删除」,是次按钮不是实底危险按钮(dangerButtonPlacement.test.ts)。
+    const dialog = screen.getByRole("alertdialog");
+    expect(within(dialog).queryByRole("textbox")).toBeNull();
+    expect(within(dialog).queryByTestId("name-confirm-action")).toBeNull();
+    const confirm = within(dialog).getByRole("button", { name: "common.confirm_delete" });
+    expect(confirm).toHaveTextContent("✕common.confirm_delete");
     expect(confirm).toBeEnabled();
     fireEvent.click(confirm);
 

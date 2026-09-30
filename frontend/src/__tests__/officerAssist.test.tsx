@@ -324,6 +324,8 @@ describe("the screen hint", () => {
     await waitFor(() => expect(post).toHaveBeenCalled());
     expect(post.mock.calls[0][0]).toBe("/assist/");
     expect((post.mock.calls[0][1] as { screen: string }).screen).toBe("sentence-requests");
+    // 关于 / 致谢页曾被归到 other(后端测试里的具名例外 NO_SCREEN);2026-09-30 起有自己的页面 id。
+    expect(officerAssistScreen("/about")).toBe("about");
     expect(officerAssistScreen("/")).toBe("other");
     expect(officerAssistScreen("/no-such-page/1")).toBe("other");
   });

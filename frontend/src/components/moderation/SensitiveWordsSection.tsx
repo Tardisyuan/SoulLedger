@@ -23,7 +23,7 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { Button } from "@/src/components/ui/Button";
 import { Badge } from "@/src/components/ui/Badge";
-import { Modal } from "@/src/components/ui/Modal";
+import { ConfirmDialog, Modal } from "@/src/components/ui/Modal";
 import { NameConfirmDialog } from "@/src/components/admin/NameConfirmDialog";
 import { Drawer } from "@/src/components/ui/Drawer";
 import { fieldControl } from "@/src/components/ui/Field";
@@ -435,18 +435,30 @@ export function SensitiveWordsSection() {
         )}
       </Drawer>
 
-      {/* 敏感词是硬删(SensitiveWord 无软删、不进回收站),不可撤回 → 输入名称以确认:
-          只删一个就输那个词,删多个输动作词。 */}
-      <NameConfirmDialog
-        isOpen={confirming}
-        title={t("social_moderation.words.confirm_title", { n: String(selected.size) })}
-        message={t("social_moderation.confirm_remove_word_body")}
-        name={singleWord ?? t("social_moderation.words.delete_selected")}
-        actionLabel={t("social_moderation.words.delete_selected")}
-        isPending={remove.isPending}
-        onConfirm={removeSelected}
-        onCancel={() => setConfirming(false)}
-      />
+      {/* 敏感词是硬删(SensitiveWord 无软删、不进回收站),不可撤回。只删一个 → 输入那个词以确认;
+          删多个时没有一个名称可输 → 普通确认框(2026-09-30 用户拍板,不再让人打动作词)。 */}
+      {singleWord !== undefined ? (
+        <NameConfirmDialog
+          isOpen={confirming}
+          title={t("social_moderation.words.confirm_title", { n: "1" })}
+          message={t("social_moderation.confirm_remove_word_body")}
+          name={singleWord}
+          actionLabel={t("social_moderation.words.delete_selected")}
+          isPending={remove.isPending}
+          onConfirm={removeSelected}
+          onCancel={() => setConfirming(false)}
+        />
+      ) : (
+        <ConfirmDialog
+          isOpen={confirming}
+          title={t("social_moderation.words.confirm_title", { n: String(selected.size) })}
+          message={t("social_moderation.confirm_remove_word_body")}
+          confirmText={<><span aria-hidden="true">✕</span>{t("common.confirm_delete")}</>}
+          confirmLoading={remove.isPending}
+          onConfirm={removeSelected}
+          onCancel={() => setConfirming(false)}
+        />
+      )}
     </div>
   );
 }
