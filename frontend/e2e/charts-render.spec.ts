@@ -81,9 +81,9 @@ const STATS_WITH_MARKS = {
 
 /** 地域分布 is the one recharts chart left on the page; one realm is zero on purpose. */
 const REALMS = [
-  { realm_code: "DIYU_5", realm_name: "第五殿", civilization: "CHINESE", count: 40 },
-  { realm_code: "INF_9", realm_name: "Ninth Circle", civilization: "EUROPEAN", count: 24 },
-  { realm_code: "DUAT_1", realm_name: "First Hour", civilization: "EGYPTIAN", count: 0 },
+  { realm_code: "DIYU_5", realm_name: "第五殿", civilization: "CHINESE", realm_type: "PURGATORY", count: 40 },
+  { realm_code: "INF_9", realm_name: "Ninth Circle", civilization: "EUROPEAN", realm_type: "HELL", count: 24 },
+  { realm_code: "DUAT_1", realm_name: "First Hour", civilization: "EGYPTIAN", realm_type: "NEUTRAL", count: 0 },
 ];
 const NON_ZERO_STATES = STATS_WITH_MARKS.state_distribution.filter(
   (s) => s.count > 0
@@ -107,6 +107,10 @@ test.describe("dashboard 的图表", () => {
      * 第二段红 = 挂上了却没画东西。 */
     await expect(page.locator(".recharts-bar")).not.toHaveCount(0);
     await expect(page.locator(".recharts-bar-rectangle path")).toHaveCount(REALMS_WITH_SOULS);
+    // A5 去向图案:地狱那根是斜线(fill 指向 <pattern>),炼狱那根是实底。
+    const fills = await page.locator(".recharts-bar-rectangle path").evaluateAll((ps) => ps.map((p) => p.getAttribute("fill") ?? ""));
+    expect(fills.filter((f) => f.startsWith("url(#hatch-"))).toHaveLength(1);
+    expect(fills.filter((f) => !f.startsWith("url(") && f !== "none")).toHaveLength(1);
   });
 
   test("没有饼图;图例账里零值是一行,不是一块色", async ({ page }) => {
