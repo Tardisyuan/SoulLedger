@@ -230,6 +230,39 @@ def test_an_embedding_failure_falls_back(ollama, kind):
     assert vectors.retrieve("申诉", "zh-Hans", "soul", "CHINESE") == vectors.Retrieval("fallback")
 
 
+def test_every_embed_asks_ollama_to_keep_the_model_loaded(ollama):
+    vectors.sync()
+    vectors.retrieve("申诉", "zh-Hans", "soul", "CHINESE")
+    assert ollama.calls and all(c["payload"]["keep_alive"] == vectors.KEEP_ALIVE for c in ollama.calls)
+
+
+def test_a_timeout_starts_one_background_warm_up_with_the_long_timeout(ollama, monkeypatch):
+    """A cold load outlasts the 3 s budget and a given-up request aborts it; without a warm-up every
+    later question times out too (2026-09-30: 24 of 24)."""
+    started = []
+    monkeypatch.setattr(vectors.threading, "Thread", lambda target, **kw: started.append(target) or type(
+        "T", (), {"start": lambda self: None})())
+    vectors.sync()
+    ollama.fail = "timeout"
+    assert vectors.retrieve("申诉", "zh-Hans", "soul", "CHINESE") == vectors.Retrieval("fallback")
+    assert vectors.retrieve("申诉", "zh-Hans", "soul", "CHINESE") == vectors.Retrieval("fallback")
+    assert len(started) == 1, "a second timeout while one warm-up is pending starts no other"
+    ollama.fail = None
+    ollama.texts["warm up"] = "rebirth-appeal"  # any vector will do
+    started[0]()
+    assert ollama.calls[-1]["timeout"] == vectors.SYNC_TIMEOUT_SECONDS
+    assert ollama.calls[-1]["payload"]["input"] == ["warm up"]
+
+
+def test_other_failures_start_no_warm_up(ollama, monkeypatch):
+    started = []
+    monkeypatch.setattr(vectors.threading, "Thread", lambda target, **kw: started.append(target))
+    vectors.sync()
+    ollama.fail = "connection"
+    vectors.retrieve("申诉", "zh-Hans", "soul", "CHINESE")
+    assert started == []
+
+
 def test_the_question_is_embedded_with_the_short_timeout(ollama, settings):
     vectors.sync()
     settings.ASSISTANT_EMBEDDING_TIMEOUT_SECONDS = 3

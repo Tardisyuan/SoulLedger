@@ -8,6 +8,7 @@
 """
 import hashlib
 import logging
+import threading
 from dataclasses import dataclass
 
 import numpy as np
@@ -37,6 +38,11 @@ INDEX_PREFIX = "helpchunk_hnsw_"
 TABLE = "soul_assist_helpchunk"
 REBUILD_LOCK = "soul_assist:vectors_rebuild"
 ERROR_KINDS = ("timeout", "connection", "model_not_found", "dims_mismatch", "bad_response", "other")
+#: Ollama unloads an idle model after 5 minutes; keep it while questions keep coming (then it goes).
+KEEP_ALIVE = "30m"
+#: One background warm-up at a time. A cold load takes ~5 s (measured 2026-09-30) and a request that
+#: gives up at 3 s makes Ollama abort the load, so without this every question timed out (24 of 24).
+WARM_KEY = "soul_assist:vectors_warming"
 
 
 class EmbeddingError(Exception):
@@ -69,7 +75,7 @@ def _post(url, payload, timeout):
 
 def embed(texts, emb: config.Embedding, timeout) -> list:
     """Ollama `/api/embed`。要了截断维度而返回的不是它,或一批里维度不一 → `dims_mismatch`。"""
-    payload = {"model": emb.model, "input": list(texts)}
+    payload = {"model": emb.model, "input": list(texts), "keep_alive": KEEP_ALIVE}
     if emb.dims:
         payload["dimensions"] = emb.dims
     data = _post(emb.url.rstrip("/") + "/api/embed", payload, timeout)
@@ -250,6 +256,8 @@ def retrieve(question, locale, audience, civilization=None, *, release=lambda: N
         query = embed([QUERY_INSTRUCTION + question], emb, settings.ASSISTANT_EMBEDDING_TIMEOUT_SECONDS)[0]
     except EmbeddingError as exc:
         logger.warning("assistant retrieval fell back: embedding %s", exc.kind)
+        if exc.kind == "timeout":
+            warm_up(emb)
         return Retrieval("fallback")
     ranked = nearest(rows.filter(dims=len(query)), query, eff.retrieval_k)
     if not ranked:  # 库里的向量是别的维度(换了截断维度还没重建)
@@ -257,6 +265,23 @@ def retrieve(question, locale, audience, civilization=None, *, release=lambda: N
     if ranked[0][0] < eff.retrieval_min_similarity:
         return Retrieval("fallback_low_similarity", top_similarity=ranked[0][0])
     return Retrieval("vector", tuple(entry_id for _, entry_id in ranked), ranked[0][0])
+
+
+def warm_up(emb):
+    """Load the model in the background with the rebuild's long timeout, so the next question finds it
+    warm. The question that timed out has already fallen back; this one is not waited for."""
+    if not cache.add(WARM_KEY, 1, SYNC_TIMEOUT_SECONDS):
+        return
+
+    def run():
+        try:
+            embed(["warm up"], emb, SYNC_TIMEOUT_SECONDS)
+        except EmbeddingError as exc:
+            logger.warning("assistant embedding warm-up failed: %s", exc.kind)
+        finally:
+            cache.delete(WARM_KEY)
+
+    threading.Thread(target=run, name="assist-embed-warm-up", daemon=True).start()
 
 
 def nearest(rows, query, k) -> list:

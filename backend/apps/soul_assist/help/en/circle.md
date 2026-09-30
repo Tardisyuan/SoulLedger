@@ -8,6 +8,7 @@ questions:
   - "who can see my post"
   - "why is my post pending"
   - "how do I report"
+  - "what is the eternal light"
 ---
 The circle only covers the civilization you are in now. When posting, choose who can see it: public, this civilization, followers only, or only me.
 Posts containing words that need a human check are reviewed first; until approved only you can see them, afterwards they show to the audience you chose, without a separate notice.
