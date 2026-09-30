@@ -14,6 +14,7 @@ from apps.perm.models import (
     Role,
     RolePermission,
 )
+from tests.perm_support import seeded_grants
 
 User = get_user_model()
 
@@ -117,27 +118,11 @@ class PermissionAPITest(TestCase):
         self.client = APIClient()
         self.admin = User.objects.create_user(username="admin", password="admin123", role="ADMIN")
         self.viewer = User.objects.create_user(username="viewer", password="viewer123", role="VIEWER")
-        for codename, name, category in DEFAULT_PERMISSIONS:
-            Permission.objects.get_or_create(codename=codename, defaults={"name": name, "category": category})
-
-        # Seeding Permission rows without the matching RolePermission rows
-        # recreates precisely the state 0017 exists to remove: a codename that
-        # is "seeded but ungranted", which the DB-authoritative checker reads as
-        # a denial. It also makes _get_role_permissions_from_db answer from the
-        # DB (any grant at all disables its dict fallback), so a half-seeded
-        # fixture would have every role report a truncated permission list.
-        # Grant what ROLE_PERMISSIONS promises so the fixture is a coherent
-        # deployment rather than half of one.
-        roles = {r.name: r for r in Role.objects.filter(name__in=list(ROLE_PERMISSIONS))}
-        perms = {p.codename: p for p in Permission.objects.all()}
-        for role_name, codenames in ROLE_PERMISSIONS.items():
-            role = roles.get(role_name)
-            if role is None:
-                continue
-            for codename in codenames:
-                perm = perms.get(codename)
-                if perm is not None:
-                    RolePermission.objects.get_or_create(role=role, permission=perm)
+        # Every catalogue Permission with the grants ROLE_PERMISSIONS promises, and the
+        # roles: a coherent deployment, not the half of one that a test running after a
+        # transactional test would find (roles and grants truncated). The rows-without-grants
+        # state is what 0017 exists to remove and makes every role report a truncated list.
+        seeded_grants()
 
     # -- list_permissions --
     #
