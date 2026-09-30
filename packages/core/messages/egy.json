@@ -3185,7 +3185,6 @@
       "send": "Hehy",
       "sent": "Hab Seth",
       "waiting": "Em Hehy Medu Hena Medjat-Ek",
-      "waiting_long": "Em Hehy Djer. Nen Menmen.",
       "wait_lock": "Wah Medu Pen",
       "answered": "Medu Seth",
       "unanswered_mark": "Nen Medu",
@@ -3216,7 +3215,14 @@
       "intro_keep_body": "Er Khet: Fekh Djes-Ef. Fekh-Ek Em Medew Tepy.",
       "intro_ro_title": "Maa Wa",
       "intro_ro_body": "Nen Hab Dbh, Nehet, Shemes Er Medu. Nen Sab.",
-      "intro_ok": "Rekh"
+      "intro_ok": "Rekh",
+      "still_searching": "Wah · Em Hehy",
+      "stop": "Khetem",
+      "stop_aria": "Khetem Medu",
+      "stopped": "Khetem-Ek",
+      "interrupted": "Medu Nen Neb",
+      "answering_aria": "Em Medu",
+      "jump_latest": "↓ Renpi"
     }
   },
   "soul_push": {
@@ -3835,8 +3841,6 @@
     "input_hint": "{{enter}}: Hehy · {{shift_enter}}: Wat Renpi · {{esc}}: Khetem",
     "sent": "Hab Seth",
     "waiting": "Em Hehy Medu Hena Sepu Wedja-Ek",
-    "waiting_long": "Em Hehy Djer. Nen Menmen.",
-    "cancel": "Sehen",
     "wait_lock": "Wah Medu Pen",
     "answered": "Medu Seth",
     "unanswered_mark": "Nen Medu",
@@ -3861,7 +3865,15 @@
     "delete_title": "Fekh Medew Pen?",
     "delete_body": "Medew Pen Em {{page}}: Fekh Emu; Nen Ankh Wehem. Nen Khemen Wedja, Wat Hesy Er Sesh Neb.",
     "delete_confirm": "Fekh",
-    "delete_failed": "Nen Fekh. Wehem Iri."
+    "delete_failed": "Nen Fekh. Wehem Iri.",
+    "still_searching": "Wah · Em Hehy",
+    "stop": "Khetem",
+    "stop_aria": "Khetem Medu",
+    "stopped": "Khetem-Ek",
+    "interrupted": "Medu Nen Neb",
+    "answering_aria": "Em Medu",
+    "jump_latest": "↓ Renpi",
+    "stop_hint": "Esc · Khetem"
   },
   "assist_admin": {
     "title": "Smen Hehy Medu",
@@ -3876,7 +3888,6 @@
       "provider": "Per Sia",
       "limits": "Hesb Neb",
       "read_only": "Maa Wa",
-      "connectivity": "Sip Ini Medu",
       "identities": "Ren Sip",
       "eval": "Sip",
       "try": "Hehy Sip",
@@ -3919,8 +3930,6 @@
       "price": "Hesb · {{model}}",
       "price_input": "Hesb · Shesep",
       "price_output": "Hesb · Hab",
-      "price_hint": "Sesh-Ek: Nen Hesb Tepy Em Aat Pen. Hesb Neb Em Pen.",
-      "unpriced": "Nen Hesb Em Sia Pen: Nen Hesb Abed.",
       "platform": "Per Sia",
       "platforms": {
         "deepseek": "DeepSeek",
@@ -3959,7 +3968,17 @@
       "test_probe": "Em Maa Senb · Hab Medu Nedjes, Hena Iri Aha Sep 1.",
       "test_ok_tool_yes": "Senb Seth · Iri Aha ✓",
       "test_ok_tool_no": "Senb Seth · Iri Aha ✕",
-      "test_no_tool": "Sia Pen Nen Iri Aha: Medu Neb Wa, Nen Hehy Sesh Ba. Sau Wenen; Setep Sia Ky Nefer."
+      "test_no_tool": "Sia Pen Nen Iri Aha: Medu Neb Wa, Nen Hehy Sesh Ba. Sau Wenen; Setep Sia Ky Nefer.",
+      "primary": "Per Sia Heri-Tep",
+      "backup": "Per Sia Idenu (Nen Sesen)",
+      "backup_none": "Nen Per Sia Idenu Djer",
+      "backup_explain": "Heri-Tep Nen Senb, Wah Menmen, Dbh Menmen, Nen Sepy, Ky Sethet: Khemen Djes-Ef Er Idenu, Weshed Sep 1.",
+      "backup_add": "Redi Idenu",
+      "backup_remove": "Fekh Idenu",
+      "backup_same_platform": "Per Sia Wa Mi Heri-Tep. Em Sethet, Sen Nen Weshed. Sau Wenen.",
+      "price_period_hint": "Hesb Ky Em Unut Ky: Sesh Hesb En Unut Menmen.",
+      "in_effect": "Heri-Tep · {{model}}",
+      "in_effect_backup": "Idenu {{model}}"
     },
     "key": {
       "title": "Menf",
@@ -3998,10 +4017,8 @@
       "retention_days_why": "Medu Seth Er Ba: Khemen Hena Medu."
     },
     "test": {
-      "hint": "Hehy 1 Em Smen Pen. Nen Hesb.",
       "run": "Sip Ini Medu",
       "again": "Wehem Sip",
-      "ok": "Kheper · Sau",
       "failed": "Nen Ini Medu · Nen Sau",
       "detail": "{{provider}} · {{model}} · Ahet {{latency}} · Shesep {{input}} · Hab {{output}} · {{at}}",
       "stale": "Khemen Seth: Wehem Sip.",
@@ -4089,7 +4106,14 @@
       "tools": "Kat · {{count}}",
       "no_tools": "Nen Kat",
       "uses_draft": "Smen Nen Sau",
-      "not_counted": "Nen Hesb Em Abed."
+      "not_counted": "Nen Hesb Em Abed.",
+      "first_text": "Medu Tepy {{t}} s",
+      "stopped_at": "Khetem-Ek {{t}} s",
+      "interrupted_at": "Medu Nen Neb {{t}} s",
+      "role_primary": "Heri-Tep",
+      "role_backup": "Idenu",
+      "switched": "Heri-Tep: Nen Medu {{t}} s. Khemen Er Idenu Seth.",
+      "no_switch": "Medu Iyi Seth: Nen Khemen Er Idenu."
     },
     "corpus": {
       "summary": "Sep {{count}} · Hesb {{tokens}}",
@@ -4128,7 +4152,10 @@
       "assistant_unavailable": "Hehy Medu Nen Wenen. Wehem Iri.",
       "assistant_busy": "Em Iri Neb. Wehem Er Khet.",
       "try_failed": "Nen Hehy. Wehem Iri.",
-      "untested_embedding": "Khemen Wat, Sia Er Aa: Sip Er Tepy, Er Sau."
+      "untested_embedding": "Khemen Wat, Sia Er Aa: Sip Er Tepy, Er Sau.",
+      "backup_untested": "Idenu Nen Senb Seth Djer. Sau Er Khet Sen Senb Seth.",
+      "backup_failed": "Idenu Nen Senb Seth. Renpi Ky Fekh Idenu, Er Sau.",
+      "unpriced_backup_model": "Hesb Neb Em Abed: Sesh Hesb Em Sia."
     },
     "usage": {
       "month": "Abed",
@@ -4163,7 +4190,19 @@
       "reached": "Kheper Seth",
       "not_reached": "Nen Kheper Djer",
       "rate_fallback": "Wekha Nen Wenen",
-      "fallback_note": "Wekha Nen Wenen: Nen Ini Medu Khent, Hehy Medu Em Medu Seth Neb."
+      "fallback_note": "Wekha Nen Wenen: Nen Ini Medu Khent, Hehy Medu Em Medu Seth Neb.",
+      "fallback": "Khemen Er Idenu",
+      "fallback_value": "Sep {{n}} · {{pct}}",
+      "reason": {
+        "connection": "Nen Senb Seth {{n}}",
+        "timeout": "Wah Menmen {{n}}",
+        "rate_limited": "Dbh Menmen {{n}}",
+        "server_error": "Sethet {{n}}",
+        "quota": "Nen Sepy {{n}}",
+        "circuit_open": "Heri-Tep Nen Senb {{n}}"
+      },
+      "legend_primary": "Heri-Tep",
+      "legend_backup": "Idenu"
     },
     "embedding": {
       "url": "Wat",

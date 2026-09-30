@@ -3185,7 +3185,6 @@
       "send": "问",
       "sent": "已发送",
       "waiting": "正在查帮助文档与你的簿册",
-      "waiting_long": "还在查，通常不超过 20 秒",
       "wait_lock": "等这一条答完再问",
       "answered": "已回答",
       "unanswered_mark": "未答",
@@ -3216,7 +3215,14 @@
       "intro_keep_body": "期满自动删除。你也可以在「历史」里随时删掉。",
       "intro_ro_title": "它只看不做",
       "intro_ro_body": "不会替你提交申请、申诉、写信或发帖。它也不是官员。",
-      "intro_ok": "我知道了"
+      "intro_ok": "我知道了",
+      "still_searching": "还在查……",
+      "stop": "停止",
+      "stop_aria": "停止回答",
+      "stopped": "已停止",
+      "interrupted": "回答中断",
+      "answering_aria": "正在回答",
+      "jump_latest": "↓ 最新"
     }
   },
   "soul_push": {
@@ -3835,8 +3841,6 @@
     "input_hint": "{{enter}} 发送 · {{shift_enter}} 换行 · {{esc}} 关闭",
     "sent": "已发送",
     "waiting": "正在查说明与你的队列",
-    "waiting_long": "还在查，通常不超过 20 秒",
-    "cancel": "取消",
     "wait_lock": "等这一条答完再问",
     "answered": "已回答",
     "unanswered_mark": "未答",
@@ -3861,7 +3865,15 @@
     "delete_title": "删除这段会话？",
     "delete_body": "从「{{page}}」开始的这段会话会立即删除，不能恢复。不影响任何审判、流程或记录。",
     "delete_confirm": "删除",
-    "delete_failed": "删除失败，请重试。"
+    "delete_failed": "删除失败，请重试。",
+    "still_searching": "还在查……",
+    "stop": "停止",
+    "stop_aria": "停止回答",
+    "stopped": "已停止",
+    "interrupted": "回答中断",
+    "answering_aria": "正在回答",
+    "jump_latest": "↓ 最新",
+    "stop_hint": "Esc 停止"
   },
   "assist_admin": {
     "title": "助手管理",
@@ -3876,7 +3888,6 @@
       "provider": "供应商",
       "limits": "限额",
       "read_only": "只读项",
-      "connectivity": "连通测试",
       "identities": "评测身份",
       "eval": "评测",
       "try": "试问",
@@ -3919,8 +3930,6 @@
       "price": "单价 · {{model}}",
       "price_input": "每百万 token · 输入",
       "price_output": "每百万 token · 输出",
-      "price_hint": "由你按合同价填写；页面不内置任何厂商价格。花费、上限、评测报价都按这里算。",
-      "unpriced": "这个模型还没有单价：花费算不出来，月度上限也不会触发。",
       "platform": "平台",
       "platforms": {
         "deepseek": "DeepSeek",
@@ -3959,7 +3968,17 @@
       "test_probe": "正在测试 · 发一条短消息，并试一次工具调用。",
       "test_ok_tool_yes": "连通 · 工具 ✓",
       "test_ok_tool_no": "连通 · 工具 ✕",
-      "test_no_tool": "这个模型不支持工具调用：助手只能答通用问题，查不了个人数据。可以保存，但建议换模型。"
+      "test_no_tool": "这个模型不支持工具调用：助手只能答通用问题，查不了个人数据。可以保存，但建议换模型。",
+      "primary": "主供应商",
+      "backup": "备用供应商（可选）",
+      "backup_none": "未设置备用供应商",
+      "backup_explain": "主供应商连不上、超时、限流、欠费或服务端出错时，自动改用备用再答一次。",
+      "backup_add": "添加备用",
+      "backup_remove": "移除备用",
+      "backup_same_platform": "和主供应商同一平台。这家平台故障时，主、备会一起不可用。不影响保存。",
+      "price_period_hint": "分时段计价的平台，请按常用时段填写。",
+      "in_effect": "当前生效 · {{model}}",
+      "in_effect_backup": "备 {{model}}"
     },
     "key": {
       "title": "API key",
@@ -3998,10 +4017,8 @@
       "retention_days_why": "已对灵魂公示（首次说明、帮助条目），改它要连公示一起改。"
     },
     "test": {
-      "hint": "用当前未保存的配置发 1 条请求，不计入用户用量。",
       "run": "测试连接",
       "again": "再测一次",
-      "ok": "连通 · 可以保存",
       "failed": "未连通 · 不能保存",
       "detail": "{{provider}} · {{model}} · 延迟 {{latency}} · token 输入 {{input}} · 输出 {{output}} · 测于 {{at}}",
       "stale": "之后又改了连接配置，此结果作废：请再测一次。",
@@ -4089,7 +4106,14 @@
       "tools": "工具调用 · {{count}}",
       "no_tools": "没有调用工具",
       "uses_draft": "用未保存的连接草稿提问。",
-      "not_counted": "真实请求，会花钱；不计入本月用量与月度上限。"
+      "not_counted": "真实请求，会花钱；不计入本月用量与月度上限。",
+      "first_text": "首字 {{t}} s",
+      "stopped_at": "停止于 {{t}} s",
+      "interrupted_at": "中断于 {{t}} s",
+      "role_primary": "主供应商",
+      "role_backup": "备用",
+      "switched": "主供应商 {{t}} s 无首字，已改用备用",
+      "no_switch": "已出字，不换备用"
     },
     "corpus": {
       "summary": "{{count}} 条 · 共 {{tokens}} token",
@@ -4128,7 +4152,10 @@
       "assistant_unavailable": "助手一时答不上来，请稍后重试。",
       "assistant_busy": "助手正忙，请稍后再问。",
       "try_failed": "试问没有发出去，请重试。",
-      "untested_embedding": "地址、模型或维度改过，测通后才能保存。"
+      "untested_embedding": "地址、模型或维度改过，测通后才能保存。",
+      "backup_untested": "备用还没测通。主、备都测通后才能保存。",
+      "backup_failed": "备用测试未通过。修好或移除备用后才能保存。",
+      "unpriced_backup_model": "设了月度上限，备用的模型也要填单价。"
     },
     "usage": {
       "month": "月份",
@@ -4163,7 +4190,19 @@
       "reached": "已到阈值",
       "not_reached": "未到阈值",
       "rate_fallback": "检索降级",
-      "fallback_note": "检索降级：向量服务不可用、退回用全部帮助条目回答的提问。"
+      "fallback_note": "检索降级：向量服务不可用、退回用全部帮助条目回答的提问。",
+      "fallback": "改用备用",
+      "fallback_value": "{{n}} 次 · {{pct}}",
+      "reason": {
+        "connection": "连不上 {{n}}",
+        "timeout": "超时 {{n}}",
+        "rate_limited": "429 限流 {{n}}",
+        "server_error": "5xx 出错 {{n}}",
+        "quota": "余额不足 {{n}}",
+        "circuit_open": "断路器 {{n}}"
+      },
+      "legend_primary": "主供应商",
+      "legend_backup": "备用"
     },
     "embedding": {
       "url": "地址",

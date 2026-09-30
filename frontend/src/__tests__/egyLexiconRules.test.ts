@@ -269,6 +269,12 @@ const TECHNICAL: Record<string, string[]> = {
   // 助手管理「供应商」区块(画布 provider-platforms,2026-09-30):价目表来源名、平台名里的缩写。
   "assist_admin.provider.price_ref": ["LiteLLM"],
   "assist_admin.provider.platforms.glm": ["GLM"],
+  // 流式输出(2026-10-01):键名 Esc;管理页试问那一行技术信息的秒数单位。
+  "officer_assist.stop_hint": ["Esc"],
+  "assist_admin.try.first_text": ["s"],
+  "assist_admin.try.stopped_at": ["s"],
+  "assist_admin.try.interrupted_at": ["s"],
+  "assist_admin.try.switched": ["s"],
 };
 
 /** 空白切出的记号去掉两端标点(括号、引号、逗号、句点……),留下可与 TECHNICAL 比对的原形。 */
@@ -480,6 +486,9 @@ const ROOTS_TWELVE = [
   // (「你的」,同 Wa-Ek 的构词)。待 Design 在词表里正式确认。
   "Djes-Ek", //       你自己(手填模型名 / 手动填写)
   "Setep-Ek", //      你所选的(模型)
+  // 流式输出与备用供应商那一批(2026-10-01,画布「问一问 · 流式输出」与「助手管理 · 供应商」第二轮):
+  // Design 给的唯一新词根。主 / 备成对:主用 Heri-Tep(首领,第十节已登),备用 Idenu(本义「副手、代理人」)。
+  "Idenu", //         备用(供应商)
 ];
 /**
  * 第十节「专名照用」。只作专名,不是词根:四文明名每个只留一个写法(Sherer / Kemet / Haunebut / Europa),
