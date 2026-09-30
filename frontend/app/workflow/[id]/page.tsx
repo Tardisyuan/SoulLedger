@@ -28,7 +28,7 @@ import { EmptyState } from "@/src/components/ui/EmptyState";
 import { WorkflowInfoCard } from "@/src/components/workflow/detail/WorkflowInfoCard";
 import { WorkflowNodeHistory } from "@/src/components/workflow/detail/WorkflowNodeHistory";
 import { WorkflowLinearPreview } from "@/src/components/workflow/detail/WorkflowLinearPreview";
-import { LedgerHeading } from "@/src/components/souls/detail/SoulLedgerSections";
+import { SectionTitle } from "@/src/components/plaque/SectionTitle";
 
 const STATUS_COLORS: Record<string, string> = {
   PENDING: "text-[oklch(var(--color-status-warning))] border-[oklch(var(--color-status-warning))]",
@@ -221,7 +221,7 @@ export default function WorkflowDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center gap-3 py-10 text-sm text-[oklch(var(--color-ink-muted))]">
+      <div className="flex items-center justify-center gap-3 py-8 text-sm text-[oklch(var(--color-ink-muted))]">
         <Spinner label={t("workflow.detail.loading")} />
         {t("workflow.detail.loading")}
       </div>
@@ -234,7 +234,7 @@ export default function WorkflowDetailPage() {
   // made on evidence that says nothing about it.
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center gap-4 py-10">
+      <div className="flex flex-col items-center justify-center gap-4 py-8">
         <QueryError onRetry={() => refetch()} />
         <Link href="/workflow" className="text-sm text-[oklch(var(--color-accent-ink))] hover:underline">
           {t("workflow.detail.back_to_list")}
@@ -245,7 +245,7 @@ export default function WorkflowDetailPage() {
 
   if (!workflow) {
     return (
-      <div className="flex flex-col items-center justify-center gap-4 py-10">
+      <div className="flex flex-col items-center justify-center gap-4 py-8">
         <div className="text-sm text-[oklch(var(--color-status-error))]">{t("workflow.detail.not_found")}</div>
         <Link href="/workflow" className="text-sm text-[oklch(var(--color-accent-ink))] hover:underline">
           {t("workflow.detail.back_to_list")}
@@ -306,7 +306,7 @@ export default function WorkflowDetailPage() {
     >
       {/* 规范 v1 详情页原型:两栏账页(393 px 折单栏)。左栏是整条审批流的事 ——
           信息、当前节点的决定、结案;右栏是节点账与历史。卡片撤掉,只剩区块标与行线。 */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.3fr] gap-x-10 gap-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.3fr] gap-x-8 gap-y-6">
         <div className="min-w-0 space-y-6">
         <div>
           <WorkflowInfoCard workflow={workflow} statusLabel={statusLabel} />
@@ -321,7 +321,7 @@ export default function WorkflowDetailPage() {
         {/* Current Node Action Card */}
         {currentNode && workflow.status !== "COMPLETED" && (
           <section>
-            <LedgerHeading mark="乙" title={t("workflow.detail.current_node")} />
+            <div className="pt-8 pb-3"><SectionTitle>{t("workflow.detail.current_node")}</SectionTitle></div>
             <div className="mb-4 py-2 border-b border-[oklch(var(--color-rule))] border-l-[3px] border-l-[oklch(var(--color-ink))] pl-3">
               <div className="text-sm font-medium text-[oklch(var(--color-ink))]">{currentNode.node_name}</div>
               <div className="text-xs text-[oklch(var(--color-ink-muted))] mt-1">

@@ -19,7 +19,7 @@ import { EmptyState } from "@/src/components/ui/EmptyState";
 import { QueryError } from "@/src/components/ui/PageError";
 import { BaseModal } from "@/src/components/ui/Modal";
 import { badgeVariants } from "@/src/components/ui/Badge";
-import { LedgerHeading } from "@/src/components/souls/detail/SoulLedgerSections";
+import { SectionTitle } from "@/src/components/plaque/SectionTitle";
 
 const STATUS_COLORS: Record<string, string> = {
   PROPOSED: "text-[oklch(var(--color-status-warning))] border-[oklch(var(--color-status-warning))]",
@@ -75,8 +75,8 @@ function statusBadgeClass(status: string): string {
 }
 
 /** 账行:dt / dd 一对,行线分隔(与灵魂详情「甲 · 身份」同一份写法)。 */
-const DT = "py-1.5 border-b border-[oklch(var(--color-rule))] text-[oklch(var(--color-ink-subtle))]";
-const DD = "py-1.5 border-b border-[oklch(var(--color-rule))] text-[oklch(var(--color-ink))] min-w-0";
+const DT = "py-2 border-b border-[oklch(var(--color-rule))] text-[oklch(var(--color-ink-subtle))]";
+const DD = "py-2 border-b border-[oklch(var(--color-rule))] text-[oklch(var(--color-ink))] min-w-0";
 const DD_TIME = `${DD} font-mono text-xs tabular-nums`;
 
 export default function DispatchDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -259,9 +259,9 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
     >
       {/* 规范 v1 详情页原型:两栏账页,393 px 折单栏。卡片撤掉,区块之间只有区块标
           压着的那条线;时间一律等宽。 */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.3fr] gap-x-10">
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.3fr] gap-x-8">
         <section className="min-w-0">
-          <LedgerHeading mark="甲" title={t("dispatch.detail_title")} />
+          <div className="pt-8 pb-3"><SectionTitle>{t("dispatch.detail_title")}</SectionTitle></div>
           <dl className="grid grid-cols-[7rem_1fr] text-sm">
             <dt className={DT}>{t("dispatch.soul")}</dt>
             <dd className={`${DD} font-medium`}>{dispatch.soul_name || dispatch.soul}</dd>
@@ -296,7 +296,7 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
         </section>
 
         <div className="min-w-0">
-          <LedgerHeading mark="乙" title={t("dispatch.flow.title")} />
+          <div className="pt-8 pb-3"><SectionTitle>{t("dispatch.flow.title")}</SectionTitle></div>
           <dl className="grid grid-cols-[7rem_1fr] text-sm">
             <dt className={DT}>{t("dispatch.proposed_at")}</dt>
             <dd className={DD_TIME}>{formatDateTime(dispatch.proposed_at)}</dd>
@@ -322,7 +322,7 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
 
           {dispatch.reason && (
             <>
-              <LedgerHeading mark="丙" title={t("dispatch.reason")} />
+              <div className="pt-8 pb-3"><SectionTitle>{t("dispatch.reason")}</SectionTitle></div>
               <p className="py-2 max-w-[72ch] text-sm text-[oklch(var(--color-ink))] text-pretty border-b border-[oklch(var(--color-rule))]">
                 {dispatch.reason}
               </p>
@@ -332,12 +332,12 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
           {/* 操作:仍是三道权限门各管一个按钮,状态决定出现哪一组。 */}
           {(isProposed || isApproved || isResiding) && (
             <section>
-              <LedgerHeading title={t("dispatch.actions")} />
+              <div className="pt-8 pb-3"><SectionTitle>{t("dispatch.actions")}</SectionTitle></div>
               <div className="flex flex-wrap justify-end gap-2 pt-3">
                 {isProposed && (
                   <>
                     <RequirePermission permissions="dispatch.reject">
-                      <Button type="button" variant="danger" onClick={() => setShowRejectModal(true)}>
+                      <Button type="button" variant="secondary" onClick={() => setShowRejectModal(true)}>
                         {t("dispatch.reject")}
                       </Button>
                     </RequirePermission>
@@ -426,7 +426,7 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
             </Button>
             <Button
               type="button"
-              variant="danger"
+              variant="secondary"
               onClick={() => rejectMutation.mutate()}
               loading={rejectMutation.isPending}
             >

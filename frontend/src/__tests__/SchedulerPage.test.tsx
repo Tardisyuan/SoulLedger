@@ -327,7 +327,11 @@ describe("schedule editor", () => {
     expect(within(dialog).getByTestId("cron-preview").querySelectorAll("li")).toHaveLength(3);
     fireEvent.click(within(dialog).getByRole("button", { name: tZh("scheduler.editor.advanced") }));
     fireEvent.change(within(dialog).getByLabelText(tZh("scheduler.editor.cron_fields.hour")), { target: { value: "25" } });
-    expect(within(dialog).getByText(tZh("scheduler.editor.preview_invalid"))).toBeInTheDocument();
+    const invalid = within(dialog).getByText(tZh("scheduler.editor.preview_invalid"), { exact: false });
+    // 补足 C15:写错用冷玫红 ✕,不是警示色。
+    expect(invalid).toHaveTextContent(/^✕/);
+    expect(invalid.className).toMatch(/color-danger/);
+    expect(invalid.className).not.toMatch(/status-warning/);
     expect(within(dialog).queryByTestId("cron-preview")).toBeNull();
   });
 

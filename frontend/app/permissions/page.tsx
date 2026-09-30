@@ -306,13 +306,13 @@ export default function PermissionsPage() {
       actions={
         segment === "roles" ? (
           <RequirePermission permissions="system.settings">
-            <Button type="button" variant="primary" onClick={() => setIsRoleCreateOpen(true)}>
+            <Button type="button" variant="secondary" onClick={() => setIsRoleCreateOpen(true)}>
               + {t("permissions.create_role")}
             </Button>
           </RequirePermission>
         ) : segment === "definitions" && !permsQuery.isLoading ? (
           <RequirePermission permissions="system.settings">
-            <Button type="button" variant="primary" onClick={() => setIsCreateOpen(true)}>
+            <Button type="button" variant="secondary" onClick={() => setIsCreateOpen(true)}>
               + {t("permissions.create")}
             </Button>
           </RequirePermission>
@@ -329,7 +329,7 @@ export default function PermissionsPage() {
                 aria-pressed={on}
                 onClick={() => setSegment(s.value)}
                 className={cn(
-                  "flex min-h-8 items-center gap-1.5 px-3 text-sm max-sm:min-h-11",
+                  "flex min-h-8 items-center gap-2 px-3 text-sm max-sm:min-h-11",
                   on
                     ? "bg-[oklch(var(--color-ink))] text-[oklch(var(--color-canvas))]"
                     : "text-[oklch(var(--color-ink-muted))] hover:bg-[oklch(var(--color-surface-2))]"
@@ -478,6 +478,7 @@ export default function PermissionsPage() {
           onClose={() => { setIsDeleteOpen(false); setDeletingPerm(null); }}
           title={t("permissions.confirm_delete")}
           message={t("permissions.confirm_delete_message")}
+          name={deletingPerm?.codename ?? ""}
           isPending={deleteMutation.isPending}
           onConfirm={() => deletingPerm && deleteMutation.mutate(deletingPerm.id)}
         />

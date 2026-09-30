@@ -345,7 +345,7 @@ function RoleDrawerBody({ role, onClose, onOpenMatrix }: { role: Role; onClose: 
             <Button type="button" variant="ghost" onClick={() => setDeleting(false)} disabled={del.isPending}>
               {t("common.cancel")}
             </Button>
-            <Button type="button" variant="danger" onClick={confirmDelete} loading={del.isPending} disabled={refusal !== null}>
+            <Button type="button" variant="secondary" onClick={confirmDelete} loading={del.isPending} disabled={refusal !== null}>
               {t("permissions.roles.recycle_action")}
             </Button>
           </div>
