@@ -527,6 +527,24 @@ describe("敏感词 · E-08b", () => {
     expect(apiMock.removeWord).not.toHaveBeenCalled();
   });
 
+  it("deleting several words has no one name to type: a plain confirm with ✕, no textbox", async () => {
+    asRole("social.moderate");
+    apiMock.words.mockResolvedValue(page(words));
+    apiMock.removeWords.mockResolvedValue({ data: { deleted: 2 } });
+    renderPage();
+    fireEvent.click(segment("words"));
+    await screen.findByText("还阳");
+    for (const box of screen.getAllByRole("checkbox", { name: /./ }).filter((b) => b.closest("tbody"))) fireEvent.click(box);
+    const n = words.length;
+    fireEvent.click(screen.getByRole("button", { name: tZh("social_moderation.words.delete_selected") }));
+    const dialog = await screen.findByRole("alertdialog");
+    expect(dialog).toHaveTextContent(tZh("social_moderation.words.confirm_title", { n: String(n) }));
+    expect(within(dialog).queryByRole("textbox")).toBeNull();
+    expect(within(dialog).queryByTestId("name-confirm-action")).toBeNull();
+    fireEvent.click(within(dialog).getByRole("button", { name: tZh("common.confirm_delete") }));
+    await waitFor(() => expect(apiMock.removeWords).toHaveBeenCalledWith(words.map((w) => w.id)));
+  });
+
   it("an empty list offers 从其他文明复制 to ADMIN only", async () => {
     asRole("social.moderate");
     renderPage();

@@ -118,6 +118,23 @@ test.describe("Circle moderation", () => {
     });
   });
 
+  test("敏感词: deleting several has no one name to type — a plain confirm with ✕", async ({ page }) => {
+    const api = await setupAuthenticatedPage(page);
+    await page.goto("/moderation");
+    await page.getByRole("button", { name: "敏感词", exact: true }).click();
+    for (const w of SENSITIVE_WORDS) await page.locator("tr", { hasText: w.word }).getByRole("checkbox").check();
+    await page.getByRole("button", { name: "删除所选" }).click();
+    const dialog = page.getByRole("alertdialog");
+    await expect(dialog).toContainText(`删除 ${SENSITIVE_WORDS.length} 个敏感词`);
+    await expect(dialog.getByRole("textbox")).toHaveCount(0);
+    const confirm = dialog.getByRole("button", { name: "确认删除" });
+    await expect(confirm).toContainText("✕");
+    await confirm.click();
+    await expect.poll(() => api.lastCall("POST", "/social-moderation/sensitive-words/batch-delete/")?.body).toEqual({
+      ids: SENSITIVE_WORDS.map((w) => w.id),
+    });
+  });
+
   test("禁言: the term is a meter; 解除禁言 asks first", async ({ page }) => {
     const api = await setupAuthenticatedPage(page);
     await page.goto("/moderation");
