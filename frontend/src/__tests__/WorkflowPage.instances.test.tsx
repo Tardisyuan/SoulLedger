@@ -214,6 +214,6 @@ describe("WorkflowPage loading", () => {
     const { container } = renderPage();
 
     expect(within(container).queryByText("workflow.custom_templates")).not.toBeInTheDocument();
-    expect(container.querySelectorAll(".animate-pulse").length).toBeGreaterThan(0);
+    expect(container.querySelectorAll("[data-slot=skeleton]").length).toBeGreaterThan(0); // v2:骨架静态,按标记找
   });
 });

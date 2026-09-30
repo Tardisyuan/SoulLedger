@@ -28,10 +28,10 @@ export function PageError({ error, reset }: PageErrorProps) {
   return (
     <div role="alert" data-page-error="" className="border-t border-[oklch(var(--color-line))] py-8">
       <div className="flex flex-wrap items-center gap-3">
-        <h2 className={ERROR_TITLE}>
+        <p className={ERROR_TITLE}>
           <span aria-hidden="true">✕ </span>
           {t("error.title")}
-        </h2>
+        </p>
         <Button type="button" variant="secondary" size="sm" onClick={reset}>
           {t("error.retry")}
         </Button>
