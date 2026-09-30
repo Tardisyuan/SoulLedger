@@ -59,7 +59,7 @@ const selfName = (l: Locale) => LOCALE_LABELS[l];
 
 function Heading({ children }: { children: string }) {
   return (
-    <Txt variant="section" tone="accent" style={styles.heading}>
+    <Txt variant="section" style={styles.heading}>
       {children}
     </Txt>
   );
@@ -77,7 +77,7 @@ function LanguageRow({ l, selected, busy, onPick }: { l: Locale; selected: boole
       onPress={onPick}
       style={({ pressed }) => [
         styles.row,
-        { paddingHorizontal: gutter, borderBottomColor: theme.hair, borderLeftColor: selected ? theme.mark : "transparent" },
+        { paddingHorizontal: gutter, borderBottomColor: theme.hair, borderLeftColor: selected ? theme.ink : "transparent" },
         pressed && styles.pressed,
       ]}
     >
@@ -91,8 +91,8 @@ function LanguageRow({ l, selected, busy, onPick }: { l: Locale; selected: boole
       </View>
       {busy ? <Loader testID="language-saving" size={20} /> : null}
       {selected && !busy ? (
-        <View style={[styles.current, { borderColor: theme.accent }]}>
-          <Txt variant="label" tone="accent" style={styles.currentText}>
+        <View style={[styles.current, { borderColor: theme.ink }]}>
+          <Txt variant="label" style={styles.currentText}>
             {t("soul_app.settings.current")}
           </Txt>
         </View>
@@ -330,8 +330,8 @@ export function SettingsScreen() {
           </Txt>
         </View>
         <View style={styles.civRow}>
-          <Emblem civ={theme.civ} size={13} stroke={theme.mark} />
-          <EnumValue namespace="souls.civilizations" value={me.civilization} tone="mark" variant="label" />
+          <Emblem civ={theme.civ} size={13} stroke={theme.inkMuted} />
+          <EnumValue namespace="souls.civilizations" value={me.civilization} tone="muted" variant="label" />
         </View>
       </View>
 
@@ -397,7 +397,7 @@ export function NotificationPrimerScreen() {
   return (
     <Screen testID="push-primer" edges={["top", "left", "right", "bottom"]}>
       <View style={[styles.primerHead, { paddingHorizontal: gutter, borderBottomColor: theme.hair }]}>
-        <Icon name="info" size={26} color={theme.mark} strokeWidth={1.2} />
+        <Icon name="info" size={26} color={theme.inkSubtle} strokeWidth={1.2} />
         <Txt variant="title" style={styles.center}>
           {t("soul_app.push.primer_title")}
         </Txt>
@@ -409,8 +409,8 @@ export function NotificationPrimerScreen() {
         <Heading>{t("soul_app.push.will_notify")}</Heading>
         {CATEGORIES.map(({ key, icon }) => (
           <View key={key} style={styles.primerItem}>
-            <View style={[styles.glyph, { borderColor: theme.mark }]}>
-              <Icon name={icon} size={12} color={theme.mark} strokeWidth={1.3} />
+            <View style={[styles.glyph, { borderColor: theme.inkSubtle }]}>
+              <Icon name={icon} size={12} color={theme.inkMuted} strokeWidth={1.3} />
             </View>
             <View style={styles.fill}>
               <Txt variant="bodyLg">{t(`soul_app.push.primer_${key}`)}</Txt>

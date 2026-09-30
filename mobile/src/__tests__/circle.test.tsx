@@ -193,6 +193,10 @@ describe("reactions", () => {
     await screen.findByTestId("reactions");
     // Five, as they were; the lamp last (补足 C17, 2026-09-30).
     expect(screen.getAllByTestId(/^react-/).map((e) => e.props.testID)).toEqual(["react-LIKE", "react-LOVE", "react-RESPECT", "react-SYMPATHY", "react-ETERNAL_LIGHT"]);
+    // …and the one pill (A2): 2px in its gold. The four ordinary ones stay square.
+    const look = (id: string) => StyleSheet.flatten(screen.getByTestId(id).props.style) as Record<string, unknown>;
+    expect(look("react-ETERNAL_LIGHT")).toMatchObject({ borderRadius: 999, borderWidth: 2 });
+    expect(["react-LIKE", "react-LOVE", "react-RESPECT", "react-SYMPATHY"].map((id) => look(id).borderRadius)).toEqual([undefined, undefined, undefined, undefined]);
     await waitFor(() => expect(screen.getByTestId("react-LIKE").props.accessibilityState.disabled).toBe(false));
     fireEvent.press(screen.getByTestId("react-LIKE"));
     await waitFor(() => expect(reacts(calls)).toHaveLength(1));

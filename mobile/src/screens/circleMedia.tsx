@@ -267,7 +267,7 @@ export function ComposeMediaTray({ uploads, onAdd }: { uploads: Uploads; onAdd: 
                     {tr("soul_app.circle.media.uploading", { percent: String(percent) })}
                   </Txt>
                   <View style={[styles.track, { backgroundColor: t.hair }]}>
-                    <View style={[styles.bar, { width: `${percent}%`, backgroundColor: t.accent }]} />
+                    <View style={[styles.bar, { width: `${percent}%`, backgroundColor: t.ink }]} />
                   </View>
                 </View>
               ) : null}

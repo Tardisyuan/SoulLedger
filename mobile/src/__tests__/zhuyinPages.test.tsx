@@ -20,7 +20,7 @@ import { defaultLifeSection, lifePathIndex, lifeSectionsOpen, signedBalance, ter
 import { LIFE_OPEN_PREFIX } from "../screens/life";
 import { SessionProvider } from "../session";
 import { themeFor } from "../theme";
-import { ThemeContext, sectionTransitions } from "../ui";
+import { SectionError, Skeleton, ThemeContext, sectionTransitions } from "../ui";
 import { PROFILE, life, stubApi } from "./stubApi";
 
 const flat = (el: { props: { style?: unknown } }) => StyleSheet.flatten(el.props.style as never) as Record<string, unknown>;
@@ -204,5 +204,23 @@ describe("the life page, as the app mounts it (补足 B11)", () => {
     await screen.findByTestId("section-judgments-body");
     await act(async () => {});
     expect(ORDER.filter(expanded)).toEqual(["judgments"]);
+  });
+});
+
+describe("a part that failed, and one still loading (补足 C15)", () => {
+  it("failed: ✕ and the words in 冷玫红 — the system failing is what neg is for — with a retry", () => {
+    const retry = jest.fn();
+    wrap(<SectionError testID="err" onRetry={retry} />);
+    const t = themeFor("CHINESE", "light");
+    expect(flat(screen.getByTestId("err")).color).toBe(t.neg);
+    expect(flat(screen.getByText("✕")).color).toBe(t.neg);
+    fireEvent.press(screen.getByText("重试"));
+    expect(retry).toHaveBeenCalled();
+  });
+
+  it("loading: static s2 bars, no hairline grey and nothing animated", () => {
+    wrap(<Skeleton testID="sk" lines={3} />);
+    const bars = (screen.getByTestId("sk") as unknown as { children: { props: { style?: unknown } }[] }).children;
+    expect(bars.map((b) => flat(b).backgroundColor)).toEqual(Array(3).fill(themeFor("CHINESE", "light").s2));
   });
 });

@@ -86,8 +86,8 @@ function RecordRow({ record, lex }: { record: MeRecord; lex: CivKey }) {
   const demerit = record.record_type === "DEMERIT";
   const color = demerit ? t.neg : t.pos;
   const milestone = (
-    <View testID={`milestone-${record.id}`} style={[styles.milestone, { borderColor: t.mark }]}>
-      <Txt variant="label" tone="mark" style={styles.milestoneText}>
+    <View testID={`milestone-${record.id}`} style={[styles.milestone, { borderColor: t.ink }]}>
+      <Txt variant="label" tone="ink" style={styles.milestoneText}>
         {tr("soul_app.life.milestone")}
       </Txt>
     </View>
@@ -229,7 +229,7 @@ export function LifeSections({
                     </Txt>
                   </View>
                   {onOpenApplication ? (
-                    <Txt variant="caption" tone="accent">
+                    <Txt variant="caption" tone="ink" style={styles.link}>
                       {`${tr("soul_app.applications.view")} →`}
                     </Txt>
                   ) : null}
@@ -471,9 +471,9 @@ function Homecoming({ me }: { me: MeProfile }) {
   };
   return (
     <View style={[styles.homecomingWrap, { paddingHorizontal: gutter, borderBottomColor: theme.hair }]}>
-      <View testID="homecoming" style={[styles.homecoming, { borderColor: theme.accent, borderLeftColor: theme.mark, backgroundColor: theme.s1 }]}>
+      <View testID="homecoming" style={[styles.homecoming, { borderColor: theme.inkSubtle, borderLeftColor: theme.ink, backgroundColor: theme.s1 }]}>
         <View style={styles.homecomingHead}>
-          <Emblem civ={theme.civ} size={15} stroke={theme.mark} />
+          <Emblem civ={theme.civ} size={15} stroke={theme.inkMuted} />
           <Txt variant="bodyLg" style={styles.shrink}>
             {t("soul_app.homecoming.title", { home })}
           </Txt>
@@ -721,6 +721,7 @@ const styles = StyleSheet.create({
   fill: { flex: 1 },
   shrink: { flexShrink: 1 },
   pressed: { opacity: 0.8 },
+  link: { textDecorationLine: "underline" },
   noSpacing: { letterSpacing: 0 },
   rule: { marginVertical: 16 },
   record: { paddingVertical: 13, gap: 5 },

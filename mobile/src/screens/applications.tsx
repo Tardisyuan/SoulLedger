@@ -248,7 +248,7 @@ function FormCard({ form, selected, onPick }: { form: DesiredRebirthForm; select
       onPress={onPick}
       style={({ pressed }) => [
         styles.formCard,
-        { backgroundColor: theme.s0, borderLeftColor: selected ? theme.mark : "transparent" },
+        { backgroundColor: theme.s0, borderLeftColor: selected ? theme.ink : "transparent" },
         pressed && styles.pressed,
       ]}
     >
@@ -349,7 +349,7 @@ export function NewApplicationScreen() {
 }
 
 /**
- * The flow (handoff 2e): done = solid mark with its time; now = hollow accent,
+ * The flow (handoff 2e): done = solid ink with its time; now = hollow ink, 2px,
  * no time; todo = 1px empty box. The rail joins what has happened; after the
  * current step it is dashed, because how many steps follow is unknown. At
  * large text the rail goes and the boxes grow to 16.
@@ -367,9 +367,9 @@ function Flow({ steps }: { steps: FlowStep[] }) {
         const last = i === steps.length - 1;
         const dot =
           step.state === "done"
-            ? { backgroundColor: theme.mark, borderColor: theme.mark, borderWidth: 1 }
+            ? { backgroundColor: theme.ink, borderColor: theme.ink, borderWidth: 1 }
             : step.state === "now"
-              ? { backgroundColor: theme.s0, borderColor: theme.accent, borderWidth: 2 }
+              ? { backgroundColor: theme.s0, borderColor: theme.ink, borderWidth: 2 }
               : { backgroundColor: "transparent", borderColor: theme.hair2, borderWidth: 1 };
         const name = step.name.status
           ? t(step.name.key, { status: enumText(enumLabel(STATUS_NAMESPACE, step.name.status), t) })
@@ -435,10 +435,10 @@ function LandingHighlight({ on, children }: { on: boolean; children: ReactNode }
     <View testID="landing-highlight">
       {reduced ? null : <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, { opacity, backgroundColor: theme.s1 }]} />}
       {children}
-      <View testID="landing-rule" pointerEvents="none" style={[styles.landingRule, { backgroundColor: theme.mark }]} />
+      <View testID="landing-rule" pointerEvents="none" style={[styles.landingRule, { backgroundColor: theme.ink }]} />
       {reduced ? null : (
-        <Animated.View pointerEvents="none" style={[styles.landingTag, { borderColor: theme.accent, opacity }]}>
-          <Txt testID="landing-tag" variant="label" tone="accent" style={styles.landingTagText}>
+        <Animated.View pointerEvents="none" style={[styles.landingTag, { borderColor: theme.ink, opacity }]}>
+          <Txt testID="landing-tag" variant="label" tone="ink" style={styles.landingTagText}>
             {t("soul_app.detail.new_result")}
           </Txt>
         </Animated.View>

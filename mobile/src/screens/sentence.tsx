@@ -28,12 +28,12 @@ import { civKeyOf } from "../theme";
 import {
   Button,
   Empty,
+  FailedLine,
   GUTTER,
   Screen,
   ScreenError,
   Section,
   Skeleton,
-  SmallButton,
   Txt,
   enumText,
   useLayout,
@@ -81,8 +81,8 @@ function NewTag({ testID }: { testID?: string }) {
   const theme = useTheme();
   const { t } = useI18n();
   return (
-    <View testID={testID} style={[styles.newTag, { borderColor: theme.accent }]}>
-      <Txt variant="label" tone="accent" style={styles.newTagText}>
+    <View testID={testID} style={[styles.newTag, { borderColor: theme.ink }]}>
+      <Txt variant="label" tone="ink" style={styles.newTagText}>
         {t("soul_app.sentence.amended_tag")}
       </Txt>
     </View>
@@ -99,7 +99,7 @@ function StationNode({ station, size = 13 }: { station: MeSentenceStation; size?
       testID={`station-node-${station.n}-${civ}`}
       civ={civ}
       size={size}
-      stroke={reached ? theme.mark : theme.hair2}
+      stroke={reached ? theme.ink : theme.hair2}
       filled={station.status === "done" || station.status === "eternal"}
       current={OCCUPYING.includes(station.status)}
     />
@@ -109,7 +109,7 @@ function StationNode({ station, size = 13 }: { station: MeSentenceStation; size?
 /** Solid = recorded, dashed = not yet / never (1g). */
 function Link({ recorded, vertical, testID }: { recorded: boolean; vertical?: boolean; testID?: string }) {
   const theme = useTheme();
-  const common = { stroke: recorded ? theme.mark : theme.hair2, strokeWidth: 1.2, strokeDasharray: recorded ? undefined : "3 3" };
+  const common = { stroke: recorded ? theme.ink : theme.hair2, strokeWidth: 1.2, strokeDasharray: recorded ? undefined : "3 3" };
   return (
     <View testID={testID} style={vertical ? styles.linkV : styles.linkH}>
       <Svg width={vertical ? 2 : "100%"} height={vertical ? "100%" : 2}>
@@ -146,8 +146,8 @@ function CivLine({ station }: { station: MeSentenceStation }) {
   const name = underworld(station.civilization);
   return (
     <View style={styles.civLine}>
-      <Emblem civ={civ} size={12} stroke={away ? theme.accent : theme.mark} />
-      <Txt variant="label" tone={away ? "accent" : "mark"} style={styles.shrink}>
+      <Emblem civ={civ} size={12} stroke={away ? theme.inkSubtle : theme.inkMuted} />
+      <Txt variant="label" tone={away ? "subtle" : "muted"} style={styles.shrink}>
         {suffix ? `${name} · ${suffix}` : name}
       </Txt>
     </View>
@@ -213,7 +213,7 @@ function StationDetail({ station, fresh, landing }: { station: MeSentenceStation
 function StatusText({ station, withEnd }: { station: MeSentenceStation; withEnd?: boolean }) {
   const { t } = useI18n();
   const here = OCCUPYING.includes(station.status);
-  const tone = station.status === "pending" ? "subtle" : station.status === "pardoned" ? "muted" : here ? "accent" : "mark";
+  const tone = station.status === "pending" ? "subtle" : station.status === "pardoned" ? "muted" : here ? "ink" : "muted";
   const state = t(STATUS_KEY[station.status]);
   return (
     <Txt testID={`station-${station.n}-status`} variant="caption" tone={tone}>
@@ -345,11 +345,8 @@ export function SentenceSection({
           </View>
         )
       ) : remote.error ? (
-        <View testID="sentence-error" style={styles.errorRow}>
-          <Txt variant="caption" tone="muted" style={styles.fill}>
-            {t("soul_app.sentence.error")}
-          </Txt>
-          <SmallButton testID="sentence-retry" title={t("soul_app.common.retry")} onPress={() => void remote.reload()} />
+        <View testID="sentence-error">
+          <FailedLine text={t("soul_app.sentence.error")} retryTestID="sentence-retry" onRetry={() => void remote.reload()} />
         </View>
       ) : (
         <View testID="sentence-loading" style={styles.sectionBody}>
@@ -369,7 +366,7 @@ function Banner({ plan }: { plan: MeSentencePlan }) {
   const { t } = useI18n();
   const copy: Partial<Record<MeSentencePlan["state"], { title: string; body: string[]; tone: string }>> = {
     between: { title: "soul_app.sentence.next_not_started", body: ["soul_app.sentence.next_not_started_body"], tone: theme.hair2 },
-    waiting: { title: "soul_app.sentence.state.waiting", body: ["soul_app.sentence.waiting_why"], tone: theme.accent },
+    waiting: { title: "soul_app.sentence.state.waiting", body: ["soul_app.sentence.waiting_why"], tone: theme.ink },
     eternal: { title: "soul_app.sentence.eternal_title", body: ["soul_app.sentence.eternal_body", "soul_app.sentence.eternal_no_rebirth"], tone: theme.hair2 },
     pardoned: { title: "soul_app.sentence.pardoned_title", body: ["soul_app.sentence.pardoned_body"], tone: theme.pos },
     completed: {
@@ -407,7 +404,7 @@ function StationRow({ station, next, plan, landing }: { station: MeSentenceStati
         {next ? <Link vertical recorded={recordedTo(next)} testID={`list-link-${next.n}`} /> : null}
       </View>
       <View style={[styles.fill, next && styles.stationGap]}>
-        <View style={[here && [styles.here, { borderColor: theme.mark, backgroundColor: theme.s1 }]]}>
+        <View style={[here && [styles.here, { borderColor: theme.ink, backgroundColor: theme.s1 }]]}>
           <StationDetail station={station} fresh={isNew(landing, station, plan)} landing={landing} />
           <View style={styles.rows}>
             <Row label={t("soul_app.sentence.field_state")}>
@@ -415,7 +412,7 @@ function StationRow({ station, next, plan, landing }: { station: MeSentenceStati
             </Row>
           </View>
           {station.status === "waiting" ? (
-            <Txt testID={`station-${station.n}-why`} variant="caption" tone="muted" style={[styles.why, { borderLeftColor: theme.accent }]}>
+            <Txt testID={`station-${station.n}-why`} variant="caption" tone="muted" style={[styles.why, { borderLeftColor: theme.inkSubtle }]}>
               {t("soul_app.sentence.waiting_why")}
             </Txt>
           ) : null}
@@ -457,7 +454,7 @@ export function SentenceScreen({ landing }: { landing?: SentenceLanding }) {
       ) : (
         <>
           {residence ? (
-            <View testID="sentence-residing" style={[styles.banner, { borderBottomColor: theme.hair, borderLeftColor: theme.accent, backgroundColor: theme.s1 }]}>
+            <View testID="sentence-residing" style={[styles.banner, { borderBottomColor: theme.hair, borderLeftColor: theme.ink, backgroundColor: theme.s1 }]}>
               <Txt variant="bodyLg">{t("soul_app.life.residing", residence)}</Txt>
               <Txt variant="caption" tone="muted">
                 {t("soul_app.sentence.residing_body", residence)}
@@ -505,7 +502,7 @@ export function SentenceBlocked() {
   const plan = remote.data;
   const current = plan ? currentStation(plan) : null;
   return (
-    <View testID="sentence-blocked" style={[styles.blocked, { borderColor: theme.hair, borderLeftColor: theme.accent, backgroundColor: theme.s1 }]}>
+    <View testID="sentence-blocked" style={[styles.blocked, { borderColor: theme.hair, borderLeftColor: theme.ink, backgroundColor: theme.s1 }]}>
       <Txt variant="bodyLg">{t("soul_app.sentence.blocked_title")}</Txt>
       <Txt variant="caption" tone="muted">
         {plan && plan.stations.length
@@ -531,7 +528,7 @@ export function SentenceBlocked() {
         </View>
       ) : null}
       <Pressable testID="sentence-blocked-link" accessibilityRole="link" hitSlop={8} onPress={() => navigation.navigate("Sentence", {})}>
-        <Txt variant="caption" tone="accent">{`${t("soul_app.sentence.blocked_link")} →`}</Txt>
+        <Txt variant="caption" tone="ink" style={styles.link}>{`${t("soul_app.sentence.blocked_link")} →`}</Txt>
       </Pressable>
     </View>
   );
@@ -559,7 +556,6 @@ const styles = StyleSheet.create({
   rowLabel: { minWidth: 36 },
   struck: { opacity: 0.62 },
   strike: { textDecorationLine: "line-through" },
-  errorRow: { flexDirection: "row", alignItems: "center", gap: 12 },
   banner: { paddingHorizontal: GUTTER, paddingVertical: 16, borderBottomWidth: 1, borderLeftWidth: 3, gap: 8 },
   summary: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 16, borderBottomWidth: 1 },
   stationRow: { flexDirection: "row", gap: 16 },
