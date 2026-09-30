@@ -14,6 +14,12 @@ import { AssistAdminTabs, MONO, MUTED, SUBTLE, Section, count, money, pct } from
 
 /** `ALERT_SHARE` in backend/apps/soul_assist/usage.py. */
 const ALERT_SHARE = 0.8;
+/** 改用备用's reasons (frame 7a): the first four always, the last two only when they happened. */
+const ALWAYS_REASONS = ["connection", "timeout", "rate_limited", "server_error"] as const;
+const RARE_REASONS = ["quota", "circuit_open"] as const;
+/** Frame 7a's backup swatch: ink diagonal hatching, no hue — the backup is not a status. */
+const HATCH =
+  "bg-[repeating-linear-gradient(135deg,oklch(var(--color-ink))_0_1.5px,transparent_1.5px_4px)] shadow-[inset_0_0_0_1px_oklch(var(--color-ink))]";
 
 export function AssistAdminUsagePage() {
   const { t } = useI18n();
@@ -52,6 +58,9 @@ function UsageBody({ usage }: { usage: AssistAdminUsage }) {
   const share = usage.cap ? usage.spent / usage.cap : null;
   const days = usage.by_day.map((d) => ({ ...d, name: d.date.slice(5) }));
   const p4 = usage.phase4;
+  const roleCost = (role: "primary" | "backup") => usage.by_provider.find((r) => r.role === role)?.cost ?? null;
+  const primaryCost = roleCost("primary") ?? 0;
+  const backupCost = roleCost("backup");
 
   return (
     <div className="grid gap-x-12 lg:grid-cols-2">
@@ -108,6 +117,21 @@ function UsageBody({ usage }: { usage: AssistAdminUsage }) {
               </dd>
             </div>
           </dl>
+          {/* 改用备用: only questions the backup answered (§13.5), laid out like 检索降级 above. */}
+          <dl className="mt-3 text-sm">
+            <dt className={MUTED}>{t("assist_admin.usage.fallback")}</dt>
+            <dd className={`text-md ${MONO}`} data-testid="aa-fallbacks">
+              {t("assist_admin.usage.fallback_value", {
+                n: count(usage.fallbacks.count),
+                pct: pct(usage.requests ? usage.fallbacks.count / usage.requests : 0),
+              })}
+            </dd>
+            <dd className={SUBTLE} data-testid="aa-fallback-reasons">
+              {[...ALWAYS_REASONS, ...RARE_REASONS.filter((r) => usage.fallbacks.by_reason[r] > 0)]
+                .map((r) => t(`assist_admin.usage.reason.${r}`, { n: count(usage.fallbacks.by_reason[r]) }))
+                .join(" · ")}
+            </dd>
+          </dl>
           <p className={`mt-2 ${SUBTLE}`}>{t("assist_admin.usage.quality_note", { count: count(usage.requests) })}</p>
           <p className={SUBTLE}>{t("assist_admin.usage.fallback_note")}</p>
         </Section>
@@ -131,6 +155,20 @@ function UsageBody({ usage }: { usage: AssistAdminUsage }) {
             <LazyBarChart data={days} dataKey="cost" fill={CHART_SERIES.realm} height={180} name={t("assist_admin.usage.cost")} />
           ) : (
             <p className={SUBTLE}>{t("assist_admin.usage.no_days")}</p>
+          )}
+          {backupCost !== null && (
+            // Month totals per role. The per-day split (stacked bars, day detail, 主 / 备 columns) needs
+            // `by_day` broken down by role, which the usage API does not return yet.
+            <p className={`mt-2 flex flex-wrap gap-x-4 ${SUBTLE}`} data-testid="aa-cost-legend">
+              <span className="flex items-center gap-1">
+                <span aria-hidden="true" className="inline-block h-2 w-3 bg-[oklch(var(--color-ink-muted))]" />
+                {t("assist_admin.usage.legend_primary")} <span className={MONO}>{money(primaryCost)}</span>
+              </span>
+              <span className="flex items-center gap-1">
+                <span aria-hidden="true" className={`inline-block h-2 w-3 ${HATCH}`} />
+                {t("assist_admin.usage.legend_backup")} <span className={MONO}>{money(backupCost)}</span>
+              </span>
+            </p>
           )}
         </Section>
       </div>

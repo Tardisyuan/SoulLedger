@@ -4,8 +4,10 @@ import { useEffect, useRef, useState } from "react";
 import { assistAdminErrorCode, type AssistAdminConfig } from "@soulledger/core/api/assist-admin";
 import {
   useAssistAdminConfig,
+  useAssistBackup,
   useAssistEmbedding,
   useUpdateAssistAdminConfig,
+  useUpdateAssistBackup,
   useUpdateAssistEmbedding,
 } from "@soulledger/core/hooks/useAssistAdmin";
 import { useI18n } from "@/src/contexts/I18nContext";
@@ -16,25 +18,30 @@ import { ConfirmDialog } from "@/src/components/ui/Modal";
 import { QueryError } from "@/src/components/ui/PageError";
 import { ListSkeleton } from "@/components/ui/skeleton";
 import { AssistAdminTabs, MONO, MUTED, SUBTLE, Section, Switch } from "./parts";
-import { ProviderSection } from "./ProviderSection";
+import { BackupBlock, KeyRow, ProviderSection, SamePlatformNote, Segment, segmentKey } from "./ProviderSection";
 import { HallSwitches } from "./HallSwitches";
 import { EvalPanel } from "./EvalPanel";
 import { TryPanel } from "./TryPanel";
 import { CorpusSection } from "./CorpusSection";
 import { EmbeddingSection, RebuildNotice } from "./EmbeddingSection";
 import {
+  backupSaveBlock,
   connectionDraft,
   embeddingSaveBlock,
-  fingerprint,
   saveBlock,
+  samePlatform,
   setDraft,
   setEmbeddingDraft,
   type Draft,
   type DraftKey,
   type EmbeddingDraft,
+  type SavedConnection,
 } from "./draft";
 
 const READ_ONLY = ["max_concurrent", "timeout_seconds", "history_turns", "retention_days"] as const;
+
+/** No backup saved: every field starts empty, so a new backup's draft holds all of them. */
+const NO_BACKUP: SavedConnection = { platform: null, provider: null, base_url: null, model: null, effort: null, fallbacks: null, prices: {} };
 
 function invalidDraft(d: Draft): boolean {
   const badInt = (v: unknown) => v !== undefined && !(Number.isInteger(v) && (v as number) >= 1);
@@ -62,7 +69,7 @@ export function AssistAdminConfigPage() {
 }
 
 function ConfigForm({ config }: { config: AssistAdminConfig }) {
-  const { t, formatDate, formatDateTime } = useI18n();
+  const { t, formatDateTime } = useI18n();
   const [draft, setDraftState] = useState<Draft>({});
   const [testedFp, setTestedFp] = useState<string | null>(null);
   const [replacingKey, setReplacingKey] = useState(false);
@@ -74,6 +81,21 @@ function ConfigForm({ config }: { config: AssistAdminConfig }) {
   const saveEmbedding = useUpdateAssistEmbedding();
   const [edraft, setEdraft] = useState<EmbeddingDraft>({});
   const [eTestedFp, setETestedFp] = useState<string | null>(null);
+  // 备用供应商 (frames 6a–6e): a third draft behind the same footer, saved through config/backup/.
+  const backupQuery = useAssistBackup();
+  const saveBackup = useUpdateAssistBackup();
+  const backup = backupQuery.data;
+  const bSaved: SavedConnection = backup?.configured ? backup : NO_BACKUP;
+  const [bdraft, setBdraftState] = useState<Draft>({});
+  const [bAdding, setBAdding] = useState(false);
+  const [bRemoving, setBRemoving] = useState(false);
+  const [bTested, setBTested] = useState<{ fp: string; ok: boolean } | null>(null);
+  const [bReplacingKey, setBReplacingKey] = useState(false);
+  const bOpen = (backup?.configured === true && !bRemoving) || bAdding;
+  const bset = (key: DraftKey, v: unknown) => {
+    setSaveError(null);
+    setBdraftState((d) => setDraft(d, bSaved, key, v));
+  };
 
   const set = (key: DraftKey, value: unknown) => {
     setSaveError(null);
@@ -84,20 +106,33 @@ function ConfigForm({ config }: { config: AssistAdminConfig }) {
 
   const nConfig = Object.keys(draft).length;
   const nEmbedding = Object.keys(edraft).length;
-  const n = nConfig + nEmbedding;
-  const block = saveBlock(draft, testedFp, invalidDraft(draft)) ?? embeddingSaveBlock(edraft, eTestedFp);
-  const saving = save.isPending || saveEmbedding.isPending;
+  const nBackup = bRemoving ? 1 : bOpen ? Object.keys(bdraft).length : 0;
+  const n = nConfig + nEmbedding + nBackup;
+  const block =
+    saveBlock(draft, config, testedFp, invalidDraft(draft) || (bOpen && invalidDraft(bdraft))) ??
+    (bOpen ? backupSaveBlock(bdraft, config, bSaved, bTested) : null) ??
+    embeddingSaveBlock(edraft, eTestedFp);
+  const saving = save.isPending || saveEmbedding.isPending || saveBackup.isPending;
   const canSave = n > 0 && block === null && !saving;
   const reason = saveError ?? (n > 0 && block ? t(`assist_admin.errors.${block}`) : null);
 
+  const resetBackup = () => {
+    setBdraftState({});
+    setBAdding(false);
+    setBRemoving(false);
+    setBTested(null);
+    setBReplacingKey(false);
+  };
   const discard = () => {
     setDraftState({});
     setEdraft({});
     setReplacingKey(false);
+    resetBackup();
     setSaveError(null);
   };
-  // Two PATCHes, config first; each clears its own draft on success, so a refused second one keeps
-  // only its own keys unsaved. Saving the embedding never rebuilds (the block shows 「需要重建」).
+  // Up to three writes, config first, then the backup (PATCH, or DELETE when removed), then the embedding;
+  // each clears its own draft on success, so a refused later one keeps only its own keys unsaved.
+  // Saving the embedding never rebuilds (the block shows 「需要重建」).
   const doSave = async () => {
     if (!canSave) return;
     try {
@@ -105,6 +140,10 @@ function ConfigForm({ config }: { config: AssistAdminConfig }) {
         await save.mutateAsync(draft);
         setDraftState({});
         setReplacingKey(false);
+      }
+      if (nBackup > 0) {
+        await saveBackup.mutateAsync(bRemoving ? null : bdraft);
+        resetBackup();
       }
       if (nEmbedding > 0) {
         await saveEmbedding.mutateAsync(edraft);
@@ -171,60 +210,73 @@ function ConfigForm({ config }: { config: AssistAdminConfig }) {
             <HallSwitches inactiveReason={hallsInactive} />
           </Section>
 
-          <ProviderSection
-            config={config}
-            draft={draft}
-            set={set}
-            onTested={setTestedFp}
-            keyField={
-              <div>
-                <p className="text-sm">{t("assist_admin.key.title")}</p>
-                <p className="text-sm" data-testid="aa-key-state">
-                  {config.api_key.set ? (
-                    <>
-                      {t("assist_admin.key.set")}
-                      {config.api_key.last4 && <span className={`${MONO} ml-2`}>•••• {config.api_key.last4}</span>}
-                      {config.api_key.set_at && <span className={`${MONO} ${SUBTLE} ml-2`}>{t("assist_admin.key.set_at", { date: formatDate(config.api_key.set_at) })}</span>}
-                      {config.api_key.source === "env" && <span className={`${SUBTLE} ml-2`}>{t("assist_admin.key.from_env")}</span>}
-                    </>
-                  ) : (
-                    t("assist_admin.key.not_set")
-                  )}
-                </p>
-                {draft.api_key === "" && <p className="text-sm text-[oklch(var(--color-warning))]">{t("assist_admin.key.will_clear")}</p>}
-                {replacingKey ? (
-                  <div className="mt-2 grid gap-2">
-                    <TextField
-                      id="aa-new-key"
-                      type="password"
-                      autoComplete="off"
-                      spellCheck={false}
-                      label={t("assist_admin.key.new")}
-                      description={t("assist_admin.key.new_hint")}
-                      value={draft.api_key ?? ""}
-                      onChange={(e) => set("api_key", e.target.value || undefined)}
+          <ProviderSection config={config} backup={backup}>
+            <h3 className="mb-3 text-sm font-medium">{t("assist_admin.provider.primary")}</h3>
+            <Segment
+              kind="primary"
+              config={config}
+              saved={config}
+              draft={draft}
+              set={set}
+              onTested={(fp, ok) => setTestedFp(ok ? fp : null)}
+              keyField={
+                <KeyRow
+                  id="aa-key"
+                  state={segmentKey(config, config, draft)}
+                  draftKey={draft.api_key}
+                  setKey={(k) => set("api_key", k)}
+                  replacing={replacingKey}
+                  setReplacing={setReplacingKey}
+                  onClear={() => setConfirmClear(true)}
+                />
+              }
+            />
+            {backupQuery.data && (
+              <BackupBlock
+                open={bOpen}
+                onAdd={() => {
+                  const first = config.platforms[0];
+                  setBAdding(true);
+                  setBRemoving(false);
+                  setBdraftState({ platform: first.id, ...(first.provider ? { provider: first.provider, base_url: first.base_url ?? "" } : {}) });
+                }}
+                onRemove={() => {
+                  resetBackup();
+                  if (backup?.configured) setBRemoving(true);
+                }}
+              >
+                <Segment
+                  kind="backup"
+                  config={config}
+                  saved={bSaved}
+                  draft={bdraft}
+                  set={bset}
+                  onTested={(fp, ok) => setBTested({ fp, ok })}
+                  platformNote={
+                    samePlatform(
+                      { platform: (value("platform") as string) ?? null, base_url: (value("base_url") as string) ?? null },
+                      {
+                        platform: ("platform" in bdraft ? bdraft.platform : bSaved.platform) ?? null,
+                        base_url: ("base_url" in bdraft ? bdraft.base_url : bSaved.base_url) ?? null,
+                      }
+                    ) ? (
+                      <SamePlatformNote />
+                    ) : null
+                  }
+                  keyField={
+                    <KeyRow
+                      id="aa-backup-key"
+                      state={segmentKey(config, bSaved, bdraft, backup && { slot: backup.api_key_slot, state: backup.api_key })}
+                      draftKey={bdraft.api_key}
+                      setKey={(k) => bset("api_key", k)}
+                      replacing={bReplacingKey}
+                      setReplacing={setBReplacingKey}
                     />
-                    <div>
-                      <Button type="button" size="sm" variant="ghost" onClick={() => { set("api_key", undefined); setReplacingKey(false); }}>
-                        {t("assist_admin.cancel")}
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="mt-2 flex gap-2">
-                    <Button type="button" size="sm" onClick={() => { set("api_key", undefined); setReplacingKey(true); }}>
-                      {t("assist_admin.key.replace")}
-                    </Button>
-                    {config.api_key.set && draft.api_key !== "" && (
-                      <Button type="button" size="sm" onClick={() => setConfirmClear(true)}>
-                        {t("assist_admin.key.clear")}
-                      </Button>
-                    )}
-                  </div>
-                )}
-              </div>
-            }
-          />
+                  }
+                />
+              </BackupBlock>
+            )}
+          </ProviderSection>
 
           {embedding.data && (
             <EmbeddingSection
@@ -274,7 +326,7 @@ function ConfigForm({ config }: { config: AssistAdminConfig }) {
           <EvalPanel
             config={config}
             draftConnection={connectionDraft(draft)}
-            afterIdentities={<TryPanel config={config} draftConnection={connectionDraft(draft)} />}
+            afterIdentities={<TryPanel config={config} backup={backup} draftConnection={connectionDraft(draft)} />}
           />
         </div>
       </div>
@@ -289,15 +341,16 @@ function ConfigForm({ config }: { config: AssistAdminConfig }) {
           <Button type="button" variant="ghost" disabled={n === 0} onClick={discard}>
             {t("assist_admin.footer.discard")}
           </Button>
+          {/* E: why Save is off sits right beside it, not on a line of its own under the bar. */}
+          {reason && (
+            <span id="aa-save-reason" role={saveError ? "alert" : undefined} className="max-w-md text-right text-xs text-[oklch(var(--color-warning))]">
+              {reason}
+            </span>
+          )}
           <Button type="button" variant="primary" disabled={!canSave} loading={saving} aria-describedby={reason ? "aa-save-reason" : undefined} onClick={() => void doSave()}>
             {t("assist_admin.footer.save")}
           </Button>
         </div>
-        {reason && (
-          <p id="aa-save-reason" role={saveError ? "alert" : undefined} className="mt-1 text-right text-xs text-[oklch(var(--color-warning))]">
-            {reason}
-          </p>
-        )}
       </div>
 
       <ConfirmDialog
