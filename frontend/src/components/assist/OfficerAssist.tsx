@@ -13,6 +13,7 @@ import {
 import { useI18n } from "@/src/contexts/I18nContext";
 import { ConfirmDialog } from "@/src/components/ui/Modal";
 import { officerAssistSuggestions } from "./officerAssistSuggestions";
+import { StreamingText, WaitingDots } from "./StreamingText";
 import type { OfficerAssist } from "./useOfficerAssist";
 
 /**
@@ -111,7 +112,14 @@ export function OfficerAssistPanel({ assist, belowBanner = false }: { assist: Of
   }
 
   return (
-    <Dialog.Root open onOpenChange={(open) => { if (!open) assist.close(); }}>
+    <Dialog.Root
+      open
+      onOpenChange={(open, details) => {
+        // A5: Esc while an answer is being written stops it; it does not close the drawer.
+        if (!open && details.reason === "escape-key" && assist.pending) assist.stop();
+        else if (!open) assist.close();
+      }}
+    >
       <Dialog.Portal>
         <Dialog.Backdrop className="fixed inset-0 z-dialog bg-[oklch(var(--color-scrim)/var(--scrim-alpha))]" />
         <Dialog.Popup
@@ -215,11 +223,16 @@ function Chat({ assist }: { assist: OfficerAssist }) {
   const pageTitle = usePageTitle();
   const scroller = useRef<HTMLDivElement>(null);
   const { thread, pending, failure } = assist;
-
-  useEffect(() => {
+  // A4: follow new text while the reader is at the bottom; scrolled up, stop and offer 「↓ 最新」.
+  const [follow, setFollow] = useState(true);
+  const toBottom = () => {
     const node = scroller.current;
     if (node) node.scrollTop = node.scrollHeight;
-  }, [thread.messages.length, pending, failure]);
+  };
+
+  useEffect(() => {
+    if (follow) toBottom();
+  }, [thread.messages.length, pending, failure, follow]);
 
   if (failure?.kind === "not_configured") {
     return (
@@ -238,7 +251,14 @@ function Chat({ assist }: { assist: OfficerAssist }) {
 
   return (
     <>
-      <div ref={scroller} className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
+      <div
+        ref={scroller}
+        onScroll={(e) => {
+          const n = e.currentTarget;
+          setFollow(n.scrollHeight - n.scrollTop - n.clientHeight <= 8);
+        }}
+        className="relative min-h-0 flex-1 overflow-y-auto px-4 py-4"
+      >
         {empty ? (
           <div>
             <p className="mb-2 text-xs text-[oklch(var(--color-ink-subtle))]">
@@ -250,23 +270,33 @@ function Chat({ assist }: { assist: OfficerAssist }) {
         ) : null}
         <ol className="flex flex-col gap-4">
           {thread.messages.map((m) => (
-            <li key={m.id}>{m.role === "user" ? <Question text={m.content} meta={hm(m.created_at)} /> : <Answer message={m} />}</li>
+            <li key={m.id}>
+              {m.role === "user" ? (
+                <Question text={m.content} meta={hm(m.created_at)} />
+              ) : (
+                <Answer message={m} onRetry={m.id === assist.retryable ? assist.retryInterrupted : undefined} />
+              )}
+            </li>
           ))}
           {pending ? (
             <li>
               <Question text={pending.question} meta={`${hm(pending.at)} · ${t("officer_assist.sent")}`} />
-              <div className="mt-3" data-testid="officer-assist-waiting">
-                <div className="flex items-center gap-2">
-                  <Seal glyph="答" />
-                  <span className="text-sm text-[oklch(var(--color-ink-muted))]">{t("officer_assist.waiting")}</span>
-                </div>
-                {pending.slow ? (
-                  <div className="mt-2 flex items-center justify-between gap-2">
-                    <span className="text-xs text-[oklch(var(--color-ink-subtle))]">{t("officer_assist.waiting_long")}</span>
-                    <HeadButton onClick={assist.cancel}>{t("officer_assist.cancel")}</HeadButton>
+              {pending.text ? (
+                <div className="mt-3 border-l border-[oklch(var(--color-block))] pl-3" aria-busy="true" data-testid="officer-assist-streaming">
+                  <div className="mb-1 flex items-center gap-2">
+                    <Seal glyph="答" />
                   </div>
-                ) : null}
-              </div>
+                  <StreamingText text={pending.text} streaming />
+                </div>
+              ) : (
+                <div className="mt-3 flex items-center gap-2" data-testid="officer-assist-waiting">
+                  <Seal glyph="答" />
+                  <WaitingDots />
+                  <span className="text-sm text-[oklch(var(--color-ink-muted))]" data-testid="officer-assist-waiting-text">
+                    {t(pending.slow ? "officer_assist.still_searching" : "officer_assist.waiting")}
+                  </span>
+                </div>
+              )}
             </li>
           ) : null}
           {failure?.kind === "unanswered" ? (
@@ -285,6 +315,19 @@ function Chat({ assist }: { assist: OfficerAssist }) {
           ) : null}
         </ol>
         {failure?.kind === "limited" ? <Limited retryAt={failure.retryAt} /> : null}
+        {!follow && pending ? (
+          <button
+            type="button"
+            data-testid="officer-assist-jump"
+            onClick={() => {
+              setFollow(true);
+              toBottom();
+            }}
+            className="sticky bottom-0 ml-auto block border border-[oklch(var(--color-line))] bg-[oklch(var(--color-canvas))] px-2 py-0.5 font-mono text-2xs text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))]"
+          >
+            {t("officer_assist.jump_latest")}
+          </button>
+        ) : null}
       </div>
       <Composer assist={assist} />
     </>
@@ -331,7 +374,8 @@ function Question({ text, meta }: { text: string; meta: string }) {
   );
 }
 
-function Answer({ message }: { message: OfficerAssistMessage }) {
+/** A6 已停止: small ink3, not a failure. A7 回答中断: warning colour, and 「重试」 on the latest answer only (A9). */
+function Answer({ message, onRetry }: { message: OfficerAssistMessage; onRetry?: () => void }) {
   const { t } = useI18n();
   const { hm } = useClock();
   return (
@@ -341,7 +385,23 @@ function Answer({ message }: { message: OfficerAssistMessage }) {
         <span className="flex-1" />
         <span className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">{hm(message.created_at)}</span>
       </div>
-      <p className="whitespace-pre-wrap text-sm text-[oklch(var(--color-ink))]">{message.content}</p>
+      <StreamingText text={message.content} streaming={false} />
+      {message.interruption === "stopped" ? (
+        <p className="mt-1 text-xs text-[oklch(var(--color-ink-subtle))]" data-testid="officer-assist-stopped">
+          {t("officer_assist.stopped")}
+        </p>
+      ) : message.interruption === "interrupted" ? (
+        <div
+          data-testid="officer-assist-interrupted"
+          className="mt-2 flex items-center justify-between gap-2 border border-[oklch(var(--color-warning))] bg-[oklch(var(--color-warning)/0.1)] px-2 py-1 text-xs text-[oklch(var(--color-warning))]"
+        >
+          <span>
+            <span aria-hidden="true">! </span>
+            {t("officer_assist.interrupted")}
+          </span>
+          {onRetry ? <HeadButton onClick={onRetry}>{t("officer_assist.retry")}</HeadButton> : null}
+        </div>
+      ) : null}
       {isOfficerEmptyAnswer(message.content) ? (
         <div className="mt-2" data-testid="officer-assist-ask-lead">
           <Notice>{t("officer_assist.cannot_answer")}</Notice>
@@ -365,10 +425,13 @@ function Limited({ retryAt }: { retryAt: string | null }) {
   );
 }
 
+/** A5: the input stays open while an answer is written; the send button turns into 「■ 停止」 in place. */
 function Composer({ assist }: { assist: OfficerAssist }) {
   const { t } = useI18n();
   const busy = assist.pending !== null;
-  const send = () => assist.ask(assist.draft);
+  const send = () => {
+    if (!busy) assist.ask(assist.draft);
+  };
   return (
     <div className="shrink-0 border-t border-[oklch(var(--color-block))] p-3">
       <div className="flex items-end gap-2 border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] px-2 py-1">
@@ -376,7 +439,6 @@ function Composer({ assist }: { assist: OfficerAssist }) {
           ref={assist.inputRef}
           rows={2}
           value={assist.draft}
-          disabled={busy}
           aria-label={t("officer_assist.placeholder")}
           placeholder={busy ? t("officer_assist.wait_lock") : t("officer_assist.placeholder")}
           onChange={(e) => assist.setDraft(e.target.value)}
@@ -389,20 +451,33 @@ function Composer({ assist }: { assist: OfficerAssist }) {
           }}
           className="min-h-10 flex-1 resize-none bg-transparent text-sm text-[oklch(var(--color-ink))] outline-none placeholder:text-[oklch(var(--color-ink-subtle))]"
         />
-        <button
-          type="button"
-          onClick={send}
-          disabled={busy || !assist.draft.trim()}
-          aria-label={t("officer_assist.send")}
-          className="flex h-7 w-7 shrink-0 items-center justify-center text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))] disabled:text-[oklch(var(--color-disabled-ink))]"
-        >
-          <svg aria-hidden="true" width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4">
-            <path d="M8 13V3M3.5 7.5L8 3l4.5 4.5" />
-          </svg>
-        </button>
+        {busy ? (
+          <button
+            type="button"
+            onClick={assist.stop}
+            aria-label={t("officer_assist.stop_aria")}
+            data-testid="officer-assist-stop"
+            className="flex h-7 shrink-0 items-center gap-1 border border-[oklch(var(--color-ink))] px-2 text-xs text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))]"
+          >
+            <span aria-hidden="true">■</span>
+            {t("officer_assist.stop")}
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={send}
+            disabled={!assist.draft.trim()}
+            aria-label={t("officer_assist.send")}
+            className="flex h-7 w-7 shrink-0 items-center justify-center text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))] disabled:text-[oklch(var(--color-disabled-ink))]"
+          >
+            <svg aria-hidden="true" width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4">
+              <path d="M8 13V3M3.5 7.5L8 3l4.5 4.5" />
+            </svg>
+          </button>
+        )}
       </div>
       <p className="mt-2 font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">
-        {t("officer_assist.input_hint", { enter: "Enter", shift_enter: "Shift+Enter", esc: "Esc" })}
+        {busy ? t("officer_assist.stop_hint") : t("officer_assist.input_hint", { enter: "Enter", shift_enter: "Shift+Enter", esc: "Esc" })}
       </p>
     </div>
   );
