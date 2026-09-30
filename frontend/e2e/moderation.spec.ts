@@ -106,9 +106,13 @@ test.describe("Circle moderation", () => {
     await expect(row.getByRole("button")).toHaveText([SENSITIVE_WORDS[0].word]);
     await row.getByRole("checkbox").check();
     await page.getByRole("button", { name: "删除所选" }).click();
-    const dialog = page.getByRole("alertdialog");
+    // 敏感词硬删、不进回收站 → 输入名称以确认(只选一个时输的是那个词)。
+    const dialog = page.getByRole("dialog");
     await expect(dialog).toContainText("删除 1 个敏感词");
-    await dialog.getByRole("button", { name: "删除所选" }).click();
+    const confirm = dialog.getByTestId("name-confirm-action");
+    await expect(confirm).toBeDisabled();
+    await dialog.getByRole("textbox").fill(SENSITIVE_WORDS[0].word);
+    await confirm.click();
     await expect.poll(() => api.lastCall("POST", "/social-moderation/sensitive-words/batch-delete/")?.body).toEqual({
       ids: [SENSITIVE_WORDS[0].id],
     });

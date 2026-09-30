@@ -5493,12 +5493,19 @@ paths:
     get:
       operationId: v1_ledger_journal_retrieve
       description: |-
-        GET /ledger/journal/?month=YYYY-MM&page=N[&civilization=][&category=][&search=]
+        GET /ledger/journal/?month=YYYY-MM&page=N[&all=1][&civilization=][&category=][&search=]
 
         功过总账:四柱(旧管 / 新收 / 开除 / 实在)、按类目的本期合计、本期流水一页。
         只读、按租户划界(`scope_to_tenant`,ADMIN 跨租户),口径见 apps/ledger/journal.py。
         不给 `month` 时取当前月。
       parameters:
+      - in: query
+        name: all
+        schema:
+          type: boolean
+        description: '1/true: the whole month in one response (page ignored, page_size
+          == count). Over apps.ledger.journal.WHOLE_MONTH_MAX rows it is a 400 MONTH_TOO_LARGE,
+          never truncated.'
       - in: query
         name: category
         schema:
@@ -27756,6 +27763,8 @@ components:
           type: string
         civilization:
           type: string
+        realm_type:
+          $ref: '#/components/schemas/RealmTypeEnum'
         count:
           type: integer
       required:
@@ -27763,6 +27772,7 @@ components:
       - count
       - realm_code
       - realm_name
+      - realm_type
     Statute:
       type: object
       description: |-

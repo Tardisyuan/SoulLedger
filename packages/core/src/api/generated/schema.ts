@@ -2499,7 +2499,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * @description GET /ledger/journal/?month=YYYY-MM&page=N[&civilization=][&category=][&search=]
+         * @description GET /ledger/journal/?month=YYYY-MM&page=N[&all=1][&civilization=][&category=][&search=]
          *
          *     功过总账:四柱(旧管 / 新收 / 开除 / 实在)、按类目的本期合计、本期流水一页。
          *     只读、按租户划界(`scope_to_tenant`,ADMIN 跨租户),口径见 apps/ledger/journal.py。
@@ -12894,6 +12894,7 @@ export interface components {
             realm_code: string;
             realm_name: string;
             civilization: string;
+            realm_type: components["schemas"]["RealmTypeEnum"];
             count: number;
         };
         /**
@@ -17580,6 +17581,8 @@ export interface operations {
     v1_ledger_journal_retrieve: {
         parameters: {
             query?: {
+                /** @description 1/true: the whole month in one response (page ignored, page_size == count). Over apps.ledger.journal.WHOLE_MONTH_MAX rows it is a 400 MONTH_TOO_LARGE, never truncated. */
+                all?: boolean;
                 category?: string;
                 civilization?: string;
                 /** @description YYYY-MM; defaults to the current month */

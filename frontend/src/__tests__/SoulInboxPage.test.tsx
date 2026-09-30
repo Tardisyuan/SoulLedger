@@ -296,6 +296,27 @@ it("a template is filled with the soul's and the hall's name and inserted", asyn
   expect(apiMock.reply).not.toHaveBeenCalled();
 });
 
+it("deleting a template asks for its title first — templates are hard-deleted, there is no bin", async () => {
+  asRole("soul_inbox.read", "soul_inbox.reply");
+  templatesMock.list.mockResolvedValue({
+    data: [{ id: "t1", title: "收悉", body: "已收悉。", created_at: "", updated_at: "" }],
+  });
+  templatesMock.remove.mockResolvedValue({ data: undefined });
+  renderPage();
+  const thread = await openThread();
+  fireEvent.click(await within(thread).findByRole("button", { name: tZh("soul_inbox.template.manage") }));
+  fireEvent.click(await screen.findByRole("button", { name: `${tZh("common.delete")} 收悉` }));
+  // 点下「删除」不再直接删。
+  expect(templatesMock.remove).not.toHaveBeenCalled();
+  const confirm = await screen.findByTestId("name-confirm-action");
+  expect(confirm).toBeDisabled();
+  fireEvent.change(screen.getByLabelText(tZh("common.type_name_to_confirm", { name: "收悉" })), { target: { value: "收" } });
+  expect(confirm).toBeDisabled();
+  fireEvent.change(screen.getByLabelText(tZh("common.type_name_to_confirm", { name: "收悉" })), { target: { value: "收悉" } });
+  fireEvent.click(confirm);
+  await waitFor(() => expect(templatesMock.remove).toHaveBeenCalledWith("t1"));
+});
+
 it("archive and move back call the endpoints for this thread", async () => {
   asRole("soul_inbox.read");
   renderPage();

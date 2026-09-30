@@ -21,7 +21,11 @@ import { fieldControl } from "@/src/components/ui/Field";
 import { cn } from "@/lib/utils";
 import { FilterChipSelect } from "@/src/components/ui/FilterChip";
 
-/** The row `?username=` located. */
+/**
+ * The row `?username=` located: s2 底(选中行),**不加行首色标** —— 规范 v2 B12 把行首色标
+ * 定为「待我处理」专用、只在审判的两个列表上;这里曾是一道 inset 阴影画的 accent 竖条,
+ * 同时也违反「全站无阴影」。
+ */
 const LOCATED_BG = "bg-[oklch(var(--color-surface-2))]";
 
 export default function UsersPage() {
@@ -86,19 +90,6 @@ function UsersRoute() {
     const role = rolesQuery.data?.find((r) => r.name === roleName);
     return role && !role.is_builtin ? role.display_name || role.name : null;
   };
-
-  // Delete user mutation
-  const deleteMutation = useMutation({
-    mutationFn: (id: string) => usersApi.delete(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: userKeys.all });
-      showToast(t("users.delete_success"), "success");
-      setDeleteUser(null);
-    },
-    onError: () => {
-      showToast(t("users.delete_error"), "error");
-    },
-  });
 
   // Toggle user status mutation
   const toggleStatusMutation = useMutation({
@@ -201,7 +192,6 @@ function UsersRoute() {
               data-located={user.username === located ? "" : undefined}
               className={cn(
                 "px-4 py-3 text-[oklch(var(--color-ink))] font-medium",
-                user.username === located && "shadow-[inset_3px_0_0_oklch(var(--color-accent))]",
                 user.username === located && LOCATED_BG
               )}
             >
@@ -250,7 +240,8 @@ function UsersRoute() {
                   </Button>
                 </RequirePermission>
                 <RequirePermission permissions="user.manage">
-                  <Button type="button" size="sm" variant="ghost" className="text-[oklch(var(--color-danger))]" onClick={() => setDeleteUser(user)}>
+                  {/* 幽灵按钮,不上冷玫红:红只给系统出错与「输入名称以确认」里的危险键(规范 v2 A1)。 */}
+                  <Button type="button" size="sm" variant="ghost" onClick={() => setDeleteUser(user)}>
                     {t("common.delete")}
                   </Button>
                 </RequirePermission>

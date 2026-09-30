@@ -1,10 +1,4 @@
 {
-  "app/page.tsx": {
-    "space": 7
-  },
-  "app/permissions/loading.tsx": {
-    "space": 1
-  },
   "components/LanguageSwitcher.tsx": {
     "space": 2
   },
@@ -17,12 +11,6 @@
   "components/ui/data-table.tsx": {
     "space": 1
   },
-  "components/ui/page-skeletons.tsx": {
-    "space": 1
-  },
-  "src/components/connection-status.tsx": {
-    "space": 1
-  },
   "src/components/layout/AppLayout.tsx": {
     "space": 1
   },
@@ -31,8 +19,5 @@
   },
   "src/components/ui/DomainValue.tsx": {
     "space": 1
-  },
-  "src/components/ui/PageShell.tsx": {
-    "space": 9
   }
 }

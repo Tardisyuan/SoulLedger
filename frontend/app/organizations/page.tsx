@@ -1,11 +1,11 @@
 "use client";
 import { useState } from "react";
-import { CIVILIZATION_ICONS, CIVILIZATION_ICON_FALLBACK } from "@soulledger/core/config/civilizations";
 import { useQuery } from "@tanstack/react-query";
 import { api, type Organization, type PaginatedResponse } from "@soulledger/core/api";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
-import { ListSkeleton } from "@/components/ui/skeleton";
+import { Skeleton } from "@/components/ui/skeleton";
+import { SectionTitle } from "@/src/components/plaque/SectionTitle";
 import { ChevronDown } from "lucide-react";
 import { TreeName, flattenTree } from "@/src/components/ui/TreeRow";
 import { PageShell } from "@/src/components/ui/PageShell";
@@ -149,7 +149,7 @@ function OrganizationsPageContent() {
       }
       subtitle={t("organization.subtitle")}
       isLoading={isLoading}
-      skeleton={<ListSkeleton count={6} />}
+      skeleton={<OrganizationsSkeleton />}
     >
       {/* Worse than its siblings: no empty state either, so a failed request
           rendered a heading and literally nothing else -- `Object.entries({})`
@@ -170,29 +170,30 @@ function OrganizationsPageContent() {
       )}
       <div className="space-y-6">
         {Object.entries(grouped).map(([category, orgs]) => {
-          const info = { name: t(`organization.civilizations.${category}`) || category, icon: CIVILIZATION_ICONS[category] ?? CIVILIZATION_ICON_FALLBACK };
+          const name = t(`organization.civilizations.${category}`) || category;
           const isCollapsed = collapsed[category];
 
           return (
-            <div key={category}>
-              {/* Category Header — a flat toggle over the block line, not a boxed button. */}
-              <button
-                type="button"
-                onClick={() => toggleCollapse(category)}
-                aria-expanded={!isCollapsed}
-                className="w-full flex items-center gap-3 mb-2 py-3 border-t border-[oklch(var(--color-block))] hover:bg-[oklch(var(--color-surface-2))] transition-colors text-left"
-              >
-                <span aria-hidden="true" className="text-md">{info.icon}</span>
-                <span className="flex-1 min-w-0">
-                  <span title={info.name} className="block text-md text-[oklch(var(--color-ink))] truncate">{info.name}</span>
-                  <span className="block font-mono text-xs text-[oklch(var(--color-ink-subtle))]">{t("organization.organizations_count", { count: String(orgs.length) })}</span>
-                </span>
-                <ChevronDown aria-hidden="true" className={`w-5 h-5 text-[oklch(var(--color-ink-muted))] transition-transform ${isCollapsed ? "-rotate-90" : ""}`} />
-              </button>
+            <section key={category}>
+              {/* 每个文明一节 = 页面级分节标题(规范 v2 §四):匾纹片段 + 节名,件数在右侧注记。
+                  折叠钮放在 <h2> 里面(披露模式),不是反过来 —— <button> 的内容只能是
+                  短语内容,标题进按钮是无效 HTML。文明 emoji 撤掉:节首的匾纹片段已经标明文明。 */}
+              <div className="mb-3">
+                <SectionTitle aside={t("organization.organizations_count", { count: String(orgs.length) })}>
+                  <button
+                    type="button"
+                    onClick={() => toggleCollapse(category)}
+                    aria-expanded={!isCollapsed}
+                    className="inline-flex items-center gap-2 text-left hover:underline underline-offset-2"
+                  >
+                    {name}
+                    <ChevronDown aria-hidden="true" className={`w-4 h-4 text-[oklch(var(--color-ink-muted))] transition-transform ${isCollapsed ? "-rotate-90" : ""}`} />
+                  </button>
+                </SectionTitle>
+              </div>
 
-              {/* Organization Tree */}
               {!isCollapsed && <div className="overflow-x-auto">{renderTable(orgs)}</div>}
-            </div>
+            </section>
           );
         })}
       </div>
@@ -200,6 +201,19 @@ function OrganizationsPageContent() {
   );
 }
 
+
+/** 骨架(补足 C15「静态,不闪光」;表格是表头 + 3 行):一节分节标题、表头、三行,与真表同高。 */
+function OrganizationsSkeleton() {
+  return (
+    <div data-testid="organizations-skeleton" aria-busy="true" className="space-y-3">
+      <Skeleton className="h-5 w-40" />
+      <Skeleton className="h-8 w-full" />
+      {[0, 1, 2].map((i) => (
+        <Skeleton key={i} className="h-9 w-full" />
+      ))}
+    </div>
+  );
+}
 
 /* 页级门。后端才是正解(这几个 viewset 都挂了 `CodenamePermission`),这里是纵深:
    侧边栏的菜单过滤**只藏链接、不挡路由**,所以在补上这道门之前,直接输 URL 就能

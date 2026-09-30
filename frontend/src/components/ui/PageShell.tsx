@@ -153,12 +153,12 @@ export type PageShellDensity = "table" | "document";
 /**
  * 正文槽的纵向节奏,按密度。
  *
- * 只有纵向不同:左右一律规范 v1 的页边距(桌面 40 px、393 px 下 16 px),因为
+ * 只有纵向不同:左右一律规范 v2 的内容边距(补足 A2:桌面 32 px、393 px 下 16 px),因为
  * 列宽归 `variant` 管,两个 prop 各管一件事。
  */
 const BODY_CLASS: Record<PageShellDensity, string> = {
-  table: "px-4 md:px-10 py-6",
-  document: "px-4 md:px-10 pt-10 pb-14",
+  table: "px-4 md:px-8 py-6",
+  document: "px-4 md:px-8 pt-8 pb-12",
 };
 
 export interface PageShellPagination {
@@ -234,10 +234,10 @@ export interface PageShellProps {
    * `space-y-10` 五处、`space-y-6` 四处,**同一个槽位**。规矩是:
    *
    *     density="table"(默认)   space-y-6    24px
-   *     density="document"       space-y-10   40px
+   *     density="document"       space-y-12   48px
    *
    * 也就是说它不是第二个决定,是这一个决定的延伸 —— 扫描页收紧、阅读页放开。
-   * 按这条,`ledger`(document)保持 10;`organizations` / `realms` /
+   * (规范 v2 A2 的刻度里没有 40,文档档取 12 = 48px。)按这条,文档页用 12;`organizations` / `realms` /
    * `permissions`(含它的 loading.tsx,否则加载完会跳一格)收到 6。
    *
    * **为什么不是壳自己加 `space-y-*`。** 壳看不见 children 是什么:走 DataTable
@@ -285,7 +285,7 @@ export function PageShell({
         data-page-shell-header=""
         className="border-b border-[oklch(var(--color-hairline))]"
       >
-        <div className={cn(width, "px-4 md:px-10 pt-10 pb-6")}>
+        <div className={cn(width, "px-4 md:px-8 pt-8 pb-6")}>
           {/* 返回链接与 eyebrow 共用标题上方那一行，但它们不是一回事，所以是
               两个槽而不是让页面把 `←` 塞进 eyebrow。eyebrow 是**这一页是什么**
               （卷宗号、租户、状态），返回链接是**离开这一页**。七个详情页现在
@@ -345,7 +345,7 @@ export function PageShell({
           所有标签页而不是当前这个。 */}
       {tabs ? (
         <div data-page-shell-tabs="" className="border-b border-[oklch(var(--color-hairline))]">
-          <div className={cn(width, "px-4 md:px-10 flex items-center gap-1")}>{tabs}</div>
+          <div className={cn(width, "px-4 md:px-8 flex items-center gap-1")}>{tabs}</div>
         </div>
       ) : null}
 
@@ -373,7 +373,7 @@ export function PageShell({
           <div
             className={cn(
               width,
-              "px-4 md:px-10 h-14 py-3 flex items-center gap-3 overflow-x-auto"
+              "px-4 md:px-8 h-14 py-3 flex items-center gap-3 overflow-x-auto"
             )}
           >
             {filters}
@@ -386,7 +386,7 @@ export function PageShell({
       </div>
 
       {pagination ? (
-        <div data-page-shell-pagination="" className={cn(width, "px-4 md:px-10 pb-6")}>
+        <div data-page-shell-pagination="" className={cn(width, "px-4 md:px-8 pb-6")}>
           <div className="border-t-2 border-[oklch(var(--color-ink-subtle))] pt-3 min-h-14 flex items-center justify-between gap-4">
             <div data-page-shell-pagination-count="" className="min-w-0">
               {pagination.count}
