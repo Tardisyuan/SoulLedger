@@ -148,17 +148,17 @@ describe("initial password expiry", () => {
   const inHours = (h: number) => new Date(now + h * 3_600_000).toISOString();
   const theme = themeFor(null, "dark");
 
-  it("under 6 hours: warning colours AND the consequence, not only a colour change", () => {
+  it("under 6 hours: the warn (橙) colours, not neg, AND the consequence, not only a colour change", () => {
     wrap(<ExpiryBox expiresAt={inHours(3.5)} now={now} />, null);
     const box = screen.getByTestId("expiry-box");
-    expect(flat(box)).toMatchObject({ borderColor: theme.negStrong, backgroundColor: theme.negBg });
+    expect(flat(box)).toMatchObject({ borderColor: theme.warn, backgroundColor: theme.warnBg });
     expect(screen.getByText("剩余 3 小时 · 过期后须由官员重置")).toBeTruthy();
   });
 
   it("with time to spare: neutral box, hours left, no consequence line", () => {
     wrap(<ExpiryBox expiresAt={inHours(39.2)} now={now} />, null);
     const box = screen.getByTestId("expiry-box");
-    expect(flat(box)).toMatchObject({ borderColor: theme.accent, backgroundColor: theme.s1 });
+    expect(flat(box)).toMatchObject({ borderColor: theme.inkSubtle, backgroundColor: theme.s1 });
     expect(screen.getByText("剩余 39 小时")).toBeTruthy();
     expect(screen.queryByText(/官员重置/)).toBeNull();
   });

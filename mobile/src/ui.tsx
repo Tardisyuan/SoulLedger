@@ -136,7 +136,7 @@ export const TYPE = {
   valueLg: { fontSize: 28, lineHeight: 36, fontFamily: family.mono[500] },
 } satisfies Record<string, TextStyle>;
 
-export type Tone = "ink" | "muted" | "subtle" | "accent" | "mark" | "neg" | "negInk" | "pos" | "onAccent";
+export type Tone = "ink" | "muted" | "subtle" | "accent" | "mark" | "neg" | "negInk" | "pos" | "warn" | "onAccent";
 
 export function toneColor(t: Theme, tone: Tone): string {
   switch (tone) {

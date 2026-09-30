@@ -95,8 +95,8 @@ describe("tokens are the design's OKLCH table, converted", () => {
  */
 describe("v2 tokens are the spec's (规范 v2 §一–§三)", () => {
   const STATUS = {
-    dark: "pos #82CB92 · neg #FF7A93 · negStrong #C21D4D · negBg #33101A · negInk #FFD3DC · warn #FF9A3C · lamp #F2CC7A · lampBg #241B0C",
-    light: "pos #197037 · neg #A8103E · negStrong #A8103E · negBg #FFECEF · negInk #8A0C33 · warn #9F4A00 · lamp #6A3E00 · lampBg #FBF1DC",
+    dark: "pos #82CB92 · neg #FF7A93 · negStrong #C21D4D · negBg #33101A · negInk #FFD3DC · warn #FF9A3C · warnBg #301904 · lamp #F2CC7A · lampBg #241B0C",
+    light: "pos #197037 · neg #A8103E · negStrong #A8103E · negBg #FFECEF · negInk #8A0C33 · warn #9F4A00 · warnBg #FFF1E2 · lamp #6A3E00 · lampBg #FBF1DC",
   };
   const PLAQUE = "neutral #2b2724 #6e665e · cn #9a2f1f #b3402c · eu #4a2a6a #7a52a6 · eg #1f3f8a #3e62b8 · gr #1f3b3e #3f7076";
   const APP_INK = { dark: ["#F4F5F6", "#C4CBD4", "#89909A"], light: ["#16181D", "#505662", "#636874"] };
@@ -106,7 +106,7 @@ describe("v2 tokens are the spec's (规范 v2 §一–§三)", () => {
   };
   const pairs = (line: string) => line.split(" · ").map((p) => p.split(" "));
 
-  it.each(SCHEMES)("%s: the eight status colours", (scheme) => {
+  it.each(SCHEMES)("%s: the nine status colours", (scheme) => {
     const printed = Object.fromEntries(pairs(STATUS[scheme]));
     const { scrim: _scrim, ...ours } = semantic[scheme];
     expect(ours).toEqual(printed);
@@ -155,10 +155,12 @@ describe("v2 contrast, at the worst App ground", () => {
     expect(low).toEqual([]);
   });
 
-  it.each(SCHEMES)("%s: white on negStrong, negInk on negBg ≥ 4.5", (scheme) => {
+  it.each(SCHEMES)("%s: white on negStrong, negInk on negBg, warn on warnBg ≥ 4.5", (scheme) => {
     const s = semantic[scheme];
     expect(contrast("#FFFFFF", s.negStrong)).toBeGreaterThanOrEqual(4.5);
     expect(contrast(s.negInk, s.negBg)).toBeGreaterThanOrEqual(4.5);
+    // 补足 D 组: text on the warning ground is warn itself.
+    expect(contrast(s.warn, s.warnBg)).toBeGreaterThanOrEqual(4.5);
   });
 
   it.each(KEYS.flatMap((k) => SCHEMES.map((s) => [k, s] as const)))("%s / %s: onPlaque on the plaque ≥ 4.5; the plaque on s0 ≥ 3", (key, scheme) => {
@@ -253,8 +255,8 @@ describe("preLoginTheme (第三类 F 组 canvas, parchment)", () => {
     expect([t.s0, t.accent, t.onAccent, t.mark]).toEqual([p.bg, p.ink, p.bg, p.ink]);
     expect([t.ink, t.inkMuted, t.inkSubtle, t.hair, t.hair2, t.s2]).toEqual([p.ink, p.ink2, p.ink3, p.line, p.line2, p.bg2]);
     expect([t.plaque, t.onPlaque]).toEqual([civ.neutral[scheme].plaque, ON_PLAQUE]);
-    const { pos, neg, negStrong, negInk, negBg, warn, lamp, lampBg, scrim } = t;
-    expect({ pos, neg, negStrong, negInk, negBg, warn, lamp, lampBg, scrim }).toEqual(semantic[scheme]);
+    const { pos, neg, negStrong, negInk, negBg, warn, warnBg, lamp, lampBg, scrim } = t;
+    expect({ pos, neg, negStrong, negInk, negBg, warn, warnBg, lamp, lampBg, scrim }).toEqual(semantic[scheme]);
     // …and the canvas's own red / merit / warnBg reach no slot at all.
     const canvasOnly = new Set<string>([p.acc, p.demerit, p.merit, p.warnBg]);
     expect((Object.keys(t) as (keyof Theme)[]).filter((k) => canvasOnly.has(t[k] as string))).toEqual([]);

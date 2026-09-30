@@ -226,7 +226,7 @@ export function ExpiryBox({ expiresAt, now }: { expiresAt: string | null; now: n
   const expiry = expiryOf(expiresAt, now);
   if (!expiry) return null;
   const warn = expiry.warning;
-  const hours = <Txt variant="value" tone={warn ? "negInk" : "subtle"} style={styles.inlineMono}>{String(expiry.hoursLeft)}</Txt>;
+  const hours = <Txt variant="value" tone={warn ? "warn" : "subtle"} style={styles.inlineMono}>{String(expiry.hoursLeft)}</Txt>;
   return (
     <View
       testID="expiry-box"
@@ -234,20 +234,20 @@ export function ExpiryBox({ expiresAt, now }: { expiresAt: string | null; now: n
       style={[
         styles.expiry,
         warn
-          ? { borderColor: theme.negStrong, backgroundColor: theme.negBg }
-          : { borderColor: theme.accent, backgroundColor: theme.s1 },
+          ? { borderColor: theme.warn, backgroundColor: theme.warnBg }
+          : { borderColor: theme.inkSubtle, backgroundColor: theme.s1 },
       ]}
     >
-      <Txt variant="label" tone={warn ? "negInk" : "muted"}>
+      <Txt variant="label" tone={warn ? "warn" : "muted"}>
         {t("soul_app.change_password.expires_label")}
       </Txt>
-      <Txt variant="value" tone={warn ? "negInk" : "accent"} style={styles.expiryValue}>
+      <Txt variant="value" tone={warn ? "warn" : "ink"} style={styles.expiryValue}>
         {formatStamp(expiresAt)}
       </Txt>
       <Interp
         testID="expiry-remaining"
         variant="label"
-        tone={warn ? "negInk" : "subtle"}
+        tone={warn ? "warn" : "subtle"}
         style={styles.noSpacing}
         text={t(
           expiry.expired
