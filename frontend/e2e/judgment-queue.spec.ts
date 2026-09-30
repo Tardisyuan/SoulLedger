@@ -215,3 +215,79 @@ test.describe("Claim queue and evidence admission", () => {
     expect(api.lastCall("PUT", "/judgment/:id/evidence/:record/")?.body).toEqual({ admitted: false, reason: "无旁证" });
   });
 });
+
+/**
+ * 审判队列上的「我认领的」分组、C 键认领与改派(2026-09-30 用户拍板的三项新功能)。
+ * 单测(JudgmentQueueConsole.test.tsx)替身掉了 motion 的 AnimatePresence;这里在真浏览器里
+ * 看:行首色标真的画在「我认领、未结案」的行上,改派走的那一行真的离开列表。
+ */
+test.describe("Queue: 我认领的 · C 认领 · 改派", () => {
+  const MINE_A = { ...OPENED_JUDGMENT, id: "aaaaaaaa-1111-4aaa-8aaa-aaaaaaaaaaaa", soul_name: "沈青梧", court: "第五殿", claimed_by: 1, claimed_by_name: "测试管理员" };
+  const MINE_B = { ...OPENED_JUDGMENT, id: "bbbbbbbb-2222-4bbb-8bbb-bbbbbbbbbbbb", soul_name: "许知微", court: "第五殿", claimed_by: 1, claimed_by_name: "测试管理员" };
+  const OPEN_CASE = { ...FIRST, claimed_by: null, claimed_by_name: null };
+
+  function mount(api: Awaited<ReturnType<typeof setupAuthenticatedPage>>) {
+    const mine = [MINE_A, MINE_B];
+    api.on("GET", "/judgment/next/", () => ({ body: cursor(OPEN_CASE, 1) }));
+    api.on("GET", "/judgment/", (call) => {
+      const results = call.query.group === "mine" ? mine : [];
+      return { body: { count: results.length, next: null, previous: null, results } };
+    });
+    api.on("GET", "/judgment/assignable-officers/", [
+      { id: 1, display_name: "测试管理员", username: "test_admin", role: "ADMIN", in_hand: 2 },
+      { id: 7, display_name: "崔判官", username: "cui", role: "JUDGE", in_hand: 3 },
+    ]);
+    api.on("POST", "/judgment/:id/reassign/", (call) => {
+      const i = mine.findIndex((j) => call.path.includes(j.id));
+      const [moved] = mine.splice(i, 1);
+      return { body: { ...moved, claimed_by: 7, claimed_by_name: "崔判官" } };
+    });
+    api.on("POST", "/judgment/:id/claim/", () => {
+      mine.unshift({ ...OPEN_CASE, claimed_by: 1, claimed_by_name: "测试管理员" });
+      return { body: { ...OPEN_CASE, claimed_by: 1, claimed_by_name: "测试管理员" } };
+    });
+    return mine;
+  }
+
+  test("my claimed cases carry the row mark, and 改派 hands one off and it leaves the list", async ({ page }) => {
+    const api = await setupAuthenticatedPage(page);
+    mount(api);
+    await page.goto("/judgment/queue");
+
+    const panel = page.getByTestId("queue-mine");
+    const rows = panel.getByTestId("queue-mine-row");
+    await expect(rows).toHaveCount(2);
+    // B12:未结案 + 认领人是我 → 两行都有色标,读屏读「待我处理」。
+    await expect(panel.getByTestId("row-mark")).toHaveCount(2);
+    await expect(rows.first()).toContainText("待我处理");
+
+    await rows.filter({ hasText: "沈青梧" }).getByRole("button", { name: "改派…" }).click();
+    const dialog = page.getByRole("dialog");
+    await expect(dialog).toBeVisible();
+    await dialog.locator('[data-officer="7"]').click();
+    await dialog.getByRole("button", { name: "改派", exact: true }).click();
+
+    await expect.poll(() => api.countOf("POST", "/judgment/:id/reassign/")).toBe(1);
+    const sent = api.lastCall("POST", "/judgment/:id/reassign/");
+    expect(sent?.path).toContain(MINE_A.id);
+    expect(sent?.body).toEqual({ to: 7 });
+    await expect(rows).toHaveCount(1);
+    await expect(panel).not.toContainText("沈青梧");
+    await expect(page.getByText("已改派 · 沈青梧 → 崔判官")).toBeVisible();
+  });
+
+  test("C claims the case on screen and it joins 我认领的 at the top", async ({ page }) => {
+    const api = await setupAuthenticatedPage(page);
+    mount(api);
+    await page.goto("/judgment/queue");
+    const rows = page.getByTestId("queue-mine").getByTestId("queue-mine-row");
+    await expect(rows).toHaveCount(2);
+    await expect(page.getByText(OPEN_CASE.soul_name).first()).toBeVisible();
+
+    await page.keyboard.press("c");
+    await expect.poll(() => api.countOf("POST", "/judgment/:id/claim/")).toBe(1);
+    expect(api.lastCall("POST", "/judgment/:id/claim/")?.path).toContain(OPEN_CASE.id);
+    await expect(rows).toHaveCount(3);
+    await expect(rows.first()).toContainText(OPEN_CASE.soul_name);
+  });
+});

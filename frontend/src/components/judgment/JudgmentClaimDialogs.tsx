@@ -263,7 +263,7 @@ export function ReassignDialog({
     >
       {isError ? (
         <p role="alert" className="text-sm text-[oklch(var(--color-danger))]">
-          <span aria-hidden="true">! </span>
+          <span aria-hidden="true">✕ </span>
           {t("judgment.claim.officers_unavailable")}
         </p>
       ) : isLoading ? (
@@ -331,7 +331,7 @@ export function ReassignDialog({
           </div>
           {touched && !to && (
             <p role="alert" className="text-xs text-[oklch(var(--color-danger))]">
-              <span aria-hidden="true">! </span>
+              <span aria-hidden="true">✕ </span>
               {t("judgment.claim.officer_required")}
             </p>
           )}
