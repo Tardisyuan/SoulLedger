@@ -1,8 +1,8 @@
 /**
  * The four civilization emblems, the neutral mark, and the handful of line
  * icons the screens use — all transcribed from the design handoff's SVG
- * (viewBox 48 for emblems, 16/18 for icons). One `stroke`: a caller passes the
- * mark colour and nothing else about colour.
+ * (viewBox 48 for emblems, 16/18 for icons). One `stroke`: a caller passes one
+ * ink and nothing else about colour.
  *
  * Each emblem has two drawings: `full` (login mark, watermark) and `compact`
  * (inline 15px, tab 24px, divider), where the handoff drops strokes that would

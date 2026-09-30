@@ -260,7 +260,7 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
               style={[stack ? styles.tabRuleSide : styles.tabRule, { backgroundColor: selected ? t.plaque : "transparent" }]}
             />
             <View style={styles.tabIcon}>
-              {tabBarBadge ? <View testID={`tab-${route.name}-badge`} style={[styles.tabBadge, { backgroundColor: t.plaque }]} /> : null}
+              {tabBarBadge ? <View testID={`tab-${route.name}-badge`} style={[styles.tabBadge, { backgroundColor: t.ink }]} /> : null}
               {selected ? (
                 <Emblem civ={t.civ} size={24} stroke={t.ink} strokeWidth={2.2} />
               ) : (

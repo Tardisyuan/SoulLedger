@@ -138,7 +138,7 @@ export const TYPE = {
   valueLg: { fontSize: 28, lineHeight: 36, fontFamily: family.mono[500] },
 } satisfies Record<string, TextStyle>;
 
-export type Tone = "ink" | "muted" | "subtle" | "accent" | "mark" | "neg" | "negInk" | "pos" | "warn" | "onAccent";
+export type Tone = "ink" | "muted" | "subtle" | "neg" | "negInk" | "pos" | "warn";
 
 export function toneColor(t: Theme, tone: Tone): string {
   switch (tone) {
@@ -212,7 +212,7 @@ export function usePullRefresh(refreshing: boolean | undefined, onRefresh: (() =
         setPulled(true);
         onRefresh();
       }}
-      tintColor={t.accent}
+      tintColor={t.inkSubtle}
     />
   ) : undefined;
 }
@@ -412,7 +412,7 @@ export function PageEmptyArt() {
   const compact = useFlavorCompact();
   return (
     <View style={styles.emptyArt}>
-      <Hero testID={`empty-hero-${t.civ}`} civ={t.civ} stroke={t.mark} compact={compact} />
+      <Hero testID={`empty-hero-${t.civ}`} civ={t.civ} stroke={t.inkSubtle} compact={compact} />
     </View>
   );
 }
@@ -753,14 +753,30 @@ export function ScreenError({ error, onRetry }: { error: SoulErrorMessage; onRet
   );
 }
 
-/** One part of a screen failed; the rest renders as usual. */
+/**
+ * One part of a screen failed; the rest renders as usual. 补足 C15: said in 冷玫红 with a
+ * ✕ — an error is the system failing, the one thing neg is for — and a retry beside it.
+ */
 export function SectionError({ onRetry, testID }: { onRetry: () => void; testID?: string }) {
   const { t } = useI18n();
   return (
     <View style={styles.sectionBody}>
-      <Notice tone="neutral" onRetry={onRetry} testID={testID}>
-        {t("soul_app.errors.section")}
-      </Notice>
+      <FailedLine text={t("soul_app.errors.section")} onRetry={onRetry} testID={testID} />
+    </View>
+  );
+}
+
+/** "✕ 没能载入 …" in neg, and a ghost retry (补足 C15 空 · 出错 · 无权限). */
+export function FailedLine({ text, onRetry, testID, retryTestID }: { text: string; onRetry: () => void; testID?: string; retryTestID?: string }) {
+  const theme = useTheme();
+  const { t } = useI18n();
+  return (
+    <View accessibilityRole="alert" style={styles.failed}>
+      <Text style={[styles.failedText, { color: theme.neg }]}>✕</Text>
+      <Text testID={testID} style={[styles.failedText, styles.fill, { color: theme.neg }]}>
+        {text}
+      </Text>
+      <SmallButton testID={retryTestID} title={t("soul_app.common.retry")} onPress={onRetry} />
     </View>
   );
 }
@@ -838,8 +854,8 @@ export function EnumValue({
 
 export function Badge({ spec, label, raw, testID }: { spec: BadgeSpec; label: string; raw?: string | null; testID?: string }) {
   const t = useTheme();
-  const color = { accent: t.accent, neg: t.neg, pos: t.pos, muted: t.inkMuted, unknown: t.inkSubtle }[spec.tone];
-  const border = spec.tone === "unknown" ? t.hair2 : color;
+  // 补足 C15: ink words, an ink3 frame, s2 under what is still pending — no status colour.
+  const color = t.ink;
   return (
     <View
       testID={testID}
@@ -848,7 +864,11 @@ export function Badge({ spec, label, raw, testID }: { spec: BadgeSpec; label: st
       // Only the raw member may wrap onto its own line. A known pill never wraps: laid
       // out at exactly its own content width (a pill in a row), iOS measures the label a
       // hair wider and a wrapping pill puts the glyph over the label.
-      style={[styles.badge, raw ? styles.badgeWraps : null, { borderColor: border, borderStyle: spec.border }]}
+      style={[
+        styles.badge,
+        raw ? styles.badgeWraps : null,
+        { borderColor: t.inkSubtle, borderStyle: spec.border, backgroundColor: spec.pending ? t.s2 : "transparent" },
+      ]}
     >
       <Text style={[styles.badgeText, { color }]}>{spec.glyph}</Text>
       <Text style={[styles.badgeText, styles.shrink, { color }]}>{label}</Text>
@@ -875,8 +895,8 @@ export function EnumBadge({
   const { enumLabel, t } = useI18n();
   const d = enumLabel(namespace, value);
   const spec = badgeSpec(table, d.raw, d.state === "known");
-  const label = d.state === "known" && spec.tone !== "unknown" ? (lexiconLabel ?? d.label) : d.state === "missing" ? t("common.value.unrecorded") : t("common.value.unrecognized");
-  return <Badge testID={testID} spec={spec} label={label} raw={spec.tone === "unknown" ? d.raw : null} />;
+  const label = d.state === "known" && !spec.unknown ? (lexiconLabel ?? d.label) : d.state === "missing" ? t("common.value.unrecorded") : t("common.value.unrecognized");
+  return <Badge testID={testID} spec={spec} label={label} raw={spec.unknown ? d.raw : null} />;
 }
 
 /** Han characters (the same ranges `fonts.ts` picks the Han serif by): the one content language the app can name. */
@@ -892,7 +912,7 @@ export function Quote({ text, tone = "neutral", testID }: { text: string; tone?:
   const t = useTheme();
   const { t: tr, locale } = useI18n();
   const { compact } = useLayout();
-  const line = tone === "rejection" ? t.negStrong : tone === "appeal" ? t.accent : t.hair2;
+  const line = tone === "rejection" ? t.negStrong : tone === "appeal" ? t.ink : t.hair2;
   const han = HAN.test(text);
   return (
     <View style={[styles.quote, compact && styles.quoteCompact, { borderLeftColor: line }]}>
@@ -920,7 +940,7 @@ export function Quote({ text, tone = "neutral", testID }: { text: string; tone?:
 
 // ── loading ────────────────────────────────────────────────────────────
 
-/** Thin hairline-coloured bars in the shape of what is coming. No pulse. */
+/** 补足 C15: s2 bars in the shape of what is coming — static, no shimmer. */
 export function Skeleton({ lines = 3, testID }: { lines?: number; testID?: string }) {
   const t = useTheme();
   const { t: tr } = useI18n();
@@ -928,7 +948,7 @@ export function Skeleton({ lines = 3, testID }: { lines?: number; testID?: strin
   return (
     <View testID={testID} accessible accessibilityLabel={tr("soul_app.common.loading")} style={styles.skeleton}>
       {Array.from({ length: lines }, (_, i) => (
-        <View key={i} style={{ width: widths[i % widths.length], height: 12, backgroundColor: t.hair }} />
+        <View key={i} style={{ width: widths[i % widths.length], height: 12, backgroundColor: t.s2 }} />
       ))}
     </View>
   );
@@ -963,7 +983,7 @@ export function Loader({ size = 28, testID }: { size?: number; testID?: string }
       accessibilityState={{ busy: true }}
       style={{ opacity: reduced ? 1 : opacity }}
     >
-      <Hero civ={t.civ} stroke={t.mark} compact size={size} />
+      <Hero civ={t.civ} stroke={t.inkSubtle} compact size={size} />
     </Animated.View>
   );
 }
@@ -1058,6 +1078,8 @@ export const styles = StyleSheet.create({
   },
   buttonText: { fontFamily: family.ui[600], fontSize: 13, lineHeight: 20, letterSpacing: 0.6, textAlign: "center" },
   notice: { flexDirection: "row", alignItems: "center", gap: space[2], borderWidth: 1, borderLeftWidth: 3, paddingVertical: space[3], paddingHorizontal: space[3] },
+  failed: { flexDirection: "row", alignItems: "center", gap: space[2] },
+  failedText: { fontFamily: family.ui[600], fontSize: 13, lineHeight: 20 },
   small: { borderWidth: 1, paddingHorizontal: space[3], paddingVertical: space[2] },
   screenError: { flex: 1, alignItems: "center", justifyContent: "center", gap: space[4], paddingHorizontal: space[6], paddingVertical: space[7] },
   retry: { alignSelf: "stretch", marginTop: space[1] },

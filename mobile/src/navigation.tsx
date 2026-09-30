@@ -238,7 +238,7 @@ export function RootNavigator() {
   const base = scheme === "light" ? DefaultTheme : DarkTheme;
   const navTheme: NavTheme = {
     ...base,
-    colors: { ...base.colors, primary: theme.accent, background: theme.s0, card: theme.s0, text: theme.ink, border: theme.hair },
+    colors: { ...base.colors, primary: theme.ink, background: theme.s0, card: theme.s0, text: theme.ink, border: theme.hair },
   };
 
   let body;

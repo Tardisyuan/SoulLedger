@@ -38,6 +38,7 @@ import { Sheet, useToast } from "../feedback";
 import { quoteFamily } from "../fonts";
 import { useI18n } from "../i18n";
 import { formatStamp } from "../rules";
+import { radius } from "../theme";
 import {
   Button,
   Interp,
@@ -53,6 +54,7 @@ import {
   useReloadOnRefocus,
   useRemote,
   useTheme,
+  shade,
 } from "../ui";
 import type { AppStackParams } from "./applications";
 import { ComposeMediaTray, MediaGrid, MediaViewer, pickImages, uploadBody, type PickedImage } from "./circleMedia";
@@ -122,7 +124,7 @@ function ReactionMark({ type, size, color }: { type: SoulReactionType; size: num
   return <Txt style={{ fontSize: size, lineHeight: size + 3, color, width: size + 1, textAlign: "center" }}>{REACTIONS.find((r) => r.type === type)?.glyph}</Txt>;
 }
 
-/** The five counts, non-zero only; the lamp in gold, mine in the accent. */
+/** The five counts, non-zero only; the lamp in gold, mine in ink. */
 function ReactionSummary({ post }: { post: SoulPost }) {
   const t = useTheme();
   const shown = REACTIONS.filter((r) => post.reaction_counts[r.type] > 0);
@@ -131,12 +133,12 @@ function ReactionSummary({ post }: { post: SoulPost }) {
     <View style={styles.summary}>
       {shown.map((r) => {
         const lamp = r.type === "ETERNAL_LIGHT";
-        const color = lamp ? t.lamp : post.my_reaction === r.type ? t.accent : t.inkMuted;
+        const color = lamp ? t.lamp : post.my_reaction === r.type ? t.ink : t.inkMuted;
         return (
           <View
             key={r.type}
             testID={`count-${r.type}`}
-            style={[styles.chip, { borderColor: lamp ? t.lamp : post.my_reaction === r.type ? t.accent : t.hair2, backgroundColor: lamp ? t.lampBg : "transparent" }]}
+            style={[styles.chip, { borderColor: lamp ? t.lamp : post.my_reaction === r.type ? t.ink : t.hair2, backgroundColor: lamp ? t.lampBg : "transparent" }]}
           >
             <ReactionMark type={r.type} size={12} color={color} />
             <Txt variant="value" style={[styles.chipCount, { color }]}>
@@ -201,7 +203,7 @@ export function PostCard({ post, onPress, onAuthor, full }: { post: SoulPost; on
           <View style={[styles.line, styles.meta]}>
             <Mono>{formatStamp(post.create_time) ?? ""}</Mono>
             <Tag text={tr(visLabel(post.visibility))} tone="quiet" />
-            {pending ? <Tag testID={`pending-${post.id}`} text={tr("soul_app.circle.post.pending")} tone="accent" /> : null}
+            {pending ? <Tag testID={`pending-${post.id}`} text={tr("soul_app.circle.post.pending")} tone="waiting" /> : null}
             {hidden ? (
               <View style={[styles.tagNeg, { borderColor: t.neg }]}>
                 <Txt style={[styles.tagNegText, { color: t.neg }]}>{tr("soul_app.circle.post.hidden")}</Txt>
@@ -465,7 +467,7 @@ export function CircleScreen() {
               accessibilityRole="tab"
               accessibilityState={{ selected: on }}
               onPress={() => setFollowing(f)}
-              style={[styles.subTab, { borderBottomColor: on ? t.mark : "transparent" }]}
+              style={[styles.subTab, { borderBottomColor: on ? t.ink : "transparent" }]}
             >
               <Txt variant="label" tone={on ? "ink" : "subtle"} style={styles.subTabText}>
                 {tr(f ? "soul_app.circle.feed.following" : "soul_app.circle.feed.tenant")}
@@ -487,7 +489,7 @@ export function CircleScreen() {
         </View>
       </Pressable>
       {justPending ? (
-        <View testID="pending-banner" style={[styles.banner, { paddingHorizontal: gutter, borderBottomColor: t.hair, borderLeftColor: t.accent, backgroundColor: t.s1 }]}>
+        <View testID="pending-banner" style={[styles.banner, { paddingHorizontal: gutter, borderBottomColor: t.hair, borderLeftColor: t.ink, backgroundColor: t.s1 }]}>
           <Txt variant="bodyLg">{tr("soul_app.circle.compose.pending_title")}</Txt>
           <Txt variant="caption" tone="muted">
             {tr("soul_app.circle.compose.pending_body")}
@@ -645,7 +647,7 @@ export function ComposePostScreen() {
                 accessibilityRole="radio"
                 accessibilityState={{ checked: on }}
                 onPress={() => setVisibility(o.value)}
-                style={[styles.radio, { backgroundColor: t.s0, borderLeftColor: on ? t.mark : "transparent" }]}
+                style={[styles.radio, { backgroundColor: t.s0, borderLeftColor: on ? t.ink : "transparent" }]}
               >
                 <View style={styles.dot}>
                   <RadioMark on={on} />
@@ -703,7 +705,7 @@ function ReactionBar({ post, status, onReact }: { post: SoulPost; status: SoulSo
         {REACTIONS.map((r) => {
           const lamp = r.type === "ETERNAL_LIGHT";
           const on = post.my_reaction === r.type;
-          const color = on ? (lamp ? t.lamp : t.accent) : t.inkSubtle;
+          const color = on ? (lamp ? t.lamp : t.ink) : t.inkSubtle;
           return (
             <Pressable
               key={r.type}
@@ -716,8 +718,10 @@ function ReactionBar({ post, status, onReact }: { post: SoulPost; status: SoulSo
               style={[
                 styles.reaction,
                 on
-                  ? { borderColor: lamp ? t.lamp : t.accent, borderStyle: "solid", backgroundColor: lamp ? t.lampBg : "transparent" }
+                  ? { borderColor: lamp ? t.lamp : t.ink, borderStyle: "solid", backgroundColor: lamp ? t.lampBg : "transparent" }
                   : { borderColor: t.hair2, borderStyle: lit ? "dotted" : "solid", opacity: lit ? 0.5 : 1 },
+                // 补足 C17: the lamp is last and the one pill — 2px in its gold, lit or not.
+                lamp && [styles.lampPill, { borderColor: t.lamp }],
               ]}
             >
               {lamp ? <Icon name={on ? "lampLit" : "lamp"} size={13} color={color} strokeWidth={1.2} /> : <ReactionMark type={r.type} size={13} color={color} />}
@@ -795,7 +799,7 @@ function CommentRow({
             {c.author.display_name}
           </Txt>
           <Mono>{formatStamp(c.create_time) ?? ""}</Mono>
-          {c.moderation_status === "PENDING" ? <Tag testID={`comment-pending-${c.id}`} text={tr("soul_app.circle.comment.pending")} tone="accent" /> : null}
+          {c.moderation_status === "PENDING" ? <Tag testID={`comment-pending-${c.id}`} text={tr("soul_app.circle.comment.pending")} tone="waiting" /> : null}
         </View>
         {parent ? (
           <Txt testID={`reply-to-${c.id}`} variant="caption" tone="subtle" style={styles.replyTo}>
@@ -1071,9 +1075,9 @@ export function PostScreen({ id }: { id: string }) {
                   accessibilityState={{ disabled: !draft.trim() || sending || !status.data }}
                   disabled={!draft.trim() || sending || !status.data}
                   onPress={press}
-                  style={({ pressed }) => [styles.send, { backgroundColor: pressed ? t.mark : t.accent, opacity: draft.trim() ? 1 : 0.6 }]}
+                  style={({ pressed }) => [styles.send, { backgroundColor: pressed ? shade(t.plaque) : t.plaque, opacity: draft.trim() ? 1 : 0.6 }]}
                 >
-                  <Txt style={[styles.sendText, { color: t.onAccent }]}>{tr("soul_app.circle.comment.send")}</Txt>
+                  <Txt style={[styles.sendText, { color: t.onPlaque }]}>{tr("soul_app.circle.comment.send")}</Txt>
                 </Pressable>
               </View>
             </>
@@ -1125,6 +1129,7 @@ const styles = StyleSheet.create({
   nudge: { marginTop: 3 },
   lockUntil: { marginTop: 6 },
   bar: { paddingVertical: 12, borderBottomWidth: 1 },
+  lampPill: { borderWidth: 2, borderRadius: radius.pill },
   reaction: { minWidth: 44, minHeight: 40, paddingHorizontal: 12, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, borderWidth: 1 },
   lampNote: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 9 },
   scrim: { flex: 1 },

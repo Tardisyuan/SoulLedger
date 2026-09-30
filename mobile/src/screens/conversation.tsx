@@ -41,7 +41,7 @@ import { family, quoteFamily } from "../fonts";
 import { useI18n } from "../i18n";
 import { formatStamp } from "../rules";
 import type { CivKey } from "../theme";
-import { Button, Interp, Loader, Notice, Skeleton, SmallButton, Txt, useReducedMotion, useTheme } from "../ui";
+import { Button, Interp, Loader, Notice, Skeleton, SmallButton, Txt, shade, useReducedMotion, useTheme } from "../ui";
 import type { AppStackParams } from "./applications";
 import { useNow } from "./auth";
 import { ANDROID, Glyph, Tag, hallOf, useCurrentHall, wash } from "./letters";
@@ -349,7 +349,7 @@ function HallHeader({ hall, sealed, onBack }: { hall: string; sealed: boolean; o
       style={styles.hallHeader}
     >
       <BackButton onBack={onBack} />
-      <Glyph text={tr("soul_app.chat.section.hall")} tone={sealed ? "subtle" : "mark"} dotted={sealed} />
+      <Glyph text={tr("soul_app.chat.section.hall")} tone={sealed ? "subtle" : "ink"} dotted={sealed} />
       <View style={styles.fill}>
         <Txt accessibilityRole="header" variant="nav" tone={sealed ? "muted" : "ink"}>
           {tr("soul_app.chat.hall.title", { hall })}
@@ -456,15 +456,15 @@ function Bubble({ m, mine, read, landed, now }: { m: ChatMessage; mine?: boolean
         style={[
           styles.bubble,
           mine
-            ? { borderColor: t.accent, backgroundColor: wash(t) }
+            ? { borderColor: t.inkSubtle, backgroundColor: wash(t) }
             : landed
-              ? { borderColor: t.mark, borderLeftWidth: 3, backgroundColor: t.s1 }
+              ? { borderColor: t.ink, borderLeftWidth: 3, backgroundColor: t.s1 }
               : { borderColor: t.hair2, backgroundColor: t.s1 },
         ]}
       >
         {landed && !reduced ? (
-          <Animated.View pointerEvents="none" style={[styles.newTag, { borderColor: t.mark, backgroundColor: t.s0, opacity: fade }]}>
-            <Txt testID="landing-tag" style={[styles.newTagText, { color: t.mark }]}>
+          <Animated.View pointerEvents="none" style={[styles.newTag, { borderColor: t.ink, backgroundColor: t.s0, opacity: fade }]}>
+            <Txt testID="landing-tag" style={[styles.newTagText, { color: t.ink }]}>
               {tr("soul_app.chat.new_marker")}
             </Txt>
           </Animated.View>
@@ -508,7 +508,7 @@ function PendingBubble({ o, onResend, now }: { o: Outgoing; onResend: () => void
             ? { borderColor: t.negStrong, backgroundColor: t.negBg }
             : queued
               ? { borderColor: t.hair2, backgroundColor: t.s1, opacity: 0.7 }
-              : { borderColor: t.accent, backgroundColor: wash(t) },
+              : { borderColor: t.inkSubtle, backgroundColor: wash(t) },
         ]}
       >
         <Body text={o.body} dim={failed || queued} />
@@ -519,7 +519,7 @@ function PendingBubble({ o, onResend, now }: { o: Outgoing; onResend: () => void
           </Txt>
           {resendable ? (
             <Pressable testID="resend" accessibilityRole="button" onPress={onResend} hitSlop={10}>
-              <Txt variant="label" tone="accent" style={styles.metaText}>
+              <Txt variant="label" tone="ink" style={[styles.metaText, styles.underline]}>
                 {tr("soul_app.chat.receipt.retry")}
               </Txt>
             </Pressable>
@@ -533,7 +533,7 @@ function PendingBubble({ o, onResend, now }: { o: Outgoing; onResend: () => void
 function OfficerBubble({ m, hall, sealed, now }: { m: ChatMessage; hall: string; sealed: boolean; now: number }) {
   const t = useTheme();
   const { t: tr } = useI18n();
-  const line = sealed ? t.hair2 : t.mark;
+  const line = sealed ? t.hair2 : t.ink;
   // Who replied and their position, as the backend stamped them on the event (either may be missing).
   const byline = tr("soul_app.chat.hall.officer_byline", { hall, role: m.officerTitle ?? "", name: m.officer ?? "" }).replace(/\s+/g, " ").trim();
   return (
@@ -541,8 +541,8 @@ function OfficerBubble({ m, hall, sealed, now }: { m: ChatMessage; hall: string;
       <View testID="officer-bubble" style={[styles.bubble, styles.officer, { borderColor: line, borderLeftWidth: 3, backgroundColor: t.s1 }]}>
         <LetterCorners civ={t.civ} stroke={line} />
         <View style={styles.byline}>
-          {sealed ? null : <Glyph text={tr("soul_app.chat.section.hall")} tone="mark" size={16} />}
-          <Txt style={[styles.bylineText, { color: sealed ? t.inkSubtle : t.mark }]}>{byline}</Txt>
+          {sealed ? null : <Glyph text={tr("soul_app.chat.section.hall")} tone="ink" size={16} />}
+          <Txt style={[styles.bylineText, { color: sealed ? t.inkSubtle : t.ink }]}>{byline}</Txt>
         </View>
         <Txt style={[styles.officerBody, { fontFamily: quoteFamily(m.body), color: sealed ? t.inkMuted : t.ink }]}>{m.body}</Txt>
         <Txt variant="value" tone="subtle" style={[styles.metaTime, styles.officerTime]}>
@@ -674,13 +674,13 @@ function Dock({
               { minHeight: size, minWidth: size },
               secondary
                 ? { borderWidth: 1, borderColor: t.hair2, backgroundColor: pressed ? t.s1 : "transparent" }
-                : { backgroundColor: pressed ? t.mark : t.accent },
+                : { backgroundColor: pressed ? shade(t.plaque) : t.plaque },
             ]}
           >
             {ANDROID ? (
-              <Icon name="send" size={20} color={secondary ? t.inkSubtle : t.onAccent} strokeWidth={1.5} />
+              <Icon name="send" size={20} color={secondary ? t.inkSubtle : t.onPlaque} strokeWidth={1.5} />
             ) : (
-              <Txt testID={secondary ? "send-secondary" : "send-primary"} style={[styles.sendText, { color: secondary ? t.inkSubtle : t.onAccent }]}>
+              <Txt testID={secondary ? "send-secondary" : "send-primary"} style={[styles.sendText, { color: secondary ? t.inkSubtle : t.onPlaque }]}>
                 {tr("soul_app.chat.compose.send")}
               </Txt>
             )}
@@ -696,6 +696,7 @@ const styles = StyleSheet.create({
   centered: { alignItems: "center" },
   pad: { padding: 20 },
   noSpacing: { letterSpacing: 0 },
+  underline: { textDecorationLine: "underline" },
   inlineMono: { fontSize: 12, lineHeight: 19 },
   header: { minHeight: 52, flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 6 },
   icon: { width: ANDROID ? 48 : 44, height: ANDROID ? 48 : 44, alignItems: "center", justifyContent: "center" },

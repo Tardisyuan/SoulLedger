@@ -192,16 +192,30 @@ describe("a past life has no action in it", () => {
   });
 });
 
-describe("civilization skin", () => {
-  it("the same component takes each civilization's accent", () => {
-    const marks = ["CHINESE", "EUROPEAN", "EGYPTIAN", "GREEK"].map((civ) => {
-      const { unmount } = wrap(<EnumBadge testID="b" namespace="soul_app.status" table={APPLICATION_BADGES} value="UNDER_REVIEW" />, civ);
-      const color = flat(screen.getByTestId("b")).borderColor;
+describe("status badges are domain enums, not status colours (补足 C15)", () => {
+  it("every civilization draws the same badge: ink words, an ink3 frame — never its plaque", () => {
+    const looks = ["CHINESE", "EUROPEAN", "EGYPTIAN", "GREEK"].map((civ) => {
+      const { unmount } = wrap(<EnumBadge testID="b" namespace="soul_app.status" table={APPLICATION_BADGES} value="REJECTED" />, civ);
+      const box = flat(screen.getByTestId("b"));
+      const glyph = flat(within(screen.getByTestId("b")).getByText("✕"));
       unmount();
-      return color;
+      const t = themeFor(civ, "dark");
+      expect([box.borderColor, glyph.color]).toEqual([t.inkSubtle, t.ink]);
+      expect([t.neg, t.negStrong, t.plaque, t.pos, t.warn]).not.toContain(glyph.color);
+      return box.borderColor;
     });
-    expect(marks).toEqual(["CHINESE", "EUROPEAN", "EGYPTIAN", "GREEK"].map((c) => themeFor(c, "dark").accent));
-    expect(new Set(marks).size).toBe(4);
+    expect(new Set(looks).size).toBe(1);
+  });
+
+  it("the ones still waiting on someone (待审 / 申诉中) sit on s2; a decided one on nothing", () => {
+    const t = themeFor("CHINESE", "dark");
+    for (const [value, ground] of [["UNDER_REVIEW", t.s2], ["APPEALING", t.s2], ["APPROVED", "transparent"], ["REJECTED", "transparent"]]) {
+      const { unmount } = wrap(<EnumBadge testID="b" namespace="soul_app.status" table={APPLICATION_BADGES} value={value} />);
+      expect([value, flat(screen.getByTestId("b")).backgroundColor]).toEqual([value, ground]);
+      unmount();
+    }
+    wrap(<EnumBadge testID="b" namespace={["soul_app", "soul_states"].join(".")} table={SOUL_STATE_BADGES} value="JUDGING" />);
+    expect(flat(screen.getByTestId("b")).backgroundColor).toBe(t.s2);
   });
 });
 

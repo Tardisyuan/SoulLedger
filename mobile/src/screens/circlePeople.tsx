@@ -30,7 +30,7 @@ import { useToast } from "../feedback";
 import { quoteFamily } from "../fonts";
 import { useI18n } from "../i18n";
 import { SessionContext } from "../session";
-import { Button, Empty, Notice, RadioMark, Screen, Skeleton, Txt, useLayout, useReloadOnRefocus, useRemote, useTheme } from "../ui";
+import { Button, Empty, Notice, RadioMark, Screen, Skeleton, Txt, shade, useLayout, useReloadOnRefocus, useRemote, useTheme } from "../ui";
 import type { AppStackParams } from "./applications";
 import { PagedFooter, PostList, useFailure, useFeed, usePaged } from "./circle";
 import { Glyph, Tag } from "./letters";
@@ -47,8 +47,8 @@ function CivMark() {
   const name = session?.state.status === "signedIn" ? session.state.profile.tenant.display_name : "";
   return (
     <View style={styles.civ}>
-      <Emblem civ={t.civ} size={12} stroke={t.mark} strokeWidth={2.4} />
-      <Txt style={[styles.civText, { color: t.mark }]}>{name}</Txt>
+      <Emblem civ={t.civ} size={12} stroke={t.inkMuted} strokeWidth={2.4} />
+      <Txt style={[styles.civText, { color: t.inkMuted }]}>{name}</Txt>
     </View>
   );
 }
@@ -96,10 +96,10 @@ function FollowButton({ following, followedBy, onPress, busy, compact }: { follo
       onPress={onPress}
       style={({ pressed }) => [
         styles.smallFollow,
-        following ? { borderWidth: 1, borderColor: t.hair2 } : { backgroundColor: pressed ? t.mark : t.accent },
+        following ? { borderWidth: 1, borderColor: t.hair2 } : { backgroundColor: pressed ? shade(t.plaque) : t.plaque },
       ]}
     >
-      <Txt style={[styles.smallFollowText, { color: following ? t.inkMuted : t.onAccent }]}>{label}</Txt>
+      <Txt style={[styles.smallFollowText, { color: following ? t.inkMuted : t.onPlaque }]}>{label}</Txt>
     </Pressable>
   );
 }
@@ -512,7 +512,7 @@ export function CircleSearchScreen() {
   return (
     <Screen edges={["left", "right", "bottom"]} testID="circle-search">
       <View style={[styles.searchBar, { paddingHorizontal: 16, borderBottomColor: t.hair }]}>
-        <View style={[styles.searchBox, { borderColor: asked ? t.accent : t.hair2, backgroundColor: t.s1 }]}>
+        <View style={[styles.searchBox, { borderColor: asked ? t.ink : t.hair2, backgroundColor: t.s1 }]}>
           <Icon name="search" size={15} color={t.inkSubtle} />
           <TextInput
             testID="search-input"
@@ -651,7 +651,7 @@ export function ReportScreen({ target, id, preview }: { target: SoulReportTarget
                     accessibilityRole="radio"
                     accessibilityState={{ checked: on }}
                     onPress={() => setReason(r)}
-                    style={[styles.radio, { backgroundColor: t.s0, borderLeftColor: on ? t.mark : "transparent" }]}
+                    style={[styles.radio, { backgroundColor: t.s0, borderLeftColor: on ? t.ink : "transparent" }]}
                   >
                     <RadioMark on={on} />
                     <Txt variant="bodyLg">{tr(`social_moderation.reason.${r}`)}</Txt>

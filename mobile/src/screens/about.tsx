@@ -26,7 +26,7 @@ function Group({ title, credits }: { title: string; credits: Credit[] }) {
   const { gutter } = useLayout();
   return (
     <View style={{ paddingHorizontal: gutter }}>
-      <Txt variant="section" tone="accent" accessibilityRole="header" style={styles.heading}>
+      <Txt variant="section" accessibilityRole="header" style={styles.heading}>
         {title}
       </Txt>
       {credits.map((c) => {

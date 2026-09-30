@@ -31,20 +31,11 @@ const DESIGN_OKLCH: { path: (s: ColorScheme) => string; triples: [string, string
   { path: (s) => ink[s].inkSubtle, triples: ["0.651 0.017 257", "0.517 0.020 268"] },
   { path: (s) => civ.neutral[s].s1, triples: ["0.175 0.008 286", "0.983 0.003 286"] },
   { path: (s) => civ.neutral[s].s2, triples: ["0.194 0.012 285", "0.965 0.004 286"] },
-  { path: (s) => civ.neutral[s].accent, triples: ["0.651 0.017 257", "0.529 0.018 257"] },
   { path: (s) => civ.cn[s].s1, triples: ["0.176 0.024 38", "0.983 0.010 58"] },
   { path: (s) => civ.cn[s].s2, triples: ["0.199 0.023 38", "0.965 0.019 62"] },
-  { path: (s) => civ.cn[s].accent, triples: ["0.713 0.098 35", "0.462 0.100 46"] },
-  { path: (s) => civ.cn[s].mark, triples: ["0.650 0.124 35", "0.509 0.112 45"] },
   { path: (s) => civ.eu[s].s1, triples: ["0.159 0.030 273", "0.975 0.012 281"] },
-  { path: (s) => civ.eu[s].accent, triples: ["0.713 0.079 278", "0.452 0.142 273"] },
-  { path: (s) => civ.eu[s].mark, triples: ["0.643 0.101 277", "0.452 0.142 273"] },
   { path: (s) => civ.eg[s].s1, triples: ["0.201 0.024 93", "0.991 0.010 87"] },
-  { path: (s) => civ.eg[s].accent, triples: ["0.733 0.099 90", "0.461 0.075 89"] },
-  { path: (s) => civ.eg[s].mark, triples: ["0.728 0.100 89", "0.541 0.089 89"] },
   { path: (s) => civ.gr[s].s1, triples: ["0.204 0.034 130", "0.994 0.014 129"] },
-  { path: (s) => civ.gr[s].accent, triples: ["0.722 0.138 130", "0.443 0.091 130"] },
-  { path: (s) => civ.gr[s].mark, triples: ["0.722 0.138 130", "0.526 0.111 131"] },
   { path: (s) => semantic[s].pos, triples: ["0.780 0.110 150", "0.480 0.120 150"] },
   // neg / negStrong / negInk / negBg left this table in v2: 规范 v2 §二 gives them as hex (below).
   // 朋友圈 handoff 1e draws the lamp dark only. Light lamp: 文明气质 1i gives #6A3E00 (confirmed 2026-09-27) —
@@ -84,7 +75,7 @@ describe("tokens are the design's OKLCH table, converted", () => {
   });
 
   it("the transcription covers every row of the table (a short list checks nothing)", () => {
-    expect(DESIGN_OKLCH).toHaveLength(22); // 20 from 灵魂簿 App 1h (its 4 neg rows replaced by v2), 2 lamp rows from 朋友圈 1e
+    expect(DESIGN_OKLCH).toHaveLength(13); // 20 from 灵魂簿 App 1h less its 4 neg rows (v2) and 9 accent / mark rows (第三阶段), 2 lamp rows from 朋友圈 1e
   });
 });
 
@@ -93,6 +84,20 @@ describe("tokens are the design's OKLCH table, converted", () => {
  * §二 status colours, global — the page prints them as hex, so they are compared
  * as hex; §三 the plaque (匾色) per civilization; §一 onMain. Transcribed as printed.
  */
+describe("v1's accent and mark are gone (第三阶段)", () => {
+  it("no theme carries them, so no screen can reach for them", () => {
+    for (const key of KEYS) for (const scheme of SCHEMES) {
+      const t = themeFor({ neutral: null, cn: "CHINESE", eu: "EUROPEAN", eg: "EGYPTIAN", gr: "GREEK" }[key], scheme) as unknown as Record<string, unknown>;
+      expect([key, scheme, "accent" in t, "mark" in t, "onAccent" in t]).toEqual([key, scheme, false, false, false]);
+    }
+    expect(Object.keys(preLoginTheme("light")).filter((k) => ["accent", "mark", "onAccent"].includes(k))).toEqual([]);
+  });
+
+  it("埃及's actions are its lapis plaque now, not the old ochre", () => {
+    expect([civ.eg.light.plaque, civ.eg.dark.plaque]).toEqual(["#1F3F8A", "#3E62B8"]);
+  });
+});
+
 describe("v2 tokens are the spec's (规范 v2 §一–§三)", () => {
   const STATUS = {
     dark: "pos #82CB92 · neg #FF7A93 · negStrong #C21D4D · negBg #33101A · negInk #FFD3DC · warn #FF9A3C · warnBg #301904 · lamp #F2CC7A · lampBg #241B0C",
@@ -183,9 +188,7 @@ describe("contrast holds in all ten skins (the handoff claims ≥ 4.6:1; WCAG AA
     ["inkMuted", "s1"],
     ["inkSubtle", "s0"],
     ["inkSubtle", "s1"],
-    ["accent", "s0"],
-    ["accent", "s1"],
-    ["onAccent", "accent"],
+    ["onPlaque", "plaque"],
     ["neg", "s0"],
     ["pos", "s0"],
     ["negInk", "negBg"],
@@ -208,9 +211,9 @@ describe("contrast holds in all ten skins (the handoff claims ≥ 4.6:1; WCAG AA
 describe("themeFor", () => {
   it("skins by the soul's civilization", () => {
     expect(themeFor("CHINESE", "dark").s1).toBe(civ.cn.dark.s1);
-    expect(themeFor("EGYPTIAN", "light").accent).toBe(civ.eg.light.accent);
+    expect(themeFor("EGYPTIAN", "light").plaque).toBe(civ.eg.light.plaque);
     expect(themeFor("GREEK", "dark").civ).toBe("gr");
-    expect(themeFor("EUROPEAN", "dark").mark).toBe(civ.eu.dark.mark);
+    expect(themeFor("EUROPEAN", "dark").hair).toBe(civ.eu.dark.hair);
   });
 
   it("four different grounds, none of them the neutral one", () => {
@@ -224,7 +227,7 @@ describe("themeFor", () => {
     const unknown = themeFor("ATLANTEAN", "dark");
     expect(unknown.civ).toBe("neutral");
     expect(unknown.s0).toBe(civ.neutral.dark.s0);
-    expect(unknown.mark).toBe(civ.neutral.dark.mark);
+    expect(unknown.plaque).toBe(civ.neutral.dark.plaque);
   });
 
   it("the ground steps s0 → s1 → s2 in the direction of the scheme", () => {
@@ -252,7 +255,7 @@ describe("preLoginTheme (第三类 F 组 canvas, parchment)", () => {
   it.each(SCHEMES)("%s: parchment grounds and ink; the neutral plaque; the global status colours (v2 §二), not the canvas's red", (scheme) => {
     const p = parchment[scheme];
     const t = preLoginTheme(scheme);
-    expect([t.s0, t.accent, t.onAccent, t.mark]).toEqual([p.bg, p.ink, p.bg, p.ink]);
+    expect(t.s0).toBe(p.bg);
     expect([t.ink, t.inkMuted, t.inkSubtle, t.hair, t.hair2, t.s2]).toEqual([p.ink, p.ink2, p.ink3, p.line, p.line2, p.bg2]);
     expect([t.plaque, t.onPlaque]).toEqual([civ.neutral[scheme].plaque, ON_PLAQUE]);
     const { pos, neg, negStrong, negInk, negBg, warn, warnBg, lamp, lampBg, scrim } = t;
@@ -269,7 +272,7 @@ describe("preLoginTheme (第三类 F 组 canvas, parchment)", () => {
     const text: (keyof Theme)[] = ["ink", "inkMuted", "inkSubtle", "neg", "pos"];
     const pairs: [keyof Theme, keyof Theme][] = [
       ...text.flatMap((fg) => [[fg, "s0"], [fg, "s2"]] as [keyof Theme, keyof Theme][]),
-      ["onAccent", "accent"],
+      ["onPlaque", "plaque"],
       ["negInk", "negBg"],
     ];
     const low = pairs
@@ -290,10 +293,10 @@ describe("preLoginTheme (第三类 F 组 canvas, parchment)", () => {
 });
 
 describe("sealedTheme (a past life)", () => {
-  it("steps ink down one level and turns accent subtle, keeping the ground", () => {
+  it("steps ink down one level, keeping the ground", () => {
     const t = themeFor("CHINESE", "dark");
     const sealed = sealedTheme(t);
-    expect([sealed.ink, sealed.inkMuted, sealed.accent]).toEqual([t.inkMuted, t.inkSubtle, t.inkSubtle]);
+    expect([sealed.ink, sealed.inkMuted]).toEqual([t.inkMuted, t.inkSubtle]);
     expect([sealed.s0, sealed.s1, sealed.hair]).toEqual([t.s0, t.s1, t.hair]);
   });
 });

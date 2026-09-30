@@ -28,11 +28,13 @@ export type CivKey = "neutral" | "cn" | "eu" | "eg" | "gr";
  * civilization owns, and it goes to five places only — the plaque, the pillar's
  * current item, the seal, the "mine to handle" row mark and the primary button.
  * Never to an error or a refusal (those are `neg`). Text on it is `onPlaque`.
- * `accent` / `mark` are v1 and stay until the pages that use them are redrawn.
+ * v1's `accent` / `mark` (and `onAccent`) are gone (第三阶段): a solid action is the
+ * plaque, a selection or a link is ink, a decoration ink3. 埃及's ochre accent went with
+ * them — its actions are now its lapis plaque.
  * The grounds s0–s2 are the App's own per-civilization grounds, kept by product
  * decision (v2 memory: "App 保留各文明底色微调"); §一 lists them unchanged.
  */
-type Ground = { s0: string; s1: string; s2: string; accent: string; mark: string; hair: string; hair2: string; plaque: string };
+type Ground = { s0: string; s1: string; s2: string; hair: string; hair2: string; plaque: string };
 
 /** 匾上题字 · 元数据 (§一 onMain): one warm white for all ten plaques. */
 export const ON_PLAQUE = "#FFF4E8";
@@ -44,24 +46,24 @@ export const ink = {
 
 export const civ: Record<CivKey, Record<ColorScheme, Ground>> = {
   neutral: {
-    dark: { s0: "#0B0B0E", s1: "#101014", s2: "#14141A", accent: "#89909A", mark: "#89909A", hair: "#26262E", hair2: "#33333D", plaque: "#6E665E" },
-    light: { s0: "#FDFDFF", s1: "#F9F9FB", s2: "#F3F3F6", accent: "#656C76", mark: "#656C76", hair: "#E4E4EA", hair2: "#CFCFD8", plaque: "#2B2724" },
+    dark: { s0: "#0B0B0E", s1: "#101014", s2: "#14141A", hair: "#26262E", hair2: "#33333D", plaque: "#6E665E" },
+    light: { s0: "#FDFDFF", s1: "#F9F9FB", s2: "#F3F3F6", hair: "#E4E4EA", hair2: "#CFCFD8", plaque: "#2B2724" },
   },
   cn: {
-    dark: { s0: "#100704", s1: "#1A0D09", s2: "#1F120E", accent: "#D88C79", mark: "#CF715A", hair: "#362B27", hair2: "#4B3F3C", plaque: "#B3402C" },
-    light: { s0: "#FFFDFA", s1: "#FFF8F3", s2: "#FDF1E7", accent: "#854423", mark: "#994E29", hair: "#DED6D0", hair2: "#C6BCB4", plaque: "#9A2F1F" },
+    dark: { s0: "#100704", s1: "#1A0D09", s2: "#1F120E", hair: "#362B27", hair2: "#4B3F3C", plaque: "#B3402C" },
+    light: { s0: "#FFFDFA", s1: "#FFF8F3", s2: "#FDF1E7", hair: "#DED6D0", hair2: "#C6BCB4", plaque: "#9A2F1F" },
   },
   eu: {
-    dark: { s0: "#040611", s1: "#090C1A", s2: "#0E111F", accent: "#969ED4", mark: "#7D87CA", hair: "#242838", hair2: "#333952", plaque: "#7A52A6" },
-    light: { s0: "#FDFDFF", s1: "#F5F6FF", s2: "#ECEEFB", accent: "#3E4BA3", mark: "#3E4BA3", hair: "#DCDFF0", hair2: "#C3C7E0", plaque: "#4A2A6A" },
+    dark: { s0: "#040611", s1: "#090C1A", s2: "#0E111F", hair: "#242838", hair2: "#333952", plaque: "#7A52A6" },
+    light: { s0: "#FDFDFF", s1: "#F5F6FF", s2: "#ECEEFB", hair: "#DCDFF0", hair2: "#C3C7E0", plaque: "#4A2A6A" },
   },
   eg: {
-    dark: { s0: "#120F05", s1: "#1A1609", s2: "#1F1B0E", accent: "#C1A65C", mark: "#C0A459", hair: "#312B1B", hair2: "#453D28", plaque: "#3E62B8" },
-    light: { s0: "#FFFDF9", s1: "#FFFCF5", s2: "#FBF7EC", accent: "#695621", mark: "#846C2A", hair: "#E6DFCC", hair2: "#CFC5AC", plaque: "#1F3F8A" },
+    dark: { s0: "#120F05", s1: "#1A1609", s2: "#1F1B0E", hair: "#312B1B", hair2: "#453D28", plaque: "#3E62B8" },
+    light: { s0: "#FFFDF9", s1: "#FFFCF5", s2: "#FBF7EC", hair: "#E6DFCC", hair2: "#CFC5AC", plaque: "#1F3F8A" },
   },
   gr: {
-    dark: { s0: "#0B1205", s1: "#121A09", s2: "#181F0E", accent: "#88B654", mark: "#88B654", hair: "#242E1A", hair2: "#374426", plaque: "#3F7076" },
-    light: { s0: "#FCFEFA", s1: "#FAFFF5", s2: "#F4FBEC", accent: "#425D22", mark: "#53772D", hair: "#DBE6CC", hair2: "#C0D1AC", plaque: "#1F3B3E" },
+    dark: { s0: "#0B1205", s1: "#121A09", s2: "#181F0E", hair: "#242E1A", hair2: "#374426", plaque: "#3F7076" },
+    light: { s0: "#FCFEFA", s1: "#FAFFF5", s2: "#F4FBEC", hair: "#DBE6CC", hair2: "#C0D1AC", plaque: "#1F3B3E" },
   },
 };
 
@@ -69,12 +71,9 @@ export const civ: Record<CivKey, Record<ColorScheme, Ground>> = {
  * `lamp` / `lampBg`: the eternal light's warm gold (朋友圈 handoff 1e), used by that
  * one reaction and nowhere else in the app. The handoff draws dark only
  * (oklch 0.860 0.110 85 on 0.230 0.030 80). Light lamp #6A3E00 on #FBF1DC is
- * Design's (文明气质 1i, confirmed 2026-09-27; 8.13:1): our earlier #845A0F sat at
- * the Egyptian light mark's lightness and chroma, differing only in hue. Against
- * the Egyptian light ACCENT (#695621) lightness and chroma cannot part in gamut,
- * so the two are told apart by form: the lamp's gold only ever appears on a solid
- * lampBg chip (the lit lamp, circle.tsx reactions); the accent only on a hollow
- * chip outlined in it (a reaction I made).
+ * Design's (文明气质 1i, confirmed 2026-09-27; 8.13:1). v1's Egyptian ochre accent,
+ * which the lamp could not part from in gamut, is gone (第三阶段: 埃及's colour is its
+ * lapis plaque); the lamp is still told apart by form too — the one pill, 2px, in its gold.
  *
  * v2 (规范 v2 定稿 §二, global — not per civilization): `neg` is 冷玫红 and every
  * neg* slot moved with it (strong = the solid danger fill under white text, bg /
@@ -138,15 +137,11 @@ export interface Theme {
   s0: string;
   s1: string;
   s2: string;
-  accent: string;
-  mark: string;
   hair: string;
   hair2: string;
   /** 匾色: see `Ground`. The primary button's fill. */
   plaque: string;
   onPlaque: string;
-  /** Text on an accent fill: the screen ground, as in the prototype. */
-  onAccent: string;
   ink: string;
   inkMuted: string;
   inkSubtle: string;
@@ -175,7 +170,7 @@ export function civKeyOf(civilization: string | null | undefined): CivKey {
 export function themeFor(civilization: string | null | undefined, scheme: ColorScheme): Theme {
   const key = civKeyOf(civilization);
   const ground = civ[key][scheme];
-  return { scheme, civ: key, ...ground, onPlaque: ON_PLAQUE, onAccent: ground.s0, ...ink[scheme], ...semantic[scheme] };
+  return { scheme, civ: key, ...ground, onPlaque: ON_PLAQUE, ...ink[scheme], ...semantic[scheme] };
 }
 
 /**
@@ -193,9 +188,8 @@ export const parchment = {
 /**
  * Every screen before sign-in: booting, login, forgot-password, the forced
  * password change. The canvas fills primary buttons with INK and keeps focus
- * rings and radios ink — the App's accent is the seal red, the same value as
- * the error colour — so here `accent` is ink, and red (`acc` / `demerit`)
- * reaches only the error slots.
+ * rings and radios ink — the canvas's accent is the seal red, the same value as
+ * the error colour — so its red (`acc` / `demerit`) reaches no slot here.
  *
  * v2: the status colours are global (规范 v2 §二), so pos / neg* / warn / lamp come
  * from `semantic`, not the canvas's merit / demerit / warnBg; the plaque is the
@@ -212,11 +206,8 @@ export function preLoginTheme(scheme: ColorScheme): Theme {
     s0: p.bg,
     s1: p.bg,
     s2: p.bg2,
-    accent: p.ink,
-    mark: p.ink,
     hair: p.line,
     hair2: p.line2,
-    onAccent: p.bg,
     ink: p.ink,
     inkMuted: p.ink2,
     inkSubtle: p.ink3,
@@ -224,11 +215,11 @@ export function preLoginTheme(scheme: ColorScheme): Theme {
 }
 
 /**
- * A sealed (past-life) record: ink steps down one level and accent becomes
- * subtle. Everything else — grounds, hairlines — is the same theme.
+ * A sealed (past-life) record: ink steps down one level. Everything else —
+ * grounds, hairlines — is the same theme.
  */
 export function sealedTheme(t: Theme): Theme {
-  return { ...t, ink: t.inkMuted, inkMuted: t.inkSubtle, accent: t.inkSubtle };
+  return { ...t, ink: t.inkMuted, inkMuted: t.inkSubtle };
 }
 
 /** OKLCH (Björn Ottosson's matrices) → sRGB hex, clamped to gamut. Used by the token test. */

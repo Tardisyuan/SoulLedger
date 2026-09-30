@@ -31,9 +31,9 @@ export function LanguageSwitch() {
             accessibilityRole="button"
             accessibilityState={{ selected: on }}
             onPress={() => setLocale(l)}
-            style={[styles.language, { borderColor: on ? t.accent : "transparent" }]}
+            style={[styles.language, { borderColor: on ? t.ink : "transparent" }]}
           >
-            <Txt variant="label" tone={on ? "accent" : "subtle"} style={styles.languageText}>
+            <Txt variant="label" tone={on ? "ink" : "subtle"} style={styles.languageText}>
               {LOCALE_LABELS[l]}
             </Txt>
           </Pressable>

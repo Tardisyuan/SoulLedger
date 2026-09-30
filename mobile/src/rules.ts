@@ -9,54 +9,51 @@ import { civKeyOf, type CivKey } from "./theme";
 
 // ── badges ──────────────────────────────────────────────────────────────
 
-export type BadgeTone = "accent" | "neg" | "pos" | "muted" | "unknown";
-/** A badge is told apart by glyph and border as well as colour. */
+/**
+ * 补足 C15「状态徽章 · 领域枚举」: a badge is a domain value, never a status colour — ink
+ * words in a 1px ink3 frame, told apart by glyph and border. The ones still waiting on
+ * someone (`pending`: 待审 / 申诉中) sit on s2. A ✕ is ink too: 冷玫红 is for the system
+ * failing, not for a decision (B8). `unknown` is the value the app cannot name.
+ */
 export interface BadgeSpec {
-  tone: BadgeTone;
   glyph: string;
   border: "solid" | "dashed" | "dotted";
+  pending?: boolean;
+  unknown?: boolean;
 }
 
 export const APPLICATION_BADGES: Record<string, BadgeSpec> = {
-  UNDER_REVIEW: { tone: "accent", glyph: "◷", border: "solid" },
-  REJECTED: { tone: "neg", glyph: "×", border: "solid" },
-  APPEALING: { tone: "accent", glyph: "↺", border: "solid" },
-  APPEAL_REJECTED: { tone: "neg", glyph: "×", border: "dashed" },
-  APPROVED: { tone: "pos", glyph: "✓", border: "solid" },
+  UNDER_REVIEW: { glyph: "◇", border: "solid", pending: true },
+  REJECTED: { glyph: "✕", border: "solid" },
+  APPEALING: { glyph: "↺", border: "solid", pending: true },
+  APPEAL_REJECTED: { glyph: "✕", border: "dashed" },
+  APPROVED: { glyph: "✓", border: "solid" },
 };
 
 /**
- * All six `Soul.current_state` members. The design drew the first three; the
- * other three follow the same system — a pill told apart by glyph (and, for
- * LOST, border), never by colour alone. The unknown badge (`?`, dotted) stays
- * reserved for a value the app cannot name.
+ * All six `Soul.current_state` members, per C15's drawing where it names them (○ 在世,
+ * ◇ 待审 on s2, ↻ 轮回) and the same system for the rest. The unknown badge (`?`,
+ * dotted) stays reserved for a value the app cannot name.
  */
 export const SOUL_STATE_BADGES: Record<string, BadgeSpec> = {
-  /** In progress: a clock face, in accent like every in-progress state. */
-  JUDGING: { tone: "accent", glyph: "◷", border: "solid" },
+  /** Still to be decided: the open diamond, on s2 — C15's 待审. */
+  JUDGING: { glyph: "◇", border: "solid", pending: true },
   /** A disposition is on record: a filled box within the frame. */
-  DISPOSED: { tone: "muted", glyph: "▣", border: "solid" },
+  DISPOSED: { glyph: "▣", border: "solid" },
   /** Moving on: the cycle arrow. */
-  REINCARNATING: { tone: "muted", glyph: "↻", border: "solid" },
+  REINCARNATING: { glyph: "↻", border: "solid" },
+  /** Not yet dead, so nothing entered: an EMPTY circle. */
+  ALIVE: { glyph: "○", border: "solid" },
   /**
-   * Not yet dead, so nothing entered: an EMPTY circle. Round, so it cannot be
-   * read as a square state, and hollow, so it is not the clock (◷).
+   * The record has lost track of the soul: a slashed circle (absent) on a DASHED border —
+   * an anomaly, said by its shape, not by a colour. Dashed, not dotted: dotted is the unknown value.
    */
-  ALIVE: { tone: "muted", glyph: "○", border: "solid" },
-  /**
-   * The record has lost track of the soul: a slashed circle (absent) on a
-   * DASHED border, in the refusal colour — an anomaly an officer must resolve.
-   * Dashed, not dotted: dotted belongs to the unknown value.
-   */
-  LOST: { tone: "neg", glyph: "⊘", border: "dashed" },
-  /**
-   * The account is closed: triple bar, the ledger ruled off beneath its last
-   * line. Flat lines, so it is neither a box (▣) nor a circle (○ ◷ ⊘).
-   */
-  SETTLED: { tone: "muted", glyph: "≡", border: "solid" },
+  LOST: { glyph: "⊘", border: "dashed" },
+  /** The account is closed: triple bar, the ledger ruled off beneath its last line. */
+  SETTLED: { glyph: "≡", border: "solid" },
 };
 
-export const UNKNOWN_BADGE: BadgeSpec = { tone: "unknown", glyph: "?", border: "dotted" };
+export const UNKNOWN_BADGE: BadgeSpec = { glyph: "?", border: "dotted", unknown: true };
 
 /**
  * The shape for a member. `recognized` is whether the copy layer could name it;
