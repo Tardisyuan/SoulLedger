@@ -37,8 +37,9 @@ test.describe("问一问", () => {
     await setupAuthenticatedPage(page);
     await page.setViewportSize({ width: 1180, height: 900 });
     await page.goto("/judgment");
-    const padded = page.getByTestId("app-content").locator("[class~='md:px-10']").first();
-    await expect(padded).toHaveCSS("padding-left", "40px");
+    // v2 PageShell: `md:px-8` (32 px); v1's was `md:px-10`.
+    const padded = page.getByTestId("app-content").locator("[class~='md:px-8']").first();
+    await expect(padded).toHaveCSS("padding-left", "32px");
     await page.getByTestId("officer-assist-entry").click();
     await expect(page.getByRole("complementary", { name: "问一问" })).toBeVisible();
     await expect(padded).toHaveCSS("padding-left", "24px");
