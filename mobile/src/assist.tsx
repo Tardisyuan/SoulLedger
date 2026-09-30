@@ -6,14 +6,22 @@
  * The state lives above the navigator, not in the drawer: closing the drawer
  * while an answer is on its way does not lose it (1e「抽屉可关,关后回答仍会到」).
  *
+ * ANSWERS STREAM (canvas「问一问 · 流式输出」, §13): the question goes out with
+ * `stream: true` through `expo/fetch`. React Native's own `fetch` (whatwg-fetch
+ * over XHR) exposes no readable `body`, so it can only hand over the whole
+ * answer at the end; Expo's WinterCG `fetch` reads the body as it arrives and
+ * aborts with an `AbortController` — which is how stop closes the connection.
+ * It is already a dependency (expo 57) and installs `TextDecoder` for us, so
+ * this is one import rather than an XHR `onprogress` reader.
+ *
  * WHEN THE ENTRY SHOWS. `/me/`'s `assistant_enabled` false → never rendered
  * (1a 三). Shown, and the server then answers 503 `assistant_not_configured`
  * (the profile was stale) → the drawer says so (1g ①) and the entry is hidden
  * for the rest of this session.
  */
 import type { MeProfile } from "@soulledger/core/api/soul";
+import type { AssistStreamEnd, AssistStreamEvent, AssistStreamFetch } from "@soulledger/core/api/assist-stream";
 import {
-  ASSIST_TIMEOUT_MS,
   soulAssistApi,
   soulAssistErrorCode,
   soulAssistRetryAt,
@@ -22,6 +30,7 @@ import {
   type AssistScreen,
 } from "@soulledger/core/api/soul-assist";
 import { platform } from "@soulledger/core/platform";
+import { fetch as expoFetch } from "expo/fetch";
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { AccessibilityInfo, Pressable, StyleSheet, Text, View } from "react-native";
 
@@ -42,10 +51,19 @@ export type AssistFailure =
   | { kind: "limited"; retryAt: string | null }
   | { kind: "unanswered"; question: string; at: string; timeout: boolean };
 
+/** The question being answered: the text streams into `text`; `slow` is 20 s with nothing yet (A1). */
 export interface Pending {
   question: string;
   at: string;
+  text: string;
+  slow: boolean;
 }
+
+/** 流式输出 A1: past this with no text yet, the waiting line reads 「还在查……」. */
+export const ASSIST_SLOW_MS = 20_000;
+
+/** Expo's `fetch`, in the shape `streamAssist` takes. */
+const streamFetch: AssistStreamFetch = (url, init) => expoFetch(url, init as Parameters<typeof expoFetch>[1]);
 
 /** What the drawer is showing: `null` messages while the resumable conversation is looked up. */
 export interface Thread {
@@ -67,7 +85,12 @@ export interface Assist {
   draft: string;
   setDraft: (text: string) => void;
   ask: (question: string) => void;
-  cancel: () => void;
+  /** A5: close the connection; the server stores what was written, and so does the thread here. */
+  stop: () => void;
+  /** A9: the one answer 「重试」 shows on — interrupted here, the latest; never one from history. */
+  retryable: number | null;
+  /** A7: re-ask that answer's question; the new answer replaces it. */
+  retryInterrupted: () => void;
   /** 1g ③「改一改再问」: the question back in the box. */
   edit: () => void;
   acked: boolean;
@@ -84,7 +107,6 @@ const AssistContext = createContext<Assist | null>(null);
 /** `null` outside a signed-in session: the header then has no entry. */
 export const useAssist = () => useContext(AssistContext);
 
-const TIMEOUT = "assist-timeout";
 const EMPTY: Thread = { id: null, screen: "other", messages: [] };
 
 export function AssistProvider({
@@ -106,6 +128,7 @@ export function AssistProvider({
   const [failure, setFailure] = useState<AssistFailure | null>(null);
   const [draft, setDraft] = useState("");
   const [history, setHistory] = useState<AssistConversation[] | null>(null);
+  const [retryable, setRetryable] = useState<number | null>(null);
   const ackKey = profile ? assistAckKey(profile) : null;
   const [ackedFor, setAckedFor] = useState<string | null>(null);
   const acked = ackKey !== null && (ackedFor === ackKey || !!platform().persistent.get(ackKey));
@@ -124,6 +147,7 @@ export function AssistProvider({
     setFailure(null);
     setDraft("");
     setHistory(null);
+    setRetryable(null);
   }
   useEffect(
     () => () => {
@@ -171,44 +195,72 @@ export function AssistProvider({
       waiting.current = controller;
       const at = new Date().toISOString();
       const { id, screen } = thread;
-      setPending({ question, at });
+      let text = "";
+      let conversationId = id;
+      let ended: Extract<AssistStreamEvent, { event: "done" | "error" }> | null = null;
+      setPending({ question, at, text: "", slow: false });
       setFailure(null);
+      setRetryable(null);
       setDraft("");
       AccessibilityInfo.announceForAccessibility(t("soul_app.assist.waiting"));
-      let timer: ReturnType<typeof setTimeout> | undefined;
-      // Our own 25 s, not axios's `timeout`: that one lives in the platform adapter.
-      const timeout = new Promise<never>((_, reject) => {
-        timer = setTimeout(() => reject(new Error(TIMEOUT)), ASSIST_TIMEOUT_MS);
-      });
-      Promise.race([soulAssistApi.ask({ question, screen, conversation_id: id ?? undefined }, controller.signal), timeout])
-        .then(
-          (res) => {
-            if (waiting.current !== controller) return;
-            const mine: AssistMessage = { id: -Date.now(), role: "user", content: question, interruption: "", created_at: at };
-            setThread((th) => ({ id: res.conversation_id, screen, messages: [...(th.messages ?? []), mine, res.answer] }));
-            AccessibilityInfo.announceForAccessibility(t("soul_app.assist.answered"));
-          },
-          (error: unknown) => {
-            if (waiting.current !== controller) return;
-            controller.abort();
-            const code = soulAssistErrorCode(error);
-            if (code === "assistant_not_configured") {
-              setFailure({ kind: "not_configured" });
-              return;
-            }
-            // The question goes back in the box for every refusal the soul can wait out.
-            setDraft(question);
-            if (code === "rate_limited") {
-              setFailure({ kind: "limited", retryAt: soulAssistRetryAt(error) });
-              return;
-            }
-            // The conversation was deleted meanwhile: the retry starts a new one.
-            if (code === "not_found") setThread((th) => ({ ...th, id: null }));
-            setFailure({ kind: "unanswered", question, at, timeout: error instanceof Error && error.message === TIMEOUT });
+      const slow = setTimeout(() => setPending((p) => (p && !p.text ? { ...p, slow: true } : p)), ASSIST_SLOW_MS);
+      const mine: AssistMessage = { id: -Date.now(), role: "user", content: question, interruption: "", created_at: at };
+      /** The answer as far as it got, kept with its marker (A6 / A7). */
+      const keep = (interruption: "stopped" | "interrupted", messageId?: number) => {
+        const answer: AssistMessage = { id: messageId ?? -Date.now() - 1, role: "assistant", content: text, interruption, created_at: new Date().toISOString() };
+        setThread((th) => ({ id: conversationId, screen, messages: [...(th.messages ?? []), mine, answer] }));
+        AccessibilityInfo.announceForAccessibility(`${t(`soul_app.assist.${interruption}`)} ${text}`.trim());
+        if (interruption === "interrupted") setRetryable(answer.id);
+      };
+      const onEvent = (event: AssistStreamEvent) => {
+        if (waiting.current !== controller) return;
+        if (event.event === "meta") conversationId = event.conversation_id;
+        if (event.event === "delta") {
+          if (!text) AccessibilityInfo.announceForAccessibility(t("soul_app.assist.answering_aria"));
+          text += event.text;
+          setPending((p) => (p ? { ...p, text, slow: false } : p));
+        }
+        if (event.event === "done" || event.event === "error") ended = event;
+      };
+      const finish = (how: AssistStreamEnd) => {
+        if (waiting.current !== controller) return;
+        const end = ended;
+        if (end?.event === "done") {
+          setThread((th) => ({ id: end.conversation_id, screen, messages: [...(th.messages ?? []), mine, end.answer] }));
+          AccessibilityInfo.announceForAccessibility(end.answer.content);
+        } else if (how === "stopped") {
+          keep("stopped");
+        } else if (text) {
+          // Broke after text: the server kept what was sent (A7) — an `interrupted` event or a lost connection alike.
+          if (end?.event === "error" && end.conversation_id) conversationId = end.conversation_id;
+          keep("interrupted", end?.event === "error" ? end.message_id : undefined);
+        } else {
+          // Nothing arrived: the backend already tried the backup (A8) — the old 「没有答上来」.
+          setDraft(question);
+          setFailure({ kind: "unanswered", question, at, timeout: how === "timeout" });
+        }
+      };
+      soulAssistApi
+        .stream(streamFetch, { question, screen, conversation_id: id ?? undefined }, controller, onEvent)
+        .then(finish, (error: unknown) => {
+          if (waiting.current !== controller) return;
+          const code = soulAssistErrorCode(error);
+          if (code === "assistant_not_configured") {
+            setFailure({ kind: "not_configured" });
+            return;
           }
-        )
+          // The question goes back in the box for every refusal the soul can wait out.
+          setDraft(question);
+          if (code === "rate_limited") {
+            setFailure({ kind: "limited", retryAt: soulAssistRetryAt(error) });
+            return;
+          }
+          // The conversation was deleted meanwhile: the retry starts a new one.
+          if (code === "not_found") setThread((th) => ({ ...th, id: null }));
+          setFailure({ kind: "unanswered", question, at, timeout: false });
+        })
         .finally(() => {
-          clearTimeout(timer);
+          clearTimeout(slow);
           if (waiting.current === controller) {
             waiting.current = null;
             setPending(null);
@@ -218,12 +270,7 @@ export function AssistProvider({
     [thread, t]
   );
 
-  /** Stop waiting. The server still answers and stores it; reopening shows it. */
-  const cancel = useCallback(() => {
-    waiting.current?.abort();
-    waiting.current = null;
-    setPending(null);
-  }, []);
+  const stop = useCallback(() => waiting.current?.abort(), []);
 
   const value: Assist = {
       visible: profile?.assistant_enabled === true && !hidden,
@@ -236,7 +283,16 @@ export function AssistProvider({
       draft,
       setDraft,
       ask,
-      cancel,
+      stop,
+      retryable,
+      retryInterrupted: () => {
+        const messages = thread.messages ?? [];
+        const at = messages.findIndex((m) => m.id === retryable);
+        if (at < 1) return;
+        const question = messages[at - 1].content;
+        setThread((th) => ({ ...th, messages: (th.messages ?? []).slice(0, at - 1) }));
+        ask(question);
+      },
       edit: () => {
         if (failure?.kind === "unanswered") setDraft(failure.question);
         setFailure(null);
@@ -251,10 +307,12 @@ export function AssistProvider({
       loadHistory: () => void fetchHistory().catch(() => setHistory((h) => h ?? [])),
       openConversation: (c) => {
         setFailure(null);
+        setRetryable(null);
         setThread({ id: c.id, screen: c.screen, messages: c.messages });
       },
       startNew: () => {
         setFailure(null);
+        setRetryable(null);
         setThread((th) => ({ id: null, screen: openFrom ?? th.screen, messages: [] }));
       },
       remove: async (id) => {
