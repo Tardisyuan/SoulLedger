@@ -167,6 +167,18 @@ def _block_embedding_service(monkeypatch):
 
     monkeypatch.setattr(vectors, "_post", blocked)
 
+    # Same for the provider block's two outbound calls (`apps/soul_assist/platforms.py::_get`):
+    # listing a platform's models and fetching the LiteLLM price table. Unfaked, a test fails like a
+    # dead host (list → `connection`, price → not found) instead of reaching a vendor or GitHub.
+    import requests
+
+    from apps.soul_assist import platforms
+
+    def blocked_get(url, headers, timeout):
+        raise requests.ConnectionError(f"network blocked in tests: {url}")
+
+    monkeypatch.setattr(platforms, "_get", blocked_get)
+
 
 def _db_kind(item):
     """'tx' for a transactional test, 'db' for a plain one, None for no database — pytest-django's own rule."""

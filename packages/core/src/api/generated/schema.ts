@@ -77,6 +77,43 @@ export interface paths {
         patch: operations["assist_admin_config_update"];
         trace?: never;
     };
+    "/api/v1/assist-admin/config/models/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description 「获取模型」:用候选连接列平台上的模型。key 不给就用已存的 —— 在服务器上用,不回给浏览器;
+         *     换了平台 / 地址而不给 key 同样 400 `api_key_required`(已存的 key 不发往新地址)。
+         */
+        post: operations["assist_admin_config_models"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/assist-admin/config/price/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 参考价:LiteLLM 公开价目表,美元 / 百万 token,服务器取、缓存 24 小时。查不到 `found=false`,不拦保存。 */
+        get: operations["assist_admin_config_price"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/assist-admin/config/test/": {
         parameters: {
             query?: never;
@@ -7406,8 +7443,14 @@ export interface components {
             last4: string | null;
             /** Format: date-time */
             set_at: string | null;
-            source: components["schemas"]["SourceEnum"];
+            source: components["schemas"]["ApiKeyStateSourceEnum"];
         };
+        /**
+         * @description * `page` - page
+         *     * `env` - env
+         * @enum {string}
+         */
+        ApiKeyStateSourceEnum: "page" | "env";
         /**
          * @description Serializer for ApprovalNode.
          *
@@ -7718,6 +7761,22 @@ export interface components {
          */
         AssistMessageRoleEnum: "user" | "assistant";
         /**
+         * @description * `deepseek` - deepseek
+         *     * `openai` - openai
+         *     * `anthropic` - anthropic
+         *     * `qwen` - qwen
+         *     * `kimi` - kimi
+         *     * `glm` - glm
+         *     * `doubao` - doubao
+         *     * `gemini` - gemini
+         *     * `siliconflow` - siliconflow
+         *     * `openrouter` - openrouter
+         *     * `ollama` - ollama
+         *     * `custom` - custom
+         * @enum {string}
+         */
+        AssistPlatformEnum: "deepseek" | "openai" | "anthropic" | "qwen" | "kimi" | "glm" | "doubao" | "gemini" | "siliconflow" | "openrouter" | "ollama" | "custom";
+        /**
          * @description * `vector` - vector
          *     * `fallback` - fallback
          *     * `fallback_low_similarity` - fallback_low_similarity
@@ -7852,8 +7911,12 @@ export interface components {
         };
         /** @enum {unknown} */
         BlankEnum: "";
-        /** @description 一套连接配置;没给的键沿用当前生效值。`api_key` 不给 = 沿用已存的 key。 */
+        /**
+         * @description 一套连接配置;没给的键沿用当前生效值。`api_key` 不给 = 沿用已存的 key。
+         *     `platform` 是预设时由它定 `provider` 与 `base_url`(不必再给;给了而不一致 → 400 `platform_locked`)。
+         */
         Candidate: {
+            platform?: components["schemas"]["AssistPlatformEnum"];
             provider?: components["schemas"]["ProviderEnum"];
             base_url?: string;
             api_key?: string;
@@ -7998,6 +8061,25 @@ export interface components {
             switch: boolean;
             /** @description 部署的 ASSISTANT_ENABLED;为假时页面开关无效 */
             env_enabled: boolean;
+            /**
+             * @description 存的平台;与当前连接对不上时按适配器 + 地址认,认不出是 custom
+             *
+             *     * `deepseek` - deepseek
+             *     * `openai` - openai
+             *     * `anthropic` - anthropic
+             *     * `qwen` - qwen
+             *     * `kimi` - kimi
+             *     * `glm` - glm
+             *     * `doubao` - doubao
+             *     * `gemini` - gemini
+             *     * `siliconflow` - siliconflow
+             *     * `openrouter` - openrouter
+             *     * `ollama` - ollama
+             *     * `custom` - custom
+             */
+            platform: components["schemas"]["AssistPlatformEnum"];
+            /** @description 下拉里的预设(只读) */
+            platforms: components["schemas"]["Platform"][];
             provider: string;
             base_url: string;
             model: string;
@@ -8033,6 +8115,8 @@ export interface components {
             tokens: {
                 [key: string]: number;
             };
+            /** @description 连通时:模型真的调了一次测试工具为 true;没调或平台拒收工具为 false。未连通为 null */
+            tools: boolean | null;
             provider: string;
             model: string;
         };
@@ -10304,6 +10388,31 @@ export interface components {
         MessageSent: {
             event_id: string;
         };
+        ModelEntry: {
+            /** @description 模型名(平台 API 里的 id),填进「模型名」 */
+            name: string;
+            /** @description 平台给了上下文长度才有 */
+            context: number | null;
+        };
+        ModelList: {
+            /**
+             * @description no_list = 平台不提供模型列表(404/405),不算出错
+             *
+             *     * `ok` - ok
+             *     * `no_list` - no_list
+             *     * `failed` - failed
+             */
+            status: components["schemas"]["ModelListStatusEnum"];
+            error_kind: (components["schemas"]["ErrorKindEnum"] | components["schemas"]["NullEnum"]) | null;
+            models: components["schemas"]["ModelEntry"][];
+        };
+        /**
+         * @description * `ok` - ok
+         *     * `no_list` - no_list
+         *     * `failed` - failed
+         * @enum {string}
+         */
+        ModelListStatusEnum: "ok" | "no_list" | "failed";
         /** @description 帖子与评论共用一份形状 —— 审核队列对两者做的是同一件事。 */
         ModeratedComment: {
             /** Format: uuid */
@@ -11446,8 +11555,12 @@ export interface components {
             /** Format: date-time */
             readonly update_time?: string;
         };
-        /** @description 一套连接配置;没给的键沿用当前生效值。`api_key` 不给 = 沿用已存的 key。 */
+        /**
+         * @description 一套连接配置;没给的键沿用当前生效值。`api_key` 不给 = 沿用已存的 key。
+         *     `platform` 是预设时由它定 `provider` 与 `base_url`(不必再给;给了而不一致 → 400 `platform_locked`)。
+         */
         PatchedConfigUpdate: {
+            platform?: components["schemas"]["AssistPlatformEnum"];
             provider?: components["schemas"]["ProviderEnum"];
             base_url?: string;
             api_key?: string;
@@ -12229,6 +12342,27 @@ export interface components {
             empty_threshold: number;
             empty_reached: boolean;
         };
+        Platform: {
+            id: components["schemas"]["AssistPlatformEnum"];
+            /**
+             * @description custom 为 null
+             *
+             *     * `anthropic` - anthropic
+             *     * `openai_compatible` - openai_compatible
+             */
+            provider: (components["schemas"]["ProviderEnum"] | components["schemas"]["NullEnum"]) | null;
+            /** @description custom 为 null */
+            base_url: string | null;
+            /**
+             * @description 文档写明支持函数调用 = yes;model = 看模型
+             *
+             *     * `yes` - yes
+             *     * `no` - no
+             *     * `model` - model
+             */
+            tools: components["schemas"]["ToolsEnum"];
+            needs_key: boolean;
+        };
         /**
          * @description * `OFFENCE` - Offence — counts against the soul
          *     * `MERIT` - Merit — counts for the soul
@@ -12296,7 +12430,42 @@ export interface components {
             output: number;
             /** Format: double */
             cache_read?: number;
+            /**
+             * @description litellm = 预填的参考价(未改过);manual = 手填或改过。缺省按 manual
+             *
+             *     * `litellm` - litellm
+             *     * `manual` - manual
+             */
+            source?: components["schemas"]["PriceSourceEnum"];
+            /**
+             * Format: date
+             * @description 参考价取自 LiteLLM 价目表的日期
+             */
+            as_of?: string | null;
         };
+        PriceReference: {
+            found: boolean;
+            /**
+             * Format: double
+             * @description 美元 / 百万 token
+             */
+            input: number | null;
+            /** Format: double */
+            output: number | null;
+            /** Format: double */
+            cache_read: number | null;
+            /**
+             * Format: date
+             * @description 价目表的取得日期;表取不到时为 null
+             */
+            as_of: string | null;
+        };
+        /**
+         * @description * `litellm` - litellm
+         *     * `manual` - manual
+         * @enum {string}
+         */
+        PriceSourceEnum: "litellm" | "manual";
         /**
          * @description * `unpriced_model` - unpriced_model
          *     * `no_cases` - no_cases
@@ -13897,12 +14066,6 @@ export interface components {
             count: number;
         };
         /**
-         * @description * `page` - page
-         *     * `env` - env
-         * @enum {string}
-         */
-        SourceEnum: "page" | "env";
-        /**
          * @description One citable article.
          *
          *     `display_text` is where a *derived* article becomes readable: for the
@@ -14070,6 +14233,13 @@ export interface components {
             refresh: string;
             readonly access: string;
         };
+        /**
+         * @description * `yes` - yes
+         *     * `no` - no
+         *     * `model` - model
+         * @enum {string}
+         */
+        ToolsEnum: "yes" | "no" | "model";
         /**
          * @description * `SCHEDULE` - Schedule
          *     * `MANUAL` - Manual
@@ -14855,6 +15025,75 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AssistError"];
+                };
+            };
+        };
+    };
+    assist_admin_config_models: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["Candidate"];
+                "application/x-www-form-urlencoded": components["schemas"]["Candidate"];
+                "multipart/form-data": components["schemas"]["Candidate"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModelList"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistError"];
+                };
+            };
+        };
+    };
+    assist_admin_config_price: {
+        parameters: {
+            query: {
+                model: string;
+                /**
+                 * @description * `deepseek` - deepseek
+                 *     * `openai` - openai
+                 *     * `anthropic` - anthropic
+                 *     * `qwen` - qwen
+                 *     * `kimi` - kimi
+                 *     * `glm` - glm
+                 *     * `doubao` - doubao
+                 *     * `gemini` - gemini
+                 *     * `siliconflow` - siliconflow
+                 *     * `openrouter` - openrouter
+                 *     * `ollama` - ollama
+                 *     * `custom` - custom
+                 */
+                platform: "deepseek" | "openai" | "anthropic" | "qwen" | "kimi" | "glm" | "doubao" | "gemini" | "siliconflow" | "openrouter" | "ollama" | "custom";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PriceReference"];
                 };
             };
         };

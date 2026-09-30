@@ -1138,10 +1138,19 @@ const BACKGROUND_PATHS: RegExp[] = [
  * checks (500s, 409 conflicts) are driven.
  */
 /** 助手管理: the saved config and the 向量模型 block in its 「需要重建」 state (canvas 1j/1k). */
+/** backend/apps/soul_assist/platforms.py's table (a subset: the page reads whatever the API lists). */
+const ASSIST_ADMIN_PLATFORMS = [
+  { id: "deepseek", provider: "openai_compatible", base_url: "https://api.deepseek.com", tools: "yes", needs_key: true },
+  { id: "anthropic", provider: "anthropic", base_url: "https://api.anthropic.com", tools: "yes", needs_key: true },
+  { id: "siliconflow", provider: "openai_compatible", base_url: "https://api.siliconflow.cn/v1", tools: "model", needs_key: true },
+  { id: "ollama", provider: "openai_compatible", base_url: "http://localhost:11434/v1", tools: "model", needs_key: false },
+  { id: "custom", provider: null, base_url: null, tools: "model", needs_key: true },
+];
 const ASSIST_ADMIN_CONFIG = {
-  enabled: true, switch: true, env_enabled: true, provider: "openai_compatible", base_url: "https://llm.example/v1",
-  model: "assist-medium", effort: "", fallbacks: false, soul_per_hour: 30, officer_per_hour: 30, monthly_cap: 300,
-  eval_spend_cap: 5, prices: { "assist-medium": { input: 3, output: 15 } },
+  enabled: true, switch: true, env_enabled: true, platform: "deepseek", platforms: ASSIST_ADMIN_PLATFORMS,
+  provider: "openai_compatible", base_url: "https://api.deepseek.com",
+  model: "deepseek-flash", effort: "", fallbacks: false, soul_per_hour: 30, officer_per_hour: 30, monthly_cap: 300,
+  eval_spend_cap: 5, prices: { "deepseek-flash": { input: 0.28, output: 0.42, source: "litellm", as_of: "2026-09-28" } },
   api_key: { set: true, last4: "8f3c", set_at: "2026-09-02T00:00:00Z", source: "page" },
   eval_soul_account: "11111111-1111-1111-1111-111111111111", eval_officer: 9,
   month_rolls_over_at: "每月 1 日 08:00(北京时间)", overridden: [],
@@ -1740,6 +1749,15 @@ export class ApiMock {
 
     // ── 助手管理 (backend/apps/soul_assist/admin_views.py) — the config page's reads, and the 向量模型 block ──
     this.on("GET", "/assist-admin/config/", ASSIST_ADMIN_CONFIG);
+    this.on("POST", "/assist-admin/config/models/", {
+      status: "ok", error_kind: null,
+      models: [{ name: "deepseek-flash", context: 131072 }, { name: "deepseek-v4-pro-with-a-deliberately-long-model-identifier", context: 131072 }],
+    });
+    this.on("GET", "/assist-admin/config/price/", { found: true, input: 1.1, output: 3.3, cache_read: null, as_of: "2026-09-30" });
+    this.on("POST", "/assist-admin/config/test/", {
+      ok: true, error_kind: null, latency_ms: 800, tokens: { input: 40, output: 2 }, tools: true,
+      provider: "openai_compatible", model: "deepseek-v4-pro-with-a-deliberately-long-model-identifier",
+    });
     this.on("GET", "/assist-admin/halls/", []);
     this.on("GET", "/assist-admin/eval/runs/", []);
     this.on("GET", "/assist-admin/corpus/", { entries: [], prompts: [{ locale: "zh-Hans", audience: "soul", tokens: 100 }], total_tokens: 100, threshold: 80000 });
