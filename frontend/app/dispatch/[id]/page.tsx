@@ -75,8 +75,8 @@ function statusBadgeClass(status: string): string {
 }
 
 /** 账行:dt / dd 一对,行线分隔(与灵魂详情「甲 · 身份」同一份写法)。 */
-const DT = "py-1.5 border-b border-[oklch(var(--color-rule))] text-[oklch(var(--color-ink-subtle))]";
-const DD = "py-1.5 border-b border-[oklch(var(--color-rule))] text-[oklch(var(--color-ink))] min-w-0";
+const DT = "py-2 border-b border-[oklch(var(--color-rule))] text-[oklch(var(--color-ink-subtle))]";
+const DD = "py-2 border-b border-[oklch(var(--color-rule))] text-[oklch(var(--color-ink))] min-w-0";
 const DD_TIME = `${DD} font-mono text-xs tabular-nums`;
 
 export default function DispatchDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -259,7 +259,7 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
     >
       {/* 规范 v1 详情页原型:两栏账页,393 px 折单栏。卡片撤掉,区块之间只有区块标
           压着的那条线;时间一律等宽。 */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.3fr] gap-x-10">
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.3fr] gap-x-8">
         <section className="min-w-0">
           <LedgerHeading mark="甲" title={t("dispatch.detail_title")} />
           <dl className="grid grid-cols-[7rem_1fr] text-sm">

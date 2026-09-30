@@ -24,8 +24,8 @@ export function WorkflowInfoCard({
 }) {
   const { t, formatDateTime } = useI18n();
 
-  const DT = "py-1.5 border-b border-[oklch(var(--color-rule))] text-[oklch(var(--color-ink-subtle))]";
-  const DD = "py-1.5 border-b border-[oklch(var(--color-rule))] text-[oklch(var(--color-ink))] min-w-0";
+  const DT = "py-2 border-b border-[oklch(var(--color-rule))] text-[oklch(var(--color-ink-subtle))]";
+  const DD = "py-2 border-b border-[oklch(var(--color-rule))] text-[oklch(var(--color-ink))] min-w-0";
 
   return (
     <section>
