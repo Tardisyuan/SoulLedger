@@ -1100,3 +1100,48 @@ describe("the fourth tab", () => {
     expect(screen.getByTestId("tab-Letters")).toBeOnTheScreen();
   }, 30_000);
 });
+
+// 断网恢复(用户拍板 2026-09-30,只提示「已离线」):书信不在切回时重载,但网络回来时重载一次;
+// 没配 Matrix(not_configured)是设计如此,网络回来也不去重试。
+describe("letters after the network comes back", () => {
+  const net = jest.requireMock("expo-network") as { __set: (s: object) => void; __reset: () => void };
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { NetworkProvider } = require("../network") as typeof import("../network");
+  // The provider's first `getNetworkStateAsync` answers after mount; let it land before the
+  // test changes the network, or its stale "connected" reads as a return.
+  const online = async (chat: Chat) => {
+    render(
+      <SafeAreaProvider initialMetrics={{ frame: { x: 0, y: 0, width: 390, height: 844 }, insets: { top: 0, left: 0, right: 0, bottom: 0 } }}>
+        <I18nProvider>
+          <NetworkProvider>
+            <ChatContext.Provider value={chat}>
+              <NavigationContainer>
+                <LettersScreen />
+              </NavigationContainer>
+            </ChatContext.Provider>
+          </NetworkProvider>
+        </I18nProvider>
+      </SafeAreaProvider>
+    );
+    await act(async () => {});
+  };
+
+  beforeEach(() => net.__reset());
+
+  it("reloads once when the network returns, not while it stays down", async () => {
+    const chat = chatState();
+    await online(chat);
+    await act(async () => net.__set({ isConnected: false }));
+    expect(chat.reload).not.toHaveBeenCalled();
+    await act(async () => net.__set({ isConnected: true }));
+    expect(chat.reload).toHaveBeenCalledTimes(1);
+  });
+
+  it("chat not configured: the return of the network does not retry it", async () => {
+    const chat = chatState({ availability: "not_configured" });
+    await online(chat);
+    await act(async () => net.__set({ isConnected: false }));
+    await act(async () => net.__set({ isConnected: true }));
+    expect(chat.reload).not.toHaveBeenCalled();
+  });
+});
