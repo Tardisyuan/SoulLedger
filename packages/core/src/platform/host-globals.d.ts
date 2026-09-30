@@ -180,3 +180,14 @@ declare const WebSocket: {
   readonly CLOSING: number;
   readonly CLOSED: number;
 };
+
+/**
+ * UTF-8 decoding of a streamed body (`api/assist-stream.ts`'s `streamAssist`).
+ * Browsers have it; on React Native the Expo runtime installs it
+ * (`expo/src/winter/TextDecoder.ts`, a UTF-8-only fallback where Hermes has
+ * none). Only the streaming form is declared: a chunk may end mid-character.
+ */
+interface TextDecoder {
+  decode(input?: Uint8Array, options?: { stream?: boolean }): string;
+}
+declare const TextDecoder: { new (label?: "utf-8"): TextDecoder };

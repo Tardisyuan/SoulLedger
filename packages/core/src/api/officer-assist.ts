@@ -3,11 +3,18 @@
  * shared `api` client. backend/apps/soul_assist/views.py (the `Officer*`
  * views) is the contract; docs/ARCHITECTURE-officer-assist.md is the design.
  *
- * Same shape as the soul side (./soul-assist): non-streaming, the server gives
- * up at 22 s (503 `assistant_unavailable`), this client at 25 s. Cancelling is
- * client-side only — the server still finishes and stores the answer.
+ * Same shape as the soul side (./soul-assist). `stream` is how the panel asks
+ * (§13, ./assist-stream): stopping closes the connection and the server stores
+ * the partial answer. `ask` is the one-shot JSON form (server gives up at 22 s).
  */
-import axios, { type GenericAbortSignal } from "axios";
+import type { GenericAbortSignal } from "axios";
+import {
+  refusalBody,
+  streamAssist,
+  type AssistStreamAbort,
+  type AssistStreamEvent,
+  type AssistStreamFetch,
+} from "./assist-stream";
 import { api } from "./client";
 import type { components } from "./generated/schema";
 
@@ -57,18 +64,14 @@ export const OFFICER_ASSIST_ERROR_CODES = [
 ] as const;
 export type OfficerAssistErrorCode = (typeof OFFICER_ASSIST_ERROR_CODES)[number];
 
-function body(error: unknown): { code?: unknown; retry_at?: unknown } | undefined {
-  return axios.isAxiosError(error) ? (error.response?.data as { code?: unknown; retry_at?: unknown } | undefined) : undefined;
-}
-
 export function officerAssistErrorCode(error: unknown): OfficerAssistErrorCode | null {
-  const code = body(error)?.code;
+  const code = refusalBody(error)?.code;
   return (OFFICER_ASSIST_ERROR_CODES as readonly unknown[]).includes(code) ? (code as OfficerAssistErrorCode) : null;
 }
 
 /** `retry_at` of a 429 `rate_limited`, or `null`. */
 export function officerAssistRetryAt(error: unknown): string | null {
-  const at = body(error)?.retry_at;
+  const at = refusalBody(error)?.retry_at;
   return typeof at === "string" ? at : null;
 }
 
@@ -89,6 +92,16 @@ export function isOfficerEmptyAnswer(content: string): boolean {
 export const officerAssistApi = {
   ask: (body: OfficerAssistAsk, signal?: GenericAbortSignal) =>
     api.post<OfficerAssistAnswer>("/assist/", body, { timeout: ASSIST_TIMEOUT_MS, signal }).then((r) => r.data),
+  /** Answered as it is written (§13); stop = `controller.abort()`, the server stores the partial answer. */
+  stream: (fetch: AssistStreamFetch, body: OfficerAssistAsk, controller: AssistStreamAbort, onEvent: (event: AssistStreamEvent) => void) =>
+    streamAssist({
+      fetch,
+      path: "/assist/",
+      body,
+      controller,
+      onEvent,
+      refresh: () => api.get("/assist/conversations/"),
+    }),
   /** Newest first, each with its messages in order. */
   conversations: () => api.get<OfficerAssistConversation[]>("/assist/conversations/").then((r) => r.data),
   /** 204; someone else's (or a gone one) is 404 `not_found`. */

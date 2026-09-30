@@ -3,12 +3,19 @@
  * (./soul) like the chat and circle clients. backend/apps/soul_assist/views.py
  * is the contract; docs/ARCHITECTURE-soul-assist.md is the design.
  *
- * Non-streaming: one POST, one answer. The server gives up at 22 s and answers
- * 503 `assistant_unavailable`; this client gives up at 25 s (canvas 1e), so a
- * timeout here normally means the network, not the model.
+ * `stream` is how the App asks (§13, ./assist-stream): stopping closes the
+ * connection and the server stores the partial answer. `ask` is the one-shot
+ * JSON form: the server gives up at 22 s and answers 503 `assistant_unavailable`.
  */
-import axios, { type GenericAbortSignal } from "axios";
+import type { GenericAbortSignal } from "axios";
 import type { Locale } from "../config/locale";
+import {
+  refusalBody,
+  streamAssist,
+  type AssistStreamAbort,
+  type AssistStreamEvent,
+  type AssistStreamFetch,
+} from "./assist-stream";
 import { soulHttp } from "./soul";
 import type { components } from "./generated/schema";
 
@@ -32,16 +39,15 @@ export const SOUL_ASSIST_ERROR_CODES = [
 ] as const;
 export type SoulAssistErrorCode = (typeof SOUL_ASSIST_ERROR_CODES)[number];
 
+/** Reads an axios refusal and a stream request's (`AssistStreamHttpError`) alike. */
 export function soulAssistErrorCode(error: unknown): SoulAssistErrorCode | null {
-  if (!axios.isAxiosError(error)) return null;
-  const code = (error.response?.data as { code?: unknown } | undefined)?.code;
+  const code = refusalBody(error)?.code;
   return (SOUL_ASSIST_ERROR_CODES as readonly unknown[]).includes(code) ? (code as SoulAssistErrorCode) : null;
 }
 
 /** `retry_at` of a 429 `rate_limited`, or `null`. */
 export function soulAssistRetryAt(error: unknown): string | null {
-  if (!axios.isAxiosError(error)) return null;
-  const at = (error.response?.data as { retry_at?: unknown } | undefined)?.retry_at;
+  const at = refusalBody(error)?.retry_at;
   return typeof at === "string" ? at : null;
 }
 
@@ -68,6 +74,19 @@ export const soulAssistApi = {
   /** `signal` lets the App stop waiting; the server still finishes and stores the answer. */
   ask: (body: AssistAsk, signal?: GenericAbortSignal) =>
     soulHttp.post<AssistAnswer>("/me/assist/", body, { timeout: ASSIST_TIMEOUT_MS, signal }).then((r) => r.data),
+  /**
+   * The same question, answered as it is written (§13). `fetch` must read the body as it arrives —
+   * the App passes `expo/fetch`. Stop = `controller.abort()`: the server stores the partial answer.
+   */
+  stream: (fetch: AssistStreamFetch, body: AssistAsk, controller: AssistStreamAbort, onEvent: (event: AssistStreamEvent) => void) =>
+    streamAssist({
+      fetch,
+      path: "/me/assist/",
+      body,
+      controller,
+      onEvent,
+      refresh: () => soulHttp.get("/me/assist/conversations/"),
+    }),
   /** Newest first, each with its messages in order. */
   conversations: () => soulHttp.get<AssistConversation[]>("/me/assist/conversations/").then((r) => r.data),
   /** 204; someone else's (or a gone one) is 404 `not_found`. */
