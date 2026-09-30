@@ -898,7 +898,7 @@ describe("供应商 · 平台 / 获取模型 / 单价 / 测试 (canvas provider-
     expect(fetchButton()).toBeDisabled();
     fireEvent.change(platformSelect(), { target: { value: "ollama" } });
     expect(fetchButton()).toBeEnabled();
-    post.mockResolvedValueOnce({ data: { status: "ok", error_kind: null, models: [{ id: "qwen3:32b", context: null }] } });
+    post.mockResolvedValueOnce({ data: { status: "ok", error_kind: null, models: [{ name: "qwen3:32b", context: null }] } });
     fireEvent.click(fetchButton());
     await within(block()).findByTestId("aa-model-list");
     expect(post).toHaveBeenCalledWith("/assist-admin/config/models/", {
@@ -909,7 +909,7 @@ describe("供应商 · 平台 / 获取模型 / 单价 / 测试 (canvas provider-
   it("a fetched list is searchable; choosing fills the model, closes the list and prefills a reference price", async () => {
     await renderConfig();
     post.mockResolvedValueOnce({ data: { status: "ok", error_kind: null, models: [
-      { id: "deepseek-ai/DeepSeek-V3.2", context: 131072 }, { id: "Qwen/Qwen3-32B", context: null }] } });
+      { name: "deepseek-ai/DeepSeek-V3.2", context: 131072 }, { name: "Qwen/Qwen3-32B", context: null }] } });
     fireEvent.click(fetchButton());
     const list = await within(block()).findByTestId("aa-model-list");
     expect(post).toHaveBeenCalledWith("/assist-admin/config/models/", {});

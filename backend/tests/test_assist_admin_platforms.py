@@ -143,7 +143,7 @@ def test_fetching_models_uses_the_saved_key_on_the_server_and_never_returns_it(a
     response = _models(api, model="whatever")
     assert response.status_code == 200
     assert response.data == {"status": "ok", "error_kind": None,
-                              "models": [{"id": "a-model", "context": None}, {"id": "b-model", "context": 131072}]}
+                              "models": [{"name": "a-model", "context": None}, {"name": "b-model", "context": 131072}]}
     assert calls[-1]["headers"] == {"Authorization": f"Bearer {KEY}"}
     assert KEY not in response.content.decode()
 
@@ -168,7 +168,7 @@ def test_anthropic_lists_through_its_own_api(api, net):
     calls, routes = net
     routes["https://api.anthropic.com/v1/models"] = Resp(200, {"data": [{"id": "claude-x", "max_input_tokens": 200000}]})
     body = _models(api, platform="anthropic", api_key="sk-ant").data
-    assert body["models"] == [{"id": "claude-x", "context": 200000}]
+    assert body["models"] == [{"name": "claude-x", "context": 200000}]
     assert calls[-1]["url"] == "https://api.anthropic.com/v1/models?limit=1000"
     assert calls[-1]["headers"] == {"x-api-key": "sk-ant", "anthropic-version": "2023-06-01"}
 
@@ -176,7 +176,7 @@ def test_anthropic_lists_through_its_own_api(api, net):
 def test_ollama_needs_no_key(api, net):
     calls, routes = net
     routes["http://localhost:11434/v1/models"] = Resp(200, {"data": [{"id": "qwen3:32b"}]})
-    assert _models(api, platform="ollama", api_key="").data["models"] == [{"id": "qwen3:32b", "context": None}]
+    assert _models(api, platform="ollama", api_key="").data["models"] == [{"name": "qwen3:32b", "context": None}]
     assert calls[-1]["headers"] == {}
 
 

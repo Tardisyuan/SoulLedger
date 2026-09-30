@@ -1751,7 +1751,7 @@ export class ApiMock {
     this.on("GET", "/assist-admin/config/", ASSIST_ADMIN_CONFIG);
     this.on("POST", "/assist-admin/config/models/", {
       status: "ok", error_kind: null,
-      models: [{ id: "deepseek-flash", context: 131072 }, { id: "deepseek-v4-pro-with-a-deliberately-long-model-identifier", context: 131072 }],
+      models: [{ name: "deepseek-flash", context: 131072 }, { name: "deepseek-v4-pro-with-a-deliberately-long-model-identifier", context: 131072 }],
     });
     this.on("GET", "/assist-admin/config/price/", { found: true, input: 1.1, output: 3.3, cache_read: null, as_of: "2026-09-30" });
     this.on("POST", "/assist-admin/config/test/", {

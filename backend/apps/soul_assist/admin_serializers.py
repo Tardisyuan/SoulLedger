@@ -134,7 +134,7 @@ class ConnectivityResultSerializer(serializers.Serializer):
 
 
 class ModelEntrySerializer(serializers.Serializer):
-    id = serializers.CharField()
+    name = serializers.CharField(help_text="模型名(平台 API 里的 id),填进「模型名」")
     context = serializers.IntegerField(allow_null=True, help_text="平台给了上下文长度才有")
 
 

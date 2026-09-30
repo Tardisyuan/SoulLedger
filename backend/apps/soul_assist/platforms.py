@@ -112,7 +112,8 @@ def _status_kind(code):
 
 
 def list_models(conn: config.Connection) -> dict:
-    """{status: ok | no_list | failed, error_kind, models: [{id, context}]}。
+    """{status: ok | no_list | failed, error_kind, models: [{name, context}]}。模型名在各家 API 里叫 `id`,
+    这里叫 `name`:页面上它是给人读、给人填的名字,不是记录的标识。
     404 / 405 = 平台不提供模型列表(如火山方舟),**不算出错**。"""
     anthropic = conn.provider == config.provider_path("anthropic")
     base = _norm(conn.base_url) or (ANTHROPIC_DEFAULT if anthropic else "")
@@ -139,13 +140,13 @@ def list_models(conn: config.Connection) -> dict:
         return failed(_status_kind(resp.status_code))
     try:
         data = resp.json()["data"]
-        models = [{"id": str(m["id"]),
+        models = [{"name": str(m["id"]),
                    "context": m.get("context_length") or m.get("max_input_tokens") or m.get("context_window")}
                   for m in data]
     except (ValueError, KeyError, TypeError):
         return {"status": "no_list", "error_kind": None, "models": []}
     models = [{**m, "context": m["context"] if isinstance(m["context"], int) else None} for m in models]
-    return {"status": "ok", "error_kind": None, "models": sorted(models, key=lambda m: m["id"])}
+    return {"status": "ok", "error_kind": None, "models": sorted(models, key=lambda m: m["name"])}
 
 
 # ── 参考价(LiteLLM 公开价目表)──────────────────────────────────────────────

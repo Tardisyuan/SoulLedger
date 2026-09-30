@@ -19,6 +19,8 @@ const WARN = "border-l-2 border-[oklch(var(--color-warning))] pl-3";
 const OK = "border-l-2 border-[oklch(var(--color-success))] pl-3";
 const BAD = "border-l-2 border-[oklch(var(--color-danger))] pl-3";
 const INK = "border-l-2 border-[oklch(var(--color-hairline))] pl-3";
+/** Canvas 2f's glyph for 「不提供模型列表」: a status mark (aria-hidden), not a missing value. */
+const NO_LIST_GLYPH = "—";
 
 type Price = NonNullable<Draft["prices"]>[string] & { source?: "litellm" | "manual"; as_of?: string | null };
 
@@ -155,7 +157,7 @@ export function ProviderSection({
     if (listModels.isPending) return { tone: INK, glyph: "…", text: t("assist_admin.provider.fetching") };
     if (fetchError) return { tone: BAD, glyph: "✕", text: fetchError };
     if (list?.status === "no_list")
-      return { tone: INK, glyph: "—", text: t("assist_admin.provider.fetch_no_list", { platform: custom ? hostOf(baseUrl) : name(platform.id) }) };
+      return { tone: INK, glyph: NO_LIST_GLYPH, text: t("assist_admin.provider.fetch_no_list", { platform: custom ? hostOf(baseUrl) : name(platform.id) }) };
     if (list?.status === "failed") {
       const kind = list.error_kind ?? "other";
       const text =
@@ -172,7 +174,7 @@ export function ProviderSection({
 
   const models = list?.status === "ok" ? list.models : [];
   const q = search.trim().toLowerCase();
-  const filtered = q ? models.filter((m) => m.id.toLowerCase().includes(q)) : models;
+  const filtered = q ? models.filter((m) => m.name.toLowerCase().includes(q)) : models;
 
   const r = tested?.result;
   return (
@@ -216,7 +218,7 @@ export function ProviderSection({
           <div data-testid="aa-preset">
             <div className="flex min-w-0 items-baseline gap-2 text-xs text-[oklch(var(--color-ink-subtle))]">
               {!open && (
-                <span className={`min-w-0 truncate ${MONO}`} data-testid="aa-preset-summary">
+                <span className={`min-w-0 truncate ${MONO}`} title={platform.base_url ?? undefined} data-testid="aa-preset-summary">
                   {typeLabel(platform.provider!)} · {platform.base_url}
                 </span>
               )}
@@ -289,16 +291,18 @@ export function ProviderSection({
               </div>
               <ul className="max-h-60 overflow-y-auto">
                 {filtered.map((m) => (
-                  <li key={m.id}>
+                  <li key={m.name}>
                     <button
                       type="button"
-                      aria-pressed={m.id === model}
-                      onClick={() => choose(m.id)}
+                      aria-pressed={m.name === model}
+                      onClick={() => choose(m.name)}
                       className={`flex w-full min-w-0 items-center gap-3 px-3 py-1.5 text-left text-sm ${MONO} ${
-                        m.id === model ? "bg-[oklch(var(--color-surface-2))] shadow-[inset_2px_0_0_oklch(var(--color-ink))]" : ""
+                        m.name === model ? "bg-[oklch(var(--color-surface-2))] shadow-[inset_2px_0_0_oklch(var(--color-ink))]" : ""
                       }`}
                     >
-                      <span className="min-w-0 flex-1 truncate">{m.id}</span>
+                      <span className="min-w-0 flex-1 truncate" title={m.name}>
+                        {m.name}
+                      </span>
                       {m.context != null && <span className={SUBTLE}>{Math.round(m.context / 1024)}K</span>}
                     </button>
                   </li>
