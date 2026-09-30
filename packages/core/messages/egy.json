@@ -4219,7 +4219,7 @@
       },
       "legend_primary": "Per Sia Wa",
       "legend_backup": "Per Sia Sen",
-      "day_detail": "Per Sia Wa {{a}} · Per Sia Sen {{b}} · Khemen Er Per Sia Sen Sep {{n}}"
+      "day_detail": "Per Sia Wa {{a}} · Per Sia Sen {{b}} · Khemen Er Per Sia Sen: Sep {{n}}"
     },
     "embedding": {
       "url": "Wat",
