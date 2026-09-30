@@ -1,7 +1,4 @@
 {
-  "app/(auth)/login/page.tsx": {
-    "space": 6
-  },
   "app/corpus/page.tsx": {
     "space": 3
   },
