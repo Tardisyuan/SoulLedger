@@ -1137,6 +1137,26 @@ const BACKGROUND_PATHS: RegExp[] = [
  * override any default with `api.on(...)` — that is how the destructive
  * checks (500s, 409 conflicts) are driven.
  */
+/** 助手管理: the saved config and the 向量模型 block in its 「需要重建」 state (canvas 1j/1k). */
+const ASSIST_ADMIN_CONFIG = {
+  enabled: true, switch: true, env_enabled: true, provider: "openai_compatible", base_url: "https://llm.example/v1",
+  model: "assist-medium", effort: "", fallbacks: false, soul_per_hour: 30, officer_per_hour: 30, monthly_cap: 300,
+  eval_spend_cap: 5, prices: { "assist-medium": { input: 3, output: 15 } },
+  api_key: { set: true, last4: "8f3c", set_at: "2026-09-02T00:00:00Z", source: "page" },
+  eval_soul_account: "11111111-1111-1111-1111-111111111111", eval_officer: 9,
+  month_rolls_over_at: "每月 1 日 08:00(北京时间)", overridden: [],
+  read_only: { max_concurrent: 8, timeout_seconds: 22, history_turns: 20, retention_days: 30 },
+};
+const ASSIST_ADMIN_EMBEDDING = {
+  embedding_url: "http://192.168.2.2:11434", embedding_model: "qwen3-embedding:4b-q4_K_M", embedding_dims: null,
+  retrieval_k: 5, retrieval_min_similarity: 0.56, overridden: ["embedding_model"],
+  status: {
+    entries: 60, embedded: 0, needs_rebuild: true, model: "qwen3-embedding:4b-q4_K_M",
+    last_rebuild_at: "2026-09-12T02:40:00Z", last_rebuild_model: "qwen3-embedding:0.6b@1024",
+    last_error: null, last_error_at: null, rebuild_running: false,
+  },
+};
+
 export class ApiMock {
   /** Every intercepted request, in order. Assert against this. */
   readonly calls: RecordedCall[] = [];
@@ -1336,6 +1356,20 @@ export class ApiMock {
     this.on("GET", "/judgment/previous/", {
       total: 0, remaining: 0, skipped: 0, position: null,
       judgment: null, soul: null, ledger: null, prior_cycles: [], realm_options: [],
+    });
+    // 丁 · 判词自动保存 (`save_draft` → JudgmentDraftSerializer). It fires
+    // AUTOSAVE_DEBOUNCE_MS (1200) after the last edit, so without this handler a
+    // test that types into 备注 passed or failed on how fast its remaining steps ran.
+    this.on("PATCH", "/judgment/:id/draft/", (call) => {
+      const { version = 0, ...fields } = call.body ?? {};
+      return {
+        body: {
+          notes: "", draft_verdict: null, draft_destination_realm_id: null, draft_term_years: null, draft_eternal: false,
+          ...fields,
+          draft_version: version + 1,
+          draft_saved_at: "2026-08-13T02:05:00Z",
+        },
+      };
     });
     this.on("GET", "/judgment/:id/destinations/", (call) => ({
       body: {
@@ -1693,6 +1727,27 @@ export class ApiMock {
         : { body: paginated([]) }
     );
     this.on("POST", "/sentence-plans/:id/requests/:id/decide/", SENTENCE_PLAN_DECIDED);
+
+    // ── 问一问 (backend/apps/soul_assist/views.py Officer*) ──
+    this.on("GET", "/assist/conversations/", []);
+    this.on("POST", "/assist/", (call) => ({
+      body: {
+        conversation_id: "11111111-1111-1111-1111-111111111111",
+        answer: { id: 2, role: "assistant", content: `答：${(call.body as { question?: string })?.question ?? ""}`, created_at: "2026-09-29T02:12:00Z" },
+      },
+    }));
+    this.on("DELETE", "/assist/conversations/:id/", () => ({ status: 204, body: null }));
+
+    // ── 助手管理 (backend/apps/soul_assist/admin_views.py) — the config page's reads, and the 向量模型 block ──
+    this.on("GET", "/assist-admin/config/", ASSIST_ADMIN_CONFIG);
+    this.on("GET", "/assist-admin/halls/", []);
+    this.on("GET", "/assist-admin/eval/runs/", []);
+    this.on("GET", "/assist-admin/corpus/", { entries: [], prompts: [{ locale: "zh-Hans", audience: "soul", tokens: 100 }], total_tokens: 100, threshold: 80000 });
+    this.on("GET", "/assist-admin/embedding/", ASSIST_ADMIN_EMBEDDING);
+    this.on("POST", "/assist-admin/embedding/test/", {
+      ok: true, error_kind: null, latency_ms: 86, dims: 2560, embedding_url: "http://192.168.2.2:11434",
+      embedding_model: "qwen3-embedding:4b-q4_K_M", embedding_dims: null,
+    });
 
     // ── Hall inbox (backend/apps/chat/views.py OfficerInboxViewSet) ──
     this.on("GET", "/chat/inbox/", paginated(INBOX_CONVERSATIONS));

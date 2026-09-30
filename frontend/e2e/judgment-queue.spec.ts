@@ -213,6 +213,8 @@ test.describe("Claim queue and evidence admission", () => {
     await dialog.getByRole("button", { name: "不采信" }).click();
     await expect.poll(() => api.countOf("PUT", "/judgment/:id/evidence/:record/")).toBe(1);
     expect(api.lastCall("PUT", "/judgment/:id/evidence/:record/")?.body).toEqual({ admitted: false, reason: "无旁证" });
+    // The typed space went into the verdict text (and so into its autosave), not to the toggle.
+    await expect.poll(() => api.lastCall("PATCH", "/judgment/:id/draft/")?.body?.notes).toBe("功过相抵  ");
   });
 });
 

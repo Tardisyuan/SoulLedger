@@ -145,4 +145,27 @@ describe("role badge in the users table", () => {
     });
     expect(badge).toHaveTextContent("管理员");
   });
+
+  it("tags the assistant's eval officer, and only it", async () => {
+    mockUsers.mockResolvedValue({
+      data: {
+        count: 2,
+        next: null,
+        previous: null,
+        results: [
+          user({ id: 1, username: "yama", role: "ADMIN", is_eval_identity: false }),
+          user({ id: 3, username: "assist-eval-officer", role: "MODERATOR", is_eval_identity: true }),
+        ],
+      },
+    });
+    renderPage();
+    await screen.findByText("assist-eval-officer");
+    const tags = screen.getAllByText("assist_admin.identities.tag");
+    expect(tags).toHaveLength(1);
+    expect(tags[0].closest("tr")).toHaveTextContent("assist-eval-officer");
+    // Design: after the row's status tag, same cell; dashed neutral border, not a status colour.
+    expect(tags[0].previousElementSibling).toHaveTextContent("users.active");
+    expect(tags[0].className).toContain("border-dashed");
+    expect(tags[0].className).not.toMatch(/color-(success|warning|danger|accent)/);
+  });
 });

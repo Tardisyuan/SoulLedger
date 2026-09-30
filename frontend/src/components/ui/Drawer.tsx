@@ -2,6 +2,7 @@
 
 import type { ReactNode, RefObject } from "react";
 import { Dialog } from "@base-ui/react/dialog";
+import { useI18n } from "@/src/contexts/I18nContext";
 
 /**
  * 规范 v1 §2「抽屉 · 右侧 480 px · 不离开列表看详情」。
@@ -38,6 +39,7 @@ function isTyping(target: EventTarget | null): boolean {
 }
 
 export function Drawer({ isOpen, onClose, title, hint, onNext, onPrev, error, finalFocus, children }: DrawerProps) {
+  const { t } = useI18n();
   return (
     <Dialog.Root open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
       <Dialog.Portal>
@@ -58,7 +60,7 @@ export function Drawer({ isOpen, onClose, title, hint, onNext, onPrev, error, fi
               {hint && <span className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">{hint}</span>}
               <Dialog.Close
                 className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))] hover:text-[oklch(var(--color-ink))] border border-[oklch(var(--color-line))] px-1 py-0.5"
-                aria-label="Close"
+                aria-label={t("common.close")}
               >
                 Esc
               </Dialog.Close>

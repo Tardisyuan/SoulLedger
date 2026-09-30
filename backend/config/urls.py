@@ -19,6 +19,7 @@ from apps.core.recycle_bin_views import RecycleBinViewSet
 from apps.social import soul_urls as social_urls
 from apps.social.media_views import PostMediaFileView
 from apps.soul_accounts import urls as soul_account_urls
+from apps.soul_assist import urls as soul_assist_urls
 
 # User management router (registered at api/v1/users/ via path)
 user_router = DefaultRouter()
@@ -82,6 +83,12 @@ urlpatterns = [
     # 聊天(apps/chat)。灵魂侧同样在 /me/ 之下;/chat/ 是官员的殿司收件箱,走官员令牌。
     path("api/v1/me/", include(chat_urls.me_urlpatterns)),
     path("api/v1/chat/", include(chat_urls.officer_urlpatterns)),
+    # 灵魂端助手(apps/soul_assist)。同一个 /me/ 前缀、同一个 SoulAPIView 分界。
+    path("api/v1/me/", include("apps.soul_assist.urls")),
+    # 官员端助手:同一个服务层,另一段前缀、另一种令牌(docs/ARCHITECTURE-officer-assist.md §3)。
+    path("api/v1/assist/", include(soul_assist_urls.officer_urlpatterns)),
+    # 助手管理页(只许 ADMIN;docs/ARCHITECTURE-assist-admin.md)。
+    path("api/v1/assist-admin/", include(soul_assist_urls.admin_urlpatterns)),
     # 灵魂朋友圈(2026-09-17)。灵魂侧在 /me/ 之下,与上面两段同一条认证分界;
     # 官员审核后台是另一段前缀、另一套码名(social.moderate),两者不共用路由。
     path("api/v1/me/social/", include(social_urls.me_social_urlpatterns)),

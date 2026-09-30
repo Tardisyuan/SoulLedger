@@ -392,11 +392,19 @@ class UserManagementSerializer(serializers.ModelSerializer):
     """User serializer for list/retrieve operations in user management API."""
     tenant = serializers.SerializerMethodField()
     organization = serializers.SerializerMethodField()
+    # 助手管理造的评测官员(apps/soul_assist/eval_identities.py):显示、打「评测专用 · 不能登录」标签
+    # (用户 2026-09-29 定)。id 在共用的 context 里缓存,一次请求只查一次。
+    is_eval_identity = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'role', 'tenant', 'organization', 'position', 'is_active', 'create_time', 'avatar']
+        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'role', 'tenant', 'organization', 'position', 'is_active', 'create_time', 'avatar', 'is_eval_identity']
         read_only_fields = ['id', 'create_time']
+
+    def get_is_eval_identity(self, obj) -> bool:
+        from apps.soul_assist.eval_identities import tagged_ids
+
+        return obj.pk == tagged_ids(self.context)[1]
 
     @extend_schema_field(UserTenantRefSerializer(allow_null=True))
     def get_tenant(self, obj):

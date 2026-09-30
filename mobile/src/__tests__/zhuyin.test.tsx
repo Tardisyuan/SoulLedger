@@ -230,10 +230,13 @@ describe("Ma Shan Zheng, before the first plaque (user decision 2026-09-30: 地�
       "/soul-auth/login/": { status: 200, data: { access: "A", refresh: "R", soul_code: PROFILE.soul_code, account: PROFILE.account } },
       "/me/": { status: 200, data: { ...PROFILE, civilization } },
     });
+    // SessionProvider reads the account's language since main's 「问一问」 merge, so it needs the provider.
     render(
-      <SessionProvider>
-        <Probe />
-      </SessionProvider>
+      <I18nProvider>
+        <SessionProvider>
+          <Probe />
+        </SessionProvider>
+      </I18nProvider>
     );
     await act(async () => session.signIn(PROFILE.soul_code, "pw"));
     expect(session.state.status).toBe("signedIn");

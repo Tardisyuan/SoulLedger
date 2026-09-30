@@ -147,3 +147,22 @@ def django_db_setup(django_db_setup):
     from django.db import connections
 
     SyncToAsync.single_thread_executor.submit(connections.close_all).result()
+
+
+@pytest.fixture(autouse=True)
+def _block_embedding_service(monkeypatch):
+    """No test reaches the Ollama embedding host (docs/ARCHITECTURE-soul-assist.md §7.7).
+
+    `apps/soul_assist/vectors.py::_post` is the only place the assistant's
+    retrieval goes on the network, and its default URL is a real LAN machine
+    (192.168.2.2). Every test gets a `_post` that fails like a dead host, so an
+    unfaked call takes the fallback path instead of silently embedding against
+    whatever is listening there. Tests that want vectors install their own fake
+    over this one (`tests/test_assist_rag.py`).
+    """
+    from apps.soul_assist import vectors
+
+    def blocked(url, payload, timeout):
+        raise vectors.EmbeddingError("connection", f"network blocked in tests: {url}")
+
+    monkeypatch.setattr(vectors, "_post", blocked)
