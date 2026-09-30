@@ -1,19 +1,28 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import {
   assistAdminErrorCode,
+  type AssistAdminApiKeyState,
+  type AssistAdminBackup,
+  type AssistAdminCandidate,
   type AssistAdminConfig,
   type AssistAdminConnectivity,
   type AssistAdminModelList,
   type AssistAdminPlatformId,
 } from "@soulledger/core/api/assist-admin";
-import { useAssistPriceReference, useListAssistModels, useTestAssistConnection } from "@soulledger/core/hooks/useAssistAdmin";
+import {
+  useAssistPriceReference,
+  useListAssistModels,
+  useTestAssistBackup,
+  useTestAssistConnection,
+} from "@soulledger/core/hooks/useAssistAdmin";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { Badge, type BadgeTone } from "@/src/components/ui/Badge";
 import { Button } from "@/src/components/ui/Button";
 import { SelectField, TextField } from "@/src/components/ui/Field";
 import { MONO, SUBTLE, Section, Switch, count } from "./parts";
-import { connectionDraft, fingerprint, type Draft, type DraftKey } from "./draft";
+import { connectionDraft, fingerprint, hostOf, keySlot, slotKey, type Draft, type DraftKey, type SavedConnection } from "./draft";
 
 const WARN = "border-l-2 border-[oklch(var(--color-warning))] pl-3";
 const OK = "border-l-2 border-[oklch(var(--color-success))] pl-3";
@@ -24,36 +33,74 @@ const NO_LIST_GLYPH = "—";
 
 type Price = NonNullable<Draft["prices"]>[string] & { source?: "litellm" | "manual"; as_of?: string | null };
 
-const hostOf = (url: string) => {
-  try {
-    return new URL(url).host;
-  } catch {
-    return url;
-  }
-};
+/** The platform's tool support as the existing status tag (user 2026-10-01: 现有标签, not text in the option). */
+const TOOL_TONE: Record<AssistAdminConfig["platforms"][number]["tools"], BadgeTone> = { yes: "success", no: "error", model: "warning" };
 
 /**
- * 「供应商」区块 (canvas provider-platforms, 2026-09-30): platform → key → model (fetch) → prices → test,
- * top to bottom in the order an admin configures it. A preset fixes the adapter and base URL (read-only,
- * collapsible); 「自定义」 edits them. The fields feed the page's one footer draft; the test lives here,
- * under the prices, and a pass is reported up through `onTested` — changing platform, address, model or
- * key still needs a passed test of that exact draft before the footer can save.
+ * 「供应商」区块 (canvas provider-platforms, 2026-09-30; round 2 frames 6a–6e, 2026-10-01): two segments,
+ * 主供应商 and 备用供应商（可选）, each platform → key → model (fetch) → prices → test, top to bottom in
+ * the order an admin configures it. The header's right side says what is in effect now (saved values).
  */
 export function ProviderSection({
   config,
+  backup,
+  children,
+}: {
+  config: AssistAdminConfig;
+  backup: AssistAdminBackup | undefined;
+  /** The two segments: `<Segment>` for the primary, then `<BackupBlock>`. */
+  children: ReactNode;
+}) {
+  const { t } = useI18n();
+  const summary = [t("assist_admin.provider.in_effect", { model: config.model })];
+  if (backup?.configured && backup.model) summary.push(t("assist_admin.provider.in_effect_backup", { model: backup.model }));
+  return (
+    <Section
+      title={t("assist_admin.sections.provider")}
+      id="aa-provider"
+      aside={
+        <span className={`${MONO} ${SUBTLE}`} data-testid="aa-provider-summary">
+          {summary.join(" · ")}
+        </span>
+      }
+    >
+      {children}
+    </Section>
+  );
+}
+
+/**
+ * One segment. A preset fixes the adapter and base URL (read-only, collapsible); 「自定义」 edits them.
+ * The fields feed the page's one footer draft; the test lives here, under the prices, and its result
+ * is reported up through `onTested` — changing platform, address, model or key still needs a passed
+ * test of that exact draft before the footer can save. The backup segment tests through its own
+ * endpoint and lists models with its whole connection (the server's base there is the primary).
+ */
+export function Segment({
+  kind,
+  config,
+  saved,
   draft,
   set,
   onTested,
   keyField,
+  platformNote,
 }: {
+  kind: "primary" | "backup";
   config: AssistAdminConfig;
+  saved: SavedConnection;
   draft: Draft;
   set: (key: DraftKey, value: unknown) => void;
-  onTested: (fingerprint: string | null) => void;
-  keyField: React.ReactNode;
+  onTested: (fingerprint: string, ok: boolean) => void;
+  keyField: ReactNode;
+  /** Under the platform row: the backup's same-platform warning. */
+  platformNote?: ReactNode;
 }) {
+  const p = kind === "primary" ? "aa" : "aa-backup";
   const { t, formatDateTime } = useI18n();
-  const probe = useTestAssistConnection();
+  const probePrimary = useTestAssistConnection();
+  const probeBackup = useTestAssistBackup();
+  const probe = kind === "primary" ? probePrimary : probeBackup;
   const listModels = useListAssistModels();
   const priceRef = useAssistPriceReference();
   const [tested, setTested] = useState<{ fp: string; result: AssistAdminConnectivity; at: string } | null>(null);
@@ -63,9 +110,9 @@ export function ProviderSection({
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
 
-  const value = <K extends DraftKey>(key: K) => (key in draft ? draft[key] : (config as unknown as Record<string, unknown>)[key]) as Draft[K];
+  const value = <K extends DraftKey>(key: K) => (key in draft ? draft[key] : (saved as Record<string, unknown>)[key]) as Draft[K];
   const platformId = value("platform") as AssistAdminPlatformId;
-  const platform = config.platforms.find((p) => p.id === platformId) ?? config.platforms[config.platforms.length - 1];
+  const platform = config.platforms.find((o) => o.id === platformId) ?? config.platforms[config.platforms.length - 1];
   const custom = platform.provider == null;
   const provider = value("provider") as string;
   const baseUrl = (value("base_url") as string) ?? "";
@@ -73,10 +120,9 @@ export function ProviderSection({
   const name = (id: string) => t(`assist_admin.provider.platforms.${id}`);
   const typeLabel = (p: string) => t(`assist_admin.provider.${p === "anthropic" ? "anthropic" : "openai_compatible"}`);
 
-  // Fetch is possible with a key typed in the draft, a saved key the backend may still use (same endpoint),
-  // or a platform that needs no key (Ollama).
-  const moved = "provider" in draft || "base_url" in draft;
-  const canFetch = !platform.needs_key || !!draft.api_key || (config.api_key.set && !moved && draft.api_key !== "");
+  // Fetch is possible with a key typed in the draft, a key saved for this platform's slot (keys are stored
+  // per platform, §13.6), or a platform that needs no key (Ollama).
+  const canFetch = !platform.needs_key || !!draft.api_key || (slotKey(config, provider, baseUrl)?.set === true && draft.api_key !== "");
 
   const pick = (id: AssistAdminPlatformId) => {
     const next = config.platforms.find((p) => p.id === id)!;
@@ -119,7 +165,12 @@ export function ProviderSection({
   const runFetch = () => {
     setFetchError(null);
     setList(null);
-    listModels.mutate(connectionDraft(draft), {
+    // The server lists with the primary as its base: the backup sends its whole connection.
+    const candidate: AssistAdminCandidate =
+      kind === "primary"
+        ? connectionDraft(draft)
+        : { platform: platformId, provider: provider as AssistAdminCandidate["provider"], base_url: baseUrl, ...(draft.api_key !== undefined ? { api_key: draft.api_key } : {}) };
+    listModels.mutate(candidate, {
       onSuccess: (result) => {
         setSearch("");
         setList(result);
@@ -142,12 +193,12 @@ export function ProviderSection({
     probe.mutate(connectionDraft(draft), {
       onSuccess: (result) => {
         setTested({ fp, result, at: new Date().toISOString() });
-        onTested(result.ok ? fp : null);
+        onTested(fp, result.ok);
       },
       onError: () => {
         setTested(null);
         setTestError(true);
-        onTested(null);
+        onTested(fp, false);
       },
     });
   };
@@ -178,26 +229,28 @@ export function ProviderSection({
 
   const r = tested?.result;
   return (
-    <Section title={t("assist_admin.sections.provider")} id="aa-provider">
-      <div className="grid gap-3">
+      <div className="grid gap-3" data-testid={`${p}-segment`}>
         <div>
           <SelectField
-            id="aa-platform"
+            id={`${p}-platform`}
             label={t("assist_admin.provider.platform")}
-            value={platformId}
+            value={platformId ?? ""}
             onChange={(e) => pick(e.target.value as AssistAdminPlatformId)}
-            options={config.platforms.map((p) => ({
-              value: p.id,
-              label: `${name(p.id)}　${t(`assist_admin.provider.tool_${p.tools}`)}`,
-            }))}
+            options={config.platforms.map((o) => ({ value: o.id, label: name(o.id) }))}
           />
-          <p className={`mt-1 ${SUBTLE}`}>{t("assist_admin.provider.tool_legend", { test: t("assist_admin.test.run") })}</p>
+          <p className={`mt-1 flex flex-wrap items-center gap-2 ${SUBTLE}`}>
+            <Badge tone={TOOL_TONE[platform.tools]} data-testid={`${p}-tools`}>
+              {t(`assist_admin.provider.tool_${platform.tools}`)}
+            </Badge>
+            <span>{t("assist_admin.provider.tool_legend", { test: t("assist_admin.test.run") })}</span>
+          </p>
+          {platformNote}
         </div>
 
         {custom ? (
           <>
             <SelectField
-              id="aa-provider-type"
+              id={`${p}-provider-type`}
               label={t("assist_admin.provider.type")}
               value={provider}
               onChange={(e) => set("provider", e.target.value)}
@@ -207,7 +260,7 @@ export function ProviderSection({
               ]}
             />
             <TextField
-              id="aa-base-url"
+              id={`${p}-base-url`}
               label={t("assist_admin.provider.base_url")}
               description={t("assist_admin.provider.base_url_hint")}
               value={baseUrl}
@@ -215,10 +268,10 @@ export function ProviderSection({
             />
           </>
         ) : (
-          <div data-testid="aa-preset">
+          <div data-testid={`${p}-preset`}>
             <div className="flex min-w-0 items-baseline gap-2 text-xs text-[oklch(var(--color-ink-subtle))]">
               {!open && (
-                <span className={`min-w-0 truncate ${MONO}`} title={platform.base_url ?? undefined} data-testid="aa-preset-summary">
+                <span className={`min-w-0 truncate ${MONO}`} title={platform.base_url ?? undefined} data-testid={`${p}-preset-summary`}>
                   {typeLabel(platform.provider!)} · {platform.base_url}
                 </span>
               )}
@@ -226,14 +279,14 @@ export function ProviderSection({
                 type="button"
                 className="shrink-0 underline"
                 aria-expanded={open}
-                aria-controls="aa-preset-details"
+                aria-controls={`${p}-preset-details`}
                 onClick={() => setOpen((o) => !o)}
               >
                 {open ? `${t("assist_admin.provider.details_hide")} ▾` : `${t("assist_admin.provider.details_show")} ▸`}
               </button>
             </div>
             {open && (
-              <dl id="aa-preset-details" className="mt-2 grid gap-1 bg-[oklch(var(--color-surface-2))] p-3 text-sm">
+              <dl id={`${p}-preset-details`} className="mt-2 grid gap-1 bg-[oklch(var(--color-surface-2))] p-3 text-sm">
                 <div className="flex flex-wrap gap-x-3">
                   <dt className="text-[oklch(var(--color-ink-muted))]">{t("assist_admin.provider.type")}</dt>
                   <dd>{typeLabel(platform.provider!)}</dd>
@@ -253,7 +306,7 @@ export function ProviderSection({
         <div>
           <div className="flex min-w-0 items-end gap-2">
             <TextField
-              id="aa-model"
+              id={`${p}-model`}
               className="min-w-0 flex-1"
               label={t("assist_admin.provider.model")}
               value={model}
@@ -266,9 +319,9 @@ export function ProviderSection({
               {t("assist_admin.provider.fetch_models")}
             </Button>
           </div>
-          {"model" in draft && <p className={`mt-1 ${SUBTLE}`}>{t("assist_admin.provider.model_was", { model: config.model })}</p>}
+          {"model" in draft && saved.model && <p className={`mt-1 ${SUBTLE}`}>{t("assist_admin.provider.model_was", { model: saved.model })}</p>}
           {fetchMessage && (
-            <div role="status" data-testid="aa-fetch-msg" className={`mt-2 text-sm ${fetchMessage.tone}`}>
+            <div role="status" data-testid={`${p}-fetch-msg`} className={`mt-2 text-sm ${fetchMessage.tone}`}>
               <span aria-hidden="true" className={`${MONO} mr-2`}>
                 {fetchMessage.glyph}
               </span>
@@ -277,7 +330,7 @@ export function ProviderSection({
             </div>
           )}
           {list?.status === "ok" && (
-            <div className="mt-2 border border-[oklch(var(--color-hairline))]" data-testid="aa-model-list">
+            <div className="mt-2 border border-[oklch(var(--color-hairline))]" data-testid={`${p}-model-list`}>
               <div className="flex items-center gap-2 border-b border-[oklch(var(--color-hairline))] p-2">
                 <input
                   type="search"
@@ -314,7 +367,7 @@ export function ProviderSection({
         </div>
 
         <SelectField
-          id="aa-effort"
+          id={`${p}-effort`}
           label={t("assist_admin.provider.effort")}
           description={t("assist_admin.provider.effort_hint")}
           value={value("effort") as string}
@@ -329,13 +382,13 @@ export function ProviderSection({
           <Switch checked={value("fallbacks") as boolean} label={t("assist_admin.provider.fallbacks")} onChange={(on) => set("fallbacks", on)} />
         </div>
 
-        <fieldset className={price ? undefined : WARN} data-testid="aa-price">
+        <fieldset className={price ? undefined : WARN} data-testid={`${p}-price`}>
           <legend className="text-sm">{t("assist_admin.provider.price", { model })}</legend>
           <div className="mt-1 grid grid-cols-2 gap-3">
-            <TextField id="aa-price-in" type="number" min={0} step="any" label={t("assist_admin.provider.price_input")} value={shown(price?.input)} onChange={(e) => setPrice("input", e.target.value)} />
-            <TextField id="aa-price-out" type="number" min={0} step="any" label={t("assist_admin.provider.price_output")} value={shown(price?.output)} onChange={(e) => setPrice("output", e.target.value)} />
+            <TextField id={`${p}-price-in`} type="number" min={0} step="any" label={t("assist_admin.provider.price_input")} value={shown(price?.input)} onChange={(e) => setPrice("input", e.target.value)} />
+            <TextField id={`${p}-price-out`} type="number" min={0} step="any" label={t("assist_admin.provider.price_output")} value={shown(price?.output)} onChange={(e) => setPrice("output", e.target.value)} />
           </div>
-          <p className="mt-1 flex flex-wrap gap-x-3 text-xs" data-testid="aa-price-note">
+          <p className="mt-1 flex flex-wrap gap-x-3 text-xs" data-testid={`${p}-price-note`}>
             {!price ? (
               <span className="font-semibold text-[oklch(var(--color-warning))]">! {t("assist_admin.provider.price_missing")}</span>
             ) : price.source === "litellm" ? (
@@ -349,9 +402,10 @@ export function ProviderSection({
               </>
             )}
           </p>
+          <p className={`mt-1 ${SUBTLE}`}>{t("assist_admin.provider.price_period_hint")}</p>
         </fieldset>
 
-        <div data-testid="aa-provider-test">
+        <div data-testid={`${p}-provider-test`}>
           <Button type="button" variant="ghost" onClick={runTest} loading={probe.isPending}>
             {tested ? t("assist_admin.test.again") : t("assist_admin.test.run")}
           </Button>
@@ -366,7 +420,7 @@ export function ProviderSection({
             </p>
           )}
           {r && !probe.isPending && (
-            <div role="status" data-testid="aa-test-result" className={`mt-3 text-sm ${!r.ok ? BAD : r.tools ? OK : WARN}`}>
+            <div role="status" data-testid={`${p}-test-result`} className={`mt-3 text-sm ${!r.ok ? BAD : r.tools ? OK : WARN}`}>
               <p className="font-semibold">
                 {r.ok ? t(r.tools ? "assist_admin.provider.test_ok_tool_yes" : "assist_admin.provider.test_ok_tool_no") : t("assist_admin.test.failed")}
               </p>
@@ -391,6 +445,138 @@ export function ProviderSection({
           )}
         </div>
       </div>
-    </Section>
+  );
+}
+
+/**
+ * The key row (§13.6, user 2026-10-01): the status of the **selected platform's** slot, so switching back
+ * to a platform with a saved key shows 「已设置 · •••• last4」 with nothing to paste. Write-only: the key
+ * itself never comes back. `onClear` (primary only) asks first; the backup shares the slots and only adds.
+ */
+export function KeyRow({
+  id,
+  state,
+  draftKey,
+  setKey,
+  replacing,
+  setReplacing,
+  onClear,
+}: {
+  id: string;
+  state: AssistAdminApiKeyState | undefined;
+  draftKey: string | undefined;
+  setKey: (key: string | undefined) => void;
+  replacing: boolean;
+  setReplacing: (on: boolean) => void;
+  onClear?: () => void;
+}) {
+  const { t, formatDate } = useI18n();
+  return (
+    <div>
+      <p className="text-sm">{t("assist_admin.key.title")}</p>
+      <p className="text-sm" data-testid={`${id}-state`}>
+        {state?.set ? (
+          <>
+            {t("assist_admin.key.set")}
+            {state.last4 && <span className={`${MONO} ml-2`}>•••• {state.last4}</span>}
+            {state.set_at && <span className={`${MONO} ${SUBTLE} ml-2`}>{t("assist_admin.key.set_at", { date: formatDate(state.set_at) })}</span>}
+            {state.source === "env" && <span className={`${SUBTLE} ml-2`}>{t("assist_admin.key.from_env")}</span>}
+          </>
+        ) : (
+          t("assist_admin.key.not_set")
+        )}
+      </p>
+      {draftKey === "" && <p className="text-sm text-[oklch(var(--color-warning))]">{t("assist_admin.key.will_clear")}</p>}
+      {replacing ? (
+        <div className="mt-2 grid gap-2">
+          <TextField
+            id={`${id}-new`}
+            type="password"
+            autoComplete="off"
+            spellCheck={false}
+            label={t("assist_admin.key.new")}
+            description={t("assist_admin.key.new_hint")}
+            value={draftKey ?? ""}
+            onChange={(e) => setKey(e.target.value || undefined)}
+          />
+          <div>
+            <Button type="button" size="sm" variant="ghost" onClick={() => { setKey(undefined); setReplacing(false); }}>
+              {t("assist_admin.cancel")}
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <div className="mt-2 flex gap-2">
+          <Button type="button" size="sm" onClick={() => { setKey(undefined); setReplacing(true); }}>
+            {t("assist_admin.key.replace")}
+          </Button>
+          {onClear && state?.set && draftKey !== "" && (
+            <Button type="button" size="sm" onClick={onClear}>
+              {t("assist_admin.key.clear")}
+            </Button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * The saved key of the slot a segment's current draft points at. `own` is the segment's own reading
+ * (`config/backup/`'s `api_key` for its `api_key_slot`), used when the config's table has no such slot.
+ */
+export function segmentKey(
+  config: AssistAdminConfig,
+  saved: SavedConnection,
+  draft: Draft,
+  own?: { slot: string | null; state: AssistAdminApiKeyState },
+) {
+  const provider = "provider" in draft ? draft.provider : saved.provider;
+  const baseUrl = "base_url" in draft ? draft.base_url : saved.base_url;
+  return slotKey(config, provider, baseUrl) ?? (own && own.slot === keySlot(config, provider, baseUrl) ? own.state : undefined);
+}
+
+/**
+ * 备用供应商（可选） (frames 6a–6e). Collapsed while there is none: what it is for, and 「＋ 添加备用」.
+ * Open: the same fields as the primary under an ink3 rule, with 「移除备用」 on the right of its title.
+ */
+export function BackupBlock({ open, onAdd, onRemove, children }: { open: boolean; onAdd: () => void; onRemove: () => void; children: ReactNode }) {
+  const { t } = useI18n();
+  return (
+    <div className="mt-2 border-t border-[oklch(var(--color-ink-subtle))] pt-3" data-testid="aa-backup">
+      <div className="mb-3 flex items-baseline justify-between gap-2">
+        <h3 className="text-sm font-medium">{t("assist_admin.provider.backup")}</h3>
+        {open && (
+          <button type="button" className="text-xs underline" onClick={onRemove}>
+            {t("assist_admin.provider.backup_remove")}
+          </button>
+        )}
+      </div>
+      {open ? (
+        children
+      ) : (
+        <div className="grid justify-items-start gap-2">
+          <p className="text-sm">{t("assist_admin.provider.backup_none")}</p>
+          <p className={SUBTLE}>{t("assist_admin.provider.backup_explain")}</p>
+          <Button type="button" size="sm" variant="ghost" onClick={onAdd}>
+            <span aria-hidden="true">＋ </span>
+            {t("assist_admin.provider.backup_add")}
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Frame 6d: the first sentence in bold, the rest plain. Does not block saving. */
+export function SamePlatformNote() {
+  const { t } = useI18n();
+  const text = t("assist_admin.provider.backup_same_platform");
+  const cut = text.search(/[。.]\s?/) + 1;
+  return (
+    <p role="note" data-testid="aa-backup-same-platform" className="mt-2 border-l-2 border-[oklch(var(--color-warning))] pl-3 text-xs">
+      <strong className="font-semibold">{text.slice(0, cut)}</strong>
+      {text.slice(cut)}
+    </p>
   );
 }

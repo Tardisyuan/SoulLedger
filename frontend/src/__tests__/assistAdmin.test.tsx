@@ -4,13 +4,14 @@
  * instance with its verbs spied on, so `assistAdminErrorCode` reads real
  * axios-shaped errors and the request bodies asserted here are the ones sent.
  */
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { AxiosError, AxiosHeaders } from "axios";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { api } from "@soulledger/core/api/client";
-import type { AssistAdminConfig, AssistAdminEmbedding, AssistAdminUsage } from "@soulledger/core/api/assist-admin";
+import type { AssistAdminBackup, AssistAdminConfig, AssistAdminEmbedding, AssistAdminUsage } from "@soulledger/core/api/assist-admin";
 import { I18nProvider } from "@/src/contexts/I18nContext";
+import { installStreamFetch, refuse, type StreamAsk, type StreamScript } from "./support/assistStreamFetch";
 
 jest.mock("@/src/contexts/ThemeContext", () => ({
   useTheme: () => ({ theme: "dark", toggleTheme: jest.fn() }),
@@ -35,6 +36,7 @@ import UsageRoute from "@/app/admin/assistant/usage/page";
 const get = jest.spyOn(api, "get");
 const post = jest.spyOn(api, "post");
 const patch = jest.spyOn(api, "patch");
+const del = jest.spyOn(api, "delete");
 
 const SECRET = "sk-live-do-not-render-9f3a";
 
@@ -97,6 +99,18 @@ const CORPUS = {
 
 let config = makeConfig();
 
+const BREAKER = { open: false, open_until: null, consecutive_failures: 0, threshold: 3, open_seconds: 60 };
+const NO_BACKUP: AssistAdminBackup = {
+  configured: false, platform: null, provider: null, base_url: null, model: null, effort: null, fallbacks: null, prices: {},
+  api_key: { set: false, last4: null, set_at: null, source: "page" }, api_key_slot: null, breaker: BREAKER, primary_first_token_seconds: 12,
+};
+const GLM_BACKUP: AssistAdminBackup = {
+  ...NO_BACKUP, configured: true, platform: "doubao", provider: "openai_compatible", base_url: "https://ark.cn-beijing.volces.com/api/v3",
+  model: "glm-4.6", effort: "", fallbacks: false, prices: { "glm-4.6": { input: 1, output: 2 } },
+  api_key: { set: true, last4: "d0b4", set_at: "2026-10-01T00:00:00Z", source: "page" }, api_key_slot: "doubao",
+};
+let backup = NO_BACKUP;
+
 function makeEmbedding(status: Partial<AssistAdminEmbedding["status"]> = {}, over: Partial<AssistAdminEmbedding> = {}): AssistAdminEmbedding {
   return {
     embedding_url: "http://192.168.2.2:11434", embedding_model: "qwen3-embedding:4b-q4_K_M", embedding_dims: null,
@@ -130,6 +144,7 @@ function renderRoute(Route: () => ReactNode) {
 async function renderConfig() {
   const view = renderRoute(ConfigRoute);
   await screen.findAllByLabelText("模型名");
+  await screen.findByTestId("aa-backup");
   return view;
 }
 
@@ -153,10 +168,13 @@ beforeEach(() => {
     if (url === "/assist-admin/usage/") return { data: USAGE };
     if (url === "/assist-admin/corpus/") return { data: CORPUS };
     if (url === "/assist-admin/embedding/") return { data: embedding };
+    if (url === "/assist-admin/config/backup/") return { data: backup };
     return { data: [] };
   });
+  backup = NO_BACKUP;
   post.mockReset();
   patch.mockReset();
+  del.mockReset();
 });
 
 describe("ADMIN only", () => {
@@ -288,10 +306,33 @@ describe("the API key is write-only", () => {
     expect(saveButton()).toBeEnabled();
   });
 
-  it("moving the provider without a new key is refused with the reason", async () => {
+  it("moving to an address with no key saved for it is refused with the reason", async () => {
     await renderConfig();
-    fireEvent.change(screen.getByLabelText("类型"), { target: { value: "anthropic" } });
+    fireEvent.change(within(region("供应商")).getByLabelText("Base URL"), { target: { value: "https://other.example/v1" } });
     expect(saveButton()).toBeDisabled();
+    expect(screen.getByText(/换了供应商或地址，要同时填新的 API key/)).toBeInTheDocument();
+    expect(screen.getByTestId("aa-key-state")).toHaveTextContent("未设置");
+  });
+
+  it("keys are per platform: the key row follows the selected platform's slot, and a saved one needs no re-paste", async () => {
+    config = makeConfig({
+      api_keys: {
+        "custom:llm.example": { set: true, last4: "8f3c", set_at: "2026-09-02T00:00:00Z", source: "page" },
+        deepseek: { set: true, last4: "d5e6", set_at: "2026-09-20T00:00:00Z", source: "page" },
+      },
+    });
+    await renderConfig();
+    const keyState = () => screen.getByTestId("aa-key-state");
+    expect(keyState()).toHaveTextContent("•••• 8f3c");
+    fireEvent.change(within(region("供应商")).getByLabelText("平台"), { target: { value: "deepseek" } });
+    expect(keyState()).toHaveTextContent("已设置•••• d5e6");
+    expect(keyState()).not.toHaveTextContent("8f3c");
+    expect(screen.queryByText(/换了供应商或地址，要同时填新的 API key/)).toBeNull();
+    expect(within(region("供应商")).getByRole("button", { name: "获取模型" })).toBeEnabled();
+    // A platform with nothing saved says so, and asks for a key.
+    fireEvent.change(within(region("供应商")).getByLabelText("平台"), { target: { value: "anthropic" } });
+    expect(keyState()).toHaveTextContent("未设置");
+    expect(keyState()).not.toHaveTextContent("••••");
     expect(screen.getByText(/换了供应商或地址，要同时填新的 API key/)).toBeInTheDocument();
   });
 });
@@ -431,45 +472,95 @@ describe("usage page", () => {
   });
 });
 
-describe("试问 (plan §3.3)", () => {
+describe("试问 (plan §3.3), streamed", () => {
   const tryRegion = () => screen.getByRole("region", { name: "试问" });
-  const ANSWER = {
-    side: "soul", answer: "你已有一份转生申请正在审批。", tools_called: ["me", "rebirth"], latency_ms: 2410,
-    tokens: { input: 2700, output: 205 }, provider: "openai_compatible", model: "assist-medium",
+  let asks: StreamAsk[];
+  let scripts: StreamScript[];
+  beforeEach(() => ({ asks, scripts } = installStreamFetch()));
+  const DONE = {
+    event: "done", side: "soul", answer: "你已有一份转生申请正在审批。", tools_called: ["me", "rebirth"], retrieval: "vector", retrieved_entries: [],
+    latency_ms: 2410, tokens: { input: 2700, output: 205 }, provider: "openai_compatible", model: "assist-medium",
+    provider_role: "primary", fallback_reason: null,
+  };
+  const ask = async (question: string) => {
+    fireEvent.change(within(tryRegion()).getByLabelText("问题"), { target: { value: question } });
+    fireEvent.click(within(tryRegion()).getByRole("button", { name: "问" }));
+    await waitFor(() => expect(asks.length).toBeGreaterThan(0));
+    return asks[asks.length - 1];
   };
 
-  it("asks as the eval soul with the saved config and shows the answer and tool names", async () => {
+  it("asks as the eval soul with the saved config and shows the answer, tool names and the technical line", async () => {
     await renderConfig();
-    post.mockResolvedValueOnce({ data: ANSWER });
     const region = tryRegion();
     expect(within(region).getByText("以 问一问评测灵魂 身份提问")).toBeInTheDocument();
-    fireEvent.change(within(region).getByLabelText("问题"), { target: { value: "  我为什么不能申请？ " } });
-    fireEvent.click(within(region).getByRole("button", { name: "问" }));
+    const a = await ask("  我为什么不能申请？ ");
+    expect(a.url).toMatch(/\/assist-admin\/try\/$/);
+    expect(a.body).toEqual({ side: "soul", question: "我为什么不能申请？", stream: true });
+    await act(async () => a.send({ event: "meta", conversation_id: "x" }, { event: "delta", text: "你已有一份" }));
+    expect(within(region).getByTestId("aa-try-tech")).toHaveTextContent(/^首字 \d+\.\d s$/);
+    expect(within(region).getByRole("button", { name: "停止回答" })).toBeInTheDocument();
+    await act(async () => a.send(DONE));
     const result = await within(region).findByTestId("aa-try-result");
-    expect(calls(post, "/assist-admin/try/")).toEqual([["/assist-admin/try/", { side: "soul", question: "我为什么不能申请？" }]]);
+    await waitFor(() => expect(result).toHaveTextContent("工具调用 · 2"));
     expect(result).toHaveTextContent("你已有一份转生申请正在审批。");
-    expect(result).toHaveTextContent("工具调用 · 2");
     expect(within(result).getByText("me()")).toBeInTheDocument();
     expect(within(result).getByText("rebirth()")).toBeInTheDocument();
     expect(result).toHaveTextContent("2,410 ms · 2,905 tok");
+    expect(within(region).getByTestId("aa-try-tech")).toHaveTextContent(/· 主供应商$/);
+    expect(within(region).getByTestId("aa-try-tech")).not.toHaveTextContent("备用");
     expect(result.textContent).not.toContain("8f3c");
     // Absence: no draft, so no candidate and no draft note.
     expect(within(region).queryByText(/用未保存的连接草稿提问/)).toBeNull();
   });
 
+  it("answered by the backup after the primary's first-text budget: the line says so (this page only)", async () => {
+    await renderConfig();
+    const a = await ask("Q");
+    await act(async () => a.send({ event: "delta", text: "好" }, { ...DONE, answer: "好", provider_role: "backup", fallback_reason: "timeout" }));
+    await waitFor(() => expect(within(tryRegion()).getByTestId("aa-try-tech")).toHaveTextContent("备用 · 主供应商 12 s 无首字，已改用备用"));
+  });
+
+  it("stop: 「■ 停止」 aborts; the line says where it stopped", async () => {
+    await renderConfig();
+    const a = await ask("Q");
+    await act(async () => a.send({ event: "delta", text: "一半" }));
+    fireEvent.click(within(tryRegion()).getByRole("button", { name: "停止回答" }));
+    await waitFor(() => expect(a.aborted()).toBe(true));
+    await waitFor(() => expect(within(tryRegion()).getByTestId("aa-try-tech")).toHaveTextContent(/首字 \d+\.\d s · 停止于 \d+\.\d s$/));
+    expect(within(tryRegion()).getByText("已停止")).toBeInTheDocument();
+    expect(within(tryRegion()).getByRole("button", { name: "问" })).toBeInTheDocument();
+  });
+
+  it("Esc in the question stops it too", async () => {
+    await renderConfig();
+    const a = await ask("Q");
+    fireEvent.keyDown(within(tryRegion()).getByLabelText("问题"), { key: "Escape" });
+    await waitFor(() => expect(a.aborted()).toBe(true));
+  });
+
+  it("interrupted after text: the platform's reason and 「已出字，不换备用」", async () => {
+    await renderConfig();
+    const a = await ask("Q");
+    await act(async () =>
+      a.send({ event: "delta", text: "一半" }, { event: "error", kind: "interrupted", text_sent: true, detail: "平台关闭了连接" })
+    );
+    await waitFor(() =>
+      expect(within(tryRegion()).getByTestId("aa-try-tech")).toHaveTextContent(/中断于 \d+\.\d s · 平台关闭了连接 · 已出字，不换备用$/)
+    );
+    expect(within(tryRegion()).getByText("回答中断")).toBeInTheDocument();
+  });
+
   it("sends the unsaved connection draft as the candidate, and the officer side when chosen", async () => {
     await renderConfig();
     fireEvent.change(providerModel(), { target: { value: "assist-large" } });
-    post.mockResolvedValueOnce({ data: { ...ANSWER, side: "officer", tools_called: [], model: "assist-large" } });
     const region = tryRegion();
     fireEvent.click(within(region).getByRole("button", { name: "官员端" }));
     expect(within(region).getByText("以 assist-eval-officer 身份提问")).toBeInTheDocument();
     expect(within(region).getByText(/用未保存的连接草稿提问/)).toBeInTheDocument();
-    fireEvent.change(within(region).getByLabelText("问题"), { target: { value: "队列里有几件？" } });
-    fireEvent.click(within(region).getByRole("button", { name: "问" }));
-    const result = await within(region).findByTestId("aa-try-result");
-    expect(calls(post, "/assist-admin/try/")[0][1]).toEqual({ side: "officer", question: "队列里有几件？", candidate: { model: "assist-large" } });
-    expect(result).toHaveTextContent("没有调用工具");
+    const a = await ask("队列里有几件？");
+    expect(a.body).toEqual({ side: "officer", question: "队列里有几件？", candidate: { model: "assist-large" }, stream: true });
+    await act(async () => a.send({ event: "delta", text: "3" }, { ...DONE, side: "officer", answer: "3", tools_called: [], model: "assist-large" }));
+    await waitFor(() => expect(within(region).getByTestId("aa-try-result")).toHaveTextContent("没有调用工具"));
   });
 
   it("is disabled with the reason when that side's eval identity is missing, and sends nothing", async () => {
@@ -479,21 +570,19 @@ describe("试问 (plan §3.3)", () => {
     expect(within(region).getByLabelText("问题")).not.toBeDisabled();
     fireEvent.click(within(region).getByRole("button", { name: "官员端" }));
     expect(within(region).getByLabelText("问题")).toBeDisabled();
-    const ask = within(region).getByRole("button", { name: "问" });
-    expect(ask).toBeDisabled();
-    expect(ask).toHaveAttribute("aria-describedby", "aa-try-missing");
+    const button = within(region).getByRole("button", { name: "问" });
+    expect(button).toBeDisabled();
+    expect(button).toHaveAttribute("aria-describedby", "aa-try-missing");
     expect(within(region).getByText("缺少评测官员，先创建评测身份。")).toBeInTheDocument();
-    expect(calls(post, "/assist-admin/try/")).toEqual([]);
+    expect(asks).toEqual([]);
   });
 
   it("names a refusal by its code", async () => {
     await renderConfig();
-    post.mockRejectedValueOnce(refusal(429, { detail: "x", code: "rate_limited" }));
-    const region = tryRegion();
-    fireEvent.change(within(region).getByLabelText("问题"), { target: { value: "Q" } });
-    fireEvent.click(within(region).getByRole("button", { name: "问" }));
-    expect(await within(region).findByRole("alert")).toHaveTextContent("试问太频繁，请稍后再试。");
-    expect(within(region).queryByTestId("aa-try-result")).toBeNull();
+    scripts.push(refuse(429, { detail: "x", code: "rate_limited" }));
+    await ask("Q");
+    expect(await within(tryRegion()).findByRole("alert")).toHaveTextContent("试问太频繁，请稍后再试。");
+    expect(within(tryRegion()).queryByTestId("aa-try-result")).toBeNull();
   });
 });
 
@@ -869,13 +958,32 @@ describe("供应商 · 平台 / 获取模型 / 单价 / 测试 (canvas provider-
     expect(within(block()).queryByTestId("aa-preset")).toBeNull();
   });
 
-  it("each option carries its tools marker, and the legend explains ✕ and ?", async () => {
+  it("tool support is the status tag of the selected platform, not text in the options; the legend stays", async () => {
     await renderConfig();
     const options = within(platformSelect()).getAllByRole("option").map((o) => o.textContent);
-    expect(options).toContain("DeepSeek　工具 ✓");
-    expect(options).toContain("硅基流动　工具 ?");
-    expect(options).toContain("自定义　工具 ?");
+    expect(options).toContain("DeepSeek");
+    expect(options).toContain("自定义");
+    // Absence: user 2026-10-01 — 「工具 ✓」 in every option read as if every platform were checked.
+    expect(options.filter((o) => o?.includes("工具"))).toEqual([]);
+    const tag = () => within(block()).getByTestId("aa-tools");
+    expect(tag()).toHaveTextContent("工具 ?");
+    expect(tag().className).toContain("--color-warning");
+    fireEvent.change(platformSelect(), { target: { value: "deepseek" } });
+    expect(tag()).toHaveTextContent("工具 ✓");
+    expect(tag().className).toContain("--color-success");
     expect(within(block()).getByText("工具 ✕ ＝ 助手只能答通用问题，查不了个人数据。工具 ? ＝ 看所选模型，「测试连接」时实测。")).toBeInTheDocument();
+  });
+
+  it("the time-of-day price hint is always under the prices", async () => {
+    await renderConfig();
+    expect(within(block()).getByTestId("aa-price")).toHaveTextContent("分时段计价的平台，请按常用时段填写。");
+  });
+
+  it("the reason Save is off sits beside Save in the footer", async () => {
+    await renderConfig();
+    fireEvent.change(providerModel(), { target: { value: "assist-large" } });
+    const reason = screen.getByText("连接配置改过，先在「供应商」里「测试连接」测通这份草稿才能保存。");
+    expect(reason.parentElement).toBe(saveButton().parentElement);
   });
 
   it("choosing a preset fills the adapter and address into the draft and needs a key", async () => {
@@ -964,5 +1072,137 @@ describe("供应商 · 平台 / 获取模型 / 单价 / 测试 (canvas provider-
 
     fireEvent.change(providerModel(), { target: { value: "unpriced-model" } });
     expect(note()).toHaveTextContent("! 没有参考价，请手动填写。月度上限按这个价格计算。");
+  });
+});
+
+describe("备用供应商 (frames 6a–6e)", () => {
+  const block = () => region("供应商");
+  const backupBlock = () => within(block()).getByTestId("aa-backup");
+  const OK = { ok: true, error_kind: null, latency_ms: 700, tokens: { input: 5, output: 1 }, tools: true, provider: "openai_compatible", model: "b-model" };
+
+  it("collapsed while there is none: what it is for, 「＋ 添加备用」, no fields, and no part in saving", async () => {
+    await renderConfig();
+    const b = backupBlock();
+    expect(b).toHaveTextContent("备用供应商（可选）");
+    expect(b).toHaveTextContent("未设置备用供应商");
+    expect(b).toHaveTextContent("主供应商连不上、超时、限流、欠费或服务端出错时，自动改用备用再答一次。");
+    expect(within(b).queryByLabelText("平台")).toBeNull();
+    expect(within(b).queryByRole("button", { name: "移除备用" })).toBeNull();
+    expect(screen.getByTestId("aa-provider-summary")).toHaveTextContent("当前生效 · assist-medium");
+    expect(screen.getByTestId("aa-provider-summary")).not.toHaveTextContent("备");
+    // An unrelated change saves without any backup test.
+    fireEvent.change(screen.getByLabelText("灵魂端 · 每账号每小时"), { target: { value: "40" } });
+    expect(saveButton()).toBeEnabled();
+  });
+
+  it("added: saves only after its own test passed; a failed test says so; then PATCH config/backup/", async () => {
+    await renderConfig();
+    fireEvent.click(within(backupBlock()).getByRole("button", { name: /添加备用/ }));
+    const b = backupBlock();
+    expect(within(b).getByRole("button", { name: "移除备用" })).toBeInTheDocument();
+    expect(within(b).getByLabelText("平台")).toHaveValue("deepseek");
+    fireEvent.click(within(b).getByRole("button", { name: "更换" }));
+    fireEvent.change(within(b).getByLabelText("粘贴新 key"), { target: { value: SECRET } });
+    fireEvent.change(within(b).getByLabelText("模型名"), { target: { value: "b-model" } });
+    expect(saveButton()).toBeDisabled();
+    expect(screen.getByText("备用还没测通。主、备都测通后才能保存。")).toBeInTheDocument();
+
+    post.mockResolvedValueOnce({ data: { ...OK, ok: false, error_kind: "auth", tools: null } });
+    fireEvent.click(within(b).getByRole("button", { name: "测试连接" }));
+    await screen.findByText("备用测试未通过。修好或移除备用后才能保存。");
+    expect(saveButton()).toBeDisabled();
+
+    post.mockResolvedValueOnce({ data: OK });
+    fireEvent.click(within(b).getByRole("button", { name: "再测一次" }));
+    await waitFor(() => expect(saveButton()).toBeEnabled());
+    const candidate = { platform: "deepseek", provider: "openai_compatible", base_url: "https://api.deepseek.com", api_key: SECRET, model: "b-model" };
+    expect(post).toHaveBeenLastCalledWith("/assist-admin/config/backup/test/", candidate);
+    expect(screen.queryByText(/备用还没测通|备用测试未通过/)).toBeNull();
+
+    patch.mockResolvedValueOnce({ data: { ...GLM_BACKUP, platform: "deepseek", model: "b-model" } });
+    fireEvent.click(saveButton());
+    await waitFor(() => expect(patch).toHaveBeenCalledWith("/assist-admin/config/backup/", candidate));
+    // The primary had nothing to save: no PATCH of config/.
+    expect(calls(patch, "/assist-admin/config/")).toEqual([]);
+  });
+
+  it("removing an unsaved backup collapses it and drops the rule", async () => {
+    await renderConfig();
+    fireEvent.click(within(backupBlock()).getByRole("button", { name: /添加备用/ }));
+    expect(saveButton()).toBeDisabled();
+    fireEvent.click(within(backupBlock()).getByRole("button", { name: "移除备用" }));
+    expect(backupBlock()).toHaveTextContent("未设置备用供应商");
+    expect(draftCount()).toBe("没有未保存的改动");
+    fireEvent.change(screen.getByLabelText("灵魂端 · 每账号每小时"), { target: { value: "40" } });
+    expect(saveButton()).toBeEnabled();
+    expect(screen.queryByText("备用还没测通。主、备都测通后才能保存。")).toBeNull();
+  });
+
+  it("same platform as the primary: a note under the backup's platform, not a block", async () => {
+    await renderConfig();
+    fireEvent.click(within(backupBlock()).getByRole("button", { name: /添加备用/ }));
+    expect(within(backupBlock()).queryByTestId("aa-backup-same-platform")).toBeNull();
+    fireEvent.change(within(backupBlock()).getByLabelText("平台"), { target: { value: "custom" } });
+    fireEvent.change(within(backupBlock()).getByLabelText("Base URL"), { target: { value: "https://LLM.example/v2" } });
+    const note = within(backupBlock()).getByTestId("aa-backup-same-platform");
+    expect(note.querySelector("strong")).toHaveTextContent("和主供应商同一平台。");
+    expect(note).toHaveTextContent("这家平台故障时，主、备会一起不可用。不影响保存。");
+    fireEvent.change(within(backupBlock()).getByLabelText("Base URL"), { target: { value: "https://elsewhere.example/v1" } });
+    expect(within(backupBlock()).queryByTestId("aa-backup-same-platform")).toBeNull();
+  });
+
+  it("a saved backup is open, named in the header, and 「移除备用」 + Save deletes it", async () => {
+    backup = GLM_BACKUP;
+    await renderConfig();
+    expect(screen.getByTestId("aa-provider-summary")).toHaveTextContent("当前生效 · assist-medium · 备 glm-4.6");
+    expect(within(backupBlock()).getByLabelText("模型名")).toHaveValue("glm-4.6");
+    expect(within(backupBlock()).getByTestId("aa-backup-key-state")).toHaveTextContent("•••• d0b4");
+    // Unchanged, it takes no part in saving.
+    fireEvent.change(screen.getByLabelText("灵魂端 · 每账号每小时"), { target: { value: "40" } });
+    expect(saveButton()).toBeEnabled();
+    fireEvent.click(within(backupBlock()).getByRole("button", { name: "移除备用" }));
+    expect(draftCount()).toBe("未保存 2 项");
+    patch.mockResolvedValueOnce({ data: makeConfig({ soul_per_hour: 40 }) });
+    del.mockResolvedValueOnce({ data: NO_BACKUP });
+    fireEvent.click(saveButton());
+    await waitFor(() => expect(del).toHaveBeenCalledWith("/assist-admin/config/backup/"));
+    expect(calls(patch, "/assist-admin/config/backup/")).toEqual([]);
+  });
+});
+
+describe("usage: 改用备用 and the primary / backup split (frame 7a)", () => {
+  it("the quality section counts switches like 检索降级, with the four reasons (and the rare two when present)", async () => {
+    get.mockImplementation(async () => ({
+      data: { ...USAGE, fallbacks: { count: 12, by_reason: { connection: 5, timeout: 3, rate_limited: 3, server_error: 1, quota: 0, circuit_open: 0 } } },
+    }));
+    renderRoute(UsageRoute);
+    expect(await screen.findByTestId("aa-fallbacks")).toHaveTextContent("12 次 · 0.1%");
+    const reasons = screen.getByTestId("aa-fallback-reasons");
+    expect(reasons).toHaveTextContent("连不上 5 · 超时 3 · 429 限流 3 · 5xx 出错 1");
+    expect(reasons).not.toHaveTextContent("余额不足");
+    expect(reasons).not.toHaveTextContent("断路器");
+  });
+
+  it("quota and the circuit breaker are named when they happened", async () => {
+    get.mockImplementation(async () => ({
+      data: { ...USAGE, fallbacks: { count: 3, by_reason: { connection: 0, timeout: 0, rate_limited: 0, server_error: 0, quota: 1, circuit_open: 2 } } },
+    }));
+    renderRoute(UsageRoute);
+    expect(await screen.findByTestId("aa-fallback-reasons")).toHaveTextContent("· 余额不足 1 · 断路器 2");
+  });
+
+  it("the cost legend gives each role's month total, only once a backup has cost anything", async () => {
+    const row = { requests: 1, answered: 1, input_tokens: 1, output_tokens: 1, cache_read_tokens: 0 };
+    get.mockImplementation(async () => ({
+      data: { ...USAGE, by_provider: [{ ...row, role: "primary", cost: 180 }, { ...row, role: "backup", cost: 4.2 }] },
+    }));
+    renderRoute(UsageRoute);
+    expect(await screen.findByTestId("aa-cost-legend")).toHaveTextContent("主供应商 180.00备用 4.20");
+  });
+
+  it("no backup cost, no legend", async () => {
+    renderRoute(UsageRoute);
+    await screen.findByTestId("aa-fallbacks");
+    expect(screen.queryByTestId("aa-cost-legend")).toBeNull();
   });
 });
