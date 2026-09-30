@@ -53,8 +53,8 @@ describe("AboutPage", () => {
   it("keeps proper names as written in egy", async () => {
     renderIn("egy");
     // egy 是懒加载的包:先等它到,否则量到的是 zh 回退。
-    expect(await screen.findByRole("heading", { level: 1, name: "Tepy · Sesen" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { level: 1, name: "Tepy Hena Sesen" })).toBeInTheDocument();
     expect(screen.getByText("Museo Egizio, Torino")).toBeInTheDocument();
-    expect(screen.getByText("Owen Jones").closest("li")).toHaveTextContent("Sesen Neb");
+    expect(screen.getByText("Owen Jones").closest("li")).toHaveTextContent("Sesen En Neb");
   });
 });
