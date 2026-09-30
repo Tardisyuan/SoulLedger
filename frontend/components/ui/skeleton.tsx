@@ -54,7 +54,8 @@ export function Skeleton({ className, as: Tag = 'div' }: SkeletonProps) {
          * about 14x the perceptual separation, and it touches none of the 128
          * pinned ink-on-surface combinations because the hairline family is in
          * neither ramp. */
-        'animate-pulse bg-[oklch(var(--color-hairline))]',
+        // 静态(交互与动效第 2 轮「骨架屏:静态骨架，不做闪光;数据到了交叉淡化成内容」)。
+        'bg-[oklch(var(--color-hairline))]',
         !shown && 'invisible',
         className
       )}
