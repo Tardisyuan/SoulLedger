@@ -46,6 +46,7 @@ PUBLIC_OR_SELF_SERVICE = {
     "/cross-judgments": "参与方由后端按租户裁;页面本身不构成额外授权。",
     "/cross-judgments/[id]": "同上。",
     "/corpus": "语料是公开的考据材料,不含任何租户数据。",
+    "/about": "关于 / 致谢:字体、纹样、图像的授权清单,静态内容,不含任何租户数据(OFL / CC0 本就要求可见)。",
     "/death-sync": "只读视图,后端 DeathRegistrationReadViewSet 是 ADMIN-only。",
 }
 
