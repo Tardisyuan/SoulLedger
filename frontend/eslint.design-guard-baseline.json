@@ -53,9 +53,6 @@
   "app/souls/[id]/page.tsx": {
     "space": 2
   },
-  "app/welcome/loading.tsx": {
-    "space": 1
-  },
   "app/workflow/[id]/page.tsx": {
     "space": 4
   },
@@ -166,9 +163,6 @@
   },
   "src/components/ui/PageShell.tsx": {
     "space": 9
-  },
-  "src/components/welcome/WelcomeChecklist.tsx": {
-    "space": 2
   },
   "src/components/workflow/WorkflowEditorPanels.tsx": {
     "space": 6

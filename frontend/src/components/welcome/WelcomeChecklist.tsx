@@ -64,7 +64,7 @@ export function WelcomeChecklist({ signedIn }: { signedIn: boolean }) {
       desc: signedIn ? (
         t("welcome.identity_desc")
       ) : (
-        <Link href="/login" className="text-[oklch(var(--color-accent-ink))] underline">
+        <Link href="/login" className="text-[oklch(var(--color-ink))] underline">
           {t("auth.login")}
         </Link>
       ),
@@ -86,7 +86,7 @@ export function WelcomeChecklist({ signedIn }: { signedIn: boolean }) {
               className={cn(
                 "px-3 py-2 text-left border",
                 view === option
-                  ? "border-[oklch(var(--color-block))] bg-[oklch(var(--color-surface-2))] shadow-[inset_0_-3px_0_oklch(var(--color-ink))]"
+                  ? "border-[oklch(var(--color-block))] bg-[oklch(var(--color-surface-2))] border-b-3 border-b-[oklch(var(--color-ink))]"
                   : "border-[oklch(var(--color-line))] hover:bg-[oklch(var(--color-surface-2))]"
               )}
             >
@@ -115,10 +115,10 @@ export function WelcomeChecklist({ signedIn }: { signedIn: boolean }) {
       title: t("judgment.queue.keyboard_help"),
       desc: t("welcome.keys_desc"),
       body: (
-        <dl className="mt-2 grid grid-cols-1 gap-x-4 gap-y-1.5 text-xs md:grid-cols-3">
+        <dl className="mt-2 grid grid-cols-1 gap-x-4 gap-y-2 text-xs md:grid-cols-3">
           {QUEUE_SHORTCUTS.map(({ key, label }) => (
             <div key={key} data-shortcut={key} className="flex items-center gap-2">
-              <dt className="min-w-5 border border-[oklch(var(--color-line))] px-1.5 text-center font-mono text-2xs">{key}</dt>
+              <dt className="min-w-5 border border-[oklch(var(--color-line))] px-2 text-center font-mono text-2xs">{key}</dt>
               <dd className="m-0 text-[oklch(var(--color-ink-muted))]">{t(label)}</dd>
             </div>
           ))}
@@ -147,7 +147,7 @@ export function WelcomeChecklist({ signedIn }: { signedIn: boolean }) {
               aria-current={s === "current" ? "step" : undefined}
               className={cn(
                 "flex gap-3 py-3 border-b border-[oklch(var(--color-rule))]",
-                s === "current" && "pl-3 bg-[oklch(var(--color-surface-1))] shadow-[inset_3px_0_0_oklch(var(--color-ink))]"
+                s === "current" && "pl-3 bg-[oklch(var(--color-surface-1))] border-l-3 border-l-[oklch(var(--color-ink))]"
               )}
             >
               <span
