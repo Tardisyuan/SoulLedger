@@ -137,6 +137,7 @@ REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 import urllib.parse as _urlparse
 
 _redis_parsed = _urlparse.urlparse(REDIS_URL)
+CHANNEL_LAYER_SOCKET_TIMEOUT = 15  # seconds; must exceed channels_redis's brpop_timeout (5)
 CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
@@ -147,6 +148,13 @@ CHANNEL_LAYERS = {
                     "port": _redis_parsed.port or 6379,
                     "db": int(_redis_parsed.path.lstrip("/") or "0"),
                     **({"password": _redis_parsed.password} if _redis_parsed.password else {}),
+                    # redis-py 8 defaults socket_timeout to 5 s, and channels_redis waits on
+                    # BZPOPMIN for up to 5 s (its brpop_timeout) when no message is queued: every
+                    # idle socket read then times out, the consumer dies and the web shows
+                    # "reconnecting" every few seconds. redis-py 6.4 defaulted to no timeout; the
+                    # lock has carried redis 8.x since a4d6ce79 (2026-09-14). Seen 2026-09-30:
+                    # 280 TimeoutErrors in one local session. The read must outlast the pop.
+                    "socket_timeout": CHANNEL_LAYER_SOCKET_TIMEOUT,
                 }
             ],
             "capacity": 1500,

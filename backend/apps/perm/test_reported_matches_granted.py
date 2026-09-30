@@ -49,6 +49,7 @@ from rest_framework.test import APIClient
 from apps.perm.cache import invalidate_all_permissions
 from apps.perm.checker import check_permission
 from apps.perm.models import DEFAULT_PERMISSIONS, ROLE_PERMISSIONS, Permission, Role, RolePermission
+from tests.perm_support import seeded_grants
 
 User = get_user_model()
 
@@ -72,6 +73,7 @@ class ReportedPermissionsMatchTheCheckerTest(TestCase):
         # answers for this one.
         invalidate_all_permissions()
         self.addCleanup(invalidate_all_permissions)
+        seeded_grants()  # roles and their grants: a transactional test before this one truncated them
         self.users = {
             role: User.objects.create_user(username=f"rp_{role}", password="x", role=role)
             for role in ROLE_PERMISSIONS
@@ -246,6 +248,7 @@ class LoginResponsePermissionsMatchTheCheckerTest(TestCase):
         self.client = APIClient()
         invalidate_all_permissions()
         self.addCleanup(invalidate_all_permissions)
+        seeded_grants()  # roles and their grants: a transactional test before this one truncated them
         self.users = {}
         for role in ROLE_PERMISSIONS:
             user = User.objects.create_user(
@@ -339,6 +342,7 @@ class ReportedPermissionsStayFreshTest(TestCase):
         self.client = APIClient()
         invalidate_all_permissions()
         self.addCleanup(invalidate_all_permissions)
+        seeded_grants()  # roles and their grants: a transactional test before this one truncated them
         self.admin = User.objects.create_user(username="fresh_admin", password="x", role="ADMIN")
         self.viewer = User.objects.create_user(username="fresh_viewer", password="x", role="VIEWER")
 

@@ -187,12 +187,15 @@ def pytest_collection_modifyitems(config, items):
 
     A ``transaction=True`` test truncates every table when it ends, including
     the rows data migrations seed (roles, permissions, menus), and nothing puts
-    them back. About twenty-five plain ``db`` tests read those rows. They pass
-    only because pytest-django sorts transactional tests last; any plugin that
-    reorders tests after that (testmon, random ordering) breaks them with a
+    them back. About twenty-five plain ``db`` tests read those rows and passed
+    only because pytest-django sorts transactional tests last; a plugin that
+    reordered tests after that (testmon, random ordering) broke them with a
     ``DoesNotExist`` that points at the test, not at the order. 2026-09-30,
-    with transactional tests moved first: 25 failures in 8 files. Stop the run
-    at collection instead, naming the first test out of place. ``trylast`` so
+    with transactional tests moved first: 25 failures in 8 files. Fifteen of them
+    were then made to create their own rows (``tests/perm_support.py``) and the
+    whole suite passed in that order (5699 passed). The guard stays for tests
+    written since: stop the run at collection instead, naming the first test
+    out of place. ``trylast`` so
     this sees the final order; under xdist every worker collects the same list
     and receives items in increasing index order, so the check holds there too.
     """
