@@ -38,9 +38,19 @@ const patch = jest.spyOn(api, "patch");
 
 const SECRET = "sk-live-do-not-render-9f3a";
 
+/** backend/apps/soul_assist/platforms.py's table as the config API returns it. */
+const PLATFORMS: AssistAdminConfig["platforms"] = [
+  { id: "deepseek", provider: "openai_compatible", base_url: "https://api.deepseek.com", tools: "yes", needs_key: true },
+  { id: "anthropic", provider: "anthropic", base_url: "https://api.anthropic.com", tools: "yes", needs_key: true },
+  { id: "doubao", provider: "openai_compatible", base_url: "https://ark.cn-beijing.volces.com/api/v3", tools: "model", needs_key: true },
+  { id: "siliconflow", provider: "openai_compatible", base_url: "https://api.siliconflow.cn/v1", tools: "model", needs_key: true },
+  { id: "ollama", provider: "openai_compatible", base_url: "http://localhost:11434/v1", tools: "model", needs_key: false },
+  { id: "custom", provider: null, base_url: null, tools: "model", needs_key: true },
+];
+
 function makeConfig(over: Partial<AssistAdminConfig> = {}): AssistAdminConfig {
   return {
-    enabled: true, switch: true, env_enabled: true, provider: "openai_compatible", base_url: "https://llm.example/v1",
+    enabled: true, switch: true, env_enabled: true, platform: "custom", platforms: PLATFORMS, provider: "openai_compatible", base_url: "https://llm.example/v1",
     model: "assist-medium", effort: "", fallbacks: false, soul_per_hour: 30, officer_per_hour: 30, monthly_cap: 300,
     eval_spend_cap: 5, prices: { "assist-medium": { input: 3, output: 15 }, "assist-large": { input: 6, output: 30 } },
     api_key: { set: true, last4: "8f3c", set_at: "2026-09-02T00:00:00Z", source: "page" },
@@ -117,10 +127,10 @@ async function renderConfig() {
   return view;
 }
 
-// 「模型名」 and 「测试连接」 now appear in 供应商 / 连通测试 and again in 向量模型: scope each by its region.
+// 「模型名」 and 「测试连接」 appear in 供应商 and again in 向量模型: scope each by its region.
 const region = (name: string) => screen.getByRole("region", { name });
 const providerModel = () => within(region("供应商")).getByLabelText("模型名");
-const providerTest = () => within(region("连通测试")).getByRole("button", { name: "测试连接" });
+const providerTest = () => within(region("供应商")).getByRole("button", { name: "测试连接" });
 
 const saveButton = () => screen.getByRole("button", { name: "保存" });
 const draftCount = () => screen.getByTestId("aa-draft-count").textContent;
@@ -174,14 +184,14 @@ describe("the config draft", () => {
 
   it("keeps Save disabled, with the reason under it, until this exact draft passed the test", async () => {
     await renderConfig();
-    const reason = "连接配置改过，先在「连通测试」测通这份草稿才能保存。";
+    const reason = "连接配置改过，先在「供应商」里「测试连接」测通这份草稿才能保存。";
     fireEvent.change(providerModel(), { target: { value: "assist-large" } });
     expect(saveButton()).toBeDisabled();
     expect(screen.getByText(reason)).toBeInTheDocument();
 
-    post.mockResolvedValueOnce({ data: { ok: true, error_kind: null, latency_ms: 1840, tokens: { input: 2310, output: 186 }, provider: "openai_compatible", model: "assist-large" } });
+    post.mockResolvedValueOnce({ data: { ok: true, error_kind: null, latency_ms: 1840, tokens: { input: 2310, output: 186 }, tools: true, provider: "openai_compatible", model: "assist-large" } });
     fireEvent.click(providerTest());
-    await screen.findByText("连通 · 可以保存");
+    await screen.findByText("连通 · 工具 ✓");
     expect(post).toHaveBeenCalledWith("/assist-admin/config/test/", { model: "assist-large" });
     expect(saveButton()).toBeEnabled();
     expect(screen.queryByText(reason)).not.toBeInTheDocument();
@@ -248,11 +258,11 @@ describe("the API key is write-only", () => {
     expect(input).toHaveAttribute("type", "password");
     fireEvent.change(input, { target: { value: SECRET } });
     expect(container.textContent).not.toContain(SECRET);
-    expect(screen.getByText("连接配置改过，先在「连通测试」测通这份草稿才能保存。")).toBeInTheDocument();
+    expect(screen.getByText("连接配置改过，先在「供应商」里「测试连接」测通这份草稿才能保存。")).toBeInTheDocument();
 
-    post.mockResolvedValueOnce({ data: { ok: true, error_kind: null, latency_ms: 900, tokens: {}, provider: "openai_compatible", model: "assist-medium" } });
+    post.mockResolvedValueOnce({ data: { ok: true, error_kind: null, latency_ms: 900, tokens: {}, tools: true, provider: "openai_compatible", model: "assist-medium" } });
     fireEvent.click(providerTest());
-    await screen.findByText("连通 · 可以保存");
+    await screen.findByText("连通 · 工具 ✓");
     expect(post).toHaveBeenCalledWith("/assist-admin/config/test/", { api_key: SECRET });
 
     config = makeConfig({ api_key: { set: true, last4: "9f3a", set_at: "2026-09-29T00:00:00Z", source: "page" } });
@@ -790,5 +800,163 @@ describe("usage: 检索降级", () => {
     expect(screen.getByTestId("aa-rate-fallback")).not.toHaveTextContent("3.0%");
     expect(screen.getByText("检索降级")).toBeInTheDocument();
     expect(screen.getByText("检索降级：向量服务不可用、退回用全部帮助条目回答的提问。")).toBeInTheDocument();
+  });
+});
+
+describe("供应商 · 平台 / 获取模型 / 单价 / 测试 (canvas provider-platforms)", () => {
+  const block = () => region("供应商");
+  const platformSelect = () => within(block()).getByLabelText("平台");
+  const fetchButton = () => within(block()).getByRole("button", { name: "获取模型" });
+  const OK_TEST = { ok: true, error_kind: null, latency_ms: 800, tokens: { input: 5, output: 1 }, provider: "openai_compatible", model: "assist-medium" };
+
+  it("the right-hand 「连通测试」 section is gone; the test button and its result live in the provider block", async () => {
+    await renderConfig();
+    expect(screen.queryByRole("region", { name: "连通测试" })).toBeNull();
+    fireEvent.change(providerModel(), { target: { value: "assist-large" } });
+    post.mockResolvedValueOnce({ data: { ...OK_TEST, tools: true, model: "assist-large" } });
+    fireEvent.click(providerTest());
+    const result = await within(block()).findByTestId("aa-test-result");
+    expect(result).toHaveTextContent("连通 · 工具 ✓");
+    expect(result).not.toHaveTextContent("不支持工具调用");
+  });
+
+  it("connected without tools is a warning that still allows saving", async () => {
+    await renderConfig();
+    fireEvent.change(providerModel(), { target: { value: "small-model" } });
+    post.mockResolvedValueOnce({ data: { ...OK_TEST, tools: false, model: "small-model" } });
+    fireEvent.click(providerTest());
+    const result = await within(block()).findByTestId("aa-test-result");
+    expect(result).toHaveTextContent("连通 · 工具 ✕");
+    expect(result).toHaveTextContent("这个模型不支持工具调用：助手只能答通用问题，查不了个人数据。可以保存，但建议换模型。");
+    expect(result.className).toContain("color-warning");
+    expect(saveButton()).toBeEnabled();
+  });
+
+  it("a failed test names its kind with the existing copy and keeps Save disabled", async () => {
+    await renderConfig();
+    fireEvent.change(providerModel(), { target: { value: "deepseek-chatt" } });
+    post.mockResolvedValueOnce({ data: { ...OK_TEST, ok: false, error_kind: "model_not_found", tools: null } });
+    fireEvent.click(providerTest());
+    const result = await within(block()).findByTestId("aa-test-result");
+    expect(result).toHaveTextContent("未连通 · 不能保存");
+    expect(result).toHaveTextContent("这个地址下没有这个模型。请核对模型名。");
+    expect(result).not.toHaveTextContent("连通 · 工具");
+    expect(saveButton()).toBeDisabled();
+  });
+
+  it("a preset shows its adapter and address as a collapsed summary, read-only when expanded; custom edits them", async () => {
+    config = makeConfig({ platform: "deepseek", base_url: "https://api.deepseek.com" });
+    await renderConfig();
+    expect(within(block()).getByTestId("aa-preset-summary")).toHaveTextContent("OpenAI 兼容 · https://api.deepseek.com");
+    expect(within(block()).queryByLabelText("Base URL")).toBeNull();
+    expect(within(block()).queryByLabelText("类型")).toBeNull();
+    const toggle = within(block()).getByRole("button", { name: /展开/ });
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(toggle);
+    expect(within(block()).getByRole("button", { name: /收起/ })).toHaveAttribute("aria-expanded", "true");
+    expect(within(block()).getByText("由平台决定，不能改。要改请选「自定义」。")).toBeInTheDocument();
+    expect(within(block()).queryByRole("textbox", { name: "Base URL" })).toBeNull();
+
+    fireEvent.change(platformSelect(), { target: { value: "custom" } });
+    expect(within(block()).getByLabelText("Base URL")).toHaveValue("https://api.deepseek.com");
+    expect(within(block()).getByLabelText("类型")).toHaveValue("openai_compatible");
+    expect(within(block()).queryByTestId("aa-preset")).toBeNull();
+  });
+
+  it("each option carries its tools marker, and the legend explains ✕ and ?", async () => {
+    await renderConfig();
+    const options = within(platformSelect()).getAllByRole("option").map((o) => o.textContent);
+    expect(options).toContain("DeepSeek　工具 ✓");
+    expect(options).toContain("硅基流动　工具 ?");
+    expect(options).toContain("自定义　工具 ?");
+    expect(within(block()).getByText("工具 ✕ ＝ 助手只能答通用问题，查不了个人数据。工具 ? ＝ 看所选模型，「测试连接」时实测。")).toBeInTheDocument();
+  });
+
+  it("choosing a preset fills the adapter and address into the draft and needs a key", async () => {
+    await renderConfig();
+    fireEvent.change(platformSelect(), { target: { value: "anthropic" } });
+    expect(draftCount()).toBe("未保存 3 项"); // platform, provider, base_url
+    expect(screen.getByText(/换了供应商或地址，要同时填新的 API key/)).toBeInTheDocument();
+    // Moved without a key: the saved key cannot be used there, so fetching is off and says why.
+    expect(fetchButton()).toBeDisabled();
+    expect(within(block()).getByTestId("aa-fetch-msg")).toHaveTextContent("先粘贴 key，才能获取模型。");
+    fireEvent.click(screen.getByRole("button", { name: "更换" }));
+    fireEvent.change(screen.getByLabelText("粘贴新 key"), { target: { value: SECRET } });
+    expect(fetchButton()).toBeEnabled();
+    expect(within(block()).queryByTestId("aa-fetch-msg")).toBeNull();
+  });
+
+  it("fetch is enabled by a saved key on the same endpoint", async () => {
+    await renderConfig();
+    expect(fetchButton()).toBeEnabled();
+    expect(within(block()).queryByTestId("aa-fetch-msg")).toBeNull();
+  });
+
+  it("with no key saved the button is off; Ollama needs none and leaves the saved key behind", async () => {
+    config = makeConfig({ api_key: { set: false, last4: null, set_at: null, source: "env" } });
+    await renderConfig();
+    expect(fetchButton()).toBeDisabled();
+    fireEvent.change(platformSelect(), { target: { value: "ollama" } });
+    expect(fetchButton()).toBeEnabled();
+    post.mockResolvedValueOnce({ data: { status: "ok", error_kind: null, models: [{ id: "qwen3:32b", context: null }] } });
+    fireEvent.click(fetchButton());
+    await within(block()).findByTestId("aa-model-list");
+    expect(post).toHaveBeenCalledWith("/assist-admin/config/models/", {
+      platform: "ollama", base_url: "http://localhost:11434/v1", api_key: "",
+    });
+  });
+
+  it("a fetched list is searchable; choosing fills the model, closes the list and prefills a reference price", async () => {
+    await renderConfig();
+    post.mockResolvedValueOnce({ data: { status: "ok", error_kind: null, models: [
+      { id: "deepseek-ai/DeepSeek-V3.2", context: 131072 }, { id: "Qwen/Qwen3-32B", context: null }] } });
+    fireEvent.click(fetchButton());
+    const list = await within(block()).findByTestId("aa-model-list");
+    expect(post).toHaveBeenCalledWith("/assist-admin/config/models/", {});
+    expect(list).toHaveTextContent("共 2 个");
+    expect(list).toHaveTextContent("列表里没有要的，就直接在上面手填模型名。");
+    fireEvent.change(within(list).getByRole("searchbox", { name: "搜索模型" }), { target: { value: "qwen" } });
+    expect(within(list).queryByText("deepseek-ai/DeepSeek-V3.2")).toBeNull();
+
+    get.mockImplementationOnce(async () => ({ data: { found: true, input: 0.28, output: 0.42, cache_read: 0.028, as_of: "2026-09-30" } }));
+    fireEvent.click(within(list).getByRole("button", { name: "Qwen/Qwen3-32B" }));
+    expect(providerModel()).toHaveValue("Qwen/Qwen3-32B");
+    expect(within(block()).queryByTestId("aa-model-list")).toBeNull();
+    await waitFor(() => expect(within(block()).getByTestId("aa-price-note")).toHaveTextContent(
+      "参考价 · 来源 LiteLLM · 2026-09-30 · 以平台账单为准"));
+    expect(get).toHaveBeenCalledWith("/assist-admin/config/price/", { params: { platform: "custom", model: "Qwen/Qwen3-32B" } });
+    expect(screen.getByLabelText("每百万 token · 输入")).toHaveValue(0.28);
+  });
+
+  it("「no model list」 is an ink note, not an error; a rejected key is", async () => {
+    await renderConfig();
+    post.mockResolvedValueOnce({ data: { status: "no_list", error_kind: null, models: [] } });
+    fireEvent.click(fetchButton());
+    const msg = await within(block()).findByTestId("aa-fetch-msg");
+    expect(msg).toHaveTextContent("llm.example 不提供模型列表。");
+    expect(msg.className).not.toContain("color-danger");
+
+    post.mockResolvedValueOnce({ data: { status: "failed", error_kind: "auth", models: [] } });
+    fireEvent.click(fetchButton());
+    await waitFor(() => expect(within(block()).getByTestId("aa-fetch-msg")).toHaveTextContent("key 无效。"));
+    expect(within(block()).getByTestId("aa-fetch-msg").className).toContain("color-danger");
+  });
+
+  it("price note: a saved price without a source reads as manual with a restore; editing marks it manual; none warns", async () => {
+    config = makeConfig({ prices: { "assist-medium": { input: 3, output: 15, source: "litellm", as_of: "2026-09-28" } } });
+    await renderConfig();
+    const note = () => within(block()).getByTestId("aa-price-note");
+    expect(note()).toHaveTextContent("参考价 · 来源 LiteLLM · 2026-09-28");
+    fireEvent.change(screen.getByLabelText("每百万 token · 输入"), { target: { value: "3.5" } });
+    expect(note()).toHaveTextContent("手动填写");
+    expect(note()).not.toHaveTextContent("参考价 ·");
+
+    get.mockImplementationOnce(async () => ({ data: { found: true, input: 3, output: 15, cache_read: null, as_of: "2026-09-28" } }));
+    fireEvent.click(within(note()).getByRole("button", { name: "恢复参考价" }));
+    await waitFor(() => expect(note()).toHaveTextContent("参考价 · 来源 LiteLLM · 2026-09-28"));
+    expect(draftCount()).toBe("没有未保存的改动"); // restored = the saved entry again
+
+    fireEvent.change(providerModel(), { target: { value: "unpriced-model" } });
+    expect(note()).toHaveTextContent("! 没有参考价，请手动填写。月度上限按这个价格计算。");
   });
 });
