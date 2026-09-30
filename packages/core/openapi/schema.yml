@@ -19048,6 +19048,7 @@ components:
       - circle
       - settings
       - other
+      - about
       - actors
       - admin
       - audit
@@ -19087,6 +19088,7 @@ components:
         * `circle` - circle
         * `settings` - settings
         * `other` - other
+        * `about` - about
         * `actors` - actors
         * `admin` - admin
         * `audit` - audit
@@ -23260,6 +23262,7 @@ components:
       - body
     OfficerScreenEnum:
       enum:
+      - about
       - actors
       - admin
       - audit
@@ -23293,6 +23296,7 @@ components:
       - other
       type: string
       description: |-
+        * `about` - about
         * `actors` - actors
         * `admin` - admin
         * `audit` - audit

@@ -323,7 +323,8 @@ interface ConfirmDialogProps {
   message: string;
   onConfirm: () => void;
   onCancel: () => void;
-  confirmText?: string;
+  /** 可以带 `<span aria-hidden>✕</span>`:无名称的不可撤回删除(删帖、删评论、多选删敏感词)就这么用。 */
+  confirmText?: React.ReactNode;
   cancelText?: string;
   variant?: "danger" | "warning" | "info";
   /**

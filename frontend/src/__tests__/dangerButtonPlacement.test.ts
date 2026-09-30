@@ -53,6 +53,24 @@ describe("solid danger buttons live only in type-the-name dialogs", () => {
     expect(users.filter((f) => !allowed.has(f))).toEqual([]);
   });
 
+  // 2026-09-30 用户拍板:没有名称的不可撤回删除(删帖、删评论、多选删敏感词)用普通确认框,
+  // 不让人输入动作词「删除」。所以 NameConfirmDialog 要输入的 `name` 必须是被删对象自己的名字
+  // (词、标题、用户名、权限码……),不能是一条翻译出来的文案 —— `t(...)` 就是动作词的样子。
+  it("NameConfirmDialog is only asked to type a real name, never a translated word", () => {
+    const offenders: string[] = [];
+    let dialogs = 0;
+    for (const f of files) {
+      const src = readFileSync(f, "utf8");
+      for (const m of src.matchAll(/<NameConfirmDialog\b([\s\S]*?)\/>/g)) {
+        dialogs += 1;
+        const name = /\sname=\{([^\n]*)\}\s*$/m.exec(m[1])?.[1] ?? "";
+        if (/\bt\(/.test(name)) offenders.push(`${path.relative(FRONTEND, f)}: name={${name}}`);
+      }
+    }
+    expect(dialogs).toBeGreaterThanOrEqual(6);
+    expect(offenders).toEqual([]);
+  });
+
   it("ConfirmDialog never asks for a name, so its default danger renders as secondary", () => {
     const modal = readFileSync(path.join(FRONTEND, "src/components/ui/Modal.tsx"), "utf8");
     const table = modal.slice(modal.indexOf("const variantButton = {"));
