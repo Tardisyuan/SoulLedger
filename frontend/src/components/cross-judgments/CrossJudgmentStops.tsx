@@ -32,7 +32,7 @@ import { LedgerHeading } from "@/src/components/souls/detail/SoulLedgerSections"
  *   服务端的 `order/` 与联审结束校验各再拦一次。
  */
 
-const ROW = "flex flex-wrap items-center gap-x-2 gap-y-1 py-1.5 border-b border-[oklch(var(--color-rule))]";
+const ROW = "flex flex-wrap items-center gap-x-2 gap-y-1 py-2 border-b border-[oklch(var(--color-rule))]";
 const MUTED = "text-xs text-[oklch(var(--color-ink-subtle))]";
 
 function errorText(error: unknown): string | null {
@@ -151,7 +151,7 @@ export function CrossJudgmentStops({ judgment }: { judgment: CrossTenantJudgment
   return (
     <section className="mb-6" aria-label={t("sentence_plan.cross.title")}>
       <LedgerHeading mark="丁" title={t("sentence_plan.cross.title")} />
-      <p className={`${MUTED} py-1.5`}>{t("sentence_plan.cross.hint")}</p>
+      <p className={`${MUTED} py-2`}>{t("sentence_plan.cross.hint")}</p>
       <ol>
         <li className={ROW} data-stop="1">
           <span className="text-sm font-medium tabular-nums">{t("sentence_plan.stop", { order: "1" })}</span>

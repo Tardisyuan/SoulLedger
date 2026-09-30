@@ -167,8 +167,8 @@ export function SoulKarmaLedgerCard({
           karmicBalance={karmicBalance}
         />
 
-        <div className="mt-4 pt-3 border-t border-[oklch(var(--color-hairline))] space-y-1.5">
-          <p className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))] mb-1.5">
+        <div className="mt-4 pt-3 border-t border-[oklch(var(--color-hairline))] space-y-2">
+          <p className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))] mb-2">
             {tf("ledger.raw_vs_decayed", "原始 / 衰减后")}
           </p>
           {/* Five weight sums, and until now five bare numerals — directly under
@@ -385,7 +385,7 @@ export function SoulKarmaLedgerCard({
               decision above is a paragraph, and a paragraph is what gets
               overtaken. */}
           {reading.civilization === "CHINESE" && (
-            <div data-inheritance-bars="" className="space-y-2.5 mb-3">
+            <div data-inheritance-bars="" className="space-y-3 mb-3">
               <div>
                 <div className="flex justify-between text-xs font-mono text-[oklch(var(--color-karma-merit))] mb-1">
                   <span>{t("souls.detail.merit")} {meritScore}</span>
