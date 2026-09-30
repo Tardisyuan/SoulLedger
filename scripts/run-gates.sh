@@ -323,6 +323,7 @@ if [ -f "$HERE/gate-lock.sh" ]; then
     . "$HERE/gate-lock.sh"
     gate_lock "$P $(git rev-parse --abbrev-ref HEAD)"
 fi
+T_GATES=$(date +%s)   # after the lock: the time below is the gates', not the queue's
 
 need() { command -v "$1" >/dev/null 2>&1 || fail "\`$1\` not found, so this check cannot run. Refusing rather than skipping — a check that did not run is not a check that passed."; }
 
@@ -405,10 +406,12 @@ if [ "$RUN_FRONTEND" = 1 ]; then
         echo "    FULL, because:"; printf '%s' "$FULL_F" | sed 's/^/      /'
     fi
     JEST_LOG=$(mktemp -t prepush-jest)
+    T_JEST=$(date +%s)
     # shellcheck disable=SC2086
     npx jest --coverage=false --silent ${JEST_PATHS:+--runTestsByPath $JEST_PATHS} >"$JEST_LOG" 2>&1
     JEST_STATUS=$?
     tail -4 "$JEST_LOG"
+    echo "    jest took $(( $(date +%s) - T_JEST ))s"
     if [ "$JEST_STATUS" -ne 0 ]; then
         grep -E '^(FAIL |  ● )' "$JEST_LOG" | head -20
         echo "    full jest log: $JEST_LOG"
@@ -674,4 +677,4 @@ PROBE_PY
     cd "$ROOT" || exit 1
 fi
 
-echo "$P: ok"
+echo "$P: ok ($(( $(date +%s) - T_GATES ))s, not counting any wait for the gate lock)"
