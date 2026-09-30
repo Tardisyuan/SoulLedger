@@ -14,7 +14,8 @@
     "language": "Medew Seth",
     "theme_light": "Khemen Er Hedj",
     "theme_dark": "Khemen Er Kem",
-    "mobile_menu": "Wat Medu"
+    "mobile_menu": "Wat Medu",
+    "more": "Ky"
   },
   "auth": {
     "login": "Aq",
@@ -1122,7 +1123,9 @@
       "claimed_next": "Wen Ky",
       "claimed_back": "Wehem Er Sepu Wedja",
       "session_deferred": "{{n}} Sedjer Em Aq Pen",
-      "restore_all": "Ankh Wehem Sepu Sedjer Neb"
+      "restore_all": "Ankh Wehem Sepu Sedjer Neb",
+      "key_claim": "Shesep Sep Pen",
+      "reassigned": "Hab Ky Seth · {{name}} → {{to}}"
     },
     "detail": {
       "loading": "Em Ini Wedja...",
@@ -2290,7 +2293,8 @@
       "rebirth_applications": "Dbh Wehem Mesut",
       "soul_inbox": "Sesh Wesekhet",
       "sentence_requests": "Dbh Wetep"
-    }
+    },
+    "queue": "Sepu Wedja"
   },
   "tenant": {
     "civilizations": {

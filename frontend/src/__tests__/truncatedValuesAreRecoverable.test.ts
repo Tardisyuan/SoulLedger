@@ -103,11 +103,7 @@ const HAS_TITLE = /\btitle=/;
 const STATIC_COPY = /\{\s*tf?\(\s*(["'])[^"']*\1\s*\)\s*\}/g;
 
 /** 按行为豁免的位置。加一项要写理由。 */
-const EXEMPT = [
-  {
-    file: "src/components/layout/SidebarMenuItem.tsx",
-    why: "同一轮已经给这两处加了 `aria-label={label}` —— 同一串字,再加 title 是第三份拷贝",
-  },
+const EXEMPT: { file: string; why: string }[] = [
 ];
 
 /** Comments blanked to spaces, so offsets and line numbers survive. */

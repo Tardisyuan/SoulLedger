@@ -217,7 +217,8 @@ export function ReassignDialog({
   count: number;
   pending: boolean;
   onCancel: () => void;
-  onConfirm: (to: number) => void;
+  /** `toName`:所选官员的展示名 —— 队列页的 toast 要写「→ 谁」,名单只在这个弹层里。 */
+  onConfirm: (to: number, toName: string) => void;
 }) {
   const { t } = useI18n();
   const { user } = useTenant();
@@ -240,7 +241,8 @@ export function ReassignDialog({
   const submit = () => {
     setTouched(true);
     if (!to) return;
-    onConfirm(Number(to));
+    const officer = all.find((u) => String(u.id) === to);
+    onConfirm(Number(to), officer ? nameOf(officer) : "");
   };
 
   return (
