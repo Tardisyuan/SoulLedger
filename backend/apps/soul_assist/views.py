@@ -21,7 +21,7 @@ from apps.core.permissions import TenantPermission
 from apps.core.throttling import ClientIPIdentMixin
 from apps.soul_accounts.authentication import OfficerJWTAuthentication
 from apps.soul_accounts.me_views import SoulAPIView
-from apps.soul_assist import config, service, usage
+from apps.soul_assist import config, service, sse, usage
 from apps.soul_assist.models import AssistConversation, AssistMessage
 from apps.soul_assist.serializers import (
     AssistAnswerSerializer,
@@ -29,9 +29,34 @@ from apps.soul_assist.serializers import (
     AssistConversationSerializer,
     AssistErrorSerializer,
     AssistMessageSerializer,
+    AssistStreamDoneSerializer,
     OfficerAssistAskSerializer,
     OfficerAssistConversationSerializer,
+    stream_event_serializer,
+    usage_summary,
 )
+
+#: `stream: true` 时 200 的正文(docs/ARCHITECTURE-soul-assist.md §13)。OpenAPI 描述不了「一串事件」,
+#: 这里声明的是**每一个** `data:` 行的 JSON。
+STREAM_EVENT = stream_event_serializer("AssistStreamEvent", AssistStreamDoneSerializer)
+ASK_RESPONSES = {(200, "application/json"): AssistAnswerSerializer, (200, "text/event-stream"): STREAM_EVENT,
+                 400: OpenApiResponse(description="字段校验失败"), 403: AssistErrorSerializer,
+                 404: AssistErrorSerializer, 429: AssistErrorSerializer, 503: AssistErrorSerializer}
+
+
+def render_answer_event(event):
+    """done 事件与非流式的回答同形;其余事件原样。"""
+    if event["event"] != "done":
+        return event
+    return {"event": "done", "conversation_id": event["conversation"].pk,
+            "answer": AssistMessageSerializer(event["reply"]).data, "usage": usage_summary(event["usage"])}
+
+
+def _reply(request, result, stream):
+    if stream:
+        return sse.response(request, result, render_answer_event)
+    conversation, reply = result
+    return Response({"conversation_id": conversation.pk, "answer": AssistMessageSerializer(reply).data})
 
 
 class AssistThrottle(ClientIPIdentMixin, throttling.UserRateThrottle):
@@ -82,19 +107,16 @@ class AssistView(_AssistErrors, SoulAPIView):
 class MeAssistView(AssistView):
     throttle_classes = [AssistThrottle]
 
-    @extend_schema(request=AssistAskSerializer,
-                   responses={200: AssistAnswerSerializer, 400: OpenApiResponse(description="字段校验失败"),
-                              403: AssistErrorSerializer, 404: AssistErrorSerializer,
-                              429: AssistErrorSerializer, 503: AssistErrorSerializer})
+    @extend_schema(request=AssistAskSerializer, responses=ASK_RESPONSES)
     def post(self, request):
         body = AssistAskSerializer(data=request.data)
         body.is_valid(raise_exception=True)
         data = body.validated_data
-        conversation, reply = service.answer(
+        result = service.answer(
             self.account, data["question"], data["screen"], locale=locale_from_request(request),
-            conversation_id=data.get("conversation_id"), request=request,
+            conversation_id=data.get("conversation_id"), request=request, stream=data.get("stream", False),
         )
-        return Response({"conversation_id": conversation.pk, "answer": AssistMessageSerializer(reply).data})
+        return _reply(request, result, data.get("stream", False))
 
 
 class MeAssistConversationsView(AssistView):
@@ -123,19 +145,16 @@ class OfficerAssistBaseView(_AssistErrors, APIView):
 class OfficerAssistView(OfficerAssistBaseView):
     throttle_classes = [OfficerAssistThrottle]
 
-    @extend_schema(operation_id="officer_assist_ask", request=OfficerAssistAskSerializer,
-                   responses={200: AssistAnswerSerializer, 400: OpenApiResponse(description="字段校验失败"),
-                              403: AssistErrorSerializer, 404: AssistErrorSerializer,
-                              429: AssistErrorSerializer, 503: AssistErrorSerializer})
+    @extend_schema(operation_id="officer_assist_ask", request=OfficerAssistAskSerializer, responses=ASK_RESPONSES)
     def post(self, request):
         body = OfficerAssistAskSerializer(data=request.data)
         body.is_valid(raise_exception=True)
         data = body.validated_data
-        conversation, reply = service.officer_answer(
+        result = service.officer_answer(
             request, data["question"], data["screen"], locale=locale_from_request(request),
-            conversation_id=data.get("conversation_id"),
+            conversation_id=data.get("conversation_id"), stream=data.get("stream", False),
         )
-        return Response({"conversation_id": conversation.pk, "answer": AssistMessageSerializer(reply).data})
+        return _reply(request, result, data.get("stream", False))
 
 
 class OfficerAssistConversationsView(OfficerAssistBaseView):

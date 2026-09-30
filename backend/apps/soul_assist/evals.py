@@ -292,16 +292,47 @@ class NoEvalIdentityError(Exception):
 def try_question(side, question, conn, lang, request=None) -> dict:
     """以配置里的评测身份问一句,看回答与工具调用。与评测同一条路(`service.ask`,正式的数据范围与审计,
     `is_eval` 不计用量);身份缺了 → `NoEvalIdentityError("no_eval_soul" / "no_eval_officer")`。
-    `service.AssistError`(503 / 429)原样抛给调用方。"""
+    `service.AssistError`(503 / 429)原样抛给调用方。`conn` 为 None = 生效配置,连同备用与断路器。"""
+    asker = _try_asker(side, lang)
+    begin = time.monotonic()
+    reply = _ask_as(asker, question, "other", lang, conn, request)
+    return try_result(side, reply, begin)
+
+
+def try_stream(side, question, conn, lang, request, respond):
+    """流式试问:`respond(events, render)` 把 `service.session` 的事件写成响应(视图传 `sse.response`)。
+    租户上下文按提问者设 —— `respond` 在里面先走一步并记下这一刻的 contextvars,之后每一步都在它里面跑。"""
+    from apps.tenants.managers import clear_current_tenant, set_current_tenant
+
+    asker = _try_asker(side, lang)
+    begin = time.monotonic()
+
+    def render(event):
+        if event["event"] != "done":
+            return event
+        return {"event": "done", **try_result(side, event["reply"], begin)}
+
+    set_current_tenant(asker.tenant)
+    try:
+        return respond(service.session(asker, question, "other", lang=lang, conn=conn, is_eval=True,
+                                       request=request), render)
+    finally:
+        clear_current_tenant()
+
+
+def _try_asker(side, lang):
     asker = _asker(side, "other", lang, config.effective())
     if asker is None:
         raise NoEvalIdentityError(f"no_eval_{side}")
-    begin = time.monotonic()
-    reply = _ask_as(asker, question, "other", lang, conn, request)
+    return asker
+
+
+def try_result(side, reply, begin):
+    provider, model = reply.answered_by
     return {"side": side, "answer": reply.content, "tools_called": list(reply.tool_calls),
             "retrieval": reply.retrieval.mode, "retrieved_entries": list(reply.retrieval.entries),
-            "latency_ms": _ms(begin), "tokens": reply.tokens, "provider": config.provider_name(conn.provider),
-            "model": conn.model}
+            "latency_ms": _ms(begin), "tokens": reply.tokens, "provider": config.provider_name(provider),
+            "model": model, "provider_role": reply.provider_role, "fallback_reason": reply.fallback_reason or None}
 
 
 def fail_stale():

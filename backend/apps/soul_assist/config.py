@@ -7,8 +7,10 @@
 """
 import hashlib
 import hmac
+import json
+import logging
 import uuid
-from dataclasses import astuple, dataclass
+from dataclasses import astuple, dataclass, replace
 from dataclasses import field as dc_field
 from urllib.parse import urlsplit, urlunsplit
 
@@ -36,6 +38,7 @@ TESTED_KEY = "soul_assist:tested:"
 EMBEDDING_KEYS = ("embedding_url", "embedding_model", "embedding_dims", "retrieval_k", "retrieval_min_similarity")
 EMBEDDING_CONNECTION_KEYS = ("embedding_url", "embedding_model", "embedding_dims")
 AUDIT_RESOURCE = "assistant_config"
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -82,7 +85,6 @@ class Effective:
     monthly_cap: float | None  # None = 不设上限
     prices: dict  # 模型名 → {"input", "output", "cache_read"?},每百万 token
     eval_spend_cap: float
-    api_key_set_at: object  # None = key 来自 env
     eval_soul_account_id: object
     eval_officer_id: object
     overridden: tuple  # 页面改过的键
@@ -91,6 +93,21 @@ class Effective:
     retrieval_k: int = 5
     retrieval_min_similarity: float = 0.0
     stored_platform: str = ""  # 页面存的平台 id;显示用 `platforms.current`(对不上连接就按连接认)
+    #: 备用供应商(§13):主用在出第一段文本之前连不上 / 超时 / 429 / 5xx / 402 时改用它。没配为 None。
+    backup: Connection = None
+    backup_prices: dict = dc_field(default_factory=dict)  # 备用的价目表,与主用的分开(同名模型可能不同价)
+    backup_platform: str = ""
+    #: 页面按平台存的 key(用户 2026-10-01 定):`platforms.key_slot` → {"key", "set_at"};"" = 已清除。
+    #: 主用与备用共用;没存过的平台若正是 env 配的那个,用 env 的 key(`stored_key`)。
+    keys: dict = dc_field(default_factory=dict)
+
+    def key_state(self, conn):
+        """页面上显示的「已设置 · 末 4 位 · 设置于」;永不含 key 本身。"""
+        slot = key_slot(conn)
+        entry = self.keys.get(slot)
+        key = conn.api_key
+        return {"set": bool(key), "last4": key[-4:] if len(key) >= 12 else None,
+                "set_at": entry["set_at"] if entry else None, "source": "page" if entry else "env"}
 
     @property
     def enabled(self) -> bool:
@@ -104,10 +121,21 @@ class Effective:
 _local = {"version": None, "row": None}
 
 
+def load_keys(text) -> dict:
+    """`AssistConfig.api_keys`(解密后的 JSON)→ dict。读不出来(换了 ENCRYPTION_KEY 等)就当没存过、记一条错误:
+    助手因此报「缺 key」,管理员在页面上看得见,而不是每个请求都 500。"""
+    try:
+        keys = json.loads(text or "{}")
+    except ValueError:
+        logger.error("assistant api key store is unreadable; treating it as empty")
+        return {}
+    return keys if isinstance(keys, dict) else {}
+
+
 def _snapshot(row):
     if row is None:
         return None
-    return {"values": dict(row.values or {}), "api_key": row.api_key, "api_key_set_at": row.api_key_set_at,
+    return {"values": dict(row.values or {}), "api_keys": load_keys(row.api_keys),
             "eval_soul_account_id": row.eval_soul_account_id, "eval_officer_id": row.eval_officer_id,
             "cap_closed_for": row.cap_closed_for}
 
@@ -145,26 +173,28 @@ def provider_name(path):
 
 def effective(row=None) -> Effective:
     """`row` 给了(已锁住的 `AssistConfig`)就按它算,不读进程快照 —— 锁里的判断要基于锁住的那一行。"""
-    row = (_snapshot(row) if row is not None else _row()) or {"values": {}, "api_key": "", "api_key_set_at": None, "eval_soul_account_id": None,
-                     "eval_officer_id": None, "cap_closed_for": ""}
+    row = (_snapshot(row) if row is not None else _row()) or {"values": {}, "api_keys": {}, "eval_soul_account_id": None,
+                                                              "eval_officer_id": None, "cap_closed_for": ""}
     v = row["values"]
+    keys = row["api_keys"]
     env = env_connection()
     fallbacks = env.fallbacks if "fallbacks" not in v else ("default" if v["fallbacks"] else "")
-    connection = Connection(
+    connection = _keyed(keys, Connection(
         provider=provider_path(v["provider"]) if "provider" in v else env.provider,
         base_url=v.get("base_url", env.base_url),
-        api_key=row["api_key"] if row["api_key_set_at"] else env.api_key,
+        api_key="",
         model=v.get("model", env.model),
         effort=v.get("effort", env.effort),
         fallbacks=fallbacks,
-    )
+    ))
+    backup = backup_connection(v.get("backup"))
     return Effective(
         connection=connection, switch=v.get("enabled", settings.ASSISTANT_ENABLED),
         env_enabled=settings.ASSISTANT_ENABLED, soul_per_hour=v.get("soul_per_hour"),
         officer_per_hour=v.get("officer_per_hour"), monthly_cap=v.get("monthly_cap"), prices=v.get("prices", {}),
-        eval_spend_cap=v.get("eval_spend_cap", DEFAULT_EVAL_SPEND_CAP), api_key_set_at=row["api_key_set_at"],
+        eval_spend_cap=v.get("eval_spend_cap", DEFAULT_EVAL_SPEND_CAP),
         eval_soul_account_id=row["eval_soul_account_id"], eval_officer_id=row["eval_officer_id"],
-        overridden=tuple(sorted(v)) + (("api_key",) if row["api_key_set_at"] else ()),
+        overridden=tuple(sorted(v)) + (("api_key",) if key_slot(connection) in keys else ()),
         cap_closed_for=row.get("cap_closed_for", ""),
         embedding=Embedding(v.get("embedding_url", settings.ASSISTANT_EMBEDDING_URL),
                             v.get("embedding_model", settings.ASSISTANT_EMBEDDING_MODEL),
@@ -172,7 +202,46 @@ def effective(row=None) -> Effective:
         retrieval_k=v.get("retrieval_k", settings.ASSISTANT_RETRIEVAL_K),
         retrieval_min_similarity=v.get("retrieval_min_similarity", settings.ASSISTANT_RETRIEVAL_MIN_SIMILARITY),
         stored_platform=v.get("platform", ""),
+        backup=None if backup is None else _keyed(keys, backup),
+        backup_prices=(v.get("backup") or {}).get("prices", {}),
+        backup_platform=(v.get("backup") or {}).get("platform", ""),
+        keys=keys,
     )
+
+
+def key_slot(conn) -> str:
+    from apps.soul_assist import platforms
+
+    return platforms.key_slot(conn)
+
+
+def stored_key(keys, conn) -> str | None:
+    """这套连接该用的已存 key:页面为它的平台存过的(可能是 "" = 已清除);没存过而它正是 env 配的平台,
+    用 env 的 key(env 的 key 就是 env 那个平台的);都没有为 None。"""
+    slot = key_slot(conn)
+    if slot in keys:
+        return keys[slot]["key"]
+    env = env_connection()
+    if env.api_key and slot == key_slot(env):
+        return env.api_key
+    return None
+
+
+def _keyed(keys, conn):
+    return replace(conn, api_key=stored_key(keys, conn) or "")
+
+
+def backup_connection(stored) -> Connection | None:
+    """`values["backup"]`(页面存的名字与值)→ 连接,不含 key(key 按平台取,`_keyed`)。备用没有 env 来源。"""
+    if not stored:
+        return None
+    return Connection(provider=provider_path(stored["provider"]), base_url=stored.get("base_url", ""),
+                      api_key="", model=stored["model"], effort=stored.get("effort", ""),
+                      fallbacks="default" if stored.get("fallbacks") else "")
+
+
+#: 还没配备用时,候选配置以它为底:什么都没有,所以给了 `provider` 就必须同时给 key(`candidate`)。
+NO_CONNECTION = Connection("", "", "", "", "", "")
 
 
 class KeyRequiredError(Exception):
@@ -187,24 +256,31 @@ def unredact(data, base: Connection):
     return data
 
 
-def candidate(data, base: Connection) -> Connection:
+def candidate(data, base: Connection, keys=None) -> Connection:
     """候选配置:请求里给了的键覆盖 `base`。`api_key` 不给就沿用 —— 页面上的 key 只写不读。
 
-    **但换了 `provider` 或 `base_url` 就必须同时给 key**(`KeyRequiredError`):否则一个指向任意主机的
-    候选会带着已存的 key 出去(连通测试、评测、保存后的每次提问)。"""
+    **换了 `provider` 或 `base_url` 而没给 key**:用目标平台**已存**的那一格(`stored_key`,按主机认,
+    所以只会是为那台主机存的 key);那一格没有才 `KeyRequiredError`。`base` 的 key 绝不跟着去新地址。
+    `keys` 缺省读生效配置;锁着配置行的调用方传锁住那一行的。"""
     data = unredact(data, base)
     moved = (("provider" in data and provider_path(data["provider"]) != base.provider)
              or ("base_url" in data and data["base_url"] != base.base_url))
-    if moved and data.get("api_key") is None:
-        raise KeyRequiredError
-    return Connection(
+    target = Connection(
         provider=provider_path(data["provider"]) if "provider" in data else base.provider,
         base_url=data.get("base_url", base.base_url),
-        api_key=base.api_key if data.get("api_key") is None else data["api_key"],
+        api_key="",
         model=data.get("model", base.model),
         effort=data.get("effort", base.effort),
         fallbacks=base.fallbacks if "fallbacks" not in data else ("default" if data["fallbacks"] else ""),
     )
+    if data.get("api_key") is not None:
+        return replace(target, api_key=data["api_key"])
+    if not moved:
+        return replace(target, api_key=base.api_key)
+    key = stored_key(effective().keys if keys is None else keys, target)
+    if not key:
+        raise KeyRequiredError
+    return replace(target, api_key=key)
 
 
 # ── 价格与花费(没有写死的供应商价格:价目表由管理员在页面上填)─────────────────
@@ -256,18 +332,41 @@ def current_value(eff: Effective, key):
         "embedding_url": eff.embedding.url, "embedding_model": eff.embedding.model,
         "embedding_dims": eff.embedding.dims, "retrieval_k": eff.retrieval_k,
         "retrieval_min_similarity": eff.retrieval_min_similarity,
+        "backup": stored_backup(eff),
     }[key]
+
+
+def stored_backup(eff: Effective):
+    """备用配置在 `values["backup"]` 里的样子(名字而不是类路径);没配为 None。"""
+    b = eff.backup
+    if b is None:
+        return None
+    from apps.soul_assist import platforms
+
+    return {"platform": platforms.current(eff.backup_platform, b), "provider": provider_name(b.provider),
+            "base_url": b.base_url, "model": b.model, "effort": b.effort, "fallbacks": bool(b.fallbacks),
+            "prices": eff.backup_prices}
 
 
 def per_hour(eff: Effective, side) -> int:
     return int(eff.rate(side).split("/")[0])
 
 
-def save_changes(row, values=None, *, user, description="assistant config updated", request=None,
-                 api_key=_UNSET, refs=None):
-    """写 `values` 里的键、可选的 API key(`""` = 清除)与评测身份(`refs`:字段名 → id),再写一条审计。
+def _audit_value(key, value):
+    """审计里的地址去掉 `user:pass@`;备用配置是一个 dict,里面的地址同样去敏。"""
+    if key in ("base_url", "embedding_url"):
+        return redact_url(value)
+    if key == "backup" and value:
+        return {**value, "base_url": redact_url(value.get("base_url", ""))}
+    return value
 
-    **审计里 API key 只记 "replaced" / "cleared",不记值**;其余键记 [旧值, 新值]。"""
+
+def save_changes(row, values=None, *, user, description="assistant config updated", request=None,
+                 keys=None, refs=None):
+    """写 `values` 里的键、按平台存的 key(`keys`:`key_slot` → key,`""` = 清除)与评测身份(`refs`:
+    字段名 → id),再写一条审计。
+
+    **审计里 key 只按平台记 "replaced" / "cleared",不记值**;其余键记 [旧值, 新值]。"""
     before = effective(row)
     changes = {}
     for key, new in (values or {}).items():
@@ -275,15 +374,17 @@ def save_changes(row, values=None, *, user, description="assistant config update
         # 只写真的变了的键:页面整表提交时,没动的键继续跟 env,也不算「动了开关」。
         if old == new:
             continue
-        changes[key] = [redact_url(old), redact_url(new)] if key in ("base_url", "embedding_url") else [old, new]
+        changes[key] = [_audit_value(key, old), _audit_value(key, new)]
         row.values = {**row.values, key: new}
     if user is not None and "enabled" in changes:
         # 管理员亲手改了总开关:不再有「上限关的、下月自动开」这回事(用户 2026-09-29 定)。
         row.cap_closed_for = ""
-    if api_key is not _UNSET:
-        changes["api_key"] = "cleared" if api_key == "" else "replaced"
-        row.api_key = api_key
-        row.api_key_set_at = timezone.now()
+    if keys:
+        store = load_keys(row.api_keys)
+        for slot, key in keys.items():
+            store[slot] = {"key": key, "set_at": timezone.now().isoformat()}
+        row.api_keys = json.dumps(store)
+        changes["api_keys"] = {slot: "cleared" if key == "" else "replaced" for slot, key in keys.items()}
     for field, new in (refs or {}).items():
         old = getattr(row, field)
         if old != new:

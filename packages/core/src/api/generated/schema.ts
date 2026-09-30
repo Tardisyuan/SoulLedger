@@ -77,6 +77,48 @@ export interface paths {
         patch: operations["assist_admin_config_update"];
         trace?: never;
     };
+    "/api/v1/assist-admin/config/backup/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description 主用在出第一段文本之前失败(连不上、超时、429、5xx、402)时改用的供应商。草稿 → 测试 → 保存,
+         *     与主用相同:连接的任何一项变了,都要先在 15 分钟内测通**同一套**(`config/backup/test/`)。
+         */
+        get: operations["assist_admin_backup_retrieve"];
+        put?: never;
+        post?: never;
+        /** @description 删掉备用(连同它的 key)。之后主用失败就是失败,不再切换。 */
+        delete: operations["assist_admin_backup_delete"];
+        options?: never;
+        head?: never;
+        /**
+         * @description 主用在出第一段文本之前失败(连不上、超时、429、5xx、402)时改用的供应商。草稿 → 测试 → 保存,
+         *     与主用相同:连接的任何一项变了,都要先在 15 分钟内测通**同一套**(`config/backup/test/`)。
+         */
+        patch: operations["assist_admin_backup_update"];
+        trace?: never;
+    };
+    "/api/v1/assist-admin/config/backup/test/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 与主用的连通测试同一个探针;测通后 15 分钟内可以保存这一套为备用。 */
+        post: operations["assist_admin_backup_test"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/assist-admin/config/models/": {
         parameters: {
             query?: never;
@@ -7439,9 +7481,14 @@ export interface components {
             per_hour: number | null;
         };
         ApiKeyState: {
+            /** @description 有 key(清除过的格子为 false) */
             set: boolean;
+            /** @description key 至少 12 个字符才给 */
             last4: string | null;
-            /** Format: date-time */
+            /**
+             * Format: date-time
+             * @description 页面存入的时间;env 的 key 为 null
+             */
             set_at: string | null;
             source: components["schemas"]["ApiKeyStateSourceEnum"];
         };
@@ -7720,6 +7767,8 @@ export interface components {
             screen: components["schemas"]["ScreenEnum"];
             /** Format: uuid */
             conversation_id?: string | null;
+            /** @description true = 以 Server-Sent Events 逐段返回(text/event-stream,事件见 AssistStreamEvent);缺省 false = 答完一次返回 JSON。进门的错误(未开通、限流、忙、会话不存在)两种都答 JSON 与状态码。 */
+            stream?: boolean;
         };
         AssistConversation: {
             /** Format: uuid */
@@ -7751,6 +7800,13 @@ export interface components {
             readonly id: number;
             role: components["schemas"]["AssistMessageRoleEnum"];
             content: string;
+            /**
+             * @description 流式没答完:stopped = 停止或断开,interrupted = 出过字后出错或超时;空 = 答完了。内容是已发出的部分
+             *
+             *     * `stopped` - stopped
+             *     * `interrupted` - interrupted
+             */
+            readonly interruption: components["schemas"]["InterruptionEnum"] | components["schemas"]["BlankEnum"];
             /** Format: date-time */
             readonly created_at: string;
         };
@@ -7777,6 +7833,12 @@ export interface components {
          */
         AssistPlatformEnum: "deepseek" | "openai" | "anthropic" | "qwen" | "kimi" | "glm" | "doubao" | "gemini" | "siliconflow" | "openrouter" | "ollama" | "custom";
         /**
+         * @description * `primary` - primary
+         *     * `backup` - backup
+         * @enum {string}
+         */
+        AssistProviderRoleEnum: "primary" | "backup";
+        /**
          * @description * `vector` - vector
          *     * `fallback` - fallback
          *     * `fallback_low_similarity` - fallback_low_similarity
@@ -7789,6 +7851,79 @@ export interface components {
          * @enum {string}
          */
         AssistSideEnum: "soul" | "officer";
+        AssistStreamDelta: {
+            /**
+             * @description delta (enum property replaced by openapi-typescript)
+             * @enum {string}
+             */
+            event: "delta";
+            /** @description 接在已收到的文本后面 */
+            text: string;
+        };
+        /**
+         * @description 与非流式的 JSON 回答同形(`conversation_id` + `answer`),多一个用量。`conversation_id` 以这里为准:
+         *     续的会话在作答时被删,回答会落进新开的会话。
+         */
+        AssistStreamDone: {
+            /** Format: uuid */
+            conversation_id: string;
+            answer: components["schemas"]["AssistMessage"];
+            /**
+             * @description done (enum property replaced by openapi-typescript)
+             * @enum {string}
+             */
+            event: "done";
+            usage: components["schemas"]["AssistUsageSummary"];
+        };
+        AssistStreamError: {
+            /**
+             * @description error (enum property replaced by openapi-typescript)
+             * @enum {string}
+             */
+            event: "error";
+            /**
+             * @description unavailable = 一个字都没出(同非流式的 503);interrupted = 出过字后断了
+             *
+             *     * `unavailable` - unavailable
+             *     * `interrupted` - interrupted
+             */
+            kind: components["schemas"]["AssistStreamErrorKindEnum"];
+            /** @description 出错前是否已经发过 delta */
+            text_sent: boolean;
+            detail: string;
+            /**
+             * Format: uuid
+             * @description interrupted 时:已发出的部分存在这个会话里
+             */
+            conversation_id?: string;
+            /** @description interrupted 时:存下的那条回答 */
+            message_id?: number;
+        };
+        /**
+         * @description * `unavailable` - unavailable
+         *     * `interrupted` - interrupted
+         * @enum {string}
+         */
+        AssistStreamErrorKindEnum: "unavailable" | "interrupted";
+        AssistStreamEvent: components["schemas"]["AssistStreamMeta"] | components["schemas"]["AssistStreamDelta"] | components["schemas"]["AssistStreamDone"] | components["schemas"]["AssistStreamError"];
+        AssistStreamMeta: {
+            /**
+             * @description meta (enum property replaced by openapi-typescript)
+             * @enum {string}
+             */
+            event: "meta";
+            /**
+             * Format: uuid
+             * @description 续的会话,或这次新开的会话(答完才落库)
+             */
+            conversation_id: string;
+        };
+        AssistTryStreamEvent: components["schemas"]["AssistStreamMeta"] | components["schemas"]["AssistStreamDelta"] | components["schemas"]["TryStreamDone"] | components["schemas"]["AssistStreamError"];
+        AssistUsageSummary: {
+            input_tokens: number;
+            output_tokens: number;
+            cache_read_tokens: number;
+        };
         /** @description One row of `stats.action_distribution` — a `values("action").annotate(count=…)`. */
         AuditActionCount: {
             action: string;
@@ -7896,6 +8031,25 @@ export interface components {
             role: string | null;
             tenant: string | null;
         };
+        BackupConfig: {
+            configured: boolean;
+            platform: (components["schemas"]["AssistPlatformEnum"] | components["schemas"]["NullEnum"]) | null;
+            provider: string | null;
+            base_url: string | null;
+            model: string | null;
+            effort: string | null;
+            fallbacks: boolean | null;
+            prices: {
+                [key: string]: components["schemas"]["Price"];
+            };
+            /** @description 备用那个平台的 key;与主用同平台时就是同一格 */
+            api_key: components["schemas"]["ApiKeyState"];
+            api_key_slot: string | null;
+            /** @description 主用的断路器 */
+            breaker: components["schemas"]["Breaker"];
+            /** Format: double */
+            primary_first_token_seconds: number;
+        };
         /** @description kind=BALANCE — the Chinese 功過格 account. */
         BalanceReading: {
             /**
@@ -7911,6 +8065,15 @@ export interface components {
         };
         /** @enum {unknown} */
         BlankEnum: "";
+        Breaker: {
+            /** @description 断开中:主用不试,直接用备用 */
+            open: boolean;
+            /** Format: date-time */
+            open_until: string | null;
+            consecutive_failures: number;
+            threshold: number;
+            open_seconds: number;
+        };
         /**
          * @description 一套连接配置;没给的键沿用当前生效值。`api_key` 不给 = 沿用已存的 key。
          *     `platform` 是预设时由它定 `provider` 与 `base_url`(不必再给;给了而不一致 → 400 `platform_locked`)。
@@ -8094,7 +8257,14 @@ export interface components {
             prices: {
                 [key: string]: components["schemas"]["Price"];
             };
+            /** @description 当前连接那个平台的 key */
             api_key: components["schemas"]["ApiKeyState"];
+            /** @description 当前连接的 key 存在哪一格:预设平台 id,或 custom:<主机[:端口]> */
+            api_key_slot: string;
+            /** @description 每个存过 key 的平台一格(键同 api_key_slot):换到那个平台不必重填 key */
+            api_keys: {
+                [key: string]: components["schemas"]["ApiKeyState"];
+            };
             /**
              * Format: uuid
              * @description 只读;由 POST eval/identities/ 设置
@@ -9088,6 +9258,16 @@ export interface components {
              */
             empty: number;
         };
+        /**
+         * @description * `connection` - connection
+         *     * `timeout` - timeout
+         *     * `rate_limited` - rate_limited
+         *     * `server_error` - server_error
+         *     * `quota` - quota
+         *     * `circuit_open` - circuit_open
+         * @enum {string}
+         */
+        FallbackReasonEnum: "connection" | "timeout" | "rate_limited" | "server_error" | "quota" | "circuit_open";
         Follow: {
             /** Format: uuid */
             readonly id: string;
@@ -9314,6 +9494,12 @@ export interface components {
          * @enum {string}
          */
         InitialCredentialStatusEnum: "QUEUED" | "SENT" | "PENDING" | "REVEALED" | "DELIVERED" | "VOID";
+        /**
+         * @description * `stopped` - stopped
+         *     * `interrupted` - interrupted
+         * @enum {string}
+         */
+        InterruptionEnum: "stopped" | "interrupted";
         /**
          * @description A proceeding. Soul and judge are the requester's own (BD-01).
          *
@@ -10547,6 +10733,8 @@ export interface components {
             screen: components["schemas"]["OfficerScreenEnum"];
             /** Format: uuid */
             conversation_id?: string | null;
+            /** @description true = 以 Server-Sent Events 逐段返回(text/event-stream,事件见 AssistStreamEvent);缺省 false = 答完一次返回 JSON。进门的错误(未开通、限流、忙、会话不存在)两种都答 JSON 与状态码。 */
+            stream?: boolean;
         };
         OfficerAssistConversation: {
             /** Format: uuid */
@@ -11536,6 +11724,20 @@ export interface components {
             readonly return_count?: number;
             readonly end_reason?: string;
             readonly tenant?: number | null;
+        };
+        /** @description 与主用的连接同一组字段,另加备用自己的价目表。连接变了要先测通**同一套**(`config/backup/test/`)。 */
+        PatchedBackupUpdate: {
+            platform?: components["schemas"]["AssistPlatformEnum"];
+            provider?: components["schemas"]["ProviderEnum"];
+            base_url?: string;
+            api_key?: string;
+            model?: string;
+            effort?: components["schemas"]["EffortEnum"] | components["schemas"]["BlankEnum"];
+            fallbacks?: boolean;
+            /** @description 备用的价目表(模型名 → 每百万 token 价),与主用的分开 */
+            prices?: {
+                [key: string]: components["schemas"]["Price"];
+            };
         };
         PatchedComment: {
             /** Format: uuid */
@@ -12568,8 +12770,21 @@ export interface components {
         ReactionTypeEnum: "LIKE" | "LOVE" | "RESPECT" | "SYMPATHY" | "ETERNAL_LIGHT";
         ReadOnlySettings: {
             max_concurrent: number;
-            /** Format: double */
+            /**
+             * Format: double
+             * @description 非流式整次回答 / 流式第一段文本的上限
+             */
             timeout_seconds: number;
+            /**
+             * Format: double
+             * @description 流式整次回答的上限
+             */
+            stream_total_seconds: number;
+            /**
+             * Format: double
+             * @description 配了备用时,主用最多等这么久出第一段文本
+             */
+            primary_first_token_seconds: number;
             history_turns: number;
             retention_days: number;
         };
@@ -14246,11 +14461,16 @@ export interface components {
          * @enum {string}
          */
         TriggerEnum: "SCHEDULE" | "MANUAL";
-        /** @description §3.3 试问:以评测身份问一句。`candidate` 不给 = 用生效配置;给了规则同连通测试(换地址要带 key)。 */
+        /**
+         * @description §3.3 试问:以评测身份问一句。`candidate` 不给 = 用生效配置(连同备用与断路器);给了只测这一套,
+         *     规则同连通测试(换地址要带 key)。
+         */
         TryRequest: {
             side: components["schemas"]["AssistSideEnum"];
             question: string;
             candidate?: components["schemas"]["Candidate"];
+            /** @description true = Server-Sent Events,事件见 AssistTryStreamEvent */
+            stream?: boolean;
         };
         TryResult: {
             side: components["schemas"]["AssistSideEnum"];
@@ -14264,8 +14484,54 @@ export interface components {
             tokens: {
                 [key: string]: number;
             };
+            /** @description 实际作答的那一家 */
             provider: string;
             model: string;
+            provider_role: components["schemas"]["AssistProviderRoleEnum"];
+            /**
+             * @description 改用了备用的理由;主用答的为 null
+             *
+             *     * `connection` - connection
+             *     * `timeout` - timeout
+             *     * `rate_limited` - rate_limited
+             *     * `server_error` - server_error
+             *     * `quota` - quota
+             *     * `circuit_open` - circuit_open
+             */
+            fallback_reason: (components["schemas"]["FallbackReasonEnum"] | components["schemas"]["NullEnum"]) | null;
+        };
+        TryStreamDone: {
+            side: components["schemas"]["AssistSideEnum"];
+            answer: string;
+            /** @description 按调用顺序的工具名,不含结果 */
+            tools_called: string[];
+            retrieval: components["schemas"]["AssistRetrievalEnum"];
+            /** @description 检索进上下文的条目 id,近的在前;退回整份语料时为空 */
+            retrieved_entries: string[];
+            latency_ms: number;
+            tokens: {
+                [key: string]: number;
+            };
+            /** @description 实际作答的那一家 */
+            provider: string;
+            model: string;
+            provider_role: components["schemas"]["AssistProviderRoleEnum"];
+            /**
+             * @description 改用了备用的理由;主用答的为 null
+             *
+             *     * `connection` - connection
+             *     * `timeout` - timeout
+             *     * `rate_limited` - rate_limited
+             *     * `server_error` - server_error
+             *     * `quota` - quota
+             *     * `circuit_open` - circuit_open
+             */
+            fallback_reason: (components["schemas"]["FallbackReasonEnum"] | components["schemas"]["NullEnum"]) | null;
+            /**
+             * @description done (enum property replaced by openapi-typescript)
+             * @enum {string}
+             */
+            event: "done";
         };
         /**
          * @description kind=UNAVAILABLE — the tenant's civilization is not mapped, so this
@@ -14290,6 +14556,9 @@ export interface components {
             unpriced_models: string[];
             requests: number;
             by_status: components["schemas"]["UsageStatus"];
+            fallbacks: components["schemas"]["UsageFallbacks"];
+            /** @description 主用 / 备用各自的请求、token 与花费(各按自己的价目表) */
+            by_provider: components["schemas"]["UsageProvider"][];
             failure_rates: components["schemas"]["FailureRates"];
             /** @description 已答的请求按帮助条目的来源分(§7.5) */
             by_retrieval: components["schemas"]["UsageRetrieval"];
@@ -14312,6 +14581,22 @@ export interface components {
             /** Format: date */
             date: string;
         };
+        UsageFallbackReasons: {
+            connection: number;
+            timeout: number;
+            rate_limited: number;
+            /** @description 5xx */
+            server_error: number;
+            /** @description 402 余额不足 */
+            quota: number;
+            /** @description 主用连续失败、断路器开着,没试主用 */
+            circuit_open: number;
+        };
+        UsageFallbacks: {
+            /** @description 改用备用的请求数 */
+            count: number;
+            by_reason: components["schemas"]["UsageFallbackReasons"];
+        };
         UsageHall: {
             requests: number;
             answered: number;
@@ -14325,6 +14610,19 @@ export interface components {
             cost: number;
             tenant_id: number | null;
             code: string | null;
+        };
+        UsageProvider: {
+            requests: number;
+            answered: number;
+            input_tokens: number;
+            output_tokens: number;
+            cache_read_tokens: number;
+            /**
+             * Format: double
+             * @description 只含已定价模型
+             */
+            cost: number;
+            role: components["schemas"]["AssistProviderRoleEnum"];
         };
         UsageRetrieval: {
             vector: number;
@@ -14353,6 +14651,10 @@ export interface components {
             busy: number;
             rate_limited: number;
             not_configured: number;
+            /** @description 流式:灵魂停止或断开(已生成的部分照存、照计费) */
+            stopped: number;
+            /** @description 流式:出过字以后供应商出错或到了总时长 */
+            interrupted: number;
         };
         /**
          * @description The serializer behind `PATCH /auth/profile/` — what a user may change
@@ -14934,6 +15236,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AssistAnswer"];
+                    "text/event-stream": components["schemas"]["AssistStreamEvent"];
                 };
             };
             /** @description 字段校验失败 */
@@ -15017,6 +15320,110 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Config"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistError"];
+                };
+            };
+        };
+    };
+    assist_admin_backup_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BackupConfig"];
+                };
+            };
+        };
+    };
+    assist_admin_backup_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BackupConfig"];
+                };
+            };
+        };
+    };
+    assist_admin_backup_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedBackupUpdate"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedBackupUpdate"];
+                "multipart/form-data": components["schemas"]["PatchedBackupUpdate"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BackupConfig"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistError"];
+                };
+            };
+        };
+    };
+    assist_admin_backup_test: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["Candidate"];
+                "application/x-www-form-urlencoded": components["schemas"]["Candidate"];
+                "multipart/form-data": components["schemas"]["Candidate"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConnectivityResult"];
                 };
             };
             400: {
@@ -15614,6 +16021,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TryResult"];
+                    "text/event-stream": components["schemas"]["AssistTryStreamEvent"];
                 };
             };
             400: {
@@ -19846,6 +20254,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AssistAnswer"];
+                    "text/event-stream": components["schemas"]["AssistStreamEvent"];
                 };
             };
             /** @description 字段校验失败 */

@@ -5,7 +5,9 @@
 每次保存(配置、每殿开关)写一条 `resource="assistant_config"` 的审计;API key 只记「已更换 / 已清除」。
 """
 from dataclasses import replace
+from datetime import UTC, datetime
 
+from django.conf import settings as dj_settings
 from django.db import transaction
 from django.db.models import Count
 from drf_spectacular.utils import OpenApiParameter, extend_schema
@@ -15,8 +17,10 @@ from rest_framework.views import APIView
 
 from apps.core.tenant import ADMIN_ROLE
 from apps.soul_accounts.authentication import OfficerJWTAuthentication
-from apps.soul_assist import config, corpus, eval_identities, evals, platforms, service, usage, vectors
+from apps.soul_assist import config, corpus, eval_identities, evals, failover, platforms, service, sse, usage, vectors
 from apps.soul_assist.admin_serializers import (
+    BackupConfigSerializer,
+    BackupUpdateSerializer,
     CandidateSerializer,
     ConfigSerializer,
     ConfigUpdateSerializer,
@@ -42,10 +46,11 @@ from apps.soul_assist.admin_serializers import (
     PriceReferenceSerializer,
     TryRequestSerializer,
     TryResultSerializer,
+    TryStreamDoneSerializer,
     UsageSerializer,
 )
 from apps.soul_assist.models import AssistConfig, AssistEvalCase, AssistEvalRun
-from apps.soul_assist.serializers import AssistErrorSerializer
+from apps.soul_assist.serializers import AssistErrorSerializer, stream_event_serializer
 
 
 class IsAdminRole(permissions.BasePermission):
@@ -67,10 +72,22 @@ def _key_required():
     return _error("换了供应商或地址,要同时填 API key:已存的 key 不会发往新的地址。", "api_key_required")
 
 
+def _key_table(eff: config.Effective):
+    """每个存过 key 的平台一行(外加 env 的 key 所属的那个平台):只有状态,永不含 key 本身。"""
+    env = config.env_connection()
+    slots = dict.fromkeys(list(eff.keys) + ([config.key_slot(env)] if env.api_key else []))
+    out = {}
+    for slot in slots:
+        entry = eff.keys.get(slot)
+        key = entry["key"] if entry else env.api_key
+        out[slot] = {"set": bool(key), "last4": key[-4:] if len(key) >= 12 else None,
+                     "set_at": entry["set_at"] if entry else None, "source": "page" if entry else "env"}
+    return out
+
+
 def _config_body(eff: config.Effective):
     from django.conf import settings
 
-    key = eff.connection.api_key
     return ConfigSerializer({
         **{k: config.current_value(eff, k) for k in config.EDITABLE if k != "enabled"},
         # 地址里的 `user:pass@` 是凭证,与 key 一样只写不读;回传去敏形式时按「没改」处理(config.unredact)。
@@ -78,13 +95,15 @@ def _config_body(eff: config.Effective):
         "enabled": eff.enabled, "switch": eff.switch, "env_enabled": eff.env_enabled,
         "platforms": platforms.table(),
         # 末 4 位只在 key 足够长时给:短 key 的末 4 位就是它的一大半。
-        "api_key": {"set": bool(key), "last4": key[-4:] if len(key) >= 12 else None,
-                    "set_at": eff.api_key_set_at, "source": "page" if eff.api_key_set_at else "env"},
+        "api_key": eff.key_state(eff.connection), "api_key_slot": config.key_slot(eff.connection),
+        "api_keys": _key_table(eff),
         "eval_soul_account": eff.eval_soul_account_id, "eval_officer": eff.eval_officer_id,
         "month_rolls_over_at": usage.ROLLOVER_TEXT,
         "overridden": list(eff.overridden),
         "read_only": {"max_concurrent": settings.ASSISTANT_MAX_CONCURRENT,
                       "timeout_seconds": settings.ASSISTANT_TIMEOUT_SECONDS,
+                      "stream_total_seconds": settings.ASSISTANT_STREAM_TOTAL_SECONDS,
+                      "primary_first_token_seconds": settings.ASSISTANT_PRIMARY_FIRST_TOKEN_SECONDS,
                       "history_turns": settings.ASSISTANT_HISTORY_TURNS,
                       "retention_days": service.RETENTION_DAYS},
     }).data
@@ -111,7 +130,7 @@ class ConfigView(AdminView):
             eff = config.effective(row)
             data = config.unredact(data, eff.connection)
             try:
-                after = config.candidate(data, eff.connection)
+                after = config.candidate(data, eff.connection, eff.keys)
             except config.KeyRequiredError:
                 return _key_required()
             # 连接的任何一项(供应商、地址、key、模型、effort、fallbacks)变了,都要先测通**同一套**候选,
@@ -124,8 +143,12 @@ class ConfigView(AdminView):
             if cap is not None and after.model not in prices:
                 return _error("设了月度上限,就要给当前模型填价格:否则花费算不出来,上限永远不会触发。",
                               "unpriced_model")
-            api_key = data.pop("api_key", config._UNSET)
-            config.save_changes(row, data, user=request.user, request=request, api_key=api_key)
+            if cap is not None and eff.backup is not None and eff.backup.model not in eff.backup_prices:
+                return _error("设了月度上限,备用的模型也要填价格。", "unpriced_backup_model")
+            # 给了 key 就存进**新连接那个平台**的格子;没给(含换回一个存过 key 的平台)什么都不写
+            keys = {config.key_slot(after): data.pop("api_key")} if data.get("api_key") is not None else None
+            data.pop("api_key", None)
+            config.save_changes(row, data, user=request.user, request=request, keys=keys)
         return Response(_config_body(config.effective()))
 
 
@@ -297,22 +320,27 @@ class TryView(AdminView):
         return super().handle_exception(exc)
 
     @extend_schema(operation_id="assist_admin_try", request=TryRequestSerializer,
-                   responses={200: TryResultSerializer, 400: AssistErrorSerializer, 429: AssistErrorSerializer,
-                              503: AssistErrorSerializer})
+                   responses={(200, "application/json"): TryResultSerializer,
+                              (200, "text/event-stream"): stream_event_serializer("AssistTryStreamEvent",
+                                                                                  TryStreamDoneSerializer),
+                              400: AssistErrorSerializer, 429: AssistErrorSerializer, 503: AssistErrorSerializer})
     def post(self, request):
         from apps.core.locale import locale_from_request
 
         body = TryRequestSerializer(data=request.data)
         body.is_valid(raise_exception=True)
         data = body.validated_data
-        base = config.effective().connection
         try:
-            conn = config.candidate(data["candidate"], base) if "candidate" in data else base
+            # 没给候选 = 生效配置,连同备用与断路器(None);给了只测这一套
+            conn = config.candidate(data["candidate"], config.effective().connection) if "candidate" in data else None
         except config.KeyRequiredError:
             return _key_required()
+        lang = corpus.corpus_locale(locale_from_request(request))
         try:
-            result = evals.try_question(data["side"], data["question"], conn,
-                                        corpus.corpus_locale(locale_from_request(request)), request)
+            if data.get("stream"):
+                return evals.try_stream(data["side"], data["question"], conn, lang, request,
+                                        lambda events, render: sse.response(request, events, render))
+            result = evals.try_question(data["side"], data["question"], conn, lang, request)
         except evals.NoEvalIdentityError as missing:
             return _error("缺少评测身份,先创建评测身份。", missing.code)
         return Response(TryResultSerializer(result).data)
@@ -328,7 +356,7 @@ class UsageView(AdminView):
         except ValueError:
             return _error("month 要写成 YYYY-MM。", "invalid_month")
         eff = config.effective()
-        return Response(UsageSerializer({**usage.report(eff.prices, at), "cap": eff.monthly_cap}).data)
+        return Response(UsageSerializer({**usage.report(usage.Prices(eff.prices, eff.backup_prices), at), "cap": eff.monthly_cap}).data)
 
 
 class CorpusView(AdminView):
@@ -418,3 +446,100 @@ class EmbeddingRebuildView(AdminView):
                      {k: result[k] for k in ("embedded", "unchanged", "deleted", "model", "dims", "index", "dropped")},
                      request, resource_id="vectors")
         return Response(EmbeddingRebuildSerializer({**result, "status": vectors.status()}).data)
+
+
+# ── 备用供应商(docs/ARCHITECTURE-soul-assist.md §13)────────────────────────
+
+
+def _backup_body(eff: config.Effective):
+    b = eff.backup
+    until = failover.open_until(eff.connection)
+    return BackupConfigSerializer({
+        "configured": b is not None,
+        "platform": platforms.current(eff.backup_platform, b) if b else None,
+        "provider": config.provider_name(b.provider) if b else None,
+        "base_url": config.redact_url(b.base_url) if b else None,
+        "model": b.model if b else None, "effort": b.effort if b else None,
+        "fallbacks": bool(b.fallbacks) if b else None, "prices": eff.backup_prices,
+        "api_key": eff.key_state(b or config.NO_CONNECTION), "api_key_slot": config.key_slot(b) if b else None,
+        "breaker": {"open": until is not None,
+                    "open_until": None if until is None else datetime.fromtimestamp(until, tz=UTC),
+                    "consecutive_failures": failover.failures(eff.connection), "threshold": failover.THRESHOLD,
+                    "open_seconds": failover.OPEN_SECONDS},
+        "primary_first_token_seconds": dj_settings.ASSISTANT_PRIMARY_FIRST_TOKEN_SECONDS,
+    }).data
+
+
+def _backup_candidate(data, base, keys=None):
+    """(连接, 错误响应)。与主用同一套规则:换了平台或地址,那个平台存过 key 就用它(与主用同平台即共用),
+    没存过才要求给 key。"""
+    try:
+        conn = config.candidate(data, base, keys)
+    except config.KeyRequiredError:
+        return None, _key_required()
+    if not conn.provider or not conn.model:
+        return None, _error("备用要有平台(或适配器)与模型。", "backup_incomplete")
+    return conn, None
+
+
+class BackupView(AdminView):
+    """主用在出第一段文本之前失败(连不上、超时、429、5xx、402)时改用的供应商。草稿 → 测试 → 保存,
+    与主用相同:连接的任何一项变了,都要先在 15 分钟内测通**同一套**(`config/backup/test/`)。"""
+
+    @extend_schema(operation_id="assist_admin_backup_retrieve", responses={200: BackupConfigSerializer})
+    def get(self, request):
+        return Response(_backup_body(config.effective()))
+
+    @extend_schema(operation_id="assist_admin_backup_update", request=BackupUpdateSerializer,
+                   responses={200: BackupConfigSerializer, 400: AssistErrorSerializer})
+    def patch(self, request):
+        body = BackupUpdateSerializer(data=request.data)
+        body.is_valid(raise_exception=True)
+        data = dict(body.validated_data)
+        with transaction.atomic():
+            AssistConfig.objects.get_or_create(pk=1)
+            row = AssistConfig.objects.select_for_update().get(pk=1)
+            eff = config.effective(row)
+            base = eff.backup or config.NO_CONNECTION
+            data = config.unredact(data, base)
+            after, problem = _backup_candidate(data, base, eff.keys)
+            if problem is not None:
+                return problem
+            if after != base and not config.was_tested(after):
+                return _error("备用的连接配置变了:先用这套配置通过连通测试再保存。", "untested_connection")
+            prices = data.get("prices", eff.backup_prices)
+            if eff.monthly_cap is not None and after.model not in prices:
+                return _error("设了月度上限,备用的模型也要填价格。", "unpriced_backup_model")
+            stored = {"platform": data.get("platform", eff.backup_platform), "provider": config.provider_name(after.provider),
+                      "base_url": after.base_url, "model": after.model, "effort": after.effort,
+                      "fallbacks": bool(after.fallbacks), "prices": prices}
+            keys = {config.key_slot(after): data["api_key"]} if data.get("api_key") is not None else None
+            config.save_changes(row, {"backup": stored}, user=request.user, request=request, keys=keys,
+                                description="assistant backup provider updated")
+        return Response(_backup_body(config.effective()))
+
+    @extend_schema(operation_id="assist_admin_backup_delete", request=None, responses={200: BackupConfigSerializer})
+    def delete(self, request):
+        """删掉备用(连同它的 key)。之后主用失败就是失败,不再切换。"""
+        with transaction.atomic():
+            AssistConfig.objects.get_or_create(pk=1)
+            row = AssistConfig.objects.select_for_update().get(pk=1)
+            if config.effective(row).backup is not None:
+                # 平台的 key 不删:它按平台存,主用(或以后再配的备用)可能正用着同一格
+                config.save_changes(row, {"backup": None}, user=request.user, request=request,
+                                    description="assistant backup provider removed")
+        return Response(_backup_body(config.effective()))
+
+
+class BackupTestView(AdminView):
+    @extend_schema(operation_id="assist_admin_backup_test", request=CandidateSerializer,
+                   responses={200: ConnectivityResultSerializer, 400: AssistErrorSerializer})
+    def post(self, request):
+        """与主用的连通测试同一个探针;测通后 15 分钟内可以保存这一套为备用。"""
+        body = CandidateSerializer(data=request.data)
+        body.is_valid(raise_exception=True)
+        conn, problem = _backup_candidate(dict(body.validated_data), config.effective().backup or config.NO_CONNECTION)
+        if problem is not None:
+            return problem
+        return Response(ConnectivityResultSerializer({
+            **evals.probe(conn), "provider": config.provider_name(conn.provider), "model": conn.model}).data)

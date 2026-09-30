@@ -10,7 +10,9 @@ import hashlib
 import hmac
 import logging
 import time
+import uuid
 from collections.abc import Callable
+from contextlib import closing
 from dataclasses import dataclass
 from datetime import timedelta
 
@@ -19,9 +21,9 @@ from django.core.cache import cache
 from django.db import connection, transaction
 from django.utils import timezone
 
-from apps.soul_assist import config, corpus, tools, usage, vectors
+from apps.soul_assist import config, corpus, failover, tools, usage, vectors
 from apps.soul_assist.models import AssistConversation, AssistMessage
-from apps.soul_assist.providers import ProviderError, Turn, get_provider
+from apps.soul_assist.providers import Answer, ProviderError, Turn, get_provider
 
 logger = logging.getLogger(__name__)
 
@@ -145,14 +147,15 @@ def soul_asker(account, screen, lang):
                  run_tool=lambda name: tools.run(name, account), civilization=soul.home_civilization)
 
 
-def answer(account, question, screen, *, locale, conversation_id=None, request=None):
+def answer(account, question, screen, *, locale, conversation_id=None, request=None, stream=False):
+    """非流式返回 `(会话, 回答)`;`stream=True` 返回 `session` 的事件生成器(开关在这里就查,不等迭代)。"""
     if not enabled_for(account):
         soul = account.soul
         usage.record("soul", soul.home_tenant or soul.tenant, "not_configured")
         raise AssistError("本殿尚未开通助手。", "assistant_not_configured", 503)
     lang = corpus.corpus_locale(locale)
-    return ask(soul_asker(account, screen, lang), question, screen, lang=lang, conversation_id=conversation_id,
-               request=request)
+    return (session if stream else ask)(soul_asker(account, screen, lang), question, screen, lang=lang,
+                                        conversation_id=conversation_id, request=request)
 
 
 def officer_enabled_for(request) -> bool:
@@ -182,13 +185,13 @@ def officer_asker(request, screen, lang):
                  empty_answer=OFFICER_EMPTY_ANSWER)
 
 
-def officer_answer(request, question, screen, *, locale, conversation_id=None):
+def officer_answer(request, question, screen, *, locale, conversation_id=None, stream=False):
     if not officer_enabled_for(request):
         usage.record("officer", getattr(request, "tenant", None), "not_configured")
         raise AssistError("本殿尚未开通助手。", "assistant_not_configured", 503)
     lang = corpus.corpus_locale(locale)
-    return ask(officer_asker(request, screen, lang), question, screen, lang=lang, conversation_id=conversation_id,
-               request=request)
+    return (session if stream else ask)(officer_asker(request, screen, lang), question, screen, lang=lang,
+                                        conversation_id=conversation_id, request=request)
 
 
 def officer_delete_conversation(request, conversation_id):
@@ -196,38 +199,65 @@ def officer_delete_conversation(request, conversation_id):
             "assistant conversation deleted by the officer", request)
 
 
-#: 记进用量表的失败(`AssistError.code` → `AssistUsage.status`)。会话不存在是调用方的错,不记。
-FAILURE_STATUS = {"assistant_busy": "busy", "assistant_unavailable": "unavailable"}
-
-
 def ask(asker, question, screen, *, lang, conversation_id=None, request=None, conn=None, is_eval=False):
-    """`conn` 缺省是生效配置;管理页评测传候选配置,并以 `is_eval` 开新会话、不计用量与月度上限。"""
-    conn = conn or config.effective().connection
+    """非流式:与流式同一条路(`session`),只是答完才一次返回 `(会话, 回答)`;失败抛 `AssistError`。
+
+    `conn` 缺省是生效配置(连同备用与断路器);管理页评测传候选配置(只测这一套,不改用备用),
+    并以 `is_eval` 开新会话、不计用量与月度上限。"""
+    *_, done = session(asker, question, screen, lang=lang, conversation_id=conversation_id, request=request,
+                       conn=conn, is_eval=is_eval, stream=False)
+    return done["conversation"], done["reply"]
+
+
+def session(asker, question, screen, *, lang, conversation_id=None, request=None, conn=None, is_eval=False,
+            stream=True):
+    """一次问答,产出事件(`event` 为 meta / delta / done / error;docs/ARCHITECTURE-soul-assist.md §13)。
+
+    - **meta 之前的失败都抛 `AssistError`**(忙、会话不存在):视图先取出 meta 才开始流式响应,
+      所以它们仍是普通的 JSON 错误与状态码。
+    - 非流式(`stream=False`)只产出 meta 与 done,供应商失败抛 503(与流式之前的行为相同)。
+    - 流式的失败以一个 error 事件收尾:没出过字是 `unavailable`,出过字是 `interrupted`(已发出的部分照存)。
+    - **调用方关掉生成器 = 客户端停止或断开**:GeneratorExit 从正在等的那一段抛进来,供应商的流随之关闭
+      (不再生成、不再计费),已生成的部分按 `stopped` 存下、记用量。
+    - 并发名额从进门占到生成器结束,每条路都在 finally 里还。"""
+    backup = None
+    if conn is None:
+        eff = config.effective()
+        conn, backup = eff.connection, eff.backup
+    slot = _Slot()
     try:
-        return _ask(asker, question, screen, lang=lang, conversation_id=conversation_id, request=request,
-                    conn=conn, is_eval=is_eval)
-    except AssistError as exc:
-        if exc.code in FAILURE_STATUS:
-            usage.record(asker.side, asker.tenant, FAILURE_STATUS[exc.code], conn.model, is_eval=is_eval)
+        slot.__enter__()
+    except AssistError:
+        usage.record(asker.side, asker.tenant, "busy", conn.model, is_eval=is_eval)
         raise
+    try:
+        yield from _run(asker, question, screen, lang, conversation_id, request, conn, backup, is_eval, stream)
+    finally:
+        slot.__exit__()
 
 
-def _ask(asker, question, screen, *, lang, conversation_id, request, conn, is_eval):
-    with _Slot():
-        conversation = None if is_eval else conversation_for(asker.owner, screen, conversation_id)
-        recent = [] if conversation is None else list(
-            conversation.messages.order_by("-created_at", "-id")[:settings.ASSISTANT_HISTORY_TURNS])
-        history = [Turn(m.role, m.content) for m in reversed(recent)] + [Turn("user", question)]
+def _run(asker, question, screen, lang, conversation_id, request, conn, backup, is_eval, stream):
+    conversation = None if is_eval else conversation_for(asker.owner, screen, conversation_id)
+    recent = [] if conversation is None else list(
+        conversation.messages.order_by("-created_at", "-id")[:settings.ASSISTANT_HISTORY_TURNS])
+    history = [Turn(m.role, m.content) for m in reversed(recent)] + [Turn("user", question)]
+    # 新会话在回答落库时才建(失败不留空会话),但 id 现在就定下,meta 里告诉客户端。
+    new_id = uuid.uuid4()
+    out = _Outcome(asker, question, screen, lang, request, is_eval, conversation, new_id)
 
-        def call_tool(name):
-            try:
-                return asker.run_tool(name)
-            finally:
-                _release_db()
+    def call_tool(name):
+        try:
+            return asker.run_tool(name)
+        finally:
+            _release_db()
 
-        # 取问题向量(至多 3 秒)也算在总预算里(§7.5)。
-        deadline = time.monotonic() + settings.ASSISTANT_TIMEOUT_SECONDS
+    # 截止时刻从这里算:取问题向量(至多 3 秒)也在预算里(§7.5)。
+    start = time.monotonic()
+    total = start + (settings.ASSISTANT_STREAM_TOTAL_SECONDS if stream else settings.ASSISTANT_TIMEOUT_SECONDS)
+    try:
+        yield {"event": "meta", "conversation_id": conversation.pk if conversation else new_id}
         found = vectors.retrieve(question, lang, asker.side, asker.civilization, release=_release_db)
+        out.found = found
         system, facts = asker.system, asker.facts
         if found.mode == "vector":
             # 规则(与 PINNED 条目)仍是缓存前缀;检索出的 k 条随问题变,接在断点之后的事实头后面。
@@ -235,39 +265,132 @@ def _ask(asker, question, screen, *, lang, conversation_id, request, conn, is_ev
             system = corpus.system_prompt(lang, asker.side, retrieved=True)
             facts = f"{asker.facts}\n\n{corpus.entries_block([by_id[i] for i in found.entries])}"
         _release_db()
-        try:
-            provider = get_provider(conn)  # 建客户端也可能失败(ProviderError):同样是 503、记用量
-            result = provider.answer(
-                system=system, facts=facts, history=history, tools=asker.tools,
-                call_tool=call_tool, max_rounds=MAX_ROUNDS, deadline=deadline,
-            )
-        except ProviderError as exc:
-            raise AssistError("助手一时答不上来,请稍后重试。", "assistant_unavailable", 503) from exc
-    text = result.text.strip() or (asker.empty_answer or EMPTY_ANSWER)[lang]
-    with transaction.atomic():
-        # 续的会话可能在模型答题的这 22 秒里被删(本人删、或留存清理删空):那就新开一个,不丢这条回答。
-        if conversation is None or not AssistConversation.objects.filter(pk=conversation.pk).exists():
-            conversation = AssistConversation.objects.create(**asker.owner, screen=screen, is_eval=is_eval)
-        AssistMessage.objects.create(conversation=conversation, role="user", content=question)
+        attempts = failover.plan(conn, backup, start)
+        error = None
+        for index, (role, attempt, first_deadline, planned) in enumerate(attempts):
+            out.role, out.model, out.provider, out.reason = role, attempt.model, attempt.provider, planned or out.reason
+            out.result = Answer(text="")
+            try:
+                provider = get_provider(attempt)  # 建客户端也可能失败(ProviderError):同样是 503、记用量
+                params = {"system": system, "facts": facts, "history": history, "tools": asker.tools,
+                          "call_tool": call_tool, "max_rounds": MAX_ROUNDS}
+                if stream:
+                    with closing(provider.stream(**params, deadline=total, first_token_deadline=first_deadline,
+                                                 result=out.result)) as pieces:
+                        for piece in pieces:
+                            out.sent = True
+                            yield {"event": "delta", "text": piece}
+                else:
+                    out.result = provider.answer(**params, deadline=min(total, first_deadline))
+            except ProviderError as exc:
+                if role == "primary" and backup is not None and exc.reason:
+                    failover.record_failure(conn)
+                if exc.reason and not out.sent and index + 1 < len(attempts):
+                    out.reason = exc.reason
+                    spent = exc.usage or out.result.usage
+                    if any(spent.values()):  # 主用失败前已花的 token(如工具轮之后才 5xx):只记账
+                        usage.record(asker.side, asker.tenant, "failed_over", attempt.model, spent, is_eval=is_eval,
+                                     provider_role="primary")
+                    continue
+                error = exc
+                break
+            if role == "primary" and backup is not None:
+                failover.record_success(conn)
+            break
+    except GeneratorExit:
+        out.finish("stopped")
+        raise
+    if error is not None:
+        if out.sent:
+            reply = out.finish("interrupted", error.usage or out.result.usage)
+            yield {"event": "error", "kind": "interrupted", "text_sent": True, "detail": INTERRUPTED_DETAIL,
+                   "conversation_id": reply.conversation_id, "message_id": reply.pk}
+            return
+        usage.record(asker.side, asker.tenant, "unavailable", out.model, error.usage or out.result.usage,
+                     is_eval=is_eval, retrieval=out.found.mode if out.found else "", provider_role=out.role,
+                     fallback_reason=out.reason)
+        if not stream:
+            raise AssistError(UNAVAILABLE_DETAIL, "assistant_unavailable", 503) from error
+        yield {"event": "error", "kind": "unavailable", "text_sent": False, "detail": UNAVAILABLE_DETAIL}
+        return
+    if not out.result.text.strip():
+        # 模型交回空文本(拒答、只输出了思考):固定的「答不了」。流式也当一段文本发出去,客户端只认 delta 也看得到。
+        out.result.text = (asker.empty_answer or EMPTY_ANSWER)[lang]
+        out.empty = True
+        if stream:
+            yield {"event": "delta", "text": out.result.text}
+    reply = out.finish("")
+    yield {"event": "done", "conversation": reply.conversation, "reply": reply, "usage": out.result.usage}
+
+
+UNAVAILABLE_DETAIL = "助手一时答不上来,请稍后重试。"
+INTERRUPTED_DETAIL = "回答中断了,已收到的部分已保存。"
+
+
+class _Outcome:
+    """一次问答走到哪一步、怎么收尾。`finish` 是**所有**花过钱的出口(答完、停止、中断)共用的落库 + 审计 + 用量。"""
+
+    def __init__(self, asker, question, screen, lang, request, is_eval, conversation, new_id):
+        self.asker, self.question, self.screen, self.lang = asker, question, screen, lang
+        self.request, self.is_eval, self.conversation, self.new_id = request, is_eval, conversation, new_id
+        self.result = Answer(text="")
+        self.found = None
+        self.role = self.model = self.reason = self.provider = ""
+        self.sent = self.empty = False
+
+    def finish(self, interruption, tokens=None):
+        """`interruption`:"" 答完 / stopped / interrupted。没答完又一个字都没有 → 不落消息,只记用量。"""
+        asker, result = self.asker, self.result
+        tokens = tokens if tokens is not None else result.usage
+        text = result.text.strip()
+        status = interruption or ("empty" if self.empty else "ok")
+        retrieval = self.found.mode if self.found else ""
+        if not self.role:
+            # 还没走到供应商就停了(响应头之前客户端就走了):没花钱,不记。这条路可能在回收生成器时、
+            # 在事件循环的线程里跑,那里不能碰数据库。
+            return None
+        reply = None
+        with transaction.atomic():
+            if text:
+                reply = self._store(text, tokens, interruption, retrieval)
+            usage.record(asker.side, asker.tenant, status, self.model, tokens, is_eval=self.is_eval,
+                         retrieval=retrieval, provider_role=self.role, fallback_reason=self.reason)
+        if reply is not None:
+            #: 不落库,只给评测与试问看:检索方式与进了上下文的条目、哪一家答的。
+            reply.retrieval, reply.provider_role, reply.fallback_reason = self.found, self.role, self.reason
+            reply.answered_by = (self.provider, self.model)
+        if not self.is_eval:
+            # 回答已经落库:上限检查坏了也不能让提问的人拿到 500(他会重问,再花一次钱)。只记异常,不记原文。
+            try:
+                usage.enforce_cap()
+            except Exception:
+                logger.exception("assistant monthly cap check failed")
+        return reply
+
+    def _store(self, text, tokens, interruption, retrieval):
+        asker, conversation = self.asker, self.conversation
+        # 续的会话可能在模型答题时被删(本人删、或留存清理删空):那就新开一个,不丢这条回答。
+        if conversation is not None and not AssistConversation.objects.filter(pk=conversation.pk).exists():
+            conversation, self.new_id = None, uuid.uuid4()
+        if conversation is None:
+            conversation = AssistConversation.objects.create(pk=self.new_id, **asker.owner, screen=self.screen,
+                                                             is_eval=self.is_eval)
+        self.conversation = conversation
+        AssistMessage.objects.create(conversation=conversation, role="user", content=self.question)
         reply = AssistMessage.objects.create(conversation=conversation, role="assistant", content=text,
-                                             tool_calls=result.tool_calls, tokens=result.usage)
+                                             tool_calls=self.result.tool_calls, tokens=tokens,
+                                             interruption=interruption)
         AssistConversation.objects.filter(pk=conversation.pk).update(last_active_at=timezone.now())
-        _audit(asker.user, asker.tenant, conversation, "EXECUTE", "assistant answer", request, {
-            "question_hmac": _sha(question), "answer_hmac": _sha(text), "tools": result.tool_calls,
-            "provider": conn.provider.rsplit(".", 1)[-1], "model": conn.model,
-            "tokens": result.usage, "locale": lang, "retrieval": found.mode, **({"eval": True} if is_eval else {}),
+        extra = {k: v for k, v in (("interruption", interruption), ("provider_role", self.role),
+                                   ("fallback_reason", self.reason)) if v}
+        _audit(asker.user, asker.tenant, conversation, "EXECUTE", "assistant answer", self.request, {
+            "question_hmac": _sha(self.question), "answer_hmac": _sha(text), "tools": self.result.tool_calls,
+            "provider": self.provider.rsplit(".", 1)[-1], "model": self.model,
+            "tokens": tokens, "locale": self.lang, "retrieval": retrieval, **extra,
+            **({"eval": True} if self.is_eval else {}),
         })
-        usage.record(asker.side, asker.tenant, "ok" if result.text.strip() else "empty", conn.model, result.usage,
-                     is_eval=is_eval, retrieval=found.mode)
-    #: 不落库,只给评测与试问看:这一问的检索方式与进了上下文的条目(`vectors.Retrieval`)。
-    reply.retrieval = found
-    if not is_eval:
-        # 回答已经落库:上限检查坏了也不能让提问的人拿到 500(他会重问,再花一次钱)。只记异常,不记原文。
-        try:
-            usage.enforce_cap()
-        except Exception:
-            logger.exception("assistant monthly cap check failed")
-    return conversation, reply
+        reply.conversation = conversation
+        return reply
 
 
 def delete_conversation(account, conversation_id, request=None):

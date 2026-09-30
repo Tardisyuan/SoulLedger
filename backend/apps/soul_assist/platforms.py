@@ -26,6 +26,7 @@
 import logging
 from dataclasses import dataclass
 from datetime import date
+from urllib.parse import urlsplit
 
 import requests
 from django.core.cache import cache
@@ -78,6 +79,30 @@ def infer(conn: config.Connection) -> str:
         if p.provider and config.provider_path(p.provider) == conn.provider and _norm(p.base_url) == _norm(conn.base_url):
             return pid
     return CUSTOM
+
+
+def _hostport(url):
+    parts = urlsplit(url or "")
+    host = (parts.hostname or "").lower()
+    return f"{host}:{parts.port}" if parts.port else host
+
+
+#: 不填地址时两个 SDK 各自的默认地址(key 的归属按真正发往的主机算)。
+SDK_DEFAULT_URL = {"anthropic": ANTHROPIC_DEFAULT, "openai_compatible": "https://api.openai.com/v1"}
+
+
+def key_slot(conn: config.Connection) -> str:
+    """这套连接用哪一格已存的 key(用户 2026-10-01 定:**key 按平台存**)。
+
+    按 key **真正发往的主机**认:主机与某个预设的地址相同 → 那个预设的 id(`deepseek`、`kimi` …);
+    否则 `custom:<主机[:端口]>`。于是同一个 key 永远只会发回存它时的那台主机 —— 换平台不会把 DeepSeek 的
+    key 带去 Kimi,换回来又能直接用;备用与主用在同一平台就共用这一格。"""
+    url = conn.base_url or SDK_DEFAULT_URL.get(config.provider_name(conn.provider), "")
+    host = _hostport(url)
+    for pid, p in PLATFORMS.items():
+        if p.base_url and _hostport(p.base_url) == host:
+            return pid
+    return f"{CUSTOM}:{host}"
 
 
 def current(stored, conn: config.Connection) -> str:
