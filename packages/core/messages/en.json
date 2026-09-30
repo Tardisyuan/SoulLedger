@@ -1397,7 +1397,6 @@
     "date_all": "All time",
     "date_7d": "Last 7 days",
     "date_30d": "Last 30 days",
-    "compact": "Compact",
     "events_from_writes": "{{count}} writes in this event",
     "actions": {
       "CREATE": "Created",

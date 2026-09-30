@@ -1397,7 +1397,6 @@
     "date_all": "全部时间",
     "date_7d": "近 7 天",
     "date_30d": "近 30 天",
-    "compact": "紧凑",
     "events_from_writes": "本事件包含 {{count}} 条写入",
     "actions": {
       "CREATE": "创建",
