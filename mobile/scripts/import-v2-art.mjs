@@ -10,9 +10,9 @@
  *                         after stripping they equal Design's project files byte for byte)
  *   assets/v2/*.png       seal edge scans and band textures, 1x + @2x
  *   assets/fonts/LXGWSeal-Regular.ttf + LXGWSeal-OFL.txt   地府印文 (SIL OFL 1.1)
- *   assets/*.png          app icon (light / dark / tinted), Android adaptive foreground and
- *                         monochrome, notification icon, splash frame (light / dark),
- *                         rasterized from deliver/icons/*.svg with sharp (librsvg)
+ *   assets/splash-frame(-dark).png   splash frame (light / dark), rasterized from
+ *                         deliver/icons/*.svg with sharp (librsvg). The app icons are NOT
+ *                         imported any more — see scripts/build-app-icon.mjs.
  *
  * NOT IMPORTED (Design: 不入库): textures/bronze, wax, inkseal (round-4 alternatives) and
  * scan-cnseal-source.png (the crop's source). svg/section-* has no App caller yet.
@@ -73,15 +73,11 @@ const png = (rel, out, size) =>
     .png()
     .toFile(join(APP, "assets", out));
 
+// The app / web icons no longer come from Design's deliver/icons: since 2026-10-01 they are the
+// S-and-L balance mark, built by scripts/build-app-icon.mjs. Only the splash frame is imported here.
 await Promise.all([
-  png("app-icon-light", "icon.png", 1024),
-  png("app-icon-dark", "icon-dark.png", 1024),
-  png("app-icon-mono", "icon-mono.png", 1024),
-  png("android-adaptive-foreground", "android-icon-foreground.png", 1024),
-  png("app-icon-mono", "android-icon-monochrome.png", 1024),
-  png("notification-android", "notification-icon.png", 96),
   // 112pt on screen (补足 C18: the empty frame the cold start stamps into), 3x.
   png("splash-frame", "splash-frame.png", 336),
   png("splash-frame-dark", "splash-frame-dark.png", 336),
 ]);
-console.log(`imported ${Object.keys(svg).length} SVGs, 20 textures, LXGW Seal and 8 icon PNGs from ${SRC}`);
+console.log(`imported ${Object.keys(svg).length} SVGs, 20 textures, LXGW Seal and 2 splash PNGs from ${SRC}`);
