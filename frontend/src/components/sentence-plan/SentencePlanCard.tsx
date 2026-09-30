@@ -153,7 +153,7 @@ function PlanBody({ plan }: { plan: SentencePlan }) {
 
       <SentenceRequestForm plan={plan} />
       {canCancel && (
-        <Button type="button" variant="danger" size="sm" onClick={() => setCancelOpen(true)}>
+        <Button type="button" variant="secondary" size="sm" onClick={() => setCancelOpen(true)}>
           {t("sentence_plan.cancel")}
         </Button>
       )}
@@ -168,7 +168,7 @@ function PlanBody({ plan }: { plan: SentencePlan }) {
             </Button>
             <Button
               type="button"
-              variant="danger"
+              variant="secondary"
               loading={cancel.isPending}
               disabled={!reason.trim()}
               onClick={submitCancel}

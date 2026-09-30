@@ -386,7 +386,7 @@ function LedgerSkeleton() {
    `tests/test_page_gates_match_the_backend.py` 会因为路由没有门而红。 */
 export default function LedgerPage() {
   return (
-    <RequirePermission permissions="ledger.read" fallback={<PermissionDenied />}>
+    <RequirePermission permissions="ledger.read" fallback={<PermissionDenied permission="ledger.read" />}>
       <LedgerPageContent />
     </RequirePermission>
   );
