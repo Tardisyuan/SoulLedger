@@ -43,6 +43,17 @@ function matchTrail(items: SidebarMenu[], pathname: string): SidebarMenu[] {
   return best;
 }
 
+/**
+ * 有子页面、自己却没有 page.tsx 的路径前缀。面包屑按路径段补出的中间层默认是
+ * 链接,而这几个前缀没有页面:/admin/stats 上那段「admin」指向 /admin,Next
+ * 预取 `/admin?_rsc=…` 得到 404。它们照样显示,只是不给链接。
+ *
+ * `AppLayout.test.tsx` 从 app/ 目录推导同一个集合并断言相等 —— 新增一个无页
+ * 的中间层而不登记在这里,那条测试会红。
+ */
+export const PAGELESS_PREFIXES: ReadonlySet<string> = new Set(["/admin", "/social/profile"]);
+const linkable = (href: string) => (PAGELESS_PREFIXES.has(href) ? undefined : href);
+
 // 面包屑段落的中文原名旁边配的译名（见 src/lib/menuI18n.ts 里的解释：菜单名
 // 是数据库自由文本，没有 i18n 字段，导航本身永远保持中文原文；面包屑和页面
 // H1 是仅有的两处例外，补一个"译名 中文原名"的对照）。
@@ -90,7 +101,7 @@ export function useBreadcrumbs(menus: SidebarMenu[]): Crumb[] {
           label: segmentLabel(segment),
           href:
             i < rest.length - 1
-              ? `${matched.path}/${rest.slice(0, i + 1).join("/")}`
+              ? linkable(`${matched.path}/${rest.slice(0, i + 1).join("/")}`)
               : undefined,
         });
       });
@@ -103,7 +114,7 @@ export function useBreadcrumbs(menus: SidebarMenu[]): Crumb[] {
       .forEach((segment, i, all) => {
         crumbs.push({
           label: segmentLabel(segment),
-          href: i < all.length - 1 ? `/${all.slice(0, i + 1).join("/")}` : undefined,
+          href: i < all.length - 1 ? linkable(`/${all.slice(0, i + 1).join("/")}`) : undefined,
         });
       });
   }

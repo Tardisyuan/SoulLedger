@@ -190,6 +190,19 @@ export const IDENTIFIER_POLICY_EXCEPTIONS: readonly IdentifierPolicyException[] 
       "been unpoliced since it was written.",
     registered: "2026-09-03",
   },
+  {
+    file: "src/components/assist-admin/CorpusSection.tsx",
+    site: "help corpus table (助手管理 · 帮助语料 · 只读): the 条目 column, one <IdentifierChip variant=\"inline\"> per row",
+    reason:
+      "The entry id is the corpus file's own key (`help/<locale>/<id>.md`, backend " +
+      "apps/soul_assist/corpus.py) and the only name an entry has: the corpus " +
+      "endpoint carries no title, and the page is read-only precisely so that a " +
+      "change is made in that file, in git (plan §5). The admin reading this table " +
+      "copies the key to find the file. Clauses 1-2 are waived for that column; " +
+      "clause 3 holds (inline chip, whole key on the clipboard); clause 4 is not in " +
+      "play because there is no name it displaces.",
+    registered: "2026-09-29",
+  },
 ];
 
 /** Characters of a UUID shown before the copy affordance. */

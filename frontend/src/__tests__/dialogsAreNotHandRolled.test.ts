@@ -66,6 +66,8 @@ const ALLOWED: Record<string, string> = {
   "src/components/moderation/MediaGrid.tsx":
     "规范 v2 C15 的图片查看器:全屏纯黑底,是 Base UI Dialog.Popup 自己铺满(焦点圈、Esc、焦点归还来自原语),不是手搓遮罩",
   "src/components/scheduler/TaskRunsDrawer.tsx": "run-history drawer scrim, keyboard handled by useDrawerA11y (same pattern as SettingsDrawer)",
+  "src/components/assist/OfficerAssist.tsx":
+    "问一问 below 1024 px: a right drawer on the Base UI Dialog (as Drawer.tsx) — focus trap, Escape and focus return come from the primitive",
   "src/components/souls/detail/SoulHeaderActions.tsx":
     "transparent aria-hidden click-catcher behind a role=menu with Escape and focus return — a menu, not a dialog",
 };

@@ -18,11 +18,14 @@ import {
   type MeProfile,
   type SoulErrorMessage,
 } from "@soulledger/core/api/soul";
-import { getRefreshToken } from "@soulledger/core/platform";
+import { getRefreshToken, platform } from "@soulledger/core/platform";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+
+import { LOCALE_COOKIE, isLocale } from "@soulledger/core/config/locale";
 
 import { clearOutbox } from "./chat";
 import { rememberPlaqueFace } from "./fonts";
+import { useI18n } from "./i18n";
 import { setUnauthorizedHandler } from "./platform";
 import { hasRegisteredDevice, unregisterDevice } from "./push";
 import { civKeyOf } from "./theme";
@@ -64,9 +67,38 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<SessionState>(() =>
     getRefreshToken() ? { status: "booting" } : { status: "signedOut" }
   );
+  const { setLocale } = useI18n();
+
+  /**
+   * The account's language is the one the settings screen promises to follow:
+   * once we know who we are, adopt it — on a device that has no language of its
+   * own yet (one stored here was picked by the soul and is written to the account
+   * by `syncPushLocale`). Best effort: a failed read, or a locale this App lacks,
+   * keeps the device's.
+   */
+  const adoptAccountLocale = useCallback(() => {
+    if (isLocale(platform().persistent.get(LOCALE_COOKIE))) return;
+    soulApi.notificationSettings().then(
+      ({ locale }) => {
+        if (isLocale(locale)) setLocale(locale);
+      },
+      () => {}
+    );
+  }, [setLocale]);
+
+  const land = useCallback(
+    (profile: MeProfile) => {
+      setState(signedIn(profile));
+      adoptAccountLocale();
+    },
+    [adoptAccountLocale]
+  );
 
   /** Where every successful authentication lands: ask the server who we are. */
-  const enter = useCallback(() => soulApi.me().then(signedIn, stateAfterFailedMe).then(setState), []);
+  const enter = useCallback(
+    () => soulApi.me().then((p) => land(p), (e) => setState(stateAfterFailedMe(e))),
+    [land]
+  );
 
   const retryBoot = useCallback(() => {
     setState({ status: "booting" });
@@ -90,7 +122,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   // A stored refresh token from a previous run: ask the server whether it still holds.
   useEffect(() => {
-    if (getRefreshToken()) soulApi.me().then(signedIn, stateAfterFailedMe).then(setState);
+    if (getRefreshToken()) void enter();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- boot runs once
   }, []);
 
   // 地府's plaque face starts loading the moment the session knows the soul is 地府's, and

@@ -889,7 +889,11 @@ def test_an_application_rejected_before_the_dispatch_can_be_appealed_during_resi
 def _me_tenant(code):
     """/me 的租户:殿司展示名没填时三语都退回 display_name(`Tenant.hall_names`)。"""
     name = f"{code} 名"
-    return {"code": code, "display_name": name, "hall_names": {"zh-Hans": name, "en": name, "egy": name}}
+    # seal_glyphs:v2「朱印」给 /me 的租户加的印文(未设 = 空,App 退回默认印文)。
+    return {
+        "code": code, "display_name": name, "hall_names": {"zh-Hans": name, "en": name, "egy": name},
+        "seal_glyphs": [],
+    }
 
 
 def test_me_reports_home_and_residence(cn, eg):

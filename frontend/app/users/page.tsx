@@ -20,6 +20,7 @@ import { Badge } from "@/src/components/ui/Badge";
 import { fieldControl } from "@/src/components/ui/Field";
 import { cn } from "@/lib/utils";
 import { FilterChipSelect } from "@/src/components/ui/FilterChip";
+import { EvalIdentityTag } from "@/src/components/assist-admin/parts";
 
 /**
  * The row `?username=` located: s2 底(选中行),**不加行首色标** —— 规范 v2 B12 把行首色标
@@ -217,6 +218,7 @@ function UsersRoute() {
               <Badge tone={user.is_active ? "success" : "neutral"} glyph={user.is_active ? "✓" : "○"}>
                 {user.is_active ? t("users.active") : t("users.inactive")}
               </Badge>
+              {user.is_eval_identity && <EvalIdentityTag />}
             </td>
             <td className={cn("px-4 py-3 text-right", user.username === located && LOCATED_BG)}>
               <div className="flex items-center justify-end gap-1">

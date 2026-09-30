@@ -105,6 +105,8 @@ describe("the five strips read it from there", () => {
     "app/social/page.tsx",
     "app/workflow/[id]/page.tsx",
     "app/workflow/page.tsx",
+    // 2026-09-29:助手管理的「配置与测试 / 实际用量」两个页签(两条路由,Link 而非 button)。
+    "src/components/assist-admin/parts.tsx",
   ];
 
   it("exactly these files import the module", () => {
