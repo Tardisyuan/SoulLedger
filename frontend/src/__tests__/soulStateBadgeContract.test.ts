@@ -99,7 +99,7 @@ describe("glyphs carry the distinction colour no longer does", () => {
   });
 
   it("draws C15's glyphs for the real enum", () => {
-    expect(SOUL_STATE_GLYPH).toEqual({ ALIVE: "○", JUDGING: "◇", DISPOSED: "▣", REINCARNATING: "↻", LOST: "◌", SETTLED: "◎" });
+    expect(SOUL_STATE_GLYPH).toEqual({ ALIVE: "○", JUDGING: "◇", DISPOSED: "▣", REINCARNATING: "↻", LOST: "◌", SETTLED: "≡" });
     expect(VERDICT_GLYPH).toEqual({ PASSED: "✓", FAILED: "✕", PURGATORY: "◇", RETRY: "↺" });
   });
 
