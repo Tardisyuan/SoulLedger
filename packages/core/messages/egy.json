@@ -3809,19 +3809,19 @@
   "soul_mail": {
     "footer": "Shemes Pen Hab In Hemsu. Nen Shesep Wesheb.",
     "reset_code": {
-      "title": "Hesb Maa Wehem Sekhem",
+      "title": "Wehem Sekhem · Hesb Maa",
       "code_label": "Hesb Maa",
-      "note": "Wenen At 5. Nen Djes: Imen.",
-      "text": "Hesb Maa-Ek: {{code}}\nWenen At 5. Nen Djes: Imen."
+      "note": "Wenen At 5. Nen Djes: Nen Iri Khet.",
+      "text": "Hesb Maa-Ek: {{code}}\nWenen At 5. Nen Djes: Nen Iri Khet."
     },
     "credential": {
-      "title": "Aq Ba",
+      "title": "Aq En Ba",
       "soul_code_label": "Ren Hesb Ba",
       "password_label": "Sekhem Tepy",
       "expires_label": "Wenen Er",
       "note_change": "Khemen Sekhem Em Aq Tepy.",
-      "note_once": "Sekhem Pen Hab Wa Djer. Wenen Khetem Seth Ky Nen Gem: Sab En Per-Ek Wehem Sekhem.",
-      "text": "Ren Hesb Ba-Ek: {{soul_code}}\nSekhem Tepy: {{password}}\nWenen Er {{expires_at}}. Khemen Sekhem Em Aq Tepy.\nSekhem Pen Hab Wa Djer. Wenen Khetem Seth Ky Nen Gem: Sab En Per-Ek Wehem Sekhem."
+      "note_once": "Sekhem Pen: Hab Sep 1 Wa. Wenen Khetem Seth Ky Nen Gem: Sab En Per-Ek Wehem Sekhem.",
+      "text": "Ren Hesb Ba-Ek: {{soul_code}}\nSekhem Tepy: {{password}}\nWenen Er {{expires_at}}. Khemen Sekhem Em Aq Tepy.\nSekhem Pen: Hab Sep 1 Wa. Wenen Khetem Seth Ky Nen Gem: Sab En Per-Ek Wehem Sekhem."
     }
   },
   "officer_assist": {
