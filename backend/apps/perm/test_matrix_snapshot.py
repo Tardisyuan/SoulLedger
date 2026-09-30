@@ -825,6 +825,9 @@ def test_perm_permission_create_snapshot(role_clients, snapshot_tenant, role):
 @pytest.mark.parametrize("role", ROLES)
 def test_perm_assign_snapshot(role_clients, snapshot_tenant, role):
     """ADMIN's outcome and the others' 403 come from two different layers — that is the finding."""
+    from tests.perm_support import seeded_role
+
+    seeded_role("VIEWER")  # the role the request names; migration 0017 seeds it
     response = role_clients[role].post(
         "/api/v1/perm/role-permissions/assign/",
         {"role": "VIEWER", "permission_ids": []},
@@ -968,7 +971,9 @@ def workflow_forced_onto_the_dict_path(db):
     """
     from apps.perm.cache import invalidate_all_permissions
     from apps.perm.models import Permission
+    from tests.perm_support import seeded_grants
 
+    seeded_grants()  # the rows migrations 0013/0017 seed; a transactional test before this one truncated them
     removed = sorted(
         Permission.all_objects.filter(codename__startswith="workflow.").values_list(
             "codename", flat=True
