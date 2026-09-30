@@ -104,11 +104,11 @@ describe("PageShell · variant 决定列宽", () => {
     }
   });
 
-  it("full 下仍然保留规范 v1 的页边距（桌面 40px / 手机 16px；不设上限 ≠ 顶到边）", () => {
+  it("full 下仍然保留规范 v2 的内容边距（桌面 32px / 手机 16px；不设上限 ≠ 顶到边）", () => {
     const { container } = renderFull("full");
     for (const slot of WIDTH_SLOTS) {
       expect(widthBox(container, slot).className).toMatch(/\bpx-4\b/);
-      expect(widthBox(container, slot).className).toMatch(/\bmd:px-10\b/);
+      expect(widthBox(container, slot).className).toMatch(/\bmd:px-8\b/);
     }
   });
 });
@@ -417,8 +417,8 @@ describe("PageShell density", () => {
     expect(body).toHaveAttribute("data-density", "table");
     expect(body?.className).toContain("py-6");
     // 断言缺席:默认档不许悄悄带上文档档的节奏。
-    expect(body?.className).not.toContain("pt-10");
-    expect(body?.className).not.toContain("pb-16");
+    expect(body?.className).not.toContain("pt-8");
+    expect(body?.className).not.toContain("pb-12");
   });
 
   it("document actually changes the body rhythm", () => {
@@ -427,8 +427,8 @@ describe("PageShell density", () => {
     );
     const body = container.querySelector("[data-page-shell-body]");
     expect(body).toHaveAttribute("data-density", "document");
-    expect(body?.className).toContain("pt-10");
-    expect(body?.className).toContain("pb-14");
+    expect(body?.className).toContain("pt-8");
+    expect(body?.className).toContain("pb-12");
     expect(body?.className).not.toContain("py-6");
   });
 

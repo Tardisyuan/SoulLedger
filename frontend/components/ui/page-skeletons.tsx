@@ -39,7 +39,7 @@ function PageHead({ withTabs }: { withTabs?: boolean }) {
   return (
     <>
       <header className="border-b border-[oklch(var(--color-hairline))]">
-        <div className="max-w-page mx-auto px-6 pt-10 pb-6">
+        <div className="max-w-page mx-auto px-4 md:px-8 pt-8 pb-6">
           <div className="flex items-start gap-4">
             <div className={`h-10 w-64 ${BLOCK}`} />
             <div className={`ml-auto h-9 w-32 ${BLOCK}`} />
@@ -49,7 +49,7 @@ function PageHead({ withTabs }: { withTabs?: boolean }) {
       </header>
       {withTabs && (
         <div className="border-b border-[oklch(var(--color-hairline))]">
-          <div className="max-w-page mx-auto px-6 flex items-center gap-1">
+          <div className="max-w-page mx-auto px-4 md:px-8 flex items-center gap-1">
             <div className={`h-10 w-24 ${BLOCK}`} />
             <div className={`h-10 w-24 ${BLOCK}`} />
           </div>
