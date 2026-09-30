@@ -17,21 +17,23 @@ import {
   type SentenceStationStatus,
 } from "@soulledger/core/api/soul";
 import { useNavigation, type NavigationProp } from "@react-navigation/native";
-import { useEffect, type ReactNode } from "react";
-import { Pressable, StyleSheet, View, type LayoutChangeEvent } from "react-native";
+import { useEffect, useState, type ReactNode } from "react";
+import { Pressable, StyleSheet, View } from "react-native";
 import Svg, { Line } from "react-native-svg";
 
 import { Emblem, Node } from "../emblems";
 import { useI18n } from "../i18n";
+import { termServed } from "../rules";
 import { civKeyOf } from "../theme";
 import {
   Button,
   Empty,
+  FailedLine,
   GUTTER,
   Screen,
   ScreenError,
+  Section,
   Skeleton,
-  SmallButton,
   Txt,
   enumText,
   useLayout,
@@ -79,8 +81,8 @@ function NewTag({ testID }: { testID?: string }) {
   const theme = useTheme();
   const { t } = useI18n();
   return (
-    <View testID={testID} style={[styles.newTag, { borderColor: theme.accent }]}>
-      <Txt variant="label" tone="accent" style={styles.newTagText}>
+    <View testID={testID} style={[styles.newTag, { borderColor: theme.ink }]}>
+      <Txt variant="label" tone="ink" style={styles.newTagText}>
         {t("soul_app.sentence.amended_tag")}
       </Txt>
     </View>
@@ -97,7 +99,7 @@ function StationNode({ station, size = 13 }: { station: MeSentenceStation; size?
       testID={`station-node-${station.n}-${civ}`}
       civ={civ}
       size={size}
-      stroke={reached ? theme.mark : theme.hair2}
+      stroke={reached ? theme.ink : theme.hair2}
       filled={station.status === "done" || station.status === "eternal"}
       current={OCCUPYING.includes(station.status)}
     />
@@ -107,7 +109,7 @@ function StationNode({ station, size = 13 }: { station: MeSentenceStation; size?
 /** Solid = recorded, dashed = not yet / never (1g). */
 function Link({ recorded, vertical, testID }: { recorded: boolean; vertical?: boolean; testID?: string }) {
   const theme = useTheme();
-  const common = { stroke: recorded ? theme.mark : theme.hair2, strokeWidth: 1.2, strokeDasharray: recorded ? undefined : "3 3" };
+  const common = { stroke: recorded ? theme.ink : theme.hair2, strokeWidth: 1.2, strokeDasharray: recorded ? undefined : "3 3" };
   return (
     <View testID={testID} style={vertical ? styles.linkV : styles.linkH}>
       <Svg width={vertical ? 2 : "100%"} height={vertical ? "100%" : 2}>
@@ -144,8 +146,8 @@ function CivLine({ station }: { station: MeSentenceStation }) {
   const name = underworld(station.civilization);
   return (
     <View style={styles.civLine}>
-      <Emblem civ={civ} size={12} stroke={away ? theme.accent : theme.mark} />
-      <Txt variant="label" tone={away ? "accent" : "mark"} style={styles.shrink}>
+      <Emblem civ={civ} size={12} stroke={away ? theme.inkSubtle : theme.inkMuted} />
+      <Txt variant="label" tone={away ? "subtle" : "muted"} style={styles.shrink}>
         {suffix ? `${name} · ${suffix}` : name}
       </Txt>
     </View>
@@ -211,7 +213,7 @@ function StationDetail({ station, fresh, landing }: { station: MeSentenceStation
 function StatusText({ station, withEnd }: { station: MeSentenceStation; withEnd?: boolean }) {
   const { t } = useI18n();
   const here = OCCUPYING.includes(station.status);
-  const tone = station.status === "pending" ? "subtle" : station.status === "pardoned" ? "muted" : here ? "accent" : "mark";
+  const tone = station.status === "pending" ? "subtle" : station.status === "pardoned" ? "muted" : here ? "ink" : "muted";
   const state = t(STATUS_KEY[station.status]);
   return (
     <Txt testID={`station-${station.n}-status`} variant="caption" tone={tone}>
@@ -234,28 +236,6 @@ function Axis({ plan }: { plan: MeSentencePlan }) {
   );
 }
 
-/** The 3px mark rule down the section's left — "the block to read on this page" — and, on a landing, the tag. */
-function Ruled({
-  landed,
-  children,
-  testID,
-  onLayout,
-}: {
-  landed: boolean;
-  children: ReactNode;
-  testID?: string;
-  onLayout?: (e: LayoutChangeEvent) => void;
-}) {
-  const theme = useTheme();
-  const { gutter } = useLayout();
-  return (
-    <View testID={testID} onLayout={onLayout} style={[styles.ruled, { paddingHorizontal: gutter, borderBottomColor: theme.hair }, landed && { backgroundColor: theme.s1 }]}>
-      <View testID={landed ? "sentence-landing-rule" : undefined} pointerEvents="none" style={[styles.rule, { backgroundColor: theme.mark }]} />
-      {children}
-    </View>
-  );
-}
-
 function ApplyRow({ plan }: { plan: MeSentencePlan }) {
   const { t } = useI18n();
   const navigation = useNavigation<NavigationProp<AppStackParams>>();
@@ -264,8 +244,9 @@ function ApplyRow({ plan }: { plan: MeSentencePlan }) {
 }
 
 /**
- * 1b: on the life page, between judgments and dispositions. One axis, the
- * current station in full; the rest behind 「全部」.
+ * 补足 B11: the fifth of the life page's six folding sections. One axis, the current
+ * station in full, and — the page's one status colour — how much of its term is served;
+ * the rest behind 「全部」. A push landing opens it, whatever the soul folded.
  */
 export type SentenceRemote = ReturnType<typeof useSentencePlan>;
 
@@ -285,15 +266,38 @@ export function useSentencePlan({ landing, reloadKey }: { landing?: SentenceLand
   return remote;
 }
 
+/** B11: the served share of the current station's term, in warn — the only status colour on the page. */
+function Served({ station }: { station: MeSentenceStation }) {
+  const theme = useTheme();
+  const [now] = useState(() => Date.now());
+  const served = station.is_eternal ? null : termServed(station.started_on, station.ends_on, now);
+  if (served === null) return null;
+  const pct = `${Math.round(served * 100)}%` as const;
+  return (
+    <View testID="sentence-served" accessible accessibilityRole="progressbar" accessibilityValue={{ min: 0, max: 100, now: Math.round(served * 100) }} style={styles.served}>
+      <View style={[styles.servedTrack, { backgroundColor: theme.s2 }]}>
+        <View testID="sentence-served-bar" style={[styles.servedBar, { width: pct, backgroundColor: theme.warn }]} />
+      </View>
+      <Txt variant="value" tone="muted">
+        {pct}
+      </Txt>
+    </View>
+  );
+}
+
 export function SentenceSection({
   remote,
   landing,
   onPlaced,
+  open = true,
+  onToggle,
 }: {
   remote: SentenceRemote;
   landing?: SentenceLanding;
   /** The section's top within its parent — the life page scrolls a landing to it. */
   onPlaced?: (y: number) => void;
+  open?: boolean;
+  onToggle?: () => void;
 }) {
   const { t } = useI18n();
   const navigation = useNavigation<NavigationProp<AppStackParams>>();
@@ -302,22 +306,27 @@ export function SentenceSection({
   const hasPlan = !!plan && plan.state !== "none";
   const final = plan?.state === "eternal";
   return (
-    <Ruled landed={!!landing} testID="section-sentence" onLayout={onPlaced && ((e) => onPlaced(e.nativeEvent.layout.y))}>
-      <View style={styles.head}>
-        <Txt variant="section">{t("soul_app.sentence.section_title")}</Txt>
-        {hasPlan && current && !final ? (
-          <Txt testID="sentence-progress" variant="value" tone="subtle">
-            {t("soul_app.sentence.progress", { cur: String(current.n), total: String(plan.stations.length) })}
-          </Txt>
-        ) : null}
-        <View style={styles.fill} />
-        {landing ? <NewTag testID="sentence-landing-tag" /> : null}
-        {hasPlan ? (
-          <Pressable testID="sentence-all" accessibilityRole="button" hitSlop={8} onPress={() => navigation.navigate("Sentence", { landing })}>
-            <Txt variant="caption" tone="accent">{`${t("soul_app.sentence.all")} →`}</Txt>
-          </Pressable>
-        ) : null}
-      </View>
+    <Section
+      testID="section-sentence"
+      title={t("soul_app.sentence.section_title")}
+      count={hasPlan && current && !final ? t("soul_app.sentence.progress", { cur: String(current.n), total: String(plan.stations.length) }) : undefined}
+      countTestID="sentence-progress"
+      open={open || !!landing}
+      onToggle={onToggle}
+      highlighted={!!landing}
+      onLayout={onPlaced && ((e) => onPlaced(e.nativeEvent.layout.y))}
+    >
+      {landing || hasPlan ? (
+        <View style={styles.head}>
+          {landing ? <NewTag testID="sentence-landing-tag" /> : null}
+          <View style={styles.fill} />
+          {hasPlan ? (
+            <Pressable testID="sentence-all" accessibilityRole="button" hitSlop={8} onPress={() => navigation.navigate("Sentence", { landing })}>
+              <Txt variant="caption" tone="ink" style={styles.link}>{`${t("soul_app.sentence.all")} →`}</Txt>
+            </Pressable>
+          ) : null}
+        </View>
+      ) : null}
       {plan ? (
         !hasPlan ? (
           <Empty testID="sentence-empty" text={t("soul_app.sentence.empty")} />
@@ -328,6 +337,7 @@ export function SentenceSection({
               <>
                 <StationDetail station={current} fresh={isNew(landing, current, plan)} landing={landing} />
                 <StatusText station={current} />
+                {OCCUPYING.includes(current.status) ? <Served station={current} /> : null}
               </>
             ) : null}
             {plan.state === "completed" && plan.rebirth_open ? <Txt variant="bodyLg">{t("soul_app.sentence.all_done_title")}</Txt> : null}
@@ -335,11 +345,8 @@ export function SentenceSection({
           </View>
         )
       ) : remote.error ? (
-        <View testID="sentence-error" style={styles.errorRow}>
-          <Txt variant="caption" tone="muted" style={styles.fill}>
-            {t("soul_app.sentence.error")}
-          </Txt>
-          <SmallButton testID="sentence-retry" title={t("soul_app.common.retry")} onPress={() => void remote.reload()} />
+        <View testID="sentence-error">
+          <FailedLine text={t("soul_app.sentence.error")} retryTestID="sentence-retry" onRetry={() => void remote.reload()} />
         </View>
       ) : (
         <View testID="sentence-loading" style={styles.sectionBody}>
@@ -349,7 +356,7 @@ export function SentenceSection({
           </Txt>
         </View>
       )}
-    </Ruled>
+    </Section>
   );
 }
 
@@ -359,7 +366,7 @@ function Banner({ plan }: { plan: MeSentencePlan }) {
   const { t } = useI18n();
   const copy: Partial<Record<MeSentencePlan["state"], { title: string; body: string[]; tone: string }>> = {
     between: { title: "soul_app.sentence.next_not_started", body: ["soul_app.sentence.next_not_started_body"], tone: theme.hair2 },
-    waiting: { title: "soul_app.sentence.state.waiting", body: ["soul_app.sentence.waiting_why"], tone: theme.accent },
+    waiting: { title: "soul_app.sentence.state.waiting", body: ["soul_app.sentence.waiting_why"], tone: theme.ink },
     eternal: { title: "soul_app.sentence.eternal_title", body: ["soul_app.sentence.eternal_body", "soul_app.sentence.eternal_no_rebirth"], tone: theme.hair2 },
     pardoned: { title: "soul_app.sentence.pardoned_title", body: ["soul_app.sentence.pardoned_body"], tone: theme.pos },
     completed: {
@@ -397,7 +404,7 @@ function StationRow({ station, next, plan, landing }: { station: MeSentenceStati
         {next ? <Link vertical recorded={recordedTo(next)} testID={`list-link-${next.n}`} /> : null}
       </View>
       <View style={[styles.fill, next && styles.stationGap]}>
-        <View style={[here && [styles.here, { borderColor: theme.mark, backgroundColor: theme.s1 }]]}>
+        <View style={[here && [styles.here, { borderColor: theme.ink, backgroundColor: theme.s1 }]]}>
           <StationDetail station={station} fresh={isNew(landing, station, plan)} landing={landing} />
           <View style={styles.rows}>
             <Row label={t("soul_app.sentence.field_state")}>
@@ -405,7 +412,7 @@ function StationRow({ station, next, plan, landing }: { station: MeSentenceStati
             </Row>
           </View>
           {station.status === "waiting" ? (
-            <Txt testID={`station-${station.n}-why`} variant="caption" tone="muted" style={[styles.why, { borderLeftColor: theme.accent }]}>
+            <Txt testID={`station-${station.n}-why`} variant="caption" tone="muted" style={[styles.why, { borderLeftColor: theme.inkSubtle }]}>
               {t("soul_app.sentence.waiting_why")}
             </Txt>
           ) : null}
@@ -447,7 +454,7 @@ export function SentenceScreen({ landing }: { landing?: SentenceLanding }) {
       ) : (
         <>
           {residence ? (
-            <View testID="sentence-residing" style={[styles.banner, { borderBottomColor: theme.hair, borderLeftColor: theme.accent, backgroundColor: theme.s1 }]}>
+            <View testID="sentence-residing" style={[styles.banner, { borderBottomColor: theme.hair, borderLeftColor: theme.ink, backgroundColor: theme.s1 }]}>
               <Txt variant="bodyLg">{t("soul_app.life.residing", residence)}</Txt>
               <Txt variant="caption" tone="muted">
                 {t("soul_app.sentence.residing_body", residence)}
@@ -495,7 +502,7 @@ export function SentenceBlocked() {
   const plan = remote.data;
   const current = plan ? currentStation(plan) : null;
   return (
-    <View testID="sentence-blocked" style={[styles.blocked, { borderColor: theme.hair, borderLeftColor: theme.accent, backgroundColor: theme.s1 }]}>
+    <View testID="sentence-blocked" style={[styles.blocked, { borderColor: theme.hair, borderLeftColor: theme.ink, backgroundColor: theme.s1 }]}>
       <Txt variant="bodyLg">{t("soul_app.sentence.blocked_title")}</Txt>
       <Txt variant="caption" tone="muted">
         {plan && plan.stations.length
@@ -521,7 +528,7 @@ export function SentenceBlocked() {
         </View>
       ) : null}
       <Pressable testID="sentence-blocked-link" accessibilityRole="link" hitSlop={8} onPress={() => navigation.navigate("Sentence", {})}>
-        <Txt variant="caption" tone="accent">{`${t("soul_app.sentence.blocked_link")} →`}</Txt>
+        <Txt variant="caption" tone="ink" style={styles.link}>{`${t("soul_app.sentence.blocked_link")} →`}</Txt>
       </Pressable>
     </View>
   );
@@ -530,32 +537,33 @@ export function SentenceBlocked() {
 const styles = StyleSheet.create({
   fill: { flex: 1 },
   shrink: { flexShrink: 1 },
-  ruled: { borderBottomWidth: 1, paddingVertical: 16, gap: 12 },
-  rule: { position: "absolute", left: 0, top: 0, bottom: 0, width: 3 },
-  head: { flexDirection: "row", alignItems: "center", gap: 12, flexWrap: "wrap" },
+  head: { flexDirection: "row", alignItems: "center", gap: 12, flexWrap: "wrap", marginBottom: 8 },
+  link: { textDecorationLine: "underline" },
+  served: { flexDirection: "row", alignItems: "center", gap: 12 },
+  servedTrack: { flex: 1, height: 6 },
+  servedBar: { height: 6 },
   sectionBody: { gap: 12 },
-  newTag: { borderWidth: 1, paddingHorizontal: 5, paddingVertical: 1 },
+  newTag: { borderWidth: 1, paddingHorizontal: 4, paddingVertical: 2 },
   newTagText: { fontSize: 11, lineHeight: 14 },
-  axis: { flexDirection: "row", alignItems: "center", paddingVertical: 6 },
+  axis: { flexDirection: "row", alignItems: "center", paddingVertical: 8 },
   axisStep: { flex: 1, flexDirection: "row", alignItems: "center" },
-  linkH: { flex: 1, height: 2, marginHorizontal: 6 },
-  linkV: { flex: 1, width: 2, marginVertical: 5 },
-  civLine: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 6 },
-  stationHead: { flexDirection: "row", alignItems: "baseline", gap: 9, flexWrap: "wrap" },
+  linkH: { flex: 1, height: 2, marginHorizontal: 8 },
+  linkV: { flex: 1, width: 2, marginVertical: 4 },
+  civLine: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 8 },
+  stationHead: { flexDirection: "row", alignItems: "baseline", gap: 8, flexWrap: "wrap" },
   rows: { marginTop: 8, gap: 4 },
   row: { flexDirection: "row", gap: 16 },
   rowLabel: { minWidth: 36 },
   struck: { opacity: 0.62 },
   strike: { textDecorationLine: "line-through" },
-  errorRow: { flexDirection: "row", alignItems: "center", gap: 12 },
   banner: { paddingHorizontal: GUTTER, paddingVertical: 16, borderBottomWidth: 1, borderLeftWidth: 3, gap: 8 },
   summary: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 16, borderBottomWidth: 1 },
   stationRow: { flexDirection: "row", gap: 16 },
   rail: { width: 13, alignItems: "center" },
-  nodeNudge: { marginTop: 5 },
+  nodeNudge: { marginTop: 4 },
   stationGap: { paddingBottom: 20 },
-  here: { borderWidth: 1, paddingHorizontal: 16, paddingVertical: 13 },
-  why: { marginTop: 11, borderLeftWidth: 2, paddingLeft: 12 },
+  here: { borderWidth: 1, paddingHorizontal: 16, paddingVertical: 12 },
+  why: { marginTop: 12, borderLeftWidth: 2, paddingLeft: 12 },
   blocked: { borderWidth: 1, borderLeftWidth: 3, padding: 16, gap: 8 },
   blockedStation: { borderTopWidth: 1, paddingTop: 12, gap: 4 },
 });

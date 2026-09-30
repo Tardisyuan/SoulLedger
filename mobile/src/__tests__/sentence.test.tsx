@@ -359,7 +359,7 @@ describe("a sentence push (1d)", () => {
     expect(screen.queryByTestId("sentence-landing-tag")).toBeNull();
     tap({ screen: "Life", kind: "sentence_completed" });
     await screen.findByTestId("sentence-landing-tag");
-    expect(StyleSheet.flatten(screen.getByTestId("sentence-landing-rule").props.style)).toMatchObject({ width: 3 });
+    expect(StyleSheet.flatten(screen.getByTestId("section-sentence-rule").props.style)).toMatchObject({ width: 3 });
     expect(await screen.findByTestId("station-3-new")).toBeTruthy();
     expect(screen.getByTestId("sentence-apply")).toBeTruthy();
     // Leave (to the applications tab) and come back by the tab bar — which keeps a tab's params,

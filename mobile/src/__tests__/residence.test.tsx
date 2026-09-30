@@ -16,7 +16,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { I18nProvider } from "../i18n";
 import { RootNavigator } from "../navigation";
 import { installMobilePlatform, persistentStore } from "../platform";
-import { RESIDENCE_MEMO_PREFIX } from "../screens/life";
+import { LIFE_OPEN_PREFIX, RESIDENCE_MEMO_PREFIX } from "../screens/life";
 import { SessionProvider } from "../session";
 import { themeFor } from "../theme";
 import { PROFILE, application, life, pressTab, stubApi } from "./stubApi";
@@ -68,6 +68,8 @@ beforeEach(async () => {
   await AsyncStorage.clear();
   // The persistent port's synchronous cache outlives AsyncStorage.clear().
   persistentStore.remove(`${RESIDENCE_MEMO_PREFIX}${PROFILE.soul_code}`);
+  // …and so does which life sections the soul opened (B11 remembers them per soul).
+  persistentStore.remove(`${LIFE_OPEN_PREFIX}${PROFILE.soul_code}`);
 });
 
 const background = (el: { props: { style?: unknown } }) =>

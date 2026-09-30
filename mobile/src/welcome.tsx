@@ -118,7 +118,7 @@ export function Welcome({ profile, scheme }: { profile: MeProfile; scheme: Color
         style={[StyleSheet.absoluteFill, { backgroundColor: civ[shown.from][scheme].s1 }]}
       >
         <Animated.View testID={`welcome-${shown.from}-${to.civ}`} style={[styles.top, { backgroundColor: to.s1, opacity: top }]}>
-          <Hero civ={to.civ} stroke={to.mark} size={96} strokeWidth={0.9} />
+          <Hero civ={to.civ} stroke={to.plaque} size={96} strokeWidth={0.9} />
           <View style={styles.text}>
             <Txt variant="title" style={[styles.center, { color: to.ink }]}>
               {text}
@@ -131,7 +131,7 @@ export function Welcome({ profile, scheme }: { profile: MeProfile; scheme: Color
 }
 
 const styles = StyleSheet.create({
-  top: { ...StyleSheet.absoluteFill, alignItems: "center", justifyContent: "center", gap: 16, paddingHorizontal: 28 },
+  top: { ...StyleSheet.absoluteFill, alignItems: "center", justifyContent: "center", gap: 16, paddingHorizontal: 24 },
   text: { alignSelf: "stretch" },
   center: { textAlign: "center" },
 });

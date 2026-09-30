@@ -47,6 +47,7 @@ import {
   type ViewStyle,
   useWindowDimensions,
 } from "react-native";
+import Reanimated, { Easing as REasing, FadeOut, Keyframe } from "react-native-reanimated";
 import { SafeAreaView, type Edge } from "react-native-safe-area-context";
 
 import { Emblem, Hero, Icon, LedgerUnreachable } from "./emblems";
@@ -130,13 +131,14 @@ export const TYPE = {
   body: { fontSize: 13, lineHeight: 20, fontFamily: family.ui[400] },
   bodyLg: { fontSize: 15, lineHeight: 24, fontFamily: family.ui[500] },
   label: { fontSize: 12, lineHeight: 18, fontFamily: family.ui[500], letterSpacing: 1 },
-  section: { fontSize: 13, lineHeight: 20, fontFamily: family.ui[600], letterSpacing: 1.75 },
+  /** 补足 B11: a section's title, 15 / 600 on its 48pt row. */
+  section: { fontSize: 15, lineHeight: 24, fontFamily: family.ui[600] },
   caption: { fontSize: 12, lineHeight: 18, fontFamily: family.ui[400] },
   value: { fontSize: 13, lineHeight: 20, fontFamily: family.mono[400] },
   valueLg: { fontSize: 28, lineHeight: 36, fontFamily: family.mono[500] },
 } satisfies Record<string, TextStyle>;
 
-export type Tone = "ink" | "muted" | "subtle" | "accent" | "mark" | "neg" | "negInk" | "pos" | "onAccent";
+export type Tone = "ink" | "muted" | "subtle" | "neg" | "negInk" | "pos" | "warn";
 
 export function toneColor(t: Theme, tone: Tone): string {
   switch (tone) {
@@ -210,7 +212,7 @@ export function usePullRefresh(refreshing: boolean | undefined, onRefresh: (() =
         setPulled(true);
         onRefresh();
       }}
-      tintColor={t.accent}
+      tintColor={t.inkSubtle}
     />
   ) : undefined;
 }
@@ -287,32 +289,59 @@ export function Block({
 }
 
 /**
+ * 交互与动效 第 2 轮 4b: a section's body appears — opacity 0 → 1, 4pt down into place, over
+ * `sectionIn` (base 200) — and goes over `sectionOut` (fast 120). Its height changes at
+ * once, never animated (no layout jump). A zero duration (reduce motion) is no animation.
+ */
+export function sectionTransitions(inMs: number, outMs: number) {
+  return {
+    entering: inMs
+      ? new Keyframe({
+          0: { opacity: 0, transform: [{ translateY: -4 }] },
+          100: { opacity: 1, transform: [{ translateY: 0 }], easing: REasing.bezier(0, 0, 0.2, 1) },
+        }).duration(inMs)
+      : undefined,
+    exiting: outMs ? FadeOut.duration(outMs) : undefined,
+  };
+}
+
+/**
  * A titled part of a screen. With `onToggle` its header is a disclosure — a
- * button whose accessibility state says expanded or not, and nothing else.
+ * button whose accessibility state says expanded or not, and nothing else. Its body
+ * moves only when the soul toggles it: a section open on arrival just is.
+ * `highlighted`: the block a push landed on — s1 ground and a 3pt ink rule down its left.
  */
 export function Section({
   title,
   count,
+  countTestID,
   open = true,
   onToggle,
+  highlighted,
+  onLayout,
   children,
   testID,
 }: {
   title: string;
   count?: string;
+  countTestID?: string;
   open?: boolean;
   onToggle?: () => void;
+  highlighted?: boolean;
+  onLayout?: (e: LayoutChangeEvent) => void;
   children: ReactNode;
   testID?: string;
 }) {
   const t = useTheme();
   const { gutter } = useLayout();
+  const { sectionIn, sectionOut } = useReducedMotionDurations();
+  const [toggled, setToggled] = useState(false);
   const pad = { paddingHorizontal: gutter };
   const header = (
     <>
       <Txt variant="section">{title}</Txt>
       {count ? (
-        <Txt variant="value" tone="subtle" style={styles.count}>
+        <Txt testID={countTestID} variant="value" tone="subtle" style={styles.count}>
           {count}
         </Txt>
       ) : null}
@@ -324,14 +353,25 @@ export function Section({
       ) : null}
     </>
   );
+  const motion = toggled ? sectionTransitions(sectionIn, sectionOut) : { entering: undefined, exiting: undefined };
   return (
-    <View testID={testID} style={{ borderBottomWidth: 1, borderBottomColor: t.hair }}>
+    <View
+      testID={testID}
+      onLayout={onLayout}
+      style={[{ borderBottomWidth: 1, borderBottomColor: t.hair }, highlighted && { backgroundColor: t.s1 }]}
+    >
+      {highlighted ? (
+        <View testID={testID ? `${testID}-rule` : undefined} pointerEvents="none" style={[styles.sectionRule, { backgroundColor: t.ink }]} />
+      ) : null}
       {onToggle ? (
         <Pressable
           testID={testID ? `${testID}-toggle` : undefined}
           accessibilityRole="button"
           accessibilityState={{ expanded: open }}
-          onPress={onToggle}
+          onPress={() => {
+            setToggled(true);
+            onToggle();
+          }}
           style={({ pressed }) => [styles.sectionHeader, pad, pressed && styles.pressed]}
         >
           {header}
@@ -339,7 +379,11 @@ export function Section({
       ) : (
         <View style={[styles.sectionHeader, pad]}>{header}</View>
       )}
-      {open ? <View style={[styles.sectionBody, pad]}>{children}</View> : null}
+      {open ? (
+        <Reanimated.View testID={testID ? `${testID}-body` : undefined} entering={motion.entering} exiting={motion.exiting} style={[styles.sectionBody, pad]}>
+          {children}
+        </Reanimated.View>
+      ) : null}
     </View>
   );
 }
@@ -368,7 +412,7 @@ export function PageEmptyArt() {
   const compact = useFlavorCompact();
   return (
     <View style={styles.emptyArt}>
-      <Hero testID={`empty-hero-${t.civ}`} civ={t.civ} stroke={t.mark} compact={compact} />
+      <Hero testID={`empty-hero-${t.civ}`} civ={t.civ} stroke={t.inkSubtle} compact={compact} />
     </View>
   );
 }
@@ -709,14 +753,30 @@ export function ScreenError({ error, onRetry }: { error: SoulErrorMessage; onRet
   );
 }
 
-/** One part of a screen failed; the rest renders as usual. */
+/**
+ * One part of a screen failed; the rest renders as usual. 补足 C15: said in 冷玫红 with a
+ * ✕ — an error is the system failing, the one thing neg is for — and a retry beside it.
+ */
 export function SectionError({ onRetry, testID }: { onRetry: () => void; testID?: string }) {
   const { t } = useI18n();
   return (
     <View style={styles.sectionBody}>
-      <Notice tone="neutral" onRetry={onRetry} testID={testID}>
-        {t("soul_app.errors.section")}
-      </Notice>
+      <FailedLine text={t("soul_app.errors.section")} onRetry={onRetry} testID={testID} />
+    </View>
+  );
+}
+
+/** "✕ 没能载入 …" in neg, and a ghost retry (补足 C15 空 · 出错 · 无权限). */
+export function FailedLine({ text, onRetry, testID, retryTestID }: { text: string; onRetry: () => void; testID?: string; retryTestID?: string }) {
+  const theme = useTheme();
+  const { t } = useI18n();
+  return (
+    <View accessibilityRole="alert" style={styles.failed}>
+      <Text style={[styles.failedText, { color: theme.neg }]}>✕</Text>
+      <Text testID={testID} style={[styles.failedText, styles.fill, { color: theme.neg }]}>
+        {text}
+      </Text>
+      <SmallButton testID={retryTestID} title={t("soul_app.common.retry")} onPress={onRetry} />
     </View>
   );
 }
@@ -794,8 +854,8 @@ export function EnumValue({
 
 export function Badge({ spec, label, raw, testID }: { spec: BadgeSpec; label: string; raw?: string | null; testID?: string }) {
   const t = useTheme();
-  const color = { accent: t.accent, neg: t.neg, pos: t.pos, muted: t.inkMuted, unknown: t.inkSubtle }[spec.tone];
-  const border = spec.tone === "unknown" ? t.hair2 : color;
+  // 补足 C15: ink words, an ink3 frame, s2 under what is still pending — no status colour.
+  const color = t.ink;
   return (
     <View
       testID={testID}
@@ -804,7 +864,11 @@ export function Badge({ spec, label, raw, testID }: { spec: BadgeSpec; label: st
       // Only the raw member may wrap onto its own line. A known pill never wraps: laid
       // out at exactly its own content width (a pill in a row), iOS measures the label a
       // hair wider and a wrapping pill puts the glyph over the label.
-      style={[styles.badge, raw ? styles.badgeWraps : null, { borderColor: border, borderStyle: spec.border }]}
+      style={[
+        styles.badge,
+        raw ? styles.badgeWraps : null,
+        { borderColor: t.inkSubtle, borderStyle: spec.border, backgroundColor: spec.pending ? t.s2 : "transparent" },
+      ]}
     >
       <Text style={[styles.badgeText, { color }]}>{spec.glyph}</Text>
       <Text style={[styles.badgeText, styles.shrink, { color }]}>{label}</Text>
@@ -831,8 +895,8 @@ export function EnumBadge({
   const { enumLabel, t } = useI18n();
   const d = enumLabel(namespace, value);
   const spec = badgeSpec(table, d.raw, d.state === "known");
-  const label = d.state === "known" && spec.tone !== "unknown" ? (lexiconLabel ?? d.label) : d.state === "missing" ? t("common.value.unrecorded") : t("common.value.unrecognized");
-  return <Badge testID={testID} spec={spec} label={label} raw={spec.tone === "unknown" ? d.raw : null} />;
+  const label = d.state === "known" && !spec.unknown ? (lexiconLabel ?? d.label) : d.state === "missing" ? t("common.value.unrecorded") : t("common.value.unrecognized");
+  return <Badge testID={testID} spec={spec} label={label} raw={spec.unknown ? d.raw : null} />;
 }
 
 /** Han characters (the same ranges `fonts.ts` picks the Han serif by): the one content language the app can name. */
@@ -848,7 +912,7 @@ export function Quote({ text, tone = "neutral", testID }: { text: string; tone?:
   const t = useTheme();
   const { t: tr, locale } = useI18n();
   const { compact } = useLayout();
-  const line = tone === "rejection" ? t.negStrong : tone === "appeal" ? t.accent : t.hair2;
+  const line = tone === "rejection" ? t.negStrong : tone === "appeal" ? t.ink : t.hair2;
   const han = HAN.test(text);
   return (
     <View style={[styles.quote, compact && styles.quoteCompact, { borderLeftColor: line }]}>
@@ -876,7 +940,7 @@ export function Quote({ text, tone = "neutral", testID }: { text: string; tone?:
 
 // ── loading ────────────────────────────────────────────────────────────
 
-/** Thin hairline-coloured bars in the shape of what is coming. No pulse. */
+/** 补足 C15: s2 bars in the shape of what is coming — static, no shimmer. */
 export function Skeleton({ lines = 3, testID }: { lines?: number; testID?: string }) {
   const t = useTheme();
   const { t: tr } = useI18n();
@@ -884,7 +948,7 @@ export function Skeleton({ lines = 3, testID }: { lines?: number; testID?: strin
   return (
     <View testID={testID} accessible accessibilityLabel={tr("soul_app.common.loading")} style={styles.skeleton}>
       {Array.from({ length: lines }, (_, i) => (
-        <View key={i} style={{ width: widths[i % widths.length], height: 12, backgroundColor: t.hair }} />
+        <View key={i} style={{ width: widths[i % widths.length], height: 12, backgroundColor: t.s2 }} />
       ))}
     </View>
   );
@@ -919,7 +983,7 @@ export function Loader({ size = 28, testID }: { size?: number; testID?: string }
       accessibilityState={{ busy: true }}
       style={{ opacity: reduced ? 1 : opacity }}
     >
-      <Hero civ={t.civ} stroke={t.mark} compact size={size} />
+      <Hero civ={t.civ} stroke={t.inkSubtle} compact size={size} />
     </Animated.View>
   );
 }
@@ -981,7 +1045,8 @@ export const styles = StyleSheet.create({
   pressed: { opacity: 0.8 },
   noSpacing: { letterSpacing: 0 },
   block: { paddingHorizontal: GUTTER, paddingVertical: GUTTER },
-  count: { marginLeft: space[3] },
+  count: { marginLeft: space[3], fontSize: 11, lineHeight: 16 },
+  sectionRule: { position: "absolute", left: 0, top: 0, bottom: 0, width: 3 },
   // B11: a section's title row is 48 high.
   sectionHeader: { minHeight: 48, flexDirection: "row", alignItems: "center", paddingHorizontal: GUTTER, paddingVertical: space[3] },
   sectionBody: { paddingHorizontal: GUTTER, paddingBottom: space[4] },
@@ -998,7 +1063,7 @@ export const styles = StyleSheet.create({
   reveal: { width: 52, alignItems: "center", justifyContent: "center", borderLeftWidth: 1 },
   revealRow: { minHeight: 60, alignItems: "center", justifyContent: "center", borderWidth: 1 },
   iconRow: { flexDirection: "row", gap: space[2], alignItems: "flex-start" },
-  iconNudge: { marginTop: 3 },
+  iconNudge: { marginTop: 4 },
   buttonWrap: { gap: space[3] },
   // A1: App buttons are 44 high, 13 / 600 — one size for all three kinds.
   button: {
@@ -1013,6 +1078,8 @@ export const styles = StyleSheet.create({
   },
   buttonText: { fontFamily: family.ui[600], fontSize: 13, lineHeight: 20, letterSpacing: 0.6, textAlign: "center" },
   notice: { flexDirection: "row", alignItems: "center", gap: space[2], borderWidth: 1, borderLeftWidth: 3, paddingVertical: space[3], paddingHorizontal: space[3] },
+  failed: { flexDirection: "row", alignItems: "center", gap: space[2] },
+  failedText: { fontFamily: family.ui[600], fontSize: 13, lineHeight: 20 },
   small: { borderWidth: 1, paddingHorizontal: space[3], paddingVertical: space[2] },
   screenError: { flex: 1, alignItems: "center", justifyContent: "center", gap: space[4], paddingHorizontal: space[6], paddingVertical: space[7] },
   retry: { alignSelf: "stretch", marginTop: space[1] },
@@ -1041,7 +1108,7 @@ export const styles = StyleSheet.create({
   quoteText: { fontSize: 15, lineHeight: 28 },
   quoteCompact: { paddingLeft: space[3] },
   original: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: space[2], marginTop: space[2] },
-  originalTag: { borderWidth: 1, borderStyle: "dashed", paddingHorizontal: space[1], paddingVertical: 1 },
+  originalTag: { borderWidth: 1, borderStyle: "dashed", paddingHorizontal: space[1], paddingVertical: 2 },
   originalText: { fontSize: 11, lineHeight: 16, letterSpacing: 0.4 },
   skeleton: { gap: space[3], paddingVertical: space[4] },
   radio: { width: 16, height: 16, borderWidth: 1.5, borderRadius: radius.pill, alignItems: "center", justifyContent: "center" },
