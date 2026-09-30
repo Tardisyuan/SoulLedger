@@ -149,5 +149,6 @@ export const SERVICE_CREDITS: ServiceCredit[] = [
  * 字体见 FONT_CREDITS。README 没写纸 / 莎草纸 / 大理石纹理的出处,所以这里不列它们。
  */
 export const DESIGN_CREDITS: { name: string; detail: string }[] = [
-  { name: "Claude Design", detail: "Anthropic · SoulLedger v2 · 朱印 · svg / icons" },
+  // 纹样带质感(paper / papyrus / marble 及深色 *-w)在规范 v2 定稿的授权表里标「本项目自有」:Design 自制,非馆藏。
+  { name: "Claude Design", detail: "Anthropic · SoulLedger v2 · 朱印 · svg / icons / textures (paper · papyrus · marble)" },
 ];
