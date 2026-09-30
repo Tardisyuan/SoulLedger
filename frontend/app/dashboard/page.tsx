@@ -20,6 +20,7 @@ import { CIVILIZATION_OPTIONS, getCivilizationFromTenantCode } from "@soulledger
 import { RequireAdmin, RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
 import { useChartColors } from "@/src/hooks/useChartColors";
+import { REALM_PATTERNS } from "@/lib/chart-colors";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
 import { DomainEnum } from "@/src/components/ui/DomainValue";
 import { resolveEnumDisplay } from "@/src/lib/domainDisplay";
@@ -182,10 +183,10 @@ function DashboardContent() {
   const { showToast } = useToast();
   const router = useRouter();
   // Recharts fills are literals and do not follow the `.light` cascade, so the
-  // theme has to pick the table. `REALM_COLORS` used to be imported here and
-  // never read — the realm histogram is single-series and fills with
-  // CHART_SERIES.realm — so it is not destructured.
-  const { CHART_SERIES } = useChartColors();
+  // theme has to pick the table. The realm histogram colours and patterns each
+  // bar by its realm type (规范 v2 A5 `REALM_PATTERNS`); CHART_SERIES.realm is
+  // only the fallback for a row the server sent without one.
+  const { CHART_SERIES, REALM_COLORS } = useChartColors();
   const searchParams = useSearchParams();
   const activeTab: DashboardTab = searchParams.get("tab") === "ledger" ? "ledger" : "overview";
 
@@ -362,6 +363,8 @@ function DashboardContent() {
       name: r.realm_name,
       count: r.count,
       civilization: r.civilization,
+      color: REALM_COLORS[r.realm_type],
+      pattern: REALM_PATTERNS[r.realm_type],
     }));
 
   const formatTimestamp = (ts: string) => formatDateTime(ts);
