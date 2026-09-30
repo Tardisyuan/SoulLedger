@@ -109,7 +109,7 @@ export const fieldControl = cva(
       },
       invalid: {
         false:
-          "border border-[oklch(var(--color-line-strong))] focus-visible:border-[oklch(var(--color-ink))]",
+          "rounded-control border border-[oklch(var(--color-line-strong))] focus-visible:border-[oklch(var(--color-ink))]",
         // 2 px neg border that stays through focus — the field must not stop
         // looking wrong as the user fixes it.
         true: "border-2 border-[oklch(var(--color-danger))] focus-visible:border-[oklch(var(--color-danger))]",

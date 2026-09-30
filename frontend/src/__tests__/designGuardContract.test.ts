@@ -151,7 +151,10 @@ describe("设计系统守卫:每条规则单独可证伪", () => {
     ["design-system/no-page-shadow", "页面内阴影(规范 v1 §1.7)", '<div className="shadow-lg" />'],
     ["design-system/no-page-shadow", "页面内任意值阴影", '<div className="shadow-[0_4px_8px_black]" />'],
     // 规范 v2 A2:浮层也不用阴影,v1 放行的这一档撤掉。
-    ["design-system/no-page-shadow", "浮层阴影(v2 撤掉)", '<div className="shadow-overlay" />'],
+    // v3 放行了 shadow-raised / shadow-overlay(见 eslint.config.mjs 的 SHADOW_OK),
+    // 它们移到下面的 CLEAN 里;这里换成一个**没有说明用途**的 Tailwind 原生档,
+    // 钉住「不是所有 shadow-* 都放行了」。
+    ["design-system/no-page-shadow", "没有用途说明的原生阴影档", '<div className="shadow-2xl" />'],
     ["design-system/no-raw-palette", "裸调色板", '<div className="bg-red-500" />'],
     // 具名色阶之外的第二种形状。这条规则原本只认 `bg-amber-500`,任意值里的
     // 三元组它一次也没匹配上 —— 而 app/organizations/page.tsx 那 8 处正是这种
@@ -187,7 +190,9 @@ describe("设计系统守卫:每条规则单独可证伪", () => {
     'export const P = () => (<div className="p-4 gap-6 mx-auto text-sm text-2xs bg-[oklch(var(--color-surface-1))] text-[oklch(var(--color-ink))] border-[oklch(var(--color-hairline))] ' +
     'bg-[oklch(var(--color-accent))] border-[oklch(var(--color-line)/0.4)] shadow-none shadow-[inset_3px_0_0_oklch(var(--color-ink))] ' +
     // 规范 v2 A2 新放行的:48px(12)、以及圆角任意值里的三种合法值。
-    'p-12 gap-0.5 rounded-[0] rounded-[9999px] rounded-[50%]" />);\n';
+    'p-12 gap-0.5 rounded-[0] rounded-[9999px] rounded-[50%] ' +
+    // 规范 v3 新放行的:两档阴影与两档圆角(shadow-none 上面那行已经在)。
+    'shadow-raised shadow-overlay rounded-control rounded-panel" />);\n';
   let fired: Array<Array<string | null>>;
   let clean: Msg[];
 
@@ -472,7 +477,7 @@ describe("DESIGN.md cannot prescribe against the code", () => {
     expect(prescribing).toEqual([]);
   });
 
-  it("prescribes no rounded corner, because every shape radius is 0", () => {
+  it("prescribes only the radii globals.css actually declares", () => {
     // Recovered from globals.css rather than asserted: if the app ever adopts a
     // real radius, this test stops applying and says so by going red.
     // SHAPE radii only. `--radius-full` (9999px, avatars) is the one
@@ -481,12 +486,20 @@ describe("DESIGN.md cannot prescribe against the code", () => {
     // rule returned early, and a mutation that put `border-radius: 12px` back
     // into DESIGN.md passed. The premise "every radius token is 0" was simply
     // wrong; 8 of 10 are.
+    //
+    // 规范 v3 推翻了「圆角一律 0」,加了 `--radius-control: 4px` 与
+    // `--radius-panel: 8px`。**那两个名字必须进下面这个扫描**:上一版的正则只认
+    // none/sm/md/lg/xl/2xl/3xl,v3 的两档它看不见,于是「每个形状圆角都是 0」这条
+    // 前提在变假之后仍然是绿的 —— 正是这份测试自己的注释在警告的那种失效。
+    // 所以现在不再断言「全是 0」,而是断言「实际声明出来的那一组值」,DESIGN.md
+    // 里能开的处方也跟着变成这一组,多写一个 12px 仍然红。
     const css = fs.readFileSync(path.join(ROOT, "app", "globals.css"), "utf8");
-    const shape = [...css.matchAll(/--radius(-(?:none|sm|md|lg|xl|2xl|3xl))?:\s*([^;]+);/g)]
-      .map((m) => m[2].trim());
-    expect(shape.length).toBeGreaterThanOrEqual(8);
-    const allZero = shape.every((v) => v === "0" || v === "0px");
-    expect(allZero).toBe(true); // asserted, not assumed — see above
+    const shape = [
+      ...css.matchAll(/--radius(?:-(?:none|sm|md|lg|xl|2xl|3xl|control|panel))?:\s*([^;]+);/g),
+    ].map((m) => m[1].trim());
+    expect(shape.length).toBeGreaterThanOrEqual(10);
+    const declared = new Set(shape);
+    expect([...declared].sort()).toEqual(["0", "4px", "8px"]); // asserted, not assumed — see above
 
     const offenders = doc
       .split("\n")
@@ -496,7 +509,7 @@ describe("DESIGN.md cannot prescribe against the code", () => {
       // "…would render `border-radius: 0` and read as a choice…" mid-sentence,
       // and the first version of this rule flagged exactly that line in the
       // rewritten file it was meant to protect.
-      .filter(([, line]) => /^\s*`?border-radius:\s*(?!0\b)/.test(line))
+      .filter(([, line]) => /^\s*`?border-radius:\s*(?!(?:0|4px|8px)\b)/.test(line))
       .map(([n, line]) => `DESIGN.md:${n}  ${line.trim().slice(0, 70)}`);
     expect(offenders).toEqual([]);
   });

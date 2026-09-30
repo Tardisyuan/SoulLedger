@@ -139,7 +139,13 @@ const ROUND_ALLOW = new Set([
 // 规范 v2 A2:全站不用阴影,**浮层也不用**(v1 放行的 shadow-overlay 撤掉,弹层改 1px ink 框)。
 // 允许的只有 shadow-none,以及用 inset 画的线(「当前」3 px 墨线、错误下划线)——它们是线,
 // 不是高度。
-const PAGE_SHADOW = /^shadow(?:-(?!none$)[a-z0-9]+|-\[(?!inset)[^\]]*\])?$/;
+// 规范 v3 推翻了 v1 §1.7 的「全站零阴影」,给了两档,用途是写死的:
+//   shadow-raised   资料舱、批量操作条 —— 贴在页面上但要读出「浮起一层」
+//   shadow-overlay  弹窗、抽屉 —— 盖住页面
+// 1px 墨框不撤,阴影是加在它之上的第二层线索。除这两个之外仍然一律报错:
+// `shadow-sm` / `shadow-lg` 这些 Tailwind 原生档不随主题走,也没有说明用途。
+const SHADOW_OK = new Set(["shadow-none", "shadow-raised", "shadow-overlay"]);
+const PAGE_SHADOW = /^shadow(?:-[a-z0-9]+|-\[(?!inset)[^\]]*\])?$/;
 
 // 圆角任意值:A2 允许的值只有 0、9999px(胶囊)、50%(正圆),其余一律报错。
 // 具名的胶囊与正圆是 rounded-full / rounded-circle,它们归 ROUND_ALLOW 管。
@@ -351,8 +357,8 @@ const designSystem = {
 
     "no-page-shadow": makeGuard("shadow", (raw, report) => {
       for (const { bare, chunk, at } of classTokens(raw)) {
-        if (PAGE_SHADOW.test(bare)) {
-          report(chunk, at, `\`${bare}\`:页面内零阴影(规范 v1 §1.7),层级靠线。浮层(弹层、抽屉、菜单)用 shadow-overlay;要画线就用 border 或 inset 的 shadow-[inset_…]`);
+        if (PAGE_SHADOW.test(bare) && !SHADOW_OK.has(bare)) {
+          report(chunk, at, `\`${bare}\` 不在阴影的两档里。规范 v3 只有 shadow-raised(资料舱、批量操作条)与 shadow-overlay(弹窗、抽屉);要画线就用 border 或 inset 的 shadow-[inset_…],不要阴影就 shadow-none`);
         }
       }
     }),

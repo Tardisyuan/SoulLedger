@@ -52,7 +52,7 @@ export function Drawer({ isOpen, onClose, title, hint, onNext, onPrev, error, fi
             if (key === "j" && onNext) { e.preventDefault(); onNext(); }
             else if (key === "k" && onPrev) { e.preventDefault(); onPrev(); }
           }}
-          className="fixed inset-y-0 right-0 z-dialog flex w-full sm:w-[480px] flex-col bg-[oklch(var(--color-surface-1))] border-l border-[oklch(var(--color-ink))] transition-transform duration-base ease-standard data-ending-style:duration-fast data-ending-style:ease-exit data-ending-style:translate-x-full data-starting-style:translate-x-full"
+          className="fixed inset-y-0 right-0 z-dialog flex w-full sm:w-[480px] flex-col shadow-overlay bg-[oklch(var(--color-surface-1))] border-l border-[oklch(var(--color-ink))] transition-transform duration-base ease-standard data-ending-style:duration-fast data-ending-style:ease-exit data-ending-style:translate-x-full data-starting-style:translate-x-full"
         >
           <div className="flex shrink-0 items-baseline justify-between gap-3 px-4 py-3 border-b border-[oklch(var(--color-block))]">
             <Dialog.Title className="min-w-0 break-words text-lg text-[oklch(var(--color-ink))]">{title}</Dialog.Title>

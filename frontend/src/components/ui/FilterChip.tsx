@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
  * Badges are never clickable; anything a user clicks to narrow a list is one of these.
  */
 const base =
-  "inline-flex h-7 max-sm:min-h-11 shrink-0 items-center gap-1 border px-2 text-xs whitespace-nowrap transition-colors duration-fast ease-standard";
+  "inline-flex h-7 max-sm:min-h-11 shrink-0 items-center gap-1 rounded-control border px-2 text-xs whitespace-nowrap transition-colors duration-fast ease-standard";
 const idle =
   "border-[oklch(var(--color-line-strong))] bg-transparent text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))] active:bg-[oklch(var(--color-line))]";
 const on =
