@@ -200,10 +200,25 @@ export function Sheet({ open, onClose, edge, closeLabel, children }: { open: boo
   const ref = useRef<BottomSheetModal>(null);
   const { sheetIn, sheetOut } = useReducedMotionDurations();
   const timing = useBottomSheetTimingConfigs({ duration: sheetIn, easing: Easing.bezier(0, 0, 0.2, 1) });
+  // Dismiss only a sheet that is up. Calling `dismiss()` on one that never opened (the mount,
+  // `open` false) or already closed itself (a drag, the scrim) left @gorhom's modal status stuck at
+  // DISMISSING, and every later `present()` rendered an empty portal: the long-lamp confirm did
+  // not open on a post's first tap, and never again after a drag-close (emulator, 2026-10-01,
+  // traced with the library's own logging: `handlePresent … status:6`).
+  const up = useRef(false);
   useEffect(() => {
-    if (open) ref.current?.present();
-    else ref.current?.dismiss({ duration: sheetOut, easing: EASE_EXIT });
+    if (open && !up.current) {
+      up.current = true;
+      ref.current?.present();
+    } else if (!open && up.current) {
+      up.current = false;
+      ref.current?.dismiss({ duration: sheetOut, easing: EASE_EXIT });
+    }
   }, [open, sheetOut]);
+  const dismissed = useCallback(() => {
+    up.current = false;
+    onClose();
+  }, [onClose]);
   useEffect(() => {
     if (!open) return;
     const sub = BackHandler.addEventListener("hardwareBackPress", () => {
@@ -229,7 +244,7 @@ export function Sheet({ open, onClose, edge, closeLabel, children }: { open: boo
   return (
     <BottomSheetModal
       ref={ref}
-      onDismiss={onClose}
+      onDismiss={dismissed}
       animationConfigs={timing}
       gestureEventsHandlersHook={useSheetGestures}
       backdropComponent={backdrop}
