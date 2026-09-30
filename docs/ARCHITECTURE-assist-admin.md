@@ -20,7 +20,8 @@
 | 灵魂端 / 官员端分别开关 | 无 | **不拆** | 维持官员端计划 Q3 的决定:共用一个开关(§7 Q3) |
 | 供应商类型(OpenAI 兼容 / Anthropic) | env | **上** | 下拉 |
 | Base URL | env | **上** | Azure / Ollama / DeepSeek 等填这里;Anthropic 留空 |
-| API key | env | **上,只写不读** | 加密存库(复用 `apps/death_sync/fields.py` 的 Fernet,`ENCRYPTION_KEY`);页面只显示「已设置 · 末 4 位 · 设置于某日」,可替换、可清除,永不回显 |
+| API key | env | **上,只写不读** | 加密存库(复用 `apps/death_sync/fields.py` 的 Fernet,`ENCRYPTION_KEY`);页面只显示「已设置 · 末 4 位 · 设置于某日」,可替换、可清除,永不回显。**2026-10-01 起按平台存**,主用与备用共用,见 `ARCHITECTURE-soul-assist.md` §13.6 |
+| 备用供应商 | 无 | **上**(2026-10-01) | 主用出字前失败时改用;同一套草稿 → 测试 → 保存,另有自己的价目表;断路器状态只读显示。见 `ARCHITECTURE-soul-assist.md` §13.5 |
 | 模型名 | env | **上** | 自由填写 + 常用项提示;保存前必须先通过 §3 的连通测试 |
 | effort(Anthropic) | env | **上** | low / medium / high,附成本说明 |
 | 拒答回退 fallbacks(Anthropic) | env | **上** | 开 / 关 |
