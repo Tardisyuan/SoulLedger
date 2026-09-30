@@ -2739,6 +2739,7 @@
       "screen_title": "Could not reach the ledger",
       "screen_body": "Your record is still there. It just cannot be fetched right now.",
       "section": "This part could not be loaded. The rest is shown as usual.",
+      "offline": "Offline",
       "sentence_in_progress": "Your sentence plan is not finished. You can apply once it is complete"
     },
     "lexicon": {

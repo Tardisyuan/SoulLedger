@@ -29,6 +29,7 @@ import { ColdStart } from "./coldStart";
 import { AppHeader, PlaqueHeader, TabBar } from "./chrome";
 import { LogoutProvider, ToastProvider } from "./feedback";
 import { useI18n } from "./i18n";
+import { NetworkProvider } from "./network";
 import { useSession } from "./session";
 import { preLoginTheme, themeFor } from "./theme";
 import { Block, Screen, ScreenError, Skeleton, ThemeContext } from "./ui";
@@ -383,7 +384,10 @@ export function RootNavigator() {
       <ToastProvider>
         {/* Inside the theme: a sheet renders in this provider's host, so it sees only the contexts above it. */}
         <BottomSheetModalProvider>
-          <LogoutProvider onConfirm={signOut}>{body}</LogoutProvider>
+          <LogoutProvider onConfirm={signOut}>
+            {/* Offline: a bar above every screen, pushing it down; gone when the network is back. */}
+            <NetworkProvider>{body}</NetworkProvider>
+          </LogoutProvider>
         </BottomSheetModalProvider>
         {/* 补足 C18: over everything, once per process. */}
         <ColdStart session={state} scheme={scheme} />

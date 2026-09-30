@@ -1,7 +1,8 @@
 /**
  * The cold start (补足 C18). The native splash is an empty seal frame on paper
  * (`app.json` → expo-splash-screen). When JS is ready this draws the same frame,
- * hides the native one under it, and a seal falls into the frame and presses; from
+ * hides the native one under it, and a seal falls into the frame, presses, and its
+ * edge scan soaks in (印泥 120–320; a civilization's seal only — the neutral one has none); from
  * 480ms the app underneath takes touches, and the layer fades out and is gone at 720.
  * A tap before then skips straight to the end.
  *
@@ -81,7 +82,9 @@ export function ColdStart({ session, scheme }: { session: SessionState; scheme: 
   const shown = useSharedValue(0);
   const scale = useSharedValue(1.04);
   const cover = useSharedValue(1);
+  const bloom = useSharedValue(0);
   const sealStyle = useAnimatedStyle(() => ({ opacity: shown.get(), transform: [{ translateY: drop.get() }, { scale: scale.get() }] }));
+  const ringStyle = useAnimatedStyle(() => ({ opacity: bloom.get() }));
   const coverStyle = useAnimatedStyle(() => ({ opacity: cover.get() }));
 
   useEffect(() => {
@@ -91,8 +94,11 @@ export function ColdStart({ session, scheme }: { session: SessionState; scheme: 
     shown.set(withTiming(1, fall));
     const half = motion.stampPress / 2;
     scale.set(withDelay(motion.stampDrop, withSequence(withTiming(0.98, { duration: half }), withTiming(1, { duration: half }))));
+    // 印泥 120–320: the edge scan soaks in, 0 → 0.95 → 0.8. The neutral seal has no ring, so nothing shows.
+    const soak = motion.stampBloom / 2;
+    bloom.set(withDelay(motion.stampDrop, withSequence(withTiming(0.95, { duration: soak }), withTiming(0.8, { duration: soak }))));
     cover.set(withDelay(motion.coldStartInteractive, withTiming(0, { duration: motion.coldStart - motion.coldStartInteractive, easing: EASE_ENTER })));
-  }, [phase, drop, shown, scale, cover]);
+  }, [phase, drop, shown, scale, cover, bloom]);
 
   // The clock on its own, keyed on the phase alone: a re-render must never restart it.
   useEffect(() => {
@@ -129,7 +135,7 @@ export function ColdStart({ session, scheme }: { session: SessionState; scheme: 
         </Svg>
         <Animated.View style={sealStyle}>
           {/* The civilization seals' bodies reach 5…59 of 64: at 100 they cover the frame's 84 as the neutral one does at 112. */}
-          <Seal testID="cold-start-seal" civ={theme.civ} size={theme.civ === "neutral" ? BOX : 100} theme={theme} glyphs={glyphs} />
+          <Seal testID="cold-start-seal" civ={theme.civ} size={theme.civ === "neutral" ? BOX : 100} theme={theme} glyphs={glyphs} ringStyle={ringStyle} />
         </Animated.View>
       </Pressable>
     </Animated.View>
