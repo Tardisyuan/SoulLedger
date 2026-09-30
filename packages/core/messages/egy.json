@@ -1843,12 +1843,7 @@
     "title": "Smen",
     "theme": "Hetep",
     "light": "Hedj",
-    "dark": "Kem",
-    "nav_mode": "Kheperu Wat",
-    "classic": "Em Tepy",
-    "compact": "Em Khet",
-    "classic_desc": "Gesu Menu Neb: Tut Hena Ren",
-    "compact_desc": "Tut Wa; Medu Iyi Er Sekhet Tut"
+    "dark": "Kem"
   },
   "menu_buttons": {
     "title": "Aha Menu",

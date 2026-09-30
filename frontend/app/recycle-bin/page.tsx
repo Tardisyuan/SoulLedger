@@ -108,7 +108,6 @@ export default function RecycleBinPage() {
           is looking for a row, not deciding on each one. Decision surfaces
           (the judgment list) stay `comfortable`. */}
       <DataTable<RecycleBinEntry>
-        density="compact"
           caption={t("recycle_bin.title")}
           columns={[
             { key: "type", header: t("recycle_bin.col_type") },

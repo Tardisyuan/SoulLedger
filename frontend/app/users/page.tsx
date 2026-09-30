@@ -172,7 +172,6 @@ function UsersRoute() {
           is looking for a row, not deciding on each one. Decision surfaces
           (the judgment list) stay `comfortable`. */}
       <DataTable<User>
-        density="compact"
         caption={t("users.title")}
         columns={[
           { key: "username", header: t("users.username"), sortable: true },

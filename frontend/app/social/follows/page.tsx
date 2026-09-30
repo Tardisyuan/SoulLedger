@@ -93,7 +93,6 @@ export default function FollowsPage() {
            空仍是上面那支 EmptyState,因为它按页签说两种不同的空。 */
         <DataTable<(typeof list)[number]>
           linkedRows
-          density="compact"
           caption={tab === "following" ? t("social.following") : t("social.followers")}
           columns={[
             { key: "name", header: tab === "following" ? t("social.following") : t("social.followers") },

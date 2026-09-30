@@ -20,6 +20,8 @@
  * 包里已无此键,夹具同步删去那一行;定稿全表本身未改。
  * 2026-09-30 再减 4 个到 774:规范 v2 撤掉用户自选强调色,settings.accent_color / apply /
  * accent_hex_invalid / accent_hex_too_dark 连同 settings.colors 一起从三份包里删除。
+ * 2026-09-30 再减 3 个到 771:v2 立柱取代侧栏,导航模式(经典 / 紧凑)的 settings.nav_mode / classic_desc /
+ * compact_desc 已无代码读,从三份包里删除。
  * 第十节「egy 旧词审定 · 277 个」没有逐键修订表,只给了义项与替换规则(ROOTS_TEN / PROPER_NAMES / ABOLISHED_TEN_WORDS);
  * 按规则改包时有 38 个夹具键的旧值含被换掉的旧词,夹具里这 38 条随包回填为新值,键数不变。
  * 第十一节「第二轮复核」同样只给义项(ROOTS_ELEVEN、En 与 -I 进小词、Asura 进专名、Per Aa 废止、功德写 Nefer);
@@ -35,7 +37,7 @@
  * 按 SECTIONS 十节的行序遍历 [键, 中文, 修订后 egy, 理由],每键取首次出现的位置、写修订后 egy
  * (生成时断言同键各行值相同),`JSON.stringify(table, null, 2)` 落盘。改定稿就整份重生成。这里钉住:
  *
- * - 修订表 774 个键与包里逐字一致(键 → 修订后 egy);
+ * - 修订表 771 个键与包里逐字一致(键 → 修订后 egy);
  * - 无撇号、无全大写词(技术词白名单除外)、无已知英文残留;
  * - 已废止写法不再出现;
  * - 加载一律 Ini(同键中文含「加载 / 载入」);
@@ -227,7 +229,7 @@ const isDispatchKey = (k: string) => /^dispatch\.|\.DISPATCH_|\.dispatch$/.test(
  * 技术词原样引用(词表「技术词 cron / webhook / ms / 权限键名不转写」):每条只放行它自己的
  * 那几个记号 —— 权限键名、命令 / 方法名、时间单位、占位示例里的代码值、版本号、色值。
  * 放行按键不按词:`soul` 在示例里是分类代码,在别处就是该大写的词。
- * 修订表 774 个键里除这些技术词外**没有**大小写违例,所以不需要为修订表另设豁免。
+ * 修订表 771 个键里除这些技术词外**没有**大小写违例,所以不需要为修订表另设豁免。
  */
 const TECHNICAL: Record<string, string[]> = {
   "soul_accounts.credentials.manage_hint": ["soul_account.manage"],
@@ -531,10 +533,10 @@ describe("egy 词表规则", () => {
     expect(KEYS.length).toBeGreaterThan(1800);
   });
 
-  it("修订表 774 个键与包里逐字一致", () => {
+  it("修订表 771 个键与包里逐字一致", () => {
     const table = REVISIONS as Record<string, string>;
     // 778 → 774:规范 v2 撤掉强调色,settings 里四个键连同修订一起删除。
-    expect(Object.keys(table)).toHaveLength(774);
+    expect(Object.keys(table)).toHaveLength(771);
     const drift = Object.entries(table)
       .filter(([k, v]) => EGY[k] !== v)
       .map(([k, v]) => `${k}: 表=${v} 包=${EGY[k]}`);

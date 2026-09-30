@@ -265,7 +265,6 @@ export function MutesSection() {
       </div>
       <DataTable<SocialMute>
         caption={t("social_moderation.tabs.mutes")}
-        density="compact"
         columns={[
           { key: "soul", header: t("social_moderation.mutes.col_soul") },
           { key: "reason", header: t("social_moderation.fields.reason") },

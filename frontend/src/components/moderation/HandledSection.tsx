@@ -120,7 +120,6 @@ export function HandledSection() {
 
       <DataTable<HandledContent>
         caption={t("social_moderation.tabs.handled")}
-        density="compact"
         linkedRows
         columns={[
           { key: "type", header: t("social_moderation.handled.col_type"), width: "72px" },
