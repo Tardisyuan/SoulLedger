@@ -44,8 +44,9 @@ function patternFill(colour: string, pattern: ChartPattern | undefined) {
  *
  * THE ONE HOLE THE STYLESHEET COULD NOT REACH. `app/globals.css` collapses all
  * CSS motion under `prefers-reduced-motion: reduce` with a universal selector
- * and `!important`, so the 23 `animate-pulse`, the 8 `animate-spin` and every
- * transition in the app already obey it. recharts does not draw with CSS: it
+ * and `!important`, so every `animate-spin` and every transition in the app
+ * already obey it (skeletons no longer pulse at all — 规范 v2 C15, static
+ * skeletons; this file's ChartSkeleton is the static `Skeleton`). recharts does not draw with CSS: it
  * grows bars and sweeps arcs by writing attributes on a `requestAnimationFrame`
  * loop, which no media query can shorten. `isAnimationActive` defaults to true
  * and was set nowhere in this repository, so these four charts were the entire

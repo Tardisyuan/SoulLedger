@@ -83,7 +83,7 @@ export function ConnectionBanner() {
   return (
     <div
       role="status"
-      className="flex items-center gap-3 border-b border-[oklch(var(--color-line))] bg-[oklch(var(--color-warning-tint))] px-4 py-1 text-xs text-[oklch(var(--color-warning))] md:px-10"
+      className="flex items-center gap-3 border-b border-[oklch(var(--color-line))] bg-[oklch(var(--color-warning-tint))] px-4 py-1 text-xs text-[oklch(var(--color-warning))] md:px-8"
     >
       <span aria-hidden="true">!</span>
       <span className="flex-1">{t(`connection.${status}`)}</span>
