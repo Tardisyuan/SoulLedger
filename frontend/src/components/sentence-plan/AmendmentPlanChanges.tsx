@@ -25,7 +25,7 @@ export function AmendmentPlanChanges({
   const { t } = useI18n();
   const plan = useSentencePlan(planId);
   return (
-    <section className="mt-10 space-y-3" data-testid="amendment-plan-changes" aria-label={t("sentence_plan.amend.title")}>
+    <section className="mt-12 space-y-3" data-testid="amendment-plan-changes" aria-label={t("sentence_plan.amend.title")}>
       <h2 className="text-md text-[oklch(var(--color-ink))]">{t("sentence_plan.amend.title")}</h2>
       <p className="text-sm text-[oklch(var(--color-ink-muted))] max-w-prose">{t("sentence_plan.amend.hint")}</p>
       {plan.isLoading ? (

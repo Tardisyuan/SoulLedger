@@ -217,7 +217,7 @@ function LedgerBody({ data, onPrevMonth }: { data: LedgerJournal; onPrevMonth: (
   return (
     <div>
       <FourPillars data={data} />
-      <p className={`${MONO_LABEL} py-1.5`} data-testid="ledger-formula">
+      <p className={`${MONO_LABEL} py-2`} data-testid="ledger-formula">
         {t("ledger.journal.formula", { souls: String(data.soul_count), records: String(data.record_count) })}
       </p>
 

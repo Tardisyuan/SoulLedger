@@ -205,7 +205,7 @@ export default function CrossJudgmentDetailPage() {
       )}
 
       {/* 规范 v1 详情页原型:两栏账页(393 px 折单栏),区块标压线,行线代替卡片。 */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.3fr] gap-x-10">
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.3fr] gap-x-8">
         <div className="min-w-0">
           <LedgerHeading
             mark="甲"
@@ -222,7 +222,7 @@ export default function CrossJudgmentDetailPage() {
               {judgment.participants.map((p: import("@soulledger/core/api").CrossTenantJudgmentParticipant, i: number) => (
                 <li
                   key={i}
-                  className="grid grid-cols-[1fr_auto] gap-x-3 py-1.5 border-b border-[oklch(var(--color-rule))]"
+                  className="grid grid-cols-[1fr_auto] gap-x-3 py-2 border-b border-[oklch(var(--color-rule))]"
                 >
                   <span
                     title={p.participant_actor_name || p.participant_actor || undefined}

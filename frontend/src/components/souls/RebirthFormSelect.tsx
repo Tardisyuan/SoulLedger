@@ -162,9 +162,9 @@ export function RebirthFormSelect({ value, onChange, disabled }: RebirthFormSele
         {tf("reincarnation.form_label", "轮回形态")}
       </p>
       {groups.map((group) => (
-        <div key={group.key} className="space-y-1.5">
+        <div key={group.key} className="space-y-2">
           <p className={`text-xs font-medium ${GROUP_TONE[group.key].label}`}>{group.label}</p>
-          <div className="grid grid-cols-3 gap-1.5">
+          <div className="grid grid-cols-3 gap-2">
             {group.forms.map((form) => {
               const selected = form === value;
               const index = flat.indexOf(form);
@@ -184,7 +184,7 @@ export function RebirthFormSelect({ value, onChange, disabled }: RebirthFormSele
                   disabled={disabled}
                   onKeyDown={(event) => onKeyDown(event, index)}
                   onClick={() => onChange(form)}
-                  className={`px-2 py-1.5 border text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                  className={`px-2 py-2 border text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
                     selected ? GROUP_TONE[group.key].selected : UNSELECTED
                   }`}
                 >
