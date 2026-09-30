@@ -2251,7 +2251,18 @@
     "subtitle": "Per Hemes Taui",
     "list": "Per Hemes",
     "no_tenants": "Nen Per Hemes Djer",
-    "code": "Medu"
+    "code": "Medu",
+    "seal": {
+      "column": "Medu Khetem",
+      "default": "Tepy {{glyph}}",
+      "edit": "Khemen Seth Medu Khetem",
+      "title": "{{name}} · Medu Khetem",
+      "hint_one": "Nen Sesh: Tepy {{glyph}}",
+      "hint_two": "Nen Sesh: Tepy {{glyph}}",
+      "preview": "Maa",
+      "saved": "Medu Khetem Sau Seth",
+      "save_failed": "Nen Sau Medu Khetem"
+    }
   },
   "table": {
     "empty": "Nen Medu Djer",
