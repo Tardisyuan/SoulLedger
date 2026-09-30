@@ -105,7 +105,6 @@ export function PostCard({ post }: { post: Post }) {
           onConfirm={handleDelete}
           onCancel={() => setShowDeleteConfirm(false)}
           confirmText={deletePost.isPending ? (t("common.deleting") || "Deleting...") : (t("common.delete") || "Delete")}
-          variant="danger"
         />
       )}
     </div>

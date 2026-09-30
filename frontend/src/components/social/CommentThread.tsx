@@ -61,7 +61,6 @@ function CommentItem({ comment, postId, depth, onReply }: {
           onConfirm={handleDelete}
           onCancel={() => setShowDeleteConfirm(false)}
           confirmText={deleteComment.isPending ? (t("common.deleting") || "Deleting...") : (t("common.delete") || "Delete")}
-          variant="danger"
         />
       )}
     </div>

@@ -33,7 +33,8 @@
  * skeleton — the shape is doing the work, not the animation.
  */
 
-const BLOCK = "bg-[oklch(var(--color-hairline))] animate-pulse";
+/* 规范 v2:骨架屏静态,不闪。 */
+const BLOCK = "bg-[oklch(var(--color-hairline))]";
 
 function PageHead({ withTabs }: { withTabs?: boolean }) {
   return (

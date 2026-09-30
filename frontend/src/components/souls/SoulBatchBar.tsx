@@ -184,7 +184,7 @@ export function SoulBatchBar({
           {t("souls.batch.export")}
         </Button>
         {canRecycle && (
-          <Button type="button" variant="danger" size="sm" onClick={() => setConfirming(true)} disabled={count === 0}>
+          <Button type="button" variant="secondary" size="sm" onClick={() => setConfirming(true)} disabled={count === 0}>
             {t("souls.detail.confirm_delete_action")}
           </Button>
         )}
@@ -203,7 +203,7 @@ export function SoulBatchBar({
             <Button type="button" variant="ghost" onClick={close} disabled={recycle.isPending}>
               {t("common.cancel")}
             </Button>
-            <Button type="button" variant="danger" onClick={submit} loading={recycle.isPending}>
+            <Button type="button" variant="secondary" onClick={submit} loading={recycle.isPending}>
               {t("souls.detail.confirm_delete_action")}
             </Button>
           </div>

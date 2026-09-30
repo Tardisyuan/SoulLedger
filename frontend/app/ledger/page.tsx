@@ -17,27 +17,28 @@ import { EmptyState } from "@/src/components/ui/EmptyState";
 import { Button } from "@/src/components/ui/Button";
 import { QueryError } from "@/src/components/ui/PageError";
 import { FilterChipSelect } from "@/src/components/ui/FilterChip";
-import { DomainText } from "@/src/components/ui/DomainValue";
-import { LegendLedger, type LegendLedgerRow } from "@/src/components/dashboard/LegendLedger";
-import { currentMonth, groupByDay, shiftMonth, signed } from "@/src/lib/ledgerJournal";
+import { currentMonth, runningBalances, shiftMonth, signed } from "@/src/lib/ledgerJournal";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
 
 /**
- * 功过总账 —— 跨灵魂的月度流水,页首用账房的「四柱」(第三类 B · /ledger):
+ * 功过总账 —— 规范 v2 补足 B10:按月日记账,页首四柱,**不分页**。
  *
- *     旧管 + 新收 − 开除 = 实在
+ *     期初 + 收入 − 支出 = 期末   (旧管 + 新收 − 开除 = 实在)
  *
- * 数据全部来自 `GET /ledger/journal/`(backend/apps/ledger/journal.py):四柱、按类目
- * 的本期合计与一页流水是**同一次查询、同一组筛选**算出来的,所以筛了文明或类目,
- * 四柱跟着变,账始终是平的。四柱是登记原值(`weight`)之和,**不是**衰减后的
- * `karmic_balance` —— 口径写在副题上,见 journal.py 的说明。
+ * 数据全部来自 `GET /ledger/journal/`(backend/apps/ledger/journal.py):四柱与流水是**同一组
+ * 筛选**算出来的,所以筛了文明、类目或搜了一户,四柱跟着变,账始终是平的。四柱是登记原值
+ * (`weight`)之和,**不是**衰减后的 `karmic_balance` —— 口径写在副题上。
  *
- * 这一页此前是「功德统计」(`statsOverview` 的状态分布、业力分桶、各界域人数、最近
- * 活动)。那些读数在仪表盘上各有位置;/ledger 按设计稿改成它名字所说的那本账。
+ * B10 的画法:四柱 28 等宽,柱间 1px 行线,期末一柱 s1 底;表格是这个月的全部行 ——
+ * 不分页、不加「加载更多」,超过 500 行表头吸顶;收入、支出只写数字、**不上色**,符号本身
+ * 已经表达方向;「结余」一列是逐行倒推的余额(最新一行 = 期末)。导出 CSV 是幽灵按钮。
+ * v1 的按日小计、本页合计与右侧图例账,B10 都没有画,随分页一起撤掉。
  *
- * 线:日小计压单线(区块边界),本页合计收双线,「实在」下也是双线 —— 与详情页
- * 「乙 · 功过」同一套:合计用单线,终结用双线。整行可点,进入该户详情的「乙 · 功过」。
+ * 后端的 journal 仍是每页 20 行(`PAGE_SIZE`),没有「整月」的开关 —— 所以这里先取第 1 页
+ * 拿到总数,再并发取其余各页拼起来。
+ * ponytail: 一月 N 条要 ⌈N/20⌉ 个请求;后端给 journal 加 `page_size=all`(或整月不分页)之后
+ * 换成一次请求,`fetchWholeMonth` 整个删掉。
  */
 
 const RECORD_CATEGORIES = [
@@ -45,18 +46,29 @@ const RECORD_CATEGORIES = [
   "CRUELTY", "DECEPTION", "COWARDICE", "GREED", "BLASPHEMY", "MURDER", "OTHER",
 ] as const;
 
-const INK_OK = "text-[oklch(var(--color-karma-merit))]";
-const INK_DANGER = "text-[oklch(var(--color-karma-demerit))]";
 const MONO_LABEL = "font-mono text-2xs text-[oklch(var(--color-ink-subtle))]";
-/** Journal grid: 日 · 灵魂 · 条目 · 依据 · 收 · 支. 393 px: two lines per row. */
+/** 日期 · 灵魂 · 类别 · 摘要 · 收入 · 支出 · 结余(B10)。393 px:两行一条。 */
 const JOURNAL_COLS =
-  "grid grid-cols-[1fr_1fr_4rem_4rem] md:grid-cols-[3.5rem_1.2fr_1.4fr_1fr_4.5rem_4.5rem] gap-x-3";
+  "grid grid-cols-[minmax(0,1fr)_4rem_4rem_5rem] md:grid-cols-[3.5rem_minmax(0,1fr)_5rem_minmax(0,1.3fr)_4.5rem_4.5rem_5rem] gap-x-3";
+/** B10:超过 500 行时表头吸顶(C15 表格细节)。 */
+const STICKY_AFTER = 500;
+
+/** 本月全部行:第 1 页给总数,其余页并发取回,按页序拼接(服务端已按时间倒序)。 */
+async function fetchWholeMonth(filters: LedgerJournalParams): Promise<LedgerJournal> {
+  const first = (await ledgerApi.journal({ ...filters, page: 1 })).data;
+  const pages = Math.ceil(first.count / Math.max(first.page_size, 1));
+  const rest = await Promise.all(
+    Array.from({ length: Math.max(pages - 1, 0) }, (_, i) =>
+      ledgerApi.journal({ ...filters, page: i + 2 }).then((r) => r.data.results)
+    )
+  );
+  return { ...first, results: [...first.results, ...rest.flat()] };
+}
 
 function LedgerPageContent() {
   const { t } = useI18n();
   const { user } = useTenant();
   const [month, setMonth] = useState(() => currentMonth());
-  const [page, setPage] = useState(1);
   const [civilization, setCivilization] = useState("");
   const [category, setCategory] = useState("");
   const [searchInput, setSearchInput] = useState("");
@@ -66,14 +78,11 @@ function LedgerPageContent() {
 
   // Same 300 ms debounce as /souls: one request per pause, not per keystroke.
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setSearch(searchInput.trim());
-      setPage(1);
-    }, 300);
+    const timer = setTimeout(() => setSearch(searchInput.trim()), 300);
     return () => clearTimeout(timer);
   }, [searchInput]);
 
-  /* 搜索与文明、类目是**同一组**筛选:四柱、类目账、流水与导出都读它,所以搜出一户,
+  /* 搜索与文明、类目是**同一组**筛选:四柱、流水与导出都读它,所以搜出一户,
      四柱就只是这一户的账,仍然平。 */
   const filters: LedgerJournalParams = {
     month,
@@ -81,10 +90,9 @@ function LedgerPageContent() {
     ...(category && { category }),
     ...(search && { search }),
   };
-  const params = { ...filters, page };
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ["ledger", "journal", params],
-    queryFn: () => ledgerApi.journal(params).then((r) => r.data),
+    queryKey: ["ledger", "journal", "month", filters],
+    queryFn: () => fetchWholeMonth(filters),
     enabled: !!user,
     placeholderData: keepPreviousData,
   });
@@ -102,11 +110,16 @@ function LedgerPageContent() {
     }
   };
 
-  const goMonth = (next: string) => {
-    setMonth(next);
-    setPage(1);
+  const clearFilters = () => {
+    setCivilization("");
+    setCategory("");
+    setSearchInput("");
+    setSearch("");
   };
-  const totalPages = data ? Math.max(1, Math.ceil(data.count / data.page_size)) : 1;
+  const filtered = Boolean(civilization || category || search);
+
+  /* 月份:◂ 2026-09 ▸,高 32、1px ink3 框、s1 底(B10 工具条)。 */
+  const MONTH_STEP = "px-2 h-full text-[oklch(var(--color-ink-subtle))] hover:text-[oklch(var(--color-ink))]";
 
   return (
     <PageShell
@@ -115,44 +128,21 @@ function LedgerPageContent() {
       subtitle={t("ledger.journal.subtitle")}
       filters={
         <>
-          <span className="flex items-center h-8 border border-[oklch(var(--color-block))] font-mono text-xs">
-            <button
-              type="button"
-              aria-label={t("ledger.journal.month_prev")}
-              onClick={() => goMonth(shiftMonth(month, -1))}
-              className="px-2 h-full text-[oklch(var(--color-ink-subtle))] hover:text-[oklch(var(--color-ink))]"
-            >
-              ‹
+          <span className="flex items-center h-8 border border-[oklch(var(--color-line-strong))] bg-[oklch(var(--color-surface-1))] font-mono text-sm">
+            <button type="button" aria-label={t("ledger.journal.month_prev")} onClick={() => setMonth(shiftMonth(month, -1))} className={MONTH_STEP}>
+              ◂
             </button>
             <input
               type="month"
               aria-label={t("ledger.journal.month")}
               value={month}
-              onChange={(e) => e.target.value && goMonth(e.target.value)}
-              className="bg-transparent px-1 h-full font-mono text-xs text-[oklch(var(--color-ink))]"
+              onChange={(e) => e.target.value && setMonth(e.target.value)}
+              className="bg-transparent px-1 h-full font-mono text-sm text-[oklch(var(--color-ink))]"
             />
-            <button
-              type="button"
-              aria-label={t("ledger.journal.month_next")}
-              onClick={() => goMonth(shiftMonth(month, 1))}
-              className="px-2 h-full text-[oklch(var(--color-ink-subtle))] hover:text-[oklch(var(--color-ink))]"
-            >
-              ›
+            <button type="button" aria-label={t("ledger.journal.month_next")} onClick={() => setMonth(shiftMonth(month, 1))} className={MONTH_STEP}>
+              ▸
             </button>
           </span>
-          <FilterChipSelect
-            label={t("souls.filter_civilization")}
-            value={civilization}
-            options={[
-              { value: "", label: t("filter.all") },
-              ...CIVILIZATION_OPTIONS.map((c) => ({ value: c, label: t(`souls.civilizations.${c}`) })),
-            ]}
-            clearLabel={t("filter.clear_one", { name: t("souls.filter_civilization") })}
-            onChange={(v) => {
-              setCivilization(v);
-              setPage(1);
-            }}
-          />
           <FilterChipSelect
             label={t("ledger.journal.category")}
             value={category}
@@ -161,10 +151,17 @@ function LedgerPageContent() {
               ...RECORD_CATEGORIES.map((c) => ({ value: c, label: t(`souls.categories.${c}`) })),
             ]}
             clearLabel={t("filter.clear_one", { name: t("ledger.journal.category") })}
-            onChange={(v) => {
-              setCategory(v);
-              setPage(1);
-            }}
+            onChange={setCategory}
+          />
+          <FilterChipSelect
+            label={t("souls.filter_civilization")}
+            value={civilization}
+            options={[
+              { value: "", label: t("filter.all") },
+              ...CIVILIZATION_OPTIONS.map((c) => ({ value: c, label: t(`souls.civilizations.${c}`) })),
+            ]}
+            clearLabel={t("filter.clear_one", { name: t("souls.filter_civilization") })}
+            onChange={setCivilization}
           />
           <input
             type="search"
@@ -172,33 +169,12 @@ function LedgerPageContent() {
             aria-label={t("ledger.journal.search")}
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
-            className={cn(fieldControl({ size: "md" }), "w-44 min-w-[140px]")}
+            className={cn(fieldControl({ size: "md" }), "flex-1 min-w-40")}
           />
-          <Button type="button" variant="secondary" size="sm" className="ml-auto" loading={exporting} onClick={exportCsv}>
+          <Button type="button" variant="secondary" loading={exporting} onClick={exportCsv}>
             {t("ledger.journal.export")}
           </Button>
         </>
-      }
-      pagination={
-        data && data.count > data.page_size
-          ? {
-              count: (
-                <p className="text-xs font-mono tabular-nums text-[oklch(var(--color-ink-subtle))]">
-                  {`${(page - 1) * data.page_size + 1}–${Math.min(page * data.page_size, data.count)} / ${data.count}`}
-                </p>
-              ),
-              controls: (
-                <div className="flex items-center gap-2">
-                  <Button type="button" variant="ghost" size="sm" disabled={page <= 1} onClick={() => setPage(page - 1)}>
-                    {t("common.prev")}
-                  </Button>
-                  <Button type="button" variant="ghost" size="sm" disabled={page >= totalPages} onClick={() => setPage(page + 1)}>
-                    {t("common.next")}
-                  </Button>
-                </div>
-              ),
-            }
-          : undefined
       }
     >
       {isError && !data ? (
@@ -206,177 +182,180 @@ function LedgerPageContent() {
       ) : isLoading || !data ? (
         <LedgerSkeleton />
       ) : (
-        <LedgerBody data={data} onPrevMonth={() => goMonth(shiftMonth(month, -1))} />
+        <LedgerBody
+          data={data}
+          onPrevMonth={() => setMonth(shiftMonth(month, -1))}
+          onClearFilters={filtered ? clearFilters : undefined}
+        />
       )}
     </PageShell>
   );
 }
 
-function LedgerBody({ data, onPrevMonth }: { data: LedgerJournal; onPrevMonth: () => void }) {
+function LedgerBody({
+  data,
+  onPrevMonth,
+  onClearFilters,
+}: {
+  data: LedgerJournal;
+  onPrevMonth: () => void;
+  onClearFilters?: () => void;
+}) {
   const { t } = useI18n();
   return (
-    <div>
+    <div className="flex flex-col gap-3">
       <FourPillars data={data} />
-      <p className={`${MONO_LABEL} py-1.5`} data-testid="ledger-formula">
+      <p className={MONO_LABEL} data-testid="ledger-formula">
         {t("ledger.journal.formula", { souls: String(data.soul_count), records: String(data.record_count) })}
       </p>
 
       {data.record_count === 0 ? (
-        <div className="mt-4">
-          <EmptyState
-            title={t("ledger.journal.empty_title")}
-            reason={t("ledger.journal.empty_reason", { month: data.month, opening: signed(data.opening) })}
-            action={
+        /* C15「空」:给一条出路 —— 有筛选就清筛选,没有就去上一月。 */
+        <EmptyState
+          title={t("ledger.journal.empty_title")}
+          reason={t("ledger.journal.empty_reason", { month: data.month, opening: signed(data.opening) })}
+          action={
+            onClearFilters ? (
+              <Button type="button" variant="secondary" size="sm" onClick={onClearFilters}>
+                {t("filter.clear_all")}
+              </Button>
+            ) : (
               <Button type="button" variant="secondary" size="sm" onClick={onPrevMonth}>
                 {t("ledger.journal.month_prev")}
               </Button>
-            }
-          />
-        </div>
+            )
+          }
+        />
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] gap-x-8 gap-y-6 mt-2">
-          <Journal rows={data.results} />
-          <section aria-labelledby="ledger-categories">
-            <h2 id="ledger-categories" className="font-mono text-2xs uppercase tracking-widest text-[oklch(var(--color-ink-subtle))] pb-1 border-b border-[oklch(var(--color-block))]">
-              {t("ledger.journal.categories")}
-            </h2>
-            <LegendLedger rows={categoryRows(data, t)} />
-          </section>
-        </div>
+        <Journal rows={data.results} closing={data.closing} />
       )}
     </div>
   );
 }
 
-/** 四柱。实在压双线:它是这张账的终结数。 */
+/** 四柱(B10):28 等宽,柱间 1px 行线,期末一柱 s1 底;数字不上色。 */
 function FourPillars({ data }: { data: LedgerJournal }) {
   const { t } = useI18n();
-  const cells: { key: string; label: string; value: string; className: string; closing?: boolean }[] = [
-    { key: "opening", label: t("ledger.journal.pillar_opening"), value: signed(data.opening), className: "" },
-    { key: "received", label: t("ledger.journal.pillar_received"), value: signed(data.received), className: INK_OK },
-    { key: "disbursed", label: t("ledger.journal.pillar_disbursed"), value: signed(-data.disbursed), className: INK_DANGER },
-    { key: "closing", label: t("ledger.journal.pillar_closing"), value: signed(data.closing), className: "font-semibold", closing: true },
+  const cells: { key: string; label: string; value: string; closing?: boolean }[] = [
+    { key: "opening", label: t("ledger.journal.pillar_opening"), value: signed(data.opening) },
+    { key: "received", label: t("ledger.journal.pillar_received"), value: signed(data.received) },
+    { key: "disbursed", label: t("ledger.journal.pillar_disbursed"), value: signed(-data.disbursed) },
+    { key: "closing", label: t("ledger.journal.pillar_closing"), value: signed(data.closing), closing: true },
   ];
   return (
-    <dl data-testid="four-pillars" className="grid grid-cols-2 md:grid-cols-4 border-t border-[oklch(var(--color-block))]">
-      {cells.map((c) => (
+    <dl
+      data-testid="four-pillars"
+      className="grid grid-cols-2 md:grid-cols-4 border-t-2 border-b border-t-[oklch(var(--color-ink))] border-b-[oklch(var(--color-line))]"
+    >
+      {cells.map((c, i) => (
         <div
           key={c.key}
           data-pillar={c.key}
-          className={`px-3 pt-2 pb-3 max-md:odd:pl-0 md:first:pl-0 border-[oklch(var(--color-line))] md:border-r last:border-r-0 ${
-            c.closing ? "border-b-[3px] border-double !border-b-[oklch(var(--color-block))]" : "border-b"
-          }`}
+          className={cn(
+            "px-3 py-2 border-[oklch(var(--color-line))]",
+            i > 0 && "md:border-l",
+            i % 2 === 1 && "max-md:border-l",
+            c.closing && "bg-[oklch(var(--color-surface-1))]"
+          )}
         >
-          <dt className={MONO_LABEL}>{c.label}</dt>
-          <dd className={`font-mono text-lg tabular-nums ${c.className}`}>{c.value}</dd>
+          <dt className="text-xs text-[oklch(var(--color-ink-subtle))]">{c.label}</dt>
+          <dd className="font-mono text-xl tabular-nums text-[oklch(var(--color-ink))]">{c.value}</dd>
         </div>
       ))}
     </dl>
   );
 }
 
-const sumOf = (rows: LedgerJournalRow[], type: LedgerJournalRow["record_type"]) =>
-  rows.filter((r) => r.record_type === type).reduce((s, r) => s + r.weight, 0);
-
-function Journal({ rows }: { rows: LedgerJournalRow[] }) {
+function Journal({ rows, closing }: { rows: LedgerJournalRow[]; closing: number }) {
   const { t } = useI18n();
-  const groups = groupByDay(rows);
+  const balances = runningBalances(rows, closing);
+  const sticky = rows.length > STICKY_AFTER;
   return (
     <section className="min-w-0" data-testid="ledger-journal">
-      <div className={`${JOURNAL_COLS} max-md:hidden ${MONO_LABEL} pb-1 border-b border-[oklch(var(--color-block))]`}>
+      <div
+        data-testid="journal-head"
+        className={cn(
+          JOURNAL_COLS,
+          "max-md:hidden h-7 items-center border-b-2 border-[oklch(var(--color-ink))] bg-[oklch(var(--color-canvas))]",
+          MONO_LABEL,
+          sticky && "sticky top-0 z-10"
+        )}
+      >
         <span>{t("ledger.journal.col_day")}</span>
         <span>{t("ledger.journal.col_soul")}</span>
+        <span>{t("ledger.journal.category")}</span>
         <span>{t("ledger.journal.col_entry")}</span>
-        <span>{t("ledger.journal.col_basis")}</span>
         <span className="text-right">{t("souls.detail.ledger.col_in")}</span>
         <span className="text-right">{t("souls.detail.ledger.col_out")}</span>
+        <span className="text-right">{t("ledger.journal.col_balance")}</span>
       </div>
-      {groups.map((g) => (
-        <div key={g.day} data-journal-day={g.day}>
-          <div className="flex justify-between pt-3 pb-1 border-b border-[oklch(var(--color-block))] font-mono text-xs">
-            <span className="font-semibold">{g.day.slice(5)}</span>
-            <span className={MONO_LABEL} data-testid="day-subtotal">
-              {t("ledger.journal.subtotal")} <span className={INK_OK}>{signed(sumOf(g.rows, "MERIT"))}</span> /{" "}
-              <span className={INK_DANGER}>{signed(-sumOf(g.rows, "DEMERIT"))}</span>
-            </span>
-          </div>
-          {g.rows.map((r) => (
-            <JournalRow key={r.id} row={r} />
-          ))}
-        </div>
+      {rows.map((r, i) => (
+        <JournalRow key={r.id} row={r} balance={balances[i]} />
       ))}
       <div
-        data-testid="page-total"
-        className="grid grid-cols-[1fr_4.5rem_4.5rem] gap-x-3 py-2 border-b-[3px] border-double border-[oklch(var(--color-block))] font-mono font-semibold"
+        data-testid="journal-foot"
+        className="flex flex-wrap justify-between gap-3 pt-2 border-t-2 border-[oklch(var(--color-ink))] -mt-px text-xs text-[oklch(var(--color-ink-muted))]"
       >
-        <span className="font-sans">{t("ledger.journal.page_total", { n: String(rows.length) })}</span>
-        <span className={`text-right ${INK_OK}`}>{signed(sumOf(rows, "MERIT"))}</span>
-        <span className={`text-right ${INK_DANGER}`}>{signed(-sumOf(rows, "DEMERIT"))}</span>
+        <span>{t("ledger.journal.all_shown", { n: String(rows.length) })}</span>
+        <span className={MONO_LABEL}>{t("ledger.journal.row_hint")}</span>
       </div>
-      <p className={`${MONO_LABEL} pt-2`}>{t("ledger.journal.row_hint")}</p>
     </section>
   );
 }
 
 /** 整行可点:一条 `Link` 用 `::after` 盖住整行,进入该户详情的「乙 · 功过」。 */
-function JournalRow({ row }: { row: LedgerJournalRow }) {
+function JournalRow({ row, balance }: { row: LedgerJournalRow; balance: number }) {
   const { t, formatDateTime } = useI18n();
   const merit = row.record_type === "MERIT";
+  const category = t(`souls.categories.${row.category}`);
+  // 摘要 = 事目,有依据就接在后面(v1 的「依据」一列,B10 并进摘要)。
+  const summary = row.statute_clause ? `${row.description} · ${row.statute_clause}` : row.description;
   return (
     <div
       data-journal-row={row.id}
-      className={`${JOURNAL_COLS} relative items-center min-h-9 max-md:py-2 border-b border-[oklch(var(--color-rule))] hover:bg-[oklch(var(--color-surface-2))] [grid-template-areas:'s_s_r_p'_'i_i_b_b'] md:[grid-template-areas:'d_s_i_b_r_p']`}
+      className={`${JOURNAL_COLS} relative items-center min-h-9 max-md:py-2 border-b border-[oklch(var(--color-line))] hover:bg-[oklch(var(--color-surface-2))] [grid-template-areas:'s_r_p_b'_'m_m_m_m'] md:[grid-template-areas:'d_s_c_m_r_p_b']`}
     >
       <span className={`[grid-area:d] max-md:hidden ${MONO_LABEL}`} title={formatDateTime(row.recorded_at)}>
-        {row.recorded_at.slice(11, 16)}
+        {row.day.slice(5)}
       </span>
-      <span className="[grid-area:s] text-sm font-medium truncate" title={row.soul_name}>
+      <span className="[grid-area:s] text-sm truncate" title={row.soul_name}>
         <Link href={`/souls/${row.soul_id}#soul-karma`} className={ROW_LINK}>
           {row.soul_name}
         </Link>
       </span>
-      <span className="[grid-area:i] text-sm truncate" title={row.description}>
-        <span className="text-[oklch(var(--color-ink-subtle))]">{t(`souls.categories.${row.category}`)} · </span>
-        {row.description}
+      <span className="[grid-area:c] max-md:hidden text-xs text-[oklch(var(--color-ink-muted))] truncate" title={category}>
+        {category}
       </span>
-      <span className={`[grid-area:b] ${MONO_LABEL} truncate`} title={row.statute_clause || undefined}>
-        <DomainText value={row.statute_clause || null} missingKind="unrecorded" />
+      <span className="[grid-area:m] text-xs text-[oklch(var(--color-ink-muted))] truncate" title={summary}>
+        <span className="md:hidden font-mono">
+          {row.day.slice(5)} · {category} ·{" "}
+        </span>
+        {summary}
       </span>
-      <span className={`[grid-area:r] font-mono text-right ${INK_OK}`}>{merit ? signed(row.weight) : ""}</span>
-      <span className={`[grid-area:p] font-mono text-right ${INK_DANGER}`}>{merit ? "" : signed(-row.weight)}</span>
+      <span className="[grid-area:r] font-mono text-sm tabular-nums text-right">{merit ? signed(row.weight) : ""}</span>
+      <span className="[grid-area:p] font-mono text-sm tabular-nums text-right">{merit ? "" : signed(-row.weight)}</span>
+      <span className="[grid-area:b] font-mono text-sm tabular-nums text-right" data-testid="row-balance">
+        {signed(balance)}
+      </span>
     </div>
   );
 }
 
-/** 图例账:每个类目的功、过各占一行,条形只示意,数字在账行里。 */
-function categoryRows(data: LedgerJournal, t: (k: string) => string): LegendLedgerRow[] {
-  const rows: LegendLedgerRow[] = [];
-  for (const c of data.categories) {
-    if (c.merit > 0)
-      rows.push({ key: `${c.category}:M`, label: `${t(`souls.categories.${c.category}`)} · ${t("souls.detail.ledger.col_in")}`, count: c.merit, swatchClass: "bg-[oklch(var(--color-karma-merit))]" });
-    if (c.demerit > 0)
-      rows.push({ key: `${c.category}:D`, label: `${t(`souls.categories.${c.category}`)} · ${t("souls.detail.ledger.col_out")}`, count: c.demerit, swatchClass: "bg-[oklch(var(--color-karma-demerit))]" });
-  }
-  return rows;
-}
-
-/** 骨架照最终版式:四柱一行,流水十行。 */
+/** 骨架照最终版式(C15:表格 = 表头 + 3 行,静态):四柱一行,表头,三行。 */
 function LedgerSkeleton() {
   return (
-    <div aria-busy="true" data-testid="ledger-skeleton">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 border-t border-[oklch(var(--color-block))] pt-3">
+    <div aria-busy="true" data-testid="ledger-skeleton" className="flex flex-col gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 border-t-2 border-[oklch(var(--color-ink))] pt-2">
         {[0, 1, 2, 3].map((i) => (
-          <div key={i} className="space-y-2">
+          <div key={i} className="flex flex-col gap-2">
             <Skeleton className="h-3 w-16" />
-            <Skeleton className="h-6 w-24" />
+            <Skeleton className="h-8 w-24" />
           </div>
         ))}
       </div>
-      <div className="mt-6 space-y-2">
-        {Array.from({ length: 10 }).map((_, i) => (
-          <Skeleton key={i} className="h-7 w-full" />
-        ))}
-      </div>
+      {[0, 1, 2, 3].map((i) => (
+        <Skeleton key={i} className="h-7 w-full" />
+      ))}
     </div>
   );
 }
@@ -386,7 +365,7 @@ function LedgerSkeleton() {
    `tests/test_page_gates_match_the_backend.py` 会因为路由没有门而红。 */
 export default function LedgerPage() {
   return (
-    <RequirePermission permissions="ledger.read" fallback={<PermissionDenied />}>
+    <RequirePermission permissions="ledger.read" fallback={<PermissionDenied permission="ledger.read" />}>
       <LedgerPageContent />
     </RequirePermission>
   );

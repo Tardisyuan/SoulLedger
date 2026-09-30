@@ -364,8 +364,12 @@ export function ConfirmDialog({
   // `info` is mapped rather than dropped: the prop still accepts it, and no
   // call site has ever passed it (only `danger`, the default, and one
   // `warning` in app/souls/[id]/page.tsx).
+  //
+  // 规范 v2 补足 A1:实底红「危险」按钮只出现在「输入名称以确认」的对话框里。这个对话框
+  // 从不要求输入名称,所以 `danger`(也是默认值)画成次按钮 —— 后果写在标题和正文里,
+  // 不写在按钮的颜色里。守卫:src/__tests__/dangerButtonPlacement.test.ts。
   const variantButton = {
-    danger: "danger",
+    danger: "secondary",
     warning: "warning",
     info: "primary",
   } as const;

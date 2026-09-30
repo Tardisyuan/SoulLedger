@@ -181,7 +181,7 @@ export function JudgmentPlacement({
         meta={
           drafted ? (
             <>
-              <span data-testid="placement-draft" className="border border-dashed border-[oklch(var(--color-ink-subtle))] px-1.5 font-mono text-2xs">
+              <span data-testid="placement-draft" className="border border-dashed border-[oklch(var(--color-ink-subtle))] px-2 font-mono text-2xs">
                 {t("judgment.placement.draft")}
               </span>
               {savedAt && (

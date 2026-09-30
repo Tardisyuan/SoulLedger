@@ -112,8 +112,8 @@ function BalanceReading({
   // 规范 v1「乙 · 功过」:收 / 支 / 结 三列账。功德记在收列、罪业记在支列,
   // 余额落在结列、压在 3 px 双线上 —— 双线在账簿里就是「到此结清」。
   // 收、支是账行,正文字号;只有结是头条数字(text-md)。
-  const cell = "py-1.5 border-b border-[oklch(var(--color-rule))]";
-  const last = "py-1.5 border-b border-[oklch(var(--color-block))]";
+  const cell = "py-2 border-b border-[oklch(var(--color-rule))]";
+  const last = "py-2 border-b border-[oklch(var(--color-block))]";
   const total = "py-2 border-b-[3px] border-double border-[oklch(var(--color-block))]";
   return (
     <div data-testid="balance-ledger" className="grid grid-cols-[1fr_auto_auto_auto] text-sm [&>*:not(:nth-child(4n+1))]:pl-4">
@@ -381,7 +381,7 @@ function UnavailableReading({
           from "these are not weights". A reader who scrolls from a Greek soul's
           road count to this box is making exactly the comparison the review
           caught, and the box is the place it is least defended against. */}
-      <div className="border border-dashed border-[oklch(var(--color-hairline))] p-3 space-y-1.5">
+      <div className="border border-dashed border-[oklch(var(--color-hairline))] p-3 space-y-2">
         <p className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))]">
           {t("souls.detail.reading.unavailable_raw_data")}
         </p>

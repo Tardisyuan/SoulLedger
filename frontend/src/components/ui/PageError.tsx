@@ -1,6 +1,13 @@
 "use client";
 
 import { useI18n } from "@/src/contexts/I18nContext";
+import { Button } from "@/src/components/ui/Button";
+
+/**
+ * 规范 v2 补足 C15:出错是内容区里的一段,不换整页 —— 冷玫红「✕ 标题」13 / 600、
+ * 旁边一颗次按钮「重试」;说明 12 ink3。冷玫红只给系统出错(判决的 ✕ 是 ink)。
+ */
+const ERROR_TITLE = "text-sm font-semibold text-[oklch(var(--color-danger))]";
 
 interface PageErrorProps {
   error: Error & { digest?: string };
@@ -17,23 +24,22 @@ interface PageErrorProps {
 export function PageError({ error, reset }: PageErrorProps) {
   const { t } = useI18n();
 
+  // 500(C15「404 · 500」):「500 · 服务出了问题」一行,trace 等宽 —— 这里是 Next 给的 digest。
   return (
-    <div className="flex items-center justify-center h-64">
-      <div className="text-center">
-        <div className="text-xl text-[oklch(var(--color-status-error))] mb-4">!</div>
-        <h2 className="text-md text-[oklch(var(--color-ink))] mb-2">
+    <div role="alert" data-page-error="" className="border-t border-[oklch(var(--color-line))] py-8">
+      <div className="flex flex-wrap items-center gap-3">
+        <p className={ERROR_TITLE}>
+          <span aria-hidden="true">✕ </span>
           {t("error.title")}
-        </h2>
-        <p className="text-[oklch(var(--color-ink-muted))] mb-4 text-sm">
-          {error.message || t("error.description")}
         </p>
-        <button
-          onClick={reset}
-          className="px-4 py-2 bg-[oklch(var(--color-ink))] text-[oklch(var(--color-canvas))] text-sm font-medium hover:opacity-90 transition-opacity"
-        >
+        <Button type="button" variant="secondary" size="sm" onClick={reset}>
           {t("error.retry")}
-        </button>
+        </Button>
       </div>
+      <p className="mt-1 text-xs text-[oklch(var(--color-ink-subtle))]">{error.message || t("error.description")}</p>
+      {error.digest && (
+        <p className="mt-2 font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">trace {error.digest}</p>
+      )}
     </div>
   );
 }
@@ -68,26 +74,19 @@ export function QueryError({ onRetry, detail }: QueryErrorProps) {
   const { t } = useI18n();
 
   return (
-    <div
-      role="alert"
-      data-query-error=""
-      className="flex flex-col items-center justify-center py-10 text-center"
-    >
-      <p className="text-md text-[oklch(var(--color-ink))] mb-1">
-        {t("error.title")}
-      </p>
-      <p className="text-sm text-[oklch(var(--color-ink-muted))] mb-4">
-        {detail || t("error.description")}
-      </p>
-      {onRetry && (
-        <button
-          type="button"
-          onClick={onRetry}
-          className="px-4 py-2 border border-[oklch(var(--color-hairline))] text-sm text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))] transition-colors"
-        >
-          {t("error.retry")}
-        </button>
-      )}
+    <div role="alert" data-query-error="" className="border-t border-[oklch(var(--color-line))] py-8">
+      <div className="flex flex-wrap items-center gap-3">
+        <p className={ERROR_TITLE}>
+          <span aria-hidden="true">✕ </span>
+          {t("error.title")}
+        </p>
+        {onRetry && (
+          <Button type="button" variant="secondary" size="sm" onClick={onRetry}>
+            {t("error.retry")}
+          </Button>
+        )}
+      </div>
+      <p className="mt-1 text-xs text-[oklch(var(--color-ink-subtle))]">{detail || t("error.description")}</p>
     </div>
   );
 }
