@@ -265,7 +265,7 @@ export function JudgmentConfirmLayer({
                   <Seal size={52} court={court ?? undefined} className="shrink-0" />
                   <span className="min-w-0">
                     <span className="block text-2xs uppercase text-[oklch(var(--color-ink-subtle))]">{t("judgment.desk.signing_court")}</span>
-                    <span className="mt-1 block truncate text-sm text-[oklch(var(--color-ink))]">
+                    <span className="mt-1 block truncate text-sm text-[oklch(var(--color-ink))]" title={court ?? undefined}>
                       <DomainText value={court} />
                     </span>
                   </span>

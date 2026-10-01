@@ -787,10 +787,11 @@ export default function JudgmentDetailPage({ params }: PageProps) {
                       <DomainEnum namespace="judgment.verdicts" value={selectedVerdict} />
                     </>
                   ) : (
-                    <>
-                      <span aria-hidden="true" className="font-normal text-[oklch(var(--color-ink-tertiary))]">—</span>
-                      <span className="sr-only">{t("judgment.detail.select_verdict")}</span>
-                    </>
+                    /* 还没选:不是「缺值」(MissingValue 说的是没记录),是「待你选」—— 原型默认落在待定上,
+                       这里不替判官选,写一句提示,字号退到 text-lg。 */
+                    <span className="text-lg font-normal text-[oklch(var(--color-ink-subtle))]">
+                      {t("judgment.detail.select_verdict")}
+                    </span>
                   )}
                 </span>
               </p>

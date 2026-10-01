@@ -978,18 +978,18 @@ describe("插入审判台的落点(?cite=)", () => {
 // ── v3 版式:当前这一判 / 资料舱 / 全案 / 盖印确认层 ─────────────────────────────
 
 describe("v3 · 当前这一判", () => {
-  it("选中的裁决以展示字号写在中轴:字形 + 文字;没选时是一道横线,不冒充任何一个裁决", async () => {
+  it("选中的裁决以展示字号写在中轴:字形 + 文字;没选时写「请选择裁决」,不替判官选一个", async () => {
     renderPage();
     const ruling = await screen.findByTestId("current-ruling");
     expect(ruling).toHaveClass("text-display-lg");
-    expect(ruling).toHaveTextContent("—");
+    expect(ruling).toHaveTextContent(tZh("judgment.detail.select_verdict"));
     for (const v of ["PASSED", "FAILED", "PURGATORY", "RETRY"]) {
       expect(ruling).not.toHaveTextContent(tZh(`judgment.verdicts.${v.toLowerCase()}`));
     }
 
     fireEvent.keyDown(document.body, { key: "3" });
     expect(ruling).toHaveTextContent(`◇${tZh("judgment.verdicts.purgatory")}`);
-    expect(ruling).not.toHaveTextContent("—");
+    expect(ruling).not.toHaveTextContent(tZh("judgment.detail.select_verdict"));
     expect(ruling).not.toHaveTextContent(tZh("judgment.verdicts.passed"));
   });
 
