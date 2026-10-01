@@ -253,6 +253,16 @@ describe("row density reaches the body, not just the header", () => {
     expect(header?.className ?? "").not.toContain("py-2");
   });
 
+  it("规范 v3 的行高:正文行最少 64(--table-row-h)、表头 44(--control-h-sm);compact 不加最小行高", () => {
+    const { container, unmount } = dense();
+    const bodyRow = container.querySelector("tbody tr") as HTMLElement;
+    expect(bodyRow.className.split(/\s+/)).toContain("h-(--table-row-h)");
+    expect(container.querySelector("thead tr")?.className.split(/\s+/)).toContain("h-(--control-h-sm)");
+    unmount();
+    const { container: c2 } = dense("compact");
+    expect((c2.querySelector("tbody tr") as HTMLElement).className).not.toContain("--table-row-h");
+  });
+
   it("leaves the header at the comfortable padding by default", () => {
     const { container } = dense();
     // 规范 v1:行高 36 px。

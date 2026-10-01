@@ -133,7 +133,7 @@ export function CommentThread({ postId }: { postId: string }) {
             type="text" value={newComment} onChange={(e) => setNewComment(e.target.value)}
             placeholder={t("social.add_comment") || "Write a comment..."}
             aria-label={t("social.add_comment")}
-            className="h-8 min-w-0 flex-1 bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-ink-subtle))] px-3 text-sm text-[oklch(var(--color-ink))] placeholder-[oklch(var(--color-ink-subtle))]"
+            className="h-(--control-h-sm) min-w-0 flex-1 bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-ink-subtle))] px-3 text-sm text-[oklch(var(--color-ink))] placeholder-[oklch(var(--color-ink-subtle))]"
           />
           <Button type="submit" variant="primary" disabled={!newComment.trim()} loading={createComment.isPending}>
             {t("social.send") || "Send"}

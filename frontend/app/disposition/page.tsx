@@ -327,7 +327,7 @@ function Row({ cols, testId, children }: { cols: string; testId: string; childre
   return (
     <div
       data-testid={testId}
-      className={`grid grid-cols-1 ${cols} items-center gap-x-3 gap-y-1 min-h-9 max-md:min-h-13 py-1 border-b border-[oklch(var(--color-rule))] text-sm`}
+      className={`grid grid-cols-1 ${cols} items-center gap-x-3 gap-y-1 min-h-(--table-row-h) py-1 border-b border-[oklch(var(--color-rule))] text-sm`}
     >
       {children}
     </div>

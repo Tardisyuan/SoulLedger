@@ -242,16 +242,28 @@ describe("focus is left to the global rule", () => {
   });
 });
 
-describe("三档高度:28(表格内)/ 32(控件)/ 40", () => {
-  it("each size is one fixed height, the same for every variant", () => {
+/** 规范 v3 的三档(2026-10-01 拍板全站换过去)。数字只在 globals.css 的 `--control-h-*` 里。 */
+const GLOBALS = readFileSync(path.join(__dirname, "../../app/globals.css"), "utf8");
+const CONTROL_PX = { sm: 44, md: 48, lg: 56 } as const;
+
+describe("三档高度:规范 v3 的 44 / 48 / 56", () => {
+  it("each size is one height, taken from its token, the same for every variant", () => {
     for (const [variant, size] of MATRIX) {
-      const h = classesOf(variant, size).filter((c) => /^h-\d+$/.test(c));
-      expect(h).toEqual([{ sm: "h-7", md: "h-8", lg: "h-10" }[size]]);
+      const h = classesOf(variant, size).filter((c) => /^h-/.test(c));
+      expect(h).toEqual([`h-(--control-h-${size})`]);
     }
   });
 
-  it("is a ≥ 44 px target on a phone (§1.7)", () => {
-    for (const [variant, size] of MATRIX) expect(classesOf(variant, size)).toContain("max-sm:min-h-11");
+  it("the tokens are 44 / 48 / 56 px", () => {
+    for (const size of ["sm", "md", "lg"] as const) {
+      expect(GLOBALS).toMatch(new RegExp(`--control-h-${size}: ${CONTROL_PX[size]}px;`));
+    }
+  });
+
+  it("needs no phone-only height patch: the smallest size is already the 44 px target (§1.7)", () => {
+    for (const [variant, size] of MATRIX) {
+      expect(classesOf(variant, size).filter((c) => c.startsWith("max-sm:"))).toEqual([]);
+    }
   });
 });
 
@@ -259,7 +271,7 @@ describe("behaviour", () => {
   it("defaults to secondary/md", () => {
     render(<Button>label</Button>);
     const classes = screen.getByRole("button").className.split(/\s+/);
-    expect(classes).toEqual(expect.arrayContaining(["bg-transparent", "border-[oklch(var(--color-line-strong))]", "h-8", "px-3", "text-sm"]));
+    expect(classes).toEqual(expect.arrayContaining(["bg-transparent", "border-[oklch(var(--color-line-strong))]", "h-(--control-h-md)", "px-3", "text-sm"]));
   });
 
   it("disables and marks itself busy while loading", () => {

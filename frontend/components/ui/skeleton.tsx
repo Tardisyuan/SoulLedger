@@ -77,7 +77,8 @@ export function TableSkeleton({ rows = 5, cols = 4 }: { rows?: number; cols?: nu
       </tr>
       {/* 行 */}
       {Array.from({ length: rows }).map((_, rowIdx) => (
-        <tr key={rowIdx} className="border-b border-[oklch(var(--color-hairline))]">
+        // 与 DataTable 的正文行同高(`--table-row-h`),骨架换成内容时不跳行。
+        <tr key={rowIdx} className="h-(--table-row-h) border-b border-[oklch(var(--color-hairline))]">
           {Array.from({ length: cols }).map((_, colIdx) => (
             <td key={colIdx} className="px-4 py-3">
               <Skeleton className="h-4 w-full" />

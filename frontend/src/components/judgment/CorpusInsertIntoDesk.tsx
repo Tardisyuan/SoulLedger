@@ -60,7 +60,7 @@ export function CorpusInsertIntoDesk({ statuteId }: { statuteId: string }) {
         href={deskHref(remembered.id, statuteId)}
         onClick={goRemembered}
         data-testid="corpus-insert"
-        className="inline-flex items-center h-8 px-3 border border-[oklch(var(--color-line))] text-sm hover:bg-[oklch(var(--color-surface-2))]"
+        className="inline-flex items-center h-(--control-h-sm) px-3 border border-[oklch(var(--color-line))] text-sm hover:bg-[oklch(var(--color-surface-2))]"
         title={remembered.soul_name || undefined}
       >
         {t("judgment.corpus.insert_desk")}

@@ -1397,13 +1397,13 @@ export default function WorkflowEditor({
             onChange={(e) => setTemplateName(e.target.value)}
             placeholder={t("workflow.editor.template_name_placeholder")}
             aria-label={t("workflow.editor.template_name_placeholder")}
-            className="h-8 px-3 bg-[oklch(var(--color-canvas))] border border-[oklch(var(--color-line))] text-sm text-[oklch(var(--color-ink))] placeholder:text-[oklch(var(--color-ink-subtle))] focus:border-[oklch(var(--color-accent))]"
+            className="h-(--control-h-sm) px-3 bg-[oklch(var(--color-canvas))] border border-[oklch(var(--color-line))] text-sm text-[oklch(var(--color-ink))] placeholder:text-[oklch(var(--color-ink-subtle))] focus:border-[oklch(var(--color-accent))]"
           />
           <select
             value={templateCiv}
             onChange={(e) => setTemplateCiv(e.target.value as typeof templateCiv)}
             aria-label={t("workflow.editor.civilization_select_label") === "workflow.editor.civilization_select_label" ? "Civilization" : t("workflow.editor.civilization_select_label")}
-            className="h-8 px-3 bg-[oklch(var(--color-canvas))] border border-[oklch(var(--color-line))] text-sm text-[oklch(var(--color-ink))] focus:border-[oklch(var(--color-accent))]"
+            className="h-(--control-h-sm) px-3 bg-[oklch(var(--color-canvas))] border border-[oklch(var(--color-line))] text-sm text-[oklch(var(--color-ink))] focus:border-[oklch(var(--color-accent))]"
           >
             {/* Rendered from CIVILIZATION_OPTIONS so the dropdown cannot fall
                 behind the union the state is typed with — three hand-written
@@ -1419,7 +1419,7 @@ export default function WorkflowEditor({
             value={templateCaseType}
             onChange={(e) => setTemplateCaseType(e.target.value)}
             aria-label={t("workflow.editor.case_type_select_label") === "workflow.editor.case_type_select_label" ? "Case Type" : t("workflow.editor.case_type_select_label")}
-            className="h-8 px-3 bg-[oklch(var(--color-canvas))] border border-[oklch(var(--color-line))] text-sm text-[oklch(var(--color-ink))] focus:border-[oklch(var(--color-accent))]"
+            className="h-(--control-h-sm) px-3 bg-[oklch(var(--color-canvas))] border border-[oklch(var(--color-line))] text-sm text-[oklch(var(--color-ink))] focus:border-[oklch(var(--color-accent))]"
           >
             <option value="ROUTINE">{t("workflow.case_types.ROUTINE")}</option>
             <option value="APPEAL">{t("workflow.case_types.APPEAL")}</option>
@@ -1436,7 +1436,7 @@ export default function WorkflowEditor({
             value={templatePriority}
             onChange={(e) => setTemplatePriority(Number(e.target.value))}
             aria-label={t("workflow.detail.priority")}
-            className="h-8 px-3 bg-[oklch(var(--color-canvas))] border border-[oklch(var(--color-line))] text-sm text-[oklch(var(--color-ink))] focus:border-[oklch(var(--color-accent))]"
+            className="h-(--control-h-sm) px-3 bg-[oklch(var(--color-canvas))] border border-[oklch(var(--color-line))] text-sm text-[oklch(var(--color-ink))] focus:border-[oklch(var(--color-accent))]"
           >
             {priorityOptions.map((opt) => (
               <option key={opt.value} value={opt.value}>
@@ -1452,7 +1452,7 @@ export default function WorkflowEditor({
           <button
             type="button"
             onClick={() => addNode()}
-            className="px-3 h-8 inline-flex items-center border border-[oklch(var(--color-block))] text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))] text-sm font-medium transition-colors"
+            className="px-3 h-(--control-h-sm) inline-flex items-center border border-[oklch(var(--color-block))] text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))] text-sm font-medium transition-colors"
           >
             + {t("workflow.editor.add_node")}
           </button>
@@ -1460,13 +1460,9 @@ export default function WorkflowEditor({
             type="button"
             onClick={autoLayout}
             disabled={nodes.length === 0}
-            /* `h-8` rather than the `py-1.5` its neighbours use: 1.5 is off the
-               spacing rhythm (1/2/3/4/6/10/16) and this file's legacy quota for
-               that is already spent, so a ninth would have to be bought by
-               raising the baseline. 32px is the same height `px-3 py-1.5` on
-               text-sm produces, border included — border-box — so the row still
-               lines up. */
-            className="px-3 h-8 inline-flex items-center text-[oklch(var(--color-ink-muted))] hover:bg-[oklch(var(--color-surface-2))] text-sm font-medium transition-colors disabled:text-[oklch(var(--color-ink-subtle))] disabled:cursor-not-allowed"
+            /* 工具条上的控件一律是规范 v3 的 sm 档 44(`--control-h-sm`),输入、下拉与按钮同高,
+               所以这一行对得齐;写高度而不写 `py-*`,是因为 1.5 不在间距节奏里。 */
+            className="px-3 h-(--control-h-sm) inline-flex items-center text-[oklch(var(--color-ink-muted))] hover:bg-[oklch(var(--color-surface-2))] text-sm font-medium transition-colors disabled:text-[oklch(var(--color-ink-subtle))] disabled:cursor-not-allowed"
           >
             {t("workflow.editor.auto_layout")}
           </button>
@@ -1508,7 +1504,7 @@ export default function WorkflowEditor({
             type="button"
             onClick={deleteSelectedNode}
             disabled={!selectedNodeId}
-            className="px-3 h-8 inline-flex items-center text-[oklch(var(--color-danger))] text-sm font-medium border border-[oklch(var(--color-danger))] transition-colors disabled:border-[oklch(var(--color-line))] disabled:text-[oklch(var(--color-ink-subtle))] disabled:cursor-not-allowed"
+            className="px-3 h-(--control-h-sm) inline-flex items-center text-[oklch(var(--color-danger))] text-sm font-medium border border-[oklch(var(--color-danger))] transition-colors disabled:border-[oklch(var(--color-line))] disabled:text-[oklch(var(--color-ink-subtle))] disabled:cursor-not-allowed"
           >
             {t("workflow.editor.delete_selected")}
           </button>
@@ -1526,7 +1522,7 @@ export default function WorkflowEditor({
                 selectNode(issues[0].nodeId);
                 document.getElementById(validationId)?.focus();
               }}
-              className="px-3 h-8 inline-flex items-center border border-[oklch(var(--color-danger))] text-[oklch(var(--color-danger))] text-sm font-medium"
+              className="px-3 h-(--control-h-sm) inline-flex items-center border border-[oklch(var(--color-danger))] text-[oklch(var(--color-danger))] text-sm font-medium"
             >
               <span aria-hidden="true">!&nbsp;</span>
               {t("workflow.editor.issues", { n: String(issues.length) })}
@@ -1544,7 +1540,7 @@ export default function WorkflowEditor({
             onClick={handleSave}
             disabled={busy || (!!templateId && isTemplateLoading) || saveBlocked}
             aria-describedby={saveBlocked ? validationId : undefined}
-            className="px-3 h-8 inline-flex items-center border border-[oklch(var(--color-block))] text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))] text-sm font-medium transition-colors disabled:text-[oklch(var(--color-ink-subtle))] disabled:border-[oklch(var(--color-line))] disabled:cursor-not-allowed"
+            className="px-3 h-(--control-h-sm) inline-flex items-center border border-[oklch(var(--color-block))] text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))] text-sm font-medium transition-colors disabled:text-[oklch(var(--color-ink-subtle))] disabled:border-[oklch(var(--color-line))] disabled:cursor-not-allowed"
           >
             {saveMutation.isPending ? t("workflow.editor.saving") : t("workflow.editor.save_template")}
           </button>
@@ -1553,7 +1549,7 @@ export default function WorkflowEditor({
             onClick={handlePublish}
             disabled={busy || (!!templateId && isTemplateLoading) || issues.length > 0 || nodes.length === 0}
             aria-describedby={issues.length > 0 ? validationId : undefined}
-            className="px-3 h-8 inline-flex items-center border border-[oklch(var(--color-ink))] bg-[oklch(var(--color-ink))] text-[oklch(var(--color-canvas))] text-sm font-medium transition-colors disabled:bg-[oklch(var(--color-surface-2))] disabled:text-[oklch(var(--color-ink-subtle))] disabled:border-[oklch(var(--color-line))] disabled:cursor-not-allowed"
+            className="px-3 h-(--control-h-sm) inline-flex items-center border border-[oklch(var(--color-ink))] bg-[oklch(var(--color-ink))] text-[oklch(var(--color-canvas))] text-sm font-medium transition-colors disabled:bg-[oklch(var(--color-surface-2))] disabled:text-[oklch(var(--color-ink-subtle))] disabled:border-[oklch(var(--color-line))] disabled:cursor-not-allowed"
           >
             {publishMutation.isPending ? t("workflow.editor.publishing") : t("workflow.editor.publish")}
           </button>

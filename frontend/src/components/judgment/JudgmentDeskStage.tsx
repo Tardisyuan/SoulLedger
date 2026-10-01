@@ -145,7 +145,7 @@ export function MaterialDock({
           type="button"
           onClick={onToggleFullCase}
           aria-pressed={fullCase}
-          className="ml-auto hidden h-8 items-center gap-2 text-xs text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))] md:inline-flex"
+          className="ml-auto hidden h-(--control-h-sm) items-center gap-2 text-xs text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))] md:inline-flex"
         >
           {fullCase ? t("judgment.desk.back_to_focus") : t("judgment.desk.full_case")}
           <Kbd>F</Kbd>
@@ -237,7 +237,7 @@ export function JudgmentConfirmLayer({
             {!done && (
               <Dialog.Close
                 disabled={pending}
-                className="inline-flex h-8 items-center gap-2 text-xs text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))]"
+                className="inline-flex h-(--control-h-sm) items-center gap-2 text-xs text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))]"
               >
                 {t("judgment.desk.back_to_check")}
                 <Kbd>Esc</Kbd>

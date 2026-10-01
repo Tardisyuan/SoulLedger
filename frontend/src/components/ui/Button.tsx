@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import { Spinner } from "./Spinner";
 
 /**
- * The one button — 规范 v2「朱印」补足 A1 的按钮行(Web 高 32、字 13 / 600):
+ * The one button — 规范 v2「朱印」补足 A1 的按钮行,尺寸按规范 v3(44 / 48 / 56,见下面 size 那段):
  *
  * - **主**:匾色实底(`--color-main`,按 <html data-civ> 换文明)、onMain 字、无边框。
  *   主按钮是匾色的五处用法之一,只给落判这一类决定。悬停 / 按下 = 底色叠黑 12% / 24%
@@ -30,8 +30,6 @@ const button = cva(
     "inline-flex items-center justify-center gap-2",
     "font-semibold whitespace-nowrap select-none border",
     "transition-[color,background-color,border-color] duration-fast ease-standard",
-    // 393 px: every control is a ≥ 44 px target.
-    "max-sm:min-h-11",
     // Disabled (A1): s2 fill, ink3 text, no border, same opacity; hover and press are dead.
     "disabled:pointer-events-none disabled:bg-[oklch(var(--color-disabled-surface))] disabled:text-[oklch(var(--color-disabled-ink))] disabled:border-transparent",
   ],
@@ -85,28 +83,27 @@ const button = cva(
           "active:bg-[oklch(var(--color-line))]",
         ],
       },
-      /* 规范 v3 的三档是 **44 / 48 / 56**,这里仍然是 28 / 32 / 40,**是拍板不是欠账**。
+      /* 规范 v3 的三档:**44 / 48 / 56**,数字在 globals.css 的 `--control-h-*`。
        *
-       * 用户 2026-10-01 决定:尺寸先整体不动,等真跑起来觉得太紧凑再一次性换到 v3。
-       * 理由是只换一部分(比如表单换、表格不换)会让全站没有统一规范 —— 半套尺寸
-       * 比旧的一整套更糟。
+       * 2026-10-01 用户拍板换过去,推翻了同一天早些时候的「尺寸先整体不动」—— 当时的理由
+       * (只换一部分会让全站没有统一规范)仍然成立,所以这次是**一次换全**:按钮、输入、
+       * 筛选标签、分页、表格行(64px,`--table-row-h`)与各处手写的同类控件同一轮换。
+       * 代价当时就写明了:`size="sm"` 约 131 处、跨约 60 个文件,大多在表格行里;一屏能看到的
+       * 案卷行数变少,审判队列首当其冲。
        *
-       * 换的时候要知道代价:`size="sm"` 有 131 处、跨 60 个文件,绝大多数在表格行内。
-       * v3 的表格行是 `min-height: 64px`(它的 `.queue-row`),行内动作列 44px;
-       * 这里现在约 40px。换过去一屏能看到的案卷行数会明显变少,审判队列首当其冲。
-       * 所以那是一次连表格行高一起做的改版,不是把三个数字改掉就完了。
+       * 最小的一档就是 44,也就是 393 宽下的触控下限,所以这里不再有 `max-sm:min-h-11`。
        *
-       * 圆角同样是拍板:**按钮保持方角**。v3 的令牌表把 `--radius-control: 4px` 写成
+       * 圆角仍是拍板:**按钮保持方角**。v3 的令牌表把 `--radius-control: 4px` 写成
        * 「输入与小控件」,而 v3 自己的组件库原型里 `.ds-button` 没有 border-radius。
        * 表与原型不一致,用户 2026-10-01 选了原型这一边。输入框与筛选标签是圆的
        * (`rounded-control`),按钮不是 —— 这是有意的区分,不是漏改。 */
       size: {
-        /** 28 px: inside table rows. (v3: 44) */
-        sm: "h-7 px-2 text-xs",
-        /** 32 px: the control height (A1). (v3: 48) */
-        md: "h-8 px-3 text-sm",
-        /** 40 px. (v3: 56) */
-        lg: "h-10 px-4 text-sm",
+        /** 44 px: inside table rows (v3 行内动作列). */
+        sm: "h-(--control-h-sm) px-3 text-xs",
+        /** 48 px: the control height (v3 `.ds-button`). */
+        md: "h-(--control-h-md) px-3 text-sm",
+        /** 56 px. */
+        lg: "h-(--control-h-lg) px-4 text-sm",
       },
     },
     defaultVariants: { variant: "secondary", size: "md" },

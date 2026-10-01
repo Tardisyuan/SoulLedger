@@ -74,7 +74,7 @@ export function ReactionBar({ postId, commentId }: ReactionBarProps) {
             disabled={toggleReaction.isPending}
             aria-pressed={isActive}
             data-reaction={type}
-            className={`inline-flex items-center gap-1 h-8 px-3 text-sm transition-colors duration-fast ease-standard disabled:cursor-not-allowed ${look}`}
+            className={`inline-flex items-center gap-1 h-(--control-h-sm) px-3 text-sm transition-colors duration-fast ease-standard disabled:cursor-not-allowed ${look}`}
             title={type}
           >
             {glyph && <span aria-hidden="true">{glyph}</span>}
