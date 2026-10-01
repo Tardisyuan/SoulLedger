@@ -114,7 +114,8 @@ function removeToast(id: string) {
   if (el) {
     // A class, not three inline properties — the leaving transition is a
     // motion decision and belongs beside the arriving one. 200ms was a fourth
-    // bare duration; `.toast-leaving` uses `state` and `ease-exit`.
+    // bare duration; `.toast-leaving` uses `dismiss` (140ms, 规范 v3) and
+    // `ease-exit`. The 200 below only has to outlast it.
     el.classList.add("toast-leaving");
     setTimeout(() => el.remove(), 200);
   }
