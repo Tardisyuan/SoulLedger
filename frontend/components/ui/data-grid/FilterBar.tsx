@@ -84,7 +84,7 @@ function FilterChip({ config }: { config: FilterChipConfig }) {
           setOpen(true)
         }}
         className={cn(
-          'flex items-center gap-2 h-9 px-3 border text-sm transition-colors',
+          'flex items-center gap-2 h-(--control-h-sm) px-3 border text-sm transition-colors',
           active
             ? 'bg-[oklch(var(--color-accent)/0.12)] border-[oklch(var(--color-accent)/0.4)] text-[oklch(var(--color-ink))]'
             : 'bg-[oklch(var(--color-surface-2))] border-[oklch(var(--color-line))] text-[oklch(var(--color-ink))] hover:border-[oklch(var(--color-hairline-tertiary))]'
@@ -152,7 +152,7 @@ export function FilterBar({
       )}
     >
       {onSearchChange && (
-        <div className="flex items-center gap-2 h-9 px-3 border border-[oklch(var(--color-hairline-strong))] bg-[oklch(var(--color-surface-2))] min-w-[220px]">
+        <div className="flex items-center gap-2 h-(--control-h-sm) px-3 border border-[oklch(var(--color-hairline-strong))] bg-[oklch(var(--color-surface-2))] min-w-[220px]">
           <span aria-hidden="true" className="font-mono text-sm text-[oklch(var(--color-ink-tertiary))]">
             ⌕
           </span>
@@ -180,7 +180,7 @@ export function FilterBar({
           onClick={density.onToggle}
           aria-pressed={density.compact}
           className={cn(
-            'h-9 px-3 border text-sm transition-colors',
+            'h-(--control-h-sm) px-3 border text-sm transition-colors',
             density.compact
               ? 'bg-[oklch(var(--color-accent)/0.12)] border-[oklch(var(--color-accent)/0.4)] text-[oklch(var(--color-ink))]'
               : 'bg-[oklch(var(--color-surface-2))] border-[oklch(var(--color-hairline-strong))] text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))]'

@@ -123,14 +123,16 @@ describe("PageShell · 滚动行为", () => {
     );
   });
 
-  it("筛选栏 sticky 在 --below-band（AppLayout 的 52px 工具条 + 身份带此刻的高度），高 56（h-14 + 上下各 12 padding）", () => {
+  it("筛选栏 sticky 在 --below-band（AppLayout 的 52px 工具条 + 身份带此刻的高度），高 64（h-16 = 上下各 8 padding + 规范 v3 md 档 48 的控件）", () => {
     const { container } = renderFull("page");
     const filters = container.querySelector<HTMLElement>("[data-page-shell-filters]")!;
     expect(filters.className).toMatch(/\bsticky\b/);
     expect(filters.className).toContain("top-(--below-band)");
     const inner = widthBox(container, "data-page-shell-filters");
-    expect(inner.className).toMatch(/\bh-14\b/);
-    expect(inner.className).toMatch(/\bpy-3\b/);
+    expect(inner.className).toMatch(/\bh-16\b/);
+    expect(inner.className).toMatch(/\bpy-2\b/);
+    // 64 − 2 × 8 = 48:放得下最高的那档筛选控件(md 输入),不被这个 overflow 容器裁掉。
+    expect(inner.className).not.toMatch(/\b(h-14|py-3)\b/);
   });
 
   it("筛选栏是全树唯一的 sticky —— 不传 filters 时一处 sticky 都没有", () => {

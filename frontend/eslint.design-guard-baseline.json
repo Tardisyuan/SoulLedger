@@ -2,9 +2,6 @@
   "components/LanguageSwitcher.tsx": {
     "space": 2
   },
-  "components/ui/data-grid/ActionsMenu.tsx": {
-    "space": 2
-  },
   "components/ui/data-grid/FilterBar.tsx": {
     "space": 2
   },

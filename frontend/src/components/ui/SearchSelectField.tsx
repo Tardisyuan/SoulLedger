@@ -243,7 +243,7 @@ export function SearchSelectField({
                         <Combobox.Item
                           key={option.value}
                           value={option}
-                          className="flex min-h-8 items-center gap-2 px-3 text-sm text-[oklch(var(--color-ink))] cursor-pointer data-highlighted:bg-[oklch(var(--color-surface-2))] data-selected:font-semibold"
+                          className="flex min-h-(--control-h-sm) items-center gap-2 px-3 text-sm text-[oklch(var(--color-ink))] cursor-pointer data-highlighted:bg-[oklch(var(--color-surface-2))] data-selected:font-semibold"
                         >
                           <Combobox.ItemIndicator className="w-3 shrink-0" aria-hidden="true">✓</Combobox.ItemIndicator>
                           {option.label}
