@@ -18,7 +18,7 @@ import { RootNavigator } from "../navigation";
 import { installMobilePlatform, persistentStore } from "../platform";
 import { LIFE_OPEN_PREFIX, RESIDENCE_MEMO_PREFIX } from "../screens/life";
 import { SessionProvider } from "../session";
-import { themeFor } from "../theme";
+import { v3, v3Band } from "../theme";
 import { PROFILE, application, life, pressTab, stubApi } from "./stubApi";
 
 const secure = (SecureStore as unknown as { __store: Map<string, string> }).__store;
@@ -79,9 +79,10 @@ describe("a soul residing in another civilization", () => {
   it("wears the Duat's colours, keeps the words of its home, and says where it is from", async () => {
     stubApi({ "/me/": { status: 200, data: RESIDING }, "/me/life/": { status: 200, data: life(1) } });
     renderApp();
-    const card = await screen.findByTestId("profile-card");
-    expect(background(card)).toBe(themeFor("EGYPTIAN", "light").s0); // jest reports a light scheme
-    expect(background(card)).not.toBe(themeFor("CHINESE", "light").s0);
+    await screen.findByTestId("profile-card");
+    // v3: the skin is the identity band's colour — where the soul is, not where it belongs (jest reports light).
+    expect(background(screen.getByTestId("plaque"))).toBe(v3Band(v3.civ.eg.light));
+    expect(background(screen.getByTestId("plaque"))).not.toBe(v3Band(v3.civ.cn.light));
     // Home lexicon: 功 / 过 and 审判中 — none of the Duat's words.
     expect(screen.getByText("功")).toBeTruthy();
     expect(screen.getByText("过")).toBeTruthy();

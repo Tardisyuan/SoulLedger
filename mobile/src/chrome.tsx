@@ -22,7 +22,7 @@ import { useI18n } from "./i18n";
 import { useCurrentHall } from "./screens/letters";
 import { PlaqueBand, Seal } from "./seal";
 import { SessionContext } from "./session";
-import type { Theme } from "./theme";
+import { v3Theme, type Theme } from "./theme";
 import { ThemeContext, Txt, shade, useLayout, useTheme } from "./ui";
 
 /**
@@ -248,7 +248,10 @@ const TAB_ICONS: Record<string, IconName> = { Life: "ledger", Applications: "cyc
  * sides; a label that still does not fit is cut, and read whole by its accessibility label.
  */
 export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
-  const t = useTheme();
+  // v3: the bar wears v3's neutrals; the current item's emblem and rule are the civilization's
+  // colour. Its label stays ink 600: v3 sets it in the colour too, but every dark civilization
+  // colour is under 4.5:1 on the dark surface (3.13–4.27), so as text it would fail AA.
+  const t = v3Theme(useTheme());
   const insets = useSafeAreaInsets();
   // Handoff 2d (supersedes 1g rule 五): at >= 1.7x text the items become rows — same
   // component, same selected state — instead of dropping their labels.
@@ -291,7 +294,7 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
             <View style={styles.tabIcon}>
               {tabBarBadge ? <View testID={`tab-${route.name}-badge`} style={[styles.tabBadge, { backgroundColor: t.ink }]} /> : null}
               {selected ? (
-                <Emblem civ={t.civ} size={24} stroke={t.ink} strokeWidth={2.2} />
+                <Emblem civ={t.civ} size={24} stroke={t.plaque} strokeWidth={2.2} />
               ) : (
                 <Icon name={TAB_ICONS[route.name] ?? "chevron"} size={18} color={t.inkSubtle} strokeWidth={1.2} />
               )}

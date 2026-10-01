@@ -24,7 +24,8 @@ import { installMobilePlatform, persistentStore } from "../platform";
 import { SessionProvider } from "../session";
 import { PROFILE, heldReply, life, stubApi } from "./stubApi";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { AccessibilityInfo } from "react-native";
+import { AccessibilityInfo, StyleSheet } from "react-native";
+import { v3 } from "../theme";
 
 type StreamEvent = Record<string, unknown> & { event: string };
 interface Ask {
@@ -168,15 +169,17 @@ describe("the entry", () => {
     expect(screen.queryByTestId("assist-entry")).toBeNull();
   });
 
-  it("sits in the life tab's header when enabled, left of the account icon", async () => {
+  it("on the life tab (v3) it is a 48pt circle in the civilization's colour over the page, not in the band", async () => {
     await boot(true);
-    // v2: a tab's root wears the full plaque (PlaqueHeader), which has no `header-bar` row.
-    const bar = screen.getByTestId("plaque");
-    const ids = (bar as unknown as { findAll: (p: (n: { props: { testID?: unknown } }) => boolean) => { props: { testID: string } }[] })
+    const band = screen.getByTestId("plaque");
+    const ids = (band as unknown as { findAll: (p: (n: { props: { testID?: unknown } }) => boolean) => { props: { testID: string } }[] })
       .findAll((n) => n.props.testID === "assist-entry" || n.props.testID === "header-account")
       .map((n) => n.props.testID);
-    expect(ids[0]).toBe("assist-entry");
-    expect(ids).toContain("header-account");
+    expect([...new Set(ids)]).toEqual(["header-account"]);
+    const entry = StyleSheet.flatten(screen.getByTestId("assist-entry").props.style);
+    expect(entry).toMatchObject({ position: "absolute", width: 48, height: 48, backgroundColor: v3.civ.cn.light });
+    await act(async () => fireEvent.press(screen.getByTestId("assist-entry")));
+    expect(screen.getByTestId("assist-panel")).toBeTruthy();
   });
 });
 
@@ -352,6 +355,26 @@ describe("streaming (流式输出)", () => {
     expect(screen.getByTestId("assist-jump")).toBeTruthy();
     fireEvent.press(screen.getByTestId("assist-jump"));
     expect(screen.queryByTestId("assist-jump")).toBeNull();
+  });
+
+  it.each([
+    [false, "rises from below the screen"],
+    [true, "is in place at once"],
+  ])("v3 drawer: with reduce motion %s the sheet %s, over a scrim that fades with it", async (reduced) => {
+    jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockResolvedValue(reduced);
+    stubApi({ [LIST]: { status: 200, data: [] } });
+    renderDrawer();
+    await act(async () => {}); // the reduce-motion answer
+    fireEvent.press(screen.getByTestId("assist-entry"));
+    const y = () => (StyleSheet.flatten(screen.getByTestId("assist-sheet").props.style).transform as { translateY: number }[])[0].translateY;
+    const shade = () => StyleSheet.flatten(screen.getByTestId("assist-scrim-shade", { includeHiddenElements: true }).props.style).opacity;
+    if (reduced) expect([y(), shade()]).toEqual([0, 1]);
+    else {
+      expect(y()).toBeGreaterThan(0);
+      expect(shade()).toBe(0);
+    }
+    // (The rise runs on the native driver, which jest does not play back: the end state is the device's.)
+    await screen.findByTestId("assist-empty");
   });
 
   it("A11 reduced motion: no cursor, still dots, and a whole paragraph at a time", async () => {

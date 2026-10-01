@@ -18,7 +18,7 @@ import { I18nProvider } from "../i18n";
 import { installMobilePlatform, persistentStore } from "../platform";
 import { DEFAULT_GLYPHS, Seal, sealGlyphs } from "../seal";
 import { SessionContext, SessionProvider, useSession, type Session, type SessionState } from "../session";
-import { motion, themeFor } from "../theme";
+import { motion, themeFor, v3, v3Theme } from "../theme";
 import { ThemeContext } from "../ui";
 import { PROFILE, stubApi } from "./stubApi";
 
@@ -297,12 +297,18 @@ describe("the tab bar (补足 B11 / C14)", () => {
   const label = (name: string) => flat(screen.getByTestId(`tab-${name}-label`));
 
   it("the current tab: a 2px rule in 匾色 and its label in ink 600; the rest ink3 400", () => {
-    const t = themeFor("CHINESE", "light");
+    // v3: the bar wears v3's neutrals and the civilization's v3 colour (not the v2 plaque).
+    const t = v3Theme(themeFor("CHINESE", "light"));
+    expect([t.plaque, t.ink, t.inkSubtle, t.s1]).toEqual([v3.civ.cn.light, v3.light.ink, v3.light.muted, v3.light.surface]);
+    expect(t.plaque).not.toBe(themeFor("CHINESE", "light").plaque);
     wrap(bar(["本世", "转生", "书信", "朋友圈"], 2), signedIn());
     expect(screen.getAllByTestId("tab-current-rule")).toHaveLength(1);
     expect(flat(screen.getByTestId("tab-current-rule"))).toMatchObject({ backgroundColor: t.plaque });
     expect(label("Letters")).toMatchObject({ color: t.ink, fontFamily: "Archivo_600SemiBold", fontSize: 12 });
     expect(label("Life")).toMatchObject({ color: t.inkSubtle, fontFamily: "Archivo_400Regular" });
+    // The label stays ink: as text every dark v3 colour is under 4.5:1 on the dark surface.
+    expect(label("Letters").color).not.toBe(t.plaque);
+    expect(flat(screen.getByTestId("tab-bar"))).toMatchObject({ backgroundColor: v3.light.surface, borderTopColor: v3.light.line });
   });
 
   it("one label past the pillar's threshold (core's pillarIsWide): all four go to 11, not only that one", () => {

@@ -132,6 +132,13 @@ export const motion = {
   sheetOut: 120,
   sectionIn: 200,
   sectionOut: 120,
+  // v3 MotionSpec, App rows (round 7): a tab's content cross-fades; a ledger row's body
+  // grows (height and opacity); 问一问's drawer rises; the life band compacts.
+  tabFade: 180,
+  sectionGrow: 220,
+  drawerIn: 280,
+  drawerOut: 200,
+  bandCompact: 200,
 } as const;
 
 export interface Theme {
@@ -215,6 +222,42 @@ export function preLoginTheme(scheme: ColorScheme): Theme {
     inkMuted: p.ink2,
     inkSubtle: p.ink3,
   };
+}
+
+/**
+ * v3 (round-7 prototype, user decision 2026-10-01): one set of neutrals for every
+ * civilization, and each civilization owns one colour. So far only the life tab and the
+ * tab bar wear it (`v3Theme`); the rest of the app keeps the grounds above until the
+ * palette is decided globally.
+ */
+export const v3 = {
+  light: { canvas: "#EFEFEB", surface: "#FBFBF8", ink: "#181A17", muted: "#646861", line: "#D1D3CD" },
+  dark: { canvas: "#10120F", surface: "#1A1D19", ink: "#F0F1EA", muted: "#A7ACA4", line: "#383C35" },
+  civ: {
+    cn: { light: "#8F3329", dark: "#AD4B40" },
+    eu: { light: "#583875", dark: "#80609A" },
+    eg: { light: "#294A8A", dark: "#5F7FBE" },
+    gr: { light: "#285051", dark: "#5A8480" },
+  },
+  /** v3 writes plain white on its civilization colours (FFF4E8 is 4.30:1 on dark 埃及's band). */
+  onCiv: "#FFFFFF",
+} as const;
+
+/**
+ * v3's slots on the Theme shape. v3 has no s2 or second hairline: s2 (a pressed ground)
+ * is the canvas and hair2 the one line. The civilization colour is `plaque`; an unknown
+ * civilization keeps the neutral plaque. Status colours are unchanged.
+ */
+export function v3Theme(t: Theme): Theme {
+  const n = v3[t.scheme];
+  const plaque = t.civ === "neutral" ? t.plaque : v3.civ[t.civ][t.scheme];
+  return { ...t, s0: n.canvas, s1: n.surface, s2: n.canvas, hair: n.line, hair2: n.line, ink: n.ink, inkMuted: n.muted, inkSubtle: n.muted, plaque, onPlaque: t.civ === "neutral" ? t.onPlaque : v3.onCiv };
+}
+
+/** v3's identity band: the civilization colour with 10% #111 mixed in (`color-mix(accent 90%, #111)`). */
+export function v3Band(plaque: string): string {
+  const n = parseInt(plaque.slice(1), 16);
+  return `#${[16, 8, 0].map((s) => Math.round(((n >> s) & 255) * 0.9 + 0x11 * 0.1).toString(16).padStart(2, "0")).join("")}`;
 }
 
 /**
