@@ -29,7 +29,7 @@ export function LedgerHeading({
   return (
     <h2
       id={id}
-      className={`font-mono text-2xs uppercase tracking-widest text-[oklch(var(--color-ink-subtle))] pt-6 pb-1 border-b border-[oklch(var(--color-block))] ${
+      className={`text-2xs uppercase tracking-widest text-[oklch(var(--color-ink-subtle))] pt-6 pb-1 border-b border-[oklch(var(--color-block))] ${
         columns ? "grid grid-cols-[6rem_1fr_1fr_5rem] max-sm:grid-cols-[5rem_1fr_1fr_3.5rem] gap-x-2" : ""
       }`}
     >

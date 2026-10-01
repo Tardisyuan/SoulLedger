@@ -109,7 +109,7 @@ export default function HomePage() {
         </header>
 
         <section>
-          <h2 className="text-md mb-6 md:mb-8 text-[oklch(var(--color-ink-muted))]">
+          <h2 className="text-lg mb-6 md:mb-8 text-[oklch(var(--color-ink-muted))]">
             {t("home.civilizations_title")}
           </h2>
           {/* Rendered from CIVILIZATION_OPTIONS, not from three hand-written

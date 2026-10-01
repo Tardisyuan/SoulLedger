@@ -159,7 +159,7 @@ export default function WorkflowPage() {
             <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
               <div>
                 {/* 06 是区块标题那一档。 */}
-                <h2 className="text-md text-[oklch(var(--color-ink))]">{t("workflow.templates")}</h2>
+                <h2 className="text-lg text-[oklch(var(--color-ink))]">{t("workflow.templates")}</h2>
                 <p className="text-sm text-[oklch(var(--color-ink-muted))]">{t("workflow.select_template")}</p>
               </div>
               <RequirePermission permissions="workflow.create">

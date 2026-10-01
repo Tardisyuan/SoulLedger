@@ -118,7 +118,7 @@ export function SettingsDrawer({ open, onClose }: SettingsDrawerProps) {
         <div className="p-6">
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
-            <h2 id={titleId} className="text-md text-[oklch(var(--color-ink))]">{t("settings.title") || "Settings"}</h2>
+            <h2 id={titleId} className="text-lg text-[oklch(var(--color-ink))]">{t("settings.title") || "Settings"}</h2>
             <button
               onClick={onClose}
               aria-label={t("common.close")}

@@ -562,7 +562,7 @@ export default function SoulDetailPage() {
             />
           ) : (
             <div className="pt-2">
-              <h3 title={soul?.civilization} className="font-mono text-2xs uppercase text-[oklch(var(--color-ink-subtle))] mb-2">{ledgerLabel}</h3>
+              <h3 title={soul?.civilization} className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))] mb-2">{ledgerLabel}</h3>
               <p className="text-sm text-[oklch(var(--color-ink-muted))]">{t("souls.detail.no_ledger")}</p>
             </div>
           )}

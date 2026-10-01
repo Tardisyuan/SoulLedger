@@ -305,7 +305,7 @@ function groupBy(list: Article[]): [string, Article[]][] {
 
 function RailLabel({ children, className = "" }: { children: ReactNode; className?: string }) {
   return (
-    <h2 className={`font-mono text-2xs uppercase tracking-widest text-[oklch(var(--color-ink-subtle))] pb-1 border-b border-[oklch(var(--color-block))] ${className}`}>
+    <h2 className={`text-2xs uppercase tracking-widest text-[oklch(var(--color-ink-subtle))] pb-1 border-b border-[oklch(var(--color-block))] ${className}`}>
       {children}
     </h2>
   );

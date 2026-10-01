@@ -47,7 +47,7 @@ function bucketMidpoint(label: string): number {
 function SectionLabel({ children, className = "", columns = "" }: { children: React.ReactNode; className?: string; columns?: string }) {
   return (
     <h2
-      className={`border-b border-[oklch(var(--color-block))] pb-1 pt-4 font-mono text-2xs uppercase tracking-widest text-[oklch(var(--color-ink-subtle))] ${columns} ${className}`}
+      className={`border-b border-[oklch(var(--color-block))] pb-1 pt-4 text-2xs uppercase tracking-widest text-[oklch(var(--color-ink-subtle))] ${columns} ${className}`}
     >
       {children}
     </h2>

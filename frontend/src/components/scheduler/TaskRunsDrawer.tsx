@@ -55,7 +55,7 @@ export function TaskRunsDrawer({ job, jobName, realtimeConnected, onClose }: Pro
       >
         <div className="p-4 sm:p-6 space-y-4">
           <div className="flex items-start justify-between gap-3">
-            <h2 id={titleId} className="text-md text-[oklch(var(--color-ink))] min-w-0 break-words">
+            <h2 id={titleId} className="text-lg text-[oklch(var(--color-ink))] min-w-0 break-words">
               {t("scheduler.runs.title", { job: jobName })}
             </h2>
             <button

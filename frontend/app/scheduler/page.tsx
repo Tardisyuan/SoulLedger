@@ -234,7 +234,7 @@ function SchedulerPageContent() {
                 className="border-t border-[oklch(var(--color-block))]"
                 data-group={group.key}
               >
-                <h2 className="font-mono text-2xs uppercase text-[oklch(var(--color-ink-muted))]">
+                <h2 className="text-2xs uppercase text-[oklch(var(--color-ink-muted))]">
                   <button
                     type="button"
                     aria-expanded={open}

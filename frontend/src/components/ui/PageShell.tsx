@@ -48,6 +48,8 @@ import { cn } from "@/lib/utils";
  *                                      旧的 `--text-01`),和壳
  *                                      自己的 `eyebrow` 是同一个排版位。
  *      面板标题   `text-md`            一整块面板/区段的标题,和页面的 `<h1>`
+ *                 (2026-10-01 起改为 `text-lg` 20px,跟 v3 的「模块标题」;
+ *                  区块标签同日去掉 `font-mono`。现行表见 DESIGN.md)
  *                                      同族、低一档。weight 由
  *                                      `--text-md--font-weight: 600` 提供。
  *      列表行标题 `text-sm font-medium` 一屏几十个的那种标题 —— 列表/信息流里
