@@ -228,6 +228,13 @@
   --font-serif:
     'SoulLedger Glyphs', var(--font-serif-latin), 'Noto Serif SC Variable', ui-serif, Georgia,
     Cambria, 'Times New Roman', Times, serif;
+  /* 规范 v3:标题与展示数字用 Noto Serif SC 600 —— 身份带题字、页面 <h1>、当前这一判、
+     本世余额、语料条号。中西文都由它出(v3 的拉丁标题也是这一款),所以栈里没有拉丁那一支。
+     用的是 layout.tsx 已经全站加载的 @fontsource-variable 那一份(200–900 可变,101 个
+     unicode-range 分片),**没有新增字体文件**:再用 next/font 拉一份静态 600,同一批汉字
+     会下载两遍(见 app/fonts.ts 顶部为何 CJK 不走 next/font)。 */
+  --font-title:
+    'SoulLedger Glyphs', 'Noto Serif SC Variable', ui-serif, Georgia, serif;
   --font-mono:
     'SoulLedger Glyphs', var(--font-mono-latin), 'Noto Sans SC Variable', ui-monospace,
     SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
@@ -256,8 +263,10 @@
   --text-xl: 28px;
   --text-xl--line-height: 36px;
   --text-display: 40px;
-  --text-display--line-height: 48px;
-  --text-display--font-weight: 400;
+  /* 54 = v3 身份带题字的 1.35。48(1.2)在 v3 第七轮实测墨迹越界 1px;题字带 overflow-hidden,
+     越界就是被裁。身份带定高,这一档加高不再推动它。字重 600:v3 的标题一律 600。 */
+  --text-display--line-height: 54px;
+  --text-display--font-weight: 600;
   /* 规范 v3:展示字号,只给「当前这一判」与 App 本世余额两处。
      行高 62/56 = 1.107,比 v2 的 display(48/40 = 1.2)更紧,因为这两处
      只放一行且没有拉丁下伸部;拉丁标题用 `--text-display`,它的 1.2 已经
@@ -636,73 +645,52 @@
     --color-main: var(--color-civ-gr);
   }
 
-  /* 文明皮的其余三样 —— 匾纹、印形、两款字体(规范 v2 §三、§四;素材在 public/v2/)。
+  /* 文明皮的其余两样 —— 印形与印文字体、分节纹(规范 v2 §三、§四;素材在 public/v2/)。
+     v2 的匾纹(回纹带)、纸 / 纸莎草 / 大理石质感与四款题字字体随 v3 身份带撤掉(2026-10-01);
+     身份带的纹样是纯 CSS 渐变,见下面 `.identity-pattern`。
      与匾色同一个开关:<html data-civ> 给整页,印组件在自己的根元素上也写 data-civ,所以
      一枚别的文明的印放在本页也拿到它自己的形与色。素材全是单色 currentColor 的 SVG,
      这里一律当 CSS 遮罩用,颜色由遮罩下面的底色给,所以换主题不用换文件。
-     字体变量来自 src/components/plaque/fonts.ts(next/font,按需加载)。
-     中性皮(登录前、不认得的租户)没有印,匾纹只留上下两道细线(见 .plaque-band)。 */
+     印文字体变量来自 src/components/plaque/fonts.ts(next/font,按需加载)。
+     中性皮(登录前、不认得的租户)没有印。 */
   :root,
   [data-civ="neutral"] {
-    --band: none;
-    --band-compact: none;
-    --font-plaque: var(--font-serif);
     --font-seal: var(--font-serif);
   }
   [data-civ="cn"] {
-    --band: url("/v2/svg/band-cn.svg");
-    --band-compact: url("/v2/svg/band-cn-compact.svg");
     --seal-body: url("/v2/svg/seal-cn-body.svg");
     --seal-ring: url("/v2/svg/seal-cn-ring.svg");
     --seal-line: url("/v2/svg/seal-cn-line.svg");
     --seal-line-small: url("/v2/svg/seal-cn-line-small.svg");
     --seal-scan: image-set(url("/v2/textures/scan-cnseal-1x.png") 1x, url("/v2/textures/scan-cnseal-2x.png") 2x);
     --section: url("/v2/svg/section-cn.svg");
-    --band-tex: image-set(url("/v2/textures/paper-1x.png") 1x, url("/v2/textures/paper-2x.png") 2x);
-    --band-tex-w: image-set(url("/v2/textures/paper-w-1x.png") 1x, url("/v2/textures/paper-w-2x.png") 2x);
-    --font-plaque: var(--font-ma-shan-zheng), var(--font-serif);
     --font-seal: var(--font-lxgw-seal), var(--font-serif);
   }
   [data-civ="eu"] {
-    --band: url("/v2/svg/band-eu.svg");
-    --band-compact: url("/v2/svg/band-eu-compact.svg");
     --seal-body: url("/v2/svg/seal-eu-body.svg");
     --seal-ring: url("/v2/svg/seal-eu-ring.svg");
     --seal-line: url("/v2/svg/seal-eu-line.svg");
     --seal-line-small: url("/v2/svg/seal-eu-line-small.svg");
     --seal-scan: image-set(url("/v2/textures/scan-wax-1x.png") 1x, url("/v2/textures/scan-wax-2x.png") 2x);
     --section: url("/v2/svg/section-eu.svg");
-    --band-tex: image-set(url("/v2/textures/paper-1x.png") 1x, url("/v2/textures/paper-2x.png") 2x);
-    --band-tex-w: image-set(url("/v2/textures/paper-w-1x.png") 1x, url("/v2/textures/paper-w-2x.png") 2x);
-    --font-plaque: var(--font-unifraktur), var(--font-serif);
     --font-seal: var(--font-unifraktur), var(--font-serif);
   }
   [data-civ="eg"] {
-    --band: url("/v2/svg/band-eg.svg");
-    --band-compact: url("/v2/svg/band-eg-compact.svg");
     --seal-body: url("/v2/svg/seal-eg-body.svg");
     --seal-ring: url("/v2/svg/seal-eg-ring.svg");
     --seal-line: url("/v2/svg/seal-eg-line.svg");
     --seal-line-small: url("/v2/svg/seal-eg-line-small.svg");
     --seal-scan: image-set(url("/v2/textures/scan-clay-1x.png") 1x, url("/v2/textures/scan-clay-2x.png") 2x);
     --section: url("/v2/svg/section-eg.svg");
-    --band-tex: image-set(url("/v2/textures/papyrus-1x.png") 1x, url("/v2/textures/papyrus-2x.png") 2x);
-    --band-tex-w: image-set(url("/v2/textures/papyrus-w-1x.png") 1x, url("/v2/textures/papyrus-w-2x.png") 2x);
-    --font-plaque: var(--font-josefin-slab), var(--font-serif);
     --font-seal: var(--font-hieroglyphs), var(--font-serif);
   }
   [data-civ="gr"] {
-    --band: url("/v2/svg/band-gr.svg");
-    --band-compact: url("/v2/svg/band-gr-compact.svg");
     --seal-body: url("/v2/svg/seal-gr-body.svg");
     --seal-ring: url("/v2/svg/seal-gr-ring.svg");
     --seal-line: url("/v2/svg/seal-gr-line.svg");
     --seal-line-small: url("/v2/svg/seal-gr-line-small.svg");
     --seal-scan: image-set(url("/v2/textures/scan-cyl-1x.png") 1x, url("/v2/textures/scan-cyl-2x.png") 2x);
     --section: url("/v2/svg/section-gr.svg");
-    --band-tex: image-set(url("/v2/textures/marble-1x.png") 1x, url("/v2/textures/marble-2x.png") 2x);
-    --band-tex-w: image-set(url("/v2/textures/marble-w-1x.png") 1x, url("/v2/textures/marble-w-2x.png") 2x);
-    --font-plaque: var(--font-cinzel), var(--font-serif);
     --font-seal: var(--font-gfs-didot), var(--font-serif);
   }
 
@@ -711,6 +699,9 @@
      裁决条、批量条)写 `bottom-(--bottom-bar)`,落在底栏上方而不是被它盖住。 */
   html {
     --bottom-bar: 0px;
+    /* 吸顶的工具条(52)+ 身份带此刻的高度(Plaque 写 `--identity-band`;没有身份带的页是 0)。
+       页面里吸顶的条写 `top-(--below-band)`。 */
+    --below-band: calc(var(--spacing) * 13 + var(--identity-band, 0px));
   }
   @media (max-width: 768px) {
     html {
@@ -718,42 +709,122 @@
     }
   }
 
-  /* 匾纹样带的质感(规范 v2 §四「质感」):只铺在纹样带这 22px 里,盖住纹样与匾色底;
-     地府 / 欧洲纸、埃及纸莎草、希腊大理石,128px 平铺。深色档(默认)用 *-w —— 只有白颗粒,
-     60% 已烤进 PNG 的 alpha,这里不再乘透明度。中性皮没有 --band-tex,于是不画。 */
-  .plaque-tex {
+  /* 身份带(规范 v3 `IdentityBand`,`src/components/plaque/Plaque.tsx`)。实底是匾色压暗 10%:
+     v3 原样是 `color-mix(in srgb, var(--accent) 90%, #111)`。白字对比度四文明 × 两主题见
+     plaqueTitleStaysLargeText.test.ts(它读的就是这一行的百分比与混入色)。 */
+  .identity-band {
     position: relative;
+    display: grid;
+    grid-template-columns: 190px minmax(0, 1fr) auto;
+    align-items: center;
+    height: 156px;
+    padding: 0 32px;
+    overflow: hidden;
+    color: oklch(var(--color-on-main));
+    background: color-mix(in srgb, oklch(var(--color-main)) 90%, #111);
+    transition: height var(--transition-duration-reveal) var(--ease-standard);
   }
-  .plaque-tex::after {
-    content: "";
+  .identity-band[data-compact] {
+    height: 48px;
+    grid-template-columns: minmax(0, 1fr) auto;
+    padding: 0 20px;
+  }
+  /* 纹样:每个文明一种,15% 白,自左向右淡出(v3 原样的四条渐变)。中性皮没有纹样。 */
+  .identity-pattern {
     position: absolute;
     inset: 0;
+    opacity: 0.15;
     pointer-events: none;
-    background: var(--band-tex-w, none) left top / 128px 128px repeat;
+    --line: oklch(var(--color-on-main));
   }
-  .light .plaque-tex::after {
-    background-image: var(--band-tex, none);
+  [data-civ="cn"] .identity-pattern {
+    background-image: linear-gradient(var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--line) 1px, transparent 1px);
+    background-size: 18px 18px;
+    mask-image: linear-gradient(90deg, #000, transparent 72%);
   }
-
-  /* 匾纹样带 · 480×22,横向平铺;≤ 393 用 compact(去点缀,埃及再去莲花扇形)。 */
-  .plaque-band {
-    height: 22px;
-    background: oklch(var(--color-on-main));
-    mask: var(--band) left center / 480px 22px repeat-x;
+  [data-civ="eu"] .identity-pattern {
+    background: repeating-radial-gradient(circle at 16% 110%, transparent 0 22px, var(--line) 23px 24px);
+    mask-image: linear-gradient(90deg, #000, transparent 76%);
   }
-  @media (max-width: 393px) {
-    .plaque-band {
-      mask-image: var(--band-compact);
+  [data-civ="eg"] .identity-pattern {
+    background: repeating-linear-gradient(90deg, var(--line) 0 1px, transparent 1px 17px);
+    mask-image: linear-gradient(90deg, #000, transparent 66%);
+  }
+  [data-civ="gr"] .identity-pattern {
+    background: linear-gradient(135deg, transparent 42%, var(--line) 43% 46%, transparent 47%) 0 0 / 34px 34px;
+    mask-image: linear-gradient(90deg, #000, transparent 74%);
+  }
+  .identity-brand,
+  .identity-title,
+  .identity-case {
+    position: relative;
+    min-width: 0;
+  }
+  .identity-brand {
+    align-self: start;
+    margin-top: 22px;
+    font-family: var(--font-mono);
+    font-size: var(--text-2xs);
+    line-height: var(--text-2xs--line-height);
+    letter-spacing: 0.12em;
+  }
+  .identity-brand span {
+    opacity: 0.7;
+  }
+  .identity-title {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+  }
+  .identity-court {
+    display: block;
+    margin-bottom: 6px;
+    font-size: var(--text-xs);
+    line-height: var(--text-xs--line-height);
+    opacity: 0.8;
+    overflow-wrap: anywhere;
+  }
+  .identity-case {
+    text-align: right;
+    font-size: var(--text-xs);
+  }
+  /* 收起:只留印与殿名(v3 `is-compact`)。没有殿名(租户没给展示名)时留题字,不然带上只剩一枚印。 */
+  .identity-band[data-compact] .identity-brand,
+  .identity-band[data-compact] .identity-court ~ [data-tier] {
+    display: none;
+  }
+  .identity-band[data-compact] .identity-title {
+    gap: 12px;
+  }
+  .identity-band[data-compact] .identity-court {
+    margin: 0;
+    font-size: var(--text-2xs);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  /* ≤ 768(底栏那一档):品牌在上、印与题字在下,不再分栏;v3 手机身份带 105–150,这里取
+     最低 120、随题字行数长高(egy 两行 20 时约 150)。案号位不显示。 */
+  @media (max-width: 768px) {
+    .identity-band:not([data-compact]) {
+      display: block;
+      height: auto;
+      min-height: 120px;
+      padding: 16px 18px;
     }
-  }
-  /* 中性皮:无匾纹,只留上下两道细线。 */
-  :root:not([data-civ]) .plaque-band,
-  [data-civ="neutral"] .plaque-band {
-    background: none;
-    mask: none;
-    border-block: 1px solid oklch(var(--color-on-main));
-    height: 6px;
-    margin-block: 8px;
+    .identity-band .identity-brand {
+      margin: 0;
+    }
+    .identity-band:not([data-compact]) .identity-title {
+      margin-top: 17px;
+      gap: 12px;
+    }
+    .identity-band .identity-case {
+      display: none;
+    }
+    .identity-band[data-compact] {
+      padding: 0 12px;
+    }
   }
 
   /* 页面级分节纹 · 48×12,线色 ink3,只用在页面级分节上(表内小分组仍是细线)。
