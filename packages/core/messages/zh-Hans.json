@@ -1280,7 +1280,9 @@
       "stamp": "盖印并结案",
       "back_to_check": "返回检查",
       "recorded": "判决已写入记录。",
-      "done": "完成"
+      "done": "完成",
+      "draft_unsaved": "有未保存的改动",
+      "draft_conflict": "草稿冲突待处理"
     },
     "claim": {
       "groups": {
