@@ -1262,7 +1262,25 @@
       "recorded_after": "其后登记 {{n}} 条",
       "cite_from_corpus_title": "引用律条",
       "cite_from_corpus_confirm": "引用{{cite}}到 {{soul}} 的审判？",
-      "cite_from_corpus_closed": "这件案子已结案,不能再引用律条。"
+      "cite_from_corpus_closed": "这件案子已结案,不能再引用律条。",
+      "current_ruling": "当前这一判",
+      "ruling_hint": "按数字键 1–4 选择判决,检查完毕后进入盖印确认。",
+      "to_confirm": "进入盖印确认",
+      "irreversible": "落判不可撤回",
+      "materials": "资料舱",
+      "tab_evidence": "功过记录",
+      "tab_law": "律条引用",
+      "full_case": "展开全案",
+      "back_to_focus": "返回聚焦",
+      "case_nav": "案卷导航",
+      "nav_draft": "草稿与批注",
+      "confirm_title": "确认落判",
+      "confirm_body": "你选择了「{{verdict}}」。落判后写入审判记录,不可撤回。",
+      "signing_court": "签署殿司",
+      "stamp": "盖印并结案",
+      "back_to_check": "返回检查",
+      "recorded": "判决已写入记录。",
+      "done": "完成"
     },
     "claim": {
       "groups": {
