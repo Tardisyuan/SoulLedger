@@ -297,6 +297,30 @@ describe("卷栏与队列进度条", () => {
     expect(judgmentApi.next).toHaveBeenCalledWith({ at: ID });
   });
 
+  it("左栏窄(220–240 px)时功过账不在字中间断:按容器宽度退成两列,数字与单位不换行,标签不在字中间断", async () => {
+    // jsdom 量不了宽度,所以断的是「防止断字的那套结构」:2026-10-01 1024 截图里「功/德」「权/重」一字一行,
+    // 因为四列账挤在 220 px 里、数字格可以换行。
+    renderPage();
+    const ledger = await screen.findByTestId("balance-ledger");
+    // 容器查询:看的是栏宽,不是视口(同一个面板在灵魂账页的宽卡片里仍是四列)。
+    expect(ledger.parentElement).toHaveClass("@container");
+    expect(ledger.className).toMatch(/(^| )grid-cols-\[minmax\(0,1fr\)_auto\]( |$)/);
+    expect(ledger.className).toContain("@xs:grid-cols-[1fr_auto_auto_auto]");
+    expect(ledger.className).not.toMatch(/(^| )grid-cols-\[1fr_auto_auto_auto\]( |$)/);
+    const cells = Array.from(ledger.children) as HTMLElement[];
+    // 四列账专有的格子(表头 4 + 每行两个空格子 × 3)在窄处不画。
+    expect(cells.filter((c) => c.classList.contains("hidden") && c.classList.contains("@xs:block"))).toHaveLength(10);
+    // 两列时剩下的 6 格:标签 3(break-keep)、数字 3(whitespace-nowrap,单位「权重」跟着不拆)。
+    const shown = cells.filter((c) => !c.classList.contains("hidden"));
+    expect(shown).toHaveLength(6);
+    for (const name of [tZh("souls.detail.merit"), tZh("souls.detail.demerit"), tZh("souls.detail.balance")]) {
+      expect(shown.find((c) => c.textContent === name)).toHaveClass("break-keep");
+    }
+    const figures = shown.filter((c) => /\d/.test(c.textContent ?? ""));
+    expect(figures).toHaveLength(3);
+    for (const f of figures) expect(f).toHaveClass("whitespace-nowrap", "text-right");
+  });
+
   it("队列头不是本案(`at` 只是偏好):不画进度条,不拿别人的位置冒充", async () => {
     judgmentApi.next.mockResolvedValue({
       data: { total: 12, remaining: 12, skipped: 0, position: 1, judgment: { id: "other" }, soul: null, ledger: null, prior_cycles: [], realm_options: [] },
