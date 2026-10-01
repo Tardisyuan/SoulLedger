@@ -293,7 +293,8 @@ export function PageShell({
   const width = WIDTH_CLASS[variant];
 
   // 三选一，顺序是有意的：还在加载时不该先闪一下空态。
-  const body = isLoading && skeleton ? skeleton : isEmpty && empty ? empty : children;
+  const showingSkeleton = Boolean(isLoading && skeleton);
+  const body = showingSkeleton ? skeleton : isEmpty && empty ? empty : children;
 
   const heading = (
     <>
@@ -426,7 +427,16 @@ export function PageShell({
         </div>
       ) : null}
 
-      <div data-page-shell-body="" data-density={density} className={cn(width, BODY_CLASS[density])}>
+      {/* 规范 v3「骨架 → 内容」:骨架在时没有动画类,内容一到就挂上 `animate-content-in`
+          (200ms 淡入)—— 类名从无到有就是动画开始,不用 key、不重挂载。骨架是静态的、
+          瞬时离场,所以这是「内容淡入」而不是两层叠着的交叉淡化;只对给了 `skeleton`
+          的页面生效。减少动态效果下是 80ms(`data-motion`)。 */}
+      <div
+        data-page-shell-body=""
+        data-density={density}
+        data-motion={skeleton ? "fade" : undefined}
+        className={cn(width, BODY_CLASS[density], skeleton && !showingSkeleton && "animate-content-in")}
+      >
         {body}
       </div>
 

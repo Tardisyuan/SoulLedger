@@ -47,10 +47,11 @@ export function TaskRunsDrawer({ job, jobName, realtimeConnected, onClose }: Pro
 
   return (
     <>
-      <button type="button" aria-label={t("common.close")} className="fixed inset-0 bg-black/50 z-drawer animate-scrim-in" onClick={onClose} />
+      <button type="button" aria-label={t("common.close")} data-motion="fade" className="fixed inset-0 bg-black/50 z-drawer animate-scrim-in" onClick={onClose} />
       <div
         ref={drawerRef}
         {...drawerProps}
+        data-motion="fade"
         className="fixed right-0 top-0 h-full w-full max-w-xl bg-[oklch(var(--color-surface-1))] border-l border-[oklch(var(--color-ink))] z-drawer overflow-y-auto animate-drawer-in"
       >
         <div className="p-4 sm:p-6 space-y-4">
