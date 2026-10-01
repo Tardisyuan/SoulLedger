@@ -134,6 +134,8 @@ const ROUND_ALLOW = new Set([
   // 审判队列的认领标:一位官员的头像(首字),规范 v1 第三类 A·02 画成圆形,属头像例外。
   // 单独成文件,好让例外只覆盖这一个元素,而不是整张队列表。
   "src/components/judgment/ClaimAvatar.tsx",
+  // 规范 v3 导航底部的个人区:30px 圆形头像(首字),头像例外。
+  "src/components/layout/GlobalNav.tsx",
 ]);
 
 // 规范 v2 A2:全站不用阴影,**浮层也不用**(v1 放行的 shadow-overlay 撤掉,弹层改 1px ink 框)。

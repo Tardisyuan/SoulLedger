@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
  *
  * 1) **不渲染面包屑。** 设计规格原话是「面包屑与标题不是两层，是同一层的两行」，
  *    并要求 PageShell 自己画那两行。但 `src/components/layout/AppLayout.tsx:260`
- *    的 sticky `h-16` 里已经有 `<Breadcrumb menus={menus} />`，而 AppLayout 经
+ *    的 sticky 工具条(`h-13`)里已经有 `<Breadcrumb menus={menus} />`，而 AppLayout 经
  *    `AppLayoutWrapper` 包住了 `app/layout.tsx` 的全部 children —— 也就是每一个
  *    页面。PageShell 再画一遍就是同一条面包屑出现两次。
  *    所以这里只留 `eyebrow`：同样的 `text-2xs font-mono uppercase` 排版位，内容
@@ -21,7 +21,7 @@ import { cn } from "@/lib/utils";
  *    `app/audit/page.tsx:176`、`app/menus/page.tsx:255` 等 10 处同形）。
  *
  * 2) **页头不 sticky，只有筛选栏 sticky。** 卷宗的封面不跟着滚；滚动时还需要的
- *    控件只有筛选。筛选栏 `top-16` 贴在 AppLayout 那条 `h-16` 头下沿。
+ *    控件只有筛选。筛选栏 `top-13` 贴在 AppLayout 那条 52px 工具条下沿(规范 v3;匾不吸顶)。
  *
  * 3) **没有 `min-h-screen`。** AppLayout 给的槽位是
  *    `min-h-[calc(100vh-4rem)]`（AppLayout.tsx:461），页面再写一次
@@ -202,7 +202,7 @@ export interface PageShellProps {
   subtitle?: React.ReactNode;
   /** 标题行右侧的动作区（「+ 创建灵魂」一类）。 */
   actions?: React.ReactNode;
-  /** 筛选栏。唯一 sticky 的一段，`top-16`，高 56（上下各 12 padding）。 */
+  /** 筛选栏。唯一 sticky 的一段，`top-13`，高 56（上下各 12 padding）。 */
   filters?: React.ReactNode;
   /**
    * 分页位。见 `PageShellPagination`。
@@ -358,13 +358,13 @@ export function PageShell({
         </div>
       ) : null}
 
-      {/* 筛选栏：全站唯一贴在 AppLayout h-16 头下沿的一段。
+      {/* 筛选栏：全站唯一贴在 AppLayout 52px 工具条(h-13)下沿的一段。
           `h-14 py-3` 不冲突 —— border-box 下总高 56、内容 32，正是规格里的
           「上下各 12 padding」。 */}
       {filters ? (
         <div
           data-page-shell-filters=""
-          className="sticky top-16 z-filters bg-[oklch(var(--color-canvas))] border-b border-[oklch(var(--color-hairline))]"
+          className="sticky top-13 z-filters bg-[oklch(var(--color-canvas))] border-b border-[oklch(var(--color-hairline))]"
         >
           {/* `overflow-x-auto` 不是装饰。这一行是固定高度、不换行的 flex —— 而
               筛选控件的数量由每个页面自己决定。灵魂页放了搜索框、两个数字输入、

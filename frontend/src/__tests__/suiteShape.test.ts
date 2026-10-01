@@ -254,6 +254,8 @@ const COLLECTED_FILES = [
   "wsClient.reconnect.test.ts",
   "wsClient.test.ts",
   "zhuyinShell.test.tsx",
+  // 规范 v3 外框导航:模式持久化、`[`、769–1199 强制收起、文明色只在当前项、图标来自 menu.icon。
+  "globalNav.test.tsx",
 ];
 
 /** Floor, not a pin — `it.each` makes the real test count larger and it moves

@@ -61,7 +61,7 @@ function AskIcon() {
   );
 }
 
-/** 1b: first in the plaque's action group; outlined in the on-plaque ink (规范 v2 §匾), never a fill. */
+/** 1b: first in the toolbar's action group (规范 v3 工具条:44×44、中性 ink-muted,悬停 / 打开时 canvas 底). */
 export function OfficerAssistEntry({ assist }: { assist: OfficerAssist }) {
   const { t } = useI18n();
   if (!assist.visible) return null;
@@ -75,12 +75,12 @@ export function OfficerAssistEntry({ assist }: { assist: OfficerAssist }) {
       aria-expanded={assist.open}
       aria-label={t("officer_assist.entry_label", { shortcut })}
       title={shortcut}
-      className="focus-ring-pillar relative flex h-7 items-center gap-1 border border-[oklch(var(--color-on-main)/0.6)] px-2 text-xs text-[oklch(var(--color-on-main))] hover:bg-[oklch(var(--color-on-main)/0.12)] aria-expanded:bg-[oklch(var(--color-on-main)/0.12)] max-lg:w-8 max-lg:justify-center max-lg:px-0"
+      className="relative flex min-h-11 min-w-11 items-center justify-center gap-1 px-2 text-xs text-[oklch(var(--color-ink-muted))] hover:bg-[oklch(var(--color-canvas))] hover:text-[oklch(var(--color-ink))] aria-expanded:bg-[oklch(var(--color-canvas))] aria-expanded:text-[oklch(var(--color-ink))] max-lg:px-0"
     >
       <AskIcon />
       <span className="hidden lg:inline">{t("officer_assist.entry")}</span>
       {assist.unseen ? (
-        <span data-testid="officer-assist-unseen" aria-hidden="true" className="absolute -right-0.5 -top-0.5 h-1.5 w-1.5 bg-[oklch(var(--color-on-main))]" />
+        <span data-testid="officer-assist-unseen" aria-hidden="true" className="absolute right-2 top-2 h-1.5 w-1.5 bg-[oklch(var(--color-ink))]" />
       ) : null}
     </button>
   );

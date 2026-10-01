@@ -16,11 +16,12 @@ import { SettingsDrawer } from "@/src/components/settings/SettingsDrawer";
 import { ConnectionBanner, useConnectionBannerShown } from "@/src/components/connection-status";
 import { useSidebarMenus, type SidebarMenu } from "@/src/hooks/useSidebarMenus";
 import { Breadcrumb, useBreadcrumbs } from "@/src/components/layout/Breadcrumb";
-import { BottomBar, Pillar, groupOfPath } from "@/src/components/layout/Pillar";
+import { BottomBar, GlobalNav, groupOfPath, useNavMode } from "@/src/components/layout/GlobalNav";
 import { LogoutConfirmDialog } from "@/src/components/layout/LogoutConfirmDialog";
 import { Plaque } from "@/src/components/plaque/Plaque";
 import { useTheme } from "@/src/contexts/ThemeContext";
 import { DomainEnum } from "@/src/components/ui/DomainValue";
+import { Bell, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 // 「问一问」的推开只在 ≥ 1024 px(canvas 1a),且主内容区让出 420 后仍有 720(Design E 组);否则它是覆盖层。
 import { useWideViewport } from "@/src/hooks/useWideViewport";
 import { useRoomBeside } from "@/src/hooks/useRoomBeside";
@@ -28,13 +29,15 @@ import { OfficerAssistEntry, OfficerAssistPanel } from "@/src/components/assist/
 import { useOfficerAssist } from "@/src/components/assist/useOfficerAssist";
 
 /**
- * The shell, 规范 v2「朱印」:左侧立柱(`Pillar`,60 / 88,四文明共用的近黑底)+ 页头匾
- * (`Plaque`:匾色底、题字、印、纹样带,面包屑在匾的元数据位)+ 内容。
+ * The shell, 规范 v3:左侧中性导航(`GlobalNav`,252 / 68)+ 内容栏。内容栏自上而下:
+ * 52px 中性工具条(`global-topbar`:导航开合、面包屑;右边问一问、通知、用户菜单)、
+ * 页头匾(`Plaque`:页面的身份带 —— 印、题字、纹样带;不再放面包屑与操作)、页面。
  *
- * - < 768 px 立柱收成底栏(`BottomBar`:前 4 个一级项 +「更多」底部抽屉)。v1 的 ☰ 抽屉
- *   与 56px 编号栏(以及设置里的「经典 / 紧凑」)一并撤掉 —— 立柱只有一种宽度规则。
- * - 连接状态只在断开时出现,是视口最顶上横跨整个视口(含立柱与问一问面板)的一条警示条
- *   (`ConnectionBanner`,Design E 组:它是全局状态,不属于匾),浮在内容上,不推动内容。
+ * - 四档宽度:≥ 1200 导航展开 / 收起由用户选;769–1199 强制收起;≤ 768 没有侧栏,
+ *   是底栏(`BottomBar`:前 4 个一级项 +「更多」底部抽屉)。规则在 `GlobalNav.tsx`。
+ * - 只有工具条吸顶;匾随页面滚走(PageShell 的筛选栏吸在工具条下沿,`top-13`)。
+ * - 连接状态只在断开时出现,是视口最顶上横跨整个视口(含导航与问一问面板)的一条警示条
+ *   (`ConnectionBanner`,Design E 组:它是全局状态),浮在内容上,不推动内容。
  * - 语言 / 主题 / 设置 / 退出在用户菜单里(brief §4.4)。
  */
 /** 问一问 pushed panel (canvas 1a) and the room the page keeps beside it (Design E 组). */
@@ -51,9 +54,11 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const pathname = usePathname();
-  // The main column (everything right of the pillar) must keep 720 px beside the pushed
-  // 420 px panel — Design E 组. Measured, not a media query: the pillar is 60 or 88 wide
-  // and its 二级栏 adds 200, so no single viewport width says how much room there is.
+  // The main column (everything right of the nav) must keep 720 px beside the pushed
+  // 420 px panel — Design E 组. Measured, not a media query: the nav is 252 or 68 wide by
+  // the user's choice, so no single viewport width says how much room there is. (At 1440
+  // expanded the column is 1188 → pushed; at 1260 expanded it is 1008 → overlay, and
+  // collapsing the nav gives the push back.)
   const mainBoxRef = useRef<HTMLElement>(null);
   const roomy = useRoomBeside(mainBoxRef, ASSIST_PANEL_WIDTH + ASSIST_MIN_MAIN_WIDTH);
   const wide = useWideViewport() && roomy;
@@ -83,9 +88,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     return out;
   }, [menus]);
 
-  // 二级栏:当前页所在的一级项默认打开;导航落进另一组时跟过去。点当前打开的那一项收起。
+  // 手风琴:当前页所在的一级项默认打开;导航落进另一组时跟过去。点当前打开的那一项收起。
   const currentGroup = useMemo(() => groupOfPath(menus, pathname, allMenuPaths), [menus, pathname, allMenuPaths]);
   const [openGroup, setOpenGroup] = useState<number | null>(null);
+  const nav = useNavMode();
   const [openFor, setOpenFor] = useState<number | null>(null);
   if (currentGroup !== openFor) {
     setOpenFor(currentGroup);
@@ -107,40 +113,78 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const unreadCount = unread?.count ?? 0;
   const notifications = unread?.results ?? [];
 
-  const onPlaque = "focus-ring-pillar text-xs text-[oklch(var(--color-on-main))] hover:underline";
+  const onBar =
+    "flex min-h-11 items-center justify-center text-xs text-[oklch(var(--color-ink-muted))] hover:bg-[oklch(var(--color-canvas))] hover:text-[oklch(var(--color-ink))] aria-expanded:bg-[oklch(var(--color-canvas))] aria-expanded:text-[oklch(var(--color-ink))]";
+  const navToggleLabel = nav.forced
+    ? t("nav.collapse_locked")
+    : nav.collapsed
+      ? t("nav.expand_menu")
+      : t("nav.collapse_menu");
 
   return (
     <LazyMotion features={domMax}>
-    <div className="min-h-screen bg-[oklch(var(--color-canvas))] md:grid md:grid-cols-[auto_1fr]">
-      <aside className="sticky top-0 hidden h-screen md:block">
-        <Pillar
+    <div className="min-h-screen bg-[oklch(var(--color-canvas))] min-[769px]:grid min-[769px]:grid-cols-[auto_minmax(0,1fr)]">
+      <aside className="sticky top-0 hidden h-screen min-[769px]:block">
+        <GlobalNav
           menus={menus}
           allMenuPaths={allMenuPaths}
           currentId={currentGroup}
           openId={openGroup}
           onToggle={(id) => setOpenGroup((g) => (g === id ? null : id))}
+          collapsed={nav.collapsed}
+          user={user}
         />
       </aside>
 
-      <main ref={mainBoxRef} className="min-w-0 max-md:pb-14">
-        {/* 问一问推开时(≥ 1024)面板是右侧通顶的一栏,和左边的立柱一样;匾让出它的 420px,
-            不压在匾上,也不用去量匾的高度(它随题字档位变)。 */}
-        <header className={`sticky top-0 z-masthead ${assist.pushed ? "pr-[420px]" : ""}`}>
-          {/* 只有一段时面包屑就是题字本身,不重复画。 */}
-          <Plaque title={title} meta={crumbs.length > 1 ? <Breadcrumb menus={menus} /> : undefined}>
-          <div className="flex shrink-0 items-center gap-4 whitespace-nowrap">
+      <main ref={mainBoxRef} className="min-w-0 max-[768px]:pb-14">
+        {/* 问一问推开时(≥ 1024)面板是右侧通顶的一栏;工具条与匾都让出它的 420px。 */}
+        <header
+          data-testid="global-topbar"
+          className={`sticky top-0 z-masthead flex h-13 items-center justify-between gap-3 border-b border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] pl-4 ${
+            assist.pushed ? "pr-[436px]" : "pr-4"
+          }`}
+        >
+          <div className="flex min-w-0 flex-1 items-center gap-2">
+            {/* 769–1199 强制收起:按钮仍在、不可用,可访问名说明原因(给审判台的裁决栏留宽度)。 */}
+            <button
+              type="button"
+              data-testid="nav-toggle"
+              aria-controls="global-nav"
+              aria-expanded={!nav.collapsed}
+              aria-disabled={nav.forced || undefined}
+              aria-label={navToggleLabel}
+              aria-keyshortcuts="["
+              title={nav.forced ? navToggleLabel : `${navToggleLabel} ([)`}
+              onClick={nav.toggle}
+              className={`hidden h-11 w-11 shrink-0 items-center justify-center min-[769px]:flex ${
+                nav.forced
+                  ? "cursor-not-allowed bg-[oklch(var(--color-disabled-surface))] text-[oklch(var(--color-disabled-ink))]"
+                  : "text-[oklch(var(--color-ink-muted))] hover:bg-[oklch(var(--color-canvas))] hover:text-[oklch(var(--color-ink))]"
+              }`}
+            >
+              {nav.collapsed ? (
+                <PanelLeftOpen aria-hidden="true" size={18} strokeWidth={1.6} />
+              ) : (
+                <PanelLeftClose aria-hidden="true" size={18} strokeWidth={1.6} />
+              )}
+            </button>
+            <Breadcrumb menus={menus} />
+          </div>
+          <div className="flex shrink-0 items-center gap-1 whitespace-nowrap">
             {/* 问一问 (canvas 1b): the connection state left the masthead, so it leads the group. */}
             <OfficerAssistEntry assist={assist} />
             {user ? (
               <Popover.Root>
                 <Popover.Trigger
-                  className={`flex items-center gap-1 ${onPlaque}`}
+                  className={`min-w-11 gap-1 px-2 ${onBar}`}
                   aria-label={unreadCount > 0 ? `${t("notifications.title")} (${unreadCount})` : t("notifications.title")}
+                  title={t("notifications.title")}
                 >
-                  <span className="hidden sm:inline">{t("notifications.title")}</span>
-                  <span aria-hidden="true" className="sm:hidden">◔</span>
+                  <Bell aria-hidden="true" size={18} strokeWidth={1.6} />
                   {unreadCount > 0 ? (
-                    <span className="font-mono text-2xs">{unreadCount > 99 ? "99+" : unreadCount}</span>
+                    <span aria-hidden="true" className="font-mono text-2xs text-[oklch(var(--color-ink))]">
+                      {unreadCount > 99 ? "99+" : unreadCount}
+                    </span>
                   ) : null}
                 </Popover.Trigger>
                 <Popover.Portal>
@@ -177,10 +221,11 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               <Popover.Root open={userMenuOpen} onOpenChange={setUserMenuOpen}>
                 <Popover.Trigger
                   data-testid="user-menu"
-                  className={`max-w-40 truncate ${onPlaque}`}
+                  className={`gap-1 px-2 ${onBar}`}
                   title={user.display_name || user.username}
                 >
-                  {user.display_name || user.username} ▾
+                  <span className="max-w-40 truncate max-sm:max-w-20" title={user.display_name || user.username}>{user.display_name || user.username}</span>
+                  <span aria-hidden="true">▾</span>
                 </Popover.Trigger>
                 <Popover.Portal>
                   <Popover.Positioner sideOffset={8} align="end" className="z-drawer">
@@ -240,13 +285,17 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 </Popover.Portal>
               </Popover.Root>
             ) : (
-              <Link href="/login" className={`border border-[oklch(var(--color-on-main))] px-3 py-1 font-medium ${onPlaque}`}>
+              <Link href="/login" className={`px-3 font-medium ${onBar}`}>
                 {t("auth.login")}
               </Link>
             )}
           </div>
-          </Plaque>
         </header>
+
+        {/* 匾:页面的身份带(印、题字、纹样带),随页面滚走。 */}
+        <div className={assist.pushed ? "pr-[420px]" : ""}>
+          <Plaque title={title} />
+        </div>
 
         {/* 问一问 pushed (≥ 1024): the page gives up the panel's 420 px, and 1024–1279 its
             side padding drops to 24 (canvas 1a 一). The padding rule reaches into

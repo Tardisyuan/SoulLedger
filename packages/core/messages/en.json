@@ -9,6 +9,7 @@
     "greeting_night": "Good Night",
     "expand_menu": "Expand menu",
     "collapse_menu": "Collapse menu",
+    "collapse_locked": "Navigation stays collapsed below a 1200 px window width",
     "settings": "Settings",
     "welcome": "Welcome",
     "language": "Interface language",
