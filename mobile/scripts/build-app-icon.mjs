@@ -17,9 +17,10 @@
  *                                               (app.json: imageWidth 112 → 3x; ground INK in both
  *                                               modes, gold on paper is too faint). src/coldStart.tsx
  *                                               draws this same PNG as its first frame.
- *   frontend/app/icon.svg                       the browser-tab icon, vector — also the README's mark
- *                                               (gold on an ink rounded square: GitHub would paint
- *                                               the bare currentColor source black)
+ *   frontend/app/icon.svg                       the browser-tab icon, vector
+ *   docs/soulledger-mark.svg                    the README's mark, vector (gold on an ink rounded
+ *                                               square: GitHub would paint the bare currentColor
+ *                                               source black). Its own file, so the tab icon can change alone.
  */
 import { Buffer } from "node:buffer";
 import { readFileSync, writeFileSync } from "node:fs";
@@ -76,5 +77,6 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     png(canvas({ size: 336, share: SPLASH, color: GOLD }), "splash-mark.png", 336),
   ]);
   writeFileSync(join(WEB, "app/icon.svg"), canvas({ size: 64, share: 0.72, color: GOLD, ground: INK, radius: 14 }) + "\n");
-  console.log("built 6 icon PNGs, the splash mark and frontend/app/icon.svg from assets/brand/soulledger-mark.svg");
+  writeFileSync(join(APP, "..", "docs/soulledger-mark.svg"), canvas({ size: 112, share: 0.72, color: GOLD, ground: INK, radius: 24 }) + "\n");
+  console.log("built 6 icon PNGs, the splash mark, frontend/app/icon.svg and docs/soulledger-mark.svg from assets/brand/soulledger-mark.svg");
 }
