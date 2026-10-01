@@ -1,26 +1,21 @@
 /**
- * v2「朱印」App chrome: the seal, the plaque on the life tab, and the cold start.
+ * v2「朱印」App chrome: the seal, the plaque on the life tab. The cold start is coldStart.test.tsx.
  */
 import { NavigationContainer } from "@react-navigation/native";
 import { act, fireEvent, render, screen } from "@testing-library/react-native";
-import * as SplashScreen from "expo-splash-screen";
 import type { ReactNode } from "react";
-import { AccessibilityInfo, StyleSheet } from "react-native";
+import { StyleSheet } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { RING_D, SVG } from "../art";
 import { AppHeader, PlaqueHeader, TabBar } from "../chrome";
-import { ColdStart, coldStart } from "../coldStart";
 import { I18nProvider } from "../i18n";
 import { installMobilePlatform } from "../platform";
 import { DEFAULT_GLYPHS, OutlineSeal, Seal, sealGlyphs } from "../seal";
 import { SessionContext, type SessionState } from "../session";
-import { motion, themeFor, v3, v3Band } from "../theme";
+import { themeFor, v3, v3Band } from "../theme";
 import { ThemeContext } from "../ui";
 import { PROFILE } from "./stubApi";
-
-// Every other suite gets jest.setup's inert double; this one tests the real thing.
-jest.unmock("../coldStart");
 
 // expo-font's registry, as the native side keeps it: a name is loaded once loadAsync for it
 // has resolved, and not before. `__state.fail` makes the next load reject, as a missing file would.
@@ -40,7 +35,7 @@ jest.mock("expo-font", () => {
   };
 });
 
-/** The seal beside words and the cold start are hidden from assistive tech; queries must ask for them. */
+/** The seal beside words is hidden from assistive tech; queries must ask for it. */
 const H = { includeHiddenElements: true };
 const flat = (el: { props: { style?: unknown } }) => StyleSheet.flatten(el.props.style as never) as Record<string, unknown>;
 const argb = (hex: string) => 0xff000000 + parseInt(hex.slice(1), 16);
@@ -282,117 +277,5 @@ describe("the tab bar (补足 B11 / C14)", () => {
     screen.unmount();
     wrap(bar(["本世", "转生", "书信", "朋友圈"]), signedIn());
     for (const name of ["Life", "Applications", "Letters", "Circle"]) expect(label(name).fontSize).toBe(12);
-  });
-});
-
-describe("the cold start (补足 C18)", () => {
-  const hide = SplashScreen.hideAsync as jest.Mock;
-  let reduced = false;
-  beforeEach(() => {
-    coldStart.played = false;
-    reduced = false;
-    hide.mockClear();
-    jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockImplementation(async () => reduced);
-    jest.useFakeTimers();
-  });
-  afterEach(() => {
-    jest.useRealTimers();
-  });
-  const layout = () => fireEvent(screen.getByTestId("cold-start-skip", H), "layout", { nativeEvent: { layout: { width: 390, height: 844 } } });
-
-  it("stamps, hides the native splash only once its own first frame is laid out, is usable at 480 and gone at 720", async () => {
-    render(<ColdStart session={{ status: "signedOut" }} scheme="light" />);
-    await act(async () => {});
-    expect(screen.getByTestId("cold-start", H)).toBeTruthy();
-    expect(hide).not.toHaveBeenCalled();
-    layout();
-    expect(hide).toHaveBeenCalledTimes(1);
-    // Before sign-in: the neutral seal — no glyph.
-    expect(screen.queryByTestId("cold-start-seal-glyph", H)).toBeNull();
-    expect(screen.getByTestId("cold-start", H).props.pointerEvents).toBe("auto");
-    act(() => jest.advanceTimersByTime(motion.coldStartInteractive));
-    expect(screen.getByTestId("cold-start", H).props.pointerEvents).toBe("none");
-    act(() => jest.advanceTimersByTime(motion.coldStart - motion.coldStartInteractive));
-    expect(screen.queryByTestId("cold-start", H)).toBeNull();
-  });
-
-  it("signed in: the civilization's seal and glyph", async () => {
-    render(<ColdStart session={signedIn()} scheme="dark" />);
-    await act(async () => {});
-    expect(screen.getByTestId("cold-start-seal-glyph", H).props.children).toBe("冥");
-    expect(flat(screen.getByTestId("cold-start-skip", H)).backgroundColor).toBe("#100e0d");
-  });
-
-  it("印泥 120–320: the civilization seal's edge scan soaks in to 0.8; the neutral seal has no scan to show", async () => {
-    // Reanimated's jest mock settles a timing at once and never re-renders a style, so the curve is
-    // read off the calls that build it; the first frame is read off the tree.
-    const R = jest.requireMock("react-native-reanimated") as Record<string, (...a: unknown[]) => unknown>;
-    const timing = jest.spyOn(R, "withTiming");
-    const delay = jest.spyOn(R, "withDelay");
-    render(<ColdStart session={signedIn()} scheme="light" />);
-    await act(async () => {});
-    // Frame 0: the scan is not there yet — the seal lands on paper, then the ink soaks in.
-    expect(flat(screen.getByTestId("cold-start-seal-ring-layer", H)).opacity).toBe(0);
-    const soak = motion.stampBloom / 2;
-    expect(timing.mock.calls).toEqual(expect.arrayContaining([[0.95, { duration: soak }], [0.8, { duration: soak }]]));
-    // It starts at the press (120) and is done by 320.
-    expect(motion.stampDrop + motion.stampBloom).toBe(320);
-    expect(delay.mock.calls.filter(([ms]) => ms === motion.stampDrop).length).toBeGreaterThanOrEqual(2); // press and 印泥
-    timing.mockRestore();
-    delay.mockRestore();
-    screen.unmount();
-    // Before sign-in: the neutral seal, and no scan layer at all (C18: 中性皮没有印泥层).
-    coldStart.played = false;
-    render(<ColdStart session={{ status: "signedOut" }} scheme="light" />);
-    await act(async () => {});
-    expect(screen.getByTestId("cold-start-seal", H)).toBeTruthy();
-    expect(screen.queryByTestId("cold-start-seal-ring-layer", H)).toBeNull();
-    screen.unmount();
-    // A seal outside the cold start has no such layer style: its scan is simply there.
-    render(<Seal testID="still" civ="cn" size={52} theme={themeFor("CHINESE", "light")} />);
-    expect(flat(screen.getByTestId("still-ring-layer", H)).opacity).toBeUndefined();
-  });
-
-  it("a tap skips to the end", async () => {
-    render(<ColdStart session={{ status: "signedOut" }} scheme="light" />);
-    await act(async () => {});
-    fireEvent.press(screen.getByTestId("cold-start-skip", H));
-    expect(screen.queryByTestId("cold-start", H)).toBeNull();
-  });
-
-  it("reduce motion: no stamp — the splash hides and the app is there", async () => {
-    reduced = true;
-    render(<ColdStart session={{ status: "signedOut" }} scheme="light" />);
-    await act(async () => {});
-    expect(screen.queryByTestId("cold-start", H)).toBeNull();
-    expect(hide).toHaveBeenCalledTimes(1);
-  });
-
-  it("the civilization's welcome is due: that plays instead, never both", async () => {
-    const first = signedIn({ welcomed_civilizations: [] });
-    render(<ColdStart session={first} scheme="light" />);
-    await act(async () => {});
-    expect(screen.queryByTestId("cold-start", H)).toBeNull();
-    expect(hide).toHaveBeenCalledTimes(1);
-  });
-
-  it("waits on a booting session, but only so long: then the neutral seal", async () => {
-    render(<ColdStart session={{ status: "booting" }} scheme="light" />);
-    await act(async () => {});
-    expect(screen.queryByTestId("cold-start", H)).toBeNull();
-    await act(async () => {
-      jest.advanceTimersByTime(1000);
-    });
-    expect(screen.getByTestId("cold-start", H)).toBeTruthy();
-  });
-
-  it("once per process: a remount (sign out, sign in) is not a cold start", async () => {
-    const { unmount } = render(<ColdStart session={{ status: "signedOut" }} scheme="light" />);
-    await act(async () => {});
-    fireEvent.press(screen.getByTestId("cold-start-skip", H));
-    unmount();
-    render(<ColdStart session={signedIn()} scheme="light" />);
-    await act(async () => {});
-    expect(screen.queryByTestId("cold-start", H)).toBeNull();
   });
 });

@@ -8,15 +8,15 @@
  *   src/art.ts            the seal SVGs, as strings for react-native-svg's
  *                         SvgXml, with the c2pa `<metadata>` stripped (README: 入库时剥掉;
  *                         after stripping they equal Design's project files byte for byte)
- *   assets/v2/*.png       seal edge scans (the cold start's v2 seal), 1x + @2x
+ *   assets/v2/*.png       seal edge scans (the v2 seal), 1x + @2x
  *   assets/fonts/LXGWSeal-Regular.ttf + LXGWSeal-OFL.txt   地府印文 (SIL OFL 1.1)
  *   assets/*.png          app icon (light / dark / tinted), Android adaptive foreground and
- *                         monochrome, notification icon, splash frame (light / dark),
- *                         rasterized from deliver/icons/*.svg with sharp (librsvg)
+ *                         monochrome, notification icon, rasterized from deliver/icons/*.svg with sharp (librsvg)
  *
  * NOT IMPORTED (Design: 不入库): textures/bronze, wax, inkseal (round-4 alternatives) and
  * scan-cnseal-source.png (the crop's source). svg/section-* has no App caller yet. svg/band-*
- * (v2's ornament band) went with v2's plaque (v3, 2026-10-02): nothing draws it.
+ * (v2's ornament band) went with v2's plaque (v3, 2026-10-02): nothing draws it. icons/splash-frame*
+ * went 2026-10-03: the native splash is the ground alone, and the cold start writes the mark.
  */
 import { Buffer } from "node:buffer";
 import { copyFileSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -81,8 +81,5 @@ await Promise.all([
   png("android-adaptive-foreground", "android-icon-foreground.png", 1024),
   png("app-icon-mono", "android-icon-monochrome.png", 1024),
   png("notification-android", "notification-icon.png", 96),
-  // 112pt on screen (补足 C18: the empty frame the cold start stamps into), 3x.
-  png("splash-frame", "splash-frame.png", 336),
-  png("splash-frame-dark", "splash-frame-dark.png", 336),
 ]);
-console.log(`imported ${Object.keys(svg).length} SVGs, 20 textures, LXGW Seal and 8 icon PNGs from ${SRC}`);
+console.log(`imported ${Object.keys(svg).length} SVGs, 20 textures, LXGW Seal and 6 icon PNGs from ${SRC}`);

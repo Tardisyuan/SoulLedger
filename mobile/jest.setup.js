@@ -155,7 +155,11 @@ jest.mock("expo-network", () => {
 
 // expo-splash-screen: a native module with no JS side under jest. A double that records
 // what was asked (jest.fn) and does nothing else.
-jest.mock("expo-splash-screen", () => ({ preventAutoHideAsync: jest.fn(async () => true), hideAsync: jest.fn(async () => true) }));
+jest.mock("expo-splash-screen", () => ({
+  preventAutoHideAsync: jest.fn(async () => true),
+  hideAsync: jest.fn(async () => true),
+  setOptions: jest.fn(),
+}));
 
 // @gorhom/bottom-sheet: its published mock renders a modal's children ALWAYS — present()
 // and dismiss() do nothing — so a closed sheet would still be on screen and "closing it
