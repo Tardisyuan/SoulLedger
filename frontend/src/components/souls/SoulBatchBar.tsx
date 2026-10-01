@@ -174,7 +174,10 @@ export function SoulBatchBar({
           {t("souls.batch.selected", { n: String(count) })}
         </span>
         {transferNote && (
-          <span role="status" className="text-xs text-[oklch(var(--color-warning))]">
+          // ink 反相条上警示色字不达标(2.65 / 3.14:1);用条本身的字色 + 警示档字形 ◐,
+          // 2026-10-01 拍板。同一理由见 JudgmentClaimQueue 的批量条。
+          <span role="status" className="text-xs">
+            <span aria-hidden="true">◐ </span>
             {t("souls.batch.transfer_one_only", { n: String(count) })}
           </span>
         )}

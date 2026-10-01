@@ -7,11 +7,12 @@
  * 渲染路径上的断言在 `SoulsBatchRecycle.test.tsx`(灵魂批量条 + DataTable 选中行)与
  * `JudgmentListPage.test.tsx`(审判队列的批量条与选中行)里;这里放不需要整页的部分。
  *
- * 两条**已知不合格**被钉成「仍然不合格」,修好的那天这里会红,提醒把它们删掉:
- *  - 警示色字落在 ink 批量条上:深 2.65、浅 3.14,都低于 4.5。条上只有两句警示文字
- *    (灵魂批量条「一次只能移交一个」、审判队列「一次最多 100 件」),颜色没有替谁换。
- *  - 浅色、中性皮下,「待我处理」的匾色竖条(civ-neutral)与选中的 ink 竖条 1.19:1、
- *    ΔE00 4.71 —— 两道 3px 竖条几乎同色。只在审判队列上两者会同时出现。
+ * 首版留下的两条已知不合格,2026-10-01 用户拍板后都已处理,这里钉住处理结果:
+ *  - 警示色字落在 ink 批量条上只有 深 2.65 / 浅 3.14:1。改为用条本身的字色,意思交给
+ *    警示档字形 ◐ + 文字(灵魂批量条「一次只能移交一个」、审判队列「一次最多 100 件」)。
+ *  - 浅色、中性皮下,「待我处理」的匾色竖条(civ-neutral)与 v3 选中行的 ink 竖条
+ *    1.19:1、ΔE00 4.71,几乎同色。改为选中行**不画竖条**,只靠 7% 底色;行首 3px 竖条
+ *    整条让给「待我处理」。
  */
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
@@ -47,16 +48,21 @@ const rowGround = (theme: ThemeName, pct: number) => mixOklab(tok(theme, "--colo
 const inverseGround = (theme: ThemeName, pct: number) => mixOklab(tok(theme, "--color-surface-1"), tok(theme, "--color-ink"), pct);
 
 describe("row states (v3 .ds-tr)", () => {
-  it("hover is ink 4% into surface-1, selected is ink 7% + a 3px ink inset — no surface-2, no accent", () => {
+  it("hover is ink 4% into surface-1, selected is ink 7% into surface-1 — no stripe, no surface-2, no accent", () => {
     expect(ROW_HOVER).toBe("hover:bg-[color-mix(in_oklab,oklch(var(--color-ink))_4%,oklch(var(--color-surface-1)))]");
-    expect(ROW_SELECTED.split(" ").sort()).toEqual(
-      [
-        "bg-[color-mix(in_oklab,oklch(var(--color-ink))_7%,oklch(var(--color-surface-1)))]",
-        "shadow-[inset_3px_0_0_oklch(var(--color-ink))]",
-      ].sort()
-    );
-    // The selected mark is ink and never the plaque colour: a 3px civ-coloured bar is RowMark's「待我处理」.
+    expect(ROW_SELECTED).toBe("bg-[color-mix(in_oklab,oklch(var(--color-ink))_7%,oklch(var(--color-surface-1)))]");
     expect(`${ROW_HOVER} ${ROW_SELECTED}`).not.toMatch(/--color-(main|civ|accent|surface-2)\b/);
+  });
+
+  it("a selected row draws no leading stripe — the 3px left bar belongs to「待我处理」alone", () => {
+    // 2026-10-01 拍板。v3 的 .ds-tr.selected 带 3px ink inset;在浅色 + 中性皮下它与
+    // 「待我处理」的 civ-neutral 竖条几乎同色,所以选中只靠底色。
+    expect(ROW_SELECTED).not.toMatch(/shadow|inset|border-l/);
+    // 那个理由本身也钉住:如果哪天 civ-neutral 与 ink 拉开了,这里会红,提醒重新评估。
+    const ink = rgb(tok("light", "--color-ink"));
+    const mine = rgb(tok("light", "--color-civ-neutral"));
+    expect(contrastRatio(ink, mine)).toBeLessThan(1.5);
+    expect(deltaE00Rgb(ink, mine)).toBeLessThan(10);
   });
 
   const TEXT = ["--color-ink", "--color-ink-muted", "--color-ink-subtle", "--color-accent", "--color-danger", "--color-success", "--color-warning"];
@@ -70,14 +76,13 @@ describe("row states (v3 .ds-tr)", () => {
     expect(ratio(tok(theme, fg), rowGround(theme, pct))).toBeGreaterThanOrEqual(AA);
   });
 
-  it.each(THEMES)("%s: selected sits further from rest than hover does, and the inset clears 3:1 on it", (theme) => {
+  it.each(THEMES)("%s: selected sits further from rest than hover does", (theme) => {
     const s1 = tok(theme, "--color-surface-1");
     const hov = rowGround(theme, 4);
     const sel = rowGround(theme, 7);
     // Three distinct steps, in order of how far each is from surface-1.
     expect(ratio(sel, s1)).toBeGreaterThan(ratio(hov, s1));
     expect(ratio(hov, s1)).toBeGreaterThan(1);
-    expect(ratio(tok(theme, "--color-ink"), sel)).toBeGreaterThanOrEqual(NON_TEXT);
   });
 
   it("KNOWN COLLISION: light + neutral skin, the 「待我处理」 bar and the selected inset are near-identical", () => {
@@ -120,8 +125,23 @@ describe("batch bar (v3 .ds-batch, inverted)", () => {
     expect(ratio(tok(theme, "--color-focus"), ink)).toBeLessThan(NON_TEXT);
   });
 
-  it.each(THEMES)("%s KNOWN BELOW AA: warning text on the ink bar (reported, not swapped)", (theme) => {
+  it.each(THEMES)("%s: warning colour on the ink bar would fail AA — which is why the bar's warnings do not use it", (theme) => {
     expect(ratio(tok(theme, "--color-warning"), tok(theme, "--color-ink"))).toBeLessThan(AA);
+  });
+
+  it.each([
+    ["src/components/souls/SoulBatchBar.tsx", "souls.batch.transfer_one_only"],
+    ["src/components/judgment/JudgmentClaimQueue.tsx", "judgment.claim.batch_limit"],
+  ])("%s: the bar warning (%s) is bar-coloured text with the ◐ glyph, not warning colour", (file, key) => {
+    const src = readFileSync(path.join(__dirname, "..", "..", file), "utf8");
+    const at = src.indexOf(`t("${key}"`);
+    expect(at).toBeGreaterThan(0);
+    // 那句文字所在的 <span> 开头 —— 往回找最近的 <span(跳过 ◐ 那个 aria-hidden 的)。
+    const before = src.slice(Math.max(0, at - 260), at);
+    const outer = before.lastIndexOf('<span role="status"') >= 0 ? before.slice(before.lastIndexOf('<span role="status"')) : before.slice(before.lastIndexOf('<span className="text-xs">'));
+    expect(outer.length).toBeGreaterThan(0);
+    expect(outer).not.toMatch(/--color-warning/);
+    expect(outer).toMatch(/<span aria-hidden="true">◐ <\/span>/);
   });
 
   // Every file that draws a batch bar, found by the constant rather than listed.
