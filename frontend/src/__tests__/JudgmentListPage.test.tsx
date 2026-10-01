@@ -629,7 +629,9 @@ describe("审判队列", () => {
       await screen.findByText("沈青梧");
       fireEvent.click(within(rowOf("沈青梧")).getByRole("checkbox"));
       const cls = (await screen.findByTestId("batch-bar")).className.split(/\s+/);
-      expect(cls).toEqual(expect.arrayContaining(["sticky", "top-13", "duration-fast", "starting:translate-y-2", "starting:opacity-0"]));
+      expect(cls).toEqual(expect.arrayContaining(["sticky", "top-(--below-band)", "duration-fast", "starting:translate-y-2", "starting:opacity-0"]));
+      // 身份带是 sticky 的(v3/band):吸在 52 的工具条下沿会被身份带盖住。
+      expect(cls).not.toContain("top-13");
     });
   });
 });

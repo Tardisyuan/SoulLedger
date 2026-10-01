@@ -1075,7 +1075,7 @@ export function PostScreen({ id }: { id: string }) {
                   accessibilityState={{ disabled: !draft.trim() || sending || !status.data }}
                   disabled={!draft.trim() || sending || !status.data}
                   onPress={press}
-                  style={({ pressed }) => [styles.send, { backgroundColor: pressed ? shade(t.plaque) : t.plaque, opacity: draft.trim() ? 1 : 0.6 }]}
+                  style={({ pressed }) => [styles.send, { backgroundColor: pressed ? shade(t.plaqueFill) : t.plaqueFill, opacity: draft.trim() ? 1 : 0.6 }]}
                 >
                   <Txt style={[styles.sendText, { color: t.onPlaque }]}>{tr("soul_app.circle.comment.send")}</Txt>
                 </Pressable>

@@ -103,8 +103,9 @@ describe("PermissionDenied", () => {
     back.mockRestore();
     expect(zh.permission.go_back).toBe("返回上一页");
     expect(en.permission.go_back).toBe("Go back");
-    // egy:沿用已审的「返回」= Khet(common.back / social.back),待 Design 复核。
-    expect(egy.permission.go_back).toBe("Khet");
+    // egy:第三节审定(R1)定稿 —— 返回 = Wehem Er …,上一页 = Medjat Pehwy。
+    // Khet 已定为「内容 / 之后」,单用表达不了「返回」(docs/design-handoff/v3-prompts/egy-277-第三节-审定结果.md)。
+    expect(egy.permission.go_back).toBe("Wehem Er Medjat Pehwy");
   });
 
   it("should render heading as an h1 element", () => {

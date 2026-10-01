@@ -683,7 +683,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
         <section
           id="desk-soul"
           aria-label={t("judgment.queue.case")}
-          className={`min-w-0 scroll-mt-16 ${fullCase ? "hidden" : "order-4 md:order-1"}`}
+          className={`min-w-0 scroll-mt-28 ${fullCase ? "hidden" : "order-4 md:order-1"}`}
         >
           <JudgmentSectionHead mark="甲" title={t("judgment.detail.soul_info")} />
           <p className="mt-3 text-lg text-[oklch(var(--color-ink))] wrap-break-word">
@@ -797,7 +797,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
             <div className="mt-6 flex flex-col items-center gap-3">
               {/* 进页时已结案:印就是落定的样子,不播。这一次会话里落的判在确认层里盖过了。 */}
               <Seal size={72} court={judgment.court ?? undefined} className="shrink-0" />
-              <p data-testid="current-ruling" className={`${fullCase ? "text-xl" : "text-display-lg"} text-[oklch(var(--color-ink))]`}>
+              <p data-testid="current-ruling" className={`font-title ${fullCase ? "text-xl font-semibold" : "text-display-lg"} text-[oklch(var(--color-ink))]`}>
                 <span aria-hidden="true" className="mr-3 font-normal">{verdictGlyph(ordered)}</span>
                 <DomainEnum namespace="judgment.verdicts" value={judgment.verdict} />
               </p>
@@ -826,7 +826,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
               <p
                 data-testid="current-ruling"
                 aria-live="polite"
-                className={`mt-6 ${fullCase ? "text-xl" : "text-display-lg"} text-[oklch(var(--color-ink))]`}
+                className={`mt-6 font-title ${fullCase ? "text-xl font-semibold" : "text-display-lg"} text-[oklch(var(--color-ink))]`}
               >
                 <span key={selectedVerdict} className="inline-block transition-opacity duration-fast ease-enter starting:opacity-0">
                   {/* 总有一个裁决:没选过时是预选的「待定」(DEFAULT_VERDICT)。空串只在详情到达前的那一帧。 */}
@@ -917,7 +917,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
         <section
           id="desk-draft"
           aria-label={t("judgment.desk.nav_draft")}
-          className={`min-w-0 scroll-mt-16 ${
+          className={`min-w-0 scroll-mt-28 ${
             fullCase
               ? "hidden"
               : `order-3 md:col-span-2 xl:order-3 xl:col-span-1 ${

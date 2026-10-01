@@ -15,7 +15,7 @@ import { RootNavigator, navigationRef } from "../navigation";
 import { OUTBOX_KEY } from "../chat";
 import { installMobilePlatform, persistentStore, sessionStore } from "../platform";
 import { SessionProvider } from "../session";
-import { civ, parchment, v3, v3Band } from "../theme";
+import { NEUTRAL_PLAQUE, v3, v3Band } from "../theme";
 import { PROFILE, application, heldReply, life, pressTab, stubApi } from "./stubApi";
 
 const secure = (SecureStore as unknown as { __store: Map<string, string> }).__store;
@@ -208,18 +208,16 @@ describe("a stored session", () => {
     expect(screen.getByText(String(PROFILE.merit_score))).toBeTruthy();
   });
 
-  it("signed in with no known civilization: the old neutral ground, not the pre-login parchment", async () => {
+  it("signed in with no known civilization: the neutral skin, no civilization's colour borrowed", async () => {
     secure.set(REFRESH_TOKEN_KEY, "R");
     const me = heldReply();
     stubApi({ "/me/": me.reply, "/me/life/": { status: 200, data: life(1) } });
     renderApp();
     await act(async () => me.answer({ status: 200, data: { ...PROFILE, civilization: "ATLANTEAN" } }));
-    // The band falls back to the neutral plaque (no civilization colour borrowed), never the parchment.
+    // The band falls back to the neutral plaque (no civilization colour borrowed).
     const band = [screen.getByTestId("plaque").props.style].flat(3).reduce((acc: object, s: object) => ({ ...acc, ...s }), {});
-    expect(band).toMatchObject({ backgroundColor: v3Band(civ.neutral.light.plaque) });
-    expect(Object.values(v3.civ).map((c) => v3Band(c.light))).not.toContain((band as { backgroundColor: string }).backgroundColor);
-    expect(band).not.toMatchObject({ backgroundColor: parchment.light.bg });
-  });
+    expect(band).toMatchObject({ backgroundColor: v3Band(NEUTRAL_PLAQUE.light) });
+    expect(Object.values(v3.civ).map((c) => v3Band(c.light))).not.toContain((band as { backgroundColor: string }).backgroundColor);  });
 
   it("returning to the life tab reloads it — an application submitted elsewhere shows up", async () => {
     secure.set(REFRESH_TOKEN_KEY, "R");

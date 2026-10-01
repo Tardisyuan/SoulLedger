@@ -166,7 +166,9 @@ describe("serif, original and translation", () => {
     expect(within(reading).getByTestId("corpus-translation")).toHaveTextContent("shall not be reborn in haste");
     // Editor notes and metadata are sans.
     expect(within(reading).getByText("编者注:期三年为上限。").closest(".font-serif")).toBeNull();
-    expect(within(reading).getByTestId("corpus-sigil").className).toContain("font-mono");
+    // 条号是展示数字(规范 v3):Noto Serif SC 600,不是等宽。
+    expect(within(reading).getByTestId("corpus-sigil").className).toContain("font-title");
+    expect(within(reading).getByTestId("corpus-sigil").className).not.toContain("font-mono");
   });
 
   it("does not pass a translation off as the original for a rulebook stored only in translation", async () => {

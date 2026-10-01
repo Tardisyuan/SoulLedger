@@ -171,7 +171,7 @@ export function Fab({ onPress, label }: { onPress: () => void; label: string }) 
       accessibilityRole="button"
       accessibilityLabel={label}
       onPress={onPress}
-      style={({ pressed }) => [styles.fab, { backgroundColor: pressed ? shade(t.plaque) : t.plaque }]}
+      style={({ pressed }) => [styles.fab, { backgroundColor: pressed ? shade(t.plaqueFill) : t.plaqueFill }]}
     >
       <Icon name="plus" size={22} color={t.onPlaque} strokeWidth={1.5} />
     </Pressable>
@@ -427,7 +427,7 @@ export function FindSoulScreen() {
               testID="find-write"
               accessibilityRole="button"
               onPress={() => void write(lookup.card.user_id)}
-              style={({ pressed }) => [styles.write, { backgroundColor: pressed ? shade(t.plaque) : t.plaque }]}
+              style={({ pressed }) => [styles.write, { backgroundColor: pressed ? shade(t.plaqueFill) : t.plaqueFill }]}
             >
               <Txt style={[styles.writeText, { color: t.onPlaque }]}>{tr("soul_app.chat.find.write")}</Txt>
             </Pressable>

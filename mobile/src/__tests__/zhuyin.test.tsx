@@ -18,7 +18,7 @@ import { I18nProvider } from "../i18n";
 import { installMobilePlatform, persistentStore } from "../platform";
 import { DEFAULT_GLYPHS, Seal, sealGlyphs } from "../seal";
 import { SessionContext, SessionProvider, useSession, type Session, type SessionState } from "../session";
-import { motion, themeFor, v3, v3Theme } from "../theme";
+import { motion, themeFor, v3, v3Band } from "../theme";
 import { ThemeContext } from "../ui";
 import { PROFILE, stubApi } from "./stubApi";
 
@@ -103,7 +103,7 @@ describe("Seal", () => {
     expect(screen.getByTestId("s").props.accessibilityLabel).toBe("第五殿之印");
     const glyph = screen.getByTestId("s-glyph", H);
     expect(glyph.props.children).toBe("五");
-    expect(flat(glyph)).toMatchObject({ fontFamily: "LXGWSeal_400", fontSize: 28, color: "#FFF4E8" });
+    expect(flat(glyph)).toMatchObject({ fontFamily: "LXGWSeal_400", fontSize: 28, color: "#FFFFFF" });
   });
 
   it("above 32: the edge scan shows in the ring; at 32 and below it goes", () => {
@@ -129,10 +129,11 @@ describe("Seal", () => {
 describe("the plaque on the life tab", () => {
   it("匾色 ground, the tenant's seal read as 「第五殿之印」, the title, the life and the hall, the band", async () => {
     wrap(<PlaqueHeader title="本世" onAccount={() => {}} />, signedIn({ tenant: { ...PROFILE.tenant, seal_glyphs: ["五"] } }));
-    expect(flat(screen.getByTestId("plaque")).backgroundColor).toBe("#9A2F1F");
+    // v3: the plaque ground is the band — 地府's colour with 10% #111, as the identity band.
+    expect(flat(screen.getByTestId("plaque")).backgroundColor).toBe(v3Band(v3.civ.cn.light));
     expect(screen.getByTestId("plaque-seal").props.accessibilityLabel).toBe("第五殿之印");
     expect(screen.getByTestId("plaque-seal-glyph").props.children).toBe("五");
-    expect(flat(screen.getByText("本世"))).toMatchObject({ fontSize: 28, color: "#FFF4E8" });
+    expect(flat(screen.getByText("本世"))).toMatchObject({ fontSize: 28, color: "#FFFFFF" });
     expect(screen.getByText("第 2 世 · 第五殿")).toBeTruthy();
     expect(screen.getByTestId("plaque-band-cn")).toBeTruthy();
     expect(screen.getByTestId("header-account")).toBeTruthy();
@@ -159,7 +160,7 @@ describe("the plaque on the life tab", () => {
     wrap(<PlaqueHeader title="本世" onAccount={() => {}} />, signedIn({ civilization: "ATLANTEAN" }), "ATLANTEAN");
     expect(screen.queryByTestId("plaque")).toBeNull();
     expect(screen.queryByTestId("plaque-seal")).toBeNull();
-    expect(flat(screen.getByTestId("header")).backgroundColor).toBe(themeFor(null, "light").plaque);
+    expect(flat(screen.getByTestId("header")).backgroundColor).toBe(themeFor(null, "light").band);
   });
 });
 
@@ -297,10 +298,9 @@ describe("the tab bar (补足 B11 / C14)", () => {
   const label = (name: string) => flat(screen.getByTestId(`tab-${name}-label`));
 
   it("the current tab: a 2px rule in 匾色 and its label in ink 600; the rest ink3 400", () => {
-    // v3: the bar wears v3's neutrals and the civilization's v3 colour (not the v2 plaque).
-    const t = v3Theme(themeFor("CHINESE", "light"));
+    // v3: the bar wears v3's neutrals and the civilization's v3 colour.
+    const t = themeFor("CHINESE", "light");
     expect([t.plaque, t.ink, t.inkSubtle, t.s1]).toEqual([v3.civ.cn.light, v3.light.ink, v3.light.muted, v3.light.surface]);
-    expect(t.plaque).not.toBe(themeFor("CHINESE", "light").plaque);
     wrap(bar(["本世", "转生", "书信", "朋友圈"], 2), signedIn());
     expect(screen.getAllByTestId("tab-current-rule")).toHaveLength(1);
     expect(flat(screen.getByTestId("tab-current-rule"))).toMatchObject({ backgroundColor: t.plaque });

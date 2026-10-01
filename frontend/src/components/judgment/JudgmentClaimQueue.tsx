@@ -392,7 +392,7 @@ export function JudgmentClaimQueue() {
       {canExecute && chosen.length > 0 && (
         <div
           data-testid="batch-bar"
-          className={`sticky top-13 z-filters flex flex-wrap items-center gap-2 px-3 py-2 mb-2 border border-[oklch(var(--color-block))] ${BATCH_BAR} text-sm transition-[opacity,translate] duration-fast ease-enter starting:translate-y-2 starting:opacity-0`}
+          className={`sticky top-(--below-band) z-filters flex flex-wrap items-center gap-2 px-3 py-2 mb-2 border border-[oklch(var(--color-block))] ${BATCH_BAR} text-sm transition-[opacity,translate] duration-fast ease-enter starting:translate-y-2 starting:opacity-0`}
         >
           <span className="mr-auto font-mono text-xs tabular-nums">{t("judgment.claim.selected", { n: String(chosen.length) })}</span>
           <Button type="button" size="sm" variant="inverse" loading={batch.isPending} onClick={() => runBatch("claim")}>
