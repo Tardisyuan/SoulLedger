@@ -3,8 +3,8 @@
  *
  * Colours are v3's (round-7 prototype; user decision 2026-10-01: v3 fully replaces v2):
  * ONE set of neutrals for every civilization — canvas, surface, ink, muted, line — and
- * each civilization owns one colour (`plaque`). The status colours (`semantic`) and the
- * pre-sign-in parchment are not v3's and stay as they were.
+ * each civilization owns one colour (`plaque`). The status colours (`semantic`) are not
+ * v3's and stay as they were.
  *
  * Until 2026-10-01 the App had per-civilization grounds and hairlines (灵魂簿 App 1h-一,
  * v2 规范 §一) and a warm onPlaque #FFF4E8; v3 drops both — a page no longer says its
@@ -34,10 +34,13 @@ export const v3 = {
 
 /**
  * v3 has no colour for a soul whose civilization the app does not know (or before
- * sign-in): it keeps v2's neutral plaque, warm black / warm grey, rather than borrowing
- * another civilization's.
+ * sign-in). Rather than borrow another civilization's, it is the web's neutral
+ * `--color-main` (`--color-civ-neutral` in frontend/app/globals.css: `.light`
+ * `0.275998 0.007000 134`, `:root` (dark) `0.515225 0.011900 131.5`), so App and Web agree.
+ * White on it: light 14.7:1, dark 5.60:1 (band 6.39:1). Until 2026-10-02 it was v2's warm
+ * black / warm grey #2B2724 / #6E665E.
  */
-export const NEUTRAL_PLAQUE = { light: "#2B2724", dark: "#6E665E" } as const;
+export const NEUTRAL_PLAQUE = { light: "#262925", dark: "#656962" } as const;
 
 /** v3 writes plain white on its civilization colours (#FFF4E8 was 4.30:1 on dark 埃及's band). */
 export const ON_PLAQUE = "#FFFFFF";
@@ -175,7 +178,7 @@ export function civKeyOf(civilization: string | null | undefined): CivKey {
 
 /**
  * A soul's theme. Before sign-in the caller passes `null` and gets the neutral
- * ground; an unknown civilization also gets neutral rather than borrowing
+ * skin; an unknown civilization also gets neutral rather than borrowing
  * another civilization's colours.
  */
 export function themeFor(civilization: string | null | undefined, scheme: ColorScheme): Theme {
@@ -204,43 +207,14 @@ function plaqueSlots(plaque: string, scheme: ColorScheme) {
 }
 
 /**
- * The pre-sign-in palette (第三类 F 组 canvas, "App 调色板"): parchment, not a
- * civilization's ground — before sign-in there is no soul to skin by. Copied
- * verbatim except light ink3: the canvas's #77705f was 4.29:1 on bg, so it is
- * darkened (same OKLCH hue) to #6d6655, AA on bg and bg2. `preLoginTheme` maps
- * it onto the Theme slots.
- */
-export const parchment = {
-  light: { bg: "#f4efe4", bg2: "#ebe4d3", ink: "#1e1a14", ink2: "#5a5145", ink3: "#6d6655", line: "#cfc6b4", line2: "#8f8672", acc: "#a8281e", merit: "#2f6b3a", demerit: "#a8281e", warnBg: "#efe0bf" },
-  dark: { bg: "#15130f", bg2: "#1f1c16", ink: "#ede5d3", ink2: "#b8ad98", ink3: "#8f8572", line: "#332e26", line2: "#6a6252", acc: "#d8503f", merit: "#7fc48a", demerit: "#e0685a", warnBg: "#2a2213" },
-} as const;
-
-/**
- * Every screen before sign-in: booting, login, forgot-password, the forced
- * password change. The canvas fills primary buttons with INK and keeps focus
- * rings and radios ink — the canvas's accent is the seal red, the same value as
- * the error colour — so its red (`acc` / `demerit`) reaches no slot here.
- *
- * v2: the status colours are global (规范 v2 §二), so pos / neg* / warn / lamp come
- * from `semantic`, not the canvas's merit / demerit / warnBg; the plaque is the
- * neutral one (a soul not yet signed in has no civilization).
+ * Every screen before sign-in: booting, login, forgot-password, the forced password
+ * change. Until 2026-10-02 these had their own parchment canvas (第三类 F 组); v3 has
+ * none, so they are the neutral skin — v3's five neutrals and the neutral plaque, the
+ * same theme as a signed-in soul of unknown civilization. The name stays because the
+ * cold-start splash (being rewritten on another branch) still calls it.
  */
 export function preLoginTheme(scheme: ColorScheme): Theme {
-  const p = parchment[scheme];
-  return {
-    ...semantic[scheme],
-    ...plaqueSlots(NEUTRAL_PLAQUE[scheme], scheme),
-    scheme,
-    civ: "neutral",
-    s0: p.bg,
-    s1: p.bg,
-    s2: p.bg2,
-    hair: p.line,
-    hair2: p.line2,
-    ink: p.ink,
-    inkMuted: p.ink2,
-    inkSubtle: p.ink3,
-  };
+  return themeFor(null, scheme);
 }
 
 /**
