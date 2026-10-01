@@ -27,7 +27,7 @@ recoverable from the code, and it points at the code for everything else.
 | What | Where | Notes |
 |---|---|---|
 | Colour tokens, both themes | `frontend/app/globals.css` | `:root` = dark, `.light` = light. The palette is spec v1 "账簿 × 卷宗" (`a2044b28`, 2026-09-24); `ledgerPaletteContract` holds each token to the spec's hex. |
-| Type scale | `frontend/app/globals.css` `@theme` (`:162-177`) | Seven steps — `--text-2xs` / `xs` / `sm` / `md` / `quote` / `lg` / `xl` (11/12/13/16/20/22/28px), with line-height attached to each (`16f4e149`). |
+| Type scale | `frontend/app/globals.css` `@theme` | Eight steps — `text-2xs` 11 · `xs` 12 · `sm` 13 · `md` 15 · `lg` 20 · `xl` 28 · `display` 40 · `display-lg` 56 (px), each with its line-height attached. Which step a heading uses is the next section, not a choice per page. This row is checked against `globals.css` by `designGuardContract` — it said "seven steps, 16 / 22px, a `quote` step" for a month after all three stopped being true. |
 | Font families | `frontend/app/fonts.ts` | Three, each with one stated job. |
 | Civilization identity | — | **Not in the colour layer any more.** The per-tenant `--color-civ-*` / `--civ-*` tokens and the `[data-civ]` rules were removed in `a2044b28` (spec v1 §1.8); a civilization is told apart by its numbering, its path shape and its titles. |
 | Enforcement | `frontend/src/__tests__/` | `ledgerPaletteContract`, `inkOnSurfaceContract`, `cssTokenReferenceContract`, `designGuardContract`, plus the seven `design-system/*` rules in `frontend/eslint.config.mjs:663-671`. These re-derive the claims rather than restating them. (`civilizationColourContract` and `civIdentityInkContract` went with the civ tokens.) |
@@ -39,14 +39,66 @@ this document is the bug.
 
 ## The decisions worth writing down
 
-**Square corners are a decision, not an omission.** Every *shape* radius is `0`
-— `--radius` and its seven siblings (`globals.css:185-192`). The one exception is deliberate and
-named: `--radius-full`, for avatars and spinners only, in the files listed in
-`ROUND_ALLOW` (`frontend/eslint.config.mjs:121-129`). The focus ring went square with
+**Square corners are a decision, not an omission.** The default *shape* radius is `0`
+— `--radius` and its seven siblings. Spec v3 (2026-10) added exactly two non-zero
+steps, each with a written job: `--radius-control` 4px for inputs and filter chips,
+`--radius-panel` 8px for dialogs. **Buttons stay square** — the v3 token table says
+"inputs and small controls", the v3 component prototype draws square buttons, and on
+2026-10-01 the prototype won; `Button.tsx` says so beside its `size` block. Pills remain
+the other exception, for avatars and spinners only, in the files listed in
+`ROUND_ALLOW` (`frontend/eslint.config.mjs`). The focus ring went square with
 spec v1 (`e78e5d88`), and `--radius-focus` was deleted with it.
 `Badge`'s `shape: "square"` variant emits *no class at all*, because `rounded`
 would render `border-radius: 0` and read as a choice that had been made when it
 had not. Pills exist only where a shape carries meaning.
+
+**Headings: the step follows the role, not the tag.** This is the one table of
+values this file keeps, because "which step is a level-two heading" has no single
+place in the code to read it from — the answer is spread across the shell, two
+guards and a component. It is not hand-maintained: `designGuardContract` reads
+every row below and checks the step, size, line-height and weight against
+`globals.css`, so a row that drifts is a red build, not a stale paragraph.
+
+| 角色 | 标签 | 写法 | 字号 / 行高 px | 字重 | 字体 | 由谁守 |
+|---|---|---|---|---|---|---|
+| 页面标题 | `<h1>`,每页一个 | `text-lg` | 20 / 28 | 600 | 界面字体 Archivo + Noto Sans SC | `PageShell.test`「页面标题」 |
+| 匾题字 · 第一档 | 匾里的 `<Title>` | `text-display` | 40 / 48 | 400 | 文明题字字体 | `plaqueTitleStaysLargeText` |
+| 匾题字 · 第二档 | 同上,第一档放不下时 | `text-xl` | 28 / 36 | 400 | 文明题字字体 | 同上 |
+| 匾题字 · 第三档 | 同上,第二档还放不下时 | `text-lg` | 20 / 28 | 600 | 界面字体,最多两行 | 同上 |
+| 面板标题 | `<h2>` 或 `<h3>` | `text-md` | 15 / 24 | 600 | 界面字体 | `PageShell.test` h2 / h3 |
+| 列表行标题 | `<h2>` 或 `<h3>` | `text-sm font-medium` | 13 / 20 | 500 | 界面字体 | 同上 |
+| 区块标签 | `<h2>` 或 `<h3>` | `text-2xs uppercase` | 11 / 16 | 400 | 界面字体 | 同上 |
+| 眉题 | 壳的 `eyebrow`,不是标题 | `text-2xs font-mono uppercase` | 11 / 16 | 400 | IBM Plex Mono | `PageShell.test` |
+| 正文 | `<p>` | `text-sm` | 13 / 20 | 400 | 界面字体 | — |
+| 展示数字 | 当前判决、本世余额 | `text-display-lg` | 56 / 62 | 600 | 界面字体 | 尚无调用点 |
+
+Three things this table does on purpose:
+
+- **A level-two heading has no single size, and that is the rule, not a gap.**
+  The same row title is an `<h2>` on a page with no intermediate panel and an
+  `<h3>` inside one; that is outline depth, not how large the words should be.
+  Tying the step to the tag would put back the coupling `PageShell.tsx` rule 4
+  took apart. So the question "how big is an h2" has three answers, one per role.
+- **The section label is 11px and smaller than body text.** It is a label —
+  uppercase, 0.1em tracking, subtle ink — that sits *above* a card or chart, not
+  a title competing with it. Spec v3 names the 11px step "micro-label".
+  Its weight is 400: `--text-2xs` has carried no weight since `16f4e149` (spec v1
+  §1.4); the 600 that `PageShell.tsx` used to cite belonged to the old `--text-01`.
+- **The plaque title is the one heading that changes step at runtime.** It
+  measures its own width and steps down 40 → 28 → 20; every step stays WCAG
+  large text, because in the dark theme the Egyptian and Greek plaque colours
+  carry white text at only 3.99:1 and 4.16:1.
+
+Font families per civilization for the plaque: neutral → Source Serif 4, 地府 →
+Ma Shan Zheng, Europe → UnifrakturMaguntia, Egypt → Josefin Slab, Greece → Cinzel
+(`globals.css`, `[data-civ]`). They are display faces for the plaque only.
+
+**Open, not settled:** the section label is written in the interface face in
+24 places and in IBM Plex Mono in 11 (counted 2026-10-01 with the guard's own tag
+regex, comments blanked). The role does not pin the family; the
+guard does not check it. Spec v3 reserves 20px for "module title" and 28px for
+"page subtitle"; this table uses 15px for panel titles. Both are decisions to
+make, not drift to correct.
 
 **Depth comes from hairlines, not from the surface ladder.** Measured
 2026-09-02: adjacent steps of `--color-surface-1..4` differ by 1.02–1.05:1, and

@@ -12,7 +12,7 @@ export function PermissionDenied({ permission }: { permission?: string }) {
   const { t } = useI18n();
   return (
     <div role="status" data-testid="permission-denied" className="border-t border-[oklch(var(--color-line))] py-8">
-      <h1 className="text-sm font-semibold text-[oklch(var(--color-ink))]">{t("permission.denied_title")}</h1>
+      <h1 className="text-lg text-[oklch(var(--color-ink))]">{t("permission.denied_title")}</h1>
       <p className="mt-1 text-xs text-[oklch(var(--color-ink-subtle))]">
         <span>{t("permission.denied_message")}</span> <span data-testid="permission-denied-ask">{t("permission.ask_admin")}</span>
       </p>

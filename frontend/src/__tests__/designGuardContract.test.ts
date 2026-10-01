@@ -513,4 +513,61 @@ describe("DESIGN.md cannot prescribe against the code", () => {
       .map(([n, line]) => `DESIGN.md:${n}  ${line.trim().slice(0, 70)}`);
     expect(offenders).toEqual([]);
   });
+
+  /*
+   * 字阶与标题表:DESIGN.md 里唯二保留数值的地方,所以每个数都要从 globals.css 重算。
+   *
+   * 为什么要这条。DESIGN.md 的「Type scale」那一行在 `16f4e149` 之后写着「七档、
+   * 16 / 22px、有 quote 档」,而 v2 早把 16→15、22→20、删掉了 quote;它就那样
+   * 躺了一个月。2026-10-01 用户问「一级、二级标题各多少号多少字体」时,仓库里唯一
+   * 写成文字的回答就是那一行 —— 而它是错的。所以这里不信文档,只信 css。
+   */
+  const css = fs.readFileSync(path.join(ROOT, "app", "globals.css"), "utf8");
+  const tok = (re: RegExp): Map<string, number> =>
+    new Map([...css.matchAll(re)].map((m) => [m[1], Number(m[2])] as [string, number]));
+  // 档名里只允许单个连字符(`display-lg`):`[a-z0-9-]+` 会把 `2xs--line-height` 也当成一个档。
+  const SIZE = tok(/^\s*--text-([a-z0-9]+(?:-[a-z0-9]+)*):\s*(\d+)px;/gm);
+  const LINE = tok(/^\s*--text-([a-z0-9-]+)--line-height:\s*(\d+)px;/gm);
+  const WEIGHT = tok(/^\s*--text-([a-z0-9-]+)--font-weight:\s*(\d+);/gm);
+
+  it("the Type scale row lists exactly the steps globals.css declares, at their sizes", () => {
+    // 先证明读到了东西:`--text-*: initial` 不是档位(名字带 *),正则本来就跳过它。
+    expect(SIZE.size).toBeGreaterThanOrEqual(8);
+    const row = doc.split("\n").find((l) => l.startsWith("| Type scale |"));
+    expect(row).toBeDefined();
+    const listed = new Map(
+      [...row!.matchAll(/`(?:text-)?([a-z0-9-]+)` (\d+)/g)].map((m) => [m[1], Number(m[2])] as [string, number])
+    );
+    expect(Object.fromEntries([...listed].sort())).toEqual(Object.fromEntries([...SIZE].sort()));
+  });
+
+  it("every row of the heading table matches the step it names", () => {
+    const lines = doc.split("\n");
+    const head = lines.findIndex((l) => l.startsWith("| 角色 |"));
+    expect(head).toBeGreaterThan(0);
+    const rows: string[] = [];
+    for (let i = head + 2; i < lines.length && lines[i].startsWith("|"); i += 1) rows.push(lines[i]);
+    // 读到零行会让下面的循环空跑而照样绿。表里现在是十行。
+    expect(rows.length).toBeGreaterThanOrEqual(10);
+
+    const wrong: string[] = [];
+    for (const r of rows) {
+      const cells = r.split("|").map((c) => c.trim());
+      // cells[0] 是行首 | 之前的空串,所以列号从 1 起:1 角色、3 写法、4 字号/行高、5 字重
+      const [role, , how, sizes, weight] = cells.slice(1);
+      const step = /`[^`]*?\btext-([a-z0-9-]+)\b[^`]*`/.exec(how)?.[1];
+      const m = /^(\d+) \/ (\d+)$/.exec(sizes);
+      if (!step || !SIZE.has(step) || !m) {
+        wrong.push(`${role}: cannot read a declared step and "N / M" from "${how}" / "${sizes}"`);
+        continue;
+      }
+      const wantWeight = /\bfont-medium\b/.test(how) ? 500 : (WEIGHT.get(step) ?? 400);
+      const got = { size: Number(m[1]), line: Number(m[2]), weight: Number(weight) };
+      const want = { size: SIZE.get(step), line: LINE.get(step), weight: wantWeight };
+      if (JSON.stringify(got) !== JSON.stringify(want)) {
+        wrong.push(`${role} (text-${step}): DESIGN.md says ${JSON.stringify(got)}, globals.css gives ${JSON.stringify(want)}`);
+      }
+    }
+    expect(wrong).toEqual([]);
+  });
 });
