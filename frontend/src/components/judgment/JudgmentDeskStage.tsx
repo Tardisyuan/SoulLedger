@@ -218,7 +218,7 @@ export function JudgmentConfirmLayer({
     if (done) doneRef.current?.focus();
   }, [done]);
   const choice = (
-    <p className="text-display-lg text-[oklch(var(--color-ink))]">
+    <p className="font-title text-display-lg text-[oklch(var(--color-ink))]">
       <span aria-hidden="true" className="mr-3 font-normal">{verdictGlyph(code)}</span>
       <DomainEnum namespace="judgment.verdicts" value={verdict} />
     </p>

@@ -99,7 +99,7 @@ export default function HomePage() {
         <header className="mb-8 md:mb-12">
           {/* 八档字级表最上面那两档。迁移前是 `text-4xl md:text-5xl lg:text-6xl`
               —— 三个断点、三个表外字号。 */}
-          <h1 className="text-lg md:text-xl mb-4 text-[oklch(var(--color-accent-ink))]">
+          <h1 className="font-title text-lg md:text-xl mb-4 text-[oklch(var(--color-accent-ink))]">
             {t("home.hero_title")}
           </h1>
           <p className="text-[oklch(var(--color-accent-ink))]/80 text-md mb-2">{t("home.hero_subtitle")}</p>
