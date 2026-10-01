@@ -1900,7 +1900,8 @@
   "permission": {
     "denied_title": "权限不足",
     "denied_message": "您没有权限访问此页面或执行此操作。",
-    "ask_admin": "请找本殿管理员。"
+    "ask_admin": "请找本殿管理员。",
+    "go_back": "返回上一页"
   },
   "icon_picker": {
     "select": "选择图标",
@@ -1945,9 +1946,9 @@
     "permission_mismatch_warning": "“{{codename}}” 不对应任何真实权限——此按钮将对所有非管理员角色静默隐藏"
   },
   "error": {
-    "title": "服务器错误",
+    "title": "系统发生错误",
     "description": "抱歉，服务器遇到了问题",
-    "retry": "重试",
+    "retry": "重新载入",
     "home": "返回首页"
   },
   "not_found": {

@@ -1900,7 +1900,8 @@
   "permission": {
     "denied_title": "Permission Denied",
     "denied_message": "You don't have permission to access this page or perform this action.",
-    "ask_admin": "Ask your hall's administrator."
+    "ask_admin": "Ask your hall's administrator.",
+    "go_back": "Go back"
   },
   "icon_picker": {
     "select": "Select Icon",
@@ -1945,9 +1946,9 @@
     "permission_mismatch_warning": "\"{{codename}}\" doesn't match a real permission — this button will be silently hidden from every non-ADMIN role"
   },
   "error": {
-    "title": "Server Error",
+    "title": "A system error occurred",
     "description": "Sorry, the server encountered a problem",
-    "retry": "Retry",
+    "retry": "Reload",
     "home": "Return Home"
   },
   "not_found": {
