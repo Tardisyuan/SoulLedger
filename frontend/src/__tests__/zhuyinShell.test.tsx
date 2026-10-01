@@ -1,10 +1,10 @@
 /**
- * 外框:印、身份带(规范 v3,取代 v2 的匾)的题字降档与滚动收起、立柱横排阈值,以及把印
- * 接到素材上的那张 CSS 表(`app/globals.css` 的 `[data-civ]` 规则 → `public/v2/`)。
+ * 外框:印(规范 v3 描边印)、身份带(规范 v3,取代 v2 的匾)的题字降档、矮带与滚动收起、
+ * 立柱横排阈值,以及分节纹的那张 CSS 表(`app/globals.css` 的 `[data-civ]` 规则 → `public/v2/`)。
  *
- * 素材那一组是这份文件存在的主要理由:印全是 CSS 遮罩,url 写错一个字母,
- * 浏览器只会安静地画出一块实心匾色(遮罩图取不到 = 不遮),tsc、eslint、jest、
- * next build 全绿。所以直接对账「每个文明的每一层都有、指向的文件都在」。
+ * 素材那一组:分节纹是 CSS 遮罩,url 写错一个字母,浏览器只会安静地画出一块实心
+ * (遮罩图取不到 = 不遮),tsc、eslint、jest、next build 全绿。所以直接对账
+ * 「每个文明都有、指向的文件都在」。v2 的实底印(遮罩 + 残边扫描)随 v3 描边印撤掉。
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -22,7 +22,7 @@ jest.mock("@/src/contexts/I18nContext", () => ({
 }));
 
 import { Seal, sealGlyphsFor, DEFAULT_SEAL_GLYPHS } from "@/src/components/plaque/Seal";
-import { fitTier, Plaque } from "@/src/components/plaque/Plaque";
+import { fitTier, Plaque, shortBandFor } from "@/src/components/plaque/Plaque";
 import { labelTooLongForVerticalPillar, pillarIsWide } from "@soulledger/core/domain/pillar";
 
 const FRONTEND = path.join(__dirname, "..", "..");
@@ -49,13 +49,22 @@ describe("印", () => {
     expect(screen.getByRole("img").textContent).not.toContain("冥");
   });
 
-  it("字号 = 印尺寸 × 文明系数;埃及两字竖排每字 0.46", () => {
-    const { rerender } = render(<Seal size={100} />);
-    expect((screen.getByRole("img").querySelector(".seal-glyphs") as HTMLElement).style.fontSize).toBe("54px");
+  it("字号 = 印宽 × 0.44(v3 64 → 28),≤ 32 是 0.5(30 → 15);埃及两字竖排每字 0.34", () => {
+    const glyphSize = () => (screen.getByRole("img").querySelector(".seal-glyphs") as HTMLElement).style.fontSize;
+    const { rerender } = render(<Seal size={64} />);
+    expect(glyphSize()).toBe("28px");
+    rerender(<Seal size={30} />);
+    expect(glyphSize()).toBe("15px");
     rerender(<Seal size={100} civ="eg" glyphs={["\u{13184}", "\u{131CB}"]} />);
-    const glyphs = screen.getByRole("img").querySelector(".seal-glyphs") as HTMLElement;
-    expect(glyphs.style.fontSize).toBe("46px");
-    expect(glyphs.children).toHaveLength(2);
+    expect(glyphSize()).toBe("34px");
+    expect((screen.getByRole("img").querySelector(".seal-glyphs") as HTMLElement).children).toHaveLength(2);
+  });
+
+  it("埃及是拱:64 宽 70 高(v3 `.seal-egypt`);别的文明方的", () => {
+    const { rerender } = render(<Seal size={64} civ="eg" />);
+    expect(screen.getByRole("img").style).toMatchObject({ width: "64px", height: "70px" });
+    rerender(<Seal size={64} civ="gr" />);
+    expect(screen.getByRole("img").style).toMatchObject({ width: "64px", height: "64px" });
   });
 
   it("只有埃及允许两个字;别的文明两个字是坏数据,退回默认而不是截断", () => {
@@ -69,12 +78,12 @@ describe("印", () => {
     expect(DEFAULT_SEAL_GLYPHS.gr[0].codePointAt(0)).toBe(0x39c);
   });
 
-  it("≤ 32 只留外形、粗框、印文:没有残边环,线层换 line-small", () => {
+  it("是描边印:只有印文一个子元素,没有 v2 的实底 / 残边环 / 线层", () => {
     render(<Seal size={32} />);
     const seal = screen.getByRole("img");
     expect(seal).toHaveAttribute("data-small");
-    expect(seal.querySelector(".seal-ring")).toBeNull();
-    expect(seal.querySelector(".seal-body")).not.toBeNull();
+    expect([...seal.children].map((c) => c.className)).toEqual(["seal-glyphs"]);
+    expect(seal.querySelector(".seal-layer, .seal-body, .seal-ring, .seal-line")).toBeNull();
   });
 
   it("中性皮(登录前、不认得的租户)没有印", () => {
@@ -118,6 +127,51 @@ describe("身份带题字按实测宽度降档(C14)", () => {
     const el = document.createElement("div");
     expect(fitTier(el, 1)).toBe(1);
     expect(el.className).not.toContain("text-display");
+  });
+});
+
+describe("矮带(审判队列、灵魂详情)", () => {
+  it.each([
+    ["/judgment/queue", true],
+    ["/souls/42", true],
+    ["/souls/3f9a0c1e-0000-4000-8000-000000000000", true],
+    ["/souls", false],
+    ["/judgment", false],
+    ["/judgment/42", false],
+    ["/judgment/queue/x", false],
+    ["/souls/42/x", false],
+  ])("%s → 矮带 %s", (path, short) => {
+    expect(shortBandFor(path)).toBe(short);
+  });
+
+  it("矮带标 data-short、题字从 28 起(放得下 40 也不用 40);印仍是 64", () => {
+    render(<Plaque title="审判队列" collapsible short />);
+    const band = screen.getByTestId("plaque");
+    expect(band).toHaveAttribute("data-short");
+    expect(band.querySelector("[data-tier]")).toHaveAttribute("data-tier", "1");
+    expect(screen.getByRole("img").style.width).toBe("64px");
+  });
+
+  it("不是矮带的不标,放得下就是 40", () => {
+    render(<Plaque title="审判台" collapsible />);
+    const band = screen.getByTestId("plaque");
+    expect(band).not.toHaveAttribute("data-short");
+    expect(band.querySelector("[data-tier]")).toHaveAttribute("data-tier", "0");
+  });
+
+  it("从 20 起(≤ 768 的矮带)", () => {
+    const el = document.createElement("div");
+    expect(fitTier(el, 2)).toBe(2);
+    expect(el.className).toContain("line-clamp-2");
+  });
+
+  const css = fs.readFileSync(path.join(FRONTEND, "app", "globals.css"), "utf8");
+  it("矮带 116 高,写在收起之前(收起的 48 赢)", () => {
+    const short = css.indexOf(".identity-band[data-short] {");
+    const compact = css.indexOf(".identity-band[data-compact] {");
+    expect(/\.identity-band\[data-short\] \{\s*height: 116px;/.test(css)).toBe(true);
+    expect(short).toBeGreaterThan(-1);
+    expect(short).toBeLessThan(compact);
   });
 });
 
@@ -222,27 +276,25 @@ describe("立柱横排阈值(C14)", () => {
 
 describe("文明皮的素材表(globals.css → public/v2)", () => {
   const css = fs.readFileSync(path.join(FRONTEND, "app", "globals.css"), "utf8");
-  const LAYERS = ["--seal-body", "--seal-ring", "--seal-line", "--seal-line-small", "--seal-scan", "--section"];
 
-  it.each(["cn", "eu", "eg", "gr"])("%s 的每一层都有声明", (civ) => {
+  it.each(["cn", "eu", "eg", "gr"])("%s 有分节纹;v2 的印素材、印文字体、匾纹都不该再有", (civ) => {
     const blocks = [...css.matchAll(new RegExp(`\\[data-civ="${civ}"\\]\\s*\\{([^}]*)\\}`, "g"))].map((m) => m[1]).join("\n");
-    for (const layer of LAYERS) expect(blocks).toMatch(new RegExp(`${layer}:\\s*\\S`));
-    // 印文字体变量也在;v2 的匾纹、质感、题字字体随 v3 身份带撤掉了,不该再有。
-    expect(blocks).toMatch(/--font-seal:\s*var\(--font-/);
-    expect(blocks).not.toMatch(/--band|--font-plaque/);
+    expect(blocks).toMatch(/--section:\s*\S/);
+    expect(blocks).not.toMatch(/--seal-|--font-seal|--band|--font-plaque/);
   });
 
   it("引用的每一个素材文件都在 public/ 里", () => {
     const urls = [...css.matchAll(/url\("(\/v2\/[^"]+)"\)/g)].map((m) => m[1]);
-    expect(urls.length).toBeGreaterThanOrEqual(4 * 7); // 4 文明 × (印 4 + 扫描 2 + 分节 1)
+    expect(urls).toHaveLength(4); // 4 文明 × 分节 1
     const missing = urls.filter((u) => !fs.existsSync(path.join(FRONTEND, "public", u)));
     expect(missing).toEqual([]);
   });
 
-  it("入库的 SVG 剥掉了 c2pa 元数据,且都是单色 currentColor", () => {
+  it("public/v2 里只剩分节纹:v2 印的遮罩与残边扫描随描边印删掉,不留没人引用的文件", () => {
     const dir = path.join(FRONTEND, "public", "v2", "svg");
     const files = fs.readdirSync(dir).filter((f) => f.endsWith(".svg"));
-    expect(files).toHaveLength(20); // 4 文明 × (印 4 + 分节 1);v2 的 8 张匾纹随身份带删掉
+    expect(files.sort()).toEqual(["section-cn.svg", "section-eg.svg", "section-eu.svg", "section-gr.svg"]);
+    expect(fs.readdirSync(path.join(FRONTEND, "public", "v2"))).toEqual(["svg"]);
     for (const f of files) {
       const svg = fs.readFileSync(path.join(dir, f), "utf8");
       expect(svg).not.toMatch(/c2pa|<metadata/);
@@ -250,8 +302,21 @@ describe("文明皮的素材表(globals.css → public/v2)", () => {
     }
   });
 
-  it("没配文明的素材不入库(bronze / wax / inkseal / 裁切前原图)", () => {
-    const tex = fs.readdirSync(path.join(FRONTEND, "public", "v2", "textures"));
-    expect(tex.filter((f) => /bronze|^wax|inkseal|source/.test(f))).toEqual([]);
+  it("印是 v3 的描边印:currentColor 描边、不填色,印文 font-title + 圣书字回退;身份带上随带上的白字", () => {
+    const rule = (sel: string) => new RegExp(`\\n {2}${sel.replace(/[.[\]"=]/g, "\\$&")} \\{([^}]*)\\}`).exec(css)?.[1] ?? "";
+    const seal = rule(".seal");
+    expect(seal).toMatch(/color: oklch\(var\(--color-main\)\);/);
+    expect(seal).toMatch(/border: 2px solid currentColor;/);
+    expect(seal).toMatch(/outline: 1px solid currentColor;/);
+    expect(seal).not.toMatch(/background/);
+    expect(rule(".identity-band .seal")).toMatch(/color: inherit;/);
+    expect(rule(".seal-glyphs")).toMatch(/font-family: var\(--font-title\), var\(--font-hieroglyphs\);/);
+    expect(rule('.seal[data-civ="eu"]')).toMatch(/border-radius: 50%;/);
+    expect(rule('.seal[data-civ="gr"]')).toMatch(/clip-path: polygon\(/);
+  });
+
+  it("v2 的三款印文字体不再加载:只剩圣书字那一支", () => {
+    const fonts = fs.readFileSync(path.join(FRONTEND, "src", "components", "plaque", "fonts.ts"), "utf8");
+    expect(fonts.match(/^import .*$/gm)).toEqual(['import { Noto_Sans_Egyptian_Hieroglyphs } from "next/font/google";']);
   });
 });

@@ -162,3 +162,53 @@ describe("身份带底色(文明色压暗 10%)上的白字", () => {
     }
   });
 });
+
+/**
+ * 印(规范 v3 描边印)是图形,门槛是 WCAG 1.4.11 的 3:1。它是 currentColor:身份带上随带上的
+ * 白字(`.identity-band .seal { color: inherit }`),别处是匾色本身 —— 落在 canvas(审判队列的
+ * 裁决条、判决页)或 surface-1(导航、确认层、印字弹窗)上。surface-2 / 3 上不放印:深色地府
+ * 在 surface-2 上只有 2.67。
+ *
+ * 实测(2026-10-02),两位小数:
+ *
+ *                    地府   欧洲   埃及   希腊
+ *   深色 canvas      3.46   3.64   4.72   4.52
+ *   深色 surface-1   3.13   3.29   4.27   4.09
+ *   浅色 canvas      6.81   8.14   7.46   7.73
+ *   浅色 surface-1   7.58   9.05   8.30   8.60
+ *
+ * 最紧的一格是深色地府在 surface-1 上的 3.13 —— 哪天地府的深色匾色调暗一点,这里先红。
+ */
+const SEAL_MEASURED: Record<string, number> = {
+  "dark:--color-canvas:cn": 3.46, "dark:--color-canvas:eu": 3.64, "dark:--color-canvas:eg": 4.72, "dark:--color-canvas:gr": 4.52,
+  "dark:--color-surface-1:cn": 3.13, "dark:--color-surface-1:eu": 3.29, "dark:--color-surface-1:eg": 4.27, "dark:--color-surface-1:gr": 4.09,
+  "light:--color-canvas:cn": 6.81, "light:--color-canvas:eu": 8.14, "light:--color-canvas:eg": 7.46, "light:--color-canvas:gr": 7.73,
+  "light:--color-surface-1:cn": 7.58, "light:--color-surface-1:eu": 9.05, "light:--color-surface-1:eg": 8.3, "light:--color-surface-1:gr": 8.6,
+};
+
+/** globals.css 里某条两格缩进的规则体(`\n  .seal {` …)。 */
+const ruleBody = (sel: string) => new RegExp(`\\n {2}${sel.replace(/[.]/g, "\\$&")} \\{([^}]*)\\}`).exec(CSS)?.[1] ?? "";
+
+describe("印的描边与印文 ≥ 3:1(图形)", () => {
+  it("印是 currentColor 的匾色,身份带上改随白字 —— 下面两组量的就是这两种颜色", () => {
+    expect(ruleBody(".seal")).toMatch(/color: oklch\(var\(--color-main\)\);[\s\S]*border: 2px solid currentColor;/);
+    expect(ruleBody(".identity-band .seal")).toMatch(/color: inherit;/);
+    expect(ruleBody(".identity-band")).toMatch(/color: oklch\(var\(--color-on-main\)\);/);
+  });
+
+  it.each(
+    THEMES.flatMap((theme) =>
+      ["--color-canvas", "--color-surface-1"].flatMap((surface) => CIVS.map((civ) => [theme, surface, civ] as const)),
+    ),
+  )("%s · %s 上的 %s 印 ≥ 3:1,且等于实测表", (theme, surface, civ) => {
+    const ratio = contrastRatio(rgb(theme, `--color-civ-${civ}`), rgb(theme, surface));
+    expect(Number(ratio.toFixed(2))).toBe(SEAL_MEASURED[`${theme}:${surface}:${civ}`]);
+    expect(ratio).toBeGreaterThanOrEqual(3);
+  });
+
+  it.each(THEMES.flatMap((theme) => CIVS.map((civ) => [theme, civ] as const)))("身份带上 %s · %s 的白印 ≥ 3:1", (theme, civ) => {
+    const { pct, shade } = bandMix();
+    const ratio = contrastRatio(rgb(theme, "--color-on-main"), mixSrgb(rgb(theme, `--color-civ-${civ}`), shade, pct));
+    expect(ratio).toBeGreaterThanOrEqual(3);
+  });
+});
