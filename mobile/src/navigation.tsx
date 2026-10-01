@@ -65,14 +65,17 @@ export const navigationRef = createNavigationContainerRef<RootParams>();
 function MainTabs() {
   const { t } = useI18n();
   const chat = useChat();
-  // v3 MotionSpec 底部标签: the content cross-fades over 180ms, the bar does not move; reduce motion swaps at once.
+  // v3 MotionSpec 底部标签: the content cross-fades over 180ms, the bar does not move; reduce motion swaps at once
+  // — by a 0ms fade, never by `animation: "none"`. The OS answers reduce motion after this first renders, and
+  // flipping "fade" → "none" turns the tabs' screen container (react-native-screens, iOS) into a different
+  // native component, remounting every tab: the life tab's three requests went out twice.
   const { tabFade } = useReducedMotionDurations();
   const unread = Object.values(chat.timeline.rooms).some((room) => room.unread > 0);
   return (
     <Tabs.Navigator
       tabBar={(props) => <TabBar {...props} />}
       screenOptions={({ route, navigation }) => ({
-        animation: tabFade ? "fade" : "none",
+        animation: "fade",
         transitionSpec: { animation: "timing", config: { duration: tabFade } },
         // v2 补足 B11 / C15: every tab's root wears the full plaque; its actions sit where the account icon was.
         header: () =>
