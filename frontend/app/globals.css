@@ -686,12 +686,13 @@
     --font-seal: var(--font-gfs-didot), var(--font-serif);
   }
 
-  /* 宽度 < 768 时立柱收成固定在底部的 56px 底栏(AppLayout 的 BottomBar)。页面里吸底的
-     操作条(审判队列的裁决条、批量条)写 `bottom-(--bottom-bar)`,落在底栏上方而不是被它盖住。 */
+  /* 宽度 ≤ 768 时没有侧栏,导航是固定在底部的 56px 底栏(GlobalNav.tsx 的 BottomBar;v3 四档,
+     侧栏从 769 起 —— 与 AppLayout 的 `min-[769px]:` 同一条线)。页面里吸底的操作条(审判队列的
+     裁决条、批量条)写 `bottom-(--bottom-bar)`,落在底栏上方而不是被它盖住。 */
   html {
     --bottom-bar: 0px;
   }
-  @media (max-width: 767.98px) {
+  @media (max-width: 768px) {
     html {
       --bottom-bar: 56px;
     }
@@ -1102,13 +1103,6 @@ html.theme-switching *::after {
   /* 规范 v2 A2:环跟着元素形状走(outline 本来就沿 border-radius 画),所以这里不再
      把圆角压成 0 —— v1 那一行会把单选钮的焦点环画成方的。输入框也不再收紧偏移:
      A1 的输入焦点是「边框改 ink,外加 2px ink 焦点框」,两层是有意的。 */
-}
-
-/* 立柱里的焦点环 · A2:立柱当前项是匾色、立柱底近黑,ink 环在深色下会消失,所以立柱里
-   一律用 onMain、内缩 4px。立柱组件还没有(下一阶段),先把这一档做成类名等它来用。 */
-.focus-ring-pillar:focus-visible {
-  outline-color: oklch(var(--color-on-main)) !important;
-  outline-offset: -4px;
 }
 
 /* ── nprogress ────────────────────────────────────────────────────────────

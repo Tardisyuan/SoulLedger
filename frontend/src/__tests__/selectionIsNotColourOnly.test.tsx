@@ -32,7 +32,7 @@
  */
 import { render, screen, fireEvent } from "@testing-library/react";
 import { useState } from "react";
-import { Pillar } from "@/src/components/layout/Pillar";
+import { GlobalNav } from "@/src/components/layout/GlobalNav";
 import type { SidebarMenu } from "@/src/hooks/useSidebarMenus";
 
 const mockPathname = jest.fn(() => "/souls");
@@ -83,25 +83,42 @@ const PARENT = menu({
   children: [menu({ id: 4, name: "菜单", path: "/menus", icon: "List" })],
 });
 
-/** 二级栏的开合在 AppLayout 里;这个外壳替它持有一组。 */
-function Harness({ menus, currentId = null }: { menus: SidebarMenu[]; currentId?: number | null }) {
+/** 手风琴的开合在 AppLayout 里;这个外壳替它持有一组。 */
+function Harness({
+  menus,
+  currentId = null,
+  collapsed = false,
+}: {
+  menus: SidebarMenu[];
+  currentId?: number | null;
+  collapsed?: boolean;
+}) {
   const [openId, setOpenId] = useState<number | null>(null);
   return (
-    <Pillar
+    <GlobalNav
       menus={menus}
       allMenuPaths={["/souls", "/judgment", "/menus"]}
       currentId={currentId}
       openId={openId}
       onToggle={(id) => setOpenId((o) => (o === id ? null : id))}
+      collapsed={collapsed}
     />
   );
 }
 
-describe("立柱:当前项不只靠匾色", () => {
-  it("竖排时每一项仍然以文字为名", () => {
+describe("导航:当前项不只靠文明色", () => {
+  it("每一项以文字为名", () => {
     render(<Harness menus={[LEAF, OTHER]} />);
     expect(screen.getByRole("link", { name: "灵魂" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "审判" })).toBeInTheDocument();
+  });
+
+  it("收起成 68px 图标轨时,每一项仍有名字(可见文字没了,名字不能跟着没)", () => {
+    render(<Harness menus={[LEAF, PARENT]} collapsed />);
+    expect(screen.getByRole("link", { name: "灵魂" })).toHaveAttribute("title", "灵魂");
+    expect(screen.getByRole("button", { name: "设置" })).toHaveAttribute("title", "设置");
+    // Absence: the visible label really is gone, so the name is not coming from it.
+    expect(screen.queryByText("灵魂")).not.toBeInTheDocument();
   });
 
   it("当前页用 aria-current 说出来,不只靠底色", () => {
@@ -114,7 +131,7 @@ describe("立柱:当前项不只靠匾色", () => {
     expect(screen.getByRole("link", { name: "审判" })).not.toHaveAttribute("aria-current");
   });
 
-  it("有子项的一级项是按钮,报告二级栏的开合,打开后二级页面可达", () => {
+  it("有子项的一级项是按钮,报告手风琴的开合,打开后二级页面可达", () => {
     render(<Harness menus={[LEAF, PARENT]} />);
 
     const toggle = screen.getByRole("button", { name: "设置" });
@@ -124,22 +141,5 @@ describe("立柱:当前项不只靠匾色", () => {
     fireEvent.click(toggle);
     expect(toggle).toHaveAttribute("aria-expanded", "true");
     expect(screen.getByRole("link", { name: "菜单" })).toHaveAttribute("href", "/menus");
-  });
-
-  it("任一项超过 4 个汉字,整根改横排(C14)", () => {
-    const { rerender } = render(<Harness menus={[LEAF, OTHER]} />);
-    expect(screen.getByTestId("pillar")).not.toHaveAttribute("data-wide");
-
-    rerender(<Harness menus={[LEAF, menu({ id: 9, name: "组织与领域", path: "/organizations" })]} />);
-    expect(screen.getByTestId("pillar")).toHaveAttribute("data-wide", "true");
-  });
-
-  it("底部 40px 静态渐隐(C13):吸底、不挡点击、在所有项之后,读屏不念", () => {
-    render(<Harness menus={[LEAF, OTHER]} />);
-    const fade = screen.getByTestId("pillar-fade");
-    expect(fade).toHaveAttribute("aria-hidden", "true");
-    expect(fade).toHaveClass("sticky", "bottom-0", "h-10", "pointer-events-none");
-    expect(fade.className).toMatch(/from-\[oklch\(var\(--color-pillar\)\)\]/);
-    expect(screen.getByTestId("pillar").lastElementChild).toBe(fade);
   });
 });
