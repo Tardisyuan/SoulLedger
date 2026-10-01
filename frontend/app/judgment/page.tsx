@@ -28,6 +28,9 @@ import { JudgmentClaimQueue } from "@/src/components/judgment/JudgmentClaimQueue
  *
  * 「已结案」一面仍是一张平表:它回答「判过什么」,没有谁在办的问题。分段切换带两边的真实计数,
  * 「进入队列」主按钮与 Q 键不变。
+ *
+ * 规范 v3 第 7 轮(2026-10-01):页头是眉题「审判」+ 标题「审判队列」(与侧栏、匾同名),
+ * 「待审」一面在主按钮左边多一行快捷键(↑↓ / Enter / C / S / R)。
  */
 
 type Tab = "pending" | "concluded";
@@ -71,19 +74,24 @@ function JudgmentQueuePageContent() {
   return (
     <PageShell
       variant="full"
+      /* v3 页头:眉题「审判」+ 标题「审判队列」(与侧栏、匾同一个名字),右侧快捷键条与主按钮。 */
+      eyebrow={t("judgment.title")}
       title={
         <>
-          {t("judgment.title")}
+          {t("breadcrumb.menu.judgment")}
           <MenuGloss path="/judgment" />
         </>
       }
       actions={
-        /* The list answers "which judgments exist"; the queue (§4.2) answers
-           "what do I decide next". An anchor, not a Button — it navigates. */
-        <Link href="/judgment/queue" className={`${buttonVariants({ variant: "primary", size: "md" })} gap-2`}>
-          {t("judgment.queue.enter")}
-          <Kbd>Q</Kbd>
-        </Link>
+        <div className="flex items-center gap-4">
+          {pending && <QueueShortcuts />}
+          {/* The list answers "which judgments exist"; the queue (§4.2) answers
+              "what do I decide next". An anchor, not a Button — it navigates. */}
+          <Link href="/judgment/queue" className={`${buttonVariants({ variant: "primary", size: "md" })} gap-2`}>
+            {t("judgment.queue.enter")}
+            <Kbd>Q</Kbd>
+          </Link>
+        </div>
       }
       tabs={
         /* 补足 B9:两个标签,当前 = ink 字 600 + 2px ink 下划线,计数 11 等宽 ink3。
@@ -180,6 +188,28 @@ function JudgmentQueuePageContent() {
   );
 }
 
+
+/** v3 `.queue-shortcuts`:「待审」一面的键。窄于 lg 不显示(那时多半没有实体键盘)。 */
+function QueueShortcuts() {
+  const { t } = useI18n();
+  const keys: [string, string][] = [
+    ["↑↓", t("judgment.claim.key_move")],
+    ["Enter", t("judgment.claim.key_open")],
+    ["C", t("judgment.claim.claim")],
+    ["S", t("judgment.queue.defer")],
+    ["R", t("judgment.claim.key_restore")],
+  ];
+  return (
+    <p data-testid="queue-shortcuts" className="flex gap-3 text-2xs text-[oklch(var(--color-ink-muted))] max-lg:hidden">
+      {keys.map(([key, label]) => (
+        <span key={key} className="flex items-center gap-1 whitespace-nowrap">
+          <Kbd>{key}</Kbd>
+          {label}
+        </span>
+      ))}
+    </p>
+  );
+}
 
 /* 页级门。后端才是正解(这几个 viewset 都挂了 `CodenamePermission`),这里是纵深:
    侧边栏的菜单过滤**只藏链接、不挡路由**,所以在补上这道门之前,直接输 URL 就能
