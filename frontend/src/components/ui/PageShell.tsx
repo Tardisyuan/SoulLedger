@@ -202,6 +202,16 @@ export interface PageShellProps {
   subtitle?: React.ReactNode;
   /** 标题行右侧的动作区（「+ 创建灵魂」一类）。 */
   actions?: React.ReactNode;
+  /**
+   * 页头最左、跨 eyebrow / 标题 / 副标题三行的一格(v3 灵魂详情的首字方块)。
+   * 只是排版位:内容由页面给,壳不替它决定可访问名 —— 装饰性的就由页面写 `aria-hidden`。
+   */
+  leading?: React.ReactNode;
+  /**
+   * 页头最右、与整块标题垂直居中的一格(v3 灵魂详情的功 / 过 / 承自前世)。
+   * 放不下时(393)整格换到标题下面占满一行,而不是把标题挤窄。
+   */
+  aside?: React.ReactNode;
   /** 筛选栏。唯一 sticky 的一段，`top-13`，高 56（上下各 12 padding）。 */
   filters?: React.ReactNode;
   /**
@@ -269,6 +279,8 @@ export function PageShell({
   tabs,
   subtitle,
   actions,
+  leading,
+  aside,
   filters,
   pagination,
   empty,
@@ -283,6 +295,56 @@ export function PageShell({
   // 三选一，顺序是有意的：还在加载时不该先闪一下空态。
   const body = isLoading && skeleton ? skeleton : isEmpty && empty ? empty : children;
 
+  const heading = (
+    <>
+      {/* 返回链接与 eyebrow 共用标题上方那一行，但它们不是一回事，所以是
+          两个槽而不是让页面把 `←` 塞进 eyebrow。eyebrow 是**这一页是什么**
+          （卷宗号、租户、状态），返回链接是**离开这一页**。七个详情页现在
+          各自手写这条链接（judgment/[id]:127、dispatch/[id]:112、
+          souls/[id]:282、social/[id]:23、social/profile/[id]:32、
+          social/follows:29、users:71）；塞进 eyebrow 会让一个导航控件继承
+          一个纯排版位的 uppercase + 字距，读起来像标签而不是链接。 */}
+      {backLink || eyebrow ? (
+        <div className="flex items-baseline gap-3 mb-3">
+          {backLink ? (
+            <div data-page-shell-back="" className="shrink-0">
+              {backLink}
+            </div>
+          ) : null}
+          {eyebrow ? (
+            <p
+              data-page-shell-eyebrow=""
+              className="text-2xs font-mono uppercase text-[oklch(var(--color-ink-subtle))] min-w-0"
+            >
+              {eyebrow}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+
+      <div className="flex items-start gap-4">
+        <h1 className="text-lg text-[oklch(var(--color-ink))] flex-1 min-w-0">{title}</h1>
+        {actions ? (
+          <div data-page-shell-actions="" className="shrink-0">
+            {actions}
+          </div>
+        ) : null}
+      </div>
+
+      {subtitle ? (
+        /* `max-w-prose` 是行长上限，不是列宽：在 variant="full" 下一句副标题
+           铺满 1800px 不可读。列宽仍然只由上面那个 `width` 决定，
+           PageShell.test.tsx 的 variant 断言也只看四个容器位。 */
+        <p
+          data-page-shell-subtitle=""
+          className="text-sm text-[oklch(var(--color-ink-subtle))] max-w-prose mt-3"
+        >
+          {subtitle}
+        </p>
+      ) : null}
+    </>
+  );
+
   return (
     <div
       data-page-shell=""
@@ -295,51 +357,25 @@ export function PageShell({
         className="border-b border-[oklch(var(--color-hairline))]"
       >
         <div className={cn(width, "px-4 md:px-8 pt-8 pb-6")}>
-          {/* 返回链接与 eyebrow 共用标题上方那一行，但它们不是一回事，所以是
-              两个槽而不是让页面把 `←` 塞进 eyebrow。eyebrow 是**这一页是什么**
-              （卷宗号、租户、状态），返回链接是**离开这一页**。七个详情页现在
-              各自手写这条链接（judgment/[id]:127、dispatch/[id]:112、
-              souls/[id]:282、social/[id]:23、social/profile/[id]:32、
-              social/follows:29、users:71）；塞进 eyebrow 会让一个导航控件继承
-              一个纯排版位的 uppercase + 字距，读起来像标签而不是链接。 */}
-          {backLink || eyebrow ? (
-            <div className="flex items-baseline gap-3 mb-3">
-              {backLink ? (
-                <div data-page-shell-back="" className="shrink-0">
-                  {backLink}
+          {leading || aside ? (
+            /* 首格 / 标题块 / 尾格。标题块 `basis-60`:flex-wrap 按基准宽决定换不换行,
+               basis 0 时尾格永远不换行、只会把标题挤成一列字。 */
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-4">
+              {leading ? (
+                <div data-page-shell-leading="" className="shrink-0 self-start">
+                  {leading}
                 </div>
               ) : null}
-              {eyebrow ? (
-                <p
-                  data-page-shell-eyebrow=""
-                  className="text-2xs font-mono uppercase text-[oklch(var(--color-ink-subtle))] min-w-0"
-                >
-                  {eyebrow}
-                </p>
+              <div className="min-w-0 flex-1 basis-60">{heading}</div>
+              {aside ? (
+                <div data-page-shell-aside="" className="w-full md:w-auto">
+                  {aside}
+                </div>
               ) : null}
             </div>
-          ) : null}
-
-          <div className="flex items-start gap-4">
-            <h1 className="text-lg text-[oklch(var(--color-ink))] flex-1 min-w-0">{title}</h1>
-            {actions ? (
-              <div data-page-shell-actions="" className="shrink-0">
-                {actions}
-              </div>
-            ) : null}
-          </div>
-
-          {subtitle ? (
-            /* `max-w-prose` 是行长上限，不是列宽：在 variant="full" 下一句副标题
-               铺满 1800px 不可读。列宽仍然只由上面那个 `width` 决定，
-               PageShell.test.tsx 的 variant 断言也只看四个容器位。 */
-            <p
-              data-page-shell-subtitle=""
-              className="text-sm text-[oklch(var(--color-ink-subtle))] max-w-prose mt-3"
-            >
-              {subtitle}
-            </p>
-          ) : null}
+          ) : (
+            heading
+          )}
         </div>
       </header>
 
