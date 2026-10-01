@@ -1,14 +1,14 @@
 /**
- * 规范 v2「朱印」的外框:印、匾的题字降档、立柱横排阈值,以及把它们接到素材上的那张
- * CSS 表(`app/globals.css` 的 `[data-civ]` 规则 → `public/v2/`)。
+ * 外框:印、身份带(规范 v3,取代 v2 的匾)的题字降档与滚动收起、立柱横排阈值,以及把印
+ * 接到素材上的那张 CSS 表(`app/globals.css` 的 `[data-civ]` 规则 → `public/v2/`)。
  *
- * 最后一组是这份文件存在的主要理由:印和匾纹全是 CSS 遮罩,url 写错一个字母,
+ * 素材那一组是这份文件存在的主要理由:印全是 CSS 遮罩,url 写错一个字母,
  * 浏览器只会安静地画出一块实心匾色(遮罩图取不到 = 不遮),tsc、eslint、jest、
  * next build 全绿。所以直接对账「每个文明的每一层都有、指向的文件都在」。
  */
 import fs from "node:fs";
 import path from "node:path";
-import { render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 
 const mockTenant: { code: string; display_name: string; seal_glyphs?: string[] } = { code: "CN_DIYU", display_name: "第五殿" };
 jest.mock("@/src/contexts/TenantContext", () => ({
@@ -84,7 +84,7 @@ describe("印", () => {
   });
 });
 
-describe("匾题字按实测宽度降档(C14)", () => {
+describe("身份带题字按实测宽度降档(C14)", () => {
   /** jsdom 不排版;给一个按档位报宽度的元素:40 档 300、28 档 `at28`、20 档 50,容器 100。 */
   function measured(at28: number) {
     const el = document.createElement("div");
@@ -101,17 +101,104 @@ describe("匾题字按实测宽度降档(C14)", () => {
     expect(el.className).toContain("text-xl");
   });
 
-  it("28 也放不下 → 界面字体 20,两行", () => {
+  it("28 也放不下 → 20,两行,仍是标题字体", () => {
     const el = measured(140);
     expect(fitTier(el)).toBe(2);
     expect(el.className).toContain("line-clamp-2");
-    expect(el.className).not.toContain("font-[family-name:var(--font-plaque)]");
+    expect(el.className).toContain("font-title");
   });
 
   it("40 放得下就是 40", () => {
     const el = document.createElement("div");
     expect(fitTier(el)).toBe(0);
     expect(el.className).toContain("text-display");
+  });
+
+  it("≤ 768 从 28 起:放得下 40 也不用 40", () => {
+    const el = document.createElement("div");
+    expect(fitTier(el, 1)).toBe(1);
+    expect(el.className).not.toContain("text-display");
+  });
+});
+
+describe("身份带(规范 v3)", () => {
+  it("品牌小字、殿名、题字;纹样只是装饰;没有 v2 的回纹带", () => {
+    render(<Plaque title="审判台" />);
+    const band = screen.getByTestId("plaque");
+    expect(band).toHaveClass("identity-band");
+    expect(band.querySelector(".identity-pattern")).toHaveAttribute("aria-hidden", "true");
+    expect(band.querySelector(".identity-brand")).toHaveTextContent("SOULLEDGER nav.title");
+    expect(band.querySelector(".identity-court")).toHaveTextContent("第五殿");
+    expect(band.querySelector("[data-tier]")).toHaveTextContent("审判台");
+    expect(band.querySelector(".plaque-band, .plaque-tex")).toBeNull();
+  });
+
+  describe("滚动收起", () => {
+    let scrollY = 0;
+    let scrollHeight = 3000;
+    beforeEach(() => {
+      scrollY = 0;
+      scrollHeight = 3000;
+      Object.defineProperty(window, "scrollY", { configurable: true, get: () => scrollY });
+      Object.defineProperty(document.documentElement, "scrollHeight", { configurable: true, get: () => scrollHeight });
+    });
+    const scrollTo = (y: number) =>
+      act(() => {
+        scrollY = y;
+        fireEvent.scroll(window);
+      });
+
+    it("滚过 60 收起,印缩到 30;回到顶才展开", () => {
+      render(<Plaque title="审判台" collapsible />);
+      const band = screen.getByTestId("plaque");
+      scrollTo(60);
+      expect(band).not.toHaveAttribute("data-compact");
+      scrollTo(61);
+      expect(band).toHaveAttribute("data-compact");
+      expect(screen.getByRole("img").style.width).toBe("30px");
+      scrollTo(10);
+      expect(band).toHaveAttribute("data-compact");
+      scrollTo(0);
+      expect(band).not.toHaveAttribute("data-compact");
+      expect(screen.getByRole("img").style.width).toBe("64px");
+    });
+
+    it("页面不够长就不收:收了会把滚动位置夹回顶、又展开,在页底来回跳", () => {
+      // 展开 156、收起 48:收起让文档短 108。可滚的余量只有 150,收了只剩 42 —— 不收。
+      scrollHeight = window.innerHeight + 150;
+      const offset = jest.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockReturnValue(156);
+      try {
+        render(<Plaque title="审判台" collapsible />);
+        scrollTo(100);
+        expect(screen.getByTestId("plaque")).not.toHaveAttribute("data-compact");
+        // 同一个页面再长 100 就收得下了 —— 判据是余量,不是一律不收。
+        scrollHeight = window.innerHeight + 250;
+        scrollTo(101);
+        expect(screen.getByTestId("plaque")).toHaveAttribute("data-compact");
+      } finally {
+        offset.mockRestore();
+      }
+    });
+
+    it("吸顶的那条把自己的实际高度写到 <html> 的 --identity-band(筛选栏据此吸顶);卸载时擦掉", () => {
+      const offset = jest.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockReturnValue(156);
+      try {
+        const { unmount } = render(<Plaque title="审判台" collapsible />);
+        expect(document.documentElement.style.getPropertyValue("--identity-band")).toBe("156px");
+        unmount();
+        expect(document.documentElement.style.getPropertyValue("--identity-band")).toBe("");
+        render(<Plaque title="灵魂账本" heading />);
+        expect(document.documentElement.style.getPropertyValue("--identity-band")).toBe("");
+      } finally {
+        offset.mockRestore();
+      }
+    });
+
+    it("不是 collapsible 的(登录页)不收", () => {
+      render(<Plaque title="灵魂账本" heading />);
+      scrollTo(500);
+      expect(screen.getByTestId("plaque")).not.toHaveAttribute("data-compact");
+    });
   });
 });
 
@@ -135,19 +222,19 @@ describe("立柱横排阈值(C14)", () => {
 
 describe("文明皮的素材表(globals.css → public/v2)", () => {
   const css = fs.readFileSync(path.join(FRONTEND, "app", "globals.css"), "utf8");
-  const LAYERS = ["--band", "--band-compact", "--band-tex", "--band-tex-w", "--seal-body", "--seal-ring", "--seal-line", "--seal-line-small", "--seal-scan", "--section"];
+  const LAYERS = ["--seal-body", "--seal-ring", "--seal-line", "--seal-line-small", "--seal-scan", "--section"];
 
   it.each(["cn", "eu", "eg", "gr"])("%s 的每一层都有声明", (civ) => {
     const blocks = [...css.matchAll(new RegExp(`\\[data-civ="${civ}"\\]\\s*\\{([^}]*)\\}`, "g"))].map((m) => m[1]).join("\n");
     for (const layer of LAYERS) expect(blocks).toMatch(new RegExp(`${layer}:\\s*\\S`));
-    // 字体变量也在:题字与印文各一款。
-    expect(blocks).toMatch(/--font-plaque:\s*var\(--font-/);
+    // 印文字体变量也在;v2 的匾纹、质感、题字字体随 v3 身份带撤掉了,不该再有。
     expect(blocks).toMatch(/--font-seal:\s*var\(--font-/);
+    expect(blocks).not.toMatch(/--band|--font-plaque/);
   });
 
   it("引用的每一个素材文件都在 public/ 里", () => {
     const urls = [...css.matchAll(/url\("(\/v2\/[^"]+)"\)/g)].map((m) => m[1]);
-    expect(urls.length).toBeGreaterThanOrEqual(4 * 13); // 4 文明 × (匾纹 2 + 质感 4 + 印 4 + 扫描 2 + 分节 1)
+    expect(urls.length).toBeGreaterThanOrEqual(4 * 7); // 4 文明 × (印 4 + 扫描 2 + 分节 1)
     const missing = urls.filter((u) => !fs.existsSync(path.join(FRONTEND, "public", u)));
     expect(missing).toEqual([]);
   });
@@ -155,7 +242,7 @@ describe("文明皮的素材表(globals.css → public/v2)", () => {
   it("入库的 SVG 剥掉了 c2pa 元数据,且都是单色 currentColor", () => {
     const dir = path.join(FRONTEND, "public", "v2", "svg");
     const files = fs.readdirSync(dir).filter((f) => f.endsWith(".svg"));
-    expect(files).toHaveLength(28);
+    expect(files).toHaveLength(20); // 4 文明 × (印 4 + 分节 1);v2 的 8 张匾纹随身份带删掉
     for (const f of files) {
       const svg = fs.readFileSync(path.join(dir, f), "utf8");
       expect(svg).not.toMatch(/c2pa|<metadata/);
@@ -166,35 +253,5 @@ describe("文明皮的素材表(globals.css → public/v2)", () => {
   it("没配文明的素材不入库(bronze / wax / inkseal / 裁切前原图)", () => {
     const tex = fs.readdirSync(path.join(FRONTEND, "public", "v2", "textures"));
     expect(tex.filter((f) => /bronze|^wax|inkseal|source/.test(f))).toEqual([]);
-  });
-});
-
-describe("匾纹样带的质感(§四「质感」)", () => {
-  const css = fs.readFileSync(path.join(FRONTEND, "app", "globals.css"), "utf8");
-  const block = (civ: string) =>
-    [...css.matchAll(new RegExp(`\\[data-civ="${civ}"\\]\\s*\\{([^}]*)\\}`, "g"))].map((m) => m[1]).join("\n");
-
-  it.each([
-    ["cn", "paper"],
-    ["eu", "paper"],
-    ["eg", "papyrus"],
-    ["gr", "marble"],
-  ])("%s 用 %s,深色档用 *-w(只白颗粒)", (civ, tex) => {
-    expect(block(civ)).toContain(`--band-tex: image-set(url("/v2/textures/${tex}-1x.png")`);
-    expect(block(civ)).toContain(`--band-tex-w: image-set(url("/v2/textures/${tex}-w-1x.png")`);
-  });
-
-  it("默认(深色)取 -w,.light 取浅色档;中性皮没有这两个变量,于是不画", () => {
-    expect(css).toMatch(/\.plaque-tex::after\s*\{[^}]*var\(--band-tex-w, none\)/);
-    expect(css).toMatch(/\.light \.plaque-tex::after\s*\{[^}]*var\(--band-tex, none\)/);
-    expect(block("neutral")).not.toContain("--band-tex");
-  });
-
-  it("质感挂在纹样带外层:纹样带自己是遮罩,挂在它身上会被一起遮掉", () => {
-    render(<Plaque title="第五殿" />);
-    const outer = screen.getByTestId("plaque-band");
-    expect(outer).toHaveClass("plaque-tex");
-    expect(outer).not.toHaveClass("plaque-band");
-    expect(outer.firstElementChild).toHaveClass("plaque-band");
   });
 });

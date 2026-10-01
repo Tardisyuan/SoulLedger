@@ -3,7 +3,7 @@
  *
  * 这个文件盯的不是「渲染出来了吗」，是四条会被无声破坏的规格：
  *   1. `variant="full"` 的含义是**不加 max-width**，不是加一个大的 max-width；
- *   2. 全站唯一的 sticky 是筛选栏（`top-13`），页头**不**跟着滚；
+ *   2. 全站唯一的 sticky 是筛选栏（`top-(--below-band)`，工具条 52 + 身份带此刻的高度），页头**不**跟着滚；
  *   3. 外壳里不许出现 `min-h-screen`（AppLayout 已经给了
  *      `min-h-[calc(100vh-4rem)]`，再写一次就是 64px 死滚动，`app/` 下现有 47 个
  *      文件犯了这个，PageShell 不能把它带进新代码）；
@@ -123,11 +123,11 @@ describe("PageShell · 滚动行为", () => {
     );
   });
 
-  it("筛选栏 sticky 在 top-13（AppLayout 的 52px 工具条下沿），高 56（h-14 + 上下各 12 padding）", () => {
+  it("筛选栏 sticky 在 --below-band（AppLayout 的 52px 工具条 + 身份带此刻的高度），高 56（h-14 + 上下各 12 padding）", () => {
     const { container } = renderFull("page");
     const filters = container.querySelector<HTMLElement>("[data-page-shell-filters]")!;
     expect(filters.className).toMatch(/\bsticky\b/);
-    expect(filters.className).toMatch(/\btop-13\b/);
+    expect(filters.className).toContain("top-(--below-band)");
     const inner = widthBox(container, "data-page-shell-filters");
     expect(inner.className).toMatch(/\bh-14\b/);
     expect(inner.className).toMatch(/\bpy-3\b/);
@@ -151,7 +151,7 @@ describe("PageShell · 滚动行为", () => {
 });
 
 describe("PageShell · 页头两行", () => {
-  it("每页仅一处 h1，用 text-lg", () => {
+  it("每页仅一处 h1，用 font-title text-lg(Noto Serif SC 600,规范 v3)", () => {
     const { container } = render(
       <PageShell title="判决卷宗" subtitle="一句副标题" eyebrow="LEDGER / 0042">
         <h2>区块标题</h2>
@@ -161,6 +161,7 @@ describe("PageShell · 页头两行", () => {
     expect(h1s).toHaveLength(1);
     expect(h1s[0]).toHaveTextContent("判决卷宗");
     expect(h1s[0].className).toMatch(/\btext-lg\b/);
+    expect(h1s[0].className).toMatch(/\bfont-title\b/);
   });
 
   it("eyebrow 是 text-2xs + font-mono + uppercase", () => {
@@ -853,6 +854,7 @@ describe("PageShell density", () => {
  * `<h1>` 的规矩,与上面 `<h2>` / `<h3>` 的三个角色配成一张完整的标题表。
  *
  * **一个角色,一档:页面标题 = `text-lg`(20px,600 来自 `--text-lg--font-weight`)。**
+ * **字体是 `font-title`(Noto Serif SC 600,规范 v3 2026-10-01):每个字面 `<h1>` 都要写它。**
  * 这是壳自己的选择(`PageShell.tsx` 的 `<h1 className="text-lg …">`),但壳只管
  * 用了它的页面。2026-10-01 扫 `app/` + `src/components/` 的字面 `<h1>`:壳外还有
  * 七处,用了 13 / 15 / 20 / 20→28 四种档 —— `PermissionDenied` 的拒绝页标题是
@@ -914,6 +916,9 @@ describe("页面标题 <h1>", () => {
           offenders.push(`${h.file}:${h.line}  global-error's inline fontSize must stay "1.25rem" (= text-lg's 20px)`);
         }
         continue;
+      }
+      if (!/(?<![\w-])font-title(?![\w-])/.test(h.tag)) {
+        offenders.push(`${h.file}:${h.line}  a page title is set in font-title (Noto Serif SC 600)`);
       }
       if (h.steps.join(" ") === H1_COVER.steps) {
         if (h.file === H1_COVER.file) coverSeen += 1;

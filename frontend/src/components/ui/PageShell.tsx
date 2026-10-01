@@ -21,7 +21,8 @@ import { cn } from "@/lib/utils";
  *    `app/audit/page.tsx:176`、`app/menus/page.tsx:255` 等 10 处同形）。
  *
  * 2) **页头不 sticky，只有筛选栏 sticky。** 卷宗的封面不跟着滚；滚动时还需要的
- *    控件只有筛选。筛选栏 `top-13` 贴在 AppLayout 那条 52px 工具条下沿(规范 v3;匾不吸顶)。
+ *    控件只有筛选。筛选栏吸在 `--below-band`:AppLayout 那条 52px 工具条加上身份带此刻的
+ *    高度(规范 v3:身份带吸顶、滚动后收成 48;页面短到收不起时仍是 156)。
  *
  * 3) **没有 `min-h-screen`。** AppLayout 给的槽位是
  *    `min-h-[calc(100vh-4rem)]`（AppLayout.tsx:461），页面再写一次
@@ -178,7 +179,7 @@ export interface PageShellPagination {
 }
 
 export interface PageShellProps {
-  /** 页面标题。全页仅此一处 `<h1>`，`text-lg`。 */
+  /** 页面标题。全页仅此一处 `<h1>`，`font-title text-lg`(Noto Serif SC 600,规范 v3)。 */
   title: React.ReactNode;
   /** 内容列宽。默认 `page`（1200px），绝大多数页面用它。 */
   variant?: PageShellVariant;
@@ -212,7 +213,7 @@ export interface PageShellProps {
    * 放不下时(393)整格换到标题下面占满一行,而不是把标题挤窄。
    */
   aside?: React.ReactNode;
-  /** 筛选栏。唯一 sticky 的一段，`top-13`，高 56（上下各 12 padding）。 */
+  /** 筛选栏。唯一 sticky 的一段，`top-(--below-band)`(工具条 52 + 身份带此刻的高度)，高 56（上下各 12 padding）。 */
   filters?: React.ReactNode;
   /**
    * 分页位。见 `PageShellPagination`。
@@ -324,7 +325,7 @@ export function PageShell({
       ) : null}
 
       <div className="flex items-start gap-4">
-        <h1 className="text-lg text-[oklch(var(--color-ink))] flex-1 min-w-0">{title}</h1>
+        <h1 className="font-title text-lg text-[oklch(var(--color-ink))] flex-1 min-w-0">{title}</h1>
         {actions ? (
           <div data-page-shell-actions="" className="shrink-0">
             {actions}
@@ -401,7 +402,7 @@ export function PageShell({
       {filters ? (
         <div
           data-page-shell-filters=""
-          className="sticky top-13 z-filters bg-[oklch(var(--color-canvas))] border-b border-[oklch(var(--color-hairline))]"
+          className="sticky top-(--below-band) z-filters bg-[oklch(var(--color-canvas))] border-b border-[oklch(var(--color-hairline))]"
         >
           {/* `overflow-x-auto` 不是装饰。这一行是固定高度、不换行的 flex —— 而
               筛选控件的数量由每个页面自己决定。灵魂页放了搜索框、两个数字输入、

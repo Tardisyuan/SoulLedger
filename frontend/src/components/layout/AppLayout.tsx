@@ -31,11 +31,12 @@ import { useOfficerAssist } from "@/src/components/assist/useOfficerAssist";
 /**
  * The shell, 规范 v3:左侧中性导航(`GlobalNav`,252 / 68)+ 内容栏。内容栏自上而下:
  * 52px 中性工具条(`global-topbar`:导航开合、面包屑;右边问一问、通知、用户菜单)、
- * 页头匾(`Plaque`:页面的身份带 —— 印、题字、纹样带;不再放面包屑与操作)、页面。
+ * 身份带(`Plaque`,v3 IdentityBand —— 品牌、印、殿名、题字、文明纹样;不放面包屑与操作)、页面。
  *
  * - 四档宽度:≥ 1200 导航展开 / 收起由用户选;769–1199 强制收起;≤ 768 没有侧栏,
  *   是底栏(`BottomBar`:前 4 个一级项 +「更多」底部抽屉)。规则在 `GlobalNav.tsx`。
- * - 只有工具条吸顶;匾随页面滚走(PageShell 的筛选栏吸在工具条下沿,`top-13`)。
+ * - 工具条吸顶;身份带吸在它下沿,页面滚过 60px 收成 48px(PageShell 的筛选栏吸在两者
+ *   下沿,`--below-band` = 52 + 身份带此刻的高度)。
  * - 连接状态只在断开时出现,是视口最顶上横跨整个视口(含导航与问一问面板)的一条警示条
  *   (`ConnectionBanner`,Design E 组:它是全局状态),浮在内容上,不推动内容。
  * - 语言 / 主题 / 设置 / 退出在用户菜单里(brief §4.4)。
@@ -292,9 +293,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        {/* 匾:页面的身份带(印、题字、纹样带),随页面滚走。 */}
-        <div className={assist.pushed ? "pr-[420px]" : ""}>
-          <Plaque title={title} />
+        {/* 身份带(规范 v3):吸在工具条下沿;页面滚动后自己收成 48px,只留印与殿名。
+            z 与筛选栏同一层:两者不重叠 —— 筛选栏吸在 52 + 身份带此刻的高度(`--below-band`)。 */}
+        <div className={`sticky top-13 z-filters ${assist.pushed ? "pr-[420px]" : ""}`}>
+          <Plaque title={title} collapsible />
         </div>
 
         {/* 问一问 pushed (≥ 1024): the page gives up the panel's 420 px, and 1024–1279 its
