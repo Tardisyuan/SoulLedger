@@ -11,6 +11,7 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { Modal } from "@/src/components/ui/Modal";
 import { Button } from "@/src/components/ui/Button";
 import { TextAreaField } from "@/src/components/ui/Field";
+import { ROW_HOVER, ROW_SELECTED } from "@/components/ui/data-table";
 
 /**
  * 认领一族(apps/judgment/claims.py)的两个弹层与一张拒绝码表。队列页的批量条和审判台的
@@ -298,8 +299,7 @@ export function ReassignDialog({
                   data-officer={u.id}
                   className={cn(
                     "flex min-h-11 items-center gap-3 border-b border-[oklch(var(--color-rule))] px-1 py-2 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-[oklch(var(--color-accent))]",
-                    self ? "opacity-50" : "cursor-pointer hover:bg-[oklch(var(--color-surface-2))]",
-                    on && "bg-[oklch(var(--color-surface-2))] shadow-[inset_3px_0_0_oklch(var(--color-ink))]"
+                    self ? "opacity-50" : `cursor-pointer ${on ? ROW_SELECTED : ROW_HOVER}`
                   )}
                 >
                   <input

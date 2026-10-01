@@ -15,6 +15,7 @@ import { MenuGloss } from "@/src/components/layout/MenuGloss";
 import { QueryError } from "@/src/components/ui/PageError";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
+import { ROW_HOVER } from "@/components/ui/data-table";
 
 // organizationsApi.list() (lib/api/organizations.ts) doesn't forward a `page` param and
 // this page renders a parent/child tree (flattenTree/renderTable below), so a paged view would
@@ -122,7 +123,7 @@ function OrganizationsPageContent() {
           (o) => o.id,
           (o) => o.parent,
         ).map(({ item: org, depth }) => (
-          <tr key={org.id} className="border-b border-[oklch(var(--color-rule))] hover:bg-[oklch(var(--color-surface-2))] transition-colors">
+          <tr key={org.id} className={`border-b border-[oklch(var(--color-rule))] ${ROW_HOVER} transition-colors`}>
             <td className="py-2 px-3">
               <TreeName depth={depth}>
                 <span className={depth ? "text-[oklch(var(--color-ink-muted))]" : "font-medium text-[oklch(var(--color-ink))]"}>{org.name}</span>
