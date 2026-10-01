@@ -542,7 +542,7 @@ describe("PageShell density", () => {
           file: path.relative(FRONTEND, file).split(path.sep).join("/"),
           line: lineAt(src, m.index),
           tag: m[0],
-          steps: [...new Set(m[0].match(/(?<![\w-])text-(?:2xs|xs|sm|md|quote|lg|xl)(?![\w-])/g) ?? [])],
+          steps: [...new Set(m[0].match(/(?<![\w-])text-(?:2xs|xs|sm|md|lg|xl|display-lg|display)(?![\w-])/g) ?? [])],
         });
       }
     }
@@ -683,7 +683,7 @@ describe("PageShell density", () => {
           file: path.relative(FRONTEND, file).split(path.sep).join("/"),
           line: lineAt(src, m.index),
           tag: m[0],
-          steps: [...new Set(m[0].match(/(?<![\w-])text-(?:2xs|xs|sm|md|quote|lg|xl)(?![\w-])/g) ?? [])],
+          steps: [...new Set(m[0].match(/(?<![\w-])text-(?:2xs|xs|sm|md|lg|xl|display-lg|display)(?![\w-])/g) ?? [])],
         });
       }
     }
@@ -835,6 +835,102 @@ describe("PageShell density", () => {
           `spacing was picked by eye. The rule is written in ` +
           `src/components/ui/PageShell.tsx on the density prop.\n\n` +
           offenders.join("\n")
+      );
+    }
+    expect(offenders).toEqual([]);
+  });
+});
+
+/**
+ * `<h1>` 的规矩,与上面 `<h2>` / `<h3>` 的三个角色配成一张完整的标题表。
+ *
+ * **一个角色,一档:页面标题 = `text-lg`(20px,600 来自 `--text-lg--font-weight`)。**
+ * 这是壳自己的选择(`PageShell.tsx` 的 `<h1 className="text-lg …">`),但壳只管
+ * 用了它的页面。2026-10-01 扫 `app/` + `src/components/` 的字面 `<h1>`:壳外还有
+ * 七处,用了 13 / 15 / 20 / 20→28 四种档 —— `PermissionDenied` 的拒绝页标题是
+ * 13px `text-sm`,比它所替代的那一页里随便一个面板标题(15px)还小。那一轮把
+ * 13 / 15 的三处改成 `text-lg`,并删掉 `not-found` 上 `text-lg` 旁边空操作的
+ * `font-semibold`(同一个 600,和 `<h2>` 那条 `text-md font-semibold` 是同一个论证)。
+ *
+ * 不在这里管的两种 `<h1>`,都有别的东西在管:
+ *   - 匾题字(`Plaque.tsx` 的 `<Title>`,登录页那一处 `<h1>`):它按实测宽度在
+ *     40 / 28 / 20 三档之间降档,`plaqueTitleStaysLargeText.test.ts` 管它。
+ *     它写的是 `<Title>` 不是字面 `<h1>`,这里的正则本来就看不见它。
+ *   - `app/global-error.tsx`:它**替换掉根 layout**,`globals.css` 不保证加载,
+ *     所以只能用行内 `style`。这里单独断言它写的是 `1.25rem`(= 20px,与 `text-lg`
+ *     同值),而不是放它走 —— 否则那一处就是一个没有任何东西看着的标题。
+ */
+const H1_ROLE_EXEMPTIONS = new Map<string, string>([
+  [
+    "app/page.tsx",
+    // 首页 hero:`text-lg md:text-xl`,桌面 28px。它是全站唯一的「封面标题」,
+    // 而 28px 在 v3 的字阶里写作「页面次标题」。把它压到 20px 是一个版式决定,
+    // 不是规矩能替人做的;留在这里等那个决定,而且这条会自我作废(见下)。
+    "text-lg md:text-xl — the landing hero; 20px on mobile, 28px from md up",
+  ],
+]);
+
+describe("页面标题 <h1>", () => {
+  it("pins every literal <h1> outside the shell to the page-title step, text-lg", () => {
+    const files = ["app", path.join("src", "components")].flatMap((root) =>
+      collectTsx(path.join(FRONTEND, root), () => true)
+    );
+    expect(files.length).toBeGreaterThan(100);
+
+    const found: { file: string; line: number; tag: string; steps: string[] }[] = [];
+    for (const file of files) {
+      const src = blankComments(readFileSync(file, "utf8"));
+      const re = /<h1\b[\s\S]*?>/g;
+      let m: RegExpExecArray | null;
+      while ((m = re.exec(src)) !== null) {
+        found.push({
+          file: path.relative(FRONTEND, file).split(path.sep).join("/"),
+          line: lineAt(src, m.index),
+          tag: m[0],
+          steps: [
+            ...new Set(m[0].match(/(?<![\w-])(?:[a-z]+:)?text-(?:2xs|xs|sm|md|lg|xl|display-lg|display)(?![\w-])/g) ?? []),
+          ],
+        });
+      }
+    }
+    // 下限:壳自己那一处加壳外七处。读到零个会让下面的循环一条都不跑而照样绿。
+    expect(found.length).toBeGreaterThanOrEqual(7);
+    expect(found.some((h) => h.file === "src/components/ui/PageShell.tsx")).toBe(true);
+
+    const offenders: string[] = [];
+    const exemptionsHit = new Set<string>();
+    for (const h of found) {
+      if (h.file === "app/global-error.tsx") {
+        if (!/fontSize:\s*"1\.25rem"/.test(h.tag)) {
+          offenders.push(`${h.file}:${h.line}  global-error's inline fontSize must stay "1.25rem" (= text-lg's 20px)`);
+        }
+        continue;
+      }
+      const exempt = H1_ROLE_EXEMPTIONS.get(h.file);
+      if (exempt !== undefined && h.steps.join(" ") === exempt.split(" — ")[0]) {
+        exemptionsHit.add(h.file);
+        continue;
+      }
+      let why: string | null = null;
+      if (h.steps.length !== 1 || h.steps[0] !== "text-lg") {
+        why = `uses ${h.steps.join(", ") || "no type step"} — a page title is text-lg`;
+      } else if (/\bfont-semibold\b/.test(h.tag)) {
+        why = `font-semibold beside text-lg is a no-op — --text-lg--font-weight is already 600`;
+      }
+      if (why) offenders.push(`${h.file}:${h.line}  ${why}`);
+    }
+
+    const stale = [...H1_ROLE_EXEMPTIONS.keys()].filter((f) => !exemptionsHit.has(f));
+    if (stale.length > 0) {
+      throw new Error(
+        `H1_ROLE_EXEMPTIONS lists a heading that no longer exists in that shape — delete the entry.\n\n` +
+          stale.join("\n")
+      );
+    }
+    if (offenders.length > 0) {
+      throw new Error(
+        `<h1> is the page title and has one step: text-lg (20px / 600). The plaque title ` +
+          `is the one exception and has its own guard.\n\n` + offenders.join("\n")
       );
     }
     expect(offenders).toEqual([]);

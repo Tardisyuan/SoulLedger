@@ -299,7 +299,7 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
   return (
     <div className="text-[oklch(var(--color-ink))]">
       <div className="h-12 flex items-center px-6 gap-4 border-b border-[oklch(var(--color-hairline))]/50">
-        <h1 className="text-md text-[oklch(var(--color-accent-ink))] flex-1">
+        <h1 className="text-lg text-[oklch(var(--color-accent-ink))] flex-1">
           {t("judgment.queue.title")}
         </h1>
         <p

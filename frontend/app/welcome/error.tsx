@@ -22,7 +22,7 @@ export default function Error({
             那一档偏亮偏淡。`--color-status-error` 是两套主题各自量过的那一个
             (深 `0 84% 62%`,浅 `0 78% 44%`)。 */}
         <div className="text-xl tabular-nums text-[oklch(var(--color-status-error))]">500</div>
-        <h1 className="text-md text-[oklch(var(--color-ink))] mt-4">{t("error.title")}</h1>
+        <h1 className="text-lg text-[oklch(var(--color-ink))] mt-4">{t("error.title")}</h1>
         <p className="text-sm text-[oklch(var(--color-ink-muted))] mt-2">{t("error.description")}</p>
         <div className="flex items-center justify-center gap-3 mt-6">
           <Button type="button" variant="primary" onClick={reset}>

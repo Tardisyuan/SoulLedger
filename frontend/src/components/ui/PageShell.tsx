@@ -28,6 +28,10 @@ import { cn } from "@/lib/utils";
  *    `min-h-screen` 就永远多出 64px 死滚动 —— 现在 `app/` 下 47 个文件犯了这个。
  *    `src/__tests__/PageShell.test.tsx` 里有一条专门盯着它。
  *
+ * (2026-10-01:这一节与下一节是**来历**;整张标题表 —— 每个角色的字号、行高、字重、
+ *  字体 —— 现在写在仓库根的 `DESIGN.md`「Headings」那一节,`designGuardContract` 逐行
+ *  对 globals.css 复核。下面的数字凡与那张表不一致,以那张表为准。)
+ *
  * 4) **`<h2>` 有三个角色,各钉一档,壳不渲染它们。** 壳拥有 `<h1>`(`text-lg`)
  *    与 `eyebrow`(`text-2xs font-mono uppercase`);`<h2>` 归页面,而 2026-09-07
  *    实测全站 `<h2>` 用了五种排版(11px…22px,同一个语义槽)。收敛成一档
@@ -38,8 +42,10 @@ import { cn } from "@/lib/utils";
  *    `PageShell.test.tsx` 每次运行重算。)
  *
  *      区块标签   `text-2xs uppercase`  卡片/图表/区段**上方**那行小字。它不是
- *                                      标题,是标签:全大写、字距 0.1em、跟着
- *                                      `--text-2xs--font-weight: 600` 走,和壳
+ *                                      标题,是标签:全大写、字距 0.1em、字重 400
+ *                                      (这里原写「跟着 `--text-2xs--font-weight: 600`」,
+ *                                      那个 token 自 `16f4e149` 起就不存在了,600 属于
+ *                                      旧的 `--text-01`),和壳
  *                                      自己的 `eyebrow` 是同一个排版位。
  *      面板标题   `text-md`            一整块面板/区段的标题,和页面的 `<h1>`
  *                                      同族、低一档。weight 由
@@ -53,11 +59,12 @@ import { cn } from "@/lib/utils";
  *    豁免,理由写的是「规则的证据从没覆盖过这个案例」。那句话是对的,而正确的
  *    处置不是永久豁免,是补上角色。前两个角色都放不进列表行:`text-2xs uppercase`
  *    会把后端来的通知标题转成大写并加 0.1em 字距(对 CJK 是错的),`text-md`
- *    是 22px、一行放不下几十个。
+ *    当时是 22px(今天 15px)、一行放不下几十个。
  *
  *    **`font-medium` 是角色定义的一部分,不是一处例外。** `--text-sm` 和
- *    `--text-xs/04/05` 一样**没有**伴生的 `--text-sm--font-weight`(带 weight
- *    的是 01/06/07/08 四个标题级,那正是刻度在说哪些是标题)。所以这里的
+ *    `--text-2xs` / `--text-xs` 一样**没有**伴生的 font-weight(今天带 weight 的是
+ *    `md` / `lg` / `display-lg` 的 600 与 `display` 的 400;这里原写的「01/06/07/08」
+ *    是 `16f4e149` 之前的旧档名)。所以这里的
  *    `font-medium` 不是 `text-md` 旁边那种空操作 —— 去掉它,标题就和它下面那条
  *    `<p>` 消息同为 400,只剩颜色可分。它是这一档**唯一**的层级信号,守卫因此
  *    连它一起钉。反过来也没有给 `--text-sm` 补 weight token:`text-sm` 站内绝大

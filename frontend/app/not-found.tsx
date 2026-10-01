@@ -20,7 +20,7 @@ export default function NotFound() {
     <div className="bg-[oklch(var(--color-canvas))]">
       <Plaque title="404" />
       <div className="px-4 py-8 md:px-8">
-        <h1 className="text-lg font-semibold text-[oklch(var(--color-ink))]">{t("not_found.title")}</h1>
+        <h1 className="text-lg text-[oklch(var(--color-ink))]">{t("not_found.title")}</h1>
         <p className="mt-1 text-sm text-[oklch(var(--color-ink-muted))]">{t("not_found.description")}</p>
         {pathname && <p className="mt-2 font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">{pathname}</p>}
         <div className="mt-4 flex flex-wrap gap-2">
