@@ -30,6 +30,7 @@ import { DomainEnum, DomainNumber, MissingValue } from "@/src/components/ui/Doma
 import { QueryError } from "@/src/components/ui/PageError";
 import { DeferDialog, ReassignDialog, claimRefusalMessage } from "@/src/components/judgment/JudgmentClaimDialogs";
 import { BATCH_BAR, ROW_HOVER, ROW_LINK, ROW_SELECTED } from "@/components/ui/data-table";
+import { ActionsMenu } from "@/components/ui/data-grid/ActionsMenu";
 import { useHotkeys } from "@/src/lib/hotkeys";
 import { verdictGlyph } from "@/src/lib/verdictGlyph";
 import { ClaimAvatar } from "@/src/components/judgment/ClaimAvatar";
@@ -55,7 +56,11 @@ import { MISSING_LABEL_KEY } from "@/src/lib/domainDisplay";
  * 一次至多 100 件;被拒时整批回滚,拒绝码说是哪一件、为什么。
  *
  * v3 有、这里没有的列(后端没有这些字段,不编):案号 SL-…(只有 UUID,IDENTIFIER_POLICY 不印)、
- * 世次、功 / 过分列(列表只给净余额 `karmic_balance`)。行高保持约 40px,不用 v3 的 64px。
+ * 世次、功 / 过分列(列表只给净余额 `karmic_balance`)。
+ *
+ * 尺寸照 v3(2026-10-01 拍板):行 `min-height: 64px`、表头 44、工具条控件 44、行尾「⋯」列 44。
+ * 「⋯」菜单(v3 `.queue-row` 最后一格):认领 / 取消认领 / 延后 / 改派…,按权限出现 ——
+ * 取消认领此前只有 C 键,这是它的鼠标路径。
  */
 
 const GROUPS: readonly JudgmentQueueGroup[] = ["mine", "unclaimed", "others", "deferred"];
@@ -83,10 +88,10 @@ function readSessionDeferred(): string[] {
 }
 
 const SELECT_CLASS =
-  "h-8 max-sm:h-11 border border-[oklch(var(--color-line))] bg-[oklch(var(--color-canvas))] px-2 text-sm text-[oklch(var(--color-ink))]";
+  "h-(--control-h-sm) border border-[oklch(var(--color-line))] bg-[oklch(var(--color-canvas))] px-2 text-sm text-[oklch(var(--color-ink))]";
 /** 分段按钮(全部案卷 / 我认领的):当前一段 ink 框 + 600,不用文明色。 */
 const SEGMENT = (on: boolean) =>
-  `h-8 max-sm:h-11 border px-3 text-sm ${
+  `h-(--control-h-sm) border px-3 text-sm ${
     on
       ? "border-[oklch(var(--color-ink))] font-semibold text-[oklch(var(--color-ink))]"
       : "border-[oklch(var(--color-line))] text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))]"
@@ -110,6 +115,10 @@ export function JudgmentClaimQueue() {
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
   const [focused, setFocused] = useState<string | null>(null);
   const [dialog, setDialog] = useState<"defer" | "reassign" | "restore" | null>(null);
+  /** 行内「⋯ → 改派…」作用的那一件;工具条与批量条的改派仍按勾选 / 焦点行。 */
+  const [rowReassign, setRowReassign] = useState<string | null>(null);
+  /** 已发出取消认领、服务端还没刷新到的 id:色标先退场(140ms),不等往返。 */
+  const [releasing, setReleasing] = useState<ReadonlySet<string>>(new Set());
   // 服务端渲染时 `window` 不存在,读取在 try 里落成空表;这一页在权限门之后才挂,首帧就在浏览器里。
   const [sessionDeferred, setSessionDeferred] = useState<string[]>(readSessionDeferred);
   const [now] = useState(() => Date.now());
@@ -164,7 +173,17 @@ export function JudgmentClaimQueue() {
   const selectable = new Set(allRows.map((j) => j.id));
   const chosen = [...selected].filter((id) => selectable.has(id));
   /** 工具条「改派…」作用的案子:勾选的;没勾选时是焦点行。 */
-  const reassignIds = chosen.length > 0 ? chosen.slice(0, BATCH_LIMIT) : focused && selectable.has(focused) ? [focused] : [];
+  const reassignIds = rowReassign
+    ? [rowReassign]
+    : chosen.length > 0
+      ? chosen.slice(0, BATCH_LIMIT)
+      : focused && selectable.has(focused)
+        ? [focused]
+        : [];
+  const closeDialog = () => {
+    setDialog(null);
+    setRowReassign(null);
+  };
 
   /* 殿的选项:`/judgment/courts/` —— 调用者范围内的全部殿,各带未结案件数,不随当前筛选收窄。
      此前取自已加载的几页行,翻不到的殿就选不到。已选的那一个在名单到之前也留着。 */
@@ -184,25 +203,48 @@ export function JudgmentClaimQueue() {
       {
         onSuccess: () => {
           showToast(t(`judgment.claim.done_${operation}`, { n: String(ids.length) }), "success");
-          setSelected(new Set());
-          setDialog(null);
+          if (!rowReassign) setSelected(new Set());
+          closeDialog();
         },
         onError: (err) => showToast(claimRefusalMessage(err, t), "error"),
       }
     );
   };
 
+  const setReleasingId = (id: string, on: boolean) =>
+    setReleasing((prev) => {
+      const next = new Set(prev);
+      if (on) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+
   const claimOne = (id: string) =>
     claim.mutate(id, {
-      onSuccess: () => showToast(t("judgment.claim.done_claim", { n: "1" }), "success"),
+      onSuccess: () => {
+        setReleasingId(id, false);
+        showToast(t("judgment.claim.done_claim", { n: "1" }), "success");
+      },
       onError: (err) => showToast(claimRefusalMessage(err, t), "error"),
     });
 
-  const releaseOne = (id: string) =>
+  const releaseOne = (id: string) => {
+    setReleasingId(id, true);
     release.mutate(id, {
       onSuccess: () => showToast(t("judgment.claim.done_release"), "success"),
-      onError: (err) => showToast(claimRefusalMessage(err, t), "error"),
+      onError: (err) => {
+        setReleasingId(id, false);
+        showToast(claimRefusalMessage(err, t), "error");
+      },
     });
+  };
+
+  /** S 与「⋯ → 延后」:本次会话延后,只排到本组末尾,不写服务端。 */
+  const deferForSession = (id: string) => {
+    if (sessionDeferred.includes(id)) return;
+    saveSessionDeferred([...sessionDeferred, id]);
+    showToast(t("judgment.claim.done_session_defer"), "success");
+  };
 
   const toggle = (id: string) =>
     setSelected((prev) => {
@@ -238,9 +280,7 @@ export function JudgmentClaimQueue() {
       else if (focusedRow.claimed_by === user?.id) releaseOne(focusedRow.id);
     },
     s: () => {
-      if (!focusedRow || sessionDeferred.includes(focusedRow.id)) return;
-      saveSessionDeferred([...sessionDeferred, focusedRow.id]);
-      showToast(t("judgment.claim.done_session_defer"), "success");
+      if (focusedRow) deferForSession(focusedRow.id);
     },
     r: () => {
       if (sessionDeferred.length > 0) setDialog("restore");
@@ -248,7 +288,7 @@ export function JudgmentClaimQueue() {
   });
 
   const waitingDays = (j: Judgment) => Math.max(0, Math.floor((now - new Date(j.created_at).getTime()) / DAY_MS));
-  const colSpan = canExecute ? 10 : 9;
+  const colSpan = canExecute ? 11 : 10;
 
   return (
     <div>
@@ -261,7 +301,7 @@ export function JudgmentClaimQueue() {
             value={term}
             onChange={(e) => setTerm(e.target.value)}
             placeholder={t("judgment.claim.search")}
-            className="w-full h-8 max-sm:h-11 border border-[oklch(var(--color-line))] bg-[oklch(var(--color-canvas))] px-2 text-sm text-[oklch(var(--color-ink))] placeholder:text-[oklch(var(--color-ink-subtle))]"
+            className="w-full h-(--control-h-sm) border border-[oklch(var(--color-line))] bg-[oklch(var(--color-canvas))] px-2 text-sm text-[oklch(var(--color-ink))] placeholder:text-[oklch(var(--color-ink-subtle))]"
           />
         </label>
         <div className="flex" data-testid="queue-scope">
@@ -389,8 +429,8 @@ export function JudgmentClaimQueue() {
         aria-label={t("judgment.pending")}
       >
         <thead>
-          {/* 补足 B9 表头:高 28、11 等宽 ink3、下沿 2px ink。 */}
-          <tr className="h-7 font-mono text-2xs text-[oklch(var(--color-ink-subtle))] border-b-2 border-[oklch(var(--color-ink))]">
+          {/* 补足 B9 表头:11 等宽 ink3、下沿 2px ink;高 44(v3 `.queue-head`)。 */}
+          <tr className="h-(--control-h-sm) font-mono text-2xs text-[oklch(var(--color-ink-subtle))] border-b-2 border-[oklch(var(--color-ink))]">
             {canExecute && <th scope="col" className="w-6"><span className="sr-only">{t("judgment.claim.select")}</span></th>}
             <th scope="col" className="px-2 py-1 text-left font-normal">{t("judgment.soul_name")}</th>
             <th scope="col" className="px-2 py-1 text-left font-normal max-md:hidden">{t("judgment.court")}</th>
@@ -401,6 +441,7 @@ export function JudgmentClaimQueue() {
             <th scope="col" className="px-2 py-1 text-left font-normal max-xl:hidden">{t("judgment.claim.col_kind")}</th>
             <th scope="col" className="px-2 py-1 text-right font-normal max-xl:hidden">{t("judgment.detail.evidence")}</th>
             <th scope="col" className="px-2 py-1 text-right font-normal max-sm:hidden">{t("judgment.waiting")}</th>
+            <th scope="col" className="w-11"><span className="sr-only">{t("common.row_actions")}</span></th>
           </tr>
         </thead>
         {shownGroups.map((group) => {
@@ -444,7 +485,7 @@ export function JudgmentClaimQueue() {
                   const isFocus = focused === j.id;
                   const days = waitingDays(j);
                   const mine = j.claimed_by != null && j.claimed_by === user?.id;
-                  const marked = isMinePending(j, user?.id);
+                  const marked = isMinePending(j, user?.id) && !releasing.has(j.id);
                   const laterThisSession = sessionDeferred.includes(j.id);
                   return (
                     <tr
@@ -455,7 +496,7 @@ export function JudgmentClaimQueue() {
                       onFocus={() => setFocused(j.id)}
                       /* 选中 / 焦点 = 7% ink 底,没有行首竖条;竖条只表示「待我处理」(RowMark)。
                          延后的行(B12):不加色标、不变灰,只把透明度降到 0.56;放回后色标重新出现。 */
-                      className={`relative h-10 max-sm:h-11 border-b border-[oklch(var(--color-line))] ${
+                      className={`relative h-(--table-row-h) border-b border-[oklch(var(--color-line))] ${
                         isSel || isFocus ? ROW_SELECTED : `${ROW_HOVER} ${marked ? ROW_MARK_ROW : ""}`
                       } ${group === "deferred" ? "opacity-[0.56]" : ""}`}
                     >
@@ -471,7 +512,8 @@ export function JudgmentClaimQueue() {
                         </td>
                       )}
                       <td className="px-2 max-w-56">
-                        {marked && <RowMark />}
+                        {/* 一直挂着、由 on 切换:取消认领时竖条反着退场(scaleY 1→0,140ms)。 */}
+                        <RowMark on={marked} />
                         <span className="block truncate text-sm font-medium text-[oklch(var(--color-ink))]" title={j.soul_name || undefined}>
                           <Link href={`/judgment/${j.id}`} data-row-link={j.id} className={ROW_LINK}>
                             {j.soul_name ? j.soul_name : <MissingValue kind="unrecorded" reason="soul_name 未随判决返回" />}
@@ -519,7 +561,7 @@ export function JudgmentClaimQueue() {
                           <button
                             type="button"
                             onClick={() => claimOne(j.id)}
-                            className="inline-flex h-7 items-center px-2 border border-[oklch(var(--color-line-strong))] text-2xs text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))] max-sm:min-h-11"
+                            className="inline-flex h-(--control-h-sm) items-center px-3 border border-[oklch(var(--color-line-strong))] text-2xs text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))]"
                           >
                             {t("judgment.claim.claim")}
                           </button>
@@ -549,6 +591,25 @@ export function JudgmentClaimQueue() {
                         }`}
                       >
                         {t("judgment.waiting_days", { n: String(days) })}
+                      </td>
+                      <td className="w-11 relative z-10 text-right">
+                        <ActionsMenu
+                          menuLabel={`${t("common.row_actions")} · ${j.soul_name || t(MISSING_LABEL_KEY.unrecorded)}`}
+                          items={[
+                            ...(canExecute && j.claimed_by == null && group !== "deferred"
+                              ? [{ key: "claim", label: t("judgment.claim.claim"), onSelect: () => claimOne(j.id), disabled: claim.isPending }]
+                              : []),
+                            ...(canExecute && mine
+                              ? [{ key: "release", label: t("judgment.claim.release"), onSelect: () => releaseOne(j.id), disabled: release.isPending }]
+                              : []),
+                            ...(group !== "deferred" && !laterThisSession
+                              ? [{ key: "defer", label: t("judgment.queue.defer"), onSelect: () => deferForSession(j.id) }]
+                              : []),
+                            ...(canAssign
+                              ? [{ key: "reassign", label: t("judgment.claim.reassign"), onSelect: () => { setRowReassign(j.id); setDialog("reassign"); } }]
+                              : []),
+                          ]}
+                        />
                       </td>
                     </tr>
                   );
@@ -584,7 +645,7 @@ export function JudgmentClaimQueue() {
         isOpen={dialog === "defer"}
         count={Math.min(chosen.length, BATCH_LIMIT)}
         pending={batch.isPending}
-        onCancel={() => setDialog(null)}
+        onCancel={closeDialog}
         onConfirm={(reason) => runBatch("defer", { reason })}
       />
       <ReassignDialog
@@ -592,7 +653,7 @@ export function JudgmentClaimQueue() {
         ids={reassignIds}
         count={reassignIds.length}
         pending={batch.isPending}
-        onCancel={() => setDialog(null)}
+        onCancel={closeDialog}
         onConfirm={(to) => runBatch("reassign", { to })}
       />
       <ConfirmDialog

@@ -1368,6 +1368,7 @@
       "deferred_session": "This sitting",
       "key_restore": "Put all back",
       "done_release": "Claim released",
+      "release": "Release claim",
       "done_session_defer": "Deferred to the end of this sitting",
       "done_restore": "Put {{n}} deferred cases back",
       "restore_title": "Put all back?",
