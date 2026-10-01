@@ -45,6 +45,8 @@ jest.mock("expo-font", () => {
 
 /** The seal beside words and the cold start are hidden from assistive tech; queries must ask for them. */
 const H = { includeHiddenElements: true };
+// Captured at import, before any beforeEach can clear the double: coldStart.tsx sets it at module load.
+const splashOptionsAtLoad = jest.mocked(SplashScreen.setOptions).mock.calls.slice();
 const flat = (el: { props: { style?: unknown } }) => StyleSheet.flatten(el.props.style as never) as Record<string, unknown>;
 
 function wrap(children: ReactNode, session: SessionState, civilization: string | null = "CHINESE") {
@@ -342,6 +344,12 @@ describe("the cold start (补足 C18)", () => {
     expect(screen.getByTestId("cold-start", H).props.pointerEvents).toBe("none");
     act(() => jest.advanceTimersByTime(motion.coldStart - motion.coldStartInteractive));
     expect(screen.queryByTestId("cold-start", H)).toBeNull();
+  });
+
+  it("the native splash goes at once — no fade of its own under the receding mark", () => {
+    // Its default is a 400ms fade: under the lifting mark that read as two marks, offset.
+    // Android reads only `duration`; iOS reads `fade`.
+    expect(splashOptionsAtLoad).toEqual([[{ duration: 0, fade: false }]]);
   });
 
   it("frame 0 is the native splash's picture: app.json's image, at its imageWidth, on its ground — at rest", async () => {

@@ -24,6 +24,13 @@ import type { SessionState } from "./session";
 import { motion } from "./theme";
 import { welcomeFrom } from "./welcome";
 
+// The native splash goes the instant hideAsync is called. Its default exit is a 400ms fade,
+// and under it this mark is already lifting: two marks, offset, fading together — seen on
+// the emulator at 420 and 560dpi. The recede below is the only motion. Both keys: Android
+// (expo-splash-screen 57, SplashScreenManager.kt) ignores `fade` and always animates alpha
+// over `duration`; `fade` is what iOS reads.
+SplashScreen.setOptions({ duration: 0, fade: false });
+
 /** Module-level: a remount in the same process is not a cold start. */
 export const coldStart = { played: false };
 
