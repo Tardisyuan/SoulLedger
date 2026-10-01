@@ -514,7 +514,7 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
                 placeholder={t("judgment.queue.notes_placeholder")}
                 className="w-full border border-[oklch(var(--color-hairline))] bg-[oklch(var(--color-surface-2))] px-3 py-2 text-sm text-[oklch(var(--color-ink))] mb-3"
               />
-              <label className="flex min-h-8 items-center gap-2 text-sm text-[oklch(var(--color-ink))] mb-3 max-sm:min-h-11">
+              <label className="flex min-h-(--control-h-sm) items-center gap-2 text-sm text-[oklch(var(--color-ink))] mb-3">
                 <input
                   type="checkbox"
                   checked={createWorkflow}
@@ -590,7 +590,7 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
                 type="button"
                 onClick={defer}
                 aria-keyshortcuts="S"
-                className="flex h-10 items-center justify-center gap-2 px-4 border border-transparent text-sm font-semibold text-[oklch(var(--color-ink))] transition-[background-color] duration-fast hover:bg-[oklch(var(--color-surface-2))] active:bg-[oklch(var(--color-line))] max-sm:min-h-11"
+                className="flex h-(--control-h-md) items-center justify-center gap-2 px-4 border border-transparent text-sm font-semibold text-[oklch(var(--color-ink))] transition-[background-color] duration-fast hover:bg-[oklch(var(--color-surface-2))] active:bg-[oklch(var(--color-line))]"
               >
                 {t("judgment.queue.defer")}
                 <Keycap>S</Keycap>
