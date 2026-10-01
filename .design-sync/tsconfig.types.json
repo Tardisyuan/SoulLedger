@@ -1,0 +1,14 @@
+{
+  "extends": "../frontend/tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "incremental": false,
+    "plugins": [],
+    "rootDir": "..",
+    "outDir": "pkg/.generated/types"
+  },
+  "include": ["pkg/entry.tsx"],
+  "exclude": []
+}
