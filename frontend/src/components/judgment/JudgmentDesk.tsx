@@ -153,9 +153,9 @@ export function PrecedentsPanel({ judgmentId }: { judgmentId: string }) {
   const rows = data ?? [];
   return (
     <section className="mt-6" data-testid="precedents">
-      <div className="flex items-baseline gap-3 border-b border-[oklch(var(--color-block))] pb-1 font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">
+      <div className="flex items-baseline gap-3 border-b border-[oklch(var(--color-block))] pb-1 text-2xs text-[oklch(var(--color-ink-subtle))]">
         <h2 className="flex-1 text-2xs uppercase">{t("judgment.precedents.title")}</h2>
-        {data && <span className="tabular-nums">{rows.length}</span>}
+        {data && <span className="font-mono tabular-nums">{rows.length}</span>}
       </div>
       {isError ? (
         <p className="py-2 text-xs text-[oklch(var(--color-ink-subtle))]">{t("judgment.precedents.error")}</p>
