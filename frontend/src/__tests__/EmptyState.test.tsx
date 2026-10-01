@@ -5,10 +5,9 @@
  *   1. **居左**。失败模式是有人为了「好看」加回 `text-center` —— 而
  *      「标题渲染出来了」在居中的时候照样是绿的，所以必须直接断言那几个类名
  *      不在树里。
- *   2. 标题上方一条 **24px × 2px** 的短线，颜色取区块边界线 `--color-block`。失败模式是
- *      有人给它兜一个彩色 fallback：`--civ-mark` 在未映射租户下是灰色
- *      （`app/globals.css:57`），那是刻意的，灰色说的是「没有文明」。
- *   3. `text-2xs` 标题 + `text-sm` 原因。
+ *   2. 标题上方一个 **28px 的 □**(规范 v3,2026-10-01;此前是 24×2 的短线),
+ *      ink-muted,不按文明染色。
+ *   3. `text-md` 标题 + `text-xs` 原因。
  */
 import { render } from "@testing-library/react";
 import { EmptyState } from "@/src/components/ui/EmptyState";
@@ -67,25 +66,26 @@ describe("EmptyState · 居左", () => {
   });
 });
 
-describe("EmptyState · 那条短线", () => {
-  it("24px 长、2px 粗，压在标题上方", () => {
+describe("EmptyState · 那个 □", () => {
+  it("28px(text-xl)的 □,压在标题上方 —— v2 那条 24×2 短线不在了", () => {
     const { container } = render(<EmptyState title="尚无判决" />);
     const mark = container.querySelector<HTMLElement>("[data-empty-state-mark]")!;
-    expect(mark.className).toMatch(/\bw-6\b/); // 24px
-    expect(mark.className).toMatch(/\bborder-t-2\b/); // 2px
+    expect(mark.textContent).toBe("□");
+    expect(mark.className).toMatch(/\btext-xl\b/); // 28px
+    expect(mark.className).not.toMatch(/\b(?:w-6|border-t-2)\b/);
     const title = container.querySelector<HTMLElement>("[data-empty-state-title]")!;
     expect(mark.compareDocumentPosition(title) & Node.DOCUMENT_POSITION_FOLLOWING)
       .toBeTruthy();
   });
 
-  it("颜色是区块边界线 --color-block,不按文明染色(规范 v1 §1.8)", () => {
+  it("颜色是 ink-muted,不按文明染色(规范 v1 §1.8)", () => {
     const { container } = render(<EmptyState title="尚无判决" />);
     const mark = container.querySelector<HTMLElement>("[data-empty-state-mark]")!;
-    expect(mark.className).toContain("border-[oklch(var(--color-block))]");
+    expect(mark.className).toContain("text-[oklch(var(--color-ink-muted))]");
     expect(mark.className).not.toMatch(/civ-/);
   });
 
-  it("短线是标记不是内容，对读屏隐藏", () => {
+  it("□ 是标记不是内容，对读屏隐藏", () => {
     const { container } = render(<EmptyState title="尚无判决" />);
     expect(container.querySelector("[data-empty-state-mark]")).toHaveAttribute(
       "aria-hidden",

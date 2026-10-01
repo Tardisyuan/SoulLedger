@@ -127,6 +127,7 @@ const COLLECTED_FILES = [
   "Spinner.test.tsx",
   "TenantContext.test.tsx",
   "Toast.test.tsx",
+  "toastColourContract.test.ts",
   "OrganizationsPage.test.tsx",
   "UserDeleteDialog.test.tsx",
   "UsersPage.locate.test.tsx",

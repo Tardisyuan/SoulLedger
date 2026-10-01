@@ -1205,17 +1205,19 @@ html.theme-switching *::after {
                                 a private copy of the font stack, so a toast
                                 would keep the old stack after --font-sans moved
 
-   The icon is square since 规范 v1 (round corners are for avatars only).
+   规范 v3(2026-10-01)取代了 v2 的「弹层一律 s1 底 + 1px ink 框、状态只由图标色说」:
+   toast 现在是**实心 ink 底、反白字**(字 = --color-surface-1),失败是**实心冷玫红底**
+   (`.toast[data-type="error"]`,--color-danger)。成功与信息只靠字形 ✓ / ℹ 分,不再各
+   带一种状态色 —— 在实心 ink 底上,浅色主题的状态绿 / 蓝是深字压深底。所以 builder
+   不再往元素上写任何内联样式(v2 时唯一的内联 `--toast-accent` 一并删掉)。
+   仍然没有 3px 状态色左边线:行首 3px 色标是「待我处理」的专用记号。
 
-   `--toast-accent` is set per element by the builder as a TOKEN NAME, not a
-   colour — `el.style.setProperty("--toast-accent", "var(--color-status-error)")`
-   — so the three status hues still come from `:root` and still follow the
-   theme. That is the one thing the builder is still allowed to set inline, and
-   the reason it is allowed is that it is a reference rather than a value.
+   字色两种底上都是 --color-surface-1,不写死 #fff:深色主题的冷玫红是 #FF7A9A,白字
+   在上面只有 2.47:1;surface-1 在深色下是近黑,在浅色下是近白,一条规则两种主题都过。
+   实测对比度由 `src/__tests__/toastColourContract.test.ts` 从本文件算出并守住(≥ 4.5)。
 
-   `src/__tests__/designGuardContract.test.ts` now has a rule for `cssText` so
-   the next file to reach for it goes red instead of quietly leaving the
-   system. */
+   `src/__tests__/designGuardContract.test.ts` has a rule for `cssText` so the
+   next file to reach for it goes red instead of quietly leaving the system. */
 #toast-container {
   position: fixed;
   top: 20px;
@@ -1225,24 +1227,26 @@ html.theme-switching *::after {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   pointer-events: none;
 }
 
+/* v3 原型:min-height 56、三栏 24px 图标 / 文字 / 关闭、栏距 8。原型的左右内边距是 13px,
+   这里取 12 —— 间距节奏(规范 v2 A2)里没有 13。 */
 .toast {
-  display: flex;
+  display: grid;
+  grid-template-columns: 24px 1fr auto;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+  min-height: 56px;
   min-width: 240px;
   max-width: 420px;
-  padding: 14px 16px;
+  padding: 0 12px;
   /* 0, like every other step in the table. */
   border-radius: 0;
-  /* 规范 v2:弹层一律 s1 底 + 1px ink 框、无阴影。状态只由图标(字形 + 状态色)说,
-     不再画 3px 状态色左边线 —— 行首 3px 色标在 v2 是「待我处理」的专用记号。 */
-  border: 1px solid oklch(var(--color-ink));
-  background: oklch(var(--color-surface-1));
-  color: oklch(var(--color-ink));
+  border: none;
+  background: oklch(var(--color-ink));
+  color: oklch(var(--color-surface-1));
   /* 动效 v2:toast 进场 base 200、ease.enter、位移 12px;出场 fast 120、ease.exit。 */
   animation: toast-in var(--transition-duration-base) var(--ease-enter);
   pointer-events: auto;
@@ -1252,32 +1256,22 @@ html.theme-switching *::after {
   line-height: 1.55;
 }
 
+.toast[data-type="error"] {
+  background: oklch(var(--color-danger));
+}
+
+/* 字形跟着字色走,12px 粗体(原型 `.toast-row b`)。 */
 .toast-icon {
-  flex-shrink: 0;
-  width: 18px;
-  height: 18px;
   display: flex;
   align-items: center;
   justify-content: center;
-  /* Square (规范 v1: round corners are for avatars only). */
-  border-radius: 0;
-  /* 10%, not 20%: the same badge-fill AA floor as the className-based badges
-     (a 16% tint of --bad measured 4.37:1, below AA). */
-  background: oklch(var(--toast-accent) / 0.1);
-  color: oklch(var(--toast-accent));
-  border: 1px solid oklch(var(--toast-accent) / 0.35);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: bold;
 }
 
-.toast-message {
-  flex: 1;
-}
-
 .toast-close {
-  flex-shrink: 0;
-  width: 18px;
-  height: 18px;
+  width: 24px;
+  height: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1285,16 +1279,23 @@ html.theme-switching *::after {
   background: transparent;
   border: none;
   cursor: pointer;
-  color: oklch(var(--color-ink));
-  opacity: 0.5;
+  /* 全不透明:v2 的 0.5 透明度是在浅底上调的,压在实心底上会把 × 调成一块半色。 */
+  color: inherit;
   font-size: 16px;
   padding: 0;
   line-height: 1;
-  transition: opacity var(--transition-duration-state) ease-in-out;
+  transition: background-color var(--transition-duration-state) ease-in-out;
 }
 
 .toast-close:hover {
-  opacity: 1;
+  background: oklch(var(--color-surface-1) / 0.16);
+}
+
+/* 全局焦点环是 --color-focus,两种主题下都等于 --color-ink —— 正是 toast 的底色,
+   环画上去看不见。在 toast 里环换成字色,内缩到按钮里。 */
+.toast-close:focus-visible {
+  outline-color: oklch(var(--color-surface-1)) !important;
+  outline-offset: -2px;
 }
 
 /* Leaving. `exit` is the curve for something getting out of the way, and the

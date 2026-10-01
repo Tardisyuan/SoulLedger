@@ -273,7 +273,7 @@ export const webPlatform: PlatformAdapter = {
     //
     // `showToast` returns the toast's id and this returns nothing, which is
     // deliberate — see `Notifier` in the package. `durationMs` is forwarded as
-    // given, including `undefined`, so `showToast`'s own 5000ms default keeps
+    // given, including `undefined`, so `showToast`'s own default (4000ms since 规范 v3) keeps
     // applying to callers that omit it; that is what the seven hooks did
     // before they went through this port, and behaviour there must not change.
     showToast(renderNotifyMessage(message), kind, durationMs);
