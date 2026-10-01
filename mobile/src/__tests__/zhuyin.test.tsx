@@ -1,18 +1,24 @@
 /**
  * v2「朱印」App chrome: the seal, the plaque on the life tab, and the cold start.
  */
+import { readFileSync } from "fs";
+import { join } from "path";
+
 import { NavigationContainer } from "@react-navigation/native";
 import { act, fireEvent, render, screen } from "@testing-library/react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as SecureStore from "expo-secure-store";
 import * as SplashScreen from "expo-splash-screen";
+import sharp from "sharp";
 import type { ReactNode } from "react";
 import { AccessibilityInfo, StyleSheet } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { Path } from "react-native-svg";
 
 import { RING_D, SVG } from "../art";
 import { AppHeader, PlaqueHeader, TabBar } from "../chrome";
 import { PLAQUE_CN, PLAQUE_CN_KEY, bootPlaqueFace, preloadPlaqueFace } from "../fonts";
+import { SHAPE, STROKES, VIEWBOX, pathLength } from "../brandMark";
 import { ColdStart, coldStart } from "../coldStart";
 import { I18nProvider } from "../i18n";
 import { installMobilePlatform, persistentStore } from "../platform";
@@ -331,14 +337,14 @@ describe("the cold start (补足 C18)", () => {
   });
   const layout = () => fireEvent(screen.getByTestId("cold-start-skip", H), "layout", { nativeEvent: { layout: { width: 390, height: 844 } } });
 
-  it("hides the native splash only once its own first frame is laid out, is usable at 480 and gone at 720", async () => {
+  it("hides the native splash only once its own first frame is laid out; usable 480 after the mark is written and held, gone at 720", async () => {
     render(<ColdStart session={{ status: "signedOut" }} />);
     await act(async () => {});
     expect(screen.getByTestId("cold-start", H)).toBeTruthy();
     expect(hide).not.toHaveBeenCalled();
     layout();
     expect(hide).toHaveBeenCalledTimes(1);
-    act(() => jest.advanceTimersByTime(motion.coldStartInteractive - 1));
+    act(() => jest.advanceTimersByTime(motion.coldStartDraw + motion.coldStartHold + motion.coldStartInteractive - 1));
     expect(screen.getByTestId("cold-start", H).props.pointerEvents).toBe("auto");
     act(() => jest.advanceTimersByTime(1));
     expect(screen.getByTestId("cold-start", H).props.pointerEvents).toBe("none");
@@ -352,24 +358,48 @@ describe("the cold start (补足 C18)", () => {
     expect(splashOptionsAtLoad).toEqual([[{ duration: 0, fade: false }]]);
   });
 
-  it("frame 0 is the native splash's picture: app.json's image, at its imageWidth, on its ground — at rest", async () => {
+  it("frame 0 is the native splash's picture: its ground, no mark yet — every stroke undrawn", async () => {
     const plugins = require("../../app.json").expo.plugins as unknown[];
     const [, splash] = plugins.find((p) => Array.isArray(p) && p[0] === "expo-splash-screen") as [string, Record<string, never>];
-    // One picture in both modes: the gold mark is too faint on paper.
-    expect(splash).toMatchObject({ image: "./assets/splash-mark.png", backgroundColor: "#131211", dark: { image: "./assets/splash-mark.png", backgroundColor: "#131211" } });
+    // Ink alone, in both modes: the mark is written by JS, so the native splash carries none.
+    expect(splash).toMatchObject({ image: "./assets/splash-blank.png", backgroundColor: "#131211", dark: { image: "./assets/splash-blank.png", backgroundColor: "#131211" } });
+    const { data, info } = await sharp(join(__dirname, "../../assets/splash-blank.png")).raw().toBuffer({ resolveWithObject: true });
+    expect(info.channels).toBe(4);
+    expect(data.some((v, k) => k % 4 === 3 && v > 0)).toBe(false);
     render(<ColdStart session={signedIn()} />);
     await act(async () => {});
     expect(flat(screen.getByTestId("cold-start-skip", H)).backgroundColor).toBe(splash.backgroundColor);
-    const mark = screen.getByTestId("cold-start-mark", H);
-    expect(mark.props.source).toBe(require("../../assets/splash-mark.png"));
-    expect(flat(mark)).toMatchObject({ width: splash.imageWidth, height: splash.imageWidth });
-    // Reanimated's jest mock never re-renders a style, so the tree shows the first frame.
+    // The Path elements themselves: the native one below them drops `animatedProps`.
+    const strokes = screen.UNSAFE_getAllByType(Path).filter((el) => el.props.testID === "cold-start-stroke");
+    expect(strokes).toHaveLength(STROKES.length);
+    // Reanimated's jest mock never re-runs animated props, so the tree shows the first frame:
+    // each dash pushed back by its whole stroke.
+    strokes.forEach((el, i) => {
+      const length = pathLength(STROKES[i][0]);
+      expect(el.props.strokeDasharray).toEqual([length, length]);
+      expect(el.props.animatedProps.strokeDashoffset).toBeCloseTo(length);
+    });
     expect(flat(screen.getByTestId("cold-start-mark-layer", H))).toMatchObject({ opacity: 1, transform: [{ translateY: 0 }, { scale: 1 }] });
-    // Signed in or not, the same mark: no seal, no glyph.
     expect(screen.queryByTestId("cold-start-seal", H)).toBeNull();
   });
 
-  it("the mark recedes by 480 — up 8, to 0.96, out — and the ground fades 480 → 720", async () => {
+  it("the mark's outline is the icon's own: SHAPE is soulledger-mark.svg's paths, its triangle cut folded in", () => {
+    const svg = readFileSync(join(__dirname, "../../assets/brand/soulledger-mark.svg"), "utf8");
+    const hole = svg.match(/<mask[\s\S]*?<path d="([^"]+)"/)![1];
+    const shapes = [...svg.match(/<g fill="currentColor"[^>]*>([\s\S]*)<\/g>/)![1].matchAll(/<path d="([^"]+)"/g)].map((m) => m[1]);
+    expect(SHAPE).toEqual([shapes[0], `${shapes[1]} ${hole}`, shapes[2]]);
+    expect(VIEWBOX).toBe(svg.match(/viewBox="([^"]+)"/)![1]);
+  });
+
+  it("pathLength agrees with the browser's getTotalLength for every stroke", () => {
+    // Chrome, 2026-10-01, on these exact centre lines.
+    const browser = [1060.31, 377.13, 118.19, 153.89, 288.36, 173.3, 150.82, 239, 252];
+    expect(STROKES.map(([d]) => pathLength(d))).toEqual(browser.map((b) => expect.closeTo(b, 0)));
+    expect(() => pathLength("M0 0A10 10 0 0 0 5 0")).toThrow(/half-circle/);
+    expect(() => pathLength("M0 0S1 1 2 2")).toThrow(/unsupported/);
+  });
+
+  it("the strokes write over coldStartDraw; after the hold the mark recedes by 480 — up 8, to 0.96, out — and the ground fades 480 → 720", async () => {
     // The curve is read off the calls that build it.
     const R = jest.requireMock("react-native-reanimated") as Record<string, (...a: unknown[]) => unknown>;
     const timing = jest.spyOn(R, "withTiming");
@@ -378,8 +408,10 @@ describe("the cold start (补足 C18)", () => {
     await act(async () => {});
     const recede = { duration: motion.coldStartInteractive, easing: expect.anything() };
     expect(timing.mock.calls).toEqual(expect.arrayContaining([[-8, recede], [0.96, recede], [0, recede]]));
+    expect(timing.mock.calls).toContainEqual([1, { duration: motion.coldStartDraw, easing: expect.anything() }]);
     expect(timing.mock.calls).toContainEqual([0, { duration: motion.coldStart - motion.coldStartInteractive, easing: expect.anything() }]);
-    expect(delay.mock.calls.map(([ms]) => ms)).toEqual([motion.coldStartInteractive]);
+    const written = motion.coldStartDraw + motion.coldStartHold;
+    expect(delay.mock.calls.map(([ms]) => ms)).toEqual([written, written, written, written + motion.coldStartInteractive]);
     timing.mockRestore();
     delay.mockRestore();
   });
