@@ -19,7 +19,7 @@ import { installMobilePlatform, persistentStore } from "../platform";
 import { defaultLifeSection, lifePathIndex, lifeSectionsOpen, signedBalance, termServed } from "../rules";
 import { LIFE_OPEN_PREFIX } from "../screens/life";
 import { SessionProvider } from "../session";
-import { GUTTER_PT, space, themeFor, v3, v3Theme } from "../theme";
+import { GUTTER_PT, space, themeFor, v3 } from "../theme";
 import { SectionError, Skeleton, ThemeContext, sectionTransitions } from "../ui";
 import { PROFILE, life, stubApi } from "./stubApi";
 
@@ -246,7 +246,7 @@ describe("the life page, as the app mounts it (补足 B11)", () => {
     expect(value.props.children).toBe("\u221212");
     // v3: an ink block, the number in the surface colour \u2014 a record, never a status or civilization colour.
     const scheme = flat(value).color === v3.light.surface ? "light" : "dark";
-    const t = v3Theme(themeFor("CHINESE", scheme));
+    const t = themeFor("CHINESE", scheme);
     expect(flat(screen.getByTestId("balance")).backgroundColor).toBe(v3[scheme].ink);
     expect(flat(value).color).toBe(v3[scheme].surface);
     expect([t.neg, t.pos, t.warn, t.plaque]).not.toContain(flat(value).color);

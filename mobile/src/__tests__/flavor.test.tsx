@@ -62,7 +62,7 @@ describe("the simplified plaque on every other title bar (补足 C15)", () => {
   it.each(CIVS.filter((c) => c !== "neutral"))("%s: 匾色 ground, its own band only, the title in its face at 20", async (civ) => {
     wrap(<AppHeader title="设置" onBack={jest.fn()} />, civ);
     const theme = themeFor(CIVILIZATION[civ], "dark");
-    expect(StyleSheet.flatten(screen.getByTestId("header").props.style).backgroundColor).toBe(theme.plaque);
+    expect(StyleSheet.flatten(screen.getByTestId("header").props.style).backgroundColor).toBe(theme.band);
     expect(screen.getByTestId(`plaque-band-${civ}`)).toBeTruthy();
     for (const other of CIVS.filter((c) => c !== civ && c !== "neutral")) expect(screen.queryByTestId(`plaque-band-${other}`)).toBeNull();
     const title = StyleSheet.flatten(screen.getByRole("header").props.style);
@@ -74,7 +74,7 @@ describe("the simplified plaque on every other title bar (补足 C15)", () => {
 
   it("neutral (before sign-in): the neutral plaque, no band, the title in the interface face", () => {
     wrap(<AppHeader title="灵魂簿" />, "neutral");
-    expect(StyleSheet.flatten(screen.getByTestId("header").props.style).backgroundColor).toBe(themeFor(null, "dark").plaque);
+    expect(StyleSheet.flatten(screen.getByTestId("header").props.style).backgroundColor).toBe(themeFor(null, "dark").band);
     expect(screen.queryAllByTestId(/^plaque-band-/)).toEqual([]);
     expect(StyleSheet.flatten(screen.getByRole("header").props.style).fontSize).toBe(15);
   });

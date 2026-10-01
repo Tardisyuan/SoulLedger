@@ -13,7 +13,7 @@ import { I18nProvider } from "../i18n";
 import { RootNavigator } from "../navigation";
 import { installMobilePlatform } from "../platform";
 import { SessionProvider } from "../session";
-import { civ, parchment } from "../theme";
+import { NEUTRAL_PLAQUE, parchment, themeFor, v3Band } from "../theme";
 
 const appJson = require("../../app.json") as { expo: { userInterfaceStyle?: string } };
 
@@ -66,9 +66,9 @@ it.each(["dark", "light"] as const)("system %s → the parchment of that scheme,
   await screen.findByTestId("login-submit");
   expect(loginGround()).toBe(parchment[scheme].bg);
   expect(StyleSheet.flatten(screen.getByTestId("login-submit").props.style)).toMatchObject({
-    backgroundColor: civ.neutral[scheme].plaque,
+    backgroundColor: scheme === "dark" ? v3Band(NEUTRAL_PLAQUE.dark) : NEUTRAL_PLAQUE.light,
   });
-  expect(loginGround()).not.toBe(civ.neutral[scheme].s1);
+  expect(loginGround()).not.toBe(themeFor(null, scheme).s1);
 });
 
 it("no system preference reported → dark (the design's primary scheme)", async () => {

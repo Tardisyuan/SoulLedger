@@ -674,7 +674,7 @@ function Dock({
               { minHeight: size, minWidth: size },
               secondary
                 ? { borderWidth: 1, borderColor: t.hair2, backgroundColor: pressed ? t.s1 : "transparent" }
-                : { backgroundColor: pressed ? shade(t.plaque) : t.plaque },
+                : { backgroundColor: pressed ? shade(t.plaqueFill) : t.plaqueFill },
             ]}
           >
             {ANDROID ? (
