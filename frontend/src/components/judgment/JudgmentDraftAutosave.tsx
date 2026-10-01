@@ -52,6 +52,8 @@ export function useDraftAutosave({
   const [editSeq, setEditSeq] = useState(0);
   const [status, setStatus] = useState<DraftStatus>("idle");
   const [conflict, setConflict] = useState<JudgmentDraft | null>(null);
+  /** 最后一次**存成功**(或改用对方版本)时的编辑序号。比它新的编辑就是「还没存上」。 */
+  const [settledSeq, setSettledSeq] = useState(0);
   /** 最后一次**发出去**的编辑序号。只有比它新的编辑才值得再存。 */
   const attempted = useRef(0);
   const saving = save.isPending;
@@ -60,7 +62,8 @@ export function useDraftAutosave({
     if (!enabled || conflict || saving || status === "concluded" || editSeq <= attempted.current) return;
     const timer = setTimeout(() => {
       const cached = queryClient.getQueryData<JudgmentDetail>(judgmentKeys.detail(judgmentId));
-      attempted.current = editSeq;
+      const seq = editSeq;
+      attempted.current = seq;
       setStatus("saving");
       save.mutate(
         {
@@ -70,7 +73,10 @@ export function useDraftAutosave({
           ...placementDraftFields(placement, verdict),
         },
         {
-          onSuccess: () => setStatus("idle"),
+          onSuccess: () => {
+            setStatus("idle");
+            setSettledSeq(seq);
+          },
           onError: (err) => {
             const e = err as { response?: { status?: number; data?: Partial<JudgmentDraftConflict> } };
             const body = e?.response?.data;
@@ -105,12 +111,15 @@ export function useDraftAutosave({
   return {
     status,
     conflict,
+    /** 动过、还没存上(在去抖里、正在存、或存失败)。审判台 769–1279 草稿收起时,开关上靠它挂 ◐。 */
+    unsaved: editSeq > settledSeq,
     markEdited: () => setEditSeq((n) => n + 1),
     /** 改用对方的版本:缓存与版本号跟过去,不再存。调用方负责把判词框换成 `draft.notes`。 */
     acceptTheirs: (): JudgmentDraft | null => {
       if (!conflict) return null;
       adopt(conflict, true);
       attempted.current = editSeq;
+      setSettledSeq(editSeq);
       setConflict(null);
       return conflict;
     },
