@@ -2,6 +2,7 @@
 
 import { useI18n } from "@/src/contexts/I18nContext";
 import { BaseModal } from "@/src/components/ui/Modal";
+import { Button } from "@/src/components/ui/Button";
 
 /** Delete Confirmation Modal */
 export function SoulDeleteModal({
@@ -23,26 +24,15 @@ export function SoulDeleteModal({
       onClose={onClose}
       title={t("souls.detail.confirm_delete")}
       footer={
-        <div className="flex gap-3">
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={isPending}
-            className="flex-1 px-4 py-2 bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-hairline))] text-[oklch(var(--color-ink-muted))] hover:bg-[oklch(var(--color-surface-2))] disabled:opacity-50 text-sm transition-colors"
-          >
+        <div className="flex justify-end gap-3">
+          <Button type="button" variant="ghost" onClick={onClose} disabled={isPending}>
             {t("souls.detail.cancel_delete")}
-          </button>
-          <button
-            type="button"
-            onClick={onConfirm}
-            disabled={isPending}
-            /* Same measured failure as UserDeleteDialog, just spelled with the
-                 token instead of `bg-red-500`: a filled status-error with white text
-                 is ~3.59:1 in dark mode. The tint recipe clears AA in both themes. */
-              className="flex-1 px-4 py-2 bg-[oklch(var(--color-status-error)/0.1)] text-[oklch(var(--color-status-error))] border border-[oklch(var(--color-status-error)/0.3)] hover:bg-[oklch(var(--color-status-error)/0.2)] disabled:opacity-50 text-sm font-medium transition-colors"
-          >
+          </Button>
+          {/* 移入回收站,不是抹去(见下面那句说明):可逆的风险动作 = warning(规范 v3);
+              danger-strong 只给不可逆的删除。 */}
+          <Button type="button" variant="warning" onClick={onConfirm} loading={isPending}>
             {isPending ? t("souls.detail.deleting") : t("souls.detail.confirm_delete_action")}
-          </button>
+          </Button>
         </div>
       }
     >
