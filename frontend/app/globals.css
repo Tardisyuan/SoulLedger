@@ -143,19 +143,21 @@
    * `useReducedMotionDurations` 把 JS 侧五档全给 0)。2026-10-01 通用动效那一轮按 v3 B3
    * 加了一个例外:整页、弹窗 / 抽屉、Toast、骨架后的内容保留 80ms 淡入、不带位移 ——
    * 见那个块后面紧跟的第二个 @media。 */
-  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
-  --ease-enter: cubic-bezier(0.2, 0.8, 0.2, 1);
-  --ease-exit: cubic-bezier(0.4, 0, 1, 1);
-  --ease-drop: cubic-bezier(0.2, 0.8, 0.3, 1);
+  /* `@kind other`:Claude Design 的 design-sync 令牌分类器认不出动效令牌(缓动、时长、动画),
+     报成「无法归类」;行尾这个注释告诉它归到 other。是给同步工具看的标注,不影响 CSS。 */
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1); /* @kind other */
+  --ease-enter: cubic-bezier(0.2, 0.8, 0.2, 1); /* @kind other */
+  --ease-exit: cubic-bezier(0.4, 0, 1, 1); /* @kind other */
+  --ease-drop: cubic-bezier(0.2, 0.8, 0.3, 1); /* @kind other */
 
-  --transition-duration-instant: 0ms;
-  --transition-duration-fast: 160ms;
-  --transition-duration-base: 240ms;
-  --transition-duration-slow: 320ms;
-  --transition-duration-ritual: 600ms;
-  --transition-duration-press: 80ms;
-  --transition-duration-state: 160ms;
-  --transition-duration-settle: 240ms;
+  --transition-duration-instant: 0ms; /* @kind other */
+  --transition-duration-fast: 160ms; /* @kind other */
+  --transition-duration-base: 240ms; /* @kind other */
+  --transition-duration-slow: 320ms; /* @kind other */
+  --transition-duration-ritual: 600ms; /* @kind other */
+  --transition-duration-press: 80ms; /* @kind other */
+  --transition-duration-state: 160ms; /* @kind other */
+  --transition-duration-settle: 240ms; /* @kind other */
   /* 规范 v3「B2 · 通用」那张表用到了 B1 四档之外的三个时长(2026-10-01)。它们各只属于一件
    * 事,所以按那件事起名,不并进最近的档 —— 并进去就是把 v3 写的数改成了别的数:
    *   close    180ms  弹窗 / 抽屉关闭(开是 240 = base)
@@ -163,10 +165,10 @@
    *   reveal   200ms  骨架 → 内容的交叉淡化;表格展开
    *   reduced   80ms  减少动态效果下保留的那一下淡入(B3「整页、弹窗、Toast、异步内容」),
    *                   不带位移。只在下面第二个 prefers-reduced-motion 块里用。 */
-  --transition-duration-close: 180ms;
-  --transition-duration-dismiss: 140ms;
-  --transition-duration-reveal: 200ms;
-  --transition-duration-reduced: 80ms;
+  --transition-duration-close: 180ms; /* @kind other */
+  --transition-duration-dismiss: 140ms; /* @kind other */
+  --transition-duration-reveal: 200ms; /* @kind other */
+  --transition-duration-reduced: 80ms; /* @kind other */
 
   /* THE TABLE ROWS, and the one of the three that is not decoration.
    *
@@ -205,21 +207,21 @@
      which jsdom cannot see and therefore no test in this repo could check. A
      closed drawer is still absent from the DOM; it is only late leaving. */
   /* 规范 v3:开 240 进场曲线,关 180 出场曲线;面板只移 12px(v2 是整宽滑入)。 */
-  --animate-drawer-in: drawer-in var(--transition-duration-settle) var(--ease-enter) both;
-  --animate-drawer-out: drawer-out var(--transition-duration-close) var(--ease-exit) both;
-  --animate-scrim-in: scrim-in var(--transition-duration-settle) var(--ease-enter) both;
-  --animate-scrim-out: scrim-out var(--transition-duration-close) var(--ease-exit) both;
+  --animate-drawer-in: drawer-in var(--transition-duration-settle) var(--ease-enter) both; /* @kind other */
+  --animate-drawer-out: drawer-out var(--transition-duration-close) var(--ease-exit) both; /* @kind other */
+  --animate-scrim-in: scrim-in var(--transition-duration-settle) var(--ease-enter) both; /* @kind other */
+  --animate-scrim-out: scrim-out var(--transition-duration-close) var(--ease-exit) both; /* @kind other */
 
   /* 规范 v3「页面切换」:新页 opacity 0→1、translateY 8px→0,240ms 进场。`backwards`
    * 而不是 `both`:动画结束后不留 transform —— 留着的 transform 会让页面里每个
    * `position: fixed` 的元素改以这个包裹层为参照。挂在 `app/template.tsx`。 */
-  --animate-page-enter: page-enter var(--transition-duration-base) var(--ease-enter) backwards;
+  --animate-page-enter: page-enter var(--transition-duration-base) var(--ease-enter) backwards; /* @kind other */
   /* 规范 v3「骨架 → 内容」:200ms 淡入。PageShell 在骨架换成内容的那一刻挂上它。 */
-  --animate-content-in: content-in var(--transition-duration-reveal) var(--ease-enter) backwards;
+  --animate-content-in: content-in var(--transition-duration-reveal) var(--ease-enter) backwards; /* @kind other */
 
-  --animate-row-enter: row-enter var(--transition-duration-settle) var(--ease-enter) both;
-  --animate-row-exit: row-exit var(--transition-duration-settle) var(--ease-exit) forwards;
-  --animate-row-changed: row-changed 2000ms var(--ease-exit) both;
+  --animate-row-enter: row-enter var(--transition-duration-settle) var(--ease-enter) both; /* @kind other */
+  --animate-row-exit: row-exit var(--transition-duration-settle) var(--ease-exit) forwards; /* @kind other */
+  --animate-row-changed: row-changed 2000ms var(--ease-exit) both; /* @kind other */
 
   --font-sans:
     'SoulLedger Glyphs', var(--font-sans-latin), 'Noto Sans SC Variable', ui-sans-serif, system-ui,
