@@ -448,10 +448,11 @@ export function Grow({ ms, children }: { ms: number; children: ReactNode }) {
     run.start(({ finished }) => finished && setDone(true));
     return () => run.stop();
   }, [natural, done, height, opacity, ms]);
-  if (done) return <>{children}</>;
+  // One tree shape before and after: letting go drops the style, not the wrappers — returning the
+  // bare children here remounted them (and whatever they held) the moment the growth ended.
   return (
-    <Animated.View testID="grow" style={{ height, opacity, overflow: "hidden" }}>
-      <View onLayout={(e) => natural === null && setNatural(e.nativeEvent.layout.height)}>{children}</View>
+    <Animated.View testID={done ? undefined : "grow"} style={done ? undefined : { height, opacity, overflow: "hidden" }}>
+      <View onLayout={done ? undefined : (e) => natural === null && setNatural(e.nativeEvent.layout.height)}>{children}</View>
     </Animated.View>
   );
 }

@@ -126,12 +126,14 @@ describe("the ledger rows", () => {
     expect(screen.queryByTestId("grow")).toBeNull();
     fireEvent.press(screen.getByTestId("section-judgments-toggle"));
     expect(flat(screen.getByTestId("grow"))).toMatchObject({ height: 0, opacity: 0, overflow: "hidden" });
-    fireEvent(screen.getByTestId("section-judgments-body").parent!, "layout", { nativeEvent: { layout: { x: 0, y: 0, width: 390, height: 120 } } });
+    const growing = screen.getByTestId("section-judgments-body");
+    fireEvent(growing.parent!, "layout", { nativeEvent: { layout: { x: 0, y: 0, width: 390, height: 120 } } });
     await act(async () => {
       await new Promise((r) => setTimeout(r, motion.sectionGrow + 200));
     });
     expect(screen.queryByTestId("grow")).toBeNull();
-    expect(screen.getByTestId("section-judgments-body")).toBeTruthy();
+    // Letting go keeps the body — the same element, not a remount of it (and of whatever it holds).
+    expect(screen.getByTestId("section-judgments-body") === growing).toBe(true);
   });
 });
 
