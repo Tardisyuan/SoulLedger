@@ -151,11 +151,12 @@ describe("interaction states are on every variant and every size", () => {
       );
     });
     expect(missing).toEqual([]);
-    // 15 = 5 variants x 3 sizes. Was 12; `warning` joined the set when
-    // ConfirmDialog stopped hand-rolling `bg-yellow-500 text-white`. Pinned
+    // 18 = 6 variants x 3 sizes. Was 12; `warning` joined the set when
+    // ConfirmDialog stopped hand-rolling `bg-yellow-500 text-white`, and
+    // `inverse` (2026-10-01, v3 batch bar) made it 18. Pinned
     // exactly so the matrix cannot shrink silently — a dropped variant would
     // otherwise just mean fewer green cells.
-    expect(MATRIX).toHaveLength(15);
+    expect(MATRIX).toHaveLength(18);
   });
 
   it("kills hover and press on a disabled button rather than leaving them live", () => {

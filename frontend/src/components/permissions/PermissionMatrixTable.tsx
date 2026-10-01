@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import type { GrantMap } from "./matrixDiff";
 import type { CellFailure } from "./useMatrixCells";
+import { ROW_HOVER } from "@/components/ui/data-table";
 
 /**
  * 权限格 PermCell(E-11a):
@@ -383,10 +384,10 @@ function MatrixGroup({
         ))}
       </tr>
       {visible.map((perm) => (
-        <tr key={perm.id} className="group hover:bg-[oklch(var(--color-surface-2))]">
+        <tr key={perm.id} className={`group ${ROW_HOVER}`}>
           <th
             scope="row"
-            className="sticky left-0 z-10 border-b border-[oklch(var(--color-rule))] bg-[oklch(var(--color-canvas))] px-3 py-1 text-left font-normal transition-colors group-hover:bg-[oklch(var(--color-surface-2))]"
+            className="sticky left-0 z-10 border-b border-[oklch(var(--color-rule))] bg-[oklch(var(--color-canvas))] px-3 py-1 text-left font-normal transition-colors group-hover:bg-[color-mix(in_oklab,oklch(var(--color-ink))_4%,oklch(var(--color-surface-1)))]"
           >
             <div className="text-sm text-[oklch(var(--color-ink))]">{perm.name}</div>
             <div className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">{perm.codename}</div>

@@ -62,6 +62,22 @@ const button = cva(
           "hover:bg-[color-mix(in_oklab,oklch(var(--color-danger-strong))_88%,black)]",
           "active:bg-[color-mix(in_oklab,oklch(var(--color-danger-strong))_76%,black)]",
         ],
+        /**
+         * 反相条上的按钮(规范 v3 `.ds-batch button`,2026-10-01):批量条是 ink 实底,
+         * 条上的按钮是无框文字按钮、surface-1 字。悬停 / 按下 = surface-1 叠进 ink 12% / 24%。
+         *
+         * 这是唯一自己写焦点颜色的变体:全局环是 2px `--color-focus`,两档主题都等于
+         * ink,外扩 2px 正好落在 ink 底上 —— 1:1,看不见。这里把环换成 surface-1
+         * (对 ink 14.98 / 16.89:1),宽度、偏移仍是全局那条的。`!` 是必需的:全局规则带
+         * `!important` 且不在任何 layer 里,而 layer 里的 `!important` 胜过不在 layer 里的,
+         * 所以这一条赢,和选择器权重无关。只用在 ink 底上 —— 放到浅底上,环就看不见了。
+         */
+        inverse: [
+          "bg-transparent text-[oklch(var(--color-surface-1))] border-transparent",
+          "hover:bg-[color-mix(in_oklab,oklch(var(--color-surface-1))_12%,oklch(var(--color-ink)))]",
+          "active:bg-[color-mix(in_oklab,oklch(var(--color-surface-1))_24%,oklch(var(--color-ink)))]",
+          "focus-visible:outline-[oklch(var(--color-surface-1))]!",
+        ],
         /** Hard to take back but not destructive: the secondary shape in the warning colour. */
         warning: [
           "bg-transparent text-[oklch(var(--color-warning))] border-[oklch(var(--color-warning))]",
@@ -138,6 +154,6 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
 });
 
 /** Exported so the contract test can enumerate variants without restating them. */
-export const BUTTON_VARIANTS: ButtonVariant[] = ["primary", "secondary", "ghost", "danger", "warning"];
+export const BUTTON_VARIANTS: ButtonVariant[] = ["primary", "secondary", "ghost", "danger", "warning", "inverse"];
 export const BUTTON_SIZES: ButtonSize[] = ["sm", "md", "lg"];
 export { button as buttonVariants };
