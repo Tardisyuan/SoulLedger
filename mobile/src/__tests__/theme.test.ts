@@ -6,12 +6,14 @@
  * 规范 v2 §二 printed, and two of them (pos, lamp) still come from the 灵魂簿 App OKLCH
  * table; those rows are re-converted below.
  */
+import { readFileSync } from "fs";
+import { join } from "path";
+
 import {
   NEUTRAL_PLAQUE,
   ON_PLAQUE,
   S2,
   oklchToHex,
-  parchment,
   preLoginTheme,
   sealedTheme,
   semantic,
@@ -98,7 +100,25 @@ describe("v3 is the palette (user decision 2026-10-01: v3 fully replaces v2)", (
       ["gr", "#285051", "#5A8480"],
     ]);
     expect(ON_PLAQUE).toBe("#FFFFFF");
-    expect(NEUTRAL_PLAQUE).toEqual({ light: "#2B2724", dark: "#6E665E" });
+  });
+
+  it("the neutral plaque is the web's neutral --color-main, read from globals.css (dark :root, light .light)", () => {
+    const css = readFileSync(join(__dirname, "../../../frontend/app/globals.css"), "utf8");
+    const block = (selector: string) => css.slice(css.indexOf(`${selector} {`)).split(/\n {2}\}/)[0];
+    const neutral = (selector: string) => block(selector).match(/--color-civ-neutral:\s*([\d.\s]+);/)?.[1];
+    // …and the web's neutral main IS that token (no data-civ = neutral).
+    expect(block(":root")).toMatch(/--color-main: var\(--color-civ-neutral\);/);
+    expect({ light: oklchToHex(neutral(".light") ?? ""), dark: oklchToHex(neutral(":root") ?? "") }).toEqual({
+      light: NEUTRAL_PLAQUE.light.toLowerCase(),
+      dark: NEUTRAL_PLAQUE.dark.toLowerCase(),
+    });
+    // Android's notification tint (app.json) is the same neutral, light.
+    const app = require("../../app.json") as { expo: { plugins: unknown[] } };
+    const notifications = app.expo.plugins.find((p) => Array.isArray(p) && p[0] === "expo-notifications") as [string, { color: string }];
+    expect(notifications[1].color.toLowerCase()).toBe(NEUTRAL_PLAQUE.light.toLowerCase());
+    // v2's warm black / warm grey are gone.
+    expect(Object.values(NEUTRAL_PLAQUE)).not.toEqual(expect.arrayContaining(["#2B2724"]));
+    expect(Object.values(NEUTRAL_PLAQUE)).not.toEqual(expect.arrayContaining(["#6E665E"]));
   });
 
   it.each(SCHEMES)("%s: the nine status colours (规范 v2 §二) are untouched", (scheme) => {
@@ -230,56 +250,14 @@ describe("themeFor", () => {
   });
 });
 
-describe("preLoginTheme (第三类 F 组 canvas, parchment)", () => {
-  /** The canvas's "App 调色板", as printed — except light ink3, darkened for AA (was #77705f). */
-  const CANVAS = {
-    light: "bg #f4efe4 · bg2 #ebe4d3 · ink #1e1a14 · ink2 #5a5145 · ink3 #6d6655 · line #cfc6b4 · line2 #8f8672 · acc #a8281e · merit #2f6b3a · demerit #a8281e · warnBg #efe0bf",
-    dark: "bg #15130f · bg2 #1f1c16 · ink #ede5d3 · ink2 #b8ad98 · ink3 #8f8572 · line #332e26 · line2 #6a6252 · acc #d8503f · merit #7fc48a · demerit #e0685a · warnBg #2a2213",
-  };
-  const parse = (line: string) => Object.fromEntries(line.split(" · ").map((pair) => pair.split(" ")));
-
-  it.each(SCHEMES)("%s: the tokens are the canvas's, all eleven", (scheme) => {
-    expect(parchment[scheme]).toEqual(parse(CANVAS[scheme]));
-  });
-
-  it.each(SCHEMES)("%s: parchment grounds and ink; the neutral plaque; the global status colours (v2 §二), not the canvas's red", (scheme) => {
-    const p = parchment[scheme];
+describe("preLoginTheme: v3 has no pre-sign-in canvas (the parchment left 2026-10-02)", () => {
+  it.each(SCHEMES)("%s: is the neutral skin — v3's neutrals, the neutral plaque — slot for slot", (scheme) => {
+    expect(preLoginTheme(scheme)).toEqual(themeFor(null, scheme));
     const t = preLoginTheme(scheme);
-    expect(t.s0).toBe(p.bg);
-    expect([t.ink, t.inkMuted, t.inkSubtle, t.hair, t.hair2, t.s2]).toEqual([p.ink, p.ink2, p.ink3, p.line, p.line2, p.bg2]);
-    expect([t.plaque, t.onPlaque]).toEqual([NEUTRAL_PLAQUE[scheme], ON_PLAQUE]);
-    const { pos, neg, negStrong, negInk, negBg, warn, warnBg, lamp, lampBg, scrim } = t;
-    expect({ pos, neg, negStrong, negInk, negBg, warn, warnBg, lamp, lampBg, scrim }).toEqual(semantic[scheme]);
-    // …and the canvas's own red / merit / warnBg reach no slot at all.
-    const canvasOnly = new Set<string>([p.acc, p.demerit, p.merit, p.warnBg]);
-    expect((Object.keys(t) as (keyof Theme)[]).filter((k) => canvasOnly.has(t[k] as string))).toEqual([]);
-  });
-
-  it.each(SCHEMES)("%s: every text token reaches AA on both grounds", (scheme) => {
-    const t = preLoginTheme(scheme);
-    // Every slot drawn as text, on bg (s0) and bg2 (s2). negStrong is borders only.
-    // Unrounded: light ink3 sits at 4.5004 on bg2, and rounding would hide a 4.495.
-    const text: (keyof Theme)[] = ["ink", "inkMuted", "inkSubtle", "neg", "pos"];
-    const pairs: [keyof Theme, keyof Theme][] = [
-      ...text.flatMap((fg) => [[fg, "s0"], [fg, "s2"]] as [keyof Theme, keyof Theme][]),
-      ["onPlaque", "plaqueFill"],
-      ["onPlaque", "band"],
-      ["negInk", "negBg"],
-    ];
-    const low = pairs
-      .map(([fg, bg]) => ({ fg, bg, ratio: contrast(t[fg] as string, t[bg] as string) }))
-      .filter(({ ratio }) => ratio < 4.5);
-    // The canvas printed light ink3 as #77705f (4.29:1 on bg, 3.88 on bg2). The product
-    // owner had it darkened, same OKLCH hue (88°), to the nearest value clearing 4.5 on both.
-    expect(low).toEqual([]);
-  });
-
-  it("is not any civilization's ground — a signed-in soul never gets it", () => {
-    for (const scheme of SCHEMES) {
-      const grounds = KEYS.map((key) => skin(key, scheme).s0);
-      expect(grounds).not.toContain(preLoginTheme(scheme).s0);
-      expect(themeFor(null, scheme).s0).toBe(v3[scheme].canvas);
-    }
+    expect([t.s0, t.s1, t.ink, t.inkMuted, t.hair, t.plaque]).toEqual([v3[scheme].canvas, v3[scheme].surface, v3[scheme].ink, v3[scheme].muted, v3[scheme].line, NEUTRAL_PLAQUE[scheme]]);
+    // v2's parchment grounds reach no slot.
+    const parchment = new Set(["#f4efe4", "#ebe4d3", "#15130f", "#1f1c16"]);
+    expect((Object.keys(t) as (keyof Theme)[]).filter((k) => parchment.has(t[k] as string))).toEqual([]);
   });
 });
 
