@@ -1,3 +1,5 @@
+<p align="center"><img src="docs/soulledger-mark.svg" width="112" alt="SoulLedger"></p>
+
 # SoulLedger
 
 **English** | [中文](README.md)

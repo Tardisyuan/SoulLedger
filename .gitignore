@@ -68,6 +68,9 @@ frontend/next-env.d.ts
 # Design handoff: Claude Design reads this repo over GitHub, so the brief and
 # the captured screens must be committed for it to see them at all.
 !/docs/design-handoff/
+# The README's mark (built by mobile/scripts/build-app-icon.mjs): its own file, so the
+# browser-tab icon can change without changing the README.
+!/docs/soulledger-mark.svg
 # Prose under docs/ is the project's written record — milestones, roadmaps, code
 # reviews, investigations. Leaving it untracked meant conclusions recorded here
 # existed only on one machine. MILESTONE_M15.md documents that the menu/perm
