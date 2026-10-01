@@ -1358,7 +1358,25 @@
       "request_admin": "请管理员改派",
       "request_admin_sent": "已请管理员改派",
       "request_admin_limited": "已经请过，{{minutes}} 分钟后可再请",
-      "request_admin_failed": "没有发出，请重试"
+      "request_admin_failed": "没有发出，请重试",
+      "filter_all": "全部案卷",
+      "filter_mine": "我认领的",
+      "col_draft": "草拟判决",
+      "col_deferred": "延后",
+      "col_kind": "种类",
+      "draft_none": "未拟",
+      "deferred_session": "本次会话",
+      "key_restore": "全部放回",
+      "done_release": "已取消认领",
+      "done_session_defer": "已延后至本次会话末",
+      "done_restore": "已将本次会话延后的 {{n}} 件全部放回",
+      "restore_title": "全部放回？",
+      "restore_body": "本次会话延后的 {{n}} 件回到各自的组里，按原来的次序排。",
+      "kinds": {
+        "ORIGINAL": "初审",
+        "AMENDMENT": "加减项",
+        "REOPEN": "重开"
+      }
     },
     "admission": {
       "title": "证据 · 采信",

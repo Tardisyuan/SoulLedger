@@ -1358,7 +1358,25 @@
       "request_admin": "Ask an administrator to reassign",
       "request_admin_sent": "An administrator has been asked",
       "request_admin_limited": "Already asked. You can ask again in {{minutes}} min",
-      "request_admin_failed": "Not sent. Try again"
+      "request_admin_failed": "Not sent. Try again",
+      "filter_all": "All cases",
+      "filter_mine": "Claimed by me",
+      "col_draft": "Draft verdict",
+      "col_deferred": "Deferred",
+      "col_kind": "Kind",
+      "draft_none": "Not drafted",
+      "deferred_session": "This sitting",
+      "key_restore": "Put all back",
+      "done_release": "Claim released",
+      "done_session_defer": "Deferred to the end of this sitting",
+      "done_restore": "Put {{n}} deferred cases back",
+      "restore_title": "Put all back?",
+      "restore_body": "The {{n}} cases deferred this sitting return to their groups, in their original order.",
+      "kinds": {
+        "ORIGINAL": "Original",
+        "AMENDMENT": "Amendment",
+        "REOPEN": "Reopened"
+      }
     },
     "admission": {
       "title": "Evidence · admission",
