@@ -1,6 +1,7 @@
 /**
  * The seal. `OutlineSeal` (below) is v3's and is the one every screen draws; this first
- * one, v2「朱印」(规范 v2 定稿 §印, 补足 A6), is left for the cold start alone.
+ * one, v2「朱印」(规范 v2 定稿 §印, 补足 A6), has no caller in the app any more: the cold
+ * start, its last one, writes the brand mark instead (src/coldStart.tsx, 2026-10-03).
  *
  * A seal is four layers, bottom up: the body in 匾色 → the ring (between the outer
  * shape and the thick frame) showing the civilization's edge scan → the frame lines in
@@ -14,9 +15,8 @@
  * 「第五殿之印」 (`seal.aria`), never the glyph.
  */
 import { StyleSheet, Text, View } from "react-native";
-import Animated from "react-native-reanimated";
 import Svg, { ClipPath, Defs, Image as SvgImage, Path, SvgXml } from "react-native-svg";
-import { useId, type ComponentProps } from "react";
+import { useId } from "react";
 
 import { RING_D, SVG } from "./art";
 import { family, quoteFamily } from "./fonts";
@@ -62,7 +62,6 @@ export function Seal({
   glyphs,
   label,
   testID,
-  ringStyle,
 }: {
   civ: CivKey;
   size: number;
@@ -72,8 +71,6 @@ export function Seal({
   /** 「第五殿之印」, from `seal.aria`. Absent: the seal is decoration beside words that say the same. */
   label?: string;
   testID?: string;
-  /** The edge scan's layer — an animated style: the ink soaking into the paper as a seal lands (印泥晕开). */
-  ringStyle?: ComponentProps<typeof Animated.View>["style"];
 }) {
   // useId gives «:r1:»; a colon does not survive `url(#…)`.
   const clip = `seal${useId().replace(/[^A-Za-z0-9]/g, "")}`;
@@ -99,16 +96,14 @@ export function Seal({
     <View testID={testID} style={box} {...a11y}>
       <SvgXml xml={SVG[`seal-${civ}-body`]} color={theme.plaque} width={size} height={size} style={StyleSheet.absoluteFill} />
       {small ? null : (
-        <Animated.View testID={testID && `${testID}-ring-layer`} style={[StyleSheet.absoluteFill, ringStyle]}>
-          <Svg width={size} height={size} viewBox="0 0 64 64">
-            <Defs>
-              <ClipPath id={clip}>
-                <Path d={RING_D[civ]} clipRule="evenodd" />
-              </ClipPath>
-            </Defs>
-            <SvgImage testID={testID && `${testID}-ring`} href={SCAN[civ]} width={64} height={64} clipPath={`url(#${clip})`} />
-          </Svg>
-        </Animated.View>
+        <Svg width={size} height={size} viewBox="0 0 64 64" style={StyleSheet.absoluteFill}>
+          <Defs>
+            <ClipPath id={clip}>
+              <Path d={RING_D[civ]} clipRule="evenodd" />
+            </ClipPath>
+          </Defs>
+          <SvgImage testID={testID && `${testID}-ring`} href={SCAN[civ]} width={64} height={64} clipPath={`url(#${clip})`} />
+        </Svg>
       )}
       <SvgXml
         xml={SVG[small ? (`seal-${civ}-line-small` as const) : (`seal-${civ}-line` as const)]}
