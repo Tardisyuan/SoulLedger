@@ -1280,7 +1280,9 @@
       "stamp": "Khetem Wedja",
       "back_to_check": "Iyi Er Sia",
       "recorded": "Wedja Em Sesh Seth.",
-      "done": "Kheper Seth"
+      "done": "Kheper Seth",
+      "draft_unsaved": "Medu Seth Nen Sau",
+      "draft_conflict": "Sesh Tepy Nen Sesen"
     },
     "claim": {
       "groups": {

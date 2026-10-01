@@ -1280,7 +1280,9 @@
       "stamp": "Seal and conclude",
       "back_to_check": "Back to review",
       "recorded": "The ruling is on the record.",
-      "done": "Done"
+      "done": "Done",
+      "draft_unsaved": "Unsaved changes",
+      "draft_conflict": "Draft conflict to resolve"
     },
     "claim": {
       "groups": {

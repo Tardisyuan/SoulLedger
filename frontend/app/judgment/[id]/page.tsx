@@ -138,6 +138,14 @@ type VerdictMember = "PASSED" | "FAILED" | "PURGATORY" | "RETRY";
  *  suspends it, the one that sends it back. */
 const VERDICTS: readonly VerdictMember[] = ["PASSED", "FAILED", "PURGATORY", "RETRY"];
 
+/**
+ * 没选过、也没有存过草稿的案子,中轴先落在「待定」上(v3 原型 `useState<Verdict>("待定")`,
+ * 2026-10-01 用户拍板照 v3)。它是 `Verdict.PURGATORY`,`conclude/` 的四个合法值之一,每个文明的
+ * 发落都有它的去处(`apps/disposition/services.py`:待定 = 结论未定,留在候审处)。
+ * 预选不算「动过」:不触发自动保存,存过的草稿裁决仍然优先。
+ */
+const DEFAULT_VERDICT: VerdictMember = "PURGATORY";
+
 /*
  * 规范 v2 补足 B8:判决不靠颜色区分 —— 四个裁决键同一个幽灵样式(`VERDICT_KEY_CLASS`,与审判队列共用),
  * 字形 + 文字。v3 把「选中」画成墨底反白(原型 `verdict-selector button.selected`):中性,不是第六处
@@ -169,6 +177,8 @@ export default function JudgmentDetailPage({ params }: PageProps) {
   const [view, setView] = useState<"focus" | "case">("focus");
   const [confirming, setConfirming] = useState(false);
   const [material, setMaterial] = useState<DeskMaterial>("evidence");
+  /** 769–1279 草稿栏收在「草稿与批注」开关后(v3 平板);收起时仍挂着,判词与自动保存都不丢。 */
+  const [draftOpen, setDraftOpen] = useState(false);
   const previousLink = useRef<HTMLAnchorElement>(null);
   const nextLink = useRef<HTMLAnchorElement>(null);
   const { user } = useTenant();
@@ -225,6 +235,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
       // 发落被拒:画在 戊 那一节(placementRefusal),并重取占用 —— realm_full 说明手上的数字旧了。
       if (code && (PLACEMENT_REFUSALS as readonly string[]).includes(code)) {
         setConfirming(false); // 拒绝写在 戊 那一节里,确认层盖着它就看不见
+        setDraftOpen(true); // 平板上 戊 收着的话,也一并展开
         queryClient.invalidateQueries({ queryKey: [...judgmentKeys.all, "destinations", id] });
         return;
       }
@@ -259,8 +270,8 @@ export default function JudgmentDetailPage({ params }: PageProps) {
       if (!notesTouched.current) setNotes(judgment.notes || "");
       if (judgment.verdict) {
         setSelectedVerdict(judgment.verdict);
-      } else if (!verdictTouched.current && judgment.draft_verdict) {
-        setSelectedVerdict(judgment.draft_verdict);
+      } else if (!verdictTouched.current) {
+        setSelectedVerdict(judgment.draft_verdict || DEFAULT_VERDICT);
       }
       const savedPlacement = placementFromDraft(judgment);
       if (!placementTouched.current && savedPlacement) setPlacement(savedPlacement);
@@ -312,8 +323,11 @@ export default function JudgmentDetailPage({ params }: PageProps) {
       showToast(t("judgment.detail.select_verdict"), "error");
       return;
     }
-    // 改动不完整就不进层:先在 戊 改好,再走盖印。
-    if (amendmentChanges() === null) return;
+    // 改动不完整就不进层:先在 戊 改好,再走盖印。平板上草稿栏收着,就把它打开。
+    if (amendmentChanges() === null) {
+      setDraftOpen(true);
+      return;
+    }
     concludeMutation.reset(); // 每次进层从头来:上一次的结果(含被拒)不属于这一次
     setConfirming(true);
   }
@@ -616,18 +630,47 @@ export default function JudgmentDetailPage({ params }: PageProps) {
         ) : undefined
       }
     >
-      {/* 案卷导航(原型 `mobile-case-nav`):两栏以下,草稿不在判的旁边;单栏时灵魂也不在。锚点,不是开关 —— 内容一直在文档流里。 */}
+      {/* 案卷导航(原型 `mobile-case-nav` / `tablet-draft-trigger`)。≤767 单栏:两个锚点,内容一直在文档流里。
+          768–1279 两栏:「草稿与批注」是开关(v3 平板,2026-10-01 拍板),收起时草稿栏只是 hidden ——
+          判词、发落、自动保存都还在。收着的时候有没存上的改动或 409 冲突,开关上挂 ◐ / !,不会悄悄漏掉。 */}
       {!fullCase && (
         <nav
           aria-label={t("judgment.desk.case_nav")}
-          className="mb-4 flex h-10 items-stretch gap-1 border-b border-[oklch(var(--color-line))] text-sm xl:hidden"
+          className={`mb-4 flex h-10 items-stretch gap-1 border-b border-[oklch(var(--color-line))] text-sm xl:hidden ${isFinal ? "md:hidden" : ""}`}
         >
           <a href="#desk-soul" className="inline-flex items-center px-3 text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))] md:hidden">
             {t("judgment.queue.identity")}
           </a>
-          <a href="#desk-draft" className="inline-flex items-center px-3 text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))]">
+          <a href="#desk-draft" className="inline-flex items-center px-3 text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))] md:hidden">
             {t("judgment.desk.nav_draft")}
           </a>
+          {!isFinal && (
+            <button
+              type="button"
+              data-testid="draft-toggle"
+              aria-expanded={draftOpen}
+              aria-controls="desk-draft"
+              onClick={() => setDraftOpen((open) => !open)}
+              className={`hidden items-center gap-2 px-3 md:inline-flex ${
+                draftOpen
+                  ? "font-semibold text-[oklch(var(--color-ink))] shadow-[inset_0_-2px_0_oklch(var(--color-ink))]"
+                  : "text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))]"
+              }`}
+            >
+              {t("judgment.desk.nav_draft")}
+              {draft.conflict ? (
+                <span data-testid="draft-toggle-mark" title={t("judgment.desk.draft_conflict")}>
+                  <span aria-hidden="true">!</span>
+                  <span className="sr-only">{t("judgment.desk.draft_conflict")}</span>
+                </span>
+              ) : draft.unsaved ? (
+                <span data-testid="draft-toggle-mark" title={t("judgment.desk.draft_unsaved")}>
+                  <span aria-hidden="true">◐</span>
+                  <span className="sr-only">{t("judgment.desk.draft_unsaved")}</span>
+                </span>
+              ) : null}
+            </button>
+          )}
         </nav>
       )}
       <div data-testid="judgment-desk" data-view={view} className={deskGrid}>
@@ -781,17 +824,12 @@ export default function JudgmentDetailPage({ params }: PageProps) {
                 className={`mt-6 ${fullCase ? "text-xl" : "text-display-lg"} text-[oklch(var(--color-ink))]`}
               >
                 <span key={selectedVerdict} className="inline-block transition-opacity duration-fast ease-enter starting:opacity-0">
-                  {selectedVerdict ? (
+                  {/* 总有一个裁决:没选过时是预选的「待定」(DEFAULT_VERDICT)。空串只在详情到达前的那一帧。 */}
+                  {selectedVerdict && (
                     <>
                       <span aria-hidden="true" className="mr-3 font-normal">{verdictGlyph(selectedVerdict as VerdictMember)}</span>
                       <DomainEnum namespace="judgment.verdicts" value={selectedVerdict} />
                     </>
-                  ) : (
-                    /* 还没选:不是「缺值」(MissingValue 说的是没记录),是「待你选」—— 原型默认落在待定上,
-                       这里不替判官选,写一句提示,字号退到 text-lg。 */
-                    <span className="text-lg font-normal text-[oklch(var(--color-ink-subtle))]">
-                      {t("judgment.detail.select_verdict")}
-                    </span>
                   )}
                 </span>
               </p>
@@ -872,7 +910,14 @@ export default function JudgmentDetailPage({ params }: PageProps) {
         <section
           id="desk-draft"
           aria-label={t("judgment.desk.nav_draft")}
-          className={`min-w-0 scroll-mt-16 ${fullCase ? "hidden" : "order-3 md:order-4 md:col-span-2 xl:order-3 xl:col-span-1"}`}
+          className={`min-w-0 scroll-mt-16 ${
+            fullCase
+              ? "hidden"
+              : `order-3 md:col-span-2 xl:order-3 xl:col-span-1 ${
+                  /* 已结案没有可编辑的东西,判词照常摊开;未结案在 768–1279 收着,打开后排在资料舱上面。 */
+                  isFinal ? "md:order-4" : draftOpen ? "md:order-3" : "md:order-4 md:max-xl:hidden"
+                }`
+          }`}
         >
           <JudgmentSectionHead mark="丁" title={t("souls.detail.ledger.verdict_words")} />
           {isFinal ? (
@@ -913,7 +958,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
                     const theirs = draft.acceptTheirs();
                     if (!theirs) return;
                     setNotes(theirs.notes);
-                    setSelectedVerdict(theirs.draft_verdict ?? "");
+                    setSelectedVerdict(theirs.draft_verdict ?? DEFAULT_VERDICT);
                     setPlacement(placementFromDraft(theirs) ?? EMPTY_PLACEMENT);
                   }}
                   onKeepMine={draft.keepMine}
@@ -970,7 +1015,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
         </section>
 
         {/* ── 资料舱 · 供词 / 功过记录 / 律条引用 ──────────────────────────── */}
-        <div className={`min-w-0 ${fullCase ? "order-1" : "order-2 md:order-3 md:col-span-2 xl:order-4 xl:col-span-3"}`}>
+        <div className={`min-w-0 ${fullCase ? "order-1" : `order-2 ${draftOpen && !isFinal ? "md:order-4" : "md:order-3"} md:col-span-2 xl:order-4 xl:col-span-3`}`}>
           <MaterialDock
             active={material}
             onActive={setMaterial}
