@@ -337,6 +337,14 @@
         "not_executed": "Not executed",
         "non_eternal": "Not eternal",
         "new_identity": "New identity"
+      },
+      "profile": {
+        "eyebrow": "Soul",
+        "birth_name": "Birth name",
+        "description": "Life summary",
+        "ledger_tabs": "Records",
+        "tab_judgments": "All judgments",
+        "tab_records": "All merit and demerit records"
       }
     },
     "date_problem_filter": "Problems only",

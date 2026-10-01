@@ -1,17 +1,17 @@
 /**
  * 灵魂详情「账簿 × 卷宗」版式里会算的那两块:户头进度的「当前」从哪来,
- * 以及「丙 · 审判」的判词取哪一份、只有它是衬线。
+ * 以及「全部审判」的判词取哪一份、只有它是衬线。
  *
  * 真 I18nProvider,不用回显键的替身 —— 理由见 SoulLedgerBook.test.tsx 第 3 条。
  */
 import { render, screen, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
-import type { Disposition, Judgment, Reincarnation, Soul } from "@soulledger/core/api";
+import type { Judgment, Reincarnation, Soul } from "@soulledger/core/api";
 import { I18nProvider } from "@/src/contexts/I18nContext";
 import { stepStatuses } from "@/src/components/souls/detail/soulProgress";
 import { SoulLedgerProgress } from "@/src/components/souls/detail/SoulLedgerProgress";
-import { SoulLedgerSections } from "@/src/components/souls/detail/SoulLedgerSections";
+import { SoulJudgmentHistory } from "@/src/components/souls/detail/SoulLedgerSections";
 
 // 行程条自己取两份数据:全部界域与这个灵魂的 path。
 jest.mock("@soulledger/core/api", () => ({
@@ -261,7 +261,7 @@ describe("SoulLedgerProgress", () => {
   });
 });
 
-describe("SoulLedgerSections — 丙 · 审判", () => {
+describe("SoulJudgmentHistory — 全部审判", () => {
   const judgments = [
     judgment({ id: "old", created_at: "2026-06-01T00:00:00Z", concluded_at: "2026-06-02T00:00:00Z", is_final: true, verdict: "FAILED", notes: "旧判词", court: "第一殿", judge_name: "秦广王" }),
     judgment({ id: "new", created_at: "2026-06-09T00:00:00Z", concluded_at: "2026-06-15T00:00:00Z", is_final: true, verdict: "PURGATORY", notes: "功过相抵，暂入救濟門。", court: "第五殿", judge_name: "阎罗王" }),
@@ -270,7 +270,7 @@ describe("SoulLedgerSections — 丙 · 审判", () => {
 
   it("quotes the latest concluded judgment's notes, signed by its court and judge, in the page's only serif", () => {
     const { container } = wrap(
-      <SoulLedgerSections judgments={judgments} dispositions={[] as Disposition[]} reincarnations={[]} events={[]} />
+      <SoulJudgmentHistory judgments={judgments} />
     );
     const quote = screen.getByTestId("soul-verdict-quote");
     expect(quote).toHaveTextContent("功过相抵，暂入救濟門。");
@@ -285,7 +285,7 @@ describe("SoulLedgerSections — 丙 · 审判", () => {
   });
 
   it("draws each verdict with its glyph and says 待决 for an open case", () => {
-    wrap(<SoulLedgerSections judgments={judgments} dispositions={[]} reincarnations={[]} events={[]} />);
+    wrap(<SoulJudgmentHistory judgments={judgments} />);
     const rows = screen.getAllByTestId("ledger-judgment-row");
     expect(rows).toHaveLength(3);
     expect(rows[0]).toHaveTextContent("待决");
