@@ -413,7 +413,7 @@ if [ "$RUN_FRONTEND" = 1 ]; then
     tail -4 "$JEST_LOG"
     echo "    jest took $(( $(date +%s) - T_JEST ))s"
     if [ "$JEST_STATUS" -ne 0 ]; then
-        grep -E '^(FAIL |  ● )' "$JEST_LOG" | head -20
+        grep -E '^(FAIL |  ● )' "$JEST_LOG" | awk '!seen[$0]++' | head -20
         echo "    full jest log: $JEST_LOG"
         fail "jest failed"
     fi
@@ -429,8 +429,18 @@ if [ "$RUN_MOBILE" = 1 ]; then
     echo "  → mobile eslint"
     npm run --workspace mobile lint --silent || fail "mobile lint failed"
     echo "  → mobile jest"
-    npm run --workspace mobile test --silent -- --silent 2>&1 | tail -4
-    [ "${PIPESTATUS[0]}" -eq 0 ] || fail "mobile jest failed. If it is theme.test.ts: frontend/app/globals.css changed an ink-layer token that mobile/src/theme.ts copies — copy the new triple, do not delete the check."
+    # Kept to a file and named on failure, as the web jest above: `| tail -4` printed only the
+    # totals, so a red run (2026-10-01, load 87, green on retry) left no trace of which test.
+    MOBILE_LOG=$(mktemp -t prepush-mobile-jest)
+    npm run --workspace mobile test --silent -- --silent >"$MOBILE_LOG" 2>&1
+    MOBILE_STATUS=$?
+    tail -4 "$MOBILE_LOG"
+    if [ "$MOBILE_STATUS" -ne 0 ]; then
+        grep -E '^(FAIL |  ● )' "$MOBILE_LOG" | awk '!seen[$0]++' | head -20
+        echo "    full mobile jest log: $MOBILE_LOG"
+        fail "mobile jest failed. If it is theme.test.ts: frontend/app/globals.css changed an ink-layer token that mobile/src/theme.ts copies — copy the new triple, do not delete the check."
+    fi
+    rm -f "$MOBILE_LOG"
 fi
 
 if [ "$RUN_BACKEND" = 1 ]; then
