@@ -2689,7 +2689,12 @@
       "code_copy_failed": "Nen Senn",
       "residing": "Hemes Em {{current}} · Taui Tepy {{home}}",
       "record_count_short": "Sesh {{count}}",
-      "residing_note": "Er Khet Hemes: Iyi Er Nut-Ek. Sesh Em Medu Nut-Ek."
+      "residing_note": "Er Khet Hemes: Iyi Er Nut-Ek. Sesh Em Medu Nut-Ek.",
+      "here": "Dy Emu",
+      "stage": "Wat {{at}} / {{total}}",
+      "balance": "Sepy Ankh Pen",
+      "ledger": "Sesh Ankh Pen",
+      "ledger_hint": "Wen Er Maa"
     },
     "past_lives": {
       "title": "Ankh Tepyu",

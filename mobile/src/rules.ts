@@ -230,7 +230,12 @@ export function lifePathIndex(state: string | null | undefined, planState: strin
 /** The balance as B11 prints it: signed, the minus a real minus (U+2212), zero bare. */
 export function signedBalance(merit: number, demerit: number): string {
   const b = merit - demerit;
-  return b > 0 ? `+${b}` : b < 0 ? `\u2212${-b}` : "0";
+  return b > 0 ? `+${grouped(b)}` : b < 0 ? `\u2212${grouped(-b)}` : "0";
+}
+
+/** "1,842": a record's whole number grouped by thousands, as v3 sets the life tab's numbers. */
+export function grouped(n: number): string {
+  return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }
 
 /**

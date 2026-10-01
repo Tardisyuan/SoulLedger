@@ -6,8 +6,9 @@
  *   a full-screen page at ≥ 1.7× text (the sheet head would eat too many lines).
  *   Answers are an "answer sheet", not bubbles: full width, interface face, a
  *   答 seal and a footnote. Only what the soul wrote is in the serif.
- *   The only motion is opacity (the fade in, the breathing seal), and
- *   reduce-motion stills it.
+ *   v3 (round 7): the sheet rises 280ms over a fading scrim and can be pulled
+ *   down by its handle; otherwise the motion is opacity (the breathing seal).
+ *   Reduce motion stills all of it.
  *
  * Streaming (canvas「问一问 · 流式输出」): three dots while waiting (「还在查……」
  * after 20 s), then the text as it arrives — each fragment fades in over 120 ms,
@@ -18,16 +19,17 @@
  */
 import { assistBlocks, assistShownText } from "@soulledger/core/api/assist-stream";
 import { assistAnswerLocale, isEmptyAnswer, type AssistConversation, type AssistMessage, type AssistScreen } from "@soulledger/core/api/soul-assist";
-import { useEffect, useRef, useState, type ReactNode } from "react";
-import { KeyboardAvoidingView, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Animated, Easing, KeyboardAvoidingView, Modal, PanResponder, Pressable, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AskGlyph, useAssist, type Assist } from "./assist";
+import { SHEET_CLOSE_DRAG_PT } from "./feedback";
 import { Icon } from "./emblems";
 import { quoteFamily } from "./fonts";
 import { useI18n } from "./i18n";
 import { useCurrentHall } from "./screens/letters";
-import { Button, Skeleton, Txt, useLayout, useReducedMotion, useTheme } from "./ui";
+import { Button, Skeleton, Txt, useLayout, useReducedMotion, useReducedMotionDurations, useTheme } from "./ui";
 
 /** Canvas 1a 一: the page's header stays visible above the sheet. */
 const PAGE_PEEK = 56;
@@ -80,17 +82,55 @@ const clock = (iso: string) => {
 };
 const sameDay = (a: Date, b: Date) => a.toDateString() === b.toDateString();
 
+
 export function AssistPanel() {
   const t = useTheme();
   const { t: tr } = useI18n();
   const assist = useAssist();
   const insets = useSafeAreaInsets();
-  const reduced = useReducedMotion();
+  const { drawerIn, drawerOut } = useReducedMotionDurations();
+  const { height: screenHeight } = useWindowDimensions();
   const { stack: full } = useLayout();
+  const visible = !!assist?.openFrom;
+  // v3: the sheet rises (translateY 100% → 0, 280ms) over a fading scrim; RN Animated only.
+  // `rise` 0 → 1 is the opening; `drag` is the soul's pull on the handle. Reduce motion: in place.
+  const [rise] = useState(() => new Animated.Value(0));
+  const [drag] = useState(() => new Animated.Value(0));
+  useEffect(() => {
+    if (!visible) return;
+    drag.setValue(0);
+    rise.setValue(drawerIn ? 0 : 1);
+    const run = Animated.timing(rise, { toValue: 1, duration: drawerIn, easing: Easing.bezier(0.2, 0.8, 0.2, 1), useNativeDriver: true });
+    run.start();
+    return () => run.stop();
+  }, [visible, drawerIn, rise, drag]);
+  const close = assist?.close;
+  // The handle follows a downward pull only; let go past SHEET_CLOSE_DRAG_PT and the sheet leaves
+  // over `drawerOut` (200ms, the exit curve), else it settles back. Vertical travel and a
+  // release threshold only — no velocity snapping (that would need a gesture library).
+  const pan = useMemo(
+    () =>
+      PanResponder.create({
+        onMoveShouldSetPanResponder: (_, g) => g.dy > 4 && Math.abs(g.dy) > Math.abs(g.dx),
+        onPanResponderMove: (_, g) => drag.setValue(Math.max(0, g.dy)),
+        onPanResponderRelease: (_, g) => {
+          const leave = g.dy > SHEET_CLOSE_DRAG_PT;
+          Animated.timing(drag, {
+            toValue: leave ? screenHeight : 0,
+            duration: drawerOut,
+            easing: leave ? Easing.bezier(0.4, 0, 1, 1) : Easing.bezier(0.2, 0.8, 0.2, 1),
+            useNativeDriver: true,
+          }).start(() => leave && close?.());
+        },
+      }),
+    [drag, drawerOut, screenHeight, close]
+  );
   if (!assist) return null;
+  const translateY = Animated.add(rise.interpolate({ inputRange: [0, 1], outputRange: [screenHeight, 0] }), drag);
   return (
-    <Modal visible={!!assist.openFrom} transparent animationType={reduced ? "none" : "fade"} onRequestClose={assist.close}>
-      <View style={[styles.scrim, { backgroundColor: t.scrim }]}>
+    <Modal visible={visible} transparent animationType="none" onRequestClose={assist.close}>
+      <View style={styles.fill}>
+        <Animated.View testID="assist-scrim-shade" pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: t.scrim, opacity: rise }]} />
         {full ? null : (
           <Pressable
             testID="assist-scrim"
@@ -99,22 +139,30 @@ export function AssistPanel() {
             accessibilityLabel={tr("soul_app.assist.close")}
           />
         )}
-        <KeyboardAvoidingView
-          testID="assist-panel"
-          accessibilityViewIsModal
-          // Both platforms, as in screens/conversation.tsx: Android draws edge-to-edge (SDK 57), so the
-          // window no longer shrinks for the keyboard and the input sat under it (seen on the emulator).
-          // No negative keyboardVerticalOffset here (unlike conversation.tsx): inside a Modal it
-          // over-corrects — the input stayed half under the keyboard.
-          behavior="padding"
-          style={[styles.sheet, { backgroundColor: t.s0, borderTopColor: t.hair2, paddingTop: full ? insets.top : 0 }]}
-        >
-          {/* The gesture-bar inset lives on an inner view: behavior="padding" writes the avoiding
-              view's own paddingBottom and would silently drop it (the input sank into the bar). */}
-          <View style={[styles.fill, { paddingBottom: insets.bottom }]}>
-            <Sheet assist={assist} />
-          </View>
-        </KeyboardAvoidingView>
+        <Animated.View testID="assist-sheet" style={[styles.fill, { transform: [{ translateY }] }]}>
+          <KeyboardAvoidingView
+            testID="assist-panel"
+            accessibilityViewIsModal
+            // Both platforms, as in screens/conversation.tsx: Android draws edge-to-edge (SDK 57), so the
+            // window no longer shrinks for the keyboard and the input sat under it (seen on the emulator).
+            // No negative keyboardVerticalOffset here (unlike conversation.tsx): inside a Modal it
+            // over-corrects — the input stayed half under the keyboard.
+            behavior="padding"
+            style={[styles.sheet, { backgroundColor: t.s0, borderTopColor: t.hair2, paddingTop: full ? insets.top : 0 }]}
+          >
+            {full ? null : (
+              // A2's one pill: the drawer handle. Decoration for touch; the close button stays the way out.
+              <View testID="assist-handle" {...pan.panHandlers} style={styles.handleZone} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+                <View style={[styles.handle, { backgroundColor: t.hair2 }]} />
+              </View>
+            )}
+            {/* The gesture-bar inset lives on an inner view: behavior="padding" writes the avoiding
+                view's own paddingBottom and would silently drop it (the input sank into the bar). */}
+            <View style={[styles.fill, { paddingBottom: insets.bottom }]}>
+              <Sheet assist={assist} />
+            </View>
+          </KeyboardAvoidingView>
+        </Animated.View>
       </View>
     </Modal>
   );
@@ -708,8 +756,10 @@ function Confirm({ children }: { children: ReactNode }) {
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
-  scrim: { flex: 1 },
   sheet: { flex: 1, borderTopWidth: 1 },
+  /** The pull zone around the 36 × 4 handle (a drag, not a tap target: closing has its button). */
+  handleZone: { height: 24, alignItems: "center", justifyContent: "center" },
+  handle: { width: 36, height: 4, borderRadius: 999 },
   head: { minHeight: 56, flexDirection: "row", alignItems: "center", paddingHorizontal: 4, borderBottomWidth: 1 },
   seal: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
   headText: { flex: 1, paddingHorizontal: 4 },
