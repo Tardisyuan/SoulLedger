@@ -1,4 +1,5 @@
 import { test as base, type Locator, type Page, type Request } from "@playwright/test";
+import type { AssistStreamEvent } from "@soulledger/core/api/assist-stream";
 
 /**
  * Shared E2E setup: authenticated browser state + a route-level mock of the
@@ -1101,7 +1102,12 @@ export interface RecordedCall {
 export interface MockReply {
   status?: number;
   body?: unknown;
+  /** Send `body` (a string) as-is under this type instead of as JSON — e.g. `text/event-stream`. */
+  contentType?: string;
 }
+
+/** One SSE frame as backend/apps/soul_assist/sse.py `frame` writes it. */
+const sse = (data: AssistStreamEvent) => `event: ${data.event}\ndata: ${JSON.stringify(data)}\n\n`;
 
 export type MockHandler = (call: RecordedCall) => MockReply | Promise<MockReply>;
 
@@ -1152,9 +1158,20 @@ const ASSIST_ADMIN_CONFIG = {
   model: "deepseek-flash", effort: "", fallbacks: false, soul_per_hour: 30, officer_per_hour: 30, monthly_cap: 300,
   eval_spend_cap: 5, prices: { "deepseek-flash": { input: 0.28, output: 0.42, source: "litellm", as_of: "2026-09-28" } },
   api_key: { set: true, last4: "8f3c", set_at: "2026-09-02T00:00:00Z", source: "page" },
+  // Keys per platform (§13.6, admin_views.py `_config_body`): the page reads `api_keys[slot]` for any
+  // platform other than the current one, so a config without them throws on render.
+  api_key_slot: "deepseek",
+  api_keys: { deepseek: { set: true, last4: "8f3c", set_at: "2026-09-02T00:00:00Z", source: "page" } },
   eval_soul_account: "11111111-1111-1111-1111-111111111111", eval_officer: 9,
   month_rolls_over_at: "每月 1 日 08:00(北京时间)", overridden: [],
   read_only: { max_concurrent: 8, timeout_seconds: 22, history_turns: 20, retention_days: 30 },
+};
+/** admin_views.py `_backup_body` with no backup saved. */
+const ASSIST_ADMIN_NO_BACKUP = {
+  configured: false, platform: null, provider: null, base_url: null, model: null, effort: null, fallbacks: null, prices: {},
+  api_key: { set: false, last4: null, set_at: null, source: "page" }, api_key_slot: null,
+  breaker: { open: false, open_until: null, consecutive_failures: 0, threshold: 3, open_seconds: 60 },
+  primary_first_token_seconds: 12,
 };
 const ASSIST_ADMIN_EMBEDDING = {
   embedding_url: "http://192.168.2.2:11434", embedding_model: "qwen3-embedding:4b-q4_K_M", embedding_dims: null,
@@ -1739,16 +1756,25 @@ export class ApiMock {
 
     // ── 问一问 (backend/apps/soul_assist/views.py Officer*) ──
     this.on("GET", "/assist/conversations/", []);
-    this.on("POST", "/assist/", (call) => ({
-      body: {
-        conversation_id: "11111111-1111-1111-1111-111111111111",
-        answer: { id: 2, role: "assistant", content: `答：${(call.body as { question?: string })?.question ?? ""}`, created_at: "2026-09-29T02:12:00Z" },
-      },
-    }));
+    // The panel asks with `stream: true` (packages/core assist-stream.ts), so it reads SSE frames, not JSON.
+    this.on("POST", "/assist/", (call) => {
+      const conversation_id = "11111111-1111-1111-1111-111111111111";
+      const content = `答：${(call.body as { question?: string })?.question ?? ""}`;
+      const answer = { id: 2, role: "assistant" as const, content, interruption: "" as const, created_at: "2026-09-29T02:12:00Z" };
+      if (!(call.body as { stream?: boolean })?.stream) return { body: { conversation_id, answer } };
+      return {
+        contentType: "text/event-stream; charset=utf-8",
+        body:
+          sse({ event: "meta", conversation_id }) +
+          sse({ event: "delta", text: content }) +
+          sse({ event: "done", conversation_id, answer, usage: { input_tokens: 40, output_tokens: 8, cache_read_tokens: 0 } }),
+      };
+    });
     this.on("DELETE", "/assist/conversations/:id/", () => ({ status: 204, body: null }));
 
     // ── 助手管理 (backend/apps/soul_assist/admin_views.py) — the config page's reads, and the 向量模型 block ──
     this.on("GET", "/assist-admin/config/", ASSIST_ADMIN_CONFIG);
+    this.on("GET", "/assist-admin/config/backup/", ASSIST_ADMIN_NO_BACKUP);
     this.on("POST", "/assist-admin/config/models/", {
       status: "ok", error_kind: null,
       models: [{ name: "deepseek-flash", context: 131072 }, { name: "deepseek-v4-pro-with-a-deliberately-long-model-identifier", context: 131072 }],
@@ -1858,8 +1884,8 @@ export async function mockApi(page: Page, mock: ApiMock = new ApiMock().register
     const reply = await mock.resolve(call);
     await route.fulfill({
       status: reply.status ?? 200,
-      headers: { ...headers, "Content-Type": "application/json" },
-      body: JSON.stringify(reply.body ?? {}),
+      headers: { ...headers, "Content-Type": reply.contentType ?? "application/json" },
+      body: reply.contentType ? String(reply.body ?? "") : JSON.stringify(reply.body ?? {}),
     });
   });
 
