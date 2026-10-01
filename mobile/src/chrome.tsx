@@ -22,7 +22,7 @@ import { useI18n } from "./i18n";
 import { useCurrentHall } from "./screens/letters";
 import { PlaqueBand, Seal } from "./seal";
 import { SessionContext } from "./session";
-import { v3Theme, type Theme } from "./theme";
+import type { Theme } from "./theme";
 import { ThemeContext, Txt, shade, useLayout, useTheme } from "./ui";
 
 /**
@@ -33,7 +33,7 @@ import { ThemeContext, Txt, shade, useLayout, useTheme } from "./ui";
  */
 export function onPlaqueTheme(t: Theme): Theme {
   const on = t.onPlaque;
-  return { ...t, s0: t.plaque, s1: t.plaque, s2: shade(t.plaque, 0.12), ink: on, inkMuted: on, inkSubtle: on, hair: `${on}33`, hair2: `${on}59` };
+  return { ...t, s0: t.band, s1: t.band, s2: shade(t.band, 0.12), ink: on, inkMuted: on, inkSubtle: on, hair: `${on}33`, hair2: `${on}59` };
 }
 
 /**
@@ -45,7 +45,7 @@ export function PlaqueFrame({ children, testID = "plaque" }: { children: ReactNo
   const t = useTheme();
   const insets = useSafeAreaInsets();
   return (
-    <View testID={testID} style={{ backgroundColor: t.plaque, paddingTop: insets.top }}>
+    <View testID={testID} style={{ backgroundColor: t.band, paddingTop: insets.top }}>
       {t.scheme === "dark" ? <View style={[styles.highlight, { backgroundColor: `${t.onPlaque}33` }]} /> : null}
       <ThemeContext.Provider value={onPlaqueTheme(t)}>{children}</ThemeContext.Provider>
       {t.civ === "neutral" ? null : <PlaqueBand civ={t.civ} theme={t} />}
@@ -251,7 +251,7 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   // v3: the bar wears v3's neutrals; the current item's emblem and rule are the civilization's
   // colour. Its label stays ink 600: v3 sets it in the colour too, but every dark civilization
   // colour is under 4.5:1 on the dark surface (3.13–4.27), so as text it would fail AA.
-  const t = v3Theme(useTheme());
+  const t = useTheme();
   const insets = useSafeAreaInsets();
   // Handoff 2d (supersedes 1g rule 五): at >= 1.7x text the items become rows — same
   // component, same selected state — instead of dropping their labels.

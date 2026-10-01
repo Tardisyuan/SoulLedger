@@ -437,6 +437,8 @@ export function Grow({ ms, children }: { ms: number; children: ReactNode }) {
   const [opacity] = useState(() => new Animated.Value(ms ? 0 : 1));
   const [natural, setNatural] = useState<number | null>(null);
   const [done, setDone] = useState(!ms);
+  // Reduce motion is answered asynchronously: a body mounted before the answer lets go at once.
+  if (!ms && !done) setDone(true);
   useEffect(() => {
     if (natural === null || done) return;
     const run = Animated.parallel([
@@ -693,7 +695,7 @@ export function Button({
   const look = inert
     ? { bg: t.s2, border: t.s2, ink: t.inkSubtle, pressed: t.s2 }
     : kind === "primary"
-      ? { bg: t.plaque, border: t.plaque, ink: t.onPlaque, pressed: shade(t.plaque) }
+      ? { bg: t.plaqueFill, border: t.plaqueFill, ink: t.onPlaque, pressed: shade(t.plaqueFill) }
       : kind === "danger"
         ? { bg: t.negStrong, border: t.negStrong, ink: "#FFFFFF", pressed: shade(t.negStrong) }
         : { bg: "transparent", border: t.inkSubtle, ink: t.ink, pressed: t.hair };
