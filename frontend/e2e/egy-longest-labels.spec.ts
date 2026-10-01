@@ -6,14 +6,14 @@ const BASE_URL = process.env.PLAYWRIGHT_BASE_URL || "http://localhost:3333";
 
 /**
  * 规范 v2 补足 C14:「用 egy 语言包里最长的 20 个键跑一遍截图测试,钉住这三条」——
- * 匾题字按实测宽度 40 → 28 → 界面字 20 两行;立柱任一项超阈值整根横排;窄屏底栏两行截断。
+ * 匾题字按实测宽度 40 → 28 → 界面字 20 两行;侧栏项(规范 v3 起:252 里一行、放不下截断、全文在 title)不溢出;窄屏底栏两行截断。
  * (第三条的 App 底栏在 mobile/,这里钉的是 Web 393 下的同形底栏。)
  *
  * 字串从 egy.json 现取,不抄进这里:以后谁加了更长的页题或菜单名,它自动进这 20 条。
- * 选的是能落到匾和立柱上的两类 —— `breadcrumb.*`(菜单与路由段)与 Web 页面的 `*.title`;
+ * 选的是能落到匾和侧栏上的两类 —— `breadcrumb.*`(菜单与路由段)与 Web 页面的 `*.title`;
  * App / 推送 / 通知信的标题(soul_app / soul_push / official_notify)不上 Web 的匾。
  *
- * 怎么让一条任意字串当上匾题与立柱项:菜单名(Menu.name)没有登记译名的路径,在 egy 下
+ * 怎么让一条任意字串当上匾题与侧栏项:菜单名(Menu.name)没有登记译名的路径,在 egy 下
  * 原样显示(`src/lib/menuI18n.ts`),而匾题取面包屑最后一段。所以把 20 条字串做成 20 个
  * 菜单项,被测那条挂在 /about 上,打开 /about。
  *
@@ -88,28 +88,31 @@ test.describe("C14 · egy 最长的 20 条标签", () => {
         expect(plaque.fontSize).toBe(plaque.tier === "0" ? 40 : 28);
       }
 
-      // ── 立柱(≥ 768)或底栏(< 768)。
-      const wide = (page.viewportSize()?.width ?? 0) >= 768;
+      // ── 侧栏(≥ 769,规范 v3 展开 252)或底栏(≤ 768)。
+      const wide = (page.viewportSize()?.width ?? 0) > 768;
       if (wide) {
-        const pillar = page.getByTestId("pillar");
-        // 20 条都超过 8 个拉丁字符 → 整根横排 88。
-        await expect(pillar).toHaveAttribute("data-wide", "true");
-        const items = await pillar.locator("a > span[title], button > span[title]").evaluateAll((els) =>
+        const nav = page.getByTestId("global-nav");
+        // 一行、放不下就截断;截断了的,全文在 title 里。
+        const items = await nav.locator("a span[title], button span[title]").evaluateAll((els) =>
           els.map((el) => {
             const cs = getComputedStyle(el);
             return {
+              text: el.textContent ?? "",
+              title: el.getAttribute("title") ?? "",
               lines: Math.round(el.getBoundingClientRect().height / parseFloat(cs.lineHeight)),
-              overflowX: el.scrollWidth - el.clientWidth,
+              clipped: el.scrollWidth - el.clientWidth > 1,
+              ellipsis: cs.textOverflow,
             };
           })
         );
         expect(items.length).toBeGreaterThan(0);
         for (const item of items) {
-          expect(item.lines).toBeLessThanOrEqual(2);
-          expect(item.overflowX).toBeLessThanOrEqual(1);
+          expect(item.lines).toBeLessThanOrEqual(1);
+          expect(item.ellipsis).toBe("ellipsis");
+          if (item.clipped) expect(item.title.startsWith(item.text)).toBe(true);
         }
-        const nav = await pillar.evaluate((el) => el.scrollWidth - el.clientWidth);
-        expect(nav).toBeLessThanOrEqual(0);
+        const navOverflow = await nav.evaluate((el) => el.scrollWidth - el.clientWidth);
+        expect(navOverflow).toBeLessThanOrEqual(0);
       } else {
         const cells = await page
           .getByTestId("bottom-bar")
