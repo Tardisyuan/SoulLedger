@@ -29,7 +29,7 @@ import { AccessibilityInfo, Animated, Easing, Pressable, StyleSheet, View } from
 
 import { Hero } from "./emblems";
 import { useI18n } from "./i18n";
-import { civ, civKeyOf, motion, themeFor, type CivKey, type ColorScheme } from "./theme";
+import { civKeyOf, motion, themeFor, v3, type CivKey, type ColorScheme } from "./theme";
 import { Txt } from "./ui";
 
 type Welcomable = Pick<MeProfile, "civilization" | "home_civilization" | "welcomed_civilizations">;
@@ -115,7 +115,7 @@ export function Welcome({ profile, scheme }: { profile: MeProfile; scheme: Color
         accessibilityLabel={text}
         accessibilityHint={t("soul_app.welcome.skip")}
         onPress={() => done(shown.civilization)}
-        style={[StyleSheet.absoluteFill, { backgroundColor: civ[shown.from][scheme].s1 }]}
+        style={[StyleSheet.absoluteFill, { backgroundColor: v3[scheme].surface }]}
       >
         <Animated.View testID={`welcome-${shown.from}-${to.civ}`} style={[styles.top, { backgroundColor: to.s1, opacity: top }]}>
           <Hero civ={to.civ} stroke={to.plaque} size={96} strokeWidth={0.9} />

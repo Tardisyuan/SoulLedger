@@ -8,13 +8,14 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { act, fireEvent, render, screen } from "@testing-library/react-native";
 import * as Network from "expo-network";
 import * as SecureStore from "expo-secure-store";
-import { StyleSheet } from "react-native";
+import { AccessibilityInfo, StyleSheet } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { I18nProvider } from "../i18n";
 import { RootNavigator } from "../navigation";
 import { installMobilePlatform, sessionStore } from "../platform";
 import { SessionProvider } from "../session";
+import { motion } from "../theme";
 import { PROFILE, life, stubApi } from "./stubApi";
 
 const net = Network as unknown as {
@@ -72,6 +73,27 @@ describe("the offline bar", () => {
     expect(screen.getByTestId("login-submit")).toBeTruthy();
   });
 
+  it.each([false, true])("v3: the bar opens from 0 to its height over 200ms (reduce motion %s: at once)", async (reduced) => {
+    const spy = jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockResolvedValue(reduced);
+    renderApp();
+    await screen.findByTestId("login-submit");
+    await drop();
+    if (reduced) {
+      expect(screen.queryByTestId("grow")).toBeNull();
+      expect(screen.getByTestId("offline-bar")).toBeTruthy();
+      spy.mockResolvedValue(false);
+      return;
+    }
+    expect(flat(screen.getByTestId("grow"))).toMatchObject({ height: 0, overflow: "hidden" });
+    fireEvent(screen.getByTestId("offline-inset").parent!, "layout", { nativeEvent: { layout: { x: 0, y: 0, width: 390, height: TOP + 40 } } });
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, motion.offlineBar + 150));
+    });
+    expect(screen.queryByTestId("grow")).toBeNull();
+    expect(screen.getByTestId("offline-bar")).toBeTruthy();
+    spy.mockResolvedValue(false);
+  });
+
   it("offline at launch: the first answer the OS gives is enough", async () => {
     net.__set({ isConnected: false });
     renderApp();
@@ -124,6 +146,30 @@ describe("the offline bar", () => {
     expect(lifeCalls()).toBe(loaded);
     await restore();
     expect(lifeCalls()).toBe(loaded + 1);
+  });
+
+  // The bug as reported: reduce motion on, the network drops, and the life tab's three requests
+  // go out again. Going offline was only the first thing to flush after the mount: the tab
+  // navigator first rendered with reduce motion still unanswered ("fade"), then switched to
+  // "none" — which turns react-native-screens' container on iOS from RNSScreenContainer into
+  // RNSScreenNavigationContainer, a different component, so every tab under it remounted.
+  it.each([false, true])("reduce motion %s: the life tab mounts once — going offline does not send its three requests again", async (reduced) => {
+    const spy = jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockResolvedValue(reduced);
+    secure.set(REFRESH_TOKEN_KEY, "R");
+    const calls = stubApi({ "/me/": { status: 200, data: PROFILE }, "/me/life/": { status: 200, data: life(1) } });
+    renderApp();
+    await screen.findByTestId("profile-card");
+    await drop();
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 50));
+    });
+    const count = (u: string) => calls.filter((c) => c.url === u).length;
+    expect(["/me/life/", "/me/past-lives/", "/me/sentence-plan/"].map((u) => [u, count(u)])).toEqual([
+      ["/me/life/", 1],
+      ["/me/past-lives/", 1],
+      ["/me/sentence-plan/", 1],
+    ]);
+    spy.mockResolvedValue(false);
   });
 });
 

@@ -9,7 +9,7 @@
     "greeting_night": "Pehwy Hru Seth",
     "expand_menu": "Wen Menu",
     "collapse_menu": "Khetem Menu",
-    "collapse_locked": "Khetem Menu · 1200",
+    "collapse_locked": "Nen Er Hry 1200: Wat Khetem Smen",
     "settings": "Smen",
     "welcome": "Tepy",
     "language": "Medew Seth",
@@ -338,10 +338,10 @@
       "profile": {
         "eyebrow": "Ba",
         "birth_name": "Ren En Mesut",
-        "description": "Medu Ankh",
+        "description": "Sesh Ankh",
         "ledger_tabs": "Sesh",
         "tab_judgments": "Wedja Neb",
-        "tab_records": "Sesh Nefer Isfet Neb"
+        "tab_records": "Sesh Nefer Hena Isfet Neb"
       }
     },
     "balance_range": "Pehwy Nefer Isfet",
@@ -1271,26 +1271,26 @@
       "cite_from_corpus_title": "Djed Medu",
       "cite_from_corpus_confirm": "Djed {{cite}} Er Wedja {{soul}}",
       "cite_from_corpus_closed": "Wedja Khetem Seth · Nen Djed",
-      "current_ruling": "Wedja Em Tepy",
-      "ruling_hint": "Setep Wedja Em 1–4 · Em Khet Sesen Khetem",
-      "to_confirm": "Sesen Khetem",
-      "irreversible": "Wedja Nen Iyi",
+      "current_ruling": "Wedja Pen",
+      "ruling_hint": "Setep Wedja Em 1–4. Maa Seth, Er Khet Khetem.",
+      "to_confirm": "Er Khetem",
+      "irreversible": "Wedja Nen Sehen",
       "materials": "Sesh En Sep",
-      "tab_evidence": "Sesh Nefer Isfet",
-      "tab_law": "Djed Medu",
-      "full_case": "Sesh En Sep Neb",
-      "back_to_focus": "Iyi Er Wedja",
+      "tab_evidence": "Sesh Nefer Hena Isfet",
+      "tab_law": "Djed Hep",
+      "full_case": "Wen Sesh En Sep Neb",
+      "back_to_focus": "Wehem Er Wedja Pen",
       "case_nav": "Wat Sesh En Sep",
-      "nav_draft": "Sesh Tepy Hena Medu Seth",
-      "confirm_title": "Sesen Wedja",
-      "confirm_body": "Setep Seth: {{verdict}}. Wedja Em Sesh, Nen Iyi.",
+      "nav_draft": "Sesh Tepy Hena Medu Sab",
+      "confirm_title": "Smen Wedja?",
+      "confirm_body": "Setep Seth: {{verdict}}. Wedja Em Sesh; Nen Sehen.",
       "signing_court": "Wesekhet Khetem",
       "stamp": "Khetem Wedja",
-      "back_to_check": "Iyi Er Sia",
+      "back_to_check": "Wehem Er Maa",
       "recorded": "Wedja Em Sesh Seth.",
-      "done": "Kheper Seth",
-      "draft_unsaved": "Medu Seth Nen Sau",
-      "draft_conflict": "Sesh Tepy Nen Sesen"
+      "done": "Iri Seth",
+      "draft_unsaved": "Khemen Nen Sau Djer",
+      "draft_conflict": "Sesh Tepy: Khenn"
     },
     "claim": {
       "groups": {
@@ -1364,18 +1364,18 @@
       "col_draft": "Sesh Tepy",
       "col_deferred": "Sedjer",
       "col_kind": "Iru",
-      "draft_none": "Nen Sesh Tepy",
+      "draft_none": "Nen Sesh Tepy Djer",
       "deferred_session": "Aq Pen",
-      "key_restore": "Ankh Wehem Neb",
+      "key_restore": "Redi Wehem Neb",
       "done_release": "Sehen Shesep Seth",
       "release": "Sehen Shesep",
-      "done_session_defer": "Sedjer Em Hru Pen",
-      "done_restore": "Ankh Wehem Seth: Sep {{n}}",
-      "restore_title": "Ankh Wehem Neb?",
-      "restore_body": "{{n}} Sedjer Em Aq Pen: Ankh Wehem Er Sepu",
+      "done_session_defer": "Sedjer Seth Er Pehwy Aq Pen",
+      "done_restore": "Redi Wehem Seth: Sep {{n}}",
+      "restore_title": "Redi Wehem Neb?",
+      "restore_body": "Sedjer Em Aq Pen: Sep {{n}}. Redi Wehem Er Aat, Mi Tepy.",
       "kinds": {
         "ORIGINAL": "Wedja Tepy",
-        "AMENDMENT": "Khemen Sekhet",
+        "AMENDMENT": "Redi Hena Fekh",
         "REOPEN": "Wedja Wehem"
       }
     },
@@ -1974,7 +1974,7 @@
     "denied_message": "Nen Was-Ek Er Aat Pen, Nen Er Iri Aha Pen.",
     "ask_admin": "Dbh Er Sab Hery En Per Pen",
     "denied_title": "Nen Was",
-    "go_back": "Khet"
+    "go_back": "Wehem Er Medjat Pehwy"
   },
   "welcome": {
     "user_role": "Netjer",
@@ -2713,7 +2713,7 @@
       "stage": "Wat {{at}} / {{total}}",
       "balance": "Sepy Ankh Pen",
       "ledger": "Sesh Ankh Pen",
-      "ledger_hint": "Wen Er Maa"
+      "ledger_hint": "Wen Sep: Maa"
     },
     "past_lives": {
       "title": "Ankh Tepyu",

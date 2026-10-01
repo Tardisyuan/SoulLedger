@@ -81,7 +81,7 @@ export function StatusCard({ code, title, message, detail, detailTestId, action,
       >
         {code}
       </span>
-      <h1 className="text-lg text-[oklch(var(--color-ink))]">{title}</h1>
+      <h1 className="font-title text-lg text-[oklch(var(--color-ink))]">{title}</h1>
       <p className="text-xs text-[oklch(var(--color-ink-subtle))]">{message}</p>
       {detail && (
         <p data-testid={detailTestId} className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">

@@ -32,7 +32,7 @@ import {
 } from "../rules";
 import { SessionContext, useSession } from "../session";
 import { Seal } from "../seal";
-import { sealedTheme, v3Band, v3Theme, type CivKey } from "../theme";
+import { sealedTheme, type CivKey } from "../theme";
 import {
   Block,
   Button,
@@ -312,7 +312,7 @@ function LifeBand({ me, compact, onAccount }: { me: MeProfile; compact: boolean;
       () => toast(tr("soul_app.life.code_copy_failed"), "failure")
     );
   return (
-    <View testID="plaque" style={{ backgroundColor: v3Band(t.plaque), paddingTop: insets.top }}>
+    <View testID="plaque" style={{ backgroundColor: t.band, paddingTop: insets.top }}>
       <Animated.View testID="identity" style={[styles.band, stack ? null : { height }, small && styles.bandSmall]}>
         {small ? null : (
           <Txt testID="identity-meta" numberOfLines={stack ? undefined : 1} style={[styles.bandMeta, { color: on }]}>
@@ -537,7 +537,7 @@ function AskButton() {
       accessibilityRole="button"
       accessibilityLabel={tr("soul_app.assist.entry_label")}
       onPress={() => assist.open("life")}
-      style={({ pressed }) => [styles.ask, { backgroundColor: pressed ? shade(t.plaque) : t.plaque }]}
+      style={({ pressed }) => [styles.ask, { backgroundColor: pressed ? shade(t.plaqueFill) : t.plaqueFill }]}
     >
       <AskGlyph color={t.onPlaque} />
     </Pressable>
@@ -648,8 +648,7 @@ export function MyLifeScreen() {
   const memo = `${LIFE_OPEN_PREFIX}${soulCode}`;
   const [touched, setTouched] = useState(() => readTouched(memo));
   const [compact, setCompact] = useState(false);
-  // v3: this tab wears v3's neutrals and civilization colour (the rest of the app does not yet).
-  const theme = v3Theme(useTheme());
+  const theme = useTheme();
   const { gutter } = useLayout();
   if (state.status !== "signedIn") return null;
   const me = state.profile;
@@ -669,78 +668,76 @@ export function MyLifeScreen() {
   };
 
   return (
-    <ThemeContext.Provider value={theme}>
-      <View testID="life" style={[styles.fill, { backgroundColor: theme.s0 }]}>
-        <LifeBand me={me} compact={compact} onAccount={() => navigation.navigate("Settings")} />
-        <Screen
-          refreshing={life.loading && !!life.data}
-          onRefresh={refresh}
-          edges={["left", "right"]}
-          testID="profile-card"
-          scrollRef={scroll.ref}
-          onScroll={(y) => setCompact((c) => (c ? y > BAND_OPEN_AT : y > BAND_COMPACT_AT))}
-        >
-          <Homecoming me={me} />
-          {residence.residing ? <ResidenceNote me={me} /> : null}
-          <Now me={me} lex={residence.home} planState={planState} />
-          <Balance me={me} lex={residence.home} />
+    <View testID="life" style={[styles.fill, { backgroundColor: theme.s0 }]}>
+      <LifeBand me={me} compact={compact} onAccount={() => navigation.navigate("Settings")} />
+      <Screen
+        refreshing={life.loading && !!life.data}
+        onRefresh={refresh}
+        edges={["left", "right"]}
+        testID="profile-card"
+        scrollRef={scroll.ref}
+        onScroll={(y) => setCompact((c) => (c ? y > BAND_OPEN_AT : y > BAND_COMPACT_AT))}
+      >
+        <Homecoming me={me} />
+        {residence.residing ? <ResidenceNote me={me} /> : null}
+        <Now me={me} lex={residence.home} planState={planState} />
+        <Balance me={me} lex={residence.home} />
+        <Block>
+          <DataRows>
+            <DataRow label={t("soul_app.life.birth")} mono>
+              {formatHistoricalDate(me.birth_date, locale) ?? unrecorded}
+            </DataRow>
+            <DataRow label={t("soul_app.life.death")} mono>
+              {formatHistoricalDate(me.death_date, locale) ?? unrecorded}
+            </DataRow>
+            <DataRow label={t("soul_app.life.origin")}>{me.origin_location || unrecorded}</DataRow>
+          </DataRows>
+        </Block>
+        {/* v3 .life-records: 「本世账目」 and its six numbered rows. */}
+        <View testID="ledger-head" style={[styles.ledgerHead, { paddingHorizontal: gutter, backgroundColor: theme.s1, borderBottomColor: theme.hair }]}>
+          <Txt variant="label" tone="muted" style={styles.fill}>
+            {t("soul_app.life.ledger")}
+          </Txt>
+          <Txt variant="caption" tone="subtle">
+            {t("soul_app.life.ledger_hint")}
+          </Txt>
+        </View>
+        {life.data ? (
+          <FadeIn onLayout={(e) => scroll.place("sections", e.nativeEvent.layout.y)}>
+            <LifeSections
+              life={life.data}
+              lex={residence.home}
+              numbered
+              open={open}
+              onToggle={toggle}
+              onOpenApplication={(id) => navigation.navigate("ApplicationDetail", { id })}
+              sentence={
+                <SentenceSection
+                  index={5}
+                  remote={sentence}
+                  landing={landing}
+                  open={open.sentence}
+                  onToggle={() => toggle("sentence")}
+                  onPlaced={(y) => scroll.place("section", y)}
+                />
+              }
+            />
+          </FadeIn>
+        ) : life.error ? (
+          <SectionError testID="life-error" onRetry={life.reload} />
+        ) : (
           <Block>
-            <DataRows>
-              <DataRow label={t("soul_app.life.birth")} mono>
-                {formatHistoricalDate(me.birth_date, locale) ?? unrecorded}
-              </DataRow>
-              <DataRow label={t("soul_app.life.death")} mono>
-                {formatHistoricalDate(me.death_date, locale) ?? unrecorded}
-              </DataRow>
-              <DataRow label={t("soul_app.life.origin")}>{me.origin_location || unrecorded}</DataRow>
-            </DataRows>
+            <Skeleton lines={4} testID="life-loading" />
           </Block>
-          {/* v3 .life-records: 「本世账目」 and its six numbered rows. */}
-          <View testID="ledger-head" style={[styles.ledgerHead, { paddingHorizontal: gutter, backgroundColor: theme.s1, borderBottomColor: theme.hair }]}>
-            <Txt variant="label" tone="muted" style={styles.fill}>
-              {t("soul_app.life.ledger")}
-            </Txt>
-            <Txt variant="caption" tone="subtle">
-              {t("soul_app.life.ledger_hint")}
-            </Txt>
-          </View>
-          {life.data ? (
-            <FadeIn onLayout={(e) => scroll.place("sections", e.nativeEvent.layout.y)}>
-              <LifeSections
-                life={life.data}
-                lex={residence.home}
-                numbered
-                open={open}
-                onToggle={toggle}
-                onOpenApplication={(id) => navigation.navigate("ApplicationDetail", { id })}
-                sentence={
-                  <SentenceSection
-                    index={5}
-                    remote={sentence}
-                    landing={landing}
-                    open={open.sentence}
-                    onToggle={() => toggle("sentence")}
-                    onPlaced={(y) => scroll.place("section", y)}
-                  />
-                }
-              />
-            </FadeIn>
-          ) : life.error ? (
-            <SectionError testID="life-error" onRetry={life.reload} />
-          ) : (
-            <Block>
-              <Skeleton lines={4} testID="life-loading" />
-            </Block>
-          )}
-          <PastLivesSection index={6} lex={residence.home} reloadKey={refreshes} open={open.past_lives} onToggle={() => toggle("past_lives")} />
-          {/* Round 4: the language switch and sign-out that sat here moved to the settings page. */}
-          <View style={styles.foot}>
-            <EmblemDivider />
-          </View>
-        </Screen>
-        <AskButton />
-      </View>
-    </ThemeContext.Provider>
+        )}
+        <PastLivesSection index={6} lex={residence.home} reloadKey={refreshes} open={open.past_lives} onToggle={() => toggle("past_lives")} />
+        {/* Round 4: the language switch and sign-out that sat here moved to the settings page. */}
+        <View style={styles.foot}>
+          <EmblemDivider />
+        </View>
+      </Screen>
+      <AskButton />
+    </View>
   );
 }
 
