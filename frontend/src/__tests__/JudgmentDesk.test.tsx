@@ -1047,6 +1047,24 @@ describe("v3 · 当前这一判", () => {
     // 判决不靠颜色:任何一个键都不读判决色或文明色。
     for (const v of ["PASSED", "FAILED", "PURGATORY", "RETRY"]) expect(tile(v).className).not.toMatch(/--color-(verdict|main|civ)/);
   });
+
+  it("键是 v3 的约 74 px(min-h-18.5);选中的那一个上移 6px 带 raised 阴影,别的不动;全案单列(52px)不上移", async () => {
+    renderPage();
+    await screen.findAllByRole("radio");
+    fireEvent.keyDown(document.body, { key: "2" });
+    const tile = (v: string) => (radio(v).closest("label") as HTMLElement).className.split(/\s+/);
+    for (const v of ["PASSED", "FAILED", "PURGATORY", "RETRY"]) expect(tile(v)).toContain("min-h-18.5");
+    expect(tile("FAILED")).toEqual(expect.arrayContaining(["-translate-y-1.5", "shadow-raised", "duration-fast"]));
+    for (const v of ["PASSED", "PURGATORY", "RETRY"]) {
+      expect(tile(v)).not.toContain("-translate-y-1.5");
+      expect(tile(v)).not.toContain("shadow-raised");
+    }
+
+    fireEvent.keyDown(document.body, { key: "f" });
+    expect(screen.getByTestId("judgment-desk")).toHaveAttribute("data-view", "case");
+    expect(tile("FAILED")).toContain("min-h-13");
+    expect(tile("FAILED")).not.toContain("-translate-y-1.5");
+  });
 });
 
 describe("v3 · 资料舱", () => {

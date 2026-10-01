@@ -37,6 +37,7 @@ import {
   QueueBar,
   StatuteSearch,
   VERDICT_KEY_CLASS,
+  VERDICT_KEY_COMPACT,
   VerdictKeyContent,
 } from "@/src/components/judgment/JudgmentDesk";
 import { Seal } from "@/src/components/plaque/Seal";
@@ -150,10 +151,14 @@ const DEFAULT_VERDICT: VerdictMember = "PURGATORY";
  * 规范 v2 补足 B8:判决不靠颜色区分 —— 四个裁决键同一个幽灵样式(`VERDICT_KEY_CLASS`,与审判队列共用),
  * 字形 + 文字。v3 把「选中」画成墨底反白(原型 `verdict-selector button.selected`):中性,不是第六处
  * 主色;✕ 也是墨色,冷玫红只给系统出错。键帽数字跟着反白(`[&_kbd]:text-current`)。
- * 原型的选中项还上移 6px —— 那是 74px 高的键;这里的键按控件尺寸规定是 40px,上移不画。
+ * 2026-10-01 键改成 v3 的约 74px 高之后,原型「选中项上移 6px」也一起照做(`VERDICT_LIFT`):
+ * translateY(0 → −6px)+ raised 阴影,160ms(键本身的 `duration-fast`);减少动态效果时全局把
+ * 时长压到 1ms,即瞬时到位。单列的案卷视图不上移(v3 `.is-compact .selected { transform: none }`),
+ * 已结案的「所判」一格也不上移 —— 那不是此刻的选择。
  */
 const VERDICT_CHOSEN =
   "bg-[oklch(var(--color-ink))] text-[oklch(var(--color-surface-1))] hover:bg-[oklch(var(--color-ink))] [&_kbd]:text-current";
+const VERDICT_LIFT = "-translate-y-1.5 shadow-raised";
 
 const NO_LIVES: Reincarnation[] = [];
 
@@ -636,7 +641,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
       {!fullCase && (
         <nav
           aria-label={t("judgment.desk.case_nav")}
-          className={`mb-4 flex h-10 items-stretch gap-1 border-b border-[oklch(var(--color-line))] text-sm xl:hidden ${isFinal ? "md:hidden" : ""}`}
+          className={`mb-4 flex h-(--control-h-sm) items-stretch gap-1 border-b border-[oklch(var(--color-line))] text-sm xl:hidden ${isFinal ? "md:hidden" : ""}`}
         >
           <a href="#desk-soul" className="inline-flex items-center px-3 text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))] md:hidden">
             {t("judgment.queue.identity")}
@@ -853,7 +858,9 @@ export default function JudgmentDetailPage({ params }: PageProps) {
               const isChosen = selectedVerdict === member;
               const marked = isFinal ? isOrdered : isChosen;
               const clause = <VerdictKeyContent code={member} keyHint={String(index + 1)} />;
-              const tile = `${VERDICT_KEY_CLASS} ${marked ? VERDICT_CHOSEN : "bg-[oklch(var(--color-surface-1))]"}`;
+              const tile = `${VERDICT_KEY_CLASS} ${fullCase ? VERDICT_KEY_COMPACT : ""} ${
+                marked ? VERDICT_CHOSEN : "bg-[oklch(var(--color-surface-1))]"
+              } ${marked && !isFinal && !fullCase ? VERDICT_LIFT : ""}`;
 
               return (
                 <li key={member}>
