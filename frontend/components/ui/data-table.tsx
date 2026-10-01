@@ -31,6 +31,35 @@ export function parseOrdering(ordering: string): SortState | null {
 /** The one link in a `linkedRows` row: its `::after` covers the whole row. */
 export const ROW_LINK = 'after:absolute after:inset-0'
 
+/*
+ * 行的悬停 / 选中(规范 v3 `.ds-tr.hover` / `.ds-tr.selected`,2026-10-01 起)。
+ *
+ * v2 两者都是 surface-2,悬停与选中同色,只差选中那道竖条。v3 把它们拆成两档:
+ * 悬停 = ink 4% 混进 surface-1,选中 = ink 7% 混进 surface-1 + 行首 3px ink 竖条。
+ * 选中行不再挂悬停类 —— 否则指针一经过,7% 的底会退成 4%,读起来像取消了选中。
+ * 调用方写 `on ? ROW_SELECTED : ROW_HOVER`,不要两个都给。
+ *
+ * 竖条是 ink,**不是匾色**:行首 3px 匾色竖条是「待我处理」(`RowMark`,补足 B12)的
+ * 专用记号。两者在浅色、中性皮下几乎同色(ink 对 civ-neutral 1.19:1),这件事记在
+ * `v3DataDisplayContract.test.ts`,没有在这里替谁做决定。
+ *
+ * 两处数字(4 / 7)与选中竖条由 `v3DataDisplayContract.test.ts` 守着,行底上的文字
+ * 对比度也在那里按两档主题算。
+ */
+export const ROW_HOVER =
+  'hover:bg-[color-mix(in_oklab,oklch(var(--color-ink))_4%,oklch(var(--color-surface-1)))]'
+export const ROW_SELECTED =
+  'bg-[color-mix(in_oklab,oklch(var(--color-ink))_7%,oklch(var(--color-surface-1)))] shadow-[inset_3px_0_0_oklch(var(--color-ink))]'
+
+/*
+ * 批量条(规范 v3 `.ds-batch`,2026-10-01 起):反相 —— ink 实底、surface-1 字,条上的
+ * 按钮用 `<Button variant="inverse">`(无框文字按钮,焦点环换成 surface-1,因为全局的
+ * ink 环落在 ink 底上会消失)。v3 的 52px 最小高度**没有**采用:尺寸整体不动是拍板。
+ * 边框保持原样 —— 它们是 `--color-block`,两档主题都等于 ink,与底同色,留着是为了
+ * 不让条的高度变 2px。
+ */
+export const BATCH_BAR = 'bg-[oklch(var(--color-ink))] text-[oklch(var(--color-surface-1))]'
+
 export interface DataTableColumn {
   /**
    * Stable identifier for the column. When `sortable` is set this is also the
@@ -471,10 +500,9 @@ export function DataTable<T>({
                       entered.has(rowKey) ? 'entered' : changed.has(rowKey) ? 'changed' : undefined
                     }
                     className={cn(
-                      'border-b border-[oklch(var(--color-rule))] hover:bg-[oklch(var(--color-surface-2))] transition-colors',
+                      'border-b border-[oklch(var(--color-rule))] transition-colors',
                       linkedRows && 'relative cursor-pointer',
-                      selection?.selected.has(rowKey) &&
-                        'bg-[oklch(var(--color-surface-2))] shadow-[inset_3px_0_0_oklch(var(--color-accent))]',
+                      selection?.selected.has(rowKey) ? ROW_SELECTED : ROW_HOVER,
                       entered.has(rowKey) && 'animate-row-enter',
                       changed.has(rowKey) && 'animate-row-changed'
                     )}

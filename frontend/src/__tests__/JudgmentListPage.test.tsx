@@ -13,6 +13,7 @@
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import JudgmentListPage from "@/app/judgment/page";
+import { BATCH_BAR } from "@/components/ui/data-table";
 import { tZh } from "./support/zhBundle";
 
 jest.mock("@soulledger/core/api", () => ({
@@ -180,6 +181,10 @@ describe("审判队列", () => {
     fireEvent.keyDown(document.body, { key: "x" });
     const bar = await screen.findByTestId("batch-bar");
     expect(within(bar).getByText(tZh("judgment.claim.selected", { n: "1" }))).toBeInTheDocument();
+    // v3 (2026-10-01): the bar is inverted, and every button on it carries the surface-1 ring.
+    expect(bar.className.split(/\s+/)).toEqual(expect.arrayContaining(BATCH_BAR.split(" ")));
+    expect(bar.className).not.toContain("--color-surface-2");
+    for (const b of within(bar).getAllByRole("button")) expect(b.className).toContain("focus-visible:outline-[oklch(var(--color-surface-1))]!");
     // JUDGE 没有 judgment.assign:没有「改派…」。
     expect(within(bar).queryByRole("button", { name: tZh("judgment.claim.reassign") })).toBeNull();
 

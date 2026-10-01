@@ -31,6 +31,7 @@ import { cn } from "@/lib/utils";
 import { REACTIONS } from "@/src/components/social/ReactionBar";
 import { MediaGrid } from "./MediaGrid";
 import { MODERATION_TONES, MUTE_DAYS, isTyping, useFailureToast } from "./shared";
+import { ROW_HOVER, ROW_SELECTED } from "@/components/ui/data-table";
 
 /**
  * 举报区 = C 组 08「朋友圈审阅」的版式:左列表、右详情。
@@ -347,8 +348,8 @@ export function ReportsReview() {
                 aria-current={on ? "true" : undefined}
                 onClick={() => select(it.key)}
                 className={cn(
-                  "flex w-full gap-3 px-4 py-3 text-left hover:bg-[oklch(var(--color-surface-2))]",
-                  on && "bg-[oklch(var(--color-surface-2))] shadow-[inset_3px_0_0_oklch(var(--color-ink))]"
+                  "flex w-full gap-3 px-4 py-3 text-left",
+                  on ? ROW_SELECTED : ROW_HOVER
                 )}
               >
                 <Initial name={it.author} />

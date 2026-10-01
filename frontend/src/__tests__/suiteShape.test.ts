@@ -249,6 +249,7 @@ const COLLECTED_FILES = [
   "workflowEdgeArrowSingleSource.test.ts",
   "workflowEditorLayout.test.ts",
   "viewportHeightContract.test.ts",
+  "v3DataDisplayContract.test.tsx",
   "workflowTemplateLore.test.ts",
   "wsClient.reconnect.test.ts",
   "wsClient.test.ts",

@@ -33,12 +33,16 @@ import type { SoulListItem } from "@soulledger/core/api";
 export type SoulState = SoulListItem["current_state"];
 
 /**
+ * 2026-10-01 规范 v3:框从 ink3(`--color-line-strong`)换成中性灰 `--color-line`(v3 的
+ * `--ds-line`),方角不变(用户拍板:徽章不做胶囊)。意思由字形 + 文字承担,框只是轮廓。
+ * 下面 v2 那段里「1px ink3 框」一句已被这一条取代,其余仍然成立。
+ *
  * 规范 v2 补足 C15「状态徽章 · 领域枚举」:全部 1px ink3 框、ink 字,**不用状态色** ——
  * 靠字形和文字区分,颜色不参与(D1:轮回中只在图表里有颜色)。「还要处理」的一种
  * (审判中 = 规范的「待审」)加 s2 底。`--color-status-*` 仍在 globals.css 里,
  * 读者只剩图表(`lib/chart-colors.ts`)。
  */
-const DOMAIN_BADGE = "text-[oklch(var(--color-ink))] border border-[oklch(var(--color-line-strong))]";
+const DOMAIN_BADGE = "text-[oklch(var(--color-ink))] border border-[oklch(var(--color-line))]";
 /** 「还要处理」的领域值:待审、待定(判决)。 */
 export const DOMAIN_BADGE_PENDING = `${DOMAIN_BADGE} bg-[oklch(var(--color-surface-2))]`;
 export { DOMAIN_BADGE };

@@ -18,6 +18,7 @@ import { CorpusInsertIntoDesk } from "@/src/components/judgment/CorpusInsertInto
 import { CorpusRelated, relatedStatutes } from "@/src/components/judgment/CorpusRelated";
 import { usePermissions } from "@/src/hooks/usePermissions";
 import { cn } from "@/lib/utils";
+import { ROW_HOVER, ROW_SELECTED } from "@/components/ui/data-table";
 
 /**
  * 律条语料 —— 长文本阅读页(第三类 B · /corpus):左目录、中阅读栏(限 72ch)、
@@ -354,8 +355,8 @@ function Toc({
                       onClick={() => onChoose(a.statute.id)}
                       className={`w-full grid grid-cols-[5.5rem_1fr] gap-2 px-6 py-1 text-left border-b border-[oklch(var(--color-rule))] ${
                         on
-                          ? "bg-[oklch(var(--color-surface-2))] shadow-[inset_3px_0_0_oklch(var(--color-ink))] font-medium text-[oklch(var(--color-ink))]"
-                          : "text-[oklch(var(--color-ink-muted))] hover:bg-[oklch(var(--color-surface-2))]"
+                          ? `${ROW_SELECTED} font-medium text-[oklch(var(--color-ink))]`
+                          : `text-[oklch(var(--color-ink-muted))] ${ROW_HOVER}`
                       }`}
                     >
                       <span className="font-mono text-2xs truncate" title={a.sigil ?? a.statute.code}>{a.sigil ?? a.statute.code}</span>

@@ -55,32 +55,33 @@ describe("the table covers the states the API can actually send", () => {
 
 /**
  * 规范 v2 补足 C15 / B8 推翻了 v1「每个状态穿自己的颜色」:领域枚举徽章一律 ink 字 +
- * 1px ink3 框,**颜色不参与**;「还要处理」的两种(灵魂「审判中」= 样张的「待审」、
+ * 1px 框(v2 是 ink3;2026-10-01 v3 起是中性灰 line),**颜色不参与**;「还要处理」的两种(灵魂「审判中」= 样张的「待审」、
  * 判决「待定」)加 s2 底。区分全靠字形与文字 —— 所以 v1 那条「六个状态六种颜色」
  * 的断言改成了「六个状态六个字形」,而颜色这一侧改成断言**缺席**:任何
  * `--color-status-*` / `--color-verdict-*` / 危险色回到徽章里都是红的。
  */
 const INK = ["--color-ink", "1"];
-const INK3 = ["--color-line-strong", "1"];
+/** 2026-10-01 规范 v3:框是中性灰 `--color-line`(v3 `--ds-line`),不再是 ink3。*/
+const LINE = ["--color-line", "1"];
 const S2 = ["--color-surface-2", "1"];
 const PENDING_STATES = ["JUDGING"];
 const PENDING_VERDICTS = ["PURGATORY"];
 
 describe("domain badges carry no status colour (C15)", () => {
-  it.each(readSoulStates())("%s is ink on an ink3 frame", (state) => {
+  it.each(readSoulStates())("%s is ink on a neutral-line frame", (state) => {
     const found = utilities(SOUL_STATE_BADGE_CLASSES[state as keyof typeof SOUL_STATE_BADGE_CLASSES]);
     expect(found.text).toEqual(INK);
-    expect(found.border).toEqual(INK3);
+    expect(found.border).toEqual(LINE);
     // Equality on the key set: "ink is present" stays true while a status fill sits beside it.
     const pending = PENDING_STATES.includes(state);
     expect(Object.keys(found).sort()).toEqual(pending ? ["bg", "border", "text"] : ["border", "text"]);
     if (pending) expect(found.bg).toEqual(S2);
   });
 
-  it.each(Object.keys(VERDICT_BADGE_CLASSES))("verdict %s is ink on an ink3 frame, ✕ included", (verdict) => {
+  it.each(Object.keys(VERDICT_BADGE_CLASSES))("verdict %s is ink on a neutral-line frame, ✕ included", (verdict) => {
     const found = utilities(VERDICT_BADGE_CLASSES[verdict as keyof typeof VERDICT_BADGE_CLASSES]);
     expect(found.text).toEqual(INK);
-    expect(found.border).toEqual(INK3);
+    expect(found.border).toEqual(LINE);
     const pending = PENDING_VERDICTS.includes(verdict);
     expect(Object.keys(found).sort()).toEqual(pending ? ["bg", "border", "text"] : ["border", "text"]);
   });
