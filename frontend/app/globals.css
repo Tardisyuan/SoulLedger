@@ -303,10 +303,10 @@
 
   /* 规范 v3 的控件三档高度 —— **2026-10-01 起全站在用**(用户拍板,推翻了此前「尺寸先不动」)。
    *   sm 44px   md 48px   lg 56px      表格行 min-height 64px、表头 44px、行内动作列 44px
-   * 这里是唯一的数字来源:Button / Field / FilterChip / Pagination / DataTable 与各处手写的
-   * 控件都写 `h-(--control-h-*)` / `min-h-(--table-row-h)`,不写 h-11 / h-12 这类等值的类名 ——
-   * 等值的类名改这里时不会跟着变。44 同时就是 393 宽下的触控下限,所以此前各处的
-   * `max-sm:min-h-11` 补丁随之删掉。 */
+   * 这里是唯一的数字来源:Button / Field / FilterChip / Pagination / DataTable 与这一轮换过的
+   * 手写控件都写 `h-(--control-h-*)` / `min-h-(--table-row-h)`,不写 h-11 / h-12 这类等值的
+   * 类名 —— 等值的类名改这里时不会跟着变。(此前就已是 44 的 `min-h-11` 等处没动,它们本来
+   * 就达标。)44 同时就是 393 宽下的触控下限,所以此前各处的 `max-sm:min-h-11` 补丁随之删掉。 */
   --control-h-sm: 44px;
   --control-h-md: 48px;
   --control-h-lg: 56px;

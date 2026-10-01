@@ -312,14 +312,14 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
           type="button"
           onClick={() => setShowKeys((prev) => !prev)}
           aria-expanded={showKeys}
-          className="text-sm text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))] underline"
+          className="inline-flex min-h-(--control-h-sm) items-center text-sm text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))] underline"
         >
           {t("judgment.queue.keyboard_help")}
         </button>
         <button
           type="button"
           onClick={leave}
-          className="text-sm text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))]"
+          className="inline-flex min-h-(--control-h-sm) items-center text-sm text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))]"
         >
           {t("judgment.queue.leave")}
         </button>
