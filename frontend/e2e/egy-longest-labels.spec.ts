@@ -92,8 +92,9 @@ test.describe("C14 · egy 最长的 20 条标签", () => {
       const wide = (page.viewportSize()?.width ?? 0) > 768;
       if (wide) {
         const nav = page.getByTestId("global-nav");
-        // 一行、放不下就截断;截断了的,全文在 title 里。
-        const items = await nav.locator("a span[title], button span[title]").evaluateAll((els) =>
+        // 一行、放不下就截断;截断了的,全文在 title 里。只量 <nav> 里的菜单项:底部个人区的
+        // 角色(DomainEnum 自带 title)不是菜单标签,第一次跑时把它当成了一项。
+        const items = await nav.locator("nav a span[title], nav button span[title]").evaluateAll((els) =>
           els.map((el) => {
             const cs = getComputedStyle(el);
             return {
