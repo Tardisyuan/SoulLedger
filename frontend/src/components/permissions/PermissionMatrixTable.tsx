@@ -160,7 +160,7 @@ function MatrixCell({
         onClick={ruled ? undefined : onToggle}
         className={cn(
           "flex items-center justify-center",
-          variant === "grid" ? "h-8 w-full" : "min-h-11 min-w-11",
+          variant === "grid" ? "h-(--control-h-sm) w-full" : "min-h-(--control-h-sm) min-w-(--control-h-sm)",
           ruled
             ? "cursor-help"
             : disabled

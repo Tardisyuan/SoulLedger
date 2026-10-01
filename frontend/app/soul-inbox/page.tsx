@@ -542,7 +542,7 @@ function Thread({ conversation }: { conversation: InboxConversation }) {
                   <select
                     value=""
                     onChange={(e) => insertTemplate(e.target.value)}
-                    className={`h-7 max-w-[12rem] px-1 border ${LINE} bg-[oklch(var(--color-canvas))] text-xs text-[oklch(var(--color-ink))]`}
+                    className={`h-(--control-h-sm) max-w-[12rem] px-2 border ${LINE} bg-[oklch(var(--color-canvas))] text-xs text-[oklch(var(--color-ink))]`}
                   >
                     <option value="">
                       {templates.data?.length ? t("soul_inbox.template.pick") : t("soul_inbox.template.none")}

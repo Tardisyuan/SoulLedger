@@ -107,7 +107,7 @@ export function JudgmentEvidenceAdmission({
                 key={record.id}
                 data-testid="evidence-row"
                 data-admitted={admitted ? "true" : "false"}
-                className={`grid grid-cols-[24px_minmax(0,1fr)_60px] md:grid-cols-[24px_88px_minmax(0,1fr)_60px] items-center gap-x-3 min-h-10 max-md:min-h-11 py-1 border-b border-[oklch(var(--color-rule))] focus-within:bg-[oklch(var(--color-surface-2))] ${
+                className={`grid grid-cols-[24px_minmax(0,1fr)_60px] md:grid-cols-[24px_88px_minmax(0,1fr)_60px] items-center gap-x-3 min-h-(--control-h-sm) py-1 border-b border-[oklch(var(--color-rule))] focus-within:bg-[oklch(var(--color-surface-2))] ${
                   admitted ? "" : "opacity-65"
                 }`}
               >

@@ -90,7 +90,7 @@ export function SoulActionsCard({
                   type="button"
                   variant="primary"
                   size="lg"
-                  className="h-auto min-h-10 w-full whitespace-normal py-2"
+                  className="h-auto min-h-(--control-h-md) w-full whitespace-normal py-2"
                   onClick={() => onReincarnate(disp.id)}
                   disabled={!!actionLoading}
                 >

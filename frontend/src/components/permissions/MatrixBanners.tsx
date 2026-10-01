@@ -187,7 +187,7 @@ export function UnsavedBar({
       </span>
       {conflict && (
         <span className="flex basis-full items-center gap-2 text-sm text-[oklch(var(--color-warning))] md:basis-auto">
-          <label className="flex min-h-8 items-center gap-2 max-sm:min-h-11">
+          <label className="flex min-h-(--control-h-sm) items-center gap-2">
             <input
               type="checkbox"
               checked={conflict.acknowledged}

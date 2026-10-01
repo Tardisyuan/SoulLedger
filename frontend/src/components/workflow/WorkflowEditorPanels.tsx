@@ -103,7 +103,7 @@ export function WorkflowPalette({
                 e.dataTransfer.effectAllowed = "copy";
               }}
               onClick={() => onAdd(type)}
-              className="w-full h-9 px-3 flex items-center gap-2 text-left text-sm text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))] cursor-grab"
+              className="w-full h-(--control-h-sm) px-3 flex items-center gap-2 text-left text-sm text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))] cursor-grab"
             >
               <span aria-hidden="true" className="w-4 text-center font-mono">
                 {KIND_GLYPH[type]}
@@ -249,7 +249,7 @@ export function WorkflowInspector({
               <button
                 type="button"
                 onClick={() => onEdit(node.id)}
-                className="mt-3 h-8 px-3 inline-flex items-center gap-2 border border-[oklch(var(--color-block))] text-sm font-medium text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))]"
+                className="mt-3 h-(--control-h-sm) px-3 inline-flex items-center gap-2 border border-[oklch(var(--color-block))] text-sm font-medium text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))]"
               >
                 {t("workflow.editor.edit_node")}
                 <kbd className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">E</kbd>
