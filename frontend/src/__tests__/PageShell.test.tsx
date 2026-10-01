@@ -3,7 +3,7 @@
  *
  * 这个文件盯的不是「渲染出来了吗」，是四条会被无声破坏的规格：
  *   1. `variant="full"` 的含义是**不加 max-width**，不是加一个大的 max-width；
- *   2. 全站唯一的 sticky 是筛选栏（`top-16`），页头**不**跟着滚；
+ *   2. 全站唯一的 sticky 是筛选栏（`top-13`），页头**不**跟着滚；
  *   3. 外壳里不许出现 `min-h-screen`（AppLayout 已经给了
  *      `min-h-[calc(100vh-4rem)]`，再写一次就是 64px 死滚动，`app/` 下现有 47 个
  *      文件犯了这个，PageShell 不能把它带进新代码）；
@@ -123,11 +123,11 @@ describe("PageShell · 滚动行为", () => {
     );
   });
 
-  it("筛选栏 sticky 在 top-16，高 56（h-14 + 上下各 12 padding）", () => {
+  it("筛选栏 sticky 在 top-13（AppLayout 的 52px 工具条下沿），高 56（h-14 + 上下各 12 padding）", () => {
     const { container } = renderFull("page");
     const filters = container.querySelector<HTMLElement>("[data-page-shell-filters]")!;
     expect(filters.className).toMatch(/\bsticky\b/);
-    expect(filters.className).toMatch(/\btop-16\b/);
+    expect(filters.className).toMatch(/\btop-13\b/);
     const inner = widthBox(container, "data-page-shell-filters");
     expect(inner.className).toMatch(/\bh-14\b/);
     expect(inner.className).toMatch(/\bpy-3\b/);

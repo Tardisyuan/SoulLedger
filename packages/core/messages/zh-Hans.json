@@ -10,6 +10,7 @@
     "greeting_night": "夜深了",
     "expand_menu": "展开菜单",
     "collapse_menu": "收起菜单",
+    "collapse_locked": "窗口宽度不足 1200 像素,导航固定收起",
     "settings": "设置",
     "language": "界面语言",
     "theme_light": "切换到浅色模式",

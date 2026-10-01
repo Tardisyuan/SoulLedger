@@ -23,12 +23,22 @@ test("the connection banner takes no layout space: content starts right under th
   const banner = page.getByRole("status").filter({ hasText: /重连中|连接失败|已断开/ });
   await expect(banner).toBeVisible({ timeout: 15_000 });
 
-  const header = await page.locator("header").first().boundingBox();
+  // 规范 v3: the masthead is the 52 px toolbar, then the plaque, then the page — the
+  // banner pushes none of them: the toolbar sits at the very top, and each starts where
+  // the one above it ends.
+  const header = await page.getByTestId("global-topbar").boundingBox();
+  const plaque = await page.getByTestId("plaque").boundingBox();
   const content = await page.getByTestId("app-content").boundingBox();
   expect(header, "no masthead box").not.toBeNull();
+  expect(plaque, "no plaque box").not.toBeNull();
   expect(content, "no content box").not.toBeNull();
+  expect(Math.round(header!.y), `the toolbar starts at y=${header!.y}, under the banner's height`).toBe(0);
   expect(
-    Math.abs(content!.y - (header!.y + header!.height)),
-    `content starts at y=${content!.y}, masthead ends at y=${header!.y + header!.height}`
+    Math.abs(plaque!.y - (header!.y + header!.height)),
+    `plaque starts at y=${plaque!.y}, masthead ends at y=${header!.y + header!.height}`
+  ).toBeLessThanOrEqual(1);
+  expect(
+    Math.abs(content!.y - (plaque!.y + plaque!.height)),
+    `content starts at y=${content!.y}, plaque ends at y=${plaque!.y + plaque!.height}`
   ).toBeLessThanOrEqual(1);
 });

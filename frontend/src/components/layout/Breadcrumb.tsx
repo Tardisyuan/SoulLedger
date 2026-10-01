@@ -136,11 +136,10 @@ export function Breadcrumb({ menus }: { menus: SidebarMenu[] }) {
       aria-label={label("breadcrumb.aria_label", "面包屑导航")}
       className="flex-1 min-w-0"
     >
-      {/* 规范 v1「页头 · 面包屑」:等宽、斜杠分隔;链接悬停下划线,当前页 600 不可点
-          (aria-current)。不再有首页图标 —— 侧栏第一项就是概览。
-          规范 v2:面包屑住在匾上(匾的元数据位,等宽 11),字色一律 onMain —— 匾色底上
-          ink 系列读不出来;层级靠字重与下划线,不靠深浅。 */}
-      <ol className="flex items-center gap-2 font-mono text-2xs min-w-0 overflow-hidden text-[oklch(var(--color-on-main))]">
+      {/* 规范 v3「工具条 · 面包屑」:界面字 12、斜杠分隔、间距 8;上级 ink-muted(链接悬停
+          ink 加下划线),当前页 ink、不可点(aria-current),放不下就截断。不再有首页图标 ——
+          导航第一项就是概览。v2 住在匾上时一律 onMain;搬到中性工具条后回到 ink 系列。 */}
+      <ol className="flex items-center gap-2 text-xs min-w-0 overflow-hidden text-[oklch(var(--color-ink-muted))]">
         {crumbs.map((crumb, i) => {
           const isLast = i === crumbs.length - 1;
           return (
@@ -165,7 +164,7 @@ export function Breadcrumb({ menus }: { menus: SidebarMenu[] }) {
                    * 两处:那条规则按行匹配,而它自己的表头写明了代价 ——「跨行写开的
                    * 元素这条规则看不见」。这里就是那个代价的实例。 */
                   title={crumb.label}
-                  className="focus-ring-pillar truncate text-[oklch(var(--color-on-main))] underline-offset-2 hover:text-[oklch(var(--color-on-main))] hover:underline"
+                  className="truncate underline-offset-2 hover:text-[oklch(var(--color-ink))] hover:underline"
                 >
                   {crumb.label}
                   {crumb.gloss && (
@@ -175,7 +174,7 @@ export function Breadcrumb({ menus }: { menus: SidebarMenu[] }) {
               ) : (
                 <span
                   title={crumb.label}
-                  className={`truncate ${isLast ? "font-semibold" : ""}`}
+                  className={`truncate ${isLast ? "text-[oklch(var(--color-ink))]" : ""}`}
                   aria-current={isLast ? "page" : undefined}
                 >
                   {crumb.label}
