@@ -248,16 +248,17 @@ describe("v2 base components", () => {
   const hosts = (id: string) => screen.getByTestId(id).findAll((n) => typeof n.type === "string");
   const hasPath = (id: string) => screen.getByTestId(id).findAll((n) => typeof n.props.d === "string").length > 0;
 
-  it("primary is the plaque under onPlaque; pressing darkens it 24%, never lightens it", () => {
+  it("primary is the plaque's fill under onPlaque (dark: the band); pressing darkens it 24%, never lightens it", () => {
     wrap(<Button testID="go" title="提交" onPress={jest.fn()} />);
-    expect(flat(screen.getByTestId("go")).backgroundColor).toBe(cn.plaque);
+    expect(flat(screen.getByTestId("go")).backgroundColor).toBe(cn.plaqueFill);
+    expect(cn.plaqueFill).toBe(cn.band); // dark: 10% #111 mixed in, so white text clears AA on every civilization
     expect(flat(screen.getByText("提交")).color).toBe(cn.onPlaque);
     // The Pressable's own style function, asked for its pressed look (the test renderer has no touch).
     let pressable = screen.getByTestId("go").parent;
     while (pressable && typeof pressable.props.style !== "function") pressable = pressable.parent;
     const styleOf = pressable!.props.style as (s: { pressed: boolean }) => unknown;
     const pressed = StyleSheet.flatten(styleOf({ pressed: true }) as never) as Record<string, unknown>;
-    expect(pressed.backgroundColor).toBe(shade(cn.plaque));
+    expect(pressed.backgroundColor).toBe(shade(cn.plaqueFill));
     expect(shade("#B3402C")).toBe("#883121");
   });
 

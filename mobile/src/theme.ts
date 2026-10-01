@@ -1,22 +1,15 @@
 /**
  * The soul app's tokens.
  *
- * SOURCE: the Claude Design handoff "灵魂簿 App", section 1h-五 ("React Native
- * 结构示例"). Its hex values are the sRGB conversions of the OKLCH table in
- * 1h-一; `__tests__/theme.test.ts` re-converts that OKLCH table and fails if a
- * hex here drifts from it, and checks the contrast ratios the design claims.
+ * Colours are v3's (round-7 prototype; user decision 2026-10-01: v3 fully replaces v2):
+ * ONE set of neutrals for every civilization — canvas, surface, ink, muted, line — and
+ * each civilization owns one colour (`plaque`). The status colours (`semantic`) and the
+ * pre-sign-in parchment are not v3's and stay as they were.
  *
- * This REPLACES the earlier copy of `frontend/app/globals.css`. The two agree on
- * ink, surface-1/2, accent and mark within rounding (the design took them from
- * the web), and differ where the design is new: `hair`/`hair2` are tinted per
- * civilization, `canvas` (s0) is darker, and the semantic `pos`/`neg*` inks are
- * lighter in dark mode. The differences are listed in the round's report.
- *
- * `s0` is the one ground the handoff's token block leaves out — its prototype
- * paints every screen with `--s0` but the RN block starts at `s1`. The values
- * below are the prototype's `--s0` OKLCH, converted; for eu/eg/gr light the
- * prototype has none, so they follow the cn/neutral light rule
- * (L 0.995, C 0.006, surface-1's hue).
+ * Until 2026-10-01 the App had per-civilization grounds and hairlines (灵魂簿 App 1h-一,
+ * v2 规范 §一) and a warm onPlaque #FFF4E8; v3 drops both — a page no longer says its
+ * civilization by its ground, only by the plaque, the current tab, the seal and the
+ * primary button.
  */
 import { CIVILIZATION_SHORT_CODES } from "@soulledger/core/config/civilizations";
 
@@ -24,48 +17,44 @@ export type ColorScheme = "dark" | "light";
 export type CivKey = "neutral" | "cn" | "eu" | "eg" | "gr";
 
 /**
- * `plaque` is v2「朱印」's 匾色 (规范 v2 定稿 §三, 2026-09-29): the one colour a
- * civilization owns, and it goes to five places only — the plaque, the pillar's
- * current item, the seal, the "mine to handle" row mark and the primary button.
- * Never to an error or a refusal (those are `neg`). Text on it is `onPlaque`.
- * v1's `accent` / `mark` (and `onAccent`) are gone (第三阶段): a solid action is the
- * plaque, a selection or a link is ink, a decoration ink3. 埃及's ochre accent went with
- * them — its actions are now its lapis plaque.
- * The grounds s0–s2 are the App's own per-civilization grounds, kept by product
- * decision (v2 memory: "App 保留各文明底色微调"); §一 lists them unchanged.
+ * v3, verbatim. `civ` is the civilization's one colour; it goes to the plaque (the
+ * identity band and every title bar), the current tab, the seal and the primary button,
+ * and never to an error or a refusal (those are `neg`).
  */
-type Ground = { s0: string; s1: string; s2: string; hair: string; hair2: string; plaque: string };
-
-/** 匾上题字 · 元数据 (§一 onMain): one warm white for all ten plaques. */
-export const ON_PLAQUE = "#FFF4E8";
-
-export const ink = {
-  dark: { ink: "#F4F5F6", inkMuted: "#C4CBD4", inkSubtle: "#89909A" },
-  light: { ink: "#16181D", inkMuted: "#505662", inkSubtle: "#636874" },
+export const v3 = {
+  light: { canvas: "#EFEFEB", surface: "#FBFBF8", ink: "#181A17", muted: "#646861", line: "#D1D3CD" },
+  dark: { canvas: "#10120F", surface: "#1A1D19", ink: "#F0F1EA", muted: "#A7ACA4", line: "#383C35" },
+  civ: {
+    cn: { light: "#8F3329", dark: "#AD4B40" },
+    eu: { light: "#583875", dark: "#80609A" },
+    eg: { light: "#294A8A", dark: "#5F7FBE" },
+    gr: { light: "#285051", dark: "#5A8480" },
+  },
 } as const;
 
-export const civ: Record<CivKey, Record<ColorScheme, Ground>> = {
-  neutral: {
-    dark: { s0: "#0B0B0E", s1: "#101014", s2: "#14141A", hair: "#26262E", hair2: "#33333D", plaque: "#6E665E" },
-    light: { s0: "#FDFDFF", s1: "#F9F9FB", s2: "#F3F3F6", hair: "#E4E4EA", hair2: "#CFCFD8", plaque: "#2B2724" },
-  },
-  cn: {
-    dark: { s0: "#100704", s1: "#1A0D09", s2: "#1F120E", hair: "#362B27", hair2: "#4B3F3C", plaque: "#B3402C" },
-    light: { s0: "#FFFDFA", s1: "#FFF8F3", s2: "#FDF1E7", hair: "#DED6D0", hair2: "#C6BCB4", plaque: "#9A2F1F" },
-  },
-  eu: {
-    dark: { s0: "#040611", s1: "#090C1A", s2: "#0E111F", hair: "#242838", hair2: "#333952", plaque: "#7A52A6" },
-    light: { s0: "#FDFDFF", s1: "#F5F6FF", s2: "#ECEEFB", hair: "#DCDFF0", hair2: "#C3C7E0", plaque: "#4A2A6A" },
-  },
-  eg: {
-    dark: { s0: "#120F05", s1: "#1A1609", s2: "#1F1B0E", hair: "#312B1B", hair2: "#453D28", plaque: "#3E62B8" },
-    light: { s0: "#FFFDF9", s1: "#FFFCF5", s2: "#FBF7EC", hair: "#E6DFCC", hair2: "#CFC5AC", plaque: "#1F3F8A" },
-  },
-  gr: {
-    dark: { s0: "#0B1205", s1: "#121A09", s2: "#181F0E", hair: "#242E1A", hair2: "#374426", plaque: "#3F7076" },
-    light: { s0: "#FCFEFA", s1: "#FAFFF5", s2: "#F4FBEC", hair: "#DBE6CC", hair2: "#C0D1AC", plaque: "#1F3B3E" },
-  },
-};
+/**
+ * v3 has no colour for a soul whose civilization the app does not know (or before
+ * sign-in): it keeps v2's neutral plaque, warm black / warm grey, rather than borrowing
+ * another civilization's.
+ */
+export const NEUTRAL_PLAQUE = { light: "#2B2724", dark: "#6E665E" } as const;
+
+/** v3 writes plain white on its civilization colours (#FFF4E8 was 4.30:1 on dark 埃及's band). */
+export const ON_PLAQUE = "#FFFFFF";
+
+/**
+ * `s2`, the pressed / disabled / skeleton step, which v3 does not print: one step from
+ * both grounds toward the line — light: 80% canvas + 20% line (muted on it 4.67:1);
+ * dark: surface and line half and half (muted on it 6.06:1). Derived, so they move with
+ * the five values above if those move.
+ */
+export const S2 = { light: "#E9E9E5", dark: "#292D27" } as const;
+
+/** 90% the colour and 10% #111, as v3's `color-mix(accent 90%, #111)` draws the identity band. */
+export function v3Band(plaque: string): string {
+  const n = parseInt(plaque.slice(1), 16);
+  return `#${[16, 8, 0].map((s) => Math.round(((n >> s) & 255) * 0.9 + 0x11 * 0.1).toString(16).padStart(2, "0")).join("")}`;
+}
 
 /**
  * `lamp` / `lampBg`: the eternal light's warm gold (朋友圈 handoff 1e), used by that
@@ -139,6 +128,7 @@ export const motion = {
   drawerIn: 280,
   drawerOut: 200,
   bandCompact: 200,
+  offlineBar: 200,
 } as const;
 
 export interface Theme {
@@ -149,8 +139,19 @@ export interface Theme {
   s2: string;
   hair: string;
   hair2: string;
-  /** 匾色: see `Ground`. The primary button's fill. */
+  /** The civilization's colour (see `v3`): rules, emblems, the seal, a mark. Never under text. */
   plaque: string;
+  /**
+   * The plaque under text — the title bars and the identity band: `v3Band(plaque)`, as v3
+   * draws the band, in both schemes.
+   */
+  band: string;
+  /**
+   * A filled control's ground (the primary button, send, follow …): the plaque in light;
+   * in dark the band, because white on dark 埃及 / 希腊 is 3.99 / 4.16:1 and on their band
+   * 4.66 / 4.82 (user decision 2026-10-01). The colour values themselves are unchanged.
+   */
+  plaqueFill: string;
   onPlaque: string;
   ink: string;
   inkMuted: string;
@@ -179,8 +180,27 @@ export function civKeyOf(civilization: string | null | undefined): CivKey {
  */
 export function themeFor(civilization: string | null | undefined, scheme: ColorScheme): Theme {
   const key = civKeyOf(civilization);
-  const ground = civ[key][scheme];
-  return { scheme, civ: key, ...ground, onPlaque: ON_PLAQUE, ...ink[scheme], ...semantic[scheme] };
+  const n = v3[scheme];
+  const plaque = key === "neutral" ? NEUTRAL_PLAQUE[scheme] : v3.civ[key][scheme];
+  return {
+    scheme,
+    civ: key,
+    s0: n.canvas,
+    s1: n.surface,
+    s2: S2[scheme],
+    // v3 prints one line and one muted ink; the second hairline and the third ink are those.
+    hair: n.line,
+    hair2: n.line,
+    ink: n.ink,
+    inkMuted: n.muted,
+    inkSubtle: n.muted,
+    ...plaqueSlots(plaque, scheme),
+    ...semantic[scheme],
+  };
+}
+
+function plaqueSlots(plaque: string, scheme: ColorScheme) {
+  return { plaque, band: v3Band(plaque), plaqueFill: scheme === "dark" ? v3Band(plaque) : plaque, onPlaque: ON_PLAQUE };
 }
 
 /**
@@ -209,8 +229,7 @@ export function preLoginTheme(scheme: ColorScheme): Theme {
   const p = parchment[scheme];
   return {
     ...semantic[scheme],
-    plaque: civ.neutral[scheme].plaque,
-    onPlaque: ON_PLAQUE,
+    ...plaqueSlots(NEUTRAL_PLAQUE[scheme], scheme),
     scheme,
     civ: "neutral",
     s0: p.bg,
@@ -222,42 +241,6 @@ export function preLoginTheme(scheme: ColorScheme): Theme {
     inkMuted: p.ink2,
     inkSubtle: p.ink3,
   };
-}
-
-/**
- * v3 (round-7 prototype, user decision 2026-10-01): one set of neutrals for every
- * civilization, and each civilization owns one colour. So far only the life tab and the
- * tab bar wear it (`v3Theme`); the rest of the app keeps the grounds above until the
- * palette is decided globally.
- */
-export const v3 = {
-  light: { canvas: "#EFEFEB", surface: "#FBFBF8", ink: "#181A17", muted: "#646861", line: "#D1D3CD" },
-  dark: { canvas: "#10120F", surface: "#1A1D19", ink: "#F0F1EA", muted: "#A7ACA4", line: "#383C35" },
-  civ: {
-    cn: { light: "#8F3329", dark: "#AD4B40" },
-    eu: { light: "#583875", dark: "#80609A" },
-    eg: { light: "#294A8A", dark: "#5F7FBE" },
-    gr: { light: "#285051", dark: "#5A8480" },
-  },
-  /** v3 writes plain white on its civilization colours (FFF4E8 is 4.30:1 on dark 埃及's band). */
-  onCiv: "#FFFFFF",
-} as const;
-
-/**
- * v3's slots on the Theme shape. v3 has no s2 or second hairline: s2 (a pressed ground)
- * is the canvas and hair2 the one line. The civilization colour is `plaque`; an unknown
- * civilization keeps the neutral plaque. Status colours are unchanged.
- */
-export function v3Theme(t: Theme): Theme {
-  const n = v3[t.scheme];
-  const plaque = t.civ === "neutral" ? t.plaque : v3.civ[t.civ][t.scheme];
-  return { ...t, s0: n.canvas, s1: n.surface, s2: n.canvas, hair: n.line, hair2: n.line, ink: n.ink, inkMuted: n.muted, inkSubtle: n.muted, plaque, onPlaque: t.civ === "neutral" ? t.onPlaque : v3.onCiv };
-}
-
-/** v3's identity band: the civilization colour with 10% #111 mixed in (`color-mix(accent 90%, #111)`). */
-export function v3Band(plaque: string): string {
-  const n = parseInt(plaque.slice(1), 16);
-  return `#${[16, 8, 0].map((s) => Math.round(((n >> s) & 255) * 0.9 + 0x11 * 0.1).toString(16).padStart(2, "0")).join("")}`;
 }
 
 /**

@@ -104,32 +104,43 @@ export function AssistPanel() {
     run.start();
     return () => run.stop();
   }, [visible, drawerIn, rise, drag]);
+  // v3 出场: closed (the ✕, the scrim, back, a pull, or the caller), the drawer stays mounted
+  // for `drawerOut` (200ms) while the sheet sinks and the scrim fades — and takes no touches.
+  // Reduce motion: gone at once.
+  const [mounted, setMounted] = useState(visible);
+  if (visible !== mounted && (visible || !drawerOut)) setMounted(visible);
+  useEffect(() => {
+    if (visible || !mounted) return;
+    const run = Animated.timing(rise, { toValue: 0, duration: drawerOut, easing: Easing.bezier(0.4, 0, 1, 1), useNativeDriver: true });
+    run.start();
+    const done = setTimeout(() => setMounted(false), drawerOut);
+    return () => {
+      run.stop();
+      clearTimeout(done);
+    };
+  }, [visible, mounted, drawerOut, rise]);
   const close = assist?.close;
-  // The handle follows a downward pull only; let go past SHEET_CLOSE_DRAG_PT and the sheet leaves
-  // over `drawerOut` (200ms, the exit curve), else it settles back. Vertical travel and a
-  // release threshold only — no velocity snapping (that would need a gesture library).
+  // The handle follows a downward pull only; let go past SHEET_CLOSE_DRAG_PT and the drawer
+  // closes — the exit above carries the sheet on down from where the finger left it — else it
+  // settles back. Vertical travel and a release threshold only — no velocity snapping (that
+  // would need a gesture library).
   const pan = useMemo(
     () =>
       PanResponder.create({
         onMoveShouldSetPanResponder: (_, g) => g.dy > 4 && Math.abs(g.dy) > Math.abs(g.dx),
         onPanResponderMove: (_, g) => drag.setValue(Math.max(0, g.dy)),
         onPanResponderRelease: (_, g) => {
-          const leave = g.dy > SHEET_CLOSE_DRAG_PT;
-          Animated.timing(drag, {
-            toValue: leave ? screenHeight : 0,
-            duration: drawerOut,
-            easing: leave ? Easing.bezier(0.4, 0, 1, 1) : Easing.bezier(0.2, 0.8, 0.2, 1),
-            useNativeDriver: true,
-          }).start(() => leave && close?.());
+          if (g.dy > SHEET_CLOSE_DRAG_PT) close?.();
+          else Animated.timing(drag, { toValue: 0, duration: drawerOut, easing: Easing.bezier(0.2, 0.8, 0.2, 1), useNativeDriver: true }).start();
         },
       }),
-    [drag, drawerOut, screenHeight, close]
+    [drag, drawerOut, close]
   );
   if (!assist) return null;
   const translateY = Animated.add(rise.interpolate({ inputRange: [0, 1], outputRange: [screenHeight, 0] }), drag);
   return (
-    <Modal visible={visible} transparent animationType="none" onRequestClose={assist.close}>
-      <View style={styles.fill}>
+    <Modal visible={mounted} transparent animationType="none" onRequestClose={assist.close}>
+      <View testID="assist-overlay" style={styles.fill} pointerEvents={visible ? "auto" : "none"}>
         <Animated.View testID="assist-scrim-shade" pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: t.scrim, opacity: rise }]} />
         {full ? null : (
           <Pressable

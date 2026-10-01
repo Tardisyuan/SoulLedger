@@ -15,7 +15,7 @@ import { RootNavigator, navigationRef } from "../navigation";
 import { OUTBOX_KEY } from "../chat";
 import { installMobilePlatform, persistentStore, sessionStore } from "../platform";
 import { SessionProvider } from "../session";
-import { civ, parchment, v3, v3Band } from "../theme";
+import { NEUTRAL_PLAQUE, parchment, v3, v3Band } from "../theme";
 import { PROFILE, application, heldReply, life, pressTab, stubApi } from "./stubApi";
 
 const secure = (SecureStore as unknown as { __store: Map<string, string> }).__store;
@@ -216,7 +216,7 @@ describe("a stored session", () => {
     await act(async () => me.answer({ status: 200, data: { ...PROFILE, civilization: "ATLANTEAN" } }));
     // The band falls back to the neutral plaque (no civilization colour borrowed), never the parchment.
     const band = [screen.getByTestId("plaque").props.style].flat(3).reduce((acc: object, s: object) => ({ ...acc, ...s }), {});
-    expect(band).toMatchObject({ backgroundColor: v3Band(civ.neutral.light.plaque) });
+    expect(band).toMatchObject({ backgroundColor: v3Band(NEUTRAL_PLAQUE.light) });
     expect(Object.values(v3.civ).map((c) => v3Band(c.light))).not.toContain((band as { backgroundColor: string }).backgroundColor);
     expect(band).not.toMatchObject({ backgroundColor: parchment.light.bg });
   });
