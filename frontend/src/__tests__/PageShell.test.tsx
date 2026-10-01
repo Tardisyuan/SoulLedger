@@ -898,8 +898,12 @@ describe("页面标题 <h1>", () => {
         });
       }
     }
-    // 下限:壳自己那一处加壳外七处。读到零个会让下面的循环一条都不跑而照样绿。
-    expect(found.length).toBeGreaterThanOrEqual(7);
+    // 下限:读到零个会让下面的循环一条都不跑而照样绿。2026-10-01 起是六处:壳、首页封面、
+    // 语料、审判台、global-error,加 `PageError.tsx` 的 `StatusCard` —— 403 / 404 / 500
+    // 与 welcome 的 error 边界共用那一块卡,于是 not-found / PermissionDenied /
+    // welcome/error 各自的字面 `<h1>` 合进了它那一处(此前是七处)。
+    expect(found.length).toBeGreaterThanOrEqual(6);
+    expect(found.some((h) => h.file === "src/components/ui/PageError.tsx")).toBe(true);
     expect(found.some((h) => h.file === "src/components/ui/PageShell.tsx")).toBe(true);
 
     const offenders: string[] = [];
