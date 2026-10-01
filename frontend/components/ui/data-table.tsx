@@ -35,21 +35,23 @@ export const ROW_LINK = 'after:absolute after:inset-0'
  * 行的悬停 / 选中(规范 v3 `.ds-tr.hover` / `.ds-tr.selected`,2026-10-01 起)。
  *
  * v2 两者都是 surface-2,悬停与选中同色,只差选中那道竖条。v3 把它们拆成两档:
- * 悬停 = ink 4% 混进 surface-1,选中 = ink 7% 混进 surface-1 + 行首 3px ink 竖条。
+ * 悬停 = ink 4% 混进 surface-1,选中 = ink 7% 混进 surface-1。
  * 选中行不再挂悬停类 —— 否则指针一经过,7% 的底会退成 4%,读起来像取消了选中。
  * 调用方写 `on ? ROW_SELECTED : ROW_HOVER`,不要两个都给。
  *
- * 竖条是 ink,**不是匾色**:行首 3px 匾色竖条是「待我处理」(`RowMark`,补足 B12)的
- * 专用记号。两者在浅色、中性皮下几乎同色(ink 对 civ-neutral 1.19:1),这件事记在
- * `v3DataDisplayContract.test.ts`,没有在这里替谁做决定。
+ * **选中行没有行首竖条**,这是 2026-10-01 用户拍板,偏离 v3(v3 的 `.ds-tr.selected`
+ * 带一道 3px ink inset)。原因:行首 3px 竖条是「待我处理」(`RowMark`,补足 B12)的
+ * 专用记号;选中也画一道时,浅色主题、中性文明皮下两条几乎同色(ink 对 civ-neutral
+ * 1.19:1,ΔE00 4.71),审判队列里「我的」与「选中的」分不开。于是竖条整条让给
+ * 「待我处理」,选中只靠底色 —— 与「3px 色标只表示待我处理」那条既有规矩一致。
  *
- * 两处数字(4 / 7)与选中竖条由 `v3DataDisplayContract.test.ts` 守着,行底上的文字
- * 对比度也在那里按两档主题算。
+ * 4 / 7 两档、以及「选中不画竖条」由 `v3DataDisplayContract.test.tsx` 守着,
+ * 行底上的文字对比度也在那里按两档主题算。
  */
 export const ROW_HOVER =
   'hover:bg-[color-mix(in_oklab,oklch(var(--color-ink))_4%,oklch(var(--color-surface-1)))]'
 export const ROW_SELECTED =
-  'bg-[color-mix(in_oklab,oklch(var(--color-ink))_7%,oklch(var(--color-surface-1)))] shadow-[inset_3px_0_0_oklch(var(--color-ink))]'
+  'bg-[color-mix(in_oklab,oklch(var(--color-ink))_7%,oklch(var(--color-surface-1)))]'
 
 /*
  * 批量条(规范 v3 `.ds-batch`,2026-10-01 起):反相 —— ink 实底、surface-1 字,条上的

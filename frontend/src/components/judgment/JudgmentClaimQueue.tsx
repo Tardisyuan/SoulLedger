@@ -266,7 +266,11 @@ export function JudgmentClaimQueue() {
             {t("judgment.claim.clear_selection")}
           </Button>
           {chosen.length > BATCH_LIMIT && (
-            <span className="text-xs text-[oklch(var(--color-warning))]">
+            // 批量条是 ink 反相底:警示色字在上面只有 2.65 / 3.14:1(深 / 浅),不达标。
+            // 2026-10-01 拍板改用条本身的字色,意思交给字形 ◐(本仓的警示档字形,见
+            // StatusBadge)+ 文字 —— 规范一贯的「不靠颜色单独传达」。
+            <span className="text-xs">
+              <span aria-hidden="true">◐ </span>
               {t("judgment.claim.batch_limit", { n: String(BATCH_LIMIT) })}
             </span>
           )}
