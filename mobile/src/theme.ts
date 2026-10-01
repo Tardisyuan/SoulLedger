@@ -107,7 +107,8 @@ export const radius = { none: 0, pill: 999 } as const;
  * Opacity and translate only — the one scale is the cold start's mark receding (0.96),
  * which does not play under reduce motion at all.
  *
- *   coldStart*               补足 C18: JS takes over from the native splash; the mark recedes,
+ *   coldStart*               补足 C18: JS takes over from the native splash and writes the mark
+ *                            (Draw), lets it stand (Hold), then it recedes: counted from there,
  *                            the home is usable from 480 and the splash layer is gone at 720
  *   sheetIn / sheetOut       a bottom sheet opens (dur.base) / closes (dur.fast; 第 2 轮 原型 06)
  *   sectionIn / sectionOut   a section's body appears (base, 4px down) / goes (fast) — 第 2 轮 4b
@@ -120,6 +121,8 @@ export const motion = {
   welcomeIn: 600,
   welcomeHold: 1200,
   welcomeOut: 240,
+  coldStartDraw: 600,
+  coldStartHold: 300,
   coldStartInteractive: 480,
   coldStart: 720,
   sheetIn: 200,

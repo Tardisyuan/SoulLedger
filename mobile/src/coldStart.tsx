@@ -1,11 +1,12 @@
 /**
- * The cold start (补足 C18). The native splash is the S-and-L balance mark, gold on ink,
- * in both modes (`app.json` → expo-splash-screen; the PNG is built by
- * scripts/build-app-icon.mjs). When JS is ready this draws the same picture — the same
- * PNG, the same size, the same ground — hides the native one under it, and the mark
- * recedes: it lifts 8pt, shrinks to 0.96 and fades by 480. From 480 the app underneath
- * takes touches and the ink ground fades out; it is gone at 720. A tap before then skips
- * straight to the end.
+ * The cold start (补足 C18). The native splash is the ink ground alone, in both modes
+ * (`app.json` → expo-splash-screen, a blank image: HarmonyOS 4.2 drops the splash icon
+ * anyway, so no device shows a mark there). When JS is ready this draws the same ground,
+ * hides the native one under it, and writes the S-and-L mark: nine strokes, all at once,
+ * over `coldStartDraw` (src/brandMark.ts). The mark holds for `coldStartHold`, then recedes:
+ * it lifts 8pt, shrinks to 0.96 and fades over 480. From there the app underneath takes
+ * touches and the ink ground fades out over the last 240. A tap before then skips straight
+ * to the end.
  *
  * WHEN: once per process — a cold start. Coming back from the background is not one,
  * and neither is a remount (sign out, sign in). It waits for the session to settle (a
@@ -17,8 +18,19 @@
  */
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect, useState } from "react";
-import { AccessibilityInfo, Image, Pressable, StyleSheet } from "react-native";
-import Animated, { Easing, useAnimatedStyle, useSharedValue, withDelay, withTiming } from "react-native-reanimated";
+import { AccessibilityInfo, Pressable, StyleSheet } from "react-native";
+import Animated, {
+  Easing,
+  type SharedValue,
+  useAnimatedProps,
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withTiming,
+} from "react-native-reanimated";
+import Svg, { ClipPath, Defs, G, Path } from "react-native-svg";
+
+import { MARK_HEIGHT, MARK_WIDTH, SHAPE, STROKES, VIEWBOX, pathLength } from "./brandMark";
 
 import type { SessionState } from "./session";
 import { motion } from "./theme";
@@ -37,13 +49,16 @@ export const coldStart = { played: false };
 /** How long the splash may wait on a booting session before it plays. */
 const SESSION_WAIT_MS = 1000;
 
-/** app.json's expo-splash-screen: its image, imageWidth and backgroundColor (both modes). */
-const MARK = require("../assets/splash-mark.png");
-const BOX = 112;
+/** app.json's expo-splash-screen backgroundColor (both modes), and the mark's width on it. */
 const INK = "#131211";
+const GOLD = "#ECAA3D";
+const BOX = 112;
+const LENGTHS = STROKES.map(([d]) => pathLength(d));
+const AnimatedPath = Animated.createAnimatedComponent(Path);
 
 const EASE_EXIT = Easing.bezier(0.4, 0, 1, 1);
 const EASE_ENTER = Easing.bezier(0, 0, 0.2, 1);
+const EASE_WRITE = Easing.bezier(0.4, 0, 0.2, 1);
 
 type Phase = "wait" | "play" | "done";
 
@@ -76,7 +91,8 @@ export function ColdStart({ session }: { session: SessionState }) {
     };
   }, [phase, session, waited]);
 
-  // Frame 0 is the native splash: the mark at rest, fully there.
+  // Frame 0 is the native splash: the ground, no mark yet.
+  const drawn = useSharedValue(0);
   const lift = useSharedValue(0);
   const scale = useSharedValue(1);
   const shown = useSharedValue(1);
@@ -86,18 +102,23 @@ export function ColdStart({ session }: { session: SessionState }) {
 
   useEffect(() => {
     if (phase !== "play") return;
+    const written = motion.coldStartDraw + motion.coldStartHold;
     const recede = { duration: motion.coldStartInteractive, easing: EASE_EXIT };
-    lift.set(withTiming(-8, recede));
-    scale.set(withTiming(0.96, recede));
-    shown.set(withTiming(0, recede));
-    cover.set(withDelay(motion.coldStartInteractive, withTiming(0, { duration: motion.coldStart - motion.coldStartInteractive, easing: EASE_ENTER })));
-  }, [phase, lift, scale, shown, cover]);
+    drawn.set(withTiming(1, { duration: motion.coldStartDraw, easing: EASE_WRITE }));
+    lift.set(withDelay(written, withTiming(-8, recede)));
+    scale.set(withDelay(written, withTiming(0.96, recede)));
+    shown.set(withDelay(written, withTiming(0, recede)));
+    cover.set(
+      withDelay(written + motion.coldStartInteractive, withTiming(0, { duration: motion.coldStart - motion.coldStartInteractive, easing: EASE_ENTER })),
+    );
+  }, [phase, drawn, lift, scale, shown, cover]);
 
   // The clock on its own, keyed on the phase alone: a re-render must never restart it.
   useEffect(() => {
     if (phase !== "play") return;
-    const usable = setTimeout(() => setInteractive(true), motion.coldStartInteractive);
-    const gone = setTimeout(() => setPhase("done"), motion.coldStart);
+    const written = motion.coldStartDraw + motion.coldStartHold;
+    const usable = setTimeout(() => setInteractive(true), written + motion.coldStartInteractive);
+    const gone = setTimeout(() => setPhase("done"), written + motion.coldStart);
     return () => {
       clearTimeout(usable);
       clearTimeout(gone);
@@ -121,10 +142,40 @@ export function ColdStart({ session }: { session: SessionState }) {
         style={[StyleSheet.absoluteFill, styles.centre, { backgroundColor: INK }]}
       >
         <Animated.View testID="cold-start-mark-layer" style={markStyle}>
-          <Image testID="cold-start-mark" source={MARK} style={{ width: BOX, height: BOX }} resizeMode="contain" />
+          <Svg testID="cold-start-mark" width={BOX} height={(BOX * MARK_HEIGHT) / MARK_WIDTH} viewBox={VIEWBOX}>
+            <Defs>
+              <ClipPath id="cold-start-shape">
+                {SHAPE.map((d) => (
+                  <Path key={d} d={d} clipRule="evenodd" />
+                ))}
+              </ClipPath>
+            </Defs>
+            <G clipPath="url(#cold-start-shape)">
+              {STROKES.map(([d, width], i) => (
+                <Stroke key={d} d={d} width={width} length={LENGTHS[i]} drawn={drawn} />
+              ))}
+            </G>
+          </Svg>
         </Animated.View>
       </Pressable>
     </Animated.View>
+  );
+}
+
+/** One stroke of the mark: a dash as long as the stroke, offset back to nothing as `drawn` goes 0 → 1. */
+function Stroke({ d, width, length, drawn }: { d: string; width: number; length: number; drawn: SharedValue<number> }) {
+  const props = useAnimatedProps(() => ({ strokeDashoffset: length * (1 - drawn.get()) }));
+  return (
+    <AnimatedPath
+      testID="cold-start-stroke"
+      d={d}
+      fill="none"
+      stroke={GOLD}
+      strokeWidth={width}
+      strokeLinejoin="round"
+      strokeDasharray={[length, length]}
+      animatedProps={props}
+    />
   );
 }
 
