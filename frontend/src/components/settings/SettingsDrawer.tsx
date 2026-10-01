@@ -14,7 +14,7 @@ import { X, Sun, Moon } from "lucide-react";
  */
 
 /** `--transition-duration-settle` (规范 v2 base 200), the length of both drawer keyframes. */
-const MOUNT_LINGER_MS = 200;
+const MOUNT_LINGER_MS = 180;
 
 interface SettingsDrawerProps {
   open: boolean;
@@ -60,8 +60,9 @@ export function SettingsDrawer({ open, onClose }: SettingsDrawerProps) {
    * A closed drawer stays genuinely absent from the DOM; it is only late in
    * leaving.
    *
-   * `MOUNT_LINGER_MS` matches `--transition-duration-settle`, which is what
-   * both keyframes run at. Shorter and the drawer is cut off mid-slide.
+   * `MOUNT_LINGER_MS` matches `--transition-duration-close` (规范 v3: 关 180),
+   * which is what both exit keyframes run at. Shorter and the drawer is cut off
+   * mid-slide.
    */
   const [closing, setClosing] = useState(false);
   // DERIVED DURING RENDER, not set from an effect — and that is load-bearing.
@@ -101,6 +102,7 @@ export function SettingsDrawer({ open, onClose }: SettingsDrawerProps) {
       <button
         type="button"
         aria-label={t("common.close")}
+        data-motion="fade"
         className={`fixed inset-0 bg-[oklch(var(--color-scrim)/var(--scrim-alpha))] z-drawer ${
           open ? "animate-scrim-in" : "animate-scrim-out"
         }`}
@@ -111,6 +113,7 @@ export function SettingsDrawer({ open, onClose }: SettingsDrawerProps) {
       <div
         ref={drawerRef}
         {...drawerProps}
+        data-motion="fade"
         className={`fixed right-0 top-0 h-full w-80 bg-[oklch(var(--color-surface-1))] border-l border-[oklch(var(--color-ink))] z-drawer overflow-y-auto ${
           open ? "animate-drawer-in" : "animate-drawer-out"
         }`}

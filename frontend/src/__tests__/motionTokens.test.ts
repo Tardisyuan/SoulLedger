@@ -5,11 +5,12 @@
  * transform,不够(动效第 2 轮「减少动态」一条)。
  */
 import { readFileSync } from "node:fs";
+import path from "node:path";
 import { renderHook } from "@testing-library/react";
 
 import { MOTION_DURATIONS, MOTION_EASINGS } from "@/lib/motion";
 import { useReducedMotionDurations } from "@/src/hooks/useReducedMotionDurations";
-import { GLOBALS_CSS } from "./support/globalsCssTokens";
+import { FRONTEND_ROOT, GLOBALS_CSS } from "./support/globalsCssTokens";
 
 const css = readFileSync(GLOBALS_CSS, "utf8");
 
@@ -34,6 +35,73 @@ describe("motion tokens: the JS mirror equals the stylesheet", () => {
    * (「不动画」与按住确认),v3 没有,所以留着 —— 对应关系写在 globals.css。 */
   it("the five spec durations are 0 / 160 / 240 / 320 / 600", () => {
     expect(Object.values(MOTION_DURATIONS).map((s) => Math.round(s * 1000))).toEqual([0, 160, 240, 320, 600]);
+  });
+});
+
+/* 规范 v3「B2 · 通用」六行(2026-10-01 那一轮)。读源码文本:jsdom 不算 CSS 动画,
+ * 也不评估 media query。浏览器里实测的时长表写在那一轮的提交信息里。 */
+describe("v3 general motion rows", () => {
+  const src = (rel: string) => readFileSync(path.join(FRONTEND_ROOT, rel), "utf8");
+
+  it("the three off-table durations and the reduced fade are named tokens with v3's numbers", () => {
+    expect(themeValue("--transition-duration-close")).toBe("180ms");
+    expect(themeValue("--transition-duration-dismiss")).toBe("140ms");
+    expect(themeValue("--transition-duration-reveal")).toBe("200ms");
+    expect(themeValue("--transition-duration-reduced")).toBe("80ms");
+  });
+
+  it("page change: 240ms enter, 8px rise, no transform left behind", () => {
+    expect(themeValue("--animate-page-enter")).toBe(
+      "page-enter var(--transition-duration-base) var(--ease-enter) backwards"
+    );
+    expect(css).toMatch(/@keyframes page-enter\s*\{\s*from\s*\{\s*opacity:\s*0;\s*transform:\s*translateY\(8px\);/);
+    expect(src("app/template.tsx")).toMatch(/data-motion="fade" className="animate-page-enter"/);
+  });
+
+  it("modal / drawer: open 240 enter, close 180 exit, 12px", () => {
+    for (const file of ["src/components/ui/Modal.tsx", "src/components/ui/Drawer.tsx"]) {
+      const text = src(file);
+      expect(text).not.toMatch(/data-ending-style:duration-fast/);
+      expect(text).not.toMatch(/translate-[xy]-(2|full)\b/);
+      expect(text).toMatch(/data-ending-style:duration-close/);
+      expect(text).toMatch(/data-starting-style:translate-[xy]-3/);
+    }
+    expect(themeValue("--animate-drawer-out")).toMatch(/var\(--transition-duration-close\) var\(--ease-exit\)/);
+    expect(themeValue("--animate-scrim-out")).toMatch(/var\(--transition-duration-close\) var\(--ease-exit\)/);
+    expect(css).toMatch(/@keyframes drawer-in\s*\{\s*from\s*\{\s*opacity:\s*0;\s*transform:\s*translateX\(12px\);/);
+  });
+
+  it("toast: 160 in, 140 out, 8px", () => {
+    expect(css).toMatch(/animation: toast-in var\(--transition-duration-fast\) var\(--ease-enter\);/);
+    expect(css).toMatch(/opacity var\(--transition-duration-dismiss\) var\(--ease-exit\)/);
+    expect(css).toMatch(/@keyframes toast-in\s*\{\s*from\s*\{\s*opacity:\s*0;\s*transform:\s*translateY\(-8px\);/);
+  });
+
+  it("skeleton → content: PageShell fades the body in over `reveal` once the skeleton goes", () => {
+    expect(themeValue("--animate-content-in")).toBe(
+      "content-in var(--transition-duration-reveal) var(--ease-enter) backwards"
+    );
+    expect(src("src/components/ui/PageShell.tsx")).toMatch(/skeleton && !showingSkeleton && "animate-content-in"/);
+  });
+
+  it("danger confirm: the name-matched button enables without a tween", () => {
+    expect(src("src/components/admin/NameConfirmDialog.tsx")).toMatch(/className="duration-instant"/);
+  });
+
+  it("reduced motion keeps an 80ms fade with NO movement on the fade set, and never `none`", () => {
+    const block =
+      /@media \(prefers-reduced-motion: reduce\) \{\s*\[data-motion="fade"\],\s*\.toast \{([^}]*)\}/.exec(css)?.[1] ?? "";
+    expect(block).toMatch(/animation-duration: var\(--transition-duration-reduced\) !important/);
+    expect(block).toMatch(/transition-duration: var\(--transition-duration-reduced\) !important/);
+    expect(block).toMatch(/transform: none !important/);
+    expect(block).toMatch(/translate: none !important/);
+    expect(block).not.toMatch(/(animation|transition):\s*none/);
+    // Same importance as the universal 1ms rule; the attribute selector wins on
+    // specificity, and it sits after that rule so source order agrees.
+    expect(css.indexOf('[data-motion="fade"],')).toBeGreaterThan(css.indexOf("transition-duration: 1ms !important"));
+    for (const file of ["src/components/ui/Modal.tsx", "src/components/ui/Drawer.tsx"]) {
+      expect(src(file).match(/data-motion="fade"/g)?.length ?? 0).toBeGreaterThanOrEqual(2);
+    }
   });
 });
 
