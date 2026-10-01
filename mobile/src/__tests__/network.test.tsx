@@ -147,6 +147,30 @@ describe("the offline bar", () => {
     await restore();
     expect(lifeCalls()).toBe(loaded + 1);
   });
+
+  // The bug as reported: reduce motion on, the network drops, and the life tab's three requests
+  // go out again. Going offline was only the first thing to flush after the mount: the tab
+  // navigator first rendered with reduce motion still unanswered ("fade"), then switched to
+  // "none" — which turns react-native-screens' container on iOS from RNSScreenContainer into
+  // RNSScreenNavigationContainer, a different component, so every tab under it remounted.
+  it.each([false, true])("reduce motion %s: the life tab mounts once — going offline does not send its three requests again", async (reduced) => {
+    const spy = jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockResolvedValue(reduced);
+    secure.set(REFRESH_TOKEN_KEY, "R");
+    const calls = stubApi({ "/me/": { status: 200, data: PROFILE }, "/me/life/": { status: 200, data: life(1) } });
+    renderApp();
+    await screen.findByTestId("profile-card");
+    await drop();
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 50));
+    });
+    const count = (u: string) => calls.filter((c) => c.url === u).length;
+    expect(["/me/life/", "/me/past-lives/", "/me/sentence-plan/"].map((u) => [u, count(u)])).toEqual([
+      ["/me/life/", 1],
+      ["/me/past-lives/", 1],
+      ["/me/sentence-plan/", 1],
+    ]);
+    spy.mockResolvedValue(false);
+  });
 });
 
 // ui.tsx reads the network state from online.ts, never from network.tsx: network.tsx draws the
