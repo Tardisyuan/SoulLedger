@@ -566,22 +566,26 @@ describe("PageShell density", () => {
           `an <h2> declares exactly one`;
       } else if (step === "text-2xs" && !/\buppercase\b/.test(h.tag)) {
         why = `text-2xs without uppercase — the eyebrow role is an uppercase label, not an 11px title`;
-      } else if (step === "text-md" && /\bfont-semibold\b/.test(h.tag)) {
+      } else if (step === "text-2xs" && /(?<![\w:-])font-mono\b/.test(h.tag)) {
+        // 2026-10-01 用户拍板:区块标签用界面字体。此前界面字体 24 处、等宽 11 处,角色没钉字体。
+        // 等宽是壳的 eyebrow 的(它不是标题),不是区块标签的。
+        why = `font-mono on a section label — the label is set in the interface face; font-mono belongs to the shell's eyebrow`;
+      } else if (step === "text-lg" && /\bfont-semibold\b/.test(h.tag)) {
         why =
-          `font-semibold on text-md is a no-op — --text-md--font-weight is already 600, ` +
+          `font-semibold on text-lg is a no-op — --text-lg--font-weight is already 600, ` +
           `so this renders byte-identical and reads as "it would be light without me"`;
       } else if (step === "text-sm" && !/\bfont-medium\b/.test(h.tag)) {
         // 与上一条相反的方向,故意挨着放:`--text-sm` 没有伴生 weight,所以
         // 这里的 font-medium 是**唯一**把行标题和它下面那条 <p> 分开的东西。
         why =
           `text-sm without font-medium — the list-row title role is "text-sm font-medium", ` +
-          `and unlike text-md this weight is load-bearing: --text-sm has no companion ` +
+          `and unlike text-lg this weight is load-bearing: --text-sm has no companion ` +
           `--text-sm--font-weight, so without it the heading renders at the same 400 as the ` +
           `<p> beneath it`;
-      } else if (step !== "text-2xs" && step !== "text-md" && step !== "text-sm") {
+      } else if (step !== "text-2xs" && step !== "text-lg" && step !== "text-sm") {
         why =
           `${step} is none of the three roles (eyebrow = text-2xs uppercase, ` +
-          `panel title = text-md, list-row title = text-sm font-medium)`;
+          `panel title = text-lg, list-row title = text-sm font-medium)`;
       }
       if (why === null) continue;
 
@@ -605,8 +609,8 @@ describe("PageShell density", () => {
     if (offenders.length > 0) {
       throw new Error(
         `<h2> has exactly three roles and each pins one step: the eyebrow label is ` +
-          `"text-2xs uppercase", the panel title is "text-md" (its 600 comes from ` +
-          `--text-md--font-weight, so font-semibold beside it is a no-op), and the ` +
+          `"text-2xs uppercase", the panel title is "text-lg" (its 600 comes from ` +
+          `--text-lg--font-weight, so font-semibold beside it is a no-op), and the ` +
           `list-row title is "text-sm font-medium" (--text-sm has no companion weight, ` +
           `so there the font-medium is required, not redundant). The rule is ` +
           `written in src/components/ui/PageShell.tsx's file header.\n\n` +
@@ -702,7 +706,7 @@ describe("PageShell density", () => {
     const conforming = (step: string, extra: (_tag: string) => boolean) =>
       found.filter((h) => h.steps.length === 1 && h.steps[0] === step && extra(h.tag)).length;
     expect(conforming("text-2xs", (t) => /\buppercase\b/.test(t))).toBeGreaterThan(0);
-    expect(conforming("text-md", () => true)).toBeGreaterThan(0);
+    expect(conforming("text-lg", () => true)).toBeGreaterThan(0);
     expect(conforming("text-sm", (t) => /\bfont-medium\b/.test(t))).toBeGreaterThan(0);
 
     const offenders: string[] = [];
@@ -719,19 +723,23 @@ describe("PageShell density", () => {
           `whatever utility class an ancestor happens to carry`;
       } else if (step === "text-2xs" && !/\buppercase\b/.test(h.tag)) {
         why = `text-2xs without uppercase — the eyebrow role is an uppercase label, not an 11px title`;
-      } else if (step === "text-md" && /\bfont-semibold\b/.test(h.tag)) {
+      } else if (step === "text-2xs" && /(?<![\w:-])font-mono\b/.test(h.tag)) {
+        // 2026-10-01 用户拍板:区块标签用界面字体。此前界面字体 24 处、等宽 11 处,角色没钉字体。
+        // 等宽是壳的 eyebrow 的(它不是标题),不是区块标签的。
+        why = `font-mono on a section label — the label is set in the interface face; font-mono belongs to the shell's eyebrow`;
+      } else if (step === "text-lg" && /\bfont-semibold\b/.test(h.tag)) {
         why =
-          `font-semibold on text-md is a no-op — --text-md--font-weight is already 600, ` +
+          `font-semibold on text-lg is a no-op — --text-lg--font-weight is already 600, ` +
           `so this renders byte-identical and reads as "it would be light without me"`;
       } else if (step === "text-sm" && !/\bfont-medium\b/.test(h.tag)) {
         why =
           `text-sm without font-medium — the list-row title role is "text-sm font-medium", ` +
           `and --text-sm has no companion --text-sm--font-weight, so without it the heading ` +
           `renders at the same 400 as the text beneath it`;
-      } else if (step !== "text-2xs" && step !== "text-md" && step !== "text-sm") {
+      } else if (step !== "text-2xs" && step !== "text-lg" && step !== "text-sm") {
         why =
           `${step} is none of the three roles (eyebrow = text-2xs uppercase, ` +
-          `panel title = text-md, list-row title = text-sm font-medium)`;
+          `panel title = text-lg, list-row title = text-sm font-medium)`;
       }
       if (why === null) continue;
 
@@ -755,7 +763,7 @@ describe("PageShell density", () => {
     if (offenders.length > 0) {
       throw new Error(
         `<h3> carries the same three roles as <h2>, at the same three steps: the eyebrow ` +
-          `label is "text-2xs uppercase", the panel title is "text-md", and the list-row ` +
+          `label is "text-2xs uppercase", the panel title is "text-lg", and the list-row ` +
           `title is "text-sm font-medium". The step follows the ROLE, not the heading ` +
           `depth — a row title written <h3> because it sits inside a panel is the same ` +
           `row title. The rule is written in src/components/ui/PageShell.tsx's file header.\n\n` +
@@ -860,15 +868,12 @@ describe("PageShell density", () => {
  *     所以只能用行内 `style`。这里单独断言它写的是 `1.25rem`(= 20px,与 `text-lg`
  *     同值),而不是放它走 —— 否则那一处就是一个没有任何东西看着的标题。
  */
-const H1_ROLE_EXEMPTIONS = new Map<string, string>([
-  [
-    "app/page.tsx",
-    // 首页 hero:`text-lg md:text-xl`,桌面 28px。它是全站唯一的「封面标题」,
-    // 而 28px 在 v3 的字阶里写作「页面次标题」。把它压到 20px 是一个版式决定,
-    // 不是规矩能替人做的;留在这里等那个决定,而且这条会自我作废(见下)。
-    "text-lg md:text-xl — the landing hero; 20px on mobile, 28px from md up",
-  ],
-]);
+/**
+ * 封面标题:首页 hero,`text-lg md:text-xl`(手机 20、md 起 28)。
+ * 原本是一条等决定的豁免;2026-10-01 用户拍板保留 28px,于是从豁免升成正式角色。
+ * 它只许出现在 `app/page.tsx`,而且必须真的出现 —— 一个从没被看到的角色是一条空守卫。
+ */
+const H1_COVER = { file: "app/page.tsx", steps: "text-lg md:text-xl" };
 
 describe("页面标题 <h1>", () => {
   it("pins every literal <h1> outside the shell to the page-title step, text-lg", () => {
@@ -898,7 +903,7 @@ describe("页面标题 <h1>", () => {
     expect(found.some((h) => h.file === "src/components/ui/PageShell.tsx")).toBe(true);
 
     const offenders: string[] = [];
-    const exemptionsHit = new Set<string>();
+    let coverSeen = 0;
     for (const h of found) {
       if (h.file === "app/global-error.tsx") {
         if (!/fontSize:\s*"1\.25rem"/.test(h.tag)) {
@@ -906,9 +911,9 @@ describe("页面标题 <h1>", () => {
         }
         continue;
       }
-      const exempt = H1_ROLE_EXEMPTIONS.get(h.file);
-      if (exempt !== undefined && h.steps.join(" ") === exempt.split(" — ")[0]) {
-        exemptionsHit.add(h.file);
+      if (h.steps.join(" ") === H1_COVER.steps) {
+        if (h.file === H1_COVER.file) coverSeen += 1;
+        else offenders.push(`${h.file}:${h.line}  the cover title (text-lg md:text-xl) belongs to ${H1_COVER.file} only`);
         continue;
       }
       let why: string | null = null;
@@ -920,13 +925,7 @@ describe("页面标题 <h1>", () => {
       if (why) offenders.push(`${h.file}:${h.line}  ${why}`);
     }
 
-    const stale = [...H1_ROLE_EXEMPTIONS.keys()].filter((f) => !exemptionsHit.has(f));
-    if (stale.length > 0) {
-      throw new Error(
-        `H1_ROLE_EXEMPTIONS lists a heading that no longer exists in that shape — delete the entry.\n\n` +
-          stale.join("\n")
-      );
-    }
+    expect(coverSeen).toBe(1);
     if (offenders.length > 0) {
       throw new Error(
         `<h1> is the page title and has one step: text-lg (20px / 600). The plaque title ` +

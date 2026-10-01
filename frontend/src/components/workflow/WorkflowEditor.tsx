@@ -1348,7 +1348,7 @@ export default function WorkflowEditor({
           <p className="text-xs text-[oklch(var(--color-ink-muted))]">{t("workflow.editor.narrow_body")}</p>
         </div>
         <div className="px-4 py-3 border-b border-[oklch(var(--color-block))]">
-          <h2 className="text-md text-[oklch(var(--color-ink))] break-words">
+          <h2 className="text-lg text-[oklch(var(--color-ink))] break-words">
             {templateName || t("workflow.editor.template_name_placeholder")}
           </h2>
           <p className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">

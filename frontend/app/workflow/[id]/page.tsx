@@ -493,7 +493,7 @@ export default function WorkflowDetailPage() {
              this. The nodes can. */
           <section>
             <h2
-              className={`pt-6 pb-1 border-b border-[oklch(var(--color-block))] font-mono text-2xs uppercase tracking-widest ${
+              className={`pt-6 pb-1 border-b border-[oklch(var(--color-block))] text-2xs uppercase tracking-widest ${
                 hasRejection
                   ? "text-[oklch(var(--color-status-error))]"
                   : "text-[oklch(var(--color-status-success))]"

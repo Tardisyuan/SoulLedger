@@ -42,7 +42,7 @@ export function ProfileCard({ profile }: { profile: UserProfile }) {
             profile.username.charAt(0).toUpperCase()
           )}
         </div>
-        <h2 className="flex-1 min-w-0 text-md text-[oklch(var(--color-ink))] truncate" title={profile.username}>
+        <h2 className="flex-1 min-w-0 text-lg text-[oklch(var(--color-ink))] truncate" title={profile.username}>
           {profile.username}
         </h2>
         {isOwnProfile ? (

@@ -309,7 +309,7 @@ function Section({
   const { t } = useI18n();
   return (
     <section className="mb-6" data-testid={testId}>
-      <h2 className="pt-4 pb-1 border-b border-[oklch(var(--color-block))] font-mono text-2xs uppercase text-[oklch(var(--color-ink-subtle))]">
+      <h2 className="pt-4 pb-1 border-b border-[oklch(var(--color-block))] text-2xs uppercase text-[oklch(var(--color-ink-subtle))]">
         <span aria-hidden="true">{mark} · </span>
         {title} <span className="tabular-nums" data-testid="section-count">{count}</span>
       </h2>

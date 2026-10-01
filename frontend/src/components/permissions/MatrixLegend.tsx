@@ -29,7 +29,7 @@ export function MatrixLegend({
           —— 它和自己下面的说明段落同为 13px,只靠 weight 分开。字号从刻度来,
           不从祖先的一个工具类来,这是刻度存在的全部理由。
           `font-semibold` 一并删掉:`--text-md--font-weight` 已经是 600。 */}
-      <h3 className="text-md text-[oklch(var(--color-ink))]">{t("permissions.matrix.legend_title")}</h3>
+      <h3 className="text-lg text-[oklch(var(--color-ink))]">{t("permissions.matrix.legend_title")}</h3>
       <p className="text-[oklch(var(--color-ink-muted))]">{t("permissions.matrix.legend_intro")}</p>
       {nonSubsetPair && (
         <p className="text-[oklch(var(--color-ink-muted))]">
