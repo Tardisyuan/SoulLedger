@@ -22,7 +22,7 @@ import { SafeAreaInsetsContext, useSafeAreaInsets } from "react-native-safe-area
 import { useI18n } from "./i18n";
 import { OnlineContext, type Online } from "./online";
 import { space } from "./theme";
-import { GUTTER, SmallButton, Txt, useTheme } from "./ui";
+import { GUTTER, Grow, SmallButton, Txt, useReducedMotionDurations, useTheme } from "./ui";
 
 export { useOnline } from "./online";
 
@@ -65,21 +65,26 @@ function OfflineBar({ onRetry }: { onRetry: () => void }) {
   const t = useTheme();
   const { t: tr } = useI18n();
   const insets = useSafeAreaInsets();
+  // v3 MotionSpec 离线条: it opens from 0 to its height over 200ms and pushes the page down
+  // with it (a layout change, on purpose); reduce motion inserts it at once.
+  const { offlineBar } = useReducedMotionDurations();
   return (
-    <View testID="offline-inset" style={{ paddingTop: insets.top, paddingLeft: insets.left, paddingRight: insets.right, backgroundColor: t.s0 }}>
-      <View
-        testID="offline-bar"
-        accessibilityRole="alert"
-        accessibilityLiveRegion="polite"
-        // GUTTER at render, not in StyleSheet.create (kept from when ui.tsx imported this module).
-        style={[styles.bar, { borderColor: t.inkSubtle, marginHorizontal: GUTTER }]}
-      >
-        <Txt testID="offline-text" variant="body" style={styles.fill}>
-          {tr("soul_app.errors.offline")}
-        </Txt>
-        <SmallButton testID="offline-retry" title={tr("soul_app.common.retry")} onPress={onRetry} />
+    <Grow ms={offlineBar}>
+      <View testID="offline-inset" style={{ paddingTop: insets.top, paddingLeft: insets.left, paddingRight: insets.right, backgroundColor: t.s0 }}>
+        <View
+          testID="offline-bar"
+          accessibilityRole="alert"
+          accessibilityLiveRegion="polite"
+          // GUTTER at render, not in StyleSheet.create (kept from when ui.tsx imported this module).
+          style={[styles.bar, { borderColor: t.inkSubtle, marginHorizontal: GUTTER }]}
+        >
+          <Txt testID="offline-text" variant="body" style={styles.fill}>
+            {tr("soul_app.errors.offline")}
+          </Txt>
+          <SmallButton testID="offline-retry" title={tr("soul_app.common.retry")} onPress={onRetry} />
+        </View>
       </View>
-    </View>
+    </Grow>
   );
 }
 

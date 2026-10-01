@@ -8,13 +8,14 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { act, fireEvent, render, screen } from "@testing-library/react-native";
 import * as Network from "expo-network";
 import * as SecureStore from "expo-secure-store";
-import { StyleSheet } from "react-native";
+import { AccessibilityInfo, StyleSheet } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { I18nProvider } from "../i18n";
 import { RootNavigator } from "../navigation";
 import { installMobilePlatform, sessionStore } from "../platform";
 import { SessionProvider } from "../session";
+import { motion } from "../theme";
 import { PROFILE, life, stubApi } from "./stubApi";
 
 const net = Network as unknown as {
@@ -70,6 +71,27 @@ describe("the offline bar", () => {
     await restore();
     expect(screen.queryByTestId("offline-bar")).toBeNull();
     expect(screen.getByTestId("login-submit")).toBeTruthy();
+  });
+
+  it.each([false, true])("v3: the bar opens from 0 to its height over 200ms (reduce motion %s: at once)", async (reduced) => {
+    const spy = jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockResolvedValue(reduced);
+    renderApp();
+    await screen.findByTestId("login-submit");
+    await drop();
+    if (reduced) {
+      expect(screen.queryByTestId("grow")).toBeNull();
+      expect(screen.getByTestId("offline-bar")).toBeTruthy();
+      spy.mockResolvedValue(false);
+      return;
+    }
+    expect(flat(screen.getByTestId("grow"))).toMatchObject({ height: 0, overflow: "hidden" });
+    fireEvent(screen.getByTestId("offline-inset").parent!, "layout", { nativeEvent: { layout: { x: 0, y: 0, width: 390, height: TOP + 40 } } });
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, motion.offlineBar + 150));
+    });
+    expect(screen.queryByTestId("grow")).toBeNull();
+    expect(screen.getByTestId("offline-bar")).toBeTruthy();
+    spy.mockResolvedValue(false);
   });
 
   it("offline at launch: the first answer the OS gives is enough", async () => {

@@ -25,7 +25,13 @@ import { SessionProvider } from "../session";
 import { PROFILE, heldReply, life, stubApi } from "./stubApi";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AccessibilityInfo, StyleSheet } from "react-native";
-import { v3 } from "../theme";
+import { motion, v3 } from "../theme";
+
+/** Wait out the drawer's 200ms exit (v3 MotionSpec 问一问抽屉 出场). */
+const afterExit = () =>
+  act(async () => {
+    await new Promise((r) => setTimeout(r, motion.drawerOut + 50));
+  });
 
 type StreamEvent = Record<string, unknown> & { event: string };
 interface Ask {
@@ -189,6 +195,8 @@ describe("the four notices (1g)", () => {
     expect(screen.getByTestId("assist-not-configured")).toBeTruthy();
     fireEvent.press(screen.getByTestId("assist-letters"));
     expect(openLetters).toHaveBeenCalledTimes(1);
+    // v3 出场: closed, the drawer sinks for 200ms (taking no touches), then it is gone.
+    await afterExit();
     expect(screen.queryByTestId("assist-panel")).toBeNull();
     expect(screen.queryByTestId("assist-entry")).toBeNull();
   });
@@ -375,6 +383,30 @@ describe("streaming (流式输出)", () => {
     }
     // (The rise runs on the native driver, which jest does not play back: the end state is the device's.)
     await screen.findByTestId("assist-empty");
+  });
+
+  it.each([
+    ["assist-close", false],
+    ["assist-close", true],
+  ])("v3 drawer exit: %s with reduce motion %s", async (closer, reduced) => {
+    jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockResolvedValue(reduced);
+    stubApi({ [LIST]: { status: 200, data: [] } });
+    renderDrawer();
+    await act(async () => {}); // the reduce-motion answer
+    fireEvent.press(screen.getByTestId("assist-entry"));
+    await screen.findByTestId("assist-empty");
+    fireEvent.press(screen.getByTestId(closer));
+    if (reduced) {
+      expect(screen.queryByTestId("assist-panel")).toBeNull();
+      return;
+    }
+    // Still there for the sink, but no longer taking touches…
+    expect(screen.getByTestId("assist-panel")).toBeTruthy();
+    expect(screen.getByTestId("assist-overlay").props.pointerEvents).toBe("none");
+    // …and gone once the 200ms are up. (No mid-way check: under load a real 120ms wait can
+    // overrun the 200ms timer — the immediate check above is what proves the drawer stayed.)
+    await afterExit();
+    expect(screen.queryByTestId("assist-panel")).toBeNull();
   });
 
   it("A11 reduced motion: no cursor, still dots, and a whole paragraph at a time", async () => {
