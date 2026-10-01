@@ -112,18 +112,33 @@ function BalanceReading({
   // 规范 v1「乙 · 功过」:收 / 支 / 结 三列账。功德记在收列、罪业记在支列,
   // 余额落在结列、压在 3 px 双线上 —— 双线在账簿里就是「到此结清」。
   // 收、支是账行,正文字号;只有结是头条数字(text-md)。
+  //
+  // 窄处改成两列(容器查询,不看视口):审判台左栏只有 220–240 px,四列挤进去时「功德」「权重」
+  // 被拆成一字一行(2026-10-01 1024 截图)。v3 原型在这么窄的栏里只放上下叠的 dt / dd,不放三列账,
+  // 所以 20rem 以下:标签在左、数字靠右,收 / 支 / 结 的表头与空格子不画 —— 哪一列由符号说明
+  // (+ 收、− 支、结压双线)。20rem 以上(灵魂账页的卡片、手机全宽)仍是三列账。
+  // 数字格 `whitespace-nowrap`:数和单位(权重)是一个词,不许拆;标签 `break-keep`:中文词不在字中间断,
+  // egy 的长标签只在词间换行。
   const cell = "py-2 border-b border-[oklch(var(--color-rule))]";
   const last = "py-2 border-b border-[oklch(var(--color-block))]";
   const total = "py-2 border-b-[3px] border-double border-[oklch(var(--color-block))]";
+  const label = "min-w-0 break-keep";
+  const figure = "pl-4 text-right whitespace-nowrap"; // pl 而不是 gap:gap 会在账线上断出缺口
+  /** 四列账里才有的格子:表头与空格子。两列时不画。 */
+  const wide = "hidden @xs:block";
   return (
-    <div data-testid="balance-ledger" className="grid grid-cols-[1fr_auto_auto_auto] text-sm [&>*:not(:nth-child(4n+1))]:pl-4">
-      <span aria-hidden="true" className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))] pb-1 border-b border-[oklch(var(--color-block))]" />
-      <span aria-hidden="true" className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))] pb-1 border-b border-[oklch(var(--color-block))] text-right">{t("souls.detail.ledger.col_in")}</span>
-      <span aria-hidden="true" className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))] pb-1 border-b border-[oklch(var(--color-block))] text-right">{t("souls.detail.ledger.col_out")}</span>
-      <span aria-hidden="true" className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))] pb-1 border-b border-[oklch(var(--color-block))] text-right">{t("souls.detail.ledger.col_net")}</span>
+    <div className="@container">
+    <div
+      data-testid="balance-ledger"
+      className="grid grid-cols-[minmax(0,1fr)_auto] text-sm @xs:grid-cols-[1fr_auto_auto_auto] @xs:[&>*:not(:nth-child(4n+1))]:pl-4"
+    >
+      <span aria-hidden="true" className={`${wide} font-mono text-2xs text-[oklch(var(--color-ink-subtle))] pb-1 border-b border-[oklch(var(--color-block))]`} />
+      <span aria-hidden="true" className={`${wide} font-mono text-2xs text-[oklch(var(--color-ink-subtle))] pb-1 border-b border-[oklch(var(--color-block))] text-right`}>{t("souls.detail.ledger.col_in")}</span>
+      <span aria-hidden="true" className={`${wide} font-mono text-2xs text-[oklch(var(--color-ink-subtle))] pb-1 border-b border-[oklch(var(--color-block))] text-right`}>{t("souls.detail.ledger.col_out")}</span>
+      <span aria-hidden="true" className={`${wide} font-mono text-2xs text-[oklch(var(--color-ink-subtle))] pb-1 border-b border-[oklch(var(--color-block))] text-right`}>{t("souls.detail.ledger.col_net")}</span>
 
-      <span className={cell}>{t("souls.detail.merit")}</span>
-      <span className={`${cell} text-right`}>
+      <span className={`${cell} ${label}`}>{t("souls.detail.merit")}</span>
+      <span className={`${cell} ${figure}`}>
         <Figure
           field="merit"
           quantity={q.merit}
@@ -133,12 +148,12 @@ function BalanceReading({
           +{reading.merit}
         </Figure>
       </span>
-      <span className={cell} />
-      <span className={cell} />
+      <span className={`${cell} ${wide}`} />
+      <span className={`${cell} ${wide}`} />
 
-      <span className={last}>{t("souls.detail.demerit")}</span>
-      <span className={last} />
-      <span className={`${last} text-right`}>
+      <span className={`${last} ${label}`}>{t("souls.detail.demerit")}</span>
+      <span className={`${last} ${wide}`} />
+      <span className={`${last} ${figure}`}>
         <Figure
           field="demerit"
           quantity={q.demerit}
@@ -148,12 +163,12 @@ function BalanceReading({
           -{reading.demerit}
         </Figure>
       </span>
-      <span className={last} />
+      <span className={`${last} ${wide}`} />
 
-      <span className={`${total} font-semibold`}>{t("souls.detail.balance")}</span>
-      <span className={total} />
-      <span className={total} />
-      <span className={`${total} text-right`}>
+      <span className={`${total} ${label} font-semibold`}>{t("souls.detail.balance")}</span>
+      <span className={`${total} ${wide}`} />
+      <span className={`${total} ${wide}`} />
+      <span className={`${total} ${figure}`}>
         <Figure
           field="balance"
           quantity={q.balance}
@@ -164,6 +179,7 @@ function BalanceReading({
           {reading.balance}
         </Figure>
       </span>
+    </div>
     </div>
   );
 }
