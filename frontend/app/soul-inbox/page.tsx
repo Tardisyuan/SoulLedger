@@ -33,6 +33,7 @@ import { Pagination } from "@/src/components/ui/Pagination";
 import { ListSkeleton } from "@/components/ui/skeleton";
 import { TemplateManager } from "./TemplateManager";
 import { AssignDialog } from "./AssignDialog";
+import { ROW_HOVER, ROW_SELECTED } from "@/components/ui/data-table";
 
 /*
  * 殿司收件箱:灵魂写给**当前所在**殿司的信(backend/apps/chat/views.py `OfficerInboxViewSet`)。
@@ -66,7 +67,7 @@ const RULE = "border-[oklch(var(--color-rule))]";
 const LINE = "border-[oklch(var(--color-line))]";
 const MUTED_TEXT = "text-xs text-[oklch(var(--color-ink-subtle))]";
 const SECTION_HEAD = "font-mono text-2xs tracking-wide text-[oklch(var(--color-ink-subtle))]";
-const CURRENT = "bg-[oklch(var(--color-surface-2))] shadow-[inset_3px_0_0_oklch(var(--color-ink))] text-[oklch(var(--color-ink))] font-medium";
+const CURRENT = `${ROW_SELECTED} text-[oklch(var(--color-ink))] font-medium`;
 
 /** 文件夹栏的一项:服务端的文件夹,或「全部来信」里按状态 / 按殿收窄。 */
 type FolderKey = InboxFolder | "status:open" | "status:closed" | `hall:${number}`;
@@ -624,8 +625,8 @@ function SoulInboxContent() {
         type="button"
         aria-pressed={folder === f.key}
         onClick={() => choose(f.key)}
-        className={`w-full flex justify-between items-center px-4 py-2 border-b ${RULE} text-left text-sm text-[oklch(var(--color-ink-muted))] hover:bg-[oklch(var(--color-surface-2))] ${
-          folder === f.key ? CURRENT : ""
+        className={`w-full flex justify-between items-center px-4 py-2 border-b ${RULE} text-left text-sm text-[oklch(var(--color-ink-muted))] ${
+          folder === f.key ? CURRENT : ROW_HOVER
         }`}
       >
         <span>{f.label}</span>
@@ -699,7 +700,7 @@ function SoulInboxContent() {
                     <button type="button" data-conversation-id={r.id} data-unread={r.unread || undefined}
                       aria-pressed={r.id === selectedId}
                       onClick={() => setSelectedId(r.id)}
-                      className="w-full flex gap-2 text-left px-4 py-3 max-lg:min-h-11 hover:bg-[oklch(var(--color-surface-2))] aria-pressed:bg-[oklch(var(--color-surface-2))] aria-pressed:shadow-[inset_3px_0_0_oklch(var(--color-ink))]">
+                      className={`w-full flex gap-2 text-left px-4 py-3 max-lg:min-h-11 ${r.id === selectedId ? ROW_SELECTED : ROW_HOVER}`}>
                       {/* 未读:6 px 强调色方块(设计稿 C · 09:方块,不用圆点)。读屏读的是旁边那句。 */}
                       <span aria-hidden="true" className={`mt-[7px] size-1.5 flex-none ${r.unread ? "bg-[oklch(var(--color-accent))]" : ""}`} />
                       <span className="min-w-0 flex-1">

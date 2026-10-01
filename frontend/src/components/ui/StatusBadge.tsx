@@ -21,17 +21,25 @@ export const TONE_GLYPH: Record<BadgeTone, string> = {
   ink: "■",
 };
 
-/** 无底色徽章 + 字形,里面是 `DomainEnum`(原始枚举值仍在 `title` 上,BRIEF §4.6)。 */
+/**
+ * 无底色徽章 + 字形,里面是 `DomainEnum`(原始枚举值仍在 `title` 上,BRIEF §4.6)。
+ *
+ * 2026-10-01 规范 v3:框一律中性灰 `--color-line`,不再跟 tone 同色 —— 意思由字形 +
+ * 文字承担,颜色不再画两遍。字仍是 tone 色:这些是流程状态,不是 C15 的领域枚举,
+ * 规范 v1 §1.2 给它们「颜色 + 字形」,v3 只改了框。
+ */
+export const STATUS_BADGE_BORDER = "border-[oklch(var(--color-line))]";
+
 export function StatusBadge({ namespace, value, tone = "neutral" }: { namespace: string; value: string | null | undefined; tone?: BadgeTone }) {
   return (
-    <Badge tone={tone} glyph={TONE_GLYPH[tone]}>
+    <Badge tone={tone} glyph={TONE_GLYPH[tone]} className={STATUS_BADGE_BORDER}>
       <DomainEnum namespace={namespace} value={value} />
     </Badge>
   );
 }
 
 /**
- * 判决徽章(补足 B8):领域枚举,ink 字 + 1px ink3 框,「待定」加 s2 底。字形与底色
+ * 判决徽章(补足 B8):领域枚举,ink 字 + 1px 中性灰框(2026-10-01 v3,原 ink3),「待定」加 s2 底。字形与底色
  * 都读 `verdictGlyph.ts` 那一张表 —— 审判列表、审判台、灵魂详情、处置页都画这一个。
  */
 export function VerdictBadge({ verdict, className }: { verdict: string | null | undefined; className?: string }) {

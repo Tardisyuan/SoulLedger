@@ -28,7 +28,7 @@ import { DomainEnum, DomainNumber, MissingValue } from "@/src/components/ui/Doma
 import { QueryError } from "@/src/components/ui/PageError";
 import { Kbd } from "@/src/components/judgment/JudgmentDesk";
 import { DeferDialog, ReassignDialog, claimRefusalMessage } from "@/src/components/judgment/JudgmentClaimDialogs";
-import { ROW_LINK } from "@/components/ui/data-table";
+import { BATCH_BAR, ROW_HOVER, ROW_LINK, ROW_SELECTED } from "@/components/ui/data-table";
 import { useHotkeys } from "@/src/lib/hotkeys";
 import { ClaimAvatar } from "@/src/components/judgment/ClaimAvatar";
 import { RowMark, ROW_MARK_ROW, isMinePending } from "@/src/components/judgment/RowMark";
@@ -248,21 +248,21 @@ export function JudgmentClaimQueue() {
       {canExecute && chosen.length > 0 && (
         <div
           data-testid="batch-bar"
-          className="flex flex-wrap items-center gap-2 px-3 py-2 mb-2 border border-[oklch(var(--color-block))] bg-[oklch(var(--color-surface-2))] text-sm"
+          className={`flex flex-wrap items-center gap-2 px-3 py-2 mb-2 border border-[oklch(var(--color-block))] ${BATCH_BAR} text-sm`}
         >
           <span className="font-mono text-xs tabular-nums">{t("judgment.claim.selected", { n: String(chosen.length) })}</span>
-          <Button type="button" size="sm" variant="secondary" loading={batch.isPending} onClick={() => runBatch("claim")}>
+          <Button type="button" size="sm" variant="inverse" loading={batch.isPending} onClick={() => runBatch("claim")}>
             {t("judgment.claim.claim")}
           </Button>
           {canAssign && (
-            <Button type="button" size="sm" variant="secondary" onClick={() => setDialog("reassign")}>
+            <Button type="button" size="sm" variant="inverse" onClick={() => setDialog("reassign")}>
               {t("judgment.claim.reassign")}
             </Button>
           )}
-          <Button type="button" size="sm" variant="secondary" onClick={() => setDialog("defer")}>
+          <Button type="button" size="sm" variant="inverse" onClick={() => setDialog("defer")}>
             {t("judgment.claim.defer")}
           </Button>
-          <Button type="button" size="sm" variant="ghost" onClick={() => setSelected(new Set())}>
+          <Button type="button" size="sm" variant="inverse" onClick={() => setSelected(new Set())}>
             {t("judgment.claim.clear_selection")}
           </Button>
           {chosen.length > BATCH_LIMIT && (
@@ -336,8 +336,8 @@ export function JudgmentClaimQueue() {
                       data-focused={isFocus ? "true" : undefined}
                       onFocus={() => setFocused(j.id)}
                       /* 延后的行(B12):不加色标、不变灰,只把透明度降到 0.56;放回后色标重新出现。 */
-                      className={`relative h-7 max-sm:h-11 border-b border-[oklch(var(--color-line))] hover:bg-[oklch(var(--color-surface-2))] ${
-                        isSel || isFocus ? "bg-[oklch(var(--color-surface-2))] shadow-[inset_3px_0_0_oklch(var(--color-ink))]" : marked ? ROW_MARK_ROW : ""
+                      className={`relative h-7 max-sm:h-11 border-b border-[oklch(var(--color-line))] ${
+                        isSel || isFocus ? ROW_SELECTED : `${ROW_HOVER} ${marked ? ROW_MARK_ROW : ""}`
                       } ${group === "deferred" ? "opacity-[0.56]" : ""}`}
                     >
                       {canExecute && (
