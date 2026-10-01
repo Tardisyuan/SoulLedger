@@ -54,6 +54,7 @@ src/__tests__/statusGlyphFont.test.ts
 src/__tests__/statusTokenLayering.test.ts
 src/__tests__/suiteShape.test.ts
 src/__tests__/tabClassContract.test.ts
+src/__tests__/toastColourContract.test.ts
 src/__tests__/truncatedValuesAreRecoverable.test.ts
 src/__tests__/viewportHeightContract.test.ts
 src/__tests__/workflowAutoLayoutMotion.test.tsx
