@@ -269,15 +269,11 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-[oklch(var(--color-canvas))]">
-      {/* 壳外页的匾(补足 C15「Web 登录」):中性皮 —— 登录前不知道文明,所以没有印、没有
-          纹样与题字字体,纹样带只剩两道细线(globals.css 中性皮)。题字是产品名,40 档;
-          这一页没有 PageShell,匾题字就是全页唯一的 <h1>。语言与主题在表单栏顶上,
-          不放在匾上:两个控件的配色是给纸底画的。 */}
-      <Plaque
-        heading
-        title={t("nav.title")}
-        meta={<span className="font-mono text-2xs tracking-[var(--tracking-meta)]">SOULLEDGER</span>}
-      />
+      {/* 壳外页的身份带(补足 C15「Web 登录」;v3 身份带):中性皮 —— 登录前不知道文明,所以
+          没有印、没有纹样、没有殿名。品牌小字 SOULLEDGER 由身份带自己画。题字是产品名,40 档;
+          这一页没有 PageShell,题字就是全页唯一的 <h1>。不吸顶、不收起。语言与主题在表单栏顶上,
+          不放在身份带上:两个控件的配色是给页面底色画的。 */}
+      <Plaque heading title={t("nav.title")} />
 
       <main className="grid flex-1 grid-cols-1 content-start md:grid-cols-2 md:content-normal">
         <section

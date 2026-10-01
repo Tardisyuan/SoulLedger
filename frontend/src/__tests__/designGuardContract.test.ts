@@ -554,14 +554,18 @@ describe("DESIGN.md cannot prescribe against the code", () => {
     for (const r of rows) {
       const cells = r.split("|").map((c) => c.trim());
       // cells[0] 是行首 | 之前的空串,所以列号从 1 起:1 角色、3 写法、4 字号/行高、5 字重
-      const [role, , how, sizes, weight] = cells.slice(1);
+      const [role, , how, sizes, weight, face] = cells.slice(1);
+      // 字体列:写了 `font-title` 的行必须说 Noto Serif SC,说 Noto Serif SC 的行必须写了 `font-title`。
+      if (/\bfont-title\b/.test(how) !== /Noto Serif SC/.test(face ?? "")) {
+        wrong.push(`${role}: 写法 "${how}" 与字体 "${face}" 对不上(font-title ⇔ Noto Serif SC)`);
+      }
       const step = /`[^`]*?\btext-([a-z0-9-]+)\b[^`]*`/.exec(how)?.[1];
       const m = /^(\d+) \/ (\d+)$/.exec(sizes);
       if (!step || !SIZE.has(step) || !m) {
         wrong.push(`${role}: cannot read a declared step and "N / M" from "${how}" / "${sizes}"`);
         continue;
       }
-      const wantWeight = /\bfont-medium\b/.test(how) ? 500 : (WEIGHT.get(step) ?? 400);
+      const wantWeight = /\bfont-medium\b/.test(how) ? 500 : /\bfont-semibold\b/.test(how) ? 600 : (WEIGHT.get(step) ?? 400);
       const got = { size: Number(m[1]), line: Number(m[2]), weight: Number(weight) };
       const want = { size: SIZE.get(step), line: LINE.get(step), weight: wantWeight };
       if (JSON.stringify(got) !== JSON.stringify(want)) {

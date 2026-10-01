@@ -409,7 +409,7 @@ function Reading({
           {" · "}
           <DomainEnum namespace="souls.civilizations" value={s.civilization} />
         </p>
-        <h1 data-testid="corpus-sigil" className="font-mono text-lg font-medium mt-2">
+        <h1 data-testid="corpus-sigil" className="font-title text-lg mt-2">
           {article.sigil ?? <MissingValue kind="unrecorded" reason={t("judgment.corpus.sigil_absent")} />}
         </h1>
         <p className="text-md font-medium mt-1">

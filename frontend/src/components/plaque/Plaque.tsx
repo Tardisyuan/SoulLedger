@@ -1,29 +1,36 @@
 "use client";
 
-import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type ReactNode, type RefObject } from "react";
+import { useI18n } from "@/src/contexts/I18nContext";
+import { useTenant } from "@/src/contexts/TenantContext";
 import { Seal } from "./Seal";
 
 /**
- * 页头匾(规范 v2 §四「匾」、补足 C14):匾色底 + 题字 + 印 + 纹样带(band-{civ},≤ 393 用
- * compact)。颜色、纹样、题字字体都由 <html data-civ> 经 globals.css 选定。深色档上沿有
- * 1px onMain 20% 的高光(§七「是一条线,不算阴影」)。
+ * 身份带(规范 v3 `IdentityBand`,2026-10-01 用户拍板取代 v2 的匾):匾色压暗 10% 的实底
+ * (`color-mix(main 90%, #111)`)+ 每个文明一种淡纹样(地府方格、欧洲同心弧、埃及竖线、
+ * 希腊斜线,自左向右淡出)+ 品牌小字 + 印 + 殿名小字 + 题字。样式在 globals.css 的
+ * `.identity-band*`;文明由 <html data-civ> 选定。
  *
- * 题字按**实测宽度**降档,不按字数(C14):题字字体 40 放得下就 40;放不下 28;还放不下
- * 改用界面字体 20、最多两行、末尾截断,完整文字在 title 里。40 只给匾和登录页
- * (eslint.config.mjs 的 DISPLAY_ALLOW 放行的正是这个目录)。
+ * 题字是 Noto Serif SC 600(`font-title`),按**实测宽度**降档,不按字数(C14):40 放得下
+ * 就 40;放不下 28;还放不下 20、最多两行、末尾截断,完整文字在 title 里。≤ 768 从 28 起
+ * (v3 手机身份带的题字就是 28 / 20)。降档仍然需要:egy 的页面标题最长 28 个字符,
+ * v3 自己也给埃及画了 28 两行与 20 两行。每一档都是 WCAG 大号文字(plaqueTitleStaysLargeText)。
+ *
+ * `collapsible`(壳里的那一条):吸在工具条下沿,页面滚过 60px 收成 48px,只留印与殿名
+ * (v3 `is-compact`)。案号:后端没有这个字段,不画(用户 2026-10-01)。
  */
 
 const TIER_CLASS = [
-  "font-[family-name:var(--font-plaque)] text-display whitespace-nowrap",
-  "font-[family-name:var(--font-plaque)] text-xl whitespace-nowrap",
-  "font-sans text-lg line-clamp-2",
+  "font-title text-display whitespace-nowrap",
+  "font-title text-xl font-semibold whitespace-nowrap",
+  "font-title text-lg line-clamp-2",
 ] as const;
 
 const tierClass = (tier: 0 | 1 | 2) => `min-w-0 overflow-hidden ${TIER_CLASS[tier]}`;
 
-/** 从 40 起逐档试,第一个不溢出的档就是它;都溢出就是两行 20。导出给测试。 */
-export function fitTier(el: HTMLElement): 0 | 1 | 2 {
-  for (const tier of [0, 1, 2] as const) {
+/** 从 `start` 起逐档试,第一个不溢出的档就是它;都溢出就是两行 20。导出给测试。 */
+export function fitTier(el: HTMLElement, start: 0 | 1 = 0): 0 | 1 | 2 {
+  for (const tier of ([0, 1, 2] as const).slice(start)) {
     // 先把这一档的样式写到元素上再量 —— React 随后按同一档重渲染,写的是同一个值。
     el.dataset.tier = String(tier);
     el.className = tierClass(tier);
@@ -32,32 +39,106 @@ export function fitTier(el: HTMLElement): 0 | 1 | 2 {
   return 2;
 }
 
+const NARROW = "(max-width: 768px)";
+/** ≤ 768(底栏那一档)。没有 matchMedia(jsdom)按宽屏算。 */
+function useNarrow(): boolean {
+  return useSyncExternalStore(
+    (onChange) => {
+      if (typeof window.matchMedia !== "function") return () => {};
+      const mq = window.matchMedia(NARROW);
+      mq.addEventListener("change", onChange);
+      return () => mq.removeEventListener("change", onChange);
+    },
+    () => typeof window.matchMedia === "function" && window.matchMedia(NARROW).matches,
+    () => false
+  );
+}
+
+/** 收起的身份带高度(globals.css `.identity-band[data-compact]`)。 */
+const COMPACT_PX = 48;
+/** 滚过多少收起(v3 `scrollTop > 60`)。 */
+const COLLAPSE_AT = 60;
+
+/**
+ * 滚过 60 收起,回到顶才展开。只在**收得下**时收:收起让文档短了「展开高 − 48」,页面不够长
+ * 时一收,浏览器把滚动位置夹回 0,于是又展开 —— 在页底来回跳。
+ */
+function useCompact(enabled: boolean, band: RefObject<HTMLElement | null>): boolean {
+  const [compact, setCompact] = useState(false);
+  useEffect(() => {
+    if (!enabled) return;
+    const onScroll = () =>
+      setCompact((was) => {
+        const y = window.scrollY;
+        if (was) return y > 0;
+        const room = document.documentElement.scrollHeight - window.innerHeight;
+        const shrink = (band.current?.offsetHeight ?? COMPACT_PX) - COMPACT_PX;
+        return y > COLLAPSE_AT && room - shrink > COLLAPSE_AT;
+      });
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [enabled, band]);
+  return enabled && compact;
+}
+
+/**
+ * 吸顶的身份带把自己此刻的高度写到 <html> 的 `--identity-band` 上:筛选栏吸在
+ * `--below-band`(工具条 52 + 这个高度)。页面短到收不起来时身份带一直是 156,
+ * 筛选栏若按 48 算就会压在它下半截上 —— 所以读实际高度,不读常量。
+ */
+function useBandHeightVar(enabled: boolean, band: RefObject<HTMLElement | null>) {
+  useLayoutEffect(() => {
+    const el = band.current;
+    if (!enabled || !el) return;
+    const root = document.documentElement.style;
+    const write = () => root.setProperty("--identity-band", `${el.offsetHeight}px`);
+    write();
+    const observer = typeof ResizeObserver === "function" ? new ResizeObserver(write) : null;
+    observer?.observe(el);
+    return () => {
+      observer?.disconnect();
+      root.removeProperty("--identity-band");
+    };
+  }, [enabled, band]);
+}
 
 export function Plaque({
   title,
   meta,
-  children,
   heading = false,
+  collapsible = false,
 }: {
   title: string;
+  /** 右栏(v3 的案号位)。≤ 768 不显示。 */
   meta?: ReactNode;
-  children?: ReactNode;
-  /** 壳外页(登录)没有 PageShell,那一页唯一的 <h1> 就是匾题字。 */
+  /** 壳外页(登录)没有 PageShell,那一页唯一的 <h1> 就是题字。 */
   heading?: boolean;
+  /** 壳里的身份带:滚动时收成 48px。 */
+  collapsible?: boolean;
 }) {
+  const { t } = useI18n();
+  const { user } = useTenant();
+  const band = useRef<HTMLDivElement>(null);
   const ref = useRef<HTMLHeadingElement & HTMLDivElement>(null);
   const Title = heading ? "h1" : "div";
-  const [tier, setTier] = useState<0 | 1 | 2>(0);
+  const narrow = useNarrow();
+  const compact = useCompact(collapsible, band);
+  useBandHeightVar(collapsible, band);
+  const start = narrow ? 1 : 0;
+  const [tier, setTier] = useState<0 | 1 | 2>(start);
+  const court = user?.tenant?.display_name || null;
+  const product = t("nav.title");
 
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
     let live = true;
     const fit = () => {
-      if (live) setTier(fitTier(el));
+      if (live) setTier(fitTier(el, start));
     };
     fit();
-    // 题字字体是 swap 加载的:字到了宽度才对,所以字到之后再量一次;容器变宽窄也要再量。
+    // 字体是 swap 加载的:字到了宽度才对,所以字到之后再量一次;容器变宽窄也要再量。
     void document.fonts?.ready.then(fit);
     const observer = typeof ResizeObserver === "function" ? new ResizeObserver(fit) : null;
     observer?.observe(el.parentElement ?? el);
@@ -65,27 +146,24 @@ export function Plaque({
       live = false;
       observer?.disconnect();
     };
-  }, [title]);
+  }, [title, start, compact]);
 
   return (
-    <div
-      data-testid="plaque"
-      className="bg-[oklch(var(--color-main))] text-[oklch(var(--color-on-main))] dark:border-t dark:border-[oklch(var(--color-on-main)/0.2)]"
-    >
-      <div className="flex min-h-12 items-center gap-3 px-4 py-1 md:px-8">
-        <Seal size={40} />
-        <div className="flex min-w-0 flex-1 items-baseline gap-3">
+    <div ref={band} data-testid="plaque" data-compact={compact ? "" : undefined} className="identity-band">
+      <div aria-hidden="true" className="identity-pattern" />
+      <div className="identity-brand">
+        SOULLEDGER{product.toUpperCase() !== "SOULLEDGER" ? <span> {product}</span> : null}
+      </div>
+      <div className="identity-title">
+        <Seal size={compact ? 30 : narrow ? 48 : 64} />
+        <div className="min-w-0">
+          {court ? <small className="identity-court">{court}</small> : null}
           <Title ref={ref} data-tier={tier} title={title} className={tierClass(tier)}>
             {title}
           </Title>
-          {meta ? <div className="min-w-0 shrink max-md:hidden">{meta}</div> : null}
         </div>
-        {children}
       </div>
-      {/* 纹样带是遮罩,遮罩会连它的伪元素一起遮,所以质感挂在外面这一层上(globals.css .plaque-tex)。 */}
-      <div aria-hidden="true" data-testid="plaque-band" className="plaque-tex">
-        <div className="plaque-band" />
-      </div>
+      {meta ? <div className="identity-case">{meta}</div> : null}
     </div>
   );
 }

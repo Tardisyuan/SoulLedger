@@ -35,7 +35,7 @@ export function SoulMonogram({ name }: { name: string | undefined }) {
     <span
       aria-hidden="true"
       data-testid="soul-monogram"
-      className="grid h-13 w-13 place-items-center bg-[oklch(var(--color-surface-2))] text-xl text-[oklch(var(--color-ink))] md:h-16 md:w-16"
+      className="grid h-13 w-13 place-items-center bg-[oklch(var(--color-surface-2))] font-title text-xl font-semibold text-[oklch(var(--color-ink))] md:h-16 md:w-16"
     >
       {glyph}
     </span>
@@ -110,7 +110,7 @@ export function SoulBalance({ soul }: { soul: Soul }) {
   const figure = (label: string, field: string, value: number) => (
     <div>
       <span className="block text-2xs text-[oklch(var(--color-ink-subtle))]">{label}</span>
-      <span className="mt-1 block font-mono text-xl tabular-nums text-[oklch(var(--color-ink))]">
+      <span className="mt-1 block font-title text-xl font-semibold tabular-nums text-[oklch(var(--color-ink))]">
         <Figure field={field} quantity="magnitude" t={t} className="">
           {value}
         </Figure>
@@ -122,7 +122,7 @@ export function SoulBalance({ soul }: { soul: Soul }) {
       id="soul-karma"
       aria-labelledby="soul-balance-title"
       data-testid="soul-balance"
-      className="min-w-0 scroll-mt-16 bg-[oklch(var(--color-surface-1))] p-6"
+      className="min-w-0 scroll-mt-28 bg-[oklch(var(--color-surface-1))] p-6"
     >
       <h2 id="soul-balance-title" className="text-2xs uppercase tracking-widest text-[oklch(var(--color-ink-subtle))]">
         {t("souls.detail.ledger.karma")}
