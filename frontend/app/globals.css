@@ -647,53 +647,21 @@
     --color-main: var(--color-civ-gr);
   }
 
-  /* 文明皮的其余两样 —— 印形与印文字体、分节纹(规范 v2 §三、§四;素材在 public/v2/)。
-     v2 的匾纹(回纹带)、纸 / 纸莎草 / 大理石质感与四款题字字体随 v3 身份带撤掉(2026-10-01);
-     身份带的纹样是纯 CSS 渐变,见下面 `.identity-pattern`。
-     与匾色同一个开关:<html data-civ> 给整页,印组件在自己的根元素上也写 data-civ,所以
-     一枚别的文明的印放在本页也拿到它自己的形与色。素材全是单色 currentColor 的 SVG,
-     这里一律当 CSS 遮罩用,颜色由遮罩下面的底色给,所以换主题不用换文件。
-     印文字体变量来自 src/components/plaque/fonts.ts(next/font,按需加载)。
-     中性皮(登录前、不认得的租户)没有印。 */
-  :root,
-  [data-civ="neutral"] {
-    --font-seal: var(--font-serif);
-  }
+  /* 文明皮的其余一样 —— 分节纹(规范 v2 §三;素材在 public/v2/svg/)。v2 的匾纹(回纹带)、
+     纸 / 纸莎草 / 大理石质感与四款题字字体随 v3 身份带撤掉(2026-10-01);v2 的实底印(遮罩
+     素材、残边扫描、三款印文字体)随 v3 描边印撤掉(2026-10-02),印的外形见下面 `.seal`。
+     身份带的纹样是纯 CSS 渐变,见下面 `.identity-pattern`。中性皮没有分节纹。 */
   [data-civ="cn"] {
-    --seal-body: url("/v2/svg/seal-cn-body.svg");
-    --seal-ring: url("/v2/svg/seal-cn-ring.svg");
-    --seal-line: url("/v2/svg/seal-cn-line.svg");
-    --seal-line-small: url("/v2/svg/seal-cn-line-small.svg");
-    --seal-scan: image-set(url("/v2/textures/scan-cnseal-1x.png") 1x, url("/v2/textures/scan-cnseal-2x.png") 2x);
     --section: url("/v2/svg/section-cn.svg");
-    --font-seal: var(--font-lxgw-seal), var(--font-serif);
   }
   [data-civ="eu"] {
-    --seal-body: url("/v2/svg/seal-eu-body.svg");
-    --seal-ring: url("/v2/svg/seal-eu-ring.svg");
-    --seal-line: url("/v2/svg/seal-eu-line.svg");
-    --seal-line-small: url("/v2/svg/seal-eu-line-small.svg");
-    --seal-scan: image-set(url("/v2/textures/scan-wax-1x.png") 1x, url("/v2/textures/scan-wax-2x.png") 2x);
     --section: url("/v2/svg/section-eu.svg");
-    --font-seal: var(--font-unifraktur), var(--font-serif);
   }
   [data-civ="eg"] {
-    --seal-body: url("/v2/svg/seal-eg-body.svg");
-    --seal-ring: url("/v2/svg/seal-eg-ring.svg");
-    --seal-line: url("/v2/svg/seal-eg-line.svg");
-    --seal-line-small: url("/v2/svg/seal-eg-line-small.svg");
-    --seal-scan: image-set(url("/v2/textures/scan-clay-1x.png") 1x, url("/v2/textures/scan-clay-2x.png") 2x);
     --section: url("/v2/svg/section-eg.svg");
-    --font-seal: var(--font-hieroglyphs), var(--font-serif);
   }
   [data-civ="gr"] {
-    --seal-body: url("/v2/svg/seal-gr-body.svg");
-    --seal-ring: url("/v2/svg/seal-gr-ring.svg");
-    --seal-line: url("/v2/svg/seal-gr-line.svg");
-    --seal-line-small: url("/v2/svg/seal-gr-line-small.svg");
-    --seal-scan: image-set(url("/v2/textures/scan-cyl-1x.png") 1x, url("/v2/textures/scan-cyl-2x.png") 2x);
     --section: url("/v2/svg/section-gr.svg");
-    --font-seal: var(--font-gfs-didot), var(--font-serif);
   }
 
   /* 宽度 ≤ 768 时没有侧栏,导航是固定在底部的 56px 底栏(GlobalNav.tsx 的 BottomBar;v3 四档,
@@ -725,6 +693,11 @@
     color: oklch(var(--color-on-main));
     background: color-mix(in srgb, oklch(var(--color-main)) 90%, #111);
     transition: height var(--transition-duration-reveal) var(--ease-standard);
+  }
+  /* 矮带(v3 `.queue-product` / `.soul-product`):审判队列与灵魂详情,116 高,题字从 28 起
+     (Plaque.tsx `shortBandFor`)。收起照样是 48。 */
+  .identity-band[data-short] {
+    height: 116px;
   }
   .identity-band[data-compact] {
     height: 48px;
@@ -827,6 +800,14 @@
     .identity-band[data-compact] {
       padding: 0 12px;
     }
+    /* 矮带的手机档(v3 `.queue-mobile` / `.soul-mobile`):105 起、印 38、题字从 20 起。 */
+    .identity-band[data-short]:not([data-compact]) {
+      min-height: 105px;
+      padding: 13px;
+    }
+    .identity-band[data-short]:not([data-compact]) .identity-title {
+      gap: 9px;
+    }
   }
 
   /* 页面级分节纹 · 48×12,线色 ink3,只用在页面级分节上(表内小分组仍是细线)。
@@ -839,42 +820,46 @@
     mask: var(--section, linear-gradient(transparent 11px, black 11px)) center / 48px 12px no-repeat;
   }
 
-  /* 印 · 叠放 body → ring(扫描遮罩)→ line(≤ 32 用 line-small)→ 印文。 */
+  /* 印(规范 v3 `.product-seal`,`src/components/plaque/Seal.tsx`):描边,不填色。2px 外框 +
+     内缩 6px 的 1px 细框;≤ 32 是 1px 外框、内缩 4px。颜色是 currentColor:默认匾色,身份带上
+     随带上的白字 —— 带本身就是匾色,匾色的印放在上面就看不见了(v3 的印也是 `color: inherit`)。
+     对比度两处都量过,见 plaqueTitleStaysLargeText.test.ts。
+     印文 Noto Serif SC 600(`--font-title`);圣书字不在 Noto Serif SC 里,接一支只含 U+13000 起
+     的 Noto Sans Egyptian Hieroglyphs(unicode-range 分片,别的文明的页面不下载它)。 */
   .seal {
     position: relative;
     display: inline-flex;
     flex: none;
     align-items: center;
     justify-content: center;
-    color: oklch(var(--color-on-main));
+    color: oklch(var(--color-main));
+    border: 2px solid currentColor;
+    outline: 1px solid currentColor;
+    outline-offset: -6px;
   }
-  .seal-layer {
-    position: absolute;
-    inset: 0;
-    mask: var(--seal-mask) center / 100% 100% no-repeat;
+  .seal[data-small] {
+    border-width: 1px;
+    outline-offset: -4px;
   }
-  .seal-body {
-    --seal-mask: var(--seal-body);
-    background: oklch(var(--color-main));
+  .identity-band .seal {
+    color: inherit;
   }
-  .seal-ring {
-    --seal-mask: var(--seal-ring);
-    background: var(--seal-scan) center / 100% 100%;
-    opacity: 0.8;
+  .seal[data-civ="eu"] {
+    border-radius: 50%;
   }
-  .seal-line {
-    --seal-mask: var(--seal-line);
-    background: oklch(var(--color-on-main));
+  /* 拱:上两角的圆半径 = 半个宽(v3 在 64 × 70 上写的是 32px)—— 横向 50% 宽、纵向 32/70 高。 */
+  .seal[data-civ="eg"] {
+    border-radius: 50% 50% 3px 3px / 45.7% 45.7% 3px 3px;
   }
-  .seal[data-small] .seal-line {
-    --seal-mask: var(--seal-line-small);
+  .seal[data-civ="gr"] {
+    clip-path: polygon(12% 0, 88% 0, 100% 50%, 88% 100%, 12% 100%, 0 50%);
   }
   .seal-glyphs {
-    position: relative;
     display: flex;
     flex-direction: column;
     align-items: center;
-    font-family: var(--font-seal);
+    font-family: var(--font-title), var(--font-hieroglyphs);
+    font-weight: 600;
     line-height: 1;
   }
 }

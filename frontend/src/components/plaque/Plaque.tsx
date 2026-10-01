@@ -29,7 +29,7 @@ const TIER_CLASS = [
 const tierClass = (tier: 0 | 1 | 2) => `min-w-0 overflow-hidden ${TIER_CLASS[tier]}`;
 
 /** 从 `start` 起逐档试,第一个不溢出的档就是它;都溢出就是两行 20。导出给测试。 */
-export function fitTier(el: HTMLElement, start: 0 | 1 = 0): 0 | 1 | 2 {
+export function fitTier(el: HTMLElement, start: 0 | 1 | 2 = 0): 0 | 1 | 2 {
   for (const tier of ([0, 1, 2] as const).slice(start)) {
     // 先把这一档的样式写到元素上再量 —— React 随后按同一档重渲染,写的是同一个值。
     el.dataset.tier = String(tier);
@@ -53,6 +53,12 @@ function useNarrow(): boolean {
     () => false
   );
 }
+
+/**
+ * 矮带(v3 `.queue-product` / `.soul-product` 的 `.identity-band`):审判队列与灵魂详情两页,
+ * 桌面 116 高、题字从 28 起;≤ 768 约 105 高、印 38、题字从 20 起。按路由选,页面文件不知道。
+ */
+export const shortBandFor = (pathname: string) => pathname === "/judgment/queue" || /^\/souls\/[^/]+$/.test(pathname);
 
 /** 收起的身份带高度(globals.css `.identity-band[data-compact]`)。 */
 const COMPACT_PX = 48;
@@ -108,6 +114,7 @@ export function Plaque({
   meta,
   heading = false,
   collapsible = false,
+  short = false,
 }: {
   title: string;
   /** 右栏(v3 的案号位)。≤ 768 不显示。 */
@@ -116,6 +123,8 @@ export function Plaque({
   heading?: boolean;
   /** 壳里的身份带:滚动时收成 48px。 */
   collapsible?: boolean;
+  /** 矮带(`shortBandFor`):116 高、题字从 28 起。 */
+  short?: boolean;
 }) {
   const { t } = useI18n();
   const { user } = useTenant();
@@ -125,7 +134,7 @@ export function Plaque({
   const narrow = useNarrow();
   const compact = useCompact(collapsible, band);
   useBandHeightVar(collapsible, band);
-  const start = narrow ? 1 : 0;
+  const start = ((narrow ? 1 : 0) + (short ? 1 : 0)) as 0 | 1 | 2;
   const [tier, setTier] = useState<0 | 1 | 2>(start);
   const court = user?.tenant?.display_name || null;
   const product = t("nav.title");
@@ -149,13 +158,19 @@ export function Plaque({
   }, [title, start, compact]);
 
   return (
-    <div ref={band} data-testid="plaque" data-compact={compact ? "" : undefined} className="identity-band">
+    <div
+      ref={band}
+      data-testid="plaque"
+      data-compact={compact ? "" : undefined}
+      data-short={short ? "" : undefined}
+      className="identity-band"
+    >
       <div aria-hidden="true" className="identity-pattern" />
       <div className="identity-brand">
         SOULLEDGER{product.toUpperCase() !== "SOULLEDGER" ? <span> {product}</span> : null}
       </div>
       <div className="identity-title">
-        <Seal size={compact ? 30 : narrow ? 48 : 64} />
+        <Seal size={compact ? 30 : narrow ? (short ? 38 : 48) : 64} />
         <div className="min-w-0">
           {court ? <small className="identity-court">{court}</small> : null}
           <Title ref={ref} data-tier={tier} title={title} className={tierClass(tier)}>
