@@ -1350,7 +1350,25 @@
       "request_admin": "Dbh Sab Hery Er Hab Ky",
       "request_admin_sent": "Dbh Sab Hery Seth",
       "request_admin_limited": "Dbh Seth. Wehem Iri Er Khet {{minutes}} At",
-      "request_admin_failed": "Nen Hab. Wehem Iri"
+      "request_admin_failed": "Nen Hab. Wehem Iri",
+      "filter_all": "Sep Neb",
+      "filter_mine": "Shesep-I",
+      "col_draft": "Sesh Tepy",
+      "col_deferred": "Sedjer",
+      "col_kind": "Iru",
+      "draft_none": "Nen Sesh Tepy",
+      "deferred_session": "Aq Pen",
+      "key_restore": "Ankh Wehem Neb",
+      "done_release": "Sehen Shesep Seth",
+      "done_session_defer": "Sedjer Em Hru Pen",
+      "done_restore": "Ankh Wehem Seth: Sep {{n}}",
+      "restore_title": "Ankh Wehem Neb?",
+      "restore_body": "{{n}} Sedjer Em Aq Pen: Ankh Wehem Er Sepu",
+      "kinds": {
+        "ORIGINAL": "Wedja Tepy",
+        "AMENDMENT": "Khemen Sekhet",
+        "REOPEN": "Wedja Wehem"
+      }
     },
     "admission": {
       "title": "Medu Maat · Shesep Maat",

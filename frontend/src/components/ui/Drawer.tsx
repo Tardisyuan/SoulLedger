@@ -29,6 +29,8 @@ interface DrawerProps {
   /** Error bar under the header (spec: 错误时在抽屉头下出错误条). */
   error?: ReactNode;
   finalFocus?: RefObject<HTMLElement | null> | (() => HTMLElement | null);
+  /** 钉在抽屉底部、不随内容滚走的一条(确认 / 取消)。改派层(v3 `.reassign-layer`)用。 */
+  footer?: ReactNode;
   children: ReactNode;
 }
 
@@ -38,7 +40,7 @@ function isTyping(target: EventTarget | null): boolean {
   return target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName);
 }
 
-export function Drawer({ isOpen, onClose, title, hint, onNext, onPrev, error, finalFocus, children }: DrawerProps) {
+export function Drawer({ isOpen, onClose, title, hint, onNext, onPrev, error, finalFocus, footer, children }: DrawerProps) {
   const { t } = useI18n();
   return (
     <Dialog.Root open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
@@ -76,6 +78,7 @@ export function Drawer({ isOpen, onClose, title, hint, onNext, onPrev, error, fi
             </div>
           )}
           <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">{children}</div>
+          {footer && <div className="shrink-0 px-4 py-3 border-t border-[oklch(var(--color-line))]">{footer}</div>}
         </Dialog.Popup>
       </Dialog.Portal>
     </Dialog.Root>
