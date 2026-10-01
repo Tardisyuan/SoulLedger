@@ -414,12 +414,14 @@ export function PageShell({
               「可见、可用、可滚动到」却点不动。mobile-chrome 上三条 E2E 长期
               超时失败,根因就在这里,而它看起来完全不像一个筛选栏的问题。
               
-              滚动而不是换行:`h-14`(56px = 上下各 12 padding + 32 内容)是规格里
-              写死的高度,换行会破坏它。 */}
+              滚动而不是换行:`h-16`(64px = 上下各 8 padding + 48 内容,即规范 v3 的 md 档
+              控件;v3 `.queue-toolbar` 是 min-height 62)是写死的高度,换行会破坏它。
+              2026-10-01 控件换到 v3 之前这里是 `h-14 py-3`(32 内容)—— 48 的输入放进去会被
+              这个 overflow 容器从上下两头裁掉。 */}
           <div
             className={cn(
               width,
-              "px-4 md:px-8 h-14 py-3 flex items-center gap-3 overflow-x-auto"
+              "px-4 md:px-8 h-16 py-2 flex items-center gap-3 overflow-x-auto"
             )}
           >
             {filters}
