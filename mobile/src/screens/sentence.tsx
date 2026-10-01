@@ -291,8 +291,11 @@ export function SentenceSection({
   onPlaced,
   open = true,
   onToggle,
+  index,
 }: {
   remote: SentenceRemote;
+  /** v3: its number in the life tab's ledger (05). */
+  index?: number;
   landing?: SentenceLanding;
   /** The section's top within its parent — the life page scrolls a landing to it. */
   onPlaced?: (y: number) => void;
@@ -308,6 +311,7 @@ export function SentenceSection({
   return (
     <Section
       testID="section-sentence"
+      index={index}
       title={t("soul_app.sentence.section_title")}
       count={hasPlan && current && !final ? t("soul_app.sentence.progress", { cur: String(current.n), total: String(plan.stations.length) }) : undefined}
       countTestID="sentence-progress"

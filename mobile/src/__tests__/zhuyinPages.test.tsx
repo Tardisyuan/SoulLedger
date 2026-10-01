@@ -19,7 +19,7 @@ import { installMobilePlatform, persistentStore } from "../platform";
 import { defaultLifeSection, lifePathIndex, lifeSectionsOpen, signedBalance, termServed } from "../rules";
 import { LIFE_OPEN_PREFIX } from "../screens/life";
 import { SessionProvider } from "../session";
-import { GUTTER_PT, space, themeFor } from "../theme";
+import { GUTTER_PT, space, themeFor, v3, v3Theme } from "../theme";
 import { SectionError, Skeleton, ThemeContext, sectionTransitions } from "../ui";
 import { PROFILE, life, stubApi } from "./stubApi";
 
@@ -132,6 +132,8 @@ describe("the life page's rules (补足 B11)", () => {
 
   it("the balance: signed, with a real minus", () => {
     expect([signedBalance(410, 112), signedBalance(3, 15), signedBalance(7, 7)]).toEqual(["+298", "\u221212", "0"]);
+    // v3 groups by thousands, on both sides of zero.
+    expect([signedBalance(1842, 391), signedBalance(0, 12345), signedBalance(1999, 1000)]).toEqual(["+1,451", "\u221212,345", "+999"]);
   });
 
   it("the served share of a term, clamped; nothing without both dates", () => {
@@ -209,14 +211,29 @@ describe("the life page, as the app mounts it (补足 B11)", () => {
     expect(screen.getAllByTestId(/^path-.*-done$/)).toHaveLength(3);
     expect(screen.getByTestId("path-SENTENCE-here")).toBeTruthy();
     expect(screen.getByTestId("path-REINCARNATING-ahead")).toBeTruthy();
-    // Walked segments are plain ink bars, never SVG (a percentage-width SVG line sat a pixel
-    // low at the end of the walked run on some screens); the one ahead stays a dashed SVG line.
+    // v3: one line behind the circles — the walked run in ink, the run ahead in the hairline;
+    // plain bars, never SVG (a percentage-width SVG line sat a pixel low on some screens).
     for (const i of [0, 1, 2]) {
       const seg = screen.getByTestId(`path-seg-${i}`);
-      expect([themeFor("CHINESE", "light").ink, themeFor("CHINESE", "dark").ink]).toContain(flat(seg).backgroundColor);
+      expect([v3.light.ink, v3.dark.ink]).toContain(flat(seg).backgroundColor);
       expect(seg.props.children).toBeUndefined();
     }
-    expect(screen.getByTestId("path-seg-3").props.children).toBeTruthy();
+    expect([v3.light.line, v3.dark.line]).toContain(flat(screen.getByTestId("path-seg-3")).backgroundColor);
+    // 「本世阶段 04 / 05」, and the state said in glyph and word: ▣ 已处置 (never a colour alone).
+    expect(screen.getByTestId("life-stage").props.children).toBe("本世阶段 04 / 05");
+    expect(screen.getByTestId("soul-state-glyph").props.children).toBe("▣");
+    expect(within(screen.getByTestId("soul-state")).getByText("已处置")).toBeTruthy();
+    // Here: its number, an ink outline, its word in 600 — and in no civilization colour.
+    expect(within(screen.getByTestId("path-SENTENCE-here")).getByText("4")).toBeTruthy();
+    expect(within(screen.getByTestId("path-ALIVE-done")).getByText("✓")).toBeTruthy();
+    expect(flat(screen.getByTestId("path-SENTENCE-word")).fontFamily).toBe("Archivo_600SemiBold");
+    expect(flat(screen.getByTestId("path-ALIVE-word")).fontFamily).toBe("Archivo_400Regular");
+    const civColours = Object.values(v3.civ).flatMap((c) => [c.light, c.dark]);
+    for (const step of ["ALIVE-done", "SENTENCE-here", "REINCARNATING-ahead"]) {
+      const dot = flat(screen.getByTestId(`path-${step}`));
+      expect(civColours).not.toContain(dot.backgroundColor);
+      expect(civColours).not.toContain(dot.borderColor);
+    }
   });
 
   it("not under sentence: 功过记录 open and only it; the balance in ink, never a status colour", async () => {
@@ -227,9 +244,11 @@ describe("the life page, as the app mounts it (补足 B11)", () => {
     expect(ORDER.filter(expanded)).toEqual(["records"]);
     const value = screen.getByTestId("balance-value");
     expect(value.props.children).toBe("\u221212");
-    const scheme = flat(value).color === themeFor("CHINESE", "light").ink ? "light" : "dark";
-    const t = themeFor("CHINESE", scheme);
-    expect(flat(value).color).toBe(t.ink);
+    // v3: an ink block, the number in the surface colour \u2014 a record, never a status or civilization colour.
+    const scheme = flat(value).color === v3.light.surface ? "light" : "dark";
+    const t = v3Theme(themeFor("CHINESE", scheme));
+    expect(flat(screen.getByTestId("balance")).backgroundColor).toBe(v3[scheme].ink);
+    expect(flat(value).color).toBe(v3[scheme].surface);
     expect([t.neg, t.pos, t.warn, t.plaque]).not.toContain(flat(value).color);
     expect(within(screen.getByTestId("score-merit")).getByText("3")).toBeTruthy();
     expect(within(screen.getByTestId("score-demerit")).getByText("15")).toBeTruthy();
@@ -250,6 +269,7 @@ describe("the life page, as the app mounts it (补足 B11)", () => {
     await act(async () => {});
     expect(ORDER.filter(expanded)).toEqual(["judgments"]);
   });
+
 });
 
 describe("a part that failed, and one still loading (补足 C15)", () => {

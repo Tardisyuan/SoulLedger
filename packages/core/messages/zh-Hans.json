@@ -2679,7 +2679,12 @@
       "code_copy_failed": "复制失败",
       "residing": "暂居 {{current}} · 原属 {{home}}",
       "record_count_short": "共 {{count}} 条",
-      "residing_note": "暂居结束后回原属文明。此间簿册仍按原属文明的词例。"
+      "residing_note": "暂居结束后回原属文明。此间簿册仍按原属文明的词例。",
+      "here": "你现在在哪",
+      "stage": "本世阶段 {{at}} / {{total}}",
+      "balance": "本世余额",
+      "ledger": "本世账目",
+      "ledger_hint": "展开一项查看"
     },
     "past_lives": {
       "title": "前世",

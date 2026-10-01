@@ -19,6 +19,9 @@ import {
   sealedTheme,
   semantic,
   themeFor,
+  v3,
+  v3Band,
+  v3Theme,
   type CivKey,
   type ColorScheme,
   type Theme,
@@ -298,6 +301,55 @@ describe("sealedTheme (a past life)", () => {
     const sealed = sealedTheme(t);
     expect([sealed.ink, sealed.inkMuted]).toEqual([t.inkMuted, t.inkSubtle]);
     expect([sealed.s0, sealed.s1, sealed.hair]).toEqual([t.s0, t.s1, t.hair]);
+  });
+});
+
+describe("v3 (round 7: the life tab and the tab bar)", () => {
+  it("is the user's palette, verbatim", () => {
+    expect(v3.light).toEqual({ canvas: "#EFEFEB", surface: "#FBFBF8", ink: "#181A17", muted: "#646861", line: "#D1D3CD" });
+    expect(v3.dark).toEqual({ canvas: "#10120F", surface: "#1A1D19", ink: "#F0F1EA", muted: "#A7ACA4", line: "#383C35" });
+    expect(Object.values(v3.civ).map((c) => [c.light, c.dark])).toEqual([
+      ["#8F3329", "#AD4B40"],
+      ["#583875", "#80609A"],
+      ["#294A8A", "#5F7FBE"],
+      ["#285051", "#5A8480"],
+    ]);
+  });
+
+  it("maps onto the theme: one set of neutrals for every civilization, its colour as the plaque", () => {
+    for (const scheme of SCHEMES) {
+      const cn = v3Theme(themeFor("CHINESE", scheme));
+      const eg = v3Theme(themeFor("EGYPTIAN", scheme));
+      expect([cn.s0, cn.s1, cn.ink, cn.inkMuted, cn.hair]).toEqual([v3[scheme].canvas, v3[scheme].surface, v3[scheme].ink, v3[scheme].muted, v3[scheme].line]);
+      expect([eg.s0, eg.s1]).toEqual([cn.s0, cn.s1]);
+      expect([cn.plaque, eg.plaque]).toEqual([v3.civ.cn[scheme], v3.civ.eg[scheme]]);
+      // Status colours are not v3's to change.
+      expect([cn.neg, cn.pos, cn.warn]).toEqual([semantic[scheme].neg, semantic[scheme].pos, semantic[scheme].warn]);
+      // An unknown civilization borrows no one's colour.
+      expect(v3Theme(themeFor("ATLANTEAN", scheme)).plaque).toBe(civ.neutral[scheme].plaque);
+    }
+  });
+
+  it("v3Band is 90% the colour and 10% #111, as color-mix() draws it", () => {
+    expect(v3Band("#FFFFFF")).toBe("#e7e7e7");
+    expect(v3Band("#000000")).toBe("#020202");
+    expect(v3Band(v3.civ.cn.light)).toBe("#823027");
+  });
+
+  it("contrast: muted ≥ 4.5 on both grounds; white on every band ≥ 4.5; the surface on the ink block ≥ 4.5", () => {
+    for (const scheme of SCHEMES) {
+      const n = v3[scheme];
+      expect(contrast(n.muted, n.canvas)).toBeGreaterThanOrEqual(4.5);
+      expect(contrast(n.muted, n.surface)).toBeGreaterThanOrEqual(4.5);
+      expect(contrast(n.surface, n.ink)).toBeGreaterThanOrEqual(4.5);
+      for (const c of Object.values(v3.civ)) expect(contrast(v3.onCiv, v3Band(c[scheme]))).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+
+  it("why the current tab's label stays ink: as text every dark v3 colour fails AA on the dark surface", () => {
+    for (const c of Object.values(v3.civ)) expect(contrast(c.dark, v3.dark.surface)).toBeLessThan(4.5);
+    // …while as a graphic (the emblem, the 2pt rule) each clears 3:1.
+    for (const c of Object.values(v3.civ)) expect(contrast(c.dark, v3.dark.surface)).toBeGreaterThanOrEqual(3);
   });
 });
 

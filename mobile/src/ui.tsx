@@ -226,6 +226,7 @@ export function Screen({
   edges = ["left", "right", "bottom"],
   testID,
   scrollRef,
+  onScroll,
 }: {
   children: ReactNode;
   refreshing?: boolean;
@@ -235,6 +236,8 @@ export function Screen({
   testID?: string;
   /** For a screen that scrolls itself to a block (a push landing, 受刑 1d). */
   scrollRef?: Ref<ScrollView>;
+  /** The scroll offset, for a header that compacts as the page moves under it (v3 life band). */
+  onScroll?: (y: number) => void;
 }) {
   const t = useTheme();
   const refreshControl = usePullRefresh(refreshing, onRefresh);
@@ -255,6 +258,8 @@ export function Screen({
           contentContainerStyle={styles.grow}
           keyboardShouldPersistTaps="handled"
           refreshControl={refreshControl}
+          onScroll={onScroll && ((e) => onScroll(e.nativeEvent.contentOffset.y))}
+          scrollEventThrottle={onScroll ? 16 : undefined}
         >
           {children}
         </ScrollView>
@@ -322,10 +327,16 @@ export function Section({
   onLayout,
   children,
   testID,
+  index,
 }: {
   title: string;
   count?: string;
   countTestID?: string;
+  /**
+   * v3's ledger row (life tab, 01–06): the number before the title, a ＋ that turns 45° when
+   * open, and the body on the canvas behind a 3pt ink rule, growing over `sectionGrow`.
+   */
+  index?: number;
   open?: boolean;
   onToggle?: () => void;
   highlighted?: boolean;
@@ -335,10 +346,30 @@ export function Section({
 }) {
   const t = useTheme();
   const { gutter } = useLayout();
-  const { sectionIn, sectionOut } = useReducedMotionDurations();
+  const { sectionIn, sectionOut, sectionGrow } = useReducedMotionDurations();
   const [toggled, setToggled] = useState(false);
   const pad = { paddingHorizontal: gutter };
-  const header = (
+  const ledger = index !== undefined;
+  const header = ledger ? (
+    <>
+      <Txt testID={testID ? `${testID}-index` : undefined} variant="value" tone="subtle" style={styles.ledgerIndex}>
+        {String(index).padStart(2, "0")}
+      </Txt>
+      <Txt variant="section" style={styles.fill}>
+        {title}
+      </Txt>
+      {count ? (
+        <Txt testID={countTestID} variant="value" tone="subtle" style={styles.count}>
+          {count}
+        </Txt>
+      ) : null}
+      {onToggle ? (
+        <Txt testID={testID ? `${testID}-plus` : undefined} tone="subtle" style={[styles.ledgerPlus, open && styles.ledgerPlusOpen]}>
+          ＋
+        </Txt>
+      ) : null}
+    </>
+  ) : (
     <>
       <Txt variant="section">{title}</Txt>
       {count ? (
@@ -359,7 +390,7 @@ export function Section({
     <View
       testID={testID}
       onLayout={onLayout}
-      style={[{ borderBottomWidth: 1, borderBottomColor: t.hair }, highlighted && { backgroundColor: t.s1 }]}
+      style={[{ borderBottomWidth: 1, borderBottomColor: t.hair }, (highlighted || ledger) && { backgroundColor: t.s1 }]}
     >
       {highlighted ? (
         <View testID={testID ? `${testID}-rule` : undefined} pointerEvents="none" style={[styles.sectionRule, { backgroundColor: t.ink }]} />
@@ -373,19 +404,53 @@ export function Section({
             setToggled(true);
             onToggle();
           }}
-          style={({ pressed }) => [styles.sectionHeader, pad, pressed && styles.pressed]}
+          style={({ pressed }) => [styles.sectionHeader, pad, ledger && styles.ledgerHeader, pressed && styles.pressed]}
         >
           {header}
         </Pressable>
       ) : (
-        <View style={[styles.sectionHeader, pad]}>{header}</View>
+        <View style={[styles.sectionHeader, pad, ledger && styles.ledgerHeader]}>{header}</View>
       )}
-      {open ? (
+      {open && ledger ? (
+        <Grow ms={toggled ? sectionGrow : 0}>
+          <View testID={testID ? `${testID}-body` : undefined} style={[styles.ledgerBody, { backgroundColor: t.s0, borderLeftColor: t.ink }]}>
+            {children}
+          </View>
+        </Grow>
+      ) : open ? (
         <Reanimated.View testID={testID ? `${testID}-body` : undefined} entering={motion.entering} exiting={motion.exiting} style={[styles.sectionBody, pad]}>
           {children}
         </Reanimated.View>
       ) : null}
     </View>
+  );
+}
+
+/**
+ * v3 分节展开: a body that grows from nothing to its own height with its opacity, over `ms`
+ * (RN Animated — the height cannot go to the native driver). It measures itself first (at
+ * height 0, clipped), then lets go of the height once there, so content that loads later
+ * is never cut. `ms` 0 (arrived open, or reduce motion): no wrapper at all.
+ */
+export function Grow({ ms, children }: { ms: number; children: ReactNode }) {
+  const [height] = useState(() => new Animated.Value(0));
+  const [opacity] = useState(() => new Animated.Value(ms ? 0 : 1));
+  const [natural, setNatural] = useState<number | null>(null);
+  const [done, setDone] = useState(!ms);
+  useEffect(() => {
+    if (natural === null || done) return;
+    const run = Animated.parallel([
+      Animated.timing(height, { toValue: natural, duration: ms, easing: Easing.bezier(0.2, 0.8, 0.2, 1), useNativeDriver: false }),
+      Animated.timing(opacity, { toValue: 1, duration: ms, useNativeDriver: false }),
+    ]);
+    run.start(({ finished }) => finished && setDone(true));
+    return () => run.stop();
+  }, [natural, done, height, opacity, ms]);
+  if (done) return <>{children}</>;
+  return (
+    <Animated.View testID="grow" style={{ height, opacity, overflow: "hidden" }}>
+      <View onLayout={(e) => natural === null && setNatural(e.nativeEvent.layout.height)}>{children}</View>
+    </Animated.View>
   );
 }
 
@@ -1063,6 +1128,12 @@ export const styles = StyleSheet.create({
   // B11: a section's title row is 48 high.
   sectionHeader: { minHeight: 48, flexDirection: "row", alignItems: "center", paddingHorizontal: GUTTER, paddingVertical: space[3] },
   sectionBody: { paddingHorizontal: GUTTER, paddingBottom: space[4] },
+  /** v3 .life-records: a 60pt row — number, title, count, ＋. */
+  ledgerHeader: { minHeight: 60 },
+  ledgerIndex: { width: 30, fontSize: 11, lineHeight: 16 },
+  ledgerPlus: { width: 24, textAlign: "right", fontSize: 15, lineHeight: 20 },
+  ledgerPlusOpen: { transform: [{ rotate: "45deg" }] },
+  ledgerBody: { marginHorizontal: space[3], marginBottom: space[3], paddingHorizontal: space[4], paddingVertical: space[3], borderLeftWidth: 3 },
   empty: { alignItems: "center", gap: space[2], paddingVertical: space[4] },
   emptyArt: { alignSelf: "center", marginBottom: space[2] },
   divider: { flexDirection: "row", alignItems: "center", gap: space[3] },

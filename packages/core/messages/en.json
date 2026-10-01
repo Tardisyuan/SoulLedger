@@ -2679,7 +2679,12 @@
       "code_copy_failed": "Copy failed",
       "residing": "Residing in {{current}} · belongs to {{home}}",
       "record_count_short": "{{count}} rec.",
-      "residing_note": "You return home when the residence ends. Until then your ledger keeps your home civilization's words."
+      "residing_note": "You return home when the residence ends. Until then your ledger keeps your home civilization's words.",
+      "here": "Where you are now",
+      "stage": "Stage {{at}} / {{total}}",
+      "balance": "Balance, this life",
+      "ledger": "This life's ledger",
+      "ledger_hint": "Open an item to read it"
     },
     "past_lives": {
       "title": "Past lives",
