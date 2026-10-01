@@ -477,7 +477,7 @@ export function JudgmentClaimQueue() {
                             {j.soul_name ? j.soul_name : <MissingValue kind="unrecorded" reason="soul_name 未随判决返回" />}
                           </Link>
                         </span>
-                        <span className="block truncate text-2xs text-[oklch(var(--color-ink-subtle))]">
+                        <span className="block whitespace-nowrap text-2xs text-[oklch(var(--color-ink-subtle))]">
                           <DomainEnum namespace="souls.civilizations" value={j.civilization} />
                         </span>
                       </td>
@@ -504,7 +504,7 @@ export function JudgmentClaimQueue() {
                           <span className="flex items-center gap-2">
                             <ClaimAvatar name={j.claimed_by_name ?? ""} mine={mine} />
                             <span className="min-w-0 max-md:hidden">
-                              <span className="block max-w-28 truncate text-xs text-[oklch(var(--color-ink))]">
+                              <span className="block max-w-28 truncate text-xs text-[oklch(var(--color-ink))]" title={j.claimed_by_name || undefined}>
                                 {mine ? t("judgment.claim.reassign_you") : j.claimed_by_name || <MissingValue kind="unrecorded" />}
                               </span>
                               {j.claimed_at && (
