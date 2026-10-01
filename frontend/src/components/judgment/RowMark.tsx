@@ -30,7 +30,8 @@ export function RowMark() {
       <span
         aria-hidden="true"
         data-testid="row-mark"
-        className="pointer-events-none absolute inset-y-0 left-0 w-[3px] bg-[oklch(var(--color-main))]"
+        /* v3「C 认领」:色标 scaleY(0→1),160ms 进场曲线 —— 认领后这一格第一次挂上时播一次。 */
+        className="pointer-events-none absolute inset-y-0 left-0 w-[3px] bg-[oklch(var(--color-main))] origin-center transition-transform duration-fast ease-enter starting:scale-y-0"
       />
       <span className="sr-only">{t("judgment.row_mark.mine")}</span>
     </>

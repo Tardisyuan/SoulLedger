@@ -90,7 +90,7 @@ export function QueueMinePanel({
                     transition={{
                       layout: { duration: d.base, ease: MOTION_EASINGS.standard, delay: d.base ? Math.min(i, STAGGER_ROWS - 1) * STAGGER : 0 },
                     }}
-                    className={`relative flex h-7 items-center gap-3 border-b border-[oklch(var(--color-line))] px-2 text-sm ${marked ? ROW_MARK_ROW : ""}`}
+                    className={`relative flex h-10 max-sm:min-h-11 items-center gap-3 border-b border-[oklch(var(--color-line))] px-2 text-sm ${marked ? ROW_MARK_ROW : ""}`}
                   >
                     {marked && <RowMark />}
                     <button
