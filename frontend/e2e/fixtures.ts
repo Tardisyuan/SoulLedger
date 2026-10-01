@@ -1,4 +1,5 @@
 import { test as base, type Locator, type Page, type Request } from "@playwright/test";
+import type { AssistAdminBackup, AssistAdminConfig, AssistAdminEmbedding } from "@soulledger/core/api/assist-admin";
 import type { AssistStreamEvent } from "@soulledger/core/api/assist-stream";
 
 /**
@@ -1151,7 +1152,7 @@ const ASSIST_ADMIN_PLATFORMS = [
   { id: "siliconflow", provider: "openai_compatible", base_url: "https://api.siliconflow.cn/v1", tools: "model", needs_key: true },
   { id: "ollama", provider: "openai_compatible", base_url: "http://localhost:11434/v1", tools: "model", needs_key: false },
   { id: "custom", provider: null, base_url: null, tools: "model", needs_key: true },
-];
+] satisfies AssistAdminConfig["platforms"];
 const ASSIST_ADMIN_CONFIG = {
   enabled: true, switch: true, env_enabled: true, platform: "deepseek", platforms: ASSIST_ADMIN_PLATFORMS,
   provider: "openai_compatible", base_url: "https://api.deepseek.com",
@@ -1164,15 +1165,15 @@ const ASSIST_ADMIN_CONFIG = {
   api_keys: { deepseek: { set: true, last4: "8f3c", set_at: "2026-09-02T00:00:00Z", source: "page" } },
   eval_soul_account: "11111111-1111-1111-1111-111111111111", eval_officer: 9,
   month_rolls_over_at: "每月 1 日 08:00(北京时间)", overridden: [],
-  read_only: { max_concurrent: 8, timeout_seconds: 22, history_turns: 20, retention_days: 30 },
-};
+  read_only: { max_concurrent: 8, timeout_seconds: 22, stream_total_seconds: 60, primary_first_token_seconds: 12, history_turns: 20, retention_days: 30 },
+} satisfies AssistAdminConfig;
 /** admin_views.py `_backup_body` with no backup saved. */
 const ASSIST_ADMIN_NO_BACKUP = {
   configured: false, platform: null, provider: null, base_url: null, model: null, effort: null, fallbacks: null, prices: {},
   api_key: { set: false, last4: null, set_at: null, source: "page" }, api_key_slot: null,
   breaker: { open: false, open_until: null, consecutive_failures: 0, threshold: 3, open_seconds: 60 },
   primary_first_token_seconds: 12,
-};
+} satisfies AssistAdminBackup;
 const ASSIST_ADMIN_EMBEDDING = {
   embedding_url: "http://192.168.2.2:11434", embedding_model: "qwen3-embedding:4b-q4_K_M", embedding_dims: null,
   retrieval_k: 5, retrieval_min_similarity: 0.56, overridden: ["embedding_model"],
@@ -1181,7 +1182,7 @@ const ASSIST_ADMIN_EMBEDDING = {
     last_rebuild_at: "2026-09-12T02:40:00Z", last_rebuild_model: "qwen3-embedding:0.6b@1024",
     last_error: null, last_error_at: null, rebuild_running: false,
   },
-};
+} satisfies AssistAdminEmbedding;
 
 export class ApiMock {
   /** Every intercepted request, in order. Assert against this. */
