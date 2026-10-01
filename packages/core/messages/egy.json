@@ -334,6 +334,14 @@
         "not_executed": "Nen Iri",
         "non_eternal": "Nen Em Tepy Seth",
         "new_identity": "Ren Wehem Mesut"
+      },
+      "profile": {
+        "eyebrow": "Ba",
+        "birth_name": "Ren En Mesut",
+        "description": "Medu Ankh",
+        "ledger_tabs": "Sesh",
+        "tab_judgments": "Wedja Neb",
+        "tab_records": "Sesh Nefer Isfet Neb"
       }
     },
     "balance_range": "Pehwy Nefer Isfet",

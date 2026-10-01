@@ -115,7 +115,9 @@ export function SoulHeaderActions({
                     close(true);
                     onDelete();
                   }}
-                  className="w-full text-left px-3 py-1 text-sm text-[oklch(var(--color-status-error))] hover:bg-[oklch(var(--color-status-error)/0.1)] transition-colors"
+                  /* 移入回收站可恢复(「系统设置 › 回收站」):可逆的风险动作用 warning,
+                     danger-strong 只给不可逆的删除(规范 v3)。 */
+                  className="w-full text-left px-3 py-1 text-sm text-[oklch(var(--color-warning))] hover:bg-[oklch(var(--color-surface-2))] transition-colors"
                 >
                   {t("souls.detail.delete")}
                 </button>

@@ -337,6 +337,14 @@
         "not_executed": "待执行",
         "non_eternal": "非永恒",
         "new_identity": "新身份"
+      },
+      "profile": {
+        "eyebrow": "灵魂",
+        "birth_name": "本名",
+        "description": "生平描述",
+        "ledger_tabs": "卷宗",
+        "tab_judgments": "全部审判",
+        "tab_records": "全部功过记录"
       }
     },
     "date_problem_filter": "仅看有问题的",
