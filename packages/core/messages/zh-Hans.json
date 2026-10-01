@@ -1368,6 +1368,7 @@
       "deferred_session": "本次会话",
       "key_restore": "全部放回",
       "done_release": "已取消认领",
+      "release": "取消认领",
       "done_session_defer": "已延后至本次会话末",
       "done_restore": "已将本次会话延后的 {{n}} 件全部放回",
       "restore_title": "全部放回？",
