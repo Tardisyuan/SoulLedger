@@ -40,6 +40,12 @@ import {
   VerdictKeyContent,
 } from "@/src/components/judgment/JudgmentDesk";
 import { Seal } from "@/src/components/plaque/Seal";
+import {
+  CivMotif,
+  JudgmentConfirmLayer,
+  MaterialDock,
+  type DeskMaterial,
+} from "@/src/components/judgment/JudgmentDeskStage";
 import { useHotkeys } from "@/src/lib/hotkeys";
 import { verdictGlyph } from "@/src/lib/verdictGlyph";
 import type { SentenceRequestChanges } from "@soulledger/core/api/sentence-plans";
@@ -83,15 +89,16 @@ import { useJudgmentNextAfter, useJudgmentPrevious } from "@soulledger/core/hook
  * `purple-500` put RETRY back beside DISPOSED — and being raw Tailwind they
  * did not follow the theme either. Every verdict colour here is now the token.
  *
- * ── STRUCTURE: 卷 | 判 | 据 (规范 v1 第三类 A·01) ────────────────────────
- * Three columns, read left to right as one hearing: 卷 is the dossier
- * (identity, 功过 with its double-ruled total, prior lives, the confession);
- * 判 is the ruling (丙 evidence, the seal band, the verdict bar, 丁 the verdict
- * text, 戊 the plan changes on an amendment, then 落判); 据 is the grounds
- * (cited articles and the statute search). At 393px they stack in that order.
- * The four verdicts are still four clauses of one choice, now a key-capped
- * VerdictBar: 1–4 choose, ⌘⏎ concludes (`src/lib/hotkeys.ts`). The other
- * three stay fully legible: a verdict is compared against the ones not given.
+ * ── STRUCTURE: v3 审判台(第 7 轮原型 `JudgmentDesk`) ───────────────────
+ * 聚焦视图三栏:灵魂(身份、功过、前世)| 当前这一判(展示字号的判决、四个裁决键、
+ * 「进入盖印确认」)| 草稿(丁 判词、戊 发落、审批流、开联审)。下面是资料舱
+ * (`MaterialDock`):供词 / 功过记录(丙 证据采信)/ 律条引用(引用签、依据、检索、先例)。
+ * F 展开全案:资料舱三栏并置,判收成右侧窄栏;Esc 或再按 F 回来。落判不在页面上而在
+ * 盖印确认层(`JudgmentConfirmLayer`):主按钮或 ⌘⏎ 进层,层里「盖印并结案」或再一下 ⌘⏎
+ * 才发 `conclude/`;成功后同一层落印。768 以下单栏:判 → 资料舱 → 草稿 → 灵魂,案卷导航跳到后两者。
+ * The four verdicts are still four clauses of one choice: 1–4 choose
+ * (`src/lib/hotkeys.ts`). The other three stay fully legible: a verdict is
+ * compared against the ones not given.
  *
  * Wired to the backend since the claim / evidence / draft round: 丙 is the
  * current life's merit and demerit records with an admission toggle (Space on
@@ -132,27 +139,13 @@ type VerdictMember = "PASSED" | "FAILED" | "PURGATORY" | "RETRY";
 const VERDICTS: readonly VerdictMember[] = ["PASSED", "FAILED", "PURGATORY", "RETRY"];
 
 /*
- * 规范 v2 补足 B8:判决不靠颜色区分。v1 这里有三张按判决上色的表(字色、选中下沿、落印带
- * 上沿),各自读 `--color-verdict-*`;v2 把四个裁决键画成同一个幽灵样式(`VERDICT_KEY_CLASS`,
- * 与审判队列共用),选中 = 2px ink 外框外扩 2,落印带上沿一律墨色,落定的判决写成 ink 字 +
- * 印。✕ 也是 ink:冷玫红只给系统出错,不给判决。
+ * 规范 v2 补足 B8:判决不靠颜色区分 —— 四个裁决键同一个幽灵样式(`VERDICT_KEY_CLASS`,与审判队列共用),
+ * 字形 + 文字。v3 把「选中」画成墨底反白(原型 `verdict-selector button.selected`):中性,不是第六处
+ * 主色;✕ 也是墨色,冷玫红只给系统出错。键帽数字跟着反白(`[&_kbd]:text-current`)。
+ * 原型的选中项还上移 6px —— 那是 74px 高的键;这里的键按控件尺寸规定是 40px,上移不画。
  */
-const VERDICT_CHOSEN = "outline-solid outline-2 outline-offset-2 outline-[oklch(var(--color-ink))]";
-
-/**
- * THE SEAL BAND'S BOX, and the whole reason it is a constant.
- *
- * The band must not change height when a verdict lands: a page that reflows at
- * the moment of judgment moves everything below it under the reader's eye.
- * `h-[124px]` is a FIXED height, not a minimum, so no content can grow it —
- * 56px (text-xl at line-height 1) + 8 + 18px (text-xs at 1.5) = 82px of content
- * against 124 − 32 (py-4) − 4 (borders, border-box) = 88px of room; the pending
- * state puts one 16px line in the same box. `border-t-3` over `border-b` reads
- * as a stamp pressed DOWN, heavy edge first. Only the top border's COLOUR
- * varies between the two states — every class in the box model is in this one
- * string, so the states cannot drift apart in height without it changing.
- */
-const SEAL_BAND = "h-[124px] flex items-center gap-6 border-t-3 border-b border-b-hairline";
+const VERDICT_CHOSEN =
+  "bg-[oklch(var(--color-ink))] text-[oklch(var(--color-surface-1))] hover:bg-[oklch(var(--color-ink))] [&_kbd]:text-current";
 
 const NO_LIVES: Reincarnation[] = [];
 
@@ -172,6 +165,10 @@ export default function JudgmentDetailPage({ params }: PageProps) {
   const [stamp, setStamp] = useState(0);
   const [planDraft, setPlanDraft] = useState<ChangesDraft>(EMPTY_DRAFT);
   const [placement, setPlacement] = useState<Placement>(EMPTY_PLACEMENT);
+  /** v3 审判台的三种样子:聚焦(默认)、全案(F)、盖印确认层(盖在两者之上)。 */
+  const [view, setView] = useState<"focus" | "case">("focus");
+  const [confirming, setConfirming] = useState(false);
+  const [material, setMaterial] = useState<DeskMaterial>("evidence");
   const previousLink = useRef<HTMLAnchorElement>(null);
   const nextLink = useRef<HTMLAnchorElement>(null);
   const { user } = useTenant();
@@ -179,7 +176,6 @@ export default function JudgmentDetailPage({ params }: PageProps) {
   const createWorkflowId = useId();
   const notesId = useId();
   const clausesId = useId();
-  const firstClauseRef = useRef<HTMLInputElement>(null);
 
   // Both keys come from the factories. They were `["judgment", id]` and
   // `["soul", judgment?.soul]` — singular, so they diverged from
@@ -204,12 +200,10 @@ export default function JudgmentDetailPage({ params }: PageProps) {
     mutationFn: (payload: ConcludeJudgmentPayload) => judgmentApi.conclude(id, payload),
     /* THE PAGE STAYS. It used to `router.push("/judgment")` here.
      *
-     * `SEAL_BAND` above is 120 lines of design for one moment — a fixed
-     * `h-[124px]` so the page cannot reflow as the verdict lands, `border-t-3`
-     * over `border-b` so the rule reads as a stamp pressed down, a colour per
-     * verdict — and navigating away on success meant no operator had ever seen
-     * it happen. The band flipped to its sealed state on a page that was
-     * already being torn down. A judgment is the one thing in this application
+     * The seal drop (`JudgmentConfirmLayer`, 320ms ease-drop) is designed for
+     * one moment, and navigating away on success meant no operator had ever
+     * seen it happen — the old seal band flipped to its sealed state on a page
+     * that was already being torn down. A judgment is the one thing in this application
      * that is supposed to leave a record you can look at; sending the judge to
      * a list the instant they render it is the opposite of that.
      *
@@ -230,6 +224,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
       const code = e?.response?.data?.code;
       // 发落被拒:画在 戊 那一节(placementRefusal),并重取占用 —— realm_full 说明手上的数字旧了。
       if (code && (PLACEMENT_REFUSALS as readonly string[]).includes(code)) {
+        setConfirming(false); // 拒绝写在 戊 那一节里,确认层盖着它就看不见
         queryClient.invalidateQueries({ queryKey: [...judgmentKeys.all, "destinations", id] });
         return;
       }
@@ -284,21 +279,22 @@ export default function JudgmentDetailPage({ params }: PageProps) {
     myTenant !== null &&
     myTenant === soulHome;
 
+  /** 加减项审判(情况 1)的改动:没改动 → undefined(不生成请求);有改动却不完整 → null,并已提示。 */
+  function amendmentChanges(): SentenceRequestChanges | undefined | null {
+    if (!isAmendment || draftIsEmpty(planDraft)) return undefined;
+    const changes = draftToChanges(planDraft);
+    if (changes === null) showToast(t("sentence_plan.errors.invalid_changes"), "error");
+    return changes;
+  }
+
   function handleConclude() {
     if (!selectedVerdict) {
       showToast(t("judgment.detail.select_verdict"), "error");
       return;
     }
     // 加减项审判(情况 1):改动随裁决一起交,系统生成一条请求给原审判官;没改动就不带(不生成请求)。
-    let planChanges: SentenceRequestChanges | undefined;
-    if (isAmendment && !draftIsEmpty(planDraft)) {
-      const changes = draftToChanges(planDraft);
-      if (changes === null) {
-        showToast(t("sentence_plan.errors.invalid_changes"), "error");
-        return;
-      }
-      planChanges = changes;
-    }
+    const planChanges = amendmentChanges();
+    if (planChanges === null) return;
     concludeMutation.mutate({
       verdict: selectedVerdict,
       notes,
@@ -309,6 +305,18 @@ export default function JudgmentDetailPage({ params }: PageProps) {
   }
 
   const canExecute = hasPermission("judgment.execute");
+
+  /** 主按钮 / ⌘⏎:先进确认层,落判在层里。与落判同一道门:选了裁决才进。 */
+  function openConfirm() {
+    if (!selectedVerdict) {
+      showToast(t("judgment.detail.select_verdict"), "error");
+      return;
+    }
+    // 改动不完整就不进层:先在 戊 改好,再走盖印。
+    if (amendmentChanges() === null) return;
+    concludeMutation.reset(); // 每次进层从头来:上一次的结果(含被拒)不属于这一次
+    setConfirming(true);
+  }
 
   /* 丁 · 判词自动保存。只在动过之后存;409 停下并把对方的版本交给冲突条(见 useDraftAutosave)。 */
   const draft = useDraftAutosave({
@@ -354,27 +362,43 @@ export default function JudgmentDetailPage({ params }: PageProps) {
     onError: () => showToast(t("judgment.desk.cite_error"), "error"),
   });
 
-  /* 裁决键 1–4 选定、⌘⏎ 落判。焦点在判词框里时 1–4 不接(那是在写字),⌘⏎ 接。
-     落判与按钮同一个门:持 judgment.execute、已选裁决、不在提交中。 */
+  /* 裁决键 1–4 选定;⌘⏎ 第一下进确认层,层里再一下落判。焦点在判词框里时 1–4 不接(那是在写字),⌘⏎ 接。
+     两下都过同一道门:持 judgment.execute、已选裁决、不在提交中。确认层开着时 1–4 不改裁决 ——
+     层上写着的就是要落的那一个。 */
   const deskOpen = !!judgment && !judgment.is_final;
   useHotkeys(
     {
-      ...Object.fromEntries(VERDICTS.map((member, i) => [String(i + 1), () => chooseVerdict(member)])),
+      ...Object.fromEntries(
+        VERDICTS.map((member, i) => [String(i + 1), () => { if (!confirming) chooseVerdict(member); }])
+      ),
       "mod+Enter": () => {
-        if (canExecute && selectedVerdict && !concludeMutation.isPending) handleConclude();
+        if (!canExecute || !selectedVerdict || concludeMutation.isPending) return;
+        if (confirming) handleConclude();
+        else openConfirm();
       },
     },
     deskOpen
+  );
+  /* F 展开 / 收起全案,Esc 回聚焦(原型:单栏不响应 F)。确认层开着时都不接 —— Esc 归层自己。 */
+  useHotkeys(
+    {
+      f: () => {
+        const wide = typeof window.matchMedia !== "function" || window.matchMedia("(min-width: 768px)").matches;
+        if (wide) setView((v) => (v === "case" ? "focus" : "case"));
+      },
+      ...(view === "case" ? { Escape: () => setView("focus") } : {}),
+    },
+    !!judgment && !confirming
   );
 
   /* K 上一件:与 `next/` 同一队列;打字时不接(useHotkeys)。结案后也能回看上一件。 */
   const { data: previous } = useJudgmentPrevious(id);
   const previousId = previous?.judgment?.id ?? null;
-  useHotkeys({ k: () => previousLink.current?.click() }, !!previousId);
+  useHotkeys({ k: () => previousLink.current?.click() }, !!previousId && !confirming);
   /* J 下一件:同一队列、同一顺序往后一步(我认领在前,再先进先出,暂缓不在其中);与 K 同样的规矩。 */
   const { data: nextCase } = useJudgmentNextAfter(id);
   const nextId = nextCase?.judgment?.id ?? null;
-  useHotkeys({ j: () => nextLink.current?.click() }, !!nextId);
+  useHotkeys({ j: () => nextLink.current?.click() }, !!nextId && !confirming);
 
   /* A known route, so a link and not a router.back() button. */
   const backLink = (
@@ -465,8 +489,99 @@ export default function JudgmentDetailPage({ params }: PageProps) {
 
   const CURSOR_LINK =
     "inline-flex items-center gap-2 font-mono text-xs text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))]";
-  /* 三栏共用的栏距:桌面 28 px 内边、栏间一条结构线;393 下纵向堆叠,线改在栏的下沿。 */
-  const COLUMN = "min-w-0 py-6 lg:px-6 border-b lg:border-b-0 border-[oklch(var(--color-line))]";
+  const fullCase = view === "case";
+  /* 版式(v3 第 7 轮 `JudgmentDesk`):≥1280 三栏 灵魂 | 当前这一判 | 草稿;768–1279 两栏,草稿落到资料舱下面;
+     <768 单栏,顺序是 判 → 资料舱 → 草稿 → 灵魂(原型的手机版:案卷导航 + 判 + 资料),灵魂与草稿由导航跳到。
+     全案(F)时只剩资料舱三栏并置 + 右侧窄栏的判。一份 DOM,只换栏与顺序:判词、检索框里的字都不丢。 */
+  const deskGrid = fullCase
+    ? "grid grid-cols-1 gap-6 md:grid-cols-[minmax(0,1fr)_240px]"
+    : "grid grid-cols-1 gap-x-8 gap-y-6 md:grid-cols-[220px_minmax(0,1fr)] xl:grid-cols-[240px_minmax(0,1fr)_300px]";
+  const notesShown = isFinal ? judgment.notes : notes;
+
+  const materials: Record<DeskMaterial, { label: string; node: ReactNode }> = {
+    confession: {
+      label: t("judgment.detail.confession"),
+      node: (
+        <>
+          {/* SERIF = WORDS SOMEONE SAID. That contrast replaces the `italic` +
+              curly quotes this paragraph used to carry: a confession in italic
+              reads as an aside, and italic is then unavailable for what italic
+              is for. */}
+          {judgment.confession ? (
+            <p className="max-w-[72ch] font-serif text-md font-normal text-[oklch(var(--color-ink))]">{judgment.confession}</p>
+          ) : (
+            <p className="text-sm text-[oklch(var(--color-ink-subtle))]">
+              <MissingValue kind="unrecorded" />
+            </p>
+          )}
+          {/* 全案时草稿栏收起,判词在供词下面读(原型「判官批注」)。 */}
+          {fullCase && notesShown && (
+            <div className="mt-6 border-t border-[oklch(var(--color-line))] pt-3">
+              <p className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))]">{t("souls.detail.ledger.verdict_words")}</p>
+              <blockquote className="mt-2 font-serif text-md font-normal text-[oklch(var(--color-ink))] whitespace-pre-wrap">
+                {notesShown}
+              </blockquote>
+            </div>
+          )}
+        </>
+      ),
+    },
+    evidence: {
+      label: t("judgment.desk.tab_evidence"),
+      node: (
+        <>
+          <JudgmentEvidenceAdmission
+            judgmentId={judgment.id}
+            records={ledgerData?.records}
+            admissions={judgment.evidence_admissions ?? []}
+            balance={judgment.admitted_balance}
+            canRule={!isFinal && canExecute}
+          />
+          {/* `evidence_json` is the case's own free-form record, separate from the ledger
+              evidence above; shown only when the case carries any. */}
+          {Object.keys(judgment.evidence_json ?? {}).length > 0 && (
+            <div className="mt-6">
+              <JudgmentEvidenceColumn evidence={judgment.evidence_json} mark="" />
+            </div>
+          )}
+        </>
+      ),
+    },
+    law: {
+      label: t("judgment.desk.tab_law"),
+      node: (
+        <>
+          {!isFinal && (
+            <CitationChips
+              citations={citations}
+              onRemove={canEditGrounds ? (statuteId) => unciteMutation.mutate(statuteId) : undefined}
+            />
+          )}
+          {/* 据 · 依据条文. Shown once the case is decided — INCLUDING when it cited nothing,
+              which is the informative case: a concluded verdict with no stated
+              basis is a fact to show, not a box to hide. On an open case, only
+              once grounds exist, so a pending proceeding grows no empty panel. */}
+          {(isFinal || citations.length > 0) && (
+            <div className="mt-4">
+              <JudgmentGroundsPanel citations={citations} />
+            </div>
+          )}
+          {/* 据 · 检索:只在未结案时有事可做(引用一条律条)。 */}
+          {!isFinal && (
+            <div className="mt-6">
+              <JudgmentSectionHead title={t("judgment.desk.statute_search")} />
+              <StatuteSearch
+                civilization={judgment.civilization}
+                cited={citedIds}
+                onCite={canEditGrounds ? (statuteId) => citeMutation.mutate(statuteId) : undefined}
+              />
+              <PrecedentsPanel judgmentId={judgment.id} />
+            </div>
+          )}
+        </>
+      ),
+    },
+  };
 
   return (
     <>
@@ -501,19 +616,32 @@ export default function JudgmentDetailPage({ params }: PageProps) {
         ) : undefined
       }
     >
-      <div
-        data-testid="judgment-desk"
-        className={`grid grid-cols-1 border-t border-[oklch(var(--color-block))] ${
-          isFinal ? "lg:grid-cols-[300px_minmax(0,1fr)]" : "lg:grid-cols-[300px_minmax(0,1fr)_340px]"
-        }`}
-      >
-        {/* ── 卷 · 身份 / 功过 / 前世 / 供词 ───────────────────────────────── */}
-        <section aria-label={t("judgment.queue.case")} className={`${COLUMN} lg:pl-0 lg:border-r`}>
+      {/* 案卷导航(原型 `mobile-case-nav`):两栏以下,草稿不在判的旁边;单栏时灵魂也不在。锚点,不是开关 —— 内容一直在文档流里。 */}
+      {!fullCase && (
+        <nav
+          aria-label={t("judgment.desk.case_nav")}
+          className="mb-4 flex h-10 items-stretch gap-1 border-b border-[oklch(var(--color-line))] text-sm xl:hidden"
+        >
+          <a href="#desk-soul" className="inline-flex items-center px-3 text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))] md:hidden">
+            {t("judgment.queue.identity")}
+          </a>
+          <a href="#desk-draft" className="inline-flex items-center px-3 text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))]">
+            {t("judgment.desk.nav_draft")}
+          </a>
+        </nav>
+      )}
+      <div data-testid="judgment-desk" data-view={view} className={deskGrid}>
+        {/* ── 灵魂 · 身份 / 功过 / 前世 ───────────────────────────────────── */}
+        <section
+          id="desk-soul"
+          aria-label={t("judgment.queue.case")}
+          className={`min-w-0 scroll-mt-16 ${fullCase ? "hidden" : "order-4 md:order-1"}`}
+        >
           <JudgmentSectionHead mark="甲" title={t("judgment.detail.soul_info")} />
-          <dl className="divide-y divide-[oklch(var(--color-rule))]">
-            <MetaRow label={t("judgment.detail.soul_name")}>
-              <DomainText value={soulName} />
-            </MetaRow>
+          <p className="mt-3 text-lg text-[oklch(var(--color-ink))] wrap-break-word">
+            <DomainText value={soulName} />
+          </p>
+          <dl className="mt-3 divide-y divide-[oklch(var(--color-rule))]">
             <MetaRow label={t("judgment.detail.civilization")}>{civilisation}</MetaRow>
             <MetaRow label={t("judgment.detail.court")}>
               <DomainText value={judgment.court} />
@@ -597,110 +725,88 @@ export default function JudgmentDetailPage({ params }: PageProps) {
               </ul>
             )}
           </div>
-
-          <div className="mt-6">
-            <JudgmentSectionHead title={t("judgment.detail.confession")} />
-            {/* SERIF = WORDS SOMEONE SAID. That contrast replaces the `italic` +
-                curly quotes this paragraph used to carry: a confession in italic
-                reads as an aside, and italic is then unavailable for what italic
-                is for. */}
-            {judgment.confession ? (
-              <p className="font-serif text-md font-normal text-[oklch(var(--color-ink))] mt-2">{judgment.confession}</p>
-            ) : (
-              <p className="text-sm text-[oklch(var(--color-ink-subtle))] mt-2">
-                <MissingValue kind="unrecorded" />
-              </p>
-            )}
-          </div>
         </section>
 
-        {/* ── 判 · 证据 / 落印 / 裁决 / 判词 / 发落 ─────────────────────────── */}
+        {/* ── 判 · 当前这一判 / 裁决键 / 进入盖印确认 ───────────────────────── */}
         <section
-          aria-label={t("judgment.detail.render_verdict")}
-          className={`${COLUMN} ${isFinal ? "lg:pr-0" : "lg:border-r"}`}
+          aria-labelledby={clausesId}
+          data-testid="current-decision"
+          className={`relative isolate min-w-0 overflow-clip py-6 text-center ${
+            fullCase ? "order-2 border border-[oklch(var(--color-line))] px-4 md:self-start" : "order-1 md:order-2 md:py-8"
+          }`}
         >
+          <CivMotif />
           {judgment.deferred_at && !isFinal && (
-            <p data-testid="deferred-note" className="mb-4 border-l-3 border-[oklch(var(--color-warning))] pl-3 text-sm text-[oklch(var(--color-ink-muted))]">
+            <p data-testid="deferred-note" className="mb-4 border-l-3 border-[oklch(var(--color-warning))] pl-3 text-left text-sm text-[oklch(var(--color-ink-muted))]">
               {t("judgment.desk.deferred_note", { reason: judgment.defer_reason ?? "" })}
             </p>
           )}
-          <JudgmentEvidenceAdmission
-            judgmentId={judgment.id}
-            records={ledgerData?.records}
-            admissions={judgment.evidence_admissions ?? []}
-            balance={judgment.admitted_balance}
-            canRule={!isFinal && canExecute}
-          />
-          {/* `evidence_json` is the case's own free-form record, separate from the ledger
-              evidence above; shown only when the case carries any. */}
-          {Object.keys(judgment.evidence_json ?? {}).length > 0 && (
-            <div className="mt-6">
-              <JudgmentEvidenceColumn evidence={judgment.evidence_json} mark="" />
+          <h2 id={clausesId} className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))]">
+            {t("judgment.desk.current_ruling")}
+          </h2>
+
+          {isFinal && ordered ? (
+            <div className="mt-6 flex flex-col items-center gap-3">
+              {/* 进页时已结案:印就是落定的样子,不播。这一次会话里落的判在确认层里盖过了。 */}
+              <Seal size={72} court={judgment.court ?? undefined} className="shrink-0" />
+              <p data-testid="current-ruling" className={`${fullCase ? "text-xl" : "text-display-lg"} text-[oklch(var(--color-ink))]`}>
+                <span aria-hidden="true" className="mr-3 font-normal">{verdictGlyph(ordered)}</span>
+                <DomainEnum namespace="judgment.verdicts" value={judgment.verdict} />
+              </p>
+              {/* 主审 · 结案时间. 印记 / 会审比数 have no fields — file header. */}
+              <p
+                className="max-w-full truncate font-mono text-xs text-[oklch(var(--color-ink-subtle))]"
+                title={
+                  [judgment.judge_name, judgment.concluded_at && formatDateTime(judgment.concluded_at)]
+                    .filter(Boolean)
+                    .join(" · ") || undefined
+                }
+              >
+                <DomainText value={judgment.judge_name} />
+                <span aria-hidden="true" className="mx-2 text-[oklch(var(--color-ink-tertiary))]">·</span>
+                {judgment.concluded_at ? (
+                  <span className="tabular-nums">{formatDateTime(judgment.concluded_at)}</span>
+                ) : (
+                  <MissingValue kind="unrecorded" />
+                )}
+              </p>
+              <Badge tone="neutral">{t("judgment.detail.final")}</Badge>
             </div>
+          ) : (
+            <>
+              {/* 展示数字(DESIGN.md:当前判决 = text-display-lg)。换判时旧字形不留,新字形 160ms 淡入。 */}
+              <p
+                data-testid="current-ruling"
+                aria-live="polite"
+                className={`mt-6 ${fullCase ? "text-xl" : "text-display-lg"} text-[oklch(var(--color-ink))]`}
+              >
+                <span key={selectedVerdict} className="inline-block transition-opacity duration-fast ease-enter starting:opacity-0">
+                  {selectedVerdict ? (
+                    <>
+                      <span aria-hidden="true" className="mr-3 font-normal">{verdictGlyph(selectedVerdict as VerdictMember)}</span>
+                      <DomainEnum namespace="judgment.verdicts" value={selectedVerdict} />
+                    </>
+                  ) : (
+                    <>
+                      <span aria-hidden="true" className="font-normal text-[oklch(var(--color-ink-tertiary))]">—</span>
+                      <span className="sr-only">{t("judgment.detail.select_verdict")}</span>
+                    </>
+                  )}
+                </span>
+              </p>
+              {!fullCase && (
+                <p className="mx-auto mt-3 max-w-prose text-xs text-[oklch(var(--color-ink-muted))]">{t("judgment.desk.ruling_hint")}</p>
+              )}
+            </>
           )}
 
-          {/* ── 落印带 · one element, one box, two states. See SEAL_BAND. ────── */}
-          <div
-            data-seal-band=""
-            data-sealed={isFinal ? "true" : "false"}
-            className={`mt-6 ${SEAL_BAND} transition-colors duration-settle ease-enter ${
-              isFinal && ordered ? "border-t-[oklch(var(--color-block))]" : "border-t-hairline-strong"
-            }`}
-          >
-            {isFinal && ordered ? (
-              <>
-                <Seal size={72} stampKey={stamp} className="shrink-0" />
-                <div className="min-w-0 flex-1">
-                  <p className="text-xl text-[oklch(var(--color-ink))]">
-                    <span aria-hidden="true">{verdictGlyph(ordered)} </span>
-                    <DomainEnum namespace="judgment.verdicts" value={judgment.verdict} />
-                  </p>
-                  {/* 主审 · 结案时间. 印记 / 会审比数 have no fields — file header. */}
-                  <p
-                    className="text-xs font-mono text-[oklch(var(--color-ink-subtle))] mt-2 truncate"
-                    title={
-                      [judgment.judge_name, judgment.concluded_at && formatDateTime(judgment.concluded_at)]
-                        .filter(Boolean)
-                        .join(" · ") || undefined
-                    }
-                  >
-                    <DomainText value={judgment.judge_name} />
-                    <span aria-hidden="true" className="mx-2 text-[oklch(var(--color-ink-tertiary))]">·</span>
-                    {judgment.concluded_at ? (
-                      <span className="tabular-nums">{formatDateTime(judgment.concluded_at)}</span>
-                    ) : (
-                      <MissingValue kind="unrecorded" />
-                    )}
-                  </p>
-                </div>
-                <Badge tone="neutral" className="shrink-0">
-                  {t("judgment.detail.final")}
-                </Badge>
-              </>
-            ) : (
-              <>
-                <p className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))] flex-1">{t("judgment.pending")}</p>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="shrink-0"
-                  onClick={() => firstClauseRef.current?.focus()}
-                >
-                  {t("judgment.detail.render_verdict")}
-                </Button>
-              </>
-            )}
-          </div>
-
-          {/* ── 裁决键组 VerdictBar ─────────────────────────────────────────── */}
-          <JudgmentSectionHead id={clausesId} title={t("judgment.detail.verdict")} />
+          {/* ── 裁决键组:字形 + 文字,不靠颜色;选中 = 墨底反白(v3)。 ── */}
           {/* `role="group"` only while the clauses are choosable — four radios
               sharing a `name` are a group to the browser but nothing names that
               group; on a decided case there is nothing to choose. */}
           <ol
             data-testid="verdict-bar"
-            className="grid grid-cols-2 lg:grid-cols-4 gap-2 mt-3"
+            className={`mx-auto mt-6 grid max-w-[540px] gap-2 text-left ${fullCase ? "grid-cols-1" : "grid-cols-2 sm:grid-cols-4"}`}
             {...(isFinal ? {} : { role: "group", "aria-labelledby": clausesId })}
           >
             {VERDICTS.map((member, index) => {
@@ -708,7 +814,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
               const isChosen = selectedVerdict === member;
               const marked = isFinal ? isOrdered : isChosen;
               const clause = <VerdictKeyContent code={member} keyHint={String(index + 1)} />;
-              const tile = `${VERDICT_KEY_CLASS} ${marked ? VERDICT_CHOSEN : ""}`;
+              const tile = `${VERDICT_KEY_CLASS} ${marked ? VERDICT_CHOSEN : "bg-[oklch(var(--color-surface-1))]"}`;
 
               return (
                 <li key={member}>
@@ -725,7 +831,6 @@ export default function JudgmentDetailPage({ params }: PageProps) {
                       className={`${tile} cursor-pointer focus-within:outline-solid focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[oklch(var(--color-focus))]`}
                     >
                       <input
-                        ref={index === 0 ? firstClauseRef : undefined}
                         type="radio"
                         name="verdict"
                         value={member}
@@ -741,14 +846,36 @@ export default function JudgmentDetailPage({ params }: PageProps) {
             })}
           </ol>
 
-          {/* ── 丁 · 判词 ── */}
-          <div className="mt-6">
-            <JudgmentSectionHead mark="丁" title={t("souls.detail.ledger.verdict_words")} />
-          </div>
+          {/* ── 进入盖印确认:落判在确认层里,不在这里 ─────────────────────── */}
+          {!isFinal && (
+            <div className="mt-6 flex flex-col items-center gap-2">
+              <RequirePermission permissions="judgment.execute">
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="lg"
+                  className={`gap-2 ${fullCase ? "w-full" : "min-w-60"}`}
+                  onClick={openConfirm}
+                  disabled={!selectedVerdict}
+                >
+                  {t("judgment.desk.to_confirm")}
+                  <Kbd>⌘⏎</Kbd>
+                </Button>
+              </RequirePermission>
+              <p className="text-2xs text-[oklch(var(--color-ink-subtle))]">{t("judgment.desk.irreversible")}</p>
+            </div>
+          )}
+        </section>
 
+        {/* ── 丁 · 判词 / 戊 · 发落 / 审批流 · 联审 ─────────────────────────── */}
+        <section
+          id="desk-draft"
+          aria-label={t("judgment.desk.nav_draft")}
+          className={`min-w-0 scroll-mt-16 ${fullCase ? "hidden" : "order-3 md:order-4 md:col-span-2 xl:order-3 xl:col-span-1"}`}
+        >
+          <JudgmentSectionHead mark="丁" title={t("souls.detail.ledger.verdict_words")} />
           {isFinal ? (
-            /* 判词是「有人说过的话」,所以衬线(规范 v1 表态 1:判词、忏悔录、古典语料)。
-               这里原先是 sans,理由是「法庭自己写的字」;规范 v1 把判词划进了引文。 */
+            /* 判词是「有人说过的话」,所以衬线(规范 v1 表态 1:判词、忏悔录、古典语料)。 */
             judgment.notes ? (
               <blockquote className="mt-3 pl-3 border-l-2 border-[oklch(var(--color-ink))] font-serif text-md font-normal text-[oklch(var(--color-ink))] max-w-[72ch]">
                 {judgment.notes}
@@ -774,7 +901,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
                 }}
                 rows={4}
                 placeholder={t("judgment.detail.notes_placeholder")}
-                className="block w-full mt-3 border border-[oklch(var(--color-block))] bg-[oklch(var(--color-surface-1))] px-3 py-2 font-serif text-md font-normal text-[oklch(var(--color-ink))] placeholder:text-[oklch(var(--color-ink-subtle))] transition-[border-color] duration-state focus-visible:border-[oklch(var(--color-accent))] resize-y"
+                className="block w-full mt-3 rounded-control border border-[oklch(var(--color-line-strong))] bg-[oklch(var(--color-surface-1))] px-3 py-2 font-serif text-md font-normal text-[oklch(var(--color-ink))] placeholder:text-[oklch(var(--color-ink-subtle))] transition-[border-color] duration-state focus-visible:border-[oklch(var(--color-ink))] resize-y"
               />
               {/* During a conflict the last saved time is the OTHER version's baseline, not this text's. */}
               {!draft.conflict && <DraftStatusLine status={draft.status} savedAt={judgment.draft_saved_at} />}
@@ -792,12 +919,6 @@ export default function JudgmentDetailPage({ params }: PageProps) {
                 />
               )}
             </>
-          )}
-          {!isFinal && (
-            <CitationChips
-              citations={citations}
-              onRemove={canEditGrounds ? (statuteId) => unciteMutation.mutate(statuteId) : undefined}
-            />
           )}
 
           {/* ── 戊 · 发落:原审判选目的地与刑期;加减项审判的发落是计划改动。 ── */}
@@ -825,9 +946,8 @@ export default function JudgmentDetailPage({ params }: PageProps) {
             />
           )}
 
-          {/* ── 落判 ─────────────────────────────────────────────────────── */}
           {!isFinal && (
-            <div className="mt-6 border-t border-[oklch(var(--color-block))] pt-4 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+            <div className="mt-6 flex flex-col gap-4 border-t border-[oklch(var(--color-line))] pt-4">
               <div className="flex items-start gap-2 min-w-0">
                 <input
                   id={createWorkflowId}
@@ -843,56 +963,36 @@ export default function JudgmentDetailPage({ params }: PageProps) {
                   </span>
                 </label>
               </div>
-
               {canOpenCross && <OpenCrossJudgment judgmentId={judgment.id} soulName={soulName} />}
-              <RequirePermission permissions="judgment.execute">
-                <Button
-                  type="button"
-                  variant="primary"
-                  size="lg"
-                  className="shrink-0 gap-2"
-                  onClick={handleConclude}
-                  loading={concludeMutation.isPending}
-                  disabled={!selectedVerdict}
-                >
-                  {/* 第三类 F 组 2.8:勾上审批流后,这个不可撤回的按钮写明它会多做什么。 */}
-                  {concludeMutation.isPending
-                    ? t("judgment.detail.concluding")
-                    : createWorkflow
-                      ? t("judgment.detail.conclude_with_workflow")
-                      : t("judgment.detail.conclude")}
-                  <Kbd>⌘⏎</Kbd>
-                </Button>
-              </RequirePermission>
             </div>
           )}
         </section>
 
-        {/* ── 据 · 检索:只在未结案时有事可做(引用一条律条),结案后这一栏不画。 ── */}
-        {!isFinal && (
-          <section aria-label={t("judgment.desk.statute_search")} className={`${COLUMN} lg:pr-0`}>
-            <JudgmentSectionHead title={t("judgment.desk.statute_search")} />
-            <StatuteSearch
-              civilization={judgment.civilization}
-              cited={citedIds}
-              onCite={canEditGrounds ? (statuteId) => citeMutation.mutate(statuteId) : undefined}
-            />
-            <PrecedentsPanel judgmentId={judgment.id} />
-          </section>
-        )}
-      </div>
-
-      {/* ── 据 · 依据条文,全宽:条文行是「编号 | 正文 | 出处」三栏,塞进 340 px 的栏里会被压成竖排。
-          Shown once the case is decided — INCLUDING when it cited nothing,
-          which is the informative case: a concluded verdict with no stated
-          basis is a fact to show, not a box to hide. On an open case, only
-          once grounds exist, so a pending proceeding grows no empty panel. */}
-      {(isFinal || citations.length > 0) && (
-        <div className="mt-12">
-          <JudgmentGroundsPanel citations={citations} />
+        {/* ── 资料舱 · 供词 / 功过记录 / 律条引用 ──────────────────────────── */}
+        <div className={`min-w-0 ${fullCase ? "order-1" : "order-2 md:order-3 md:col-span-2 xl:order-4 xl:col-span-3"}`}>
+          <MaterialDock
+            active={material}
+            onActive={setMaterial}
+            fullCase={fullCase}
+            onToggleFullCase={() => setView(fullCase ? "focus" : "case")}
+            panels={materials}
+          />
         </div>
-      )}
+      </div>
     </PageShell>
+    {!isFinal || concludeMutation.isSuccess ? (
+      <JudgmentConfirmLayer
+        open={confirming}
+        onClose={() => setConfirming(false)}
+        verdict={selectedVerdict}
+        court={judgment.court}
+        withWorkflow={createWorkflow}
+        pending={concludeMutation.isPending}
+        done={concludeMutation.isSuccess}
+        stampKey={stamp}
+        onConfirm={handleConclude}
+      />
+    ) : null}
     </>
   );
 }

@@ -1262,7 +1262,25 @@
       "recorded_after": "{{n}} recorded since",
       "cite_from_corpus_title": "Cite an article",
       "cite_from_corpus_confirm": "Cite {{cite}} in the judgment of {{soul}}?",
-      "cite_from_corpus_closed": "This case is concluded; no article can be cited now."
+      "cite_from_corpus_closed": "This case is concluded; no article can be cited now.",
+      "current_ruling": "Current ruling",
+      "ruling_hint": "Press 1–4 to choose a verdict, then go on to the seal.",
+      "to_confirm": "Go to the seal",
+      "irreversible": "A ruling cannot be withdrawn",
+      "materials": "Case materials",
+      "tab_evidence": "Merit and demerit",
+      "tab_law": "Cited articles",
+      "full_case": "Full case",
+      "back_to_focus": "Back to focus",
+      "case_nav": "Case navigation",
+      "nav_draft": "Draft and notes",
+      "confirm_title": "Confirm the ruling",
+      "confirm_body": "You chose “{{verdict}}”. Once ruled it goes on the record and cannot be withdrawn.",
+      "signing_court": "Signed by",
+      "stamp": "Seal and conclude",
+      "back_to_check": "Back to review",
+      "recorded": "The ruling is on the record.",
+      "done": "Done"
     },
     "claim": {
       "groups": {

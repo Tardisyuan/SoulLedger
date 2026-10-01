@@ -97,7 +97,9 @@ function renderPage() {
 async function conclude() {
   const passed = (await screen.findAllByRole("radio")).find((r) => (r as HTMLInputElement).value === "PASSED")!;
   fireEvent.click(passed);
-  fireEvent.click(screen.getByRole("button", { name: tZh("judgment.detail.conclude") }));
+  // v3:主按钮进盖印确认层,层里「盖印并结案」才发 conclude/。
+  fireEvent.click(screen.getByRole("button", { name: tZh("judgment.desk.to_confirm") }));
+  fireEvent.click(await screen.findByRole("button", { name: tZh("judgment.desk.stamp") }));
   await waitFor(() => expect(judgmentApi.conclude).toHaveBeenCalledTimes(1));
   return judgmentApi.conclude.mock.calls[0];
 }
@@ -142,15 +144,16 @@ describe("加减项审判结案带改动(情况 1)", () => {
     expect(await conclude()).toEqual([ID, { verdict: "PASSED", notes: "", create_workflow: false }]);
   });
 
-  it("改动里有一行没选界域:不结案,说明原因", async () => {
+  it("改动里有一行没选界域:不进确认层、不结案,说明原因", async () => {
     renderPage();
     const section = await screen.findByTestId("amendment-plan-changes");
     fireEvent.click(within(section).getByRole("button", { name: tZh("sentence_plan.file.add_stop") }));
     fireEvent.click((await screen.findAllByRole("radio")).find((r) => (r as HTMLInputElement).value === "PASSED")!);
-    fireEvent.click(screen.getByRole("button", { name: tZh("judgment.detail.conclude") }));
+    fireEvent.click(screen.getByRole("button", { name: tZh("judgment.desk.to_confirm") }));
     await waitFor(() =>
       expect(mockShowToast).toHaveBeenCalledWith(tZh("sentence_plan.errors.invalid_changes"), "error")
     );
+    expect(screen.queryByTestId("confirm-layer")).toBeNull();
     expect(judgmentApi.conclude).not.toHaveBeenCalled();
   });
 
@@ -185,13 +188,13 @@ describe("原审判", () => {
   it("别的文明、没有 cross_judgment.create、已结案:都没有「开联审」", async () => {
     as("EG_DUAT", ...JUDGE);
     const a = renderPage();
-    await screen.findByRole("button", { name: tZh("judgment.detail.conclude") });
+    await screen.findByRole("button", { name: tZh("judgment.desk.to_confirm") });
     expect(screen.queryByRole("button", { name: tZh("sentence_plan.cross.open") })).toBeNull();
     a.unmount();
 
     as("CN_DIYU", "judgment.read", "judgment.execute");
     const b = renderPage();
-    await screen.findByRole("button", { name: tZh("judgment.detail.conclude") });
+    await screen.findByRole("button", { name: tZh("judgment.desk.to_confirm") });
     expect(screen.queryByRole("button", { name: tZh("sentence_plan.cross.open") })).toBeNull();
     b.unmount();
 
