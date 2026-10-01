@@ -12,6 +12,9 @@ const BASE_URL = process.env.PLAYWRIGHT_BASE_URL || "http://localhost:3333";
  * 字串从 egy.json 现取,不抄进这里:以后谁加了更长的页题或菜单名,它自动进这 20 条。
  * 选的是能落到匾和侧栏上的两类 —— `breadcrumb.*`(菜单与路由段)与 Web 页面的 `*.title`;
  * App / 推送 / 通知信的标题(soul_app / soul_push / official_notify)不上 Web 的匾。
+ * 带 `{{…}}` 占位符的是模板(弹窗标题,如 `sentence_plan.file.title` 的「…: {{soul}}」),
+ * 代码里总是带参数调用,从不原样当页题 —— 原样塞进菜单名,匾上就画出一个生的 `{{soul}}`
+ * (2026-10-02 截图里的那一条,它恰好是最长的一条)。所以不选。
  *
  * 怎么让一条任意字串当上匾题与侧栏项:菜单名(Menu.name)没有登记译名的路径,在 egy 下
  * 原样显示(`src/lib/menuI18n.ts`),而匾题取面包屑最后一段。所以把 20 条字串做成 20 个
@@ -32,6 +35,7 @@ function flatten(o: Record<string, unknown>, prefix = ""): [string, string][] {
 
 const LONGEST: [string, string][] = flatten(EGY)
   .filter(([k]) => /^breadcrumb\./.test(k) || (/\.title$/.test(k) && !/^(soul_app|soul_push|official_notify)\./.test(k)))
+  .filter(([, v]) => !/\{\{\w+\}\}/.test(v))
   .sort((a, b) => [...b[1]].length - [...a[1]].length || a[0].localeCompare(b[0]))
   .slice(0, 20);
 
@@ -56,6 +60,8 @@ test.describe("C14 · egy 最长的 20 条标签", () => {
     const keys = LONGEST.map(([k]) => k);
     expect(keys).toContain("actors.assessors.title");
     expect(keys).toContain("breadcrumb.menu.soul_credentials");
+    // 没有模板:带占位符的字串不是页题,原样上匾就是一个生的 {{soul}}。
+    expect(LONGEST.filter(([, label]) => /\{\{|\}\}/.test(label))).toEqual([]);
   });
 
   for (const [i, [key, label]] of LONGEST.entries()) {
@@ -68,6 +74,7 @@ test.describe("C14 · egy 最长的 20 条标签", () => {
       // ── 匾题字:完整文字在 title 里;前两档一行不溢出,第三档是界面字两行截断。
       const title = page.getByTestId("plaque").locator("[data-tier]");
       await expect(title).toHaveAttribute("title", label);
+      await expect(title).not.toContainText("{{");
       await page.evaluate(() => document.fonts.ready);
       const plaque = await title.evaluate((el) => {
         const cs = getComputedStyle(el);
