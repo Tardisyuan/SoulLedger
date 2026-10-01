@@ -109,10 +109,9 @@ export interface DataTableSelection<T> {
 
 export interface DataTableProps<T> {
   /**
-   * Row height. `compact` is `py-2` (~36px at text-sm) against
-   * `comfortable`'s `py-3` (~44px) — an 18% reduction, which at 20 rows a
-   * page is the difference between the table fitting one 1080p viewport and
-   * not.
+   * Row height. `comfortable`(默认)是规范 v3 的 64px 最小行高(`--table-row-h`);
+   * `compact` 不设最小高度,行高只由 `py-1` 与内容决定。2026-10-01 起全站按 v3 走,
+   * 没有调用点传 `compact` —— 它留着是给「这一页确实要更密」的那一次决定。
    *
    * It lived on DataGrid, so only the two pages on DataGrid could reach it
    * and exactly one used it; the other ten list pages call DataTable
@@ -277,7 +276,11 @@ export function DataTable<T>({
     transitionKey ?? ''
   )
 
-  // 规范 v1 §2 表格:行高 36,紧凑 28(仅审判队列用)。
+  /* 行高按规范 v3(2026-10-01 拍板):正文行 `min-height: 64px`(`--table-row-h`,v3 `.queue-row`
+     / `.ds-tr`),表头 44(`--control-h-sm`,v3 `.queue-head` / `.ds-th`)。`<tr>` 上的 `height`
+     在表格布局里就是最小高度 —— 内容更高时行照样长高。`compact` 不加这一条:它是显式的
+     「我要更密」,而且目前没有任何调用点传它。 */
+  const rowHeight = density === 'compact' ? '' : 'h-(--table-row-h)'
   const cellPadding = density === 'compact' ? 'px-3 py-1' : 'px-3 py-2'
   /**
    * The body rows come from `renderRow`, which every caller hand-writes — 40
@@ -350,7 +353,7 @@ export function DataTable<T>({
           <caption className="sr-only">{caption}</caption>
           {columns.some((c) => c.width) && (
             <colgroup>
-              {selection && <col style={{ width: '40px' }} />}
+              {selection && <col style={{ width: '44px' }} />}
               {columns.map((column) => (
                 <col key={column.key} style={column.width ? { width: column.width } : undefined} />
               ))}
@@ -358,10 +361,10 @@ export function DataTable<T>({
           )}
           {/* 补足 C15 表格细节 / B9:表头 11 等宽 ink3,下沿 2px ink。 */}
           <thead className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">
-            <tr className="border-b-2 border-[oklch(var(--color-ink))]">
+            <tr className="h-(--control-h-sm) border-b-2 border-[oklch(var(--color-ink))]">
               {selection && (
-                <th scope="col" className="w-10 p-0">
-                  <label className="flex h-full min-h-8 items-center justify-center px-3 cursor-pointer">
+                <th scope="col" className="w-11 p-0">
+                  <label className="flex h-full min-h-(--control-h-sm) items-center justify-center px-3 cursor-pointer">
                     <input
                       type="checkbox"
                       checked={allOnScreen}
@@ -396,7 +399,7 @@ export function DataTable<T>({
                         type="button"
                         onClick={() => handleSort(column)}
                         className={cn(
-                          'group flex w-full items-center gap-1.5 font-normal',
+                          'group flex min-h-(--control-h-sm) w-full items-center gap-1.5 font-normal',
                           cellPadding,
                           'hover:text-[oklch(var(--color-ink))] transition-colors',
                           // Focus ring comes from the global :focus-visible rule
@@ -503,6 +506,7 @@ export function DataTable<T>({
                     }
                     className={cn(
                       'border-b border-[oklch(var(--color-rule))] transition-colors',
+                      rowHeight,
                       linkedRows && 'relative cursor-pointer',
                       selection?.selected.has(rowKey) ? ROW_SELECTED : ROW_HOVER,
                       entered.has(rowKey) && 'animate-row-enter',
@@ -510,8 +514,8 @@ export function DataTable<T>({
                     )}
                   >
                     {selection && (
-                      <td className="w-10 p-0 align-middle">
-                        <label className="relative z-[1] flex min-h-8 items-center justify-center px-3 py-2 cursor-pointer">
+                      <td className="w-11 p-0 align-middle">
+                        <label className="relative z-[1] flex min-h-(--control-h-sm) items-center justify-center px-3 cursor-pointer">
                           <input
                             type="checkbox"
                             checked={selection.selected.has(rowKey)}
@@ -543,9 +547,9 @@ export function DataTable<T>({
                   key={`leaving-${key}`}
                   aria-hidden="true"
                   data-row-state="leaving"
-                  className="border-b border-[oklch(var(--color-rule))] pointer-events-none animate-row-exit"
+                  className={cn('border-b border-[oklch(var(--color-rule))] pointer-events-none animate-row-exit', rowHeight)}
                 >
-                  {selection && <td className="w-10" />}
+                  {selection && <td className="w-11" />}
                   {renderRow(item, index)}
                 </tr>
               ))}

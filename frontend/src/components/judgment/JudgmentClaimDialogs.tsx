@@ -250,11 +250,12 @@ export function ReassignDialog({
   };
 
   return (
-    /* v3 `.reassign-layer`:从右侧滑入的改派层(240ms 进 · 160ms 出,`Drawer` 的两档时长),
+    /* v3 `.reassign-layer`:桌面从右侧滑入、宽 390;手机从底部升起、高 78%(`Drawer` 的 layer;240 进 · 180 出),
        不是居中弹窗;选判官只换单选状态。 */
     <Drawer
       isOpen={isOpen}
       onClose={close}
+      variant="layer"
       title={t("judgment.claim.reassign_title", { n: String(count) })}
       footer={
         <div className="flex justify-end gap-2">

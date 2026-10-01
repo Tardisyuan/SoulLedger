@@ -275,12 +275,13 @@ describe("label wiring and shape", () => {
   });
 });
 
-describe("heights line up with Button (28 / 32 / 40)", () => {
-  it("each size carries Button's height as a minimum, so a textarea can grow", () => {
+describe("heights line up with Button (规范 v3 44 / 48 / 56)", () => {
+  it("each size carries Button's height token as a minimum, so a textarea can grow", () => {
     const heights = FIELD_SIZES.map((size: FieldSize) =>
-      fieldControl({ size }).split(/\s+/).filter((c) => /^min-h-\d+$/.test(c)).join(" ")
+      fieldControl({ size }).split(/\s+/).filter((c) => /^(max-sm:)?min-h-/.test(c)).join(" ")
     );
-    expect(heights).toEqual(["min-h-7", "min-h-8", "min-h-10"]);
+    // Exactly one height each and no phone-only patch: the smallest is already 44.
+    expect(heights).toEqual(["min-h-(--control-h-sm)", "min-h-(--control-h-md)", "min-h-(--control-h-lg)"]);
   });
 
   it("carries the type scale beside the ink colour", () => {

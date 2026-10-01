@@ -118,7 +118,7 @@ function LedgerPageContent() {
       subtitle={t("ledger.journal.subtitle")}
       filters={
         <>
-          <span className="flex items-center h-8 border border-[oklch(var(--color-line-strong))] bg-[oklch(var(--color-surface-1))] font-mono text-sm">
+          <span className="flex items-center h-(--control-h-sm) border border-[oklch(var(--color-line-strong))] bg-[oklch(var(--color-surface-1))] font-mono text-sm">
             <button type="button" aria-label={t("ledger.journal.month_prev")} onClick={() => setMonth(shiftMonth(month, -1))} className={MONTH_STEP}>
               ◂
             </button>
@@ -268,7 +268,7 @@ function Journal({ rows, closing }: { rows: LedgerJournalRow[]; closing: number 
         data-testid="journal-head"
         className={cn(
           JOURNAL_COLS,
-          "max-md:hidden h-7 items-center border-b-2 border-[oklch(var(--color-ink))] bg-[oklch(var(--color-canvas))]",
+          "max-md:hidden h-(--control-h-sm) items-center border-b-2 border-[oklch(var(--color-ink))] bg-[oklch(var(--color-canvas))]",
           MONO_LABEL,
           sticky && "sticky top-0 z-10"
         )}
@@ -305,7 +305,7 @@ function JournalRow({ row, balance }: { row: LedgerJournalRow; balance: number }
   return (
     <div
       data-journal-row={row.id}
-      className={`${JOURNAL_COLS} relative items-center min-h-9 max-md:py-2 border-b border-[oklch(var(--color-line))] hover:bg-[oklch(var(--color-surface-2))] [grid-template-areas:'s_r_p_b'_'m_m_m_m'] md:[grid-template-areas:'d_s_c_m_r_p_b']`}
+      className={`${JOURNAL_COLS} relative items-center min-h-(--table-row-h) max-md:py-2 border-b border-[oklch(var(--color-line))] hover:bg-[oklch(var(--color-surface-2))] [grid-template-areas:'s_r_p_b'_'m_m_m_m'] md:[grid-template-areas:'d_s_c_m_r_p_b']`}
     >
       <span className={`[grid-area:d] max-md:hidden ${MONO_LABEL}`} title={formatDateTime(row.recorded_at)}>
         {row.day.slice(5)}

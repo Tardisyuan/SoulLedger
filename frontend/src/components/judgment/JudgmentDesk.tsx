@@ -38,22 +38,26 @@ export function Kbd({ children }: { children: ReactNode }) {
 }
 
 /**
- * 落判键(补足 B8):四个同一个样式 —— 幽灵按钮,高 40、1px ink3 框、13 / 600、ink 字;
- * 左边字形(15)+ 文字,右边数字键(11 等宽 ink3)。落判不靠颜色区分对错:✕ 也是 ink,
- * 冷玫红只给系统出错。焦点环交给全局 `:focus-visible`(2px ink 外扩 2)。
- * 审判详情页的裁决键组用同一串,两处长得一样。
+ * 落判键(补足 B8,尺寸按规范 v3 `.verdict-selector`):四个同一个样式 —— 幽灵按钮,1px ink3 框、
+ * ink 字;**高约 74**(v3 `min-height: 74px`),竖排:字形(衬线 20)在上、文字(12 / 600)在下,
+ * 数字键(11 等宽 ink3)贴左上角。落判不靠颜色区分对错:✕ 也是 ink,冷玫红只给系统出错。
+ * 焦点环交给全局 `:focus-visible`(2px ink 外扩 2)。审判详情页的裁决键组用同一串,两处长得一样;
+ * 详情页单列的「案卷」视图另加 `VERDICT_KEY_COMPACT`(v3 `.is-compact`:52 高、横排、不上移)。
  */
 export const VERDICT_KEY_CLASS =
-  "flex h-10 w-full items-center gap-2 px-3 border border-[oklch(var(--color-line-strong))] text-sm font-semibold text-[oklch(var(--color-ink))] transition-[background-color] duration-fast hover:bg-[oklch(var(--color-surface-2))] active:bg-[oklch(var(--color-line))] max-sm:min-h-11";
+  "relative flex min-h-18.5 w-full flex-col items-center justify-center gap-1 px-3 border border-[oklch(var(--color-line-strong))] text-xs font-semibold text-[oklch(var(--color-ink))] transition-[background-color,translate,box-shadow] duration-fast ease-standard hover:bg-[oklch(var(--color-surface-2))] active:bg-[oklch(var(--color-line))]";
 
-/** 字形 + 文字 + 右侧数字键,两处落判键共用。 */
+/** v3 `.verdict-selector.is-compact`:单列时 52 高、键帽 · 字形 · 文字横排靠左。 */
+export const VERDICT_KEY_COMPACT = "min-h-13 flex-row justify-start gap-2 [&_kbd]:static [&_kbd]:order-first";
+
+/** 字形 + 文字 + 左上角数字键,两处落判键共用。 */
 export function VerdictKeyContent({ code, keyHint }: { code: NonNullable<Judgment["verdict"]>; keyHint: string }) {
   return (
     <>
-      <span aria-hidden="true" className="text-md font-normal">{verdictGlyph(code)}</span>
+      <span aria-hidden="true" className="font-serif text-lg font-normal">{verdictGlyph(code)}</span>
       {/* <DomainEnum>:原始枚举留在 title 上,缺译文时显示「未识别」而不是点号键名。 */}
       <DomainEnum namespace="judgment.verdicts" value={code} />
-      <kbd aria-hidden="true" className="ml-auto font-mono text-2xs font-normal text-[oklch(var(--color-ink-subtle))]">
+      <kbd aria-hidden="true" className="absolute left-2 top-2 font-mono text-2xs font-normal text-[oklch(var(--color-ink-subtle))]">
         {keyHint}
       </kbd>
     </>
@@ -108,7 +112,7 @@ export function QueueBar({ judgmentId, canDefer = false }: { judgmentId: string;
         <button
           type="button"
           onClick={() => setAsking(true)}
-          className="inline-flex items-center gap-2 hover:text-[oklch(var(--color-ink))] max-sm:min-h-11"
+          className="inline-flex min-h-(--control-h-sm) items-center gap-2 hover:text-[oklch(var(--color-ink))]"
         >
           <Kbd>S</Kbd>
           {t("judgment.claim.defer")}
@@ -270,7 +274,7 @@ export function StatuteSearch({
           value={term}
           onChange={(e) => setTerm(e.target.value)}
           placeholder={t("judgment.desk.statute_search")}
-          className="w-full h-8 max-sm:h-11 border border-[oklch(var(--color-line))] bg-[oklch(var(--color-canvas))] px-2 text-sm text-[oklch(var(--color-ink))] placeholder:text-[oklch(var(--color-ink-subtle))]"
+          className="w-full h-(--control-h-sm) border border-[oklch(var(--color-line))] bg-[oklch(var(--color-canvas))] px-2 text-sm text-[oklch(var(--color-ink))] placeholder:text-[oklch(var(--color-ink-subtle))]"
         />
       </label>
       {query && !resolved && !corpus.isPending && !isFetching && (isError || results.length === 0) && (

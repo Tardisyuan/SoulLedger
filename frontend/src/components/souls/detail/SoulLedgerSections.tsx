@@ -83,7 +83,7 @@ export function SoulJudgmentHistory({ judgments }: { judgments: Judgment[] }) {
         return (
           <div
             key={j.id}
-            className={`relative grid min-h-10 grid-cols-[5.5rem_minmax(0,1fr)_auto_auto] items-center gap-x-3 border-b border-[oklch(var(--color-line))] pl-4 pr-2 max-sm:grid-cols-[4.5rem_minmax(0,1fr)_auto_auto] max-sm:gap-x-2 ${mine ? ROW_MARK_ROW : ""}`}
+            className={`relative grid min-h-(--table-row-h) grid-cols-[5.5rem_minmax(0,1fr)_auto_auto] items-center gap-x-3 border-b border-[oklch(var(--color-line))] pl-4 pr-2 max-sm:grid-cols-[4.5rem_minmax(0,1fr)_auto_auto] max-sm:gap-x-2 ${mine ? ROW_MARK_ROW : ""}`}
             data-testid="ledger-judgment-row"
           >
             {mine && <RowMark />}
@@ -98,7 +98,7 @@ export function SoulJudgmentHistory({ judgments }: { judgments: Judgment[] }) {
             </span>
             <Link
               href={`/judgment/${j.id}`}
-              className="inline-flex h-10 items-center px-2 text-xs text-[oklch(var(--color-ink))] underline-offset-4 hover:underline"
+              className="inline-flex h-(--control-h-sm) items-center px-2 text-xs text-[oklch(var(--color-ink))] underline-offset-4 hover:underline"
             >
               {t("judgment.view")}
             </Link>

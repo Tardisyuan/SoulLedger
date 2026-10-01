@@ -352,7 +352,7 @@ export default function WorkflowDetailPage() {
                 ].map((opt) => (
                   <label
                     key={opt.key}
-                    className={`flex min-h-8 max-sm:min-h-11 items-center gap-3 px-2 border-b border-[oklch(var(--color-rule))] cursor-pointer transition-colors text-sm ${
+                    className={`flex min-h-(--control-h-sm) items-center gap-3 px-2 border-b border-[oklch(var(--color-rule))] cursor-pointer transition-colors text-sm ${
                       selectedVerdict === opt.key
                         ? "bg-[oklch(var(--color-surface-2))]"
                         : "hover:bg-[oklch(var(--color-surface-2))]"

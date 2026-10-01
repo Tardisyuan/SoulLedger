@@ -143,7 +143,7 @@ function RealmsPageContent() {
               type="button"
               aria-pressed={civ === civilization}
               onClick={() => setPicked(civ)}
-              className={`px-3 h-8 ${
+              className={`px-3 h-(--control-h-sm) ${
                 civ === civilization
                   ? "bg-[oklch(var(--color-ink))] text-[oklch(var(--color-canvas))]"
                   : "text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))]"
@@ -247,7 +247,7 @@ function RealmTreeTable({
           const type = REALM_TYPE_CONFIG[realm.realm_type] || REALM_TYPE_CONFIG.NEUTRAL;
           const name = realmStationLabel(t, { id: realm.id, code: realm.realm_code, realm, state: "pending" });
           return (
-            <tr key={realm.id} data-realm-row={realm.realm_code} data-depth={depth} data-full={full ? "true" : undefined} className="border-b border-[oklch(var(--color-rule))] h-8">
+            <tr key={realm.id} data-realm-row={realm.realm_code} data-depth={depth} data-full={full ? "true" : undefined} className="border-b border-[oklch(var(--color-rule))] h-(--table-row-h)">
               <td
                 className={`text-sm pr-3 ${depth ? "text-[oklch(var(--color-ink-muted))]" : "font-medium text-[oklch(var(--color-ink))]"}`}
                 style={{ paddingLeft: depth * 14 }}
@@ -369,7 +369,7 @@ function CapacityEditor({
           onChange={(e) => onDraft(e.target.value)}
           aria-label={t("realms.table.capacity_label")}
           placeholder={t("realms.table.capacity_unrecorded")}
-          className="w-20 h-7 border border-[oklch(var(--color-line))] bg-[oklch(var(--color-canvas))] px-1 text-right font-mono"
+          className="w-20 h-(--control-h-sm) border border-[oklch(var(--color-line))] bg-[oklch(var(--color-canvas))] px-2 text-right font-mono"
         />
         <Button type="button" size="sm" variant="primary" disabled={value === undefined || pending} onClick={() => value !== undefined && onSave(value)}>
           {t("common.save")}

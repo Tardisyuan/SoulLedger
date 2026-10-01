@@ -3,7 +3,8 @@
  *
  * - 分段切换带两边的真实计数(各取自一次 `has_verdict` 查询的 count);Q 进入队列,打字时不接;
  * - 「待审」按谁在处理分四组,组头的数来自 `queue-counts/` —— 不是本页行数;
- * - 约 40 px 的行(h-10,不是 v3 的 64)、整行链到审判台;认领标是圆形头像,未认领的行给「认领」;
+ * - v3 的 64 px 行(`--table-row-h`)、整行链到审判台;认领标是圆形头像,未认领的行给「认领」;
+ * - 行尾「⋯」菜单按权限给认领 / 取消认领 / 延后 / 改派…;取消认领时色标反着退场(scaleY 1→0,140ms);
  * - ↑↓ 或 J / K 移焦点,X 勾选,C 认领 / 取消认领焦点行,S 延后到本次会话末,R 确认后全部放回;
  *   打字时一概不接;
  * - 工具条「全部案卷 / 我认领的」;草拟判决是字形 + 文字;
@@ -130,13 +131,14 @@ describe("审判队列", () => {
     expect(within(screen.getByTestId("queue-group-deferred")).getByText(tZh("judgment.claim.group_empty"))).toBeInTheDocument();
   });
 
-  it("行约 40 px(h-10)、整行链到审判台;余额与证据两列;认领标是圆形,只有未认领的行给「认领」", async () => {
+  it("行是 v3 的 64 px(--table-row-h)、整行链到审判台;余额与证据两列;认领标是圆形,只有未认领的行给「认领」", async () => {
     renderPage();
     const link = await screen.findByRole("link", { name: "沈青梧" });
     expect(link).toHaveAttribute("href", "/judgment/a");
     const mine = rowOf("沈青梧");
-    expect(mine.className.split(/\s+/)).toContain("h-10");
-    expect(mine.className).not.toMatch(/\bh-(7|16)\b/);
+    expect(mine.className.split(/\s+/)).toContain("h-(--table-row-h)");
+    // 只有这一个高度:旧的 h-10 与 393 下的 max-sm:h-11 补丁都不在了。
+    expect(mine.className).not.toMatch(/\bh-(7|10|11|16)\b/);
     // v3「C 认领」:待我处理的色标挂上时 scaleY(0→1),160ms。
     expect(within(mine).getByTestId("row-mark").className.split(/\s+/)).toEqual(expect.arrayContaining(["starting:scale-y-0", "duration-fast"]));
     expect(within(mine).getByText("+347")).toBeInTheDocument();
@@ -553,12 +555,83 @@ describe("审判队列", () => {
       expect(screen.queryByRole("button", { name: tZh("judgment.claim.reassign") })).toBeNull();
     });
 
+    const openRowMenu = async (name: string) => {
+      fireEvent.click(within(rowOf(name)).getByRole("button", { name: `${tZh("common.row_actions")} · ${name}` }));
+      return (await screen.findByRole("menu")).querySelectorAll<HTMLElement>("[role=menuitem]");
+    };
+    const labels = (items: NodeListOf<HTMLElement>) => [...items].map((el) => el.textContent);
+
+    it("「⋯」菜单按权限:我认领的给取消认领 + 延后,未认领的给认领 + 延后,他人认领的只给延后;JUDGE 没有改派", async () => {
+      renderPage();
+      await screen.findByText("陆晚晴");
+      expect(labels(await openRowMenu("沈青梧"))).toEqual([tZh("judgment.claim.release"), tZh("judgment.queue.defer")]);
+      fireEvent.keyDown(screen.getByRole("menu"), { key: "Escape" });
+      expect(labels(await openRowMenu("Marguerite Vey"))).toEqual([tZh("judgment.claim.claim"), tZh("judgment.queue.defer")]);
+      fireEvent.keyDown(screen.getByRole("menu"), { key: "Escape" });
+      expect(labels(await openRowMenu("陆晚晴"))).toEqual([tZh("judgment.queue.defer")]);
+    });
+
+    it("「⋯ → 取消认领」是 C 的鼠标路径;色标不卸载,而是反着退场(scaleY 1→0,dismiss 140ms,出场曲线)", async () => {
+      judgmentApi.release.mockReturnValue(new Promise(() => {})); // 服务端还没回:退场不等往返
+      renderPage();
+      await screen.findByText("沈青梧");
+      expect(within(rowOf("沈青梧")).getByTestId("row-mark")).toBeInTheDocument();
+      const [release] = await openRowMenu("沈青梧");
+      fireEvent.click(release);
+      await waitFor(() => expect(judgmentApi.release).toHaveBeenCalledWith("a"));
+      const mine = rowOf("沈青梧");
+      expect(within(mine).queryByTestId("row-mark")).toBeNull();
+      expect(within(mine).queryByText(tZh("judgment.row_mark.mine"))).toBeNull();
+      const cls = within(mine).getByTestId("row-mark-off").className.split(/\s+/);
+      expect(cls).toEqual(expect.arrayContaining(["scale-y-0", "duration-dismiss", "ease-exit"]));
+      expect(cls).not.toContain("starting:scale-y-0");
+    });
+
+    it("「⋯ → 认领」认领那一行;「⋯ → 延后」与 S 同一件事", async () => {
+      renderPage();
+      await screen.findByText("Marguerite Vey");
+      fireEvent.click((await openRowMenu("Marguerite Vey"))[0]);
+      await waitFor(() => expect(judgmentApi.claim).toHaveBeenCalledWith("b"));
+      fireEvent.click((await openRowMenu("陆晚晴"))[0]);
+      expect(within(rowOf("陆晚晴")).getByTestId("deferred-cell")).toHaveTextContent(tZh("judgment.claim.deferred_session"));
+      expect(judgmentApi.batch).not.toHaveBeenCalled();
+    });
+
+    it("「⋯ → 改派…」只作用于那一行,不管勾选了什么;改派后勾选还在", async () => {
+      mockUser = { ...mockUser, role: "MODERATOR", permissions: ["judgment.read", "judgment.execute", "judgment.assign"] };
+      renderPage();
+      await screen.findByText("陆晚晴");
+      fireEvent.click(within(rowOf("沈青梧")).getByRole("checkbox"));
+      const items = await openRowMenu("陆晚晴");
+      expect(labels(items)).toEqual([tZh("judgment.queue.defer"), tZh("judgment.claim.reassign")]);
+      fireEvent.click(items[1]);
+      const dialog = await screen.findByRole("dialog");
+      await waitFor(() => expect(judgmentApi.assignableOfficers).toHaveBeenCalledWith(["c"]));
+      fireEvent.click(await within(dialog).findByRole("radio", { name: /秦广王/ }));
+      fireEvent.click(within(dialog).getByRole("button", { name: tZh("judgment.claim.reassign_confirm") }));
+      await waitFor(() => expect(judgmentApi.batch).toHaveBeenCalledWith({ operation: "reassign", ids: ["c"], to: 7 }));
+      expect(screen.getByTestId("batch-bar")).toBeInTheDocument();
+    });
+
+    it("改派层是 v3 的 390 宽、手机上从底部升起 78% 高(Drawer 的 layer)", async () => {
+      mockUser = { ...mockUser, role: "MODERATOR", permissions: ["judgment.read", "judgment.execute", "judgment.assign"] };
+      renderPage();
+      await screen.findByText("陆晚晴");
+      fireEvent.click((await openRowMenu("陆晚晴"))[1]);
+      const dialog = await screen.findByRole("dialog");
+      expect(dialog).toHaveAttribute("data-variant", "layer");
+      expect(dialog.className.split(/\s+/)).toEqual(expect.arrayContaining(["sm:w-[390px]", "h-[78%]", "bottom-0", "data-starting-style:translate-y-3"]));
+      expect(dialog.className).not.toContain("sm:w-[480px]");
+    });
+
     it("批量条吸在工具条下沿,出现时 translateY(8→0) + 淡入", async () => {
       renderPage();
       await screen.findByText("沈青梧");
       fireEvent.click(within(rowOf("沈青梧")).getByRole("checkbox"));
       const cls = (await screen.findByTestId("batch-bar")).className.split(/\s+/);
-      expect(cls).toEqual(expect.arrayContaining(["sticky", "top-13", "duration-fast", "starting:translate-y-2", "starting:opacity-0"]));
+      expect(cls).toEqual(expect.arrayContaining(["sticky", "top-(--below-band)", "duration-fast", "starting:translate-y-2", "starting:opacity-0"]));
+      // 身份带是 sticky 的(v3/band):吸在 52 的工具条下沿会被身份带盖住。
+      expect(cls).not.toContain("top-13");
     });
   });
 });

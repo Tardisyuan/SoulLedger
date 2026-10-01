@@ -168,7 +168,7 @@ function HeadButton({ onClick, children, label }: { onClick: () => void; childre
       type="button"
       onClick={onClick}
       aria-label={label}
-      className="h-7 px-2 text-xs text-[oklch(var(--color-ink-muted))] hover:bg-[oklch(var(--color-surface-2))] hover:text-[oklch(var(--color-ink))]"
+      className="h-(--control-h-sm) px-2 text-xs text-[oklch(var(--color-ink-muted))] hover:bg-[oklch(var(--color-surface-2))] hover:text-[oklch(var(--color-ink))]"
     >
       {children}
     </button>
@@ -457,7 +457,7 @@ function Composer({ assist }: { assist: OfficerAssist }) {
             onClick={assist.stop}
             aria-label={t("officer_assist.stop_aria")}
             data-testid="officer-assist-stop"
-            className="flex h-7 shrink-0 items-center gap-1 border border-[oklch(var(--color-ink))] px-2 text-xs text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))]"
+            className="flex h-(--control-h-sm) shrink-0 items-center gap-1 border border-[oklch(var(--color-ink))] px-2 text-xs text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))]"
           >
             <span aria-hidden="true">■</span>
             {t("officer_assist.stop")}
@@ -468,7 +468,7 @@ function Composer({ assist }: { assist: OfficerAssist }) {
             onClick={send}
             disabled={!assist.draft.trim()}
             aria-label={t("officer_assist.send")}
-            className="flex h-7 w-7 shrink-0 items-center justify-center text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))] disabled:text-[oklch(var(--color-disabled-ink))]"
+            className="flex size-(--control-h-sm) shrink-0 items-center justify-center text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))] disabled:text-[oklch(var(--color-disabled-ink))]"
           >
             <svg aria-hidden="true" width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4">
               <path d="M8 13V3M3.5 7.5L8 3l4.5 4.5" />

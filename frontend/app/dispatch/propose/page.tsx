@@ -365,7 +365,7 @@ function ProposeDispatchForm() {
             <span className="text-xs font-medium text-[oklch(var(--color-ink))]">{t("dispatch.target_soul")}</span>
             <div
               aria-readonly="true"
-              className="flex min-h-8 items-center gap-3 border border-[oklch(var(--color-line))] bg-[oklch(var(--color-disabled-surface))] px-3 text-sm text-[oklch(var(--color-ink-muted))]"
+              className="flex min-h-(--control-h-md) items-center gap-3 border border-[oklch(var(--color-line))] bg-[oklch(var(--color-disabled-surface))] px-3 text-sm text-[oklch(var(--color-ink-muted))]"
             >
               {carriedSoul.name}
               <span className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))]" title={carriedSoul.id}>
@@ -446,7 +446,7 @@ function ProposeDispatchForm() {
                 <label
                   key={tn.tenant_code}
                   className={cn(
-                    "flex min-h-8 max-sm:min-h-11 items-center gap-3 border-b border-[oklch(var(--color-rule))] px-2 text-sm",
+                    "flex min-h-(--control-h-sm) items-center gap-3 border-b border-[oklch(var(--color-rule))] px-2 text-sm",
                     isSource
                       ? "cursor-not-allowed text-[oklch(var(--color-disabled-ink))]"
                       : "cursor-pointer text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))]",
@@ -479,7 +479,7 @@ function ProposeDispatchForm() {
               );
             })}
             {tenantsLoading && (
-              <span className="flex min-h-8 items-center px-2 text-sm text-[oklch(var(--color-ink-subtle))]">{t("common.loading")}</span>
+              <span className="flex min-h-(--control-h-sm) items-center px-2 text-sm text-[oklch(var(--color-ink-subtle))]">{t("common.loading")}</span>
             )}
           </div>
           {tenantError ? (

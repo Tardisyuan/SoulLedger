@@ -33,7 +33,7 @@ type TFunc = (key: string, params?: Record<string, string>) => string;
 const SECTION_HEAD =
   "font-mono text-2xs tracking-wide text-[oklch(var(--color-ink-subtle))] pb-1 border-b border-[oklch(var(--color-block))]";
 const CONTROL =
-  "h-8 px-2 bg-[oklch(var(--color-canvas))] border border-[oklch(var(--color-line))] text-sm text-[oklch(var(--color-ink))] focus-visible:border-[oklch(var(--color-accent))]";
+  "h-(--control-h-sm) px-2 bg-[oklch(var(--color-canvas))] border border-[oklch(var(--color-line))] text-sm text-[oklch(var(--color-ink))] focus-visible:border-[oklch(var(--color-accent))]";
 
 function assignmentText(a: ApproverAssignment, t: TFunc): string {
   if (a.approver_type === "ACTOR" && a.actor) {
@@ -188,7 +188,7 @@ function ClauseRow({
       <button
         type="button"
         onClick={onRemove}
-        className="h-8 px-2 text-xs text-[oklch(var(--color-danger))]"
+        className="h-(--control-h-sm) px-2 text-xs text-[oklch(var(--color-danger))]"
         aria-label={t("workflow.editor.condition.remove_clause")}
       >
         ×
@@ -257,14 +257,14 @@ export function ExitConditionsSection({
                   <div className="flex gap-2">
                     <button
                       type="button"
-                      className="h-8 px-2 text-xs border border-[oklch(var(--color-line))]"
+                      className="h-(--control-h-sm) px-2 text-xs border border-[oklch(var(--color-line))]"
                       onClick={() => onChange(e.id, [...when, defaultClause()])}
                     >
                       + {t("workflow.editor.condition.add_clause")}
                     </button>
                     <button
                       type="button"
-                      className="h-8 px-2 text-xs text-[oklch(var(--color-ink-muted))]"
+                      className="h-(--control-h-sm) px-2 text-xs text-[oklch(var(--color-ink-muted))]"
                       onClick={() => onChange(e.id, undefined)}
                     >
                       {t("workflow.editor.condition.clear")}
@@ -275,7 +275,7 @@ export function ExitConditionsSection({
               {onChange && when === undefined && (
                 <button
                   type="button"
-                  className="self-start h-8 px-2 text-xs border border-[oklch(var(--color-line))]"
+                  className="self-start h-(--control-h-sm) px-2 text-xs border border-[oklch(var(--color-line))]"
                   onClick={() => onChange(e.id, [defaultClause()])}
                 >
                   {t("workflow.editor.condition.make")}

@@ -101,7 +101,7 @@ function PasswordHelp({ initialUsername, onClose }: { initialUsername: string; o
           <p className="font-semibold">{t("auth.forgot_sent")}</p>
           <p className="mt-1 text-[oklch(var(--color-ink-muted))]">{t("auth.forgot_sent_body")}</p>
         </div>
-        <Button type="button" variant="ghost" onClick={onClose} className="w-full h-10 max-sm:h-12">
+        <Button type="button" variant="ghost" onClick={onClose} className="w-full">
           {t("auth.back_to_login")}
         </Button>
       </div>
@@ -135,11 +135,11 @@ function PasswordHelp({ initialUsername, onClose }: { initialUsername: string; o
         variant="primary"
         disabled={state === "sending" || !username.trim()}
         loading={state === "sending"}
-        className="w-full h-10 max-sm:h-12"
+        className="w-full"
       >
         {t("auth.forgot_submit")}
       </Button>
-      <Button type="button" variant="ghost" onClick={onClose} className="w-full h-10 max-sm:h-12">
+      <Button type="button" variant="ghost" onClick={onClose} className="w-full">
         {t("auth.back_to_login")}
       </Button>
     </form>
@@ -443,7 +443,7 @@ export default function LoginPage() {
                   variant="primary"
                   disabled={loading}
                   loading={loading}
-                  className="w-full h-10 max-sm:h-12"
+                  className="w-full"
                 >
                   {loading ? t("auth.logging_in") : t("auth.login")}
                   {!loading && (
