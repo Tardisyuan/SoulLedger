@@ -457,7 +457,7 @@ test.describe("Workflow editor below 1024 px", () => {
     await expect(page.getByRole("button", { name: "发布", exact: true })).toHaveCount(0);
     await expect(page.getByLabel("模板名称", { exact: true })).toHaveCount(0);
 
-    await preview.getByRole("button", { name: /酆都大帝 · 终审/ }).click();
+    await preview.getByRole("button", { name: /^酆都大帝 · 终审/ }).click();
     const inspector = page.getByRole("complementary", { name: "属性" });
     await expect(inspector).toContainText("FINAL");
     await expect(inspector).toContainText("酆都");

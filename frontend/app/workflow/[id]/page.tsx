@@ -470,7 +470,7 @@ export default function WorkflowDetailPage() {
                     return (
                       <label
                         key={opt.key}
-                        className={`flex flex-col items-center justify-center gap-1 h-[74px] cursor-pointer bg-[oklch(var(--color-surface-1))] has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-[oklch(var(--color-focus))] ${
+                        className={`relative flex flex-col items-center justify-center gap-1 h-[74px] cursor-pointer bg-[oklch(var(--color-surface-1))] has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-[oklch(var(--color-focus))] ${
                           on
                             ? "border-2 border-[oklch(var(--color-ink))] font-medium"
                             : "border border-[oklch(var(--color-line-strong))] hover:bg-[oklch(var(--color-surface-2))]"
@@ -483,7 +483,7 @@ export default function WorkflowDetailPage() {
                           aria-label={opt.label}
                           checked={on}
                           onChange={(e) => setSelectedVerdict(e.target.value)}
-                          className="sr-only"
+                          className="absolute inset-0 opacity-0 cursor-pointer"
                         />
                         <span aria-hidden="true" className="text-xl leading-none text-[oklch(var(--color-ink))]">
                           {VERDICT_GLYPH[opt.key]}
