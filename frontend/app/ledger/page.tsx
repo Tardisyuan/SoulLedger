@@ -111,8 +111,9 @@ function LedgerPageContent() {
   };
   const filtered = Boolean(civilization || category || search);
 
-  /* 月份:◂ 2026-09 ▸,高 32、1px ink3 框、s1 底(B10 工具条)。 */
-  const MONTH_STEP = "px-2 h-full text-[oklch(var(--color-ink-subtle))] hover:text-[oklch(var(--color-ink))]";
+  /* 月份:◂ 2026-09 ▸,1px ink3 框、s1 底(B10 工具条)。高与两枚箭头的宽都是 v3 的 44
+     (`--control-h-sm`):箭头此前只有 `px-2` 那么宽(约 22),点击目标不到 44。 */
+  const MONTH_STEP = "w-(--control-h-sm) h-full shrink-0 text-[oklch(var(--color-ink-subtle))] hover:text-[oklch(var(--color-ink))]";
 
   return (
     <PageShell
@@ -121,7 +122,7 @@ function LedgerPageContent() {
       subtitle={t("ledger.journal.subtitle")}
       filters={
         <>
-          <span className="flex items-center h-(--control-h-sm) border border-[oklch(var(--color-line-strong))] bg-[oklch(var(--color-surface-1))] font-mono text-sm">
+          <span className="flex shrink-0 items-center h-(--control-h-sm) border border-[oklch(var(--color-line-strong))] bg-[oklch(var(--color-surface-1))] font-mono text-sm">
             <button type="button" aria-label={t("ledger.journal.month_prev")} onClick={() => setMonth(shiftMonth(month, -1))} className={MONTH_STEP}>
               ◂
             </button>
@@ -254,7 +255,8 @@ function FourPillars({ data }: { data: LedgerJournal }) {
           )}
         >
           <dt className="text-xs text-[oklch(var(--color-ink-subtle))]">{c.label}</dt>
-          <dd className="font-mono text-xl tabular-nums text-[oklch(var(--color-ink))]">{c.value}</dd>
+          {/* 展示数字(DESIGN.md「展示数字 · 二档」,概览的 KPI 同一写法):Noto Serif SC,不是等宽。 */}
+          <dd className="font-title text-xl tabular-nums text-[oklch(var(--color-ink))]">{c.value}</dd>
         </div>
       ))}
     </dl>

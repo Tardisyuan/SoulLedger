@@ -21,12 +21,13 @@ import { EmptyState } from "@/src/components/ui/EmptyState";
 import { QueryError } from "@/src/components/ui/PageError";
 import { BaseModal } from "@/src/components/ui/Modal";
 import { badgeVariants } from "@/src/components/ui/Badge";
-import { SectionTitle } from "@/src/components/plaque/SectionTitle";
+import { PageSection } from "@/components/ui/page-section";
 
 const STATUS_COLORS: Record<string, string> = {
-  PROPOSED: "text-[oklch(var(--color-status-warning))] border-[oklch(var(--color-status-warning))]",
+  // 规范 v3:等待审批不是风险、被驳回不是错误 —— 两个都是墨色,字形(◐ / ✕)把它们分开。
+  PROPOSED: "text-[oklch(var(--color-ink-muted))] border-[oklch(var(--color-ink-muted))]",
   APPROVED: "text-[oklch(var(--color-status-success))] border-[oklch(var(--color-status-success))]",
-  REJECTED: "text-[oklch(var(--color-status-error))] border-[oklch(var(--color-status-error))]",
+  REJECTED: "text-[oklch(var(--color-ink-muted))] border-[oklch(var(--color-ink-muted))]",
   EXECUTED: "text-[oklch(var(--color-status-info))] border-[oklch(var(--color-status-info))]",
   RETURNED: "text-[oklch(var(--color-status-success))] border-[oklch(var(--color-status-success))]",
   CANCELLED: "text-[oklch(var(--color-status-lost))] border-[oklch(var(--color-status-lost))]",
@@ -84,7 +85,8 @@ const DD_TIME = `${DD} font-mono text-xs tabular-nums`;
 export default function DispatchDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { t, formatDateTime } = useI18n();
-  usePlaque({ hall: useHall(useCourtOffice()) });
+  // 题字自己报:壳的默认是面包屑末段,在这一页是「详情」。
+  usePlaque({ title: t("dispatch.detail_title"), hall: useHall(useCourtOffice()) });
   const { user } = useTenant();
   const { showToast } = useToast();
   const router = useRouter();
@@ -260,11 +262,10 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
       title={t("dispatch.detail_title")}
       actions={statusBadge}
     >
-      {/* 规范 v1 详情页原型:两栏账页,393 px 折单栏。卡片撤掉,区块之间只有区块标
-          压着的那条线;时间一律等宽。 */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.3fr] gap-x-8">
-        <section className="min-w-0">
-          <div className="pt-8 pb-3"><SectionTitle>{t("dispatch.detail_title")}</SectionTitle></div>
+      {/* 规范 v3 详情(灵魂详情同一种分法):两栏面板,393 px 折单栏;面板是 surface-1 底 +
+          结构线,标题 20 px 界面字体。v2 的分节纹撤掉。时间一律等宽。 */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.3fr] gap-4 lg:gap-6">
+        <PageSection title={t("dispatch.detail_title")}>
           <dl className="grid grid-cols-[7rem_1fr] text-sm">
             <dt className={DT}>{t("dispatch.soul")}</dt>
             <dd className={`${DD} font-medium`}>{dispatch.soul_name || dispatch.soul}</dd>
@@ -296,10 +297,10 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
               )}
             </dd>
           </dl>
-        </section>
+        </PageSection>
 
-        <div className="min-w-0">
-          <div className="pt-8 pb-3"><SectionTitle>{t("dispatch.flow.title")}</SectionTitle></div>
+        <div className="flex min-w-0 flex-col gap-4 lg:gap-6">
+          <PageSection title={t("dispatch.flow.title")}>
           <dl className="grid grid-cols-[7rem_1fr] text-sm">
             <dt className={DT}>{t("dispatch.proposed_at")}</dt>
             <dd className={DD_TIME}>{formatDateTime(dispatch.proposed_at)}</dd>
@@ -322,21 +323,21 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
               </>
             )}
           </dl>
+          </PageSection>
 
           {dispatch.reason && (
-            <>
-              <div className="pt-8 pb-3"><SectionTitle>{t("dispatch.reason")}</SectionTitle></div>
-              <p className="py-2 max-w-[72ch] text-sm text-[oklch(var(--color-ink))] text-pretty border-b border-[oklch(var(--color-rule))]">
+            <PageSection title={t("dispatch.reason")}>
+              {/* 理由是人写的话:衬线(DESIGN.md「Things a person said」)。 */}
+              <p className="max-w-[72ch] font-serif text-sm text-[oklch(var(--color-ink))] text-pretty">
                 {dispatch.reason}
               </p>
-            </>
+            </PageSection>
           )}
 
           {/* 操作:仍是三道权限门各管一个按钮,状态决定出现哪一组。 */}
           {(isProposed || isApproved || isResiding) && (
-            <section>
-              <div className="pt-8 pb-3"><SectionTitle>{t("dispatch.actions")}</SectionTitle></div>
-              <div className="flex flex-wrap justify-end gap-2 pt-3">
+            <PageSection title={t("dispatch.actions")}>
+              <div className="flex flex-wrap justify-end gap-2">
                 {isProposed && (
                   <>
                     <RequirePermission permissions="dispatch.reject">
@@ -376,7 +377,7 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
                   </RequirePermission>
                 )}
               </div>
-            </section>
+            </PageSection>
           )}
         </div>
       </div>

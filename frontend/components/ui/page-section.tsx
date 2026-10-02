@@ -47,12 +47,13 @@ export function PageSection({
   actions,
 }: PageSectionProps) {
   return (
-    // 规范 v1 §2「卡片 = 区块」:1 px 结构线框,无底色、无阴影、无圆角;标题是 11 px 等宽
-    // 栏目标签,下接区块边界线。
-    <div className={cn('border border-[oklch(var(--color-line))] px-3 py-3', className)}>
+    // 规范 v3 面板(与 `app/dashboard` 的面板同一写法):1 px 结构线 + surface-1 底 + 16 内距;
+    // 标题是面板标题(`text-lg`,界面字体,DESIGN.md「面板标题」)。v1 的 11 px 等宽栏目标签
+    // 与压在标题下的区块线撤掉 —— 那是 v1「卡片 = 区块」的画法,v3 的面板靠底色与外框分层。
+    <section className={cn('flex min-w-0 flex-col gap-3 border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] p-4', className)}>
       {title && (
-        <div className="flex items-center justify-between gap-3 pb-1 mb-3 border-b border-[oklch(var(--color-block))]">
-          <h3 className="font-mono text-2xs uppercase text-[oklch(var(--color-ink))]">{title}</h3>
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-lg text-[oklch(var(--color-ink))]">{title}</h2>
           {actions}
         </div>
       )}
@@ -77,6 +78,6 @@ export function PageSection({
           {children}
         </div>
       )}
-    </div>
+    </section>
   )
 }
