@@ -1896,7 +1896,7 @@
     "execute": "执行",
     "reject_reason": "驳回理由",
     "reject_placeholder": "请说明驳回原因",
-    "confirm_execute": "确认执行这次调度?",
+    "confirm_execute": "确认执行这次调度？",
     "confirm_reject": "确认驳回这次调度?",
     "execute_warning": "执行后灵魂暂居目标租户,由其审判并执行处置;该处置执行完毕后,灵魂自动回归原属租户。",
     "approved_success": "已批准",
@@ -1915,7 +1915,7 @@
       "RETURNED": "已回归",
       "CANCELLED": "已取消"
     },
-    "confirm_approve": "确认批准这次跨租户调度?",
+    "confirm_approve": "确认批准这次跨租户调度？",
     "approve_warning": "批准后目标租户将获得该灵魂的处置权。此操作会写入审计日志。",
     "proposer_account_removed": "提议人账号已删除,姓名无从取得",
     "propose_subtitle": "把灵魂调往另一文明暂居审理：目标文明批准后，由目标文明执行。",
@@ -2025,7 +2025,7 @@
       "SOUL": "灵魂"
     },
     "delete_title": "删除用户",
-    "delete_confirm": "确认删除该用户?"
+    "delete_confirm": "确认删除该用户？"
   },
   "settings": {
     "title": "设置",
@@ -2345,7 +2345,7 @@
     "eternal": "永久处置",
     "executed": "已执行",
     "execute": "执行处置",
-    "confirm_execute": "确认执行该处置?",
+    "confirm_execute": "确认执行该处置？",
     "execute_warning": "执行后灵魂将被送往目标领域,该操作不可撤销。",
     "execute_success": "处置已执行",
     "executed_success": "处置已执行",
