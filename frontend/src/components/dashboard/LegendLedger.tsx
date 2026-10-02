@@ -43,7 +43,7 @@ export function LegendLedger({ rows }: { rows: LegendLedgerRow[] }) {
   return (
     <div data-legend-ledger="">
       {/* Decorative: every value it shows is in the rows below. */}
-      <div aria-hidden="true" className="mt-3 flex h-3.5 gap-px">
+      <div aria-hidden="true" className="flex h-6 gap-px">
         {rows
           .filter((r) => r.count > 0)
           .map((r) => (
@@ -55,12 +55,12 @@ export function LegendLedger({ rows }: { rows: LegendLedgerRow[] }) {
           <div
             key={r.key}
             data-legend-row={r.key}
-            className="grid min-h-7 grid-cols-[18px_1fr_40px_50px] items-center border-b border-[oklch(var(--color-rule))] text-sm"
+            className="grid min-h-8 grid-cols-[12px_1fr_auto_52px] items-center gap-x-2 border-b border-[oklch(var(--color-line))] text-sm"
           >
-            <span aria-hidden="true" className={`block size-2.5 ${r.swatchClass}`} />
+            <span aria-hidden="true" className={`block size-3 ${r.swatchClass}`} />
             <span className="text-[oklch(var(--color-ink))]">{r.label}</span>
             <span className="text-right font-mono text-[oklch(var(--color-ink))]">{r.count}</span>
-            <span className="text-right font-mono text-[oklch(var(--color-ink-subtle))]">{sharePercent(r.count, total)}</span>
+            <span className="text-right font-mono text-[oklch(var(--color-ink-muted))]">{sharePercent(r.count, total)}</span>
           </div>
         ))}
       </div>

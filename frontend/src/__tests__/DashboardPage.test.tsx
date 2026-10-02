@@ -53,14 +53,6 @@ jest.mock("@/src/contexts/I18nContext", () => ({
   }),
 }));
 
-jest.mock("@/src/components/charts/LazyDashboardCharts", () => ({
-  LazyBarChart: ({ data, dataKey }: { data: { name?: string; pattern?: string }[]; dataKey: string }) => (
-    <div data-testid={`bar-${dataKey}`} data-patterns={data.map((d) => `${d.name}:${d.pattern}`).join(",")}>
-      {data.length}
-    </div>
-  ),
-}));
-
 const mockedStats = ledgerApi.statsOverview as jest.Mock;
 const mockedProposed = dispatchApi.proposed as jest.Mock;
 const mockedNext = judgmentApi.next as jest.Mock;
@@ -200,7 +192,7 @@ describe("DashboardPage overview", () => {
     expect(container.querySelectorAll("[data-civ-row]")).toHaveLength(4);
   });
 
-  it("draws histogram bars by the sign of their bucket — 功 solid, 过 hatched, never a status colour (v2 A5)", async () => {
+  it("draws histogram bars by the sign of their bucket — two lightness steps split at 0, never a status colour (Design A4)", async () => {
     const { container } = renderPage();
     await found(container, "[data-histogram-bar]");
     // Looked up by attribute value in JS: jsdom's selector engine mis-reads a
@@ -211,9 +203,13 @@ describe("DashboardPage overview", () => {
       ) as HTMLElement;
     const fill = (label: string) => bar(label).querySelector("[aria-hidden]")?.className ?? "";
     expect(bar("< -50")).toHaveTextContent("2");
-    expect(fill("< -50")).toContain("repeating-linear-gradient(45deg,oklch(var(--color-chart-1))_0_1.5px");
-    expect(fill("> 50")).toMatch(/^block w-full bg-\[oklch\(var\(--color-chart-1\)\)\]$/);
-    expect(fill("-5 to 5")).not.toContain("bg-");
+    // Below 0 the 4th ramp step, above 0 the 2nd; the bucket straddling 0 is half of each.
+    expect(fill("< -50")).toMatch(/^block w-full bg-\[oklch\(var\(--color-chart-4\)\)\]$/);
+    expect(fill("> 50")).toMatch(/^block w-full bg-\[oklch\(var\(--color-chart-2\)\)\]$/);
+    expect(fill("-5 to 5")).toContain("linear-gradient(to_right,oklch(var(--color-chart-4))_50%,oklch(var(--color-chart-2))_50%)");
+    // The 0 line runs through the middle of the straddling bucket (index 1 of 4).
+    const zero = container.querySelector<HTMLElement>("[data-zero-line]");
+    expect(zero?.style.left).toBe("37.5%");
     // Absence: no feedback colour anywhere in the histogram.
     expect(container.querySelector("[data-histogram]")?.innerHTML).not.toMatch(/--color-(danger|success)/);
   });
@@ -260,6 +256,39 @@ describe("DashboardPage overview", () => {
       expect(await screen.findByText("dashboard.todo.load_error")).toBeInTheDocument();
     });
 
+    it("a failed cell fails alone: the others still count, and 重试 refetches only that one", async () => {
+      mockedProposed.mockRejectedValueOnce(new Error("500")).mockResolvedValue({ data: { count: 4, results: [] } });
+      const { container } = renderPage();
+      const retry = await screen.findByRole("button", { name: "common.retry" });
+      // The queue and death-sync cells still show their numbers beside the failure.
+      const counts = () => Array.from(container.querySelectorAll("[data-todo-count]")).map((el) => el.textContent);
+      await waitFor(() => expect(counts()).toEqual(["0", "3"]));
+      const nextCalls = mockedNext.mock.calls.length;
+      fireEvent.click(retry);
+      await waitFor(() => expect(counts()).toEqual(["4", "0", "3"]));
+      expect(screen.queryByText("dashboard.todo.load_error")).not.toBeInTheDocument();
+      expect(mockedNext.mock.calls.length).toBe(nextCalls);
+    });
+
+    it("marks only the cells that need me (count > 0); an empty cell shows 0 and stays", async () => {
+      // dispatch 1, queue 0, death-sync 3 (beforeEach)
+      const { container } = renderPage();
+      await screen.findByText("dashboard.todo.unbooked");
+      const cells = Array.from(container.querySelectorAll<HTMLElement>("[data-todo]"));
+      expect(cells).toHaveLength(3);
+      expect(cells.map((c) => c.hasAttribute("data-todo-mine"))).toEqual([true, false, true]);
+      expect(cells.map((c) => c.querySelectorAll('[data-testid="row-mark"]').length)).toEqual([1, 0, 1]);
+      expect(cells[1].querySelector("[data-todo-count]")).toHaveTextContent("0");
+      expect(cells[1]).toHaveTextContent("dashboard.todo.none");
+    });
+
+    it("a clean death sync says so, without the 未入簿 alarm", async () => {
+      mockedDeathSummary.mockResolvedValue({ data: { anomaly_status: "FAILED", anomaly_count: 0 } });
+      renderPage();
+      expect(await screen.findByText("dashboard.todo.sync_ok")).toBeInTheDocument();
+      expect(screen.queryByText("dashboard.todo.unbooked")).not.toBeInTheDocument();
+    });
+
     it("counts death-sync anomalies for an admin and links to the status the server counted", async () => {
       mockedDeathSummary.mockResolvedValue({ data: { anomaly_status: "FAILED", anomaly_count: 3 } });
       renderPage();
@@ -296,9 +325,14 @@ describe("DashboardPage overview", () => {
         souls_by_realm: [realm("H", "HELL", 4), realm("P", "PURGATORY", 3), realm("B", "BLISS", 2), realm("N", "NEUTRAL", 1)],
       },
     });
-    renderPage();
-    const chart = await screen.findByTestId("bar-count");
-    expect(chart).toHaveAttribute("data-patterns", "H:hatch,P:solid,B:half,N:outline");
+    const { container } = renderPage();
+    await found(container, "[data-realm-bar]");
+    const drawn = Array.from(container.querySelectorAll<HTMLElement>("[data-realm-bar]")).map(
+      (el) => `${el.getAttribute("data-realm-bar")}:${el.querySelector("[data-pattern]")?.getAttribute("data-pattern")}`
+    );
+    expect(drawn).toEqual(["H:hatch", "P:solid", "B:half", "N:outline"]);
+    // Absence: the four patterns are drawn in one ramp step, no realm-type hue.
+    expect(container.querySelector("[data-realm-bars]")?.innerHTML).not.toMatch(/--color-(chart-[2-6]|danger|success|warning|civ)/);
   });
 
   it("shows a placeholder instead of a realm chart when there are no realms", async () => {
@@ -352,7 +386,7 @@ describe("DashboardPage permission gate", () => {
   it("shows the ledger tab to an admin", async () => {
     renderPage();
 
-    expect(await screen.findByText("admin.ledger_stats")).toBeInTheDocument();
+    expect(await screen.findByText("dashboard.tab_ledger")).toBeInTheDocument();
   });
 
   it("hides the ledger tab from a non-admin", async () => {
@@ -361,7 +395,7 @@ describe("DashboardPage permission gate", () => {
     renderPage();
 
     await screen.findByText("dashboard.tab_overview");
-    expect(screen.queryByText("admin.ledger_stats")).not.toBeInTheDocument();
+    expect(screen.queryByText("dashboard.tab_ledger")).not.toBeInTheDocument();
   });
 
   it("refuses the ledger panel to a non-admin who reaches it via ?tab=ledger", async () => {
@@ -371,7 +405,7 @@ describe("DashboardPage permission gate", () => {
     renderPage();
 
     await waitFor(() => expect(screen.queryByText("admin.avg_balance")).not.toBeInTheDocument());
-    expect(screen.queryByText("admin.top_balance")).not.toBeInTheDocument();
+    expect(screen.queryByText("dashboard.top_realms")).not.toBeInTheDocument();
   });
 
   it("renders the ledger panel for an admin at ?tab=ledger", async () => {
@@ -436,10 +470,10 @@ describe("DashboardPage ledger tab", () => {
   });
 
   it("averages the balance buckets by their midpoints", async () => {
-    // (-60 * 2) + (0 * 3) + (60 * 1) + (0 * 5) = -60, over 4 souls => -15.00
+    // (-60 * 2) + (0 * 3) + (60 * 1) + (0 * 5) = -60, over 4 souls => -15.0
     renderPage();
 
-    expect(await screen.findByText("-15.00")).toBeInTheDocument();
+    expect(await screen.findByText("-15.0")).toBeInTheDocument();
   });
 
   it("divides by one rather than by zero when there are no souls", async () => {
@@ -449,7 +483,7 @@ describe("DashboardPage ledger tab", () => {
 
     renderPage();
 
-    expect(await screen.findByText("60.00")).toBeInTheDocument();
+    expect(await screen.findByText("+60.0")).toBeInTheDocument();
   });
 
   it("reports a zero average when no bucket data came back", async () => {
@@ -457,10 +491,22 @@ describe("DashboardPage ledger tab", () => {
 
     renderPage();
 
-    expect(await screen.findByText("0.00")).toBeInTheDocument();
+    expect(await screen.findByText("0.0")).toBeInTheDocument();
   });
 
-  it("lists the realms in the top-balance table", async () => {
+  it("reads the server's real top bucket `>= 50`, not only `> 50` (a NaN average before)", async () => {
+    mockedStats.mockResolvedValue({
+      data: { ...baseStats, total_souls: 2, karma_distribution: [{ label: ">= 50", count: 1 }, { label: "< -50", count: 1 }] },
+    });
+
+    renderPage();
+
+    // (60 * 1) + (-60 * 1) over 2 souls => 0.0
+    expect(await screen.findByText("0.0")).toBeInTheDocument();
+    expect(screen.queryByText("NaN")).not.toBeInTheDocument();
+  });
+
+  it("lists the realms in the top-realms table", async () => {
     renderPage();
 
     expect(await screen.findByText("Diyu")).toBeInTheDocument();
@@ -485,7 +531,7 @@ describe("DashboardPage tab navigation", () => {
   it("writes ?tab=ledger to the URL when the ledger tab is picked", async () => {
     renderPage();
 
-    fireEvent.click(await screen.findByText("admin.ledger_stats"));
+    fireEvent.click(await screen.findByText("dashboard.tab_ledger"));
 
     expect(mockReplace).toHaveBeenCalledWith("/dashboard?tab=ledger", { scroll: false });
   });

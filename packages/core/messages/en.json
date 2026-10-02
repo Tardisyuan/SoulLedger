@@ -600,7 +600,7 @@
       "showing": "Permissions · showing {{shown}} / {{total}}",
       "no_differences": "No differences: every role has the same values under this filter.",
       "role_picker": "Role",
-      "pending_cells": "{{n}} unsaved",
+      "pending_cells": "{{n}} pending",
       "discard": "Discard",
       "unsaved_region": "Unsaved changes",
       "saved_all": "Saved {{n}}",
@@ -618,8 +618,8 @@
         "on": "Granted",
         "off": "Not granted",
         "unsaved": "Unsaved",
-        "failed": "Not saved",
-        "conflict": "Causes a conflict",
+        "failed": "Failed",
+        "conflict": "Conflict",
         "lock": "always · ADMIN",
         "deny": "forbidden · realm lead"
       },
@@ -979,17 +979,22 @@
     "error_load": "Failed to load statistics",
     "error_export": "Failed to export statistics",
     "todo": {
-      "approve_dispatch": "Awaiting my approval · dispatch",
+      "approve_dispatch": "Dispatches to approve",
       "go_approve": "Review →",
       "judgment_queue": "Judgment queue",
-      "enter": "Enter →",
-      "none": "Nothing waiting",
+      "enter": "To the bench →",
+      "none": "All clear",
       "death_sync_anomaly": "Death sync anomalies",
       "go_view": "View →",
-      "load_error": "Could not load the count"
+      "load_error": "Failed to load",
+      "sync_ok": "In sync",
+      "unbooked": "Not entered"
     },
     "civ_share": "Share",
-    "civ_empty": "No souls yet · register one"
+    "civ_empty": "No souls yet · register one",
+    "tab_ledger": "Ledger",
+    "top_realms": "Top 10 realms",
+    "avg_scope": "All souls in the ledger"
   },
   "ledger": {
     "title": "Deed Statistics",
