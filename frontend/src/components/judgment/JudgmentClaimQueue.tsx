@@ -101,7 +101,8 @@ const SEGMENT = (on: boolean) =>
       : "border-[oklch(var(--color-line))] text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))]"
   }`;
 
-export function JudgmentClaimQueue() {
+/** `initialSearch`:全局搜索带来的词(`/judgment?q=`),进页即填进搜索框。 */
+export function JudgmentClaimQueue({ initialSearch = "" }: { initialSearch?: string } = {}) {
   const { t, formatDateTime } = useI18n();
   const { showToast } = useToast();
   const { user } = useTenant();
@@ -109,8 +110,8 @@ export function JudgmentClaimQueue() {
   const canExecute = hasPermission("judgment.execute");
   const canAssign = hasPermission("judgment.assign");
 
-  const [term, setTerm] = useState("");
-  const [search, setSearch] = useState("");
+  const [term, setTerm] = useState(initialSearch);
+  const [search, setSearch] = useState(initialSearch);
   const [court, setCourt] = useState("");
   const [civilization, setCivilization] = useState("");
   const [ordering, setOrdering] = useState<QueueOrdering>("created_at");

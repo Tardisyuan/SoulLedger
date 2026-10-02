@@ -18,6 +18,7 @@ import { useSidebarMenus, type SidebarMenu } from "@/src/hooks/useSidebarMenus";
 import { Breadcrumb, useBreadcrumbs } from "@/src/components/layout/Breadcrumb";
 import { BottomBar, GlobalNav, groupOfPath, useNavMode } from "@/src/components/layout/GlobalNav";
 import { LogoutConfirmDialog } from "@/src/components/layout/LogoutConfirmDialog";
+import { GlobalSearch } from "@/src/components/layout/GlobalSearch";
 import { Plaque, PlaqueProvider, shortBandFor, type PlaqueText } from "@/src/components/plaque/Plaque";
 import { useTheme } from "@/src/contexts/ThemeContext";
 import { DomainEnum } from "@/src/components/ui/DomainValue";
@@ -176,6 +177,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           <div className="flex shrink-0 items-center gap-1 whitespace-nowrap">
             {/* 问一问 (canvas 1b): the connection state left the masthead, so it leads the group. */}
             <OfficerAssistEntry assist={assist} />
+            {/* 全局搜索(v3 A8):顺序 搜索 / 通知 / 头像;1440 是 240 宽的搜索框样按钮,≤768 是 44 的图标。 */}
+            {user ? <GlobalSearch menus={menus} /> : null}
             {user ? (
               <Popover.Root>
                 <Popover.Trigger

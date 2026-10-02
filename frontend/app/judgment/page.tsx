@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { usePlaque } from "@/src/components/plaque/Plaque";
@@ -41,16 +41,19 @@ function JudgmentQueuePageContent() {
   const { t, formatDate } = useI18n();
   usePlaque({ hall: useHall(t("plaque.office.trials")) });
   const router = useRouter();
+  // 全局搜索「查看全部 N 个案件 →」带来的 `?q=`:待审一面填进搜索框,已结案一面同样按它筛。
+  const q = useSearchParams()?.get("q")?.trim() ?? "";
   const [tab, setTab] = useState<Tab>("pending");
   const [page, setPage] = useState(1);
   const [ordering, setOrdering] = useState("");
 
   const listQuery = (which: Tab, p: number) => ({
-    queryKey: ["judgments", which, p, ordering],
+    queryKey: ["judgments", which, p, ordering, q],
     queryFn: async () => {
       const params: Record<string, string> = { page: String(p) };
       params.has_verdict = which === "pending" ? "false" : "true";
       if (ordering) params.ordering = ordering;
+      if (q) params.search = q;
       const res = await judgmentApi.list(params);
       return res.data;
     },
@@ -118,7 +121,7 @@ function JudgmentQueuePageContent() {
       }
     >
       {pending ? (
-        <JudgmentClaimQueue />
+        <JudgmentClaimQueue key={q} initialSearch={q} />
       ) : (
       <DataTable<Judgment>
         linkedRows
@@ -221,7 +224,10 @@ function QueueShortcuts() {
 export default function JudgmentQueuePage() {
   return (
     <RequirePermission permissions="judgment.read" fallback={<PermissionDenied permission="judgment.read" />}>
-      <JudgmentQueuePageContent />
+      {/* useSearchParams needs a Suspense boundary under the App Router build (as app/corpus/page.tsx). */}
+      <Suspense fallback={null}>
+        <JudgmentQueuePageContent />
+      </Suspense>
     </RequirePermission>
   );
 }
