@@ -8,6 +8,8 @@ import { PAGE_SIZE, type OfficerRebirthApplication } from "@soulledger/core/api"
 import { soulAccountKeys } from "@soulledger/core/query_keys";
 import { useRebirthApplications } from "@soulledger/core/hooks/useSoulAccounts";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { usePlaque } from "@/src/components/plaque/Plaque";
+import { useHall } from "@/src/components/plaque/useHall";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
 import { PageShell } from "@/src/components/ui/PageShell";
@@ -28,6 +30,7 @@ const ROW_GRID = "md:grid md:grid-cols-[minmax(0,2fr)_minmax(0,0.6fr)_minmax(0,1
 
 function RebirthApplicationsContent() {
   const { t, formatDateTime } = useI18n();
+  usePlaque({ hall: useHall(t("plaque.office.tenth")) });
   const queryClient = useQueryClient();
   const [status, setStatus] = useState("");
   const [page, setPage] = useState(1);

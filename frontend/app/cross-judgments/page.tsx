@@ -6,6 +6,8 @@ import Link from "next/link";
 import { crossTenantJudgmentsApi, type CrossTenantJudgmentListItem } from "@soulledger/core/api";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { usePlaque } from "@/src/components/plaque/Plaque";
+import { useHall } from "@/src/components/plaque/useHall";
 import { PageSection } from "@/components/ui/page-section";
 import { DataTable, ROW_LINK } from "@/components/ui/data-table";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
@@ -43,6 +45,7 @@ const STATUS_TONES: Record<string, BadgeTone> = {
  */
 export default function CrossJudgmentsPage() {
   const { t } = useI18n();
+  usePlaque({ hall: useHall(t("plaque.office.trials")) });
   const { user } = useTenant();
 
   /**

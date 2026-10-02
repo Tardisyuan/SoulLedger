@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { usePlaque } from "@/src/components/plaque/Plaque";
+import { useHall } from "@/src/components/plaque/useHall";
 import { judgmentApi, PAGE_SIZE, type Judgment } from "@soulledger/core/api";
 import { DataTable, parseOrdering, ROW_LINK } from "@/components/ui/data-table";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
@@ -37,6 +39,7 @@ type Tab = "pending" | "concluded";
 
 function JudgmentQueuePageContent() {
   const { t, formatDate } = useI18n();
+  usePlaque({ hall: useHall(t("plaque.office.trials")) });
   const router = useRouter();
   const [tab, setTab] = useState<Tab>("pending");
   const [page, setPage] = useState(1);

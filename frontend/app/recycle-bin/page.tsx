@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { recycleBinApi, type RecycleBinEntry } from "@soulledger/core/api";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { usePlaque } from "@/src/components/plaque/Plaque";
+import { useHall } from "@/src/components/plaque/useHall";
 import { useToast } from "@/src/contexts/ToastContext";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { DomainEnum, DomainNumber, DomainText } from "@/src/components/ui/DomainValue";
@@ -28,6 +30,7 @@ import { ActionsMenu } from "@/components/ui/data-grid/ActionsMenu";
  */
 export default function RecycleBinPage() {
   const { t } = useI18n();
+  usePlaque({ hall: useHall(t("plaque.office.records")) });
   const { showToast } = useToast();
   const queryClient = useQueryClient();
   const [confirmHardDelete, setConfirmHardDelete] = useState<RecycleBinEntry | null>(null);

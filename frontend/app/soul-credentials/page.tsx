@@ -13,6 +13,8 @@ import {
   useSoulCredentials,
 } from "@soulledger/core/hooks/useSoulAccounts";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { usePlaque } from "@/src/components/plaque/Plaque";
+import { useHall } from "@/src/components/plaque/useHall";
 import { useToast } from "@/src/contexts/ToastContext";
 import { usePermissions } from "@/src/hooks/usePermissions";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
@@ -43,6 +45,7 @@ const ROW_GRID = "md:grid md:grid-cols-[minmax(0,2fr)_minmax(0,0.6fr)_minmax(0,2
 
 function CredentialsPageContent() {
   const { t, formatDateTime } = useI18n();
+  usePlaque({ hall: useHall(t("plaque.office.rules")) });
   const { showToast } = useToast();
   const queryClient = useQueryClient();
   const { hasPermission } = usePermissions();
