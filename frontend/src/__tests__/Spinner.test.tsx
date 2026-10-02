@@ -140,7 +140,8 @@ describe("PageSpinner is the whole-route shape those 20 files hand-roll", () => 
     // loading files adopt. Asserting the absence matters as much as asserting
     // the presence: "the right value is shown" stays green while the wrong one
     // sits beside it.
-    expect(root.className).toContain("min-h-[calc(100vh-4rem)]");
+    // Since 2026-10-02 the slot's height is one variable (globals.css), read by both.
+    expect(root.className).toContain("min-h-(--content-min-h)");
     expect(root.className).not.toContain("min-h-screen");
     expect(root.className).toContain("bg-[oklch(var(--color-canvas))]");
     expect(classesIn(container)).toEqual(expect.arrayContaining(["w-16", "h-16", "border-4"]));

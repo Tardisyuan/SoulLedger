@@ -672,6 +672,10 @@
     /* 吸顶的工具条(52)+ 身份带此刻的高度(Plaque 写 `--identity-band`;没有身份带的页是 0)。
        页面里吸顶的条写 `top-(--below-band)`。 */
     --below-band: calc(var(--spacing) * 13 + var(--identity-band, 0px));
+    /* AppLayout 内容槽位的最小高:视口减去吸顶的工具条 + 身份带,再减去窄屏的底栏(main 的
+       `pb-14`)—— 内容短的页恰好一屏,不多出滚动。此前是 `100vh-2.5rem`,早于 v3 身份带,
+       编辑器页因此多滚约 168px(用户 2026-10-02)。PageSpinner 填同一个槽位,用同一个值。 */
+    --content-min-h: calc(100vh - var(--below-band) - var(--bottom-bar));
   }
   @media (max-width: 768px) {
     html {

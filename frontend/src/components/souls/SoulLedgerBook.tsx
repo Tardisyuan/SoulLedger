@@ -3,6 +3,7 @@
 import type { LedgerRecord } from "@soulledger/core/api/ledger";
 import { RECORD_QUANTITIES } from "@soulledger/core/api/ledgerQuantities";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { MissingValue } from "@/src/components/ui/DomainValue";
 import { formatHistoricalDate } from "@/lib/utils";
 
 /**
@@ -27,7 +28,7 @@ import { formatHistoricalDate } from "@/lib/utils";
  *     markup, and a screen reader announces the column when it reads a cell —
  *     which is what makes an *empty* 功 cell legible as "nothing under 功"
  *     rather than as a rendering fault.
- *   * `<colgroup>` states the six fixed widths once instead of repeating them
+ *   * `<colgroup>` states the fixed widths once instead of repeating them
  *     on every cell.
  *
  * THE VERTICAL RULES ARE THE ONE SET IN THE PRODUCT. They are the form of the
@@ -38,8 +39,20 @@ import { formatHistoricalDate } from "@/lib/utils";
  * at the head of app/ledger/page.tsx).
  */
 
-/** 六列。`条` is 64px and the date 116px — 92px was the first draft and wrapped. */
-const COLUMN_WIDTHS = [64, 116, undefined, 96, 96, 112] as const;
+/**
+ * 七列。The date is 116px — 92px was the first draft and wrapped.
+ * 条款 (index 3) is its own column from 768 up, as in the Design v3 功过记录 table
+ * (用户 2026-10-02); below that it is hidden and the clause folds into 事目's second line.
+ * To make room for it the others narrowed (条 64 → 48, 功 / 过 96 → 72, 销算余 112 → 88:
+ * a six-character figure in 14px mono is ~50px). The soul page's middle column at 1440 is
+ * ~604px; the old 640 floor already cut 销算余 off there, so the floor is now 600 and 事目
+ * gets the rest (~112px at 1440).
+ */
+const COLUMN_WIDTHS = [48, 116, undefined, 96, 72, 72, 88] as const;
+const CLAUSE_COLUMN = 3;
+/** The clause column and its fold are the two halves of one breakpoint. */
+const CLAUSE_COLUMN_ONLY = "max-md:hidden";
+const CLAUSE_FOLD_ONLY = "md:hidden";
 
 interface LedgerBookRow {
   record: LedgerRecord;
@@ -114,7 +127,18 @@ export function RecordFacts({ record }: { record: LedgerRecord }) {
   if (record.occurrence_count != null) parts.push(t("ledger.book.occurrences", { n: String(record.occurrence_count) }));
   if (record.is_milestone) parts.push(`◆ ${t("ledger.book.milestone")}`);
   if (parts.length === 0) return null;
-  return <span data-record-facts="">{parts.join(" · ")}</span>;
+  // Each fact is one unbreakable unit: 「◆」 never ends a line with 「重要节点」 on the next
+  // (用户 2026-10-02). The line may still break between facts, at the 「 · 」.
+  return (
+    <span data-record-facts="">
+      {parts.map((part, i) => (
+        <span key={i}>
+          {i > 0 && " · "}
+          <span className="whitespace-nowrap">{part}</span>
+        </span>
+      ))}
+    </span>
+  );
 }
 
 export interface SoulLedgerBookProps {
@@ -145,13 +169,18 @@ export function SoulLedgerBook({ records }: SoulLedgerBookProps) {
   return (
     <section>
       <BookHeading title={t("ledger.book.title")} />
-      {/* 484px of fixed columns plus the entry column; below that the book
-          scrolls rather than crushing the numerals out of alignment. */}
+      {/* 396px of fixed columns plus the entry column (492 with 条款 from 768 up);
+          below 600 the book scrolls rather than crushing the numerals out of alignment —
+          600, not 640, so the ~604px middle column of the soul page at 1440 holds all seven. */}
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[640px] table-fixed border-collapse">
+        <table className="w-full min-w-[600px] table-fixed border-collapse">
           <colgroup>
             {COLUMN_WIDTHS.map((width, i) => (
-              <col key={i} style={width === undefined ? undefined : { width }} />
+              <col
+                key={i}
+                className={i === CLAUSE_COLUMN ? CLAUSE_COLUMN_ONLY : undefined}
+                style={width === undefined ? undefined : { width }}
+              />
             ))}
           </colgroup>
 
@@ -160,6 +189,9 @@ export function SoulLedgerBook({ records }: SoulLedgerBookProps) {
               <HeadCell first>{t("ledger.book.col_n")}</HeadCell>
               <HeadCell>{t("ledger.book.col_date")}</HeadCell>
               <HeadCell>{t("ledger.book.col_item")}</HeadCell>
+              <HeadCell className={`${CLAUSE_COLUMN_ONLY} text-[oklch(var(--color-ink-subtle))]`}>
+                {t("ledger.book.clause")}
+              </HeadCell>
               {/* The two column heads and the +/− signs carry the polarity; every
                   numeral is ink, as on /ledger (Design E 组:冷玫红只表「失败」,
                   拿来标罪业就和失败状态撞了). The scale word rides the header ONCE per column — `Figure`
@@ -201,17 +233,34 @@ export function SoulLedgerBook({ records }: SoulLedgerBookProps) {
                       numerals the only job the colour has. */}
                   <BodyCell className="font-sans text-sm text-[oklch(var(--color-ink-muted))]">
                     {record.description}
-                    {/* 条款与次数折进事目的第二行:台账的六列是账本的形制,不为它们加列。 */}
+                    {/* 次数与重要节点在事目的第二行;条款在窄屏(< 768,没有条款列)也折进来。 */}
                     {(clause || hasFacts) && (
-                      <span className="mt-0.5 block text-xs text-[oklch(var(--color-ink-subtle))]">
+                      <span
+                        className={`mt-0.5 block text-xs text-[oklch(var(--color-ink-subtle))] ${
+                          hasFacts ? "" : CLAUSE_FOLD_ONLY
+                        }`}
+                      >
                         {clause && (
-                          <span data-record-clause="" title={record.statute_clause} className="font-serif">
-                            {clause}
+                          <span className={CLAUSE_FOLD_ONLY}>
+                            <span data-record-clause="folded" title={record.statute_clause} className="font-serif">
+                              {clause}
+                            </span>
+                            {hasFacts && " · "}
                           </span>
                         )}
-                        {clause && hasFacts && " · "}
                         <RecordFacts record={record} />
                       </span>
+                    )}
+                  </BodyCell>
+
+                  {/* 条款列(Design v3 功过记录):律条号,全文在 title;没记写「未记录」。 */}
+                  <BodyCell className={`${CLAUSE_COLUMN_ONLY} font-serif text-xs text-[oklch(var(--color-ink-muted))] break-words`}>
+                    {clause ? (
+                      <span data-record-clause="column" title={record.statute_clause}>
+                        {clause}
+                      </span>
+                    ) : (
+                      <MissingValue kind="unrecorded" />
                     )}
                   </BodyCell>
 
@@ -266,6 +315,7 @@ export function SoulLedgerBook({ records }: SoulLedgerBookProps) {
               <FootCell className="font-sans text-2xs uppercase text-[oklch(var(--color-ink-subtle))]">
                 {t("ledger.book.total")}
               </FootCell>
+              <FootCell className={CLAUSE_COLUMN_ONLY} />
               <FootCell numeric>
                 <Amount
                   field="merit_total"

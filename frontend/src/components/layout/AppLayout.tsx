@@ -310,7 +310,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           tabIndex={-1}
           data-testid="app-content"
           data-assist-pushed={assist.pushed ? "" : undefined}
-          className={`min-h-[calc(100vh-2.5rem)] outline-none ${
+          className={`min-h-(--content-min-h) outline-none ${
             assist.pushed ? "pr-[420px] max-xl:[&_[class~='md:px-8']]:px-6" : ""
           }`}
         >
