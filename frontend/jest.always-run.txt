@@ -25,6 +25,7 @@ src/__tests__/dialogsAreNotHandRolled.test.ts
 src/__tests__/domainDisplayContract.test.tsx
 src/__tests__/domainDisplayRendering.test.tsx
 src/__tests__/domainNamespaceContract.test.ts
+src/__tests__/draftSavedFlash.test.tsx
 src/__tests__/egyLexiconRules.test.ts
 src/__tests__/enumsMatchTheSchema.test.ts
 src/__tests__/errorIsNotAnEmptyState.test.ts

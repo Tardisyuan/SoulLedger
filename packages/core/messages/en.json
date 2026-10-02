@@ -1475,6 +1475,7 @@
     },
     "draft": {
       "saved_at": "Autosaved {{time}}",
+      "saved_flash": "Saved",
       "saving": "Saving…",
       "save_failed": "Autosave failed; it retries on your next change",
       "conflict_title": "Another version was saved elsewhere ({{time}})",
