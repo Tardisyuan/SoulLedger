@@ -198,6 +198,14 @@ describe("v3 civilization marks on 本世", () => {
     expect(flat(screen.getByTestId("soul-state-glyph")).fontSize).toBe(56);
     expect(flat(screen.getByTestId("soul-state-word"))).toMatchObject({ fontSize: 56, fontFamily: "NotoSerifSC_600" });
   });
+
+  it("a passed stage's ✓ is set in the status-glyph face (IBM Plex Mono has none: the OS drew a √)", async () => {
+    await open();
+    await settle();
+    const ticks = screen.queryAllByText("✓");
+    expect(ticks.length).toBeGreaterThan(0);
+    for (const tick of ticks) expect(flat(tick).fontFamily).toBe("SoulLedgerGlyphs");
+  });
 });
 
 describe("the ledger rows", () => {
