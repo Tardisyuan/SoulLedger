@@ -135,7 +135,8 @@ describe("审判队列", () => {
   it("行是 v3 的 64 px(--table-row-h)、整行链到审判台;功 / 过与证据两列;认领标是圆形,只有未认领的行给「认领」", async () => {
     renderPage();
     const link = await screen.findByRole("link", { name: "沈青梧" });
-    expect(link).toHaveAttribute("href", "/judgment/a");
+    // 来源写在链接上(v3:审判台的返回键回到来源队列,不靠浏览器历史)。
+    expect(link).toHaveAttribute("href", "/judgment/a?from=%2Fjudgment");
     const mine = rowOf("沈青梧");
     expect(mine.className.split(/\s+/)).toContain("h-(--table-row-h)");
     // 只有这一个高度:旧的 h-10 与 393 下的 max-sm:h-11 补丁都不在了。
@@ -195,6 +196,25 @@ describe("审判队列", () => {
     fireEvent.keyDown(document.body, { key: "c" });
     await waitFor(() => expect(judgmentApi.claim).toHaveBeenCalledWith("b"));
     expect(judgmentApi.claim).toHaveBeenCalledTimes(1);
+  });
+
+  it("v3 焦点恢复:从审判台回到队列,焦点落回原案卷行;只恢复一次", async () => {
+    const first = renderPage();
+    fireEvent.click(await screen.findByRole("link", { name: "Marguerite Vey" }));
+    first.unmount();
+
+    const second = renderPage();
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("link", { name: "Marguerite Vey" })));
+    expect(rowOf("Marguerite Vey")).toHaveAttribute("data-focused", "true");
+    // 不是落在第一行(J 的默认落点)。
+    expect(rowOf("沈青梧")).not.toHaveAttribute("data-focused");
+    second.unmount();
+
+    // 读一次就删:再进队列(不是从审判台回来)焦点不再被拽到那一行。
+    renderPage();
+    await screen.findByRole("link", { name: "Marguerite Vey" });
+    await act(async () => {});
+    expect(document.activeElement).toBe(document.body);
   });
 
   it("没有勾选时没有批量条;X 勾选焦点行后出现,批量认领带勾选的 id", async () => {

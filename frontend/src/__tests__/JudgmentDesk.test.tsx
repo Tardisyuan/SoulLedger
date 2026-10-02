@@ -1212,17 +1212,36 @@ describe("v3 · 全案(F)", () => {
     expect(radio("RETRY").checked).toBe(true);
   });
 
-  it("单栏(<768)不响应 F", async () => {
+  /** 视口宽 `width` 下的 matchMedia:按查询里的 min-width 真算,不是一律 true / false。 */
+  const viewport = (width: number) =>
+    ((q: string) => {
+      const min = /min-width:\s*(\d+)px/.exec(q);
+      return { matches: min ? width >= Number(min[1]) : false, media: q };
+    }) as unknown as typeof window.matchMedia;
+
+  it.each([
+    [768, "focus"],
+    [769, "case"],
+  ])("全案的门与导航同一个边界(769):视口 %ipx 按 F → %s", async (width, view) => {
+    // v3 四档:394–768 取消全案。768 正好是窄档,导航在 769 才换成侧栏。
     const original = window.matchMedia;
-    window.matchMedia = ((q: string) => ({ matches: false, media: q })) as unknown as typeof window.matchMedia;
+    window.matchMedia = viewport(width);
     try {
       renderPage();
       await screen.findAllByRole("radio");
       fireEvent.keyDown(document.body, { key: "f" });
-      expect(desk()).toHaveAttribute("data-view", "focus");
+      expect(desk()).toHaveAttribute("data-view", view);
     } finally {
       window.matchMedia = original;
     }
+  });
+
+  it("「全案」按钮也在 769 才画(md 是 768,正好差那一格)", async () => {
+    renderPage();
+    await screen.findAllByRole("radio");
+    const cls = screen.getByRole("button", { name: new RegExp(tZh("judgment.desk.full_case")) }).className.split(/\s+/);
+    expect(cls).toEqual(expect.arrayContaining(["hidden", "min-[769px]:inline-flex"]));
+    expect(cls).not.toContain("md:inline-flex");
   });
 });
 

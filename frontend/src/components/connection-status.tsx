@@ -1,5 +1,6 @@
 "use client";
 
+import { useSyncExternalStore } from "react";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useWebSocket } from "@/src/contexts/WebSocketContext";
@@ -69,11 +70,30 @@ export function ConnectionStatus() {
   );
 }
 
+function subscribeOnline(onChange: () => void) {
+  window.addEventListener("online", onChange);
+  window.addEventListener("offline", onChange);
+  return () => {
+    window.removeEventListener("online", onChange);
+    window.removeEventListener("offline", onChange);
+  };
+}
+
+/**
+ * The browser says there is no network (v3 离线条:`navigator.onLine === false`, kept current by
+ * the `offline` / `online` events). `onLine === true` only means "some network", so this is the
+ * one direction it can be trusted in. The server render has no navigator: online.
+ */
+export function useBrowserOffline(): boolean {
+  return useSyncExternalStore(subscribeOnline, () => navigator.onLine === false, () => false);
+}
+
 /** Whether the link-down bar is showing. The shell reads it to start the 问一问 panel below the bar. */
 export function useConnectionBannerShown(): boolean {
   const { status } = useWebSocket();
   const { user } = useTenant();
-  return !!user && status !== "connected" && status !== "connecting";
+  const offline = useBrowserOffline();
+  return offline || (!!user && status !== "connected" && status !== "connecting");
 }
 
 /**
@@ -92,20 +112,26 @@ export function ConnectionBanner() {
   const { status, reconnect } = useWebSocket();
   const { t } = useI18n();
   const shown = useConnectionBannerShown();
+  const offline = useBrowserOffline();
   if (!shown) return null;
-  const canRetry = status === "failed" || status === "disconnected";
+  // Offline outranks the socket: with no network the socket is down *because* of it, and
+  // 「离线 · 当前内容可能不是最新版本」 tells the operator what to distrust. Its retry re-dials
+  // the socket; queries refetch by themselves on `online` (TanStack Query's onlineManager).
+  const canRetry = offline || status === "failed" || status === "disconnected";
+  const reason = offline ? t("connection.offline") : t(`connection.${status}`);
   return (
     <div
       role="status"
       data-testid="connection-banner"
-      className="fixed inset-x-0 top-0 z-drawer flex h-7 items-center gap-3 border-b border-[oklch(var(--color-line))] bg-[oklch(var(--color-warning-tint))] px-4 text-xs text-[oklch(var(--color-warning))] md:px-8"
+      data-offline={offline ? "true" : undefined}
+      className="fixed inset-x-0 top-0 z-drawer flex h-7 items-center gap-3 border-t-4 border-t-[oklch(var(--color-warning))] border-b border-[oklch(var(--color-line))] bg-[oklch(var(--color-warning-tint))] px-4 text-xs text-[oklch(var(--color-warning))] md:px-8"
     >
       <span aria-hidden="true">!</span>
       {/* Fixed 28 px: a long egy / en reason is cut, and readable in full on hover. */}
-      <span className="flex-1 truncate" title={t(`connection.${status}`)}>{t(`connection.${status}`)}</span>
+      <span className="flex-1 truncate" title={reason}>{reason}</span>
       {canRetry ? (
         <button type="button" onClick={reconnect} className="underline underline-offset-2">
-          {t("connection.retry")}
+          {offline ? t("common.retry") : t("connection.retry")}
         </button>
       ) : null}
     </div>

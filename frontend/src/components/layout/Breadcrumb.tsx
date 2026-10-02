@@ -1,8 +1,11 @@
 "use client";
 
+import { Suspense } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { FROM_PARAM, sourceFrom } from "@/src/lib/backSource";
 import { isDirectory, type SidebarMenu } from "@/src/hooks/useSidebarMenus";
 import { menuGlossParts } from "@/src/lib/menuI18n";
 
@@ -122,6 +125,30 @@ export function useBreadcrumbs(menus: SidebarMenu[]): Crumb[] {
   return crumbs;
 }
 
+/**
+ * 面包屑前的返回键(v3 `breadcrumbs > button`):回到来源,不走浏览器历史。来源是链接上显式写的
+ * `?from=`(见 src/lib/backSource.ts);没写就是面包屑里最近一段有页面的上级。两样都没有
+ * (顶层页)就不画。`useSearchParams` 要一个 Suspense 边界,否则整站的静态渲染都会退出 ——
+ * 所以它单独成一个组件,包在 Breadcrumb 里的 Suspense 中。
+ */
+function BackToSource({ crumbs, label }: { crumbs: Crumb[]; label: string }) {
+  const from = sourceFrom(useSearchParams()?.get(FROM_PARAM));
+  const parent = crumbs.slice(0, -1).reverse().find((c) => c.href)?.href;
+  const href = from ?? parent;
+  if (!href) return null;
+  return (
+    <Link
+      href={href}
+      aria-label={label}
+      title={label}
+      data-testid="breadcrumb-back"
+      className="grid size-11 shrink-0 place-items-center text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))]"
+    >
+      <ArrowLeft className="size-4" aria-hidden="true" />
+    </Link>
+  );
+}
+
 export function Breadcrumb({ menus }: { menus: SidebarMenu[] }) {
   const { t } = useI18n();
   const crumbs = useBreadcrumbs(menus);
@@ -134,8 +161,11 @@ export function Breadcrumb({ menus }: { menus: SidebarMenu[] }) {
   return (
     <nav
       aria-label={label("breadcrumb.aria_label", "面包屑导航")}
-      className="flex-1 min-w-0"
+      className="flex flex-1 min-w-0 items-center"
     >
+      <Suspense fallback={null}>
+        <BackToSource crumbs={crumbs} label={label("breadcrumb.back", "返回")} />
+      </Suspense>
       {/* 规范 v3「工具条 · 面包屑」:界面字 12、斜杠分隔、间距 8;上级 ink-muted(链接悬停
           ink 加下划线),当前页 ink、不可点(aria-current),放不下就截断。不再有首页图标 ——
           导航第一项就是概览。v2 住在匾上时一律 onMain;搬到中性工具条后回到 ink 系列。 */}

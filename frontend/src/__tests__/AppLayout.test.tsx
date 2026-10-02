@@ -122,10 +122,12 @@ describe("menuGlossParts", () => {
 
 describe("Breadcrumb", () => {
   let mockPathname = "/audit";
+  let mockSearch = "";
   let mockLocale: "zh-Hans" | "en" = "en";
 
   jest.mock("next/navigation", () => ({
     usePathname: () => mockPathname,
+    useSearchParams: () => new URLSearchParams(mockSearch),
   }));
 
   jest.mock("@/src/contexts/I18nContext", () => ({
@@ -136,6 +138,7 @@ describe("Breadcrumb", () => {
           "breadcrumb.menu.audit": "Audit Log",
           "breadcrumb.menu.group_settings": "System Settings",
           "breadcrumb.aria_label": "Breadcrumb",
+          "breadcrumb.back": "Back",
           "breadcrumb.home": "Dashboard",
           "breadcrumb.detail": "Detail",
           "breadcrumb.menu.cross_judgments": "Cross-civ Judgments",
@@ -182,6 +185,7 @@ describe("Breadcrumb", () => {
 
   beforeEach(() => {
     mockPathname = "/audit";
+    mockSearch = "";
     mockLocale = "en";
   });
 
@@ -225,7 +229,39 @@ describe("Breadcrumb", () => {
   it("an intermediate segment that does have a page stays a link", () => {
     mockPathname = "/audit/12";
     render(<Breadcrumb menus={menus} />);
-    expect(document.querySelector('a[href="/audit"]')).not.toBeNull();
+    // Inside the trail: the back button before it links /audit too, and must not stand in for the crumb.
+    expect(document.querySelector('ol a[href="/audit"]')).not.toBeNull();
+  });
+
+  describe("返回键(v3:回到来源,不走浏览器历史)", () => {
+    const back = () => screen.queryByRole("link", { name: "Back" });
+
+    it("没写来源时回到最近一段有页面的上级", () => {
+      mockPathname = "/audit/12";
+      render(<Breadcrumb menus={menus} />);
+      expect(back()).toHaveAttribute("href", "/audit");
+      // 在面包屑之前,不在那一串里。
+      expect(back()?.closest("ol")).toBeNull();
+    });
+
+    it("链接上写了 ?from= 就回到那里(审判台 ← 审判队列)", () => {
+      mockPathname = "/audit/12";
+      mockSearch = "from=%2Fjudgment%2Fqueue";
+      render(<Breadcrumb menus={menus} />);
+      expect(back()).toHaveAttribute("href", "/judgment/queue");
+    });
+
+    it.each(["//evil.example/x", "https://evil.example/", "/\\evil.example"])("站外的 from(%s)不认,退回上级", (from) => {
+      mockPathname = "/audit/12";
+      mockSearch = `from=${encodeURIComponent(from)}`;
+      render(<Breadcrumb menus={menus} />);
+      expect(back()).toHaveAttribute("href", "/audit");
+    });
+
+    it("顶层页没有上级、也没写来源:不画", () => {
+      render(<Breadcrumb menus={menus} />);
+      expect(back()).toBeNull();
+    });
   });
 
   it("PAGELESS_PREFIXES is exactly the set of app/ prefixes without a page.tsx", () => {
