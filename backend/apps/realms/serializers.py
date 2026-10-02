@@ -16,6 +16,14 @@ TOPOLOGY_FIELDS = [
     "fork",
 ]
 
+#: `is_eternal` 的对外说明(OpenAPI 的 description)。写在 serializer 而不是模型的
+#: help_text 上,是为了不生成一条只改描述的迁移;含义见 `Realm.is_eternal` 上的注释。
+IS_ETERNAL_HELP = (
+    "不出狱、不轮回:落到此处的灵魂永不离开,也不再入轮回。"
+    "判决落地时抄进处置(Disposition.is_eternal),之后以处置上的那一份为准。"
+)
+_IS_ETERNAL_KWARGS = {"is_eternal": {"help_text": IS_ETERNAL_HELP}}
+
 
 class RealmSerializer(FieldPermissionMixin, serializers.ModelSerializer):
     class Meta:
@@ -27,6 +35,7 @@ class RealmSerializer(FieldPermissionMixin, serializers.ModelSerializer):
             "memory_reset_mechanism", "is_eternal", "cycle_limit",
             *TOPOLOGY_FIELDS,
         ]
+        extra_kwargs = _IS_ETERNAL_KWARGS
 
 
 class RealmListSerializer(serializers.ModelSerializer):
@@ -38,6 +47,7 @@ class RealmListSerializer(serializers.ModelSerializer):
             "id", "realm_code", "civilization", "name_en", "realm_type", "tier",
             "parent_realm", "is_eternal", *TOPOLOGY_FIELDS,
         ]
+        extra_kwargs = _IS_ETERNAL_KWARGS
 
 
 class RealmLocalizedSerializer(serializers.ModelSerializer):
@@ -55,6 +65,7 @@ class RealmLocalizedSerializer(serializers.ModelSerializer):
             "display_name", "realm_type", "tier",
             "is_eternal", "memory_reset_mechanism",
         ]
+        extra_kwargs = _IS_ETERNAL_KWARGS
 
     def get_display_name(self, obj) -> str:
         # The return hint is what keeps this out of the generator's warning

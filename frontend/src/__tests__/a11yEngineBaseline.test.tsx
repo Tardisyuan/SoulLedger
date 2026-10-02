@@ -603,7 +603,6 @@ const SUBJECTS: Subject[] = [
         isFiltered
         onClearAll={() => {}}
         clearAllLabel="filter.clear"
-        density={{ compact: false, onToggle: () => {}, label: "filter.density" }}
       />
     ),
   },
