@@ -25,7 +25,9 @@ export const LICENCE_LABELS: Record<Exclude<CreditLicence, "PD">, { label: strin
 
 /**
  * 界面三条字体栈(补足 A4)加中文回退,再加印文字体。v2 匾的题字字体(Ma Shan Zheng、
- * Josefin Slab、Cinzel)随匾一起去掉了(v3,2026-10-02),不再随任何一端发布,也就不再列。
+ * Josefin Slab、Cinzel)随匾一起去掉了(v3,2026-10-02);v2 朱印的另三款印文字体(LXGW Seal、
+ * UnifrakturMaguntia、GFS Didot)随 App 的 v2 印去掉了(2026-10-03,Web 早在 10-02 撤掉)。
+ * 都不再随任何一端发布,也就不再列。v3 描边印只剩埃及的圣书字。
  */
 export const FONT_CREDITS: Credit[] = [
   "Archivo",
@@ -33,9 +35,6 @@ export const FONT_CREDITS: Credit[] = [
   "IBM Plex Mono",
   "Noto Sans SC",
   "Noto Serif SC",
-  "LXGW Seal",
-  "UnifrakturMaguntia",
-  "GFS Didot",
   "Noto Sans Egyptian Hieroglyphs",
 ].map((name) => ({ name, licence: "OFL-1.1" as const }));
 

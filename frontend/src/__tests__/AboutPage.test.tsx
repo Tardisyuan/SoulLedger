@@ -20,14 +20,15 @@ describe("AboutPage", () => {
     expect(screen.getByRole("heading", { name: /字体/ })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /纹样/ })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /印的残边/ })).toBeInTheDocument();
-    for (const font of ["Archivo", "LXGW Seal", "Noto Sans Egyptian Hieroglyphs"]) {
+    for (const font of ["Archivo", "Noto Sans Egyptian Hieroglyphs"]) {
       expect(screen.getByText(font)).toBeInTheDocument();
     }
-    // v2's plaque faces ship nowhere since v3, so they are not credited.
-    for (const font of ["Ma Shan Zheng", "Josefin Slab", "Cinzel"]) {
+    // v2's plaque faces, and v2 朱印's other three seal faces (2026-10-03), ship nowhere since v3,
+    // so they are not credited.
+    for (const font of ["Ma Shan Zheng", "Josefin Slab", "Cinzel", "LXGW Seal", "UnifrakturMaguntia", "GFS Didot"]) {
       expect(screen.queryByText(font)).toBeNull();
     }
-    expect(screen.getAllByRole("link", { name: "SIL Open Font License 1.1" })).toHaveLength(9);
+    expect(screen.getAllByRole("link", { name: "SIL Open Font License 1.1" })).toHaveLength(6);
     expect(screen.getByText("Owen Jones").closest("li")).toHaveTextContent("公有领域");
   });
 
