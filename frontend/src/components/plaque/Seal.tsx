@@ -46,29 +46,26 @@ export function sealGlyphsFor(civ: SealCiv, glyphs: readonly string[] | null | u
 }
 
 /**
- * 盖印(交互与动效第 2 轮 §三 1):下落 0–120(ease.drop,28px,透明度 0→1)→ 压实 120–180
- * (1.06 → 0.97 → 1,全站唯一允许的缩放)→ 静置到 320。v2 的「印泥晕开」画在残边环上,
- * v3 的描边印没有那一层,随之去掉。
+ * 盖印(v3 第 7 轮 `App.tsx` 动效表「印落下」):scale 1.7 → .96 → 1、opacity 0 → 1,320ms,
+ * 强调曲线 cubic-bezier(.2,.8,.3,1)(token `drop`)。.96 落在 75% 处(原型 `@keyframes stamp-down`
+ * 的结构)。取代 v2 的「下落 28px → 压实」。
  * 减少动态效果时不播:印直接是落定的样子。WAAPI,不进 motion —— 多段关键帧、可 cancel()。
  */
+export const STAMP_KEYFRAMES: Keyframe[] = [
+  { offset: 0, opacity: 0, transform: "scale(1.7)" },
+  { offset: 0.75, opacity: 1, transform: "scale(0.96)" },
+  { offset: 1, opacity: 1, transform: "scale(1)" },
+];
+
 function useStamp(stampKey: number | undefined) {
   const root = useRef<HTMLSpanElement>(null);
   useEffect(() => {
     const el = root.current;
     if (!stampKey || !el || typeof el.animate !== "function" || prefersReducedMotion()) return;
-    const total = MOTION_DURATIONS.slow * 1000;
-    const at = (ms: number) => ms / total;
-    const drop = `cubic-bezier(${MOTION_EASINGS.drop.join(",")})`;
-    const press = el.animate(
-      [
-        { offset: 0, opacity: 0, transform: "translateY(-28px) scale(1.06)", easing: drop },
-        { offset: at(120), opacity: 1, transform: "translateY(0) scale(1.06)", easing: "ease-out" },
-        { offset: at(150), transform: "scale(0.97)", easing: "ease-out" },
-        { offset: at(180), transform: "scale(1)" },
-        { offset: 1, opacity: 1, transform: "none" },
-      ],
-      { duration: total }
-    );
+    const press = el.animate(STAMP_KEYFRAMES, {
+      duration: MOTION_DURATIONS.slow * 1000,
+      easing: `cubic-bezier(${MOTION_EASINGS.drop.join(",")})`,
+    });
     return () => press.cancel();
   }, [stampKey]);
   return root;
