@@ -72,8 +72,12 @@ describe("the identity band", () => {
   it("full at the top; one compact row past 68pt; open again only back near the top", async () => {
     await open();
     expect(screen.getByTestId("identity-meta").props.children).toBe("中国 · 第 2 世 · 第五殿");
-    expect(flat(screen.getByTestId("plaque-seal")).width).toBe(52);
+    expect(flat(screen.getByTestId("plaque-seal")).width).toBe(64);
     expect(flat(screen.getByTestId("identity")).height).toBe(116);
+    // v3's 64pt seal still fits the full band (it clips: overflow hidden): padding, meta line, gap, seal.
+    const band = flat(screen.getByTestId("identity")) as Record<string, number>;
+    const need = band.paddingTop + Number(flat(screen.getByTestId("identity-meta")).lineHeight) + band.gap + Number(flat(screen.getByTestId("plaque-seal")).height) + band.paddingBottom;
+    expect(need).toBeLessThanOrEqual(band.height);
     // The civilization's colour (darkened 10%, as v3 mixes it) is the band's; the page under it is neutral.
     expect(flat(screen.getByTestId("plaque")).backgroundColor).toBe(v3Band(v3.civ.cn.light));
     expect(flat(screen.getByTestId("life")).backgroundColor).toBe(v3.light.canvas);
@@ -81,7 +85,7 @@ describe("the identity band", () => {
     expect(screen.getByTestId("identity-meta")).toBeTruthy();
     scrollTo(100);
     expect(screen.queryByTestId("identity-meta")).toBeNull();
-    expect(flat(screen.getByTestId("plaque-seal")).width).toBe(28);
+    expect(flat(screen.getByTestId("plaque-seal")).width).toBe(30);
     // Still the name, the code to copy and the way to settings, in the one row.
     expect(screen.getByTestId("soul-name").props.children).toBe(PROFILE.name);
     expect(screen.getByTestId("copy-soul-code")).toBeTruthy();
@@ -108,7 +112,7 @@ describe("the identity band", () => {
     expect(flat(screen.getByTestId("identity")).height).toBeUndefined();
     scrollTo(300);
     expect(screen.getByTestId("identity-meta")).toBeTruthy();
-    expect(flat(screen.getByTestId("plaque-seal")).width).toBe(52);
+    expect(flat(screen.getByTestId("plaque-seal")).width).toBe(64);
   });
 });
 

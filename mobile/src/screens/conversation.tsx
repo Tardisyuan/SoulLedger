@@ -39,7 +39,7 @@ import { PlaqueFrame } from "../chrome";
 import { CORNER, Icon } from "../emblems";
 import { family, quoteFamily } from "../fonts";
 import { useI18n } from "../i18n";
-import { formatStamp } from "../rules";
+import { formatStamp, TAG_GLYPH } from "../rules";
 import type { CivKey } from "../theme";
 import { Button, Interp, Loader, Notice, Skeleton, SmallButton, Txt, shade, useReducedMotion, useTheme } from "../ui";
 import type { AppStackParams } from "./applications";
@@ -217,7 +217,7 @@ export function ConversationScreen({ id, landed }: { id: string; landed?: boolea
             title={c.peer_name}
             muted={sealed}
             subtitle={sealed ? undefined : tr(c.mutual ? "soul_app.chat.badge.mutual" : "soul_app.chat.badge.not_mutual")}
-            right={sealed ? <Tag testID="closed-tag" text={tr("soul_app.chat.badge.closed")} tone="quiet" /> : null}
+            right={sealed ? <Tag testID="closed-tag" text={tr("soul_app.chat.badge.closed")} tone="quiet" glyph={TAG_GLYPH.closed.glyph} /> : null}
           />
         )}
       </PlaqueFrame>
@@ -328,7 +328,8 @@ function Header({ onBack, title, subtitle, muted, right }: { onBack: () => void;
       <BackButton onBack={onBack} />
       {/* 1e: iOS centres the title, Android sets it left. */}
       <View style={[styles.fill, !ANDROID && styles.centered]}>
-        <Txt accessibilityRole="header" variant="nav" tone={muted ? "muted" : "ink"} numberOfLines={1}>
+        {/* v3: 20 / 28 like every other title bar; the relation line under it stays (it says something). */}
+        <Txt accessibilityRole="header" variant="title" tone={muted ? "muted" : "ink"} numberOfLines={1}>
           {title}
         </Txt>
         {subtitle ? (
@@ -351,14 +352,14 @@ function HallHeader({ hall, sealed, onBack }: { hall: string; sealed: boolean; o
       <BackButton onBack={onBack} />
       <Glyph text={tr("soul_app.chat.section.hall")} tone={sealed ? "subtle" : "ink"} dotted={sealed} />
       <View style={styles.fill}>
-        <Txt accessibilityRole="header" variant="nav" tone={sealed ? "muted" : "ink"}>
+        <Txt accessibilityRole="header" variant="title" tone={sealed ? "muted" : "ink"}>
           {tr("soul_app.chat.hall.title", { hall })}
         </Txt>
         <Txt variant="caption" tone={sealed ? "subtle" : "muted"} style={styles.hallSub}>
           {sealed ? tr("soul_app.chat.hall.not_current", { hall }) : tr("soul_app.chat.hall.subtitle")}
         </Txt>
       </View>
-      {sealed ? <Tag text={tr("soul_app.chat.badge.sealed")} tone="quiet" /> : null}
+      {sealed ? <Tag testID="sealed-tag" text={tr("soul_app.chat.badge.sealed")} tone="quiet" glyph={TAG_GLYPH.sealed.glyph} /> : null}
     </View>
   );
 }

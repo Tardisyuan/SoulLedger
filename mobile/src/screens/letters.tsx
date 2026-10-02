@@ -23,6 +23,7 @@ import { chatSections, isCompleteCode, listStamp, normalizeCode } from "../chatR
 import { Icon } from "../emblems";
 import { family, quoteFamily } from "../fonts";
 import { useI18n } from "../i18n";
+import { TAG_GLYPH } from "../rules";
 import { SessionContext } from "../session";
 import type { Theme } from "../theme";
 import { Button, Empty, FadeIn, Notice, PageEmptyArt, Screen, SectionLabel, Skeleton, Txt, shade, useLayout, usePullRefresh, useReloadOnReconnect, useTheme } from "../ui";
@@ -71,11 +72,30 @@ export function Glyph({ text, tone, dotted, size = 30 }: { text: string; tone: "
 
 /** A small square-cornered label: 待回复 (dotted ink), 已闭 / 封存 (hairline), 互关 (solid ink). */
 /** `waiting` (dotted: not settled yet) and `marked` (solid) are both ink; `quiet` is ink3 on a hairline. */
-export function Tag({ text, tone, testID }: { text: string; tone: "waiting" | "marked" | "quiet"; testID?: string }) {
+/**
+ * `glyph` (v3: glyph + word, `TAG_GLYPH` in rules.ts) sits before the word, from the bundled glyph
+ * font. It is hidden from screen readers: the tag is one accessible element labelled by the word.
+ */
+export function Tag({ text, tone, glyph, testID }: { text: string; tone: "waiting" | "marked" | "quiet"; glyph?: string; testID?: string }) {
   const t = useTheme();
   const color = tone === "quiet" ? t.inkSubtle : t.ink;
   return (
-    <View testID={testID} style={[styles.tag, { borderColor: tone === "quiet" ? t.hair2 : color, borderStyle: tone === "waiting" ? "dotted" : "solid" }]}>
+    <View
+      testID={testID}
+      accessible
+      accessibilityLabel={text}
+      style={[styles.tag, { borderColor: tone === "quiet" ? t.hair2 : color, borderStyle: tone === "waiting" ? "dotted" : "solid" }]}
+    >
+      {glyph ? (
+        <Txt
+          testID={testID ? `${testID}-glyph` : undefined}
+          accessibilityElementsHidden
+          importantForAccessibility="no"
+          style={[styles.tagText, styles.tagGlyph, { color }]}
+        >
+          {glyph}
+        </Txt>
+      ) : null}
       <Txt style={[styles.tagText, { color }]}>{text}</Txt>
     </View>
   );
@@ -283,7 +303,7 @@ export function LettersScreen() {
                     onPress={() => open(c)}
                     glyph={<Glyph text={hallGlyph} tone="subtle" dotted />}
                     title={tr("soul_app.chat.hall.title", { hall: hallOf(c, locale) })}
-                    tag={<Tag text={tr("soul_app.chat.badge.sealed")} tone="quiet" />}
+                    tag={<Tag text={tr("soul_app.chat.badge.sealed")} tone="quiet" glyph={TAG_GLYPH.sealed.glyph} />}
                     {...preview(c)}
                   />
                 ))}
@@ -310,9 +330,9 @@ export function LettersScreen() {
                 dim={shut(c)}
                 tag={
                   shut(c) ? (
-                    <Tag testID={`closed-${c.id}`} text={tr("soul_app.chat.badge.closed")} tone="quiet" />
+                    <Tag testID={`closed-${c.id}`} text={tr("soul_app.chat.badge.closed")} tone="quiet" glyph={TAG_GLYPH.closed.glyph} />
                   ) : awaiting(c) ? (
-                    <Tag testID={`awaiting-${c.id}`} text={tr("soul_app.chat.badge.awaiting")} tone="waiting" />
+                    <Tag testID={`awaiting-${c.id}`} text={tr("soul_app.chat.badge.awaiting")} tone="waiting" glyph={TAG_GLYPH.awaiting.glyph} />
                   ) : undefined
                 }
                 {...preview(c)}
@@ -460,7 +480,12 @@ export function FindSoulScreen() {
                 <Txt variant="body" style={styles.fill}>
                   {card.display_name}
                 </Txt>
-                <Tag text={tr(mutual ? "soul_app.chat.badge.mutual" : "soul_app.chat.badge.following")} tone={mutual ? "marked" : "quiet"} />
+                <Tag
+                  testID={`circle-tag-${card.user_id}`}
+                  text={tr(mutual ? "soul_app.chat.badge.mutual" : "soul_app.chat.badge.following")}
+                  tone={mutual ? "marked" : "quiet"}
+                  glyph={mutual ? TAG_GLYPH.mutual.glyph : undefined}
+                />
               </Pressable>
             ))}
           </View>
@@ -485,8 +510,9 @@ const styles = StyleSheet.create({
   dot: { width: 8, height: 8, marginTop: 8 },
   glyph: { borderWidth: 1, alignItems: "center", justifyContent: "center" },
   glyphText: { fontFamily: family.ui[500] },
-  tag: { borderWidth: 1, paddingHorizontal: 8, paddingVertical: 2 },
+  tag: { flexDirection: "row", alignItems: "center", gap: 4, borderWidth: 1, paddingHorizontal: 8, paddingVertical: 2 },
   tagText: { fontFamily: family.ui[500], fontSize: 11, lineHeight: 14, letterSpacing: 0.8 },
+  tagGlyph: { fontFamily: family.glyph, letterSpacing: 0 },
   empty: { alignItems: "center", gap: 12, paddingHorizontal: 24, paddingTop: 48, paddingBottom: 48 },
   emptyButton: { alignSelf: "stretch", marginTop: 4 },
   fab: { position: "absolute", right: 16, bottom: 16, width: 56, height: 56, alignItems: "center", justifyContent: "center" },
