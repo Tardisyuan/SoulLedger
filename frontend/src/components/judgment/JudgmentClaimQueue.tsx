@@ -433,7 +433,7 @@ export function JudgmentClaimQueue() {
           {/* 补足 B9 表头:11 等宽 ink3、下沿 2px ink;高 44(v3 `.queue-head`)。 */}
           <tr className="h-(--control-h-sm) font-mono text-2xs text-[oklch(var(--color-ink-subtle))] border-b-2 border-[oklch(var(--color-ink))]">
             {canExecute && <th scope="col" className="w-6"><span className="sr-only">{t("judgment.claim.select")}</span></th>}
-            <th scope="col" className="px-2 py-1 text-left font-normal">{t("judgment.soul_name")}</th>
+            <th scope="col" className="px-2 py-1 text-left font-normal">{t("judgment.claim.col_case_soul")}</th>
             <th scope="col" className="px-2 py-1 text-left font-normal max-md:hidden">{t("judgment.court")}</th>
             <th scope="col" className="px-2 py-1 text-right font-normal">{t("judgment.claim.col_merit_demerit")}</th>
             <th scope="col" className="px-2 py-1 text-left font-normal max-lg:hidden">{t("judgment.claim.col_draft")}</th>

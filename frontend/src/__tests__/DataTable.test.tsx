@@ -205,68 +205,22 @@ describe("DataTable", () => {
   });
 });
 
-/**
- * Row density, and the half of it that is not obvious.
- *
- * `density` used to live on DataGrid, which two pages use and one page sets —
- * the other ten list pages call DataTable directly, so the compact row was
- * unreachable for them. Lifting the prop is the easy half.
- *
- * The hard half: **body cells come from `renderRow`, which every caller
- * hand-writes** (40 `px-4 py-3` `<td>`s across app/). A `density` prop that
- * only styled the header would have moved the header and left the rows,
- * which looks like a bug rather than a setting. The compact branch therefore
- * also emits a `[&_tbody_td]:py-2` descendant rule on the table, which beats
- * the single class on each `<td>` without touching one call site — and the
- * comfortable branch emits nothing at all, so the ten pages that do not opt
- * in are byte-identical to before.
- */
-describe("row density reaches the body, not just the header", () => {
-  const dense = (density?: "comfortable" | "compact") =>
-    render(
+describe("row height (规范 v3)", () => {
+  it("正文行最少 64(--table-row-h)、表头 44(--control-h-sm),单元格不再有 compact 的覆盖", () => {
+    const { container } = render(
       <DataTable<Row>
         caption="Souls table"
         columns={columns}
         data={rows}
-        density={density}
         keyExtractor={(item) => item.id}
         renderRow={(item) => <td className="px-4 py-3">{item.name}</td>}
       />
     );
-
-  it("emits the body override only when compact", () => {
-    const { container, unmount } = dense("compact");
-    // 规范 v1:紧凑行 28 px。
-    expect(container.querySelector("table")?.className).toContain("[&_tbody_td]:py-1");
-    unmount();
-
-    // Comfortable must add nothing — the ten pages that never opt in should be
-    // unchanged by this prop existing.
-    const { container: c2 } = dense();
-    expect(c2.querySelector("table")?.className).not.toContain("[&_tbody_td]");
-  });
-
-  it("compacts the header cells too, so the two do not disagree", () => {
-    const { container } = dense("compact");
-    const header = container.querySelector("thead th");
-    expect(header?.className ?? "").toContain("py-1");
-    expect(header?.className ?? "").not.toContain("py-2");
-  });
-
-  it("规范 v3 的行高:正文行最少 64(--table-row-h)、表头 44(--control-h-sm);compact 不加最小行高", () => {
-    const { container, unmount } = dense();
     const bodyRow = container.querySelector("tbody tr") as HTMLElement;
     expect(bodyRow.className.split(/\s+/)).toContain("h-(--table-row-h)");
     expect(container.querySelector("thead tr")?.className.split(/\s+/)).toContain("h-(--control-h-sm)");
-    unmount();
-    const { container: c2 } = dense("compact");
-    expect((c2.querySelector("tbody tr") as HTMLElement).className).not.toContain("--table-row-h");
-  });
-
-  it("leaves the header at the comfortable padding by default", () => {
-    const { container } = dense();
-    // 规范 v1:行高 36 px。
     expect(container.querySelector("thead th")?.className ?? "").toContain("py-2");
+    expect(container.querySelector("table")?.className).not.toContain("[&_tbody_td]");
   });
 });
 

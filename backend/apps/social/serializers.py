@@ -25,7 +25,8 @@ class PostMediaFieldMixin(serializers.Serializer):
 
     @extend_schema_field(PostMediaSerializer(many=True))
     def get_media(self, post):
-        return post_media.describe(live_media(post), self.context["request"].user)
+        request = self.context["request"]
+        return post_media.describe(live_media(post), request.user, getattr(request, "tenant", None))
 
 
 class PostSerializer(PostMediaFieldMixin, serializers.ModelSerializer):
