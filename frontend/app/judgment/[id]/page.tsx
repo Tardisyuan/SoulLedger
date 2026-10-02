@@ -71,6 +71,7 @@ import {
 } from "@/src/components/judgment/JudgmentPlacement";
 import { useJudgmentNextAfter, useJudgmentPrevious } from "@soulledger/core/hooks/useJudgments";
 import { usePlaque } from "@/src/components/plaque/Plaque";
+import { useHall } from "@/src/components/plaque/useHall";
 
 /**
  * 判决书 —— the judgment detail page.
@@ -431,7 +432,9 @@ export default function JudgmentDetailPage({ params }: PageProps) {
   );
 
   // 身份带:题「审判台」(v3 `pageTitle`;面包屑末段是「详情」)。案号后端没有,不写右栏。
-  usePlaque({ title: t("plaque.desk") });
+  // 殿名:这个案子的殿;案子没记殿(`court` 是空串)就写刑名司。
+  const hall = useHall(judgment?.court || t("plaque.office.trials"));
+  usePlaque({ title: t("plaque.desk"), hall });
 
   if (isLoading) {
     return <PageSpinner label={t("judgment.detail.loading")} />;

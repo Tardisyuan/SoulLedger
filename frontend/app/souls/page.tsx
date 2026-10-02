@@ -8,6 +8,8 @@ import { usePermissions } from "@/src/hooks/usePermissions";
 import { SoulBatchBar, useSoulSelection } from "@/src/components/souls/SoulBatchBar";
 import { CIVILIZATION_OPTIONS } from "@soulledger/core/config/civilizations";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { usePlaque } from "@/src/components/plaque/Plaque";
+import { useHall } from "@/src/components/plaque/useHall";
 import { SoulCreateModal } from "@/src/components/ui/Modal";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { DataTable, ROW_LINK, parseOrdering, type SortState } from "@/components/ui/data-table";
@@ -54,6 +56,7 @@ function dateProblemMarker(soul: SoulListItem): { glyph: string; className: stri
 
 export default function SoulsPage() {
   const { t, locale } = useI18n();
+  usePlaque({ hall: useHall(t("plaque.office.records")) });
   const [page, setPage] = useState(1);
   const [stateFilter, setStateFilter] = useState("");
   const [civilizationFilter, setCivilizationFilter] = useState("");
