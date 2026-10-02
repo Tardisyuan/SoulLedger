@@ -14,7 +14,8 @@ import { SelectField } from "@/src/components/ui/Field";
 import { Pagination } from "@/src/components/ui/Pagination";
 import { QueryError } from "@/src/components/ui/PageError";
 import { Spinner } from "@/src/components/ui/Spinner";
-import { durationParts, runStatusBadgeClass } from "./schedulerView";
+import { durationParts } from "./schedulerView";
+import { RunStatusBadge } from "./SchedulerJobRow";
 
 export const RUN_STATUSES: TaskRunStatus[] = ["PENDING", "RUNNING", "SUCCESS", "FAILURE", "RETRY", "SKIPPED", "LOST"];
 
@@ -135,7 +136,7 @@ export function TaskRunItem({
     <li className="py-3 space-y-2" data-run-status={run.status}>
       {heading}
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-        <DomainEnum namespace="scheduler.status" value={run.status} className={runStatusBadgeClass(run.status)} />
+        <RunStatusBadge status={run.status} />
         <DomainEnum namespace="scheduler.trigger" value={run.trigger} className="text-xs text-[oklch(var(--color-ink-muted))]" />
         {run.triggered_by_username && (
           <span className="text-xs text-[oklch(var(--color-ink-muted))] break-all">

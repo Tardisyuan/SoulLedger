@@ -8,7 +8,7 @@
  * whose notifications happen to be unread. Both are pinned here, along with
  * the failure toasts for the two mutations.
  */
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent, within } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import NotificationsPage from "@/app/notifications/page";
@@ -196,19 +196,23 @@ describe("NotificationsPage unread count", () => {
     renderPage();
 
     await screen.findByText("Read one");
-    // Badge on the bell plus the pill on the unread tab.
-    expect(screen.getAllByText("2")).toHaveLength(2);
+    // Once, on the unread tab. (The bell in the <h1> that repeated it is gone — v3 titles are text.)
+    expect(screen.getAllByText("2")).toHaveLength(1);
+    expect(within(screen.getByRole("button", { name: /notifications\.unread/ })).getByText("2")).toBeInTheDocument();
   });
 
-  it("caps the bell badge at 99+ but leaves the tab pill exact", async () => {
+  it("the page title is the words alone — no bell, no count badge in the <h1> (v3)", async () => {
     mockedList.mockResolvedValue({
       data: { results: Array.from({ length: 150 }, (_, i) => notification({ id: i, title: `n${i}` })) },
     });
 
     renderPage();
 
-    expect(await screen.findByText("99+")).toBeInTheDocument();
-    expect(screen.getByText("150")).toBeInTheDocument();
+    await screen.findByText("150");
+    const h1 = screen.getByRole("heading", { level: 1 });
+    expect(h1.textContent).toBe("notifications.title");
+    expect(h1.querySelector("svg")).toBeNull();
+    expect(screen.queryByText("99+")).not.toBeInTheDocument();
   });
 
   it("hides the badge and the mark-all button when everything is read", async () => {

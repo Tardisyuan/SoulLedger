@@ -112,7 +112,7 @@ function OrganizationsPageContent() {
   const renderTable = (orgs: Organization[]) => (
     <table className="w-full text-sm">
       <thead className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">
-        <tr className="border-b border-[oklch(var(--color-block))]">
+        <tr className="h-(--control-h-sm) border-b-2 border-[oklch(var(--color-ink))]">
           <th scope="col" className="px-3 py-2 text-left font-normal">{t("menus.name")}</th>
           <th scope="col" className="px-3 py-2 text-left font-normal">{t("tenants.code")}</th>
         </tr>
@@ -126,7 +126,7 @@ function OrganizationsPageContent() {
           (o) => o.id,
           (o) => o.parent,
         ).map(({ item: org, depth }) => (
-          <tr key={org.id} className={`border-b border-[oklch(var(--color-rule))] ${ROW_HOVER} transition-colors`}>
+          <tr key={org.id} className={`h-(--table-row-h) border-b border-[oklch(var(--color-rule))] ${ROW_HOVER} transition-colors`}>
             <td className="py-2 px-3">
               <TreeName depth={depth}>
                 <span className={depth ? "text-[oklch(var(--color-ink-muted))]" : "font-medium text-[oklch(var(--color-ink))]"}>{org.name}</span>
@@ -211,9 +211,9 @@ function OrganizationsSkeleton() {
   return (
     <div data-testid="organizations-skeleton" aria-busy="true" className="space-y-3">
       <Skeleton className="h-5 w-40" />
-      <Skeleton className="h-8 w-full" />
+      <Skeleton className="h-(--control-h-sm) w-full" />
       {[0, 1, 2].map((i) => (
-        <Skeleton key={i} className="h-9 w-full" />
+        <Skeleton key={i} className="h-(--table-row-h) w-full" />
       ))}
     </div>
   );

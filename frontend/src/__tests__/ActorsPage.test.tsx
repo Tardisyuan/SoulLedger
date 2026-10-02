@@ -355,6 +355,18 @@ describe("enum display", () => {
     const html = container.innerHTML;
     expect([...html.matchAll(/bg-\[oklch\(var\(--color-[\w-]+\)\/([\d.]+)\)\]/g)]).toEqual([]);
     const conduit = container.querySelector<HTMLElement>('[data-actor-card="孟婆"] [title="CONDUIT"]')!;
-    expect(conduit.className).toContain("border-[oklch(var(--color-status-success))]");
+    expect(conduit.className).toContain("border-[oklch(var(--color-ink-muted))]");
+  });
+
+  it("draws every role badge neutral — a role is an identity, not a status (v3: danger only for errors)", async () => {
+    const { container } = renderPage();
+    await waitForRoster();
+
+    const badges = [...container.querySelectorAll<HTMLElement>("[data-actor-card] td:last-child [title]")];
+    expect(badges.length).toBeGreaterThan(1);
+    for (const badge of badges) {
+      expect(badge.className).toContain("text-[oklch(var(--color-ink-muted))]");
+      expect(badge.className).not.toMatch(/--color-(status-|danger|success|warning|accent)/);
+    }
   });
 });

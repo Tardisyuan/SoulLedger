@@ -29,7 +29,7 @@ import { ActionsMenu } from "@/components/ui/data-grid/ActionsMenu";
  * administrative screen in this app.
  */
 export default function RecycleBinPage() {
-  const { t } = useI18n();
+  const { t, formatDateTime } = useI18n();
   usePlaque({ hall: useHall(t("plaque.office.records")) });
   const { showToast } = useToast();
   const queryClient = useQueryClient();
@@ -171,7 +171,7 @@ export default function RecycleBinPage() {
                   : <DomainNumber value={entry.dependent_count} />}
               </td>
               <td className="px-4 py-3 font-mono text-xs text-[oklch(var(--color-ink-subtle))]">
-                <DomainText value={entry.deleted_at ? new Date(entry.deleted_at).toLocaleString() : null} />
+                <DomainText value={entry.deleted_at ? formatDateTime(entry.deleted_at) : null} />
               </td>
               {/* 删除人 is its own column now (第三类 D 组答复). `deleted_by` is the
                   username or null — null is a row no session deleted (a cascade,

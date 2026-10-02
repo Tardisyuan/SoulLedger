@@ -17,24 +17,18 @@ import { PageShell } from "@/src/components/ui/PageShell";
 import { EmptyState } from "@/src/components/ui/EmptyState";
 import { badgeVariants } from "@/src/components/ui/Badge";
 import { QueryError } from "@/src/components/ui/PageError";
+import { ROW_HOVER } from "@/components/ui/data-table";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
 
 /**
- * Role badge colours. 规范 v1 §2「徽章 · 只有常态」: no fill — the text and the
- * 1 px border share one token. The 0.1 tints these used to carry are gone with
- * every other badge fill.
+ * Role badges are neutral, the same call `app/users/page.tsx` makes for a user's role: a role is
+ * an identity, not a system state, so it does not borrow the feedback colours (spec v3: danger only
+ * for errors). They used to — EXECUTOR drew in the error red, JUDGE in accent, the rest in
+ * info / success / judging — which made a row of gods read as a row of alerts. The role's name
+ * tells them apart. (`statusTokenLayering.test.ts` had this map on its "still on feedback tokens"
+ * register, waiting for exactly this decision.)
  */
-const ROLE_BADGE_CLASSES: Record<string, string> = {
-  JUDGE: "text-[oklch(var(--color-accent-ink))] border-[oklch(var(--color-accent))]",
-  GUARDIAN: "text-[oklch(var(--color-status-info))] border-[oklch(var(--color-status-info))]",
-  EXECUTOR: "text-[oklch(var(--color-status-error))] border-[oklch(var(--color-status-error))]",
-  CONDUIT: "text-[oklch(var(--color-status-success))] border-[oklch(var(--color-status-success))]",
-  // OVERSEER was missing — `ActorRole` has five members and all three message
-  // bundles carry `actors.roles.OVERSEER`, so the label was right and only the
-  // colour fell to the fallback. Hades is an OVERSEER.
-  OVERSEER: "text-[oklch(var(--color-status-judging))] border-[oklch(var(--color-status-judging))]",
-};
 const ROLE_BADGE_FALLBACK =
   "text-[oklch(var(--color-ink-muted))] border-[oklch(var(--color-ink-muted))]";
 
@@ -86,7 +80,7 @@ function ActorRow({ actor, seatLabel }: { actor: Actor; seatLabel?: string }) {
   return (
     <tr
       data-actor-card={actor.name}
-      className="border-b border-[oklch(var(--color-rule))] hover:bg-[oklch(var(--color-surface-2))] transition-colors"
+      className={`h-(--table-row-h) border-b border-[oklch(var(--color-rule))] ${ROW_HOVER} transition-colors`}
     >
       <td className="px-4 py-2">
         {/* `display_name` and `display_title` are localized by the backend
@@ -112,7 +106,7 @@ function ActorRow({ actor, seatLabel }: { actor: Actor; seatLabel?: string }) {
           <DomainEnum
             namespace="actors.roles"
             value={actor.role}
-            className={roleBadgeClass(ROLE_BADGE_CLASSES[actor.role] ?? ROLE_BADGE_FALLBACK)}
+            className={roleBadgeClass(ROLE_BADGE_FALLBACK)}
           />
           {seatLabel && (
             <span className={cn(roleBadgeClass(ROLE_BADGE_FALLBACK), "tabular-nums")}>
@@ -131,7 +125,7 @@ function ActorTable({ children, ...rest }: { children: React.ReactNode } & React
   return (
     <table className="w-full text-sm" {...rest}>
       <thead className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">
-        <tr className="border-b border-[oklch(var(--color-block))]">
+        <tr className="h-(--control-h-sm) border-b-2 border-[oklch(var(--color-ink))]">
           <th scope="col" className="px-3 py-2 text-left font-normal">{t("menus.name")}</th>
           <th scope="col" className="px-3 py-2 text-right font-normal">{t("users.role")}</th>
         </tr>
@@ -207,7 +201,7 @@ function ActorsPageContent() {
         ) : isLoading ? (
           <div className="space-y-2">
             {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => (
-              <Skeleton key={i} className="h-9 w-full" />
+              <Skeleton key={i} className="h-(--table-row-h) w-full" />
             ))}
           </div>
         ) : actors.length === 0 ? (
@@ -273,7 +267,7 @@ function ActorsPageContent() {
                             onClick={() => toggleBench(civ)}
                             aria-expanded={!!isBenchOpen}
                             aria-label={t("actors.assessors.toggle")}
-                            className="w-full flex items-center gap-3 px-3 py-2 border-b border-[oklch(var(--color-rule))] hover:bg-[oklch(var(--color-surface-2))] transition-colors text-left"
+                            className="w-full min-h-(--table-row-h) flex items-center gap-3 px-4 py-2 border-b border-[oklch(var(--color-rule))] hover:bg-[oklch(var(--color-surface-2))] transition-colors text-left"
                           >
                             <Scale aria-hidden="true" className="w-5 h-5 text-[oklch(var(--color-ink-subtle))] shrink-0" />
                             <div className="flex-1 min-w-0">

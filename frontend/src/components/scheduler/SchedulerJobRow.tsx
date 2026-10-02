@@ -7,7 +7,7 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { Badge } from "@/src/components/ui/Badge";
 import { Button } from "@/src/components/ui/Button";
 import { DomainEnum, MissingValue } from "@/src/components/ui/DomainValue";
-import { durationParts, jobCron, runStatusBadgeClass } from "./schedulerView";
+import { durationParts, jobCron, runStatusBadgeClass, runStatusGlyph } from "./schedulerView";
 
 export const JOB_DESCRIPTION_NAMESPACE = "scheduler.jobs";
 
@@ -93,17 +93,18 @@ export function SchedulerJobRow({ job, canManage, onToggle, onRun, onEdit, onSho
           {job.periodic_task_name}
         </p>
         <div className="flex flex-wrap gap-1">
-          {!job.enabled && <Badge tone="neutral">{t("scheduler.flags.disabled")}</Badge>}
+          {!job.enabled && <Badge tone="neutral" glyph="○">{t("scheduler.flags.disabled")}</Badge>}
           {job.overdue && (
             <Badge
               tone="warning"
+              glyph="◐"
               title={job.expected_at ? t("scheduler.flags.overdue_detail", { time: formatDateTime(job.expected_at) }) : undefined}
             >
               {t("scheduler.flags.overdue")}
             </Badge>
           )}
           {job.consecutive_failures > 0 && (
-            <Badge tone="error">{t("scheduler.flags.failures", { count: String(job.consecutive_failures) })}</Badge>
+            <Badge tone="error" glyph="!">{t("scheduler.flags.failures", { count: String(job.consecutive_failures) })}</Badge>
           )}
         </div>
       </div>
@@ -120,7 +121,7 @@ export function SchedulerJobRow({ job, canManage, onToggle, onRun, onEdit, onSho
         <p className={label}>{t("scheduler.fields.last_run")}</p>
         {last ? (
           <>
-            <DomainEnum namespace="scheduler.status" value={last.status} className={runStatusBadgeClass(last.status)} />
+            <RunStatusBadge status={last.status} />
             <p className="font-mono text-xs text-[oklch(var(--color-ink-muted))]">
               {formatDateTime(last.started_at ?? last.queued_at)}
               {lastDuration && ` · ${t(lastDuration.key, { value: lastDuration.value })}`}
@@ -151,18 +152,24 @@ export function SchedulerJobRow({ job, canManage, onToggle, onRun, onEdit, onSho
             aria-label={t("scheduler.actions.toggle", { job: job.task_name })}
             disabled={togglePending}
             onClick={() => onToggle(job)}
-            // 规范 v2 A1「开关」:32 × 18、1.5px 框;开 = ink 实底、纸色滑块在右;关 = 空底、
-            // ink3 框与滑块在左;禁用 = s2 底、line 框(不调透明度)。选中不用匾色。
-            className={`relative inline-flex h-[18px] w-8 shrink-0 items-center border-[1.5px] p-0.5 transition-colors duration-instant disabled:cursor-not-allowed disabled:border-[oklch(var(--color-line))] disabled:bg-[oklch(var(--color-disabled-surface))] ${
-              job.enabled
-                ? "justify-end bg-[oklch(var(--color-ink))] border-[oklch(var(--color-ink))]"
-                : "justify-start bg-transparent border-[oklch(var(--color-line-strong))]"
-            }`}
+            // 规范 v3:控件点击区至少 44(`--control-h-sm`)。开关的样子仍是规范 v2 A1 的 32 × 18
+            // 轨道(1.5px 框;开 = ink 实底、纸色滑块在右;关 = 空底、ink3 框与滑块在左;
+            // 禁用 = s2 底、line 框,不调透明度;选中不用匾色),现在画在 44 × 44 的按钮里 ——
+            // 此前按钮本身就是那条 18 高的轨道,手机上点不准。
+            className="group inline-flex size-(--control-h-sm) shrink-0 items-center justify-center disabled:cursor-not-allowed"
           >
             <span
               aria-hidden="true"
-              className={`block size-[11px] ${job.enabled ? "bg-[oklch(var(--color-canvas))]" : "bg-[oklch(var(--color-line-strong))]"}`}
-            />
+              className={`relative inline-flex h-[18px] w-8 items-center border-[1.5px] p-0.5 transition-colors duration-instant group-disabled:border-[oklch(var(--color-line))] group-disabled:bg-[oklch(var(--color-disabled-surface))] ${
+                job.enabled
+                  ? "justify-end bg-[oklch(var(--color-ink))] border-[oklch(var(--color-ink))]"
+                  : "justify-start bg-transparent border-[oklch(var(--color-line-strong))]"
+              }`}
+            >
+              <span
+                className={`block size-[11px] ${job.enabled ? "bg-[oklch(var(--color-canvas))]" : "bg-[oklch(var(--color-line-strong))]"}`}
+              />
+            </span>
           </button>
         )}
         {canManage && (
@@ -180,5 +187,15 @@ export function SchedulerJobRow({ job, canManage, onToggle, onRun, onEdit, onSho
         </Button>
       </div>
     </li>
+  );
+}
+
+/** A run's status as a badge: glyph + translated text, raw member in `title` (spec v3: never colour alone). */
+export function RunStatusBadge({ status }: { status: string }) {
+  return (
+    <span className={runStatusBadgeClass(status)} data-run-status-badge={status}>
+      <span aria-hidden="true">{runStatusGlyph(status)}</span>
+      <DomainEnum namespace="scheduler.status" value={status} />
+    </span>
   );
 }
