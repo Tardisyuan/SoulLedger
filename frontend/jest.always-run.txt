@@ -13,6 +13,7 @@ src/__tests__/Spinner.test.tsx
 src/__tests__/a11yEngineBaseline.test.tsx
 src/__tests__/accessTokenNeverBecomesACookie.test.ts
 src/__tests__/arrowNotDoubled.test.ts
+src/__tests__/brandTokensMatchIcon.test.ts
 src/__tests__/chartColourContract.test.ts
 src/__tests__/civilizationMapCoverage.test.ts
 src/__tests__/creditsOssDrift.test.ts
