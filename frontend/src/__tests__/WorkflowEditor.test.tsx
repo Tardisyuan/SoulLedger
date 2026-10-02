@@ -111,6 +111,10 @@ jest.mock("@/src/contexts/I18nContext", () => ({
         "workflow.editor.court_placeholder": "e.g. First Court",
         "workflow.editor.approver_type": "Approver Type",
         "workflow.editor.approver_role": "Approver Role",
+        // The inspector form's short labels (v3 A1 · 72px column).
+        "workflow.editor.field.name": "Name",
+        "workflow.editor.field.court": "Court",
+        "workflow.editor.field.role": "Role",
         "workflow.editor.approver_placeholder": "— select —",
         "users.roles.JUDGE": "判官",
         "workflow.editor.new_node": "New Node",
@@ -570,7 +574,7 @@ describe("WorkflowEditor", () => {
 
   /** The inspector's 节点-tab form (v3 A1) — the only place a node is edited now. */
   const form = () => screen.queryByTestId("node-form");
-  const nameField = () => within(form()!).getByLabelText("Node Name") as HTMLInputElement;
+  const nameField = () => within(form()!).getByLabelText("Name") as HTMLInputElement;
 
   it("E on a node selects THAT node, opens 节点 and focuses its name field", () => {
     renderNamed();
@@ -591,7 +595,7 @@ describe("WorkflowEditor", () => {
     renderNamed();
     fireEvent.keyDown(wrapperFor("B"), { key: "e", bubbles: true });
 
-    const select = within(form()!).getByLabelText("Approver Role") as HTMLSelectElement;
+    const select = within(form()!).getByLabelText("Role") as HTMLSelectElement;
     expect(select.tagName).toBe("SELECT");
     // The table arrives asynchronously; a built-in by its translated copy, a
     // custom role by its display_name.
@@ -819,8 +823,8 @@ describe("WorkflowEditor · validation gates the save", () => {
     const inspector = screen.getByRole("complementary", { name: "workflow.editor.inspector" });
     expect(within(inspector).getAllByText("秦广王 · 分流").length).toBeGreaterThan(0);
     // Wide: the fields are the form's controls, holding this node's values.
-    expect(within(inspector).getByLabelText("Node Name")).toHaveValue("秦广王 · 分流");
-    expect(within(inspector).getByLabelText("Court Code")).toHaveValue("第一殿");
+    expect(within(inspector).getByLabelText("Name")).toHaveValue("秦广王 · 分流");
+    expect(within(inspector).getByLabelText("Court")).toHaveValue("第一殿");
     // The preset chain routes PASS to the next card; FAIL has no edge, so it is
     // the engine's own default — the flow ends rejected — spelled out.
     expect(within(inspector).getByText("→ N2「楚江王 · 初审」")).toBeInTheDocument();

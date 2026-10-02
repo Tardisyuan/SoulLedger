@@ -256,19 +256,6 @@ const FIT_OPTIONS = { padding: { top: "64px", bottom: "64px", left: "24px", righ
 const TOOL_SELECT =
   "flex shrink-0 items-center gap-2 h-(--control-h-sm) pl-3 pr-2 rounded-control border border-[oklch(var(--color-line-strong))] bg-[oklch(var(--color-surface-1))] focus-within:border-[oklch(var(--color-ink))]";
 
-/** `WorkflowTemplate.case_type`'s members, in the order the select lists them. */
-const CASE_TYPES = [
-  "ROUTINE",
-  "APPEAL",
-  "CROSS_REALM",
-  "SPECIAL",
-  "CANONIZATION",
-  "PURGATORY_REVIEW",
-  "HERESY_TRIAL",
-  "HEART_WEIGHING",
-  "DIVINE_TRIAL",
-] as const;
-
 export interface WorkflowTemplateInput {
   name: string;
   description: string;
@@ -1542,11 +1529,20 @@ export default function WorkflowEditor({
             aria-label={t("workflow.editor.case_type_select_label") === "workflow.editor.case_type_select_label" ? "Case Type" : t("workflow.editor.case_type_select_label")}
             className="h-full bg-transparent text-sm text-[oklch(var(--color-ink))] outline-none"
           >
-            {CASE_TYPES.map((ct) => (
-              <option key={ct} value={ct}>
-                {t(`workflow.case_types.${ct}`)}
-              </option>
-            ))}
+            {/* One literal <option> per line, in exactly this shape:
+                `backend/tests/test_workflow_preset_case_types.py` reads them as
+                text to prove every preset's case type is selectable. A `.map`
+                over a const array leaves that test nothing to read (it went
+                red after the v3 A1 change did exactly that). */}
+            <option value="ROUTINE">{t("workflow.case_types.ROUTINE")}</option>
+            <option value="APPEAL">{t("workflow.case_types.APPEAL")}</option>
+            <option value="CROSS_REALM">{t("workflow.case_types.CROSS_REALM")}</option>
+            <option value="SPECIAL">{t("workflow.case_types.SPECIAL")}</option>
+            <option value="CANONIZATION">{t("workflow.case_types.CANONIZATION")}</option>
+            <option value="PURGATORY_REVIEW">{t("workflow.case_types.PURGATORY_REVIEW")}</option>
+            <option value="HERESY_TRIAL">{t("workflow.case_types.HERESY_TRIAL")}</option>
+            <option value="HEART_WEIGHING">{t("workflow.case_types.HEART_WEIGHING")}</option>
+            <option value="DIVINE_TRIAL">{t("workflow.case_types.DIVINE_TRIAL")}</option>
           </select>
         </label>
         {/* Priority as a 0 / 1 / 2 segment, v3 A1. A radio group, so arrow keys
