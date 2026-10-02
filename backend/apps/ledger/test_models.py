@@ -108,4 +108,6 @@ class TestSoulRecordStaysInTheSoulsApp:
         assert ledger_models.RecordCategory is RecordCategory
         assert set(ledger_models.__all__) == {
             "SoulRecord", "LedgerRecord", "RecordType", "RecordCategory",
+            # The ledger's own table (仪表盘「较上月」), not a re-export.
+            "BalanceSnapshot",
         }

@@ -527,3 +527,23 @@ def test_granularity_needs_both_inputs_and_says_unknown_otherwise(clause, count,
     """
     record = SimpleNamespace(statute_clause=clause, occurrence_count=count)
     assert granularity_of(record) == expected
+
+
+@pytest.mark.django_db
+def test_the_ledger_summary_carries_both_inputs_and_unrecorded_stays_unrecorded(make_chinese_soul):
+    """审判台「功过记录」每行的条款与发生次数,读的就是这份 summary 的 records。
+
+    没记的行必须原样是 "" / None —— 不是 1 次、不是某条默认条款。补一个默认值就是
+    这个文件拒绝过的那种发明。
+    """
+    soul = make_chinese_soul("summary")
+    cited = SoulRecord.objects.create(
+        soul=soul, record_type="MERIT", category=RecordCategory.CHARITY, weight=5,
+        description="cited", statute_clause="救濟門#7:賑濟窮民百錢", occurrence_count=12,
+    )
+    _record(soul, "DEMERIT", RecordCategory.GREED, 3, "bare")
+    rows = {r["description"]: r for r in LedgerService.get_ledger_summary(soul)["records"]}
+    assert rows["cited"]["statute_clause"] == cited.statute_clause
+    assert rows["cited"]["occurrence_count"] == 12
+    assert rows["bare"]["statute_clause"] == ""
+    assert rows["bare"]["occurrence_count"] is None

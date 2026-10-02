@@ -10114,6 +10114,10 @@ export interface components {
             total_souls: number;
             /** Format: double */
             average_balance: number | null;
+            /** Format: double */
+            average_balance_prev_month: number | null;
+            /** Format: double */
+            average_balance_delta: number | null;
             state_distribution: components["schemas"]["SoulStateDistribution"][];
             tenants: components["schemas"]["TenantSoulStats"][];
             karma_distribution: components["schemas"]["KarmaBucket"][];
@@ -10164,6 +10168,8 @@ export interface components {
             recorded_at: string;
             event_date: components["schemas"]["LedgerRecordEventDate"] | null;
             is_milestone: boolean;
+            statute_clause: string;
+            occurrence_count: number | null;
         };
         /**
          * @description 200 body of `LedgerBalanceView`.

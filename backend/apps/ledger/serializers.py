@@ -204,6 +204,10 @@ class LedgerRecordSummarySerializer(serializers.Serializer):
     recorded_at = serializers.DateTimeField()
     event_date = LedgerRecordEventDateSerializer(allow_null=True)
     is_milestone = serializers.BooleanField()
+    #: '<Statute.code>:<clause condition_zh>';空串 = 没记。
+    statute_clause = serializers.CharField(allow_blank=True)
+    #: 这一行覆盖几次;null = 没记(不是 0 次)。
+    occurrence_count = serializers.IntegerField(allow_null=True, min_value=1)
 
 
 class LedgerSummarySerializer(serializers.Serializer):
@@ -365,6 +369,10 @@ class LedgerOverviewStatsSerializer(serializers.Serializer):
     total_souls = serializers.IntegerField()
     #: 全部灵魂的平均余额,一位小数;没有灵魂时 null。
     average_balance = serializers.FloatField(allow_null=True)
+    #: 上个月快照(BalanceSnapshot)的平均余额,一位小数;没有上月快照时 null。
+    average_balance_prev_month = serializers.FloatField(allow_null=True)
+    #: `average_balance` 减上月,用两边原值相减再取一位;任一边为 null 时 null。
+    average_balance_delta = serializers.FloatField(allow_null=True)
     state_distribution = SoulStateDistributionSerializer(many=True)
     tenants = TenantSoulStatsSerializer(many=True)
     karma_distribution = KarmaBucketSerializer(many=True)
