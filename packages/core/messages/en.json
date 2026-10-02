@@ -2518,7 +2518,14 @@
       "assistant_admin": "Assistant Admin"
     },
     "queue": "Triage queue",
-    "about": "About"
+    "about": "About",
+    "notifications": "Notifications",
+    "profile": "Personal Center",
+    "welcome": "Home",
+    "buttons": "Menu Buttons",
+    "admin": "System Settings",
+    "assistant": "Assistant admin",
+    "usage": "Actual usage"
   },
   "tenant": {
     "civilizations": {

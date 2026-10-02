@@ -2,7 +2,6 @@
 
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { usersApi, permApi, PAGE_SIZE, type User, type PaginatedResponse } from "@soulledger/core/api";
 import { permissionKeys, userKeys } from "@soulledger/core/query_keys";
@@ -120,11 +119,6 @@ function UsersRoute() {
           {t("users.title")}
           <MenuGloss path="/users" />
         </>
-      }
-      backLink={
-        <Link href="/" className="text-sm text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))]">
-          ← {t("nav.home")}
-        </Link>
       }
       actions={
         <RequirePermission permissions="user.manage">

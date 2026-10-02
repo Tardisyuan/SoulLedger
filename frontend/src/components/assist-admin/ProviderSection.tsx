@@ -23,6 +23,7 @@ import { Button } from "@/src/components/ui/Button";
 import { SelectField, TextField } from "@/src/components/ui/Field";
 import { MONO, SUBTLE, Section, Switch, count } from "./parts";
 import { connectionDraft, fingerprint, hostOf, keySlot, slotKey, type Draft, type DraftKey, type SavedConnection } from "./draft";
+import { ROW_HOVER, ROW_SELECTED } from "@/components/ui/data-table";
 
 const WARN = "border-l-2 border-[oklch(var(--color-warning))] pl-3";
 const OK = "border-l-2 border-[oklch(var(--color-success))] pl-3";
@@ -350,7 +351,7 @@ export function Segment({
                       aria-pressed={m.name === model}
                       onClick={() => choose(m.name)}
                       className={`flex w-full min-w-0 items-center gap-3 px-3 py-2 text-left text-sm ${MONO} ${
-                        m.name === model ? "bg-[oklch(var(--color-surface-2))] shadow-[inset_2px_0_0_oklch(var(--color-ink))]" : ""
+                        m.name === model ? `${ROW_SELECTED} font-semibold` : ROW_HOVER
                       }`}
                     >
                       <span className="min-w-0 flex-1 truncate" title={m.name}>

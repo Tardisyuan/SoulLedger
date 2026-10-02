@@ -2518,7 +2518,14 @@
       "assistant_admin": "Smen Hehy Medu"
     },
     "queue": "Sepu Wedja",
-    "about": "Khet Medjat Ba"
+    "about": "Khet Medjat Ba",
+    "notifications": "Sedjem Sab",
+    "profile": "Djes",
+    "welcome": "Tepy",
+    "buttons": "Aha Menu",
+    "admin": "Smen Hemsu",
+    "assistant": "Smen Hehy Medu",
+    "usage": "Hesb Hehy"
   },
   "tenant": {
     "civilizations": {
