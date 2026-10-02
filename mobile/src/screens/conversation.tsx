@@ -328,7 +328,8 @@ function Header({ onBack, title, subtitle, muted, right }: { onBack: () => void;
       <BackButton onBack={onBack} />
       {/* 1e: iOS centres the title, Android sets it left. */}
       <View style={[styles.fill, !ANDROID && styles.centered]}>
-        <Txt accessibilityRole="header" variant="nav" tone={muted ? "muted" : "ink"} numberOfLines={1}>
+        {/* v3: 20 / 28 like every other title bar; the relation line under it stays (it says something). */}
+        <Txt accessibilityRole="header" variant="title" tone={muted ? "muted" : "ink"} numberOfLines={1}>
           {title}
         </Txt>
         {subtitle ? (
@@ -351,7 +352,7 @@ function HallHeader({ hall, sealed, onBack }: { hall: string; sealed: boolean; o
       <BackButton onBack={onBack} />
       <Glyph text={tr("soul_app.chat.section.hall")} tone={sealed ? "subtle" : "ink"} dotted={sealed} />
       <View style={styles.fill}>
-        <Txt accessibilityRole="header" variant="nav" tone={sealed ? "muted" : "ink"}>
+        <Txt accessibilityRole="header" variant="title" tone={sealed ? "muted" : "ink"}>
           {tr("soul_app.chat.hall.title", { hall })}
         </Txt>
         <Txt variant="caption" tone={sealed ? "subtle" : "muted"} style={styles.hallSub}>
