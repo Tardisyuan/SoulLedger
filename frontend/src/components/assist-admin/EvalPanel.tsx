@@ -324,6 +324,7 @@ function RunDetail({ id }: { id: number }) {
                   {isOpen && (
                     <tr>
                       <td colSpan={5 + detail.candidates.length} className="pb-2">
+                        <div className="row-expand"><div>
                         {ret && <RetrievalDetail wanted={wanted} got={ret.got} allHit={ret.hit} />}
                         <div className="grid gap-2 sm:grid-cols-2">
                           {row.byCandidate.map((r, i) =>
@@ -337,6 +338,7 @@ function RunDetail({ id }: { id: number }) {
                             ) : null
                           )}
                         </div>
+                        </div></div>
                       </td>
                     </tr>
                   )}

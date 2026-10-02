@@ -287,7 +287,8 @@ export function Segment({
               </button>
             </div>
             {open && (
-              <dl id={`${p}-preset-details`} className="mt-2 grid gap-1 bg-[oklch(var(--color-surface-2))] p-3 text-sm">
+              <div className="row-expand mt-2">
+              <dl id={`${p}-preset-details`} className="grid gap-1 bg-[oklch(var(--color-surface-2))] p-3 text-sm">
                 <div className="flex flex-wrap gap-x-3">
                   <dt className="text-[oklch(var(--color-ink-muted))]">{t("assist_admin.provider.type")}</dt>
                   <dd>{typeLabel(platform.provider!)}</dd>
@@ -298,6 +299,7 @@ export function Segment({
                 </div>
                 <p className={SUBTLE}>{t("assist_admin.provider.locked_note")}</p>
               </dl>
+              </div>
             )}
           </div>
         )}

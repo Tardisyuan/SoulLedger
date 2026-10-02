@@ -149,6 +149,7 @@ export function DateProblemsPanel({ soulId, soulProblems, records, onChanged }: 
                 </span>
               </button>
               {isOpen && (
+                <div className="row-expand">
                 <div className="px-3 pb-3 space-y-3 border-t border-[oklch(var(--color-hairline))] pt-2">
                   {group.map((occ, idx) => (
                     <div key={`${occ.recordId ?? "soul"}-${idx}`} className="text-sm text-[oklch(var(--color-ink-muted))] space-y-1">
@@ -193,6 +194,7 @@ export function DateProblemsPanel({ soulId, soulProblems, records, onChanged }: 
                       )}
                     </div>
                   ))}
+                </div>
                 </div>
               )}
             </div>
