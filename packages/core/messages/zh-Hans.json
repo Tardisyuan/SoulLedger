@@ -2408,6 +2408,8 @@
       "expired": "链接已过期",
       "refetch": "重新获取",
       "refetch_short": "重取",
+      "add": "配图",
+      "max": "最多 {{max}} 张",
       "viewer_hint": "← → 切换 · Esc 关闭",
       "prev": "上一张",
       "next": "下一张"

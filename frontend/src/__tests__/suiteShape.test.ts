@@ -82,6 +82,7 @@ const COLLECTED_FILES = [
   "PermissionsMatrixDiff.test.ts",
   "PermissionsPage.roleRename.test.tsx",
   "PostCard.test.tsx",
+  "PostComposer.test.tsx",
   "PostMediaGrid.test.tsx",
   "paginatedPagesCanBePaged.test.ts",
   "permissionGatesActuallyWithhold.test.tsx",
