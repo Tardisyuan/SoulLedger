@@ -200,6 +200,14 @@ export interface DataTableProps<T> {
   className?: string
 }
 
+/**
+ * 表头单元格(v3 `.ds-th`):吸顶在表格自己的滚动框里(z 用 `--z-index-sticky`),界面字 11、
+ * muted、大写,下沿 1px 行线。线画成 inset 阴影而不是边框:表格是 border-collapse,
+ * 折叠的边框属于表格网格,单元格吸顶滚动时边框会留在原地(与权限矩阵同一个原因)。
+ */
+const TH_CLASS =
+  'sticky top-0 z-sticky bg-[oklch(var(--color-canvas))] shadow-[inset_0_-1px_0_oklch(var(--color-line))]'
+
 const ALIGN_CLASS: Record<NonNullable<DataTableColumn['align']>, string> = {
   left: 'text-left',
   center: 'text-center',
@@ -318,7 +326,11 @@ export function DataTable<T>({
           后果不止一条横向滚动条:所有 `fixed inset-0` 的遮罩与弹窗按 457 铺开、
           居中在 228,一半落在可视区外,里面的按钮「可见、可用、可滚动到」却点不动。 */}
       {/* 账页不装框:表格没有外框,表头下接区块边界线,行与行之间是行线(规范 v1 §2)。 */}
-      <div className="relative overflow-x-auto">
+      {/* 吸顶表头(v3 表格:sticky z-20):≥768 时这个框也是纵向滚动框,最高一屏
+          (`--content-min-h`),表头吸在框顶 —— 页面级吸顶做不到,因为横向滚动的框
+          本身就是 sticky 的参照,而它不纵向滚动。`isolate` 把表头的 z-20 关在框里,
+          滚动时不会压过页面上同为 20 的筛选栏。<768 只横向滚,表头不吸顶。 */}
+      <div className="relative isolate overflow-x-auto md:max-h-(--content-min-h)">
         {/* `text-sm` (13px), not `text-sm` (14px). Every body cell that does not
             set its own size inherits from here, so this one class is the base
             size of thirteen pages' tables — and it was the single largest block
@@ -335,11 +347,11 @@ export function DataTable<T>({
               ))}
             </colgroup>
           )}
-          {/* 补足 C15 表格细节 / B9:表头 11 等宽 ink3,下沿 2px ink。 */}
-          <thead className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">
-            <tr className="h-(--control-h-sm) border-b-2 border-[oklch(var(--color-ink))]">
+          {/* v3 `.ds-th`(替换 v2 B9 的「11 等宽 ink3,下沿 2px ink」):界面字 11、muted、大写、下沿 1px 行线。 */}
+          <thead className="text-2xs uppercase text-[oklch(var(--color-ink-muted))]">
+            <tr className="h-(--control-h-sm)">
               {selection && (
-                <th scope="col" className="w-11 p-0">
+                <th scope="col" className={cn(TH_CLASS, 'w-11 p-0')}>
                   <label className="flex h-full min-h-(--control-h-sm) items-center justify-center px-3 cursor-pointer">
                     <input
                       type="checkbox"
@@ -364,6 +376,7 @@ export function DataTable<T>({
                     scope="col"
                     aria-sort={ariaSort(column)}
                     className={cn(
+                      TH_CLASS,
                       'font-normal',
                       align,
                       isSortable ? 'p-0' : cellPadding,
