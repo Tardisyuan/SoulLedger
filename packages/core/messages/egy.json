@@ -2433,6 +2433,8 @@
       "expired": "Tut Nen Wenen",
       "refetch": "Wehem Ini Tut",
       "refetch_short": "Wehem Ini",
+      "add": "Ini Tut",
+      "max": "Tut Er Pehwy {{max}}",
       "viewer_hint": "← → Khemen · Khetem",
       "prev": "Tut Khet",
       "next": "Tut Ky"
