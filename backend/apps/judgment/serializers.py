@@ -60,7 +60,10 @@ class StatuteSerializer(serializers.ModelSerializer):
             "text_zh", "text_en", "text_egy",
             "display_title", "display_text", "is_derived", "citation_count",
             "source", "source_notes", "payload_json",
+            "revision", "effective_from",
         ]
+        # 版本由 `Statute.save` 在条文变了时定,不是谁填的值(这个视图集本来就只读)。
+        read_only_fields = ["revision", "effective_from"]
 
     def get_citation_count(self, obj) -> int | None:
         """How many times this tenant has cited the article — or ``None``.
@@ -180,7 +183,7 @@ class JudgmentSerializer(FieldPermissionMixin, serializers.ModelSerializer):
     class Meta:
         model = Judgment
         fields = [
-            "id", "soul", "soul_name", "civilization", "judge", "judge_name",
+            "id", "case_number", "soul", "soul_name", "civilization", "judge", "judge_name",
             "court", "realm_id", "evidence_json", "confession", "verdict", "notes",
             "citations",
             "is_final", "created_at", "concluded_at",

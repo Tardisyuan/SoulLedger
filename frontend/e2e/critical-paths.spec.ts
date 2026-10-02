@@ -125,6 +125,10 @@ test.describe("Critical path: login and create a soul", () => {
 
     await expect(page).toHaveURL(`/judgment/${OPENED_JUDGMENT.id}`);
     expect(api.countOf("POST", "/judgment/")).toBe(0);
+    // 审判台页头:案号整串、可复制(CASE_NUMBER_POLICY)—— 不是截到 8 位的 `CN-2026-`。
+    await expect(page.getByRole("button", { name: `复制案号 ${OPENED_JUDGMENT.case_number}` })).toHaveText(
+      `${OPENED_JUDGMENT.case_number} ⧉`
+    );
   });
 
   test("a failed create keeps the modal open and reports the error", async ({ page }) => {

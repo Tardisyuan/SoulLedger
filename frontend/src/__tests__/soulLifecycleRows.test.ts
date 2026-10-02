@@ -107,6 +107,7 @@ describe("buildJudgmentMarkers", () => {
   function judgment(overrides: Partial<Judgment> = {}): Judgment {
     return {
       id: "j1",
+      case_number: "CN-2026-0001",
       soul: "s1",
       soul_name: "x",
       civilization: "CHINESE",
