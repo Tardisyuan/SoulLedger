@@ -2358,7 +2358,26 @@
     },
     "visibility_label": "Post visibility",
     "follow_error": "Follow action failed",
-    "reactions": "Reactions"
+    "reactions": "Reactions",
+    "back_to_feed": "Back to feed",
+    "compose": "New post",
+    "lamp": {
+      "light": "Light the lamp",
+      "lit": "Lamp lit",
+      "lit_short": "Lit"
+    },
+    "media": {
+      "expired": "Link expired",
+      "refetch": "Fetch again",
+      "refetch_short": "Refetch",
+      "viewer_hint": "← → to switch · Esc to close",
+      "prev": "Previous image",
+      "next": "Next image"
+    },
+    "legend": {
+      "light": "{{list}} are light reactions; only the total is counted",
+      "lamp": "The eternal lamp weighs most: it stands apart and is not counted beside the other four"
+    }
   },
   "tenants": {
     "active": "Active",

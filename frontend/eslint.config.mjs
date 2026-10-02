@@ -129,6 +129,8 @@ const RHYTHM_EXEMPT = {};
 const ROUND_ALLOW = new Set([
   "app/social/follows/page.tsx",
   "src/components/social/ProfileCard.tsx",
+  // A5 朋友圈的首字头像(帖子 / 评论 / 关注行 / 个人页),同 ClaimAvatar:例外只覆盖这一个元素。
+  "src/components/social/Avatar.tsx",
   "src/components/ui/Spinner.tsx",
   "app/admin/stats/page.tsx",
   // 审判队列的认领标:一位官员的头像(首字),规范 v1 第三类 A·02 画成圆形,属头像例外。
