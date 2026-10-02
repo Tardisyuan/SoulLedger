@@ -230,6 +230,10 @@ describe("DashboardPage overview", () => {
       ["+300", `${(13 / 14) * 100}%`],
     ]);
     expect(screen.getByText(/dashboard\.bucket_width/)).toBeInTheDocument();
+    // 只数已处置的(Design A4「已处置 · 每格 50」):n 是直方图自己的 total(10),不是 total_souls(4)。
+    const scope = container.querySelector("[data-histogram-scope]");
+    expect(scope).toHaveTextContent(/^dashboard\.disposed · n = 10 · dashboard\.bucket_width$/);
+    expect(scope).not.toHaveTextContent("n = 4");
     // Absence: no feedback colour anywhere in the histogram.
     expect(container.querySelector("[data-histogram]")?.innerHTML).not.toMatch(/--color-(danger|success)/);
   });

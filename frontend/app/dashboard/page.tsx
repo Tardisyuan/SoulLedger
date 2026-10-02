@@ -359,10 +359,12 @@ function DashboardContent() {
               <ChartCard
                 title={t("dashboard.balance_distribution")}
                 aside={
-                  stats ? (
-                    <span className="font-mono">
-                      n = {stats.total_souls}
-                      {stats.balance_histogram ? ` · ${t("dashboard.bucket_width", { n: String(stats.balance_histogram.bucket_width) })}` : null}
+                  // 只数已处置的灵魂(Design A4「已处置 · 每格 50」,用户 2026-10-02),所以 n 是直方图自己的
+                  // total(= 已处置人数),不是 total_souls。
+                  stats?.balance_histogram ? (
+                    <span className="font-mono" data-histogram-scope="">
+                      {t("dashboard.disposed")} · n = {stats.balance_histogram.total} ·{" "}
+                      {t("dashboard.bucket_width", { n: String(stats.balance_histogram.bucket_width) })}
                     </span>
                   ) : null
                 }

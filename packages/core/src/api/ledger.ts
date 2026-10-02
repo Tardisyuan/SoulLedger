@@ -19,7 +19,8 @@ export interface LedgerStatsOverview {
   }[];
   /** 旧的七格(欢迎页、调派提案页、/admin/stats 在读)。仪表盘的等宽直方图读 `balance_histogram`。 */
   karma_distribution: { label: string; count: number }[];
-  /** 等宽直方图:[-300, 300) 每 `bucket_width` 一格,两端各一格开口(min / max 为 null)。半开区间 [min, max)。 */
+  /** 等宽直方图:[-300, 300) 每 `bucket_width` 一格,两端各一格开口(min / max 为 null)。半开区间 [min, max)。
+   *  **只数已处置的灵魂**,所以 `total` 是已处置人数,不是 `total_souls`。 */
   balance_histogram: {
     bucket_width: number;
     buckets: { min: number | null; max: number | null; count: number }[];
