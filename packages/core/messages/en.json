@@ -80,9 +80,8 @@
   },
   "about": {
     "title": "About & credits",
-    "intro": "The typefaces, ornament, images, open-source software, texts and services this app uses, with their licences and sources.",
+    "intro": "The typefaces, images, open-source software, texts and services this app uses, with their licences and sources.",
     "fonts": "Typefaces",
-    "ornament": "Ornament",
     "images": "Seal edges",
     "licence": "Licence",
     "public_domain": "Public domain",

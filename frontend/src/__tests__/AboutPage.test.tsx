@@ -15,11 +15,13 @@ const renderIn = (locale: Locale) =>
   );
 
 describe("AboutPage", () => {
-  it("lists typefaces, ornament and seal-edge images with their licences", () => {
+  it("lists typefaces and seal-edge images with their licences", () => {
     renderIn("zh-Hans");
     expect(screen.getByRole("heading", { name: /字体/ })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: /纹样/ })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /印的残边/ })).toBeInTheDocument();
+    // v2 的匾纹带与分节纹(取自 Owen Jones)已从两端删光(2026-10-03),纹样一节随之撤掉。
+    expect(screen.queryByRole("heading", { name: /纹样/ })).toBeNull();
+    expect(screen.queryByText("Owen Jones")).toBeNull();
     for (const font of ["Archivo", "LXGW Seal", "Noto Sans Egyptian Hieroglyphs"]) {
       expect(screen.getByText(font)).toBeInTheDocument();
     }
@@ -28,7 +30,6 @@ describe("AboutPage", () => {
       expect(screen.queryByText(font)).toBeNull();
     }
     expect(screen.getAllByRole("link", { name: "SIL Open Font License 1.1" })).toHaveLength(9);
-    expect(screen.getByText("Owen Jones").closest("li")).toHaveTextContent("公有领域");
   });
 
   it("credits Turin S 2312 as CC0 with a link to its Commons page, and nowhere says CC BY", () => {
@@ -94,6 +95,6 @@ describe("AboutPage", () => {
     // egy 是懒加载的包:先等它到,否则量到的是 zh 回退。
     expect(await screen.findByRole("heading", { level: 1, name: "Tepy Hena Sesen" })).toBeInTheDocument();
     expect(screen.getByText("Museo Egizio, Torino")).toBeInTheDocument();
-    expect(screen.getByText("Owen Jones").closest("li")).toHaveTextContent("Sesen En Neb");
+    expect(screen.getByText("Archivo").closest("li")).toHaveTextContent("SIL Open Font License 1.1");
   });
 });
