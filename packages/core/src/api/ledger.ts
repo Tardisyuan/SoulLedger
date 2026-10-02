@@ -3,8 +3,13 @@ import { api } from "./client";
 import type { HistoricalDate } from "../domain/dates";
 
 export interface LedgerStatsOverview {
+  /** 这份聚合算出来的时刻(ISO)—— 身份带「截至 HH:MM」。 */
+  as_of: string;
   total_souls: number;
-  state_distribution: { state: string; label: string; count: number }[];
+  /** 全部灵魂的平均余额(merit − demerit),一位小数;没有灵魂时 null。 */
+  average_balance: number | null;
+  /** `average_balance`:这个状态下的平均余额,一位小数;没有灵魂时 null。 */
+  state_distribution: { state: string; label: string; count: number; average_balance: number | null }[];
   tenants: {
     tenant_id: number;
     tenant_code: string;
@@ -12,7 +17,14 @@ export interface LedgerStatsOverview {
     total_souls: number;
     state_breakdown: Record<string, number>;
   }[];
+  /** 旧的七格(欢迎页、调派提案页、/admin/stats 在读)。仪表盘的等宽直方图读 `balance_histogram`。 */
   karma_distribution: { label: string; count: number }[];
+  /** 等宽直方图:[-300, 300) 每 `bucket_width` 一格,两端各一格开口(min / max 为 null)。半开区间 [min, max)。 */
+  balance_histogram: {
+    bucket_width: number;
+    buckets: { min: number | null; max: number | null; count: number }[];
+    total: number;
+  };
   recent_activity: {
     id: number;
     action: string;
@@ -29,6 +41,10 @@ export interface LedgerStatsOverview {
     /** `Realm.realm_type` —— 仪表盘按它选图案(web `REALM_PATTERNS`)。 */
     realm_type: "HELL" | "PURGATORY" | "BLISS" | "NEUTRAL";
     count: number;
+    /** 容量;null = 未记录。 */
+    capacity: number | null;
+    /** 此刻在押,与界域页、发落 `realm_full` 同一口径 —— 「占容量」= held / capacity。 */
+    held: number;
   }[];
 }
 

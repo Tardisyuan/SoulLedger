@@ -58,6 +58,7 @@ from apps.social.serializers import (
     UserProfileUpdateSerializer,
 )
 from apps.social.services import CommentService, FollowService, PostService, ReactionService
+from apps.social.soul_circle import reaction_kind_counts
 from apps.social.visibility import visible_posts
 
 
@@ -94,7 +95,8 @@ class PostViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, viewsets.ModelVie
         qs = scope_to_tenant(super().get_queryset(), self.request)
         # The visibility clause lived here and only here. See
         # apps/social/visibility.py for what that cost.
-        return visible_posts(self.request, qs).order_by("-create_time")
+        # 五种表态各自的数(`PostSerializer.reaction_counts`);每页一次聚合。
+        return visible_posts(self.request, qs).annotate(**reaction_kind_counts()).order_by("-create_time")
 
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
@@ -114,7 +116,7 @@ class PostViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, viewsets.ModelVie
             author_id__in=following_ids,
             visibility__in=["PUBLIC", "FOLLOWERS"],
             tenant=tenant,
-        ).select_related("author").order_by("-create_time")
+        ).select_related("author").annotate(**reaction_kind_counts()).order_by("-create_time")
         page = self.paginate_queryset(qs)
         if page is not None:
             serializer = PostListSerializer(page, many=True)

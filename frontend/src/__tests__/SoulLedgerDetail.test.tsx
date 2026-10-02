@@ -292,4 +292,21 @@ describe("SoulJudgmentHistory — 全部审判", () => {
     expect(rows[1]).toHaveTextContent("◇");
     expect(rows[2]).toHaveTextContent("✕");
   });
+
+  it("行标题是「第 N 世 · 种类」(cycle 0 = 第 1 世),庭与判官退到第二行", () => {
+    wrap(
+      <SoulJudgmentHistory
+        judgments={[
+          judgment({ id: "x", created_at: "2026-06-01T00:00:00Z", cycle: 3, kind: "AMENDMENT", court: "第五殿", judge_name: "阎罗王" }),
+          judgment({ id: "y", created_at: "2026-05-01T00:00:00Z", cycle: 0, kind: "ORIGINAL" }),
+        ]}
+      />
+    );
+    const [fourth, first] = screen.getAllByTestId("judgment-life-kind");
+    expect(fourth).toHaveTextContent(/^第 4 世 · 加减项$/);
+    expect(first).toHaveTextContent(/^第 1 世 · 初审$/);
+    // 庭与判官不在标题里,在下一行。
+    expect(fourth).not.toHaveTextContent("第五殿");
+    expect(screen.getAllByTestId("ledger-judgment-row")[0]).toHaveTextContent("第五殿 · 阎罗王");
+  });
 });
