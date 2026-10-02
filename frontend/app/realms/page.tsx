@@ -134,9 +134,10 @@ function RealmsPageContent() {
   const rootName = root
     ? realmStationLabel(t, { id: root.id, code: root.realm_code, realm: root, state: "pending" }) ?? root.realm_code
     : undefined;
+  const rootHeld = root && occupancyQuery.isSuccess ? String(occupancy.get(root.id) ?? 0) : undefined;
   usePlaque({
     title: rootName ? t("plaque.realms", { root: rootName }) : undefined,
-    meta: root && occupancyQuery.isSuccess ? t("plaque.held", { n: String(occupancy.get(root.id) ?? 0) }) : undefined,
+    meta: rootHeld ? t("plaque.held", { n: rootHeld }) : undefined,
   });
 
   return (
