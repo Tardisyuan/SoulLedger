@@ -774,11 +774,6 @@
         "END": "结束"
       },
       "signers": "会签人",
-      "signer_label": "会签人 {{n}}",
-      "signer_add": "添加会签人",
-      "signer_remove": "移除",
-      "threshold": "通过所需人数",
-      "threshold_hint": "留空 = 每位会签人都须同意;人数已不可能达到时立即驳回。",
       "signers_summary": "{{who}} · {{k}}/{{n}} 同意即通过",
       "timeout": {
         "label": "超时",
@@ -794,7 +789,6 @@
         "hint": "超时由定时任务每 5 分钟检查一次后触发;定时调度没有运行时不会触发。",
         "summary": "{{hours}} 小时后 · {{action}}"
       },
-      "reject_to": "驳回到",
       "reject_to_none": "— 不退回,流程结束 —",
       "template_level": "整个模板",
       "condition": {
@@ -862,6 +856,22 @@
       "exit_target": "目标",
       "exit_up": "上移出口",
       "exit_down": "下移出口",
+      "field": {
+        "name": "名称",
+        "kind": "类型",
+        "stage": "阶段",
+        "court": "殿号",
+        "approver": "审批人",
+        "role": "角色",
+        "signers": "会签人",
+        "threshold": "门槛",
+        "reject_to": "驳回到"
+      },
+      "threshold_of": "/ {{n}} 人",
+      "threshold_rule": "{{n}} 人中任 {{k}} 人通过即放行",
+      "signer_remove_named": "移除 {{name}}",
+      "signer_placeholder": "输入姓名后回车",
+      "signer_add_role": "按角色添加会签人",
       "preview_count": "{{nodes}} 节点 · {{edges}} 连线",
       "flow_count": "流程 · {{n}} 节点",
       "glyph_legend": "左列字形是角色（▷ 入口 · □ 步骤 · ◇ 分支 · ■ 终点），名称前是节点类型",

@@ -774,11 +774,6 @@
         "END": "End"
       },
       "signers": "Signers",
-      "signer_label": "Signer {{n}}",
-      "signer_add": "Add signer",
-      "signer_remove": "Remove",
-      "threshold": "Approvals needed",
-      "threshold_hint": "Blank = every signer must approve. The node is refused as soon as the number can no longer be reached.",
       "signers_summary": "{{who}} · {{k}} of {{n}} to pass",
       "timeout": {
         "label": "Timeout",
@@ -794,7 +789,6 @@
         "hint": "A scheduled job checks timeouts every 5 minutes; they do not fire while the scheduler is not running.",
         "summary": "After {{hours}} h · {{action}}"
       },
-      "reject_to": "On refusal, return to",
       "reject_to_none": "— none: the flow ends —",
       "template_level": "The template",
       "condition": {
@@ -862,6 +856,22 @@
       "exit_target": "Target",
       "exit_up": "Move exit up",
       "exit_down": "Move exit down",
+      "field": {
+        "name": "Name",
+        "kind": "Kind",
+        "stage": "Stage",
+        "court": "Court",
+        "approver": "Approver",
+        "role": "Role",
+        "signers": "Signers",
+        "threshold": "Threshold",
+        "reject_to": "Reject to"
+      },
+      "threshold_of": "of {{n}}",
+      "threshold_rule": "Any {{k}} of {{n}} pass it",
+      "signer_remove_named": "Remove {{name}}",
+      "signer_placeholder": "Type a name, Enter",
+      "signer_add_role": "Add a signer by role",
       "preview_count": "{{nodes}} nodes · {{edges}} edges",
       "flow_count": "Flow · {{n}} nodes",
       "glyph_legend": "The left glyph is the role (▷ entry · □ step · ◇ branch · ■ end); the one before the name is the node kind",
