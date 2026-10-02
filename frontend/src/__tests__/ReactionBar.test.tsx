@@ -1,7 +1,7 @@
 /**
  * 表态条(A5 · v3 Post.dc):五种对齐现有表态,长明灯在末位、竖分隔之后单独一格;
  * 长明灯 Noto Serif SC 600、1px ink 描边,点亮后 ink 实底反白并换字;其余四种无框。
- * 选中靠 aria-pressed + 字重,不只靠颜色。没有分类计数,右端只写总数。
+ * 选中靠 aria-pressed + 字重,不只靠颜色。计数:右端是四种轻表态之和,长明灯的数单独写在灯那一格。
  */
 import { render, screen } from "@testing-library/react";
 
@@ -70,5 +70,29 @@ describe("表态条", () => {
     const like = screen.getByRole("button", { name: /react\.like/ });
     expect(like).toHaveAttribute("aria-pressed", "false");
     expect(like).not.toHaveClass("font-semibold");
+  });
+
+  it("有分类计数时:右端只数四种轻表态,长明灯的数写在灯里、不进右端", () => {
+    render(
+      <ReactionBar
+        postId="p1"
+        totals={{ reactions: 10, comments: 2 }}
+        counts={{ LIKE: 4, LOVE: 1, RESPECT: 0, SYMPATHY: 0, ETERNAL_LIGHT: 5 }}
+      />
+    );
+    expect(screen.getByTestId("post-totals").textContent).toBe("social.reactions 5 · social.comments 2");
+    const lamp = screen.getByRole("button", { name: /social\.lamp\.light/ });
+    expect(lamp).toContainElement(screen.getByTestId("lamp-count"));
+    expect(screen.getByTestId("lamp-count")).toHaveTextContent("5");
+  });
+
+  it("没人点过长明灯就不写 0;没给计数(评论)也不写", () => {
+    const { unmount } = render(
+      <ReactionBar postId="p1" totals={{ reactions: 1, comments: 0 }} counts={{ LIKE: 1, LOVE: 0, RESPECT: 0, SYMPATHY: 0, ETERNAL_LIGHT: 0 }} />
+    );
+    expect(screen.queryByTestId("lamp-count")).toBeNull();
+    unmount();
+    render(<ReactionBar commentId="c1" />);
+    expect(screen.queryByTestId("lamp-count")).toBeNull();
   });
 });

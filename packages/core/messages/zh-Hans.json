@@ -1032,7 +1032,9 @@
     "civ_empty": "尚未入册 · 去登记",
     "tab_ledger": "账本",
     "top_realms": "界域前十",
-    "avg_scope": "全部已入簿灵魂"
+    "avg_scope": "全部已入簿灵魂",
+    "occupancy": "占容量",
+    "bucket_width": "每格 {{n}}"
   },
   "ledger": {
     "title": "功德统计",
@@ -1218,7 +1220,9 @@
       "notes_placeholder": "输入备注...",
       "create_workflow": "发起审批流程",
       "create_workflow_hint": "勾选后,结案将按该文明与案件类型匹配的模板自动创建一条审批流程。",
-      "conclude_with_workflow": "落判并发起"
+      "conclude_with_workflow": "落判并发起",
+      "current_realm": "所在界域",
+      "method": "审判方式"
     },
     "create_success": "已创建审判",
     "create_error": "创建审判失败",
@@ -1428,7 +1432,9 @@
         "ORIGINAL": "初审",
         "AMENDMENT": "加减项",
         "REOPEN": "重开"
-      }
+      },
+      "col_merit_demerit": "功 / 过",
+      "col_cycle_kind": "世次 / 种类"
     },
     "admission": {
       "title": "证据 · 采信",
@@ -1489,6 +1495,11 @@
     },
     "row_mark": {
       "mine": "待我处理"
+    },
+    "methods": {
+      "STANDARD": "标准审判",
+      "HEART_WEIGHING": "称心审判",
+      "DIABOLICAL_TRIAL": "魔鬼审判"
     }
   },
   "audit": {

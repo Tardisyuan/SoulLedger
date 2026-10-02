@@ -16,6 +16,8 @@ export interface Post {
   visibility: "PUBLIC" | "TENANT" | "FOLLOWERS" | "PRIVATE";
   comment_count: number;
   reaction_count: number;
+  /** 五种表态各自的数(未删除的)。 */
+  reaction_counts: Record<"LIKE" | "LOVE" | "RESPECT" | "SYMPATHY" | "ETERNAL_LIGHT", number>;
   tenant?: number;
   create_time: string;
   update_time?: string;
