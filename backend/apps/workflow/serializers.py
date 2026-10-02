@@ -507,6 +507,10 @@ class ApprovalWorkflowSerializer(serializers.ModelSerializer):
     current_node_detail = ApprovalNodeSerializer(source="current_node", read_only=True)
     soul_name = serializers.CharField(source="soul.name", read_only=True)
     judgment_verdict = serializers.CharField(source="judgment.verdict", read_only=True, allow_null=True)
+    # 实例信息卡上的案号(人读的那个编号);没挂审判的流程是 null。
+    judgment_case_number = serializers.CharField(
+        source="judgment.case_number", read_only=True, allow_null=True, default=None
+    )
 
     # `validate()` below locks these three, but only when `self.instance is not
     # None` — i.e. on update. On POST there is no instance, so the branch never
@@ -529,6 +533,7 @@ class ApprovalWorkflowSerializer(serializers.ModelSerializer):
             "id",
             "judgment",
             "judgment_verdict",
+            "judgment_case_number",
             "soul",
             "soul_name",
             "workflow_name",
