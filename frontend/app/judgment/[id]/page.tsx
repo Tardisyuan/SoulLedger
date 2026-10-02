@@ -71,6 +71,7 @@ import {
 } from "@/src/components/judgment/JudgmentPlacement";
 import { useJudgmentNextAfter, useJudgmentPrevious } from "@soulledger/core/hooks/useJudgments";
 import { usePlaque } from "@/src/components/plaque/Plaque";
+import { useHall } from "@/src/components/plaque/useHall";
 
 /**
  * 判决书 —— the judgment detail page.
@@ -432,8 +433,11 @@ export default function JudgmentDetailPage({ params }: PageProps) {
 
   // 身份带:题「审判台」(v3 `pageTitle`;面包屑末段是「详情」)。右栏是案号(v3 `identity-case`):
   // 身份带只收文字,可复制的那一个在下面的 eyebrow 里(CASE_NUMBER_POLICY)。
+  // 殿名:这个案子的殿;案子没记殿(`court` 是空串)就写刑名司。
+  const hall = useHall(judgment?.court || t("plaque.office.trials"));
   usePlaque({
     title: t("plaque.desk"),
+    hall,
     meta: judgment?.case_number ? `${t("judgment.case_number")} ${judgment.case_number}` : undefined,
   });
 

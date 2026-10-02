@@ -1050,7 +1050,8 @@
     "top_realms": "Top 10 realms",
     "avg_scope": "All souls in the ledger",
     "occupancy": "Of capacity",
-    "bucket_width": "{{n}} per bar"
+    "bucket_width": "{{n}} per bar",
+    "vs_last_month": "vs last month"
   },
   "ledger": {
     "title": "Deed Statistics",
@@ -1085,7 +1086,10 @@
       "col_demerit": "Demerit",
       "col_balance": "Net",
       "total": "Total",
-      "empty": "No entries recorded."
+      "empty": "No entries recorded.",
+      "occurrences": "Occurred {{n}}×",
+      "milestone": "Milestone",
+      "clause": "Clause"
     },
     "series_effective": "Effective",
     "series_decayed": "Decayed away",
@@ -2573,7 +2577,8 @@
       "workflow_process_timeouts_for_tenant": "Process approval-node timeouts",
       "social_cleanup_orphan_post_media": "Delete unposted circle images",
       "chat_reconcile_inbox": "Reconcile the hall inbox with Synapse",
-      "soul_assist_purge_history": "Purge assistant history"
+      "soul_assist_purge_history": "Purge assistant history",
+      "ledger_snapshot_balance_for_tenant": "Snapshot monthly balances"
     },
     "status": {
       "PENDING": "Queued",
@@ -4472,6 +4477,12 @@
     "desk": "Judgment desk",
     "queue": "Judgment queue",
     "permissions": "Permissions",
-    "permissions_meta": "{{roles}} roles · {{perms}} permissions"
+    "permissions_meta": "{{roles}} roles · {{perms}} permissions",
+    "office": {
+      "rules": "Office of Rules",
+      "records": "Office of Records",
+      "trials": "Office of Trials",
+      "tenth": "Tenth Court"
+    }
   }
 }

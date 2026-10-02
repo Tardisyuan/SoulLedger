@@ -4,6 +4,8 @@ import { useQuery } from "@tanstack/react-query";
 import { api, type Organization, type PaginatedResponse } from "@soulledger/core/api";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { usePlaque } from "@/src/components/plaque/Plaque";
+import { useHall } from "@/src/components/plaque/useHall";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SectionTitle } from "@/src/components/plaque/SectionTitle";
 import { ChevronDown } from "lucide-react";
@@ -82,6 +84,7 @@ const CATEGORY_COLORS: Record<string, string> = {
 
 function OrganizationsPageContent() {
   const { t } = useI18n();
+  usePlaque({ hall: useHall(t("plaque.office.rules")) });
   const { user } = useTenant();
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
 

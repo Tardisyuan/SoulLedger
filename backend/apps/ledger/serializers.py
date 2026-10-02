@@ -204,6 +204,10 @@ class LedgerRecordSummarySerializer(serializers.Serializer):
     recorded_at = serializers.DateTimeField()
     event_date = LedgerRecordEventDateSerializer(allow_null=True)
     is_milestone = serializers.BooleanField()
+    #: '<Statute.code>:<clause condition_zh>';空串 = 没记。
+    statute_clause = serializers.CharField(allow_blank=True)
+    #: 这一行覆盖几次;null = 没记(不是 0 次)。
+    occurrence_count = serializers.IntegerField(allow_null=True, min_value=1)
 
 
 class LedgerSummarySerializer(serializers.Serializer):
@@ -317,7 +321,8 @@ class BalanceHistogramBucketSerializer(serializers.Serializer):
 
 class BalanceHistogramSerializer(serializers.Serializer):
     """等宽余额直方图:[-300, 300) 每 `bucket_width` 一格,外加两端开口的两格。
-    格子覆盖整条数轴,所以 `total` 总等于 `total_souls`。"""
+    **只数已处置(DISPOSED)的灵魂**;格子覆盖整条数轴,所以 `total` 等于已处置人数
+    (`state_distribution` 里 DISPOSED 那一行的 count),不是 `total_souls`。"""
 
     bucket_width = serializers.IntegerField()
     buckets = BalanceHistogramBucketSerializer(many=True)
@@ -365,6 +370,10 @@ class LedgerOverviewStatsSerializer(serializers.Serializer):
     total_souls = serializers.IntegerField()
     #: 全部灵魂的平均余额,一位小数;没有灵魂时 null。
     average_balance = serializers.FloatField(allow_null=True)
+    #: 上个月快照(BalanceSnapshot)的平均余额,一位小数;没有上月快照时 null。
+    average_balance_prev_month = serializers.FloatField(allow_null=True)
+    #: `average_balance` 减上月,用两边原值相减再取一位;任一边为 null 时 null。
+    average_balance_delta = serializers.FloatField(allow_null=True)
     state_distribution = SoulStateDistributionSerializer(many=True)
     tenants = TenantSoulStatsSerializer(many=True)
     karma_distribution = KarmaBucketSerializer(many=True)

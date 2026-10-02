@@ -17734,7 +17734,8 @@ components:
       type: object
       description: |-
         等宽余额直方图:[-300, 300) 每 `bucket_width` 一格,外加两端开口的两格。
-        格子覆盖整条数轴,所以 `total` 总等于 `total_souls`。
+        **只数已处置(DISPOSED)的灵魂**;格子覆盖整条数轴,所以 `total` 等于已处置人数
+        (`state_distribution` 里 DISPOSED 那一行的 count),不是 `total_souls`。
       properties:
         bucket_width:
           type: integer
@@ -22086,6 +22087,14 @@ components:
           type: number
           format: double
           nullable: true
+        average_balance_prev_month:
+          type: number
+          format: double
+          nullable: true
+        average_balance_delta:
+          type: number
+          format: double
+          nullable: true
         state_distribution:
           type: array
           items:
@@ -22113,6 +22122,8 @@ components:
       required:
       - as_of
       - average_balance
+      - average_balance_delta
+      - average_balance_prev_month
       - balance_histogram
       - karma_distribution
       - karma_distribution_total
@@ -22212,6 +22223,12 @@ components:
           nullable: true
         is_milestone:
           type: boolean
+        statute_clause:
+          type: string
+        occurrence_count:
+          type: integer
+          minimum: 1
+          nullable: true
       required:
       - category
       - civilization
@@ -22222,8 +22239,10 @@ components:
       - fungibility_class
       - id
       - is_milestone
+      - occurrence_count
       - original_weight
       - recorded_at
+      - statute_clause
       - type
       - years_elapsed
     LedgerSummary:

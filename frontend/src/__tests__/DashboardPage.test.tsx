@@ -230,6 +230,10 @@ describe("DashboardPage overview", () => {
       ["+300", `${(13 / 14) * 100}%`],
     ]);
     expect(screen.getByText(/dashboard\.bucket_width/)).toBeInTheDocument();
+    // 只数已处置的(Design A4「已处置 · 每格 50」):n 是直方图自己的 total(10),不是 total_souls(4)。
+    const scope = container.querySelector("[data-histogram-scope]");
+    expect(scope).toHaveTextContent(/^dashboard\.disposed · n = 10 · dashboard\.bucket_width$/);
+    expect(scope).not.toHaveTextContent("n = 4");
     // Absence: no feedback colour anywhere in the histogram.
     expect(container.querySelector("[data-histogram]")?.innerHTML).not.toMatch(/--color-(danger|success)/);
   });
@@ -487,6 +491,27 @@ describe("DashboardPage permission gate", () => {
 describe("DashboardPage ledger tab", () => {
   beforeEach(() => {
     mockSearch = new URLSearchParams("tab=ledger");
+  });
+
+  it("较上月: the server's delta in mono with a true minus; the half-sentence is absent without a previous snapshot", async () => {
+    mockedStats.mockResolvedValue({
+      data: { ...baseStats, average_balance: 42.7, average_balance_prev_month: 44, average_balance_delta: -1.3 },
+    });
+    const first = renderPage();
+    const delta = await found(first.container, "[data-avg-delta]");
+    expect(delta).toHaveTextContent(/^−1\.3$/);
+    expect(delta.parentElement).toHaveTextContent("dashboard.avg_scope · dashboard.vs_last_month −1.3");
+    first.unmount();
+
+    // No snapshot for last month: null, and the card says only its scope — not 0.0, not 未记录.
+    mockedStats.mockResolvedValue({
+      data: { ...baseStats, average_balance: 42.7, average_balance_prev_month: null, average_balance_delta: null },
+    });
+    const { container } = renderPage();
+    await found(container, "[data-avg-balance]");
+    expect(container.querySelector("[data-avg-delta]")).toBeNull();
+    expect(screen.queryByText(/dashboard\.vs_last_month/)).toBeNull();
+    expect(screen.getByText("dashboard.avg_scope")).toBeInTheDocument();
   });
 
   it("shows the server's exact mean balance, signed, one decimal — not a bucket-midpoint estimate", async () => {

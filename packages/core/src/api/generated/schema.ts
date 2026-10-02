@@ -8094,7 +8094,8 @@ export interface components {
         };
         /**
          * @description 等宽余额直方图:[-300, 300) 每 `bucket_width` 一格,外加两端开口的两格。
-         *     格子覆盖整条数轴,所以 `total` 总等于 `total_souls`。
+         *     **只数已处置(DISPOSED)的灵魂**;格子覆盖整条数轴,所以 `total` 等于已处置人数
+         *     (`state_distribution` 里 DISPOSED 那一行的 count),不是 `total_souls`。
          */
         BalanceHistogram: {
             bucket_width: number;
@@ -10117,6 +10118,10 @@ export interface components {
             total_souls: number;
             /** Format: double */
             average_balance: number | null;
+            /** Format: double */
+            average_balance_prev_month: number | null;
+            /** Format: double */
+            average_balance_delta: number | null;
             state_distribution: components["schemas"]["SoulStateDistribution"][];
             tenants: components["schemas"]["TenantSoulStats"][];
             karma_distribution: components["schemas"]["KarmaBucket"][];
@@ -10167,6 +10172,8 @@ export interface components {
             recorded_at: string;
             event_date: components["schemas"]["LedgerRecordEventDate"] | null;
             is_milestone: boolean;
+            statute_clause: string;
+            occurrence_count: number | null;
         };
         /**
          * @description 200 body of `LedgerBalanceView`.

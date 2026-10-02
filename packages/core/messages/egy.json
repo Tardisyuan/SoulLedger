@@ -1050,7 +1050,8 @@
     "top_realms": "Ahet Tepy",
     "avg_scope": "Ba Neb",
     "occupancy": "Hesb Aq",
-    "bucket_width": "Hesb {{n}}"
+    "bucket_width": "Hesb {{n}}",
+    "vs_last_month": "Abed Pehwy"
   },
   "ledger": {
     "title": "Medew Nefer",
@@ -1085,7 +1086,10 @@
       "col_demerit": "Isfet",
       "col_balance": "Wedja",
       "total": "Hesb Neb",
-      "empty": "Nen Medu."
+      "empty": "Nen Medu.",
+      "occurrences": "Sep {{n}}",
+      "milestone": "Khet Dens",
+      "clause": "Hep"
     },
     "series_effective": "Em Iri",
     "series_decayed": "Khebi Seth",
@@ -2573,7 +2577,8 @@
       "workflow_process_timeouts_for_tenant": "Maa Unut Khetem Wat Wedja",
       "social_cleanup_orphan_post_media": "Fekh Tut Shemsu Nen Hab",
       "chat_reconcile_inbox": "Senb Sesh Wesekhet",
-      "soul_assist_purge_history": "Fekh Medew Hehy Medu"
+      "soul_assist_purge_history": "Fekh Medew Hehy Medu",
+      "ledger_snapshot_balance_for_tenant": "Sesh Hesb Abed"
     },
     "status": {
       "PENDING": "Em Smen",
@@ -4472,6 +4477,12 @@
     "desk": "Wedja",
     "queue": "Sepu Wedja",
     "permissions": "Was",
-    "permissions_meta": "Netjeru {{roles}} · Was {{perms}}"
+    "permissions_meta": "Netjeru {{roles}} · Was {{perms}}",
+    "office": {
+      "rules": "Wesekhet Hep",
+      "records": "Per Medjat",
+      "trials": "Wesekhet Wedja",
+      "tenth": "Zhuanlun Wesekhet"
+    }
   }
 }
