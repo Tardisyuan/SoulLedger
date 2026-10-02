@@ -31,7 +31,7 @@ import {
   type Residence,
 } from "../rules";
 import { SessionContext, useSession } from "../session";
-import { Seal } from "../seal";
+import { OutlineSeal } from "../seal";
 import { sealedTheme, type CivKey } from "../theme";
 import {
   Block,
@@ -320,7 +320,7 @@ function LifeBand({ me, compact, onAccount }: { me: MeProfile; compact: boolean;
           </Txt>
         )}
         <View style={styles.bandRow}>
-          <Seal civ={t.civ} size={small ? 28 : 52} theme={t} glyphs={me.tenant.seal_glyphs} label={tr("seal.aria", { court: hall })} testID="plaque-seal" />
+          <OutlineSeal civ={t.civ} size={small ? 28 : 52} color={on} glyphs={me.tenant.seal_glyphs} label={tr("seal.aria", { court: hall })} testID="plaque-seal" />
           <View style={styles.bandText}>
             <View style={styles.nameRow}>
               <Txt testID="soul-name" accessibilityRole="header" numberOfLines={stack ? undefined : 1} style={[small ? styles.nameSmall : styles.name, { color: on }]}>
