@@ -224,6 +224,9 @@
    * 两个工具类只由 `src/components/ui/Collapse.tsx` 挂:收起时它先给内容 `inert`,动画结束再加 `hidden`。 */
   --animate-row-expand: row-expand var(--transition-duration-base) var(--ease-enter) backwards; /* @kind other */
   --animate-row-collapse: row-collapse var(--transition-duration-fast) var(--ease-exit) forwards; /* @kind other */
+  /* 规范 v3「草稿保存」:「已保存」opacity 0→1(160ms 进场)→0(160ms 出场),紧接着。
+   * 减少动态效果下不挂这个类:`DraftStatusLine` 改为静态显示 1.5s 后移除(1ms 规则压不掉 delay)。 */
+  --animate-saved-flash: content-in var(--transition-duration-fast) var(--ease-enter) both, row-exit var(--transition-duration-fast) var(--ease-exit) var(--transition-duration-fast) forwards; /* @kind other */
   /* 同一段内换页(`/souls` → `/souls/123`)时 template 不重新挂载,于是同一个动画名不会重播。
    * 换一个名字就会:`app/template.tsx` 在 pathname 变化时在这两个名字之间切换。值与上面逐字相同。 */
   --animate-page-enter-again: page-enter-again var(--transition-duration-base) var(--ease-enter) backwards; /* @kind other */

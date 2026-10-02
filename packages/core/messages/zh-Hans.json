@@ -1475,6 +1475,7 @@
     },
     "draft": {
       "saved_at": "已自动保存 {{time}}",
+      "saved_flash": "已保存",
       "saving": "保存中…",
       "save_failed": "自动保存未成功，下次改动时会再试",
       "conflict_title": "他处已保存了另一版（{{time}}）",
