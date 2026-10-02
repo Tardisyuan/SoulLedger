@@ -6,11 +6,13 @@
  */
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { renderHook } from "@testing-library/react";
+import { render, renderHook } from "@testing-library/react";
 
 import { MOTION_DURATIONS, MOTION_EASINGS } from "@/lib/motion";
 import { useReducedMotionDurations } from "@/src/hooks/useReducedMotionDurations";
 import { FRONTEND_ROOT, GLOBALS_CSS } from "./support/globalsCssTokens";
+import { createElement, type ReactNode } from "react";
+import Template from "@/app/template";
 
 const css = readFileSync(GLOBALS_CSS, "utf8");
 
@@ -55,7 +57,36 @@ describe("v3 general motion rows", () => {
       "page-enter var(--transition-duration-base) var(--ease-enter) backwards"
     );
     expect(css).toMatch(/@keyframes page-enter\s*\{\s*from\s*\{\s*opacity:\s*0;\s*transform:\s*translateY\(8px\);/);
-    expect(src("app/template.tsx")).toMatch(/data-motion="fade" className="animate-page-enter"/);
+  });
+
+  /* 同段换页:template 不重挂,换动画名才重播。两个名字必须是同一个动画。 */
+  it("page change inside one segment: a second name with the identical value and keyframes", () => {
+    expect(themeValue("--animate-page-enter-again")).toBe(
+      themeValue("--animate-page-enter").replace(/^page-enter /, "page-enter-again ")
+    );
+    const body = (name: string) => new RegExp(`@keyframes ${name}\\s*(\\{[^@]*?\\}\\s*\\})`).exec(css)?.[1];
+    expect(body("page-enter-again")).toBeDefined();
+    expect(body("page-enter-again")).toBe(body("page-enter"));
+  });
+
+  it("table row expand: 200ms enter on grid-template-rows 0fr → 1fr, one shared utility", () => {
+    expect(themeValue("--animate-row-expand")).toBe(
+      "row-expand var(--transition-duration-reveal) var(--ease-enter) backwards"
+    );
+    expect(css).toMatch(/@keyframes row-expand\s*\{\s*from\s*\{\s*grid-template-rows:\s*0fr;\s*overflow:\s*hidden;\s*\}\s*to\s*\{\s*grid-template-rows:\s*1fr;\s*overflow:\s*hidden;/);
+    expect(css).toMatch(/@utility row-expand \{\s*display: grid;\s*animation: var\(--animate-row-expand\);\s*& > \* \{\s*min-height: 0;/);
+    // v3 B3:减少动态效果下瞬时展开 —— 它走 1ms 的通用规则,不能进 80ms 淡入的例外。
+    expect(css).not.toMatch(/\.row-expand[^{]*\{[^}]*--transition-duration-reduced/);
+    for (const file of [
+      "app/actors/page.tsx",
+      "src/components/assist-admin/EvalPanel.tsx",
+      "src/components/assist-admin/ProviderSection.tsx",
+      "src/components/scheduler/TaskRunsDrawer.tsx",
+      "src/components/souls/DateProblemsPanel.tsx",
+      "src/components/souls/SoulLifecycleTimeline.tsx",
+    ]) {
+      expect([file, /className="row-expand(?: mt-[12])?"/.test(src(file))]).toEqual([file, true]);
+    }
   });
 
   it("modal / drawer: open 240 enter, close 180 exit, 12px", () => {
@@ -124,5 +155,43 @@ describe("useReducedMotionDurations", () => {
     const d = renderHook(() => useReducedMotionDurations()).result.current;
     expect(Object.keys(d).sort()).toEqual(Object.keys(MOTION_DURATIONS).sort());
     expect(Object.values(d)).toEqual([0, 0, 0, 0, 0]);
+  });
+});
+
+const mockPathname = jest.fn<string, []>();
+jest.mock("next/navigation", () => ({ usePathname: () => mockPathname() }));
+
+const page = (child: ReactNode) => createElement(Template, null, child);
+
+describe("app/template: the page-enter animation replays on every pathname change", () => {
+  it("swaps the animation name when the pathname changes inside one segment, and only then", () => {
+    mockPathname.mockReturnValue("/souls");
+    const { container, rerender } = render(page(createElement("p", null, "x")));
+    const wrapper = () => container.firstElementChild as HTMLElement;
+    expect(wrapper().getAttribute("data-motion")).toBe("fade");
+    expect(wrapper().className).toBe("animate-page-enter");
+
+    mockPathname.mockReturnValue("/souls/123");
+    rerender(page(createElement("p", null, "x")));
+    expect(wrapper().className).toBe("animate-page-enter-again");
+
+    // Same pathname (a query-string change): no replay.
+    rerender(page(createElement("p", null, "x")));
+    expect(wrapper().className).toBe("animate-page-enter-again");
+
+    mockPathname.mockReturnValue("/souls");
+    rerender(page(createElement("p", null, "x")));
+    expect(wrapper().className).toBe("animate-page-enter");
+  });
+
+  it("keeps the page mounted across the swap (state and focus survive)", () => {
+    mockPathname.mockReturnValue("/souls");
+    const { container, rerender } = render(page(createElement("input", { "aria-label": "kept" })));
+    const input = container.querySelector("input")!;
+    input.focus();
+    mockPathname.mockReturnValue("/souls/9");
+    rerender(page(createElement("input", { "aria-label": "kept" })));
+    expect(container.querySelector("input")).toBe(input);
+    expect(document.activeElement).toBe(input);
   });
 });

@@ -348,7 +348,8 @@ export function SoulLifecycleTimeline({
                     </div>
                   </button>
                   {isOpen && (
-                    <div className="mt-1 space-y-0.5 pl-2 border-l border-[oklch(var(--color-hairline))]">
+                    <div className="row-expand mt-1">
+                    <div className="space-y-0.5 pl-2 border-l border-[oklch(var(--color-hairline))]">
                       {row.items.map((item) => {
                         const described = describeSystemEvent(item, systemEventLabels);
                         return (
@@ -357,6 +358,7 @@ export function SoulLifecycleTimeline({
                         </div>
                         );
                       })}
+                    </div>
                     </div>
                   )}
                 </RowShell>
