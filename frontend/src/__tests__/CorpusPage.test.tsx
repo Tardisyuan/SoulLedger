@@ -24,6 +24,13 @@ jest.mock("@soulledger/core/api", () => ({
   judgmentApi: { statutes: jest.fn(), list: jest.fn() },
 }));
 
+// `?code=` deep link (ClauseLink). Empty by default: no query string.
+const mockQuery = { current: "" };
+jest.mock("next/navigation", () => ({
+  ...jest.requireActual("next/navigation"),
+  useSearchParams: () => new URLSearchParams(mockQuery.current),
+}));
+
 const mockedStatutes = judgmentApi.statutes as jest.Mock;
 const mockedList = judgmentApi.list as jest.Mock;
 
@@ -99,6 +106,7 @@ async function open(query: string) {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockQuery.current = "";
   // Two pages, so the walk over `next` is exercised.
   mockedStatutes.mockImplementation((params: Record<string, string>) =>
     Promise.resolve({
@@ -335,5 +343,33 @@ describe("the right rail", () => {
     fireEvent.click(within(list).getByRole("button", { name: /下一页|next/i }));
     await waitFor(() => expect(within(screen.getByTestId("corpus-cited-list")).getByText("魂-j0")).toBeInTheDocument());
     expect(mockedList).toHaveBeenLastCalledWith({ statute: "cn-17", ordering: "-created_at", page: "2" });
+  });
+});
+
+describe("?code= — a ledger clause links to its article", () => {
+  const tocGroup = (corpus: string) => document.querySelector(`[data-toc-corpus="${corpus}"] > button`) as HTMLElement;
+
+  it("opens the article whose code matches and expands its group in the contents", async () => {
+    mockQuery.current = "code=CODE-eg-27";
+    renderPage();
+    await waitFor(() => expect(screen.getByTestId("corpus-reading")).toHaveTextContent("title-eg-27"));
+    expect(tocGroup("NEGATIVE_CONFESSION")).toHaveAttribute("aria-expanded", "true");
+    const nav = screen.getByRole("navigation", { name: /目录|contents/i });
+    expect(within(nav).getByRole("button", { current: true })).toHaveTextContent("title-eg-27");
+    // Absence: not the first article, its group not opened, and no "unknown code" line.
+    expect(screen.getByTestId("corpus-reading")).not.toHaveTextContent("title-cn-17");
+    expect(tocGroup("GONGGUOGE")).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByTestId("corpus-unknown-code")).toBeNull();
+  });
+
+  it("an unknown code says so and reads from the first article; choosing one clears the notice", async () => {
+    mockQuery.current = "code=%E6%95%91%E6%BF%9F%E9%96%80%2399";
+    renderPage();
+    const notice = await screen.findByTestId("corpus-unknown-code");
+    expect(notice).toHaveTextContent("救濟門#99");
+    expect(notice).toHaveAttribute("role", "status");
+    expect(screen.getByTestId("corpus-reading")).toHaveTextContent("title-cn-17");
+    fireEvent.click(within(screen.getByRole("navigation", { name: /目录|contents/i })).getByRole("button", { name: /title-cn-17/ }));
+    expect(screen.queryByTestId("corpus-unknown-code")).toBeNull();
   });
 });

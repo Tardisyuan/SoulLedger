@@ -310,7 +310,7 @@ describe("甲 · 灵魂栏的所在界域、审判方式、世次 / 种类", () 
     );
   });
 
-  it("案号:身份带右栏印「案号 CN-2026-0042」,页头一个可复制的整串(CASE_NUMBER_POLICY)", async () => {
+  it("案号:只交给身份带的 caseNumber 槽,页头不再重复(用户 2026-10-02;CASE_NUMBER_POLICY)", async () => {
     const { PlaqueProvider } = await import("@/src/components/plaque/Plaque");
     const plaque = jest.fn();
     judgmentApi.get.mockResolvedValue({ data: judgment() });
@@ -322,11 +322,11 @@ describe("甲 · 灵魂栏的所在界域、审判方式、世次 / 种类", () 
         </PlaqueProvider>
       </QueryClientProvider>
     );
-    const chip = await screen.findByRole("button", { name: tZh("common.value.copy_case_number", { value: "CN-2026-0042" }) });
-    expect(chip).toHaveTextContent(/^CN-2026-0042 ⧉$/);
-    await waitFor(() =>
-      expect(plaque).toHaveBeenLastCalledWith(expect.objectContaining({ meta: `${tZh("judgment.case_number")} CN-2026-0042` }))
-    );
+    await waitFor(() => expect(plaque).toHaveBeenLastCalledWith(expect.objectContaining({ caseNumber: "CN-2026-0042" })));
+    expect(plaque).toHaveBeenLastCalledWith(expect.objectContaining({ meta: undefined }));
+    // 页面本身(这里没有壳,身份带不在)一个案号也不画:可复制的那一个只在身份带右栏。
+    expect(screen.queryByText(/CN-2026-0042/)).toBeNull();
+    expect(document.querySelector("[data-case-number]")).toBeNull();
   });
 
   it("案子没挂界域:写「未记录」,不拿殿名充数", async () => {
@@ -484,10 +484,18 @@ describe("丙 · 证据采信", () => {
     expect(clause).toHaveTextContent("救濟門#7");
     expect(clause).not.toHaveTextContent("賑濟窮民百錢");
     expect(clause).toHaveAttribute("title", "救濟門#7:賑濟窮民百錢");
+    // The clause opens its article in the corpus — the column and the narrow-width fold alike.
+    const links = within(cited).getAllByRole("link", { name: "救濟門#7" });
+    expect(links).toHaveLength(2);
+    for (const link of links) {
+      expect(link).toHaveAttribute("href", "/corpus?code=%E6%95%91%E6%BF%9F%E9%96%80%237");
+      expect(link).toHaveAttribute("title", "救濟門#7:賑濟窮民百錢");
+    }
     expect(cited).toHaveTextContent(`${tZh("ledger.book.occurrences", { n: "12" })} · ◆ ${tZh("ledger.book.milestone")}`);
 
     const bare = evidenceRow("詈骂邻人");
     expect(within(bare).getByTestId("evidence-clause").querySelector('[data-missing="unrecorded"]')).not.toBeNull();
+    expect(within(bare).queryByRole("link")).toBeNull();
     expect(bare).not.toHaveTextContent(tZh("ledger.book.occurrences", { n: "1" }));
     expect(bare).not.toHaveTextContent("◆");
     expect(bare.querySelector("[data-record-facts]")).toBeNull();

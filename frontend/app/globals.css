@@ -767,6 +767,18 @@
     text-align: right;
     font-size: var(--text-xs);
   }
+  /* 案号(审判台,v3 `.identity-case span` / `b`):「案号」小字 11 · 0.7 在上,可复制的案号在下。
+     收起的 48 带里照样在右(v3 `is-compact` 只藏品牌与题字);收起时并成一行。 */
+  .identity-case[data-case] > span {
+    display: block;
+    margin-bottom: 5px;
+    font-size: var(--text-2xs);
+    opacity: 0.7;
+  }
+  .identity-band[data-compact] .identity-case[data-case] > span {
+    display: inline;
+    margin: 0 8px 0 0;
+  }
   /* 收起:只留印与殿名(v3 `is-compact`)。没有殿名(租户没给展示名)时留题字,不然带上只剩一枚印。 */
   .identity-band[data-compact] .identity-brand,
   .identity-band[data-compact] .identity-court ~ [data-tier] {
@@ -783,7 +795,7 @@
     text-overflow: ellipsis;
   }
   /* ≤ 768(底栏那一档):品牌在上、印与题字在下,不再分栏;v3 手机身份带 105–150,这里取
-     最低 120、随题字行数长高(egy 两行 20 时约 150)。案号位不显示。 */
+     最低 120、随题字行数长高(egy 两行 20 时约 150)。右栏只留案号,别的文字不显示。 */
   @media (max-width: 768px) {
     .identity-band:not([data-compact]) {
       display: block;
@@ -798,8 +810,14 @@
       margin-top: 17px;
       gap: 12px;
     }
-    .identity-band .identity-case {
+    .identity-band .identity-case:not([data-case]) {
       display: none;
+    }
+    /* 案号在手机上照样印(v3 `.is-mobile .identity-case`):右上角,与品牌同一行;收起时回到格子里。 */
+    .identity-band:not([data-compact]) .identity-case[data-case] {
+      position: absolute;
+      top: 15px;
+      right: 16px;
     }
     .identity-band[data-compact] {
       padding: 0 12px;
