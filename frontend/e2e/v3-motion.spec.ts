@@ -46,7 +46,7 @@ test.describe("v3 motion", () => {
       await expect(shell.getByText(/ValueError: ledger row 42 has no soul/)).toBeVisible();
       await expect.poll(() => started(page)).toContain("row-expand");
       expect(await shell.evaluate((el) => getComputedStyle(el).display)).toBe("grid");
-      expect(await shell.evaluate((el) => getComputedStyle(el).animationDuration)).toBe(reduced ? "0.001s" : "0.2s");
+      expect(await shell.evaluate((el) => getComputedStyle(el).animationDuration)).toBe(reduced ? "0.001s" : "0.24s");
       // Once open, nothing is clipped: overflow is hidden only while the animation runs.
       await expect.poll(() => shell.evaluate((el) => getComputedStyle(el).overflow)).toBe("visible");
     }

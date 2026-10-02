@@ -24,6 +24,7 @@ import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { Button } from "@/src/components/ui/Button";
+import { Collapse } from "@/src/components/ui/Collapse";
 import { EmptyState } from "@/src/components/ui/EmptyState";
 import { FilterChipToggle } from "@/src/components/ui/FilterChip";
 import { QueryError } from "@/src/components/ui/PageError";
@@ -260,8 +261,7 @@ function SchedulerPageContent() {
                     <ChevronDown aria-hidden="true" className={`w-4 h-4 shrink-0 transition-transform ${open ? "" : "-rotate-90"}`} />
                   </button>
                 </h2>
-                {open && (
-                  <div id={bodyId}>
+                <Collapse open={open} id={bodyId} rows={group.jobs.length}>
                     <div
                       aria-hidden="true"
                       className={`hidden px-4 py-2 font-mono text-2xs text-[oklch(var(--color-ink-subtle))] border-b border-[oklch(var(--color-block))] ${JOB_ROW_GRID}`}
@@ -286,8 +286,7 @@ function SchedulerPageContent() {
                         />
                       ))}
                     </ul>
-                  </div>
-                )}
+                </Collapse>
               </section>
             );
           })}

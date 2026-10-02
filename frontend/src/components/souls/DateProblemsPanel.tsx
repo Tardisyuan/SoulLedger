@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
+import { Collapse } from "@/src/components/ui/Collapse";
 import { soulsApi } from "@soulledger/core/api";
 import type { SoulDateProblem, SoulRecordEntry } from "@soulledger/core/api/souls";
 
@@ -122,6 +123,7 @@ export function DateProblemsPanel({ soulId, soulProblems, records, onChanged }: 
                 type="button"
                 onClick={() => setExpandedCodes((s) => ({ ...s, [code]: !isOpen }))}
                 aria-expanded={isOpen}
+                aria-controls={`date-problems-${code}`}
                 className="w-full flex items-center justify-between px-3 py-2 text-left"
               >
                 <span className="flex items-center gap-2 text-sm">
@@ -148,8 +150,7 @@ export function DateProblemsPanel({ soulId, soulProblems, records, onChanged }: 
                   </span>
                 </span>
               </button>
-              {isOpen && (
-                <div className="row-expand">
+              <Collapse open={isOpen} id={`date-problems-${code}`}>
                 <div className="px-3 pb-3 space-y-3 border-t border-[oklch(var(--color-hairline))] pt-2">
                   {group.map((occ, idx) => (
                     <div key={`${occ.recordId ?? "soul"}-${idx}`} className="text-sm text-[oklch(var(--color-ink-muted))] space-y-1">
@@ -195,8 +196,7 @@ export function DateProblemsPanel({ soulId, soulProblems, records, onChanged }: 
                     </div>
                   ))}
                 </div>
-                </div>
-              )}
+              </Collapse>
             </div>
           );
         })}

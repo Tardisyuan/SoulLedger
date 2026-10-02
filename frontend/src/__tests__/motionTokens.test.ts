@@ -69,23 +69,44 @@ describe("v3 general motion rows", () => {
     expect(body("page-enter-again")).toBe(body("page-enter"));
   });
 
-  it("table row expand: 200ms enter on grid-template-rows 0fr → 1fr, one shared utility", () => {
+  /* Design 第三批回复(2026-10-03):展开 240 进场、收起 160 出场(内容前 80ms 淡出),
+   * 超过 40 行的整节只淡入淡出 160。两个工具类只由 Collapse 挂,行展开与整节折叠都走它。 */
+  it("row / section expand 240 enter, collapse 160 exit, one shared component", () => {
     expect(themeValue("--animate-row-expand")).toBe(
-      "row-expand var(--transition-duration-reveal) var(--ease-enter) backwards"
+      "row-expand var(--transition-duration-base) var(--ease-enter) backwards"
     );
+    expect(themeValue("--animate-row-collapse")).toBe(
+      "row-collapse var(--transition-duration-fast) var(--ease-exit) forwards"
+    );
+    expect(themeValue("--transition-duration-base")).toBe("240ms");
+    expect(themeValue("--transition-duration-fast")).toBe("160ms");
+    expect(themeValue("--ease-enter")).toBe("cubic-bezier(0.2, 0.8, 0.2, 1)");
+    expect(themeValue("--ease-exit")).toBe("cubic-bezier(0.4, 0, 1, 1)");
     expect(css).toMatch(/@keyframes row-expand\s*\{\s*from\s*\{\s*grid-template-rows:\s*0fr;\s*overflow:\s*hidden;\s*\}\s*to\s*\{\s*grid-template-rows:\s*1fr;\s*overflow:\s*hidden;/);
+    expect(css).toMatch(/@keyframes row-collapse\s*\{\s*from\s*\{\s*grid-template-rows:\s*1fr;\s*overflow:\s*hidden;\s*\}\s*to\s*\{\s*grid-template-rows:\s*0fr;\s*overflow:\s*hidden;/);
     expect(css).toMatch(/@utility row-expand \{\s*display: grid;\s*animation: var\(--animate-row-expand\);\s*& > \* \{\s*min-height: 0;/);
-    // v3 B3:减少动态效果下瞬时展开 —— 它走 1ms 的通用规则,不能进 80ms 淡入的例外。
-    expect(css).not.toMatch(/\.row-expand[^{]*\{[^}]*--transition-duration-reduced/);
+    // 内容在收起的前一半(80ms)淡出。
+    expect(css).toMatch(
+      /@utility row-collapse \{\s*display: grid;\s*animation: var\(--animate-row-collapse\);\s*& > \* \{\s*min-height: 0;\s*animation: row-exit calc\(var\(--transition-duration-fast\) \/ 2\) var\(--ease-exit\) forwards;/
+    );
+    expect(css).toMatch(/@utility collapse-fade-in \{\s*animation: content-in var\(--transition-duration-fast\) var\(--ease-enter\) backwards;/);
+    expect(css).toMatch(/@utility collapse-fade-out \{\s*animation: row-exit var\(--transition-duration-fast\) var\(--ease-exit\) forwards;/);
+    // v3 B3:减少动态效果下瞬时 —— 走 1ms 的通用规则,不能进 80ms 淡入的例外。
+    expect(css).not.toMatch(/\.(row-expand|row-collapse|collapse-fade-\w+)[^{]*\{[^}]*--transition-duration-reduced/);
+    // 没有哪个调用方再手挂 row-expand:都经过 Collapse(它才管 inert / hidden / 焦点)。
     for (const file of [
       "app/actors/page.tsx",
+      "app/corpus/page.tsx",
+      "app/organizations/page.tsx",
+      "app/scheduler/page.tsx",
       "src/components/assist-admin/EvalPanel.tsx",
       "src/components/assist-admin/ProviderSection.tsx",
       "src/components/scheduler/TaskRunsDrawer.tsx",
       "src/components/souls/DateProblemsPanel.tsx",
       "src/components/souls/SoulLifecycleTimeline.tsx",
     ]) {
-      expect([file, /className="row-expand(?: mt-[12])?"/.test(src(file))]).toEqual([file, true]);
+      const text = src(file);
+      expect([file, /<Collapse\b/.test(text), /className="row-expand/.test(text)]).toEqual([file, true, false]);
     }
   });
 

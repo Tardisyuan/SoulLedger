@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
+import { Collapse } from "@/src/components/ui/Collapse";
 import { DomainEnum } from "@/src/components/ui/DomainValue";
 import { RowShell, TONE_DOT } from "@/src/components/souls/SoulLifecycleRowShell";
 import { ANNIHILATION_REALM_CODE } from "@/src/lib/realmCodes";
@@ -332,6 +333,7 @@ export function SoulLifecycleTimeline({
                     type="button"
                     onClick={() => setExpandedSystemGroups((s) => ({ ...s, [row.id]: !isOpen }))}
                     aria-expanded={isOpen}
+                    aria-controls={`timeline-system-${row.id}`}
                     className="text-left w-full"
                   >
                     {/* `title` carries the raw event_type — the domainDisplay
@@ -347,8 +349,7 @@ export function SoulLifecycleTimeline({
                       )}
                     </div>
                   </button>
-                  {isOpen && (
-                    <div className="row-expand mt-1">
+                  <Collapse open={isOpen} id={`timeline-system-${row.id}`} className="mt-1">
                     <div className="space-y-0.5 pl-2 border-l border-[oklch(var(--color-hairline))]">
                       {row.items.map((item) => {
                         const described = describeSystemEvent(item, systemEventLabels);
@@ -359,8 +360,7 @@ export function SoulLifecycleTimeline({
                         );
                       })}
                     </div>
-                    </div>
-                  )}
+                  </Collapse>
                 </RowShell>
               );
             }
