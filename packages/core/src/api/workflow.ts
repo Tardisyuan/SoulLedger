@@ -30,6 +30,8 @@ export interface ApprovalWorkflowListItem {
 export interface ApprovalWorkflow extends ApprovalWorkflowListItem {
   judgment: string | null;
   judgment_verdict?: string | null;
+  /** 所属审判的案号;没挂审判是 null。 */
+  judgment_case_number?: string | null;
   current_node?: string | null;
   current_node_detail?: ApprovalNode | null;
   original_workflow?: string | null;

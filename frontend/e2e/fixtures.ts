@@ -404,6 +404,8 @@ const statute = (id: string, civilization: string, corpus: string, ordinal: numb
   source_notes: [],
   payload_json: {},
   citation_count: 0,
+  revision: 1,
+  effective_from: "2026-08-27",
   ...extra,
 });
 
@@ -470,6 +472,7 @@ export const SOUL_INHERITANCE = {
 /** The judgment POST /judgment/ opens for a soul already in JUDGING. */
 export const OPENED_JUDGMENT = {
   id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+  case_number: "CN-2026-0001",
   soul: SOULS[0].id,
   soul_name: SOULS[0].name,
   civilization: "CHINESE",

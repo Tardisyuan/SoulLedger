@@ -2,7 +2,7 @@
 
 import { type ApprovalWorkflow } from "@soulledger/core/api";
 import { useI18n } from "@/src/contexts/I18nContext";
-import { DomainEnum, DomainText } from "@/src/components/ui/DomainValue";
+import { CaseNumber, DomainEnum, DomainText, MissingValue } from "@/src/components/ui/DomainValue";
 
 /**
  * /workflow/[id] 右栏的「信息」卡(v3 A1 实例详情):`surface-1` 卡,h2「信息」,
@@ -45,6 +45,11 @@ export function WorkflowInfoCard({
         </dd>
         <dt className={DT}>{t("workflow.detail.case_type")}</dt>
         <dd className={DD}><DomainEnum namespace="workflow.case_types" value={workflow.case_type} /></dd>
+        {/* 所属审判的案号(CASE_NUMBER_POLICY);没挂审判的流程(如转生申请)不适用。 */}
+        <dt className={DT}>{t("judgment.case_number")}</dt>
+        <dd className={DD}>
+          {workflow.judgment ? <CaseNumber value={workflow.judgment_case_number} /> : <MissingValue kind="inapplicable" />}
+        </dd>
         <dt className={DT}>{t("workflow.detail.judgment_verdict")}</dt>
         <dd className={DD}><DomainEnum namespace="workflow.verdicts" value={workflow.judgment_verdict} /></dd>
         <dt className={DT}>{t("workflow.detail.priority")}</dt>

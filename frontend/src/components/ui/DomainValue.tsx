@@ -250,6 +250,45 @@ export function IdentifierChip({ id, ariaLabel, variant = "chip" }: IdentifierCh
   );
 }
 
+/**
+ * 案号(`Judgment.case_number`,`CN-2026-0007`)—— `CASE_NUMBER_POLICY`(src/lib/domainDisplay.ts)。
+ * 与 `IdentifierChip` 同一种按钮、同一份剪贴板行为,区别只有一处:**不截断**。案号是给人读、给人
+ * 抄的,截到 8 位就成了 `CN-2026-`,序号恰好是被截掉的那一段。没有案号(旧接口、拿不到)是
+ * `unrecorded`,不拿 UUID 顶上。
+ */
+export function CaseNumber({ value, variant = "chip" }: { value: string | null | undefined; variant?: "chip" | "inline" }) {
+  const { t } = useI18n();
+  const { showToast } = useToast();
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = useCallback(async () => {
+    if (!value) return;
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopied(true);
+      showToast(t("common.value.case_number_copied"), "success");
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      showToast(t("common.value.id_copy_failed"), "error");
+    }
+  }, [value, showToast, t]);
+
+  if (!value) return <MissingValue kind="unrecorded" />;
+  return (
+    <button
+      type="button"
+      onClick={handleCopy}
+      title={value}
+      aria-label={t("common.value.copy_case_number", { value })}
+      className={`${IDENTIFIER_VARIANT_CLASSES[variant]} whitespace-nowrap`}
+      data-identifier-variant={variant}
+      data-case-number={value}
+    >
+      {copied ? t("common.value.copied") : `${value} ⧉`}
+    </button>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Convenience
 // ---------------------------------------------------------------------------

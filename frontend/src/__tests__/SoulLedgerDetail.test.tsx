@@ -45,6 +45,7 @@ describe("stepStatuses — the 当前 step comes from current_state, not from wh
 
 function judgment(over: Partial<Judgment> & Pick<Judgment, "id" | "created_at">): Judgment {
   return {
+    case_number: "CN-2026-0001",
     soul: "s1",
     soul_name: "沈青梧",
     civilization: "CHINESE",
