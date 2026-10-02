@@ -8,7 +8,8 @@ import { judgmentApi } from "@soulledger/core/api";
 import { judgmentKeys } from "@soulledger/core/query_keys";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
-import { Button } from "@/src/components/ui/Button";
+import { Button, buttonVariants, type ButtonSize } from "@/src/components/ui/Button";
+import { cn } from "@/lib/utils";
 import { DomainText } from "@/src/components/ui/DomainValue";
 import { forgetOpenCase, lastOpenCase } from "@/src/lib/lastOpenCase";
 
@@ -26,7 +27,8 @@ const deskHref = (judgmentId: string, statuteId: string) =>
  * 记着的那件可能已经在别处结了(另一个标签页、另一位官员)。所以点下去先问一次它的现状:
  * 已结就忘掉它、改开上面那张清单,而不是把人送到审判台去读「这件案子已结案」。
  */
-export function CorpusInsertIntoDesk({ statuteId }: { statuteId: string }) {
+/** Design A3: a full-width primary — 44 in the rail, 56 in the phone's bottom bar. */
+export function CorpusInsertIntoDesk({ statuteId, size = "sm" }: { statuteId: string; size?: ButtonSize }) {
   const { t } = useI18n();
   const { user } = useTenant();
   // Read in render: the rail only renders once the corpus has loaded client-side, and
@@ -60,17 +62,17 @@ export function CorpusInsertIntoDesk({ statuteId }: { statuteId: string }) {
         href={deskHref(remembered.id, statuteId)}
         onClick={goRemembered}
         data-testid="corpus-insert"
-        className="inline-flex items-center h-(--control-h-sm) px-3 border border-[oklch(var(--color-line))] text-sm hover:bg-[oklch(var(--color-surface-2))]"
+        className={cn(buttonVariants({ variant: "primary", size }), "w-full min-w-0")}
         title={remembered.soul_name || undefined}
       >
         {t("judgment.corpus.insert_desk")}
-        {remembered.soul_name && <span className="ml-2 text-xs text-[oklch(var(--color-ink-muted))]">· {remembered.soul_name}</span>}
+        {remembered.soul_name && <span title={remembered.soul_name} className="ml-2 min-w-0 truncate text-xs opacity-80">· {remembered.soul_name}</span>}
       </Link>
     );
   }
   return (
     <div>
-      <Button type="button" variant="secondary" size="sm" data-testid="corpus-insert" aria-expanded={picking} onClick={() => setPicking((v) => !v)}>
+      <Button type="button" variant="primary" size={size} className="w-full" data-testid="corpus-insert" aria-expanded={picking} onClick={() => setPicking((v) => !v)}>
         {t("judgment.corpus.insert_desk")}
       </Button>
       {picking && (
