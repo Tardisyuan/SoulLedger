@@ -16,8 +16,10 @@ from apps.audit.models import AuditLog
 from apps.core.csv_safe import csv_safe
 from apps.core.locale import locale_from_request
 from apps.core.permissions import CodenamePermission, TenantPermission
+from apps.core.tenant import scope_to_tenant
 from apps.disposition.models import Disposition
 from apps.ledger.journal import JournalParamError, build_journal, journal_records
+from apps.ledger.models import BalanceSnapshot
 from apps.ledger.serializers import (
     LedgerEffectiveSerializer,
     LedgerErrorSerializer,
@@ -30,6 +32,7 @@ from apps.ledger.serializers import (
     RebirthNotApplicableSerializer,
 )
 from apps.ledger.services import LedgerService, RebirthNotApplicable
+from apps.ledger.snapshots import previous_month_average
 from apps.realms.models import Realm, resolve_localized_name
 from apps.souls.models import Soul, SoulState
 
@@ -414,7 +417,19 @@ class LedgerOverviewStatsView(APIView):
             }
             for s in SoulState.values
         ]
-        average_balance = _one_decimal(soul_qs.aggregate(avg=Avg(balance))["avg"])
+        average_raw = soul_qs.aggregate(avg=Avg(balance))["avg"]
+        average_balance = _one_decimal(average_raw)
+
+        # 较上月:上个月的快照(apps/ledger/snapshots.py),与上面的 soul_qs 同一个划界 ——
+        # 不带租户的 ADMIN 看全部,带租户的只看这个租户。没有上月快照就是 null,前端隐藏。
+        snapshots = BalanceSnapshot.objects.all()
+        if tenant is not None:
+            snapshots = scope_to_tenant(snapshots, request, admin_bypass=False)
+        prev_raw = previous_month_average(snapshots)
+        average_balance_delta = (
+            None if prev_raw is None or average_raw is None
+            else _one_decimal(float(average_raw) - prev_raw)
+        )
 
         # Per-tenant soul counts with state breakdown (single query, no N+1)
         tenant_state_data = (
@@ -571,6 +586,8 @@ class LedgerOverviewStatsView(APIView):
             "as_of": timezone.now(),
             "total_souls": total_souls,
             "average_balance": average_balance,
+            "average_balance_prev_month": _one_decimal(prev_raw),
+            "average_balance_delta": average_balance_delta,
             "state_distribution": state_distribution,
             "tenants": tenant_stats,
             "karma_distribution": [
