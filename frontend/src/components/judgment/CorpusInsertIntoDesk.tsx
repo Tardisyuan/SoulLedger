@@ -66,7 +66,7 @@ export function CorpusInsertIntoDesk({ statuteId, size = "sm" }: { statuteId: st
         title={remembered.soul_name || undefined}
       >
         {t("judgment.corpus.insert_desk")}
-        {remembered.soul_name && <span className="ml-2 min-w-0 truncate text-xs opacity-80">· {remembered.soul_name}</span>}
+        {remembered.soul_name && <span title={remembered.soul_name} className="ml-2 min-w-0 truncate text-xs opacity-80">· {remembered.soul_name}</span>}
       </Link>
     );
   }

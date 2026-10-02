@@ -378,14 +378,14 @@ function RealmTree({
                   data-full={full ? "true" : undefined}
                   className={`h-(--table-row-h) ${inline ? "" : "border-b border-[oklch(var(--color-line))]"}`}
                 >
-                  <td className={`truncate pr-3 ${depth ? "" : "font-semibold"}`} style={{ paddingLeft: 16 + depth * 20 }}>
+                  <td title={nameOf(realm)} className={`truncate pr-3 ${depth ? "" : "font-semibold"}`} style={{ paddingLeft: 16 + depth * 20 }}>
                     <span aria-hidden="true" className="mr-2 text-[oklch(var(--color-ink-subtle))]">
                       {parents.has(realm.id) ? "▾" : "　"}
                     </span>
-                    <span title={nameOf(realm)}>{nameOf(realm)}</span>
+                    {nameOf(realm)}
                   </td>
-                  <td className={`truncate pr-3 font-mono text-xs ${MUTED}`}>{realm.realm_code}</td>
-                  <td className={`truncate pr-3 ${MUTED}`}>{typeOf(realm)}</td>
+                  <td title={realm.realm_code} className={`truncate pr-3 font-mono text-xs ${MUTED}`}>{realm.realm_code}</td>
+                  <td title={realm.kind ? t(`realms.kind.${realm.kind}`) : realm.realm_type} className={`truncate pr-3 ${MUTED}`}>{typeOf(realm)}</td>
                   <td data-testid="realm-held" className="pr-3 text-right whitespace-nowrap">
                     {noPlace ? (
                       <span className={MUTED}>{t("realms.table.not_a_place")}</span>
@@ -415,14 +415,14 @@ function RealmTree({
           const noPlace = isTerminalRealm(realm);
           const body = (
             <span className={`grid grid-cols-[1fr_auto] items-center gap-x-3 gap-y-0.5 min-h-16 py-2 pr-3 ${depth ? "pl-8" : "pl-3"}`}>
-              <span className={`truncate ${depth ? "" : "font-semibold"}`}>
+              <span title={nameOf(realm)} className={`truncate ${depth ? "" : "font-semibold"}`}>
                 {parents.has(realm.id) && <span aria-hidden="true" className="mr-2 text-[oklch(var(--color-ink-subtle))]">▾</span>}
                 {nameOf(realm)}
               </span>
               <span className="whitespace-nowrap text-sm">
                 {noPlace ? <span className={MUTED}>{t("realms.table.not_a_place")}</span> : heldCap(realm, false)}
               </span>
-              <span className={`col-span-2 truncate font-mono text-2xs ${MUTED}`}>
+              <span title={realm.realm_code} className={`col-span-2 truncate font-mono text-2xs ${MUTED}`}>
                 {realm.realm_code} · {realm.kind ? t(`realms.kind.${realm.kind}`) : <DomainEnum namespace="realms.types" value={realm.realm_type} />}
                 {realm.is_eternal && <> · ≡ {t("realms.table.eternal_yes")}</>}
               </span>

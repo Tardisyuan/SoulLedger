@@ -463,6 +463,7 @@ function NavSquare({ article, label, glyph, onChoose }: { article: Article | nul
       disabled={!article}
       aria-label={article ? `${label} · ${article.sigil ?? article.statute.code}` : label}
       onClick={() => article && onChoose(article.statute.id)}
+      title={article ? article.sigil ?? article.statute.code : undefined}
       className="size-(--control-h-lg) truncate px-1 border border-[oklch(var(--color-line-strong))] font-mono text-xs disabled:opacity-40"
     >
       {article ? article.sigil ?? article.statute.code : <span aria-hidden="true">{glyph}</span>}
@@ -505,7 +506,7 @@ function Toc({
               className="w-full flex items-center gap-2 h-(--control-h-sm) text-left hover:bg-[oklch(var(--color-surface-2))]"
             >
               <span aria-hidden="true" className="w-3 text-[oklch(var(--color-ink-subtle))]">{open ? "▾" : "▸"}</span>
-              <span className={`flex-1 min-w-0 truncate ${open ? "font-medium" : ""}`}>{corpusName(corpus)}</span>
+              <span title={corpusName(corpus)} className={`flex-1 min-w-0 truncate ${open ? "font-medium" : ""}`}>{corpusName(corpus)}</span>
               <span className="font-mono text-2xs text-[oklch(var(--color-ink-muted))]">{corpusCount ? corpusCount(corpus) : list.length}</span>
             </button>
             {open && (
@@ -669,7 +670,7 @@ function ArticleLink({ article, label, onChoose, end = false }: { article: Artic
       className={`min-h-(--control-h-sm) min-w-0 py-1 hover:bg-[oklch(var(--color-surface-2))] ${end ? "text-right" : "text-left"}`}
     >
       <span className="block text-2xs text-[oklch(var(--color-ink-subtle))]">{label}</span>
-      <span className="block truncate text-sm">
+      <span title={`${article.sigil ?? article.statute.code} ${article.statute.display_title}`} className="block truncate text-sm">
         {article.sigil ?? article.statute.code} {article.statute.display_title}
       </span>
     </button>
