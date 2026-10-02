@@ -22,6 +22,17 @@ const SEGMENT_TITLE: Record<string, string> = {
   admin: "breadcrumb.menu.group_settings",
   assistant: "assist_admin.title",
   usage: "assist_admin.tabs.usage",
+  // 2026-10-03:/social/follows 与 /dispatch/propose 的身份带此前读原样的「follows」「propose」。
+  follows: "social.follows",
+  propose: "dispatch.propose",
+};
+
+/**
+ * 菜单里的页面,<h1> 与菜单名(面包屑 / 身份带)说同一个名字。2026-10-03 用户拍板:
+ * /actors 的 <h1> 此前是「角色」,而身份带是菜单名「神祇名录」—— 同一页两个名字。
+ */
+const MENU_PAGE_TITLE: Record<string, string> = {
+  actors: "actors.title",
 };
 
 describe.each([
@@ -34,5 +45,11 @@ describe.each([
     expect(typeof label).toBe("string");
     expect(label).not.toBe(segment);
     expect(label).toBe(get(bundle as Bundle, titleKey));
+  });
+
+  it.each(Object.entries(MENU_PAGE_TITLE))("%s 的 <h1>(%s)就是 breadcrumb.menu 里的菜单名", (menuKey, titleKey) => {
+    const menuName = get(bundle as Bundle, `breadcrumb.menu.${menuKey}`);
+    expect(typeof menuName).toBe("string");
+    expect(get(bundle as Bundle, titleKey)).toBe(menuName);
   });
 });

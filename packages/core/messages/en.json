@@ -1826,7 +1826,7 @@
     "no_organizations": "No organizations are recorded yet."
   },
   "actors": {
-    "title": "Actors",
+    "title": "Deity Roster",
     "subtitle": "Cross-civilization actor management",
     "section": {
       "actors": "Actors List"
@@ -2525,7 +2525,9 @@
     "buttons": "Menu Buttons",
     "admin": "System Settings",
     "assistant": "Assistant admin",
-    "usage": "Actual usage"
+    "usage": "Actual usage",
+    "follows": "Follows",
+    "propose": "Propose Dispatch"
   },
   "tenant": {
     "civilizations": {

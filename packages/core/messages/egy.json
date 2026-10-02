@@ -1826,7 +1826,7 @@
     "no_organizations": "Nen Per Djer"
   },
   "actors": {
-    "title": "Netjeru",
+    "title": "Ren Netjeru",
     "subtitle": "Iri Netjeru Em Taui Neb",
     "section": {
       "actors": "Netjeru"
@@ -2525,7 +2525,9 @@
     "buttons": "Aha Menu",
     "admin": "Smen Hemsu",
     "assistant": "Smen Hehy Medu",
-    "usage": "Hesb Hehy"
+    "usage": "Hesb Hehy",
+    "follows": "Nehes Neb",
+    "propose": "Sesen Hab-Ba"
   },
   "tenant": {
     "civilizations": {
