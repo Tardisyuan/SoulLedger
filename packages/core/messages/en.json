@@ -2479,6 +2479,7 @@
   },
   "breadcrumb": {
     "aria_label": "Breadcrumb",
+    "back": "Back",
     "home": "Dashboard",
     "detail": "Detail",
     "menu": {
@@ -2542,7 +2543,8 @@
     "reconnecting": "Reconnecting…",
     "disconnected": "Disconnected",
     "failed": "Connection failed",
-    "retry": "Reconnect"
+    "retry": "Reconnect",
+    "offline": "Offline · What you see may not be current"
   },
   "scheduler": {
     "title": "Scheduled Tasks",

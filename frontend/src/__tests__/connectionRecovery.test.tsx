@@ -14,9 +14,9 @@
  * raw `bg-emerald-500` / `bg-yellow-500` / `bg-red-500`, so they rendered the
  * same colour in both themes while everything around them changed.
  */
-import { render, screen, fireEvent } from "@testing-library/react";
+import { act, render, renderHook, screen, fireEvent } from "@testing-library/react";
 
-import { ConnectionBanner, ConnectionStatus } from "@/src/components/connection-status";
+import { ConnectionBanner, ConnectionStatus, useConnectionBannerShown } from "@/src/components/connection-status";
 
 const mockReconnect = jest.fn();
 let mockStatus = "connected";
@@ -122,6 +122,42 @@ describe("the connection bar (Design E 组: global state, top of the viewport)",
     for (const c of ["fixed", "inset-x-0", "top-0", "h-7"]) expect(bar.className.split(/\s+/)).toContain(c);
     // Absence: it is no longer hung off the plaque's lower edge.
     expect(bar.className).not.toMatch(/top-full|absolute/);
+  });
+
+  describe("离线(v3:navigator.onLine === false,随 offline / online 事件)", () => {
+    const setOnline = (on: boolean) => {
+      Object.defineProperty(window.navigator, "onLine", { configurable: true, get: () => on });
+      act(() => {
+        window.dispatchEvent(new Event(on ? "online" : "offline"));
+      });
+    };
+    afterEach(() => setOnline(true));
+
+    it("socket 连着也出条:离线 · 当前内容可能不是最新版本 · 重试,上沿 warning", () => {
+      mockStatus = "connected";
+      render(<ConnectionBanner />);
+      expect(screen.queryByTestId("connection-banner")).toBeNull();
+
+      setOnline(false);
+      const bar = screen.getByTestId("connection-banner");
+      expect(bar).toHaveTextContent("connection.offline");
+      // Absence: the socket reason is not what an offline bar says.
+      expect(bar).not.toHaveTextContent("connection.connected");
+      expect(bar.className.split(/\s+/)).toEqual(expect.arrayContaining(["border-t-4", "border-t-[oklch(var(--color-warning))]"]));
+      fireEvent.click(screen.getByRole("button", { name: "common.retry" }));
+      expect(mockReconnect).toHaveBeenCalledTimes(1);
+
+      setOnline(true);
+      expect(screen.queryByTestId("connection-banner")).toBeNull();
+    });
+
+    it("问一问面板按同一个判断让出条的高度", () => {
+      mockStatus = "connected";
+      const { result } = renderHook(() => useConnectionBannerShown());
+      expect(result.current).toBe(false);
+      setOnline(false);
+      expect(result.current).toBe(true);
+    });
   });
 
   it("is not there while connected or still connecting", () => {

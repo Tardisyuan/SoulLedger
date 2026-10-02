@@ -2479,6 +2479,7 @@
   },
   "breadcrumb": {
     "aria_label": "Wat Tepy",
+    "back": "Wehem Er Medjat Pehwy",
     "home": "Wetep Khet",
     "detail": "Medu",
     "menu": {
@@ -2542,7 +2543,8 @@
     "reconnecting": "Em Senb Wehem…",
     "disconnected": "Nen Em Senb",
     "failed": "Nen Senb Seth",
-    "retry": "Senb Wehem"
+    "retry": "Senb Wehem",
+    "offline": "Nen Em Senb · Nen Renpi"
   },
   "scheduler": {
     "title": "Baku Ahet",
