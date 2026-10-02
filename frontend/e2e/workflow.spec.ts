@@ -180,34 +180,33 @@ test.describe("Workflow editor toolbar", () => {
     await page.goto("/workflow");
     await page.getByRole("button", { name: "流程编辑器", exact: true }).click();
 
-    const priority = page.getByLabel("优先级", { exact: true }).filter({ visible: true });
+    // v3 A1: a 0 / 1 / 2 segment (radio group), each digit named by its tier.
+    const priority = page.getByRole("radiogroup", { name: "优先级", exact: true }).filter({ visible: true });
     await expect(priority).toBeVisible();
 
-    // Three tiers, and each option's value paired with its own copy — a select
-    // whose labels drifted off their values reads correctly and saves the wrong
+    // Three tiers, and each digit paired with its own name — a segment whose
+    // names drifted off their values reads correctly and saves the wrong
     // number. `toHaveCount(3)` is the absence half: a fourth tier would have to
     // be a deliberate edit here, because 0/1/2 is the whole of the model column.
-    await expect(priority.locator("option")).toHaveCount(3);
+    await expect(priority.getByRole("radio")).toHaveCount(3);
     for (const [value, label] of [["0", "普通"], ["1", "紧急"], ["2", "危急"]]) {
-      await expect(priority.locator(`option[value="${value}"]`)).toHaveText(label);
+      await expect(priority.getByRole("radio", { name: label, exact: true })).toHaveText(value);
     }
 
     // A fresh editor opens at the column's own floor.
-    await expect(priority).toHaveValue("0");
+    await expect(priority.getByRole("radio", { checked: true })).toHaveText("0");
 
     await page.getByLabel("模板名称", { exact: true }).filter({ visible: true }).fill("危急模板");
-    await priority.selectOption("2");
-    await expect(priority).toHaveValue("2");
+    await priority.getByRole("radio", { name: "危急", exact: true }).click();
+    await expect(priority.getByRole("radio", { checked: true })).toHaveText("2");
 
     await page.getByRole("button", { name: "存草稿", exact: true }).click();
 
     await expect.poll(() => api.countOf("POST", "/workflow/templates/")).toBe(1);
     const body = api.lastCall("POST", "/workflow/templates/")!.body;
 
-    // `toBe(2)`, not `toBe("2")`: the select hands back a string and
-    // `WorkflowEditor` is what calls Number() on it. Dropping that conversion
-    // would leave a payload DRF still coerces, so the type is the only place
-    // the regression is visible — and 2 is neither the default (0) nor the
+    // `toBe(2)`, not `toBe("2")`: the type is the only place a stringly
+    // regression would be visible, since DRF still coerces — and 2 is neither the default (0) nor the
     // value any preset carries (1), so it can only have come from the click.
     expect(body.priority).toBe(2);
     expect(body.name).toBe("危急模板");
@@ -450,7 +449,7 @@ test.describe("Workflow editor below 1024 px", () => {
     await page.getByRole("button", { name: /申诉审判流程/ }).first().click();
     await page.getByRole("button", { name: "编辑", exact: true }).click();
 
-    await expect(seen(page, "画布只在 ≥ 1024 px 可编辑")).toBeVisible();
+    await expect(seen(page, "窄屏只读。要改节点或连线，请在 1024 以上打开。")).toBeVisible();
     const preview = page.getByRole("region", { name: "模板预览 · 线性" });
     await expect(preview.getByRole("button")).toHaveCount(4);
     await expect(page.locator(".react-flow__node")).toHaveCount(0);
@@ -458,7 +457,7 @@ test.describe("Workflow editor below 1024 px", () => {
     await expect(page.getByRole("button", { name: "发布", exact: true })).toHaveCount(0);
     await expect(page.getByLabel("模板名称", { exact: true })).toHaveCount(0);
 
-    await preview.getByRole("button", { name: /酆都大帝 · 终审/ }).click();
+    await preview.getByRole("button", { name: /^酆都大帝 · 终审/ }).click();
     const inspector = page.getByRole("complementary", { name: "属性" });
     await expect(inspector).toContainText("FINAL");
     await expect(inspector).toContainText("酆都");

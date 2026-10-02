@@ -109,6 +109,8 @@ describe("the five strips read it from there", () => {
     "src/components/assist-admin/parts.tsx",
     // 2026-10-02(A5):动态页右列「关注」卡的「关注中 / 粉丝」两个页签。
     "src/components/social/FollowPanel.tsx",
+    // 2026-10-02(v3 A1):审批流编辑器检查器的「节点 / 出口 / 问题 / 版本」四个页签。
+    "src/components/workflow/WorkflowEditorPanels.tsx",
   ];
 
   it("exactly these files import the module", () => {

@@ -127,8 +127,8 @@ function edgesFor(rows: TemplateNode[]): Edge[] {
 }
 
 /**
- * How every edge in this editor is drawn: design C · 03 「连线 Edge」, a 1 px
- * right-angle polyline in ink3 (补足 C15) (`route`, the edge type in
+ * How every edge in this editor is drawn: v3 A1 「连线」, a 1.25 px
+ * right-angle polyline in ink-muted (`route`, the edge type in
  * `EditableNode.tsx`, which also dashes the FAIL branch).
  *
  * No `markerEnd` any more, and that is what lets the colour be a token. The
@@ -149,7 +149,7 @@ function edgesFor(rows: TemplateNode[]): Edge[] {
 export function edgeArrow() {
   return {
     type: "route",
-    style: { stroke: "oklch(var(--color-ink-subtle))", strokeWidth: 1 },
+    style: { stroke: "oklch(var(--color-ink-muted))", strokeWidth: 1.25 },
   };
 }
 
