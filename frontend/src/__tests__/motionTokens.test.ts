@@ -46,7 +46,7 @@ describe("v3 general motion rows", () => {
   const src = (rel: string) => readFileSync(path.join(FRONTEND_ROOT, rel), "utf8");
 
   it("the three off-table durations and the reduced fade are named tokens with v3's numbers", () => {
-    expect(themeValue("--transition-duration-close")).toBe("180ms");
+    expect(themeValue("--transition-duration-close")).toBe("160ms");
     expect(themeValue("--transition-duration-dismiss")).toBe("140ms");
     expect(themeValue("--transition-duration-reveal")).toBe("200ms");
     expect(themeValue("--transition-duration-reduced")).toBe("80ms");
@@ -73,12 +73,14 @@ describe("v3 general motion rows", () => {
    * 超过 40 行的整节只淡入淡出 160。两个工具类只由 Collapse 挂,行展开与整节折叠都走它。 */
   it("row / section expand 240 enter, collapse 160 exit, one shared component", () => {
     expect(themeValue("--animate-row-expand")).toBe(
-      "row-expand var(--transition-duration-base) var(--ease-enter) backwards"
+      "row-expand var(--transition-duration-settle) var(--ease-enter) backwards"
     );
     expect(themeValue("--animate-row-collapse")).toBe(
       "row-collapse var(--transition-duration-fast) var(--ease-exit) forwards"
     );
-    expect(themeValue("--transition-duration-base")).toBe("240ms");
+    // 展开与 row-enter 同一档(Design 第三批书面回复)。
+    expect(themeValue("--animate-row-enter")).toMatch(/var\(--transition-duration-settle\) var\(--ease-enter\)/);
+    expect(themeValue("--transition-duration-settle")).toBe("240ms");
     expect(themeValue("--transition-duration-fast")).toBe("160ms");
     expect(themeValue("--ease-enter")).toBe("cubic-bezier(0.2, 0.8, 0.2, 1)");
     expect(themeValue("--ease-exit")).toBe("cubic-bezier(0.4, 0, 1, 1)");
@@ -110,7 +112,17 @@ describe("v3 general motion rows", () => {
     }
   });
 
-  it("modal / drawer: open 240 enter, close 180 exit, 12px", () => {
+  /* Design 第三批书面回复:整节折叠的箭头 160ms、标准曲线转 90°;节首吸顶,收起时节首不动、下面的节往上收。 */
+  it("section collapse: arrow turns 90° over 160ms standard, section headers stick under the band", () => {
+    for (const file of ["app/actors/page.tsx", "app/corpus/page.tsx", "app/organizations/page.tsx", "app/scheduler/page.tsx"]) {
+      expect([file, /transition-transform duration-fast ease-standard \$\{[^}]*-rotate-90/.test(src(file))]).toEqual([file, true]);
+    }
+    for (const file of ["app/actors/page.tsx", "app/organizations/page.tsx", "app/scheduler/page.tsx"]) {
+      expect([file, src(file).includes("sticky top-(--below-band) z-1")]).toEqual([file, true]);
+    }
+  });
+
+  it("modal / drawer: open 240 enter, close 160 exit, 12px", () => {
     for (const file of ["src/components/ui/Modal.tsx", "src/components/ui/Drawer.tsx"]) {
       const text = src(file);
       expect(text).not.toMatch(/data-ending-style:duration-fast/);

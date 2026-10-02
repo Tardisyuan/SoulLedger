@@ -238,7 +238,8 @@ function SchedulerPageContent() {
                 className="border-t border-[oklch(var(--color-block))]"
                 data-group={group.key}
               >
-                <h2 className="text-2xs uppercase text-[oklch(var(--color-ink-muted))]">
+                {/* 节首吸顶(Design 第三批):收起时节首不动,下面的节往上收。 */}
+                <h2 className="sticky top-(--below-band) z-1 bg-[oklch(var(--color-canvas))] text-2xs uppercase text-[oklch(var(--color-ink-muted))]">
                   <button
                     type="button"
                     aria-expanded={open}
@@ -258,7 +259,7 @@ function SchedulerPageContent() {
                       {" · "}
                       {t("scheduler.groups.count", { count: String(group.jobs.length) })}
                     </span>
-                    <ChevronDown aria-hidden="true" className={`w-4 h-4 shrink-0 transition-transform ${open ? "" : "-rotate-90"}`} />
+                    <ChevronDown aria-hidden="true" className={`w-4 h-4 shrink-0 transition-transform duration-fast ease-standard ${open ? "" : "-rotate-90"}`} />
                   </button>
                 </h2>
                 <Collapse open={open} id={bodyId} rows={group.jobs.length}>

@@ -6,7 +6,7 @@
  *
  *   - `SettingsDrawer` 的 `drawer-in` / `drawer-out`,元素本体是 `fixed right-0 w-80`;
  *     写这份测试时是 `translateX(100%)` 起手,规范 v3(2026-10-01)改成 12px + 淡入、
- *     关 180ms —— 位移小了,但它仍从右缘往外伸,这份测试照旧有用;
+ *     关 160ms(原 180)—— 位移小了,但它仍从右缘往外伸,这份测试照旧有用;
  *   - `AppLayout` 的移动端抽屉,`-translate-x-full`,这一轮之前它**根本没有过渡**
  *     (`transition-[width]` 里没有 transform),所以那 240ms 从来不存在。
  *
