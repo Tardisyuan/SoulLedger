@@ -27,7 +27,8 @@ import { CrossJudgmentSeatForm } from "@/src/components/cross-judgments/CrossJud
  * enumeration as a domain enumeration — see the note on the list page.
  */
 const STATUS_TONES: Record<string, BadgeTone> = {
-  PROPOSED: "warning",
+  // 规范 v3:警示色只给可撤回的风险。「已提议」只是还没开审,中性;字形 ◐ 照旧把它分开。
+  PROPOSED: "neutral",
   ACTIVE: "info",
   CONCLUDED: "success",
   CANCELLED: "neutral",
@@ -46,7 +47,8 @@ const CONCLUSION_GLYPH: Record<string, string> = { PASS: "✓", FAIL: "✕" };
 
 export default function CrossJudgmentDetailPage() {
   const { t } = useI18n();
-  usePlaque({ hall: useHall(t("plaque.office.trials")) });
+  // 题字自己报:壳的默认是面包屑末段,在详情页上那是原始 id。
+  usePlaque({ title: t("crossJudgments.title"), hall: useHall(t("plaque.office.trials")) });
   const { user } = useTenant();
   const params = useParams();
   const router = useRouter();
@@ -163,7 +165,9 @@ export default function CrossJudgmentDetailPage() {
           <Skeleton className="h-4 w-32" />
         ) : (
           <>
-            {t("crossJudgments.initiated_by")}: {judgment?.initiating_tenant}
+            {/* 展示名,不是 `initiating_tenant`:那是租户主键(IDENTIFIER_POLICY 第 4 条),
+                `initiating_tenant_display_name` 是 2026-09-24 为这一格加的。 */}
+            {t("crossJudgments.initiated_by")}: {judgment?.initiating_tenant_display_name || judgment?.initiating_tenant_code}
           </>
         )
       }
@@ -239,7 +243,8 @@ export default function CrossJudgmentDetailPage() {
                       一直是 SCREAMING_SNAKE 原样,正是 §4.6 要消除的那种。
                       键已补进 `crossJudgments.participant_roles`。 */}
                   <span className="text-xs text-[oklch(var(--color-ink-subtle))] flex items-center gap-1">
-                    <span className="font-mono">{p.participant_tenant}</span>
+                    {/* 席位租户的展示名,不是 `participant_tenant`(主键)。 */}
+                    <span>{p.participant_tenant_display_name || p.participant_tenant_code}</span>
                     {/* 中点,不是 em dash。em dash 是 §4.6 里「缺失值」的
                         专用字形,`domainDisplayContract` 会把它当成手写的缺失
                         标记报红 —— 而这里它只是两个存在的值之间的分隔符。 */}

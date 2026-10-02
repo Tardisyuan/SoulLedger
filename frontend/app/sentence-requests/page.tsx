@@ -78,7 +78,8 @@ function SentenceRequestsContent() {
                     </span>
                   </p>
                   <RequestChanges request={request} plan={plan} />
-                  {request.reason && <p className="text-sm text-[oklch(var(--color-ink-muted))]">{request.reason}</p>}
+                  {/* 请求理由是人写的话:衬线(DESIGN.md「Things a person said」)。 */}
+                  {request.reason && <p className="font-serif text-sm text-[oklch(var(--color-ink-muted))]">{request.reason}</p>}
                   <SentenceRequestActions plan={plan} request={request} />
                 </li>
               );
