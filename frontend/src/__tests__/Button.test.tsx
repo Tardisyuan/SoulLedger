@@ -295,6 +295,22 @@ describe("behaviour", () => {
     expect(screen.getByRole("button", { name: "Save" })).toBeInTheDocument();
   });
 
+  it("keeps its width while loading: the spinner lies over the label, the label stays in the flow (v3)", () => {
+    render(<Button loading>Save</Button>);
+    const button = screen.getByRole("button");
+    const label = button.querySelector("[data-button-label]") as HTMLElement;
+    // The label still takes its room and is still the name: transparent, not invisible / hidden / removed.
+    expect(label).toHaveTextContent("Save");
+    expect(label.className.split(/\s+/)).toContain("opacity-0");
+    expect(label.className).not.toMatch(/\b(invisible|hidden|sr-only)\b/);
+    // The spinner is out of the flow, over the label, and is the only other child.
+    const overlay = button.querySelector("[aria-hidden=\"true\"]")!.parentElement as HTMLElement;
+    expect(overlay.parentElement).toBe(button);
+    expect(overlay.className.split(/\s+/)).toEqual(expect.arrayContaining(["absolute", "inset-0"]));
+    expect(button.className.split(/\s+/)).toContain("relative");
+    expect(button.children).toHaveLength(2);
+  });
+
   it("does not force a type, so migrated submit buttons keep submitting", () => {
     // Defaulting to type="button" would silently break every form this
     // eventually replaces: no type error, no failing test, just a dead submit.

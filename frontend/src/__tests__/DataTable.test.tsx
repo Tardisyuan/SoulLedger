@@ -222,6 +222,22 @@ describe("row height (规范 v3)", () => {
     expect(container.querySelector("thead th")?.className ?? "").toContain("py-2");
     expect(container.querySelector("table")?.className).not.toContain("[&_tbody_td]");
   });
+
+  it("表头是 v3 `.ds-th`:吸顶 z-20、界面字 11 muted 大写、下沿 1px 行线(不再是 v2 的等宽 + 2px 墨线)", () => {
+    const { container } = renderTable();
+    const thead = container.querySelector("thead") as HTMLElement;
+    const head = thead.className.split(/\s+/);
+    expect(head).toEqual(expect.arrayContaining(["text-2xs", "uppercase", "text-[oklch(var(--color-ink-muted))]"]));
+    expect(head).not.toContain("font-mono");
+    expect(container.querySelector("thead tr")?.className).not.toMatch(/border-b-2|color-ink\)\]/);
+    container.querySelectorAll("thead th").forEach((th) => {
+      const cls = th.className.split(/\s+/);
+      expect(cls).toEqual(expect.arrayContaining(["sticky", "top-0", "z-sticky", "shadow-[inset_0_-1px_0_oklch(var(--color-line))]"]));
+    });
+    // 吸顶的参照是表格自己的滚动框;isolate 把 z-20 关在框里,不压页面的筛选栏。
+    const box = (container.querySelector("table") as HTMLElement).parentElement as HTMLElement;
+    expect(box.className.split(/\s+/)).toEqual(expect.arrayContaining(["isolate", "overflow-x-auto", "md:max-h-(--content-min-h)"]));
+  });
 });
 
 describe("linked rows (规范 v1: the whole row opens the record)", () => {
