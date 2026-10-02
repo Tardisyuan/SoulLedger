@@ -432,12 +432,13 @@ export default function WorkflowPage() {
              parent); below 1024 px the editor is the read-only view, which is
              a document and takes the height its content needs.
              Fills the viewport below the band: 52 toolbar + the band's live height
-             (`--below-band`, 156 before it collapses) + 147 for this page's own head
-             (title, tabs, padding — measured 2026-10-02 at 1440) + 24 for PageShell's
+             (`--below-band`, 156 before it collapses) + 153 for this page's own head
+             (title, tabs, padding — measured 2026-10-02 at 1440; +6 on 2026-10-03 when the
+             underline tabs went from 38 to the 44 touch target) + 24 for PageShell's
              `py-6` under it, so the page ends at the viewport's bottom and does not scroll.
              The old `100vh-220px` predates the v3 band and ran ~135px off the bottom at 1440×900.
              `e2e/workflow-editor-fits-viewport.spec.ts` holds the bottom edge to the viewport. */
-          <div data-testid="workflow-editor-frame" className="lg:h-[calc(100vh-var(--below-band)-171px)] lg:min-h-[480px]">
+          <div data-testid="workflow-editor-frame" className="lg:h-[calc(100vh-var(--below-band)-177px)] lg:min-h-[480px]">
             <LazyWorkflowEditor
               templateId={editingTemplateId || undefined}
               initialTemplateData={editingTemplateData}
