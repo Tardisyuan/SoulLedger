@@ -736,3 +736,91 @@ class TestQueueList:
             return len(ctx.captured_queries)
 
         assert list_queries(2) == list_queries(8)
+
+
+# ---------------------------------------------------------------------------
+# v3 队列 / 审判台要的四个字段:功 / 过分列、世次、审判方式、所在界域
+# ---------------------------------------------------------------------------
+
+
+def _row(client, case):
+    response = client.get(BASE)
+    assert response.status_code == 200, response.data
+    return next(r for r in response.data["results"] if r["id"] == str(case.pk))
+
+
+@pytest.mark.django_db
+class TestV3RowFields:
+    def test_merit_and_demerit_ride_separately_for_every_cosmology(self, world):
+        cn_case = _case(world.cn, name="分账", merit=50, demerit=20)
+        eu_case = _case(world.eu, name="Dante", merit=7, demerit=3)
+        cn_row = _row(world.clients["a"], cn_case)
+        assert (cn_row["merit_score"], cn_row["demerit_score"]) == (50, 20)
+        eu_row = _row(world.clients["eu_judge"], eu_case)
+        # The net is a Chinese reading and stays null elsewhere; the two ledgers are not a net.
+        assert eu_row["karmic_balance"] is None
+        assert (eu_row["merit_score"], eu_row["demerit_score"]) == (7, 3)
+
+    def test_viewer_gets_neither_ledger(self, world):
+        cn_case = _case(world.cn, name="分账", merit=50, demerit=20)
+        row = _row(world.clients["viewer"], cn_case)
+        for field in ("merit_score", "demerit_score", "karmic_balance"):
+            assert field not in row
+        detail = world.clients["viewer"].get(f"{BASE}{cn_case.pk}/")
+        assert "merit_score" not in detail.data and "demerit_score" not in detail.data
+
+    def test_cycle_is_the_life_the_case_was_opened_in(self, world):
+        from apps.reincarnation.models import Reincarnation
+
+        first = _case(world.cn, name="一世")
+        assert _row(world.clients["a"], first)["cycle"] == 0
+        soul = Soul.objects.create(
+            name="四世", birth_date="1900-01-01", current_state=SoulState.JUDGING, tenant=world.cn,
+        )
+        for n in (1, 2, 3):
+            Reincarnation.objects.create(soul=soul, target_realm="人道", cycle_count=n, tenant=world.cn)
+        fourth = Judgment.objects.create(soul=soul, civilization=soul.civilization, court="第七殿", tenant=world.cn)
+        assert _row(world.clients["a"], fourth)["cycle"] == 3
+        # Read-only: a PATCH cannot rewrite which life a case belongs to.
+        world.clients["a"].patch(f"{BASE}{fourth.pk}/", {"cycle": 0}, format="json")
+        assert _fresh(fourth).cycle == 3
+
+    def test_judgment_method_and_realm_name(self, world):
+        from apps.judgment.models import JudgmentMethod
+        from apps.realms.models import Realm, RealmType
+
+        realm = Realm.objects.create(
+            realm_code="V3_DESK_SEVEN", name_local="第七殿", name_zh="第七殿", name_en="Seventh Court",
+            civilization="CHINESE", realm_type=RealmType.HELL, tenant=world.cn,
+        )
+        case = _case(world.cn, name="台上")
+        Judgment.all_objects.filter(pk=case.pk).update(realm=realm, judgment_method=JudgmentMethod.HEART_WEIGHING)
+        row = _row(world.clients["a"], case)
+        assert row["judgment_method"] == "HEART_WEIGHING"
+        assert row["realm_name"] == "Seventh Court"
+        zh = world.clients["a"].get(f"{BASE}{case.pk}/", HTTP_ACCEPT_LANGUAGE="zh-Hans")
+        assert zh.data["realm_name"] == "第七殿"
+        bare = _case(world.cn, name="未挂站")
+        assert _row(world.clients["a"], bare)["realm_name"] is None
+
+    def test_realm_name_does_not_query_per_row(self, world):
+        from apps.realms.models import Realm, RealmType
+
+        def list_queries(n):
+            Judgment.all_objects.all().delete()
+            for i in range(n):
+                realm = Realm.objects.create(
+                    realm_code=f"V3_Q_{n}_{i}", name_local=f"殿{i}", civilization="CHINESE",
+                    realm_type=RealmType.HELL, tenant=world.cn,
+                )
+                case = _case(world.cn, name=f"界{n}-{i}")
+                Judgment.all_objects.filter(pk=case.pk).update(realm=realm)
+            client = world.clients["a"]
+            client.get(BASE)  # warm the permission cache
+            with CaptureQueriesContext(connection) as ctx:
+                response = client.get(BASE)
+            assert response.status_code == 200
+            assert all(r["realm_name"] for r in response.data["results"])
+            return len(ctx.captured_queries)
+
+        assert list_queries(2) == list_queries(8)

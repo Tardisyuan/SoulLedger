@@ -80,6 +80,7 @@ export function PostCard({ post }: { post: Post }) {
         <ReactionBar
           postId={post.id}
           totals={{ reactions: post.reaction_count, comments: post.comment_count }}
+          counts={post.reaction_counts}
         />
       </div>
 

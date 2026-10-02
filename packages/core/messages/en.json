@@ -1032,7 +1032,9 @@
     "civ_empty": "No souls yet · register one",
     "tab_ledger": "Ledger",
     "top_realms": "Top 10 realms",
-    "avg_scope": "All souls in the ledger"
+    "avg_scope": "All souls in the ledger",
+    "occupancy": "Of capacity",
+    "bucket_width": "{{n}} per bar"
   },
   "ledger": {
     "title": "Deed Statistics",
@@ -1218,7 +1220,9 @@
       "notes_placeholder": "Enter notes...",
       "create_workflow": "Start approval workflow",
       "create_workflow_hint": "If checked, concluding will create an approval workflow from the template matching this civilization and case type.",
-      "conclude_with_workflow": "Rule and open workflow"
+      "conclude_with_workflow": "Rule and open workflow",
+      "current_realm": "Realm",
+      "method": "Method"
     },
     "create_success": "Judgment created",
     "create_error": "Failed to create judgment",
@@ -1428,7 +1432,9 @@
         "ORIGINAL": "Original",
         "AMENDMENT": "Amendment",
         "REOPEN": "Reopened"
-      }
+      },
+      "col_merit_demerit": "Merit / demerit",
+      "col_cycle_kind": "Life / kind"
     },
     "admission": {
       "title": "Evidence · admission",
@@ -1489,6 +1495,11 @@
     },
     "row_mark": {
       "mine": "Awaiting me"
+    },
+    "methods": {
+      "STANDARD": "Standard trial",
+      "HEART_WEIGHING": "Heart weighing",
+      "DIABOLICAL_TRIAL": "Diabolical trial"
     }
   },
   "audit": {

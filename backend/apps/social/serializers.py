@@ -7,6 +7,7 @@ from rest_framework import serializers
 
 from apps.social import images
 from apps.social.models import Comment, Follow, Post, Reaction, ReactionType, UserProfile, Visibility
+from apps.social.soul_serializers import SoulReactionCountsSerializer
 
 # ---------------------------------------------------------------------------
 # Post serializers
@@ -15,6 +16,8 @@ from apps.social.models import Comment, Follow, Post, Reaction, ReactionType, Us
 class PostSerializer(serializers.ModelSerializer):
     author_name = serializers.CharField(source="author.display_name", read_only=True, default="")
     author_username = serializers.CharField(source="author.username", read_only=True)
+    #: 五种表态各自的数(未删除的),读 `reaction_kind_counts()` 的注解 —— 与灵魂端、审核后台同一份。
+    reaction_counts = SoulReactionCountsSerializer(source="*", read_only=True)
 
     class Meta:
         model = Post
@@ -27,6 +30,7 @@ class PostSerializer(serializers.ModelSerializer):
             "visibility",
             "comment_count",
             "reaction_count",
+            "reaction_counts",
             "tenant",
             "create_time",
             "update_time",
@@ -61,6 +65,8 @@ class PostListSerializer(serializers.ModelSerializer):
 
     author_name = serializers.CharField(source="author.display_name", read_only=True, default="")
     author_username = serializers.CharField(source="author.username", read_only=True)
+    #: 五种表态各自的数(未删除的),读 `reaction_kind_counts()` 的注解 —— 与灵魂端、审核后台同一份。
+    reaction_counts = SoulReactionCountsSerializer(source="*", read_only=True)
 
     class Meta:
         model = Post
@@ -73,6 +79,7 @@ class PostListSerializer(serializers.ModelSerializer):
             "visibility",
             "comment_count",
             "reaction_count",
+            "reaction_counts",
             "create_time",
         ]
 
