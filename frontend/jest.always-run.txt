@@ -60,4 +60,5 @@ src/__tests__/v3DataDisplayContract.test.tsx
 src/__tests__/viewportHeightContract.test.ts
 src/__tests__/workflowAutoLayoutMotion.test.tsx
 src/__tests__/workflowEdgeArrowSingleSource.test.ts
+src/__tests__/zIndexOrderContract.test.ts
 src/__tests__/zhuyinShell.test.tsx

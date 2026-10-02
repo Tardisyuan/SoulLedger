@@ -346,7 +346,7 @@
      drawer 那一档,因为它可能在移动端抽屉打开时被唤起。
      dialog 现在压在 drawer 之上。理由是单向的:**从抽屉里开出来的确认框必须盖住
      抽屉**,而抽屉不会在对话框打开时被打开 —— 对话框是模态的。 */
-  /* 60–90 是**浮层**带,10–50 是**吸顶/布局**带,而在 2026-09-07 之前只有上面
+  /* 45–80 是**浮层**带(2026-10-03 前是 60–90),20–40 是**吸顶/布局**带(前是 10–50),而在 2026-09-07 之前只有上面
      那一半有名字 —— 下面这一半全站写裸数字,顺序碰巧是对的,但没有一处说明
      为什么是这个顺序,也没有任何东西会在有人写 `z-45` 时反对。补齐的是**跨文件
      协调的那几档**:这三个数字分别写在 PageShell.tsx 和 AppLayout.tsx 里,
@@ -370,14 +370,19 @@
      侧栏之后。这是一个可以被改掉的事实(有人重排 body 就变了),不是一条不变式;
      写下来是为了下次读到「同级」时不必重新推一遍。
 
-     `--z-index-scrim` 与 `--z-index-masthead` 同为 40,不是笔误。遮罩
+     `--z-index-scrim` 与 `--z-index-masthead` 同为一档(今为 30),不是笔误。遮罩
      (AppLayout.tsx 的 `md:hidden` 那个 button)与顶栏故意同档,于是 DOM 顺序
      决定谁在上 —— 遮罩在前、顶栏在后,顶栏因此不被压暗。两个名字而不是一个,
      是因为「遮罩」和「顶栏」不是一样东西;同值记的是这个决定,不是这个巧合。 */
-  --z-index-filters: 30;
-  --z-index-scrim: 40;
-  --z-index-masthead: 40;
-  --z-index-sidebar: 50;
+  /* 2026-10-03 按 v3(原型 App.tsx 令牌表 Z-index)重排:吸顶 20 / 导航 30 / Toast 50 /
+     抽屉 60 / 弹窗 70 / 盖印确认 80。名字不变,只换数字;v3 没有的两档(移动端导航面板、
+     进度条)插在空档里,保持它们原来的相对位置。
+     `sticky` 是 v3 的名字,`filters` 是它在本站的第一个消费者,同一档。 */
+  --z-index-sticky: 20;
+  --z-index-filters: 20;
+  --z-index-scrim: 30;
+  --z-index-masthead: 30;
+  --z-index-sidebar: 40;
 
   /* 这一档 2026-09-01 命名,到 2026-09-10 **一个消费者都没有** —— 唯一该用它的
      `#nprogress .bar` 写的是字面量 60。Tailwind 4 会摇掉无消费者的 `@theme`
@@ -387,13 +392,17 @@
      2026-09-10 接上了消费者(见下面 `#nprogress .bar`),它现在真的在构建产物里,
      60 这一档由编译器持有而不是由一段注释持有。当时另一个选项是删掉这个 token、
      让 60 只活在那条规则里;没有选它,因为那样「浮层带的下沿在哪」就只剩注释在说。 */
-  --z-index-progress: 60;
-  --z-index-drawer: 70;
-  --z-index-dialog: 80;
-  /* Toast sits above dialog, and that direction is also single: a toast usually
-     REPORTS what a dialog just did ("saved", "could not save"), so it has to be
-     readable while the dialog is still on screen; a dialog never needs to cover
-     a toast.
+  --z-index-progress: 45;
+  --z-index-drawer: 60;
+  --z-index-dialog: 70;
+  /* 盖印确认、ConfirmDialog:确认总是从弹窗或抽屉里唤起的那一层,所以压在 dialog 之上。 */
+  --z-index-confirm: 80;
+  /* Toast 在抽屉与弹窗**之下**(v3,2026-10-03)。此前是 90、压在 dialog 之上,理由是
+     「Toast 报告的是弹窗刚做的事,弹窗还在时要读得到」。v3 选了另一边:弹层是模态的,
+     盖住它的东西会抢走它的焦点语义;弹层里的结果由弹层自己说(错误写在弹层里),
+     Toast 报告的是弹层关掉之后的事。
+
+     History of the token:
 
      Added 2026-09-07. `#toast-container` below referenced `var(--z-toast, 99999)`
      — a name in no family (the scale is `--z-index-*`) that was never declared
@@ -401,7 +410,7 @@
      toast layer sat at 99999, four orders of magnitude off a scale whose whole
      point is that three numbers describe every stacking decision. Nothing
      failed, because an undeclared custom property with a fallback is valid CSS. */
-  --z-index-toast: 90;
+  --z-index-toast: 50;
 
   /* 规范 v2 A2:全站不用阴影,浮层也不用 —— 层级靠 1px ink 框(`border-[oklch(var(--color-ink))]`)。
      v1 的 `shadow-overlay` 这一档因此删掉,守卫(no-page-shadow)不再放行它。 */
@@ -1275,8 +1284,8 @@ html.theme-switching *::after {
 
 #nprogress .bar {
   position: fixed;
-  /* 60: above the sticky masthead (`--z-index-masthead`, 40), below drawers
-     (70) and dialogs (80). The scale is the `@theme` block at the top of this
+  /* 45: above the sticky masthead (`--z-index-masthead`, 30) and the mobile nav
+     sheet (40), below toasts (50), drawers (60) and dialogs (70). The scale is the `@theme` block at the top of this
      file — there is no `tailwind.config.js` any more, which is where this
      comment used to point.
 
