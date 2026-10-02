@@ -36,6 +36,7 @@ import { verdictGlyph } from "@/src/lib/verdictGlyph";
 import { ClaimAvatar } from "@/src/components/judgment/ClaimAvatar";
 import { RowMark, ROW_MARK_ROW, isMinePending } from "@/src/components/judgment/RowMark";
 import { MISSING_LABEL_KEY } from "@/src/lib/domainDisplay";
+import { withFrom } from "@/src/lib/backSource";
 
 /**
  * 审判队列的「待审」一面(规范 v3 第 7 轮 `QueuePage`,落在规范 v1 第三类 A·02 的四组上):
@@ -77,6 +78,8 @@ const LONG_WAIT_DAYS = 30;
 const CLAIMED_AT_FORMAT: Intl.DateTimeFormatOptions = { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" };
 /** 「本次会话」延后:浏览器会话内有效,去审判台再回来还在;关掉标签页就没了。 */
 const SESSION_DEFERRED_KEY = "soulledger-queue-session-deferred";
+/** 最后打开的那一件(v3 焦点恢复:从审判台回到队列时焦点落回原案卷行)。读一次就删。 */
+const LAST_OPENED_KEY = "soulledger-queue-last-opened";
 
 function readSessionDeferred(): string[] {
   try {
@@ -171,6 +174,32 @@ export function JudgmentClaimQueue() {
     return [...rows].sort((a, b) => later(a) - later(b));
   };
   const allRows = shownGroups.flatMap(rowsOf);
+
+  /* 焦点恢复:各组都取回来之后,把焦点放回上次从这里打开的那一件的行链接上(行的 onFocus 记下焦点行)。
+     只试一次:那一件已不在这一页(结案、被别人认领、翻了页)就作罢,不去猜一个相邻行。 */
+  const restored = useRef(false);
+  const rowsSettled = !groupQueries.some((q) => q.isPending);
+  useEffect(() => {
+    if (restored.current || !rowsSettled) return;
+    restored.current = true;
+    let id: string | null = null;
+    try {
+      id = window.sessionStorage.getItem(LAST_OPENED_KEY);
+      window.sessionStorage.removeItem(LAST_OPENED_KEY);
+    } catch {
+      /* 隐私模式等:没有可恢复的,焦点照常从页首开始。 */
+    }
+    if (!id) return;
+    const links = tableRef.current?.querySelectorAll<HTMLAnchorElement>("[data-row-link]") ?? [];
+    Array.from(links).find((a) => a.dataset.rowLink === id)?.focus();
+  }, [rowsSettled]);
+  const rememberOpened = (id: string) => {
+    try {
+      window.sessionStorage.setItem(LAST_OPENED_KEY, id);
+    } catch {
+      /* 同上。 */
+    }
+  };
   const selectable = new Set(allRows.map((j) => j.id));
   const chosen = [...selected].filter((id) => selectable.has(id));
   /** 工具条「改派…」作用的案子:勾选的;没勾选时是焦点行。 */
@@ -516,7 +545,7 @@ export function JudgmentClaimQueue() {
                         {/* 一直挂着、由 on 切换:取消认领时竖条反着退场(scaleY 1→0,140ms)。 */}
                         <RowMark on={marked} />
                         <span className="block truncate text-sm font-medium text-[oklch(var(--color-ink))]" title={j.soul_name || undefined}>
-                          <Link href={`/judgment/${j.id}`} data-row-link={j.id} className={ROW_LINK}>
+                          <Link href={withFrom(`/judgment/${j.id}`, "/judgment")} onClick={() => rememberOpened(j.id)} data-row-link={j.id} className={ROW_LINK}>
                             {j.soul_name ? j.soul_name : <MissingValue kind="unrecorded" reason="soul_name 未随判决返回" />}
                           </Link>
                         </span>
