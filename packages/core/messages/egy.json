@@ -823,7 +823,8 @@
           "eq": "=",
           "in": "∈",
           "not_in": "∉"
-        }
+        },
+        "and": "Hena"
       },
       "preview_approver": {
         "title": "Maa Netjer Sesen",
@@ -834,6 +835,37 @@
         "nobody": "Nen Netjer — Seshem Er Hery Wa",
         "no_accounts": "Nen Aq Em Sesen",
         "accounts": "Aq {{n}}: {{names}}"
+      },
+      "roles_title": "Iaut · Em Wat",
+      "role_legend": {
+        "entry": "Tepy · Nen Wat",
+        "step": "Wedja",
+        "branch": "Setep · Wat Setep",
+        "end": "Pehwy · Nen Wat"
+      },
+      "roles_note": "Iaut Em Wat · Nen Nehem",
+      "tab": {
+        "node": "Sekhet",
+        "exits": "Wat",
+        "issues": "Maat",
+        "version": "Hemet-Sesh"
+      },
+      "issues_blocking": "Nen Sesh · Maat {{n}}",
+      "issues_hint": "Setep Wa → Sekhet",
+      "issues_checks": "Maat {{total}} · Menkh {{passed}}",
+      "exits_title": "Wat · {{node}}",
+      "exits_hint": "Hesb · Gem Wa; Nen Gem → Tepy",
+      "exits_none": "Nen Wat Menkh",
+      "exits_fixed": "Setep Em Wat Menkh · Wat Khesef Nen Setep",
+      "exit_label": "Ren Wat",
+      "preview_count": "Sekhet {{nodes}} · Wat {{edges}}",
+      "flow_count": "Wat · Sekhet {{n}}",
+      "glyph_legend": "▷ Tepy · □ Wedja · ◇ Setep · ■ Pehwy",
+      "zoom": {
+        "out": "Maa Nedjes",
+        "in": "Maa Aa",
+        "reset": "Maa 100%",
+        "fit": "Maa Neb"
       }
     },
     "templates": "Pet-Sesh Wat",
@@ -895,7 +927,13 @@
       "approver_name_absent": "Sekhet Ini Ren Hesb Netjer Wa; Ren Nen Iyi",
       "reason_for_soul": "Khet Khesef Er Ba",
       "reason_for_soul_hint": "Ba Maa Khet Pen; Medu Sab Nen Maa. Sesh 2000 Er Pehwy.",
-      "reason_for_soul_required": "Khesef Dbh Wehem Mesut: Sesh Khet Khesef Er Ba"
+      "reason_for_soul_required": "Khesef Dbh Wehem Mesut: Sesh Khet Khesef Er Ba",
+      "waiting_on_me": "Shesep-I · Nen Iri Djer",
+      "row_legend": "Shesep-I · Nen Iri Djer — Sekhet Tepy",
+      "not_reached": "Nen Shem",
+      "last_step": "Wedja Pehwy",
+      "template": "Pet-Sesh",
+      "status": "Kheperu"
     },
     "verdicts": {
       "passed": "Menkh",

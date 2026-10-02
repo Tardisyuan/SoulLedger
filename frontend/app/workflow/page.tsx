@@ -130,7 +130,8 @@ export default function WorkflowPage() {
     /* `page` (1200px), up from the `max-w-6xl` (1152) this page chose for
        itself. */
     <PageShell
-      variant="page"
+      /* The editor tab is a three-pane canvas (176 · canvas · 360, v3 A1) and takes the full width; the other two tabs keep the page column. */
+      variant={tab === "editor" ? "full" : "page"}
       title={
         <>
           {t("workflow.title")}

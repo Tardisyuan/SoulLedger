@@ -736,7 +736,7 @@
         "no_exit": "{{node}} 没有出口,走不到结束",
         "no_end": "{{node}}:用了条件或结束节点,就需要至少一个结束节点"
       },
-      "palette": "节点库 · 拖入",
+      "palette": "节点 · 拖入画布",
       "inspector": "属性",
       "inspector_empty": "在画布或线性预览里选一个节点。",
       "unnamed": "(未命名)",
@@ -748,7 +748,7 @@
       },
       "preview": "模板预览 · 线性",
       "preview_empty": "还没有节点。",
-      "narrow_title": "画布只在 ≥ 1024 px 可编辑",
+      "narrow_title": "窄屏只读。要改节点或连线，请在 1024 以上打开。",
       "narrow_body": "窄屏下只读:显示线性预览、校验结果和节点属性。",
       "publish": "发布",
       "publishing": "发布中…",
@@ -823,7 +823,8 @@
           "eq": "等于",
           "in": "属于",
           "not_in": "不属于"
-        }
+        },
+        "and": "且"
       },
       "preview_approver": {
         "title": "审批人预览",
@@ -834,6 +835,37 @@
         "nobody": "无人(SYSTEM)—— 只能越级推进",
         "no_accounts": "当前没有账号能审批它",
         "accounts": "{{n}} 个账号:{{names}}"
+      },
+      "roles_title": "角色 · 由连线推导",
+      "role_legend": {
+        "entry": "入口 · 无入线",
+        "step": "步骤",
+        "branch": "分支 · 有条件出口",
+        "end": "终点 · 无出线"
+      },
+      "roles_note": "角色不可拖，只能由连线得出",
+      "tab": {
+        "node": "节点",
+        "exits": "出口",
+        "issues": "问题",
+        "version": "版本"
+      },
+      "issues_blocking": "{{n}} 处问题挡住发布",
+      "issues_hint": "点一条，画布定位到出问题的节点",
+      "issues_checks": "共 {{total}} 种检查 · {{passed}} 种通过",
+      "exits_title": "{{node}} 的出口",
+      "exits_hint": "按顺序匹配，首个命中即走；都不中走默认",
+      "exits_none": "这个节点没有「通过」出口。",
+      "exits_fixed": "条件只挂在「通过」出口上；「否决」出口另走固定路线。",
+      "exit_label": "连线标签",
+      "preview_count": "{{nodes}} 节点 · {{edges}} 连线",
+      "flow_count": "流程 · {{n}} 节点",
+      "glyph_legend": "左列字形是角色（▷ 入口 · □ 步骤 · ◇ 分支 · ■ 终点），名称前是节点类型",
+      "zoom": {
+        "out": "缩小",
+        "in": "放大",
+        "reset": "缩放到 100%",
+        "fit": "适配画布"
       }
     },
     "templates": "流程模板",
@@ -895,7 +927,13 @@
       "approver_name_absent": "节点只带审批人主键,后端未返回姓名",
       "reason_for_soul": "给灵魂的驳回理由",
       "reason_for_soul_hint": "此理由对灵魂可见;内部备注不可见。最多 2000 字。",
-      "reason_for_soul_required": "驳回转生申请必须填写给灵魂的驳回理由"
+      "reason_for_soul_required": "驳回转生申请必须填写给灵魂的驳回理由",
+      "waiting_on_me": "待我处理",
+      "row_legend": "行首竖条 = 待我处理 · 底色 = 当前节点",
+      "not_reached": "未走",
+      "last_step": "最近一步",
+      "template": "模板",
+      "status": "状态"
     },
     "verdicts": {
       "passed": "通过",

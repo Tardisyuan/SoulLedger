@@ -1,6 +1,6 @@
 /**
- * 审批流编辑器的节点框(规范 v2 补足 C15):普通节点 1px ink3 实线,条件(分支 ◇)节点虚线,
- * 选中是 2px 焦点框。
+ * 审批流编辑器的节点框(v3 A1):168 宽,1px line-strong 实线,不分角色;选中是 2px ink 框;
+ * 有问题是 danger 边框加名称行末的 `!`。文明色**不进画布**(用户 10-02)。
  */
 import type { ComponentType } from "react";
 import { render } from "@testing-library/react";
@@ -13,27 +13,44 @@ jest.mock("@/src/contexts/I18nContext", () => ({
 
 const Node = nodeTypes.editableNode as unknown as ComponentType<{ data: Record<string, unknown>; selected: boolean }>;
 
-function frame(role: string, selected = false) {
+function frame(role: string, selected = false, extra: Record<string, unknown> = {}) {
   const { container } = render(
     <ReactFlowProvider>
-      <Node selected={selected} data={{ label: "殿主复核", nodeType: "APPROVAL", courtCode: "CN_5", approverRole: "JUDGE", role }} />
+      <Node selected={selected} data={{ label: "殿主复核", nodeType: "APPROVAL", courtCode: "CN_5", approverRole: "JUDGE", role, ...extra }} />
     </ReactFlowProvider>
   );
   return container.querySelector("[data-role]") as HTMLElement;
 }
 
-it("draws a branch node dashed and a plain step solid, both in ink3", () => {
-  const branch = frame("branch");
-  const step = frame("step");
-  expect(branch.className).toMatch(/border-dashed/);
-  expect(step.className).not.toMatch(/border-dashed/);
-  for (const el of [branch, step]) {
-    expect(el.className).toMatch(/border-\[oklch\(var\(--color-ink-subtle\)\)\]/);
-    expect(el.className).not.toMatch(/color-block/);
+it("draws every role with the same solid line-strong frame, 168 wide", () => {
+  for (const role of ["entry", "step", "branch", "end"]) {
+    const el = frame(role);
+    expect(el.className).toMatch(/border-\[oklch\(var\(--color-line-strong\)\)\]/);
+    expect(el.className).toMatch(/w-\[168px\]/);
+    expect(el.className).not.toMatch(/border-dashed/);
   }
 });
 
-it("marks the selected node with the 2px focus frame and only that one", () => {
-  expect(frame("step", true).className).toMatch(/outline-2/);
+it("marks the selected node with a 2px ink frame, never the civilization colour", () => {
+  const on = frame("step", true);
+  expect(on.className).toMatch(/outline-2/);
+  expect(on.className).toMatch(/outline-\[oklch\(var\(--color-ink\)\)\]/);
+  expect(on.className).not.toMatch(/color-main|color-accent/);
   expect(frame("step", false).className).not.toMatch(/outline-2/);
+});
+
+it("shows the role on the first line and the kind glyph before the name", () => {
+  const el = frame("branch", false, { kind: "COUNTERSIGN", signers: [{}, {}, {}], threshold: 2 });
+  expect(el.textContent).toContain("◇ workflow.editor.role.branch");
+  expect(el.textContent).toContain("⧉ 殿主复核");
+  expect(el.textContent).toContain("CN_5 · 2/3");
+});
+
+it("puts a node with issues in danger, with a `!`, and a clean one in neither", () => {
+  const bad = frame("step", false, { issueCount: 2 });
+  expect(bad.className).toMatch(/border-\[oklch\(var\(--color-danger\)\)\]/);
+  expect(bad.textContent).toContain("!");
+  const ok = frame("step");
+  expect(ok.className).not.toMatch(/color-danger/);
+  expect(ok.textContent).not.toContain("!");
 });

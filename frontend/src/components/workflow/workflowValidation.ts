@@ -122,6 +122,31 @@ export type FlowIssueCode =
   | "no_exit"
   | "no_end";
 
+/**
+ * Every check `validateFlow` can report, in one list — the inspector's 问题 tab
+ * counts 「共 N 种检查 · M 种通过」 from it. Typed against the union so a code
+ * added there and forgotten here fails to compile only in the other direction;
+ * `workflowIssueCodes.test.ts` closes it against the bundle's `issue.*` keys.
+ */
+export const FLOW_ISSUE_CODES: readonly FlowIssueCode[] = [
+  "name_empty",
+  "self_route",
+  "duplicate_route",
+  "reject_not_earlier",
+  "reject_and_fail_route",
+  "timeout_incomplete",
+  "timeout_role_missing",
+  "countersign_no_signers",
+  "threshold_out_of_range",
+  "end_has_exit",
+  "condition_empty",
+  "condition_invalid",
+  "condition_overlap",
+  "unreachable",
+  "no_exit",
+  "no_end",
+];
+
 export const SAVE_BLOCKING: ReadonlySet<FlowIssueCode> = new Set(["name_empty", "self_route", "duplicate_route"]);
 
 export interface FlowIssue {
