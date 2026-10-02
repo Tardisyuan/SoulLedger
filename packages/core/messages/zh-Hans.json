@@ -1307,6 +1307,7 @@
       "select_prompt": "从目录选一条律条。",
       "no_match": "没有匹配「{{q}}」的律条",
       "clear_search": "清除检索",
+      "unknown_code": "没有编号为「{{code}}」的律条,下面从第一条读起",
       "cited_by_error": "被引用清单加载失败",
       "cited_by_open": "未结",
       "insert_desk": "插入审判台",
@@ -1455,6 +1456,7 @@
         "REOPEN": "重开"
       },
       "col_merit_demerit": "功 / 过",
+      "col_case_soul": "案号 / 灵魂",
       "col_cycle_kind": "世次 / 种类"
     },
     "admission": {

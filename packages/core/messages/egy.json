@@ -1307,6 +1307,7 @@
       "select_prompt": "Setep Hep Em Sesh Hep.",
       "no_match": "Nen Gem Hep: «{{q}}»",
       "clear_search": "Fekh Hehy",
+      "unknown_code": "Nen Gem Ren Hep: «{{code}}»",
       "cited_by_error": "Nen Ini Wedja",
       "cited_by_open": "Nen Khetem",
       "insert_desk": "Djed Er Wedja",
@@ -1455,6 +1456,7 @@
         "REOPEN": "Wedja Wehem"
       },
       "col_merit_demerit": "Nefer / Isfet",
+      "col_case_soul": "Hesb Sep / Ba",
       "col_cycle_kind": "Ankh / Iru"
     },
     "admission": {
