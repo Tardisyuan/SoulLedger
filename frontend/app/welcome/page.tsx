@@ -16,7 +16,8 @@ import { DomainEnum } from "@/src/components/ui/DomainValue";
 import { RoleName } from "@/src/components/users/RoleName";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { WelcomeChecklist } from "@/src/components/welcome/WelcomeChecklist";
-import { SectionTitle } from "@/src/components/plaque/SectionTitle";
+import { Badge } from "@/src/components/ui/Badge";
+import { ROW_HOVER } from "@/components/ui/data-table";
 import {
   Users,
   Scale,
@@ -205,7 +206,7 @@ export default function WelcomePage() {
           {quickStats.map((stat, i) => (
             <div
               key={i}
-              className="bg-[oklch(var(--color-surface-1))] p-4 border border-[oklch(var(--color-hairline))]"
+              className="bg-[oklch(var(--color-surface-1))] p-4 border border-[oklch(var(--color-line))]"
             >
               <div className="flex items-center justify-between mb-3">
                 <span className={stat.color}>{stat.icon}</span>
@@ -221,7 +222,7 @@ export default function WelcomePage() {
                   一行近况,和标题平级。`tabular-nums` 让四张卡的数字对齐 ——
                   这里不做千位分隔,`stat.value` 是 `number | string` 联合,
                   非数字那一支是字面量 "-"。 */}
-              <div data-kpi="" className="text-lg tabular-nums text-[oklch(var(--color-ink))]">
+              <div data-kpi="" className="font-title text-lg tabular-nums text-[oklch(var(--color-ink))]">
                 {loading ? "..." : stat.value}
               </div>
               <div className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))] mt-1">{stat.label}</div>
@@ -240,16 +241,16 @@ export default function WelcomePage() {
             it rendered a status. Deleted rather than stubbed: there is no
             source of truth to wire it to.
             The grid collapsed with it — one panel does not need three columns. */}
-        <div className="bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-hairline))] p-4">
-            <div className="mb-4">
-              <SectionTitle>{t("welcome.quick_actions")}</SectionTitle>
-            </div>
+        <section className="bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-line))] p-4">
+            {/* 面板标题(DESIGN.md 标题表:面板标题 20 / 600,界面字体),与概览页的卡片同一档。
+                此前是页面级分节标题(13 号加匾纹片段)—— 那一档给页面上的分节,不给面板。 */}
+            <h2 className="mb-4 text-lg text-[oklch(var(--color-ink))]">{t("welcome.quick_actions")}</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               {quickActions.map((action, i) => (
                 <Link
                   key={i}
                   href={action.href}
-                  className="flex flex-col items-center justify-center gap-2 p-4 bg-[oklch(var(--color-surface-2))] border border-[oklch(var(--color-hairline))] text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-3))] transition-colors group"
+                  className={`group flex min-h-(--control-h-lg) flex-col items-center justify-center gap-2 p-4 border border-[oklch(var(--color-line))] text-[oklch(var(--color-ink))] transition-colors ${ROW_HOVER}`}
                 >
                   {action.icon}
                   <span className="text-sm font-medium">{action.label}</span>
@@ -257,30 +258,29 @@ export default function WelcomePage() {
                 </Link>
               ))}
             </div>
-        </div>
+        </section>
 
         {/* Recent Activity */}
-        <div className="bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-hairline))] p-4">
-          <div className="mb-4">
-            <SectionTitle>{t("welcome.recent_activity")}</SectionTitle>
-          </div>
+        <section className="bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-line))] p-4">
+          <h2 className="mb-4 text-lg text-[oklch(var(--color-ink))]">{t("welcome.recent_activity")}</h2>
           {activities.length === 0 ? (
             <p className="text-sm text-[oklch(var(--color-ink-subtle))]">{t("dashboard.no_activity")}</p>
           ) : null}
-          <div className="space-y-3">
+          {/* 账页行(行线分隔,不铺 s2 底):与审计、通知同一种列表。 */}
+          <div className="border-t border-[oklch(var(--color-rule))]">
             {activities.map((activity) => (
               <div
                 key={activity.id}
-                className="flex items-start gap-4 p-3 bg-[oklch(var(--color-surface-2))] hover:bg-[oklch(var(--color-surface-3))] transition-colors"
+                className={`flex min-h-(--table-row-h) items-start gap-4 border-b border-[oklch(var(--color-rule))] px-3 py-3 transition-colors ${ROW_HOVER}`}
               >
-                <div className="w-10 h-10 bg-[oklch(var(--color-surface-1))] flex items-center justify-center shrink-0">
-                  <Activity className="w-5 h-5 text-[oklch(var(--color-ink-subtle))]" />
+                <div className="flex size-10 shrink-0 items-center justify-center">
+                  <Activity aria-hidden="true" className="w-5 h-5 text-[oklch(var(--color-ink-subtle))]" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="text-xs px-2 py-1 bg-[oklch(var(--color-surface-1))] text-[oklch(var(--color-ink-muted))]">
+                    <Badge>
                       <DomainEnum namespace="audit.actions" value={activity.action} />
-                    </span>
+                    </Badge>
                     <span className="text-xs text-[oklch(var(--color-ink-subtle))]">
                       {formatTimestamp(activity.timestamp)}
                     </span>
@@ -298,35 +298,29 @@ export default function WelcomePage() {
             {t("welcome.view_all_activity")}
             <ArrowRight className="w-4 h-4" />
           </Link>
-        </div>
+        </section>
 
         {/* System Info */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* 三块图标砖原来是 blue-500/20 + blue-400、emerald、purple。文明、
               角色、版本号三样里没有一样是状态,所以三种色相编码的是「这是第
               一块、第二块、第三块」—— 那已经由位置说了。 */}
-          <div className="bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-hairline))] p-4 flex items-center gap-4">
-            <div className="w-12 h-12 bg-[oklch(var(--color-surface-2))] flex items-center justify-center">
-              <Globe className="w-6 h-6 text-[oklch(var(--color-ink-subtle))]" />
-            </div>
+          <div className="bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-line))] p-4 flex items-center gap-4">
+            <Globe aria-hidden="true" className="w-6 h-6 shrink-0 text-[oklch(var(--color-ink-subtle))]" />
             <div>
               <div className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))]">{t("welcome.current_civilization")}</div>
               <div className="text-md font-semibold text-[oklch(var(--color-ink))] mt-1">{user?.tenant?.display_name || "SoulLedger"}</div>
             </div>
           </div>
-          <div className="bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-hairline))] p-4 flex items-center gap-4">
-            <div className="w-12 h-12 bg-[oklch(var(--color-surface-2))] flex items-center justify-center">
-              <Shield className="w-6 h-6 text-[oklch(var(--color-ink-subtle))]" />
-            </div>
+          <div className="bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-line))] p-4 flex items-center gap-4">
+            <Shield aria-hidden="true" className="w-6 h-6 shrink-0 text-[oklch(var(--color-ink-subtle))]" />
             <div>
               <div className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))]">{t("welcome.user_role")}</div>
               <div className="text-md font-semibold text-[oklch(var(--color-ink))] mt-1"><RoleName value={user?.role} /></div>
             </div>
           </div>
-          <div className="bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-hairline))] p-4 flex items-center gap-4">
-            <div className="w-12 h-12 bg-[oklch(var(--color-surface-2))] flex items-center justify-center">
-              <Sparkles className="w-6 h-6 text-[oklch(var(--color-ink-subtle))]" />
-            </div>
+          <div className="bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-line))] p-4 flex items-center gap-4">
+            <Sparkles aria-hidden="true" className="w-6 h-6 shrink-0 text-[oklch(var(--color-ink-subtle))]" />
             <div>
               <div className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))]">{t("welcome.system_version")}</div>
               <div className="text-md font-semibold text-[oklch(var(--color-ink))] mt-1">v0.1</div>

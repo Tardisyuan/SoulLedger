@@ -219,10 +219,8 @@ function enumKeyedMapsUsingFeedbackTokens(): string[] {
  * two palettes inside one badge map would be worse than either.
  */
 const ENUM_MAPS_STILL_ON_FEEDBACK_TOKENS: Record<string, string> = {
-  "app/actors/page.tsx::ROLE_BADGE_CLASSES":
-    "JUDGE/GUARDIAN/EXECUTOR/CONDUIT are actor identities. There is no " +
-    "identity palette for them — --color-civ-mark-* is tenant identity, not " +
-    "role — so this needs a palette decision, not a rename.",
+  // `app/actors/page.tsx::ROLE_BADGE_CLASSES` left on 2026-10-02 (v3 pages): the map is gone,
+  // every role badge is neutral — roles are identities, as on the users page.
   // `app/death-sync/page.tsx::STATUS_COLORS` left this register on 2026-09-24
   // (规范 v1 列表改版): it became a tone map, which is what its entry here said
   // the fix would be.

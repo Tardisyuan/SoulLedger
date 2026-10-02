@@ -185,11 +185,11 @@ const ENUM_STRING_CONTEXTS: Record<string, string> = {
  * failure mode this whole file exists to prevent.
  */
 const DASH_EXCEPTIONS: Record<string, string> = {
-  [`${path.join("components", "LanguageSwitcher.tsx")}:19`]:
+  [`${path.join("components", "LanguageSwitcher.tsx")}:24`]:
     "Pre-hydration skeleton: an aria-hidden, disabled <option> holding the " +
     "control's width for one tick. It represents a value still loading, not " +
     "a value that is absent.",
-  [`${path.join("src", "components", "assist-admin", "ProviderSection.tsx")}:32`]:
+  [`${path.join("src", "components", "assist-admin", "ProviderSection.tsx")}:33`]:
     "Canvas provider-platforms 2f: the aria-hidden status glyph of 「平台不提供模型列表」 (an ink note, " +
     "not an error). It marks a platform's answer, not a value that is absent.",
 };
