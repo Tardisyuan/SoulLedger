@@ -460,7 +460,19 @@ function DashboardContent() {
                       {avgBalance == null ? <MissingValue kind="unrecorded" /> : signedBalance(avgBalance)}
                     </div>
                   )}
-                  <p className="text-xs text-[oklch(var(--color-ink-muted))]">{t("dashboard.avg_scope")}</p>
+                  <p className="text-xs text-[oklch(var(--color-ink-muted))]">
+                    {t("dashboard.avg_scope")}
+                    {/* 较上月:上月的余额快照(apps/ledger/snapshots.py)。没有上月快照时后端给 null,这半句不写(Design A4)。 */}
+                    {stats?.average_balance_delta != null && (
+                      <>
+                        {" · "}
+                        {t("dashboard.vs_last_month")}{" "}
+                        <span data-avg-delta="" className="font-mono tabular-nums">
+                          {signedBalance(stats.average_balance_delta).replace("-", "−")}
+                        </span>
+                      </>
+                    )}
+                  </p>
                 </ChartCard>
                 <section
                   aria-labelledby="dash-state-breakdown"

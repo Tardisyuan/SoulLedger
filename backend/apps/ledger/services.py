@@ -408,6 +408,11 @@ class LedgerService:
                 # from this payload, so the only consumer of ledger records had
                 # no way to tell a defining deed from an ordinary one.
                 "is_milestone": r.is_milestone,
+                # 审判台「功过记录」每行的条款与发生次数(souls/0028 的两列,成对写入,
+                # 见 SoulRecordSerializer._check_granularity_pair)。空串 / null = 没记,
+                # 不是 0 次 —— 早于这两列的行没有回填,也不该有(见 SoulRecord 上的注释)。
+                "statute_clause": r.statute_clause,
+                "occurrence_count": r.occurrence_count,
             })
 
         total_merit = round(merit)
