@@ -240,8 +240,12 @@ describe("事目's second line: clause, occurrences, milestone (Design v3 功过
   it("shows the clause once per width: the column from 768 up, the fold below it", () => {
     const { container } = renderBook([
       record({
-        id: "cited", type: "MERIT", original_weight: 5, recorded_at: "2020-01-01T00:00:00Z",
+        id: "bare-clause", type: "MERIT", original_weight: 5, recorded_at: "2020-01-01T00:00:00Z",
         statute_clause: "救濟門#7:賑濟窮民百錢",
+      }),
+      record({
+        id: "with-facts", type: "MERIT", original_weight: 5, recorded_at: "2020-02-01T00:00:00Z",
+        statute_clause: "救濟門#8:施棺", occurrence_count: 3,
       }),
     ]);
     const head = container.querySelectorAll("thead th")[3];
@@ -249,11 +253,19 @@ describe("事目's second line: clause, occurrences, milestone (Design v3 功过
     const col = container.querySelectorAll("colgroup col")[3];
     const foot = container.querySelectorAll("tfoot td")[3];
     for (const el of [head, cell, col, foot]) expect(el).toHaveClass("max-md:hidden");
-    // The fold is the other half of the same breakpoint, and with no facts beside it the
-    // whole second line goes away from 768 up — not an empty line under the entry.
-    const folded = container.querySelector('[data-record-clause="folded"]')!;
-    expect(folded.closest(".md\\:hidden")).not.toBeNull();
-    expect(folded.closest("td")!.querySelector(":scope > span")).toHaveClass("md:hidden");
+
+    // The fold is the other half of the same breakpoint. Its own wrapper hides from 768 up
+    // (with the 「 · 」 after it), while the facts beside it stay on every width...
+    const [bareLine, factsLine] = Array.from(container.querySelectorAll("tbody tr")).map(
+      (tr) => tr.querySelectorAll("td")[2].querySelector(":scope > span")!
+    );
+    const foldedWithFacts = factsLine.querySelector('[data-record-clause="folded"]')!;
+    expect(foldedWithFacts.parentElement).toHaveClass("md:hidden");
+    expect(foldedWithFacts.parentElement!.textContent).toBe("救濟門#8 · ");
+    expect(factsLine).not.toHaveClass("md:hidden");
+    // ...and with no facts beside it the whole second line goes away from 768 up — not an
+    // empty line under the entry.
+    expect(bareLine).toHaveClass("md:hidden");
   });
 
   it("never lets 「◆」 end a line apart from 「重要节点」", () => {
