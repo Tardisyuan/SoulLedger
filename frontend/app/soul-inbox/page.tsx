@@ -19,6 +19,8 @@ import {
   useInboxTemplates,
 } from "@soulledger/core/hooks/useSoulInbox";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { usePlaque } from "@/src/components/plaque/Plaque";
+import { useCourtOffice, useHall } from "@/src/components/plaque/useHall";
 import { useToast } from "@/src/contexts/ToastContext";
 import { usePermissions } from "@/src/hooks/usePermissions";
 import { citationOf } from "@soulledger/core/config/statuteCitation";
@@ -66,7 +68,8 @@ import { ROW_HOVER, ROW_SELECTED } from "@/components/ui/data-table";
 const RULE = "border-[oklch(var(--color-rule))]";
 const LINE = "border-[oklch(var(--color-line))]";
 const MUTED_TEXT = "text-xs text-[oklch(var(--color-ink-subtle))]";
-const SECTION_HEAD = "font-mono text-2xs tracking-wide text-[oklch(var(--color-ink-subtle))]";
+// 区块标签(DESIGN.md):11 px 界面字体,不是等宽 —— 等宽只留给眉题、编号与数字。
+const SECTION_HEAD = "text-2xs tracking-wide text-[oklch(var(--color-ink-subtle))]";
 const CURRENT = `${ROW_SELECTED} text-[oklch(var(--color-ink))] font-medium`;
 
 /** 文件夹栏的一项:服务端的文件夹,或「全部来信」里按状态 / 按殿收窄。 */
@@ -580,6 +583,8 @@ function Thread({ conversation }: { conversation: InboxConversation }) {
 
 function SoulInboxContent() {
   const { t, formatDateTime, locale } = useI18n();
+  // 身份带殿名:这一页此前没报,带上落回租户展示名(「中国地府」),与其余各页的「酆都 · 第十殿」不是一个写法。
+  usePlaque({ hall: useHall(useCourtOffice()) });
   const queryClient = useQueryClient();
   const [folder, setFolder] = useState<FolderKey>("all");
   const [page, setPage] = useState(1);
@@ -625,7 +630,7 @@ function SoulInboxContent() {
         type="button"
         aria-pressed={folder === f.key}
         onClick={() => choose(f.key)}
-        className={`w-full flex justify-between items-center px-4 py-2 border-b ${RULE} text-left text-sm text-[oklch(var(--color-ink-muted))] ${
+        className={`w-full flex justify-between items-center px-4 min-h-11 border-b ${RULE} text-left text-sm text-[oklch(var(--color-ink-muted))] ${
           folder === f.key ? CURRENT : ROW_HOVER
         }`}
       >
@@ -655,7 +660,7 @@ function SoulInboxContent() {
       ) : nothingAtAll ? (
         <EmptyState title={t("soul_inbox.empty")} reason={t("soul_inbox.empty_reason")} />
       ) : (
-        <div className={`grid border ${LINE} lg:grid-cols-[170px_300px_minmax(0,1fr)] xl:grid-cols-[170px_360px_minmax(0,1fr)]`}>
+        <div className={`grid border ${LINE} bg-[oklch(var(--color-surface-1))] lg:grid-cols-[170px_300px_minmax(0,1fr)] xl:grid-cols-[170px_360px_minmax(0,1fr)]`}>
           <nav aria-label={t("soul_inbox.folders")} className={`hidden lg:block py-3 border-r ${LINE}`}>
             <ul>{folders.map(folderButton)}</ul>
             <ul className="mt-3">{statusFolders.map(folderButton)}</ul>
