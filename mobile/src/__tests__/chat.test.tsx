@@ -28,6 +28,7 @@ import { AppHeader } from "../chrome";
 import { I18nProvider } from "../i18n";
 import { RootNavigator } from "../navigation";
 import { installMobilePlatform, persistentStore } from "../platform";
+import { family } from "../fonts";
 import { formatStamp } from "../rules";
 import { ConversationScreen } from "../screens/conversation";
 import { FindSoulScreen, LettersScreen, hallOf } from "../screens/letters";
@@ -80,6 +81,21 @@ const msg = (id: string, sender: string, body: string, ts: number): ChatMessage 
 const facts = (overrides = {}) => ({ now: NOW, peerHasSpoken: false, iHaveSpoken: false, refused: null, ...overrides });
 
 // ── the state choice ──────────────────────────────────────────────────
+
+
+/** v3: a 书信 tag is glyph + word; the glyph comes from the glyph font and is hidden from screen readers. */
+function expectTag(testID: string, word: string, glyph: string) {
+  const tag = screen.getByTestId(testID);
+  expect(tag.props.accessibilityLabel).toBe(word);
+  expect(within(tag).getByText(word)).toBeTruthy();
+  // Hidden from screen readers: the default (accessible-only) query cannot see it.
+  expect(screen.queryByTestId(`${testID}-glyph`)).toBeNull();
+  const mark = screen.getByTestId(`${testID}-glyph`, { includeHiddenElements: true });
+  expect(mark.props.children).toBe(glyph);
+  expect(mark.props.accessibilityElementsHidden).toBe(true);
+  expect(mark.props.importantForAccessibility).toBe("no");
+  expect(StyleSheet.flatten(mark.props.style).fontFamily).toBe(family.glyph);
+}
 
 describe("chatMode — the design's eight states from the server's facts", () => {
   it("① free: mutual", () => {
@@ -240,7 +256,7 @@ describe("the list", () => {
     expect(StyleSheet.flatten(screen.getByTestId("section-rule").props.style)).toMatchObject({ height: 1 });
     expect(screen.getByTestId("soul-row-a-unread")).toBeTruthy();
     // My request waiting for an answer is tagged; the mutual one is not.
-    expect(screen.getByTestId("awaiting-b")).toBeTruthy();
+    expectTag("awaiting-b", "待回复", "◇");
     expect(screen.queryByTestId("awaiting-a")).toBeNull();
     expect(within(screen.getByTestId("hall-row")).getByText("第五殿 · 殿司")).toBeTruthy();
   });
@@ -262,7 +278,7 @@ describe("the list", () => {
   it("a request whose other soul is gone reads 已闭, not 待回复", () => {
     const gone = conv({ id: "g", room_id: "!g", throttled: true, initiated_by_me: true, mutual: false, refusal: "peer_retired" });
     wrap(chatState({ conversations: [gone] }), <LettersScreen />);
-    expect(screen.getByTestId("closed-g")).toBeTruthy();
+    expectTag("closed-g", "已闭", "✕");
     expect(screen.queryByTestId("awaiting-g")).toBeNull();
   });
 
@@ -387,7 +403,7 @@ describe("the conversation's eight states", () => {
     const ids = hostIds(screen.getByTestId("conversation-closed"));
     expect(ids.indexOf("closed-marker")).toBeGreaterThan(-1);
     expect(screen.getByTestId("closed-reason").props.children).toBe("她已转生去了。这段话留着，不能再添。");
-    expect(screen.getByTestId("closed-tag")).toBeTruthy();
+    expectTag("closed-tag", "已闭", "✕");
     composerGone();
   });
 
@@ -677,6 +693,18 @@ describe("find someone by code", () => {
     await act(async () => fireEvent.press(screen.getByTestId("find-submit")));
     expect(screen.getByText("灵魂编号须为 10 位。")).toBeTruthy();
     expect(calls.some((c) => c.url === "/me/chat/lookup/")).toBe(false);
+  });
+
+  it("the circle list tags a mutual soul 互关 with ⇄; one-way 已关注 carries no glyph", async () => {
+    stubApi({
+      "/me/social/following/": { status: 200, data: { results: [{ user_id: 1, display_name: "周芸", is_active: true }, { user_id: 2, display_name: "吴长明", is_active: true }] } },
+      "/me/social/followers/": { status: 200, data: { results: [{ user_id: 1, display_name: "周芸", is_active: true }] } },
+    });
+    wrap(chatState(), <FindSoulScreen />);
+    await screen.findByTestId("circle-tag-1");
+    expectTag("circle-tag-1", "互关", "⇄");
+    expect(screen.getByTestId("circle-tag-2").props.accessibilityLabel).toBe("已关注");
+    expect(screen.queryByTestId("circle-tag-2-glyph", { includeHiddenElements: true })).toBeNull();
   });
 
   it("a hit writes to them: the code goes upper-cased in the body, and 写信 opens the conversation", async () => {

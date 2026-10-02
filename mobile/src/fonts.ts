@@ -48,7 +48,7 @@ export const FONT_ASSETS = {
   // title faces (Josefin Slab, Cinzel; 地府's Ma Shan Zheng, loaded per soul) went with v2's plaque
   // (2026-10-02): v3's band sets its title in the interface face.
   LXGWSeal_400: require("../assets/fonts/LXGWSeal-Regular.ttf"),
-  // Status glyphs (Design E 组): ✓✕◇↺◌○▣↻◎≡? from ONE font. Archivo has only ≡ and ?, so each
+  // Status glyphs (Design E 组): ✓✕◇↺◌○▣↻◎≡?◐⇄ from ONE font. Archivo has only ≡ and ?, so each
   // fell back to the OS per glyph — ◌ from one font, its neighbours from another. 5 KB, the same
   // bytes the web serves (scripts/build-glyph-font.py; DejaVu Sans subset, licence beside it).
   SoulLedgerGlyphs: require("../assets/fonts/SoulLedgerGlyphs.ttf"),
