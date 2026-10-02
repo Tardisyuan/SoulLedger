@@ -238,8 +238,12 @@ test.describe("Workflow editor selection", () => {
     await cards.nth(2).click();
 
     const inspector = page.getByRole("complementary", { name: "属性" });
-    await expect(inspector).toContainText("上级殿阎王");
-    await expect(inspector).not.toContainText("魏征 · 察查司");
+    // The 节点 tab is the edit form now: its heading names the node and its
+    // first field holds the name. (Not `inspector` text as a whole — 驳回到
+    // lists the earlier nodes, 魏征 among them, as options.)
+    await expect(inspector.getByRole("heading", { level: 2 })).toHaveText(/上级殿阎王/);
+    await expect(inspector.getByRole("heading", { level: 2 })).not.toHaveText(/魏征 · 察查司/);
+    await expect(inspector.getByLabel("节点名称", { exact: true })).toHaveValue("上级殿阎王");
     await expect(page.getByRole("button", { name: "删除选中", exact: true })).toBeEnabled();
     await expect(
       page.getByRole("region", { name: "模板预览 · 线性" }).getByRole("button", { pressed: true })
@@ -253,15 +257,15 @@ test.describe("Workflow editor keyboard access", () => {
   test.use({ viewport: { width: 1280, height: 720 } });
 
   /**
-   * THE NODE EDIT MODAL, WITHOUT A MOUSE.
+   * EDITING A NODE, WITHOUT A MOUSE.
    *
-   * `onNodeDoubleClick` was the only way to open it, so a keyboard-only
-   * operator could not edit a single node of a template. `E` on a focused node
-   * is the way in now.
+   * `onNodeDoubleClick` was once the only way in, so a keyboard-only operator
+   * could not edit a single node of a template. `E` on a focused node is the
+   * way in: it selects the node and puts focus in the inspector's form (v3 A1
+   * — the 「编辑节点」 modal is gone, 用户 10-02).
    *
    * WHY THIS FILE AND NOT JSDOM. `src/__tests__/WorkflowEditor.test.tsx` pins
-   * the DECISIONS — which key, which modifiers, what happens when the modal is
-   * already open — against a stub that renders one wrapper per node because
+   * the DECISIONS — which key, which modifiers, which node — against a stub that renders one wrapper per node because
    * this file's product code needs one to exist. What that stub cannot say is
    * the thing the whole change turns on: that a node is REACHABLE. `tabIndex`
    * there is a string the test file itself writes; jsdom has no sequential
@@ -314,7 +318,11 @@ test.describe("Workflow editor keyboard access", () => {
     return { presses: max, id: null as string | null };
   }
 
-  test("a keyboard-only operator can Tab to a node and open its edit modal with E", async ({
+  /** The inspector's 节点-tab form and its first field. */
+  const nodeForm = (page: Page) => page.getByTestId("node-form");
+  const nameField = (page: Page) => nodeForm(page).getByLabel("节点名称", { exact: true });
+
+  test("a keyboard-only operator can Tab to a node and edit it with E", async ({
     page,
   }) => {
     await openAppealPresetInEditor(page);
@@ -336,16 +344,15 @@ test.describe("Workflow editor keyboard access", () => {
       .getAttribute("aria-label");
     expect(APPEAL_LABELS).toContain(label);
 
-    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await expect(nodeForm(page)).toHaveCount(0);
     await page.keyboard.press("e");
 
-    const dialog = page.getByRole("dialog");
-    await expect(dialog).toBeVisible();
-    // The modal opened on THE focused node, not on some node. `aria-label`'s
-    // first field is the node name, which is what the form is seeded with.
-    await expect(dialog.getByLabel("节点名称", { exact: true })).toHaveValue(
-      label!.split(", ")[0]
-    );
+    // The form is on THE focused node, not on some node — `aria-label`'s first
+    // field is the node name — and the keyboard is already in it.
+    await expect(nameField(page)).toBeFocused();
+    await expect(nameField(page)).toHaveValue(label!.split(", ")[0]);
+    // No dialog: editing happens in place.
+    await expect(page.getByRole("dialog")).toHaveCount(0);
   });
 
   test("every card carries a non-empty accessible name built from what it shows", async ({
@@ -387,10 +394,10 @@ test.describe("Workflow editor keyboard access", () => {
     await page.keyboard.press("End");
     await page.keyboard.press("e");
 
-    // Both halves. "No modal" alone would also pass if the key had been
+    // Both halves. "No form" alone would also pass if the key had been
     // swallowed by `preventDefault` somewhere and the operator could no longer
     // type the letter at all.
-    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await expect(nodeForm(page)).toHaveCount(0);
     await expect(name).toHaveValue(`${before}e`);
   });
 
@@ -404,34 +411,57 @@ test.describe("Workflow editor keyboard access", () => {
 
     for (const combo of ["Meta+e", "Control+e", "Alt+e"]) {
       await page.keyboard.press(combo);
-      await expect(page.getByRole("dialog")).toHaveCount(0);
+      await expect(nodeForm(page)).toHaveCount(0);
     }
 
     // The same key without a modifier still works — otherwise the three
     // assertions above would be satisfied by a shortcut that never fires.
     expect(await focusedNodeId(page)).toBe(landed.id);
     await page.keyboard.press("e");
-    await expect(page.getByRole("dialog")).toBeVisible();
+    await expect(nameField(page)).toBeFocused();
   });
 
-  test("E with the modal already open does not re-seed the form", async ({ page }) => {
+  test("the form writes as it is typed: the card, the checks and save follow it", async ({ page }) => {
     await openAppealPresetInEditor(page);
     await page.getByLabel("模板名称", { exact: true }).filter({ visible: true }).focus();
     const landed = await tabUntilNode(page);
     expect(landed.id).not.toBeNull();
     await page.keyboard.press("e");
+    await expect(nameField(page)).toBeFocused();
 
-    const dialog = page.getByRole("dialog");
-    const nameField = dialog.getByLabel("节点名称", { exact: true });
-    await expect(nameField).toBeVisible();
-    await nameField.fill("改到一半");
-
-    // Whatever the dialog's focus trap has focused, `E` must not re-enter the
-    // handler and replace the operator's half-finished edit.
+    // `e` typed in the form is a letter, not the shortcut: the form is outside
+    // the canvas the listener is bound to.
+    await nameField(page).fill("改到一半");
     await page.keyboard.press("e");
+    await expect(nameField(page)).toHaveValue("改到一半e");
+    const card = page.locator(`.react-flow__node[data-id="${landed.id}"]`);
+    await expect(card).toHaveAttribute("aria-label", /^改到一半e, /);
 
-    await expect(dialog).toHaveCount(1);
-    await expect(nameField).toHaveValue(/^改到一半/);
+    // Emptied: 存草稿 blocks and the 问题 tab counts it, with no save step.
+    const save = page.getByRole("button", { name: "存草稿", exact: true });
+    await expect(save).toBeEnabled();
+    await nameField(page).fill("");
+    await expect(save).toBeDisabled();
+    await expect(page.getByRole("tab", { name: /^问题 [1-9]/ })).toBeVisible();
+    await nameField(page).fill("又有名字");
+    await expect(save).toBeEnabled();
+  });
+
+  test("出口: a conditional exit added in the inspector is drawn and labelled on the canvas", async ({ page }) => {
+    await openAppealPresetInEditor(page);
+    await page.locator(".react-flow__node").first().click();
+    await page.getByRole("tab", { name: "出口", exact: true }).click();
+    const exits = page.getByRole("region", { name: "出口 · 条件" });
+    await expect(exits.getByRole("listitem")).toHaveCount(1);
+
+    await exits.getByLabel("目标", { exact: true }).selectOption({ label: "N3「上级殿阎王」" });
+    await exits.getByRole("button", { name: "＋ 加一条条件出口" }).click();
+
+    // Conditional first, the old exit now the default — and both on the canvas.
+    await expect(exits.getByRole("listitem")).toHaveCount(2);
+    await expect(exits.getByRole("listitem").nth(1)).toContainText("默认");
+    await expect(page.locator(".react-flow").getByText("是 · 余额 < 0", { exact: true })).toBeVisible();
+    await expect(page.locator(".react-flow").getByText("否 · 默认", { exact: true })).toBeVisible();
   });
 });
 

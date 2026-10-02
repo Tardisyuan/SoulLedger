@@ -112,9 +112,6 @@ jest.mock("@/src/contexts/I18nContext", () => ({
   }),
 }));
 jest.mock("@/src/contexts/ToastContext", () => ({ useToast: () => ({ showToast: jest.fn() }) }));
-jest.mock("@/src/components/ui/Modal", () => ({
-  Modal: ({ isOpen, children }: any) => (isOpen ? <div>{children}</div> : null),
-}));
 
 import WorkflowEditor from "@/src/components/workflow/WorkflowEditor";
 import { savedTemplateToFlow, type TemplateNode } from "@/src/components/workflow/workflowEditorGraph";
@@ -350,5 +347,128 @@ describe("WorkflowEditor — versions and the engine fields", () => {
     const n1 = api().update.mock.calls.at(-1)![1].nodes.find((n: any) => n.id === "n1");
     expect(n1.on_pass).toBeNull();
     expect(n1.branches).toEqual([{ id: expect.any(String), when: [{ fact: "balance", op: "lt", value: 0 }], target: "n2" }]);
+  });
+});
+
+// ── the inspector form and the 出口 tab, editing in place (v3 A1) ─────────
+
+describe("WorkflowEditor — the inspector edits in place", () => {
+  beforeEach(() => api().update.mockClear());
+
+  async function pick(name: RegExp) {
+    renderEditor();
+    fireEvent.click(await screen.findByRole("button", { name }));
+  }
+  const form = () => screen.getByTestId("node-form");
+  const toTab = (k: string) => fireEvent.click(screen.getByRole("tab", { name: new RegExp(`workflow\\.editor\\.tab\\.${k}`) }));
+  /** The codes the 问题 tab lists right now (leaves the inspector there). */
+  const issueCodes = () => {
+    toTab("issues");
+    return within(screen.getByRole("region", { name: /workflow\.editor\.issues/ }))
+      .queryAllByText(/^[a-z_]+$/)
+      .map((el) => el.textContent);
+  };
+  const saved = async (id: string) => {
+    fireEvent.click(screen.getByRole("button", { name: "workflow.editor.save_template" }));
+    await waitFor(() => expect(api().update).toHaveBeenCalled());
+    return api().update.mock.calls.at(-1)![1].nodes.find((n: { id: string }) => n.id === id);
+  };
+
+  it("会签: signers and the threshold are edited in place and the checks follow each change", async () => {
+    await pick(/两文明判官/);
+    expect(within(form()).getByLabelText("workflow.editor.signer_label(1)")).toHaveValue("Minos");
+    expect(within(form()).getByLabelText("workflow.editor.threshold")).toHaveValue(2);
+
+    // 3 of 2 signers: out of range, live — no save step.
+    fireEvent.change(within(form()).getByLabelText("workflow.editor.threshold"), { target: { value: "3" } });
+    expect(issueCodes()).toContain("threshold_out_of_range");
+    toTab("node");
+    fireEvent.click(within(form()).getByRole("button", { name: "＋ workflow.editor.signer_add" }));
+    expect(within(form()).getByLabelText("workflow.editor.signer_label(3)")).toHaveValue("");
+    expect(issueCodes()).not.toContain("threshold_out_of_range");
+
+    // Removing every signer is its own issue.
+    toTab("node");
+    for (const n of [3, 2, 1])
+      fireEvent.click(
+        within(form()).getByRole("button", { name: `workflow.editor.signer_remove workflow.editor.signer_label(${n})` })
+      );
+    expect(issueCodes()).toContain("countersign_no_signers");
+  });
+
+  it("switching 类别 away from 会签 keeps the signers on screen but not in the payload", async () => {
+    await pick(/两文明判官/);
+    fireEvent.change(within(form()).getByLabelText("workflow.editor.kind_label"), { target: { value: "APPROVAL" } });
+    expect(within(form()).queryByLabelText("workflow.editor.signer_label(1)")).not.toBeInTheDocument();
+    const n3 = await saved("n3");
+    expect(n3.kind).toBe("APPROVAL");
+    expect(n3.signers).toEqual([]);
+    expect(n3.threshold).toBeNull();
+
+    // Back to 会签: what was there is still there.
+    fireEvent.change(within(form()).getByLabelText("workflow.editor.kind_label"), { target: { value: "COUNTERSIGN" } });
+    expect(within(form()).getByLabelText("workflow.editor.signer_label(2)")).toHaveValue("Osiris");
+  });
+
+  it("超时: ESCALATE asks for a role, live; another action drops the role from the payload", async () => {
+    await pick(/目标文明判官/);
+    expect(within(form()).getByLabelText("workflow.editor.timeout.hours")).toHaveValue(72);
+    fireEvent.change(within(form()).getByLabelText("workflow.editor.timeout.role"), { target: { value: "" } });
+    expect(issueCodes()).toContain("timeout_role_missing");
+    toTab("node");
+    const role = within(form()).getByLabelText("workflow.editor.timeout.role");
+    // The role table arrives asynchronously; a value with no option is no value.
+    await within(role).findByRole("option", { name: "users.roles.JUDGE" });
+    fireEvent.change(role, { target: { value: "JUDGE" } });
+    expect(issueCodes()).not.toContain("timeout_role_missing");
+    // The role stays in the node while another action is picked — and must
+    // still not be sent.
+    toTab("node");
+    fireEvent.change(within(form()).getByLabelText("workflow.editor.timeout.action_label"), { target: { value: "AUTO_REJECT" } });
+    expect(within(form()).queryByLabelText("workflow.editor.timeout.role")).not.toBeInTheDocument();
+    expect(issueCodes()).not.toContain("timeout_role_missing");
+    const n4 = await saved("n4");
+    expect(n4).toMatchObject({ timeout_hours: 72, timeout_action: "AUTO_REJECT", timeout_role: null });
+  });
+
+  it("驳回到 offers only the nodes before this one", async () => {
+    await pick(/目标文明判官/);
+    const reject = within(form()).getByLabelText("workflow.editor.reject_to") as HTMLSelectElement;
+    expect(reject.value).toBe("n1");
+    expect(Array.from(reject.options).map((o) => o.value)).toEqual(["", "n1", "n2", "n3"]);
+  });
+
+  it("出口: 「＋ 加一条条件出口」 adds a branch to the chosen node; ↑ ↓ reorder what is saved", async () => {
+    await pick(/余额 < 0 \?/);
+    expect(issueCodes()).not.toContain("condition_overlap");
+    toTab("exits");
+    const region = () => screen.getByRole("region", { name: "workflow.editor.condition.title" });
+    fireEvent.change(within(region()).getByLabelText("workflow.editor.exit_target"), { target: { value: "n5" } });
+    fireEvent.click(within(region()).getByRole("button", { name: "＋ workflow.editor.exit_add" }));
+    // The new exit's default clause (余额 < 0) is the existing branch's: overlap, live.
+    expect(issueCodes()).toContain("condition_overlap");
+
+    toTab("exits");
+    const cards = () => within(region()).getAllByRole("listitem");
+    const head = (li: HTMLElement) => within(li).getAllByRole("button")[0].textContent;
+    // Conditional exits first, in order, then the default.
+    expect(cards().map(head)).toEqual([
+      expect.stringMatching(/condition\.yes → N3/),
+      expect.stringMatching(/condition\.yes → N5/),
+      expect.stringMatching(/condition\.no → N4.*condition\.default/),
+    ]);
+    expect(within(cards()[0]).getByRole("button", { name: "workflow.editor.exit_up 1" })).toBeDisabled();
+    expect(within(cards()[1]).getByRole("button", { name: "workflow.editor.exit_down 2" })).toBeDisabled();
+    // The default is on_pass, always last: it has nowhere to move.
+    expect(within(cards()[2]).queryByRole("button", { name: /exit_up|exit_down/ })).not.toBeInTheDocument();
+
+    fireEvent.click(within(cards()[1]).getByRole("button", { name: "workflow.editor.exit_up 2" }));
+    expect(head(cards()[0])).toMatch(/→ N5/);
+
+    const n2 = await saved("n2");
+    expect(n2.on_pass).toBe("n4");
+    expect(n2.branches.map((b: { target: string }) => b.target)).toEqual(["n5", "n3"]);
+    expect(n2.branches[0].when).toEqual([{ fact: "balance", op: "lt", value: 0 }]);
+    expect(n2.branches[1].id).toBe("neg");
   });
 });

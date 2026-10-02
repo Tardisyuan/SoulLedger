@@ -161,18 +161,6 @@ jest.mock("@/src/contexts/ToastContext", () => ({
   }),
 }));
 
-// Mock the Modal component used internally
-jest.mock("@/src/components/ui/Modal", () => ({
-  Modal: ({ isOpen, onClose, title, children }: any) =>
-    isOpen ? (
-      <div data-testid="modal">
-        <h3>{title}</h3>
-        <button onClick={onClose}>Close Modal</button>
-        {children}
-      </div>
-    ) : null,
-}));
-
 import WorkflowEditor from "@/src/components/workflow/WorkflowEditor";
 
 function renderWithProviders(ui: React.ReactElement) {
@@ -487,10 +475,11 @@ describe("WorkflowEditor", () => {
     expect(added[1].y).not.toBe(560);
   });
 
-  // ── keyboard access to the node edit modal ─────────────────────────
+  // ── keyboard access to the node form ─────────────────────────────
   //
-  // `onNodeDoubleClick` was the only way into this modal, so a keyboard-only
-  // operator could not edit a single node of a template. `E` is the way in.
+  // `onNodeDoubleClick` was once the only way into editing, so a keyboard-only
+  // operator could not edit a single node of a template. `E` is the way in:
+  // it selects the node and focuses the inspector form's first field.
   //
   // WHAT RUNS HERE AND WHAT DOES NOT. jsdom can show that the listener is
   // wired, scoped and guarded — those are decisions, and decisions are exactly
@@ -579,34 +568,41 @@ describe("WorkflowEditor", () => {
     expect(wrapperFor("A").getAttribute("aria-label")).toBe("秦广王 · 分流, TRIAL, 第一殿");
   });
 
-  it("opens THAT node's edit modal when E is pressed on it", () => {
+  /** The inspector's 节点-tab form (v3 A1) — the only place a node is edited now. */
+  const form = () => screen.queryByTestId("node-form");
+  const nameField = () => within(form()!).getByLabelText("Node Name") as HTMLInputElement;
+
+  it("E on a node selects THAT node, opens 节点 and focuses its name field", () => {
     renderNamed();
-    expect(screen.queryByTestId("modal")).not.toBeInTheDocument();
+    // 问题 first, so the shortcut has a tab to move away from.
+    fireEvent.click(screen.getByRole("tab", { name: /workflow\.editor\.tab\.issues/ }));
+    expect(form()).toBeNull();
 
     fireEvent.keyDown(wrapperFor("B"), { key: "e", bubbles: true });
 
-    expect(screen.getByTestId("modal")).toBeInTheDocument();
-    // The node, not merely a node — a handler that always opened the first one
-    // would satisfy "the modal opened".
-    expect(screen.getByLabelText("Node Name")).toHaveValue("楚江王 · 初审");
+    expect(screen.getByRole("tab", { name: "workflow.editor.tab.node" })).toHaveAttribute("aria-selected", "true");
+    // The node, not merely a node — a handler that always took the first one
+    // would satisfy "a form appeared".
+    expect(nameField()).toHaveValue("楚江王 · 初审");
+    expect(nameField()).toHaveFocus();
   });
 
   it("offers the approver role from the role table and keeps a value the table does not know", async () => {
     renderNamed();
     fireEvent.keyDown(wrapperFor("B"), { key: "e", bubbles: true });
 
-    const select = screen.getByLabelText("Approver Role") as HTMLSelectElement;
+    const select = within(form()!).getByLabelText("Approver Role") as HTMLSelectElement;
     expect(select.tagName).toBe("SELECT");
     // The table arrives asynchronously; a built-in by its translated copy, a
     // custom role by its display_name.
-    await waitFor(() => expect(screen.getByRole("option", { name: "书吏" })).toBeInTheDocument());
-    expect(screen.getByRole("option", { name: "判官" })).toHaveValue("JUDGE");
-    expect(screen.getByRole("option", { name: "— select —" })).toHaveValue("");
+    await waitFor(() => expect(within(select).getByRole("option", { name: "书吏" })).toBeInTheDocument());
+    expect(within(select).getByRole("option", { name: "判官" })).toHaveValue("JUDGE");
+    expect(within(select).getByRole("option", { name: "— select —" })).toHaveValue("");
     // What the node already carries stays selected and selectable even when
     // the table has no such role — the free-text days left values like this
     // behind, and a select that dropped them would rewrite the template on save.
     expect(select.value).toBe("OVERSEER");
-    expect(screen.getByRole("option", { name: "OVERSEER" })).toHaveValue("OVERSEER");
+    expect(within(select).getByRole("option", { name: "OVERSEER" })).toHaveValue("OVERSEER");
 
     fireEvent.change(select, { target: { value: "SCRIBE" } });
     expect(select.value).toBe("SCRIBE");
@@ -616,72 +612,87 @@ describe("WorkflowEditor", () => {
     // Shift is deliberately NOT in the modifier guard: `event.key` is then "E".
     renderNamed();
     fireEvent.keyDown(wrapperFor("C"), { key: "E", shiftKey: true, bubbles: true });
-    expect(screen.getByLabelText("Node Name")).toHaveValue("转轮王 · 终审");
+    expect(nameField()).toHaveValue("转轮王 · 终审");
   });
 
-  it("does NOT open when E is typed into the template-name input", () => {
+  it("does NOT select anything when E is typed into the template-name input", () => {
     renderNamed();
     const input = screen.getByPlaceholderText("Template name...");
     input.focus();
 
     fireEvent.keyDown(input, { key: "e", bubbles: true });
 
-    expect(screen.queryByTestId("modal")).not.toBeInTheDocument();
+    expect(form()).toBeNull();
+    expect(input).toHaveFocus();
   });
 
-  it("does NOT open on Cmd+E, Ctrl+E or Alt+E", () => {
+  it("does NOT act on Cmd+E, Ctrl+E or Alt+E", () => {
     renderNamed();
     for (const modifier of ["metaKey", "ctrlKey", "altKey"] as const) {
       fireEvent.keyDown(wrapperFor("A"), { key: "e", [modifier]: true, bubbles: true });
-      expect(screen.queryByTestId("modal")).not.toBeInTheDocument();
+      expect(form()).toBeNull();
     }
-    // The same press without a modifier does open it — otherwise this test
-    // would pass against a shortcut that never works at all.
+    // The same press without a modifier does act — otherwise this test would
+    // pass against a shortcut that never works at all.
     fireEvent.keyDown(wrapperFor("A"), { key: "e", bubbles: true });
-    expect(screen.getByTestId("modal")).toBeInTheDocument();
+    expect(nameField()).toHaveValue("秦广王 · 分流");
   });
 
-  it("does NOT re-seed the form when E is pressed again with the modal open", () => {
+  it("E on another node moves the form there, and the first node keeps what was typed", () => {
+    // The modal held a copy, so a second E had to be refused or it threw the
+    // copy away. The form writes to the node as it is typed: there is no copy
+    // to lose, and E on another node simply goes there.
     renderNamed();
     fireEvent.keyDown(wrapperFor("B"), { key: "e", bubbles: true });
-    const nameField = screen.getByLabelText("Node Name");
-    fireEvent.change(nameField, { target: { value: "半路改到一半" } });
+    fireEvent.change(nameField(), { target: { value: "半路改到一半" } });
 
-    // A different node, while the form is open and dirty.
     fireEvent.keyDown(wrapperFor("A"), { key: "e", bubbles: true });
 
-    // Without the `editModalOpen` guard this reads "秦广王 · 分流": the
-    // operator's half-typed rename is silently replaced by another node's data
-    // in a modal that never appeared to close.
-    expect(screen.getByLabelText("Node Name")).toHaveValue("半路改到一半");
+    expect(nameField()).toHaveValue("秦广王 · 分流");
+    expect(wrapperFor("B").getAttribute("aria-label")).toBe("半路改到一半, EVALUATION, 第二殿");
   });
 
   it("does nothing when E is pressed on the canvas but not on a node", () => {
     renderNamed();
-    // The container the listener is bound to — the zoom Controls and the hint
-    // panel live here too, and none of them is a node.
+    // The container the listener is bound to — the floating bar and the zoom
+    // bar live here too, and none of them is a node.
     fireEvent.keyDown(screen.getByTestId("react-flow"), { key: "e", bubbles: true });
-    expect(screen.queryByTestId("modal")).not.toBeInTheDocument();
+    expect(form()).toBeNull();
   });
 
-  it("re-announces a node under its new name after it is renamed", async () => {
+  it("re-announces a node under its new name as it is typed — no save step", () => {
     // Why the accessible name is derived at render and not written into the
     // node when the graph is built: `updateNodeData` does not go through either
     // builder, so a name baked in at build time would keep announcing the old
     // one and nothing would go red.
     renderNamed();
     fireEvent.keyDown(wrapperFor("A"), { key: "e", bubbles: true });
-    fireEvent.change(screen.getByLabelText("Node Name"), { target: { value: "改名后的节点" } });
-    fireEvent.click(screen.getByText("Save"));
+    fireEvent.change(nameField(), { target: { value: "改名后的节点" } });
 
-    await waitFor(() =>
-      expect(wrapperFor("A").getAttribute("aria-label")).toBe("改名后的节点, TRIAL, 第一殿")
-    );
+    expect(wrapperFor("A").getAttribute("aria-label")).toBe("改名后的节点, TRIAL, 第一殿");
     // Absence: the old name is gone from every node, not merely absent from
     // the one that was checked.
     expect(wrappers().map((el) => el.getAttribute("aria-label"))).not.toContain(
       "秦广王 · 分流, TRIAL, 第一殿"
     );
+    // And there is no modal left to save it from.
+    expect(screen.queryByRole("button", { name: "Save" })).not.toBeInTheDocument();
+  });
+
+  it("clearing the name blocks saving at once and names the issue — the checks follow the form", () => {
+    renderNamed();
+    const save = screen.getByText("Save Template").closest("button")!;
+    expect(save).not.toBeDisabled();
+    expect(screen.getByRole("tab", { name: /workflow\.editor\.tab\.issues/ })).toHaveTextContent("workflow.editor.tab.issues 0");
+
+    fireEvent.keyDown(wrapperFor("B"), { key: "e", bubbles: true });
+    fireEvent.change(nameField(), { target: { value: "" } });
+
+    expect(save).toBeDisabled();
+    expect(screen.getByRole("tab", { name: /workflow\.editor\.tab\.issues/ })).toHaveTextContent("workflow.editor.tab.issues 1");
+
+    fireEvent.change(nameField(), { target: { value: "又有名字了" } });
+    expect(save).not.toBeDisabled();
   });
 });
 
@@ -807,7 +818,9 @@ describe("WorkflowEditor · validation gates the save", () => {
     expect(chips[0]).toHaveAttribute("aria-pressed", "true");
     const inspector = screen.getByRole("complementary", { name: "workflow.editor.inspector" });
     expect(within(inspector).getAllByText("秦广王 · 分流").length).toBeGreaterThan(0);
-    expect(within(inspector).getByText("第一殿")).toBeInTheDocument();
+    // Wide: the fields are the form's controls, holding this node's values.
+    expect(within(inspector).getByLabelText("Node Name")).toHaveValue("秦广王 · 分流");
+    expect(within(inspector).getByLabelText("Court Code")).toHaveValue("第一殿");
     // The preset chain routes PASS to the next card; FAIL has no edge, so it is
     // the engine's own default — the flow ends rejected — spelled out.
     expect(within(inspector).getByText("→ N2「楚江王 · 初审」")).toBeInTheDocument();
@@ -851,7 +864,9 @@ describe("WorkflowEditor · below 1024 px", () => {
     fireEvent.click(screen.getByRole("button", { name: /秦广王 · 分流/ }));
     const inspector = screen.getByRole("complementary", { name: "workflow.editor.inspector" });
     expect(within(inspector).getByText("第一殿")).toBeInTheDocument();
-    // Reading, not editing: the inspector's edit button is not offered here.
-    expect(within(inspector).queryByText("Edit Node")).not.toBeInTheDocument();
+    // Reading, not editing: no form, no control of any kind in the 节点 tab.
+    expect(screen.queryByTestId("node-form")).not.toBeInTheDocument();
+    expect(within(inspector).queryByRole("textbox")).not.toBeInTheDocument();
+    expect(within(inspector).queryByRole("combobox")).not.toBeInTheDocument();
   });
 });
