@@ -63,7 +63,7 @@ function bucketMidpoint(label: string): number {
 
 
 function DashboardContent() {
-  const { t, formatDate, formatDateTime } = useI18n();
+  const { t, formatDateTime } = useI18n();
   const { showToast } = useToast();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -83,7 +83,7 @@ function DashboardContent() {
   // 「数据截至」时间,稿里的「截至 08:00」没有来源,不写。
   usePlaque({
     title: t(activeTab === "ledger" ? "dashboard.tab_ledger" : "dashboard.tab_overview"),
-    meta: formatDate(new Date(), { year: "numeric", month: "2-digit", day: "2-digit" }),
+    meta: formatDateTime(new Date(), { year: "numeric", month: "2-digit", day: "2-digit" }),
   });
 
   const setTab = useCallback(
