@@ -375,6 +375,7 @@ export default function PermissionsPage() {
                 permsById={permsById}
               />
 
+              {/* Design A6:筛选框 280 宽 + 「只看差异」,图例靠右在同一行。 */}
               <div className="mb-3 flex flex-wrap items-center gap-3">
                 <input
                   type="text"
@@ -382,11 +383,14 @@ export default function PermissionsPage() {
                   onChange={(e) => setFilterText(e.target.value)}
                   placeholder={t("permissions.matrix.filter_placeholder")}
                   aria-label={t("permissions.matrix.filter_placeholder")}
-                  className={cn(fieldControl({ size: "md" }), "min-w-[200px] flex-1")}
+                  className={cn(fieldControl({ size: "sm" }), "min-w-0 flex-1 md:w-[280px] md:flex-none")}
                 />
                 <FilterChipToggle pressed={onlyDifferences} onPressedChange={setOnlyDifferences}>
                   {t("permissions.matrix.only_differences")}
                 </FilterChipToggle>
+                <div className="basis-full md:ml-auto md:basis-auto">
+                  <PermLegend />
+                </div>
               </div>
 
               <PermissionMatrixTable
@@ -403,7 +407,6 @@ export default function PermissionsPage() {
                 mobileRole={mobileRole}
                 onMobileRoleChange={setMobileRole}
               />
-              <PermLegend />
             </PageSection>
 
             <UnsavedBar
