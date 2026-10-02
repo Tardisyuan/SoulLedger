@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useMemo, useRef } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -18,7 +18,7 @@ import { useSidebarMenus, type SidebarMenu } from "@/src/hooks/useSidebarMenus";
 import { Breadcrumb, useBreadcrumbs } from "@/src/components/layout/Breadcrumb";
 import { BottomBar, GlobalNav, groupOfPath, useNavMode } from "@/src/components/layout/GlobalNav";
 import { LogoutConfirmDialog } from "@/src/components/layout/LogoutConfirmDialog";
-import { Plaque, shortBandFor } from "@/src/components/plaque/Plaque";
+import { Plaque, PlaqueProvider, shortBandFor, type PlaqueText } from "@/src/components/plaque/Plaque";
 import { useTheme } from "@/src/contexts/ThemeContext";
 import { DomainEnum } from "@/src/components/ui/DomainValue";
 import { Bell, PanelLeftClose, PanelLeftOpen } from "lucide-react";
@@ -99,7 +99,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     setOpenGroup(currentGroup);
   }
   const crumbs = useBreadcrumbs(menus);
-  const title = crumbs.length ? crumbs[crumbs.length - 1].label : t("nav.title");
+  // 页面经 `usePlaque` 报的题字 / 殿名 / 右栏优先;没报的退回面包屑末段与租户名。
+  const [plaque, setPlaque] = useState<PlaqueText | null>(null);
+  const title = plaque?.title ?? (crumbs.length ? crumbs[crumbs.length - 1].label : t("nav.title"));
 
   // `count`, not `results.length`: results is one page, the badge is the whole unread inbox. (FL-15)
   const { data: unread } = useQuery({
@@ -296,7 +298,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         {/* 身份带(规范 v3):吸在工具条下沿;页面滚动后自己收成 48px,只留印与殿名。
             z 与筛选栏同一层:两者不重叠 —— 筛选栏吸在 52 + 身份带此刻的高度(`--below-band`)。 */}
         <div className={`sticky top-13 z-filters ${assist.pushed ? "pr-[420px]" : ""}`}>
-          <Plaque title={title} collapsible short={shortBandFor(pathname)} />
+          <Plaque title={title} meta={plaque?.meta} hall={plaque?.hall} collapsible short={shortBandFor(pathname)} />
         </div>
 
         {/* 问一问 pushed (≥ 1024): the page gives up the panel's 420 px, and 1024–1279 its
@@ -312,7 +314,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             assist.pushed ? "pr-[420px] max-xl:[&_[class~='md:px-8']]:px-6" : ""
           }`}
         >
-          {children}
+          <PlaqueProvider value={setPlaque}>{children}</PlaqueProvider>
         </div>
       </main>
 

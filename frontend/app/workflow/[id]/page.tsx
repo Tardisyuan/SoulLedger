@@ -29,6 +29,7 @@ import { WorkflowNodeHistory } from "@/src/components/workflow/detail/WorkflowNo
 import { WorkflowLinearPreview } from "@/src/components/workflow/detail/WorkflowLinearPreview";
 import { usePermissions } from "@/src/hooks/usePermissions";
 import { KIND_GLYPH } from "@/src/components/workflow/workflowValidation";
+import { usePlaque } from "@/src/components/plaque/Plaque";
 
 const STATUS_COLORS: Record<string, string> = {
   PENDING: "text-[oklch(var(--color-status-warning))] border-[oklch(var(--color-status-warning))]",
@@ -193,6 +194,21 @@ export default function WorkflowDetailPage() {
   const sortedNodes = workflow?.nodes?.slice().sort((a, b) => a.node_order - b.node_order) || [];
   // By `case_type` from the serializer — never by the workflow's name.
   const needsReasonForSoul = requiresReasonForSoul(workflow?.case_type, selectedVerdict);
+
+  // 身份带(A1 实例):题「审批实例」,右栏「<流程名> vN · 第 k / n 步」。版本只在跑的是已发布
+  // 模板时有;没有当前节点(已结束)就不写步数。
+  const stepIndex = currentNode ? sortedNodes.findIndex((n) => n.id === currentNode.id) : -1;
+  usePlaque({
+    title: t("plaque.workflow_instance"),
+    meta: workflow
+      ? [
+          workflow.template_version_number ? `${workflow.workflow_name} v${workflow.template_version_number}` : workflow.workflow_name,
+          stepIndex >= 0 ? t("plaque.step", { k: String(stepIndex + 1), n: String(sortedNodes.length) }) : null,
+        ]
+          .filter(Boolean)
+          .join(" · ")
+      : undefined,
+  });
 
   function handleApproveNode() {
     if (!currentNode) return;
