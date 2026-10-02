@@ -150,4 +150,11 @@ describe("the selected tab is painted in ink (规范 v2 A1: no accent colour exi
     // to avoid, not to acquire.
     expect(TAB_BASE).not.toContain("oklch(");
   });
+
+  it("TAB_BASE 的点击区至少 44(v3 控件高),字在多出的高度里居中", () => {
+    // py-2 + text-sm 只有约 38。高度写 token,不写 h-11 / min-h-11(globals.css 的约定)。
+    expect(TAB_BASE.split(" ")).toEqual(
+      expect.arrayContaining(["min-h-(--control-h-sm)", "inline-flex", "items-center", "justify-center"]),
+    );
+  });
 });

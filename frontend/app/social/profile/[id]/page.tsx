@@ -13,7 +13,6 @@ import { PageShell } from "@/src/components/ui/PageShell";
 import { EmptyState } from "@/src/components/ui/EmptyState";
 import { QueryError } from "@/src/components/ui/PageError";
 import { Skeleton } from "@/components/ui/skeleton";
-import { SectionTitle } from "@/src/components/plaque/SectionTitle";
 import { usePlaque } from "@/src/components/plaque/Plaque";
 
 export default function UserProfilePage() {
@@ -112,8 +111,12 @@ export default function UserProfilePage() {
           <ProfileCard profile={profile} />
         ) : null}
 
-        <div className="max-[768px]:px-4">
-          <SectionTitle aside={postsData?.count}>{t("social.user_posts")}</SectionTitle>
+        {/* v3 面板标题(与 `components/ui/page-section.tsx` 同一档)+ 件数注记;v2 节首的匾纹片段撤掉。 */}
+        <div className="flex items-center gap-3 max-[768px]:px-4">
+          <h2 className="text-lg text-[oklch(var(--color-ink))]">{t("social.user_posts")}</h2>
+          {postsData?.count ? (
+            <span className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">{postsData.count}</span>
+          ) : null}
         </div>
 
         {postsLoading ? (

@@ -8,7 +8,6 @@ import { useTenant } from "@/src/contexts/TenantContext";
 import { showToast } from "@/src/components/ui/Toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageShell } from "@/src/components/ui/PageShell";
-import { SectionTitle } from "@/src/components/plaque/SectionTitle";
 import { Button } from "@/src/components/ui/Button";
 import { Badge } from "@/src/components/ui/Badge";
 import { TextField, fieldControl } from "@/src/components/ui/Field";
@@ -127,12 +126,11 @@ export default function ProfilePage() {
 
       {/* 规范 v1:区块标压线,行线代替卡片;标签在左,值在右,393 px 下同样两列。 */}
       <section className="mb-6">
-        <div className="pt-6">
-          <SectionTitle>
-            <span aria-hidden="true">甲 · </span>
-            {t("profile.basic_info")}
-          </SectionTitle>
-        </div>
+        {/* v3 面板标题(与 `components/ui/page-section.tsx` 同一档);v2 节首的匾纹片段撤掉。 */}
+        <h2 className="pt-6 text-lg text-[oklch(var(--color-ink))]">
+          <span aria-hidden="true">甲 · </span>
+          {t("profile.basic_info")}
+        </h2>
         <dl className="grid grid-cols-[8rem_1fr] max-sm:grid-cols-[6rem_1fr] text-sm">
           <dt className={DT}>{t("profile.username")}</dt>
           <dd className={DD}>
@@ -206,12 +204,10 @@ export default function ProfilePage() {
 
       {/* Change Password Section */}
       <section>
-        <div className="pt-6">
-          <SectionTitle>
-            <span aria-hidden="true">乙 · </span>
-            {t("profile.change_password")}
-          </SectionTitle>
-        </div>
+        <h2 className="pt-6 text-lg text-[oklch(var(--color-ink))]">
+          <span aria-hidden="true">乙 · </span>
+          {t("profile.change_password")}
+        </h2>
         <div className="pt-3">
         {!isLoading && !showPasswordForm ? (
           <Button variant="secondary" type="button" onClick={() => setShowPasswordForm(true)}>

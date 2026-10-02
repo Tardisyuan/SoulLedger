@@ -7,7 +7,6 @@ import { judgmentKeys } from "@soulledger/core/query_keys";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useReducedMotionDurations } from "@/src/hooks/useReducedMotionDurations";
-import { SectionTitle } from "@/src/components/plaque/SectionTitle";
 import { RowMark, ROW_MARK_ROW, isMinePending } from "@/src/components/judgment/RowMark";
 import { MissingValue } from "@/src/components/ui/DomainValue";
 import { MOTION_EASINGS } from "@/lib/motion";
@@ -66,9 +65,15 @@ export function QueueMinePanel({
 
   return (
     <section aria-labelledby="queue-mine-heading" data-testid="queue-mine" className="space-y-2">
-      <SectionTitle id="queue-mine-heading" aside={query.data ? String(query.data.count - goneHere) : "…"}>
-        {t("judgment.claim.groups.mine")}
-      </SectionTitle>
+      {/* 区块标签一档(与审判队列控制台里的 <h2> 同一写法);v2 节首的匾纹片段撤掉。 */}
+      <div className="flex items-center gap-3">
+        <h2 id="queue-mine-heading" className="text-2xs uppercase text-[oklch(var(--color-ink-muted))]">
+          {t("judgment.claim.groups.mine")}
+        </h2>
+        <span className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">
+          {query.data ? String(query.data.count - goneHere) : "…"}
+        </span>
+      </div>
       {query.isError ? (
         <p className="text-xs text-[oklch(var(--color-ink-subtle))]">{t("judgment.claim.refused.generic")}</p>
       ) : rows.length === 0 && query.isSuccess ? (
