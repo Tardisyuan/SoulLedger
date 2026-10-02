@@ -53,6 +53,8 @@ function statute(o: Fixture) {
     source_notes: [],
     payload_json: {},
     citation_count: 0,
+    revision: 1,
+    effective_from: "2026-08-27",
     ...o,
   };
 }
@@ -71,8 +73,9 @@ const FIXTURES = [
     source_notes: ["编者注:期三年为上限。"],
     citation_count: 3,
   }),
-  statute({ id: "eu-ds-7", civilization: "EUROPEAN", corpus: "DEADLY_SIN", ordinal: 7, citation_count: 0 }),
-  statute({ id: "eu-inf-26", civilization: "EUROPEAN", corpus: "INFERNO", ordinal: 26, payload_json: { circle: 9 }, citation_count: null }),
+  statute({ id: "eu-ds-7", civilization: "EUROPEAN", corpus: "DEADLY_SIN", ordinal: 7, citation_count: 0, revision: 3, effective_from: "2026-09-30" }),
+  // 旧接口:没有版本两列。
+  statute({ id: "eu-inf-26", civilization: "EUROPEAN", corpus: "INFERNO", ordinal: 26, payload_json: { circle: 9 }, citation_count: null, revision: undefined, effective_from: undefined }),
   statute({ id: "eg-27", civilization: "EGYPTIAN", corpus: "NEGATIVE_CONFESSION", ordinal: 27, polarity: "DENIAL", citation_count: 12 }),
   statute({ id: "gr-er-4", civilization: "GREEK", corpus: "REPUBLIC_ER", ordinal: 4, polarity: "PROCEDURE", payload_json: { stephanus: "614b" } }),
 ];
@@ -290,13 +293,18 @@ describe("the right rail", () => {
     expect(miss).not.toHaveTextContent("0");
   });
 
-  it("states the version gap instead of inventing one — and no longer claims the cited-by list is missing", async () => {
+  it("shows which revision the article is and since when — and a typed miss, not a made-up v1, when the API has none", async () => {
     renderPage();
     await screen.findByTestId("corpus-reading");
     const rail = screen.getByTestId("corpus-rail");
     expect(rail).not.toHaveTextContent("接口不能按律条查判决");
-    expect(within(rail).getByTestId("corpus-versions")).toHaveTextContent("律条没有版本记录");
-    expect(rail).not.toHaveTextContent("v1");
+    expect(within(rail).getByTestId("corpus-versions")).toHaveTextContent(/^第 1 版自 2026-08-27 起施行$/);
+    await open("VII");
+    expect(screen.getByTestId("corpus-versions")).toHaveTextContent(/^第 3 版自 2026-09-30 起施行$/);
+    await open("IX · XXVI");
+    const miss = screen.getByTestId("corpus-versions");
+    expect(miss.querySelector('[data-missing="unrecorded"]')).not.toBeNull();
+    expect(miss).not.toHaveTextContent(/版|v1/);
   });
 
   it("lists the citing judgments newest first: soul, verdict glyph, date — and pages", async () => {

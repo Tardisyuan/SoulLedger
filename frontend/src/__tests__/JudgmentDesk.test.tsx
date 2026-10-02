@@ -91,7 +91,8 @@ const judgment = (over: Record<string, unknown> = {}) => ({
   id: ID, soul: "s-1", soul_name: "沈青梧", civilization: "CHINESE", judge: null, judge_name: null,
   court: "第五殿", evidence_json: {}, confession: "", verdict: null, notes: "", is_final: false,
   citations: [{ id: "c-1", statute: CITED, note: "", created_at: "2026-09-12T00:00:00Z" }],
-  created_at: "2026-09-12T00:00:00Z", concluded_at: null, kind: "ORIGINAL", amends_plan_id: null, ...over,
+  created_at: "2026-09-12T00:00:00Z", concluded_at: null, kind: "ORIGINAL", amends_plan_id: null,
+  case_number: "CN-2026-0042", ...over,
 });
 
 function renderPage() {
@@ -306,6 +307,25 @@ describe("甲 · 灵魂栏的所在界域、审判方式、世次 / 种类", () 
     expect(method).not.toHaveTextContent(tZh("judgment.methods.STANDARD"));
     expect(screen.getByTestId("desk-life-kind")).toHaveTextContent(
       `${tZh("souls.detail.life_number", { n: "4" })} / ${tZh("judgment.claim.kinds.AMENDMENT")}`
+    );
+  });
+
+  it("案号:身份带右栏印「案号 CN-2026-0042」,页头一个可复制的整串(CASE_NUMBER_POLICY)", async () => {
+    const { PlaqueProvider } = await import("@/src/components/plaque/Plaque");
+    const plaque = jest.fn();
+    judgmentApi.get.mockResolvedValue({ data: judgment() });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <PlaqueProvider value={plaque}>
+          <JudgmentDetailPage params={Promise.resolve({ id: ID })} />
+        </PlaqueProvider>
+      </QueryClientProvider>
+    );
+    const chip = await screen.findByRole("button", { name: tZh("common.value.copy_case_number", { value: "CN-2026-0042" }) });
+    expect(chip).toHaveTextContent(/^CN-2026-0042 ⧉$/);
+    await waitFor(() =>
+      expect(plaque).toHaveBeenLastCalledWith(expect.objectContaining({ meta: `${tZh("judgment.case_number")} CN-2026-0042` }))
     );
   });
 

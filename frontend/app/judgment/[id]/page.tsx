@@ -8,7 +8,7 @@ import { judgmentKeys, soulKeys } from "@soulledger/core/query_keys";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
-import { DomainEnum, DomainText, IdentifierChip, MissingValue } from "@/src/components/ui/DomainValue";
+import { CaseNumber, DomainEnum, DomainText, IdentifierChip, MissingValue } from "@/src/components/ui/DomainValue";
 import {
   JudgmentGroundsPanel,
   JudgmentSectionHead,
@@ -430,8 +430,12 @@ export default function JudgmentDetailPage({ params }: PageProps) {
     </Link>
   );
 
-  // 身份带:题「审判台」(v3 `pageTitle`;面包屑末段是「详情」)。案号后端没有,不写右栏。
-  usePlaque({ title: t("plaque.desk") });
+  // 身份带:题「审判台」(v3 `pageTitle`;面包屑末段是「详情」)。右栏是案号(v3 `identity-case`):
+  // 身份带只收文字,可复制的那一个在下面的 eyebrow 里(CASE_NUMBER_POLICY)。
+  usePlaque({
+    title: t("plaque.desk"),
+    meta: judgment?.case_number ? `${t("judgment.case_number")} ${judgment.case_number}` : undefined,
+  });
 
   if (isLoading) {
     return <PageSpinner label={t("judgment.detail.loading")} />;
@@ -492,6 +496,8 @@ export default function JudgmentDetailPage({ params }: PageProps) {
   const eyebrow = (
     <span className="inline-flex items-center gap-3">
       {t("judgment.title")}
+      {/* 案号是给人的名字(CASE_NUMBER_POLICY):整串、可复制,排在 UUID 前面。 */}
+      <CaseNumber value={judgment.case_number} variant="inline" />
       {/* IDENTIFIER_POLICY, all four clauses: the entity this page is about,
           once, in the header sub-line, after the human name, and copyable. */}
       <IdentifierChip id={judgment.id} variant="inline" />

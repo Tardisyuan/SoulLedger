@@ -26,7 +26,7 @@ import { usePermissions } from "@/src/hooks/usePermissions";
 import { Button } from "@/src/components/ui/Button";
 import { ConfirmDialog } from "@/src/components/ui/Modal";
 import { Pagination } from "@/src/components/ui/Pagination";
-import { DomainEnum, DomainNumber, MissingValue } from "@/src/components/ui/DomainValue";
+import { CaseNumber, DomainEnum, DomainNumber, MissingValue } from "@/src/components/ui/DomainValue";
 import { QueryError } from "@/src/components/ui/PageError";
 import { DeferDialog, ReassignDialog, claimRefusalMessage } from "@/src/components/judgment/JudgmentClaimDialogs";
 import { BATCH_BAR, ROW_HOVER, ROW_LINK, ROW_SELECTED } from "@/components/ui/data-table";
@@ -55,7 +55,7 @@ import { MISSING_LABEL_KEY } from "@/src/lib/domainDisplay";
  * 批量只做认领、改派、暂缓(brief §4.2:不做批量裁决)。`/judgment/batch/` 全有或全无、
  * 一次至多 100 件;被拒时整批回滚,拒绝码说是哪一件、为什么。
  *
- * v3 有、这里没有的列(后端没有这些字段,不编):案号 SL-…(只有 UUID,IDENTIFIER_POLICY 不印)。
+ * 案号(v3「案号 / 灵魂」那一格的小字)在名字下面一行,经 `<CaseNumber>`(CASE_NUMBER_POLICY)。
  * 「功 / 过」分列读 `merit_score` / `demerit_score`(灵魂此刻的两本账,四个文明都有;VIEWER 拿不到,
  * 写「未记录」);「世次 / 种类」读 `cycle`(0 是第一世)与 `kind`。
  *
@@ -520,7 +520,12 @@ export function JudgmentClaimQueue() {
                             {j.soul_name ? j.soul_name : <MissingValue kind="unrecorded" reason="soul_name 未随判决返回" />}
                           </Link>
                         </span>
+                        {/* v3「案号 / 灵魂」:名字下面一行是案号(可复制,所以压在整行链接之上)与文明。 */}
                         <span className="block whitespace-nowrap text-2xs text-[oklch(var(--color-ink-subtle))]">
+                          <span className="relative z-10">
+                            <CaseNumber value={j.case_number} variant="inline" />
+                          </span>
+                          {" · "}
                           <DomainEnum namespace="souls.civilizations" value={j.civilization} />
                         </span>
                       </td>
