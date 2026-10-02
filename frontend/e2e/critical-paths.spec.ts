@@ -176,12 +176,12 @@ test.describe("Critical path: cross-civilization dispatch approval", () => {
     // The failure read as "the pending card is missing", which is a much more
     // alarming thing than what had happened.
     //
-    // `div:has(> div > h3)` is PageSection's own shape: a root div whose first
-    // child is the header div holding the title as an h3. That is the
-    // component's contract rather than its styling, so a second Tailwind pass
-    // does not break it.
+    // `section:has(> div > h2)` is PageSection's own shape: a root <section>
+    // whose header div holds the title as an h2 (v3 panel, 2026-10-02; it was a
+    // div with an h3 before). That is the component's contract rather than its
+    // styling, so a second Tailwind pass does not break it.
     const pendingSection = page.locator(
-      'div:has(> div > h3:text-is("待处理提案"))'
+      'section:has(> div > h2:text-is("待处理提案"))'
     );
 
     // The pending card must name both civilizations — the whole point of a
