@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ChevronDown } from "lucide-react";
 import { TreeName, flattenTree } from "@/src/components/ui/TreeRow";
 import { PageShell } from "@/src/components/ui/PageShell";
+import { Collapse } from "@/src/components/ui/Collapse";
 import { EmptyState } from "@/src/components/ui/EmptyState";
 import { Badge } from "@/src/components/ui/Badge";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
@@ -188,6 +189,7 @@ function OrganizationsPageContent() {
                     type="button"
                     onClick={() => toggleCollapse(category)}
                     aria-expanded={!isCollapsed}
+                    aria-controls={`organizations-${category}`}
                     className="inline-flex items-center gap-2 text-left hover:underline underline-offset-2"
                   >
                     {name}
@@ -199,7 +201,9 @@ function OrganizationsPageContent() {
                 </span>
               </div>
 
-              {!isCollapsed && <div className="overflow-x-auto">{renderTable(orgs)}</div>}
+              <Collapse open={!isCollapsed} id={`organizations-${category}`} rows={orgs.length}>
+                <div className="overflow-x-auto">{renderTable(orgs)}</div>
+              </Collapse>
             </section>
           );
         })}

@@ -11,6 +11,7 @@ import { PageSection } from "@/components/ui/page-section";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChevronDown, Scale } from "lucide-react";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
+import { Collapse } from "@/src/components/ui/Collapse";
 import { DomainEnum, DomainText } from "@/src/components/ui/DomainValue";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { EmptyState } from "@/src/components/ui/EmptyState";
@@ -240,6 +241,7 @@ function ActorsPageContent() {
                         type="button"
                         onClick={() => toggleCollapse(civ)}
                         aria-expanded={!isCollapsed}
+                        aria-controls={`actors-civ-${civ}`}
                         className="inline-flex items-center gap-2 text-left hover:underline underline-offset-2"
                       >
                         <DomainEnum namespace="actors.civilizations" value={civ} />
@@ -251,7 +253,11 @@ function ActorsPageContent() {
                     </span>
                   </div>
 
-                  {!isCollapsed && (
+                  <Collapse
+                    open={!isCollapsed}
+                    id={`actors-civ-${civ}`}
+                    rows={principals.length + (isBenchOpen ? bench.length : Math.min(bench.length, 1))}
+                  >
                     <div className="space-y-4">
                       {/* Named gods, flat */}
                       {principals.length > 0 && (
@@ -268,6 +274,7 @@ function ActorsPageContent() {
                           <button
                             onClick={() => toggleBench(civ)}
                             aria-expanded={!!isBenchOpen}
+                            aria-controls={`actors-bench-${civ}`}
                             aria-label={t("actors.assessors.toggle")}
                             className="w-full min-h-(--table-row-h) flex items-center gap-3 px-4 py-2 border-b border-[oklch(var(--color-rule))] hover:bg-[oklch(var(--color-surface-2))] transition-colors text-left"
                           >
@@ -284,8 +291,7 @@ function ActorsPageContent() {
                             <ChevronDown className={`w-4 h-4 text-[oklch(var(--color-ink-muted))] transition-transform ${isBenchOpen ? "" : "-rotate-90"}`} />
                           </button>
 
-                          {isBenchOpen && (
-                            <div className="row-expand">
+                          <Collapse open={!!isBenchOpen} id={`actors-bench-${civ}`}>
                             <ActorTable>
                               {bench.map((actor) => (
                                 <ActorRow
@@ -295,12 +301,11 @@ function ActorsPageContent() {
                                 />
                               ))}
                             </ActorTable>
-                            </div>
-                          )}
+                          </Collapse>
                         </div>
                       )}
                     </div>
-                  )}
+                  </Collapse>
                 </div>
               );
             })}
