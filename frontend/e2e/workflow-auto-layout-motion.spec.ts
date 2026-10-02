@@ -408,7 +408,7 @@ test.describe("auto layout brings the result back on screen, and only then", () 
      * height of the pane.
      */
     for (let i = 0; i < 6; i++) {
-      await page.getByRole("button", { name: "Zoom In" }).click();
+      await page.getByRole("button", { name: "放大", exact: true }).click();
       await page.waitForTimeout(60);
     }
     await page.waitForTimeout(300);
@@ -574,7 +574,7 @@ test.describe("auto layout under prefers-reduced-motion", () => {
     await openSmallPresetInEditor(page);
     await page.waitForTimeout(500);
     for (let i = 0; i < 6; i++) {
-      await page.getByRole("button", { name: "Zoom In" }).click();
+      await page.getByRole("button", { name: "放大", exact: true }).click();
       await page.waitForTimeout(60);
     }
     await page.waitForTimeout(300);
