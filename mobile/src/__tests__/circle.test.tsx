@@ -301,7 +301,11 @@ describe("reactions", () => {
 
   it("a pending post takes no reactions and no comments", async () => {
     detail({ moderation_status: "PENDING", is_mine: true });
-    await screen.findByTestId("pending-p1");
+    const tag = await screen.findByTestId("pending-p1");
+    // v3: glyph + word — ◐ from the glyph font, hidden from screen readers; the word is the label.
+    expect(tag.props.accessibilityLabel).toBe("待审 · 仅你可见");
+    expect(screen.queryByTestId("pending-p1-glyph")).toBeNull(); // hidden from screen readers
+    expect(screen.getByTestId("pending-p1-glyph", { includeHiddenElements: true }).props.children).toBe("◐");
     await act(async () => {});
     expect(screen.queryByTestId("reactions")).toBeNull();
     expect(screen.queryByTestId("comment-composer")).toBeNull();

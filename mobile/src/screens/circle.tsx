@@ -37,7 +37,7 @@ import { Icon } from "../emblems";
 import { Sheet, useToast } from "../feedback";
 import { quoteFamily } from "../fonts";
 import { useI18n } from "../i18n";
-import { formatStamp } from "../rules";
+import { formatStamp, TAG_GLYPH } from "../rules";
 import { radius } from "../theme";
 import {
   Button,
@@ -204,7 +204,7 @@ export function PostCard({ post, onPress, onAuthor, full }: { post: SoulPost; on
           <View style={[styles.line, styles.meta]}>
             <Mono>{formatStamp(post.create_time) ?? ""}</Mono>
             <Tag text={tr(visLabel(post.visibility))} tone="quiet" />
-            {pending ? <Tag testID={`pending-${post.id}`} text={tr("soul_app.circle.post.pending")} tone="waiting" /> : null}
+            {pending ? <Tag testID={`pending-${post.id}`} text={tr("soul_app.circle.post.pending")} tone="waiting" glyph={TAG_GLYPH.pending.glyph} /> : null}
             {hidden ? (
               <View style={[styles.tagNeg, { borderColor: t.neg }]}>
                 <Txt style={[styles.tagNegText, { color: t.neg }]}>{tr("soul_app.circle.post.hidden")}</Txt>
@@ -800,7 +800,7 @@ function CommentRow({
             {c.author.display_name}
           </Txt>
           <Mono>{formatStamp(c.create_time) ?? ""}</Mono>
-          {c.moderation_status === "PENDING" ? <Tag testID={`comment-pending-${c.id}`} text={tr("soul_app.circle.comment.pending")} tone="waiting" /> : null}
+          {c.moderation_status === "PENDING" ? <Tag testID={`comment-pending-${c.id}`} text={tr("soul_app.circle.comment.pending")} tone="waiting" glyph={TAG_GLYPH.pending.glyph} /> : null}
         </View>
         {parent ? (
           <Txt testID={`reply-to-${c.id}`} variant="caption" tone="subtle" style={styles.replyTo}>

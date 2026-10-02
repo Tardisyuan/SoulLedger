@@ -39,7 +39,7 @@ import { PlaqueFrame } from "../chrome";
 import { CORNER, Icon } from "../emblems";
 import { family, quoteFamily } from "../fonts";
 import { useI18n } from "../i18n";
-import { formatStamp } from "../rules";
+import { formatStamp, TAG_GLYPH } from "../rules";
 import type { CivKey } from "../theme";
 import { Button, Interp, Loader, Notice, Skeleton, SmallButton, Txt, shade, useReducedMotion, useTheme } from "../ui";
 import type { AppStackParams } from "./applications";
@@ -217,7 +217,7 @@ export function ConversationScreen({ id, landed }: { id: string; landed?: boolea
             title={c.peer_name}
             muted={sealed}
             subtitle={sealed ? undefined : tr(c.mutual ? "soul_app.chat.badge.mutual" : "soul_app.chat.badge.not_mutual")}
-            right={sealed ? <Tag testID="closed-tag" text={tr("soul_app.chat.badge.closed")} tone="quiet" /> : null}
+            right={sealed ? <Tag testID="closed-tag" text={tr("soul_app.chat.badge.closed")} tone="quiet" glyph={TAG_GLYPH.closed.glyph} /> : null}
           />
         )}
       </PlaqueFrame>
@@ -358,7 +358,7 @@ function HallHeader({ hall, sealed, onBack }: { hall: string; sealed: boolean; o
           {sealed ? tr("soul_app.chat.hall.not_current", { hall }) : tr("soul_app.chat.hall.subtitle")}
         </Txt>
       </View>
-      {sealed ? <Tag text={tr("soul_app.chat.badge.sealed")} tone="quiet" /> : null}
+      {sealed ? <Tag testID="sealed-tag" text={tr("soul_app.chat.badge.sealed")} tone="quiet" glyph={TAG_GLYPH.sealed.glyph} /> : null}
     </View>
   );
 }
