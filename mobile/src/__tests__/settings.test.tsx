@@ -484,7 +484,9 @@ describe("about / credits (spec v2 C16)", () => {
     fireEvent.press(screen.getByTestId("credit-source-Museo Egizio, Torino"));
     expect(open).toHaveBeenCalledWith(expect.stringContaining("commons.wikimedia.org/wiki/File:Stamped_clay_sealing"));
     expect(screen.getByText("Owen Jones")).toBeTruthy();
-    expect(screen.getByText("LXGW Seal")).toBeTruthy();
+    expect(screen.getByText("Noto Sans Egyptian Hieroglyphs")).toBeTruthy();
+    // v2 朱印's other three glyph faces ship nowhere since 2026-10-03, so they are not credited.
+    for (const font of ["LXGW Seal", "UnifrakturMaguntia", "GFS Didot"]) expect(screen.queryByText(font)).toBeNull();
     open.mockRestore();
     await act(async () => {});
   });
