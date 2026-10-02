@@ -316,7 +316,7 @@ export function PermissionMatrixTable({
           </label>
           {shown.map(({ category, perms, visible }) => (
             <section key={category} aria-label={category} className="mt-3 border-y border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))]">
-              <h3 className="flex h-9 items-center justify-between bg-[oklch(var(--color-surface-2))] px-4 text-2xs font-semibold text-[oklch(var(--color-ink-muted))]">
+              <h3 className="flex h-9 items-center justify-between bg-[oklch(var(--color-surface-2))] px-4 text-2xs uppercase font-semibold text-[oklch(var(--color-ink-muted))]">
                 <span>{category}</span>
                 <span className="font-mono font-normal">{categoryTally(perms, role)}</span>
               </h3>

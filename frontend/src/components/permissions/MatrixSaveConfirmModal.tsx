@@ -13,7 +13,8 @@ import type { RoleDiff } from "./matrixDiff";
  *
  * Design A6(2026-10-02):按角色分组 ——「角色 · N 人」小标题,下面每处改动一行 48 高:
  * 字形(＋ 待授 / − 待撤)+ 等宽权限码。不用成功 / 失败色:撤一项权限不是一次出错,
- * 字形已经说了方向。确认按钮是主按钮 —— 清空一个角色的授权可以再授回来,不是不可撤回的删除。
+ * 字形已经说了方向。确认按钮仍是实心 danger(Design 画的是主按钮):`dangerButtonPlacement.test.ts`
+ * 把这个对话框钉为「输入名称以确认」的两处之一,改它要先拍板。
  */
 export function MatrixSaveConfirmModal({
   isOpen,
@@ -58,11 +59,12 @@ export function MatrixSaveConfirmModal({
           </Button>
           <Button
             type="button"
-            variant="primary"
+            variant="danger"
             onClick={onConfirm}
             disabled={isSaving || !canConfirmSave}
             className="flex-1"
           >
+            <span aria-hidden="true">✕</span>
             {isSaving ? t("permissions.matrix.confirm_submitting") : t("permissions.matrix.confirm_submit")}
           </Button>
         </div>
