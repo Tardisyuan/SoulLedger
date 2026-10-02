@@ -19,6 +19,7 @@ import { Drawer } from "@/src/components/ui/Drawer";
 import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
 import { realmStationLabel } from "@/src/components/realms/RouteTopology";
 import { usePlaque } from "@/src/components/plaque/Plaque";
+import { useHall } from "@/src/components/plaque/useHall";
 import { RouteMap } from "@/src/components/realms/RouteMap";
 import { buildTopology, isTerminalRealm } from "@/src/lib/routeTopology";
 
@@ -135,7 +136,9 @@ function RealmsPageContent() {
     ? realmStationLabel(t, { id: root.id, code: root.realm_code, realm: root, state: "pending" }) ?? root.realm_code
     : undefined;
   const rootHeld = root && occupancyQuery.isSuccess ? String(occupancy.get(root.id) ?? 0) : undefined;
+  const hall = useHall(t("plaque.office.rules"));
   usePlaque({
+    hall,
     title: rootName ? t("plaque.realms", { root: rootName }) : undefined,
     meta: rootHeld ? t("plaque.held", { n: rootHeld }) : undefined,
   });

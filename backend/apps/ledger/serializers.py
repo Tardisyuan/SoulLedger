@@ -317,7 +317,8 @@ class BalanceHistogramBucketSerializer(serializers.Serializer):
 
 class BalanceHistogramSerializer(serializers.Serializer):
     """等宽余额直方图:[-300, 300) 每 `bucket_width` 一格,外加两端开口的两格。
-    格子覆盖整条数轴,所以 `total` 总等于 `total_souls`。"""
+    **只数已处置(DISPOSED)的灵魂**;格子覆盖整条数轴,所以 `total` 等于已处置人数
+    (`state_distribution` 里 DISPOSED 那一行的 count),不是 `total_souls`。"""
 
     bucket_width = serializers.IntegerField()
     buckets = BalanceHistogramBucketSerializer(many=True)

@@ -5,8 +5,6 @@ import { useSearchParams } from "next/navigation";
 import { JudgmentQueueConsole } from "@/src/components/judgment/JudgmentQueueConsole";
 import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
-import { usePlaque } from "@/src/components/plaque/Plaque";
-import { useI18n } from "@/src/contexts/I18nContext";
 
 /**
  * `/judgment/queue` — the triage console (BRIEF §4.2).
@@ -27,9 +25,7 @@ function QueueRoute() {
 }
 
 export default function JudgmentQueuePage() {
-  // 身份带:题「审判队列」(v3 `queue-product`;面包屑末段是「分诊队列」)。
-  const { t } = useI18n();
-  usePlaque({ title: t("plaque.queue") });
+  // 身份带(题「审判队列」、殿名是眼前那一案的殿)在 JudgmentQueueConsole 里报 —— 只有它知道是哪一案。
   return (
     <RequirePermission permissions="judgment.read" fallback={<PermissionDenied permission="judgment.read" />}>
       {/* useSearchParams needs a Suspense boundary or the whole route opts out

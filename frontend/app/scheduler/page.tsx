@@ -13,6 +13,8 @@ import {
   useUpdateScheduledJob,
 } from "@soulledger/core/hooks/useScheduler";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { usePlaque } from "@/src/components/plaque/Plaque";
+import { useHall } from "@/src/components/plaque/useHall";
 import { useToast } from "@/src/contexts/ToastContext";
 import { useWebSocket } from "@/src/contexts/WebSocketContext";
 import type { SchedulerEventPayload } from "@/lib/events/event_registry";
@@ -36,6 +38,7 @@ import { JOB_FILTERS, groupJobs, matchesFilter, type JobFilter } from "@/src/com
 
 function SchedulerPageContent() {
   const { t } = useI18n();
+  usePlaque({ hall: useHall(t("plaque.office.rules")) });
   const { showToast } = useToast();
   const queryClient = useQueryClient();
   const { isConnected, subscribe } = useWebSocket();

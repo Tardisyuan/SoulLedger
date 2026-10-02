@@ -8,6 +8,8 @@ import {
   useSocialMutes,
 } from "@soulledger/core/hooks/useSocialModeration";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { usePlaque } from "@/src/components/plaque/Plaque";
+import { useHall } from "@/src/components/plaque/useHall";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
@@ -34,6 +36,7 @@ const SEGMENTS: Segment[] = ["reports", "words", "mutes", "handled"];
 
 function ModerationPageContent() {
   const { t } = useI18n();
+  usePlaque({ hall: useHall(t("plaque.office.rules")) });
   const { user } = useTenant();
   const [segment, setSegment] = useState<Segment>("reports");
 

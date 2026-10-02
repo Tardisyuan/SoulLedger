@@ -4,6 +4,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { crossTenantJudgmentsApi } from "@soulledger/core/api";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { usePlaque } from "@/src/components/plaque/Plaque";
+import { useHall } from "@/src/components/plaque/useHall";
 import { useToast } from "@/src/contexts/ToastContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DomainEnum } from "@/src/components/ui/DomainValue";
@@ -44,6 +46,7 @@ const CONCLUSION_GLYPH: Record<string, string> = { PASS: "✓", FAIL: "✕" };
 
 export default function CrossJudgmentDetailPage() {
   const { t } = useI18n();
+  usePlaque({ hall: useHall(t("plaque.office.trials")) });
   const { user } = useTenant();
   const params = useParams();
   const router = useRouter();

@@ -2,7 +2,7 @@
 界域前十的容量与在押、`as_of`。
 
 每条都断反面:均值不是桶中点估出来的;没有灵魂的状态是 null 不是 0;直方图的边界是
-半开区间、两端开口、格子之和等于总数;「在押」数的是未离开的行程站,不是处置条数;
+半开区间、两端开口、只数已处置的灵魂、格子之和等于已处置人数;「在押」数的是未离开的行程站,不是处置条数;
 别的租户的灵魂不进均值。
 """
 import datetime as dt
@@ -96,7 +96,7 @@ class TestBalanceHistogram:
     def test_edges_are_half_open_and_every_soul_lands_in_exactly_one_bucket(self, world):
         client, cn, _ = world
         for merit, demerit in [(0, 301), (0, 300), (0, 1), (0, 0), (49, 0), (50, 0), (299, 0), (300, 0), (200000, 0)]:
-            _soul(cn, merit, demerit)
+            _soul(cn, merit, demerit, SoulState.DISPOSED)
         body = _get(client, cn)
         counts = {(b["min"], b["max"]): b["count"] for b in body["balance_histogram"]["buckets"]}
         assert counts[(None, -300)] == 1        # -301
@@ -106,8 +106,28 @@ class TestBalanceHistogram:
         assert counts[(50, 100)] == 1           # 50
         assert counts[(250, 300)] == 1          # 299
         assert counts[(300, None)] == 2         # 300 and 200000
-        assert body["balance_histogram"]["total"] == body["total_souls"] == 9
+        assert body["balance_histogram"]["total"] == body["total_souls"] == 9  # all nine are disposed
         assert sum(counts.values()) == 9
+
+    def test_only_disposed_souls_are_counted(self, world):
+        """Design A4「已处置 · 每格 50」(用户 2026-10-02):在世、审判中、轮回中、已终结的都不进直方图;
+        旧的七格仍数全部。"""
+        client, cn, eu = world
+        for state in SoulState.values:
+            _soul(cn, 10, 0, state)            # one per state, all in [0, 50)
+        _soul(cn, 0, 120, SoulState.DISPOSED)  # a second disposed one, in [-150, -100)
+        _soul(cn, 0, 400, SoulState.ALIVE)     # alive, far below -300: must land nowhere
+        _soul(eu, 10, 0, SoulState.DISPOSED)   # another tenant's disposed soul: not ours
+        body = _get(client, cn)
+        hist = body["balance_histogram"]
+        counts = {(b["min"], b["max"]): b["count"] for b in hist["buckets"]}
+        assert counts[(0, 50)] == 1
+        assert counts[(-150, -100)] == 1
+        assert counts[(None, -300)] == 0
+        disposed = {r["state"]: r["count"] for r in body["state_distribution"]}["DISPOSED"]
+        assert hist["total"] == sum(counts.values()) == disposed == 2
+        assert body["total_souls"] == len(SoulState.values) + 2
+        assert body["karma_distribution_total"] == body["total_souls"]
 
     def test_the_old_seven_buckets_are_still_there(self, world):
         """欢迎页、调派提案页、/admin/stats 还读 `karma_distribution`。"""

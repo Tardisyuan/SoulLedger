@@ -3,6 +3,8 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { usePlaque } from "@/src/components/plaque/Plaque";
+import { useHall } from "@/src/components/plaque/useHall";
 import { api, PAGE_SIZE, type Tenant, type PaginatedResponse } from "@soulledger/core/api";
 import { DataTable } from "@/components/ui/data-table";
 import { PageShell } from "@/src/components/ui/PageShell";
@@ -18,6 +20,7 @@ import { civSkinOf } from "@/src/lib/civSkin";
 
 function TenantsPageContent() {
   const { t } = useI18n();
+  usePlaque({ hall: useHall(t("plaque.office.rules")) });
   const { user } = useTenant();
   const [page, setPage] = useState(1);
   const [editingSeal, setEditingSeal] = useState<Tenant | null>(null);
