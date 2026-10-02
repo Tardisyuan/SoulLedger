@@ -229,6 +229,9 @@
   --animate-row-enter: row-enter var(--transition-duration-settle) var(--ease-enter) both; /* @kind other */
   --animate-row-exit: row-exit var(--transition-duration-settle) var(--ease-exit) forwards; /* @kind other */
   --animate-row-changed: row-changed 2000ms var(--ease-exit) both; /* @kind other */
+  /* 全局搜索(规范 v3 A8):第二次起的搜索不换结果、只在输入框下走一条 2px 进度条,前景宽 38% 来回滑。
+   * 减少动态效果:上面那条 1ms + 只播一次 —— 播完回到原位,留一段不动的条,仍看得出「在搜」。 */
+  --animate-search-progress: search-progress 1200ms var(--ease-standard) infinite; /* @kind other */
 
   --font-sans:
     'SoulLedger Glyphs', var(--font-sans-latin), 'Noto Sans SC Variable', ui-sans-serif, system-ui,
@@ -1036,6 +1039,15 @@ html.theme-switching *::after {
 
 /* 问一问 waiting (canvas「流式输出」A1): three dots brighten one after another, 400 ms each.
    Opacity only; used under `motion-safe:`, so reduced motion leaves them still. */
+@keyframes search-progress {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(263%);
+  }
+}
+
 @keyframes assist-dot {
   0% {
     opacity: 1;
