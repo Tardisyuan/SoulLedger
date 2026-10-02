@@ -251,7 +251,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                       <button
                         type="button"
                         onClick={toggleTheme}
-                        className="flex min-h-8 w-full items-center justify-between border-b border-[oklch(var(--color-rule))] px-3 text-xs text-[oklch(var(--color-ink-muted))] hover:bg-[oklch(var(--color-surface-2))]"
+                        className="flex min-h-(--control-h-sm) w-full items-center justify-between border-b border-[oklch(var(--color-rule))] px-3 text-xs text-[oklch(var(--color-ink-muted))] hover:bg-[oklch(var(--color-surface-2))]"
                       >
                         <span>{t("settings.theme")}</span>
                         <span className="text-[oklch(var(--color-ink))]">{theme === "dark" ? t("settings.dark") : t("settings.light")} ›</span>
@@ -262,14 +262,14 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                           setUserMenuOpen(false);
                           setSettingsOpen(true);
                         }}
-                        className="flex min-h-8 w-full items-center border-b border-[oklch(var(--color-rule))] px-3 text-xs text-[oklch(var(--color-ink-muted))] hover:bg-[oklch(var(--color-surface-2))]"
+                        className="flex min-h-(--control-h-sm) w-full items-center border-b border-[oklch(var(--color-rule))] px-3 text-xs text-[oklch(var(--color-ink-muted))] hover:bg-[oklch(var(--color-surface-2))]"
                       >
                         {t("nav.settings")}
                       </button>
                       <Link
                         href="/about"
                         onClick={() => setUserMenuOpen(false)}
-                        className="flex min-h-8 w-full items-center border-b border-[oklch(var(--color-rule))] px-3 text-xs text-[oklch(var(--color-ink-muted))] hover:bg-[oklch(var(--color-surface-2))]"
+                        className="flex min-h-(--control-h-sm) w-full items-center border-b border-[oklch(var(--color-rule))] px-3 text-xs text-[oklch(var(--color-ink-muted))] hover:bg-[oklch(var(--color-surface-2))]"
                       >
                         {t("about.title")}
                       </Link>
@@ -279,7 +279,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                           setUserMenuOpen(false);
                           setLogoutConfirmOpen(true);
                         }}
-                        className="flex min-h-8 w-full items-center px-3 text-xs text-[oklch(var(--color-danger))] hover:bg-[oklch(var(--color-surface-2))]"
+                        className="flex min-h-(--control-h-sm) w-full items-center px-3 text-xs text-[oklch(var(--color-danger))] hover:bg-[oklch(var(--color-surface-2))]"
                       >
                         {t("auth.logout")}
                       </button>
