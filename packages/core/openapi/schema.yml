@@ -16868,6 +16868,10 @@ components:
           type: string
           readOnly: true
           nullable: true
+        judgment_case_number:
+          type: string
+          readOnly: true
+          nullable: true
         soul:
           type: string
           format: uuid
@@ -16949,6 +16953,7 @@ components:
       - current_node_detail
       - end_reason
       - id
+      - judgment_case_number
       - judgment_verdict
       - nodes
       - return_count
@@ -20893,6 +20898,9 @@ components:
           type: string
           format: uuid
           readOnly: true
+        case_number:
+          type: string
+          readOnly: true
         soul:
           type: string
           format: uuid
@@ -21053,6 +21061,7 @@ components:
           readOnly: true
       required:
       - amends_plan_id
+      - case_number
       - citations
       - civilization
       - claimed_at
@@ -21368,6 +21377,9 @@ components:
           type: string
           format: uuid
           readOnly: true
+        case_number:
+          type: string
+          readOnly: true
         soul:
           type: string
           format: uuid
@@ -21538,6 +21550,7 @@ components:
       required:
       - admitted_balance
       - amends_plan_id
+      - case_number
       - citations
       - civilization
       - claimed_at
@@ -25423,6 +25436,10 @@ components:
           type: string
           readOnly: true
           nullable: true
+        judgment_case_number:
+          type: string
+          readOnly: true
+          nullable: true
         soul:
           type: string
           format: uuid
@@ -26121,6 +26138,9 @@ components:
         id:
           type: string
           format: uuid
+          readOnly: true
+        case_number:
+          type: string
           readOnly: true
         soul:
           type: string
@@ -31095,6 +31115,13 @@ components:
           type: string
         source_notes: {}
         payload_json: {}
+        revision:
+          type: integer
+          readOnly: true
+        effective_from:
+          type: string
+          format: date
+          readOnly: true
       required:
       - citation_count
       - civilization
@@ -31102,8 +31129,10 @@ components:
       - corpus
       - display_text
       - display_title
+      - effective_from
       - id
       - is_derived
+      - revision
     SystemTypeEnum:
       enum:
       - GOVERNMENT

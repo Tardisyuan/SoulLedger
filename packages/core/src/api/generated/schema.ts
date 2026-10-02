@@ -7704,6 +7704,7 @@ export interface components {
             /** Format: uuid */
             judgment?: string | null;
             readonly judgment_verdict: string | null;
+            readonly judgment_case_number: string | null;
             /** Format: uuid */
             soul: string;
             readonly soul_name: string;
@@ -9574,6 +9575,7 @@ export interface components {
         Judgment: {
             /** Format: uuid */
             readonly id: string;
+            readonly case_number: string;
             /** Format: uuid */
             soul: string;
             readonly soul_name: string;
@@ -9791,6 +9793,7 @@ export interface components {
         JudgmentDetail: {
             /** Format: uuid */
             readonly id: string;
+            readonly case_number: string;
             /** Format: uuid */
             soul: string;
             readonly soul_name: string;
@@ -11788,6 +11791,7 @@ export interface components {
             /** Format: uuid */
             judgment?: string | null;
             readonly judgment_verdict?: string | null;
+            readonly judgment_case_number?: string | null;
             /** Format: uuid */
             soul?: string;
             readonly soul_name?: string;
@@ -12127,6 +12131,7 @@ export interface components {
         PatchedJudgment: {
             /** Format: uuid */
             readonly id?: string;
+            readonly case_number?: string;
             /** Format: uuid */
             soul?: string;
             readonly soul_name?: string;
@@ -14462,6 +14467,9 @@ export interface components {
             source?: string;
             source_notes?: unknown;
             payload_json?: unknown;
+            readonly revision: number;
+            /** Format: date */
+            readonly effective_from: string;
         };
         /**
          * @description * `GOVERNMENT` - Government Civil Registry

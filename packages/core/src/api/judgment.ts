@@ -16,6 +16,11 @@ import type { PaginatedResponse } from "./users";
  */
 export interface Judgment {
   id: string;
+  /**
+   * 案号:给人读、给人抄的编号(`CN-2026-0007` = 租户前缀-年-序号),开案时服务端发,永不改。
+   * `id` 仍是路由与 API 用的身份。显示一律走 `<CaseNumber>`(可复制、不截断)。
+   */
+  case_number: string;
   soul: string;
   soul_name: string;
   civilization: string;
@@ -273,6 +278,10 @@ export interface Statute {
   source: string;
   source_notes: string[];
   payload_json: Record<string, unknown>;
+  /** 第几版(1 起):条文(标题 / 正文 / 出处 / 分值)改了才加一。 */
+  revision: number;
+  /** 这一版自哪天起施行(ISO 日期)。存量条目是入库那天。 */
+  effective_from: string;
   /**
    * How many times **this tenant** has cited this article, annotated by
    * `StatuteViewSet.get_queryset` through `apps/core/tenant.py`'s
