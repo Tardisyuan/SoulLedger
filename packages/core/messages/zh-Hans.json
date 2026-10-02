@@ -600,7 +600,7 @@
       "showing": "权限 · 显示 {{shown}} / {{total}}",
       "no_differences": "没有差异：当前筛选下各角色取值完全一致。",
       "role_picker": "角色",
-      "pending_cells": "未保存 {{n}} 项",
+      "pending_cells": "{{n}} 处待改",
       "discard": "放弃",
       "unsaved_region": "未保存的改动",
       "saved_all": "已保存 {{n}} 项",
@@ -615,11 +615,11 @@
         "conflict": "未保存 · 引起冲突"
       },
       "legend": {
-        "on": "有",
-        "off": "无",
+        "on": "已授",
+        "off": "未授",
         "unsaved": "未保存",
-        "failed": "保存失败",
-        "conflict": "引起冲突",
+        "failed": "失败",
+        "conflict": "冲突",
         "lock": "始终 · ADMIN",
         "deny": "禁授 · 殿主"
       },
@@ -979,17 +979,22 @@
     "error_load": "加载统计数据失败",
     "error_export": "导出统计数据失败",
     "todo": {
-      "approve_dispatch": "待我审批 · 调度",
+      "approve_dispatch": "调派待批",
       "go_approve": "去审批 →",
       "judgment_queue": "审判队列",
-      "enter": "进入 →",
-      "none": "无待办",
+      "enter": "去审判台 →",
+      "none": "已清空",
       "death_sync_anomaly": "死亡同步异常",
       "go_view": "去查看 →",
-      "load_error": "计数加载失败"
+      "load_error": "加载失败",
+      "sync_ok": "同步正常",
+      "unbooked": "未入簿"
     },
     "civ_share": "占比",
-    "civ_empty": "尚未入册 · 去登记"
+    "civ_empty": "尚未入册 · 去登记",
+    "tab_ledger": "账本",
+    "top_realms": "界域前十",
+    "avg_scope": "全部已入簿灵魂"
   },
   "ledger": {
     "title": "功德统计",
