@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import type { Edge, Node } from "@xyflow/react";
 import {
@@ -214,6 +215,8 @@ export function ExitConditionsSection({
   nodes,
   edges,
   onChange,
+  onMove,
+  onAdd,
   activeEdgeId,
   onActivate,
 }: {
@@ -223,10 +226,24 @@ export function ExitConditionsSection({
   edges: readonly Edge[];
   /** Absent in the read-only view. `undefined` clears the condition. */
   onChange?: (edgeId: string, when: ConditionClause[] | undefined) => void;
+  /** ↑ / ↓ among the conditional exits. Absent in the read-only view. */
+  onMove?: (edgeId: string, step: -1 | 1) => void;
+  /** 「＋ 加一条条件出口」 to `target`. Absent in the read-only view. */
+  onAdd?: (source: string, target: string) => void;
   activeEdgeId?: string | null;
   onActivate?: (edgeId: string) => void;
 }) {
-  const exits = edges.filter((e) => e.source === node.id && branchOf(e) === "pass");
+  // In the order the engine tries them: the conditional exits (branches, in
+  // edge order — the order that is saved), then the default (`on_pass`).
+  const passEdges = edges.filter((e) => e.source === node.id && branchOf(e) === "pass");
+  const exits = [
+    ...passEdges.filter((e) => whenOf(e) !== undefined),
+    ...passEdges.filter((e) => whenOf(e) === undefined),
+  ];
+  const conditionalCount = exits.length - passEdges.filter((e) => whenOf(e) === undefined).length;
+  const targets = nodes.filter((n) => n.id !== node.id);
+  const [addTarget, setAddTarget] = useState("");
+  const chosenTarget = targets.some((n) => n.id === addTarget) ? addTarget : (targets[0]?.id ?? "");
   // 「否 · 默认」 only means something beside a 「是 · …」: a node with no
   // conditional exit has a plain 通过 exit, and is labelled as one.
   const branching = exits.some((e) => whenOf(e) !== undefined);
@@ -260,11 +277,12 @@ export function ExitConditionsSection({
                   active ? "border-[oklch(var(--color-ink))]" : "border-[oklch(var(--color-line))]"
                 }`}
               >
+                <div className="flex items-stretch">
                 <button
                   type="button"
                   aria-pressed={active}
                   onClick={() => onActivate?.(e.id)}
-                  className="flex items-center gap-2 min-h-11 px-3 text-left text-sm text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))]"
+                  className="flex-1 min-w-0 flex items-center gap-2 min-h-11 px-3 text-left text-sm text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))]"
                 >
                   <span className="font-mono text-xs text-[oklch(var(--color-ink-subtle))]">{i + 1}</span>
                   <span className="flex-1 min-w-0 break-words">
@@ -279,6 +297,29 @@ export function ExitConditionsSection({
                     <span className="font-mono text-xs text-[oklch(var(--color-ink-muted))]">{t("workflow.editor.condition.default")}</span>
                   )}
                 </button>
+                {onMove && when !== undefined && (
+                  <>
+                    <button
+                      type="button"
+                      aria-label={`${t("workflow.editor.exit_up")} ${i + 1}`}
+                      disabled={i === 0}
+                      onClick={() => onMove(e.id, -1)}
+                      className="w-11 shrink-0 font-mono text-sm text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))] disabled:text-[oklch(var(--color-ink-subtle))] disabled:hover:bg-transparent"
+                    >
+                      ↑
+                    </button>
+                    <button
+                      type="button"
+                      aria-label={`${t("workflow.editor.exit_down")} ${i + 1}`}
+                      disabled={i === conditionalCount - 1}
+                      onClick={() => onMove(e.id, 1)}
+                      className="w-11 shrink-0 font-mono text-sm text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))] disabled:text-[oklch(var(--color-ink-subtle))] disabled:hover:bg-transparent"
+                    >
+                      ↓
+                    </button>
+                  </>
+                )}
+                </div>
                 {when !== undefined && (
                   <div className="flex flex-col gap-1 px-3">
                     {when.length === 0 && (
@@ -347,6 +388,31 @@ export function ExitConditionsSection({
             );
           })}
         </ol>
+      )}
+      {/* 「＋ 加一条条件出口」, dashed, 48 high (v3 A1). The target is picked
+          here because a conditional exit is an edge, and an edge needs one. */}
+      {onAdd && targets.length > 0 && (
+        <div className="flex items-center gap-2 min-h-12 px-2 border border-dashed border-[oklch(var(--color-line-strong))]">
+          <select
+            aria-label={t("workflow.editor.exit_target")}
+            className={`${CONTROL} flex-1 min-w-0`}
+            value={chosenTarget}
+            onChange={(ev) => setAddTarget(ev.target.value)}
+          >
+            {targets.map((n) => (
+              <option key={n.id} value={n.id}>
+                {ref(n.id)}
+              </option>
+            ))}
+          </select>
+          <button
+            type="button"
+            onClick={() => onAdd(node.id, chosenTarget)}
+            className="h-(--control-h-sm) px-3 shrink-0 text-sm text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))]"
+          >
+            ＋ {t("workflow.editor.exit_add")}
+          </button>
+        </div>
       )}
       <p className="text-xs text-[oklch(var(--color-ink-muted))]">{t("workflow.editor.exits_fixed")}</p>
     </section>
