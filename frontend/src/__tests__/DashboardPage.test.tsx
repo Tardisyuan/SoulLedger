@@ -489,6 +489,27 @@ describe("DashboardPage ledger tab", () => {
     mockSearch = new URLSearchParams("tab=ledger");
   });
 
+  it("较上月: the server's delta in mono with a true minus; the half-sentence is absent without a previous snapshot", async () => {
+    mockedStats.mockResolvedValue({
+      data: { ...baseStats, average_balance: 42.7, average_balance_prev_month: 44, average_balance_delta: -1.3 },
+    });
+    const first = renderPage();
+    const delta = await found(first.container, "[data-avg-delta]");
+    expect(delta).toHaveTextContent(/^−1\.3$/);
+    expect(delta.parentElement).toHaveTextContent("dashboard.avg_scope · dashboard.vs_last_month −1.3");
+    first.unmount();
+
+    // No snapshot for last month: null, and the card says only its scope — not 0.0, not 未记录.
+    mockedStats.mockResolvedValue({
+      data: { ...baseStats, average_balance: 42.7, average_balance_prev_month: null, average_balance_delta: null },
+    });
+    const { container } = renderPage();
+    await found(container, "[data-avg-balance]");
+    expect(container.querySelector("[data-avg-delta]")).toBeNull();
+    expect(screen.queryByText(/dashboard\.vs_last_month/)).toBeNull();
+    expect(screen.getByText("dashboard.avg_scope")).toBeInTheDocument();
+  });
+
   it("shows the server's exact mean balance, signed, one decimal — not a bucket-midpoint estimate", async () => {
     // The old buckets' midpoints would give (-60 * 2 + 60 * 1) / 4 = -15.0 too, so move the
     // server's number off it: what is printed must be `average_balance` and nothing else.

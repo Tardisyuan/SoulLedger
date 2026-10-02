@@ -10,6 +10,7 @@ import { DomainEnum, DomainNumber, MissingValue } from "@/src/components/ui/Doma
 import { JudgmentSectionHead } from "@/src/components/judgment/JudgmentGroundsPanel";
 import { Kbd } from "@/src/components/judgment/JudgmentDesk";
 import { ReasonDialog } from "@/src/components/judgment/JudgmentClaimDialogs";
+import { clauseCode, RecordFacts } from "@/src/components/souls/SoulLedgerBook";
 import { formatHistoricalDate } from "@/lib/utils";
 
 /**
@@ -102,12 +103,13 @@ export function JudgmentEvidenceAdmission({
             const when = formatHistoricalDate(record.event_date) ?? formatDate(record.recorded_at);
             const signed = record.type === "MERIT" ? record.original_weight : -record.original_weight;
             const label = record.description || record.category;
+            const clause = clauseCode(record);
             return (
               <li
                 key={record.id}
                 data-testid="evidence-row"
                 data-admitted={admitted ? "true" : "false"}
-                className={`grid grid-cols-[24px_minmax(0,1fr)_60px] md:grid-cols-[24px_88px_minmax(0,1fr)_60px] items-center gap-x-3 min-h-(--control-h-sm) py-1 border-b border-[oklch(var(--color-rule))] focus-within:bg-[oklch(var(--color-surface-2))] ${
+                className={`grid grid-cols-[24px_minmax(0,1fr)_60px] md:grid-cols-[24px_88px_minmax(0,1fr)_96px_60px] items-center gap-x-3 min-h-(--control-h-sm) py-1 border-b border-[oklch(var(--color-rule))] focus-within:bg-[oklch(var(--color-surface-2))] ${
                   admitted ? "" : "opacity-65"
                 }`}
               >
@@ -142,11 +144,26 @@ export function JudgmentEvidenceAdmission({
                     title={admitted ? record.category || undefined : ruling?.reason || undefined}
                   >
                     {admitted ? (
-                      <DomainEnum namespace="souls.categories" value={record.category} />
+                      <>
+                        <DomainEnum namespace="souls.categories" value={record.category} />
+                        {/* 窄屏没有条款列,条款折进这一行。 */}
+                        {clause && <span className="md:hidden font-serif" title={record.statute_clause}> · {clause}</span>}
+                        {(record.occurrence_count != null || record.is_milestone) && " · "}
+                        <RecordFacts record={record} />
+                      </>
                     ) : (
                       t("judgment.admission.reason_shown", { reason: ruling?.reason ?? "" })
                     )}
                   </span>
+                </span>
+                {/* 条款(Design v3 功过记录的「条款」列):律条号,全文在 title。 */}
+                <span
+                  data-testid="evidence-clause"
+                  title={record.statute_clause || undefined}
+                  className="font-serif text-xs text-[oklch(var(--color-ink-muted))] truncate max-md:hidden"
+                >
+                  <span className="sr-only">{t("ledger.book.clause")} </span>
+                  {clause ?? <MissingValue kind="unrecorded" />}
                 </span>
                 <span className="text-right text-xs">
                   <DomainNumber value={signed} signed toned={admitted} />

@@ -8,6 +8,10 @@ export interface LedgerStatsOverview {
   total_souls: number;
   /** 全部灵魂的平均余额(merit − demerit),一位小数;没有灵魂时 null。 */
   average_balance: number | null;
+  /** 上个月余额快照的平均余额;没有上月快照时 null(快照从开始写的那个月起才有,不回填)。 */
+  average_balance_prev_month: number | null;
+  /** `average_balance` 减上月(原值相减再取一位);任一边为 null 时 null —— 仪表盘就不写「较上月」。 */
+  average_balance_delta: number | null;
   /** `average_balance`:这个状态下的平均余额,一位小数;没有灵魂时 null。 */
   state_distribution: { state: string; label: string; count: number; average_balance: number | null }[];
   tenants: {
@@ -234,6 +238,10 @@ export interface LedgerRecord {
   /** HistoricalDateField: {year, month, day} | null */
   event_date: HistoricalDate | null;
   is_milestone: boolean;
+  /** '<Statute.code>:<条款原文>',如 '救濟門#7:賑濟窮民百錢';空串 = 没记。 */
+  statute_clause: string;
+  /** 这一行覆盖几次;null = 没记(不是 0 次,也不当 1 次显示)。 */
+  occurrence_count: number | null;
 }
 
 /** 200 body of GET /souls/{id}/karma/ and GET /ledger/balance/{soul_id}/. */
