@@ -518,7 +518,7 @@ function PendingBubble({ o, onResend, now }: { o: Outgoing; onResend: () => void
             {tr(receipt)}
           </Txt>
           {resendable ? (
-            <Pressable testID="resend" accessibilityRole="button" onPress={onResend} hitSlop={10}>
+            <Pressable testID="resend" accessibilityRole="button" onPress={onResend} hitSlop={15}>
               <Txt variant="label" tone="ink" style={[styles.metaText, styles.underline]}>
                 {tr("soul_app.chat.receipt.retry")}
               </Txt>

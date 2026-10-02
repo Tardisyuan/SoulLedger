@@ -27,6 +27,8 @@ import {
   Input,
   Quote,
   RadioMark,
+  Section,
+  SectionLabel,
   SwitchMark,
   ThemeContext,
   shade,
@@ -243,6 +245,32 @@ describe("long labels", () => {
 });
 
 /** v2「朱印」base components (补足 A1 states, A2 rules). */
+describe("v3 section labels (.product-label)", () => {
+  const cn = themeFor("CHINESE", "dark");
+  const label = { fontFamily: "IBMPlexMono_400Regular", fontSize: 11, textTransform: "uppercase", color: cn.inkMuted };
+
+  it("SectionLabel: 11 mono, upper case, muted — not ink, not the civilization's colour", () => {
+    wrap(<SectionLabel>Language</SectionLabel>);
+    expect(flat(screen.getByText("Language"))).toMatchObject(label);
+    expect(flat(screen.getByText("Language")).color).not.toBe(cn.plaque);
+  });
+
+  it("a section header outside the ledger is one; a ledger row keeps its 15 / 600 title", () => {
+    wrap(
+      <>
+        <Section testID="plain" title="Open source" open={false} onToggle={jest.fn()}>
+          <Text>body</Text>
+        </Section>
+        <Section testID="ledger" index={1} title="功过" open={false} onToggle={jest.fn()}>
+          <Text>body</Text>
+        </Section>
+      </>
+    );
+    expect(flat(screen.getByText("Open source"))).toMatchObject(label);
+    expect(flat(screen.getByText("功过"))).toMatchObject({ fontSize: 15, fontFamily: "Archivo_600SemiBold", color: cn.ink });
+  });
+});
+
 describe("v2 base components", () => {
   const cn = themeFor("CHINESE", "dark");
   const hosts = (id: string) => screen.getByTestId(id).findAll((n) => typeof n.type === "string");
