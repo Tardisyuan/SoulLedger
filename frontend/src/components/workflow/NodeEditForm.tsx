@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import type { Node } from "@xyflow/react";
 import { useRoleOptions } from "@/src/components/users/RoleName";
 import type { TemplateSigner, WorkflowNodeKind, WorkflowTimeoutAction } from "@soulledger/core/api";
@@ -122,7 +123,7 @@ export function NodeEditForm({
   return (
     <div className="grid grid-cols-[72px_minmax(0,1fr)] gap-x-3 gap-y-2" data-testid="node-form">
       <label htmlFor={nodeNameFieldId(formId)} className={LABEL}>
-        {t("workflow.editor.node_name")}
+        {t("workflow.editor.field.name")}
       </label>
       <input
         id={nodeNameFieldId(formId)}
@@ -133,7 +134,7 @@ export function NodeEditForm({
       />
 
       <label htmlFor={id("node-kind")} className={LABEL}>
-        {t("workflow.editor.kind_label")}
+        {t("workflow.editor.field.kind")}
       </label>
       <select
         id={id("node-kind")}
@@ -145,7 +146,7 @@ export function NodeEditForm({
       </select>
 
       <label htmlFor={id("node-type")} className={LABEL}>
-        {t("workflow.editor.node_type")}
+        {t("workflow.editor.field.stage")}
       </label>
       <select
         id={id("node-type")}
@@ -157,7 +158,7 @@ export function NodeEditForm({
       </select>
 
       <label htmlFor={id("court-code")} className={LABEL}>
-        {t("workflow.editor.court_code")}
+        {t("workflow.editor.field.court")}
       </label>
       <input
         id={id("court-code")}
@@ -169,7 +170,7 @@ export function NodeEditForm({
       />
 
       <label htmlFor={id("approver-type")} className={LABEL}>
-        {t("workflow.editor.approver_type")}
+        {t("workflow.editor.field.approver")}
       </label>
       <select
         id={id("approver-type")}
@@ -181,7 +182,7 @@ export function NodeEditForm({
       </select>
 
       <label htmlFor={id("approver-role")} className={LABEL}>
-        {t("workflow.editor.approver_role")}
+        {t("workflow.editor.field.role")}
       </label>
       <select
         id={id("approver-role")}
@@ -197,58 +198,19 @@ export function NodeEditForm({
            role. The backend resolves each with `_resolve_approver`, the same
            resolver a one-person node gets. */
         <>
-          <span className={LABEL}>{t("workflow.editor.signers")}</span>
-          <div className="flex flex-col gap-2 min-w-0">
-            {signers.map((signer, idx) => (
-              <div key={idx} className="flex gap-1 min-w-0">
-                <input
-                  id={id(`signer-${idx}-label`)}
-                  aria-label={t("workflow.editor.signer_label", { n: String(idx + 1) })}
-                  type="text"
-                  className={`${CONTROL} flex-1`}
-                  value={signer.label}
-                  onChange={(e) =>
-                    setSigners(signers.map((s, i) => (i === idx ? { ...s, label: e.target.value } : s)))
-                  }
-                />
-                <select
-                  id={id(`signer-${idx}-role`)}
-                  aria-label={`${t("workflow.editor.signer_label", { n: String(idx + 1) })} · ${t("workflow.editor.approver_role")}`}
-                  className={`${CONTROL} w-24`}
-                  value={signer.approver_role}
-                  onChange={(e) =>
-                    setSigners(
-                      signers.map((s, i) =>
-                        i === idx
-                          ? { ...s, approver_role: e.target.value, approver_type: e.target.value ? "ROLE" : "ACTOR" }
-                          : s
-                      )
-                    )
-                  }
-                >
-                  {options(roleSelectOptions)}
-                </select>
-                <button
-                  type="button"
-                  aria-label={`${t("workflow.editor.signer_remove")} ${t("workflow.editor.signer_label", { n: String(idx + 1) })}`}
-                  className="h-(--control-h-sm) w-11 shrink-0 rounded-control text-[oklch(var(--color-ink-muted))] hover:bg-[oklch(var(--color-surface-2))]"
-                  onClick={() => setSigners(signers.filter((_, i) => i !== idx))}
-                >
-                  ✕
-                </button>
-              </div>
-            ))}
-            <button
-              type="button"
-              className="self-start h-(--control-h-sm) px-3 rounded-control border border-[oklch(var(--color-line-strong))] text-sm text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))]"
-              onClick={() => setSigners([...signers, { label: "", approver_type: "ROLE", approver_role: "" }])}
-            >
-              ＋ {t("workflow.editor.signer_add")}
-            </button>
-          </div>
+          <label htmlFor={id("signer-input")} className={LABEL}>
+            {t("workflow.editor.field.signers")}
+          </label>
+          <SignerTags
+            inputId={id("signer-input")}
+            signers={signers}
+            onChange={setSigners}
+            roleOptions={roleOptions}
+            t={t}
+          />
 
           <label htmlFor={id("threshold")} className={LABEL}>
-            {t("workflow.editor.threshold")}
+            {t("workflow.editor.field.threshold")}
           </label>
           <div className="flex flex-col gap-1 min-w-0">
             <span className="flex items-center gap-2">
@@ -256,16 +218,26 @@ export function NodeEditForm({
                 id={id("threshold")}
                 type="number"
                 min={1}
-                aria-describedby={id("threshold-hint")}
+                aria-describedby={signers.length > 0 ? id("threshold-rule") : undefined}
                 className={`${CONTROL} w-14 font-mono`}
                 value={threshold ?? ""}
                 onChange={(e) => set({ threshold: positiveOrNull(e.target.value) })}
               />
-              <span className="font-mono text-sm text-[oklch(var(--color-ink-muted))]">/ {signers.length}</span>
+              <span className="font-mono text-sm text-[oklch(var(--color-ink-muted))]">
+                {t("workflow.editor.threshold_of", { n: String(signers.length) })}
+              </span>
             </span>
-            <p id={id("threshold-hint")} className="text-xs text-[oklch(var(--color-ink-muted))]">
-              {t("workflow.editor.threshold_hint")}
-            </p>
+            {/* 「3 人中任 2 人通过即放行」. A blank threshold means every signer
+                (the backend's rule), so it reads k = n. Out-of-range values
+                are the 问题 tab's to name, not this line's. */}
+            {signers.length > 0 && (
+              <p id={id("threshold-rule")} className="text-xs text-[oklch(var(--color-ink-muted))]">
+                {t("workflow.editor.threshold_rule", {
+                  n: String(signers.length),
+                  k: String(threshold ?? signers.length),
+                })}
+              </p>
+            )}
           </div>
         </>
       )}
@@ -273,7 +245,7 @@ export function NodeEditForm({
       {kind !== "END" && kind !== "NOTIFY" && (
         <>
           <label htmlFor={id("reject-to")} className={LABEL}>
-            {t("workflow.editor.reject_to")}
+            {t("workflow.editor.field.reject_to")}
           </label>
           <select
             id={id("reject-to")}
@@ -330,6 +302,103 @@ export function NodeEditForm({
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+/** A signer as its chip reads: the name, the role, or both. */
+function signerText(s: TemplateSigner, roleLabel: (v: string) => string): string {
+  const role = s.approver_role ? roleLabel(s.approver_role) : "";
+  return [s.label, role].filter(Boolean).join(" · ") || "?";
+}
+
+/**
+ * 会签人 as a tag field, v3 A1: 「宋帝王 ✕」 chips inside one field.
+ *
+ * Same data as before — each signer is a free-text name (`ACTOR`, resolved
+ * by name like a node label) or a role (`ROLE`); the backend's
+ * `_resolve_approver` takes either. Typing a name + Enter adds a name chip;
+ * picking from the role menu inside the field adds a role chip; ✕ or
+ * Backspace in the empty input removes one. A stored signer carrying both a
+ * name and a role (older templates) shows as one chip with both.
+ */
+function SignerTags({
+  inputId,
+  signers,
+  onChange,
+  roleOptions,
+  t,
+}: {
+  inputId: string;
+  signers: TemplateSigner[];
+  onChange: (next: TemplateSigner[]) => void;
+  roleOptions: { value: string; label: string }[];
+  t: TFunc;
+}) {
+  const [draft, setDraft] = useState("");
+  const roleLabel = (v: string) => roleOptions.find((o) => o.value === v)?.label ?? v;
+  const addName = () => {
+    const label = draft.trim();
+    if (!label) return;
+    onChange([...signers, { label, approver_type: "ACTOR", approver_role: "" }]);
+    setDraft("");
+  };
+  return (
+    <div className="flex flex-wrap items-center gap-1 min-w-0 min-h-(--control-h-sm) px-1 py-1 rounded-control border border-[oklch(var(--color-line-strong))] bg-[oklch(var(--color-surface-1))] focus-within:border-[oklch(var(--color-ink))] focus-within:shadow-[0_0_0_2px_oklch(var(--color-focus)/0.35)]">
+      <ul className="contents" aria-label={t("workflow.editor.signers")}>
+        {signers.map((sg, idx) => {
+          const text = signerText(sg, roleLabel);
+          return (
+            <li
+              key={idx}
+              className="inline-flex items-center gap-1 h-8 pl-2 rounded-control bg-[oklch(var(--color-surface-2))] text-xs text-[oklch(var(--color-ink))]"
+            >
+              {text}
+              <button
+                type="button"
+                aria-label={t("workflow.editor.signer_remove_named", { name: text })}
+                onClick={() => onChange(signers.filter((_, i) => i !== idx))}
+                className="h-8 w-8 text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))]"
+              >
+                ✕
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+      <input
+        id={inputId}
+        type="text"
+        value={draft}
+        placeholder={signers.length === 0 ? t("workflow.editor.signer_placeholder") : undefined}
+        onChange={(e) => setDraft(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && !e.nativeEvent.isComposing) {
+            e.preventDefault();
+            addName();
+          } else if (e.key === "Backspace" && draft === "" && signers.length > 0) {
+            e.preventDefault();
+            onChange(signers.slice(0, -1));
+          }
+        }}
+        onBlur={addName}
+        className="flex-1 min-w-16 h-8 px-1 bg-transparent text-sm text-[oklch(var(--color-ink))] outline-none placeholder:text-[oklch(var(--color-ink-subtle))]"
+      />
+      <select
+        aria-label={t("workflow.editor.signer_add_role")}
+        value=""
+        onChange={(e) => {
+          if (e.target.value) onChange([...signers, { label: "", approver_type: "ROLE", approver_role: e.target.value }]);
+        }}
+        className="h-8 w-20 shrink-0 px-1 rounded-control bg-transparent text-xs text-[oklch(var(--color-ink-muted))]"
+      >
+        <option value="">＋ {t("workflow.editor.field.role")}</option>
+        {roleOptions.map((o) => (
+          <option key={o.value} value={o.value}>
+            {o.label}
+          </option>
+        ))}
+      </select>
     </div>
   );
 }
