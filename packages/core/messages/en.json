@@ -1287,7 +1287,15 @@
       "related": "Related articles",
       "related_gate": "Same gate",
       "related_circle": "Same circle",
-      "related_terrace": "Same terrace"
+      "related_terrace": "Same terrace",
+      "search_paste": "Paste a citation to jump, or type words to search",
+      "search_paste_short": "Paste a citation or search",
+      "hits_summary": "Substring match · {{n}} hits in {{c}} corpora",
+      "hit_prev": "Previous hit",
+      "hit_next": "Next hit",
+      "prev_article": "Previous",
+      "next_article": "Next",
+      "cited_by_unit": "times cited in judgments"
     },
     "waiting": "Waiting",
     "waiting_days": "{{n}} d",
@@ -1696,7 +1704,7 @@
       "col_kind": "Type",
       "col_held": "Held / capacity",
       "col_eternal": "Eternal",
-      "eternal_yes": "Yes",
+      "eternal_yes": "eternal",
       "eternal_no": "No",
       "full": "full",
       "capacity_unrecorded": "Capacity not recorded",
@@ -1711,13 +1719,57 @@
       "full_warning": "Full: {{held}} held. Nobody is moved; new placements here will be refused.",
       "saved": "{{code}}: capacity saved",
       "saved_full": "{{code}}: capacity saved · full ({{held}} / {{cap}}): nobody is moved; new placements here will be refused.",
-      "save_failed": "Could not save the capacity"
+      "save_failed": "Could not save the capacity",
+      "near": "nearly full",
+      "near_warning": "Nearly full: {{held}} held; at {{cap}} it is {{pct}}% occupied.",
+      "keys": "Enter saves · Esc cancels"
     },
     "kind": {
       "HALL": "Court",
       "GATE": "Gate",
       "LAYER": "Layer",
       "PATH": "Path"
+    },
+    "switch": {
+      "CHINESE": "Diyu",
+      "EUROPEAN": "Europe",
+      "EGYPTIAN": "Egypt",
+      "GREEK": "Greece"
+    },
+    "switch_hint": "Switching changes only the civilization you view; the plaque and seal stay yours",
+    "manage_hint": "realms.manage · capacity can be edited in place",
+    "map": {
+      "title": "Route map",
+      "shape_line": "A single line",
+      "shape_funnel": "A funnel, by level",
+      "shape_fork_two": "A trunk, then pass / fail",
+      "shape_fork": "A trunk, then left / right",
+      "shape_schematic": "A line",
+      "region": {
+        "INFERNO": "Inferno · {{n}} circles, narrowing downward",
+        "PURGATORIO": "Purgatorio · {{n}} terraces, narrowing upward",
+        "PARADISO": "Paradiso · {{n}} spheres"
+      },
+      "fork": {
+        "PASS": "✓ Pass · the heart lighter than the feather",
+        "FAIL": "✕ Fail · the heart heavier than the feather",
+        "LEFT": "← Left · downward",
+        "RIGHT": "Right · upward →"
+      },
+      "terminal": "≡ Devoured: the end",
+      "legend_held": "■ souls held",
+      "legend_empty": "□ empty",
+      "legend_count": "number = held",
+      "read_only": "Read-only sketch"
+    },
+    "tree": {
+      "title": "Realm tree",
+      "count": "{{n}} realms",
+      "count_editable": "{{n}} realms · click a capacity to change it",
+      "legend_full": "■ full = held ≥ capacity",
+      "legend_near": "◐ nearly full = ≥ 90%",
+      "legend_eternal": "≡ eternal = no release, no rebirth",
+      "sheet_hint": "Tap a row to change its capacity"
     }
   },
   "organization": {
