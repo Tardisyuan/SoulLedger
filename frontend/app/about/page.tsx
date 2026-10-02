@@ -16,7 +16,6 @@ import {
 } from "@soulledger/core/config/credits";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { PageShell } from "@/src/components/ui/PageShell";
-import { SectionTitle } from "@/src/components/plaque/SectionTitle";
 
 /**
  * 关于 / 致谢(规范 v2 补足 C16):入口在用户菜单。数据在 packages/core 的
@@ -78,11 +77,13 @@ function Rows({ credits }: { credits: Credit[] }) {
 function Section({ stem, title, aside, children }: { stem: string; title: string; aside?: ReactNode; children: ReactNode }) {
   return (
     <section>
-      <div className="pt-6">
-        <SectionTitle aside={aside}>
+      {/* v3 面板标题(与 `components/ui/page-section.tsx` 同一写法);v2 节首的匾纹片段撤掉。 */}
+      <div className="flex items-center gap-3 pt-6">
+        <h2 className="text-lg text-[oklch(var(--color-ink))]">
           <span aria-hidden="true">{stem} · </span>
           {title}
-        </SectionTitle>
+        </h2>
+        {aside ? <span className={`font-mono text-2xs ${MUTED}`}>{aside}</span> : null}
       </div>
       {children}
     </section>

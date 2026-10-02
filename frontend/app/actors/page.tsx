@@ -8,7 +8,6 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { usePlaque } from "@/src/components/plaque/Plaque";
 import { useHall } from "@/src/components/plaque/useHall";
 import { PageSection } from "@/components/ui/page-section";
-import { SectionTitle } from "@/src/components/plaque/SectionTitle";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChevronDown, Scale } from "lucide-react";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
@@ -231,12 +230,12 @@ function ActorsPageContent() {
                   data-civilization={civ}
                   className="border-t border-[oklch(var(--color-block))] first:border-t-0"
                 >
-                  {/* 文明 = 页面级分节标题(规范 v2 §四,SectionTitle):匾纹片段 + 节名 + 件数注记。
+                  {/* 文明 = 面板里的分组标题(列表行标题一档)+ 件数注记。v2 节首的匾纹片段随
+                      v3 撤掉(2026-10-03),文明由节名本身标明。
                       此前是 <button> 里包 <h2> —— 标题进按钮是无效 HTML(按钮只收短语内容),
-                      读屏也只念出一个按钮。现在反过来:<h2> 里放折叠钮(披露模式)。
-                      文明 emoji 撤掉,节首的匾纹片段已经标明是哪个文明。 */}
-                  <div className="pt-3 mb-3">
-                    <SectionTitle aside={t("actors.count", { count: String(total) })}>
+                      读屏也只念出一个按钮。现在反过来:<h2> 里放折叠钮(披露模式)。 */}
+                  <div className="pt-3 mb-3 flex items-center gap-3">
+                    <h2 className="text-sm font-medium text-[oklch(var(--color-ink))]">
                       <button
                         type="button"
                         onClick={() => toggleCollapse(civ)}
@@ -246,7 +245,10 @@ function ActorsPageContent() {
                         <DomainEnum namespace="actors.civilizations" value={civ} />
                         <ChevronDown aria-hidden="true" className={`w-4 h-4 text-[oklch(var(--color-ink-muted))] transition-transform ${isCollapsed ? "-rotate-90" : ""}`} />
                       </button>
-                    </SectionTitle>
+                    </h2>
+                    <span className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">
+                      {t("actors.count", { count: String(total) })}
+                    </span>
                   </div>
 
                   {!isCollapsed && (
