@@ -59,8 +59,17 @@ const mockedNext = judgmentApi.next as jest.Mock;
 const mockedDeathSummary = deathSyncApi.summary as jest.Mock;
 const mockedExport = ledgerApi.exportStats as jest.Mock;
 
+/** 服务端的等宽直方图:[-300, 300) 每 50 一格,两端开口 —— 共 14 格。 */
+const histogramBuckets = [
+  { min: null, max: -300, count: 1 },
+  ...Array.from({ length: 12 }, (_, i) => ({ min: -300 + 50 * i, max: -250 + 50 * i, count: i === 5 ? 2 : i === 6 ? 3 : 0 })),
+  { min: 300, max: null, count: 4 },
+];
+
 const baseStats = {
+  as_of: "2026-10-02T08:00:00Z",
   total_souls: 4,
+  average_balance: -15,
   // `label` 是**枚举成员原样**,不是英文标签。
   //
   // 这份夹具原来写的是 `"Alive"` / `"Judging"` / `"Disposed"`,而后端
@@ -68,21 +77,22 @@ const baseStats = {
   // 夹具和它旁边那条注释一起,把一个不存在的接线说成了事实,于是下面两条测试
   // **钉住的是那个不存在的接线**。
   state_distribution: [
-    { state: "ALIVE", label: "ALIVE", count: 2 },
-    { state: "JUDGING", label: "JUDGING", count: 1 },
-    { state: "DISPOSED", label: "DISPOSED", count: 1 },
+    { state: "ALIVE", label: "ALIVE", count: 2, average_balance: 12.5 },
+    { state: "JUDGING", label: "JUDGING", count: 1, average_balance: -40 },
+    { state: "DISPOSED", label: "DISPOSED", count: 1, average_balance: null },
   ],
   tenants: [
     { tenant_code: "CN_DIYU", tenant_name: "地府", total_souls: 3, state_breakdown: { ALIVE: 2, JUDGING: 1 } },
     { tenant_code: "EG_DUAT", tenant_name: "", total_souls: 1, state_breakdown: { DISPOSED: 1 } },
   ],
-  souls_by_realm: [{ realm_code: "R1", realm_name: "Diyu", civilization: "CHINESE", realm_type: "HELL", count: 3 }],
+  souls_by_realm: [{ realm_code: "R1", realm_name: "Diyu", civilization: "CHINESE", realm_type: "HELL", count: 3, capacity: 8, held: 2 }],
   karma_distribution: [
     { label: "< -50", count: 2 },
     { label: "-5 to 5", count: 3 },
     { label: "> 50", count: 1 },
     { label: "unparseable", count: 5 },
   ],
+  balance_histogram: { bucket_width: 50, buckets: histogramBuckets, total: 10 },
   recent_activity: [
     { id: 1, action: "CREATE", description: "made a soul", user: "admin", resource: "Soul", timestamp: "T1" },
     { id: 2, action: "CREATE", description: "", user: "admin", resource: "SoulResource", timestamp: "T2" },
@@ -192,24 +202,34 @@ describe("DashboardPage overview", () => {
     expect(container.querySelectorAll("[data-civ-row]")).toHaveLength(4);
   });
 
-  it("draws histogram bars by the sign of their bucket — two lightness steps split at 0, never a status colour (Design A4)", async () => {
+  it("draws the fixed-width histogram (每格 50, −300…+300, open ends) by the sign of each bucket — never a status colour (Design A4)", async () => {
     const { container } = renderPage();
     await found(container, "[data-histogram-bar]");
-    // Looked up by attribute value in JS: jsdom's selector engine mis-reads a
-    // `>` inside a quoted attribute value.
-    const bar = (label: string) =>
-      Array.from(container.querySelectorAll<HTMLElement>("[data-histogram-bar]")).find(
-        (el) => el.getAttribute("data-histogram-bar") === label
-      ) as HTMLElement;
+    const bars = Array.from(container.querySelectorAll<HTMLElement>("[data-histogram-bar]"));
+    // `balance_histogram`, not the seven old `karma_distribution` buckets.
+    expect(bars).toHaveLength(14);
+    expect(bars.map((b) => b.getAttribute("data-histogram-bar"))).not.toContain("-5 to 5");
+    const bar = (label: string) => bars.find((el) => el.getAttribute("data-histogram-bar") === label) as HTMLElement;
     const fill = (label: string) => bar(label).querySelector("[aria-hidden]")?.className ?? "";
-    expect(bar("< -50")).toHaveTextContent("2");
-    // Below 0 the 4th ramp step, above 0 the 2nd; the bucket straddling 0 is half of each.
-    expect(fill("< -50")).toMatch(/^block w-full bg-\[oklch\(var\(--color-chart-4\)\)\]$/);
-    expect(fill("> 50")).toMatch(/^block w-full bg-\[oklch\(var\(--color-chart-2\)\)\]$/);
-    expect(fill("-5 to 5")).toContain("linear-gradient(to_right,oklch(var(--color-chart-4))_50%,oklch(var(--color-chart-2))_50%)");
-    // The 0 line runs through the middle of the straddling bucket (index 1 of 4).
-    const zero = container.querySelector<HTMLElement>("[data-zero-line]");
-    expect(zero?.style.left).toBe("37.5%");
+    expect(bar("< −300")).toHaveTextContent("1");
+    expect(bar("−50 – 0")).toHaveTextContent("2");
+    expect(bar("0 – +50")).toHaveTextContent("3");
+    expect(bar("≥ +300")).toHaveTextContent("4");
+    // [−50, 0) is the negative side (4th ramp step); [0, 50) the positive side (2nd).
+    expect(fill("−50 – 0")).toMatch(/^block w-full bg-\[oklch\(var\(--color-chart-4\)\)\]$/);
+    expect(fill("0 – +50")).toMatch(/^block w-full bg-\[oklch\(var\(--color-chart-2\)\)\]$/);
+    // The 0 line sits on the boundary between them: 7 of 14 buckets.
+    expect(container.querySelector<HTMLElement>("[data-zero-line]")?.style.left).toBe("50%");
+    // Ticks −300 / −150 / 0 / +150 / +300 at those buckets' lower edges.
+    const ticks = Array.from(container.querySelectorAll<HTMLElement>("[data-histogram-tick]"));
+    expect(ticks.map((t) => [t.textContent, t.style.left])).toEqual([
+      ["−300", `${(1 / 14) * 100}%`],
+      ["−150", `${(4 / 14) * 100}%`],
+      ["0", "50%"],
+      ["+150", `${(10 / 14) * 100}%`],
+      ["+300", `${(13 / 14) * 100}%`],
+    ]);
+    expect(screen.getByText(/dashboard\.bucket_width/)).toBeInTheDocument();
     // Absence: no feedback colour anywhere in the histogram.
     expect(container.querySelector("[data-histogram]")?.innerHTML).not.toMatch(/--color-(danger|success)/);
   });
@@ -413,7 +433,7 @@ describe("DashboardPage permission gate", () => {
 
     renderPage();
 
-    expect(await screen.findByText("admin.avg_balance")).toBeInTheDocument();
+    expect((await screen.findAllByText("admin.avg_balance")).length).toBeGreaterThan(0);
     // The overview-only cards must be gone.
     expect(screen.queryByTestId("pie")).not.toBeInTheDocument();
   });
@@ -469,41 +489,59 @@ describe("DashboardPage ledger tab", () => {
     mockSearch = new URLSearchParams("tab=ledger");
   });
 
-  it("averages the balance buckets by their midpoints", async () => {
-    // (-60 * 2) + (0 * 3) + (60 * 1) + (0 * 5) = -60, over 4 souls => -15.0
-    renderPage();
+  it("shows the server's exact mean balance, signed, one decimal — not a bucket-midpoint estimate", async () => {
+    // The old buckets' midpoints would give (-60 * 2 + 60 * 1) / 4 = -15.0 too, so move the
+    // server's number off it: what is printed must be `average_balance` and nothing else.
+    mockedStats.mockResolvedValue({ data: { ...baseStats, average_balance: 42.7 } });
+    const { container } = renderPage();
 
-    expect(await screen.findByText("-15.0")).toBeInTheDocument();
+    expect(await screen.findByText("+42.7")).toBeInTheDocument();
+    expect(container.querySelector("[data-avg-balance]")).toHaveTextContent("+42.7");
+    expect(screen.queryByText("-15.0")).not.toBeInTheDocument();
   });
 
-  it("divides by one rather than by zero when there are no souls", async () => {
+  it("writes 未记录, not 0.0, when there are no souls to average", async () => {
+    mockedStats.mockResolvedValue({ data: { ...baseStats, total_souls: 0, average_balance: null } });
+    const { container } = renderPage();
+
+    const avg = await found(container, "[data-avg-balance]");
+    expect(avg.querySelector('[data-missing="unrecorded"]')).not.toBeNull();
+    expect(avg).not.toHaveTextContent("0.0");
+  });
+
+  it("gives each state its mean balance; a state with no souls is 不适用, not 0", async () => {
+    const { container } = renderPage();
+
+    const cell = async (state: string) => found(container, `[data-avg-of="${state}"]`);
+    expect(await cell("ALIVE")).toHaveTextContent("+12.5");
+    expect(await cell("JUDGING")).toHaveTextContent("-40.0");
+    const disposed = await cell("DISPOSED");
+    expect(disposed.querySelector('[data-missing="inapplicable"]')).not.toBeNull();
+    expect(disposed).not.toHaveTextContent("0.0");
+  });
+
+  it("占容量: held / capacity as a percentage; 「■ 满」 at held ≥ capacity; 未记录 without a capacity", async () => {
     mockedStats.mockResolvedValue({
-      data: { ...baseStats, total_souls: 0, karma_distribution: [{ label: "> 50", count: 1 }] },
+      data: {
+        ...baseStats,
+        souls_by_realm: [
+          { realm_code: "A", realm_name: "Half", civilization: "CHINESE", realm_type: "HELL", count: 9, capacity: 8, held: 4 },
+          { realm_code: "B", realm_name: "Full", civilization: "CHINESE", realm_type: "HELL", count: 5, capacity: 5, held: 5 },
+          { realm_code: "C", realm_name: "Open", civilization: "CHINESE", realm_type: "HELL", count: 1, capacity: null, held: 3 },
+        ],
+      },
     });
-
     renderPage();
 
-    expect(await screen.findByText("+60.0")).toBeInTheDocument();
-  });
-
-  it("reports a zero average when no bucket data came back", async () => {
-    mockedStats.mockResolvedValue({ data: { ...baseStats, karma_distribution: undefined } });
-
-    renderPage();
-
-    expect(await screen.findByText("0.0")).toBeInTheDocument();
-  });
-
-  it("reads the server's real top bucket `>= 50`, not only `> 50` (a NaN average before)", async () => {
-    mockedStats.mockResolvedValue({
-      data: { ...baseStats, total_souls: 2, karma_distribution: [{ label: ">= 50", count: 1 }, { label: "< -50", count: 1 }] },
-    });
-
-    renderPage();
-
-    // (60 * 1) + (-60 * 1) over 2 souls => 0.0
-    expect(await screen.findByText("0.0")).toBeInTheDocument();
-    expect(screen.queryByText("NaN")).not.toBeInTheDocument();
+    const row = async (name: string) => (await screen.findByText(name)).closest("tr") as HTMLElement;
+    const half = await row("Half");
+    expect(half.querySelector("[data-occupancy]")).toHaveTextContent(/^50%$/);
+    const full = await row("Full");
+    expect(full.querySelector('[data-occupancy="full"]')).toHaveTextContent("■ realms.table.full");
+    expect(full).not.toHaveTextContent("100%");
+    const open = await row("Open");
+    expect(open.querySelector("[data-occupancy]")).toBeNull();
+    expect(open.querySelector('[data-missing="unrecorded"]')).not.toBeNull();
   });
 
   it("lists the realms in the top-realms table", async () => {

@@ -43,12 +43,13 @@ const row = (id: string, name: string, over: Record<string, unknown> = {}) => ({
   court: "第五殿", evidence_json: {}, confession: "", verdict: null, notes: "", citations: [], is_final: false,
   created_at: new Date(Date.now() - 7.5 * 86_400_000).toISOString(), concluded_at: null,
   claimed_by: null, claimed_by_name: null, deferred_at: null, defer_reason: "", karmic_balance: 347, evidence_count: 12,
+  merit_score: 1842, demerit_score: 391, cycle: 3, kind: "ORIGINAL",
   ...over,
 });
 
 const GROUP_ROWS: Record<string, ReturnType<typeof row>[]> = {
   mine: [row("a", "沈青梧", { claimed_by: 1, claimed_by_name: "阎罗" })],
-  unclaimed: [row("b", "Marguerite Vey", { civilization: "EUROPEAN", court: "米诺斯", karmic_balance: null, evidence_count: 7 })],
+  unclaimed: [row("b", "Marguerite Vey", { civilization: "EUROPEAN", court: "米诺斯", karmic_balance: null, evidence_count: 7, merit_score: 641, demerit_score: 602, cycle: 0 })],
   others: [row("c", "陆晚晴", { claimed_by: 2, claimed_by_name: "秦广" })],
   deferred: [],
 };
@@ -131,7 +132,7 @@ describe("审判队列", () => {
     expect(within(screen.getByTestId("queue-group-deferred")).getByText(tZh("judgment.claim.group_empty"))).toBeInTheDocument();
   });
 
-  it("行是 v3 的 64 px(--table-row-h)、整行链到审判台;余额与证据两列;认领标是圆形,只有未认领的行给「认领」", async () => {
+  it("行是 v3 的 64 px(--table-row-h)、整行链到审判台;功 / 过与证据两列;认领标是圆形,只有未认领的行给「认领」", async () => {
     renderPage();
     const link = await screen.findByRole("link", { name: "沈青梧" });
     expect(link).toHaveAttribute("href", "/judgment/a");
@@ -141,7 +142,10 @@ describe("审判队列", () => {
     expect(mine.className).not.toMatch(/\bh-(7|10|11|16)\b/);
     // v3「C 认领」:待我处理的色标挂上时 scaleY(0→1),160ms。
     expect(within(mine).getByTestId("row-mark").className.split(/\s+/)).toEqual(expect.arrayContaining(["starting:scale-y-0", "duration-fast"]));
-    expect(within(mine).getByText("+347")).toBeInTheDocument();
+    // 「功 / 过」分列:功在前加粗,过在后;不是净值。
+    expect(within(mine).getByTestId("merit-demerit-cell")).toHaveTextContent(/^1842 \/ 391$/);
+    expect(within(mine).getByText("1842")).toHaveClass("font-semibold");
+    expect(within(mine).queryByText("+347")).toBeNull();
     expect(within(mine).getByText("12")).toBeInTheDocument();
     expect(within(mine).getByText(tZh("judgment.waiting_days", { n: "7" }))).toBeInTheDocument();
     const avatar = within(mine).getByRole("img", { name: tZh("judgment.claim.claimed_by_me") });
@@ -153,8 +157,9 @@ describe("审判队列", () => {
 
     const unclaimed = rowOf("Marguerite Vey");
     expect(within(unclaimed).queryByRole("img")).toBeNull();
-    // 非功过格的余额是「不适用」,不是 0。
-    expect(within(unclaimed).queryByText("0")).toBeNull();
+    // 功 / 过两本账四个文明都有:欧洲的案子也写数,不是「不适用」。
+    expect(within(unclaimed).getByTestId("merit-demerit-cell")).toHaveTextContent(/^641 \/ 602$/);
+    expect(within(unclaimed).getByTestId("merit-demerit-cell").querySelector("[data-missing]")).toBeNull();
     fireEvent.click(within(unclaimed).getByRole("button", { name: tZh("judgment.claim.claim") }));
     await waitFor(() => expect(judgmentApi.claim).toHaveBeenCalledWith("b"));
   });
@@ -633,5 +638,33 @@ describe("审判队列", () => {
       // 身份带是 sticky 的(v3/band):吸在 52 的工具条下沿会被身份带盖住。
       expect(cls).not.toContain("top-13");
     });
+  });
+});
+
+describe("审判队列 · 世次 / 种类", () => {
+  it("cycle 0 是第 1 世;世次在上、种类在下", async () => {
+    renderPage();
+    await screen.findByText("Marguerite Vey");
+    const first = within(rowOf("Marguerite Vey")).getByTestId("cycle-kind-cell");
+    expect(first).toHaveTextContent(tZh("souls.detail.life_number", { n: "1" }));
+    expect(first).toHaveTextContent(tZh("judgment.claim.kinds.ORIGINAL"));
+    const fourth = within(rowOf("沈青梧")).getByTestId("cycle-kind-cell");
+    expect(fourth).toHaveTextContent(tZh("souls.detail.life_number", { n: "4" }));
+    expect(fourth).not.toHaveTextContent(tZh("souls.detail.life_number", { n: "3" }));
+    expect(screen.getByRole("columnheader", { name: tZh("judgment.claim.col_cycle_kind") })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: tZh("judgment.claim.col_merit_demerit") })).toBeInTheDocument();
+  });
+
+  it("VIEWER 拿不到功过两个字段:写「未记录」,不写 0", async () => {
+    GROUP_ROWS.mine = [row("a", "沈青梧", { claimed_by: 1, claimed_by_name: "阎罗", merit_score: undefined, demerit_score: undefined })];
+    try {
+      renderPage();
+      await screen.findByText("沈青梧");
+      const cell = within(rowOf("沈青梧")).getByTestId("merit-demerit-cell");
+      expect(cell.querySelectorAll('[data-missing="unrecorded"]')).toHaveLength(2);
+      expect(cell).not.toHaveTextContent("0");
+    } finally {
+      GROUP_ROWS.mine = [row("a", "沈青梧", { claimed_by: 1, claimed_by_name: "阎罗" })];
+    }
   });
 });

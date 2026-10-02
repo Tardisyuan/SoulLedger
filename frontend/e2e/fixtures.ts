@@ -494,14 +494,26 @@ export const OPENED_JUDGMENT = {
  * `stats`, so any body missing that key throws into the error boundary.
  */
 export const LEDGER_STATS = {
+  as_of: "2026-10-02T08:00:00Z",
   total_souls: 2,
+  average_balance: 12.5,
   state_distribution: [
-    { state: "ALIVE", label: "在世", count: 1 },
-    { state: "JUDGING", label: "审判中", count: 1 },
-    { state: "DISPOSED", label: "已处置", count: 0 },
+    { state: "ALIVE", label: "在世", count: 1, average_balance: 30 },
+    { state: "JUDGING", label: "审判中", count: 1, average_balance: -5 },
+    { state: "DISPOSED", label: "已处置", count: 0, average_balance: null },
   ],
   tenants: [],
   karma_distribution: [],
+  // 等宽直方图:[-300, 300) 每 50 一格,两端开口(`apps/ledger/views.py`)。
+  balance_histogram: {
+    bucket_width: 50,
+    buckets: [
+      { min: null, max: -300, count: 0 },
+      ...Array.from({ length: 12 }, (_, i) => ({ min: -300 + 50 * i, max: -250 + 50 * i, count: i === 5 || i === 6 ? 1 : 0 })),
+      { min: 300, max: null, count: 0 },
+    ],
+    total: 2,
+  },
   recent_activity: [],
   souls_by_realm: [],
 };

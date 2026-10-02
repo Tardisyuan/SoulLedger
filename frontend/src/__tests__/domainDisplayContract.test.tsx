@@ -108,6 +108,9 @@ const ENUM_FIELDS = [
   // Its `status` was already here. The meta-test below demanded both.
   "trigger",
   "scope",
+  // Added 2026-10-02 by the meta-test: `Judgment.judgment_method` reached the
+  // wire (审判台「审判方式」), drawn through <DomainEnum namespace="judgment.methods">.
+  "judgment_method",
   // Added 2026-09-17 with `packages/core/src/api/soul-accounts.ts`:
   // SoulAccount's `origin` (DEATH_SYNC/OFFICER/BACKFILL) and a rebirth
   // application's `desired_form` (the six paths + OTHER). The meta-test below
