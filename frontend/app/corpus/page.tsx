@@ -9,6 +9,7 @@ import { citationOf, resolveCitation, statuteSigil } from "@soulledger/core/conf
 import { sigilSystemName } from "@soulledger/core/config/civilizationSigil";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { Button } from "@/src/components/ui/Button";
+import { Collapse } from "@/src/components/ui/Collapse";
 import { EmptyState } from "@/src/components/ui/EmptyState";
 import { QueryError } from "@/src/components/ui/PageError";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -549,13 +550,14 @@ function Toc({
               type="button"
               onClick={() => setToggled((o) => ({ ...o, [corpus]: !open }))}
               aria-expanded={open}
+              aria-controls={`corpus-toc-${corpus}`}
               className="w-full flex items-center gap-2 h-(--control-h-sm) text-left hover:bg-[oklch(var(--color-surface-2))]"
             >
-              <span aria-hidden="true" className="w-3 text-[oklch(var(--color-ink-subtle))]">{open ? "▾" : "▸"}</span>
+              <span aria-hidden="true" className={`inline-block w-3 text-center text-[oklch(var(--color-ink-subtle))] transition-transform duration-fast ease-standard ${open ? "" : "-rotate-90"}`}>▾</span>
               <span title={corpusName(corpus)} className={`flex-1 min-w-0 truncate ${open ? "font-medium" : ""}`}>{corpusName(corpus)}</span>
               <span className="font-mono text-2xs text-[oklch(var(--color-ink-muted))]">{corpusCount ? corpusCount(corpus) : list.length}</span>
             </button>
-            {open && (
+            <Collapse open={open} id={`corpus-toc-${corpus}`} rows={list.length}>
               <ol className="ml-3 border-l border-[oklch(var(--color-line))]">
                 {list.map((a, i) => {
                   const on = a.statute.id === selectedId;
@@ -583,7 +585,7 @@ function Toc({
                   );
                 })}
               </ol>
-            )}
+            </Collapse>
           </div>
         );
       })}

@@ -8,6 +8,7 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { useDrawerA11y } from "@/src/components/layout/useDrawerA11y";
 import { Button } from "@/src/components/ui/Button";
+import { Collapse } from "@/src/components/ui/Collapse";
 import { DomainEnum, MissingValue } from "@/src/components/ui/DomainValue";
 import { EmptyState } from "@/src/components/ui/EmptyState";
 import { SelectField } from "@/src/components/ui/Field";
@@ -168,20 +169,17 @@ export function TaskRunItem({
               </Button>
             )}
           </div>
-          {open && (
-            // Wrapped, not horizontally scrolled: a traceback line is often
-            // wider than a phone, and a nested scroller inside a scrolling
-            // drawer is two scroll axes to fight with one thumb.
-            <div className="row-expand mt-2">
+          {/* Wrapped, not horizontally scrolled: a traceback line is often
+              wider than a phone, and a nested scroller inside a scrolling
+              drawer is two scroll axes to fight with one thumb. */}
+          <Collapse open={open} id={errorId} className="mt-2">
             <pre
-              id={errorId}
               aria-label={t("scheduler.runs.error")}
               className="max-h-80 overflow-y-auto whitespace-pre-wrap break-words select-text bg-[oklch(var(--color-surface-2))] border border-[oklch(var(--color-hairline))] p-3 font-mono text-xs text-[oklch(var(--color-ink))]"
             >
               {run.error}
             </pre>
-            </div>
-          )}
+          </Collapse>
         </div>
       )}
     </li>

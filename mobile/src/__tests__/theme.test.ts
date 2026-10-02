@@ -105,7 +105,9 @@ describe("v3 is the palette (user decision 2026-10-01: v3 fully replaces v2)", (
 
   it("the neutral plaque is the web's neutral --color-main, read from globals.css (dark :root, light .light)", () => {
     const css = readFileSync(join(__dirname, "../../../frontend/app/globals.css"), "utf8");
-    const block = (selector: string) => css.slice(css.indexOf(`${selector} {`)).split(/\n {2}\}/)[0];
+    // The theme's block, not the brand-token `:root` beside it (Design batch 3: outside the themes).
+    const block = (selector: string) =>
+      css.split(`${selector} {`).slice(1).map((b) => b.split(/\n {2}\}/)[0]).find((b) => b.includes("--color-civ-neutral")) ?? "";
     const neutral = (selector: string) => block(selector).match(/--color-civ-neutral:\s*([\d.\s]+);/)?.[1];
     // …and the web's neutral main IS that token (no data-civ = neutral).
     expect(block(":root")).toMatch(/--color-main: var\(--color-civ-neutral\);/);
@@ -232,9 +234,13 @@ describe("contrast, at the worst App ground", () => {
 describe("brand (v3 第三批 品牌色令牌): the mark's gold and ground, one value for icon and cold start", () => {
   const src = (rel: string) => readFileSync(join(__dirname, rel), "utf8");
   it("the icon script prints the same two colours", () => {
+    // The script reads `--brand-mark` / `--brand-ground` from the web tokens; those must equal these.
     const script = src("../../scripts/build-app-icon.mjs");
-    expect(script.match(/export const GOLD = "(#[0-9A-F]{6})"/i)?.[1]).toBe(brand.mark);
-    expect(script.match(/export const INK = "(#[0-9A-F]{6})"/i)?.[1]).toBe(brand.ground);
+    expect(script).toMatch(/export const GOLD = brandToken\("--brand-mark"\)/);
+    expect(script).toMatch(/export const INK = brandToken\("--brand-ground"\)/);
+    const css = src("../../../frontend/app/globals.css");
+    expect(css.match(/--brand-mark:\s*(#[0-9A-F]{6});/i)?.[1]).toBe(brand.mark);
+    expect(css.match(/--brand-ground:\s*(#[0-9A-F]{6});/i)?.[1]).toBe(brand.ground);
   });
   it("the cold start takes them from here rather than its own literals", () => {
     const cold = src("../coldStart.tsx");

@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ChevronDown } from "lucide-react";
 import { TreeName, flattenTree } from "@/src/components/ui/TreeRow";
 import { PageShell } from "@/src/components/ui/PageShell";
+import { Collapse } from "@/src/components/ui/Collapse";
 import { EmptyState } from "@/src/components/ui/EmptyState";
 import { Badge } from "@/src/components/ui/Badge";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
@@ -182,16 +183,18 @@ function OrganizationsPageContent() {
                   v2 节首的匾纹片段随 v3 撤掉(2026-10-03),文明由节名本身标明。
                   折叠钮放在 <h2> 里面(披露模式),不是反过来 —— <button> 的内容只能是
                   短语内容,标题进按钮是无效 HTML。 */}
-              <div className="mb-3 flex items-center gap-3">
+              {/* 节首吸顶(Design 第三批):收起时节首不动,下面的节往上收。 */}
+              <div className="sticky top-(--below-band) z-1 mb-3 flex items-center gap-3 bg-[oklch(var(--color-canvas))]">
                 <h2 className="text-lg text-[oklch(var(--color-ink))]">
                   <button
                     type="button"
                     onClick={() => toggleCollapse(category)}
                     aria-expanded={!isCollapsed}
+                    aria-controls={`organizations-${category}`}
                     className="inline-flex items-center gap-2 text-left hover:underline underline-offset-2"
                   >
                     {name}
-                    <ChevronDown aria-hidden="true" className={`w-4 h-4 text-[oklch(var(--color-ink-muted))] transition-transform ${isCollapsed ? "-rotate-90" : ""}`} />
+                    <ChevronDown aria-hidden="true" className={`w-4 h-4 text-[oklch(var(--color-ink-muted))] transition-transform duration-fast ease-standard ${isCollapsed ? "-rotate-90" : ""}`} />
                   </button>
                 </h2>
                 <span className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">
@@ -199,7 +202,9 @@ function OrganizationsPageContent() {
                 </span>
               </div>
 
-              {!isCollapsed && <div className="overflow-x-auto">{renderTable(orgs)}</div>}
+              <Collapse open={!isCollapsed} id={`organizations-${category}`} rows={orgs.length}>
+                <div className="overflow-x-auto">{renderTable(orgs)}</div>
+              </Collapse>
             </section>
           );
         })}

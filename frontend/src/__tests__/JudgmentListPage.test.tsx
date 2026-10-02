@@ -217,6 +217,22 @@ describe("审判队列", () => {
     expect(document.activeElement).toBe(document.body);
   });
 
+  it("J 移焦点不让浏览器瞬时滚动,由 v3 的纵向滚动把行带进视野(减少动态时瞬时)", async () => {
+    renderPage();
+    await screen.findByText("Marguerite Vey");
+    const focus = jest.spyOn(HTMLElement.prototype, "focus");
+    const scrollTo = jest.fn();
+    Object.defineProperty(window, "scrollTo", { configurable: true, value: scrollTo });
+    Object.defineProperty(window, "matchMedia", { configurable: true, value: (q: string) => ({ matches: q.includes("reduce"), media: q }) });
+    const row = rowOf("沈青梧");
+    row.getBoundingClientRect = () => ({ top: 2000, bottom: 2064, left: 0, right: 0, width: 0, height: 64, x: 0, y: 2000, toJSON: () => ({}) }) as DOMRect;
+    fireEvent.keyDown(document.body, { key: "j" });
+    expect(focus).toHaveBeenLastCalledWith({ preventScroll: true });
+    expect(scrollTo).toHaveBeenCalledTimes(1);
+    focus.mockRestore();
+    delete (window as { matchMedia?: unknown }).matchMedia;
+  });
+
   it("没有勾选时没有批量条;X 勾选焦点行后出现,批量认领带勾选的 id", async () => {
     renderPage();
     await screen.findByText("Marguerite Vey");

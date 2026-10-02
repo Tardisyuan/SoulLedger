@@ -1474,6 +1474,7 @@
     },
     "draft": {
       "saved_at": "Sau Djes-Ef Seth {{time}}",
+      "saved_flash": "Sau Seth",
       "saving": "Em Sau…",
       "save_failed": "Nen Sau Djes-Ef; Wehem Iri Er Khemen Em Khet",
       "conflict_title": "Sau Seth Em Ky ({{time}})",

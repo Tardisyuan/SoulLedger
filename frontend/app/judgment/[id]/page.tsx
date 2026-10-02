@@ -19,6 +19,7 @@ import { JudgmentEvidenceAdmission } from "@/src/components/judgment/JudgmentEvi
 import {
   DraftConflictBanner,
   DraftStatusLine,
+  DraftSavedAt,
   useDraftAutosave,
 } from "@/src/components/judgment/JudgmentDraftAutosave";
 import { PageShell } from "@/src/components/ui/PageShell";
@@ -953,7 +954,11 @@ export default function JudgmentDetailPage({ params }: PageProps) {
                 }`
           }`}
         >
-          <JudgmentSectionHead mark="丁" title={t("souls.detail.ledger.verdict_words")} />
+          <JudgmentSectionHead
+            mark="丁"
+            title={t("souls.detail.ledger.verdict_words")}
+            meta={!isFinal && !draft.conflict ? <DraftSavedAt savedAt={judgment.draft_saved_at} /> : undefined}
+          />
           {isFinal ? (
             /* 判词是「有人说过的话」,所以衬线(规范 v1 表态 1:判词、忏悔录、古典语料)。 */
             judgment.notes ? (
@@ -984,7 +989,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
                 className="block w-full mt-3 rounded-control border border-[oklch(var(--color-line-strong))] bg-[oklch(var(--color-surface-1))] px-3 py-2 font-serif text-md font-normal text-[oklch(var(--color-ink))] placeholder:text-[oklch(var(--color-ink-subtle))] transition-[border-color] duration-state focus-visible:border-[oklch(var(--color-ink))] resize-y"
               />
               {/* During a conflict the last saved time is the OTHER version's baseline, not this text's. */}
-              {!draft.conflict && <DraftStatusLine status={draft.status} savedAt={judgment.draft_saved_at} />}
+              {!draft.conflict && <DraftStatusLine status={draft.status} saves={draft.saves} />}
               {draft.conflict && (
                 <DraftConflictBanner
                   current={draft.conflict}

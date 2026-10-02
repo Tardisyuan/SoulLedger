@@ -589,7 +589,10 @@ describe("丁 · 判词自动保存", () => {
     expect(judgmentApi.saveDraft).not.toHaveBeenCalled(); // 去抖:不是每个字一次
     await waitFor(() => expect(judgmentApi.saveDraft).toHaveBeenCalledTimes(1), WAIT);
     expect(judgmentApi.saveDraft).toHaveBeenCalledWith(ID, { version: 4, notes: "功过相抵", draft_verdict: "PURGATORY", ...NO_PLACEMENT });
-    expect(await screen.findByText(tZh("judgment.draft.saved_at", { time: "2026-09-25T10:15:00Z" }))).toBeInTheDocument();
+    // 规范 v3「草稿保存」:存上那一下闪「已保存」;保存时间在 丁 的标题行,不再常驻在判词框下。
+    expect(await screen.findByTestId("draft-saved-flash", {}, { interval: 10 })).toHaveTextContent(tZh("judgment.draft.saved_flash"));
+    expect(screen.getByTestId("draft-saved-at")).toHaveTextContent(tZh("judgment.draft.saved_at", { time: "2026-09-25T10:15:00Z" }));
+    expect(screen.getByTestId("draft-status")).not.toHaveTextContent(tZh("judgment.draft.saved_at", { time: "2026-09-25T10:15:00Z" }));
 
     // 下一次以服务端回来的版本为底。
     fireEvent.change(notesBox(), { target: { value: "功过相抵,暂入救济门" } });
@@ -613,12 +616,14 @@ describe("丁 · 判词自动保存", () => {
     renderPage();
     await screen.findAllByRole("radio");
     expect(await screen.findByTestId("draft-status")).toBeInTheDocument();
+    expect(screen.getByTestId("draft-saved-at")).toBeInTheDocument();
     fireEvent.change(notesBox(), { target: { value: "我的判词" } });
     const banner = await screen.findByTestId("draft-conflict", {}, WAIT);
     expect(within(banner).getByText("他人的判词")).toBeInTheDocument();
     expect(notesBox().value).toBe("我的判词");
     // 冲突时不显示「已自动保存」:那个时间属于对方的版本,不属于框里这段字。
     expect(screen.queryByTestId("draft-status")).toBeNull();
+    expect(screen.queryByTestId("draft-saved-at")).toBeNull();
 
     fireEvent.change(notesBox(), { target: { value: "我的判词,续写" } });
     await new Promise((r) => setTimeout(r, 1500));

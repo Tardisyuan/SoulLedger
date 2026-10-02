@@ -160,12 +160,12 @@
   --transition-duration-settle: 240ms; /* @kind other */
   /* 规范 v3「B2 · 通用」那张表用到了 B1 四档之外的三个时长(2026-10-01)。它们各只属于一件
    * 事,所以按那件事起名,不并进最近的档 —— 并进去就是把 v3 写的数改成了别的数:
-   *   close    180ms  弹窗 / 抽屉关闭(开是 240 = base)
+   *   close    160ms  弹窗 / 抽屉关闭(开是 240 = base;Design 第四批 2026-10-03 由 180 改 160)
    *   dismiss  140ms  Toast 出场(进场 160 = fast)
-   *   reveal   200ms  骨架 → 内容的交叉淡化;表格展开
+   *   reveal   200ms  骨架 → 内容的交叉淡化(表格展开 2026-10-03 起改为 240 = base)
    *   reduced   80ms  减少动态效果下保留的那一下淡入(B3「整页、弹窗、Toast、异步内容」),
    *                   不带位移。只在下面第二个 prefers-reduced-motion 块里用。 */
-  --transition-duration-close: 180ms; /* @kind other */
+  --transition-duration-close: 160ms; /* @kind other */
   --transition-duration-dismiss: 140ms; /* @kind other */
   --transition-duration-reveal: 200ms; /* @kind other */
   --transition-duration-reduced: 80ms; /* @kind other */
@@ -206,7 +206,7 @@
      not focusable and not announced" a guarantee held up by one CSS class,
      which jsdom cannot see and therefore no test in this repo could check. A
      closed drawer is still absent from the DOM; it is only late leaving. */
-  /* 规范 v3:开 240 进场曲线,关 180 出场曲线;面板只移 12px(v2 是整宽滑入)。 */
+  /* 规范 v3:开 240 进场曲线,关 160 出场曲线(Design 第四批);面板只移 12px(v2 是整宽滑入)。 */
   --animate-drawer-in: drawer-in var(--transition-duration-settle) var(--ease-enter) both; /* @kind other */
   --animate-drawer-out: drawer-out var(--transition-duration-close) var(--ease-exit) both; /* @kind other */
   --animate-scrim-in: scrim-in var(--transition-duration-settle) var(--ease-enter) both; /* @kind other */
@@ -218,10 +218,15 @@
   --animate-page-enter: page-enter var(--transition-duration-base) var(--ease-enter) backwards; /* @kind other */
   /* 规范 v3「骨架 → 内容」:200ms 淡入。PageShell 在骨架换成内容的那一刻挂上它。 */
   --animate-content-in: content-in var(--transition-duration-reveal) var(--ease-enter) backwards; /* @kind other */
-  /* 规范 v3「表格交互 · 展开」:grid-template-rows 0fr→1fr,200ms 进场曲线;减少动态效果下瞬时展开
-   * (上面那条 1ms 规则就是瞬时,这里不进 `data-motion="fade"` 的 80ms 例外)。用法是 `row-expand`
-   * 工具类,见文件后面的 @utility。只做展开:收起是卸载,内容当场离开 DOM 与读屏树。 */
-  --animate-row-expand: row-expand var(--transition-duration-reveal) var(--ease-enter) backwards; /* @kind other */
+  /* 规范 v3「表格交互 · 展开 / 收起」(Design 第三批回复,2026-10-03):展开 grid-template-rows
+   * 0fr→1fr,240ms 进场曲线;收起 1fr→0fr,160ms 出场曲线,内容在前 80ms 淡出。整节折叠用同一对。
+   * 减少动态效果下瞬时(上面那条 1ms 规则,不进 `data-motion="fade"` 的 80ms 例外)。
+   * 两个工具类只由 `src/components/ui/Collapse.tsx` 挂:收起时它先给内容 `inert`,动画结束再加 `hidden`。 */
+  --animate-row-expand: row-expand var(--transition-duration-settle) var(--ease-enter) backwards; /* @kind other */
+  --animate-row-collapse: row-collapse var(--transition-duration-fast) var(--ease-exit) forwards; /* @kind other */
+  /* 规范 v3「草稿保存」:「已保存」opacity 0→1(160ms 进场)→0(160ms 出场),紧接着。
+   * 减少动态效果下不挂这个类:`DraftStatusLine` 改为静态显示 1.5s 后移除(1ms 规则压不掉 delay)。 */
+  --animate-saved-flash: content-in var(--transition-duration-fast) var(--ease-enter) both, row-exit var(--transition-duration-fast) var(--ease-exit) var(--transition-duration-fast) forwards; /* @kind other */
   /* 同一段内换页(`/souls` → `/souls/123`)时 template 不重新挂载,于是同一个动画名不会重播。
    * 换一个名字就会:`app/template.tsx` 在 pathname 变化时在这两个名字之间切换。值与上面逐字相同。 */
   --animate-page-enter-again: page-enter-again var(--transition-duration-base) var(--ease-enter) backwards; /* @kind other */
@@ -416,6 +421,15 @@
      v1 的 `shadow-overlay` 这一档因此删掉,守卫(no-page-shadow)不再放行它。 */
   --container-prose: 720px;
   --container-page: 1200px;
+}
+
+/* 品牌色(Design 第三批回复,2026-10-03):只给品牌标、图标、冷启动用,不进界面。
+   在明暗两套主题之外、不派生任何别的颜色;长明灯的金(`--color-lamp`)是另一回事,不动。
+   `mobile/scripts/build-app-icon.mjs` 的 GOLD / INK 与 `app/icon.svg` 必须是这两个值
+   —— brandTokensMatchIcon.test.ts 守着。 */
+:root {
+  --brand-mark: #ECAA3D;
+  --brand-ground: #10120F;
 }
 
 /*
@@ -969,13 +983,42 @@ html.theme-switching *::after {
   }
 }
 
-/* 行展开 / 行内检查器的共享外壳:包在条件渲染的那块内容外面,里面只放一个子元素。 */
+/* 行展开 / 行内检查器 / 整节折叠的共享外壳(`Collapse` 组件挂上),里面只放一个子元素。 */
 @utility row-expand {
   display: grid;
   animation: var(--animate-row-expand);
   & > * {
     min-height: 0;
   }
+}
+
+@keyframes row-collapse {
+  from {
+    grid-template-rows: 1fr;
+    overflow: hidden;
+  }
+  to {
+    grid-template-rows: 0fr;
+    overflow: hidden;
+  }
+}
+
+/* 收起:高度 160ms;内容在前一半(80ms)淡出。`forwards` 让它停在 0fr / 透明,直到 Collapse 加上 hidden。 */
+@utility row-collapse {
+  display: grid;
+  animation: var(--animate-row-collapse);
+  & > * {
+    min-height: 0;
+    animation: row-exit calc(var(--transition-duration-fast) / 2) var(--ease-exit) forwards;
+  }
+}
+
+/* 超过 40 行的整节:不做高度动画,只淡入 / 淡出 160ms。 */
+@utility collapse-fade-in {
+  animation: content-in var(--transition-duration-fast) var(--ease-enter) backwards;
+}
+@utility collapse-fade-out {
+  animation: row-exit var(--transition-duration-fast) var(--ease-exit) forwards;
 }
 
 @keyframes content-in {

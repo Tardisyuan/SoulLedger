@@ -287,9 +287,15 @@ describe("the expanded bench is in seat order", () => {
     await waitForRoster();
     await expandBench(container);
 
-    fireEvent.click(within(benchSection(container)).getByRole("button"));
-    await waitFor(() => expect(screen.queryAllByText("Aati")).toHaveLength(0));
-    expect(cardNames(benchSection(container))).toEqual([]);
+    const toggle = within(benchSection(container)).getByRole("button");
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    // 收起的契约:先 inert,动画结束再 hidden —— 卡片还在 DOM 里,但读屏与焦点都进不去。
+    const body = document.getElementById(toggle.getAttribute("aria-controls")!)!;
+    expect(screen.getAllByText("Aati")[0].closest("[inert]")).toBe(body);
+    fireEvent.animationEnd(body);
+    expect(body).toHaveAttribute("hidden");
+    for (const el of screen.getAllByText("Aati")) expect(el).not.toBeVisible();
   });
 });
 
