@@ -10,7 +10,7 @@ import { DomainEnum, DomainNumber, MissingValue } from "@/src/components/ui/Doma
 import { JudgmentSectionHead } from "@/src/components/judgment/JudgmentGroundsPanel";
 import { Kbd } from "@/src/components/judgment/JudgmentDesk";
 import { ReasonDialog } from "@/src/components/judgment/JudgmentClaimDialogs";
-import { clauseCode, RecordFacts } from "@/src/components/souls/SoulLedgerBook";
+import { ClauseLink, clauseCode, RecordFacts } from "@/src/components/souls/SoulLedgerBook";
 import { formatHistoricalDate } from "@/lib/utils";
 
 /**
@@ -147,7 +147,12 @@ export function JudgmentEvidenceAdmission({
                       <>
                         <DomainEnum namespace="souls.categories" value={record.category} />
                         {/* 窄屏没有条款列,条款折进这一行。 */}
-                        {clause && <span className="md:hidden font-serif" title={record.statute_clause}> · {clause}</span>}
+                        {clause && (
+                          <span className="md:hidden font-serif">
+                            {" · "}
+                            <ClauseLink record={record} code={clause} />
+                          </span>
+                        )}
                         {(record.occurrence_count != null || record.is_milestone) && " · "}
                         <RecordFacts record={record} />
                       </>
@@ -163,7 +168,7 @@ export function JudgmentEvidenceAdmission({
                   className="font-serif text-xs text-[oklch(var(--color-ink-muted))] truncate max-md:hidden"
                 >
                   <span className="sr-only">{t("ledger.book.clause")} </span>
-                  {clause ?? <MissingValue kind="unrecorded" />}
+                  {clause ? <ClauseLink record={record} code={clause} /> : <MissingValue kind="unrecorded" />}
                 </span>
                 <span className="text-right text-xs">
                   <DomainNumber value={signed} signed toned={admitted} />

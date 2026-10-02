@@ -264,7 +264,7 @@ function XContent() {
       actions={<RequirePermission permissions="x.create"><Button variant="primary">+ …</Button></RequirePermission>}
       filters={/* 裸 input/select 套 fieldControl({size:"md"}) + aria-label，无可见 label */}
     >
-      <DataTable density columns data isLoading isError onRetry keyExtractor renderRow
+      <DataTable columns data isLoading isError onRetry keyExtractor renderRow
                  sort onSortChange isFiltered onClearFilters emptyMessage
                  page totalPages totalCount onPageChange />
       <XCreateModal … />                             {/* 弹层挂在 PageShell 末尾 */}

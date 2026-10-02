@@ -150,8 +150,8 @@ export const IDENTIFIER_POLICY = "detail-page header, copyable, once, never as a
  *      `domainDisplayContract.test.tsx` 的「case numbers」一组扫这两种写法。
  *   3. 它不顶替灵魂的名字,也不由 UUID 顶替它:没有案号就是 `unrecorded`。
  *
- * 唯一的例外是身份带(`usePlaque` 的 `meta` 只收字符串,Plaque 归身份带那一组):那里印的是
- * 文字,同一页的 eyebrow 里另有一个可复制的 `<CaseNumber>`。
+ * 身份带也不例外(2026-10-02 用户拍板):审判台把案号交给 `usePlaque({ caseNumber })`,Plaque 在右栏
+ * 画 `<CaseNumber variant="band">`,页头不再重复。经 `meta`(纯文字)交案号是缺陷,守卫同样扫它。
  */
 export const CASE_NUMBER_POLICY = "a name for people: anywhere a name goes, always <CaseNumber>, never truncated" as const;
 

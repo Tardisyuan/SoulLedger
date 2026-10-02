@@ -109,17 +109,6 @@ export interface DataTableSelection<T> {
 
 export interface DataTableProps<T> {
   /**
-   * Row height. `comfortable`(默认)是规范 v3 的 64px 最小行高(`--table-row-h`);
-   * `compact` 不设最小高度,行高只由 `py-1` 与内容决定。2026-10-01 起全站按 v3 走,
-   * 没有调用点传 `compact` —— 它留着是给「这一页确实要更密」的那一次决定。
-   *
-   * It lived on DataGrid, so only the two pages on DataGrid could reach it
-   * and exactly one used it; the other ten list pages call DataTable
-   * directly. The default stays `comfortable`: the wider row is right where
-   * each line is a decision, and wrong where the page is a scan-and-find.
-   */
-  density?: 'comfortable' | 'compact'
-  /**
    * 规范 v1 §3.2: the whole row opens the record, no「查看 →」column. The row
    * becomes the positioning box and `cursor-pointer`; the caller puts ONE
    * `<Link className={ROW_LINK}>` in the row (usually on the name) whose
@@ -248,7 +237,6 @@ export function DataTable<T>({
   onRetry,
   errorMessage,
   skeletonRows = 5,
-  density = 'comfortable',
   linkedRows = false,
   sort,
   onSortChange,
@@ -278,22 +266,10 @@ export function DataTable<T>({
 
   /* 行高按规范 v3(2026-10-01 拍板):正文行 `min-height: 64px`(`--table-row-h`,v3 `.queue-row`
      / `.ds-tr`),表头 44(`--control-h-sm`,v3 `.queue-head` / `.ds-th`)。`<tr>` 上的 `height`
-     在表格布局里就是最小高度 —— 内容更高时行照样长高。`compact` 不加这一条:它是显式的
-     「我要更密」,而且目前没有任何调用点传它。 */
-  const rowHeight = density === 'compact' ? '' : 'h-(--table-row-h)'
-  const cellPadding = density === 'compact' ? 'px-3 py-1' : 'px-3 py-2'
-  /**
-   * The body rows come from `renderRow`, which every caller hand-writes — 40
-   * `px-4 py-3` `<td>`s across app/. So a `density` prop alone would only have
-   * moved the header, and the table would have looked broken at `compact`.
-   *
-   * A descendant selector on the table beats the single class on each `<td>`
-   * without touching any of those call sites. It is scoped to `tbody` so the
-   * header keeps `cellPadding` directly, and it only exists in the compact
-   * branch — `comfortable` emits no override at all, so nothing changes for
-   * the ten pages that do not opt in.
-   */
-  const bodyDensity = density === 'compact' ? '[&_tbody_td]:py-1' : ''
+     在表格布局里就是最小高度 —— 内容更高时行照样长高。曾有的 `compact` 密度(不设最小行高、
+     `py-1`)2026-10-02 用户拍板删除;删之前唯一的调用点是审判队列侧栏的两张表(经 DataGrid)。 */
+  const rowHeight = 'h-(--table-row-h)'
+  const cellPadding = 'px-3 py-2'
   const { t } = useI18n()
   const colCount = columns.length + (selection ? 1 : 0)
   const keysOnScreen = selection ? (data ?? []).map((item, i) => keyExtractor(item, i)) : []
@@ -349,7 +325,7 @@ export function DataTable<T>({
             of text still outside the eight-step scale. 13px is tighter than what
             it replaces: the scale buys hierarchy from the span between steps,
             not by growing rows, and the table is where density is defended. */}
-        <table className={cn("w-full text-sm", bodyDensity)} aria-busy={isLoading || undefined}>
+        <table className="w-full text-sm" aria-busy={isLoading || undefined}>
           <caption className="sr-only">{caption}</caption>
           {columns.some((c) => c.width) && (
             <colgroup>

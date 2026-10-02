@@ -8,7 +8,7 @@ Pillow 解码 + 去 EXIF)。**服务不同**:头像经 nginx 公开的 `/media/`
 
 **为什么是签名地址而不是带令牌的请求。** 网页端 `<img src>` 带不上 `Authorization`
 头,App 的图片组件也不走 axios 的拦截器。所以序列化器给每个查看者签一个短时地址:
-签名里是 (图片 id, 查看者 user_id),`URL_TTL` 秒后过期。**签名只说明「这个地址是发给谁的」,
+签名里是 (图片 id, 查看者 user_id, 签发那次请求的租户 id),`URL_TTL` 秒后过期。**签名只说明「这个地址是发给谁的」,
 不说明「谁能看」**:每一次取文件都用签名里的查看者重算一遍 `may_view` —— 帖子在签发之后
 被隐藏、被删、查看者取关了作者,旧地址立刻 404。
 """
@@ -160,7 +160,7 @@ def cleanup_orphans(older_than=ORPHAN_AFTER, *, dry_run=False) -> dict:
 # ── 访问判定与签名地址 ────────────────────────────────────────────────────
 
 
-def may_view(user, media):
+def may_view(user, media, tenant_id=None):
     """`user` 此刻能不能拿到这张图的文件。列表序列化与文件服务用的是同一个判定。
 
     * 还没挂到帖子:只有上传者本人。
@@ -171,6 +171,9 @@ def may_view(user, media):
       作者自己删掉的帖子没有图可看 —— 行已经没了。
     * 官员看官员的帖子(2026-10-02):帖子在官员动态流里看得见 —— `scope_to_tenant` +
       `visibility.visible_posts`,与 `PostViewSet.get_queryset` 同一条规则。
+
+    `tenant_id` 是签发地址那次请求的租户(签在地址里,见 `_as_request`);官员两条判定都在
+    这个租户里做,所以 ADMIN 在 X 文明里看得见的「本域可见」帖子,图也打得开。
     """
     if user is None or not user.is_authenticated or not user.is_active:
         return False
@@ -178,38 +181,55 @@ def may_view(user, media):
         return not media.is_deleted and media.uploader_id == user.pk
     if getattr(user, "role", None) == SOUL_ROLE:
         return not media.is_deleted and visible_posts_for_soul(user).filter(pk=media.post_id).exists()
-    return _officer_may_view(user, media) or _officer_feed_may_view(user, media)
+    req = _as_request(user, tenant_id)
+    if req is None:
+        return False
+    return _officer_may_view(req, media) or _officer_feed_may_view(req, media)
 
 
-def _as_request(user):
-    """取文件的请求不带令牌,所以「请求所在的租户」就是签名里那个官员自己的租户 ——
-    非 ADMIN 的列表请求本来也只能在这个租户里(`TenantPermission` 比对令牌与 `user.tenant`)。"""
+def _as_request(user, tenant_id=None):
+    """取文件的请求不带令牌,「请求所在的租户」来自签名:签发地址的那次列表请求的 `request.tenant`。
+
+    此前这里用的是官员自己的租户,于是 ADMIN 在别的文明里看得见那里「本域可见」的帖子,
+    图却 404(2026-10-02)。规则照 `TenantPermission`:ADMIN 可以在任一租户里;别的官员
+    签名里的租户必须就是自己现在的租户,不是就返回 None(拒绝)—— 签发之后被调去别的文明,
+    旧地址随之失效。签名里没有租户(灵魂、上传预览)时退回本人的租户。
+    """
     from types import SimpleNamespace
 
-    return SimpleNamespace(user=user, tenant=getattr(user, "tenant", None), method="GET")
+    from apps.core.tenant import is_tenant_exempt
+    from apps.tenants.models import Tenant
+
+    if tenant_id is None:
+        tenant = getattr(user, "tenant", None)
+    elif is_tenant_exempt(user):
+        tenant = Tenant.objects.filter(pk=tenant_id).first()
+    elif getattr(user, "tenant_id", None) is not None and str(user.tenant_id) == str(tenant_id):
+        tenant = user.tenant
+    else:
+        return None
+    return SimpleNamespace(user=user, tenant=tenant, method="GET")
 
 
-def _officer_feed_may_view(user, media):
+def _officer_feed_may_view(req, media):
     from apps.core.tenant import scope_to_tenant
     from apps.social.models import Post
     from apps.social.visibility import visible_posts
 
     if media.is_deleted:
         return False
-    req = _as_request(user)
     # `visible_posts` 排除灵魂作者,`Post.objects` 排除已删的帖子。
     return visible_posts(req, scope_to_tenant(Post.objects.filter(pk=media.post_id), req)).exists()
 
 
-def _officer_may_view(user, media):
+def _officer_may_view(as_request, media):
     """租户经帖子(`post__tenant`),由 `scope_to_tenant` 判 —— 与审核后台每个视图同一个函数。"""
     from apps.core.tenant import scope_to_tenant
     from apps.perm.checker import check_permission
     from apps.social.models import Post
 
-    if not check_permission(user, MODERATE):
+    if not check_permission(as_request.user, MODERATE):
         return False
-    as_request = _as_request(user)
     scoped = scope_to_tenant(
         PostMedia.all_objects.filter(pk=media.pk, post__author__role=SOUL_ROLE), as_request, field="post__tenant",
     )
@@ -221,28 +241,32 @@ def _officer_may_view(user, media):
     return True
 
 
-def signed_url(media, viewer):
-    """发给 `viewer` 的取图地址(站点根相对路径)。客户端把它接在 API 的源上。"""
-    token = signing.TimestampSigner(salt=SIGNING_SALT).sign(f"{media.pk}.{viewer.pk}")
+def signed_url(media, viewer, tenant=None):
+    """发给 `viewer` 的取图地址(站点根相对路径)。客户端把它接在 API 的源上。
+
+    `tenant` 是这次请求的 `request.tenant`(官员端传;灵魂端不传)—— 取文件时在它里面判可见。"""
+    value = f"{media.pk}.{viewer.pk}" + (f".{tenant.pk}" if tenant is not None else "")
+    token = signing.TimestampSigner(salt=SIGNING_SALT).sign(value)
     return f"/api/v1/social-media/{media.pk}/?t={token}"
 
 
 def viewer_from_token(token, media_id):
-    """验签并取出查看者 user_id。签名坏了、过期了、签的不是这张图 → None。"""
+    """验签并取出 `(查看者 user_id, 租户 id 或 None)`。签名坏了、过期了、签的不是这张图 → None。"""
     try:
         value = signing.TimestampSigner(salt=SIGNING_SALT).unsign(token or "", max_age=URL_TTL)
     except signing.BadSignature:  # SignatureExpired 是它的子类
         return None
-    signed_media, _, user_id = value.partition(".")
-    if signed_media != str(media_id) or not user_id.isdigit():
+    signed_media, _, rest = value.partition(".")
+    user_id, _, tenant_id = rest.partition(".")
+    if signed_media != str(media_id) or not user_id.isdigit() or (tenant_id and not tenant_id.isdigit()):
         return None
-    return int(user_id)
+    return int(user_id), (int(tenant_id) if tenant_id else None)
 
 
-def describe(rows, viewer):
+def describe(rows, viewer, tenant=None):
     """序列化用:按顺序的 `{id, url, width, height}`。`rows` 已经是这条帖子未删除的图。"""
     return [
-        {"id": row.pk, "url": signed_url(row, viewer), "width": row.width, "height": row.height}
+        {"id": row.pk, "url": signed_url(row, viewer, tenant), "width": row.width, "height": row.height}
         for row in rows
     ]
 

@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type ReactNode, type RefObject } from "react";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
+import { CaseNumber } from "@/src/components/ui/DomainValue";
 import { Seal } from "./Seal";
 
 /**
@@ -17,27 +18,31 @@ import { Seal } from "./Seal";
  * v3 自己也给埃及画了 28 两行与 20 两行。每一档都是 WCAG 大号文字(plaqueTitleStaysLargeText)。
  *
  * `collapsible`(壳里的那一条):吸在工具条下沿,页面滚过 60px 收成 48px,只留印与殿名
- * (v3 `is-compact`)。案号:后端没有这个字段,不画(用户 2026-10-01)。
+ * (v3 `is-compact`)。
  */
 
 /**
  * 页面给身份带的题字 / 殿名 / 右栏(用户 2026-10-02 拍板)。没给的那一项退回壳的默认:题字 =
  * 面包屑最后一段,殿名 = 租户展示名,右栏空。详情页的面包屑末段是「详情」或原始 id,所以
  * 这些页自己报题字。值只来自 API —— 页面拿不到的部分传 undefined,不编。
+ *
+ * `caseNumber`(审判台,用户 2026-10-02):右栏是 v3 的 `identity-case` ——「案号」小字 + 可复制的
+ * `<CaseNumber>`(CASE_NUMBER_POLICY)。是一个具名的字符串槽,不是 ReactNode:`usePlaque` 的依赖
+ * 按值比较,传节点会每次渲染都换引用、每次都重设一遍壳的状态。给了它就不画 `meta`。
  */
-export type PlaqueText = { title?: string; meta?: string; hall?: string };
+export type PlaqueText = { title?: string; meta?: string; hall?: string; caseNumber?: string };
 
 const PlaqueContext = createContext<(text: PlaqueText | null) => void>(() => {});
 /** AppLayout 用:把 setter 交给页面。壳外(测试、登录页)没有 Provider,`usePlaque` 什么都不做。 */
 export const PlaqueProvider = PlaqueContext.Provider;
 
 /** 页面调用:挂载期间身份带用这几样;卸载时还给壳。 */
-export function usePlaque({ title, meta, hall }: PlaqueText): void {
+export function usePlaque({ title, meta, hall, caseNumber }: PlaqueText): void {
   const set = useContext(PlaqueContext);
   useEffect(() => {
-    set({ title: title || undefined, meta: meta || undefined, hall: hall || undefined });
+    set({ title: title || undefined, meta: meta || undefined, hall: hall || undefined, caseNumber: caseNumber || undefined });
     return () => set(null);
-  }, [set, title, meta, hall]);
+  }, [set, title, meta, hall, caseNumber]);
 }
 
 const TIER_CLASS = [
@@ -132,14 +137,17 @@ function useBandHeightVar(enabled: boolean, band: RefObject<HTMLElement | null>)
 export function Plaque({
   title,
   meta,
+  caseNumber,
   hall,
   heading = false,
   collapsible = false,
   short = false,
 }: {
   title: string;
-  /** 右栏(v3 的案号位)。≤ 768 不显示。 */
+  /** 右栏的一般文字。≤ 768 不显示。 */
   meta?: ReactNode;
+  /** 右栏的案号(v3 `identity-case`):可复制;收起时与 ≤ 768 都还在(v3 `is-compact` / `is-mobile`)。 */
+  caseNumber?: string;
   /** 殿名;不给就是租户展示名。 */
   hall?: string;
   /** 壳外页(登录)没有 PageShell,那一页唯一的 <h1> 就是题字。 */
@@ -201,7 +209,14 @@ export function Plaque({
           </Title>
         </div>
       </div>
-      {meta ? <div className="identity-case">{meta}</div> : null}
+      {caseNumber ? (
+        <div className="identity-case" data-case="">
+          <span>{t("judgment.case_number")}</span>
+          <CaseNumber value={caseNumber} variant="band" />
+        </div>
+      ) : meta ? (
+        <div className="identity-case">{meta}</div>
+      ) : null}
     </div>
   );
 }
