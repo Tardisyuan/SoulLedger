@@ -134,18 +134,18 @@ export function Spinner({ size = "md", label, className, ...rest }: SpinnerProps
 export function PageSpinner({ label }: { label?: string }) {
   const { t } = useI18n();
   return (
-    // `min-h-[calc(100vh-4rem)]`, matching AppLayout.tsx:461's slot exactly —
-    // NOT `min-h-screen`. A route's `loading.tsx` renders inside that slot, so
-    // a full 100vh here is 100vh nested in 100vh−4rem: the same 64px of dead
-    // scroll PageShell exists to delete, handed back through the component all
-    // 21 loading files adopt. One class in one file, 21 routes.
+    // `min-h-(--content-min-h)`, the same variable as AppLayout's slot (globals.css:
+    // viewport − toolbar − identity band − bottom bar) — NOT `min-h-screen`, and not a
+    // hand-written `calc` either: this was `100vh-4rem` while the slot was `100vh-2.5rem`
+    // and later the v3 band made it ~208px shorter still. A route's `loading.tsx` renders
+    // inside that slot, so anything taller here is dead scroll handed back through the
+    // component all 21 loading files adopt. One class in one file, 21 routes.
     //
     // The two routes outside AppLayout (`/` and `(auth)/login` — see
-    // AppLayoutWrapper's PUBLIC_PATHS) get a busy screen 64px shorter than the
-    // viewport. For a centred spinner that is invisible, and it is the right
-    // trade: being 64px short on two routes costs nothing, while being 64px
-    // long on nineteen costs a scrollbar on every one of them.
-    <div className="min-h-[calc(100vh-4rem)] bg-[oklch(var(--color-canvas))] flex items-center justify-center">
+    // AppLayoutWrapper's PUBLIC_PATHS) get a busy screen 52px shorter than the
+    // viewport (no band there, so only the toolbar's height is taken off). For a
+    // centred spinner that is invisible, and it is the right trade.
+    <div className="min-h-(--content-min-h) bg-[oklch(var(--color-canvas))] flex items-center justify-center">
       <Spinner size="lg" label={label ?? t("common.loading")} />
     </div>
   );

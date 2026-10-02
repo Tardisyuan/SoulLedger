@@ -80,56 +80,71 @@ export function WorkflowPalette({
   };
   return (
     /* v3 A1: 176 wide on surface-1, 16/12 padding. Four 48-high drag blocks, then
-       the role legend — roles cannot be dragged, they are read off the edges. */
-    <nav aria-label={t("workflow.editor.palette")} className="flex flex-col gap-3 px-3 py-4 border-r border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] overflow-y-auto">
-      <div className={LABEL}>{t("workflow.editor.palette")}</div>
-      <ul className="flex flex-col gap-2">
-        {PALETTE_TYPES.map((type, i) => (
-          <li key={type}>
-            <button
-              ref={(el) => {
-                refs.current[i] = el;
-              }}
-              type="button"
-              tabIndex={i === active ? 0 : -1}
-              onFocus={() => setActive(i)}
-              onKeyDown={(e) => {
-                if (e.key === "ArrowDown") move(i + 1);
-                else if (e.key === "ArrowUp") move(i - 1);
-                else if (e.key === "Home") move(0);
-                else if (e.key === "End") move(PALETTE_TYPES.length - 1);
-                else return;
-                e.preventDefault();
-              }}
-              draggable
-              onDragStart={(e) => {
-                e.dataTransfer.setData(PALETTE_DRAG_TYPE, type);
-                e.dataTransfer.effectAllowed = "copy";
-              }}
-              onClick={() => onAdd(type)}
-              className="w-full h-12 px-3 flex items-center gap-2 text-left text-sm text-[oklch(var(--color-ink))] border border-[oklch(var(--color-line-strong))] bg-[oklch(var(--color-surface-1))] hover:bg-[oklch(var(--color-surface-2))] cursor-grab"
-            >
-              <span aria-hidden="true" className="w-4 text-center">
-                {KIND_GLYPH[type]}
+       the role legend — roles cannot be dragged, they are read off the edges.
+       The hint is a footer OUTSIDE the scrolling part (用户 2026-10-02): it used to be the
+       last item of one scrolling column, pinned with `mt-auto`, and at 1440×900 the column
+       was ~100px taller than the box — so the hint sat below the box's bottom edge. */
+    <nav
+      aria-label={t("workflow.editor.palette")}
+      className="flex flex-col min-h-0 border-r border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))]"
+    >
+      <div data-palette-scroll="" className="flex flex-col gap-3 px-3 py-4 min-h-0 flex-1 overflow-y-auto">
+        <div className={LABEL}>{t("workflow.editor.palette")}</div>
+        <ul className="flex flex-col gap-2">
+          {PALETTE_TYPES.map((type, i) => (
+            <li key={type}>
+              <button
+                ref={(el) => {
+                  refs.current[i] = el;
+                }}
+                type="button"
+                tabIndex={i === active ? 0 : -1}
+                onFocus={() => setActive(i)}
+                onKeyDown={(e) => {
+                  if (e.key === "ArrowDown") move(i + 1);
+                  else if (e.key === "ArrowUp") move(i - 1);
+                  else if (e.key === "Home") move(0);
+                  else if (e.key === "End") move(PALETTE_TYPES.length - 1);
+                  else return;
+                  e.preventDefault();
+                }}
+                draggable
+                onDragStart={(e) => {
+                  e.dataTransfer.setData(PALETTE_DRAG_TYPE, type);
+                  e.dataTransfer.effectAllowed = "copy";
+                }}
+                onClick={() => onAdd(type)}
+                className="w-full h-12 px-3 flex items-center gap-2 text-left text-sm text-[oklch(var(--color-ink))] border border-[oklch(var(--color-line-strong))] bg-[oklch(var(--color-surface-1))] hover:bg-[oklch(var(--color-surface-2))] cursor-grab"
+              >
+                <span aria-hidden="true" className="w-4 text-center">
+                  {KIND_GLYPH[type]}
+                </span>
+                <span className="flex-1">{t(`workflow.editor.kind.${type}`)}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+        <div className={`${LABEL} mt-2`}>{t("workflow.editor.roles_title")}</div>
+        <ul className="flex flex-col gap-2">
+          {(Object.keys(ROLE_GLYPH) as NodeRole[]).map((role) => (
+            <li key={role} className="flex items-center gap-2 text-xs text-[oklch(var(--color-ink-muted))]">
+              <span aria-hidden="true" className="w-4 text-center text-md text-[oklch(var(--color-ink))]">
+                {ROLE_GLYPH[role]}
               </span>
-              <span className="flex-1">{t(`workflow.editor.kind.${type}`)}</span>
-            </button>
-          </li>
-        ))}
-      </ul>
-      <div className={`${LABEL} mt-2`}>{t("workflow.editor.roles_title")}</div>
-      <ul className="flex flex-col gap-2">
-        {(Object.keys(ROLE_GLYPH) as NodeRole[]).map((role) => (
-          <li key={role} className="flex items-center gap-2 text-xs text-[oklch(var(--color-ink-muted))]">
-            <span aria-hidden="true" className="w-4 text-center text-md text-[oklch(var(--color-ink))]">
-              {ROLE_GLYPH[role]}
-            </span>
-            {t(`workflow.editor.role_legend.${role}`)}
-          </li>
-        ))}
-      </ul>
-      <p className="text-2xs normal-case tracking-normal text-[oklch(var(--color-ink-subtle))]">{t("workflow.editor.roles_note")}</p>
-      {children && <p className="mt-auto pt-4 text-xs text-[oklch(var(--color-ink-muted))]">{children}</p>}
+              {t(`workflow.editor.role_legend.${role}`)}
+            </li>
+          ))}
+        </ul>
+        <p className="text-2xs normal-case tracking-normal text-[oklch(var(--color-ink-subtle))]">{t("workflow.editor.roles_note")}</p>
+      </div>
+      {children && (
+        <p
+          data-palette-hint=""
+          className="shrink-0 px-3 py-3 border-t border-[oklch(var(--color-line))] text-xs text-[oklch(var(--color-ink-muted))]"
+        >
+          {children}
+        </p>
+      )}
     </nav>
   );
 }
