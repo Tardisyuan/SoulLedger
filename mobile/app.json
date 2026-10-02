@@ -18,7 +18,7 @@
     "android": {
       "package": "com.soulledger.soul",
       "adaptiveIcon": {
-        "backgroundColor": "#f4ede0",
+        "backgroundColor": "#131211",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
@@ -28,13 +28,13 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/splash-frame.png",
+          "image": "./assets/splash-blank.png",
           "imageWidth": 112,
           "resizeMode": "contain",
-          "backgroundColor": "#f4ede0",
+          "backgroundColor": "#10120F",
           "dark": {
-            "image": "./assets/splash-frame-dark.png",
-            "backgroundColor": "#100e0d"
+            "image": "./assets/splash-blank.png",
+            "backgroundColor": "#10120F"
           }
         }
       ],

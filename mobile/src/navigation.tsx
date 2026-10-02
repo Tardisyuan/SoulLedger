@@ -421,7 +421,7 @@ export function RootNavigator() {
           </LogoutProvider>
         </BottomSheetModalProvider>
         {/* 补足 C18: over everything, once per process. */}
-        <ColdStart session={state} scheme={scheme} />
+        <ColdStart session={state} />
       </ToastProvider>
     </ThemeContext.Provider>
   );

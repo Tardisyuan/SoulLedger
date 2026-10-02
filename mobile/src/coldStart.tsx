@@ -1,55 +1,73 @@
 /**
- * The cold start (补足 C18). The native splash is an empty seal frame on paper
- * (`app.json` → expo-splash-screen). When JS is ready this draws the same frame,
- * hides the native one under it, and a seal falls into the frame, presses, and its
- * edge scan soaks in (印泥 120–320; a civilization's seal only — the neutral one has none); from
- * 480ms the app underneath takes touches, and the layer fades out and is gone at 720.
- * A tap before then skips straight to the end.
+ * The cold start (补足 C18). The native splash is the ground alone, in both modes
+ * (`app.json` → expo-splash-screen, a blank image: HarmonyOS 4.2 drops the splash icon
+ * anyway, so no device shows a mark there). When JS is ready this draws the same ground,
+ * hides the native one under it, and writes the S-and-L mark: nine strokes, all at once,
+ * over `coldStartDraw` (src/brandMark.ts). The mark holds for `coldStartHold`, then recedes:
+ * it lifts 8pt, shrinks to 0.96 and fades over 480. From there the app underneath takes
+ * touches and the ground fades out over the last 240. A tap before then skips straight
+ * to the end.
  *
  * WHEN: once per process — a cold start. Coming back from the background is not one,
- * and neither is a remount (sign out, sign in). It waits for the session to settle
- * (who is signed in decides the seal) but not for longer than `SESSION_WAIT_MS`; a
- * slow network gets the neutral seal. It does NOT play:
+ * and neither is a remount (sign out, sign in). It waits for the session to settle (a
+ * signed-in soul may be due its civilization's welcome) but not for longer than
+ * `SESSION_WAIT_MS`. It does NOT play:
  *   - under the OS "reduce motion" setting: the splash hides and the app is there;
  *   - when the civilization's welcome is about to play (`welcomeFrom`): the two do not
  *     stack (C18: 首次进入某个文明时 … 冷启动动画跳过).
- *
- * SKIN: signed in, the civilization's seal and glyph; otherwise (before sign-in, or a
- * civilization the app does not know) the neutral seal — ink, three ledger lines.
  */
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect, useState } from "react";
 import { AccessibilityInfo, Pressable, StyleSheet } from "react-native";
-import Animated, { Easing, useAnimatedStyle, useSharedValue, withDelay, withSequence, withTiming } from "react-native-reanimated";
-import Svg, { Path } from "react-native-svg";
+import Animated, {
+  Easing,
+  type SharedValue,
+  useAnimatedProps,
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withTiming,
+} from "react-native-reanimated";
+import Svg, { ClipPath, Defs, G, Path } from "react-native-svg";
 
-import { Seal } from "./seal";
+import { MARK_HEIGHT, MARK_WIDTH, SHAPE, STROKES, VIEWBOX, pathLength } from "./brandMark";
+
 import type { SessionState } from "./session";
-import { motion, preLoginTheme, themeFor, type ColorScheme } from "./theme";
+import { motion, v3 } from "./theme";
 import { welcomeFrom } from "./welcome";
+
+// The native splash goes the instant hideAsync is called. Its default exit is a 400ms fade,
+// and under it this mark is already lifting: two marks, offset, fading together — seen on
+// the emulator at 420 and 560dpi. The recede below is the only motion. Both keys: Android
+// (expo-splash-screen 57, SplashScreenManager.kt) ignores `fade` and always animates alpha
+// over `duration`; `fade` is what iOS reads.
+SplashScreen.setOptions({ duration: 0, fade: false });
 
 /** Module-level: a remount in the same process is not a cold start. */
 export const coldStart = { played: false };
 
-/** How long the splash may wait on a booting session before it plays neutral. */
+/** How long the splash may wait on a booting session before it plays. */
 const SESSION_WAIT_MS = 1000;
 
-/** The native splash's colours (app.json), so the first JS frame is the same picture. */
-export const SPLASH = {
-  light: { bg: "#f4ede0", frame: "#655c53" },
-  dark: { bg: "#100e0d", frame: "#a3968a" },
-} as const;
-
-/** 112pt, the frame at 8…56 of 64 — splash-frame.svg as app.json places it. */
+/**
+ * The ground: v3's dark canvas, in both modes (app.json's expo-splash-screen backgroundColor
+ * says the same) — the gold mark is too faint on v3's light canvas. v2 had its warm ink #131211.
+ * The gold is the mark's own (assets/brand/soulledger-mark.svg, user's pick 2026-10-01): v3's
+ * tokens print no brand colour, and its one gold (`semantic.lamp`) belongs to the lamp alone.
+ */
+const GROUND = v3.dark.canvas;
+const GOLD = "#ECAA3D";
 const BOX = 112;
-const FRAME = "M8 8H56V56H8Z";
+const LENGTHS = STROKES.map(([d]) => pathLength(d));
+const AnimatedPath = Animated.createAnimatedComponent(Path);
 
-const EASE_DROP = Easing.bezier(0.55, 0, 1, 0.45);
+const EASE_EXIT = Easing.bezier(0.4, 0, 1, 1);
 const EASE_ENTER = Easing.bezier(0, 0, 0.2, 1);
+const EASE_WRITE = Easing.bezier(0.4, 0, 0.2, 1);
 
 type Phase = "wait" | "play" | "done";
 
-export function ColdStart({ session, scheme }: { session: SessionState; scheme: ColorScheme }) {
+export function ColdStart({ session }: { session: SessionState }) {
   const [phase, setPhase] = useState<Phase>(coldStart.played ? "done" : "wait");
   const [waited, setWaited] = useState(false);
   const [interactive, setInteractive] = useState(false);
@@ -78,33 +96,34 @@ export function ColdStart({ session, scheme }: { session: SessionState; scheme: 
     };
   }, [phase, session, waited]);
 
-  const drop = useSharedValue(-16);
-  const shown = useSharedValue(0);
-  const scale = useSharedValue(1.04);
+  // Frame 0 is the native splash: the ground, no mark yet.
+  const drawn = useSharedValue(0);
+  const lift = useSharedValue(0);
+  const scale = useSharedValue(1);
+  const shown = useSharedValue(1);
   const cover = useSharedValue(1);
-  const bloom = useSharedValue(0);
-  const sealStyle = useAnimatedStyle(() => ({ opacity: shown.get(), transform: [{ translateY: drop.get() }, { scale: scale.get() }] }));
-  const ringStyle = useAnimatedStyle(() => ({ opacity: bloom.get() }));
+  const markStyle = useAnimatedStyle(() => ({ opacity: shown.get(), transform: [{ translateY: lift.get() }, { scale: scale.get() }] }));
   const coverStyle = useAnimatedStyle(() => ({ opacity: cover.get() }));
 
   useEffect(() => {
     if (phase !== "play") return;
-    const fall = { duration: motion.stampDrop, easing: EASE_DROP };
-    drop.set(withTiming(0, fall));
-    shown.set(withTiming(1, fall));
-    const half = motion.stampPress / 2;
-    scale.set(withDelay(motion.stampDrop, withSequence(withTiming(0.98, { duration: half }), withTiming(1, { duration: half }))));
-    // 印泥 120–320: the edge scan soaks in, 0 → 0.95 → 0.8. The neutral seal has no ring, so nothing shows.
-    const soak = motion.stampBloom / 2;
-    bloom.set(withDelay(motion.stampDrop, withSequence(withTiming(0.95, { duration: soak }), withTiming(0.8, { duration: soak }))));
-    cover.set(withDelay(motion.coldStartInteractive, withTiming(0, { duration: motion.coldStart - motion.coldStartInteractive, easing: EASE_ENTER })));
-  }, [phase, drop, shown, scale, cover, bloom]);
+    const written = motion.coldStartDraw + motion.coldStartHold;
+    const recede = { duration: motion.coldStartInteractive, easing: EASE_EXIT };
+    drawn.set(withTiming(1, { duration: motion.coldStartDraw, easing: EASE_WRITE }));
+    lift.set(withDelay(written, withTiming(-8, recede)));
+    scale.set(withDelay(written, withTiming(0.96, recede)));
+    shown.set(withDelay(written, withTiming(0, recede)));
+    cover.set(
+      withDelay(written + motion.coldStartInteractive, withTiming(0, { duration: motion.coldStart - motion.coldStartInteractive, easing: EASE_ENTER })),
+    );
+  }, [phase, drawn, lift, scale, shown, cover]);
 
   // The clock on its own, keyed on the phase alone: a re-render must never restart it.
   useEffect(() => {
     if (phase !== "play") return;
-    const usable = setTimeout(() => setInteractive(true), motion.coldStartInteractive);
-    const gone = setTimeout(() => setPhase("done"), motion.coldStart);
+    const written = motion.coldStartDraw + motion.coldStartHold;
+    const usable = setTimeout(() => setInteractive(true), written + motion.coldStartInteractive);
+    const gone = setTimeout(() => setPhase("done"), written + motion.coldStart);
     return () => {
       clearTimeout(usable);
       clearTimeout(gone);
@@ -112,9 +131,6 @@ export function ColdStart({ session, scheme }: { session: SessionState; scheme: 
   }, [phase]);
 
   if (phase !== "play") return null;
-  const colours = SPLASH[scheme];
-  const theme = session.status === "signedIn" ? themeFor(session.profile.civilization, scheme) : preLoginTheme(scheme);
-  const glyphs = session.status === "signedIn" ? session.profile.tenant.seal_glyphs : null;
   return (
     <Animated.View
       testID="cold-start"
@@ -128,21 +144,46 @@ export function ColdStart({ session, scheme }: { session: SessionState; scheme: 
         onPress={() => setPhase("done")}
         // The first frame is the native splash's picture: only now may that one go.
         onLayout={() => void SplashScreen.hideAsync().catch(() => {})}
-        style={[StyleSheet.absoluteFill, styles.centre, { backgroundColor: colours.bg }]}
+        style={[StyleSheet.absoluteFill, styles.centre, { backgroundColor: GROUND }]}
       >
-        <Svg width={BOX} height={BOX} viewBox="0 0 64 64" style={styles.frame}>
-          <Path d={FRAME} fill="none" stroke={colours.frame} strokeWidth={1} />
-        </Svg>
-        <Animated.View style={sealStyle}>
-          {/* The civilization seals' bodies reach 5…59 of 64: at 100 they cover the frame's 84 as the neutral one does at 112. */}
-          <Seal testID="cold-start-seal" civ={theme.civ} size={theme.civ === "neutral" ? BOX : 100} theme={theme} glyphs={glyphs} ringStyle={ringStyle} />
+        <Animated.View testID="cold-start-mark-layer" style={markStyle}>
+          <Svg testID="cold-start-mark" width={BOX} height={(BOX * MARK_HEIGHT) / MARK_WIDTH} viewBox={VIEWBOX}>
+            <Defs>
+              <ClipPath id="cold-start-shape">
+                {SHAPE.map((d) => (
+                  <Path key={d} d={d} clipRule="evenodd" />
+                ))}
+              </ClipPath>
+            </Defs>
+            <G clipPath="url(#cold-start-shape)">
+              {STROKES.map(([d, width], i) => (
+                <Stroke key={d} d={d} width={width} length={LENGTHS[i]} drawn={drawn} />
+              ))}
+            </G>
+          </Svg>
         </Animated.View>
       </Pressable>
     </Animated.View>
   );
 }
 
+/** One stroke of the mark: a dash as long as the stroke, offset back to nothing as `drawn` goes 0 → 1. */
+function Stroke({ d, width, length, drawn }: { d: string; width: number; length: number; drawn: SharedValue<number> }) {
+  const props = useAnimatedProps(() => ({ strokeDashoffset: length * (1 - drawn.get()) }));
+  return (
+    <AnimatedPath
+      testID="cold-start-stroke"
+      d={d}
+      fill="none"
+      stroke={GOLD}
+      strokeWidth={width}
+      strokeLinejoin="round"
+      strokeDasharray={[length, length]}
+      animatedProps={props}
+    />
+  );
+}
+
 const styles = StyleSheet.create({
   centre: { alignItems: "center", justifyContent: "center" },
-  frame: { position: "absolute" },
 });
