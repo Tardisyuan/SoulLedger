@@ -48,11 +48,12 @@ export function PostCard({ post }: { post: Post }) {
         <div className="min-w-0 flex-1">
           <Link
             href={`/social/profile/${post.author}`}
+            title={name}
             className="block truncate text-sm font-medium text-[oklch(var(--color-ink))] hover:underline"
           >
             {name}
           </Link>
-          <p className="truncate whitespace-nowrap text-xs text-[oklch(var(--color-ink-muted))]">
+          <p title={`${formatDate(post.create_time)} · ${t(`social.visibility.${post.visibility}`)}`} className="truncate whitespace-nowrap text-xs text-[oklch(var(--color-ink-muted))]">
             <span className="font-mono tabular-nums">{formatDate(post.create_time)}</span>
             {" · "}
             <DomainEnum namespace="social.visibility" value={post.visibility} />
