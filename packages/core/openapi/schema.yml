@@ -27776,6 +27776,7 @@ components:
           - $ref: '#/components/schemas/BlankEnum'
         is_eternal:
           type: boolean
+          description: 不出狱、不轮回:落到此处的灵魂永不离开,也不再入轮回。判决落地时抄进处置(Disposition.is_eternal),之后以处置上的那一份为准。
         cycle_limit:
           type: integer
           nullable: true
@@ -27910,6 +27911,7 @@ components:
           - $ref: '#/components/schemas/BlankEnum'
         is_eternal:
           type: boolean
+          description: 不出狱、不轮回:落到此处的灵魂永不离开,也不再入轮回。判决落地时抄进处置(Disposition.is_eternal),之后以处置上的那一份为准。
         cycle_limit:
           type: integer
           nullable: true
@@ -28054,6 +28056,7 @@ components:
           nullable: true
         is_eternal:
           type: boolean
+          description: 不出狱、不轮回:落到此处的灵魂永不离开,也不再入轮回。判决落地时抄进处置(Disposition.is_eternal),之后以处置上的那一份为准。
         order:
           type: integer
           minimum: 1
@@ -28175,6 +28178,7 @@ components:
           description: Severity or bliss tier
         is_eternal:
           type: boolean
+          description: 不出狱、不轮回:落到此处的灵魂永不离开,也不再入轮回。判决落地时抄进处置(Disposition.is_eternal),之后以处置上的那一份为准。
         memory_reset_mechanism:
           oneOf:
           - $ref: '#/components/schemas/MemoryResetMechanismEnum'
