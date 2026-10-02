@@ -774,11 +774,6 @@
         "END": "Pehwy"
       },
       "signers": "Netjer Sesen",
-      "signer_label": "Netjer Sesen {{n}}",
-      "signer_add": "Redi Netjer Sesen",
-      "signer_remove": "Fekh",
-      "threshold": "Sesen Er Hry",
-      "threshold_hint": "Nen Sesh: Netjer Neb Sesen. Nen Sesen Er Hry: Khesef.",
       "signers_summary": "{{who}} · Sesen {{k}} / {{n}}",
       "timeout": {
         "label": "Unut Khetem",
@@ -794,7 +789,6 @@
         "hint": "Unut Khetem: Baku Ahet Maa Djes-Ef; Nen Ahet, Nen Iri.",
         "summary": "Unut {{hours}} · {{action}}"
       },
-      "reject_to": "Khesef Er",
       "reject_to_none": "— Nen: Pehwy —",
       "template_level": "Pet-Sesh Neb",
       "condition": {
@@ -858,6 +852,26 @@
       "exits_none": "Nen Wat Menkh",
       "exits_fixed": "Setep Em Wat Menkh · Wat Khesef Nen Setep",
       "exit_label": "Ren Wat",
+      "exit_add": "Redi Wat Setep",
+      "exit_target": "Setep Seth",
+      "exit_up": "Wat Em Tepy",
+      "exit_down": "Wat Em Khet",
+      "field": {
+        "name": "Ren",
+        "kind": "Iru",
+        "stage": "Iru Sekhet",
+        "court": "Wesekhet",
+        "approver": "Netjer Em Wedja",
+        "role": "Netjer",
+        "signers": "Netjer Sesen",
+        "threshold": "Sesen Er Hry",
+        "reject_to": "Khesef Er"
+      },
+      "threshold_of": "/ {{n}} Remetj",
+      "threshold_rule": "{{k}} / {{n}} Remetj Sesen: Menkh",
+      "signer_remove_named": "Fekh {{name}}",
+      "signer_placeholder": "Ren Netjer Sesen",
+      "signer_add_role": "Redi Netjer Sesen · Netjer",
       "preview_count": "Sekhet {{nodes}} · Wat {{edges}}",
       "flow_count": "Wat · Sekhet {{n}}",
       "glyph_legend": "▷ Tepy · □ Wedja · ◇ Setep · ■ Pehwy",
@@ -1032,7 +1046,9 @@
     "civ_empty": "Nen Sesh Djer · Sesh",
     "tab_ledger": "Medjat",
     "top_realms": "Ahet Tepy",
-    "avg_scope": "Ba Neb"
+    "avg_scope": "Ba Neb",
+    "occupancy": "Hesb Aq",
+    "bucket_width": "Hesb {{n}}"
   },
   "ledger": {
     "title": "Medew Nefer",
@@ -1218,7 +1234,9 @@
       "notes_placeholder": "Shesep Medu Seth...",
       "create_workflow": "Iri Wat Hesy",
       "create_workflow_hint": "Setep Seth: Em Khetem, Wat Hesy Iri Djes-Ef Em Tut En Taui Hena Sep.",
-      "conclude_with_workflow": "Khetem Hena Iri Wat Hesy"
+      "conclude_with_workflow": "Khetem Hena Iri Wat Hesy",
+      "current_realm": "Ta",
+      "method": "Iru En Wedja"
     },
     "create_success": "Wedja Iri Seth",
     "create_error": "Nen Iri Wedja",
@@ -1428,7 +1446,9 @@
         "ORIGINAL": "Wedja Tepy",
         "AMENDMENT": "Redi Hena Fekh",
         "REOPEN": "Wedja Wehem"
-      }
+      },
+      "col_merit_demerit": "Nefer / Isfet",
+      "col_cycle_kind": "Ankh / Iru"
     },
     "admission": {
       "title": "Medu Maat · Shesep Maat",
@@ -1489,6 +1509,11 @@
     },
     "row_mark": {
       "mine": "Shesep-I · Nen Iri Djer"
+    },
+    "methods": {
+      "STANDARD": "Wedja Tepy",
+      "HEART_WEIGHING": "Dens Ib",
+      "DIABOLICAL_TRIAL": "Wedja Isfet"
     }
   },
   "audit": {
@@ -2482,7 +2507,8 @@
       "sentence_requests": "Dbh Wetep",
       "assistant_admin": "Smen Hehy Medu"
     },
-    "queue": "Sepu Wedja"
+    "queue": "Sepu Wedja",
+    "about": "Tepy Hena Sesen"
   },
   "tenant": {
     "civilizations": {
@@ -4424,5 +4450,24 @@
       "floor_hint": "Sep Tepy Nen Er Mi Er Tepy: Hehy Medu Em Medu Seth Neb.",
       "rebuild_body": "Iri Seth Neb, Er Khemen; Nen Wehem Iri: Khent Wenen. Em Wehem Iri: Hehy Medu Wesheb Wenen."
     }
+  },
+  "plaque": {
+    "realms": "Ta · {{root}}",
+    "held": "Em Sekhet {{n}}",
+    "corpus": "Hep Sesh",
+    "corpus_meta": "Sesh {{works}} · Hep {{n}}",
+    "workflow_editor": "Khemen Wat Wedja",
+    "workflow_instance": "Wat Wedja Em Iri",
+    "step": "Wedja {{k}} / {{n}}",
+    "social": "Shemsu",
+    "social_meta": "Nehes {{following}} · Nehesu {{followers}}",
+    "post": "Sesh",
+    "comments": "Wesheb {{n}}",
+    "posts": "Sesh {{n}}",
+    "soul": "Ba",
+    "desk": "Wedja",
+    "queue": "Sepu Wedja",
+    "permissions": "Was",
+    "permissions_meta": "Netjeru {{roles}} · Was {{perms}}"
   }
 }

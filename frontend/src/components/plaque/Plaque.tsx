@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type ReactNode, type RefObject } from "react";
+import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type ReactNode, type RefObject } from "react";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { Seal } from "./Seal";
@@ -19,6 +19,26 @@ import { Seal } from "./Seal";
  * `collapsible`(壳里的那一条):吸在工具条下沿,页面滚过 60px 收成 48px,只留印与殿名
  * (v3 `is-compact`)。案号:后端没有这个字段,不画(用户 2026-10-01)。
  */
+
+/**
+ * 页面给身份带的题字 / 殿名 / 右栏(用户 2026-10-02 拍板)。没给的那一项退回壳的默认:题字 =
+ * 面包屑最后一段,殿名 = 租户展示名,右栏空。详情页的面包屑末段是「详情」或原始 id,所以
+ * 这些页自己报题字。值只来自 API —— 页面拿不到的部分传 undefined,不编。
+ */
+export type PlaqueText = { title?: string; meta?: string; hall?: string };
+
+const PlaqueContext = createContext<(text: PlaqueText | null) => void>(() => {});
+/** AppLayout 用:把 setter 交给页面。壳外(测试、登录页)没有 Provider,`usePlaque` 什么都不做。 */
+export const PlaqueProvider = PlaqueContext.Provider;
+
+/** 页面调用:挂载期间身份带用这几样;卸载时还给壳。 */
+export function usePlaque({ title, meta, hall }: PlaqueText): void {
+  const set = useContext(PlaqueContext);
+  useEffect(() => {
+    set({ title: title || undefined, meta: meta || undefined, hall: hall || undefined });
+    return () => set(null);
+  }, [set, title, meta, hall]);
+}
 
 const TIER_CLASS = [
   "font-title text-display whitespace-nowrap",
@@ -112,6 +132,7 @@ function useBandHeightVar(enabled: boolean, band: RefObject<HTMLElement | null>)
 export function Plaque({
   title,
   meta,
+  hall,
   heading = false,
   collapsible = false,
   short = false,
@@ -119,6 +140,8 @@ export function Plaque({
   title: string;
   /** 右栏(v3 的案号位)。≤ 768 不显示。 */
   meta?: ReactNode;
+  /** 殿名;不给就是租户展示名。 */
+  hall?: string;
   /** 壳外页(登录)没有 PageShell,那一页唯一的 <h1> 就是题字。 */
   heading?: boolean;
   /** 壳里的身份带:滚动时收成 48px。 */
@@ -136,7 +159,7 @@ export function Plaque({
   useBandHeightVar(collapsible, band);
   const start = ((narrow ? 1 : 0) + (short ? 1 : 0)) as 0 | 1 | 2;
   const [tier, setTier] = useState<0 | 1 | 2>(start);
-  const court = user?.tenant?.display_name || null;
+  const court = hall || user?.tenant?.display_name || null;
   const product = t("nav.title");
 
   useLayoutEffect(() => {

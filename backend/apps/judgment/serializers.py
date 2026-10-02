@@ -159,6 +159,12 @@ class JudgmentSerializer(FieldPermissionMixin, serializers.ModelSerializer):
     # 队列一行要显示的两个数,免得每行再请求一次灵魂与证据。
     karmic_balance = serializers.SerializerMethodField()
     evidence_count = serializers.SerializerMethodField()
+    # 队列「功 / 过」分列:灵魂此刻的两本账,分开给,不是净值 —— 所以不像 `karmic_balance`
+    # 那样只给中国(希腊两条并行的账、欧洲罪与罚分离,本来就是分开读的)。VIEWER 拿掉,同 SoulSerializer。
+    merit_score = serializers.IntegerField(source="soul.merit_score", read_only=True)
+    demerit_score = serializers.IntegerField(source="soul.demerit_score", read_only=True)
+    # 审判台「所在界域」:案子挂的那一站(`realm`),按请求语言给名字;没挂站是 null。
+    realm_name = serializers.SerializerMethodField()
 
     validate_judge = tenant_scoped("judge")
     # 行程拓扑契约的 `judgment.realm_id`。`Realm.objects` 滤掉软删的界域,但**不滤租户**
@@ -184,6 +190,8 @@ class JudgmentSerializer(FieldPermissionMixin, serializers.ModelSerializer):
             "claimed_by", "claimed_by_name", "claimed_at",
             "deferred_at", "deferred_by", "deferred_by_name", "defer_reason",
             "karmic_balance", "evidence_count",
+            # 世次(`cycle`,0 是第一世,判决创建时盖章)与审判方式,都是模型上已有的列,此前没出线。
+            "cycle", "judgment_method", "merit_score", "demerit_score", "realm_name",
         ]
         # 草稿各列只读:只有 `draft/`(带版本前提)写它们,见 JudgmentDraftService。
         # `kind` / `amends_plan_id` 只读:由服务端定(docs/ARCHITECTURE-sentence-plan.md §4),
@@ -193,6 +201,7 @@ class JudgmentSerializer(FieldPermissionMixin, serializers.ModelSerializer):
             "draft_verdict", "draft_saved_at", "draft_version",
             "draft_destination_realm_id", "draft_term_years", "draft_eternal",
             "claimed_by", "claimed_at", "deferred_at", "deferred_by", "defer_reason",
+            "cycle", "judgment_method",
         ]
 
     # Fields that only `conclude/` may write. Checked against `initial_data`
@@ -227,6 +236,10 @@ class JudgmentSerializer(FieldPermissionMixin, serializers.ModelSerializer):
             return None
         return obj.soul.karmic_balance
 
+    def get_realm_name(self, obj) -> str | None:
+        realm = obj.realm
+        return realm.get_localized_name(locale_from_context(self.context)) if realm is not None else None
+
     def get_evidence_count(self, obj) -> int:
         """`evidence_json` 的条目数 —— 详情页「事实」一栏标题旁的那个数
         (`JudgmentEvidenceColumn`,`Object.entries(evidence).length`)。"""
@@ -241,7 +254,8 @@ class JudgmentSerializer(FieldPermissionMixin, serializers.ModelSerializer):
         # judgment.read,而功过分数对 VIEWER 的隐藏是写死的底线(SoulSerializer 的
         # docstring:数据库规则只能收窄,不能放宽)。这里守同一条底线。
         if _is_viewer(self.context):
-            data.pop("karmic_balance", None)
+            for field in ("karmic_balance", "merit_score", "demerit_score"):
+                data.pop(field, None)
         return data
 
     def validate_soul(self, value):

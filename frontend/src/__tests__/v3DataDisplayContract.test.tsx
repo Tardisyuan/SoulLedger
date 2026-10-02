@@ -164,15 +164,39 @@ describe("batch bar (v3 .ds-batch, inverted)", () => {
     ]);
   });
 
-  it.each(BARS.map((b) => [b.file, b.src] as const))("%s: every button on the bar is inverse, and nothing on it is inked", (_file, src) => {
+  // One exception (用户 2026-10-02, Design A6): a bar may carry exactly ONE solid primary action —
+  // a `<Button>` whose own className paints it surface-1 with ink text (the unsaved bar's 保存).
+  // Anything else surface-1 / canvas grounded or ink-family texted on the bar is still refused.
+  const solidActions = (bar: string) =>
+    [...bar.matchAll(/<(\w+)\b[^>]*?className="([^"]*)"/g)].filter((m) => /bg-\[oklch\(var\(--color-surface-1\)\)\]/.test(m[2]));
+  const barOf = (src: string) => {
     const start = src.indexOf("${BATCH_BAR}");
-    const bar = src.slice(start, src.indexOf("</div>", start));
+    return src.slice(start, src.indexOf("</div>", start));
+  };
+
+  it.each(BARS.map((b) => [b.file, b.src] as const))("%s: every button on the bar is inverse, and nothing on it is inked", (_file, src) => {
+    const bar = barOf(src);
     const variants = [...bar.matchAll(/variant="(\w+)"/g)].map((m) => m[1]);
     expect(variants.length).toBeGreaterThan(1);
     expect(variants.filter((v) => v !== "inverse")).toEqual([]);
+    const solid = solidActions(bar);
+    expect(solid.length).toBeLessThanOrEqual(1);
+    for (const [, tag, cls] of solid) {
+      expect(tag).toBe("Button");
+      expect(cls.split(" ")).toContain("text-[oklch(var(--color-ink))]");
+    }
+    const rest = solid.reduce((b, m) => b.replace(m[2], ""), bar);
     // Ink-family text on an ink ground is 1:1 (ink) or ~2–3:1 (subtle / muted).
-    expect(bar).not.toMatch(/text-\[oklch\(var\(--color-ink(-\w+)?\)\)\]/);
-    expect(bar).not.toMatch(/bg-\[oklch\(var\(--color-(canvas|surface-\d)\)\)\]/);
+    expect(rest).not.toMatch(/text-\[oklch\(var\(--color-ink(-\w+)?\)\)\]/);
+    expect(rest).not.toMatch(/bg-\[oklch\(var\(--color-(canvas|surface-\d)\)\)\]/);
+  });
+
+  it("the permission matrix's unsaved bar uses that one exception: 保存 is solid surface-1 / ink / 600", () => {
+    const bar = barOf(BARS.find((b) => b.file === "src/components/permissions/MatrixBanners.tsx")!.src);
+    const solid = solidActions(bar);
+    expect(solid).toHaveLength(1);
+    expect(solid[0][2].split(" ")).toEqual(expect.arrayContaining(["font-semibold", "text-[oklch(var(--color-ink))]"]));
+    expect(bar.slice(bar.indexOf(solid[0][0]))).toMatch(/^<Button[\s\S]*?onClick=\{onSave\}/);
   });
 });
 

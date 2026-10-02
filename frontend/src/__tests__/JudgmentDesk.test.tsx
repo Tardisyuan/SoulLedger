@@ -287,6 +287,39 @@ describe("引用签与律条检索", () => {
   });
 });
 
+describe("甲 · 灵魂栏的所在界域、审判方式、世次 / 种类", () => {
+  const meta = (label: string) =>
+    within(screen.getByRole("region", { name: tZh("judgment.queue.case") }))
+      .getByText(label, { selector: "dt" })
+      .nextElementSibling as HTMLElement;
+
+  it("读 realm_name / judgment_method / cycle + kind;方式是译名,原始成员在 title", async () => {
+    judgmentApi.get.mockResolvedValue({
+      data: judgment({ realm_name: "第七殿 · 泰山王司", judgment_method: "HEART_WEIGHING", cycle: 3, kind: "AMENDMENT" }),
+    });
+    renderPage();
+    await screen.findByText("第七殿 · 泰山王司");
+    expect(meta(tZh("judgment.detail.current_realm"))).toHaveTextContent(/^第七殿 · 泰山王司$/);
+    const method = meta(tZh("judgment.detail.method"));
+    expect(method).toHaveTextContent(tZh("judgment.methods.HEART_WEIGHING"));
+    expect(method.querySelector('[title="HEART_WEIGHING"]')).not.toBeNull();
+    expect(method).not.toHaveTextContent(tZh("judgment.methods.STANDARD"));
+    expect(screen.getByTestId("desk-life-kind")).toHaveTextContent(
+      `${tZh("souls.detail.life_number", { n: "4" })} / ${tZh("judgment.claim.kinds.AMENDMENT")}`
+    );
+  });
+
+  it("案子没挂界域:写「未记录」,不拿殿名充数", async () => {
+    judgmentApi.get.mockResolvedValue({ data: judgment({ realm_name: null, judgment_method: "STANDARD", cycle: 0 }) });
+    renderPage();
+    await screen.findByTestId("desk-life-kind");
+    const realmCell = meta(tZh("judgment.detail.current_realm"));
+    expect(realmCell.querySelector('[data-missing="unrecorded"]')).not.toBeNull();
+    expect(realmCell).not.toHaveTextContent("第五殿");
+    expect(screen.getByTestId("desk-life-kind")).toHaveTextContent(tZh("souls.detail.life_number", { n: "1" }));
+  });
+});
+
 describe("卷栏与队列进度条", () => {
   it("功过按 reading 画(收 / 支 / 结),前世列出来,进度条给出本案在队列里的位置", async () => {
     renderPage();

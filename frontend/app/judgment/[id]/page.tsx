@@ -70,6 +70,7 @@ import {
   type Placement,
 } from "@/src/components/judgment/JudgmentPlacement";
 import { useJudgmentNextAfter, useJudgmentPrevious } from "@soulledger/core/hooks/useJudgments";
+import { usePlaque } from "@/src/components/plaque/Plaque";
 
 /**
  * 判决书 —— the judgment detail page.
@@ -429,6 +430,9 @@ export default function JudgmentDetailPage({ params }: PageProps) {
     </Link>
   );
 
+  // 身份带:题「审判台」(v3 `pageTitle`;面包屑末段是「详情」)。案号后端没有,不写右栏。
+  usePlaque({ title: t("plaque.desk") });
+
   if (isLoading) {
     return <PageSpinner label={t("judgment.detail.loading")} />;
   }
@@ -693,6 +697,20 @@ export default function JudgmentDetailPage({ params }: PageProps) {
             <MetaRow label={t("judgment.detail.civilization")}>{civilisation}</MetaRow>
             <MetaRow label={t("judgment.detail.court")}>
               <DomainText value={judgment.court} />
+            </MetaRow>
+            {/* v3 灵魂栏:所在界域(案子挂的那一站 `realm_id`,没挂写「未记录」)· 审判方式 · 世次 / 种类。 */}
+            <MetaRow label={t("judgment.detail.current_realm")}>
+              <DomainText value={judgment.realm_name} />
+            </MetaRow>
+            <MetaRow label={t("judgment.detail.method")}>
+              <DomainEnum namespace="judgment.methods" value={judgment.judgment_method} />
+            </MetaRow>
+            <MetaRow label={t("judgment.claim.col_cycle_kind")}>
+              <span data-testid="desk-life-kind">
+                {judgment.cycle == null ? <MissingValue kind="unrecorded" /> : t("souls.detail.life_number", { n: String(judgment.cycle + 1) })}
+                {" / "}
+                <DomainEnum namespace="judgment.claim.kinds" value={judgment.kind} />
+              </span>
             </MetaRow>
             <MetaRow label={t("judgment.created")}>
               <span className="font-mono tabular-nums">{formatDate(judgment.created_at)}</span>

@@ -9,12 +9,18 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { EmptyState } from "@/src/components/ui/EmptyState";
 import { Skeleton } from "@/components/ui/skeleton";
+import { usePlaque } from "@/src/components/plaque/Plaque";
 
 export default function PostDetailPage() {
   const { t } = useI18n();
   const params = useParams();
   const id = params.id as string;
   const { data: post, isLoading, error } = usePost(id);
+  // 身份带(A5 详情):题「帖子」,右栏「评论 N」。
+  usePlaque({
+    title: t("plaque.post"),
+    meta: post ? t("plaque.comments", { n: String(post.comment_count) }) : undefined,
+  });
 
   return (
     <PageShell

@@ -55,8 +55,9 @@ import { MISSING_LABEL_KEY } from "@/src/lib/domainDisplay";
  * 批量只做认领、改派、暂缓(brief §4.2:不做批量裁决)。`/judgment/batch/` 全有或全无、
  * 一次至多 100 件;被拒时整批回滚,拒绝码说是哪一件、为什么。
  *
- * v3 有、这里没有的列(后端没有这些字段,不编):案号 SL-…(只有 UUID,IDENTIFIER_POLICY 不印)、
- * 世次、功 / 过分列(列表只给净余额 `karmic_balance`)。
+ * v3 有、这里没有的列(后端没有这些字段,不编):案号 SL-…(只有 UUID,IDENTIFIER_POLICY 不印)。
+ * 「功 / 过」分列读 `merit_score` / `demerit_score`(灵魂此刻的两本账,四个文明都有;VIEWER 拿不到,
+ * 写「未记录」);「世次 / 种类」读 `cycle`(0 是第一世)与 `kind`。
  *
  * 尺寸照 v3(2026-10-01 拍板):行 `min-height: 64px`、表头 44、工具条控件 44、行尾「⋯」列 44。
  * 「⋯」菜单(v3 `.queue-row` 最后一格):认领 / 取消认领 / 延后 / 改派…,按权限出现 ——
@@ -434,11 +435,11 @@ export function JudgmentClaimQueue() {
             {canExecute && <th scope="col" className="w-6"><span className="sr-only">{t("judgment.claim.select")}</span></th>}
             <th scope="col" className="px-2 py-1 text-left font-normal">{t("judgment.soul_name")}</th>
             <th scope="col" className="px-2 py-1 text-left font-normal max-md:hidden">{t("judgment.court")}</th>
-            <th scope="col" className="px-2 py-1 text-right font-normal">{t("judgment.claim.balance")}</th>
+            <th scope="col" className="px-2 py-1 text-right font-normal">{t("judgment.claim.col_merit_demerit")}</th>
             <th scope="col" className="px-2 py-1 text-left font-normal max-lg:hidden">{t("judgment.claim.col_draft")}</th>
             <th scope="col" className="px-2 py-1 text-left font-normal">{t("judgment.claim.claimant")}</th>
             <th scope="col" className="px-2 py-1 text-left font-normal max-md:hidden">{t("judgment.claim.col_deferred")}</th>
-            <th scope="col" className="px-2 py-1 text-left font-normal max-xl:hidden">{t("judgment.claim.col_kind")}</th>
+            <th scope="col" className="px-2 py-1 text-left font-normal max-xl:hidden">{t("judgment.claim.col_cycle_kind")}</th>
             <th scope="col" className="px-2 py-1 text-right font-normal max-xl:hidden">{t("judgment.detail.evidence")}</th>
             <th scope="col" className="px-2 py-1 text-right font-normal max-sm:hidden">{t("judgment.waiting")}</th>
             <th scope="col" className="w-11"><span className="sr-only">{t("common.row_actions")}</span></th>
@@ -526,9 +527,11 @@ export function JudgmentClaimQueue() {
                       <td className="px-2 text-xs text-[oklch(var(--color-ink-muted))] whitespace-nowrap max-w-48 truncate max-md:hidden" title={[j.court, j.judge_name].filter(Boolean).join(" · ") || undefined}>
                         {[j.court, j.judge_name].filter(Boolean).join(" · ") || <MissingValue kind="unrecorded" />}
                       </td>
-                      <td className="px-2 text-right text-xs">
-                        {/* 余额只有功过格有;别的文明服务端给 null,是「不适用」不是「没记」。 */}
-                        <DomainNumber value={j.karmic_balance} signed toned missingKind={j.karmic_balance === null ? "inapplicable" : "unrecorded"} />
+                      <td className="px-2 text-right text-xs whitespace-nowrap" data-testid="merit-demerit-cell">
+                        {/* 功 / 过分开写(v3 `<b>功</b> / 过`),不是净值;VIEWER 两个字段都不在,写「未记录」。 */}
+                        <DomainNumber value={j.merit_score} className="font-semibold text-[oklch(var(--color-ink))]" />
+                        <span className="text-[oklch(var(--color-ink-muted))]"> / </span>
+                        <DomainNumber value={j.demerit_score} className="text-[oklch(var(--color-ink-muted))]" />
                       </td>
                       <td className="px-2 text-xs whitespace-nowrap max-lg:hidden" data-testid="draft-cell">
                         {/* 草拟判决:字形 + 文字,不单靠颜色。没拟过的写「未拟」,不是「未记录」。 */}
@@ -579,8 +582,14 @@ export function JudgmentClaimQueue() {
                             ? t("judgment.claim.deferred_session")
                             : null}
                       </td>
-                      <td className="px-2 text-xs whitespace-nowrap text-[oklch(var(--color-ink-muted))] max-xl:hidden">
-                        <DomainEnum namespace="judgment.claim.kinds" value={j.kind} />
+                      <td className="px-2 text-xs whitespace-nowrap text-[oklch(var(--color-ink-muted))] max-xl:hidden" data-testid="cycle-kind-cell">
+                        {/* 世次在上(cycle 0 = 第 1 世),种类小字在下(v3 `第四世<small>初审</small>`)。 */}
+                        <span className="block text-[oklch(var(--color-ink))]">
+                          {j.cycle == null ? <MissingValue kind="unrecorded" /> : t("souls.detail.life_number", { n: String(j.cycle + 1) })}
+                        </span>
+                        <span className="block text-2xs">
+                          <DomainEnum namespace="judgment.claim.kinds" value={j.kind} />
+                        </span>
                       </td>
                       <td className="px-2 text-right text-xs max-xl:hidden">
                         <DomainNumber value={j.evidence_count} />

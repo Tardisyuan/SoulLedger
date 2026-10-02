@@ -62,7 +62,7 @@ from apps.social.serializers import (
     UserProfileUpdateSerializer,
 )
 from apps.social.services import CommentService, FollowService, PostService, ReactionService
-from apps.social.soul_circle import SocialError
+from apps.social.soul_circle import SocialError, reaction_kind_counts
 from apps.social.soul_serializers import SoulPostMediaUploadSerializer, SoulSocialErrorSerializer
 from apps.social.visibility import visible_posts
 
@@ -103,7 +103,13 @@ class PostViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, viewsets.ModelVie
         qs = scope_to_tenant(super().get_queryset(), self.request)
         # The visibility clause lived here and only here. See
         # apps/social/visibility.py for what that cost.
-        return visible_posts(self.request, qs).prefetch_related(WITH_MEDIA).order_by("-create_time")
+        # 五种表态各自的数(`PostSerializer.reaction_counts`);每页一次聚合。图随帖子一次预取。
+        return (
+            visible_posts(self.request, qs)
+            .annotate(**reaction_kind_counts())
+            .prefetch_related(WITH_MEDIA)
+            .order_by("-create_time")
+        )
 
     def perform_create(self, serializer):
         """Images are attached in the same transaction as the post: one that
@@ -140,7 +146,7 @@ class PostViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, viewsets.ModelVie
             author_id__in=following_ids,
             visibility__in=["PUBLIC", "FOLLOWERS"],
             tenant=tenant,
-        ).select_related("author").prefetch_related(WITH_MEDIA).order_by("-create_time")
+        ).select_related("author").annotate(**reaction_kind_counts()).prefetch_related(WITH_MEDIA).order_by("-create_time")
         context = self.get_serializer_context()
         page = self.paginate_queryset(qs)
         if page is not None:

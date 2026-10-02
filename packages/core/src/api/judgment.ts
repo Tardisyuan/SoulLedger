@@ -10,9 +10,6 @@ import type { PaginatedResponse } from "./users";
  * this shape; the detail (`GET /judgment/{id}/`) returns `JudgmentDetail`,
  * which adds the evidence rulings and the admitted balance.
  *
- * `judgment_method` was declared here and is not in the serializer's field
- * list; it never arrives.
- *
  * The serializer mixes in FieldPermissionMixin, which can strip fields
  * per-role from DB-configured rules, so everything past the identity fields
  * is optional in principle.
@@ -83,6 +80,18 @@ export interface Judgment {
   karmic_balance?: number | null;
   /** Entries in `evidence_json` — the number the detail page's facts column shows. */
   evidence_count?: number;
+  /** 第几世:0 是第一世(`Judgment.cycle`,创建时按灵魂的转世次数盖章)。显示用 `cycle + 1`。 */
+  cycle?: number;
+  /** 审判方式(`Judgment.judgment_method`),只读。 */
+  judgment_method?: "STANDARD" | "HEART_WEIGHING" | "DIABOLICAL_TRIAL";
+  /**
+   * 灵魂此刻的功 / 过两本账,分开给(队列「功 / 过」)。不是净值,所以四个文明都有;
+   * VIEWER 拿不到(字段不在),同 `karmic_balance`。
+   */
+  merit_score?: number;
+  demerit_score?: number;
+  /** 案子所挂界域(`realm_id`)按请求语言的名字;没挂是 null。 */
+  realm_name?: string | null;
 }
 
 type Schemas = components["schemas"];

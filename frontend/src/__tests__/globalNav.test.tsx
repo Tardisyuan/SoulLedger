@@ -83,6 +83,7 @@ jest.mock("@/src/hooks/useSidebarMenus", () => ({
 
 import { AppLayout } from "@/src/components/layout/AppLayout";
 import { GlobalNav, NAV_MODE_KEY, iconResolver } from "@/src/components/layout/GlobalNav";
+import { usePlaque } from "@/src/components/plaque/Plaque";
 
 const ALL_PATHS = ["/dashboard", "/souls", "/menus", "/soul-credentials", "/audit"];
 
@@ -331,6 +332,46 @@ describe("长标签(egy)在 252 里截断,全文在 title", () => {
     expect(label).toHaveAttribute("title", "Sekhem Tepy Em Djeret");
     expect(label.className).toMatch(/(^|\s)truncate(\s|$)/);
     expect(label.className).toMatch(/(^|\s)min-w-0(\s|$)/);
+  });
+});
+
+// 身份带的题字 / 殿名 / 右栏由页面经 `usePlaque` 给(用户 2026-10-02);没给就是面包屑末段。
+describe("usePlaque:页面给身份带的题字", () => {
+  function Page({ text }: { text: { title?: string; meta?: string; hall?: string } }) {
+    usePlaque(text);
+    return <>page body</>;
+  }
+  function renderWith(children: ReactNode) {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const Wrapper = ({ children: c }: { children: ReactNode }) => <QueryClientProvider client={client}>{c}</QueryClientProvider>;
+    return render(<AppLayout>{children}</AppLayout>, { wrapper: Wrapper });
+  }
+  const band = () => screen.getByTestId("plaque");
+  const title = () => band().querySelector("[data-tier]");
+
+  it("没有页面报题字时,题字是面包屑末段,右栏不画", () => {
+    renderWith("page body");
+    expect(title()).toHaveTextContent("菜单");
+    expect(band().querySelector(".identity-case")).toBeNull();
+  });
+
+  it("页面报的题字、殿名、右栏取代默认;页面离开后还给面包屑", () => {
+    const { rerender } = renderWith(<Page text={{ title: "审批实例", meta: "生死簿复核 v3 · 第 4 / 6 步", hall: "酆都 · 第三殿" }} />);
+    expect(title()).toHaveTextContent("审批实例");
+    expect(title()).not.toHaveTextContent("菜单");
+    expect(band().querySelector(".identity-case")).toHaveTextContent("生死簿复核 v3 · 第 4 / 6 步");
+    expect(band().querySelector(".identity-court")).toHaveTextContent("酆都 · 第三殿");
+
+    rerender(<AppLayout>page body</AppLayout>);
+    expect(title()).toHaveTextContent("菜单");
+    expect(band().querySelector(".identity-case")).toBeNull();
+    expect(band().querySelector(".identity-court")).toBeNull();
+  });
+
+  it("只报右栏、题字留空(数据没到)时,题字仍是面包屑末段", () => {
+    renderWith(<Page text={{ title: undefined, meta: "在押 3" }} />);
+    expect(title()).toHaveTextContent("菜单");
+    expect(band().querySelector(".identity-case")).toHaveTextContent("在押 3");
   });
 });
 
