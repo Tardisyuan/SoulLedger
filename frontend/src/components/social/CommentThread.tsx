@@ -78,7 +78,7 @@ function CommentItem({ comment, parent, depth, onReply, children }: {
             {formatDate(comment.create_time)}
           </span>
         </div>
-        <p className="whitespace-pre-wrap text-md text-[oklch(var(--color-ink))]">{comment.content}</p>
+        <p className="whitespace-pre-wrap text-md font-normal text-[oklch(var(--color-ink))]">{comment.content}</p>
         <div className="flex flex-wrap items-center gap-3">
           <button type="button" onClick={() => onReply(comment.id)} className={ACTION}>
             {t("soul_app.circle.comment.reply")}
@@ -202,7 +202,7 @@ export function CommentThread({ postId, count }: { postId: string; count?: numbe
             onChange={(e) => setNewComment(e.target.value)}
             placeholder={t("social.add_comment")}
             aria-label={t("social.add_comment")}
-            className={cn(fieldControl({ size: "md" }), "min-w-0 flex-1 text-md")}
+            className={cn(fieldControl({ size: "md" }), "min-w-0 flex-1 text-md font-normal")}
           />
           <Button type="submit" variant="primary" disabled={!newComment.trim()} loading={createComment.isPending}>
             {t("social.send")}

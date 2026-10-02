@@ -45,7 +45,7 @@ export function ProfileCard({ profile }: { profile: UserProfile }) {
           {profile.username}
         </h2>
         {profile.bio && (
-          <p className="whitespace-pre-wrap text-md text-[oklch(var(--color-ink-muted))]">{profile.bio}</p>
+          <p className="whitespace-pre-wrap text-md font-normal text-[oklch(var(--color-ink-muted))]">{profile.bio}</p>
         )}
         <dl className="flex flex-wrap gap-6 text-sm">
           {counts.map(([n, label]) => (

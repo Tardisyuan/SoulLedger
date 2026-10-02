@@ -73,7 +73,7 @@ export function PostCard({ post }: { post: Post }) {
       </div>
 
       <Link href={`/social/${post.id}`} className="block">
-        <p className="whitespace-pre-wrap text-md text-pretty text-[oklch(var(--color-ink))]">{post.content}</p>
+        <p className="whitespace-pre-wrap text-md font-normal text-pretty text-[oklch(var(--color-ink))]">{post.content}</p>
       </Link>
 
       <div className="border-t border-[oklch(var(--color-line))] pt-2">

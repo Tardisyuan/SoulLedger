@@ -46,7 +46,7 @@ export function PostComposer({ onPosted }: { onPosted?: () => void }) {
         placeholder={t("social.placeholder")}
         aria-label={t("social.placeholder")}
         rows={3}
-        className={cn(fieldControl({ size: "md" }), "min-h-18 px-3 py-[10px] text-md")}
+        className={cn(fieldControl({ size: "md" }), "min-h-18 px-3 py-[10px] text-md font-normal")}
       />
       <div className="flex flex-wrap items-center gap-2">
         <label className="contents">
