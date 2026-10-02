@@ -199,7 +199,7 @@ export function WorkflowInspector({
   issues,
   selectedId,
   onSelect,
-  onEdit,
+  nodeForm,
   validationId,
   tab,
   onTab,
@@ -214,8 +214,8 @@ export function WorkflowInspector({
   issues: readonly FlowIssue[];
   selectedId: string | null;
   onSelect: (id: string) => void;
-  /** Absent in the read-only view. */
-  onEdit?: (id: string) => void;
+  /** The 节点 tab's edit form (v3 A1). Absent in the read-only view, which lists the fields instead. */
+  nodeForm?: (node: Node) => ReactNode;
   validationId: string;
   tab: InspectorTab;
   onTab: (tab: InspectorTab) => void;
@@ -285,33 +285,31 @@ export function WorkflowInspector({
                   {t(`workflow.editor.role.${role}`)} · <span className="font-mono">N{idx + 1}</span>
                 </p>
               </div>
+              {nodeForm?.(node)}
+              {/* Read-only: every field as text. Editable: the form above
+                  carries the fields, and only the two routes stay as text —
+                  they are edges, edited on the canvas and in 出口. */}
               <dl className="grid grid-cols-[72px_minmax(0,1fr)] gap-x-3">
-                {field(t("workflow.editor.node_name"), nodeName(node, t))}
-                {field(t("workflow.editor.kind_label"), `${KIND_GLYPH[kindOf(node)]} ${t(`workflow.editor.kind.${kindOf(node)}`)}`)}
-                {field(t("workflow.editor.node_type"), String(node.data.nodeType ?? ""), true)}
-                {field(t("workflow.editor.court_code"), String(node.data.courtCode ?? ""))}
-                {field(
-                  t("workflow.editor.approver_type"),
-                  node.data.approverType ? t(`workflow.approver_types.${String(node.data.approverType)}`) : ""
+                {!nodeForm && (
+                  <>
+                    {field(t("workflow.editor.node_name"), nodeName(node, t))}
+                    {field(t("workflow.editor.kind_label"), `${KIND_GLYPH[kindOf(node)]} ${t(`workflow.editor.kind.${kindOf(node)}`)}`)}
+                    {field(t("workflow.editor.node_type"), String(node.data.nodeType ?? ""), true)}
+                    {field(t("workflow.editor.court_code"), String(node.data.courtCode ?? ""))}
+                    {field(
+                      t("workflow.editor.approver_type"),
+                      node.data.approverType ? t(`workflow.approver_types.${String(node.data.approverType)}`) : ""
+                    )}
+                    {field(t("workflow.editor.approver_role"), String(node.data.approverRole ?? ""), true)}
+                    {kindOf(node) === "COUNTERSIGN" && field(t("workflow.editor.signers"), signersText(node, t))}
+                    {field(t("workflow.editor.timeout.label"), timeoutText(node, t))}
+                  </>
                 )}
-                {field(t("workflow.editor.approver_role"), String(node.data.approverRole ?? ""), true)}
-                {kindOf(node) === "COUNTERSIGN" && field(t("workflow.editor.signers"), signersText(node, t))}
-                {field(t("workflow.editor.timeout.label"), timeoutText(node, t))}
                 {field(t("workflow.editor.branch.pass"), exitText("pass", node, nodes, edges, t))}
                 {kindOf(node) !== "END" &&
                   kindOf(node) !== "NOTIFY" &&
                   field(t("workflow.editor.branch.fail"), exitText("fail", node, nodes, edges, t))}
               </dl>
-              {onEdit && (
-                <button
-                  type="button"
-                  onClick={() => onEdit(node.id)}
-                  className="self-start h-(--control-h-sm) px-3 inline-flex items-center gap-2 border border-[oklch(var(--color-line-strong))] text-sm font-medium text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))]"
-                >
-                  {t("workflow.editor.edit_node")}
-                  <kbd className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">E</kbd>
-                </button>
-              )}
               {nodeExtras?.(node)}
             </>
           ) : (

@@ -76,7 +76,7 @@ import {
 import { Button } from "@/src/components/ui/Button";
 import { Badge } from "@/src/components/ui/Badge";
 import { SAVE_BLOCKING, branchOf, nodeRoles, validateFlow, whenOf } from "@/src/components/workflow/workflowValidation";
-import { whenText } from "@/src/components/workflow/workflowConditions";
+import { defaultClause, whenText } from "@/src/components/workflow/workflowConditions";
 import {
   ApproverPreviewSection,
   ExitConditionsSection,
@@ -84,10 +84,10 @@ import {
 } from "@/src/components/workflow/WorkflowInspectorExtras";
 import { useWideViewport } from "@/src/hooks/useWideViewport";
 import {
-  NodeEditModal,
+  NodeEditForm,
+  nodeNameFieldId,
   type NodeDataUpdates,
-  type NodeEditData,
-} from "@/src/components/workflow/NodeEditModal";
+} from "@/src/components/workflow/NodeEditForm";
 import { useToast } from "@/src/contexts/ToastContext";
 import type { TemplatePreviewData } from "@/src/components/workflow/page/types";
 import { QueryError } from "@/src/components/ui/PageError";
@@ -329,8 +329,6 @@ export default function WorkflowEditor({
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesStateChange] = useEdgesState<Edge>([]);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
-  const [editModalOpen, setEditModalOpen] = useState(false);
-  const [editData, setEditData] = useState<NodeEditData | null>(null);
   /** v3 A1 inspector tab; 「! 校验 · N」 opens 问题, a card click opens 节点. */
   const [inspectorTab, setInspectorTab] = useState<InspectorTab>("node");
   /** The exit the 出口 tab is on — drawn in ink on the canvas. */
@@ -581,12 +579,16 @@ export default function WorkflowEditor({
       // serializer's ChoiceField takes null for "none", and "" is what the
       // form holds.
       kind: (n.data.kind as TemplateNode["kind"]) ?? "APPROVAL",
-      signers: (n.data.signers as TemplateSigner[] | undefined) ?? [],
-      threshold: (n.data.threshold as number | null | undefined) ?? null,
+      // Signers and threshold only on a 会签, the escalation role only on
+      // ESCALATE — the shaping the old modal did on 保存. The inspector form
+      // writes live and keeps them in `data` across a 类别 switch, so they
+      // are dropped here, where the payload is built.
+      signers: n.data.kind === "COUNTERSIGN" ? ((n.data.signers as TemplateSigner[] | undefined) ?? []) : [],
+      threshold: n.data.kind === "COUNTERSIGN" ? ((n.data.threshold as number | null | undefined) ?? null) : null,
       reject_to: (n.data.rejectTo as string | null | undefined) ?? null,
       timeout_hours: (n.data.timeoutHours as number | null | undefined) ?? null,
       timeout_action: ((n.data.timeoutAction as TemplateNode["timeout_action"]) || null),
-      timeout_role: (n.data.timeoutRole as string | undefined) || null,
+      timeout_role: n.data.timeoutAction === "ESCALATE" ? (n.data.timeoutRole as string | undefined) || null : null,
       // Rounded because these are pixels on a canvas, not measurements: the
       // drag handler produces long floats and storing them makes every save a
       // diff even when nothing moved.
@@ -944,31 +946,40 @@ export default function WorkflowEditor({
     setSelectedNodeId(null);
   }, [selectedNodeId, setNodes, setEdges, stopLayoutTravel]);
 
-  // Handle node double-click to edit
-  const handleNodeEdit = useCallback((nodeId: string) => {
-    const node = nodes.find((n) => n.id === nodeId);
-    if (node) {
-      setEditData({
-        id: nodeId,
-        node_name: node.data.label as string,
-        node_type: node.data.nodeType as NodeEditData["node_type"],
-        court_code: (node.data.courtCode as string) || "",
-        approver_role: (node.data.approverRole as string) || "",
-        approver_type: (node.data.approverType as NodeEditData["approver_type"]) || "ROLE",
-        kind: (node.data.kind as NodeEditData["kind"]) || "APPROVAL",
-        signers: (node.data.signers as TemplateSigner[] | undefined) ?? [],
-        threshold: (node.data.threshold as number | null | undefined) ?? null,
-        timeout_hours: (node.data.timeoutHours as number | null | undefined) ?? null,
-        timeout_action: (node.data.timeoutAction as NodeEditData["timeout_action"]) || "",
-        timeout_role: (node.data.timeoutRole as string | undefined) || "",
-        reject_to: (node.data.rejectTo as string | null | undefined) ?? null,
-      });
-      setEditModalOpen(true);
-    }
-  }, [nodes]);
+  /**
+   * Select a node from outside the canvas — the linear preview and the issue
+   * list. Writes xyflow's own `selected` flag too, so the card shows the focus
+   * ring the canvas would have given it.
+   */
+  const selectNode = useCallback(
+    (nodeId: string) => {
+      stopLayoutTravel();
+      setSelectedNodeId(nodeId);
+      setNodes((nds) => nds.map((n) => (!!n.selected === (n.id === nodeId) ? n : { ...n, selected: n.id === nodeId })));
+    },
+    [setNodes, stopLayoutTravel]
+  );
 
   /**
-   * `E` on the focused node opens that node's edit modal.
+   * 编辑节点 — `E` on a card, or a double-click: select the node, open the
+   * inspector's 节点 tab and put focus in its first field (名称). The form is
+   * the inspector itself now (v3 A1, 用户 10-02), so there is nothing to open
+   * and nothing to seed: `flushSync` commits the selection and the tab so the
+   * field exists before it is focused.
+   */
+  const handleNodeEdit = useCallback(
+    (nodeId: string) => {
+      flushSync(() => {
+        selectNode(nodeId);
+        setInspectorTab("node");
+      });
+      document.getElementById(nodeNameFieldId(formId))?.focus();
+    },
+    [selectNode, formId]
+  );
+
+  /**
+   * `E` on the focused node moves focus to that node's form in the inspector.
    *
    * ON THE CANVAS CONTAINER, not on the nodes and not on `window`.
    *
@@ -998,16 +1009,13 @@ export default function WorkflowEditor({
       // listed — `event.key` is then "E", which lowercases to the same key.
       if (event.metaKey || event.ctrlKey || event.altKey) return;
       if (event.key.toLowerCase() !== EDIT_NODE_KEY) return;
-      // Already editing. Re-entering would re-seed `editData` from `nodes` and
-      // throw away whatever the operator has typed into the open form.
-      if (editModalOpen) return;
       // NO `isTextEntry` GUARD HERE, AND THAT IS THE MEASURED DECISION.
       // One was written, and removed for failing to earn its place: deleting
       // it left `WorkflowEditor.test.tsx` at 26 passed and `e2e/workflow.spec`
       // at 14 passed, with md5 confirming the deletion reached disk. The case
       // it would defend is already carried by the `.react-flow__node` lookup
-      // below — every text control in this editor (four toolbar fields, five
-      // modal fields) sits OUTSIDE a card, so `closest` returns null first,
+      // below — every text control in this editor (the toolbar fields, the
+      // inspector form) sits OUTSIDE the canvas, so `closest` returns null first,
       // and no card contains an input. `does NOT open when E is typed into the
       // template-name input` goes red when that lookup is removed, which is
       // where the toolbar case actually lives.
@@ -1031,7 +1039,7 @@ export default function WorkflowEditor({
       event.preventDefault();
       handleNodeEdit(nodeId);
     },
-    [editModalOpen, handleNodeEdit]
+    [handleNodeEdit]
   );
 
   /**
@@ -1145,17 +1153,56 @@ export default function WorkflowEditor({
   );
 
   /**
-   * Select a node from outside the canvas — the linear preview and the issue
-   * list. Writes xyflow's own `selected` flag too, so the card shows the focus
-   * ring the canvas would have given it.
+   * ↑ / ↓ on a conditional exit: swap it with its neighbour among the node's
+   * conditional PASS edges. The order IS persisted — `getTemplateNodes` emits
+   * `branches` in edge order and `workflowEditorGraph` rebuilds edges in
+   * `branches` order — and the engine tries branches in that order. The
+   * default exit is `on_pass`, always tried last, so it has no place to move.
    */
-  const selectNode = useCallback(
-    (nodeId: string) => {
+  const moveExit = useCallback(
+    (edgeId: string, step: -1 | 1) => {
       stopLayoutTravel();
-      setSelectedNodeId(nodeId);
-      setNodes((nds) => nds.map((n) => (!!n.selected === (n.id === nodeId) ? n : { ...n, selected: n.id === nodeId })));
+      setEdges((eds) => {
+        const edge = eds.find((e) => e.id === edgeId);
+        if (!edge) return eds;
+        const slots = eds.flatMap((e, i) =>
+          e.source === edge.source && branchOf(e) === "pass" && whenOf(e) !== undefined ? [i] : []
+        );
+        const k = slots.findIndex((i) => eds[i].id === edgeId);
+        const a = slots[k];
+        const b = slots[k + step];
+        if (a === undefined || b === undefined) return eds;
+        const next = [...eds];
+        [next[a], next[b]] = [next[b], next[a]];
+        return next;
+      });
     },
-    [setNodes, stopLayoutTravel]
+    [setEdges, stopLayoutTravel]
+  );
+
+  /** 「＋ 加一条条件出口」: a new PASS edge to `target`, carrying one clause. */
+  const addExit = useCallback(
+    (source: string, target: string) => {
+      stopLayoutTravel();
+      setEdges((eds) => {
+        const taken = new Set(eds.map((e) => (e.data as { branchId?: string } | undefined)?.branchId).filter(Boolean));
+        let n = 1;
+        while (taken.has(`b${n}`)) n += 1;
+        const branchId = `b${n}`;
+        return [
+          ...eds,
+          {
+            id: `e${source}-branch-${branchId}-${target}`,
+            source,
+            sourceHandle: "pass",
+            target,
+            data: { when: [defaultClause()], branchId },
+            ...edgeArrow(),
+          } as Edge,
+        ];
+      });
+    },
+    [setEdges, stopLayoutTravel]
   );
 
   /** A palette item dropped on the canvas becomes a node where it landed. */
@@ -1175,14 +1222,14 @@ export default function WorkflowEditor({
     [addNode]
   );
 
-  /** 驳回到's choices for the node being edited: the nodes before it, by order. */
+  /** 驳回到's choices for the selected node: the nodes before it, by order. */
   const rejectOptions = useMemo(() => {
-    const idx = editData ? nodes.findIndex((n) => n.id === editData.id) : -1;
+    const idx = selectedNodeId ? nodes.findIndex((n) => n.id === selectedNodeId) : -1;
     return nodes.slice(0, Math.max(idx, 0)).map((n, i) => ({
       value: n.id,
       label: `N${i + 1}「${(typeof n.data.label === "string" && n.data.label) || t("workflow.editor.unnamed")}」`,
     }));
-  }, [editData, nodes, t]);
+  }, [selectedNodeId, nodes, t]);
 
   // Update node data
   const updateNodeData = useCallback(
@@ -1347,7 +1394,13 @@ export default function WorkflowEditor({
       issues={issues}
       selectedId={selectedNodeId}
       onSelect={selectNode}
-      onEdit={wide ? handleNodeEdit : undefined}
+      nodeForm={
+        wide
+          ? (node) => (
+              <NodeEditForm node={node} formId={formId} onChange={updateNodeData} rejectOptions={rejectOptions} t={t} />
+            )
+          : undefined
+      }
       validationId={validationId}
       tab={inspectorTab}
       onTab={setInspectorTab}
@@ -1367,6 +1420,8 @@ export default function WorkflowEditor({
           nodes={nodes}
           edges={edges}
           onChange={wide ? setEdgeWhen : undefined}
+          onMove={wide ? moveExit : undefined}
+          onAdd={wide ? addExit : undefined}
           activeEdgeId={activeEdgeId}
           onActivate={setActiveEdgeId}
         />
@@ -1611,7 +1666,7 @@ export default function WorkflowEditor({
       <div className="flex-1 min-h-0 grid grid-cols-[176px_minmax(0,1fr)_360px]">
       <WorkflowPalette t={t} onAdd={(type) => addNode(type)}>
         {/* The keyboard half of the hint, and the only place `E` is visible.
-            It reuses `workflow.editor.edit_node` — the modal's own title —
+            It reuses `workflow.editor.edit_node` — once the modal title —
             rather than introducing a fourth string in three bundles, one of
             which (egy) is transliterated and would have to be authored, not
             translated.
@@ -1768,18 +1823,6 @@ export default function WorkflowEditor({
         issueNodes={issueNodes}
         selectedId={selectedNodeId}
         onSelect={selectNode}
-      />
-
-      {/* Node edit modal */}
-      <NodeEditModal
-        isOpen={editModalOpen}
-        onClose={() => setEditModalOpen(false)}
-        formId={formId}
-        editData={editData}
-        setEditData={setEditData}
-        onSave={updateNodeData}
-        rejectOptions={rejectOptions}
-        t={t}
       />
     </div>
   );
