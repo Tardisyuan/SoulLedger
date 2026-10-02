@@ -81,7 +81,8 @@ export const ROLE_GLYPH: Record<NodeRole, string> = {
 export const KIND_GLYPH: Record<WorkflowNodeKind, string> = {
   APPROVAL: "□",
   COUNTERSIGN: "⧉",
-  NOTIFY: "✉",
+  // U+FE0E: text presentation — without it the envelope renders as a colour emoji (seen at 1440, v3 A1).
+  NOTIFY: "✉\uFE0E",
   END: "■",
 };
 

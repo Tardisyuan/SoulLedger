@@ -227,6 +227,10 @@ export function ExitConditionsSection({
   onActivate?: (edgeId: string) => void;
 }) {
   const exits = edges.filter((e) => e.source === node.id && branchOf(e) === "pass");
+  // 「否 · 默认」 only means something beside a 「是 · …」: a node with no
+  // conditional exit has a plain 通过 exit, and is labelled as one.
+  const branching = exits.some((e) => whenOf(e) !== undefined);
+  const plain = (when: ConditionClause[] | undefined) => when === undefined && !branching;
   const ref = (id: string) => {
     const idx = nodes.findIndex((n) => n.id === id);
     const label = idx >= 0 && typeof nodes[idx].data.label === "string" ? nodes[idx].data.label : "";
@@ -264,9 +268,14 @@ export function ExitConditionsSection({
                 >
                   <span className="font-mono text-xs text-[oklch(var(--color-ink-subtle))]">{i + 1}</span>
                   <span className="flex-1 min-w-0 break-words">
-                    {when === undefined ? t("workflow.editor.condition.no") : t("workflow.editor.condition.yes")} → {ref(e.target)}
+                    {plain(when)
+                      ? t("workflow.editor.branch.pass")
+                      : when === undefined
+                        ? t("workflow.editor.condition.no")
+                        : t("workflow.editor.condition.yes")}{" "}
+                    → {ref(e.target)}
                   </span>
-                  {when === undefined && (
+                  {when === undefined && !plain(when) && (
                     <span className="font-mono text-xs text-[oklch(var(--color-ink-muted))]">{t("workflow.editor.condition.default")}</span>
                   )}
                 </button>
@@ -327,7 +336,9 @@ export function ExitConditionsSection({
                 <div className="flex items-center gap-2 px-3 pb-2 text-xs text-[oklch(var(--color-ink-muted))]">
                   <span>{t("workflow.editor.exit_label")}</span>
                   <span className="font-mono text-[oklch(var(--color-ink))] break-all">
-                    {when === undefined
+                    {plain(when)
+                      ? t("workflow.editor.branch.pass")
+                      : when === undefined
                       ? `${t("workflow.editor.condition.no")} · ${t("workflow.editor.condition.default")}`
                       : `${t("workflow.editor.condition.yes")} · ${when.length ? whenText(when, t) : t("workflow.editor.condition.empty")}`}
                   </span>
