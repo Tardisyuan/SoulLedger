@@ -46,6 +46,7 @@ import {
   PageEmptyArt,
   RadioMark,
   Screen,
+  SectionLabel,
   Skeleton,
   SmallButton,
   Txt,
@@ -190,7 +191,7 @@ export function PostCard({ post, onPress, onAuthor, full }: { post: SoulPost; on
   const body = (
     <>
       <View style={styles.cardHead}>
-        <Pressable testID={`author-${post.id}`} accessibilityRole="button" accessibilityLabel={post.author.display_name} disabled={!onAuthor} onPress={onAuthor} hitSlop={4}>
+        <Pressable testID={`author-${post.id}`} accessibilityRole="button" accessibilityLabel={post.author.display_name} disabled={!onAuthor} onPress={onAuthor} hitSlop={8}>
           <Glyph text={post.author.display_name} tone={reborn ? "subtle" : "muted"} dotted={reborn} size={36} />
         </Pressable>
         <View style={styles.fill}>
@@ -634,9 +635,9 @@ export function ComposePostScreen() {
           <Mono>{`${draft.length} / ${POST_MAX}`}</Mono>
         </View>
         <ComposeMediaTray uploads={uploads} onAdd={() => void addImages()} />
-        <Txt variant="section" style={styles.formLabel}>
+        <SectionLabel style={styles.formLabel}>
           {tr("soul_app.circle.compose.visibility")}
-        </Txt>
+        </SectionLabel>
         <View accessibilityRole="radiogroup" style={[styles.radios, { backgroundColor: t.hair, borderColor: t.hair }]}>
           {VISIBILITY.map((o) => {
             const on = o.value === visibility;
@@ -790,7 +791,7 @@ function CommentRow({
   const { gutter } = useLayout();
   return (
     <View testID={`comment-${c.id}`} style={[styles.comment, { paddingHorizontal: gutter, borderBottomColor: t.hair }]}>
-      <Pressable accessibilityRole="button" accessibilityLabel={c.author.display_name} onPress={onAuthor} hitSlop={4}>
+      <Pressable accessibilityRole="button" accessibilityLabel={c.author.display_name} onPress={onAuthor} hitSlop={8}>
         <Glyph text={c.author.display_name} tone={c.author.is_active ? "muted" : "subtle"} dotted={!c.author.is_active} size={28} />
       </Pressable>
       <View style={styles.fill}>
@@ -818,6 +819,8 @@ function CommentRow({
         accessibilityRole="button"
         accessibilityLabel={tr(c.is_mine ? "soul_app.circle.delete.action" : "soul_app.circle.report.comment")}
         onPress={onMore}
+        // 32pt drawn, 44 to the finger.
+        hitSlop={6}
         style={styles.commentMore}
       >
         <Icon name="more" size={14} color={t.inkSubtle} strokeWidth={2} />
@@ -1019,9 +1022,9 @@ export function PostScreen({ id }: { id: string }) {
               <>
                 <PostCard post={p} full onAuthor={() => openSoul(p.author, p.is_mine)} />
                 {open ? <ReactionBar post={p} status={status.data} onReact={(type) => void react(type)} /> : null}
-                <Txt variant="section" style={[styles.commentsHead, { paddingHorizontal: gutter }]}>
+                <SectionLabel style={[styles.commentsHead, { paddingHorizontal: gutter }]}>
                   {tr("soul_app.circle.post.comments", { n: String(p.comment_count) })}
-                </Txt>
+                </SectionLabel>
               </>
             )
           }
@@ -1145,7 +1148,8 @@ const styles = StyleSheet.create({
   commentBody: { marginTop: 4, fontSize: 15, lineHeight: 24 },
   commentMore: { width: 32, height: 32, alignItems: "center", justifyContent: "center" },
   replyTo: { marginTop: 4 },
-  replyButton: { marginTop: 8, alignSelf: "flex-start", paddingVertical: 4 },
+  /** 18pt of words, 44 to the finger: the padding grows, the negative margins keep it where it was. */
+  replyButton: { marginTop: -4, marginBottom: -12, alignSelf: "flex-start", paddingVertical: 16, paddingRight: 12 },
   replying: { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 2, paddingBottom: 8 },
   menu: { borderTopWidth: 1 },
   menuRow: { minHeight: 54, flexDirection: "row", alignItems: "center", paddingHorizontal: 20, borderBottomWidth: 1 },

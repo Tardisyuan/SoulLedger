@@ -31,7 +31,7 @@ import {
   type Residence,
 } from "../rules";
 import { SessionContext, useSession } from "../session";
-import { Seal } from "../seal";
+import { OutlineSeal } from "../seal";
 import { sealedTheme, type CivKey } from "../theme";
 import {
   Block,
@@ -47,6 +47,7 @@ import {
   Hairline,
   Screen,
   Section,
+  SectionLabel,
   SectionError,
   Skeleton,
   ThemeContext,
@@ -320,7 +321,7 @@ function LifeBand({ me, compact, onAccount }: { me: MeProfile; compact: boolean;
           </Txt>
         )}
         <View style={styles.bandRow}>
-          <Seal civ={t.civ} size={small ? 28 : 52} theme={t} glyphs={me.tenant.seal_glyphs} label={tr("seal.aria", { court: hall })} testID="plaque-seal" />
+          <OutlineSeal civ={t.civ} size={small ? 28 : 52} color={on} glyphs={me.tenant.seal_glyphs} label={tr("seal.aria", { court: hall })} testID="plaque-seal" />
           <View style={styles.bandText}>
             <View style={styles.nameRow}>
               <Txt testID="soul-name" accessibilityRole="header" numberOfLines={stack ? undefined : 1} style={[small ? styles.nameSmall : styles.name, { color: on }]}>
@@ -695,9 +696,7 @@ export function MyLifeScreen() {
         </Block>
         {/* v3 .life-records: 「本世账目」 and its six numbered rows. */}
         <View testID="ledger-head" style={[styles.ledgerHead, { paddingHorizontal: gutter, backgroundColor: theme.s1, borderBottomColor: theme.hair }]}>
-          <Txt variant="label" tone="muted" style={styles.fill}>
-            {t("soul_app.life.ledger")}
-          </Txt>
+          <SectionLabel style={styles.fill}>{t("soul_app.life.ledger")}</SectionLabel>
           <Txt variant="caption" tone="subtle">
             {t("soul_app.life.ledger_hint")}
           </Txt>

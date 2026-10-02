@@ -132,8 +132,13 @@ export const TYPE = {
   body: { fontSize: 13, lineHeight: 20, fontFamily: family.ui[400] },
   bodyLg: { fontSize: 15, lineHeight: 24, fontFamily: family.ui[500] },
   label: { fontSize: 12, lineHeight: 18, fontFamily: family.ui[500], letterSpacing: 1 },
-  /** 补足 B11: a section's title, 15 / 600 on its 48pt row. */
+  /** A ledger row's title (v3 `.life-records article b`), 15 / 600 on its row. */
   section: { fontSize: 15, lineHeight: 24, fontFamily: family.ui[600] },
+  /**
+   * v3 `.product-label`: what a block of the page is — 11 mono, 0.08em, upper case, always in
+   * `muted` (`SectionLabel`). Every section header and form-group label outside the ledger rows.
+   */
+  eyebrow: { fontSize: 11, lineHeight: 16, fontFamily: family.mono[400], letterSpacing: 0.88, textTransform: "uppercase" },
   caption: { fontSize: 12, lineHeight: 18, fontFamily: family.ui[400] },
   value: { fontSize: 13, lineHeight: 20, fontFamily: family.mono[400] },
   valueLg: { fontSize: 28, lineHeight: 36, fontFamily: family.mono[500] },
@@ -162,6 +167,15 @@ export function Txt({
 }: TextProps & { variant?: keyof typeof TYPE; tone?: Tone }) {
   const t = useTheme();
   return <Text {...rest} style={[TYPE[variant], { color: toneColor(t, tone) }, style]} />;
+}
+
+/** v3 `.product-label`: a block's name, in `muted` — never ink, never a colour. */
+export function SectionLabel({ children, ...rest }: Omit<Parameters<typeof Txt>[0], "variant" | "tone">) {
+  return (
+    <Txt variant="eyebrow" tone="muted" {...rest}>
+      {children}
+    </Txt>
+  );
 }
 
 /** Screen width and system text size → the handoff's three layout thresholds. */
@@ -371,7 +385,7 @@ export function Section({
     </>
   ) : (
     <>
-      <Txt variant="section">{title}</Txt>
+      <SectionLabel>{title}</SectionLabel>
       {count ? (
         <Txt testID={countTestID} variant="value" tone="subtle" style={styles.count}>
           {count}
