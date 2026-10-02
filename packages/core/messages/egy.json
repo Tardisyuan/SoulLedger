@@ -1249,7 +1249,15 @@
       "related": "Medu Hena",
       "related_gate": "Sebkhet Wa",
       "related_circle": "Mi Wa",
-      "related_terrace": "Hesep Wa"
+      "related_terrace": "Hesep Wa",
+      "search_paste": "Hehy Hep; Er Djed: Wat-Ha",
+      "search_paste_short": "Hehy Hep",
+      "hits_summary": "Gem {{n}} · Sesh {{c}}",
+      "hit_prev": "Em Tepy",
+      "hit_next": "Em Khet",
+      "prev_article": "Em Tepy",
+      "next_article": "Em Khet",
+      "cited_by_unit": "Djed Seth"
     },
     "waiting": "Em Smen",
     "waiting_days": "Hru {{n}}",
@@ -1658,7 +1666,7 @@
       "col_kind": "Iru",
       "col_held": "Em Sekhet / Hesb Aq",
       "col_eternal": "Djet",
-      "eternal_yes": "Iu",
+      "eternal_yes": "Djet",
       "eternal_no": "Nen",
       "full": "Nen Aq",
       "capacity_unrecorded": "Nen Sesh Hesb Aq",
@@ -1673,13 +1681,57 @@
       "full_warning": "Nen Aq · Em Sekhet {{held}}",
       "saved": "{{code}} · Hesb Aq Sau",
       "saved_full": "{{code}} · Hesb Aq Sau · Nen Aq {{held}} / {{cap}}",
-      "save_failed": "Nen Sau Hesb Aq"
+      "save_failed": "Nen Sau Hesb Aq",
+      "near": "Aq",
+      "near_warning": "Aq · Em Sekhet {{held}} / {{cap}} · {{pct}}%",
+      "keys": "Sau · Sehen"
     },
     "kind": {
       "HALL": "Wesekhet",
       "GATE": "Sebkhet",
       "LAYER": "Hesep",
       "PATH": "Wat"
+    },
+    "switch": {
+      "CHINESE": "Duat Sherer",
+      "EUROPEAN": "Duat Europa",
+      "EGYPTIAN": "Duat Kemet",
+      "GREEK": "Duat Haunebut"
+    },
+    "switch_hint": "Maa Wa · Sepat Nen Khemen",
+    "manage_hint": "Hesb Aq Khemen Dy",
+    "map": {
+      "title": "Tut Wat",
+      "shape_line": "Wat Wa",
+      "shape_funnel": "Hesep Neb",
+      "shape_fork_two": "Wat 2 Em Fai Ib",
+      "shape_fork": "Wat 3",
+      "shape_schematic": "Wat Wa",
+      "region": {
+        "INFERNO": "Duat · {{n}}",
+        "PURGATORIO": "Ta Hesmen · {{n}}",
+        "PARADISO": "Pet · {{n}}"
+      },
+      "fork": {
+        "PASS": "✓ Ib Maa",
+        "FAIL": "✕ Mut Sen",
+        "LEFT": "← Tartaros",
+        "RIGHT": "Ta Nefer →"
+      },
+      "terminal": "≡ Mut Sen",
+      "legend_held": "■ Em Sekhet",
+      "legend_empty": "□ Nen",
+      "legend_count": "Hesb = Em Sekhet",
+      "read_only": "Maa Wa · Tut"
+    },
+    "tree": {
+      "title": "Ta Neb",
+      "count": "Ta {{n}}",
+      "count_editable": "Ta {{n}} · Khemen Hesb Aq",
+      "legend_full": "■ Nen Aq = Em Sekhet ≥ Hesb Aq",
+      "legend_near": "◐ Aq = ≥ 90%",
+      "legend_eternal": "≡ Djet",
+      "sheet_hint": "Khemen Hesb Aq"
     }
   },
   "organization": {
