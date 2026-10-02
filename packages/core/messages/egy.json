@@ -407,7 +407,9 @@
       "copy_id": "Senn Ren Hesb Neb",
       "id_copied": "Ren Hesb Senn Seth",
       "id_copy_failed": "Nen Sesh",
-      "copied": "Em Sesh ✓"
+      "copied": "Em Sesh ✓",
+      "copy_case_number": "Senn Hesb Sep {{value}}",
+      "case_number_copied": "Hesb Sep Senn Seth"
     },
     "field_required": "Medu Pen Em Tepy",
     "dismiss": "Khetem",
@@ -1298,7 +1300,6 @@
       "cited_by": "Djed Seth",
       "cited_by_count": "Wedja {{n}}",
       "versions": "Hemet-Sesh",
-      "versions_gap": "Nen Hemet-Sesh Hep; Khemen Em Sesh Tepy Wa.",
       "select_prompt": "Setep Hep Em Sesh Hep.",
       "no_match": "Nen Gem Hep: «{{q}}»",
       "clear_search": "Fekh Hehy",
@@ -1318,7 +1319,9 @@
       "hit_next": "Em Khet",
       "prev_article": "Em Tepy",
       "next_article": "Em Khet",
-      "cited_by_unit": "Djed Seth"
+      "cited_by_unit": "Djed Seth",
+      "revision": "Hemet-Sesh {{n}}",
+      "effective_from": "Em Wenen · {{date}}"
     },
     "waiting": "Em Smen",
     "waiting_days": "Hru {{n}}",
@@ -1514,7 +1517,8 @@
       "STANDARD": "Wedja Tepy",
       "HEART_WEIGHING": "Dens Ib",
       "DIABOLICAL_TRIAL": "Wedja Isfet"
-    }
+    },
+    "case_number": "Hesb Sep"
   },
   "audit": {
     "title": "Medew Maa",

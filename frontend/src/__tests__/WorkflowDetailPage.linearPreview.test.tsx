@@ -148,3 +148,22 @@ describe("待我处理 bar", () => {
     expect(bars()).toHaveLength(0);
   });
 });
+
+describe("workflow info card · 案号", () => {
+  it("prints the judgment's case number whole and copyable; a workflow with no judgment is 不适用, not 未记录", async () => {
+    const base = payload("IN_PROGRESS", "n2");
+    workflowApi.get.mockResolvedValue({ data: { ...base.data, judgment: "j1", judgment_case_number: "EG-2026-0013" } });
+    const { unmount } = renderPage();
+    const chip = await screen.findByRole("button", { name: tZh("common.value.copy_case_number", { value: "EG-2026-0013" }) });
+    expect(chip).toHaveTextContent(/^EG-2026-0013 ⧉$/);
+    unmount();
+
+    workflowApi.get.mockResolvedValue(payload("IN_PROGRESS", "n2"));
+    renderPage();
+    await preview();
+    const label = screen.getByText(tZh("judgment.case_number"));
+    const value = label.nextElementSibling as HTMLElement;
+    expect(value.querySelector('[data-missing="inapplicable"]')).not.toBeNull();
+    expect(value.querySelector("button")).toBeNull();
+  });
+});

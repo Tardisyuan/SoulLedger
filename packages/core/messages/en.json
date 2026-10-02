@@ -407,7 +407,9 @@
       "copy_id": "Copy full ID",
       "id_copied": "ID copied to clipboard",
       "id_copy_failed": "Copy failed",
-      "copied": "Copied ✓"
+      "copied": "Copied ✓",
+      "copy_case_number": "Copy case number {{value}}",
+      "case_number_copied": "Case number copied to clipboard"
     },
     "field_required": "This field is required",
     "dismiss": "Dismiss",
@@ -1298,7 +1300,6 @@
       "cited_by": "Cited by",
       "cited_by_count": "Cited by {{n}} judgments",
       "versions": "Versions",
-      "versions_gap": "Articles carry no version history: corrections are made in place in the seed data.",
       "select_prompt": "Choose an article from the contents.",
       "no_match": "No article matches “{{q}}”",
       "clear_search": "Clear search",
@@ -1318,7 +1319,9 @@
       "hit_next": "Next hit",
       "prev_article": "Previous",
       "next_article": "Next",
-      "cited_by_unit": "times cited in judgments"
+      "cited_by_unit": "times cited in judgments",
+      "revision": "Revision {{n}}",
+      "effective_from": "In force since {{date}}"
     },
     "waiting": "Waiting",
     "waiting_days": "{{n}} d",
@@ -1514,7 +1517,8 @@
       "STANDARD": "Standard trial",
       "HEART_WEIGHING": "Heart weighing",
       "DIABOLICAL_TRIAL": "Diabolical trial"
-    }
+    },
+    "case_number": "Case no."
   },
   "audit": {
     "title": "Audit Log",

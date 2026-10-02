@@ -43,7 +43,7 @@ const row = (id: string, name: string, over: Record<string, unknown> = {}) => ({
   court: "第五殿", evidence_json: {}, confession: "", verdict: null, notes: "", citations: [], is_final: false,
   created_at: new Date(Date.now() - 7.5 * 86_400_000).toISOString(), concluded_at: null,
   claimed_by: null, claimed_by_name: null, deferred_at: null, defer_reason: "", karmic_balance: 347, evidence_count: 12,
-  merit_score: 1842, demerit_score: 391, cycle: 3, kind: "ORIGINAL",
+  merit_score: 1842, demerit_score: 391, cycle: 3, kind: "ORIGINAL", case_number: `CN-2026-00${id}`,
   ...over,
 });
 
@@ -162,6 +162,15 @@ describe("审判队列", () => {
     expect(within(unclaimed).getByTestId("merit-demerit-cell").querySelector("[data-missing]")).toBeNull();
     fireEvent.click(within(unclaimed).getByRole("button", { name: tZh("judgment.claim.claim") }));
     await waitFor(() => expect(judgmentApi.claim).toHaveBeenCalledWith("b"));
+  });
+
+  it("v3「案号 / 灵魂」:名字下一行是整串案号,可复制,压在整行链接之上", async () => {
+    renderPage();
+    await screen.findByRole("link", { name: "沈青梧" });
+    const chip = within(rowOf("沈青梧")).getByRole("button", { name: tZh("common.value.copy_case_number", { value: "CN-2026-00a" }) });
+    expect(chip).toHaveTextContent(/^CN-2026-00a ⧉$/);
+    // 整行是一个 ::after 盖满的链接;不抬到它上面,点案号就是打开审判台。
+    expect(chip.parentElement!.className.split(/\s+/)).toEqual(expect.arrayContaining(["relative", "z-10"]));
   });
 
   it("J 移到第一行、再 J 到下一行;C 认领焦点行;打字时 J / C 都不接", async () => {

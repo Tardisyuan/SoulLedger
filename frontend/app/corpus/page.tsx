@@ -42,9 +42,9 @@ import { cn } from "@/lib/utils";
  * `citation_count` 是调用者**看得见的**判决里引用它的件数(0 与 null 不同,见
  * core/api/judgment.ts);清单是 `GET /judgment/?statute=<id>`,新的在前、分页
  * (`CorpusCitedBy`)。件数与清单算在同一个集合上 —— 调用者的判决列表,含行级
- * DataScope —— 所以不会对不上。律条没有版本模型(更正走 `seed_mythology --update`
- * 就地改写;已结案子的引用另有结案时快照,见 apps/judgment/snapshot.py),版本栏
- * 写明缺口,不造一个 v1。
+ * DataScope —— 所以不会对不上。版本栏读 `revision` / `effective_from`(2026-10-02 起):
+ * 条文改了(`seed_mythology --update` 就地改写)才升一版、施行日记那天;存量条目是第 1 版、
+ * 施行日 = 入库那天。旧文本不在这里 —— 已结案子的引用另有结案时快照(apps/judgment/snapshot.py)。
  *
  * ── 检索与编号直达 ──────────────────────────────────────────────────────
  * 输入框同时是检索与跳转:与某条的节号(`IX · XXVI`、`救濟門 · 六`、`§ 27 / 42`、
@@ -412,10 +412,18 @@ export default function CorpusPage() {
 
             <section>
               <RailLabel>{t("judgment.corpus.versions")}</RailLabel>
-              {/* 律条没有版本模型(见文件头):空槽,写明缺口,不造一个 v1。 */}
+              {/* 第几版 + 自哪天起施行(见文件头)。旧接口不带这两列时是「未记录」,不造一个 v1。 */}
               <p data-testid="corpus-versions" className="text-sm text-[oklch(var(--color-ink-muted))]">
-                <MissingValue kind="unrecorded" />
-                <span className="block pt-1 text-2xs text-[oklch(var(--color-ink-subtle))]">{t("judgment.corpus.versions_gap")}</span>
+                {selected.statute.revision ? (
+                  <>
+                    <span className="text-[oklch(var(--color-ink))]">{t("judgment.corpus.revision", { n: String(selected.statute.revision) })}</span>
+                    <span className="block pt-1 text-2xs text-[oklch(var(--color-ink-subtle))]">
+                      {t("judgment.corpus.effective_from", { date: selected.statute.effective_from })}
+                    </span>
+                  </>
+                ) : (
+                  <MissingValue kind="unrecorded" />
+                )}
               </p>
             </section>
           </aside>

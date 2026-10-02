@@ -23,7 +23,7 @@ import path from "node:path";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { I18nProvider } from "@/src/contexts/I18nContext";
 import { ToastProvider } from "@/src/contexts/ToastContext";
-import { DomainEnum, DomainNumber, DomainText, IdentifierChip, MissingValue } from "@/src/components/ui/DomainValue";
+import { CaseNumber, DomainEnum, DomainNumber, DomainText, IdentifierChip, MissingValue } from "@/src/components/ui/DomainValue";
 import {
   DOMAIN_DISPLAY_I18N_KEYS,
   MISSING_GLYPH,
@@ -250,6 +250,47 @@ describe("<IdentifierChip>", () => {
     // The toast renders its own close button, so scope back to the chip.
     expect(await screen.findByText(copy("common.value.id_copy_failed"))).toBeInTheDocument();
     expect(screen.getByTitle(UUID).textContent).toContain("3f2504e0");
+  });
+});
+
+describe("<CaseNumber> (CASE_NUMBER_POLICY)", () => {
+  const CASE = "CN-2026-0007";
+
+  function renderCase(value: string | null) {
+    return render(
+      <I18nProvider>
+        <ToastProvider>
+          <CaseNumber value={value} variant="inline" />
+        </ToastProvider>
+      </I18nProvider>
+    );
+  }
+
+  it("shows the whole number — the UUID chip's 8-character cut would drop the sequence", () => {
+    renderCase(CASE);
+    const button = screen.getByRole("button", { name: copy("common.value.copy_case_number").replace("{{value}}", CASE) });
+    expect(button.textContent).toBe(`${CASE} ⧉`);
+    expect(button.textContent).not.toContain("#");
+    expect(button.getAttribute("title")).toBe(CASE);
+  });
+
+  it("copies it and says a case number was copied, not an ID", async () => {
+    const writeText = jest.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+    // The toast container is document-level and outlives earlier tests: count, don't assume empty.
+    const idToasts = () => screen.queryAllByText(copy("common.value.id_copied")).length;
+    const before = idToasts();
+    renderCase(CASE);
+    fireEvent.click(screen.getByTitle(CASE));
+    await waitFor(() => expect(writeText).toHaveBeenCalledWith(CASE));
+    expect(await screen.findByText(copy("common.value.case_number_copied"))).toBeInTheDocument();
+    expect(idToasts()).toBe(before);
+  });
+
+  it("is a typed miss when there is no number, never a button with nothing to copy", () => {
+    const { container } = renderCase(null);
+    expect(container.querySelector('[data-missing="unrecorded"]')).not.toBeNull();
+    expect(container.querySelector("button")).toBeNull();
   });
 });
 

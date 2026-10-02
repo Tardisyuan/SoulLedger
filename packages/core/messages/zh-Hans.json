@@ -407,7 +407,9 @@
       "copy_id": "复制完整 ID",
       "id_copied": "ID 已复制到剪贴板",
       "id_copy_failed": "复制失败",
-      "copied": "已复制 ✓"
+      "copied": "已复制 ✓",
+      "copy_case_number": "复制案号 {{value}}",
+      "case_number_copied": "案号已复制到剪贴板"
     },
     "field_required": "此项为必填",
     "dismiss": "知道了",
@@ -1298,7 +1300,6 @@
       "cited_by": "被引用",
       "cited_by_count": "被引用 {{n}} 件",
       "versions": "版本",
-      "versions_gap": "律条没有版本记录:更正在种子数据里就地改写。",
       "select_prompt": "从目录选一条律条。",
       "no_match": "没有匹配「{{q}}」的律条",
       "clear_search": "清除检索",
@@ -1318,7 +1319,9 @@
       "hit_next": "下一处",
       "prev_article": "上一条",
       "next_article": "下一条",
-      "cited_by_unit": "次被判词引用"
+      "cited_by_unit": "次被判词引用",
+      "revision": "第 {{n}} 版",
+      "effective_from": "自 {{date}} 起施行"
     },
     "waiting": "等待",
     "waiting_days": "{{n}} 天",
@@ -1514,7 +1517,8 @@
       "STANDARD": "标准审判",
       "HEART_WEIGHING": "称心审判",
       "DIABOLICAL_TRIAL": "魔鬼审判"
-    }
+    },
+    "case_number": "案号"
   },
   "audit": {
     "title": "审计日志",

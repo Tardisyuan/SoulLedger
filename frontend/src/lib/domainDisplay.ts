@@ -90,6 +90,9 @@ export const DOMAIN_DISPLAY_I18N_KEYS: readonly string[] = [
   "common.value.id_copied",
   "common.value.id_copy_failed",
   "common.value.copied",
+  // <CaseNumber>: aria 带上案号本身(一列十个「复制案号」对读屏器什么也没说),toast 说复制的是案号。
+  "common.value.copy_case_number",
+  "common.value.case_number_copied",
   // Needed by the registered exception below: ten copy buttons in one list all
   // announcing "Copy full ID" tell a screen reader nothing about which.
   "ledger.copy_resource_id",
@@ -134,6 +137,23 @@ export {
  * appears.
  */
 export const IDENTIFIER_POLICY = "detail-page header, copyable, once, never as a name" as const;
+
+/**
+ * 案号不是 UUID(2026-10-02 用户拍板实现 V1 案号)。`IDENTIFIER_POLICY` 管的是**指针** ——
+ * 一串只对数据库有意义的值,所以它只许出现在详情页页头、一次、可复制。案号是**给人的名字**:
+ * 开案时发给人读、给人抄、给人在电话里念的(`CN-2026-0007`),Design 把它印在审判台页头、
+ * 队列每一行、流程实例信息卡上。所以:
+ *
+ *   1. 名字能去的地方它都能去 —— 列表行、页头、卡片,一页几次都行(条款 1–2 不适用)。
+ *   2. 一律经 `<CaseNumber>`:可复制、**不截断**(`IdentifierChip` 截到 8 位,正好截掉序号)。
+ *      `{x.case_number}` 当裸文字、或塞进 `<IdentifierChip>`,都是缺陷 ——
+ *      `domainDisplayContract.test.tsx` 的「case numbers」一组扫这两种写法。
+ *   3. 它不顶替灵魂的名字,也不由 UUID 顶替它:没有案号就是 `unrecorded`。
+ *
+ * 唯一的例外是身份带(`usePlaque` 的 `meta` 只收字符串,Plaque 归身份带那一组):那里印的是
+ * 文字,同一页的 eyebrow 里另有一个可复制的 `<CaseNumber>`。
+ */
+export const CASE_NUMBER_POLICY = "a name for people: anywhere a name goes, always <CaseNumber>, never truncated" as const;
 
 /** One registered departure from clauses 1–2 of `IDENTIFIER_POLICY`. */
 export interface IdentifierPolicyException {
