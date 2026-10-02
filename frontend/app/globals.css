@@ -409,6 +409,15 @@
   --container-page: 1200px;
 }
 
+/* 品牌色(Design 第三批回复,2026-10-03):只给品牌标、图标、冷启动用,不进界面。
+   在明暗两套主题之外、不派生任何别的颜色;长明灯的金(`--color-lamp`)是另一回事,不动。
+   `mobile/scripts/build-app-icon.mjs` 的 GOLD / INK 与 `app/icon.svg` 必须是这两个值
+   —— brandTokensMatchIcon.test.ts 守着。 */
+:root {
+  --brand-mark: #ECAA3D;
+  --brand-ground: #10120F;
+}
+
 /*
   The default border color has changed to `currentcolor` in Tailwind CSS v4,
   so we've added these compatibility styles to make sure everything still
