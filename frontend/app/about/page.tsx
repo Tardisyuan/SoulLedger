@@ -4,7 +4,6 @@ import type { ReactNode } from "react";
 import {
   DESIGN_CREDITS,
   FONT_CREDITS,
-  IMAGE_CREDITS,
   LICENCE_LABELS,
   LITERATURE_CIVILIZATIONS,
   LITERATURE_CREDITS,
@@ -138,23 +137,20 @@ export default function AboutPage() {
       <Section stem="乙" title={t("about.ornament")}>
         <Rows credits={ORNAMENT_CREDITS} />
       </Section>
-      <Section stem="丙" title={t("about.images")}>
-        <Rows credits={IMAGE_CREDITS} />
-      </Section>
-      <Section stem="丁" title={t("about.software")}>
+      <Section stem="丙" title={t("about.software")}>
         <OpenSource />
       </Section>
-      <Section stem="戊" title={t("about.literature")}>
+      <Section stem="丁" title={t("about.literature")}>
         <Literature />
       </Section>
-      <Section stem="己" title={t("about.services")} aside={t("about.by_deployment")}>
+      <Section stem="戊" title={t("about.services")} aside={t("about.by_deployment")}>
         <ul className="text-sm">
           {SERVICE_CREDITS.map((s) => (
             <Row key={s.name} name={s.name} detail={s.detail} url={s.url} aside={s.isDefault ? t("about.default") : null} />
           ))}
         </ul>
       </Section>
-      <Section stem="庚" title={t("about.design")}>
+      <Section stem="己" title={t("about.design")}>
         <ul className="text-sm">
           {DESIGN_CREDITS.map((d) => (
             <Row key={d.name} name={d.name} detail={d.detail} />

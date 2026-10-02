@@ -7,7 +7,6 @@
 import {
   DESIGN_CREDITS,
   FONT_CREDITS,
-  IMAGE_CREDITS,
   LICENCE_LABELS,
   LITERATURE_CIVILIZATIONS,
   LITERATURE_CREDITS,
@@ -119,7 +118,6 @@ export function AboutScreen() {
       </Txt>
       <Group title={t("about.fonts")} credits={FONT_CREDITS} />
       <Group title={t("about.ornament")} credits={ORNAMENT_CREDITS} />
-      <Group title={t("about.images")} credits={IMAGE_CREDITS} />
 
       <View style={pad}>
         <Heading title={t("about.software")} />
