@@ -8,7 +8,14 @@ import { TextField } from "@/src/components/ui/Field";
 import { DomainEnum } from "@/src/components/ui/DomainValue";
 import type { RoleDiff } from "./matrixDiff";
 
-/** Three-tier save confirmation (tier 2 and tier 3 diffs). */
+/**
+ * Three-tier save confirmation (tier 2 and tier 3 diffs).
+ *
+ * Design A6(2026-10-02):按角色分组 ——「角色 · N 人」小标题,下面每处改动一行 48 高:
+ * 字形(＋ 待授 / − 待撤)+ 等宽权限码。不用成功 / 失败色:撤一项权限不是一次出错,
+ * 字形已经说了方向。确认按钮仍是实心 danger(Design 画的是主按钮):`dangerButtonPlacement.test.ts`
+ * 把这个对话框钉为「输入名称以确认」的两处之一,改它要先拍板。
+ */
 export function MatrixSaveConfirmModal({
   isOpen,
   diffs,
@@ -63,11 +70,11 @@ export function MatrixSaveConfirmModal({
         </div>
       }
     >
-      <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
+      <div className="max-h-[60vh] space-y-3 overflow-y-auto pr-1">
         {diffs.map((diff) => (
-          <div key={diff.role} className="border border-[oklch(var(--color-hairline))] p-3 space-y-2">
-            <div className="flex items-center justify-between">
-              <h4 className="font-semibold text-[oklch(var(--color-ink))] text-sm">
+          <div key={diff.role} data-confirm-role={diff.role}>
+            <div className="flex items-center justify-between py-2">
+              <h4 className="text-2xs font-normal text-[oklch(var(--color-ink-subtle))]">
                 {/* A role the meta table does not know falls back to its translated
                     built-in name, never to the raw member (§4.6; found by ENUM_FIELDS
                     gaining `role`). */}
@@ -80,24 +87,28 @@ export function MatrixSaveConfirmModal({
                 {t("permissions.matrix.confirm_user_count", { count: String(roleMeta[diff.role]?.user_count ?? 0) })}
               </p>
             )}
-            {diff.addedCodenames.length > 0 && (
-              <p className="text-xs text-[oklch(var(--color-status-success))] font-mono">+ {diff.addedCodenames.join(", ")}</p>
-            )}
             {diff.removedCodenames.length > 0 && (
-              <div>
-                <p className="text-xs text-[oklch(var(--color-status-error))] mb-1">{t("permissions.matrix.confirm_removed_label")}</p>
-                <ul className="text-xs font-mono text-[oklch(var(--color-status-error))] list-disc list-inside space-y-1">
-                  {diff.removedCodenames.map((c) => <li key={c}>{c}</li>)}
-                </ul>
-              </div>
+              <p className="pb-1 text-xs text-[oklch(var(--color-ink-muted))]">{t("permissions.matrix.confirm_removed_label")}</p>
             )}
+            <ul className="border-b border-[oklch(var(--color-line))]">
+              {[
+                ...diff.removedCodenames.map((c) => ["−", c] as const),
+                ...diff.addedCodenames.map((c) => ["＋", c] as const),
+              ].map(([glyph, c]) => (
+                <li key={`${glyph}${c}`} className="flex min-h-12 items-center gap-2 border-t border-[oklch(var(--color-line))] text-sm">
+                  <span aria-hidden="true" className="w-5 text-center">{glyph}</span>
+                  <span className="font-mono text-[oklch(var(--color-ink))]">{c}</span>
+                </li>
+              ))}
+            </ul>
             {diff.tier === 3 && (
-              <div className="mt-2 space-y-2 border-t border-[oklch(var(--color-hairline))] pt-2">
-                <p className="text-xs text-[oklch(var(--color-status-error))] font-medium">
+              <div className="mt-2 space-y-2 pt-2">
+                <p className="text-xs font-medium text-[oklch(var(--color-ink))]">
+                  <span aria-hidden="true">◐ </span>
                   {t("permissions.matrix.confirm_clear_warning", { role: diff.role })}
                 </p>
                 {diff.removesMenuRead && (
-                  <p className="text-xs text-[oklch(var(--color-status-error))]">{t("permissions.matrix.confirm_menu_read_warning")}</p>
+                  <p className="text-xs text-[oklch(var(--color-ink-muted))]">{t("permissions.matrix.confirm_menu_read_warning")}</p>
                 )}
                 <TextField
                   id={`type-confirm-${diff.role}`}
