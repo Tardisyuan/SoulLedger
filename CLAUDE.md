@@ -141,7 +141,7 @@ stdin 变成改动文件清单(`PREPUSH_CHANGED`),然后 `exec` 被推送的 che
     scripts/run-gates.sh --help
 
 - **怎么选**:`jest --findRelatedTests <改动文件>`,**加上** `frontend/jest.always-run.txt` 里的
-  51 个测试。`--roots` 在命令行上补了 `packages/core`:`jest.config.js` 的 roots 只有 `frontend/`,
+  58 个测试(2026-10-02)。`--roots` 在命令行上补了 `packages/core`:`jest.config.js` 的 roots 只有 `frontend/`,
   于是改了 core 的文件 `--findRelatedTests` 返回**空**、不报错 —— 实测 `useSouls.ts` 不补是 0 个、
   补了是 20 个,总测试文件数两种都是 196。
 - **always-run 清单**是「读文件而不是 import」的测试(`readFileSync` / `readdirSync` /
@@ -170,6 +170,20 @@ stdin 变成改动文件清单(`PREPUSH_CHANGED`),然后 `exec` 被推送的 che
 - **推只改门禁脚本的提交,现在会跑后端**:这些脚本唯一的测试是
   `backend/tests/test_prepush_runs_the_gates_a_change_can_break.py`,它读脚本而不 import。
   此前这样的推送什么都不跑。
+- **读别区文件的测试,别区改了也跑(2026-10-02 起)**。此前区域只按改动文件所在目录决定:
+  A1 工作流改版只改了 `frontend/`,弄红了 `backend/tests/test_workflow_preset_case_types.py`
+  (它解析 `WorkflowEditor.tsx`),所有 frontend-only 推送都绿着过去,直到后来一个分支碰巧改了 `backend/`。
+  现在某个区域**不全跑**时,它的「读文件的测试」照样跑:
+  - 后端:`backend/tests/reads-outside-backend.txt`,49 个能摸到仓库根的测试文件,每行带它点名的
+    顶层条目(`frontend` / `packages` / `config` / `docker-compose.*.yml` …,一个都没点名就是 `*`)。
+    `backend/` 下没有改动时,跑条目命中改动首段路径的行和全部 `*` 行(不跑 ruff / makemigrations)。
+    清单是推导的:`test_reads_outside_backend_list.py` 按「仓库根句柄(`parents[N]` / `REPO_ROOT` …)
+    + `tests.*` 的传递 import」重算,少行、多行、条目不对都红。新写了读别区文件的后端测试,照它点名的补一行。
+  - 前端不跑时跑 `jest.always-run.txt`(其中 6 个读 `backend/*.py`);mobile 不跑时跑 grep 出来的
+    6 个读文件的 mobile 测试。
+  - 代价(2026-10-02,负载 13–30):frontend-only 推送多出后端 15 个文件 / 662 条,`-n 4` 约 49 s
+    (串行 105 s),其中门禁自己的测试占一半 —— 它把 `frontend/...` 当测试数据写,被保守地选中;
+    core 改动选 31 个文件;只改 README / docs 选 3 个,另跑 jest 读文件测试(58 个,约 19 s)。
 - 验证(2026-09-30,6 个真实提交各跑选择性与全量,再各注入一处会让测试红的改动)。
   方法:在本分支尖端上 `git revert` 该提交再 `cherry-pick` 回来,`--base` 取 revert 那一格,
   于是改动集恰好是那个提交的 diff,依赖是今天的;`127dff04` revert 冲突,改用 `PREPUSH_CHANGED`

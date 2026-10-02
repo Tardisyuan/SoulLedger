@@ -238,6 +238,56 @@ if [ "$TOUCHES_FRONTEND" -gt 0 ] || [ "$TOUCHES_CORE" -gt 0 ]; then RUN_FRONTEND
 # TOUCHES_CORE already folds in the JS root files and unknown root files.
 if [ "$TOUCHES_MOBILE" -gt 0 ] || [ "$TOUCHES_CORE" -gt 0 ]; then RUN_MOBILE=1; fi
 
+# ── TESTS THAT READ ANOTHER AREA'S FILES ─────────────────────────────────────
+#
+# The rules above follow where a changed file lives. Some tests read another
+# area's files as text, and those ran only when their OWN area changed: the A1
+# workflow redesign changed only frontend/ and broke
+# backend/tests/test_workflow_preset_case_types.py (it parses WorkflowEditor.tsx);
+# every frontend-only push passed until a later branch touched backend/
+# (2026-10-02). The mirror holes: frontend tests that read backend/*.py
+# (roleForbiddenCodenamesMatchBackend, officerAssist, ...) and
+# mobile/src/__tests__/assist.test.tsx (backend/apps/soul_assist) did not run
+# on a backend-only push. So when an area is not running in full, its readers
+# run for any change outside it:
+#
+#   backend   the lines of backend/tests/reads-outside-backend.txt whose entries
+#             include the first path component of a changed file, plus the `*`
+#             lines. Derived, and kept exact by
+#             backend/tests/test_reads_outside_backend_list.py.
+#   frontend  jest on frontend/jest.always-run.txt (every test that reads files;
+#             kept exact by jestAlwaysRunList.test.ts). No tsc / eslint.
+#   mobile    jest on the mobile tests that read files, found by grep right here
+#             (6 on 2026-10-02) — derived on every run, so nothing to drift.
+TOPS=$(echo "$CHANGED" | grep -v '^$' | sed 's|/.*||' | sort -u)
+READERS_LIST="$ROOT/backend/tests/reads-outside-backend.txt"
+BACKEND_READERS=""
+if [ "$RUN_BACKEND" = 0 ]; then
+    if [ -f "$READERS_LIST" ]; then
+        # awk, not a shell loop: a `*` entry must not glob.
+        BACKEND_READERS=$(TOPS="$TOPS" awk '
+            BEGIN { n = split(ENVIRON["TOPS"], a, "\n"); for (i = 1; i <= n; i++) top[a[i]] = 1 }
+            /^[[:space:]]*(#|$)/ { next }
+            { for (i = 2; i <= NF; i++) if ($i == "*" || ($i in top)) { print $1; next } }
+        ' "$READERS_LIST")
+    else
+        echo "$P: no backend/tests/reads-outside-backend.txt in this checkout — cannot tell which backend tests read other areas, so the backend suite runs"
+        RUN_BACKEND=1
+    fi
+fi
+# No list means no frontend tests here (a throwaway test repository): there is
+# nothing to run. Deleting the list is itself a frontend change, which runs jest
+# in full — and jestAlwaysRunList.test.ts fails on it.
+RUN_JEST_READERS=0
+[ "$RUN_FRONTEND" = 0 ] && [ -f "$ROOT/frontend/jest.always-run.txt" ] && RUN_JEST_READERS=1
+MOBILE_READERS=""
+if [ "$RUN_MOBILE" = 0 ]; then
+    MOBILE_READERS=$(git ls-files 'mobile/*.test.ts' 'mobile/*.test.tsx' \
+        | while IFS= read -r f; do
+            grep -lE "readFileSync|readdirSync|existsSync|statSync|execSync|execFileSync|spawnSync|['\"](node:)?(fs|fs/promises|child_process)['\"]" "$f" 2>/dev/null
+        done)
+fi
+
 # THE MIGRATION ROUND TRIPS RUN ONLY WHEN SOMETHING THEY TEST CHANGED.
 #
 # 26 tests (the `migration` marker — see pytest.ini and backend/tests/conftest.py)
@@ -308,6 +358,8 @@ if [ "${PREPUSH_CLASSIFY_ONLY:-0}" = "1" ]; then
     echo "classify-migration: migration=$RUN_MIGRATION"
     echo "classify-jest: full=$([ -n "$FULL_F" ] && echo 1 || echo 0)"
     printf '%s' "$FULL_F" | sed 's/^/  full because: /'
+    echo "classify-readers: jest=$RUN_JEST_READERS mobile=$([ -n "$MOBILE_READERS" ] && echo 1 || echo 0) backend=$(echo "$BACKEND_READERS" | grep -c . || true)"
+    printf '%s' "$BACKEND_READERS" | sed 's/^/  backend reader: /'; echo
     exit 0
 fi
 
@@ -421,6 +473,30 @@ if [ "$RUN_FRONTEND" = 1 ]; then
     cd "$ROOT" || exit 1
 fi
 
+# The frontend is not running, so its file readers do (see TESTS THAT READ
+# ANOTHER AREA'S FILES above).
+if [ "$RUN_JEST_READERS" = 1 ]; then
+    need npx
+    cd "$ROOT/frontend" || fail "frontend/ missing"
+    ALWAYS=$(grep -vE '^[[:space:]]*(#|$)' "$ROOT/frontend/jest.always-run.txt" | sed "s|^|$ROOT/frontend/|")
+    [ -n "$ALWAYS" ] || fail "frontend/jest.always-run.txt is empty, so the frontend tests that read other areas cannot be selected"
+    echo "  → jest: the $(echo "$ALWAYS" | wc -l | tr -d ' ') tests that read files (frontend/jest.always-run.txt)"
+    JEST_LOG=$(mktemp -t prepush-jest)
+    T_JEST=$(date +%s)
+    # shellcheck disable=SC2086
+    npx jest --coverage=false --silent --runTestsByPath $ALWAYS >"$JEST_LOG" 2>&1
+    JEST_STATUS=$?
+    tail -4 "$JEST_LOG"
+    echo "    jest took $(( $(date +%s) - T_JEST ))s"
+    if [ "$JEST_STATUS" -ne 0 ]; then
+        grep -E '^(FAIL |  ● )' "$JEST_LOG" | head -20
+        echo "    full jest log: $JEST_LOG"
+        fail "jest (file readers) failed"
+    fi
+    rm -f "$JEST_LOG"
+    cd "$ROOT" || exit 1
+fi
+
 if [ "$RUN_MOBILE" = 1 ]; then
     need npm
     cd "$ROOT" || exit 1
@@ -433,7 +509,19 @@ if [ "$RUN_MOBILE" = 1 ]; then
     [ "${PIPESTATUS[0]}" -eq 0 ] || fail "mobile jest failed. If it is theme.test.ts: frontend/app/globals.css changed an ink-layer token that mobile/src/theme.ts copies — copy the new triple, do not delete the check."
 fi
 
-if [ "$RUN_BACKEND" = 1 ]; then
+if [ -n "$MOBILE_READERS" ]; then
+    need npm
+    cd "$ROOT" || exit 1
+    echo "  → mobile jest: the $(echo "$MOBILE_READERS" | wc -l | tr -d ' ') tests that read files"
+    # shellcheck disable=SC2046
+    npm run --workspace mobile test --silent -- --silent --runTestsByPath $(echo "$MOBILE_READERS" | sed "s|^|$ROOT/|") 2>&1 | tail -4
+    [ "${PIPESTATUS[0]}" -eq 0 ] || fail "mobile jest (file readers) failed"
+fi
+
+# RUN_BACKEND: the whole suite. BACKEND_READERS: nothing under backend/ changed,
+# only the tests that read the areas that did (see above) — no ruff and no
+# makemigrations, which read nothing outside backend/.
+if [ "$RUN_BACKEND" = 1 ] || [ -n "$BACKEND_READERS" ]; then
     cd "$ROOT/backend" || fail "backend/ missing"
     # THE INTERPRETER IS THE PROJECT VENV, `backend/.venv` — Python 3.11 with
     # exactly `requirements.lock`, the set the image and CI install.
@@ -471,30 +559,34 @@ if [ "$RUN_BACKEND" = 1 ]; then
     fi
     command -v "$PY" >/dev/null 2>&1 || fail "\`$PY\` not found or not executable."
     command -v "$RUFF" >/dev/null 2>&1 || fail "\`$RUFF\` not found or not executable."
-    echo "  → ruff";  "$RUFF" check .          || fail "ruff failed"
-    # `makemigrations --check` BEFORE pytest, because it is the cheap one and
-    # because it catches a class the suite does not: a model `choices` list
-    # losing a member alters a field, and Django notices while every test that
-    # only reads today's members stays green. Verified by dropping GREEK from
-    # the org category choices — this exits 1 and names the missing migration.
-    #
-    # It ran only in CI, and both workflows are `workflow_dispatch` now, so
-    # nothing ran it at all.
-    #
-    # Say what failed only when the output says it. This used to discard the
-    # output and call EVERY non-zero exit "a model changed" — so a wrong
-    # interpreter (ModuleNotFoundError) and a missing SECRET_KEY both read as a
-    # migration problem, and the one line the push printed pointed away from the
-    # cause. makemigrations names the app when a migration is really missing.
-    echo "  → makemigrations --check"
-    MM_OUT="$("$PY" manage.py makemigrations --check --dry-run 2>&1)"
-    MM_STATUS=$?
-    if [ "$MM_STATUS" -ne 0 ]; then
-        echo "$MM_OUT" | tail -15 | sed 's/^/    /'
-        if echo "$MM_OUT" | grep -q "^Migrations for '"; then
-            fail "makemigrations --check: a model changed without a migration. Run \`manage.py makemigrations\` and read what it generated before committing it."
+    if [ "$RUN_BACKEND" = 1 ]; then
+        echo "  → ruff";  "$RUFF" check .          || fail "ruff failed"
+        # `makemigrations --check` BEFORE pytest, because it is the cheap one and
+        # because it catches a class the suite does not: a model `choices` list
+        # losing a member alters a field, and Django notices while every test that
+        # only reads today's members stays green. Verified by dropping GREEK from
+        # the org category choices — this exits 1 and names the missing migration.
+        #
+        # It ran only in CI, and both workflows are `workflow_dispatch` now, so
+        # nothing ran it at all.
+        #
+        # Say what failed only when the output says it. This used to discard the
+        # output and call EVERY non-zero exit "a model changed" — so a wrong
+        # interpreter (ModuleNotFoundError) and a missing SECRET_KEY both read as a
+        # migration problem, and the one line the push printed pointed away from the
+        # cause. makemigrations names the app when a migration is really missing.
+        echo "  → makemigrations --check"
+        MM_OUT="$("$PY" manage.py makemigrations --check --dry-run 2>&1)"
+        MM_STATUS=$?
+        if [ "$MM_STATUS" -ne 0 ]; then
+            echo "$MM_OUT" | tail -15 | sed 's/^/    /'
+            if echo "$MM_OUT" | grep -q "^Migrations for '"; then
+                fail "makemigrations --check: a model changed without a migration. Run \`manage.py makemigrations\` and read what it generated before committing it."
+            fi
+            fail "makemigrations --check could not run (exit $MM_STATUS) — see the output above. This is not a missing migration. Interpreter: $PY"
         fi
-        fail "makemigrations --check could not run (exit $MM_STATUS) — see the output above. This is not a missing migration. Interpreter: $PY"
+    else
+        echo "  → ruff, makemigrations: skipped — nothing under backend/ changed"
     fi
 
     echo "  → pytest"
@@ -652,8 +744,14 @@ PROBE_PY
         echo "    (pytest-xdist: $XDIST)"
     fi
     PYTEST_LOG=$(mktemp -t prepush-pytest)
+    PYTEST_PATHS=""
+    if [ "$RUN_BACKEND" = 0 ]; then
+        PYTEST_PATHS="$BACKEND_READERS"
+        echo "    (only the $(echo "$PYTEST_PATHS" | wc -l | tr -d ' ') test files that read what changed — backend/tests/reads-outside-backend.txt)"
+    fi
+    # shellcheck disable=SC2086
     SECRET_KEY="$CI_SECRET_KEY" "$PY" -m pytest -q --no-header --no-cov $XDIST \
-        ${SKIP_MIGRATION:+-m "not migration"} ${PYTEST_PREPUSH_ARGS:-} >"$PYTEST_LOG" 2>&1 &
+        ${SKIP_MIGRATION:+-m "not migration"} ${PYTEST_PREPUSH_ARGS:-} $PYTEST_PATHS >"$PYTEST_LOG" 2>&1 &
     PYTEST_PID=$!
     T0=$(date +%s); NEXT=30
     while kill -0 "$PYTEST_PID" 2>/dev/null; do
