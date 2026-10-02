@@ -27,10 +27,10 @@ import { AppHeader } from "../chrome";
 import { useCommittedSend } from "../composing";
 import { Emblem, Icon } from "../emblems";
 import { useToast } from "../feedback";
-import { quoteFamily } from "../fonts";
+import { family, quoteFamily } from "../fonts";
 import { useI18n } from "../i18n";
 import { SessionContext } from "../session";
-import { Button, Empty, Notice, RadioMark, Screen, Skeleton, Txt, shade, useLayout, useReloadOnRefocus, useRemote, useTheme } from "../ui";
+import { Button, Empty, Notice, RadioMark, Screen, SectionLabel, Skeleton, Txt, shade, useLayout, useReloadOnRefocus, useRemote, useTheme } from "../ui";
 import type { AppStackParams } from "./applications";
 import { PagedFooter, PostList, useFailure, useFeed, usePaged } from "./circle";
 import { Glyph, Tag } from "./letters";
@@ -93,6 +93,8 @@ function FollowButton({ following, followedBy, onPress, busy, compact }: { follo
       accessibilityRole="button"
       accessibilityState={{ busy: !!busy }}
       disabled={busy}
+      // 34pt drawn, 44 to the finger.
+      hitSlop={5}
       onPress={onPress}
       style={({ pressed }) => [
         styles.smallFollow,
@@ -311,7 +313,7 @@ function RenameField({ value, onChange, onDone, onCancel }: { value: string; onC
         onEndEditing={onEndEditing}
         autoFocus
         maxLength={20}
-        style={[styles.nameInput, { borderColor: refusal ? t.negStrong : t.hair2, backgroundColor: t.s1, color: t.ink, fontFamily: quoteFamily(value) }]}
+        style={[styles.nameInput, { borderColor: refusal ? t.negStrong : t.hair2, backgroundColor: t.s1, color: t.ink }]}
       />
       {refusal ? (
         <Txt testID="name-refusal" variant="caption" tone="negInk" accessibilityRole="alert">
@@ -638,9 +640,9 @@ export function ReportScreen({ target, id, preview }: { target: SoulReportTarget
                 {preview}
               </Txt>
             )}
-            <Txt variant="section" style={styles.formLabel}>
+            <SectionLabel style={styles.formLabel}>
               {tr("soul_app.circle.report.reason")}
-            </Txt>
+            </SectionLabel>
             <View accessibilityRole="radiogroup" style={[styles.radios, { backgroundColor: t.hair, borderColor: t.hair }]}>
               {REASONS.map((r) => {
                 const on = r === reason;
@@ -659,9 +661,9 @@ export function ReportScreen({ target, id, preview }: { target: SoulReportTarget
                 );
               })}
             </View>
-            <Txt variant="section" style={styles.formLabel}>
+            <SectionLabel style={styles.formLabel}>
               {tr("soul_app.circle.report.detail")}
-            </Txt>
+            </SectionLabel>
             <TextInput
               ref={input}
               testID="report-detail"
@@ -720,5 +722,6 @@ const styles = StyleSheet.create({
   detail: { minHeight: 86, borderWidth: 1, padding: 12, fontSize: 13, lineHeight: 21, textAlignVertical: "top" },
   submit: { marginTop: 16 },
   rename: { gap: 8 },
-  nameInput: { minHeight: 44, borderWidth: 1, paddingHorizontal: 12, fontSize: 15 },
+  /** A name is not something said: the interface face, not the serif (v3). */
+  nameInput: { minHeight: 44, borderWidth: 1, paddingHorizontal: 12, fontSize: 15, fontFamily: family.ui[500] },
 });

@@ -325,7 +325,7 @@ export function SentenceSection({
           {landing ? <NewTag testID="sentence-landing-tag" /> : null}
           <View style={styles.fill} />
           {hasPlan ? (
-            <Pressable testID="sentence-all" accessibilityRole="button" hitSlop={8} onPress={() => navigation.navigate("Sentence", { landing })}>
+            <Pressable testID="sentence-all" accessibilityRole="button" hitSlop={13} onPress={() => navigation.navigate("Sentence", { landing })}>
               <Txt variant="caption" tone="ink" style={styles.link}>{`${t("soul_app.sentence.all")} →`}</Txt>
             </Pressable>
           ) : null}
@@ -531,7 +531,7 @@ export function SentenceBlocked() {
           ) : null}
         </View>
       ) : null}
-      <Pressable testID="sentence-blocked-link" accessibilityRole="link" hitSlop={8} onPress={() => navigation.navigate("Sentence", {})}>
+      <Pressable testID="sentence-blocked-link" accessibilityRole="link" hitSlop={13} onPress={() => navigation.navigate("Sentence", {})}>
         <Txt variant="caption" tone="ink" style={styles.link}>{`${t("soul_app.sentence.blocked_link")} →`}</Txt>
       </Pressable>
     </View>

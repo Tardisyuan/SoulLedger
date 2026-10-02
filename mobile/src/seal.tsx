@@ -1,5 +1,6 @@
 /**
- * v2「朱印」: the seal and the plaque's ornament band (规范 v2 定稿 §印 / §匾, 补足 A6).
+ * The seal. `OutlineSeal` (below) is v3's and is the one every screen draws; this first
+ * one, v2「朱印」(规范 v2 定稿 §印, 补足 A6), is left for the cold start alone.
  *
  * A seal is four layers, bottom up: the body in 匾色 → the ring (between the outer
  * shape and the thick frame) showing the civilization's edge scan → the frame lines in
@@ -12,13 +13,13 @@
  * object, not interface text. A screen reader hears the language pack's
  * 「第五殿之印」 (`seal.aria`), never the glyph.
  */
-import { Image, StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import Animated from "react-native-reanimated";
 import Svg, { ClipPath, Defs, Image as SvgImage, Path, SvgXml } from "react-native-svg";
 import { useId, type ComponentProps } from "react";
 
 import { RING_D, SVG } from "./art";
-import { family } from "./fonts";
+import { family, quoteFamily } from "./fonts";
 import type { CivKey, Theme } from "./theme";
 
 export type SealCiv = Exclude<CivKey, "neutral">;
@@ -132,38 +133,91 @@ export function Seal({
   );
 }
 
-/** Each band's ground texture (§匾 质感): paper, papyrus, marble; `-w` (white grain only) in dark. */
-const TEXTURE: Record<SealCiv, Record<"light" | "dark", number>> = {
-  cn: { light: require("../assets/v2/paper.png"), dark: require("../assets/v2/paper-w.png") },
-  eu: { light: require("../assets/v2/paper.png"), dark: require("../assets/v2/paper-w.png") },
-  eg: { light: require("../assets/v2/papyrus.png"), dark: require("../assets/v2/papyrus-w.png") },
-  gr: { light: require("../assets/v2/marble.png"), dark: require("../assets/v2/marble-w.png") },
-};
-
-/** One period of every band is 480 wide. */
-const BAND_PERIOD = 480;
-/** §匾 纹样带: ≤ 393 wide uses the compact drawing (no dots; 杜阿特 also loses the lotus fans). */
-const COMPACT_MAX = 393;
-
 /**
- * The plaque's 22pt ornament band, in onPlaque, tiled across the screen, with the
- * civilization's texture over it — dark mode's white-grain variant at 60%.
+ * v3 印 (规范 v3 `.product-seal`; the Web's `Seal.tsx` since v3/band2): an OUTLINE, never a
+ * filled body — a 2px outer frame and a 1px inner frame 6px in (≤ 32: 1px, 4px in), in one
+ * colour: the civilization's (`theme.plaque`) on a page, white (`onPlaque`) on the band, which
+ * is itself that colour. The shape says the civilization: 地府 square, 欧洲 circle, 埃及 arch
+ * (64 × 70, round top), 希腊 hexagon. The glyph is the same data as above, set in the app's
+ * serif (Noto Serif SC for Han, Source Serif 4 for J / Μ) — the App bundles Noto Serif SC at
+ * 400 only — and the hieroglyph face for 埃及. A soul of no known civilization has no seal.
+ *
+ * The v2 `Seal` above stays for the cold start only (being rewritten on 「九笔金标」).
  */
-export function PlaqueBand({ civ, theme }: { civ: SealCiv; theme: Pick<Theme, "onPlaque" | "scheme"> }) {
-  const { width } = useWindowDimensions();
-  const xml = SVG[width <= COMPACT_MAX ? (`band-${civ}-compact` as const) : (`band-${civ}` as const)];
+const EG_ASPECT = 70 / 64;
+/** Glyph size = seal width × this: v3 draws 64 → 28 and 30 → 15; two hieroglyphs 0.34 each. */
+const OUTLINE_GLYPH = 0.44;
+const OUTLINE_GLYPH_SMALL = 0.5;
+const OUTLINE_GLYPH_PAIR = 0.34;
+
+/** The shape's outline, `i` in from a w × h box (a stroke centred on it). */
+export function sealOutline(civ: SealCiv, w: number, h: number, i: number): string {
+  const r = (n: number) => Math.round(n * 100) / 100;
+  if (civ === "eu") {
+    const cx = w / 2;
+    const rad = w / 2 - i;
+    return `M${r(cx - rad)} ${r(h / 2)}A${r(rad)} ${r(rad)} 0 1 0 ${r(cx + rad)} ${r(h / 2)}A${r(rad)} ${r(rad)} 0 1 0 ${r(cx - rad)} ${r(h / 2)}Z`;
+  }
+  if (civ === "eg") {
+    const rad = w / 2 - i;
+    return `M${r(i)} ${r(h - i)}V${r(i + rad)}A${r(rad)} ${r(rad)} 0 0 1 ${r(w - i)} ${r(i + rad)}V${r(h - i)}Z`;
+  }
+  if (civ === "gr") {
+    const pts: [number, number][] = [[0.12, 0], [0.88, 0], [1, 0.5], [0.88, 1], [0.12, 1], [0, 0.5]];
+    return `M${pts.map(([x, y]) => `${r(i + (w - 2 * i) * x)} ${r(i + (h - 2 * i) * y)}`).join("L")}Z`;
+  }
+  return `M${r(i)} ${r(i)}H${r(w - i)}V${r(h - i)}H${r(i)}Z`;
+}
+
+/** A glyph's face: hieroglyphs in theirs, Han and Latin / Greek in the app's two serifs. */
+const outlineFace = (g: string) => ((g.codePointAt(0) ?? 0) >= 0x13000 ? family.seal.eg : quoteFamily(g));
+
+export function OutlineSeal({
+  civ,
+  size,
+  color,
+  glyphs,
+  label,
+  testID,
+}: {
+  civ: CivKey;
+  /** The width; 埃及's arch is 70/64 of it tall. */
+  size: number;
+  /** The plaque colour on a page; `onPlaque` on the band. */
+  color: string;
+  glyphs?: readonly string[] | null;
+  /** 「第五殿之印」, from `seal.aria`. Absent: decoration beside words that say the same. */
+  label?: string;
+  testID?: string;
+}) {
+  if (civ === "neutral") return null;
+  const small = size <= 32;
+  const w = size;
+  const h = civ === "eg" ? Math.round(size * EG_ASPECT) : size;
+  const shown = sealGlyphs(civ, glyphs);
+  const pair = shown.length === 2;
+  const fontSize = Math.round(size * (pair ? OUTLINE_GLYPH_PAIR : small ? OUTLINE_GLYPH_SMALL : OUTLINE_GLYPH));
+  const a11y = label
+    ? { accessible: true, accessibilityRole: "image" as const, accessibilityLabel: label }
+    : { accessibilityElementsHidden: true, importantForAccessibility: "no-hide-descendants" as const };
   return (
-    <View testID={`plaque-band-${civ}`} style={styles.band} pointerEvents="none">
-      <View style={styles.tiles}>
-        {Array.from({ length: Math.ceil(width / BAND_PERIOD) }, (_, i) => (
-          <SvgXml key={i} xml={xml} color={theme.onPlaque} width={BAND_PERIOD} height={22} />
+    <View testID={testID} style={{ width: w, height: h }} {...a11y}>
+      <Svg width={w} height={h} style={StyleSheet.absoluteFill}>
+        <Path testID={testID && `${testID}-outer`} d={sealOutline(civ, w, h, small ? 0.5 : 1)} fill="none" stroke={color} strokeWidth={small ? 1 : 2} />
+        <Path testID={testID && `${testID}-inner`} d={sealOutline(civ, w, h, small ? 3.5 : 5.5)} fill="none" stroke={color} strokeWidth={1} />
+      </Svg>
+      <View style={styles.glyphs}>
+        {shown.map((g, i) => (
+          <Text
+            key={i}
+            testID={testID && `${testID}-glyph`}
+            allowFontScaling={false}
+            style={[styles.glyph, { fontFamily: outlineFace(g), fontSize, lineHeight: Math.round(fontSize * 1.15), color }]}
+          >
+            {g}
+          </Text>
         ))}
       </View>
-      <Image
-        source={TEXTURE[civ][theme.scheme]}
-        resizeMode="repeat"
-        style={[StyleSheet.absoluteFill, { opacity: theme.scheme === "dark" ? 0.6 : 1 }]}
-      />
     </View>
   );
 }
@@ -171,6 +225,4 @@ export function PlaqueBand({ civ, theme }: { civ: SealCiv; theme: Pick<Theme, "o
 const styles = StyleSheet.create({
   glyphs: { ...StyleSheet.absoluteFill, alignItems: "center", justifyContent: "center" },
   glyph: { textAlign: "center", includeFontPadding: false },
-  band: { height: 22, overflow: "hidden" },
-  tiles: { flexDirection: "row" },
 });

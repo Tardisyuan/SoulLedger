@@ -25,7 +25,7 @@ import { family, quoteFamily } from "../fonts";
 import { useI18n } from "../i18n";
 import { SessionContext } from "../session";
 import type { Theme } from "../theme";
-import { Button, Empty, FadeIn, Notice, PageEmptyArt, Screen, Skeleton, Txt, shade, useLayout, usePullRefresh, useReloadOnReconnect, useTheme } from "../ui";
+import { Button, Empty, FadeIn, Notice, PageEmptyArt, Screen, SectionLabel, Skeleton, Txt, shade, useLayout, usePullRefresh, useReloadOnReconnect, useTheme } from "../ui";
 import type { AppStackParams } from "./applications";
 import { useNow } from "./auth";
 
@@ -81,12 +81,12 @@ export function Tag({ text, tone, testID }: { text: string; tone: "waiting" | "m
   );
 }
 
-function SectionLabel({ text, tone }: { text: string; tone: "ink" | "subtle" }) {
+function ListLabel({ text }: { text: string }) {
   const t = useTheme();
   const { gutter } = useLayout();
   return (
     <View style={[styles.sectionLabel, { paddingHorizontal: gutter, borderBottomColor: t.hair }]}>
-      <Txt style={[styles.sectionText, { color: tone === "ink" ? t.ink : t.inkSubtle }]}>{text}</Txt>
+      <SectionLabel>{text}</SectionLabel>
     </View>
   );
 }
@@ -266,7 +266,7 @@ export function LettersScreen() {
                     </Notice>
                   </View>
                 ) : null}
-                <SectionLabel text={tr("soul_app.chat.section.hall")} tone="ink" />
+                <ListLabel text={tr("soul_app.chat.section.hall")} />
                 <Row
                   testID="hall-row"
                   hall
@@ -288,7 +288,7 @@ export function LettersScreen() {
                   />
                 ))}
                 <View testID="section-rule" style={{ height: 1, backgroundColor: t.hair2 }} />
-                <SectionLabel text={tr("soul_app.chat.section.souls")} tone="subtle" />
+                <ListLabel text={tr("soul_app.chat.section.souls")} />
               </>
             }
             ListEmptyComponent={
@@ -392,7 +392,7 @@ export function FindSoulScreen() {
   return (
     <Screen edges={["left", "right", "bottom"]} testID="find-soul">
       <View style={[styles.findBlock, { borderBottomColor: t.hair }]}>
-        <Txt style={[styles.sectionText, { color: t.ink }]}>{tr("soul_app.chat.find.by_code")}</Txt>
+        <SectionLabel>{tr("soul_app.chat.find.by_code")}</SectionLabel>
         <View style={[styles.codeBox, { backgroundColor: t.s1, borderColor: lookup.state === "error" ? t.negStrong : t.hair }]}>
           <TextInput
             testID="find-code"
@@ -441,7 +441,7 @@ export function FindSoulScreen() {
         ) : null}
       </View>
       <View style={styles.findBlock}>
-        <Txt style={[styles.sectionText, { color: t.ink }]}>{tr("soul_app.chat.find.from_circle")}</Txt>
+        <SectionLabel>{tr("soul_app.chat.find.from_circle")}</SectionLabel>
         <Txt variant="label" tone="subtle" style={styles.noSpacing}>
           {tr("soul_app.chat.find.circle_hint")}
         </Txt>
@@ -476,7 +476,6 @@ const styles = StyleSheet.create({
   noSpacing: { letterSpacing: 0 },
   pad: { padding: 20 },
   sectionLabel: { paddingTop: 12, paddingBottom: 8, borderBottomWidth: 1 },
-  sectionText: { fontFamily: family.ui[600], fontSize: 11, lineHeight: 15, letterSpacing: 1.5 },
   row: { flexDirection: "row", gap: 12, alignItems: "flex-start", paddingVertical: 16, borderBottomWidth: 1, minHeight: 64 },
   rowHead: { flexDirection: "row", alignItems: "center", gap: 8 },
   rowTitle: { fontSize: 15, lineHeight: 20 },
@@ -496,7 +495,7 @@ const styles = StyleSheet.create({
   codeBox: { minHeight: 48, borderWidth: 1, justifyContent: "center" },
   codeInput: { minHeight: 46, paddingHorizontal: 12, fontFamily: family.mono[500], fontSize: 15, letterSpacing: 2.2 },
   card: { flexDirection: "row", alignItems: "center", gap: 12, borderWidth: 1, padding: 16 },
-  write: { minHeight: ANDROID ? 48 : 38, paddingHorizontal: 12, alignItems: "center", justifyContent: "center" },
+  write: { minHeight: ANDROID ? 48 : 44, paddingHorizontal: 12, alignItems: "center", justifyContent: "center" },
   writeText: { fontFamily: family.ui[600], fontSize: 12, lineHeight: 17 },
   circle: { gap: 2 },
   circleRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, paddingHorizontal: 2, minHeight: ANDROID ? 48 : 44 },

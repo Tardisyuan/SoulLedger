@@ -8,7 +8,7 @@
  *   src/art.ts            the seal and band SVGs, as strings for react-native-svg's
  *                         SvgXml, with the c2pa `<metadata>` stripped (README: 入库时剥掉;
  *                         after stripping they equal Design's project files byte for byte)
- *   assets/v2/*.png       seal edge scans and band textures, 1x + @2x
+ *   assets/v2/*.png       seal edge scans (the cold start's v2 seal), 1x + @2x
  *   assets/fonts/LXGWSeal-Regular.ttf + LXGWSeal-OFL.txt   地府印文 (SIL OFL 1.1)
  *   assets/*.png          app icon (light / dark / tinted), Android adaptive foreground and
  *                         monochrome, notification icon, splash frame (light / dark),
@@ -59,7 +59,8 @@ writeFileSync(
 
 // ── textures and the seal font ──────────────────────────────────────────
 mkdirSync(join(APP, "assets/v2"), { recursive: true });
-for (const name of ["scan-cnseal", "scan-wax", "scan-clay", "scan-cyl", "paper", "paper-w", "papyrus", "papyrus-w", "marble", "marble-w"]) {
+// The band textures (paper / papyrus / marble) went with v2's ornament band (v3, 2026-10-02).
+for (const name of ["scan-cnseal", "scan-wax", "scan-clay", "scan-cyl"]) {
   copyFileSync(join(SRC, `textures/${name}-1x.png`), join(APP, `assets/v2/${name}.png`));
   copyFileSync(join(SRC, `textures/${name}-2x.png`), join(APP, `assets/v2/${name}@2x.png`));
 }

@@ -275,7 +275,12 @@ describe("reactions", () => {
       "/me/social/status/": STATUS,
     });
     wrap(<PostScreen id="p1" />);
-    fireEvent.press(await screen.findByTestId("comment-more-c1"));
+    // v3 44pt targets: the ⋯ is drawn 32 and reaches 44 by its slop; 回复 is 18 of words in 44 of padding.
+    const more = await screen.findByTestId("comment-more-c1");
+    expect(32 + 2 * (more.props.hitSlop as number)).toBeGreaterThanOrEqual(44);
+    const reply = StyleSheet.flatten(screen.getByTestId("comment-reply-c1").props.style) as { lineHeight: number; paddingVertical: number };
+    expect(reply.lineHeight + 2 * reply.paddingVertical).toBeGreaterThanOrEqual(44);
+    fireEvent.press(more);
     expect(mockNavigate).toHaveBeenCalledWith("CircleReport", { target: "COMMENT", id: "c1", preview: "春笋" });
     mockNavigate.mockReset();
     fireEvent.press(screen.getByTestId("comment-more-c2"));
