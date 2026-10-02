@@ -58,6 +58,8 @@ export function record(
     recorded_at: "2020-01-01T00:00:00Z",
     event_date: null,
     is_milestone: false,
+    statute_clause: "",
+    occurrence_count: null,
     ...over,
   };
 }

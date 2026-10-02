@@ -57,6 +57,8 @@ function record(
     civilization: "CHINESE",
     event_date: null,
     is_milestone: false,
+    statute_clause: "",
+    occurrence_count: null,
     ...over,
   };
 }
@@ -206,6 +208,26 @@ describe("the column heads carry the book's own words", () => {
     const { container } = renderBook();
 
     expect(container.textContent ?? "").not.toContain("ledger.book");
+  });
+});
+
+describe("事目's second line: clause, occurrences, milestone (Design v3 功过记录)", () => {
+  it("writes them under the entry, in the book's own words, and invents nothing for a bare entry", () => {
+    const { container } = renderBook([
+      record({
+        id: "cited", type: "MERIT", original_weight: 5, recorded_at: "2020-01-01T00:00:00Z",
+        statute_clause: "救濟門#7:賑濟窮民百錢", occurrence_count: 12, is_milestone: true,
+      }),
+      record({ id: "bare", type: "DEMERIT", original_weight: 3, recorded_at: "2020-02-01T00:00:00Z" }),
+      record({ id: "star", type: "MERIT", original_weight: 1, recorded_at: "2020-03-01T00:00:00Z", is_milestone: true }),
+    ]);
+    const items = bodyRows(container).map((cells) => cells[2]);
+    // Written out, not read from the bundle — see section 3 at the top.
+    expect(items[0]).toBe("deed cited救濟門#7 · 发生 12 次 · ◆ 重要节点");
+    expect(container.querySelector("[data-record-clause]")).toHaveAttribute("title", "救濟門#7:賑濟窮民百錢");
+    expect(items[1]).toBe("deed bare");
+    // A milestone with no count is not "1 次".
+    expect(items[2]).toBe("deed star◆ 重要节点");
   });
 });
 

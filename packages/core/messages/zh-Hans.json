@@ -1048,7 +1048,8 @@
     "top_realms": "界域前十",
     "avg_scope": "全部已入簿灵魂",
     "occupancy": "占容量",
-    "bucket_width": "每格 {{n}}"
+    "bucket_width": "每格 {{n}}",
+    "vs_last_month": "较上月"
   },
   "ledger": {
     "title": "功德统计",
@@ -1083,7 +1084,10 @@
       "col_demerit": "过",
       "col_balance": "销算余",
       "total": "合计",
-      "empty": "尚无账目。"
+      "empty": "尚无账目。",
+      "occurrences": "发生 {{n}} 次",
+      "milestone": "重要节点",
+      "clause": "条款"
     },
     "series_effective": "现值",
     "series_decayed": "已衰减",
@@ -2569,7 +2573,8 @@
       "workflow_process_timeouts_for_tenant": "处理审批超时",
       "social_cleanup_orphan_post_media": "清理未发出的朋友圈图片",
       "chat_reconcile_inbox": "按 Synapse 校对殿司收件箱",
-      "soul_assist_purge_history": "清理助手会话"
+      "soul_assist_purge_history": "清理助手会话",
+      "ledger_snapshot_balance_for_tenant": "记余额月快照"
     },
     "status": {
       "PENDING": "排队中",
