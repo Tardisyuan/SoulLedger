@@ -67,7 +67,13 @@ let css = result.css
     return `url("data:${mime};base64,${readFileSync(file).toString("base64")}")`;
   })
   .replaceAll("'Noto Sans SC Variable'", "'Noto Sans SC'")
-  .replaceAll("'Noto Serif SC Variable'", "'Noto Serif SC'");
+  .replaceAll("'Noto Serif SC Variable'", "'Noto Serif SC'")
+  // Tailwind's `.space-y-*` rules each re-declare its internal `--tw-space-y-reverse: 0`;
+  // design-sync's token scan reads every one as an unclassifiable design token. Dropping
+  // them here leaves the value unchanged — Tailwind registers that property with
+  // `@property … initial-value: 0` (and a `@layer properties` fallback), so 0 is what an
+  // element gets anyway. Only the shipped copy changes; Tailwind's own output does not.
+  .replace(/(:where\(\.[^{]*space-y-[^{]*\{)\s*--tw-space-y-reverse:\s*0;/g, "$1");
 
 const leftover = css.match(/url\((["']?)\/[^"')]*\1\)/g);
 if (leftover) throw new Error(`root-relative url() left in output: ${[...new Set(leftover)].join(", ")}`);
