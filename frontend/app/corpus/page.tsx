@@ -553,7 +553,7 @@ function Toc({
               aria-controls={`corpus-toc-${corpus}`}
               className="w-full flex items-center gap-2 h-(--control-h-sm) text-left hover:bg-[oklch(var(--color-surface-2))]"
             >
-              <span aria-hidden="true" className="w-3 text-[oklch(var(--color-ink-subtle))]">{open ? "▾" : "▸"}</span>
+              <span aria-hidden="true" className={`inline-block w-3 text-center text-[oklch(var(--color-ink-subtle))] transition-transform duration-fast ease-standard ${open ? "" : "-rotate-90"}`}>▾</span>
               <span title={corpusName(corpus)} className={`flex-1 min-w-0 truncate ${open ? "font-medium" : ""}`}>{corpusName(corpus)}</span>
               <span className="font-mono text-2xs text-[oklch(var(--color-ink-muted))]">{corpusCount ? corpusCount(corpus) : list.length}</span>
             </button>
