@@ -45,8 +45,8 @@ on the list; a listed file that does not exist.
 This file spells its own patterns, so it matches them and is on the list.
 """
 
-import os
 import re
+import subprocess
 from pathlib import Path
 
 BACKEND = Path(__file__).resolve().parents[1]
@@ -106,7 +106,13 @@ def _reaches_root(f: Path) -> bool:
 
 def _entries(files: set[Path]) -> list[str]:
     text = "\n".join(f.read_text(encoding="utf-8") for f in files)
-    names = [n for n in os.listdir(REPO) if n not in NOT_ENTRIES]
+    # Tracked top-level entries only: `os.listdir` also saw ignored local dirs
+    # (media/, __pycache__/, .prepush.env), so the derived list differed between
+    # the main checkout and a clean worktree, and the guard went red on merge.
+    tracked = subprocess.run(
+        ["git", "-C", str(REPO), "ls-files"], capture_output=True, text=True, check=True
+    ).stdout.splitlines()
+    names = sorted({t.split("/", 1)[0] for t in tracked} - set(NOT_ENTRIES))
     found = sorted(n for n in names if re.search(rf"""['"/]{re.escape(n)}['"/]""", text))
     return found or ["*"]
 
