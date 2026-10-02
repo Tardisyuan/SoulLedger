@@ -89,10 +89,30 @@ export function useFeed(
   });
 }
 
+/**
+ * Re-fetch every post list and detail — what a card's「重新获取」does when a
+ * signed image URL has expired (the server signs a fresh one per response).
+ */
+export function useRefreshPosts() {
+  const qc = useQueryClient();
+  return () => {
+    void qc.invalidateQueries({ queryKey: socialKeys.posts.all });
+  };
+}
+
+/** The composer's upload limits (`GET /social/media/`); they change only with a deploy. */
+export function usePostMediaLimits() {
+  return useQuery({
+    queryKey: socialKeys.mediaLimits,
+    queryFn: socialApi.mediaLimits,
+    staleTime: Infinity,
+  });
+}
+
 export function useCreatePost() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: { content: string; visibility?: string }) =>
+    mutationFn: (data: { content: string; visibility?: string; media?: string[] }) =>
       socialApi.createPost(data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: socialKeys.posts.all });

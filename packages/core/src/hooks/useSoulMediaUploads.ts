@@ -21,6 +21,16 @@ import { useCallback, useRef, useState } from "react";
 import { soulSocialApi, type SoulPostMediaUpload } from "../api/soul-social";
 import { SOUL_POST_MEDIA_MAX } from "../domain/postMedia";
 
+/**
+ * Where the uploads go: `soulSocialApi` (the App, soul token) or `socialApi`
+ * (the web officers' composer, 2026-10-02) — same backend function, same shape.
+ * Pass a module-level object: it is a dependency of the hook's callbacks.
+ */
+export interface MediaUploadClient {
+  uploadMedia: (body: FormData, onProgress?: (fraction: number) => void) => Promise<SoulPostMediaUpload>;
+  removeMedia: (id: string) => Promise<void>;
+}
+
 export type SoulMediaUploadStatus = "uploading" | "done" | "failed";
 
 export interface SoulMediaUpload<S> {
@@ -43,6 +53,14 @@ export function useSoulMediaUploads<S>(
   toBody: (source: S) => FormData | Promise<FormData>,
   max: number = SOUL_POST_MEDIA_MAX
 ) {
+  return useMediaUploads(soulSocialApi, toBody, max);
+}
+
+export function useMediaUploads<S>(
+  client: MediaUploadClient,
+  toBody: (source: S) => FormData | Promise<FormData>,
+  max: number
+) {
   const [items, setItems] = useState<SoulMediaUpload<S>[]>([]);
   // Keys removed while their request was in flight: the upload is deleted when it lands.
   const dropped = useRef(new Set<string>());
@@ -53,13 +71,13 @@ export function useSoulMediaUploads<S>(
 
   const start = useCallback(
     (key: string, source: S) => {
-      const upload = (body: FormData) => soulSocialApi.uploadMedia(body, (progress) => patch(key, { progress }));
+      const upload = (body: FormData) => client.uploadMedia(body, (progress) => patch(key, { progress }));
       const body = toBody(source);
       // A plain body goes up at once (no extra tick); an async one (compression) first.
       (body instanceof Promise ? body.then(upload) : upload(body))
         .then((media) => {
           if (dropped.current.delete(key)) {
-            void soulSocialApi.removeMedia(media.id).catch(() => {});
+            void client.removeMedia(media.id).catch(() => {});
             return;
           }
           patch(key, { status: "done", progress: 1, media, error: null });
@@ -69,7 +87,7 @@ export function useSoulMediaUploads<S>(
           patch(key, { status: "failed", error });
         });
     },
-    [toBody, patch]
+    [client, toBody, patch]
   );
 
   /** Adds up to the remaining room; returns how many were taken. */
@@ -106,10 +124,10 @@ export function useSoulMediaUploads<S>(
       const item = items.find((it) => it.key === key);
       if (!item) return;
       if (item.status === "uploading") dropped.current.add(key);
-      if (item.media) void soulSocialApi.removeMedia(item.media.id).catch(() => {});
+      if (item.media) void client.removeMedia(item.media.id).catch(() => {});
       setItems((prev) => prev.filter((it) => it.key !== key));
     },
-    [items]
+    [client, items]
   );
 
   /** After a successful post: the uploads now belong to it, so nothing is deleted. */

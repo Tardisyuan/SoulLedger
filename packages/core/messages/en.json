@@ -2408,6 +2408,8 @@
       "expired": "Link expired",
       "refetch": "Fetch again",
       "refetch_short": "Refetch",
+      "add": "Add images",
+      "max": "Up to {{max}}",
       "viewer_hint": "← → to switch · Esc to close",
       "prev": "Previous image",
       "next": "Next image"

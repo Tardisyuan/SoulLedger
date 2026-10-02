@@ -4,11 +4,12 @@ import { useState } from "react";
 import Link from "next/link";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
-import { useDeletePost } from "@soulledger/core/hooks/useSocial";
+import { useDeletePost, useRefreshPosts } from "@soulledger/core/hooks/useSocial";
 import { ConfirmDialog } from "@/src/components/ui/Modal";
 import { Button } from "@/src/components/ui/Button";
 import { ReactionBar } from "./ReactionBar";
 import { Avatar } from "./Avatar";
+import { PostMediaGrid } from "./PostMedia";
 import type { Post } from "@soulledger/core/api";
 import { DomainEnum } from "@/src/components/ui/DomainValue";
 
@@ -20,15 +21,15 @@ import { DomainEnum } from "@/src/components/ui/DomainValue";
  * 右端 44 高幽灵「删除」。可见性是领域枚举,经 `DomainEnum`(`social.visibility.*`)读出 ——
  * v3 把它写进时间那一行,不再是徽章(v1 那四个手写的明暗色对早已撤成中性徽章,现在连徽章也撤了)。
  *
- * 配图:`PostMediaGrid`(./PostMedia)已按稿做好,**但这里不画**:官员端 `/social/posts/` 的
- * 序列化器没有 `media`,而且 `apps/social/visibility.py::visible_posts` 排除了灵魂的帖子 ——
- * 有图的帖子只出自灵魂端上传(`/me/social/media/`,只收灵魂),所以官员这条流里今天没有一条
- * 帖子带图。等「官员能否发图 / 能否在这里看到灵魂帖子」拍板,再从这里接上。
+ * 配图:`PostMediaGrid`(./PostMedia)。2026-10-02 用户拍板:官员也能发图(`POST /social/media/`),
+ * 官员流仍不含灵魂帖子。每张图的 `url` 是发给当前用户的签名地址(约一小时);过期的那张显示
+ * 「◌ 链接已过期 · 重新获取」,重新获取 = 重拉帖子列表拿新签的地址(`useRefreshPosts`)。
  */
 export function PostCard({ post }: { post: Post }) {
   const { t, formatDate } = useI18n();
   const { user } = useTenant();
   const deletePost = useDeletePost();
+  const refreshPosts = useRefreshPosts();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const isAuthor = !!user && String(user.id) === String(post.author);
   const name = post.author_name || post.author_username;
@@ -75,6 +76,13 @@ export function PostCard({ post }: { post: Post }) {
       <Link href={`/social/${post.id}`} className="block">
         <p className="whitespace-pre-wrap text-md font-normal text-pretty text-[oklch(var(--color-ink))]">{post.content}</p>
       </Link>
+
+      <PostMediaGrid
+        media={post.media ?? []}
+        onRefetch={refreshPosts}
+        author={name}
+        time={formatDate(post.create_time)}
+      />
 
       <div className="border-t border-[oklch(var(--color-line))] pt-2">
         <ReactionBar

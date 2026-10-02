@@ -22,8 +22,10 @@ jest.mock("@/src/contexts/TenantContext", () => ({
 }));
 
 const mockDeleteMutate = jest.fn();
+const mockRefresh = jest.fn();
 jest.mock("@soulledger/core/hooks/useSocial", () => ({
   useDeletePost: () => ({ mutate: mockDeleteMutate, isPending: false }),
+  useRefreshPosts: () => mockRefresh,
   useToggleReaction: () => ({ mutate: jest.fn(), isPending: false }),
   useReactions: () => ({ data: { results: [] } }),
 }));
@@ -37,6 +39,7 @@ const basePost: Post = {
   visibility: "PUBLIC",
   comment_count: 0,
   reaction_count: 0,
+  media: [],
   create_time: "2026-08-01T00:00:00Z",
 };
 
@@ -97,5 +100,32 @@ describe("PostCard delete UI", () => {
     fireEvent.click(screen.getByText("common.delete"));
     fireEvent.click(screen.getByText("common.cancel"));
     expect(mockDeleteMutate).not.toHaveBeenCalled();
+  });
+});
+
+describe("PostCard 配图(官员也能发图,2026-10-02)", () => {
+  const media = (n: number) =>
+    Array.from({ length: n }, (_, i) => ({ id: `m${i}`, url: `/api/v1/social-media/m${i}/?t=s${i}`, width: 64, height: 48 }));
+
+  it("没有图:不画方格", () => {
+    render(<PostCard post={basePost} />);
+    expect(document.querySelector("[data-media-grid]")).toBeNull();
+  });
+
+  it("有图:按顺序画进方格", () => {
+    render(<PostCard post={{ ...basePost, media: media(4) }} />);
+    const grid = document.querySelector("[data-media-grid]")!;
+    expect(grid.getAttribute("data-count")).toBe("4");
+    expect(Array.from(grid.querySelectorAll("img")).map((i) => i.getAttribute("src"))).toEqual(
+      media(4).map((m) => expect.stringContaining(m.url)),
+    );
+  });
+
+  it("签名过期:虚线格「重新获取」重拉帖子列表,不留破图", () => {
+    render(<PostCard post={{ ...basePost, media: media(1) }} />);
+    fireEvent.error(document.querySelector("[data-media-grid] img")!);
+    expect(document.querySelector("[data-media-grid] img")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "social.media.refetch social.media.refetch_short" }));
+    expect(mockRefresh).toHaveBeenCalledTimes(1);
   });
 });
