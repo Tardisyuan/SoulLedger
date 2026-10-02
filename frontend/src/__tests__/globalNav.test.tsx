@@ -20,6 +20,7 @@ const MESSAGES: Record<string, string> = {
   "nav.expand_menu": "展开菜单",
   "nav.collapse_menu": "收起菜单",
   "nav.collapse_locked": "窗口宽度不足 1200 像素,导航固定收起",
+  "judgment.case_number": "案号",
 };
 
 jest.mock("@/src/contexts/I18nContext", () => ({
@@ -337,7 +338,7 @@ describe("长标签(egy)在 252 里截断,全文在 title", () => {
 
 // 身份带的题字 / 殿名 / 右栏由页面经 `usePlaque` 给(用户 2026-10-02);没给就是面包屑末段。
 describe("usePlaque:页面给身份带的题字", () => {
-  function Page({ text }: { text: { title?: string; meta?: string; hall?: string } }) {
+  function Page({ text }: { text: { title?: string; meta?: string; hall?: string; caseNumber?: string } }) {
     usePlaque(text);
     return <>page body</>;
   }
@@ -366,6 +367,22 @@ describe("usePlaque:页面给身份带的题字", () => {
     expect(title()).toHaveTextContent("菜单");
     expect(band().querySelector(".identity-case")).toBeNull();
     expect(band().querySelector(".identity-court")).toBeNull();
+  });
+
+  it("案号槽:右栏是「案号」小字 + 可复制的整串,不画 meta;收起与手机档都保留(data-case)", async () => {
+    const writeText = jest.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+    renderWith(<Page text={{ title: "审判台", meta: "不该出现", caseNumber: "CN-2026-0042" }} />);
+    const slot = band().querySelector(".identity-case") as HTMLElement;
+    expect(slot).toHaveAttribute("data-case");
+    expect(slot).toHaveTextContent(/^案号CN-2026-0042 ⧉$/);
+    expect(slot).not.toHaveTextContent("不该出现");
+    // 这份 t 不代参数:读屏名是 key 本身,案号由 data-case-number 认。
+    const chip = within(slot).getByRole("button", { name: "common.value.copy_case_number" });
+    expect(chip).toHaveAttribute("data-case-number", "CN-2026-0042");
+    expect(chip).toHaveAttribute("data-identifier-variant", "band");
+    fireEvent.click(chip);
+    await waitFor(() => expect(writeText).toHaveBeenCalledWith("CN-2026-0042"));
   });
 
   it("只报右栏、题字留空(数据没到)时,题字仍是面包屑末段", () => {
