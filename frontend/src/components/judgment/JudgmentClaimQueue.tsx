@@ -32,6 +32,8 @@ import { DeferDialog, ReassignDialog, claimRefusalMessage } from "@/src/componen
 import { BATCH_BAR, ROW_HOVER, ROW_LINK, ROW_SELECTED } from "@/components/ui/data-table";
 import { ActionsMenu } from "@/components/ui/data-grid/ActionsMenu";
 import { useHotkeys } from "@/src/lib/hotkeys";
+import { MOTION_DURATIONS, MOTION_EASINGS, prefersReducedMotion } from "@/lib/motion";
+import { animate } from "motion/react";
 import { verdictGlyph } from "@/src/lib/verdictGlyph";
 import { ClaimAvatar } from "@/src/components/judgment/ClaimAvatar";
 import { RowMark, ROW_MARK_ROW, isMinePending } from "@/src/components/judgment/RowMark";
@@ -97,6 +99,28 @@ const SEGMENT = (on: boolean) =>
       ? "border-[oklch(var(--color-ink))] font-semibold text-[oklch(var(--color-ink))]"
       : "border-[oklch(var(--color-line))] text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))]"
   }`;
+
+/**
+ * 选中行滚进视野(v3 第 7 轮 App.tsx「B2 · 审判队列」↑↓ 与「滚动进视野」):只沿纵轴,160ms、进场曲线;
+ * 减少动态效果下瞬时。浏览器的 smooth 定不了时长与曲线,所以自己滚 window(这页滚的就是 window)。
+ * 上缘让开吸顶的表头(它卡住时底边就是遮挡线)。用 motion 的数值动画 —— 队列这一族已经在用它,不另加库。
+ */
+export function scrollRowIntoView(row: HTMLElement) {
+  const r = row.getBoundingClientRect();
+  const top = row.closest("table")?.querySelector("thead")?.getBoundingClientRect().bottom ?? 0;
+  const delta = r.top < top ? r.top - top : r.bottom > window.innerHeight ? r.bottom - window.innerHeight : 0;
+  if (!delta) return;
+  const from = window.scrollY;
+  if (prefersReducedMotion()) {
+    window.scrollTo(window.scrollX, from + delta);
+    return;
+  }
+  return animate(from, from + delta, {
+    duration: MOTION_DURATIONS.fast,
+    ease: [...MOTION_EASINGS.enter],
+    onUpdate: (y) => window.scrollTo(window.scrollX, y),
+  });
+}
 
 export function JudgmentClaimQueue() {
   const { t, formatDateTime } = useI18n();
@@ -261,7 +285,11 @@ export function JudgmentClaimQueue() {
     const at = focused ? allRows.findIndex((j) => j.id === focused) : -1;
     const next = at === -1 ? (step === 1 ? 0 : allRows.length - 1) : Math.min(allRows.length - 1, Math.max(0, at + step));
     const id = allRows[next].id;
-    tableRef.current?.querySelector<HTMLAnchorElement>(`[data-row-link="${id}"]`)?.focus();
+    const link = tableRef.current?.querySelector<HTMLAnchorElement>(`[data-row-link="${id}"]`);
+    // focus() 自己会瞬时滚动;让它别动,滚动交给 v3 的 160ms 纵向滚动。
+    link?.focus({ preventScroll: true });
+    const row = link?.closest("tr");
+    if (row) scrollRowIntoView(row);
     setFocused(id);
   };
 
