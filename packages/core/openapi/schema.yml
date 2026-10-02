@@ -17645,6 +17645,40 @@ components:
       - prices
       - primary_first_token_seconds
       - provider
+    BalanceHistogram:
+      type: object
+      description: |-
+        等宽余额直方图:[-300, 300) 每 `bucket_width` 一格,外加两端开口的两格。
+        格子覆盖整条数轴,所以 `total` 总等于 `total_souls`。
+      properties:
+        bucket_width:
+          type: integer
+        buckets:
+          type: array
+          items:
+            $ref: '#/components/schemas/BalanceHistogramBucket'
+        total:
+          type: integer
+      required:
+      - bucket_width
+      - buckets
+      - total
+    BalanceHistogramBucket:
+      type: object
+      description: 半开区间 [min, max);两端那两格开口(min 或 max 为 null)。
+      properties:
+        min:
+          type: integer
+          nullable: true
+        max:
+          type: integer
+          nullable: true
+        count:
+          type: integer
+      required:
+      - count
+      - max
+      - min
     BalanceReading:
       type: object
       description: kind=BALANCE — the Chinese 功過格 account.
@@ -20913,6 +20947,30 @@ components:
             `evidence_json` 的条目数 —— 详情页「事实」一栏标题旁的那个数
             (`JudgmentEvidenceColumn`,`Object.entries(evidence).length`)。
           readOnly: true
+        cycle:
+          type: integer
+          readOnly: true
+          description: Life index this row belongs to; 0 is the first life.
+        judgment_method:
+          allOf:
+          - $ref: '#/components/schemas/JudgmentMethodEnum'
+          readOnly: true
+          description: |-
+            Method of judgment (affects disposition routing)
+
+            * `STANDARD` - Standard Trial (Chinese/European/Greek)
+            * `HEART_WEIGHING` - Heart Weighing (Egyptian)
+            * `DIABOLICAL_TRIAL` - Diabolical Trial (European Hell)
+        merit_score:
+          type: integer
+          readOnly: true
+        demerit_score:
+          type: integer
+          readOnly: true
+        realm_name:
+          type: string
+          nullable: true
+          readOnly: true
       required:
       - amends_plan_id
       - citations
@@ -20922,10 +20980,12 @@ components:
       - claimed_by_name
       - concluded_at
       - created_at
+      - cycle
       - defer_reason
       - deferred_at
       - deferred_by
       - deferred_by_name
+      - demerit_score
       - draft_destination_realm_id
       - draft_eternal
       - draft_saved_at
@@ -20936,8 +20996,11 @@ components:
       - id
       - is_final
       - judge_name
+      - judgment_method
       - karmic_balance
       - kind
+      - merit_score
+      - realm_name
       - soul
       - soul_name
       - verdict
@@ -21359,6 +21422,30 @@ components:
             `evidence_json` 的条目数 —— 详情页「事实」一栏标题旁的那个数
             (`JudgmentEvidenceColumn`,`Object.entries(evidence).length`)。
           readOnly: true
+        cycle:
+          type: integer
+          readOnly: true
+          description: Life index this row belongs to; 0 is the first life.
+        judgment_method:
+          allOf:
+          - $ref: '#/components/schemas/JudgmentMethodEnum'
+          readOnly: true
+          description: |-
+            Method of judgment (affects disposition routing)
+
+            * `STANDARD` - Standard Trial (Chinese/European/Greek)
+            * `HEART_WEIGHING` - Heart Weighing (Egyptian)
+            * `DIABOLICAL_TRIAL` - Diabolical Trial (European Hell)
+        merit_score:
+          type: integer
+          readOnly: true
+        demerit_score:
+          type: integer
+          readOnly: true
+        realm_name:
+          type: string
+          nullable: true
+          readOnly: true
         evidence_admissions:
           type: array
           items:
@@ -21378,10 +21465,12 @@ components:
       - claimed_by_name
       - concluded_at
       - created_at
+      - cycle
       - defer_reason
       - deferred_at
       - deferred_by
       - deferred_by_name
+      - demerit_score
       - draft_destination_realm_id
       - draft_eternal
       - draft_saved_at
@@ -21393,8 +21482,11 @@ components:
       - id
       - is_final
       - judge_name
+      - judgment_method
       - karmic_balance
       - kind
+      - merit_score
+      - realm_name
       - soul
       - soul_name
       - verdict
@@ -21476,6 +21568,16 @@ components:
         * `ORIGINAL` - 原审判
         * `AMENDMENT` - 加项 / 减项审判
         * `REOPEN` - 重开审判
+    JudgmentMethodEnum:
+      enum:
+      - STANDARD
+      - HEART_WEIGHING
+      - DIABOLICAL_TRIAL
+      type: string
+      description: |-
+        * `STANDARD` - Standard Trial (Chinese/European/Greek)
+        * `HEART_WEIGHING` - Heart Weighing (Egyptian)
+        * `DIABOLICAL_TRIAL` - Diabolical Trial (European Hell)
     JudgmentPrecedent:
       type: object
       description: |-
@@ -21882,8 +21984,15 @@ components:
         equals `total_souls` because the buckets partition the whole line, and
         it exists so a reader can check that without re-deriving the bounds.
       properties:
+        as_of:
+          type: string
+          format: date-time
         total_souls:
           type: integer
+        average_balance:
+          type: number
+          format: double
+          nullable: true
         state_distribution:
           type: array
           items:
@@ -21898,6 +22007,8 @@ components:
             $ref: '#/components/schemas/KarmaBucket'
         karma_distribution_total:
           type: integer
+        balance_histogram:
+          $ref: '#/components/schemas/BalanceHistogram'
         recent_activity:
           type: array
           items:
@@ -21907,6 +22018,9 @@ components:
           items:
             $ref: '#/components/schemas/SoulsByRealm'
       required:
+      - as_of
+      - average_balance
+      - balance_histogram
       - karma_distribution
       - karma_distribution_total
       - recent_activity
@@ -26062,6 +26176,30 @@ components:
             `evidence_json` 的条目数 —— 详情页「事实」一栏标题旁的那个数
             (`JudgmentEvidenceColumn`,`Object.entries(evidence).length`)。
           readOnly: true
+        cycle:
+          type: integer
+          readOnly: true
+          description: Life index this row belongs to; 0 is the first life.
+        judgment_method:
+          allOf:
+          - $ref: '#/components/schemas/JudgmentMethodEnum'
+          readOnly: true
+          description: |-
+            Method of judgment (affects disposition routing)
+
+            * `STANDARD` - Standard Trial (Chinese/European/Greek)
+            * `HEART_WEIGHING` - Heart Weighing (Egyptian)
+            * `DIABOLICAL_TRIAL` - Diabolical Trial (European Hell)
+        merit_score:
+          type: integer
+          readOnly: true
+        demerit_score:
+          type: integer
+          readOnly: true
+        realm_name:
+          type: string
+          nullable: true
+          readOnly: true
     PatchedJudgmentDraftWrite:
       type: object
       description: |-
@@ -26230,6 +26368,10 @@ components:
           readOnly: true
         reaction_count:
           type: integer
+          readOnly: true
+        reaction_counts:
+          allOf:
+          - $ref: '#/components/schemas/SoulReactionCounts'
           readOnly: true
         tenant:
           type: integer
@@ -27012,6 +27154,10 @@ components:
         reaction_count:
           type: integer
           readOnly: true
+        reaction_counts:
+          allOf:
+          - $ref: '#/components/schemas/SoulReactionCounts'
+          readOnly: true
         tenant:
           type: integer
           readOnly: true
@@ -27032,6 +27178,7 @@ components:
       - create_time
       - id
       - reaction_count
+      - reaction_counts
       - tenant
       - update_time
     PostCreate:
@@ -27076,6 +27223,10 @@ components:
         reaction_count:
           type: integer
           minimum: 0
+        reaction_counts:
+          allOf:
+          - $ref: '#/components/schemas/SoulReactionCounts'
+          readOnly: true
         create_time:
           type: string
           format: date-time
@@ -27087,6 +27238,7 @@ components:
       - content
       - create_time
       - id
+      - reaction_counts
     PostMedia:
       type: object
       description: |-
@@ -30694,7 +30846,12 @@ components:
           type: string
         count:
           type: integer
+        average_balance:
+          type: number
+          format: double
+          nullable: true
       required:
+      - average_balance
       - count
       - label
       - state
@@ -30722,9 +30879,16 @@ components:
           $ref: '#/components/schemas/RealmTypeEnum'
         count:
           type: integer
+        capacity:
+          type: integer
+          nullable: true
+        held:
+          type: integer
       required:
+      - capacity
       - civilization
       - count
+      - held
       - realm_code
       - realm_name
       - realm_type

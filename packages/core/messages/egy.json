@@ -1046,7 +1046,9 @@
     "civ_empty": "Nen Sesh Djer · Sesh",
     "tab_ledger": "Medjat",
     "top_realms": "Ahet Tepy",
-    "avg_scope": "Ba Neb"
+    "avg_scope": "Ba Neb",
+    "occupancy": "Hesb Aq",
+    "bucket_width": "Hesb {{n}}"
   },
   "ledger": {
     "title": "Medew Nefer",
@@ -1232,7 +1234,9 @@
       "notes_placeholder": "Shesep Medu Seth...",
       "create_workflow": "Iri Wat Hesy",
       "create_workflow_hint": "Setep Seth: Em Khetem, Wat Hesy Iri Djes-Ef Em Tut En Taui Hena Sep.",
-      "conclude_with_workflow": "Khetem Hena Iri Wat Hesy"
+      "conclude_with_workflow": "Khetem Hena Iri Wat Hesy",
+      "current_realm": "Ta",
+      "method": "Iru En Wedja"
     },
     "create_success": "Wedja Iri Seth",
     "create_error": "Nen Iri Wedja",
@@ -1442,7 +1446,9 @@
         "ORIGINAL": "Wedja Tepy",
         "AMENDMENT": "Redi Hena Fekh",
         "REOPEN": "Wedja Wehem"
-      }
+      },
+      "col_merit_demerit": "Nefer / Isfet",
+      "col_cycle_kind": "Ankh / Iru"
     },
     "admission": {
       "title": "Medu Maat · Shesep Maat",
@@ -1503,6 +1509,11 @@
     },
     "row_mark": {
       "mine": "Shesep-I · Nen Iri Djer"
+    },
+    "methods": {
+      "STANDARD": "Wedja Tepy",
+      "HEART_WEIGHING": "Dens Ib",
+      "DIABOLICAL_TRIAL": "Wedja Isfet"
     }
   },
   "audit": {

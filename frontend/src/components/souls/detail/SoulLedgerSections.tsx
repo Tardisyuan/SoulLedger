@@ -57,8 +57,8 @@ const byNewest = <T,>(items: T[], at: (x: T) => string | null | undefined) =>
  * 日 · 庭与判官 · 裁决(字形 + 文字)· 查看。行首色标只在「未结案 + 认领人是我」的行上。
  * 下面是最近一份已宣判判决的判词,全页唯一的衬线(规范:衬线只给人说的话)。
  *
- * 原型的行标题是「第四世 · 初审」:判决上没有它属于第几世的字段,`kind`(原审 / 改判 /
- * 重开)也没有译名,所以这一格写庭与判官 —— 两样都是判决自己带的。
+ * 行标题是原型的「第四世 · 初审」:世次读 `cycle`(0 是第一世),种类读 `kind`;
+ * 下面一行小字是庭与判官 —— 都是判决自己带的。
  */
 export function SoulJudgmentHistory({ judgments }: { judgments: Judgment[] }) {
   const { t, formatDate } = useI18n();
@@ -90,8 +90,15 @@ export function SoulJudgmentHistory({ judgments }: { judgments: Judgment[] }) {
             <span className="font-mono text-2xs text-[oklch(var(--color-ink-muted))]">
               {formatDate(j.concluded_at ?? j.created_at)}
             </span>
-            <span title={bench || undefined} className="truncate text-sm">
-              {bench || <MissingValue kind="unrecorded" />}
+            <span className="min-w-0">
+              <span className="block whitespace-nowrap text-sm font-semibold text-[oklch(var(--color-ink))]" data-testid="judgment-life-kind">
+                {j.cycle == null ? <MissingValue kind="unrecorded" /> : t("souls.detail.life_number", { n: String(j.cycle + 1) })}
+                {" · "}
+                <DomainEnum namespace="judgment.claim.kinds" value={j.kind} />
+              </span>
+              <span title={bench || undefined} className="block truncate text-xs text-[oklch(var(--color-ink-muted))]">
+                {bench || <MissingValue kind="unrecorded" />}
+              </span>
             </span>
             <span className="text-xs">
               {j.verdict ? <VerdictBadge verdict={j.verdict} /> : t("souls.detail.ledger.verdict_pending")}
