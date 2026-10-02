@@ -33,8 +33,8 @@ const sharp = require("sharp");
 
 const APP = join(dirname(fileURLToPath(import.meta.url)), "..");
 const WEB = join(APP, "..", "frontend");
-export const GOLD = "#ECAA3D";
-export const INK = "#10120F"; // v3 dark canvas — the same ground as app.json's splash and src/coldStart.tsx
+export const GOLD = "#ECAA3D"; // `brand.mark` in src/theme.ts (theme.test pins the two equal)
+export const INK = "#10120F"; // `brand.ground` — v3 dark canvas, the same ground as app.json's splash and src/coldStart.tsx
 
 const mark = readFileSync(join(APP, "assets/brand/soulledger-mark.svg"), "utf8");
 const [, , , vw, vh] = mark.match(/viewBox="([\d.]+) ([\d.]+) ([\d.]+) ([\d.]+)"/).map(Number);

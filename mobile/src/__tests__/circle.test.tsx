@@ -9,7 +9,7 @@
 import { NavigationContainer } from "@react-navigation/native";
 import { act, fireEvent, render, renderHook, screen, waitFor, within } from "@testing-library/react-native";
 import type { ReactNode } from "react";
-import { FlatList, RefreshControl, StyleSheet } from "react-native";
+import { FlatList, StyleSheet } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { I18nProvider } from "../i18n";
@@ -168,7 +168,8 @@ describe("feed paging (a FlatList read to its end)", () => {
     stubApi({ "/me/social/feed/": [page([post({ id: "p1" })]), page([post({ id: "p0" }), post({ id: "p1" })])] });
     wrap(<CircleScreen />);
     const before = await screen.findByTestId("post-p1");
-    await act(async () => screen.UNSAFE_getByType(RefreshControl).props.onRefresh());
+    // A pull released past 56 (v3 B2; jest renders iOS, where the pull is the list's own bounce).
+    await act(async () => fireEvent(screen.getByTestId("circle-list"), "scrollEndDrag", { nativeEvent: { contentOffset: { x: 0, y: -60 } } }));
     await screen.findByTestId("post-p0");
     expect(screen.getByTestId("post-p1")).toBe(before);
   });
