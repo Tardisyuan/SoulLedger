@@ -4478,7 +4478,18 @@
       "rules": "Office of Rules",
       "records": "Office of Records",
       "trials": "Office of Trials",
-      "tenth": "Tenth Court"
+      "court": {
+        "cn": "Tenth Court",
+        "eu": "Court of Minos",
+        "eg": "Hall of Two Truths",
+        "gr": "Court of the Three Judges"
+      }
+    },
+    "realm": {
+      "cn": "Fengdu",
+      "eu": "The Beyond",
+      "eg": "Duat",
+      "gr": "Hades"
     }
   }
 }
