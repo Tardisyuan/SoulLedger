@@ -70,6 +70,7 @@ import {
   type Placement,
 } from "@/src/components/judgment/JudgmentPlacement";
 import { useJudgmentNextAfter, useJudgmentPrevious } from "@soulledger/core/hooks/useJudgments";
+import { usePlaque } from "@/src/components/plaque/Plaque";
 
 /**
  * 判决书 —— the judgment detail page.
@@ -428,6 +429,9 @@ export default function JudgmentDetailPage({ params }: PageProps) {
       {t("judgment.detail.back_to_list")}
     </Link>
   );
+
+  // 身份带:题「审判台」(v3 `pageTitle`;面包屑末段是「详情」)。案号后端没有,不写右栏。
+  usePlaque({ title: t("plaque.desk") });
 
   if (isLoading) {
     return <PageSpinner label={t("judgment.detail.loading")} />;

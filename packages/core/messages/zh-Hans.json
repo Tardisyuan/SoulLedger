@@ -2480,7 +2480,8 @@
       "sentence_requests": "受刑请求",
       "assistant_admin": "助手管理"
     },
-    "queue": "分诊队列"
+    "queue": "分诊队列",
+    "about": "关于"
   },
   "tenant": {
     "civilizations": {
@@ -4422,5 +4423,24 @@
       "until_rebuilt": "重建完成前，助手改用全部帮助条目回答。",
       "fallback_note": "向量服务连不上时，助手会自动改用全部帮助条目回答，不会答不了。"
     }
+  },
+  "plaque": {
+    "realms": "界域 · {{root}}",
+    "held": "在押 {{n}}",
+    "corpus": "律条语料",
+    "corpus_meta": "{{works}} 部 · {{n}} 条",
+    "workflow_editor": "审批流编辑器",
+    "workflow_instance": "审批实例",
+    "step": "第 {{k}} / {{n}} 步",
+    "social": "朋友圈",
+    "social_meta": "关注 {{following}} · 粉丝 {{followers}}",
+    "post": "帖子",
+    "comments": "评论 {{n}}",
+    "posts": "发帖 {{n}}",
+    "soul": "灵魂详情",
+    "desk": "审判台",
+    "queue": "审判队列",
+    "permissions": "权限",
+    "permissions_meta": "{{roles}} 角色 · {{perms}} 项权限"
   }
 }

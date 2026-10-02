@@ -2480,7 +2480,8 @@
       "sentence_requests": "Dbh Wetep",
       "assistant_admin": "Smen Hehy Medu"
     },
-    "queue": "Sepu Wedja"
+    "queue": "Sepu Wedja",
+    "about": "Tepy Hena Sesen"
   },
   "tenant": {
     "civilizations": {
@@ -4422,5 +4423,24 @@
       "floor_hint": "Sep Tepy Nen Er Mi Er Tepy: Hehy Medu Em Medu Seth Neb.",
       "rebuild_body": "Iri Seth Neb, Er Khemen; Nen Wehem Iri: Khent Wenen. Em Wehem Iri: Hehy Medu Wesheb Wenen."
     }
+  },
+  "plaque": {
+    "realms": "Ta · {{root}}",
+    "held": "Em Sekhet {{n}}",
+    "corpus": "Hep Sesh",
+    "corpus_meta": "Sesh {{works}} · Hep {{n}}",
+    "workflow_editor": "Khemen Wat Wedja",
+    "workflow_instance": "Wat Wedja Em Iri",
+    "step": "Wedja {{k}} / {{n}}",
+    "social": "Shemsu",
+    "social_meta": "Nehes {{following}} · Nehesu {{followers}}",
+    "post": "Sesh",
+    "comments": "Wesheb {{n}}",
+    "posts": "Sesh {{n}}",
+    "soul": "Ba",
+    "desk": "Wedja",
+    "queue": "Sepu Wedja",
+    "permissions": "Was",
+    "permissions_meta": "Netjeru {{roles}} · Was {{perms}}"
   }
 }
