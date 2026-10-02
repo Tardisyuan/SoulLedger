@@ -483,7 +483,8 @@ describe("about / credits (spec v2 C16)", () => {
     expect(screen.queryByText(/CC BY/)).toBeNull();
     fireEvent.press(screen.getByTestId("credit-source-Museo Egizio, Torino"));
     expect(open).toHaveBeenCalledWith(expect.stringContaining("commons.wikimedia.org/wiki/File:Stamped_clay_sealing"));
-    expect(screen.getByText("Owen Jones")).toBeTruthy();
+    // 纹样一节(Owen Jones)随 v2 匾纹带与分节纹一起撤掉(2026-10-03)。
+    expect(screen.queryByText("Owen Jones")).toBeNull();
     expect(screen.getByText("LXGW Seal")).toBeTruthy();
     open.mockRestore();
     await act(async () => {});
