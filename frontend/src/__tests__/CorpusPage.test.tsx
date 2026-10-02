@@ -5,11 +5,12 @@
  *
  *   1. 每个节号是它自己体系的(§ 27 / 42 带分母、614b 是转录的斯特方页码、功過格按
  *      門內序號)—— 断言逐字,并断言裸 ordinal 不出现。
- *   2. 衬线只给原文与今译:阅读栏里恰好两段 `.font-serif`。
- *   3. 原文只在真按原语转录的功過格上有;别的五部写「未记录」,不拿译文冒充。
+ *   2. 衬线只给原文与译文:阅读栏里恰好两段 `.font-serif`。
+ *   3. 原文只在真按原语转录的功過格上有;别的几部不放「原文」一节,不拿译文冒充。
  *   4. citation_count 的 0 与 null 可区分;「被引用」清单读 `?statute=`,新的在前、分页;
  *      「版本」没有接口,写明缺口。
- *   5. 检索命中用 <mark>(底色 + 2 px 强调下线,不改字重);输入节号直达那一条。
+ *   5. 检索命中用 <mark>(12% 墨底 + 2 px 墨下线,当前那处反白,不改字重);↑ ↓ 按目录顺序
+ *      走过每一处;输入节号直达那一条。
  */
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { ReactNode } from "react";
@@ -158,14 +159,18 @@ describe("typing a code jumps straight to it — each in its own system", () => 
 });
 
 describe("serif, original and translation", () => {
-  it("sets exactly two serif passages — 原文 and 今译 — for the 功過格, original = text_zh", async () => {
+  it("sets exactly two serif passages — 原文 and 译文 — for the 功過格, original = text_zh", async () => {
     renderPage();
     const reading = await screen.findByTestId("corpus-reading");
     expect(reading.querySelectorAll(".font-serif")).toHaveLength(2);
     expect(within(reading).getByTestId("corpus-original")).toHaveTextContent("凡善多而口业未净者");
     expect(within(reading).getByTestId("corpus-translation")).toHaveTextContent("shall not be reborn in haste");
     // Editor notes and metadata are sans.
-    expect(within(reading).getByText("编者注:期三年为上限。").closest(".font-serif")).toBeNull();
+    // (twice: a section from 1024 up, a <details> below it)
+    const notes = within(reading).getAllByText("编者注:期三年为上限。");
+    expect(notes).toHaveLength(2);
+    for (const n of notes) expect(n.closest(".font-serif")).toBeNull();
+    expect(reading.querySelector("details")).toHaveTextContent("编者注");
     // 条号是展示数字(规范 v3):Noto Serif SC 600,不是等宽。
     expect(within(reading).getByTestId("corpus-sigil").className).toContain("font-title");
     expect(within(reading).getByTestId("corpus-sigil").className).not.toContain("font-mono");
@@ -176,30 +181,77 @@ describe("serif, original and translation", () => {
     await screen.findByTestId("corpus-reading");
     await open("IX · XXVI");
     const reading = screen.getByTestId("corpus-reading");
-    const original = within(reading).getByTestId("corpus-original");
-    expect(original.querySelector('[data-missing="unrecorded"]')).not.toBeNull();
-    expect(original).not.toHaveTextContent("text-eu-inf-26");
+    expect(within(reading).queryByTestId("corpus-original")).toBeNull();
+    expect(within(reading).queryByText("原文")).toBeNull();
+    expect(within(reading).getByText("译文")).toBeInTheDocument();
     expect(within(reading).getByTestId("corpus-translation")).toHaveTextContent("text-eu-inf-26");
     expect(reading.querySelectorAll(".font-serif")).toHaveLength(1);
   });
 
-  it("caps the reading column at 72ch", async () => {
+  it("caps the passages at 34em", async () => {
     renderPage();
     const reading = await screen.findByTestId("corpus-reading");
-    expect(reading.querySelector(".max-w-\\[72ch\\]")).not.toBeNull();
+    expect(within(reading).getByTestId("corpus-translation").className).toContain("max-w-[34em]");
   });
 });
 
 describe("search", () => {
-  it("marks hits with a tint and a 2px accent underline, not a weight change", async () => {
+  it("marks the current hit inverted, the others with a tint and a 2px ink underline — never a weight change", async () => {
     renderPage();
     await screen.findByTestId("corpus-reading");
-    fireEvent.change(search(), { target: { value: "口业" } });
-    const hit = await screen.findAllByText("口业", { selector: "mark" });
-    expect(hit[0].className).toContain("--color-surface-2");
-    expect(hit[0].className).toContain("inset_0_-2px_0_oklch(var(--color-accent))");
-    expect(hit[0].className).not.toMatch(/font-(semibold|bold|medium)/);
-    expect(screen.getByTestId("corpus-hit-count")).toHaveTextContent("1 条");
+    fireEvent.change(search(), { target: { value: "text-" } });
+    await waitFor(() => expect(screen.getByTestId("corpus-hit-position")).toHaveTextContent("1 / 4"));
+    const current = screen.getAllByText("text-", { selector: "mark" });
+    expect(current).toHaveLength(1);
+    expect(current[0]).toHaveAttribute("data-current");
+    expect(current[0].className).toContain("bg-[oklch(var(--color-ink))]");
+    expect(current[0].className).toContain("text-[oklch(var(--color-surface-1))]");
+    expect(current[0].className).not.toMatch(/font-(semibold|bold|medium)/);
+    expect(screen.getByTestId("corpus-hit-count")).toHaveTextContent("子串匹配 · 4 部中 4 处");
+  });
+
+  it("numbers hits title → translation within one article: the next one is the next drawn, the others tinted", async () => {
+    mockedStatutes.mockImplementation(() =>
+      Promise.resolve({
+        data: {
+          count: 1,
+          next: null,
+          previous: null,
+          results: [statute({ id: "x", civilization: "EUROPEAN", corpus: "DEADLY_SIN", ordinal: 1, display_title: "ira", display_text: "ira et ira" })],
+        },
+      })
+    );
+    renderPage();
+    await screen.findByTestId("corpus-reading");
+    fireEvent.change(search(), { target: { value: "ira" } });
+    await waitFor(() => expect(screen.getByTestId("corpus-hit-position")).toHaveTextContent("1 / 3"));
+    const translationMarks = () => Array.from(screen.getByTestId("corpus-translation").querySelectorAll("mark"));
+    expect(translationMarks()).toHaveLength(2);
+    expect(translationMarks().some((m) => m.hasAttribute("data-current"))).toBe(false);
+    expect(translationMarks()[1].className).toContain("bg-[oklch(var(--color-ink)/0.12)]");
+    expect(translationMarks()[1].className).toContain("inset_0_-2px_0_oklch(var(--color-ink))");
+    fireEvent.click(screen.getByRole("button", { name: "下一处" }));
+    expect(screen.getByTestId("corpus-hit-position")).toHaveTextContent("2 / 3");
+    expect(translationMarks()[0]).toHaveAttribute("data-current");
+    expect(translationMarks()[1]).not.toHaveAttribute("data-current");
+    expect(document.querySelectorAll("mark[data-current]")).toHaveLength(1);
+  });
+
+  it("↑ ↓ walk the hits across articles in contents order, wrapping at both ends", async () => {
+    renderPage();
+    await screen.findByTestId("corpus-reading");
+    fireEvent.change(search(), { target: { value: "text-" } });
+    await waitFor(() => expect(screen.getByTestId("corpus-translation")).toHaveTextContent("text-eu-inf-26"));
+    fireEvent.click(screen.getByRole("button", { name: "下一处" }));
+    expect(screen.getByTestId("corpus-hit-position")).toHaveTextContent("2 / 4");
+    expect(screen.getByTestId("corpus-translation")).toHaveTextContent("text-eu-ds-7");
+    fireEvent.keyDown(search(), { key: "Enter", shiftKey: true });
+    fireEvent.keyDown(search(), { key: "Enter", shiftKey: true });
+    expect(screen.getByTestId("corpus-hit-position")).toHaveTextContent("4 / 4");
+    expect(screen.getByTestId("corpus-translation")).toHaveTextContent("text-gr-er-4");
+    fireEvent.click(screen.getByRole("button", { name: "清除检索" }));
+    expect(search()).toHaveValue("");
+    expect(screen.queryByTestId("corpus-hit-position")).toBeNull();
   });
 
   it("says nothing matched, with a way out", async () => {
@@ -207,7 +259,9 @@ describe("search", () => {
     await screen.findByTestId("corpus-reading");
     fireEvent.change(search(), { target: { value: "口孽" } });
     expect(await screen.findByText("没有匹配「口孽」的律条")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "清除检索" }));
+    // Two ways out: the ✕ in the box and the empty state's button.
+    expect(screen.getAllByRole("button", { name: "清除检索" })).toHaveLength(2);
+    fireEvent.click(screen.getByText("清除检索", { selector: "button" }));
     await screen.findByTestId("corpus-reading");
   });
 });
@@ -223,7 +277,7 @@ describe("the right rail", () => {
     renderPage();
     await screen.findByTestId("corpus-reading");
     await open("VII");
-    expect(screen.getByTestId("corpus-cited-by")).toHaveTextContent("被引用 0 件");
+    expect(screen.getByTestId("corpus-cited-by")).toHaveTextContent(/^0次被判词引用$/);
     // Nothing to list, so nothing is asked for.
     expect(mockedList).not.toHaveBeenCalledWith(expect.objectContaining({ statute: "eu-ds-7" }));
     await open("IX · XXVI");
@@ -252,7 +306,8 @@ describe("the right rail", () => {
     );
     renderPage();
     await screen.findByTestId("corpus-reading");
-    expect(screen.getByTestId("corpus-cited-by")).toHaveTextContent("被引用 3 件");
+    expect(screen.getByTestId("corpus-cited-by")).toHaveTextContent(/^3次被判词引用$/);
+    expect(screen.getByTestId("corpus-cited-by").querySelector(".font-title")).toHaveTextContent(/^3$/);
     const list = await screen.findByTestId("corpus-cited-list");
     expect(mockedList).toHaveBeenCalledWith({ statute: "cn-17", ordering: "-created_at", page: "1" });
     const rows = within(list).getAllByRole("listitem");
