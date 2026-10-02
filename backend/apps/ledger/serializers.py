@@ -285,6 +285,8 @@ class SoulStateDistributionSerializer(serializers.Serializer):
     state = serializers.CharField()
     label = serializers.CharField()
     count = serializers.IntegerField()
+    #: 这个状态下灵魂的平均余额(merit − demerit),一位小数;没有灵魂时 null。
+    average_balance = serializers.FloatField(allow_null=True)
 
 
 class TenantSoulStatsSerializer(serializers.Serializer):
@@ -303,6 +305,23 @@ class KarmaBucketSerializer(serializers.Serializer):
 
     label = serializers.CharField()
     count = serializers.IntegerField()
+
+
+class BalanceHistogramBucketSerializer(serializers.Serializer):
+    """半开区间 [min, max);两端那两格开口(min 或 max 为 null)。"""
+
+    min = serializers.IntegerField(allow_null=True)
+    max = serializers.IntegerField(allow_null=True)
+    count = serializers.IntegerField()
+
+
+class BalanceHistogramSerializer(serializers.Serializer):
+    """等宽余额直方图:[-300, 300) 每 `bucket_width` 一格,外加两端开口的两格。
+    格子覆盖整条数轴,所以 `total` 总等于 `total_souls`。"""
+
+    bucket_width = serializers.IntegerField()
+    buckets = BalanceHistogramBucketSerializer(many=True)
+    total = serializers.IntegerField()
 
 
 class RecentActivitySerializer(serializers.Serializer):
@@ -327,6 +346,10 @@ class SoulsByRealmSerializer(serializers.Serializer):
     #: `Realm.realm_type`(HELL / PURGATORY / BLISS / NEUTRAL)—— 前端按它选图案。
     realm_type = serializers.ChoiceField(choices=RealmType.choices)
     count = serializers.IntegerField()
+    #: 容量;null = 未记录。
+    capacity = serializers.IntegerField(allow_null=True)
+    #: 此刻在押(未离开的行程站),与界域页、发落的 `realm_full` 同一口径。
+    held = serializers.IntegerField()
 
 
 class LedgerOverviewStatsSerializer(serializers.Serializer):
@@ -337,11 +360,16 @@ class LedgerOverviewStatsSerializer(serializers.Serializer):
     it exists so a reader can check that without re-deriving the bounds.
     """
 
+    #: 这份聚合算出来的时刻。
+    as_of = serializers.DateTimeField()
     total_souls = serializers.IntegerField()
+    #: 全部灵魂的平均余额,一位小数;没有灵魂时 null。
+    average_balance = serializers.FloatField(allow_null=True)
     state_distribution = SoulStateDistributionSerializer(many=True)
     tenants = TenantSoulStatsSerializer(many=True)
     karma_distribution = KarmaBucketSerializer(many=True)
     karma_distribution_total = serializers.IntegerField()
+    balance_histogram = BalanceHistogramSerializer()
     recent_activity = RecentActivitySerializer(many=True)
     souls_by_realm = SoulsByRealmSerializer(many=True)
 

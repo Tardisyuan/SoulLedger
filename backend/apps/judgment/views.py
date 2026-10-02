@@ -262,7 +262,7 @@ class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSe
     }
     queryset = (
         Judgment.objects
-        .select_related("soul", "soul__tenant", "tenant", "judge", "claimed_by", "deferred_by")
+        .select_related("soul", "soul__tenant", "tenant", "judge", "claimed_by", "deferred_by", "realm")
         .prefetch_related("citations__statute", "citations__statute__source_actor")
         .all()
     )
