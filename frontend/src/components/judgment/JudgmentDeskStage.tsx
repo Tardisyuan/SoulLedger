@@ -145,7 +145,7 @@ export function MaterialDock({
           type="button"
           onClick={onToggleFullCase}
           aria-pressed={fullCase}
-          className="ml-auto hidden h-(--control-h-sm) items-center gap-2 text-xs text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))] md:inline-flex"
+          className="ml-auto hidden h-(--control-h-sm) items-center gap-2 text-xs text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))] min-[769px]:inline-flex"
         >
           {fullCase ? t("judgment.desk.back_to_focus") : t("judgment.desk.full_case")}
           <Kbd>F</Kbd>

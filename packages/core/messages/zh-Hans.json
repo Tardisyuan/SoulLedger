@@ -2478,6 +2478,7 @@
   },
   "breadcrumb": {
     "aria_label": "面包屑导航",
+    "back": "返回",
     "home": "仪表盘",
     "detail": "详情",
     "menu": {
@@ -2541,7 +2542,8 @@
     "reconnecting": "重连中…",
     "disconnected": "已断开",
     "failed": "连接失败",
-    "retry": "重连"
+    "retry": "重连",
+    "offline": "离线 · 当前内容可能不是最新版本"
   },
   "scheduler": {
     "title": "定时任务",

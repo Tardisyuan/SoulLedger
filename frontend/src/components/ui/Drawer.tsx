@@ -58,7 +58,7 @@ export function Drawer({ isOpen, onClose, title, hint, onNext, onPrev, error, fi
     <Dialog.Root open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
       <Dialog.Portal>
         <Dialog.Backdrop data-motion="fade"
-          className="fixed inset-0 z-dialog bg-[oklch(var(--color-scrim)/var(--scrim-alpha))] transition-opacity duration-base ease-enter data-ending-style:duration-close data-ending-style:ease-exit data-ending-style:opacity-0 data-starting-style:opacity-0" />
+          className="fixed inset-0 z-drawer bg-[oklch(var(--color-scrim)/var(--scrim-alpha))] transition-opacity duration-base ease-enter data-ending-style:duration-close data-ending-style:ease-exit data-ending-style:opacity-0 data-starting-style:opacity-0" />
         <Dialog.Popup
           data-motion="fade"
           finalFocus={finalFocus}
@@ -69,7 +69,7 @@ export function Drawer({ isOpen, onClose, title, hint, onNext, onPrev, error, fi
             else if (key === "k" && onPrev) { e.preventDefault(); onPrev(); }
           }}
           data-variant={variant}
-          className={`fixed z-dialog flex flex-col shadow-overlay bg-[oklch(var(--color-surface-1))] border-[oklch(var(--color-ink))] transition-[opacity,translate] duration-base ease-enter data-ending-style:duration-close data-ending-style:ease-exit data-ending-style:opacity-0 data-starting-style:opacity-0 ${POPUP_SHAPE[variant]}`}
+          className={`fixed z-drawer flex flex-col shadow-overlay bg-[oklch(var(--color-surface-1))] border-[oklch(var(--color-ink))] transition-[opacity,translate] duration-base ease-enter data-ending-style:duration-close data-ending-style:ease-exit data-ending-style:opacity-0 data-starting-style:opacity-0 ${POPUP_SHAPE[variant]}`}
         >
           <div className="flex shrink-0 items-center justify-between gap-3 px-4 py-2 border-b border-[oklch(var(--color-block))]">
             <Dialog.Title className="min-w-0 break-words text-lg text-[oklch(var(--color-ink))]">{title}</Dialog.Title>

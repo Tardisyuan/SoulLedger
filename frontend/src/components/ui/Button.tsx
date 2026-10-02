@@ -117,10 +117,13 @@ export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
     VariantProps<typeof button> {
   /**
-   * Busy. Disables the control and swaps in a `<Spinner size="sm">` ahead of
-   * the label, so the label stays readable and the button does not resize.
-   * The spinner is unlabelled on purpose — the button's own text is already
-   * the accessible name, and `aria-busy` carries the state.
+   * Busy. Disables the control and lays a `<Spinner size="sm">` over the
+   * label (v3:加载时保留原宽度). The label stays in the layout and in the
+   * accessibility tree — only its opacity drops to 0 — so the button keeps its
+   * width and its accessible name. (This comment used to say the spinner was
+   * placed ahead of the label "so the button does not resize"; inserted in the
+   * flow, it widened the button by the spinner plus a gap.) The spinner is
+   * unlabelled on purpose: the button's text is the name, `aria-busy` the state.
    */
   loading?: boolean;
 }
@@ -141,11 +144,22 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       ref={ref}
       disabled={disabled || loading}
       aria-busy={loading || undefined}
-      className={cn(button({ variant, size }), className)}
+      className={cn(button({ variant, size }), loading && "relative", className)}
       {...rest}
     >
-      {loading ? <Spinner size="sm" /> : null}
-      {children}
+      {loading ? (
+        <>
+          {/* Same `gap-2` as the button, so the hidden label measures exactly what it did. */}
+          <span data-button-label="" className="inline-flex items-center gap-2 opacity-0">
+            {children}
+          </span>
+          <span className="absolute inset-0 grid place-items-center">
+            <Spinner size="sm" />
+          </span>
+        </>
+      ) : (
+        children
+      )}
     </button>
   );
 });

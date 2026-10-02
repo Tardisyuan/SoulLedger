@@ -2,6 +2,7 @@
 
 import { use, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { judgmentApi, soulsApi } from "@soulledger/core/api";
 import { judgmentKeys, soulKeys } from "@soulledger/core/query_keys";
@@ -48,6 +49,7 @@ import {
   type DeskMaterial,
 } from "@/src/components/judgment/JudgmentDeskStage";
 import { useHotkeys } from "@/src/lib/hotkeys";
+import { FROM_PARAM, sourceFrom, withFrom } from "@/src/lib/backSource";
 import { verdictGlyph } from "@/src/lib/verdictGlyph";
 import type { SentenceRequestChanges } from "@soulledger/core/api/sentence-plans";
 import { useTenant } from "@/src/contexts/TenantContext";
@@ -170,6 +172,9 @@ interface PageProps {
 
 export default function JudgmentDetailPage({ params }: PageProps) {
   const { id } = use(params);
+  /** 来源队列(链接上的 `?from=`,见 src/lib/backSource.ts);没写就是审判列表。J / K 带着它走。 */
+  const from = sourceFrom(useSearchParams()?.get(FROM_PARAM));
+  const back = from ?? "/judgment";
   const { t, formatDate, formatDateTime } = useI18n();
   const { showToast } = useToast();
   const queryClient = useQueryClient();
@@ -404,7 +409,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
   useHotkeys(
     {
       f: () => {
-        const wide = typeof window.matchMedia !== "function" || window.matchMedia("(min-width: 768px)").matches;
+        const wide = typeof window.matchMedia !== "function" || window.matchMedia("(min-width: 769px)").matches;
         if (wide) setView((v) => (v === "case" ? "focus" : "case"));
       },
       ...(view === "case" ? { Escape: () => setView("focus") } : {}),
@@ -421,10 +426,10 @@ export default function JudgmentDetailPage({ params }: PageProps) {
   const nextId = nextCase?.judgment?.id ?? null;
   useHotkeys({ j: () => nextLink.current?.click() }, !!nextId && !confirming);
 
-  /* A known route, so a link and not a router.back() button. */
+  /* A known route, so a link and not a router.back() button — the source queue when the link said so. */
   const backLink = (
     <Link
-      href="/judgment"
+      href={back}
       className="text-xs text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))] transition-colors"
     >
       {t("judgment.detail.back_to_list")}
@@ -462,7 +467,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
         <EmptyState
           title={t("judgment.detail.not_found")}
           action={
-            <Link href="/judgment" className="text-sm text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))] transition-colors">
+            <Link href={back} className="text-sm text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))] transition-colors">
               {t("common.back_to_list")}
             </Link>
           }
@@ -628,13 +633,13 @@ export default function JudgmentDetailPage({ params }: PageProps) {
         previousId || nextId ? (
           <span className="inline-flex items-center gap-4">
             {previousId && (
-              <Link ref={previousLink} href={`/judgment/${previousId}`} className={CURSOR_LINK}>
+              <Link ref={previousLink} href={withFrom(`/judgment/${previousId}`, from)} className={CURSOR_LINK}>
                 <Kbd>K</Kbd>
                 {t("judgment.desk.previous")}
               </Link>
             )}
             {nextId && (
-              <Link ref={nextLink} href={`/judgment/${nextId}`} className={CURSOR_LINK}>
+              <Link ref={nextLink} href={withFrom(`/judgment/${nextId}`, from)} className={CURSOR_LINK}>
                 <Kbd>J</Kbd>
                 {t("judgment.desk.next")}
               </Link>
