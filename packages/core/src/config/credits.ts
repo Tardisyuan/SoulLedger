@@ -23,7 +23,10 @@ export const LICENCE_LABELS: Record<Exclude<CreditLicence, "PD">, { label: strin
   "CC0-1.0": { label: "CC0 1.0", url: "https://creativecommons.org/publicdomain/zero/1.0/" },
 };
 
-/** 界面三条字体栈(补足 A4)加中文回退,再加只由匾与印按需加载的题字 / 印文字体。 */
+/**
+ * 界面三条字体栈(补足 A4)加中文回退,再加印文字体。v2 匾的题字字体(Ma Shan Zheng、
+ * Josefin Slab、Cinzel)随匾一起去掉了(v3,2026-10-02),不再随任何一端发布,也就不再列。
+ */
 export const FONT_CREDITS: Credit[] = [
   "Archivo",
   "Source Serif 4",
@@ -31,10 +34,7 @@ export const FONT_CREDITS: Credit[] = [
   "Noto Sans SC",
   "Noto Serif SC",
   "LXGW Seal",
-  "Ma Shan Zheng",
   "UnifrakturMaguntia",
-  "Josefin Slab",
-  "Cinzel",
   "GFS Didot",
   "Noto Sans Egyptian Hieroglyphs",
 ].map((name) => ({ name, licence: "OFL-1.1" as const }));
