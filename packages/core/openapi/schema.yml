@@ -12860,6 +12860,87 @@ paths:
               schema:
                 $ref: '#/components/schemas/FollowToggleResult'
           description: ''
+  /api/v1/social/media/:
+    get:
+      operationId: v1_social_media_limits
+      description: 上传上限 —— 发帖框的「最多 N 张」读这里,不在前端写死。
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostMediaLimits'
+          description: ''
+    post:
+      operationId: v1_social_media_upload
+      description: |-
+        官员朋友圈的配图(2026-10-02 用户决定:官员也能发图;官员流仍不含灵魂帖子)。
+
+        与灵魂端 `/me/social/media/` 同一套:`media.upload`(魔数 + 重编码 + 去 EXIF、5 MB、
+        长边 2048、未发图上限)、私有存储、签名地址。闸门与官员发帖同一个 `TenantPermission`
+        —— 官员社交没有自己的权限码(见文首)。拒绝答 `{detail, code}` + 服务层给的状态码。
+      tags:
+      - v1
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+              required:
+              - file
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulPostMediaUpload'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulSocialError'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulSocialError'
+          description: ''
+  /api/v1/social/media/{media_id}/:
+    delete:
+      operationId: v1_social_media_delete
+      description: 移除一张还没发出去的图(行与文件真删)。已经挂到帖子上的图随帖子删。
+      parameters:
+      - in: path
+        name: media_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulSocialError'
+          description: ''
   /api/v1/social/posts/:
     get:
       operationId: v1_social_posts_list
@@ -12928,7 +13009,6 @@ paths:
           multipart/form-data:
             schema:
               $ref: '#/components/schemas/PostCreate'
-        required: true
       security:
       - jwtAuth: []
       responses:
@@ -26231,6 +26311,12 @@ components:
         reaction_count:
           type: integer
           readOnly: true
+        media:
+          type: array
+          items:
+            $ref: '#/components/schemas/PostMedia'
+          readOnly: true
+          description: 按显示顺序,最多 9 张。
         tenant:
           type: integer
           readOnly: true
@@ -27012,6 +27098,12 @@ components:
         reaction_count:
           type: integer
           readOnly: true
+        media:
+          type: array
+          items:
+            $ref: '#/components/schemas/PostMedia'
+          readOnly: true
+          description: 按显示顺序,最多 9 张。
         tenant:
           type: integer
           readOnly: true
@@ -27031,12 +27123,17 @@ components:
       - content
       - create_time
       - id
+      - media
       - reaction_count
       - tenant
       - update_time
     PostCreate:
       type: object
-      description: Serializer for creating posts — only content + visibility needed.
+      description: |-
+        content + visibility, plus `media`: ids uploaded first through
+        `POST /social/media/`, in display order (attached in `PostViewSet.perform_create`).
+        Text may be empty when there are images — the soul circle's rule
+        (`soul_circle.create_post`, code `empty_post`).
       properties:
         id:
           type: string
@@ -27044,10 +27141,18 @@ components:
           readOnly: true
         content:
           type: string
+          default: ''
         visibility:
           $ref: '#/components/schemas/VisibilityEnum'
+        media:
+          type: array
+          items:
+            type: string
+            format: uuid
+          writeOnly: true
+          description: 先经 POST /social/media/ 上传的图片 id,按显示顺序。
+          maxItems: 9
       required:
-      - content
       - id
     PostList:
       type: object
@@ -27076,6 +27181,12 @@ components:
         reaction_count:
           type: integer
           minimum: 0
+        media:
+          type: array
+          items:
+            $ref: '#/components/schemas/PostMedia'
+          readOnly: true
+          description: 按显示顺序,最多 9 张。
         create_time:
           type: string
           format: date-time
@@ -27087,6 +27198,7 @@ components:
       - content
       - create_time
       - id
+      - media
     PostMedia:
       type: object
       description: |-
@@ -27108,6 +27220,22 @@ components:
       - id
       - url
       - width
+    PostMediaLimits:
+      type: object
+      properties:
+        max_per_post:
+          type: integer
+          description: 每条帖子最多几张。
+        max_pending:
+          type: integer
+          description: 同时最多几张「传了还没发」的图。
+        max_bytes:
+          type: integer
+          description: 单张上限(字节)。
+      required:
+      - max_bytes
+      - max_pending
+      - max_per_post
     Price:
       type: object
       description: 每百万 token 的价格,单位由管理员自定(与月度上限同一单位)。`cache_read` 不填按 `input` 算。
