@@ -1,10 +1,9 @@
 /**
  * 外框:印(规范 v3 描边印)、身份带(规范 v3,取代 v2 的匾)的题字降档、矮带与滚动收起、
- * 立柱横排阈值,以及分节纹的那张 CSS 表(`app/globals.css` 的 `[data-civ]` 规则 → `public/v2/`)。
+ * 立柱横排阈值,以及 `[data-civ]` 规则里不再有 v2 素材(`app/globals.css` → `public/v2/`)。
  *
- * 素材那一组:分节纹是 CSS 遮罩,url 写错一个字母,浏览器只会安静地画出一块实心
- * (遮罩图取不到 = 不遮),tsc、eslint、jest、next build 全绿。所以直接对账
- * 「每个文明都有、指向的文件都在」。v2 的实底印(遮罩 + 残边扫描)随 v3 描边印撤掉。
+ * 素材那一组:v2 的实底印(遮罩 + 残边扫描)随 v3 描边印撤掉;v2 的分节纹(CSS 遮罩
+ * `--section` + `.section-rule` + public/v2/svg/section-*)随 `SectionTitle` 撤掉(2026-10-03)。
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -277,29 +276,21 @@ describe("立柱横排阈值(C14)", () => {
 describe("文明皮的素材表(globals.css → public/v2)", () => {
   const css = fs.readFileSync(path.join(FRONTEND, "app", "globals.css"), "utf8");
 
-  it.each(["cn", "eu", "eg", "gr"])("%s 有分节纹;v2 的印素材、印文字体、匾纹都不该再有", (civ) => {
+  it.each(["cn", "eu", "eg", "gr"])("%s 只有匾色;v2 的分节纹、印素材、印文字体、匾纹都不该再有", (civ) => {
     const blocks = [...css.matchAll(new RegExp(`\\[data-civ="${civ}"\\]\\s*\\{([^}]*)\\}`, "g"))].map((m) => m[1]).join("\n");
-    expect(blocks).toMatch(/--section:\s*\S/);
-    expect(blocks).not.toMatch(/--seal-|--font-seal|--band|--font-plaque/);
+    // 先证明找到了这个文明的块,再断言里面没有 v2 素材。
+    expect(blocks).toMatch(/--color-main:\s*\S/);
+    expect(blocks).not.toMatch(/--section|--seal-|--font-seal|--band|--font-plaque/);
   });
 
-  it("引用的每一个素材文件都在 public/ 里", () => {
-    const urls = [...css.matchAll(/url\("(\/v2\/[^"]+)"\)/g)].map((m) => m[1]);
-    expect(urls).toHaveLength(4); // 4 文明 × 分节 1
-    const missing = urls.filter((u) => !fs.existsSync(path.join(FRONTEND, "public", u)));
-    expect(missing).toEqual([]);
+  it("v2 的分节纹撤掉(2026-10-03):CSS 不再引用 public/v2,也没有 .section-rule", () => {
+    expect(css).not.toMatch(/url\("\/v2\//);
+    expect(css).not.toMatch(/\.section-rule\b/);
   });
 
-  it("public/v2 里只剩分节纹:v2 印的遮罩与残边扫描随描边印删掉,不留没人引用的文件", () => {
-    const dir = path.join(FRONTEND, "public", "v2", "svg");
-    const files = fs.readdirSync(dir).filter((f) => f.endsWith(".svg"));
-    expect(files.sort()).toEqual(["section-cn.svg", "section-eg.svg", "section-eu.svg", "section-gr.svg"]);
-    expect(fs.readdirSync(path.join(FRONTEND, "public", "v2"))).toEqual(["svg"]);
-    for (const f of files) {
-      const svg = fs.readFileSync(path.join(dir, f), "utf8");
-      expect(svg).not.toMatch(/c2pa|<metadata/);
-      expect(svg).toContain("currentColor");
-    }
+  it("public/v2 整个删掉:分节纹是 v2 最后一批素材,不留没人引用的文件", () => {
+    expect(fs.existsSync(path.join(FRONTEND, "public"))).toBe(true);
+    expect(fs.existsSync(path.join(FRONTEND, "public", "v2"))).toBe(false);
   });
 
   it("印是 v3 的描边印:currentColor 描边、不填色,印文 font-title + 圣书字回退;身份带上随带上的白字", () => {

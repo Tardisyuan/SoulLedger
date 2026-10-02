@@ -7,7 +7,6 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { usePlaque } from "@/src/components/plaque/Plaque";
 import { useHall } from "@/src/components/plaque/useHall";
 import { Skeleton } from "@/components/ui/skeleton";
-import { SectionTitle } from "@/src/components/plaque/SectionTitle";
 import { ChevronDown } from "lucide-react";
 import { TreeName, flattenTree } from "@/src/components/ui/TreeRow";
 import { PageShell } from "@/src/components/ui/PageShell";
@@ -179,11 +178,12 @@ function OrganizationsPageContent() {
 
           return (
             <section key={category}>
-              {/* 每个文明一节 = 页面级分节标题(规范 v2 §四):匾纹片段 + 节名,件数在右侧注记。
+              {/* 每个文明一节 = v3 面板标题(与 `components/ui/page-section.tsx` 同一档)+ 件数注记。
+                  v2 节首的匾纹片段随 v3 撤掉(2026-10-03),文明由节名本身标明。
                   折叠钮放在 <h2> 里面(披露模式),不是反过来 —— <button> 的内容只能是
-                  短语内容,标题进按钮是无效 HTML。文明 emoji 撤掉:节首的匾纹片段已经标明文明。 */}
-              <div className="mb-3">
-                <SectionTitle aside={t("organization.organizations_count", { count: String(orgs.length) })}>
+                  短语内容,标题进按钮是无效 HTML。 */}
+              <div className="mb-3 flex items-center gap-3">
+                <h2 className="text-lg text-[oklch(var(--color-ink))]">
                   <button
                     type="button"
                     onClick={() => toggleCollapse(category)}
@@ -193,7 +193,10 @@ function OrganizationsPageContent() {
                     {name}
                     <ChevronDown aria-hidden="true" className={`w-4 h-4 text-[oklch(var(--color-ink-muted))] transition-transform ${isCollapsed ? "-rotate-90" : ""}`} />
                   </button>
-                </SectionTitle>
+                </h2>
+                <span className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">
+                  {t("organization.organizations_count", { count: String(orgs.length) })}
+                </span>
               </div>
 
               {!isCollapsed && <div className="overflow-x-auto">{renderTable(orgs)}</div>}

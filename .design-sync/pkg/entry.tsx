@@ -96,4 +96,3 @@ export { Breadcrumb } from "../../frontend/src/components/layout/Breadcrumb";
 export { ThemeToggle } from "../../frontend/src/components/layout/ThemeToggle";
 export { Plaque } from "../../frontend/src/components/plaque/Plaque";
 export { Seal } from "../../frontend/src/components/plaque/Seal";
-export { SectionTitle } from "../../frontend/src/components/plaque/SectionTitle";

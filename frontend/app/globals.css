@@ -647,22 +647,10 @@
     --color-main: var(--color-civ-gr);
   }
 
-  /* 文明皮的其余一样 —— 分节纹(规范 v2 §三;素材在 public/v2/svg/)。v2 的匾纹(回纹带)、
-     纸 / 纸莎草 / 大理石质感与四款题字字体随 v3 身份带撤掉(2026-10-01);v2 的实底印(遮罩
-     素材、残边扫描、三款印文字体)随 v3 描边印撤掉(2026-10-02),印的外形见下面 `.seal`。
-     身份带的纹样是纯 CSS 渐变,见下面 `.identity-pattern`。中性皮没有分节纹。 */
-  [data-civ="cn"] {
-    --section: url("/v2/svg/section-cn.svg");
-  }
-  [data-civ="eu"] {
-    --section: url("/v2/svg/section-eu.svg");
-  }
-  [data-civ="eg"] {
-    --section: url("/v2/svg/section-eg.svg");
-  }
-  [data-civ="gr"] {
-    --section: url("/v2/svg/section-gr.svg");
-  }
+  /* 文明皮只有上面这一条匾色。v2 的匾纹(回纹带)、纸 / 纸莎草 / 大理石质感与四款题字字体随
+     v3 身份带撤掉(2026-10-01);v2 的实底印(遮罩素材、残边扫描、三款印文字体)随 v3 描边印撤掉
+     (2026-10-02),印的外形见下面 `.seal`;v2 的分节纹(public/v2/svg/section-*,与 `SectionTitle`
+     一起)撤掉(2026-10-03)。身份带的纹样是纯 CSS 渐变,见下面 `.identity-pattern`。 */
 
   /* 宽度 ≤ 768 时没有侧栏,导航是固定在底部的 56px 底栏(GlobalNav.tsx 的 BottomBar;v3 四档,
      侧栏从 769 起 —— 与 AppLayout 的 `min-[769px]:` 同一条线)。页面里吸底的操作条(审判队列的
@@ -830,16 +818,6 @@
     .identity-band[data-short]:not([data-compact]) .identity-title {
       gap: 9px;
     }
-  }
-
-  /* 页面级分节纹 · 48×12,线色 ink3,只用在页面级分节上(表内小分组仍是细线)。
-     中性皮没有分节纹,退成一道细线。 */
-  .section-rule {
-    width: 48px;
-    height: 12px;
-    flex: none;
-    background: oklch(var(--color-ink-subtle));
-    mask: var(--section, linear-gradient(transparent 11px, black 11px)) center / 48px 12px no-repeat;
   }
 
   /* 印(规范 v3 `.product-seal`,`src/components/plaque/Seal.tsx`):描边,不填色。2px 外框 +
