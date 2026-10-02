@@ -243,7 +243,7 @@ test.describe("Workflow editor selection", () => {
     // lists the earlier nodes, 魏征 among them, as options.)
     await expect(inspector.getByRole("heading", { level: 2 })).toHaveText(/上级殿阎王/);
     await expect(inspector.getByRole("heading", { level: 2 })).not.toHaveText(/魏征 · 察查司/);
-    await expect(inspector.getByLabel("节点名称", { exact: true })).toHaveValue("上级殿阎王");
+    await expect(inspector.getByLabel("名称", { exact: true })).toHaveValue("上级殿阎王");
     await expect(page.getByRole("button", { name: "删除选中", exact: true })).toBeEnabled();
     await expect(
       page.getByRole("region", { name: "模板预览 · 线性" }).getByRole("button", { pressed: true })
@@ -320,7 +320,7 @@ test.describe("Workflow editor keyboard access", () => {
 
   /** The inspector's 节点-tab form and its first field. */
   const nodeForm = (page: Page) => page.getByTestId("node-form");
-  const nameField = (page: Page) => nodeForm(page).getByLabel("节点名称", { exact: true });
+  const nameField = (page: Page) => nodeForm(page).getByLabel("名称", { exact: true });
 
   test("a keyboard-only operator can Tab to a node and edit it with E", async ({
     page,
@@ -445,6 +445,30 @@ test.describe("Workflow editor keyboard access", () => {
     await expect(page.getByRole("tab", { name: /^问题 [1-9]/ })).toBeVisible();
     await nameField(page).fill("又有名字");
     await expect(save).toBeEnabled();
+  });
+
+  test("会签人 by keyboard: Enter adds a chip, Backspace takes it back, and the threshold line follows", async ({
+    page,
+  }) => {
+    await openAppealPresetInEditor(page);
+    await page.locator(".react-flow__node").first().click();
+    await nodeForm(page).getByLabel("类型", { exact: true }).selectOption("COUNTERSIGN");
+
+    const input = nodeForm(page).getByLabel("会签人", { exact: true });
+    const chips = nodeForm(page).getByRole("list", { name: "会签人" }).getByRole("listitem");
+    await input.click();
+    await page.keyboard.type("宋帝王");
+    await page.keyboard.press("Enter");
+    await page.keyboard.type("楚江王");
+    await page.keyboard.press("Enter");
+    await expect(chips).toHaveText(["宋帝王✕", "楚江王✕"]);
+    await expect(input).toBeFocused();
+    await expect(nodeForm(page)).toContainText("/ 2 人");
+    await expect(nodeForm(page)).toContainText("2 人中任 2 人通过即放行");
+
+    await page.keyboard.press("Backspace");
+    await expect(chips).toHaveText(["宋帝王✕"]);
+    await expect(nodeForm(page)).toContainText("1 人中任 1 人通过即放行");
   });
 
   test("出口: a conditional exit added in the inspector is drawn and labelled on the canvas", async ({ page }) => {
