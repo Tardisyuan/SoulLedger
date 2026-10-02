@@ -468,7 +468,7 @@ describe("tapping a notification", () => {
 });
 
 describe("about / credits (spec v2 C16)", () => {
-  it("settings opens it; Turin S 2312 is CC0 with its Commons page, and nothing says CC BY", async () => {
+  it("settings opens it; a licence opens in the browser; no seal-edge scans, no v2 seal faces", async () => {
     const open = jest.spyOn(Linking, "openURL").mockResolvedValue(true);
     signedIn();
     renderApp();
@@ -478,14 +478,17 @@ describe("about / credits (spec v2 C16)", () => {
     await screen.findByTestId("about");
     expect(route()?.name).toBe("About");
 
-    const turin = screen.getByTestId("credit-Museo Egizio, Torino");
-    expect(within(turin).getByText("CC0 1.0 ↗")).toBeTruthy();
-    expect(screen.queryByText(/CC BY/)).toBeNull();
-    fireEvent.press(screen.getByTestId("credit-source-Museo Egizio, Torino"));
-    expect(open).toHaveBeenCalledWith(expect.stringContaining("commons.wikimedia.org/wiki/File:Stamped_clay_sealing"));
+    fireEvent.press(within(screen.getByTestId("credit-Archivo")).getByText("SIL Open Font License 1.1 ↗"));
+    expect(open).toHaveBeenCalledWith("https://openfontlicense.org/open-font-license-official-text/");
+    // The four museum scans masked only v2's filled seal, which ships nowhere since 2026-10-03.
+    expect(screen.queryByTestId("credit-Museo Egizio, Torino")).toBeNull();
+    expect(screen.queryByText("The Metropolitan Museum of Art")).toBeNull();
+    expect(screen.queryByText(/CC0|CC BY/)).toBeNull();
     // 纹样一节(Owen Jones)随 v2 匾纹带与分节纹一起撤掉(2026-10-03)。
     expect(screen.queryByText("Owen Jones")).toBeNull();
-    expect(screen.getByText("LXGW Seal")).toBeTruthy();
+    expect(screen.getByText("Noto Sans Egyptian Hieroglyphs")).toBeTruthy();
+    // v2 朱印's other three glyph faces ship nowhere since 2026-10-03, so they are not credited.
+    for (const font of ["LXGW Seal", "UnifrakturMaguntia", "GFS Didot"]) expect(screen.queryByText(font)).toBeNull();
     open.mockRestore();
     await act(async () => {});
   });

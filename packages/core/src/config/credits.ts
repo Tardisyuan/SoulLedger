@@ -25,7 +25,9 @@ export const LICENCE_LABELS: Record<Exclude<CreditLicence, "PD">, { label: strin
 
 /**
  * 界面三条字体栈(补足 A4)加中文回退,再加印文字体。v2 匾的题字字体(Ma Shan Zheng、
- * Josefin Slab、Cinzel)随匾一起去掉了(v3,2026-10-02),不再随任何一端发布,也就不再列。
+ * Josefin Slab、Cinzel)随匾一起去掉了(v3,2026-10-02);v2 朱印的另三款印文字体(LXGW Seal、
+ * UnifrakturMaguntia、GFS Didot)随 App 的 v2 印去掉了(2026-10-03,Web 早在 10-02 撤掉)。
+ * 都不再随任何一端发布,也就不再列。v3 描边印只剩埃及的圣书字。
  */
 export const FONT_CREDITS: Credit[] = [
   "Archivo",
@@ -33,9 +35,6 @@ export const FONT_CREDITS: Credit[] = [
   "IBM Plex Mono",
   "Noto Sans SC",
   "Noto Serif SC",
-  "LXGW Seal",
-  "UnifrakturMaguntia",
-  "GFS Didot",
   "Noto Sans Egyptian Hieroglyphs",
 ].map((name) => ({ name, licence: "OFL-1.1" as const }));
 
@@ -43,42 +42,9 @@ export const FONT_CREDITS: Credit[] = [
 // 取自它的 v2 匾纹带与分节纹已从 Web 与 App 删光,不再随任何一端发布。身份带的纹样是 v3 的纯 CSS
 // 渐变,App 信纸角饰是 Design「文明气质」画的(见 DESIGN_CREDITS)。`PD` 留在许可类型里备用。
 
-/**
- * 印的残边扫描遮罩(deliver/textures/scan-*)。
- *
- * 都灵 S 2312:规范 v2 草案写 CC0,补足 A7 改写为「按 CC BY 2.0 署名,待工程核对」。
- * 2026-09-30 核对 Commons 文件页:模板是 `{{Cc-zero}}`,API 的 extmetadata 为
- * LicenseShortName「CC0」、AttributionRequired「false」、Credit「Museo Egizio」——
- * 所以是 CC0 1.0,不是 CC BY 2.0。按 A7「以文件页为准」写 CC0;署名不是义务,照样写上馆名。
- * 另外三张的出处由 Design 在素材包 README 与补足 A7 补齐(2026-09-30),都是 CC0 1.0,
- * 都在 Commons 上。四张法律上都不需要署名,致谢页仍逐条列出。
- */
-export const IMAGE_CREDITS: Credit[] = [
-  {
-    name: "Museo Egizio, Torino",
-    detail: "S 2312",
-    licence: "CC0-1.0",
-    url: "https://commons.wikimedia.org/wiki/File:Stamped_clay_sealing_(bulla)_showing_St._Menas_-_Museo_Egizio,_Turin_S_2312_p01.jpg",
-  },
-  {
-    name: "The Metropolitan Museum of Art",
-    detail: "韓幹《照夜白圖》卷 · 1977.78 · DP153679",
-    licence: "CC0-1.0",
-    url: "https://commons.wikimedia.org/wiki/File:唐_韓幹_照夜白圖_卷-Night-Shining_White_MET_DP153679.jpg",
-  },
-  {
-    name: "The Metropolitan Museum of Art",
-    detail: "Seal Impression, Municipal Seal of Middelburg · 227192",
-    licence: "CC0-1.0",
-    url: "https://commons.wikimedia.org/wiki/File:Seal_Impression,_Municipal_Seal_of_Middelburg_MET_227192.jpg",
-  },
-  {
-    name: "The Metropolitan Museum of Art",
-    detail: "Cylinder seal and modern impression: ritual scene before a temple facade · DP270679",
-    licence: "CC0-1.0",
-    url: "https://commons.wikimedia.org/wiki/File:Cylinder_seal_and_modern_impression-_ritual_scene_before_a_temple_facade_MET_DP270679.jpg",
-  },
-];
+// 印的残边(四张馆藏扫描:都灵 S 2312 与大都会三件,均 CC0 1.0)一节撤掉(2026-10-03):那组扫描
+// 只做 v2 填色印的残边遮罩,Web 随 v3 描边印早已不用,App 的 v2 印与 assets/v2/ 也已删光,
+// 不再随任何一端发布。`CC0-1.0` 留在许可类型里备用。
 
 // ── 2026-10-01 扩充:开源软件、文献出处、模型与服务、设计与协作 ──────────────
 
@@ -145,7 +111,7 @@ export const SERVICE_CREDITS: ServiceCredit[] = [
 
 /**
  * 设计与协作。素材包 README(`~/Downloads/SoulLedger-deliver`,不入库)分 svg / textures /
- * fonts / icons 四个目录:svg 与 icons 是 Design 画的,textures 里的扫描见 IMAGE_CREDITS,
+ * fonts / icons 四个目录:svg 与 icons 是 Design 画的,textures 里的印边扫描已不发布(见上),
  * 字体见 FONT_CREDITS。README 没写纸 / 莎草纸 / 大理石纹理的出处,所以这里不列它们。
  */
 export const DESIGN_CREDITS: { name: string; detail: string }[] = [

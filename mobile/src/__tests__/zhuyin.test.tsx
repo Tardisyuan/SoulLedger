@@ -1,5 +1,6 @@
 /**
- * v2「朱印」App chrome: the seal, the plaque on the life tab. The cold start is coldStart.test.tsx.
+ * App chrome: v3's outline seal, the band on a tab's root, the tab bar. The cold start is
+ * coldStart.test.tsx. (v2「朱印」's filled seal and its art went 2026-10-03.)
  */
 import { NavigationContainer } from "@react-navigation/native";
 import { act, fireEvent, render, screen } from "@testing-library/react-native";
@@ -7,11 +8,10 @@ import type { ReactNode } from "react";
 import { StyleSheet } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
-import { RING_D, SVG } from "../art";
 import { AppHeader, PlaqueHeader, TabBar } from "../chrome";
 import { I18nProvider } from "../i18n";
 import { installMobilePlatform } from "../platform";
-import { DEFAULT_GLYPHS, OutlineSeal, Seal, sealGlyphs } from "../seal";
+import { DEFAULT_GLYPHS, OutlineSeal, sealGlyphs } from "../seal";
 import { SessionContext, type SessionState } from "../session";
 import { themeFor, v3, v3Band } from "../theme";
 import { ThemeContext } from "../ui";
@@ -59,20 +59,6 @@ const signedIn = (overrides: Record<string, unknown> = {}): SessionState =>
 
 beforeEach(() => installMobilePlatform());
 
-describe("the art Design delivered", () => {
-  it("carries no c2pa metadata, and every civilization has its four seal drawings — and no v2 band", () => {
-    expect(Object.entries(SVG).filter(([, xml]) => /<metadata|c2pa:manifest/.test(xml))).toEqual([]);
-    for (const civ of ["cn", "eu", "eg", "gr"]) {
-      for (const part of ["seal-%-body", "seal-%-ring", "seal-%-line", "seal-%-line-small"]) {
-        expect(SVG).toHaveProperty(part.replace("%", civ));
-      }
-      expect(RING_D[civ as keyof typeof RING_D]).toMatch(/^M/);
-    }
-    // v2's ornament band went with v3 (2026-10-02): nothing draws it, so it is not shipped.
-    expect(Object.keys(SVG).filter((k) => k.startsWith("band-"))).toEqual([]);
-  });
-});
-
 describe("the seal's glyphs (补足 A6)", () => {
   it("empty or missing: the civilization's default", () => {
     expect(sealGlyphs("cn", [])).toEqual(["冥"]);
@@ -87,37 +73,6 @@ describe("the seal's glyphs (补足 A6)", () => {
     expect(sealGlyphs("cn", ["五", "殿"])).toEqual([DEFAULT_GLYPHS.cn]);
     expect(sealGlyphs("eg", ["a", "b", "c"])).toEqual([DEFAULT_GLYPHS.eg]);
     expect(sealGlyphs("gr", [""])).toEqual([DEFAULT_GLYPHS.gr]);
-  });
-});
-
-describe("Seal", () => {
-  const t = themeFor("CHINESE", "light");
-
-  it("reads its label, not its glyph; the glyph is in the civilization's seal face", () => {
-    wrap(<Seal testID="s" civ="cn" size={52} theme={t} glyphs={["五"]} label="第五殿之印" />, signedIn());
-    expect(screen.getByTestId("s").props.accessibilityLabel).toBe("第五殿之印");
-    const glyph = screen.getByTestId("s-glyph", H);
-    expect(glyph.props.children).toBe("五");
-    expect(flat(glyph)).toMatchObject({ fontFamily: "LXGWSeal_400", fontSize: 28, color: "#FFFFFF" });
-  });
-
-  it("above 32: the edge scan shows in the ring; at 32 and below it goes", () => {
-    render(
-      <>
-        <Seal testID="big" civ="cn" size={52} theme={t} />
-        <Seal testID="s" civ="cn" size={32} theme={t} />
-      </>
-    );
-    expect(screen.getByTestId("big-ring", H)).toBeTruthy();
-    expect(screen.queryByTestId("s-ring", H)).toBeNull();
-    expect(screen.getByTestId("s-glyph", H).props.children).toBe("冥");
-  });
-
-  it("两个圣书字 stack, each at 0.46 of the seal", () => {
-    wrap(<Seal testID="s" civ="eg" size={100} theme={themeFor("EGYPTIAN", "light")} glyphs={["\u{13184}", "\u{131CB}"]} />, signedIn());
-    const glyphs = screen.getAllByTestId("s-glyph", H);
-    expect(glyphs.map((g) => g.props.children)).toEqual(["\u{13184}", "\u{131CB}"]);
-    expect(glyphs.map((g) => flat(g).fontSize)).toEqual([46, 46]);
   });
 });
 
