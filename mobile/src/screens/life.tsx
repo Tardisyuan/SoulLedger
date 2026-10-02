@@ -47,6 +47,7 @@ import {
   Hairline,
   Screen,
   Section,
+  SectionLabel,
   SectionError,
   Skeleton,
   ThemeContext,
@@ -695,9 +696,7 @@ export function MyLifeScreen() {
         </Block>
         {/* v3 .life-records: 「本世账目」 and its six numbered rows. */}
         <View testID="ledger-head" style={[styles.ledgerHead, { paddingHorizontal: gutter, backgroundColor: theme.s1, borderBottomColor: theme.hair }]}>
-          <Txt variant="label" tone="muted" style={styles.fill}>
-            {t("soul_app.life.ledger")}
-          </Txt>
+          <SectionLabel style={styles.fill}>{t("soul_app.life.ledger")}</SectionLabel>
           <Txt variant="caption" tone="subtle">
             {t("soul_app.life.ledger_hint")}
           </Txt>
