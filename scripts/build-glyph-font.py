@@ -25,8 +25,9 @@ from fontTools import subset
 from fontTools.ttLib import TTFont
 
 ROOT = Path(__file__).resolve().parent.parent
-# Status / verdict / application badge glyphs, plus ≡ (App: 已终结) and ? (the unknown badge, App).
-GLYPHS = "✓✕◇↺◌○▣↻◎≡?"
+# Status / verdict / application badge glyphs, plus ≡ (App: 已终结) and ? (the unknown badge, App),
+# and the App's tag glyphs ◐ (朋友圈 审核中) and ⇄ (书信 互关) — v3, 2026-10-02.
+GLYPHS = "✓✕◇↺◌○▣↻◎≡?◐⇄"
 FAMILY = "SoulLedger Glyphs"
 PS_NAME = "SoulLedgerGlyphs-Regular"
 OUT = [ROOT / "frontend/public/fonts/SoulLedgerGlyphs.ttf", ROOT / "mobile/assets/fonts/SoulLedgerGlyphs.ttf"]

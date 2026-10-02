@@ -5,7 +5,7 @@
  *   node mobile/scripts/import-v2-art.mjs [~/Downloads/SoulLedger-deliver]
  *
  * WRITES
- *   src/art.ts            the seal and band SVGs, as strings for react-native-svg's
+ *   src/art.ts            the seal SVGs, as strings for react-native-svg's
  *                         SvgXml, with the c2pa `<metadata>` stripped (README: 入库时剥掉;
  *                         after stripping they equal Design's project files byte for byte)
  *   assets/v2/*.png       seal edge scans (the cold start's v2 seal), 1x + @2x
@@ -15,7 +15,8 @@
  *                         rasterized from deliver/icons/*.svg with sharp (librsvg)
  *
  * NOT IMPORTED (Design: 不入库): textures/bronze, wax, inkseal (round-4 alternatives) and
- * scan-cnseal-source.png (the crop's source). svg/section-* has no App caller yet.
+ * scan-cnseal-source.png (the crop's source). svg/section-* has no App caller yet. svg/band-*
+ * (v2's ornament band) went with v2's plaque (v3, 2026-10-02): nothing draws it.
  */
 import { Buffer } from "node:buffer";
 import { copyFileSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -38,7 +39,6 @@ const read = (rel) => strip(readFileSync(join(SRC, rel), "utf8"));
 const svg = {};
 for (const civ of CIVS) {
   for (const part of ["body", "ring", "line", "line-small"]) svg[`seal-${civ}-${part}`] = read(`svg/seal-${civ}-${part}.svg`);
-  for (const part of ["", "-compact"]) svg[`band-${civ}${part}`] = read(`svg/band-${civ}${part}.svg`);
 }
 for (const [key, xml] of Object.entries(svg)) if (/metadata|c2pa:manifest/.test(xml)) throw new Error(`${key}: metadata survived`);
 // The ring is also a clip path (the scan shows only inside it): its one path, pulled out.

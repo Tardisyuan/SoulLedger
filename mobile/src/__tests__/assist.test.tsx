@@ -25,7 +25,8 @@ import { SessionProvider } from "../session";
 import { PROFILE, heldReply, life, stubApi } from "./stubApi";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AccessibilityInfo, StyleSheet } from "react-native";
-import { motion, v3 } from "../theme";
+import { motion, themeFor, v3, type Theme } from "../theme";
+import { ThemeContext } from "../ui";
 
 /** Wait out the drawer's 200ms exit (v3 MotionSpec 问一问抽屉 出场). */
 const afterExit = () =>
@@ -99,8 +100,11 @@ const METRICS = { frame: { x: 0, y: 0, width: 390, height: 844 }, insets: { top:
 const LIST = "GET /me/assist/conversations/";
 const openLetters = jest.fn();
 
+/** The theme the next drawer renders under; null keeps the app's default (neutral). */
+let drawerTheme: Theme | null = null;
+
 function renderDrawer(profile = ENABLED) {
-  return render(
+  const drawer = (
     <SafeAreaProvider initialMetrics={METRICS}>
       <I18nProvider>
         <AssistProvider profile={profile} onOpenLetters={openLetters}>
@@ -110,6 +114,7 @@ function renderDrawer(profile = ENABLED) {
       </I18nProvider>
     </SafeAreaProvider>
   );
+  return render(drawerTheme ? <ThemeContext.Provider value={drawerTheme}>{drawer}</ThemeContext.Provider> : drawer);
 }
 
 const conversation = (id: string, first_question: string) => ({
@@ -441,6 +446,24 @@ describe("the answer's language (1i)", () => {
     await withLocale(locale);
     expect(screen.getByTestId("assist-answer")).toBeTruthy();
     expect(screen.queryByTestId("assist-en")).toBeNull();
+  });
+});
+
+describe("the 答 glyph (v3)", () => {
+  afterEach(() => {
+    drawerTheme = null;
+  });
+
+  it("is ink, not the civilization's colour — streaming and answered alike", async () => {
+    const t = (drawerTheme = themeFor("CHINESE", "light"));
+    expect(t.ink).not.toBe(t.plaque);
+    const answerGlyph = (id: string) =>
+      StyleSheet.flatten(within(screen.getByTestId(id)).getByText("答", { includeHiddenElements: true }).props.style).color;
+    const ask = await openAndAsk(null);
+    await act(async () => ask.send({ event: "meta", conversation_id: CONVERSATION }, { event: "delta", text: "你已有一份申请" }));
+    expect(answerGlyph("assist-streaming")).toBe(t.ink);
+    await act(async () => ask.send(done("你已有一份申请。")));
+    expect(answerGlyph("assist-answer")).toBe(t.ink);
   });
 });
 

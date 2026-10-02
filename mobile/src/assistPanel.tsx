@@ -359,7 +359,7 @@ function Answer({ message, assist, onRetry }: { message: AssistMessage; assist: 
   return (
     <View testID="assist-answer" style={styles.answer}>
       <View style={styles.answerHead}>
-        <AskGlyph color={t.plaque} glyph="答" />
+        <AskGlyph color={t.ink} glyph="答" />
         {english && locale !== "en" ? (
           <View testID="assist-en" style={[styles.en, { borderColor: t.inkSubtle }]}>
             <Txt variant="label" tone="subtle" style={styles.enText}>
@@ -457,7 +457,7 @@ function Streaming({ text }: { text: string }) {
   return (
     <View testID="assist-streaming" style={styles.answer} accessibilityState={{ busy: true }}>
       <View style={styles.answerHead}>
-        <AskGlyph color={t.plaque} glyph="答" />
+        <AskGlyph color={t.ink} glyph="答" />
       </View>
       <AnswerText text={text} streaming english={assistAnswerLocale(locale) === "en"} />
     </View>
