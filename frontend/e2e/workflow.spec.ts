@@ -454,7 +454,7 @@ test.describe("Workflow editor keyboard access", () => {
     await page.locator(".react-flow__node").first().click();
     await nodeForm(page).getByLabel("类型", { exact: true }).selectOption("COUNTERSIGN");
 
-    const input = nodeForm(page).getByLabel("会签人", { exact: true });
+    const input = nodeForm(page).getByRole("textbox", { name: "会签人", exact: true });
     const chips = nodeForm(page).getByRole("list", { name: "会签人" }).getByRole("listitem");
     await input.click();
     await page.keyboard.type("宋帝王");
