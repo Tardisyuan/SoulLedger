@@ -47,8 +47,8 @@ class PostMediaThrottle(ClientIPRateThrottle):
     scope = "post_media"
 
     def get_cache_key(self, request, view):
-        viewer = post_media.viewer_from_token(request.query_params.get("t"), view.kwargs.get("media_id"))
-        ident = f"u{viewer}" if viewer is not None else self.get_ident(request)
+        grant = post_media.viewer_from_token(request.query_params.get("t"), view.kwargs.get("media_id"))
+        ident = f"u{grant[0]}" if grant is not None else self.get_ident(request)
         return self.cache_format % {"scope": self.scope, "ident": ident}
 
 
@@ -68,10 +68,11 @@ class PostMediaFileView(APIView):
     def get(self, request, media_id):
         from apps.authentication.models import User
 
-        viewer_id = post_media.viewer_from_token(request.query_params.get("t"), media_id)
+        grant = post_media.viewer_from_token(request.query_params.get("t"), media_id)
+        viewer_id, tenant_id = grant if grant is not None else (None, None)
         media = PostMedia.all_objects.filter(pk=media_id).first() if viewer_id is not None else None
         viewer = User.objects.filter(pk=viewer_id).first() if media is not None else None
-        if viewer is None or not post_media.may_view(viewer, media):
+        if viewer is None or not post_media.may_view(viewer, media, tenant_id):
             raise Http404
         if settings.POST_MEDIA_X_ACCEL:
             response = HttpResponse(content_type=media.content_type)

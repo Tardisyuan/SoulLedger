@@ -258,3 +258,52 @@ class TestSoulPostsStayOut:
         row = PostMedia.objects.get(pk=body["media"][0]["id"])
         assert fetch(post_media.signed_url(row, cn_a))[0] == 404
 
+
+def client_in(user, tenant):
+    """令牌里的租户是 `tenant`,不是 `user.tenant` —— `request.tenant` 来自令牌(TenantMiddleware)。"""
+    from rest_framework.test import APIClient
+    from rest_framework_simplejwt.tokens import RefreshToken
+
+    token = RefreshToken.for_user(user)
+    token["tenant_code"] = tenant.code
+    client = APIClient()
+    client.credentials(HTTP_AUTHORIZATION=f"Bearer {token.access_token}")
+    return client
+
+
+class TestTheFileIsJudgedInTheListRequestsTenant:
+    """2026-10-02:取文件时的可见性在**签发地址那次请求**的租户里判,而不是查看者自己的租户。
+    此前 ADMIN 在 X 文明的上下文里看得见 X 的「本域可见」帖子,图却 404。"""
+
+    @pytest.fixture
+    def admin(self, django_user_model):
+        return django_user_model.objects.create(username="global_admin", role="ADMIN", tenant=None)
+
+    def test_an_admin_in_another_tenant_opens_that_tenants_tenant_visible_images(self, admin, cn_a, cn_tenant):
+        post_id, ids = post_with_images(officer_client(cn_a), 1, visibility=Visibility.TENANT)
+        res = client_in(admin, cn_tenant).get(f"{SOCIAL}/posts/")
+        row = next(p for p in res.json()["results"] if p["id"] == post_id)
+        assert [m["id"] for m in row["media"]] == ids
+        assert fetch(row["media"][0]["url"])[0] == 200
+        # 同一张图不带租户签发(退回 ADMIN 自己的租户:没有)→ 404。上面的 200 来自签名里的租户。
+        assert fetch(post_media.signed_url(PostMedia.objects.get(pk=ids[0]), admin))[0] == 404
+
+    def test_an_officer_of_another_tenant_cannot_borrow_the_tenant_in_the_signature(self, cn_a, eu_a, cn_tenant):
+        _, ids = post_with_images(officer_client(cn_a), 1, visibility=Visibility.TENANT)
+        row = PostMedia.objects.get(pk=ids[0])
+        assert fetch(post_media.signed_url(row, eu_a, cn_tenant))[0] == 404
+        assert fetch(post_media.signed_url(row, eu_a, eu_a.tenant))[0] == 404
+
+    def test_an_officer_moved_after_signing_loses_the_old_url(self, cn_a, cn_b, eu_tenant):
+        post_id, _ = post_with_images(officer_client(cn_a), 1, visibility=Visibility.TENANT)
+        url = detail_urls(officer_client(cn_b), post_id)[0]
+        assert fetch(url)[0] == 200
+        type(cn_b).objects.filter(pk=cn_b.pk).update(tenant=eu_tenant)
+        assert fetch(url)[0] == 404
+
+    def test_soul_posts_stay_out_of_the_admins_officer_feed(self, admin, cn_tenant):
+        _, soul_client = soul(cn_tenant, "作者")
+        body = soul_post_with_images(soul_client, 1, visibility=Visibility.PUBLIC)
+        ids = [p["id"] for p in client_in(admin, cn_tenant).get(f"{SOCIAL}/posts/").json()["results"]]
+        assert body["id"] not in ids
+

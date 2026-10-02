@@ -12960,6 +12960,7 @@ export interface components {
             parent_realm?: string | null;
             description?: string;
             memory_reset_mechanism?: components["schemas"]["MemoryResetMechanismEnum"] | components["schemas"]["BlankEnum"];
+            /** @description 不出狱、不轮回:落到此处的灵魂永不离开,也不再入轮回。判决落地时抄进处置(Disposition.is_eternal),之后以处置上的那一份为准。 */
             is_eternal?: boolean;
             cycle_limit?: number | null;
             /** @description Position along the civilization's route (Chinese: court number 1-10) */
@@ -13029,6 +13030,7 @@ export interface components {
             parent_realm?: string | null;
             description?: string;
             memory_reset_mechanism?: components["schemas"]["MemoryResetMechanismEnum"] | components["schemas"]["BlankEnum"];
+            /** @description 不出狱、不轮回:落到此处的灵魂永不离开,也不再入轮回。判决落地时抄进处置(Disposition.is_eternal),之后以处置上的那一份为准。 */
             is_eternal?: boolean;
             cycle_limit?: number | null;
             /** @description Position along the civilization's route (Chinese: court number 1-10) */
@@ -13103,6 +13105,7 @@ export interface components {
             tier?: number;
             /** Format: uuid */
             parent_realm?: string | null;
+            /** @description 不出狱、不轮回:落到此处的灵魂永不离开,也不再入轮回。判决落地时抄进处置(Disposition.is_eternal),之后以处置上的那一份为准。 */
             is_eternal?: boolean;
             /** @description Position along the civilization's route (Chinese: court number 1-10) */
             order?: number | null;
@@ -13166,6 +13169,7 @@ export interface components {
             realm_type: components["schemas"]["RealmTypeEnum"];
             /** @description Severity or bliss tier */
             tier?: number;
+            /** @description 不出狱、不轮回:落到此处的灵魂永不离开,也不再入轮回。判决落地时抄进处置(Disposition.is_eternal),之后以处置上的那一份为准。 */
             is_eternal?: boolean;
             memory_reset_mechanism?: components["schemas"]["MemoryResetMechanismEnum"] | components["schemas"]["BlankEnum"];
         };
