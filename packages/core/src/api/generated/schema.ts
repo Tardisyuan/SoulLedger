@@ -5869,6 +5869,47 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/social/media/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 上传上限 —— 发帖框的「最多 N 张」读这里,不在前端写死。 */
+        get: operations["v1_social_media_limits"];
+        put?: never;
+        /**
+         * @description 官员朋友圈的配图(2026-10-02 用户决定:官员也能发图;官员流仍不含灵魂帖子)。
+         *
+         *     与灵魂端 `/me/social/media/` 同一套:`media.upload`(魔数 + 重编码 + 去 EXIF、5 MB、
+         *     长边 2048、未发图上限)、私有存储、签名地址。闸门与官员发帖同一个 `TenantPermission`
+         *     —— 官员社交没有自己的权限码(见文首)。拒绝答 `{detail, code}` + 服务层给的状态码。
+         */
+        post: operations["v1_social_media_upload"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/social/media/{media_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** @description 移除一张还没发出去的图(行与文件真删)。已经挂到帖子上的图随帖子删。 */
+        delete: operations["v1_social_media_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/social/posts/": {
         parameters: {
             query?: never;
@@ -12243,6 +12284,8 @@ export interface components {
             visibility?: components["schemas"]["VisibilityEnum"];
             readonly comment_count?: number;
             readonly reaction_count?: number;
+            /** @description 按显示顺序,最多 9 张。 */
+            readonly media?: components["schemas"]["PostMedia"][];
             readonly reaction_counts?: components["schemas"]["SoulReactionCounts"];
             readonly tenant?: number;
             /** Format: date-time */
@@ -12651,6 +12694,8 @@ export interface components {
             visibility?: components["schemas"]["VisibilityEnum"];
             readonly comment_count: number;
             readonly reaction_count: number;
+            /** @description 按显示顺序,最多 9 张。 */
+            readonly media: components["schemas"]["PostMedia"][];
             readonly reaction_counts: components["schemas"]["SoulReactionCounts"];
             readonly tenant: number;
             /** Format: date-time */
@@ -12658,12 +12703,20 @@ export interface components {
             /** Format: date-time */
             readonly update_time: string;
         };
-        /** @description Serializer for creating posts — only content + visibility needed. */
+        /**
+         * @description content + visibility, plus `media`: ids uploaded first through
+         *     `POST /social/media/`, in display order (attached in `PostViewSet.perform_create`).
+         *     Text may be empty when there are images — the soul circle's rule
+         *     (`soul_circle.create_post`, code `empty_post`).
+         */
         PostCreate: {
             /** Format: uuid */
             readonly id: string;
+            /** @default  */
             content: string;
             visibility?: components["schemas"]["VisibilityEnum"];
+            /** @description 先经 POST /social/media/ 上传的图片 id,按显示顺序。 */
+            media?: string[];
         };
         /** @description Lightweight serializer for listing posts. */
         PostList: {
@@ -12677,6 +12730,8 @@ export interface components {
             visibility?: components["schemas"]["VisibilityEnum"];
             comment_count?: number;
             reaction_count?: number;
+            /** @description 按显示顺序,最多 9 张。 */
+            readonly media: components["schemas"]["PostMedia"][];
             readonly reaction_counts: components["schemas"]["SoulReactionCounts"];
             /** Format: date-time */
             readonly create_time: string;
@@ -12692,6 +12747,14 @@ export interface components {
             url: string;
             width: number;
             height: number;
+        };
+        PostMediaLimits: {
+            /** @description 每条帖子最多几张。 */
+            max_per_post: number;
+            /** @description 同时最多几张「传了还没发」的图。 */
+            max_pending: number;
+            /** @description 单张上限(字节)。 */
+            max_bytes: number;
         };
         /** @description 每百万 token 的价格,单位由管理员自定(与月度上限同一单位)。`cache_read` 不填按 `input` 算。 */
         Price: {
@@ -25804,6 +25867,95 @@ export interface operations {
             };
         };
     };
+    v1_social_media_limits: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PostMediaLimits"];
+                };
+            };
+        };
+    };
+    v1_social_media_upload: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulPostMediaUpload"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulSocialError"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulSocialError"];
+                };
+            };
+        };
+    };
+    v1_social_media_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                media_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulSocialError"];
+                };
+            };
+        };
+    };
     v1_social_posts_list: {
         parameters: {
             query?: {
@@ -25837,7 +25989,7 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody: {
+        requestBody?: {
             content: {
                 "application/json": components["schemas"]["PostCreate"];
                 "application/x-www-form-urlencoded": components["schemas"]["PostCreate"];

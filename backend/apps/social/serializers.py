@@ -3,17 +3,32 @@ Serializers for the social domain.
 """
 import uuid
 
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from apps.social import images
+from apps.social import media as post_media
 from apps.social.models import Comment, Follow, Post, Reaction, ReactionType, UserProfile, Visibility
-from apps.social.soul_serializers import SoulReactionCountsSerializer
+from apps.social.soul_serializers import PostMediaSerializer, SoulReactionCountsSerializer, live_media
 
 # ---------------------------------------------------------------------------
 # Post serializers
 # ---------------------------------------------------------------------------
 
-class PostSerializer(serializers.ModelSerializer):
+class PostMediaFieldMixin(serializers.Serializer):
+    # 官员帖子的配图(2026-10-02):与灵魂端同一个 `media.describe` —— 按顺序、地址签给
+    # **当前请求的用户**,取文件时按他重查可见性(apps/social/media.py::may_view)。
+    # 视图预取 `live_media`;没有预取时现查。(注释而非 docstring:docstring 会变成
+    # Post / PostList 两个 schema 组件的 description。)
+
+    media = serializers.SerializerMethodField(help_text="按显示顺序,最多 9 张。")
+
+    @extend_schema_field(PostMediaSerializer(many=True))
+    def get_media(self, post):
+        return post_media.describe(live_media(post), self.context["request"].user)
+
+
+class PostSerializer(PostMediaFieldMixin, serializers.ModelSerializer):
     author_name = serializers.CharField(source="author.display_name", read_only=True, default="")
     author_username = serializers.CharField(source="author.username", read_only=True)
     #: 五种表态各自的数(未删除的),读 `reaction_kind_counts()` 的注解 —— 与灵魂端、审核后台同一份。
@@ -30,6 +45,7 @@ class PostSerializer(serializers.ModelSerializer):
             "visibility",
             "comment_count",
             "reaction_count",
+            "media",
             "reaction_counts",
             "tenant",
             "create_time",
@@ -52,15 +68,30 @@ class PostSerializer(serializers.ModelSerializer):
 
 
 class PostCreateSerializer(serializers.ModelSerializer):
-    """Serializer for creating posts — only content + visibility needed."""
+    """content + visibility, plus `media`: ids uploaded first through
+    `POST /social/media/`, in display order (attached in `PostViewSet.perform_create`).
+    Text may be empty when there are images — the soul circle's rule
+    (`soul_circle.create_post`, code `empty_post`)."""
+
+    content = serializers.CharField(required=False, allow_blank=True, default="")
+    media = serializers.ListField(
+        child=serializers.UUIDField(), required=False, default=list, write_only=True,
+        max_length=post_media.MAX_PER_POST,
+        help_text="先经 POST /social/media/ 上传的图片 id,按显示顺序。",
+    )
 
     class Meta:
         model = Post
-        fields = ["id", "content", "visibility"]
+        fields = ["id", "content", "visibility", "media"]
         read_only_fields = ["id"]
 
+    def validate(self, attrs):
+        if not attrs.get("content", "").strip() and not attrs.get("media"):
+            raise serializers.ValidationError({"content": "帖子要有文字或图片。"}, code="empty_post")
+        return attrs
 
-class PostListSerializer(serializers.ModelSerializer):
+
+class PostListSerializer(PostMediaFieldMixin, serializers.ModelSerializer):
     """Lightweight serializer for listing posts."""
 
     author_name = serializers.CharField(source="author.display_name", read_only=True, default="")
@@ -79,6 +110,7 @@ class PostListSerializer(serializers.ModelSerializer):
             "visibility",
             "comment_count",
             "reaction_count",
+            "media",
             "reaction_counts",
             "create_time",
         ]
