@@ -40,6 +40,7 @@ const basePost: Post = {
   comment_count: 0,
   reaction_count: 0,
   media: [],
+  reaction_counts: { LIKE: 0, LOVE: 0, RESPECT: 0, SYMPATHY: 0, ETERNAL_LIGHT: 0 },
   create_time: "2026-08-01T00:00:00Z",
 };
 
@@ -127,5 +128,17 @@ describe("PostCard 配图(官员也能发图,2026-10-02)", () => {
     expect(document.querySelector("[data-media-grid] img")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "social.media.refetch social.media.refetch_short" }));
     expect(mockRefresh).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("PostCard 表态计数", () => {
+  it("把 reaction_counts 交给表态条:右端是四种轻表态之和,长明灯的数在它自己那一格", () => {
+    render(
+      <PostCard
+        post={{ ...basePost, reaction_count: 9, reaction_counts: { LIKE: 3, LOVE: 1, RESPECT: 0, SYMPATHY: 2, ETERNAL_LIGHT: 3 } }}
+      />
+    );
+    expect(screen.getByTestId("post-totals")).toHaveTextContent("social.reactions 6");
+    expect(screen.getByTestId("lamp-count")).toHaveTextContent("3");
   });
 });

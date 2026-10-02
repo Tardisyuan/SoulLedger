@@ -18,6 +18,7 @@ import { usePermissions } from "@/src/hooks/usePermissions";
 import { Drawer } from "@/src/components/ui/Drawer";
 import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
 import { realmStationLabel } from "@/src/components/realms/RouteTopology";
+import { usePlaque } from "@/src/components/plaque/Plaque";
 import { RouteMap } from "@/src/components/realms/RouteMap";
 import { buildTopology, isTerminalRealm } from "@/src/lib/routeTopology";
 
@@ -127,6 +128,17 @@ function RealmsPageContent() {
   const own = realms.filter((r) => r.civilization === civilization);
   const occupancy = new Map((occupancyQuery.data ?? []).map((o) => [o.realm_id, o.count]));
   const rows = treeRows(own);
+  // 身份带(A2):题「界域 · <所看文明的界域根>」,右栏「在押 <根的在押数>」。根取树的第一行;
+  // 在押没取到就不写右栏。
+  const root = rows[0]?.realm;
+  const rootName = root
+    ? realmStationLabel(t, { id: root.id, code: root.realm_code, realm: root, state: "pending" }) ?? root.realm_code
+    : undefined;
+  const rootHeld = root && occupancyQuery.isSuccess ? String(occupancy.get(root.id) ?? 0) : undefined;
+  usePlaque({
+    title: rootName ? t("plaque.realms", { root: rootName }) : undefined,
+    meta: rootHeld ? t("plaque.held", { n: rootHeld }) : undefined,
+  });
 
   return (
     <PageShell

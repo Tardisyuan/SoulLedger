@@ -25,6 +25,8 @@ export interface Post {
   reaction_count: number;
   /** In display order; each `url` is signed for the current user (about an hour). */
   media: PostMedia[];
+  /** 五种表态各自的数(未删除的)。 */
+  reaction_counts: Record<"LIKE" | "LOVE" | "RESPECT" | "SYMPATHY" | "ETERNAL_LIGHT", number>;
   tenant?: number;
   create_time: string;
   update_time?: string;

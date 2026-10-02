@@ -224,10 +224,9 @@ export function UnsavedBar({
         type="button"
         variant="inverse"
         size="md"
-        // Design A6 draws 保存 solid (s1 ground, ink text). The batch-bar contract
-        // (v3DataDisplayContract) forbids s1 / ink on the bar, so it is the inverse
-        // button with a frame and 600 weight until that rule is decided.
-        className="border-[oklch(var(--color-surface-1))] font-semibold"
+        // Design A6: 保存 is the bar's one solid button — s1 ground, ink text, 600 (用户 2026-10-02).
+        // `v3DataDisplayContract` allows exactly one such primary action per inverted bar.
+        className="bg-[oklch(var(--color-surface-1))] text-[oklch(var(--color-ink))] font-semibold hover:bg-[color-mix(in_oklab,oklch(var(--color-ink))_8%,oklch(var(--color-surface-1)))] active:bg-[color-mix(in_oklab,oklch(var(--color-ink))_16%,oklch(var(--color-surface-1)))]"
         onClick={onSave}
         loading={isSaving}
         disabled={saveDisabled}

@@ -774,11 +774,6 @@
         "END": "结束"
       },
       "signers": "会签人",
-      "signer_label": "会签人 {{n}}",
-      "signer_add": "添加会签人",
-      "signer_remove": "移除",
-      "threshold": "通过所需人数",
-      "threshold_hint": "留空 = 每位会签人都须同意;人数已不可能达到时立即驳回。",
       "signers_summary": "{{who}} · {{k}}/{{n}} 同意即通过",
       "timeout": {
         "label": "超时",
@@ -794,7 +789,6 @@
         "hint": "超时由定时任务每 5 分钟检查一次后触发;定时调度没有运行时不会触发。",
         "summary": "{{hours}} 小时后 · {{action}}"
       },
-      "reject_to": "驳回到",
       "reject_to_none": "— 不退回,流程结束 —",
       "template_level": "整个模板",
       "condition": {
@@ -858,6 +852,26 @@
       "exits_none": "这个节点没有「通过」出口。",
       "exits_fixed": "条件只挂在「通过」出口上；「否决」出口另走固定路线。",
       "exit_label": "连线标签",
+      "exit_add": "加一条条件出口",
+      "exit_target": "目标",
+      "exit_up": "上移出口",
+      "exit_down": "下移出口",
+      "field": {
+        "name": "名称",
+        "kind": "类型",
+        "stage": "阶段",
+        "court": "殿号",
+        "approver": "审批人",
+        "role": "角色",
+        "signers": "会签人",
+        "threshold": "门槛",
+        "reject_to": "驳回到"
+      },
+      "threshold_of": "/ {{n}} 人",
+      "threshold_rule": "{{n}} 人中任 {{k}} 人通过即放行",
+      "signer_remove_named": "移除 {{name}}",
+      "signer_placeholder": "输入姓名后回车",
+      "signer_add_role": "按角色添加会签人",
       "preview_count": "{{nodes}} 节点 · {{edges}} 连线",
       "flow_count": "流程 · {{n}} 节点",
       "glyph_legend": "左列字形是角色（▷ 入口 · □ 步骤 · ◇ 分支 · ■ 终点），名称前是节点类型",
@@ -1032,7 +1046,9 @@
     "civ_empty": "尚未入册 · 去登记",
     "tab_ledger": "账本",
     "top_realms": "界域前十",
-    "avg_scope": "全部已入簿灵魂"
+    "avg_scope": "全部已入簿灵魂",
+    "occupancy": "占容量",
+    "bucket_width": "每格 {{n}}"
   },
   "ledger": {
     "title": "功德统计",
@@ -1218,7 +1234,9 @@
       "notes_placeholder": "输入备注...",
       "create_workflow": "发起审批流程",
       "create_workflow_hint": "勾选后,结案将按该文明与案件类型匹配的模板自动创建一条审批流程。",
-      "conclude_with_workflow": "落判并发起"
+      "conclude_with_workflow": "落判并发起",
+      "current_realm": "所在界域",
+      "method": "审判方式"
     },
     "create_success": "已创建审判",
     "create_error": "创建审判失败",
@@ -1428,7 +1446,9 @@
         "ORIGINAL": "初审",
         "AMENDMENT": "加减项",
         "REOPEN": "重开"
-      }
+      },
+      "col_merit_demerit": "功 / 过",
+      "col_cycle_kind": "世次 / 种类"
     },
     "admission": {
       "title": "证据 · 采信",
@@ -1489,6 +1509,11 @@
     },
     "row_mark": {
       "mine": "待我处理"
+    },
+    "methods": {
+      "STANDARD": "标准审判",
+      "HEART_WEIGHING": "称心审判",
+      "DIABOLICAL_TRIAL": "魔鬼审判"
     }
   },
   "audit": {
@@ -2482,7 +2507,8 @@
       "sentence_requests": "受刑请求",
       "assistant_admin": "助手管理"
     },
-    "queue": "分诊队列"
+    "queue": "分诊队列",
+    "about": "关于"
   },
   "tenant": {
     "civilizations": {
@@ -4424,5 +4450,24 @@
       "until_rebuilt": "重建完成前，助手改用全部帮助条目回答。",
       "fallback_note": "向量服务连不上时，助手会自动改用全部帮助条目回答，不会答不了。"
     }
+  },
+  "plaque": {
+    "realms": "界域 · {{root}}",
+    "held": "在押 {{n}}",
+    "corpus": "律条语料",
+    "corpus_meta": "{{works}} 部 · {{n}} 条",
+    "workflow_editor": "审批流编辑器",
+    "workflow_instance": "审批实例",
+    "step": "第 {{k}} / {{n}} 步",
+    "social": "朋友圈",
+    "social_meta": "关注 {{following}} · 粉丝 {{followers}}",
+    "post": "帖子",
+    "comments": "评论 {{n}}",
+    "posts": "发帖 {{n}}",
+    "soul": "灵魂详情",
+    "desk": "审判台",
+    "queue": "审判队列",
+    "permissions": "权限",
+    "permissions_meta": "{{roles}} 角色 · {{perms}} 项权限"
   }
 }

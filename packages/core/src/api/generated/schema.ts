@@ -8091,6 +8091,21 @@ export interface components {
             /** Format: double */
             primary_first_token_seconds: number;
         };
+        /**
+         * @description 等宽余额直方图:[-300, 300) 每 `bucket_width` 一格,外加两端开口的两格。
+         *     格子覆盖整条数轴,所以 `total` 总等于 `total_souls`。
+         */
+        BalanceHistogram: {
+            bucket_width: number;
+            buckets: components["schemas"]["BalanceHistogramBucket"][];
+            total: number;
+        };
+        /** @description 半开区间 [min, max);两端那两格开口(min 或 max 为 null)。 */
+        BalanceHistogramBucket: {
+            min: number | null;
+            max: number | null;
+            count: number;
+        };
         /** @description kind=BALANCE — the Chinese 功過格 account. */
         BalanceReading: {
             /**
@@ -9614,6 +9629,19 @@ export interface components {
              *     (`JudgmentEvidenceColumn`,`Object.entries(evidence).length`)。
              */
             readonly evidence_count: number;
+            /** @description Life index this row belongs to; 0 is the first life. */
+            readonly cycle: number;
+            /**
+             * @description Method of judgment (affects disposition routing)
+             *
+             *     * `STANDARD` - Standard Trial (Chinese/European/Greek)
+             *     * `HEART_WEIGHING` - Heart Weighing (Egyptian)
+             *     * `DIABOLICAL_TRIAL` - Diabolical Trial (European Hell)
+             */
+            readonly judgment_method: components["schemas"]["JudgmentMethodEnum"];
+            readonly merit_score: number;
+            readonly demerit_score: number;
+            readonly realm_name: string | null;
         };
         /** @description `POST /judgment/batch/` 的输入。一个动作、至多 `BATCH_LIMIT` 个 id,全有或全无。 */
         JudgmentBatch: {
@@ -9818,6 +9846,19 @@ export interface components {
              *     (`JudgmentEvidenceColumn`,`Object.entries(evidence).length`)。
              */
             readonly evidence_count: number;
+            /** @description Life index this row belongs to; 0 is the first life. */
+            readonly cycle: number;
+            /**
+             * @description Method of judgment (affects disposition routing)
+             *
+             *     * `STANDARD` - Standard Trial (Chinese/European/Greek)
+             *     * `HEART_WEIGHING` - Heart Weighing (Egyptian)
+             *     * `DIABOLICAL_TRIAL` - Diabolical Trial (European Hell)
+             */
+            readonly judgment_method: components["schemas"]["JudgmentMethodEnum"];
+            readonly merit_score: number;
+            readonly demerit_score: number;
+            readonly realm_name: string | null;
             readonly evidence_admissions: components["schemas"]["EvidenceAdmission"][];
             readonly admitted_balance: components["schemas"]["AdmittedBalance"];
         };
@@ -9855,6 +9896,13 @@ export interface components {
          * @enum {string}
          */
         JudgmentKindEnum: "ORIGINAL" | "AMENDMENT" | "REOPEN";
+        /**
+         * @description * `STANDARD` - Standard Trial (Chinese/European/Greek)
+         *     * `HEART_WEIGHING` - Heart Weighing (Egyptian)
+         *     * `DIABOLICAL_TRIAL` - Diabolical Trial (European Hell)
+         * @enum {string}
+         */
+        JudgmentMethodEnum: "STANDARD" | "HEART_WEIGHING" | "DIABOLICAL_TRIAL";
         /**
          * @description One row of 「据 · 先例」 — see apps/judgment/precedents.py for the ranking.
          *
@@ -10061,11 +10109,16 @@ export interface components {
          *     it exists so a reader can check that without re-deriving the bounds.
          */
         LedgerOverviewStats: {
+            /** Format: date-time */
+            as_of: string;
             total_souls: number;
+            /** Format: double */
+            average_balance: number | null;
             state_distribution: components["schemas"]["SoulStateDistribution"][];
             tenants: components["schemas"]["TenantSoulStats"][];
             karma_distribution: components["schemas"]["KarmaBucket"][];
             karma_distribution_total: number;
+            balance_histogram: components["schemas"]["BalanceHistogram"];
             recent_activity: components["schemas"]["RecentActivity"][];
             souls_by_realm: components["schemas"]["SoulsByRealm"][];
         };
@@ -12129,6 +12182,19 @@ export interface components {
              *     (`JudgmentEvidenceColumn`,`Object.entries(evidence).length`)。
              */
             readonly evidence_count?: number;
+            /** @description Life index this row belongs to; 0 is the first life. */
+            readonly cycle?: number;
+            /**
+             * @description Method of judgment (affects disposition routing)
+             *
+             *     * `STANDARD` - Standard Trial (Chinese/European/Greek)
+             *     * `HEART_WEIGHING` - Heart Weighing (Egyptian)
+             *     * `DIABOLICAL_TRIAL` - Diabolical Trial (European Hell)
+             */
+            readonly judgment_method?: components["schemas"]["JudgmentMethodEnum"];
+            readonly merit_score?: number;
+            readonly demerit_score?: number;
+            readonly realm_name?: string | null;
         };
         /**
          * @description Input for `PATCH /judgment/{id}/draft/`. `version` is the
@@ -12220,6 +12286,7 @@ export interface components {
             readonly reaction_count?: number;
             /** @description 按显示顺序,最多 9 张。 */
             readonly media?: components["schemas"]["PostMedia"][];
+            readonly reaction_counts?: components["schemas"]["SoulReactionCounts"];
             readonly tenant?: number;
             /** Format: date-time */
             readonly create_time?: string;
@@ -12629,6 +12696,7 @@ export interface components {
             readonly reaction_count: number;
             /** @description 按显示顺序,最多 9 张。 */
             readonly media: components["schemas"]["PostMedia"][];
+            readonly reaction_counts: components["schemas"]["SoulReactionCounts"];
             readonly tenant: number;
             /** Format: date-time */
             readonly create_time: string;
@@ -12664,6 +12732,7 @@ export interface components {
             reaction_count?: number;
             /** @description 按显示顺序,最多 9 张。 */
             readonly media: components["schemas"]["PostMedia"][];
+            readonly reaction_counts: components["schemas"]["SoulReactionCounts"];
             /** Format: date-time */
             readonly create_time: string;
         };
@@ -14330,6 +14399,8 @@ export interface components {
             state: string;
             label: string;
             count: number;
+            /** Format: double */
+            average_balance: number | null;
         };
         SoulTokenPair: {
             access: string;
@@ -14342,6 +14413,8 @@ export interface components {
             civilization: string;
             realm_type: components["schemas"]["RealmTypeEnum"];
             count: number;
+            capacity: number | null;
+            held: number;
         };
         /**
          * @description One citable article.

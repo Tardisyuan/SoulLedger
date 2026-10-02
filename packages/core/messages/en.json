@@ -774,11 +774,6 @@
         "END": "End"
       },
       "signers": "Signers",
-      "signer_label": "Signer {{n}}",
-      "signer_add": "Add signer",
-      "signer_remove": "Remove",
-      "threshold": "Approvals needed",
-      "threshold_hint": "Blank = every signer must approve. The node is refused as soon as the number can no longer be reached.",
       "signers_summary": "{{who}} · {{k}} of {{n}} to pass",
       "timeout": {
         "label": "Timeout",
@@ -794,7 +789,6 @@
         "hint": "A scheduled job checks timeouts every 5 minutes; they do not fire while the scheduler is not running.",
         "summary": "After {{hours}} h · {{action}}"
       },
-      "reject_to": "On refusal, return to",
       "reject_to_none": "— none: the flow ends —",
       "template_level": "The template",
       "condition": {
@@ -858,6 +852,26 @@
       "exits_none": "This node has no pass exit.",
       "exits_fixed": "Conditions sit on pass exits only; the fail exit keeps its fixed route.",
       "exit_label": "Edge label",
+      "exit_add": "Add a conditional exit",
+      "exit_target": "Target",
+      "exit_up": "Move exit up",
+      "exit_down": "Move exit down",
+      "field": {
+        "name": "Name",
+        "kind": "Kind",
+        "stage": "Stage",
+        "court": "Court",
+        "approver": "Approver",
+        "role": "Role",
+        "signers": "Signers",
+        "threshold": "Threshold",
+        "reject_to": "Reject to"
+      },
+      "threshold_of": "of {{n}}",
+      "threshold_rule": "Any {{k}} of {{n}} pass it",
+      "signer_remove_named": "Remove {{name}}",
+      "signer_placeholder": "Type a name, Enter",
+      "signer_add_role": "Add a signer by role",
       "preview_count": "{{nodes}} nodes · {{edges}} edges",
       "flow_count": "Flow · {{n}} nodes",
       "glyph_legend": "The left glyph is the role (▷ entry · □ step · ◇ branch · ■ end); the one before the name is the node kind",
@@ -1032,7 +1046,9 @@
     "civ_empty": "No souls yet · register one",
     "tab_ledger": "Ledger",
     "top_realms": "Top 10 realms",
-    "avg_scope": "All souls in the ledger"
+    "avg_scope": "All souls in the ledger",
+    "occupancy": "Of capacity",
+    "bucket_width": "{{n}} per bar"
   },
   "ledger": {
     "title": "Deed Statistics",
@@ -1218,7 +1234,9 @@
       "notes_placeholder": "Enter notes...",
       "create_workflow": "Start approval workflow",
       "create_workflow_hint": "If checked, concluding will create an approval workflow from the template matching this civilization and case type.",
-      "conclude_with_workflow": "Rule and open workflow"
+      "conclude_with_workflow": "Rule and open workflow",
+      "current_realm": "Realm",
+      "method": "Method"
     },
     "create_success": "Judgment created",
     "create_error": "Failed to create judgment",
@@ -1428,7 +1446,9 @@
         "ORIGINAL": "Original",
         "AMENDMENT": "Amendment",
         "REOPEN": "Reopened"
-      }
+      },
+      "col_merit_demerit": "Merit / demerit",
+      "col_cycle_kind": "Life / kind"
     },
     "admission": {
       "title": "Evidence · admission",
@@ -1489,6 +1509,11 @@
     },
     "row_mark": {
       "mine": "Awaiting me"
+    },
+    "methods": {
+      "STANDARD": "Standard trial",
+      "HEART_WEIGHING": "Heart weighing",
+      "DIABOLICAL_TRIAL": "Diabolical trial"
     }
   },
   "audit": {
@@ -2482,7 +2507,8 @@
       "sentence_requests": "Sentence Requests",
       "assistant_admin": "Assistant Admin"
     },
-    "queue": "Triage queue"
+    "queue": "Triage queue",
+    "about": "About"
   },
   "tenant": {
     "civilizations": {
@@ -4424,5 +4450,24 @@
       "until_rebuilt": "Until the rebuild finishes, the assistant answers from all help entries.",
       "fallback_note": "If the embedding service can’t be reached, the assistant answers from all help entries instead — it still answers."
     }
+  },
+  "plaque": {
+    "realms": "Realm · {{root}}",
+    "held": "Held {{n}}",
+    "corpus": "Statute corpus",
+    "corpus_meta": "{{works}} rulebooks · {{n}} articles",
+    "workflow_editor": "Workflow editor",
+    "workflow_instance": "Workflow instance",
+    "step": "Step {{k}} / {{n}}",
+    "social": "Circle",
+    "social_meta": "Following {{following}} · Followers {{followers}}",
+    "post": "Post",
+    "comments": "{{n}} comments",
+    "posts": "{{n}} posts",
+    "soul": "Soul",
+    "desk": "Judgment desk",
+    "queue": "Judgment queue",
+    "permissions": "Permissions",
+    "permissions_meta": "{{roles}} roles · {{perms}} permissions"
   }
 }

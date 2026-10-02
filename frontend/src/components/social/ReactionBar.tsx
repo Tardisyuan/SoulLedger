@@ -17,7 +17,9 @@ import { useI18n } from "@/src/contexts/I18nContext";
  * 选中不靠颜色:aria-pressed + 加粗,长明灯还换字(「点长明灯」→「长明灯已点」)。
  * ≤ 768 轻表态只显示字形(名字留给读屏),长明灯换短字。
  *
- * 后端没有分类计数(PostListSerializer 只有 `reaction_count`),所以右端只写总数。
+ * 计数(`Post.reaction_counts`,五种各自的数):照 A5 稿「轻表态只计总数;长明灯单独一格,
+ * 不与其他四种并排计数」—— 右端「表态 N」是四种轻表态之和,长明灯的数写在它自己那一格里
+ * (有人点过才写)。没给 `counts`(评论)就退回 `totals.reactions`。
  */
 export const REACTIONS: {
   type: "LIKE" | "LOVE" | "RESPECT" | "SYMPATHY" | "ETERNAL_LIGHT";
@@ -38,9 +40,11 @@ interface ReactionBarProps {
   commentId?: string;
   /** 帖子卡右端的「表态 N · 评论 N」;评论里不给。 */
   totals?: { reactions: number; comments: number };
+  /** 五种表态各自的数(`Post.reaction_counts`)。 */
+  counts?: Record<(typeof REACTIONS)[number]["type"], number>;
 }
 
-export function ReactionBar({ postId, commentId, totals }: ReactionBarProps) {
+export function ReactionBar({ postId, commentId, totals, counts }: ReactionBarProps) {
   const { user } = useTenant();
   const { t } = useI18n();
   const toggleReaction = useToggleReaction();
@@ -63,6 +67,8 @@ export function ReactionBar({ postId, commentId, totals }: ReactionBarProps) {
   };
 
   const lit = myReaction === "ETERNAL_LIGHT";
+  const lamps = counts?.ETERNAL_LIGHT ?? 0;
+  const lightTotal = counts ? LIGHT.reduce((sum, r) => sum + (counts[r.type] ?? 0), 0) : totals?.reactions;
   const base =
     "inline-flex h-(--control-h-sm) min-w-(--control-h-sm) shrink-0 items-center justify-center gap-1 text-sm transition-colors duration-fast ease-standard disabled:cursor-not-allowed";
 
@@ -107,11 +113,16 @@ export function ReactionBar({ postId, commentId, totals }: ReactionBarProps) {
         <span className="min-[769px]:hidden">
           {t(lit ? "social.lamp.lit_short" : "soul_app.circle.react.eternal_light")}
         </span>
+        {lamps > 0 && (
+          <span data-testid="lamp-count" className="font-mono font-normal tabular-nums">
+            {lamps}
+          </span>
+        )}
       </button>
       {totals ? (
         <span className="ml-auto text-xs text-[oklch(var(--color-ink-muted))]" data-testid="post-totals">
           <span className="max-[768px]:sr-only">{t("social.reactions")} </span>
-          <span className="font-mono tabular-nums">{totals.reactions}</span>
+          <span className="font-mono tabular-nums">{lightTotal}</span>
           {" · "}
           <span className="max-[768px]:sr-only">{t("social.comments")} </span>
           <span className="font-mono tabular-nums">{totals.comments}</span>

@@ -174,6 +174,10 @@ describe("serif, original and translation", () => {
     // 条号是展示数字(规范 v3):Noto Serif SC 600,不是等宽。
     expect(within(reading).getByTestId("corpus-sigil").className).toContain("font-title");
     expect(within(reading).getByTestId("corpus-sigil").className).not.toContain("font-mono");
+    // 宽屏 40(用户 2026-10-02,Design A3),窄屏 28(Design 393)。
+    expect(within(reading).getByTestId("corpus-sigil").className.split(" ")).toEqual(
+      expect.arrayContaining(["lg:text-display", "text-xl"])
+    );
   });
 
   it("does not pass a translation off as the original for a rulebook stored only in translation", async () => {
@@ -308,6 +312,7 @@ describe("the right rail", () => {
     await screen.findByTestId("corpus-reading");
     expect(screen.getByTestId("corpus-cited-by")).toHaveTextContent(/^3次被判词引用$/);
     expect(screen.getByTestId("corpus-cited-by").querySelector(".font-title")).toHaveTextContent(/^3$/);
+    expect(screen.getByTestId("corpus-cited-by").querySelector(".font-title")!.className.split(" ")).toContain("lg:text-display");
     const list = await screen.findByTestId("corpus-cited-list");
     expect(mockedList).toHaveBeenCalledWith({ statute: "cn-17", ordering: "-created_at", page: "1" });
     const rows = within(list).getAllByRole("listitem");

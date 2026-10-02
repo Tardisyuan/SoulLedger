@@ -46,6 +46,7 @@ import { ConfirmDialog } from "@/src/components/ui/Modal";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatHistoricalDate } from "@/lib/utils";
 import { PageShell } from "@/src/components/ui/PageShell";
+import { usePlaque } from "@/src/components/plaque/Plaque";
 import { DOMAIN_BADGE, soulStateBadgeClass, soulStateGlyph } from "@/src/lib/soulStateBadge";
 
 /** 详情页头上那两个徽章的形状。颜色由调用点给,形状只有一种。 */
@@ -324,6 +325,9 @@ export default function SoulDetailPage() {
       // error handled by hook
     }
   }
+
+  // 身份带:题「灵魂详情」(v3 `soul-product`;面包屑末段是原始 id)。案号后端没有,不写右栏。
+  usePlaque({ title: t("plaque.soul") });
 
   // Error state - only show when we have actual data fetch error, not during initial load
   if (error && !soul) {

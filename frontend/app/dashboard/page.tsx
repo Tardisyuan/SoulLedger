@@ -8,7 +8,7 @@ import { useToast } from "@/src/contexts/ToastContext";
 import { ledgerApi, LedgerStatsOverview } from "@soulledger/core/api";
 import Link from "next/link";
 import { LegendLedger, STATE_SWATCH, orderLifecycle, sharePercent } from "@/src/components/dashboard/LegendLedger";
-import { BalanceHistogram } from "@/src/components/dashboard/BalanceHistogram";
+import { BalanceHistogram, histogramFromBuckets } from "@/src/components/dashboard/BalanceHistogram";
 import { soulStateGlyph } from "@/src/lib/soulStateBadge";
 import { CIVILIZATION_MARK } from "@/src/lib/civilizationIdentity";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -19,9 +19,10 @@ import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
 import { RealmBars, RealmLegend, PATTERN_CLASS, patternOf } from "@/src/components/dashboard/RealmBars";
 import { TodoStrip } from "@/src/components/dashboard/TodoStrip";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
-import { DomainEnum } from "@/src/components/ui/DomainValue";
+import { DomainEnum, MissingValue } from "@/src/components/ui/DomainValue";
 import { resolveEnumDisplay } from "@/src/lib/domainDisplay";
 import { PageShell } from "@/src/components/ui/PageShell";
+import { usePlaque } from "@/src/components/plaque/Plaque";
 import { TAB_BASE, TAB_ON, TAB_OFF } from "@/src/lib/tabClasses";
 import { Button } from "@/src/components/ui/Button";
 import { EmptyState } from "@/src/components/ui/EmptyState";
@@ -48,16 +49,19 @@ function signedBalance(n: number): string {
   return n > 0 ? `+${fixed}` : fixed === "-0.0" ? "0.0" : fixed;
 }
 
-/** Parses karma_distribution bucket labels ("< -50", "-5 to 5", "> 50", ...) into a midpoint. */
-function bucketMidpoint(label: string): number {
-  // The server's top bucket is `>= 50` (apps/ledger/views.py). Stripping only the
-  // `>` left `= 50`, parseFloat gave NaN, and the average balance read NaN.
-  const bound = (l: string) => parseFloat(l.replace(/^[<>]=?/, "").trim());
-  if (label.startsWith("<")) return bound(label) - 10;
-  if (label.startsWith(">")) return bound(label) + 10;
-  const parts = label.split(" to ");
-  if (parts.length === 2) return (parseFloat(parts[0]) + parseFloat(parts[1])) / 2;
-  return 0;
+/** 「占容量」:在押 / 容量,与界域页同一条线 —— 在押 ≥ 容量即满;容量未记录写「未记录」。 */
+function Occupancy({ held, capacity }: { held: number; capacity: number | null }) {
+  const { t } = useI18n();
+  if (capacity == null) return <MissingValue kind="unrecorded" />;
+  if (held >= capacity) {
+    return (
+      <span data-occupancy="full" className="font-semibold text-[oklch(var(--color-ink))]">
+        <span aria-hidden="true">■ </span>
+        {t("realms.table.full")}
+      </span>
+    );
+  }
+  return <span data-occupancy="">{`${Math.round((held / capacity) * 100)}%`}</span>;
 }
 
 
@@ -77,6 +81,13 @@ function DashboardContent() {
     staleTime: 60_000,
   });
   const error = queryError ? t("dashboard.error_load") : null;
+
+  // 身份带(A4):题是当前标签名(「概览」/「账本」),右栏只写今天的日期 —— 统计接口不带
+  // 「数据截至」时间,稿里的「截至 08:00」没有来源,不写。
+  usePlaque({
+    title: t(activeTab === "ledger" ? "dashboard.tab_ledger" : "dashboard.tab_overview"),
+    meta: formatDateTime(new Date(), { year: "numeric", month: "2-digit", day: "2-digit" }),
+  });
 
   const setTab = useCallback(
     (tab: DashboardTab) => {
@@ -235,12 +246,10 @@ function DashboardContent() {
     return formatDateTime(ts, today ? { hour: "2-digit", minute: "2-digit" } : { month: "numeric", day: "numeric" });
   };
 
-  // Ledger-tab-only derived data (admin/stats page's unique cards)
-  const avgBalance = stats?.karma_distribution
-    ? stats.karma_distribution.reduce((sum, k) => sum + bucketMidpoint(k.label) * k.count, 0) /
-      (stats.total_souls || 1)
-    : 0;
+  // 账本页的平均余额:服务端算的精确均值(此前按七格的中点估,两端开口的格还各硬加 ±10)。
+  const avgBalance = stats?.average_balance ?? null;
   const total = stats?.total_souls ?? 0;
+  const histogram = stats?.balance_histogram ? histogramFromBuckets(stats.balance_histogram.buckets) : null;
 
   return (
     <PageShell
@@ -349,18 +358,20 @@ function DashboardContent() {
               {/* 余额分布 — 0 左右两档明度,0 线墨色,负值不用红。 */}
               <ChartCard
                 title={t("dashboard.balance_distribution")}
-                aside={stats ? <span className="font-mono">n = {stats.total_souls}</span> : null}
+                aside={
+                  stats ? (
+                    <span className="font-mono">
+                      n = {stats.total_souls}
+                      {stats.balance_histogram ? ` · ${t("dashboard.bucket_width", { n: String(stats.balance_histogram.bucket_width) })}` : null}
+                    </span>
+                  ) : null
+                }
               >
                 {loading ? (
                   <Skeleton className="h-50 w-full" />
-                ) : (
-                  <BalanceHistogram
-                    bars={(stats?.karma_distribution ?? []).map((k) => {
-                      const mid = bucketMidpoint(k.label);
-                      return { label: k.label, count: k.count, tone: mid < 0 ? "negative" : mid > 0 ? "positive" : "zero" };
-                    })}
-                  />
-                )}
+                ) : histogram ? (
+                  <BalanceHistogram bars={histogram.bars} ticks={histogram.ticks} />
+                ) : null}
               </ChartCard>
             </div>
 
@@ -441,7 +452,7 @@ function DashboardContent() {
                     <Skeleton className="h-16 w-32" />
                   ) : (
                     <div data-avg-balance="" className="font-title text-display-lg tabular-nums text-[oklch(var(--color-ink))]">
-                      {signedBalance(avgBalance)}
+                      {avgBalance == null ? <MissingValue kind="unrecorded" /> : signedBalance(avgBalance)}
                     </div>
                   )}
                   <p className="text-xs text-[oklch(var(--color-ink-muted))]">{t("dashboard.avg_scope")}</p>
@@ -453,20 +464,21 @@ function DashboardContent() {
                   <h2 id="dash-state-breakdown" className="px-4 pt-4 text-lg text-[oklch(var(--color-ink))]">
                     {t("admin.state_breakdown")}
                   </h2>
-                  <div className="grid grid-cols-[20px_1fr_140px] px-4">
-                    <div className="col-span-3 grid h-10 grid-cols-subgrid items-center text-2xs text-[oklch(var(--color-ink-subtle))]">
+                  <div className="grid grid-cols-[20px_1fr_140px_120px] px-4 max-sm:grid-cols-[20px_1fr_64px_72px]">
+                    <div className="col-span-4 grid h-10 grid-cols-subgrid items-center text-2xs text-[oklch(var(--color-ink-subtle))]">
                       <span />
                       <span>{t("souls.state")}</span>
                       <span className="text-right">{t("admin.soul_count")}</span>
+                      <span className="text-right">{t("admin.avg_balance")}</span>
                     </div>
                     {loading ? (
-                      <Skeleton className="col-span-3 h-32 w-full" />
+                      <Skeleton className="col-span-4 h-32 w-full" />
                     ) : (
                       stats?.state_distribution?.map((s) => (
                         <div
                           key={s.state}
                           data-breakdown-row={s.state}
-                          className="col-span-3 grid min-h-(--table-row-h) grid-cols-subgrid items-center border-t border-[oklch(var(--color-line))] text-sm"
+                          className="col-span-4 grid min-h-(--table-row-h) grid-cols-subgrid items-center border-t border-[oklch(var(--color-line))] text-sm"
                         >
                           <span aria-hidden="true" className={`block size-3 ${STATE_SWATCH[s.state] ?? "border-2 border-[oklch(var(--color-ink-subtle))]"}`} />
                           <span className="text-[oklch(var(--color-ink))]">
@@ -474,6 +486,14 @@ function DashboardContent() {
                             <span title={s.state}>{stateLabel(s.state, s.label)}</span>
                           </span>
                           <span className="text-right font-mono">{s.count}</span>
+                          <span className="text-right" data-avg-of={s.state}>
+                            {/* 没有灵魂的状态没有均值:写「不适用」,不写 0。 */}
+                            {s.average_balance == null ? (
+                              <MissingValue kind="inapplicable" />
+                            ) : (
+                              <span className="font-mono tabular-nums">{signedBalance(s.average_balance)}</span>
+                            )}
+                          </span>
                         </div>
                       ))
                     )}
@@ -491,6 +511,7 @@ function DashboardContent() {
                     { key: "realm_name", header: t("admin.realm") },
                     { key: "realm_type", header: t("realms.table.col_kind"), width: "160px" },
                     { key: "count", header: t("admin.soul_count"), align: "right", width: "140px" },
+                    { key: "occupancy", header: t("dashboard.occupancy"), align: "right", width: "140px" },
                   ]}
                   data={topRealms}
                   // DataTable suppresses its own empty state when isError is set, so a
@@ -514,6 +535,9 @@ function DashboardContent() {
                         </span>
                       </td>
                       <td className="px-4 text-right font-mono">{realm.count}</td>
+                      <td className="px-4 text-right font-mono tabular-nums">
+                        <Occupancy held={realm.held} capacity={realm.capacity} />
+                      </td>
                     </>
                   )}
                   emptyMessage={t("admin.no_realm_data")}

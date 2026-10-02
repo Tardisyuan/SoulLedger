@@ -9,7 +9,7 @@ from rest_framework import serializers
 from apps.social import images
 from apps.social import media as post_media
 from apps.social.models import Comment, Follow, Post, Reaction, ReactionType, UserProfile, Visibility
-from apps.social.soul_serializers import PostMediaSerializer, live_media
+from apps.social.soul_serializers import PostMediaSerializer, SoulReactionCountsSerializer, live_media
 
 # ---------------------------------------------------------------------------
 # Post serializers
@@ -31,6 +31,8 @@ class PostMediaFieldMixin(serializers.Serializer):
 class PostSerializer(PostMediaFieldMixin, serializers.ModelSerializer):
     author_name = serializers.CharField(source="author.display_name", read_only=True, default="")
     author_username = serializers.CharField(source="author.username", read_only=True)
+    #: 五种表态各自的数(未删除的),读 `reaction_kind_counts()` 的注解 —— 与灵魂端、审核后台同一份。
+    reaction_counts = SoulReactionCountsSerializer(source="*", read_only=True)
 
     class Meta:
         model = Post
@@ -44,6 +46,7 @@ class PostSerializer(PostMediaFieldMixin, serializers.ModelSerializer):
             "comment_count",
             "reaction_count",
             "media",
+            "reaction_counts",
             "tenant",
             "create_time",
             "update_time",
@@ -93,6 +96,8 @@ class PostListSerializer(PostMediaFieldMixin, serializers.ModelSerializer):
 
     author_name = serializers.CharField(source="author.display_name", read_only=True, default="")
     author_username = serializers.CharField(source="author.username", read_only=True)
+    #: 五种表态各自的数(未删除的),读 `reaction_kind_counts()` 的注解 —— 与灵魂端、审核后台同一份。
+    reaction_counts = SoulReactionCountsSerializer(source="*", read_only=True)
 
     class Meta:
         model = Post
@@ -106,6 +111,7 @@ class PostListSerializer(PostMediaFieldMixin, serializers.ModelSerializer):
             "comment_count",
             "reaction_count",
             "media",
+            "reaction_counts",
             "create_time",
         ]
 
