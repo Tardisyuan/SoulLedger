@@ -329,6 +329,9 @@ describe("the conversation's eight states", () => {
     // v2 补足 C15: the conversation's own title bar is the simplified plaque.
     expect(StyleSheet.flatten(screen.getByTestId("header").props.style).backgroundColor).toBeTruthy();
     expect(screen.queryAllByTestId(/^header-band-/)).toEqual([]);
+    // v3: the title is 20 / 28 like every other title bar, and the relation line stays under it.
+    expect(StyleSheet.flatten(within(screen.getByTestId("header")).getByRole("header").props.style)).toMatchObject({ fontSize: 20, lineHeight: 28 });
+    expect(screen.getByTestId("relation").props.children).toBe("互关");
   });
 
   it("② my request, waiting: a dotted line and the mono time it opens — never a disabled box", () => {
@@ -463,6 +466,8 @@ describe("the conversation's eight states", () => {
     expect(screen.getByTestId("conversation-hall_sealed")).toBeTruthy();
     expect(screen.getByTestId("go-current-hall")).toBeTruthy();
     composerGone();
+    expect(StyleSheet.flatten(within(screen.getByTestId("header")).getByRole("header").props.style)).toMatchObject({ fontSize: 20, lineHeight: 28 });
+    expectTag("sealed-tag", "封存", "▣");
   });
 });
 
