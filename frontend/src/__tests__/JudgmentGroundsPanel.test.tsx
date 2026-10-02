@@ -25,6 +25,8 @@ function statute(overrides: Partial<Statute> = {}): Statute {
   return {
     id: "st-1",
     code: "CN-HL-O01",
+    revision: 1,
+    effective_from: "2026-08-27",
     civilization: "CHINESE",
     corpus: "HELL_LAW",
     ordinal: 1,

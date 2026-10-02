@@ -135,6 +135,7 @@ describe("SoulLifecycleTimeline — empty-history soul", () => {
 describe("SoulLifecycleTimeline — awaiting-judgment action row", () => {
   const openJudgment: Judgment = {
     id: "judgment-1",
+    case_number: "CN-2026-0001",
     soul: "soul-1",
     soul_name: "Test Soul",
     civilization: "CHINESE",
@@ -197,6 +198,7 @@ describe("SoulLifecycleTimeline — tabs and system-event toggle", () => {
   const judgments: Judgment[] = [
     {
       id: "judgment-2",
+      case_number: "CN-2026-0002",
       soul: "soul-1",
       soul_name: "Test Soul",
       civilization: "CHINESE",
