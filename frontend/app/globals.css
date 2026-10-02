@@ -245,8 +245,8 @@
   /* 字号七档 · 规范 v2 补足 A3:11 / 12 / 13 / 15 / 20 / 28 / 40。
      和 v1 的对照:11、12、13、20、28 不变;16(md)并入 15;22(lg)并入 20;
      v1 的 quote(20/32,衬线引文)按 A3 归入 read 档 —— 判词、律条、书信正文是 15/24
-     衬线,调用处写 `font-serif text-md font-normal`;新增 display 40/48,**只给匾题字和
-     登录页**(eslint.config.mjs 的 DISPLAY_ALLOW 守着)。
+     衬线,调用处写 `font-serif text-md font-normal`;新增 display 40/48,**只给匾题字、
+     登录页与律条语料页的展示数字**(eslint.config.mjs 的 DISPLAY_ALLOW / DISPLAY_NUMERAL_ALLOW 守着)。
      `--text-*: initial` 清掉 Tailwind 的默认档,只剩这七个名字;字重只用 400 / 500 / 600。 */
   --text-*: initial;
   --text-2xs: 11px;
