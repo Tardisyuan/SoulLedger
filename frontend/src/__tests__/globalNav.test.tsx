@@ -41,6 +41,7 @@ jest.mock("@/src/contexts/TenantContext", () => ({
 const mockPathname = jest.fn(() => "/menus");
 jest.mock("next/navigation", () => ({
   usePathname: () => mockPathname(),
+  useSearchParams: () => new URLSearchParams(),
   useRouter: () => ({ push: jest.fn(), replace: jest.fn(), prefetch: jest.fn() }),
 }));
 jest.mock("@soulledger/core/api", () => ({
