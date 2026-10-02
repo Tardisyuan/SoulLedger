@@ -1686,6 +1686,11 @@ export default function WorkflowEditor({
              covers a card — a panel over a card takes its clicks (see the
              palette hint note above). */
           fitViewOptions={FIT_OPTIONS}
+          /* 0.25, not xyflow's default 0.5: at 0.5 the ten-court preset cannot
+             be fitted (the fit clamps and centres it, top and bottom cards cut
+             off) — and with the floating bar now on the pane, the cut-off top
+             card sat under the bar. 0.25 lets the fit really fit. */
+          minZoom={0.25}
           /* ── colorMode="dark" IS NOT A THEME CHOICE ─────────────────────
            *
            * xyflow puts its colorMode on the root as a CLASS, default `light`,
