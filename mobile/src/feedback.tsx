@@ -1,5 +1,5 @@
 /**
- * Transient feedback: the toast (bottom, 110pt up, 1.9s, success / failure)
+ * Transient feedback: the toast (bottom, 110pt up, 4s, success / failure)
  * and the sign-out confirmation sheet. Both only fade — 160ms / 120ms, or 0
  * under reduce-motion. And `Sheet`, v2's bottom sheet, at the end.
  */
@@ -20,6 +20,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Icon } from "./emblems";
 import { useI18n } from "./i18n";
+import { radius } from "./theme";
 import { Button, GUTTER, Txt, useReducedMotion, useReducedMotionDurations, useTheme } from "./ui";
 
 type ToastKind = "success" | "failure";
@@ -141,7 +142,7 @@ const styles = StyleSheet.create({
   },
   toastText: { flex: 1, fontSize: 13 },
   scrim: { flex: 1 },
-  sheet: { borderTopWidth: 1, paddingTop: 24, paddingHorizontal: GUTTER, gap: 8 },
+  sheet: { borderTopWidth: 1, borderTopLeftRadius: radius.dialog, borderTopRightRadius: radius.dialog, paddingTop: 24, paddingHorizontal: GUTTER, gap: 8 },
   sheetButtons: { marginTop: 12, gap: 12 },
 });
 
@@ -248,7 +249,7 @@ export function Sheet({ open, onClose, edge, closeLabel, children }: { open: boo
       animationConfigs={timing}
       gestureEventsHandlersHook={useSheetGestures}
       backdropComponent={backdrop}
-      backgroundStyle={{ backgroundColor: t.s1, borderRadius: 0, borderTopWidth: 1, borderTopColor: edge }}
+      backgroundStyle={{ backgroundColor: t.s1, borderRadius: 0, borderTopLeftRadius: radius.dialog, borderTopRightRadius: radius.dialog, borderTopWidth: 1, borderTopColor: edge }}
       handleIndicatorStyle={{ backgroundColor: t.hair2 }}
     >
       <BottomSheetView>{children}</BottomSheetView>

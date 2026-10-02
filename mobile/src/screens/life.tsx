@@ -9,7 +9,7 @@ import { Animated, Pressable, ScrollView, StyleSheet, View, useWindowDimensions 
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AskGlyph, useAssist } from "../assist";
-import { Emblem, Icon } from "../emblems";
+import { BandPattern, Emblem, Icon, StageMotif } from "../emblems";
 import { family } from "../fonts";
 import { useToast } from "../feedback";
 import { useI18n } from "../i18n";
@@ -280,6 +280,11 @@ const BAND_OPEN_AT = 20;
 /** pt below the status bar, at 1× text: full (12 + meta 16 + 12 + 64pt seal + 12 — the seal is the row's tallest) and compact (one row, 30pt seal). */
 const BAND_FULL = 116;
 const BAND_SMALL = 48;
+/** The soul code's line (`codeText`) and what its copy target adds to reach 44: 28pt of padding. */
+const CODE_LINE = 16;
+const CODE_REACH = 44 - CODE_LINE;
+/** Compact, the room between the code's foot and the band's clipped edge: (48 − (18 + 4 + 16)) / 2. */
+const CODE_FOOT_SMALL = 5;
 
 /**
  * v3's identity band, in place of the navigator's plaque on this tab: the civilization's
@@ -292,7 +297,7 @@ function LifeBand({ me, compact, onAccount }: { me: MeProfile; compact: boolean;
   const t = useTheme();
   const { t: tr, enumLabel } = useI18n();
   const { stack } = useLayout();
-  const { fontScale } = useWindowDimensions();
+  const { fontScale, width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const hall = useCurrentHall();
   const toast = useToast();
@@ -315,6 +320,8 @@ function LifeBand({ me, compact, onAccount }: { me: MeProfile; compact: boolean;
   return (
     <View testID="plaque" style={{ backgroundColor: t.band, paddingTop: insets.top }}>
       <Animated.View testID="identity" style={[styles.band, stack ? null : { height }, small && styles.bandSmall]}>
+        {/* Drawn for the band at its tallest (large text stacks it), clipped by the band as it compacts. */}
+        <BandPattern testID="band-pattern" civ={t.civ} color={on} width={width} height={BAND_FULL * Math.max(k, 3)} ringBase={BAND_FULL * k} />
         {small ? null : (
           <Txt testID="identity-meta" numberOfLines={stack ? undefined : 1} style={[styles.bandMeta, { color: on }]}>
             {meta}
@@ -322,7 +329,7 @@ function LifeBand({ me, compact, onAccount }: { me: MeProfile; compact: boolean;
         )}
         <View style={styles.bandRow}>
           <OutlineSeal civ={t.civ} size={small ? 30 : 64} color={on} glyphs={me.tenant.seal_glyphs} label={tr("seal.aria", { court: hall })} testID="plaque-seal" />
-          <View style={styles.bandText}>
+          <View testID="band-text" style={styles.bandText}>
             <View style={styles.nameRow}>
               <Txt testID="soul-name" accessibilityRole="header" numberOfLines={stack ? undefined : 1} style={[small ? styles.nameSmall : styles.name, { color: on }]}>
                 {me.name}
@@ -339,9 +346,13 @@ function LifeBand({ me, compact, onAccount }: { me: MeProfile; compact: boolean;
               accessibilityLabel={`${tr("soul_app.life.soul_code")} ${me.soul_code}`}
               accessibilityHint={tr("soul_app.life.copy_code")}
               onPress={copy}
-              style={styles.code}
-              // The row is 20pt; the slop makes the target 44.
-              hitSlop={12}
+              // The row is 16pt (the code's line). It used to be `hitSlop={12}`: 40 at best, and less
+              // on Android, which routes a touch outside a parent only into its children's laid-out
+              // boxes (TouchTargetHelper's overflow inset) — never into a slop — and this row is
+              // the bottom of `bandText`. The 44pt target is the Pressable's own box instead:
+              // padding grown, margins pulled back by the same, so nothing moves (`codeTarget*`).
+              // Compact, mostly upward: the band clips (overflow hidden) 5pt under the code.
+              style={[styles.code, small ? styles.codeTargetSmall : styles.codeTarget]}
             >
               <Txt variant="value" style={[styles.codeText, { color: on }]}>
                 {me.soul_code}
@@ -408,6 +419,7 @@ function Now({ me, lex, planState }: { me: MeProfile; lex: CivKey; planState: st
   const at = lifePathIndex(me.current_state, planState);
   return (
     <View testID="life-now" style={[styles.now, { paddingHorizontal: gutter, borderBottomColor: t.hair }]}>
+      <StageMotif testID="stage-motif" civ={t.civ} color={t.plaque} />
       <Txt variant="caption" tone="muted">
         {tr("soul_app.life.here")}
       </Txt>
@@ -415,7 +427,9 @@ function Now({ me, lex, planState }: { me: MeProfile; lex: CivKey; planState: st
         <Txt testID="soul-state-glyph" style={styles.nowGlyph}>
           {spec.glyph}
         </Txt>
-        <Txt style={styles.nowWord}>{word}</Txt>
+        <Txt testID="soul-state-word" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.5} style={styles.nowWord}>
+          {word}
+        </Txt>
       </View>
       {at === null ? null : (
         <>
@@ -887,13 +901,18 @@ const styles = StyleSheet.create({
   name: { fontFamily: family.ui[600], fontSize: 20, lineHeight: 28, flexShrink: 1 },
   nameSmall: { fontFamily: family.ui[600], fontSize: 13, lineHeight: 18, flexShrink: 1 },
   code: { flexDirection: "row", alignItems: "center", gap: 8, alignSelf: "flex-start" },
-  codeText: { fontSize: 11, lineHeight: 16, letterSpacing: 1.6, fontFamily: family.mono[500] },
+  /** 16 + 14 + 14 = 44. Full, the band has room below the row for the even split. */
+  codeTarget: { paddingVertical: CODE_REACH / 2, marginVertical: -CODE_REACH / 2 },
+  /** 16 + 23 + 5 = 44, kept inside the 48pt compact band (its code row ends 5pt above the edge). */
+  codeTargetSmall: { paddingTop: CODE_REACH - CODE_FOOT_SMALL, paddingBottom: CODE_FOOT_SMALL, marginTop: -(CODE_REACH - CODE_FOOT_SMALL), marginBottom: -CODE_FOOT_SMALL },
+  codeText: { fontSize: 11, lineHeight: CODE_LINE, letterSpacing: 1.6, fontFamily: family.mono[500] },
   account: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
   /** v3 .life-now. */
-  now: { paddingTop: 24, paddingBottom: 24, alignItems: "center", gap: 8, borderBottomWidth: 1 },
-  nowState: { flexDirection: "row", alignItems: "baseline", gap: 8, marginTop: 8 },
-  nowGlyph: { fontSize: 28, lineHeight: 36 },
-  nowWord: { fontFamily: family.ui[600], fontSize: 28, lineHeight: 36 },
+  now: { paddingTop: 24, paddingBottom: 24, alignItems: "center", gap: 8, borderBottomWidth: 1, overflow: "hidden" },
+  /** v3 .life-current: the glyph over the word, both 56; the word in the title serif (Noto Serif SC 600). One line, shrinking to fit (a long English state). */
+  nowState: { alignSelf: "stretch", alignItems: "center", marginTop: 8 },
+  nowGlyph: { fontSize: 56, lineHeight: 64 },
+  nowWord: { fontFamily: family.title, fontSize: 56, lineHeight: 64, textAlign: "center" },
   small: { fontSize: 11, lineHeight: 16 },
   path: { alignSelf: "stretch", flexDirection: "row", marginTop: 16 },
   /** The line behind the circles, centre to centre: walked in ink, ahead in the hairline. */

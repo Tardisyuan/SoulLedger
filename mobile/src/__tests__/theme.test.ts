@@ -13,6 +13,7 @@ import {
   NEUTRAL_PLAQUE,
   ON_PLAQUE,
   S2,
+  brand,
   oklchToHex,
   preLoginTheme,
   sealedTheme,
@@ -225,6 +226,24 @@ describe("contrast, at the worst App ground", () => {
     for (const c of CIVS) expect(contrast(v3.civ[c].dark, v3.dark.surface)).toBeLessThan(4.5);
     // …while as a graphic (the emblem, the 2pt rule) each clears 3:1.
     for (const c of CIVS) expect(contrast(v3.civ[c].dark, v3.dark.surface)).toBeGreaterThanOrEqual(3);
+  });
+});
+
+describe("brand (v3 第三批 品牌色令牌): the mark's gold and ground, one value for icon and cold start", () => {
+  const src = (rel: string) => readFileSync(join(__dirname, rel), "utf8");
+  it("the icon script prints the same two colours", () => {
+    const script = src("../../scripts/build-app-icon.mjs");
+    expect(script.match(/export const GOLD = "(#[0-9A-F]{6})"/i)?.[1]).toBe(brand.mark);
+    expect(script.match(/export const INK = "(#[0-9A-F]{6})"/i)?.[1]).toBe(brand.ground);
+  });
+  it("the cold start takes them from here rather than its own literals", () => {
+    const cold = src("../coldStart.tsx");
+    expect(cold).toMatch(/const GROUND = brand\.ground;/);
+    expect(cold).toMatch(/const GOLD = brand\.mark;/);
+    expect(cold).not.toMatch(/#ECAA3D|#10120F/i);
+  });
+  it("is not a UI colour: no theme carries either value", () => {
+    for (const civ of [null, "CHINESE", "EUROPEAN", "EGYPTIAN", "GREEK"]) for (const s of ["light", "dark"] as const) expect(Object.values(themeFor(civ, s))).not.toContain(brand.mark);
   });
 });
 

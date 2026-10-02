@@ -25,6 +25,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AskGlyph, useAssist, type Assist } from "./assist";
 import { SHEET_CLOSE_DRAG_PT } from "./feedback";
+import { radius } from "./theme";
 import { Icon } from "./emblems";
 import { quoteFamily } from "./fonts";
 import { useI18n } from "./i18n";
@@ -159,7 +160,7 @@ export function AssistPanel() {
             // No negative keyboardVerticalOffset here (unlike conversation.tsx): inside a Modal it
             // over-corrects — the input stayed half under the keyboard.
             behavior="padding"
-            style={[styles.sheet, { backgroundColor: t.s0, borderTopColor: t.hair2, paddingTop: full ? insets.top : 0 }]}
+            style={[styles.sheet, !full && styles.sheetRound, { backgroundColor: t.s0, borderTopColor: t.hair2, paddingTop: full ? insets.top : 0 }]}
           >
             {full ? null : (
               // A2's one pill: the drawer handle. Decoration for touch; the close button stays the way out.
@@ -768,6 +769,8 @@ function Confirm({ children }: { children: ReactNode }) {
 const styles = StyleSheet.create({
   fill: { flex: 1 },
   sheet: { flex: 1, borderTopWidth: 1 },
+  /** The drawer's top corners (v3 第一批: sheets 8); square once it fills the screen. */
+  sheetRound: { borderTopLeftRadius: radius.dialog, borderTopRightRadius: radius.dialog, overflow: "hidden" },
   /** The pull zone around the 36 × 4 handle (a drag, not a tap target: closing has its button). */
   handleZone: { height: 24, alignItems: "center", justifyContent: "center" },
   handle: { width: 36, height: 4, borderRadius: 999 },
@@ -799,7 +802,7 @@ const styles = StyleSheet.create({
   card: { borderWidth: 1, padding: 16, gap: 12 },
   introItem: { flexDirection: "row", gap: 12, borderTopWidth: 1, paddingTop: 12 },
   composer: { borderTopWidth: 1, paddingHorizontal: 12, paddingVertical: 8, gap: 4 },
-  input: { flex: 1, minHeight: 44, maxHeight: 120, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 8, fontSize: 15 },
+  input: { flex: 1, minHeight: 44, maxHeight: 120, borderWidth: 1, borderRadius: radius.control, paddingHorizontal: 12, paddingVertical: 8, fontSize: 15 },
   send: { width: 44, height: 44, borderWidth: 1, alignItems: "center", justifyContent: "center" },
   historyRow: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 12, borderBottomWidth: 1 },
   screenTag: { borderLeftWidth: 2, paddingLeft: 8 },

@@ -2,8 +2,9 @@
  * The soul app's primitives, per the design handoff "灵魂簿 App", restyled for
  * v2「朱印」(补足 A1 component states, A2 rules, A3 type):
  *
- *   radius 0 everywhere — only a pill (the lamp, a drawer handle) and a circle
- *   (a radio, an avatar) are round, and the focus ring follows its element;
+ *   radius 0 except v3's three (`radius` in theme.ts): an input 4, a dialog or sheet 8, and
+ *   the pill / circle (the lamp, a drawer handle, a radio, an avatar); the focus ring follows
+ *   its element;
  *   depth is 1px hairlines between two surfaces, never a shadow or elevation;
  *   pressed is a darker ground (A1: fills darken 24% toward black, ghosts take
  *   `hair`), never an Android ripple, whose colour cannot be held to contrast;
@@ -40,6 +41,7 @@ import {
   TextInput,
   View,
   type LayoutChangeEvent,
+  type ScrollViewProps,
   type StyleProp,
   type TextInputProps,
   type TextProps,
@@ -126,8 +128,9 @@ export function FadeIn({
  * smaller than v1's compact value-lg, so the step-down is gone.)
  */
 export const TYPE = {
-  display: { fontSize: 28, lineHeight: 36, fontFamily: family.ui[600] },
-  title: { fontSize: 20, lineHeight: 28, fontFamily: family.ui[600] },
+  /** v3 第一批: titles and display text in Noto Serif SC 600 (`family.title`); body and controls stay `ui`. */
+  display: { fontSize: 28, lineHeight: 36, fontFamily: family.title },
+  title: { fontSize: 20, lineHeight: 28, fontFamily: family.title },
   nav: { fontSize: 15, lineHeight: 20, fontFamily: family.ui[600], letterSpacing: 0.6 },
   body: { fontSize: 13, lineHeight: 20, fontFamily: family.ui[400] },
   bodyLg: { fontSize: 15, lineHeight: 24, fontFamily: family.ui[500] },
@@ -135,10 +138,12 @@ export const TYPE = {
   /** A ledger row's title (v3 `.life-records article b`), 15 / 600 on its row. */
   section: { fontSize: 15, lineHeight: 24, fontFamily: family.ui[600] },
   /**
-   * v3 `.product-label`: what a block of the page is — 11 mono, 0.08em, upper case, always in
-   * `muted` (`SectionLabel`). Every section header and form-group label outside the ledger rows.
+   * What a block of the page is — 11, upper case, always in `muted` (`SectionLabel`). Every
+   * section header and form-group label outside the ledger rows. The interface face, not mono:
+   * v3 第一批「区块标签：11 号，大写，界面字体（不用等宽）」 overrides the round-7 prototype's
+   * mono `.product-label`; the 0.08em tracking is the prototype's.
    */
-  eyebrow: { fontSize: 11, lineHeight: 16, fontFamily: family.mono[400], letterSpacing: 0.88, textTransform: "uppercase" },
+  eyebrow: { fontSize: 11, lineHeight: 16, fontFamily: family.ui[500], letterSpacing: 0.88, textTransform: "uppercase" },
   caption: { fontSize: 12, lineHeight: 18, fontFamily: family.ui[400] },
   value: { fontSize: 13, lineHeight: 20, fontFamily: family.mono[400] },
   valueLg: { fontSize: 28, lineHeight: 36, fontFamily: family.mono[500] },
@@ -210,26 +215,74 @@ export function Interp({ text, parts, ...props }: Parameters<typeof Txt>[0] & { 
 
 export const GUTTER = GUTTER_PT;
 
+/** v3 B2 App「下拉刷新」: released past 56pt, the scroller reloads. */
+export const PULL_REFRESH_PT = 56;
+
+type PullScrollProps = Pick<ScrollViewProps, "refreshControl" | "alwaysBounceVertical" | "scrollEventThrottle" | "onScroll" | "onScrollEndDrag">;
+
 /**
- * Pull-to-refresh for a scroller: `Screen`'s own, or a list's that owns its
- * scrolling (a `FlatList` inside `<Screen scroll={false}>`).
- * The spinner belongs to a pull. A reload the app starts itself (tab refocus)
- * would otherwise open an empty band above the content on iOS (seen on the iPhone run).
+ * Pull-to-refresh for a scroller: `Screen`'s own, or a list's that owns its scrolling (a
+ * `FlatList` inside `<Screen scroll={false}>`). Spread `props` on the scroller and put
+ * `indicator` just before it, in the same parent (it sits under the list's top edge).
+ *
+ * iOS, v3 B2: no spinner. The content follows the finger (the scroll view's own bounce, so no
+ * gesture is taken from the list — v3 allows the ScrollView's onScroll in place of a
+ * PanResponder) and a release at 56pt or more reloads. In the gap the pull opens sits a
+ * static ↻ that never turns (v3: 印框旋转不使用): it fades in with the pull, and under reduce
+ * motion it simply appears once the pull has reached 56 (v3: 仅显示静态刷新指示).
+ *
+ * Android keeps the system RefreshControl: its scroll view takes the drag natively at touch
+ * slop, before a JS responder can claim it (react-native TouchTargetHelper / JSResponderHandler),
+ * so a PanResponder pull loses the gesture, and an overscroll there sends no offset to read
+ * (v3 B4 itself says nested-scroll contention needs a dependency it does not allow). Its
+ * spinner belongs to a pull: a reload the app starts itself (tab refocus) shows none.
  */
-export function usePullRefresh(refreshing: boolean | undefined, onRefresh: (() => void) | undefined) {
+export function usePullRefresh(
+  refreshing: boolean | undefined,
+  onRefresh: (() => void) | undefined
+): { props: PullScrollProps; indicator: ReactElement | null } | undefined {
   const t = useTheme();
+  const reduced = useReducedMotion();
   const [pulled, setPulled] = useState(false);
   if (pulled && !refreshing) setPulled(false);
-  return onRefresh ? (
-    <RefreshControl
-      refreshing={pulled && !!refreshing}
-      onRefresh={() => {
-        setPulled(true);
-        onRefresh();
-      }}
-      tintColor={t.inkSubtle}
-    />
-  ) : undefined;
+  const [pull] = useState(() => new Animated.Value(0));
+  if (!onRefresh) return undefined;
+  if (Platform.OS !== "ios") {
+    const control = (
+      <RefreshControl
+        refreshing={pulled && !!refreshing}
+        onRefresh={() => {
+          setPulled(true);
+          onRefresh();
+        }}
+        tintColor={t.inkSubtle}
+      />
+    );
+    return { props: { refreshControl: control }, indicator: null };
+  }
+  const opacity = reduced
+    ? pull.interpolate({ inputRange: [0, PULL_REFRESH_PT - 0.5, PULL_REFRESH_PT], outputRange: [0, 0, 1], extrapolate: "clamp" })
+    : pull.interpolate({ inputRange: [0, PULL_REFRESH_PT], outputRange: [0, 1], extrapolate: "clamp" });
+  return {
+    props: {
+      alwaysBounceVertical: true,
+      scrollEventThrottle: 16,
+      onScroll: (e) => pull.setValue(Math.max(0, -e.nativeEvent.contentOffset.y)),
+      onScrollEndDrag: (e) => {
+        if (-e.nativeEvent.contentOffset.y >= PULL_REFRESH_PT && !refreshing) onRefresh();
+      },
+    },
+    indicator: (
+      <Animated.View testID="pull-indicator" pointerEvents="none" style={[styles.pullIndicator, { opacity }]} importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
+        <Text style={[styles.pullGlyph, { color: t.inkSubtle }]}>↻</Text>
+      </Animated.View>
+    ),
+  };
+}
+
+/** Both a caller's onScroll and the pull's, on one scroller. */
+function both<E>(a: ((e: E) => void) | undefined, b: ((e: E) => void) | undefined) {
+  return a && b ? (e: E) => (a(e), b(e)) : (a ?? b);
 }
 
 export function Screen({
@@ -254,7 +307,7 @@ export function Screen({
   onScroll?: (y: number) => void;
 }) {
   const t = useTheme();
-  const refreshControl = usePullRefresh(refreshing, onRefresh);
+  const pull = usePullRefresh(refreshing, onRefresh);
   // When the system text size changes while a screen is open, iOS re-sizes the
   // glyphs but Yoga keeps the old line boxes, and text is clipped (seen on the
   // iPhone run). Remounting the content at a new scale re-measures every line.
@@ -267,16 +320,19 @@ export function Screen({
       style={[styles.fill, { backgroundColor: t.s0 }]}
     >
       {scroll ? (
-        <ScrollView
-          ref={scrollRef}
-          contentContainerStyle={styles.grow}
-          keyboardShouldPersistTaps="handled"
-          refreshControl={refreshControl}
-          onScroll={onScroll && ((e) => onScroll(e.nativeEvent.contentOffset.y))}
-          scrollEventThrottle={onScroll ? 16 : undefined}
-        >
-          {children}
-        </ScrollView>
+        <>
+          {pull?.indicator}
+          <ScrollView
+            ref={scrollRef}
+            contentContainerStyle={styles.grow}
+            keyboardShouldPersistTaps="handled"
+            {...pull?.props}
+            onScroll={both(onScroll && ((e) => onScroll(e.nativeEvent.contentOffset.y)), pull?.props.onScroll)}
+            scrollEventThrottle={onScroll || pull?.props.onScroll ? 16 : undefined}
+          >
+            {children}
+          </ScrollView>
+        </>
       ) : (
         <View style={styles.fill}>{children}</View>
       )}
@@ -1139,6 +1195,8 @@ export const styles = StyleSheet.create({
   center: { textAlign: "center" },
   pressed: { opacity: 0.8 },
   noSpacing: { letterSpacing: 0 },
+  pullIndicator: { position: "absolute", top: 0, left: 0, right: 0, height: PULL_REFRESH_PT, alignItems: "center", justifyContent: "center" },
+  pullGlyph: { fontFamily: family.glyph, fontSize: 20, lineHeight: 24 },
   block: { paddingHorizontal: GUTTER, paddingVertical: GUTTER },
   count: { marginLeft: space[3], fontSize: 11, lineHeight: 16 },
   sectionRule: { position: "absolute", left: 0, top: 0, bottom: 0, width: 3 },
@@ -1156,13 +1214,14 @@ export const styles = StyleSheet.create({
   divider: { flexDirection: "row", alignItems: "center", gap: space[3] },
   field: { gap: space[2] },
   labelRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: space[3] },
-  ring: { margin: -4, padding: 2, borderWidth: 2, borderRadius: radius.none },
-  inputBox: { flexDirection: "row", borderWidth: 1, minHeight: 48 },
+  // The ring sits 4pt outside the field, so its corner is the field's plus 4.
+  ring: { margin: -4, padding: 2, borderWidth: 2, borderRadius: radius.control + 4 },
+  inputBox: { flexDirection: "row", borderWidth: 1, minHeight: 48, borderRadius: radius.control, overflow: "hidden" },
   input: { flex: 1, minHeight: 46, paddingHorizontal: space[3], fontSize: 15 },
   monoInput: { fontSize: 15, letterSpacing: 2.2 },
   multiline: { minHeight: 128, paddingVertical: space[3], fontSize: 15, lineHeight: 24, textAlignVertical: "top" },
   reveal: { width: 52, alignItems: "center", justifyContent: "center", borderLeftWidth: 1 },
-  revealRow: { minHeight: 60, alignItems: "center", justifyContent: "center", borderWidth: 1 },
+  revealRow: { minHeight: 60, alignItems: "center", justifyContent: "center", borderWidth: 1, borderRadius: radius.control },
   iconRow: { flexDirection: "row", gap: space[2], alignItems: "flex-start" },
   iconNudge: { marginTop: 4 },
   buttonWrap: { gap: space[3] },
