@@ -23,7 +23,10 @@ export type ChartTheme = "dark" | "light";
 export type ChartSeriesKey = "balance" | "realm" | "neutral" | "merit" | "demerit";
 export type ChartChromeKey = "grid" | "axis" | "tick" | "tooltipBg" | "tooltipBorder";
 
-/** A5 的四种图案。`half` 是梯度第 4 档的实底,另外三种都用第 1 档。 */
+/**
+ * A5 的四种图案。recharts 里 `half` 是梯度第 4 档的实底,另外三种都用第 1 档;
+ * 仪表盘「按界域」的 CSS 柱(`RealmBars`,Design A4)把 `half` 画成第 1 档的点阵半色调。
+ */
 export type ChartPattern = "solid" | "half" | "hatch" | "outline";
 
 export interface ChartColors {

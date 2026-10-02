@@ -986,10 +986,15 @@
       "none": "Nen Djer",
       "death_sync_anomaly": "Senb Mut · Sethet",
       "go_view": "Maa →",
-      "load_error": "Nen Ini"
+      "load_error": "Nen Ini",
+      "sync_ok": "Nen Djer",
+      "unbooked": "Nen Sesh"
     },
     "civ_share": "Redu",
-    "civ_empty": "Nen Sesh Djer · Sesh"
+    "civ_empty": "Nen Sesh Djer · Sesh",
+    "tab_ledger": "Medjat",
+    "top_realms": "Ahet Tepy",
+    "avg_scope": "Ba Neb"
   },
   "ledger": {
     "title": "Medew Nefer",

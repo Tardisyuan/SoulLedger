@@ -12,16 +12,18 @@ import type { CellFailure } from "./useMatrixCells";
 import { ROW_HOVER } from "@/components/ui/data-table";
 
 /**
- * 权限格 PermCell(E-11a):
+ * 权限格 PermCell(Design A6,2026-10-02 起;v3 的画法,取代 E-11a / C15):
  *
- *   ■ 有 — 墨色实心方块        □ 无 — 空框
- *   ＋ / − 未保存 — 2 px 强调色焦点环 + 字形
- *   ! 保存失败 — 危险色,原因在描述里(aria-describedby)与 title 上
- *   ◇ 引起冲突 — 警示色,这次改动会让某条审批流的某一步无人可批
- *   始终 — ADMIN 整列(第三类 F 组):s2 底、等宽字「始终」(补足 C15)。服务端对 ADMIN
- *          在读授权之前就答「有」(`admin_always_all`),所以这里点不动,悬停 / 聚焦说明原因
- *   ! 禁授 — 1px ink3 虚线框(C15)。服务端禁止授予该角色的格子(`ROLE_FORBIDDEN_CODENAMES`),一开始就摆明;
- *          与「!」保存失败(勾了之后被退回)区分:禁授是规则,拒绝是事后结果
+ *   ■ 已授 — 墨色实心方块        □ 未授 — ink3 空框
+ *   ＋ 待授 / − 待撤 — 44 × 44 的格子,7% 墨底 + 2px 墨色强调环 + 600 字形
+ *   ! 失败 — 1px danger 框、danger 字,原因在描述里(aria-describedby)与 title 上
+ *   ◇ 冲突 — 1px 墨色虚线框 + 2px 墨色强调环;这次改动会让某条审批流的某一步无人可批
+ *   始终 — ADMIN 整列:只有 11px ink3 的「始终」二字。服务端对 ADMIN 在读授权之前就答
+ *          「有」(`admin_always_all`),所以这里点不动,悬停 / 聚焦说明原因
+ *   禁授 — 11px ink3 字 + 135° 细斜线底。服务端禁止授予该角色的格子(`ROLE_FORBIDDEN_CODENAMES`),
+ *          一开始就摆明;不用反馈色 —— 禁授是规则,「!」失败才是事后结果
+ *
+ * 格子里没有文明色,也不再借警示 / 强调色:未保存与冲突靠环与字形,不靠色相。
  *
  * State is never colour alone: every non-plain state carries a glyph, and the
  * same word goes to the accessible description.
@@ -53,33 +55,32 @@ export function cellState({
 
 const GLYPH: Record<Exclude<CellState, "lock" | "deny">, string> = { on: "", off: "", grant: "＋", revoke: "−", failed: "!", conflict: "◇" };
 
+/** The 44 × 44 box the marked states draw (待授 / 待撤 / 失败 / 冲突 / 禁授). */
+const BOX = "size-11";
+const RING = "bg-[oklch(var(--color-ink)/0.07)] ring-2 ring-[oklch(var(--color-ink))] text-lg font-semibold text-[oklch(var(--color-ink))]";
+
 const CELL_CLASS: Record<CellState, string> = {
-  on: "bg-[oklch(var(--color-ink))] text-[oklch(var(--color-canvas))]",
-  off: "border border-[oklch(var(--color-line))]",
-  grant:
-    "bg-[oklch(var(--color-ink))] text-[oklch(var(--color-canvas))] outline-2 outline-offset-2 outline-[oklch(var(--color-accent))]",
-  revoke:
-    "border border-[oklch(var(--color-line))] text-[oklch(var(--color-accent-ink))] outline-2 outline-offset-2 outline-[oklch(var(--color-accent))]",
-  failed: "border border-[oklch(var(--color-danger))] bg-[oklch(var(--color-danger-tint))] text-[oklch(var(--color-danger))]",
-  conflict:
-    "border border-[oklch(var(--color-warning))] bg-[oklch(var(--color-warning-tint))] text-[oklch(var(--color-warning))] outline-2 outline-offset-2 outline-[oklch(var(--color-accent))]",
-  // 补足 C15:「始终」是 s2 底、ink 字(不是降了不透明度的墨块);「! 禁授」是 1px ink3 虚线框,
-  // 不用反馈色 —— 它是一条规则,不是出错。
-  lock: "bg-[oklch(var(--color-surface-2))] text-[oklch(var(--color-ink))]",
-  deny: "border border-dashed border-[oklch(var(--color-ink-subtle))] text-[oklch(var(--color-ink))]",
+  on: "size-3.5 bg-[oklch(var(--color-ink))]",
+  off: "size-3.5 border border-[oklch(var(--color-ink-subtle))]",
+  grant: `${BOX} ${RING}`,
+  revoke: `${BOX} ${RING}`,
+  failed: `${BOX} border border-[oklch(var(--color-danger))] text-sm font-semibold text-[oklch(var(--color-danger))]`,
+  conflict: `${BOX} border border-dashed border-[oklch(var(--color-ink))] ring-2 ring-[oklch(var(--color-ink))] text-sm text-[oklch(var(--color-ink))]`,
+  lock: "text-2xs text-[oklch(var(--color-ink-subtle))]",
+  deny: `${BOX} text-2xs text-[oklch(var(--color-ink-subtle))] bg-[repeating-linear-gradient(135deg,oklch(var(--color-line))_0_1px,transparent_1px_5px)]`,
 };
 
 /** The drawn square, also used by the legend. */
 export function PermGlyph({ state, className }: { state: CellState; className?: string }) {
   const { t } = useI18n();
-  const word = state === "lock" ? t("permissions.matrix.lock_word") : state === "deny" ? `! ${t("permissions.matrix.deny_word")}` : null;
+  const word = state === "lock" ? t("permissions.matrix.lock_word") : state === "deny" ? t("permissions.matrix.deny_word") : null;
   return (
     <span
       aria-hidden="true"
       data-cell-state={state}
       className={cn(
-        "inline-flex shrink-0 items-center justify-center font-mono text-2xs leading-none",
-        word ? "min-h-5.5 min-w-5.5 px-1 whitespace-nowrap" : "h-4.5 w-4.5",
+        "inline-flex shrink-0 items-center justify-center leading-none",
+        word && "whitespace-nowrap",
         CELL_CLASS[state],
         className
       )}
@@ -115,7 +116,7 @@ function useCellDescription(info: MatrixCellInfo, role: string, perm: Permission
     state === "lock"
       ? `${t("permissions.matrix.lock_word")} · ${ADMIN_ROLE_NAME}　${t("permissions.matrix.lock_hint")}`
       : state === "deny"
-        ? `! ${t("permissions.matrix.deny_word")}　${t("permissions.matrix.deny_hint", { perm: perm.name || perm.codename })} role_forbidden_permission`
+        ? `${t("permissions.matrix.deny_word")}　${t("permissions.matrix.deny_hint", { perm: perm.name || perm.codename })} role_forbidden_permission`
         : state === "failed" && failure
       ? `${t("permissions.matrix.state.failed")}: ${info.failureReason(failure)}`
       : state === "on" || state === "off"
@@ -159,16 +160,16 @@ function MatrixCell({
         data-rule={ruled ? state : undefined}
         onClick={ruled ? undefined : onToggle}
         className={cn(
-          "flex items-center justify-center",
-          variant === "grid" ? "h-(--control-h-sm) w-full" : "min-h-(--control-h-sm) min-w-(--control-h-sm)",
+          "flex size-(--control-h-sm) items-center justify-center",
+          variant === "grid" && "mx-auto",
           ruled
             ? "cursor-help"
             : disabled
               ? "cursor-not-allowed opacity-70"
-              : "cursor-pointer hover:bg-[oklch(var(--color-surface-3))]"
+              : "cursor-pointer hover:bg-[oklch(var(--color-ink)/0.07)]"
         )}
       >
-        <PermGlyph state={state} className={variant === "switch" ? "h-5.5 w-5.5" : undefined} />
+        <PermGlyph state={state} />
       </button>
       {words && (
         <span id={descId} className="sr-only">
@@ -257,20 +258,21 @@ export function PermissionMatrixTable({
           的角单元格压不住表头;collapse 下边框归表格,sticky 单元格滚动时边框
           留在原地。滚到第 8 个角色时,第一列必须还在说这一行是哪条权限。 */}
       {visibleCount > 0 && (
-        <div className="hidden max-h-[65vh] overflow-auto md:block">
+        <div className="hidden max-h-[65vh] overflow-auto border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] md:block">
+          {/* Design A6:表头 56、类别头 44、权限行 48(格内开关仍是 44 的点击区)。 */}
           <table className="w-full border-separate border-spacing-0 text-sm">
             <thead>
-              <tr className="h-11">
-                <th className="sticky top-0 left-0 z-40 min-w-[240px] border-b border-[oklch(var(--color-block))] bg-[oklch(var(--color-canvas))] px-3 text-left font-mono text-2xs font-normal text-[oklch(var(--color-ink-subtle))]">
+              <tr className="h-14">
+                <th className="sticky top-0 left-0 z-40 w-[280px] min-w-[240px] border-b border-[oklch(var(--color-line-strong))] bg-[oklch(var(--color-surface-1))] px-4 text-left text-2xs font-normal text-[oklch(var(--color-ink-subtle))] shadow-[2px_0_6px_oklch(0_0_0/0.06)]">
                   {t("permissions.matrix.codename_col")}
                 </th>
                 {roleNames.map((r) => (
                   <th
                     key={r}
-                    className="sticky top-0 z-30 min-w-[96px] border-b border-[oklch(var(--color-block))] bg-[oklch(var(--color-canvas))] px-2 text-center font-medium text-[oklch(var(--color-ink))]"
+                    className="sticky top-0 z-30 min-w-[96px] border-b border-l border-[oklch(var(--color-line-strong))] border-l-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] px-2 text-center font-medium text-[oklch(var(--color-ink))] shadow-[0_2px_6px_oklch(0_0_0/0.08)]"
                   >
                     <div>{roleLabel(roleMeta, r)}</div>
-                    <div className="font-mono text-2xs font-normal text-[oklch(var(--color-ink-subtle))]">{r}</div>
+                    <div className="font-mono text-2xs font-normal text-[oklch(var(--color-ink-muted))]">{r}</div>
                   </th>
                 ))}
               </tr>
@@ -297,13 +299,13 @@ export function PermissionMatrixTable({
       {/* ── < md: pick a role, then toggle rows ── */}
       {visibleCount > 0 && (
         <div className="md:hidden">
-          <label className="flex items-center gap-2 border-b border-[oklch(var(--color-block))] pb-2 text-sm">
-            <span className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">{t("permissions.matrix.role_picker")}</span>
+          <label className="flex min-h-(--control-h-md) items-center gap-2 rounded-control border border-[oklch(var(--color-line-strong))] bg-[oklch(var(--color-surface-1))] pl-3 text-sm">
+            <span className="text-2xs text-[oklch(var(--color-ink-muted))]">{t("permissions.matrix.role_picker")}</span>
             <select
               aria-label={t("permissions.matrix.role_picker")}
               value={role}
               onChange={(e) => onMobileRoleChange(e.target.value)}
-              className="min-h-11 flex-1 border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] px-2 text-sm"
+              className="min-h-(--control-h-md) flex-1 bg-transparent px-2 text-sm font-medium"
             >
               {roleNames.map((r) => (
                 <option key={r} value={r}>
@@ -313,17 +315,17 @@ export function PermissionMatrixTable({
             </select>
           </label>
           {shown.map(({ category, perms, visible }) => (
-            <section key={category} aria-label={category}>
-              <h3 className="flex justify-between border-b border-[oklch(var(--color-block))] pt-4 pb-1 text-2xs uppercase tracking-widest text-[oklch(var(--color-ink-subtle))]">
+            <section key={category} aria-label={category} className="mt-3 border-y border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))]">
+              <h3 className="flex h-9 items-center justify-between bg-[oklch(var(--color-surface-2))] px-4 text-2xs uppercase font-semibold text-[oklch(var(--color-ink-muted))]">
                 <span>{category}</span>
-                <span>{categoryTally(perms, role)}</span>
+                <span className="font-mono font-normal">{categoryTally(perms, role)}</span>
               </h3>
               <ul>
                 {visible.map((perm) => (
-                  <li key={perm.id} className="flex min-h-12 items-center justify-between gap-3 border-b border-[oklch(var(--color-rule))]">
+                  <li key={perm.id} className="flex min-h-12 items-center justify-between gap-3 border-t border-[oklch(var(--color-line))] px-4 py-0.5">
                     <span className="min-w-0">
-                      <span className="block text-sm text-[oklch(var(--color-ink))]">{perm.name}</span>
-                      <span className="block font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">{perm.codename}</span>
+                      <span className="block text-sm font-medium text-[oklch(var(--color-ink))]">{perm.name}</span>
+                      <span className="block font-mono text-2xs text-[oklch(var(--color-ink-muted))]">{perm.codename}</span>
                     </span>
                     <MatrixCell
                       role={role}
@@ -363,37 +365,44 @@ function MatrixGroup({
   categoryTally: (perms: Permission[], role: string) => string;
   info: MatrixCellInfo;
 }) {
+  const { t } = useI18n();
   return (
     <>
-      {/* 组头与区块标题同一样式(E-11a):等宽 11 px、字距、下接区块边界。
-          `top-[44px]` 对着表头那一行的 h-11。 */}
-      <tr>
+      {/* 类别头(Design A6):44 高、s2 底、「类别 · 条数」;每列是「已授 / 总数」,ADMIN 列写「全部」。
+          `top-14` 对着表头那一行的 h-14。 */}
+      <tr className="h-11">
         <th
           scope="colgroup"
-          className="sticky top-[44px] left-0 z-30 border-b border-[oklch(var(--color-block))] bg-[oklch(var(--color-canvas))] px-3 pt-3 pb-1 text-left font-mono text-2xs font-normal uppercase tracking-widest text-[oklch(var(--color-ink-subtle))]"
+          className="sticky top-14 left-0 z-30 bg-[oklch(var(--color-surface-2))] px-4 text-left text-2xs font-semibold text-[oklch(var(--color-ink-muted))] shadow-[2px_0_6px_oklch(0_0_0/0.06)]"
         >
-          {category}
+          {category} · {perms.length}
         </th>
         {roleNames.map((role) => (
           <td
             key={role}
-            className="sticky top-[44px] z-20 border-b border-[oklch(var(--color-block))] bg-[oklch(var(--color-canvas))] px-2 pt-3 pb-1 text-center font-mono text-2xs text-[oklch(var(--color-ink-subtle))]"
+            className="sticky top-14 z-20 border-l border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-2))] px-2 text-center font-mono text-2xs text-[oklch(var(--color-ink-muted))]"
           >
-            {categoryTally(perms, role)}
+            {role === ADMIN_ROLE_NAME ? t("filter.all") : categoryTally(perms, role)}
           </td>
         ))}
       </tr>
-      {visible.map((perm) => (
-        <tr key={perm.id} className={`group ${ROW_HOVER}`}>
+      {visible.map((perm) => {
+        // 有未保存 / 失败 / 冲突格的行整行 4% 墨底,让人在宽矩阵里找到改过的那几行。
+        const touched = roleNames.some((role) => {
+          const key = matrixCellKey(role, perm.id);
+          return info.pending(key) || info.failure(key) !== null || info.conflict(key);
+        });
+        return (
+        <tr key={perm.id} data-touched={touched || undefined} className={`group h-12 ${touched ? "bg-[oklch(var(--color-ink)/0.04)]" : ROW_HOVER}`}>
           <th
             scope="row"
-            className="sticky left-0 z-10 border-b border-[oklch(var(--color-rule))] bg-[oklch(var(--color-canvas))] px-3 py-1 text-left font-normal transition-colors group-hover:bg-[color-mix(in_oklab,oklch(var(--color-ink))_4%,oklch(var(--color-surface-1)))]"
+            className="sticky left-0 z-10 border-t border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] px-4 text-left font-normal shadow-[2px_0_6px_oklch(0_0_0/0.06)]"
           >
-            <div className="text-sm text-[oklch(var(--color-ink))]">{perm.name}</div>
-            <div className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">{perm.codename}</div>
+            <div className="text-sm font-medium text-[oklch(var(--color-ink))]">{perm.name}</div>
+            <div className="font-mono text-2xs text-[oklch(var(--color-ink-muted))]">{perm.codename}</div>
           </th>
           {roleNames.map((role) => (
-            <td key={role} className="border-b border-[oklch(var(--color-rule))] px-1 py-1 text-center">
+            <td key={role} className="border-t border-l border-[oklch(var(--color-line))] p-0 text-center">
               <MatrixCell
                 role={role}
                 perm={perm}
@@ -405,12 +414,22 @@ function MatrixGroup({
             </td>
           ))}
         </tr>
-      ))}
+        );
+      })}
     </>
   );
 }
 
-/** ■ 有 □ 无 ＋ − 未保存 ! 保存失败 ◇ 引起冲突 始终 ! 禁授 */
+/** The legend draws each mark at 20px; the cells draw them at 44. */
+const SMALL: Partial<Record<CellState, string>> = {
+  grant: "size-5 text-xs ring-1",
+  revoke: "size-5 text-xs ring-1",
+  failed: "size-5 text-xs",
+  conflict: "size-5 text-xs ring-1",
+  deny: "h-5 w-auto px-1",
+};
+
+/** ■ 已授 □ 未授 ＋ − 未保存 ! 失败 ◇ 冲突 始终 禁授 */
 export function PermLegend() {
   const { t } = useI18n();
   const items: [CellState, string][] = [
@@ -423,11 +442,11 @@ export function PermLegend() {
     ["deny", "permissions.matrix.legend.deny"],
   ];
   return (
-    <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-[oklch(var(--color-ink-muted))]">
+    <ul className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[oklch(var(--color-ink-muted))]">
       {items.map(([state, key]) => (
-        <li key={state} className="flex items-center gap-2">
-          <PermGlyph state={state} />
-          {state === "grant" && <PermGlyph state="revoke" />}
+        <li key={state} className="flex items-center gap-1">
+          {state !== "lock" && <PermGlyph state={state} className={SMALL[state]} />}
+          {state === "grant" && <PermGlyph state="revoke" className={SMALL.revoke} />}
           {t(key)}
         </li>
       ))}

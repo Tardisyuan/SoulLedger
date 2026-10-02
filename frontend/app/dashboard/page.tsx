@@ -7,9 +7,6 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { ledgerApi, LedgerStatsOverview } from "@soulledger/core/api";
 import Link from "next/link";
-import { LazyBarChart } from "@/src/components/charts/LazyDashboardCharts";
-import { deathSyncApi, dispatchApi, judgmentApi } from "@soulledger/core/api";
-import { usePermissions } from "@/src/hooks/usePermissions";
 import { LegendLedger, STATE_SWATCH, orderLifecycle, sharePercent } from "@/src/components/dashboard/LegendLedger";
 import { BalanceHistogram } from "@/src/components/dashboard/BalanceHistogram";
 import { soulStateGlyph } from "@/src/lib/soulStateBadge";
@@ -17,10 +14,10 @@ import { CIVILIZATION_MARK } from "@/src/lib/civilizationIdentity";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DataTable } from "@/components/ui/data-table";
 import { CIVILIZATION_OPTIONS, getCivilizationFromTenantCode } from "@soulledger/core/config/civilizations";
-import { RequireAdmin, RequirePermission } from "@/src/components/rbac/RequirePermission";
+import { RequireAdmin } from "@/src/components/rbac/RequirePermission";
 import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
-import { useChartColors } from "@/src/hooks/useChartColors";
-import { REALM_PATTERNS } from "@/lib/chart-colors";
+import { RealmBars, RealmLegend, PATTERN_CLASS, patternOf } from "@/src/components/dashboard/RealmBars";
+import { TodoStrip } from "@/src/components/dashboard/TodoStrip";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
 import { DomainEnum } from "@/src/components/ui/DomainValue";
 import { resolveEnumDisplay } from "@/src/lib/domainDisplay";
@@ -29,164 +26,45 @@ import { TAB_BASE, TAB_ON, TAB_OFF } from "@/src/lib/tabClasses";
 import { Button } from "@/src/components/ui/Button";
 import { EmptyState } from "@/src/components/ui/EmptyState";
 import { StatCard } from "@/src/components/dashboard/StatCard";
-import { groupDigits } from "@/src/components/dashboard/numberFormat";
 
 type DashboardTab = "overview" | "ledger";
 
+/** One Design A4 card: s1, 1px line, padding 20, a 20/28 h2 with an optional aside. */
+function ChartCard({ title, aside, children }: { title: React.ReactNode; aside?: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <section className="flex min-w-0 flex-col gap-3 border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] p-4">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+        <h2 className="text-lg text-[oklch(var(--color-ink))]">{title}</h2>
+        {aside && <div className="text-xs text-[oklch(var(--color-ink-muted))]">{aside}</div>}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+/** 平均余额带正负号、一位小数(「+42.7」);零不带号。 */
+function signedBalance(n: number): string {
+  const fixed = n.toFixed(1);
+  return n > 0 ? `+${fixed}` : fixed === "-0.0" ? "0.0" : fixed;
+}
+
 /** Parses karma_distribution bucket labels ("< -50", "-5 to 5", "> 50", ...) into a midpoint. */
 function bucketMidpoint(label: string): number {
-  if (label.startsWith("<")) return parseFloat(label.replace("<", "").trim()) - 10;
-  if (label.startsWith(">")) return parseFloat(label.replace(">", "").trim()) + 10;
+  // The server's top bucket is `>= 50` (apps/ledger/views.py). Stripping only the
+  // `>` left `= 50`, parseFloat gave NaN, and the average balance read NaN.
+  const bound = (l: string) => parseFloat(l.replace(/^[<>]=?/, "").trim());
+  if (label.startsWith("<")) return bound(label) - 10;
+  if (label.startsWith(">")) return bound(label) + 10;
   const parts = label.split(" to ");
   if (parts.length === 2) return (parseFloat(parts[0]) + parseFloat(parts[1])) / 2;
   return 0;
 }
 
 
-/** Section label (规范 v1): 11 px mono, block line beneath. */
-function SectionLabel({ children, className = "", columns = "" }: { children: React.ReactNode; className?: string; columns?: string }) {
-  return (
-    <h2
-      className={`border-b border-[oklch(var(--color-block))] pb-1 pt-4 text-2xs uppercase tracking-widest text-[oklch(var(--color-ink-subtle))] ${columns} ${className}`}
-    >
-      {children}
-    </h2>
-  );
-}
-
-/** One 待办 cell: a count and where to go about it. */
-function TodoCell({
-  label,
-  count,
-  isLoading,
-  isError,
-  href,
-  linkText,
-}: {
-  label: string;
-  count: number | undefined;
-  isLoading: boolean;
-  isError: boolean;
-  href: string;
-  linkText: string;
-}) {
-  const { t } = useI18n();
-  return (
-    <div data-todo="" className="py-3 pr-4 md:border-r md:last:border-r-0 border-[oklch(var(--color-line))] max-md:border-b max-md:last:border-b-0">
-      <div className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">{label}</div>
-      <div className="flex items-baseline justify-between gap-3">
-        {isLoading ? (
-          <Skeleton className="h-8 w-10" />
-        ) : isError || count === undefined ? (
-          <span role="alert" className="text-sm text-[oklch(var(--color-danger))]">
-            <span aria-hidden="true">! </span>
-            {t("dashboard.todo.load_error")}
-          </span>
-        ) : (
-          <>
-            <span
-              data-todo-count=""
-              className={`font-mono text-xl ${count === 0 ? "text-[oklch(var(--color-ink-subtle))]" : "text-[oklch(var(--color-ink))]"}`}
-            >
-              {count}
-            </span>
-            {count > 0 ? (
-              <Link href={href} className="text-sm underline text-[oklch(var(--color-accent-ink))]">
-                {linkText}
-              </Link>
-            ) : (
-              <span className="text-sm text-[oklch(var(--color-ink-subtle))]">{t("dashboard.todo.none")}</span>
-            )}
-          </>
-        )}
-      </div>
-    </div>
-  );
-}
-
-/**
- * 待我审批 / 审判队列 (规范 v1 §3.4). Each count comes from the endpoint the
- * page it links to already reads, so the two can never disagree:
- * `/dispatch/records/proposed/` is the approval inbox (`target_tenant=<caller>`,
- * see dispatchApi.proposed), and `/judgment/next/`'s `total` is the queue's own
- * count. A cell only exists for someone who may open where it points.
- *
- * 死亡同步异常 counts through `/death-sync/registrations/summary/`, which also
- * names the status it counted, so the link lands on exactly those rows. The
- * page's endpoints are ADMIN-only (`IsAdminPermission`, no death_sync codename),
- * so the cell is gated on the role, not on a permission.
- */
-function DashboardTodo() {
-  const { t } = useI18n();
-  const { hasPermission, isAdmin } = usePermissions();
-  const canDispatch = hasPermission("dispatch.read");
-  const canJudge = hasPermission("judgment.read");
-  const canDeathSync = isAdmin;
-  const dispatchQ = useQuery({
-    queryKey: ["dashboard", "todo", "dispatch-proposed"],
-    queryFn: async () => (await dispatchApi.proposed({ page: "1" })).data.count,
-    enabled: canDispatch,
-    staleTime: 60_000,
-  });
-  const queueQ = useQuery({
-    queryKey: ["dashboard", "todo", "judgment-queue"],
-    queryFn: async () => (await judgmentApi.next()).data.total,
-    enabled: canJudge,
-    staleTime: 60_000,
-  });
-  const deathSyncQ = useQuery({
-    queryKey: ["dashboard", "todo", "death-sync"],
-    queryFn: async () => (await deathSyncApi.summary()).data,
-    enabled: canDeathSync,
-    staleTime: 60_000,
-  });
-  const cells = [canDispatch, canJudge, canDeathSync].filter(Boolean).length;
-  if (cells === 0) return null;
-  return (
-    <div className={`grid grid-cols-1 ${cells === 3 ? "md:grid-cols-3" : "md:grid-cols-2"} border-y border-[oklch(var(--color-block))]`}>
-      {canDispatch && (
-        <TodoCell
-          label={t("dashboard.todo.approve_dispatch")}
-          count={dispatchQ.data}
-          isLoading={dispatchQ.isLoading}
-          isError={dispatchQ.isError}
-          href="/dispatch"
-          linkText={t("dashboard.todo.go_approve")}
-        />
-      )}
-      {canJudge && (
-        <TodoCell
-          label={t("dashboard.todo.judgment_queue")}
-          count={queueQ.data}
-          isLoading={queueQ.isLoading}
-          isError={queueQ.isError}
-          href="/judgment/queue"
-          linkText={t("dashboard.todo.enter")}
-        />
-      )}
-      {canDeathSync && (
-        <TodoCell
-          label={t("dashboard.todo.death_sync_anomaly")}
-          count={deathSyncQ.data?.anomaly_count}
-          isLoading={deathSyncQ.isLoading}
-          isError={deathSyncQ.isError}
-          href={`/death-sync?status=${encodeURIComponent(deathSyncQ.data?.anomaly_status ?? "")}`}
-          linkText={t("dashboard.todo.go_view")}
-        />
-      )}
-    </div>
-  );
-}
-
 function DashboardContent() {
   const { t, formatDateTime } = useI18n();
   const { showToast } = useToast();
   const router = useRouter();
-  // Recharts fills are literals and do not follow the `.light` cascade, so the
-  // theme has to pick the table. The realm histogram colours and patterns each
-  // bar by its realm type (规范 v2 A5 `REALM_PATTERNS`); CHART_SERIES.realm is
-  // only the fallback for a row the server sent without one.
-  const { CHART_SERIES, REALM_COLORS } = useChartColors();
   const searchParams = useSearchParams();
   const activeTab: DashboardTab = searchParams.get("tab") === "ledger" ? "ledger" : "overview";
 
@@ -267,7 +145,7 @@ function DashboardContent() {
 
   const tabs: { key: DashboardTab; label: string }[] = [
     { key: "overview", label: t("dashboard.tab_overview") },
-    { key: "ledger", label: t("admin.ledger_stats") },
+    { key: "ledger", label: t("dashboard.tab_ledger") },
   ];
 
   // 交给 PageShell 的 `tabs` 槽。外层那条 `border-b border-hairline/50` 和
@@ -345,35 +223,24 @@ function DashboardContent() {
   const civTotal = CIVILIZATION_OPTIONS.reduce((sum, civ) => sum + civCount(civ), 0);
   const civMax = Math.max(1, ...CIVILIZATION_OPTIONS.map(civCount));
 
-  /**
-   * Sorted descending, unlike the civilization rows above, and the difference
-   * is the point.
-   *
-   * Realms have no canonical order, so the server's order is arbitrary and a
-   * reader comparing magnitudes has to hunt. Tenants do: there are exactly
-   * four, each carries its civilization's hue (contract-tested), and a stable
-   * order lets a reader learn "the third bar is Egypt" and keep that across
-   * page loads — sorting those by magnitude would make the bars swap places
-   * between visits. Applying "always sort descending" to both would have
-   * traded a real identity for a generic rule.
-   */
-  const realmChartData = [...(stats?.souls_by_realm ?? [])]
+  const realmBars = [...(stats?.souls_by_realm ?? [])]
     .sort((a, b) => b.count - a.count)
-    .map((r) => ({
-      name: r.realm_name,
-      count: r.count,
-      civilization: r.civilization,
-      color: REALM_COLORS[r.realm_type],
-      pattern: REALM_PATTERNS[r.realm_type],
-    }));
+    .map((r) => ({ key: r.realm_code, name: r.realm_name || r.realm_code, count: r.count, realmType: r.realm_type }));
+  const topRealms = [...(stats?.souls_by_realm ?? [])].sort((a, b) => b.count - a.count).slice(0, 10);
 
-  const formatTimestamp = (ts: string) => formatDateTime(ts);
+  /** 今天的只写 HH:MM;更早的写月 / 日(Design A4 最近动态的右栏)。 */
+  const formatTimestamp = (ts: string) => {
+    const d = new Date(ts);
+    const today = !Number.isNaN(d.getTime()) && d.toDateString() === new Date().toDateString();
+    return formatDateTime(ts, today ? { hour: "2-digit", minute: "2-digit" } : { month: "numeric", day: "numeric" });
+  };
 
   // Ledger-tab-only derived data (admin/stats page's unique cards)
   const avgBalance = stats?.karma_distribution
     ? stats.karma_distribution.reduce((sum, k) => sum + bucketMidpoint(k.label) * k.count, 0) /
       (stats.total_souls || 1)
     : 0;
+  const total = stats?.total_souls ?? 0;
 
   return (
     <PageShell
@@ -383,30 +250,10 @@ function DashboardContent() {
       actions={pageActions}
       tabs={pageTabs}
     >
-      <div className="space-y-6">
+      <div className="space-y-4 md:space-y-6">
         {activeTab === "overview" ? (
           <>
-            {/* 待办(规范 v1 §3.4):数字 + 去处。只给有权限看的那几格。 */}
-            <DashboardTodo />
-
-            {/* The lifecycle states, glyph + word (never colour alone). */}
-            <div className="grid grid-cols-2 md:grid-cols-5 border-b border-[oklch(var(--color-line))]">
-              {lifecycleStates.map((state) => (
-                <StatCard
-                  key={state}
-                  label={
-                    <>
-                      <span className="font-mono">{soulStateGlyph(state)}</span>{" "}
-                      <span title={state}>{stateLabel(state)}</span>
-                    </>
-                  }
-                  // A state missing from `state_distribution` means zero souls are
-                  // in it — a real count, so `?? 0` here is honest.
-                  value={stateCount(state)}
-                  isLoading={loading}
-                />
-              ))}
-            </div>
+            <TodoStrip />
 
             {error && (
               <p role="alert" className="text-sm text-[oklch(var(--color-danger))]">
@@ -415,58 +262,73 @@ function DashboardContent() {
               </p>
             )}
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-12 gap-y-6">
-              <section>
-                {/* 各文明 — ledger rows, all four civilizations. A civilization
-                    with no souls is a row saying so, with a way in, not an
-                    empty card (规范 v1: 没有灵魂的文明不画空卡片). */}
-                <SectionLabel columns="grid grid-cols-[1.3fr_56px_1.4fr]">
-                  <span>{t("dashboard.souls_by_civilization")}</span>
-                  <span className="text-right">{t("dashboard.chart_souls")}</span>
-                  <span className="pl-4">{t("dashboard.civ_share")}</span>
-                </SectionLabel>
-                {CIVILIZATION_OPTIONS.map((civ) => {
-                  const n = civCount(civ);
-                  return (
-                    <div
-                      key={civ}
-                      data-civ-row={civ}
-                      className="grid min-h-9 grid-cols-[1.3fr_56px_1.4fr] items-center border-b border-[oklch(var(--color-rule))] text-sm"
-                    >
-                      <span className="flex items-baseline gap-2 text-[oklch(var(--color-ink))]">
-                        <span aria-hidden="true" className="font-mono text-[oklch(var(--color-ink-subtle))]">{CIVILIZATION_MARK[civ]}</span>
-                        <DomainEnum namespace="souls.civilizations" value={civ} />
-                      </span>
-                      <span className={`text-right font-mono ${n ? "text-[oklch(var(--color-ink))]" : "text-[oklch(var(--color-ink-subtle))]"}`}>
-                        {loading ? <Skeleton as="span" className="inline-block h-4 w-6" /> : n}
-                      </span>
-                      <span className="flex items-center gap-2 pl-4">
-                        {loading ? null : n > 0 ? (
-                          <>
-                            <span
-                              aria-hidden="true"
-                              className="block h-2 min-w-1 bg-[oklch(var(--color-ink))]"
-                              style={{ width: `${(n / civMax) * 60}%` }}
-                            />
-                            <span className="text-xs text-[oklch(var(--color-ink-subtle))]">{sharePercent(n, civTotal)}</span>
-                          </>
+            {/* 状态卡(Design A4):五个生命周期状态,五等分;393 宽下前四张 2 × 2,已终结是网格下的一行。
+                迷失与本版本不认得的状态不另起卡片 —— 它们在下面的图例账里,一个都不少。 */}
+            <div className="grid grid-cols-2 gap-2 md:grid-cols-5 md:gap-4">
+              {LIFECYCLE.map((state) => (
+                <StatCard
+                  key={state}
+                  label={
+                    <>
+                      <span aria-hidden="true" className="font-mono">{soulStateGlyph(state)}</span>{" "}
+                      <span title={state}>{stateLabel(state)}</span>
+                    </>
+                  }
+                  // A state missing from `state_distribution` means zero souls are
+                  // in it — a real count, so `?? 0` here is honest.
+                  value={stateCount(state)}
+                  total={total}
+                  barClass={STATE_SWATCH[state] ?? "bg-[oklch(var(--color-chart-1))]"}
+                  isLoading={loading}
+                  compactLine={state === "SETTLED"}
+                />
+              ))}
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_1.2fr_1.2fr]">
+              {/* 按文明 — all four civilizations, one ramp step; civ colour stays out of charts. */}
+              <ChartCard title={t("dashboard.souls_by_civilization")}>
+                <div className="space-y-3">
+                  {CIVILIZATION_OPTIONS.map((civ) => {
+                    const n = civCount(civ);
+                    return (
+                      <div
+                        key={civ}
+                        data-civ-row={civ}
+                        className="grid grid-cols-[minmax(40px,auto)_1fr_80px_48px] items-center gap-x-3 text-sm"
+                      >
+                        <span className="flex items-baseline gap-1 whitespace-nowrap text-[oklch(var(--color-ink))]">
+                          <span aria-hidden="true" className="font-mono text-[oklch(var(--color-ink-subtle))]">{CIVILIZATION_MARK[civ]}</span>
+                          <DomainEnum namespace="souls.civilizations" value={civ} />
+                        </span>
+                        {loading ? (
+                          <Skeleton className="h-3 w-full" />
+                        ) : n > 0 ? (
+                          <span aria-hidden="true" className="block h-3 bg-[oklch(var(--color-surface-2))]">
+                            <span className="block h-full min-w-0.5 bg-[oklch(var(--color-chart-3))]" style={{ width: `${(n / civMax) * 100}%` }} />
+                          </span>
                         ) : (
-                          <Link href="/souls" className="text-xs text-[oklch(var(--color-ink-subtle))] underline">
+                          // 没有灵魂的文明是一行,带去处,不画空条(规范 v1)。
+                          <Link href="/souls" className="truncate text-xs text-[oklch(var(--color-ink-subtle))] underline">
                             {t("dashboard.civ_empty")}
                           </Link>
                         )}
-                      </span>
-                    </div>
-                  );
-                })}
+                        <span className={`text-right font-mono ${n ? "text-[oklch(var(--color-ink))]" : "text-[oklch(var(--color-ink-subtle))]"}`}>
+                          {loading ? <Skeleton as="span" className="inline-block h-4 w-6" /> : n}
+                        </span>
+                        <span className="text-right font-mono text-xs text-[oklch(var(--color-ink-muted))]">
+                          {loading ? null : sharePercent(n, civTotal)}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </ChartCard>
 
-                {/* 生命周期 — the 图例账 that replaces the pie chart. */}
-                <SectionLabel className="mt-6">
-                  {t("dashboard.state_distribution")}
-                  {stats ? ` · ${stats.total_souls}` : ""}
-                </SectionLabel>
+              {/* 状态分布 — the 图例账 that replaces the pie chart. */}
+              <ChartCard title={t("dashboard.state_distribution")}>
                 {loading ? (
-                  <Skeleton className="mt-3 h-24 w-full" />
+                  <Skeleton className="h-40 w-full" />
                 ) : (
                   <LegendLedger
                     rows={lifecycleStates.map((state) => ({
@@ -482,15 +344,15 @@ function DashboardContent() {
                     }))}
                   />
                 )}
-              </section>
+              </ChartCard>
 
-              <section>
-                <SectionLabel columns="flex justify-between">
-                  <span>{t("dashboard.balance_distribution")}</span>
-                  {stats ? <span>n = {stats.total_souls}</span> : null}
-                </SectionLabel>
+              {/* 余额分布 — 0 左右两档明度,0 线墨色,负值不用红。 */}
+              <ChartCard
+                title={t("dashboard.balance_distribution")}
+                aside={stats ? <span className="font-mono">n = {stats.total_souls}</span> : null}
+              >
                 {loading ? (
-                  <Skeleton className="mt-3 h-36 w-full" />
+                  <Skeleton className="h-50 w-full" />
                 ) : (
                   <BalanceHistogram
                     bars={(stats?.karma_distribution ?? []).map((k) => {
@@ -499,148 +361,164 @@ function DashboardContent() {
                     })}
                   />
                 )}
-
-            {/* Recent Activity - grouped by action type */}
-            <SectionLabel className="mt-6">{t("dashboard.recent_activity")}</SectionLabel>
-            <div className="mt-2">
-              {loading ? (
-                <div className="space-y-3">
-                  {[0, 1, 2].map((i) => (
-                    <div key={i} className="flex items-start gap-3 py-2">
-                      <Skeleton className="h-8 w-full" />
-                    </div>
-                  ))}
-                </div>
-              ) : stats?.recent_activity && stats.recent_activity.length > 0 ? (
-                (() => {
-                  // Group by action type
-                  const grouped: Record<string, typeof stats.recent_activity> = {};
-                  stats.recent_activity.forEach((log) => {
-                    const action = log.action || "OTHER";
-                    if (!grouped[action]) grouped[action] = [];
-                    grouped[action].push(log);
-                  });
-
-
-                  return (
-                    <div className="space-y-4">
-                      {Object.entries(grouped).map(([action, logs]) => (
-                        <div key={action}>
-                          <div className="flex items-center gap-2 mb-2">
-                            {/* `OTHER` is this block's own bucket for rows with no action, not a
-                                member the backend emits — so it goes to the screen as a missing
-                                value, not as an unrecognised one. */}
-                            <DomainEnum
-                              namespace="audit.actions"
-                              value={action === "OTHER" ? null : action}
-                              // 审计动作是领域枚举:1px ink3 框、ink 字,不借状态色(补足 C15「状态徽章」)。
-                              className="text-xs px-2 py-1 border border-[oklch(var(--color-ink-subtle))] font-medium text-[oklch(var(--color-ink))]"
-                            />
-                            <span className="text-xs text-[oklch(var(--color-ink-muted))]">{t("dashboard.activity_count", { count: String(logs.length) })}</span>
-                          </div>
-                          <div className="space-y-1 pl-2 border-l-2 border-[oklch(var(--color-hairline))]">
-                            {logs.map((log) => (
-                              <div key={log.id} className="flex items-start gap-3 py-1 px-2 hover:bg-[oklch(var(--color-surface-2))] transition-colors">
-                                <div className="flex-1 min-w-0">
-                                  <span title={log.description || log.resource} className="text-sm text-[oklch(var(--color-ink))] truncate">{log.description || log.resource}</span>
-                                  <div className="text-xs text-[oklch(var(--color-ink-muted))]">
-                                    {log.user} · {formatTimestamp(log.timestamp)}
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  );
-                })()
-              ) : error ? null : (
-                // Not on error: "no recent activity" would be the failed request
-                // speaking as if it had succeeded (the alert above says why).
-                <EmptyState title={t("dashboard.no_activity")} />
-              )}
-            </div>
-              </section>
+              </ChartCard>
             </div>
 
-            {/* Souls by Realm — a bar chart, not a pie; it stays. */}
-            <section>
-              <SectionLabel>{t("dashboard.souls_by_realm")}</SectionLabel>
-              {loading ? (
-                <Skeleton className="mt-3 h-[180px] w-full" />
-              ) : realmChartData.length > 0 ? (
-                <div className="mt-3">
-                  <LazyBarChart data={realmChartData} dataKey="count" fill={CHART_SERIES.realm} height={180} name={t("dashboard.chart_souls")} />
-                </div>
-              ) : (
-                <p className="mt-3 text-sm text-[oklch(var(--color-ink-muted))]">{t("dashboard.no_realm_data")}</p>
-              )}
-            </section>
-          </>
-        ) : (
-          <RequireAdmin fallback={<PermissionDenied />}>
-            {/* Ledger-only cards that don't already appear on the Overview tab */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="bg-[oklch(var(--color-surface-1))] p-4 border border-[oklch(var(--color-hairline))]">
-                <div className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))]">{t("admin.avg_balance")}</div>
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.6fr_1fr]">
+              {/* 按界域 — sorted descending: realms have no canonical order, so the
+                  server's is arbitrary and a reader comparing magnitudes would have to
+                  hunt. Each bar takes its realm type's pattern. */}
+              <ChartCard title={t("dashboard.souls_by_realm")} aside={<RealmLegend />}>
                 {loading ? (
-                  <Skeleton className="h-8 w-24 mt-2" />
+                  <Skeleton className="h-60 w-full" />
+                ) : realmBars.length > 0 ? (
+                  <RealmBars bars={realmBars} />
                 ) : (
-                  <div data-kpi="" className="text-xl tabular-nums text-[oklch(var(--color-accent-ink))] mt-2">{avgBalance.toFixed(2)}</div>
+                  <p className="text-sm text-[oklch(var(--color-ink-muted))]">{t("dashboard.no_realm_data")}</p>
                 )}
-              </div>
-              <div className="bg-[oklch(var(--color-surface-1))] p-4 border border-[oklch(var(--color-hairline))]">
-                <div className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))] mb-2">{t("admin.state_breakdown")}</div>
+              </ChartCard>
+
+              {/* 最近动态 — grouped by action. */}
+              <ChartCard title={t("dashboard.recent_activity")}>
                 {loading ? (
-                  <div className="space-y-1">
-                    <Skeleton className="h-4 w-full" />
-                    <Skeleton className="h-4 w-full" />
-                    <Skeleton className="h-4 w-2/3" />
+                  <div className="space-y-3">
+                    {[0, 1, 2].map((i) => (
+                      <Skeleton key={i} className="h-11 w-full" />
+                    ))}
                   </div>
-                ) : (
-                  <div className="space-y-1">
-                    {stats?.state_distribution?.map((s) => (
-                      <div key={s.state} className="flex justify-between text-sm">
-                        <span title={s.state} className="text-[oklch(var(--color-ink-muted))]">{stateLabel(s.state, s.label)}</span>
-                        <span className="font-medium">{s.count}</span>
+                ) : stats?.recent_activity && stats.recent_activity.length > 0 ? (
+                  <div className="space-y-4">
+                    {Object.entries(
+                      stats.recent_activity.reduce<Record<string, typeof stats.recent_activity>>((acc, log) => {
+                        (acc[log.action || "OTHER"] ??= []).push(log);
+                        return acc;
+                      }, {})
+                    ).map(([action, logs]) => (
+                      <div key={action}>
+                        <div className="flex items-baseline gap-1 pb-1 text-2xs text-[oklch(var(--color-ink-subtle))]">
+                          {/* `OTHER` is this block's own bucket for rows with no action, not a
+                              member the backend emits — so it goes to the screen as a missing
+                              value, not as an unrecognised one. */}
+                          <DomainEnum namespace="audit.actions" value={action === "OTHER" ? null : action} />
+                          <span aria-hidden="true">·</span>
+                          <span>{t("dashboard.activity_count", { count: String(logs.length) })}</span>
+                        </div>
+                        <ul className="border-t border-[oklch(var(--color-line))]">
+                          {logs.map((log) => (
+                            <li
+                              key={log.id}
+                              className="grid min-h-11 grid-cols-[1fr_auto] items-center gap-x-3 border-b border-[oklch(var(--color-line))] py-1"
+                            >
+                              <div className="min-w-0">
+                                <div title={log.description || log.resource} className="truncate text-sm text-[oklch(var(--color-ink))]">
+                                  {log.description || log.resource}
+                                </div>
+                                <div className="text-xs text-[oklch(var(--color-ink-muted))]">{log.user}</div>
+                              </div>
+                              <time dateTime={log.timestamp} className="font-mono text-xs text-[oklch(var(--color-ink-muted))]">
+                                {formatTimestamp(log.timestamp)}
+                              </time>
+                            </li>
+                          ))}
+                        </ul>
                       </div>
                     ))}
                   </div>
+                ) : error ? null : (
+                  // Not on error: "no recent activity" would be the failed request
+                  // speaking as if it had succeeded (the alert above says why).
+                  <EmptyState title={t("dashboard.no_activity")} />
                 )}
-              </div>
+              </ChartCard>
             </div>
+          </>
+        ) : (
+          <RequireAdmin fallback={<PermissionDenied />}>
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-[320px_1fr]">
+                <ChartCard title={t("admin.avg_balance")}>
+                  {loading ? (
+                    <Skeleton className="h-16 w-32" />
+                  ) : (
+                    <div data-avg-balance="" className="font-title text-display-lg tabular-nums text-[oklch(var(--color-ink))]">
+                      {signedBalance(avgBalance)}
+                    </div>
+                  )}
+                  <p className="text-xs text-[oklch(var(--color-ink-muted))]">{t("dashboard.avg_scope")}</p>
+                </ChartCard>
+                <section
+                  aria-labelledby="dash-state-breakdown"
+                  className="min-w-0 border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))]"
+                >
+                  <h2 id="dash-state-breakdown" className="px-4 pt-4 text-lg text-[oklch(var(--color-ink))]">
+                    {t("admin.state_breakdown")}
+                  </h2>
+                  <div className="grid grid-cols-[20px_1fr_140px] px-4">
+                    <div className="col-span-3 grid h-10 grid-cols-subgrid items-center text-2xs text-[oklch(var(--color-ink-subtle))]">
+                      <span />
+                      <span>{t("souls.state")}</span>
+                      <span className="text-right">{t("admin.soul_count")}</span>
+                    </div>
+                    {loading ? (
+                      <Skeleton className="col-span-3 h-32 w-full" />
+                    ) : (
+                      stats?.state_distribution?.map((s) => (
+                        <div
+                          key={s.state}
+                          data-breakdown-row={s.state}
+                          className="col-span-3 grid min-h-(--table-row-h) grid-cols-subgrid items-center border-t border-[oklch(var(--color-line))] text-sm"
+                        >
+                          <span aria-hidden="true" className={`block size-3 ${STATE_SWATCH[s.state] ?? "border-2 border-[oklch(var(--color-ink-subtle))]"}`} />
+                          <span className="text-[oklch(var(--color-ink))]">
+                            <span aria-hidden="true" className="font-mono">{soulStateGlyph(s.state)}</span>{" "}
+                            <span title={s.state}>{stateLabel(s.state, s.label)}</span>
+                          </span>
+                          <span className="text-right font-mono">{s.count}</span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </section>
+              </div>
 
-            {/* Top Souls by Balance Table */}
-            <div className="bg-[oklch(var(--color-surface-1))] p-4 border border-[oklch(var(--color-hairline))]">
-              <h2 className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))] mb-4">
-                {t("admin.top_balance")}
-              </h2>
-              <DataTable<LedgerStatsOverview["souls_by_realm"][number]>
-                caption={t("admin.top_balance")}
-                columns={[
-                  { key: "realm_name", header: t("admin.realm") },
-                  { key: "civilization", header: t("admin.civilization") },
-                  { key: "count", header: t("admin.soul_count"), align: "right" },
-                ]}
-                data={stats?.souls_by_realm?.slice(0, 10) ?? []}
-                // The page has an error branch, but it only wraps the pie
-                // chart (line ~248). This table sits outside it and reads the
-                // same query, so a failure gave it `?? []` and it rendered
-                // "no data" beside a chart that said "failed to load".
-                // DataTable suppresses its own empty state when isError is
-                // set (data-table.tsx:144).
-                isError={!!queryError}
-                keyExtractor={(realm, idx) => `${realm.realm_code}-${idx}`}
-                renderRow={(realm) => (
-                  <>
-                    <td className="px-4 py-3 text-[oklch(var(--color-ink))]">{realm.realm_name || realm.realm_code}</td>
-                    <td className="px-4 py-3 text-[oklch(var(--color-ink-muted))]"><DomainEnum namespace="souls.civilizations" value={realm.civilization} /></td>
-                    <td className="px-4 py-3 text-right font-medium">{realm.count}</td>
-                  </>
-                )}
-                emptyMessage={t("admin.no_realm_data")}
-              />
+              {/* 界域前十 — the realms holding the most souls. It used to be titled
+                  「功过榜首灵魂」, which is not what `souls_by_realm` holds. */}
+              <ChartCard title={t("dashboard.top_realms")}>
+                <DataTable<LedgerStatsOverview["souls_by_realm"][number]>
+                  caption={t("dashboard.top_realms")}
+                  columns={[
+                    { key: "rank", header: "#", width: "40px" },
+                    { key: "realm_name", header: t("admin.realm") },
+                    { key: "realm_type", header: t("realms.table.col_kind"), width: "160px" },
+                    { key: "count", header: t("admin.soul_count"), align: "right", width: "140px" },
+                  ]}
+                  data={topRealms}
+                  // DataTable suppresses its own empty state when isError is set, so a
+                  // failed load never reads as "no realms" beside an error.
+                  isError={!!queryError}
+                  keyExtractor={(realm, idx) => `${realm.realm_code}-${idx}`}
+                  renderRow={(realm, idx) => (
+                    <>
+                      <td className="px-4 font-mono text-[oklch(var(--color-ink-muted))]">{idx + 1}</td>
+                      <td className="px-4 text-[oklch(var(--color-ink))]">
+                        {realm.realm_name || realm.realm_code}
+                        <span className="text-[oklch(var(--color-ink-muted))]">
+                          {" · "}
+                          <DomainEnum namespace="souls.civilizations" value={realm.civilization} />
+                        </span>
+                      </td>
+                      <td className="px-4">
+                        <span className="flex items-center gap-2">
+                          <span aria-hidden="true" className={`block size-3 ${PATTERN_CLASS[patternOf(realm.realm_type)]}`} />
+                          <DomainEnum namespace="realms.types" value={realm.realm_type} />
+                        </span>
+                      </td>
+                      <td className="px-4 text-right font-mono">{realm.count}</td>
+                    </>
+                  )}
+                  emptyMessage={t("admin.no_realm_data")}
+                />
+              </ChartCard>
             </div>
           </RequireAdmin>
         )}

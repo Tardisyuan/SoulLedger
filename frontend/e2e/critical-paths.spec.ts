@@ -322,7 +322,7 @@ test.describe("Critical path: permission matrix save", () => {
     // Removing one of JUDGE's three grants ⇒ tier 2 (removal, not to zero).
     await page.getByRole("checkbox", { name: cell("JUDGE", "dispatch.approve") }).click();
 
-    await expect(unsaved(page)).toContainText("未保存 1 项");
+    await expect(unsaved(page)).toContainText("1 处待改");
     await expect(unsaved(page)).toContainText("＋0 · −1");
     await unsaved(page).getByRole("button", { name: "保存改动" }).click();
 
@@ -388,7 +388,7 @@ test.describe("Critical path: permission matrix save", () => {
     const refused = page.getByRole("checkbox", { name: cell("JUDGE", "recycle_bin.restore") });
     await expect(refused).toHaveText("!");
     await expect(page.getByRole("checkbox", { name: cell("GUARDIAN", "dispatch.approve") })).toHaveText("");
-    await expect(unsaved(page)).toContainText("未保存 1 项");
+    await expect(unsaved(page)).toContainText("1 处待改");
 
     await banner.getByRole("button", { name: "定位" }).click();
     await expect(refused).toBeFocused();
@@ -425,7 +425,7 @@ test.describe("Critical path: permission matrix save", () => {
     await expect(toggle).toHaveAttribute("aria-checked", "false");
     await toggle.click();
     await expect(toggle).toHaveAttribute("aria-checked", "true");
-    await expect(unsaved(page)).toContainText("未保存 1 项");
+    await expect(unsaved(page)).toContainText("1 处待改");
     await unsaved(page).getByRole("button", { name: "保存改动" }).click();
     await expect.poll(() => api.lastCall("POST", "/perm/role-permissions/changes/")?.body.changes).toEqual([
       { role: "GUARDIAN", permission_id: 3, action: "grant" },
