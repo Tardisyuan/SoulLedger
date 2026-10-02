@@ -368,9 +368,10 @@ describe("卷栏与队列进度条", () => {
 
 // ── 丙 · 证据采信 ─────────────────────────────────────────────────────────
 
-const record = (id: string, type: string, description: string, weight: number) => ({
+const record = (id: string, type: string, description: string, weight: number, over: Record<string, unknown> = {}) => ({
   id, type, category: "CHARITY", description, original_weight: weight, effective_weight: weight, years_elapsed: 0,
   decay_factor: 1, civilization: "CHINESE", recorded_at: "2026-06-02T00:00:00Z", event_date: null, is_milestone: false,
+  statute_clause: "", occurrence_count: null, ...over,
 });
 const RECORDS = [
   record("r1", "MERIT", "救溺 · 胥江", 120),
@@ -443,6 +444,33 @@ describe("丙 · 证据采信", () => {
     await act(async () => {});
     expect(judgmentApi.ruleEvidence).not.toHaveBeenCalled();
     expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("每行写条款、发生次数与重要节点;没记的不补(不当 1 次,条款写未记录)", async () => {
+    soulsApi.karma.mockResolvedValue({
+      data: {
+        soul_id: "s-1", soul_name: "沈青梧", merit_score: 1284, demerit_score: 937, karmic_balance: 347, record_count: 2,
+        records: [
+          record("r1", "MERIT", "救溺 · 胥江", 120, { statute_clause: "救濟門#7:賑濟窮民百錢", occurrence_count: 12, is_milestone: true }),
+          record("r3", "DEMERIT", "詈骂邻人", 25),
+        ],
+        reading: { kind: "BALANCE", civilization: "CHINESE", merit: 1284, demerit: 937, balance: 347 },
+      },
+    });
+    renderPage();
+    await screen.findAllByTestId("evidence-row");
+    const cited = evidenceRow("救溺");
+    const clause = within(cited).getByTestId("evidence-clause");
+    expect(clause).toHaveTextContent("救濟門#7");
+    expect(clause).not.toHaveTextContent("賑濟窮民百錢");
+    expect(clause).toHaveAttribute("title", "救濟門#7:賑濟窮民百錢");
+    expect(cited).toHaveTextContent(`${tZh("ledger.book.occurrences", { n: "12" })} · ◆ ${tZh("ledger.book.milestone")}`);
+
+    const bare = evidenceRow("詈骂邻人");
+    expect(within(bare).getByTestId("evidence-clause").querySelector('[data-missing="unrecorded"]')).not.toBeNull();
+    expect(bare).not.toHaveTextContent(tZh("ledger.book.occurrences", { n: "1" }));
+    expect(bare).not.toHaveTextContent("◆");
+    expect(bare.querySelector("[data-record-facts]")).toBeNull();
   });
 
   it("案子不在这一世:不列证据,说为什么;已结案:没有开关", async () => {
