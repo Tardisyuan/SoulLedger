@@ -26,8 +26,10 @@ jest.mock("next/navigation", () => ({
   useParams: () => ({ id: "w1" }),
   useRouter: () => ({ push: jest.fn() }),
 }));
+const ADMIN = { id: 1, username: "admin", role: "ADMIN", permissions: [] as string[] };
+let mockUser = ADMIN;
 jest.mock("@/src/contexts/TenantContext", () => ({
-  useTenant: () => ({ user: { id: 1, username: "admin", role: "ADMIN", permissions: [] } }),
+  useTenant: () => ({ user: mockUser }),
 }));
 jest.mock("@/src/contexts/I18nContext", () => ({
   ...jest.requireActual("@/src/contexts/I18nContext"),
@@ -108,5 +110,41 @@ describe("workflow linear preview", () => {
     const list = await preview();
     expect(chips(list)).toHaveLength(4);
     expect(list.querySelector("[aria-current]")).toBeNull();
+  });
+});
+
+/**
+ * v3 A1: civilization colour does not enter the page — except the 3 px
+ * 「待我处理」 bar on the current node's row, and only for an operator who can
+ * decide it (`workflow.approve`, the gate on 提交判决).
+ */
+describe("待我处理 bar", () => {
+  const bars = () => document.querySelectorAll("li [class*='--color-main']");
+  afterEach(() => {
+    mockUser = ADMIN;
+  });
+
+  it("marks the current node's row, and no other row, for an operator who can approve", async () => {
+    workflowApi.get.mockResolvedValue(payload("IN_PROGRESS", "n2"));
+    renderPage();
+    await preview();
+    expect(bars()).toHaveLength(1);
+    expect(bars()[0].closest("li")).toHaveAttribute("aria-current", "step");
+    expect(bars()[0].closest("li")).toHaveTextContent("复核");
+  });
+
+  it("is absent for an operator without workflow.approve", async () => {
+    mockUser = { id: 2, username: "clerk", role: "CLERK", permissions: ["workflow.view"] };
+    workflowApi.get.mockResolvedValue(payload("IN_PROGRESS", "n2"));
+    renderPage();
+    await preview();
+    expect(bars()).toHaveLength(0);
+  });
+
+  it("is absent once the workflow is completed", async () => {
+    workflowApi.get.mockResolvedValue(payload("COMPLETED", "n3"));
+    renderPage();
+    await preview();
+    expect(bars()).toHaveLength(0);
   });
 });

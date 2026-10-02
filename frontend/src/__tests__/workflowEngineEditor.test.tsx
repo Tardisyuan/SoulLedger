@@ -258,13 +258,14 @@ describe("WorkflowEditor — versions and the engine fields", () => {
     api().publish.mockClear();
   });
 
-  it("shows 「草稿 v4 · 已发布 v3」 and the read-only history", async () => {
+  it("shows 「✓ 已发布 v3 · ◇ 草稿 v4」 and the read-only history", async () => {
     renderEditor();
     await waitFor(() =>
       expect(screen.getByTestId("version-badge").textContent).toBe(
-        "workflow.editor.version.draft(4) · workflow.editor.version.published(3)"
+        "✓workflow.editor.version.published(3)◇ workflow.editor.version.draft(4)"
       )
     );
+    fireEvent.click(screen.getByRole("tab", { name: /workflow\.editor\.tab\.version/ }));
     const history = await screen.findByRole("region", { name: "workflow.editor.version.history" });
     expect(within(history).getByText("v4")).toBeInTheDocument();
     expect(within(history).getByText("v3")).toBeInTheDocument();
@@ -294,8 +295,8 @@ describe("WorkflowEditor — versions and the engine fields", () => {
 
   it("发布 saves the draft, then publishes it", async () => {
     renderEditor();
-    await waitFor(() => expect(screen.getByRole("button", { name: "workflow.editor.publish" })).toBeEnabled());
-    fireEvent.click(screen.getByRole("button", { name: "workflow.editor.publish" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "workflow.editor.publish v4" })).toBeEnabled());
+    fireEvent.click(screen.getByRole("button", { name: "workflow.editor.publish v4" }));
     await waitFor(() => expect(api().publish).toHaveBeenCalledWith("t1"));
     expect(api().update).toHaveBeenCalledTimes(1);
     expect(api().update.mock.invocationCallOrder[0]).toBeLessThan(api().publish.mock.invocationCallOrder[0]);
@@ -312,8 +313,10 @@ describe("WorkflowEditor — versions and the engine fields", () => {
       </QueryClientProvider>
     );
     // Without the 结束 node, the conditional graph has no end.
-    await waitFor(() => expect(screen.getAllByText(/workflow\.editor\.issue\.no_end/).length).toBeGreaterThan(0));
-    expect(screen.getByRole("button", { name: "workflow.editor.publish" })).toBeDisabled();
+    await waitFor(() => expect(screen.getByRole("tab", { name: /workflow\.editor\.tab\.issues [1-9]/ })).toBeInTheDocument());
+    fireEvent.click(screen.getByRole("tab", { name: /workflow\.editor\.tab\.issues/ }));
+    expect(screen.getAllByText(/workflow\.editor\.issue\.no_end/).length).toBeGreaterThan(0);
+    expect(screen.getByRole("button", { name: "workflow.editor.publish v4" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "workflow.editor.save_template" })).toBeEnabled();
   });
 
@@ -321,11 +324,13 @@ describe("WorkflowEditor — versions and the engine fields", () => {
     renderEditor();
     const chip = await screen.findByRole("button", { name: /余额 < 0 \?/ });
     fireEvent.click(chip);
+    fireEvent.click(screen.getByRole("tab", { name: /workflow\.editor\.tab\.exits/ }));
     const exits = await screen.findByRole("region", { name: "workflow.editor.condition.title" });
     expect(within(exits).getByText(/workflow\.editor\.condition\.fact\.balance < 0/)).toBeInTheDocument();
     expect(within(exits).getByText("workflow.editor.condition.default")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: /目标文明判官/ }));
+    fireEvent.click(within(screen.getByRole("region", { name: "workflow.editor.preview" })).getByRole("button", { name: /目标文明判官/ }));
+    fireEvent.click(screen.getByRole("tab", { name: /workflow\.editor\.tab\.node/ }));
     await waitFor(() => expect(api().approverPreview).toHaveBeenCalledWith("t1", { node: "n4", civilization: "CHINESE" }));
     expect(await screen.findByText("workflow.editor.preview_approver.role(JUDGE)")).toBeInTheDocument();
   });
@@ -333,12 +338,13 @@ describe("WorkflowEditor — versions and the engine fields", () => {
   it("making an exit conditional turns it into a branch on save", async () => {
     renderEditor();
     fireEvent.click(await screen.findByRole("button", { name: /来源殿审批/ }));
+    fireEvent.click(screen.getByRole("tab", { name: /workflow\.editor\.tab\.exits/ }));
     const exits = await screen.findByRole("region", { name: "workflow.editor.condition.title" });
     fireEvent.click(within(exits).getByRole("button", { name: "workflow.editor.condition.make" }));
     await waitFor(() => expect(within(exits).getByRole("button", { name: "workflow.editor.condition.clear" })).toBeInTheDocument());
     // It is now a branch with no default beside it — publish must be blocked
     // (no_exit) while the draft still saves.
-    expect(screen.getByRole("button", { name: "workflow.editor.publish" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "workflow.editor.publish v4" })).toBeDisabled();
     fireEvent.click(screen.getByRole("button", { name: "workflow.editor.save_template" }));
     await waitFor(() => expect(api().update).toHaveBeenCalled());
     const n1 = api().update.mock.calls.at(-1)![1].nodes.find((n: any) => n.id === "n1");

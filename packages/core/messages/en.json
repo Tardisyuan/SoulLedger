@@ -736,7 +736,7 @@
         "no_exit": "{{node}} has no way out to an end node",
         "no_end": "{{node}}: a flow with conditions or end nodes needs at least one end node"
       },
-      "palette": "Node library · drag in",
+      "palette": "Nodes · drag onto the canvas",
       "inspector": "Properties",
       "inspector_empty": "Pick a node on the canvas or in the linear preview.",
       "unnamed": "(unnamed)",
@@ -748,7 +748,7 @@
       },
       "preview": "Linear preview",
       "preview_empty": "No nodes yet.",
-      "narrow_title": "The canvas is editable at ≥ 1024 px only",
+      "narrow_title": "Read-only on narrow screens. Open at 1024 px or wider to change nodes or edges.",
       "narrow_body": "Read-only on narrow screens: linear preview, checks and node properties.",
       "publish": "Publish",
       "publishing": "Publishing…",
@@ -823,7 +823,8 @@
           "eq": "equals",
           "in": "is one of",
           "not_in": "is none of"
-        }
+        },
+        "and": "and"
       },
       "preview_approver": {
         "title": "Approver preview",
@@ -834,6 +835,37 @@
         "nobody": "Nobody (SYSTEM) — only escalation moves it",
         "no_accounts": "No account can decide it yet",
         "accounts": "{{n}} accounts: {{names}}"
+      },
+      "roles_title": "Roles · read off the edges",
+      "role_legend": {
+        "entry": "Entry · no edge in",
+        "step": "Step",
+        "branch": "Branch · conditional exit",
+        "end": "End · no edge out"
+      },
+      "roles_note": "Roles cannot be dragged; the edges decide them",
+      "tab": {
+        "node": "Node",
+        "exits": "Exits",
+        "issues": "Issues",
+        "version": "Version"
+      },
+      "issues_blocking": "{{n}} issues block publishing",
+      "issues_hint": "Pick one to select its node on the canvas",
+      "issues_checks": "{{total}} checks · {{passed}} pass",
+      "exits_title": "Exits of {{node}}",
+      "exits_hint": "Tried in order; the first match is taken, otherwise the default",
+      "exits_none": "This node has no pass exit.",
+      "exits_fixed": "Conditions sit on pass exits only; the fail exit keeps its fixed route.",
+      "exit_label": "Edge label",
+      "preview_count": "{{nodes}} nodes · {{edges}} edges",
+      "flow_count": "Flow · {{n}} nodes",
+      "glyph_legend": "The left glyph is the role (▷ entry · □ step · ◇ branch · ■ end); the one before the name is the node kind",
+      "zoom": {
+        "out": "Zoom out",
+        "in": "Zoom in",
+        "reset": "Zoom to 100%",
+        "fit": "Fit to canvas"
       }
     },
     "templates": "Workflow Templates",
@@ -895,7 +927,13 @@
       "approver_name_absent": "the node carries the approver's primary key; the backend sends no name",
       "reason_for_soul": "Rejection reason for the soul",
       "reason_for_soul_hint": "The soul will see this reason; internal notes stay hidden. Up to 2000 characters.",
-      "reason_for_soul_required": "Rejecting a rebirth application requires a reason for the soul"
+      "reason_for_soul_required": "Rejecting a rebirth application requires a reason for the soul",
+      "waiting_on_me": "Waiting on me",
+      "row_legend": "Bar = waiting on me · tint = current node",
+      "not_reached": "Not reached",
+      "last_step": "Latest step",
+      "template": "Template",
+      "status": "Status"
     },
     "verdicts": {
       "passed": "Passed",
