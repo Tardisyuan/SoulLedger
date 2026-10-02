@@ -373,3 +373,23 @@ describe("?code= — a ledger clause links to its article", () => {
     expect(screen.queryByTestId("corpus-unknown-code")).toBeNull();
   });
 });
+
+describe("全局搜索的两种链接:?article= 打开那一条,?q= 填进搜索框", () => {
+  it("?article=<id> opens that article, not the first one", async () => {
+    mockQuery.current = "article=eu-inf-26";
+    renderPage();
+    await waitFor(() => expect(screen.getByTestId("corpus-reading")).toHaveTextContent("title-eu-inf-26"));
+    const current = within(screen.getByRole("navigation", { name: /目录|contents/i })).getByRole("button", { current: true });
+    expect(current).toHaveTextContent("title-eu-inf-26");
+    expect(current).not.toHaveTextContent("title-cn-17");
+    expect(screen.queryByTestId("corpus-unknown-code")).toBeNull();
+  });
+
+  it("?q= starts the search with that word", async () => {
+    mockQuery.current = "q=%E5%8F%A3%E4%B8%9A";
+    renderPage();
+    await waitFor(() => expect(screen.getByTestId("corpus-reading")).toHaveTextContent("title-cn-17"));
+    expect(search()).toHaveValue("口业");
+    expect(document.querySelector("[data-search-hit]")?.textContent).toBe("口业");
+  });
+});

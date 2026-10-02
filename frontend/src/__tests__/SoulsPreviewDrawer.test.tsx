@@ -25,8 +25,9 @@ let detail: (_id: string) => DetailState = (id) => ({
 });
 const mockRefetch = jest.fn();
 
+const mockListParams: Record<string, unknown>[] = [];
 jest.mock("@soulledger/core/hooks/useSouls", () => ({
-  useSouls: () => ({ data: { results: souls, count: souls.length }, isLoading: false, isError: false, isPlaceholderData: false, refetch: jest.fn() }),
+  useSouls: (params: Record<string, unknown>) => (mockListParams.push(params), { data: { results: souls, count: souls.length }, isLoading: false, isError: false, isPlaceholderData: false, refetch: jest.fn() }),
   useSoul: (id: string) => ({ ...(id ? detail(id) : { isLoading: false, isError: false }), refetch: mockRefetch }),
   useCreateSoul: () => ({ mutateAsync: jest.fn() }),
   // The batch bar (SoulBatchBar) is on this page too; ADMIN holds soul.delete.
@@ -39,7 +40,8 @@ jest.mock("@soulledger/core/api", () => ({
 }));
 
 // The real gate runs (suiteShape forbids stubbing it); an ADMIN session lets it through.
-jest.mock("next/navigation", () => ({ useRouter: () => ({ push: jest.fn() }) }));
+let mockSearch = "";
+jest.mock("next/navigation", () => ({ useRouter: () => ({ push: jest.fn() }), useSearchParams: () => new URLSearchParams(mockSearch) }));
 jest.mock("@/src/contexts/TenantContext", () => ({
   useTenant: () => ({ user: { role: "ADMIN" } }),
 }));
@@ -65,10 +67,23 @@ const previewButton = (name: string) => screen.getByRole("button", { name: `soul
 const drawer = () => screen.getByRole("dialog");
 
 beforeEach(() => {
+  mockSearch = "";
+  mockListParams.length = 0;
   detail = (id) => ({
     isLoading: false,
     isError: false,
     data: { ...souls.find((s) => s.id === id), origin_location: `loc-${id}`, merit_score: 1284, demerit_score: 937 },
+  });
+});
+
+describe("?q= from the global search", () => {
+  it("fills the search box and the first list request carries it", () => {
+    mockSearch = "q=%E6%B2%88";
+    renderPage();
+    expect(screen.getByPlaceholderText("souls.search_placeholder")).toHaveValue("沈");
+    expect(mockListParams[0]).toMatchObject({ search: "沈", page: 1 });
+    // Absence: no request went out without the word first.
+    expect(mockListParams.some((p) => !("search" in p))).toBe(false);
   });
 });
 

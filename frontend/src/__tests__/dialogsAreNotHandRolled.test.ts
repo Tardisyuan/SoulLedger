@@ -68,6 +68,8 @@ const ALLOWED: Record<string, string> = {
   "src/components/social/PostMedia.tsx":
     "A5 朋友圈的图片查看器:遮罩是 Base UI Dialog.Backdrop、面板是 Dialog.Popup(同 MediaGrid)—— 焦点圈、Esc、焦点归还来自原语",
   "src/components/scheduler/TaskRunsDrawer.tsx": "run-history drawer scrim, keyboard handled by useDrawerA11y (same pattern as SettingsDrawer)",
+  "src/components/layout/GlobalSearch.tsx":
+    "全局搜索命令面板(规范 v3 A8;≤ 768 全屏):遮罩是 Base UI Dialog.Backdrop、面板是 Dialog.Popup(同 PostMedia)—— 焦点圈、Esc、焦点归还来自原语",
   "src/components/assist/OfficerAssist.tsx":
     "问一问 below 1024 px: a right drawer on the Base UI Dialog (as Drawer.tsx) — focus trap, Escape and focus return come from the primitive",
   "src/components/judgment/JudgmentDeskStage.tsx":
