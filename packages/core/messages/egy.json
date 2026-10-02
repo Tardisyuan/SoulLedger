@@ -4478,7 +4478,18 @@
       "rules": "Wesekhet Hep",
       "records": "Per Medjat",
       "trials": "Wesekhet Wedja",
-      "tenth": "Zhuanlun Wesekhet"
+      "court": {
+        "cn": "Zhuanlun Wesekhet",
+        "eu": "Wesekhet Europa",
+        "eg": "Weret Maaty",
+        "gr": "Wesekhet Wedja 3"
+      }
+    },
+    "realm": {
+      "cn": "Duat Sherer",
+      "eu": "Duat Europa",
+      "eg": "Duat",
+      "gr": "Duat Haunebut"
     }
   }
 }
