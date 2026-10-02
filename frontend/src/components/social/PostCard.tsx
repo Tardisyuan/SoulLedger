@@ -6,101 +6,81 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useDeletePost } from "@soulledger/core/hooks/useSocial";
 import { ConfirmDialog } from "@/src/components/ui/Modal";
+import { Button } from "@/src/components/ui/Button";
 import { ReactionBar } from "./ReactionBar";
+import { Avatar } from "./Avatar";
 import type { Post } from "@soulledger/core/api";
 import { DomainEnum } from "@/src/components/ui/DomainValue";
-import { Badge, type BadgeTone } from "@/src/components/ui/Badge";
 
 /**
- * Visibility — a domain enum, so every member is the neutral badge (规范 v2 补足 C15
- * 「状态徽章 · 领域枚举 · 不用状态色」: 1px ink3 frame, ink text, told apart by the word).
- * The four tones below were a v1 decision; the history is kept because the
- * reason they left `dark:` pairs still holds.
+ * 帖子卡(A5 · v3 Post.dc):surface-1、1px line、padding 20、间距 12;≤ 768 通栏(只有上下线)、
+ * padding 16、间距 10。
  *
- * Visibility, in the app's badge tones (v1).
+ * 头部:40 圆头像 + 两行(500 作者 / 12px ink-muted「等宽时间 · 可见性」,不换行);作者本人
+ * 右端 44 高幽灵「删除」。可见性是领域枚举,经 `DomainEnum`(`social.visibility.*`)读出 ——
+ * v3 把它写进时间那一行,不再是徽章(v1 那四个手写的明暗色对早已撤成中性徽章,现在连徽章也撤了)。
  *
- * These four used to be hand-written light/dark pairs — `bg-green-100
- * text-green-800 dark:bg-green-900/30 dark:text-green-400` and three more —
- * which made this the **only component in the codebase running its own theme
- * system**. Of the ten `dark:` utilities in the whole frontend, six were here.
- * It worked, which is what made it durable: a private parallel implementation
- * of the thing `.light`/`:root` already do, immune to every contrast
- * measurement the token layer carries and to the user's accent choice.
- *
- * `Badge` is the one tone table (its own docstring: "THIS IS NOW THE ONLY TONE
- * TABLE"), and its fills are measured — 10%, because columns.tsx recorded that
- * 16% drops light-mode badge text to 4.37:1.
- *
- * Square like every badge (规范 v1: round corners are for avatars only).
+ * 配图:`PostMediaGrid`(./PostMedia)已按稿做好,**但这里不画**:官员端 `/social/posts/` 的
+ * 序列化器没有 `media`,而且 `apps/social/visibility.py::visible_posts` 排除了灵魂的帖子 ——
+ * 有图的帖子只出自灵魂端上传(`/me/social/media/`,只收灵魂),所以官员这条流里今天没有一条
+ * 帖子带图。等「官员能否发图 / 能否在这里看到灵魂帖子」拍板,再从这里接上。
  */
-const VISIBILITY_TONES: Record<string, BadgeTone> = {
-  PUBLIC: "neutral",
-  TENANT: "neutral",
-  FOLLOWERS: "neutral",
-  PRIVATE: "neutral",
-};
-
 export function PostCard({ post }: { post: Post }) {
   const { t, formatDate } = useI18n();
   const { user } = useTenant();
   const deletePost = useDeletePost();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const isAuthor = !!user && String(user.id) === String(post.author);
+  const name = post.author_name || post.author_username;
 
   const handleDelete = () => {
     if (deletePost.isPending) return;
     deletePost.mutate(post.id, { onSuccess: () => setShowDeleteConfirm(false) });
   };
 
-  // Hover was `hover:shadow-xs transition-shadow` — an elevation cue on an
-  // in-flow card, where `DESIGN.md:50-57` puts the layering on the hairline.
-  // The hairline-strong step is the same affordance in the system's own
-  // vocabulary, and is what `app/realms/page.tsx` already uses for a hoverable
-  // card.
   return (
-    <div className="bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-hairline))] p-4 hover:border-[oklch(var(--color-hairline-strong))] transition-colors duration-state">
-      <div className="flex items-center gap-3 mb-3">
-        <Link
-          href={`/social/profile/${post.author}`}
-          className="text-sm font-medium text-[oklch(var(--color-ink))] hover:underline"
-        >
-          {post.author_name || post.author_username}
-        </Link>
-        <Badge tone={VISIBILITY_TONES[post.visibility] ?? "neutral"}>
-          <DomainEnum namespace="social.visibility" value={post.visibility} />
-        </Badge>
-        <span className="text-xs font-mono tabular-nums text-[oklch(var(--color-ink-muted))] ml-auto">
-          {formatDate(post.create_time)}
-        </span>
-        {isAuthor && (
-          <button
-            type="button"
-            onClick={() => setShowDeleteConfirm(true)}
-            aria-label={t("common.delete") || "Delete"}
-            className="text-xs text-[oklch(var(--color-ink-subtle))] underline underline-offset-2 hover:text-[oklch(var(--color-ink))] transition-colors"
+    <article
+      data-post-card=""
+      className="flex flex-col gap-3 border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] p-[20px] max-[768px]:gap-[10px] max-[768px]:border-x-0 max-[768px]:p-4"
+    >
+      <div className="flex items-center gap-3">
+        <Avatar name={name} size={40} />
+        <div className="min-w-0 flex-1">
+          <Link
+            href={`/social/profile/${post.author}`}
+            className="block truncate text-sm font-medium text-[oklch(var(--color-ink))] hover:underline"
           >
-            {t("common.delete") || "Delete"}
-          </button>
+            {name}
+          </Link>
+          <p className="truncate whitespace-nowrap text-xs text-[oklch(var(--color-ink-muted))]">
+            <span className="font-mono tabular-nums">{formatDate(post.create_time)}</span>
+            {" · "}
+            <DomainEnum namespace="social.visibility" value={post.visibility} />
+          </p>
+        </div>
+        {isAuthor && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowDeleteConfirm(true)}
+            className="text-[oklch(var(--color-ink-muted))]"
+          >
+            {t("common.delete")}
+          </Button>
         )}
       </div>
 
       <Link href={`/social/${post.id}`} className="block">
-        <p className="text-sm text-[oklch(var(--color-ink))] whitespace-pre-wrap">
-          {post.content}
-        </p>
+        <p className="whitespace-pre-wrap text-md text-pretty text-[oklch(var(--color-ink))]">{post.content}</p>
       </Link>
 
-      <div className="flex items-center gap-4 mt-3 text-xs font-mono tabular-nums text-[oklch(var(--color-ink-muted))]">
-        {/* 文字 + 数字,不是 emoji(规范 v1:图标不用 emoji,状态与计数都要读得出来)。 */}
-        <span>
-          {t("social.comments")} {post.comment_count}
-        </span>
-        <span>
-          {t("social.reactions")} {post.reaction_count}
-        </span>
+      <div className="border-t border-[oklch(var(--color-line))] pt-2">
+        <ReactionBar
+          postId={post.id}
+          totals={{ reactions: post.reaction_count, comments: post.comment_count }}
+        />
       </div>
-
-      <ReactionBar postId={post.id} />
 
       {/* 作者自己删帖:软删但不进回收站(apps/social/apps.py 只登记官员删的),界面上拿不回来 ——
           不可撤回。帖子没有名称,所以不走「输入名称以确认」而用普通确认框(2026-09-30 用户拍板:
@@ -116,6 +96,6 @@ export function PostCard({ post }: { post: Post }) {
           onCancel={() => setShowDeleteConfirm(false)}
         />
       )}
-    </div>
+    </article>
   );
 }

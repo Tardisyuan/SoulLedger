@@ -2,8 +2,11 @@
 
 import { useState } from "react";
 import { PAGE_SIZE } from "@soulledger/core/api";
-import { useFeed, usePosts, useCreatePost } from "@soulledger/core/hooks/useSocial";
+import { useFeed, usePosts } from "@soulledger/core/hooks/useSocial";
 import { PostCard } from "@/src/components/social/PostCard";
+import { PostComposer } from "@/src/components/social/PostComposer";
+import { FollowPanel } from "@/src/components/social/FollowPanel";
+import { Modal } from "@/src/components/ui/Modal";
 import { Pagination } from "@/src/components/ui/Pagination";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
@@ -12,8 +15,6 @@ import { TAB_BASE, TAB_ON, TAB_OFF } from "@/src/lib/tabClasses";
 import { Button } from "@/src/components/ui/Button";
 import { EmptyState } from "@/src/components/ui/EmptyState";
 import { QueryError } from "@/src/components/ui/PageError";
-import { TextAreaField, fieldControl } from "@/src/components/ui/Field";
-import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const TAB_KEYS = ["feed", "all"] as const;
@@ -22,9 +23,7 @@ export default function SocialFeedPage() {
   const { t } = useI18n();
   const [tab, setTab] = useState<"feed" | "all">("feed");
   const [page, setPage] = useState(1);
-  const [content, setContent] = useState("");
-  const [visibility, setVisibility] = useState("PUBLIC");
-  const createPost = useCreatePost();
+  const [composing, setComposing] = useState(false);
 
   const params = { page };
   // Both queries used to RUN, always. Passing `undefined` params to the
@@ -50,14 +49,6 @@ export default function SocialFeedPage() {
   const refetch = tab === "feed" ? refetchFeed : refetchAll;
   const paged = data && !Array.isArray(data) ? data : null;
   const totalPages = paged ? Math.ceil(paged.count / PAGE_SIZE) : 0;
-
-  const handleCreate = () => {
-    if (!content.trim()) return;
-    createPost.mutate(
-      { content: content.trim(), visibility },
-      { onSuccess: () => { setContent(""); setVisibility("PUBLIC"); } },
-    );
-  };
 
   /**
    * The `pagination` slot is filled directly here rather than left to a
@@ -104,117 +95,90 @@ export default function SocialFeedPage() {
       }
     : undefined;
 
+  /* A5:标签行在左列里(48 高、下边 1px line);393 两等分、surface-1。
+     `aria-pressed`, not `role="tab"`: these own no tabpanel and arrow keys do
+     not move between them — a set of toggles with exactly one on.
+     `components/ui/data-grid/FilterBar.tsx:181` already does this. */
+  const tabs = (
+    <div className="flex gap-6 border-b border-[oklch(var(--color-line))] max-[768px]:gap-0 max-[768px]:bg-[oklch(var(--color-surface-1))]">
+      {TAB_KEYS.map((key) => (
+        <button
+          key={key}
+          type="button"
+          onClick={() => { setTab(key); setPage(1); }}
+          aria-pressed={tab === key}
+          className={`${TAB_BASE} ${tab === key ? TAB_ON : TAB_OFF} min-h-(--control-h-md) px-0 max-[768px]:flex-1`}
+        >
+          {key === "feed" ? t("social.feed") : t("social.all")}
+        </button>
+      ))}
+    </div>
+  );
+
   return (
     <PageShell
-      variant="prose"
+      variant="page"
       title={
         <>
           {t("social.title")}
           <MenuGloss path="/social" />
         </>
       }
-      tabs={TAB_KEYS.map((key) => (
-        <button
-          key={key}
-          type="button"
-          onClick={() => { setTab(key); setPage(1); }}
-          // `aria-pressed`, not `role="tab"`. These are not a real tablist —
-          // they do not own a `tabpanel`, arrow keys do not move between them,
-          // and claiming the role without that contract is the defect this
-          // repo already has three instances of. What they ARE is a set of
-          // toggles where exactly one is on, and `aria-pressed` says that
-          // truthfully. Before this the selected one differed only by border
-          // and text COLOUR, so a screen-reader user heard two identical
-          // buttons and could not tell which view was showing.
-          // `components/ui/data-grid/FilterBar.tsx:181` already does this.
-          aria-pressed={tab === key}
-          // 规范 v2 A1 的标签页:与仪表盘同一组类名(src/lib/tabClasses)。
-          className={`${TAB_BASE} ${tab === key ? TAB_ON : TAB_OFF}`}
-        >
-          {key === "feed" ? t("social.feed") : t("social.all")}
-        </button>
-      ))}
       pagination={pagination}
     >
-      <div className="space-y-4">
-        {/* Post creation */}
-        <div className="bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-hairline))] p-4">
-          <TextAreaField
-            label={t("social.post")}
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            placeholder={t("social.placeholder")}
-            rows={3}
-          />
-          <div className="flex items-center justify-between mt-3">
-            {/* Bare <select> rather than <SelectField>: this control sits in a
-                row beside the submit button, and SelectField stacks its label
-                above the control. It also has no label to stack — the bundles
-                carry no `social.visibility` namespace at all (grep: zero hits
-                in all three), which is the same gap that makes PostCard's
-                visibility badge render as "unrecorded". Reported to main; not
-                fixable here without adding keys to three bundles. */}
-            <select
-              value={visibility}
-              onChange={(e) => setVisibility(e.target.value)}
-              /* `w-auto` undoes fieldControl's `w-full`: a full-width control
-                 in this justify-between row would eat every pixel the Post
-                 button is not using. */
-              className={cn(fieldControl({ size: "sm" }), "w-auto")}
-              aria-label={t("social.visibility_label")}
-            >
-              {/* Was four hardcoded English strings. `social.visibility.*` did
-                  not exist in any of the three bundles, which also meant
-                  PostCard's `<DomainEnum namespace="social.visibility">` had
-                  nothing to resolve and every post's badge rendered as
-                  MissingValue — in production, not only under the test stub.
-                  The keys exist now, so the same four labels serve both the
-                  control that sets the value and the badge that displays it. */}
-              {(["PUBLIC", "TENANT", "FOLLOWERS", "PRIVATE"] as const).map((v) => (
-                <option key={v} value={v}>
-                  {t(`social.visibility.${v}`)}
-                </option>
-              ))}
-            </select>
-            <Button
-              type="button"
-              variant="primary"
-              onClick={handleCreate}
-              disabled={!content.trim()}
-              loading={createPost.isPending}
-            >
-              {t("social.post")}
-            </Button>
+      {/* 1440:`minmax(0,680px) 300px`、间距 32、整体居中;≤ 1023 右列落到下面。 */}
+      <div className="mx-auto grid max-w-[1012px] gap-8 lg:grid-cols-[minmax(0,680px)_300px]">
+        <div className="flex min-w-0 flex-col gap-4">
+          {tabs}
+
+          {/* 393 下发帖框不在页面里 —— 由右下的「＋ 发帖」打开。 */}
+          <div className="border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] p-4 max-[768px]:hidden">
+            <PostComposer />
           </div>
+
+          {isLoading ? (
+            <div className="space-y-3">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <Skeleton key={i} className="h-32" />
+              ))}
+            </div>
+          ) : isError ? (
+            <QueryError onRetry={() => refetch()} />
+          ) : posts.length === 0 ? (
+            <EmptyState
+              title={t("social.posts")}
+              reason={t("social.no_posts")}
+            />
+          ) : (
+            <div
+              aria-busy={isStale || undefined}
+              className={`space-y-3 transition-opacity duration-settle max-[768px]:-mx-4 max-[768px]:space-y-0 ${
+                isStale ? "opacity-50 ease-exit" : "opacity-100 ease-enter"
+              }`}
+            >
+              {posts.map((post) => (
+                <PostCard key={post.id} post={post} />
+              ))}
+            </div>
+          )}
         </div>
 
-        {/* Posts */}
-        {isLoading ? (
-          <div className="space-y-3">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <Skeleton key={i} className="h-32" />
-            ))}
-          </div>
-        ) : isError ? (
-          <QueryError onRetry={() => refetch()} />
-        ) : posts.length === 0 ? (
-          <EmptyState
-            title={t("social.posts")}
-            reason={t("social.no_posts")}
-          />
-        ) : (
-          <div
-            aria-busy={isStale || undefined}
-            className={`space-y-3 transition-opacity duration-settle ${
-              isStale ? "opacity-50 ease-exit" : "opacity-100 ease-enter"
-            }`}
-          >
-            {posts.map((post) => (
-              <PostCard key={post.id} post={post} />
-            ))}
-          </div>
-        )}
+        <FollowPanel />
       </div>
+
+      <Button
+        type="button"
+        variant="primary"
+        size="lg"
+        onClick={() => setComposing(true)}
+        className="fixed right-4 bottom-[calc(var(--bottom-bar)+16px)] z-filters px-[22px] shadow-raised min-[769px]:hidden"
+      >
+        <span aria-hidden="true">＋ </span>
+        {t("social.compose")}
+      </Button>
+      <Modal isOpen={composing} onClose={() => setComposing(false)} title={t("social.compose")}>
+        <PostComposer onPosted={() => setComposing(false)} />
+      </Modal>
     </PageShell>
   );
 }

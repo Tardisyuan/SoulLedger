@@ -2253,7 +2253,7 @@
   },
   "social": {
     "title": "动态",
-    "feed": "信息流",
+    "feed": "动态",
     "posts": "帖子",
     "post": "发布",
     "post_detail": "帖子详情",
@@ -2264,7 +2264,7 @@
     "no_posts": "暂无帖子",
     "user_posts": "TA 的帖子",
     "view_all_posts": "查看全部帖子",
-    "placeholder": "说点什么…",
+    "placeholder": "今天想说点什么",
     "send": "发送",
     "comments": "评论",
     "add_comment": "写评论…",
@@ -2301,7 +2301,26 @@
     },
     "visibility_label": "帖子可见范围",
     "follow_error": "关注操作失败",
-    "reactions": "表态"
+    "reactions": "表态",
+    "back_to_feed": "返回动态",
+    "compose": "发帖",
+    "lamp": {
+      "light": "点长明灯",
+      "lit": "长明灯已点",
+      "lit_short": "已点"
+    },
+    "media": {
+      "expired": "链接已过期",
+      "refetch": "重新获取",
+      "refetch_short": "重取",
+      "viewer_hint": "← → 切换 · Esc 关闭",
+      "prev": "上一张",
+      "next": "下一张"
+    },
+    "legend": {
+      "light": "{{list}} 是轻表态，只计总数",
+      "lamp": "长明灯最重：单独一格，不与其他四种并排计数"
+    }
   },
   "tenants": {
     "active": "启用",
