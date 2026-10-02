@@ -25,10 +25,14 @@ for (const [path, name] of [
     const box = await link.boundingBox();
     expect(box!.height, `${path}: 名字链接高 ${box!.height}px —— 折行了`).toBeLessThan(ONE_LINE);
 
+    // 按钮是定高 44(v3 sm 档),折行的字溢出框外而框不长 —— 所以量内容高(scrollHeight),
+    // 不量框;计数那一句量自己的框。
     const prev = page.getByRole("button", { name: /上一页/ }).first();
-    const prevBox = await prev.boundingBox();
-    // 按钮本身 44 高(v3 sm 档);折行时内容把它撑到 60 以上。
-    expect(prevBox!.height, `${path}: 「上一页」高 ${prevBox!.height}px`).toBeLessThanOrEqual(48);
+    const overflow = await prev.evaluate((el) => el.scrollHeight - el.clientHeight);
+    expect(overflow, `${path}: 「上一页」的字溢出按钮 ${overflow}px —— 折行了`).toBeLessThanOrEqual(1);
+    const info = page.getByText(/第\s*1\s*\/\s*1\s*页/).first();
+    const infoBox = await info.boundingBox();
+    expect(infoBox!.height, `${path}: 分页计数高 ${infoBox!.height}px —— 折行了`).toBeLessThan(ONE_LINE);
   });
 }
 
