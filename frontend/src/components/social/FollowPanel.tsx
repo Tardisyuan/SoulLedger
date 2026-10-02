@@ -37,7 +37,7 @@ export function FollowPanel() {
                 type="button"
                 onClick={() => setTab(key)}
                 aria-pressed={tab === key}
-                className={`${TAB_BASE} ${tab === key ? TAB_ON : TAB_OFF} min-h-(--control-h-sm) px-2`}
+                className={`${TAB_BASE} ${tab === key ? TAB_ON : TAB_OFF} px-2`}
               >
                 {t(key === "following" ? "social.following" : "social.followers")} ·{" "}
                 <span className="font-mono tabular-nums">{n}</span>
