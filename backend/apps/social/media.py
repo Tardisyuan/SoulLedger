@@ -48,8 +48,13 @@ def _not_found():
 
 
 def upload(user, uploaded_file):
-    """校验、重编码、存盘,建一行 `post=None` 的 PostMedia。返回它。"""
-    ensure_can_write(user)
+    """校验、重编码、存盘,建一行 `post=None` 的 PostMedia。返回它。
+
+    灵魂先过 `ensure_can_write`(本世、未禁言)。官员端(`POST /social/media/`,2026-10-02)
+    的闸门在视图上 —— 与官员发帖同一个 `TenantPermission`;官员朋友圈没有禁言。
+    """
+    if getattr(user, "role", None) == SOUL_ROLE:
+        ensure_can_write(user)
     if PostMedia.objects.filter(uploader=user, post__isnull=True).count() >= MAX_PENDING:
         raise SocialError(
             f"未发出的图片最多 {MAX_PENDING} 张,先发帖或移除一些。", "too_many_pending", 409,
@@ -161,9 +166,11 @@ def may_view(user, media):
     * 还没挂到帖子:只有上传者本人。
     * 灵魂:图片没被删,且帖子在 `visible_posts_for_soul(user)` 里 —— 与动态流同一条规则,
       所以被隐藏 / 待审的帖子只有作者本人看得见它的图,PRIVATE、FOLLOWERS 各按其档。
-    * 官员:持 `social.moderate`,帖子在自己的文明(ADMIN 不限)且作者是灵魂。
+    * 官员看灵魂的帖子:持 `social.moderate`,帖子在自己的文明(ADMIN 不限)且作者是灵魂。
       被官员删除、躺在回收站里的帖子,图也看得见(回收站里要能判断恢复不恢复);
       作者自己删掉的帖子没有图可看 —— 行已经没了。
+    * 官员看官员的帖子(2026-10-02):帖子在官员动态流里看得见 —— `scope_to_tenant` +
+      `visibility.visible_posts`,与 `PostViewSet.get_queryset` 同一条规则。
     """
     if user is None or not user.is_authenticated or not user.is_active:
         return False
@@ -171,21 +178,38 @@ def may_view(user, media):
         return not media.is_deleted and media.uploader_id == user.pk
     if getattr(user, "role", None) == SOUL_ROLE:
         return not media.is_deleted and visible_posts_for_soul(user).filter(pk=media.post_id).exists()
-    return _officer_may_view(user, media)
+    return _officer_may_view(user, media) or _officer_feed_may_view(user, media)
+
+
+def _as_request(user):
+    """取文件的请求不带令牌,所以「请求所在的租户」就是签名里那个官员自己的租户 ——
+    非 ADMIN 的列表请求本来也只能在这个租户里(`TenantPermission` 比对令牌与 `user.tenant`)。"""
+    from types import SimpleNamespace
+
+    return SimpleNamespace(user=user, tenant=getattr(user, "tenant", None), method="GET")
+
+
+def _officer_feed_may_view(user, media):
+    from apps.core.tenant import scope_to_tenant
+    from apps.social.models import Post
+    from apps.social.visibility import visible_posts
+
+    if media.is_deleted:
+        return False
+    req = _as_request(user)
+    # `visible_posts` 排除灵魂作者,`Post.objects` 排除已删的帖子。
+    return visible_posts(req, scope_to_tenant(Post.objects.filter(pk=media.post_id), req)).exists()
 
 
 def _officer_may_view(user, media):
-    """租户经帖子(`post__tenant`),由 `scope_to_tenant` 判 —— 与审核后台每个视图同一个函数。
-    取文件的请求不带令牌,所以「请求所在的租户」就是签名里那个官员自己的租户。"""
-    from types import SimpleNamespace
-
+    """租户经帖子(`post__tenant`),由 `scope_to_tenant` 判 —— 与审核后台每个视图同一个函数。"""
     from apps.core.tenant import scope_to_tenant
     from apps.perm.checker import check_permission
     from apps.social.models import Post
 
     if not check_permission(user, MODERATE):
         return False
-    as_request = SimpleNamespace(user=user, tenant=getattr(user, "tenant", None), method="GET")
+    as_request = _as_request(user)
     scoped = scope_to_tenant(
         PostMedia.all_objects.filter(pk=media.pk, post__author__role=SOUL_ROLE), as_request, field="post__tenant",
     )
