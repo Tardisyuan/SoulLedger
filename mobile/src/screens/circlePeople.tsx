@@ -30,6 +30,7 @@ import { useToast } from "../feedback";
 import { family, quoteFamily } from "../fonts";
 import { useI18n } from "../i18n";
 import { SessionContext } from "../session";
+import { radius } from "../theme";
 import { Button, Empty, Notice, RadioMark, Screen, SectionLabel, Skeleton, Txt, shade, useLayout, useReloadOnRefocus, useRemote, useTheme } from "../ui";
 import type { AppStackParams } from "./applications";
 import { PagedFooter, PostList, useFailure, useFeed, usePaged } from "./circle";
@@ -705,12 +706,12 @@ const styles = StyleSheet.create({
   smallFollowText: { fontSize: 12, letterSpacing: 0.4 },
   listRow: { minHeight: 62, flexDirection: "row", alignItems: "center", gap: 12, borderBottomWidth: 1, paddingVertical: 12 },
   scrim: { flex: 1 },
-  sheet: { borderTopWidth: 1 },
+  sheet: { borderTopWidth: 1, borderTopLeftRadius: radius.dialog, borderTopRightRadius: radius.dialog, overflow: "hidden" },
   menuRow: { minHeight: 54, flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 20, borderBottomWidth: 1 },
   menuNote: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 12, borderBottomWidth: 1 },
   menuCancel: { minHeight: 54, alignItems: "center", justifyContent: "center" },
   searchBar: { paddingVertical: 12, borderBottomWidth: 1 },
-  searchBox: { minHeight: 44, borderWidth: 1, flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 12 },
+  searchBox: { minHeight: 44, borderWidth: 1, borderRadius: radius.control, flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 12 },
   searchInput: { flex: 1, minHeight: 42, fontSize: 15 },
   resultsHead: { paddingTop: 12, paddingBottom: 8 },
   done: { flex: 1, alignItems: "center", gap: 12, paddingTop: 32 },
@@ -719,9 +720,9 @@ const styles = StyleSheet.create({
   formLabel: { marginTop: 20, marginBottom: 12 },
   radios: { gap: 2, borderWidth: 1 },
   radio: { minHeight: 48, flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, borderLeftWidth: 2 },
-  detail: { minHeight: 86, borderWidth: 1, padding: 12, fontSize: 13, lineHeight: 21, textAlignVertical: "top" },
+  detail: { minHeight: 86, borderWidth: 1, borderRadius: radius.control, padding: 12, fontSize: 13, lineHeight: 21, textAlignVertical: "top" },
   submit: { marginTop: 16 },
   rename: { gap: 8 },
   /** A name is not something said: the interface face, not the serif (v3). */
-  nameInput: { minHeight: 44, borderWidth: 1, paddingHorizontal: 12, fontSize: 15, fontFamily: family.ui[500] },
+  nameInput: { minHeight: 44, borderWidth: 1, borderRadius: radius.control, paddingHorizontal: 12, fontSize: 15, fontFamily: family.ui[500] },
 });

@@ -33,7 +33,7 @@ import Svg, { ClipPath, Defs, G, Path } from "react-native-svg";
 import { MARK_HEIGHT, MARK_WIDTH, SHAPE, STROKES, VIEWBOX, pathLength } from "./brandMark";
 
 import type { SessionState } from "./session";
-import { motion, v3 } from "./theme";
+import { brand, motion } from "./theme";
 import { welcomeFrom } from "./welcome";
 
 // The native splash goes the instant hideAsync is called. Its default exit is a 400ms fade,
@@ -50,13 +50,13 @@ export const coldStart = { played: false };
 const SESSION_WAIT_MS = 1000;
 
 /**
- * The ground: v3's dark canvas, in both modes (app.json's expo-splash-screen backgroundColor
- * says the same) — the gold mark is too faint on v3's light canvas. v2 had its warm ink #131211.
- * The gold is the mark's own (assets/brand/soulledger-mark.svg, user's pick 2026-10-01): v3's
- * tokens print no brand colour, and its one gold (`semantic.lamp`) belongs to the lamp alone.
+ * The ground: `brand.ground`, v3's dark canvas, in both modes (app.json's expo-splash-screen
+ * backgroundColor says the same) — the gold mark is too faint on v3's light canvas. v2 had its
+ * warm ink #131211. The gold is `brand.mark`, the mark's own (assets/brand/soulledger-mark.svg,
+ * user's pick 2026-10-01; v3 第三批 品牌色令牌); v3's one UI gold (`semantic.lamp`) is the lamp's alone.
  */
-const GROUND = v3.dark.canvas;
-const GOLD = "#ECAA3D";
+const GROUND = brand.ground;
+const GOLD = brand.mark;
 const BOX = 112;
 const LENGTHS = STROKES.map(([d]) => pathLength(d));
 const AnimatedPath = Animated.createAnimatedComponent(Path);

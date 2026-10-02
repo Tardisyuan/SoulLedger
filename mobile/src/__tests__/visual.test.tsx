@@ -10,27 +10,32 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { useSharedValue } from "react-native-reanimated";
 import { act, fireEvent, render, screen, within } from "@testing-library/react-native";
 import type { ReactNode } from "react";
-import { AccessibilityInfo, StyleSheet, Text, View } from "react-native";
+import { AccessibilityInfo, Platform, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
+import { LogoutProvider, useAskLogout } from "../feedback";
 import { I18nProvider } from "../i18n";
 import { installMobilePlatform } from "../platform";
 import { FONT_ASSETS, quoteFamily } from "../fonts";
 import { APPLICATION_BADGES, SOUL_STATE_BADGES } from "../rules";
 import { ExpiryBox } from "../screens/auth";
 import { LifeSections } from "../screens/life";
-import { motion, themeFor } from "../theme";
+import { motion, radius, themeFor } from "../theme";
 import {
   Button,
   DataRow,
   EnumBadge,
   Input,
+  PULL_REFRESH_PT,
+  Screen,
   Quote,
   RadioMark,
   Section,
   SectionLabel,
   SwitchMark,
+  TYPE,
   ThemeContext,
+  Txt,
   shade,
   useReducedMotionDurations,
 } from "../ui";
@@ -39,7 +44,11 @@ import { application, life } from "./stubApi";
 const flat = (el: { props: { style?: unknown } }) => StyleSheet.flatten(el.props.style as never) as Record<string, unknown>;
 
 function wrap(children: ReactNode, civilization: string | null = "CHINESE") {
-  return render(
+  return render(tree(children, civilization));
+}
+
+function tree(children: ReactNode, civilization: string | null = "CHINESE") {
+  return (
     <SafeAreaProvider initialMetrics={{ frame: { x: 0, y: 0, width: 390, height: 844 }, insets: { top: 0, left: 0, right: 0, bottom: 0 } }}>
       <I18nProvider>
         <ThemeContext.Provider value={themeFor(civilization, "dark")}>
@@ -112,20 +121,32 @@ describe("the Han serif", () => {
     expect(quoteFamily("功过相权，尚有一过未清")).toBe("NotoSerifSC_400");
     expect(quoteFamily("Merit and demerit have been weighed")).toBe("SourceSerif4_400Regular");
     expect(FONT_ASSETS).toHaveProperty("NotoSerifSC_400");
-    // Regular only (2026-09-18): the SemiBold subset had no caller and is gone.
-    expect(Object.keys(FONT_ASSETS).filter((name) => name.startsWith("NotoSerifSC"))).toEqual(["NotoSerifSC_400"]);
+    // Regular for quotes, SemiBold for v3's titles and display text (back 2026-10-03; it had no caller 2026-09-18).
+    expect(Object.keys(FONT_ASSETS).filter((name) => name.startsWith("NotoSerifSC"))).toEqual(["NotoSerifSC_400", "NotoSerifSC_600"]);
   });
 
-  it("bundles exactly the one Han serif file, within the 1.5 MB budget (scripts/subset-serif-sc.sh)", () => {
+  it("titles and display text are Noto Serif SC 600 (v3 第一批); body and labels stay the interface face", () => {
+    expect([TYPE.title.fontFamily, TYPE.display.fontFamily]).toEqual(["NotoSerifSC_600", "NotoSerifSC_600"]);
+    expect([TYPE.body.fontFamily, TYPE.label.fontFamily, TYPE.section.fontFamily]).not.toContain("NotoSerifSC_600");
+    wrap(<Txt variant="title">灵魂簿</Txt>);
+    expect(flat(screen.getByText("灵魂簿")).fontFamily).toBe("NotoSerifSC_600");
+  });
+
+  it("bundles exactly the two Han serif weights, each within the 1.5 MB budget (scripts/subset-serif-sc.sh)", () => {
     const fs = jest.requireActual<typeof import("fs")>("fs");
     const path = jest.requireActual<typeof import("path")>("path");
     const dir = path.join(__dirname, "..", "..", "assets", "fonts");
-    // Beside it only the 5 KB status-glyph face (Design E 组), which is not a serif. v2's seal face
-    // 霞鹜篆书 went with v2's seal (2026-10-03).
-    expect(fs.readdirSync(dir).filter((f: string) => f.endsWith(".ttf"))).toEqual(["NotoSerifSC-Subset-400.ttf", "SoulLedgerGlyphs.ttf"]);
-    expect(fs.statSync(path.join(dir, "NotoSerifSC-Subset-400.ttf")).size <= 1_500_000).toBe(true);
+    // Beside them only the 5 KB status-glyph face (Design E 组), which is not a serif. v2's seal face
+    // 霞鹜篆书 went with v2's seal (2026-10-03). The 600 subset is v3's titles and display text.
+    expect(fs.readdirSync(dir).filter((f: string) => f.endsWith(".ttf"))).toEqual([
+      "NotoSerifSC-Subset-400.ttf",
+      "NotoSerifSC-Subset-600.ttf",
+      "SoulLedgerGlyphs.ttf",
+    ]);
+    for (const w of ["400", "600"]) expect(fs.statSync(path.join(dir, `NotoSerifSC-Subset-${w}.ttf`)).size <= 1_500_000).toBe(true);
     // what App.tsx hands to useFonts must resolve — a require of a deleted file fails the import above
     expect(FONT_ASSETS.NotoSerifSC_400).toBeTruthy();
+    expect(FONT_ASSETS.NotoSerifSC_600).toBeTruthy();
   });
 
   it("renders a rejection reason in it", () => {
@@ -247,11 +268,13 @@ describe("long labels", () => {
 /** v2「朱印」base components (补足 A1 states, A2 rules). */
 describe("v3 section labels (.product-label)", () => {
   const cn = themeFor("CHINESE", "dark");
-  const label = { fontFamily: "IBMPlexMono_400Regular", fontSize: 11, textTransform: "uppercase", color: cn.inkMuted };
+  // v3 第一批: 11, upper case, the interface face — not mono (the round-7 prototype's was mono).
+  const label = { fontFamily: "Archivo_500Medium", fontSize: 11, textTransform: "uppercase", color: cn.inkMuted };
 
-  it("SectionLabel: 11 mono, upper case, muted — not ink, not the civilization's colour", () => {
+  it("SectionLabel: 11, upper case, the interface face (not mono), muted — not ink, not the civilization's colour", () => {
     wrap(<SectionLabel>Language</SectionLabel>);
     expect(flat(screen.getByText("Language"))).toMatchObject(label);
+    expect(String(flat(screen.getByText("Language")).fontFamily)).not.toMatch(/Mono/);
     expect(flat(screen.getByText("Language")).color).not.toBe(cn.plaque);
   });
 
@@ -368,6 +391,100 @@ describe("useReducedMotionDurations", () => {
     const d = read();
     expect(Object.entries(d).filter(([k, v]) => !k.endsWith("Hold") && v !== 0)).toEqual([]);
     expect([d.toastHold, d.welcomeHold]).toEqual([motion.toastHold, motion.welcomeHold]);
+  });
+});
+
+describe("v3 timings and corners", () => {
+  it("a toast stays 4s (v3 B2 Toast 停留 4s); a sheet opens over 240 and closes over 180", () => {
+    expect([motion.toastHold, motion.sheetIn, motion.sheetOut]).toEqual([4000, 240, 180]);
+  });
+
+  it("inputs 4, dialogs and sheets 8, the rest square (v3 第一批 形状与层次)", async () => {
+    expect(radius).toEqual({ none: 0, control: 4, dialog: 8, pill: 999 });
+    wrap(<Input label="Name" testID="name" value="" onChangeText={jest.fn()} />);
+    const box = screen.getByTestId("name").parent?.parent;
+    expect(flat(box as never).borderRadius).toBe(4);
+    screen.unmount();
+    wrap(
+      <LogoutProvider onConfirm={jest.fn()}>
+        <AskLogout />
+      </LogoutProvider>
+    );
+    await act(async () => {});
+    fireEvent.press(screen.getByTestId("ask"));
+    expect(flat(screen.getByTestId("confirm-sheet"))).toMatchObject({ borderTopLeftRadius: 8, borderTopRightRadius: 8 });
+    expect(flat(screen.getByTestId("confirm-sheet")).borderBottomLeftRadius).toBeUndefined();
+  });
+});
+
+function AskLogout() {
+  const ask = useAskLogout();
+  return <Button testID="ask" title="ask" onPress={ask} />;
+}
+
+describe("pull to refresh (v3 B2: the content follows the finger, no spinner)", () => {
+  const scroller = () => screen.UNSAFE_getByType(ScrollView);
+  const pullTo = (y: number) => fireEvent.scroll(scroller(), { nativeEvent: { contentOffset: { x: 0, y: -y } } });
+  const release = (y: number) => fireEvent(scroller(), "scrollEndDrag", { nativeEvent: { contentOffset: { x: 0, y: -y } } });
+  const indicator = () => screen.queryByTestId("pull-indicator", { includeHiddenElements: true });
+  const opacity = () => flat(indicator()!).opacity;
+
+  it("a release at 56pt or more reloads; short of it, or while a reload is running, nothing", async () => {
+    const onRefresh = jest.fn();
+    wrap(<Screen onRefresh={onRefresh}>{null}</Screen>);
+    await act(async () => {});
+    release(PULL_REFRESH_PT - 1);
+    expect(onRefresh).not.toHaveBeenCalled();
+    release(PULL_REFRESH_PT);
+    expect(onRefresh).toHaveBeenCalledTimes(1);
+    screen.rerender(tree(<Screen onRefresh={onRefresh} refreshing>{null}</Screen>));
+    release(PULL_REFRESH_PT + 20);
+    expect(onRefresh).toHaveBeenCalledTimes(1);
+  });
+
+  it("iOS: no system spinner, the scroller bounces even when short; the ↻ fades in with the pull", async () => {
+    jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockResolvedValue(false);
+    wrap(<Screen onRefresh={jest.fn()}>{null}</Screen>);
+    await act(async () => {});
+    expect(screen.UNSAFE_queryAllByType(RefreshControl)).toEqual([]);
+    expect(scroller().props.alwaysBounceVertical).toBe(true);
+    expect(opacity()).toBe(0);
+    act(() => pullTo(PULL_REFRESH_PT / 2));
+    expect(opacity()).toBeCloseTo(0.5);
+    act(() => pullTo(PULL_REFRESH_PT * 2));
+    expect(opacity()).toBe(1);
+  });
+
+  it("under reduce motion the ↻ does not fade: it appears, static, once the pull has reached 56", async () => {
+    jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockResolvedValue(true);
+    wrap(<Screen onRefresh={jest.fn()}>{null}</Screen>);
+    await act(async () => {});
+    act(() => pullTo(PULL_REFRESH_PT / 2));
+    expect(opacity()).toBe(0);
+    act(() => pullTo(PULL_REFRESH_PT));
+    expect(opacity()).toBe(1);
+  });
+
+  it("Android keeps the system RefreshControl (its scroll view takes the drag before JS can)", async () => {
+    const os = Platform.OS;
+    Object.defineProperty(Platform, "OS", { value: "android", configurable: true });
+    try {
+      const onRefresh = jest.fn();
+      wrap(<Screen onRefresh={onRefresh}>{null}</Screen>);
+      await act(async () => {});
+      expect(indicator()).toBeNull();
+      act(() => screen.UNSAFE_getByType(RefreshControl).props.onRefresh());
+      expect(onRefresh).toHaveBeenCalledTimes(1);
+    } finally {
+      Object.defineProperty(Platform, "OS", { value: os, configurable: true });
+    }
+  });
+
+  it("a screen without onRefresh has neither", async () => {
+    wrap(<Screen>{null}</Screen>);
+    await act(async () => {});
+    expect(indicator()).toBeNull();
+    expect(screen.UNSAFE_queryAllByType(RefreshControl)).toEqual([]);
   });
 });
 

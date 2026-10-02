@@ -8,6 +8,9 @@
  *          + Noto Serif SC    a rejection reason (the Han serif, a bundled subset);
  *                            one exception: the app name on the pre-login bar
  *                            (`AppHeader serif`, product decision 2026-09-26)
+ *   title  Noto Serif SC 600  titles and display text (`TYPE.title` / `TYPE.display`):
+ *                            v3 第一批「标题与展示大字用衬线 Noto Serif SC 600」. Its Latin
+ *                            letters are Noto's own serif, as the web's `font-title` draws them
  *
  * React Native has no font-family fallback list and picks no file by
  * `fontWeight` for a custom family, so each weight is its own family name.
@@ -36,9 +39,10 @@ export const FONT_ASSETS = {
   IBMPlexMono_400Regular,
   IBMPlexMono_500Medium,
   SourceSerif4_400Regular,
-  // Regular only: nothing sets quoted words in a heavier weight. The 600 subset
-  // (1.49 MB) was bundled with no caller and removed 2026-09-18.
+  // Quoted words are Regular. The 600 subset (1.49 MB, the same charset) is v3's titles and
+  // display text; it was dropped 2026-09-18 when nothing called it and is back for `family.title`.
   NotoSerifSC_400: require("../assets/fonts/NotoSerifSC-Subset-400.ttf"),
+  NotoSerifSC_600: require("../assets/fonts/NotoSerifSC-Subset-600.ttf"),
   // Status glyphs (Design E 组): ✓✕◇↺◌○▣↻◎≡?◐⇄ from ONE font. Archivo has only ≡ and ?, so each
   // fell back to the OS per glyph — ◌ from one font, its neighbours from another. 5 KB, the same
   // bytes the web serves (scripts/build-glyph-font.py; DejaVu Sans subset, licence beside it).
@@ -56,6 +60,8 @@ export const family = {
   mono: { 400: "IBMPlexMono_400Regular", 500: "IBMPlexMono_500Medium" },
   serif: "SourceSerif4_400Regular",
   serifHan: "NotoSerifSC_400",
+  /** v3 titles and display text: Noto Serif SC 600 (bundled subset; a rarer Han character falls back per glyph). */
+  title: "NotoSerifSC_600",
   /** Badge glyphs only (`Badge` in ui.tsx) — the family has no letters beyond `?`. */
   glyph: "SoulLedgerGlyphs",
   /** 印文 in 圣书字 (`OutlineSeal`); other glyphs use the two serifs via `quoteFamily`. */
@@ -65,6 +71,7 @@ export const family = {
   mono: Record<number, FontName>;
   serif: FontName;
   serifHan: FontName;
+  title: FontName;
   glyph: FontName;
   hieroglyph: FontName;
 };

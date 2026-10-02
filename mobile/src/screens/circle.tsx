@@ -402,32 +402,35 @@ export function PostList({
   const { t: tr } = useI18n();
   const { gutter } = useLayout();
   const navigation = useNavigation<Nav>();
-  const refreshControl = usePullRefresh(refreshing, onRefresh);
+  const pull = usePullRefresh(refreshing, onRefresh);
   return (
-    <FlatList
-      testID={testID}
-      data={feed.posts ?? []}
-      keyExtractor={rowKey}
-      renderItem={({ item: p }) => <PostCard post={p} onPress={() => navigation.navigate("CirclePost", { id: p.id })} onAuthor={noop} />}
-      ListHeaderComponent={header}
-      ListEmptyComponent={
-        feed.posts ? null : (
-          <View style={[styles.pad, { paddingHorizontal: gutter }]}>
-            <Skeleton lines={3} />
-          </View>
-        )
-      }
-      ListFooterComponent={
-        <>
-          <PagedFooter list={feed} testID="circle-more" title={tr("soul_app.circle.feed.more")} />
-          {footer}
-        </>
-      }
-      onEndReached={feed.more ?? undefined}
-      onEndReachedThreshold={0.5}
-      refreshControl={refreshControl}
-      keyboardShouldPersistTaps="handled"
-    />
+    <View style={styles.fill}>
+      {pull?.indicator}
+      <FlatList
+        testID={testID}
+        data={feed.posts ?? []}
+        keyExtractor={rowKey}
+        renderItem={({ item: p }) => <PostCard post={p} onPress={() => navigation.navigate("CirclePost", { id: p.id })} onAuthor={noop} />}
+        ListHeaderComponent={header}
+        ListEmptyComponent={
+          feed.posts ? null : (
+            <View style={[styles.pad, { paddingHorizontal: gutter }]}>
+              <Skeleton lines={3} />
+            </View>
+          )
+        }
+        ListFooterComponent={
+          <>
+            <PagedFooter list={feed} testID="circle-more" title={tr("soul_app.circle.feed.more")} />
+            {footer}
+          </>
+        }
+        onEndReached={feed.more ?? undefined}
+        onEndReachedThreshold={0.5}
+        {...pull?.props}
+        keyboardShouldPersistTaps="handled"
+      />
+    </View>
   );
 }
 
@@ -454,7 +457,7 @@ export function CircleScreen() {
   const pendingId = route.params?.pendingId;
   const justPending = feed.posts?.some((p) => p.id === pendingId && p.moderation_status === "PENDING");
   const write = () => navigation.navigate("ComposePost");
-  const refreshControl = usePullRefresh(feed.loading && !!feed.posts, feed.reload);
+  const pull = usePullRefresh(feed.loading && !!feed.posts, feed.reload);
 
   const header = (
     <>
@@ -528,6 +531,7 @@ export function CircleScreen() {
   // page read used to stay mounted. The next page is read on nearing the end.
   return (
     <Screen scroll={false} edges={["left", "right"]} testID="circle">
+      {pull?.indicator}
       <FlatList
         testID="circle-list"
         data={feed.posts ?? []}
@@ -540,7 +544,7 @@ export function CircleScreen() {
         ListFooterComponent={<PagedFooter list={feed} testID="circle-more" title={tr("soul_app.circle.feed.more")} />}
         onEndReached={feed.more ?? undefined}
         onEndReachedThreshold={0.5}
-        refreshControl={refreshControl}
+        {...pull?.props}
         keyboardShouldPersistTaps="handled"
       />
     </Screen>
@@ -968,7 +972,7 @@ export function PostScreen({ id }: { id: string }) {
     void post.reload();
   };
 
-  const refreshControl = usePullRefresh(post.loading && !!p, () => void Promise.all([post.reload(), comments.reload()]));
+  const pull = usePullRefresh(post.loading && !!p, () => void Promise.all([post.reload(), comments.reload()]));
 
   if (post.error && !post.data) {
     return (
@@ -991,6 +995,7 @@ export function PostScreen({ id }: { id: string }) {
     <KeyboardAvoidingView style={[styles.fill, { backgroundColor: t.s0 }]} behavior="padding" keyboardVerticalOffset={-insets.bottom}>
       {/* The comments are one more unbounded, paged list, so they are the FlatList and the post is its header. */}
       <Screen scroll={false} edges={["left", "right"]} testID="circle-post">
+        {pull?.indicator}
         <FlatList
           testID="comments-list"
           data={p ? (comments.rows ?? []) : []}
@@ -1038,7 +1043,7 @@ export function PostScreen({ id }: { id: string }) {
           ListFooterComponent={p ? <PagedFooter list={comments} testID="comments-more" title={tr("soul_app.circle.comment.more")} /> : null}
           onEndReached={comments.more ?? undefined}
           onEndReachedThreshold={0.5}
-          refreshControl={refreshControl}
+          {...pull?.props}
           keyboardShouldPersistTaps="handled"
         />
       </Screen>
@@ -1121,7 +1126,7 @@ const styles = StyleSheet.create({
   empty: { paddingVertical: 48, paddingHorizontal: 32, alignItems: "stretch", gap: 4 },
   more: { alignItems: "center", paddingVertical: 20 },
   form: { paddingVertical: 16 },
-  postInput: { minHeight: 150, borderWidth: 1, padding: 12, fontSize: 15, lineHeight: 27, textAlignVertical: "top" },
+  postInput: { minHeight: 150, borderWidth: 1, borderRadius: radius.control, padding: 12, fontSize: 15, lineHeight: 27, textAlignVertical: "top" },
   counter: { alignItems: "flex-end", marginTop: 8 },
   formLabel: { marginTop: 20, marginBottom: 12 },
   radios: { gap: 2, borderWidth: 1 },
@@ -1136,7 +1141,7 @@ const styles = StyleSheet.create({
   reaction: { minWidth: 44, minHeight: 40, paddingHorizontal: 12, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, borderWidth: 1 },
   lampNote: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 8 },
   scrim: { flex: 1 },
-  sheet: { borderTopWidth: 1, paddingTop: 24, paddingHorizontal: 20, gap: 12 },
+  sheet: { borderTopWidth: 1, borderTopLeftRadius: radius.dialog, borderTopRightRadius: radius.dialog, paddingTop: 24, paddingHorizontal: 20, gap: 12 },
   /** In a `Sheet`: the edge and the ground are the sheet's; its drag handle sits above. */
   sheetBody: { paddingTop: 8, paddingHorizontal: 20, gap: 12 },
   sheetTitle: { flexShrink: 1 },
@@ -1151,12 +1156,12 @@ const styles = StyleSheet.create({
   /** 18pt of words, 44 to the finger: the padding grows, the negative margins keep it where it was. */
   replyButton: { marginTop: -4, marginBottom: -12, alignSelf: "flex-start", paddingVertical: 16, paddingRight: 12 },
   replying: { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 2, paddingBottom: 8 },
-  menu: { borderTopWidth: 1 },
+  menu: { borderTopWidth: 1, borderTopLeftRadius: radius.dialog, borderTopRightRadius: radius.dialog, overflow: "hidden" },
   menuRow: { minHeight: 54, flexDirection: "row", alignItems: "center", paddingHorizontal: 20, borderBottomWidth: 1 },
   menuCancel: { minHeight: 54, alignItems: "center", justifyContent: "center" },
   dock: { borderTopWidth: 1, paddingTop: 12 },
   composer: { flexDirection: "row", gap: 8, alignItems: "flex-end" },
-  commentInput: { flex: 1, minHeight: 42, maxHeight: 120, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 12, fontSize: 15 },
+  commentInput: { flex: 1, minHeight: 42, maxHeight: 120, borderWidth: 1, borderRadius: radius.control, paddingHorizontal: 12, paddingVertical: 12, fontSize: 15 },
   send: { minHeight: 42, minWidth: 56, paddingHorizontal: 16, alignItems: "center", justifyContent: "center" },
   sendText: { fontSize: 13, letterSpacing: 0.6 },
 });
