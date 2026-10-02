@@ -88,6 +88,9 @@ const LEGACY_TYPE = /^-?text-(?:base|[3-9]xl|2xl|0[1-8]|quote)$/;
 // 登录页一个文件;匾组件还没有(下一阶段),先把它要住的目录留在这里 —— 那个目录今天
 // 不存在,所以这一条今天什么也不放行,而匾落地时不必再改守卫。加一项是一个决定,要写理由。
 const DISPLAY_ALLOW = ["app/(auth)/login/", "src/components/plaque/"];
+// 展示数字(用户 2026-10-02):律条语料页的条号与被引用数画 40(Design A3)。按**单个文件**
+// 放行,不是目录 —— 语料的其他组件、审判台都仍然报红。加一项同样要写理由。
+const DISPLAY_NUMERAL_ALLOW = ["app/corpus/page.tsx"];
 
 // 八档字号的第二个绕道:**任意值**。`text-sm` 抓得到,`text-[11px]` 抓不到 ——
 // 后者绕开具名档位,直接把像素写进方括号,拿到的却是同一个「不在这套系统里的字号」。
@@ -327,8 +330,8 @@ const designSystem = {
           report(chunk, at, `\`${bare}\` 不在七档字号里。用 text-2xs / xs / sm / md / lg / xl / display(11/12/13/15/20/28/40px,规范 v2 A3),见 app/globals.css 的 @theme;v1 的 text-quote 写成 \`font-serif text-md font-normal\``);
         } else if (ARBITRARY_TYPE.test(chunk)) {
           report(chunk, at, `\`${chunk}\` 把字号写死在任意值里,绕开了七档。用 text-2xs…text-xl(11/12/13/15/20/28px);没有恰好对应的档位,说明这里该重新选一档,而不是新造一个字号。注意 \`text-[oklch(var(--…))]\` 是**颜色**不是字号,不受这条限制`);
-        } else if (bare === "text-display" && !DISPLAY_ALLOW.some((p) => file.startsWith(p))) {
-          report(chunk, at, `\`text-display\`(40px)只给匾题字和登录页(规范 v2 A3)。其他地方用 text-xl(28)或更小;真是匾组件,放进 src/components/plaque/`);
+        } else if (bare === "text-display" && !DISPLAY_ALLOW.some((p) => file.startsWith(p)) && !DISPLAY_NUMERAL_ALLOW.includes(file)) {
+          report(chunk, at, `\`text-display\`(40px)只给匾题字、登录页与律条语料页的展示数字(规范 v2 A3;DISPLAY_NUMERAL_ALLOW)。其他地方用 text-xl(28)或更小;真是匾组件,放进 src/components/plaque/`);
         }
       }
     }),
