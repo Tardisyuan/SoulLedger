@@ -103,7 +103,8 @@ export default function SocialFeedPage() {
       }
     : undefined;
 
-  /* A5:标签行在左列里(48 高、下边 1px line);393 两等分、surface-1。
+  /* A5:标签行在左列里(48 高、下边 1px line);393 两等分、surface-1。48 写成 `h-`,不是
+     `min-h-`:TAB_BASE 自带 `min-h-(--control-h-sm)`(44),两个 min-h 谁赢取决于生成 CSS 的顺序。
      `aria-pressed`, not `role="tab"`: these own no tabpanel and arrow keys do
      not move between them — a set of toggles with exactly one on.
      `components/ui/data-grid/FilterBar.tsx:181` already does this. */
@@ -115,7 +116,7 @@ export default function SocialFeedPage() {
           type="button"
           onClick={() => { setTab(key); setPage(1); }}
           aria-pressed={tab === key}
-          className={`${TAB_BASE} ${tab === key ? TAB_ON : TAB_OFF} min-h-(--control-h-md) px-0 max-[768px]:flex-1`}
+          className={`${TAB_BASE} ${tab === key ? TAB_ON : TAB_OFF} h-(--control-h-md) px-0 max-[768px]:flex-1`}
         >
           {key === "feed" ? t("social.feed") : t("social.all")}
         </button>
