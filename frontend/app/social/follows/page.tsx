@@ -72,7 +72,10 @@ export default function FollowsPage() {
           className={`${TAB_BASE} ${tab === key ? TAB_ON : TAB_OFF}`}
         >
           {key === "following" ? t("social.following") : t("social.followers")}
-          {` (${key === "following" ? followingList.length : followersList.length})`}
+          {" · "}
+          <span className="font-mono tabular-nums">
+            {key === "following" ? followingList.length : followersList.length}
+          </span>
         </button>
       ))}
     >

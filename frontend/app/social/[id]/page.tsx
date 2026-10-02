@@ -18,14 +18,14 @@ export default function PostDetailPage() {
 
   return (
     <PageShell
-      variant="prose"
+      variant="page"
       title={t("social.post_detail")}
       backLink={
         <Link
           href="/social"
-          className="text-sm text-[oklch(var(--color-accent-ink))] hover:underline"
+          className="inline-flex min-h-(--control-h-md) items-center text-sm text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))] hover:underline"
         >
-          ← {t("social.back")}
+          ← {t("social.back_to_feed")}
         </Link>
       }
     >
@@ -47,14 +47,11 @@ export default function PostDetailPage() {
       ) : !post ? (
         <EmptyState title={t("social.post")} reason={t("social.post_not_found")} />
       ) : (
-        <>
+        /* A5 详情:帖子卡 + 评论区卡,左列宽 680(与动态页同一列)。 */
+        <div className="mx-auto flex max-w-[680px] flex-col gap-4 max-[768px]:-mx-4">
           <PostCard post={post} />
-
-          <div className="mt-6">
-            <h2 className="text-lg text-[oklch(var(--color-ink))] mb-3">{t("social.comments")}</h2>
-            <CommentThread postId={id} />
-          </div>
-        </>
+          <CommentThread postId={id} count={post.comment_count} />
+        </div>
       )}
     </PageShell>
   );

@@ -2301,7 +2301,26 @@
     },
     "visibility_label": "Aat Maa",
     "follow_error": "Nen Nehes",
-    "reactions": "Sehed"
+    "reactions": "Sehed",
+    "back_to_feed": "Wehem Er Medew Sesh",
+    "compose": "Iri Sesh",
+    "lamp": {
+      "light": "Wen Khabes",
+      "lit": "Khabes Wen Seth",
+      "lit_short": "Wen Seth"
+    },
+    "media": {
+      "expired": "Tut Nen Wenen",
+      "refetch": "Wehem Ini Tut",
+      "refetch_short": "Wehem Ini",
+      "viewer_hint": "← → Khemen · Khetem",
+      "prev": "Tut Khet",
+      "next": "Tut Ky"
+    },
+    "legend": {
+      "light": "{{list}}: Sepu Neb Wa",
+      "lamp": "Khabes Djet: Aat Wa, Nen Sepu Er Sehed Ky"
+    }
   },
   "tenants": {
     "active": "Em Iri",
