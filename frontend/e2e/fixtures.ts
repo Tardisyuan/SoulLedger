@@ -500,6 +500,9 @@ export const LEDGER_STATS = {
   as_of: "2026-10-02T08:00:00Z",
   total_souls: 2,
   average_balance: 12.5,
+  // 上月快照(BalanceSnapshot)的均值与差;没有上月快照时两项都是 null。
+  average_balance_prev_month: 13.8,
+  average_balance_delta: -1.3,
   state_distribution: [
     { state: "ALIVE", label: "在世", count: 1, average_balance: 30 },
     { state: "JUDGING", label: "审判中", count: 1, average_balance: -5 },

@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { usePlaque } from "@/src/components/plaque/Plaque";
+import { useHall } from "@/src/components/plaque/useHall";
 import { useToast } from "@/src/contexts/ToastContext";
 import { dispositionApi, PAGE_SIZE, type Disposition } from "@soulledger/core/api";
 import type { DispositionListParams, DispositionSection } from "@soulledger/core/api/disposition";
@@ -48,6 +50,7 @@ const SECTION_MARK: Record<DispositionSection, string> = { pending: "甲", execu
 
 export default function DispositionPage() {
   const { t, formatDate } = useI18n();
+  usePlaque({ hall: useHall(t("plaque.office.tenth")) });
   const { user } = useTenant();
   const { showToast } = useToast();
   const queryClient = useQueryClient();

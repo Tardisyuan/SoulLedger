@@ -1,0 +1,56 @@
+# Backend tests that can read files outside backend/, and the repository's
+# top-level entries each one names ("*": names none, so any of them).
+# When a push changes nothing under backend/, scripts/run-gates.sh runs every
+# test here whose entries include the first path component of a changed file,
+# plus every "*" line. (A backend change runs the whole suite anyway.)
+# Derived, not curated: tests/test_reads_outside_backend_list.py fails on a
+# missing, stale or wrong line. Paths are relative to backend/.
+apps/ledger/test_readings.py                                     packages
+tests/test_annihilation_realm_code.py                            frontend packages
+tests/test_audit_assertions_are_not_vacuous.py                   config pytest.ini
+tests/test_chat_conversation_state.py                            config
+tests/test_chat_hall_names.py                                    config
+tests/test_chat_inbox_folders.py                                 config
+tests/test_chat_lives.py                                         config
+tests/test_chat_lookup.py                                        config
+tests/test_chat_moves_and_mutes.py                               config
+tests/test_chat_officer_inbox.py                                 config
+tests/test_chat_policy.py                                        config
+tests/test_chat_push_hook.py                                     config
+tests/test_chat_synapse_integration.py                           config
+tests/test_collection_scope.py                                   *
+tests/test_committed_schema_matches_the_backend.py               packages
+tests/test_credits_literature_quotes_the_corpus.py               config packages
+tests/test_e2e_fixtures_match_the_serializers.py                 frontend packages
+tests/test_egyptian_routine_is_the_weighing.py                   config packages
+tests/test_every_realm_has_its_three_names.py                    packages
+tests/test_expired_jwt_rows_are_flushed_on_a_schedule.py         .env.example docker-compose.override.yml docker-compose.production.yml docker-compose.staging.yml docker-compose.yml frontend nginx.conf scripts
+tests/test_frontend_civilization_codes.py                        config packages
+tests/test_frontend_civilization_members.py                      config packages
+tests/test_frontend_event_types_track_the_backend.py             frontend packages
+tests/test_frontend_page_size.py                                 config frontend packages
+tests/test_frontend_permission_strings_are_real.py               frontend packages
+tests/test_frontend_role_labels.py                               frontend packages
+tests/test_frontend_statute_enums.py                             packages
+tests/test_no_second_copy_of_the_civilization_map.py             *
+tests/test_officer_assist_corpus.py                              frontend
+tests/test_official_notify_messages_match_the_language_packs.py  packages
+tests/test_page_gates_match_the_backend.py                       frontend
+tests/test_prepush_runs_the_gates_a_change_can_break.py          .dockerignore .gitignore .nvmrc CLAUDE.md README.md conftest.py docker-compose.yml docs frontend mobile package-lock.json package.json packages pytest.ini scripts
+tests/test_production.py                                         .env.example docker-compose.override.yml docker-compose.production.yml docker-compose.staging.yml docker-compose.yml frontend nginx.conf scripts
+tests/test_reads_outside_backend_list.py                         frontend packages pytest.ini
+tests/test_realm_path_fields.py                                  packages
+tests/test_realm_seed_egy_names_match_the_language_pack.py       packages
+tests/test_seed_entrypoint.py                                    docker-compose.yml scripts
+tests/test_soul_push_messages_match_the_language_packs.py        packages
+tests/test_system_mail_speaks_the_recipients_language.py         packages
+tests/test_testdb_name.py                                        conftest.py pytest.ini
+tests/test_the_image_installs_locked_versions.py                 .dockerignore .github
+tests/test_the_locale_header_reaches_the_name.py                 packages
+tests/test_verdict_names_exist_in_every_bundle.py                packages
+tests/test_workflow_preset_approvers.py                          config packages
+tests/test_workflow_preset_case_types.py                         config frontend packages
+tests/test_workflow_preset_node_types.py                         config packages
+tests/test_workflow_template_cast.py                             config packages
+tests/test_workflow_template_priority.py                         config packages
+tests/test_workflow_template_recycle_bin.py                      packages

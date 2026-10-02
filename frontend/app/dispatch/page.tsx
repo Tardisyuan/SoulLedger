@@ -5,6 +5,8 @@ import Link from "next/link";
 import { dispatchApi, type DispatchRecord } from "@soulledger/core/api";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { usePlaque } from "@/src/components/plaque/Plaque";
+import { useHall } from "@/src/components/plaque/useHall";
 import { PageSection } from "@/components/ui/page-section";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
 import { MissingValue } from "@/src/components/ui/DomainValue";
@@ -38,6 +40,7 @@ const STATUS_TONES: Record<string, BadgeTone> = {
 
 function DispatchPageContent() {
   const { t } = useI18n();
+  usePlaque({ hall: useHall(t("plaque.office.tenth")) });
   const { user } = useTenant();
 
   // `isError` on both. The `= []` defaults mean a failed request lands on the

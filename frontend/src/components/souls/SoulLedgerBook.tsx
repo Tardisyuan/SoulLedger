@@ -97,6 +97,26 @@ function entryWeight(record: LedgerRecord): number {
   return record.original_weight;
 }
 
+/** `'<Statute.code>:<条款原文>'` 的律条号那一半(`救濟門#7`);没记就是 null。 */
+export function clauseCode(record: LedgerRecord): string | null {
+  const code = (record.statute_clause ?? "").split(":")[0].trim();
+  return code || null;
+}
+
+/**
+ * 一条功过的「第二行」事实:发生次数与重要节点(Design v3 功过记录行:「发生 1 次 · ◆ 重要节点」)。
+ * 次数没记(null)就不写 —— 不当 1 次;不是重要节点就不写。两样都没有时什么也不画。
+ * 审判台的证据行与灵魂详情的台账共用这一份。
+ */
+export function RecordFacts({ record }: { record: LedgerRecord }) {
+  const { t } = useI18n();
+  const parts: string[] = [];
+  if (record.occurrence_count != null) parts.push(t("ledger.book.occurrences", { n: String(record.occurrence_count) }));
+  if (record.is_milestone) parts.push(`◆ ${t("ledger.book.milestone")}`);
+  if (parts.length === 0) return null;
+  return <span data-record-facts="">{parts.join(" · ")}</span>;
+}
+
 export interface SoulLedgerBookProps {
   records: LedgerRecord[];
 }
@@ -160,6 +180,8 @@ export function SoulLedgerBook({ records }: SoulLedgerBookProps) {
               const isMerit = record.type === "MERIT";
               const weight = entryWeight(record);
               const eventDate = formatHistoricalDate(record.event_date, locale);
+              const clause = clauseCode(record);
+              const hasFacts = record.occurrence_count != null || record.is_milestone;
 
               return (
                 <tr key={record.id} className="border-b border-[oklch(var(--color-hairline))]">
@@ -179,6 +201,18 @@ export function SoulLedgerBook({ records }: SoulLedgerBookProps) {
                       numerals the only job the colour has. */}
                   <BodyCell className="font-sans text-sm text-[oklch(var(--color-ink-muted))]">
                     {record.description}
+                    {/* 条款与次数折进事目的第二行:台账的六列是账本的形制,不为它们加列。 */}
+                    {(clause || hasFacts) && (
+                      <span className="mt-0.5 block text-xs text-[oklch(var(--color-ink-subtle))]">
+                        {clause && (
+                          <span data-record-clause="" title={record.statute_clause} className="font-serif">
+                            {clause}
+                          </span>
+                        )}
+                        {clause && hasFacts && " · "}
+                        <RecordFacts record={record} />
+                      </span>
+                    )}
                   </BodyCell>
 
                   {/* One of these two is empty, and the emptiness is the

@@ -18,6 +18,7 @@ import { CorpusInsertIntoDesk } from "@/src/components/judgment/CorpusInsertInto
 import { CorpusRelated, relatedStatutes } from "@/src/components/judgment/CorpusRelated";
 import { usePermissions } from "@/src/hooks/usePermissions";
 import { usePlaque } from "@/src/components/plaque/Plaque";
+import { useHall } from "@/src/components/plaque/useHall";
 import { cn } from "@/lib/utils";
 
 /**
@@ -159,8 +160,10 @@ export default function CorpusPage() {
   }, [data]);
 
   // 身份带(A3):题「律条语料」,右栏「N 部 · N 条」—— 都从已载入的条文数出来,没载入就不写。
+  const hall = useHall(t("plaque.office.records"));
   usePlaque({
     title: t("plaque.corpus"),
+    hall,
     meta: data?.length
       ? t("plaque.corpus_meta", { works: String(new Set(data.map((s) => s.corpus)).size), n: String(data.length) })
       : undefined,

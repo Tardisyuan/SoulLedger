@@ -91,6 +91,7 @@ import pytest
 REPO_ROOT = Path(__file__).resolve().parents[2]
 GENERATOR = REPO_ROOT / "scripts" / "install-hooks.sh"
 RUNNER = REPO_ROOT / "scripts" / "run-gates.sh"
+READERS = REPO_ROOT / "backend" / "tests" / "reads-outside-backend.txt"
 
 
 def _hook_body() -> str:
@@ -151,7 +152,7 @@ class TestTheSeamIsReal:
         copy of the rule rather than the rule."""
         body = RUNNER.read_text(encoding="utf-8")
         for var in ("RUN_CORE", "RUN_FRONTEND", "RUN_BACKEND"):
-            assert re.search(rf'^if \[ "\${var}" = 1 \]; then', body, re.M), (
+            assert re.search(rf'^if \[ "\${var}" = 1 \](; then| \|\|)', body, re.M), (
                 f"no gate reads {var} directly"
             )
 
@@ -250,6 +251,8 @@ def checkouts(tmp_path):
     (main / "scripts").mkdir()
     for name in ("install-hooks.sh", "run-gates.sh", "gate-lock.sh"):
         (main / "scripts" / name).write_text((GENERATOR.parent / name).read_text(encoding="utf-8"))
+    (main / "backend" / "tests").mkdir()
+    (main / "backend" / "tests" / READERS.name).write_text(READERS.read_text(encoding="utf-8"))
     (main / ".gitignore").write_text(".prepush.env\nbackend/.env\n")
     _git(main, "init", "-q", "-b", "main")
     _git(main, "add", "-A")
@@ -748,3 +751,72 @@ class TestRunGatesOutsideAPush:
         assert proc.returncode == 0, proc.stdout + proc.stderr
         assert "classify-jest: full=1" in proc.stdout
         assert "--full" in proc.stdout
+
+
+# ── tests that read another area's files (2026-10-02) ───────────────────────
+#
+# The A1 workflow redesign changed only frontend/ and broke
+# tests/test_workflow_preset_case_types.py, which parses WorkflowEditor.tsx;
+# no frontend-only push ran it. The runner prints `classify-readers:` and one
+# `backend reader:` line per selected backend test file.
+
+
+def _readers(changed: list[str]) -> tuple[dict[str, int], list[str], str]:
+    env = _clean_env(PREPUSH_CHANGED="\n".join(changed), PREPUSH_CLASSIFY_ONLY="1")
+    proc = subprocess.run(
+        ["bash", str(RUNNER)], cwd=REPO_ROOT, env=env, capture_output=True, text=True, timeout=60,
+    )
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    m = re.search(r"^classify-readers: jest=(\d) mobile=(\d) backend=(\d+)$", proc.stdout, re.M)
+    assert m, f"no classify-readers line:\n{proc.stdout}"
+    files = re.findall(r"^  backend reader: (\S+)$", proc.stdout, re.M)
+    assert len(files) == int(m.group(3)), proc.stdout
+    return {"jest": int(m.group(1)), "mobile": int(m.group(2))}, files, proc.stdout
+
+
+def _listed_readers() -> dict[str, list[str]]:
+    out = {}
+    for line in READERS.read_text(encoding="utf-8").splitlines():
+        if line.strip() and not line.lstrip().startswith("#"):
+            path, *entries = line.split()
+            out[path] = entries
+    return out
+
+
+class TestReadersOfAnotherArea:
+    def test_a_frontend_only_change_runs_the_backend_tests_that_read_it(self):
+        """The 2026-10-02 miss, exactly."""
+        _, files, out = _readers(["frontend/src/components/workflow/WorkflowEditor.tsx"])
+        assert "tests/test_workflow_preset_case_types.py" in files, out
+        assert "classify: core=0 frontend=1 backend=0" in out, "the whole backend suite must not run"
+
+    def test_the_selection_is_exactly_the_matching_lines(self):
+        """Absence as well as presence: a selector that took every line would
+        pass the test above."""
+        _, files, _ = _readers(["frontend/app/page.tsx"])
+        want = sorted(p for p, e in _listed_readers().items() if "frontend" in e or "*" in e)
+        assert sorted(files) == want
+        assert "apps/ledger/test_readings.py" not in files  # reads packages/ only
+
+    def test_a_star_line_runs_on_any_change_outside_backend(self):
+        stars = sorted(p for p, e in _listed_readers().items() if e == ["*"])
+        assert stars, "precondition: the list has a `*` line"
+        _, files, _ = _readers(["README.md"])
+        assert sorted(files) == sorted(
+            p for p, e in _listed_readers().items() if "*" in e or "README.md" in e
+        )
+        assert set(stars) <= set(files)
+
+    def test_a_backend_change_runs_the_whole_suite_not_the_readers(self):
+        _, files, out = _readers(["backend/apps/perm/checker.py"])
+        assert files == [] and "backend=1" in out
+
+    def test_a_backend_change_runs_the_frontend_and_mobile_tests_that_read_files(self):
+        """The mirror: roleForbiddenCodenamesMatchBackend reads
+        backend/apps/perm/checker.py; mobile's assist test reads soul_assist."""
+        areas, _, _ = _readers(["backend/apps/perm/checker.py"])
+        assert areas == {"jest": 1, "mobile": 1}
+
+    def test_an_area_running_in_full_does_not_also_run_its_readers(self):
+        areas, _, _ = _readers(["frontend/app/page.tsx", "mobile/src/App.tsx"])
+        assert areas == {"jest": 0, "mobile": 0}

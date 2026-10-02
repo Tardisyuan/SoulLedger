@@ -6,6 +6,8 @@ import { isMonthTooLarge, ledgerApi, type LedgerJournal, type LedgerJournalParam
 import { CIVILIZATION_OPTIONS } from "@soulledger/core/config/civilizations";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { usePlaque } from "@/src/components/plaque/Plaque";
+import { useHall } from "@/src/components/plaque/useHall";
 import { useToast } from "@/src/contexts/ToastContext";
 import { cn } from "@/lib/utils";
 import { fieldControl } from "@/src/components/ui/Field";
@@ -55,6 +57,7 @@ const STICKY_AFTER = 500;
 
 function LedgerPageContent() {
   const { t } = useI18n();
+  usePlaque({ hall: useHall(t("plaque.office.records")) });
   const { user } = useTenant();
   const [month, setMonth] = useState(() => currentMonth());
   const [civilization, setCivilization] = useState("");

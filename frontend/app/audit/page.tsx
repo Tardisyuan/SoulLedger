@@ -4,6 +4,8 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { auditApi, PAGE_SIZE, type AuditLogEntry } from "@soulledger/core/api";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { usePlaque } from "@/src/components/plaque/Plaque";
+import { useHall } from "@/src/components/plaque/useHall";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { DataGrid, parseOrdering, type DataGridColumn, type EnumValue } from "@/components/ui/data-grid";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
@@ -73,6 +75,7 @@ function actionEnumValue(action: string, t: (key: string) => string): EnumValue 
 
 export default function AuditPage() {
   const { t, formatDate, formatDateTime } = useI18n();
+  usePlaque({ hall: useHall(t("plaque.office.records")) });
   // `hasPermission("audit.read")`, not `isAdmin`.
   //
   // The backend grants `audit.read` to ADMIN **and MODERATOR**

@@ -5,6 +5,7 @@ import { useQuery, useQueries } from "@tanstack/react-query";
 import { permApi, Permission, Role, RolePermissions } from "@soulledger/core/api";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { usePlaque } from "@/src/components/plaque/Plaque";
+import { useHall } from "@/src/components/plaque/useHall";
 import { RequireAdmin, RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
 import { usePermissions } from "@/src/hooks/usePermissions";
@@ -90,8 +91,10 @@ export default function PermissionsPage() {
   const roleNames = useMemo(() => (rolesQuery.data ?? []).map((r) => r.name), [rolesQuery.data]);
 
   // 身份带(A6):题「权限」,右栏「N 角色 · N 项权限」,两个数都等两张表载入后才写。
+  const hall = useHall(t("plaque.office.rules"));
   usePlaque({
     title: t("plaque.permissions"),
+    hall,
     meta:
       rolesQuery.data && permsQuery.data
         ? t("plaque.permissions_meta", { roles: String(rolesQuery.data.length), perms: String(permsQuery.data.length) })

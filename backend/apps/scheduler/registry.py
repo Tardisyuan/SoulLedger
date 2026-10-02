@@ -90,6 +90,10 @@ REGISTRY: tuple[JobSpec, ...] = (
     # 自动驳回写的审计行要带租户,所以按租户一行。每 5 分钟 = 超时最多晚 5 分钟触发;
     # 没有到期节点时只是一条查询。锁 240s 的理由同下面的 webhook 重试。
     JobSpec("workflow.process_timeouts_for_tenant", TENANT, "*/5 * * * *", max_runtime=240),
+    # 余额月快照(apps/ledger/snapshots.py):仪表盘「平均余额 · 较上月」的上月那一半。
+    # 每天覆盖当月那一行,所以过去的月份留下的是它最后一天 23:55(UTC)的值;漏跑一天
+    # 只是那个月停在前一天。一条聚合查询加一次 upsert。
+    JobSpec("ledger.snapshot_balance_for_tenant", TENANT, "55 23 * * *", max_runtime=600),
     # ---- global jobs ---------------------------------------------------------
     JobSpec("authentication.flush_expired_tokens", GLOBAL, "30 3 * * *"),
     # Period 300s; lock TTL / LOST threshold 240s so a crashed run cannot make
