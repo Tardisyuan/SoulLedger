@@ -225,7 +225,7 @@ export function MediaViewer({
             {current && index !== null ? (
               <>
                 <div className="flex h-14 shrink-0 items-center gap-3 border-b border-[oklch(var(--color-line))] pl-[20px] pr-2">
-                  <Dialog.Title className="min-w-0 truncate text-sm font-medium text-[oklch(var(--color-ink))]">
+                  <Dialog.Title title={author} className="min-w-0 truncate text-sm font-medium text-[oklch(var(--color-ink))]">
                     {author}
                   </Dialog.Title>
                   <span className="font-mono text-xs tabular-nums text-[oklch(var(--color-ink-muted))]">{time}</span>

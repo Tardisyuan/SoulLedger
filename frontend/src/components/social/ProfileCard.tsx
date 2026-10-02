@@ -41,7 +41,7 @@ export function ProfileCard({ profile }: { profile: UserProfile }) {
         <Avatar name={profile.username} size={72} />
       )}
       <div className="flex min-w-0 flex-1 flex-col gap-2">
-        <h2 className="truncate font-title text-xl font-semibold text-[oklch(var(--color-ink))]" title={profile.username}>
+        <h2 className="truncate font-title text-lg text-[oklch(var(--color-ink))]" title={profile.username}>
           {profile.username}
         </h2>
         {profile.bio && (
