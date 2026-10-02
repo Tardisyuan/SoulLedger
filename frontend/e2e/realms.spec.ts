@@ -7,7 +7,7 @@ import { test, expect, setupAuthenticatedPage } from "./fixtures";
 test("the Duat renders as 称心二岔: two roads out of the weighing, the fail road a terminal", async ({ page }) => {
   await setupAuthenticatedPage(page);
   await page.goto("/realms");
-  await page.getByRole("button", { name: /杜阿特/ }).click();
+  await page.getByRole("button", { name: /埃及/ }).click();
 
   const topo = page.getByTestId("realm-topology").locator("[data-route-topology]");
   await expect(topo).toHaveAttribute("data-route-topology", "fork_two");
