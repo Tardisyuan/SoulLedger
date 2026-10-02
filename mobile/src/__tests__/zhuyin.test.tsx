@@ -65,14 +65,16 @@ const signedIn = (overrides: Record<string, unknown> = {}): SessionState =>
 beforeEach(() => installMobilePlatform());
 
 describe("the art Design delivered", () => {
-  it("carries no c2pa metadata, and every civilization has its six drawings", () => {
+  it("carries no c2pa metadata, and every civilization has its four seal drawings — and no v2 band", () => {
     expect(Object.entries(SVG).filter(([, xml]) => /<metadata|c2pa:manifest/.test(xml))).toEqual([]);
     for (const civ of ["cn", "eu", "eg", "gr"]) {
-      for (const part of ["seal-%-body", "seal-%-ring", "seal-%-line", "seal-%-line-small", "band-%", "band-%-compact"]) {
+      for (const part of ["seal-%-body", "seal-%-ring", "seal-%-line", "seal-%-line-small"]) {
         expect(SVG).toHaveProperty(part.replace("%", civ));
       }
       expect(RING_D[civ as keyof typeof RING_D]).toMatch(/^M/);
     }
+    // v2's ornament band went with v3 (2026-10-02): nothing draws it, so it is not shipped.
+    expect(Object.keys(SVG).filter((k) => k.startsWith("band-"))).toEqual([]);
   });
 });
 
