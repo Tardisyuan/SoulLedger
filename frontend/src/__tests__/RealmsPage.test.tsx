@@ -1,6 +1,7 @@
 /**
- * app/realms/page.tsx —— 文明切换、左侧拓扑(与详情行程条同一个组件)、右侧树表
- * (在押 / 容量 / 永恒;满额用警示色并写「已满」)、杜阿特画成「称心二岔」、缺形状字段才退化为「示意」;
+ * app/realms/page.tsx —— 文明切换(墨底选中段)、左侧路线图(`RouteMap`,与详情行程条同一份布局)、
+ * 右侧树表(在押 / 容量 / 永恒;满写「■ 满」、≥ 90% 写「◐ 将满」,字形加字、不靠警示色)、
+ * 杜阿特画成「主干后分过 / 不过」(不过那栏虚线、终点是虚线框)、缺形状字段才退化为「示意」;
  * 容量只有持 `realms.manage` 的人能行内改(`PATCH /realms/{id}/` 只收 capacity),
  * 不持有的人看到的仍是只读表。
  */
@@ -77,44 +78,96 @@ it("nests children under their parent in the tree table", async () => {
   expect(rows[i + 1]).toHaveTextContent("门");
 });
 
-it("marks a realm at capacity in the warning colour AND in words; one under capacity in neither", async () => {
+it("marks a realm at capacity with ■ 满 — glyph and word, not the warning colour; one under capacity with neither", async () => {
+  mockedOcc.mockResolvedValue({
+    data: [{ realm_id: "DY_00_PURGATORY", count: 2 }, { realm_id: "SUB_GATE", count: 3 }],
+  });
   renderPage();
   const tree = await screen.findByTestId("realm-tree");
   const full = tree.querySelector('[data-realm-row="DY_00_PURGATORY"]')!;
   const held = within(full as HTMLElement).getByTestId("realm-held");
-  expect(held).toHaveTextContent("2 / 2");
-  expect(held).toHaveTextContent("已满");
-  expect(held.className).toContain("--color-warning");
+  await waitFor(() => expect(held).toHaveTextContent("2 / 2"));
+  expect(held).toHaveTextContent("■ 满");
+  expect(held.querySelector('[data-load="full"]')).not.toBeNull();
+  // 满不是错误,也不是「可撤回的风险」:不用警示色(规范 v3)。
+  expect(held.innerHTML).not.toContain("--color-warning");
   const gate = within(tree.querySelector('[data-realm-row="SUB_GATE"]') as HTMLElement).getByTestId("realm-held");
   expect(gate).toHaveTextContent("3 / 10");
-  expect(gate).not.toHaveTextContent("已满");
-  expect(gate.className).not.toContain("--color-warning");
+  expect(gate).not.toHaveTextContent("满");
+  expect(gate.querySelector("[data-load]")).toBeNull();
   // 永恒
-  expect(tree.querySelector('[data-realm-row="DY_01_HEAVEN"]')).toHaveTextContent("是");
+  expect(tree.querySelector('[data-realm-row="DY_01_HEAVEN"]')).toHaveTextContent("≡ 永恒");
+  expect(tree.querySelector('[data-realm-row="SUB_GATE"]')).not.toHaveTextContent("永恒");
 });
 
-it("draws the Duat as 称心二岔: trunk to the weighing, the pass road, and the fail road as a dashed terminal", async () => {
+it("marks ≥ 90% as ◐ 将满, and 89% as nothing", async () => {
+  mockedList.mockResolvedValue({
+    data: { results: [...REALMS, R("NEAR", "CHINESE", { capacity: 10 }), R("UNDER", "CHINESE", { capacity: 100 })], count: 11 },
+  });
+  mockedOcc.mockResolvedValue({ data: [{ realm_id: "NEAR", count: 9 }, { realm_id: "UNDER", count: 89 }] });
+  renderPage();
+  const tree = await screen.findByTestId("realm-tree");
+  const cell = (code: string) => within(tree.querySelector(`[data-realm-row="${code}"]`) as HTMLElement).getByTestId("realm-held");
+  await waitFor(() => expect(cell("NEAR")).toHaveTextContent("◐ 将满"));
+  expect(cell("NEAR").querySelector('[data-load="near"]')).not.toBeNull();
+  expect(cell("UNDER")).toHaveTextContent("89 / 100");
+  expect(cell("UNDER").querySelector("[data-load]")).toBeNull();
+});
+
+it("folds the tree into two-line cards for the phone, with the same rows in the same order", async () => {
+  renderPage();
+  const tree = await screen.findByTestId("realm-tree");
+  const cards = screen.getByTestId("realm-cards");
+  const order = (root: Element, attr: string) => Array.from(root.querySelectorAll(`[${attr}]`)).map((r) => r.getAttribute(attr));
+  expect(order(cards, "data-realm-card")).toEqual(order(tree, "data-realm-row"));
+  expect(cards.querySelector('[data-realm-card="SUB_GATE"]')).toHaveTextContent("SUB_GATE · 门");
+  // Read-only: a card is not a button.
+  expect(within(cards).queryByRole("button")).toBeNull();
+});
+
+it("draws the Duat as a trunk, then 过 / 不过: the fail column dashed, its end a dashed box, uncounted", async () => {
   renderPage();
   await screen.findByTestId("realm-topology");
-  fireEvent.click(screen.getByRole("button", { name: /杜阿特/ }));
+  fireEvent.click(screen.getByRole("button", { name: /埃及/ }));
   const topo = screen.getByTestId("realm-topology").querySelector("[data-route-topology]")! as HTMLElement;
   expect(topo.getAttribute("data-route-topology")).toBe("fork_two");
   expect(topo.getAttribute("data-schematic")).toBe("false");
-  expect(topo).toHaveTextContent("称心二岔");
+  expect(topo).toHaveTextContent("埃及 · 主干后分过 / 不过");
   expect(within(topo).queryByTestId("topology-schematic")).toBeNull();
-  const pass = topo.querySelector('[data-fork="PASS"]')!;
-  const fail = topo.querySelector('[data-fork="FAIL"]')!;
-  expect(pass).toHaveTextContent("过 · 称心通过");
+  const pass = topo.querySelector('[data-fork="PASS"]')! as HTMLElement;
+  const fail = topo.querySelector('[data-fork="FAIL"]')! as HTMLElement;
+  expect(pass).toHaveTextContent("✓ 过 · 心轻于羽");
   expect(pass.getAttribute("data-terminal")).toBeNull();
-  expect(pass.querySelector('[data-terminal="dashed"]')).toBeNull();
+  expect(pass.className).not.toContain("border-dashed");
+  expect(pass.querySelector(".border-dashed")).toBeNull();
+  expect(fail).toHaveTextContent("✕ 不过 · 心重于羽");
   expect(fail.getAttribute("data-terminal")).toBe("dashed");
-  expect(fail.querySelector('[data-mark][data-terminal="dashed"]')).not.toBeNull();
-  // 通向终点的那一段是虚线,不是墨实线(实线段是 border-t-2 且不带 border-dashed)。
-  expect(fail.querySelector('[class*="border-t-2"]:not([class*="border-dashed"])')).toBeNull();
-  expect(fail.querySelector('[class*="border-t-2"][class*="border-dashed"]')).not.toBeNull();
+  expect(fail.className).toContain("border-dashed");
+  expect(fail.querySelector("ol.border-dashed [data-station]")).not.toBeNull();
+  expect(fail).toHaveTextContent("≡ 吞噬即终结");
   // 第二次死亡不是地方:不计在押(过那条路的站照常写 0)。
   expect(pass.textContent).toMatch(/0/);
   expect(fail.textContent).not.toMatch(/\d/);
+});
+
+it("draws a station with souls as a solid mark and an empty one as an outline, with the count beside it", async () => {
+  mockedOcc.mockResolvedValue({ data: [{ realm_id: "DY_COURT_05_YANLUO", count: 4 }] });
+  renderPage();
+  const topo = (await screen.findByTestId("realm-topology")) as HTMLElement;
+  await waitFor(() => expect(topo.querySelector('[data-station="DY_COURT_05_YANLUO"] [data-mark="held"]')).not.toBeNull());
+  expect(topo.querySelector('[data-station="DY_COURT_05_YANLUO"]')).toHaveTextContent("4");
+  expect(topo.querySelector('[data-station="DY_COURT_01_QINGUANG"] [data-mark="empty"]')).not.toBeNull();
+  expect(topo.querySelector('[data-station="DY_COURT_01_QINGUANG"] [data-mark="held"]')).toBeNull();
+  // Not clickable: the map is a picture of the data, not a control.
+  expect(within(topo).queryByRole("button")).toBeNull();
+});
+
+it("writes — rather than 0 on the map when occupancy fails", async () => {
+  mockedOcc.mockRejectedValue(new Error("500"));
+  renderPage();
+  const topo = (await screen.findByTestId("realm-topology")) as HTMLElement;
+  await waitFor(() => expect(topo.querySelector('[data-station="DY_COURT_01_QINGUANG"]')).toHaveTextContent("—"));
+  expect(topo.querySelector('[data-station="DY_COURT_01_QINGUANG"]')!.textContent).not.toMatch(/0$/);
 });
 
 it("the tree table puts the second death at 不计 — the same fail-road rule as the topology, not a realm code", async () => {
@@ -126,12 +179,12 @@ it("the tree table puts the second death at 不计 — the same fail-road rule a
   mockedOcc.mockResolvedValue({ data: [{ realm_id: "EG_RENAMED_END", count: 4 }, { realm_id: "EG_AARU", count: 1 }] });
   renderPage();
   await screen.findByTestId("realm-topology");
-  fireEvent.click(screen.getByRole("button", { name: /杜阿特/ }));
+  fireEvent.click(screen.getByRole("button", { name: /埃及/ }));
   const tree = screen.getByTestId("realm-tree");
   const cell = (code: string) => within(tree.querySelector(`[data-realm-row="${code}"]`) as HTMLElement).getByTestId("realm-held");
   for (const code of ["EG_ANNIHILATION", "EG_RENAMED_END"]) {
     expect(cell(code)).toHaveTextContent("— · 不是地方");
-    expect(cell(code)).not.toHaveTextContent(/\d|已满/);
+    expect(cell(code)).not.toHaveTextContent(/\d|满/);
     expect(within(cell(code)).queryByRole("button")).toBeNull();
   }
   expect(tree.querySelector('[data-realm-row="EG_RENAMED_END"]')!.getAttribute("data-full")).toBeNull();
@@ -147,7 +200,7 @@ it("falls back to the labelled schematic line for a Duat whose rows carry no ord
   });
   renderPage();
   await screen.findByTestId("realm-topology");
-  fireEvent.click(screen.getByRole("button", { name: /杜阿特/ }));
+  fireEvent.click(screen.getByRole("button", { name: /埃及/ }));
   const topo = screen.getByTestId("realm-topology").querySelector("[data-route-topology]")!;
   expect(topo.getAttribute("data-schematic")).toBe("true");
   expect(within(topo as HTMLElement).getByTestId("topology-schematic")).toHaveTextContent("示意");
@@ -207,14 +260,63 @@ describe("with realms.manage", () => {
     expect(screen.getByTestId("capacity-saved")).not.toHaveTextContent("已满");
   });
 
-  it("warns 已满 while editing below occupancy, and says so after saving", async () => {
+  it("warns ■ 已满 under the row while editing at or below occupancy, and says so after saving", async () => {
     mockedSet.mockResolvedValue({ data: { ...REALMS[3], capacity: 1, held: 3, is_full: true } });
     renderPage();
     const row = await editRow("SUB_GATE");
     fireEvent.change(within(row).getByRole("spinbutton"), { target: { value: "1" } });
-    expect(within(row).getByTestId("capacity-full-warning")).toHaveTextContent("谁都不挪");
+    expect(screen.getByTestId("capacity-full-warning")).toHaveTextContent("■ 已满:在押 3。谁都不挪");
+    expect(screen.queryByTestId("capacity-near-warning")).toBeNull();
     fireEvent.click(within(row).getByRole("button", { name: "保存" }));
     expect(await screen.findByTestId("capacity-saved")).toHaveTextContent("已满(3 / 1)");
+  });
+
+  it("says nothing under the row for a comfortable number, but always shows the keys", async () => {
+    renderPage();
+    const row = await editRow("SUB_GATE");
+    fireEvent.change(within(row).getByRole("spinbutton"), { target: { value: "4" } });
+    expect(screen.queryByTestId("capacity-near-warning")).toBeNull();
+    expect(screen.queryByTestId("capacity-full-warning")).toBeNull();
+    expect(screen.getByText("Enter 保存 · Esc 取消")).toBeInTheDocument();
+  });
+
+  it("puts the near-full percentage in words", async () => {
+    mockedOcc.mockResolvedValue({ data: [{ realm_id: "SUB_GATE", count: 9 }] });
+    renderPage();
+    const tree = await screen.findByTestId("realm-tree");
+    await waitFor(() => expect(within(tree.querySelector('[data-realm-row="SUB_GATE"]') as HTMLElement).getByTestId("realm-held")).toHaveTextContent("9 / 10"));
+    const row = await editRow("SUB_GATE");
+    fireEvent.change(within(row).getByRole("spinbutton"), { target: { value: "10" } });
+    expect(screen.getByTestId("capacity-near-warning")).toHaveTextContent("◐ 将满：在押 9，改为 10 后占用 90%。");
+    fireEvent.change(within(row).getByRole("spinbutton"), { target: { value: "11" } });
+    expect(screen.queryByTestId("capacity-near-warning")).toBeNull();
+  });
+
+  it("saves on Enter and cancels on Esc", async () => {
+    mockedSet.mockResolvedValue({ data: { ...REALMS[3], capacity: 12, held: 3, is_full: false } });
+    renderPage();
+    let row = await editRow("SUB_GATE");
+    fireEvent.keyDown(within(row).getByRole("spinbutton"), { key: "Escape" });
+    expect(within(row).queryByRole("spinbutton")).toBeNull();
+    expect(mockedSet).not.toHaveBeenCalled();
+    row = await editRow("SUB_GATE");
+    fireEvent.change(within(row).getByRole("spinbutton"), { target: { value: "12" } });
+    fireEvent.keyDown(within(row).getByRole("spinbutton"), { key: "Enter" });
+    await waitFor(() => expect(mockedSet).toHaveBeenCalledWith("SUB_GATE", 12));
+  });
+
+  it("on the phone, a card opens the bottom sheet to edit, and saves only the capacity", async () => {
+    mockedSet.mockResolvedValue({ data: { ...REALMS[3], capacity: 7, held: 3, is_full: false } });
+    renderPage();
+    const cards = await screen.findByTestId("realm-cards");
+    fireEvent.click(within(cards).getByRole("button", { name: "改 SUB_GATE 的容量" }));
+    const dialog = await screen.findByRole("dialog");
+    // The table row stays read-only: the sheet is the editor.
+    expect(within(screen.getByTestId("realm-tree")).queryByRole("spinbutton")).toBeNull();
+    fireEvent.change(within(dialog).getByRole("spinbutton", { name: "容量" }), { target: { value: "7" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "保存" }));
+    await waitFor(() => expect(mockedSet).toHaveBeenCalledTimes(1));
+    expect(mockedSet.mock.calls[0][1]).toBe(7);
   });
 
   it("blank means not recorded (null); cancel sends nothing", async () => {
