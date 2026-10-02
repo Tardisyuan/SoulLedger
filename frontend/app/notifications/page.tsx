@@ -21,6 +21,7 @@ import { EmptyState } from "@/src/components/ui/EmptyState";
 import { QueryError } from "@/src/components/ui/PageError";
 import { TAB_BASE, TAB_ON, TAB_OFF } from "@/src/lib/tabClasses";
 import { cn } from "@/lib/utils";
+import { ROW_HOVER } from "@/components/ui/data-table";
 
 type FilterType = "all" | "unread";
 
@@ -167,23 +168,9 @@ export default function NotificationsPage() {
   return (
     <PageShell
       variant="prose"
-      title={
-        <span className="inline-flex items-center gap-3">
-          <span className="relative inline-flex shrink-0">
-            <Bell aria-hidden="true" className="w-6 h-6 text-[oklch(var(--color-ink-subtle))]" />
-            {unreadCount > 0 && (
-              <Badge
-                tone="accent"
-               
-                className="absolute -top-1 -right-1 justify-center min-w-[18px]"
-              >
-                {unreadCount > 99 ? "99+" : unreadCount}
-              </Badge>
-            )}
-          </span>
-          {t("notifications.title")}
-        </span>
-      }
+      /* 只有字:v3 的页面 <h1> 不带图标(其余各页都是)。原先这里是一枚铃铛加右上角的未读数角标
+         —— 未读数仍在「未读」那一枚上,同一个数不必写两遍。 */
+      title={t("notifications.title")}
       actions={
         unreadCount > 0 ? (
           // 次要按钮,不是主按钮:规范 v2 的主按钮(匾色实底)只给落判这一类决定(补足 B10)。
@@ -289,7 +276,7 @@ export default function NotificationsPage() {
         <section key={day.key} aria-label={day.label} data-notification-day={day.key} className="mt-3 first:mt-0">
           <div
             aria-hidden="true"
-            className="flex h-8 items-center justify-between border-b border-[oklch(var(--color-block))] px-3 font-mono text-xs"
+            className="flex h-(--control-h-sm) items-center justify-between border-b border-[oklch(var(--color-block))] px-3 font-mono text-xs"
           >
             <span className="font-semibold text-[oklch(var(--color-ink))]">
               {day.label}{" "}
@@ -300,7 +287,7 @@ export default function NotificationsPage() {
           <div
             key={notification.id}
             data-unread={notification.is_read ? undefined : ""}
-            className="px-3 py-3 border-b border-[oklch(var(--color-rule))] transition-colors hover:bg-[oklch(var(--color-surface-2))]"
+            className={`min-h-(--table-row-h) px-3 py-3 border-b border-[oklch(var(--color-rule))] transition-colors ${ROW_HOVER}`}
           >
             <div className="flex items-start gap-3">
               {/* Unread mark: a 6 px square, not a dot. Drawn on every row

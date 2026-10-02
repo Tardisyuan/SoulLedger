@@ -17,6 +17,7 @@ import { TextField } from "@/src/components/ui/Field";
 import { ConfirmDialog } from "@/src/components/ui/Modal";
 import { QueryError } from "@/src/components/ui/PageError";
 import { ListSkeleton } from "@/components/ui/skeleton";
+import { BATCH_BAR } from "@/components/ui/data-table";
 import { AssistAdminTabs, MONO, MUTED, SUBTLE, Section, Switch } from "./parts";
 import { BackupBlock, KeyRow, ProviderSection, SamePlatformNote, Segment, segmentKey } from "./ProviderSection";
 import { HallSwitches } from "./HallSwitches";
@@ -333,25 +334,58 @@ function ConfigForm({ config }: { config: AssistAdminConfig }) {
 
       <CorpusSection />
 
-      <div className="sticky bottom-0 z-filters -mx-4 border-t border-[oklch(var(--color-block))] bg-[oklch(var(--color-canvas))] px-4 py-3">
-        <div className="flex flex-wrap items-center justify-end gap-3">
-          <span className="mr-auto text-sm" data-testid="aa-draft-count">
-            {n > 0 ? t("assist_admin.footer.unsaved", { count: String(n) }) : t("assist_admin.footer.clean")}
-          </span>
-          <Button type="button" variant="ghost" disabled={n === 0} onClick={discard}>
-            {t("assist_admin.footer.discard")}
-          </Button>
-          {/* E: why Save is off sits right beside it, not on a line of its own under the bar. */}
-          {reason && (
-            <span id="aa-save-reason" role={saveError ? "alert" : undefined} className="max-w-md text-right text-xs text-[oklch(var(--color-warning))]">
-              {reason}
+      {/* 未保存条(规范 v3,与权限矩阵的未保存条同一规则):有改动时墨色反白 —— 条上按钮都是
+          `inverse`,「保存」是唯一的实心(s1 底、ink 字、600),保存不了的原因用条的字色加 ◐,
+          不借警示色(警示色在墨底上不到 4.5:1)。没有改动时是原来那条安静的说明行。 */}
+      {n > 0 ? (
+        <div className={`sticky bottom-0 z-filters -mx-4 px-4 py-3 ${BATCH_BAR}`}>
+          <div className="flex flex-wrap items-center justify-end gap-3">
+            <span className="mr-auto text-sm font-medium" data-testid="aa-draft-count">
+              {t("assist_admin.footer.unsaved", { count: String(n) })}
             </span>
-          )}
-          <Button type="button" variant="primary" disabled={!canSave} loading={saving} aria-describedby={reason ? "aa-save-reason" : undefined} onClick={() => void doSave()}>
-            {t("assist_admin.footer.save")}
-          </Button>
+            <Button type="button" variant="inverse" onClick={discard}>
+              {t("assist_admin.footer.discard")}
+            </Button>
+            {/* E: why Save is off sits right beside it, not on a line of its own under the bar. */}
+            {reason && (
+              <span id="aa-save-reason" role={saveError ? "alert" : undefined} className="max-w-md text-right text-xs">
+                <span aria-hidden="true">◐ </span>
+                {reason}
+              </span>
+            )}
+            <Button
+              type="button"
+              variant="inverse"
+              className="bg-[oklch(var(--color-surface-1))] text-[oklch(var(--color-ink))] font-semibold hover:bg-[color-mix(in_oklab,oklch(var(--color-ink))_8%,oklch(var(--color-surface-1)))] active:bg-[color-mix(in_oklab,oklch(var(--color-ink))_16%,oklch(var(--color-surface-1)))]"
+              disabled={!canSave}
+              loading={saving}
+              aria-describedby={reason ? "aa-save-reason" : undefined}
+              onClick={() => void doSave()}
+            >
+              {t("assist_admin.footer.save")}
+            </Button>
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="sticky bottom-0 z-filters -mx-4 border-t border-[oklch(var(--color-block))] bg-[oklch(var(--color-canvas))] px-4 py-3">
+          <div className="flex flex-wrap items-center justify-end gap-3">
+            <span className="mr-auto text-sm" data-testid="aa-draft-count">
+              {t("assist_admin.footer.clean")}
+            </span>
+            {reason && (
+              <span id="aa-save-reason" role={saveError ? "alert" : undefined} className="max-w-md text-right text-xs text-[oklch(var(--color-warning))]">
+                {reason}
+              </span>
+            )}
+            <Button type="button" variant="ghost" disabled>
+              {t("assist_admin.footer.discard")}
+            </Button>
+            <Button type="button" variant="primary" disabled>
+              {t("assist_admin.footer.save")}
+            </Button>
+          </div>
+        </div>
+      )}
 
       <ConfirmDialog
         isOpen={confirmClear}

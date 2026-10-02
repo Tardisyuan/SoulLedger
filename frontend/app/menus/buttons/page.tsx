@@ -218,7 +218,8 @@ export default function MenuButtonsPage() {
                   </Button>
                 </RequirePermission>
                 <RequirePermission permissions="menu.manage">
-                  <Button type="button" size="sm" variant="ghost" className="text-[oklch(var(--color-danger))]" onClick={() => deleteMutation.mutate(btn.id)}>
+                  {/* 幽灵按钮,不上红(同用户页):v3 的红只给系统出错与不可撤回删除里那个确认键。 */}
+                  <Button type="button" size="sm" variant="ghost" onClick={() => deleteMutation.mutate(btn.id)}>
                     {t("menus.delete")}
                   </Button>
                 </RequirePermission>

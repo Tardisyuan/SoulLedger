@@ -155,8 +155,9 @@ describe("batch bar (v3 .ds-batch, inverted)", () => {
     .map((file) => ({ file: path.relative(FRONTEND_ROOT, file), src: readFileSync(file, "utf8") }))
     .filter(({ src }) => src.includes("${BATCH_BAR}"));
 
-  it("finds the four inverted bars (three batch bars and the permission matrix's unsaved bar)", () => {
+  it("finds the five inverted bars (three batch bars and two unsaved bars: permission matrix, assistant admin)", () => {
     expect(BARS.map((b) => b.file).sort()).toEqual([
+      "src/components/assist-admin/ConfigPage.tsx",
       "src/components/judgment/JudgmentClaimQueue.tsx",
       "src/components/moderation/SensitiveWordsSection.tsx",
       "src/components/permissions/MatrixBanners.tsx",

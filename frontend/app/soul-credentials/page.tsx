@@ -149,7 +149,7 @@ function CredentialsPageContent() {
       <div>
         <div
           aria-hidden="true"
-          className={`hidden px-3 py-2 font-mono text-2xs text-[oklch(var(--color-ink-subtle))] border-b border-[oklch(var(--color-block))] ${ROW_GRID}`}
+          className={`hidden min-h-(--control-h-sm) items-center px-3 py-2 font-mono text-2xs text-[oklch(var(--color-ink-subtle))] border-b-2 border-[oklch(var(--color-ink))] ${ROW_GRID}`}
         >
           <span>{t("soul_accounts.fields.soul")}</span>
           <span>{t("soul_accounts.fields.cycle")}</span>
@@ -165,7 +165,7 @@ function CredentialsPageContent() {
               <li
                 key={c.id}
                 data-credential-id={c.id}
-                className={`px-3 py-3 md:py-2 space-y-3 md:space-y-0 border-b border-[oklch(var(--color-rule))] ${ROW_GRID}`}
+                className={`px-3 py-3 md:py-2 md:min-h-(--table-row-h) space-y-3 md:space-y-0 border-b border-[oklch(var(--color-rule))] ${ROW_GRID}`}
               >
                 <div className="min-w-0 space-y-1">
                   <p className="text-sm font-medium text-[oklch(var(--color-ink))] break-words">
@@ -232,7 +232,7 @@ function CredentialsPageContent() {
                   {canManage && expired && c.status !== "DELIVERED" && (
                     <Link
                       href={`/souls/${c.soul}#soul-account`}
-                      className="px-2 text-xs underline text-[oklch(var(--color-accent-ink))]"
+                      className="inline-flex min-h-(--control-h-sm) items-center px-2 text-xs underline text-[oklch(var(--color-accent-ink))]"
                     >
                       {t("soul_accounts.credentials.actions.go_reset")}
                     </Link>
