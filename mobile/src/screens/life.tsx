@@ -523,7 +523,7 @@ function LifePath({ at, lex }: { at: number; lex: CivKey }) {
                       : { backgroundColor: t.ink, borderColor: t.ink },
                 ]}
               >
-                <Txt style={[styles.stageMark, { color: where === "ahead" ? t.inkMuted : t.s0 }]}>{where === "done" ? "✓" : String(i + 1)}</Txt>
+                <Txt style={[styles.stageMark, where === "done" && styles.stageGlyph, { color: where === "ahead" ? t.inkMuted : t.s0 }]}>{where === "done" ? "✓" : String(i + 1)}</Txt>
               </View>
             </View>
             <Txt
@@ -922,6 +922,8 @@ const styles = StyleSheet.create({
   stageDot: { width: 30, height: 30, borderRadius: 999, borderWidth: 1, alignItems: "center", justifyContent: "center" },
   stageHere: { width: 28, height: 28, borderWidth: 4 },
   stageMark: { fontFamily: family.mono[400], fontSize: 11, lineHeight: 14 },
+  /** ✓ from the status-glyph face: IBM Plex Mono has none, so the OS fell back to a √-like mark. */
+  stageGlyph: { fontFamily: family.glyph },
   stageWord: { fontSize: 11, lineHeight: 16, textAlign: "center" },
   /** v3 .life-balance: an ink block, the number in mono 56. */
   balance: { minHeight: 120, flexDirection: "row", alignItems: "center", gap: 24, paddingVertical: 24 },
