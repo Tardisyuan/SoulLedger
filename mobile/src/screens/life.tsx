@@ -277,7 +277,7 @@ export function LifeSections({
 /** v3 .life-identity: compacts once the page has moved 68pt under it, opens again near the top. */
 const BAND_COMPACT_AT = 68;
 const BAND_OPEN_AT = 20;
-/** pt below the status bar, at 1× text: full (meta line, 52pt seal, name and code) and compact (one row). */
+/** pt below the status bar, at 1× text: full (12 + meta 16 + 12 + 64pt seal + 12 — the seal is the row's tallest) and compact (one row, 30pt seal). */
 const BAND_FULL = 116;
 const BAND_SMALL = 48;
 
@@ -321,7 +321,7 @@ function LifeBand({ me, compact, onAccount }: { me: MeProfile; compact: boolean;
           </Txt>
         )}
         <View style={styles.bandRow}>
-          <OutlineSeal civ={t.civ} size={small ? 28 : 52} color={on} glyphs={me.tenant.seal_glyphs} label={tr("seal.aria", { court: hall })} testID="plaque-seal" />
+          <OutlineSeal civ={t.civ} size={small ? 30 : 64} color={on} glyphs={me.tenant.seal_glyphs} label={tr("seal.aria", { court: hall })} testID="plaque-seal" />
           <View style={styles.bandText}>
             <View style={styles.nameRow}>
               <Txt testID="soul-name" accessibilityRole="header" numberOfLines={stack ? undefined : 1} style={[small ? styles.nameSmall : styles.name, { color: on }]}>
