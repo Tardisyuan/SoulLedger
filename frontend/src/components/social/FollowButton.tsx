@@ -4,7 +4,11 @@ import { useToggleFollow, useFollowing } from "@soulledger/core/hooks/useSocial"
 import { useI18n } from "@/src/contexts/I18nContext";
 import { Button } from "@/src/components/ui/Button";
 
-export function FollowButton({ userId, className }: { userId: string; className?: string }) {
+/**
+ * A5:列表里 44 高次按钮「已关注」/「关注」;个人页(`prominent`)未关注时是 48 高主按钮「＋ 关注」。
+ * 「已关注」是次按钮(v3 稿),不再是 v1 的幽灵按钮。
+ */
+export function FollowButton({ userId, className, prominent = false }: { userId: string; className?: string; prominent?: boolean }) {
   const { t } = useI18n();
   const toggleFollow = useToggleFollow();
   const { data } = useFollowing();
@@ -18,14 +22,12 @@ export function FollowButton({ userId, className }: { userId: string; className?
     toggleFollow.mutate(userId);
   };
 
-  // The `Button` primitive (规范 v1 §2) rather than hand-written classes: 28 px
-  // in a row, and "already following" is the quieter ghost so a column of them
-  // does not read as a column of calls to action.
+  const loud = prominent && !isFollowing;
   return (
     <Button
       type="button"
-      size="sm"
-      variant={isFollowing ? "ghost" : "secondary"}
+      size={prominent ? "md" : "sm"}
+      variant={loud ? "primary" : "secondary"}
       onClick={handleClick}
       disabled={toggleFollow.isPending}
       className={className}
@@ -33,8 +35,8 @@ export function FollowButton({ userId, className }: { userId: string; className?
       {toggleFollow.isPending
         ? "..."
         : isFollowing
-          ? t("social.following") || "Following"
-          : t("social.follow") || "Follow"}
+          ? t("social.following")
+          : <>{loud ? <span aria-hidden="true">＋ </span> : null}{t("social.follow")}</>}
     </Button>
   );
 }
