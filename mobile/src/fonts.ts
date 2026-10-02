@@ -27,11 +27,7 @@ import { Archivo_600SemiBold } from "@expo-google-fonts/archivo/600SemiBold";
 import { IBMPlexMono_400Regular } from "@expo-google-fonts/ibm-plex-mono/400Regular";
 import { IBMPlexMono_500Medium } from "@expo-google-fonts/ibm-plex-mono/500Medium";
 import { SourceSerif4_400Regular } from "@expo-google-fonts/source-serif-4/400Regular";
-import { GFSDidot_400Regular } from "@expo-google-fonts/gfs-didot/400Regular";
 import { NotoSansEgyptianHieroglyphs_400Regular } from "@expo-google-fonts/noto-sans-egyptian-hieroglyphs/400Regular";
-import { UnifrakturMaguntia_400Regular } from "@expo-google-fonts/unifrakturmaguntia/400Regular";
-
-import type { CivKey } from "./theme";
 
 export const FONT_ASSETS = {
   Archivo_400Regular,
@@ -43,18 +39,14 @@ export const FONT_ASSETS = {
   // Regular only: nothing sets quoted words in a heavier weight. The 600 subset
   // (1.49 MB) was bundled with no caller and removed 2026-09-18.
   NotoSerifSC_400: require("../assets/fonts/NotoSerifSC-Subset-400.ttf"),
-  // v2 朱印 (规范 v2 §印): the cold start's seal glyph, per civilization; the hieroglyphs are also
-  // v3's outline seal's for 埃及. Loaded with the rest at boot, under the native splash. v2's plaque
-  // title faces (Josefin Slab, Cinzel; 地府's Ma Shan Zheng, loaded per soul) went with v2's plaque
-  // (2026-10-02): v3's band sets its title in the interface face.
-  LXGWSeal_400: require("../assets/fonts/LXGWSeal-Regular.ttf"),
   // Status glyphs (Design E 组): ✓✕◇↺◌○▣↻◎≡?◐⇄ from ONE font. Archivo has only ≡ and ?, so each
   // fell back to the OS per glyph — ◌ from one font, its neighbours from another. 5 KB, the same
   // bytes the web serves (scripts/build-glyph-font.py; DejaVu Sans subset, licence beside it).
   SoulLedgerGlyphs: require("../assets/fonts/SoulLedgerGlyphs.ttf"),
-  UnifrakturMaguntia_400Regular,
+  // v3's outline seal for 埃及 (its default glyph is U+13184), loaded with the rest at boot. v2 朱印's
+  // other three glyph faces (霞鹜篆书, UnifrakturMaguntia, GFS Didot) went with v2's seal (2026-10-03);
+  // its plaque title faces (Josefin Slab, Cinzel, Ma Shan Zheng) with v2's plaque (2026-10-02).
   NotoSansEgyptianHieroglyphs_400Regular,
-  GFSDidot_400Regular,
 };
 
 type FontName = keyof typeof FONT_ASSETS;
@@ -66,15 +58,15 @@ export const family = {
   serifHan: "NotoSerifSC_400",
   /** Badge glyphs only (`Badge` in ui.tsx) — the family has no letters beyond `?`. */
   glyph: "SoulLedgerGlyphs",
-  /** 印文: 霞鹜篆书 · 花体首字母 · 圣书字 · GFS Didot. Never translated (补足 A6). */
-  seal: { cn: "LXGWSeal_400", eu: "UnifrakturMaguntia_400Regular", eg: "NotoSansEgyptianHieroglyphs_400Regular", gr: "GFSDidot_400Regular" },
+  /** 印文 in 圣书字 (`OutlineSeal`); other glyphs use the two serifs via `quoteFamily`. */
+  hieroglyph: "NotoSansEgyptianHieroglyphs_400Regular",
 } as const satisfies {
   ui: Record<number, FontName>;
   mono: Record<number, FontName>;
   serif: FontName;
   serifHan: FontName;
   glyph: FontName;
-  seal: Record<Exclude<CivKey, "neutral">, FontName>;
+  hieroglyph: FontName;
 };
 
 const HAN = /[㐀-鿿豈-﫿]/;

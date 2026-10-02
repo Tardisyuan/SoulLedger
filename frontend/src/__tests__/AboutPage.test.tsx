@@ -1,6 +1,6 @@
 /**
- * 关于 / 致谢页:三节都在,都灵 S 2312 写的是核实过的 CC0(不是草案里的 CC BY 2.0),
- * 并链到 Commons 文件页;专名不经语言包,所以 egy 下也原样出现。
+ * 关于 / 致谢页:各节都在,不再发布的素材(v2 题字与印文字体、印的残边扫描)不列;
+ * 专名不经语言包,所以 egy 下也原样出现。
  */
 import { render, screen, within } from "@testing-library/react";
 import AboutPage from "@/app/about/page";
@@ -15,44 +15,31 @@ const renderIn = (locale: Locale) =>
   );
 
 describe("AboutPage", () => {
-  it("lists typefaces and seal-edge images with their licences", () => {
+  it("lists typefaces with their licences; no ornament or seal-edge section", () => {
     renderIn("zh-Hans");
     expect(screen.getByRole("heading", { name: /字体/ })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: /印的残边/ })).toBeInTheDocument();
     // v2 的匾纹带与分节纹(取自 Owen Jones)已从两端删光(2026-10-03),纹样一节随之撤掉。
     expect(screen.queryByRole("heading", { name: /纹样/ })).toBeNull();
     expect(screen.queryByText("Owen Jones")).toBeNull();
-    for (const font of ["Archivo", "LXGW Seal", "Noto Sans Egyptian Hieroglyphs"]) {
+    for (const font of ["Archivo", "Noto Sans Egyptian Hieroglyphs"]) {
       expect(screen.getByText(font)).toBeInTheDocument();
     }
-    // v2's plaque faces ship nowhere since v3, so they are not credited.
-    for (const font of ["Ma Shan Zheng", "Josefin Slab", "Cinzel"]) {
+    // v2's plaque faces, and v2 朱印's other three seal faces (2026-10-03), ship nowhere since v3,
+    // so they are not credited.
+    for (const font of ["Ma Shan Zheng", "Josefin Slab", "Cinzel", "LXGW Seal", "UnifrakturMaguntia", "GFS Didot"]) {
       expect(screen.queryByText(font)).toBeNull();
     }
-    expect(screen.getAllByRole("link", { name: "SIL Open Font License 1.1" })).toHaveLength(9);
+    expect(screen.getAllByRole("link", { name: "SIL Open Font License 1.1" })).toHaveLength(6);
   });
 
-  it("credits Turin S 2312 as CC0 with a link to its Commons page, and nowhere says CC BY", () => {
+  it("no seal-edge section: the four museum scans masked only v2's filled seal, which ships nowhere (2026-10-03)", () => {
     const { container } = renderIn("zh-Hans");
-    const turin = screen.getByText("Museo Egizio, Torino").closest("li") as HTMLElement;
-    expect(within(turin).getByRole("link", { name: "CC0 1.0" })).toHaveAttribute(
-      "href",
-      "https://creativecommons.org/publicdomain/zero/1.0/"
-    );
-    expect(within(turin).getByRole("link", { name: "来源" }).getAttribute("href")).toContain("Turin_S_2312");
-    expect(container.textContent).not.toMatch(/CC BY/);
-  });
-
-  it("names all four seal-edge scans, each CC0 with its own Commons source (README / A7, 2026-09-30)", () => {
-    renderIn("zh-Hans");
-    const met = screen.getAllByText("The Metropolitan Museum of Art").map((el) => el.closest("li") as HTMLElement);
-    expect(met).toHaveLength(3);
-    for (const [row, id] of met.map((r, i) => [r, ["DP153679", "227192", "DP270679"][i]] as const)) {
-      expect(within(row).getByRole("link", { name: "CC0 1.0" })).toBeInTheDocument();
-      const href = within(row).getByRole("link", { name: "来源" }).getAttribute("href") ?? "";
-      expect(href.startsWith("https://commons.wikimedia.org/wiki/File:")).toBe(true);
-      expect(href).toContain(id);
+    expect(screen.queryByRole("heading", { name: /印的残边/ })).toBeNull();
+    for (const museum of ["Museo Egizio, Torino", "The Metropolitan Museum of Art"]) {
+      expect(screen.queryByText(museum)).toBeNull();
     }
+    expect(screen.queryByRole("link", { name: "CC0 1.0" })).toBeNull();
+    expect(container.textContent).not.toMatch(/CC BY/);
   });
 
   it("groups open-source dependencies by platform, collapsed, each linked to its registry page", () => {
@@ -94,7 +81,7 @@ describe("AboutPage", () => {
     renderIn("egy");
     // egy 是懒加载的包:先等它到,否则量到的是 zh 回退。
     expect(await screen.findByRole("heading", { level: 1, name: "Tepy Hena Sesen" })).toBeInTheDocument();
-    expect(screen.getByText("Museo Egizio, Torino")).toBeInTheDocument();
+    expect(screen.getByText("Noto Sans Egyptian Hieroglyphs")).toBeInTheDocument();
     expect(screen.getByText("Archivo").closest("li")).toHaveTextContent("SIL Open Font License 1.1");
   });
 });
