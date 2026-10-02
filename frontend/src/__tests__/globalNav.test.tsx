@@ -34,8 +34,9 @@ jest.mock("@/src/contexts/I18nContext", () => ({
   }),
 }));
 jest.mock("@/src/contexts/ThemeContext", () => ({ useTheme: () => ({ theme: "light", toggleTheme: jest.fn() }) }));
+let mockUser: { username: string; display_name: string; role: string } | null = null;
 jest.mock("@/src/contexts/TenantContext", () => ({
-  useTenant: () => ({ user: null, tenantCode: "CN", logout: jest.fn() }),
+  useTenant: () => ({ user: mockUser, tenantCode: "CN", logout: jest.fn() }),
 }));
 const mockPathname = jest.fn(() => "/menus");
 jest.mock("next/navigation", () => ({
@@ -389,6 +390,26 @@ describe("usePlaque:页面给身份带的题字", () => {
     renderWith(<Page text={{ title: undefined, meta: "在押 3" }} />);
     expect(title()).toHaveTextContent("菜单");
     expect(band().querySelector(".identity-case")).toHaveTextContent("在押 3");
+  });
+});
+
+describe("用户菜单的每一项都是 44 的点击区", () => {
+  afterEach(() => {
+    mockUser = null;
+  });
+
+  it("主题 / 设置 / 关于 / 退出:min-h 是 --control-h-sm(44),不再是 min-h-8(32)", async () => {
+    mockUser = { username: "yama", display_name: "阎罗", role: "ADMIN" };
+    renderLayout();
+    fireEvent.click(screen.getByTestId("user-menu"));
+    const labels = await Promise.all(
+      ["settings.theme", "nav.settings", "about.title", "auth.logout"].map((k) => screen.findByText(k)),
+    );
+    for (const label of labels) {
+      const control = label.closest("button, a") as HTMLElement;
+      expect(control.className).toContain("min-h-(--control-h-sm)");
+      expect(control.className).not.toContain("min-h-8");
+    }
   });
 });
 

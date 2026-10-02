@@ -11,7 +11,6 @@ import {
   LICENCE_LABELS,
   LITERATURE_CIVILIZATIONS,
   LITERATURE_CREDITS,
-  ORNAMENT_CREDITS,
   OSS_CREDITS,
   OSS_GROUPS,
   SERVICE_CREDITS,
@@ -118,7 +117,6 @@ export function AboutScreen() {
         {t("about.intro")}
       </Txt>
       <Group title={t("about.fonts")} credits={FONT_CREDITS} />
-      <Group title={t("about.ornament")} credits={ORNAMENT_CREDITS} />
       <Group title={t("about.images")} credits={IMAGE_CREDITS} />
 
       <View style={pad}>

@@ -39,9 +39,9 @@ export const FONT_CREDITS: Credit[] = [
   "Noto Sans Egyptian Hieroglyphs",
 ].map((name) => ({ name, licence: "OFL-1.1" as const }));
 
-export const ORNAMENT_CREDITS: Credit[] = [
-  { name: "Owen Jones", detail: "The Grammar of Ornament, 1856 · Pl. LXII / LXVIII / VI / XXII", licence: "PD" },
-];
+// 纹样(Owen Jones《The Grammar of Ornament》Pl. LXII / LXVIII / VI / XXII)一节撤掉(2026-10-03):
+// 取自它的 v2 匾纹带与分节纹已从 Web 与 App 删光,不再随任何一端发布。身份带的纹样是 v3 的纯 CSS
+// 渐变,App 信纸角饰是 Design「文明气质」画的(见 DESIGN_CREDITS)。`PD` 留在许可类型里备用。
 
 /**
  * 印的残边扫描遮罩(deliver/textures/scan-*)。

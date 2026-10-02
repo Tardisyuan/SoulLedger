@@ -80,9 +80,8 @@
   },
   "about": {
     "title": "关于与致谢",
-    "intro": "本应用用到的字体、纹样、图像、开源软件、典籍与服务,以及它们的授权与出处。",
+    "intro": "本应用用到的字体、图像、开源软件、典籍与服务,以及它们的授权与出处。",
     "fonts": "字体",
-    "ornament": "纹样",
     "images": "印的残边",
     "licence": "授权",
     "public_domain": "公有领域",
@@ -1826,7 +1825,7 @@
     "no_organizations": "还没有登记任何机构。"
   },
   "actors": {
-    "title": "角色",
+    "title": "神祇名录",
     "subtitle": "跨文明角色管理",
     "section": {
       "actors": "角色列表"
@@ -2525,7 +2524,9 @@
     "buttons": "菜单按钮",
     "admin": "系统设置",
     "assistant": "助手管理",
-    "usage": "实际用量"
+    "usage": "实际用量",
+    "follows": "关注关系",
+    "propose": "发起调度"
   },
   "tenant": {
     "civilizations": {

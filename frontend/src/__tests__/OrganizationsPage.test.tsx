@@ -1,5 +1,5 @@
 /**
- * /organizations 按规范 v2 补齐:每个文明一节 = 分节标题(SectionTitle),折叠钮在 <h2> 里
+ * /organizations 按规范 v2 补齐:每个文明一节 = 面板标题 <h2>,折叠钮在 <h2> 里
  * (不是 <h2> 进 <button>),加载是静态的表格骨架。
  */
 import { fireEvent, render, screen, within } from "@testing-library/react";

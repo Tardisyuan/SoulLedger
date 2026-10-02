@@ -175,12 +175,10 @@ describe("civilization enters only the plaque colour (规范 v2 §1.8 收窄)", 
     expect(mainUnder(civ)).toBe(`var(--color-civ-${civ})`);
   });
 
-  // 文明皮是「匾色 + 分节纹」(印形由 `.seal[data-civ]` 直接选,不经变量;v2 的匾纹、质感、
-  // 题字字体、印素材与印文字体随 v3 撤掉),所以 [data-civ] 块里除了匾色只有分节纹(见
-  // zhuyinShell.test)。这条守的仍是 §1.8 收窄那句话:**颜色**里只有 --color-main 随文明变。
-  const SKIN_ASSETS = /^--section$/;
-
-  it("a [data-civ] block sets no colour but --color-main, and nothing but skin assets besides", () => {
+  // 文明皮只剩匾色(印形由 `.seal[data-civ]` 直接选,不经变量;v2 的匾纹、质感、题字字体、
+  // 印素材与印文字体随 v3 撤掉,分节纹 `--section` 于 2026-10-03 随 `SectionTitle` 撤掉),
+  // 所以 [data-civ] 块里只有 --color-main。这条守的仍是 §1.8 收窄那句话。
+  it("a [data-civ] block sets --color-main and nothing else", () => {
     const blocks = [...CSS.matchAll(/\[data-civ="(\w+)"\]\s*\{([^}]*)\}/g)];
     // 中性皮没有自己的块:它的匾色是 :root 的默认(上一条),它没有印、没有分节纹。
     expect([...new Set(blocks.map((b) => b[1]))].sort()).toEqual(["cn", "eg", "eu", "gr"]);
@@ -190,7 +188,7 @@ describe("civilization enters only the plaque colour (规范 v2 §1.8 收窄)", 
       const colours = decls.filter((d) => d.startsWith("--color-"));
       expect(colours.filter((d) => d !== "--color-main")).toEqual([]);
       if (colours.includes("--color-main")) mainSetBy.push(b[1]);
-      expect(decls.filter((d) => !d.startsWith("--color-") && !SKIN_ASSETS.test(d))).toEqual([]);
+      expect(decls.filter((d) => !d.startsWith("--color-"))).toEqual([]);
     }
     expect(mainSetBy.sort()).toEqual(["cn", "eg", "eu", "gr"]);
   });

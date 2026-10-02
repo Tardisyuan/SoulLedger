@@ -8,7 +8,6 @@ import {
   LICENCE_LABELS,
   LITERATURE_CIVILIZATIONS,
   LITERATURE_CREDITS,
-  ORNAMENT_CREDITS,
   OSS_CREDITS,
   OSS_GROUPS,
   SERVICE_CREDITS,
@@ -16,7 +15,6 @@ import {
 } from "@soulledger/core/config/credits";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { PageShell } from "@/src/components/ui/PageShell";
-import { SectionTitle } from "@/src/components/plaque/SectionTitle";
 
 /**
  * 关于 / 致谢(规范 v2 补足 C16):入口在用户菜单。数据在 packages/core 的
@@ -78,11 +76,13 @@ function Rows({ credits }: { credits: Credit[] }) {
 function Section({ stem, title, aside, children }: { stem: string; title: string; aside?: ReactNode; children: ReactNode }) {
   return (
     <section>
-      <div className="pt-6">
-        <SectionTitle aside={aside}>
+      {/* v3 面板标题(与 `components/ui/page-section.tsx` 同一写法);v2 节首的匾纹片段撤掉。 */}
+      <div className="flex items-center gap-3 pt-6">
+        <h2 className="text-lg text-[oklch(var(--color-ink))]">
           <span aria-hidden="true">{stem} · </span>
           {title}
-        </SectionTitle>
+        </h2>
+        {aside ? <span className={`font-mono text-2xs ${MUTED}`}>{aside}</span> : null}
       </div>
       {children}
     </section>
@@ -135,26 +135,23 @@ export default function AboutPage() {
       <Section stem="甲" title={t("about.fonts")}>
         <Rows credits={FONT_CREDITS} />
       </Section>
-      <Section stem="乙" title={t("about.ornament")}>
-        <Rows credits={ORNAMENT_CREDITS} />
-      </Section>
-      <Section stem="丙" title={t("about.images")}>
+      <Section stem="乙" title={t("about.images")}>
         <Rows credits={IMAGE_CREDITS} />
       </Section>
-      <Section stem="丁" title={t("about.software")}>
+      <Section stem="丙" title={t("about.software")}>
         <OpenSource />
       </Section>
-      <Section stem="戊" title={t("about.literature")}>
+      <Section stem="丁" title={t("about.literature")}>
         <Literature />
       </Section>
-      <Section stem="己" title={t("about.services")} aside={t("about.by_deployment")}>
+      <Section stem="戊" title={t("about.services")} aside={t("about.by_deployment")}>
         <ul className="text-sm">
           {SERVICE_CREDITS.map((s) => (
             <Row key={s.name} name={s.name} detail={s.detail} url={s.url} aside={s.isDefault ? t("about.default") : null} />
           ))}
         </ul>
       </Section>
-      <Section stem="庚" title={t("about.design")}>
+      <Section stem="己" title={t("about.design")}>
         <ul className="text-sm">
           {DESIGN_CREDITS.map((d) => (
             <Row key={d.name} name={d.name} detail={d.detail} />

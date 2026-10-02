@@ -29,10 +29,7 @@ const GOOGLE_FAMILIES = [
   "IBM+Plex+Mono:wght@400;500;600",
   "Noto+Sans+SC:wght@100..900",
   "Noto+Serif+SC:wght@200..900",
-  "Ma+Shan+Zheng",
   "UnifrakturMaguntia",
-  "Josefin+Slab:wght@600;700",
-  "Cinzel:wght@600",
   "GFS+Didot",
   "Noto+Sans+Egyptian+Hieroglyphs",
 ];
@@ -43,10 +40,7 @@ const FONT_VARS = `:root {
   --font-sans-latin: 'Archivo';
   --font-serif-latin: 'Source Serif 4';
   --font-mono-latin: 'IBM Plex Mono';
-  --font-ma-shan-zheng: 'Ma Shan Zheng';
   --font-unifraktur: 'UnifrakturMaguntia';
-  --font-josefin-slab: 'Josefin Slab';
-  --font-cinzel: 'Cinzel';
   --font-gfs-didot: 'GFS Didot';
   --font-hieroglyphs: 'Noto Sans Egyptian Hieroglyphs';
   --font-lxgw-seal: 'LXGW Seal';
