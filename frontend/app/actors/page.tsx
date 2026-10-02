@@ -283,6 +283,7 @@ function ActorsPageContent() {
                           </button>
 
                           {isBenchOpen && (
+                            <div className="row-expand">
                             <ActorTable>
                               {bench.map((actor) => (
                                 <ActorRow
@@ -292,6 +293,7 @@ function ActorsPageContent() {
                                 />
                               ))}
                             </ActorTable>
+                            </div>
                           )}
                         </div>
                       )}
