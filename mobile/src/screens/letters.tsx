@@ -25,7 +25,7 @@ import { family, quoteFamily } from "../fonts";
 import { useI18n } from "../i18n";
 import { TAG_GLYPH } from "../rules";
 import { SessionContext } from "../session";
-import type { Theme } from "../theme";
+import { radius, type Theme } from "../theme";
 import { Button, Empty, FadeIn, Notice, PageEmptyArt, Screen, SectionLabel, Skeleton, Txt, shade, useLayout, usePullRefresh, useReloadOnReconnect, useTheme } from "../ui";
 import type { AppStackParams } from "./applications";
 import { useNow } from "./auth";
@@ -220,7 +220,7 @@ export function LettersScreen() {
     }
   };
   const lastTs = useCallback((roomId: string) => lastOf(chat, roomId)?.ts ?? 0, [chat]);
-  const refreshControl = usePullRefresh(false, () => void chat.reload());
+  const pull = usePullRefresh(false, () => void chat.reload());
   // 书信不在切回时重载(会话开销大),但断网恢复时重载一次;没配 Matrix 时不重试,那是设计如此。
   const reloadOnReconnect = useCallback(() => {
     if (chat.availability !== "not_configured") void chat.reload();
@@ -271,11 +271,12 @@ export function LettersScreen() {
           every conversation a soul ever had stays in it. */}
       <Screen scroll={false} edges={["left", "right"]} testID="letters">
         <FadeIn style={styles.fill}>
+          {pull?.indicator}
           <FlatList
             testID="letters-list"
             data={souls}
             keyExtractor={conversationKey}
-            refreshControl={refreshControl}
+            {...pull?.props}
             keyboardShouldPersistTaps="handled"
             ListHeaderComponent={
               <>
@@ -518,7 +519,7 @@ const styles = StyleSheet.create({
   fab: { position: "absolute", right: 16, bottom: 16, width: 56, height: 56, alignItems: "center", justifyContent: "center" },
   fabSpace: { height: 88 },
   findBlock: { paddingHorizontal: 20, paddingVertical: 16, gap: 12, borderBottomWidth: 1, borderBottomColor: "transparent" },
-  codeBox: { minHeight: 48, borderWidth: 1, justifyContent: "center" },
+  codeBox: { minHeight: 48, borderWidth: 1, borderRadius: radius.control, justifyContent: "center" },
   codeInput: { minHeight: 46, paddingHorizontal: 12, fontFamily: family.mono[500], fontSize: 15, letterSpacing: 2.2 },
   card: { flexDirection: "row", alignItems: "center", gap: 12, borderWidth: 1, padding: 16 },
   write: { minHeight: ANDROID ? 48 : 44, paddingHorizontal: 12, alignItems: "center", justifyContent: "center" },

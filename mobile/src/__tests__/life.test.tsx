@@ -9,13 +9,14 @@ import { act, fireEvent, render, screen } from "@testing-library/react-native";
 import * as SecureStore from "expo-secure-store";
 import { AccessibilityInfo, ScrollView, StyleSheet } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import Svg, { Path, Stop } from "react-native-svg";
 
 import { I18nProvider } from "../i18n";
 import { RootNavigator } from "../navigation";
 import { installMobilePlatform, persistentStore } from "../platform";
 import { LIFE_OPEN_PREFIX } from "../screens/life";
 import { SessionProvider } from "../session";
-import { motion, v3, v3Band } from "../theme";
+import { ON_PLAQUE, motion, v3, v3Band } from "../theme";
 import { PROFILE, life, stubApi } from "./stubApi";
 
 const mockWindow = { width: 390, height: 844, scale: 3, fontScale: 1 };
@@ -113,6 +114,89 @@ describe("the identity band", () => {
     scrollTo(300);
     expect(screen.getByTestId("identity-meta")).toBeTruthy();
     expect(flat(screen.getByTestId("plaque-seal")).width).toBe(64);
+  });
+});
+
+describe("the copy-the-soul-code target", () => {
+  /** The target's own box: the code's line plus the padding around it (no `hitSlop`, which Android drops outside a parent). */
+  const target = () => {
+    const box = flat(screen.getByTestId("copy-soul-code")) as Record<string, number>;
+    const line = Number(flat(screen.getByText(PROFILE.soul_code)).lineHeight);
+    return { box, line, height: (box.paddingTop ?? box.paddingVertical) + line + (box.paddingBottom ?? box.paddingVertical) };
+  };
+
+  it("is at least 44 high, full and compact, and moves nothing (the margins take the padding back)", async () => {
+    await open();
+    for (const y of [0, 100]) {
+      scrollTo(y);
+      await act(async () => {
+        await new Promise((r) => setTimeout(r, motion.bandCompact + 200));
+      });
+      const { box, height } = target();
+      expect(height).toBeGreaterThanOrEqual(44);
+      expect(screen.getByTestId("copy-soul-code").props.hitSlop).toBeUndefined();
+      expect([box.marginTop ?? box.marginVertical, box.marginBottom ?? box.marginVertical]).toEqual([
+        -(box.paddingTop ?? box.paddingVertical),
+        -(box.paddingBottom ?? box.paddingVertical),
+      ]);
+    }
+  });
+
+  it("compact, the whole 44 is inside the 48pt band, which clips (overflow hidden) whatever reaches past it", async () => {
+    await open();
+    scrollTo(100);
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, motion.bandCompact + 200));
+    });
+    const band = flat(screen.getByTestId("identity")) as Record<string, number>;
+    expect([band.height, band.overflow]).toEqual([48, "hidden"]);
+    const { box, line } = target();
+    const name = Number(flat(screen.getByTestId("soul-name")).lineHeight);
+    const gap = Number(flat(screen.getByTestId("band-text")).gap);
+    // The row is the text column (taller than the 30pt seal), centred in the band.
+    const column = name + gap + line;
+    expect(column).toBeGreaterThan(Number(flat(screen.getByTestId("plaque-seal")).height));
+    const codeTop = (band.height - column) / 2 + name + gap;
+    expect(codeTop - box.paddingTop).toBeGreaterThanOrEqual(0);
+    expect(codeTop + line + box.paddingBottom).toBeLessThanOrEqual(band.height);
+  });
+});
+
+describe("v3 civilization marks on 本世", () => {
+  /** The drawing's own props (the host view does not carry `opacity` through). */
+  const svg = (testID: string) => screen.UNSAFE_getAllByType(Svg).find((el) => el.props.testID === testID)!;
+  const settle = () => act(async () => new Promise((r) => setTimeout(r, motion.bandCompact + 200)));
+
+  it("the band carries 中国's grid at 15% white, fading out by 72% of the width", async () => {
+    await open();
+    await settle();
+    expect(svg("band-pattern").props.opacity).toBe(0.15);
+    const stops = screen.UNSAFE_getAllByType(Stop).map((s) => [s.props.offset, s.props.stopOpacity, s.props.stopColor]);
+    expect(stops).toEqual([
+      [0, 1, ON_PLAQUE],
+      [0.72, 0, ON_PLAQUE],
+    ]);
+  });
+
+  it("「你现在在哪」 has the stage motif behind it, in the civilization's colour under 10%", async () => {
+    await open();
+    await settle();
+    const motif = svg("stage-motif");
+    expect(motif.props.opacity).toBeLessThan(0.1);
+    expect(motif.props.opacity).toBeGreaterThan(0);
+    // First child: drawn under the label, the state and the road.
+    const first = screen.getByTestId("life-now").children[0];
+    expect(typeof first === "string" ? first : first.props.testID).toBe("stage-motif");
+    const paths = motif.findAllByType(Path);
+    expect(paths.length).toBeGreaterThan(0);
+    expect(paths.map((p) => p.props.stroke)).toEqual(paths.map(() => v3.civ.cn.light));
+  });
+
+  it("the current state is v3's display: glyph and word both 56, the word in Noto Serif SC 600", async () => {
+    await open();
+    await settle();
+    expect(flat(screen.getByTestId("soul-state-glyph")).fontSize).toBe(56);
+    expect(flat(screen.getByTestId("soul-state-word"))).toMatchObject({ fontSize: 56, fontFamily: "NotoSerifSC_600" });
   });
 });
 

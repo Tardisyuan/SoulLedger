@@ -89,11 +89,13 @@ export const semantic = {
 export const space = [2, 4, 8, 12, 16, 24, 32, 48] as const;
 export const GUTTER_PT = 20;
 /**
- * A2: corners are 0. The exceptions are the pill (the lamp, a drawer handle) and
- * the circle (a radio, an avatar) — both drawn with `pill`. The focus ring follows
- * the element's shape, so it is square too.
+ * v3 第一批「形状与层次」(2026-10-01): inputs (and filter chips — the app has none) 4, dialogs
+ * and sheets 8 (a sheet rounds its top corners only), everything else square — buttons too
+ * (user decision). The round-7 prototype draws 问一问's drawer at 20; the first batch is the
+ * later word and says it follows that prototype, so 8. The pill (the lamp, a drawer handle)
+ * and the circle (a radio, an avatar) are `pill`. The focus ring follows its element's shape.
  */
-export const radius = { none: 0, pill: 999 } as const;
+export const radius = { none: 0, control: 4, dialog: 8, pill: 999 } as const;
 /**
  * ms; reduce-motion sets every one to 0 (holds excepted, `useReducedMotionDurations`).
  * Opacity and translate only — the one scale is the cold start's mark receding (0.96),
@@ -102,13 +104,15 @@ export const radius = { none: 0, pill: 999 } as const;
  *   coldStart*               补足 C18: JS takes over from the native splash and writes the mark
  *                            (Draw), lets it stand (Hold), then it recedes: counted from there,
  *                            the home is usable from 480 and the splash layer is gone at 720
- *   sheetIn / sheetOut       a bottom sheet opens (dur.base) / closes (dur.fast; 第 2 轮 原型 06)
+ *   sheetIn / sheetOut       a bottom sheet opens / closes: v3 --duration-layout 240, and 180 out
+ *                            (v3 B2 改派弹层「240ms 进入 … 180ms 退出」; until 2026-10-03 200 / 120)
+ *   toastHold                v3 B2 Toast「停留 4s」 (until 2026-10-03 1.9s)
  *   sectionIn / sectionOut   a section's body appears (base, 4px down) / goes (fast) — 第 2 轮 4b
  */
 export const motion = {
   fade: 120,
   toast: 160,
-  toastHold: 1900,
+  toastHold: 4000,
   breath: 1600,
   welcomeIn: 600,
   welcomeHold: 1200,
@@ -117,8 +121,8 @@ export const motion = {
   coldStartHold: 300,
   coldStartInteractive: 480,
   coldStart: 720,
-  sheetIn: 200,
-  sheetOut: 120,
+  sheetIn: 240,
+  sheetOut: 180,
   sectionIn: 200,
   sectionOut: 120,
   // v3 MotionSpec, App rows (round 7): a tab's content cross-fades; a ledger row's body
@@ -130,6 +134,13 @@ export const motion = {
   bandCompact: 200,
   offlineBar: 200,
 } as const;
+
+/**
+ * The brand mark's two colours (v3 第三批 品牌色令牌): the gold balance on the deep canvas. For
+ * the app icon (scripts/build-app-icon.mjs) and the cold start (coldStart.tsx) only — never a UI
+ * colour, so it sits outside both schemes and `Theme`. `ground` is v3's dark canvas.
+ */
+export const brand = { mark: "#ECAA3D", ground: "#10120F" } as const;
 
 export interface Theme {
   scheme: ColorScheme;
