@@ -23,6 +23,7 @@ import { DomainEnum, MissingValue } from "@/src/components/ui/DomainValue";
 import { resolveEnumDisplay } from "@/src/lib/domainDisplay";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { usePlaque } from "@/src/components/plaque/Plaque";
+import { useHall } from "@/src/components/plaque/useHall";
 import { TAB_BASE, TAB_ON, TAB_OFF } from "@/src/lib/tabClasses";
 import { Button } from "@/src/components/ui/Button";
 import { EmptyState } from "@/src/components/ui/EmptyState";
@@ -84,7 +85,9 @@ function DashboardContent() {
 
   // 身份带(A4):题是当前标签名(「概览」/「账本」),右栏只写今天的日期 —— 统计接口不带
   // 「数据截至」时间,稿里的「截至 08:00」没有来源,不写。
+  const hall = useHall(t("plaque.office.tenth"));
   usePlaque({
+    hall,
     title: t(activeTab === "ledger" ? "dashboard.tab_ledger" : "dashboard.tab_overview"),
     meta: formatDateTime(new Date(), { year: "numeric", month: "2-digit", day: "2-digit" }),
   });
@@ -359,10 +362,12 @@ function DashboardContent() {
               <ChartCard
                 title={t("dashboard.balance_distribution")}
                 aside={
-                  stats ? (
-                    <span className="font-mono">
-                      n = {stats.total_souls}
-                      {stats.balance_histogram ? ` · ${t("dashboard.bucket_width", { n: String(stats.balance_histogram.bucket_width) })}` : null}
+                  // 只数已处置的灵魂(Design A4「已处置 · 每格 50」,用户 2026-10-02),所以 n 是直方图自己的
+                  // total(= 已处置人数),不是 total_souls。
+                  stats?.balance_histogram ? (
+                    <span className="font-mono" data-histogram-scope="">
+                      {t("dashboard.disposed")} · n = {stats.balance_histogram.total} ·{" "}
+                      {t("dashboard.bucket_width", { n: String(stats.balance_histogram.bucket_width) })}
                     </span>
                   ) : null
                 }

@@ -26,6 +26,7 @@ import {
 } from "@/src/components/workflow/page/TemplatePreview";
 import { QueryError } from "@/src/components/ui/PageError";
 import { usePlaque } from "@/src/components/plaque/Plaque";
+import { useHall } from "@/src/components/plaque/useHall";
 import type {
   BackendTemplate,
   FrontendNode,
@@ -131,7 +132,9 @@ export default function WorkflowPage() {
   // 那一行的 `published_version`;「草稿 N 处改动」只有编辑器内部知道,这里不写。其他页签退回面包屑。
   const editingRow = editingTemplateId ? templates.find((x) => String(x.id) === editingTemplateId) : undefined;
   const editingName = editingRow?.name ?? editingTemplateData?.name;
+  const hall = useHall(t("plaque.office.rules"));
   usePlaque({
+    hall,
     title: tab === "editor" ? t("plaque.workflow_editor") : undefined,
     meta:
       tab === "editor" && editingName

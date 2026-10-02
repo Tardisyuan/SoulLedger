@@ -4468,6 +4468,12 @@
     "desk": "Judgment desk",
     "queue": "Judgment queue",
     "permissions": "Permissions",
-    "permissions_meta": "{{roles}} roles · {{perms}} permissions"
+    "permissions_meta": "{{roles}} roles · {{perms}} permissions",
+    "office": {
+      "rules": "Office of Rules",
+      "records": "Office of Records",
+      "trials": "Office of Trials",
+      "tenth": "Tenth Court"
+    }
   }
 }

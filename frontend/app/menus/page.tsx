@@ -6,6 +6,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { menusApi, permApi, PAGE_SIZE, type Permission } from "@soulledger/core/api";
 import { menuKeys } from "@soulledger/core/query_keys";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { usePlaque } from "@/src/components/plaque/Plaque";
+import { useHall } from "@/src/components/plaque/useHall";
 import { useToast } from "@/src/contexts/ToastContext";
 import { ConfirmDialog } from "@/src/components/ui/Modal";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
@@ -22,6 +24,7 @@ import { flattenTree } from "@/src/components/ui/TreeRow";
 
 export default function MenusPage() {
   const { t } = useI18n();
+  usePlaque({ hall: useHall(t("plaque.office.rules")) });
   const { showToast } = useToast();
   const queryClient = useQueryClient();
 

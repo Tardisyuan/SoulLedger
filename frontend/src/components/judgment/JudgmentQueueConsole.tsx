@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { usePlaque } from "@/src/components/plaque/Plaque";
+import { useHall } from "@/src/components/plaque/useHall";
 import { EnumBadge } from "@/components/ui/data-grid";
 import { DomainEnum } from "@/src/components/ui/DomainValue";
 import { useJudgmentQueue, type VerdictCode } from "@soulledger/core/hooks/useJudgmentQueue";
@@ -80,6 +82,11 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
 
   const { cursor, progress, submitVerdict, defer, restoreDeferred, setAside, claimRefusal, dismissClaimRefusal } = queue;
   const judgment = cursor.judgment;
+
+  // 身份带:题「审判队列」(v3 `queue-product`;面包屑末段是「分诊队列」),殿名是眼前这一案的殿;
+  // 案子没记殿或队列空了就写刑名司。
+  const hall = useHall(judgment?.court || t("plaque.office.trials"));
+  usePlaque({ title: t("plaque.queue"), hall });
 
   // Notes belong to the case in front of the operator, never to the next one.
   //

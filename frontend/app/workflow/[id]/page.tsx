@@ -30,6 +30,7 @@ import { WorkflowLinearPreview } from "@/src/components/workflow/detail/Workflow
 import { usePermissions } from "@/src/hooks/usePermissions";
 import { KIND_GLYPH } from "@/src/components/workflow/workflowValidation";
 import { usePlaque } from "@/src/components/plaque/Plaque";
+import { useHall } from "@/src/components/plaque/useHall";
 
 const STATUS_COLORS: Record<string, string> = {
   PENDING: "text-[oklch(var(--color-status-warning))] border-[oklch(var(--color-status-warning))]",
@@ -198,8 +199,11 @@ export default function WorkflowDetailPage() {
   // 身份带(A1 实例):题「审批实例」,右栏「<流程名> vN · 第 k / n 步」。版本只在跑的是已发布
   // 模板时有;没有当前节点(已结束)就不写步数。
   const stepIndex = currentNode ? sortedNodes.findIndex((n) => n.id === currentNode.id) : -1;
+  // 殿名:当前节点的殿(A1「酆都 · 第三殿」);已结束、没有当前节点就写规制司。
+  const hall = useHall(currentNode?.court_code || t("plaque.office.rules"));
   usePlaque({
     title: t("plaque.workflow_instance"),
+    hall,
     meta: workflow
       ? [
           workflow.template_version_number ? `${workflow.workflow_name} v${workflow.template_version_number}` : workflow.workflow_name,

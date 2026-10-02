@@ -464,8 +464,10 @@ class LedgerOverviewStatsView(APIView):
             {"label": "20 to 50", "min": 20, "max": 50},
             {"label": ">= 50", "min": 50, "max": None},
         ]
-        # 等宽直方图(仪表盘「余额分布 · 每格 50」):[-300, 300) 每 50 一格,两端开口。
-        # `karma_distribution` 那七格不动 —— 欢迎页、调派提案页、/admin/stats 还在读它。
+        # 等宽直方图(仪表盘「余额分布 · 已处置 · 每格 50」):[-300, 300) 每 50 一格,两端开口。
+        # **只数已处置的灵魂**(Design A4 标题「已处置 · 每格 50」,用户 2026-10-02 拍板):
+        # 余额要到处置时才定案,在世与审判中的还在变。所以 `total` 等于已处置人数,不等于 `total_souls`。
+        # `karma_distribution` 那七格不动、仍数全部 —— 欢迎页、调派提案页、/admin/stats 还在读它。
         histogram_buckets = [
             {"min": None, "max": HISTOGRAM_MIN},
             *(
@@ -483,6 +485,8 @@ class LedgerOverviewStatsView(APIView):
                     condition &= Q(merit_score__gte=F('demerit_score') + b['min'])
                 if b["max"] is not None:
                     condition &= Q(merit_score__lt=F('demerit_score') + b['max'])
+                if prefix == "h":
+                    condition &= Q(current_state=SoulState.DISPOSED)
                 bucket_counts[f'{prefix}_{i}'] = Count('id', filter=condition)
         bucket_result = soul_qs.aggregate(**bucket_counts)
         for prefix, buckets in (("k", karma_buckets), ("h", histogram_buckets)):

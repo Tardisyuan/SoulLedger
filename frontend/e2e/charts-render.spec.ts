@@ -102,7 +102,8 @@ test.describe("dashboard 的图表", () => {
     api.on("GET", "/ledger/stats/overview/", { ...STATS_WITH_MARKS, souls_by_realm: REALMS });
 
     await page.goto("/dashboard");
-    await expect(page.getByText("n = 84")).toBeVisible();
+    // 余额分布的题注:只数已处置的,n 是直方图的 total(LEDGER_STATS 里是 2),不是 total_souls(84)。
+    await expect(page.locator("[data-histogram-scope]")).toHaveText("已处置 · n = 2 · 每格 50");
 
     const marks = page.locator("[data-realm-bar] [data-pattern]");
     await expect(marks).toHaveCount(REALMS_WITH_SOULS);

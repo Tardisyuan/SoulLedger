@@ -4468,6 +4468,12 @@
     "desk": "Wedja",
     "queue": "Sepu Wedja",
     "permissions": "Was",
-    "permissions_meta": "Netjeru {{roles}} · Was {{perms}}"
+    "permissions_meta": "Netjeru {{roles}} · Was {{perms}}",
+    "office": {
+      "rules": "Wesekhet Hep",
+      "records": "Per Medjat",
+      "trials": "Wesekhet Wedja",
+      "tenth": "Zhuanlun Wesekhet"
+    }
   }
 }

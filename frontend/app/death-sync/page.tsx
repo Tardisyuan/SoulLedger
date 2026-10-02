@@ -4,6 +4,8 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { usePlaque } from "@/src/components/plaque/Plaque";
+import { useHall } from "@/src/components/plaque/useHall";
 import { deathSyncApi, PAGE_SIZE, type DeathRegistration } from "@soulledger/core/api";
 import { DataTable } from "@/components/ui/data-table";
 import { SectionTitle } from "@/src/components/plaque/SectionTitle";
@@ -45,6 +47,7 @@ export default function DeathSyncPage() {
 
 function DeathSyncRoute() {
   const { t, formatDateTime } = useI18n();
+  usePlaque({ hall: useHall(t("plaque.office.records")) });
   const { user } = useTenant();
   const router = useRouter();
   const pathname = usePathname();
