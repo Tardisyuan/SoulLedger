@@ -131,6 +131,13 @@ class Realm(AuditUserFields, models.Model):
         blank=True,
         choices=MemoryResetMechanism.choices,
     )
+    # 不出狱、不轮回 —— 落到这里的灵魂不会离开,也不会再入轮回。
+    # 它是 realm 的默认值,判决落地时抄进 Disposition / SentenceNode 的同名列
+    # (apps/disposition/services.py、apps/sentence_plan/requests.py),之后只读
+    # 那一份:这样的处置没有刑满日(apps/disposition/expiry.py),也不进轮回
+    # (`DispositionService.execute` 与 `SentencePlanService._complete`,2026-09-29 用户决定)。
+    # 对外的说明写在 serializer 的 help_text(IS_ETERNAL_HELP),不写在这里的
+    # help_text —— 那会生成一条只改描述的迁移。
     is_eternal = models.BooleanField(default=False)
     is_judgment_required = models.BooleanField(
         default=True,

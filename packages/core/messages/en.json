@@ -1307,6 +1307,7 @@
       "select_prompt": "Choose an article from the contents.",
       "no_match": "No article matches “{{q}}”",
       "clear_search": "Clear search",
+      "unknown_code": "No article has the code “{{code}}”; showing the first article instead",
       "cited_by_error": "Could not load the citing judgments",
       "cited_by_open": "Open",
       "insert_desk": "Insert into the desk",
@@ -1455,6 +1456,7 @@
         "REOPEN": "Reopened"
       },
       "col_merit_demerit": "Merit / demerit",
+      "col_case_soul": "Case no. / Soul",
       "col_cycle_kind": "Life / kind"
     },
     "admission": {
