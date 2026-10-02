@@ -511,6 +511,9 @@ const PROPER_NAMES = [
   "Asura",
   // 第十二节:成都(如:成都)。
   "Chengdu",
+  // 第十五节(egy 第四节审定,v3,2026-10-02):三个专名原样引用(魔鬼审判 Wedja Apep、米诺斯之庭 Wesekhet Minos、冥界哈迪斯 Hades),
+  // 一个新词根 Meh(满;将满 Er Meh);Enter / Esc 是键名原样保留(同 IP、PNG)。
+  "Apep", "Minos", "Hades", "Meh", "Enter", "Esc",
   "IP", "JPEG", "MB", "PNG", "WebP", "Webhook", "MODERATOR", "A", "N",
   // 词表第十三节:厂商名原样引用(兼容写 Mi OpenAI),不再用 Iru Wa / Iru Sen(要看下拉顺序才读得懂)。
   "Anthropic", "OpenAI",
