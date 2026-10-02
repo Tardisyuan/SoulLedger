@@ -78,7 +78,7 @@ describe("the non-reading tables classify exactly their payload's numbers", () =
     expect(numericFieldsOf(INHERITANCE)).toEqual(Object.keys(INHERITANCE_QUANTITIES).sort());
   });
 
-  it("RECORD_QUANTITIES covers one ledger row's four", () => {
+  it("RECORD_QUANTITIES covers one ledger row's five", () => {
     expect(numericFieldsOf(RECORDS[0])).toEqual(Object.keys(RECORD_QUANTITIES).sort());
   });
 

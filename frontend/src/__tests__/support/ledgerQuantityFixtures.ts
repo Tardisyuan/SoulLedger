@@ -67,7 +67,8 @@ export function record(
 /** Raw 30 / 12, decayed 24 / 9 — the two pairs must differ or the inventory
  *  in the render half could not tell a raw sum from a decayed one. */
 export const RECORDS: LedgerRecord[] = [
-  record({ id: "r1", type: "MERIT", original_weight: 30, effective_weight: 24 }),
+  // A cited row, so `occurrence_count` is a number here and the contract test sees all five numeric fields.
+  record({ id: "r1", type: "MERIT", original_weight: 30, effective_weight: 24, statute_clause: "救濟門#7:賑濟窮民百錢", occurrence_count: 3 }),
   record({ id: "r2", type: "DEMERIT", original_weight: 12, effective_weight: 9 }),
 ];
 
