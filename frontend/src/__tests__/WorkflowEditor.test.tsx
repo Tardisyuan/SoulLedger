@@ -193,6 +193,27 @@ describe("WorkflowEditor", () => {
     expect(screen.getByText(/Save Template/)).toBeInTheDocument();
   });
 
+  // 用户 10-02: the toolbar keeps 校验 / 存草稿 / 发布; 加节点 / 自动布局 / 删除所选
+  // float on the canvas. Pinned both ways: present on the canvas, absent from the toolbar.
+  it("puts add / auto layout / delete on the canvas, not in the toolbar beside save", () => {
+    renderWithProviders(<WorkflowEditor />);
+    const toolbar = screen.getByText(/Save Template/).closest("button")!.parentElement!;
+    const canvas = screen.getByTestId("react-flow").parentElement!;
+    for (const name of [/Add Node/, /^Auto layout$/, /Delete Selected/]) {
+      const button = screen.getByRole("button", { name });
+      expect(canvas).toContainElement(button);
+      expect(toolbar).not.toContainElement(button);
+    }
+    expect(toolbar).toContainElement(screen.getByRole("button", { name: /workflow\.editor\.issues|Checks/ }));
+  });
+
+  it("names the 16 checks the inspector counts exactly as the bundle's issue keys", () => {
+    const { FLOW_ISSUE_CODES } = jest.requireActual("@/src/components/workflow/workflowValidation");
+    const zh = jest.requireActual("@soulledger/core/messages/zh-Hans.json");
+    expect([...FLOW_ISSUE_CODES].sort()).toEqual(Object.keys(zh.workflow.editor.issue).sort());
+    expect(FLOW_ISSUE_CODES).toHaveLength(16);
+  });
+
   it("renders the ReactFlow canvas", () => {
     renderWithProviders(<WorkflowEditor />);
     expect(screen.getByTestId("react-flow")).toBeInTheDocument();
@@ -240,13 +261,13 @@ describe("WorkflowEditor", () => {
   // the mirror-image failure here is the editor never sending it at all — in
   // both cases the save answers 201 and the value is gone.
 
-  it("offers the three priority levels, using the same labels as the detail page", () => {
+  it("offers the three priority levels as a 0 / 1 / 2 segment, named with the detail page's labels", () => {
     renderWithProviders(<WorkflowEditor />);
-    const select = screen.getByLabelText("Priority");
-    expect(select).toHaveValue("0");
-    expect(
-      Array.from(select.querySelectorAll("option")).map((o) => o.textContent)
-    ).toEqual(["Normal", "Urgent", "Critical"]);
+    const group = screen.getByRole("radiogroup", { name: "Priority" });
+    const radios = within(group).getAllByRole("radio");
+    expect(radios.map((r) => r.textContent)).toEqual(["0", "1", "2"]);
+    expect(radios.map((r) => r.getAttribute("aria-label"))).toEqual(["Normal", "Urgent", "Critical"]);
+    expect(within(group).getByRole("radio", { checked: true })).toHaveTextContent("0");
   });
 
   it("opens a preset at the priority the preset declares", () => {
@@ -261,14 +282,14 @@ describe("WorkflowEditor", () => {
         }}
       />
     );
-    expect(screen.getByLabelText("Priority")).toHaveValue("1");
+    expect(within(screen.getByRole("radiogroup", { name: "Priority" })).getByRole("radio", { checked: true })).toHaveTextContent("1");
   });
 
   it("sends the chosen priority in the saved template", async () => {
     const { workflowApi } = require("@soulledger/core/api");
     renderWithProviders(<WorkflowEditor />);
 
-    fireEvent.change(screen.getByLabelText("Priority"), { target: { value: "2" } });
+    fireEvent.click(screen.getByRole("radio", { name: "Critical" }));
     fireEvent.click(screen.getByText(/Save Template/));
 
     await waitFor(() => expect(workflowApi.templates.create).toHaveBeenCalled());
@@ -756,16 +777,18 @@ describe("WorkflowEditor · validation gates the save", () => {
     ]);
 
     expect(screen.getByText("Save Template").closest("button")).toBeDisabled();
-    // The count button in the toolbar and the list entry in the inspector.
-    expect(screen.getAllByText("workflow.editor.issues").length).toBeGreaterThanOrEqual(2);
+    // 「! 校验 · N」 opens the inspector's 问题 tab, where the issue is listed.
+    fireEvent.click(screen.getByRole("button", { name: /workflow\.editor\.issues/ }));
+    expect(screen.getByRole("tab", { name: /workflow\.editor\.tab\.issues/ })).toHaveAttribute("aria-selected", "true");
     expect(screen.getByText("workflow.editor.issue.name_empty")).toBeInTheDocument();
     fireEvent.click(screen.getByText("Save Template"));
     expect(workflowApi.templates.create.mock.calls.length).toBe(before);
   });
 
-  it("with every node named there is no issue button and saving is enabled", () => {
+  it("with every node named the 问题 tab says so and saving is enabled", () => {
     withNodes([{ id: "A", node_name: "秦广王 · 分流", node_type: "TRIAL", court_code: "第一殿", node_order: 1 }]);
     expect(screen.getByText("Save Template").closest("button")).not.toBeDisabled();
+    fireEvent.click(screen.getByRole("tab", { name: /workflow\.editor\.tab\.issues/ }));
     expect(screen.queryByText("workflow.editor.issue.name_empty")).not.toBeInTheDocument();
     expect(screen.getByText("workflow.editor.issues_none")).toBeInTheDocument();
   });
@@ -783,7 +806,7 @@ describe("WorkflowEditor · validation gates the save", () => {
     fireEvent.click(chips[0]);
     expect(chips[0]).toHaveAttribute("aria-pressed", "true");
     const inspector = screen.getByRole("complementary", { name: "workflow.editor.inspector" });
-    expect(within(inspector).getByText("秦广王 · 分流")).toBeInTheDocument();
+    expect(within(inspector).getAllByText("秦广王 · 分流").length).toBeGreaterThan(0);
     expect(within(inspector).getByText("第一殿")).toBeInTheDocument();
     // The preset chain routes PASS to the next card; FAIL has no edge, so it is
     // the engine's own default — the flow ends rejected — spelled out.

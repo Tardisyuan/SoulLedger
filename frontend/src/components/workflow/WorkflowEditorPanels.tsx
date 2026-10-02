@@ -3,8 +3,10 @@
 import { useRef, useState, type ReactNode } from "react";
 import type { Edge, Node } from "@xyflow/react";
 import { MissingValue } from "@/src/components/ui/DomainValue";
+import { TAB_BASE, TAB_ON, TAB_OFF } from "@/src/lib/tabClasses";
 import type { TemplateSigner, WorkflowNodeKind } from "@soulledger/core/api";
 import {
+  FLOW_ISSUE_CODES,
   KIND_GLYPH,
   ROLE_GLYPH,
   branchOf,
@@ -29,8 +31,8 @@ import { whenText } from "@/src/components/workflow/workflowConditions";
 
 type TFunc = (key: string, params?: Record<string, string>) => string;
 
-const SECTION_HEAD =
-  "font-mono text-2xs tracking-wide text-[oklch(var(--color-ink-subtle))] pb-1 border-b border-[oklch(var(--color-block))]";
+/** v3 区块标签: 11px, uppercase, 0.1em (the `text-2xs` token carries the tracking), ink-subtle. */
+const LABEL = "text-2xs uppercase text-[oklch(var(--color-ink-subtle))]";
 
 /**
  * The node KINDS — design C · 03's palette (□ 审批 · ⧉ 会签 · ✉ 通知 · ■ 结束).
@@ -77,11 +79,13 @@ export function WorkflowPalette({
     refs.current[next]?.focus();
   };
   return (
-    <nav aria-label={t("workflow.editor.palette")} className="flex flex-col py-3 border-r border-[oklch(var(--color-line))] bg-[oklch(var(--color-canvas))] overflow-y-auto">
-      <div className={`${SECTION_HEAD} px-3`}>{t("workflow.editor.palette")}</div>
-      <ul>
+    /* v3 A1: 176 wide on surface-1, 16/12 padding. Four 48-high drag blocks, then
+       the role legend — roles cannot be dragged, they are read off the edges. */
+    <nav aria-label={t("workflow.editor.palette")} className="flex flex-col gap-3 px-3 py-4 border-r border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] overflow-y-auto">
+      <div className={LABEL}>{t("workflow.editor.palette")}</div>
+      <ul className="flex flex-col gap-2">
         {PALETTE_TYPES.map((type, i) => (
-          <li key={type} className="border-b border-[oklch(var(--color-rule))]">
+          <li key={type}>
             <button
               ref={(el) => {
                 refs.current[i] = el;
@@ -103,9 +107,9 @@ export function WorkflowPalette({
                 e.dataTransfer.effectAllowed = "copy";
               }}
               onClick={() => onAdd(type)}
-              className="w-full h-(--control-h-sm) px-3 flex items-center gap-2 text-left text-sm text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))] cursor-grab"
+              className="w-full h-12 px-3 flex items-center gap-2 text-left text-sm text-[oklch(var(--color-ink))] border border-[oklch(var(--color-line-strong))] bg-[oklch(var(--color-surface-1))] hover:bg-[oklch(var(--color-surface-2))] cursor-grab"
             >
-              <span aria-hidden="true" className="w-4 text-center font-mono">
+              <span aria-hidden="true" className="w-4 text-center">
                 {KIND_GLYPH[type]}
               </span>
               <span className="flex-1">{t(`workflow.editor.kind.${type}`)}</span>
@@ -113,7 +117,19 @@ export function WorkflowPalette({
           </li>
         ))}
       </ul>
-      {children && <p className="mt-auto px-3 pt-4 text-xs text-[oklch(var(--color-ink-muted))]">{children}</p>}
+      <div className={`${LABEL} mt-2`}>{t("workflow.editor.roles_title")}</div>
+      <ul className="flex flex-col gap-2">
+        {(Object.keys(ROLE_GLYPH) as NodeRole[]).map((role) => (
+          <li key={role} className="flex items-center gap-2 text-xs text-[oklch(var(--color-ink-muted))]">
+            <span aria-hidden="true" className="w-4 text-center text-md text-[oklch(var(--color-ink))]">
+              {ROLE_GLYPH[role]}
+            </span>
+            {t(`workflow.editor.role_legend.${role}`)}
+          </li>
+        ))}
+      </ul>
+      <p className="text-2xs normal-case tracking-normal text-[oklch(var(--color-ink-subtle))]">{t("workflow.editor.roles_note")}</p>
+      {children && <p className="mt-auto pt-4 text-xs text-[oklch(var(--color-ink-muted))]">{children}</p>}
     </nav>
   );
 }
@@ -162,12 +178,18 @@ function exitText(branch: Branch, node: Node, nodes: readonly Node[], edges: rea
     : t("workflow.editor.exit.pass_end");
 }
 
+/** The inspector's four tabs, v3 A1: 节点 / 出口 / 问题 N / 版本. */
+export const INSPECTOR_TABS = ["node", "exits", "issues", "version"] as const;
+export type InspectorTab = (typeof INSPECTOR_TABS)[number];
+
 /**
- * 「属性面板 Inspector」 + 「校验标 IssueMark」 list. Properties are read here and
+ * 「检查器 Inspector」, v3 A1: 360 wide, four tabs. Properties are read here and
  * edited in the node modal (the 编辑 button, or `E` on the canvas): that modal
  * is where the approver-role options are loaded and the fields are validated,
- * and a second form for the same six fields would be two places to keep in
- * step.
+ * and a second form for the same fields would be two places to keep in step.
+ *
+ * The tab is the editor's state, not this component's: 「! 校验 · N」 in the
+ * toolbar opens 问题, and a click on a card opens 节点.
  */
 export function WorkflowInspector({
   t,
@@ -179,8 +201,11 @@ export function WorkflowInspector({
   onSelect,
   onEdit,
   validationId,
+  tab,
+  onTab,
   nodeExtras,
-  footer,
+  exits,
+  version,
 }: {
   t: TFunc;
   nodes: readonly Node[];
@@ -192,99 +217,157 @@ export function WorkflowInspector({
   /** Absent in the read-only view. */
   onEdit?: (id: string) => void;
   validationId: string;
-  /** Sections about the selected node that talk to the API (approver preview, exit conditions). */
+  tab: InspectorTab;
+  onTab: (tab: InspectorTab) => void;
+  /** Sections about the selected node that talk to the API (approver preview). */
   nodeExtras?: (node: Node) => ReactNode;
-  /** Template-level sections under the issue list (version history). */
-  footer?: ReactNode;
+  /** The 出口 tab's body for the selected node. */
+  exits?: (node: Node) => ReactNode;
+  /** The 版本 tab's body. */
+  version?: ReactNode;
 }) {
   const idx = nodes.findIndex((n) => n.id === selectedId);
   const node = idx >= 0 ? nodes[idx] : undefined;
   const role = node ? roles.get(node.id) ?? "step" : "step";
   const field = (label: string, value: string, mono = false) => (
-    <div className="flex flex-col gap-0.5">
-      <dt className="text-xs font-medium text-[oklch(var(--color-ink-muted))]">{label}</dt>
-      <dd className={`text-sm text-[oklch(var(--color-ink))] break-words ${mono ? "font-mono" : ""}`}>{value || <MissingValue kind="unrecorded" />}</dd>
-    </div>
+    <>
+      <dt className="py-1 text-xs text-[oklch(var(--color-ink-muted))]">{label}</dt>
+      <dd className={`py-1 text-sm text-[oklch(var(--color-ink))] break-words min-w-0 ${mono ? "font-mono" : ""}`}>
+        {value || <MissingValue kind="unrecorded" />}
+      </dd>
+    </>
   );
+  const failing = new Set(issues.map((i) => i.code));
+  const tabLabel = (k: InspectorTab) =>
+    k === "issues" ? `${t("workflow.editor.tab.issues")} ${issues.length}` : t(`workflow.editor.tab.${k}`);
+  const empty = <p className="text-sm text-[oklch(var(--color-ink-muted))]">{t("workflow.editor.inspector_empty")}</p>;
 
   return (
     <aside
       aria-label={t("workflow.editor.inspector")}
-      className="flex flex-col gap-4 p-4 bg-[oklch(var(--color-surface-1))] border-l border-[oklch(var(--color-line))] overflow-y-auto max-lg:border-l-0 max-lg:border-t"
+      className="flex flex-col min-h-0 bg-[oklch(var(--color-surface-1))] border-l border-[oklch(var(--color-line))] max-lg:border-l-0 max-lg:border-t"
     >
-      <section>
-        <div className={`${SECTION_HEAD} flex justify-between`}>
-          <span>
-            {t("workflow.editor.inspector")}
-            {node && (
-              <>
-                {" · "}
-                <span aria-hidden="true">{ROLE_GLYPH[role]}</span> {t(`workflow.editor.role.${role}`)}
-              </>
-            )}
-          </span>
-          {node && <span>N{idx + 1}</span>}
-        </div>
-        {node ? (
-          <>
-            <dl className="mt-3 flex flex-col gap-3">
-              {field(t("workflow.editor.node_name"), nodeName(node, t))}
-              {field(t("workflow.editor.node_type"), String(node.data.nodeType ?? ""), true)}
-              {field(t("workflow.editor.court_code"), String(node.data.courtCode ?? ""))}
-              {field(
-                t("workflow.editor.approver_type"),
-                node.data.approverType ? t(`workflow.approver_types.${String(node.data.approverType)}`) : ""
-              )}
-              {field(t("workflow.editor.approver_role"), String(node.data.approverRole ?? ""), true)}
-              {field(t("workflow.editor.kind_label"), `${KIND_GLYPH[kindOf(node)]} ${t(`workflow.editor.kind.${kindOf(node)}`)}`)}
-              {kindOf(node) === "COUNTERSIGN" &&
-                field(t("workflow.editor.signers"), signersText(node, t))}
-              {field(t("workflow.editor.timeout.label"), timeoutText(node, t))}
-              {field(t("workflow.editor.branch.pass"), exitText("pass", node, nodes, edges, t))}
-              {kindOf(node) !== "END" &&
-                kindOf(node) !== "NOTIFY" &&
-                field(t("workflow.editor.branch.fail"), exitText("fail", node, nodes, edges, t))}
-            </dl>
-            {onEdit && (
-              <button
-                type="button"
-                onClick={() => onEdit(node.id)}
-                className="mt-3 h-(--control-h-sm) px-3 inline-flex items-center gap-2 border border-[oklch(var(--color-block))] text-sm font-medium text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))]"
-              >
-                {t("workflow.editor.edit_node")}
-                <kbd className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">E</kbd>
-              </button>
-            )}
-          </>
-        ) : (
-          <p className="mt-3 text-sm text-[oklch(var(--color-ink-muted))]">{t("workflow.editor.inspector_empty")}</p>
-        )}
-      </section>
+      <div role="tablist" aria-label={t("workflow.editor.inspector")} className="flex shrink-0 border-b border-[oklch(var(--color-line))]">
+        {INSPECTOR_TABS.map((k) => (
+          <button
+            key={k}
+            type="button"
+            role="tab"
+            id={`${validationId}-tab-${k}`}
+            aria-selected={tab === k}
+            aria-controls={`${validationId}-panel`}
+            onClick={() => onTab(k)}
+            className={`${TAB_BASE} ${tab === k ? TAB_ON : TAB_OFF} flex-1 h-12 ${
+              k === "issues" && issues.length > 0 ? "text-[oklch(var(--color-danger))]!" : ""
+            }`}
+          >
+            {tabLabel(k)}
+          </button>
+        ))}
+      </div>
 
-      {node && nodeExtras?.(node)}
-
-      <section id={validationId} tabIndex={-1} aria-label={t("workflow.editor.issues", { n: String(issues.length) })}>
-        <div className={SECTION_HEAD}>{t("workflow.editor.issues", { n: String(issues.length) })}</div>
-        {issues.length === 0 ? (
-          <p className="py-2 text-sm text-[oklch(var(--color-ink-muted))]">{t("workflow.editor.issues_none")}</p>
-        ) : (
-          <ul>
-            {issues.map((issue) => (
-              <li key={`${issue.nodeId}-${issue.code}-${issue.branch ?? ""}-${issue.edgeId ?? ""}`} className="border-b border-[oklch(var(--color-rule))]">
+      <div
+        role="tabpanel"
+        id={`${validationId}-panel`}
+        aria-labelledby={`${validationId}-tab-${tab}`}
+        className="flex flex-col gap-4 p-4 overflow-y-auto min-h-0"
+      >
+        {tab === "node" &&
+          (node ? (
+            <>
+              <div>
+                <h2 className="text-lg text-[oklch(var(--color-ink))] break-words">
+                  <span aria-hidden="true">{KIND_GLYPH[kindOf(node)]} </span>
+                  {nodeName(node, t)}
+                </h2>
+                <p className="text-xs text-[oklch(var(--color-ink-muted))]">
+                  <span aria-hidden="true">{ROLE_GLYPH[role]} </span>
+                  {t(`workflow.editor.role.${role}`)} · <span className="font-mono">N{idx + 1}</span>
+                </p>
+              </div>
+              <dl className="grid grid-cols-[72px_minmax(0,1fr)] gap-x-3">
+                {field(t("workflow.editor.node_name"), nodeName(node, t))}
+                {field(t("workflow.editor.kind_label"), `${KIND_GLYPH[kindOf(node)]} ${t(`workflow.editor.kind.${kindOf(node)}`)}`)}
+                {field(t("workflow.editor.node_type"), String(node.data.nodeType ?? ""), true)}
+                {field(t("workflow.editor.court_code"), String(node.data.courtCode ?? ""))}
+                {field(
+                  t("workflow.editor.approver_type"),
+                  node.data.approverType ? t(`workflow.approver_types.${String(node.data.approverType)}`) : ""
+                )}
+                {field(t("workflow.editor.approver_role"), String(node.data.approverRole ?? ""), true)}
+                {kindOf(node) === "COUNTERSIGN" && field(t("workflow.editor.signers"), signersText(node, t))}
+                {field(t("workflow.editor.timeout.label"), timeoutText(node, t))}
+                {field(t("workflow.editor.branch.pass"), exitText("pass", node, nodes, edges, t))}
+                {kindOf(node) !== "END" &&
+                  kindOf(node) !== "NOTIFY" &&
+                  field(t("workflow.editor.branch.fail"), exitText("fail", node, nodes, edges, t))}
+              </dl>
+              {onEdit && (
                 <button
                   type="button"
-                  onClick={() => issue.nodeId && onSelect(issue.nodeId)}
-                  className="w-full py-2 text-left text-sm text-[oklch(var(--color-danger))] hover:underline"
+                  onClick={() => onEdit(node.id)}
+                  className="self-start h-(--control-h-sm) px-3 inline-flex items-center gap-2 border border-[oklch(var(--color-line-strong))] text-sm font-medium text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))]"
                 >
-                  <span aria-hidden="true">! </span>
-                  {issueText(issue, nodes, t)}
+                  {t("workflow.editor.edit_node")}
+                  <kbd className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">E</kbd>
                 </button>
-              </li>
-            ))}
-          </ul>
+              )}
+              {nodeExtras?.(node)}
+            </>
+          ) : (
+            empty
+          ))}
+
+        {tab === "exits" && (node ? exits?.(node) : empty)}
+
+        {tab === "issues" && (
+          <section id={validationId} tabIndex={-1} aria-label={t("workflow.editor.issues", { n: String(issues.length) })}>
+            {issues.length === 0 ? (
+              <p className="text-sm text-[oklch(var(--color-ink-muted))]">{t("workflow.editor.issues_none")}</p>
+            ) : (
+              <>
+                <h2 className="text-lg text-[oklch(var(--color-ink))]">
+                  {t("workflow.editor.issues_blocking", { n: String(issues.length) })}
+                </h2>
+                <p className="text-xs text-[oklch(var(--color-ink-muted))]">{t("workflow.editor.issues_hint")}</p>
+                <ul className="mt-3 flex flex-col">
+                  {issues.map((issue) => (
+                    <li
+                      key={`${issue.nodeId}-${issue.code}-${issue.branch ?? ""}-${issue.edgeId ?? ""}`}
+                      className="border-b border-[oklch(var(--color-line))]"
+                    >
+                      <button
+                        type="button"
+                        aria-current={issue.nodeId !== "" && issue.nodeId === selectedId ? "true" : undefined}
+                        onClick={() => issue.nodeId && onSelect(issue.nodeId)}
+                        className="w-full flex gap-2 px-2 py-3 text-left hover:bg-[oklch(var(--color-surface-2))] aria-[current=true]:bg-[oklch(var(--color-ink)/0.07)]"
+                      >
+                        <span aria-hidden="true" className="font-semibold text-[oklch(var(--color-danger))]">
+                          !
+                        </span>
+                        <span className="flex flex-col min-w-0">
+                          <span className="text-sm font-medium text-[oklch(var(--color-ink))]">{issueText(issue, nodes, t)}</span>
+                          <span className="font-mono text-2xs normal-case tracking-normal text-[oklch(var(--color-ink-subtle))]">
+                            {issue.code}
+                          </span>
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+            <p className="mt-3 text-xs text-[oklch(var(--color-ink-muted))]">
+              {t("workflow.editor.issues_checks", {
+                total: String(FLOW_ISSUE_CODES.length),
+                passed: String(FLOW_ISSUE_CODES.filter((c) => !failing.has(c)).length),
+              })}
+            </p>
+          </section>
         )}
-      </section>
-      {footer}
+
+        {tab === "version" && version}
+      </div>
     </aside>
   );
 }
@@ -315,15 +398,16 @@ export function glyphFor(node: Node, role: NodeRole): string {
 }
 
 /**
- * 「模板预览 · 线性」: the nodes in `node_order`, which is the path the engine
- * takes when every node passes and no edge says otherwise. Each chip selects
- * its node. Branch nodes are mono (they carry a condition), nodes with issues
- * are danger-bordered, the end node dashed — the same three marks as the
- * canvas, so the two read as one thing.
+ * 「线性预览」, v3 A1: one 44-high line under the canvas, never wrapping. The
+ * nodes in `node_order`, which is the path the engine takes when every node
+ * passes and no edge says otherwise; each chip selects its node. A node with
+ * issues is danger and carries `!` — glyph and colour, never colour alone.
+ * The count at the right end is of what is drawn: nodes and edges.
  */
 export function WorkflowLinearPreview({
   t,
   nodes,
+  edgeCount,
   roles,
   issueNodes,
   selectedId,
@@ -331,43 +415,41 @@ export function WorkflowLinearPreview({
 }: {
   t: TFunc;
   nodes: readonly Node[];
+  edgeCount: number;
   roles: ReadonlyMap<string, NodeRole>;
   issueNodes: ReadonlySet<string>;
   selectedId: string | null;
   onSelect: (id: string) => void;
 }) {
   return (
-    <section aria-label={t("workflow.editor.preview")} className="px-4 pt-2 pb-3 border-t border-[oklch(var(--color-block))] bg-[oklch(var(--color-canvas))]">
-      <div className="font-mono text-2xs tracking-wide text-[oklch(var(--color-ink-subtle))]">{t("workflow.editor.preview")}</div>
+    <section
+      aria-label={t("workflow.editor.preview")}
+      className="flex items-center gap-3 h-11 shrink-0 px-4 border-t border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] text-xs whitespace-nowrap overflow-x-auto"
+    >
+      <span className={LABEL}>{t("workflow.editor.preview")}</span>
       {nodes.length === 0 ? (
-        <p className="mt-2 text-sm text-[oklch(var(--color-ink-muted))]">{t("workflow.editor.preview_empty")}</p>
+        <span className="text-[oklch(var(--color-ink-muted))]">{t("workflow.editor.preview_empty")}</span>
       ) : (
-        <ol className="mt-2 flex flex-wrap items-center gap-2 text-sm">
+        <ol className="flex items-center h-full">
           {nodes.map((n, i) => {
             const role = roles.get(n.id) ?? "step";
             const bad = issueNodes.has(n.id);
             return (
-              <li key={n.id} className="flex items-center gap-2">
+              <li key={n.id} className="flex items-center h-full">
                 <button
                   type="button"
                   aria-pressed={n.id === selectedId}
                   onClick={() => onSelect(n.id)}
-                  className={`px-2 py-0.5 border max-lg:min-h-11 ${
-                    bad
-                      ? "border-[oklch(var(--color-danger))] text-[oklch(var(--color-danger))]"
-                      : role === "end"
-                        ? "border-dashed border-[oklch(var(--color-line-strong))] text-[oklch(var(--color-ink-muted))]"
-                        : "border-[oklch(var(--color-line))] text-[oklch(var(--color-ink))]"
-                  } ${role === "branch" ? "font-mono text-xs" : ""} aria-pressed:bg-[oklch(var(--color-surface-2))] aria-pressed:shadow-[inset_3px_0_0_oklch(var(--color-ink))]`}
+                  className={`h-full px-2 hover:bg-[oklch(var(--color-surface-2))] aria-pressed:bg-[oklch(var(--color-ink)/0.07)] aria-pressed:font-medium ${
+                    bad ? "text-[oklch(var(--color-danger))]" : "text-[oklch(var(--color-ink))]"
+                  }`}
                 >
-                  <span aria-hidden="true" className="font-mono">
-                    {glyphFor(n, role)}{" "}
-                  </span>
+                  <span aria-hidden="true">{glyphFor(n, role)} </span>
                   {bad && <span aria-hidden="true">! </span>}
                   {nodeName(n, t)}
                 </button>
                 {i < nodes.length - 1 && (
-                  <span aria-hidden="true" className="text-[oklch(var(--color-ink-subtle))]">
+                  <span aria-hidden="true" className="px-0.5 text-[oklch(var(--color-ink-subtle))]">
                     →
                   </span>
                 )}
@@ -376,6 +458,93 @@ export function WorkflowLinearPreview({
           })}
         </ol>
       )}
+      <span className="ml-auto pl-4 font-mono text-[oklch(var(--color-ink-muted))]">
+        {t("workflow.editor.preview_count", { nodes: String(nodes.length), edges: String(edgeCount) })}
+      </span>
+    </section>
+  );
+}
+
+/**
+ * The read-only flow below 1024 (v3 A1 · 393): one row per node in order. The
+ * left column is the node's ROLE glyph, the name carries its KIND glyph, the
+ * right column its court (and k/n for 会签); the second line says where each
+ * outcome goes. A row selects its node, which the inspector below then shows.
+ */
+export function WorkflowReadOnlyList({
+  t,
+  nodes,
+  edges,
+  roles,
+  issueNodes,
+  selectedId,
+  onSelect,
+}: {
+  t: TFunc;
+  nodes: readonly Node[];
+  edges: readonly Edge[];
+  roles: ReadonlyMap<string, NodeRole>;
+  issueNodes: ReadonlySet<string>;
+  selectedId: string | null;
+  onSelect: (id: string) => void;
+}) {
+  return (
+    <section aria-label={t("workflow.editor.preview")} className="flex flex-col gap-2">
+      <div className={LABEL}>{t("workflow.editor.flow_count", { n: String(nodes.length) })}</div>
+      {nodes.length === 0 ? (
+        <p className="text-sm text-[oklch(var(--color-ink-muted))]">{t("workflow.editor.preview_empty")}</p>
+      ) : (
+        <ol className="bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-line))]">
+          {nodes.map((n) => {
+            const role = roles.get(n.id) ?? "step";
+            const kind = kindOf(n);
+            const bad = issueNodes.has(n.id);
+            const signers = Array.isArray(n.data.signers) ? n.data.signers.length : 0;
+            const right = [
+              typeof n.data.courtCode === "string" ? n.data.courtCode : "",
+              kind === "COUNTERSIGN" && signers > 0
+                ? `${typeof n.data.threshold === "number" ? n.data.threshold : signers}/${signers}`
+                : "",
+            ]
+              .filter(Boolean)
+              .join(" · ");
+            return (
+              <li key={n.id} className="border-b last:border-b-0 border-[oklch(var(--color-line))]">
+                <button
+                  type="button"
+                  aria-pressed={n.id === selectedId}
+                  onClick={() => onSelect(n.id)}
+                  className="w-full grid grid-cols-[20px_minmax(0,1fr)_auto] gap-x-2 px-3 py-3 text-left hover:bg-[oklch(var(--color-surface-2))] aria-pressed:bg-[oklch(var(--color-ink)/0.07)]"
+                >
+                  <span aria-hidden="true" className="text-[oklch(var(--color-ink-muted))]">
+                    {ROLE_GLYPH[role]}
+                  </span>
+                  <span
+                    className={`text-sm font-medium break-words ${
+                      bad ? "text-[oklch(var(--color-danger))]" : "text-[oklch(var(--color-ink))]"
+                    }`}
+                  >
+                    <span aria-hidden="true">{KIND_GLYPH[kind]} </span>
+                    {bad && <span aria-hidden="true">! </span>}
+                    {nodeName(n, t)}
+                  </span>
+                  <span className="font-mono text-xs text-[oklch(var(--color-ink-muted))]">{right}</span>
+                  <span className="col-start-2 col-span-2 text-xs text-[oklch(var(--color-ink-muted))] break-words">
+                    {t("workflow.editor.branch.pass")} {exitText("pass", n, nodes, edges, t)}
+                    {kind !== "END" && kind !== "NOTIFY" && (
+                      <>
+                        {" · "}
+                        {t("workflow.editor.branch.fail")} {exitText("fail", n, nodes, edges, t)}
+                      </>
+                    )}
+                  </span>
+                </button>
+              </li>
+            );
+          })}
+        </ol>
+      )}
+      <p className="text-xs text-[oklch(var(--color-ink-muted))]">{t("workflow.editor.glyph_legend")}</p>
     </section>
   );
 }

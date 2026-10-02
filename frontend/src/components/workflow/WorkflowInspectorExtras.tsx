@@ -30,10 +30,10 @@ import { branchOf, whenOf } from "@/src/components/workflow/workflowValidation";
 
 type TFunc = (key: string, params?: Record<string, string>) => string;
 
-const SECTION_HEAD =
-  "font-mono text-2xs tracking-wide text-[oklch(var(--color-ink-subtle))] pb-1 border-b border-[oklch(var(--color-block))]";
+/** v3 区块标签: 11px, uppercase, 0.1em (in the `text-2xs` token), ink-subtle. */
+const SECTION_HEAD = "text-2xs uppercase text-[oklch(var(--color-ink-subtle))]";
 const CONTROL =
-  "h-(--control-h-sm) px-2 bg-[oklch(var(--color-canvas))] border border-[oklch(var(--color-line))] text-sm text-[oklch(var(--color-ink))] focus-visible:border-[oklch(var(--color-accent))]";
+  "h-(--control-h-sm) px-2 rounded-control bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-line-strong))] text-sm text-[oklch(var(--color-ink))] focus-visible:border-[oklch(var(--color-ink))]";
 
 function assignmentText(a: ApproverAssignment, t: TFunc): string {
   if (a.approver_type === "ACTOR" && a.actor) {
@@ -198,10 +198,15 @@ function ClauseRow({
 }
 
 /**
- * The node's PASS exits and the condition on each. A conditional edge is a
- * BRANCH (taken when every clause holds, tried before the default); an edge
- * without one is the default 「否 · 默认」. Editing writes `edge.data.when`,
- * which is what `getTemplateNodes` turns into `branches`.
+ * The 出口 tab, v3 A1: the node's PASS exits as cards, in the order the engine
+ * tries them. A conditional edge is a BRANCH (taken when every clause holds,
+ * tried before the default); an edge without one is the default 「否 · 默认」.
+ * Editing writes `edge.data.when`, which is what `getTemplateNodes` turns into
+ * `branches`.
+ *
+ * A card's header is a button: pressing it marks that exit active, and the
+ * canvas draws the edge in ink, 2 px, label inverted — the one place the
+ * canvas shows which line the inspector is talking about.
  */
 export function ExitConditionsSection({
   t,
@@ -209,6 +214,8 @@ export function ExitConditionsSection({
   nodes,
   edges,
   onChange,
+  activeEdgeId,
+  onActivate,
 }: {
   t: TFunc;
   node: Node;
@@ -216,87 +223,142 @@ export function ExitConditionsSection({
   edges: readonly Edge[];
   /** Absent in the read-only view. `undefined` clears the condition. */
   onChange?: (edgeId: string, when: ConditionClause[] | undefined) => void;
+  activeEdgeId?: string | null;
+  onActivate?: (edgeId: string) => void;
 }) {
   const exits = edges.filter((e) => e.source === node.id && branchOf(e) === "pass");
-  if (exits.length === 0) return null;
   const ref = (id: string) => {
     const idx = nodes.findIndex((n) => n.id === id);
     const label = idx >= 0 && typeof nodes[idx].data.label === "string" ? nodes[idx].data.label : "";
     return `N${idx + 1}「${label || t("workflow.editor.unnamed")}」`;
   };
+  const nodeLabel = typeof node.data.label === "string" && node.data.label.trim() ? node.data.label : t("workflow.editor.unnamed");
   return (
-    <section aria-label={t("workflow.editor.condition.title")}>
-      <div className={SECTION_HEAD}>{t("workflow.editor.condition.title")}</div>
-      <ul className="mt-2 flex flex-col gap-3">
-        {exits.map((e) => {
-          const when = whenOf(e);
-          return (
-            <li key={e.id} className="flex flex-col gap-1 text-sm">
-              <span className="text-[oklch(var(--color-ink))]">
-                → {ref(e.target)} ·{" "}
-                <span className="font-mono text-xs">
-                  {when === undefined
-                    ? t("workflow.editor.condition.default")
-                    : when.length === 0
-                      ? t("workflow.editor.condition.empty")
-                      : whenText(when, t)}
-                </span>
-              </span>
-              {onChange && when !== undefined && (
-                <div className="flex flex-col gap-1 pl-2 border-l border-[oklch(var(--color-line))]">
-                  {when.map((c, i) => (
-                    <ClauseRow
-                      key={i}
-                      t={t}
-                      idPrefix={`${e.id}-${i}`}
-                      clause={c}
-                      onChange={(next) => onChange(e.id, when.map((x, j) => (j === i ? next : x)))}
-                      onRemove={() => onChange(e.id, when.filter((_, j) => j !== i))}
-                    />
-                  ))}
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      className="h-(--control-h-sm) px-2 text-xs border border-[oklch(var(--color-line))]"
-                      onClick={() => onChange(e.id, [...when, defaultClause()])}
-                    >
-                      + {t("workflow.editor.condition.add_clause")}
-                    </button>
-                    <button
-                      type="button"
-                      className="h-(--control-h-sm) px-2 text-xs text-[oklch(var(--color-ink-muted))]"
-                      onClick={() => onChange(e.id, undefined)}
-                    >
-                      {t("workflow.editor.condition.clear")}
-                    </button>
-                  </div>
-                </div>
-              )}
-              {onChange && when === undefined && (
+    <section aria-label={t("workflow.editor.condition.title")} className="flex flex-col gap-3">
+      <div>
+        <h2 className="text-lg text-[oklch(var(--color-ink))] break-words">
+          <span aria-hidden="true">◇ </span>
+          {t("workflow.editor.exits_title", { node: nodeLabel })}
+        </h2>
+        <p className="text-xs text-[oklch(var(--color-ink-muted))]">{t("workflow.editor.exits_hint")}</p>
+      </div>
+      {exits.length === 0 ? (
+        <p className="text-sm text-[oklch(var(--color-ink-muted))]">{t("workflow.editor.exits_none")}</p>
+      ) : (
+        <ol className="flex flex-col gap-2">
+          {exits.map((e, i) => {
+            const when = whenOf(e);
+            const active = e.id === activeEdgeId;
+            return (
+              <li
+                key={e.id}
+                className={`flex flex-col gap-2 border bg-[oklch(var(--color-surface-1))] ${
+                  active ? "border-[oklch(var(--color-ink))]" : "border-[oklch(var(--color-line))]"
+                }`}
+              >
                 <button
                   type="button"
-                  className="self-start h-(--control-h-sm) px-2 text-xs border border-[oklch(var(--color-line))]"
-                  onClick={() => onChange(e.id, [defaultClause()])}
+                  aria-pressed={active}
+                  onClick={() => onActivate?.(e.id)}
+                  className="flex items-center gap-2 min-h-11 px-3 text-left text-sm text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))]"
                 >
-                  {t("workflow.editor.condition.make")}
+                  <span className="font-mono text-xs text-[oklch(var(--color-ink-subtle))]">{i + 1}</span>
+                  <span className="flex-1 min-w-0 break-words">
+                    {when === undefined ? t("workflow.editor.condition.no") : t("workflow.editor.condition.yes")} → {ref(e.target)}
+                  </span>
+                  {when === undefined && (
+                    <span className="font-mono text-xs text-[oklch(var(--color-ink-muted))]">{t("workflow.editor.condition.default")}</span>
+                  )}
                 </button>
-              )}
-            </li>
-          );
-        })}
-      </ul>
+                {when !== undefined && (
+                  <div className="flex flex-col gap-1 px-3">
+                    {when.length === 0 && (
+                      <span className="font-mono text-xs text-[oklch(var(--color-ink-muted))]">{t("workflow.editor.condition.empty")}</span>
+                    )}
+                    {when.map((c, j) => (
+                      <div key={j} className="flex flex-col gap-1">
+                        {j > 0 && <span className="text-2xs text-[oklch(var(--color-ink-subtle))]">{t("workflow.editor.condition.and")}</span>}
+                        {onChange ? (
+                          <ClauseRow
+                            t={t}
+                            idPrefix={`${e.id}-${j}`}
+                            clause={c}
+                            onChange={(next) => onChange(e.id, when.map((x, k) => (k === j ? next : x)))}
+                            onRemove={() => onChange(e.id, when.filter((_, k) => k !== j))}
+                          />
+                        ) : (
+                          <span className="font-mono text-xs">{whenText([c], t)}</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {onChange && (
+                  <div className="flex flex-wrap gap-2 px-3">
+                    {when !== undefined ? (
+                      <>
+                        <button
+                          type="button"
+                          className="h-(--control-h-sm) px-2 text-xs border border-[oklch(var(--color-line-strong))]"
+                          onClick={() => onChange(e.id, [...when, defaultClause()])}
+                        >
+                          + {t("workflow.editor.condition.add_clause")}
+                        </button>
+                        <button
+                          type="button"
+                          className="h-(--control-h-sm) px-2 text-xs text-[oklch(var(--color-ink-muted))]"
+                          onClick={() => onChange(e.id, undefined)}
+                        >
+                          {t("workflow.editor.condition.clear")}
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        type="button"
+                        className="h-(--control-h-sm) px-2 text-xs border border-[oklch(var(--color-line-strong))]"
+                        onClick={() => onChange(e.id, [defaultClause()])}
+                      >
+                        {t("workflow.editor.condition.make")}
+                      </button>
+                    )}
+                  </div>
+                )}
+                {/* 连线标签: what the canvas prints on this line. */}
+                <div className="flex items-center gap-2 px-3 pb-2 text-xs text-[oklch(var(--color-ink-muted))]">
+                  <span>{t("workflow.editor.exit_label")}</span>
+                  <span className="font-mono text-[oklch(var(--color-ink))] break-all">
+                    {when === undefined
+                      ? `${t("workflow.editor.condition.no")} · ${t("workflow.editor.condition.default")}`
+                      : `${t("workflow.editor.condition.yes")} · ${when.length ? whenText(when, t) : t("workflow.editor.condition.empty")}`}
+                  </span>
+                </div>
+              </li>
+            );
+          })}
+        </ol>
+      )}
+      <p className="text-xs text-[oklch(var(--color-ink-muted))]">{t("workflow.editor.exits_fixed")}</p>
     </section>
   );
 }
 
 /** Read-only history, newest first. Nothing here writes. */
-export function VersionHistorySection({ t, templateId }: { t: TFunc; templateId?: string }) {
+export function VersionHistorySection({
+  t,
+  templateId,
+  empty,
+}: {
+  t: TFunc;
+  templateId?: string;
+  /** What the 版本 tab shows while there is no history to list (a new or unsaved template). */
+  empty?: React.ReactNode;
+}) {
   const { data } = useQuery({
     queryKey: workflowKeys.templates.versions(templateId ?? ""),
     queryFn: async () => (await workflowApi.templates.versions(templateId!)).data,
     enabled: Boolean(templateId),
   });
-  if (!templateId || !Array.isArray(data) || data.length === 0) return null;
+  if (!templateId || !Array.isArray(data) || data.length === 0) return empty ?? null;
   return (
     <section aria-label={t("workflow.editor.version.history")}>
       <div className={SECTION_HEAD}>{t("workflow.editor.version.history")}</div>

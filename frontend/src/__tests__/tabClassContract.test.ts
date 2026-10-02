@@ -107,6 +107,8 @@ describe("the five strips read it from there", () => {
     "app/workflow/page.tsx",
     // 2026-09-29:助手管理的「配置与测试 / 实际用量」两个页签(两条路由,Link 而非 button)。
     "src/components/assist-admin/parts.tsx",
+    // 2026-10-02(v3 A1):审批流编辑器检查器的「节点 / 出口 / 问题 / 版本」四个页签。
+    "src/components/workflow/WorkflowEditorPanels.tsx",
   ];
 
   it("exactly these files import the module", () => {
