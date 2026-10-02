@@ -2495,7 +2495,8 @@
       "sentence_requests": "Sentence Requests",
       "assistant_admin": "Assistant Admin"
     },
-    "queue": "Triage queue"
+    "queue": "Triage queue",
+    "about": "About"
   },
   "tenant": {
     "civilizations": {
@@ -4437,5 +4438,24 @@
       "until_rebuilt": "Until the rebuild finishes, the assistant answers from all help entries.",
       "fallback_note": "If the embedding service can’t be reached, the assistant answers from all help entries instead — it still answers."
     }
+  },
+  "plaque": {
+    "realms": "Realm · {{root}}",
+    "held": "Held {{n}}",
+    "corpus": "Statute corpus",
+    "corpus_meta": "{{works}} rulebooks · {{n}} articles",
+    "workflow_editor": "Workflow editor",
+    "workflow_instance": "Workflow instance",
+    "step": "Step {{k}} / {{n}}",
+    "social": "Circle",
+    "social_meta": "Following {{following}} · Followers {{followers}}",
+    "post": "Post",
+    "comments": "{{n}} comments",
+    "posts": "{{n}} posts",
+    "soul": "Soul",
+    "desk": "Judgment desk",
+    "queue": "Judgment queue",
+    "permissions": "Permissions",
+    "permissions_meta": "{{roles}} roles · {{perms}} permissions"
   }
 }

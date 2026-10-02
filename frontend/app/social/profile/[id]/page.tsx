@@ -14,6 +14,7 @@ import { EmptyState } from "@/src/components/ui/EmptyState";
 import { QueryError } from "@/src/components/ui/PageError";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SectionTitle } from "@/src/components/plaque/SectionTitle";
+import { usePlaque } from "@/src/components/plaque/Plaque";
 
 export default function UserProfilePage() {
   const { t } = useI18n();
@@ -35,6 +36,12 @@ export default function UserProfilePage() {
     error: postsError,
     refetch: refetchPosts,
   } = usePosts({ author: userId, page });
+
+  // 身份带(A5 个人页):题是人名,右栏「发帖 N」(资料里的 post_count)。
+  usePlaque({
+    title: profile?.username,
+    meta: profile ? t("plaque.posts", { n: String(profile.post_count) }) : undefined,
+  });
 
   const posts = postsData?.results ?? [];
   const totalPages = postsData ? Math.ceil(postsData.count / PAGE_SIZE) : 0;

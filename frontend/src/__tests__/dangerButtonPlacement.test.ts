@@ -15,9 +15,13 @@ const FRONTEND = path.join(__dirname, "..", "..");
 const ROOTS = ["app", "components", "src"];
 const SKIP = new Set(["node_modules", ".next", "__tests__", "coverage"]);
 
-/** 要求输入名称才能确认的对话框。加一项之前先确认它真的要输入名称。 */
+/**
+ * 要求输入名称才能确认的对话框。加一项之前先确认它真的要输入名称。
+ * 权限矩阵的保存确认(`MatrixSaveConfirmModal`)仍要逐个输入角色名,但它的确认键是主按钮
+ * (用户 2026-10-02,Design A6):保存权限可以再改回来,不是删除。所以它不在这张表里 ——
+ * 输入名称是 danger 的必要条件,不是充分条件。下面最后一条钉住它仍要输入角色名。
+ */
 const TYPED_NAME_DIALOGS = [
-  "src/components/permissions/MatrixSaveConfirmModal.tsx",
   // v2/web-p3b(cd5c6880)新建的通用「输入名称以确认」对话框;合入前本分支没有这个文件。
   "src/components/admin/NameConfirmDialog.tsx",
 ];
@@ -45,7 +49,7 @@ describe("solid danger buttons live only in type-the-name dialogs", () => {
   it("scans a real tree", () => {
     // A walker that finds nothing makes the next assertion vacuously green.
     expect(files.length).toBeGreaterThan(200);
-    expect(users).toContain("src/components/permissions/MatrixSaveConfirmModal.tsx");
+    expect(users).toContain("src/components/admin/NameConfirmDialog.tsx");
   });
 
   it("no other file asks for variant=\"danger\"", () => {
@@ -69,6 +73,17 @@ describe("solid danger buttons live only in type-the-name dialogs", () => {
     }
     expect(dialogs).toBeGreaterThanOrEqual(6);
     expect(offenders).toEqual([]);
+  });
+
+  // 用户 2026-10-02:矩阵保存确认的确认键是主按钮,但仍然要逐个输入角色名才可用。
+  it("the matrix save confirm is a primary button that stays disabled until every role name is typed", () => {
+    const modal = readFileSync(path.join(FRONTEND, "src/components/permissions/MatrixSaveConfirmModal.tsx"), "utf8");
+    const confirm = /<Button\b[^>]*?onClick=\{onConfirm\}[^>]*>/.exec(modal)?.[0] ?? "";
+    expect(confirm).toMatch(/variant="primary"/);
+    expect(confirm).toMatch(/disabled=\{[^}]*!canConfirmSave[^}]*\}/);
+    expect(modal).toMatch(/id=\{`type-confirm-\$\{diff\.role\}`\}/);
+    const cells = readFileSync(path.join(FRONTEND, "src/components/permissions/useMatrixCells.ts"), "utf8");
+    expect(cells).toMatch(/canConfirmSave = tier3\.every\(\(d\) => \(typedRoleNames\[d\.role\] \?\? ""\)\.trim\(\) === d\.role\)/);
   });
 
   it("ConfirmDialog never asks for a name, so its default danger renders as secondary", () => {

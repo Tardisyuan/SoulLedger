@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { PAGE_SIZE } from "@soulledger/core/api";
-import { useFeed, usePosts } from "@soulledger/core/hooks/useSocial";
+import { useFeed, useMyProfile, usePosts } from "@soulledger/core/hooks/useSocial";
+import { usePlaque } from "@/src/components/plaque/Plaque";
 import { PostCard } from "@/src/components/social/PostCard";
 import { PostComposer } from "@/src/components/social/PostComposer";
 import { FollowPanel } from "@/src/components/social/FollowPanel";
@@ -34,6 +35,13 @@ export default function SocialFeedPage() {
     useFeed(params, { enabled: tab === "feed" });
   const { data: allData, isLoading: allLoading, isPlaceholderData: allStale, isError: allError, refetch: refetchAll } =
     usePosts(params, { enabled: tab === "all" });
+
+  // 身份带(A5):题「朋友圈」,右栏「关注 N · 粉丝 N」(自己的资料;没取到就不写)。
+  const { data: me } = useMyProfile();
+  usePlaque({
+    title: t("plaque.social"),
+    meta: me ? t("plaque.social_meta", { following: String(me.following_count), followers: String(me.followers_count) }) : undefined,
+  });
 
   const data = tab === "feed" ? feedData : allData;
   const posts = Array.isArray(data) ? data : (data?.results ?? []);
