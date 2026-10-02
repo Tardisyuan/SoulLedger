@@ -234,6 +234,12 @@ describe("事目's second line: clause, occurrences, milestone (Design v3 功过
     // 条款 has its own column (Design v3, 用户 2026-10-02); an entry with no clause says so.
     expect(rows.map((cells) => cells[3])).toEqual(["救濟門#7", "—", "—"]);
     expect(container.querySelector('[data-record-clause="column"]')).toHaveAttribute("title", "救濟門#7:賑濟窮民百錢");
+    // Both the column and the fold link to the article in the corpus (`?code=`, encoded — `#` would be a fragment).
+    for (const where of ["column", "folded"]) {
+      const link = container.querySelector(`[data-record-clause="${where}"]`)!;
+      expect(link.tagName).toBe("A");
+      expect(link).toHaveAttribute("href", "/corpus?code=%E6%95%91%E6%BF%9F%E9%96%80%237");
+    }
     expect(container.querySelectorAll("tbody [data-missing='unrecorded']")).toHaveLength(2);
   });
 

@@ -119,7 +119,8 @@ class ModeratedPostSerializer(ModeratedContentSerializer):
 
     @extend_schema_field(PostMediaSerializer(many=True))
     def get_media(self, post):
-        return post_media.describe(officer_media(post), self.context["request"].user)
+        request = self.context["request"]
+        return post_media.describe(officer_media(post), request.user, getattr(request, "tenant", None))
 
     def get_media_count(self, post) -> int:
         return len(officer_media(post))

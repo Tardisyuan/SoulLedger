@@ -171,6 +171,9 @@ describe("审判队列", () => {
     expect(chip).toHaveTextContent(/^CN-2026-00a ⧉$/);
     // 整行是一个 ::after 盖满的链接;不抬到它上面,点案号就是打开审判台。
     expect(chip.parentElement!.className.split(/\s+/)).toEqual(expect.arrayContaining(["relative", "z-10"]));
+    // 列头跟着这一格写「案号 / 灵魂」(用户 2026-10-02),不再是只说一半的「灵魂名称」。
+    expect(screen.getByRole("columnheader", { name: "案号 / 灵魂" })).toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: tZh("judgment.soul_name") })).toBeNull();
   });
 
   it("J 移到第一行、再 J 到下一行;C 认领焦点行;打字时 J / C 都不接", async () => {

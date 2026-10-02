@@ -233,7 +233,6 @@ export function LedgerPanel({ ledger }: { ledger: QueueLedger }) {
         caption={t("judgment.queue.ledger")}
         columns={columns}
         data={ledger.records}
-        density="compact"
         keyExtractor={(row, i) => row.id ?? String(i)}
         emptyMessage={t("judgment.queue.ledger_empty")}
       />
@@ -293,7 +292,6 @@ export function PriorCyclesPanel({ cycles }: { cycles: QueuePriorCycle[] }) {
         caption={t("judgment.queue.prior_cycles")}
         columns={columns}
         data={cycles}
-        density="compact"
         keyExtractor={(row, i) => row.id ?? String(i)}
         // "Not yet" rather than "no data" — a soul on its first pass through
         // has no prior lives, which is a fact about the soul, not a gap.

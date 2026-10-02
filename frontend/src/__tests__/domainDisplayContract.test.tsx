@@ -846,6 +846,10 @@ describe("§4.6 identifier placement", () => {
 const RAW_CASE_NUMBER_RE = /(^|[^=$])\{\s*[A-Za-z_$][\w$]*(?:\??\.[\w$]+)*\??\.(?:judgment_)?case_number\s*\}/;
 /** A case number fed to the UUID chip, which truncates to 8 characters: `CN-2026-` and the sequence gone. */
 const CASE_NUMBER_IN_ID_CHIP_RE = /<IdentifierChip[^>]*\bid=\{[^}]*case_number/;
+/** A case number handed to the identity band as `meta` — dead text; the band's copyable slot is `caseNumber`. */
+const CASE_NUMBER_AS_PLAQUE_META_RE = /\bmeta:[^,}]*case_number/;
+/** The band's slot: `usePlaque({ caseNumber: x.case_number })`, which Plaque renders through <CaseNumber>. */
+const CASE_NUMBER_PLAQUE_SLOT_RE = /\bcaseNumber:\s*[\w$.?]*case_number/;
 
 function scanCaseNumbers(): { raw: Violation[]; chips: number } {
   const raw: Violation[] = [];
@@ -855,10 +859,10 @@ function scanCaseNumbers(): { raw: Violation[]; chips: number } {
     if (CONVENTION_MODULES.includes(rel)) continue;
     readFileSync(file, "utf8").split("\n").forEach((line, i) => {
       const code = stripComment(line);
-      if (RAW_CASE_NUMBER_RE.test(code) || CASE_NUMBER_IN_ID_CHIP_RE.test(code)) {
+      if (RAW_CASE_NUMBER_RE.test(code) || CASE_NUMBER_IN_ID_CHIP_RE.test(code) || CASE_NUMBER_AS_PLAQUE_META_RE.test(code)) {
         raw.push({ file: rel, line: i + 1, text: line.trim().slice(0, 110) });
       }
-      if (/<CaseNumber\b[^>]*\bvalue=\{[^}]*case_number/.test(code)) chips += 1;
+      if (/<CaseNumber\b[^>]*\bvalue=\{[^}]*case_number/.test(code) || CASE_NUMBER_PLAQUE_SLOT_RE.test(code)) chips += 1;
     });
   }
   return { raw, chips };
@@ -866,7 +870,8 @@ function scanCaseNumbers(): { raw: Violation[]; chips: number } {
 
 describe("case numbers (CASE_NUMBER_POLICY)", () => {
   it("shows the case number on the desk, the queue and the workflow card", () => {
-    // Not vacuous: the three places the Design puts it each render one.
+    // Not vacuous: the three places the Design puts it each render one (the desk's is the
+    // identity band's `caseNumber` slot, which Plaque renders through <CaseNumber>).
     expect(scanCaseNumbers().chips).toBeGreaterThanOrEqual(3);
   });
 

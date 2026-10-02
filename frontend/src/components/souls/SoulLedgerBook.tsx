@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import type { LedgerRecord } from "@soulledger/core/api/ledger";
 import { RECORD_QUANTITIES } from "@soulledger/core/api/ledgerQuantities";
 import { useI18n } from "@/src/contexts/I18nContext";
@@ -114,6 +115,24 @@ function entryWeight(record: LedgerRecord): number {
 export function clauseCode(record: LedgerRecord): string | null {
   const code = (record.statute_clause ?? "").split(":")[0].trim();
   return code || null;
+}
+
+/**
+ * 条款号 → 语料页的那一条(`/corpus?code=<Statute.code>`,用户 2026-10-02);条款全文在 title。
+ * 没有条款锚点:语料页不把 `payload_json.clauses` 画成可定位的元素,所以只落到条,不落到款。
+ * 审判台证据行与灵魂详情台账共用。
+ */
+export function ClauseLink({ record, code, className, ...rest }: { record: LedgerRecord; code: string; className?: string } & Record<`data-${string}`, string>) {
+  return (
+    <Link
+      href={`/corpus?code=${encodeURIComponent(code)}`}
+      title={record.statute_clause}
+      className={`underline decoration-dotted decoration-[oklch(var(--color-hairline))] underline-offset-2 hover:text-[oklch(var(--color-ink))] hover:decoration-current ${className ?? ""}`}
+      {...rest}
+    >
+      {code}
+    </Link>
+  );
 }
 
 /**
@@ -242,9 +261,7 @@ export function SoulLedgerBook({ records }: SoulLedgerBookProps) {
                       >
                         {clause && (
                           <span className={CLAUSE_FOLD_ONLY}>
-                            <span data-record-clause="folded" title={record.statute_clause} className="font-serif">
-                              {clause}
-                            </span>
+                            <ClauseLink record={record} code={clause} data-record-clause="folded" className="font-serif" />
                             {hasFacts && " · "}
                           </span>
                         )}
@@ -256,9 +273,7 @@ export function SoulLedgerBook({ records }: SoulLedgerBookProps) {
                   {/* 条款列(Design v3 功过记录):律条号,全文在 title;没记写「未记录」。 */}
                   <BodyCell className={`${CLAUSE_COLUMN_ONLY} font-serif text-xs text-[oklch(var(--color-ink-muted))] break-words`}>
                     {clause ? (
-                      <span data-record-clause="column" title={record.statute_clause}>
-                        {clause}
-                      </span>
+                      <ClauseLink record={record} code={clause} data-record-clause="column" />
                     ) : (
                       <MissingValue kind="unrecorded" />
                     )}

@@ -1,6 +1,7 @@
 "use client";
 
-import { Fragment, useEffect, useMemo, useState, type ReactNode } from "react";
+import { Fragment, Suspense, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useSearchParams } from "next/navigation";
 import { useI18n } from "@/src/contexts/I18nContext";
 import type { Statute, StatuteCorpus } from "@soulledger/core/api";
 import { useAllStatutes } from "@soulledger/core/hooks/useStatutes";
@@ -52,6 +53,11 @@ import { cn } from "@/lib/utils";
  * `614b`)或 `code` 逐字相等(忽略空白与「·」、大小写)就直接打开那一条;否则按
  * 标题与正文检索(子串)。命中处 12% 墨底加 2 px 墨下线,当前那一处反白;框里
  * 「当前 / 总数」与 ↑ ↓(Enter / Shift+Enter)按目录顺序走过标题、原文、译文里画出来的每一处。
+ *
+ * ── `?code=<Statute.code>` ─────────────────────────────────────────────
+ * 功过记录的条款(审判台证据行、灵魂详情台账,`ClauseLink`)链到这里:打开 `code` 逐字相等的那一条,
+ * 目录展开它那一部(目录本来就展开打开的那条所在的部)。没有这一条(改过编号、别的租户的语料)
+ * 不装作找到:页头下一行写明「没有编号为 X 的律条」,正文照常从第一条读起;读者自己选了别的条就收起。
  */
 
 /** Contents order: the seven rulebooks, one civilization after another. */
@@ -136,7 +142,17 @@ function MarkHits({ text, query, base = 0, current = -1 }: { text: string; query
 }
 
 export default function CorpusPage() {
+  // useSearchParams needs a Suspense boundary under the App Router build (as app/users/page.tsx).
+  return (
+    <Suspense fallback={null}>
+      <CorpusRoute />
+    </Suspense>
+  );
+}
+
+function CorpusRoute() {
   const { t, locale } = useI18n();
+  const linkedCode = useSearchParams()?.get("code")?.trim() ?? "";
   const { data, isLoading, isError, refetch } = useAllStatutes();
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -170,6 +186,10 @@ export default function CorpusPage() {
   });
 
   const corpusName = (c: string) => t(`judgment.statute_corpus.${c}`);
+  const linked = linkedCode ? articles.find((a) => a.statute.code === linkedCode) : undefined;
+  // 链接给的那条在读者自己选之前算「选中」;找不到就说出来,直到读者自己选了一条。
+  const openId = selectedId ?? linked?.statute.id ?? null;
+  const unknownCode = linkedCode && data && !linked && selectedId === null ? linkedCode : "";
   const trimmed = query.trim();
   // The shared resolver (core/config/statuteCitation): a bare sigil, a code, or a
   // pasted 〔文献 · 条号〕 — the same bracket the rail copies — all land on the article.
@@ -199,7 +219,7 @@ export default function CorpusPage() {
   const selected =
     jump ??
     (currentHit ? hits.find((a) => a.statute.id === currentHit.id) : undefined) ??
-    hits.find((a) => a.statute.id === selectedId) ??
+    hits.find((a) => a.statute.id === openId) ??
     hits[0] ??
     null;
   const position = selected ? hits.indexOf(selected) : -1;
@@ -457,6 +477,11 @@ export default function CorpusPage() {
       subtitle={t("judgment.corpus.subtitle", { n: String(articles.length) })}
       filters={searchBar}
     >
+      {unknownCode && (
+        <p role="status" data-testid="corpus-unknown-code" className="px-4 lg:px-0 pt-4 text-sm text-[oklch(var(--color-ink-muted))]">
+          {t("judgment.corpus.unknown_code", { code: unknownCode })}
+        </p>
+      )}
       <div className="space-y-12">{body}</div>
     </PageShell>
   );

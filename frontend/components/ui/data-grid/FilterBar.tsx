@@ -28,7 +28,6 @@ export interface FilterBarProps {
   isFiltered: boolean
   onClearAll: () => void
   clearAllLabel: string
-  density?: { compact: boolean; onToggle: () => void; label: string }
   className?: string
 }
 
@@ -36,7 +35,7 @@ export interface FilterBarProps {
  * Filter bar per §7: no native `<select>` or `<input type="date">` — they
  * render browser chrome (mm/dd/yyyy, OS-styled listboxes) that can't be
  * localised or kept visually consistent across zh-Hans/en/egy. Every control
- * is 36px, matching compact row height.
+ * is `--control-h-sm` tall.
  */
 /**
  * A chip's dropdown declares `role="listbox"` with `role="option"` children.
@@ -141,7 +140,6 @@ export function FilterBar({
   isFiltered,
   onClearAll,
   clearAllLabel,
-  density,
   className,
 }: FilterBarProps) {
   return (
@@ -172,21 +170,6 @@ export function FilterBar({
       {isFiltered && (
         <button type="button" onClick={onClearAll} className="text-sm text-[oklch(var(--color-ink-subtle))] hover:text-[oklch(var(--color-ink))]">
           {clearAllLabel}
-        </button>
-      )}
-      {density && (
-        <button
-          type="button"
-          onClick={density.onToggle}
-          aria-pressed={density.compact}
-          className={cn(
-            'h-(--control-h-sm) px-3 border text-sm transition-colors',
-            density.compact
-              ? 'bg-[oklch(var(--color-accent)/0.12)] border-[oklch(var(--color-accent)/0.4)] text-[oklch(var(--color-ink))]'
-              : 'bg-[oklch(var(--color-surface-2))] border-[oklch(var(--color-hairline-strong))] text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))]'
-          )}
-        >
-          {density.label}
         </button>
       )}
     </div>
