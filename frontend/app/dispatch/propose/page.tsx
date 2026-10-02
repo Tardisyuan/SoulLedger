@@ -13,7 +13,7 @@ import {
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { usePlaque } from "@/src/components/plaque/Plaque";
-import { useHall } from "@/src/components/plaque/useHall";
+import { useCourtOffice, useHall } from "@/src/components/plaque/useHall";
 import { useToast } from "@/src/contexts/ToastContext";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { drfFieldErrors, drfNonFieldError } from "@soulledger/core/validations/drfErrors";
@@ -48,7 +48,7 @@ export default function ProposeDispatchPage() {
 
 function ProposeDispatchForm() {
   const { t } = useI18n();
-  usePlaque({ hall: useHall(t("plaque.office.tenth")) });
+  usePlaque({ hall: useHall(useCourtOffice()) });
   const { user } = useTenant();
   const { showToast } = useToast();
   const router = useRouter();

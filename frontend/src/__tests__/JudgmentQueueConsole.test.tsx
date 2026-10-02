@@ -16,7 +16,7 @@ import { JudgmentQueueConsole } from "@/src/components/judgment/JudgmentQueueCon
 import { judgmentApi } from "@soulledger/core/api";
 import { isMinePending } from "@/src/components/judgment/RowMark";
 import { PlaqueProvider } from "@/src/components/plaque/Plaque";
-import { useHall } from "@/src/components/plaque/useHall";
+import { useCourtOffice, useHall } from "@/src/components/plaque/useHall";
 
 const mockPush = jest.fn();
 const mockShowToast = jest.fn();
@@ -824,6 +824,19 @@ describe("身份带殿名跟着眼前这一案", () => {
 });
 
 describe("useHall", () => {
+  // 用户 2026-10-02:前缀是文明的冥界名(plaque.realm.<civ>),不是租户展示名。
+  it("认得的文明写冥界名;四个文明各取各的;第十殿那一格也按文明换", () => {
+    for (const [code, civ] of [["CN_DIYU", "cn"], ["EU_HEAVEN_HELL", "eu"], ["EG_DUAT", "eg"], ["GR_HADES", "gr"]]) {
+      currentUser = { ...mockUser, tenant: { code, display_name: "中国地府" } } as typeof mockUser;
+      expect(renderHook(() => useHall("规制司")).result.current).toBe(`plaque.realm.${civ} · 规制司`);
+      expect(renderHook(() => useCourtOffice()).result.current).toBe(`plaque.office.court.${civ}`);
+    }
+    // 认不出的文明:退回租户展示名;第十殿那一格写地府的(改动前的样子)。
+    currentUser = { ...mockUser, tenant: { code: "XX_UNKNOWN", display_name: "某租户" } } as typeof mockUser;
+    expect(renderHook(() => useHall("规制司")).result.current).toBe("某租户 · 规制司");
+    expect(renderHook(() => useCourtOffice()).result.current).toBe("plaque.office.court.cn");
+  });
+
   it("租户名在前;没有租户只写司名;没有司名是 undefined(身份带退回租户名)", () => {
     currentUser = { ...mockUser, tenant: { display_name: "中国地府" } } as typeof mockUser;
     expect(renderHook(() => useHall("规制司")).result.current).toBe("中国地府 · 规制司");

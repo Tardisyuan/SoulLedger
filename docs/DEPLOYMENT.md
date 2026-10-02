@@ -49,6 +49,9 @@ DC="docker compose -f docker-compose.yml -f docker-compose.production.yml"
   补建代码里新加、库里还没有的权限码名,并按 `ROLE_PERMISSIONS` 授给默认角色;已有的码名一行不碰,
   管理员在权限矩阵里的改动保留。启动命令**不**自动跑它,加了新码名的版本部署后要手动跑一次。
 - 定时任务的行不用手动补:启动命令已经跑 `setup_scheduled_tasks`(见下节)。
+- **余额月快照(带上 `ledger` 0002 的那次部署,跑一次):** `$DC exec backend python manage.py snapshot_balances`。
+  概览的平均余额卡写「较上月」,要读上个月那一行快照;日常由 `ledger.snapshot_balance_for_tenant`(每天 23:55)
+  覆盖当月,但 beat 没跑(见下节)时一行都不会有。这条命令现在就写当月的一行,不补更早的月份;重跑无害(覆盖当月)。
 
 ## 定时任务(celery beat)
 

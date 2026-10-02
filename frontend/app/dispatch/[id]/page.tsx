@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { usePlaque } from "@/src/components/plaque/Plaque";
-import { useHall } from "@/src/components/plaque/useHall";
+import { useCourtOffice, useHall } from "@/src/components/plaque/useHall";
 import { useToast } from "@/src/contexts/ToastContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
@@ -84,7 +84,7 @@ const DD_TIME = `${DD} font-mono text-xs tabular-nums`;
 export default function DispatchDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { t, formatDateTime } = useI18n();
-  usePlaque({ hall: useHall(t("plaque.office.tenth")) });
+  usePlaque({ hall: useHall(useCourtOffice()) });
   const { user } = useTenant();
   const { showToast } = useToast();
   const router = useRouter();
