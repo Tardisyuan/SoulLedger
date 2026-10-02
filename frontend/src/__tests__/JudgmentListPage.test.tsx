@@ -27,7 +27,8 @@ jest.mock("@soulledger/core/api", () => ({
 const { judgmentApi, usersApi } = jest.requireMock("@soulledger/core/api") as Record<string, Record<string, jest.Mock>>;
 
 const mockPush = jest.fn();
-jest.mock("next/navigation", () => ({ useRouter: () => ({ push: mockPush }) }));
+let mockSearch = "";
+jest.mock("next/navigation", () => ({ useRouter: () => ({ push: mockPush }), useSearchParams: () => new URLSearchParams(mockSearch) }));
 jest.mock("@/src/contexts/I18nContext", () => ({
   ...jest.requireActual("@/src/contexts/I18nContext"),
   useI18n: () => ({ t: tZh, formatDate: (v: unknown) => String(v), formatDateTime: (v: unknown) => String(v), locale: "zh-Hans", hydrated: true }),
@@ -57,6 +58,7 @@ const GROUP_ROWS: Record<string, ReturnType<typeof row>[]> = {
 beforeEach(() => {
   jest.clearAllMocks();
   window.sessionStorage.clear();
+  mockSearch = "";
   mockUser = { id: 1, username: "yama", role: "JUDGE", permissions: ["judgment.read", "judgment.execute"], tenant: { code: "diyu" } };
   judgmentApi.list.mockImplementation(async (params: Record<string, string>) => {
     if (params.group) {
@@ -407,6 +409,17 @@ describe("审判队列", () => {
     } finally {
       jest.useRealTimers();
     }
+  });
+
+  it("全局搜索「查看全部」带来的 ?q=:填进搜索框,并进待审四组、计数与已结案的请求", async () => {
+    mockSearch = "q=CN-2026-0042";
+    renderPage();
+    expect(screen.getByPlaceholderText(tZh("judgment.claim.search"))).toHaveValue("CN-2026-0042");
+    await waitFor(() => expect(judgmentApi.queueCounts).toHaveBeenCalledWith({ search: "CN-2026-0042" }));
+    expect(judgmentApi.list).toHaveBeenCalledWith({ search: "CN-2026-0042", group: "unclaimed", page: "1", ordering: "created_at" });
+    expect(judgmentApi.list).toHaveBeenCalledWith({ page: "1", has_verdict: "true", search: "CN-2026-0042" });
+    // 反面:没有不带词的请求。
+    expect(judgmentApi.queueCounts).not.toHaveBeenCalledWith({});
   });
 
   it("殿的选项是 courts/ 的全部殿(带未结案数),不是已加载行里出现过的殿", async () => {

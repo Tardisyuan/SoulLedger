@@ -146,16 +146,28 @@ export default function CorpusPage() {
   // useSearchParams needs a Suspense boundary under the App Router build (as app/users/page.tsx).
   return (
     <Suspense fallback={null}>
-      <CorpusRoute />
+      <CorpusLinked />
     </Suspense>
   );
 }
 
-function CorpusRoute() {
+/**
+ * 链接进来的三种参数:`code`(按条目编号)、`article`(按 id —— 全局搜索打开一条律条)、
+ * `q`(全局搜索「查看全部 N 条律条 →」带来的词,填进搜索框)。换链接时整页重挂(key),
+ * 读者此前点开的那条不会挡住新链接要打开的那条。
+ */
+function CorpusLinked() {
+  const params = useSearchParams();
+  const linkedArticle = params?.get("article")?.trim() ?? "";
+  const linkedQuery = params?.get("q")?.trim() ?? "";
+  return <CorpusRoute key={`${linkedArticle}|${linkedQuery}`} linkedArticle={linkedArticle} linkedQuery={linkedQuery} />;
+}
+
+function CorpusRoute({ linkedArticle, linkedQuery }: { linkedArticle: string; linkedQuery: string }) {
   const { t, locale } = useI18n();
   const linkedCode = useSearchParams()?.get("code")?.trim() ?? "";
   const { data, isLoading, isError, refetch } = useAllStatutes();
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(linkedQuery);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [hitIndex, setHitIndex] = useState(0);
   const [copied, setCopied] = useState(false);
@@ -187,7 +199,9 @@ function CorpusRoute() {
   });
 
   const corpusName = (c: string) => t(`judgment.statute_corpus.${c}`);
-  const linked = linkedCode ? articles.find((a) => a.statute.code === linkedCode) : undefined;
+  const linked =
+    (linkedArticle ? articles.find((a) => a.statute.id === linkedArticle) : undefined) ??
+    (linkedCode ? articles.find((a) => a.statute.code === linkedCode) : undefined);
   // 链接给的那条在读者自己选之前算「选中」;找不到就说出来,直到读者自己选了一条。
   const openId = selectedId ?? linked?.statute.id ?? null;
   const unknownCode = linkedCode && data && !linked && selectedId === null ? linkedCode : "";
