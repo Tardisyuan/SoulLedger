@@ -140,4 +140,23 @@ describe("cross-judgment detail — activate", () => {
     await screen.findByText("Joint");
     expect(screen.queryByRole("button", { name: ACTIVATE })).toBeNull();
   });
+
+  /* 发起方与席位印租户展示名,不印主键(IDENTIFIER_POLICY 第 4 条)。此前副标题是
+     `initiating_tenant`(pk 1)、席位是 `participant_tenant`(pk 2)。主键在这里刻意取
+     页面上别处不会出现的数,断言它不在,才分得清「印了名字」与「名字旁边还躺着主键」。 */
+  it("names the tenants by display name, never by primary key", async () => {
+    renderPage(
+      judgment({
+        initiating_tenant: 9041,
+        initiating_tenant_display_name: "中国地府",
+        participants: [{ ...participant, participant_tenant: 9052, participant_tenant_display_name: "欧洲天堂地狱" }],
+      })
+    );
+
+    await screen.findByText("Joint");
+    expect(screen.getByText(/发起方.*中国地府/)).toBeTruthy();
+    expect(screen.getByText("欧洲天堂地狱")).toBeTruthy();
+    expect(screen.queryByText(/9041/)).toBeNull();
+    expect(screen.queryByText(/9052/)).toBeNull();
+  });
 });

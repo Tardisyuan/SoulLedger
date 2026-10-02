@@ -74,6 +74,7 @@ const COLLECTED_FILES = [
   "ModerationPage.test.tsx",
   "NotificationsPage.test.tsx",
   "PageError.test.tsx",
+  "PageSection.test.tsx",
   "PageShell.test.tsx",
   "Pagination.test.tsx",
   "PermissionDenied.test.tsx",
