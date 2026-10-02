@@ -21,6 +21,7 @@ import {
 } from "@soulledger/core/hooks/useAssistAdmin";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { Button } from "@/src/components/ui/Button";
+import { Collapse } from "@/src/components/ui/Collapse";
 import { Modal } from "@/src/components/ui/Modal";
 import { MissingValue } from "@/src/components/ui/DomainValue";
 import { MONO, MUTED, SUBTLE, Section, count, money, pct } from "./parts";
@@ -231,6 +232,8 @@ function RunDetail({ id }: { id: number }) {
   const run = useEvalRun(id);
   const cases = useEvalCases();
   const [open, setOpen] = useState<string | null>(null);
+  // 展开过的行:收起后详情行留在 DOM 里(inert → hidden,见 Collapse),没展开过的不渲染。
+  const [opened, setOpened] = useState<ReadonlySet<string>>(new Set());
   const expected = useMemo(() => new Map((cases.data ?? []).map((c) => [c.id, c.expected_tools ?? []])), [cases.data]);
   const expectedEntries = useMemo(() => new Map((cases.data ?? []).map((c) => [c.id, c.expected_entries ?? []])), [cases.data]);
   const rows = useMemo(() => groupByCase(run.data), [run.data]);
@@ -291,7 +294,15 @@ function RunDetail({ id }: { id: number }) {
                   <tr className="border-t border-[oklch(var(--color-hairline))] align-top">
                     <td className={`py-1 ${MONO}`}>{n + 1}</td>
                     <td className="py-1">
-                      <button type="button" aria-expanded={isOpen} onClick={() => setOpen(isOpen ? null : row.key)} className="text-left underline-offset-2 hover:underline">
+                      <button
+                        type="button"
+                        aria-expanded={isOpen}
+                        aria-controls={`aa-eval-detail-${row.key}`}
+                        onClick={() => {
+                          setOpen(isOpen ? null : row.key);
+                          setOpened((s) => new Set(s).add(row.key));
+                        }}
+                        className="text-left underline-offset-2 hover:underline">
                         {row.question}
                       </button>
                     </td>
@@ -321,10 +332,11 @@ function RunDetail({ id }: { id: number }) {
                       })}
                     </td>
                   </tr>
-                  {isOpen && (
-                    <tr>
-                      <td colSpan={5 + detail.candidates.length} className="pb-2">
-                        <div className="row-expand"><div>
+                  {opened.has(row.key) && (
+                    <tr className="has-[[data-collapse=hidden]]:hidden">
+                      <td colSpan={5 + detail.candidates.length}>
+                        <Collapse open={isOpen} id={`aa-eval-detail-${row.key}`}>
+                        <div className="pb-2">
                         {ret && <RetrievalDetail wanted={wanted} got={ret.got} allHit={ret.hit} />}
                         <div className="grid gap-2 sm:grid-cols-2">
                           {row.byCandidate.map((r, i) =>
@@ -338,7 +350,8 @@ function RunDetail({ id }: { id: number }) {
                             ) : null
                           )}
                         </div>
-                        </div></div>
+                        </div>
+                        </Collapse>
                       </td>
                     </tr>
                   )}

@@ -186,8 +186,17 @@ describe("grouping and filters", () => {
     });
     fireEvent.click(header);
     expect(header).toHaveAttribute("aria-expanded", "false");
-    expect(container.querySelector('[data-job-id="9"]')).toBeNull();
-    expect(container.querySelector('[data-job-id="1"]')).not.toBeNull();
+    // 收起的契约(Design 第三批回复):先 inert、动画结束再 hidden。
+    const body = document.getElementById(header.getAttribute("aria-controls")!)!;
+    const row = container.querySelector('[data-job-id="9"]');
+    expect(row?.closest("[inert]")).toBe(body);
+    expect(body).not.toHaveAttribute("hidden");
+    fireEvent.animationEnd(body);
+    expect(body).toHaveAttribute("hidden");
+    expect(row).not.toBeVisible();
+    const other = container.querySelector('[data-job-id="1"]');
+    expect(other).toBeVisible();
+    expect(other?.closest("[inert]")).toBeNull();
   });
 
   it.each([

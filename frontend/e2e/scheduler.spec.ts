@@ -46,7 +46,8 @@ test.describe("Scheduler page", () => {
 
     await page.getByRole("button", { name: "全部", exact: true }).click();
     await page.locator('section[data-group="global"]').getByRole("button", { expanded: true }).click();
-    await expect(row(page, 1)).toHaveCount(0);
+    // 收起:先 inert,160ms 动画结束后 hidden(行仍在 DOM 里)。
+    await expect(row(page, 1)).toBeHidden();
     await expect(row(page, 2)).toBeVisible();
   });
 

@@ -46,8 +46,13 @@ it("gives each civilization a section heading whose toggle lives inside the <h2>
   expect(screen.getByText("第五殿")).toBeInTheDocument();
   fireEvent.click(toggle);
   expect(toggle).toHaveAttribute("aria-expanded", "false");
-  expect(screen.queryByText("第五殿")).toBeNull();
-  expect(screen.getByText("Limbo")).toBeInTheDocument();
+  // 收起的契约:先 inert,动画结束再 hidden。
+  const body = document.getElementById(toggle.getAttribute("aria-controls")!)!;
+  expect(screen.getByText("第五殿").closest("[inert]")).toBe(body);
+  fireEvent.animationEnd(body);
+  expect(screen.getByText("第五殿")).not.toBeVisible();
+  expect(screen.getByText("Limbo")).toBeVisible();
+  expect(screen.getByText("Limbo").closest("[inert]")).toBeNull();
 });
 
 it("shows a static table skeleton while loading, not pulsing cards", () => {

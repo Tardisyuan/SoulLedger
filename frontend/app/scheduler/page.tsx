@@ -24,6 +24,7 @@ import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { Button } from "@/src/components/ui/Button";
+import { Collapse } from "@/src/components/ui/Collapse";
 import { EmptyState } from "@/src/components/ui/EmptyState";
 import { FilterChipToggle } from "@/src/components/ui/FilterChip";
 import { QueryError } from "@/src/components/ui/PageError";
@@ -237,7 +238,8 @@ function SchedulerPageContent() {
                 className="border-t border-[oklch(var(--color-block))]"
                 data-group={group.key}
               >
-                <h2 className="text-2xs uppercase text-[oklch(var(--color-ink-muted))]">
+                {/* 节首吸顶(Design 第三批):收起时节首不动,下面的节往上收。 */}
+                <h2 className="sticky top-(--below-band) z-1 bg-[oklch(var(--color-canvas))] text-2xs uppercase text-[oklch(var(--color-ink-muted))]">
                   <button
                     type="button"
                     aria-expanded={open}
@@ -257,11 +259,10 @@ function SchedulerPageContent() {
                       {" · "}
                       {t("scheduler.groups.count", { count: String(group.jobs.length) })}
                     </span>
-                    <ChevronDown aria-hidden="true" className={`w-4 h-4 shrink-0 transition-transform ${open ? "" : "-rotate-90"}`} />
+                    <ChevronDown aria-hidden="true" className={`w-4 h-4 shrink-0 transition-transform duration-fast ease-standard ${open ? "" : "-rotate-90"}`} />
                   </button>
                 </h2>
-                {open && (
-                  <div id={bodyId}>
+                <Collapse open={open} id={bodyId} rows={group.jobs.length}>
                     <div
                       aria-hidden="true"
                       className={`hidden px-4 py-2 font-mono text-2xs text-[oklch(var(--color-ink-subtle))] border-b border-[oklch(var(--color-block))] ${JOB_ROW_GRID}`}
@@ -286,8 +287,7 @@ function SchedulerPageContent() {
                         />
                       ))}
                     </ul>
-                  </div>
-                )}
+                </Collapse>
               </section>
             );
           })}

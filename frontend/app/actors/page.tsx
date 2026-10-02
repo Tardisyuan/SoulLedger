@@ -11,6 +11,7 @@ import { PageSection } from "@/components/ui/page-section";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChevronDown, Scale } from "lucide-react";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
+import { Collapse } from "@/src/components/ui/Collapse";
 import { DomainEnum, DomainText } from "@/src/components/ui/DomainValue";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { EmptyState } from "@/src/components/ui/EmptyState";
@@ -234,16 +235,18 @@ function ActorsPageContent() {
                       v3 撤掉(2026-10-03),文明由节名本身标明。
                       此前是 <button> 里包 <h2> —— 标题进按钮是无效 HTML(按钮只收短语内容),
                       读屏也只念出一个按钮。现在反过来:<h2> 里放折叠钮(披露模式)。 */}
-                  <div className="pt-3 mb-3 flex items-center gap-3">
+                  {/* 节首吸顶(Design 第三批):收起时节首不动,下面的节往上收。 */}
+                  <div className="sticky top-(--below-band) z-1 pt-3 mb-3 flex items-center gap-3 bg-[oklch(var(--color-surface-1))]">
                     <h2 className="text-sm font-medium text-[oklch(var(--color-ink))]">
                       <button
                         type="button"
                         onClick={() => toggleCollapse(civ)}
                         aria-expanded={!isCollapsed}
+                        aria-controls={`actors-civ-${civ}`}
                         className="inline-flex items-center gap-2 text-left hover:underline underline-offset-2"
                       >
                         <DomainEnum namespace="actors.civilizations" value={civ} />
-                        <ChevronDown aria-hidden="true" className={`w-4 h-4 text-[oklch(var(--color-ink-muted))] transition-transform ${isCollapsed ? "-rotate-90" : ""}`} />
+                        <ChevronDown aria-hidden="true" className={`w-4 h-4 text-[oklch(var(--color-ink-muted))] transition-transform duration-fast ease-standard ${isCollapsed ? "-rotate-90" : ""}`} />
                       </button>
                     </h2>
                     <span className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">
@@ -251,7 +254,11 @@ function ActorsPageContent() {
                     </span>
                   </div>
 
-                  {!isCollapsed && (
+                  <Collapse
+                    open={!isCollapsed}
+                    id={`actors-civ-${civ}`}
+                    rows={principals.length + (isBenchOpen ? bench.length : Math.min(bench.length, 1))}
+                  >
                     <div className="space-y-4">
                       {/* Named gods, flat */}
                       {principals.length > 0 && (
@@ -268,6 +275,7 @@ function ActorsPageContent() {
                           <button
                             onClick={() => toggleBench(civ)}
                             aria-expanded={!!isBenchOpen}
+                            aria-controls={`actors-bench-${civ}`}
                             aria-label={t("actors.assessors.toggle")}
                             className="w-full min-h-(--table-row-h) flex items-center gap-3 px-4 py-2 border-b border-[oklch(var(--color-rule))] hover:bg-[oklch(var(--color-surface-2))] transition-colors text-left"
                           >
@@ -284,8 +292,7 @@ function ActorsPageContent() {
                             <ChevronDown className={`w-4 h-4 text-[oklch(var(--color-ink-muted))] transition-transform ${isBenchOpen ? "" : "-rotate-90"}`} />
                           </button>
 
-                          {isBenchOpen && (
-                            <div className="row-expand">
+                          <Collapse open={!!isBenchOpen} id={`actors-bench-${civ}`}>
                             <ActorTable>
                               {bench.map((actor) => (
                                 <ActorRow
@@ -295,12 +302,11 @@ function ActorsPageContent() {
                                 />
                               ))}
                             </ActorTable>
-                            </div>
-                          )}
+                          </Collapse>
                         </div>
                       )}
                     </div>
-                  )}
+                  </Collapse>
                 </div>
               );
             })}
