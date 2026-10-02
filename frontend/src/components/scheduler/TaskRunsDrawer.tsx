@@ -172,13 +172,15 @@ export function TaskRunItem({
             // Wrapped, not horizontally scrolled: a traceback line is often
             // wider than a phone, and a nested scroller inside a scrolling
             // drawer is two scroll axes to fight with one thumb.
+            <div className="row-expand mt-2">
             <pre
               id={errorId}
               aria-label={t("scheduler.runs.error")}
-              className="mt-2 max-h-80 overflow-y-auto whitespace-pre-wrap break-words select-text bg-[oklch(var(--color-surface-2))] border border-[oklch(var(--color-hairline))] p-3 font-mono text-xs text-[oklch(var(--color-ink))]"
+              className="max-h-80 overflow-y-auto whitespace-pre-wrap break-words select-text bg-[oklch(var(--color-surface-2))] border border-[oklch(var(--color-hairline))] p-3 font-mono text-xs text-[oklch(var(--color-ink))]"
             >
               {run.error}
             </pre>
+            </div>
           )}
         </div>
       )}

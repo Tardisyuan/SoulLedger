@@ -218,6 +218,13 @@
   --animate-page-enter: page-enter var(--transition-duration-base) var(--ease-enter) backwards; /* @kind other */
   /* 规范 v3「骨架 → 内容」:200ms 淡入。PageShell 在骨架换成内容的那一刻挂上它。 */
   --animate-content-in: content-in var(--transition-duration-reveal) var(--ease-enter) backwards; /* @kind other */
+  /* 规范 v3「表格交互 · 展开」:grid-template-rows 0fr→1fr,200ms 进场曲线;减少动态效果下瞬时展开
+   * (上面那条 1ms 规则就是瞬时,这里不进 `data-motion="fade"` 的 80ms 例外)。用法是 `row-expand`
+   * 工具类,见文件后面的 @utility。只做展开:收起是卸载,内容当场离开 DOM 与读屏树。 */
+  --animate-row-expand: row-expand var(--transition-duration-reveal) var(--ease-enter) backwards; /* @kind other */
+  /* 同一段内换页(`/souls` → `/souls/123`)时 template 不重新挂载,于是同一个动画名不会重播。
+   * 换一个名字就会:`app/template.tsx` 在 pathname 变化时在这两个名字之间切换。值与上面逐字相同。 */
+  --animate-page-enter-again: page-enter-again var(--transition-duration-base) var(--ease-enter) backwards; /* @kind other */
 
   --animate-row-enter: row-enter var(--transition-duration-settle) var(--ease-enter) both; /* @kind other */
   --animate-row-exit: row-exit var(--transition-duration-settle) var(--ease-exit) forwards; /* @kind other */
@@ -926,6 +933,39 @@ html.theme-switching *::after {
   to {
     opacity: 1;
     transform: none;
+  }
+}
+
+@keyframes page-enter-again {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* overflow 只在动画期间是 hidden(离散属性,fill 是 backwards,结束后回到 visible),
+   于是展开完的内容里焦点环与浮层不会被裁。 */
+@keyframes row-expand {
+  from {
+    grid-template-rows: 0fr;
+    overflow: hidden;
+  }
+  to {
+    grid-template-rows: 1fr;
+    overflow: hidden;
+  }
+}
+
+/* 行展开 / 行内检查器的共享外壳:包在条件渲染的那块内容外面,里面只放一个子元素。 */
+@utility row-expand {
+  display: grid;
+  animation: var(--animate-row-expand);
+  & > * {
+    min-height: 0;
   }
 }
 
