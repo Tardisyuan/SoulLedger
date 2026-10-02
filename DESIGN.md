@@ -73,7 +73,7 @@ every row below and checks the step, size, line-height and weight against
 | 正文 | `<p>` | `text-sm` | 13 / 20 | 400 | 界面字体 | — |
 | 展示数字 | 当前这一判(审判台、盖印层) | `font-title text-display-lg` | 56 / 62 | 600 | Noto Serif SC | — |
 | 展示数字 · 二档 | 灵魂详情的功 / 过余额、首字方块 | `font-title text-xl font-semibold` | 28 / 36 | 600 | Noto Serif SC | — |
-| 条号 | 语料阅读区的条号(`corpus-sigil`,`<p>`;篇名才是那一页的 `<h1>`)与被引用数。Design A3 画 40,`text-display` 只许匾与登录页(lint `type-scale`),所以落在二档 | `font-title text-xl font-semibold` | 28 / 36 | 600 | Noto Serif SC | `CorpusPage.test` |
+| 条号 · 展示数字 | 语料阅读区的条号(`corpus-sigil`,`<p>`;篇名才是那一页的 `<h1>`)与被引用数,lg 起(Design A3;窄屏 28,即上面「二档」)。用户 2026-10-02 定;lint `type-scale` 只为 `app/corpus/page.tsx` 一个文件放行 `text-display`(`DISPLAY_NUMERAL_ALLOW`) | `font-title lg:text-display` | 40 / 54 | 600 | Noto Serif SC | `CorpusPage.test`、`designGuardContract` |
 
 Three things this table does on purpose:
 

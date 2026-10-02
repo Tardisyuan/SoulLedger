@@ -231,12 +231,20 @@ describe("text-display 只在匾与登录页放行(规范 v2 A3)", () => {
   const typeHits = (filePath: string) =>
     lintAll([PROBE], filePath)[0].filter((m) => m.ruleId === "design-system/type-scale");
 
-  it.each(["app/(auth)/login/__probe__.tsx", "src/components/plaque/__probe__.tsx"])("%s 放行", (filePath) => {
+  // 律条语料页的条号与被引用数(用户 2026-10-02)按单个文件放行:同目录的别的文件、
+  // 用断点前缀写的 `lg:text-display` 在别处,都仍然报红。
+  it.each(["app/(auth)/login/__probe__.tsx", "src/components/plaque/__probe__.tsx", "app/corpus/page.tsx"])("%s 放行", (filePath) => {
     expect(typeHits(filePath)).toEqual([]);
   }, 60_000);
 
-  it.each(["app/judgment/__probe__.tsx", "src/components/ui/__probe__.tsx"])("%s 报红", (filePath) => {
+  it.each(["app/judgment/__probe__.tsx", "src/components/ui/__probe__.tsx", "app/corpus/__probe__.tsx", "src/components/judgment/__probe__.tsx"])("%s 报红", (filePath) => {
     expect(typeHits(filePath)).toHaveLength(1);
+  }, 60_000);
+
+  it("带断点前缀的 lg:text-display 照样报红(语料页用的就是这个写法)", () => {
+    const hits = lintAll(['export const P = () => (<p className="text-xl lg:text-display" />);\n'], "app/judgment/__probe__.tsx")[0]
+      .filter((m) => m.ruleId === "design-system/type-scale");
+    expect(hits).toHaveLength(1);
   }, 60_000);
 });
 

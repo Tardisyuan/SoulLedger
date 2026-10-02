@@ -17,12 +17,14 @@ import { CorpusCitedBy } from "@/src/components/judgment/CorpusCitedBy";
 import { CorpusInsertIntoDesk } from "@/src/components/judgment/CorpusInsertIntoDesk";
 import { CorpusRelated, relatedStatutes } from "@/src/components/judgment/CorpusRelated";
 import { usePermissions } from "@/src/hooks/usePermissions";
+import { usePlaque } from "@/src/components/plaque/Plaque";
 import { cn } from "@/lib/utils";
 
 /**
  * 律条语料 —— 长文本阅读页(Design A3 · /corpus):左目录(按部分组、可折叠;手机是下拉)、
  * 中阅读栏(正文限 34em)、右栏引文 / 被引用 / 相关 / 版本;手机底部一条「上一条 / 插入审判台 /
- * 下一条」。条号用标题字体 28(Design 画 40;`text-display` 只许匾与登录页用,lint 守着),编号类型(`sigilSystemName`)写在旁边。
+ * 下一条」。条号与被引用数是展示数字:宽屏标题字体 40(`lg:text-display`,lint `type-scale` 为这一个文件放行,用户 2026-10-02),
+ * 窄屏 28(Design 393);编号类型(`sigilSystemName`)写在旁边。
  *
  * ── 衬线只给「原文」与「译文」 ────────────────────────────────────────────
  * 它们是「被说出的话」;条号用标题字体,编者注、元数据、目录用界面字体。
@@ -155,6 +157,14 @@ export default function CorpusPage() {
         division: typeof statute.payload_json?.gate === "string" ? (statute.payload_json.gate as string) : null,
       }));
   }, [data]);
+
+  // 身份带(A3):题「律条语料」,右栏「N 部 · N 条」—— 都从已载入的条文数出来,没载入就不写。
+  usePlaque({
+    title: t("plaque.corpus"),
+    meta: data?.length
+      ? t("plaque.corpus_meta", { works: String(new Set(data.map((s) => s.corpus)).size), n: String(data.length) })
+      : undefined,
+  });
 
   const corpusName = (c: string) => t(`judgment.statute_corpus.${c}`);
   const trimmed = query.trim();
@@ -375,7 +385,7 @@ export default function CorpusPage() {
               <p data-testid="corpus-cited-by" className="flex items-baseline gap-2">
                 {typeof cited === "number" ? (
                   <>
-                    <span className="font-title text-xl font-semibold">{cited}</span>
+                    <span className="font-title text-xl font-semibold lg:text-display">{cited}</span>
                     <span className="text-sm text-[oklch(var(--color-ink-muted))]">{t("judgment.corpus.cited_by_unit")}</span>
                   </>
                 ) : (
@@ -591,7 +601,7 @@ function Reading({
       </p>
       <header className="pb-4 border-b border-[oklch(var(--color-line))]">
         <div className="flex flex-wrap items-baseline gap-x-3">
-          <p data-testid="corpus-sigil" className="font-title text-xl font-semibold">
+          <p data-testid="corpus-sigil" className="font-title text-xl font-semibold lg:text-display">
             {article.sigil ?? <MissingValue kind="unrecorded" reason={t("judgment.corpus.sigil_absent")} />}
           </p>
           <span className="text-2xs uppercase tracking-widest text-[oklch(var(--color-ink-subtle))]">{sigilSystemName(s.civilization)}</span>
