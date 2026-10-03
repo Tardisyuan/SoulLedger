@@ -101,7 +101,11 @@ for (const name of ["--animate-spin", "--animate-pulse", "--default-transition-d
     else if (ch === "}") stack.pop();
     else if (/^\s*(?:\/\* @kind \w+ \*\/\s*)?--tw-[\w-]+\s*:/.test(text)) {
       const rule = [...stack].reverse().find((sel) => !sel.startsWith("@"));
-      if (rule && !STATE.test(rule)) return `${m} /* @kind other */`;
+      // Not inside a conditional/variant block: the sync reads no token scope in `@media`,
+      // `@starting-style` or `@container` (Design round 6, 2026-10-03). `@supports` stays — it
+      // holds Tailwind's `--tw-*` property fallbacks, which the check does read as tokens.
+      const scoped = !stack.some((sel) => /^@(media|starting-style|container)\b/.test(sel));
+      if (rule && scoped && !STATE.test(rule)) return `${m} /* @kind other */`;
     }
     return m;
   });
