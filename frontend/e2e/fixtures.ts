@@ -1593,9 +1593,9 @@ export class ApiMock {
     ]);
     // 默认视图 on the server. Unset, so login lands where it always did
     // (/dashboard); a PATCH answers with what it was sent, as the view does.
-    this.on("GET", "/auth/profile/preferences/", { default_view: null });
+    this.on("GET", "/auth/profile/preferences/", { default_view: null, onboarded: false });
     this.on("PATCH", "/auth/profile/preferences/", (call) => ({
-      body: { default_view: null, ...(call.body as object) },
+      body: { default_view: null, onboarded: false, ...(call.body as object) },
     }));
     // 忘记密码: one body for every username, as the backend answers.
     this.on("POST", "/auth/password-help/", { detail: "请求已受理" });

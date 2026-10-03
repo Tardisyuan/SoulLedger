@@ -12497,12 +12497,14 @@ export interface components {
         /**
          * @description `User.preferences`, as the API reads and writes it.
          *
-         *     One key today. Language and theme are not here: both are browser-side
+         *     Two keys. Language and theme are not here: both are browser-side
          *     settings with no server home (the locale is a cookie the middleware reads,
          *     the theme a localStorage key), and moving them is a separate decision.
          */
         PatchedUserPreferences: {
             default_view?: (components["schemas"]["DefaultViewEnum"] | components["schemas"]["NullEnum"]) | null;
+            /** @default false */
+            onboarded: boolean;
         };
         /**
          * @description Serializer for updating the profile bio. The avatar has its own upload
@@ -14994,12 +14996,14 @@ export interface components {
         /**
          * @description `User.preferences`, as the API reads and writes it.
          *
-         *     One key today. Language and theme are not here: both are browser-side
+         *     Two keys. Language and theme are not here: both are browser-side
          *     settings with no server home (the locale is a cookie the middleware reads,
          *     the theme a localStorage key), and moving them is a separate decision.
          */
         UserPreferences: {
             default_view?: (components["schemas"]["DefaultViewEnum"] | components["schemas"]["NullEnum"]) | null;
+            /** @default false */
+            onboarded: boolean;
         };
         UserProfile: {
             /** Format: uuid */
