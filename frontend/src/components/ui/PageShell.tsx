@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
  *
  * 1) **不渲染面包屑。** 设计规格原话是「面包屑与标题不是两层，是同一层的两行」，
  *    并要求 PageShell 自己画那两行。但 `src/components/layout/AppLayout.tsx:260`
- *    的 sticky `h-16` 里已经有 `<Breadcrumb menus={menus} />`，而 AppLayout 经
+ *    的 sticky 工具条(`h-13`)里已经有 `<Breadcrumb menus={menus} />`，而 AppLayout 经
  *    `AppLayoutWrapper` 包住了 `app/layout.tsx` 的全部 children —— 也就是每一个
  *    页面。PageShell 再画一遍就是同一条面包屑出现两次。
  *    所以这里只留 `eyebrow`：同样的 `text-2xs font-mono uppercase` 排版位，内容
@@ -21,12 +21,17 @@ import { cn } from "@/lib/utils";
  *    `app/audit/page.tsx:176`、`app/menus/page.tsx:255` 等 10 处同形）。
  *
  * 2) **页头不 sticky，只有筛选栏 sticky。** 卷宗的封面不跟着滚；滚动时还需要的
- *    控件只有筛选。筛选栏 `top-16` 贴在 AppLayout 那条 `h-16` 头下沿。
+ *    控件只有筛选。筛选栏吸在 `--below-band`:AppLayout 那条 52px 工具条加上身份带此刻的
+ *    高度(规范 v3:身份带吸顶、滚动后收成 48;页面短到收不起时仍是 156)。
  *
  * 3) **没有 `min-h-screen`。** AppLayout 给的槽位是
  *    `min-h-[calc(100vh-4rem)]`（AppLayout.tsx:461），页面再写一次
  *    `min-h-screen` 就永远多出 64px 死滚动 —— 现在 `app/` 下 47 个文件犯了这个。
  *    `src/__tests__/PageShell.test.tsx` 里有一条专门盯着它。
+ *
+ * (2026-10-01:这一节与下一节是**来历**;整张标题表 —— 每个角色的字号、行高、字重、
+ *  字体 —— 现在写在仓库根的 `DESIGN.md`「Headings」那一节,`designGuardContract` 逐行
+ *  对 globals.css 复核。下面的数字凡与那张表不一致,以那张表为准。)
  *
  * 4) **`<h2>` 有三个角色,各钉一档,壳不渲染它们。** 壳拥有 `<h1>`(`text-lg`)
  *    与 `eyebrow`(`text-2xs font-mono uppercase`);`<h2>` 归页面,而 2026-09-07
@@ -38,10 +43,14 @@ import { cn } from "@/lib/utils";
  *    `PageShell.test.tsx` 每次运行重算。)
  *
  *      区块标签   `text-2xs uppercase`  卡片/图表/区段**上方**那行小字。它不是
- *                                      标题,是标签:全大写、字距 0.1em、跟着
- *                                      `--text-2xs--font-weight: 600` 走,和壳
+ *                                      标题,是标签:全大写、字距 0.1em、字重 400
+ *                                      (这里原写「跟着 `--text-2xs--font-weight: 600`」,
+ *                                      那个 token 自 `16f4e149` 起就不存在了,600 属于
+ *                                      旧的 `--text-01`),和壳
  *                                      自己的 `eyebrow` 是同一个排版位。
  *      面板标题   `text-md`            一整块面板/区段的标题,和页面的 `<h1>`
+ *                 (2026-10-01 起改为 `text-lg` 20px,跟 v3 的「模块标题」;
+ *                  区块标签同日去掉 `font-mono`。现行表见 DESIGN.md)
  *                                      同族、低一档。weight 由
  *                                      `--text-md--font-weight: 600` 提供。
  *      列表行标题 `text-sm font-medium` 一屏几十个的那种标题 —— 列表/信息流里
@@ -53,11 +62,12 @@ import { cn } from "@/lib/utils";
  *    豁免,理由写的是「规则的证据从没覆盖过这个案例」。那句话是对的,而正确的
  *    处置不是永久豁免,是补上角色。前两个角色都放不进列表行:`text-2xs uppercase`
  *    会把后端来的通知标题转成大写并加 0.1em 字距(对 CJK 是错的),`text-md`
- *    是 22px、一行放不下几十个。
+ *    当时是 22px(今天 15px)、一行放不下几十个。
  *
  *    **`font-medium` 是角色定义的一部分,不是一处例外。** `--text-sm` 和
- *    `--text-xs/04/05` 一样**没有**伴生的 `--text-sm--font-weight`(带 weight
- *    的是 01/06/07/08 四个标题级,那正是刻度在说哪些是标题)。所以这里的
+ *    `--text-2xs` / `--text-xs` 一样**没有**伴生的 font-weight(今天带 weight 的是
+ *    `md` / `lg` / `display-lg` 的 600 与 `display` 的 400;这里原写的「01/06/07/08」
+ *    是 `16f4e149` 之前的旧档名)。所以这里的
  *    `font-medium` 不是 `text-md` 旁边那种空操作 —— 去掉它,标题就和它下面那条
  *    `<p>` 消息同为 400,只剩颜色可分。它是这一档**唯一**的层级信号,守卫因此
  *    连它一起钉。反过来也没有给 `--text-sm` 补 weight token:`text-sm` 站内绝大
@@ -169,7 +179,7 @@ export interface PageShellPagination {
 }
 
 export interface PageShellProps {
-  /** 页面标题。全页仅此一处 `<h1>`，`text-lg`。 */
+  /** 页面标题。全页仅此一处 `<h1>`，`font-title text-lg`(Noto Serif SC 600,规范 v3)。 */
   title: React.ReactNode;
   /** 内容列宽。默认 `page`（1200px），绝大多数页面用它。 */
   variant?: PageShellVariant;
@@ -193,7 +203,17 @@ export interface PageShellProps {
   subtitle?: React.ReactNode;
   /** 标题行右侧的动作区（「+ 创建灵魂」一类）。 */
   actions?: React.ReactNode;
-  /** 筛选栏。唯一 sticky 的一段，`top-16`，高 56（上下各 12 padding）。 */
+  /**
+   * 页头最左、跨 eyebrow / 标题 / 副标题三行的一格(v3 灵魂详情的首字方块)。
+   * 只是排版位:内容由页面给,壳不替它决定可访问名 —— 装饰性的就由页面写 `aria-hidden`。
+   */
+  leading?: React.ReactNode;
+  /**
+   * 页头最右、与整块标题垂直居中的一格(v3 灵魂详情的功 / 过 / 承自前世)。
+   * 放不下时(393)整格换到标题下面占满一行,而不是把标题挤窄。
+   */
+  aside?: React.ReactNode;
+  /** 筛选栏。唯一 sticky 的一段，`top-(--below-band)`(工具条 52 + 身份带此刻的高度)，高 64（上下各 8 padding + 48 控件）。 */
   filters?: React.ReactNode;
   /**
    * 分页位。见 `PageShellPagination`。
@@ -260,6 +280,8 @@ export function PageShell({
   tabs,
   subtitle,
   actions,
+  leading,
+  aside,
   filters,
   pagination,
   empty,
@@ -272,7 +294,58 @@ export function PageShell({
   const width = WIDTH_CLASS[variant];
 
   // 三选一，顺序是有意的：还在加载时不该先闪一下空态。
-  const body = isLoading && skeleton ? skeleton : isEmpty && empty ? empty : children;
+  const showingSkeleton = Boolean(isLoading && skeleton);
+  const body = showingSkeleton ? skeleton : isEmpty && empty ? empty : children;
+
+  const heading = (
+    <>
+      {/* 返回链接与 eyebrow 共用标题上方那一行，但它们不是一回事，所以是
+          两个槽而不是让页面把 `←` 塞进 eyebrow。eyebrow 是**这一页是什么**
+          （卷宗号、租户、状态），返回链接是**离开这一页**。七个详情页现在
+          各自手写这条链接（judgment/[id]:127、dispatch/[id]:112、
+          souls/[id]:282、social/[id]:23、social/profile/[id]:32、
+          social/follows:29、users:71）；塞进 eyebrow 会让一个导航控件继承
+          一个纯排版位的 uppercase + 字距，读起来像标签而不是链接。 */}
+      {backLink || eyebrow ? (
+        <div className="flex items-baseline gap-3 mb-3">
+          {backLink ? (
+            <div data-page-shell-back="" className="shrink-0">
+              {backLink}
+            </div>
+          ) : null}
+          {eyebrow ? (
+            <p
+              data-page-shell-eyebrow=""
+              className="text-2xs font-mono uppercase text-[oklch(var(--color-ink-subtle))] min-w-0"
+            >
+              {eyebrow}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+
+      <div className="flex items-start gap-4">
+        <h1 className="font-title text-lg text-[oklch(var(--color-ink))] flex-1 min-w-0">{title}</h1>
+        {actions ? (
+          <div data-page-shell-actions="" className="shrink-0">
+            {actions}
+          </div>
+        ) : null}
+      </div>
+
+      {subtitle ? (
+        /* `max-w-prose` 是行长上限，不是列宽：在 variant="full" 下一句副标题
+           铺满 1800px 不可读。列宽仍然只由上面那个 `width` 决定，
+           PageShell.test.tsx 的 variant 断言也只看四个容器位。 */
+        <p
+          data-page-shell-subtitle=""
+          className="text-sm text-[oklch(var(--color-ink-subtle))] max-w-prose mt-3"
+        >
+          {subtitle}
+        </p>
+      ) : null}
+    </>
+  );
 
   return (
     <div
@@ -286,51 +359,25 @@ export function PageShell({
         className="border-b border-[oklch(var(--color-hairline))]"
       >
         <div className={cn(width, "px-4 md:px-8 pt-8 pb-6")}>
-          {/* 返回链接与 eyebrow 共用标题上方那一行，但它们不是一回事，所以是
-              两个槽而不是让页面把 `←` 塞进 eyebrow。eyebrow 是**这一页是什么**
-              （卷宗号、租户、状态），返回链接是**离开这一页**。七个详情页现在
-              各自手写这条链接（judgment/[id]:127、dispatch/[id]:112、
-              souls/[id]:282、social/[id]:23、social/profile/[id]:32、
-              social/follows:29、users:71）；塞进 eyebrow 会让一个导航控件继承
-              一个纯排版位的 uppercase + 字距，读起来像标签而不是链接。 */}
-          {backLink || eyebrow ? (
-            <div className="flex items-baseline gap-3 mb-3">
-              {backLink ? (
-                <div data-page-shell-back="" className="shrink-0">
-                  {backLink}
+          {leading || aside ? (
+            /* 首格 / 标题块 / 尾格。标题块 `basis-60`:flex-wrap 按基准宽决定换不换行,
+               basis 0 时尾格永远不换行、只会把标题挤成一列字。 */
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-4">
+              {leading ? (
+                <div data-page-shell-leading="" className="shrink-0 self-start">
+                  {leading}
                 </div>
               ) : null}
-              {eyebrow ? (
-                <p
-                  data-page-shell-eyebrow=""
-                  className="text-2xs font-mono uppercase text-[oklch(var(--color-ink-subtle))] min-w-0"
-                >
-                  {eyebrow}
-                </p>
+              <div className="min-w-0 flex-1 basis-60">{heading}</div>
+              {aside ? (
+                <div data-page-shell-aside="" className="w-full md:w-auto">
+                  {aside}
+                </div>
               ) : null}
             </div>
-          ) : null}
-
-          <div className="flex items-start gap-4">
-            <h1 className="text-lg text-[oklch(var(--color-ink))] flex-1 min-w-0">{title}</h1>
-            {actions ? (
-              <div data-page-shell-actions="" className="shrink-0">
-                {actions}
-              </div>
-            ) : null}
-          </div>
-
-          {subtitle ? (
-            /* `max-w-prose` 是行长上限，不是列宽：在 variant="full" 下一句副标题
-               铺满 1800px 不可读。列宽仍然只由上面那个 `width` 决定，
-               PageShell.test.tsx 的 variant 断言也只看四个容器位。 */
-            <p
-              data-page-shell-subtitle=""
-              className="text-sm text-[oklch(var(--color-ink-subtle))] max-w-prose mt-3"
-            >
-              {subtitle}
-            </p>
-          ) : null}
+          ) : (
+            heading
+          )}
         </div>
       </header>
 
@@ -349,13 +396,12 @@ export function PageShell({
         </div>
       ) : null}
 
-      {/* 筛选栏：全站唯一贴在 AppLayout h-16 头下沿的一段。
-          `h-14 py-3` 不冲突 —— border-box 下总高 56、内容 32，正是规格里的
-          「上下各 12 padding」。 */}
+      {/* 筛选栏：全站唯一贴在 AppLayout 52px 工具条(h-13)下沿的一段。
+          `h-16 py-2`:border-box 下总高 64、内容 48,放得下规范 v3 md 档的控件(见下)。 */}
       {filters ? (
         <div
           data-page-shell-filters=""
-          className="sticky top-16 z-filters bg-[oklch(var(--color-canvas))] border-b border-[oklch(var(--color-hairline))]"
+          className="sticky top-(--below-band) z-filters bg-[oklch(var(--color-canvas))] border-b border-[oklch(var(--color-hairline))]"
         >
           {/* `overflow-x-auto` 不是装饰。这一行是固定高度、不换行的 flex —— 而
               筛选控件的数量由每个页面自己决定。灵魂页放了搜索框、两个数字输入、
@@ -368,12 +414,14 @@ export function PageShell({
               「可见、可用、可滚动到」却点不动。mobile-chrome 上三条 E2E 长期
               超时失败,根因就在这里,而它看起来完全不像一个筛选栏的问题。
               
-              滚动而不是换行:`h-14`(56px = 上下各 12 padding + 32 内容)是规格里
-              写死的高度,换行会破坏它。 */}
+              滚动而不是换行:`h-16`(64px = 上下各 8 padding + 48 内容,即规范 v3 的 md 档
+              控件;v3 `.queue-toolbar` 是 min-height 62)是写死的高度,换行会破坏它。
+              2026-10-01 控件换到 v3 之前这里是 `h-14 py-3`(32 内容)—— 48 的输入放进去会被
+              这个 overflow 容器从上下两头裁掉。 */}
           <div
             className={cn(
               width,
-              "px-4 md:px-8 h-14 py-3 flex items-center gap-3 overflow-x-auto"
+              "px-4 md:px-8 h-16 py-2 flex items-center gap-3 overflow-x-auto"
             )}
           >
             {filters}
@@ -381,7 +429,16 @@ export function PageShell({
         </div>
       ) : null}
 
-      <div data-page-shell-body="" data-density={density} className={cn(width, BODY_CLASS[density])}>
+      {/* 规范 v3「骨架 → 内容」:骨架在时没有动画类,内容一到就挂上 `animate-content-in`
+          (200ms 淡入)—— 类名从无到有就是动画开始,不用 key、不重挂载。骨架是静态的、
+          瞬时离场,所以这是「内容淡入」而不是两层叠着的交叉淡化;只对给了 `skeleton`
+          的页面生效。减少动态效果下是 80ms(`data-motion`)。 */}
+      <div
+        data-page-shell-body=""
+        data-density={density}
+        data-motion={skeleton ? "fade" : undefined}
+        className={cn(width, BODY_CLASS[density], skeleton && !showingSkeleton && "animate-content-in")}
+      >
         {body}
       </div>
 

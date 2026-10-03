@@ -4,17 +4,20 @@ import { useQuery } from "@tanstack/react-query";
 import { api, type Organization, type PaginatedResponse } from "@soulledger/core/api";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { usePlaque } from "@/src/components/plaque/Plaque";
+import { useHall } from "@/src/components/plaque/useHall";
 import { Skeleton } from "@/components/ui/skeleton";
-import { SectionTitle } from "@/src/components/plaque/SectionTitle";
 import { ChevronDown } from "lucide-react";
 import { TreeName, flattenTree } from "@/src/components/ui/TreeRow";
 import { PageShell } from "@/src/components/ui/PageShell";
+import { Collapse } from "@/src/components/ui/Collapse";
 import { EmptyState } from "@/src/components/ui/EmptyState";
 import { Badge } from "@/src/components/ui/Badge";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
 import { QueryError } from "@/src/components/ui/PageError";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
+import { ROW_HOVER } from "@/components/ui/data-table";
 
 // organizationsApi.list() (lib/api/organizations.ts) doesn't forward a `page` param and
 // this page renders a parent/child tree (flattenTree/renderTable below), so a paged view would
@@ -81,6 +84,7 @@ const CATEGORY_COLORS: Record<string, string> = {
 
 function OrganizationsPageContent() {
   const { t } = useI18n();
+  usePlaque({ hall: useHall(t("plaque.office.rules")) });
   const { user } = useTenant();
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
 
@@ -108,7 +112,7 @@ function OrganizationsPageContent() {
   const renderTable = (orgs: Organization[]) => (
     <table className="w-full text-sm">
       <thead className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">
-        <tr className="border-b border-[oklch(var(--color-block))]">
+        <tr className="h-(--control-h-sm) border-b-2 border-[oklch(var(--color-ink))]">
           <th scope="col" className="px-3 py-2 text-left font-normal">{t("menus.name")}</th>
           <th scope="col" className="px-3 py-2 text-left font-normal">{t("tenants.code")}</th>
         </tr>
@@ -122,7 +126,7 @@ function OrganizationsPageContent() {
           (o) => o.id,
           (o) => o.parent,
         ).map(({ item: org, depth }) => (
-          <tr key={org.id} className="border-b border-[oklch(var(--color-rule))] hover:bg-[oklch(var(--color-surface-2))] transition-colors">
+          <tr key={org.id} className={`h-(--table-row-h) border-b border-[oklch(var(--color-rule))] ${ROW_HOVER} transition-colors`}>
             <td className="py-2 px-3">
               <TreeName depth={depth}>
                 <span className={depth ? "text-[oklch(var(--color-ink-muted))]" : "font-medium text-[oklch(var(--color-ink))]"}>{org.name}</span>
@@ -175,24 +179,32 @@ function OrganizationsPageContent() {
 
           return (
             <section key={category}>
-              {/* 每个文明一节 = 页面级分节标题(规范 v2 §四):匾纹片段 + 节名,件数在右侧注记。
+              {/* 每个文明一节 = v3 面板标题(与 `components/ui/page-section.tsx` 同一档)+ 件数注记。
+                  v2 节首的匾纹片段随 v3 撤掉(2026-10-03),文明由节名本身标明。
                   折叠钮放在 <h2> 里面(披露模式),不是反过来 —— <button> 的内容只能是
-                  短语内容,标题进按钮是无效 HTML。文明 emoji 撤掉:节首的匾纹片段已经标明文明。 */}
-              <div className="mb-3">
-                <SectionTitle aside={t("organization.organizations_count", { count: String(orgs.length) })}>
+                  短语内容,标题进按钮是无效 HTML。 */}
+              {/* 节首吸顶(Design 第三批):收起时节首不动,下面的节往上收。 */}
+              <div className="sticky top-(--below-band) z-1 mb-3 flex items-center gap-3 bg-[oklch(var(--color-canvas))]">
+                <h2 className="text-lg text-[oklch(var(--color-ink))]">
                   <button
                     type="button"
                     onClick={() => toggleCollapse(category)}
                     aria-expanded={!isCollapsed}
+                    aria-controls={`organizations-${category}`}
                     className="inline-flex items-center gap-2 text-left hover:underline underline-offset-2"
                   >
                     {name}
-                    <ChevronDown aria-hidden="true" className={`w-4 h-4 text-[oklch(var(--color-ink-muted))] transition-transform ${isCollapsed ? "-rotate-90" : ""}`} />
+                    <ChevronDown aria-hidden="true" className={`w-4 h-4 text-[oklch(var(--color-ink-muted))] transition-transform duration-fast ease-standard ${isCollapsed ? "-rotate-90" : ""}`} />
                   </button>
-                </SectionTitle>
+                </h2>
+                <span className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">
+                  {t("organization.organizations_count", { count: String(orgs.length) })}
+                </span>
               </div>
 
-              {!isCollapsed && <div className="overflow-x-auto">{renderTable(orgs)}</div>}
+              <Collapse open={!isCollapsed} id={`organizations-${category}`} rows={orgs.length}>
+                <div className="overflow-x-auto">{renderTable(orgs)}</div>
+              </Collapse>
             </section>
           );
         })}
@@ -207,9 +219,9 @@ function OrganizationsSkeleton() {
   return (
     <div data-testid="organizations-skeleton" aria-busy="true" className="space-y-3">
       <Skeleton className="h-5 w-40" />
-      <Skeleton className="h-8 w-full" />
+      <Skeleton className="h-(--control-h-sm) w-full" />
       {[0, 1, 2].map((i) => (
-        <Skeleton key={i} className="h-9 w-full" />
+        <Skeleton key={i} className="h-(--table-row-h) w-full" />
       ))}
     </div>
   );

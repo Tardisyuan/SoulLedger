@@ -3,7 +3,7 @@ REST views for Ledger app.
 """
 import csv
 
-from django.db.models import Count, F, Q
+from django.db.models import Avg, Count, F, Q
 from django.http import HttpResponse
 from django.utils import timezone
 from drf_spectacular.types import OpenApiTypes
@@ -16,8 +16,10 @@ from apps.audit.models import AuditLog
 from apps.core.csv_safe import csv_safe
 from apps.core.locale import locale_from_request
 from apps.core.permissions import CodenamePermission, TenantPermission
+from apps.core.tenant import scope_to_tenant
 from apps.disposition.models import Disposition
 from apps.ledger.journal import JournalParamError, build_journal, journal_records
+from apps.ledger.models import BalanceSnapshot
 from apps.ledger.serializers import (
     LedgerEffectiveSerializer,
     LedgerErrorSerializer,
@@ -30,7 +32,8 @@ from apps.ledger.serializers import (
     RebirthNotApplicableSerializer,
 )
 from apps.ledger.services import LedgerService, RebirthNotApplicable
-from apps.realms.models import resolve_localized_name
+from apps.ledger.snapshots import previous_month_average
+from apps.realms.models import Realm, resolve_localized_name
 from apps.souls.models import Soul, SoulState
 
 
@@ -340,6 +343,32 @@ class LedgerJournalExportView(APIView):
         return response
 
 
+HISTOGRAM_MIN, HISTOGRAM_MAX, HISTOGRAM_WIDTH = -300, 300, 50
+
+
+def _one_decimal(value) -> float | None:
+    return None if value is None else round(float(value), 1)
+
+
+def _attach_capacity(rows) -> None:
+    """给「界域前十」每行补 `capacity` 与 `held`(此刻在押)。
+
+    口径与界域页、发落拒绝(`realm_full`)同一个:`apps.disposition.destination.realm_held`
+    数这个界域里未离开的行程站。`realm_code` 全局唯一,所以一行就是一个界域。
+    `Realm.all_objects`:界域软删了,在押的人与记下的容量仍然是事实。
+    """
+    realms = {
+        r.realm_code: r
+        for r in Realm.all_objects.filter(realm_code__in=[row["realm_code"] for row in rows]).annotate(
+            held=Count("path_entries", filter=Q(path_entries__left_at__isnull=True))
+        )
+    }
+    for row in rows:
+        realm = realms.get(row["realm_code"])
+        row["held"] = realm.held if realm is not None else 0
+        row["capacity"] = realm.capacity if realm is not None else None
+
+
 class LedgerOverviewStatsView(APIView):
     """
     GET /ledger/stats/overview/
@@ -372,20 +401,35 @@ class LedgerOverviewStatsView(APIView):
         # S-H3: All queries scoped to tenant
         total_souls = soul_qs.count()
 
-        # State distribution
-        state_counts = dict(
-            soul_qs.values_list("current_state")
-            .annotate(count=Count("id"))
-            .values_list("current_state", "count")
-        )
+        # State distribution, with each state's mean balance (账本页「状态细分」的平均余额列)。
+        # 余额 = merit_score - demerit_score,与 Soul.karmic_balance 同一个式子;没有灵魂的状态是 null。
+        balance = F("merit_score") - F("demerit_score")
+        state_rows = {
+            row["current_state"]: row
+            for row in soul_qs.values("current_state").annotate(count=Count("id"), avg=Avg(balance))
+        }
         state_distribution = [
             {
                 "state": s,
                 "label": s,
-                "count": state_counts.get(s, 0),
+                "count": state_rows.get(s, {}).get("count", 0),
+                "average_balance": _one_decimal(state_rows.get(s, {}).get("avg")),
             }
             for s in SoulState.values
         ]
+        average_raw = soul_qs.aggregate(avg=Avg(balance))["avg"]
+        average_balance = _one_decimal(average_raw)
+
+        # 较上月:上个月的快照(apps/ledger/snapshots.py),与上面的 soul_qs 同一个划界 ——
+        # 不带租户的 ADMIN 看全部,带租户的只看这个租户。没有上月快照就是 null,前端隐藏。
+        snapshots = BalanceSnapshot.objects.all()
+        if tenant is not None:
+            snapshots = scope_to_tenant(snapshots, request, admin_bypass=False)
+        prev_raw = previous_month_average(snapshots)
+        average_balance_delta = (
+            None if prev_raw is None or average_raw is None
+            else _one_decimal(float(average_raw) - prev_raw)
+        )
 
         # Per-tenant soul counts with state breakdown (single query, no N+1)
         tenant_state_data = (
@@ -435,18 +479,34 @@ class LedgerOverviewStatsView(APIView):
             {"label": "20 to 50", "min": 20, "max": 50},
             {"label": ">= 50", "min": 50, "max": None},
         ]
+        # 等宽直方图(仪表盘「余额分布 · 已处置 · 每格 50」):[-300, 300) 每 50 一格,两端开口。
+        # **只数已处置的灵魂**(Design A4 标题「已处置 · 每格 50」,用户 2026-10-02 拍板):
+        # 余额要到处置时才定案,在世与审判中的还在变。所以 `total` 等于已处置人数,不等于 `total_souls`。
+        # `karma_distribution` 那七格不动、仍数全部 —— 欢迎页、调派提案页、/admin/stats 还在读它。
+        histogram_buckets = [
+            {"min": None, "max": HISTOGRAM_MIN},
+            *(
+                {"min": lo, "max": lo + HISTOGRAM_WIDTH}
+                for lo in range(HISTOGRAM_MIN, HISTOGRAM_MAX, HISTOGRAM_WIDTH)
+            ),
+            {"min": HISTOGRAM_MAX, "max": None},
+        ]
         bucket_counts = {}
-        for i, b in enumerate(karma_buckets):
-            # karmic_balance = merit_score - demerit_score, expressed via F()
-            condition = Q()
-            if b["min"] is not None:
-                condition &= Q(merit_score__gte=F('demerit_score') + b['min'])
-            if b["max"] is not None:
-                condition &= Q(merit_score__lt=F('demerit_score') + b['max'])
-            bucket_counts[f'bucket_{i}'] = Count('id', filter=condition)
+        for prefix, buckets in (("k", karma_buckets), ("h", histogram_buckets)):
+            for i, b in enumerate(buckets):
+                # karmic_balance = merit_score - demerit_score, expressed via F()
+                condition = Q()
+                if b["min"] is not None:
+                    condition &= Q(merit_score__gte=F('demerit_score') + b['min'])
+                if b["max"] is not None:
+                    condition &= Q(merit_score__lt=F('demerit_score') + b['max'])
+                if prefix == "h":
+                    condition &= Q(current_state=SoulState.DISPOSED)
+                bucket_counts[f'{prefix}_{i}'] = Count('id', filter=condition)
         bucket_result = soul_qs.aggregate(**bucket_counts)
-        for i, b in enumerate(karma_buckets):
-            b["count"] = bucket_result.get(f'bucket_{i}', 0)
+        for prefix, buckets in (("k", karma_buckets), ("h", histogram_buckets)):
+            for i, b in enumerate(buckets):
+                b["count"] = bucket_result.get(f'{prefix}_{i}', 0)
 
         # S-C2: Recent activity filtered to current tenant only
         audit_qs = AuditLog.objects.all() if tenant is None else AuditLog.objects.filter(tenant=tenant)
@@ -523,9 +583,15 @@ class LedgerOverviewStatsView(APIView):
                 .order_by("destination_realm__realm_code")
             )
         ]
+        _attach_capacity(souls_by_realm)
 
         return Response({
+            # 这份聚合算出来的时刻(身份带「截至 HH:MM」)。不缓存,所以就是这次请求的时刻。
+            "as_of": timezone.now(),
             "total_souls": total_souls,
+            "average_balance": average_balance,
+            "average_balance_prev_month": _one_decimal(prev_raw),
+            "average_balance_delta": average_balance_delta,
             "state_distribution": state_distribution,
             "tenants": tenant_stats,
             "karma_distribution": [
@@ -537,6 +603,11 @@ class LedgerOverviewStatsView(APIView):
             # accounts_for_every_soul.py` has something to assert that does not
             # depend on the bucket boundaries it is checking.
             "karma_distribution_total": sum(b["count"] for b in karma_buckets),
+            "balance_histogram": {
+                "bucket_width": HISTOGRAM_WIDTH,
+                "buckets": histogram_buckets,
+                "total": sum(b["count"] for b in histogram_buckets),
+            },
             "recent_activity": recent_activity,
             "souls_by_realm": souls_by_realm,
         })

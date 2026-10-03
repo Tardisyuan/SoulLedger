@@ -169,6 +169,7 @@ function baseSoul(overrides: Partial<Soul> = {}): Soul {
 
 const concludedJudgment: Judgment = {
   id: "judgment-1",
+  case_number: "CN-2026-0001",
   soul: "soul-1",
   soul_name: "Test Soul",
   civilization: "CHINESE",

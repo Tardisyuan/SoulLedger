@@ -19,7 +19,7 @@ export const VERDICT_GLYPH: Record<Verdict, string> = {
 };
 
 /**
- * 判决徽章(补足 B8 / C15):领域枚举,1px ink3 框、ink 字、无底;只有「待定」
+ * 判决徽章(补足 B8 / C15):领域枚举,1px 中性灰框(2026-10-01 v3:原为 ink3)、ink 字、无底;只有「待定」
  * 加 s2 底(还要继续处理)。「不过」的 ✕ 是 ink,不是冷玫红 —— 冷玫红只给系统出错。
  */
 export const VERDICT_BADGE_CLASSES: Record<Verdict, string> = {

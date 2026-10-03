@@ -1,5 +1,5 @@
 /**
- * /organizations 按规范 v2 补齐:每个文明一节 = 分节标题(SectionTitle),折叠钮在 <h2> 里
+ * /organizations 按规范 v2 补齐:每个文明一节 = 面板标题 <h2>,折叠钮在 <h2> 里
  * (不是 <h2> 进 <button>),加载是静态的表格骨架。
  */
 import { fireEvent, render, screen, within } from "@testing-library/react";
@@ -46,8 +46,13 @@ it("gives each civilization a section heading whose toggle lives inside the <h2>
   expect(screen.getByText("第五殿")).toBeInTheDocument();
   fireEvent.click(toggle);
   expect(toggle).toHaveAttribute("aria-expanded", "false");
-  expect(screen.queryByText("第五殿")).toBeNull();
-  expect(screen.getByText("Limbo")).toBeInTheDocument();
+  // 收起的契约:先 inert,动画结束再 hidden。
+  const body = document.getElementById(toggle.getAttribute("aria-controls")!)!;
+  expect(screen.getByText("第五殿").closest("[inert]")).toBe(body);
+  fireEvent.animationEnd(body);
+  expect(screen.getByText("第五殿")).not.toBeVisible();
+  expect(screen.getByText("Limbo")).toBeVisible();
+  expect(screen.getByText("Limbo").closest("[inert]")).toBeNull();
 });
 
 it("shows a static table skeleton while loading, not pulsing cards", () => {

@@ -9,7 +9,9 @@
 import { NavigationContainer } from "@react-navigation/native";
 import { act, fireEvent, render, renderHook, screen, waitFor, within } from "@testing-library/react-native";
 import type { ReactNode } from "react";
-import { FlatList, RefreshControl, StyleSheet } from "react-native";
+import { FlatList, StyleSheet } from "react-native";
+import { State, type PanGesture } from "react-native-gesture-handler";
+import { fireGestureHandler, getByGestureTestId } from "react-native-gesture-handler/jest-utils";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { I18nProvider } from "../i18n";
@@ -168,9 +170,20 @@ describe("feed paging (a FlatList read to its end)", () => {
     stubApi({ "/me/social/feed/": [page([post({ id: "p1" })]), page([post({ id: "p0" }), post({ id: "p1" })])] });
     wrap(<CircleScreen />);
     const before = await screen.findByTestId("post-p1");
-    await act(async () => screen.UNSAFE_getByType(RefreshControl).props.onRefresh());
+    // A pull released past 56 (v3 B2): the gesture-handler pan around the list, both platforms.
+    await act(async () =>
+      fireGestureHandler<PanGesture>(getByGestureTestId("pull"), [
+        { state: State.BEGAN, translationY: 0 },
+        { state: State.ACTIVE, translationY: 0 },
+        { translationY: 60 },
+        { state: State.END, translationY: 60 },
+      ])
+    );
     await screen.findByTestId("post-p0");
     expect(screen.getByTestId("post-p1")).toBe(before);
+    // The reload done, the list goes back up from the 56 hold.
+    const shift = () => (StyleSheet.flatten(screen.getByTestId("pull-content").props.style).transform as { translateY: number }[])[0].translateY;
+    await waitFor(() => expect(shift()).toBe(0));
   });
 });
 
@@ -275,7 +288,12 @@ describe("reactions", () => {
       "/me/social/status/": STATUS,
     });
     wrap(<PostScreen id="p1" />);
-    fireEvent.press(await screen.findByTestId("comment-more-c1"));
+    // v3 44pt targets: the ⋯ is drawn 32 and reaches 44 by its slop; 回复 is 18 of words in 44 of padding.
+    const more = await screen.findByTestId("comment-more-c1");
+    expect(32 + 2 * (more.props.hitSlop as number)).toBeGreaterThanOrEqual(44);
+    const reply = StyleSheet.flatten(screen.getByTestId("comment-reply-c1").props.style) as { lineHeight: number; paddingVertical: number };
+    expect(reply.lineHeight + 2 * reply.paddingVertical).toBeGreaterThanOrEqual(44);
+    fireEvent.press(more);
     expect(mockNavigate).toHaveBeenCalledWith("CircleReport", { target: "COMMENT", id: "c1", preview: "春笋" });
     mockNavigate.mockReset();
     fireEvent.press(screen.getByTestId("comment-more-c2"));
@@ -296,7 +314,11 @@ describe("reactions", () => {
 
   it("a pending post takes no reactions and no comments", async () => {
     detail({ moderation_status: "PENDING", is_mine: true });
-    await screen.findByTestId("pending-p1");
+    const tag = await screen.findByTestId("pending-p1");
+    // v3: glyph + word — ◐ from the glyph font, hidden from screen readers; the word is the label.
+    expect(tag.props.accessibilityLabel).toBe("待审 · 仅你可见");
+    expect(screen.queryByTestId("pending-p1-glyph")).toBeNull(); // hidden from screen readers
+    expect(screen.getByTestId("pending-p1-glyph", { includeHiddenElements: true }).props.children).toBe("◐");
     await act(async () => {});
     expect(screen.queryByTestId("reactions")).toBeNull();
     expect(screen.queryByTestId("comment-composer")).toBeNull();

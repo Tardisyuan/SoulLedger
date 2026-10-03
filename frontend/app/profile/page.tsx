@@ -8,23 +8,10 @@ import { useTenant } from "@/src/contexts/TenantContext";
 import { showToast } from "@/src/components/ui/Toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageShell } from "@/src/components/ui/PageShell";
-import { SectionTitle } from "@/src/components/plaque/SectionTitle";
 import { Button } from "@/src/components/ui/Button";
-import { Badge, type BadgeTone } from "@/src/components/ui/Badge";
+import { Badge } from "@/src/components/ui/Badge";
 import { TextField, fieldControl } from "@/src/components/ui/Field";
 import { cn } from "@/lib/utils";
-
-/**
- * Role → badge tone. `GUARDIAN` and the roles below it used to reach for
- * `--color-status-lost`, which `Badge` has no tone for; `neutral` is what a
- * role with no severity actually means, and it is the tone the data grid
- * already gives an unremarkable enum member.
- */
-const ROLE_TONES: Record<string, BadgeTone> = {
-  ADMIN: "error",
-  JUDGE: "warning",
-  GUARDIAN: "info",
-};
 
 export default function ProfilePage() {
   const { t } = useI18n();
@@ -139,12 +126,11 @@ export default function ProfilePage() {
 
       {/* 规范 v1:区块标压线,行线代替卡片;标签在左,值在右,393 px 下同样两列。 */}
       <section className="mb-6">
-        <div className="pt-6">
-          <SectionTitle>
-            <span aria-hidden="true">甲 · </span>
-            {t("profile.basic_info")}
-          </SectionTitle>
-        </div>
+        {/* v3 面板标题(与 `components/ui/page-section.tsx` 同一档);v2 节首的匾纹片段撤掉。 */}
+        <h2 className="pt-6 text-lg text-[oklch(var(--color-ink))]">
+          <span aria-hidden="true">甲 · </span>
+          {t("profile.basic_info")}
+        </h2>
         <dl className="grid grid-cols-[8rem_1fr] max-sm:grid-cols-[6rem_1fr] text-sm">
           <dt className={DT}>{t("profile.username")}</dt>
           <dd className={DD}>
@@ -189,7 +175,9 @@ export default function ProfilePage() {
             {isLoading ? (
               <Skeleton className="h-5 w-20" />
             ) : (
-              <Badge tone={ROLE_TONES[role] ?? "neutral"}>
+              /* 角色是身份,不是系统状态:中性徽章,与用户页、神祇名录同一条(v3:红只给出错)。
+                 此前 ADMIN 用 error 红、JUDGE 用 warning 橙。 */
+              <Badge tone="neutral">
                 {t(`users.roles.${role}`)}
               </Badge>
             )}
@@ -216,12 +204,10 @@ export default function ProfilePage() {
 
       {/* Change Password Section */}
       <section>
-        <div className="pt-6">
-          <SectionTitle>
-            <span aria-hidden="true">乙 · </span>
-            {t("profile.change_password")}
-          </SectionTitle>
-        </div>
+        <h2 className="pt-6 text-lg text-[oklch(var(--color-ink))]">
+          <span aria-hidden="true">乙 · </span>
+          {t("profile.change_password")}
+        </h2>
         <div className="pt-3">
         {!isLoading && !showPasswordForm ? (
           <Button variant="secondary" type="button" onClick={() => setShowPasswordForm(true)}>

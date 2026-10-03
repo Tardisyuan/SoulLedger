@@ -25,16 +25,20 @@ TenantPermission plus an object-level owner check
 (IsAuthorOrReadOnly / IsReactionOwnerOrReadOnly / IsFollowOwnerOrReadOnly /
 IsProfileOwnerOrReadOnly), so authorship still governs writes.
 """
+from django.db import transaction
+from django.db.models import Prefetch
 from drf_spectacular.utils import extend_schema
-from rest_framework import mixins, status, viewsets
+from rest_framework import mixins, serializers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from apps.core.permissions import TenantPermission
 from apps.core.tenant import scope_to_tenant
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin
-from apps.social.models import Comment, Follow, Post, Reaction, UserProfile
+from apps.social import media as post_media
+from apps.social.models import Comment, Follow, Post, PostMedia, Reaction, UserProfile
 from apps.social.permissions import (
     IsAuthorOrReadOnly,
     IsFollowOwnerOrReadOnly,
@@ -58,7 +62,12 @@ from apps.social.serializers import (
     UserProfileUpdateSerializer,
 )
 from apps.social.services import CommentService, FollowService, PostService, ReactionService
+from apps.social.soul_circle import SocialError, reaction_kind_counts
+from apps.social.soul_serializers import SoulPostMediaUploadSerializer, SoulSocialErrorSerializer
 from apps.social.visibility import visible_posts
+
+# 帖子的图随帖子一次取出(每页一条查询);`PostMedia.objects` 已排除软删除的。
+WITH_MEDIA = Prefetch("media", queryset=PostMedia.objects.order_by("position"), to_attr="live_media")
 
 
 class PostViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, viewsets.ModelViewSet):
@@ -94,11 +103,34 @@ class PostViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, viewsets.ModelVie
         qs = scope_to_tenant(super().get_queryset(), self.request)
         # The visibility clause lived here and only here. See
         # apps/social/visibility.py for what that cost.
-        return visible_posts(self.request, qs).order_by("-create_time")
+        # 五种表态各自的数(`PostSerializer.reaction_counts`);每页一次聚合。图随帖子一次预取。
+        return (
+            visible_posts(self.request, qs)
+            .annotate(**reaction_kind_counts())
+            .prefetch_related(WITH_MEDIA)
+            .order_by("-create_time")
+        )
 
     def perform_create(self, serializer):
-        serializer.save(author=self.request.user)
+        """Images are attached in the same transaction as the post: one that
+        cannot be attached (not the caller's, already used, deleted) means no
+        post at all — `media.attach`, the soul circle's rule."""
+        media_ids = serializer.validated_data.pop("media", [])
+        try:
+            with transaction.atomic():
+                post = serializer.save(author=self.request.user)
+                post_media.attach(post, self.request.user, media_ids)
+        except SocialError as exc:
+            raise serializers.ValidationError({"media": [str(exc)]}, code=exc.code) from None
         PostService.increment_post_count(self.request.user.pk)
+
+    def perform_destroy(self, instance):
+        """The author's own delete never reaches the recycle bin (apps/social/apps.py
+        registers officer-moderated deletes only), so — as for a soul deleting its
+        own post — the images' rows and files really go."""
+        with transaction.atomic():
+            super().perform_destroy(instance)
+            post_media.purge_for_post(instance)
 
     @extend_schema(responses=PostListSerializer(many=True))
     @action(detail=False, methods=["get"])
@@ -114,13 +146,80 @@ class PostViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, viewsets.ModelVie
             author_id__in=following_ids,
             visibility__in=["PUBLIC", "FOLLOWERS"],
             tenant=tenant,
-        ).select_related("author").order_by("-create_time")
+        ).select_related("author").annotate(**reaction_kind_counts()).prefetch_related(WITH_MEDIA).order_by("-create_time")
+        context = self.get_serializer_context()
         page = self.paginate_queryset(qs)
         if page is not None:
-            serializer = PostListSerializer(page, many=True)
+            serializer = PostListSerializer(page, many=True, context=context)
             return self.get_paginated_response(serializer.data)
-        serializer = PostListSerializer(qs, many=True)
+        serializer = PostListSerializer(qs, many=True, context=context)
         return Response(serializer.data)
+
+
+class PostMediaLimitsSerializer(serializers.Serializer):
+    max_per_post = serializers.IntegerField(help_text="每条帖子最多几张。")
+    max_pending = serializers.IntegerField(help_text="同时最多几张「传了还没发」的图。")
+    max_bytes = serializers.IntegerField(help_text="单张上限(字节)。")
+
+
+class OfficerMediaView(APIView):
+    """官员朋友圈的配图(2026-10-02 用户决定:官员也能发图;官员流仍不含灵魂帖子)。
+
+    与灵魂端 `/me/social/media/` 同一套:`media.upload`(魔数 + 重编码 + 去 EXIF、5 MB、
+    长边 2048、未发图上限)、私有存储、签名地址。闸门与官员发帖同一个 `TenantPermission`
+    —— 官员社交没有自己的权限码(见文首)。拒绝答 `{detail, code}` + 服务层给的状态码。
+    """
+
+    permission_classes = [TenantPermission]
+
+    def handle_exception(self, exc):
+        if isinstance(exc, SocialError):
+            return Response({"detail": str(exc), "code": exc.code, **exc.extra}, status=exc.status)
+        return super().handle_exception(exc)
+
+
+class PostMediaUploadView(OfficerMediaView):
+    parser_classes = [MultiPartParser]
+
+    @extend_schema(operation_id="v1_social_media_limits", responses=PostMediaLimitsSerializer)
+    def get(self, request):
+        """上传上限 —— 发帖框的「最多 N 张」读这里,不在前端写死。"""
+        from apps.social.images import MAX_BYTES
+
+        return Response(PostMediaLimitsSerializer({
+            "max_per_post": post_media.MAX_PER_POST,
+            "max_pending": post_media.MAX_PENDING,
+            "max_bytes": MAX_BYTES,
+        }).data)
+
+    # 请求体手写:理由见 UserProfileViewSet.avatar。
+    @extend_schema(
+        operation_id="v1_social_media_upload",
+        request={"multipart/form-data": {
+            "type": "object",
+            "properties": {"file": {"type": "string", "format": "binary"}},
+            "required": ["file"],
+        }},
+        responses={201: SoulPostMediaUploadSerializer, 400: SoulSocialErrorSerializer, 409: SoulSocialErrorSerializer},
+    )
+    def post(self, request):
+        upload = request.FILES.get("file")
+        if upload is None:
+            raise SocialError("缺少图片文件。", "file_required", 400)
+        media = post_media.upload(request.user, upload)
+        row = post_media.describe([media], request.user)[0]
+        return Response(
+            SoulPostMediaUploadSerializer({**row, "byte_size": media.byte_size, "content_type": media.content_type}).data,
+            status=201,
+        )
+
+
+class PostMediaItemView(OfficerMediaView):
+    @extend_schema(operation_id="v1_social_media_delete", responses={204: None, 404: SoulSocialErrorSerializer})
+    def delete(self, request, media_id):
+        """移除一张还没发出去的图(行与文件真删)。已经挂到帖子上的图随帖子删。"""
+        post_media.delete_pending(request.user, media_id)
+        return Response(status=204)
 
 
 class CommentViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, viewsets.ModelViewSet):

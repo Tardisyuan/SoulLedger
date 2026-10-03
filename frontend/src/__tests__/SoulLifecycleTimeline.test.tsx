@@ -135,6 +135,7 @@ describe("SoulLifecycleTimeline — empty-history soul", () => {
 describe("SoulLifecycleTimeline — awaiting-judgment action row", () => {
   const openJudgment: Judgment = {
     id: "judgment-1",
+    case_number: "CN-2026-0001",
     soul: "soul-1",
     soul_name: "Test Soul",
     civilization: "CHINESE",
@@ -191,12 +192,15 @@ describe("SoulLifecycleTimeline — tabs and system-event toggle", () => {
       recorded_at: "2020-01-01T00:00:00Z",
       event_date: { year: 2020, month: 1, day: 1 },
       is_milestone: false,
+      statute_clause: "",
+      occurrence_count: null,
     },
   ];
 
   const judgments: Judgment[] = [
     {
       id: "judgment-2",
+      case_number: "CN-2026-0002",
       soul: "soul-1",
       soul_name: "Test Soul",
       civilization: "CHINESE",

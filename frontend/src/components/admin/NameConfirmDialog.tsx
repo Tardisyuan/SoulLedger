@@ -59,6 +59,9 @@ export function NameConfirmDialog({
             type="button"
             variant="danger"
             data-testid="name-confirm-action"
+            /* 规范 v3「危险确认」:名称对上的那一刻按钮瞬时启用,不渐变 —— 禁用到可按
+               之间的 160ms 颜色过渡会让人以为还没好。`instant` 是 0ms「不动画」那一档。 */
+            className="duration-instant"
             loading={isPending}
             disabled={!matches}
             onClick={() => {

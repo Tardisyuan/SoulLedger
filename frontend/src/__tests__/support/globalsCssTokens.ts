@@ -479,6 +479,26 @@ export function compositeOver(fg: Rgb, bg: Rgb, alpha: number): Rgb {
   return [0, 1, 2].map((i) => alpha * fg[i] + (1 - alpha) * bg[i]) as unknown as Rgb;
 }
 
+/**
+ * `color-mix(in oklab, A p%, B)` of two bare OKLCH triples, as an OKLCH triple —
+ * the ground of a v3 hovered / selected row (`ink 4% / 7%` into surface-1).
+ * OKLab is the space the browser mixes in for that spelling, so mixing here in
+ * sRGB (`compositeOver`) would measure a different colour from the one drawn.
+ */
+export function mixOklab(a: string, b: string, pctA: number): string {
+  const lab = (t: string) => {
+    const [L, C, H] = t.trim().split(/\s+/).map(Number);
+    const h = (H * Math.PI) / 180;
+    return [L, C * Math.cos(h), C * Math.sin(h)];
+  };
+  const [la, lb] = [lab(a), lab(b)];
+  const w = pctA / 100;
+  const [L, A, B] = [0, 1, 2].map((i) => w * la[i] + (1 - w) * lb[i]);
+  const C = Math.hypot(A, B);
+  const H = C < 1e-9 ? 0 : ((Math.atan2(B, A) * 180) / Math.PI + 360) % 360;
+  return `${L.toFixed(6)} ${C.toFixed(6)} ${H.toFixed(4)}`;
+}
+
 /** WCAG contrast ratio, 1:1 to 21:1. Order-independent. */
 export function contrastRatio(a: Rgb, b: Rgb): number {
   const la = relativeLuminance(a);

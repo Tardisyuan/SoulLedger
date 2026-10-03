@@ -45,8 +45,12 @@
  * `src/__tests__/cssTokenReferenceContract.test.ts`.
  */
 
-/** Geometry and type, identical in both states. */
-export const TAB_BASE = "px-4 py-2 text-sm transition-colors duration-fast border-b-2 -mb-px";
+/**
+ * Geometry and type, identical in both states. v3:点击区至少 44(`--control-h-sm`)。
+ * 此前 py-2 + text-sm 约 38 高。`inline-flex items-center justify-center` 让多出的高度
+ * 平分在字的上下(`<Link>` 也吃得到 min-h),下划线仍是元素底边那 2px。
+ */
+export const TAB_BASE = "inline-flex min-h-(--control-h-sm) items-center justify-center px-4 py-2 text-sm transition-colors duration-fast border-b-2 -mb-px";
 
 /**
  * The selected tab. `--color-accent-ink`, NOT `--color-accent`: this is text,

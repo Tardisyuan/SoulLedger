@@ -1,20 +1,21 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { Button } from "@/src/components/ui/Button";
 import { FollowButton } from "./FollowButton";
 import { ProfileEditModal } from "./ProfileEditModal";
+import { Avatar } from "./Avatar";
 import type { UserProfile } from "@soulledger/core/api";
 
 /**
- * 身份段 —— 页面的主语。规范 v1 详情页原型:卡片撤掉(无底色、无阴影、无框),
- * 头像是全站唯一保留圆角的东西;三个计数是账行,数字等宽右对齐。
+ * 个人页资料卡(A5):surface-1、padding 24、间距 20。72 圆头像(上传的头像,否则首字,标题字体 28/600);
+ * 右侧标题字体 28/36/600 的名字、15/24 ink-muted 简介、计数行(等宽 600 数字 + 标签,间距 24);
+ * 右端 48 高主按钮「＋ 关注」,自己的页面是「编辑资料」。
  *
- * 这里曾是一张 `p-6` 的身份卡,注释论证过它为什么不收成 `p-4`。卡没了,那段
- * 论证也就没有对象了 —— 页面上只剩行线与区块标。
+ * 名字是 `username`:`UserProfileSerializer` 没有显示名字段。v1 的「查看全部帖子」链接撤了 ——
+ * 这张卡只出现在个人页上,那个链接指向的就是这一页。
  */
 export function ProfileCard({ profile }: { profile: UserProfile }) {
   const { t } = useI18n();
@@ -23,60 +24,46 @@ export function ProfileCard({ profile }: { profile: UserProfile }) {
   const [isEditOpen, setIsEditOpen] = useState(false);
 
   const counts: [number, string][] = [
-    [profile.post_count, t("social.posts") || "posts"],
-    [profile.followers_count, t("social.followers") || "followers"],
-    [profile.following_count, t("social.following_count") || "following"],
+    [profile.post_count, t("social.posts")],
+    [profile.followers_count, t("social.followers")],
+    [profile.following_count, t("social.following_count")],
   ];
 
   return (
-    <section>
-      <div className="flex items-center gap-4 pb-3 border-b border-[oklch(var(--color-block))]">
-        <div className="w-16 h-16 rounded-full bg-[oklch(var(--color-surface-2))] flex items-center justify-center text-md text-[oklch(var(--color-accent-ink))] overflow-hidden shrink-0">
-          {profile.avatar ? (
-            <img
-              src={profile.avatar}
-              alt={profile.username}
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            profile.username.charAt(0).toUpperCase()
-          )}
-        </div>
-        <h2 className="flex-1 min-w-0 text-md text-[oklch(var(--color-ink))] truncate" title={profile.username}>
+    <section className="flex items-start gap-[20px] border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] p-6 max-[768px]:flex-wrap max-[768px]:border-x-0 max-[768px]:p-4">
+      {profile.avatar ? (
+        <img
+          src={profile.avatar}
+          alt={profile.username}
+          className="size-18 shrink-0 rounded-full object-cover"
+        />
+      ) : (
+        <Avatar name={profile.username} size={72} />
+      )}
+      <div className="flex min-w-0 flex-1 flex-col gap-2">
+        <h2 className="truncate font-title text-lg text-[oklch(var(--color-ink))]" title={profile.username}>
           {profile.username}
         </h2>
-        {isOwnProfile ? (
-          <Button type="button" variant="secondary" size="sm" onClick={() => setIsEditOpen(true)}>
-            {t("social.edit_profile") || "Edit profile"}
-          </Button>
-        ) : (
-          <FollowButton userId={profile.user} />
+        {profile.bio && (
+          <p className="whitespace-pre-wrap text-md font-normal text-[oklch(var(--color-ink-muted))]">{profile.bio}</p>
         )}
+        <dl className="flex flex-wrap gap-6 text-sm">
+          {counts.map(([n, label]) => (
+            // dt 在前(dl 的语义),画面上数字在前:flex-row-reverse。
+            <div key={label} className="flex flex-row-reverse items-baseline justify-end gap-[6px]">
+              <dt className="text-[oklch(var(--color-ink-muted))]">{label}</dt>
+              <dd className="font-mono font-semibold tabular-nums text-[oklch(var(--color-ink))]">{n}</dd>
+            </div>
+          ))}
+        </dl>
       </div>
-
-      {profile.bio && (
-        <p className="py-2 max-w-[72ch] text-sm text-[oklch(var(--color-ink-muted))] whitespace-pre-wrap border-b border-[oklch(var(--color-rule))]">
-          {profile.bio}
-        </p>
+      {isOwnProfile ? (
+        <Button type="button" variant="primary" onClick={() => setIsEditOpen(true)}>
+          {t("social.edit_profile")}
+        </Button>
+      ) : (
+        <FollowButton userId={profile.user} prominent />
       )}
-
-      <dl className="grid grid-cols-[1fr_auto] max-w-sm text-sm">
-        {counts.map(([n, label]) => (
-          <div key={label} className="contents">
-            <dt className="py-2 border-b border-[oklch(var(--color-rule))] text-[oklch(var(--color-ink-subtle))]">{label}</dt>
-            <dd className="py-2 border-b border-[oklch(var(--color-rule))] text-right font-mono tabular-nums text-[oklch(var(--color-ink))]">{n}</dd>
-          </div>
-        ))}
-      </dl>
-
-      <div className="pt-2">
-        <Link
-          href={`/social/profile/${profile.user}`}
-          className="text-sm text-[oklch(var(--color-accent-ink))] hover:underline"
-        >
-          {t("social.view_all_posts") || "View all posts"} →
-        </Link>
-      </div>
 
       {isOwnProfile && (
         <ProfileEditModal

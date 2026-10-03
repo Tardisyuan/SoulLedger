@@ -29,8 +29,22 @@ interface DrawerProps {
   /** Error bar under the header (spec: 错误时在抽屉头下出错误条). */
   error?: ReactNode;
   finalFocus?: RefObject<HTMLElement | null> | (() => HTMLElement | null);
+  /** 钉在抽屉底部、不随内容滚走的一条(确认 / 取消)。改派层(v3 `.reassign-layer`)用。 */
+  footer?: ReactNode;
+  /**
+   * `panel`(默认):右侧 480,手机上整屏。`layer`:v3 `.reassign-layer` —— 桌面右侧 390,
+   * 手机(< 640)从底部升起、高 78%。两者的时长都是 v3 的开 240 / 关 180。
+   */
+  variant?: "panel" | "layer";
   children: ReactNode;
 }
+
+const POPUP_SHAPE = {
+  panel:
+    "inset-y-0 right-0 w-full sm:w-[480px] border-l data-ending-style:translate-x-3 data-starting-style:translate-x-3",
+  layer:
+    "inset-x-0 bottom-0 h-[78%] border-t sm:inset-x-auto sm:inset-y-0 sm:right-0 sm:h-auto sm:w-[390px] sm:border-t-0 sm:border-l data-ending-style:translate-y-3 data-starting-style:translate-y-3 sm:data-ending-style:translate-y-0 sm:data-starting-style:translate-y-0 sm:data-ending-style:translate-x-3 sm:data-starting-style:translate-x-3",
+} as const;
 
 /** J / K only when the keystroke is not text entry. */
 function isTyping(target: EventTarget | null): boolean {
@@ -38,13 +52,15 @@ function isTyping(target: EventTarget | null): boolean {
   return target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName);
 }
 
-export function Drawer({ isOpen, onClose, title, hint, onNext, onPrev, error, finalFocus, children }: DrawerProps) {
+export function Drawer({ isOpen, onClose, title, hint, onNext, onPrev, error, finalFocus, footer, variant = "panel", children }: DrawerProps) {
   const { t } = useI18n();
   return (
     <Dialog.Root open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
       <Dialog.Portal>
-        <Dialog.Backdrop className="fixed inset-0 z-dialog bg-[oklch(var(--color-scrim)/var(--scrim-alpha))] transition-opacity duration-base ease-enter data-ending-style:duration-fast data-ending-style:ease-exit data-ending-style:opacity-0 data-starting-style:opacity-0" />
+        <Dialog.Backdrop data-motion="fade"
+          className="fixed inset-0 z-drawer bg-[oklch(var(--color-scrim)/var(--scrim-alpha))] transition-opacity duration-base ease-enter data-ending-style:duration-close data-ending-style:ease-exit data-ending-style:opacity-0 data-starting-style:opacity-0" />
         <Dialog.Popup
+          data-motion="fade"
           finalFocus={finalFocus}
           onKeyDown={(e) => {
             if (e.metaKey || e.ctrlKey || e.altKey || isTyping(e.target)) return;
@@ -52,14 +68,16 @@ export function Drawer({ isOpen, onClose, title, hint, onNext, onPrev, error, fi
             if (key === "j" && onNext) { e.preventDefault(); onNext(); }
             else if (key === "k" && onPrev) { e.preventDefault(); onPrev(); }
           }}
-          className="fixed inset-y-0 right-0 z-dialog flex w-full sm:w-[480px] flex-col bg-[oklch(var(--color-surface-1))] border-l border-[oklch(var(--color-ink))] transition-transform duration-base ease-standard data-ending-style:duration-fast data-ending-style:ease-exit data-ending-style:translate-x-full data-starting-style:translate-x-full"
+          data-variant={variant}
+          className={`fixed z-drawer flex flex-col shadow-overlay bg-[oklch(var(--color-surface-1))] border-[oklch(var(--color-ink))] transition-[opacity,translate] duration-base ease-enter data-ending-style:duration-close data-ending-style:ease-exit data-ending-style:opacity-0 data-starting-style:opacity-0 ${POPUP_SHAPE[variant]}`}
         >
-          <div className="flex shrink-0 items-baseline justify-between gap-3 px-4 py-3 border-b border-[oklch(var(--color-block))]">
+          <div className="flex shrink-0 items-center justify-between gap-3 px-4 py-2 border-b border-[oklch(var(--color-block))]">
             <Dialog.Title className="min-w-0 break-words text-lg text-[oklch(var(--color-ink))]">{title}</Dialog.Title>
-            <span className="flex items-baseline gap-3 shrink-0">
+            <span className="flex items-center gap-3 shrink-0">
               {hint && <span className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">{hint}</span>}
               <Dialog.Close
-                className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))] hover:text-[oklch(var(--color-ink))] border border-[oklch(var(--color-line))] px-1 py-0.5"
+                /* v3 层头的关闭键 44 × 44(`.reassign-layer header>button`)。 */
+                className="inline-flex size-(--control-h-sm) items-center justify-center font-mono text-2xs text-[oklch(var(--color-ink-subtle))] hover:text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))]"
                 aria-label={t("common.close")}
               >
                 Esc
@@ -76,6 +94,7 @@ export function Drawer({ isOpen, onClose, title, hint, onNext, onPrev, error, fi
             </div>
           )}
           <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">{children}</div>
+          {footer && <div className="shrink-0 px-4 py-3 border-t border-[oklch(var(--color-line))]">{footer}</div>}
         </Dialog.Popup>
       </Dialog.Portal>
     </Dialog.Root>

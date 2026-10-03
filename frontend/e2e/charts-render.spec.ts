@@ -10,6 +10,9 @@
  * 各文明是账行不是柱)。页上仍用 recharts 的只剩「地域分布」柱状图,所以下面
  * 的计数断言改对着它;饼图那一半改成了对图例账的断言 —— 零值是一行,不是一块色。
  * 下面几段说的是饼图时代的事,道理对柱状图一样成立,留着。
+ * **2026-10-02 起「按界域」也不是 recharts 了**(Design A4,CSS 柱):dashboard 上一个
+ * recharts 图都没有,下面那条改成量每根柱的实际高度 —— 同一个道理:断「画出了面积」,
+ * 不断「容器在」。
  *
  * 整个图表模块被替换成桩。1689 个通过的单元测试对「饼图能不能画出来」一个字都
  * 没说 —— 它们断言的是「组件收到了正确的 props」,而不是「浏览器里出现了图形」。
@@ -79,7 +82,7 @@ const STATS_WITH_MARKS = {
   ],
 };
 
-/** 地域分布 is the one recharts chart left on the page; one realm is zero on purpose. */
+/** 按界域:one realm is zero on purpose. */
 const REALMS = [
   { realm_code: "DIYU_5", realm_name: "第五殿", civilization: "CHINESE", realm_type: "PURGATORY", count: 40 },
   { realm_code: "INF_9", realm_name: "Ninth Circle", civilization: "EUROPEAN", realm_type: "HELL", count: 24 },
@@ -91,26 +94,25 @@ const NON_ZERO_STATES = STATS_WITH_MARKS.state_distribution.filter(
 const REALMS_WITH_SOULS = REALMS.filter((r) => r.count > 0).length;
 
 test.describe("dashboard 的图表", () => {
-  test("地域柱状图画出 <path>,不是只画出坐标轴", async ({ page }) => {
+  test("按界域的柱画出来了:非零的界各一根,按界的类型取图案", async ({ page }) => {
+    // 2026-10-02(Design A4):这张图不再是 recharts,是 CSS 柱(`RealmBars`)—— 数在柱上、
+    // 名在柱下、四种图案。断言的仍是「画出了有面积的标记」,不是「容器在」:量的是每根柱的
+    // 实际高度,一个 0 高的盒子会让下面那条红。
     const api = await setupAuthenticatedPage(page);
     api.on("GET", "/ledger/stats/overview/", { ...STATS_WITH_MARKS, souls_by_realm: REALMS });
 
     await page.goto("/dashboard");
+    // 余额分布的题注:只数已处置的,n 是直方图的 total(LEDGER_STATS 里是 2),不是 total_souls(84)。
+    await expect(page.locator("[data-histogram-scope]")).toHaveText("已处置 · n = 2 · 每格 50");
 
-    // 数据确实进了页面 —— 否则下面是在对一个没拿到数据的页面测「没有图形」。
-    await expect(page.getByText("n = 84")).toBeVisible();
-
-    /* 分两段等:先「图表代码到位、series 挂上了」,再「画出了几条 path」。
-     * recharts 是按需取的 551KB chunk,负载下单是下载就可能吃掉 3.5–4.3 秒,
-     * 挂上之后 path 还要约 460ms(animationBegin 400ms)—— 2026-09-18 实测,
-     * 两段合在一个 5 秒窗口里会偶发 `Received: 0`。第一段红 = 图表没挂上,
-     * 第二段红 = 挂上了却没画东西。 */
-    await expect(page.locator(".recharts-bar")).not.toHaveCount(0);
-    await expect(page.locator(".recharts-bar-rectangle path")).toHaveCount(REALMS_WITH_SOULS);
-    // A5 去向图案:地狱那根是斜线(fill 指向 <pattern>),炼狱那根是实底。
-    const fills = await page.locator(".recharts-bar-rectangle path").evaluateAll((ps) => ps.map((p) => p.getAttribute("fill") ?? ""));
-    expect(fills.filter((f) => f.startsWith("url(#hatch-"))).toHaveLength(1);
-    expect(fills.filter((f) => !f.startsWith("url(") && f !== "none")).toHaveLength(1);
+    const marks = page.locator("[data-realm-bar] [data-pattern]");
+    await expect(marks).toHaveCount(REALMS_WITH_SOULS);
+    const heights = await marks.evaluateAll((els) => els.map((el) => el.getBoundingClientRect().height));
+    for (const h of heights) expect(h).toBeGreaterThan(0);
+    // A5 去向图案:地狱那根是斜线,炼狱那根是实底;零值的那个界只有数,没有柱。
+    expect(await marks.evaluateAll((els) => els.map((el) => el.getAttribute("data-pattern")))).toEqual(["solid", "hatch"]);
+    const hatch = await page.locator('[data-pattern="hatch"]').evaluate((el) => getComputedStyle(el).backgroundImage);
+    expect(hatch).toContain("repeating-linear-gradient");
   });
 
   test("没有饼图;图例账里零值是一行,不是一块色", async ({ page }) => {

@@ -128,12 +128,13 @@ export function JudgmentSectionHead({
   mark?: string;
 }) {
   return (
-    <div className="flex items-baseline gap-3 border-b border-[oklch(var(--color-block))] pb-1 font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">
+    <div className="flex items-baseline gap-3 border-b border-[oklch(var(--color-block))] pb-1 text-2xs text-[oklch(var(--color-ink-subtle))]">
+      {/* 区块标签用界面字体(2026-10-01 拍板);等宽只给右边的计数。它原先挂在外层 div 上,标签跟着继承成了等宽。 */}
       <h2 id={id} className="flex-1 text-2xs uppercase">
         {mark && <span aria-hidden="true">{mark} · </span>}
         {title}
       </h2>
-      {meta ? <span className="tabular-nums">{meta}</span> : null}
+      {meta ? <span className="font-mono tabular-nums">{meta}</span> : null}
     </div>
   );
 }

@@ -31,8 +31,10 @@ import { SoulActionsCard } from "@/src/components/souls/detail/SoulActionsCard";
 import { SoulHeaderActions } from "@/src/components/souls/detail/SoulHeaderActions";
 import { SoulTimelineColumn } from "@/src/components/souls/detail/SoulTimelineColumn";
 import { SoulDeleteModal } from "@/src/components/souls/detail/SoulDeleteModal";
-import { SoulLedgerProgress } from "@/src/components/souls/detail/SoulLedgerProgress";
-import { LedgerHeading } from "@/src/components/souls/detail/SoulLedgerSections";
+import { SoulJudgmentHistory } from "@/src/components/souls/detail/SoulLedgerSections";
+import { SoulLedgerTabs } from "@/src/components/souls/detail/SoulLedgerTabs";
+import { SoulBalance, SoulHeadingFigures, SoulMonogram } from "@/src/components/souls/detail/SoulFigures";
+import { DateProblemsPanel } from "@/src/components/souls/DateProblemsPanel";
 import { latest } from "@/src/components/souls/detail/soulProgress";
 import { SoulLedgerBook } from "@/src/components/souls/SoulLedgerBook";
 import { SoulAccountCard } from "@/src/components/soul-accounts/SoulAccountCard";
@@ -44,6 +46,8 @@ import { ConfirmDialog } from "@/src/components/ui/Modal";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatHistoricalDate } from "@/lib/utils";
 import { PageShell } from "@/src/components/ui/PageShell";
+import { usePlaque } from "@/src/components/plaque/Plaque";
+import { useHall } from "@/src/components/plaque/useHall";
 import { DOMAIN_BADGE, soulStateBadgeClass, soulStateGlyph } from "@/src/lib/soulStateBadge";
 
 /** 详情页头上那两个徽章的形状。颜色由调用点给,形状只有一种。 */
@@ -323,6 +327,10 @@ export default function SoulDetailPage() {
     }
   }
 
+  // 身份带:题「灵魂详情」(v3 `soul-product`;面包屑末段是原始 id)。案号后端没有,不写右栏。
+  const hall = useHall(t("plaque.office.records"));
+  usePlaque({ title: t("plaque.soul"), hall });
+
   // Error state - only show when we have actual data fetch error, not during initial load
   if (error && !soul) {
     return (
@@ -382,32 +390,25 @@ export default function SoulDetailPage() {
     </a>
   );
 
-  // 标题行:当前世的名字是这个灵魂今天被叫作什么,所以它是标题;状态与世数
-  // 是两个已翻译的徽章,身边不再有裸枚举文本。
-  const headerTitle = loading ? (
-    <Skeleton className="h-8 w-48" />
-  ) : (
-    <span className="flex items-baseline gap-3 flex-wrap">
-      <span>{soul?.name}</span>
-      {/* §4.6 逐字:这个徽章曾经写着「ALIVE — 存活」,原始枚举和它的译名并排。
-          枚举现在只住在 `title` 里 —— 排查的人看得见,读页面的人看不见。 */}
-      <span
-        title={soul?.current_state}
-        className={`${BADGE_SHAPE} ${soulStateBadgeClass(soul?.current_state)}`}
-      >
-        <span aria-hidden="true">{soulStateGlyph(soul?.current_state)} </span>
-        {resolveEnumDisplay(t, "souls.states", soul?.current_state).label ?? t("common.value.unrecorded")}
-      </span>
-      {generation !== null && (
-        <span className={`${BADGE_SHAPE} ${DOMAIN_BADGE}`}>
-          {tf("souls.detail.generation", "Life {{n}}", { n: String(generation) })}
-        </span>
-      )}
+  // 标题:当前世的名字是这个灵魂今天被叫作什么。状态与世数挪到副标题行首
+  // (v3 原型:名字下面一行「◇ 审判中」),身边不再有裸枚举文本。
+  const headerTitle = loading ? <Skeleton className="h-7 w-48" /> : soul?.name;
+
+  // 状态:字形 + 文字,不用颜色(v3)。§4.6 逐字:这个徽章曾经写着「ALIVE — 存活」,
+  // 原始枚举和它的译名并排。枚举现在只住在 `title` 里 —— 排查的人看得见,读页面的人看不见。
+  const stateBadge = (
+    <span
+      title={soul?.current_state}
+      data-testid="soul-state"
+      className={`${BADGE_SHAPE} ${soulStateBadgeClass(soul?.current_state)}`}
+    >
+      <span aria-hidden="true">{soulStateGlyph(soul?.current_state)} </span>
+      {resolveEnumDisplay(t, "souls.states", soul?.current_state).label ?? t("common.value.unrecorded")}
     </span>
   );
 
-  // 副标题:文明、这个灵魂出生时用的那个名字(只在它与标题不同时出现 ——
-  // 同名就只是噪音)、属于那同一个出生身份的生卒区间,以及一个可复制的 ID。
+  // 副标题:状态、世数、文明、这个灵魂出生时用的那个名字(只在它与标题不同时出现 ——
+  // 同名就只是噪音)、属于那同一个出生身份的生卒区间、暂居。
   // `Skeleton` renders a <div>, and PageShell's subtitle slot renders a <p>.
   // React reported it by name: "In HTML, <div> cannot be a descendant of <p>",
   // followed by "Hydration failed because the server rendered HTML didn't
@@ -419,10 +420,16 @@ export default function SoulDetailPage() {
     <Skeleton as="span" className="inline-block h-4 w-64" />
   ) : (
     <span className="flex items-center gap-2 flex-wrap">
+      {stateBadge}
+      {generation !== null && (
+        <span className={`${BADGE_SHAPE} ${DOMAIN_BADGE}`}>
+          {tf("souls.detail.generation", "Life {{n}}", { n: String(generation) })}
+        </span>
+      )}
       <DomainEnum namespace="souls.civilizations" value={soul?.civilization} />
       {/* 规范 v1 页头副行「文明 · 殿 · 判官」:殿与判官取最近一份判决的
           `court` / `judge_name`。没有判决、或判决没写,就不出现 —— 这是摘要,
-          空着的那一格在「丙 · 审判」里有它的 MissingValue。 */}
+          空着的那一格在「全部审判」里有它的 MissingValue。 */}
       {[lastJudgment?.court, lastJudgment?.judge_name].filter(Boolean).map((part, i) => (
         <span key={i} className="contents">
           <span aria-hidden="true">·</span>
@@ -464,17 +471,19 @@ export default function SoulDetailPage() {
           <span>{dateRangeText}</span>
         </>
       )}
-      {/* 全站唯一展示 UUID 的地方 —— 见 src/lib/domainDisplay.ts 的
-          IDENTIFIER_POLICY:页面所讲的那个实体,一次,在页头,可复制,
-          且永不代替名字。 */}
-      {soul?.id && (
-        <>
-          <span aria-hidden="true">·</span>
-          <IdentifierChip id={soul.id} ariaLabel={tf("souls.detail.copy_id_aria", "Copy soul ID")} />
-        </>
-      )}
     </span>
   );
+
+  // eyebrow「灵魂 / ID」(v3 `SOUL / SL-…`)。全站唯一展示 UUID 的地方 —— 见
+  // src/lib/domainDisplay.ts 的 IDENTIFIER_POLICY:页面所讲的那个实体,一次,在页头,
+  // 可复制,且永不代替名字。
+  const eyebrow = soul?.id ? (
+    <span className="inline-flex flex-wrap items-baseline gap-x-2">
+      <span>{t("souls.detail.profile.eyebrow")}</span>
+      <span aria-hidden="true">/</span>
+      <IdentifierChip id={soul.id} ariaLabel={tf("souls.detail.copy_id_aria", "Copy soul ID")} />
+    </span>
+  ) : undefined;
 
   const headerActions = !loading && soul && !readOnlyAway ? (
     <SoulHeaderActions
@@ -485,110 +494,117 @@ export default function SoulDetailPage() {
     />
   ) : null;
 
+  // 「全部功过记录」:业力总账(文明读法、原始 / 衰减后、一生图、下一世继承)在上,
+  // 逐条账页(功过台账)跟在它自己的合计下面。
+  const recordsPanel = loading ? (
+    <div className="space-y-3 p-6">
+      <Skeleton className="h-4 w-24" />
+      <Skeleton className="h-6 w-full" />
+      <Skeleton className="h-6 w-full" />
+    </div>
+  ) : ledger ? (
+    <div className="space-y-6 p-6">
+      <SoulKarmaLedgerCard
+        ledgerLabel={ledgerLabel}
+        reading={ledger.reading}
+        meritScore={ledger.merit_score}
+        demeritScore={ledger.demerit_score}
+        karmicBalance={ledger.karmic_balance}
+        recordCount={ledger.record_count}
+        records={ledger.records}
+        inheritance={inheritanceQuery.data ?? null}
+        life={
+          soul
+            ? {
+                index: soul.life_index ?? 0,
+                inheritedMerit: soul.inherited_merit,
+                inheritedDemerit: soul.inherited_demerit,
+              }
+            : null
+        }
+      />
+      <SoulLedgerBook records={ledger.records} />
+    </div>
+  ) : (
+    <div className="p-6">
+      <h3 title={soul?.civilization} className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))] mb-2">{ledgerLabel}</h3>
+      <p className="text-sm text-[oklch(var(--color-ink-muted))]">{t("souls.detail.no_ledger")}</p>
+    </div>
+  );
+
+  const judgmentsPanel = loading ? (
+    <div className="space-y-3 p-6">
+      <Skeleton className="h-6 w-full" />
+      <Skeleton className="h-6 w-full" />
+    </div>
+  ) : (
+    <SoulJudgmentHistory judgments={judgments} />
+  );
+
   return (
     <PageShell
       variant="page"
       backLink={backLink}
+      eyebrow={eyebrow}
+      leading={loading ? <Skeleton className="h-13 w-13 md:h-16 md:w-16" /> : <SoulMonogram name={soul?.name} />}
       title={headerTitle}
       subtitle={headerSubtitle}
       actions={headerActions}
+      aside={soul && !loading ? <SoulHeadingFigures soul={soul} /> : undefined}
     >
-      {/* 户头进度 + 行程 —— 规范 v1 灵魂详情,正文第一段,通栏。 */}
+      {/* 日期问题 —— 没有就什么都不画。放在最前:坏日期动摇下面每一份读数与每一条记录。 */}
       {!loading && soul && (
-        <SoulLedgerProgress
-          soul={soul}
-          judgments={judgments}
-          dispositions={dispositions}
-          reincarnations={reincarnations}
-          birthDisplay={birthDisplay}
-          deathDisplay={deathDisplay}
+        <DateProblemsPanel
+          soulId={soul.id}
+          soulProblems={soul.date_problems}
+          records={records}
+          onChanged={refreshSoulViews}
         />
       )}
 
-      {/* 两栏账:宽屏 1 : 1.3,393 px 下单栏(规范 v1 `--cols`)。卡片撤掉,区块
-          之间只有区块标压着的那条线。 */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.3fr] gap-x-8">
-        {/* Left column: 甲 身份 · 乙 功过 · 操作 · 账号 · 受刑计划 */}
-        <div className="min-w-0 space-y-6">
-          <SoulInfoCard
-            soul={soul}
-            loading={loading}
-            birthDisplay={birthDisplay}
-            deathDisplay={deathDisplay}
+      {/* v3 三栏(原型 `.soul-detail-grid`):身份 | 账页 | 功过。
+          1024:身份 | 账页,功过接在身份栏下面(原型是落到两栏之下占满一行 —— 中栏比原型长得多,那样会把功过推到页底,见报告「需要拍板」);768:身份 | 功过,账页占第二行;
+          768 以下单栏,按身份、功过、账页的顺序(原型注 03)。 */}
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-[190px_minmax(0,1fr)] lg:grid-rows-[auto_1fr] xl:grid-cols-[220px_minmax(0,1fr)_220px]">
+        <div className="order-1 min-w-0 space-y-4 lg:col-start-1 lg:row-start-1">
+          <SoulInfoCard soul={soul} loading={loading} birthDisplay={birthDisplay} deathDisplay={deathDisplay} />
+
+          {!readOnlyAway && (
+            <SoulActionsCard
+              soul={soul}
+              loading={loading}
+              actionLoading={actionLoading}
+              dispositions={dispositions}
+              reincarnations={reincarnations}
+              rebirthForm={rebirthForm}
+              onRebirthFormChange={setRebirthForm}
+              onDie={handleDie}
+              onStartJudgment={handleStartJudgment}
+              onReincarnate={handleReincarnate}
+            />
+          )}
+        </div>
+
+        <div className="order-3 min-w-0 space-y-4 md:col-span-full lg:col-span-1 lg:col-start-2 lg:row-span-2 lg:row-start-1">
+          <SoulLedgerTabs
+            judgmentCount={judgments.length}
+            recordCount={ledger ? ledger.record_count : null}
+            judgments={judgmentsPanel}
+            records={recordsPanel}
           />
 
-          {/* 业力总账 — Stage 3 doc's left-column ledger card: the existing
-              SoulReadingPanel (unchanged) plus the raw-vs-decayed breakdown,
-              lifespan chart, and next-life inheritance preview, all moved
-              out of this ad hoc box into their own component.
-              规范 v1:「乙 · 功过」区块,逐条账页(功过台账)跟在它自己的合计下面。 */}
-          <section>
-          <LedgerHeading id="soul-karma" mark="乙" title={t("souls.detail.ledger.karma")} />
-          {loading ? (
-            <div className="pt-3 space-y-3">
-              <div className="flex justify-between items-center">
-                <Skeleton className="h-4 w-12" />
-                <Skeleton className="h-6 w-12" />
-              </div>
-              <div className="flex justify-between items-center">
-                <Skeleton className="h-4 w-12" />
-                <Skeleton className="h-6 w-12" />
-              </div>
-              <div className="border-t border-[oklch(var(--color-hairline))] pt-2 flex justify-between items-center">
-                <Skeleton className="h-4 w-12" />
-                <Skeleton className="h-6 w-12" />
-              </div>
-              <Skeleton className="h-3 w-full" />
-            </div>
-          ) : ledger ? (
-            <SoulKarmaLedgerCard
-              ledgerLabel={ledgerLabel}
-              reading={ledger.reading}
-              meritScore={ledger.merit_score}
-              demeritScore={ledger.demerit_score}
-              karmicBalance={ledger.karmic_balance}
-              recordCount={ledger.record_count}
-              records={ledger.records}
-              inheritance={inheritanceQuery.data ?? null}
-              life={
-                soul
-                  ? {
-                      index: soul.life_index ?? 0,
-                      inheritedMerit: soul.inherited_merit,
-                      inheritedDemerit: soul.inherited_demerit,
-                    }
-                  : null
-              }
-            />
-          ) : (
-            <div className="pt-2">
-              <h3 title={soul?.civilization} className="font-mono text-2xs uppercase text-[oklch(var(--color-ink-subtle))] mb-2">{ledgerLabel}</h3>
-              <p className="text-sm text-[oklch(var(--color-ink-muted))]">{t("souls.detail.no_ledger")}</p>
-            </div>
-          )}
-          {/* 功过台账 —— 逐条账页。这一页原本有功过格的每一个部分,唯独没有
-              「条」;它曾放在宽栏,因为六列定宽账页在 1/3 栏里会永远横向滚动。
-              两栏改成 1 : 1.3 之后左栏够宽,于是它回到自己的合计下面。 */}
-          {!loading && ledger && (
-            <div className="mt-6">
-              <SoulLedgerBook records={ledger.records} />
-            </div>
-          )}
-          </section>
-
-          {/* Action Buttons */}
-          {!readOnlyAway && <SoulActionsCard
+          <SoulTimelineColumn
             soul={soul}
             loading={loading}
-            actionLoading={actionLoading}
+            ledger={ledger}
+            judgments={judgments}
             dispositions={dispositions}
             reincarnations={reincarnations}
-            rebirthForm={rebirthForm}
-            onRebirthFormChange={setRebirthForm}
-            onDie={handleDie}
-            onStartJudgment={handleStartJudgment}
-            onReincarnate={handleReincarnate}
-          />}
+            events={events}
+            birthDisplay={birthDisplay}
+            deathDisplay={deathDisplay}
+            onOpenJudgmentQueue={(judgmentId) => router.push(`/judgment/queue?at=${judgmentId}`)}
+          />
 
           {/* 灵魂账号 — docs/ARCHITECTURE-soul-app-and-domain-split.md 2026-09-17「链式账号」. */}
           {soul && (
@@ -606,19 +622,11 @@ export default function SoulDetailPage() {
           )}
         </div>
 
-        {/* Right column: 丙 审判 · 丁 处置 · 戊 轮回 · 己 事件日志 · 庚 灵魂账页 */}
-        <SoulTimelineColumn
-          soul={soul}
-          loading={loading}
-          records={records}
-          ledger={ledger}
-          judgments={judgments}
-          dispositions={dispositions}
-          reincarnations={reincarnations}
-          events={events}
-          onChanged={refreshSoulViews}
-          onOpenJudgmentQueue={(judgmentId) => router.push(`/judgment/queue?at=${judgmentId}`)}
-        />
+        {soul && !loading && (
+          <div className="order-2 min-w-0 lg:col-start-1 lg:row-start-2 lg:self-start xl:col-start-3 xl:row-start-1">
+            <SoulBalance soul={soul} />
+          </div>
+        )}
       </div>
 
       {/* Edit Modal */}

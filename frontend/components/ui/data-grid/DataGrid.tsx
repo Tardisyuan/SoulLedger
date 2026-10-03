@@ -60,8 +60,6 @@ export interface DataGridProps<T> {
   onPageChange?: (page: number) => void
 
   selection?: DataGridSelection<T>
-  /** Comfortable (44px rows, decisions) or compact (36px rows, scan-and-find) — §4. */
-  density?: 'comfortable' | 'compact'
   /** Forwarded to DataTable — see its `groupHeader`. */
   groupHeader?: (item: T, index: number) => React.ReactNode | null
   className?: string
@@ -125,13 +123,11 @@ export function DataGrid<T>({
   totalCount,
   onPageChange,
   selection,
-  density = 'comfortable',
   groupHeader,
   className,
 }: DataGridProps<T>) {
-  // Row height is DataTable's now — DataGrid forwards the choice rather
-  // than keeping a second copy of the padding constant.
-  const cellPadding = density === 'compact' ? 'px-4 py-2' : 'px-4 py-3'
+  // Row height is DataTable's; this is only the cell padding of the cells DataGrid renders.
+  const cellPadding = 'px-4 py-3'
 
   const visibleIds = useMemo(
     () => (selection ? (data ?? []).map((row, i) => selection.getId(row) ?? keyExtractor(row, i)) : []),
@@ -241,7 +237,6 @@ export function DataGrid<T>({
         </div>
       )}
       <DataTable<T>
-        density={density}
         columns={tableColumns}
         data={data}
         keyExtractor={keyExtractor}

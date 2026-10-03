@@ -2,11 +2,12 @@
 
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { usersApi, permApi, PAGE_SIZE, type User, type PaginatedResponse } from "@soulledger/core/api";
 import { permissionKeys, userKeys } from "@soulledger/core/query_keys";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { usePlaque } from "@/src/components/plaque/Plaque";
+import { useHall } from "@/src/components/plaque/useHall";
 import { UserModal } from "@/src/components/users/UserModal";
 import { UserDeleteDialog } from "@/src/components/users/UserDeleteDialog";
 import { showToast } from "@/src/components/ui/Toast";
@@ -40,6 +41,7 @@ export default function UsersPage() {
 
 function UsersRoute() {
   const { t } = useI18n();
+  usePlaque({ hall: useHall(t("plaque.office.rules")) });
   const router = useRouter();
   // `?username=<u>`: the password-help notification's 「去用户页」 (第三类 F 组 2.6) lands on
   // exactly that account — an exact-match filter on the server, and the row highlighted.
@@ -117,11 +119,6 @@ function UsersRoute() {
           {t("users.title")}
           <MenuGloss path="/users" />
         </>
-      }
-      backLink={
-        <Link href="/" className="text-sm text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))]">
-          ← {t("nav.home")}
-        </Link>
       }
       actions={
         <RequirePermission permissions="user.manage">

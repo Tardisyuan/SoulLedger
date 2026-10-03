@@ -23,9 +23,10 @@ import { chatSections, isCompleteCode, listStamp, normalizeCode } from "../chatR
 import { Icon } from "../emblems";
 import { family, quoteFamily } from "../fonts";
 import { useI18n } from "../i18n";
+import { TAG_GLYPH } from "../rules";
 import { SessionContext } from "../session";
-import type { Theme } from "../theme";
-import { Button, Empty, FadeIn, Notice, PageEmptyArt, Screen, Skeleton, Txt, shade, useLayout, usePullRefresh, useReloadOnReconnect, useTheme } from "../ui";
+import { radius, type Theme } from "../theme";
+import { Button, Empty, FadeIn, Notice, PageEmptyArt, Screen, SectionLabel, Skeleton, Txt, shade, useLayout, usePullRefresh, useReloadOnReconnect, useTheme } from "../ui";
 import type { AppStackParams } from "./applications";
 import { useNow } from "./auth";
 
@@ -71,22 +72,41 @@ export function Glyph({ text, tone, dotted, size = 30 }: { text: string; tone: "
 
 /** A small square-cornered label: 待回复 (dotted ink), 已闭 / 封存 (hairline), 互关 (solid ink). */
 /** `waiting` (dotted: not settled yet) and `marked` (solid) are both ink; `quiet` is ink3 on a hairline. */
-export function Tag({ text, tone, testID }: { text: string; tone: "waiting" | "marked" | "quiet"; testID?: string }) {
+/**
+ * `glyph` (v3: glyph + word, `TAG_GLYPH` in rules.ts) sits before the word, from the bundled glyph
+ * font. It is hidden from screen readers: the tag is one accessible element labelled by the word.
+ */
+export function Tag({ text, tone, glyph, testID }: { text: string; tone: "waiting" | "marked" | "quiet"; glyph?: string; testID?: string }) {
   const t = useTheme();
   const color = tone === "quiet" ? t.inkSubtle : t.ink;
   return (
-    <View testID={testID} style={[styles.tag, { borderColor: tone === "quiet" ? t.hair2 : color, borderStyle: tone === "waiting" ? "dotted" : "solid" }]}>
+    <View
+      testID={testID}
+      accessible
+      accessibilityLabel={text}
+      style={[styles.tag, { borderColor: tone === "quiet" ? t.hair2 : color, borderStyle: tone === "waiting" ? "dotted" : "solid" }]}
+    >
+      {glyph ? (
+        <Txt
+          testID={testID ? `${testID}-glyph` : undefined}
+          accessibilityElementsHidden
+          importantForAccessibility="no"
+          style={[styles.tagText, styles.tagGlyph, { color }]}
+        >
+          {glyph}
+        </Txt>
+      ) : null}
       <Txt style={[styles.tagText, { color }]}>{text}</Txt>
     </View>
   );
 }
 
-function SectionLabel({ text, tone }: { text: string; tone: "ink" | "subtle" }) {
+function ListLabel({ text }: { text: string }) {
   const t = useTheme();
   const { gutter } = useLayout();
   return (
     <View style={[styles.sectionLabel, { paddingHorizontal: gutter, borderBottomColor: t.hair }]}>
-      <Txt style={[styles.sectionText, { color: tone === "ink" ? t.ink : t.inkSubtle }]}>{text}</Txt>
+      <SectionLabel>{text}</SectionLabel>
     </View>
   );
 }
@@ -171,7 +191,7 @@ export function Fab({ onPress, label }: { onPress: () => void; label: string }) 
       accessibilityRole="button"
       accessibilityLabel={label}
       onPress={onPress}
-      style={({ pressed }) => [styles.fab, { backgroundColor: pressed ? shade(t.plaque) : t.plaque }]}
+      style={({ pressed }) => [styles.fab, { backgroundColor: pressed ? shade(t.plaqueFill) : t.plaqueFill }]}
     >
       <Icon name="plus" size={22} color={t.onPlaque} strokeWidth={1.5} />
     </Pressable>
@@ -200,7 +220,7 @@ export function LettersScreen() {
     }
   };
   const lastTs = useCallback((roomId: string) => lastOf(chat, roomId)?.ts ?? 0, [chat]);
-  const refreshControl = usePullRefresh(false, () => void chat.reload());
+  const pull = usePullRefresh(false, () => chat.reload());
   // 书信不在切回时重载(会话开销大),但断网恢复时重载一次;没配 Matrix 时不重试,那是设计如此。
   const reloadOnReconnect = useCallback(() => {
     if (chat.availability !== "not_configured") void chat.reload();
@@ -251,11 +271,12 @@ export function LettersScreen() {
           every conversation a soul ever had stays in it. */}
       <Screen scroll={false} edges={["left", "right"]} testID="letters">
         <FadeIn style={styles.fill}>
+          {pull.frame(
           <FlatList
             testID="letters-list"
             data={souls}
             keyExtractor={conversationKey}
-            refreshControl={refreshControl}
+            {...pull.props}
             keyboardShouldPersistTaps="handled"
             ListHeaderComponent={
               <>
@@ -266,7 +287,7 @@ export function LettersScreen() {
                     </Notice>
                   </View>
                 ) : null}
-                <SectionLabel text={tr("soul_app.chat.section.hall")} tone="ink" />
+                <ListLabel text={tr("soul_app.chat.section.hall")} />
                 <Row
                   testID="hall-row"
                   hall
@@ -283,12 +304,12 @@ export function LettersScreen() {
                     onPress={() => open(c)}
                     glyph={<Glyph text={hallGlyph} tone="subtle" dotted />}
                     title={tr("soul_app.chat.hall.title", { hall: hallOf(c, locale) })}
-                    tag={<Tag text={tr("soul_app.chat.badge.sealed")} tone="quiet" />}
+                    tag={<Tag text={tr("soul_app.chat.badge.sealed")} tone="quiet" glyph={TAG_GLYPH.sealed.glyph} />}
                     {...preview(c)}
                   />
                 ))}
                 <View testID="section-rule" style={{ height: 1, backgroundColor: t.hair2 }} />
-                <SectionLabel text={tr("soul_app.chat.section.souls")} tone="subtle" />
+                <ListLabel text={tr("soul_app.chat.section.souls")} />
               </>
             }
             ListEmptyComponent={
@@ -310,9 +331,9 @@ export function LettersScreen() {
                 dim={shut(c)}
                 tag={
                   shut(c) ? (
-                    <Tag testID={`closed-${c.id}`} text={tr("soul_app.chat.badge.closed")} tone="quiet" />
+                    <Tag testID={`closed-${c.id}`} text={tr("soul_app.chat.badge.closed")} tone="quiet" glyph={TAG_GLYPH.closed.glyph} />
                   ) : awaiting(c) ? (
-                    <Tag testID={`awaiting-${c.id}`} text={tr("soul_app.chat.badge.awaiting")} tone="waiting" />
+                    <Tag testID={`awaiting-${c.id}`} text={tr("soul_app.chat.badge.awaiting")} tone="waiting" glyph={TAG_GLYPH.awaiting.glyph} />
                   ) : undefined
                 }
                 {...preview(c)}
@@ -320,6 +341,7 @@ export function LettersScreen() {
             )}
             ListFooterComponent={ANDROID ? <View style={styles.fabSpace} /> : null}
           />
+          )}
         </FadeIn>
       </Screen>
       {ANDROID ? <Fab label={tr("soul_app.chat.new")} onPress={() => navigation.navigate("FindSoul")} /> : null}
@@ -392,7 +414,7 @@ export function FindSoulScreen() {
   return (
     <Screen edges={["left", "right", "bottom"]} testID="find-soul">
       <View style={[styles.findBlock, { borderBottomColor: t.hair }]}>
-        <Txt style={[styles.sectionText, { color: t.ink }]}>{tr("soul_app.chat.find.by_code")}</Txt>
+        <SectionLabel>{tr("soul_app.chat.find.by_code")}</SectionLabel>
         <View style={[styles.codeBox, { backgroundColor: t.s1, borderColor: lookup.state === "error" ? t.negStrong : t.hair }]}>
           <TextInput
             testID="find-code"
@@ -427,7 +449,7 @@ export function FindSoulScreen() {
               testID="find-write"
               accessibilityRole="button"
               onPress={() => void write(lookup.card.user_id)}
-              style={({ pressed }) => [styles.write, { backgroundColor: pressed ? shade(t.plaque) : t.plaque }]}
+              style={({ pressed }) => [styles.write, { backgroundColor: pressed ? shade(t.plaqueFill) : t.plaqueFill }]}
             >
               <Txt style={[styles.writeText, { color: t.onPlaque }]}>{tr("soul_app.chat.find.write")}</Txt>
             </Pressable>
@@ -441,7 +463,7 @@ export function FindSoulScreen() {
         ) : null}
       </View>
       <View style={styles.findBlock}>
-        <Txt style={[styles.sectionText, { color: t.ink }]}>{tr("soul_app.chat.find.from_circle")}</Txt>
+        <SectionLabel>{tr("soul_app.chat.find.from_circle")}</SectionLabel>
         <Txt variant="label" tone="subtle" style={styles.noSpacing}>
           {tr("soul_app.chat.find.circle_hint")}
         </Txt>
@@ -460,7 +482,12 @@ export function FindSoulScreen() {
                 <Txt variant="body" style={styles.fill}>
                   {card.display_name}
                 </Txt>
-                <Tag text={tr(mutual ? "soul_app.chat.badge.mutual" : "soul_app.chat.badge.following")} tone={mutual ? "marked" : "quiet"} />
+                <Tag
+                  testID={`circle-tag-${card.user_id}`}
+                  text={tr(mutual ? "soul_app.chat.badge.mutual" : "soul_app.chat.badge.following")}
+                  tone={mutual ? "marked" : "quiet"}
+                  glyph={mutual ? TAG_GLYPH.mutual.glyph : undefined}
+                />
               </Pressable>
             ))}
           </View>
@@ -476,7 +503,6 @@ const styles = StyleSheet.create({
   noSpacing: { letterSpacing: 0 },
   pad: { padding: 20 },
   sectionLabel: { paddingTop: 12, paddingBottom: 8, borderBottomWidth: 1 },
-  sectionText: { fontFamily: family.ui[600], fontSize: 11, lineHeight: 15, letterSpacing: 1.5 },
   row: { flexDirection: "row", gap: 12, alignItems: "flex-start", paddingVertical: 16, borderBottomWidth: 1, minHeight: 64 },
   rowHead: { flexDirection: "row", alignItems: "center", gap: 8 },
   rowTitle: { fontSize: 15, lineHeight: 20 },
@@ -486,17 +512,18 @@ const styles = StyleSheet.create({
   dot: { width: 8, height: 8, marginTop: 8 },
   glyph: { borderWidth: 1, alignItems: "center", justifyContent: "center" },
   glyphText: { fontFamily: family.ui[500] },
-  tag: { borderWidth: 1, paddingHorizontal: 8, paddingVertical: 2 },
+  tag: { flexDirection: "row", alignItems: "center", gap: 4, borderWidth: 1, paddingHorizontal: 8, paddingVertical: 2 },
   tagText: { fontFamily: family.ui[500], fontSize: 11, lineHeight: 14, letterSpacing: 0.8 },
+  tagGlyph: { fontFamily: family.glyph, letterSpacing: 0 },
   empty: { alignItems: "center", gap: 12, paddingHorizontal: 24, paddingTop: 48, paddingBottom: 48 },
   emptyButton: { alignSelf: "stretch", marginTop: 4 },
   fab: { position: "absolute", right: 16, bottom: 16, width: 56, height: 56, alignItems: "center", justifyContent: "center" },
   fabSpace: { height: 88 },
   findBlock: { paddingHorizontal: 20, paddingVertical: 16, gap: 12, borderBottomWidth: 1, borderBottomColor: "transparent" },
-  codeBox: { minHeight: 48, borderWidth: 1, justifyContent: "center" },
+  codeBox: { minHeight: 48, borderWidth: 1, borderRadius: radius.control, justifyContent: "center" },
   codeInput: { minHeight: 46, paddingHorizontal: 12, fontFamily: family.mono[500], fontSize: 15, letterSpacing: 2.2 },
   card: { flexDirection: "row", alignItems: "center", gap: 12, borderWidth: 1, padding: 16 },
-  write: { minHeight: ANDROID ? 48 : 38, paddingHorizontal: 12, alignItems: "center", justifyContent: "center" },
+  write: { minHeight: ANDROID ? 48 : 44, paddingHorizontal: 12, alignItems: "center", justifyContent: "center" },
   writeText: { fontFamily: family.ui[600], fontSize: 12, lineHeight: 17 },
   circle: { gap: 2 },
   circleRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, paddingHorizontal: 2, minHeight: ANDROID ? 48 : 44 },

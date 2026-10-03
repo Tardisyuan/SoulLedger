@@ -4,7 +4,9 @@ Judgment model — records of soul judgment proceedings.
 import uuid
 
 from django.core.exceptions import ValidationError
-from django.db import models
+from django.db import models, transaction
+from django.db.models import F
+from django.utils import timezone
 
 from apps.core.archive import ArchivableMixin
 from apps.core.models import AuditUserFields
@@ -56,6 +58,49 @@ class JudgmentKind(models.TextChoices):
     REOPEN = "REOPEN", "重开审判"
 
 
+def case_number_prefix(tenant) -> str:
+    """案号的前缀:租户代码第一段(`CN_DIYU` → `CN`),没有租户是 `SL`(Design 的品牌前缀)。
+
+    前缀带租户,是因为同一个人(ADMIN)会在跨租户的列表里看到几个文明的案子:
+    `SL-2026-0001` 在四个文明各有一件,印在纸上就分不出是哪一件。
+    """
+    if tenant is None:
+        return "SL"
+    head = "".join(ch for ch in tenant.code.split("_")[0].upper() if ch.isalnum())
+    return head[:8] or "SL"
+
+
+def format_case_number(prefix: str, year: int, seq: int) -> str:
+    """`CN-2026-0007`。序号至少四位、不截断(第一万件是 `-10000`)。"""
+    return f"{prefix}-{year}-{seq:04d}"
+
+
+class JudgmentCaseCounter(models.Model):
+    """案号发号器:每个「前缀-年」一行,`last` 是已发出的最大序号。
+
+    为什么是一张计数表而不是 `max(序号) + 1`:两件同时开的案子会读到同一个 max。
+    这里 `UPDATE … SET last = last + 1` 在 PostgreSQL 上锁住这一行直到开案的事务提交,
+    第二件案子在锁上等、拿到的是加过一次的值;事务回滚则号一起回滚,所以不留空号。
+    键是前缀而不是租户:两个租户的代码第一段相同(`CN_DIYU` 与 `CN_TEST`)时共用一行,
+    于是 `case_number` 可以全局唯一,而每个租户自己的号仍然单调递增。
+
+    ponytail: 一个租户一年一行,同租户的开案在这一行上串行;开案是人手动作,
+    要是哪天成了批量导入的瓶颈,再换 PostgreSQL SEQUENCE。
+    """
+    key = models.CharField(max_length=20, primary_key=True, help_text="<prefix>-<year>")
+    last = models.PositiveIntegerField(default=0)
+
+    @classmethod
+    def next_number(cls, tenant) -> str:
+        """发下一个号。必须在写入案子的同一个事务里调(`Judgment.save` 这样做)。"""
+        prefix = case_number_prefix(tenant)
+        year = timezone.localdate().year
+        key = f"{prefix}-{year}"
+        cls.objects.get_or_create(key=key)
+        cls.objects.filter(key=key).update(last=F("last") + 1)
+        return format_case_number(prefix, year, cls.objects.get(key=key).last)
+
+
 class Judgment(ArchivableMixin, AuditUserFields, models.Model):
     """
     A single judgment proceeding for a soul.
@@ -66,6 +111,10 @@ class Judgment(ArchivableMixin, AuditUserFields, models.Model):
     can_delete/delete_or_archive below and ArchivableMixin.archive().
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    # 案号:给人读、给人抄的编号(`CN-2026-0007`),开案时由 `save()` 从 `JudgmentCaseCounter`
+    # 发。`id` 仍是 API 与路由用的身份;案号只是它的人类名字,永不改、永不复用(软删的案子
+    # 留着它的号)。存量行由 judgment/0032 按 (前缀, 年, created_at, id) 回填。
+    case_number = models.CharField(max_length=32, unique=True, editable=False)
     soul = models.ForeignKey(
         Soul,
         on_delete=models.CASCADE,
@@ -206,6 +255,12 @@ class Judgment(ArchivableMixin, AuditUserFields, models.Model):
         # 与 SoulRecord.save 同一写法。
         if self._state.adding and self.cycle == 0 and self.soul_id is not None:
             self.cycle = self.soul.life_index
+        if self._state.adding and not self.case_number:
+            # 发号与写入在同一个事务里:写入失败,号跟着回滚,不留空号。
+            with transaction.atomic():
+                self.case_number = JudgmentCaseCounter.next_number(self.tenant)
+                super().save(*args, **kwargs)
+            return
         super().save(*args, **kwargs)
 
     def __str__(self):
@@ -566,6 +621,16 @@ class Statute(AuditUserFields, models.Model):
         null=True,
     )
 
+    #: 版本:第几次修订(1 起)与这一版自哪天起施行。只在条文本身变了时加一 ——
+    #: `VERSIONED_FIELDS` 之一变了(`save()` 比对库里那一行),所以 `seed_mythology` 重跑
+    #: 不改字就不升版,`--update` 改了正文才升。存量行由 judgment/0032 定为第 1 版、
+    #: 施行日 = 入库那天(`create_time`)。
+    #: 不是一张版本历史表:旧文本已经由结案时的引用快照(`JudgmentCitation.snapshot_*`)
+    #: 保住了,需要的只是「现在读到的是第几版、从哪天起」。
+    #: 埃及四十二条的正文读自 `source_actor`,改那位陪审神的条文不会让这里升版。
+    revision = models.PositiveIntegerField(default=1)
+    effective_from = models.DateField(default=timezone.localdate)
+
     class Meta:
         ordering = ["civilization", "corpus", "ordinal", "code"]
         verbose_name = "Statute"
@@ -614,7 +679,28 @@ class Statute(AuditUserFields, models.Model):
         narrow invariant into a broad and untested one.
         """
         self.clean()
+        if not self._state.adding:
+            self._bump_revision_if_text_changed(kwargs)
         return super().save(*args, **kwargs)
+
+    #: 这些列变了,读者读到的就是另一条律文 —— 升一版。`ordinal` / `tenant` 不在内:
+    #: 换位置、补租户不改条文。
+    VERSIONED_FIELDS = (
+        "polarity", "title_zh", "title_en", "title_egy", "text_zh", "text_en", "text_egy",
+        "source", "source_notes", "payload_json", "source_actor_id", "source_actor_field",
+    )
+
+    def _bump_revision_if_text_changed(self, save_kwargs):
+        stored = Statute.all_objects.filter(pk=self.pk).values(*self.VERSIONED_FIELDS, "revision").first()
+        if stored is None:
+            return
+        if all(stored[f] == getattr(self, f) for f in self.VERSIONED_FIELDS):
+            return
+        self.revision = stored["revision"] + 1
+        self.effective_from = timezone.localdate()
+        update_fields = save_kwargs.get("update_fields")
+        if update_fields is not None:
+            save_kwargs["update_fields"] = {*update_fields, "revision", "effective_from"}
 
     def clean(self):
         expected = CORPUS_CIVILIZATION.get(self.corpus)

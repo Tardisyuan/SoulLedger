@@ -125,6 +125,10 @@ test.describe("Critical path: login and create a soul", () => {
 
     await expect(page).toHaveURL(`/judgment/${OPENED_JUDGMENT.id}`);
     expect(api.countOf("POST", "/judgment/")).toBe(0);
+    // 审判台页头:案号整串、可复制(CASE_NUMBER_POLICY)—— 不是截到 8 位的 `CN-2026-`。
+    await expect(page.getByRole("button", { name: `复制案号 ${OPENED_JUDGMENT.case_number}` })).toHaveText(
+      `${OPENED_JUDGMENT.case_number} ⧉`
+    );
   });
 
   test("a failed create keeps the modal open and reports the error", async ({ page }) => {
@@ -172,12 +176,12 @@ test.describe("Critical path: cross-civilization dispatch approval", () => {
     // The failure read as "the pending card is missing", which is a much more
     // alarming thing than what had happened.
     //
-    // `div:has(> div > h3)` is PageSection's own shape: a root div whose first
-    // child is the header div holding the title as an h3. That is the
-    // component's contract rather than its styling, so a second Tailwind pass
-    // does not break it.
+    // `section:has(> div > h2)` is PageSection's own shape: a root <section>
+    // whose header div holds the title as an h2 (v3 panel, 2026-10-02; it was a
+    // div with an h3 before). That is the component's contract rather than its
+    // styling, so a second Tailwind pass does not break it.
     const pendingSection = page.locator(
-      'div:has(> div > h3:text-is("待处理提案"))'
+      'section:has(> div > h2:text-is("待处理提案"))'
     );
 
     // The pending card must name both civilizations — the whole point of a
@@ -322,7 +326,7 @@ test.describe("Critical path: permission matrix save", () => {
     // Removing one of JUDGE's three grants ⇒ tier 2 (removal, not to zero).
     await page.getByRole("checkbox", { name: cell("JUDGE", "dispatch.approve") }).click();
 
-    await expect(unsaved(page)).toContainText("未保存 1 项");
+    await expect(unsaved(page)).toContainText("1 处待改");
     await expect(unsaved(page)).toContainText("＋0 · −1");
     await unsaved(page).getByRole("button", { name: "保存改动" }).click();
 
@@ -388,7 +392,7 @@ test.describe("Critical path: permission matrix save", () => {
     const refused = page.getByRole("checkbox", { name: cell("JUDGE", "recycle_bin.restore") });
     await expect(refused).toHaveText("!");
     await expect(page.getByRole("checkbox", { name: cell("GUARDIAN", "dispatch.approve") })).toHaveText("");
-    await expect(unsaved(page)).toContainText("未保存 1 项");
+    await expect(unsaved(page)).toContainText("1 处待改");
 
     await banner.getByRole("button", { name: "定位" }).click();
     await expect(refused).toBeFocused();
@@ -425,7 +429,7 @@ test.describe("Critical path: permission matrix save", () => {
     await expect(toggle).toHaveAttribute("aria-checked", "false");
     await toggle.click();
     await expect(toggle).toHaveAttribute("aria-checked", "true");
-    await expect(unsaved(page)).toContainText("未保存 1 项");
+    await expect(unsaved(page)).toContainText("1 处待改");
     await unsaved(page).getByRole("button", { name: "保存改动" }).click();
     await expect.poll(() => api.lastCall("POST", "/perm/role-permissions/changes/")?.body.changes).toEqual([
       { role: "GUARDIAN", permission_id: 3, action: "grant" },

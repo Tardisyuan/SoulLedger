@@ -9,10 +9,14 @@ import { useToast } from "@/src/contexts/ToastContext";
 import { saveBlob } from "@/src/lib/saveBlob";
 import { Button } from "@/src/components/ui/Button";
 import { Modal } from "@/src/components/ui/Modal";
-import type { DataTableSelection } from "@/components/ui/data-table";
+import { BATCH_BAR, type DataTableSelection } from "@/components/ui/data-table";
 
 /**
  * 规范 v1 §3.1「有接口」:/souls 的批量条 —— 已选 N · 移交… · 导出 · 移入回收站 · 取消选择。
+ *
+ * 2026-10-01 规范 v3:条是反相的(`BATCH_BAR`,ink 底、surface-1 字),条上按钮一律
+ * `variant="inverse"`。「一次只能移交一个」仍是警示色 —— 它在 ink 底上不到 4.5:1
+ * (深 2.65、浅 3.14),这件事等拍板,`v3DataDisplayContract.test.tsx` 钉着。
  *
  * 「移交…」打开既有的发起移交表单(`/dispatch/propose?soul=`),它一次只带**一个**灵魂:
  * 选了一个就带过去;选了几个,就在条上说明「一次只能移交一个」并停下,不替操作员挑。
@@ -164,33 +168,36 @@ export function SoulBatchBar({
       <div
         role="region"
         aria-label={t("souls.batch.region")}
-        className="sticky bottom-(--bottom-bar) z-10 mt-3 flex flex-wrap items-center gap-3 border-t border-[oklch(var(--color-block))] bg-[oklch(var(--color-canvas))] px-4 py-2"
+        className={`sticky bottom-(--bottom-bar) z-10 mt-3 flex flex-wrap items-center gap-3 shadow-raised border-t border-[oklch(var(--color-block))] ${BATCH_BAR} px-4 py-2`}
       >
-        <span className="font-mono text-xs text-[oklch(var(--color-ink))]" aria-live="polite">
+        <span className="font-mono text-xs" aria-live="polite">
           {t("souls.batch.selected", { n: String(count) })}
         </span>
         {transferNote && (
-          <span role="status" className="text-xs text-[oklch(var(--color-warning))]">
+          // ink 反相条上警示色字不达标(2.65 / 3.14:1);用条本身的字色 + 警示档字形 ◐,
+          // 2026-10-01 拍板。同一理由见 JudgmentClaimQueue 的批量条。
+          <span role="status" className="text-xs">
+            <span aria-hidden="true">◐ </span>
             {t("souls.batch.transfer_one_only", { n: String(count) })}
           </span>
         )}
         <span className="flex-1" />
         {canDispatch && (
-          <Button type="button" variant="secondary" size="sm" onClick={transfer} disabled={count === 0}>
+          <Button type="button" variant="inverse" size="sm" onClick={transfer} disabled={count === 0}>
             {t("souls.batch.transfer")}
           </Button>
         )}
-        <Button type="button" variant="secondary" size="sm" onClick={exportCsv} loading={exporting} disabled={count === 0}>
+        <Button type="button" variant="inverse" size="sm" onClick={exportCsv} loading={exporting} disabled={count === 0}>
           {t("souls.batch.export")}
         </Button>
         {canRecycle && (
-          <Button type="button" variant="secondary" size="sm" onClick={() => setConfirming(true)} disabled={count === 0}>
+          <Button type="button" variant="inverse" size="sm" onClick={() => setConfirming(true)} disabled={count === 0}>
             {t("souls.detail.confirm_delete_action")}
           </Button>
         )}
-        <Button type="button" variant="ghost" size="sm" onClick={selection.clear}>
+        <Button type="button" variant="inverse" size="sm" onClick={selection.clear}>
           {t("souls.batch.clear")}
-          <span aria-hidden="true" className="ml-1 font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">· Esc</span>
+          <span aria-hidden="true" className="ml-1 font-mono text-2xs">· Esc</span>
         </Button>
       </div>
 

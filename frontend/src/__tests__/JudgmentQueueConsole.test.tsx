@@ -10,11 +10,13 @@
  * window, the U key and the undo strip were removed on 2026-09-25
  * (「落判即提交,不可撤回」, as on the desk).
  */
-import { render, screen, waitFor, act, fireEvent, within } from "@testing-library/react";
+import { render, renderHook, screen, waitFor, act, fireEvent, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { JudgmentQueueConsole } from "@/src/components/judgment/JudgmentQueueConsole";
 import { judgmentApi } from "@soulledger/core/api";
 import { isMinePending } from "@/src/components/judgment/RowMark";
+import { PlaqueProvider } from "@/src/components/plaque/Plaque";
+import { useCourtOffice, useHall } from "@/src/components/plaque/useHall";
 
 const mockPush = jest.fn();
 const mockShowToast = jest.fn();
@@ -784,5 +786,62 @@ describe("行首色标只表示「待我处理」(B12)", () => {
     ["没登录", { concluded_at: null, claimed_by: 5 }, undefined],
   ] as const)("%s → 没有", (_label, judgment, user) => {
     expect(isMinePending(judgment, user)).toBe(false);
+  });
+});
+
+// 身份带殿名(用户 2026-10-02):「<租户名> · <眼前这一案的殿>」;案子没记殿就写刑名司。
+describe("身份带殿名跟着眼前这一案", () => {
+  function renderInBand(set: jest.Mock) {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    return render(
+      <QueryClientProvider client={queryClient}>
+        <PlaqueProvider value={set}>
+          <JudgmentQueueConsole />
+        </PlaqueProvider>
+      </QueryClientProvider>
+    );
+  }
+
+  beforeEach(() => {
+    currentUser = { ...mockUser, tenant: { display_name: "中国地府" } } as typeof mockUser;
+  });
+
+  it("写这一案的殿,前面是租户名", async () => {
+    const set = jest.fn();
+    renderInBand(set);
+    await waitFor(() => expect(set).toHaveBeenLastCalledWith({ title: "plaque.queue", meta: undefined, hall: "中国地府 · 第一殿" }));
+    // 案子到之前(以及队列空了)写的是刑名司;案子到了就换成它的殿,不停在司名上。
+    expect(set).toHaveBeenCalledWith(expect.objectContaining({ hall: "中国地府 · plaque.office.trials" }));
+  });
+
+  it("案子没记殿(court 是空串)→ 刑名司", async () => {
+    mockNext.mockImplementation(async () => cursor({ ...JUDGMENT, court: "" }, 1));
+    const set = jest.fn();
+    renderInBand(set);
+    await waitFor(() => expect(screen.getByText("第一位待判者")).toBeInTheDocument());
+    expect(set).toHaveBeenLastCalledWith({ title: "plaque.queue", meta: undefined, hall: "中国地府 · plaque.office.trials" });
+  });
+});
+
+describe("useHall", () => {
+  // 用户 2026-10-02:前缀是文明的冥界名(plaque.realm.<civ>),不是租户展示名。
+  it("认得的文明写冥界名;四个文明各取各的;第十殿那一格也按文明换", () => {
+    for (const [code, civ] of [["CN_DIYU", "cn"], ["EU_HEAVEN_HELL", "eu"], ["EG_DUAT", "eg"], ["GR_HADES", "gr"]]) {
+      currentUser = { ...mockUser, tenant: { code, display_name: "中国地府" } } as typeof mockUser;
+      expect(renderHook(() => useHall("规制司")).result.current).toBe(`plaque.realm.${civ} · 规制司`);
+      expect(renderHook(() => useCourtOffice()).result.current).toBe(`plaque.office.court.${civ}`);
+    }
+    // 认不出的文明:退回租户展示名;第十殿那一格写地府的(改动前的样子)。
+    currentUser = { ...mockUser, tenant: { code: "XX_UNKNOWN", display_name: "某租户" } } as typeof mockUser;
+    expect(renderHook(() => useHall("规制司")).result.current).toBe("某租户 · 规制司");
+    expect(renderHook(() => useCourtOffice()).result.current).toBe("plaque.office.court.cn");
+  });
+
+  it("租户名在前;没有租户只写司名;没有司名是 undefined(身份带退回租户名)", () => {
+    currentUser = { ...mockUser, tenant: { display_name: "中国地府" } } as typeof mockUser;
+    expect(renderHook(() => useHall("规制司")).result.current).toBe("中国地府 · 规制司");
+    expect(renderHook(() => useHall("")).result.current).toBeUndefined();
+    currentUser = mockUser;
+    expect(renderHook(() => useHall("规制司")).result.current).toBe("规制司");
   });
 });

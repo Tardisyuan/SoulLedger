@@ -31,6 +31,37 @@ export function parseOrdering(ordering: string): SortState | null {
 /** The one link in a `linkedRows` row: its `::after` covers the whole row. */
 export const ROW_LINK = 'after:absolute after:inset-0'
 
+/*
+ * 行的悬停 / 选中(规范 v3 `.ds-tr.hover` / `.ds-tr.selected`,2026-10-01 起)。
+ *
+ * v2 两者都是 surface-2,悬停与选中同色,只差选中那道竖条。v3 把它们拆成两档:
+ * 悬停 = ink 4% 混进 surface-1,选中 = ink 7% 混进 surface-1。
+ * 选中行不再挂悬停类 —— 否则指针一经过,7% 的底会退成 4%,读起来像取消了选中。
+ * 调用方写 `on ? ROW_SELECTED : ROW_HOVER`,不要两个都给。
+ *
+ * **选中行没有行首竖条**,这是 2026-10-01 用户拍板,偏离 v3(v3 的 `.ds-tr.selected`
+ * 带一道 3px ink inset)。原因:行首 3px 竖条是「待我处理」(`RowMark`,补足 B12)的
+ * 专用记号;选中也画一道时,浅色主题、中性文明皮下两条几乎同色(ink 对 civ-neutral
+ * 1.19:1,ΔE00 4.71),审判队列里「我的」与「选中的」分不开。于是竖条整条让给
+ * 「待我处理」,选中只靠底色 —— 与「3px 色标只表示待我处理」那条既有规矩一致。
+ *
+ * 4 / 7 两档、以及「选中不画竖条」由 `v3DataDisplayContract.test.tsx` 守着,
+ * 行底上的文字对比度也在那里按两档主题算。
+ */
+export const ROW_HOVER =
+  'hover:bg-[color-mix(in_oklab,oklch(var(--color-ink))_4%,oklch(var(--color-surface-1)))]'
+export const ROW_SELECTED =
+  'bg-[color-mix(in_oklab,oklch(var(--color-ink))_7%,oklch(var(--color-surface-1)))]'
+
+/*
+ * 批量条(规范 v3 `.ds-batch`,2026-10-01 起):反相 —— ink 实底、surface-1 字,条上的
+ * 按钮用 `<Button variant="inverse">`(无框文字按钮,焦点环换成 surface-1,因为全局的
+ * ink 环落在 ink 底上会消失)。v3 的 52px 最小高度**没有**采用:尺寸整体不动是拍板。
+ * 边框保持原样 —— 它们是 `--color-block`,两档主题都等于 ink,与底同色,留着是为了
+ * 不让条的高度变 2px。
+ */
+export const BATCH_BAR = 'bg-[oklch(var(--color-ink))] text-[oklch(var(--color-surface-1))]'
+
 export interface DataTableColumn {
   /**
    * Stable identifier for the column. When `sortable` is set this is also the
@@ -77,18 +108,6 @@ export interface DataTableSelection<T> {
 }
 
 export interface DataTableProps<T> {
-  /**
-   * Row height. `compact` is `py-2` (~36px at text-sm) against
-   * `comfortable`'s `py-3` (~44px) — an 18% reduction, which at 20 rows a
-   * page is the difference between the table fitting one 1080p viewport and
-   * not.
-   *
-   * It lived on DataGrid, so only the two pages on DataGrid could reach it
-   * and exactly one used it; the other ten list pages call DataTable
-   * directly. The default stays `comfortable`: the wider row is right where
-   * each line is a decision, and wrong where the page is a scan-and-find.
-   */
-  density?: 'comfortable' | 'compact'
   /**
    * 规范 v1 §3.2: the whole row opens the record, no「查看 →」column. The row
    * becomes the positioning box and `cursor-pointer`; the caller puts ONE
@@ -181,6 +200,14 @@ export interface DataTableProps<T> {
   className?: string
 }
 
+/**
+ * 表头单元格(v3 `.ds-th`):吸顶在表格自己的滚动框里(z 用 `--z-index-sticky`),界面字 11、
+ * muted、大写,下沿 1px 行线。线画成 inset 阴影而不是边框:表格是 border-collapse,
+ * 折叠的边框属于表格网格,单元格吸顶滚动时边框会留在原地(与权限矩阵同一个原因)。
+ */
+const TH_CLASS =
+  'sticky top-0 z-sticky bg-[oklch(var(--color-canvas))] shadow-[inset_0_-1px_0_oklch(var(--color-line))]'
+
 const ALIGN_CLASS: Record<NonNullable<DataTableColumn['align']>, string> = {
   left: 'text-left',
   center: 'text-center',
@@ -218,7 +245,6 @@ export function DataTable<T>({
   onRetry,
   errorMessage,
   skeletonRows = 5,
-  density = 'comfortable',
   linkedRows = false,
   sort,
   onSortChange,
@@ -246,20 +272,12 @@ export function DataTable<T>({
     transitionKey ?? ''
   )
 
-  // 规范 v1 §2 表格:行高 36,紧凑 28(仅审判队列用)。
-  const cellPadding = density === 'compact' ? 'px-3 py-1' : 'px-3 py-2'
-  /**
-   * The body rows come from `renderRow`, which every caller hand-writes — 40
-   * `px-4 py-3` `<td>`s across app/. So a `density` prop alone would only have
-   * moved the header, and the table would have looked broken at `compact`.
-   *
-   * A descendant selector on the table beats the single class on each `<td>`
-   * without touching any of those call sites. It is scoped to `tbody` so the
-   * header keeps `cellPadding` directly, and it only exists in the compact
-   * branch — `comfortable` emits no override at all, so nothing changes for
-   * the ten pages that do not opt in.
-   */
-  const bodyDensity = density === 'compact' ? '[&_tbody_td]:py-1' : ''
+  /* 行高按规范 v3(2026-10-01 拍板):正文行 `min-height: 64px`(`--table-row-h`,v3 `.queue-row`
+     / `.ds-tr`),表头 44(`--control-h-sm`,v3 `.queue-head` / `.ds-th`)。`<tr>` 上的 `height`
+     在表格布局里就是最小高度 —— 内容更高时行照样长高。曾有的 `compact` 密度(不设最小行高、
+     `py-1`)2026-10-02 用户拍板删除;删之前唯一的调用点是审判队列侧栏的两张表(经 DataGrid)。 */
+  const rowHeight = 'h-(--table-row-h)'
+  const cellPadding = 'px-3 py-2'
   const { t } = useI18n()
   const colCount = columns.length + (selection ? 1 : 0)
   const keysOnScreen = selection ? (data ?? []).map((item, i) => keyExtractor(item, i)) : []
@@ -308,29 +326,33 @@ export function DataTable<T>({
           后果不止一条横向滚动条:所有 `fixed inset-0` 的遮罩与弹窗按 457 铺开、
           居中在 228,一半落在可视区外,里面的按钮「可见、可用、可滚动到」却点不动。 */}
       {/* 账页不装框:表格没有外框,表头下接区块边界线,行与行之间是行线(规范 v1 §2)。 */}
-      <div className="relative overflow-x-auto">
+      {/* 吸顶表头(v3 表格:sticky z-20):≥768 时这个框也是纵向滚动框,最高一屏
+          (`--content-min-h`),表头吸在框顶 —— 页面级吸顶做不到,因为横向滚动的框
+          本身就是 sticky 的参照,而它不纵向滚动。`isolate` 把表头的 z-20 关在框里,
+          滚动时不会压过页面上同为 20 的筛选栏。<768 只横向滚,表头不吸顶。 */}
+      <div className="relative isolate overflow-x-auto md:max-h-(--content-min-h)">
         {/* `text-sm` (13px), not `text-sm` (14px). Every body cell that does not
             set its own size inherits from here, so this one class is the base
             size of thirteen pages' tables — and it was the single largest block
             of text still outside the eight-step scale. 13px is tighter than what
             it replaces: the scale buys hierarchy from the span between steps,
             not by growing rows, and the table is where density is defended. */}
-        <table className={cn("w-full text-sm", bodyDensity)} aria-busy={isLoading || undefined}>
+        <table className="w-full text-sm" aria-busy={isLoading || undefined}>
           <caption className="sr-only">{caption}</caption>
           {columns.some((c) => c.width) && (
             <colgroup>
-              {selection && <col style={{ width: '40px' }} />}
+              {selection && <col style={{ width: '44px' }} />}
               {columns.map((column) => (
                 <col key={column.key} style={column.width ? { width: column.width } : undefined} />
               ))}
             </colgroup>
           )}
-          {/* 补足 C15 表格细节 / B9:表头 11 等宽 ink3,下沿 2px ink。 */}
-          <thead className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">
-            <tr className="border-b-2 border-[oklch(var(--color-ink))]">
+          {/* v3 `.ds-th`(替换 v2 B9 的「11 等宽 ink3,下沿 2px ink」):界面字 11、muted、大写、下沿 1px 行线。 */}
+          <thead className="text-2xs uppercase text-[oklch(var(--color-ink-muted))]">
+            <tr className="h-(--control-h-sm)">
               {selection && (
-                <th scope="col" className="w-10 p-0">
-                  <label className="flex h-full min-h-8 items-center justify-center px-3 cursor-pointer">
+                <th scope="col" className={cn(TH_CLASS, 'w-11 p-0')}>
+                  <label className="flex h-full min-h-(--control-h-sm) items-center justify-center px-3 cursor-pointer">
                     <input
                       type="checkbox"
                       checked={allOnScreen}
@@ -354,6 +376,7 @@ export function DataTable<T>({
                     scope="col"
                     aria-sort={ariaSort(column)}
                     className={cn(
+                      TH_CLASS,
                       'font-normal',
                       align,
                       isSortable ? 'p-0' : cellPadding,
@@ -365,7 +388,7 @@ export function DataTable<T>({
                         type="button"
                         onClick={() => handleSort(column)}
                         className={cn(
-                          'group flex w-full items-center gap-1.5 font-normal',
+                          'group flex min-h-(--control-h-sm) w-full items-center gap-1.5 font-normal',
                           cellPadding,
                           'hover:text-[oklch(var(--color-ink))] transition-colors',
                           // Focus ring comes from the global :focus-visible rule
@@ -471,17 +494,17 @@ export function DataTable<T>({
                       entered.has(rowKey) ? 'entered' : changed.has(rowKey) ? 'changed' : undefined
                     }
                     className={cn(
-                      'border-b border-[oklch(var(--color-rule))] hover:bg-[oklch(var(--color-surface-2))] transition-colors',
+                      'border-b border-[oklch(var(--color-rule))] transition-colors',
+                      rowHeight,
                       linkedRows && 'relative cursor-pointer',
-                      selection?.selected.has(rowKey) &&
-                        'bg-[oklch(var(--color-surface-2))] shadow-[inset_3px_0_0_oklch(var(--color-accent))]',
+                      selection?.selected.has(rowKey) ? ROW_SELECTED : ROW_HOVER,
                       entered.has(rowKey) && 'animate-row-enter',
                       changed.has(rowKey) && 'animate-row-changed'
                     )}
                   >
                     {selection && (
-                      <td className="w-10 p-0 align-middle">
-                        <label className="relative z-[1] flex min-h-8 items-center justify-center px-3 py-2 cursor-pointer">
+                      <td className="w-11 p-0 align-middle">
+                        <label className="relative z-[1] flex min-h-(--control-h-sm) items-center justify-center px-3 cursor-pointer">
                           <input
                             type="checkbox"
                             checked={selection.selected.has(rowKey)}
@@ -513,9 +536,9 @@ export function DataTable<T>({
                   key={`leaving-${key}`}
                   aria-hidden="true"
                   data-row-state="leaving"
-                  className="border-b border-[oklch(var(--color-rule))] pointer-events-none animate-row-exit"
+                  className={cn('border-b border-[oklch(var(--color-rule))] pointer-events-none animate-row-exit', rowHeight)}
                 >
-                  {selection && <td className="w-10" />}
+                  {selection && <td className="w-11" />}
                   {renderRow(item, index)}
                 </tr>
               ))}

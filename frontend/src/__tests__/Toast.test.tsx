@@ -109,11 +109,12 @@ describe("Toast", () => {
     expect(document.getElementById(`toast-${id}`)).toBeNull();
   });
 
-  it("should use 5000ms as default duration", () => {
+  it("默认停留 4000ms(规范 v3;v2 是 5000)—— 3999 时还在,4000 + 离场 200 后没了", () => {
     const id = showToast("default duration");
+    jest.advanceTimersByTime(3999);
     expect(document.getElementById(`toast-${id}`)).not.toBeNull();
 
-    jest.advanceTimersByTime(5000);
+    jest.advanceTimersByTime(1);
     jest.advanceTimersByTime(200); // fade-out
     expect(document.getElementById(`toast-${id}`)).toBeNull();
   });
@@ -174,19 +175,21 @@ describe("Toast 回到设计系统里", () => {
     jest.useRealTimers();
   });
 
-  it("元素上不带内联样式表,只带类名和一个 token 引用", () => {
-    const id = showToast("hello", "error");
-    const el = document.getElementById(`toast-${id}`)!;
+  it("元素上不带任何内联样式,底色由 data-type 交给 globals.css 选", () => {
+    const bad = document.getElementById(`toast-${showToast("hello", "error")}`)!;
+    const ok = document.getElementById(`toast-${showToast("saved", "success")}`)!;
+    const info = document.getElementById(`toast-${showToast("fyi")}`)!;
 
-    expect(el.className).toBe("toast");
-    // 唯一允许留在元素上的内联,而且是**token 名字**不是颜色值 —— 三种状态色
-    // 因此仍然来自 :root、仍然跟着主题走。
-    expect(el.style.getPropertyValue("--toast-accent")).toBe("var(--color-status-error)");
-    // 缺席断言,这是这条的要害:五处绕过设计系统的决定就写在这里面
-    // (两个 border-radius、一个裸 0.25s 加第三条缓动、一份私有 font-family)。
-    expect(el.getAttribute("style")).not.toContain("border-radius");
-    expect(el.getAttribute("style")).not.toContain("font-family");
-    expect(el.getAttribute("style")).not.toContain("animation");
+    expect(bad.className).toBe("toast");
+    // 规范 v3:失败是实心冷玫红底,规则是 `.toast[data-type="error"]`
+    // (颜色与对比度见 toastColourContract.test.ts)。其余两种是同一块 ink 底。
+    expect(bad.dataset.type).toBe("error");
+    expect(ok.dataset.type).toBe("success");
+    expect(info.dataset.type).toBe("info");
+    // 缺席断言:v2 留在元素上的 `--toast-accent` 跟着「图标按状态着色」一起没了,
+    // 更早的五处绕过设计系统的决定(两个 border-radius、裸 0.25s 加第三条缓动、
+    // 私有 font-family)也都写在 style 里 —— 所以断言整个属性不存在。
+    for (const el of [bad, ok, info]) expect(el.getAttribute("style")).toBeNull();
   });
 
   it("成功和信息用 status,只有错误用 assertive 的 alert", () => {

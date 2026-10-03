@@ -108,6 +108,9 @@ const ENUM_FIELDS = [
   // Its `status` was already here. The meta-test below demanded both.
   "trigger",
   "scope",
+  // Added 2026-10-02 by the meta-test: `Judgment.judgment_method` reached the
+  // wire (审判台「审判方式」), drawn through <DomainEnum namespace="judgment.methods">.
+  "judgment_method",
   // Added 2026-09-17 with `packages/core/src/api/soul-accounts.ts`:
   // SoulAccount's `origin` (DEATH_SYNC/OFFICER/BACKFILL) and a rebirth
   // application's `desired_form` (the six paths + OTHER). The meta-test below
@@ -145,7 +148,7 @@ const CONVENTION_MODULES = [
  */
 const ENUM_STRING_CONTEXTS: Record<string, string> = {
   [path.join("app", "dashboard", "page.tsx")]:
-    "Recharts `name` on a chart datum, plus list rows that fall back to the API's own label; both carry title={state} by hand.",
+    "State labels inside composed card / ledger labels (glyph + word) and rows that fall back to the API's own label; each carries title={state} by hand.",
   [path.join("src", "components", "realms", "RouteTopology.tsx")]:
     "A realm's station label resolves across two namespaces (realms.names, then realms.codes) and falls back to the API's own name — <DomainEnum> reads one namespace. The string is both the truncated text and its title, and the realm code rides in that title for triage.",
   [path.join("app", "dispatch", "[id]", "page.tsx")]:
@@ -160,6 +163,8 @@ const ENUM_STRING_CONTEXTS: Record<string, string> = {
     "Realm names inside an <option>, which can hold no child element. Chosen realms render elsewhere with <DomainEnum>.",
   [path.join("src", "components", "sentence-plan", "SentenceRequestForm.tsx")]:
     "Request kinds inside an <option>, which can hold no child element.",
+  [path.join("src", "components", "judgment", "JudgmentDeskStage.tsx")]:
+    "Interpolated into t('judgment.desk.confirm_body', { verdict }) as a parameter, not rendered; the same layer renders the verdict itself with <DomainEnum>.",
   [path.join("app", "recycle-bin", "page.tsx")]:
     "Interpolated into t('recycle_bin.dependent_count', { type }) as a parameter, not rendered.",
   [path.join("app", "workflow", "[id]", "page.tsx")]:
@@ -180,11 +185,11 @@ const ENUM_STRING_CONTEXTS: Record<string, string> = {
  * failure mode this whole file exists to prevent.
  */
 const DASH_EXCEPTIONS: Record<string, string> = {
-  [`${path.join("components", "LanguageSwitcher.tsx")}:19`]:
+  [`${path.join("components", "LanguageSwitcher.tsx")}:24`]:
     "Pre-hydration skeleton: an aria-hidden, disabled <option> holding the " +
     "control's width for one tick. It represents a value still loading, not " +
     "a value that is absent.",
-  [`${path.join("src", "components", "assist-admin", "ProviderSection.tsx")}:32`]:
+  [`${path.join("src", "components", "assist-admin", "ProviderSection.tsx")}:34`]:
     "Canvas provider-platforms 2f: the aria-hidden status glyph of 「平台不提供模型列表」 (an ink note, " +
     "not an error). It marks a platform's answer, not a value that is absent.",
 };
@@ -830,5 +835,52 @@ describe("§4.6 identifier placement", () => {
       // rubber stamp; the reason has to survive being read by the next person.
       expect(`${exception.file}: ${exception.reason}`.length).toBeGreaterThan(160);
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Rule 4 — case numbers go through <CaseNumber> (CASE_NUMBER_POLICY)
+// ---------------------------------------------------------------------------
+
+/** `{x.case_number}` / `{x.judgment_case_number}` in a JSX text position — same guard as RAW_IDENTIFIER_RE. */
+const RAW_CASE_NUMBER_RE = /(^|[^=$])\{\s*[A-Za-z_$][\w$]*(?:\??\.[\w$]+)*\??\.(?:judgment_)?case_number\s*\}/;
+/** A case number fed to the UUID chip, which truncates to 8 characters: `CN-2026-` and the sequence gone. */
+const CASE_NUMBER_IN_ID_CHIP_RE = /<IdentifierChip[^>]*\bid=\{[^}]*case_number/;
+/** A case number handed to the identity band as `meta` — dead text; the band's copyable slot is `caseNumber`. */
+const CASE_NUMBER_AS_PLAQUE_META_RE = /\bmeta:[^,}]*case_number/;
+/** The band's slot: `usePlaque({ caseNumber: x.case_number })`, which Plaque renders through <CaseNumber>. */
+const CASE_NUMBER_PLAQUE_SLOT_RE = /\bcaseNumber:\s*[\w$.?]*case_number/;
+
+function scanCaseNumbers(): { raw: Violation[]; chips: number } {
+  const raw: Violation[] = [];
+  let chips = 0;
+  for (const file of SOURCE_FILES) {
+    const rel = relative(file);
+    if (CONVENTION_MODULES.includes(rel)) continue;
+    readFileSync(file, "utf8").split("\n").forEach((line, i) => {
+      const code = stripComment(line);
+      if (RAW_CASE_NUMBER_RE.test(code) || CASE_NUMBER_IN_ID_CHIP_RE.test(code) || CASE_NUMBER_AS_PLAQUE_META_RE.test(code)) {
+        raw.push({ file: rel, line: i + 1, text: line.trim().slice(0, 110) });
+      }
+      if (/<CaseNumber\b[^>]*\bvalue=\{[^}]*case_number/.test(code) || CASE_NUMBER_PLAQUE_SLOT_RE.test(code)) chips += 1;
+    });
+  }
+  return { raw, chips };
+}
+
+describe("case numbers (CASE_NUMBER_POLICY)", () => {
+  it("shows the case number on the desk, the queue and the workflow card", () => {
+    // Not vacuous: the three places the Design puts it each render one (the desk's is the
+    // identity band's `caseNumber` slot, which Plaque renders through <CaseNumber>).
+    expect(scanCaseNumbers().chips).toBeGreaterThanOrEqual(3);
+  });
+
+  it("never renders a case number as dead text or through the truncating UUID chip", () => {
+    const { raw } = scanCaseNumbers();
+    expect(
+      raw.length === 0
+        ? ""
+        : `A case number is a name people copy. Render it with <CaseNumber value={…}> — whole, copyable:\n${format(raw)}`
+    ).toBe("");
   });
 });

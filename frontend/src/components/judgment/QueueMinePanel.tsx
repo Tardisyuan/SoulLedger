@@ -7,7 +7,6 @@ import { judgmentKeys } from "@soulledger/core/query_keys";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useReducedMotionDurations } from "@/src/hooks/useReducedMotionDurations";
-import { SectionTitle } from "@/src/components/plaque/SectionTitle";
 import { RowMark, ROW_MARK_ROW, isMinePending } from "@/src/components/judgment/RowMark";
 import { MissingValue } from "@/src/components/ui/DomainValue";
 import { MOTION_EASINGS } from "@/lib/motion";
@@ -15,7 +14,7 @@ import { MOTION_EASINGS } from "@/lib/motion";
 /**
  * 审判队列上的「我认领的」分组(2026-09-30 用户拍板的三项新功能之一):服务端 `?group=mine`
  * —— 我认领、未结案的案子。每行带行首色标(B12「待我处理」),点名字把队列切到那一件,
- * 有改派权限时每行可改派。
+ * 有改派权限时每行可改派。行高与审判队列同为 v3 的 64(`--table-row-h`),行内动作 44。
  *
  * 动效(交互与动效第 2 轮 §三 2 / 2c):刚认领的那件排在最上面,其余行 layout 补位
  * (base 200 · ease.standard,级差 30,只对前 8 行);改派走的那一行向左 8px 淡出
@@ -66,9 +65,15 @@ export function QueueMinePanel({
 
   return (
     <section aria-labelledby="queue-mine-heading" data-testid="queue-mine" className="space-y-2">
-      <SectionTitle id="queue-mine-heading" aside={query.data ? String(query.data.count - goneHere) : "…"}>
-        {t("judgment.claim.groups.mine")}
-      </SectionTitle>
+      {/* 区块标签一档(与审判队列控制台里的 <h2> 同一写法);v2 节首的匾纹片段撤掉。 */}
+      <div className="flex items-center gap-3">
+        <h2 id="queue-mine-heading" className="text-2xs uppercase text-[oklch(var(--color-ink-muted))]">
+          {t("judgment.claim.groups.mine")}
+        </h2>
+        <span className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">
+          {query.data ? String(query.data.count - goneHere) : "…"}
+        </span>
+      </div>
       {query.isError ? (
         <p className="text-xs text-[oklch(var(--color-ink-subtle))]">{t("judgment.claim.refused.generic")}</p>
       ) : rows.length === 0 && query.isSuccess ? (
@@ -90,7 +95,7 @@ export function QueueMinePanel({
                     transition={{
                       layout: { duration: d.base, ease: MOTION_EASINGS.standard, delay: d.base ? Math.min(i, STAGGER_ROWS - 1) * STAGGER : 0 },
                     }}
-                    className={`relative flex h-7 items-center gap-3 border-b border-[oklch(var(--color-line))] px-2 text-sm ${marked ? ROW_MARK_ROW : ""}`}
+                    className={`relative flex min-h-(--table-row-h) items-center gap-3 border-b border-[oklch(var(--color-line))] px-2 text-sm ${marked ? ROW_MARK_ROW : ""}`}
                   >
                     {marked && <RowMark />}
                     <button
@@ -112,7 +117,7 @@ export function QueueMinePanel({
                         type="button"
                         onClick={() => onReassign(j)}
                         /* B9 行内动作:1px ink3 框、11 字。 */
-                        className="inline-flex h-6 shrink-0 items-center px-2 border border-[oklch(var(--color-line-strong))] text-2xs text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))] max-sm:min-h-11"
+                        className="inline-flex h-(--control-h-sm) shrink-0 items-center px-3 border border-[oklch(var(--color-line-strong))] text-2xs text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))]"
                       >
                         {t("judgment.claim.reassign")}
                       </button>

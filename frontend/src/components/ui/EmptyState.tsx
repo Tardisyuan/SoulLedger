@@ -14,17 +14,14 @@ import { cn } from "@/lib/utils";
  *    没有 `items-center`、没有 `mx-auto` —— `src/__tests__/EmptyState.test.tsx`
  *    盯着这四个类名。
  *
- * 2) **一条 24px 长、2px 粗的短线压在标题上方**，用 `--civ-mark` 着色。
- *    这是全站少数几处直接读 `--civ-mark` 的地方之一（另一处是
- *    `src/components/layout/TenantSignal.tsx`）。
+ * 2) **标题上方一个 28px 的 □ 字形**(规范 v3,2026-10-01;v1 / v2 是一条 24×2 的
+ *    `--color-block` 短线),用 `--color-ink-muted`。它不按文明染色(规范 v1 §1.8 的
+ *    那条照旧):空态说的是「这里没有东西」,和哪个文明无关。
  *
  * 3) 标题 15 / 600 + 12 ink3 一句原因 + 一个动作(规范 v2 补足 C15「空」:「本月没有账目」
  *    「换个月份，或清除类别筛选。」「清除筛选」)。v1 是 `text-2xs` 标题 + `text-sm` 原因。原因写成一句话，不是一个
  *    名词短语：「还没有灵魂被登记」而不是「无数据」。
- *
- * **`--civ-mark` 在未映射租户下是灰色（`app/globals.css:57`，`215 8% 57%`），
- * 这是刻意的** —— 那条注释说得很清楚：灰色说的是「没有文明」，而那是真话。
- * 不要在这里给它兜一个彩色 fallback。
+
  */
 export interface EmptyStateProps {
   /** 标题,15 / 600。一个短语。 */
@@ -39,13 +36,14 @@ export interface EmptyStateProps {
 export function EmptyState({ title, reason, action, className }: EmptyStateProps) {
   return (
     <div data-empty-state="" className={cn("py-8", className)}>
-      {/* 24px × 2px。用 border-t 而不是 h-[2px]+bg：2 是 borderWidth 里已有的档，
-          高度用任意值会绕开那道阶梯。aria-hidden —— 它是标记，不是内容。 */}
+      {/* 规范 v3 的 □,28px(text-xl)。aria-hidden —— 它是标记，不是内容。 */}
       <span
         data-empty-state-mark=""
         aria-hidden="true"
-        className="block w-6 border-t-2 border-[oklch(var(--color-block))]"
-      />
+        className="block text-xl leading-none text-[oklch(var(--color-ink-muted))]"
+      >
+        □
+      </span>
 
       <p data-empty-state-title="" className="text-md font-semibold text-[oklch(var(--color-ink))] mt-4">
         {title}

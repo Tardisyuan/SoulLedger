@@ -196,7 +196,7 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
         'create_from_judgment': ['workflow.create'],
     }
     queryset = ApprovalWorkflow.objects.select_related(
-        "soul", "soul__tenant", "tenant", "current_node", "current_node__approver", "coordinating_realm", "template_version"
+        "soul", "soul__tenant", "tenant", "judgment", "current_node", "current_node__approver", "coordinating_realm", "template_version"
     ).prefetch_related(_nodes_with_approver()).all()
     filterset_class = WorkflowFilter
     search_fields = WorkflowFilter.search_fields
@@ -207,7 +207,7 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
         """Fresh queryset to avoid stale TenantManager contextvar filters.
         Applies tenant filtering for non-ADMIN users."""
         qs = ApprovalWorkflow._base_manager.select_related(
-            "soul", "soul__tenant", "tenant", "current_node", "current_node__approver", "coordinating_realm", "template_version"
+            "soul", "soul__tenant", "tenant", "judgment", "current_node", "current_node__approver", "coordinating_realm", "template_version"
         ).prefetch_related(_nodes_with_approver()).all()
         return DataScopeFilter.filter_queryset(self.request, scope_to_tenant(qs, self.request), ApprovalWorkflow)
 

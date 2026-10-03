@@ -1,6 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
-
-<path d="M13 13H51V51H13Z" fill="none" stroke="currentColor" stroke-width="0.8"></path>
-<path d="M10 10H54V54H10Z" fill="none" stroke="currentColor" stroke-width="1.8"></path>
-<path d="M10 10h4v4h-4zM50 50h4v4h-4z" fill="currentColor"></path>
-</svg>

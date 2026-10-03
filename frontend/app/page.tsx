@@ -15,7 +15,7 @@ import { ThemeToggle } from "@/src/components/layout/ThemeToggle";
  * 交出去,不经 AppLayout。也就是说这一页和 `app/(auth)/login/page.tsx` 处境
  * 相同:没有那条 `h-16` 的头,没有面包屑,也没有 AppLayout 那个
  * `min-h-[calc(100vh-4rem)]` 的槽位。PageShell 的三条前提在这里全部不成立 ——
- * 它不画面包屑是因为 AppLayout 画了;它的筛选栏钉 `top-16` 是因为要贴在
+ * 它不画面包屑是因为 AppLayout 画了;它的筛选栏钉 `top-13` 是因为要贴在
  * AppLayout 的头下沿;它不写 `min-h-screen` 是因为槽位已经给了高度。这一页
  * 三样都没有,所以高度得自己给。
  *
@@ -99,7 +99,7 @@ export default function HomePage() {
         <header className="mb-8 md:mb-12">
           {/* 八档字级表最上面那两档。迁移前是 `text-4xl md:text-5xl lg:text-6xl`
               —— 三个断点、三个表外字号。 */}
-          <h1 className="text-lg md:text-xl mb-4 text-[oklch(var(--color-accent-ink))]">
+          <h1 className="font-title text-lg md:text-xl mb-4 text-[oklch(var(--color-accent-ink))]">
             {t("home.hero_title")}
           </h1>
           <p className="text-[oklch(var(--color-accent-ink))]/80 text-md mb-2">{t("home.hero_subtitle")}</p>
@@ -109,7 +109,7 @@ export default function HomePage() {
         </header>
 
         <section>
-          <h2 className="text-md mb-6 md:mb-8 text-[oklch(var(--color-ink-muted))]">
+          <h2 className="text-lg mb-6 md:mb-8 text-[oklch(var(--color-ink-muted))]">
             {t("home.civilizations_title")}
           </h2>
           {/* Rendered from CIVILIZATION_OPTIONS, not from three hand-written

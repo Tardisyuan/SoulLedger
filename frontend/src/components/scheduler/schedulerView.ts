@@ -89,6 +89,23 @@ export const RUN_STATUS_TONE: Record<string, BadgeTone> = {
   PENDING: "info",
 };
 
+/**
+ * Run status → glyph, so the badge is never colour alone (spec v3: statuses are glyph + text).
+ * Warning keeps ◐ (the reversible-risk mark); unknown members get ○ like the neutral tone.
+ */
+const RUN_STATUS_GLYPH: Record<string, string> = {
+  SUCCESS: "✓",
+  FAILURE: "✕",
+  LOST: "✕",
+  RETRY: "◐",
+  RUNNING: "↻",
+  PENDING: "○",
+};
+
+export function runStatusGlyph(status: string): string {
+  return RUN_STATUS_GLYPH[status] ?? "○";
+}
+
 export function runStatusBadgeClass(status: string): string {
   return badgeVariants({ tone: RUN_STATUS_TONE[status] ?? "neutral" });
 }

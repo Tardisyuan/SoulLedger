@@ -125,7 +125,7 @@ export function SoulKarmaLedgerCard({
       {/* 业力总账 —— 规范 v1「乙 · 功过」:不再是卡片,区块标由页面画,这里的
           文明账名(功过格 / 称心 …)降为区块内第一行小字。 */}
       <div>
-        <h3 className="font-mono text-2xs uppercase text-[oklch(var(--color-ink-subtle))] pt-2 mb-2">{ledgerLabel}</h3>
+        <h3 className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))] pt-2 mb-2">{ledgerLabel}</h3>
 
         {/* Which life the totals below belong to, and — after a rebirth — the
             carry-over they started from. The ledger is per life (BD-04), so a

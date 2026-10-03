@@ -10,15 +10,17 @@ import type { PaginatedResponse } from "./users";
  * this shape; the detail (`GET /judgment/{id}/`) returns `JudgmentDetail`,
  * which adds the evidence rulings and the admitted balance.
  *
- * `judgment_method` was declared here and is not in the serializer's field
- * list; it never arrives.
- *
  * The serializer mixes in FieldPermissionMixin, which can strip fields
  * per-role from DB-configured rules, so everything past the identity fields
  * is optional in principle.
  */
 export interface Judgment {
   id: string;
+  /**
+   * 案号:给人读、给人抄的编号(`CN-2026-0007` = 租户前缀-年-序号),开案时服务端发,永不改。
+   * `id` 仍是路由与 API 用的身份。显示一律走 `<CaseNumber>`(可复制、不截断)。
+   */
+  case_number: string;
   soul: string;
   soul_name: string;
   civilization: string;
@@ -83,6 +85,18 @@ export interface Judgment {
   karmic_balance?: number | null;
   /** Entries in `evidence_json` — the number the detail page's facts column shows. */
   evidence_count?: number;
+  /** 第几世:0 是第一世(`Judgment.cycle`,创建时按灵魂的转世次数盖章)。显示用 `cycle + 1`。 */
+  cycle?: number;
+  /** 审判方式(`Judgment.judgment_method`),只读。 */
+  judgment_method?: "STANDARD" | "HEART_WEIGHING" | "DIABOLICAL_TRIAL";
+  /**
+   * 灵魂此刻的功 / 过两本账,分开给(队列「功 / 过」)。不是净值,所以四个文明都有;
+   * VIEWER 拿不到(字段不在),同 `karmic_balance`。
+   */
+  merit_score?: number;
+  demerit_score?: number;
+  /** 案子所挂界域(`realm_id`)按请求语言的名字;没挂是 null。 */
+  realm_name?: string | null;
 }
 
 type Schemas = components["schemas"];
@@ -264,6 +278,10 @@ export interface Statute {
   source: string;
   source_notes: string[];
   payload_json: Record<string, unknown>;
+  /** 第几版(1 起):条文(标题 / 正文 / 出处 / 分值)改了才加一。 */
+  revision: number;
+  /** 这一版自哪天起施行(ISO 日期)。存量条目是入库那天。 */
+  effective_from: string;
   /**
    * How many times **this tenant** has cited this article, annotated by
    * `StatuteViewSet.get_queryset` through `apps/core/tenant.py`'s

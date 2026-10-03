@@ -9,8 +9,10 @@ import { judgmentApi, type AssignableOfficer, type JudgmentClaimRefusal } from "
 import { useAssignableOfficers } from "@soulledger/core/hooks/useJudgments";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { Modal } from "@/src/components/ui/Modal";
+import { Drawer } from "@/src/components/ui/Drawer";
 import { Button } from "@/src/components/ui/Button";
 import { TextAreaField } from "@/src/components/ui/Field";
+import { ROW_HOVER, ROW_SELECTED } from "@/components/ui/data-table";
 
 /**
  * 认领一族(apps/judgment/claims.py)的两个弹层与一张拒绝码表。队列页的批量条和审判台的
@@ -199,6 +201,8 @@ type ApiError = { response?: { status?: number; data?: { retry_after?: number } 
  * `claims.is_assignable` 筛好,这里不再自己按租户或在职过滤。那个端点也拒了(403 等)
  * 时照实说「名单读不到」,不给一个空下拉。
  *
+ * 2026-10-01 起是右侧改派层(v3 `.reassign-layer`),不再是居中弹窗;内容不变。
+ *
  * 第三类 F 组 2.7:搜索判官 + 名单(方形首字块、姓名、角色、右侧等宽「在手」件数,读
  * `in_hand`)。自己也列出但置灰、写「· 你」、件数「—」,不可选。除自己之外没有人时是
  * 虚线框的空状态,带边框按钮「请管理员改派」(`RequestAdminButton`)。
@@ -246,9 +250,12 @@ export function ReassignDialog({
   };
 
   return (
-    <Modal
+    /* v3 `.reassign-layer`:桌面从右侧滑入、宽 390;手机从底部升起、高 78%(`Drawer` 的 layer;240 进 · 180 出),
+       不是居中弹窗;选判官只换单选状态。 */
+    <Drawer
       isOpen={isOpen}
       onClose={close}
+      variant="layer"
       title={t("judgment.claim.reassign_title", { n: String(count) })}
       footer={
         <div className="flex justify-end gap-2">
@@ -298,8 +305,7 @@ export function ReassignDialog({
                   data-officer={u.id}
                   className={cn(
                     "flex min-h-11 items-center gap-3 border-b border-[oklch(var(--color-rule))] px-1 py-2 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-[oklch(var(--color-accent))]",
-                    self ? "opacity-50" : "cursor-pointer hover:bg-[oklch(var(--color-surface-2))]",
-                    on && "bg-[oklch(var(--color-surface-2))] shadow-[inset_3px_0_0_oklch(var(--color-ink))]"
+                    self ? "opacity-50" : `cursor-pointer ${on ? ROW_SELECTED : ROW_HOVER}`
                   )}
                 >
                   <input
@@ -337,6 +343,6 @@ export function ReassignDialog({
           )}
         </div>
       )}
-    </Modal>
+    </Drawer>
   );
 }

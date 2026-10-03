@@ -182,6 +182,19 @@ describe("处置页按服务端分三段", () => {
     }
   });
 
+  it("期满与逾期是状态,不用警示色:字形 ◐ + 墨色(2026-10-03 用户定)", async () => {
+    const { container } = renderPage();
+    await screen.findByText("Soul p");
+    expect(container.innerHTML).not.toContain("color-warning");
+    const [expired] = screen.getAllByTestId("disposition-expired-row");
+    expect(within(expired).getByText("◐", { exact: false })).toBeInTheDocument();
+    const rows = screen.getAllByTestId("disposition-running-row");
+    const overdue = rows.find((r) => r.textContent?.includes("Soul overdue"))!;
+    const far = rows.find((r) => r.textContent?.includes("Soul far"))!;
+    expect(within(overdue).getByText("◐", { exact: false })).toBeInTheDocument();
+    expect(within(far).queryByText("◐", { exact: false })).toBeNull();
+  });
+
   it("永恒画虚线框不画进度;缺起算写缺什么", async () => {
     renderPage();
     await screen.findByText("Soul p");

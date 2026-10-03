@@ -35,6 +35,7 @@ import {
   Quote,
   RadioMark,
   Screen,
+  SectionLabel,
   ScreenError,
   Skeleton,
   Txt,
@@ -309,9 +310,9 @@ export function NewApplicationScreen() {
           />
         </View>
         <View>
-          <Txt variant="section" style={styles.heading}>
+          <SectionLabel style={styles.heading}>
             {t("soul_app.applications.desired_form")}
-          </Txt>
+          </SectionLabel>
           <View accessibilityRole="radiogroup" style={[styles.forms, { backgroundColor: theme.hair }]}>
             {DESIRED_REBIRTH_FORMS.map((f) => (
               <FormCard key={f} form={f} selected={form === f} onPick={() => setForm(f)} />
@@ -546,17 +547,17 @@ export function ApplicationDetailScreen({ id, landed }: { id: string; landed?: b
         </LandingHighlight>
 
         <Block>
-          <Txt variant="section" style={styles.heading}>
+          <SectionLabel style={styles.heading}>
             {t("soul_app.detail.flow")}
-          </Txt>
+          </SectionLabel>
           <Flow steps={buildFlow(a)} />
         </Block>
 
         {a.statement ? (
           <Block>
-            <Txt variant="section" style={styles.headingTight}>
+            <SectionLabel style={styles.headingTight}>
               {t("soul_app.detail.statement")}
-            </Txt>
+            </SectionLabel>
             <Quote text={a.statement} />
           </Block>
         ) : null}
@@ -566,7 +567,7 @@ export function ApplicationDetailScreen({ id, landed }: { id: string; landed?: b
         {appealed ? (
           <Block style={{ backgroundColor: theme.s1 }} testID="first-rejection">
             <View style={styles.headingRow}>
-              <Txt variant="section">{t("soul_app.detail.first_rejection_reason")}</Txt>
+              <SectionLabel>{t("soul_app.detail.first_rejection_reason")}</SectionLabel>
               <Txt testID="first-rejection-at" variant="value" tone="subtle" style={styles.meta}>
                 {formatStamp(a.first_decided_at) ?? unrecorded}
               </Txt>
@@ -584,9 +585,9 @@ export function ApplicationDetailScreen({ id, landed }: { id: string; landed?: b
         {reason ? (
           <Block style={{ backgroundColor: theme.s1 }} testID="rejection">
             <View style={styles.headingRow}>
-              <Txt variant="section">
+              <SectionLabel>
                 {t(a.status === "APPEAL_REJECTED" ? "soul_app.detail.appeal_rejection_reason" : "soul_app.detail.rejection_reason")}
-              </Txt>
+              </SectionLabel>
               {a.decided_at ? (
                 <Txt variant="value" tone="subtle" style={styles.meta}>
                   {formatStamp(a.decided_at)}
@@ -599,9 +600,9 @@ export function ApplicationDetailScreen({ id, landed }: { id: string; landed?: b
 
         {a.appeal_statement ? (
           <Block>
-            <Txt variant="section" style={styles.headingTight}>
+            <SectionLabel style={styles.headingTight}>
               {t("soul_app.detail.appeal_statement")}
-            </Txt>
+            </SectionLabel>
             <Quote text={a.appeal_statement} tone="appeal" />
           </Block>
         ) : null}
@@ -609,7 +610,7 @@ export function ApplicationDetailScreen({ id, landed }: { id: string; landed?: b
         {a.can_appeal ? (
           <Block last testID="appeal" style={styles.appealBlock}>
             <View>
-              <Txt variant="section">{t("soul_app.detail.appeal")}</Txt>
+              <SectionLabel>{t("soul_app.detail.appeal")}</SectionLabel>
               <Txt variant="caption" tone="subtle" style={styles.hint}>
                 {residence ? t("soul_app.detail.appeal_hint_residing", { home: residence.home }) : t("soul_app.detail.appeal_hint")}
               </Txt>

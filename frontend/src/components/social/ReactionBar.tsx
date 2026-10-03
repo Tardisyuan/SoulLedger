@@ -10,10 +10,16 @@ import { useI18n } from "@/src/contexts/I18nContext";
  * so an officer and a soul read the same mark for the same reaction. The lamp
  * has no glyph there (it is drawn as an icon); here it is ◉, as 补足 C17 draws it.
  *
- * 规范 v2 补足 C17:五种对齐现有表态,**长明灯在末位**(`REACTIONS` 的顺序就是渲染顺序,
- * ReactionBar.test 钉住)。四种普通表态是 32 高的方角按钮、1px ink3 框;长明灯是胶囊、
- * 2px 长明灯色框 —— 圆角的例外里只有胶囊(A2),长明灯色不和警示共用。选中不靠颜色:
- * aria-pressed + 加粗,普通表态再加 s2 底与 ink 框,长明灯是实底块(「有」)。
+ * A5(v3 Post.dc):四种轻表态是 44 高的方角按钮;1px × 24 竖分隔之后,**长明灯单独一格**,
+ * Noto Serif SC 600(稿上写明;用 `font-title` 而不是 `font-serif`:后者是「引文」那一支,
+ * 拉丁字会落到 Source Serif 4),未点 = 1px ink 描边,
+ * 已点 = ink 实底 surface-1 字(反白)。v2 的胶囊 + 长明灯色框随 v3 撤掉。
+ * 选中不靠颜色:aria-pressed + 加粗,长明灯还换字(「点长明灯」→「长明灯已点」)。
+ * ≤ 768 轻表态只显示字形(名字留给读屏),长明灯换短字。
+ *
+ * 计数(`Post.reaction_counts`,五种各自的数):照 A5 稿「轻表态只计总数;长明灯单独一格,
+ * 不与其他四种并排计数」—— 右端「表态 N」是四种轻表态之和,长明灯的数写在它自己那一格里
+ * (有人点过才写)。没给 `counts`(评论)就退回 `totals.reactions`。
  */
 export const REACTIONS: {
   type: "LIKE" | "LOVE" | "RESPECT" | "SYMPATHY" | "ETERNAL_LIGHT";
@@ -27,12 +33,18 @@ export const REACTIONS: {
   { type: "ETERNAL_LIGHT", glyph: "◉", key: "soul_app.circle.react.eternal_light" },
 ];
 
+const LIGHT = REACTIONS.filter((r) => r.type !== "ETERNAL_LIGHT");
+
 interface ReactionBarProps {
   postId?: string;
   commentId?: string;
+  /** 帖子卡右端的「表态 N · 评论 N」;评论里不给。 */
+  totals?: { reactions: number; comments: number };
+  /** 五种表态各自的数(`Post.reaction_counts`)。 */
+  counts?: Record<(typeof REACTIONS)[number]["type"], number>;
 }
 
-export function ReactionBar({ postId, commentId }: ReactionBarProps) {
+export function ReactionBar({ postId, commentId, totals, counts }: ReactionBarProps) {
   const { user } = useTenant();
   const { t } = useI18n();
   const toggleReaction = useToggleReaction();
@@ -54,18 +66,16 @@ export function ReactionBar({ postId, commentId }: ReactionBarProps) {
     });
   };
 
+  const lit = myReaction === "ETERNAL_LIGHT";
+  const lamps = counts?.ETERNAL_LIGHT ?? 0;
+  const lightTotal = counts ? LIGHT.reduce((sum, r) => sum + (counts[r.type] ?? 0), 0) : totals?.reactions;
+  const base =
+    "inline-flex h-(--control-h-sm) min-w-(--control-h-sm) shrink-0 items-center justify-center gap-1 text-sm transition-colors duration-fast ease-standard disabled:cursor-not-allowed";
+
   return (
-    <div className="flex flex-wrap items-center gap-2 mt-2">
-      {REACTIONS.map(({ type, glyph, key }) => {
+    <div className="flex flex-wrap items-center gap-1">
+      {LIGHT.map(({ type, glyph, key }) => {
         const isActive = myReaction === type;
-        const lamp = type === "ETERNAL_LIGHT";
-        const look = lamp
-          ? isActive
-            ? "rounded-[9999px] border-2 border-[oklch(var(--color-lamp))] bg-[oklch(var(--color-lamp))] text-[oklch(var(--color-lamp-bg))] font-semibold"
-            : "rounded-[9999px] border-2 border-[oklch(var(--color-lamp))] text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))]"
-          : isActive
-            ? "border border-[oklch(var(--color-ink))] bg-[oklch(var(--color-surface-2))] text-[oklch(var(--color-ink))] font-semibold"
-            : "border border-[oklch(var(--color-ink-subtle))] text-[oklch(var(--color-ink-muted))] hover:bg-[oklch(var(--color-surface-2))] hover:text-[oklch(var(--color-ink))]";
         return (
           <button
             key={type}
@@ -74,14 +84,50 @@ export function ReactionBar({ postId, commentId }: ReactionBarProps) {
             disabled={toggleReaction.isPending}
             aria-pressed={isActive}
             data-reaction={type}
-            className={`inline-flex items-center gap-1 h-8 px-3 text-sm transition-colors duration-fast ease-standard disabled:cursor-not-allowed ${look}`}
-            title={type}
+            className={`${base} px-2 ${
+              isActive
+                ? "bg-[oklch(var(--color-surface-2))] font-semibold text-[oklch(var(--color-ink))]"
+                : "text-[oklch(var(--color-ink-muted))] hover:bg-[oklch(var(--color-surface-2))] hover:text-[oklch(var(--color-ink))]"
+            }`}
           >
-            {glyph && <span aria-hidden="true">{glyph}</span>}
-            {t(key)}
+            <span aria-hidden="true">{glyph}</span>
+            <span className="max-[768px]:sr-only">{t(key)}</span>
           </button>
         );
       })}
+      <span aria-hidden="true" className="mx-[6px] h-6 w-px bg-[oklch(var(--color-line))]" />
+      <button
+        type="button"
+        onClick={() => handleToggle("ETERNAL_LIGHT")}
+        disabled={toggleReaction.isPending}
+        aria-pressed={lit}
+        data-reaction="ETERNAL_LIGHT"
+        className={`${base} border border-[oklch(var(--color-ink))] px-[14px] font-title font-semibold ${
+          lit
+            ? "bg-[oklch(var(--color-ink))] text-[oklch(var(--color-surface-1))]"
+            : "text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))]"
+        }`}
+      >
+        <span aria-hidden="true">◉</span>
+        <span className="max-[768px]:hidden">{t(lit ? "social.lamp.lit" : "social.lamp.light")}</span>
+        <span className="min-[769px]:hidden">
+          {t(lit ? "social.lamp.lit_short" : "soul_app.circle.react.eternal_light")}
+        </span>
+        {lamps > 0 && (
+          <span data-testid="lamp-count" className="font-mono font-normal tabular-nums">
+            {lamps}
+          </span>
+        )}
+      </button>
+      {totals ? (
+        <span className="ml-auto text-xs text-[oklch(var(--color-ink-muted))]" data-testid="post-totals">
+          <span className="max-[768px]:sr-only">{t("social.reactions")} </span>
+          <span className="font-mono tabular-nums">{lightTotal}</span>
+          {" · "}
+          <span className="max-[768px]:sr-only">{t("social.comments")} </span>
+          <span className="font-mono tabular-nums">{totals.comments}</span>
+        </span>
+      ) : null}
     </div>
   );
 }

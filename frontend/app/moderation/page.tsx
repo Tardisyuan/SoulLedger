@@ -8,6 +8,8 @@ import {
   useSocialMutes,
 } from "@soulledger/core/hooks/useSocialModeration";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { usePlaque } from "@/src/components/plaque/Plaque";
+import { useHall } from "@/src/components/plaque/useHall";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
@@ -34,6 +36,7 @@ const SEGMENTS: Segment[] = ["reports", "words", "mutes", "handled"];
 
 function ModerationPageContent() {
   const { t } = useI18n();
+  usePlaque({ hall: useHall(t("plaque.office.rules")) });
   const { user } = useTenant();
   const [segment, setSegment] = useState<Segment>("reports");
 
@@ -72,7 +75,7 @@ function ModerationPageContent() {
                 aria-pressed={on}
                 onClick={() => setSegment(value)}
                 className={cn(
-                  "flex min-h-8 items-center gap-2 px-3 text-sm max-sm:min-h-11",
+                  "flex min-h-(--control-h-sm) items-center gap-2 px-3 text-sm",
                   on
                     ? "bg-[oklch(var(--color-ink))] text-[oklch(var(--color-canvas))]"
                     : "text-[oklch(var(--color-ink-muted))] hover:bg-[oklch(var(--color-surface-2))]"

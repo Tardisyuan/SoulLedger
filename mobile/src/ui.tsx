@@ -2,8 +2,9 @@
  * The soul app's primitives, per the design handoff "灵魂簿 App", restyled for
  * v2「朱印」(补足 A1 component states, A2 rules, A3 type):
  *
- *   radius 0 everywhere — only a pill (the lamp, a drawer handle) and a circle
- *   (a radio, an avatar) are round, and the focus ring follows its element;
+ *   radius 0 except v3's three (`radius` in theme.ts): an input 4, a dialog or sheet 8, and
+ *   the pill / circle (the lamp, a drawer handle, a radio, an avatar); the focus ring follows
+ *   its element;
  *   depth is 1px hairlines between two surfaces, never a shadow or elevation;
  *   pressed is a darker ground (A1: fills darken 24% toward black, ghosts take
  *   `hair`), never an Android ripple, whose colour cannot be held to contrast;
@@ -31,6 +32,7 @@ import {
   AccessibilityInfo,
   Animated,
   Easing,
+  KeyboardAvoidingView,
   Platform,
   Pressable,
   RefreshControl,
@@ -40,6 +42,7 @@ import {
   TextInput,
   View,
   type LayoutChangeEvent,
+  type ScrollViewProps,
   type StyleProp,
   type TextInputProps,
   type TextProps,
@@ -47,6 +50,7 @@ import {
   type ViewStyle,
   useWindowDimensions,
 } from "react-native";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Reanimated, { Easing as REasing, FadeOut, Keyframe } from "react-native-reanimated";
 import { SafeAreaView, type Edge } from "react-native-safe-area-context";
 
@@ -126,14 +130,22 @@ export function FadeIn({
  * smaller than v1's compact value-lg, so the step-down is gone.)
  */
 export const TYPE = {
-  display: { fontSize: 28, lineHeight: 36, fontFamily: family.ui[600] },
-  title: { fontSize: 20, lineHeight: 28, fontFamily: family.ui[600] },
+  /** v3 第一批: titles and display text in Noto Serif SC 600 (`family.title`); body and controls stay `ui`. */
+  display: { fontSize: 28, lineHeight: 36, fontFamily: family.title },
+  title: { fontSize: 20, lineHeight: 28, fontFamily: family.title },
   nav: { fontSize: 15, lineHeight: 20, fontFamily: family.ui[600], letterSpacing: 0.6 },
   body: { fontSize: 13, lineHeight: 20, fontFamily: family.ui[400] },
   bodyLg: { fontSize: 15, lineHeight: 24, fontFamily: family.ui[500] },
   label: { fontSize: 12, lineHeight: 18, fontFamily: family.ui[500], letterSpacing: 1 },
-  /** 补足 B11: a section's title, 15 / 600 on its 48pt row. */
+  /** A ledger row's title (v3 `.life-records article b`), 15 / 600 on its row. */
   section: { fontSize: 15, lineHeight: 24, fontFamily: family.ui[600] },
+  /**
+   * What a block of the page is — 11, upper case, always in `muted` (`SectionLabel`). Every
+   * section header and form-group label outside the ledger rows. The interface face, not mono:
+   * v3 第一批「区块标签：11 号，大写，界面字体（不用等宽）」 overrides the round-7 prototype's
+   * mono `.product-label`; the 0.08em tracking is the prototype's.
+   */
+  eyebrow: { fontSize: 11, lineHeight: 16, fontFamily: family.ui[500], letterSpacing: 0.88, textTransform: "uppercase" },
   caption: { fontSize: 12, lineHeight: 18, fontFamily: family.ui[400] },
   value: { fontSize: 13, lineHeight: 20, fontFamily: family.mono[400] },
   valueLg: { fontSize: 28, lineHeight: 36, fontFamily: family.mono[500] },
@@ -162,6 +174,15 @@ export function Txt({
 }: TextProps & { variant?: keyof typeof TYPE; tone?: Tone }) {
   const t = useTheme();
   return <Text {...rest} style={[TYPE[variant], { color: toneColor(t, tone) }, style]} />;
+}
+
+/** v3 `.product-label`: a block's name, in `muted` — never ink, never a colour. */
+export function SectionLabel({ children, ...rest }: Omit<Parameters<typeof Txt>[0], "variant" | "tone">) {
+  return (
+    <Txt variant="eyebrow" tone="muted" {...rest}>
+      {children}
+    </Txt>
+  );
 }
 
 /** Screen width and system text size → the handoff's three layout thresholds. */
@@ -196,26 +217,169 @@ export function Interp({ text, parts, ...props }: Parameters<typeof Txt>[0] & { 
 
 export const GUTTER = GUTTER_PT;
 
+/** v3 B2 App「下拉刷新」: released past 56pt, the scroller reloads. */
+export const PULL_REFRESH_PT = 56;
+/** A drag this far down from a list at its top is a pull; this far up, or across, it is the list's. */
+const PULL_SLOP_PT = 10;
+const PULL_EASING = Easing.bezier(0.2, 0.8, 0.2, 1);
+
+/** The OS screen reader (VoiceOver / TalkBack), live — `useReducedMotion`'s twin. */
+export function useScreenReaderEnabled(): boolean {
+  const [on, setOn] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    AccessibilityInfo.isScreenReaderEnabled()
+      .then((value) => alive && setOn(value))
+      .catch(() => {});
+    const sub = AccessibilityInfo.addEventListener("screenReaderChanged", setOn);
+    return () => {
+      alive = false;
+      sub?.remove();
+    };
+  }, []);
+  return on;
+}
+
+type PullScrollProps = Pick<ScrollViewProps, "refreshControl" | "bounces" | "overScrollMode" | "scrollEventThrottle" | "onScroll">;
+
 /**
- * Pull-to-refresh for a scroller: `Screen`'s own, or a list's that owns its
- * scrolling (a `FlatList` inside `<Screen scroll={false}>`).
- * The spinner belongs to a pull. A reload the app starts itself (tab refocus)
- * would otherwise open an empty band above the content on iOS (seen on the iPhone run).
+ * Pull-to-refresh for a scroller: `Screen`'s own, or a list's that owns its scrolling (a
+ * `FlatList` inside `<Screen scroll={false}>`). Spread `props` on the scroller and pass it
+ * through `frame`. One path on iOS and Android.
+ *
+ * v3 B2: no spinner. The content follows the finger down, at most 56; a release at 56 reloads
+ * and the content waits there, a static ↻ in the gap (v3: 印框旋转不使用), until the reload is
+ * done — what `onRefresh` returned settles, or else `refreshing` goes false — then goes back
+ * over 200ms on cubic-bezier(.2,.8,.2,1); a release short of 56 goes back the same way. While
+ * it waits nothing re-triggers it. Under reduce motion the content does not follow the finger:
+ * at 56 it stands at 56 with the ↻, short of it nothing, and nothing animates (v3: 仅显示静态刷新
+ * 指示). With a screen reader on, the system RefreshControl instead (both platforms): a screen
+ * reader's three-finger scroll reaches it, a drag gesture does not.
+ *
+ * v3 B4 allows only Animated + PanResponder in the App, and says nested-scroll contention needs
+ * a dependency. The user's decision of 2026-10-03 is the exception: pull-to-refresh and its
+ * scroll contention may use react-native-gesture-handler (already installed); the animation
+ * stays RN Animated, never Reanimated. A PanResponder cannot do it on Android: the scroll view
+ * takes the drag natively at touch slop, before a JS responder can claim it.
+ *
+ * The pull is a `Gesture.Pan` around the scroller, enabled only while the list is at its top,
+ * activating 10pt down and failing 10pt up or across; the scroller is a `Gesture.Native` that
+ * waits for that pan to fail. Not `manualActivation` + `onTouchesMove`: on the JS thread
+ * (`runOnJS`) its state manager calls Reanimated's `setGestureState`, which only acts inside a
+ * worklet (on the RN runtime it warns and does nothing) — hence the declarative offsets, with
+ * `enabled` following `onScroll`'s offset. The scroller neither bounces nor overscrolls: the
+ * pull is the only thing that moves the content past its top. The offset is set from JS on
+ * every move anyway, so the 200ms return runs on the JS driver too (one driver for one value).
  */
-export function usePullRefresh(refreshing: boolean | undefined, onRefresh: (() => void) | undefined) {
+export function usePullRefresh(
+  refreshing: boolean | undefined,
+  onRefresh: (() => unknown) | undefined
+): { props: PullScrollProps; frame: (scroller: ReactElement) => ReactElement } {
   const t = useTheme();
-  const [pulled, setPulled] = useState(false);
-  if (pulled && !refreshing) setPulled(false);
-  return onRefresh ? (
-    <RefreshControl
-      refreshing={pulled && !!refreshing}
-      onRefresh={() => {
-        setPulled(true);
-        onRefresh();
-      }}
-      tintColor={t.inkSubtle}
-    />
-  ) : undefined;
+  const reduced = useReducedMotion();
+  const reader = useScreenReaderEnabled();
+  const { pullRelease } = useReducedMotionDurations();
+  const [y] = useState(() => new Animated.Value(0));
+  const [atTop, setAtTop] = useState(true);
+  // "wait": held while `refreshing`; "promise": held until what onRefresh returned settles.
+  const [held, setHeld] = useState<false | "wait" | "promise">(false);
+  if (held === "wait" && !refreshing) setHeld(false);
+  // …and for at least `motion.pullMinHold` after the pull, even when the reload answers in 40ms
+  // (a local backend does): shorter, the hold is a one-frame flash that reads as "did not refresh".
+  const [minHeld, setMinHeld] = useState(false);
+  const holding = !!held || minHeld;
+  // While it refreshes the ↻ turns (user decision 2026-10-03: a still glyph during the hold read
+  // as "stuck"; this overrides v3 B2's "刷新指示不旋转"). Not under reduce motion.
+  const [spin] = useState(() => new Animated.Value(0));
+  useEffect(() => {
+    if (!holding || reduced || reader) return; // with a reader on, the system control shows instead
+    spin.setValue(0);
+    const loop = Animated.loop(
+      Animated.timing(spin, { toValue: 1, duration: motion.pullSpin, easing: Easing.linear, useNativeDriver: true })
+    );
+    loop.start();
+    return () => {
+      loop.stop();
+      spin.setValue(0);
+    };
+  }, [holding, reduced, reader, spin]);
+
+  const trigger = () => {
+    if (!onRefresh) return;
+    setMinHeld(true);
+    setTimeout(() => setMinHeld(false), motion.pullMinHold);
+    const result = onRefresh();
+    if (result && typeof (result as PromiseLike<unknown>).then === "function") {
+      setHeld("promise");
+      (result as PromiseLike<unknown>).then(
+        () => setHeld(false),
+        () => setHeld(false)
+      );
+    } else setHeld("wait");
+  };
+  const back = () => {
+    if (pullRelease) Animated.timing(y, { toValue: 0, duration: pullRelease, easing: PULL_EASING, useNativeDriver: false }).start();
+    else y.setValue(0);
+  };
+  // The reload is done: back from the 56 hold (only then — nothing moves on mount).
+  const wasHeld = useRef(false);
+  useEffect(() => {
+    if (holding || !wasHeld.current) {
+      wasHeld.current = holding;
+      return;
+    }
+    wasHeld.current = false;
+    if (pullRelease) Animated.timing(y, { toValue: 0, duration: pullRelease, easing: PULL_EASING, useNativeDriver: false }).start();
+    else y.setValue(0);
+  }, [holding, pullRelease, y]);
+
+  // Built every render: the detector keeps the native handler (same tag) and swaps in the new
+  // config and callbacks, so a re-render mid-drag does not drop the pull.
+  const pan = Gesture.Pan()
+    .withTestId("pull")
+    .runOnJS(true)
+    .enabled(!!onRefresh && atTop && !holding && !reader)
+    .activeOffsetY(PULL_SLOP_PT)
+    .failOffsetY(-PULL_SLOP_PT)
+    .failOffsetX([-PULL_SLOP_PT, PULL_SLOP_PT])
+    .onUpdate((e) => {
+      const d = Math.min(Math.max(e.translationY, 0), PULL_REFRESH_PT);
+      y.setValue(reduced ? (d >= PULL_REFRESH_PT ? PULL_REFRESH_PT : 0) : d);
+    })
+    .onEnd((e, ok) => (ok && e.translationY >= PULL_REFRESH_PT ? trigger() : back()));
+  const native = Gesture.Native().requireExternalGestureToFail(pan);
+
+  if (!onRefresh) return { props: {}, frame: (scroller) => scroller };
+  const opacity = y.interpolate({ inputRange: [0, PULL_REFRESH_PT], outputRange: [0, 1], extrapolate: "clamp" });
+  return {
+    props: reader
+      ? { refreshControl: <RefreshControl refreshing={holding} onRefresh={trigger} tintColor={t.inkSubtle} /> }
+      : { bounces: false, overScrollMode: "never", scrollEventThrottle: 16, onScroll: (e) => setAtTop(e.nativeEvent.contentOffset.y <= 0) },
+    frame: (scroller) => (
+      <GestureDetector gesture={pan}>
+        <View style={styles.fill} collapsable={false}>
+          {reader ? null : (
+            <Animated.View testID="pull-indicator" pointerEvents="none" style={[styles.pullIndicator, { opacity }]} importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
+              <Animated.Text
+                testID="pull-glyph"
+                style={[styles.pullGlyph, { color: t.inkSubtle, transform: [{ rotate: spin.interpolate({ inputRange: [0, 1], outputRange: ["0deg", "360deg"] }) }] }]}
+              >
+                ↻
+              </Animated.Text>
+            </Animated.View>
+          )}
+          <Animated.View testID="pull-content" style={[styles.fill, { transform: [{ translateY: y }] }]}>
+            <GestureDetector gesture={native}>{scroller}</GestureDetector>
+          </Animated.View>
+        </View>
+      </GestureDetector>
+    ),
+  };
+}
+
+/** Both a caller's onScroll and the pull's, on one scroller. */
+function both<E>(a: ((e: E) => void) | undefined, b: ((e: E) => void) | undefined) {
+  return a && b ? (e: E) => (a(e), b(e)) : (a ?? b);
 }
 
 export function Screen({
@@ -226,18 +390,21 @@ export function Screen({
   edges = ["left", "right", "bottom"],
   testID,
   scrollRef,
+  onScroll,
 }: {
   children: ReactNode;
   refreshing?: boolean;
-  onRefresh?: () => void;
+  onRefresh?: () => unknown;
   scroll?: boolean;
   edges?: Edge[];
   testID?: string;
   /** For a screen that scrolls itself to a block (a push landing, 受刑 1d). */
   scrollRef?: Ref<ScrollView>;
+  /** The scroll offset, for a header that compacts as the page moves under it (v3 life band). */
+  onScroll?: (y: number) => void;
 }) {
   const t = useTheme();
-  const refreshControl = usePullRefresh(refreshing, onRefresh);
+  const pull = usePullRefresh(refreshing, onRefresh);
   // When the system text size changes while a screen is open, iOS re-sizes the
   // glyphs but Yoga keeps the old line boxes, and text is clipped (seen on the
   // iPhone run). Remounting the content at a new scale re-measures every line.
@@ -250,14 +417,23 @@ export function Screen({
       style={[styles.fill, { backgroundColor: t.s0 }]}
     >
       {scroll ? (
-        <ScrollView
-          ref={scrollRef}
-          contentContainerStyle={styles.grow}
-          keyboardShouldPersistTaps="handled"
-          refreshControl={refreshControl}
-        >
-          {children}
-        </ScrollView>
+        // The keyboard covers the lower half of the screen; without this a focused field low on
+        // the page (登录的密码框) sits under it. Android is edge-to-edge (SDK 35+), where
+        // `adjustResize` no longer shrinks the window, so both platforms pad by the keyboard.
+        <KeyboardAvoidingView style={styles.fill} behavior="padding">
+        {pull.frame(
+          <ScrollView
+            ref={scrollRef}
+            contentContainerStyle={styles.grow}
+            keyboardShouldPersistTaps="handled"
+            {...pull.props}
+            onScroll={both(onScroll && ((e) => onScroll(e.nativeEvent.contentOffset.y)), pull.props.onScroll)}
+            scrollEventThrottle={onScroll || pull.props.onScroll ? 16 : undefined}
+          >
+            {children}
+          </ScrollView>
+        )}
+        </KeyboardAvoidingView>
       ) : (
         <View style={styles.fill}>{children}</View>
       )}
@@ -322,10 +498,16 @@ export function Section({
   onLayout,
   children,
   testID,
+  index,
 }: {
   title: string;
   count?: string;
   countTestID?: string;
+  /**
+   * v3's ledger row (life tab, 01–06): the number before the title, a ＋ that turns 45° when
+   * open, and the body on the canvas behind a 3pt ink rule, growing over `sectionGrow`.
+   */
+  index?: number;
   open?: boolean;
   onToggle?: () => void;
   highlighted?: boolean;
@@ -335,12 +517,32 @@ export function Section({
 }) {
   const t = useTheme();
   const { gutter } = useLayout();
-  const { sectionIn, sectionOut } = useReducedMotionDurations();
+  const { sectionIn, sectionOut, sectionGrow } = useReducedMotionDurations();
   const [toggled, setToggled] = useState(false);
   const pad = { paddingHorizontal: gutter };
-  const header = (
+  const ledger = index !== undefined;
+  const header = ledger ? (
     <>
-      <Txt variant="section">{title}</Txt>
+      <Txt testID={testID ? `${testID}-index` : undefined} variant="value" tone="subtle" style={styles.ledgerIndex}>
+        {String(index).padStart(2, "0")}
+      </Txt>
+      <Txt variant="section" style={styles.fill}>
+        {title}
+      </Txt>
+      {count ? (
+        <Txt testID={countTestID} variant="value" tone="subtle" style={styles.count}>
+          {count}
+        </Txt>
+      ) : null}
+      {onToggle ? (
+        <Txt testID={testID ? `${testID}-plus` : undefined} tone="subtle" style={[styles.ledgerPlus, open && styles.ledgerPlusOpen]}>
+          ＋
+        </Txt>
+      ) : null}
+    </>
+  ) : (
+    <>
+      <SectionLabel>{title}</SectionLabel>
       {count ? (
         <Txt testID={countTestID} variant="value" tone="subtle" style={styles.count}>
           {count}
@@ -359,7 +561,7 @@ export function Section({
     <View
       testID={testID}
       onLayout={onLayout}
-      style={[{ borderBottomWidth: 1, borderBottomColor: t.hair }, highlighted && { backgroundColor: t.s1 }]}
+      style={[{ borderBottomWidth: 1, borderBottomColor: t.hair }, (highlighted || ledger) && { backgroundColor: t.s1 }]}
     >
       {highlighted ? (
         <View testID={testID ? `${testID}-rule` : undefined} pointerEvents="none" style={[styles.sectionRule, { backgroundColor: t.ink }]} />
@@ -373,19 +575,56 @@ export function Section({
             setToggled(true);
             onToggle();
           }}
-          style={({ pressed }) => [styles.sectionHeader, pad, pressed && styles.pressed]}
+          style={({ pressed }) => [styles.sectionHeader, pad, ledger && styles.ledgerHeader, pressed && styles.pressed]}
         >
           {header}
         </Pressable>
       ) : (
-        <View style={[styles.sectionHeader, pad]}>{header}</View>
+        <View style={[styles.sectionHeader, pad, ledger && styles.ledgerHeader]}>{header}</View>
       )}
-      {open ? (
+      {open && ledger ? (
+        <Grow ms={toggled ? sectionGrow : 0}>
+          <View testID={testID ? `${testID}-body` : undefined} style={[styles.ledgerBody, { backgroundColor: t.s0, borderLeftColor: t.ink }]}>
+            {children}
+          </View>
+        </Grow>
+      ) : open ? (
         <Reanimated.View testID={testID ? `${testID}-body` : undefined} entering={motion.entering} exiting={motion.exiting} style={[styles.sectionBody, pad]}>
           {children}
         </Reanimated.View>
       ) : null}
     </View>
+  );
+}
+
+/**
+ * v3 分节展开: a body that grows from nothing to its own height with its opacity, over `ms`
+ * (RN Animated — the height cannot go to the native driver). It measures itself first (at
+ * height 0, clipped), then lets go of the height once there, so content that loads later
+ * is never cut. `ms` 0 (arrived open, or reduce motion): no wrapper at all.
+ */
+export function Grow({ ms, children }: { ms: number; children: ReactNode }) {
+  const [height] = useState(() => new Animated.Value(0));
+  const [opacity] = useState(() => new Animated.Value(ms ? 0 : 1));
+  const [natural, setNatural] = useState<number | null>(null);
+  const [done, setDone] = useState(!ms);
+  // Reduce motion is answered asynchronously: a body mounted before the answer lets go at once.
+  if (!ms && !done) setDone(true);
+  useEffect(() => {
+    if (natural === null || done) return;
+    const run = Animated.parallel([
+      Animated.timing(height, { toValue: natural, duration: ms, easing: Easing.bezier(0.2, 0.8, 0.2, 1), useNativeDriver: false }),
+      Animated.timing(opacity, { toValue: 1, duration: ms, useNativeDriver: false }),
+    ]);
+    run.start(({ finished }) => finished && setDone(true));
+    return () => run.stop();
+  }, [natural, done, height, opacity, ms]);
+  // One tree shape before and after: letting go drops the style, not the wrappers — returning the
+  // bare children here remounted them (and whatever they held) the moment the growth ended.
+  return (
+    <Animated.View testID={done ? undefined : "grow"} style={done ? undefined : { height, opacity, overflow: "hidden" }}>
+      <View onLayout={done ? undefined : (e) => natural === null && setNatural(e.nativeEvent.layout.height)}>{children}</View>
+    </Animated.View>
   );
 }
 
@@ -628,7 +867,7 @@ export function Button({
   const look = inert
     ? { bg: t.s2, border: t.s2, ink: t.inkSubtle, pressed: t.s2 }
     : kind === "primary"
-      ? { bg: t.plaque, border: t.plaque, ink: t.onPlaque, pressed: shade(t.plaque) }
+      ? { bg: t.plaqueFill, border: t.plaqueFill, ink: t.onPlaque, pressed: shade(t.plaqueFill) }
       : kind === "danger"
         ? { bg: t.negStrong, border: t.negStrong, ink: "#FFFFFF", pressed: shade(t.negStrong) }
         : { bg: "transparent", border: t.inkSubtle, ink: t.ink, pressed: t.hair };
@@ -1057,24 +1296,33 @@ export const styles = StyleSheet.create({
   center: { textAlign: "center" },
   pressed: { opacity: 0.8 },
   noSpacing: { letterSpacing: 0 },
+  pullIndicator: { position: "absolute", top: 0, left: 0, right: 0, height: PULL_REFRESH_PT, alignItems: "center", justifyContent: "center" },
+  pullGlyph: { fontFamily: family.glyph, fontSize: 20, lineHeight: 24 },
   block: { paddingHorizontal: GUTTER, paddingVertical: GUTTER },
   count: { marginLeft: space[3], fontSize: 11, lineHeight: 16 },
   sectionRule: { position: "absolute", left: 0, top: 0, bottom: 0, width: 3 },
   // B11: a section's title row is 48 high.
   sectionHeader: { minHeight: 48, flexDirection: "row", alignItems: "center", paddingHorizontal: GUTTER, paddingVertical: space[3] },
   sectionBody: { paddingHorizontal: GUTTER, paddingBottom: space[4] },
+  /** v3 .life-records: a 60pt row — number, title, count, ＋. */
+  ledgerHeader: { minHeight: 60 },
+  ledgerIndex: { width: 30, fontSize: 11, lineHeight: 16 },
+  ledgerPlus: { width: 24, textAlign: "right", fontSize: 15, lineHeight: 20 },
+  ledgerPlusOpen: { transform: [{ rotate: "45deg" }] },
+  ledgerBody: { marginHorizontal: space[3], marginBottom: space[3], paddingHorizontal: space[4], paddingVertical: space[3], borderLeftWidth: 3 },
   empty: { alignItems: "center", gap: space[2], paddingVertical: space[4] },
   emptyArt: { alignSelf: "center", marginBottom: space[2] },
   divider: { flexDirection: "row", alignItems: "center", gap: space[3] },
   field: { gap: space[2] },
   labelRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: space[3] },
-  ring: { margin: -4, padding: 2, borderWidth: 2, borderRadius: radius.none },
-  inputBox: { flexDirection: "row", borderWidth: 1, minHeight: 48 },
+  // The ring sits 4pt outside the field, so its corner is the field's plus 4.
+  ring: { margin: -4, padding: 2, borderWidth: 2, borderRadius: radius.control + 4 },
+  inputBox: { flexDirection: "row", borderWidth: 1, minHeight: 48, borderRadius: radius.control, overflow: "hidden" },
   input: { flex: 1, minHeight: 46, paddingHorizontal: space[3], fontSize: 15 },
   monoInput: { fontSize: 15, letterSpacing: 2.2 },
   multiline: { minHeight: 128, paddingVertical: space[3], fontSize: 15, lineHeight: 24, textAlignVertical: "top" },
   reveal: { width: 52, alignItems: "center", justifyContent: "center", borderLeftWidth: 1 },
-  revealRow: { minHeight: 60, alignItems: "center", justifyContent: "center", borderWidth: 1 },
+  revealRow: { minHeight: 60, alignItems: "center", justifyContent: "center", borderWidth: 1, borderRadius: radius.control },
   iconRow: { flexDirection: "row", gap: space[2], alignItems: "flex-start" },
   iconNudge: { marginTop: 4 },
   buttonWrap: { gap: space[3] },

@@ -4,6 +4,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useQuery, useQueries } from "@tanstack/react-query";
 import { permApi, Permission, Role, RolePermissions } from "@soulledger/core/api";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { usePlaque } from "@/src/components/plaque/Plaque";
+import { useHall } from "@/src/components/plaque/useHall";
 import { RequireAdmin, RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
 import { usePermissions } from "@/src/hooks/usePermissions";
@@ -87,6 +89,17 @@ export default function PermissionsPage() {
   });
 
   const roleNames = useMemo(() => (rolesQuery.data ?? []).map((r) => r.name), [rolesQuery.data]);
+
+  // 身份带(A6):题「权限」,右栏「N 角色 · N 项权限」,两个数都等两张表载入后才写。
+  const hall = useHall(t("plaque.office.rules"));
+  usePlaque({
+    title: t("plaque.permissions"),
+    hall,
+    meta:
+      rolesQuery.data && permsQuery.data
+        ? t("plaque.permissions_meta", { roles: String(rolesQuery.data.length), perms: String(permsQuery.data.length) })
+        : undefined,
+  });
 
   const rolePermQueries = useQueries({
     queries: roleNames.map((name) => ({
@@ -329,7 +342,7 @@ export default function PermissionsPage() {
                 aria-pressed={on}
                 onClick={() => setSegment(s.value)}
                 className={cn(
-                  "flex min-h-8 items-center gap-2 px-3 text-sm max-sm:min-h-11",
+                  "flex min-h-(--control-h-sm) items-center gap-2 px-3 text-sm",
                   on
                     ? "bg-[oklch(var(--color-ink))] text-[oklch(var(--color-canvas))]"
                     : "text-[oklch(var(--color-ink-muted))] hover:bg-[oklch(var(--color-surface-2))]"
@@ -375,6 +388,7 @@ export default function PermissionsPage() {
                 permsById={permsById}
               />
 
+              {/* Design A6:筛选框 280 宽 + 「只看差异」,图例靠右在同一行。 */}
               <div className="mb-3 flex flex-wrap items-center gap-3">
                 <input
                   type="text"
@@ -382,11 +396,14 @@ export default function PermissionsPage() {
                   onChange={(e) => setFilterText(e.target.value)}
                   placeholder={t("permissions.matrix.filter_placeholder")}
                   aria-label={t("permissions.matrix.filter_placeholder")}
-                  className={cn(fieldControl({ size: "md" }), "min-w-[200px] flex-1")}
+                  className={cn(fieldControl({ size: "sm" }), "min-w-0 flex-1 md:w-[280px] md:flex-none")}
                 />
                 <FilterChipToggle pressed={onlyDifferences} onPressedChange={setOnlyDifferences}>
                   {t("permissions.matrix.only_differences")}
                 </FilterChipToggle>
+                <div className="basis-full md:ml-auto md:basis-auto">
+                  <PermLegend />
+                </div>
               </div>
 
               <PermissionMatrixTable
@@ -403,7 +420,6 @@ export default function PermissionsPage() {
                 mobileRole={mobileRole}
                 onMobileRoleChange={setMobileRole}
               />
-              <PermLegend />
             </PageSection>
 
             <UnsavedBar

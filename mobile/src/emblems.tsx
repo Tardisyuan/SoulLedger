@@ -9,7 +9,7 @@
  * turn to mud at small sizes.
  */
 import type { ReactNode } from "react";
-import Svg, { Circle, Path, Rect } from "react-native-svg";
+import Svg, { Circle, Defs, LinearGradient, Path, Rect, Stop } from "react-native-svg";
 
 import type { CivKey } from "./theme";
 
@@ -181,6 +181,97 @@ export function Hero({
     </Svg>
   );
 }
+
+/**
+ * v3 `.life-pattern` (and the web's `.identity-pattern`, frontend/app/globals.css): one pattern per
+ * civilization in the band's white at 15%, strong on the left and gone by `fade` of the width —
+ * the CSS `mask-image` is a stroke gradient here. Each is that CSS gradient's geometry, drawn:
+ *   cn  a grid: 1pt lines every 18                               (fades out by 72%)
+ *   eu  1pt rings every 24 from r 23, centred at (16%, 110%)     (76%)
+ *   eg  1pt verticals every 17                                    (66%)
+ *   gr  `linear-gradient(135deg, … 43% 46% …) 0 0 / 34px 34px`: in each 34pt tile one 1.44pt
+ *       stroke on x + y = 30.26 — so the diagonals break 3.7pt short of each tile's corner, as on the web (74%)
+ * The neutral skin has none (as on the web). Drawn for a `width` × `height` box from the top-left;
+ * the band clips it, so its height can be the tallest the band gets.
+ */
+export const BAND_PATTERN_FADE: Record<Exclude<CivKey, "neutral">, number> = { cn: 0.72, eu: 0.76, eg: 0.66, gr: 0.74 };
+
+export function bandPatternShapes(civ: Exclude<CivKey, "neutral">, width: number, height: number, ringBase: number): { d: string; strokeWidth: number } {
+  const range = (step: number, to: number, from = 0) => Array.from({ length: Math.max(0, Math.floor((to - from) / step) + 1) }, (_, i) => from + i * step);
+  if (civ === "cn") {
+    return { strokeWidth: 1, d: [...range(18, width).map((x) => `M${x + 0.5} 0V${height}`), ...range(18, height).map((y) => `M0 ${y + 0.5}H${width}`)].join("") };
+  }
+  if (civ === "eg") return { strokeWidth: 1, d: range(17, width).map((x) => `M${x + 0.5} 0V${height}`).join("") };
+  if (civ === "eu") {
+    const cx = width * 0.16;
+    const cy = ringBase * 1.1;
+    const far = Math.hypot(Math.max(cx, width - cx), cy);
+    const arc = (r: number) => `M${cx - r} ${cy}a${r} ${r} 0 1 0 ${2 * r} 0a${r} ${r} 0 1 0 ${-2 * r} 0`;
+    return { strokeWidth: 1, d: range(24, far, 23.5).map(arc).join("") };
+  }
+  const k = 34 * 0.89;
+  const tiles: string[] = [];
+  for (const x of range(34, width)) for (const y of range(34, height)) tiles.push(`M${x} ${y + k}L${x + k} ${y}`);
+  return { strokeWidth: 34 * Math.SQRT2 * 0.03, d: tiles.join("") };
+}
+
+export function BandPattern({ civ, color, width, height, ringBase, testID }: { civ: CivKey; color: string; width: number; height: number; ringBase: number; testID?: string }) {
+  if (civ === "neutral") return null;
+  const { d, strokeWidth } = bandPatternShapes(civ, width, height, ringBase);
+  const fade = BAND_PATTERN_FADE[civ];
+  return (
+    <Svg testID={testID} pointerEvents="none" width={width} height={height} style={patternStyle} opacity={0.15}>
+      <Defs>
+        <LinearGradient id="band-fade" x1={0} y1={0} x2={width} y2={0} gradientUnits="userSpaceOnUse">
+          <Stop offset={0} stopColor={color} stopOpacity={1} />
+          <Stop offset={fade} stopColor={color} stopOpacity={0} />
+        </LinearGradient>
+      </Defs>
+      <Path d={d} fill="none" stroke="url(#band-fade)" strokeWidth={strokeWidth} />
+    </Svg>
+  );
+}
+
+const patternStyle = { position: "absolute", left: 0, top: 0 } as const;
+
+/**
+ * v3 `CivilizationMotif context="stage"` (App.tsx; the web's `CivMotif`, JudgmentDeskStage.tsx):
+ * each civilization's abstract figure stretched over the whole 「你现在在哪」 block, behind it, in
+ * the civilization's colour at 9% (`.motif-stage`) — under 10%, never carrying meaning. Lines are
+ * 2 wide; the hall's four nodes and 埃及's pivot are filled. The neutral skin has none.
+ */
+const MOTIF: Record<Exclude<CivKey, "neutral">, { lines: string[]; nodes?: { x: number; y: number; s: number }[]; pivot?: boolean }> = {
+  cn: {
+    lines: ["M300 0v520M255 38h90v90h-90zM270 161h60v60h-60zM242 259h116v116H242zM278 412h44v44h-44z", "M210 83h180M225 191h150M195 317h210M240 434h120"],
+    nodes: [
+      { x: 292, y: 75, s: 16 },
+      { x: 292, y: 183, s: 16 },
+      { x: 288, y: 305, s: 24 },
+      { x: 292, y: 426, s: 16 },
+    ],
+  },
+  eu: { lines: ["M110 20a190 120 0 0 0 380 0M135 92a165 105 0 0 0 330 0M163 160a137 88 0 0 0 274 0M194 224a106 68 0 0 0 212 0M225 281a75 48 0 0 0 150 0M254 332a46 30 0 0 0 92 0M300 356v164"] },
+  eg: { lines: ["M300 28v464M95 260h410M130 260l-55 125h110L130 260Zm340 0-55 125h110L470 260Z", "M112 222v76m18-76v76m340-76v76m18-76v76M245 492h110"], pivot: true },
+  gr: { lines: ["M276-10c85 74-68 143 18 218 56 49-10 82 6 116", "M300 324c-11 57-88 71-117 139M300 324c19 61 101 70 135 139M183 463c-7 17-9 38-7 57M435 463c9 18 12 37 11 57", "M260 45c57 48-42 93 15 142"] },
+};
+
+export const STAGE_MOTIF_OPACITY = 0.09;
+
+export function StageMotif({ civ, color, testID }: { civ: CivKey; color: string; testID?: string }) {
+  if (civ === "neutral") return null;
+  const m = MOTIF[civ];
+  return (
+    <Svg testID={testID} pointerEvents="none" width="100%" height="100%" viewBox="0 0 600 520" preserveAspectRatio="none" style={motifStyle} opacity={STAGE_MOTIF_OPACITY}>
+      {m.lines.map((d) => (
+        <Path key={d} d={d} fill="none" stroke={color} strokeWidth={2} />
+      ))}
+      {m.nodes?.map((n) => <Rect key={n.y} x={n.x} y={n.y} width={n.s} height={n.s} fill={color} />)}
+      {m.pivot ? <Circle cx={300} cy={260} r={22} fill={color} /> : null}
+    </Svg>
+  );
+}
+
+const motifStyle = { position: "absolute", left: 0, top: 0, right: 0, bottom: 0 } as const;
 
 /** The ledger crossed out: whole-screen "could not reach the ledger". */
 export function LedgerUnreachable({ size, stroke }: { size: number; stroke: string }) {

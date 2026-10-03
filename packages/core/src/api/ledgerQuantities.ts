@@ -153,6 +153,8 @@ export const RECORD_QUANTITIES: Record<NumericFields<LedgerRecord>, QuantityKind
   effective_weight: "magnitude",
   years_elapsed: "duration",
   decay_factor: "ratio",
+  // How many occasions one row covers (souls/0028). A count of occasions, not a weight.
+  occurrence_count: "count",
 };
 
 /**

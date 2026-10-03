@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useSentencePlans } from "@soulledger/core/hooks/useSentencePlans";
 import { PAGE_SIZE } from "@soulledger/core/api/client";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { usePlaque } from "@/src/components/plaque/Plaque";
+import { useHall } from "@/src/components/plaque/useHall";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
@@ -32,6 +34,7 @@ const MUTED = "text-xs text-[oklch(var(--color-ink-subtle))]";
 
 function SentenceRequestsContent() {
   const { t, formatDateTime } = useI18n();
+  usePlaque({ hall: useHall(t("plaque.office.trials")) });
   const { user } = useTenant();
   const [page, setPage] = useState(1);
   const list = useSentencePlans({ pending_request: true, page });
@@ -75,7 +78,8 @@ function SentenceRequestsContent() {
                     </span>
                   </p>
                   <RequestChanges request={request} plan={plan} />
-                  {request.reason && <p className="text-sm text-[oklch(var(--color-ink-muted))]">{request.reason}</p>}
+                  {/* 请求理由是人写的话:衬线(DESIGN.md「Things a person said」)。 */}
+                  {request.reason && <p className="font-serif text-sm text-[oklch(var(--color-ink-muted))]">{request.reason}</p>}
                   <SentenceRequestActions plan={plan} request={request} />
                 </li>
               );

@@ -4,12 +4,13 @@ import type { Locale } from "@soulledger/core/config/locale";
 import { useFocusEffect, useNavigation, useRoute, type NavigationProp, type RouteProp } from "@react-navigation/native";
 import * as Clipboard from "expo-clipboard";
 import { platform } from "@soulledger/core/platform";
-import { Fragment, useCallback, useContext, useEffect, useReducer, useRef, useState, type ReactNode } from "react";
-import { Pressable, ScrollView, StyleSheet, View } from "react-native";
-import Svg, { Line } from "react-native-svg";
+import { useCallback, useContext, useEffect, useReducer, useRef, useState, type ReactNode } from "react";
+import { Animated, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { Emblem, Icon } from "../emblems";
-import { family } from "../fonts";
+import { AskGlyph, useAssist } from "../assist";
+import { BandPattern, Emblem, Icon, StageMotif } from "../emblems";
+import { family, titleFamily } from "../fonts";
 import { useToast } from "../feedback";
 import { useI18n } from "../i18n";
 import {
@@ -17,7 +18,9 @@ import {
   LIFE_PATH,
   LIFE_SECTIONS,
   SOUL_STATE_BADGES,
+  badgeSpec,
   formatStamp,
+  grouped,
   lexiconKey,
   lifePathIndex,
   lifeSectionsOpen,
@@ -28,6 +31,7 @@ import {
   type Residence,
 } from "../rules";
 import { SessionContext, useSession } from "../session";
+import { OutlineSeal } from "../seal";
 import { sealedTheme, type CivKey } from "../theme";
 import {
   Block,
@@ -43,18 +47,22 @@ import {
   Hairline,
   Screen,
   Section,
+  SectionLabel,
   SectionError,
   Skeleton,
   ThemeContext,
   Txt,
   enumText,
+  shade,
   useReducedMotion,
+  useReducedMotionDurations,
   useReloadOnRefocus,
   useRemote,
   useLayout,
   useTheme,
 } from "../ui";
 import type { AppStackParams, LifeParams } from "./applications";
+import { useCurrentHall } from "./letters";
 import { SentenceSection, useSentencePlan, type SentenceLanding } from "./sentence";
 
 /**
@@ -135,8 +143,11 @@ export function LifeSections({
   onOpenApplication,
   lex,
   sentence,
+  numbered,
 }: {
   life: MeLife;
+  /** v3: the current life's rows carry their ledger number (01–04 here; 05 受刑, 06 前世 are the caller's). */
+  numbered?: boolean;
   /** 补足 B11: the current life's sentence section, fifth — after applications. Past lives have none. */
   sentence?: ReactNode;
   /** The lexicon: the soul's HOME civilization. */
@@ -152,6 +163,7 @@ export function LifeSections({
   const count = (n: number) => (n ? String(n) : tr("soul_app.common.empty"));
   const section = (key: SectionKey) => ({
     testID: `section-${key}`,
+    index: numbered ? LIFE_SECTIONS.indexOf(key) + 1 : undefined,
     open: sealed ? true : (open?.[key] ?? true),
     onToggle: sealed || !onToggle ? undefined : () => onToggle(key),
   });
@@ -262,113 +274,207 @@ export function LifeSections({
   );
 }
 
-function Identity({ me, residence }: { me: MeProfile; residence: Residence }) {
+/** v3 .life-identity: compacts once the page has moved 68pt under it, opens again near the top. */
+const BAND_COMPACT_AT = 68;
+const BAND_OPEN_AT = 20;
+/** pt below the status bar, at 1× text: full (12 + meta 16 + 12 + 64pt seal + 12 — the seal is the row's tallest) and compact (one row, 30pt seal). */
+const BAND_FULL = 116;
+const BAND_SMALL = 48;
+/** The soul code's line (`codeText`) and what its copy target adds to reach 44: 28pt of padding. */
+const CODE_LINE = 16;
+const CODE_REACH = 44 - CODE_LINE;
+/** Compact, the room between the code's foot and the band's clipped edge: (48 − (18 + 4 + 16)) / 2. */
+const CODE_FOOT_SMALL = 5;
+
+/**
+ * v3's identity band, in place of the navigator's plaque on this tab: the civilization's
+ * colour (one of its four places) with the seal, the soul's name and code, and — as on every
+ * tab's plaque — the account icon. Compact on scroll: one 48pt row, the height moving over
+ * `bandCompact` (instant under reduce motion). At ≥ 1.7× text it never compacts and takes the
+ * height its words need.
+ */
+function LifeBand({ me, compact, onAccount }: { me: MeProfile; compact: boolean; onAccount: () => void }) {
   const t = useTheme();
   const { t: tr, enumLabel } = useI18n();
-  const { gutter } = useLayout();
-  const civName = (civilization: string | null | undefined) => enumText(enumLabel("souls.civilizations", civilization), tr);
+  const { stack } = useLayout();
+  const { fontScale, width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const hall = useCurrentHall();
   const toast = useToast();
+  const { bandCompact } = useReducedMotionDurations();
+  const small = compact && !stack;
+  const k = Math.max(1, fontScale);
+  const [height] = useState(() => new Animated.Value(BAND_FULL * k));
+  useEffect(() => {
+    Animated.timing(height, { toValue: (small ? BAND_SMALL : BAND_FULL) * k, duration: bandCompact, useNativeDriver: false }).start();
+  }, [small, k, bandCompact, height]);
+  const on = t.onPlaque;
+  const meta = [enumText(enumLabel("souls.civilizations", me.civilization), tr), tr("soul_app.life.cycle", { cycle: String(me.account.cycle + 1) }), hall]
+    .filter(Boolean)
+    .join(" · ");
   const copy = () =>
     Clipboard.setStringAsync(me.soul_code).then(
       () => toast(tr("soul_app.life.code_copied")),
       () => toast(tr("soul_app.life.code_copy_failed"), "failure")
     );
   return (
-    <View testID="identity" style={[styles.identity, { paddingHorizontal: gutter, borderBottomColor: t.hair }]}>
-      <View style={styles.civRow}>
-        <Emblem civ={t.civ} size={15} stroke={t.inkMuted} />
-        <View style={styles.shrink}>
-          <EnumValue namespace="souls.civilizations" value={me.civilization} tone="muted" variant="label" />
-        </View>
-        <View style={[styles.tick, { backgroundColor: t.hair2 }]} />
-        <Txt variant="label" tone="subtle">
-          {tr("soul_app.life.cycle", { cycle: String(me.account.cycle + 1) })}
-        </Txt>
-      </View>
-      {/* Handoff 3b: the residence mark is a 1px DASHED box in ink-muted — never a colour
-          block, so it cannot be read as a state badge — shown only while is_residing. */}
-      {residence.residing ? (
-        <>
-          <View style={[styles.residenceBox, { borderColor: t.hair2 }]}>
-            <Txt testID="residence" variant="label" tone="muted" style={styles.residence}>
-              {tr("soul_app.life.residing", {
-                current: civName(me.civilization),
-                home: civName(me.home_civilization),
-              })}
-            </Txt>
-          </View>
-          <Txt testID="residence-note" variant="caption" tone="subtle" style={styles.residenceNote}>
-            {tr("soul_app.life.residing_note")}
+    <View testID="plaque" style={{ backgroundColor: t.band, paddingTop: insets.top }}>
+      <Animated.View testID="identity" style={[styles.band, stack ? null : { height }, small && styles.bandSmall]}>
+        {/* Drawn for the band at its tallest (large text stacks it), clipped by the band as it compacts. */}
+        <BandPattern testID="band-pattern" civ={t.civ} color={on} width={width} height={BAND_FULL * Math.max(k, 3)} ringBase={BAND_FULL * k} />
+        {small ? null : (
+          <Txt testID="identity-meta" numberOfLines={stack ? undefined : 1} style={[styles.bandMeta, { color: on }]}>
+            {meta}
           </Txt>
-        </>
-      ) : null}
-      <View style={styles.nameRow}>
-        <Txt variant="display" style={styles.shrink}>
-          {me.name}
-        </Txt>
-        {me.birth_name && me.birth_name !== me.name ? (
-          <Txt tone="subtle">{tr("soul_app.life.birth_name", { name: me.birth_name })}</Txt>
-        ) : null}
-      </View>
-      <Pressable
-        testID="copy-soul-code"
-        accessibilityRole="button"
-        accessibilityLabel={`${tr("soul_app.life.soul_code")} ${me.soul_code}`}
-        accessibilityHint={tr("soul_app.life.copy_code")}
-        onPress={copy}
-        style={styles.code}
-        hitSlop={8}
-      >
-        <Txt variant="value" tone="muted" style={styles.codeText}>
-          {me.soul_code}
-        </Txt>
-        <Icon name="copy" size={13} color={t.inkSubtle} strokeWidth={1.2} />
-      </Pressable>
-      <View style={styles.state}>
-        <EnumBadge
-          testID="soul-state"
-          namespace={SOUL_STATES}
-          table={SOUL_STATE_BADGES}
-          value={me.current_state}
-          label={me.current_state === "JUDGING" ? tr(lexiconKey(residence.home, "judging")) : undefined}
-        />
-      </View>
+        )}
+        <View style={styles.bandRow}>
+          <OutlineSeal civ={t.civ} size={small ? 30 : 64} color={on} glyphs={me.tenant.seal_glyphs} label={tr("seal.aria", { court: hall })} testID="plaque-seal" />
+          <View testID="band-text" style={styles.bandText}>
+            <View style={styles.nameRow}>
+              <Txt testID="soul-name" accessibilityRole="header" numberOfLines={stack ? undefined : 1} style={[small ? styles.nameSmall : styles.name, { color: on, fontFamily: titleFamily(me.name) }]}>
+                {me.name}
+              </Txt>
+              {!small && me.birth_name && me.birth_name !== me.name ? (
+                <Txt variant="caption" numberOfLines={stack ? undefined : 1} style={[styles.shrink, { color: on }]}>
+                  {tr("soul_app.life.birth_name", { name: me.birth_name })}
+                </Txt>
+              ) : null}
+            </View>
+            <Pressable
+              testID="copy-soul-code"
+              accessibilityRole="button"
+              accessibilityLabel={`${tr("soul_app.life.soul_code")} ${me.soul_code}`}
+              accessibilityHint={tr("soul_app.life.copy_code")}
+              onPress={copy}
+              // The row is 16pt (the code's line). It used to be `hitSlop={12}`: 40 at best, and less
+              // on Android, which routes a touch outside a parent only into its children's laid-out
+              // boxes (TouchTargetHelper's overflow inset) — never into a slop — and this row is
+              // the bottom of `bandText`. The 44pt target is the Pressable's own box instead:
+              // padding grown, margins pulled back by the same, so nothing moves (`codeTarget*`).
+              // Compact, mostly upward: the band clips (overflow hidden) 5pt under the code.
+              style={[styles.code, small ? styles.codeTargetSmall : styles.codeTarget]}
+            >
+              <Txt variant="value" style={[styles.codeText, { color: on }]}>
+                {me.soul_code}
+              </Txt>
+              <Icon name="copy" size={13} color={on} strokeWidth={1.2} />
+            </Pressable>
+          </View>
+          <Pressable
+            testID="header-account"
+            accessibilityRole="button"
+            accessibilityLabel={tr("soul_app.settings.title")}
+            onPress={onAccount}
+            style={({ pressed }) => [styles.account, pressed && { backgroundColor: `${on}22` }]}
+          >
+            <Icon name="person" size={18} color={on} strokeWidth={1.2} />
+          </Pressable>
+        </View>
+      </Animated.View>
     </View>
   );
 }
 
 /**
- * 补足 B11: the balance — merit less demerit, in mono 40, in ink: never coloured (a colour
- * would make it a verdict). The two sides the server sends sit beside it, in the soul's
- * home lexicon (Egypt: feather side / heart side). Under it, the life's path.
+ * Handoff 3b: the residence mark is a 1px DASHED box in ink-muted — never a colour block, so
+ * it cannot be read as a state badge — shown only while is_residing. Under the band in v3.
  */
-function Balance({ me, lex, planState }: { me: MeProfile; lex: CivKey; planState: string | undefined }) {
+function ResidenceNote({ me }: { me: MeProfile }) {
+  const t = useTheme();
+  const { t: tr, enumLabel } = useI18n();
+  const { gutter } = useLayout();
+  const civName = (civilization: string | null | undefined) => enumText(enumLabel("souls.civilizations", civilization), tr);
+  return (
+    <View style={[styles.residenceWrap, { paddingHorizontal: gutter, borderBottomColor: t.hair }]}>
+      <View style={[styles.residenceBox, { borderColor: t.inkMuted }]}>
+        <Txt testID="residence" variant="label" tone="muted" style={styles.residence}>
+          {tr("soul_app.life.residing", { current: civName(me.civilization), home: civName(me.home_civilization) })}
+        </Txt>
+      </View>
+      <Txt testID="residence-note" variant="caption" tone="subtle" style={styles.residenceNote}>
+        {tr("soul_app.life.residing_note")}
+      </Txt>
+    </View>
+  );
+}
+
+const two = (n: number) => String(n).padStart(2, "0");
+
+/**
+ * v3 .life-now 「你现在在哪」: the soul's state, glyph and word (never colour alone), then —
+ * when the state has a place on the road — 「本世阶段 02 / 05」 and the five stages.
+ */
+function Now({ me, lex, planState }: { me: MeProfile; lex: CivKey; planState: string | undefined }) {
+  const t = useTheme();
+  const { t: tr, enumLabel } = useI18n();
+  const { gutter } = useLayout();
+  // EnumBadge's reading: a member the bundles cannot name keeps the unknown shape and its raw value.
+  const d = enumLabel(SOUL_STATES, me.current_state);
+  const spec = badgeSpec(SOUL_STATE_BADGES, d.raw, d.state === "known");
+  const word = spec.unknown
+    ? `${tr(d.state === "missing" ? "common.value.unrecorded" : "common.value.unrecognized")}${d.raw ? ` (${d.raw})` : ""}`
+    : me.current_state === "JUDGING"
+      ? tr(lexiconKey(lex, "judging"))
+      : enumText(d, tr);
+  const at = lifePathIndex(me.current_state, planState);
+  return (
+    <View testID="life-now" style={[styles.now, { paddingHorizontal: gutter, borderBottomColor: t.hair }]}>
+      <StageMotif testID="stage-motif" civ={t.civ} color={t.plaque} />
+      <Txt variant="caption" tone="muted">
+        {tr("soul_app.life.here")}
+      </Txt>
+      <View testID="soul-state" accessible accessibilityLabel={word} style={styles.nowState}>
+        <Txt testID="soul-state-glyph" style={styles.nowGlyph}>
+          {spec.glyph}
+        </Txt>
+        <Txt testID="soul-state-word" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.5} style={styles.nowWord}>
+          {word}
+        </Txt>
+      </View>
+      {at === null ? null : (
+        <>
+          <Txt testID="life-stage" variant="value" tone="muted" style={styles.small}>
+            {tr("soul_app.life.stage", { at: two(at + 1), total: two(LIFE_PATH.length) })}
+          </Txt>
+          <LifePath at={at} lex={lex} />
+        </>
+      )}
+    </View>
+  );
+}
+
+/**
+ * v3 .life-balance: merit less demerit, the one number the page is for, in mono on an ink
+ * block — never in a status colour (a colour would make it a verdict). The two sides the
+ * server sends beside it, in the soul's home lexicon (Egypt: feather side / heart side).
+ */
+function Balance({ me, lex }: { me: MeProfile; lex: CivKey }) {
   const t = useTheme();
   const { t: tr } = useI18n();
   const { gutter } = useLayout();
+  const on = { color: t.s1 };
   const side = (word: "merit" | "demerit", value: number) => (
     <View testID={`score-${word}`} style={styles.side}>
-      <Txt variant="caption" tone="subtle">
+      <Txt variant="caption" style={[on, styles.dim]}>
         {tr(lexiconKey(lex, word))}
       </Txt>
-      <Txt variant="value" tone="muted">
-        {String(value)}
+      <Txt variant="value" style={on}>
+        {grouped(value)}
       </Txt>
     </View>
   );
   return (
-    <View testID="balance" style={[styles.balance, { paddingHorizontal: gutter, borderBottomColor: t.hair }]}>
-      <View style={styles.balanceHead}>
-        <Txt variant="caption" tone="subtle" style={styles.fill}>
-          {tr("souls.detail.balance")}
+    <View testID="balance" style={[styles.balance, { paddingHorizontal: gutter, backgroundColor: t.ink }]}>
+      <View style={styles.fill}>
+        <Txt variant="caption" style={[on, styles.dim]}>
+          {tr("soul_app.life.balance")}
         </Txt>
-        {side("merit", me.merit_score)}
-        {side("demerit", me.demerit_score)}
+        <Txt testID="balance-value" numberOfLines={1} adjustsFontSizeToFit style={[styles.balanceValue, on]}>
+          {signedBalance(me.merit_score, me.demerit_score)}
+        </Txt>
       </View>
-      <Txt testID="balance-value" style={[styles.balanceValue, { color: t.ink }]}>
-        {signedBalance(me.merit_score, me.demerit_score)}
-      </Txt>
-      <LifePath state={me.current_state} planState={planState} lex={lex} />
+      {side("merit", me.merit_score)}
+      {side("demerit", me.demerit_score)}
     </View>
   );
 }
@@ -382,54 +488,74 @@ const PATH_WORD: Record<LifePathStep, string> = {
 };
 
 /**
- * B11's 行程缩略: the steps passed as solid ink dots on a solid line, where the soul is as
- * a 12pt dot in 匾色, what is ahead hollow on a dashed line. No state to place it (LOST,
- * SETTLED, unknown): nothing is drawn (`lifePathIndex`).
+ * v3 .life-stages: five 30pt circles on one line. Passed: solid ink with ✓; here: ink inside a
+ * canvas ring and an ink outline, its word in ink 600; ahead: an outline and its number. v3
+ * paints "here" in the civilization's colour; this page keeps that colour to the band, the seal
+ * and the ask button (user rule), so "here" is told by its ring, its number and its weight.
  */
-function LifePath({ state, planState, lex }: { state: string; planState: string | undefined; lex: CivKey }) {
+function LifePath({ at, lex }: { at: number; lex: CivKey }) {
   const t = useTheme();
   const { t: tr } = useI18n();
-  const at = lifePathIndex(state, planState);
-  if (at === null) return null;
   const word = (step: LifePathStep) => tr(step === "JUDGING" ? lexiconKey(lex, "judging") : PATH_WORD[step]);
-  const here = word(LIFE_PATH[at]);
+  const span = 100 / LIFE_PATH.length;
   return (
-    <View testID="life-path" accessible accessibilityLabel={`${tr("souls.detail.ledger.route_title")} · ${here}`} style={styles.path}>
-      <View style={styles.pathRow}>
-        {LIFE_PATH.map((step, i) => (
-          <Fragment key={step}>
-            <View
-              testID={`path-${step}${i < at ? "-done" : i === at ? "-here" : "-ahead"}`}
-              style={
-                i < at
-                  ? [styles.dot, { backgroundColor: t.ink }]
-                  : i === at
-                    ? [styles.dotHere, { backgroundColor: t.plaque }]
-                    : [styles.dot, styles.dotAhead, { borderColor: t.inkSubtle }]
-              }
-            />
-            {i < LIFE_PATH.length - 1 ? (
-              // Walked: a plain 2pt bar, not an SVG line. The SVG's percentage width rounded
-              // differently from its neighbours on some screen widths and the last walked
-              // segment sat a pixel low (user screenshot, 2026-09-30). Ahead stays SVG: RN
-              // has no dependable one-sided dashed border.
-              i < at ? (
-                <View testID={`path-seg-${i}`} style={[styles.segment, { backgroundColor: t.ink }]} />
-              ) : (
-                <View testID={`path-seg-${i}`} style={styles.segment}>
-                  <Svg width="100%" height={2}>
-                    <Line x1={0} y1={1} x2="100%" y2={1} stroke={t.inkSubtle} strokeWidth={2} strokeDasharray="4 3" />
-                  </Svg>
-                </View>
-              )
-            ) : null}
-          </Fragment>
-        ))}
-      </View>
-      <Txt variant="caption" tone="muted">
-        {here}
-      </Txt>
+    <View testID="life-path" accessible accessibilityLabel={`${tr("souls.detail.ledger.route_title")} · ${word(LIFE_PATH[at])}`} style={styles.path}>
+      {LIFE_PATH.slice(1).map((step, i) => (
+        <View
+          key={step}
+          testID={`path-seg-${i}`}
+          style={[styles.segment, { left: `${span * (i + 0.5)}%`, width: `${span}%`, backgroundColor: i < at ? t.ink : t.hair }]}
+        />
+      ))}
+      {LIFE_PATH.map((step, i) => {
+        const where = i < at ? "done" : i === at ? "here" : "ahead";
+        return (
+          <View key={step} style={styles.stage}>
+            <View style={[styles.stageRing, where === "here" && { borderColor: t.ink }]}>
+              <View
+                testID={`path-${step}-${where}`}
+                style={[
+                  styles.stageDot,
+                  where === "ahead"
+                    ? { backgroundColor: t.s0, borderColor: t.hair }
+                    : where === "here"
+                      ? [styles.stageHere, { backgroundColor: t.ink, borderColor: t.s0 }]
+                      : { backgroundColor: t.ink, borderColor: t.ink },
+                ]}
+              >
+                <Txt style={[styles.stageMark, where === "done" && styles.stageGlyph, { color: where === "ahead" ? t.inkMuted : t.s0 }]}>{where === "done" ? "✓" : String(i + 1)}</Txt>
+              </View>
+            </View>
+            <Txt
+              testID={`path-${step}-word`}
+              numberOfLines={2}
+              style={[styles.stageWord, { color: where === "here" ? t.ink : t.inkMuted, fontFamily: family.ui[where === "here" ? 600 : 400] }]}
+            >
+              {word(step)}
+            </Txt>
+          </View>
+        );
+      })}
     </View>
+  );
+}
+
+/** v3 「问一问」: a 48pt circle in the civilization's colour (the page's primary action), over its foot. */
+function AskButton() {
+  const t = useTheme();
+  const { t: tr } = useI18n();
+  const assist = useAssist();
+  if (!assist?.visible) return null;
+  return (
+    <Pressable
+      testID="assist-entry"
+      accessibilityRole="button"
+      accessibilityLabel={tr("soul_app.assist.entry_label")}
+      onPress={() => assist.open("life")}
+      style={({ pressed }) => [styles.ask, { backgroundColor: pressed ? shade(t.plaqueFill) : t.plaqueFill }]}
+    >
+      <AskGlyph color={t.onPlaque} />
+    </Pressable>
   );
 }
 
@@ -536,6 +662,9 @@ export function MyLifeScreen() {
   const soulCode = state.status === "signedIn" ? state.profile.soul_code : "";
   const memo = `${LIFE_OPEN_PREFIX}${soulCode}`;
   const [touched, setTouched] = useState(() => readTouched(memo));
+  const [compact, setCompact] = useState(false);
+  const theme = useTheme();
+  const { gutter } = useLayout();
   if (state.status !== "signedIn") return null;
   const me = state.profile;
   const planState = sentence.data?.state;
@@ -554,59 +683,74 @@ export function MyLifeScreen() {
   };
 
   return (
-    <Screen
-      refreshing={life.loading && !!life.data}
-      onRefresh={refresh}
-      edges={["left", "right"]}
-      testID="profile-card"
-      scrollRef={scroll.ref}
-    >
-      <Homecoming me={me} />
-      <Identity me={me} residence={residence} />
-      <Balance me={me} lex={residence.home} planState={planState} />
-      <Block>
-        <DataRows>
-          <DataRow label={t("soul_app.life.birth")} mono>
-            {formatHistoricalDate(me.birth_date, locale) ?? unrecorded}
-          </DataRow>
-          <DataRow label={t("soul_app.life.death")} mono>
-            {formatHistoricalDate(me.death_date, locale) ?? unrecorded}
-          </DataRow>
-          <DataRow label={t("soul_app.life.origin")}>{me.origin_location || unrecorded}</DataRow>
-        </DataRows>
-      </Block>
-      {life.data ? (
-        <FadeIn onLayout={(e) => scroll.place("sections", e.nativeEvent.layout.y)}>
-          <LifeSections
-            life={life.data}
-            lex={residence.home}
-            open={open}
-            onToggle={toggle}
-            onOpenApplication={(id) => navigation.navigate("ApplicationDetail", { id })}
-            sentence={
-              <SentenceSection
-                remote={sentence}
-                landing={landing}
-                open={open.sentence}
-                onToggle={() => toggle("sentence")}
-                onPlaced={(y) => scroll.place("section", y)}
-              />
-            }
-          />
-        </FadeIn>
-      ) : life.error ? (
-        <SectionError testID="life-error" onRetry={life.reload} />
-      ) : (
+    <View testID="life" style={[styles.fill, { backgroundColor: theme.s0 }]}>
+      <LifeBand me={me} compact={compact} onAccount={() => navigation.navigate("Settings")} />
+      <Screen
+        refreshing={life.loading && !!life.data}
+        onRefresh={refresh}
+        edges={["left", "right"]}
+        testID="profile-card"
+        scrollRef={scroll.ref}
+        onScroll={(y) => setCompact((c) => (c ? y > BAND_OPEN_AT : y > BAND_COMPACT_AT))}
+      >
+        <Homecoming me={me} />
+        {residence.residing ? <ResidenceNote me={me} /> : null}
+        <Now me={me} lex={residence.home} planState={planState} />
+        <Balance me={me} lex={residence.home} />
         <Block>
-          <Skeleton lines={4} testID="life-loading" />
+          <DataRows>
+            <DataRow label={t("soul_app.life.birth")} mono>
+              {formatHistoricalDate(me.birth_date, locale) ?? unrecorded}
+            </DataRow>
+            <DataRow label={t("soul_app.life.death")} mono>
+              {formatHistoricalDate(me.death_date, locale) ?? unrecorded}
+            </DataRow>
+            <DataRow label={t("soul_app.life.origin")}>{me.origin_location || unrecorded}</DataRow>
+          </DataRows>
         </Block>
-      )}
-      <PastLivesSection lex={residence.home} reloadKey={refreshes} open={open.past_lives} onToggle={() => toggle("past_lives")} />
-      {/* Round 4: the language switch and sign-out that sat here moved to the settings page. */}
-      <View style={styles.foot}>
-        <EmblemDivider />
-      </View>
-    </Screen>
+        {/* v3 .life-records: 「本世账目」 and its six numbered rows. */}
+        <View testID="ledger-head" style={[styles.ledgerHead, { paddingHorizontal: gutter, backgroundColor: theme.s1, borderBottomColor: theme.hair }]}>
+          <SectionLabel style={styles.fill}>{t("soul_app.life.ledger")}</SectionLabel>
+          <Txt variant="caption" tone="subtle">
+            {t("soul_app.life.ledger_hint")}
+          </Txt>
+        </View>
+        {life.data ? (
+          <FadeIn onLayout={(e) => scroll.place("sections", e.nativeEvent.layout.y)}>
+            <LifeSections
+              life={life.data}
+              lex={residence.home}
+              numbered
+              open={open}
+              onToggle={toggle}
+              onOpenApplication={(id) => navigation.navigate("ApplicationDetail", { id })}
+              sentence={
+                <SentenceSection
+                  index={5}
+                  remote={sentence}
+                  landing={landing}
+                  open={open.sentence}
+                  onToggle={() => toggle("sentence")}
+                  onPlaced={(y) => scroll.place("section", y)}
+                />
+              }
+            />
+          </FadeIn>
+        ) : life.error ? (
+          <SectionError testID="life-error" onRetry={life.reload} />
+        ) : (
+          <Block>
+            <Skeleton lines={4} testID="life-loading" />
+          </Block>
+        )}
+        <PastLivesSection index={6} lex={residence.home} reloadKey={refreshes} open={open.past_lives} onToggle={() => toggle("past_lives")} />
+        {/* Round 4: the language switch and sign-out that sat here moved to the settings page. */}
+        <View style={styles.foot}>
+          <EmblemDivider />
+        </View>
+      </Screen>
+      <AskButton />
+    </View>
   );
 }
 
@@ -672,9 +816,12 @@ export function PastLivesSection({
   reloadKey,
   open: expanded,
   onToggle,
+  index,
 }: {
   lex: CivKey;
   reloadKey: number;
+  /** v3: its number in the life tab's ledger (06). */
+  index?: number;
   open: boolean;
   onToggle: () => void;
 }) {
@@ -689,6 +836,7 @@ export function PastLivesSection({
   return (
     <Section
       testID="section-past_lives"
+      index={index}
       title={tr("soul_app.past_lives.title")}
       count={lives.data ? (lives.data.length ? String(lives.data.length) : tr("soul_app.common.empty")) : undefined}
       open={expanded}
@@ -743,31 +891,57 @@ const styles = StyleSheet.create({
   apps: { gap: 12 },
   appCard: { flexDirection: "row", alignItems: "center", gap: 12, borderWidth: 1, padding: 16 },
   appSummary: { gap: 8 },
-  identity: { overflow: "hidden", paddingHorizontal: GUTTER, paddingTop: 24, paddingBottom: GUTTER, borderBottomWidth: 1 },
-  civRow: { flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" },
-  tick: { width: 1, height: 11 },
-  nameRow: { flexDirection: "row", alignItems: "baseline", flexWrap: "wrap", columnGap: 12, marginTop: 12 },
-  code: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 8, alignSelf: "flex-start" },
-  codeText: { fontSize: 15, letterSpacing: 2.2, fontFamily: family.mono[500] },
-  state: { marginTop: 16 },
-  balance: { paddingTop: 16, paddingBottom: 16, borderBottomWidth: 1 },
-  balanceHead: { flexDirection: "row", alignItems: "baseline", gap: 12, flexWrap: "wrap" },
-  side: { flexDirection: "row", alignItems: "baseline", gap: 4 },
-  /** B11: the balance at 40 / 48 in mono — the one number the page is for. */
-  balanceValue: { fontFamily: family.mono[400], fontSize: 40, lineHeight: 48 },
-  path: { marginTop: 12, gap: 8 },
-  pathRow: { flexDirection: "row", alignItems: "center" },
-  dot: { width: 8, height: 8 },
-  dotHere: { width: 12, height: 12 },
-  dotAhead: { borderWidth: 1.5, borderStyle: "dashed" },
-  segment: { flex: 1, height: 2 },
-  residenceBox: { alignSelf: "flex-start", marginTop: 12, borderWidth: 1, borderStyle: "dashed", paddingHorizontal: 8, paddingVertical: 4 },
+  /** v3 .life-identity: 116pt (meta line, seal row) → 48pt (one row) on scroll. */
+  band: { overflow: "hidden", paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12, gap: 12 },
+  bandSmall: { paddingVertical: 0, paddingLeft: 12, paddingRight: 4, justifyContent: "center" },
+  bandMeta: { fontFamily: family.mono[400], fontSize: 11, lineHeight: 16, letterSpacing: 0.6 },
+  bandRow: { flexDirection: "row", alignItems: "center", gap: 12 },
+  bandText: { flex: 1, minWidth: 0, gap: 4 },
+  nameRow: { flexDirection: "row", alignItems: "baseline", columnGap: 8 },
+  // The soul's name: v3's title serif (Noto Serif SC 600) via `titleFamily(me.name)`.
+  name: { fontSize: 20, lineHeight: 28, flexShrink: 1 },
+  nameSmall: { fontSize: 13, lineHeight: 18, flexShrink: 1 },
+  code: { flexDirection: "row", alignItems: "center", gap: 8, alignSelf: "flex-start" },
+  /** 16 + 14 + 14 = 44. Full, the band has room below the row for the even split. */
+  codeTarget: { paddingVertical: CODE_REACH / 2, marginVertical: -CODE_REACH / 2 },
+  /** 16 + 23 + 5 = 44, kept inside the 48pt compact band (its code row ends 5pt above the edge). */
+  codeTargetSmall: { paddingTop: CODE_REACH - CODE_FOOT_SMALL, paddingBottom: CODE_FOOT_SMALL, marginTop: -(CODE_REACH - CODE_FOOT_SMALL), marginBottom: -CODE_FOOT_SMALL },
+  codeText: { fontSize: 11, lineHeight: CODE_LINE, letterSpacing: 1.6, fontFamily: family.mono[500] },
+  account: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
+  /** v3 .life-now. */
+  now: { paddingTop: 24, paddingBottom: 24, alignItems: "center", gap: 8, borderBottomWidth: 1, overflow: "hidden" },
+  /** v3 .life-current: the glyph over the word, both 56; the word in the title serif (Noto Serif SC 600). One line, shrinking to fit (a long English state). */
+  nowState: { alignSelf: "stretch", alignItems: "center", marginTop: 8 },
+  nowGlyph: { fontSize: 56, lineHeight: 64 },
+  nowWord: { fontFamily: family.title, fontSize: 56, lineHeight: 64, textAlign: "center" },
+  small: { fontSize: 11, lineHeight: 16 },
+  path: { alignSelf: "stretch", flexDirection: "row", marginTop: 16 },
+  /** The line behind the circles, centre to centre: walked in ink, ahead in the hairline. */
+  segment: { position: "absolute", top: 14, height: 2 },
+  stage: { flex: 1, alignItems: "center", gap: 8 },
+  stageRing: { width: 30, height: 30, borderRadius: 999, borderWidth: 1, borderColor: "transparent", alignItems: "center", justifyContent: "center" },
+  stageDot: { width: 30, height: 30, borderRadius: 999, borderWidth: 1, alignItems: "center", justifyContent: "center" },
+  stageHere: { width: 28, height: 28, borderWidth: 4 },
+  stageMark: { fontFamily: family.mono[400], fontSize: 11, lineHeight: 14 },
+  /** ✓ from the status-glyph face: IBM Plex Mono has none, so the OS fell back to a √-like mark. */
+  stageGlyph: { fontFamily: family.glyph },
+  stageWord: { fontSize: 11, lineHeight: 16, textAlign: "center" },
+  /** v3 .life-balance: an ink block, the number in mono 56. */
+  balance: { minHeight: 120, flexDirection: "row", alignItems: "center", gap: 24, paddingVertical: 24 },
+  side: { alignItems: "flex-start", gap: 4 },
+  dim: { opacity: 0.72 },
+  balanceValue: { fontFamily: family.mono[500], fontSize: 56, lineHeight: 64, letterSpacing: -2 },
+  ledgerHead: { minHeight: 56, flexDirection: "row", alignItems: "center", gap: 12, borderBottomWidth: 1 },
+  ask: { position: "absolute", right: 16, bottom: 16, width: 48, height: 48, borderRadius: 999, alignItems: "center", justifyContent: "center" },
+  residenceWrap: { paddingTop: 12, paddingBottom: 12, borderBottomWidth: 1 },
+  residenceBox: { alignSelf: "flex-start", borderWidth: 1, borderStyle: "dashed", paddingHorizontal: 8, paddingVertical: 4 },
   residence: { fontSize: 11, lineHeight: 15, letterSpacing: 0.4 },
   residenceNote: { marginTop: 8 },
   homecomingWrap: { paddingTop: GUTTER, paddingBottom: GUTTER, borderBottomWidth: 1 },
   homecoming: { borderWidth: 1, borderLeftWidth: 3, padding: 16, gap: 12 },
   homecomingHead: { flexDirection: "row", alignItems: "center", gap: 8 },
-  foot: { paddingTop: 24, paddingBottom: 32 },
+  /** Room under the divider for the ask button, which floats at the right over the foot. */
+  foot: { paddingTop: 24, paddingBottom: 48 },
   readOnly: { flexDirection: "row", gap: 8, paddingHorizontal: 16, paddingVertical: 12 },
   pastList: { borderWidth: 1 },
   nudge: { marginTop: 4 },

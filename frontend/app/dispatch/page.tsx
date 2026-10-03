@@ -5,6 +5,8 @@ import Link from "next/link";
 import { dispatchApi, type DispatchRecord } from "@soulledger/core/api";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { usePlaque } from "@/src/components/plaque/Plaque";
+import { useCourtOffice, useHall } from "@/src/components/plaque/useHall";
 import { PageSection } from "@/components/ui/page-section";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
 import { MissingValue } from "@/src/components/ui/DomainValue";
@@ -28,9 +30,11 @@ import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
  */
 const STATUS_TONES: Record<string, BadgeTone> = {
   DRAFT: "neutral",
-  PROPOSED: "warning",
+  // 规范 v3:警示色只给「可撤回的风险」,危险色只给错误。等待审批不是风险,被驳回不是错误 ——
+  // 两者都是请求走到的一个状态,所以是中性;文字与字形照样把它们分开。
+  PROPOSED: "neutral",
   APPROVED: "success",
-  REJECTED: "error",
+  REJECTED: "neutral",
   EXECUTED: "info",
   RETURNED: "success",
   CANCELLED: "neutral",
@@ -38,6 +42,7 @@ const STATUS_TONES: Record<string, BadgeTone> = {
 
 function DispatchPageContent() {
   const { t } = useI18n();
+  usePlaque({ hall: useHall(useCourtOffice()) });
   const { user } = useTenant();
 
   // `isError` on both. The `= []` defaults mean a failed request lands on the
@@ -165,7 +170,9 @@ function DispatchTable({
       keyExtractor={(d) => String(d.id)}
       renderRow={(d) => (
         <>
-          <td className="px-3 py-2 font-medium text-[oklch(var(--color-ink))]">
+          {/* 393 px 下自动布局的表把中文名挤成一字一行;名字、路由、时间、状态都不折行,
+              表在自己的 `overflow-x-auto` 里横滚。理由一行截断,完整的在 title 里。 */}
+          <td className="px-3 py-2 font-medium whitespace-nowrap text-[oklch(var(--color-ink))]">
             {/* `soul_name` is in the same response and was going unread;
                 the card printed the primary key instead. */}
             {/* A draft (only its author is ever sent one) reopens in the form,
@@ -177,19 +184,19 @@ function DispatchTable({
               {d.soul_name || <MissingValue kind="unrecorded" />}
             </Link>
             {d.reason && (
-              <p className="text-xs font-normal text-[oklch(var(--color-ink-muted))]">{d.reason}</p>
+              <p className="max-w-80 truncate text-xs font-normal text-[oklch(var(--color-ink-muted))]" title={d.reason}>{d.reason}</p>
             )}
           </td>
-          <td className="px-3 py-2 font-mono text-xs text-[oklch(var(--color-ink-muted))]">
+          <td className="px-3 py-2 font-mono text-xs whitespace-nowrap text-[oklch(var(--color-ink-muted))]">
             {d.source_tenant_code} → {d.target_tenant_code ?? <MissingValue kind="unrecorded" />}
           </td>
           {/* `proposed_at` was in the response and unread, so the queue could
               not be triaged by age. Mono + tabular-nums so the timestamps line
               up digit for digit down the column. */}
-          <td className="px-3 py-2 font-mono text-xs tabular-nums text-[oklch(var(--color-ink-subtle))]">
+          <td className="px-3 py-2 font-mono text-xs tabular-nums whitespace-nowrap text-[oklch(var(--color-ink-subtle))]">
             {d.proposed_at ? formatDateTime(d.proposed_at) : <MissingValue kind="unrecorded" />}
           </td>
-          <td className="px-3 py-2">
+          <td className="px-3 py-2 whitespace-nowrap">
             <StatusBadge namespace="dispatch.states" value={d.status} tone={STATUS_TONES[d.status] ?? "neutral"} />
           </td>
         </>

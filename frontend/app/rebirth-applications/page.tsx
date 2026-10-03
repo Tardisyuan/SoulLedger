@@ -8,6 +8,8 @@ import { PAGE_SIZE, type OfficerRebirthApplication } from "@soulledger/core/api"
 import { soulAccountKeys } from "@soulledger/core/query_keys";
 import { useRebirthApplications } from "@soulledger/core/hooks/useSoulAccounts";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { usePlaque } from "@/src/components/plaque/Plaque";
+import { useCourtOffice, useHall } from "@/src/components/plaque/useHall";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
 import { PageShell } from "@/src/components/ui/PageShell";
@@ -28,6 +30,7 @@ const ROW_GRID = "md:grid md:grid-cols-[minmax(0,2fr)_minmax(0,0.6fr)_minmax(0,1
 
 function RebirthApplicationsContent() {
   const { t, formatDateTime } = useI18n();
+  usePlaque({ hall: useHall(useCourtOffice()) });
   const queryClient = useQueryClient();
   const [status, setStatus] = useState("");
   const [page, setPage] = useState(1);
@@ -56,7 +59,7 @@ function RebirthApplicationsContent() {
     />
   );
 
-  const label = "md:hidden font-mono text-2xs text-[oklch(var(--color-ink-subtle))]";
+  const label = "md:hidden text-2xs text-[oklch(var(--color-ink-muted))]";
 
   return (
     <PageShell
@@ -76,7 +79,9 @@ function RebirthApplicationsContent() {
         </Button>
       }
       filters={
-        <div role="group" aria-label={t("soul_accounts.rebirth.filters.label")} className="flex flex-wrap gap-2">
+        /* 不换行:筛选栏是定高 64 的一行(`PageShell` 的 `h-16` + 横滚),换行的第二排在 393 px
+           下被裁掉一半、压在表头上。放不下就在栏里横滚。 */
+        <div role="group" aria-label={t("soul_accounts.rebirth.filters.label")} className="flex shrink-0 gap-2 [&>*]:shrink-0">
           {REBIRTH_FILTERS.map((value) => (
             /* 筛选签(规范 v1 §2),单选,aria-pressed 照旧;「全部」是其中一枚。 */
             <FilterChipToggle
@@ -106,11 +111,12 @@ function RebirthApplicationsContent() {
           : undefined
       }
     >
-      {/* 账页(规范 v1 §2):不装框;表头 11 px 等宽,下接区块边界线,行与行之间是行线。 */}
+      {/* 规范 v3 列表(审判队列同一种表):表头 44、11 px 界面字体,行最小 64,行与行之间是行线。
+          窄于 md 不是表,是一叠卡片(每格自带标签)。 */}
       <div>
         <div
           aria-hidden="true"
-          className={`hidden px-3 py-2 font-mono text-2xs text-[oklch(var(--color-ink-subtle))] border-b border-[oklch(var(--color-block))] ${ROW_GRID}`}
+          className={`hidden px-3 md:min-h-11 text-2xs text-[oklch(var(--color-ink-muted))] border-b border-[oklch(var(--color-block))] ${ROW_GRID}`}
         >
           <span>{t("soul_accounts.fields.soul")}</span>
           <span>{t("soul_accounts.fields.cycle")}</span>
@@ -124,7 +130,7 @@ function RebirthApplicationsContent() {
             <li
               key={a.id}
               data-application-id={a.id}
-              className={`px-3 py-3 md:py-2 space-y-3 md:space-y-0 border-b border-[oklch(var(--color-rule))] ${ROW_GRID}`}
+              className={`px-3 py-3 md:py-2 md:min-h-(--table-row-h) space-y-3 md:space-y-0 border-b border-[oklch(var(--color-rule))] ${ROW_GRID}`}
             >
               <div className="min-w-0 space-y-1">
                 <Link href={`/souls/${a.soul}`} className="text-sm font-medium text-[oklch(var(--color-ink))] hover:underline break-words">

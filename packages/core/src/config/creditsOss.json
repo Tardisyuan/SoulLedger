@@ -255,29 +255,9 @@
       "url": "https://www.npmjs.com/package/@expo-google-fonts/archivo"
     },
     {
-      "name": "@expo-google-fonts/cinzel",
-      "licence": "MIT AND OFL-1.1",
-      "url": "https://www.npmjs.com/package/@expo-google-fonts/cinzel"
-    },
-    {
-      "name": "@expo-google-fonts/gfs-didot",
-      "licence": "MIT AND OFL-1.1",
-      "url": "https://www.npmjs.com/package/@expo-google-fonts/gfs-didot"
-    },
-    {
       "name": "@expo-google-fonts/ibm-plex-mono",
       "licence": "MIT AND OFL-1.1",
       "url": "https://www.npmjs.com/package/@expo-google-fonts/ibm-plex-mono"
-    },
-    {
-      "name": "@expo-google-fonts/josefin-slab",
-      "licence": "MIT AND OFL-1.1",
-      "url": "https://www.npmjs.com/package/@expo-google-fonts/josefin-slab"
-    },
-    {
-      "name": "@expo-google-fonts/ma-shan-zheng",
-      "licence": "MIT AND OFL-1.1",
-      "url": "https://www.npmjs.com/package/@expo-google-fonts/ma-shan-zheng"
     },
     {
       "name": "@expo-google-fonts/noto-sans-egyptian-hieroglyphs",
@@ -288,11 +268,6 @@
       "name": "@expo-google-fonts/source-serif-4",
       "licence": "MIT AND OFL-1.1",
       "url": "https://www.npmjs.com/package/@expo-google-fonts/source-serif-4"
-    },
-    {
-      "name": "@expo-google-fonts/unifrakturmaguntia",
-      "licence": "MIT AND OFL-1.1",
-      "url": "https://www.npmjs.com/package/@expo-google-fonts/unifrakturmaguntia"
     },
     {
       "name": "@gorhom/bottom-sheet",

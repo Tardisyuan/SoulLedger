@@ -33,8 +33,16 @@ const sharp = require("sharp");
 
 const APP = join(dirname(fileURLToPath(import.meta.url)), "..");
 const WEB = join(APP, "..", "frontend");
-export const GOLD = "#ECAA3D";
-export const INK = "#131211";
+// Brand colours are read from the web tokens (`--brand-mark` / `--brand-ground` in
+// frontend/app/globals.css, Design batch-3 reply 2026-10-03), so icon and token cannot drift.
+// INK is v3's dark canvas — the same ground as app.json's splash and src/coldStart.tsx.
+const brandToken = (name) => {
+  const m = readFileSync(join(WEB, "app/globals.css"), "utf8").match(new RegExp(`${name}:\\s*(#[0-9A-Fa-f]{6});`));
+  if (!m) throw new Error(`${name} not found in frontend/app/globals.css`);
+  return m[1];
+};
+export const GOLD = brandToken("--brand-mark");
+export const INK = brandToken("--brand-ground");
 
 const mark = readFileSync(join(APP, "assets/brand/soulledger-mark.svg"), "utf8");
 const [, , , vw, vh] = mark.match(/viewBox="([\d.]+) ([\d.]+) ([\d.]+) ([\d.]+)"/).map(Number);

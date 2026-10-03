@@ -37,7 +37,7 @@ import { Icon } from "../emblems";
 import { Sheet, useToast } from "../feedback";
 import { quoteFamily } from "../fonts";
 import { useI18n } from "../i18n";
-import { formatStamp } from "../rules";
+import { formatStamp, TAG_GLYPH } from "../rules";
 import { radius } from "../theme";
 import {
   Button,
@@ -46,6 +46,7 @@ import {
   PageEmptyArt,
   RadioMark,
   Screen,
+  SectionLabel,
   Skeleton,
   SmallButton,
   Txt,
@@ -190,7 +191,7 @@ export function PostCard({ post, onPress, onAuthor, full }: { post: SoulPost; on
   const body = (
     <>
       <View style={styles.cardHead}>
-        <Pressable testID={`author-${post.id}`} accessibilityRole="button" accessibilityLabel={post.author.display_name} disabled={!onAuthor} onPress={onAuthor} hitSlop={4}>
+        <Pressable testID={`author-${post.id}`} accessibilityRole="button" accessibilityLabel={post.author.display_name} disabled={!onAuthor} onPress={onAuthor} hitSlop={8}>
           <Glyph text={post.author.display_name} tone={reborn ? "subtle" : "muted"} dotted={reborn} size={36} />
         </Pressable>
         <View style={styles.fill}>
@@ -203,7 +204,7 @@ export function PostCard({ post, onPress, onAuthor, full }: { post: SoulPost; on
           <View style={[styles.line, styles.meta]}>
             <Mono>{formatStamp(post.create_time) ?? ""}</Mono>
             <Tag text={tr(visLabel(post.visibility))} tone="quiet" />
-            {pending ? <Tag testID={`pending-${post.id}`} text={tr("soul_app.circle.post.pending")} tone="waiting" /> : null}
+            {pending ? <Tag testID={`pending-${post.id}`} text={tr("soul_app.circle.post.pending")} tone="waiting" glyph={TAG_GLYPH.pending.glyph} /> : null}
             {hidden ? (
               <View style={[styles.tagNeg, { borderColor: t.neg }]}>
                 <Txt style={[styles.tagNegText, { color: t.neg }]}>{tr("soul_app.circle.post.hidden")}</Txt>
@@ -395,38 +396,42 @@ export function PostList({
   /** Under the posts and their "earlier posts" foot. */
   footer?: ReactElement | null;
   refreshing: boolean;
-  onRefresh: () => void;
+  onRefresh: () => unknown;
   testID: string;
 }) {
   const { t: tr } = useI18n();
   const { gutter } = useLayout();
   const navigation = useNavigation<Nav>();
-  const refreshControl = usePullRefresh(refreshing, onRefresh);
+  const pull = usePullRefresh(refreshing, onRefresh);
   return (
-    <FlatList
-      testID={testID}
-      data={feed.posts ?? []}
-      keyExtractor={rowKey}
-      renderItem={({ item: p }) => <PostCard post={p} onPress={() => navigation.navigate("CirclePost", { id: p.id })} onAuthor={noop} />}
-      ListHeaderComponent={header}
-      ListEmptyComponent={
-        feed.posts ? null : (
-          <View style={[styles.pad, { paddingHorizontal: gutter }]}>
-            <Skeleton lines={3} />
-          </View>
-        )
-      }
-      ListFooterComponent={
-        <>
-          <PagedFooter list={feed} testID="circle-more" title={tr("soul_app.circle.feed.more")} />
-          {footer}
-        </>
-      }
-      onEndReached={feed.more ?? undefined}
-      onEndReachedThreshold={0.5}
-      refreshControl={refreshControl}
-      keyboardShouldPersistTaps="handled"
-    />
+    <View style={styles.fill}>
+      {pull.frame(
+      <FlatList
+        testID={testID}
+        data={feed.posts ?? []}
+        keyExtractor={rowKey}
+        renderItem={({ item: p }) => <PostCard post={p} onPress={() => navigation.navigate("CirclePost", { id: p.id })} onAuthor={noop} />}
+        ListHeaderComponent={header}
+        ListEmptyComponent={
+          feed.posts ? null : (
+            <View style={[styles.pad, { paddingHorizontal: gutter }]}>
+              <Skeleton lines={3} />
+            </View>
+          )
+        }
+        ListFooterComponent={
+          <>
+            <PagedFooter list={feed} testID="circle-more" title={tr("soul_app.circle.feed.more")} />
+            {footer}
+          </>
+        }
+        onEndReached={feed.more ?? undefined}
+        onEndReachedThreshold={0.5}
+        {...pull.props}
+        keyboardShouldPersistTaps="handled"
+      />
+      )}
+    </View>
   );
 }
 
@@ -453,7 +458,7 @@ export function CircleScreen() {
   const pendingId = route.params?.pendingId;
   const justPending = feed.posts?.some((p) => p.id === pendingId && p.moderation_status === "PENDING");
   const write = () => navigation.navigate("ComposePost");
-  const refreshControl = usePullRefresh(feed.loading && !!feed.posts, feed.reload);
+  const pull = usePullRefresh(feed.loading && !!feed.posts, feed.reload);
 
   const header = (
     <>
@@ -527,6 +532,7 @@ export function CircleScreen() {
   // page read used to stay mounted. The next page is read on nearing the end.
   return (
     <Screen scroll={false} edges={["left", "right"]} testID="circle">
+      {pull.frame(
       <FlatList
         testID="circle-list"
         data={feed.posts ?? []}
@@ -539,9 +545,10 @@ export function CircleScreen() {
         ListFooterComponent={<PagedFooter list={feed} testID="circle-more" title={tr("soul_app.circle.feed.more")} />}
         onEndReached={feed.more ?? undefined}
         onEndReachedThreshold={0.5}
-        refreshControl={refreshControl}
+        {...pull.props}
         keyboardShouldPersistTaps="handled"
       />
+      )}
     </Screen>
   );
 }
@@ -634,9 +641,9 @@ export function ComposePostScreen() {
           <Mono>{`${draft.length} / ${POST_MAX}`}</Mono>
         </View>
         <ComposeMediaTray uploads={uploads} onAdd={() => void addImages()} />
-        <Txt variant="section" style={styles.formLabel}>
+        <SectionLabel style={styles.formLabel}>
           {tr("soul_app.circle.compose.visibility")}
-        </Txt>
+        </SectionLabel>
         <View accessibilityRole="radiogroup" style={[styles.radios, { backgroundColor: t.hair, borderColor: t.hair }]}>
           {VISIBILITY.map((o) => {
             const on = o.value === visibility;
@@ -790,7 +797,7 @@ function CommentRow({
   const { gutter } = useLayout();
   return (
     <View testID={`comment-${c.id}`} style={[styles.comment, { paddingHorizontal: gutter, borderBottomColor: t.hair }]}>
-      <Pressable accessibilityRole="button" accessibilityLabel={c.author.display_name} onPress={onAuthor} hitSlop={4}>
+      <Pressable accessibilityRole="button" accessibilityLabel={c.author.display_name} onPress={onAuthor} hitSlop={8}>
         <Glyph text={c.author.display_name} tone={c.author.is_active ? "muted" : "subtle"} dotted={!c.author.is_active} size={28} />
       </Pressable>
       <View style={styles.fill}>
@@ -799,7 +806,7 @@ function CommentRow({
             {c.author.display_name}
           </Txt>
           <Mono>{formatStamp(c.create_time) ?? ""}</Mono>
-          {c.moderation_status === "PENDING" ? <Tag testID={`comment-pending-${c.id}`} text={tr("soul_app.circle.comment.pending")} tone="waiting" /> : null}
+          {c.moderation_status === "PENDING" ? <Tag testID={`comment-pending-${c.id}`} text={tr("soul_app.circle.comment.pending")} tone="waiting" glyph={TAG_GLYPH.pending.glyph} /> : null}
         </View>
         {parent ? (
           <Txt testID={`reply-to-${c.id}`} variant="caption" tone="subtle" style={styles.replyTo}>
@@ -818,6 +825,8 @@ function CommentRow({
         accessibilityRole="button"
         accessibilityLabel={tr(c.is_mine ? "soul_app.circle.delete.action" : "soul_app.circle.report.comment")}
         onPress={onMore}
+        // 32pt drawn, 44 to the finger.
+        hitSlop={6}
         style={styles.commentMore}
       >
         <Icon name="more" size={14} color={t.inkSubtle} strokeWidth={2} />
@@ -965,7 +974,7 @@ export function PostScreen({ id }: { id: string }) {
     void post.reload();
   };
 
-  const refreshControl = usePullRefresh(post.loading && !!p, () => void Promise.all([post.reload(), comments.reload()]));
+  const pull = usePullRefresh(post.loading && !!p, () => Promise.all([post.reload(), comments.reload()]));
 
   if (post.error && !post.data) {
     return (
@@ -988,6 +997,7 @@ export function PostScreen({ id }: { id: string }) {
     <KeyboardAvoidingView style={[styles.fill, { backgroundColor: t.s0 }]} behavior="padding" keyboardVerticalOffset={-insets.bottom}>
       {/* The comments are one more unbounded, paged list, so they are the FlatList and the post is its header. */}
       <Screen scroll={false} edges={["left", "right"]} testID="circle-post">
+        {pull.frame(
         <FlatList
           testID="comments-list"
           data={p ? (comments.rows ?? []) : []}
@@ -1019,9 +1029,9 @@ export function PostScreen({ id }: { id: string }) {
               <>
                 <PostCard post={p} full onAuthor={() => openSoul(p.author, p.is_mine)} />
                 {open ? <ReactionBar post={p} status={status.data} onReact={(type) => void react(type)} /> : null}
-                <Txt variant="section" style={[styles.commentsHead, { paddingHorizontal: gutter }]}>
+                <SectionLabel style={[styles.commentsHead, { paddingHorizontal: gutter }]}>
                   {tr("soul_app.circle.post.comments", { n: String(p.comment_count) })}
-                </Txt>
+                </SectionLabel>
               </>
             )
           }
@@ -1035,9 +1045,10 @@ export function PostScreen({ id }: { id: string }) {
           ListFooterComponent={p ? <PagedFooter list={comments} testID="comments-more" title={tr("soul_app.circle.comment.more")} /> : null}
           onEndReached={comments.more ?? undefined}
           onEndReachedThreshold={0.5}
-          refreshControl={refreshControl}
+          {...pull.props}
           keyboardShouldPersistTaps="handled"
         />
+        )}
       </Screen>
       {open ? (
         <View style={[styles.dock, { paddingHorizontal: 12, paddingBottom: 12 + insets.bottom, borderTopColor: t.hair, backgroundColor: t.s1 }]}>
@@ -1075,7 +1086,7 @@ export function PostScreen({ id }: { id: string }) {
                   accessibilityState={{ disabled: !draft.trim() || sending || !status.data }}
                   disabled={!draft.trim() || sending || !status.data}
                   onPress={press}
-                  style={({ pressed }) => [styles.send, { backgroundColor: pressed ? shade(t.plaque) : t.plaque, opacity: draft.trim() ? 1 : 0.6 }]}
+                  style={({ pressed }) => [styles.send, { backgroundColor: pressed ? shade(t.plaqueFill) : t.plaqueFill, opacity: draft.trim() ? 1 : 0.6 }]}
                 >
                   <Txt style={[styles.sendText, { color: t.onPlaque }]}>{tr("soul_app.circle.comment.send")}</Txt>
                 </Pressable>
@@ -1118,7 +1129,7 @@ const styles = StyleSheet.create({
   empty: { paddingVertical: 48, paddingHorizontal: 32, alignItems: "stretch", gap: 4 },
   more: { alignItems: "center", paddingVertical: 20 },
   form: { paddingVertical: 16 },
-  postInput: { minHeight: 150, borderWidth: 1, padding: 12, fontSize: 15, lineHeight: 27, textAlignVertical: "top" },
+  postInput: { minHeight: 150, borderWidth: 1, borderRadius: radius.control, padding: 12, fontSize: 15, lineHeight: 27, textAlignVertical: "top" },
   counter: { alignItems: "flex-end", marginTop: 8 },
   formLabel: { marginTop: 20, marginBottom: 12 },
   radios: { gap: 2, borderWidth: 1 },
@@ -1133,7 +1144,7 @@ const styles = StyleSheet.create({
   reaction: { minWidth: 44, minHeight: 40, paddingHorizontal: 12, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, borderWidth: 1 },
   lampNote: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 8 },
   scrim: { flex: 1 },
-  sheet: { borderTopWidth: 1, paddingTop: 24, paddingHorizontal: 20, gap: 12 },
+  sheet: { borderTopWidth: 1, borderTopLeftRadius: radius.dialog, borderTopRightRadius: radius.dialog, paddingTop: 24, paddingHorizontal: 20, gap: 12 },
   /** In a `Sheet`: the edge and the ground are the sheet's; its drag handle sits above. */
   sheetBody: { paddingTop: 8, paddingHorizontal: 20, gap: 12 },
   sheetTitle: { flexShrink: 1 },
@@ -1145,14 +1156,15 @@ const styles = StyleSheet.create({
   commentBody: { marginTop: 4, fontSize: 15, lineHeight: 24 },
   commentMore: { width: 32, height: 32, alignItems: "center", justifyContent: "center" },
   replyTo: { marginTop: 4 },
-  replyButton: { marginTop: 8, alignSelf: "flex-start", paddingVertical: 4 },
+  /** 18pt of words, 44 to the finger: the padding grows, the negative margins keep it where it was. */
+  replyButton: { marginTop: -4, marginBottom: -12, alignSelf: "flex-start", paddingVertical: 16, paddingRight: 12 },
   replying: { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 2, paddingBottom: 8 },
-  menu: { borderTopWidth: 1 },
+  menu: { borderTopWidth: 1, borderTopLeftRadius: radius.dialog, borderTopRightRadius: radius.dialog, overflow: "hidden" },
   menuRow: { minHeight: 54, flexDirection: "row", alignItems: "center", paddingHorizontal: 20, borderBottomWidth: 1 },
   menuCancel: { minHeight: 54, alignItems: "center", justifyContent: "center" },
   dock: { borderTopWidth: 1, paddingTop: 12 },
   composer: { flexDirection: "row", gap: 8, alignItems: "flex-end" },
-  commentInput: { flex: 1, minHeight: 42, maxHeight: 120, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 12, fontSize: 15 },
+  commentInput: { flex: 1, minHeight: 42, maxHeight: 120, borderWidth: 1, borderRadius: radius.control, paddingHorizontal: 12, paddingVertical: 12, fontSize: 15 },
   send: { minHeight: 42, minWidth: 56, paddingHorizontal: 16, alignItems: "center", justifyContent: "center" },
   sendText: { fontSize: 13, letterSpacing: 0.6 },
 });

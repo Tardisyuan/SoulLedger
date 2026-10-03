@@ -1,5 +1,12 @@
 import { api } from "./client";
 import type { PaginatedResponse } from "./users";
+import type { components } from "./generated/schema";
+import type { PostMedia } from "../domain/postMedia";
+
+/** `GET /social/media/` — the composer's「最多 N 张」comes from here, not a constant. */
+export type PostMediaLimits = components["schemas"]["PostMediaLimits"];
+/** One uploaded image not yet on a post (same shape as the soul circle's). */
+export type PostMediaUpload = components["schemas"]["SoulPostMediaUpload"];
 
 /**
  * PostSerializer / PostListSerializer (backend/apps/social/serializers.py:12
@@ -16,6 +23,10 @@ export interface Post {
   visibility: "PUBLIC" | "TENANT" | "FOLLOWERS" | "PRIVATE";
   comment_count: number;
   reaction_count: number;
+  /** In display order; each `url` is signed for the current user (about an hour). */
+  media: PostMedia[];
+  /** 五种表态各自的数(未删除的)。 */
+  reaction_counts: Record<"LIKE" | "LOVE" | "RESPECT" | "SYMPATHY" | "ETERNAL_LIGHT", number>;
   tenant?: number;
   create_time: string;
   update_time?: string;
@@ -73,8 +84,28 @@ export const socialApi = {
   listPosts: (params?: Record<string, string | number | undefined>) =>
     api.get<PaginatedResponse<Post>>("/social/posts/", { params }),
   getPost: (id: string) => api.get<Post>(`/social/posts/${id}/`),
-  createPost: (data: { content: string; visibility?: string }) =>
+  /** `media`: ids from `uploadMedia`, in display order. Text may be empty when there are images. */
+  createPost: (data: { content: string; visibility?: string; media?: string[] }) =>
     api.post<Post>("/social/posts/", data),
+  mediaLimits: () => api.get<PostMediaLimits>("/social/media/").then((r) => r.data),
+  /**
+   * Upload one image before posting — the officer twin of `soulSocialApi.uploadMedia`
+   * (same backend function: magic bytes, re-encode, EXIF stripped, 5 MB). `body` is the
+   * host's multipart body with the image under `file`; see `uploadAvatar` for why the
+   * Content-Type is explicit. 400 `not_an_image` / `too_large` / `too_many_pixels`,
+   * 409 `too_many_pending`.
+   */
+  uploadMedia: (body: FormData, onProgress?: (fraction: number) => void) =>
+    api
+      .post<PostMediaUpload>("/social/media/", body, {
+        headers: { "Content-Type": "multipart/form-data" },
+        onUploadProgress: onProgress
+          ? (e) => onProgress(e.total ? Math.min(1, e.loaded / e.total) : 0)
+          : undefined,
+      })
+      .then((r) => r.data),
+  /** Drop an uploaded image that was not posted (file and row are deleted). */
+  removeMedia: (id: string) => api.delete(`/social/media/${id}/`).then(() => undefined),
   updatePost: (id: string, data: Partial<Post>) =>
     api.patch<Post>(`/social/posts/${id}/`, data),
   deletePost: (id: string) => api.delete<void>(`/social/posts/${id}/`),

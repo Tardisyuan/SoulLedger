@@ -25,6 +25,8 @@ import {
   presetPreviewModel,
 } from "@/src/components/workflow/page/TemplatePreview";
 import { QueryError } from "@/src/components/ui/PageError";
+import { usePlaque } from "@/src/components/plaque/Plaque";
+import { useHall } from "@/src/components/plaque/useHall";
 import type {
   BackendTemplate,
   FrontendNode,
@@ -126,11 +128,28 @@ export default function WorkflowPage() {
   ] as const;
   const [tab, setTab] = useState<"existing" | "editor" | "instances">("existing");
 
+  // 身份带(A1):编辑器页签题「审批流编辑器」,右栏「模板名 · 已发布 vN」。版本取模板列表里
+  // 那一行的 `published_version`;「草稿 N 处改动」只有编辑器内部知道,这里不写。其他页签退回面包屑。
+  const editingRow = editingTemplateId ? templates.find((x) => String(x.id) === editingTemplateId) : undefined;
+  const editingName = editingRow?.name ?? editingTemplateData?.name;
+  const hall = useHall(t("plaque.office.rules"));
+  usePlaque({
+    hall,
+    title: tab === "editor" ? t("plaque.workflow_editor") : undefined,
+    meta:
+      tab === "editor" && editingName
+        ? [editingName, editingRow?.published_version ? t("workflow.editor.version.published", { n: String(editingRow.published_version) }) : null]
+            .filter(Boolean)
+            .join(" · ")
+        : undefined,
+  });
+
   return (
     /* `page` (1200px), up from the `max-w-6xl` (1152) this page chose for
        itself. */
     <PageShell
-      variant="page"
+      /* The editor tab is a three-pane canvas (176 · canvas · 360, v3 A1) and takes the full width; the other two tabs keep the page column. */
+      variant={tab === "editor" ? "full" : "page"}
       title={
         <>
           {t("workflow.title")}
@@ -159,7 +178,7 @@ export default function WorkflowPage() {
             <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
               <div>
                 {/* 06 是区块标题那一档。 */}
-                <h2 className="text-md text-[oklch(var(--color-ink))]">{t("workflow.templates")}</h2>
+                <h2 className="text-lg text-[oklch(var(--color-ink))]">{t("workflow.templates")}</h2>
                 <p className="text-sm text-[oklch(var(--color-ink-muted))]">{t("workflow.select_template")}</p>
               </div>
               <RequirePermission permissions="workflow.create">
@@ -411,8 +430,15 @@ export default function WorkflowPage() {
         ) : tab === "editor" ? (
           /* Editor tab. The fixed height is the canvas's (xyflow fills its
              parent); below 1024 px the editor is the read-only view, which is
-             a document and takes the height its content needs. */
-          <div className="lg:h-[calc(100vh-220px)]">
+             a document and takes the height its content needs.
+             Fills the viewport below the band: 52 toolbar + the band's live height
+             (`--below-band`, 156 before it collapses) + 153 for this page's own head
+             (title, tabs, padding — measured 2026-10-02 at 1440; +6 on 2026-10-03 when the
+             underline tabs went from 38 to the 44 touch target) + 24 for PageShell's
+             `py-6` under it, so the page ends at the viewport's bottom and does not scroll.
+             The old `100vh-220px` predates the v3 band and ran ~135px off the bottom at 1440×900.
+             `e2e/workflow-editor-fits-viewport.spec.ts` holds the bottom edge to the viewport. */
+          <div data-testid="workflow-editor-frame" className="lg:h-[calc(100vh-var(--below-band)-177px)] lg:min-h-[480px]">
             <LazyWorkflowEditor
               templateId={editingTemplateId || undefined}
               initialTemplateData={editingTemplateData}
