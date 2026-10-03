@@ -7,11 +7,11 @@ from apps.core.permissions import IsAdminPermission, TenantPermission
 from apps.core.tenant import scope_to_tenant
 from apps.core.viewsets import CodenameViewSetMixin
 from apps.tenants.models import Tenant
-from apps.tenants.serializers import TenantSealGlyphsSerializer, TenantSerializer
+from apps.tenants.serializers import TenantSealGlyphsSerializer, TenantSerializer, TenantSettingsSerializer
 
 
 class TenantViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
-    """Tenant management API — read-only, except `seal-glyphs/` (ADMIN only).
+    """Tenant management API — read-only, except `seal-glyphs/` and `settings/` (ADMIN only).
     Non-ADMIN users see only their own tenant."""
 
     serializer_class = TenantSerializer
@@ -44,6 +44,17 @@ class TenantViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
         """匾上的印字。只收这一个字段,其余租户字段仍然只读。"""
         tenant = self.get_object()
         serializer = TenantSealGlyphsSerializer(tenant, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(TenantSerializer(tenant).data)
+
+    @extend_schema(request=TenantSettingsSerializer, responses={200: TenantSerializer})
+    @action(detail=True, methods=["patch"], url_path="settings",
+            permission_classes=[TenantPermission, IsAdminPermission])
+    def hall_settings(self, request, code=None):
+        """殿的设置:说明、调拨开关、三语殿名、转生冷却天数。只收已知字段,`settings` 里别的键不动。"""
+        tenant = self.get_object()
+        serializer = TenantSettingsSerializer(tenant, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(TenantSerializer(tenant).data)

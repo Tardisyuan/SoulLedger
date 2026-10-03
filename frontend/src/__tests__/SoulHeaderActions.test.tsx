@@ -132,3 +132,49 @@ describe("SoulHeaderActions 的溢出菜单", () => {
     expect(trigger()).toHaveAttribute("aria-expanded", "true");
   });
 });
+
+/**
+ * 「更正结案」只在页面交来 `onCorrectSettlement` 时才有这一项。这里不判定谁能更正 ——
+ * 那在页面上(`SoulDetailPage.correctSettlement.test.tsx`);这里只守「没交就没有、交了就有且能点到」。
+ */
+describe("SoulHeaderActions 的更正结案项", () => {
+  function HarnessWithCorrect({ onCorrectSettlement }: { onCorrectSettlement?: () => void }) {
+    const [open, setOpen] = useState(false);
+    return (
+      <SoulHeaderActions
+        onEdit={jest.fn()}
+        onDelete={jest.fn()}
+        onCorrectSettlement={onCorrectSettlement}
+        isOverflowMenuOpen={open}
+        setIsOverflowMenuOpen={setOpen}
+      />
+    );
+  }
+
+  it("没交 onCorrectSettlement 时菜单只有删除一项", async () => {
+    render(<HarnessWithCorrect />);
+    await act(async () => {
+      fireEvent.click(trigger());
+    });
+    expect(screen.getAllByRole("menuitem")).toHaveLength(1);
+    expect(screen.queryByRole("menuitem", { name: "souls.detail.correct_settlement.action" })).not.toBeInTheDocument();
+  });
+
+  it("交了就多一项,点它先关菜单还焦点再调用", async () => {
+    let focusedWhenCalled: Element | null = null;
+    const onCorrect = jest.fn(() => {
+      focusedWhenCalled = document.activeElement;
+    });
+    render(<HarnessWithCorrect onCorrectSettlement={onCorrect} />);
+    await act(async () => {
+      fireEvent.click(trigger());
+    });
+    expect(screen.getAllByRole("menuitem")).toHaveLength(2);
+    await act(async () => {
+      fireEvent.click(screen.getByRole("menuitem", { name: "souls.detail.correct_settlement.action" }));
+    });
+    expect(onCorrect).toHaveBeenCalledTimes(1);
+    expect(focusedWhenCalled).toBe(trigger());
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+  });
+});

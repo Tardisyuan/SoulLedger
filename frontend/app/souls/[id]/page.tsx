@@ -31,6 +31,7 @@ import { SoulActionsCard } from "@/src/components/souls/detail/SoulActionsCard";
 import { SoulHeaderActions } from "@/src/components/souls/detail/SoulHeaderActions";
 import { SoulTimelineColumn } from "@/src/components/souls/detail/SoulTimelineColumn";
 import { SoulDeleteModal } from "@/src/components/souls/detail/SoulDeleteModal";
+import { CorrectSettlementDialog } from "@/src/components/souls/detail/CorrectSettlementDialog";
 import { SoulJudgmentHistory } from "@/src/components/souls/detail/SoulLedgerSections";
 import { SoulLedgerTabs } from "@/src/components/souls/detail/SoulLedgerTabs";
 import { SoulBalance, SoulHeadingFigures, SoulMonogram } from "@/src/components/souls/detail/SoulFigures";
@@ -40,6 +41,7 @@ import { SoulLedgerBook } from "@/src/components/souls/SoulLedgerBook";
 import { SoulAccountCard } from "@/src/components/soul-accounts/SoulAccountCard";
 import { SentencePlanCard } from "@/src/components/sentence-plan/SentencePlanCard";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
+import { usePermissions } from "@/src/hooks/usePermissions";
 import { DomainEnum, IdentifierChip } from "@/src/components/ui/DomainValue";
 import { resolveEnumDisplay } from "@/src/lib/domainDisplay";
 import { ConfirmDialog } from "@/src/components/ui/Modal";
@@ -92,7 +94,9 @@ export default function SoulDetailPage() {
   const [actionLoading, setActionLoading] = useState("");
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isCorrectSettlementOpen, setIsCorrectSettlementOpen] = useState(false);
   const [isOverflowMenuOpen, setIsOverflowMenuOpen] = useState(false);
+  const { hasPermission } = usePermissions();
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   // The rebirth destination. Was not state at all: handleReincarnate posted a
   // literal "HUMAN", so every soul this app ever reincarnated went into 人道
@@ -485,10 +489,14 @@ export default function SoulDetailPage() {
     </span>
   ) : undefined;
 
+  // 更正结案:后端按码名 `soul.correct_settlement`(默认只有 ADMIN 持有)+ 只收 SETTLED;
+  // 两条都不满足就连菜单项都没有,而不是点了再吃 400 / 403。
+  const canCorrectSettlement = Boolean(soul && soul.current_state === "SETTLED" && hasPermission("soul.correct_settlement"));
   const headerActions = !loading && soul && !readOnlyAway ? (
     <SoulHeaderActions
       onEdit={() => setIsEditModalOpen(true)}
       onDelete={handleDeleteConfirm}
+      onCorrectSettlement={canCorrectSettlement ? () => setIsCorrectSettlementOpen(true) : undefined}
       isOverflowMenuOpen={isOverflowMenuOpen}
       setIsOverflowMenuOpen={setIsOverflowMenuOpen}
     />
@@ -655,6 +663,17 @@ export default function SoulDetailPage() {
         onConfirm={handleDelete}
         isPending={deleteSoulMutation.isPending}
       />
+
+      {/* 更正结案写出一条 SETTLEMENT_CORRECTED 事件,所以成功后三族全标脏(`refreshSoulViews`),
+          不只重取这一个灵魂。 */}
+      {soul && (
+        <CorrectSettlementDialog
+          soulId={soul.id}
+          isOpen={isCorrectSettlementOpen}
+          onClose={() => setIsCorrectSettlementOpen(false)}
+          onCorrected={refreshSoulViews}
+        />
+      )}
 
       {/* Custom Confirm Dialog */}
       <ConfirmDialog

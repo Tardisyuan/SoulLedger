@@ -15,6 +15,7 @@ import { RequireAdmin } from "@/src/components/rbac/RequirePermission";
 import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
 import { Button } from "@/src/components/ui/Button";
 import { SealGlyphsDialog } from "@/src/components/tenants/SealGlyphsDialog";
+import { TenantSettingsDialog } from "@/src/components/tenants/TenantSettingsDialog";
 import { DEFAULT_SEAL_GLYPHS, type SealCiv } from "@/src/components/plaque/Seal";
 import { civSkinOf } from "@/src/lib/civSkin";
 
@@ -24,6 +25,7 @@ function TenantsPageContent() {
   const { user } = useTenant();
   const [page, setPage] = useState(1);
   const [editingSeal, setEditingSeal] = useState<Tenant | null>(null);
+  const [editingSettings, setEditingSettings] = useState<Tenant | null>(null);
 
   // tenantsApi.list() (lib/api/tenants.ts) doesn't forward a `page` param, so this
   // calls the shared `api` client directly to reach `/tenants/?page=`.
@@ -83,6 +85,9 @@ function TenantsPageContent() {
               <SealGlyphsCell tenant={tenant} />
             </td>
             <td className="px-4 py-3 text-right">
+              <Button type="button" variant="ghost" size="sm" onClick={() => setEditingSettings(tenant)}>
+                {t("tenants.settings.edit")}
+              </Button>
               <Button type="button" variant="ghost" size="sm" onClick={() => setEditingSeal(tenant)}>
                 {t("tenants.seal.edit")}
               </Button>
@@ -99,6 +104,10 @@ function TenantsPageContent() {
           key 让每次打开都从这一行的现值起步,而不是上一次输入的残留。 */}
       {editingSeal ? (
         <SealGlyphsDialog key={editingSeal.code} tenant={editingSeal} onClose={() => setEditingSeal(null)} />
+      ) : null}
+      {/* 殿的设置(说明、调拨开关、三语殿名、转生冷却):同样只有管理员,同样按 key 从现值起步。 */}
+      {editingSettings ? (
+        <TenantSettingsDialog key={editingSettings.code} tenant={editingSettings} onClose={() => setEditingSettings(null)} />
       ) : null}
     </PageShell>
   );
