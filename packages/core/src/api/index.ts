@@ -131,7 +131,7 @@ export { menusApi, menuButtonsApi, type MenuItem, type MenuButton } from "./menu
 export { auditApi, type AuditLogEntry } from "./audit";
 
 // Tenants
-export { tenantsApi, type Tenant } from "./tenants";
+export { tenantsApi, REBIRTH_COOLDOWN_SETTING, type Tenant, type TenantSettingsPatch } from "./tenants";
 
 // Organizations
 export { organizationsApi, type Organization } from "./organizations";

@@ -360,6 +360,16 @@
         "ledger_tabs": "卷宗",
         "tab_judgments": "全部审判",
         "tab_records": "全部功过记录"
+      },
+      "correct_settlement": {
+        "action": "更正结案",
+        "title": "更正结案状态",
+        "message": "灵魂退回「已处置」;审判与处置记录不动,原因单独记入审计。",
+        "reason": "原因",
+        "reason_required": "必须写明原因",
+        "confirm": "更正",
+        "success": "已更正结案状态,灵魂回到「已处置」",
+        "failed": "没能更正结案状态"
       }
     },
     "date_problem_filter": "仅看有问题的",
@@ -2540,6 +2550,21 @@
       "preview": "预览",
       "saved": "印字已保存",
       "save_failed": "没能保存印字"
+    },
+    "settings": {
+      "edit": "改设置",
+      "title": "{{name}} · 设置",
+      "hall_name": "殿司展示名(中文)",
+      "hall_name_hint": "灵魂与殿司收件箱里看到的殿名;留空用租户名",
+      "hall_name_en": "殿司展示名(English)",
+      "hall_name_egy": "殿司展示名(egy)",
+      "description": "说明",
+      "cooldown_days": "转生申请冷却天数",
+      "cooldown_hint": "最近一次终局驳回之后这么多天内不能再申请;留空用默认 30 天",
+      "cooldown_invalid": "请填 0 或正整数",
+      "dispatch_enabled": "可接收调拨(暂居)",
+      "saved": "设置已保存",
+      "save_failed": "没能保存设置"
     }
   },
   "table": {

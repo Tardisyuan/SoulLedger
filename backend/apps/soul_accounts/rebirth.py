@@ -34,9 +34,10 @@ from apps.soul_accounts.models import (
     SoulAccount,
 )
 from apps.soul_accounts.services import SoulAccountError
+from apps.tenants.models import REBIRTH_COOLDOWN_SETTING
 
 DEFAULT_COOLDOWN_DAYS = 30
-COOLDOWN_SETTING = "soul_rebirth_cooldown_days"
+COOLDOWN_SETTING = REBIRTH_COOLDOWN_SETTING
 FINAL_REJECTIONS = (RebirthApplicationStatus.REJECTED, RebirthApplicationStatus.APPEAL_REJECTED)
 
 #: 节点按**角色**指定审批人,不按神祇:转生申请没有经典出处的审理殿,
