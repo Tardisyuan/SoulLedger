@@ -7,6 +7,7 @@ src/__tests__/ActorsPage.test.tsx
 src/__tests__/AppLayout.test.tsx
 src/__tests__/Button.test.tsx
 src/__tests__/Field.test.tsx
+src/__tests__/LoginPage.test.tsx
 src/__tests__/PageShell.test.tsx
 src/__tests__/SchedulerPage.test.tsx
 src/__tests__/Spinner.test.tsx

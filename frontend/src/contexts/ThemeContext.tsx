@@ -17,12 +17,18 @@ interface ThemeContextValue {
   theme: Theme;
   toggleTheme: () => void;
   setTheme: (t: Theme) => void;
+  /** No saved choice: the theme is the OS's and follows it (首次设置「跟随系统」). */
+  followsSystem: boolean;
+  /** Forget the saved choice and follow the OS again. */
+  followSystem: () => void;
 }
 
 const ThemeContext = createContext<ThemeContextValue>({
   theme: "dark",
   toggleTheme: () => {},
   setTheme: () => {},
+  followsSystem: true,
+  followSystem: () => {},
 });
 
 const STORAGE_KEY = "soulledger_theme";
@@ -49,6 +55,7 @@ function systemTheme(): Theme {
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<Theme>("dark");
+  const [followsSystem, setFollowsSystem] = useState(true);
   const themeSwapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // A switch immediately followed by a navigation would otherwise leave the
@@ -77,9 +84,12 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     }
     if (saved === "light" || saved === "dark") {
       setThemeState(saved);
-      return;
+      setFollowsSystem(false);
+    } else {
+      setThemeState(systemTheme());
     }
-    setThemeState(systemTheme());
+    // Attached either way: `followSystem` can drop a saved choice later, and the
+    // listener already ignores the OS while a choice is saved.
     if (typeof window === "undefined" || typeof window.matchMedia !== "function") return;
     const mql = window.matchMedia(LIGHT_QUERY);
     const follow = (e: MediaQueryListEvent) => {
@@ -132,6 +142,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     }, THEME_SWAP_MS);
 
     setThemeState(t);
+    setFollowsSystem(false);
     try {
       localStorage.setItem(STORAGE_KEY, t);
     } catch {
@@ -143,9 +154,22 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   const toggleTheme = useCallback(() => setTheme(theme === "dark" ? "light" : "dark"), [theme, setTheme]);
 
+  const followSystem = useCallback(() => {
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch {
+      // unavailable: nothing was saved there either
+    }
+    const t = systemTheme();
+    setThemeState(t);
+    setFollowsSystem(true);
+    document.documentElement.classList.remove("dark", "light");
+    document.documentElement.classList.add(t);
+  }, []);
+
   const value = useMemo(
-    () => ({ theme, toggleTheme, setTheme }),
-    [theme, toggleTheme, setTheme]
+    () => ({ theme, toggleTheme, setTheme, followsSystem, followSystem }),
+    [theme, toggleTheme, setTheme, followsSystem, followSystem]
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
