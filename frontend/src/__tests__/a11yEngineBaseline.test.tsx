@@ -146,7 +146,9 @@ jest.mock("@/src/contexts/ThemeContext", () => ({
 jest.mock("@/src/contexts/TenantContext", () => ({
   useTenant: () => ({
     isAdmin: true,
-    user: { role: "ADMIN", permissions: ["audit.read"], username: "admin" },
+    // `id`: /welcome asks the audit log for this user's own entries (`?user=<id>`) and keys its
+    // first-time setup flag by it — a user without one reads as not signed in.
+    user: { id: 1, role: "ADMIN", permissions: ["audit.read"], username: "admin" },
     tenant: { id: 1, name: "Diyu", code: "cn" },
   }),
 }));
@@ -847,6 +849,9 @@ beforeAll(async () => {
   });
   (menusApi.all as jest.Mock).mockResolvedValue({ data: [] });
   (menusApi.list as jest.Mock).mockResolvedValue({ data: { results: [] } });
+  // /welcome shows its first-time setup INSTEAD of the page until this user has done it; the
+  // subject is the regular page (the setup has its own tests in WelcomePage.test.tsx).
+  localStorage.setItem("soulledger_onboarded:1", "1");
 
   for (const subject of SUBJECTS) {
     // Wrapped in `<main>`, because that is where every one of these

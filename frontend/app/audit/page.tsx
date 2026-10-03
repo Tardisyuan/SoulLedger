@@ -25,6 +25,7 @@ import { FilterChipSelect } from "@/src/components/ui/FilterChip";
 import { fieldControl } from "@/src/components/ui/Field";
 import { Button } from "@/src/components/ui/Button";
 import { cn } from "@/lib/utils";
+import { auditActionGlyph } from "@/src/lib/auditActionGlyph";
 
 const ACTION_OPTIONS = [
   "CREATE", "UPDATE", "DELETE", "LOGIN", "LOGOUT", "VIEW",
@@ -57,20 +58,8 @@ interface AuditRow {
  */
 function actionEnumValue(action: string, t: (key: string) => string): EnumValue {
   const label = t(`audit.actions.${action}`);
-  switch (action) {
-    case "CREATE":
-      return { tone: "info", glyph: "＋", label };
-    case "LOGIN":
-      return { tone: "info", glyph: "→", label };
-    case "LOGOUT":
-      return { tone: "neutral", glyph: "←", label };
-    case "UPDATE":
-      return { tone: "neutral", glyph: "✎", label };
-    case "DELETE":
-      return { tone: "neutral", glyph: "⌫", label };
-    default:
-      return { tone: "neutral", glyph: "•", label };
-  }
+  const tone = action === "CREATE" || action === "LOGIN" ? "info" : "neutral";
+  return { tone, glyph: auditActionGlyph(action), label };
 }
 
 export default function AuditPage() {

@@ -90,9 +90,8 @@ test.describe("Login page", () => {
     await mockApi(page);
     await page.goto("/login");
 
-    await expect(page.locator("h1")).toHaveText("灵魂账本");
-    await expect(page.getByRole("heading", { name: "登录", level: 2 })).toBeVisible();
-    await expect(page.getByLabel("用户名")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "登录", level: 1 })).toBeVisible();
+    await expect(page.getByLabel("账号")).toBeVisible();
     await expect(page.getByLabel("密码")).toBeVisible();
     await expect(page.getByRole("button", { name: "登录" })).toBeEnabled();
   });
@@ -129,18 +128,19 @@ test.describe("Login page", () => {
     // why, in the app's own locale and its own markup.
     await expect(page.getByRole("alert").filter({ hasText: "请输入用户名" })).toBeVisible();
     await expect(page.getByRole("alert").filter({ hasText: "请输入密码" })).toBeVisible();
-    await expect(page.getByLabel("用户名")).toHaveAttribute("aria-invalid", "true");
+    await expect(page.getByLabel("账号")).toHaveAttribute("aria-invalid", "true");
   });
 
   test("bad credentials surface an error and leave the user on /login", async ({ page }) => {
     const api = await mockApi(page);
     await page.goto("/login");
 
-    await page.getByLabel("用户名").fill("nobody");
+    await page.getByLabel("账号").fill("nobody");
     await page.getByLabel("密码").fill("wrong-password");
     await page.getByRole("button", { name: "登录" }).click();
 
-    await expect(page.getByText("账号或密码错误 · 还可以再试 4 次")).toBeVisible();
+    await expect(page.getByText("账号或密码不对")).toBeVisible();
+    await expect(page.getByText("还可以再试 4 次，之后账号锁定 15 分钟。")).toBeVisible();
     await expect(page).toHaveURL(/\/login/);
     expect(api.countOf("POST", "/auth/login/")).toBe(1);
   });
@@ -157,7 +157,7 @@ test.describe("Protected routes (unauthenticated)", () => {
       // proxy.ts stashes the original path as ?redirect= — asserting
       // it means a redirect to a *generic* login page would fail.
       await expect(page).toHaveURL(`/login?redirect=${encodeURIComponent(route)}`);
-      await expect(page.getByRole("heading", { name: "登录", level: 2 })).toBeVisible();
+      await expect(page.getByRole("heading", { name: "登录", level: 1 })).toBeVisible();
     });
   }
 });
@@ -184,7 +184,7 @@ test.describe("Routing edge cases", () => {
     await page.goto("/welcome");
 
     await expect(page).toHaveURL(/\/welcome/);
-    await expect(page.getByRole("heading", { name: "快捷操作" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "接着做" })).toBeVisible();
   });
 });
 
