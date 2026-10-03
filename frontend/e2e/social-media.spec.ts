@@ -78,6 +78,9 @@ test("帖子按 1 / 4 / 7 张画方格,7 张的末格叠 +N,点开查看器能�
   await grids.nth(2).locator("[data-media-cell]").nth(1).getByRole("button").click();
   const viewer = page.locator("[data-media-viewer]");
   await expect(viewer.getByTestId("viewer-position")).toHaveText("2 / 7");
+  // The arrows are the popup's onKeyDown: a key pressed before Base UI moves focus inside
+  // lands on <body> and is lost (1 in 5 runs on chromium, 2026-10-03).
+  await expect.poll(() => viewer.evaluate((el) => el.contains(document.activeElement))).toBe(true);
   await page.keyboard.press("ArrowRight");
   await expect(viewer.getByTestId("viewer-position")).toHaveText("3 / 7");
   await page.keyboard.press("Escape");

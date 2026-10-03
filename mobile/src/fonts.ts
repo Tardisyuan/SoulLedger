@@ -43,7 +43,7 @@ export const FONT_ASSETS = {
   // display text; it was dropped 2026-09-18 when nothing called it and is back for `family.title`.
   NotoSerifSC_400: require("../assets/fonts/NotoSerifSC-Subset-400.ttf"),
   NotoSerifSC_600: require("../assets/fonts/NotoSerifSC-Subset-600.ttf"),
-  // Status glyphs (Design E 组): ✓✕◇↺◌○▣↻◎≡?◐⇄ from ONE font. Archivo has only ≡ and ?, so each
+  // Status glyphs (Design E 组): ✓✕◇↺◌○▣↻◎≡?◐⇄■□ from ONE font. Archivo has only ≡ and ?, so each
   // fell back to the OS per glyph — ◌ from one font, its neighbours from another. 5 KB, the same
   // bytes the web serves (scripts/build-glyph-font.py; DejaVu Sans subset, licence beside it).
   SoulLedgerGlyphs: require("../assets/fonts/SoulLedgerGlyphs.ttf"),

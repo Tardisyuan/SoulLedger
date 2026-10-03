@@ -656,7 +656,7 @@ class PasswordHelpRequestSerializer(serializers.Serializer):
 class UserPreferencesSerializer(serializers.Serializer):
     """`User.preferences`, as the API reads and writes it.
 
-    One key today. Language and theme are not here: both are browser-side
+    Two keys. Language and theme are not here: both are browser-side
     settings with no server home (the locale is a cookie the middleware reads,
     the theme a localStorage key), and moving them is a separate decision.
     """
@@ -666,6 +666,9 @@ class UserPreferencesSerializer(serializers.Serializer):
     #: 操作员 → /judgment/queue, 管理员 → /dashboard (`frontend/src/lib/defaultView.ts`).
     #: Null until the operator picks one.
     default_view = serializers.ChoiceField(choices=DEFAULT_VIEWS, allow_null=True, required=False)
+    #: /welcome 的首次设置做完或跳过了没有(`WelcomeSetup.tsx`)。Unset reads as false;
+    #: `default` is only the read-side fallback — a partial PATCH never applies it.
+    onboarded = serializers.BooleanField(required=False, default=False)
 
     def to_internal_value(self, data):
         # Unknown keys are refused rather than silently dropped: this is a

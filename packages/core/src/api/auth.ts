@@ -91,6 +91,8 @@ export type DefaultView = "operator" | "admin";
 /** `GET/PATCH /auth/profile/preferences/` — always the caller's own. */
 export interface UserPreferences {
   default_view: DefaultView | null;
+  /** /welcome 的首次设置做完或跳过了。Unset reads as false. */
+  onboarded: boolean;
 }
 
 /** The body `/auth/password-help/` answers 200 with, for every username alike. */
