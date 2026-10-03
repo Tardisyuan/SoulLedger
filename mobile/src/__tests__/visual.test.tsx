@@ -11,7 +11,7 @@ import { fireGestureHandler, getByGestureTestId } from "react-native-gesture-han
 import { useSharedValue } from "react-native-reanimated";
 import { act, fireEvent, render, screen, within } from "@testing-library/react-native";
 import { useState, type ReactNode } from "react";
-import { AccessibilityInfo, Animated, DeviceEventEmitter, Easing, Platform, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import { AccessibilityInfo, Animated, DeviceEventEmitter, Easing, KeyboardAvoidingView, Platform, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { LogoutProvider, useAskLogout } from "../feedback";
@@ -488,6 +488,18 @@ describe("pull to refresh (v3 B2: the content follows the finger, at most 56; no
     await act(async () => {});
     await applied();
   };
+
+  it("a scrolling Screen pads itself by the keyboard on both platforms, so a low field is not hidden", async () => {
+    for (const os of ["ios", "android"] as const) {
+      setOS(os);
+      const { UNSAFE_getByType, unmount } = wrap(<Screen>{null}</Screen>);
+      await act(async () => {});
+      const kav = UNSAFE_getByType(KeyboardAvoidingView);
+      expect(kav.props.behavior).toBe("padding");
+      expect(kav.findByType(ScrollView)).toBeTruthy();
+      unmount();
+    }
+  });
 
   it("the content follows the finger and stops at 56; the ↻ fades in with it", async () => {
     await mount();

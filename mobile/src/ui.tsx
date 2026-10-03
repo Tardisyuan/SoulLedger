@@ -32,6 +32,7 @@ import {
   AccessibilityInfo,
   Animated,
   Easing,
+  KeyboardAvoidingView,
   Platform,
   Pressable,
   RefreshControl,
@@ -390,7 +391,11 @@ export function Screen({
       style={[styles.fill, { backgroundColor: t.s0 }]}
     >
       {scroll ? (
-        pull.frame(
+        // The keyboard covers the lower half of the screen; without this a focused field low on
+        // the page (登录的密码框) sits under it. Android is edge-to-edge (SDK 35+), where
+        // `adjustResize` no longer shrinks the window, so both platforms pad by the keyboard.
+        <KeyboardAvoidingView style={styles.fill} behavior="padding">
+        {pull.frame(
           <ScrollView
             ref={scrollRef}
             contentContainerStyle={styles.grow}
@@ -401,7 +406,8 @@ export function Screen({
           >
             {children}
           </ScrollView>
-        )
+        )}
+        </KeyboardAvoidingView>
       ) : (
         <View style={styles.fill}>{children}</View>
       )}

@@ -105,6 +105,11 @@ describe("login", () => {
     await signIn(false);
     expect((await screen.findByTestId("login-error")).props.children).toBe("初始密码已过期,请联系官员重置");
   });
+
+  it("the login page carries the S-and-L balance mark, not the old ledger emblem (2026-10-03)", async () => {
+    renderApp();
+    expect(await screen.findByTestId("login-mark", { includeHiddenElements: true })).toBeTruthy();
+  });
 });
 
 describe("a stored session", () => {
