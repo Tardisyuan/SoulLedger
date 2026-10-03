@@ -10,7 +10,7 @@ import { RoleName } from "@/src/components/users/RoleName";
 import { EmptyState } from "@/src/components/ui/EmptyState";
 import { Button, buttonVariants } from "@/src/components/ui/Button";
 import { usePlaque } from "@/src/components/plaque/Plaque";
-import { WelcomeSetup, readOnboarded } from "@/src/components/welcome/WelcomeSetup";
+import { WelcomeSetup, loadOnboarded } from "@/src/components/welcome/WelcomeSetup";
 import { useSidebarMenus, type SidebarMenu } from "@/src/hooks/useSidebarMenus";
 import { auditActionGlyph } from "@/src/lib/auditActionGlyph";
 import { APP_VERSION } from "@/src/lib/appVersion";
@@ -21,7 +21,7 @@ import { cn } from "@/lib/utils";
  * 下面是:一块四格的「本殿灵魂」、按角色的「接着做」、我的「最近活动」,页脚一行版本。
  * 原来的问候区、「欢迎页」字样、四个图标卡、四个大方块与三张信息卡都去掉了。
  *
- * 首次进入(这个浏览器里还没有 `onboarded`)单独占一屏 —— `WelcomeSetup`;做完或跳过回到这里,
+ * 首次进入(这个账号在服务器上还没有 `onboarded`)单独占一屏 —— `WelcomeSetup`;做完或跳过回到这里,
  * 之后从「接着做」底部的「重看首次设置」再进去。
  *
  * 统计与活动**各自**加载、各自报错、各自重试;「接着做」不等接口。
@@ -307,11 +307,18 @@ export default function WelcomePage() {
     meta: formatDate(new Date(), { weekday: "long", year: "numeric", month: "long", day: "numeric" }),
   });
 
-  // ── 首次设置:这个用户在这个浏览器里还没做完 → 单独一屏。null = 常规页。
+  // ── 首次设置:这个账号还没做完(服务器说的)→ 单独一屏。null = 常规页。
   const [setupAt, setSetupAt] = useState<number | null>(null);
   const userId = user?.id ?? null;
   useEffect(() => {
-    if (userId !== null && !readOnboarded(userId)) setSetupAt(0);
+    if (userId === null) return;
+    let cancelled = false;
+    void loadOnboarded(userId).then((done) => {
+      if (!cancelled && !done) setSetupAt(0);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [userId]);
 
   // ── 本殿灵魂。

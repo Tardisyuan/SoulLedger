@@ -26884,7 +26884,7 @@ components:
       description: |-
         `User.preferences`, as the API reads and writes it.
 
-        One key today. Language and theme are not here: both are browser-side
+        Two keys. Language and theme are not here: both are browser-side
         settings with no server home (the locale is a cookie the middleware reads,
         the theme a localStorage key), and moving them is a separate decision.
       properties:
@@ -26893,6 +26893,9 @@ components:
           oneOf:
           - $ref: '#/components/schemas/DefaultViewEnum'
           - $ref: '#/components/schemas/NullEnum'
+        onboarded:
+          type: boolean
+          default: false
     PatchedUserProfileUpdate:
       type: object
       description: |-
@@ -32260,7 +32263,7 @@ components:
       description: |-
         `User.preferences`, as the API reads and writes it.
 
-        One key today. Language and theme are not here: both are browser-side
+        Two keys. Language and theme are not here: both are browser-side
         settings with no server home (the locale is a cookie the middleware reads,
         the theme a localStorage key), and moving them is a separate decision.
       properties:
@@ -32269,6 +32272,9 @@ components:
           oneOf:
           - $ref: '#/components/schemas/DefaultViewEnum'
           - $ref: '#/components/schemas/NullEnum'
+        onboarded:
+          type: boolean
+          default: false
     UserProfile:
       type: object
       properties:

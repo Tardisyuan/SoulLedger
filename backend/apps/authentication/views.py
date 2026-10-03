@@ -18,6 +18,7 @@ from rest_framework.decorators import (
     throttle_classes,
 )
 from rest_framework.exceptions import AuthenticationFailed
+from rest_framework.fields import empty
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -1153,6 +1154,9 @@ def preferences_view(request):
 
 
 def _preferences_with_defaults(user):
-    """Every declared key present, null where unset, so a client reads one shape."""
+    """Every declared key present — the field's default where unset, else null — so a client reads one shape."""
     stored = user.preferences or {}
-    return {name: stored.get(name) for name in UserPreferencesSerializer().fields}
+    return {
+        name: stored.get(name, None if field.default is empty else field.default)
+        for name, field in UserPreferencesSerializer().fields.items()
+    }
