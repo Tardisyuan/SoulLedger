@@ -220,7 +220,7 @@ export function LettersScreen() {
     }
   };
   const lastTs = useCallback((roomId: string) => lastOf(chat, roomId)?.ts ?? 0, [chat]);
-  const pull = usePullRefresh(false, () => void chat.reload());
+  const pull = usePullRefresh(false, () => chat.reload());
   // 书信不在切回时重载(会话开销大),但断网恢复时重载一次;没配 Matrix 时不重试,那是设计如此。
   const reloadOnReconnect = useCallback(() => {
     if (chat.availability !== "not_configured") void chat.reload();
@@ -271,12 +271,12 @@ export function LettersScreen() {
           every conversation a soul ever had stays in it. */}
       <Screen scroll={false} edges={["left", "right"]} testID="letters">
         <FadeIn style={styles.fill}>
-          {pull?.indicator}
+          {pull.frame(
           <FlatList
             testID="letters-list"
             data={souls}
             keyExtractor={conversationKey}
-            {...pull?.props}
+            {...pull.props}
             keyboardShouldPersistTaps="handled"
             ListHeaderComponent={
               <>
@@ -341,6 +341,7 @@ export function LettersScreen() {
             )}
             ListFooterComponent={ANDROID ? <View style={styles.fabSpace} /> : null}
           />
+          )}
         </FadeIn>
       </Screen>
       {ANDROID ? <Fab label={tr("soul_app.chat.new")} onPress={() => navigation.navigate("FindSoul")} /> : null}

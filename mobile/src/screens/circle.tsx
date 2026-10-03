@@ -396,7 +396,7 @@ export function PostList({
   /** Under the posts and their "earlier posts" foot. */
   footer?: ReactElement | null;
   refreshing: boolean;
-  onRefresh: () => void;
+  onRefresh: () => unknown;
   testID: string;
 }) {
   const { t: tr } = useI18n();
@@ -405,7 +405,7 @@ export function PostList({
   const pull = usePullRefresh(refreshing, onRefresh);
   return (
     <View style={styles.fill}>
-      {pull?.indicator}
+      {pull.frame(
       <FlatList
         testID={testID}
         data={feed.posts ?? []}
@@ -427,9 +427,10 @@ export function PostList({
         }
         onEndReached={feed.more ?? undefined}
         onEndReachedThreshold={0.5}
-        {...pull?.props}
+        {...pull.props}
         keyboardShouldPersistTaps="handled"
       />
+      )}
     </View>
   );
 }
@@ -531,7 +532,7 @@ export function CircleScreen() {
   // page read used to stay mounted. The next page is read on nearing the end.
   return (
     <Screen scroll={false} edges={["left", "right"]} testID="circle">
-      {pull?.indicator}
+      {pull.frame(
       <FlatList
         testID="circle-list"
         data={feed.posts ?? []}
@@ -544,9 +545,10 @@ export function CircleScreen() {
         ListFooterComponent={<PagedFooter list={feed} testID="circle-more" title={tr("soul_app.circle.feed.more")} />}
         onEndReached={feed.more ?? undefined}
         onEndReachedThreshold={0.5}
-        {...pull?.props}
+        {...pull.props}
         keyboardShouldPersistTaps="handled"
       />
+      )}
     </Screen>
   );
 }
@@ -972,7 +974,7 @@ export function PostScreen({ id }: { id: string }) {
     void post.reload();
   };
 
-  const pull = usePullRefresh(post.loading && !!p, () => void Promise.all([post.reload(), comments.reload()]));
+  const pull = usePullRefresh(post.loading && !!p, () => Promise.all([post.reload(), comments.reload()]));
 
   if (post.error && !post.data) {
     return (
@@ -995,7 +997,7 @@ export function PostScreen({ id }: { id: string }) {
     <KeyboardAvoidingView style={[styles.fill, { backgroundColor: t.s0 }]} behavior="padding" keyboardVerticalOffset={-insets.bottom}>
       {/* The comments are one more unbounded, paged list, so they are the FlatList and the post is its header. */}
       <Screen scroll={false} edges={["left", "right"]} testID="circle-post">
-        {pull?.indicator}
+        {pull.frame(
         <FlatList
           testID="comments-list"
           data={p ? (comments.rows ?? []) : []}
@@ -1043,9 +1045,10 @@ export function PostScreen({ id }: { id: string }) {
           ListFooterComponent={p ? <PagedFooter list={comments} testID="comments-more" title={tr("soul_app.circle.comment.more")} /> : null}
           onEndReached={comments.more ?? undefined}
           onEndReachedThreshold={0.5}
-          {...pull?.props}
+          {...pull.props}
           keyboardShouldPersistTaps="handled"
         />
+        )}
       </Screen>
       {open ? (
         <View style={[styles.dock, { paddingHorizontal: 12, paddingBottom: 12 + insets.bottom, borderTopColor: t.hair, backgroundColor: t.s1 }]}>

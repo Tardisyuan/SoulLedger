@@ -49,6 +49,7 @@ import {
   type ViewStyle,
   useWindowDimensions,
 } from "react-native";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Reanimated, { Easing as REasing, FadeOut, Keyframe } from "react-native-reanimated";
 import { SafeAreaView, type Edge } from "react-native-safe-area-context";
 
@@ -217,65 +218,134 @@ export const GUTTER = GUTTER_PT;
 
 /** v3 B2 App「下拉刷新」: released past 56pt, the scroller reloads. */
 export const PULL_REFRESH_PT = 56;
+/** A drag this far down from a list at its top is a pull; this far up, or across, it is the list's. */
+const PULL_SLOP_PT = 10;
+const PULL_EASING = Easing.bezier(0.2, 0.8, 0.2, 1);
 
-type PullScrollProps = Pick<ScrollViewProps, "refreshControl" | "alwaysBounceVertical" | "scrollEventThrottle" | "onScroll" | "onScrollEndDrag">;
+/** The OS screen reader (VoiceOver / TalkBack), live — `useReducedMotion`'s twin. */
+export function useScreenReaderEnabled(): boolean {
+  const [on, setOn] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    AccessibilityInfo.isScreenReaderEnabled()
+      .then((value) => alive && setOn(value))
+      .catch(() => {});
+    const sub = AccessibilityInfo.addEventListener("screenReaderChanged", setOn);
+    return () => {
+      alive = false;
+      sub?.remove();
+    };
+  }, []);
+  return on;
+}
+
+type PullScrollProps = Pick<ScrollViewProps, "refreshControl" | "bounces" | "overScrollMode" | "scrollEventThrottle" | "onScroll">;
 
 /**
  * Pull-to-refresh for a scroller: `Screen`'s own, or a list's that owns its scrolling (a
- * `FlatList` inside `<Screen scroll={false}>`). Spread `props` on the scroller and put
- * `indicator` just before it, in the same parent (it sits under the list's top edge).
+ * `FlatList` inside `<Screen scroll={false}>`). Spread `props` on the scroller and pass it
+ * through `frame`. One path on iOS and Android.
  *
- * iOS, v3 B2: no spinner. The content follows the finger (the scroll view's own bounce, so no
- * gesture is taken from the list — v3 allows the ScrollView's onScroll in place of a
- * PanResponder) and a release at 56pt or more reloads. In the gap the pull opens sits a
- * static ↻ that never turns (v3: 印框旋转不使用): it fades in with the pull, and under reduce
- * motion it simply appears once the pull has reached 56 (v3: 仅显示静态刷新指示).
+ * v3 B2: no spinner. The content follows the finger down, at most 56; a release at 56 reloads
+ * and the content waits there, a static ↻ in the gap (v3: 印框旋转不使用), until the reload is
+ * done — what `onRefresh` returned settles, or else `refreshing` goes false — then goes back
+ * over 200ms on cubic-bezier(.2,.8,.2,1); a release short of 56 goes back the same way. While
+ * it waits nothing re-triggers it. Under reduce motion the content does not follow the finger:
+ * at 56 it stands at 56 with the ↻, short of it nothing, and nothing animates (v3: 仅显示静态刷新
+ * 指示). With a screen reader on, the system RefreshControl instead (both platforms): a screen
+ * reader's three-finger scroll reaches it, a drag gesture does not.
  *
- * Android keeps the system RefreshControl: its scroll view takes the drag natively at touch
- * slop, before a JS responder can claim it (react-native TouchTargetHelper / JSResponderHandler),
- * so a PanResponder pull loses the gesture, and an overscroll there sends no offset to read
- * (v3 B4 itself says nested-scroll contention needs a dependency it does not allow). Its
- * spinner belongs to a pull: a reload the app starts itself (tab refocus) shows none.
+ * v3 B4 allows only Animated + PanResponder in the App, and says nested-scroll contention needs
+ * a dependency. The user's decision of 2026-10-03 is the exception: pull-to-refresh and its
+ * scroll contention may use react-native-gesture-handler (already installed); the animation
+ * stays RN Animated, never Reanimated. A PanResponder cannot do it on Android: the scroll view
+ * takes the drag natively at touch slop, before a JS responder can claim it.
+ *
+ * The pull is a `Gesture.Pan` around the scroller, enabled only while the list is at its top,
+ * activating 10pt down and failing 10pt up or across; the scroller is a `Gesture.Native` that
+ * waits for that pan to fail. Not `manualActivation` + `onTouchesMove`: on the JS thread
+ * (`runOnJS`) its state manager calls Reanimated's `setGestureState`, which only acts inside a
+ * worklet (on the RN runtime it warns and does nothing) — hence the declarative offsets, with
+ * `enabled` following `onScroll`'s offset. The scroller neither bounces nor overscrolls: the
+ * pull is the only thing that moves the content past its top. The offset is set from JS on
+ * every move anyway, so the 200ms return runs on the JS driver too (one driver for one value).
  */
 export function usePullRefresh(
   refreshing: boolean | undefined,
-  onRefresh: (() => void) | undefined
-): { props: PullScrollProps; indicator: ReactElement | null } | undefined {
+  onRefresh: (() => unknown) | undefined
+): { props: PullScrollProps; frame: (scroller: ReactElement) => ReactElement } {
   const t = useTheme();
   const reduced = useReducedMotion();
-  const [pulled, setPulled] = useState(false);
-  if (pulled && !refreshing) setPulled(false);
-  const [pull] = useState(() => new Animated.Value(0));
-  if (!onRefresh) return undefined;
-  if (Platform.OS !== "ios") {
-    const control = (
-      <RefreshControl
-        refreshing={pulled && !!refreshing}
-        onRefresh={() => {
-          setPulled(true);
-          onRefresh();
-        }}
-        tintColor={t.inkSubtle}
-      />
-    );
-    return { props: { refreshControl: control }, indicator: null };
-  }
-  const opacity = reduced
-    ? pull.interpolate({ inputRange: [0, PULL_REFRESH_PT - 0.5, PULL_REFRESH_PT], outputRange: [0, 0, 1], extrapolate: "clamp" })
-    : pull.interpolate({ inputRange: [0, PULL_REFRESH_PT], outputRange: [0, 1], extrapolate: "clamp" });
+  const reader = useScreenReaderEnabled();
+  const { pullRelease } = useReducedMotionDurations();
+  const [y] = useState(() => new Animated.Value(0));
+  const [atTop, setAtTop] = useState(true);
+  // "wait": held while `refreshing`; "promise": held until what onRefresh returned settles.
+  const [held, setHeld] = useState<false | "wait" | "promise">(false);
+  if (held === "wait" && !refreshing) setHeld(false);
+
+  const trigger = () => {
+    if (!onRefresh) return;
+    const result = onRefresh();
+    if (result && typeof (result as PromiseLike<unknown>).then === "function") {
+      setHeld("promise");
+      (result as PromiseLike<unknown>).then(
+        () => setHeld(false),
+        () => setHeld(false)
+      );
+    } else setHeld("wait");
+  };
+  const back = () => {
+    if (pullRelease) Animated.timing(y, { toValue: 0, duration: pullRelease, easing: PULL_EASING, useNativeDriver: false }).start();
+    else y.setValue(0);
+  };
+  // The reload is done: back from the 56 hold (only then — nothing moves on mount).
+  const wasHeld = useRef(false);
+  useEffect(() => {
+    if (held || !wasHeld.current) {
+      wasHeld.current = !!held;
+      return;
+    }
+    wasHeld.current = false;
+    if (pullRelease) Animated.timing(y, { toValue: 0, duration: pullRelease, easing: PULL_EASING, useNativeDriver: false }).start();
+    else y.setValue(0);
+  }, [held, pullRelease, y]);
+
+  // Built every render: the detector keeps the native handler (same tag) and swaps in the new
+  // config and callbacks, so a re-render mid-drag does not drop the pull.
+  const pan = Gesture.Pan()
+    .withTestId("pull")
+    .runOnJS(true)
+    .enabled(!!onRefresh && atTop && !held && !reader)
+    .activeOffsetY(PULL_SLOP_PT)
+    .failOffsetY(-PULL_SLOP_PT)
+    .failOffsetX([-PULL_SLOP_PT, PULL_SLOP_PT])
+    .onUpdate((e) => {
+      const d = Math.min(Math.max(e.translationY, 0), PULL_REFRESH_PT);
+      y.setValue(reduced ? (d >= PULL_REFRESH_PT ? PULL_REFRESH_PT : 0) : d);
+    })
+    .onEnd((e, ok) => (ok && e.translationY >= PULL_REFRESH_PT ? trigger() : back()));
+  const native = Gesture.Native().requireExternalGestureToFail(pan);
+
+  if (!onRefresh) return { props: {}, frame: (scroller) => scroller };
+  const opacity = y.interpolate({ inputRange: [0, PULL_REFRESH_PT], outputRange: [0, 1], extrapolate: "clamp" });
   return {
-    props: {
-      alwaysBounceVertical: true,
-      scrollEventThrottle: 16,
-      onScroll: (e) => pull.setValue(Math.max(0, -e.nativeEvent.contentOffset.y)),
-      onScrollEndDrag: (e) => {
-        if (-e.nativeEvent.contentOffset.y >= PULL_REFRESH_PT && !refreshing) onRefresh();
-      },
-    },
-    indicator: (
-      <Animated.View testID="pull-indicator" pointerEvents="none" style={[styles.pullIndicator, { opacity }]} importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
-        <Text style={[styles.pullGlyph, { color: t.inkSubtle }]}>↻</Text>
-      </Animated.View>
+    props: reader
+      ? { refreshControl: <RefreshControl refreshing={!!held} onRefresh={trigger} tintColor={t.inkSubtle} /> }
+      : { bounces: false, overScrollMode: "never", scrollEventThrottle: 16, onScroll: (e) => setAtTop(e.nativeEvent.contentOffset.y <= 0) },
+    frame: (scroller) => (
+      <GestureDetector gesture={pan}>
+        <View style={styles.fill} collapsable={false}>
+          {reader ? null : (
+            <Animated.View testID="pull-indicator" pointerEvents="none" style={[styles.pullIndicator, { opacity }]} importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
+              <Text style={[styles.pullGlyph, { color: t.inkSubtle }]}>↻</Text>
+            </Animated.View>
+          )}
+          <Animated.View testID="pull-content" style={[styles.fill, { transform: [{ translateY: y }] }]}>
+            <GestureDetector gesture={native}>{scroller}</GestureDetector>
+          </Animated.View>
+        </View>
+      </GestureDetector>
     ),
   };
 }
@@ -297,7 +367,7 @@ export function Screen({
 }: {
   children: ReactNode;
   refreshing?: boolean;
-  onRefresh?: () => void;
+  onRefresh?: () => unknown;
   scroll?: boolean;
   edges?: Edge[];
   testID?: string;
@@ -320,19 +390,18 @@ export function Screen({
       style={[styles.fill, { backgroundColor: t.s0 }]}
     >
       {scroll ? (
-        <>
-          {pull?.indicator}
+        pull.frame(
           <ScrollView
             ref={scrollRef}
             contentContainerStyle={styles.grow}
             keyboardShouldPersistTaps="handled"
-            {...pull?.props}
-            onScroll={both(onScroll && ((e) => onScroll(e.nativeEvent.contentOffset.y)), pull?.props.onScroll)}
-            scrollEventThrottle={onScroll || pull?.props.onScroll ? 16 : undefined}
+            {...pull.props}
+            onScroll={both(onScroll && ((e) => onScroll(e.nativeEvent.contentOffset.y)), pull.props.onScroll)}
+            scrollEventThrottle={onScroll || pull.props.onScroll ? 16 : undefined}
           >
             {children}
           </ScrollView>
-        </>
+        )
       ) : (
         <View style={styles.fill}>{children}</View>
       )}
