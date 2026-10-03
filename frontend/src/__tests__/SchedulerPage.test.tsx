@@ -186,8 +186,17 @@ describe("grouping and filters", () => {
     });
     fireEvent.click(header);
     expect(header).toHaveAttribute("aria-expanded", "false");
-    expect(container.querySelector('[data-job-id="9"]')).toBeNull();
-    expect(container.querySelector('[data-job-id="1"]')).not.toBeNull();
+    // 收起的契约(Design 第三批回复):先 inert、动画结束再 hidden。
+    const body = document.getElementById(header.getAttribute("aria-controls")!)!;
+    const row = container.querySelector('[data-job-id="9"]');
+    expect(row?.closest("[inert]")).toBe(body);
+    expect(body).not.toHaveAttribute("hidden");
+    fireEvent.animationEnd(body);
+    expect(body).toHaveAttribute("hidden");
+    expect(row).not.toBeVisible();
+    const other = container.querySelector('[data-job-id="1"]');
+    expect(other).toBeVisible();
+    expect(other?.closest("[inert]")).toBeNull();
   });
 
   it.each([
@@ -279,6 +288,36 @@ describe("run now", () => {
     await confirmRun();
     await waitFor(() => expect(mockShowToast).toHaveBeenCalledWith(tZh(key), "error"));
     expect(mockShowToast).not.toHaveBeenCalledWith(tZh("scheduler.run.queued"), "success");
+  });
+});
+
+describe("v3: statuses are glyph + text, controls are 44", () => {
+  it("every status badge on a row carries a glyph, not colour alone", async () => {
+    asRole("scheduler.read");
+    schedulerApi.jobs.mockResolvedValue({
+      data: [job({ enabled: false, overdue: true, expected_at: "2026-09-17T00:00:00Z", consecutive_failures: 2 })],
+    });
+    renderPage();
+    const success = await screen.findByTitle("SUCCESS");
+    // The badge is the span that wraps the translated member; its first child is the glyph.
+    expect(success.parentElement!.textContent).toBe(`✓${tZh("scheduler.status.SUCCESS")}`);
+    const badge = (text: string) => screen.queryByText((_, el) => el?.tagName === "SPAN" && el.textContent === text);
+    for (const [glyph, label] of [
+      ["○", tZh("scheduler.flags.disabled")],
+      ["◐", tZh("scheduler.flags.overdue")],
+      ["!", tZh("scheduler.flags.failures", { count: "2" })],
+    ]) {
+      expect(badge(`${glyph}${label}`)).not.toBeNull();
+    }
+  });
+
+  it("the enable switch is a 44 × 44 target with the 32 × 18 track drawn inside it", async () => {
+    asRole("scheduler.read", "scheduler.manage");
+    renderPage();
+    const [toggle] = await screen.findAllByRole("switch");
+    expect(toggle.className).toContain("size-(--control-h-sm)");
+    expect(toggle.className).not.toContain("h-[18px]");
+    expect(toggle.querySelector("span")!.className).toContain("h-[18px] w-8");
   });
 });
 

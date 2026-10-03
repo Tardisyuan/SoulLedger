@@ -1,7 +1,7 @@
 /**
  * The app follows the system's light / dark setting (app.json
  * `userInterfaceStyle: "automatic"`; `useColorScheme` in the navigator),
- * on every screen including the parchment sign-in.
+ * on every screen including the sign-in.
  */
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { render, screen } from "@testing-library/react-native";
@@ -13,7 +13,7 @@ import { I18nProvider } from "../i18n";
 import { RootNavigator } from "../navigation";
 import { installMobilePlatform } from "../platform";
 import { SessionProvider } from "../session";
-import { civ, parchment } from "../theme";
+import { NEUTRAL_PLAQUE, v3, v3Band } from "../theme";
 
 const appJson = require("../../app.json") as { expo: { userInterfaceStyle?: string } };
 
@@ -60,20 +60,21 @@ it("app.json asks the OS to follow the system setting", () => {
 
 // v2: the primary button is one of the plaque's five places; before sign-in that is
 // the neutral plaque (补足 C 组 login: 中性皮), no longer the canvas's ink fill.
-it.each(["dark", "light"] as const)("system %s → the parchment of that scheme, primary button in the neutral plaque", async (scheme) => {
+// v3 (2026-10-02): no parchment before sign-in — the login is on v3's neutrals.
+it.each(["dark", "light"] as const)("system %s → v3's neutrals of that scheme, primary button in the neutral plaque", async (scheme) => {
   mockScheme = scheme;
   renderApp();
   await screen.findByTestId("login-submit");
-  expect(loginGround()).toBe(parchment[scheme].bg);
+  expect(loginGround()).toBe(v3[scheme].surface);
   expect(StyleSheet.flatten(screen.getByTestId("login-submit").props.style)).toMatchObject({
-    backgroundColor: civ.neutral[scheme].plaque,
+    backgroundColor: scheme === "dark" ? v3Band(NEUTRAL_PLAQUE.dark) : NEUTRAL_PLAQUE.light,
   });
-  expect(loginGround()).not.toBe(civ.neutral[scheme].s1);
+  expect(loginGround()).not.toBe(v3[scheme === "dark" ? "light" : "dark"].surface);
 });
 
 it("no system preference reported → dark (the design's primary scheme)", async () => {
   mockScheme = null;
   renderApp();
   await screen.findByTestId("login-submit");
-  expect(loginGround()).toBe(parchment.dark.bg);
+  expect(loginGround()).toBe(v3.dark.surface);
 });

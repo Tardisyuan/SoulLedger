@@ -3,8 +3,17 @@ import { api } from "./client";
 import type { HistoricalDate } from "../domain/dates";
 
 export interface LedgerStatsOverview {
+  /** 这份聚合算出来的时刻(ISO)—— 身份带「截至 HH:MM」。 */
+  as_of: string;
   total_souls: number;
-  state_distribution: { state: string; label: string; count: number }[];
+  /** 全部灵魂的平均余额(merit − demerit),一位小数;没有灵魂时 null。 */
+  average_balance: number | null;
+  /** 上个月余额快照的平均余额;没有上月快照时 null(快照从开始写的那个月起才有,不回填)。 */
+  average_balance_prev_month: number | null;
+  /** `average_balance` 减上月(原值相减再取一位);任一边为 null 时 null —— 仪表盘就不写「较上月」。 */
+  average_balance_delta: number | null;
+  /** `average_balance`:这个状态下的平均余额,一位小数;没有灵魂时 null。 */
+  state_distribution: { state: string; label: string; count: number; average_balance: number | null }[];
   tenants: {
     tenant_id: number;
     tenant_code: string;
@@ -12,7 +21,15 @@ export interface LedgerStatsOverview {
     total_souls: number;
     state_breakdown: Record<string, number>;
   }[];
+  /** 旧的七格(欢迎页、调派提案页、/admin/stats 在读)。仪表盘的等宽直方图读 `balance_histogram`。 */
   karma_distribution: { label: string; count: number }[];
+  /** 等宽直方图:[-300, 300) 每 `bucket_width` 一格,两端各一格开口(min / max 为 null)。半开区间 [min, max)。
+   *  **只数已处置的灵魂**,所以 `total` 是已处置人数,不是 `total_souls`。 */
+  balance_histogram: {
+    bucket_width: number;
+    buckets: { min: number | null; max: number | null; count: number }[];
+    total: number;
+  };
   recent_activity: {
     id: number;
     action: string;
@@ -29,6 +46,10 @@ export interface LedgerStatsOverview {
     /** `Realm.realm_type` —— 仪表盘按它选图案(web `REALM_PATTERNS`)。 */
     realm_type: "HELL" | "PURGATORY" | "BLISS" | "NEUTRAL";
     count: number;
+    /** 容量;null = 未记录。 */
+    capacity: number | null;
+    /** 此刻在押,与界域页、发落 `realm_full` 同一口径 —— 「占容量」= held / capacity。 */
+    held: number;
   }[];
 }
 
@@ -218,6 +239,10 @@ export interface LedgerRecord {
   /** HistoricalDateField: {year, month, day} | null */
   event_date: HistoricalDate | null;
   is_milestone: boolean;
+  /** '<Statute.code>:<条款原文>',如 '救濟門#7:賑濟窮民百錢';空串 = 没记。 */
+  statute_clause: string;
+  /** 这一行覆盖几次;null = 没记(不是 0 次,也不当 1 次显示)。 */
+  occurrence_count: number | null;
 }
 
 /** 200 body of GET /souls/{id}/karma/ and GET /ledger/balance/{soul_id}/. */

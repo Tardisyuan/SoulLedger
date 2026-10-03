@@ -5,7 +5,7 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { RebirthFormSelect, type RebirthFormValue } from "@/src/components/souls/RebirthFormSelect";
-import { LedgerHeading } from "./SoulLedgerSections";
+import { Button } from "@/src/components/ui/Button";
 
 /** Left column's 操作 card — the state-machine verbs available on this soul. */
 export function SoulActionsCard({
@@ -34,8 +34,10 @@ export function SoulActionsCard({
   const { t } = useI18n();
 
   return (
-    <section className="space-y-3">
-      <LedgerHeading title={t("souls.detail.actions")} />
+    <section aria-labelledby="soul-actions-title" className="min-w-0 space-y-4 bg-[oklch(var(--color-surface-1))] p-6">
+      <h2 id="soul-actions-title" className="text-2xs uppercase tracking-widest text-[oklch(var(--color-ink-subtle))]">
+        {t("souls.detail.actions")}
+      </h2>
       {loading ? (
         <div className="space-y-2">
           <Skeleton className="h-8 w-full" />
@@ -45,31 +47,23 @@ export function SoulActionsCard({
         <div className="space-y-2">
           {soul?.current_state === "ALIVE" && (
             <RequirePermission permissions="soul.die">
-              {/* Accent, not status-error. Recording a death is the
+              {/* Primary (v3: the civilization's main colour), not status-error. Recording a death is the
                   central verb of this product, not a failure — and the
                   error token is what genuinely destructive actions
                   (删除, below) use, so spending it here drains the
                   signal from both. */}
-              <button
-                onClick={onDie}
-                disabled={!!actionLoading}
-                className="w-full py-2 px-4 bg-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-ink-muted))] text-[oklch(var(--color-canvas))] disabled:opacity-50 text-sm font-medium transition-colors"
-              >
+              <Button type="button" variant="primary" size="lg" className="w-full" onClick={onDie} disabled={!!actionLoading}>
                 {actionLoading === "die" ? t("souls.detail.processing") : t("souls.detail.mark_dead")}
-              </button>
+              </Button>
             </RequirePermission>
           )}
           {soul?.current_state === "JUDGING" && (
             <div className="space-y-2">
               <p className="text-xs text-[oklch(var(--color-ink-muted))] text-center">{t("souls.detail.render_judgment")}</p>
               <RequirePermission permissions="judgment.create">
-                <button
-                  onClick={onStartJudgment}
-                  disabled={!!actionLoading}
-                  className="w-full py-2 px-4 bg-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-ink-muted))] disabled:opacity-50 text-[oklch(var(--color-canvas))] text-sm font-medium transition-colors"
-                >
+                <Button type="button" variant="primary" size="lg" className="w-full" onClick={onStartJudgment} disabled={!!actionLoading}>
                   {actionLoading === "judge" ? t("souls.detail.processing") : t("souls.detail.start_judgment")}
-                </button>
+                </Button>
               </RequirePermission>
             </div>
           )}
@@ -91,19 +85,23 @@ export function SoulActionsCard({
                 </div>
               )}
               {dispositions.filter(d => !d.is_executed).map((disp) => (
-                <button
+                <Button
                   key={disp.id}
+                  type="button"
+                  variant="primary"
+                  size="lg"
+                  className="h-auto min-h-(--control-h-md) w-full whitespace-normal py-2"
                   onClick={() => onReincarnate(disp.id)}
                   disabled={!!actionLoading}
-                  className="w-full py-2 px-4 bg-[oklch(var(--color-status-info))] hover:bg-[oklch(var(--color-status-info)/0.8)] disabled:opacity-50 text-sm font-medium transition-colors"
                 >
                   {actionLoading === "reincarnate" ? t("souls.detail.processing") : `${t("souls.detail.reincarnate")} ${disp.realm_name || disp.realm_code || t("souls.detail.destination")}`}
-                </button>
+                </Button>
               ))}
             </RequirePermission>
           )}
           {soul?.current_state === "REINCARNATING" && (
-            <div className="text-center text-[oklch(var(--color-status-info))] text-sm py-2">
+            <div className="text-center text-[oklch(var(--color-ink-muted))] text-sm py-2">
+              <span aria-hidden="true">↻ </span>
               {t("souls.detail.being_reborn")}
             </div>
           )}

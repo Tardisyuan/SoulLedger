@@ -6,29 +6,37 @@
 import BottomSheet from "@gorhom/bottom-sheet";
 import { NavigationContainer } from "@react-navigation/native";
 import * as Haptics from "expo-haptics";
-import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { GestureHandlerRootView, State, type PanGesture } from "react-native-gesture-handler";
+import { fireGestureHandler, getByGestureTestId } from "react-native-gesture-handler/jest-utils";
 import { useSharedValue } from "react-native-reanimated";
 import { act, fireEvent, render, screen, within } from "@testing-library/react-native";
-import type { ReactNode } from "react";
-import { AccessibilityInfo, StyleSheet, Text, View } from "react-native";
+import { useState, type ReactNode } from "react";
+import { AccessibilityInfo, Animated, DeviceEventEmitter, Easing, KeyboardAvoidingView, Platform, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
+import { LogoutProvider, useAskLogout } from "../feedback";
 import { I18nProvider } from "../i18n";
 import { installMobilePlatform } from "../platform";
-import { FONT_ASSETS, quoteFamily } from "../fonts";
+import { FONT_ASSETS, quoteFamily, titleFamily } from "../fonts";
 import { APPLICATION_BADGES, SOUL_STATE_BADGES } from "../rules";
 import { ExpiryBox } from "../screens/auth";
 import { LifeSections } from "../screens/life";
-import { motion, themeFor } from "../theme";
+import { motion, radius, themeFor } from "../theme";
 import {
   Button,
   DataRow,
   EnumBadge,
   Input,
+  PULL_REFRESH_PT,
+  Screen,
   Quote,
   RadioMark,
+  Section,
+  SectionLabel,
   SwitchMark,
+  TYPE,
   ThemeContext,
+  Txt,
   shade,
   useReducedMotionDurations,
 } from "../ui";
@@ -37,7 +45,11 @@ import { application, life } from "./stubApi";
 const flat = (el: { props: { style?: unknown } }) => StyleSheet.flatten(el.props.style as never) as Record<string, unknown>;
 
 function wrap(children: ReactNode, civilization: string | null = "CHINESE") {
-  return render(
+  return render(tree(children, civilization));
+}
+
+function tree(children: ReactNode, civilization: string | null = "CHINESE") {
+  return (
     <SafeAreaProvider initialMetrics={{ frame: { x: 0, y: 0, width: 390, height: 844 }, insets: { top: 0, left: 0, right: 0, bottom: 0 } }}>
       <I18nProvider>
         <ThemeContext.Provider value={themeFor(civilization, "dark")}>
@@ -110,20 +122,32 @@ describe("the Han serif", () => {
     expect(quoteFamily("功过相权，尚有一过未清")).toBe("NotoSerifSC_400");
     expect(quoteFamily("Merit and demerit have been weighed")).toBe("SourceSerif4_400Regular");
     expect(FONT_ASSETS).toHaveProperty("NotoSerifSC_400");
-    // Regular only (2026-09-18): the SemiBold subset had no caller and is gone.
-    expect(Object.keys(FONT_ASSETS).filter((name) => name.startsWith("NotoSerifSC"))).toEqual(["NotoSerifSC_400"]);
+    // Regular for quotes, SemiBold for v3's titles and display text (back 2026-10-03; it had no caller 2026-09-18).
+    expect(Object.keys(FONT_ASSETS).filter((name) => name.startsWith("NotoSerifSC"))).toEqual(["NotoSerifSC_400", "NotoSerifSC_600"]);
   });
 
-  it("bundles exactly the one Han serif file, within the 1.5 MB budget (scripts/subset-serif-sc.sh)", () => {
+  it("titles and display text are Noto Serif SC 600 (v3 第一批); body and labels stay the interface face", () => {
+    expect([TYPE.title.fontFamily, TYPE.display.fontFamily]).toEqual(["NotoSerifSC_600", "NotoSerifSC_600"]);
+    expect([TYPE.body.fontFamily, TYPE.label.fontFamily, TYPE.section.fontFamily]).not.toContain("NotoSerifSC_600");
+    wrap(<Txt variant="title">灵魂簿</Txt>);
+    expect(flat(screen.getByText("灵魂簿")).fontFamily).toBe("NotoSerifSC_600");
+  });
+
+  it("bundles exactly the two Han serif weights, each within the 1.5 MB budget (scripts/subset-serif-sc.sh)", () => {
     const fs = jest.requireActual<typeof import("fs")>("fs");
     const path = jest.requireActual<typeof import("path")>("path");
     const dir = path.join(__dirname, "..", "..", "assets", "fonts");
-    // Beside it only the v2 seal face 霞鹜篆书 (scripts/import-v2-art.mjs), which is not a serif for quotes.
-    // And the 5 KB status-glyph face (Design E 组), which is not a serif either.
-    expect(fs.readdirSync(dir).filter((f: string) => f.endsWith(".ttf"))).toEqual(["LXGWSeal-Regular.ttf", "NotoSerifSC-Subset-400.ttf", "SoulLedgerGlyphs.ttf"]);
-    expect(fs.statSync(path.join(dir, "NotoSerifSC-Subset-400.ttf")).size <= 1_500_000).toBe(true);
+    // Beside them only the 5 KB status-glyph face (Design E 组), which is not a serif. v2's seal face
+    // 霞鹜篆书 went with v2's seal (2026-10-03). The 600 subset is v3's titles and display text.
+    expect(fs.readdirSync(dir).filter((f: string) => f.endsWith(".ttf"))).toEqual([
+      "NotoSerifSC-Subset-400.ttf",
+      "NotoSerifSC-Subset-600.ttf",
+      "SoulLedgerGlyphs.ttf",
+    ]);
+    for (const w of ["400", "600"]) expect(fs.statSync(path.join(dir, `NotoSerifSC-Subset-${w}.ttf`)).size <= 1_500_000).toBe(true);
     // what App.tsx hands to useFonts must resolve — a require of a deleted file fails the import above
     expect(FONT_ASSETS.NotoSerifSC_400).toBeTruthy();
+    expect(FONT_ASSETS.NotoSerifSC_600).toBeTruthy();
   });
 
   it("renders a rejection reason in it", () => {
@@ -243,21 +267,50 @@ describe("long labels", () => {
 });
 
 /** v2「朱印」base components (补足 A1 states, A2 rules). */
+describe("v3 section labels (.product-label)", () => {
+  const cn = themeFor("CHINESE", "dark");
+  // v3 第一批: 11, upper case, the interface face — not mono (the round-7 prototype's was mono).
+  const label = { fontFamily: "Archivo_500Medium", fontSize: 11, textTransform: "uppercase", color: cn.inkMuted };
+
+  it("SectionLabel: 11, upper case, the interface face (not mono), muted — not ink, not the civilization's colour", () => {
+    wrap(<SectionLabel>Language</SectionLabel>);
+    expect(flat(screen.getByText("Language"))).toMatchObject(label);
+    expect(String(flat(screen.getByText("Language")).fontFamily)).not.toMatch(/Mono/);
+    expect(flat(screen.getByText("Language")).color).not.toBe(cn.plaque);
+  });
+
+  it("a section header outside the ledger is one; a ledger row keeps its 15 / 600 title", () => {
+    wrap(
+      <>
+        <Section testID="plain" title="Open source" open={false} onToggle={jest.fn()}>
+          <Text>body</Text>
+        </Section>
+        <Section testID="ledger" index={1} title="功过" open={false} onToggle={jest.fn()}>
+          <Text>body</Text>
+        </Section>
+      </>
+    );
+    expect(flat(screen.getByText("Open source"))).toMatchObject(label);
+    expect(flat(screen.getByText("功过"))).toMatchObject({ fontSize: 15, fontFamily: "Archivo_600SemiBold", color: cn.ink });
+  });
+});
+
 describe("v2 base components", () => {
   const cn = themeFor("CHINESE", "dark");
   const hosts = (id: string) => screen.getByTestId(id).findAll((n) => typeof n.type === "string");
   const hasPath = (id: string) => screen.getByTestId(id).findAll((n) => typeof n.props.d === "string").length > 0;
 
-  it("primary is the plaque under onPlaque; pressing darkens it 24%, never lightens it", () => {
+  it("primary is the plaque's fill under onPlaque (dark: the band); pressing darkens it 24%, never lightens it", () => {
     wrap(<Button testID="go" title="提交" onPress={jest.fn()} />);
-    expect(flat(screen.getByTestId("go")).backgroundColor).toBe(cn.plaque);
+    expect(flat(screen.getByTestId("go")).backgroundColor).toBe(cn.plaqueFill);
+    expect(cn.plaqueFill).toBe(cn.band); // dark: 10% #111 mixed in, so white text clears AA on every civilization
     expect(flat(screen.getByText("提交")).color).toBe(cn.onPlaque);
     // The Pressable's own style function, asked for its pressed look (the test renderer has no touch).
     let pressable = screen.getByTestId("go").parent;
     while (pressable && typeof pressable.props.style !== "function") pressable = pressable.parent;
     const styleOf = pressable!.props.style as (s: { pressed: boolean }) => unknown;
     const pressed = StyleSheet.flatten(styleOf({ pressed: true }) as never) as Record<string, unknown>;
-    expect(pressed.backgroundColor).toBe(shade(cn.plaque));
+    expect(pressed.backgroundColor).toBe(shade(cn.plaqueFill));
     expect(shade("#B3402C")).toBe("#883121");
   });
 
@@ -339,6 +392,322 @@ describe("useReducedMotionDurations", () => {
     const d = read();
     expect(Object.entries(d).filter(([k, v]) => !k.endsWith("Hold") && v !== 0)).toEqual([]);
     expect([d.toastHold, d.welcomeHold]).toEqual([motion.toastHold, motion.welcomeHold]);
+  });
+});
+
+describe("v3 timings and corners", () => {
+  it("a toast stays 4s (v3 B2 Toast 停留 4s); a sheet opens over 240 and closes over 180", () => {
+    expect([motion.toastHold, motion.sheetIn, motion.sheetOut]).toEqual([4000, 240, 180]);
+  });
+
+  it("inputs 4, dialogs and sheets 8, the rest square (v3 第一批 形状与层次)", async () => {
+    expect(radius).toEqual({ none: 0, control: 4, dialog: 8, pill: 999 });
+    wrap(<Input label="Name" testID="name" value="" onChangeText={jest.fn()} />);
+    const box = screen.getByTestId("name").parent?.parent;
+    expect(flat(box as never).borderRadius).toBe(4);
+    screen.unmount();
+    wrap(
+      <LogoutProvider onConfirm={jest.fn()}>
+        <AskLogout />
+      </LogoutProvider>
+    );
+    await act(async () => {});
+    fireEvent.press(screen.getByTestId("ask"));
+    expect(flat(screen.getByTestId("confirm-sheet"))).toMatchObject({ borderTopLeftRadius: 8, borderTopRightRadius: 8 });
+    expect(flat(screen.getByTestId("confirm-sheet")).borderBottomLeftRadius).toBeUndefined();
+  });
+});
+
+function AskLogout() {
+  const ask = useAskLogout();
+  return <Button testID="ask" title="ask" onPress={ask} />;
+}
+
+describe("titleFamily (v3 titles in Noto Serif SC 600, a Han + ASCII subset)", () => {
+  it("Han, ASCII and the subset's punctuation take the serif; a rare Han character alone falls back, so it still does", () => {
+    expect(["张三", "Anubis", "第 2 世 · 书信", "「灵魂簿」", "王翾"].map(titleFamily)).toEqual(Array(5).fill("NotoSerifSC_600"));
+  });
+  it("a letter outside the subset keeps the whole title in the interface face, not serif and sans glyph by glyph", () => {
+    expect(["Jérôme", "Søren", "Σωκράτης", "Ḥr-m-ḥꜣb", "Đặng"].map(titleFamily)).toEqual(Array(5).fill("Archivo_600SemiBold"));
+  });
+});
+
+const realImmediate = setImmediate;
+
+describe("pull to refresh (v3 B2: the content follows the finger, at most 56; the ↻ turns while it refreshes)", () => {
+  // The pull is a gesture-handler Pan (user decision 2026-10-03, the v3 B4 exception); jest drives
+  // it through the library's own test utils, or — for a pull still under the finger — its events.
+  const pan = () => getByGestureTestId("pull");
+  const emit = (name: string, ev: Record<string, unknown>) =>
+    act(() => void DeviceEventEmitter.emit(name, { handlerTag: pan().handlerTag, numberOfPointers: 1, x: 0, y: 0, absoluteX: 0, absoluteY: 0, translationX: 0, velocityX: 0, velocityY: 0, ...ev }));
+  /** Down and held, `dy` below where the finger landed. */
+  const hold = (dy: number) => {
+    emit("onGestureHandlerStateChange", { state: State.BEGAN, oldState: State.UNDETERMINED, translationY: 0 });
+    emit("onGestureHandlerStateChange", { state: State.ACTIVE, oldState: State.BEGAN, translationY: dy });
+    emit("onGestureHandlerEvent", { state: State.ACTIVE, translationY: dy });
+  };
+  /** A whole pull: down `dy`, released. */
+  const pull = (dy: number) =>
+    act(() =>
+      fireGestureHandler<PanGesture>(pan(), [
+        { state: State.BEGAN, translationY: 0 },
+        { state: State.ACTIVE, translationY: 0 },
+        { translationY: dy },
+        { state: State.END, translationY: dy },
+      ])
+    );
+  // The detector applies a changed gesture (enabled, reduce motion) on the next setImmediate —
+  // gesture-handler bound the real one at import, before the fake timers.
+  const applied = () => act(() => new Promise<void>((resolve) => realImmediate(() => resolve())));
+  const shift = () => (flat(screen.getByTestId("pull-content")).transform as { translateY: number }[])[0].translateY;
+  const indicator = () => screen.queryByTestId("pull-indicator", { includeHiddenElements: true });
+  const opacity = () => flat(indicator()!).opacity;
+  const scroller = () => screen.UNSAFE_getByType(ScrollView);
+  const settle = () => act(() => void jest.advanceTimersByTime(motion.pullMinHold + motion.pullRelease + 50));
+  const deferred = () => {
+    let done = () => {};
+    const promise = new Promise<void>((resolve) => (done = resolve));
+    return { promise, done: () => act(async () => done()) };
+  };
+  const setOS = (os: string) => Object.defineProperty(Platform, "OS", { value: os, configurable: true });
+  const os = Platform.OS;
+
+  beforeEach(() => {
+    jest.useFakeTimers();
+    jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockResolvedValue(false);
+    jest.spyOn(AccessibilityInfo, "isScreenReaderEnabled").mockResolvedValue(false);
+  });
+  afterEach(() => {
+    jest.useRealTimers();
+    jest.restoreAllMocks();
+    setOS(os);
+  });
+
+  const mount = async (onRefresh: () => unknown = jest.fn()) => {
+    wrap(<Screen onRefresh={onRefresh}>{null}</Screen>);
+    await act(async () => {});
+    await applied();
+  };
+
+  it("a scrolling Screen pads itself by the keyboard on both platforms, so a low field is not hidden", async () => {
+    for (const os of ["ios", "android"] as const) {
+      setOS(os);
+      const { UNSAFE_getByType, unmount } = wrap(<Screen>{null}</Screen>);
+      await act(async () => {});
+      const kav = UNSAFE_getByType(KeyboardAvoidingView);
+      expect(kav.props.behavior).toBe("padding");
+      expect(kav.findByType(ScrollView)).toBeTruthy();
+      unmount();
+    }
+  });
+
+  it("the content follows the finger and stops at 56; the ↻ fades in with it", async () => {
+    await mount();
+    expect(shift()).toBe(0);
+    expect(opacity()).toBe(0);
+    hold(30);
+    expect(shift()).toBe(30);
+    expect(opacity()).toBeCloseTo(30 / PULL_REFRESH_PT);
+    hold(100);
+    expect(shift()).toBe(PULL_REFRESH_PT);
+    expect(opacity()).toBe(1);
+  });
+
+  it("released at 55: no reload, and back to 0 over 200ms on the entry curve", async () => {
+    const onRefresh = jest.fn();
+    await mount(onRefresh);
+    const timing = jest.spyOn(Animated, "timing");
+    pull(PULL_REFRESH_PT - 1);
+    expect(onRefresh).not.toHaveBeenCalled();
+    const config = timing.mock.calls.at(-1)![1] as { toValue: number; duration: number; easing: (x: number) => number };
+    expect(config).toMatchObject({ toValue: 0, duration: 200 });
+    expect(config.easing(0.3)).toBeCloseTo(Easing.bezier(0.2, 0.8, 0.2, 1)(0.3));
+    expect(config.easing(0.3)).not.toBeCloseTo(0.3);
+    settle();
+    expect(shift()).toBe(0);
+  });
+
+  it("released at 56: one reload; the content waits at 56 with the ↻ until it is done, then goes back", async () => {
+    const reload = deferred();
+    const onRefresh = jest.fn(() => reload.promise);
+    await mount(onRefresh);
+    pull(PULL_REFRESH_PT);
+    await applied();
+    expect(onRefresh).toHaveBeenCalledTimes(1);
+    settle();
+    expect(shift()).toBe(PULL_REFRESH_PT);
+    expect(opacity()).toBe(1);
+    // A second pull while it runs does nothing.
+    pull(PULL_REFRESH_PT + 40);
+    expect(onRefresh).toHaveBeenCalledTimes(1);
+    await reload.done();
+    await applied();
+    settle();
+    expect(shift()).toBe(0);
+    expect(opacity()).toBe(0);
+    pull(PULL_REFRESH_PT);
+    expect(onRefresh).toHaveBeenCalledTimes(2);
+    await act(async () => {}); // that second reload's (already settled) promise
+  });
+
+  it("a reload that answers at once still holds the ↻ at 56 for motion.pullMinHold, then goes back", async () => {
+    const onRefresh = jest.fn(() => Promise.resolve());
+    await mount(onRefresh);
+    pull(PULL_REFRESH_PT);
+    await applied();
+    await act(async () => {}); // the promise has settled
+    act(() => void jest.advanceTimersByTime(motion.pullMinHold - 100));
+    expect(shift()).toBe(PULL_REFRESH_PT);
+    expect(opacity()).toBe(1);
+    act(() => void jest.advanceTimersByTime(100));
+    settle(); // the 200ms return starts once the hold ends
+    expect(shift()).toBe(0);
+  });
+
+  it("while it refreshes the ↻ turns (user 2026-10-03); before release and after, it stands still", async () => {
+    const reload = deferred();
+    const loop = jest.spyOn(Animated, "loop");
+    await mount(jest.fn(() => reload.promise));
+    expect(loop).not.toHaveBeenCalled(); // at rest
+    hold(PULL_REFRESH_PT + 10);
+    expect(loop).not.toHaveBeenCalled(); // pulling, not yet refreshing
+    emit("onGestureHandlerStateChange", { state: State.END, oldState: State.ACTIVE, translationY: PULL_REFRESH_PT + 10 });
+    await applied();
+    expect(loop).toHaveBeenCalledTimes(1);
+    const stop = jest.spyOn(loop.mock.results[0].value as Animated.CompositeAnimation, "stop");
+    await reload.done();
+    settle();
+    expect(stop).toHaveBeenCalled();
+  });
+
+  it("an onRefresh that returns nothing is held for as long as `refreshing` says", async () => {
+    const onRefresh = jest.fn();
+    // Like useRemote's reload: `refreshing` goes true in the same update as the pull.
+    function Busy() {
+      const [busy, setBusy] = useState(false);
+      const refresh = () => {
+        setBusy(true);
+        onRefresh();
+      };
+      return (
+        <Screen refreshing={busy} onRefresh={refresh}>
+          <Button testID="done" title="done" onPress={() => setBusy(false)} />
+        </Screen>
+      );
+    }
+    wrap(<Busy />);
+    await act(async () => {});
+    await applied();
+    pull(PULL_REFRESH_PT);
+    expect(onRefresh).toHaveBeenCalledTimes(1);
+    await applied();
+    settle();
+    expect(shift()).toBe(PULL_REFRESH_PT);
+    pull(PULL_REFRESH_PT);
+    expect(onRefresh).toHaveBeenCalledTimes(1);
+    fireEvent.press(screen.getByTestId("done"));
+    settle();
+    expect(shift()).toBe(0);
+  });
+
+  it("scrolled down, the pull is off and the drag is the list's; back at the top, it is on again", async () => {
+    const onRefresh = jest.fn();
+    await mount(onRefresh);
+    expect(scroller().props).toMatchObject({ bounces: false, overScrollMode: "never", scrollEventThrottle: 16 });
+    act(() => fireEvent.scroll(scroller(), { nativeEvent: { contentOffset: { x: 0, y: 120 } } }));
+    await applied();
+    expect(pan().config.enabled).toBe(false);
+    pull(PULL_REFRESH_PT + 20);
+    expect(onRefresh).not.toHaveBeenCalled();
+    expect(shift()).toBe(0);
+    act(() => fireEvent.scroll(scroller(), { nativeEvent: { contentOffset: { x: 0, y: 0 } } }));
+    await applied();
+    expect(pan().config.enabled).toBe(true);
+    pull(PULL_REFRESH_PT);
+    expect(onRefresh).toHaveBeenCalledTimes(1);
+  });
+
+  it("the caller's onScroll and the pull's both hear the scroller", async () => {
+    const onScroll = jest.fn();
+    wrap(
+      <Screen onRefresh={jest.fn()} onScroll={onScroll}>
+        {null}
+      </Screen>
+    );
+    await act(async () => {});
+    act(() => fireEvent.scroll(scroller(), { nativeEvent: { contentOffset: { x: 0, y: 80 } } }));
+    await applied();
+    expect(onScroll).toHaveBeenCalledWith(80);
+    expect(pan().config.enabled).toBe(false);
+  });
+
+  it("reduce motion: the content does not follow; at 56 it stands at 56 with the ↻, short of it nothing; no animation", async () => {
+    jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockResolvedValue(true);
+    const reload = deferred();
+    const onRefresh = jest.fn(() => reload.promise);
+    await mount(onRefresh);
+    const timing = jest.spyOn(Animated, "timing");
+    hold(30);
+    expect(shift()).toBe(0);
+    expect(opacity()).toBe(0);
+    hold(PULL_REFRESH_PT - 1);
+    expect(shift()).toBe(0);
+    hold(PULL_REFRESH_PT + 30);
+    expect(shift()).toBe(PULL_REFRESH_PT);
+    expect(opacity()).toBe(1);
+    emit("onGestureHandlerStateChange", { state: State.END, oldState: State.ACTIVE, translationY: PULL_REFRESH_PT + 30 });
+    expect(onRefresh).toHaveBeenCalledTimes(1);
+    expect(shift()).toBe(PULL_REFRESH_PT);
+    await reload.done();
+    await applied();
+    act(() => void jest.advanceTimersByTime(motion.pullMinHold)); // the hold is a state, not motion: it stays
+    expect(shift()).toBe(0); // then at once, not over 200
+    pull(PULL_REFRESH_PT - 1);
+    expect(shift()).toBe(0);
+    expect(timing).not.toHaveBeenCalled();
+  });
+
+  it("with a screen reader on: the system RefreshControl, and the pull gesture is off", async () => {
+    jest.spyOn(AccessibilityInfo, "isScreenReaderEnabled").mockResolvedValue(true);
+    const reload = deferred();
+    const onRefresh = jest.fn(() => reload.promise);
+    await mount(onRefresh);
+    expect(pan().config.enabled).toBe(false);
+    expect(indicator()).toBeNull();
+    pull(PULL_REFRESH_PT + 20);
+    expect(onRefresh).not.toHaveBeenCalled();
+    const control = () => screen.UNSAFE_getByType(RefreshControl);
+    expect(control().props.refreshing).toBe(false);
+    act(() => control().props.onRefresh());
+    expect(onRefresh).toHaveBeenCalledTimes(1);
+    expect(control().props.refreshing).toBe(true);
+    await reload.done();
+    act(() => void jest.advanceTimersByTime(motion.pullMinHold));
+    expect(control().props.refreshing).toBe(false);
+    expect(shift()).toBe(0);
+  });
+
+  it("Android takes the same path: the pull, no RefreshControl", async () => {
+    setOS("android");
+    const onRefresh = jest.fn();
+    await mount(onRefresh);
+    expect(screen.UNSAFE_queryAllByType(RefreshControl)).toEqual([]);
+    expect(scroller().props.overScrollMode).toBe("never");
+    hold(30);
+    expect(shift()).toBe(30);
+    emit("onGestureHandlerStateChange", { state: State.END, oldState: State.ACTIVE, translationY: 30 });
+    settle();
+    pull(PULL_REFRESH_PT);
+    expect(onRefresh).toHaveBeenCalledTimes(1);
+  });
+
+  it("a screen without onRefresh has neither the pull nor a RefreshControl", async () => {
+    wrap(<Screen>{null}</Screen>);
+    await act(async () => {});
+    expect(indicator()).toBeNull();
+    expect(screen.queryByTestId("pull-content")).toBeNull();
+    expect(screen.UNSAFE_queryAllByType(RefreshControl)).toEqual([]);
+    expect(scroller().props.bounces).toBeUndefined();
   });
 });
 

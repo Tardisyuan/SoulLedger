@@ -24,7 +24,15 @@ import { installMobilePlatform, persistentStore } from "../platform";
 import { SessionProvider } from "../session";
 import { PROFILE, heldReply, life, stubApi } from "./stubApi";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { AccessibilityInfo } from "react-native";
+import { AccessibilityInfo, StyleSheet } from "react-native";
+import { motion, themeFor, v3, type Theme } from "../theme";
+import { ThemeContext } from "../ui";
+
+/** Wait out the drawer's 200ms exit (v3 MotionSpec 问一问抽屉 出场). */
+const afterExit = () =>
+  act(async () => {
+    await new Promise((r) => setTimeout(r, motion.drawerOut + 50));
+  });
 
 type StreamEvent = Record<string, unknown> & { event: string };
 interface Ask {
@@ -92,8 +100,11 @@ const METRICS = { frame: { x: 0, y: 0, width: 390, height: 844 }, insets: { top:
 const LIST = "GET /me/assist/conversations/";
 const openLetters = jest.fn();
 
+/** The theme the next drawer renders under; null keeps the app's default (neutral). */
+let drawerTheme: Theme | null = null;
+
 function renderDrawer(profile = ENABLED) {
-  return render(
+  const drawer = (
     <SafeAreaProvider initialMetrics={METRICS}>
       <I18nProvider>
         <AssistProvider profile={profile} onOpenLetters={openLetters}>
@@ -103,6 +114,7 @@ function renderDrawer(profile = ENABLED) {
       </I18nProvider>
     </SafeAreaProvider>
   );
+  return render(drawerTheme ? <ThemeContext.Provider value={drawerTheme}>{drawer}</ThemeContext.Provider> : drawer);
 }
 
 const conversation = (id: string, first_question: string) => ({
@@ -168,15 +180,17 @@ describe("the entry", () => {
     expect(screen.queryByTestId("assist-entry")).toBeNull();
   });
 
-  it("sits in the life tab's header when enabled, left of the account icon", async () => {
+  it("on the life tab (v3) it is a 48pt circle in the civilization's colour over the page, not in the band", async () => {
     await boot(true);
-    // v2: a tab's root wears the full plaque (PlaqueHeader), which has no `header-bar` row.
-    const bar = screen.getByTestId("plaque");
-    const ids = (bar as unknown as { findAll: (p: (n: { props: { testID?: unknown } }) => boolean) => { props: { testID: string } }[] })
+    const band = screen.getByTestId("plaque");
+    const ids = (band as unknown as { findAll: (p: (n: { props: { testID?: unknown } }) => boolean) => { props: { testID: string } }[] })
       .findAll((n) => n.props.testID === "assist-entry" || n.props.testID === "header-account")
       .map((n) => n.props.testID);
-    expect(ids[0]).toBe("assist-entry");
-    expect(ids).toContain("header-account");
+    expect([...new Set(ids)]).toEqual(["header-account"]);
+    const entry = StyleSheet.flatten(screen.getByTestId("assist-entry").props.style);
+    expect(entry).toMatchObject({ position: "absolute", width: 48, height: 48, backgroundColor: v3.civ.cn.light });
+    await act(async () => fireEvent.press(screen.getByTestId("assist-entry")));
+    expect(screen.getByTestId("assist-panel")).toBeTruthy();
   });
 });
 
@@ -186,6 +200,8 @@ describe("the four notices (1g)", () => {
     expect(screen.getByTestId("assist-not-configured")).toBeTruthy();
     fireEvent.press(screen.getByTestId("assist-letters"));
     expect(openLetters).toHaveBeenCalledTimes(1);
+    // v3 出场: closed, the drawer sinks for 200ms (taking no touches), then it is gone.
+    await afterExit();
     expect(screen.queryByTestId("assist-panel")).toBeNull();
     expect(screen.queryByTestId("assist-entry")).toBeNull();
   });
@@ -354,6 +370,50 @@ describe("streaming (流式输出)", () => {
     expect(screen.queryByTestId("assist-jump")).toBeNull();
   });
 
+  it.each([
+    [false, "rises from below the screen"],
+    [true, "is in place at once"],
+  ])("v3 drawer: with reduce motion %s the sheet %s, over a scrim that fades with it", async (reduced) => {
+    jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockResolvedValue(reduced);
+    stubApi({ [LIST]: { status: 200, data: [] } });
+    renderDrawer();
+    await act(async () => {}); // the reduce-motion answer
+    fireEvent.press(screen.getByTestId("assist-entry"));
+    const y = () => (StyleSheet.flatten(screen.getByTestId("assist-sheet").props.style).transform as { translateY: number }[])[0].translateY;
+    const shade = () => StyleSheet.flatten(screen.getByTestId("assist-scrim-shade", { includeHiddenElements: true }).props.style).opacity;
+    if (reduced) expect([y(), shade()]).toEqual([0, 1]);
+    else {
+      expect(y()).toBeGreaterThan(0);
+      expect(shade()).toBe(0);
+    }
+    // (The rise runs on the native driver, which jest does not play back: the end state is the device's.)
+    await screen.findByTestId("assist-empty");
+  });
+
+  it.each([
+    ["assist-close", false],
+    ["assist-close", true],
+  ])("v3 drawer exit: %s with reduce motion %s", async (closer, reduced) => {
+    jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockResolvedValue(reduced);
+    stubApi({ [LIST]: { status: 200, data: [] } });
+    renderDrawer();
+    await act(async () => {}); // the reduce-motion answer
+    fireEvent.press(screen.getByTestId("assist-entry"));
+    await screen.findByTestId("assist-empty");
+    fireEvent.press(screen.getByTestId(closer));
+    if (reduced) {
+      expect(screen.queryByTestId("assist-panel")).toBeNull();
+      return;
+    }
+    // Still there for the sink, but no longer taking touches…
+    expect(screen.getByTestId("assist-panel")).toBeTruthy();
+    expect(screen.getByTestId("assist-overlay").props.pointerEvents).toBe("none");
+    // …and gone once the 200ms are up. (No mid-way check: under load a real 120ms wait can
+    // overrun the 200ms timer — the immediate check above is what proves the drawer stayed.)
+    await afterExit();
+    expect(screen.queryByTestId("assist-panel")).toBeNull();
+  });
+
   it("A11 reduced motion: no cursor, still dots, and a whole paragraph at a time", async () => {
     jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockResolvedValue(true);
     const ask = await openAndAsk(null);
@@ -386,6 +446,24 @@ describe("the answer's language (1i)", () => {
     await withLocale(locale);
     expect(screen.getByTestId("assist-answer")).toBeTruthy();
     expect(screen.queryByTestId("assist-en")).toBeNull();
+  });
+});
+
+describe("the 答 glyph (v3)", () => {
+  afterEach(() => {
+    drawerTheme = null;
+  });
+
+  it("is ink, not the civilization's colour — streaming and answered alike", async () => {
+    const t = (drawerTheme = themeFor("CHINESE", "light"));
+    expect(t.ink).not.toBe(t.plaque);
+    const answerGlyph = (id: string) =>
+      StyleSheet.flatten(within(screen.getByTestId(id)).getByText("答", { includeHiddenElements: true }).props.style).color;
+    const ask = await openAndAsk(null);
+    await act(async () => ask.send({ event: "meta", conversation_id: CONVERSATION }, { event: "delta", text: "你已有一份申请" }));
+    expect(answerGlyph("assist-streaming")).toBe(t.ink);
+    await act(async () => ask.send(done("你已有一份申请。")));
+    expect(answerGlyph("assist-answer")).toBe(t.ink);
   });
 });
 

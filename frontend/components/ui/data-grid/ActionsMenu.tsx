@@ -114,7 +114,7 @@ export function ActionsMenu({ primary, items, menuLabel }: ActionsMenuProps) {
           type="button"
           onClick={primary.onSelect}
           disabled={primary.disabled}
-          className="px-2.5 py-1 text-sm text-[oklch(var(--color-ink-muted))] border border-[oklch(var(--color-line))] hover:text-[oklch(var(--color-ink))] hover:border-[oklch(var(--color-hairline-tertiary))] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          className="inline-flex h-(--control-h-sm) items-center px-3 text-sm text-[oklch(var(--color-ink-muted))] border border-[oklch(var(--color-line))] hover:text-[oklch(var(--color-ink))] hover:border-[oklch(var(--color-hairline-tertiary))] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
         >
           {primary.label}
         </button>
@@ -130,7 +130,7 @@ export function ActionsMenu({ primary, items, menuLabel }: ActionsMenuProps) {
             aria-expanded={open}
             onClick={toggle}
             onKeyDown={onTriggerKeyDown}
-            className="px-2 py-1 font-mono text-[oklch(var(--color-ink-subtle))] hover:text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-3))] transition-colors"
+            className="inline-flex size-(--control-h-sm) items-center justify-center font-mono text-[oklch(var(--color-ink-subtle))] hover:text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-3))] transition-colors"
           >
             ⋯
           </button>
@@ -182,7 +182,7 @@ export function ActionsMenu({ primary, items, menuLabel }: ActionsMenuProps) {
                       item.onSelect()
                     }}
                     className={cn(
-                      'w-full text-left px-3 py-1.5 text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed',
+                      'flex min-h-(--control-h-sm) w-full items-center text-left px-3 text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed',
                       item.tone === 'danger'
                         ? 'text-[oklch(var(--color-status-error))] hover:bg-[oklch(var(--color-status-error)/0.1)]'
                         : 'text-[oklch(var(--color-ink-muted))] hover:bg-[oklch(var(--color-surface-3))] hover:text-[oklch(var(--color-ink))]'

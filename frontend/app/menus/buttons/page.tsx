@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { menuButtonsApi, menusApi, permApi, PAGE_SIZE, type MenuButton, type MenuItem, type PaginatedResponse, type Permission } from "@soulledger/core/api";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { usePlaque } from "@/src/components/plaque/Plaque";
+import { useHall } from "@/src/components/plaque/useHall";
 import { useToast } from "@/src/contexts/ToastContext";
 import { Modal } from "@/src/components/ui/Modal";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
@@ -17,6 +19,7 @@ import { FilterChipSelect } from "@/src/components/ui/FilterChip";
 
 export default function MenuButtonsPage() {
   const { t } = useI18n();
+  usePlaque({ hall: useHall(t("plaque.office.rules")) });
   const { showToast } = useToast();
   const queryClient = useQueryClient();
   const [selectedMenuId, setSelectedMenuId] = useState<number | undefined>();
@@ -215,7 +218,8 @@ export default function MenuButtonsPage() {
                   </Button>
                 </RequirePermission>
                 <RequirePermission permissions="menu.manage">
-                  <Button type="button" size="sm" variant="ghost" className="text-[oklch(var(--color-danger))]" onClick={() => deleteMutation.mutate(btn.id)}>
+                  {/* 幽灵按钮,不上红(同用户页):v3 的红只给系统出错与不可撤回删除里那个确认键。 */}
+                  <Button type="button" size="sm" variant="ghost" onClick={() => deleteMutation.mutate(btn.id)}>
                     {t("menus.delete")}
                   </Button>
                 </RequirePermission>

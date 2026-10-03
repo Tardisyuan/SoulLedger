@@ -37,6 +37,7 @@ import {
   Notice,
   RadioMark,
   Screen,
+  SectionLabel,
   SectionError,
   Skeleton,
   SwitchMark,
@@ -59,9 +60,9 @@ const selfName = (l: Locale) => LOCALE_LABELS[l];
 
 function Heading({ children }: { children: string }) {
   return (
-    <Txt variant="section" style={styles.heading}>
+    <SectionLabel style={styles.heading}>
       {children}
-    </Txt>
+    </SectionLabel>
   );
 }
 

@@ -151,11 +151,12 @@ describe("interaction states are on every variant and every size", () => {
       );
     });
     expect(missing).toEqual([]);
-    // 15 = 5 variants x 3 sizes. Was 12; `warning` joined the set when
-    // ConfirmDialog stopped hand-rolling `bg-yellow-500 text-white`. Pinned
+    // 18 = 6 variants x 3 sizes. Was 12; `warning` joined the set when
+    // ConfirmDialog stopped hand-rolling `bg-yellow-500 text-white`, and
+    // `inverse` (2026-10-01, v3 batch bar) made it 18. Pinned
     // exactly so the matrix cannot shrink silently — a dropped variant would
     // otherwise just mean fewer green cells.
-    expect(MATRIX).toHaveLength(15);
+    expect(MATRIX).toHaveLength(18);
   });
 
   it("kills hover and press on a disabled button rather than leaving them live", () => {
@@ -241,16 +242,28 @@ describe("focus is left to the global rule", () => {
   });
 });
 
-describe("三档高度:28(表格内)/ 32(控件)/ 40", () => {
-  it("each size is one fixed height, the same for every variant", () => {
+/** 规范 v3 的三档(2026-10-01 拍板全站换过去)。数字只在 globals.css 的 `--control-h-*` 里。 */
+const GLOBALS = readFileSync(path.join(__dirname, "../../app/globals.css"), "utf8");
+const CONTROL_PX = { sm: 44, md: 48, lg: 56 } as const;
+
+describe("三档高度:规范 v3 的 44 / 48 / 56", () => {
+  it("each size is one height, taken from its token, the same for every variant", () => {
     for (const [variant, size] of MATRIX) {
-      const h = classesOf(variant, size).filter((c) => /^h-\d+$/.test(c));
-      expect(h).toEqual([{ sm: "h-7", md: "h-8", lg: "h-10" }[size]]);
+      const h = classesOf(variant, size).filter((c) => /^h-/.test(c));
+      expect(h).toEqual([`h-(--control-h-${size})`]);
     }
   });
 
-  it("is a ≥ 44 px target on a phone (§1.7)", () => {
-    for (const [variant, size] of MATRIX) expect(classesOf(variant, size)).toContain("max-sm:min-h-11");
+  it("the tokens are 44 / 48 / 56 px", () => {
+    for (const size of ["sm", "md", "lg"] as const) {
+      expect(GLOBALS).toMatch(new RegExp(`--control-h-${size}: ${CONTROL_PX[size]}px;`));
+    }
+  });
+
+  it("needs no phone-only height patch: the smallest size is already the 44 px target (§1.7)", () => {
+    for (const [variant, size] of MATRIX) {
+      expect(classesOf(variant, size).filter((c) => c.startsWith("max-sm:"))).toEqual([]);
+    }
   });
 });
 
@@ -258,7 +271,7 @@ describe("behaviour", () => {
   it("defaults to secondary/md", () => {
     render(<Button>label</Button>);
     const classes = screen.getByRole("button").className.split(/\s+/);
-    expect(classes).toEqual(expect.arrayContaining(["bg-transparent", "border-[oklch(var(--color-line-strong))]", "h-8", "px-3", "text-sm"]));
+    expect(classes).toEqual(expect.arrayContaining(["bg-transparent", "border-[oklch(var(--color-line-strong))]", "h-(--control-h-md)", "px-3", "text-sm"]));
   });
 
   it("disables and marks itself busy while loading", () => {
@@ -280,6 +293,22 @@ describe("behaviour", () => {
     // with a spinner loses its accessible name mid-flight.
     render(<Button loading>Save</Button>);
     expect(screen.getByRole("button", { name: "Save" })).toBeInTheDocument();
+  });
+
+  it("keeps its width while loading: the spinner lies over the label, the label stays in the flow (v3)", () => {
+    render(<Button loading>Save</Button>);
+    const button = screen.getByRole("button");
+    const label = button.querySelector("[data-button-label]") as HTMLElement;
+    // The label still takes its room and is still the name: transparent, not invisible / hidden / removed.
+    expect(label).toHaveTextContent("Save");
+    expect(label.className.split(/\s+/)).toContain("opacity-0");
+    expect(label.className).not.toMatch(/\b(invisible|hidden|sr-only)\b/);
+    // The spinner is out of the flow, over the label, and is the only other child.
+    const overlay = button.querySelector("[aria-hidden=\"true\"]")!.parentElement as HTMLElement;
+    expect(overlay.parentElement).toBe(button);
+    expect(overlay.className.split(/\s+/)).toEqual(expect.arrayContaining(["absolute", "inset-0"]));
+    expect(button.className.split(/\s+/)).toContain("relative");
+    expect(button.children).toHaveLength(2);
   });
 
   it("does not force a type, so migrated submit buttons keep submitting", () => {

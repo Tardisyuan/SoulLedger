@@ -42,10 +42,12 @@ export function prefersReducedMotion(): boolean {
  * `--transition-duration-*` / `--ease-*` 是同一张表,`motionTokens.test.ts` 逐项对账。
  * 取用走 `src/hooks/useReducedMotionDurations.ts`,那里处理减少动态效果。
  */
+/* 值按规范 v3 的四档走,名字仍是 v2 的 —— 对应关系与两个不进 v3 表的名字
+ * (instant 0ms「不动画」、ritual 600ms 按住确认)写在 globals.css 那段注释里。 */
 export const MOTION_DURATIONS = {
   instant: 0,
-  fast: 0.12,
-  base: 0.2,
+  fast: 0.16,
+  base: 0.24,
   slow: 0.32,
   ritual: 0.6,
 } as const;
@@ -54,7 +56,7 @@ export type MotionDurations = { readonly [K in keyof typeof MOTION_DURATIONS]: n
 
 export const MOTION_EASINGS = {
   standard: [0.2, 0, 0, 1],
-  enter: [0, 0, 0.2, 1],
+  enter: [0.2, 0.8, 0.2, 1],
   exit: [0.4, 0, 1, 1],
-  drop: [0.55, 0, 1, 0.45],
+  drop: [0.2, 0.8, 0.3, 1],
 } as const;

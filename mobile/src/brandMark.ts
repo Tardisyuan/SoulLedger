@@ -1,7 +1,7 @@
 /**
  * The S-and-L balance mark as data, for the cold start to draw (src/coldStart.tsx).
  *
- * SHAPE is assets/brand/soulledger-mark.svg's outline, copied (zhuyin.test.tsx holds it to
+ * SHAPE is assets/brand/soulledger-mark.svg's outline, copied (coldStart.test.tsx holds it to
  * the file). The right pan's triangle is a mask in the SVG; here it is folded into the right
  * pan's path and cut by clipRule="evenodd" — it lies wholly inside that pan.
  *

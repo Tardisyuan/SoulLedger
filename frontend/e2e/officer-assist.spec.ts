@@ -25,8 +25,9 @@ test.describe("问一问", () => {
     await expect(box).toBeFocused();
     await box.fill("我的队列有多少？");
     await box.press("Enter");
-    await expect(panel.getByText("答：我的队列有多少？")).toBeVisible();
-    expect(api.lastCall("POST", "/assist/")?.body).toEqual({ question: "我的队列有多少？", screen: "judgment" });
+    // The visible bubble (`assist-stream-text`); the same words also go to an sr-only live region (c84a0441).
+    await expect(panel.getByTestId("assist-stream-text")).toHaveText("答：我的队列有多少？");
+    expect(api.lastCall("POST", "/assist/")?.body).toEqual({ question: "我的队列有多少？", screen: "judgment", stream: true });
 
     await box.press("Escape");
     await expect(panel).toBeHidden();
@@ -57,10 +58,23 @@ test.describe("问一问", () => {
     await expect(head).toHaveCSS("border-bottom-width", "1px");
   });
 
-  test("1200–1279: still pushed (720 left beside the panel), with the page's side padding at 24", async ({ page }) => {
+  test("1200–1279 with the nav expanded (252): the main column is 1008, so the panel overlays", async ({ page }) => {
     await setupAuthenticatedPage(page);
     await page.setViewportSize({ width: 1260, height: 900 });
     await page.goto("/judgment");
+    await expect(page.getByTestId("global-nav")).not.toHaveAttribute("data-collapsed", "true");
+    await page.getByTestId("officer-assist-entry").click();
+    await expect(page.getByRole("dialog", { name: "问一问" })).toBeVisible();
+    await expect(page.getByRole("complementary", { name: "问一问" })).toHaveCount(0);
+  });
+
+  test("1200–1279 with the nav collapsed (68): pushed (720 left beside the panel), with the page's side padding at 24", async ({ page }) => {
+    await setupAuthenticatedPage(page);
+    // 规范 v3: the user's nav choice lives in localStorage; collapsed gives the column back.
+    await page.addInitScript(() => window.localStorage.setItem("soulledger-nav-mode", "collapsed"));
+    await page.setViewportSize({ width: 1260, height: 900 });
+    await page.goto("/judgment");
+    await expect(page.getByTestId("global-nav")).toHaveAttribute("data-collapsed", "true");
     // v2 PageShell: `md:px-8` (32 px); v1's was `md:px-10`.
     const padded = page.getByTestId("app-content").locator("[class~='md:px-8']").first();
     await expect(padded).toHaveCSS("padding-left", "32px");

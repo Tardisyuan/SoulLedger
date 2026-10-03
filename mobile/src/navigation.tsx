@@ -35,7 +35,7 @@ import { useI18n } from "./i18n";
 import { NetworkProvider } from "./network";
 import { useSession } from "./session";
 import { preLoginTheme, themeFor } from "./theme";
-import { Block, Screen, ScreenError, Skeleton, ThemeContext } from "./ui";
+import { Block, Screen, ScreenError, Skeleton, ThemeContext, useReducedMotionDurations } from "./ui";
 import { Welcome } from "./welcome";
 import {
   ApplicationDetailScreen,
@@ -65,11 +65,18 @@ export const navigationRef = createNavigationContainerRef<RootParams>();
 function MainTabs() {
   const { t } = useI18n();
   const chat = useChat();
+  // v3 MotionSpec 底部标签: the content cross-fades over 180ms, the bar does not move; reduce motion swaps at once
+  // — by a 0ms fade, never by `animation: "none"`. The OS answers reduce motion after this first renders, and
+  // flipping "fade" → "none" turns the tabs' screen container (react-native-screens, iOS) into a different
+  // native component, remounting every tab: the life tab's three requests went out twice.
+  const { tabFade } = useReducedMotionDurations();
   const unread = Object.values(chat.timeline.rooms).some((room) => room.unread > 0);
   return (
     <Tabs.Navigator
       tabBar={(props) => <TabBar {...props} />}
       screenOptions={({ route, navigation }) => ({
+        animation: "fade",
+        transitionSpec: { animation: "timing", config: { duration: tabFade } },
         // v2 补足 B11 / C15: every tab's root wears the full plaque; its actions sit where the account icon was.
         header: () =>
           route.name === "Letters" ? (
@@ -105,7 +112,8 @@ function MainTabs() {
       })}
     >
       {/* Four tabs (朋友圈 handoff 1a): 本世 / 转生 / 书信 / 朋友圈. 前世 is the life tab's last section now. */}
-      <Tabs.Screen name="Life" component={MyLifeScreen} options={{ title: t("soul_app.tabs.life") }} />
+      {/* v3: the life tab draws its own identity band (it compacts as the page scrolls), so no navigator header. */}
+      <Tabs.Screen name="Life" component={MyLifeScreen} options={{ title: t("soul_app.tabs.life"), headerShown: false }} />
       {/* The tab is a signpost, the screen title the full name (chat handoff 1a): four two-character labels fit 98pt. */}
       <Tabs.Screen name="Applications" component={ApplicationsScreen} options={{ title: t("soul_app.tabs.rebirth") }} />
       {/* Not deployed here: no tab at all, rather than one that opens onto "not available" (1b). */}

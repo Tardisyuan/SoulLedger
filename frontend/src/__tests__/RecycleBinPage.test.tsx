@@ -24,7 +24,7 @@ jest.mock("@/src/contexts/I18nContext", () => ({
     t: (key: string, params?: Record<string, string>) =>
       key === "souls.civilizations.CHINESE" ? "中国地府"
         : params ? `${key}(${Object.values(params).join(",")})` : key,
-    formatDateTime: (v: string) => v,
+    formatDateTime: (v: string) => `fmt:${v}`,
     locale: "en",
     hydrated: true,
   }),
@@ -143,6 +143,18 @@ describe("RecycleBinPage hard-delete gate", () => {
 });
 
 describe("RecycleBinPage columns", () => {
+  it("writes 删除时间 through the app's formatter, not the browser's toLocaleString", async () => {
+    // It was `new Date(…).toLocaleString()`: on an en-US browser the zh page read
+    // 「8/11/2026, 7:30:00 PM」 beside every other date on the site in the locale's form.
+    mockUser = { role: "JUDGE", permissions: READ_RESTORE };
+    renderPage();
+
+    await screen.findByText("旧菜单");
+    const [, first] = screen.getAllByRole("row");
+    expect(within(first).getByText("fmt:2026-09-01T10:00:00Z")).toBeInTheDocument();
+    expect(first).not.toHaveTextContent(new Date("2026-09-01T10:00:00Z").toLocaleString());
+  });
+
   it("shows 删除人 in its own column, and a missing deleter as a missing value", async () => {
     mockUser = { role: "JUDGE", permissions: READ_RESTORE };
     (recycleBinApi.list as jest.Mock).mockResolvedValue({

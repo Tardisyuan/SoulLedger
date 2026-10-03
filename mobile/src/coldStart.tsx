@@ -1,11 +1,11 @@
 /**
- * The cold start (补足 C18). The native splash is the ink ground alone, in both modes
+ * The cold start (补足 C18). The native splash is the ground alone, in both modes
  * (`app.json` → expo-splash-screen, a blank image: HarmonyOS 4.2 drops the splash icon
  * anyway, so no device shows a mark there). When JS is ready this draws the same ground,
  * hides the native one under it, and writes the S-and-L mark: nine strokes, all at once,
  * over `coldStartDraw` (src/brandMark.ts). The mark holds for `coldStartHold`, then recedes:
  * it lifts 8pt, shrinks to 0.96 and fades over 480. From there the app underneath takes
- * touches and the ink ground fades out over the last 240. A tap before then skips straight
+ * touches and the ground fades out over the last 240. A tap before then skips straight
  * to the end.
  *
  * WHEN: once per process — a cold start. Coming back from the background is not one,
@@ -33,7 +33,7 @@ import Svg, { ClipPath, Defs, G, Path } from "react-native-svg";
 import { MARK_HEIGHT, MARK_WIDTH, SHAPE, STROKES, VIEWBOX, pathLength } from "./brandMark";
 
 import type { SessionState } from "./session";
-import { motion } from "./theme";
+import { brand, motion } from "./theme";
 import { welcomeFrom } from "./welcome";
 
 // The native splash goes the instant hideAsync is called. Its default exit is a 400ms fade,
@@ -49,9 +49,14 @@ export const coldStart = { played: false };
 /** How long the splash may wait on a booting session before it plays. */
 const SESSION_WAIT_MS = 1000;
 
-/** app.json's expo-splash-screen backgroundColor (both modes), and the mark's width on it. */
-const INK = "#131211";
-const GOLD = "#ECAA3D";
+/**
+ * The ground: `brand.ground`, v3's dark canvas, in both modes (app.json's expo-splash-screen
+ * backgroundColor says the same) — the gold mark is too faint on v3's light canvas. v2 had its
+ * warm ink #131211. The gold is `brand.mark`, the mark's own (assets/brand/soulledger-mark.svg,
+ * user's pick 2026-10-01; v3 第三批 品牌色令牌); v3's one UI gold (`semantic.lamp`) is the lamp's alone.
+ */
+const GROUND = brand.ground;
+const GOLD = brand.mark;
 const BOX = 112;
 const LENGTHS = STROKES.map(([d]) => pathLength(d));
 const AnimatedPath = Animated.createAnimatedComponent(Path);
@@ -139,7 +144,7 @@ export function ColdStart({ session }: { session: SessionState }) {
         onPress={() => setPhase("done")}
         // The first frame is the native splash's picture: only now may that one go.
         onLayout={() => void SplashScreen.hideAsync().catch(() => {})}
-        style={[StyleSheet.absoluteFill, styles.centre, { backgroundColor: INK }]}
+        style={[StyleSheet.absoluteFill, styles.centre, { backgroundColor: GROUND }]}
       >
         <Animated.View testID="cold-start-mark-layer" style={markStyle}>
           <Svg testID="cold-start-mark" width={BOX} height={(BOX * MARK_HEIGHT) / MARK_WIDTH} viewBox={VIEWBOX}>

@@ -6,6 +6,8 @@ import Link from "next/link";
 import { crossTenantJudgmentsApi, type CrossTenantJudgmentListItem } from "@soulledger/core/api";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { usePlaque } from "@/src/components/plaque/Plaque";
+import { useHall } from "@/src/components/plaque/useHall";
 import { PageSection } from "@/components/ui/page-section";
 import { DataTable, ROW_LINK } from "@/components/ui/data-table";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
@@ -28,7 +30,8 @@ import { StatusBadge } from "@/src/components/ui/StatusBadge";
  * that failed.
  */
 const STATUS_TONES: Record<string, BadgeTone> = {
-  PROPOSED: "warning",
+  // 规范 v3:警示色只给可撤回的风险。「已提议」只是还没开审,中性。
+  PROPOSED: "neutral",
   ACTIVE: "info",
   CONCLUDED: "success",
   CANCELLED: "neutral",
@@ -43,6 +46,7 @@ const STATUS_TONES: Record<string, BadgeTone> = {
  */
 export default function CrossJudgmentsPage() {
   const { t } = useI18n();
+  usePlaque({ hall: useHall(t("plaque.office.trials")) });
   const { user } = useTenant();
 
   /**
@@ -94,15 +98,18 @@ export default function CrossJudgmentsPage() {
           keyExtractor={(j) => String(j.id)}
           renderRow={(j) => (
             <>
-              <td className="px-3 py-2 font-medium text-[oklch(var(--color-ink))]">
+              {/* 不折行:393 px 下自动布局的表会把标题挤成一字一行;表在自己的框里横滚。 */}
+              <td className="px-3 py-2 font-medium whitespace-nowrap text-[oklch(var(--color-ink))]">
                 <Link href={`/cross-judgments/${j.id}`} className={ROW_LINK}>
                   {j.title}
                 </Link>
               </td>
-              <td className="px-3 py-2 font-mono text-xs text-[oklch(var(--color-ink-muted))]">
-                {j.initiating_tenant_code}
+              <td className="px-3 py-2 text-xs whitespace-nowrap text-[oklch(var(--color-ink-muted))]">
+                {/* 展示名在前、代码在后(列表接口两样都给)。 */}
+                {j.initiating_tenant_display_name || j.initiating_tenant_code}
+                <span className="ml-2 font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">{j.initiating_tenant_code}</span>
               </td>
-              <td className="px-3 py-2">
+              <td className="px-3 py-2 whitespace-nowrap">
                 <StatusBadge namespace="crossJudgments.states" value={j.status} tone={STATUS_TONES[j.status] ?? "neutral"} />
               </td>
             </>

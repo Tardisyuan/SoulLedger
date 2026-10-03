@@ -142,7 +142,7 @@ export function TemplatePreview({
       <div className="flex items-start justify-between mb-4">
         <div>
           {/* 06 是区块标题那一档。 */}
-          <h3 className="text-md text-[oklch(var(--color-ink))]">{model.name}</h3>
+          <h3 className="text-lg text-[oklch(var(--color-ink))]">{model.name}</h3>
           <div className="flex gap-2 mt-1">
             <Badge tone="accent">
               <DomainEnum namespace="workflow.civilizations" value={model.civilization} />

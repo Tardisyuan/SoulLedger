@@ -257,6 +257,7 @@ export const socialKeys = {
     detail: (id: string) => [...socialKeys.profiles.all, "detail", id] as const,
     me: ["social", "profiles", "me"] as const,
   },
+  mediaLimits: ["social", "media", "limits"] as const,
 };
 
 /**

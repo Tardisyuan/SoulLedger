@@ -48,6 +48,7 @@ import { useEffect, useRef, useState } from "react";
 import { Pressable, StyleSheet, TextInput, View } from "react-native";
 
 import { family } from "../fonts";
+import { radius } from "../theme";
 import { useI18n } from "../i18n";
 import { RESEND_AFTER_SECONDS, RESET_CODE, RESET_CODE_TTL_SECONDS, formatCountdown, isPlausibleEmail } from "../rules";
 import { Button, GUTTER, Input, Screen, Txt, useTheme } from "../ui";
@@ -666,7 +667,7 @@ const styles = StyleSheet.create({
   labelRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 },
   countdown: { fontSize: 12, fontVariant: ["tabular-nums"] },
   cells: { flexDirection: "row", gap: 8 },
-  cell: { flex: 1, height: 52, borderWidth: 1, alignItems: "center", justifyContent: "center" },
+  cell: { flex: 1, height: 52, borderWidth: 1, borderRadius: radius.control, alignItems: "center", justifyContent: "center" },
   cellText: { fontFamily: family.mono[500], fontSize: 20, lineHeight: 28, fontVariant: ["tabular-nums"] },
   // Covers the cells, so a tap anywhere focuses it and the one-time-code autofill
   // (iOS keyboard bar, Android SMS/autofill) still has a real, focusable field.

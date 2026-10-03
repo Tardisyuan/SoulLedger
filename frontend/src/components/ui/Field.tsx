@@ -85,16 +85,15 @@ import { cn } from "@/lib/utils";
  *   v1 用它,于是每一个 SelectField 都被画成了禁用底色。
  * - 密码显示后改等宽字:调用点在明文时给 input 加 `data-revealed`(登录页那样)。
  *
- * Heights match `Button` (28 / 32 / 40), so a field and the button beside it
- * line up; `min-h` rather than `h` so a <textarea> can grow.
+ * Heights match `Button` (44 / 48 / 56, 规范 v3 `.field-sizes`;数字在 globals.css 的
+ * `--control-h-*`), so a field and the button beside it line up; `min-h` rather than
+ * `h` so a <textarea> can grow. 最小一档就是 44,393 宽下不再另补触控高度。
  */
 export const fieldControl = cva(
   [
     "block w-full bg-[oklch(var(--color-surface-1))] text-[oklch(var(--color-ink))]",
     "placeholder:text-[oklch(var(--color-ink-subtle))]",
     "transition-[border-color] duration-fast ease-standard",
-    // 393 px: a ≥ 44 px target.
-    "max-sm:min-h-11",
     "disabled:cursor-not-allowed disabled:bg-[oklch(var(--color-disabled-surface))] disabled:text-[oklch(var(--color-disabled-ink))] disabled:border-[oklch(var(--color-line))]",
     "[&[readonly]]:border-0 [&[readonly]]:border-b [&[readonly]]:border-dashed [&[readonly]]:border-[oklch(var(--color-line-strong))] [&[readonly]]:bg-transparent [&[readonly]]:px-0",
     "data-revealed:font-mono",
@@ -103,13 +102,13 @@ export const fieldControl = cva(
     variants: {
       // min-h, not h: the same recipe serves <textarea>.
       size: {
-        sm: "min-h-7 px-2 py-1 text-xs",
-        md: "min-h-8 px-3 py-1 text-sm",
-        lg: "min-h-10 px-3 py-2 text-sm",
+        sm: "min-h-(--control-h-sm) px-3 py-1 text-xs",
+        md: "min-h-(--control-h-md) px-3 py-1 text-sm",
+        lg: "min-h-(--control-h-lg) px-3 py-2 text-sm",
       },
       invalid: {
         false:
-          "border border-[oklch(var(--color-line-strong))] focus-visible:border-[oklch(var(--color-ink))]",
+          "rounded-control border border-[oklch(var(--color-line-strong))] focus-visible:border-[oklch(var(--color-ink))]",
         // 2 px neg border that stays through focus — the field must not stop
         // looking wrong as the user fixes it.
         true: "border-2 border-[oklch(var(--color-danger))] focus-visible:border-[oklch(var(--color-danger))]",

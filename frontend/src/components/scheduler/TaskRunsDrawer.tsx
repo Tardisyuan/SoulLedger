@@ -8,13 +8,15 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { useDrawerA11y } from "@/src/components/layout/useDrawerA11y";
 import { Button } from "@/src/components/ui/Button";
+import { Collapse } from "@/src/components/ui/Collapse";
 import { DomainEnum, MissingValue } from "@/src/components/ui/DomainValue";
 import { EmptyState } from "@/src/components/ui/EmptyState";
 import { SelectField } from "@/src/components/ui/Field";
 import { Pagination } from "@/src/components/ui/Pagination";
 import { QueryError } from "@/src/components/ui/PageError";
 import { Spinner } from "@/src/components/ui/Spinner";
-import { durationParts, runStatusBadgeClass } from "./schedulerView";
+import { durationParts } from "./schedulerView";
+import { RunStatusBadge } from "./SchedulerJobRow";
 
 export const RUN_STATUSES: TaskRunStatus[] = ["PENDING", "RUNNING", "SUCCESS", "FAILURE", "RETRY", "SKIPPED", "LOST"];
 
@@ -47,15 +49,16 @@ export function TaskRunsDrawer({ job, jobName, realtimeConnected, onClose }: Pro
 
   return (
     <>
-      <button type="button" aria-label={t("common.close")} className="fixed inset-0 bg-black/50 z-drawer animate-scrim-in" onClick={onClose} />
+      <button type="button" aria-label={t("common.close")} data-motion="fade" className="fixed inset-0 bg-black/50 z-drawer animate-scrim-in" onClick={onClose} />
       <div
         ref={drawerRef}
         {...drawerProps}
+        data-motion="fade"
         className="fixed right-0 top-0 h-full w-full max-w-xl bg-[oklch(var(--color-surface-1))] border-l border-[oklch(var(--color-ink))] z-drawer overflow-y-auto animate-drawer-in"
       >
         <div className="p-4 sm:p-6 space-y-4">
           <div className="flex items-start justify-between gap-3">
-            <h2 id={titleId} className="text-md text-[oklch(var(--color-ink))] min-w-0 break-words">
+            <h2 id={titleId} className="text-lg text-[oklch(var(--color-ink))] min-w-0 break-words">
               {t("scheduler.runs.title", { job: jobName })}
             </h2>
             <button
@@ -134,7 +137,7 @@ export function TaskRunItem({
     <li className="py-3 space-y-2" data-run-status={run.status}>
       {heading}
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-        <DomainEnum namespace="scheduler.status" value={run.status} className={runStatusBadgeClass(run.status)} />
+        <RunStatusBadge status={run.status} />
         <DomainEnum namespace="scheduler.trigger" value={run.trigger} className="text-xs text-[oklch(var(--color-ink-muted))]" />
         {run.triggered_by_username && (
           <span className="text-xs text-[oklch(var(--color-ink-muted))] break-all">
@@ -166,18 +169,17 @@ export function TaskRunItem({
               </Button>
             )}
           </div>
-          {open && (
-            // Wrapped, not horizontally scrolled: a traceback line is often
-            // wider than a phone, and a nested scroller inside a scrolling
-            // drawer is two scroll axes to fight with one thumb.
+          {/* Wrapped, not horizontally scrolled: a traceback line is often
+              wider than a phone, and a nested scroller inside a scrolling
+              drawer is two scroll axes to fight with one thumb. */}
+          <Collapse open={open} id={errorId} className="mt-2">
             <pre
-              id={errorId}
               aria-label={t("scheduler.runs.error")}
-              className="mt-2 max-h-80 overflow-y-auto whitespace-pre-wrap break-words select-text bg-[oklch(var(--color-surface-2))] border border-[oklch(var(--color-hairline))] p-3 font-mono text-xs text-[oklch(var(--color-ink))]"
+              className="max-h-80 overflow-y-auto whitespace-pre-wrap break-words select-text bg-[oklch(var(--color-surface-2))] border border-[oklch(var(--color-hairline))] p-3 font-mono text-xs text-[oklch(var(--color-ink))]"
             >
               {run.error}
             </pre>
-          )}
+          </Collapse>
         </div>
       )}
     </li>

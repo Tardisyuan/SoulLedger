@@ -20,6 +20,7 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AxiosError, AxiosHeaders } from "axios";
 import SoulsPage from "@/app/souls/page";
+import { BATCH_BAR, ROW_HOVER, ROW_SELECTED } from "@/components/ui/data-table";
 
 const soul = (id: string, name: string) => ({
   id,
@@ -60,7 +61,7 @@ jest.mock("@soulledger/core/api", () => ({
   },
 }));
 const mockPush = jest.fn();
-jest.mock("next/navigation", () => ({ useRouter: () => ({ push: mockPush }) }));
+jest.mock("next/navigation", () => ({ useRouter: () => ({ push: mockPush }), useSearchParams: () => new URLSearchParams() }));
 const mockSave = jest.fn();
 jest.mock("@/src/lib/saveBlob", () => ({ saveBlob: (...args: unknown[]) => mockSave(...args) }));
 
@@ -123,6 +124,24 @@ it("the checkbox is its own control, outside the row link, and shows 已选 N", 
   expect(within(bar() as HTMLElement).getByText("souls.batch.selected:1")).toBeInTheDocument();
   fireEvent.click(box("周慕云"));
   expect(within(bar() as HTMLElement).getByText("souls.batch.selected:2")).toBeInTheDocument();
+});
+
+it("v3 (2026-10-01): the ticked row is ink-7% + ink inset and loses hover; the bar is inverted and every button on it is inverse", () => {
+  renderPage();
+  fireEvent.click(box("沈青梧"));
+  const picked = (box("沈青梧").closest("tr") as HTMLElement).className.split(/\s+/);
+  const other = (box("周慕云").closest("tr") as HTMLElement).className.split(/\s+/);
+  expect(picked).toEqual(expect.arrayContaining(ROW_SELECTED.split(" ")));
+  expect(picked).not.toContain(ROW_HOVER);
+  expect(other).toContain(ROW_HOVER);
+  expect(other.some((c) => ROW_SELECTED.split(" ").includes(c))).toBe(false);
+
+  const region = bar() as HTMLElement;
+  expect(region.className.split(/\s+/)).toEqual(expect.arrayContaining(BATCH_BAR.split(" ")));
+  expect(region.className).not.toContain("--color-canvas");
+  const buttons = within(region).getAllByRole("button");
+  expect(buttons.length).toBe(4);
+  for (const b of buttons) expect(b.className).toContain("focus-visible:outline-[oklch(var(--color-surface-1))]!");
 });
 
 it("移入回收站 confirms in the recycle-bin wording, then sends the selected ids", () => {

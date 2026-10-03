@@ -57,6 +57,8 @@ function record(
     civilization: "CHINESE",
     event_date: null,
     is_milestone: false,
+    statute_clause: "",
+    occurrence_count: null,
     ...over,
   };
 }
@@ -80,7 +82,7 @@ function renderBook(records: LedgerRecord[] = RECORDS) {
   );
 }
 
-/** The six cells of each body row, as text. */
+/** The seven cells of each body row, as text. */
 function bodyRows(container: HTMLElement): string[][] {
   return Array.from(container.querySelectorAll("tbody tr")).map((tr) =>
     Array.from(tr.querySelectorAll("td")).map((td) => (td.textContent ?? "").trim())
@@ -125,7 +127,7 @@ describe("功 and 过 each hold a column, and the empty one stays empty", () => 
   it("puts a merit entry under 功 and leaves 过 blank", () => {
     const { container } = renderBook();
     // Row 1 is r3, a MERIT of 5.
-    const [, , , merit, demerit] = bodyRows(container)[0];
+    const [, , , , merit, demerit] = bodyRows(container)[0];
 
     expect(merit).toBe("+5");
     expect(demerit).toBe("");
@@ -134,7 +136,7 @@ describe("功 and 过 each hold a column, and the empty one stays empty", () => 
   it("puts a demerit entry under 过 and leaves 功 blank", () => {
     const { container } = renderBook();
     // Row 2 is r2, a DEMERIT of 12.
-    const [, , , merit, demerit] = bodyRows(container)[1];
+    const [, , , , merit, demerit] = bodyRows(container)[1];
 
     expect(merit).toBe("");
     expect(demerit).toBe("-12");
@@ -147,7 +149,7 @@ describe("功 and 过 each hold a column, and the empty one stays empty", () => 
     const { container } = renderBook();
 
     for (const cells of bodyRows(container)) {
-      const [, , , merit, demerit] = cells;
+      const [, , , , merit, demerit] = cells;
       expect([merit, demerit]).toContain("");
       for (const cell of [merit, demerit]) {
         expect(cell).not.toBe("0");
@@ -163,10 +165,11 @@ describe("合计 appears once, at the foot", () => {
     const foot = container.querySelector("tfoot")!;
     const cells = Array.from(foot.querySelectorAll("td")).map((td) => (td.textContent ?? "").trim());
 
-    // 功 35 = 30 + 5, 过 12, 销算余 +23.
-    expect(cells[3]).toBe("+35");
-    expect(cells[4]).toBe("-12");
-    expect(cells[5]).toBe("+23");
+    // 功 35 = 30 + 5, 过 12, 销算余 +23. (cells[3] is the 条款 column: nothing to total.)
+    expect(cells[3]).toBe("");
+    expect(cells[4]).toBe("+35");
+    expect(cells[5]).toBe("-12");
+    expect(cells[6]).toBe("+23");
   });
 
   it("gives no row a subtotal of its own", () => {
@@ -180,7 +183,7 @@ describe("合计 appears once, at the foot", () => {
 });
 
 describe("the column heads carry the book's own words", () => {
-  it("names the six columns in the provider's default locale", () => {
+  it("names the seven columns in the provider's default locale", () => {
     // zh-Hans is the provider default, so these are the strings that render.
     // Written out rather than read back out of the bundle: a test that looks up
     // `ledger.book.col_merit` and compares it to what `ledger.book.col_merit`
@@ -194,10 +197,11 @@ describe("the column heads carry the book's own words", () => {
     expect(heads[0]).toBe("条");
     expect(heads[1]).toBe("日");
     expect(heads[2]).toBe("事目");
+    expect(heads[3]).toBe("条款");
     // The three weight columns append the scale word to their heading.
-    expect(heads[3]).toBe("功权重");
-    expect(heads[4]).toBe("过权重");
-    expect(heads[5]).toBe("销算余权重");
+    expect(heads[4]).toBe("功权重");
+    expect(heads[5]).toBe("过权重");
+    expect(heads[6]).toBe("销算余权重");
   });
 
   it("renders no raw message key anywhere in the book", () => {
@@ -206,6 +210,81 @@ describe("the column heads carry the book's own words", () => {
     const { container } = renderBook();
 
     expect(container.textContent ?? "").not.toContain("ledger.book");
+  });
+});
+
+describe("事目's second line: clause, occurrences, milestone (Design v3 功过记录)", () => {
+  it("writes them under the entry, in the book's own words, and invents nothing for a bare entry", () => {
+    const { container } = renderBook([
+      record({
+        id: "cited", type: "MERIT", original_weight: 5, recorded_at: "2020-01-01T00:00:00Z",
+        statute_clause: "救濟門#7:賑濟窮民百錢", occurrence_count: 12, is_milestone: true,
+      }),
+      record({ id: "bare", type: "DEMERIT", original_weight: 3, recorded_at: "2020-02-01T00:00:00Z" }),
+      record({ id: "star", type: "MERIT", original_weight: 1, recorded_at: "2020-03-01T00:00:00Z", is_milestone: true }),
+    ]);
+    const rows = bodyRows(container);
+    const items = rows.map((cells) => cells[2]);
+    // Written out, not read from the bundle — see section 3 at the top.
+    // jsdom applies no CSS, so the folded clause (shown only below 768) is in the text here.
+    expect(items[0]).toBe("deed cited救濟門#7 · 发生 12 次 · ◆ 重要节点");
+    expect(items[1]).toBe("deed bare");
+    // A milestone with no count is not "1 次".
+    expect(items[2]).toBe("deed star◆ 重要节点");
+    // 条款 has its own column (Design v3, 用户 2026-10-02); an entry with no clause says so.
+    expect(rows.map((cells) => cells[3])).toEqual(["救濟門#7", "—", "—"]);
+    expect(container.querySelector('[data-record-clause="column"]')).toHaveAttribute("title", "救濟門#7:賑濟窮民百錢");
+    // Both the column and the fold link to the article in the corpus (`?code=`, encoded — `#` would be a fragment).
+    for (const where of ["column", "folded"]) {
+      const link = container.querySelector(`[data-record-clause="${where}"]`)!;
+      expect(link.tagName).toBe("A");
+      expect(link).toHaveAttribute("href", "/corpus?code=%E6%95%91%E6%BF%9F%E9%96%80%237");
+    }
+    expect(container.querySelectorAll("tbody [data-missing='unrecorded']")).toHaveLength(2);
+  });
+
+  it("shows the clause once per width: the column from 768 up, the fold below it", () => {
+    const { container } = renderBook([
+      record({
+        id: "bare-clause", type: "MERIT", original_weight: 5, recorded_at: "2020-01-01T00:00:00Z",
+        statute_clause: "救濟門#7:賑濟窮民百錢",
+      }),
+      record({
+        id: "with-facts", type: "MERIT", original_weight: 5, recorded_at: "2020-02-01T00:00:00Z",
+        statute_clause: "救濟門#8:施棺", occurrence_count: 3,
+      }),
+    ]);
+    const head = container.querySelectorAll("thead th")[3];
+    const cell = container.querySelectorAll("tbody tr td")[3];
+    const col = container.querySelectorAll("colgroup col")[3];
+    const foot = container.querySelectorAll("tfoot td")[3];
+    for (const el of [head, cell, col, foot]) expect(el).toHaveClass("max-md:hidden");
+
+    // The fold is the other half of the same breakpoint. Its own wrapper hides from 768 up
+    // (with the 「 · 」 after it), while the facts beside it stay on every width...
+    const [bareLine, factsLine] = Array.from(container.querySelectorAll("tbody tr")).map(
+      (tr) => tr.querySelectorAll("td")[2].querySelector(":scope > span")!
+    );
+    const foldedWithFacts = factsLine.querySelector('[data-record-clause="folded"]')!;
+    expect(foldedWithFacts.parentElement).toHaveClass("md:hidden");
+    expect(foldedWithFacts.parentElement!.textContent).toBe("救濟門#8 · ");
+    expect(factsLine).not.toHaveClass("md:hidden");
+    // ...and with no facts beside it the whole second line goes away from 768 up — not an
+    // empty line under the entry.
+    expect(bareLine).toHaveClass("md:hidden");
+  });
+
+  it("never lets 「◆」 end a line apart from 「重要节点」", () => {
+    const { container } = renderBook([
+      record({
+        id: "star", type: "MERIT", original_weight: 1, recorded_at: "2020-03-01T00:00:00Z",
+        occurrence_count: 2, is_milestone: true,
+      }),
+    ]);
+    const units = Array.from(container.querySelectorAll("[data-record-facts] .whitespace-nowrap")).map(
+      (el) => el.textContent
+    );
+    expect(units).toEqual(["发生 2 次", "◆ 重要节点"]);
   });
 });
 
@@ -238,8 +317,8 @@ describe("功 and 过 carry no colour — the heads and the signs tell them apar
     const { container } = renderBook();
     expect(colouredElements(container)).toEqual([]);
     // The signs are what is left to tell them apart, so they must be there.
-    expect(bodyRows(container)[0][3]).toMatch(/^\+/);
-    expect(bodyRows(container)[1][4]).toMatch(/^-/);
+    expect(bodyRows(container)[0][4]).toMatch(/^\+/);
+    expect(bodyRows(container)[1][5]).toMatch(/^-/);
   });
 
   it("draws the karma card's merit and demerit figures in ink too", () => {

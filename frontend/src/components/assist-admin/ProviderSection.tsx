@@ -20,9 +20,11 @@ import {
 import { useI18n } from "@/src/contexts/I18nContext";
 import { Badge, type BadgeTone } from "@/src/components/ui/Badge";
 import { Button } from "@/src/components/ui/Button";
+import { Collapse } from "@/src/components/ui/Collapse";
 import { SelectField, TextField } from "@/src/components/ui/Field";
 import { MONO, SUBTLE, Section, Switch, count } from "./parts";
 import { connectionDraft, fingerprint, hostOf, keySlot, slotKey, type Draft, type DraftKey, type SavedConnection } from "./draft";
+import { ROW_HOVER, ROW_SELECTED } from "@/components/ui/data-table";
 
 const WARN = "border-l-2 border-[oklch(var(--color-warning))] pl-3";
 const OK = "border-l-2 border-[oklch(var(--color-success))] pl-3";
@@ -285,8 +287,8 @@ export function Segment({
                 {open ? `${t("assist_admin.provider.details_hide")} ▾` : `${t("assist_admin.provider.details_show")} ▸`}
               </button>
             </div>
-            {open && (
-              <dl id={`${p}-preset-details`} className="mt-2 grid gap-1 bg-[oklch(var(--color-surface-2))] p-3 text-sm">
+            <Collapse open={open} id={`${p}-preset-details`} className="mt-2">
+              <dl className="grid gap-1 bg-[oklch(var(--color-surface-2))] p-3 text-sm">
                 <div className="flex flex-wrap gap-x-3">
                   <dt className="text-[oklch(var(--color-ink-muted))]">{t("assist_admin.provider.type")}</dt>
                   <dd>{typeLabel(platform.provider!)}</dd>
@@ -297,7 +299,7 @@ export function Segment({
                 </div>
                 <p className={SUBTLE}>{t("assist_admin.provider.locked_note")}</p>
               </dl>
-            )}
+            </Collapse>
           </div>
         )}
 
@@ -350,7 +352,7 @@ export function Segment({
                       aria-pressed={m.name === model}
                       onClick={() => choose(m.name)}
                       className={`flex w-full min-w-0 items-center gap-3 px-3 py-2 text-left text-sm ${MONO} ${
-                        m.name === model ? "bg-[oklch(var(--color-surface-2))] shadow-[inset_2px_0_0_oklch(var(--color-ink))]" : ""
+                        m.name === model ? `${ROW_SELECTED} font-semibold` : ROW_HOVER
                       }`}
                     >
                       <span className="min-w-0 flex-1 truncate" title={m.name}>

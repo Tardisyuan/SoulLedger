@@ -56,15 +56,17 @@ export function Pagination({ page, totalPages, count, onPageChange, showInfo = t
     if (next !== page) onPageChange(next);
   };
 
-  // 规范 v1 §2 分页:32 px 方格、等宽 12 px;悬停 surface-2、按下 surface-3,
+  // 规范 v1 §2 分页:方格、等宽 12 px,高按规范 v3 的 sm 档 44(`--control-h-sm`);悬停 surface-2、按下 surface-3,
   // 禁用用 disabled 墨色(首页的「上一页」)。
+  // `whitespace-nowrap`:393 px 下「← 上一页」曾折成三行(箭头、上一、页),整条控件跟着变高。
   const stepButton =
-    "h-8 min-w-8 px-2 font-mono text-xs border border-transparent text-[oklch(var(--color-ink-muted))] hover:bg-[oklch(var(--color-surface-2))] hover:text-[oklch(var(--color-ink))] active:bg-[oklch(var(--color-surface-3))] disabled:text-[oklch(var(--color-disabled-ink))] disabled:pointer-events-none max-sm:min-h-11";
+    "h-(--control-h-sm) min-w-(--control-h-sm) px-2 whitespace-nowrap font-mono text-xs border border-transparent text-[oklch(var(--color-ink-muted))] hover:bg-[oklch(var(--color-surface-2))] hover:text-[oklch(var(--color-ink))] active:bg-[oklch(var(--color-surface-3))] disabled:text-[oklch(var(--color-disabled-ink))] disabled:pointer-events-none";
 
   return (
-    <div className="flex items-center justify-between mt-4 px-2">
+    /* 放不下一行时计数在上、控件在下(`flex-wrap`),不再把计数挤成三行。 */
+    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 mt-4 px-2">
       {showInfo && (
-        <p className="font-mono text-xs text-[oklch(var(--color-ink-subtle))]">
+        <p className="font-mono text-xs text-[oklch(var(--color-ink-subtle))] whitespace-nowrap">
           {t("pagination.info", {
             page: String(page),
             total: String(totalPages),
@@ -72,7 +74,7 @@ export function Pagination({ page, totalPages, count, onPageChange, showInfo = t
           })}
         </p>
       )}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 ml-auto">
         {/* `type="button"` on every one. A <button> inside a <form> defaults to
             `submit`, and these sit in page bodies that do contain forms — a
             page turn would submit whatever form enclosed it. */}
@@ -91,7 +93,8 @@ export function Pagination({ page, totalPages, count, onPageChange, showInfo = t
           disabled={page === 1}
           className={stepButton}
         >
-          ← {t("common.prev")}
+          {/* 窄屏只留箭头,文字留给读屏(按钮的可及名称不变)。 */}
+          ← <span className="max-sm:sr-only">{t("common.prev")}</span>
         </button>
 
         {/* Mono + tabular-nums, like every other number in this app, so the
@@ -109,7 +112,7 @@ export function Pagination({ page, totalPages, count, onPageChange, showInfo = t
             }
           }}
           aria-label={t("pagination.jump")}
-          className="h-8 w-14 px-2 font-mono text-xs tabular-nums text-center bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-block))] font-semibold text-[oklch(var(--color-ink))]"
+          className="h-(--control-h-sm) w-14 px-2 font-mono text-xs tabular-nums text-center bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-block))] font-semibold text-[oklch(var(--color-ink))]"
         />
 
         <button
@@ -118,7 +121,7 @@ export function Pagination({ page, totalPages, count, onPageChange, showInfo = t
           disabled={page >= totalPages}
           className={stepButton}
         >
-          {t("common.next")} →
+          <span className="max-sm:sr-only">{t("common.next")}</span> →
         </button>
         <button
           type="button"

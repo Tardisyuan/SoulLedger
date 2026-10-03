@@ -24,11 +24,9 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import { LOCALE_COOKIE, isLocale } from "@soulledger/core/config/locale";
 
 import { clearOutbox } from "./chat";
-import { rememberPlaqueFace } from "./fonts";
 import { useI18n } from "./i18n";
 import { setUnauthorizedHandler } from "./platform";
 import { hasRegisteredDevice, unregisterDevice } from "./push";
-import { civKeyOf } from "./theme";
 
 export type SessionState =
   | { status: "booting" }
@@ -125,14 +123,6 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     if (getRefreshToken()) void enter();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- boot runs once
   }, []);
-
-  // 地府's plaque face starts loading the moment the session knows the soul is 地府's, and
-  // the next cold start loads it under the splash; any other soul, or none, loads nothing.
-  // Booting / unreachable / must-change-password decide nothing: the last answer stands.
-  useEffect(() => {
-    if (state.status === "signedIn") rememberPlaqueFace(civKeyOf(state.profile.civilization));
-    else if (state.status === "signedOut") rememberPlaqueFace(null);
-  }, [state]);
 
   const signIn = useCallback(
     async (soulCode: string, password: string) => {

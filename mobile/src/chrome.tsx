@@ -1,29 +1,30 @@
 /**
- * The navigator's chrome, drawn by the app instead of the platform — v2「朱印」:
- * every title bar is a plaque (规范 v2 §匾). A tab's root wears the full one (the seal,
- * a 28pt title in the civilization's face, the life and hall under it); every other
- * bar the simplified one (补足 C15): the same 匾色 ground and 22pt band under an
- * ordinary bar row. Before sign-in, or for a civilization the app does not know, the
- * plaque is the neutral one — ink ground, no band. The tab bar marks its current item
- * with a 2px rule in 匾色, one of the plaque colour's five places.
+ * The navigator's chrome, drawn by the app instead of the platform — v3: every title bar is
+ * the identity band (the civilization's colour with 10% #111, `Theme.band`), as the life tab
+ * draws it. A tab's root wears the short band (the Web's 116 band at phone width, round-7
+ * `.queue-mobile .identity-band`): the meta line in mono, then the outline seal (38) and the
+ * title at 20 in v3's title serif (Noto Serif SC 600, `titleFamily`). Every other bar is one row on the same ground.
+ * No ornament band, no texture, no civilization display face (v2's 匾, gone 2026-10-02).
+ * Before sign-in, or for a civilization the app does not know, the band is the neutral one
+ * and has no seal. The tab bar marks its current item with a 2px rule in the colour.
  */
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { pillarIsWide } from "@soulledger/core/domain/pillar";
-import { Platform, Pressable, StyleSheet, View, type TextLayoutEvent } from "react-native";
+import { Platform, Pressable, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import type { AssistScreen } from "@soulledger/core/api/soul-assist";
-import { useContext, useState, type ReactNode } from "react";
+import { useContext, type ReactNode } from "react";
 
 import { AssistEntry, useAssist } from "./assist";
 import { Emblem, Icon, type IconName } from "./emblems";
-import { family, plaqueFamily, quoteFamily, usePlaqueFace } from "./fonts";
+import { family, quoteFamily, titleFamily } from "./fonts";
 import { useI18n } from "./i18n";
 import { useCurrentHall } from "./screens/letters";
-import { PlaqueBand, Seal } from "./seal";
+import { OutlineSeal } from "./seal";
 import { SessionContext } from "./session";
 import type { Theme } from "./theme";
-import { ThemeContext, Txt, shade, useLayout, useTheme } from "./ui";
+import { ThemeContext, Txt, enumText, shade, useLayout, useTheme } from "./ui";
 
 /**
  * The theme for what sits ON a plaque: every ink is onPlaque (>= 4.5 on every 匾色,
@@ -33,22 +34,16 @@ import { ThemeContext, Txt, shade, useLayout, useTheme } from "./ui";
  */
 export function onPlaqueTheme(t: Theme): Theme {
   const on = t.onPlaque;
-  return { ...t, s0: t.plaque, s1: t.plaque, s2: shade(t.plaque, 0.12), ink: on, inkMuted: on, inkSubtle: on, hair: `${on}33`, hair2: `${on}59` };
+  return { ...t, s0: t.band, s1: t.band, s2: shade(t.band, 0.12), ink: on, inkMuted: on, inkSubtle: on, hair: `${on}33`, hair2: `${on}59` };
 }
 
-/**
- * The plaque's ground: 匾色 from the status bar down, the dark scheme's 1px top highlight
- * (onPlaque 20%), whatever row the caller puts on it, and — for a known civilization —
- * the 22pt ornament band at the foot.
- */
+/** The band's ground, from the status bar down, with whatever row the caller puts on it. */
 export function PlaqueFrame({ children, testID = "plaque" }: { children: ReactNode; testID?: string }) {
   const t = useTheme();
   const insets = useSafeAreaInsets();
   return (
-    <View testID={testID} style={{ backgroundColor: t.plaque, paddingTop: insets.top }}>
-      {t.scheme === "dark" ? <View style={[styles.highlight, { backgroundColor: `${t.onPlaque}33` }]} /> : null}
+    <View testID={testID} style={{ backgroundColor: t.band, paddingTop: insets.top }}>
       <ThemeContext.Provider value={onPlaqueTheme(t)}>{children}</ThemeContext.Provider>
-      {t.civ === "neutral" ? null : <PlaqueBand civ={t.civ} theme={t} />}
     </View>
   );
 }
@@ -129,7 +124,7 @@ interface BarProps {
 }
 
 /** The bar row, drawn inside a PlaqueFrame (so its theme is `onPlaqueTheme`). */
-function Bar({ title, serif, onBack, action, onAccount, assist, civ, cnFace }: BarProps & { civ: Theme["civ"]; cnFace: boolean }) {
+function Bar({ title, serif, onBack, action, onAccount, assist }: BarProps) {
   const t = useTheme();
   const { t: tr } = useI18n();
   const { compact } = useLayout();
@@ -156,8 +151,10 @@ function Bar({ title, serif, onBack, action, onAccount, assist, civ, cnFace }: B
           styles.title,
           android && !onBack && styles.titleStart,
           { textAlign: onBack || android ? "left" : "center" },
-          // The simplified plaque's title: the civilization's face at 20 (补足 A3), never the 28 of a tab's root.
-          civ !== "neutral" ? [styles.barTitle, { fontFamily: plaqueFamily(civ, title, cnFace) }] : serif && { fontFamily: quoteFamily(title) },
+          // 20 / 600 in v3's title serif (Noto Serif SC 600), as the band's title; the pre-login app
+          // name keeps its quote serif (product decision 2026-09-26).
+          styles.barTitle,
+          { fontFamily: serif ? quoteFamily(title) : titleFamily(title) },
         ]}
       >
         {title}
@@ -167,23 +164,19 @@ function Bar({ title, serif, onBack, action, onAccount, assist, civ, cnFace }: B
   );
 }
 
-/** Every title bar that is not a tab's root: the simplified plaque. */
+/** Every title bar that is not a tab's root: one row on the band. */
 export function AppHeader(props: BarProps) {
-  const t = useTheme();
-  const cnFace = usePlaqueFace(t.civ);
   return (
     <PlaqueFrame testID="header">
-      <Bar {...props} civ={t.civ} cnFace={cnFace} />
+      <Bar {...props} />
     </PlaqueFrame>
   );
 }
 
 /**
- * v2「朱印」's plaque (规范 v2 §匾, 补足 B11 / C18) on a tab's root: the seal (52), the title
- * in the civilization's face at 28 with the life and hall under it in mono, and the band.
- * 补足 C14: a title that does not fit one line at 28 in its face is set in the interface
- * face at 20, two lines — judged by the laid-out lines, not by counting characters.
- * Neutral (an unrecognised civilization) or no session: the simplified plaque.
+ * A tab's root: the short identity band — the meta line (civilization · life · hall, mono 11,
+ * as the life tab's band), then the seal, the title and the bar's own end. The title takes two
+ * lines before it is cut. Neutral (an unrecognised civilization) or no session: one row.
  */
 export function PlaqueHeader({
   title,
@@ -197,43 +190,27 @@ export function PlaqueHeader({
   assist?: AssistScreen;
 }) {
   const t = useTheme();
-  const { t: tr } = useI18n();
+  const { t: tr, enumLabel } = useI18n();
   const hall = useCurrentHall();
   const session = useContext(SessionContext);
   const me = session?.state.status === "signedIn" ? session.state.profile : null;
-  const cnFace = usePlaqueFace(t.civ);
-  const [fits, setFits] = useState<{ title: string; one: boolean } | null>(null);
   if (t.civ === "neutral" || !me) return <AppHeader title={title} onAccount={onAccount} action={action} assist={assist} />;
-  const meta = [tr("soul_app.life.cycle", { cycle: String(me.account.cycle + 1) }), hall].filter(Boolean).join(" · ");
-  const stepDown = fits?.title === title && !fits.one;
-  const measure = (e: TextLayoutEvent) => {
-    const one = e.nativeEvent.lines.length <= 1;
-    if (!stepDown && (fits?.title !== title || fits.one !== one)) setFits({ title, one });
-  };
+  const meta = [enumText(enumLabel("souls.civilizations", me.civilization), tr), tr("soul_app.life.cycle", { cycle: String(me.account.cycle + 1) }), hall]
+    .filter(Boolean)
+    .join(" · ");
   return (
     <PlaqueFrame>
-      <View style={styles.plaqueRow}>
-        <Seal civ={t.civ} size={52} theme={t} glyphs={me.tenant.seal_glyphs} label={tr("seal.aria", { court: hall })} testID="plaque-seal" />
-        <View style={styles.plaqueText}>
-          <Txt
-            testID="plaque-title"
-            accessibilityRole="header"
-            numberOfLines={stepDown ? 2 : undefined}
-            onTextLayout={measure}
-            style={[
-              stepDown ? styles.plaqueTitleSmall : styles.plaqueTitle,
-              { color: t.onPlaque, fontFamily: stepDown ? family.ui[600] : plaqueFamily(t.civ, title, cnFace) },
-            ]}
-          >
+      <View style={styles.plaque}>
+        <Txt testID="plaque-meta" numberOfLines={1} style={styles.plaqueMeta}>
+          {meta}
+        </Txt>
+        <View style={styles.plaqueRow}>
+          <OutlineSeal civ={t.civ} size={38} color={t.onPlaque} glyphs={me.tenant.seal_glyphs} label={tr("seal.aria", { court: hall })} testID="plaque-seal" />
+          <Txt testID="plaque-title" accessibilityRole="header" numberOfLines={2} style={[styles.plaqueTitle, { fontFamily: titleFamily(title) }]}>
             {title}
           </Txt>
-          <Txt numberOfLines={1} style={[styles.plaqueMeta, { color: t.onPlaque }]}>
-            {meta}
-          </Txt>
-        </View>
-        <ThemeContext.Provider value={onPlaqueTheme(t)}>
           <BarEnd action={action} onAccount={onAccount} assist={assist} />
-        </ThemeContext.Provider>
+        </View>
       </View>
     </PlaqueFrame>
   );
@@ -248,6 +225,9 @@ const TAB_ICONS: Record<string, IconName> = { Life: "ledger", Applications: "cyc
  * sides; a label that still does not fit is cut, and read whole by its accessibility label.
  */
 export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
+  // v3: the bar wears v3's neutrals; the current item's emblem and rule are the civilization's
+  // colour. Its label stays ink 600: v3 sets it in the colour too, but every dark civilization
+  // colour is under 4.5:1 on the dark surface (3.13–4.27), so as text it would fail AA.
   const t = useTheme();
   const insets = useSafeAreaInsets();
   // Handoff 2d (supersedes 1g rule 五): at >= 1.7x text the items become rows — same
@@ -291,7 +271,7 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
             <View style={styles.tabIcon}>
               {tabBarBadge ? <View testID={`tab-${route.name}-badge`} style={[styles.tabBadge, { backgroundColor: t.ink }]} /> : null}
               {selected ? (
-                <Emblem civ={t.civ} size={24} stroke={t.ink} strokeWidth={2.2} />
+                <Emblem civ={t.civ} size={24} stroke={t.plaque} strokeWidth={2.2} />
               ) : (
                 <Icon name={TAB_ICONS[route.name] ?? "chevron"} size={18} color={t.inkSubtle} strokeWidth={1.2} />
               )}
@@ -332,12 +312,10 @@ const styles = StyleSheet.create({
   /** B11: 12; C14 wide: 11, two lines. */
   tabLabel: { fontSize: 12, lineHeight: 16, letterSpacing: 0, textAlign: "center" },
   tabLabelWide: { fontSize: 11, lineHeight: 16 },
-  highlight: { position: "absolute", top: 0, left: 0, right: 0, height: 1 },
-  plaqueRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingLeft: 16, paddingRight: 4, paddingVertical: 12 },
-  plaqueText: { flex: 1, minWidth: 0 },
-  /** 补足 A3: 28 / 36 — the plaque is one of the two places above 20. */
-  plaqueTitle: { fontSize: 28, lineHeight: 36 },
-  /** C14's last step: the interface face at 20, two lines. */
-  plaqueTitleSmall: { fontSize: 20, lineHeight: 28 },
-  plaqueMeta: { fontFamily: family.mono[400], fontSize: 11, lineHeight: 16 },
+  /** v3 short band at phone width: the meta line, then the seal row. */
+  plaque: { paddingTop: 12, paddingBottom: 12, paddingLeft: 16, paddingRight: 4, gap: 12 },
+  plaqueRow: { flexDirection: "row", alignItems: "center", gap: 12 },
+  /** v3 第一批: titles in Noto Serif SC 600 (`titleFamily`, set where the title is known). */
+  plaqueTitle: { flex: 1, minWidth: 0, fontSize: 20, lineHeight: 28 },
+  plaqueMeta: { fontFamily: family.mono[400], fontSize: 11, lineHeight: 16, letterSpacing: 0.6, paddingRight: 12 },
 });

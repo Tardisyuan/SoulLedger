@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
+import { Collapse } from "@/src/components/ui/Collapse";
 import { DomainEnum } from "@/src/components/ui/DomainValue";
 import { RowShell, TONE_DOT } from "@/src/components/souls/SoulLifecycleRowShell";
 import { ANNIHILATION_REALM_CODE } from "@/src/lib/realmCodes";
@@ -207,7 +208,7 @@ export function SoulLifecycleTimeline({
       {/* Header + filter tabs. 规范 v1 灵魂详情:区块标压在区块边界线上,不是卡片;
           「庚」接在详情页「甲…己」之后。 */}
       <div className="flex items-end justify-between flex-wrap gap-3 pt-6 pb-1 mb-4 border-b border-[oklch(var(--color-block))]">
-        <h2 className="font-mono text-2xs uppercase tracking-widest text-[oklch(var(--color-ink-subtle))]">
+        <h2 className="text-2xs uppercase tracking-widest text-[oklch(var(--color-ink-subtle))]">
           <span aria-hidden="true">庚 · </span>
           {tf("souls.detail.timeline.title", "灵魂账页")}
         </h2>
@@ -332,6 +333,7 @@ export function SoulLifecycleTimeline({
                     type="button"
                     onClick={() => setExpandedSystemGroups((s) => ({ ...s, [row.id]: !isOpen }))}
                     aria-expanded={isOpen}
+                    aria-controls={`timeline-system-${row.id}`}
                     className="text-left w-full"
                   >
                     {/* `title` carries the raw event_type — the domainDisplay
@@ -347,8 +349,8 @@ export function SoulLifecycleTimeline({
                       )}
                     </div>
                   </button>
-                  {isOpen && (
-                    <div className="mt-1 space-y-0.5 pl-2 border-l border-[oklch(var(--color-hairline))]">
+                  <Collapse open={isOpen} id={`timeline-system-${row.id}`} className="mt-1">
+                    <div className="space-y-0.5 pl-2 border-l border-[oklch(var(--color-hairline))]">
                       {row.items.map((item) => {
                         const described = describeSystemEvent(item, systemEventLabels);
                         return (
@@ -358,7 +360,7 @@ export function SoulLifecycleTimeline({
                         );
                       })}
                     </div>
-                  )}
+                  </Collapse>
                 </RowShell>
               );
             }

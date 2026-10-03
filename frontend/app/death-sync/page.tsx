@@ -4,9 +4,11 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { usePlaque } from "@/src/components/plaque/Plaque";
+import { useHall } from "@/src/components/plaque/useHall";
 import { deathSyncApi, PAGE_SIZE, type DeathRegistration } from "@soulledger/core/api";
 import { DataTable } from "@/components/ui/data-table";
-import { SectionTitle } from "@/src/components/plaque/SectionTitle";
+import { PageSection } from "@/components/ui/page-section";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
 import { IdentifierChip, MissingValue } from "@/src/components/ui/DomainValue";
 import { PageShell } from "@/src/components/ui/PageShell";
@@ -23,7 +25,8 @@ import { FilterChipSelect } from "@/src/components/ui/FilterChip";
  * PENDING / PROCESSED / FAILED 说的正是一次同步操作的结果。登记条目随之删除。
  */
 const STATUS_TONES: Record<string, BadgeTone> = {
-  PENDING: "warning",
+  // 规范 v3:还没处理不是风险,中性;部分失败(PARTIAL)是可补救的风险,仍是警示;FAILED 是错误。
+  PENDING: "neutral",
   ACCEPTED: "info",
   PROCESSED: "success",
   FAILED: "error",
@@ -45,6 +48,7 @@ export default function DeathSyncPage() {
 
 function DeathSyncRoute() {
   const { t, formatDateTime } = useI18n();
+  usePlaque({ hall: useHall(t("plaque.office.records")) });
   const { user } = useTenant();
   const router = useRouter();
   const pathname = usePathname();
@@ -90,11 +94,8 @@ function DeathSyncRoute() {
       }
       subtitle={t("death_sync.subtitle") || "External death registration sync"}
     >
-      {/* 页面级分节标题(规范 v2 §四,SectionTitle);v1 的 PageSection 框与 11px 栏目标签撤掉。 */}
-      <section aria-labelledby="death-sync-registrations">
-        <div className="mb-3">
-          <SectionTitle id="death-sync-registrations">{t("death_sync.registrations")}</SectionTitle>
-        </div>
+      {/* 规范 v3 面板:surface-1 底 + 结构线,20 px 面板标题;v2 的分节纹撤掉。 */}
+      <PageSection title={t("death_sync.registrations")}>
         <div className="mb-3 flex flex-wrap items-center gap-3">
           <FilterChipSelect
             label={t("death_sync.status_label")}
@@ -139,7 +140,7 @@ function DeathSyncRoute() {
           keyExtractor={(reg) => String(reg.id)}
           renderRow={(reg) => (
             <>
-              <td className="px-3 py-2">
+              <td className="px-3 py-2 whitespace-nowrap">
                 <p className="font-medium text-[oklch(var(--color-ink))]">{reg.source_system}</p>
                 <p className="text-xs text-[oklch(var(--color-ink-subtle))]">
                   {/* IdentifierChip, not dead text. This one is a genuine
@@ -155,14 +156,14 @@ function DeathSyncRoute() {
                   />
                 </p>
                 {reg.error_message && (
-                  <p className="text-xs text-[oklch(var(--color-danger))]">
+                  <p className="max-w-80 whitespace-normal text-xs text-[oklch(var(--color-danger))]">
                     {/* 补足 C15:出错是冷玫红「✕ 原因」。 */}
                     <span aria-hidden="true">✕ </span>
                     {reg.error_message}
                   </p>
                 )}
               </td>
-              <td className="px-3 py-2 font-mono text-xs text-[oklch(var(--color-ink-muted))]">
+              <td className="px-3 py-2 font-mono text-xs whitespace-nowrap text-[oklch(var(--color-ink-muted))]">
                 {formatDateTime(reg.request_timestamp)}
               </td>
               <td className="px-3 py-2 text-right font-mono text-xs tabular-nums text-[oklch(var(--color-ink-muted))]">
@@ -170,7 +171,7 @@ function DeathSyncRoute() {
                     0 ms 是一个值,照常显示;只有 null 才是「未记录」。 */}
                 {reg.processing_duration_ms != null ? `${reg.processing_duration_ms}ms` : <MissingValue kind="unrecorded" />}
               </td>
-              <td className="px-3 py-2">
+              <td className="px-3 py-2 whitespace-nowrap">
                 <StatusBadge namespace="death_sync.status" value={reg.status} tone={STATUS_TONES[reg.status] ?? "neutral"} />
               </td>
             </>
@@ -180,7 +181,7 @@ function DeathSyncRoute() {
           totalCount={data?.count ?? 0}
           onPageChange={setPage}
         />
-      </section>
+      </PageSection>
     </PageShell>
   );
 }

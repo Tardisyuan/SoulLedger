@@ -1,4 +1,6 @@
 import { test as base, type Locator, type Page, type Request } from "@playwright/test";
+import type { AssistAdminBackup, AssistAdminConfig, AssistAdminEmbedding } from "@soulledger/core/api/assist-admin";
+import type { AssistStreamEvent } from "@soulledger/core/api/assist-stream";
 
 /**
  * Shared E2E setup: authenticated browser state + a route-level mock of the
@@ -402,6 +404,8 @@ const statute = (id: string, civilization: string, corpus: string, ordinal: numb
   source_notes: [],
   payload_json: {},
   citation_count: 0,
+  revision: 1,
+  effective_from: "2026-08-27",
   ...extra,
 });
 
@@ -468,6 +472,7 @@ export const SOUL_INHERITANCE = {
 /** The judgment POST /judgment/ opens for a soul already in JUDGING. */
 export const OPENED_JUDGMENT = {
   id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+  case_number: "CN-2026-0001",
   soul: SOULS[0].id,
   soul_name: SOULS[0].name,
   civilization: "CHINESE",
@@ -492,14 +497,29 @@ export const OPENED_JUDGMENT = {
  * `stats`, so any body missing that key throws into the error boundary.
  */
 export const LEDGER_STATS = {
+  as_of: "2026-10-02T08:00:00Z",
   total_souls: 2,
+  average_balance: 12.5,
+  // 上月快照(BalanceSnapshot)的均值与差;没有上月快照时两项都是 null。
+  average_balance_prev_month: 13.8,
+  average_balance_delta: -1.3,
   state_distribution: [
-    { state: "ALIVE", label: "在世", count: 1 },
-    { state: "JUDGING", label: "审判中", count: 1 },
-    { state: "DISPOSED", label: "已处置", count: 0 },
+    { state: "ALIVE", label: "在世", count: 1, average_balance: 30 },
+    { state: "JUDGING", label: "审判中", count: 1, average_balance: -5 },
+    { state: "DISPOSED", label: "已处置", count: 0, average_balance: null },
   ],
   tenants: [],
   karma_distribution: [],
+  // 等宽直方图:[-300, 300) 每 50 一格,两端开口(`apps/ledger/views.py`)。
+  balance_histogram: {
+    bucket_width: 50,
+    buckets: [
+      { min: null, max: -300, count: 0 },
+      ...Array.from({ length: 12 }, (_, i) => ({ min: -300 + 50 * i, max: -250 + 50 * i, count: i === 5 || i === 6 ? 1 : 0 })),
+      { min: 300, max: null, count: 0 },
+    ],
+    total: 2,
+  },
   recent_activity: [],
   souls_by_realm: [],
 };
@@ -1101,7 +1121,12 @@ export interface RecordedCall {
 export interface MockReply {
   status?: number;
   body?: unknown;
+  /** Send `body` (a string) as-is under this type instead of as JSON — e.g. `text/event-stream`. */
+  contentType?: string;
 }
+
+/** One SSE frame as backend/apps/soul_assist/sse.py `frame` writes it. */
+const sse = (data: AssistStreamEvent) => `event: ${data.event}\ndata: ${JSON.stringify(data)}\n\n`;
 
 export type MockHandler = (call: RecordedCall) => MockReply | Promise<MockReply>;
 
@@ -1145,17 +1170,28 @@ const ASSIST_ADMIN_PLATFORMS = [
   { id: "siliconflow", provider: "openai_compatible", base_url: "https://api.siliconflow.cn/v1", tools: "model", needs_key: true },
   { id: "ollama", provider: "openai_compatible", base_url: "http://localhost:11434/v1", tools: "model", needs_key: false },
   { id: "custom", provider: null, base_url: null, tools: "model", needs_key: true },
-];
+] satisfies AssistAdminConfig["platforms"];
 const ASSIST_ADMIN_CONFIG = {
   enabled: true, switch: true, env_enabled: true, platform: "deepseek", platforms: ASSIST_ADMIN_PLATFORMS,
   provider: "openai_compatible", base_url: "https://api.deepseek.com",
   model: "deepseek-flash", effort: "", fallbacks: false, soul_per_hour: 30, officer_per_hour: 30, monthly_cap: 300,
   eval_spend_cap: 5, prices: { "deepseek-flash": { input: 0.28, output: 0.42, source: "litellm", as_of: "2026-09-28" } },
   api_key: { set: true, last4: "8f3c", set_at: "2026-09-02T00:00:00Z", source: "page" },
+  // Keys per platform (§13.6, admin_views.py `_config_body`): the page reads `api_keys[slot]` for any
+  // platform other than the current one, so a config without them throws on render.
+  api_key_slot: "deepseek",
+  api_keys: { deepseek: { set: true, last4: "8f3c", set_at: "2026-09-02T00:00:00Z", source: "page" } },
   eval_soul_account: "11111111-1111-1111-1111-111111111111", eval_officer: 9,
   month_rolls_over_at: "每月 1 日 08:00(北京时间)", overridden: [],
-  read_only: { max_concurrent: 8, timeout_seconds: 22, history_turns: 20, retention_days: 30 },
-};
+  read_only: { max_concurrent: 8, timeout_seconds: 22, stream_total_seconds: 60, primary_first_token_seconds: 12, history_turns: 20, retention_days: 30 },
+} satisfies AssistAdminConfig;
+/** admin_views.py `_backup_body` with no backup saved. */
+const ASSIST_ADMIN_NO_BACKUP = {
+  configured: false, platform: null, provider: null, base_url: null, model: null, effort: null, fallbacks: null, prices: {},
+  api_key: { set: false, last4: null, set_at: null, source: "page" }, api_key_slot: null,
+  breaker: { open: false, open_until: null, consecutive_failures: 0, threshold: 3, open_seconds: 60 },
+  primary_first_token_seconds: 12,
+} satisfies AssistAdminBackup;
 const ASSIST_ADMIN_EMBEDDING = {
   embedding_url: "http://192.168.2.2:11434", embedding_model: "qwen3-embedding:4b-q4_K_M", embedding_dims: null,
   retrieval_k: 5, retrieval_min_similarity: 0.56, overridden: ["embedding_model"],
@@ -1164,7 +1200,7 @@ const ASSIST_ADMIN_EMBEDDING = {
     last_rebuild_at: "2026-09-12T02:40:00Z", last_rebuild_model: "qwen3-embedding:0.6b@1024",
     last_error: null, last_error_at: null, rebuild_running: false,
   },
-};
+} satisfies AssistAdminEmbedding;
 
 export class ApiMock {
   /** Every intercepted request, in order. Assert against this. */
@@ -1739,16 +1775,25 @@ export class ApiMock {
 
     // ── 问一问 (backend/apps/soul_assist/views.py Officer*) ──
     this.on("GET", "/assist/conversations/", []);
-    this.on("POST", "/assist/", (call) => ({
-      body: {
-        conversation_id: "11111111-1111-1111-1111-111111111111",
-        answer: { id: 2, role: "assistant", content: `答：${(call.body as { question?: string })?.question ?? ""}`, created_at: "2026-09-29T02:12:00Z" },
-      },
-    }));
+    // The panel asks with `stream: true` (packages/core assist-stream.ts), so it reads SSE frames, not JSON.
+    this.on("POST", "/assist/", (call) => {
+      const conversation_id = "11111111-1111-1111-1111-111111111111";
+      const content = `答：${(call.body as { question?: string })?.question ?? ""}`;
+      const answer = { id: 2, role: "assistant" as const, content, interruption: "" as const, created_at: "2026-09-29T02:12:00Z" };
+      if (!(call.body as { stream?: boolean })?.stream) return { body: { conversation_id, answer } };
+      return {
+        contentType: "text/event-stream; charset=utf-8",
+        body:
+          sse({ event: "meta", conversation_id }) +
+          sse({ event: "delta", text: content }) +
+          sse({ event: "done", conversation_id, answer, usage: { input_tokens: 40, output_tokens: 8, cache_read_tokens: 0 } }),
+      };
+    });
     this.on("DELETE", "/assist/conversations/:id/", () => ({ status: 204, body: null }));
 
     // ── 助手管理 (backend/apps/soul_assist/admin_views.py) — the config page's reads, and the 向量模型 block ──
     this.on("GET", "/assist-admin/config/", ASSIST_ADMIN_CONFIG);
+    this.on("GET", "/assist-admin/config/backup/", ASSIST_ADMIN_NO_BACKUP);
     this.on("POST", "/assist-admin/config/models/", {
       status: "ok", error_kind: null,
       models: [{ name: "deepseek-flash", context: 131072 }, { name: "deepseek-v4-pro-with-a-deliberately-long-model-identifier", context: 131072 }],
@@ -1858,8 +1903,8 @@ export async function mockApi(page: Page, mock: ApiMock = new ApiMock().register
     const reply = await mock.resolve(call);
     await route.fulfill({
       status: reply.status ?? 200,
-      headers: { ...headers, "Content-Type": "application/json" },
-      body: JSON.stringify(reply.body ?? {}),
+      headers: { ...headers, "Content-Type": reply.contentType ?? "application/json" },
+      body: reply.contentType ? String(reply.body ?? "") : JSON.stringify(reply.body ?? {}),
     });
   });
 

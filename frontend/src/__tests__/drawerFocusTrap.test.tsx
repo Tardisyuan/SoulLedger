@@ -58,6 +58,7 @@ jest.mock("@/src/contexts/TenantContext", () => ({
 
 jest.mock("next/navigation", () => ({
   usePathname: () => "/dashboard",
+  useSearchParams: () => new URLSearchParams(),
   useRouter: () => ({ push: jest.fn(), replace: jest.fn(), prefetch: jest.fn() }),
 }));
 

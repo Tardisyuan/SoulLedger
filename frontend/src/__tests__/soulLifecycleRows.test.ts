@@ -42,6 +42,8 @@ function record(overrides: Partial<LedgerRecord> = {}): LedgerRecord {
     recorded_at: "2020-01-01T00:00:00Z",
     event_date: { year: 2020, month: 1, day: 1 },
     is_milestone: false,
+    statute_clause: "",
+    occurrence_count: null,
     ...overrides,
   };
 }
@@ -105,6 +107,7 @@ describe("buildJudgmentMarkers", () => {
   function judgment(overrides: Partial<Judgment> = {}): Judgment {
     return {
       id: "j1",
+      case_number: "CN-2026-0001",
       soul: "s1",
       soul_name: "x",
       civilization: "CHINESE",

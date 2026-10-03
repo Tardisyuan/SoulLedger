@@ -5869,6 +5869,47 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/social/media/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 上传上限 —— 发帖框的「最多 N 张」读这里,不在前端写死。 */
+        get: operations["v1_social_media_limits"];
+        put?: never;
+        /**
+         * @description 官员朋友圈的配图(2026-10-02 用户决定:官员也能发图;官员流仍不含灵魂帖子)。
+         *
+         *     与灵魂端 `/me/social/media/` 同一套:`media.upload`(魔数 + 重编码 + 去 EXIF、5 MB、
+         *     长边 2048、未发图上限)、私有存储、签名地址。闸门与官员发帖同一个 `TenantPermission`
+         *     —— 官员社交没有自己的权限码(见文首)。拒绝答 `{detail, code}` + 服务层给的状态码。
+         */
+        post: operations["v1_social_media_upload"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/social/media/{media_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** @description 移除一张还没发出去的图(行与文件真删)。已经挂到帖子上的图随帖子删。 */
+        delete: operations["v1_social_media_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/social/posts/": {
         parameters: {
             query?: never;
@@ -7663,6 +7704,7 @@ export interface components {
             /** Format: uuid */
             judgment?: string | null;
             readonly judgment_verdict: string | null;
+            readonly judgment_case_number: string | null;
             /** Format: uuid */
             soul: string;
             readonly soul_name: string;
@@ -8049,6 +8091,22 @@ export interface components {
             breaker: components["schemas"]["Breaker"];
             /** Format: double */
             primary_first_token_seconds: number;
+        };
+        /**
+         * @description 等宽余额直方图:[-300, 300) 每 `bucket_width` 一格,外加两端开口的两格。
+         *     **只数已处置(DISPOSED)的灵魂**;格子覆盖整条数轴,所以 `total` 等于已处置人数
+         *     (`state_distribution` 里 DISPOSED 那一行的 count),不是 `total_souls`。
+         */
+        BalanceHistogram: {
+            bucket_width: number;
+            buckets: components["schemas"]["BalanceHistogramBucket"][];
+            total: number;
+        };
+        /** @description 半开区间 [min, max);两端那两格开口(min 或 max 为 null)。 */
+        BalanceHistogramBucket: {
+            min: number | null;
+            max: number | null;
+            count: number;
         };
         /** @description kind=BALANCE — the Chinese 功過格 account. */
         BalanceReading: {
@@ -9518,6 +9576,7 @@ export interface components {
         Judgment: {
             /** Format: uuid */
             readonly id: string;
+            readonly case_number: string;
             /** Format: uuid */
             soul: string;
             readonly soul_name: string;
@@ -9573,6 +9632,19 @@ export interface components {
              *     (`JudgmentEvidenceColumn`,`Object.entries(evidence).length`)。
              */
             readonly evidence_count: number;
+            /** @description Life index this row belongs to; 0 is the first life. */
+            readonly cycle: number;
+            /**
+             * @description Method of judgment (affects disposition routing)
+             *
+             *     * `STANDARD` - Standard Trial (Chinese/European/Greek)
+             *     * `HEART_WEIGHING` - Heart Weighing (Egyptian)
+             *     * `DIABOLICAL_TRIAL` - Diabolical Trial (European Hell)
+             */
+            readonly judgment_method: components["schemas"]["JudgmentMethodEnum"];
+            readonly merit_score: number;
+            readonly demerit_score: number;
+            readonly realm_name: string | null;
         };
         /** @description `POST /judgment/batch/` 的输入。一个动作、至多 `BATCH_LIMIT` 个 id,全有或全无。 */
         JudgmentBatch: {
@@ -9722,6 +9794,7 @@ export interface components {
         JudgmentDetail: {
             /** Format: uuid */
             readonly id: string;
+            readonly case_number: string;
             /** Format: uuid */
             soul: string;
             readonly soul_name: string;
@@ -9777,6 +9850,19 @@ export interface components {
              *     (`JudgmentEvidenceColumn`,`Object.entries(evidence).length`)。
              */
             readonly evidence_count: number;
+            /** @description Life index this row belongs to; 0 is the first life. */
+            readonly cycle: number;
+            /**
+             * @description Method of judgment (affects disposition routing)
+             *
+             *     * `STANDARD` - Standard Trial (Chinese/European/Greek)
+             *     * `HEART_WEIGHING` - Heart Weighing (Egyptian)
+             *     * `DIABOLICAL_TRIAL` - Diabolical Trial (European Hell)
+             */
+            readonly judgment_method: components["schemas"]["JudgmentMethodEnum"];
+            readonly merit_score: number;
+            readonly demerit_score: number;
+            readonly realm_name: string | null;
             readonly evidence_admissions: components["schemas"]["EvidenceAdmission"][];
             readonly admitted_balance: components["schemas"]["AdmittedBalance"];
         };
@@ -9814,6 +9900,13 @@ export interface components {
          * @enum {string}
          */
         JudgmentKindEnum: "ORIGINAL" | "AMENDMENT" | "REOPEN";
+        /**
+         * @description * `STANDARD` - Standard Trial (Chinese/European/Greek)
+         *     * `HEART_WEIGHING` - Heart Weighing (Egyptian)
+         *     * `DIABOLICAL_TRIAL` - Diabolical Trial (European Hell)
+         * @enum {string}
+         */
+        JudgmentMethodEnum: "STANDARD" | "HEART_WEIGHING" | "DIABOLICAL_TRIAL";
         /**
          * @description One row of 「据 · 先例」 — see apps/judgment/precedents.py for the ranking.
          *
@@ -10020,11 +10113,20 @@ export interface components {
          *     it exists so a reader can check that without re-deriving the bounds.
          */
         LedgerOverviewStats: {
+            /** Format: date-time */
+            as_of: string;
             total_souls: number;
+            /** Format: double */
+            average_balance: number | null;
+            /** Format: double */
+            average_balance_prev_month: number | null;
+            /** Format: double */
+            average_balance_delta: number | null;
             state_distribution: components["schemas"]["SoulStateDistribution"][];
             tenants: components["schemas"]["TenantSoulStats"][];
             karma_distribution: components["schemas"]["KarmaBucket"][];
             karma_distribution_total: number;
+            balance_histogram: components["schemas"]["BalanceHistogram"];
             recent_activity: components["schemas"]["RecentActivity"][];
             souls_by_realm: components["schemas"]["SoulsByRealm"][];
         };
@@ -10070,6 +10172,8 @@ export interface components {
             recorded_at: string;
             event_date: components["schemas"]["LedgerRecordEventDate"] | null;
             is_milestone: boolean;
+            statute_clause: string;
+            occurrence_count: number | null;
         };
         /**
          * @description 200 body of `LedgerBalanceView`.
@@ -11694,6 +11798,7 @@ export interface components {
             /** Format: uuid */
             judgment?: string | null;
             readonly judgment_verdict?: string | null;
+            readonly judgment_case_number?: string | null;
             /** Format: uuid */
             soul?: string;
             readonly soul_name?: string;
@@ -12033,6 +12138,7 @@ export interface components {
         PatchedJudgment: {
             /** Format: uuid */
             readonly id?: string;
+            readonly case_number?: string;
             /** Format: uuid */
             soul?: string;
             readonly soul_name?: string;
@@ -12088,6 +12194,19 @@ export interface components {
              *     (`JudgmentEvidenceColumn`,`Object.entries(evidence).length`)。
              */
             readonly evidence_count?: number;
+            /** @description Life index this row belongs to; 0 is the first life. */
+            readonly cycle?: number;
+            /**
+             * @description Method of judgment (affects disposition routing)
+             *
+             *     * `STANDARD` - Standard Trial (Chinese/European/Greek)
+             *     * `HEART_WEIGHING` - Heart Weighing (Egyptian)
+             *     * `DIABOLICAL_TRIAL` - Diabolical Trial (European Hell)
+             */
+            readonly judgment_method?: components["schemas"]["JudgmentMethodEnum"];
+            readonly merit_score?: number;
+            readonly demerit_score?: number;
+            readonly realm_name?: string | null;
         };
         /**
          * @description Input for `PATCH /judgment/{id}/draft/`. `version` is the
@@ -12177,6 +12296,9 @@ export interface components {
             visibility?: components["schemas"]["VisibilityEnum"];
             readonly comment_count?: number;
             readonly reaction_count?: number;
+            /** @description 按显示顺序,最多 9 张。 */
+            readonly media?: components["schemas"]["PostMedia"][];
+            readonly reaction_counts?: components["schemas"]["SoulReactionCounts"];
             readonly tenant?: number;
             /** Format: date-time */
             readonly create_time?: string;
@@ -12584,18 +12706,29 @@ export interface components {
             visibility?: components["schemas"]["VisibilityEnum"];
             readonly comment_count: number;
             readonly reaction_count: number;
+            /** @description 按显示顺序,最多 9 张。 */
+            readonly media: components["schemas"]["PostMedia"][];
+            readonly reaction_counts: components["schemas"]["SoulReactionCounts"];
             readonly tenant: number;
             /** Format: date-time */
             readonly create_time: string;
             /** Format: date-time */
             readonly update_time: string;
         };
-        /** @description Serializer for creating posts — only content + visibility needed. */
+        /**
+         * @description content + visibility, plus `media`: ids uploaded first through
+         *     `POST /social/media/`, in display order (attached in `PostViewSet.perform_create`).
+         *     Text may be empty when there are images — the soul circle's rule
+         *     (`soul_circle.create_post`, code `empty_post`).
+         */
         PostCreate: {
             /** Format: uuid */
             readonly id: string;
+            /** @default  */
             content: string;
             visibility?: components["schemas"]["VisibilityEnum"];
+            /** @description 先经 POST /social/media/ 上传的图片 id,按显示顺序。 */
+            media?: string[];
         };
         /** @description Lightweight serializer for listing posts. */
         PostList: {
@@ -12609,6 +12742,9 @@ export interface components {
             visibility?: components["schemas"]["VisibilityEnum"];
             comment_count?: number;
             reaction_count?: number;
+            /** @description 按显示顺序,最多 9 张。 */
+            readonly media: components["schemas"]["PostMedia"][];
+            readonly reaction_counts: components["schemas"]["SoulReactionCounts"];
             /** Format: date-time */
             readonly create_time: string;
         };
@@ -12623,6 +12759,14 @@ export interface components {
             url: string;
             width: number;
             height: number;
+        };
+        PostMediaLimits: {
+            /** @description 每条帖子最多几张。 */
+            max_per_post: number;
+            /** @description 同时最多几张「传了还没发」的图。 */
+            max_pending: number;
+            /** @description 单张上限(字节)。 */
+            max_bytes: number;
         };
         /** @description 每百万 token 的价格,单位由管理员自定(与月度上限同一单位)。`cache_read` 不填按 `input` 算。 */
         Price: {
@@ -12816,6 +12960,7 @@ export interface components {
             parent_realm?: string | null;
             description?: string;
             memory_reset_mechanism?: components["schemas"]["MemoryResetMechanismEnum"] | components["schemas"]["BlankEnum"];
+            /** @description 不出狱、不轮回:落到此处的灵魂永不离开,也不再入轮回。判决落地时抄进处置(Disposition.is_eternal),之后以处置上的那一份为准。 */
             is_eternal?: boolean;
             cycle_limit?: number | null;
             /** @description Position along the civilization's route (Chinese: court number 1-10) */
@@ -12885,6 +13030,7 @@ export interface components {
             parent_realm?: string | null;
             description?: string;
             memory_reset_mechanism?: components["schemas"]["MemoryResetMechanismEnum"] | components["schemas"]["BlankEnum"];
+            /** @description 不出狱、不轮回:落到此处的灵魂永不离开,也不再入轮回。判决落地时抄进处置(Disposition.is_eternal),之后以处置上的那一份为准。 */
             is_eternal?: boolean;
             cycle_limit?: number | null;
             /** @description Position along the civilization's route (Chinese: court number 1-10) */
@@ -12959,6 +13105,7 @@ export interface components {
             tier?: number;
             /** Format: uuid */
             parent_realm?: string | null;
+            /** @description 不出狱、不轮回:落到此处的灵魂永不离开,也不再入轮回。判决落地时抄进处置(Disposition.is_eternal),之后以处置上的那一份为准。 */
             is_eternal?: boolean;
             /** @description Position along the civilization's route (Chinese: court number 1-10) */
             order?: number | null;
@@ -13022,6 +13169,7 @@ export interface components {
             realm_type: components["schemas"]["RealmTypeEnum"];
             /** @description Severity or bliss tier */
             tier?: number;
+            /** @description 不出狱、不轮回:落到此处的灵魂永不离开,也不再入轮回。判决落地时抄进处置(Disposition.is_eternal),之后以处置上的那一份为准。 */
             is_eternal?: boolean;
             memory_reset_mechanism?: components["schemas"]["MemoryResetMechanismEnum"] | components["schemas"]["BlankEnum"];
         };
@@ -14267,6 +14415,8 @@ export interface components {
             state: string;
             label: string;
             count: number;
+            /** Format: double */
+            average_balance: number | null;
         };
         SoulTokenPair: {
             access: string;
@@ -14279,6 +14429,8 @@ export interface components {
             civilization: string;
             realm_type: components["schemas"]["RealmTypeEnum"];
             count: number;
+            capacity: number | null;
+            held: number;
         };
         /**
          * @description One citable article.
@@ -14326,6 +14478,9 @@ export interface components {
             source?: string;
             source_notes?: unknown;
             payload_json?: unknown;
+            readonly revision: number;
+            /** Format: date */
+            readonly effective_from: string;
         };
         /**
          * @description * `GOVERNMENT` - Government Civil Registry
@@ -25731,6 +25886,95 @@ export interface operations {
             };
         };
     };
+    v1_social_media_limits: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PostMediaLimits"];
+                };
+            };
+        };
+    };
+    v1_social_media_upload: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulPostMediaUpload"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulSocialError"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulSocialError"];
+                };
+            };
+        };
+    };
+    v1_social_media_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                media_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulSocialError"];
+                };
+            };
+        };
+    };
     v1_social_posts_list: {
         parameters: {
             query?: {
@@ -25764,7 +26008,7 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody: {
+        requestBody?: {
             content: {
                 "application/json": components["schemas"]["PostCreate"];
                 "application/x-www-form-urlencoded": components["schemas"]["PostCreate"];

@@ -13,7 +13,7 @@ import { PageShell } from "@/src/components/ui/PageShell";
 import { EmptyState } from "@/src/components/ui/EmptyState";
 import { QueryError } from "@/src/components/ui/PageError";
 import { Skeleton } from "@/components/ui/skeleton";
-import { SectionTitle } from "@/src/components/plaque/SectionTitle";
+import { usePlaque } from "@/src/components/plaque/Plaque";
 
 export default function UserProfilePage() {
   const { t } = useI18n();
@@ -35,6 +35,12 @@ export default function UserProfilePage() {
     error: postsError,
     refetch: refetchPosts,
   } = usePosts({ author: userId, page });
+
+  // 身份带(A5 个人页):题是人名,右栏「发帖 N」(资料里的 post_count)。
+  usePlaque({
+    title: profile?.username,
+    meta: profile ? t("plaque.posts", { n: String(profile.post_count) }) : undefined,
+  });
 
   const posts = postsData?.results ?? [];
   const totalPages = postsData ? Math.ceil(postsData.count / PAGE_SIZE) : 0;
@@ -77,7 +83,7 @@ export default function UserProfilePage() {
 
   return (
     <PageShell
-      variant="prose"
+      variant="page"
       title={t("social.profile")}
       backLink={
         <Link
@@ -89,7 +95,8 @@ export default function UserProfilePage() {
       }
       pagination={pagination}
     >
-      <div className="space-y-6">
+      {/* A5 个人页:与动态页同一条 680 宽的左列。 */}
+      <div className="mx-auto max-w-[680px] space-y-6 max-[768px]:-mx-4">
         {profileLoading ? (
           <Skeleton className="h-32" />
         ) : profileError ? (
@@ -104,8 +111,12 @@ export default function UserProfilePage() {
           <ProfileCard profile={profile} />
         ) : null}
 
-        <div className="pt-6">
-          <SectionTitle aside={postsData?.count}>{t("social.user_posts")}</SectionTitle>
+        {/* v3 面板标题(与 `components/ui/page-section.tsx` 同一档)+ 件数注记;v2 节首的匾纹片段撤掉。 */}
+        <div className="flex items-center gap-3 max-[768px]:px-4">
+          <h2 className="text-lg text-[oklch(var(--color-ink))]">{t("social.user_posts")}</h2>
+          {postsData?.count ? (
+            <span className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">{postsData.count}</span>
+          ) : null}
         </div>
 
         {postsLoading ? (
@@ -126,7 +137,7 @@ export default function UserProfilePage() {
              skeleton away and left no waiting signal in its place. */
           <div
             aria-busy={postsStale || undefined}
-            className={`space-y-3 transition-opacity duration-settle ${
+            className={`space-y-3 transition-opacity duration-settle max-[768px]:space-y-0 ${
               postsStale ? "opacity-50 ease-exit" : "opacity-100 ease-enter"
             }`}
           >

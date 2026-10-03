@@ -25,6 +25,7 @@ function QueueRoute() {
 }
 
 export default function JudgmentQueuePage() {
+  // 身份带(题「审判队列」、殿名是眼前那一案的殿)在 JudgmentQueueConsole 里报 —— 只有它知道是哪一案。
   return (
     <RequirePermission permissions="judgment.read" fallback={<PermissionDenied permission="judgment.read" />}>
       {/* useSearchParams needs a Suspense boundary or the whole route opts out

@@ -27,9 +27,9 @@ recoverable from the code, and it points at the code for everything else.
 | What | Where | Notes |
 |---|---|---|
 | Colour tokens, both themes | `frontend/app/globals.css` | `:root` = dark, `.light` = light. The palette is spec v1 "账簿 × 卷宗" (`a2044b28`, 2026-09-24); `ledgerPaletteContract` holds each token to the spec's hex. |
-| Type scale | `frontend/app/globals.css` `@theme` (`:162-177`) | Seven steps — `--text-2xs` / `xs` / `sm` / `md` / `quote` / `lg` / `xl` (11/12/13/16/20/22/28px), with line-height attached to each (`16f4e149`). |
-| Font families | `frontend/app/fonts.ts` | Three, each with one stated job. |
-| Civilization identity | — | **Not in the colour layer any more.** The per-tenant `--color-civ-*` / `--civ-*` tokens and the `[data-civ]` rules were removed in `a2044b28` (spec v1 §1.8); a civilization is told apart by its numbering, its path shape and its titles. |
+| Type scale | `frontend/app/globals.css` `@theme` | Eight steps — `text-2xs` 11 · `xs` 12 · `sm` 13 · `md` 15 · `lg` 20 · `xl` 28 · `display` 40 · `display-lg` 56 (px), each with its line-height attached. Which step a heading uses is the next section, not a choice per page. This row is checked against `globals.css` by `designGuardContract` — it said "seven steps, 16 / 22px, a `quote` step" for a month after all three stopped being true. |
+| Font families | `frontend/app/fonts.ts`, `--font-title` in `globals.css` | Four roles, each with one stated job — see "Four faces, one job each" below. |
+| Civilization identity | `frontend/app/globals.css`, `[data-civ="…"]` | One colour per civilization, `--color-civ-cn` / `eu` / `eg` / `gr` (spec v3 values), and it enters through **one** declaration: each `[data-civ]` rule sets `--color-main` from its civ token, and `--color-main` paints the plaque, the navigation's current item (a 3px mark and an 8% tint over surface-1 — the nav itself is neutral since v3), the seal, the primary button and the row's "mine" mark. Nothing else reads a civ token — `ledgerPaletteContract` asserts it. The seal (spec v3, 2026-10-02) is an outline in `currentColor` — the civ colour on surfaces, the band's white on the band — whose shape follows `data-civ` (地府 square, Europe circle, Egypt arch, Greece hexagon) with its glyph in Noto Serif SC 600; the same `data-civ` picks the identity band's faint pattern (spec v3: 地府 grid, Europe concentric arcs, Egypt vertical rules, Greece diagonals). The band's fill is the civ colour darkened 10% (`color-mix(in srgb, main 90%, #111)`). (v1 removed this layer in `a2044b28`; spec v2 brought it back narrowed to that one route, and v3 kept the route and changed the colours.) |
 | Enforcement | `frontend/src/__tests__/` | `ledgerPaletteContract`, `inkOnSurfaceContract`, `cssTokenReferenceContract`, `designGuardContract`, plus the seven `design-system/*` rules in `frontend/eslint.config.mjs:663-671`. These re-derive the claims rather than restating them. (`civilizationColourContract` and `civIdentityInkContract` went with the civ tokens.) |
 
 If a number here would ever contradict one of those files, the file wins and
@@ -39,14 +39,83 @@ this document is the bug.
 
 ## The decisions worth writing down
 
-**Square corners are a decision, not an omission.** Every *shape* radius is `0`
-— `--radius` and its seven siblings (`globals.css:185-192`). The one exception is deliberate and
-named: `--radius-full`, for avatars and spinners only, in the files listed in
-`ROUND_ALLOW` (`frontend/eslint.config.mjs:121-129`). The focus ring went square with
+**Square corners are a decision, not an omission.** The default *shape* radius is `0`
+— `--radius` and its seven siblings. Spec v3 (2026-10) added exactly two non-zero
+steps, each with a written job: `--radius-control` 4px for inputs and filter chips,
+`--radius-panel` 8px for dialogs. **Buttons stay square** — the v3 token table says
+"inputs and small controls", the v3 component prototype draws square buttons, and on
+2026-10-01 the prototype won; `Button.tsx` says so beside its `size` block. Pills remain
+the other exception, for avatars and spinners only, in the files listed in
+`ROUND_ALLOW` (`frontend/eslint.config.mjs`). The focus ring went square with
 spec v1 (`e78e5d88`), and `--radius-focus` was deleted with it.
 `Badge`'s `shape: "square"` variant emits *no class at all*, because `rounded`
 would render `border-radius: 0` and read as a choice that had been made when it
 had not. Pills exist only where a shape carries meaning.
+
+**Headings: the step follows the role, not the tag.** This is the one table of
+values this file keeps, because "which step is a level-two heading" has no single
+place in the code to read it from — the answer is spread across the shell, two
+guards and a component. It is not hand-maintained: `designGuardContract` reads
+every row below and checks the step, size, line-height and weight against
+`globals.css`, so a row that drifts is a red build, not a stale paragraph.
+
+| 角色 | 标签 | 写法 | 字号 / 行高 px | 字重 | 字体 | 由谁守 |
+|---|---|---|---|---|---|---|
+| 页面标题 | `<h1>`,每页一个 | `font-title text-lg` | 20 / 28 | 600 | Noto Serif SC | `PageShell.test`「页面标题」 |
+| 封面标题(只在首页;md 起 28 / 36) | `<h1>` | `font-title text-lg md:text-xl` | 20 / 28 | 600 | Noto Serif SC | 同上 |
+| 身份带题字 · 第一档(≤ 768 不用) | 身份带里的 `<Title>` | `font-title text-display` | 40 / 54 | 600 | Noto Serif SC | `plaqueTitleStaysLargeText` |
+| 身份带题字 · 第二档 | 同上,第一档放不下时;≤ 768 从这一档起 | `font-title text-xl font-semibold` | 28 / 36 | 600 | Noto Serif SC | 同上 |
+| 身份带题字 · 第三档 | 同上,第二档还放不下时 | `font-title text-lg` | 20 / 28 | 600 | Noto Serif SC,最多两行 | 同上 |
+| 面板标题 | `<h2>` 或 `<h3>` | `text-lg` | 20 / 28 | 600 | 界面字体 | `PageShell.test` h2 / h3 |
+| 列表行标题 | `<h2>` 或 `<h3>` | `text-sm font-medium` | 13 / 20 | 500 | 界面字体 | 同上 |
+| 区块标签 | `<h2>` 或 `<h3>` | `text-2xs uppercase`,不带 `font-mono` | 11 / 16 | 400 | 界面字体 | 同上 |
+| 眉题 | 壳的 `eyebrow`,不是标题 | `text-2xs font-mono uppercase` | 11 / 16 | 400 | IBM Plex Mono | `PageShell.test` |
+| 正文 | `<p>` | `text-sm` | 13 / 20 | 400 | 界面字体 | — |
+| 展示数字 | 当前这一判(审判台、盖印层) | `font-title text-display-lg` | 56 / 62 | 600 | Noto Serif SC | — |
+| 展示数字 · 二档 | 灵魂详情的功 / 过余额、首字方块 | `font-title text-xl font-semibold` | 28 / 36 | 600 | Noto Serif SC | — |
+| 条号 · 展示数字 | 语料阅读区的条号(`corpus-sigil`,`<p>`;篇名才是那一页的 `<h1>`)与被引用数,lg 起(Design A3;窄屏 28,即上面「二档」)。用户 2026-10-02 定;lint `type-scale` 只为 `app/corpus/page.tsx` 一个文件放行 `text-display`(`DISPLAY_NUMERAL_ALLOW`) | `font-title lg:text-display` | 40 / 54 | 600 | Noto Serif SC | `CorpusPage.test`、`designGuardContract` |
+
+Three things this table does on purpose:
+
+- **A level-two heading has no single size, and that is the rule, not a gap.**
+  The same row title is an `<h2>` on a page with no intermediate panel and an
+  `<h3>` inside one; that is outline depth, not how large the words should be.
+  Tying the step to the tag would put back the coupling `PageShell.tsx` rule 4
+  took apart. So the question "how big is an h2" has three answers, one per role.
+- **The section label is 11px and smaller than body text.** It is a label —
+  uppercase, 0.1em tracking, subtle ink — that sits *above* a card or chart, not
+  a title competing with it. Spec v3 names the 11px step "micro-label".
+  Its weight is 400: `--text-2xs` has carried no weight since `16f4e149` (spec v1
+  §1.4); the 600 that `PageShell.tsx` used to cite belonged to the old `--text-01`.
+- **The identity-band title is the one heading that changes step at runtime.** It
+  measures its own width and steps down 40 → 28 → 20 (from 28 at ≤ 768, as spec
+  v3's phone band does); Egyptian page titles run to 28 characters, and v3 itself
+  draws them at 28 and 20 on two lines. Every step stays WCAG large text. On the raw
+  dark Egyptian and Greek colours white text is only 3.99:1 and 4.16:1; on the band
+  (the colour darkened 10%) it is 4.66:1 and 4.82:1, and
+  `plaqueTitleStaysLargeText` pins all eight civ × theme ratios at ≥ 4.5.
+
+The v2 plaque's per-civilization display faces (Ma Shan Zheng, UnifrakturMaguntia,
+Josefin Slab, Cinzel) and its fret band were removed with spec v3 (2026-10-01).
+The v2 seal's three glyph faces (LXGW Seal, UnifrakturMaguntia, GFS Didot) and its
+mask artwork went with spec v3's outline seal (2026-10-02); only Noto Sans Egyptian
+Hieroglyphs still ships, as the fallback for the Egyptian glyph (U+13184), which
+Noto Serif SC does not have. The queue and soul-detail pages use v3's short band
+(116px, title from 28) — chosen by route in `Plaque.tsx` `shortBandFor`.
+
+**Settled 2026-10-01** (each was an open question in the first version of this table):
+
+- **Panel titles are 20px**, following spec v3's "module title". That puts a panel
+  title at the same size and weight as the page title. The page title is still
+  told apart — it is the first thing on the page, it sits in the shell's header
+  band, and there is one of it — but size no longer does that work. Fourteen
+  headings moved from `text-md` to `text-lg`, including the home hero's subtitle,
+  which is therefore as large as the hero itself on a phone.
+- **Section labels are set in the interface face.** It was 24 interface / 11 mono;
+  the 11 dropped `font-mono`, and the guard now rejects it on a label. Monospace
+  stays with the shell's eyebrow, which is not a heading.
+- **The home hero keeps 28px** and is a named role, "cover title", that may appear
+  only in `app/page.tsx` — not an exemption waiting for a decision.
 
 **Depth comes from hairlines, not from the surface ladder.** Measured
 2026-09-02: adjacent steps of `--color-surface-1..4` differ by 1.02–1.05:1, and
@@ -57,11 +126,20 @@ ramp was tried and broke 23 pinned ink-on-surface combinations, because the ink
 ramp is tuned tightly against the flat surfaces. Making the ladder real means
 re-deriving both ramps together, not editing four numbers.
 
-**Three families, one job each** (`frontend/app/fonts.ts`):
-Archivo carries the interface, IBM Plex Mono carries identifiers and figures,
-and Source Serif 4 carries **things a person said** — the statute corpus, a
-soul's confession, the grounds of a judgment. The serif is not decoration; it
-marks quoted speech. Do not spend it anywhere else.
+**Four faces, one job each** (`frontend/app/fonts.ts`, `--font-title` in `globals.css`):
+
+- **Interface** (`font-sans`): Archivo + Noto Sans SC — body, tables, controls, labels.
+- **Identifiers and data figures** (`font-mono`): IBM Plex Mono — IDs, hashes, table numbers.
+- **Titles and display numerals** (`font-title`): Noto Serif SC 600, Latin included
+  (spec v3) — the identity-band title, page `<h1>`s, the current ruling, a soul's
+  balance, a corpus article number. Nothing else: a panel title, a button or a table
+  cell is interface type. It is the `@fontsource-variable` copy `layout.tsx` already
+  loads, so it added no font files.
+- **Things a person said** (`font-serif`): Source Serif 4 for Latin, Noto Serif SC for
+  CJK — the statute corpus, a soul's confession, the grounds of a judgment. Spec v3
+  sets quoted text in Noto Serif SC 500; our CJK quotes already are, and Latin quotes
+  keep Source Serif 4 for its optical-size axis. The serif marks quoted speech; do
+  not spend it anywhere else.
 
 **One spelling for a colour token, and it is the bracketed one.**
 `text-[oklch(var(--color-ink))]`, never `text-ink`. The bare form silently
@@ -78,9 +156,10 @@ lightness to 100% and paints white, with every gate green.
 `packages/core/src/config/civilizationSigil.ts` is the idea: an Egyptian article is
 `§ 27 / 42` because the Negative Confession is a closed tally; a 功過格 article
 is a 卷-numbered 門; an Inferno circle is a roman numeral; a Platonic citation
-is a Stephanus page. Numbering is now the *only* visual difference: the
-per-tenant surface tint (`--civ-hue`), mark and ink were removed in `a2044b28`
-(2026-09-24), and `ledgerPaletteContract` asserts no civ token is declared or read.
+is a Stephanus page. Numbering is one of two visual differences; the other is
+the narrow colour-and-plaque route described in the table above. What v1 removed
+in `a2044b28` (a per-tenant surface tint `--civ-hue`, separate mark and ink) has
+not come back: surfaces, ink and every status colour are shared by all four.
 
 **Reduced motion collapses to 1ms, not `none`.** Base UI waits for
 `transitionend` before unmounting a popup; `none` would strand them mounted

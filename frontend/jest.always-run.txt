@@ -13,6 +13,7 @@ src/__tests__/Spinner.test.tsx
 src/__tests__/a11yEngineBaseline.test.tsx
 src/__tests__/accessTokenNeverBecomesACookie.test.ts
 src/__tests__/arrowNotDoubled.test.ts
+src/__tests__/brandTokensMatchIcon.test.ts
 src/__tests__/chartColourContract.test.ts
 src/__tests__/civilizationMapCoverage.test.ts
 src/__tests__/creditsOssDrift.test.ts
@@ -24,6 +25,7 @@ src/__tests__/dialogsAreNotHandRolled.test.ts
 src/__tests__/domainDisplayContract.test.tsx
 src/__tests__/domainDisplayRendering.test.tsx
 src/__tests__/domainNamespaceContract.test.ts
+src/__tests__/draftSavedFlash.test.tsx
 src/__tests__/egyLexiconRules.test.ts
 src/__tests__/enumsMatchTheSchema.test.ts
 src/__tests__/errorIsNotAnEmptyState.test.ts
@@ -42,6 +44,7 @@ src/__tests__/notifyPortCarriesTheToast.test.ts
 src/__tests__/officerAssist.test.tsx
 src/__tests__/oneRealtimeSocketPerSession.test.ts
 src/__tests__/paginatedPagesCanBePaged.test.ts
+src/__tests__/plaqueTitleStaysLargeText.test.ts
 src/__tests__/platformAdapterIsInstalled.test.tsx
 src/__tests__/proseLinkIsNotColourOnly.test.ts
 src/__tests__/proxyAuthGate.test.ts
@@ -53,8 +56,11 @@ src/__tests__/statusGlyphFont.test.ts
 src/__tests__/statusTokenLayering.test.ts
 src/__tests__/suiteShape.test.ts
 src/__tests__/tabClassContract.test.ts
+src/__tests__/toastColourContract.test.ts
 src/__tests__/truncatedValuesAreRecoverable.test.ts
+src/__tests__/v3DataDisplayContract.test.tsx
 src/__tests__/viewportHeightContract.test.ts
 src/__tests__/workflowAutoLayoutMotion.test.tsx
 src/__tests__/workflowEdgeArrowSingleSource.test.ts
+src/__tests__/zIndexOrderContract.test.ts
 src/__tests__/zhuyinShell.test.tsx

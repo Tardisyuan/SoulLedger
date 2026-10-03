@@ -12,12 +12,14 @@ import {
 } from "@soulledger/core/api";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { usePlaque } from "@/src/components/plaque/Plaque";
+import { useCourtOffice, useHall } from "@/src/components/plaque/useHall";
 import { useToast } from "@/src/contexts/ToastContext";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { drfFieldErrors, drfNonFieldError } from "@soulledger/core/validations/drfErrors";
 import { resolveEnumDisplay } from "@/src/lib/domainDisplay";
 import { PageShell } from "@/src/components/ui/PageShell";
-import { SectionTitle } from "@/src/components/plaque/SectionTitle";
+import { PageSection } from "@/components/ui/page-section";
 import { Button } from "@/src/components/ui/Button";
 import { SelectField, TextAreaField, type SelectOption } from "@/src/components/ui/Field";
 import { SearchSelectField } from "@/src/components/ui/SearchSelectField";
@@ -46,6 +48,8 @@ export default function ProposeDispatchPage() {
 
 function ProposeDispatchForm() {
   const { t } = useI18n();
+  // 题字自己报:壳的默认是面包屑末段,而这一页的末段是路径段 `propose`(原样印在了身份带上)。
+  usePlaque({ title: t("dispatch.propose"), hall: useHall(useCourtOffice()) });
   const { user } = useTenant();
   const { showToast } = useToast();
   const router = useRouter();
@@ -365,7 +369,7 @@ function ProposeDispatchForm() {
             <span className="text-xs font-medium text-[oklch(var(--color-ink))]">{t("dispatch.target_soul")}</span>
             <div
               aria-readonly="true"
-              className="flex min-h-8 items-center gap-3 border border-[oklch(var(--color-line))] bg-[oklch(var(--color-disabled-surface))] px-3 text-sm text-[oklch(var(--color-ink-muted))]"
+              className="flex min-h-(--control-h-md) items-center gap-3 border border-[oklch(var(--color-line))] bg-[oklch(var(--color-disabled-surface))] px-3 text-sm text-[oklch(var(--color-ink-muted))]"
             >
               {carriedSoul.name}
               <span className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))]" title={carriedSoul.id}>
@@ -446,7 +450,7 @@ function ProposeDispatchForm() {
                 <label
                   key={tn.tenant_code}
                   className={cn(
-                    "flex min-h-8 max-sm:min-h-11 items-center gap-3 border-b border-[oklch(var(--color-rule))] px-2 text-sm",
+                    "flex min-h-(--control-h-sm) items-center gap-3 border-b border-[oklch(var(--color-rule))] px-2 text-sm",
                     isSource
                       ? "cursor-not-allowed text-[oklch(var(--color-disabled-ink))]"
                       : "cursor-pointer text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))]",
@@ -479,7 +483,7 @@ function ProposeDispatchForm() {
               );
             })}
             {tenantsLoading && (
-              <span className="flex min-h-8 items-center px-2 text-sm text-[oklch(var(--color-ink-subtle))]">{t("common.loading")}</span>
+              <span className="flex min-h-(--control-h-sm) items-center px-2 text-sm text-[oklch(var(--color-ink-subtle))]">{t("common.loading")}</span>
             )}
           </div>
           {tenantError ? (
@@ -544,12 +548,10 @@ function ProposeDispatchForm() {
       {/* 审批流 — what actually happens to this record, per the state machine
           in backend/apps/dispatch/models.py: PROPOSED → the target approves
           (views.py: "Only target tenant can approve") → the target executes. */}
-      <aside aria-labelledby="dispatch-flow-title">
-        {/* 页面级分节标题(规范 v2 §四,SectionTitle),不是 v1 的 11px 等宽栏目标签。 */}
-        <div className="mb-3">
-          <SectionTitle id="dispatch-flow-title">{t("dispatch.flow.title")}</SectionTitle>
-        </div>
-        <ol className="text-sm border-t border-[oklch(var(--color-block))]">
+      {/* 规范 v3 面板(surface-1 底 + 结构线,20 px 面板标题);v2 的分节纹撤掉。 */}
+      <aside aria-label={t("dispatch.flow.title")} className="self-start">
+      <PageSection title={t("dispatch.flow.title")}>
+        <ol className="text-sm border-t border-[oklch(var(--color-line))]">
           {[
             [t("dispatch.flow.step_propose", { tenant: sourceTenantRow ? tenantName(sourceTenantRow) : sourceCode ?? "" }), t("dispatch.flow.pending_submit")],
             [t("dispatch.flow.step_approve", { tenant: targetTenantRow ? tenantName(targetTenantRow) : t("dispatch.flow.target_unchosen") }), t("dispatch.flow.not_yet")],
@@ -562,6 +564,7 @@ function ProposeDispatchForm() {
             </li>
           ))}
         </ol>
+      </PageSection>
       </aside>
       </div>
 

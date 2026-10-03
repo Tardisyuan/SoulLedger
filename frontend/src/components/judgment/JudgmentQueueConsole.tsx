@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { usePlaque } from "@/src/components/plaque/Plaque";
+import { useHall } from "@/src/components/plaque/useHall";
 import { EnumBadge } from "@/components/ui/data-grid";
 import { DomainEnum } from "@/src/components/ui/DomainValue";
 import { useJudgmentQueue, type VerdictCode } from "@soulledger/core/hooks/useJudgmentQueue";
@@ -80,6 +82,11 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
 
   const { cursor, progress, submitVerdict, defer, restoreDeferred, setAside, claimRefusal, dismissClaimRefusal } = queue;
   const judgment = cursor.judgment;
+
+  // 身份带:题「审判队列」(v3 `queue-product`;面包屑末段是「分诊队列」),殿名是眼前这一案的殿;
+  // 案子没记殿或队列空了就写刑名司。
+  const hall = useHall(judgment?.court || t("plaque.office.trials"));
+  usePlaque({ title: t("plaque.queue"), hall });
 
   // Notes belong to the case in front of the operator, never to the next one.
   //
@@ -299,7 +306,7 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
   return (
     <div className="text-[oklch(var(--color-ink))]">
       <div className="h-12 flex items-center px-6 gap-4 border-b border-[oklch(var(--color-hairline))]/50">
-        <h1 className="text-md text-[oklch(var(--color-accent-ink))] flex-1">
+        <h1 className="font-title text-lg text-[oklch(var(--color-accent-ink))] flex-1">
           {t("judgment.queue.title")}
         </h1>
         <p
@@ -312,14 +319,14 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
           type="button"
           onClick={() => setShowKeys((prev) => !prev)}
           aria-expanded={showKeys}
-          className="text-sm text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))] underline"
+          className="inline-flex min-h-(--control-h-sm) items-center text-sm text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))] underline"
         >
           {t("judgment.queue.keyboard_help")}
         </button>
         <button
           type="button"
           onClick={leave}
-          className="text-sm text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))]"
+          className="inline-flex min-h-(--control-h-sm) items-center text-sm text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))]"
         >
           {t("judgment.queue.leave")}
         </button>
@@ -514,7 +521,7 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
                 placeholder={t("judgment.queue.notes_placeholder")}
                 className="w-full border border-[oklch(var(--color-hairline))] bg-[oklch(var(--color-surface-2))] px-3 py-2 text-sm text-[oklch(var(--color-ink))] mb-3"
               />
-              <label className="flex min-h-8 items-center gap-2 text-sm text-[oklch(var(--color-ink))] mb-3 max-sm:min-h-11">
+              <label className="flex min-h-(--control-h-sm) items-center gap-2 text-sm text-[oklch(var(--color-ink))] mb-3">
                 <input
                   type="checkbox"
                   checked={createWorkflow}
@@ -590,7 +597,7 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
                 type="button"
                 onClick={defer}
                 aria-keyshortcuts="S"
-                className="flex h-10 items-center justify-center gap-2 px-4 border border-transparent text-sm font-semibold text-[oklch(var(--color-ink))] transition-[background-color] duration-fast hover:bg-[oklch(var(--color-surface-2))] active:bg-[oklch(var(--color-line))] max-sm:min-h-11"
+                className="flex h-(--control-h-md) items-center justify-center gap-2 px-4 border border-transparent text-sm font-semibold text-[oklch(var(--color-ink))] transition-[background-color] duration-fast hover:bg-[oklch(var(--color-surface-2))] active:bg-[oklch(var(--color-line))]"
               >
                 {t("judgment.queue.defer")}
                 <Keycap>S</Keycap>

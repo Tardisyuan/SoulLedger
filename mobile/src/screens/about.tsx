@@ -7,11 +7,9 @@
 import {
   DESIGN_CREDITS,
   FONT_CREDITS,
-  IMAGE_CREDITS,
   LICENCE_LABELS,
   LITERATURE_CIVILIZATIONS,
   LITERATURE_CREDITS,
-  ORNAMENT_CREDITS,
   OSS_CREDITS,
   OSS_GROUPS,
   SERVICE_CREDITS,
@@ -22,7 +20,7 @@ import { useState, type ReactNode } from "react";
 import { Linking, Pressable, StyleSheet, View } from "react-native";
 
 import { useI18n } from "../i18n";
-import { Screen, Section, Txt, useLayout, useTheme } from "../ui";
+import { Screen, Section, SectionLabel, Txt, useLayout, useTheme } from "../ui";
 
 /** 18 高的字 + 上下各 13 的 hitSlop = 44,App 点击区下限(补足 A1)。 */
 function Link({ label, url, testID }: { label: string; url: string; testID?: string }) {
@@ -53,9 +51,9 @@ function Row({ name, detail, testID, children }: { name: string; detail?: string
 function Heading({ title, note }: { title: string; note?: string }) {
   return (
     <>
-      <Txt variant="section" accessibilityRole="header" style={styles.heading}>
+      <SectionLabel accessibilityRole="header" style={styles.heading}>
         {title}
-      </Txt>
+      </SectionLabel>
       {note ? (
         <Txt variant="caption" tone="subtle" style={styles.note}>
           {note}
@@ -118,8 +116,6 @@ export function AboutScreen() {
         {t("about.intro")}
       </Txt>
       <Group title={t("about.fonts")} credits={FONT_CREDITS} />
-      <Group title={t("about.ornament")} credits={ORNAMENT_CREDITS} />
-      <Group title={t("about.images")} credits={IMAGE_CREDITS} />
 
       <View style={pad}>
         <Heading title={t("about.software")} />

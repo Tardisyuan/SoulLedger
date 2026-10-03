@@ -70,3 +70,24 @@ def recalculate_tenant_ledgers(tenant_id: str):
 # scheduled). `LedgerService.recalculate_soul_ledger` — the logic this task
 # only wrapped — is unaffected and is still what `recalculate_tenant_ledgers`
 # above calls per soul.
+
+
+@shared_task(name="ledger.snapshot_balance_for_tenant")
+def snapshot_balance_for_tenant(tenant_id: str):
+    """Write (overwrite) this month's balance snapshot for exactly one tenant.
+
+    Idempotent within a month — the row is keyed (tenant, month) — so the daily
+    schedule leaves each past month holding its last run's value. Writes no
+    audited model, so no tenant contextvar is needed. See apps.ledger.snapshots.
+    """
+    from apps.ledger.snapshots import snapshot_tenant
+    from apps.tenants.models import Tenant
+
+    tenant = Tenant.objects.get(id=tenant_id)
+    row = snapshot_tenant(tenant)
+    return {
+        "tenant": tenant.code,
+        "month": row.month.isoformat(),
+        "soul_count": row.soul_count,
+        "timestamp": timezone.now().isoformat(),
+    }

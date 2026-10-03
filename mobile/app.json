@@ -31,10 +31,10 @@
           "image": "./assets/splash-blank.png",
           "imageWidth": 112,
           "resizeMode": "contain",
-          "backgroundColor": "#131211",
+          "backgroundColor": "#10120F",
           "dark": {
             "image": "./assets/splash-blank.png",
-            "backgroundColor": "#131211"
+            "backgroundColor": "#10120F"
           }
         }
       ],
@@ -43,7 +43,7 @@
         "expo-notifications",
         {
           "icon": "./assets/notification-icon.png",
-          "color": "#131211"
+          "color": "#262925"
         }
       ],
       [

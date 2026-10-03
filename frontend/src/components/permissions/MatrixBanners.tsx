@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import type { MatrixConflict, MatrixWorkflowConflict, Permission, Role } from "@soulledger/core/api";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { Button } from "@/src/components/ui/Button";
+import { BATCH_BAR } from "@/components/ui/data-table";
 import type { CellFailure } from "./useMatrixCells";
 
 const roleName = (roleMeta: Record<string, Role>, role: string) => roleMeta[role]?.display_name || role;
@@ -32,10 +33,10 @@ export function PartialFailBanner({
 }) {
   const { t } = useI18n();
   return (
-    <div role="alert" className="border-l-2 border-[oklch(var(--color-danger))] bg-[oklch(var(--color-danger-tint))] px-4 py-3 text-sm">
+    <div role="alert" className="border border-[oklch(var(--color-danger))] bg-[oklch(var(--color-surface-1))] px-4 py-2 text-sm">
       <div className="flex flex-wrap items-center gap-3">
-        <p className="font-medium text-[oklch(var(--color-danger))]">
-          <span aria-hidden="true">! </span>
+        <p className="flex min-h-11 items-center font-medium text-[oklch(var(--color-ink))]">
+          <span aria-hidden="true" className="pr-2 font-semibold text-[oklch(var(--color-danger))]">!</span>
           {t("permissions.matrix.partial_title", { saved: String(saved), failed: String(failures.length) })}
         </p>
         <span className="flex-1" />
@@ -98,9 +99,9 @@ export function ImpactConflictBanner({
   const causes = (c: MatrixConflict | MatrixWorkflowConflict) =>
     c.caused_by.map((x) => `${roleName(roleMeta, x.role)}「${permsById[x.permission_id]?.name ?? x.codename}」`).join("、");
   return (
-    <div id={CONFLICT_BANNER_ID} tabIndex={-1} role="status" className="border-l-2 border-[oklch(var(--color-warning))] bg-[oklch(var(--color-warning-tint))] px-4 py-3 text-sm">
-      <p className="font-medium text-[oklch(var(--color-warning))]">
-        <span aria-hidden="true">◇ </span>
+    <div id={CONFLICT_BANNER_ID} tabIndex={-1} role="status" className="border border-[oklch(var(--color-line-strong))] bg-[oklch(var(--color-surface-1))] px-4 py-2 text-sm">
+      <p className="flex min-h-11 items-center font-medium text-[oklch(var(--color-ink))]">
+        <span aria-hidden="true" className="pr-2">◇</span>
         {t("permissions.matrix.conflict_title", { n: String(conflicts.length + workflowConflicts.length) })}
       </p>
       <ul className="mt-2 space-y-1">
@@ -130,7 +131,11 @@ export function ImpactConflictBanner({
 }
 
 /**
- * 未保存条 UnsavedBar:底部常驻,「未保存 N 项 ＋a · −b」,放弃 / 保存 ⌘S。
+ * 未保存条 UnsavedBar:底部常驻,「N 处待改 ＋a · −b」,放弃 / 保存 ⌘S。
+ *
+ * Design A6(2026-10-02):墨色反白,与批量条同一规则 —— `BATCH_BAR` 底、条上按钮 `inverse`;
+ * 冲突提示用条的字色加 ◐,不借警示色(警示色在墨底上不到 4.5:1)。「保存」是唯一的实心按钮:
+ * s1 底、ink 字、600。高 72(393 下 64)。
  * ⌘S(Ctrl+S)在页面任何位置都保存,并拦下浏览器自己的「存网页」。
  *
  * 有冲突时条上多一格必勾框(警示色,第三类 F 组):「确认冲突:这次改动影响 N 条审批流,
@@ -177,23 +182,24 @@ export function UnsavedBar({
     <div
       role="region"
       aria-label={t("permissions.matrix.unsaved_region")}
-      className="sticky bottom-(--bottom-bar) z-40 mt-3 flex flex-wrap items-center gap-3 border-t border-[oklch(var(--color-block))] bg-[oklch(var(--color-canvas))] px-4 py-2"
+      className={`sticky bottom-(--bottom-bar) z-40 mt-3 flex min-h-16 flex-wrap items-center gap-3 py-2 pr-2 pl-4 shadow-[0_4px_16px_oklch(0_0_0/0.22)] md:min-h-18 md:pr-3 md:pl-4 ${BATCH_BAR}`}
     >
-      <span className="text-sm text-[oklch(var(--color-ink))]" aria-live="polite">
+      <span className="text-sm font-medium" aria-live="polite">
         {t("permissions.matrix.pending_cells", { n: String(count) })}
       </span>
-      <span className="font-mono text-xs text-[oklch(var(--color-ink-muted))]">
+      <span className="font-mono text-xs opacity-80">
         ＋{grants} · −{revokes}
       </span>
       {conflict && (
-        <span className="flex basis-full items-center gap-2 text-sm text-[oklch(var(--color-warning))] md:basis-auto">
-          <label className="flex min-h-8 items-center gap-2 max-sm:min-h-11">
+        <span className="flex basis-full items-center gap-2 text-sm md:basis-auto">
+          <label className="flex min-h-(--control-h-sm) items-center gap-2 border border-[oklch(var(--color-surface-1)/0.5)] px-3">
             <input
               type="checkbox"
               checked={conflict.acknowledged}
               onChange={(e) => conflict.onAcknowledge(e.target.checked)}
-              className="h-4 w-4 accent-[oklch(var(--color-warning))]"
+              className="h-4 w-4 accent-[oklch(var(--color-surface-1))]"
             />
+            <span aria-hidden="true">◐</span>
             {t("permissions.matrix.conflict_acknowledge", { n: String(conflict.flows), m: String(conflict.live) })}
           </label>
           <a
@@ -211,13 +217,16 @@ export function UnsavedBar({
         </span>
       )}
       <span className="flex-1" />
-      <Button type="button" variant="ghost" size="sm" onClick={onDiscard} disabled={isSaving}>
+      <Button type="button" variant="inverse" size="md" onClick={onDiscard} disabled={isSaving}>
         {t("permissions.matrix.discard")}
       </Button>
       <Button
         type="button"
-        variant="primary"
-        size="sm"
+        variant="inverse"
+        size="md"
+        // Design A6: 保存 is the bar's one solid button — s1 ground, ink text, 600 (用户 2026-10-02).
+        // `v3DataDisplayContract` allows exactly one such primary action per inverted bar.
+        className="bg-[oklch(var(--color-surface-1))] text-[oklch(var(--color-ink))] font-semibold hover:bg-[color-mix(in_oklab,oklch(var(--color-ink))_8%,oklch(var(--color-surface-1)))] active:bg-[color-mix(in_oklab,oklch(var(--color-ink))_16%,oklch(var(--color-surface-1)))]"
         onClick={onSave}
         loading={isSaving}
         disabled={saveDisabled}

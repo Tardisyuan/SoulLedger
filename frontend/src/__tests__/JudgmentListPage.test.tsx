@@ -3,8 +3,11 @@
  *
  * - 分段切换带两边的真实计数(各取自一次 `has_verdict` 查询的 count);Q 进入队列,打字时不接;
  * - 「待审」按谁在处理分四组,组头的数来自 `queue-counts/` —— 不是本页行数;
- * - 28 px 紧凑行、整行链到审判台;认领标是圆形头像,未认领的行给「认领」;
- * - J / K 移焦点,X 勾选,C 认领焦点行;打字时一概不接;
+ * - v3 的 64 px 行(`--table-row-h`)、整行链到审判台;认领标是圆形头像,未认领的行给「认领」;
+ * - 行尾「⋯」菜单按权限给认领 / 取消认领 / 延后 / 改派…;取消认领时色标反着退场(scaleY 1→0,140ms);
+ * - ↑↓ 或 J / K 移焦点,X 勾选,C 认领 / 取消认领焦点行,S 延后到本次会话末,R 确认后全部放回;
+ *   打字时一概不接;
+ * - 工具条「全部案卷 / 我认领的」;草拟判决是字形 + 文字;
  * - 勾选后出批量条:认领 / 改派… / 暂缓;暂缓理由必填,改派只列同租户的官员;
  * - 搜索与殿筛选同时进列表与计数的请求;殿的选项来自 `courts/`,不是已加载的行。
  *
@@ -13,17 +16,19 @@
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import JudgmentListPage from "@/app/judgment/page";
+import { BATCH_BAR } from "@/components/ui/data-table";
 import { tZh } from "./support/zhBundle";
 
 jest.mock("@soulledger/core/api", () => ({
-  judgmentApi: { list: jest.fn(), queueCounts: jest.fn(), courts: jest.fn(), claim: jest.fn(), batch: jest.fn(), assignableOfficers: jest.fn(), requestReassign: jest.fn() },
+  judgmentApi: { list: jest.fn(), queueCounts: jest.fn(), courts: jest.fn(), claim: jest.fn(), release: jest.fn(), batch: jest.fn(), assignableOfficers: jest.fn(), requestReassign: jest.fn() },
   usersApi: { list: jest.fn() },
   PAGE_SIZE: 20,
 }));
 const { judgmentApi, usersApi } = jest.requireMock("@soulledger/core/api") as Record<string, Record<string, jest.Mock>>;
 
 const mockPush = jest.fn();
-jest.mock("next/navigation", () => ({ useRouter: () => ({ push: mockPush }) }));
+let mockSearch = "";
+jest.mock("next/navigation", () => ({ useRouter: () => ({ push: mockPush }), useSearchParams: () => new URLSearchParams(mockSearch) }));
 jest.mock("@/src/contexts/I18nContext", () => ({
   ...jest.requireActual("@/src/contexts/I18nContext"),
   useI18n: () => ({ t: tZh, formatDate: (v: unknown) => String(v), formatDateTime: (v: unknown) => String(v), locale: "zh-Hans", hydrated: true }),
@@ -39,18 +44,21 @@ const row = (id: string, name: string, over: Record<string, unknown> = {}) => ({
   court: "第五殿", evidence_json: {}, confession: "", verdict: null, notes: "", citations: [], is_final: false,
   created_at: new Date(Date.now() - 7.5 * 86_400_000).toISOString(), concluded_at: null,
   claimed_by: null, claimed_by_name: null, deferred_at: null, defer_reason: "", karmic_balance: 347, evidence_count: 12,
+  merit_score: 1842, demerit_score: 391, cycle: 3, kind: "ORIGINAL", case_number: `CN-2026-00${id}`,
   ...over,
 });
 
 const GROUP_ROWS: Record<string, ReturnType<typeof row>[]> = {
   mine: [row("a", "沈青梧", { claimed_by: 1, claimed_by_name: "阎罗" })],
-  unclaimed: [row("b", "Marguerite Vey", { civilization: "EUROPEAN", court: "米诺斯", karmic_balance: null, evidence_count: 7 })],
+  unclaimed: [row("b", "Marguerite Vey", { civilization: "EUROPEAN", court: "米诺斯", karmic_balance: null, evidence_count: 7, merit_score: 641, demerit_score: 602, cycle: 0 })],
   others: [row("c", "陆晚晴", { claimed_by: 2, claimed_by_name: "秦广" })],
   deferred: [],
 };
 
 beforeEach(() => {
   jest.clearAllMocks();
+  window.sessionStorage.clear();
+  mockSearch = "";
   mockUser = { id: 1, username: "yama", role: "JUDGE", permissions: ["judgment.read", "judgment.execute"], tenant: { code: "diyu" } };
   judgmentApi.list.mockImplementation(async (params: Record<string, string>) => {
     if (params.group) {
@@ -126,13 +134,21 @@ describe("审判队列", () => {
     expect(within(screen.getByTestId("queue-group-deferred")).getByText(tZh("judgment.claim.group_empty"))).toBeInTheDocument();
   });
 
-  it("行是 28 px、整行链到审判台;余额与证据两列;认领标是圆形,只有未认领的行给「认领」", async () => {
+  it("行是 v3 的 64 px(--table-row-h)、整行链到审判台;功 / 过与证据两列;认领标是圆形,只有未认领的行给「认领」", async () => {
     renderPage();
     const link = await screen.findByRole("link", { name: "沈青梧" });
-    expect(link).toHaveAttribute("href", "/judgment/a");
+    // 来源写在链接上(v3:审判台的返回键回到来源队列,不靠浏览器历史)。
+    expect(link).toHaveAttribute("href", "/judgment/a?from=%2Fjudgment");
     const mine = rowOf("沈青梧");
-    expect(mine.className).toContain("h-7");
-    expect(within(mine).getByText("+347")).toBeInTheDocument();
+    expect(mine.className.split(/\s+/)).toContain("h-(--table-row-h)");
+    // 只有这一个高度:旧的 h-10 与 393 下的 max-sm:h-11 补丁都不在了。
+    expect(mine.className).not.toMatch(/\bh-(7|10|11|16)\b/);
+    // v3「C 认领」:待我处理的色标挂上时 scaleY(0→1),160ms。
+    expect(within(mine).getByTestId("row-mark").className.split(/\s+/)).toEqual(expect.arrayContaining(["starting:scale-y-0", "duration-fast"]));
+    // 「功 / 过」分列:功在前加粗,过在后;不是净值。
+    expect(within(mine).getByTestId("merit-demerit-cell")).toHaveTextContent(/^1842 \/ 391$/);
+    expect(within(mine).getByText("1842")).toHaveClass("font-semibold");
+    expect(within(mine).queryByText("+347")).toBeNull();
     expect(within(mine).getByText("12")).toBeInTheDocument();
     expect(within(mine).getByText(tZh("judgment.waiting_days", { n: "7" }))).toBeInTheDocument();
     const avatar = within(mine).getByRole("img", { name: tZh("judgment.claim.claimed_by_me") });
@@ -144,10 +160,23 @@ describe("审判队列", () => {
 
     const unclaimed = rowOf("Marguerite Vey");
     expect(within(unclaimed).queryByRole("img")).toBeNull();
-    // 非功过格的余额是「不适用」,不是 0。
-    expect(within(unclaimed).queryByText("0")).toBeNull();
+    // 功 / 过两本账四个文明都有:欧洲的案子也写数,不是「不适用」。
+    expect(within(unclaimed).getByTestId("merit-demerit-cell")).toHaveTextContent(/^641 \/ 602$/);
+    expect(within(unclaimed).getByTestId("merit-demerit-cell").querySelector("[data-missing]")).toBeNull();
     fireEvent.click(within(unclaimed).getByRole("button", { name: tZh("judgment.claim.claim") }));
     await waitFor(() => expect(judgmentApi.claim).toHaveBeenCalledWith("b"));
+  });
+
+  it("v3「案号 / 灵魂」:名字下一行是整串案号,可复制,压在整行链接之上", async () => {
+    renderPage();
+    await screen.findByRole("link", { name: "沈青梧" });
+    const chip = within(rowOf("沈青梧")).getByRole("button", { name: tZh("common.value.copy_case_number", { value: "CN-2026-00a" }) });
+    expect(chip).toHaveTextContent(/^CN-2026-00a ⧉$/);
+    // 整行是一个 ::after 盖满的链接;不抬到它上面,点案号就是打开审判台。
+    expect(chip.parentElement!.className.split(/\s+/)).toEqual(expect.arrayContaining(["relative", "z-10"]));
+    // 列头跟着这一格写「案号 / 灵魂」(用户 2026-10-02),不再是只说一半的「灵魂名称」。
+    expect(screen.getByRole("columnheader", { name: "案号 / 灵魂" })).toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: tZh("judgment.soul_name") })).toBeNull();
   });
 
   it("J 移到第一行、再 J 到下一行;C 认领焦点行;打字时 J / C 都不接", async () => {
@@ -171,6 +200,41 @@ describe("审判队列", () => {
     expect(judgmentApi.claim).toHaveBeenCalledTimes(1);
   });
 
+  it("v3 焦点恢复:从审判台回到队列,焦点落回原案卷行;只恢复一次", async () => {
+    const first = renderPage();
+    fireEvent.click(await screen.findByRole("link", { name: "Marguerite Vey" }));
+    first.unmount();
+
+    const second = renderPage();
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("link", { name: "Marguerite Vey" })));
+    expect(rowOf("Marguerite Vey")).toHaveAttribute("data-focused", "true");
+    // 不是落在第一行(J 的默认落点)。
+    expect(rowOf("沈青梧")).not.toHaveAttribute("data-focused");
+    second.unmount();
+
+    // 读一次就删:再进队列(不是从审判台回来)焦点不再被拽到那一行。
+    renderPage();
+    await screen.findByRole("link", { name: "Marguerite Vey" });
+    await act(async () => {});
+    expect(document.activeElement).toBe(document.body);
+  });
+
+  it("J 移焦点不让浏览器瞬时滚动,由 v3 的纵向滚动把行带进视野(减少动态时瞬时)", async () => {
+    renderPage();
+    await screen.findByText("Marguerite Vey");
+    const focus = jest.spyOn(HTMLElement.prototype, "focus");
+    const scrollTo = jest.fn();
+    Object.defineProperty(window, "scrollTo", { configurable: true, value: scrollTo });
+    Object.defineProperty(window, "matchMedia", { configurable: true, value: (q: string) => ({ matches: q.includes("reduce"), media: q }) });
+    const row = rowOf("沈青梧");
+    row.getBoundingClientRect = () => ({ top: 2000, bottom: 2064, left: 0, right: 0, width: 0, height: 64, x: 0, y: 2000, toJSON: () => ({}) }) as DOMRect;
+    fireEvent.keyDown(document.body, { key: "j" });
+    expect(focus).toHaveBeenLastCalledWith({ preventScroll: true });
+    expect(scrollTo).toHaveBeenCalledTimes(1);
+    focus.mockRestore();
+    delete (window as { matchMedia?: unknown }).matchMedia;
+  });
+
   it("没有勾选时没有批量条;X 勾选焦点行后出现,批量认领带勾选的 id", async () => {
     renderPage();
     await screen.findByText("Marguerite Vey");
@@ -180,6 +244,10 @@ describe("审判队列", () => {
     fireEvent.keyDown(document.body, { key: "x" });
     const bar = await screen.findByTestId("batch-bar");
     expect(within(bar).getByText(tZh("judgment.claim.selected", { n: "1" }))).toBeInTheDocument();
+    // v3 (2026-10-01): the bar is inverted, and every button on it carries the surface-1 ring.
+    expect(bar.className.split(/\s+/)).toEqual(expect.arrayContaining(BATCH_BAR.split(" ")));
+    expect(bar.className).not.toContain("--color-surface-2");
+    for (const b of within(bar).getAllByRole("button")) expect(b.className).toContain("focus-visible:outline-[oklch(var(--color-surface-1))]!");
     // JUDGE 没有 judgment.assign:没有「改派…」。
     expect(within(bar).queryByRole("button", { name: tZh("judgment.claim.reassign") })).toBeNull();
 
@@ -343,6 +411,17 @@ describe("审判队列", () => {
     }
   });
 
+  it("全局搜索「查看全部」带来的 ?q=:填进搜索框,并进待审四组、计数与已结案的请求", async () => {
+    mockSearch = "q=CN-2026-0042";
+    renderPage();
+    expect(screen.getByPlaceholderText(tZh("judgment.claim.search"))).toHaveValue("CN-2026-0042");
+    await waitFor(() => expect(judgmentApi.queueCounts).toHaveBeenCalledWith({ search: "CN-2026-0042" }));
+    expect(judgmentApi.list).toHaveBeenCalledWith({ search: "CN-2026-0042", group: "unclaimed", page: "1", ordering: "created_at" });
+    expect(judgmentApi.list).toHaveBeenCalledWith({ page: "1", has_verdict: "true", search: "CN-2026-0042" });
+    // 反面:没有不带词的请求。
+    expect(judgmentApi.queueCounts).not.toHaveBeenCalledWith({});
+  });
+
   it("殿的选项是 courts/ 的全部殿(带未结案数),不是已加载行里出现过的殿", async () => {
     renderPage();
     await screen.findByText("Marguerite Vey");
@@ -401,5 +480,252 @@ describe("审判队列", () => {
     fireEvent.keyDown(document.body, { key: "j" });
     fireEvent.keyDown(document.body, { key: "c" });
     expect(judgmentApi.claim).not.toHaveBeenCalled();
+  });
+
+  describe("v3 审判队列", () => {
+    it("页头:标题是「审判队列」,眉题「审判」;待审一面有快捷键条,已结案一面没有", async () => {
+      renderPage();
+      await screen.findByText("沈青梧");
+      expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(tZh("breadcrumb.menu.judgment"));
+      const keys = screen.getByTestId("queue-shortcuts");
+      for (const k of ["↑↓", "Enter", "C", "S", "R"]) expect(within(keys).getByText(k)).toBeInTheDocument();
+      fireEvent.click(screen.getByRole("button", { name: /已结案/ }));
+      expect(screen.queryByTestId("queue-shortcuts")).toBeNull();
+    });
+
+    it("↓ / ↑ 移焦点,与 J / K 同一条路", async () => {
+      renderPage();
+      await screen.findByText("陆晚晴");
+      fireEvent.keyDown(document.body, { key: "ArrowDown" });
+      expect(document.activeElement).toBe(screen.getByRole("link", { name: "沈青梧" }));
+      fireEvent.keyDown(document.body, { key: "ArrowDown" });
+      expect(document.activeElement).toBe(screen.getByRole("link", { name: "Marguerite Vey" }));
+      fireEvent.keyDown(document.body, { key: "ArrowUp" });
+      expect(document.activeElement).toBe(screen.getByRole("link", { name: "沈青梧" }));
+    });
+
+    it("C 在我认领的行上是取消认领,在他人认领的行上什么都不做", async () => {
+      judgmentApi.release.mockResolvedValue({ data: {} });
+      renderPage();
+      await screen.findByText("陆晚晴");
+      fireEvent.keyDown(document.body, { key: "j" }); // 沈青梧,我认领的
+      fireEvent.keyDown(document.body, { key: "c" });
+      await waitFor(() => expect(judgmentApi.release).toHaveBeenCalledWith("a"));
+      expect(judgmentApi.claim).not.toHaveBeenCalled();
+      await waitFor(() => expect(mockShowToast).toHaveBeenCalledWith(tZh("judgment.claim.done_release"), "success"));
+
+      fireEvent.keyDown(document.body, { key: "j" });
+      fireEvent.keyDown(document.body, { key: "j" }); // 陆晚晴,他人认领
+      expect(document.activeElement).toBe(screen.getByRole("link", { name: "陆晚晴" }));
+      fireEvent.keyDown(document.body, { key: "c" });
+      expect(judgmentApi.release).toHaveBeenCalledTimes(1);
+      expect(judgmentApi.claim).not.toHaveBeenCalled();
+    });
+
+    it("S 把焦点行延后到本次会话末:排到本组最后、延后一格写「本次会话」,不发请求;R 先确认再全部放回", async () => {
+      GROUP_ROWS.unclaimed = [GROUP_ROWS.unclaimed[0], row("d", "顾长庚")];
+      try {
+        renderPage();
+        await screen.findByText("顾长庚");
+        const names = () => within(screen.getByTestId("queue-group-unclaimed")).getAllByRole("link").map((a) => a.textContent);
+        expect(names()).toEqual(["Marguerite Vey", "顾长庚"]);
+
+        fireEvent.keyDown(document.body, { key: "j" });
+        fireEvent.keyDown(document.body, { key: "j" }); // Marguerite Vey
+        fireEvent.keyDown(document.body, { key: "s" });
+        expect(names()).toEqual(["顾长庚", "Marguerite Vey"]);
+        expect(within(rowOf("Marguerite Vey")).getByTestId("deferred-cell")).toHaveTextContent(tZh("judgment.claim.deferred_session"));
+        expect(within(rowOf("顾长庚")).getByTestId("deferred-cell")).toHaveTextContent("");
+        expect(judgmentApi.batch).not.toHaveBeenCalled();
+        expect(mockShowToast).toHaveBeenCalledWith(tZh("judgment.claim.done_session_defer"), "success");
+        expect(JSON.parse(window.sessionStorage.getItem("soulledger-queue-session-deferred") ?? "[]")).toEqual(["b"]);
+
+        // R:先问,取消就什么都不变。
+        fireEvent.keyDown(document.body, { key: "r" });
+        let dialog = await screen.findByRole("alertdialog");
+        fireEvent.click(within(dialog).getByRole("button", { name: tZh("common.cancel") }));
+        await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+        expect(names()).toEqual(["顾长庚", "Marguerite Vey"]);
+
+        fireEvent.keyDown(document.body, { key: "r" });
+        dialog = await screen.findByRole("alertdialog");
+        fireEvent.click(within(dialog).getByRole("button", { name: tZh("judgment.queue.restore_all") }));
+        await waitFor(() => expect(names()).toEqual(["Marguerite Vey", "顾长庚"]));
+        expect(within(rowOf("Marguerite Vey")).getByTestId("deferred-cell")).toHaveTextContent("");
+        expect(mockShowToast).toHaveBeenCalledWith(tZh("judgment.claim.done_restore", { n: "1" }), "success");
+      } finally {
+        GROUP_ROWS.unclaimed = GROUP_ROWS.unclaimed.slice(0, 1);
+      }
+    });
+
+    it("没有本次会话延后的件时,R 不弹确认", async () => {
+      renderPage();
+      await screen.findByText("沈青梧");
+      fireEvent.keyDown(document.body, { key: "r" });
+      expect(screen.queryByRole("alertdialog")).toBeNull();
+    });
+
+    it("「我认领的」只留我认领一组;「全部案卷」四组都回来", async () => {
+      renderPage();
+      await screen.findByText("陆晚晴");
+      const scope = screen.getByTestId("queue-scope");
+      const all = within(scope).getByRole("button", { name: tZh("judgment.claim.filter_all") });
+      const mine = within(scope).getByRole("button", { name: tZh("judgment.claim.filter_mine") });
+      expect(all).toHaveAttribute("aria-pressed", "true");
+      fireEvent.click(mine);
+      expect(mine).toHaveAttribute("aria-pressed", "true");
+      expect(screen.getByTestId("queue-group-mine")).toBeInTheDocument();
+      for (const g of ["unclaimed", "others", "deferred"]) expect(screen.queryByTestId(`queue-group-${g}`)).toBeNull();
+      expect(screen.queryByText("陆晚晴")).toBeNull();
+      fireEvent.click(all);
+      expect(await screen.findByText("陆晚晴")).toBeInTheDocument();
+    });
+
+    it("草拟判决是字形 + 文字,原始值进 title;没拟过的写「未拟」;种类走 DomainEnum", async () => {
+      GROUP_ROWS.others = [row("c", "陆晚晴", { claimed_by: 2, claimed_by_name: "秦广", draft_verdict: "RETRY", kind: "AMENDMENT" })];
+      try {
+        renderPage();
+        await screen.findByText("陆晚晴");
+        const drafted = within(rowOf("陆晚晴")).getByTestId("draft-cell");
+        expect(drafted).toHaveTextContent(`↺ ${tZh("judgment.verdicts.retry")}`);
+        expect(drafted.querySelector("[title]")).toHaveAttribute("title", "RETRY");
+        expect(within(rowOf("陆晚晴")).getByText(tZh("judgment.claim.kinds.AMENDMENT"))).toHaveAttribute("title", "AMENDMENT");
+        expect(within(rowOf("沈青梧")).getByTestId("draft-cell")).toHaveTextContent(tZh("judgment.claim.draft_none"));
+        expect(within(rowOf("沈青梧")).getByTestId("draft-cell")).not.toHaveTextContent("↺");
+      } finally {
+        GROUP_ROWS.others = [row("c", "陆晚晴", { claimed_by: 2, claimed_by_name: "秦广" })];
+      }
+    });
+
+    it("工具条「改派…」没勾选时作用于焦点行;什么都没选时不可按;没有改派权限时不出现", async () => {
+      mockUser = { ...mockUser, role: "MODERATOR", permissions: ["judgment.read", "judgment.execute", "judgment.assign"] };
+      renderPage();
+      await screen.findByText("陆晚晴");
+      const toolbarReassign = () => screen.getAllByRole("button", { name: tZh("judgment.claim.reassign") })[0];
+      expect(toolbarReassign()).toBeDisabled();
+      fireEvent.keyDown(document.body, { key: "j" });
+      fireEvent.keyDown(document.body, { key: "j" });
+      fireEvent.keyDown(document.body, { key: "j" }); // 陆晚晴
+      expect(toolbarReassign()).toBeEnabled();
+      fireEvent.click(toolbarReassign());
+      const dialog = await screen.findByRole("dialog");
+      await waitFor(() => expect(judgmentApi.assignableOfficers).toHaveBeenCalledWith(["c"]));
+      fireEvent.click(await within(dialog).findByRole("radio", { name: /秦广王/ }));
+      fireEvent.click(within(dialog).getByRole("button", { name: tZh("judgment.claim.reassign_confirm") }));
+      await waitFor(() => expect(judgmentApi.batch).toHaveBeenCalledWith({ operation: "reassign", ids: ["c"], to: 7 }));
+    });
+
+    it("JUDGE(没有 judgment.assign)的工具条上没有「改派…」", async () => {
+      renderPage();
+      await screen.findByText("陆晚晴");
+      expect(screen.queryByRole("button", { name: tZh("judgment.claim.reassign") })).toBeNull();
+    });
+
+    const openRowMenu = async (name: string) => {
+      fireEvent.click(within(rowOf(name)).getByRole("button", { name: `${tZh("common.row_actions")} · ${name}` }));
+      return (await screen.findByRole("menu")).querySelectorAll<HTMLElement>("[role=menuitem]");
+    };
+    const labels = (items: NodeListOf<HTMLElement>) => [...items].map((el) => el.textContent);
+
+    it("「⋯」菜单按权限:我认领的给取消认领 + 延后,未认领的给认领 + 延后,他人认领的只给延后;JUDGE 没有改派", async () => {
+      renderPage();
+      await screen.findByText("陆晚晴");
+      expect(labels(await openRowMenu("沈青梧"))).toEqual([tZh("judgment.claim.release"), tZh("judgment.queue.defer")]);
+      fireEvent.keyDown(screen.getByRole("menu"), { key: "Escape" });
+      expect(labels(await openRowMenu("Marguerite Vey"))).toEqual([tZh("judgment.claim.claim"), tZh("judgment.queue.defer")]);
+      fireEvent.keyDown(screen.getByRole("menu"), { key: "Escape" });
+      expect(labels(await openRowMenu("陆晚晴"))).toEqual([tZh("judgment.queue.defer")]);
+    });
+
+    it("「⋯ → 取消认领」是 C 的鼠标路径;色标不卸载,而是反着退场(scaleY 1→0,dismiss 140ms,出场曲线)", async () => {
+      judgmentApi.release.mockReturnValue(new Promise(() => {})); // 服务端还没回:退场不等往返
+      renderPage();
+      await screen.findByText("沈青梧");
+      expect(within(rowOf("沈青梧")).getByTestId("row-mark")).toBeInTheDocument();
+      const [release] = await openRowMenu("沈青梧");
+      fireEvent.click(release);
+      await waitFor(() => expect(judgmentApi.release).toHaveBeenCalledWith("a"));
+      const mine = rowOf("沈青梧");
+      expect(within(mine).queryByTestId("row-mark")).toBeNull();
+      expect(within(mine).queryByText(tZh("judgment.row_mark.mine"))).toBeNull();
+      const cls = within(mine).getByTestId("row-mark-off").className.split(/\s+/);
+      expect(cls).toEqual(expect.arrayContaining(["scale-y-0", "duration-dismiss", "ease-exit"]));
+      expect(cls).not.toContain("starting:scale-y-0");
+    });
+
+    it("「⋯ → 认领」认领那一行;「⋯ → 延后」与 S 同一件事", async () => {
+      renderPage();
+      await screen.findByText("Marguerite Vey");
+      fireEvent.click((await openRowMenu("Marguerite Vey"))[0]);
+      await waitFor(() => expect(judgmentApi.claim).toHaveBeenCalledWith("b"));
+      fireEvent.click((await openRowMenu("陆晚晴"))[0]);
+      expect(within(rowOf("陆晚晴")).getByTestId("deferred-cell")).toHaveTextContent(tZh("judgment.claim.deferred_session"));
+      expect(judgmentApi.batch).not.toHaveBeenCalled();
+    });
+
+    it("「⋯ → 改派…」只作用于那一行,不管勾选了什么;改派后勾选还在", async () => {
+      mockUser = { ...mockUser, role: "MODERATOR", permissions: ["judgment.read", "judgment.execute", "judgment.assign"] };
+      renderPage();
+      await screen.findByText("陆晚晴");
+      fireEvent.click(within(rowOf("沈青梧")).getByRole("checkbox"));
+      const items = await openRowMenu("陆晚晴");
+      expect(labels(items)).toEqual([tZh("judgment.queue.defer"), tZh("judgment.claim.reassign")]);
+      fireEvent.click(items[1]);
+      const dialog = await screen.findByRole("dialog");
+      await waitFor(() => expect(judgmentApi.assignableOfficers).toHaveBeenCalledWith(["c"]));
+      fireEvent.click(await within(dialog).findByRole("radio", { name: /秦广王/ }));
+      fireEvent.click(within(dialog).getByRole("button", { name: tZh("judgment.claim.reassign_confirm") }));
+      await waitFor(() => expect(judgmentApi.batch).toHaveBeenCalledWith({ operation: "reassign", ids: ["c"], to: 7 }));
+      expect(screen.getByTestId("batch-bar")).toBeInTheDocument();
+    });
+
+    it("改派层是 v3 的 390 宽、手机上从底部升起 78% 高(Drawer 的 layer)", async () => {
+      mockUser = { ...mockUser, role: "MODERATOR", permissions: ["judgment.read", "judgment.execute", "judgment.assign"] };
+      renderPage();
+      await screen.findByText("陆晚晴");
+      fireEvent.click((await openRowMenu("陆晚晴"))[1]);
+      const dialog = await screen.findByRole("dialog");
+      expect(dialog).toHaveAttribute("data-variant", "layer");
+      expect(dialog.className.split(/\s+/)).toEqual(expect.arrayContaining(["sm:w-[390px]", "h-[78%]", "bottom-0", "data-starting-style:translate-y-3"]));
+      expect(dialog.className).not.toContain("sm:w-[480px]");
+    });
+
+    it("批量条吸在工具条下沿,出现时 translateY(8→0) + 淡入", async () => {
+      renderPage();
+      await screen.findByText("沈青梧");
+      fireEvent.click(within(rowOf("沈青梧")).getByRole("checkbox"));
+      const cls = (await screen.findByTestId("batch-bar")).className.split(/\s+/);
+      expect(cls).toEqual(expect.arrayContaining(["sticky", "top-(--below-band)", "duration-fast", "starting:translate-y-2", "starting:opacity-0"]));
+      // 身份带是 sticky 的(v3/band):吸在 52 的工具条下沿会被身份带盖住。
+      expect(cls).not.toContain("top-13");
+    });
+  });
+});
+
+describe("审判队列 · 世次 / 种类", () => {
+  it("cycle 0 是第 1 世;世次在上、种类在下", async () => {
+    renderPage();
+    await screen.findByText("Marguerite Vey");
+    const first = within(rowOf("Marguerite Vey")).getByTestId("cycle-kind-cell");
+    expect(first).toHaveTextContent(tZh("souls.detail.life_number", { n: "1" }));
+    expect(first).toHaveTextContent(tZh("judgment.claim.kinds.ORIGINAL"));
+    const fourth = within(rowOf("沈青梧")).getByTestId("cycle-kind-cell");
+    expect(fourth).toHaveTextContent(tZh("souls.detail.life_number", { n: "4" }));
+    expect(fourth).not.toHaveTextContent(tZh("souls.detail.life_number", { n: "3" }));
+    expect(screen.getByRole("columnheader", { name: tZh("judgment.claim.col_cycle_kind") })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: tZh("judgment.claim.col_merit_demerit") })).toBeInTheDocument();
+  });
+
+  it("VIEWER 拿不到功过两个字段:写「未记录」,不写 0", async () => {
+    GROUP_ROWS.mine = [row("a", "沈青梧", { claimed_by: 1, claimed_by_name: "阎罗", merit_score: undefined, demerit_score: undefined })];
+    try {
+      renderPage();
+      await screen.findByText("沈青梧");
+      const cell = within(rowOf("沈青梧")).getByTestId("merit-demerit-cell");
+      expect(cell.querySelectorAll('[data-missing="unrecorded"]')).toHaveLength(2);
+      expect(cell).not.toHaveTextContent("0");
+    } finally {
+      GROUP_ROWS.mine = [row("a", "沈青梧", { claimed_by: 1, claimed_by_name: "阎罗" })];
+    }
   });
 });

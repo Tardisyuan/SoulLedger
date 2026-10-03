@@ -107,6 +107,10 @@ describe("the five strips read it from there", () => {
     "app/workflow/page.tsx",
     // 2026-09-29:助手管理的「配置与测试 / 实际用量」两个页签(两条路由,Link 而非 button)。
     "src/components/assist-admin/parts.tsx",
+    // 2026-10-02(A5):动态页右列「关注」卡的「关注中 / 粉丝」两个页签。
+    "src/components/social/FollowPanel.tsx",
+    // 2026-10-02(v3 A1):审批流编辑器检查器的「节点 / 出口 / 问题 / 版本」四个页签。
+    "src/components/workflow/WorkflowEditorPanels.tsx",
   ];
 
   it("exactly these files import the module", () => {
@@ -145,5 +149,12 @@ describe("the selected tab is painted in ink (规范 v2 A1: no accent colour exi
     // more — which is the failure shape this repository writes contract tests
     // to avoid, not to acquire.
     expect(TAB_BASE).not.toContain("oklch(");
+  });
+
+  it("TAB_BASE 的点击区至少 44(v3 控件高),字在多出的高度里居中", () => {
+    // py-2 + text-sm 只有约 38。高度写 token,不写 h-11 / min-h-11(globals.css 的约定)。
+    expect(TAB_BASE.split(" ")).toEqual(
+      expect.arrayContaining(["min-h-(--control-h-sm)", "inline-flex", "items-center", "justify-center"]),
+    );
   });
 });

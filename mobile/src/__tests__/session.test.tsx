@@ -15,7 +15,7 @@ import { RootNavigator, navigationRef } from "../navigation";
 import { OUTBOX_KEY } from "../chat";
 import { installMobilePlatform, persistentStore, sessionStore } from "../platform";
 import { SessionProvider } from "../session";
-import { civ, parchment, themeFor } from "../theme";
+import { NEUTRAL_PLAQUE, v3, v3Band } from "../theme";
 import { PROFILE, application, heldReply, life, pressTab, stubApi } from "./stubApi";
 
 const secure = (SecureStore as unknown as { __store: Map<string, string> }).__store;
@@ -104,6 +104,11 @@ describe("login", () => {
     renderApp();
     await signIn(false);
     expect((await screen.findByTestId("login-error")).props.children).toBe("初始密码已过期,请联系官员重置");
+  });
+
+  it("the login page carries the S-and-L balance mark, not the old ledger emblem (2026-10-03)", async () => {
+    renderApp();
+    expect(await screen.findByTestId("login-mark", { includeHiddenElements: true })).toBeTruthy();
   });
 });
 
@@ -197,27 +202,27 @@ describe("a stored session", () => {
     stubApi({ "/me/": me.reply, "/me/life/": { status: 200, data: life(1) } });
     renderApp();
     await act(async () => me.answer({ status: 200, data: { ...PROFILE, civilization: "EGYPTIAN", welcomed_civilizations: ["EGYPTIAN"] } }));
-    const card = screen.getByTestId("profile-card");
-    const style = [card.props.style].flat(3).reduce((acc: object, s: object) => ({ ...acc, ...s }), {});
-    expect(style).toMatchObject({ backgroundColor: themeFor("EGYPTIAN", "light").s0 }); // jest reports a light colour scheme
-    expect(themeFor("EGYPTIAN", "light").s0).not.toBe(themeFor(null, "light").s0);
+    // v3: the life tab's ground is v3's one canvas; the civilization is its identity band (jest reports light).
+    const flatten = (id: string) => [screen.getByTestId(id).props.style].flat(3).reduce((acc: object, s: object) => ({ ...acc, ...s }), {});
+    expect(flatten("profile-card")).toMatchObject({ backgroundColor: v3.light.canvas });
+    expect(flatten("plaque")).toMatchObject({ backgroundColor: v3Band(v3.civ.eg.light) });
+    expect(v3Band(v3.civ.eg.light)).not.toBe(v3Band(v3.civ.cn.light));
     // …and relabels the two scores from Egypt's lexicon, keeping the server's numbers.
     expect(screen.getByText("羽侧")).toBeTruthy();
     expect(screen.queryByText("功")).toBeNull();
     expect(screen.getByText(String(PROFILE.merit_score))).toBeTruthy();
   });
 
-  it("signed in with no known civilization: the old neutral ground, not the pre-login parchment", async () => {
+  it("signed in with no known civilization: the neutral skin, no civilization's colour borrowed", async () => {
     secure.set(REFRESH_TOKEN_KEY, "R");
     const me = heldReply();
     stubApi({ "/me/": me.reply, "/me/life/": { status: 200, data: life(1) } });
     renderApp();
     await act(async () => me.answer({ status: 200, data: { ...PROFILE, civilization: "ATLANTEAN" } }));
-    const card = screen.getByTestId("profile-card");
-    const style = [card.props.style].flat(3).reduce((acc: object, s: object) => ({ ...acc, ...s }), {});
-    expect(style).toMatchObject({ backgroundColor: civ.neutral.light.s0 });
-    expect(style).not.toMatchObject({ backgroundColor: parchment.light.bg });
-  });
+    // The band falls back to the neutral plaque (no civilization colour borrowed).
+    const band = [screen.getByTestId("plaque").props.style].flat(3).reduce((acc: object, s: object) => ({ ...acc, ...s }), {});
+    expect(band).toMatchObject({ backgroundColor: v3Band(NEUTRAL_PLAQUE.light) });
+    expect(Object.values(v3.civ).map((c) => v3Band(c.light))).not.toContain((band as { backgroundColor: string }).backgroundColor);  });
 
   it("returning to the life tab reloads it — an application submitted elsewhere shows up", async () => {
     secure.set(REFRESH_TOKEN_KEY, "R");

@@ -1202,6 +1202,11 @@ def test_the_postgres_only_set_is_the_set_we_think_it_is():
         "tests/test_assist_rag.py::test_pgvector_orders_exactly_like_the_python_cosine",
         "tests/test_assist_rag.py::"
         "test_the_hnsw_index_is_built_past_the_threshold_used_and_dropped_with_its_model",
+        # 2026-10-02 案号:八个连接同时开案,后来者在计数行的行锁上等,拿到连续的八个号。
+        # SQLite 整库写锁,没有行锁可等。串行版本
+        # test_numbers_run_per_prefix_and_year_without_gaps 每个引擎都跑。
+        "tests/test_judgment_case_number.py::"
+        "test_eight_cases_opened_at_once_get_eight_consecutive_numbers",
     ])
     assert pg_only == expected, (
         f"PostgreSQL-only 的集合变了:{pg_only}\n"

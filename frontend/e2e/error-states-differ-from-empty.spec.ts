@@ -128,6 +128,9 @@ test("the failed state offers a way to try again", async ({ page }) => {
   );
   await page.goto("/realms");
   // `role="alert"` rather than a class or a phrase: it is what a screen reader
-  // announces, and it is the part of this that is a contract.
-  await expect(page.getByRole("alert")).toBeVisible();
+  // announces, and it is the part of this that is a contract. Scoped to the
+  // query-error region because Next's own `__next-route-announcer__` also
+  // carries `role="alert"`; a bare `getByRole("alert")` matched both under load
+  // (strict-mode violation) and read as a flake.
+  await expect(page.locator('[data-query-error][role="alert"]')).toBeVisible();
 });

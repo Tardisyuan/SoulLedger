@@ -1,13 +1,16 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
+import { useSearchParams } from "next/navigation";
 import { useSouls } from "@soulledger/core/hooks/useSouls";
 import { usePermissions } from "@/src/hooks/usePermissions";
 import { SoulBatchBar, useSoulSelection } from "@/src/components/souls/SoulBatchBar";
 import { CIVILIZATION_OPTIONS } from "@soulledger/core/config/civilizations";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { usePlaque } from "@/src/components/plaque/Plaque";
+import { useHall } from "@/src/components/plaque/useHall";
 import { SoulCreateModal } from "@/src/components/ui/Modal";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { DataTable, ROW_LINK, parseOrdering, type SortState } from "@/components/ui/data-table";
@@ -52,13 +55,29 @@ function dateProblemMarker(soul: SoulListItem): { glyph: string; className: stri
   return null;
 }
 
+/** `?q=` 是全局搜索「查看全部 N 个灵魂 →」带来的词,进页即填进搜索框。换词时整页重挂(key),筛选回到初始。 */
 export default function SoulsPage() {
+  // useSearchParams needs a Suspense boundary under the App Router build (as app/corpus/page.tsx).
+  return (
+    <Suspense fallback={null}>
+      <SoulsRoute />
+    </Suspense>
+  );
+}
+
+function SoulsRoute() {
+  const q = useSearchParams()?.get("q")?.trim() ?? "";
+  return <SoulsList key={q} initialQuery={q} />;
+}
+
+function SoulsList({ initialQuery }: { initialQuery: string }) {
   const { t, locale } = useI18n();
+  usePlaque({ hall: useHall(t("plaque.office.records")) });
   const [page, setPage] = useState(1);
   const [stateFilter, setStateFilter] = useState("");
   const [civilizationFilter, setCivilizationFilter] = useState("");
-  const [searchInput, setSearchInput] = useState("");
-  const [search, setSearch] = useState("");
+  const [searchInput, setSearchInput] = useState(initialQuery);
+  const [search, setSearch] = useState(initialQuery);
   const [balanceMin, setBalanceMin] = useState("");
   const [balanceMax, setBalanceMax] = useState("");
   const [ordering, setOrdering] = useState("");
@@ -310,7 +329,11 @@ export default function SoulsPage() {
           const showsBalance = soul.civilization === "CHINESE";
           return (
           <>
-            <td className="px-4 py-3 font-medium text-[oklch(var(--color-ink))]">
+            {/* `whitespace-nowrap` on every cell: at 393 px the auto-layout table
+                squeezed CJK names to their min-content — one character per line —
+                instead of letting the table scroll sideways inside its own
+                `overflow-x-auto` box. The page itself still does not scroll. */}
+            <td className="px-4 py-3 font-medium whitespace-nowrap text-[oklch(var(--color-ink))]">
               <span className="flex items-center gap-1">
                 {marker && (
                   <span className={marker.className} aria-hidden="true" title={t(marker.labelKey)}>
@@ -339,10 +362,10 @@ export default function SoulsPage() {
                 </button>
               </span>
             </td>
-            <td className="px-4 py-3 text-[oklch(var(--color-ink-muted))]">
+            <td className="px-4 py-3 whitespace-nowrap text-[oklch(var(--color-ink-muted))]">
               <DomainEnum namespace="souls.civilizations" value={soul.civilization} />
             </td>
-            <td className="px-4 py-3">
+            <td className="px-4 py-3 whitespace-nowrap">
               {/* 领域枚举徽章(补足 C15):ink 字 + ink3 框,审判中加 s2 底,不用状态色。
                   表在 src/lib/soulStateBadge.ts —— 它曾是这里与详情页两份逐字相同的拷贝。 */}
               <Badge
@@ -359,7 +382,7 @@ export default function SoulsPage() {
                 prints a bare neutral `0` — a recorded fact — while a soul
                 whose cosmology does not net merit against demerit gets the
                 "not applicable" dot, visibly different from both. */}
-            <td className="px-4 py-3 text-right">
+            <td className="px-4 py-3 text-right whitespace-nowrap">
               {/* `?? 0` rendered a confident zero -- signed and toned -- for a
                   value the backend deliberately withholds. `SoulSerializer
                   .to_representation` deletes merit/demerit/karmic_balance for
@@ -378,7 +401,7 @@ export default function SoulsPage() {
             </td>
             {showsDeathColumn && (
               /* 02 档：日期是元数据，不是正文。 */
-              <td className="px-4 py-3 text-xs text-[oklch(var(--color-ink-muted))]">
+              <td className="px-4 py-3 text-xs whitespace-nowrap text-[oklch(var(--color-ink-muted))]">
                 <DomainText value={formatHistoricalDate(soul.death_date, locale)} />
               </td>
             )}

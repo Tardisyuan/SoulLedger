@@ -95,13 +95,13 @@ function PasswordHelp({ initialUsername, onClose }: { initialUsername: string; o
   if (state === "sent") {
     return (
       <div className="flex flex-col gap-4" data-testid="password-help-sent">
-        <h2 className="text-md text-[oklch(var(--color-ink))]">{t("auth.forgot_password")}</h2>
+        <h2 className="text-lg text-[oklch(var(--color-ink))]">{t("auth.forgot_password")}</h2>
         {/* 第三类 F 组 2.6:对任何账号名都是同一句 —— 账号不存在时后端不发通知,这里也不说。 */}
         <div role="status" className="border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] px-4 py-3 text-sm text-[oklch(var(--color-ink))]">
           <p className="font-semibold">{t("auth.forgot_sent")}</p>
           <p className="mt-1 text-[oklch(var(--color-ink-muted))]">{t("auth.forgot_sent_body")}</p>
         </div>
-        <Button type="button" variant="ghost" onClick={onClose} className="w-full h-10 max-sm:h-12">
+        <Button type="button" variant="ghost" onClick={onClose} className="w-full">
           {t("auth.back_to_login")}
         </Button>
       </div>
@@ -110,7 +110,7 @@ function PasswordHelp({ initialUsername, onClose }: { initialUsername: string; o
 
   return (
     <form onSubmit={submit} className="flex flex-col gap-4" data-testid="password-help-form">
-      <h2 className="text-md text-[oklch(var(--color-ink))]">{t("auth.forgot_password")}</h2>
+      <h2 className="text-lg text-[oklch(var(--color-ink))]">{t("auth.forgot_password")}</h2>
       <p className="text-xs text-[oklch(var(--color-ink-muted))]">{t("auth.forgot_desc")}</p>
       <TextField
         id="password-help-username"
@@ -135,11 +135,11 @@ function PasswordHelp({ initialUsername, onClose }: { initialUsername: string; o
         variant="primary"
         disabled={state === "sending" || !username.trim()}
         loading={state === "sending"}
-        className="w-full h-10 max-sm:h-12"
+        className="w-full"
       >
         {t("auth.forgot_submit")}
       </Button>
-      <Button type="button" variant="ghost" onClick={onClose} className="w-full h-10 max-sm:h-12">
+      <Button type="button" variant="ghost" onClick={onClose} className="w-full">
         {t("auth.back_to_login")}
       </Button>
     </form>
@@ -269,15 +269,11 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-[oklch(var(--color-canvas))]">
-      {/* 壳外页的匾(补足 C15「Web 登录」):中性皮 —— 登录前不知道文明,所以没有印、没有
-          纹样与题字字体,纹样带只剩两道细线(globals.css 中性皮)。题字是产品名,40 档;
-          这一页没有 PageShell,匾题字就是全页唯一的 <h1>。语言与主题在表单栏顶上,
-          不放在匾上:两个控件的配色是给纸底画的。 */}
-      <Plaque
-        heading
-        title={t("nav.title")}
-        meta={<span className="font-mono text-2xs tracking-[var(--tracking-meta)]">SOULLEDGER</span>}
-      />
+      {/* 壳外页的身份带(补足 C15「Web 登录」;v3 身份带):中性皮 —— 登录前不知道文明,所以
+          没有印、没有纹样、没有殿名。品牌小字 SOULLEDGER 由身份带自己画。题字是产品名,40 档;
+          这一页没有 PageShell,题字就是全页唯一的 <h1>。不吸顶、不收起。语言与主题在表单栏顶上,
+          不放在身份带上:两个控件的配色是给页面底色画的。 */}
+      <Plaque heading title={t("nav.title")} />
 
       <main className="grid flex-1 grid-cols-1 content-start md:grid-cols-2 md:content-normal">
         <section
@@ -330,7 +326,7 @@ export default function LoginPage() {
               <PasswordHelp initialUsername={form.username} onClose={() => setHelpOpen(false)} />
             ) : (
               <form ref={formRef} onSubmit={handleSubmit} className="flex w-full flex-col gap-4">
-                <h2 className="text-md text-[oklch(var(--color-ink))]">{t("auth.login")}</h2>
+                <h2 className="text-lg text-[oklch(var(--color-ink))]">{t("auth.login")}</h2>
 
                 {civilizations.length > 0 && (
                   <section aria-labelledby="login-civilization-label" className="flex flex-col gap-2">
@@ -447,7 +443,7 @@ export default function LoginPage() {
                   variant="primary"
                   disabled={loading}
                   loading={loading}
-                  className="w-full h-10 max-sm:h-12"
+                  className="w-full"
                 >
                   {loading ? t("auth.logging_in") : t("auth.login")}
                   {!loading && (

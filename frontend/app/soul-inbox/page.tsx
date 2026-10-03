@@ -19,6 +19,8 @@ import {
   useInboxTemplates,
 } from "@soulledger/core/hooks/useSoulInbox";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { usePlaque } from "@/src/components/plaque/Plaque";
+import { useCourtOffice, useHall } from "@/src/components/plaque/useHall";
 import { useToast } from "@/src/contexts/ToastContext";
 import { usePermissions } from "@/src/hooks/usePermissions";
 import { citationOf } from "@soulledger/core/config/statuteCitation";
@@ -33,6 +35,7 @@ import { Pagination } from "@/src/components/ui/Pagination";
 import { ListSkeleton } from "@/components/ui/skeleton";
 import { TemplateManager } from "./TemplateManager";
 import { AssignDialog } from "./AssignDialog";
+import { ROW_HOVER, ROW_SELECTED } from "@/components/ui/data-table";
 
 /*
  * 殿司收件箱:灵魂写给**当前所在**殿司的信(backend/apps/chat/views.py `OfficerInboxViewSet`)。
@@ -65,8 +68,9 @@ import { AssignDialog } from "./AssignDialog";
 const RULE = "border-[oklch(var(--color-rule))]";
 const LINE = "border-[oklch(var(--color-line))]";
 const MUTED_TEXT = "text-xs text-[oklch(var(--color-ink-subtle))]";
-const SECTION_HEAD = "font-mono text-2xs tracking-wide text-[oklch(var(--color-ink-subtle))]";
-const CURRENT = "bg-[oklch(var(--color-surface-2))] shadow-[inset_3px_0_0_oklch(var(--color-ink))] text-[oklch(var(--color-ink))] font-medium";
+// 区块标签(DESIGN.md):11 px 界面字体,不是等宽 —— 等宽只留给眉题、编号与数字。
+const SECTION_HEAD = "text-2xs tracking-wide text-[oklch(var(--color-ink-subtle))]";
+const CURRENT = `${ROW_SELECTED} text-[oklch(var(--color-ink))] font-medium`;
 
 /** 文件夹栏的一项:服务端的文件夹,或「全部来信」里按状态 / 按殿收窄。 */
 type FolderKey = InboxFolder | "status:open" | "status:closed" | `hall:${number}`;
@@ -438,7 +442,7 @@ function Thread({ conversation }: { conversation: InboxConversation }) {
   return (
     <section aria-label={t("soul_inbox.thread_label", { name: conversation.soul_name })} className="min-w-0 px-4 lg:px-6 pt-4 pb-6">
       <header className="flex flex-wrap items-baseline gap-3 pb-3 border-b border-[oklch(var(--color-block))]">
-        <h2 className="text-md text-[oklch(var(--color-ink))]">{conversation.soul_name}</h2>
+        <h2 className="text-lg text-[oklch(var(--color-ink))]">{conversation.soul_name}</h2>
         <span className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">{conversation.soul_code}</span>
         {conversation.closed_at && <Badge tone="neutral">{t("soul_inbox.closed")}</Badge>}
         {waitingDays !== null && <Badge tone="warning">{t("soul_inbox.awaiting", { n: String(waitingDays) })}</Badge>}
@@ -541,7 +545,7 @@ function Thread({ conversation }: { conversation: InboxConversation }) {
                   <select
                     value=""
                     onChange={(e) => insertTemplate(e.target.value)}
-                    className={`h-7 max-w-[12rem] px-1 border ${LINE} bg-[oklch(var(--color-canvas))] text-xs text-[oklch(var(--color-ink))]`}
+                    className={`h-(--control-h-sm) max-w-[12rem] px-2 border ${LINE} bg-[oklch(var(--color-canvas))] text-xs text-[oklch(var(--color-ink))]`}
                   >
                     <option value="">
                       {templates.data?.length ? t("soul_inbox.template.pick") : t("soul_inbox.template.none")}
@@ -579,6 +583,8 @@ function Thread({ conversation }: { conversation: InboxConversation }) {
 
 function SoulInboxContent() {
   const { t, formatDateTime, locale } = useI18n();
+  // 身份带殿名:这一页此前没报,带上落回租户展示名(「中国地府」),与其余各页的「酆都 · 第十殿」不是一个写法。
+  usePlaque({ hall: useHall(useCourtOffice()) });
   const queryClient = useQueryClient();
   const [folder, setFolder] = useState<FolderKey>("all");
   const [page, setPage] = useState(1);
@@ -624,8 +630,8 @@ function SoulInboxContent() {
         type="button"
         aria-pressed={folder === f.key}
         onClick={() => choose(f.key)}
-        className={`w-full flex justify-between items-center px-4 py-2 border-b ${RULE} text-left text-sm text-[oklch(var(--color-ink-muted))] hover:bg-[oklch(var(--color-surface-2))] ${
-          folder === f.key ? CURRENT : ""
+        className={`w-full flex justify-between items-center px-4 min-h-11 border-b ${RULE} text-left text-sm text-[oklch(var(--color-ink-muted))] ${
+          folder === f.key ? CURRENT : ROW_HOVER
         }`}
       >
         <span>{f.label}</span>
@@ -654,7 +660,7 @@ function SoulInboxContent() {
       ) : nothingAtAll ? (
         <EmptyState title={t("soul_inbox.empty")} reason={t("soul_inbox.empty_reason")} />
       ) : (
-        <div className={`grid border ${LINE} lg:grid-cols-[170px_300px_minmax(0,1fr)] xl:grid-cols-[170px_360px_minmax(0,1fr)]`}>
+        <div className={`grid border ${LINE} bg-[oklch(var(--color-surface-1))] lg:grid-cols-[170px_300px_minmax(0,1fr)] xl:grid-cols-[170px_360px_minmax(0,1fr)]`}>
           <nav aria-label={t("soul_inbox.folders")} className={`hidden lg:block py-3 border-r ${LINE}`}>
             <ul>{folders.map(folderButton)}</ul>
             <ul className="mt-3">{statusFolders.map(folderButton)}</ul>
@@ -699,7 +705,7 @@ function SoulInboxContent() {
                     <button type="button" data-conversation-id={r.id} data-unread={r.unread || undefined}
                       aria-pressed={r.id === selectedId}
                       onClick={() => setSelectedId(r.id)}
-                      className="w-full flex gap-2 text-left px-4 py-3 max-lg:min-h-11 hover:bg-[oklch(var(--color-surface-2))] aria-pressed:bg-[oklch(var(--color-surface-2))] aria-pressed:shadow-[inset_3px_0_0_oklch(var(--color-ink))]">
+                      className={`w-full flex gap-2 text-left px-4 py-3 max-lg:min-h-11 ${r.id === selectedId ? ROW_SELECTED : ROW_HOVER}`}>
                       {/* 未读:6 px 强调色方块(设计稿 C · 09:方块,不用圆点)。读屏读的是旁边那句。 */}
                       <span aria-hidden="true" className={`mt-[7px] size-1.5 flex-none ${r.unread ? "bg-[oklch(var(--color-accent))]" : ""}`} />
                       <span className="min-w-0 flex-1">

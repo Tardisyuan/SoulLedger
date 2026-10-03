@@ -10,6 +10,7 @@
     "greeting_night": "夜深了",
     "expand_menu": "展开菜单",
     "collapse_menu": "收起菜单",
+    "collapse_locked": "窗口宽度不足 1200 像素，导航固定收起",
     "settings": "设置",
     "language": "界面语言",
     "theme_light": "切换到浅色模式",
@@ -79,10 +80,8 @@
   },
   "about": {
     "title": "关于与致谢",
-    "intro": "本应用用到的字体、纹样、图像、开源软件、典籍与服务,以及它们的授权与出处。",
+    "intro": "本应用用到的字体、开源软件、典籍与服务,以及它们的授权与出处。",
     "fonts": "字体",
-    "ornament": "纹样",
-    "images": "印的残边",
     "licence": "授权",
     "public_domain": "公有领域",
     "source": "来源",
@@ -336,6 +335,14 @@
         "not_executed": "待执行",
         "non_eternal": "非永恒",
         "new_identity": "新身份"
+      },
+      "profile": {
+        "eyebrow": "灵魂",
+        "birth_name": "本名",
+        "description": "生平描述",
+        "ledger_tabs": "卷宗",
+        "tab_judgments": "全部审判",
+        "tab_records": "全部功过记录"
       }
     },
     "date_problem_filter": "仅看有问题的",
@@ -398,7 +405,9 @@
       "copy_id": "复制完整 ID",
       "id_copied": "ID 已复制到剪贴板",
       "id_copy_failed": "复制失败",
-      "copied": "已复制 ✓"
+      "copied": "已复制 ✓",
+      "copy_case_number": "复制案号 {{value}}",
+      "case_number_copied": "案号已复制到剪贴板"
     },
     "field_required": "此项为必填",
     "dismiss": "知道了",
@@ -591,7 +600,7 @@
       "showing": "权限 · 显示 {{shown}} / {{total}}",
       "no_differences": "没有差异：当前筛选下各角色取值完全一致。",
       "role_picker": "角色",
-      "pending_cells": "未保存 {{n}} 项",
+      "pending_cells": "{{n}} 处待改",
       "discard": "放弃",
       "unsaved_region": "未保存的改动",
       "saved_all": "已保存 {{n}} 项",
@@ -606,11 +615,11 @@
         "conflict": "未保存 · 引起冲突"
       },
       "legend": {
-        "on": "有",
-        "off": "无",
+        "on": "已授",
+        "off": "未授",
         "unsaved": "未保存",
-        "failed": "保存失败",
-        "conflict": "引起冲突",
+        "failed": "失败",
+        "conflict": "冲突",
         "lock": "始终 · ADMIN",
         "deny": "禁授 · 殿主"
       },
@@ -727,7 +736,7 @@
         "no_exit": "{{node}} 没有出口,走不到结束",
         "no_end": "{{node}}:用了条件或结束节点,就需要至少一个结束节点"
       },
-      "palette": "节点库 · 拖入",
+      "palette": "节点 · 拖入画布",
       "inspector": "属性",
       "inspector_empty": "在画布或线性预览里选一个节点。",
       "unnamed": "(未命名)",
@@ -739,7 +748,7 @@
       },
       "preview": "模板预览 · 线性",
       "preview_empty": "还没有节点。",
-      "narrow_title": "画布只在 ≥ 1024 px 可编辑",
+      "narrow_title": "窄屏只读。要改节点或连线，请在 1024 以上打开。",
       "narrow_body": "窄屏下只读:显示线性预览、校验结果和节点属性。",
       "publish": "发布",
       "publishing": "发布中…",
@@ -765,11 +774,6 @@
         "END": "结束"
       },
       "signers": "会签人",
-      "signer_label": "会签人 {{n}}",
-      "signer_add": "添加会签人",
-      "signer_remove": "移除",
-      "threshold": "通过所需人数",
-      "threshold_hint": "留空 = 每位会签人都须同意;人数已不可能达到时立即驳回。",
       "signers_summary": "{{who}} · {{k}}/{{n}} 同意即通过",
       "timeout": {
         "label": "超时",
@@ -785,7 +789,6 @@
         "hint": "超时由定时任务每 5 分钟检查一次后触发;定时调度没有运行时不会触发。",
         "summary": "{{hours}} 小时后 · {{action}}"
       },
-      "reject_to": "驳回到",
       "reject_to_none": "— 不退回,流程结束 —",
       "template_level": "整个模板",
       "condition": {
@@ -814,7 +817,8 @@
           "eq": "等于",
           "in": "属于",
           "not_in": "不属于"
-        }
+        },
+        "and": "且"
       },
       "preview_approver": {
         "title": "审批人预览",
@@ -825,6 +829,57 @@
         "nobody": "无人(SYSTEM)—— 只能越级推进",
         "no_accounts": "当前没有账号能审批它",
         "accounts": "{{n}} 个账号:{{names}}"
+      },
+      "roles_title": "角色 · 由连线推导",
+      "role_legend": {
+        "entry": "入口 · 无入线",
+        "step": "步骤",
+        "branch": "分支 · 有条件出口",
+        "end": "终点 · 无出线"
+      },
+      "roles_note": "角色不可拖，只能由连线得出",
+      "tab": {
+        "node": "节点",
+        "exits": "出口",
+        "issues": "问题",
+        "version": "版本"
+      },
+      "issues_blocking": "{{n}} 处问题挡住发布",
+      "issues_hint": "点一条，画布定位到出问题的节点",
+      "issues_checks": "共 {{total}} 种检查 · {{passed}} 种通过",
+      "exits_title": "{{node}} 的出口",
+      "exits_hint": "按顺序匹配，首个命中即走；都不中走默认",
+      "exits_none": "这个节点没有「通过」出口。",
+      "exits_fixed": "条件只挂在「通过」出口上；「否决」出口另走固定路线。",
+      "exit_label": "连线标签",
+      "exit_add": "加一条条件出口",
+      "exit_target": "目标",
+      "exit_up": "上移出口",
+      "exit_down": "下移出口",
+      "field": {
+        "name": "名称",
+        "kind": "类型",
+        "stage": "阶段",
+        "court": "殿号",
+        "approver": "审批人",
+        "role": "角色",
+        "signers": "会签人",
+        "threshold": "门槛",
+        "reject_to": "驳回到"
+      },
+      "threshold_of": "/ {{n}} 人",
+      "threshold_rule": "{{n}} 人中任 {{k}} 人通过即放行",
+      "signer_remove_named": "移除 {{name}}",
+      "signer_placeholder": "输入姓名后回车",
+      "signer_add_role": "按角色添加会签人",
+      "preview_count": "{{nodes}} 节点 · {{edges}} 连线",
+      "flow_count": "流程 · {{n}} 节点",
+      "glyph_legend": "左列字形是角色（▷ 入口 · □ 步骤 · ◇ 分支 · ■ 终点），名称前是节点类型",
+      "zoom": {
+        "out": "缩小",
+        "in": "放大",
+        "reset": "缩放到 100%",
+        "fit": "适配画布"
       }
     },
     "templates": "流程模板",
@@ -886,7 +941,13 @@
       "approver_name_absent": "节点只带审批人主键,后端未返回姓名",
       "reason_for_soul": "给灵魂的驳回理由",
       "reason_for_soul_hint": "此理由对灵魂可见;内部备注不可见。最多 2000 字。",
-      "reason_for_soul_required": "驳回转生申请必须填写给灵魂的驳回理由"
+      "reason_for_soul_required": "驳回转生申请必须填写给灵魂的驳回理由",
+      "waiting_on_me": "待我处理",
+      "row_legend": "行首竖条 = 待我处理 · 底色 = 当前节点",
+      "not_reached": "未走",
+      "last_step": "最近一步",
+      "template": "模板",
+      "status": "状态"
     },
     "verdicts": {
       "passed": "通过",
@@ -970,17 +1031,25 @@
     "error_load": "加载统计数据失败",
     "error_export": "导出统计数据失败",
     "todo": {
-      "approve_dispatch": "待我审批 · 调度",
+      "approve_dispatch": "调派待批",
       "go_approve": "去审批 →",
       "judgment_queue": "审判队列",
-      "enter": "进入 →",
-      "none": "无待办",
+      "enter": "去审判台 →",
+      "none": "已清空",
       "death_sync_anomaly": "死亡同步异常",
       "go_view": "去查看 →",
-      "load_error": "计数加载失败"
+      "load_error": "加载失败",
+      "sync_ok": "同步正常",
+      "unbooked": "未入簿"
     },
     "civ_share": "占比",
-    "civ_empty": "尚未入册 · 去登记"
+    "civ_empty": "尚未入册 · 去登记",
+    "tab_ledger": "账本",
+    "top_realms": "界域前十",
+    "avg_scope": "全部已入簿灵魂",
+    "occupancy": "占容量",
+    "bucket_width": "每格 {{n}}",
+    "vs_last_month": "较上月"
   },
   "ledger": {
     "title": "功德统计",
@@ -1015,7 +1084,10 @@
       "col_demerit": "过",
       "col_balance": "销算余",
       "total": "合计",
-      "empty": "尚无账目。"
+      "empty": "尚无账目。",
+      "occurrences": "发生 {{n}} 次",
+      "milestone": "重要节点",
+      "clause": "条款"
     },
     "series_effective": "现值",
     "series_decayed": "已衰减",
@@ -1166,7 +1238,9 @@
       "notes_placeholder": "输入备注...",
       "create_workflow": "发起审批流程",
       "create_workflow_hint": "勾选后,结案将按该文明与案件类型匹配的模板自动创建一条审批流程。",
-      "conclude_with_workflow": "落判并发起"
+      "conclude_with_workflow": "落判并发起",
+      "current_realm": "所在界域",
+      "method": "审判方式"
     },
     "create_success": "已创建审判",
     "create_error": "创建审判失败",
@@ -1218,7 +1292,7 @@
       "search_jump": "检索律条,或输入编号直达",
       "toc": "目录",
       "original": "原文",
-      "translation": "今译",
+      "translation": "译文",
       "original_absent": "只转录了译文,未存原语原文",
       "notes": "注 · 编者",
       "source": "出处",
@@ -1228,10 +1302,10 @@
       "cited_by": "被引用",
       "cited_by_count": "被引用 {{n}} 件",
       "versions": "版本",
-      "versions_gap": "律条没有版本记录:更正在种子数据里就地改写。",
       "select_prompt": "从目录选一条律条。",
       "no_match": "没有匹配「{{q}}」的律条",
       "clear_search": "清除检索",
+      "unknown_code": "没有编号为「{{code}}」的律条，下面从第一条读起",
       "cited_by_error": "被引用清单加载失败",
       "cited_by_open": "未结",
       "insert_desk": "插入审判台",
@@ -1240,7 +1314,17 @@
       "related": "相关条目",
       "related_gate": "同门",
       "related_circle": "同圈",
-      "related_terrace": "同台阶"
+      "related_terrace": "同台阶",
+      "search_paste": "粘贴引文直达，或输入字词搜索",
+      "search_paste_short": "粘贴引文或搜索",
+      "hits_summary": "子串匹配 · {{c}} 部中 {{n}} 处",
+      "hit_prev": "上一处",
+      "hit_next": "下一处",
+      "prev_article": "上一条",
+      "next_article": "下一条",
+      "cited_by_unit": "次被判词引用",
+      "revision": "第 {{n}} 版",
+      "effective_from": "自 {{date}} 起施行"
     },
     "waiting": "等待",
     "waiting_days": "{{n}} 天",
@@ -1261,7 +1345,27 @@
       "recorded_after": "其后登记 {{n}} 条",
       "cite_from_corpus_title": "引用律条",
       "cite_from_corpus_confirm": "引用{{cite}}到 {{soul}} 的审判？",
-      "cite_from_corpus_closed": "这件案子已结案,不能再引用律条。"
+      "cite_from_corpus_closed": "这件案子已结案,不能再引用律条。",
+      "current_ruling": "当前这一判",
+      "ruling_hint": "按数字键 1–4 选择判决，检查完毕后进入盖印确认。",
+      "to_confirm": "进入盖印确认",
+      "irreversible": "落判不可撤回",
+      "materials": "资料舱",
+      "tab_evidence": "功过记录",
+      "tab_law": "律条引用",
+      "full_case": "展开全案",
+      "back_to_focus": "返回聚焦",
+      "case_nav": "案卷导航",
+      "nav_draft": "草稿与批注",
+      "confirm_title": "确认落判",
+      "confirm_body": "你选择了「{{verdict}}」。落判后写入审判记录，不可撤回。",
+      "signing_court": "签署殿司",
+      "stamp": "盖印并结案",
+      "back_to_check": "返回检查",
+      "recorded": "判决已写入记录。",
+      "done": "完成",
+      "draft_unsaved": "有未保存的改动",
+      "draft_conflict": "草稿冲突待处理"
     },
     "claim": {
       "groups": {
@@ -1329,7 +1433,29 @@
       "request_admin": "请管理员改派",
       "request_admin_sent": "已请管理员改派",
       "request_admin_limited": "已经请过，{{minutes}} 分钟后可再请",
-      "request_admin_failed": "没有发出，请重试"
+      "request_admin_failed": "没有发出，请重试",
+      "filter_all": "全部案卷",
+      "filter_mine": "我认领的",
+      "col_draft": "草拟判决",
+      "col_deferred": "延后",
+      "col_kind": "种类",
+      "draft_none": "未拟",
+      "deferred_session": "本次会话",
+      "key_restore": "全部放回",
+      "done_release": "已取消认领",
+      "release": "取消认领",
+      "done_session_defer": "已延后至本次会话末",
+      "done_restore": "已将本次会话延后的 {{n}} 件全部放回",
+      "restore_title": "全部放回？",
+      "restore_body": "本次会话延后的 {{n}} 件回到各自的组里，按原来的次序排。",
+      "kinds": {
+        "ORIGINAL": "初审",
+        "AMENDMENT": "加减项",
+        "REOPEN": "重开"
+      },
+      "col_merit_demerit": "功 / 过",
+      "col_case_soul": "案号 / 灵魂",
+      "col_cycle_kind": "世次 / 种类"
     },
     "admission": {
       "title": "证据 · 采信",
@@ -1348,6 +1474,7 @@
     },
     "draft": {
       "saved_at": "已自动保存 {{time}}",
+      "saved_flash": "已保存",
       "saving": "保存中…",
       "save_failed": "自动保存未成功，下次改动时会再试",
       "conflict_title": "他处已保存了另一版（{{time}}）",
@@ -1390,7 +1517,13 @@
     },
     "row_mark": {
       "mine": "待我处理"
-    }
+    },
+    "methods": {
+      "STANDARD": "标准审判",
+      "HEART_WEIGHING": "称心审判",
+      "DIABOLICAL_TRIAL": "魔鬼审判"
+    },
+    "case_number": "案号"
   },
   "audit": {
     "title": "审计日志",
@@ -1610,9 +1743,9 @@
       "col_kind": "类型",
       "col_held": "在押 / 容量",
       "col_eternal": "永恒",
-      "eternal_yes": "是",
+      "eternal_yes": "永恒",
       "eternal_no": "否",
-      "full": "已满",
+      "full": "满",
       "capacity_unrecorded": "容量未记录",
       "read_only": "只读 · 只有持 realms.manage 的人能改容量;其余各列来自神话语料,不经接口改",
       "empty_civ": "此文明尚未配置界域",
@@ -1625,13 +1758,57 @@
       "full_warning": "已满:在押 {{held}}。谁都不挪,之后发落到这里会被拒。",
       "saved": "{{code}} 容量已保存",
       "saved_full": "{{code}} 容量已保存 · 已满({{held}} / {{cap}}):谁都不挪,之后发落到这里会被拒。",
-      "save_failed": "容量保存失败"
+      "save_failed": "容量保存失败",
+      "near": "将满",
+      "near_warning": "将满：在押 {{held}}，改为 {{cap}} 后占用 {{pct}}%。",
+      "keys": "Enter 保存 · Esc 取消"
     },
     "kind": {
       "HALL": "殿",
       "GATE": "门",
       "LAYER": "层",
       "PATH": "道"
+    },
+    "switch": {
+      "CHINESE": "地府",
+      "EUROPEAN": "欧洲",
+      "EGYPTIAN": "埃及",
+      "GREEK": "希腊"
+    },
+    "switch_hint": "切换只换查看的文明，匾与印仍是你所属的文明",
+    "manage_hint": "realms.manage · 容量可就地编辑",
+    "map": {
+      "title": "路线图",
+      "shape_line": "一条直线",
+      "shape_funnel": "漏斗，按层排",
+      "shape_fork_two": "主干后分过 / 不过",
+      "shape_fork": "主干后分左右",
+      "shape_schematic": "一条线",
+      "region": {
+        "INFERNO": "地狱 · {{n}} 圈，越下越窄",
+        "PURGATORIO": "炼狱 · {{n}} 层，越上越窄",
+        "PARADISO": "天堂 · {{n}} 重"
+      },
+      "fork": {
+        "PASS": "✓ 过 · 心轻于羽",
+        "FAIL": "✕ 不过 · 心重于羽",
+        "LEFT": "← 左 · 向下",
+        "RIGHT": "右 · 向上 →"
+      },
+      "terminal": "≡ 吞噬即终结",
+      "legend_held": "■ 有灵魂",
+      "legend_empty": "□ 空",
+      "legend_count": "数字 = 在押",
+      "read_only": "只读示意"
+    },
+    "tree": {
+      "title": "界域树",
+      "count": "{{n}} 处",
+      "count_editable": "{{n}} 处 · 点容量数字可改",
+      "legend_full": "■ 满 = 在押 ≥ 容量",
+      "legend_near": "◐ 将满 = ≥ 90%",
+      "legend_eternal": "≡ 永恒 = 不出狱、不轮回",
+      "sheet_hint": "窄屏下点一行，从底部抽屉改容量"
     }
   },
   "organization": {
@@ -1648,7 +1825,7 @@
     "no_organizations": "还没有登记任何机构。"
   },
   "actors": {
-    "title": "角色",
+    "title": "神祇名录",
     "subtitle": "跨文明角色管理",
     "section": {
       "actors": "角色列表"
@@ -1720,7 +1897,7 @@
     "execute": "执行",
     "reject_reason": "驳回理由",
     "reject_placeholder": "请说明驳回原因",
-    "confirm_execute": "确认执行这次调度?",
+    "confirm_execute": "确认执行这次调度？",
     "confirm_reject": "确认驳回这次调度?",
     "execute_warning": "执行后灵魂暂居目标租户,由其审判并执行处置;该处置执行完毕后,灵魂自动回归原属租户。",
     "approved_success": "已批准",
@@ -1739,7 +1916,7 @@
       "RETURNED": "已回归",
       "CANCELLED": "已取消"
     },
-    "confirm_approve": "确认批准这次跨租户调度?",
+    "confirm_approve": "确认批准这次跨租户调度？",
     "approve_warning": "批准后目标租户将获得该灵魂的处置权。此操作会写入审计日志。",
     "proposer_account_removed": "提议人账号已删除,姓名无从取得",
     "propose_subtitle": "把灵魂调往另一文明暂居审理：目标文明批准后，由目标文明执行。",
@@ -1849,7 +2026,7 @@
       "SOUL": "灵魂"
     },
     "delete_title": "删除用户",
-    "delete_confirm": "确认删除该用户?"
+    "delete_confirm": "确认删除该用户？"
   },
   "settings": {
     "title": "设置",
@@ -1900,7 +2077,8 @@
   "permission": {
     "denied_title": "权限不足",
     "denied_message": "您没有权限访问此页面或执行此操作。",
-    "ask_admin": "请找本殿管理员。"
+    "ask_admin": "请找本殿管理员。",
+    "go_back": "返回上一页"
   },
   "icon_picker": {
     "select": "选择图标",
@@ -1945,9 +2123,9 @@
     "permission_mismatch_warning": "“{{codename}}” 不对应任何真实权限——此按钮将对所有非管理员角色静默隐藏"
   },
   "error": {
-    "title": "服务器错误",
+    "title": "系统发生错误",
     "description": "抱歉，服务器遇到了问题",
-    "retry": "重试",
+    "retry": "重新载入",
     "home": "返回首页"
   },
   "not_found": {
@@ -1957,7 +2135,29 @@
   },
   "search": {
     "placeholder": "搜索...",
-    "aria_label": "搜索"
+    "aria_label": "搜索",
+    "input_placeholder": "搜灵魂、案号、律条或页面",
+    "dialog_label": "全局搜索",
+    "cancel": "取消",
+    "group_judgments": "案件",
+    "group_souls": "灵魂",
+    "group_statutes": "律条",
+    "group_pages": "页面",
+    "group_recent": "最近打开",
+    "count_more": "前 {{shown}} · 共 {{n}}",
+    "view_all_judgments": "查看全部 {{n}} 个案件 →",
+    "view_all_souls": "查看全部 {{n}} 个灵魂 →",
+    "view_all_statutes": "查看全部 {{n}} 条律条 →",
+    "load_failed": "加载失败",
+    "others_unaffected": "其余几类不受影响",
+    "exact_case": "案号完全一致",
+    "no_results_title": "没有找到「{{q}}」",
+    "no_results_body": "灵魂按姓名搜；案件按完整案号、编号或灵魂姓名搜，例如 {{example}}；律条按条文、出处搜。",
+    "hint": "案号要输完整才能搜到，例如 {{example}}。",
+    "footer_select": "选择",
+    "footer_open": "打开",
+    "footer_new_tab": "新标签页",
+    "announce_group": "{{group}} {{n}} 条"
   },
   "filter": {
     "all": "全部",
@@ -2168,7 +2368,7 @@
     "eternal": "永久处置",
     "executed": "已执行",
     "execute": "执行处置",
-    "confirm_execute": "确认执行该处置?",
+    "confirm_execute": "确认执行该处置？",
     "execute_warning": "执行后灵魂将被送往目标领域,该操作不可撤销。",
     "execute_success": "处置已执行",
     "executed_success": "处置已执行",
@@ -2204,7 +2404,7 @@
   },
   "social": {
     "title": "动态",
-    "feed": "信息流",
+    "feed": "动态",
     "posts": "帖子",
     "post": "发布",
     "post_detail": "帖子详情",
@@ -2215,7 +2415,7 @@
     "no_posts": "暂无帖子",
     "user_posts": "TA 的帖子",
     "view_all_posts": "查看全部帖子",
-    "placeholder": "说点什么…",
+    "placeholder": "今天想说点什么",
     "send": "发送",
     "comments": "评论",
     "add_comment": "写评论…",
@@ -2252,7 +2452,28 @@
     },
     "visibility_label": "帖子可见范围",
     "follow_error": "关注操作失败",
-    "reactions": "表态"
+    "reactions": "表态",
+    "back_to_feed": "返回动态",
+    "compose": "发帖",
+    "lamp": {
+      "light": "点长明灯",
+      "lit": "长明灯已点",
+      "lit_short": "已点"
+    },
+    "media": {
+      "expired": "链接已过期",
+      "refetch": "重新获取",
+      "refetch_short": "重取",
+      "add": "配图",
+      "max": "最多 {{max}} 张",
+      "viewer_hint": "← → 切换 · Esc 关闭",
+      "prev": "上一张",
+      "next": "下一张"
+    },
+    "legend": {
+      "light": "{{list}} 是轻表态，只计总数",
+      "lamp": "长明灯最重：单独一格，不与其他四种并排计数"
+    }
   },
   "tenants": {
     "active": "启用",
@@ -2280,6 +2501,7 @@
   },
   "breadcrumb": {
     "aria_label": "面包屑导航",
+    "back": "返回",
     "home": "仪表盘",
     "detail": "详情",
     "menu": {
@@ -2317,7 +2539,17 @@
       "sentence_requests": "受刑请求",
       "assistant_admin": "助手管理"
     },
-    "queue": "分诊队列"
+    "queue": "分诊队列",
+    "about": "关于",
+    "notifications": "通知中心",
+    "profile": "个人中心",
+    "welcome": "欢迎页",
+    "buttons": "菜单按钮",
+    "admin": "系统设置",
+    "assistant": "助手管理",
+    "usage": "实际用量",
+    "follows": "关注关系",
+    "propose": "发起调度"
   },
   "tenant": {
     "civilizations": {
@@ -2333,7 +2565,8 @@
     "reconnecting": "重连中…",
     "disconnected": "已断开",
     "failed": "连接失败",
-    "retry": "重连"
+    "retry": "重连",
+    "offline": "离线 · 当前内容可能不是最新版本"
   },
   "scheduler": {
     "title": "定时任务",
@@ -2378,7 +2611,8 @@
       "workflow_process_timeouts_for_tenant": "处理审批超时",
       "social_cleanup_orphan_post_media": "清理未发出的朋友圈图片",
       "chat_reconcile_inbox": "按 Synapse 校对殿司收件箱",
-      "soul_assist_purge_history": "清理助手会话"
+      "soul_assist_purge_history": "清理助手会话",
+      "ledger_snapshot_balance_for_tenant": "记余额月快照"
     },
     "status": {
       "PENDING": "排队中",
@@ -2659,7 +2893,12 @@
       "code_copy_failed": "复制失败",
       "residing": "暂居 {{current}} · 原属 {{home}}",
       "record_count_short": "共 {{count}} 条",
-      "residing_note": "暂居结束后回原属文明。此间簿册仍按原属文明的词例。"
+      "residing_note": "暂居结束后回原属文明。此间簿册仍按原属文明的词例。",
+      "here": "你现在在哪",
+      "stage": "本世阶段 {{at}} / {{total}}",
+      "balance": "本世余额",
+      "ledger": "本世账目",
+      "ledger_hint": "展开一项查看"
     },
     "past_lives": {
       "title": "前世",
@@ -4253,6 +4492,42 @@
       "needs_rebuild": "向量是用旧模型生成的，需要重建",
       "until_rebuilt": "重建完成前，助手改用全部帮助条目回答。",
       "fallback_note": "向量服务连不上时，助手会自动改用全部帮助条目回答，不会答不了。"
+    }
+  },
+  "plaque": {
+    "realms": "界域 · {{root}}",
+    "held": "在押 {{n}}",
+    "corpus": "律条语料",
+    "corpus_meta": "{{works}} 部 · {{n}} 条",
+    "workflow_editor": "审批流编辑器",
+    "workflow_instance": "审批实例",
+    "step": "第 {{k}} / {{n}} 步",
+    "social": "朋友圈",
+    "social_meta": "关注 {{following}} · 粉丝 {{followers}}",
+    "post": "帖子",
+    "comments": "评论 {{n}}",
+    "posts": "发帖 {{n}}",
+    "soul": "灵魂详情",
+    "desk": "审判台",
+    "queue": "审判队列",
+    "permissions": "权限",
+    "permissions_meta": "{{roles}} 角色 · {{perms}} 项权限",
+    "office": {
+      "rules": "规制司",
+      "records": "典籍司",
+      "trials": "刑名司",
+      "court": {
+        "cn": "第十殿",
+        "eu": "米诺斯之庭",
+        "eg": "双真理厅",
+        "gr": "三判官之庭"
+      }
+    },
+    "realm": {
+      "cn": "酆都",
+      "eu": "彼岸",
+      "eg": "杜阿特",
+      "gr": "哈迪斯"
     }
   }
 }

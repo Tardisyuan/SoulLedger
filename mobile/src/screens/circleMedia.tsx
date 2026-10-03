@@ -277,10 +277,10 @@ export function ComposeMediaTray({ uploads, onAdd }: { uploads: Uploads; onAdd: 
                     {tr("soul_app.circle.media.failed")}
                   </Txt>
                   <View style={styles.actions}>
-                    <Pressable testID={`upload-${i}-retry`} accessibilityRole="button" onPress={() => uploads.retry(it.key)} hitSlop={6} style={[styles.action, { borderColor: t.hair2 }]}>
+                    <Pressable testID={`upload-${i}-retry`} accessibilityRole="button" onPress={() => uploads.retry(it.key)} hitSlop={11} style={[styles.action, { borderColor: t.hair2 }]}>
                       <Txt variant="label">{tr("soul_app.circle.media.retry")}</Txt>
                     </Pressable>
-                    <Pressable testID={`upload-${i}-remove`} accessibilityRole="button" onPress={() => uploads.remove(it.key)} hitSlop={6} style={[styles.action, { borderColor: t.hair2 }]}>
+                    <Pressable testID={`upload-${i}-remove`} accessibilityRole="button" onPress={() => uploads.remove(it.key)} hitSlop={11} style={[styles.action, { borderColor: t.hair2 }]}>
                       <Txt variant="label">{tr("soul_app.circle.media.remove")}</Txt>
                     </Pressable>
                   </View>
@@ -291,7 +291,8 @@ export function ComposeMediaTray({ uploads, onAdd }: { uploads: Uploads; onAdd: 
                   accessibilityRole="button"
                   accessibilityLabel={tr("soul_app.circle.media.remove")}
                   onPress={() => uploads.remove(it.key)}
-                  hitSlop={6}
+                  // 22pt drawn, 44 to the finger.
+                  hitSlop={11}
                   style={[styles.corner, { backgroundColor: t.s0, borderColor: t.hair2 }]}
                 >
                   <Icon name="close" size={12} color={t.ink} />

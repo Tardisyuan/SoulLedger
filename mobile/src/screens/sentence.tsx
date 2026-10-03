@@ -291,8 +291,11 @@ export function SentenceSection({
   onPlaced,
   open = true,
   onToggle,
+  index,
 }: {
   remote: SentenceRemote;
+  /** v3: its number in the life tab's ledger (05). */
+  index?: number;
   landing?: SentenceLanding;
   /** The section's top within its parent — the life page scrolls a landing to it. */
   onPlaced?: (y: number) => void;
@@ -308,6 +311,7 @@ export function SentenceSection({
   return (
     <Section
       testID="section-sentence"
+      index={index}
       title={t("soul_app.sentence.section_title")}
       count={hasPlan && current && !final ? t("soul_app.sentence.progress", { cur: String(current.n), total: String(plan.stations.length) }) : undefined}
       countTestID="sentence-progress"
@@ -321,7 +325,7 @@ export function SentenceSection({
           {landing ? <NewTag testID="sentence-landing-tag" /> : null}
           <View style={styles.fill} />
           {hasPlan ? (
-            <Pressable testID="sentence-all" accessibilityRole="button" hitSlop={8} onPress={() => navigation.navigate("Sentence", { landing })}>
+            <Pressable testID="sentence-all" accessibilityRole="button" hitSlop={13} onPress={() => navigation.navigate("Sentence", { landing })}>
               <Txt variant="caption" tone="ink" style={styles.link}>{`${t("soul_app.sentence.all")} →`}</Txt>
             </Pressable>
           ) : null}
@@ -527,7 +531,7 @@ export function SentenceBlocked() {
           ) : null}
         </View>
       ) : null}
-      <Pressable testID="sentence-blocked-link" accessibilityRole="link" hitSlop={8} onPress={() => navigation.navigate("Sentence", {})}>
+      <Pressable testID="sentence-blocked-link" accessibilityRole="link" hitSlop={13} onPress={() => navigation.navigate("Sentence", {})}>
         <Txt variant="caption" tone="ink" style={styles.link}>{`${t("soul_app.sentence.blocked_link")} →`}</Txt>
       </Pressable>
     </View>

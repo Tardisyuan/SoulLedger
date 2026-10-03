@@ -143,7 +143,16 @@ export { notificationsApi, type Notification } from "./notifications";
 export { dispatchApi, crossTenantJudgmentsApi, DISPATCH_REASON_MIN_CHARS, dispatchReasonLength, type DispatchRecord, type DispatchDraftInput, type DispatchRealmOption, type CrossTenantJudgment, type CrossTenantJudgmentListItem, type CrossTenantJudgmentParticipant } from "./dispatch";
 
 // Social
-export { socialApi, type Post, type Comment, type Reaction, type Follow, type UserProfile } from "./social";
+export {
+  socialApi,
+  type Post,
+  type Comment,
+  type Reaction,
+  type Follow,
+  type UserProfile,
+  type PostMediaLimits,
+  type PostMediaUpload,
+} from "./social";
 
 // Scheduler
 export {

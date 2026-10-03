@@ -88,6 +88,9 @@ const LEGACY_TYPE = /^-?text-(?:base|[3-9]xl|2xl|0[1-8]|quote)$/;
 // 登录页一个文件;匾组件还没有(下一阶段),先把它要住的目录留在这里 —— 那个目录今天
 // 不存在,所以这一条今天什么也不放行,而匾落地时不必再改守卫。加一项是一个决定,要写理由。
 const DISPLAY_ALLOW = ["app/(auth)/login/", "src/components/plaque/"];
+// 展示数字(用户 2026-10-02):律条语料页的条号与被引用数画 40(Design A3)。按**单个文件**
+// 放行,不是目录 —— 语料的其他组件、审判台都仍然报红。加一项同样要写理由。
+const DISPLAY_NUMERAL_ALLOW = ["app/corpus/page.tsx"];
 
 // 八档字号的第二个绕道:**任意值**。`text-sm` 抓得到,`text-[11px]` 抓不到 ——
 // 后者绕开具名档位,直接把像素写进方括号,拿到的却是同一个「不在这套系统里的字号」。
@@ -129,17 +132,27 @@ const RHYTHM_EXEMPT = {};
 const ROUND_ALLOW = new Set([
   "app/social/follows/page.tsx",
   "src/components/social/ProfileCard.tsx",
+  // A5 朋友圈的首字头像(帖子 / 评论 / 关注行 / 个人页),同 ClaimAvatar:例外只覆盖这一个元素。
+  "src/components/social/Avatar.tsx",
   "src/components/ui/Spinner.tsx",
   "app/admin/stats/page.tsx",
   // 审判队列的认领标:一位官员的头像(首字),规范 v1 第三类 A·02 画成圆形,属头像例外。
   // 单独成文件,好让例外只覆盖这一个元素,而不是整张队列表。
   "src/components/judgment/ClaimAvatar.tsx",
+  // 规范 v3 导航底部的个人区:30px 圆形头像(首字),头像例外。
+  "src/components/layout/GlobalNav.tsx",
 ]);
 
 // 规范 v2 A2:全站不用阴影,**浮层也不用**(v1 放行的 shadow-overlay 撤掉,弹层改 1px ink 框)。
 // 允许的只有 shadow-none,以及用 inset 画的线(「当前」3 px 墨线、错误下划线)——它们是线,
 // 不是高度。
-const PAGE_SHADOW = /^shadow(?:-(?!none$)[a-z0-9]+|-\[(?!inset)[^\]]*\])?$/;
+// 规范 v3 推翻了 v1 §1.7 的「全站零阴影」,给了两档,用途是写死的:
+//   shadow-raised   资料舱、批量操作条 —— 贴在页面上但要读出「浮起一层」
+//   shadow-overlay  弹窗、抽屉 —— 盖住页面
+// 1px 墨框不撤,阴影是加在它之上的第二层线索。除这两个之外仍然一律报错:
+// `shadow-sm` / `shadow-lg` 这些 Tailwind 原生档不随主题走,也没有说明用途。
+const SHADOW_OK = new Set(["shadow-none", "shadow-raised", "shadow-overlay"]);
+const PAGE_SHADOW = /^shadow(?:-[a-z0-9]+|-\[(?!inset)[^\]]*\])?$/;
 
 // 圆角任意值:A2 允许的值只有 0、9999px(胶囊)、50%(正圆),其余一律报错。
 // 具名的胶囊与正圆是 rounded-full / rounded-circle,它们归 ROUND_ALLOW 管。
@@ -317,8 +330,8 @@ const designSystem = {
           report(chunk, at, `\`${bare}\` 不在七档字号里。用 text-2xs / xs / sm / md / lg / xl / display(11/12/13/15/20/28/40px,规范 v2 A3),见 app/globals.css 的 @theme;v1 的 text-quote 写成 \`font-serif text-md font-normal\``);
         } else if (ARBITRARY_TYPE.test(chunk)) {
           report(chunk, at, `\`${chunk}\` 把字号写死在任意值里,绕开了七档。用 text-2xs…text-xl(11/12/13/15/20/28px);没有恰好对应的档位,说明这里该重新选一档,而不是新造一个字号。注意 \`text-[oklch(var(--…))]\` 是**颜色**不是字号,不受这条限制`);
-        } else if (bare === "text-display" && !DISPLAY_ALLOW.some((p) => file.startsWith(p))) {
-          report(chunk, at, `\`text-display\`(40px)只给匾题字和登录页(规范 v2 A3)。其他地方用 text-xl(28)或更小;真是匾组件,放进 src/components/plaque/`);
+        } else if (bare === "text-display" && !DISPLAY_ALLOW.some((p) => file.startsWith(p)) && !DISPLAY_NUMERAL_ALLOW.includes(file)) {
+          report(chunk, at, `\`text-display\`(40px)只给匾题字、登录页与律条语料页的展示数字(规范 v2 A3;DISPLAY_NUMERAL_ALLOW)。其他地方用 text-xl(28)或更小;真是匾组件,放进 src/components/plaque/`);
         }
       }
     }),
@@ -351,8 +364,8 @@ const designSystem = {
 
     "no-page-shadow": makeGuard("shadow", (raw, report) => {
       for (const { bare, chunk, at } of classTokens(raw)) {
-        if (PAGE_SHADOW.test(bare)) {
-          report(chunk, at, `\`${bare}\`:页面内零阴影(规范 v1 §1.7),层级靠线。浮层(弹层、抽屉、菜单)用 shadow-overlay;要画线就用 border 或 inset 的 shadow-[inset_…]`);
+        if (PAGE_SHADOW.test(bare) && !SHADOW_OK.has(bare)) {
+          report(chunk, at, `\`${bare}\` 不在阴影的两档里。规范 v3 只有 shadow-raised(资料舱、批量操作条)与 shadow-overlay(弹窗、抽屉);要画线就用 border 或 inset 的 shadow-[inset_…],不要阴影就 shadow-none`);
         }
       }
     }),

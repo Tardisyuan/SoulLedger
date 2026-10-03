@@ -5,34 +5,30 @@ import { actorsApi, Actor } from "@soulledger/core/api";
 import { cn } from "@/lib/utils";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { usePlaque } from "@/src/components/plaque/Plaque";
+import { useHall } from "@/src/components/plaque/useHall";
 import { PageSection } from "@/components/ui/page-section";
-import { SectionTitle } from "@/src/components/plaque/SectionTitle";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChevronDown, Scale } from "lucide-react";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
+import { Collapse } from "@/src/components/ui/Collapse";
 import { DomainEnum, DomainText } from "@/src/components/ui/DomainValue";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { EmptyState } from "@/src/components/ui/EmptyState";
 import { badgeVariants } from "@/src/components/ui/Badge";
 import { QueryError } from "@/src/components/ui/PageError";
+import { ROW_HOVER } from "@/components/ui/data-table";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
 
 /**
- * Role badge colours. 规范 v1 §2「徽章 · 只有常态」: no fill — the text and the
- * 1 px border share one token. The 0.1 tints these used to carry are gone with
- * every other badge fill.
+ * Role badges are neutral, the same call `app/users/page.tsx` makes for a user's role: a role is
+ * an identity, not a system state, so it does not borrow the feedback colours (spec v3: danger only
+ * for errors). They used to — EXECUTOR drew in the error red, JUDGE in accent, the rest in
+ * info / success / judging — which made a row of gods read as a row of alerts. The role's name
+ * tells them apart. (`statusTokenLayering.test.ts` had this map on its "still on feedback tokens"
+ * register, waiting for exactly this decision.)
  */
-const ROLE_BADGE_CLASSES: Record<string, string> = {
-  JUDGE: "text-[oklch(var(--color-accent-ink))] border-[oklch(var(--color-accent))]",
-  GUARDIAN: "text-[oklch(var(--color-status-info))] border-[oklch(var(--color-status-info))]",
-  EXECUTOR: "text-[oklch(var(--color-status-error))] border-[oklch(var(--color-status-error))]",
-  CONDUIT: "text-[oklch(var(--color-status-success))] border-[oklch(var(--color-status-success))]",
-  // OVERSEER was missing — `ActorRole` has five members and all three message
-  // bundles carry `actors.roles.OVERSEER`, so the label was right and only the
-  // colour fell to the fallback. Hades is an OVERSEER.
-  OVERSEER: "text-[oklch(var(--color-status-judging))] border-[oklch(var(--color-status-judging))]",
-};
 const ROLE_BADGE_FALLBACK =
   "text-[oklch(var(--color-ink-muted))] border-[oklch(var(--color-ink-muted))]";
 
@@ -84,7 +80,7 @@ function ActorRow({ actor, seatLabel }: { actor: Actor; seatLabel?: string }) {
   return (
     <tr
       data-actor-card={actor.name}
-      className="border-b border-[oklch(var(--color-rule))] hover:bg-[oklch(var(--color-surface-2))] transition-colors"
+      className={`h-(--table-row-h) border-b border-[oklch(var(--color-rule))] ${ROW_HOVER} transition-colors`}
     >
       <td className="px-4 py-2">
         {/* `display_name` and `display_title` are localized by the backend
@@ -110,7 +106,7 @@ function ActorRow({ actor, seatLabel }: { actor: Actor; seatLabel?: string }) {
           <DomainEnum
             namespace="actors.roles"
             value={actor.role}
-            className={roleBadgeClass(ROLE_BADGE_CLASSES[actor.role] ?? ROLE_BADGE_FALLBACK)}
+            className={roleBadgeClass(ROLE_BADGE_FALLBACK)}
           />
           {seatLabel && (
             <span className={cn(roleBadgeClass(ROLE_BADGE_FALLBACK), "tabular-nums")}>
@@ -129,7 +125,7 @@ function ActorTable({ children, ...rest }: { children: React.ReactNode } & React
   return (
     <table className="w-full text-sm" {...rest}>
       <thead className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">
-        <tr className="border-b border-[oklch(var(--color-block))]">
+        <tr className="h-(--control-h-sm) border-b-2 border-[oklch(var(--color-ink))]">
           <th scope="col" className="px-3 py-2 text-left font-normal">{t("menus.name")}</th>
           <th scope="col" className="px-3 py-2 text-right font-normal">{t("users.role")}</th>
         </tr>
@@ -141,6 +137,7 @@ function ActorTable({ children, ...rest }: { children: React.ReactNode } & React
 
 function ActorsPageContent() {
   const { t } = useI18n();
+  usePlaque({ hall: useHall(t("plaque.office.rules")) });
   const { user } = useTenant();
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   /**
@@ -204,7 +201,7 @@ function ActorsPageContent() {
         ) : isLoading ? (
           <div className="space-y-2">
             {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => (
-              <Skeleton key={i} className="h-9 w-full" />
+              <Skeleton key={i} className="h-(--table-row-h) w-full" />
             ))}
           </div>
         ) : actors.length === 0 ? (
@@ -234,25 +231,34 @@ function ActorsPageContent() {
                   data-civilization={civ}
                   className="border-t border-[oklch(var(--color-block))] first:border-t-0"
                 >
-                  {/* 文明 = 页面级分节标题(规范 v2 §四,SectionTitle):匾纹片段 + 节名 + 件数注记。
+                  {/* 文明 = 面板里的分组标题(列表行标题一档)+ 件数注记。v2 节首的匾纹片段随
+                      v3 撤掉(2026-10-03),文明由节名本身标明。
                       此前是 <button> 里包 <h2> —— 标题进按钮是无效 HTML(按钮只收短语内容),
-                      读屏也只念出一个按钮。现在反过来:<h2> 里放折叠钮(披露模式)。
-                      文明 emoji 撤掉,节首的匾纹片段已经标明是哪个文明。 */}
-                  <div className="pt-3 mb-3">
-                    <SectionTitle aside={t("actors.count", { count: String(total) })}>
+                      读屏也只念出一个按钮。现在反过来:<h2> 里放折叠钮(披露模式)。 */}
+                  {/* 节首吸顶(Design 第三批):收起时节首不动,下面的节往上收。 */}
+                  <div className="sticky top-(--below-band) z-1 pt-3 mb-3 flex items-center gap-3 bg-[oklch(var(--color-surface-1))]">
+                    <h2 className="text-sm font-medium text-[oklch(var(--color-ink))]">
                       <button
                         type="button"
                         onClick={() => toggleCollapse(civ)}
                         aria-expanded={!isCollapsed}
+                        aria-controls={`actors-civ-${civ}`}
                         className="inline-flex items-center gap-2 text-left hover:underline underline-offset-2"
                       >
                         <DomainEnum namespace="actors.civilizations" value={civ} />
-                        <ChevronDown aria-hidden="true" className={`w-4 h-4 text-[oklch(var(--color-ink-muted))] transition-transform ${isCollapsed ? "-rotate-90" : ""}`} />
+                        <ChevronDown aria-hidden="true" className={`w-4 h-4 text-[oklch(var(--color-ink-muted))] transition-transform duration-fast ease-standard ${isCollapsed ? "-rotate-90" : ""}`} />
                       </button>
-                    </SectionTitle>
+                    </h2>
+                    <span className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">
+                      {t("actors.count", { count: String(total) })}
+                    </span>
                   </div>
 
-                  {!isCollapsed && (
+                  <Collapse
+                    open={!isCollapsed}
+                    id={`actors-civ-${civ}`}
+                    rows={principals.length + (isBenchOpen ? bench.length : Math.min(bench.length, 1))}
+                  >
                     <div className="space-y-4">
                       {/* Named gods, flat */}
                       {principals.length > 0 && (
@@ -269,8 +275,9 @@ function ActorsPageContent() {
                           <button
                             onClick={() => toggleBench(civ)}
                             aria-expanded={!!isBenchOpen}
+                            aria-controls={`actors-bench-${civ}`}
                             aria-label={t("actors.assessors.toggle")}
-                            className="w-full flex items-center gap-3 px-3 py-2 border-b border-[oklch(var(--color-rule))] hover:bg-[oklch(var(--color-surface-2))] transition-colors text-left"
+                            className="w-full min-h-(--table-row-h) flex items-center gap-3 px-4 py-2 border-b border-[oklch(var(--color-rule))] hover:bg-[oklch(var(--color-surface-2))] transition-colors text-left"
                           >
                             <Scale aria-hidden="true" className="w-5 h-5 text-[oklch(var(--color-ink-subtle))] shrink-0" />
                             <div className="flex-1 min-w-0">
@@ -285,7 +292,7 @@ function ActorsPageContent() {
                             <ChevronDown className={`w-4 h-4 text-[oklch(var(--color-ink-muted))] transition-transform ${isBenchOpen ? "" : "-rotate-90"}`} />
                           </button>
 
-                          {isBenchOpen && (
+                          <Collapse open={!!isBenchOpen} id={`actors-bench-${civ}`}>
                             <ActorTable>
                               {bench.map((actor) => (
                                 <ActorRow
@@ -295,11 +302,11 @@ function ActorsPageContent() {
                                 />
                               ))}
                             </ActorTable>
-                          )}
+                          </Collapse>
                         </div>
                       )}
                     </div>
-                  )}
+                  </Collapse>
                 </div>
               );
             })}

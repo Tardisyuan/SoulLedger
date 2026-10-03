@@ -15,15 +15,15 @@ interface ToastItem {
 
 // ── Pure DOM toast — no React state, no effects, no portals ──
 
-// Theme-aware surface. The previous literals (rgba(16,64,40,.98) with #d1fae5
-// text) were a dark card with pale text, which inverted badly under .light.
-// `accent` is the status hue; the toast body stays on an opaque surface token
-// so the floating card never shows the page through it.
-const COLOR = {
-  success: { accent: "var(--color-status-success)", icon: "✓" },
-  error: { accent: "var(--color-status-error)", icon: "✕" },
-  info: { accent: "var(--color-status-info)", icon: "ℹ" },
-} as const;
+// 规范 v3(2026-10-01):toast 是一块实心 ink 底、反白字;失败是实心冷玫红
+// (`--color-danger`)底。颜色全部在 `app/globals.css` 的 `.toast` 块里,按
+// `data-type` 选 —— 这里只给字形。图标跟着字色走,不再各带一种状态色:在实心 ink
+// 底上,浅色主题的状态绿 / 蓝是深色字形压在近黑底上,读不出来。
+const ICON: Record<ToastType, string> = {
+  success: "✓",
+  error: "✕",
+  info: "ℹ",
+};
 
 /**
  * Which live-region role a toast carries.
@@ -57,17 +57,14 @@ function getContainer(): HTMLElement | null {
 }
 
 function buildToastEl(item: ToastItem): HTMLElement {
-  const c = COLOR[item.type] || COLOR.info;
+  const type: ToastType = item.type in ICON ? item.type : "info";
   const el = document.createElement("div");
   el.id = `toast-${item.id}`;
-  el.setAttribute("role", ROLE[item.type] ?? "status");
+  el.setAttribute("role", ROLE[type]);
   el.className = "toast";
-  // The ONE thing still set inline, and it is a token NAME rather than a
-  // colour — so the three status hues keep coming from `:root` and keep
-  // following the theme. Everything else moved to `app/globals.css`; see the
-  // block there for why five decisions were sitting outside the design system
-  // with nothing able to report them.
-  el.style.setProperty("--toast-accent", c.accent);
+  // 底色由 `.toast[data-type="error"]` 选,不再往元素上写任何内联样式 —— v2 时
+  // 唯一的内联是 `--toast-accent` 这个 token 名,v3 图标不再按状态着色,它也就没了。
+  el.dataset.type = type;
 
   // Icon span
   const iconSpan = document.createElement("span");
@@ -75,7 +72,7 @@ function buildToastEl(item: ToastItem): HTMLElement {
   // The glyph duplicates what the role already conveys, and a screen reader
   // reading "✓" before the message is noise.
   iconSpan.setAttribute("aria-hidden", "true");
-  iconSpan.textContent = c.icon;
+  iconSpan.textContent = ICON[type];
 
   // Message span — use textContent to prevent XSS
   const msgSpan = document.createElement("span");
@@ -117,7 +114,8 @@ function removeToast(id: string) {
   if (el) {
     // A class, not three inline properties — the leaving transition is a
     // motion decision and belongs beside the arriving one. 200ms was a fourth
-    // bare duration; `.toast-leaving` uses `state` and `ease-exit`.
+    // bare duration; `.toast-leaving` uses `dismiss` (140ms, 规范 v3) and
+    // `ease-exit`. The 200 below only has to outlast it.
     el.classList.add("toast-leaving");
     setTimeout(() => el.remove(), 200);
   }
@@ -131,7 +129,8 @@ function removeToast(id: string) {
 export function showToast(
   message: string,
   type: ToastType = "info",
-  duration: number = 5000
+  // 默认停留 4 秒(规范 v3;v2 是 5 秒)。调用方显式传的时长照旧生效。
+  duration: number = 4000
 ): string {
   if (typeof document === "undefined") return "";
 

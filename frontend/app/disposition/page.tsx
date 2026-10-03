@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { usePlaque } from "@/src/components/plaque/Plaque";
+import { useCourtOffice, useHall } from "@/src/components/plaque/useHall";
 import { useToast } from "@/src/contexts/ToastContext";
 import { dispositionApi, PAGE_SIZE, type Disposition } from "@soulledger/core/api";
 import type { DispositionListParams, DispositionSection } from "@soulledger/core/api/disposition";
@@ -48,6 +50,7 @@ const SECTION_MARK: Record<DispositionSection, string> = { pending: "甲", execu
 
 export default function DispositionPage() {
   const { t, formatDate } = useI18n();
+  usePlaque({ hall: useHall(useCourtOffice()) });
   const { user } = useTenant();
   const { showToast } = useToast();
   const queryClient = useQueryClient();
@@ -173,6 +176,7 @@ export default function DispositionPage() {
             {realm(d)}
             <TermBar term={term} />
             <span className="text-right font-mono text-xs tabular-nums text-[oklch(var(--color-ink-muted))]">
+              {term.kind === "running" && term.fraction > 0.9 && <span aria-hidden="true">◐ </span>}
               {term.kind === "running" ? t("disposition.days_left", { n: String(term.daysLeft) }) : termLabel(term, t)}
             </span>
           </Row>
@@ -188,7 +192,8 @@ export default function DispositionPage() {
             <Row key={d.id} testId="disposition-expired-row" cols="md:grid-cols-[1.3fr_1.3fr_1fr_8rem]">
               {soulLink(d)}
               {realm(d)}
-              <span className="font-mono text-xs tabular-nums text-[oklch(var(--color-warning))]">
+              <span className="font-mono text-xs tabular-nums text-[oklch(var(--color-ink))]">
+                <span aria-hidden="true">◐ </span>
                 {end ? t("disposition.expired_on", { date: end }) : <MissingValue kind="unrecorded" />}
               </span>
               <span className="flex justify-end">
@@ -271,7 +276,6 @@ function TermBar({ term }: { term: TermState }) {
     );
   }
   const pct = Math.min(100, Math.round(term.fraction * 100));
-  const late = pct > 90;
   return (
     <span className="flex items-center gap-2 font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">
       <span>{formatHistoricalDate(term.start)}</span>
@@ -283,7 +287,7 @@ function TermBar({ term }: { term: TermState }) {
         className="relative flex-1 min-w-16 h-1.5 bg-[oklch(var(--color-surface-3))]"
       >
         <span
-          className={`absolute inset-y-0 left-0 ${late ? "bg-[oklch(var(--color-warning))]" : "bg-[oklch(var(--color-ink))]"}`}
+          className="absolute inset-y-0 left-0 bg-[oklch(var(--color-ink))]"
           style={{ width: `${pct}%` }}
         />
       </span>
@@ -309,7 +313,7 @@ function Section({
   const { t } = useI18n();
   return (
     <section className="mb-6" data-testid={testId}>
-      <h2 className="pt-4 pb-1 border-b border-[oklch(var(--color-block))] font-mono text-2xs uppercase text-[oklch(var(--color-ink-subtle))]">
+      <h2 className="pt-4 pb-1 border-b border-[oklch(var(--color-block))] text-2xs uppercase text-[oklch(var(--color-ink-subtle))]">
         <span aria-hidden="true">{mark} · </span>
         {title} <span className="tabular-nums" data-testid="section-count">{count}</span>
       </h2>
@@ -327,7 +331,7 @@ function Row({ cols, testId, children }: { cols: string; testId: string; childre
   return (
     <div
       data-testid={testId}
-      className={`grid grid-cols-1 ${cols} items-center gap-x-3 gap-y-1 min-h-9 max-md:min-h-13 py-1 border-b border-[oklch(var(--color-rule))] text-sm`}
+      className={`grid grid-cols-1 ${cols} items-center gap-x-3 gap-y-1 min-h-(--table-row-h) py-1 border-b border-[oklch(var(--color-rule))] text-sm`}
     >
       {children}
     </div>

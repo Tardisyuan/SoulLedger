@@ -151,7 +151,10 @@ describe("设计系统守卫:每条规则单独可证伪", () => {
     ["design-system/no-page-shadow", "页面内阴影(规范 v1 §1.7)", '<div className="shadow-lg" />'],
     ["design-system/no-page-shadow", "页面内任意值阴影", '<div className="shadow-[0_4px_8px_black]" />'],
     // 规范 v2 A2:浮层也不用阴影,v1 放行的这一档撤掉。
-    ["design-system/no-page-shadow", "浮层阴影(v2 撤掉)", '<div className="shadow-overlay" />'],
+    // v3 放行了 shadow-raised / shadow-overlay(见 eslint.config.mjs 的 SHADOW_OK),
+    // 它们移到下面的 CLEAN 里;这里换成一个**没有说明用途**的 Tailwind 原生档,
+    // 钉住「不是所有 shadow-* 都放行了」。
+    ["design-system/no-page-shadow", "没有用途说明的原生阴影档", '<div className="shadow-2xl" />'],
     ["design-system/no-raw-palette", "裸调色板", '<div className="bg-red-500" />'],
     // 具名色阶之外的第二种形状。这条规则原本只认 `bg-amber-500`,任意值里的
     // 三元组它一次也没匹配上 —— 而 app/organizations/page.tsx 那 8 处正是这种
@@ -187,7 +190,9 @@ describe("设计系统守卫:每条规则单独可证伪", () => {
     'export const P = () => (<div className="p-4 gap-6 mx-auto text-sm text-2xs bg-[oklch(var(--color-surface-1))] text-[oklch(var(--color-ink))] border-[oklch(var(--color-hairline))] ' +
     'bg-[oklch(var(--color-accent))] border-[oklch(var(--color-line)/0.4)] shadow-none shadow-[inset_3px_0_0_oklch(var(--color-ink))] ' +
     // 规范 v2 A2 新放行的:48px(12)、以及圆角任意值里的三种合法值。
-    'p-12 gap-0.5 rounded-[0] rounded-[9999px] rounded-[50%]" />);\n';
+    'p-12 gap-0.5 rounded-[0] rounded-[9999px] rounded-[50%] ' +
+    // 规范 v3 新放行的:两档阴影与两档圆角(shadow-none 上面那行已经在)。
+    'shadow-raised shadow-overlay rounded-control rounded-panel" />);\n';
   let fired: Array<Array<string | null>>;
   let clean: Msg[];
 
@@ -226,12 +231,20 @@ describe("text-display 只在匾与登录页放行(规范 v2 A3)", () => {
   const typeHits = (filePath: string) =>
     lintAll([PROBE], filePath)[0].filter((m) => m.ruleId === "design-system/type-scale");
 
-  it.each(["app/(auth)/login/__probe__.tsx", "src/components/plaque/__probe__.tsx"])("%s 放行", (filePath) => {
+  // 律条语料页的条号与被引用数(用户 2026-10-02)按单个文件放行:同目录的别的文件、
+  // 用断点前缀写的 `lg:text-display` 在别处,都仍然报红。
+  it.each(["app/(auth)/login/__probe__.tsx", "src/components/plaque/__probe__.tsx", "app/corpus/page.tsx"])("%s 放行", (filePath) => {
     expect(typeHits(filePath)).toEqual([]);
   }, 60_000);
 
-  it.each(["app/judgment/__probe__.tsx", "src/components/ui/__probe__.tsx"])("%s 报红", (filePath) => {
+  it.each(["app/judgment/__probe__.tsx", "src/components/ui/__probe__.tsx", "app/corpus/__probe__.tsx", "src/components/judgment/__probe__.tsx"])("%s 报红", (filePath) => {
     expect(typeHits(filePath)).toHaveLength(1);
+  }, 60_000);
+
+  it("带断点前缀的 lg:text-display 照样报红(语料页用的就是这个写法)", () => {
+    const hits = lintAll(['export const P = () => (<p className="text-xl lg:text-display" />);\n'], "app/judgment/__probe__.tsx")[0]
+      .filter((m) => m.ruleId === "design-system/type-scale");
+    expect(hits).toHaveLength(1);
   }, 60_000);
 });
 
@@ -472,7 +485,7 @@ describe("DESIGN.md cannot prescribe against the code", () => {
     expect(prescribing).toEqual([]);
   });
 
-  it("prescribes no rounded corner, because every shape radius is 0", () => {
+  it("prescribes only the radii globals.css actually declares", () => {
     // Recovered from globals.css rather than asserted: if the app ever adopts a
     // real radius, this test stops applying and says so by going red.
     // SHAPE radii only. `--radius-full` (9999px, avatars) is the one
@@ -481,12 +494,20 @@ describe("DESIGN.md cannot prescribe against the code", () => {
     // rule returned early, and a mutation that put `border-radius: 12px` back
     // into DESIGN.md passed. The premise "every radius token is 0" was simply
     // wrong; 8 of 10 are.
+    //
+    // 规范 v3 推翻了「圆角一律 0」,加了 `--radius-control: 4px` 与
+    // `--radius-panel: 8px`。**那两个名字必须进下面这个扫描**:上一版的正则只认
+    // none/sm/md/lg/xl/2xl/3xl,v3 的两档它看不见,于是「每个形状圆角都是 0」这条
+    // 前提在变假之后仍然是绿的 —— 正是这份测试自己的注释在警告的那种失效。
+    // 所以现在不再断言「全是 0」,而是断言「实际声明出来的那一组值」,DESIGN.md
+    // 里能开的处方也跟着变成这一组,多写一个 12px 仍然红。
     const css = fs.readFileSync(path.join(ROOT, "app", "globals.css"), "utf8");
-    const shape = [...css.matchAll(/--radius(-(?:none|sm|md|lg|xl|2xl|3xl))?:\s*([^;]+);/g)]
-      .map((m) => m[2].trim());
-    expect(shape.length).toBeGreaterThanOrEqual(8);
-    const allZero = shape.every((v) => v === "0" || v === "0px");
-    expect(allZero).toBe(true); // asserted, not assumed — see above
+    const shape = [
+      ...css.matchAll(/--radius(?:-(?:none|sm|md|lg|xl|2xl|3xl|control|panel))?:\s*([^;]+);/g),
+    ].map((m) => m[1].trim());
+    expect(shape.length).toBeGreaterThanOrEqual(10);
+    const declared = new Set(shape);
+    expect([...declared].sort()).toEqual(["0", "4px", "8px"]); // asserted, not assumed — see above
 
     const offenders = doc
       .split("\n")
@@ -496,8 +517,69 @@ describe("DESIGN.md cannot prescribe against the code", () => {
       // "…would render `border-radius: 0` and read as a choice…" mid-sentence,
       // and the first version of this rule flagged exactly that line in the
       // rewritten file it was meant to protect.
-      .filter(([, line]) => /^\s*`?border-radius:\s*(?!0\b)/.test(line))
+      .filter(([, line]) => /^\s*`?border-radius:\s*(?!(?:0|4px|8px)\b)/.test(line))
       .map(([n, line]) => `DESIGN.md:${n}  ${line.trim().slice(0, 70)}`);
     expect(offenders).toEqual([]);
+  });
+
+  /*
+   * 字阶与标题表:DESIGN.md 里唯二保留数值的地方,所以每个数都要从 globals.css 重算。
+   *
+   * 为什么要这条。DESIGN.md 的「Type scale」那一行在 `16f4e149` 之后写着「七档、
+   * 16 / 22px、有 quote 档」,而 v2 早把 16→15、22→20、删掉了 quote;它就那样
+   * 躺了一个月。2026-10-01 用户问「一级、二级标题各多少号多少字体」时,仓库里唯一
+   * 写成文字的回答就是那一行 —— 而它是错的。所以这里不信文档,只信 css。
+   */
+  const css = fs.readFileSync(path.join(ROOT, "app", "globals.css"), "utf8");
+  const tok = (re: RegExp): Map<string, number> =>
+    new Map([...css.matchAll(re)].map((m) => [m[1], Number(m[2])] as [string, number]));
+  // 档名里只允许单个连字符(`display-lg`):`[a-z0-9-]+` 会把 `2xs--line-height` 也当成一个档。
+  const SIZE = tok(/^\s*--text-([a-z0-9]+(?:-[a-z0-9]+)*):\s*(\d+)px;/gm);
+  const LINE = tok(/^\s*--text-([a-z0-9-]+)--line-height:\s*(\d+)px;/gm);
+  const WEIGHT = tok(/^\s*--text-([a-z0-9-]+)--font-weight:\s*(\d+);/gm);
+
+  it("the Type scale row lists exactly the steps globals.css declares, at their sizes", () => {
+    // 先证明读到了东西:`--text-*: initial` 不是档位(名字带 *),正则本来就跳过它。
+    expect(SIZE.size).toBeGreaterThanOrEqual(8);
+    const row = doc.split("\n").find((l) => l.startsWith("| Type scale |"));
+    expect(row).toBeDefined();
+    const listed = new Map(
+      [...row!.matchAll(/`(?:text-)?([a-z0-9-]+)` (\d+)/g)].map((m) => [m[1], Number(m[2])] as [string, number])
+    );
+    expect(Object.fromEntries([...listed].sort())).toEqual(Object.fromEntries([...SIZE].sort()));
+  });
+
+  it("every row of the heading table matches the step it names", () => {
+    const lines = doc.split("\n");
+    const head = lines.findIndex((l) => l.startsWith("| 角色 |"));
+    expect(head).toBeGreaterThan(0);
+    const rows: string[] = [];
+    for (let i = head + 2; i < lines.length && lines[i].startsWith("|"); i += 1) rows.push(lines[i]);
+    // 读到零行会让下面的循环空跑而照样绿。表里现在是十行。
+    expect(rows.length).toBeGreaterThanOrEqual(10);
+
+    const wrong: string[] = [];
+    for (const r of rows) {
+      const cells = r.split("|").map((c) => c.trim());
+      // cells[0] 是行首 | 之前的空串,所以列号从 1 起:1 角色、3 写法、4 字号/行高、5 字重
+      const [role, , how, sizes, weight, face] = cells.slice(1);
+      // 字体列:写了 `font-title` 的行必须说 Noto Serif SC,说 Noto Serif SC 的行必须写了 `font-title`。
+      if (/\bfont-title\b/.test(how) !== /Noto Serif SC/.test(face ?? "")) {
+        wrong.push(`${role}: 写法 "${how}" 与字体 "${face}" 对不上(font-title ⇔ Noto Serif SC)`);
+      }
+      const step = /`[^`]*?\btext-([a-z0-9-]+)\b[^`]*`/.exec(how)?.[1];
+      const m = /^(\d+) \/ (\d+)$/.exec(sizes);
+      if (!step || !SIZE.has(step) || !m) {
+        wrong.push(`${role}: cannot read a declared step and "N / M" from "${how}" / "${sizes}"`);
+        continue;
+      }
+      const wantWeight = /\bfont-medium\b/.test(how) ? 500 : /\bfont-semibold\b/.test(how) ? 600 : (WEIGHT.get(step) ?? 400);
+      const got = { size: Number(m[1]), line: Number(m[2]), weight: Number(weight) };
+      const want = { size: SIZE.get(step), line: LINE.get(step), weight: wantWeight };
+      if (JSON.stringify(got) !== JSON.stringify(want)) {
+        wrong.push(`${role} (text-${step}): DESIGN.md says ${JSON.stringify(got)}, globals.css gives ${JSON.stringify(want)}`);
+      }
+    }
+    expect(wrong).toEqual([]);
   });
 });

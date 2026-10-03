@@ -30,7 +30,6 @@ import {
   ReactFlow,
   Node,
   Edge,
-  Controls,
   Background,
   useNodesState,
   useEdgesState,
@@ -70,10 +69,14 @@ import {
   WorkflowInspector,
   WorkflowLinearPreview,
   WorkflowPalette,
+  WorkflowReadOnlyList,
+  type InspectorTab,
   type PaletteType,
 } from "@/src/components/workflow/WorkflowEditorPanels";
+import { Button } from "@/src/components/ui/Button";
+import { Badge } from "@/src/components/ui/Badge";
 import { SAVE_BLOCKING, branchOf, nodeRoles, validateFlow, whenOf } from "@/src/components/workflow/workflowValidation";
-import { whenText } from "@/src/components/workflow/workflowConditions";
+import { defaultClause, whenText } from "@/src/components/workflow/workflowConditions";
 import {
   ApproverPreviewSection,
   ExitConditionsSection,
@@ -81,10 +84,10 @@ import {
 } from "@/src/components/workflow/WorkflowInspectorExtras";
 import { useWideViewport } from "@/src/hooks/useWideViewport";
 import {
-  NodeEditModal,
+  NodeEditForm,
+  nodeNameFieldId,
   type NodeDataUpdates,
-  type NodeEditData,
-} from "@/src/components/workflow/NodeEditModal";
+} from "@/src/components/workflow/NodeEditForm";
 import { useToast } from "@/src/contexts/ToastContext";
 import type { TemplatePreviewData } from "@/src/components/workflow/page/types";
 import { QueryError } from "@/src/components/ui/PageError";
@@ -243,6 +246,16 @@ function nodeAriaLabel(node: Node): string {
   return parts.length > 0 ? parts.join(", ") : node.id;
 }
 
+/** One cell of the canvas zoom bar. */
+const ZOOM_BUTTON = "w-11 h-11 border-l first:border-l-0 border-[oklch(var(--color-line-strong))] hover:bg-[oklch(var(--color-surface-2))]";
+
+/** Room for the floating bar above and the zoom bar below whenever the canvas fits. */
+const FIT_OPTIONS = { padding: { top: "64px", bottom: "64px", left: "24px", right: "24px" } } as const;
+
+/** The toolbar's two prefixed selects (v3 A1): a 44-high box, small muted prefix, the select filling the rest. */
+const TOOL_SELECT =
+  "flex shrink-0 items-center gap-2 h-(--control-h-sm) pl-3 pr-2 rounded-control border border-[oklch(var(--color-line-strong))] bg-[oklch(var(--color-surface-1))] focus-within:border-[oklch(var(--color-ink))]";
+
 export interface WorkflowTemplateInput {
   name: string;
   description: string;
@@ -303,8 +316,12 @@ export default function WorkflowEditor({
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesStateChange] = useEdgesState<Edge>([]);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
-  const [editModalOpen, setEditModalOpen] = useState(false);
-  const [editData, setEditData] = useState<NodeEditData | null>(null);
+  /** v3 A1 inspector tab; 「! 校验 · N」 opens 问题, a card click opens 节点. */
+  const [inspectorTab, setInspectorTab] = useState<InspectorTab>("node");
+  /** The exit the 出口 tab is on — drawn in ink on the canvas. */
+  const [activeEdgeId, setActiveEdgeId] = useState<string | null>(null);
+  /** The viewport zoom, shown in the bottom-left zoom bar. */
+  const [zoom, setZoom] = useState(1);
 
   // Form state - initialized from query data
   const [templateName, setTemplateName] = useState("");
@@ -549,12 +566,16 @@ export default function WorkflowEditor({
       // serializer's ChoiceField takes null for "none", and "" is what the
       // form holds.
       kind: (n.data.kind as TemplateNode["kind"]) ?? "APPROVAL",
-      signers: (n.data.signers as TemplateSigner[] | undefined) ?? [],
-      threshold: (n.data.threshold as number | null | undefined) ?? null,
+      // Signers and threshold only on a 会签, the escalation role only on
+      // ESCALATE — the shaping the old modal did on 保存. The inspector form
+      // writes live and keeps them in `data` across a 类别 switch, so they
+      // are dropped here, where the payload is built.
+      signers: n.data.kind === "COUNTERSIGN" ? ((n.data.signers as TemplateSigner[] | undefined) ?? []) : [],
+      threshold: n.data.kind === "COUNTERSIGN" ? ((n.data.threshold as number | null | undefined) ?? null) : null,
       reject_to: (n.data.rejectTo as string | null | undefined) ?? null,
       timeout_hours: (n.data.timeoutHours as number | null | undefined) ?? null,
       timeout_action: ((n.data.timeoutAction as TemplateNode["timeout_action"]) || null),
-      timeout_role: (n.data.timeoutRole as string | undefined) || null,
+      timeout_role: n.data.timeoutAction === "ESCALATE" ? (n.data.timeoutRole as string | undefined) || null : null,
       // Rounded because these are pixels on a canvas, not measurements: the
       // drag handler produces long floats and storing them makes every save a
       // diff even when nothing moved.
@@ -729,7 +750,8 @@ export default function WorkflowEditor({
     const bounds = layoutBounds(next);
     const { width, height } = pane.getBoundingClientRect();
     if (fitsInside(bounds, flow.getViewport(), { width, height })) return;
-    void flow.fitBounds(bounds);
+    // `fitBounds` takes a ratio only (no per-side px); 0.15 keeps the cards off the two bars in practice.
+    void flow.fitBounds(bounds, { padding: 0.15 });
   }, []);
 
   /**
@@ -911,31 +933,40 @@ export default function WorkflowEditor({
     setSelectedNodeId(null);
   }, [selectedNodeId, setNodes, setEdges, stopLayoutTravel]);
 
-  // Handle node double-click to edit
-  const handleNodeEdit = useCallback((nodeId: string) => {
-    const node = nodes.find((n) => n.id === nodeId);
-    if (node) {
-      setEditData({
-        id: nodeId,
-        node_name: node.data.label as string,
-        node_type: node.data.nodeType as NodeEditData["node_type"],
-        court_code: (node.data.courtCode as string) || "",
-        approver_role: (node.data.approverRole as string) || "",
-        approver_type: (node.data.approverType as NodeEditData["approver_type"]) || "ROLE",
-        kind: (node.data.kind as NodeEditData["kind"]) || "APPROVAL",
-        signers: (node.data.signers as TemplateSigner[] | undefined) ?? [],
-        threshold: (node.data.threshold as number | null | undefined) ?? null,
-        timeout_hours: (node.data.timeoutHours as number | null | undefined) ?? null,
-        timeout_action: (node.data.timeoutAction as NodeEditData["timeout_action"]) || "",
-        timeout_role: (node.data.timeoutRole as string | undefined) || "",
-        reject_to: (node.data.rejectTo as string | null | undefined) ?? null,
-      });
-      setEditModalOpen(true);
-    }
-  }, [nodes]);
+  /**
+   * Select a node from outside the canvas — the linear preview and the issue
+   * list. Writes xyflow's own `selected` flag too, so the card shows the focus
+   * ring the canvas would have given it.
+   */
+  const selectNode = useCallback(
+    (nodeId: string) => {
+      stopLayoutTravel();
+      setSelectedNodeId(nodeId);
+      setNodes((nds) => nds.map((n) => (!!n.selected === (n.id === nodeId) ? n : { ...n, selected: n.id === nodeId })));
+    },
+    [setNodes, stopLayoutTravel]
+  );
 
   /**
-   * `E` on the focused node opens that node's edit modal.
+   * 编辑节点 — `E` on a card, or a double-click: select the node, open the
+   * inspector's 节点 tab and put focus in its first field (名称). The form is
+   * the inspector itself now (v3 A1, 用户 10-02), so there is nothing to open
+   * and nothing to seed: `flushSync` commits the selection and the tab so the
+   * field exists before it is focused.
+   */
+  const handleNodeEdit = useCallback(
+    (nodeId: string) => {
+      flushSync(() => {
+        selectNode(nodeId);
+        setInspectorTab("node");
+      });
+      document.getElementById(nodeNameFieldId(formId))?.focus();
+    },
+    [selectNode, formId]
+  );
+
+  /**
+   * `E` on the focused node moves focus to that node's form in the inspector.
    *
    * ON THE CANVAS CONTAINER, not on the nodes and not on `window`.
    *
@@ -965,16 +996,13 @@ export default function WorkflowEditor({
       // listed — `event.key` is then "E", which lowercases to the same key.
       if (event.metaKey || event.ctrlKey || event.altKey) return;
       if (event.key.toLowerCase() !== EDIT_NODE_KEY) return;
-      // Already editing. Re-entering would re-seed `editData` from `nodes` and
-      // throw away whatever the operator has typed into the open form.
-      if (editModalOpen) return;
       // NO `isTextEntry` GUARD HERE, AND THAT IS THE MEASURED DECISION.
       // One was written, and removed for failing to earn its place: deleting
       // it left `WorkflowEditor.test.tsx` at 26 passed and `e2e/workflow.spec`
       // at 14 passed, with md5 confirming the deletion reached disk. The case
       // it would defend is already carried by the `.react-flow__node` lookup
-      // below — every text control in this editor (four toolbar fields, five
-      // modal fields) sits OUTSIDE a card, so `closest` returns null first,
+      // below — every text control in this editor (the toolbar fields, the
+      // inspector form) sits OUTSIDE the canvas, so `closest` returns null first,
       // and no card contains an input. `does NOT open when E is typed into the
       // template-name input` goes red when that lookup is removed, which is
       // where the toolbar case actually lives.
@@ -998,7 +1026,7 @@ export default function WorkflowEditor({
       event.preventDefault();
       handleNodeEdit(nodeId);
     },
-    [editModalOpen, handleNodeEdit]
+    [handleNodeEdit]
   );
 
   /**
@@ -1086,10 +1114,11 @@ export default function WorkflowEditor({
           labelled: branching.has(e.source) || conditional.has(e.source),
           conditionText: when?.length ? whenText(when, t) : undefined,
           isDefault: when === undefined && branchOf(e) === "pass" && conditional.has(e.source),
+          active: inspectorTab === "exits" && e.id === activeEdgeId,
         },
       };
     });
-  }, [edges, t]);
+  }, [edges, t, inspectorTab, activeEdgeId]);
 
   /** Set or clear the condition on one PASS edge (the inspector's 出口 · 条件). */
   const setEdgeWhen = useCallback(
@@ -1111,17 +1140,56 @@ export default function WorkflowEditor({
   );
 
   /**
-   * Select a node from outside the canvas — the linear preview and the issue
-   * list. Writes xyflow's own `selected` flag too, so the card shows the focus
-   * ring the canvas would have given it.
+   * ↑ / ↓ on a conditional exit: swap it with its neighbour among the node's
+   * conditional PASS edges. The order IS persisted — `getTemplateNodes` emits
+   * `branches` in edge order and `workflowEditorGraph` rebuilds edges in
+   * `branches` order — and the engine tries branches in that order. The
+   * default exit is `on_pass`, always tried last, so it has no place to move.
    */
-  const selectNode = useCallback(
-    (nodeId: string) => {
+  const moveExit = useCallback(
+    (edgeId: string, step: -1 | 1) => {
       stopLayoutTravel();
-      setSelectedNodeId(nodeId);
-      setNodes((nds) => nds.map((n) => (!!n.selected === (n.id === nodeId) ? n : { ...n, selected: n.id === nodeId })));
+      setEdges((eds) => {
+        const edge = eds.find((e) => e.id === edgeId);
+        if (!edge) return eds;
+        const slots = eds.flatMap((e, i) =>
+          e.source === edge.source && branchOf(e) === "pass" && whenOf(e) !== undefined ? [i] : []
+        );
+        const k = slots.findIndex((i) => eds[i].id === edgeId);
+        const a = slots[k];
+        const b = slots[k + step];
+        if (a === undefined || b === undefined) return eds;
+        const next = [...eds];
+        [next[a], next[b]] = [next[b], next[a]];
+        return next;
+      });
     },
-    [setNodes, stopLayoutTravel]
+    [setEdges, stopLayoutTravel]
+  );
+
+  /** 「＋ 加一条条件出口」: a new PASS edge to `target`, carrying one clause. */
+  const addExit = useCallback(
+    (source: string, target: string) => {
+      stopLayoutTravel();
+      setEdges((eds) => {
+        const taken = new Set(eds.map((e) => (e.data as { branchId?: string } | undefined)?.branchId).filter(Boolean));
+        let n = 1;
+        while (taken.has(`b${n}`)) n += 1;
+        const branchId = `b${n}`;
+        return [
+          ...eds,
+          {
+            id: `e${source}-branch-${branchId}-${target}`,
+            source,
+            sourceHandle: "pass",
+            target,
+            data: { when: [defaultClause()], branchId },
+            ...edgeArrow(),
+          } as Edge,
+        ];
+      });
+    },
+    [setEdges, stopLayoutTravel]
   );
 
   /** A palette item dropped on the canvas becomes a node where it landed. */
@@ -1141,14 +1209,14 @@ export default function WorkflowEditor({
     [addNode]
   );
 
-  /** 驳回到's choices for the node being edited: the nodes before it, by order. */
+  /** 驳回到's choices for the selected node: the nodes before it, by order. */
   const rejectOptions = useMemo(() => {
-    const idx = editData ? nodes.findIndex((n) => n.id === editData.id) : -1;
+    const idx = selectedNodeId ? nodes.findIndex((n) => n.id === selectedNodeId) : -1;
     return nodes.slice(0, Math.max(idx, 0)).map((n, i) => ({
       value: n.id,
       label: `N${i + 1}「${(typeof n.data.label === "string" && n.data.label) || t("workflow.editor.unnamed")}」`,
     }));
-  }, [editData, nodes, t]);
+  }, [selectedNodeId, nodes, t]);
 
   // Update node data
   const updateNodeData = useCallback(
@@ -1196,7 +1264,12 @@ export default function WorkflowEditor({
       );
       if (selects.length === 0) return;
       const picked = selects.find((c) => c.selected && nodes.some((n) => n.id === c.id));
-      if (picked) setSelectedNodeId(picked.id);
+      if (picked) {
+        setSelectedNodeId(picked.id);
+        // A card picked on the canvas is a question about that node: 出口 stays
+        // (it is about the node too), 问题 / 版本 give way to 节点.
+        setInspectorTab((tab) => (tab === "exits" ? tab : "node"));
+      }
       else setSelectedNodeId((current) => (selects.some((c) => c.id === current) ? null : current));
     },
     [onNodesChange, nodes]
@@ -1237,16 +1310,21 @@ export default function WorkflowEditor({
   /** 「草稿 v4 · 已发布 v3」, design C · 03 — from the template as last loaded. */
   const draftVersion = existingTemplate?.draft_version ?? null;
   const publishedVersion = existingTemplate?.published_version ?? null;
+  /* v3 A1: the published version as a badge (✓ ink), the working draft beside
+     it in muted text (◇). A template never published says so in the badge. */
   const versionBadge = (
-    <span className="font-mono text-2xs whitespace-nowrap text-[oklch(var(--color-ink-muted))]" data-testid="version-badge">
-      {[
-        draftVersion != null ? t("workflow.editor.version.draft", { n: String(draftVersion) }) : null,
-        publishedVersion != null
+    <span className="inline-flex items-center gap-2 whitespace-nowrap" data-testid="version-badge">
+      <Badge tone={publishedVersion != null ? "ink" : "neutral"} glyph={publishedVersion != null ? "✓" : "◇"}>
+        {publishedVersion != null
           ? t("workflow.editor.version.published", { n: String(publishedVersion) })
-          : t("workflow.editor.version.unpublished"),
-      ]
-        .filter(Boolean)
-        .join(" · ")}
+          : t("workflow.editor.version.unpublished")}
+      </Badge>
+      {draftVersion != null && (
+        <span className="text-xs text-[oklch(var(--color-ink-muted))]">
+          <span aria-hidden="true">◇ </span>
+          {t("workflow.editor.version.draft", { n: String(draftVersion) })}
+        </span>
+      )}
     </span>
   );
 
@@ -1303,107 +1381,132 @@ export default function WorkflowEditor({
       issues={issues}
       selectedId={selectedNodeId}
       onSelect={selectNode}
-      onEdit={wide ? handleNodeEdit : undefined}
+      nodeForm={
+        wide
+          ? (node) => (
+              <NodeEditForm node={node} formId={formId} onChange={updateNodeData} rejectOptions={rejectOptions} t={t} />
+            )
+          : undefined
+      }
       validationId={validationId}
+      tab={inspectorTab}
+      onTab={setInspectorTab}
       nodeExtras={(node) => (
-        <>
-          <ApproverPreviewSection
-            t={t}
-            templateId={templateId ?? createdIdRef.current ?? undefined}
-            nodeId={node.id}
-            civilization={templateCiv}
-            saved={savedAsShown(node)}
-          />
-          <ExitConditionsSection
-            t={t}
-            node={node}
-            nodes={nodes}
-            edges={edges}
-            onChange={wide ? setEdgeWhen : undefined}
-          />
-        </>
+        <ApproverPreviewSection
+          t={t}
+          templateId={templateId ?? createdIdRef.current ?? undefined}
+          nodeId={node.id}
+          civilization={templateCiv}
+          saved={savedAsShown(node)}
+        />
       )}
-      footer={<VersionHistorySection t={t} templateId={templateId} />}
-    />
-  );
-  const preview = (
-    <WorkflowLinearPreview
-      t={t}
-      nodes={nodes}
-      roles={roles}
-      issueNodes={issueNodes}
-      selectedId={selectedNodeId}
-      onSelect={selectNode}
+      exits={(node) => (
+        <ExitConditionsSection
+          t={t}
+          node={node}
+          nodes={nodes}
+          edges={edges}
+          onChange={wide ? setEdgeWhen : undefined}
+          onMove={wide ? moveExit : undefined}
+          onAdd={wide ? addExit : undefined}
+          activeEdgeId={activeEdgeId}
+          onActivate={setActiveEdgeId}
+        />
+      )}
+      version={
+        <VersionHistorySection t={t} templateId={templateId} empty={versionBadge} />
+      }
     />
   );
 
-  // The read-only view (design C · 03 at 393): no canvas, no palette, no
-  // inputs and — deliberately — no save. A template opened here can be read,
-  // not changed; the notice says why and where it can be.
+  const priorityLabel = priorityOptions.find((o) => o.value === templatePriority)?.label;
+
+  // The read-only view (v3 A1 · 393): no canvas, no palette, no inputs and —
+  // deliberately — no save. A template opened here can be read, not changed;
+  // the notice says why and where it can be.
   if (!wide) {
     return (
-      <div className="flex flex-col border border-[oklch(var(--color-line))] bg-[oklch(var(--color-canvas))]">
-        <div role="note" className="px-4 py-3 border-b border-[oklch(var(--color-line))] bg-[oklch(var(--color-warning-tint))]">
-          <p className="text-sm font-semibold text-[oklch(var(--color-warning))]">{t("workflow.editor.narrow_title")}</p>
-          <p className="text-xs text-[oklch(var(--color-ink-muted))]">{t("workflow.editor.narrow_body")}</p>
+      <div className="flex flex-col gap-3">
+        <div role="note" className="px-3 py-3 border border-[oklch(var(--color-line-strong))] bg-[oklch(var(--color-surface-1))] text-sm text-[oklch(var(--color-ink))]">
+          <span aria-hidden="true">◐ </span>
+          {t("workflow.editor.narrow_title")}
         </div>
-        <div className="px-4 py-3 border-b border-[oklch(var(--color-block))]">
-          <h2 className="text-md text-[oklch(var(--color-ink))] break-words">
-            {templateName || t("workflow.editor.template_name_placeholder")}
-          </h2>
-          <p className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">
-            {t(`workflow.civilizations.${templateCiv}`)} · {t(`workflow.case_types.${templateCaseType}`)} ·{" "}
-            {priorityOptions.find((o) => o.value === templatePriority)?.label}
-          </p>
-          {versionBadge}
-        </div>
-        {preview}
-        {inspector}
+        <h2 className="font-title text-lg text-[oklch(var(--color-ink))] break-words">
+          {templateName || t("workflow.editor.template_name_placeholder")}
+        </h2>
+        <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-[oklch(var(--color-ink-muted))]">
+          <span>{t(`workflow.civilizations.${templateCiv}`)}</span>
+          <span aria-hidden="true">·</span>
+          <span>{t(`workflow.case_types.${templateCaseType}`)}</span>
+          <span aria-hidden="true">·</span>
+          <span>
+            {t("workflow.detail.priority")} <span className="font-mono" title={priorityLabel}>{templatePriority}</span>
+          </span>
+          <span aria-hidden="true">·</span>
+          <span className={issues.length > 0 ? "text-[oklch(var(--color-danger))]" : undefined}>
+            <span aria-hidden="true">{issues.length > 0 ? "! " : "✓ "}</span>
+            {issues.length > 0 ? t("workflow.editor.issues", { n: String(issues.length) }) : t("workflow.editor.issues_none")}
+          </span>
+        </p>
+        {versionBadge}
+        <WorkflowReadOnlyList
+          t={t}
+          nodes={nodes}
+          edges={edges}
+          roles={roles}
+          issueNodes={issueNodes}
+          selectedId={selectedNodeId}
+          onSelect={selectNode}
+        />
+        <div className="border border-[oklch(var(--color-line))]">{inspector}</div>
       </div>
     );
   }
 
+  /* 「! 校验 · N」: the count, and the `!`, go danger only while something
+     fails. Split around the placeholder so the number can be styled on its own
+     without a second string per locale. */
+  const [issuesBefore, issuesAfter = ""] = t("workflow.editor.issues", { n: "\u0001" }).split("\u0001");
+  const openIssues = () => {
+    flushSync(() => setInspectorTab("issues"));
+    if (issues[0]?.nodeId) selectNode(issues[0].nodeId);
+    document.getElementById(validationId)?.focus();
+  };
+
   return (
     <div className="flex flex-col h-full border border-[oklch(var(--color-line))] bg-[oklch(var(--color-canvas))]">
-      {/* Toolbar
+      {/* Toolbar — v3 A1: 64 high on surface-1. Template name, civilization,
+       * case type, priority 0/1/2, version; then 「! 校验 · N」/ 存草稿 / 发布.
+       * 加节点 / 自动布局 / 删除所选 are NOT here (用户 10-02): they float on
+       * the canvas, top right.
        *
        * ─────────────────────────────────────────────────────────────────
        * 这一行的收缩策略修过一次,方向反了,于是缺陷换了个受害者。
        * ─────────────────────────────────────────────────────────────────
        *
-       * 原注释写着:「`min-w-0` 是必需的 —— flex 子项默认 `min-width:auto`,
-       * 不加它 `flex-1` 不会收缩,`overflow-x-auto` 也就永远没有可滚动的余量。」
-       *
-       * **那个因果是倒的。** `overflow-x-auto` 生效的条件是内容**超出**容器,
-       * 也就是子项**不收缩**。加上 `min-w-0` 之后这一行永远塞得下,滚动条永远
-       * 不出现,而代价是输入区被压到不可用 —— 窄屏上四个按钮直接压在名称输入框
-       * 和三个下拉框上面。2026-09-05 在 mobile-chrome(393px)的失败截图里,
-       * 「中国地府」是从「删除选中」底下透出来的。
-       *
-       * 当初要修的是「`保存模板` 被案件类型下拉挡住」—— 同一个病,只是那次
-       * 被压的是按钮。把子项改成会收缩,只是换了谁被压。
-       *
-       * 现在:输入区保留 `flex-1`(桌面上照旧撑开、把按钮推到右边),但**不再**
-       * 带 `min-w-0` —— 它的 `min-width:auto` 就是内容宽度,于是窄屏上这一行
-       * 真的超出,`overflow-x-auto` 真的滚,每个控件都保持可用的尺寸。
-       *
-       * 一个 token 的改动,和一段反过来的推理。 */}
-      <div className="flex items-center gap-3 px-4 py-2 border-b border-[oklch(var(--color-block))] bg-[oklch(var(--color-canvas))] overflow-x-auto">
-        {/* Template info inputs */}
-        <div className="flex-1 flex items-center gap-3">
-          <input
-            type="text"
-            value={templateName}
-            onChange={(e) => setTemplateName(e.target.value)}
-            placeholder={t("workflow.editor.template_name_placeholder")}
-            aria-label={t("workflow.editor.template_name_placeholder")}
-            className="h-8 px-3 bg-[oklch(var(--color-canvas))] border border-[oklch(var(--color-line))] text-sm text-[oklch(var(--color-ink))] placeholder:text-[oklch(var(--color-ink-subtle))] focus:border-[oklch(var(--color-accent))]"
-          />
+       * `overflow-x-auto` 生效的条件是内容**超出**容器,也就是子项**不收缩**。
+       * 给子项加 `min-w-0` 之后这一行永远塞得下,滚动条永远不出现,而代价是
+       * 输入区被压到不可用 —— 2026-09-05 在 mobile-chrome(393px)的失败截图里,
+       * 「中国地府」是从「删除选中」底下透出来的。所以这里**没有** `min-w-0`:
+       * 每个控件保持可用的尺寸,行真的超出时真的滚。 */}
+      <div className="flex items-center gap-2 h-16 shrink-0 px-4 border-b border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] overflow-x-auto">
+        <input
+          type="text"
+          value={templateName}
+          onChange={(e) => setTemplateName(e.target.value)}
+          placeholder={t("workflow.editor.template_name_placeholder")}
+          aria-label={t("workflow.editor.template_name_placeholder")}
+          className="w-[180px] shrink-0 h-(--control-h-sm) px-3 rounded-control bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-line-strong))] text-sm font-medium text-[oklch(var(--color-ink))] placeholder:text-[oklch(var(--color-ink-subtle))] focus:border-[oklch(var(--color-ink))]"
+        />
+        <label className={TOOL_SELECT}>
+          <span aria-hidden="true" className="text-2xs normal-case tracking-normal text-[oklch(var(--color-ink-muted))]">
+            {t("workflow.editor.civilization_select_label")}
+          </span>
           <select
             value={templateCiv}
             onChange={(e) => setTemplateCiv(e.target.value as typeof templateCiv)}
             aria-label={t("workflow.editor.civilization_select_label") === "workflow.editor.civilization_select_label" ? "Civilization" : t("workflow.editor.civilization_select_label")}
-            className="h-8 px-3 bg-[oklch(var(--color-canvas))] border border-[oklch(var(--color-line))] text-sm text-[oklch(var(--color-ink))] focus:border-[oklch(var(--color-accent))]"
+            className="h-full bg-transparent text-sm text-[oklch(var(--color-ink))] outline-none"
           >
             {/* Rendered from CIVILIZATION_OPTIONS so the dropdown cannot fall
                 behind the union the state is typed with — three hand-written
@@ -1415,12 +1518,22 @@ export default function WorkflowEditor({
               </option>
             ))}
           </select>
+        </label>
+        <label className={TOOL_SELECT}>
+          <span aria-hidden="true" className="text-2xs normal-case tracking-normal text-[oklch(var(--color-ink-muted))]">
+            {t("workflow.editor.case_type_select_label")}
+          </span>
           <select
             value={templateCaseType}
             onChange={(e) => setTemplateCaseType(e.target.value)}
             aria-label={t("workflow.editor.case_type_select_label") === "workflow.editor.case_type_select_label" ? "Case Type" : t("workflow.editor.case_type_select_label")}
-            className="h-8 px-3 bg-[oklch(var(--color-canvas))] border border-[oklch(var(--color-line))] text-sm text-[oklch(var(--color-ink))] focus:border-[oklch(var(--color-accent))]"
+            className="h-full bg-transparent text-sm text-[oklch(var(--color-ink))] outline-none"
           >
+            {/* One literal <option> per line, in exactly this shape:
+                `backend/tests/test_workflow_preset_case_types.py` reads them as
+                text to prove every preset's case type is selectable. A `.map`
+                over a const array leaves that test nothing to read (it went
+                red after the v3 A1 change did exactly that). */}
             <option value="ROUTINE">{t("workflow.case_types.ROUTINE")}</option>
             <option value="APPEAL">{t("workflow.case_types.APPEAL")}</option>
             <option value="CROSS_REALM">{t("workflow.case_types.CROSS_REALM")}</option>
@@ -1431,133 +1544,96 @@ export default function WorkflowEditor({
             <option value="HEART_WEIGHING">{t("workflow.case_types.HEART_WEIGHING")}</option>
             <option value="DIVINE_TRIAL">{t("workflow.case_types.DIVINE_TRIAL")}</option>
           </select>
-          <select
-            id={templatePriorityId}
-            value={templatePriority}
-            onChange={(e) => setTemplatePriority(Number(e.target.value))}
-            aria-label={t("workflow.detail.priority")}
-            className="h-8 px-3 bg-[oklch(var(--color-canvas))] border border-[oklch(var(--color-line))] text-sm text-[oklch(var(--color-ink))] focus:border-[oklch(var(--color-accent))]"
-          >
-            {priorityOptions.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
-          {versionBadge}
+        </label>
+        {/* Priority as a 0 / 1 / 2 segment, v3 A1. A radio group, so arrow keys
+            move it and the screen reader hears 「普通 / 紧急 / 危急」 — the
+            digit is what is drawn, the word is the accessible name. */}
+        <div
+          role="radiogroup"
+          id={templatePriorityId}
+          aria-label={t("workflow.detail.priority")}
+          className="flex shrink-0 rounded-control border border-[oklch(var(--color-line-strong))] overflow-hidden"
+        >
+          {priorityOptions.map((opt) => {
+            const on = opt.value === templatePriority;
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                role="radio"
+                aria-checked={on}
+                aria-label={opt.label}
+                title={opt.label}
+                tabIndex={on ? 0 : -1}
+                onClick={() => setTemplatePriority(opt.value)}
+                onKeyDown={(e) => {
+                  const step = e.key === "ArrowRight" || e.key === "ArrowDown" ? 1 : e.key === "ArrowLeft" || e.key === "ArrowUp" ? -1 : 0;
+                  if (!step) return;
+                  e.preventDefault();
+                  const next = (templatePriority + step + priorityOptions.length) % priorityOptions.length;
+                  setTemplatePriority(next);
+                  (e.currentTarget.parentElement?.children[next] as HTMLElement | undefined)?.focus();
+                }}
+                className={`w-11 h-11 font-mono text-sm border-l first:border-l-0 border-[oklch(var(--color-line-strong))] ${
+                  on
+                    ? "bg-[oklch(var(--color-ink))] text-[oklch(var(--color-surface-1))]"
+                    : "text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))]"
+                }`}
+              >
+                {opt.value}
+              </button>
+            );
+          })}
         </div>
-
-        {/* Action buttons */}
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => addNode()}
-            className="px-3 h-8 inline-flex items-center border border-[oklch(var(--color-block))] text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))] text-sm font-medium transition-colors"
-          >
-            + {t("workflow.editor.add_node")}
-          </button>
-          <button
-            type="button"
-            onClick={autoLayout}
-            disabled={nodes.length === 0}
-            /* `h-8` rather than the `py-1.5` its neighbours use: 1.5 is off the
-               spacing rhythm (1/2/3/4/6/10/16) and this file's legacy quota for
-               that is already spent, so a ninth would have to be bought by
-               raising the baseline. 32px is the same height `px-3 py-1.5` on
-               text-sm produces, border included — border-box — so the row still
-               lines up. */
-            className="px-3 h-8 inline-flex items-center text-[oklch(var(--color-ink-muted))] hover:bg-[oklch(var(--color-surface-2))] text-sm font-medium transition-colors disabled:text-[oklch(var(--color-ink-subtle))] disabled:cursor-not-allowed"
-          >
-            {t("workflow.editor.auto_layout")}
-          </button>
-          {/* Status, not a spinner. `layoutNodes` is synchronous and finished
-              before this appears; the 450ms is travel. `role="status"` so the
-              change is announced once rather than polled, and it renders
-              nothing at all when still — an empty live region is not a layout
-              shift because the row's height comes from the buttons.
-              `whitespace-nowrap` is what keeps that true: in the editor's
-              narrow column the word wrapped to two lines, and two lines of
-              text-xs were exactly 32px under 规范 v1 (16px leading) — the
-              buttons' height, by coincidence. v2's 18px leading made it 36,
-              the canvas slid 4px down mid-press, and Flip animated every card
-              from the old spot (workflow-auto-layout-motion caught it). */}
-          <span
-            role="status"
-            aria-live="polite"
-            className="whitespace-nowrap text-xs text-[oklch(var(--color-ink-muted))]"
-          >
-            {relayouting ? t("workflow.editor.relayouting") : ""}
+        {versionBadge}
+        <span className="flex-1" />
+        {/* 「! 校验 · N」, always on screen: muted while clean, danger while
+            something fails — it is the reason the save beside it is disabled.
+            Pressing it opens the inspector's 问题 tab, selects the first
+            offending node and moves focus to the list. */}
+        <Button type="button" size="sm" variant="secondary" onClick={openIssues} className="shrink-0 text-sm">
+          <span aria-hidden="true" className={issues.length > 0 ? "text-[oklch(var(--color-danger))]" : "text-[oklch(var(--color-ink-muted))]"}>
+            !
           </span>
-          {/* 结果播报,**视觉隐藏**,而这一点是被实测逼出来的。
-           *
-           * 第一版把这句话塞进上面那个可见的 span 里。它在工具栏那一行,而这一行
-           * 在窄屏上本来就是横向滚动的 —— 文字一进来行就变宽,画布随之变小,于是
-           * `fitIfOverflowing` 刚按旧尺寸算好的「装得下」不再成立。
-           * mobile-chrome 上 `workflow-auto-layout-motion` 两条**内容断言**因此
-           * 变红(不是超时,是卡片真的落到了屏幕外)。
-           *
-           * 所以播报和排版分开:可见的那个 span 只说「正在重排」(它出现在动画
-           * 期间,那时视口已经定好了),这一个只说结果,而且不占任何布局。
-           *
-           * 两条分支都设 `layoutDone` —— 减少动效那条此前完全沉默,卡片瞬移而
-           * 读屏一个字都没有。 */}
-          <span role="status" aria-live="polite" className="sr-only">
-            {layoutDone}
+          <span>
+            {issuesBefore}
+            <span className={`font-mono ${issues.length > 0 ? "text-[oklch(var(--color-danger))]" : "text-[oklch(var(--color-ink-muted))]"}`}>
+              {issues.length}
+            </span>
+            {issuesAfter}
           </span>
-          <button
-            type="button"
-            onClick={deleteSelectedNode}
-            disabled={!selectedNodeId}
-            className="px-3 h-8 inline-flex items-center text-[oklch(var(--color-danger))] text-sm font-medium border border-[oklch(var(--color-danger))] transition-colors disabled:border-[oklch(var(--color-line))] disabled:text-[oklch(var(--color-ink-subtle))] disabled:cursor-not-allowed"
-          >
-            {t("workflow.editor.delete_selected")}
-          </button>
-          {/* `isTemplateLoading` in the disabled condition: between mount and
-              the GET resolving, the form holds its own empty defaults, and
-              saving there would PUT those over the template still in flight.
-              The error case never reaches this button — it returns above. */}
-          {/* 「! 校验 · N」, design C · 03: shown only while something fails, and
-              it is the reason the save beside it is disabled. Pressing it
-              selects the first offending node and moves focus to the list. */}
-          {issues.length > 0 && (
-            <button
-              type="button"
-              onClick={() => {
-                selectNode(issues[0].nodeId);
-                document.getElementById(validationId)?.focus();
-              }}
-              className="px-3 h-8 inline-flex items-center border border-[oklch(var(--color-danger))] text-[oklch(var(--color-danger))] text-sm font-medium"
-            >
-              <span aria-hidden="true">!&nbsp;</span>
-              {t("workflow.editor.issues", { n: String(issues.length) })}
-            </button>
-          )}
-          {/* Disabled while validation fails: every rule in
-              `workflowValidation.ts` is one the backend or the engine acts on
-              (a 400, an edge that is never taken, an edge dropped on save), so
-              saving past it would store something other than what is drawn. */}
-          {/* 存草稿 is blocked only by what a draft cannot hold (SAVE_BLOCKING);
-              发布 by every issue, and by an empty canvas — the backend refuses
-              both with the same codes. */}
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={busy || (!!templateId && isTemplateLoading) || saveBlocked}
-            aria-describedby={saveBlocked ? validationId : undefined}
-            className="px-3 h-8 inline-flex items-center border border-[oklch(var(--color-block))] text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))] text-sm font-medium transition-colors disabled:text-[oklch(var(--color-ink-subtle))] disabled:border-[oklch(var(--color-line))] disabled:cursor-not-allowed"
-          >
-            {saveMutation.isPending ? t("workflow.editor.saving") : t("workflow.editor.save_template")}
-          </button>
-          <button
-            type="button"
-            onClick={handlePublish}
-            disabled={busy || (!!templateId && isTemplateLoading) || issues.length > 0 || nodes.length === 0}
-            aria-describedby={issues.length > 0 ? validationId : undefined}
-            className="px-3 h-8 inline-flex items-center border border-[oklch(var(--color-ink))] bg-[oklch(var(--color-ink))] text-[oklch(var(--color-canvas))] text-sm font-medium transition-colors disabled:bg-[oklch(var(--color-surface-2))] disabled:text-[oklch(var(--color-ink-subtle))] disabled:border-[oklch(var(--color-line))] disabled:cursor-not-allowed"
-          >
-            {publishMutation.isPending ? t("workflow.editor.publishing") : t("workflow.editor.publish")}
-          </button>
-        </div>
+        </Button>
+        {/* `isTemplateLoading` in the disabled condition: between mount and
+            the GET resolving, the form holds its own empty defaults, and
+            saving there would PUT those over the template still in flight.
+            The error case never reaches this button — it returns above.
+            存草稿 is blocked only by what a draft cannot hold (SAVE_BLOCKING);
+            发布 by every issue, and by an empty canvas — the backend refuses
+            both with the same codes. */}
+        <Button
+          type="button"
+          size="sm"
+          variant="secondary"
+          onClick={handleSave}
+          disabled={busy || (!!templateId && isTemplateLoading) || saveBlocked}
+          aria-describedby={saveBlocked && inspectorTab === "issues" ? validationId : undefined}
+          className="shrink-0 text-sm"
+        >
+          {saveMutation.isPending ? t("workflow.editor.saving") : t("workflow.editor.save_template")}
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="primary"
+          onClick={handlePublish}
+          disabled={busy || (!!templateId && isTemplateLoading) || issues.length > 0 || nodes.length === 0}
+          aria-describedby={issues.length > 0 && inspectorTab === "issues" ? validationId : undefined}
+          className="shrink-0 text-sm"
+        >
+          {publishMutation.isPending
+            ? t("workflow.editor.publishing")
+            : `${t("workflow.editor.publish")} v${(publishedVersion ?? 0) + 1}`}
+        </Button>
       </div>
 
       {/* Flow canvas */}
@@ -1582,10 +1658,11 @@ export default function WorkflowEditor({
        * A descendant variant rather than a rule in `globals.css`: the selector
        * is xyflow's internal class and this is the only file that may know it.
        */}
-      <div className="flex-1 min-h-0 grid grid-cols-[160px_minmax(0,1fr)_260px] xl:grid-cols-[170px_minmax(0,1fr)_300px]">
+      {/* v3 A1: palette 176 · canvas · inspector 360 (was 320, 用户 10-02). */}
+      <div className="flex-1 min-h-0 grid grid-cols-[176px_minmax(0,1fr)_360px]">
       <WorkflowPalette t={t} onAdd={(type) => addNode(type)}>
         {/* The keyboard half of the hint, and the only place `E` is visible.
-            It reuses `workflow.editor.edit_node` — the modal's own title —
+            It reuses `workflow.editor.edit_node` — once the modal title —
             rather than introducing a fourth string in three bundles, one of
             which (egy) is transliterated and would have to be authored, not
             translated.
@@ -1604,7 +1681,7 @@ export default function WorkflowEditor({
         ref={canvasRef}
         onDragOver={onCanvasDragOver}
         onDrop={onCanvasDrop}
-        className={`min-h-0 min-w-0 [&_.react-flow__edge]:transition-opacity [&_.react-flow__edge]:duration-state ${
+        className={`relative min-h-0 min-w-0 [&_.react-flow__edge]:transition-opacity [&_.react-flow__edge]:duration-state ${
           relayouting ? "[&_.react-flow__edge]:opacity-25" : ""
         }`}
       >
@@ -1619,7 +1696,9 @@ export default function WorkflowEditor({
           onNodeDoubleClick={(_, node) => handleNodeEdit(node.id)}
           onInit={(instance) => {
             flowRef.current = instance;
+            setZoom(instance.getViewport().zoom);
           }}
+          onMove={(_, viewport) => setZoom(viewport.zoom)}
           /* ── 边不是 tab 站 ────────────────────────────────────────────
            *
            * xyflow 的 `edgesFocusable` 默认 true,于是每一条边都是一个 tab 停靠点。
@@ -1653,6 +1732,16 @@ export default function WorkflowEditor({
              before branches existed it was all that was needed. `autoLayout`
              owns every fit after this one. */
           fitView
+          /* The floating bar (top right) and the zoom bar (bottom left) sit on
+             the pane; the fit keeps 64 px clear above and below so neither
+             covers a card — a panel over a card takes its clicks (see the
+             palette hint note above). */
+          fitViewOptions={FIT_OPTIONS}
+          /* 0.25, not xyflow's default 0.5: at 0.5 the ten-court preset cannot
+             be fitted (the fit clamps and centres it, top and bottom cards cut
+             off) — and with the floating bar now on the pane, the cut-off top
+             card sat under the bar. 0.25 lets the fit really fit. */
+          minZoom={0.25}
           /* ── colorMode="dark" IS NOT A THEME CHOICE ─────────────────────
            *
            * xyflow puts its colorMode on the root as a CLASS, default `light`,
@@ -1670,25 +1759,66 @@ export default function WorkflowEditor({
             ...edgeArrow(),
           }}
         >
-          {/* 16 px dot grid in the line colour, as drawn. */}
-          <Background variant={BackgroundVariant.Dots} gap={16} size={1} color="oklch(var(--color-line))" />
-          <Controls className="bg-[oklch(var(--color-canvas))]! border border-[oklch(var(--color-block))]! [&_button]:bg-[oklch(var(--color-canvas))]! [&_button]:border-[oklch(var(--color-line))]! [&_button]:fill-[oklch(var(--color-ink))]!" />
+          {/* 16 px dot grid, line-strong at 45 %, as drawn (v3 A1). */}
+          <Background variant={BackgroundVariant.Dots} gap={16} size={1} color="oklch(var(--color-line-strong) / 0.45)" />
         </ReactFlow>
+
+        {/* Floating bar, top right (用户 10-02: these three left the toolbar).
+            Plain DOM over the pane, not an xyflow <Panel>, so the jest stubs
+            that replace <ReactFlow> still render it. */}
+        <div className="absolute top-3 right-3 z-10 flex items-center gap-2 p-1 bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-line))] shadow-[0_2px_8px_oklch(0_0_0/0.08)]">
+          <Button type="button" size="sm" variant="ghost" onClick={() => addNode()} className="text-sm">
+            ＋ {t("workflow.editor.add_node")}
+          </Button>
+          <Button type="button" size="sm" variant="ghost" onClick={autoLayout} disabled={nodes.length === 0} className="text-sm">
+            {t("workflow.editor.auto_layout")}
+          </Button>
+          {/* Status, not a spinner. `layoutNodes` is synchronous and finished
+              before this appears; the 450ms is travel. `role="status"` so the
+              change is announced once rather than polled, and it renders
+              nothing at all when still. The bar is absolutely positioned, so
+              the word arriving cannot resize the canvas mid-travel — the
+              defect that once moved every card 4px (workflow-auto-layout-motion
+              caught it when this sat in the toolbar row). */}
+          <span role="status" aria-live="polite" className="whitespace-nowrap text-xs text-[oklch(var(--color-ink-muted))] empty:hidden">
+            {relayouting ? t("workflow.editor.relayouting") : ""}
+          </span>
+          {/* 结果播报,视觉隐藏:可见的那个只说「正在重排」,这一个只说结果,
+              两条分支(动画 / 减少动效)都设它。 */}
+          <span role="status" aria-live="polite" className="sr-only">
+            {layoutDone}
+          </span>
+          <Button type="button" size="sm" variant="warning" onClick={deleteSelectedNode} disabled={!selectedNodeId} className="text-sm">
+            {t("workflow.editor.delete_selected")}
+          </Button>
+        </div>
+
+        {/* Zoom, bottom left: − / 100% / ＋ / ⤢, 44 square each (v3 A1). */}
+        <div className="absolute bottom-3 left-3 z-10 flex border border-[oklch(var(--color-line-strong))] bg-[oklch(var(--color-surface-1))] font-mono text-xs text-[oklch(var(--color-ink))]">
+          <button type="button" aria-label={t("workflow.editor.zoom.out")} onClick={() => void flowRef.current?.zoomOut()} className={ZOOM_BUTTON}>
+            −
+          </button>
+          <button type="button" aria-label={t("workflow.editor.zoom.reset")} onClick={() => void flowRef.current?.zoomTo(1)} className={`${ZOOM_BUTTON} w-14`}>
+            {Math.round(zoom * 100)}%
+          </button>
+          <button type="button" aria-label={t("workflow.editor.zoom.in")} onClick={() => void flowRef.current?.zoomIn()} className={ZOOM_BUTTON}>
+            ＋
+          </button>
+          <button type="button" aria-label={t("workflow.editor.zoom.fit")} onClick={() => void flowRef.current?.fitView(FIT_OPTIONS)} className={ZOOM_BUTTON}>
+            ⤢
+          </button>
+        </div>
       </div>
       {inspector}
       </div>
-      {preview}
-
-      {/* Node edit modal */}
-      <NodeEditModal
-        isOpen={editModalOpen}
-        onClose={() => setEditModalOpen(false)}
-        formId={formId}
-        editData={editData}
-        setEditData={setEditData}
-        onSave={updateNodeData}
-        rejectOptions={rejectOptions}
+      <WorkflowLinearPreview
         t={t}
+        nodes={nodes}
+        edgeCount={edges.length}
+        roles={roles}
+        issueNodes={issueNodes}
+        selectedId={selectedNodeId}
+        onSelect={selectNode}
       />
     </div>
   );
