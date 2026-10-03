@@ -470,8 +470,10 @@ export default function LoginPage() {
         </div>
       </div>
 
-      {/* 右栏:表单。宽 400,左右各留 80(560 − 400)。 */}
-      <div className="order-1 flex min-h-0 flex-col bg-[oklch(var(--color-surface-1))] px-4 md:order-2 md:px-0">
+      {/* 右栏:表单。宽 400,左右各留 80(560 − 400)。
+          md 起整页定高一屏(md:h-dvh),窗口矮于表单时右栏在自己里面滚 —— 与左栏律条区同一做法。
+          此前没有 overflow,内容溢出栏外，栏底色停在视口底边，下面露出画布(用户 2026-10-03 截图)。 */}
+      <div className="order-1 flex min-h-0 flex-col bg-[oklch(var(--color-surface-1))] px-4 md:order-2 md:overflow-y-auto md:px-0">
         <div aria-hidden="true" className="hidden h-10 shrink-0 md:block" />
         <div className="flex h-14 shrink-0 items-center justify-between gap-3 md:mx-auto md:h-11 md:w-full md:max-w-[400px] md:justify-end">
           <div className="md:hidden">

@@ -13,12 +13,20 @@ import { civSkinOf } from "@/src/lib/civSkin";
  * 交给 `usePlaque({ hall })`。
  */
 export function useHall(place: string | null | undefined): string | undefined {
+  const realm = useRealm();
+  if (!place) return undefined;
+  return realm ? `${realm} · ${place}` : place;
+}
+
+/**
+ * 文明的冥界名(`plaque.realm.<civ>`),认不出文明才退回租户展示名。身份带不写司名时
+ * 也用它:租户展示名是库里的英文(「Chinese Afterlife」),中文界面下直接露出来(2026-10-03)。
+ */
+export function useRealm(): string | undefined {
   const tenant = useTenant().user?.tenant;
   const { t } = useI18n();
-  if (!place) return undefined;
   const civ = civSkinOf(tenant?.code ?? null);
-  const realm = civ === "neutral" ? tenant?.display_name : t(`plaque.realm.${civ}`);
-  return realm ? `${realm} · ${place}` : place;
+  return civ === "neutral" ? tenant?.display_name : t(`plaque.realm.${civ}`);
 }
 
 /**

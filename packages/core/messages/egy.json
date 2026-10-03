@@ -88,7 +88,9 @@
       "EGYPTIAN": "Wedja Wesir, Fai Ib, Sekhet Aaru",
       "GREEK": "Wedja 3, Sesh Er, Mu Lethe"
     },
-    "your_realm": "Per Ahet-Ek"
+    "your_realm": "Per Ahet-Ek",
+    "civilizations_eyebrow_sub": "Duat 4 · Medjat Wa",
+    "signed_in_as": "Em Aq · {{name}}"
   },
   "footer": {
     "version": "Medjat Ba v0.1"
@@ -2582,7 +2584,8 @@
       "rebirth_applications": "Dbh Wehem Mesut",
       "soul_inbox": "Sesh Wesekhet",
       "sentence_requests": "Dbh Wetep",
-      "assistant_admin": "Smen Hehy Medu"
+      "assistant_admin": "Smen Hehy Medu",
+      "moderation": "Maat Shemsu"
     },
     "queue": "Sepu Wedja",
     "about": "Khet Medjat Ba",

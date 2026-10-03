@@ -2,9 +2,9 @@
 
 import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type ReactNode, type RefObject } from "react";
 import { useI18n } from "@/src/contexts/I18nContext";
-import { useTenant } from "@/src/contexts/TenantContext";
 import { CaseNumber } from "@/src/components/ui/DomainValue";
 import { Seal } from "./Seal";
+import { useRealm } from "./useHall";
 
 /**
  * 身份带(规范 v3 `IdentityBand`,2026-10-01 用户拍板取代 v2 的匾):匾色压暗 10% 的实底
@@ -148,7 +148,7 @@ export function Plaque({
   meta?: ReactNode;
   /** 右栏的案号(v3 `identity-case`):可复制;收起时与 ≤ 768 都还在(v3 `is-compact` / `is-mobile`)。 */
   caseNumber?: string;
-  /** 殿名;不给就是租户展示名。 */
+  /** 殿名;不给就是文明的冥界名(`useRealm`)。 */
   hall?: string;
   /** 壳外页(登录)没有 PageShell,那一页唯一的 <h1> 就是题字。 */
   heading?: boolean;
@@ -158,7 +158,6 @@ export function Plaque({
   short?: boolean;
 }) {
   const { t } = useI18n();
-  const { user } = useTenant();
   const band = useRef<HTMLDivElement>(null);
   const ref = useRef<HTMLHeadingElement & HTMLDivElement>(null);
   const Title = heading ? "h1" : "div";
@@ -167,7 +166,8 @@ export function Plaque({
   useBandHeightVar(collapsible, band);
   const start = ((narrow ? 1 : 0) + (short ? 1 : 0)) as 0 | 1 | 2;
   const [tier, setTier] = useState<0 | 1 | 2>(start);
-  const court = hall || user?.tenant?.display_name || null;
+  const realm = useRealm();
+  const court = hall || realm || null;
   const product = t("nav.title");
 
   useLayoutEffect(() => {
