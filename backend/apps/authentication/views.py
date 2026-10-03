@@ -473,6 +473,14 @@ class LoginLogViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
     # returns 403 here today, and it keeps doing so.
     permission_codename = None
     serializer_class = LoginLogSerializer
+    # The console's login-log tab filters on these. Before 2026-10-04 the
+    # viewset declared none, so `?status=FAILED` was silently ignored by
+    # DjangoFilterBackend and the one test that "covered" it passed on an
+    # empty result set.
+    filterset_fields = ["status"]
+    search_fields = ["username"]
+    ordering_fields = ["timestamp"]
+    ordering = ["-timestamp"]
 
     def get_queryset(self):
         from .models import LoginLog
