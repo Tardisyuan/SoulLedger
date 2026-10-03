@@ -4,7 +4,7 @@ import { useNavigation, useRoute, type NavigationProp, type RouteProp } from "@r
 import { useEffect, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
-import { Emblem } from "../emblems";
+import { BrandMark } from "../brandMarkView";
 import { useToast } from "../feedback";
 import { family } from "../fonts";
 import { useI18n } from "../i18n";
@@ -89,7 +89,7 @@ export function LoginScreen() {
   return (
     <Screen edges={["top", "left", "right", "bottom"]}>
       <View style={styles.brand}>
-        <Emblem civ="neutral" size={66} stroke={theme.inkSubtle} />
+        <BrandMark testID="login-mark" size={66} color={theme.ink} />
         <Txt variant="display" style={styles.appName}>
           {t("soul_app.app_name")}
         </Txt>
