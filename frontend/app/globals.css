@@ -431,8 +431,8 @@
    `mobile/scripts/build-app-icon.mjs` 的 GOLD / INK 与 `app/icon.svg` 必须是这两个值
    —— brandTokensMatchIcon.test.ts 守着。 */
 :root {
-  --brand-mark: #ECAA3D;
-  --brand-ground: #10120F;
+  --brand-mark: #ECAA3D; /* @kind color */
+  --brand-ground: #10120F; /* @kind color */
 }
 
 /*

@@ -111,6 +111,25 @@
     },
     "DataTable": {
       "cardMode": "column"
+    },
+    "ConfirmDialog": {
+      "cardMode": "single",
+      "viewport": "720x520"
+    },
+    "DomainEnum": {
+      "cardMode": "column"
+    },
+    "Pagination": {
+      "cardMode": "column"
+    },
+    "SoulStateBadge": {
+      "cardMode": "column"
+    },
+    "VerdictBadge": {
+      "cardMode": "column"
+    },
+    "PageSection": {
+      "cardMode": "column"
     }
   },
   "readmeHeader": ".design-sync/conventions.md"
