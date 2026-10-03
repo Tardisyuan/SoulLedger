@@ -88,7 +88,9 @@
       "EGYPTIAN": "奥西里斯审判、心脏称重、芦苇之地",
       "GREEK": "三判官分道、厄尔的千年循环、勒忒之水"
     },
-    "your_realm": "你所属的冥府"
+    "your_realm": "你所属的冥府",
+    "civilizations_eyebrow_sub": "四界 · 一本账",
+    "signed_in_as": "已登录 · {{name}}"
   },
   "footer": {
     "version": "灵魂账本 v0.1"
@@ -2582,7 +2584,8 @@
       "rebirth_applications": "转生申请",
       "soul_inbox": "殿司收件箱",
       "sentence_requests": "受刑请求",
-      "assistant_admin": "助手管理"
+      "assistant_admin": "助手管理",
+      "moderation": "朋友圈审核"
     },
     "queue": "分诊队列",
     "about": "关于",

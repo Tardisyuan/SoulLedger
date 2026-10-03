@@ -88,7 +88,9 @@
       "EGYPTIAN": "The judgement of Osiris, the weighing of the heart, the Field of Reeds",
       "GREEK": "Three judges parting the ways, Er's thousand-year cycle, the water of Lethe"
     },
-    "your_realm": "Your realm"
+    "your_realm": "Your realm",
+    "civilizations_eyebrow_sub": "Four realms · one ledger",
+    "signed_in_as": "Signed in · {{name}}"
   },
   "footer": {
     "version": "SoulLedger v0.1"
@@ -2582,7 +2584,8 @@
       "rebirth_applications": "Rebirth Applications",
       "soul_inbox": "Hall Inbox",
       "sentence_requests": "Sentence Requests",
-      "assistant_admin": "Assistant Admin"
+      "assistant_admin": "Assistant Admin",
+      "moderation": "Circle Moderation"
     },
     "queue": "Triage queue",
     "about": "About",
