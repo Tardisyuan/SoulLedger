@@ -10,6 +10,7 @@ import { RoleName } from "@/src/components/users/RoleName";
 import { MissingValue } from "@/src/components/ui/DomainValue";
 import { BrandMark } from "@/src/components/brand/BrandMark";
 import { cn } from "@/lib/utils";
+import { authApi } from "@soulledger/core/api";
 import { loadDefaultView, saveDefaultView, type DefaultView } from "@/src/lib/defaultView";
 import { QUEUE_SHORTCUTS } from "@/src/lib/queueShortcuts";
 import { APP_VERSION } from "@/src/lib/appVersion";
@@ -22,29 +23,56 @@ import { APP_VERSION } from "@/src/lib/appVersion";
  * 四步沿用原清单(第三类 D 组 10b)的内容与交互:确认身份、默认视图(存在服务器上,
  * `/auth/profile/preferences/`)、语言与主题、快捷键(队列那张表,`src/lib/queueShortcuts.ts`)。
  *
- * 做完或跳过,写入 `onboarded`。它存在这个浏览器里,按用户分键:后端的 preferences 只认
- * `default_view`,未知键一律 400(`UserPreferencesSerializer`),这一轮不改后端。
+ * 做完或跳过,写入 `onboarded` —— 存在服务器上(`/auth/profile/preferences/`),跟着账号走,
+ * 换浏览器不再重做。「重看首次设置」只是再打开这一屏,不清这个标记。
  */
 export const TOTAL_STEPS = 4;
 
-const ONBOARDED_KEY = "soulledger_onboarded";
-const keyFor = (userId: number) => `${ONBOARDED_KEY}:${userId}`;
+/**
+ * The localStorage era's per-user key. Read ONCE, as a migration: local says done and the
+ * server says not → write true to the server, then remove the key. If that write fails the
+ * key stays and the next visit tries again. Nothing writes the key any more.
+ */
+const LEGACY_ONBOARDED_KEY = "soulledger_onboarded";
+const legacyKeyFor = (userId: number) => `${LEGACY_ONBOARDED_KEY}:${userId}`;
 
-export function readOnboarded(userId: number): boolean {
+function readLegacy(userId: number): boolean {
   try {
-    return localStorage.getItem(keyFor(userId)) === "1";
+    return localStorage.getItem(legacyKeyFor(userId)) === "1";
   } catch {
-    // Storage unavailable: do not trap the operator in setup on every visit.
-    return true;
+    return false;
   }
 }
 
-function writeOnboarded(userId: number): void {
+function clearLegacy(userId: number): void {
   try {
-    localStorage.setItem(keyFor(userId), "1");
+    localStorage.removeItem(legacyKeyFor(userId));
   } catch {
-    // Unavailable: setup shows again next time, which is the honest outcome.
+    // Storage disabled: there is nothing there to clear either.
   }
+}
+
+/** Has this user done (or skipped) the setup? The server's answer, migrating a local one once. */
+export async function loadOnboarded(userId: number): Promise<boolean> {
+  let server: boolean;
+  try {
+    server = (await authApi.preferences()).data.onboarded === true;
+  } catch {
+    // Server unreadable: do not trap the operator in setup on every visit.
+    return true;
+  }
+  if (server) {
+    clearLegacy(userId);
+    return true;
+  }
+  if (!readLegacy(userId)) return false;
+  try {
+    await authApi.updatePreferences({ onboarded: true });
+    clearLegacy(userId);
+  } catch {
+    // Kept locally; the next visit migrates it instead.
+  }
+  return true;
 }
 
 type ThemeChoice = "system" | "light" | "dark";
@@ -90,7 +118,8 @@ export function WelcomeSetup({
   };
 
   const finish = () => {
-    writeOnboarded(user.id);
+    // Not awaited: a failed save shows the setup again next visit, which is the honest outcome.
+    authApi.updatePreferences({ onboarded: true }).catch(() => {});
     onDone();
   };
 

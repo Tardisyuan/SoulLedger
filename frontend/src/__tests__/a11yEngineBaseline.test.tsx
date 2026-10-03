@@ -137,6 +137,7 @@ jest.mock("@soulledger/core/api", () => ({
   auditApi: { list: jest.fn() },
   ledgerApi: { statsOverview: jest.fn() },
   menusApi: { all: jest.fn(), list: jest.fn() },
+  authApi: { preferences: jest.fn(), updatePreferences: jest.fn() },
 }));
 
 jest.mock("@/src/contexts/ThemeContext", () => ({
@@ -185,7 +186,7 @@ import type { Permission, Role } from "@soulledger/core/api";
 import NotificationsPage from "@/app/notifications/page";
 import AuditPage from "@/app/audit/page";
 import WelcomePage from "@/app/welcome/page";
-import { notificationsApi, auditApi, ledgerApi, menusApi } from "@soulledger/core/api";
+import { notificationsApi, auditApi, ledgerApi, menusApi, authApi } from "@soulledger/core/api";
 
 // ── Subjects ────────────────────────────────────────────────────────────────
 
@@ -851,7 +852,7 @@ beforeAll(async () => {
   (menusApi.list as jest.Mock).mockResolvedValue({ data: { results: [] } });
   // /welcome shows its first-time setup INSTEAD of the page until this user has done it; the
   // subject is the regular page (the setup has its own tests in WelcomePage.test.tsx).
-  localStorage.setItem("soulledger_onboarded:1", "1");
+  (authApi.preferences as jest.Mock).mockResolvedValue({ data: { default_view: null, onboarded: true } });
 
   for (const subject of SUBJECTS) {
     // Wrapped in `<main>`, because that is where every one of these
