@@ -85,8 +85,14 @@ for (const name of ["--animate-spin", "--animate-pulse", "--default-transition-d
 // `.-translate-x-full` …); Design's check reads each as an unclassified token. They cannot be
 // dropped like the `space-y` / `divide-y` resets above — those equal the registered initial value,
 // these ARE the utility (`translate: var(--tw-translate-x) …`). Mark every one `other`, by prefix,
-// so a new Tailwind variable is covered too.
-css = css.replace(/(--tw-[\w-]+\s*:[^;{}]*;)(?!\s*\/\* @kind)/g, "$1 /* @kind other */");
+// so a new Tailwind variable is covered too. Skip rules whose selector ends in a state
+// pseudo-class (`:focus`, `:checked` …): the sync doesn't read those as tokens, so a comment there
+// "didn't attach to any token" (Design, 2026-10-03). Innermost blocks only; pseudo-elements stay.
+css = css.replace(/([^{};]+)\{([^{}]*)\}/g, (rule, selector, body) =>
+  /(?<!:):[a-z-]+(\([^)]*\))?\s*$/.test(selector.trim())
+    ? rule
+    : `${selector}{${body.replace(/(--tw-[\w-]+\s*:[^;{}]*;)(?!\s*\/\* @kind)/g, "$1 /* @kind other */")}}`,
+);
 // The brand pair lives in its own `:root` block at the end of globals.css (outside both themes),
 // which the sync's token scan does not read; it reads the top `:root` block below. Move the pair
 // there, comments and all, and drop the late block from the shipped copy.
