@@ -6863,7 +6863,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * @description Tenant management API — read-only, except `seal-glyphs/` (ADMIN only).
+         * @description Tenant management API — read-only, except `seal-glyphs/` and `settings/` (ADMIN only).
          *     Non-ADMIN users see only their own tenant.
          */
         get: operations["v1_tenants_list"];
@@ -6883,7 +6883,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * @description Tenant management API — read-only, except `seal-glyphs/` (ADMIN only).
+         * @description Tenant management API — read-only, except `seal-glyphs/` and `settings/` (ADMIN only).
          *     Non-ADMIN users see only their own tenant.
          */
         get: operations["v1_tenants_retrieve"];
@@ -6910,6 +6910,23 @@ export interface paths {
         head?: never;
         /** @description 匾上的印字。只收这一个字段,其余租户字段仍然只读。 */
         patch: operations["v1_tenants_seal_glyphs_partial_update"];
+        trace?: never;
+    };
+    "/api/v1/tenants/{code}/settings/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** @description 殿的设置:说明、调拨开关、三语殿名、转生冷却天数。只收已知字段,`settings` 里别的键不动。 */
+        patch: operations["v1_tenants_settings_partial_update"];
         trace?: never;
     };
     "/api/v1/users/": {
@@ -12434,6 +12451,24 @@ export interface components {
             seal_glyphs?: string[];
         };
         /**
+         * @description `PATCH /tenants/{code}/settings/` 的请求体(ADMIN):只收这几个**已知**的字段,不收整份 `settings` JSON。
+         *
+         *     `soul_rebirth_cooldown_days` 是 `settings` 里的一个键(`apps/soul_accounts/rebirth.py::cooldown_days`
+         *     读它,负数按 0 算,所以这里下限 0);写它时**合并**进现有 `settings`,别的键(如助手管理页写的
+         *     `assistant_enabled`)原样保留;给 `null` 就删掉这个键,回到默认 30 天。
+         */
+        PatchedTenantSettings: {
+            description?: string;
+            dispatch_enabled?: boolean;
+            /** @description 殿司展示名(简体中文) */
+            hall_name?: string;
+            /** @description 殿司展示名(English) */
+            hall_name_en?: string;
+            /** @description 殿司展示名(egy) */
+            hall_name_egy?: string;
+            soul_rebirth_cooldown_days?: number | null;
+        };
+        /**
          * @description The serializer behind `PATCH /auth/profile/` — what a user may change
          *     about themselves.
          *
@@ -14568,6 +14603,12 @@ export interface components {
             settings?: unknown;
             readonly civilization: string;
             readonly seal_glyphs: string[];
+            /** @description 殿司展示名(简体中文) */
+            hall_name?: string;
+            /** @description 殿司展示名(English) */
+            hall_name_en?: string;
+            /** @description 殿司展示名(egy) */
+            hall_name_egy?: string;
             /** Format: date-time */
             readonly created_at: string;
         };
@@ -27561,6 +27602,33 @@ export interface operations {
                 "application/json": components["schemas"]["PatchedTenantSealGlyphs"];
                 "application/x-www-form-urlencoded": components["schemas"]["PatchedTenantSealGlyphs"];
                 "multipart/form-data": components["schemas"]["PatchedTenantSealGlyphs"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Tenant"];
+                };
+            };
+        };
+    };
+    v1_tenants_settings_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedTenantSettings"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedTenantSettings"];
+                "multipart/form-data": components["schemas"]["PatchedTenantSettings"];
             };
         };
         responses: {

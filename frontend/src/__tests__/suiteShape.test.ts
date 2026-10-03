@@ -102,6 +102,7 @@ const COLLECTED_FILES = [
   "RoleFormModal.test.tsx",
   // 2026-09-30 v2 管理页(v2-web-p3b):租户印字编辑、审批流节点框。
   "SealGlyphsDialog.test.tsx",
+  "TenantSettingsDialog.test.tsx",
   "EditableNodeFrame.test.tsx",
   "queueRowScroll.test.ts",
   "sealStamp.test.tsx",
@@ -121,6 +122,8 @@ const COLLECTED_FILES = [
   "DispositionPage.sections.test.tsx",
   "hotkeys.test.tsx",
   "SoulHeaderActions.test.tsx",
+  "CorrectSettlementDialog.test.tsx",
+  "SoulDetailPage.correctSettlement.test.tsx",
   "SoulDetailPage.cacheInvalidation.test.tsx",
   "SoulDetailPage.inheritance.test.tsx",
   "SoulDetailPage.openJudgment.test.tsx",

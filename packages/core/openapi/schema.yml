@@ -15099,7 +15099,7 @@ paths:
     get:
       operationId: v1_tenants_list
       description: |-
-        Tenant management API — read-only, except `seal-glyphs/` (ADMIN only).
+        Tenant management API — read-only, except `seal-glyphs/` and `settings/` (ADMIN only).
         Non-ADMIN users see only their own tenant.
       parameters:
       - name: ordering
@@ -15135,7 +15135,7 @@ paths:
     get:
       operationId: v1_tenants_retrieve
       description: |-
-        Tenant management API — read-only, except `seal-glyphs/` (ADMIN only).
+        Tenant management API — read-only, except `seal-glyphs/` and `settings/` (ADMIN only).
         Non-ADMIN users see only their own tenant.
       parameters:
       - in: path
@@ -15177,6 +15177,38 @@ paths:
           multipart/form-data:
             schema:
               $ref: '#/components/schemas/PatchedTenantSealGlyphs'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tenant'
+          description: ''
+  /api/v1/tenants/{code}/settings/:
+    patch:
+      operationId: v1_tenants_settings_partial_update
+      description: 殿的设置:说明、调拨开关、三语殿名、转生冷却天数。只收已知字段,`settings` 里别的键不动。
+      parameters:
+      - in: path
+        name: code
+        schema:
+          type: string
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedTenantSettings'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedTenantSettings'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedTenantSettings'
       security:
       - jwtAuth: []
       responses:
@@ -26766,6 +26798,35 @@ components:
           items:
             type: string
           maxItems: 2
+    PatchedTenantSettings:
+      type: object
+      description: |-
+        `PATCH /tenants/{code}/settings/` 的请求体(ADMIN):只收这几个**已知**的字段,不收整份 `settings` JSON。
+
+        `soul_rebirth_cooldown_days` 是 `settings` 里的一个键(`apps/soul_accounts/rebirth.py::cooldown_days`
+        读它,负数按 0 算,所以这里下限 0);写它时**合并**进现有 `settings`,别的键(如助手管理页写的
+        `assistant_enabled`)原样保留;给 `null` 就删掉这个键,回到默认 30 天。
+      properties:
+        description:
+          type: string
+        dispatch_enabled:
+          type: boolean
+        hall_name:
+          type: string
+          description: 殿司展示名(简体中文)
+          maxLength: 60
+        hall_name_en:
+          type: string
+          description: 殿司展示名(English)
+          maxLength: 80
+        hall_name_egy:
+          type: string
+          description: 殿司展示名(egy)
+          maxLength: 80
+        soul_rebirth_cooldown_days:
+          type: integer
+          minimum: 0
+          nullable: true
     PatchedUser:
       type: object
       description: |-
@@ -31388,6 +31449,18 @@ components:
           items:
             type: string
           readOnly: true
+        hall_name:
+          type: string
+          description: 殿司展示名(简体中文)
+          maxLength: 60
+        hall_name_en:
+          type: string
+          description: 殿司展示名(English)
+          maxLength: 80
+        hall_name_egy:
+          type: string
+          description: 殿司展示名(egy)
+          maxLength: 80
         created_at:
           type: string
           format: date-time
