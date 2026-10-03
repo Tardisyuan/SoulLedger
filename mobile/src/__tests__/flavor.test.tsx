@@ -56,15 +56,16 @@ afterEach(() => jest.restoreAllMocks());
 
 /**
  * v3 (2026-10-02) supersedes 补足 C15: a sub-page's title bar is one row on the identity band's
- * ground — no ornament band, no texture, and the title in the interface face at 20 / 600.
+ * ground — no ornament band, no texture, and the title at 20 in v3's title serif (Noto Serif SC
+ * 600, v3 第一批「标题与展示大字用衬线」).
  */
 describe("the band on every other title bar (v3)", () => {
-  it.each(CIVS)("%s: the band ground, no ornament band, the title in the interface face at 20", async (civ) => {
+  it.each(CIVS)("%s: the band ground, no ornament band, the title in the title serif at 20", async (civ) => {
     wrap(<AppHeader title="设置" onBack={jest.fn()} />, civ);
     const theme = themeFor(CIVILIZATION[civ], "dark");
     expect(StyleSheet.flatten(screen.getByTestId("header").props.style).backgroundColor).toBe(theme.band);
     expect(screen.queryAllByTestId(/^plaque-band-/)).toEqual([]);
-    expect(StyleSheet.flatten(screen.getByRole("header").props.style)).toMatchObject({ fontSize: 20, fontFamily: "Archivo_600SemiBold", color: theme.onPlaque });
+    expect(StyleSheet.flatten(screen.getByRole("header").props.style)).toMatchObject({ fontSize: 20, fontFamily: "NotoSerifSC_600", color: theme.onPlaque });
     // v1's 6pt band is gone, not doubled under the plaque's; v2's dark-scheme top highlight too.
     expect(screen.queryAllByTestId(/^header-band-/)).toEqual([]);
     expect(screen.getByTestId("header").children).toHaveLength(1);

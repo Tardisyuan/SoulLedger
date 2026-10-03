@@ -3,7 +3,7 @@
  * the identity band (the civilization's colour with 10% #111, `Theme.band`), as the life tab
  * draws it. A tab's root wears the short band (the Web's 116 band at phone width, round-7
  * `.queue-mobile .identity-band`): the meta line in mono, then the outline seal (38) and the
- * title at 20 / 600 in the interface face. Every other bar is one row on the same ground.
+ * title at 20 in v3's title serif (Noto Serif SC 600, `titleFamily`). Every other bar is one row on the same ground.
  * No ornament band, no texture, no civilization display face (v2's 匾, gone 2026-10-02).
  * Before sign-in, or for a civilization the app does not know, the band is the neutral one
  * and has no seal. The tab bar marks its current item with a 2px rule in the colour.
@@ -18,7 +18,7 @@ import { useContext, type ReactNode } from "react";
 
 import { AssistEntry, useAssist } from "./assist";
 import { Emblem, Icon, type IconName } from "./emblems";
-import { family, quoteFamily } from "./fonts";
+import { family, quoteFamily, titleFamily } from "./fonts";
 import { useI18n } from "./i18n";
 import { useCurrentHall } from "./screens/letters";
 import { OutlineSeal } from "./seal";
@@ -151,9 +151,10 @@ function Bar({ title, serif, onBack, action, onAccount, assist }: BarProps) {
           styles.title,
           android && !onBack && styles.titleStart,
           { textAlign: onBack || android ? "left" : "center" },
-          // 20 / 600 in the interface face, as the band's title; the pre-login app name keeps its serif.
+          // 20 / 600 in v3's title serif (Noto Serif SC 600), as the band's title; the pre-login app
+          // name keeps its quote serif (product decision 2026-09-26).
           styles.barTitle,
-          serif && { fontFamily: quoteFamily(title) },
+          { fontFamily: serif ? quoteFamily(title) : titleFamily(title) },
         ]}
       >
         {title}
@@ -205,7 +206,7 @@ export function PlaqueHeader({
         </Txt>
         <View style={styles.plaqueRow}>
           <OutlineSeal civ={t.civ} size={38} color={t.onPlaque} glyphs={me.tenant.seal_glyphs} label={tr("seal.aria", { court: hall })} testID="plaque-seal" />
-          <Txt testID="plaque-title" accessibilityRole="header" numberOfLines={2} style={styles.plaqueTitle}>
+          <Txt testID="plaque-title" accessibilityRole="header" numberOfLines={2} style={[styles.plaqueTitle, { fontFamily: titleFamily(title) }]}>
             {title}
           </Txt>
           <BarEnd action={action} onAccount={onAccount} assist={assist} />
@@ -314,6 +315,7 @@ const styles = StyleSheet.create({
   /** v3 short band at phone width: the meta line, then the seal row. */
   plaque: { paddingTop: 12, paddingBottom: 12, paddingLeft: 16, paddingRight: 4, gap: 12 },
   plaqueRow: { flexDirection: "row", alignItems: "center", gap: 12 },
-  plaqueTitle: { flex: 1, minWidth: 0, fontFamily: family.ui[600], fontSize: 20, lineHeight: 28 },
+  /** v3 第一批: titles in Noto Serif SC 600 (`titleFamily`, set where the title is known). */
+  plaqueTitle: { flex: 1, minWidth: 0, fontSize: 20, lineHeight: 28 },
   plaqueMeta: { fontFamily: family.mono[400], fontSize: 11, lineHeight: 16, letterSpacing: 0.6, paddingRight: 12 },
 });

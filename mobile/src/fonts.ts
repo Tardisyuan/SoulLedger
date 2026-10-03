@@ -82,3 +82,20 @@ const HAN = /[㐀-鿿豈-﫿]/;
 export function quoteFamily(text: string): string {
   return HAN.test(text) ? family.serifHan : family.serif;
 }
+
+/**
+ * What the title subset draws besides Han (`scripts/subset-serif-sc.sh` UNICODES): ASCII,
+ * Latin-1 punctuation and × ÷, general and CJK punctuation, fullwidth forms.
+ */
+const TITLE_SUBSET = /^[\u0020-\u007E\u00A0-\u00BF\u00D7\u00F7\u2010-\u2027\u2030-\u203B\u2E3A\u2E3B\u3000-\u303F\uFF00-\uFFEF\u3400-\u9FFF\uF900-\uFAFF\s]*$/;
+
+/**
+ * The family for a title (v3: Noto Serif SC 600) — unless it has a letter the subset lacks.
+ * React Native falls back glyph by glyph, so `Jérôme` would be J·r·m·e in the serif and é·ô in
+ * the system sans, and `Ḥr-m-ḥꜣb` or a Greek name likewise; such a title stays whole in the
+ * interface face (600). Every bar title in the three language packs is inside the subset; a
+ * rare Han character outside it still falls back alone, as it does in quoted words.
+ */
+export function titleFamily(text: string): string {
+  return TITLE_SUBSET.test(text) ? family.title : family.ui[600];
+}

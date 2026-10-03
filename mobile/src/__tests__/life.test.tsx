@@ -73,6 +73,8 @@ describe("the identity band", () => {
   it("full at the top; one compact row past 68pt; open again only back near the top", async () => {
     await open();
     expect(screen.getByTestId("identity-meta").props.children).toBe("中国 · 第 2 世 · 第五殿");
+    // The name is the band's title: v3's title serif, Noto Serif SC 600, at 20 (13 compact).
+    expect(flat(screen.getByTestId("soul-name"))).toMatchObject({ fontFamily: "NotoSerifSC_600", fontSize: 20 });
     expect(flat(screen.getByTestId("plaque-seal")).width).toBe(64);
     expect(flat(screen.getByTestId("identity")).height).toBe(116);
     // v3's 64pt seal still fits the full band (it clips: overflow hidden): padding, meta line, gap, seal.
@@ -89,6 +91,7 @@ describe("the identity band", () => {
     expect(flat(screen.getByTestId("plaque-seal")).width).toBe(30);
     // Still the name, the code to copy and the way to settings, in the one row.
     expect(screen.getByTestId("soul-name").props.children).toBe(PROFILE.name);
+    expect(flat(screen.getByTestId("soul-name"))).toMatchObject({ fontFamily: "NotoSerifSC_600", fontSize: 13 });
     expect(screen.getByTestId("copy-soul-code")).toBeTruthy();
     expect(screen.getByTestId("header-account")).toBeTruthy();
     // The height moves rather than jumps: right after the switch it is still on its way to 48.

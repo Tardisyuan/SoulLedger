@@ -133,6 +133,8 @@ export const motion = {
   drawerOut: 200,
   bandCompact: 200,
   offlineBar: 200,
+  // v3 B2 App「下拉刷新」: released, the content goes back (or to the 56 hold) over 200.
+  pullRelease: 200,
 } as const;
 
 /**

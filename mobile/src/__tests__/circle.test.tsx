@@ -10,6 +10,8 @@ import { NavigationContainer } from "@react-navigation/native";
 import { act, fireEvent, render, renderHook, screen, waitFor, within } from "@testing-library/react-native";
 import type { ReactNode } from "react";
 import { FlatList, StyleSheet } from "react-native";
+import { State, type PanGesture } from "react-native-gesture-handler";
+import { fireGestureHandler, getByGestureTestId } from "react-native-gesture-handler/jest-utils";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { I18nProvider } from "../i18n";
@@ -168,10 +170,20 @@ describe("feed paging (a FlatList read to its end)", () => {
     stubApi({ "/me/social/feed/": [page([post({ id: "p1" })]), page([post({ id: "p0" }), post({ id: "p1" })])] });
     wrap(<CircleScreen />);
     const before = await screen.findByTestId("post-p1");
-    // A pull released past 56 (v3 B2; jest renders iOS, where the pull is the list's own bounce).
-    await act(async () => fireEvent(screen.getByTestId("circle-list"), "scrollEndDrag", { nativeEvent: { contentOffset: { x: 0, y: -60 } } }));
+    // A pull released past 56 (v3 B2): the gesture-handler pan around the list, both platforms.
+    await act(async () =>
+      fireGestureHandler<PanGesture>(getByGestureTestId("pull"), [
+        { state: State.BEGAN, translationY: 0 },
+        { state: State.ACTIVE, translationY: 0 },
+        { translationY: 60 },
+        { state: State.END, translationY: 60 },
+      ])
+    );
     await screen.findByTestId("post-p0");
     expect(screen.getByTestId("post-p1")).toBe(before);
+    // The reload done, the list goes back up from the 56 hold.
+    const shift = () => (StyleSheet.flatten(screen.getByTestId("pull-content").props.style).transform as { translateY: number }[])[0].translateY;
+    await waitFor(() => expect(shift()).toBe(0));
   });
 });
 
