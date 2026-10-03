@@ -122,6 +122,9 @@ function signedInJudge(over: Record<string, unknown> = {}) {
   mockedPrefs.mockResolvedValue({ data: { default_view: null, onboarded: true } });
 }
 
+/** A signed-in page shows a loading state until the server says whether setup is done. */
+const settled = () => waitFor(() => expect(screen.queryByTestId("welcome-loading")).toBeNull());
+
 const panel = (id: string) => {
   const el = document.querySelector(`section[aria-labelledby="${id}"]`);
   if (!el) throw new Error(`no panel ${id}`);
@@ -206,6 +209,7 @@ describe("本殿灵魂: one panel, four cells", () => {
     mockedAudit.mockResolvedValue({ data: { results: [{ id: 1, action: "CREATE", resource: "soul", resource_id: "s1", description: "记一条", timestamp: new Date().toISOString() }], count: 1 } });
     mockedStats.mockRejectedValueOnce(new Error("500"));
     renderPage();
+    await settled();
     const alert = await within(statsPanel()).findByRole("alert");
     expect(alert).toHaveTextContent("! dashboard.todo.load_error");
     expect(alert).toHaveTextContent("welcome.error_stats");
@@ -228,6 +232,7 @@ describe("接着做: one primary button, entries from the user's own menus", () 
     signedInJudge();
     mockMenus = [menu(1, "/souls"), menu(2, "/workflow")];
     renderPage();
+    await settled();
     const primary = await within(nextPanel()).findByTestId("welcome-primary");
     await waitFor(() => expect(primary).toHaveTextContent("welcome.next_judgment(4)"));
     expect(primary).toHaveAttribute("href", "/judgment/queue");
@@ -249,6 +254,7 @@ describe("接着做: one primary button, entries from the user's own menus", () 
     signedInJudge({ role: "ADMIN" });
     mockMenus = [menu(1, "/users"), menu(2, "/permissions"), menu(3, "/audit"), menu(4, "/souls")];
     renderPage();
+    await settled();
     const primary = await within(nextPanel()).findByTestId("welcome-primary");
     expect(primary).toHaveTextContent("welcome.next_dashboard");
     expect(primary).toHaveAttribute("href", "/dashboard");
@@ -271,6 +277,7 @@ describe("接着做: one primary button, entries from the user's own menus", () 
     signedInJudge();
     mockMenus = [menu(1, "/souls"), menu(2, "/workflow"), menu(3, "/ledger")];
     renderPage();
+    await settled();
     await within(nextPanel()).findByTestId("welcome-primary");
     const primaries = Array.from(document.querySelectorAll("a, button")).filter((el) => el.className.includes("--color-main"));
     expect(primaries).toEqual([within(nextPanel()).getByTestId("welcome-primary")]);
@@ -301,6 +308,7 @@ describe("最近活动: mine, from the audit log, at most six", () => {
       data: { results: Array.from({ length: 20 }, (_, i) => entry({ id: i + 1, description: `条目 ${i + 1}` })), count: 20 },
     });
     renderPage();
+    await settled();
     await within(activityPanel()).findByText("条目 1");
     expect(mockedAudit).toHaveBeenCalledWith({ user: "7" });
     const rows = activityPanel().querySelectorAll("[data-activity]");
@@ -340,6 +348,7 @@ describe("最近活动: mine, from the audit log, at most six", () => {
     signedInJudge();
     mockedAudit.mockRejectedValueOnce(new Error("403"));
     renderPage();
+    await settled();
     const alert = await within(activityPanel()).findByRole("alert");
     expect(alert).toHaveTextContent("welcome.error_activity");
     await waitFor(() => expect(statsPanel().querySelectorAll("[data-kpi]")).toHaveLength(4));
@@ -388,10 +397,25 @@ describe("first-time setup: its own screen until `onboarded`", () => {
     expect(setup()).toHaveTextContent("welcome.first_run(1,4)");
   });
 
+  it("until the server answers, neither screen — only the loading state", async () => {
+    mockUser = { ...JUDGE };
+    let answer: (_v: unknown) => void = () => {};
+    mockedPrefs.mockReturnValue(new Promise((r) => (answer = r)));
+    renderPage();
+    expect(screen.getByTestId("welcome-loading")).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("common.loading");
+    expect(setup()).toBeNull();
+    expect(document.querySelector("section[aria-labelledby='welcome-stats-title']")).toBeNull();
+    answer({ data: { default_view: null, onboarded: true } });
+    await waitFor(() => expect(screen.queryByTestId("welcome-loading")).toBeNull());
+    expect(document.querySelector("section[aria-labelledby='welcome-stats-title']")).not.toBeNull();
+  });
+
   it("an anonymous visitor never gets it", async () => {
     renderPage();
     await waitFor(() => expect(mockedStats).toHaveBeenCalled());
     expect(setup()).toBeNull();
+    expect(screen.queryByTestId("welcome-loading")).toBeNull();
   });
 
   it("继续 / 上一步 move through the steps; 上一步 is disabled on the first", async () => {
@@ -489,6 +513,7 @@ describe("first-time setup: its own screen until `onboarded`", () => {
     it("重看首次设置 opens the setup without clearing the flag", async () => {
       signedInJudge();
       renderPage();
+      await settled();
       fireEvent.click(await within(nextPanel()).findByRole("button", { name: "welcome.next_redo_onboarding" }));
       expect(setup()).not.toBeNull();
       expect(savedOnboarded()).toEqual([]);
@@ -498,6 +523,7 @@ describe("first-time setup: its own screen until `onboarded`", () => {
   it("重看首次设置 comes back from 接着做; 所有快捷键 opens the shortcuts step — exactly the queue's seven", async () => {
     signedInJudge();
     renderPage();
+    await settled();
     fireEvent.click(await within(nextPanel()).findByRole("button", { name: "welcome.next_redo_onboarding" }));
     expect(stepStates()).toEqual(["current", "future", "future", "future"]);
     fireEvent.click(screen.getByRole("button", { name: "welcome.skip" }));

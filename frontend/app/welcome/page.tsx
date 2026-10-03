@@ -8,6 +8,7 @@ import { auditApi, ledgerApi, type AuditLogEntry, type LedgerStatsOverview } fro
 import { DomainEnum } from "@/src/components/ui/DomainValue";
 import { RoleName } from "@/src/components/users/RoleName";
 import { EmptyState } from "@/src/components/ui/EmptyState";
+import { Spinner } from "@/src/components/ui/Spinner";
 import { Button, buttonVariants } from "@/src/components/ui/Button";
 import { usePlaque } from "@/src/components/plaque/Plaque";
 import { WelcomeSetup, loadOnboarded } from "@/src/components/welcome/WelcomeSetup";
@@ -309,12 +310,17 @@ export default function WelcomePage() {
 
   // ── 首次设置:这个账号还没做完(服务器说的)→ 单独一屏。null = 常规页。
   const [setupAt, setSetupAt] = useState<number | null>(null);
+  // Until the server has said whether this account finished setup, show neither screen: the
+  // regular page flashed for a beat before switching to setup (user, 2026-10-03).
+  const [setupKnown, setSetupKnown] = useState(false);
   const userId = user?.id ?? null;
   useEffect(() => {
     if (userId === null) return;
     let cancelled = false;
     void loadOnboarded(userId).then((done) => {
-      if (!cancelled && !done) setSetupAt(0);
+      if (cancelled) return;
+      if (!done) setSetupAt(0);
+      setSetupKnown(true);
     });
     return () => {
       cancelled = true;
@@ -379,7 +385,11 @@ export default function WelcomePage() {
     <div className="bg-[oklch(var(--color-canvas))] px-4 py-6 md:p-6">
       {/* 这一页的 <h1>:看得见的问候在身份带上(壳里的题字是 div),这里给读屏一个标题。 */}
       <h1 className="sr-only font-title text-lg">{greeting}</h1>
-      {setupAt !== null && user ? (
+      {userId !== null && !setupKnown ? (
+        <div className="flex justify-center py-12" data-testid="welcome-loading">
+          <Spinner size="lg" label={t("common.loading")} />
+        </div>
+      ) : setupAt !== null && user ? (
         <WelcomeSetup user={user} startAt={setupAt} onDone={() => setSetupAt(null)} />
       ) : (
         <div className="flex flex-col gap-6">
