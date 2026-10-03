@@ -141,7 +141,7 @@ export function SoulProfileScreen({ userId }: { userId: number }) {
   const [menu, setMenu] = useState(false);
   const p: SoulProfile | null = profile.data;
   const reborn = p ? !p.is_active : false;
-  const refresh = () => void Promise.all([profile.reload(), feed.reload()]);
+  const refresh = () => Promise.all([profile.reload(), feed.reload()]);
 
   const letter = async () => {
     setMenu(false);
@@ -364,7 +364,7 @@ export function MyCircleScreen() {
           testID="my-posts"
           feed={feed}
           refreshing={me.loading}
-          onRefresh={() => void Promise.all([me.reload(), feed.reload()])}
+          onRefresh={() => Promise.all([me.reload(), feed.reload()])}
           header={
             <View style={[styles.head, { paddingHorizontal: gutter, borderBottomColor: t.hair }]}>
               <View style={styles.row}>

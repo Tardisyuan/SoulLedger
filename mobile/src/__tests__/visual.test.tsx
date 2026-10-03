@@ -6,17 +6,18 @@
 import BottomSheet from "@gorhom/bottom-sheet";
 import { NavigationContainer } from "@react-navigation/native";
 import * as Haptics from "expo-haptics";
-import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { GestureHandlerRootView, State, type PanGesture } from "react-native-gesture-handler";
+import { fireGestureHandler, getByGestureTestId } from "react-native-gesture-handler/jest-utils";
 import { useSharedValue } from "react-native-reanimated";
 import { act, fireEvent, render, screen, within } from "@testing-library/react-native";
-import type { ReactNode } from "react";
-import { AccessibilityInfo, Platform, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useState, type ReactNode } from "react";
+import { AccessibilityInfo, Animated, DeviceEventEmitter, Easing, Platform, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { LogoutProvider, useAskLogout } from "../feedback";
 import { I18nProvider } from "../i18n";
 import { installMobilePlatform } from "../platform";
-import { FONT_ASSETS, quoteFamily } from "../fonts";
+import { FONT_ASSETS, quoteFamily, titleFamily } from "../fonts";
 import { APPLICATION_BADGES, SOUL_STATE_BADGES } from "../rules";
 import { ExpiryBox } from "../screens/auth";
 import { LifeSections } from "../screens/life";
@@ -422,69 +423,247 @@ function AskLogout() {
   return <Button testID="ask" title="ask" onPress={ask} />;
 }
 
-describe("pull to refresh (v3 B2: the content follows the finger, no spinner)", () => {
-  const scroller = () => screen.UNSAFE_getByType(ScrollView);
-  const pullTo = (y: number) => fireEvent.scroll(scroller(), { nativeEvent: { contentOffset: { x: 0, y: -y } } });
-  const release = (y: number) => fireEvent(scroller(), "scrollEndDrag", { nativeEvent: { contentOffset: { x: 0, y: -y } } });
+describe("titleFamily (v3 titles in Noto Serif SC 600, a Han + ASCII subset)", () => {
+  it("Han, ASCII and the subset's punctuation take the serif; a rare Han character alone falls back, so it still does", () => {
+    expect(["张三", "Anubis", "第 2 世 · 书信", "「灵魂簿」", "王翾"].map(titleFamily)).toEqual(Array(5).fill("NotoSerifSC_600"));
+  });
+  it("a letter outside the subset keeps the whole title in the interface face, not serif and sans glyph by glyph", () => {
+    expect(["Jérôme", "Søren", "Σωκράτης", "Ḥr-m-ḥꜣb", "Đặng"].map(titleFamily)).toEqual(Array(5).fill("Archivo_600SemiBold"));
+  });
+});
+
+const realImmediate = setImmediate;
+
+describe("pull to refresh (v3 B2: the content follows the finger, at most 56; no spinner)", () => {
+  // The pull is a gesture-handler Pan (user decision 2026-10-03, the v3 B4 exception); jest drives
+  // it through the library's own test utils, or — for a pull still under the finger — its events.
+  const pan = () => getByGestureTestId("pull");
+  const emit = (name: string, ev: Record<string, unknown>) =>
+    act(() => void DeviceEventEmitter.emit(name, { handlerTag: pan().handlerTag, numberOfPointers: 1, x: 0, y: 0, absoluteX: 0, absoluteY: 0, translationX: 0, velocityX: 0, velocityY: 0, ...ev }));
+  /** Down and held, `dy` below where the finger landed. */
+  const hold = (dy: number) => {
+    emit("onGestureHandlerStateChange", { state: State.BEGAN, oldState: State.UNDETERMINED, translationY: 0 });
+    emit("onGestureHandlerStateChange", { state: State.ACTIVE, oldState: State.BEGAN, translationY: dy });
+    emit("onGestureHandlerEvent", { state: State.ACTIVE, translationY: dy });
+  };
+  /** A whole pull: down `dy`, released. */
+  const pull = (dy: number) =>
+    act(() =>
+      fireGestureHandler<PanGesture>(pan(), [
+        { state: State.BEGAN, translationY: 0 },
+        { state: State.ACTIVE, translationY: 0 },
+        { translationY: dy },
+        { state: State.END, translationY: dy },
+      ])
+    );
+  // The detector applies a changed gesture (enabled, reduce motion) on the next setImmediate —
+  // gesture-handler bound the real one at import, before the fake timers.
+  const applied = () => act(() => new Promise<void>((resolve) => realImmediate(() => resolve())));
+  const shift = () => (flat(screen.getByTestId("pull-content")).transform as { translateY: number }[])[0].translateY;
   const indicator = () => screen.queryByTestId("pull-indicator", { includeHiddenElements: true });
   const opacity = () => flat(indicator()!).opacity;
+  const scroller = () => screen.UNSAFE_getByType(ScrollView);
+  const settle = () => act(() => void jest.advanceTimersByTime(motion.pullRelease + 50));
+  const deferred = () => {
+    let done = () => {};
+    const promise = new Promise<void>((resolve) => (done = resolve));
+    return { promise, done: () => act(async () => done()) };
+  };
+  const setOS = (os: string) => Object.defineProperty(Platform, "OS", { value: os, configurable: true });
+  const os = Platform.OS;
 
-  it("a release at 56pt or more reloads; short of it, or while a reload is running, nothing", async () => {
-    const onRefresh = jest.fn();
+  beforeEach(() => {
+    jest.useFakeTimers();
+    jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockResolvedValue(false);
+    jest.spyOn(AccessibilityInfo, "isScreenReaderEnabled").mockResolvedValue(false);
+  });
+  afterEach(() => {
+    jest.useRealTimers();
+    jest.restoreAllMocks();
+    setOS(os);
+  });
+
+  const mount = async (onRefresh: () => unknown = jest.fn()) => {
     wrap(<Screen onRefresh={onRefresh}>{null}</Screen>);
     await act(async () => {});
-    release(PULL_REFRESH_PT - 1);
+    await applied();
+  };
+
+  it("the content follows the finger and stops at 56; the ↻ fades in with it", async () => {
+    await mount();
+    expect(shift()).toBe(0);
+    expect(opacity()).toBe(0);
+    hold(30);
+    expect(shift()).toBe(30);
+    expect(opacity()).toBeCloseTo(30 / PULL_REFRESH_PT);
+    hold(100);
+    expect(shift()).toBe(PULL_REFRESH_PT);
+    expect(opacity()).toBe(1);
+  });
+
+  it("released at 55: no reload, and back to 0 over 200ms on the entry curve", async () => {
+    const onRefresh = jest.fn();
+    await mount(onRefresh);
+    const timing = jest.spyOn(Animated, "timing");
+    pull(PULL_REFRESH_PT - 1);
     expect(onRefresh).not.toHaveBeenCalled();
-    release(PULL_REFRESH_PT);
+    const config = timing.mock.calls.at(-1)![1] as { toValue: number; duration: number; easing: (x: number) => number };
+    expect(config).toMatchObject({ toValue: 0, duration: 200 });
+    expect(config.easing(0.3)).toBeCloseTo(Easing.bezier(0.2, 0.8, 0.2, 1)(0.3));
+    expect(config.easing(0.3)).not.toBeCloseTo(0.3);
+    settle();
+    expect(shift()).toBe(0);
+  });
+
+  it("released at 56: one reload; the content waits at 56 with the ↻ until it is done, then goes back", async () => {
+    const reload = deferred();
+    const onRefresh = jest.fn(() => reload.promise);
+    await mount(onRefresh);
+    pull(PULL_REFRESH_PT);
+    await applied();
     expect(onRefresh).toHaveBeenCalledTimes(1);
-    screen.rerender(tree(<Screen onRefresh={onRefresh} refreshing>{null}</Screen>));
-    release(PULL_REFRESH_PT + 20);
+    settle();
+    expect(shift()).toBe(PULL_REFRESH_PT);
+    expect(opacity()).toBe(1);
+    // A second pull while it runs does nothing.
+    pull(PULL_REFRESH_PT + 40);
     expect(onRefresh).toHaveBeenCalledTimes(1);
-  });
-
-  it("iOS: no system spinner, the scroller bounces even when short; the ↻ fades in with the pull", async () => {
-    jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockResolvedValue(false);
-    wrap(<Screen onRefresh={jest.fn()}>{null}</Screen>);
-    await act(async () => {});
-    expect(screen.UNSAFE_queryAllByType(RefreshControl)).toEqual([]);
-    expect(scroller().props.alwaysBounceVertical).toBe(true);
+    await reload.done();
+    await applied();
+    settle();
+    expect(shift()).toBe(0);
     expect(opacity()).toBe(0);
-    act(() => pullTo(PULL_REFRESH_PT / 2));
-    expect(opacity()).toBeCloseTo(0.5);
-    act(() => pullTo(PULL_REFRESH_PT * 2));
-    expect(opacity()).toBe(1);
+    pull(PULL_REFRESH_PT);
+    expect(onRefresh).toHaveBeenCalledTimes(2);
+    await act(async () => {}); // that second reload's (already settled) promise
   });
 
-  it("under reduce motion the ↻ does not fade: it appears, static, once the pull has reached 56", async () => {
-    jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockResolvedValue(true);
-    wrap(<Screen onRefresh={jest.fn()}>{null}</Screen>);
-    await act(async () => {});
-    act(() => pullTo(PULL_REFRESH_PT / 2));
-    expect(opacity()).toBe(0);
-    act(() => pullTo(PULL_REFRESH_PT));
-    expect(opacity()).toBe(1);
-  });
-
-  it("Android keeps the system RefreshControl (its scroll view takes the drag before JS can)", async () => {
-    const os = Platform.OS;
-    Object.defineProperty(Platform, "OS", { value: "android", configurable: true });
-    try {
-      const onRefresh = jest.fn();
-      wrap(<Screen onRefresh={onRefresh}>{null}</Screen>);
-      await act(async () => {});
-      expect(indicator()).toBeNull();
-      act(() => screen.UNSAFE_getByType(RefreshControl).props.onRefresh());
-      expect(onRefresh).toHaveBeenCalledTimes(1);
-    } finally {
-      Object.defineProperty(Platform, "OS", { value: os, configurable: true });
+  it("an onRefresh that returns nothing is held for as long as `refreshing` says", async () => {
+    const onRefresh = jest.fn();
+    // Like useRemote's reload: `refreshing` goes true in the same update as the pull.
+    function Busy() {
+      const [busy, setBusy] = useState(false);
+      const refresh = () => {
+        setBusy(true);
+        onRefresh();
+      };
+      return (
+        <Screen refreshing={busy} onRefresh={refresh}>
+          <Button testID="done" title="done" onPress={() => setBusy(false)} />
+        </Screen>
+      );
     }
+    wrap(<Busy />);
+    await act(async () => {});
+    await applied();
+    pull(PULL_REFRESH_PT);
+    expect(onRefresh).toHaveBeenCalledTimes(1);
+    await applied();
+    settle();
+    expect(shift()).toBe(PULL_REFRESH_PT);
+    pull(PULL_REFRESH_PT);
+    expect(onRefresh).toHaveBeenCalledTimes(1);
+    fireEvent.press(screen.getByTestId("done"));
+    settle();
+    expect(shift()).toBe(0);
   });
 
-  it("a screen without onRefresh has neither", async () => {
+  it("scrolled down, the pull is off and the drag is the list's; back at the top, it is on again", async () => {
+    const onRefresh = jest.fn();
+    await mount(onRefresh);
+    expect(scroller().props).toMatchObject({ bounces: false, overScrollMode: "never", scrollEventThrottle: 16 });
+    act(() => fireEvent.scroll(scroller(), { nativeEvent: { contentOffset: { x: 0, y: 120 } } }));
+    await applied();
+    expect(pan().config.enabled).toBe(false);
+    pull(PULL_REFRESH_PT + 20);
+    expect(onRefresh).not.toHaveBeenCalled();
+    expect(shift()).toBe(0);
+    act(() => fireEvent.scroll(scroller(), { nativeEvent: { contentOffset: { x: 0, y: 0 } } }));
+    await applied();
+    expect(pan().config.enabled).toBe(true);
+    pull(PULL_REFRESH_PT);
+    expect(onRefresh).toHaveBeenCalledTimes(1);
+  });
+
+  it("the caller's onScroll and the pull's both hear the scroller", async () => {
+    const onScroll = jest.fn();
+    wrap(
+      <Screen onRefresh={jest.fn()} onScroll={onScroll}>
+        {null}
+      </Screen>
+    );
+    await act(async () => {});
+    act(() => fireEvent.scroll(scroller(), { nativeEvent: { contentOffset: { x: 0, y: 80 } } }));
+    await applied();
+    expect(onScroll).toHaveBeenCalledWith(80);
+    expect(pan().config.enabled).toBe(false);
+  });
+
+  it("reduce motion: the content does not follow; at 56 it stands at 56 with the ↻, short of it nothing; no animation", async () => {
+    jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockResolvedValue(true);
+    const reload = deferred();
+    const onRefresh = jest.fn(() => reload.promise);
+    await mount(onRefresh);
+    const timing = jest.spyOn(Animated, "timing");
+    hold(30);
+    expect(shift()).toBe(0);
+    expect(opacity()).toBe(0);
+    hold(PULL_REFRESH_PT - 1);
+    expect(shift()).toBe(0);
+    hold(PULL_REFRESH_PT + 30);
+    expect(shift()).toBe(PULL_REFRESH_PT);
+    expect(opacity()).toBe(1);
+    emit("onGestureHandlerStateChange", { state: State.END, oldState: State.ACTIVE, translationY: PULL_REFRESH_PT + 30 });
+    expect(onRefresh).toHaveBeenCalledTimes(1);
+    expect(shift()).toBe(PULL_REFRESH_PT);
+    await reload.done();
+    await applied();
+    expect(shift()).toBe(0); // at once, not over 200
+    pull(PULL_REFRESH_PT - 1);
+    expect(shift()).toBe(0);
+    expect(timing).not.toHaveBeenCalled();
+  });
+
+  it("with a screen reader on: the system RefreshControl, and the pull gesture is off", async () => {
+    jest.spyOn(AccessibilityInfo, "isScreenReaderEnabled").mockResolvedValue(true);
+    const reload = deferred();
+    const onRefresh = jest.fn(() => reload.promise);
+    await mount(onRefresh);
+    expect(pan().config.enabled).toBe(false);
+    expect(indicator()).toBeNull();
+    pull(PULL_REFRESH_PT + 20);
+    expect(onRefresh).not.toHaveBeenCalled();
+    const control = () => screen.UNSAFE_getByType(RefreshControl);
+    expect(control().props.refreshing).toBe(false);
+    act(() => control().props.onRefresh());
+    expect(onRefresh).toHaveBeenCalledTimes(1);
+    expect(control().props.refreshing).toBe(true);
+    await reload.done();
+    expect(control().props.refreshing).toBe(false);
+    expect(shift()).toBe(0);
+  });
+
+  it("Android takes the same path: the pull, no RefreshControl", async () => {
+    setOS("android");
+    const onRefresh = jest.fn();
+    await mount(onRefresh);
+    expect(screen.UNSAFE_queryAllByType(RefreshControl)).toEqual([]);
+    expect(scroller().props.overScrollMode).toBe("never");
+    hold(30);
+    expect(shift()).toBe(30);
+    emit("onGestureHandlerStateChange", { state: State.END, oldState: State.ACTIVE, translationY: 30 });
+    settle();
+    pull(PULL_REFRESH_PT);
+    expect(onRefresh).toHaveBeenCalledTimes(1);
+  });
+
+  it("a screen without onRefresh has neither the pull nor a RefreshControl", async () => {
     wrap(<Screen>{null}</Screen>);
     await act(async () => {});
     expect(indicator()).toBeNull();
+    expect(screen.queryByTestId("pull-content")).toBeNull();
     expect(screen.UNSAFE_queryAllByType(RefreshControl)).toEqual([]);
+    expect(scroller().props.bounces).toBeUndefined();
   });
 });
 
