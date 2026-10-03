@@ -193,7 +193,7 @@ function RealmsPageContent() {
       ) : own.length === 0 ? (
         <EmptyState title={t(`realms.civilizations.${civilization}`)} reason={t("realms.table.empty_civ")} />
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-[360px_minmax(0,1fr)] gap-4 lg:gap-6 pt-2">
+        <div className="grid grid-cols-1 lg:grid-cols-[360px_minmax(0,1fr)] items-start gap-4 lg:gap-6 pt-2">
           <section data-testid="realm-topology" className={`${CARD} p-4 space-y-4 min-w-0`}>
             <h2 className="text-lg">{t("realms.map.title")}</h2>
             <RouteMap
