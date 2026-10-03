@@ -142,14 +142,14 @@ describe("v3 OutlineSeal", () => {
 });
 
 describe("the band on a tab's root (v3 short identity band)", () => {
-  it("the band ground, the tenant's seal in white read as 「第五殿之印」, the meta line, the title at 20 / 600 in the interface face", async () => {
+  it("the band ground, the tenant's seal in white read as 「第五殿之印」, the meta line, the title at 20 in the title serif (Noto Serif SC 600)", async () => {
     wrap(<PlaqueHeader title="书信" onAccount={() => {}} />, signedIn({ tenant: { ...PROFILE.tenant, seal_glyphs: ["五"] } }));
     expect(flat(screen.getByTestId("plaque")).backgroundColor).toBe(v3Band(v3.civ.cn.light));
     expect(screen.getByTestId("plaque-seal").props.accessibilityLabel).toBe("第五殿之印");
     expect(flat(screen.getByTestId("plaque-seal", H))).toMatchObject({ width: 38, height: 38 });
     expect(screen.getByTestId("plaque-seal-glyph", H).props.children).toBe("五");
     expect(screen.getByTestId("plaque-seal-outer", H).props.stroke.payload).toBe(argb("#FFFFFF"));
-    expect(flat(screen.getByTestId("plaque-title"))).toMatchObject({ fontFamily: "Archivo_600SemiBold", fontSize: 20, color: "#FFFFFF" });
+    expect(flat(screen.getByTestId("plaque-title"))).toMatchObject({ fontFamily: "NotoSerifSC_600", fontSize: 20, color: "#FFFFFF" });
     expect(screen.getByTestId("plaque-meta").props.children).toBe("中国 · 第 2 世 · 第五殿");
     expect(flat(screen.getByTestId("plaque-meta"))).toMatchObject({ fontFamily: "IBMPlexMono_400Regular", fontSize: 11 });
     expect(screen.getByTestId("header-account")).toBeTruthy();
@@ -186,14 +186,23 @@ describe("no civilization display face on any bar (v3; v2's 匾题字 and Ma Sha
   const Font = jest.requireMock("expo-font") as { loadAsync: jest.Mock };
   beforeEach(() => Font.loadAsync.mockClear());
 
-  it.each(["CHINESE", "EUROPEAN", "EGYPTIAN", "GREEK"])("%s: the tab root and a sub-page bar are both the interface face, and nothing is loaded", async (civilization) => {
+  it.each(["CHINESE", "EUROPEAN", "EGYPTIAN", "GREEK"])("%s: the tab root and a sub-page bar are both v3's title serif, and nothing is loaded", async (civilization) => {
     wrap(<PlaqueHeader title="Life" onAccount={() => {}} />, signedIn({ civilization }), civilization);
-    expect(flat(screen.getByTestId("plaque-title")).fontFamily).toBe("Archivo_600SemiBold");
+    expect(flat(screen.getByTestId("plaque-title")).fontFamily).toBe("NotoSerifSC_600");
     screen.unmount();
     wrap(<AppHeader title="设置" onBack={() => {}} />, signedIn({ civilization }), civilization);
-    expect(flat(screen.getByRole("header"))).toMatchObject({ fontFamily: "Archivo_600SemiBold", fontSize: 20 });
+    expect(flat(screen.getByRole("header"))).toMatchObject({ fontFamily: "NotoSerifSC_600", fontSize: 20 });
     await act(async () => {});
     expect(Font.loadAsync).not.toHaveBeenCalled();
+  });
+
+  it("a title with a letter the serif subset lacks (a soul's name) stays whole in the interface face", async () => {
+    wrap(<AppHeader title="Jérôme" onBack={() => {}} />, signedIn(), "CHINESE");
+    expect(flat(screen.getByRole("header"))).toMatchObject({ fontFamily: "Archivo_600SemiBold", fontSize: 20 });
+    screen.unmount();
+    wrap(<PlaqueHeader title="Σωκράτης" onAccount={() => {}} />, signedIn(), "CHINESE");
+    expect(flat(screen.getByTestId("plaque-title")).fontFamily).toBe("Archivo_600SemiBold");
+    await act(async () => {});
   });
 
   it("the pre-login bar keeps the app name in the serif (product decision 2026-09-26)", () => {

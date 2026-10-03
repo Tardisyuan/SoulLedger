@@ -10,7 +10,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AskGlyph, useAssist } from "../assist";
 import { BandPattern, Emblem, Icon, StageMotif } from "../emblems";
-import { family } from "../fonts";
+import { family, titleFamily } from "../fonts";
 import { useToast } from "../feedback";
 import { useI18n } from "../i18n";
 import {
@@ -331,7 +331,7 @@ function LifeBand({ me, compact, onAccount }: { me: MeProfile; compact: boolean;
           <OutlineSeal civ={t.civ} size={small ? 30 : 64} color={on} glyphs={me.tenant.seal_glyphs} label={tr("seal.aria", { court: hall })} testID="plaque-seal" />
           <View testID="band-text" style={styles.bandText}>
             <View style={styles.nameRow}>
-              <Txt testID="soul-name" accessibilityRole="header" numberOfLines={stack ? undefined : 1} style={[small ? styles.nameSmall : styles.name, { color: on }]}>
+              <Txt testID="soul-name" accessibilityRole="header" numberOfLines={stack ? undefined : 1} style={[small ? styles.nameSmall : styles.name, { color: on, fontFamily: titleFamily(me.name) }]}>
                 {me.name}
               </Txt>
               {!small && me.birth_name && me.birth_name !== me.name ? (
@@ -898,8 +898,9 @@ const styles = StyleSheet.create({
   bandRow: { flexDirection: "row", alignItems: "center", gap: 12 },
   bandText: { flex: 1, minWidth: 0, gap: 4 },
   nameRow: { flexDirection: "row", alignItems: "baseline", columnGap: 8 },
-  name: { fontFamily: family.ui[600], fontSize: 20, lineHeight: 28, flexShrink: 1 },
-  nameSmall: { fontFamily: family.ui[600], fontSize: 13, lineHeight: 18, flexShrink: 1 },
+  // The soul's name: v3's title serif (Noto Serif SC 600) via `titleFamily(me.name)`.
+  name: { fontSize: 20, lineHeight: 28, flexShrink: 1 },
+  nameSmall: { fontSize: 13, lineHeight: 18, flexShrink: 1 },
   code: { flexDirection: "row", alignItems: "center", gap: 8, alignSelf: "flex-start" },
   /** 16 + 14 + 14 = 44. Full, the band has room below the row for the even split. */
   codeTarget: { paddingVertical: CODE_REACH / 2, marginVertical: -CODE_REACH / 2 },
