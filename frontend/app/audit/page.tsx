@@ -26,6 +26,7 @@ import { fieldControl } from "@/src/components/ui/Field";
 import { Button } from "@/src/components/ui/Button";
 import { cn } from "@/lib/utils";
 import { auditActionGlyph } from "@/src/lib/auditActionGlyph";
+import { AuditTabs } from "@/src/components/audit/AuditTabs";
 
 const ACTION_OPTIONS = [
   "CREATE", "UPDATE", "DELETE", "LOGIN", "LOGOUT", "VIEW",
@@ -280,6 +281,7 @@ export default function AuditPage() {
     <PageShell
       variant="full"
       title={title}
+      tabs={<AuditTabs />}
       filters={
         /* 筛选签(规范 v1 §2),与灵魂列表同一套:搜索框用共享的 `fieldControl`,
            三个枚举筛选各是一枚「维度 · 值 ×」。

@@ -128,7 +128,7 @@ export {
 export { menusApi, menuButtonsApi, type MenuItem, type MenuButton } from "./menus";
 
 // Audit
-export { auditApi, type AuditLogEntry } from "./audit";
+export { auditApi, loginLogsApi, type AuditLogEntry, type LoginLogEntry, type LoginLogStatus } from "./audit";
 
 // Tenants
 export { tenantsApi, type Tenant } from "./tenants";
@@ -187,7 +187,15 @@ export {
 } from "./soul-accounts";
 
 // Death sync (browser read side)
-export { deathSyncApi, type DeathRegistration, type DeathRegistrationStatus, type DeathRegistrationSummary } from "./death-sync";
+export {
+  deathSyncApi,
+  type DeathRegistration,
+  type DeathRegistrationStatus,
+  type DeathRegistrationSummary,
+  type ExternalApiKey,
+  type ExternalApiKeyCreate,
+  type ExternalApiKeySystemType,
+} from "./death-sync";
 
 // Recycle bin
 export { recycleBinApi, type RecycleBinEntry, type RecycleBinLocation, type RecycleBinListResponse, type RestoreResponse } from "./recycle-bin";
