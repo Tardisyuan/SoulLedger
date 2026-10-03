@@ -463,7 +463,7 @@ describe("pull to refresh (v3 B2: the content follows the finger, at most 56; no
   const indicator = () => screen.queryByTestId("pull-indicator", { includeHiddenElements: true });
   const opacity = () => flat(indicator()!).opacity;
   const scroller = () => screen.UNSAFE_getByType(ScrollView);
-  const settle = () => act(() => void jest.advanceTimersByTime(motion.pullRelease + 50));
+  const settle = () => act(() => void jest.advanceTimersByTime(motion.pullMinHold + motion.pullRelease + 50));
   const deferred = () => {
     let done = () => {};
     const promise = new Promise<void>((resolve) => (done = resolve));
@@ -550,6 +550,20 @@ describe("pull to refresh (v3 B2: the content follows the finger, at most 56; no
     await act(async () => {}); // that second reload's (already settled) promise
   });
 
+  it("a reload that answers at once still holds the ↻ at 56 for motion.pullMinHold, then goes back", async () => {
+    const onRefresh = jest.fn(() => Promise.resolve());
+    await mount(onRefresh);
+    pull(PULL_REFRESH_PT);
+    await applied();
+    await act(async () => {}); // the promise has settled
+    act(() => void jest.advanceTimersByTime(motion.pullMinHold - 100));
+    expect(shift()).toBe(PULL_REFRESH_PT);
+    expect(opacity()).toBe(1);
+    act(() => void jest.advanceTimersByTime(100));
+    settle(); // the 200ms return starts once the hold ends
+    expect(shift()).toBe(0);
+  });
+
   it("an onRefresh that returns nothing is held for as long as `refreshing` says", async () => {
     const onRefresh = jest.fn();
     // Like useRemote's reload: `refreshing` goes true in the same update as the pull.
@@ -630,7 +644,8 @@ describe("pull to refresh (v3 B2: the content follows the finger, at most 56; no
     expect(shift()).toBe(PULL_REFRESH_PT);
     await reload.done();
     await applied();
-    expect(shift()).toBe(0); // at once, not over 200
+    act(() => void jest.advanceTimersByTime(motion.pullMinHold)); // the hold is a state, not motion: it stays
+    expect(shift()).toBe(0); // then at once, not over 200
     pull(PULL_REFRESH_PT - 1);
     expect(shift()).toBe(0);
     expect(timing).not.toHaveBeenCalled();
@@ -651,6 +666,7 @@ describe("pull to refresh (v3 B2: the content follows the finger, at most 56; no
     expect(onRefresh).toHaveBeenCalledTimes(1);
     expect(control().props.refreshing).toBe(true);
     await reload.done();
+    act(() => void jest.advanceTimersByTime(motion.pullMinHold));
     expect(control().props.refreshing).toBe(false);
     expect(shift()).toBe(0);
   });
