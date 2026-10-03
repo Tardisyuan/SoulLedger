@@ -288,6 +288,21 @@ export function usePullRefresh(
   // (a local backend does): shorter, the hold is a one-frame flash that reads as "did not refresh".
   const [minHeld, setMinHeld] = useState(false);
   const holding = !!held || minHeld;
+  // While it refreshes the ↻ turns (user decision 2026-10-03: a still glyph during the hold read
+  // as "stuck"; this overrides v3 B2's "刷新指示不旋转"). Not under reduce motion.
+  const [spin] = useState(() => new Animated.Value(0));
+  useEffect(() => {
+    if (!holding || reduced || reader) return; // with a reader on, the system control shows instead
+    spin.setValue(0);
+    const loop = Animated.loop(
+      Animated.timing(spin, { toValue: 1, duration: motion.pullSpin, easing: Easing.linear, useNativeDriver: true })
+    );
+    loop.start();
+    return () => {
+      loop.stop();
+      spin.setValue(0);
+    };
+  }, [holding, reduced, reader, spin]);
 
   const trigger = () => {
     if (!onRefresh) return;
@@ -345,7 +360,12 @@ export function usePullRefresh(
         <View style={styles.fill} collapsable={false}>
           {reader ? null : (
             <Animated.View testID="pull-indicator" pointerEvents="none" style={[styles.pullIndicator, { opacity }]} importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
-              <Text style={[styles.pullGlyph, { color: t.inkSubtle }]}>↻</Text>
+              <Animated.Text
+                testID="pull-glyph"
+                style={[styles.pullGlyph, { color: t.inkSubtle, transform: [{ rotate: spin.interpolate({ inputRange: [0, 1], outputRange: ["0deg", "360deg"] }) }] }]}
+              >
+                ↻
+              </Animated.Text>
             </Animated.View>
           )}
           <Animated.View testID="pull-content" style={[styles.fill, { transform: [{ translateY: y }] }]}>

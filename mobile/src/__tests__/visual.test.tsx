@@ -434,7 +434,7 @@ describe("titleFamily (v3 titles in Noto Serif SC 600, a Han + ASCII subset)", (
 
 const realImmediate = setImmediate;
 
-describe("pull to refresh (v3 B2: the content follows the finger, at most 56; no spinner)", () => {
+describe("pull to refresh (v3 B2: the content follows the finger, at most 56; the ↻ turns while it refreshes)", () => {
   // The pull is a gesture-handler Pan (user decision 2026-10-03, the v3 B4 exception); jest drives
   // it through the library's own test utils, or — for a pull still under the finger — its events.
   const pan = () => getByGestureTestId("pull");
@@ -562,6 +562,22 @@ describe("pull to refresh (v3 B2: the content follows the finger, at most 56; no
     act(() => void jest.advanceTimersByTime(100));
     settle(); // the 200ms return starts once the hold ends
     expect(shift()).toBe(0);
+  });
+
+  it("while it refreshes the ↻ turns (user 2026-10-03); before release and after, it stands still", async () => {
+    const reload = deferred();
+    const loop = jest.spyOn(Animated, "loop");
+    await mount(jest.fn(() => reload.promise));
+    expect(loop).not.toHaveBeenCalled(); // at rest
+    hold(PULL_REFRESH_PT + 10);
+    expect(loop).not.toHaveBeenCalled(); // pulling, not yet refreshing
+    emit("onGestureHandlerStateChange", { state: State.END, oldState: State.ACTIVE, translationY: PULL_REFRESH_PT + 10 });
+    await applied();
+    expect(loop).toHaveBeenCalledTimes(1);
+    const stop = jest.spyOn(loop.mock.results[0].value as Animated.CompositeAnimation, "stop");
+    await reload.done();
+    settle();
+    expect(stop).toHaveBeenCalled();
   });
 
   it("an onRefresh that returns nothing is held for as long as `refreshing` says", async () => {

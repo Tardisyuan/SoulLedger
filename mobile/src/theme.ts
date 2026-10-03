@@ -138,6 +138,8 @@ export const motion = {
   // The 56 hold with ↻ stays at least this long, even when the reload answers in 40ms (a local
   // backend does): shorter, the hold is a one-frame flash and reads as "did not refresh" (真机 2026-10-03).
   pullMinHold: 600,
+  // One turn of the ↻ while it refreshes (user 2026-10-03).
+  pullSpin: 900,
 } as const;
 
 /**
