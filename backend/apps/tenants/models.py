@@ -2,6 +2,11 @@ from django.db import models
 
 from apps.core.models import AuditUserFields
 
+#: `Tenant.settings` 里的键:转生申请被终局驳回后的冷却天数(默认 30,负数按 0)。
+#: 读的是 `apps/soul_accounts/rebirth.py::cooldown_days`,写的是 `TenantSettingsSerializer`;
+#: 常量放在这里是因为两边都能 import 这个模块而不绕圈。
+REBIRTH_COOLDOWN_SETTING = "soul_rebirth_cooldown_days"
+
 
 class Tenant(AuditUserFields, models.Model):
     """A tenant represents a civilization's afterlife system (Chinese Diyu, European Heaven-Hell, Egyptian Duat)."""

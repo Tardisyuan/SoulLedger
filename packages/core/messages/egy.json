@@ -357,6 +357,16 @@
         "ledger_tabs": "Sesh",
         "tab_judgments": "Wedja Neb",
         "tab_records": "Sesh Nefer Hena Isfet Neb"
+      },
+      "correct_settlement": {
+        "action": "Khemen Khetem",
+        "title": "Khemen Khetem Seth",
+        "message": "Ba Iyi Er Wetep Seth; Wedja Hena Wetep Smen; Khet Sesh Em Medew Maa.",
+        "reason": "Khet",
+        "reason_required": "Sesh Khet Em Tepy",
+        "confirm": "Khemen",
+        "success": "Khemen Khetem Seth; Ba Em Wetep Seth",
+        "failed": "Nen Khemen Khetem"
       }
     },
     "balance_range": "Pehwy Nefer Isfet",
@@ -2540,6 +2550,21 @@
       "preview": "Maa",
       "saved": "Medu Khetem Sau Seth",
       "save_failed": "Nen Sau Medu Khetem"
+    },
+    "settings": {
+      "edit": "Khemen Smen",
+      "title": "{{name}} · Smen",
+      "hall_name": "Ren Wesekhet · Medu Sherer",
+      "hall_name_hint": "Ren Wesekhet Em Sesh Ba; Nen Sesh: Tepy Ren Per",
+      "hall_name_en": "Ren Wesekhet · Europa",
+      "hall_name_egy": "Ren Wesekhet · Kemet",
+      "description": "Medu Seth",
+      "cooldown_days": "Hru Ahet Qebeh Dbh Wehem Mesut",
+      "cooldown_hint": "Er Khet Khesef: Nen Dbh Wehem Mesut Em Ahet Qebeh; Nen Sesh: Tepy Hru 30",
+      "cooldown_invalid": "Sesh Hesb, 0 Er Tepy",
+      "dispatch_enabled": "Shesep Hab-Ba (Hemes)",
+      "saved": "Smen Sau Seth",
+      "save_failed": "Nen Sau Smen"
     }
   },
   "table": {

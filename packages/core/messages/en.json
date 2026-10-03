@@ -360,6 +360,16 @@
         "ledger_tabs": "Records",
         "tab_judgments": "All judgments",
         "tab_records": "All merit and demerit records"
+      },
+      "correct_settlement": {
+        "action": "Correct settlement",
+        "title": "Correct the settlement",
+        "message": "The soul goes back to Disposed; its judgments and dispositions stay, and the reason is written to the audit log on its own.",
+        "reason": "Reason",
+        "reason_required": "A reason is required",
+        "confirm": "Correct",
+        "success": "Settlement corrected; the soul is back to Disposed",
+        "failed": "Could not correct the settlement"
       }
     },
     "date_problem_filter": "Problems only",
@@ -2540,6 +2550,21 @@
       "preview": "Preview",
       "saved": "Seal glyphs saved",
       "save_failed": "Could not save the seal glyphs"
+    },
+    "settings": {
+      "edit": "Edit settings",
+      "title": "{{name}} · settings",
+      "hall_name": "Hall name (Chinese)",
+      "hall_name_hint": "What souls and the officer inbox call this hall; empty falls back to the tenant name",
+      "hall_name_en": "Hall name (English)",
+      "hall_name_egy": "Hall name (egy)",
+      "description": "Description",
+      "cooldown_days": "Rebirth application cooldown (days)",
+      "cooldown_hint": "Days after the last final rejection before a soul may apply again; empty uses the default of 30",
+      "cooldown_invalid": "Enter 0 or a whole number",
+      "dispatch_enabled": "Can receive transfers (residence)",
+      "saved": "Settings saved",
+      "save_failed": "Could not save the settings"
     }
   },
   "table": {

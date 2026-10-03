@@ -253,6 +253,10 @@ export const soulsApi = {
     api.get<Blob>("/souls/export/", { params: { ids: ids.join(",") }, responseType: "blob" }),
   die: (id: string, data?: object) => api.post<Soul>(`/souls/${id}/die/`, data),
   transition: (id: string, data: object) => api.post<Soul>(`/souls/${id}/transition/`, data),
+  /** ADMIN 更正:SETTLED → DISPOSED,必须带原因;不是状态流转,后端单独记 SETTLEMENT_CORRECTED 事件。
+      400 的 `error` 是后端的那句话(没有原因 / 不是 SETTLED)。 */
+  correctSettlement: (id: string, reason: string) =>
+    api.post<Soul>(`/souls/${id}/correct_settlement/`, { reason }),
   karma: (id: string) => api.get<LedgerSummary>(`/souls/${id}/karma/`),
   addRecord: (id: string, data: object) => api.post<SoulRecordEntry>(`/souls/${id}/add_record/`, data),
   // Bare array — the action returns `Response(serializer.data)` directly
