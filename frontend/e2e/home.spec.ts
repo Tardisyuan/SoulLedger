@@ -135,6 +135,24 @@ test.describe("Login page", () => {
     await expect(page.getByLabel("账号")).toHaveAttribute("aria-invalid", "true");
   });
 
+  test("a window shorter than the form: the form column scrolls inside, its background never ends", async ({ page, isMobile }) => {
+    // ≥ 768 the page is one screen (md:h-dvh). The form column had no overflow of its own, so in
+    // a short window its content ran past the column and the page scrolled into bare canvas
+    // below the column's background (user screenshot, 2026-10-03).
+    test.skip(isMobile, "393 stacks the columns and the page scrolls as a whole");
+    await page.setViewportSize({ width: 1440, height: 640 });
+    await page.goto("/login");
+    await expect(page.getByRole("button", { name: /^登录/ })).toBeAttached();
+    const m = await page.evaluate(() => {
+      const col = document.querySelector("form")!.closest("div.order-1") as HTMLElement;
+      return { doc: document.documentElement.scrollHeight, vh: innerHeight, scroll: col.scrollHeight, client: col.clientHeight };
+    });
+    expect(m.doc).toBe(m.vh);
+    expect(m.scroll).toBeGreaterThan(m.client); // the form really is taller than the window here
+    await page.getByRole("button", { name: /^登录/ }).scrollIntoViewIfNeeded();
+    await expect(page.getByRole("button", { name: /^登录/ })).toBeInViewport();
+  });
+
   test("bad credentials surface an error and leave the user on /login", async ({ page }) => {
     const api = await mockApi(page);
     await page.goto("/login");
