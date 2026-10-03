@@ -283,27 +283,23 @@ export function usePullRefresh(
   const [atTop, setAtTop] = useState(true);
   // "wait": held while `refreshing`; "promise": held until what onRefresh returned settles.
   const [held, setHeld] = useState<false | "wait" | "promise">(false);
-  // The hold ends when the reload is done AND `motion.pullMinHold` has passed since it began.
-  // A plain mutable box, not refs: the gesture callbacks built during render touch it.
-  const [clock] = useState(() => ({ since: 0, timer: undefined as ReturnType<typeof setTimeout> | undefined }));
-  const endHold = useCallback(() => {
-    const wait = motion.pullMinHold - (Date.now() - clock.since);
-    clearTimeout(clock.timer);
-    if (wait > 0) clock.timer = setTimeout(() => setHeld(false), wait);
-    else setHeld(false);
-  }, [clock]);
-  useEffect(() => () => clearTimeout(clock.timer), [clock]);
-  useEffect(() => {
-    if (held === "wait" && !refreshing) endHold();
-  }, [held, refreshing, endHold]);
+  if (held === "wait" && !refreshing) setHeld(false);
+  // …and for at least `motion.pullMinHold` after the pull, even when the reload answers in 40ms
+  // (a local backend does): shorter, the hold is a one-frame flash that reads as "did not refresh".
+  const [minHeld, setMinHeld] = useState(false);
+  const holding = !!held || minHeld;
 
   const trigger = () => {
     if (!onRefresh) return;
-    clock.since = Date.now();
+    setMinHeld(true);
+    setTimeout(() => setMinHeld(false), motion.pullMinHold);
     const result = onRefresh();
     if (result && typeof (result as PromiseLike<unknown>).then === "function") {
       setHeld("promise");
-      (result as PromiseLike<unknown>).then(endHold, endHold);
+      (result as PromiseLike<unknown>).then(
+        () => setHeld(false),
+        () => setHeld(false)
+      );
     } else setHeld("wait");
   };
   const back = () => {
@@ -313,21 +309,21 @@ export function usePullRefresh(
   // The reload is done: back from the 56 hold (only then — nothing moves on mount).
   const wasHeld = useRef(false);
   useEffect(() => {
-    if (held || !wasHeld.current) {
-      wasHeld.current = !!held;
+    if (holding || !wasHeld.current) {
+      wasHeld.current = holding;
       return;
     }
     wasHeld.current = false;
     if (pullRelease) Animated.timing(y, { toValue: 0, duration: pullRelease, easing: PULL_EASING, useNativeDriver: false }).start();
     else y.setValue(0);
-  }, [held, pullRelease, y]);
+  }, [holding, pullRelease, y]);
 
   // Built every render: the detector keeps the native handler (same tag) and swaps in the new
   // config and callbacks, so a re-render mid-drag does not drop the pull.
   const pan = Gesture.Pan()
     .withTestId("pull")
     .runOnJS(true)
-    .enabled(!!onRefresh && atTop && !held && !reader)
+    .enabled(!!onRefresh && atTop && !holding && !reader)
     .activeOffsetY(PULL_SLOP_PT)
     .failOffsetY(-PULL_SLOP_PT)
     .failOffsetX([-PULL_SLOP_PT, PULL_SLOP_PT])
@@ -342,7 +338,7 @@ export function usePullRefresh(
   const opacity = y.interpolate({ inputRange: [0, PULL_REFRESH_PT], outputRange: [0, 1], extrapolate: "clamp" });
   return {
     props: reader
-      ? { refreshControl: <RefreshControl refreshing={!!held} onRefresh={trigger} tintColor={t.inkSubtle} /> }
+      ? { refreshControl: <RefreshControl refreshing={holding} onRefresh={trigger} tintColor={t.inkSubtle} /> }
       : { bounces: false, overScrollMode: "never", scrollEventThrottle: 16, onScroll: (e) => setAtTop(e.nativeEvent.contentOffset.y <= 0) },
     frame: (scroller) => (
       <GestureDetector gesture={pan}>
