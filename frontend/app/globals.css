@@ -386,11 +386,11 @@
      抽屉 60 / 弹窗 70 / 盖印确认 80。名字不变,只换数字;v3 没有的两档(移动端导航面板、
      进度条)插在空档里,保持它们原来的相对位置。
      `sticky` 是 v3 的名字,`filters` 是它在本站的第一个消费者,同一档。 */
-  --z-index-sticky: 20;
-  --z-index-filters: 20;
-  --z-index-scrim: 30;
-  --z-index-masthead: 30;
-  --z-index-sidebar: 40;
+  --z-index-sticky: 20; /* @kind other */
+  --z-index-filters: 20; /* @kind other */
+  --z-index-scrim: 30; /* @kind other */
+  --z-index-masthead: 30; /* @kind other */
+  --z-index-sidebar: 40; /* @kind other */
 
   /* 这一档 2026-09-01 命名,到 2026-09-10 **一个消费者都没有** —— 唯一该用它的
      `#nprogress .bar` 写的是字面量 60。Tailwind 4 会摇掉无消费者的 `@theme`
@@ -400,11 +400,11 @@
      2026-09-10 接上了消费者(见下面 `#nprogress .bar`),它现在真的在构建产物里,
      60 这一档由编译器持有而不是由一段注释持有。当时另一个选项是删掉这个 token、
      让 60 只活在那条规则里;没有选它,因为那样「浮层带的下沿在哪」就只剩注释在说。 */
-  --z-index-progress: 45;
-  --z-index-drawer: 60;
-  --z-index-dialog: 70;
+  --z-index-progress: 45; /* @kind other */
+  --z-index-drawer: 60; /* @kind other */
+  --z-index-dialog: 70; /* @kind other */
   /* 盖印确认、ConfirmDialog:确认总是从弹窗或抽屉里唤起的那一层,所以压在 dialog 之上。 */
-  --z-index-confirm: 80;
+  --z-index-confirm: 80; /* @kind other */
   /* Toast 在抽屉与弹窗**之下**(v3,2026-10-03)。此前是 90、压在 dialog 之上,理由是
      「Toast 报告的是弹窗刚做的事,弹窗还在时要读得到」。v3 选了另一边:弹层是模态的,
      盖住它的东西会抢走它的焦点语义;弹层里的结果由弹层自己说(错误写在弹层里),
@@ -418,7 +418,7 @@
      toast layer sat at 99999, four orders of magnitude off a scale whose whole
      point is that three numbers describe every stacking decision. Nothing
      failed, because an undeclared custom property with a fallback is valid CSS. */
-  --z-index-toast: 50;
+  --z-index-toast: 50; /* @kind other */
 
   /* 规范 v2 A2:全站不用阴影,浮层也不用 —— 层级靠 1px ink 框(`border-[oklch(var(--color-ink))]`)。
      v1 的 `shadow-overlay` 这一档因此删掉,守卫(no-page-shadow)不再放行它。 */

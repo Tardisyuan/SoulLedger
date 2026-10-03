@@ -76,7 +76,17 @@ const kinds = new Map(
 for (const [name, kind] of kinds) {
   css = css.replace(new RegExp(`(${name}\\s*:[^;{}]*;)(?!\\s*/\\* @kind)`, "g"), `$1 /* @kind ${kind} */`);
 }
-const unannotated = [...kinds.keys()].filter((n) => !css.includes(`${n}:`));
+// Tailwind's own theme defaults that land in the synced theme block have no line in globals.css
+// to carry a comment; Design's check (2026-10-03) listed these four.
+for (const name of ["--animate-spin", "--animate-pulse", "--default-transition-duration", "--default-transition-timing-function"]) {
+  css = css.replace(new RegExp(`(${name}\\s*:[^;{}]*;)(?!\\s*/\\* @kind)`, "g"), "$1 /* @kind other */");
+}
+// The brand pair lives in its own `:root` block at the end of globals.css (outside both themes),
+// which the sync's token scan does not read; it reads the top `:root` block below. Move the pair
+// there, comments and all, and drop the late block from the shipped copy.
+const brand = [...css.matchAll(/(--brand-[\w-]+\s*:[^;{}]*;\s*\/\* @kind \w+ \*\/)/g)].map((m) => m[1]);
+css = css.replace(/:root\s*\{\s*(--brand-[\w-]+\s*:[^;{}]*;\s*\/\* @kind \w+ \*\/\s*)+\}/, "");
+const unannotated = [...kinds.keys()].filter((n) => !n.startsWith("--brand-") && !css.includes(`${n}:`));
 if (unannotated.length) console.error(`build-css: @kind tokens not in compiled output: ${unannotated.join(", ")}`);
 
 const leftover = css.match(/url\((["']?)\/[^"')]*\1\)/g);
@@ -84,5 +94,5 @@ if (leftover) throw new Error(`root-relative url() left in output: ${[...new Set
 
 mkdirSync(OUT_DIR, { recursive: true });
 copyFileSync(join(FE, "public/fonts/SoulLedgerGlyphs.ttf"), join(OUT_DIR, "SoulLedgerGlyphs.ttf"));
-writeFileSync(OUT, `@import url("${googleUrl}");\n${FONT_VARS}${css}`);
+writeFileSync(OUT, `@import url("${googleUrl}");\n${FONT_VARS.replace(":root {\n", `:root {\n${brand.map((d) => `  ${d}\n`).join("")}`)}${css}`);
 console.error(`build-css: ${OUT} (${(Buffer.byteLength(css) / 1024).toFixed(0)} KB)`);
