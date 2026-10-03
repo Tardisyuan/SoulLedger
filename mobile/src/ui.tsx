@@ -284,22 +284,22 @@ export function usePullRefresh(
   // "wait": held while `refreshing`; "promise": held until what onRefresh returned settles.
   const [held, setHeld] = useState<false | "wait" | "promise">(false);
   // The hold ends when the reload is done AND `motion.pullMinHold` has passed since it began.
-  const heldSince = useRef(0);
-  const releaseTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  // A plain mutable box, not refs: the gesture callbacks built during render touch it.
+  const [clock] = useState(() => ({ since: 0, timer: undefined as ReturnType<typeof setTimeout> | undefined }));
   const endHold = useCallback(() => {
-    const wait = motion.pullMinHold - (Date.now() - heldSince.current);
-    clearTimeout(releaseTimer.current);
-    if (wait > 0) releaseTimer.current = setTimeout(() => setHeld(false), wait);
+    const wait = motion.pullMinHold - (Date.now() - clock.since);
+    clearTimeout(clock.timer);
+    if (wait > 0) clock.timer = setTimeout(() => setHeld(false), wait);
     else setHeld(false);
-  }, []);
-  useEffect(() => () => clearTimeout(releaseTimer.current), []);
+  }, [clock]);
+  useEffect(() => () => clearTimeout(clock.timer), [clock]);
   useEffect(() => {
     if (held === "wait" && !refreshing) endHold();
   }, [held, refreshing, endHold]);
 
   const trigger = () => {
     if (!onRefresh) return;
-    heldSince.current = Date.now();
+    clock.since = Date.now();
     const result = onRefresh();
     if (result && typeof (result as PromiseLike<unknown>).then === "function") {
       setHeld("promise");
