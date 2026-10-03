@@ -10,6 +10,7 @@ import { RoleName } from "@/src/components/users/RoleName";
 import { MissingValue } from "@/src/components/ui/DomainValue";
 import { BrandMark } from "@/src/components/brand/BrandMark";
 import { cn } from "@/lib/utils";
+import { TENANT_CODE_TO_CIVILIZATION } from "@soulledger/core/config/civilizations";
 import { authApi } from "@soulledger/core/api";
 import { loadDefaultView, saveDefaultView, type DefaultView } from "@/src/lib/defaultView";
 import { QUEUE_SHORTCUTS } from "@/src/lib/queueShortcuts";
@@ -87,6 +88,9 @@ export function WelcomeSetup({
   onDone: () => void;
 }) {
   const { t, locale, setLocale, hydrated } = useI18n();
+  // 租户展示名是库里的英文;文明名走语言包(2026-10-03 演示账号上露出「Chinese Afterlife」)。
+  const civ = user.tenant?.code ? TENANT_CODE_TO_CIVILIZATION[user.tenant.code] : undefined;
+  const civName = civ ? t(`tenant.civilizations.${civ}`) : undefined;
   const { theme, setTheme, followsSystem, followSystem } = useTheme();
   const [step, setStep] = useState(startAt);
 
@@ -134,7 +138,7 @@ export function WelcomeSetup({
       body: (
         <dl className="m-0 grid grid-cols-[auto_minmax(0,1fr)] gap-x-6 gap-y-3 text-sm">
           <dt className="text-[oklch(var(--color-ink-muted))]">{t("auth.civilization")}</dt>
-          <dd className="m-0 text-[oklch(var(--color-ink))]">{user.tenant?.display_name ?? <MissingValue kind="unrecorded" />}</dd>
+          <dd className="m-0 text-[oklch(var(--color-ink))]">{civName ?? user.tenant?.display_name ?? <MissingValue kind="unrecorded" />}</dd>
           <dt className="text-[oklch(var(--color-ink-muted))]">{t("welcome.user_role")}</dt>
           <dd className="m-0 text-[oklch(var(--color-ink))]">
             <RoleName value={user.role} />

@@ -93,7 +93,7 @@ const stats = {
 const menu = (id: number, path: string): SidebarMenu =>
   ({ id, name: path, path, icon: null, order: id, component: null, roles: [], is_active: true, parent: null, children: [] }) as SidebarMenu;
 
-const JUDGE = { id: 7, username: "yama", display_name: "阎罗", role: "JUDGE", tenant: { display_name: "地府" } };
+const JUDGE = { id: 7, username: "yama", display_name: "阎罗", role: "JUDGE", tenant: { code: "CN_DIYU", display_name: "Chinese Afterlife" } };
 const ONBOARDED = "soulledger_onboarded:7";
 
 let hoursSpy: jest.SpyInstance;
@@ -395,6 +395,9 @@ describe("first-time setup: its own screen until `onboarded`", () => {
     expect(document.querySelector("section[aria-labelledby='welcome-stats-title']")).toBeNull();
     expect(document.querySelector("section[aria-labelledby='welcome-next-title']")).toBeNull();
     expect(setup()).toHaveTextContent("welcome.first_run(1,4)");
+    // 文明 is the language pack's name, not the tenant's stored (English) display name.
+    expect(setup()).toHaveTextContent("tenant.civilizations.CHINESE");
+    expect(setup()).not.toHaveTextContent("Chinese Afterlife");
   });
 
   it("until the server answers, neither screen — only the loading state", async () => {
@@ -540,7 +543,7 @@ describe("first-time setup: its own screen until `onboarded`", () => {
     mockTranslate = tZh;
     renderPage();
     await waitFor(() => expect(setup()).not.toBeNull());
-    expect(within(setup()!).getByText("地府")).toBeInTheDocument();
+    expect(within(setup()!).getByText(zh("tenant.civilizations.CHINESE"))).toBeInTheDocument();
     expect(within(setup()!).getByText(zh("users.roles.GUARDIAN"))).toBeInTheDocument();
     expect(within(setup()!).getByTitle("GUARDIAN")).toBeInTheDocument();
     expect(within(setup()!).getByText(zh("welcome.onboarding_wrong_identity"))).toBeInTheDocument();
