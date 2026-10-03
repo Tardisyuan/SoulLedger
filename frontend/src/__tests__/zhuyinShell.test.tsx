@@ -181,7 +181,10 @@ describe("身份带(规范 v3)", () => {
     expect(band).toHaveClass("identity-band");
     expect(band.querySelector(".identity-pattern")).toHaveAttribute("aria-hidden", "true");
     expect(band.querySelector(".identity-brand")).toHaveTextContent("SOULLEDGER nav.title");
-    expect(band.querySelector(".identity-court")).toHaveTextContent("第五殿");
+    // No hall given: the civilization's realm name, not the tenant's stored display name —
+    // on the 115 box that name is English ("Chinese Afterlife") under a Chinese UI.
+    expect(band.querySelector(".identity-court")).toHaveTextContent("plaque.realm.cn");
+    expect(band.querySelector(".identity-court")).not.toHaveTextContent("第五殿");
     expect(band.querySelector("[data-tier]")).toHaveTextContent("审判台");
     expect(band.querySelector(".plaque-band, .plaque-tex")).toBeNull();
   });
