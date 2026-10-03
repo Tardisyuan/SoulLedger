@@ -107,17 +107,19 @@ beforeEach(() => {
   mockedStats.mockResolvedValue({ data: stats });
   mockedAudit.mockResolvedValue({ data: { results: [], count: 0 } });
   mockedRoles.mockResolvedValue({ data: [] });
-  mockedPrefs.mockResolvedValue({ data: { default_view: null } });
-  mockedSavePrefs.mockImplementation(async (body: { default_view: string | null }) => ({ data: body }));
+  mockedPrefs.mockResolvedValue({ data: { default_view: null, onboarded: false } });
+  mockedSavePrefs.mockImplementation(async (body: Record<string, unknown>) => ({
+    data: { default_view: null, onboarded: false, ...body },
+  }));
   hoursSpy = jest.spyOn(Date.prototype, "getHours").mockReturnValue(10);
 });
 
 afterEach(() => hoursSpy.mockRestore());
 
-/** A signed-in judge who has done the setup, so the regular page shows. */
+/** A signed-in judge who has done the setup (the server says so), so the regular page shows. */
 function signedInJudge(over: Record<string, unknown> = {}) {
   mockUser = { ...JUDGE, ...over };
-  localStorage.setItem(`soulledger_onboarded:${mockUser.id}`, "1");
+  mockedPrefs.mockResolvedValue({ data: { default_view: null, onboarded: true } });
 }
 
 const panel = (id: string) => {
@@ -404,12 +406,13 @@ describe("first-time setup: its own screen until `onboarded`", () => {
     expect(stepStates()).toEqual(["current", "future", "future", "future"]);
   });
 
-  it("finishing writes `onboarded` for this user and shows the regular page", async () => {
+  it("finishing writes `onboarded` to the server — not this browser — and shows the regular page", async () => {
     mockUser = { ...JUDGE };
     renderPage();
     await waitFor(() => expect(setup()).not.toBeNull());
     for (let i = 0; i < 4; i++) fireEvent.click(screen.getByRole("button", { name: "welcome.continue" }));
-    expect(localStorage.getItem(ONBOARDED)).toBe("1");
+    expect(mockedSavePrefs).toHaveBeenCalledWith({ onboarded: true });
+    expect(localStorage.getItem(ONBOARDED)).toBeNull();
     expect(setup()).toBeNull();
     expect(statsPanel()).toBeInTheDocument();
   });
@@ -419,8 +422,77 @@ describe("first-time setup: its own screen until `onboarded`", () => {
     renderPage();
     await waitFor(() => expect(setup()).not.toBeNull());
     fireEvent.click(screen.getByRole("button", { name: "welcome.skip" }));
-    expect(localStorage.getItem(ONBOARDED)).toBe("1");
+    expect(mockedSavePrefs).toHaveBeenCalledWith({ onboarded: true });
     expect(setup()).toBeNull();
+  });
+
+  describe("`onboarded` comes from the server", () => {
+    const savedOnboarded = () => mockedSavePrefs.mock.calls.filter(([body]) => "onboarded" in body);
+
+    it("server says done → the regular page, no setup, nothing written", async () => {
+      signedInJudge();
+      renderPage();
+      await waitFor(() => expect(mockedPrefs).toHaveBeenCalled());
+      expect(await within(nextPanel()).findByRole("button", { name: "welcome.next_redo_onboarding" })).toBeInTheDocument();
+      expect(setup()).toBeNull();
+      expect(savedOnboarded()).toEqual([]);
+    });
+
+    it("server says done, a stale local key is removed and nothing is written", async () => {
+      signedInJudge();
+      localStorage.setItem(ONBOARDED, "1");
+      renderPage();
+      await waitFor(() => expect(localStorage.getItem(ONBOARDED)).toBeNull());
+      expect(setup()).toBeNull();
+      expect(savedOnboarded()).toEqual([]);
+    });
+
+    it("local says done, server says not → writes true to the server once, removes the key, no setup", async () => {
+      mockUser = { ...JUDGE };
+      localStorage.setItem(ONBOARDED, "1");
+      renderPage();
+      await waitFor(() => expect(localStorage.getItem(ONBOARDED)).toBeNull());
+      expect(savedOnboarded()).toEqual([[{ onboarded: true }]]);
+      expect(setup()).toBeNull();
+      expect(statsPanel()).toBeInTheDocument();
+    });
+
+    it("another user's local key does not migrate for this one", async () => {
+      mockUser = { ...JUDGE };
+      localStorage.setItem("soulledger_onboarded:8", "1");
+      renderPage();
+      await waitFor(() => expect(setup()).not.toBeNull());
+      expect(savedOnboarded()).toEqual([]);
+      expect(localStorage.getItem("soulledger_onboarded:8")).toBe("1");
+    });
+
+    it("a migration that cannot be saved keeps the local key for next time, and still skips the setup", async () => {
+      mockUser = { ...JUDGE };
+      localStorage.setItem(ONBOARDED, "1");
+      mockedSavePrefs.mockRejectedValue(new Error("offline"));
+      renderPage();
+      await waitFor(() => expect(mockedSavePrefs).toHaveBeenCalledWith({ onboarded: true }));
+      await waitFor(() => expect(statsPanel()).toBeInTheDocument());
+      expect(localStorage.getItem(ONBOARDED)).toBe("1");
+      expect(setup()).toBeNull();
+    });
+
+    it("an unreadable server does not trap the operator in the setup", async () => {
+      mockUser = { ...JUDGE };
+      mockedPrefs.mockRejectedValue(new Error("offline"));
+      renderPage();
+      await waitFor(() => expect(mockedPrefs).toHaveBeenCalled());
+      await waitFor(() => expect(statsPanel()).toBeInTheDocument());
+      expect(setup()).toBeNull();
+    });
+
+    it("重看首次设置 opens the setup without clearing the flag", async () => {
+      signedInJudge();
+      renderPage();
+      fireEvent.click(await within(nextPanel()).findByRole("button", { name: "welcome.next_redo_onboarding" }));
+      expect(setup()).not.toBeNull();
+      expect(savedOnboarded()).toEqual([]);
+    });
   });
 
   it("重看首次设置 comes back from 接着做; 所有快捷键 opens the shortcuts step — exactly the queue's seven", async () => {
