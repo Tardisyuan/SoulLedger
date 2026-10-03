@@ -1,60 +1,77 @@
 /**
- * Tests for app/welcome/page.tsx.
+ * Tests for app/welcome/page.tsx after A9 (Design 2026-10-03).
  *
- * The page is deliberately unguarded — proxy.ts treats /welcome as
- * public and `user` is null during the first render, so an auth guard here
- * used to bounce signed-in visitors to /login. That regression is pinned
- * below ("renders for an anonymous visitor"). The rest covers the two bits
- * of real logic: the hour-of-day greeting and the relative timestamp.
+ * The page is deliberately unguarded — proxy.ts treats /welcome as public and
+ * `user` is null during the first render, so an auth guard here used to bounce
+ * signed-in visitors to /login. That is pinned below ("anonymous visitor").
+ *
+ * What is covered: the greeting in the identity band; the one stats panel and
+ * its own loading / error / retry; 「接着做」 by role and by menu; my recent
+ * activity and its own states; the first-time setup screen and the
+ * `onboarded` flag; and the absence of what A9 removed.
  */
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import WelcomePage from "@/app/welcome/page";
 import { auditApi, authApi, ledgerApi, permApi } from "@soulledger/core/api";
+import type { SidebarMenu } from "@/src/hooks/useSidebarMenus";
 import { tZh, zh } from "./support/zhBundle";
 
 jest.mock("@soulledger/core/api", () => ({
   ledgerApi: { statsOverview: jest.fn() },
   auditApi: { list: jest.fn() },
-  // The role card reads the role table for a custom role's display_name
-  // (RoleName); empty by default, so the built-ins below still resolve
-  // through DomainEnum.
+  // RoleName reads the role table for a custom role's display_name.
   permApi: { roles: { list: jest.fn() } },
   // 默认视图 lives on the server (`/auth/profile/preferences/`).
   authApi: { preferences: jest.fn(), updatePreferences: jest.fn() },
 }));
 
 let mockUser: Record<string, unknown> | null = null;
-
 jest.mock("@/src/contexts/TenantContext", () => ({
   useTenant: () => ({ user: mockUser }),
 }));
 
-// Key-echo by default — most assertions here are about WHICH key the page
-// chose. The identity tests swap in `tZh` (the real zh-Hans bundle) because a
-// `<DomainEnum>` under an echoing `t` renders every member as "unrecognised",
-// which is how `ADMIN` and `GUARDIAN` came to be pinned as correct output.
+let mockMenus: SidebarMenu[] = [];
+jest.mock("@/src/hooks/useSidebarMenus", () => ({
+  useSidebarMenus: () => ({ data: mockMenus }),
+}));
+
+const mockPlaque = jest.fn();
+jest.mock("@/src/components/plaque/Plaque", () => ({
+  usePlaque: (text: unknown) => mockPlaque(text),
+}));
+
+const mockSetTheme = jest.fn();
+const mockFollowSystem = jest.fn();
+jest.mock("@/src/contexts/ThemeContext", () => ({
+  useTheme: () => ({ theme: "light", setTheme: mockSetTheme, followsSystem: true, followSystem: mockFollowSystem }),
+}));
+
+// Key-echo by default — most assertions are about WHICH key the page chose.
+// The identity tests swap in `tZh` (the real zh-Hans bundle) because a
+// `<DomainEnum>` under an echoing `t` renders every member as "unrecognised".
 const keyEcho = (key: string, params?: Record<string, string>) =>
   params ? `${key}(${Object.values(params).join(",")})` : key;
 let mockTranslate: typeof keyEcho = keyEcho;
 
 jest.mock("@/src/contexts/I18nContext", () => ({
-  // The checklist's 语言与主题 step renders the real LanguageSwitcher.
   LOCALE_LABELS: jest.requireActual("@/src/contexts/I18nContext").LOCALE_LABELS,
   useI18n: () => ({
     t: (key: string, params?: Record<string, string>) => mockTranslate(key, params),
-    formatDate: () => "FORMATTED_DATE",
+    formatDate: (_d: unknown, o?: Intl.DateTimeFormatOptions) => (o?.hour ? "20:14" : "FORMATTED_DATE"),
     formatDateTime: () => "FORMATTED_DATETIME",
     locale: "en",
+    setLocale: jest.fn(),
     hydrated: true,
   }),
 }));
 
 const mockedStats = ledgerApi.statsOverview as jest.Mock;
+const mockedAudit = auditApi.list as jest.Mock;
 const mockedRoles = permApi.roles.list as jest.Mock;
+const mockedPrefs = authApi.preferences as jest.Mock;
+const mockedSavePrefs = authApi.updatePreferences as jest.Mock;
 
-// `RoleName` queries through TanStack, which the app root provides and a bare
-// render does not.
 function renderPage() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
@@ -73,189 +90,197 @@ const stats = {
   ],
 };
 
+const menu = (id: number, path: string): SidebarMenu =>
+  ({ id, name: path, path, icon: null, order: id, component: null, roles: [], is_active: true, parent: null, children: [] }) as SidebarMenu;
+
+const JUDGE = { id: 7, username: "yama", display_name: "阎罗", role: "JUDGE", tenant: { display_name: "地府" } };
+const ONBOARDED = "soulledger_onboarded:7";
+
 let hoursSpy: jest.SpyInstance;
 
 beforeEach(() => {
   jest.clearAllMocks();
+  localStorage.clear();
   mockUser = null;
+  mockMenus = [];
   mockTranslate = keyEcho;
   mockedStats.mockResolvedValue({ data: stats });
-  // A default so tests that are not about the feed do not have to configure
-  // it. The feed tests override this with what they actually assert on.
-  (auditApi.list as jest.Mock).mockResolvedValue({ data: { results: [], count: 0 } });
+  mockedAudit.mockResolvedValue({ data: { results: [], count: 0 } });
+  mockedRoles.mockResolvedValue({ data: [] });
+  mockedPrefs.mockResolvedValue({ data: { default_view: null } });
+  mockedSavePrefs.mockImplementation(async (body: { default_view: string | null }) => ({ data: body }));
   hoursSpy = jest.spyOn(Date.prototype, "getHours").mockReturnValue(10);
 });
 
-afterEach(() => {
-  hoursSpy.mockRestore();
+afterEach(() => hoursSpy.mockRestore());
+
+/** A signed-in judge who has done the setup, so the regular page shows. */
+function signedInJudge(over: Record<string, unknown> = {}) {
+  mockUser = { ...JUDGE, ...over };
+  localStorage.setItem(`soulledger_onboarded:${mockUser.id}`, "1");
+}
+
+const panel = (id: string) => {
+  const el = document.querySelector(`section[aria-labelledby="${id}"]`);
+  if (!el) throw new Error(`no panel ${id}`);
+  return el as HTMLElement;
+};
+const statsPanel = () => panel("welcome-stats-title");
+const activityPanel = () => panel("welcome-activity-title");
+const nextPanel = () => panel("welcome-next-title");
+
+// ── Greeting ─────────────────────────────────────────────────────────
+
+describe("greeting: in the identity band, three buckets", () => {
+  const bandTitle = () => mockPlaque.mock.calls.at(-1)?.[0]?.title;
+
+  it.each([
+    [9, "welcome.greeting_morning(阎罗)"],
+    [12, "welcome.greeting_afternoon(阎罗)"],
+    [17, "welcome.greeting_afternoon(阎罗)"],
+    [18, "welcome.greeting_evening(阎罗)"],
+    [3, "welcome.greeting_evening(阎罗)"],
+  ])("%s o'clock → %s", async (hour, expected) => {
+    hoursSpy.mockReturnValue(hour as number);
+    signedInJudge();
+    renderPage();
+    await waitFor(() => expect(bandTitle()).toBe(expected));
+    expect(mockPlaque.mock.calls.at(-1)?.[0]?.meta).toBe("FORMATTED_DATE");
+    // The readers' <h1> says the same thing; there is no visible greeting block.
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(expected as string);
+    expect(screen.getByRole("heading", { level: 1 }).className).toContain("sr-only");
+  });
+
+  it("falls back to username, and greets an anonymous visitor without a name", async () => {
+    signedInJudge({ display_name: "" });
+    const first = renderPage();
+    await waitFor(() => expect(bandTitle()).toBe("welcome.greeting_morning(yama)"));
+    first.unmount();
+    mockUser = null;
+    renderPage();
+    await waitFor(() => expect(bandTitle()).toBe("nav.greeting_morning"));
+    expect(screen.queryByText(/Admin/)).toBeNull();
+  });
 });
 
 // ── Stats ────────────────────────────────────────────────────────────
 
-describe("WelcomePage quick stats", () => {
-  it("shows a placeholder for every stat until the request resolves", () => {
-    let resolve: (_v: unknown) => void = () => {};
-    mockedStats.mockReturnValue(new Promise((r) => (resolve = r)));
-
+describe("本殿灵魂: one panel, four cells", () => {
+  it("is busy with skeletons, not numbers, until the request resolves", () => {
+    mockedStats.mockReturnValue(new Promise(() => {}));
     renderPage();
-
-    expect(screen.getAllByText("...")).toHaveLength(4);
-    resolve({ data: stats });
+    expect(statsPanel()).toHaveAttribute("aria-busy", "true");
+    expect(statsPanel().querySelectorAll("[data-kpi]")).toHaveLength(0);
   });
 
-  it("fills each stat card from the state distribution once loaded", async () => {
+  it("fills the cells, each a link to its filtered list, with glyph + name", async () => {
     renderPage();
-
-    expect(await screen.findByText("77")).toBeInTheDocument();
-    // Scoped to the KPI cells: the checklist's fourth step marker is also "4".
-    expect(screen.getByText("4", { selector: "[data-kpi]" })).toBeInTheDocument();
-    expect(screen.getByText("60")).toBeInTheDocument();
-    expect(screen.getByText("13")).toBeInTheDocument();
+    await waitFor(() => expect(statsPanel().querySelectorAll("[data-kpi]")).toHaveLength(4));
+    const cells = Array.from(statsPanel().querySelectorAll("a[data-stat]"));
+    expect(cells.map((a) => [a.getAttribute("href"), a.querySelector("[data-kpi]")?.textContent])).toEqual([
+      ["/souls", "77"],
+      ["/judgment/queue", "4"],
+      ["/souls?state=ALIVE", "60"],
+      ["/souls?state=DISPOSED", "13"],
+    ]);
+    expect(cells[0]).toHaveTextContent(/^dashboard\.total_souls77welcome\.stats_roster$/);
+    expect(cells[1]).toHaveTextContent("◇ dashboard.under_judgment");
+    expect(cells[2]).toHaveTextContent("○ dashboard.alive");
+    expect(cells[3]).toHaveTextContent("▣ dashboard.disposed");
+    expect(statsPanel()).toHaveTextContent("welcome.stats_as_of(20:14)");
+    expect(statsPanel()).not.toHaveAttribute("aria-busy");
   });
 
-  it("falls back to a dash for a state the backend did not report", async () => {
-    mockedStats.mockResolvedValue({ data: { total_souls: 9, state_distribution: [] } });
-
+  it("writes 0 for a state the backend did not report — no dash, no hidden cell", async () => {
+    mockedStats.mockResolvedValue({ data: { total_souls: 0, state_distribution: [] } });
     renderPage();
-
-    expect(await screen.findByText("9")).toBeInTheDocument();
-    expect(screen.getAllByText("-")).toHaveLength(3);
+    await waitFor(() => expect(statsPanel().querySelectorAll("[data-kpi]")).toHaveLength(4));
+    expect(Array.from(statsPanel().querySelectorAll("[data-kpi]")).map((n) => n.textContent)).toEqual(["0", "0", "0", "0"]);
+    expect(screen.queryByText("-")).toBeNull();
   });
 
-  it("stops the loading placeholder and shows dashes when the stats call fails", async () => {
-    mockedStats.mockRejectedValue(new Error("500"));
-
+  it("errors on its own: 加载失败 in danger, the reason muted, 重试 reloads — activity is untouched", async () => {
+    signedInJudge();
+    mockedAudit.mockResolvedValue({ data: { results: [{ id: 1, action: "CREATE", resource: "soul", resource_id: "s1", description: "记一条", timestamp: new Date().toISOString() }], count: 1 } });
+    mockedStats.mockRejectedValueOnce(new Error("500"));
     renderPage();
+    const alert = await within(statsPanel()).findByRole("alert");
+    expect(alert).toHaveTextContent("! dashboard.todo.load_error");
+    expect(alert).toHaveTextContent("welcome.error_stats");
+    expect(alert.querySelector("p")?.className).toContain("--color-danger");
+    expect(within(activityPanel()).getByText("记一条")).toBeInTheDocument();
+    // The entries still work while the numbers are down.
+    expect(within(nextPanel()).getByTestId("welcome-primary")).toBeInTheDocument();
 
-    await waitFor(() => expect(screen.queryAllByText("...")).toHaveLength(0));
-    expect(screen.getAllByText("-")).toHaveLength(4);
-  });
-});
-
-// ── Greeting ─────────────────────────────────────────────────────────
-
-describe("WelcomePage greeting", () => {
-  it.each([
-    [3, "nav.greeting_night"],
-    [9, "nav.greeting_morning"],
-    [14, "nav.greeting_afternoon"],
-    [21, "nav.greeting_evening"],
-  ])("uses the %s o'clock greeting bucket", async (hour, expectedKey) => {
-    hoursSpy.mockReturnValue(hour as number);
-
-    renderPage();
-
-    expect(await screen.findByText(new RegExp(expectedKey as string))).toBeInTheDocument();
-  });
-
-  it("treats midnight as night and noon as afternoon at the bucket edges", async () => {
-    hoursSpy.mockReturnValue(0);
-    const { unmount } = renderPage();
-    expect(await screen.findByText(/nav\.greeting_night/)).toBeInTheDocument();
-    unmount();
-
-    hoursSpy.mockReturnValue(12);
-    renderPage();
-    expect(await screen.findByText(/nav\.greeting_afternoon/)).toBeInTheDocument();
+    fireEvent.click(within(alert).getByRole("button", { name: "common.retry" }));
+    await waitFor(() => expect(statsPanel().querySelectorAll("[data-kpi]")).toHaveLength(4));
+    expect(mockedStats).toHaveBeenCalledTimes(2);
+    expect(mockedAudit).toHaveBeenCalledTimes(1);
   });
 });
 
-// ── Identity fallbacks ───────────────────────────────────────────────
+// ── 接着做 ───────────────────────────────────────────────────────────
 
-describe("WelcomePage identity", () => {
-  it("renders for an anonymous visitor without redirecting or crashing", async () => {
-    mockUser = null;
-    mockTranslate = tZh;
-
+describe("接着做: one primary button, entries from the user's own menus", () => {
+  it("a judge: 进入审判台 with the pending count; only the entries their menus have", async () => {
+    signedInJudge();
+    mockMenus = [menu(1, "/souls"), menu(2, "/workflow")];
     renderPage();
-
-    expect(await screen.findByText(/Admin/)).toBeInTheDocument();
-    expect(screen.getByText("SoulLedger")).toBeInTheDocument();
-    // No user means no role. `{user?.role || "ADMIN"}` used to show a visitor
-    // the administrator label; the cell is a missing value now.
-    const roleCell = screen.getByText(zh("welcome.user_role")).nextElementSibling as HTMLElement;
-    expect(roleCell.querySelector("[data-missing='unrecorded']")).not.toBeNull();
-    expect(roleCell).not.toHaveTextContent("ADMIN");
-    // Anywhere it could be read as the visitor's role. The checklist's 默认视图
-    // step offers 「管理员」 as a way of working — a choice, not an identity —
-    // so that one button is excluded by name, not the whole page.
-    expect(
-      screen.queryAllByText(zh("users.roles.ADMIN")).filter((el) => !el.closest("[data-testid='welcome-view-admin']"))
-    ).toHaveLength(0);
+    const primary = await within(nextPanel()).findByTestId("welcome-primary");
+    await waitFor(() => expect(primary).toHaveTextContent("welcome.next_judgment(4)"));
+    expect(primary).toHaveAttribute("href", "/judgment/queue");
+    const rows = within(nextPanel()).getAllByRole("listitem");
+    expect(rows.map((r) => r.querySelector("a")?.getAttribute("href"))).toEqual(["/souls", "/workflow"]);
+    expect(rows[0]).toHaveTextContent("souls.createwelcome.next_create_soul_hint");
+    // /ledger is not in this judge's menus, so 功德统计 is not offered.
+    expect(within(nextPanel()).queryByText("ledger.title")).toBeNull();
   });
 
-  it("prefers display_name over username", async () => {
-    mockUser = { display_name: "阎罗", username: "yama", role: "JUDGE" };
-
+  it("the queue is clear: 进入审判台 · 队列已清空", async () => {
+    signedInJudge();
+    mockedStats.mockResolvedValue({ data: { total_souls: 3, state_distribution: [{ state: "ALIVE", count: 3 }] } });
     renderPage();
-
-    expect(await screen.findByText(/阎罗/)).toBeInTheDocument();
-    expect(screen.queryByText(/yama/)).not.toBeInTheDocument();
+    await waitFor(() => expect(within(nextPanel()).getByTestId("welcome-primary")).toHaveTextContent("welcome.next_judgment_empty"));
   });
 
-  it("falls back to username when display_name is empty", async () => {
-    mockUser = { display_name: "", username: "yama", role: "JUDGE" };
-
+  it("an administrator: 看统计概览, and 用户 / 权限 / 审计", async () => {
+    signedInJudge({ role: "ADMIN" });
+    mockMenus = [menu(1, "/users"), menu(2, "/permissions"), menu(3, "/audit"), menu(4, "/souls")];
     renderPage();
-
-    expect(await screen.findByText(/yama/)).toBeInTheDocument();
+    const primary = await within(nextPanel()).findByTestId("welcome-primary");
+    expect(primary).toHaveTextContent("welcome.next_dashboard");
+    expect(primary).toHaveAttribute("href", "/dashboard");
+    expect(within(nextPanel()).getAllByRole("listitem").map((r) => r.querySelector("a")?.getAttribute("href"))).toEqual([
+      "/users",
+      "/permissions",
+      "/audit",
+    ]);
   });
 
-  it("shows the tenant display name and role when the user carries them", async () => {
-    mockUser = {
-      username: "yama",
-      role: "GUARDIAN",
-      tenant: { display_name: "地府" },
-    };
-    mockTranslate = tZh;
-
+  it("names the role through RoleName — a custom role by the role table's display_name", async () => {
+    mockedRoles.mockResolvedValue({ data: [{ id: 9, name: "SCRIBE", display_name: "书吏", is_builtin: false }] });
+    signedInJudge({ role: "SCRIBE" });
     renderPage();
-
-    expect(await screen.findByText("地府")).toBeInTheDocument();
-    // §4.6: the translated role in the text node, the raw member only in `title`.
-    expect(screen.getByText(zh("users.roles.GUARDIAN"))).toBeInTheDocument();
-    expect(screen.getByTitle("GUARDIAN")).toBeInTheDocument();
-    expect(screen.queryByText("GUARDIAN")).not.toBeInTheDocument();
+    await waitFor(() => expect(within(nextPanel()).getByText("书吏")).toBeInTheDocument());
+    expect(within(nextPanel()).getByTitle("SCRIBE")).toBeInTheDocument();
   });
 
-  it("shows a custom role by the role table's display_name, not as unrecognised", async () => {
-    // Same decision as the users table's badge (UsersPage.roleBadge): a role an
-    // admin created has no `users.roles.*` copy and cannot, so DomainEnum alone
-    // rendered it italic as "unrecognised" with the name hidden in `title`.
-    mockedRoles.mockResolvedValue({
-      data: [{ id: 9, name: "SCRIBE", display_name: "书吏", is_builtin: false }],
-    });
-    mockUser = { username: "yama", role: "SCRIBE" };
-    mockTranslate = tZh;
-
+  it("is the only primary button on the page", async () => {
+    signedInJudge();
+    mockMenus = [menu(1, "/souls"), menu(2, "/workflow"), menu(3, "/ledger")];
     renderPage();
-
-    expect(await screen.findByText("书吏")).toBeInTheDocument();
-    expect(screen.getByTitle("SCRIBE")).toBeInTheDocument();
-    expect(document.querySelector("[data-enum-state='unrecognized']")).toBeNull();
+    await within(nextPanel()).findByTestId("welcome-primary");
+    const primaries = Array.from(document.querySelectorAll("a, button")).filter((el) => el.className.includes("--color-main"));
+    expect(primaries).toEqual([within(nextPanel()).getByTestId("welcome-primary")]);
   });
 });
 
-// ── Activity feed ────────────────────────────────────────────────────
+// ── 最近活动 ─────────────────────────────────────────────────────────
 
-/**
- * The activity feed, and the two tests that used to certify inventions.
- *
- * This block previously asserted three hard-coded rows ("新灵魂 张三 入库",
- * by "admin") and an agent panel listing "soul-indexer" / "ledger-decay" /
- * "judgment-assistant" with a pulsing "running" dot — **none of which existed**.
- * The page fabricated them, and these tests held them in place. `/welcome` is
- * on `PUBLIC_PATHS`, so that fiction was shown to unauthenticated visitors.
- * A third test pinned `/settings` among the quick-action hrefs, a route that
- * has never existed (`ls app/settings` → nothing).
- *
- * A test that asserts invented content is worse than no test: it makes the
- * invention look load-bearing, and it goes red when someone removes it.
- */
-describe("WelcomePage activity feed", () => {
+describe("最近活动: mine, from the audit log, at most six", () => {
   const entry = (over: Partial<Record<string, unknown>> = {}) => ({
     id: 1,
-    action: "SOUL_CREATE",
+    action: "CREATE",
     description: "记录一条",
     username: "yama",
     user_display: "阎罗",
@@ -267,205 +292,237 @@ describe("WelcomePage activity feed", () => {
     ...over,
   });
 
-  it("renders entries returned by the audit API, not invented ones", async () => {
-    mockUser = { username: "yama", role: "JUDGE" };
-    (auditApi.list as jest.Mock).mockResolvedValue({
+  it("asks for this user's entries only, shows six of twenty, four columns with the verb's glyph", async () => {
+    signedInJudge();
+    mockTranslate = tZh;
+    mockedAudit.mockResolvedValue({
+      data: { results: Array.from({ length: 20 }, (_, i) => entry({ id: i + 1, description: `条目 ${i + 1}` })), count: 20 },
+    });
+    renderPage();
+    await within(activityPanel()).findByText("条目 1");
+    expect(mockedAudit).toHaveBeenCalledWith({ user: "7" });
+    const rows = activityPanel().querySelectorAll("[data-activity]");
+    expect(rows).toHaveLength(6);
+    expect(within(activityPanel()).queryByText("条目 7")).toBeNull();
+    const cols = Array.from(rows[0].children).map((c) => c.textContent);
+    expect(cols).toEqual([zh("welcome.just_now"), `＋ ${zh("audit.actions.CREATE")}`, "soul · s1", "条目 1"]);
+    expect(activityPanel()).toHaveTextContent(zh("welcome.activity_source").replace("{{n}}", "6"));
+    expect(within(activityPanel()).getByRole("link", { name: new RegExp(zh("welcome.view_all_activity")) })).toHaveAttribute("href", "/audit");
+  });
+
+  it("shows real entries with relative times, never invented ones", async () => {
+    signedInJudge();
+    mockedAudit.mockResolvedValue({
       data: {
-        results: [
-          entry({ id: 1, description: "真实条目 A" }),
-          entry({ id: 2, description: "真实条目 B", timestamp: new Date(Date.now() - 3600000).toISOString() }),
-        ],
+        results: [entry({ id: 1, description: "真实条目 A" }), entry({ id: 2, description: "真实条目 B", timestamp: new Date(Date.now() - 3600000).toISOString() })],
         count: 2,
       },
     });
-
     renderPage();
-
     expect(await screen.findByText("真实条目 A")).toBeInTheDocument();
-    expect(screen.getByText("welcome.just_now")).toBeInTheDocument();
     expect(screen.getByText("welcome.hours_ago(1)")).toBeInTheDocument();
-    // Assert the absence too — the old fixtures must not be reachable.
     expect(screen.queryByText(/张三/)).not.toBeInTheDocument();
   });
 
-  it("shows at most three, because the first page is twenty", async () => {
-    mockUser = { username: "yama", role: "JUDGE" };
-    (auditApi.list as jest.Mock).mockResolvedValue({
-      data: {
-        results: Array.from({ length: 20 }, (_, i) => entry({ id: i + 1, description: `条目 ${i + 1}` })),
-        count: 20,
-      },
-    });
-
+  it("empty: the EmptyState with its reason, no action", async () => {
+    signedInJudge();
     renderPage();
-
-    await screen.findByText("条目 1");
-    expect(screen.getByText("条目 3")).toBeInTheDocument();
-    expect(screen.queryByText("条目 4")).not.toBeInTheDocument();
-    // And it must not ask for a page size the backend ignores: DRF runs a
-    // plain PageNumberPagination with no page_size_query_param.
-    expect((auditApi.list as jest.Mock).mock.calls[0]?.[0]).toBeUndefined();
+    await waitFor(() => expect(activityPanel().querySelector("[data-empty-state]")).not.toBeNull());
+    const empty = activityPanel().querySelector("[data-empty-state]") as HTMLElement;
+    expect(empty).toHaveTextContent("dashboard.no_activity");
+    expect(empty).toHaveTextContent("welcome.activity_empty_reason");
+    expect(empty.querySelector("[data-empty-state-action]")).toBeNull();
   });
 
-  it("asks for nothing, and invents nothing, for an anonymous visitor", async () => {
-    mockUser = null;
-    (auditApi.list as jest.Mock).mockResolvedValue({ data: { results: [], count: 0 } });
-
+  it("errors on its own and retries on its own", async () => {
+    signedInJudge();
+    mockedAudit.mockRejectedValueOnce(new Error("403"));
     renderPage();
-
-    await waitFor(() => expect(ledgerApi.statsOverview).toHaveBeenCalled());
-    // The audit log needs a session. Showing nothing is the honest answer to
-    // "what has been happening?" when we are not allowed to know.
-    expect(auditApi.list).not.toHaveBeenCalled();
-    expect(screen.queryByText(/张三/)).not.toBeInTheDocument();
+    const alert = await within(activityPanel()).findByRole("alert");
+    expect(alert).toHaveTextContent("welcome.error_activity");
+    await waitFor(() => expect(statsPanel().querySelectorAll("[data-kpi]")).toHaveLength(4));
+    fireEvent.click(within(alert).getByRole("button", { name: "common.retry" }));
+    await waitFor(() => expect(activityPanel().querySelector("[data-empty-state]")).not.toBeNull());
+    expect(mockedAudit).toHaveBeenCalledTimes(2);
+    expect(mockedStats).toHaveBeenCalledTimes(1);
   });
 
-  it("no longer claims a fleet of agents is running", async () => {
-    mockUser = { username: "yama", role: "JUDGE" };
-    (auditApi.list as jest.Mock).mockResolvedValue({ data: { results: [], count: 0 } });
-
+  it("asks nothing, and invents nothing, for an anonymous visitor", async () => {
     renderPage();
-
-    await waitFor(() => expect(ledgerApi.statsOverview).toHaveBeenCalled());
-    for (const invented of ["soul-indexer", "ledger-decay", "judgment-assistant"]) {
-      expect(screen.queryByText(invented)).not.toBeInTheDocument();
-    }
-    expect(screen.queryByText("welcome.agent_status")).not.toBeInTheDocument();
-  });
-
-  it("links the quick actions to routes that exist", async () => {
-    mockUser = { username: "yama", role: "JUDGE" };
-    (auditApi.list as jest.Mock).mockResolvedValue({ data: { results: [], count: 0 } });
-
-    renderPage();
-
-    const hrefs = (await screen.findAllByRole("link")).map((a) => a.getAttribute("href"));
-    expect(hrefs).toEqual(expect.arrayContaining(["/souls", "/workflow", "/judgment", "/ledger", "/audit"]));
-    // `/settings` was in this list and has never been a route.
-    expect(hrefs).not.toContain("/settings");
+    await waitFor(() => expect(mockedStats).toHaveBeenCalled());
+    expect(mockedAudit).not.toHaveBeenCalled();
+    expect(activityPanel().querySelector("[data-empty-state]")).not.toBeNull();
   });
 });
 
-// ── 首次进入清单 ─────────────────────────────────────────────────────
+// ── What A9 removed ─────────────────────────────────────────────────
 
-describe("WelcomePage first-run checklist", () => {
+describe("A9 removed the old blocks", () => {
+  it("no quick-action tiles, no info cards, no agent panel; the version is one footer line", async () => {
+    signedInJudge();
+    renderPage();
+    await waitFor(() => expect(statsPanel().querySelectorAll("[data-kpi]")).toHaveLength(4));
+    for (const gone of ["welcome.quick_actions", "welcome.current_civilization", "welcome.user_role", "welcome.agent_status", "nav.welcome"]) {
+      expect(screen.queryByText(gone)).toBeNull();
+    }
+    expect(screen.getByRole("contentinfo")).toHaveTextContent(/^welcome\.system_version · v\d+\.\d+\.\d+$/);
+  });
+});
+
+// ── 首次设置 ─────────────────────────────────────────────────────────
+
+describe("first-time setup: its own screen until `onboarded`", () => {
   const stepStates = () =>
     Array.from(document.querySelectorAll("[data-step-state]")).map((li) => li.getAttribute("data-step-state"));
+  const setup = () => screen.queryByTestId("welcome-setup");
 
-  beforeEach(() => localStorage.clear());
-
-  it("starts an anonymous visitor on 确认身份 with a way to sign in", async () => {
+  it("a signed-in user without the flag sees only the setup — not the regular panels", async () => {
+    mockUser = { ...JUDGE };
     renderPage();
-    await waitFor(() => expect(stepStates()).toEqual(["current", "future", "future", "future"]));
-    expect(screen.getByRole("link", { name: "auth.login" })).toHaveAttribute("href", "/login");
+    await waitFor(() => expect(setup()).not.toBeNull());
+    expect(stepStates()).toEqual(["current", "future", "future", "future"]);
+    expect(document.querySelector("section[aria-labelledby='welcome-stats-title']")).toBeNull();
+    expect(document.querySelector("section[aria-labelledby='welcome-next-title']")).toBeNull();
+    expect(setup()).toHaveTextContent("welcome.first_run(1,4)");
   });
 
-  const LEGACY_KEY = "soulledger_default_view";
-  const mockedPrefs = authApi.preferences as jest.Mock;
-  const mockedSavePrefs = authApi.updatePreferences as jest.Mock;
-
-  beforeEach(() => {
-    mockedPrefs.mockResolvedValue({ data: { default_view: null } });
-    mockedSavePrefs.mockImplementation(async (body: { default_view: string | null }) => ({ data: body }));
+  it("an anonymous visitor never gets it", async () => {
+    renderPage();
+    await waitFor(() => expect(mockedStats).toHaveBeenCalled());
+    expect(setup()).toBeNull();
   });
 
-  it("saves the default view on the server, not in this browser, and moves on", async () => {
-    mockUser = { username: "yama", role: "JUDGE" };
+  it("继续 / 上一步 move through the steps; 上一步 is disabled on the first", async () => {
+    mockUser = { ...JUDGE };
     renderPage();
-
-    await waitFor(() => expect(stepStates()).toEqual(["done", "current", "future", "future"]));
-    // Unchosen, 跳过 goes where login always went.
-    expect(screen.getByRole("link", { name: "welcome.skip" })).toHaveAttribute("href", "/dashboard");
-
-    fireEvent.click(screen.getByTestId("welcome-view-operator"));
-
-    await waitFor(() => expect(mockedSavePrefs).toHaveBeenCalledWith({ default_view: "operator" }));
-    expect(localStorage.getItem(LEGACY_KEY)).toBeNull();
-    expect(screen.getByTestId("welcome-view-operator")).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByTestId("welcome-view-admin")).toHaveAttribute("aria-pressed", "false");
-    expect(stepStates()).toEqual(["done", "done", "current", "future"]);
-    expect(screen.getByRole("link", { name: "welcome.skip" })).toHaveAttribute("href", "/judgment/queue");
+    await waitFor(() => expect(setup()).not.toBeNull());
+    expect(screen.getByRole("button", { name: "welcome.onboarding_back" })).toBeDisabled();
+    fireEvent.click(screen.getByRole("button", { name: "welcome.continue" }));
+    expect(stepStates()).toEqual(["done", "current", "future", "future"]);
+    expect(screen.getByRole("heading", { level: 2, name: "welcome.onboarding_view_title" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "welcome.onboarding_back" }));
+    expect(stepStates()).toEqual(["current", "future", "future", "future"]);
   });
 
-  it("shows the value the server has, from any browser", async () => {
-    mockUser = { username: "yama", role: "JUDGE" };
-    mockedPrefs.mockResolvedValue({ data: { default_view: "operator" } });
+  it("finishing writes `onboarded` for this user and shows the regular page", async () => {
+    mockUser = { ...JUDGE };
     renderPage();
-    await waitFor(() =>
-      expect(screen.getByTestId("welcome-view-operator")).toHaveAttribute("aria-pressed", "true")
-    );
-    expect(screen.getByRole("link", { name: "welcome.skip" })).toHaveAttribute("href", "/judgment/queue");
-    expect(mockedSavePrefs).not.toHaveBeenCalled();
+    await waitFor(() => expect(setup()).not.toBeNull());
+    for (let i = 0; i < 4; i++) fireEvent.click(screen.getByRole("button", { name: "welcome.continue" }));
+    expect(localStorage.getItem(ONBOARDED)).toBe("1");
+    expect(setup()).toBeNull();
+    expect(statsPanel()).toBeInTheDocument();
   });
 
-  it("migrates a value this browser stored before, once, and then forgets it", async () => {
-    mockUser = { username: "yama", role: "JUDGE" };
-    localStorage.setItem(LEGACY_KEY, "operator");
-    const first = renderPage();
-    await waitFor(() => expect(mockedSavePrefs).toHaveBeenCalledWith({ default_view: "operator" }));
-    await waitFor(() => expect(localStorage.getItem(LEGACY_KEY)).toBeNull());
-    expect(screen.getByTestId("welcome-view-operator")).toHaveAttribute("aria-pressed", "true");
-    first.unmount();
-
-    // Next visit: the server has it now, and nothing is written again.
-    mockedPrefs.mockResolvedValue({ data: { default_view: "operator" } });
+  it("跳过，直接进入 writes it too", async () => {
+    mockUser = { ...JUDGE };
     renderPage();
-    await waitFor(() =>
-      expect(screen.getByTestId("welcome-view-operator")).toHaveAttribute("aria-pressed", "true")
-    );
-    expect(mockedSavePrefs).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(setup()).not.toBeNull());
+    fireEvent.click(screen.getByRole("button", { name: "welcome.skip" }));
+    expect(localStorage.getItem(ONBOARDED)).toBe("1");
+    expect(setup()).toBeNull();
   });
 
-  it("keeps the local value for next time when the migration cannot be saved", async () => {
-    mockUser = { username: "yama", role: "JUDGE" };
-    localStorage.setItem(LEGACY_KEY, "operator");
-    mockedSavePrefs.mockRejectedValue(new Error("offline"));
+  it("重看首次设置 comes back from 接着做; 所有快捷键 opens the shortcuts step — exactly the queue's seven", async () => {
+    signedInJudge();
     renderPage();
-    await waitFor(() => expect(mockedSavePrefs).toHaveBeenCalled());
-    expect(localStorage.getItem(LEGACY_KEY)).toBe("operator");
-  });
+    fireEvent.click(await within(nextPanel()).findByRole("button", { name: "welcome.next_redo_onboarding" }));
+    expect(stepStates()).toEqual(["current", "future", "future", "future"]);
+    fireEvent.click(screen.getByRole("button", { name: "welcome.skip" }));
 
-  it("lets the server's value win over a stale local one, and clears the local one", async () => {
-    mockUser = { username: "yama", role: "JUDGE" };
-    localStorage.setItem(LEGACY_KEY, "operator");
-    mockedPrefs.mockResolvedValue({ data: { default_view: "admin" } });
-    renderPage();
-    await waitFor(() => expect(screen.getByTestId("welcome-view-admin")).toHaveAttribute("aria-pressed", "true"));
-    expect(screen.getByTestId("welcome-view-operator")).toHaveAttribute("aria-pressed", "false");
-    expect(localStorage.getItem(LEGACY_KEY)).toBeNull();
-    expect(mockedSavePrefs).not.toHaveBeenCalled();
-  });
-
-  it("puts the previous choice back when a save fails", async () => {
-    mockUser = { username: "yama", role: "JUDGE" };
-    mockedPrefs.mockResolvedValue({ data: { default_view: "admin" } });
-    mockedSavePrefs.mockRejectedValue(new Error("offline"));
-    renderPage();
-    await waitFor(() => expect(screen.getByTestId("welcome-view-admin")).toHaveAttribute("aria-pressed", "true"));
-    fireEvent.click(screen.getByTestId("welcome-view-operator"));
-    await waitFor(() => expect(screen.getByTestId("welcome-view-admin")).toHaveAttribute("aria-pressed", "true"));
-    expect(screen.getByTestId("welcome-view-operator")).toHaveAttribute("aria-pressed", "false");
-  });
-
-  it("asks nothing for an anonymous visitor, and offers no choice it cannot save", async () => {
-    renderPage();
-    await waitFor(() => expect(stepStates()).toEqual(["current", "future", "future", "future"]));
-    expect(screen.getByTestId("welcome-view-operator")).toBeDisabled();
-    expect(screen.getByTestId("welcome-view-admin")).toBeDisabled();
-    expect(mockedPrefs).not.toHaveBeenCalled();
-  });
-
-  it("lists exactly the queue's six shortcuts, all bound: no U, W and R present", async () => {
-    renderPage();
-    const keys = await waitFor(() => {
-      const found = Array.from(document.querySelectorAll("dt")).map((dt) => dt.textContent);
-      expect(found.length).toBeGreaterThan(0);
-      return found;
-    });
-    // Design's six (F group reply, 2026-09-26) plus C (v2 claim, 2026-09-30): W and R present,
-    // U gone with the undo window.
+    fireEvent.click(within(nextPanel()).getByRole("button", { name: /welcome\.next_all_shortcuts/ }));
+    expect(stepStates()).toEqual(["done", "done", "done", "current"]);
+    const keys = Array.from(document.querySelectorAll("[data-shortcut] dt")).map((dt) => dt.textContent);
     expect(keys).toEqual(["1–4", "C", "S", "W", "R", "N", "?"]);
-    // The design's ⌘K / Q / ⌘⏎ / ⌘Z have no handler anywhere in the app; U was withdrawn.
     for (const invented of ["⌘K", "Q", "⌘⏎", "⌘Z", "U"]) expect(keys).not.toContain(invented);
+  });
+
+  it("step 1 shows the identity it asks you to confirm", async () => {
+    mockUser = { ...JUDGE, role: "GUARDIAN" };
+    mockTranslate = tZh;
+    renderPage();
+    await waitFor(() => expect(setup()).not.toBeNull());
+    expect(within(setup()!).getByText("地府")).toBeInTheDocument();
+    expect(within(setup()!).getByText(zh("users.roles.GUARDIAN"))).toBeInTheDocument();
+    expect(within(setup()!).getByTitle("GUARDIAN")).toBeInTheDocument();
+    expect(within(setup()!).getByText(zh("welcome.onboarding_wrong_identity"))).toBeInTheDocument();
+  });
+
+  it("step 3: three theme radios — 跟随系统 follows the OS again, the others set it", async () => {
+    mockUser = { ...JUDGE };
+    renderPage();
+    await waitFor(() => expect(setup()).not.toBeNull());
+    fireEvent.click(screen.getByRole("button", { name: "welcome.continue" }));
+    fireEvent.click(screen.getByRole("button", { name: "welcome.continue" }));
+    expect(screen.getByTestId("welcome-theme-system")).toBeChecked();
+    fireEvent.click(screen.getByTestId("welcome-theme-dark"));
+    expect(mockSetTheme).toHaveBeenCalledWith("dark");
+    fireEvent.click(screen.getByTestId("welcome-theme-system"));
+    // Already following the system: a click on the checked radio changes nothing.
+    expect(mockFollowSystem).not.toHaveBeenCalled();
+    expect(screen.getByLabelText("nav.language")).toHaveValue("en");
+  });
+
+  describe("step 2, 默认视图: saved on the server", () => {
+    const LEGACY_KEY = "soulledger_default_view";
+    async function atViewStep() {
+      renderPage();
+      await waitFor(() => expect(setup()).not.toBeNull());
+      fireEvent.click(screen.getByRole("button", { name: "welcome.continue" }));
+    }
+    beforeEach(() => {
+      mockUser = { ...JUDGE };
+    });
+
+    it("saves the choice on the server, not in this browser", async () => {
+      await atViewStep();
+      fireEvent.click(screen.getByTestId("welcome-view-operator"));
+      await waitFor(() => expect(mockedSavePrefs).toHaveBeenCalledWith({ default_view: "operator" }));
+      expect(localStorage.getItem(LEGACY_KEY)).toBeNull();
+      expect(screen.getByTestId("welcome-view-operator")).toBeChecked();
+      expect(screen.getByTestId("welcome-view-admin")).not.toBeChecked();
+    });
+
+    it("shows the value the server has, from any browser", async () => {
+      mockedPrefs.mockResolvedValue({ data: { default_view: "operator" } });
+      await atViewStep();
+      await waitFor(() => expect(screen.getByTestId("welcome-view-operator")).toBeChecked());
+      expect(mockedSavePrefs).not.toHaveBeenCalled();
+    });
+
+    it("migrates a value this browser stored before, once", async () => {
+      localStorage.setItem(LEGACY_KEY, "operator");
+      await atViewStep();
+      await waitFor(() => expect(mockedSavePrefs).toHaveBeenCalledWith({ default_view: "operator" }));
+      await waitFor(() => expect(localStorage.getItem(LEGACY_KEY)).toBeNull());
+      expect(screen.getByTestId("welcome-view-operator")).toBeChecked();
+    });
+
+    it("keeps the local value for next time when the migration cannot be saved", async () => {
+      localStorage.setItem(LEGACY_KEY, "operator");
+      mockedSavePrefs.mockRejectedValue(new Error("offline"));
+      await atViewStep();
+      await waitFor(() => expect(mockedSavePrefs).toHaveBeenCalled());
+      expect(localStorage.getItem(LEGACY_KEY)).toBe("operator");
+    });
+
+    it("lets the server's value win over a stale local one, and clears the local one", async () => {
+      localStorage.setItem(LEGACY_KEY, "operator");
+      mockedPrefs.mockResolvedValue({ data: { default_view: "admin" } });
+      await atViewStep();
+      await waitFor(() => expect(screen.getByTestId("welcome-view-admin")).toBeChecked());
+      expect(localStorage.getItem(LEGACY_KEY)).toBeNull();
+      expect(mockedSavePrefs).not.toHaveBeenCalled();
+    });
+
+    it("puts the previous choice back when a save fails", async () => {
+      mockedPrefs.mockResolvedValue({ data: { default_view: "admin" } });
+      mockedSavePrefs.mockRejectedValue(new Error("offline"));
+      await atViewStep();
+      await waitFor(() => expect(screen.getByTestId("welcome-view-admin")).toBeChecked());
+      fireEvent.click(screen.getByTestId("welcome-view-operator"));
+      await waitFor(() => expect(screen.getByTestId("welcome-view-admin")).toBeChecked());
+      expect(screen.getByTestId("welcome-view-operator")).not.toBeChecked();
+    });
   });
 });

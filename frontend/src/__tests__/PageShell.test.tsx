@@ -878,6 +878,12 @@ describe("PageShell density", () => {
  * 它只许出现在 `app/page.tsx`,而且必须真的出现 —— 一个从没被看到的角色是一条空守卫。
  */
 const H1_COVER = { file: "app/page.tsx", steps: "text-lg md:text-xl" };
+/**
+ * 登录标题:「登录」font-title 28/36(A9 §二,Design 2026-10-03)。登录页此前的 `<h1>` 是匾题字
+ * (40,上面那条豁免管它);A9 撤掉了那条墨色宽带,`<h1>` 落到表单标题上,字号照稿是 28。
+ * 同样只许在那一个文件、必须真的出现一次。
+ */
+const H1_LOGIN = { file: "app/(auth)/login/page.tsx", steps: "text-xl" };
 
 describe("页面标题 <h1>", () => {
   it("pins every literal <h1> outside the shell to the page-title step, text-lg", () => {
@@ -912,6 +918,7 @@ describe("页面标题 <h1>", () => {
 
     const offenders: string[] = [];
     let coverSeen = 0;
+    let loginSeen = 0;
     for (const h of found) {
       if (h.file === "app/global-error.tsx") {
         if (!/fontSize:\s*"1\.25rem"/.test(h.tag)) {
@@ -927,6 +934,11 @@ describe("页面标题 <h1>", () => {
         else offenders.push(`${h.file}:${h.line}  the cover title (text-lg md:text-xl) belongs to ${H1_COVER.file} only`);
         continue;
       }
+      if (h.file === H1_LOGIN.file) {
+        loginSeen += 1;
+        if (h.steps.join(" ") !== H1_LOGIN.steps) offenders.push(`${h.file}:${h.line}  the login title is ${H1_LOGIN.steps} (A9: 28/36)`);
+        continue;
+      }
       let why: string | null = null;
       if (h.steps.length !== 1 || h.steps[0] !== "text-lg") {
         why = `uses ${h.steps.join(", ") || "no type step"} — a page title is text-lg`;
@@ -937,6 +949,7 @@ describe("页面标题 <h1>", () => {
     }
 
     expect(coverSeen).toBe(1);
+    expect(loginSeen).toBe(1);
     if (offenders.length > 0) {
       throw new Error(
         `<h1> is the page title and has one step: text-lg (20px / 600). The plaque title ` +
