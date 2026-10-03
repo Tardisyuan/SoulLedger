@@ -53,6 +53,9 @@ const LEAF_KEYS: Record<string, string> = {
   "/sentence-requests": "breadcrumb.menu.sentence_requests",
   // backend/apps/menus/migrations/0020_add_assistant_admin_menu.py
   "/admin/assistant": "breadcrumb.menu.assistant_admin",
+  // backend/apps/menus/migrations/0017_add_moderation_menu.py — missed when it landed, so the
+  // sidebar showed 朋友圈审核 in en and egy too (2026-10-03).
+  "/moderation": "breadcrumb.menu.moderation",
 };
 
 const DIRECTORY_KEYS: Record<string, string> = {

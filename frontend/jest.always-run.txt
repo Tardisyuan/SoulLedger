@@ -65,3 +65,4 @@ src/__tests__/workflowAutoLayoutMotion.test.tsx
 src/__tests__/workflowEdgeArrowSingleSource.test.ts
 src/__tests__/zIndexOrderContract.test.ts
 src/__tests__/zhuyinShell.test.tsx
+src/__tests__/menuTranslationCoverage.test.ts

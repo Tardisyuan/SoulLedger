@@ -2582,7 +2582,8 @@
       "rebirth_applications": "转生申请",
       "soul_inbox": "殿司收件箱",
       "sentence_requests": "受刑请求",
-      "assistant_admin": "助手管理"
+      "assistant_admin": "助手管理",
+      "moderation": "朋友圈审核"
     },
     "queue": "分诊队列",
     "about": "关于",

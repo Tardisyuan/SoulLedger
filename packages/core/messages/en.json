@@ -2582,7 +2582,8 @@
       "rebirth_applications": "Rebirth Applications",
       "soul_inbox": "Hall Inbox",
       "sentence_requests": "Sentence Requests",
-      "assistant_admin": "Assistant Admin"
+      "assistant_admin": "Assistant Admin",
+      "moderation": "Circle Moderation"
     },
     "queue": "Triage queue",
     "about": "About",
