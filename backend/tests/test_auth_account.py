@@ -463,24 +463,60 @@ class TestPreferences:
         api_client.force_authenticate(judge_user)
         response = api_client.get(PREFS)
         assert response.status_code == 200
-        assert response.data == {"default_view": None}
+        assert response.data == {"default_view": None, "onboarded": False}
 
     @pytest.mark.parametrize("view", ["operator", "admin"])
     def test_patch_stores_and_get_reads_it_back(self, api_client, judge_user, view):
         api_client.force_authenticate(judge_user)
-        assert api_client.patch(PREFS, {"default_view": view}, format="json").data == {"default_view": view}
-        assert api_client.get(PREFS).data == {"default_view": view}
+        expected = {"default_view": view, "onboarded": False}
+        assert api_client.patch(PREFS, {"default_view": view}, format="json").data == expected
+        assert api_client.get(PREFS).data == expected
         judge_user.refresh_from_db()
         assert judge_user.preferences == {"default_view": view}
 
     def test_null_clears_it(self, api_client, judge_user):
         api_client.force_authenticate(judge_user)
         api_client.patch(PREFS, {"default_view": "operator"}, format="json")
-        assert api_client.patch(PREFS, {"default_view": None}, format="json").data == {"default_view": None}
+        assert api_client.patch(PREFS, {"default_view": None}, format="json").data["default_view"] is None
 
     def test_an_unknown_value_is_refused(self, api_client, judge_user):
         api_client.force_authenticate(judge_user)
         assert api_client.patch(PREFS, {"default_view": "/admin"}, format="json").status_code == 400
+        judge_user.refresh_from_db()
+        assert judge_user.preferences == {}
+
+    def test_onboarded_is_stored_and_read_back_without_touching_default_view(self, api_client, judge_user):
+        judge_user.preferences = {"default_view": "admin"}
+        judge_user.save(update_fields=["preferences"])
+        api_client.force_authenticate(judge_user)
+        expected = {"default_view": "admin", "onboarded": True}
+        assert api_client.patch(PREFS, {"onboarded": True}, format="json").data == expected
+        assert api_client.get(PREFS).data == expected
+        judge_user.refresh_from_db()
+        assert judge_user.preferences == {"default_view": "admin", "onboarded": True}
+
+    def test_onboarded_can_be_set_back_to_false(self, api_client, judge_user):
+        api_client.force_authenticate(judge_user)
+        api_client.patch(PREFS, {"onboarded": True}, format="json")
+        assert api_client.patch(PREFS, {"onboarded": False}, format="json").data["onboarded"] is False
+        judge_user.refresh_from_db()
+        assert judge_user.preferences == {"onboarded": False}
+
+    def test_patching_default_view_alone_does_not_write_an_onboarded_default(self, api_client, judge_user):
+        # A partial PATCH must not apply the read-side default and overwrite a stored true.
+        judge_user.preferences = {"onboarded": True}
+        judge_user.save(update_fields=["preferences"])
+        api_client.force_authenticate(judge_user)
+        assert api_client.patch(PREFS, {"default_view": "operator"}, format="json").data["onboarded"] is True
+        judge_user.refresh_from_db()
+        assert judge_user.preferences == {"onboarded": True, "default_view": "operator"}
+
+    @pytest.mark.parametrize("value", [None, "maybe", 2, [True], {"done": True}])
+    def test_a_non_boolean_onboarded_is_refused(self, api_client, judge_user, value):
+        api_client.force_authenticate(judge_user)
+        response = api_client.patch(PREFS, {"onboarded": value}, format="json")
+        assert response.status_code == 400
+        assert "onboarded" in response.data
         judge_user.refresh_from_db()
         assert judge_user.preferences == {}
 
@@ -507,7 +543,7 @@ class TestPreferencesAreOnlyEverYourOwn:
         admin_user.preferences = {"default_view": "admin"}
         admin_user.save(update_fields=["preferences"])
         api_client.force_authenticate(judge_user)
-        assert api_client.get(PREFS).data == {"default_view": None}
+        assert api_client.get(PREFS).data == {"default_view": None, "onboarded": False}
 
     @pytest.mark.parametrize("field", ["user", "user_id", "id", "username"])
     def test_naming_another_user_in_the_body_is_refused(self, api_client, judge_user, admin_user, field):
@@ -519,6 +555,17 @@ class TestPreferencesAreOnlyEverYourOwn:
         judge_user.refresh_from_db()
         assert admin_user.preferences == {}
         assert judge_user.preferences == {}
+
+    def test_onboarded_is_per_user_across_tenants(self, api_client, judge_user, eu_admin_user):
+        """Another tenant's user — and the same-tenant judge — keep their own flag."""
+        api_client.force_authenticate(eu_admin_user)
+        assert api_client.patch(PREFS, {"onboarded": True}, format="json").status_code == 200
+        api_client.force_authenticate(judge_user)
+        assert api_client.get(PREFS).data["onboarded"] is False
+        judge_user.refresh_from_db()
+        eu_admin_user.refresh_from_db()
+        assert judge_user.preferences == {}
+        assert eu_admin_user.preferences == {"onboarded": True}
 
     def test_there_is_no_per_user_url(self, api_client, judge_user, admin_user):
         api_client.force_authenticate(judge_user)

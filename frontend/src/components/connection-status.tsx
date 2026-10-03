@@ -119,18 +119,24 @@ export function ConnectionBanner() {
   // the socket; queries refetch by themselves on `online` (TanStack Query's onlineManager).
   const canRetry = offline || status === "failed" || status === "disconnected";
   const reason = offline ? t("connection.offline") : t(`connection.${status}`);
+  // Click-through except the reason text and 重试: the bar floats over the top 28 px of the 52 px toolbar, so it
+  // covered the centre of every toolbar button — while the link was down the operator could
+  // not open the user menu (sign out) or 问一问. E2E caught it once nothing served /ws.
   return (
     <div
       role="status"
       data-testid="connection-banner"
       data-offline={offline ? "true" : undefined}
-      className="fixed inset-x-0 top-0 z-drawer flex h-7 items-center gap-3 border-t-4 border-t-[oklch(var(--color-warning))] border-b border-[oklch(var(--color-line))] bg-[oklch(var(--color-warning-tint))] px-4 text-xs text-[oklch(var(--color-warning))] md:px-8"
+      className="pointer-events-none fixed inset-x-0 top-0 z-drawer flex h-7 items-center gap-3 border-t-4 border-t-[oklch(var(--color-warning))] border-b border-[oklch(var(--color-line))] bg-[oklch(var(--color-warning-tint))] px-4 text-xs text-[oklch(var(--color-warning))] md:px-8"
     >
       <span aria-hidden="true">!</span>
-      {/* Fixed 28 px: a long egy / en reason is cut, and readable in full on hover. */}
-      <span className="flex-1 truncate" title={reason}>{reason}</span>
+      {/* Fixed 28 px: a long egy / en reason is cut, and readable in full on hover. Only the
+          text itself takes the pointer (sized to it, not stretched) — it sits over the nav's
+          brand slot, not over a toolbar button. */}
+      <span className="pointer-events-auto min-w-0 truncate" title={reason}>{reason}</span>
+      <span className="flex-1" aria-hidden="true" />
       {canRetry ? (
-        <button type="button" onClick={reconnect} className="underline underline-offset-2">
+        <button type="button" onClick={reconnect} className="pointer-events-auto underline underline-offset-2">
           {offline ? t("common.retry") : t("connection.retry")}
         </button>
       ) : null}

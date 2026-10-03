@@ -27,7 +27,10 @@ from fontTools.ttLib import TTFont
 ROOT = Path(__file__).resolve().parent.parent
 # Status / verdict / application badge glyphs, plus ≡ (App: 已终结) and ? (the unknown badge, App),
 # and the App's tag glyphs ◐ (朋友圈 审核中) and ⇄ (书信 互关) — v3, 2026-10-02.
-GLYPHS = "✓✕◇↺◌○▣↻◎≡?◐⇄"
+# ■□ (2026-10-03): v3's EmptyState draws a 28px □, and the route map and permission matrix
+# legends draw ■/□ beside ○◇▣ — they were left out, so the squares came from the OS font
+# while their neighbours came from here.
+GLYPHS = "✓✕◇↺◌○▣↻◎≡?◐⇄■□"
 FAMILY = "SoulLedger Glyphs"
 PS_NAME = "SoulLedgerGlyphs-Regular"
 OUT = [ROOT / "frontend/public/fonts/SoulLedgerGlyphs.ttf", ROOT / "mobile/assets/fonts/SoulLedgerGlyphs.ttf"]

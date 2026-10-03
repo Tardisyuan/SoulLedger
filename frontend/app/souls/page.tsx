@@ -66,15 +66,18 @@ export default function SoulsPage() {
 }
 
 function SoulsRoute() {
-  const q = useSearchParams()?.get("q")?.trim() ?? "";
-  return <SoulsList key={q} initialQuery={q} />;
+  const params = useSearchParams();
+  const q = params?.get("q")?.trim() ?? "";
+  // `?state=` is how /welcome's 本殿灵魂 cells land on a filtered list.
+  const state = params?.get("state")?.trim() ?? "";
+  return <SoulsList key={`${q}|${state}`} initialQuery={q} initialState={state} />;
 }
 
-function SoulsList({ initialQuery }: { initialQuery: string }) {
+function SoulsList({ initialQuery, initialState }: { initialQuery: string; initialState: string }) {
   const { t, locale } = useI18n();
   usePlaque({ hall: useHall(t("plaque.office.records")) });
   const [page, setPage] = useState(1);
-  const [stateFilter, setStateFilter] = useState("");
+  const [stateFilter, setStateFilter] = useState(initialState);
   const [civilizationFilter, setCivilizationFilter] = useState("");
   const [searchInput, setSearchInput] = useState(initialQuery);
   const [search, setSearch] = useState(initialQuery);

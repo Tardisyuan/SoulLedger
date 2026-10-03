@@ -64,8 +64,20 @@ function cmapCodepoints(buf: Buffer): Set<number> {
 const cps = (glyphs: Iterable<string>) => [...new Set([...glyphs].map((g) => g.codePointAt(0)!))].sort((a, b) => a - b);
 const hex = (c: number) => `U+${c.toString(16).toUpperCase().padStart(4, "0")}`;
 
-/** Every glyph a web status / verdict badge draws. */
-const WEB_GLYPHS = cps([...Object.values(SOUL_STATE_GLYPH), ...Object.values(VERDICT_GLYPH)]);
+/**
+ * ■□ outside the badge tables (2026-10-03): v3's EmptyState draws a 28px □, and the route map
+ * and permission matrix legends draw ■/□ beside ○◇▣. They were missing from the font, so the
+ * squares came from the OS while their neighbours came from the subset. Read from the sources
+ * below so a square that leaves all three stops being claimed here.
+ */
+const SQUARE_SOURCES = [
+  "frontend/src/components/ui/EmptyState.tsx",
+  "frontend/src/components/realms/RouteMap.tsx",
+  "frontend/src/components/permissions/PermissionMatrixTable.tsx",
+].map((f) => readFileSync(path.join(REPO, f), "utf8"));
+const SQUARES = ["■", "□"].filter((g) => SQUARE_SOURCES.some((src) => src.includes(g)));
+/** Every glyph a web status / verdict badge draws, plus the squares. */
+const WEB_GLYPHS = cps([...Object.values(SOUL_STATE_GLYPH), ...Object.values(VERDICT_GLYPH), ...SQUARES]);
 /** Every glyph an App badge draws, read from mobile/src/rules.ts (it imports React Native's theme). */
 const APP_GLYPHS = cps([...APP_RULES.matchAll(/glyph: "([^"]+)"/g)].map((m) => m[1]));
 
@@ -76,6 +88,7 @@ describe("status glyphs come from one bundled font (Design E 组)", () => {
       expect(APP_GLYPHS).toContain(g.codePointAt(0));
     }
     expect(APP_GLYPHS.length).toBeGreaterThanOrEqual(10);
+    expect(SQUARES).toEqual(["■", "□"]);
   });
 
   it("the font file carries every web and App badge glyph", () => {

@@ -321,7 +321,7 @@ function DashboardContent() {
                           </span>
                         ) : (
                           // 没有灵魂的文明是一行,带去处,不画空条(规范 v1)。
-                          <Link href="/souls" className="truncate text-xs text-[oklch(var(--color-ink-subtle))] underline">
+                          <Link href="/souls" className="text-xs leading-tight [word-break:keep-all] text-[oklch(var(--color-ink-subtle))] underline">
                             {t("dashboard.civ_empty")}
                           </Link>
                         )}

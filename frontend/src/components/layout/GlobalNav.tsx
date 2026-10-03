@@ -10,7 +10,7 @@ import { isDirectory, type SidebarMenu } from "@/src/hooks/useSidebarMenus";
 import { useDrawerA11y } from "@/src/components/layout/useDrawerA11y";
 import { isMenuPathActive } from "@/src/lib/menuPath";
 import { menuGlossParts } from "@/src/lib/menuI18n";
-import { Seal } from "@/src/components/plaque/Seal";
+import { BrandMark } from "@/src/components/brand/BrandMark";
 import { DomainEnum } from "@/src/components/ui/DomainValue";
 import type { UserRole } from "@soulledger/core/api";
 
@@ -105,6 +105,9 @@ export function NavIcon({ icon }: { icon: string | null | undefined }) {
 // ── 导航模式 ────────────────────────────────────────────────────────────
 
 export const NAV_MODE_KEY = "soulledger-nav-mode";
+/** 品牌字标。一直是字面量(此前的「SoulLedger / 灵魂簿」两行也是):它是标的一部分,不随界面语言换。 */
+const BRAND_WORD = "灵魂簿";
+
 export type NavMode = "expanded" | "collapsed";
 /** 769–1199 强制收起;≤ 768 根本没有侧栏,同样不让切。 */
 const FORCED_QUERY = "(max-width: 1199.98px)";
@@ -242,14 +245,11 @@ export function GlobalNav({
         collapsed ? "w-17" : "w-63"
       }`}
     >
-      <div className={`flex h-14.5 shrink-0 items-center gap-2 border-b border-[oklch(var(--color-line))] ${collapsed ? "justify-center" : "px-4"}`}>
-        <Seal size={28} />
-        {collapsed ? null : (
-          <div className="min-w-0 leading-tight">
-            <p className="truncate text-xs font-semibold text-[oklch(var(--color-ink))]">SoulLedger</p>
-            <p className="truncate text-2xs text-[oklch(var(--color-ink-muted))]">灵魂簿</p>
-          </div>
-        )}
+      {/* 品牌位(A9 §一):天平标 24 加「灵魂簿」,高 56(17/600 不在八档字号里,取 md 15/600)。文明印只在身份带上,导航里不再出现;
+          收起时只留标,标自己带名字(旁边没有字了)。 */}
+      <div data-nav-brand="" className={`flex h-14 shrink-0 items-center gap-2 border-b border-[oklch(var(--color-line))] ${collapsed ? "justify-center" : "px-4"}`}>
+        <BrandMark size={24} label={collapsed ? BRAND_WORD : undefined} />
+        {collapsed ? null : <span className="font-title text-md text-[oklch(var(--color-ink))]">{BRAND_WORD}</span>}
       </div>
 
       <nav aria-label={navLabel} className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-2 py-2">
