@@ -873,11 +873,12 @@ describe("PageShell density", () => {
  *     同值),而不是放它走 —— 否则那一处就是一个没有任何东西看着的标题。
  */
 /**
- * 封面标题:首页 hero,`text-lg md:text-xl`(手机 20、md 起 28)。
+ * 封面标题:首页 hero,`text-xl md:text-display-lg`(手机 28、md 起 56)。
  * 原本是一条等决定的豁免;2026-10-01 用户拍板保留 28px,于是从豁免升成正式角色。
+ * 2026-10-03 A10 落地页改版:Design 画 88,不在字级表里;用户定取表内最大一档 display-lg 56。
  * 它只许出现在 `app/page.tsx`,而且必须真的出现 —— 一个从没被看到的角色是一条空守卫。
  */
-const H1_COVER = { file: "app/page.tsx", steps: "text-lg md:text-xl" };
+const H1_COVER = { file: "app/page.tsx", steps: "text-xl md:text-display-lg" };
 /**
  * 登录标题:「登录」font-title 28/36(A9 §二,Design 2026-10-03)。登录页此前的 `<h1>` 是匾题字
  * (40,上面那条豁免管它);A9 撤掉了那条墨色宽带,`<h1>` 落到表单标题上,字号照稿是 28。
@@ -931,7 +932,7 @@ describe("页面标题 <h1>", () => {
       }
       if (h.steps.join(" ") === H1_COVER.steps) {
         if (h.file === H1_COVER.file) coverSeen += 1;
-        else offenders.push(`${h.file}:${h.line}  the cover title (text-lg md:text-xl) belongs to ${H1_COVER.file} only`);
+        else offenders.push(`${h.file}:${h.line}  the cover title (text-xl md:text-display-lg) belongs to ${H1_COVER.file} only`);
         continue;
       }
       if (h.file === H1_LOGIN.file) {

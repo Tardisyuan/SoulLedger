@@ -206,6 +206,7 @@ const COLLECTED_FILES = [
   "MenuButtonsPage.editFailure.test.tsx",
   "MenuRowCells.test.tsx",
   "menuCacheRootsAreInvalidatedTogether.test.ts",
+  "menuTranslationCoverage.test.ts",
   "notifyKeysExistInTheBundles.test.ts",
   "notifyPortCarriesTheToast.test.ts",
   "officerAssist.test.tsx",
