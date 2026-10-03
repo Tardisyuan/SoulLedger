@@ -105,8 +105,9 @@ def entries(locale: str, audience: str = "soul") -> tuple:
 
 
 #: 检索时也总在缓存前缀里的条目:规则点名要它(原因代码对照表),而它与问题的措辞无关 ——
-#: 工具返回一个代码时,问题本身可能一点也不像「代码」。
-PINNED = ("codes",)
+#: 工具返回一个代码时,问题本身可能一点也不像「代码」。官员端同理钉住 `officer-disabled-buttons`:
+#: 「为什么点不了」的答案一半在权限之外的服务端规则里,而问题措辞往往只提按钮名。各受众只取自己有的那条。
+PINNED = ("codes", "officer-disabled-buttons")
 
 
 def _render(e) -> str:

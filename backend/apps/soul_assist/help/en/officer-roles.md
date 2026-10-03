@@ -7,6 +7,7 @@ codes: []
 questions:
   - "what can my role do"
   - "what is the difference between a judge and a realm lead"
+  - "which role is the judge"
 ---
 The console has five officer roles. What each holds by default:
 - ADMIN (Administrator): everything, in every hall. The only role that sees across halls. Always ADMIN-only: managing users, editing the permission matrix, the scheduler rebuild, and restoring or permanently deleting from the recycle bin; nothing can be taken away from ADMIN. By default ADMIN-only (the matrix can change it): managing menus.

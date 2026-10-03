@@ -239,9 +239,10 @@ class Retrieval:
     top_similarity: float | None = None
 
 
-def retrieve(question, locale, audience, civilization=None, *, release=lambda: None) -> Retrieval:
+def retrieve(question, locale, audience, civilization=None, *, screen=None, release=lambda: None) -> Retrieval:
     """按语言、受众、文明(条目的 `civilizations` 为空或含 `civilization`;官员不按文明过滤)过滤,
-    取余弦最近的 k 条。`release` 在出网前调:取向量的这几秒不占着数据库连接。"""
+    取余弦最近的 k 条;`screen`(提问来自哪一页)只改这 k 条的次序 —— 头里列了这一页的条目排到前面,
+    各组内仍按余弦 —— 不改 k,不改入选。`release` 在出网前调:取向量的这几秒不占着数据库连接。"""
     from apps.soul_assist.models import HelpChunk
 
     eff = config.effective()
@@ -264,7 +265,11 @@ def retrieve(question, locale, audience, civilization=None, *, release=lambda: N
         return Retrieval("fallback")
     if ranked[0][0] < eff.retrieval_min_similarity:
         return Retrieval("fallback_low_similarity", top_similarity=ranked[0][0])
-    return Retrieval("vector", tuple(entry_id for _, entry_id in ranked), ranked[0][0])
+    ids = [entry_id for _, entry_id in ranked]
+    if screen:
+        on_screen = {e["id"] for e in corpus.entries(locale, audience) if screen in e["screens"]}
+        ids.sort(key=lambda i: i not in on_screen)  # 稳定排序:同页在前,组内保持余弦次序
+    return Retrieval("vector", tuple(ids), ranked[0][0])
 
 
 def warm_up(emb):

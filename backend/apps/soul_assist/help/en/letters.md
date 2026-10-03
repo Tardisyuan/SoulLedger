@@ -8,6 +8,8 @@ questions:
   - "how do I write to the hall office"
   - "how do I write to another soul"
   - "why can't I send a letter"
+  - "why can't I talk freely with some souls"
+  - "how soon does the hall reply"
 ---
 "Letters" has two kinds of conversation:
 - Hall office: write to the hall office of the hall you are in now; officers reply in the office's name, not instantly and with no fixed reply time; the reply appears in "Letters", and you are notified if letter notifications are on. Use it for questions that need a person.
