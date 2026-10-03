@@ -283,17 +283,27 @@ export function usePullRefresh(
   const [atTop, setAtTop] = useState(true);
   // "wait": held while `refreshing`; "promise": held until what onRefresh returned settles.
   const [held, setHeld] = useState<false | "wait" | "promise">(false);
-  if (held === "wait" && !refreshing) setHeld(false);
+  // The hold ends when the reload is done AND `motion.pullMinHold` has passed since it began.
+  const heldSince = useRef(0);
+  const releaseTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const endHold = useCallback(() => {
+    const wait = motion.pullMinHold - (Date.now() - heldSince.current);
+    clearTimeout(releaseTimer.current);
+    if (wait > 0) releaseTimer.current = setTimeout(() => setHeld(false), wait);
+    else setHeld(false);
+  }, []);
+  useEffect(() => () => clearTimeout(releaseTimer.current), []);
+  useEffect(() => {
+    if (held === "wait" && !refreshing) endHold();
+  }, [held, refreshing, endHold]);
 
   const trigger = () => {
     if (!onRefresh) return;
+    heldSince.current = Date.now();
     const result = onRefresh();
     if (result && typeof (result as PromiseLike<unknown>).then === "function") {
       setHeld("promise");
-      (result as PromiseLike<unknown>).then(
-        () => setHeld(false),
-        () => setHeld(false)
-      );
+      (result as PromiseLike<unknown>).then(endHold, endHold);
     } else setHeld("wait");
   };
   const back = () => {
