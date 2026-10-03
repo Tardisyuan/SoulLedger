@@ -108,6 +108,9 @@
     },
     "Plaque": {
       "cardMode": "column"
+    },
+    "DataTable": {
+      "cardMode": "column"
     }
   },
   "readmeHeader": ".design-sync/conventions.md"

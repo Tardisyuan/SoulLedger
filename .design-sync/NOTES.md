@@ -23,8 +23,9 @@ previews authored for the core set; the rest ship on the floor card.
   `process is not defined`.
 - CSS (`build-css.mjs`): next/font variables are re-declared on `:root` against a Google
   Fonts `@import`; `'Noto Sans/Serif SC Variable'` (fontsource names) are rewritten to the
-  Google family names; `url("/v2/…")` assets are inlined as data URIs; the two local
-  fonts (SoulLedgerGlyphs, LXGW Seal) are copied next to the CSS so extractFonts ships them.
+  Google family names; `url("/v2/…")` assets are inlined as data URIs; the one local
+  font (SoulLedgerGlyphs) is copied next to the CSS so extractFonts ships it. (LXGW Seal,
+  UnifrakturMaguntia, GFS Didot were dropped 2026-10-03 with v2's seal; the web ships none of them.)
   `@source "../../.design-sync/previews"` makes classes used only in previews exist.
 - `SoulLedgerProvider` (in entry.tsx) = I18n + Theme + Tenant + Toast, plus two
   stand-ins: `pathname` (feeds Next's `PathnameContext`, since there is no router) and
@@ -52,6 +53,9 @@ previews authored for the core set; the rest ship on the floor card.
   tokens.
 - Skeleton components render invisible for 400 ms (`SKELETON_DELAY_MS`) by design;
   a capture taken earlier is blank.
+
+- `DataTable` is `cardMode: column` (2026-10-03): after the v3 header / sticky change its
+  Default story ran wider than a grid cell (`[GRID_OVERFLOW]`).
 
 ## Re-sync risks
 

@@ -29,8 +29,6 @@ const GOOGLE_FAMILIES = [
   "IBM+Plex+Mono:wght@400;500;600",
   "Noto+Sans+SC:wght@100..900",
   "Noto+Serif+SC:wght@200..900",
-  "UnifrakturMaguntia",
-  "GFS+Didot",
   "Noto+Sans+Egyptian+Hieroglyphs",
 ];
 const googleUrl =
@@ -40,15 +38,7 @@ const FONT_VARS = `:root {
   --font-sans-latin: 'Archivo';
   --font-serif-latin: 'Source Serif 4';
   --font-mono-latin: 'IBM Plex Mono';
-  --font-unifraktur: 'UnifrakturMaguntia';
-  --font-gfs-didot: 'GFS Didot';
   --font-hieroglyphs: 'Noto Sans Egyptian Hieroglyphs';
-  --font-lxgw-seal: 'LXGW Seal';
-}
-@font-face {
-  font-family: 'LXGW Seal';
-  src: url('./LXGWSeal-Regular.ttf') format('truetype');
-  font-display: swap;
 }
 `;
 
@@ -80,6 +70,5 @@ if (leftover) throw new Error(`root-relative url() left in output: ${[...new Set
 
 mkdirSync(OUT_DIR, { recursive: true });
 copyFileSync(join(FE, "public/fonts/SoulLedgerGlyphs.ttf"), join(OUT_DIR, "SoulLedgerGlyphs.ttf"));
-copyFileSync(join(FE, "src/components/plaque/fonts/LXGWSeal-Regular.ttf"), join(OUT_DIR, "LXGWSeal-Regular.ttf"));
 writeFileSync(OUT, `@import url("${googleUrl}");\n${FONT_VARS}${css}`);
 console.error(`build-css: ${OUT} (${(Buffer.byteLength(css) / 1024).toFixed(0)} KB)`);
