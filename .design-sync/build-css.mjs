@@ -85,27 +85,22 @@ for (const name of ["--animate-spin", "--animate-pulse", "--default-transition-d
 // `.-translate-x-full` …); Design's check reads each as an unclassified token. They cannot be
 // dropped like the `space-y` / `divide-y` resets above — those equal the registered initial value,
 // these ARE the utility (`translate: var(--tw-translate-x) …`). Mark every one `other`, by prefix,
-// so a new Tailwind variable is covered too. Skip rules whose selector ends in a state —
-// a pseudo-class (`:focus`, `:checked` …) or an attribute (`[data-animate]`, `[aria-pressed="true"]`):
-// the sync doesn't read those as tokens, so a comment there "didn't attach to any token" (Design,
-// 2026-10-03). A declaration belongs to its nearest enclosing style rule, even when an at-rule is
-// nested inside that rule after it (Tailwind v4 nests `@media (forced-colors: active)` in
-// `.outline-hidden`). Pseudo-elements (`::before`) are not states.
+// so a new Tailwind variable is covered too — but only where the sync reads tokens:
 {
-  // Escaped characters are part of a class name, not selector syntax: `.shadow-\\[…\\]` (arbitrary
-  // value) and `.max-\\[768px\\]\\:duration-base` (variant) end in no state.
-  const STATE = /(?:(?<![:\\]):[a-z-]+(?:\([^)]*\))?|(?<!\\)\[[^\]\\]*\])\s*$/;
+  // Allow rule (Design round 7, 2026-10-03 — a full-file scan): the sync reads a token only in a
+  // rule whose selector is ONE class and nothing else (escapes allowed) and whose enclosing at-rules
+  // are all `@layer`. Everything else — states, descendants/children, elements, `*`, pseudo-elements,
+  // selector lists, `@media` / `@supports` / `@starting-style` … — gets no comment, or the comment
+  // "doesn't attach to any token".
+  const SINGLE_CLASS = /^\.(?:[\w-]|\\.)+$/;
   const stack = [];
   css = css.replace(/([^{};]*)([{};])/g, (m, text, ch) => {
     if (ch === "{") stack.push(text.trim());
     else if (ch === "}") stack.pop();
     else if (/^\s*(?:\/\* @kind \w+ \*\/\s*)?--tw-[\w-]+\s*:/.test(text)) {
       const rule = [...stack].reverse().find((sel) => !sel.startsWith("@"));
-      // Not inside a conditional/variant block: the sync reads no token scope in `@media`,
-      // `@starting-style` or `@container` (Design round 6, 2026-10-03). `@supports` stays — it
-      // holds Tailwind's `--tw-*` property fallbacks, which the check does read as tokens.
-      const scoped = !stack.some((sel) => /^@(media|starting-style|container)\b/.test(sel));
-      if (rule && scoped && !STATE.test(rule)) return `${m} /* @kind other */`;
+      const scoped = stack.every((sel) => !sel.startsWith("@") || sel.startsWith("@layer"));
+      if (rule && scoped && SINGLE_CLASS.test(rule)) return `${m} /* @kind other */`;
     }
     return m;
   });
