@@ -414,3 +414,26 @@ describe("用户菜单的每一项都是 44 的点击区", () => {
   });
 });
 
+describe("品牌位(A9 §一):天平标加「灵魂簿」,文明印不在导航里", () => {
+  const brand = () => nav().querySelector("[data-nav-brand]") as HTMLElement;
+
+  it("展开:标 24 宽、对读屏隐藏,旁边的字说名字;没有印、没有「SoulLedger」那一行", () => {
+    render(<Nav />);
+    const mark = brand().querySelector("svg[data-brand-mark]") as SVGElement;
+    expect(mark).toHaveAttribute("width", "24");
+    expect(mark).toHaveAttribute("aria-hidden", "true");
+    const paths = Array.from(mark.querySelectorAll("path"));
+    expect(paths).toHaveLength(3);
+    for (const p of paths) expect(p).toHaveAttribute("fill-rule", "evenodd");
+    expect(brand()).toHaveTextContent(/^灵魂簿$/);
+    expect(within(nav()).queryByTestId("seal")).toBeNull();
+    expect(within(nav()).queryByText("SoulLedger")).toBeNull();
+  });
+
+  it("收起:只留标,标自己带名字", () => {
+    render(<Nav collapsed />);
+    expect(brand().textContent).toBe("");
+    expect(within(brand()).getByRole("img", { name: "灵魂簿" })).toBeInTheDocument();
+  });
+});
+
