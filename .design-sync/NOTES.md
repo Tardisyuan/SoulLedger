@@ -73,6 +73,10 @@ previews authored for the core set; the rest ship on the floor card.
   globals.css's `--token: v; /* @kind x */` lines, and drops Tailwind's internal
   `--tw-space-y-reverse` / `--tw-divide-y-reverse` declarations — Design's token check flagged
   both (2026-10-03). Write a new token's kind on the same line as its declaration.
+  It also tags every `--tw-*` declaration `@kind other` by prefix (they live in utility classes and
+  ARE the utility — never strip them), moves the brand pair into the top `:root` (the token scan
+  ignores the late `:root`), and tags four Tailwind theme defaults (animate-spin/pulse,
+  default-transition-*) that have no line in globals.css.
 
 ## Re-sync risks
 

@@ -81,6 +81,12 @@ for (const [name, kind] of kinds) {
 for (const name of ["--animate-spin", "--animate-pulse", "--default-transition-duration", "--default-transition-timing-function"]) {
   css = css.replace(new RegExp(`(${name}\\s*:[^;{}]*;)(?!\\s*/\\* @kind)`, "g"), "$1 /* @kind other */");
 }
+// Tailwind's internal `--tw-*` variables are set inside utility classes (`.ordinal`, `.blur`,
+// `.-translate-x-full` …); Design's check reads each as an unclassified token. They cannot be
+// dropped like the `space-y` / `divide-y` resets above — those equal the registered initial value,
+// these ARE the utility (`translate: var(--tw-translate-x) …`). Mark every one `other`, by prefix,
+// so a new Tailwind variable is covered too.
+css = css.replace(/(--tw-[\w-]+\s*:[^;{}]*;)(?!\s*\/\* @kind)/g, "$1 /* @kind other */");
 // The brand pair lives in its own `:root` block at the end of globals.css (outside both themes),
 // which the sync's token scan does not read; it reads the top `:root` block below. Move the pair
 // there, comments and all, and drop the late block from the shipped copy.
