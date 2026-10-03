@@ -63,7 +63,21 @@ let css = result.css
   // them here leaves the value unchanged — Tailwind registers that property with
   // `@property … initial-value: 0` (and a `@layer properties` fallback), so 0 is what an
   // element gets anyway. Only the shipped copy changes; Tailwind's own output does not.
-  .replace(/(:where\(\.[^{]*space-y-[^{]*\{)\s*--tw-space-y-reverse:\s*0;/g, "$1");
+  .replace(/(:where\(\.[^{]*space-y-[^{]*\{)\s*--tw-space-y-reverse:\s*0;/g, "$1")
+  // Same for `.divide-y` (Design 2026-10-03: one leftover under `:where(.divide-y > :not(:last-child))`).
+  .replace(/(:where\(\.[^{]*divide-y[^{]*\{)\s*--tw-divide-y-reverse:\s*0;/g, "$1");
+
+// Tailwind drops every CSS comment, so the `/* @kind … */` annotations written next to tokens in
+// globals.css (Design's token classifier reads them: motion tokens are `other`, the brand pair is
+// `color`) never reached the synced copy. Re-attach each one after its token's declarations here.
+const kinds = new Map(
+  [...readFileSync(SRC, "utf8").matchAll(/(--[\w-]+)\s*:[^;]*;\s*\/\*\s*@kind\s+(\w+)\s*\*\//g)].map((m) => [m[1], m[2]]),
+);
+for (const [name, kind] of kinds) {
+  css = css.replace(new RegExp(`(${name}\\s*:[^;{}]*;)(?!\\s*/\\* @kind)`, "g"), `$1 /* @kind ${kind} */`);
+}
+const unannotated = [...kinds.keys()].filter((n) => !css.includes(`${n}:`));
+if (unannotated.length) console.error(`build-css: @kind tokens not in compiled output: ${unannotated.join(", ")}`);
 
 const leftover = css.match(/url\((["']?)\/[^"')]*\1\)/g);
 if (leftover) throw new Error(`root-relative url() left in output: ${[...new Set(leftover)].join(", ")}`);

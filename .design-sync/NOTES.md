@@ -42,6 +42,8 @@ previews authored for the core set; the rest ship on the floor card.
 
 ## Known render warns (triaged, benign)
 
+- `[RENDER_THIN] ConfirmDialog: rendered height is 0px` — portal, same as BaseModal; the single-card capture is complete.
+
 - `[RENDER_THIN] GlobalNav / BaseModal / Drawer: rendered height is 0px` — BaseModal and
   Drawer render in a portal; GlobalNav's preview root is the provider's
   `display: contents` wrapper. Screenshots are complete.
@@ -56,6 +58,21 @@ previews authored for the core set; the rest ship on the floor card.
 
 - `DataTable` is `cardMode: column` (2026-10-03): after the v3 header / sticky change its
   Default story ran wider than a grid cell (`[GRID_OVERFLOW]`).
+
+- Authored previews (2026-10-03 wave): the §4.6 display components and statuses.
+  - DomainEnum shows a mono `title=RAW` hint column: screenshots can't show `title`, and the
+    design agent must learn that the raw member goes in `title`, never in the text.
+  - The generated `.d.ts` types Domain* `value` as `string`/`number` (null branch lost); previews
+    pass `null as unknown as string` for the missing path. The source accepts null.
+  - Status badges follow v3: glyph + text, neutral by default; StatusBadge tones are copied from
+    the pages' `STATUS_TONES` maps (only PARTIAL warning, FAILED error).
+  - ConfirmDialog is `cardMode: single` 720x520 like BaseModal; it opens with focus on 取消 (Base UI
+    AlertDialog initial focus — real, not a defect).
+  - Pagination's disabled ink is faint at sheet scale — the real style.
+- `build-css.mjs` re-attaches `/* @kind … */` comments (Tailwind strips all comments) from
+  globals.css's `--token: v; /* @kind x */` lines, and drops Tailwind's internal
+  `--tw-space-y-reverse` / `--tw-divide-y-reverse` declarations — Design's token check flagged
+  both (2026-10-03). Write a new token's kind on the same line as its declaration.
 
 ## Re-sync risks
 
