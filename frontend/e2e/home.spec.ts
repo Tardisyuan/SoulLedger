@@ -14,16 +14,18 @@ test.describe("Home page", () => {
     await mockApi(page);
   });
 
-  test("renders hero title and all three civilization cards", async ({ page }) => {
+  test("renders hero title and all four civilizations (A10)", async ({ page }) => {
     await page.goto("/");
 
     await expect(page.locator("h1")).toHaveText("灵魂账本");
     await expect(page.getByText("跨文明灵魂管理系统")).toBeVisible();
-    await expect(page.getByRole("heading", { name: "文明体系" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /文明体系/ })).toBeVisible();
 
-    // One card per civilization — the grid is the page's whole point.
-    for (const civilization of ["中国地府", "欧洲天堂与地狱", "埃及冥界"]) {
-      await expect(page.getByText(civilization, { exact: true })).toBeVisible();
+    // One column per civilization — the row is the page's whole point. Each name follows its
+    // ink glyph (■●▲◆, aria-hidden), so match inside the list rather than by exact text.
+    const civs = page.getByTestId("landing-civs");
+    for (const civilization of ["中国地府", "欧洲天堂与地狱", "埃及冥界", "希腊冥界"]) {
+      await expect(civs.getByText(civilization)).toBeVisible();
     }
     await expect(page.getByText("灵魂账本 v0.1")).toBeVisible();
   });
@@ -31,7 +33,9 @@ test.describe("Home page", () => {
   test("language switcher re-renders the page in the chosen locale", async ({ page }) => {
     await page.goto("/");
 
-    const switcher = page.getByLabel("界面语言");
+    // A10 draws the language and theme controls twice — in the top row at ≥ 768, above the
+    // footer below it — and hides the other with CSS. Act on the one this viewport shows.
+    const switcher = page.getByLabel("界面语言").filter({ visible: true });
     await expect(switcher).toBeVisible();
     await expect(page.getByText("万古轮回皆有录")).toBeVisible();
 
@@ -65,11 +69,11 @@ test.describe("Home page", () => {
     const html = page.locator("html");
     await expect(html).toHaveClass(/dark/);
 
-    await page.getByTitle("切换到浅色模式").click();
+    await page.getByTitle("切换到浅色模式").filter({ visible: true }).click();
     await expect(html).toHaveClass(/light/);
     await expect(html).not.toHaveClass(/dark/);
 
-    await page.getByTitle("切换到深色模式").click();
+    await page.getByTitle("切换到深色模式").filter({ visible: true }).click();
     await expect(html).toHaveClass(/dark/);
   });
 
