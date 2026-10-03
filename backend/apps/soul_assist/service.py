@@ -256,7 +256,7 @@ def _run(asker, question, screen, lang, conversation_id, request, conn, backup, 
     total = start + (settings.ASSISTANT_STREAM_TOTAL_SECONDS if stream else settings.ASSISTANT_TIMEOUT_SECONDS)
     try:
         yield {"event": "meta", "conversation_id": conversation.pk if conversation else new_id}
-        found = vectors.retrieve(question, lang, asker.side, asker.civilization, release=_release_db)
+        found = vectors.retrieve(question, lang, asker.side, asker.civilization, screen=screen, release=_release_db)
         out.found = found
         system, facts = asker.system, asker.facts
         if found.mode == "vector":
