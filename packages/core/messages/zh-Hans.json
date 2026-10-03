@@ -1590,7 +1590,24 @@
     "needs_audit_read": "需要「查看审计日志」权限（audit.read）",
     "repeat_expand": "展开",
     "repeat_collapse": "收起",
-    "repeat_rule": "同一人、同一动作、同一类资源，前后相隔不超过 {{minutes}} 分钟的连续记录合为一行"
+    "repeat_rule": "同一人、同一动作、同一类资源，前后相隔不超过 {{minutes}} 分钟的连续记录合为一行",
+    "tabs": {
+      "audit": "审计日志",
+      "logins": "登录日志"
+    },
+    "login_log": {
+      "title": "登录日志",
+      "username": "用户名",
+      "status_label": "结果",
+      "status": {
+        "SUCCESS": "成功",
+        "FAILED": "失败"
+      },
+      "failure_reason": "失败原因",
+      "user_agent": "客户端",
+      "search_placeholder": "搜索用户名...",
+      "no_logs": "暂无登录日志"
+    }
   },
   "profile": {
     "title": "个人中心",
@@ -2239,7 +2256,54 @@
       "PARTIAL": "部分处理"
     },
     "source_system": "来源系统",
-    "status_label": "状态"
+    "status_label": "状态",
+    "tabs": {
+      "registrations": "登记记录",
+      "api_keys": "接入密钥"
+    },
+    "api_keys": {
+      "title": "接入密钥",
+      "intro": "外部系统凭密钥调用死亡登记接口。密钥只在创建时显示一次，之后只能看到前缀。",
+      "create": "新建密钥",
+      "name": "名称",
+      "name_placeholder": "如「市立医院死亡登记」",
+      "system_type_label": "系统类型",
+      "system_type": {
+        "GOVERNMENT": "政府户籍",
+        "HOSPITAL": "医院死亡证明",
+        "POLICE": "公安户籍",
+        "MESSAGE_BUS": "消息总线",
+        "CUSTOM": "自定义"
+      },
+      "key_prefix": "前缀",
+      "permissions": "权限",
+      "can_register_death": "登记死亡",
+      "can_query_status": "查询状态",
+      "can_manage_webhooks": "管理 Webhook",
+      "last_used": "最近使用",
+      "never_used": "未使用",
+      "usage_count": "调用次数",
+      "status_label": "状态",
+      "status": {
+        "ACTIVE": "生效中",
+        "REVOKED": "已撤销"
+      },
+      "revoke": "撤销",
+      "revoke_title": "撤销密钥「{{name}}」？",
+      "revoke_message": "撤销后，持此密钥的外部系统立即无法调用。此操作不可撤销，需要时请新建密钥。",
+      "revoked_ok": "密钥已撤销",
+      "revoke_failed": "撤销失败",
+      "create_failed": "创建失败",
+      "no_keys": "暂无接入密钥",
+      "shown_title": "新密钥（仅此一次）",
+      "shown_warning": "这是密钥的唯一一次显示。关闭后服务器只保留散列，无法再次查看；请现在复制并交付给外部系统。",
+      "key_label": "密钥",
+      "copy": "复制密钥",
+      "copied": "密钥已复制",
+      "copy_failed": "复制失败",
+      "close": "我已保存，关闭",
+      "webhooks_note": "Webhook 由外部系统持密钥自行配置（/death-sync/webhooks/ 只接受密钥认证），此处不提供。"
+    }
   },
   "soul_accounts": {
     "refresh": "刷新",

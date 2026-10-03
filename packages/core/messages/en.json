@@ -1590,7 +1590,24 @@
     "needs_audit_read": "Requires the audit.read permission",
     "repeat_expand": "expand",
     "repeat_collapse": "collapse",
-    "repeat_rule": "Consecutive entries by the same person, with the same action on the same kind of resource, at most {{minutes}} minutes apart, are merged into one row"
+    "repeat_rule": "Consecutive entries by the same person, with the same action on the same kind of resource, at most {{minutes}} minutes apart, are merged into one row",
+    "tabs": {
+      "audit": "Audit log",
+      "logins": "Login log"
+    },
+    "login_log": {
+      "title": "Login log",
+      "username": "Username",
+      "status_label": "Result",
+      "status": {
+        "SUCCESS": "Success",
+        "FAILED": "Failed"
+      },
+      "failure_reason": "Reason",
+      "user_agent": "Client",
+      "search_placeholder": "Search username...",
+      "no_logs": "No login logs"
+    }
   },
   "profile": {
     "title": "Personal Center",
@@ -2239,7 +2256,54 @@
       "PARTIAL": "Partial"
     },
     "source_system": "Source system",
-    "status_label": "Status"
+    "status_label": "Status",
+    "tabs": {
+      "registrations": "Registrations",
+      "api_keys": "API keys"
+    },
+    "api_keys": {
+      "title": "API keys",
+      "intro": "External systems call the death registration API with a key. The key is shown once, at creation; afterwards only its prefix is visible.",
+      "create": "New key",
+      "name": "Name",
+      "name_placeholder": "e.g. “Municipal hospital death registry”",
+      "system_type_label": "System type",
+      "system_type": {
+        "GOVERNMENT": "Civil registry",
+        "HOSPITAL": "Hospital death certificates",
+        "POLICE": "Police household registration",
+        "MESSAGE_BUS": "Message bus",
+        "CUSTOM": "Custom"
+      },
+      "key_prefix": "Prefix",
+      "permissions": "Permissions",
+      "can_register_death": "Register deaths",
+      "can_query_status": "Query status",
+      "can_manage_webhooks": "Manage webhooks",
+      "last_used": "Last used",
+      "never_used": "Never",
+      "usage_count": "Calls",
+      "status_label": "Status",
+      "status": {
+        "ACTIVE": "Active",
+        "REVOKED": "Revoked"
+      },
+      "revoke": "Revoke",
+      "revoke_title": "Revoke key “{{name}}”?",
+      "revoke_message": "The external system holding this key is refused at once. This cannot be undone; create a new key if one is needed.",
+      "revoked_ok": "Key revoked",
+      "revoke_failed": "Could not revoke the key",
+      "create_failed": "Could not create the key",
+      "no_keys": "No API keys yet",
+      "shown_title": "New key (shown once)",
+      "shown_warning": "This is the only time the key is shown. After closing, the server keeps only a hash and cannot show it again — copy it now and hand it to the external system.",
+      "key_label": "Key",
+      "copy": "Copy key",
+      "copied": "Key copied",
+      "copy_failed": "Copy failed",
+      "close": "I have saved it, close",
+      "webhooks_note": "Webhooks are configured by the external system with its own key (/death-sync/webhooks/ accepts key authentication only) and are not managed here."
+    }
   },
   "soul_accounts": {
     "refresh": "Refresh",

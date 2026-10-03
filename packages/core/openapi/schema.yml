@@ -1523,6 +1523,16 @@ paths:
         description: A search term.
         schema:
           type: string
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - FAILED
+          - SUCCESS
+        description: |-
+          * `SUCCESS` - 成功
+          * `FAILED` - 失败
       tags:
       - v1
       security:
