@@ -1,14 +1,17 @@
 /**
- * app/(auth)/login/page.tsx after 第三类 D 组 10a. The E2E spec owns the
- * happy path and the empty-submit refusal; this covers what the redesign
- * added: the inline error (replacing the error toast), show / hide password,
- * the statute panel, the civilization rows, 保持登录, 忘记密码, and login
- * honouring the server's default view.
+ * app/(auth)/login/page.tsx after A9 (Design 2026-10-03). The E2E spec owns the
+ * happy path and the empty-submit refusal; this covers the page's own logic:
+ * the three failure states (credentials with tries left, locked with a time,
+ * network with a retry) and loading, show / hide password, the statute's three
+ * length tiers, the four civilizations, the civilization rows, 保持登录,
+ * 忘记密码, and login honouring the server's default view.
  */
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { readFileSync } from "node:fs";
+import path from "node:path";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import LoginPage from "@/app/(auth)/login/page";
 import { authApi } from "@soulledger/core/api";
-import { LOGIN_STATUTES } from "@/src/lib/loginStatutes";
+import { LOGIN_STATUTES, type LoginStatute } from "@/src/lib/loginStatutes";
 import { defaultViewRoute } from "@/src/lib/defaultView";
 
 jest.mock("@soulledger/core/api", () => ({
@@ -30,6 +33,7 @@ jest.mock("@/src/contexts/I18nContext", () => ({
   useI18n: () => ({
     t: (key: string, params?: Record<string, string>) =>
       params ? `${key}(${Object.values(params).join(",")})` : key,
+    formatDate: (d: Date) => `T${d.getTime()}`,
     locale: "zh-Hans",
     hydrated: true,
     setLocale: jest.fn(),
@@ -49,10 +53,19 @@ const CIV_ROWS = [
   { code: "GR_HADES", civilization: "GREEK" },
 ];
 
+/** The server's limiter, read from where it is defined — the page's sentences must say these numbers. */
+const VIEWS = readFileSync(path.join(__dirname, "../../../backend/apps/authentication/views.py"), "utf8");
+const MAX_ATTEMPTS = Number(/^LOGIN_MAX_ATTEMPTS = (\d+)$/m.exec(VIEWS)?.[1]);
+const WINDOW_MINUTES = Number(/^LOGIN_WINDOW_SECONDS = (\d+)$/m.exec(VIEWS)?.[1]) / 60;
+
+const account = () => screen.getByLabelText(/auth\.account/) as HTMLInputElement;
+const password = () => screen.getByLabelText(/auth\.password/) as HTMLInputElement;
+const submitButton = () => screen.getByRole("button", { name: /auth\.(login|submitting)/ });
+
 function fillAndSubmit() {
-  fireEvent.change(screen.getByLabelText(/auth\.username/), { target: { value: "nobody" } });
-  fireEvent.change(screen.getByLabelText(/auth\.password/), { target: { value: "wrong-password" } });
-  fireEvent.click(screen.getByRole("button", { name: "auth.login" }));
+  fireEvent.change(account(), { target: { value: "nobody" } });
+  fireEvent.change(password(), { target: { value: "wrong-password" } });
+  fireEvent.click(submitButton());
 }
 
 beforeEach(() => {
@@ -63,60 +76,123 @@ beforeEach(() => {
   mockedSavePrefs.mockImplementation(async (body: object) => ({ data: body }));
 });
 
-describe("LoginPage", () => {
-  it("shows bad credentials inline, once, and not as a toast", async () => {
+describe("LoginPage · failure states (A9 §二「状态」)", () => {
+  it("credentials: one line in danger, tries left in muted, password cleared, account kept, fields not red", async () => {
+    expect(MAX_ATTEMPTS).toBeGreaterThan(0);
+    expect(WINDOW_MINUTES).toBeGreaterThan(0);
     mockedLogin.mockRejectedValue({
-      response: { data: { detail: "No active account found with the given credentials" } },
+      response: { status: 401, data: { detail: "No active account found with the given credentials", remaining_attempts: 3 } },
     });
     render(<LoginPage />);
     fillAndSubmit();
 
     const alert = await screen.findByTestId("login-error");
     expect(alert).toHaveAttribute("role", "alert");
-    expect(alert).toHaveTextContent("✕ auth.error_invalid_credentials");
-    // One surface: E2E reads this text with a strict locator.
-    expect(screen.getAllByText("auth.error_invalid_credentials")).toHaveLength(1);
+    expect(alert).toHaveAttribute("data-kind", "credentials");
+    const [title, body] = Array.from(alert.querySelectorAll("p"));
+    expect(title).toHaveTextContent("! auth.error_credentials");
+    expect(title.className).toContain("--color-danger");
+    // The minutes come from the server's window, not a number the page made up.
+    expect(body).toHaveTextContent(`auth.error_attempts_body(3,${WINDOW_MINUTES})`);
+    expect(body.className).not.toContain("--color-danger");
+    expect(password().value).toBe("");
+    expect(account().value).toBe("nobody");
+    expect(account()).not.toHaveAttribute("aria-invalid");
+    expect(password()).not.toHaveAttribute("aria-invalid");
+    await waitFor(() => expect(document.activeElement).toBe(password()));
     expect(mockShowToast).not.toHaveBeenCalled();
   });
 
-  it("says how many tries are left when the server counts them", async () => {
-    mockedLogin.mockRejectedValue({
-      response: {
-        status: 401,
-        data: { detail: "No active account found with the given credentials", remaining_attempts: 3 },
-      },
-    });
+  it("credentials without a count: the one line, no tries sentence", async () => {
+    mockedLogin.mockRejectedValue({ response: { status: 401, data: { detail: "x" } } });
+    render(<LoginPage />);
+    fillAndSubmit();
+    const alert = await screen.findByTestId("login-error");
+    expect(alert.querySelectorAll("p")).toHaveLength(1);
+    expect(alert).not.toHaveTextContent("auth.error_attempts_body");
+  });
+
+  it("locked: warning border, ◐ title in ink, the time it opens, password and button disabled", async () => {
+    const now = 1_700_000_000_000;
+    const spy = jest.spyOn(Date, "now").mockReturnValue(now);
+    mockedLogin.mockRejectedValue({ response: { status: 429, data: { error: "x", code: "login_locked", retry_after: 601 } } });
     render(<LoginPage />);
     fillAndSubmit();
 
     const alert = await screen.findByTestId("login-error");
-    expect(alert).toHaveTextContent('✕ auth.error_attempts_left(3)');
-    // The count replaces the bare message; it is not shown beside it.
-    expect(screen.queryByText("auth.error_invalid_credentials")).not.toBeInTheDocument();
+    expect(alert).toHaveAttribute("data-kind", "locked");
+    expect(alert.className).toContain("--color-warning");
+    const [title, body] = Array.from(alert.querySelectorAll("p"));
+    expect(title).toHaveTextContent("◐ auth.error_locked_title");
+    expect(title.className).not.toContain("--color-danger");
+    expect(body).toHaveTextContent(`auth.error_locked_body(${MAX_ATTEMPTS},T${now + 601_000})`);
+    expect(password()).toBeDisabled();
+    expect(submitButton()).toBeDisabled();
+    spy.mockRestore();
   });
 
-  it("says the address is locked, in whole minutes, on 429 login_locked", async () => {
-    mockedLogin.mockRejectedValue({
-      response: { status: 429, data: { error: "x", code: "login_locked", retry_after: 601 } },
-    });
+  it("network: 连不上服务器 with a retry that sends what was typed again", async () => {
+    mockedLogin.mockRejectedValueOnce(new Error("Network Error"));
+    mockedLogin.mockRejectedValueOnce({ response: { status: 401, data: {} } });
     render(<LoginPage />);
     fillAndSubmit();
 
     const alert = await screen.findByTestId("login-error");
-    expect(alert).toHaveTextContent('✕ auth.error_locked(11)');
-    expect(alert).not.toHaveTextContent("auth.error_login_failed");
+    expect(alert).toHaveAttribute("data-kind", "network");
+    expect(alert).toHaveTextContent("! auth.error_network");
+    expect(alert).toHaveTextContent("auth.error_network_body");
+    // What was typed is kept.
+    expect(password().value).toBe("wrong-password");
+    fireEvent.click(within(alert).getByRole("button", { name: "common.retry" }));
+    await waitFor(() => expect(mockedLogin).toHaveBeenCalledTimes(2));
+    expect(mockedLogin).toHaveBeenLastCalledWith({ username: "nobody", password: "wrong-password", remember: false });
   });
 
+  it("a 5xx is the network state too, not 「账号或密码不对」", async () => {
+    mockedLogin.mockRejectedValue({ response: { status: 502, data: {} } });
+    render(<LoginPage />);
+    fillAndSubmit();
+    expect(await screen.findByTestId("login-error")).toHaveAttribute("data-kind", "network");
+  });
+
+  it("loading: the button says 登录中 and the fields are disabled", async () => {
+    let reject: (_e: unknown) => void = () => {};
+    mockedLogin.mockReturnValue(new Promise((_r, j) => (reject = j)));
+    render(<LoginPage />);
+    fillAndSubmit();
+    await waitFor(() => expect(submitButton()).toHaveTextContent("auth.submitting"));
+    expect(submitButton()).toBeDisabled();
+    expect(account()).toBeDisabled();
+    expect(password()).toBeDisabled();
+    await act(async () => reject({ response: { status: 401, data: {} } }));
+  });
+});
+
+describe("LoginPage · layout and content", () => {
   it("toggles the password between hidden and shown", () => {
     render(<LoginPage />);
-    const input = screen.getByLabelText(/auth\.password/) as HTMLInputElement;
     const toggle = screen.getByRole("button", { name: "soul_app.common.show" });
 
-    expect(input.type).toBe("password");
+    expect(password().type).toBe("password");
     fireEvent.click(toggle);
-    expect(input.type).toBe("text");
+    expect(password().type).toBe("text");
     expect(toggle).toHaveAttribute("aria-pressed", "true");
     expect(toggle).toHaveTextContent("soul_app.common.hide");
+  });
+
+  it("the only <h1> is 登录; the dark band is gone; the brand row carries the mark, hidden from readers", async () => {
+    render(<LoginPage />);
+    await waitFor(() => expect(mockedCivs).toHaveBeenCalled());
+    const h1s = screen.getAllByRole("heading", { level: 1 });
+    expect(h1s).toHaveLength(1);
+    expect(h1s[0]).toHaveTextContent("auth.login");
+    expect(screen.queryByTestId("plaque")).toBeNull();
+    expect(screen.queryByTestId("seal")).toBeNull();
+    for (const brand of screen.getAllByTestId("login-brand")) {
+      expect(brand).toHaveTextContent("灵魂簿");
+      expect(brand.querySelector("svg[data-brand-mark]")).toHaveAttribute("aria-hidden", "true");
+    }
+    expect(screen.getAllByTestId("login-brand").map((b) => b.querySelector("svg")?.getAttribute("width"))).toEqual(["32", "24"]);
   });
 
   it("quotes one statute from the fixed corpus list", () => {
@@ -132,12 +208,76 @@ describe("LoginPage", () => {
     const cite = screen.getByTestId("login-statute-cite").textContent ?? "";
     expect(cite).toMatch(/^〔.+ · .+〕$/);
     expect(cite.startsWith("〔") && cite.includes(statute.corpus)).toBe(true);
-    // Absence: the internal code is no longer printed in the bracket.
     expect(cite).not.toContain(statute.code);
   });
 
+  describe("statute length tiers: ≤ 60 · 61–160 · > 160 characters", () => {
+    const list = LOGIN_STATUTES as LoginStatute[];
+    const extra = (n: number): LoginStatute => ({ ...list[0], code: `T-${n}`, text: "興".repeat(n) });
+    let random: jest.SpyInstance;
+    beforeEach(() => {
+      random = jest.spyOn(Math, "random").mockReturnValue(0.9999);
+    });
+    afterEach(() => {
+      random.mockRestore();
+      list.pop();
+    });
+    const section = () => screen.getByTestId("login-statute").closest("section") as HTMLElement;
+
+    it.each([
+      [60, "short"],
+      [61, "medium"],
+      [160, "medium"],
+      [161, "long"],
+    ])("%i characters is %s", async (n, tier) => {
+      list.push(extra(n));
+      render(<LoginPage />);
+      await waitFor(() => expect(screen.getByTestId("login-statute").textContent).toHaveLength(n));
+      expect(section()).toHaveAttribute("data-statute-tier", tier);
+    });
+
+    it("long: folded with a fade and 展开全文 (with its length); expanding shows this one in full", async () => {
+      list.push(extra(200));
+      render(<LoginPage />);
+      await waitFor(() => expect(section()).toHaveAttribute("data-statute-tier", "long"));
+      expect(screen.getByTestId("login-statute-fade")).toBeInTheDocument();
+      expect(screen.getByText("auth.statute_chars(200)")).toBeInTheDocument();
+      fireEvent.click(screen.getByRole("button", { name: /auth\.statute_expand/ }));
+      expect(screen.queryByTestId("login-statute-fade")).toBeNull();
+      expect(screen.queryByRole("button", { name: /auth\.statute_expand/ })).toBeNull();
+      expect(screen.getByTestId("login-statute").className).not.toContain("line-clamp-4");
+    });
+
+    it("short and medium are not folded on wide screens: no fade, no wide-screen expand", async () => {
+      list.push(extra(100));
+      render(<LoginPage />);
+      await waitFor(() => expect(section()).toHaveAttribute("data-statute-tier", "medium"));
+      expect(screen.queryByTestId("login-statute-fade")).toBeNull();
+      // jsdom has no layout, so the 393 four-line clamp never measures as overflowing.
+      expect(screen.queryByRole("button", { name: /auth\.statute_expand/ })).toBeNull();
+    });
+  });
+
+  it("four civilizations: glyph in ink plus name, and the numbering — no civilization colour", () => {
+    render(<LoginPage />);
+    const civs = screen.getByTestId("login-civs");
+    const cells = Array.from(civs.children);
+    expect(cells.map((c) => c.textContent)).toEqual([
+      "■ organization.civilizations.CHINESE救濟門 · 十七",
+      "● organization.civilizations.EUROPEANIX · XXVI",
+      "▲ organization.civilizations.EGYPTIAN§ 27 / 42",
+      "◆ organization.civilizations.GREEK523a",
+    ]);
+    expect(civs.innerHTML).not.toMatch(/--color-(main|civ)/);
+  });
+
+  it("the bottom row links the welcome page", () => {
+    render(<LoginPage />);
+    expect(screen.getByRole("link", { name: "auth.welcome_link" })).toHaveAttribute("href", "/welcome");
+  });
+
   it("does not offer a civilization choice — the login request carries no tenant", async () => {
-    mockedLogin.mockRejectedValue({ response: { data: {} } });
+    mockedLogin.mockRejectedValue({ response: { status: 401, data: {} } });
     render(<LoginPage />);
     await screen.findByTestId("login-civilizations");
     expect(screen.queryByRole("radio")).not.toBeInTheDocument();
@@ -163,24 +303,12 @@ describe("LoginPage", () => {
     expect(screen.getByText("auth.civilization_note")).toBeInTheDocument();
   });
 
-  it("v2 C15: the page's only <h1> is the product name on a neutral plaque — no seal before sign-in", async () => {
-    render(<LoginPage />);
-    await waitFor(() => expect(mockedCivs).toHaveBeenCalled());
-    const plaque = screen.getByTestId("plaque");
-    const h1 = screen.getByRole("heading", { level: 1 });
-    expect(plaque).toContainElement(h1);
-    expect(h1).toHaveTextContent("nav.title");
-    expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
-    // 登录前不知道文明:印不出现(中性皮)。
-    expect(within(plaque).queryByRole("img")).not.toBeInTheDocument();
-  });
-
   it("leaves the list out when the endpoint fails, and still signs in", async () => {
     mockedCivs.mockRejectedValue(new Error("offline"));
     render(<LoginPage />);
     await waitFor(() => expect(mockedCivs).toHaveBeenCalled());
     expect(screen.queryByTestId("login-civilizations")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "auth.login" })).toBeEnabled();
+    expect(submitButton()).toBeEnabled();
   });
 
   it("remembers where this device signed in", async () => {
@@ -193,14 +321,16 @@ describe("LoginPage", () => {
   });
 
   it("sends remember=false unless 保持登录 is ticked, and true when it is", async () => {
-    mockedLogin.mockRejectedValue({ response: { data: {} } });
+    mockedLogin.mockRejectedValue({ response: { status: 401, data: {} } });
     render(<LoginPage />);
     fillAndSubmit();
     await screen.findByTestId("login-error");
     expect(mockedLogin).toHaveBeenLastCalledWith({ username: "nobody", password: "wrong-password", remember: false });
 
     fireEvent.click(screen.getByRole("checkbox", { name: "auth.remember_me(30)" }));
-    fireEvent.click(screen.getByRole("button", { name: "auth.login" }));
+    // The failed attempt cleared the password; type it again.
+    fireEvent.change(password(), { target: { value: "wrong-password" } });
+    fireEvent.click(submitButton());
     await waitFor(() => expect(mockedLogin).toHaveBeenCalledTimes(2));
     expect(mockedLogin).toHaveBeenLastCalledWith({ username: "nobody", password: "wrong-password", remember: true });
   });
@@ -208,7 +338,7 @@ describe("LoginPage", () => {
 
 describe("忘记密码", () => {
   function openHelp() {
-    fireEvent.change(screen.getByLabelText(/auth\.username/), { target: { value: "yama" } });
+    fireEvent.change(screen.getByLabelText(/auth\.account/), { target: { value: "yama" } });
     fireEvent.click(screen.getByRole("button", { name: "auth.forgot_password" }));
   }
 
@@ -217,7 +347,7 @@ describe("忘记密码", () => {
     render(<LoginPage />);
     openHelp();
     const form = screen.getByTestId("password-help-form");
-    expect(within(form).getByLabelText(/auth\.username/)).toHaveValue("yama");
+    expect(within(form).getByLabelText(/auth\.account/)).toHaveValue("yama");
     fireEvent.click(within(form).getByRole("button", { name: "auth.forgot_submit" }));
 
     const status = await screen.findByRole("status");

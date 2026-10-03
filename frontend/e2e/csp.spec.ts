@@ -32,8 +32,8 @@ test.describe("Content-Security-Policy", () => {
     await page.goto("/login");
     await expect(page.getByRole("button", { name: "登录" })).toBeVisible();
     // Hydrated: the controlled input takes typing only once React is running.
-    await page.getByLabel("用户名").fill("probe");
-    await expect(page.getByLabel("用户名")).toHaveValue("probe");
+    await page.getByLabel("账号").fill("probe");
+    await expect(page.getByLabel("账号")).toHaveValue("probe");
     // The theme bootstrap ran (it is the one inline script this repo writes).
     await expect(page.locator("html")).toHaveClass(/\b(dark|light)\b/);
     expect(await violations()).toEqual([]);

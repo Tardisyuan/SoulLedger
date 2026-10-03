@@ -1,38 +1,18 @@
 "use client";
 
 /**
- * 骨架屏跟着 app/welcome/page.tsx 一起迁移到 PageShell 的形状:
- * 一条 `border-b` 页头(标题 + 副标题两行)压在 `max-w-page` 的正文之上。
- *
- * 没有 `min-h-screen` —— AppLayout 给的槽位已经是 min-h-[calc(100vh-4rem)],
- * 再写一次就永远多出 64px 死滚动(见 PageShell 文件头第 3 条)。
- * 骨架屏是静态的(补足 C15「静态,不闪光」):没有,数据到了直接换。
- * 也没有 `rounded-*` —— borderRadius 表里除 full/focus 之外全部是 0,写了
- * 也不圆,只会让读代码的人以为这里是圆的。
+ * 骨架屏跟着 app/welcome/page.tsx 的 A9 版式:一块四格的统计面板,下面「接着做」400 宽与
+ * 「最近活动」并排。静态(补足 C15「静态,不闪光」),没有 `min-h-screen`(AppLayout 的槽位
+ * 已经给了高度,见 PageShell 文件头第 3 条)。圆角是 v3 的面板档。
  */
 export default function Loading() {
   return (
-    <div className="bg-[oklch(var(--color-canvas))]">
-      <header className="border-b border-[oklch(var(--color-hairline))]">
-        <div className="max-w-page mx-auto px-6 pt-8 pb-6">
-          {/* h-10 对着 text-lg 的 32px × 1.2 行高;h-6 对着 text-sm 的副标题。 */}
-          <div className="h-10 w-80 bg-[oklch(var(--color-hairline))]" />
-          <div className="h-6 w-96 bg-[oklch(var(--color-hairline))] mt-3" />
-        </div>
-      </header>
-
-      <div className="max-w-page mx-auto px-6 py-6 space-y-6">
-        {/* Stats skeleton */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-24 bg-[oklch(var(--color-hairline))]" />
-          ))}
-        </div>
-
-        {/* Content skeleton */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 h-48 bg-[oklch(var(--color-hairline))]" />
-          <div className="h-48 bg-[oklch(var(--color-hairline))]" />
+    <div aria-busy="true" className="bg-[oklch(var(--color-canvas))] px-4 py-6 md:p-6">
+      <div className="flex flex-col gap-6">
+        <div className="h-36 rounded-panel bg-[oklch(var(--color-surface-2))]" />
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[400px_minmax(0,1fr)]">
+          <div className="h-72 rounded-panel bg-[oklch(var(--color-surface-2))]" />
+          <div className="h-72 rounded-panel bg-[oklch(var(--color-surface-2))]" />
         </div>
       </div>
     </div>

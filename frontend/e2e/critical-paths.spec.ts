@@ -22,7 +22,7 @@ test.describe("Critical path: login and create a soul", () => {
     const api = await mockApi(page);
 
     await page.goto("/login");
-    await page.getByLabel("用户名").fill(TEST_USER.username);
+    await page.getByLabel("账号").fill(TEST_USER.username);
     await page.getByLabel("密码").fill("correct-horse-battery");
     await page.getByRole("button", { name: "登录" }).click();
 
