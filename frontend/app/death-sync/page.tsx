@@ -15,6 +15,7 @@ import { PageShell } from "@/src/components/ui/PageShell";
 import { type BadgeTone } from "@/src/components/ui/Badge";
 import { StatusBadge } from "@/src/components/ui/StatusBadge";
 import { FilterChipSelect } from "@/src/components/ui/FilterChip";
+import { DeathSyncTabs } from "@/src/components/death-sync/DeathSyncTabs";
 
 /**
  * Sync status → badge tone. 规范 v1:徽章无底色,颜色之外配一枚字形(`StatusBadge`)。
@@ -93,6 +94,7 @@ function DeathSyncRoute() {
         </>
       }
       subtitle={t("death_sync.subtitle") || "External death registration sync"}
+      tabs={<DeathSyncTabs />}
     >
       {/* 规范 v3 面板:surface-1 底 + 结构线,20 px 面板标题;v2 的分节纹撤掉。 */}
       <PageSection title={t("death_sync.registrations")}>

@@ -16650,6 +16650,11 @@ export interface operations {
                 page?: number;
                 /** @description A search term. */
                 search?: string;
+                /**
+                 * @description * `SUCCESS` - 成功
+                 *     * `FAILED` - 失败
+                 */
+                status?: "FAILED" | "SUCCESS";
             };
             header?: never;
             path?: never;

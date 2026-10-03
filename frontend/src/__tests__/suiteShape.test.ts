@@ -42,6 +42,9 @@ import path from "node:path";
 const COLLECTED_FILES = [
   "AboutPage.test.tsx",
   "ActorsPage.test.tsx",
+  // 2026-10-04 外部接入与登录日志:/death-sync/api-keys 与 /audit/logins。
+  "ApiKeysPanel.test.tsx",
+  "LoginLogPage.test.tsx",
   "AppLayout.test.tsx",
   "AuditPage.test.tsx",
   "Badge.test.tsx",
