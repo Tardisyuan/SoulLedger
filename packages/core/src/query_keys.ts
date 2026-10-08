@@ -178,6 +178,10 @@ export const soulAccountKeys = {
   credentials: (params: Record<string, string | number | undefined>) => ["soul-accounts", "credentials", params] as const,
   rebirthApplications: (params: Record<string, string | number | undefined>) =>
     ["soul-accounts", "rebirth-applications", params] as const,
+  cooldownShortenings: (params: Record<string, string | number | undefined>) =>
+    ["soul-accounts", "cooldown-shortenings", params] as const,
+  cooldownShortening: (id: string) => ["soul-accounts", "cooldown-shortening", id] as const,
+  cooldownShorteningCounts: ["soul-accounts", "cooldown-shortening-counts"] as const,
 };
 
 /**
@@ -221,6 +225,12 @@ export const sentencePlanKeys = {
   all: ["sentence-plans"] as const,
   list: (params: Record<string, string | number | boolean | undefined>) => ["sentence-plans", "list", params] as const,
   detail: (id: string) => ["sentence-plans", "detail", id] as const,
+};
+
+/** The soul's own push history (`/me/notifications/`), one key per page. */
+export const soulNotificationKeys = {
+  all: ["soul-notifications"] as const,
+  page: (page: number) => ["soul-notifications", "page", page] as const,
 };
 
 /** Soul chat, soul side. Opening a conversation invalidates the list. */

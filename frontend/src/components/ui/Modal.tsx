@@ -30,6 +30,10 @@ interface BaseModalProps {
    * backdrop would destroy it.
    */
   dismissOnOutsideClick?: boolean;
+  /** 640 wide on sm+ instead of 440 (A11 缩短冷却详情); below sm it is the bottom sheet either way. */
+  wide?: boolean;
+  /** Replaces the title's `text-lg` (A11: 缩短冷却详情 uses `font-title text-xl`). */
+  titleClassName?: string;
 }
 
 /**
@@ -53,7 +57,7 @@ interface BaseModalProps {
  * `onOpenChange`, and the animation hooks move from headlessui's `transition`
  * prop to Base UI's `data-starting-style` / `data-ending-style` attributes.
  */
-export function BaseModal({ isOpen, onClose, title, children, footer, dismissOnOutsideClick = true }: BaseModalProps) {
+export function BaseModal({ isOpen, onClose, title, children, footer, dismissOnOutsideClick = true, wide = false, titleClassName = "text-lg" }: BaseModalProps) {
   const { t } = useI18n();
   return (
     <Dialog.Root
@@ -87,12 +91,12 @@ export function BaseModal({ isOpen, onClose, title, children, footer, dismissOnO
         <Dialog.Viewport className="fixed inset-0 z-dialog flex w-screen items-end justify-center overflow-y-auto sm:items-center sm:p-4">
           <Dialog.Popup
             data-motion="fade"
-            className="flex max-h-[calc(100dvh-2rem)] w-full sm:max-w-[440px] flex-col rounded-panel shadow-overlay bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-ink))] transition-[opacity,translate] duration-base ease-enter data-ending-style:duration-close data-ending-style:ease-exit data-ending-style:opacity-0 data-ending-style:translate-y-3 data-starting-style:opacity-0 data-starting-style:translate-y-3"
+            className={`flex max-h-[calc(100dvh-2rem)] w-full ${wide ? "sm:max-w-[640px]" : "sm:max-w-[440px]"} flex-col rounded-panel shadow-overlay bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-ink))] transition-[opacity,translate] duration-base ease-enter data-ending-style:duration-close data-ending-style:ease-exit data-ending-style:opacity-0 data-ending-style:translate-y-3 data-starting-style:opacity-0 data-starting-style:translate-y-3`}
           >
             {/* Header */}
             {/* 规范 v1 §3.3:标题 16/600,下接区块边界线;右上角写 Esc(键盘上真正关它的那个键)。 */}
             <div className="flex shrink-0 items-center justify-between gap-3 px-6 py-3 border-b border-[oklch(var(--color-block))]">
-              <Dialog.Title className="text-[oklch(var(--color-ink))] text-lg">{title}</Dialog.Title>
+              <Dialog.Title className={`text-[oklch(var(--color-ink))] ${titleClassName}`}>{title}</Dialog.Title>
               <Dialog.Close
                 className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))] hover:text-[oklch(var(--color-ink))] border border-[oklch(var(--color-line))] px-1 py-0.5"
                 aria-label={t("common.close")}

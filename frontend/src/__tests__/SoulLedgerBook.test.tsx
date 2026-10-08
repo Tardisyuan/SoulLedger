@@ -274,6 +274,37 @@ describe("事目's second line: clause, occurrences, milestone (Design v3 功过
     expect(bareLine).toHaveClass("md:hidden");
   });
 
+  it("V5: an article snapshot fills the clause column, and stage / source read translated with the raw member in title", () => {
+    const snapshot = {
+      statute_id: "st-1", code: "CN-GGG-F-JJ-07", revision: 2, effective_from: "2026-01-01",
+      title: { zh: "賑濟窮民", en: "Relieving the poor", egy: "Redi Djeret" }, text: { zh: "", en: "", egy: "" },
+      source: "太微仙君功過格", hash: "abc", at: "2026-06-02T00:00:00Z",
+    };
+    const { container } = renderBook([
+      record({
+        id: "cited-article", type: "MERIT", original_weight: 5, recorded_at: "2020-01-01T00:00:00Z",
+        statute_snapshot: snapshot, life_stage: "YOUTH", evidence_source: "WITNESS", evidence_note: "鄰人王氏",
+      }),
+      record({ id: "bare", type: "DEMERIT", original_weight: 3, recorded_at: "2020-02-01T00:00:00Z" }),
+    ]);
+    const rows = bodyRows(container);
+    // The clause column no longer says 「—」 for a record whose article is linked without a clause string.
+    expect(rows.map((cells) => cells[3])).toEqual(["CN-GGG-F-JJ-07", "—"]);
+    expect(container.querySelectorAll("tbody [data-missing='unrecorded']")).toHaveLength(1);
+    const link = container.querySelector('[data-record-clause="column"]')!;
+    expect(link).toHaveAttribute("href", "/corpus?code=CN-GGG-F-JJ-07");
+    expect(link).toHaveAttribute("title", "賑濟窮民");
+    // Translated labels on the second line; the raw members only in `title`.
+    const facts = container.querySelector("[data-record-facts]")!;
+    expect(facts.textContent).toBe("少年 · 证人");
+    expect(facts.textContent).not.toMatch(/YOUTH|WITNESS/);
+    expect(facts.querySelector('[title="YOUTH"]')).not.toBeNull();
+    expect(facts.querySelector('[title="WITNESS"]')).not.toBeNull();
+    expect(facts.querySelector("[data-evidence-source]")).toHaveAttribute("title", "鄰人王氏");
+    // The bare row invents none of it.
+    expect(rows[1][2]).toBe("deed bare");
+  });
+
   it("never lets 「◆」 end a line apart from 「重要节点」", () => {
     const { container } = renderBook([
       record({

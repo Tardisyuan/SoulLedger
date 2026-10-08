@@ -218,6 +218,35 @@ def test_retrieval_filters_by_audience_locale_and_civilization(ollama, settings)
     assert [c["payload"]["input"][0] for c in ollama.calls[-1:]] == [vectors.QUERY_INSTRUCTION + "q"]
 
 
+def test_the_asking_screen_moves_same_screen_entries_first_without_changing_k(ollama, settings):
+    """同页条目排到前面,组内仍按余弦;k 不变 —— 没进 top-k 的不会因为同页而进来。
+    变异:`retrieve` 不收 `screen` → TypeError → 红;收了不排 → 第二条断言红。"""
+    vectors.sync()
+    settings.ASSISTANT_RETRIEVAL_K = 3
+    config.invalidate()
+    ollama.queries["q"] = {"rebirth-appeal": 0.9, "letters": 0.8, "circle": 0.7, "residence": 0.6}
+    assert vectors.retrieve("q", "zh-Hans", "soul", "CHINESE").entries == ("rebirth-appeal", "letters", "circle")
+    found = vectors.retrieve("q", "zh-Hans", "soul", "CHINESE", screen="circle")
+    assert found.entries == ("circle", "rebirth-appeal", "letters")  # residence 也列了 circle,但它本来就在 k 之外
+    assert found.top_similarity == pytest.approx(0.9 / (0.9**2 + 0.8**2 + 0.7**2 + 0.6**2 + 0.01**2) ** 0.5)
+    assert vectors.retrieve("q", "zh-Hans", "soul", "CHINESE", screen="settings").entries == \
+        ("rebirth-appeal", "letters", "circle")  # 没有同页条目:次序不动
+
+
+def test_officer_disabled_buttons_is_pinned_like_codes(ollama):
+    """官员端的「为什么点不了」条目总在缓存前缀里,不经检索;灵魂端的前缀里没有它。
+    变异:PINNED 去掉它 → 第一条断言红(它以 0.9 的权重排第一)。"""
+    vectors.sync()
+    ollama.queries["q"] = {"officer-disabled-buttons": 0.9, "officer-roles": 0.8}
+    found = vectors.retrieve("q", "en", "officer", None)
+    assert found.mode == "vector" and found.entries[0] == "officer-roles"
+    assert "officer-disabled-buttons" not in found.entries
+    for locale in corpus.LOCALES:
+        assert "### officer-disabled-buttons\n" in corpus.system_prompt(locale, "officer", retrieved=True)
+        assert "### codes\n" not in corpus.system_prompt(locale, "officer", retrieved=True)
+        assert "### officer-disabled-buttons" not in corpus.system_prompt(locale, "soul", retrieved=True)
+
+
 def test_no_vectors_falls_back_without_calling_the_service(ollama):
     assert vectors.retrieve("申诉", "zh-Hans", "soul", "CHINESE").mode == "fallback"
     assert ollama.calls == []
@@ -316,6 +345,21 @@ def test_the_retrieved_entries_replace_the_corpus_and_the_rules_stay_cached(cn_t
     assert "### circle" not in call["system"] + call["facts"]
     assert AssistUsage.objects.get().retrieval == "vector"
     assert AuditLog.objects.get(resource="assistant").changes["retrieval"] == "vector"
+
+
+def test_the_screen_the_question_came_from_reaches_the_retrieval(cn_tenant, ollama, settings):
+    """`/me/assist/` 的 `screen` 一路传到 `vectors.retrieve`:从「书信」页问,letters 排在更像的 rebirth-appeal 前面。
+    变异:`service._run` 不传 `screen=` → 红。"""
+    settings.ASSISTANT_RETRIEVAL_K = 2
+    _enable(cn_tenant)
+    vectors.sync()
+    ollama.queries["q"] = {"rebirth-appeal": 0.9, "letters": 0.4}
+    _, client = ready_soul(cn_tenant)
+    response = client.post("/api/v1/me/assist/", {"question": "q", "screen": "letters"}, format="json",
+                           HTTP_ACCEPT_LANGUAGE="zh-Hans")
+    assert response.status_code == 200
+    facts = FakeProvider.calls[0]["facts"]
+    assert facts.index("### letters") < facts.index("### rebirth-appeal")
 
 
 @pytest.mark.parametrize("setup", ["no_vectors", "service_down", "low_similarity"])
@@ -509,6 +553,22 @@ def test_an_eval_case_names_only_entries_that_exist(api):
     assert officer_only.status_code == 400
     ok = api.post(f"{BASE}eval/cases/", {**base, "expected_entries": ["rebirth-appeal"]}, format="json")
     assert ok.status_code == 201 and ok.data["expected_entries"] == ["rebirth-appeal"]
+
+
+def test_the_seeded_eval_cases_cover_every_entry_in_both_languages():
+    """0004 + 0010 起草的用例:每个条目两种语言各至少一条带 `expected_entries` 的用例,点名的条目与页面都存在。
+    变异:删掉 0010 里 officer-landing 的英文用例 → 红。迁移已跑过(测试库),直接读表。"""
+    from apps.soul_assist.models import OFFICER_SCREENS, SCREENS
+    cases = list(AssistEvalCase.objects.all())
+    assert all(c.expected_entries for c in cases), [c.question for c in cases if not c.expected_entries]
+    for c in cases:
+        ids = {e["id"] for e in corpus.entries(c.locale, c.side)}
+        assert set(c.expected_entries) <= ids, (c.question, c.expected_entries)
+        assert c.screen in (SCREENS if c.side == "soul" else OFFICER_SCREENS), c.question
+    for side in corpus.AUDIENCES:
+        for locale in corpus.LOCALES:
+            covered = {e for c in cases if c.side == side and c.locale == locale for e in c.expected_entries}
+            assert {e["id"] for e in corpus.entries(locale, side)} - covered == set(), (side, locale)
 
 
 def test_eval_runs_report_the_retrieval_hit_rate(cn_tenant, ollama, api):

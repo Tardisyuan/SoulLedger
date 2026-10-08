@@ -26,6 +26,7 @@ import { fieldControl } from "@/src/components/ui/Field";
 import { Button } from "@/src/components/ui/Button";
 import { cn } from "@/lib/utils";
 import { auditActionGlyph } from "@/src/lib/auditActionGlyph";
+import { AuditTabs } from "@/src/components/audit/AuditTabs";
 
 const ACTION_OPTIONS = [
   "CREATE", "UPDATE", "DELETE", "LOGIN", "LOGOUT", "VIEW",
@@ -40,6 +41,25 @@ const RESOURCE_OPTIONS = [
   { value: "soulrecord", label: "Soul Record" },
   { value: "permission", label: "Permission" },
 ];
+
+/**
+ * 殿的设置 / 印字 / 助手开关写的审计描述是英文固定句式 + 殿代码(存库原样,向后兼容);
+ * 页面按已知句式走 i18n,认不得的描述原样显示。
+ */
+const HALL_DESCRIPTIONS: [prefix: string, key: string][] = [
+  ["hall settings ", "audit.descriptions.hall_settings"],
+  ["hall seal glyphs ", "audit.descriptions.hall_seal_glyphs"],
+  ["hall assistant switch ", "audit.descriptions.hall_assistant_switch"],
+];
+
+function describeAudit(description: string, t: (key: string, params?: Record<string, string>) => string): string {
+  for (const [prefix, key] of HALL_DESCRIPTIONS) {
+    if (description.startsWith(prefix) && description.length > prefix.length) {
+      return t(key, { code: description.slice(prefix.length) });
+    }
+  }
+  return description;
+}
 
 type DatePreset = "" | "7d" | "30d";
 
@@ -223,7 +243,7 @@ export default function AuditPage() {
           <TreeName depth={lead ? 0 : 1}>
             <div className="min-w-0">
               <div className="text-[oklch(var(--color-ink))]">
-                {g.descriptions.length > 0 ? g.descriptions.join(" · ") : g.resources.join(" + ")}
+                {g.descriptions.length > 0 ? g.descriptions.map((d) => describeAudit(d, t)).join(" · ") : g.resources.join(" + ")}
                 {lead && repeats > 1 && (
                   <button
                     type="button"
@@ -280,6 +300,7 @@ export default function AuditPage() {
     <PageShell
       variant="full"
       title={title}
+      tabs={<AuditTabs />}
       filters={
         /* 筛选签(规范 v1 §2),与灵魂列表同一套:搜索框用共享的 `fieldControl`,
            三个枚举筛选各是一枚「维度 · 值 ×」。
@@ -308,7 +329,11 @@ export default function AuditPage() {
           <FilterChipSelect
             label={t("audit.filter_resource")}
             value={resourceFilter}
-            options={[{ value: "", label: t("audit.all_resources") }, ...RESOURCE_OPTIONS]}
+            options={[
+              { value: "", label: t("audit.all_resources") },
+              ...RESOURCE_OPTIONS,
+              { value: "tenant", label: t("audit.resource_tenant") },
+            ]}
             clearLabel={t("filter.clear_one", { name: t("audit.filter_resource") })}
             onChange={(v) => { setResourceFilter(v); setPage(1); }}
           />

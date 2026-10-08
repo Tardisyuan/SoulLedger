@@ -1523,6 +1523,16 @@ paths:
         description: A search term.
         schema:
           type: string
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - FAILED
+          - SUCCESS
+        description: |-
+          * `SUCCESS` - 成功
+          * `FAILED` - 失败
       tags:
       - v1
       security:
@@ -2676,6 +2686,344 @@ paths:
               schema:
                 $ref: '#/components/schemas/InboxFolders'
           description: ''
+  /api/v1/death-sync/admin-webhooks/:
+    get:
+      operationId: v1_death_sync_admin_webhooks_list
+      description: |-
+        Browser-facing management of `WebhookConfig` (JWT, ADMIN only).
+
+        `WebhookViewSet` above is the external system's self-service endpoint: it
+        authenticates with its API key only, so an admin's Bearer JWT gets 401
+        there, and the /death-sync page had no way to see or change where this
+        tenant's events are posted. This viewset is the operator's door to the
+        same rows; the self-service one is unchanged.
+
+        Separate viewset rather than a second auth class on the one above, for
+        the same reason `DeathRegistrationReadViewSet` is separate from
+        `DeathRegistrationViewSet`: the key path scopes by key (fail-closed), the
+        browser path scopes by tenant, and merging them would weaken one.
+
+        No `destroy`: disabling is `PATCH {"is_active": false}`, which keeps the
+        row and its `EventWebhookDelivery` history (the FK is CASCADE). The
+        signing secret is generated here and returned once in the 201 as
+        `_signing_secret`, exactly like `ExternalApiKeyViewSet._raw_key`.
+
+        ADMIN cross-tenant: `scope_to_tenant` with the default `admin_bypass`,
+        matching `ExternalApiKeyViewSet` beside it — ADMIN is this codebase's one
+        globally-scoped role there too. Creation still pins `tenant` to the
+        request's tenant and refuses an `api_key` from another tenant.
+      parameters:
+      - in: query
+        name: api_key
+        schema:
+          type: string
+          format: uuid
+      - in: query
+        name: is_active
+        schema:
+          type: boolean
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedAdminWebhookConfigList'
+          description: ''
+    post:
+      operationId: v1_death_sync_admin_webhooks_create
+      description: |-
+        Browser-facing management of `WebhookConfig` (JWT, ADMIN only).
+
+        `WebhookViewSet` above is the external system's self-service endpoint: it
+        authenticates with its API key only, so an admin's Bearer JWT gets 401
+        there, and the /death-sync page had no way to see or change where this
+        tenant's events are posted. This viewset is the operator's door to the
+        same rows; the self-service one is unchanged.
+
+        Separate viewset rather than a second auth class on the one above, for
+        the same reason `DeathRegistrationReadViewSet` is separate from
+        `DeathRegistrationViewSet`: the key path scopes by key (fail-closed), the
+        browser path scopes by tenant, and merging them would weaken one.
+
+        No `destroy`: disabling is `PATCH {"is_active": false}`, which keeps the
+        row and its `EventWebhookDelivery` history (the FK is CASCADE). The
+        signing secret is generated here and returned once in the 201 as
+        `_signing_secret`, exactly like `ExternalApiKeyViewSet._raw_key`.
+
+        ADMIN cross-tenant: `scope_to_tenant` with the default `admin_bypass`,
+        matching `ExternalApiKeyViewSet` beside it — ADMIN is this codebase's one
+        globally-scoped role there too. Creation still pins `tenant` to the
+        request's tenant and refuses an `api_key` from another tenant.
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminWebhookConfig'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AdminWebhookConfig'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AdminWebhookConfig'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminWebhookConfig'
+          description: ''
+  /api/v1/death-sync/admin-webhooks/{id}/:
+    get:
+      operationId: v1_death_sync_admin_webhooks_retrieve
+      description: |-
+        Browser-facing management of `WebhookConfig` (JWT, ADMIN only).
+
+        `WebhookViewSet` above is the external system's self-service endpoint: it
+        authenticates with its API key only, so an admin's Bearer JWT gets 401
+        there, and the /death-sync page had no way to see or change where this
+        tenant's events are posted. This viewset is the operator's door to the
+        same rows; the self-service one is unchanged.
+
+        Separate viewset rather than a second auth class on the one above, for
+        the same reason `DeathRegistrationReadViewSet` is separate from
+        `DeathRegistrationViewSet`: the key path scopes by key (fail-closed), the
+        browser path scopes by tenant, and merging them would weaken one.
+
+        No `destroy`: disabling is `PATCH {"is_active": false}`, which keeps the
+        row and its `EventWebhookDelivery` history (the FK is CASCADE). The
+        signing secret is generated here and returned once in the 201 as
+        `_signing_secret`, exactly like `ExternalApiKeyViewSet._raw_key`.
+
+        ADMIN cross-tenant: `scope_to_tenant` with the default `admin_bypass`,
+        matching `ExternalApiKeyViewSet` beside it — ADMIN is this codebase's one
+        globally-scoped role there too. Creation still pins `tenant` to the
+        request's tenant and refuses an `api_key` from another tenant.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Webhook Config.
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminWebhookConfig'
+          description: ''
+    put:
+      operationId: v1_death_sync_admin_webhooks_update
+      description: |-
+        Browser-facing management of `WebhookConfig` (JWT, ADMIN only).
+
+        `WebhookViewSet` above is the external system's self-service endpoint: it
+        authenticates with its API key only, so an admin's Bearer JWT gets 401
+        there, and the /death-sync page had no way to see or change where this
+        tenant's events are posted. This viewset is the operator's door to the
+        same rows; the self-service one is unchanged.
+
+        Separate viewset rather than a second auth class on the one above, for
+        the same reason `DeathRegistrationReadViewSet` is separate from
+        `DeathRegistrationViewSet`: the key path scopes by key (fail-closed), the
+        browser path scopes by tenant, and merging them would weaken one.
+
+        No `destroy`: disabling is `PATCH {"is_active": false}`, which keeps the
+        row and its `EventWebhookDelivery` history (the FK is CASCADE). The
+        signing secret is generated here and returned once in the 201 as
+        `_signing_secret`, exactly like `ExternalApiKeyViewSet._raw_key`.
+
+        ADMIN cross-tenant: `scope_to_tenant` with the default `admin_bypass`,
+        matching `ExternalApiKeyViewSet` beside it — ADMIN is this codebase's one
+        globally-scoped role there too. Creation still pins `tenant` to the
+        request's tenant and refuses an `api_key` from another tenant.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Webhook Config.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminWebhookConfig'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AdminWebhookConfig'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AdminWebhookConfig'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminWebhookConfig'
+          description: ''
+    patch:
+      operationId: v1_death_sync_admin_webhooks_partial_update
+      description: |-
+        Browser-facing management of `WebhookConfig` (JWT, ADMIN only).
+
+        `WebhookViewSet` above is the external system's self-service endpoint: it
+        authenticates with its API key only, so an admin's Bearer JWT gets 401
+        there, and the /death-sync page had no way to see or change where this
+        tenant's events are posted. This viewset is the operator's door to the
+        same rows; the self-service one is unchanged.
+
+        Separate viewset rather than a second auth class on the one above, for
+        the same reason `DeathRegistrationReadViewSet` is separate from
+        `DeathRegistrationViewSet`: the key path scopes by key (fail-closed), the
+        browser path scopes by tenant, and merging them would weaken one.
+
+        No `destroy`: disabling is `PATCH {"is_active": false}`, which keeps the
+        row and its `EventWebhookDelivery` history (the FK is CASCADE). The
+        signing secret is generated here and returned once in the 201 as
+        `_signing_secret`, exactly like `ExternalApiKeyViewSet._raw_key`.
+
+        ADMIN cross-tenant: `scope_to_tenant` with the default `admin_bypass`,
+        matching `ExternalApiKeyViewSet` beside it — ADMIN is this codebase's one
+        globally-scoped role there too. Creation still pins `tenant` to the
+        request's tenant and refuses an `api_key` from another tenant.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Webhook Config.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedAdminWebhookConfig'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedAdminWebhookConfig'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedAdminWebhookConfig'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminWebhookConfig'
+          description: ''
+  /api/v1/death-sync/admin-webhooks/event-types/:
+    get:
+      operationId: v1_death_sync_admin_webhooks_event_types_list
+      description: |-
+        The event names a webhook can subscribe to.
+
+        `EventType` is the enum every publisher writes `envelope.event_type`
+        from, and the handler filters on it verbatim — so this list, not a
+        hand-written one in the client, is what a checklist must offer.
+      parameters:
+      - in: query
+        name: api_key
+        schema:
+          type: string
+          format: uuid
+      - in: query
+        name: is_active
+        schema:
+          type: boolean
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - count
+                - results
+                properties:
+                  count:
+                    type: integer
+                    example: 123
+                  next:
+                    type: string
+                    nullable: true
+                    format: uri
+                    example: http://api.example.org/accounts/?page=4
+                  previous:
+                    type: string
+                    nullable: true
+                    format: uri
+                    example: http://api.example.org/accounts/?page=2
+                  results:
+                    type: array
+                    items:
+                      type: string
+          description: ''
   /api/v1/death-sync/api-keys/:
     get:
       operationId: v1_death_sync_api_keys_list
@@ -3114,6 +3462,104 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/DeathRegistrationSummary'
+          description: ''
+  /api/v1/death-sync/webhook-deliveries/:
+    get:
+      operationId: v1_death_sync_webhook_deliveries_list
+      description: |-
+        `EventWebhookDelivery` rows for this tenant's webhooks (JWT, ADMIN only).
+
+        Newest first (model ordering), paginated, filterable by `webhook`,
+        `status` and `event_type`. Read-only: a delivery's status is written by
+        the worker (`apps/events/tasks.py`) and by nothing else.
+
+        Scoped through `webhook__tenant` rather than the row's own nullable
+        `tenant`: the webhook is the thing an operator manages, and a row whose
+        `tenant` were ever left null would otherwise be invisible to everyone.
+      parameters:
+      - in: query
+        name: event_type
+        schema:
+          type: string
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - ABANDONED
+          - FAILED
+          - PENDING
+          - SUCCESS
+        description: |-
+          * `PENDING` - Pending
+          * `SUCCESS` - Delivered
+          * `FAILED` - Failed
+          * `ABANDONED` - Abandoned after max retries
+      - in: query
+        name: webhook
+        schema:
+          type: string
+          format: uuid
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedEventWebhookDeliveryList'
+          description: ''
+  /api/v1/death-sync/webhook-deliveries/{id}/:
+    get:
+      operationId: v1_death_sync_webhook_deliveries_retrieve
+      description: |-
+        `EventWebhookDelivery` rows for this tenant's webhooks (JWT, ADMIN only).
+
+        Newest first (model ordering), paginated, filterable by `webhook`,
+        `status` and `event_type`. Read-only: a delivery's status is written by
+        the worker (`apps/events/tasks.py`) and by nothing else.
+
+        Scoped through `webhook__tenant` rather than the row's own nullable
+        `tenant`: the webhook is the thing an operator manages, and a row whose
+        `tenant` were ever left null would otherwise be invisible to everyone.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Event Webhook Delivery.
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventWebhookDelivery'
           description: ''
   /api/v1/death-sync/webhooks/:
     get:
@@ -4691,6 +5137,7 @@ paths:
           enum:
           - COMMENT_CREATED
           - COMMENT_DELETED
+          - COOLDOWN_SHORTENING_DECIDED
           - DEATH_SYNC_PROCESSED
           - DEATH_SYNC_RECEIVED
           - DISPATCH_APPROVED
@@ -4773,6 +5220,7 @@ paths:
           * `REBIRTH_APPLICATION_SUBMITTED` - Rebirth Application Submitted
           * `REBIRTH_STATUS_CHANGED` - Rebirth Status Changed
           * `REBIRTH_CROSS_CIV_DECIDED` - Rebirth Cross Civ Decided
+          * `COOLDOWN_SHORTENING_DECIDED` - Cooldown Shortening Decided
           * `SENTENCE_PLAN_CREATED` - Sentence Plan Created
           * `SENTENCE_NODE_ACTIVATED` - Sentence Node Activated
           * `SENTENCE_NODE_WAITING` - Sentence Node Waiting
@@ -6961,6 +7409,32 @@ paths:
               schema:
                 $ref: '#/components/schemas/SoulError'
           description: ''
+  /api/v1/me/notifications/:
+    get:
+      operationId: v1_me_notifications_retrieve
+      description: |-
+        `GET /me/notifications/`:本灵魂收到过的推送,最新在前,分页(PAGE_SIZE 20)。
+
+        只读。范围是**灵魂**而不是本世账号:转世换账号,记录仍是同一个灵魂的。
+        `PushDelivery` 一台设备一行,两台手机登同一账号就是同一件事两行 —— 这里按
+        `dedupe_key` 只给最早那一行,记录讲的是「发生过什么」,不是「发到了哪台」。
+      tags:
+      - v1
+      security:
+      - soulJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedPushHistory'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulError'
+          description: ''
   /api/v1/me/password/:
     post:
       operationId: v1_me_password_create
@@ -7211,6 +7685,40 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SoulError'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulError'
+          description: ''
+  /api/v1/me/rebirth-applications/cooldown-shortening/:
+    post:
+      operationId: v1_me_rebirth_applications_cooldown_shortening_create
+      description: 冷却期内申请缩短本次冷却。状态在 `GET rebirth-applications/` 的 `cooldown_shortening`
+        里。
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CooldownShorteningCreate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CooldownShorteningCreate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CooldownShorteningCreate'
+        required: true
+      security:
+      - soulJwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeCooldownShortening'
           description: ''
         '409':
           content:
@@ -8989,6 +9497,23 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/UserNotification'
+          description: ''
+  /api/v1/notifications/email-status/:
+    get:
+      operationId: v1_notifications_email_status_retrieve
+      description: |-
+        `GET /notifications/email-status/`:本人邮件通道最近一次失败(apps/notifications/tasks.py),
+        没有失败过就是 null。/profile 的开关旁显示它。只看本人:按 `notification__user` 取。
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationEmailStatus'
           description: ''
   /api/v1/notifications/mark_all_read/:
     post:
@@ -13669,6 +14194,189 @@ paths:
               schema:
                 $ref: '#/components/schemas/SoulError'
           description: ''
+  /api/v1/soul-accounts/cooldown-shortenings/:
+    get:
+      operationId: v1_soul_accounts_cooldown_shortenings_list
+      description: 缩短冷却申请:与转生申请同一把权限(看 `workflow.read`,决定 `workflow.approve`),同一种租户隔离。
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      - in: query
+        name: soul
+        schema:
+          type: string
+          format: uuid
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - APPROVED
+          - PENDING
+          - REJECTED
+        description: |-
+          * `PENDING` - 待决定
+          * `APPROVED` - 已批准
+          * `REJECTED` - 已驳回
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedOfficerCooldownShorteningList'
+          description: ''
+  /api/v1/soul-accounts/cooldown-shortenings/{id}/:
+    get:
+      operationId: v1_soul_accounts_cooldown_shortenings_retrieve
+      description: 缩短冷却申请:与转生申请同一把权限(看 `workflow.read`,决定 `workflow.approve`),同一种租户隔离。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this cooldown shortening request.
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OfficerCooldownShortening'
+          description: ''
+  /api/v1/soul-accounts/cooldown-shortenings/{id}/approve/:
+    post:
+      operationId: v1_soul_accounts_cooldown_shortenings_approve_create
+      description: 缩短冷却申请:与转生申请同一把权限(看 `workflow.read`,决定 `workflow.approve`),同一种租户隔离。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this cooldown shortening request.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CooldownShorteningApprove'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CooldownShorteningApprove'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CooldownShorteningApprove'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OfficerCooldownShortening'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulError'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulError'
+          description: ''
+  /api/v1/soul-accounts/cooldown-shortenings/{id}/reject/:
+    post:
+      operationId: v1_soul_accounts_cooldown_shortenings_reject_create
+      description: 缩短冷却申请:与转生申请同一把权限(看 `workflow.read`,决定 `workflow.approve`),同一种租户隔离。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this cooldown shortening request.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CooldownShorteningReject'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CooldownShorteningReject'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CooldownShorteningReject'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OfficerCooldownShortening'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulError'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulError'
+          description: ''
+  /api/v1/soul-accounts/cooldown-shortenings/counts/:
+    get:
+      operationId: v1_soul_accounts_cooldown_shortenings_counts_retrieve
+      description: 筛选签与页签的计数:本租户范围内各状态的申请数(不受分页与筛选影响)。
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CooldownShorteningCounts'
+          description: ''
   /api/v1/soul-accounts/credentials/:
     get:
       operationId: v1_soul_accounts_credentials_list
@@ -15099,7 +15807,7 @@ paths:
     get:
       operationId: v1_tenants_list
       description: |-
-        Tenant management API — read-only, except `seal-glyphs/` (ADMIN only).
+        Tenant management API — read-only, except `seal-glyphs/` and `settings/` (ADMIN only).
         Non-ADMIN users see only their own tenant.
       parameters:
       - name: ordering
@@ -15135,7 +15843,7 @@ paths:
     get:
       operationId: v1_tenants_retrieve
       description: |-
-        Tenant management API — read-only, except `seal-glyphs/` (ADMIN only).
+        Tenant management API — read-only, except `seal-glyphs/` and `settings/` (ADMIN only).
         Non-ADMIN users see only their own tenant.
       parameters:
       - in: path
@@ -15177,6 +15885,38 @@ paths:
           multipart/form-data:
             schema:
               $ref: '#/components/schemas/PatchedTenantSealGlyphs'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tenant'
+          description: ''
+  /api/v1/tenants/{code}/settings/:
+    patch:
+      operationId: v1_tenants_settings_partial_update
+      description: 殿的设置:说明、调拨开关、三语殿名、转生冷却天数。只收已知字段,`settings` 里别的键不动。
+      parameters:
+      - in: path
+        name: code
+        schema:
+          type: string
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedTenantSettings'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedTenantSettings'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedTenantSettings'
       security:
       - jwtAuth: []
       responses:
@@ -16494,6 +17234,74 @@ components:
         * `GUARDIAN` - Guardian
         * `CONDUIT` - Soul Conduit / Guide
         * `OVERSEER` - Overseer / Admin
+    AdminWebhookConfig:
+      type: object
+      description: |-
+        `WebhookConfig` as the admin tab sees it.
+
+        `_signing_secret` is the plaintext and arrives exactly once, in the 201
+        of `create` — the same shape as `ExternalApiKeySerializer._raw_key`. The
+        field is `read_only` and the view sets it on the saved instance, so a
+        list / retrieve / update response never carries it (nothing puts it on
+        those instances). The model column is encrypted at rest and is not a
+        serializer field at all.
+
+        `events` is a list of real `EventType` members: the delivery code
+        (`apps/events/handlers/webhook_handler.py`) compares
+        `envelope.event_type` against this list verbatim, so a misspelt name
+        would silently subscribe to nothing. An empty list keeps the model's
+        meaning of "everything".
+
+        `api_key` is the external system the webhook belongs to: the
+        self-service endpoint (`WebhookViewSet`) scopes by it, so an admin-created
+        webhook is visible to that system under its own key. It must be one of
+        the request tenant's keys and cannot be moved after creation.
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        api_key:
+          type: string
+          format: uuid
+        api_key_name:
+          type: string
+          readOnly: true
+        url:
+          type: string
+          format: uri
+          description: Webhook callback URL (must be HTTPS in production)
+          maxLength: 500
+        is_active:
+          type: boolean
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/EventTypeEnum'
+        max_retries:
+          type: integer
+        timeout_seconds:
+          type: integer
+        create_time:
+          type: string
+          format: date-time
+          readOnly: true
+        update_time:
+          type: string
+          format: date-time
+          readOnly: true
+        _signing_secret:
+          type: string
+          readOnly: true
+          title: ' signing secret'
+      required:
+      - _signing_secret
+      - api_key
+      - api_key_name
+      - create_time
+      - id
+      - update_time
+      - url
     AdmittedBalance:
       type: object
       description: |-
@@ -18386,6 +19194,57 @@ components:
       description: |-
         * `DIRECT` - 灵魂私聊
         * `OFFICER_INBOX` - 官员收件箱
+    CooldownShorteningApprove:
+      type: object
+      properties:
+        approved_days:
+          type: integer
+          minimum: 0
+        note:
+          type: string
+          default: ''
+          maxLength: 2000
+      required:
+      - approved_days
+    CooldownShorteningCounts:
+      type: object
+      properties:
+        PENDING:
+          type: integer
+        APPROVED:
+          type: integer
+        REJECTED:
+          type: integer
+      required:
+      - APPROVED
+      - PENDING
+      - REJECTED
+    CooldownShorteningCreate:
+      type: object
+      properties:
+        reason:
+          type: string
+          maxLength: 2000
+      required:
+      - reason
+    CooldownShorteningReject:
+      type: object
+      properties:
+        note:
+          type: string
+          maxLength: 2000
+      required:
+      - note
+    CooldownShorteningStatusEnum:
+      enum:
+      - PENDING
+      - APPROVED
+      - REJECTED
+      type: string
+      description: |-
+        * `PENDING` - 待决定
+        * `APPROVED` - 已批准
+        * `REJECTED` - 已驳回
     Corpus:
       type: object
       properties:
@@ -20086,6 +20945,7 @@ components:
       - REBIRTH_APPLICATION_SUBMITTED
       - REBIRTH_STATUS_CHANGED
       - REBIRTH_CROSS_CIV_DECIDED
+      - COOLDOWN_SHORTENING_DECIDED
       - SENTENCE_PLAN_CREATED
       - SENTENCE_NODE_ACTIVATED
       - SENTENCE_NODE_WAITING
@@ -20135,6 +20995,7 @@ components:
         * `REBIRTH_APPLICATION_SUBMITTED` - Rebirth Application Submitted
         * `REBIRTH_STATUS_CHANGED` - Rebirth Status Changed
         * `REBIRTH_CROSS_CIV_DECIDED` - Rebirth Cross Civ Decided
+        * `COOLDOWN_SHORTENING_DECIDED` - Cooldown Shortening Decided
         * `SENTENCE_PLAN_CREATED` - Sentence Plan Created
         * `SENTENCE_NODE_ACTIVATED` - Sentence Node Activated
         * `SENTENCE_NODE_WAITING` - Sentence Node Waiting
@@ -20146,6 +21007,84 @@ components:
         * `SENTENCE_PLAN_COMPLETED` - Sentence Plan Completed
         * `SENTENCE_PLAN_CANCELLED` - Sentence Plan Cancelled
         * `SCHEDULER_RUN_FAILED` - Scheduler Run Failed
+    EventWebhookDelivery:
+      type: object
+      description: |-
+        Read-only row of `GET /death-sync/webhook-deliveries/`.
+
+        `payload_json` is deliberately absent: it is the envelope snapshot
+        (soul ids, verdicts) and the admin tab needs the outcome, not the body.
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        webhook:
+          type: string
+          format: uuid
+          readOnly: true
+          description: 目标端点。租户自己配的,所以它的可靠性不在本系统控制内。
+        webhook_url:
+          type: string
+          readOnly: true
+        domain:
+          type: string
+          readOnly: true
+        event_type:
+          type: string
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/EventWebhookDeliveryStatusEnum'
+          readOnly: true
+        attempt:
+          type: integer
+          readOnly: true
+        response_status:
+          type: integer
+          readOnly: true
+          nullable: true
+        error:
+          type: string
+          readOnly: true
+        delivered_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        create_time:
+          type: string
+          format: date-time
+          readOnly: true
+        update_time:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - attempt
+      - create_time
+      - delivered_at
+      - domain
+      - error
+      - event_type
+      - id
+      - response_status
+      - status
+      - update_time
+      - webhook
+      - webhook_url
+    EventWebhookDeliveryStatusEnum:
+      enum:
+      - PENDING
+      - SUCCESS
+      - FAILED
+      - ABANDONED
+      type: string
+      description: |-
+        * `PENDING` - Pending
+        * `SUCCESS` - Delivered
+        * `FAILED` - Failed
+        * `ABANDONED` - Abandoned after max retries
     EvidenceAdmission:
       type: object
       description: |-
@@ -20202,6 +21141,18 @@ components:
           default: ''
       required:
       - admitted
+    EvidenceSourceEnum:
+      enum:
+      - REGISTRY
+      - WITNESS
+      - SELF_ACCOUNT
+      - OTHER
+      type: string
+      description: |-
+        * `REGISTRY` - Registry
+        * `WITNESS` - Witness
+        * `SELF_ACCOUNT` - Self account
+        * `OTHER` - Other
     ExportedDataScope:
       type: object
       properties:
@@ -22229,6 +23180,14 @@ components:
           type: integer
           minimum: 1
           nullable: true
+        statute_snapshot:
+          nullable: true
+        life_stage:
+          type: string
+        evidence_source:
+          type: string
+        evidence_note:
+          type: string
       required:
       - category
       - civilization
@@ -22236,13 +23195,17 @@ components:
       - description
       - effective_weight
       - event_date
+      - evidence_note
+      - evidence_source
       - fungibility_class
       - id
       - is_milestone
+      - life_stage
       - occurrence_count
       - original_weight
       - recorded_at
       - statute_clause
+      - statute_snapshot
       - type
       - years_elapsed
     LedgerSummary:
@@ -22283,6 +23246,18 @@ components:
       - records
       - soul_id
       - soul_name
+    LifeStageEnum:
+      enum:
+      - CHILDHOOD
+      - YOUTH
+      - ADULTHOOD
+      - OLD_AGE
+      type: string
+      description: |-
+        * `CHILDHOOD` - Childhood
+        * `YOUTH` - Youth
+        * `ADULTHOOD` - Adulthood
+        * `OLD_AGE` - Old age
     LoginFailedResponse:
       type: object
       description: |-
@@ -22690,6 +23665,56 @@ components:
       required:
       - created_at
       - cycle
+    MeCooldownShortening:
+      type: object
+      description: 灵魂看自己的那份:没有 decided_by。
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        application:
+          type: string
+          format: uuid
+          readOnly: true
+          description: 其终局驳回引起这段冷却的那份申请。
+        cycle:
+          type: integer
+          readOnly: true
+        reason:
+          type: string
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/CooldownShorteningStatusEnum'
+          readOnly: true
+        approved_days:
+          type: integer
+          readOnly: true
+          nullable: true
+          description: 批准后,自决定时刻起还要等的天数。
+        decision_note:
+          type: string
+          readOnly: true
+        decided_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - application
+      - approved_days
+      - created_at
+      - cycle
+      - decided_at
+      - decision_note
+      - id
+      - reason
+      - status
     MeCurrentStep:
       type: object
       description: 当前所在节点:只有节点类型与**角色**,不含审批人是谁(2026-09-14 决定 2)。
@@ -23038,8 +24063,16 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/MeRebirthApplication'
+        can_shorten_cooldown:
+          type: boolean
+        cooldown_shortening:
+          allOf:
+          - $ref: '#/components/schemas/MeCooldownShortening'
+          nullable: true
       required:
       - can_apply
+      - can_shorten_cooldown
+      - cooldown_shortening
       - cooldown_until
       - reason
       - results
@@ -23710,6 +24743,27 @@ components:
       - rule_zh
       - unoffset_demerit
       - unusable_merit
+    NotificationEmailFailure:
+      type: object
+      properties:
+        error:
+          type: string
+        at:
+          type: string
+          format: date-time
+      required:
+      - at
+      - error
+    NotificationEmailStatus:
+      type: object
+      description: '`{"last_failure": {error, at} | null}` — what `email_status` returns(apps/notifications/tasks.py)。'
+      properties:
+        last_failure:
+          allOf:
+          - $ref: '#/components/schemas/NotificationEmailFailure'
+          nullable: true
+      required:
+      - last_failure
     NotificationSettings:
       type: object
       properties:
@@ -23839,6 +24893,118 @@ components:
       - last_active_at
       - messages
       - screen
+    OfficerCooldownShortening:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        soul:
+          type: string
+          format: uuid
+          readOnly: true
+        soul_code:
+          type: string
+          readOnly: true
+        soul_name:
+          type: string
+          readOnly: true
+        account:
+          type: string
+          format: uuid
+          readOnly: true
+        application:
+          type: string
+          format: uuid
+          readOnly: true
+          description: 其终局驳回引起这段冷却的那份申请。
+        cycle:
+          type: integer
+          readOnly: true
+        reason:
+          type: string
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/CooldownShorteningStatusEnum'
+          readOnly: true
+        approved_days:
+          type: integer
+          readOnly: true
+          nullable: true
+          description: 批准后,自决定时刻起还要等的天数。
+        decision_note:
+          type: string
+          readOnly: true
+        decided_by:
+          type: integer
+          readOnly: true
+          nullable: true
+        decided_by_username:
+          type: string
+          readOnly: true
+        decided_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        cooldown_until:
+          type: string
+          format: date-time
+          nullable: true
+          readOnly: true
+        remaining_days:
+          type: integer
+          description: 批准的天数必须小于它(向上取整);0 = 冷却已结束。
+          readOnly: true
+        cooldown_end:
+          type: string
+          format: date-time
+          nullable: true
+          readOnly: true
+        cooldown_original_until:
+          type: string
+          format: date-time
+          nullable: true
+          readOnly: true
+        cooldown_total_days:
+          type: integer
+          readOnly: true
+        cooldown_past_days:
+          type: integer
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - account
+      - application
+      - approved_days
+      - cooldown_end
+      - cooldown_original_until
+      - cooldown_past_days
+      - cooldown_total_days
+      - cooldown_until
+      - created_at
+      - cycle
+      - decided_at
+      - decided_by
+      - decided_by_username
+      - decision_note
+      - id
+      - reason
+      - remaining_days
+      - soul
+      - soul_code
+      - soul_name
+      - status
+      - updated_at
     OfficerInbox:
       type: object
       properties:
@@ -24232,6 +25398,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ActorList'
+    PaginatedAdminWebhookConfigList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdminWebhookConfig'
     PaginatedApprovalNodeList:
       type: object
       required:
@@ -24430,6 +25619,29 @@ components:
           - pending
           - executing
           - expired
+    PaginatedEventWebhookDeliveryList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/EventWebhookDelivery'
     PaginatedExternalApiKeyList:
       type: object
       required:
@@ -24660,6 +25872,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ModeratedPost'
+    PaginatedOfficerCooldownShorteningList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/OfficerCooldownShortening'
     PaginatedOfficerInboxList:
       type: object
       required:
@@ -24752,6 +25987,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/PostList'
+    PaginatedPushHistory:
+      type: object
+      description: |-
+        DRF 分页信封的显式声明 —— 理由同 `apps/social/soul_views.py::_page`:APIView 上
+        drf-spectacular 推不出 `{count, next, previous, results}`。
+      properties:
+        count:
+          type: integer
+        next:
+          type: string
+          nullable: true
+        previous:
+          type: string
+          nullable: true
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/PushHistoryItem'
+      required:
+      - count
+      - next
+      - previous
+      - results
     PaginatedReactionList:
       type: object
       required:
@@ -25262,6 +26520,66 @@ components:
           type: string
       required:
       - password
+    PatchedAdminWebhookConfig:
+      type: object
+      description: |-
+        `WebhookConfig` as the admin tab sees it.
+
+        `_signing_secret` is the plaintext and arrives exactly once, in the 201
+        of `create` — the same shape as `ExternalApiKeySerializer._raw_key`. The
+        field is `read_only` and the view sets it on the saved instance, so a
+        list / retrieve / update response never carries it (nothing puts it on
+        those instances). The model column is encrypted at rest and is not a
+        serializer field at all.
+
+        `events` is a list of real `EventType` members: the delivery code
+        (`apps/events/handlers/webhook_handler.py`) compares
+        `envelope.event_type` against this list verbatim, so a misspelt name
+        would silently subscribe to nothing. An empty list keeps the model's
+        meaning of "everything".
+
+        `api_key` is the external system the webhook belongs to: the
+        self-service endpoint (`WebhookViewSet`) scopes by it, so an admin-created
+        webhook is visible to that system under its own key. It must be one of
+        the request tenant's keys and cannot be moved after creation.
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        api_key:
+          type: string
+          format: uuid
+        api_key_name:
+          type: string
+          readOnly: true
+        url:
+          type: string
+          format: uri
+          description: Webhook callback URL (must be HTTPS in production)
+          maxLength: 500
+        is_active:
+          type: boolean
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/EventTypeEnum'
+        max_retries:
+          type: integer
+        timeout_seconds:
+          type: integer
+        create_time:
+          type: string
+          format: date-time
+          readOnly: true
+        update_time:
+          type: string
+          format: date-time
+          readOnly: true
+        _signing_secret:
+          type: string
+          readOnly: true
+          title: ' signing secret'
     PatchedApprovalNode:
       type: object
       description: |-
@@ -26766,6 +28084,36 @@ components:
           items:
             type: string
           maxItems: 2
+    PatchedTenantSettings:
+      type: object
+      description: |-
+        `PATCH /tenants/{code}/settings/` 的请求体(ADMIN):只收这几个**已知**的字段,不收整份 `settings` JSON。
+
+        `soul_rebirth_cooldown_days` 是 `settings` 里的一个键(`apps/soul_accounts/rebirth.py::cooldown_days`
+        读它,负数按 0 算,所以这里下限 0,上限 365);写它时**合并**进现有 `settings`,别的键(如助手管理页写的
+        `assistant_enabled`)原样保留;给 `null` 就删掉这个键,回到默认 30 天。
+      properties:
+        description:
+          type: string
+        dispatch_enabled:
+          type: boolean
+        hall_name:
+          type: string
+          description: 殿司展示名(简体中文)
+          maxLength: 60
+        hall_name_en:
+          type: string
+          description: 殿司展示名(English)
+          maxLength: 80
+        hall_name_egy:
+          type: string
+          description: 殿司展示名(egy)
+          maxLength: 80
+        soul_rebirth_cooldown_days:
+          type: integer
+          maximum: 365
+          minimum: 0
+          nullable: true
     PatchedUser:
       type: object
       description: |-
@@ -26884,7 +28232,7 @@ components:
       description: |-
         `User.preferences`, as the API reads and writes it.
 
-        Two keys. Language and theme are not here: both are browser-side
+        Four keys. Language and theme are not here: both are browser-side
         settings with no server home (the locale is a cookie the middleware reads,
         the theme a localStorage key), and moving them is a separate decision.
       properties:
@@ -26896,6 +28244,14 @@ components:
         onboarded:
           type: boolean
           default: false
+        email_notifications:
+          type: boolean
+          default: false
+        email_locale:
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/EvalCaseLocaleEnum'
+          - $ref: '#/components/schemas/NullEnum'
     PatchedUserProfileUpdate:
       type: object
       description: |-
@@ -27591,6 +28947,65 @@ components:
       - is_active
       - last_seen_at
       - platform
+    PushHistoryItem:
+      type: object
+      description: |-
+        一条推送,按**内容**给:每个状态都在(被系统丢掉的、灵魂当时关掉的,内容照样可读)。
+        `data` 是推送带的导航目标(`{screen, …}`,见 `services.rule_for`),App 用 `landingOf` 解。
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        kind:
+          type: string
+          readOnly: true
+        title:
+          type: string
+          readOnly: true
+        body:
+          type: string
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/PushHistoryItemStatusEnum'
+          readOnly: true
+        data:
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - body
+      - created_at
+      - data
+      - id
+      - kind
+      - status
+      - title
+    PushHistoryItemStatusEnum:
+      enum:
+      - QUEUED
+      - SENDING
+      - SENT
+      - DELIVERED
+      - FAILED
+      - DISABLED
+      - EXPIRED
+      - CANCELLED
+      - NO_DEVICE
+      type: string
+      description: |-
+        * `QUEUED` - 待发送
+        * `SENDING` - 发送中
+        * `SENT` - 已交给 Expo
+        * `DELIVERED` - 回执成功
+        * `FAILED` - 失败
+        * `DISABLED` - 推送未启用
+        * `EXPIRED` - 已过期
+        * `CANCELLED` - 已取消
+        * `NO_DEVICE` - 没有设备
     PushLocaleEnum:
       enum:
       - zh-Hans
@@ -30797,7 +32212,7 @@ components:
           maxLength: 200
         occurrence_count:
           type: integer
-          minimum: 0
+          minimum: 1
           nullable: true
           description: 'How many separate occasions this row''s weight covers. NOT
             a row count: one row may document a year of alms or three rows one killing.
@@ -30814,6 +32229,41 @@ components:
           type: integer
           readOnly: true
           description: Life index this record belongs to; 0 is the first life.
+        statute:
+          type: string
+          format: uuid
+          nullable: true
+        statute_snapshot:
+          readOnly: true
+          nullable: true
+          description: 'The cited article as it read when cited: statute_id, code,
+            revision, effective_from, title/text per locale, source, hash, at. Taken
+            by save(); never updated when the article changes.'
+        life_stage:
+          description: |-
+            Which stage of the life the deed falls in; blank = unrecorded.
+
+            * `CHILDHOOD` - Childhood
+            * `YOUTH` - Youth
+            * `ADULTHOOD` - Adulthood
+            * `OLD_AGE` - Old age
+          oneOf:
+          - $ref: '#/components/schemas/LifeStageEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        evidence_source:
+          description: |-
+            Where this record came from; blank = unrecorded.
+
+            * `REGISTRY` - Registry
+            * `WITNESS` - Witness
+            * `SELF_ACCOUNT` - Self account
+            * `OTHER` - Other
+          oneOf:
+          - $ref: '#/components/schemas/EvidenceSourceEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        evidence_note:
+          type: string
+          description: Free text about the source, e.g. which witness or which register.
       required:
       - civilization
       - cycle
@@ -30822,6 +32272,7 @@ components:
       - id
       - record_type
       - recorded_at
+      - statute_snapshot
     SoulRecordCategoryEnum:
       enum:
       - CHARITY
@@ -31388,6 +32839,18 @@ components:
           items:
             type: string
           readOnly: true
+        hall_name:
+          type: string
+          description: 殿司展示名(简体中文)
+          maxLength: 60
+        hall_name_en:
+          type: string
+          description: 殿司展示名(English)
+          maxLength: 80
+        hall_name_egy:
+          type: string
+          description: 殿司展示名(egy)
+          maxLength: 80
         created_at:
           type: string
           format: date-time
@@ -31408,6 +32871,8 @@ components:
           type: string
         tenant_name:
           type: string
+        dispatch_enabled:
+          type: boolean
         total_souls:
           type: integer
         state_breakdown:
@@ -31415,6 +32880,7 @@ components:
           additionalProperties:
             type: integer
       required:
+      - dispatch_enabled
       - state_breakdown
       - tenant_code
       - tenant_id
@@ -32263,7 +33729,7 @@ components:
       description: |-
         `User.preferences`, as the API reads and writes it.
 
-        Two keys. Language and theme are not here: both are browser-side
+        Four keys. Language and theme are not here: both are browser-side
         settings with no server home (the locale is a cookie the middleware reads,
         the theme a localStorage key), and moving them is a separate decision.
       properties:
@@ -32275,6 +33741,14 @@ components:
         onboarded:
           type: boolean
           default: false
+        email_notifications:
+          type: boolean
+          default: false
+        email_locale:
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/EvalCaseLocaleEnum'
+          - $ref: '#/components/schemas/NullEnum'
     UserProfile:
       type: object
       properties:

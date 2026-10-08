@@ -121,6 +121,8 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
    * behaviour on that path, and `rejectReason` is left alone — only the
    * dialog's own `onClose` clears it — so reopening after a failure still has
    * the typed reason in it. */
+  /** 后端拒绝时响应体里的 `code`(`open_judgment` / `target_dispatch_disabled` …);没有就 undefined。 */
+  const refusalCode = (err: unknown) => (err as { response?: { data?: { code?: string } } })?.response?.data?.code;
   const approveMutation = useMutation({
     mutationFn: () => dispatchApi.approve(id),
     onSuccess: () => {
@@ -129,9 +131,9 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
       queryClient.invalidateQueries({ queryKey: ["dispatch"] });
       router.push("/dispatch");
     },
-    onError: () => {
+    onError: (err: unknown) => {
       setShowApproveModal(false);
-      showToast(t("dispatch.approve_error"), "error");
+      showToast(t(refusalCode(err) === "target_dispatch_disabled" ? "dispatch.target_tenant_closed" : "dispatch.approve_error"), "error");
     },
   });
 
@@ -157,9 +159,9 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
       queryClient.invalidateQueries({ queryKey: ["dispatch"] });
       router.push("/dispatch");
     },
-    onError: () => {
+    onError: (err: unknown) => {
       setShowExecuteModal(false);
-      showToast(t("dispatch.execute_error"), "error");
+      showToast(t(refusalCode(err) === "target_dispatch_disabled" ? "dispatch.target_tenant_closed" : "dispatch.execute_error"), "error");
     },
   });
 
@@ -175,7 +177,7 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
       setShowReturnModal(false);
       // 2026-09-18:灵魂仍有未结案审判时后端答 409 + code=open_judgment。说清原因,
       // 否则官员只看到「失败」,会一直重试。
-      const code = (err as { response?: { data?: { code?: string } } })?.response?.data?.code;
+      const code = refusalCode(err);
       showToast(
         t(code === "open_judgment" ? "dispatch.return_home_blocked_open_judgment" : "dispatch.return_home_error"),
         "error",

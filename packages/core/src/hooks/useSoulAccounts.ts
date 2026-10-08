@@ -3,7 +3,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   soulAccountsApi,
+  type CooldownShorteningFilters,
   type CredentialFilters,
+  type OfficerCooldownShortening,
   type RebirthApplicationFilters,
   type SoulContactUpdate,
 } from "../api/index";
@@ -46,6 +48,36 @@ export function useRebirthApplications(filters: RebirthApplicationFilters) {
   });
 }
 
+export function useCooldownShortenings(filters: CooldownShorteningFilters) {
+  return useQuery({
+    queryKey: soulAccountKeys.cooldownShortenings({ ...filters }),
+    queryFn: async () => (await soulAccountsApi.cooldownShortenings(filters)).data,
+    placeholderData: (previous) => previous,
+  });
+}
+
+/**
+ * One request, read independently of the list's filter: after a refused decision
+ * the row may have left the filtered list, and the open dialog must still show
+ * what the server says now. `initial` is the list's copy, so opening asks nothing.
+ */
+export function useCooldownShortening(id: string, initial: OfficerCooldownShortening) {
+  return useQuery({
+    queryKey: soulAccountKeys.cooldownShortening(id),
+    queryFn: async () => (await soulAccountsApi.cooldownShortening(id)).data,
+    initialData: initial,
+  });
+}
+
+/** Per-status counts for the filter chips and the tab's pending number. */
+export function useCooldownShorteningCounts(enabled = true) {
+  return useQuery({
+    queryKey: soulAccountKeys.cooldownShorteningCounts,
+    queryFn: async () => (await soulAccountsApi.cooldownShorteningCounts()).data,
+    enabled,
+  });
+}
+
 function useSoulAccountWrite<TVars, TResult>(fn: (vars: TVars) => Promise<TResult>) {
   const qc = useQueryClient();
   return useMutation({
@@ -74,6 +106,18 @@ export function useMarkCredentialDelivered() {
 
 export function useRetryCredential() {
   return useSoulAccountWrite(async (id: string) => (await soulAccountsApi.retry(id)).data);
+}
+
+export function useApproveCooldownShortening() {
+  return useSoulAccountWrite(async ({ id, days, note }: { id: string; days: number; note?: string }) =>
+    (await soulAccountsApi.approveCooldownShortening(id, days, note)).data
+  );
+}
+
+export function useRejectCooldownShortening() {
+  return useSoulAccountWrite(async ({ id, note }: { id: string; note: string }) =>
+    (await soulAccountsApi.rejectCooldownShortening(id, note)).data
+  );
 }
 
 export function useDecideCrossCivilization() {

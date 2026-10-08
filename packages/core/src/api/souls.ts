@@ -1,7 +1,7 @@
 import axios from "axios";
 import { api } from "./client";
 import type { PaginatedResponse } from "./users";
-import type { LedgerSummary } from "./ledger";
+import type { LedgerSummary, StatuteSnapshot } from "./ledger";
 import type { HistoricalDate } from "../domain/dates";
 import type { CivilizationOption } from "@soulledger/core/config/civilizations";
 import type { components } from "./generated/schema";
@@ -150,6 +150,13 @@ export interface SoulRecordEntry {
   cycle: number;
   /** This record's event date against its soul's — see SoulRecordDateProblem. */
   date_problems: SoulRecordDateProblem[];
+  /** Article this deed is filed under (Statute id); the snapshot is what it said when cited. */
+  statute?: string | null;
+  statute_snapshot?: StatuteSnapshot | null;
+  /** souls.life_stages / souls.evidence_sources members; "" = unrecorded. */
+  life_stage?: string;
+  evidence_source?: string;
+  evidence_note?: string;
 }
 
 // Backward-compatible alias. NOTE: this is an alias for the *soul*, not for a
@@ -253,6 +260,10 @@ export const soulsApi = {
     api.get<Blob>("/souls/export/", { params: { ids: ids.join(",") }, responseType: "blob" }),
   die: (id: string, data?: object) => api.post<Soul>(`/souls/${id}/die/`, data),
   transition: (id: string, data: object) => api.post<Soul>(`/souls/${id}/transition/`, data),
+  /** ADMIN 更正:SETTLED → DISPOSED,必须带原因;不是状态流转,后端单独记 SETTLEMENT_CORRECTED 事件。
+      400 的 `error` 是后端的那句话(没有原因 / 不是 SETTLED)。 */
+  correctSettlement: (id: string, reason: string) =>
+    api.post<Soul>(`/souls/${id}/correct_settlement/`, { reason }),
   karma: (id: string) => api.get<LedgerSummary>(`/souls/${id}/karma/`),
   addRecord: (id: string, data: object) => api.post<SoulRecordEntry>(`/souls/${id}/add_record/`, data),
   // Bare array — the action returns `Response(serializer.data)` directly

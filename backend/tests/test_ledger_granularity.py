@@ -321,7 +321,12 @@ def test_the_soul_record_carries_exactly_the_two_inputs_the_rule_named():
         "granularity", "occurrence", "occasion", "clause", "statute",
         "lump", "at_once", "scattered",
     )
-    names = {field.name for field in SoulRecord._meta.get_fields()}
+    # V5's article link (`statute` FK + the frozen `statute_snapshot`) shares
+    # the fragment but is not a granularity input: it names an article, not a
+    # clause, and `granularity_of` never reads it. Listed by name so a third
+    # `statute_*` would still trip this.
+    article_link = {"statute", "statute_snapshot"}
+    names = {field.name for field in SoulRecord._meta.get_fields()} - article_link
     matching = sorted(name for name in names if any(f in name for f in fragments))
     assert matching == sorted(GRANULARITY_MISSING_INPUTS), (
         f"SoulRecord's granularity-shaped fields are {matching}; the rule reads "

@@ -1285,6 +1285,181 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/death-sync/admin-webhooks/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description Browser-facing management of `WebhookConfig` (JWT, ADMIN only).
+         *
+         *     `WebhookViewSet` above is the external system's self-service endpoint: it
+         *     authenticates with its API key only, so an admin's Bearer JWT gets 401
+         *     there, and the /death-sync page had no way to see or change where this
+         *     tenant's events are posted. This viewset is the operator's door to the
+         *     same rows; the self-service one is unchanged.
+         *
+         *     Separate viewset rather than a second auth class on the one above, for
+         *     the same reason `DeathRegistrationReadViewSet` is separate from
+         *     `DeathRegistrationViewSet`: the key path scopes by key (fail-closed), the
+         *     browser path scopes by tenant, and merging them would weaken one.
+         *
+         *     No `destroy`: disabling is `PATCH {"is_active": false}`, which keeps the
+         *     row and its `EventWebhookDelivery` history (the FK is CASCADE). The
+         *     signing secret is generated here and returned once in the 201 as
+         *     `_signing_secret`, exactly like `ExternalApiKeyViewSet._raw_key`.
+         *
+         *     ADMIN cross-tenant: `scope_to_tenant` with the default `admin_bypass`,
+         *     matching `ExternalApiKeyViewSet` beside it — ADMIN is this codebase's one
+         *     globally-scoped role there too. Creation still pins `tenant` to the
+         *     request's tenant and refuses an `api_key` from another tenant.
+         */
+        get: operations["v1_death_sync_admin_webhooks_list"];
+        put?: never;
+        /**
+         * @description Browser-facing management of `WebhookConfig` (JWT, ADMIN only).
+         *
+         *     `WebhookViewSet` above is the external system's self-service endpoint: it
+         *     authenticates with its API key only, so an admin's Bearer JWT gets 401
+         *     there, and the /death-sync page had no way to see or change where this
+         *     tenant's events are posted. This viewset is the operator's door to the
+         *     same rows; the self-service one is unchanged.
+         *
+         *     Separate viewset rather than a second auth class on the one above, for
+         *     the same reason `DeathRegistrationReadViewSet` is separate from
+         *     `DeathRegistrationViewSet`: the key path scopes by key (fail-closed), the
+         *     browser path scopes by tenant, and merging them would weaken one.
+         *
+         *     No `destroy`: disabling is `PATCH {"is_active": false}`, which keeps the
+         *     row and its `EventWebhookDelivery` history (the FK is CASCADE). The
+         *     signing secret is generated here and returned once in the 201 as
+         *     `_signing_secret`, exactly like `ExternalApiKeyViewSet._raw_key`.
+         *
+         *     ADMIN cross-tenant: `scope_to_tenant` with the default `admin_bypass`,
+         *     matching `ExternalApiKeyViewSet` beside it — ADMIN is this codebase's one
+         *     globally-scoped role there too. Creation still pins `tenant` to the
+         *     request's tenant and refuses an `api_key` from another tenant.
+         */
+        post: operations["v1_death_sync_admin_webhooks_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/death-sync/admin-webhooks/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description Browser-facing management of `WebhookConfig` (JWT, ADMIN only).
+         *
+         *     `WebhookViewSet` above is the external system's self-service endpoint: it
+         *     authenticates with its API key only, so an admin's Bearer JWT gets 401
+         *     there, and the /death-sync page had no way to see or change where this
+         *     tenant's events are posted. This viewset is the operator's door to the
+         *     same rows; the self-service one is unchanged.
+         *
+         *     Separate viewset rather than a second auth class on the one above, for
+         *     the same reason `DeathRegistrationReadViewSet` is separate from
+         *     `DeathRegistrationViewSet`: the key path scopes by key (fail-closed), the
+         *     browser path scopes by tenant, and merging them would weaken one.
+         *
+         *     No `destroy`: disabling is `PATCH {"is_active": false}`, which keeps the
+         *     row and its `EventWebhookDelivery` history (the FK is CASCADE). The
+         *     signing secret is generated here and returned once in the 201 as
+         *     `_signing_secret`, exactly like `ExternalApiKeyViewSet._raw_key`.
+         *
+         *     ADMIN cross-tenant: `scope_to_tenant` with the default `admin_bypass`,
+         *     matching `ExternalApiKeyViewSet` beside it — ADMIN is this codebase's one
+         *     globally-scoped role there too. Creation still pins `tenant` to the
+         *     request's tenant and refuses an `api_key` from another tenant.
+         */
+        get: operations["v1_death_sync_admin_webhooks_retrieve"];
+        /**
+         * @description Browser-facing management of `WebhookConfig` (JWT, ADMIN only).
+         *
+         *     `WebhookViewSet` above is the external system's self-service endpoint: it
+         *     authenticates with its API key only, so an admin's Bearer JWT gets 401
+         *     there, and the /death-sync page had no way to see or change where this
+         *     tenant's events are posted. This viewset is the operator's door to the
+         *     same rows; the self-service one is unchanged.
+         *
+         *     Separate viewset rather than a second auth class on the one above, for
+         *     the same reason `DeathRegistrationReadViewSet` is separate from
+         *     `DeathRegistrationViewSet`: the key path scopes by key (fail-closed), the
+         *     browser path scopes by tenant, and merging them would weaken one.
+         *
+         *     No `destroy`: disabling is `PATCH {"is_active": false}`, which keeps the
+         *     row and its `EventWebhookDelivery` history (the FK is CASCADE). The
+         *     signing secret is generated here and returned once in the 201 as
+         *     `_signing_secret`, exactly like `ExternalApiKeyViewSet._raw_key`.
+         *
+         *     ADMIN cross-tenant: `scope_to_tenant` with the default `admin_bypass`,
+         *     matching `ExternalApiKeyViewSet` beside it — ADMIN is this codebase's one
+         *     globally-scoped role there too. Creation still pins `tenant` to the
+         *     request's tenant and refuses an `api_key` from another tenant.
+         */
+        put: operations["v1_death_sync_admin_webhooks_update"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * @description Browser-facing management of `WebhookConfig` (JWT, ADMIN only).
+         *
+         *     `WebhookViewSet` above is the external system's self-service endpoint: it
+         *     authenticates with its API key only, so an admin's Bearer JWT gets 401
+         *     there, and the /death-sync page had no way to see or change where this
+         *     tenant's events are posted. This viewset is the operator's door to the
+         *     same rows; the self-service one is unchanged.
+         *
+         *     Separate viewset rather than a second auth class on the one above, for
+         *     the same reason `DeathRegistrationReadViewSet` is separate from
+         *     `DeathRegistrationViewSet`: the key path scopes by key (fail-closed), the
+         *     browser path scopes by tenant, and merging them would weaken one.
+         *
+         *     No `destroy`: disabling is `PATCH {"is_active": false}`, which keeps the
+         *     row and its `EventWebhookDelivery` history (the FK is CASCADE). The
+         *     signing secret is generated here and returned once in the 201 as
+         *     `_signing_secret`, exactly like `ExternalApiKeyViewSet._raw_key`.
+         *
+         *     ADMIN cross-tenant: `scope_to_tenant` with the default `admin_bypass`,
+         *     matching `ExternalApiKeyViewSet` beside it — ADMIN is this codebase's one
+         *     globally-scoped role there too. Creation still pins `tenant` to the
+         *     request's tenant and refuses an `api_key` from another tenant.
+         */
+        patch: operations["v1_death_sync_admin_webhooks_partial_update"];
+        trace?: never;
+    };
+    "/api/v1/death-sync/admin-webhooks/event-types/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description The event names a webhook can subscribe to.
+         *
+         *     `EventType` is the enum every publisher writes `envelope.event_type`
+         *     from, and the handler filters on it verbatim — so this list, not a
+         *     hand-written one in the client, is what a checklist must offer.
+         */
+        get: operations["v1_death_sync_admin_webhooks_event_types_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/death-sync/api-keys/": {
         parameters: {
             query?: never;
@@ -1507,6 +1682,60 @@ export interface paths {
          *     goes on the wire so the dashboard links to the same filter it counted.
          */
         get: operations["v1_death_sync_registrations_summary_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/death-sync/webhook-deliveries/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description `EventWebhookDelivery` rows for this tenant's webhooks (JWT, ADMIN only).
+         *
+         *     Newest first (model ordering), paginated, filterable by `webhook`,
+         *     `status` and `event_type`. Read-only: a delivery's status is written by
+         *     the worker (`apps/events/tasks.py`) and by nothing else.
+         *
+         *     Scoped through `webhook__tenant` rather than the row's own nullable
+         *     `tenant`: the webhook is the thing an operator manages, and a row whose
+         *     `tenant` were ever left null would otherwise be invisible to everyone.
+         */
+        get: operations["v1_death_sync_webhook_deliveries_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/death-sync/webhook-deliveries/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description `EventWebhookDelivery` rows for this tenant's webhooks (JWT, ADMIN only).
+         *
+         *     Newest first (model ordering), paginated, filterable by `webhook`,
+         *     `status` and `event_type`. Read-only: a delivery's status is written by
+         *     the worker (`apps/events/tasks.py`) and by nothing else.
+         *
+         *     Scoped through `webhook__tenant` rather than the row's own nullable
+         *     `tenant`: the webhook is the thing an operator manages, and a row whose
+         *     `tenant` were ever left null would otherwise be invisible to everyone.
+         */
+        get: operations["v1_death_sync_webhook_deliveries_retrieve"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3172,6 +3401,29 @@ export interface paths {
         patch: operations["v1_me_notification_settings_partial_update"];
         trace?: never;
     };
+    "/api/v1/me/notifications/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description `GET /me/notifications/`:本灵魂收到过的推送,最新在前,分页(PAGE_SIZE 20)。
+         *
+         *     只读。范围是**灵魂**而不是本世账号:转世换账号,记录仍是同一个灵魂的。
+         *     `PushDelivery` 一台设备一行,两台手机登同一账号就是同一件事两行 —— 这里按
+         *     `dedupe_key` 只给最早那一行,记录讲的是「发生过什么」,不是「发到了哪台」。
+         */
+        get: operations["v1_me_notifications_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/me/password/": {
         parameters: {
             query?: never;
@@ -3279,6 +3531,23 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["v1_me_rebirth_applications_appeal_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/rebirth-applications/cooldown-shortening/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 冷却期内申请缩短本次冷却。状态在 `GET rebirth-applications/` 的 `cooldown_shortening` 里。 */
+        post: operations["v1_me_rebirth_applications_cooldown_shortening_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3960,6 +4229,26 @@ export interface paths {
         put?: never;
         /** @description Mark a single notification as read. */
         post: operations["v1_notifications_mark_read_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/notifications/email-status/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description `GET /notifications/email-status/`:本人邮件通道最近一次失败(apps/notifications/tasks.py),
+         *     没有失败过就是 null。/profile 的开关旁显示它。只看本人:按 `notification__user` 取。
+         */
+        get: operations["v1_notifications_email_status_retrieve"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -6266,6 +6555,91 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/soul-accounts/cooldown-shortenings/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 缩短冷却申请:与转生申请同一把权限(看 `workflow.read`,决定 `workflow.approve`),同一种租户隔离。 */
+        get: operations["v1_soul_accounts_cooldown_shortenings_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/soul-accounts/cooldown-shortenings/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 缩短冷却申请:与转生申请同一把权限(看 `workflow.read`,决定 `workflow.approve`),同一种租户隔离。 */
+        get: operations["v1_soul_accounts_cooldown_shortenings_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/soul-accounts/cooldown-shortenings/{id}/approve/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 缩短冷却申请:与转生申请同一把权限(看 `workflow.read`,决定 `workflow.approve`),同一种租户隔离。 */
+        post: operations["v1_soul_accounts_cooldown_shortenings_approve_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/soul-accounts/cooldown-shortenings/{id}/reject/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 缩短冷却申请:与转生申请同一把权限(看 `workflow.read`,决定 `workflow.approve`),同一种租户隔离。 */
+        post: operations["v1_soul_accounts_cooldown_shortenings_reject_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/soul-accounts/cooldown-shortenings/counts/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 筛选签与页签的计数:本租户范围内各状态的申请数(不受分页与筛选影响)。 */
+        get: operations["v1_soul_accounts_cooldown_shortenings_counts_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/soul-accounts/credentials/": {
         parameters: {
             query?: never;
@@ -6863,7 +7237,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * @description Tenant management API — read-only, except `seal-glyphs/` (ADMIN only).
+         * @description Tenant management API — read-only, except `seal-glyphs/` and `settings/` (ADMIN only).
          *     Non-ADMIN users see only their own tenant.
          */
         get: operations["v1_tenants_list"];
@@ -6883,7 +7257,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * @description Tenant management API — read-only, except `seal-glyphs/` (ADMIN only).
+         * @description Tenant management API — read-only, except `seal-glyphs/` and `settings/` (ADMIN only).
          *     Non-ADMIN users see only their own tenant.
          */
         get: operations["v1_tenants_retrieve"];
@@ -6910,6 +7284,23 @@ export interface paths {
         head?: never;
         /** @description 匾上的印字。只收这一个字段,其余租户字段仍然只读。 */
         patch: operations["v1_tenants_seal_glyphs_partial_update"];
+        trace?: never;
+    };
+    "/api/v1/tenants/{code}/settings/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** @description 殿的设置:说明、调拨开关、三语殿名、转生冷却天数。只收已知字段,`settings` 里别的键不动。 */
+        patch: operations["v1_tenants_settings_partial_update"];
         trace?: never;
     };
     "/api/v1/users/": {
@@ -7485,6 +7876,49 @@ export interface components {
          * @enum {string}
          */
         ActorRoleEnum: "JUDGE" | "EXECUTOR" | "GUARDIAN" | "CONDUIT" | "OVERSEER";
+        /**
+         * @description `WebhookConfig` as the admin tab sees it.
+         *
+         *     `_signing_secret` is the plaintext and arrives exactly once, in the 201
+         *     of `create` — the same shape as `ExternalApiKeySerializer._raw_key`. The
+         *     field is `read_only` and the view sets it on the saved instance, so a
+         *     list / retrieve / update response never carries it (nothing puts it on
+         *     those instances). The model column is encrypted at rest and is not a
+         *     serializer field at all.
+         *
+         *     `events` is a list of real `EventType` members: the delivery code
+         *     (`apps/events/handlers/webhook_handler.py`) compares
+         *     `envelope.event_type` against this list verbatim, so a misspelt name
+         *     would silently subscribe to nothing. An empty list keeps the model's
+         *     meaning of "everything".
+         *
+         *     `api_key` is the external system the webhook belongs to: the
+         *     self-service endpoint (`WebhookViewSet`) scopes by it, so an admin-created
+         *     webhook is visible to that system under its own key. It must be one of
+         *     the request tenant's keys and cannot be moved after creation.
+         */
+        AdminWebhookConfig: {
+            /** Format: uuid */
+            readonly id: string;
+            /** Format: uuid */
+            api_key: string;
+            readonly api_key_name: string;
+            /**
+             * Format: uri
+             * @description Webhook callback URL (must be HTTPS in production)
+             */
+            url: string;
+            is_active?: boolean;
+            events?: components["schemas"]["EventTypeEnum"][];
+            max_retries?: number;
+            timeout_seconds?: number;
+            /** Format: date-time */
+            readonly create_time: string;
+            /** Format: date-time */
+            readonly update_time: string;
+            /** signing secret */
+            readonly _signing_secret: string;
+        };
         /**
          * @description `LedgerService.get_admitted_balance`. `balance` and `not_admitted_net`
          *     are null unless `reading_kind` is BALANCE (and the judgment is from the
@@ -8401,6 +8835,29 @@ export interface components {
          * @enum {string}
          */
         ConversationKindEnum: "DIRECT" | "OFFICER_INBOX";
+        CooldownShorteningApprove: {
+            approved_days: number;
+            /** @default  */
+            note: string;
+        };
+        CooldownShorteningCounts: {
+            PENDING: number;
+            APPROVED: number;
+            REJECTED: number;
+        };
+        CooldownShorteningCreate: {
+            reason: string;
+        };
+        CooldownShorteningReject: {
+            note: string;
+        };
+        /**
+         * @description * `PENDING` - 待决定
+         *     * `APPROVED` - 已批准
+         *     * `REJECTED` - 已驳回
+         * @enum {string}
+         */
+        CooldownShorteningStatusEnum: "PENDING" | "APPROVED" | "REJECTED";
         Corpus: {
             entries: components["schemas"]["CorpusEntry"][];
             prompts: components["schemas"]["CorpusPrompt"][];
@@ -9196,6 +9653,7 @@ export interface components {
          *     * `REBIRTH_APPLICATION_SUBMITTED` - Rebirth Application Submitted
          *     * `REBIRTH_STATUS_CHANGED` - Rebirth Status Changed
          *     * `REBIRTH_CROSS_CIV_DECIDED` - Rebirth Cross Civ Decided
+         *     * `COOLDOWN_SHORTENING_DECIDED` - Cooldown Shortening Decided
          *     * `SENTENCE_PLAN_CREATED` - Sentence Plan Created
          *     * `SENTENCE_NODE_ACTIVATED` - Sentence Node Activated
          *     * `SENTENCE_NODE_WAITING` - Sentence Node Waiting
@@ -9209,7 +9667,43 @@ export interface components {
          *     * `SCHEDULER_RUN_FAILED` - Scheduler Run Failed
          * @enum {string}
          */
-        EventTypeEnum: "SOUL_CREATED" | "STATE_CHANGED" | "SETTLEMENT_CORRECTED" | "RECORD_ADDED" | "JUDGMENT_INITIATED" | "JUDGMENT_CONCLUDED" | "DISPOSITION_CREATED" | "DISPOSITION_EXPIRED" | "REINCARNATION_TRIGGERED" | "KARMA_RECALCULATED" | "WORKFLOW_CREATED" | "WORKFLOW_ASSIGNED" | "WORKFLOW_APPROVED" | "WORKFLOW_REJECTED" | "DISPATCH_CREATED" | "DISPATCH_APPROVED" | "DISPATCH_REJECTED" | "DISPATCH_EXECUTED" | "DISPATCH_STATUS_CHANGED" | "DEATH_SYNC_RECEIVED" | "DEATH_SYNC_PROCESSED" | "POST_CREATED" | "POST_UPDATED" | "POST_DELETED" | "COMMENT_CREATED" | "COMMENT_DELETED" | "REACTION_ADDED" | "REACTION_REMOVED" | "USER_FOLLOWED" | "USER_UNFOLLOWED" | "NOTIFICATION_CREATED" | "SOUL_ACCOUNT_CREATED" | "SOUL_ACCOUNT_RETIRED" | "REBIRTH_APPLICATION_SUBMITTED" | "REBIRTH_STATUS_CHANGED" | "REBIRTH_CROSS_CIV_DECIDED" | "SENTENCE_PLAN_CREATED" | "SENTENCE_NODE_ACTIVATED" | "SENTENCE_NODE_WAITING" | "SENTENCE_NODE_COMPLETED" | "SENTENCE_NODE_REFUSED" | "SENTENCE_PLAN_AMENDED" | "SENTENCE_REQUEST_CREATED" | "SENTENCE_REQUEST_DECIDED" | "SENTENCE_PLAN_COMPLETED" | "SENTENCE_PLAN_CANCELLED" | "SCHEDULER_RUN_FAILED";
+        EventTypeEnum: "SOUL_CREATED" | "STATE_CHANGED" | "SETTLEMENT_CORRECTED" | "RECORD_ADDED" | "JUDGMENT_INITIATED" | "JUDGMENT_CONCLUDED" | "DISPOSITION_CREATED" | "DISPOSITION_EXPIRED" | "REINCARNATION_TRIGGERED" | "KARMA_RECALCULATED" | "WORKFLOW_CREATED" | "WORKFLOW_ASSIGNED" | "WORKFLOW_APPROVED" | "WORKFLOW_REJECTED" | "DISPATCH_CREATED" | "DISPATCH_APPROVED" | "DISPATCH_REJECTED" | "DISPATCH_EXECUTED" | "DISPATCH_STATUS_CHANGED" | "DEATH_SYNC_RECEIVED" | "DEATH_SYNC_PROCESSED" | "POST_CREATED" | "POST_UPDATED" | "POST_DELETED" | "COMMENT_CREATED" | "COMMENT_DELETED" | "REACTION_ADDED" | "REACTION_REMOVED" | "USER_FOLLOWED" | "USER_UNFOLLOWED" | "NOTIFICATION_CREATED" | "SOUL_ACCOUNT_CREATED" | "SOUL_ACCOUNT_RETIRED" | "REBIRTH_APPLICATION_SUBMITTED" | "REBIRTH_STATUS_CHANGED" | "REBIRTH_CROSS_CIV_DECIDED" | "COOLDOWN_SHORTENING_DECIDED" | "SENTENCE_PLAN_CREATED" | "SENTENCE_NODE_ACTIVATED" | "SENTENCE_NODE_WAITING" | "SENTENCE_NODE_COMPLETED" | "SENTENCE_NODE_REFUSED" | "SENTENCE_PLAN_AMENDED" | "SENTENCE_REQUEST_CREATED" | "SENTENCE_REQUEST_DECIDED" | "SENTENCE_PLAN_COMPLETED" | "SENTENCE_PLAN_CANCELLED" | "SCHEDULER_RUN_FAILED";
+        /**
+         * @description Read-only row of `GET /death-sync/webhook-deliveries/`.
+         *
+         *     `payload_json` is deliberately absent: it is the envelope snapshot
+         *     (soul ids, verdicts) and the admin tab needs the outcome, not the body.
+         */
+        EventWebhookDelivery: {
+            /** Format: uuid */
+            readonly id: string;
+            /**
+             * Format: uuid
+             * @description 目标端点。租户自己配的,所以它的可靠性不在本系统控制内。
+             */
+            readonly webhook: string;
+            readonly webhook_url: string;
+            readonly domain: string;
+            readonly event_type: string;
+            readonly status: components["schemas"]["EventWebhookDeliveryStatusEnum"];
+            readonly attempt: number;
+            readonly response_status: number | null;
+            readonly error: string;
+            /** Format: date-time */
+            readonly delivered_at: string | null;
+            /** Format: date-time */
+            readonly create_time: string;
+            /** Format: date-time */
+            readonly update_time: string;
+        };
+        /**
+         * @description * `PENDING` - Pending
+         *     * `SUCCESS` - Delivered
+         *     * `FAILED` - Failed
+         *     * `ABANDONED` - Abandoned after max retries
+         * @enum {string}
+         */
+        EventWebhookDeliveryStatusEnum: "PENDING" | "SUCCESS" | "FAILED" | "ABANDONED";
         /**
          * @description One ruling on one ledger record in this case. A record with no ruling
          *     is admitted; only rulings that were made are listed.
@@ -9242,6 +9736,14 @@ export interface components {
             /** @default  */
             reason: string;
         };
+        /**
+         * @description * `REGISTRY` - Registry
+         *     * `WITNESS` - Witness
+         *     * `SELF_ACCOUNT` - Self account
+         *     * `OTHER` - Other
+         * @enum {string}
+         */
+        EvidenceSourceEnum: "REGISTRY" | "WITNESS" | "SELF_ACCOUNT" | "OTHER";
         ExportedDataScope: {
             role: string;
             civilization?: string | null;
@@ -10174,6 +10676,10 @@ export interface components {
             is_milestone: boolean;
             statute_clause: string;
             occurrence_count: number | null;
+            statute_snapshot: unknown;
+            life_stage: string;
+            evidence_source: string;
+            evidence_note: string;
         };
         /**
          * @description 200 body of `LedgerBalanceView`.
@@ -10194,6 +10700,14 @@ export interface components {
             records: components["schemas"]["LedgerRecordSummary"][];
             reading: components["schemas"]["LedgerReading"];
         };
+        /**
+         * @description * `CHILDHOOD` - Childhood
+         *     * `YOUTH` - Youth
+         *     * `ADULTHOOD` - Adulthood
+         *     * `OLD_AGE` - Old age
+         * @enum {string}
+         */
+        LifeStageEnum: "CHILDHOOD" | "YOUTH" | "ADULTHOOD" | "OLD_AGE";
         /**
          * @description Doc-only: the 401 body of `LoginView` for wrong credentials.
          *
@@ -10384,6 +10898,26 @@ export interface components {
             /** Format: date-time */
             readonly created_at: string;
         };
+        /** @description 灵魂看自己的那份:没有 decided_by。 */
+        MeCooldownShortening: {
+            /** Format: uuid */
+            readonly id: string;
+            /**
+             * Format: uuid
+             * @description 其终局驳回引起这段冷却的那份申请。
+             */
+            readonly application: string;
+            readonly cycle: number;
+            readonly reason: string;
+            readonly status: components["schemas"]["CooldownShorteningStatusEnum"];
+            /** @description 批准后,自决定时刻起还要等的天数。 */
+            readonly approved_days: number | null;
+            readonly decision_note: string;
+            /** Format: date-time */
+            readonly decided_at: string | null;
+            /** Format: date-time */
+            readonly created_at: string;
+        };
         /** @description 当前所在节点:只有节点类型与**角色**,不含审批人是谁(2026-09-14 决定 2)。 */
         MeCurrentStep: {
             node_type: string;
@@ -10501,6 +11035,8 @@ export interface components {
             /** Format: date-time */
             cooldown_until: string | null;
             results: components["schemas"]["MeRebirthApplication"][];
+            can_shorten_cooldown: boolean;
+            cooldown_shortening: components["schemas"]["MeCooldownShortening"] | null;
         };
         MeRecord: {
             /** Format: uuid */
@@ -10789,6 +11325,15 @@ export interface components {
             granularity_unavailable: string;
             granularity_missing_inputs: string[];
         };
+        NotificationEmailFailure: {
+            error: string;
+            /** Format: date-time */
+            at: string;
+        };
+        /** @description `{"last_failure": {error, at} | null}` — what `email_status` returns(apps/notifications/tasks.py)。 */
+        NotificationEmailStatus: {
+            last_failure: components["schemas"]["NotificationEmailFailure"] | null;
+        };
         NotificationSettings: {
             /** @description 转生申请:提交确认、申诉确认、结果 */
             rebirth?: boolean;
@@ -10850,6 +11395,45 @@ export interface components {
             readonly last_active_at: string;
             readonly first_question: string;
             readonly messages: components["schemas"]["AssistMessage"][];
+        };
+        OfficerCooldownShortening: {
+            /** Format: uuid */
+            readonly id: string;
+            /** Format: uuid */
+            readonly soul: string;
+            readonly soul_code: string;
+            readonly soul_name: string;
+            /** Format: uuid */
+            readonly account: string;
+            /**
+             * Format: uuid
+             * @description 其终局驳回引起这段冷却的那份申请。
+             */
+            readonly application: string;
+            readonly cycle: number;
+            readonly reason: string;
+            readonly status: components["schemas"]["CooldownShorteningStatusEnum"];
+            /** @description 批准后,自决定时刻起还要等的天数。 */
+            readonly approved_days: number | null;
+            readonly decision_note: string;
+            readonly decided_by: number | null;
+            readonly decided_by_username: string;
+            /** Format: date-time */
+            readonly decided_at: string | null;
+            /** Format: date-time */
+            readonly cooldown_until: string | null;
+            /** @description 批准的天数必须小于它(向上取整);0 = 冷却已结束。 */
+            readonly remaining_days: number;
+            /** Format: date-time */
+            readonly cooldown_end: string | null;
+            /** Format: date-time */
+            readonly cooldown_original_until: string | null;
+            readonly cooldown_total_days: number;
+            readonly cooldown_past_days: number;
+            /** Format: date-time */
+            readonly created_at: string;
+            /** Format: date-time */
+            readonly updated_at: string;
         };
         OfficerInbox: {
             /** Format: uuid */
@@ -11029,6 +11613,21 @@ export interface components {
             previous?: string | null;
             results: components["schemas"]["ActorList"][];
         };
+        PaginatedAdminWebhookConfigList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["AdminWebhookConfig"][];
+        };
         PaginatedApprovalNodeList: {
             /** @example 123 */
             count: number;
@@ -11153,6 +11752,21 @@ export interface components {
                 executing: number;
                 expired: number;
             };
+        };
+        PaginatedEventWebhookDeliveryList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["EventWebhookDelivery"][];
         };
         PaginatedExternalApiKeyList: {
             /** @example 123 */
@@ -11304,6 +11918,21 @@ export interface components {
             previous?: string | null;
             results: components["schemas"]["ModeratedPost"][];
         };
+        PaginatedOfficerCooldownShorteningList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["OfficerCooldownShortening"][];
+        };
         PaginatedOfficerInboxList: {
             /** @example 123 */
             count: number;
@@ -11363,6 +11992,16 @@ export interface components {
              */
             previous?: string | null;
             results: components["schemas"]["PostList"][];
+        };
+        /**
+         * @description DRF 分页信封的显式声明 —— 理由同 `apps/social/soul_views.py::_page`:APIView 上
+         *     drf-spectacular 推不出 `{count, next, previous, results}`。
+         */
+        PaginatedPushHistory: {
+            count: number;
+            next: string | null;
+            previous: string | null;
+            results: components["schemas"]["PushHistoryItem"][];
         };
         PaginatedReactionList: {
             /** @example 123 */
@@ -11673,6 +12312,49 @@ export interface components {
          */
         PasswordResetResult: {
             password: string;
+        };
+        /**
+         * @description `WebhookConfig` as the admin tab sees it.
+         *
+         *     `_signing_secret` is the plaintext and arrives exactly once, in the 201
+         *     of `create` — the same shape as `ExternalApiKeySerializer._raw_key`. The
+         *     field is `read_only` and the view sets it on the saved instance, so a
+         *     list / retrieve / update response never carries it (nothing puts it on
+         *     those instances). The model column is encrypted at rest and is not a
+         *     serializer field at all.
+         *
+         *     `events` is a list of real `EventType` members: the delivery code
+         *     (`apps/events/handlers/webhook_handler.py`) compares
+         *     `envelope.event_type` against this list verbatim, so a misspelt name
+         *     would silently subscribe to nothing. An empty list keeps the model's
+         *     meaning of "everything".
+         *
+         *     `api_key` is the external system the webhook belongs to: the
+         *     self-service endpoint (`WebhookViewSet`) scopes by it, so an admin-created
+         *     webhook is visible to that system under its own key. It must be one of
+         *     the request tenant's keys and cannot be moved after creation.
+         */
+        PatchedAdminWebhookConfig: {
+            /** Format: uuid */
+            readonly id?: string;
+            /** Format: uuid */
+            api_key?: string;
+            readonly api_key_name?: string;
+            /**
+             * Format: uri
+             * @description Webhook callback URL (must be HTTPS in production)
+             */
+            url?: string;
+            is_active?: boolean;
+            events?: components["schemas"]["EventTypeEnum"][];
+            max_retries?: number;
+            timeout_seconds?: number;
+            /** Format: date-time */
+            readonly create_time?: string;
+            /** Format: date-time */
+            readonly update_time?: string;
+            /** signing secret */
+            readonly _signing_secret?: string;
         };
         /**
          * @description Serializer for ApprovalNode.
@@ -12434,6 +13116,24 @@ export interface components {
             seal_glyphs?: string[];
         };
         /**
+         * @description `PATCH /tenants/{code}/settings/` 的请求体(ADMIN):只收这几个**已知**的字段,不收整份 `settings` JSON。
+         *
+         *     `soul_rebirth_cooldown_days` 是 `settings` 里的一个键(`apps/soul_accounts/rebirth.py::cooldown_days`
+         *     读它,负数按 0 算,所以这里下限 0,上限 365);写它时**合并**进现有 `settings`,别的键(如助手管理页写的
+         *     `assistant_enabled`)原样保留;给 `null` 就删掉这个键,回到默认 30 天。
+         */
+        PatchedTenantSettings: {
+            description?: string;
+            dispatch_enabled?: boolean;
+            /** @description 殿司展示名(简体中文) */
+            hall_name?: string;
+            /** @description 殿司展示名(English) */
+            hall_name_en?: string;
+            /** @description 殿司展示名(egy) */
+            hall_name_egy?: string;
+            soul_rebirth_cooldown_days?: number | null;
+        };
+        /**
          * @description The serializer behind `PATCH /auth/profile/` — what a user may change
          *     about themselves.
          *
@@ -12497,7 +13197,7 @@ export interface components {
         /**
          * @description `User.preferences`, as the API reads and writes it.
          *
-         *     Two keys. Language and theme are not here: both are browser-side
+         *     Four keys. Language and theme are not here: both are browser-side
          *     settings with no server home (the locale is a cookie the middleware reads,
          *     the theme a localStorage key), and moving them is a separate decision.
          */
@@ -12505,6 +13205,9 @@ export interface components {
             default_view?: (components["schemas"]["DefaultViewEnum"] | components["schemas"]["NullEnum"]) | null;
             /** @default false */
             onboarded: boolean;
+            /** @default false */
+            email_notifications: boolean;
+            email_locale?: (components["schemas"]["EvalCaseLocaleEnum"] | components["schemas"]["NullEnum"]) | null;
         };
         /**
          * @description Serializer for updating the profile bio. The avatar has its own upload
@@ -12860,6 +13563,34 @@ export interface components {
             /** Format: date-time */
             readonly created_at: string;
         };
+        /**
+         * @description 一条推送,按**内容**给:每个状态都在(被系统丢掉的、灵魂当时关掉的,内容照样可读)。
+         *     `data` 是推送带的导航目标(`{screen, …}`,见 `services.rule_for`),App 用 `landingOf` 解。
+         */
+        PushHistoryItem: {
+            /** Format: uuid */
+            readonly id: string;
+            readonly kind: string;
+            readonly title: string;
+            readonly body: string;
+            readonly status: components["schemas"]["PushHistoryItemStatusEnum"];
+            readonly data: unknown;
+            /** Format: date-time */
+            readonly created_at: string;
+        };
+        /**
+         * @description * `QUEUED` - 待发送
+         *     * `SENDING` - 发送中
+         *     * `SENT` - 已交给 Expo
+         *     * `DELIVERED` - 回执成功
+         *     * `FAILED` - 失败
+         *     * `DISABLED` - 推送未启用
+         *     * `EXPIRED` - 已过期
+         *     * `CANCELLED` - 已取消
+         *     * `NO_DEVICE` - 没有设备
+         * @enum {string}
+         */
+        PushHistoryItemStatusEnum: "QUEUED" | "SENDING" | "SENT" | "DELIVERED" | "FAILED" | "DISABLED" | "EXPIRED" | "CANCELLED" | "NO_DEVICE";
         /**
          * @description * `zh-Hans` - 简体中文
          *     * `en` - English
@@ -14319,6 +15050,30 @@ export interface components {
             inferno_article?: string;
             /** @description Life index this record belongs to; 0 is the first life. */
             readonly cycle: number;
+            /** Format: uuid */
+            statute?: string | null;
+            /** @description The cited article as it read when cited: statute_id, code, revision, effective_from, title/text per locale, source, hash, at. Taken by save(); never updated when the article changes. */
+            readonly statute_snapshot: unknown;
+            /**
+             * @description Which stage of the life the deed falls in; blank = unrecorded.
+             *
+             *     * `CHILDHOOD` - Childhood
+             *     * `YOUTH` - Youth
+             *     * `ADULTHOOD` - Adulthood
+             *     * `OLD_AGE` - Old age
+             */
+            life_stage?: components["schemas"]["LifeStageEnum"] | components["schemas"]["BlankEnum"];
+            /**
+             * @description Where this record came from; blank = unrecorded.
+             *
+             *     * `REGISTRY` - Registry
+             *     * `WITNESS` - Witness
+             *     * `SELF_ACCOUNT` - Self account
+             *     * `OTHER` - Other
+             */
+            evidence_source?: components["schemas"]["EvidenceSourceEnum"] | components["schemas"]["BlankEnum"];
+            /** @description Free text about the source, e.g. which witness or which register. */
+            evidence_note?: string;
         };
         /**
          * @description * `CHARITY` - Charity / Generosity
@@ -14568,6 +15323,12 @@ export interface components {
             settings?: unknown;
             readonly civilization: string;
             readonly seal_glyphs: string[];
+            /** @description 殿司展示名(简体中文) */
+            hall_name?: string;
+            /** @description 殿司展示名(English) */
+            hall_name_en?: string;
+            /** @description 殿司展示名(egy) */
+            hall_name_egy?: string;
             /** Format: date-time */
             readonly created_at: string;
         };
@@ -14575,6 +15336,7 @@ export interface components {
             tenant_id: number;
             tenant_code: string;
             tenant_name: string;
+            dispatch_enabled: boolean;
             total_souls: number;
             state_breakdown: {
                 [key: string]: number;
@@ -14996,7 +15758,7 @@ export interface components {
         /**
          * @description `User.preferences`, as the API reads and writes it.
          *
-         *     Two keys. Language and theme are not here: both are browser-side
+         *     Four keys. Language and theme are not here: both are browser-side
          *     settings with no server home (the locale is a cookie the middleware reads,
          *     the theme a localStorage key), and moving them is a separate decision.
          */
@@ -15004,6 +15766,9 @@ export interface components {
             default_view?: (components["schemas"]["DefaultViewEnum"] | components["schemas"]["NullEnum"]) | null;
             /** @default false */
             onboarded: boolean;
+            /** @default false */
+            email_notifications: boolean;
+            email_locale?: (components["schemas"]["EvalCaseLocaleEnum"] | components["schemas"]["NullEnum"]) | null;
         };
         UserProfile: {
             /** Format: uuid */
@@ -16650,6 +17415,11 @@ export interface operations {
                 page?: number;
                 /** @description A search term. */
                 search?: string;
+                /**
+                 * @description * `SUCCESS` - 成功
+                 *     * `FAILED` - 失败
+                 */
+                status?: "FAILED" | "SUCCESS";
             };
             header?: never;
             path?: never;
@@ -17585,6 +18355,179 @@ export interface operations {
             };
         };
     };
+    v1_death_sync_admin_webhooks_list: {
+        parameters: {
+            query?: {
+                api_key?: string;
+                is_active?: boolean;
+                /** @description Which field to use when ordering the results. */
+                ordering?: string;
+                /** @description A page number within the paginated result set. */
+                page?: number;
+                /** @description A search term. */
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedAdminWebhookConfigList"];
+                };
+            };
+        };
+    };
+    v1_death_sync_admin_webhooks_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminWebhookConfig"];
+                "application/x-www-form-urlencoded": components["schemas"]["AdminWebhookConfig"];
+                "multipart/form-data": components["schemas"]["AdminWebhookConfig"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminWebhookConfig"];
+                };
+            };
+        };
+    };
+    v1_death_sync_admin_webhooks_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this Webhook Config. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminWebhookConfig"];
+                };
+            };
+        };
+    };
+    v1_death_sync_admin_webhooks_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this Webhook Config. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminWebhookConfig"];
+                "application/x-www-form-urlencoded": components["schemas"]["AdminWebhookConfig"];
+                "multipart/form-data": components["schemas"]["AdminWebhookConfig"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminWebhookConfig"];
+                };
+            };
+        };
+    };
+    v1_death_sync_admin_webhooks_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this Webhook Config. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedAdminWebhookConfig"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedAdminWebhookConfig"];
+                "multipart/form-data": components["schemas"]["PatchedAdminWebhookConfig"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminWebhookConfig"];
+                };
+            };
+        };
+    };
+    v1_death_sync_admin_webhooks_event_types_list: {
+        parameters: {
+            query?: {
+                api_key?: string;
+                is_active?: boolean;
+                /** @description Which field to use when ordering the results. */
+                ordering?: string;
+                /** @description A page number within the paginated result set. */
+                page?: number;
+                /** @description A search term. */
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example 123 */
+                        count: number;
+                        /**
+                         * Format: uri
+                         * @example http://api.example.org/accounts/?page=4
+                         */
+                        next?: string | null;
+                        /**
+                         * Format: uri
+                         * @example http://api.example.org/accounts/?page=2
+                         */
+                        previous?: string | null;
+                        results: string[];
+                    };
+                };
+            };
+        };
+    };
     v1_death_sync_api_keys_list: {
         parameters: {
             query?: {
@@ -17899,6 +18842,63 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DeathRegistrationSummary"];
+                };
+            };
+        };
+    };
+    v1_death_sync_webhook_deliveries_list: {
+        parameters: {
+            query?: {
+                event_type?: string;
+                /** @description Which field to use when ordering the results. */
+                ordering?: string;
+                /** @description A page number within the paginated result set. */
+                page?: number;
+                /** @description A search term. */
+                search?: string;
+                /**
+                 * @description * `PENDING` - Pending
+                 *     * `SUCCESS` - Delivered
+                 *     * `FAILED` - Failed
+                 *     * `ABANDONED` - Abandoned after max retries
+                 */
+                status?: "ABANDONED" | "FAILED" | "PENDING" | "SUCCESS";
+                webhook?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedEventWebhookDeliveryList"];
+                };
+            };
+        };
+    };
+    v1_death_sync_webhook_deliveries_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this Event Webhook Delivery. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EventWebhookDelivery"];
                 };
             };
         };
@@ -19094,6 +20094,7 @@ export interface operations {
                  *     * `REBIRTH_APPLICATION_SUBMITTED` - Rebirth Application Submitted
                  *     * `REBIRTH_STATUS_CHANGED` - Rebirth Status Changed
                  *     * `REBIRTH_CROSS_CIV_DECIDED` - Rebirth Cross Civ Decided
+                 *     * `COOLDOWN_SHORTENING_DECIDED` - Cooldown Shortening Decided
                  *     * `SENTENCE_PLAN_CREATED` - Sentence Plan Created
                  *     * `SENTENCE_NODE_ACTIVATED` - Sentence Node Activated
                  *     * `SENTENCE_NODE_WAITING` - Sentence Node Waiting
@@ -19106,7 +20107,7 @@ export interface operations {
                  *     * `SENTENCE_PLAN_CANCELLED` - Sentence Plan Cancelled
                  *     * `SCHEDULER_RUN_FAILED` - Scheduler Run Failed
                  */
-                event_type?: "COMMENT_CREATED" | "COMMENT_DELETED" | "DEATH_SYNC_PROCESSED" | "DEATH_SYNC_RECEIVED" | "DISPATCH_APPROVED" | "DISPATCH_CREATED" | "DISPATCH_EXECUTED" | "DISPATCH_REJECTED" | "DISPATCH_STATUS_CHANGED" | "DISPOSITION_CREATED" | "DISPOSITION_EXPIRED" | "JUDGMENT_CONCLUDED" | "JUDGMENT_INITIATED" | "KARMA_RECALCULATED" | "NOTIFICATION_CREATED" | "POST_CREATED" | "POST_DELETED" | "POST_UPDATED" | "REACTION_ADDED" | "REACTION_REMOVED" | "REBIRTH_APPLICATION_SUBMITTED" | "REBIRTH_CROSS_CIV_DECIDED" | "REBIRTH_STATUS_CHANGED" | "RECORD_ADDED" | "REINCARNATION_TRIGGERED" | "SCHEDULER_RUN_FAILED" | "SENTENCE_NODE_ACTIVATED" | "SENTENCE_NODE_COMPLETED" | "SENTENCE_NODE_REFUSED" | "SENTENCE_NODE_WAITING" | "SENTENCE_PLAN_AMENDED" | "SENTENCE_PLAN_CANCELLED" | "SENTENCE_PLAN_COMPLETED" | "SENTENCE_PLAN_CREATED" | "SENTENCE_REQUEST_CREATED" | "SENTENCE_REQUEST_DECIDED" | "SETTLEMENT_CORRECTED" | "SOUL_ACCOUNT_CREATED" | "SOUL_ACCOUNT_RETIRED" | "SOUL_CREATED" | "STATE_CHANGED" | "USER_FOLLOWED" | "USER_UNFOLLOWED" | "WORKFLOW_APPROVED" | "WORKFLOW_ASSIGNED" | "WORKFLOW_CREATED" | "WORKFLOW_REJECTED";
+                event_type?: "COMMENT_CREATED" | "COMMENT_DELETED" | "COOLDOWN_SHORTENING_DECIDED" | "DEATH_SYNC_PROCESSED" | "DEATH_SYNC_RECEIVED" | "DISPATCH_APPROVED" | "DISPATCH_CREATED" | "DISPATCH_EXECUTED" | "DISPATCH_REJECTED" | "DISPATCH_STATUS_CHANGED" | "DISPOSITION_CREATED" | "DISPOSITION_EXPIRED" | "JUDGMENT_CONCLUDED" | "JUDGMENT_INITIATED" | "KARMA_RECALCULATED" | "NOTIFICATION_CREATED" | "POST_CREATED" | "POST_DELETED" | "POST_UPDATED" | "REACTION_ADDED" | "REACTION_REMOVED" | "REBIRTH_APPLICATION_SUBMITTED" | "REBIRTH_CROSS_CIV_DECIDED" | "REBIRTH_STATUS_CHANGED" | "RECORD_ADDED" | "REINCARNATION_TRIGGERED" | "SCHEDULER_RUN_FAILED" | "SENTENCE_NODE_ACTIVATED" | "SENTENCE_NODE_COMPLETED" | "SENTENCE_NODE_REFUSED" | "SENTENCE_NODE_WAITING" | "SENTENCE_PLAN_AMENDED" | "SENTENCE_PLAN_CANCELLED" | "SENTENCE_PLAN_COMPLETED" | "SENTENCE_PLAN_CREATED" | "SENTENCE_REQUEST_CREATED" | "SENTENCE_REQUEST_DECIDED" | "SETTLEMENT_CORRECTED" | "SOUL_ACCOUNT_CREATED" | "SOUL_ACCOUNT_RETIRED" | "SOUL_CREATED" | "STATE_CHANGED" | "USER_FOLLOWED" | "USER_UNFOLLOWED" | "WORKFLOW_APPROVED" | "WORKFLOW_ASSIGNED" | "WORKFLOW_CREATED" | "WORKFLOW_REJECTED";
                 /** @description Which field to use when ordering the results. */
                 ordering?: string;
                 /** @description A page number within the paginated result set. */
@@ -20854,6 +21855,33 @@ export interface operations {
             };
         };
     };
+    v1_me_notifications_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedPushHistory"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulError"];
+                };
+            };
+        };
+    };
     v1_me_password_create: {
         parameters: {
             query?: never;
@@ -21130,6 +22158,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SoulError"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulError"];
+                };
+            };
+        };
+    };
+    v1_me_rebirth_applications_cooldown_shortening_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CooldownShorteningCreate"];
+                "application/x-www-form-urlencoded": components["schemas"]["CooldownShorteningCreate"];
+                "multipart/form-data": components["schemas"]["CooldownShorteningCreate"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeCooldownShortening"];
                 };
             };
             409: {
@@ -22811,6 +23872,25 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["UserNotification"];
+                };
+            };
+        };
+    };
+    v1_notifications_email_status_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationEmailStatus"];
                 };
             };
         };
@@ -26533,6 +27613,168 @@ export interface operations {
             };
         };
     };
+    v1_soul_accounts_cooldown_shortenings_list: {
+        parameters: {
+            query?: {
+                /** @description Which field to use when ordering the results. */
+                ordering?: string;
+                /** @description A page number within the paginated result set. */
+                page?: number;
+                /** @description A search term. */
+                search?: string;
+                soul?: string;
+                /**
+                 * @description * `PENDING` - 待决定
+                 *     * `APPROVED` - 已批准
+                 *     * `REJECTED` - 已驳回
+                 */
+                status?: "APPROVED" | "PENDING" | "REJECTED";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedOfficerCooldownShorteningList"];
+                };
+            };
+        };
+    };
+    v1_soul_accounts_cooldown_shortenings_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this cooldown shortening request. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OfficerCooldownShortening"];
+                };
+            };
+        };
+    };
+    v1_soul_accounts_cooldown_shortenings_approve_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this cooldown shortening request. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CooldownShorteningApprove"];
+                "application/x-www-form-urlencoded": components["schemas"]["CooldownShorteningApprove"];
+                "multipart/form-data": components["schemas"]["CooldownShorteningApprove"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OfficerCooldownShortening"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulError"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulError"];
+                };
+            };
+        };
+    };
+    v1_soul_accounts_cooldown_shortenings_reject_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this cooldown shortening request. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CooldownShorteningReject"];
+                "application/x-www-form-urlencoded": components["schemas"]["CooldownShorteningReject"];
+                "multipart/form-data": components["schemas"]["CooldownShorteningReject"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OfficerCooldownShortening"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulError"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulError"];
+                };
+            };
+        };
+    };
+    v1_soul_accounts_cooldown_shortenings_counts_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CooldownShorteningCounts"];
+                };
+            };
+        };
+    };
     v1_soul_accounts_credentials_list: {
         parameters: {
             query?: {
@@ -27561,6 +28803,33 @@ export interface operations {
                 "application/json": components["schemas"]["PatchedTenantSealGlyphs"];
                 "application/x-www-form-urlencoded": components["schemas"]["PatchedTenantSealGlyphs"];
                 "multipart/form-data": components["schemas"]["PatchedTenantSealGlyphs"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Tenant"];
+                };
+            };
+        };
+    };
+    v1_tenants_settings_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedTenantSettings"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedTenantSettings"];
+                "multipart/form-data": components["schemas"]["PatchedTenantSettings"];
             };
         };
         responses: {

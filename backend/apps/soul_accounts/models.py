@@ -181,3 +181,51 @@ class RebirthApplication(models.Model):
                 name="rebirth_application_one_open_per_soul",
             ),
         ]
+
+
+class CooldownShorteningStatus(models.TextChoices):
+    PENDING = "PENDING", "待决定"
+    APPROVED = "APPROVED", "已批准"
+    REJECTED = "REJECTED", "已驳回"
+
+
+class CooldownShorteningRequest(models.Model):
+    """灵魂在转生冷却期内申请缩短本次冷却;官员批准(给出剩余天数)或驳回(附理由)。
+
+    **每份被驳回的申请只能请求一次**(`application` 唯一),与「每份申请申诉一次」同形:
+    驳回之后不能为同一段冷却再申请,下一次终局驳回开始的冷却才有新的一次机会。
+    **同时只有一份待决**(部分唯一约束)由数据库兜底,服务层另在账号行锁下给出可读的 409。
+
+    批准不改殿的设置(`Tenant.settings["soul_rebirth_cooldown_days"]`):`approved_days` 是
+    **从决定那一刻起**还要等的天数,`rebirth._cooldown_end` 取「殿规截止」与「决定时刻 + 批准天数」
+    中较早者 —— 殿规后来调短也照样生效。不存 tenant 列,租户经 `soul__home_tenant`(见文件头)。
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    soul = models.ForeignKey("souls.Soul", on_delete=models.CASCADE, related_name="cooldown_shortenings")
+    account = models.ForeignKey(SoulAccount, on_delete=models.PROTECT, related_name="cooldown_shortenings")
+    application = models.OneToOneField(
+        RebirthApplication, on_delete=models.PROTECT, related_name="cooldown_shortening",
+        help_text="其终局驳回引起这段冷却的那份申请。",
+    )
+    cycle = models.PositiveIntegerField()
+    reason = models.TextField(max_length=2000)
+    status = models.CharField(max_length=10, choices=CooldownShorteningStatus.choices,
+                              default=CooldownShorteningStatus.PENDING)
+    approved_days = models.PositiveIntegerField(null=True, blank=True, help_text="批准后,自决定时刻起还要等的天数。")
+    decision_note = models.TextField(blank=True, default="", max_length=2000)
+    decided_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    decided_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["soul"], condition=Q(status="PENDING"),
+                name="cooldown_shortening_one_pending_per_soul",
+            ),
+        ]

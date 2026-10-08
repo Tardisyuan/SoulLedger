@@ -3,7 +3,7 @@ import unicodedata
 from rest_framework import serializers
 
 from apps.souls.models import Civilization
-from apps.tenants.models import Tenant
+from apps.tenants.models import REBIRTH_COOLDOWN_SETTING, Tenant
 
 
 def _one_char(test):
@@ -57,9 +57,38 @@ class TenantSerializer(serializers.ModelSerializer):
             "settings",
             "civilization",
             "seal_glyphs",
+            "hall_name",
+            "hall_name_en",
+            "hall_name_egy",
             "created_at",
         ]
         read_only_fields = ["id", "code", "created_at"]
+
+
+class TenantSettingsSerializer(serializers.ModelSerializer):
+    """`PATCH /tenants/{code}/settings/` 的请求体(ADMIN):只收这几个**已知**的字段,不收整份 `settings` JSON。
+
+    `soul_rebirth_cooldown_days` 是 `settings` 里的一个键(`apps/soul_accounts/rebirth.py::cooldown_days`
+    读它,负数按 0 算,所以这里下限 0,上限 365);写它时**合并**进现有 `settings`,别的键(如助手管理页写的
+    `assistant_enabled`)原样保留;给 `null` 就删掉这个键,回到默认 30 天。
+    """
+
+    # 上限 365(2026-10-08 用户决定):一年之外的冷却没有业务含义,只会是手误。
+    soul_rebirth_cooldown_days = serializers.IntegerField(min_value=0, max_value=365, required=False, allow_null=True)
+
+    class Meta:
+        model = Tenant
+        fields = ["description", "dispatch_enabled", "hall_name", "hall_name_en", "hall_name_egy",
+                  "soul_rebirth_cooldown_days"]
+
+    def update(self, instance, validated_data):
+        if "soul_rebirth_cooldown_days" in validated_data:
+            days = validated_data.pop("soul_rebirth_cooldown_days")
+            merged = {k: v for k, v in (instance.settings or {}).items() if k != REBIRTH_COOLDOWN_SETTING}
+            if days is not None:
+                merged[REBIRTH_COOLDOWN_SETTING] = days
+            instance.settings = merged
+        return super().update(instance, validated_data)
 
 
 class TenantSealGlyphsSerializer(serializers.ModelSerializer):

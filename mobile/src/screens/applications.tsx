@@ -18,7 +18,7 @@ import { useToast } from "../feedback";
 import { useI18n } from "../i18n";
 import { APPLICATION_BADGES, buildFlow, formatStamp, lexiconKey, wasAppealed, type FlowStep } from "../rules";
 import { SessionContext } from "../session";
-import { space } from "../theme";
+import { radius, space } from "../theme";
 import {
   Block,
   Button,
@@ -46,6 +46,7 @@ import {
   useLayout,
   useTheme,
 } from "../ui";
+import { CooldownShorteningBlock } from "./cooldown";
 import { useResidence } from "./life";
 import { SentenceBlocked, type SentenceLanding } from "./sentence";
 
@@ -57,7 +58,7 @@ export type AppStackParams = {
    * `screen` picks the tab (a push landing on the life tab). The circle's
    * `pendingId`: the post just sent went to review — the feed says so over it.
    */
-  Tabs: { screen: "Life" | "Applications" | "Letters" | "Circle"; params?: { pendingId?: string } & LifeParams } | undefined;
+  Tabs: { screen: "Life" | "Applications" | "Letters" | "Circle"; params?: { pendingId?: string; landed?: boolean } & LifeParams } | undefined;
   /** 受刑 1c. `landing`: opened from a tapped sentence push — the stations it names are marked 「新」 once. */
   Sentence: { landing?: SentenceLanding } | undefined;
   NewApplication: undefined;
@@ -67,6 +68,8 @@ export type AppStackParams = {
   /** 关于 / 致谢(补足 C16),从设置页进。 */
   About: undefined;
   NotificationPrimer: undefined;
+  /** 通知记录:推送过的都在,从设置页进。 */
+  NotificationHistory: undefined;
   /** `landed`: opened from a tapped notification — the newest letter from the other side is highlighted once. */
   Conversation: { id: string; landed?: boolean };
   FindSoul: undefined;
@@ -108,33 +111,64 @@ function TerminalEmpty() {
  * a refusal is always explained under the disabled button — the reason code,
  * and the cooling-off end date when there is one.
  */
-export function EligibilityCard({ list, onApply }: { list: MeRebirthApplicationList; onApply: () => void }) {
+export function EligibilityCard({
+  list,
+  onApply,
+  onChanged,
+  landed,
+}: {
+  list: MeRebirthApplicationList;
+  onApply: () => void;
+  onChanged?: () => void;
+  /** Opened from a tapped push (cooldown decision): the shortening block is washed once. */
+  landed?: boolean;
+}) {
+  const theme = useTheme();
   const { t } = useI18n();
   const reason = list.reason ? soulCodeMessage(list.reason) : null;
   const until = formatStamp(list.cooldown_until);
   // 受刑 1d: an unfinished sentence gets its own block (how many stations, where, until when) instead of the one-line reason.
   const sentence = !list.can_apply && list.reason === "sentence_in_progress";
+  const cooling = !list.can_apply && list.reason === "cooldown";
   return (
-    <Block testID="eligibility">
-      <Button
-        testID="apply"
-        title={t("soul_app.applications.new")}
-        onPress={onApply}
-        disabled={!list.can_apply}
-        reasonTestID="eligibility-reason"
-        reason={sentence ? undefined : reason ? t(reason.key, reason.params) : t("soul_app.applications.cannot_apply")}
-      />
-      {sentence ? <SentenceBlocked /> : null}
-      {!list.can_apply && until ? (
-        <Interp
-          testID="cooldown-until"
-          variant="caption"
-          tone="muted"
-          style={styles.cooldown}
-          text={t("soul_app.applications.cooldown_until")}
-          parts={{ date: <Txt variant="value" tone="muted">{until}</Txt> }}
+    <Block testID="eligibility" last>
+      {/* A11: the eligibility card and the shortening block share one panel: s1, a hairline, radius 8, 16 inside. */}
+      <View style={[styles.panel, { backgroundColor: theme.s1, borderColor: theme.hair }]}>
+        <Button
+          testID="apply"
+          title={t("soul_app.applications.new")}
+          onPress={onApply}
+          disabled={!list.can_apply}
+          reasonTestID="eligibility-reason"
+          reason={sentence ? undefined : reason ? t(reason.key, reason.params) : t("soul_app.applications.cannot_apply")}
         />
-      ) : null}
+        {sentence ? <SentenceBlocked /> : null}
+        {!list.can_apply && until ? (
+          <View style={styles.untilRow}>
+            <Interp
+              testID="cooldown-until"
+              variant="bodyLg"
+              text={t("soul_app.applications.cooldown_until")}
+              parts={{ date: <Txt variant="value" style={styles.untilDate}>{until}</Txt> }}
+            />
+            {/* An approved shortening moved the date: say so beside it; the original date lives in the officer's detail only. */}
+            {cooling && list.cooldown_shortening?.status === "APPROVED" ? (
+              <View testID="cooldown-brought-forward" style={[styles.forwardTag, { borderColor: theme.ink }]}>
+                <Txt variant="label" style={styles.forwardText}>
+                  ↑ {t("soul_app.cooldown.brought_forward")}
+                </Txt>
+              </View>
+            ) : null}
+          </View>
+        ) : null}
+        {/* 缩短冷却:只在 cooldown 这一种拒绝下出现(服务端 can_shorten_cooldown / cooldown_shortening)。 */}
+        {cooling ? (
+          <>
+            <View style={[styles.divider, { backgroundColor: theme.hair }]} />
+            <CooldownShorteningBlock list={list} onChanged={onChanged ?? (() => undefined)} landed={landed} />
+          </>
+        ) : null}
+      </View>
     </Block>
   );
 }
@@ -195,7 +229,7 @@ function ResidenceNote() {
   );
 }
 
-export function ApplicationsScreen() {
+export function ApplicationsScreen({ landed }: { landed?: boolean } = {}) {
   const { t } = useI18n();
   const navigation = useNavigation<NavigationProp<AppStackParams>>();
   const list = useRemote(soulApi.applications);
@@ -216,7 +250,7 @@ export function ApplicationsScreen() {
       ) : (
         <FadeIn>
           <ResidenceNote />
-          <EligibilityCard list={list.data} onApply={() => navigation.navigate("NewApplication")} />
+          <EligibilityCard list={list.data} onApply={() => navigation.navigate("NewApplication")} onChanged={() => void list.reload()} landed={landed} />
           {list.data.results.length === 0 ? (
             list.data.reason === TERMINAL_REASON ? (
               <TerminalEmpty />
@@ -637,15 +671,20 @@ export function ApplicationDetailScreen({ id, landed }: { id: string; landed?: b
   );
 }
 
-const REASON_INDENT = 14 + space[2];
-
 const styles = StyleSheet.create({
   fill: { flex: 1 },
   pressed: { opacity: 0.8 },
   gap4: { marginTop: 4 },
   gap10: { marginTop: 12 },
-  /** Under DisabledReason's words: its icon (14) and gap (8) in from the edge. */
-  cooldown: { marginTop: 8, marginLeft: REASON_INDENT },
+  /** A11 panel: radius 8 (`radius.dialog`), 16 inside, 12 between the eligibility items. */
+  panel: { borderWidth: 1, borderRadius: radius.dialog, padding: space[4], gap: space[3] },
+  untilRow: { flexDirection: "row", alignItems: "center", flexWrap: "wrap", columnGap: space[2] },
+  untilDate: { fontSize: 15, lineHeight: 24 },
+  /** 12 above and below from the panel's gap, plus 4 each: 16 either side of the hairline. */
+  divider: { height: 1, marginVertical: space[1] },
+  /** 24 high, 1px ink outline, 12 / 16 600 (the `label` variant is 12 / 18: the nearest on the type scale). */
+  forwardTag: { height: 24, borderWidth: 1, borderRadius: radius.control, paddingHorizontal: space[2], justifyContent: "center" },
+  forwardText: { letterSpacing: 0, fontWeight: "600" },
   appRow: { flexDirection: "row", alignItems: "center", gap: 16, paddingHorizontal: GUTTER, paddingVertical: 16, borderBottomWidth: 1 },
   stack: { gap: 24 },
   note: { borderLeftWidth: 2, paddingLeft: 12 },

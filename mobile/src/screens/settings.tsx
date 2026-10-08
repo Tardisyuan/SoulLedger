@@ -292,6 +292,24 @@ function Notifications({ settings, onChange }: { settings: NotificationSettings;
       <Txt variant="caption" tone="subtle" style={[styles.foot, { paddingHorizontal: gutter }]}>
         {t("soul_app.settings.lock_screen")}
       </Txt>
+      <Pressable
+        testID="open-history"
+        accessibilityRole="button"
+        onPress={() => navigation.navigate("NotificationHistory")}
+        style={({ pressed }) => [
+          styles.row,
+          { paddingHorizontal: gutter, borderBottomColor: theme.hair, borderLeftColor: "transparent" },
+          pressed && styles.pressed,
+        ]}
+      >
+        <View style={styles.fill}>
+          <Txt variant="bodyLg">{t("soul_app.settings.history")}</Txt>
+          <Txt variant="caption" tone="subtle">
+            {t("soul_app.settings.history_note")}
+          </Txt>
+        </View>
+        <Icon name="chevron" size={14} color={theme.inkSubtle} />
+      </Pressable>
     </>
   );
 }

@@ -188,6 +188,18 @@
       "MURDER": "Murder",
       "OTHER": "Other"
     },
+    "life_stages": {
+      "CHILDHOOD": "Childhood",
+      "YOUTH": "Youth",
+      "ADULTHOOD": "Adulthood",
+      "OLD_AGE": "Old age"
+    },
+    "evidence_sources": {
+      "REGISTRY": "Registry",
+      "WITNESS": "Witness",
+      "SELF_ACCOUNT": "Self-account",
+      "OTHER": "Other"
+    },
     "form": {
       "name_label": "Name *",
       "name_placeholder": "Soul name",
@@ -360,6 +372,16 @@
         "ledger_tabs": "Records",
         "tab_judgments": "All judgments",
         "tab_records": "All merit and demerit records"
+      },
+      "correct_settlement": {
+        "action": "Correct settlement",
+        "title": "Correct the settlement",
+        "message": "The soul goes back to Disposed; its judgments and dispositions stay, and the reason is written to the audit log on its own.",
+        "reason": "Reason",
+        "reason_required": "A reason is required",
+        "confirm": "Correct",
+        "success": "Settlement corrected; the soul is back to Disposed",
+        "failed": "Could not correct the settlement"
       }
     },
     "date_problem_filter": "Problems only",
@@ -1580,7 +1602,30 @@
     "needs_audit_read": "Requires the audit.read permission",
     "repeat_expand": "expand",
     "repeat_collapse": "collapse",
-    "repeat_rule": "Consecutive entries by the same person, with the same action on the same kind of resource, at most {{minutes}} minutes apart, are merged into one row"
+    "repeat_rule": "Consecutive entries by the same person, with the same action on the same kind of resource, at most {{minutes}} minutes apart, are merged into one row",
+    "tabs": {
+      "audit": "Audit log",
+      "logins": "Login log"
+    },
+    "login_log": {
+      "title": "Login log",
+      "username": "Username",
+      "status_label": "Result",
+      "status": {
+        "SUCCESS": "Success",
+        "FAILED": "Failed"
+      },
+      "failure_reason": "Reason",
+      "user_agent": "Client",
+      "search_placeholder": "Search username...",
+      "no_logs": "No login logs"
+    },
+    "resource_tenant": "Hall",
+    "descriptions": {
+      "hall_settings": "Edited the settings of hall {{code}}",
+      "hall_seal_glyphs": "Edited the seal glyphs of hall {{code}}",
+      "hall_assistant_switch": "Changed the Ask switch of hall {{code}}"
+    }
   },
   "profile": {
     "title": "Personal Center",
@@ -1602,7 +1647,11 @@
     "profile_updated": "Profile updated",
     "profile_update_failed": "Failed to update profile",
     "avatar": "Avatar",
-    "load_failed": "Could not load the latest profile — the values below may be out of date"
+    "load_failed": "Could not load the latest profile — the values below may be out of date",
+    "email_notifications": "Email notifications",
+    "email_notifications_note": "When on, what needs your action (pending approvals, approval timeouts, reassignment requests, password help) is also sent to your email.",
+    "email_notifications_no_address": "This account has no email address, so nothing is sent even when on.",
+    "email_last_failure": "Last send failed: {{error}} ({{at}})"
   },
   "notifications": {
     "title": "Notifications",
@@ -1940,6 +1989,7 @@
     "soul_from_detail": "Carried from the detail page; cannot be changed",
     "soul_from_detail_error": "Could not load the soul carried from the detail page. Choose it again here.",
     "source_label": "Source",
+    "target_tenant_closed": "This hall is not receiving transfers",
     "discard": "Discard…",
     "discard_title": "Discard this dispatch draft?",
     "discard_message": "The draft moves to the recycle bin and can be recovered from Settings › Recycle bin, with the reason you wrote.",
@@ -2229,7 +2279,102 @@
       "PARTIAL": "Partial"
     },
     "source_system": "Source system",
-    "status_label": "Status"
+    "status_label": "Status",
+    "tabs": {
+      "registrations": "Registrations",
+      "api_keys": "API keys",
+      "webhooks": "Webhooks"
+    },
+    "api_keys": {
+      "title": "API keys",
+      "intro": "External systems call the death registration API with a key. The key is shown once, at creation; afterwards only its prefix is visible.",
+      "create": "New key",
+      "name": "Name",
+      "name_placeholder": "e.g. “Municipal hospital death registry”",
+      "system_type_label": "System type",
+      "system_type": {
+        "GOVERNMENT": "Civil registry",
+        "HOSPITAL": "Hospital death certificates",
+        "POLICE": "Police household registration",
+        "MESSAGE_BUS": "Message bus",
+        "CUSTOM": "Custom"
+      },
+      "key_prefix": "Prefix",
+      "permissions": "Permissions",
+      "can_register_death": "Register deaths",
+      "can_query_status": "Query status",
+      "can_manage_webhooks": "Manage webhooks",
+      "last_used": "Last used",
+      "never_used": "Never",
+      "usage_count": "Calls",
+      "status_label": "Status",
+      "status": {
+        "ACTIVE": "Active",
+        "REVOKED": "Revoked"
+      },
+      "revoke": "Revoke",
+      "revoke_title": "Revoke key “{{name}}”?",
+      "revoke_message": "The external system holding this key is refused at once. This cannot be undone; create a new key if one is needed.",
+      "revoked_ok": "Key revoked",
+      "revoke_failed": "Could not revoke the key",
+      "create_failed": "Could not create the key",
+      "no_keys": "No API keys yet",
+      "shown_title": "New key (shown once)",
+      "shown_warning": "This is the only time the key is shown. After closing, the server keeps only a hash and cannot show it again — copy it now and hand it to the external system.",
+      "key_label": "Key",
+      "copy": "Copy key",
+      "copied": "Key copied",
+      "copy_failed": "Copy failed",
+      "close": "I have saved it, close",
+      "webhooks_note": "Webhooks are managed on the Webhooks tab; the external system can also configure its own with its key."
+    },
+    "webhooks": {
+      "title": "Webhooks",
+      "intro": "When an event happens, the system POSTs a signed HTTP request to each address below. The signing secret is shown once, at creation.",
+      "create": "New webhook",
+      "edit_title": "Edit webhook",
+      "url": "URL",
+      "api_key": "API key",
+      "events": "Events",
+      "events_hint": "Nothing checked means every event. The name is the value of the X-SoulLedger-Event header.",
+      "all_events": "All events",
+      "status_label": "Status",
+      "status": {
+        "ACTIVE": "Active",
+        "DISABLED": "Disabled"
+      },
+      "disable": "Disable",
+      "enable": "Enable",
+      "disable_title": "Disable webhook “{{url}}”?",
+      "disable_message": "No more events are delivered to this address. The row and its delivery history stay; it can be enabled again at any time.",
+      "disabled_ok": "Webhook disabled",
+      "disable_failed": "Could not disable the webhook",
+      "saved_ok": "Webhook saved",
+      "save_failed": "Could not save the webhook",
+      "no_webhooks": "No webhooks yet",
+      "no_keys_hint": "A webhook belongs to an API key. Create one on the API keys tab first.",
+      "shown_title": "Signing secret (shown once)",
+      "shown_warning": "This is the only time the signing secret is shown. After closing it cannot be viewed again — copy it now and hand it to the receiving system to verify X-SoulLedger-Signature.",
+      "secret_label": "Signing secret",
+      "copy": "Copy secret",
+      "deliveries": "Deliveries",
+      "deliveries_for": "Deliveries for {{url}}",
+      "all_deliveries": "Show all",
+      "no_deliveries": "No deliveries yet",
+      "delivery": {
+        "event": "Event",
+        "attempt": "Attempts",
+        "response": "Response",
+        "error": "Last error",
+        "time": "Time",
+        "status": {
+          "PENDING": "Pending",
+          "SUCCESS": "Delivered",
+          "FAILED": "Failed",
+          "ABANDONED": "Abandoned"
+        }
+      }
+    }
   },
   "soul_accounts": {
     "refresh": "Refresh",
@@ -2403,6 +2548,53 @@
       "empty_filtered": "No applications with this status",
       "cooldown_until": "Cooling down until {{time}}; the soul cannot apply again before then",
       "step_appeal": "(appeal)"
+    },
+    "cooldown": {
+      "tabs": {
+        "applications": "Rebirth applications",
+        "shortenings": "Cooldown shortening"
+      },
+      "title": "Cooldown shortening requests",
+      "subtitle": "Souls in cooldown asking to end it earlier: approve with the days left, reject with a note",
+      "empty": "No cooldown shortening requests yet",
+      "empty_filtered": "No requests with this status",
+      "detail_title": "Cooldown shortening · {{name}}",
+      "fields": {
+        "reason": "Reason",
+        "remaining": "Cooldown left",
+        "approved_days": "Days left after approval",
+        "note": "Note for the soul",
+        "decided_by": "Decided by",
+        "created_at": "Filed",
+        "cooldown_until": "Cooldown ends"
+      },
+      "remaining_days": "{{n}} days",
+      "over": "Cooldown over",
+      "approve": "Approve",
+      "reject": "Reject",
+      "days_label": "Days still to wait from today",
+      "days_hint": "Must be less than the {{n}} days left; 0 lets the soul apply again now",
+      "note_label": "Note for the soul",
+      "note_hint": "Required on rejection; the soul will read it",
+      "decided": "Saved",
+      "failed": "Could not save",
+      "already_decided": "Already decided",
+      "cooldown_over": "The cooldown is over; nothing to decide",
+      "invalid_days": "Days must be between 0 and the days left",
+      "note_required": "A rejection needs a note; the soul will read it",
+      "remaining_progress": "{{past}} of {{total}} days passed",
+      "approve_with_days": "Approve · {{days}} days left",
+      "scope_note": "Approval only shortens this cooling-off period; the hall's setting is unchanged",
+      "sort_note": "Pending sorted by days left; ended cooling-off last",
+      "source": "Cooling-off from the final rejection of {{id}}",
+      "decide_failed": "Could not decide: {{reason}}",
+      "original": "was {{date}}",
+      "day_unit": "days"
+    },
+    "cooldown_status": {
+      "PENDING": "Pending",
+      "APPROVED": "Approved",
+      "REJECTED": "Rejected"
     }
   },
   "disposition": {
@@ -2540,6 +2732,21 @@
       "preview": "Preview",
       "saved": "Seal glyphs saved",
       "save_failed": "Could not save the seal glyphs"
+    },
+    "settings": {
+      "edit": "Edit settings",
+      "title": "{{name}} · settings",
+      "hall_name": "Hall name (Chinese)",
+      "hall_name_hint": "What souls and the officer inbox call this hall; empty falls back to the tenant name",
+      "hall_name_en": "Hall name (English)",
+      "hall_name_egy": "Hall name (egy)",
+      "description": "Description",
+      "cooldown_days": "Rebirth application cooldown (days)",
+      "cooldown_hint": "Days after the last final rejection before a soul may apply again; 0 to 365, empty uses the default of 30",
+      "cooldown_invalid": "Enter a whole number from 0 to 365",
+      "dispatch_enabled": "Can receive transfers (residence)",
+      "saved": "Settings saved",
+      "save_failed": "Could not save the settings"
     }
   },
   "table": {
@@ -2660,7 +2867,9 @@
       "social_cleanup_orphan_post_media": "Delete unposted circle images",
       "chat_reconcile_inbox": "Reconcile the hall inbox with Synapse",
       "soul_assist_purge_history": "Purge assistant history",
-      "ledger_snapshot_balance_for_tenant": "Snapshot monthly balances"
+      "ledger_snapshot_balance_for_tenant": "Snapshot monthly balances",
+      "notifications_email_action_needed_for_tenant": "Email action-needed notifications",
+      "notifications_email_action_needed_global": "Email action-needed notifications (global admins)"
     },
     "status": {
       "PENDING": "Queued",
@@ -3037,7 +3246,10 @@
       "screen_body": "Your record is still there. It just cannot be fetched right now.",
       "section": "This part could not be loaded. The rest is shown as usual.",
       "offline": "Offline",
-      "sentence_in_progress": "Your sentence plan is not finished. You can apply once it is complete"
+      "sentence_in_progress": "Your sentence plan is not finished. You can apply once it is complete",
+      "not_in_cooldown": "Only a soul in cooldown can ask to shorten it",
+      "shortening_pending": "A cooldown shortening request is already pending",
+      "shortening_used": "This cooldown has already been asked to be shortened once"
     },
     "lexicon": {
       "eg": {
@@ -3138,7 +3350,9 @@
       "toggle_failed": "Could not save that setting; it has been put back",
       "version": "Soul Ledger {{version}}",
       "chat": "Letters",
-      "chat_note": "When a new letter or a reply from the hall arrives"
+      "chat_note": "When a new letter or a reply from the hall arrives",
+      "history": "Notification history",
+      "history_note": "Every notification sent to you, delivered or not"
     },
     "push": {
       "primer_title": "Tell you when there is a result?",
@@ -3522,6 +3736,25 @@
       "interrupted": "Answer interrupted",
       "answering_aria": "Answering",
       "jump_latest": "↓ Latest"
+    },
+    "history": {
+      "title": "Notification history",
+      "empty": "No notifications yet",
+      "load_failed": "Could not load the notification history",
+      "not_delivered": "Not delivered",
+      "more": "More"
+    },
+    "cooldown": {
+      "request": "Ask to shorten the cooldown",
+      "hint": "Once per cooldown; the home civilization decides.",
+      "reason": "Reason",
+      "submit": "Submit request",
+      "submitted": "Request submitted",
+      "pending": "Cooldown shortening request pending",
+      "approved": "Cooldown shortening approved; cooling-off ends {{date}}",
+      "rejected": "Cooldown shortening request rejected",
+      "note": "Note",
+      "brought_forward": "Brought forward"
     }
   },
   "soul_push": {
@@ -3536,6 +3769,14 @@
     "rebirth_appeal_rejected": {
       "title": "Appeal rejected",
       "body": "Your appeal on the rebirth application was rejected. Open Soul Ledger to see why."
+    },
+    "cooldown_shortening_approved": {
+      "title": "Cooldown shortening approved",
+      "body": "Your request to shorten the cooldown was approved. Open Soul Ledger to see the new end date."
+    },
+    "cooldown_shortening_rejected": {
+      "title": "Cooldown shortening rejected",
+      "body": "Your request to shorten the cooldown was rejected. Open Soul Ledger to see why."
     },
     "judgment_result": {
       "title": "Judgment concluded",

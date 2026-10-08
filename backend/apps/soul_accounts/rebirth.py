@@ -29,14 +29,17 @@ from django.utils import timezone
 
 from apps.soul_accounts.models import (
     OPEN_APPLICATION_STATUSES,
+    CooldownShorteningRequest,
+    CooldownShorteningStatus,
     RebirthApplication,
     RebirthApplicationStatus,
     SoulAccount,
 )
 from apps.soul_accounts.services import SoulAccountError
+from apps.tenants.models import REBIRTH_COOLDOWN_SETTING
 
 DEFAULT_COOLDOWN_DAYS = 30
-COOLDOWN_SETTING = "soul_rebirth_cooldown_days"
+COOLDOWN_SETTING = REBIRTH_COOLDOWN_SETTING
 FINAL_REJECTIONS = (RebirthApplicationStatus.REJECTED, RebirthApplicationStatus.APPEAL_REJECTED)
 
 #: 节点按**角色**指定审批人,不按神祇:转生申请没有经典出处的审理殿,
@@ -96,12 +99,48 @@ def eligibility(account):
         return False, "application_open", None
     if mine.filter(cycle=account.cycle, status=RebirthApplicationStatus.APPROVED).exists():
         return False, "application_approved", None
-    last = mine.filter(status__in=FINAL_REJECTIONS, decided_at__isnull=False).order_by("-decided_at").first()
+    last = cooldown_application(soul)
     if last is not None:
-        until = last.decided_at + timedelta(days=cooldown_days(soul.home_tenant))
-        if until > timezone.now():
+        until = cooldown_until(last)
+        if until is not None:
             return False, "cooldown", until
     return True, None, None
+
+
+def cooldown_application(soul):
+    """最近一次终局驳回的申请 —— 冷却期(若还在)由它起算。"""
+    return (
+        RebirthApplication.objects.filter(soul=soul, status__in=FINAL_REJECTIONS, decided_at__isnull=False)
+        .order_by("-decided_at").first()
+    )
+
+
+def _cooldown_end(application):
+    """这份申请的终局驳回引起的冷却截止时刻,不看现在几点。殿规截止与「批准缩短」取较早者;
+    殿的设置本身不动(`Tenant.settings`),所以殿规后来调短也照样生效。"""
+    until = application.decided_at + timedelta(days=cooldown_days(application.soul.home_tenant))
+    shortening = CooldownShorteningRequest.objects.filter(
+        application=application, status=CooldownShorteningStatus.APPROVED, decided_at__isnull=False,
+    ).first()
+    if shortening is not None:
+        until = min(until, shortening.decided_at + timedelta(days=shortening.approved_days or 0))
+    return until
+
+
+def cooldown_span(application):
+    """`(原截止, 现截止, 总天数, 已过天数)`:官员台的「已过 a / 共 b 天」用。
+
+    原截止 = 殿规截止(不含批准的缩短);现截止 = `_cooldown_end`(含缩短,可能已过去)。
+    总天数以**现截止**起算,所以批准后进度线仍然是满刻度:`past ≤ total`。
+    没有终局驳回的申请(`decided_at` 为空)返回 `None`。
+    """
+    if application.status not in FINAL_REJECTIONS or application.decided_at is None:
+        return None
+    original = application.decided_at + timedelta(days=cooldown_days(application.soul.home_tenant))
+    end = _cooldown_end(application)
+    total = max(0, -(-int((end - application.decided_at).total_seconds()) // 86400))
+    past = max(0, min(total, int((timezone.now() - application.decided_at).total_seconds() // 86400)))
+    return original, end, total, past
 
 
 REFUSALS = {
@@ -112,6 +151,10 @@ REFUSALS = {
     "application_approved": "本世的转生申请已获批准。",
     "cooldown": "驳回后的冷却期内不能重新申请。",
     "sentence_in_progress": "受刑计划尚未完成,完成后才能申请转生。",
+    # 缩短冷却申请(下面 request_cooldown_shortening)
+    "not_in_cooldown": "只有在转生冷却期内才能申请缩短冷却。",
+    "shortening_pending": "已有一份待决的缩短冷却申请。",
+    "shortening_used": "这段冷却期已经申请过一次缩短。",
 }
 
 
@@ -260,11 +303,111 @@ def can_appeal(application, account) -> bool:
 
 
 def cooldown_until(application):
-    """这份申请的终局驳回引起的冷却截止时刻;不在冷却中为 None。"""
+    """这份申请的终局驳回引起的冷却截止时刻;不在冷却中为 None。批准的缩短已算在内。"""
     if application.status not in FINAL_REJECTIONS or application.decided_at is None:
         return None
-    until = application.decided_at + timedelta(days=cooldown_days(application.soul.home_tenant))
+    until = _cooldown_end(application)
     return until if until > timezone.now() else None
+
+
+# ── 缩短冷却申请 ─────────────────────────────────────────────────────────
+#
+# 与申诉同形:灵魂在账号行锁下提交;每段冷却(= 每份终局驳回的申请)只能申请一次,驳回后不能再提;
+# 官员在申请行锁下决定。批准写 `approved_days`(自决定时刻起还要等的天数,< 当时的剩余天数),
+# `_cooldown_end` 据此把这份申请的冷却截止提前;**殿的设置不动**。
+
+
+def remaining_cooldown_days(until, now=None) -> int:
+    """到 `until` 还有几天,向上取整;已过为 0。批准的天数必须小于它。"""
+    seconds = (until - (now or timezone.now())).total_seconds()
+    return max(0, -(-int(seconds) // 86400))
+
+
+def cooldown_shortening_eligibility(account):
+    """`(can_request, reason_code, application)`。App 用它决定是否显示「申请缩短冷却」。"""
+    can, code, _ = eligibility(account)
+    if can or code != "cooldown":
+        return False, "not_in_cooldown", None
+    application = cooldown_application(account.soul)
+    existing = CooldownShorteningRequest.objects.filter(application=application).first()
+    if existing is not None:
+        code = "shortening_pending" if existing.status == CooldownShorteningStatus.PENDING else "shortening_used"
+        return False, code, application
+    return True, None, application
+
+
+def current_cooldown_shortening(account):
+    """本世最近一份缩短冷却申请(给 /me 列表):没有为 None。"""
+    return CooldownShorteningRequest.objects.filter(soul=account.soul, cycle=account.cycle).first()
+
+
+def request_cooldown_shortening(account, reason):
+    with transaction.atomic():
+        account = _lock_account(account)
+        can, code, application = cooldown_shortening_eligibility(account)
+        if not can:
+            raise SoulAccountError(REFUSALS[code], code, 409)
+        try:
+            with transaction.atomic():
+                shortening = CooldownShorteningRequest.objects.create(
+                    soul=account.soul, account=account, application=application, cycle=account.cycle,
+                    reason=reason,
+                )
+        except IntegrityError:
+            raise SoulAccountError(REFUSALS["shortening_pending"], "shortening_pending", 409) from None
+    return shortening
+
+
+def decide_cooldown_shortening(request_id, user, *, approve: bool, approved_days=None, note="", request=None):
+    """官员批准或驳回。行锁下再读一次状态(与 decide_cross_civilization 同形):
+    两个官员同时决定,只有先拿到锁的那个算数。"""
+    from apps.events.services import EventService
+    from apps.soul_accounts.services import audit
+
+    with transaction.atomic():
+        shortening = (
+            CooldownShorteningRequest.objects.select_for_update(of=("self",))
+            .select_related("application__soul__home_tenant", "account__user").get(pk=request_id)
+        )
+        if shortening.status != CooldownShorteningStatus.PENDING:
+            raise SoulAccountError("这份申请已经决定过了。", "already_decided", 409)
+        until = cooldown_until(shortening.application)
+        if until is None:
+            raise SoulAccountError("冷却期已经结束或已作废,无需决定。", "cooldown_over", 409)
+        now = timezone.now()
+        if approve:
+            remaining = remaining_cooldown_days(until, now)
+            if approved_days is None or not 0 <= approved_days < remaining:
+                raise SoulAccountError(f"批准的天数须在 0 到 {remaining - 1} 之间(剩余 {remaining} 天)。",
+                                       "invalid_days", 400)
+            shortening.status = CooldownShorteningStatus.APPROVED
+            shortening.approved_days = approved_days
+        else:
+            if not note.strip():
+                raise SoulAccountError("驳回必须写给灵魂看的理由。", "note_required", 400)
+            shortening.status = CooldownShorteningStatus.REJECTED
+        shortening.decision_note = note
+        shortening.decided_by = user
+        shortening.decided_at = now
+        shortening.save()
+        soul = shortening.application.soul
+        audit("EXECUTE", soul, f"{'批准' if approve else '驳回'}缩短转生冷却申请"
+              + (f"(剩余 {approved_days} 天)" if approve else ""),
+              actor=user, request=request, resource_id=shortening.pk, resource="cooldown_shortening",
+              changes={"status": ["PENDING", shortening.status], "approved_days": [None, shortening.approved_days]})
+    EventService.log(soul, "COOLDOWN_SHORTENING_DECIDED", {
+        "request_id": str(shortening.pk), "application_id": str(shortening.application_id),
+        "status": shortening.status, "decided_by": user.username,
+    })
+    EventService.notify_user(
+        user=shortening.account.user,
+        title="缩短冷却申请有了结果",
+        message=f"您的缩短冷却申请:{shortening.get_status_display()}。",
+        notification_type="SYSTEM",
+        related_resource="cooldown_shortening",
+        related_id=str(shortening.pk),
+    )
+    return shortening
 
 
 def sync_from_workflow(workflow_id):

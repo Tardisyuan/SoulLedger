@@ -226,6 +226,9 @@ describe("push registration", () => {
     expect(screen.queryByTestId("failure")).toBeNull();
     // …and the primer is never pushed on a build that cannot deliver.
     expect(route()?.name).toBe("Settings");
+    // `usePermission()` settles after mount; everything above renders without it, so the test could
+    // end first and the late update landed outside act (full-suite timing, 2026-10-08).
+    await act(async () => {});
   });
 
   it("with a projectId and permission: registers at start-up, again on a token change, as IOS", async () => {

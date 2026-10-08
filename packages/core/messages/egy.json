@@ -185,6 +185,18 @@
       "MURDER": "Sma",
       "OTHER": "Ky"
     },
+    "life_stages": {
+      "CHILDHOOD": "Ankh Nedjes",
+      "YOUTH": "Ankh Renpi",
+      "ADULTHOOD": "Ankh Qen",
+      "OLD_AGE": "Ankh Wah"
+    },
+    "evidence_sources": {
+      "REGISTRY": "Sesh Sab",
+      "WITNESS": "Remetj Maa",
+      "SELF_ACCOUNT": "Medu Djes",
+      "OTHER": "Ky"
+    },
     "form": {
       "name_label": "Ren *",
       "name_placeholder": "Ren Ba",
@@ -357,6 +369,16 @@
         "ledger_tabs": "Sesh",
         "tab_judgments": "Wedja Neb",
         "tab_records": "Sesh Nefer Hena Isfet Neb"
+      },
+      "correct_settlement": {
+        "action": "Khemen Khetem",
+        "title": "Khemen Khetem Seth",
+        "message": "Ba Iyi Er Wetep Seth; Wedja Hena Wetep Smen; Khet Sesh Em Medew Maa.",
+        "reason": "Khet",
+        "reason_required": "Sesh Khet Em Tepy",
+        "confirm": "Khemen",
+        "success": "Khemen Khetem Seth; Ba Em Wetep Seth",
+        "failed": "Nen Khemen Khetem"
       }
     },
     "balance_range": "Pehwy Nefer Isfet",
@@ -1580,7 +1602,30 @@
     "needs_audit_read": "Sesen Was audit.read",
     "repeat_expand": "Wen",
     "repeat_collapse": "Imen",
-    "repeat_rule": "Ren Wa, Iri Wa, Khet Wa: {{minutes}} At"
+    "repeat_rule": "Ren Wa, Iri Wa, Khet Wa: {{minutes}} At",
+    "tabs": {
+      "audit": "Medew Maa",
+      "logins": "Medew Aq"
+    },
+    "login_log": {
+      "title": "Medew Aq",
+      "username": "Ren Aq",
+      "status_label": "Kheperu",
+      "status": {
+        "SUCCESS": "Aq Kheper",
+        "FAILED": "Nen Aq"
+      },
+      "failure_reason": "Khet Nen Aq",
+      "user_agent": "Kat Wen Aq",
+      "search_placeholder": "Hehy Ren Aq...",
+      "no_logs": "Nen Medew Aq Djer"
+    },
+    "resource_tenant": "Wesekhet",
+    "descriptions": {
+      "hall_settings": "Khemen Smen {{code}}",
+      "hall_seal_glyphs": "Khemen Seth Medu Khetem {{code}}",
+      "hall_assistant_switch": "Khemen Wen-Khetem Hehy Medu {{code}}"
+    }
   },
   "profile": {
     "title": "Djes",
@@ -1602,7 +1647,11 @@
     "profile_updated": "Djes Renpi Seth",
     "profile_update_failed": "Nen Renpi Djes",
     "avatar": "Tut",
-    "load_failed": "Nen Ini Djes — Medu Em Khery Nen Renpi"
+    "load_failed": "Nen Ini Djes — Medu Em Khery Nen Renpi",
+    "email_notifications": "Sedjem Ba Em Djeret",
+    "email_notifications_note": "Wen: Khet Em Smen Er-Ek Hab Er Djeret-Ek.",
+    "email_notifications_no_address": "Nen Djeret Em Aq: Nen Hab.",
+    "email_last_failure": "Nen Hab Pehwy: {{error}} ({{at}})"
   },
   "notifications": {
     "title": "Sedjem Sab",
@@ -1940,6 +1989,7 @@
     "soul_from_detail": "Em Medu Ba; Nen Wehem",
     "soul_from_detail_error": "Nen Ini Ba. Setep Wehem.",
     "source_label": "Tepy",
+    "target_tenant_closed": "Nen Shesep Hab-Ba",
     "discard": "Khet…",
     "discard_title": "Sehen Sesh Tepy Hab-Ba Pen?",
     "discard_message": "Sesh Tepy Nehem Er Per Wehem; Ankh Wehem Em Smen Hemsu › Per Wehem. Khet Smen.",
@@ -2229,7 +2279,102 @@
       "PARTIAL": "Redu Seth"
     },
     "source_system": "Tepy Hemsu",
-    "status_label": "Kheperu"
+    "status_label": "Kheperu",
+    "tabs": {
+      "registrations": "Medew Mut",
+      "api_keys": "Menf Aq",
+      "webhooks": "Webhook"
+    },
+    "api_keys": {
+      "title": "Menf Aq",
+      "intro": "Hemsu Ky Aq Em Menf. Menf Maa Wa Djer, Em Iri; Er Khet: Tepy Wa.",
+      "create": "Iri Menf Renpi",
+      "name": "Ren",
+      "name_placeholder": "Ren Menf",
+      "system_type_label": "Kher Seth Hemsu",
+      "system_type": {
+        "GOVERNMENT": "Sesh Remetj",
+        "HOSPITAL": "Per Senb",
+        "POLICE": "Sesh Per",
+        "MESSAGE_BUS": "Itru Medu",
+        "CUSTOM": "Iri Djes-Ef"
+      },
+      "key_prefix": "Tepy Menf",
+      "permissions": "Was",
+      "can_register_death": "Sesh Mut",
+      "can_query_status": "Hehy Kheperu",
+      "can_manage_webhooks": "Iri Webhook",
+      "last_used": "Iri Pehwy",
+      "never_used": "Nen Iri Djer",
+      "usage_count": "Sep Iri",
+      "status_label": "Kheperu",
+      "status": {
+        "ACTIVE": "Em Wenen",
+        "REVOKED": "Khetem Seth"
+      },
+      "revoke": "Khetem",
+      "revoke_title": "Khetem Menf «{{name}}»?",
+      "revoke_message": "Er Khet Khetem: Hemsu Ky Nen Aq Emu. Nen Wehem Djer; Iri Menf Renpi.",
+      "revoked_ok": "Menf Khetem Seth",
+      "revoke_failed": "Nen Khetem",
+      "create_failed": "Nen Iri",
+      "no_keys": "Nen Menf Djer",
+      "shown_title": "Menf Renpi (Wa Djer)",
+      "shown_warning": "Menf Maa Wa Djer. Er Khet Khetem: Per Hemsu Nen Maa Wehem; Senn Emu, Hab Er Hemsu Ky.",
+      "key_label": "Menf",
+      "copy": "Senn Menf",
+      "copied": "Menf Senn Seth",
+      "copy_failed": "Nen Senn",
+      "close": "Sau Seth, Khetem",
+      "webhooks_note": "Webhook Em Aat Webhook; Hemsu Ky Smen Djes Em Menf Pen."
+    },
+    "webhooks": {
+      "title": "Webhook",
+      "intro": "Medew Kheper: Hemsu Hab Medu Er Wat Pen. Menf Hab Maa Wa Djer, Em Iri.",
+      "create": "Iri Webhook Renpi",
+      "edit_title": "Khemen Webhook",
+      "url": "Wat",
+      "api_key": "Menf",
+      "events": "Medew",
+      "events_hint": "Nen Setep: Medew Neb.",
+      "all_events": "Medew Neb",
+      "status_label": "Kheperu",
+      "status": {
+        "ACTIVE": "Em Wenen",
+        "DISABLED": "Khetem Seth"
+      },
+      "disable": "Khetem",
+      "enable": "Wen",
+      "disable_title": "Khetem Webhook «{{url}}»?",
+      "disable_message": "Er Khet Khetem: Nen Hab Medu Er Wat Pen. Sesh Hena Sesh Hab Sau Seth; Wen Wehem Em Sepdet Neb.",
+      "disabled_ok": "Webhook Khetem Seth",
+      "disable_failed": "Nen Khetem",
+      "saved_ok": "Webhook Sau Seth",
+      "save_failed": "Nen Sau",
+      "no_webhooks": "Nen Webhook Djer",
+      "no_keys_hint": "Webhook Em Menf Wa. Iri Menf Tepy Em Aat Menf Aq.",
+      "shown_title": "Menf Hab (Wa Djer)",
+      "shown_warning": "Menf Hab Maa Wa Djer. Er Khet Khetem: Nen Maa Wehem; Senn Emu, Hab Er Hemsu Ky.",
+      "secret_label": "Menf Hab",
+      "copy": "Senn Menf",
+      "deliveries": "Sesh Hab",
+      "deliveries_for": "Sesh Hab En {{url}}",
+      "all_deliveries": "Maa Neb",
+      "no_deliveries": "Nen Sesh Hab Djer",
+      "delivery": {
+        "event": "Medew",
+        "attempt": "Sep Iri",
+        "response": "Medu Iyi",
+        "error": "Sethet Pehwy",
+        "time": "Sepdet",
+        "status": {
+          "PENDING": "Nen Hab Djer",
+          "SUCCESS": "Hab Seth",
+          "FAILED": "Nen Hab",
+          "ABANDONED": "Sehen Seth"
+        }
+      }
+    }
   },
   "soul_accounts": {
     "refresh": "Wehem Maa",
@@ -2403,6 +2548,53 @@
       "empty_filtered": "Nen Dbh Em Kheperu Pen",
       "cooldown_until": "Ahet Qebeh Er {{time}}; Ba Nen Dbh Djer",
       "step_appeal": "(Nehet)"
+    },
+    "cooldown": {
+      "tabs": {
+        "applications": "Dbh Wehem Mesut",
+        "shortenings": "Dbh Khebi Ahet Qebeh"
+      },
+      "title": "Dbh Khebi Ahet Qebeh",
+      "subtitle": "Ba Em Ahet Qebeh Dbh Khetem Tepy: Hesy Em Hru Khery, Khesef Em Medu",
+      "empty": "Nen Dbh Khebi Ahet Qebeh",
+      "empty_filtered": "Nen Dbh Em Kheperu Pen",
+      "detail_title": "Dbh Khebi Ahet Qebeh · {{name}}",
+      "fields": {
+        "reason": "Khet Dbh",
+        "remaining": "Ahet Qebeh Khery",
+        "approved_days": "Hru Khery Er Khet Hesy",
+        "note": "Medu Er Ba",
+        "decided_by": "Wedja In",
+        "created_at": "Dbh Em",
+        "cooldown_until": "Ahet Qebeh Er"
+      },
+      "remaining_days": "Hru {{n}}",
+      "over": "Ahet Qebeh Khetem",
+      "approve": "Hesy",
+      "reject": "Khesef",
+      "days_label": "Hru Khery Er Khet Hru Pen",
+      "days_hint": "Hru < {{n}}; 0 = Dbh Wehem Mesut Emu",
+      "note_label": "Medu Er Ba",
+      "note_hint": "Khesef: Medu Sesen; Ba Maa",
+      "decided": "Sau Seth",
+      "failed": "Nen Sau",
+      "already_decided": "Wedja Seth",
+      "cooldown_over": "Ahet Qebeh Khetem; Nen Wedja",
+      "invalid_days": "Hru Nen Maat: 0 – Hru Khery",
+      "note_required": "Khesef: Medu Er Ba Sesen",
+      "remaining_progress": "Hru Iri: {{past}} / {{total}}",
+      "approve_with_days": "Hesy · Hru {{days}} Khery",
+      "scope_note": "Hesy Khebi Ahet Qebeh Pen Wa; Hru Ahet Qebeh En Wesekhet Nen Khemen",
+      "sort_note": "Nen Wedja Djer: Hru Khery Nedjes Er Tepy; Ahet Qebeh Khetem Em Pehwy",
+      "source": "Ahet Qebeh In Khesef Pehwy En Dbh Wehem Mesut {{id}}",
+      "decide_failed": "Nen Iri Wedja: {{reason}}",
+      "original": "Tepy {{date}}",
+      "day_unit": "Hru"
+    },
+    "cooldown_status": {
+      "PENDING": "Em Wedja",
+      "APPROVED": "Hesy Seth",
+      "REJECTED": "Khesef Seth"
     }
   },
   "disposition": {
@@ -2540,6 +2732,21 @@
       "preview": "Maa",
       "saved": "Medu Khetem Sau Seth",
       "save_failed": "Nen Sau Medu Khetem"
+    },
+    "settings": {
+      "edit": "Khemen Smen",
+      "title": "{{name}} · Smen",
+      "hall_name": "Ren Wesekhet · Medu Sherer",
+      "hall_name_hint": "Ren Wesekhet Em Sesh Ba; Nen Sesh: Tepy Ren Per",
+      "hall_name_en": "Ren Wesekhet · Medu Europa",
+      "hall_name_egy": "Ren Wesekhet · Medu Kemet",
+      "description": "Medu Seth",
+      "cooldown_days": "Hru Ahet Qebeh Dbh Wehem Mesut",
+      "cooldown_hint": "Er Khet Khesef: Nen Dbh Wehem Mesut Em Ahet Qebeh; 365 Er Pehwy; Nen Sesh: Tepy Hru 30",
+      "cooldown_invalid": "Sesh Hesb, 0 Er 365",
+      "dispatch_enabled": "Shesep Hab-Ba (Hemes)",
+      "saved": "Smen Sau Seth",
+      "save_failed": "Nen Sau Smen"
     }
   },
   "table": {
@@ -2660,7 +2867,9 @@
       "social_cleanup_orphan_post_media": "Fekh Tut Shemsu Nen Hab",
       "chat_reconcile_inbox": "Senb Sesh Wesekhet",
       "soul_assist_purge_history": "Fekh Medew Hehy Medu",
-      "ledger_snapshot_balance_for_tenant": "Sesh Sepy Abed"
+      "ledger_snapshot_balance_for_tenant": "Sesh Sepy Abed",
+      "notifications_email_action_needed_for_tenant": "Hab Sedjem Ba Em Smen Er Djeret",
+      "notifications_email_action_needed_global": "Hab Sedjem Ba Em Smen Er Djeret · Sab Hery"
     },
     "status": {
       "PENDING": "Em Smen",
@@ -3037,7 +3246,10 @@
       "screen_body": "Sesh-Ek Wenen. Nen Gem Emu.",
       "section": "Aat Pen Nen Gem. Ky Wenen.",
       "offline": "Nen Em Senb",
-      "sentence_in_progress": "Wetep-Ek Nen Neb Seth. Dbh Wehem Mesut Em Khet Wetep"
+      "sentence_in_progress": "Wetep-Ek Nen Neb Seth. Dbh Wehem Mesut Em Khet Wetep",
+      "not_in_cooldown": "Nen Em Ahet Qebeh: Nen Dbh Khebi",
+      "shortening_pending": "Dbh Khebi Wa Em Wedja",
+      "shortening_used": "Dbh Khebi Sep Wa Seth"
     },
     "lexicon": {
       "eg": {
@@ -3138,7 +3350,9 @@
       "toggle_failed": "Nen Sau Smen Pen. Wehem Er Tepy.",
       "version": "Medjat Ba {{version}}",
       "chat": "Shemes",
-      "chat_note": "Shemes Renpi, Weshed Wesekhet"
+      "chat_note": "Shemes Renpi, Weshed Wesekhet",
+      "history": "Sesh Sedjem Ba",
+      "history_note": "Sedjem Ba Neb Dy: Iyi Ky Nen Iyi"
     },
     "push": {
       "primer_title": "Sedjem Ba Er-Ek Em Wedja?",
@@ -3522,6 +3736,25 @@
       "interrupted": "Medu Nen Neb",
       "answering_aria": "Em Medu",
       "jump_latest": "↓ Renpi"
+    },
+    "history": {
+      "title": "Sesh Sedjem Ba",
+      "empty": "Nen Sedjem Ba Djer",
+      "load_failed": "Nen Ini Sesh Sedjem Ba",
+      "not_delivered": "Nen Iyi",
+      "more": "Ky"
+    },
+    "cooldown": {
+      "request": "Dbh Khebi Ahet Qebeh",
+      "hint": "Dbh Khebi Wa Em Ahet Qebeh; Sab Wedja.",
+      "reason": "Khet Dbh",
+      "submit": "Dbh",
+      "submitted": "Dbh Seth",
+      "pending": "Dbh Khebi Em Wedja",
+      "approved": "Dbh Khebi Hesy Seth; Ahet Qebeh Er {{date}}",
+      "rejected": "Dbh Khebi Khesef Seth",
+      "note": "Medu",
+      "brought_forward": "Ahet Khebi"
     }
   },
   "soul_push": {
@@ -3536,6 +3769,14 @@
     "rebirth_appeal_rejected": {
       "title": "Nehet Khesef Seth",
       "body": "Nehet-Ek Er Dbh Wehem Mesut Khesef Seth. Wen Medjat Ba Er Maa Khet."
+    },
+    "cooldown_shortening_approved": {
+      "title": "Khebi Ahet Qebeh Hesy Seth",
+      "body": "Khebi Ahet Qebeh-Ek Hesy Seth. Wen Medjat Ba Er Maa Ahet Qebeh."
+    },
+    "cooldown_shortening_rejected": {
+      "title": "Khebi Ahet Qebeh Khesef Seth",
+      "body": "Khebi Ahet Qebeh-Ek Khesef Seth. Wen Medjat Ba Er Maa Khet."
     },
     "judgment_result": {
       "title": "Wedja Khetem",

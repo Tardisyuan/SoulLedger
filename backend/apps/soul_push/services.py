@@ -74,6 +74,13 @@ REBIRTH_STATUS_KINDS = {
     "APPEAL_REJECTED": "rebirth_appeal_rejected",
 }
 
+#: 缩短冷却申请的结果(apps/soul_accounts/rebirth.py::decide_cooldown_shortening)。提交不推(灵魂自己刚做的事);
+#: 文案不含新截止日期与驳回理由 —— 打开灵魂簿看。类别与转生结果同一个(`rebirth`)。
+COOLDOWN_SHORTENING_KINDS = {
+    "APPROVED": "cooldown_shortening_approved",
+    "REJECTED": "cooldown_shortening_rejected",
+}
+
 #: 暂居(已合并的 feat/dispatch-residence)。**两者都没有独立的 EventType**:
 #: `DispatchService.execute` / `end_residence` 直接写 `SoulEvent(event_type=STATE_CHANGED)`,
 #: 用 payload 的 `action` 区分 —— 而且**不经事件总线**,所以由 `signals.py` 挂在 SoulEvent 的 post_save 上接。
@@ -101,6 +108,12 @@ def rule_for(event_type, payload, account):
         if not (app_id and kind):
             return None
         return ("rebirth", kind, f"rebirth:{app_id}:{new}", {"screen": "ApplicationDetail", "application_id": app_id})
+    if event_type == "COOLDOWN_SHORTENING_DECIDED":
+        request_id, kind = payload.get("request_id"), COOLDOWN_SHORTENING_KINDS.get(payload.get("status"))
+        if not (request_id and kind):
+            return None
+        # 落在转生申请页:缩短申请的状态(新截止 / 驳回理由)就在那页的冷却块里。
+        return ("rebirth", kind, f"cooldown-shortening:{request_id}:{payload['status']}", {"screen": "Applications"})
     if event_type == "JUDGMENT_CONCLUDED":
         judgment_id = payload.get("judgment_id")
         return ("judgment", "judgment_result", f"judgment:{judgment_id}", {"screen": "Life"}) if judgment_id else None
@@ -159,11 +172,13 @@ def _sentence_rule(event_type, payload):
     return ("rebirth", "sentence_completed", f"plan:{plan_id}:completed", life)
 
 
-HANDLED_EVENTS = frozenset({"REBIRTH_STATUS_CHANGED", "JUDGMENT_CONCLUDED", "STATE_CHANGED", *SENTENCE_EVENTS})
+HANDLED_EVENTS = frozenset({"REBIRTH_STATUS_CHANGED", "COOLDOWN_SHORTENING_DECIDED", "JUDGMENT_CONCLUDED",
+                            "STATE_CHANGED", *SENTENCE_EVENTS})
 
 #: 种类 → 偏好类别。发送前(含补发)再核对一次偏好时用。
 KIND_CATEGORY = {
     **{kind: "rebirth" for kind in REBIRTH_STATUS_KINDS.values()},
+    **{kind: "rebirth" for kind in COOLDOWN_SHORTENING_KINDS.values()},
     "judgment_result": "judgment",
     "disposition_executed": "judgment",
     **{kind: "residence" for kind in RESIDENCE_ACTIONS.values()},
@@ -219,7 +234,7 @@ SOCIAL_WARNED_EVENT = "SOCIAL_WARNED"
 
 
 def record_social_warning(user_id, report_id, target_type, reason):
-    """被警告的若是灵魂(有本世账号),给它记一条带理由的推送;官员、已转世的、没有设备的:不记。
+    """被警告的若是灵魂(有本世账号),给它记一条带理由的推送;官员、已转世的:不记;没有设备的照记一行历史(NO_DEVICE)。
 
     `target_type` 是举报对象(POST / COMMENT / USER),决定锁屏说「帖子」「评论」还是「账号」。"""
     from apps.soul_accounts.models import SoulAccount
@@ -241,7 +256,15 @@ def _record(account, event_type, category, kind, dedupe_key, data, params=None):
     title, body = title[:120], body[:300]  # 列宽(PushDelivery);警告理由最长 500
     data = {**data, "kind": kind}
     created_ids = []
-    for device in PushDevice.objects.filter(account=account, is_active=True):
+    devices = list(PushDevice.objects.filter(account=account, is_active=True))
+    if not devices:
+        # 没有可推的设备:仍记一行历史(通知记录读它),标 NO_DEVICE,不入队 —— 返回的 id 只含要发送的。
+        PushDelivery.objects.get_or_create(
+            dedupe_key=dedupe_key, device=None, account=account,
+            defaults={"soul_id": account.soul_id, "event_type": event_type, "kind": kind, "title": title,
+                      "body": body, "data": data, "status": PushStatus.NO_DEVICE},
+        )
+    for device in devices:
         delivery, created = PushDelivery.objects.get_or_create(
             dedupe_key=dedupe_key, device=device,
             defaults={"account": account, "soul_id": account.soul_id, "event_type": event_type, "kind": kind,

@@ -19,6 +19,9 @@ import Constants from "expo-constants";
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 
+import type { NavigationProp } from "@react-navigation/native";
+
+import type { AppStackParams } from "./screens/applications";
 import { SENTENCE_PUSH_KINDS, type SentenceLanding, type SentencePushKind } from "./screens/sentence";
 
 /** The Expo token this device last registered — what sign-out must unregister. */
@@ -143,7 +146,25 @@ export type Landing =
   | { screen: "ApplicationDetail"; id: string }
   | { screen: "Conversation"; id: string }
   | { screen: "Life" }
+  | { screen: "Applications" }
   | { screen: "Sentence"; landing: SentenceLanding };
+
+/**
+ * Go where a landing points. The push bridge (a tapped notification) and the
+ * notification history (a tapped row) both route through here, so a new kind
+ * of landing is added once.
+ */
+export function landOn(navigate: NavigationProp<AppStackParams>["navigate"], landing: Landing): void {
+  if (landing.screen === "ApplicationDetail") navigate("ApplicationDetail", { id: landing.id, landed: true });
+  else if (landing.screen === "Conversation") navigate("Conversation", { id: landing.id, landed: true });
+  // 受刑 1d: completion lands on the life page's section (the new 「可申请转生」 row is there); the rest on the full list.
+  else if (landing.screen === "Sentence" && landing.landing.kind === "sentence_completed")
+    navigate("Tabs", { screen: "Life", params: { sentenceLanding: landing.landing } });
+  else if (landing.screen === "Sentence") navigate("Sentence", { landing: landing.landing });
+  // 缩短冷却的决定(cooldown_shortening_*)落在申请页;两条分支合并时这一支只进了 navigation.tsx 的旧写法。
+  else if (landing.screen === "Applications") navigate("Tabs", { screen: "Applications", params: { landed: true } });
+  else navigate("Tabs", { screen: "Life" });
+}
 
 /** An application id as the server sends it (a UUID); anything else is not navigated to. */
 const ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -156,6 +177,8 @@ export function landingOf(data: unknown): Landing | null {
   // Reserved: the server sends no chat push yet (no Synapse → push path; see the round's report).
   // A malformed id opens the app and no more — a letter is not worth guessing at.
   if (screen === "Conversation") return typeof conversation === "string" && ID.test(conversation) ? { screen, id: conversation } : null;
+  // 缩短冷却申请的结果:状态在转生申请页的冷却块里。
+  if (screen === "Applications") return { screen };
   if (screen === "Life") {
     // 受刑 1d: the four sentence pushes say `screen: Life` (an older app still lands there) and are
     // told apart by `kind`; `node_ids` names the stations to mark 「新」. A malformed id is dropped, not guessed at.

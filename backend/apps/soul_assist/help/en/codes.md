@@ -3,7 +3,7 @@ id: codes
 screens: [applications, sentence, life]
 audience: soul
 civilizations: []
-codes: [account_retired, terminal_cosmology, soul_state, application_open, application_approved, cooldown, sentence_in_progress]
+codes: [account_retired, terminal_cosmology, soul_state, application_open, application_approved, cooldown, sentence_in_progress, not_in_cooldown, shortening_pending, shortening_used]
 questions:
   - "why can't I apply for rebirth"
   - "what does cannot apply mean"
@@ -16,3 +16,7 @@ When you cannot apply for rebirth, the app gives a reason. Meaning and next step
 - application_approved: this life's application has already been approved; you do not need a new one.
 - cooldown: your last application was rejected (or its appeal was rejected) and a cooldown is running. The date it ends is the one shown on the "Rebirth applications" page.
 - sentence_in_progress: your sentence plan is not fully served yet. Applying opens once every station is done (or the rest is pardoned).
+Reasons a request to shorten the cooldown is refused:
+- not_in_cooldown: no cooldown is running right now, so there is nothing to shorten.
+- shortening_pending: this cooldown already has a pending shortening request; wait for the decision.
+- shortening_used: this cooldown has already been asked to be shortened once; the next cooldown brings a new chance.

@@ -31,10 +31,32 @@ class ResidenceReturnBlockedError(Exception):
         )
 
 
+class TargetHallClosedError(ValueError):
+    """目标殿关了调拨(`Tenant.dispatch_enabled=False`)。
+
+    是 ValueError 的子类:每条发起 / 审批 / 执行路径都已经把 ValueError 答成 400,
+    受刑计划的 `_dispatch` 也只接 ValueError 并记一条 warning。带 `code` 让视图能把它
+    一并写进响应,前端照 `code` 翻译,不靠这句英文。
+    """
+
+    code = "target_dispatch_disabled"
+
+    def __init__(self, target_tenant):
+        super().__init__(f"Hall {target_tenant.code} is not receiving transfers")
+
+
 class DispatchService:
     """
     Service for managing cross-tenant soul dispatch operations.
     """
+
+    @staticmethod
+    def check_target_accepts(target_tenant):
+        """目标殿必须开着调拨。发起(`propose` / `submit`,经 `_check_proposable`)、批准、执行
+        都从这里过 —— 批准与执行再问一次,是因为殿可以在提案挂着的时候关掉。
+        `target_tenant` 为空(草稿)放行,完整性另有人查。"""
+        if target_tenant is not None and not target_tenant.dispatch_enabled:
+            raise TargetHallClosedError(target_tenant)
 
     @staticmethod
     def eligible_realms(target_tenant):
@@ -69,8 +91,9 @@ class DispatchService:
             raise ValueError(f"Realm {realm.realm_code} is not a realm of {target_tenant.code}")
 
     @staticmethod
-    def _check_proposable(source_tenant, soul):
-        """提交审批前的业务检查,`propose` 与 `submit` 共用。"""
+    def _check_proposable(source_tenant, target_tenant, soul):
+        """提交审批前的业务检查,`propose` 与 `submit` 共用(受刑计划的 `_dispatch` 走 `propose`)。"""
+        DispatchService.check_target_accepts(target_tenant)
         # Validate soul belongs to source tenant
         if str(soul.tenant_id) != str(source_tenant.id):
             raise ValueError("Soul does not belong to the specified source tenant")
@@ -117,7 +140,7 @@ class DispatchService:
         Raises:
             ValueError: If soul doesn't belong to source tenant or active dispatch exists
         """
-        DispatchService._check_proposable(source_tenant, soul)
+        DispatchService._check_proposable(source_tenant, target_tenant, soul)
         DispatchService.check_target_realm(target_tenant, target_realm)
 
         with transaction.atomic():
@@ -176,7 +199,7 @@ class DispatchService:
             locked = DispatchService.save_draft(record, source_tenant=None, dispatcher=dispatcher, **fields)
             if locked.soul_id is None or locked.target_tenant_id is None:
                 raise ValueError("A dispatch needs a soul and a target civilization")
-            DispatchService._check_proposable(locked.source_tenant, locked.soul)
+            DispatchService._check_proposable(locked.source_tenant, locked.target_tenant, locked.soul)
             locked.status = DispatchStatus.PROPOSED
             locked.proposed_at = timezone.now()
             locked.save()
@@ -249,6 +272,8 @@ class DispatchService:
         Returns:
             DispatchRecord: Updated dispatch record
         """
+        # 殿可以在提案挂着的时候关掉:批准是目标殿的「收下」,关着的殿不收(驳回仍可以)。
+        DispatchService.check_target_accepts(dispatch_record.target_tenant)
         if not dispatch_record.transition_to(DispatchStatus.APPROVED, decided_at=timezone.now()):
             raise ValueError(f"Cannot approve dispatch in status: {dispatch_record.status}")
 
@@ -344,6 +369,8 @@ class DispatchService:
 
         if not dispatch_record.can_transition_to(DispatchStatus.EXECUTED):
             raise ValueError(f"Cannot execute dispatch in status: {dispatch_record.status}")
+        # 批准到执行之间殿也可能关掉;灵魂真正进殿是这一刻,再问一次。
+        DispatchService.check_target_accepts(dispatch_record.target_tenant)
 
         with transaction.atomic():
             soul = Soul.all_objects.select_for_update(of=("self",)).get(pk=dispatch_record.soul_id)

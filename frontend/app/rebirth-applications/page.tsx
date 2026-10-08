@@ -1,15 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query";
 import { RefreshCw } from "lucide-react";
 import { PAGE_SIZE, type OfficerRebirthApplication } from "@soulledger/core/api";
 import { soulAccountKeys } from "@soulledger/core/query_keys";
-import { useRebirthApplications } from "@soulledger/core/hooks/useSoulAccounts";
+import { useCooldownShorteningCounts, useRebirthApplications } from "@soulledger/core/hooks/useSoulAccounts";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { usePlaque } from "@/src/components/plaque/Plaque";
 import { useCourtOffice, useHall } from "@/src/components/plaque/useHall";
+import { usePermissions } from "@/src/hooks/usePermissions";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
 import { PageShell } from "@/src/components/ui/PageShell";
@@ -23,12 +24,14 @@ import { RebirthApplicationDetail } from "@/src/components/soul-accounts/Rebirth
 import { REBIRTH_FILTERS, lifeNumber, rebirthTone } from "@/src/components/soul-accounts/soulAccountsView";
 import { StatusBadge } from "@/src/components/ui/StatusBadge";
 import { FilterChipToggle } from "@/src/components/ui/FilterChip";
+import { CooldownShorteningsContent } from "@/src/components/soul-accounts/CooldownShorteningsContent";
+import { TAB_BASE, TAB_OFF, TAB_ON } from "@/src/lib/tabClasses";
 
 // 操作列定宽,不是 `auto`:表头那一格是空的,`auto` 在表头里解成 0、在数据行里解成
 // 按钮宽,两边的 fr 列于是按不同的余量分配,表头与数据错开(2026-09-25 截图里实测)。
 const ROW_GRID = "md:grid md:grid-cols-[minmax(0,2fr)_minmax(0,0.6fr)_minmax(0,1fr)_minmax(0,1.2fr)_minmax(0,1.3fr)_5rem] md:items-center md:gap-4";
 
-function RebirthApplicationsContent() {
+function RebirthApplicationsContent({ tabs }: { tabs: ReactNode }) {
   const { t, formatDateTime } = useI18n();
   usePlaque({ hall: useHall(useCourtOffice()) });
   const queryClient = useQueryClient();
@@ -66,6 +69,7 @@ function RebirthApplicationsContent() {
       variant="full"
       title={t("soul_accounts.rebirth.title")}
       subtitle={t("soul_accounts.rebirth.subtitle")}
+      tabs={tabs}
       actions={
         <Button
           type="button"
@@ -169,10 +173,35 @@ function RebirthApplicationsContent() {
   );
 }
 
+const TABS = ["applications", "shortenings"] as const;
+
 export default function RebirthApplicationsPage() {
+  const { t } = useI18n();
+  const [tab, setTab] = useState<(typeof TABS)[number]>("applications");
+  const { hasPermission } = usePermissions();
+  // 「缩短冷却申请」页签后的待决定数(A11):与筛选签共用同一条 counts 查询。
+  const pending = useCooldownShorteningCounts(hasPermission("workflow.read")).data?.PENDING;
+  /* 「转生申请 / 缩短冷却申请」: the judgment page's strip (TAB_BASE, aria-pressed — it swaps the
+     table under one shell, not a tabpanel set). Both tables are `workflow.read`. */
+  const tabs = (
+    <div className="flex border-b border-[oklch(var(--color-line))]">
+      {TABS.map((key) => (
+        <button
+          key={key}
+          type="button"
+          aria-pressed={tab === key}
+          onClick={() => setTab(key)}
+          className={`${TAB_BASE} ${tab === key ? TAB_ON : TAB_OFF}`}
+        >
+          {t(`soul_accounts.cooldown.tabs.${key}`)}
+          {key === "shortenings" && pending !== undefined && <span className="ml-2 font-mono text-xs">{pending}</span>}
+        </button>
+      ))}
+    </div>
+  );
   return (
     <RequirePermission permissions="workflow.read" fallback={<PermissionDenied permission="workflow.read" />}>
-      <RebirthApplicationsContent />
+      {tab === "applications" ? <RebirthApplicationsContent tabs={tabs} /> : <CooldownShorteningsContent tabs={tabs} />}
     </RequirePermission>
   );
 }

@@ -47,6 +47,28 @@ class RecordCategory(models.TextChoices):
     OTHER = "OTHER", "Other"
 
 
+class LifeStage(models.TextChoices):
+    """When in the life a deed happened, when no date is known. Four members
+    on purpose: a finer ladder would be a classification the sources do not
+    make, and `event_year` already carries the precise answer when there is
+    one. Translated via the `souls.life_stages` DomainEnum namespace."""
+    CHILDHOOD = "CHILDHOOD", "Childhood"
+    YOUTH = "YOUTH", "Youth"
+    ADULTHOOD = "ADULTHOOD", "Adulthood"
+    OLD_AGE = "OLD_AGE", "Old age"
+
+
+class EvidenceSource(models.TextChoices):
+    """Where the record of a deed came from (司录 / witness / the soul's own
+    account / other). Display only: the judgment desk's 采信 toggle is a ruling
+    on each record, and the source is one input to that ruling, not a rule.
+    Translated via the `souls.evidence_sources` DomainEnum namespace."""
+    REGISTRY = "REGISTRY", "Registry"
+    WITNESS = "WITNESS", "Witness"
+    SELF_ACCOUNT = "SELF_ACCOUNT", "Self account"
+    OTHER = "OTHER", "Other"
+
+
 class SoulRecord(AuditUserFields, models.Model):
     """
     Individual event/record attached to a soul.
@@ -229,6 +251,44 @@ class SoulRecord(AuditUserFields, models.Model):
         ),
     )
 
+    # ── Structured citation, when, and provenance (V5) ─────────────────────
+    #
+    # `statute_clause` above cites a *clause* by its condition text for the
+    # granularity rule and stays as it is. `statute` is the article-level
+    # link the dossier shows, and it never travels alone: `save()` takes
+    # `statute_snapshot` (apps/judgment/snapshot.record_snapshot — the same
+    # rendering JudgmentCitation freezes at conclusion) the first time a
+    # statute is set, and keeps it when the article's text is revised later.
+    # A record cites what the article said when the deed was filed.
+    statute = models.ForeignKey(
+        "judgment.Statute",
+        on_delete=models.PROTECT,
+        related_name="soul_records",
+        null=True,
+        blank=True,
+        help_text="Article this deed is filed under. Must share the soul's civilization.",
+    )
+    statute_snapshot = models.JSONField(
+        null=True, blank=True,
+        help_text=(
+            "The cited article as it read when cited: statute_id, code, "
+            "revision, effective_from, title/text per locale, source, hash, at. "
+            "Taken by save(); never updated when the article changes."
+        ),
+    )
+    life_stage = models.CharField(
+        max_length=12, choices=LifeStage.choices, blank=True, default="",
+        help_text="Which stage of the life the deed falls in; blank = unrecorded.",
+    )
+    evidence_source = models.CharField(
+        max_length=12, choices=EvidenceSource.choices, blank=True, default="",
+        help_text="Where this record came from; blank = unrecorded.",
+    )
+    evidence_note = models.TextField(
+        blank=True, default="",
+        help_text="Free text about the source, e.g. which witness or which register.",
+    )
+
     is_milestone = models.BooleanField(
         default=False,
         help_text=(
@@ -405,12 +465,24 @@ class SoulRecord(AuditUserFields, models.Model):
         # the mapping instead of two.
         if self.soul_id is not None:
             self.civilization = self.soul.civilization
-            # Stamp the life on insert. A caller may pass cycle explicitly;
-            # 0 is also the default, so 0 on a reborn soul means "unspecified"
-            # and is filled in -- there is no write path that files a deed
-            # under a life that already ended.
-            if is_new and self.cycle == 0:
-                self.cycle = self.soul.life_index
+        # Snapshot the cited article once, on first citation; a later change
+        # of statute re-snapshots, a cleared statute clears it. A bare FK
+        # with no snapshot is never stored.
+        if self.statute_id is None:
+            self.statute_snapshot = None
+        elif (self.statute_snapshot or {}).get("statute_id") != str(self.statute_id):
+            from django.utils import timezone
+
+            from apps.judgment.snapshot import record_snapshot
+            self.statute_snapshot = record_snapshot(self.statute, timezone.now())
+        # Stamp the life on insert. A caller may pass cycle explicitly;
+        # 0 is also the default, so 0 on a reborn soul means "unspecified"
+        # and is filled in -- there is no write path that files a deed
+        # under a life that already ended.
+        # (2026-10-08: the statute-snapshot block above was once inserted so that this landed
+        # inside its `elif`, and a deed was stamped with its life only when it cited a statute.)
+        if is_new and self.cycle == 0:
+            self.cycle = self.soul.life_index
         super().save(*args, **kwargs)
         if is_new:
             depth, souls = _BATCH.get()
