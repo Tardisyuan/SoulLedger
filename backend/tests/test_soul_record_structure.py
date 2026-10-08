@@ -195,6 +195,20 @@ def test_a_record_can_be_edited_and_the_snapshot_follows_the_statute(cn_soul, ap
     assert cleared.status_code == 200 and cleared.json()["statute_snapshot"] is None
 
 
+def test_editing_the_weight_or_type_recomputes_the_souls_scores(cn_soul, api_client, auth_headers):
+    record = SoulRecord.objects.create(soul=cn_soul, event_year=1990, **_payload(weight=10))
+    cn_soul.refresh_from_db()
+    before = (cn_soul.merit_score, cn_soul.demerit_score)
+    assert before[0] > 0 and before[1] == 0
+    url = f"/api/v1/souls/{cn_soul.pk}/records/{record.pk}/"
+    assert api_client.patch(url, {"weight": 40}, format="json", **auth_headers).status_code == 200
+    cn_soul.refresh_from_db()
+    assert cn_soul.merit_score > before[0]
+    assert api_client.patch(url, {"record_type": "DEMERIT"}, format="json", **auth_headers).status_code == 200
+    cn_soul.refresh_from_db()
+    assert cn_soul.merit_score == 0 and cn_soul.demerit_score > 0
+
+
 def test_editing_runs_the_create_validation(cn_soul, api_client, auth_headers):
     record = SoulRecord.objects.create(soul=cn_soul, **_payload())
     url = f"/api/v1/souls/{cn_soul.pk}/records/{record.pk}/"
