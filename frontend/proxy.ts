@@ -65,7 +65,8 @@ export function contentSecurityPolicy(nonce: string, host: string): string {
 }
 
 // Routes that don't require authentication
-const PUBLIC_PATHS = ["/", "/welcome", "/(auth)/login", "/(auth)/register"];
+// `/login/verify` (two-step verification) is reached before any refresh token exists.
+const PUBLIC_PATHS = ["/", "/welcome", "/(auth)/login", "/(auth)/login/verify", "/(auth)/register"];
 
 function isPublicPath(pathname: string): boolean {
   return PUBLIC_PATHS.some(

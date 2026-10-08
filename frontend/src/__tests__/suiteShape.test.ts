@@ -72,6 +72,13 @@ const COLLECTED_FILES = [
   "JudgmentQueueConsole.test.tsx",
   "LedgerPage.test.tsx",
   "LoginPage.test.tsx",
+  // 2026-10-09 官员两步验证(A12):码框、登录第二步、向导、个人中心面板、用户列表列与重置、殿设置的角色开关。
+  "CodeInput.test.tsx",
+  "MfaVerifyPage.test.tsx",
+  "MfaSetupWizard.test.tsx",
+  "MfaSection.test.tsx",
+  "UsersPage.mfaColumn.test.tsx",
+  "TenantSettingsDialog.mfaRoles.test.tsx",
   "brandTokensMatchIcon.test.ts",
   "draftSavedFlash.test.tsx",
   "judgmentFullCaseMotion.test.ts",

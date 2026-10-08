@@ -15,6 +15,8 @@ import { LOGIN_STATUTES, type LoginStatute } from "@/src/lib/loginStatutes";
 import { defaultViewRoute } from "@/src/lib/defaultView";
 
 jest.mock("@soulledger/core/api", () => ({
+  // A12: the page branches on this; the real one is a one-line type guard.
+  isMfaRequired: (outcome: { mfa_required?: boolean }) => outcome?.mfa_required === true,
   authApi: {
     login: jest.fn(),
     civilizations: jest.fn(),
