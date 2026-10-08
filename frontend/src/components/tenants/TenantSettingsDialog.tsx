@@ -26,12 +26,16 @@ export function tenantSettingsErrors(error: unknown): Partial<Record<FieldName, 
   return out;
 }
 
-/** 输入框里的冷却天数 → 请求体:空 = `null`(删键,回默认);非整数或负数不出门,留给字段错误。 */
+/** 冷却天数的上限,与 `TenantSettingsSerializer` 的 `max_value` 同一个数。 */
+export const COOLDOWN_DAYS_MAX = 365;
+
+/** 输入框里的冷却天数 → 请求体:空 = `null`(删键,回默认);非整数、负数或超过 365 不出门,留给字段错误。 */
 export function parseCooldownDays(value: string): number | null | undefined {
   const s = value.trim();
   if (s === "") return null;
   if (!/^\d+$/.test(s)) return undefined;
-  return Number(s);
+  const n = Number(s);
+  return n > COOLDOWN_DAYS_MAX ? undefined : n;
 }
 
 /**

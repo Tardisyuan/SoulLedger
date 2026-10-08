@@ -1967,6 +1967,7 @@
     "soul_from_detail": "Em Medu Ba; Nen Wehem",
     "soul_from_detail_error": "Nen Ini Ba. Setep Wehem.",
     "source_label": "Tepy",
+    "target_tenant_closed": "Nen Shesep Hab-Ba",
     "discard": "Khet…",
     "discard_title": "Sehen Sesh Tepy Hab-Ba Pen?",
     "discard_message": "Sesh Tepy Nehem Er Per Wehem; Ankh Wehem Em Smen Hemsu › Per Wehem. Khet Smen.",
@@ -2624,8 +2625,8 @@
       "hall_name_egy": "Ren Wesekhet · Kemet",
       "description": "Medu Seth",
       "cooldown_days": "Hru Ahet Qebeh Dbh Wehem Mesut",
-      "cooldown_hint": "Er Khet Khesef: Nen Dbh Wehem Mesut Em Ahet Qebeh; Nen Sesh: Tepy Hru 30",
-      "cooldown_invalid": "Sesh Hesb, 0 Er Tepy",
+      "cooldown_hint": "Er Khet Khesef: Nen Dbh Wehem Mesut Em Ahet Qebeh; 365 Er Pehwy; Nen Sesh: Tepy Hru 30",
+      "cooldown_invalid": "Sesh Hesb, 0 Er 365",
       "dispatch_enabled": "Shesep Hab-Ba (Hemes)",
       "saved": "Smen Sau Seth",
       "save_failed": "Nen Sau Smen"

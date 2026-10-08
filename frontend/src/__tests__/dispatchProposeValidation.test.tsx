@@ -474,6 +474,31 @@ describe("dispatch drafts and the target realm", () => {
     expect(dispatchApi.createDraft).toHaveBeenCalledWith(expect.objectContaining({ reason: "写了一半" }));
   });
 
+  it("a hall that is not receiving transfers is listed but disabled, with the reason beside it", async () => {
+    renderPage([{ tenant_id: 3, tenant_code: "EG_DUAT", tenant_name: "杜阿特", dispatch_enabled: false }]);
+    const closed = await screen.findByRole("radio", { name: /杜阿特/ });
+    expect(closed).toBeDisabled();
+    expect(screen.getByText("dispatch.target_tenant_closed")).toBeInTheDocument();
+    // Absence as well as presence: an open hall is still choosable and carries no such note.
+    expect(screen.getByRole("radio", { name: /冥界/ })).not.toBeDisabled();
+    expect(screen.getAllByText("dispatch.target_tenant_closed")).toHaveLength(1);
+  });
+
+  it("a hall that closed while the form was open is refused by the server and named under the hall field", async () => {
+    renderPage();
+    await fillValid();
+    mockedPropose.mockRejectedValue({
+      isAxiosError: true,
+      response: { status: 400, data: { error: "Hall GR_HADES is not receiving transfers", code: "target_dispatch_disabled" } },
+    });
+
+    fireEvent.click(screen.getByText("dispatch.submit_proposal"));
+
+    await waitFor(() => expect(mockedPropose).toHaveBeenCalledTimes(1));
+    expect(await screen.findByText("dispatch.target_tenant_closed")).toBeInTheDocument();
+    expect(mockShowToast).not.toHaveBeenCalled();
+  });
+
   it("a realm the server refuses is shown under the realm select", async () => {
     (dispatchApi.createDraft as jest.Mock).mockRejectedValue({
       isAxiosError: true,

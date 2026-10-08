@@ -44,6 +44,14 @@ from apps.realms.serializers import RealmLocalizedSerializer
 from apps.tenants.models import Tenant
 
 
+def _refused(exc):
+    """ValueError → 400 的响应体。带 `code` 的(`TargetHallClosedError`)一并写出,前端照 code 翻译。"""
+    body = {"error": str(exc)}
+    if getattr(exc, "code", None):
+        body["code"] = exc.code
+    return Response(body, status=status.HTTP_400_BAD_REQUEST)
+
+
 def hide_others_drafts(qs, user):
     """草稿只给发起人看(ADMIN 例外)。别人的草稿从列表、历史、详情与每个详情动作里消失 ——
     `get_object` 读的就是这里,所以对别人的草稿一律 404,不是 403(不承认它存在)。
@@ -240,7 +248,7 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
                 target_realm=validated.get("target_realm"),
             )
         except ValueError as e:
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            return _refused(e)
         except IntegrityError:
             return Response(
                 {"error": "An active dispatch already exists for this soul"},
@@ -350,7 +358,7 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
         try:
             record = DispatchService.submit(record, request.user, **body.validated_data)
         except ValueError as e:
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            return _refused(e)
         except IntegrityError:
             return Response(
                 {"error": "An active dispatch already exists for this soul"},
@@ -469,7 +477,7 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
             dispatch_record = DispatchService.approve(dispatch_record, approver)
             return Response(DispatchRecordSerializer(dispatch_record).data)
         except ValueError as e:
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            return _refused(e)
 
     @action(detail=True, methods=["post"])
     def reject(self, request, pk=None):
@@ -508,7 +516,7 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
             dispatch_record = DispatchService.execute(dispatch_record, executor)
             return Response(DispatchRecordSerializer(dispatch_record).data)
         except ValueError as e:
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            return _refused(e)
 
     @extend_schema(request=DispatchReturnSerializer, responses=DispatchRecordSerializer)
     @action(detail=True, methods=["post"], url_path="return-home")
