@@ -17,7 +17,7 @@ import { Button, Empty, Notice, Screen, Skeleton, Txt, useLayout, useReloadOnRef
 import type { AppStackParams } from "./applications";
 
 /** Statuses where the lock screen never showed it; the content is still readable. */
-const NOT_DELIVERED = new Set(["FAILED", "DISABLED", "EXPIRED", "CANCELLED"]);
+const NOT_DELIVERED = new Set(["FAILED", "DISABLED", "EXPIRED", "CANCELLED", "NO_DEVICE"]);
 
 function Row({ item, last }: { item: PushHistoryItem; last: boolean }) {
   const theme = useTheme();

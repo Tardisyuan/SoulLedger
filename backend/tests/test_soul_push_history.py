@@ -84,3 +84,52 @@ def test_one_event_on_two_devices_is_one_row(cn_tenant):
     _delivery(account, "judgment:2", token=TOKEN_B)
     page = client.get(URL).data
     assert page["count"] == 2 and len(page["results"]) == 2
+
+
+# ── 没有设备也有记录 ──────────────────────────────────────────────────────
+
+
+def _judged(account, tenant, judgment_id="j-1"):
+    from apps.soul_push import services
+
+    return services.record_for_event(
+        "JUDGMENT_CONCLUDED", {"soul_id": str(account.soul_id), "judgment_id": judgment_id}, tenant.code)
+
+
+def test_an_event_for_a_soul_without_a_device_is_still_in_the_history_marked_undelivered(cn_tenant):
+    """变异:`_record` 去掉 `if not devices` 那一段 → 历史是空的,红。"""
+    account, client = ready_soul(cn_tenant)
+    assert _judged(account, cn_tenant) == []  # 没有要发送的投递
+    (row,) = PushDelivery.objects.all()
+    assert row.device is None and row.status == PushStatus.NO_DEVICE
+    rows = client.get(URL).data["results"]
+    assert [(r["kind"], r["status"]) for r in rows] == [("judgment_result", "NO_DEVICE")]
+    assert set(rows[0]) == {"id", "kind", "title", "body", "status", "data", "created_at"}
+
+
+def test_the_deviceless_history_row_is_deduped_by_the_event(cn_tenant):
+    """同一件事发布两次,仍是一行(NULL 设备不进 `(dedupe_key, device)` 唯一约束,靠条件约束)。"""
+    account, client = ready_soul(cn_tenant)
+    _judged(account, cn_tenant)
+    _judged(account, cn_tenant)
+    assert PushDelivery.objects.count() == 1
+    _judged(account, cn_tenant, "j-2")
+    assert PushDelivery.objects.count() == 2
+    assert client.get(URL).data["count"] == 2
+
+
+def test_a_soul_with_a_device_gets_a_queued_row_and_no_deviceless_one(cn_tenant):
+    account, client = ready_soul(cn_tenant)
+    _device(account)
+    ids = _judged(account, cn_tenant)
+    (row,) = PushDelivery.objects.all()
+    assert ids == [str(row.pk)] and row.device is not None and row.status == PushStatus.QUEUED
+
+
+def test_a_preference_that_is_off_records_nothing_even_without_a_device(cn_tenant):
+    from apps.soul_push.models import PushPreference
+
+    account, client = ready_soul(cn_tenant)
+    PushPreference.objects.create(account=account, soul=account.soul, judgment=False)
+    _judged(account, cn_tenant)
+    assert not PushDelivery.objects.exists()
