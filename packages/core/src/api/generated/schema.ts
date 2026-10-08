@@ -11054,6 +11054,8 @@ export interface components {
             is_milestone: boolean;
             /** Format: date-time */
             recorded_at: string;
+            readonly statute_snapshot: components["schemas"]["MeStatuteRef"] | null;
+            life_stage: string;
         };
         /** @description 结束这一世的那次转世。**没有 new_identity、没有 notes。** */
         MeReincarnation: {
@@ -11087,6 +11089,13 @@ export interface components {
             started_on: string | null;
             /** Format: date */
             ends_on: string | null;
+        };
+        /** @description 灵魂看到的律条引用:只有编号与各语言的短标题 —— 不带正文、出处、哈希、版本。 */
+        MeStatuteRef: {
+            code: string;
+            title: {
+                [key: string]: string;
+            };
         };
         MeTenant: {
             code: string;
