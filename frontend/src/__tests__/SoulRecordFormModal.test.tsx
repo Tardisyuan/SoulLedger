@@ -132,13 +132,39 @@ describe("新增", () => {
     expect(onClose).toHaveBeenCalled();
   });
 
-  it("shows the server's 400 under the field it names", async () => {
-    soulsApi.addRecord.mockRejectedValue({ response: { status: 400, data: { occurrence_count: ["Ensure this value is greater than or equal to 1."] } } });
+  function save(reject: unknown) {
+    soulsApi.addRecord.mockRejectedValue(reject);
     openAdd();
     fireEvent.change(label("ledger.book.col_item"), { target: { value: "事" } });
     fireEvent.click(screen.getByRole("button", { name: tZh("common.save") }));
-    expect(await screen.findByText(/Ensure this value is greater than or equal to 1/)).toBeInTheDocument();
+  }
+  const notify = () => (jest.requireMock("@soulledger/core/platform") as { notify: jest.Mock }).notify;
+  const bad = (data: object) => ({ response: { status: 400, data } });
+
+  it.each([
+    ["count below 1", { occurrence_count: ["Ensure this value is greater than or equal to 1."], error_codes: { occurrence_count: ["min_value"] } }, "ledger.book.form.err.count_min"],
+    ["weight out of range", { weight: ["Ensure this value is less than or equal to 100."], error_codes: { weight: ["max_value"] } }, "ledger.book.form.weight_range"],
+    ["unknown enum", { life_stage: ['"X" is not a valid choice.'], error_codes: { life_stage: ["invalid_choice"] } }, "ledger.book.form.err.unknown_enum"],
+    ["statute of another civilization", { statute: ["CN-1 belongs to EUROPEAN"], error_codes: { statute: ["statute_other_civilization"] } }, "ledger.book.form.err.statute_civ"],
+    ["unpaired clause and count", { non_field_errors: ["statute_clause and occurrence_count are the two halves"], error_codes: { non_field_errors: ["clause_count_pair"] } }, "ledger.book.form.err.pair"],
+  ])("translates the server's code for %s and raises no generic toast", async (_name, data, key) => {
+    notify().mockClear();
+    save(bad(data));
+    expect(await screen.findByText(tZh(key))).toBeInTheDocument();
+    expect(screen.queryByText(/Ensure this value|is not a valid choice|belongs to EUROPEAN|two halves/)).toBeNull();
+    expect(notify()).not.toHaveBeenCalled();
+  });
+
+  it("falls back to the server's text for a code it does not know, still under the field", async () => {
+    save(bad({ occurrence_count: ["Something new."], error_codes: { occurrence_count: ["brand_new"] } }));
+    expect(await screen.findByText(/Something new\./)).toBeInTheDocument();
     expect(label("ledger.book.form.occurrence_count")).toHaveAttribute("aria-invalid", "true");
+  });
+
+  it("keeps the generic toast for errors that name no field", async () => {
+    notify().mockClear();
+    save({ response: { status: 500, data: "boom" } });
+    await waitFor(() => expect(notify()).toHaveBeenCalledWith("souls.detail.failed", "error"));
   });
 });
 

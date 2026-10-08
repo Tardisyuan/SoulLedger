@@ -1142,7 +1142,13 @@
         "count_needs_clause": "填写次数时须同时选择条款",
         "clause_needs_count": "选了条款须同时填写次数",
         "weight_range": "权重须是 1 到 100 的整数",
-        "snapshot": "已存入的律条快照"
+        "snapshot": "已存入的律条快照",
+        "err": {
+          "statute_civ": "该律条不属于这个灵魂的文明",
+          "pair": "次数与条款须同时填写,或同时留空",
+          "count_min": "次数须是不小于 1 的整数",
+          "unknown_enum": "取值不在可选范围内"
+        }
       }
     },
     "series_effective": "现值",

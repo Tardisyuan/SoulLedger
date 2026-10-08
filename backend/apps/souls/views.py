@@ -45,6 +45,16 @@ from apps.souls.serializers import (
 )
 
 
+def _record_errors(serializer):
+    """400 for a record write: the usual `{field: [message]}` plus `error_codes` — `{field: [code]}` in the
+    same order — so a client maps the stable code to its own words instead of matching English text."""
+    codes = {
+        field: [d.get("code", "invalid") if isinstance(d, dict) else "invalid" for d in (details if isinstance(details, list) else [details])]
+        for field, details in serializer.get_full_details().items()
+    }
+    return Response({**serializer.errors, "error_codes": codes}, status=status.HTTP_400_BAD_REQUEST)
+
+
 class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetMixin, viewsets.ModelViewSet):
     """
     Soul CRUD + state transitions + record management.
@@ -494,7 +504,8 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
         """Add a merit or demerit record to a soul."""
         soul = self.get_object()
         serializer = SoulRecordSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+        if not serializer.is_valid():
+            return _record_errors(serializer)
         record = serializer.save(soul=soul)
         return Response(SoulRecordSerializer(record).data, status=status.HTTP_201_CREATED)
 
@@ -523,7 +534,8 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
         except (SoulRecord.DoesNotExist, DjangoValidationError):
             return Response({"error": "Record not found on this soul."}, status=status.HTTP_404_NOT_FOUND)
         serializer = SoulRecordSerializer(record, data=request.data, partial=True, context={"soul": soul})
-        serializer.is_valid(raise_exception=True)
+        if not serializer.is_valid():
+            return _record_errors(serializer)
         record = serializer.save()
         # save() 只在新建时重算;改权重 / 类型要同一条共用的重算路径,否则 merit_score 停在旧值。
         record._update_soul_karma()
