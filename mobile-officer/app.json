@@ -1,0 +1,51 @@
+{
+  "expo": {
+    "name": "灵魂簿 · 官员",
+    "slug": "soulledger-officer",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.soulledger.officer",
+      "icon": {
+        "light": "./assets/icon.png",
+        "dark": "./assets/icon-dark.png",
+        "tinted": "./assets/icon-mono.png"
+      }
+    },
+    "android": {
+      "package": "com.soulledger.officer",
+      "adaptiveIcon": {
+        "backgroundColor": "#EFEFEB",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "plugins": [
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-blank.png",
+          "imageWidth": 112,
+          "resizeMode": "contain",
+          "backgroundColor": "#EFEFEB",
+          "dark": {
+            "image": "./assets/splash-blank.png",
+            "backgroundColor": "#EFEFEB"
+          }
+        }
+      ],
+      "expo-secure-store",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#181A17"
+        }
+      ]
+    ]
+  }
+}
