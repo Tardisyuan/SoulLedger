@@ -47,7 +47,8 @@ import { ChangePasswordScreen, LoginScreen, type LoginParams } from "./screens/a
 import { ForgotPasswordScreen } from "./screens/forgotPassword";
 import { AboutScreen } from "./screens/about";
 import { NotificationPrimerScreen, SettingsScreen } from "./screens/settings";
-import { PRIMER_SEEN_KEY, easProjectId, landingOf, permission, registerDevice, syncPushLocale, type Landing } from "./push";
+import { PRIMER_SEEN_KEY, easProjectId, landOn, landingOf, permission, registerDevice, syncPushLocale, type Landing } from "./push";
+import { NotificationHistoryScreen } from "./screens/notificationHistory";
 import { MyLifeScreen } from "./screens/life";
 import { SentenceScreen } from "./screens/sentence";
 import { CircleScreen, ComposePostScreen, PostScreen } from "./screens/circle";
@@ -247,13 +248,7 @@ function PushBridge({ signedIn, ready }: { signedIn: boolean; ready: number }) {
     const landing = pending.current;
     if (!landing || !signedIn || !navigationRef.isReady()) return;
     pending.current = null;
-    if (landing.screen === "ApplicationDetail") navigationRef.navigate("ApplicationDetail", { id: landing.id, landed: true });
-    else if (landing.screen === "Conversation") navigationRef.navigate("Conversation", { id: landing.id, landed: true });
-    // 受刑 1d: completion lands on the life page's section (the new 「可申请转生」 row is there); the rest on the full list.
-    else if (landing.screen === "Sentence" && landing.landing.kind === "sentence_completed")
-      navigationRef.navigate("Tabs", { screen: "Life", params: { sentenceLanding: landing.landing } });
-    else if (landing.screen === "Sentence") navigationRef.navigate("Sentence", { landing: landing.landing });
-    else navigationRef.navigate("Tabs", { screen: "Life" });
+    landOn(navigationRef.navigate, landing);
   }, [arrived, signedIn, ready]);
 
   return null;
@@ -335,6 +330,13 @@ export function RootNavigator() {
               component={AboutScreen}
               options={({ navigation }) => ({
                 header: () => <AppHeader title={t("about.title")} onBack={navigation.goBack} />,
+              })}
+            />
+            <Stack.Screen
+              name="NotificationHistory"
+              component={NotificationHistoryScreen}
+              options={({ navigation }) => ({
+                header: () => <AppHeader title={t("soul_app.history.title")} onBack={navigation.goBack} />,
               })}
             />
             <Stack.Screen name="NotificationPrimer" component={NotificationPrimerScreen} options={{ headerShown: false }} />
