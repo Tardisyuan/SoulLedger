@@ -70,6 +70,9 @@ export type MeRebirthApplication = Schemas["MeRebirthApplication"];
 export type MeRebirthApplicationList = Schemas["MeRebirthApplicationList"];
 export type DesiredRebirthForm = Schemas["DesiredRebirthFormEnum"];
 export type RebirthApplicationStatus = Schemas["RebirthApplicationStatusEnum"];
+/** 缩短冷却申请:本世最近一份,在 `MeRebirthApplicationList.cooldown_shortening` 里。 */
+export type MeCooldownShortening = Schemas["MeCooldownShortening"];
+export type CooldownShorteningStatus = Schemas["CooldownShorteningStatusEnum"];
 export type PushDevice = Schemas["PushDevice"];
 export type PushPlatform = Schemas["PushPlatformEnum"];
 export type NotificationSettings = Schemas["NotificationSettings"];
@@ -215,6 +218,11 @@ export const soulApi = {
     soulHttp
       .post<MeRebirthApplication>(`/me/rebirth-applications/${id}/appeal/`, { statement })
       .then((r) => r.data),
+  /** Only while `reason === "cooldown"` and `can_shorten_cooldown`; 409 `not_in_cooldown` / `shortening_pending` / `shortening_used`. */
+  requestCooldownShortening: (reason: string) =>
+    soulHttp
+      .post<MeCooldownShortening>("/me/rebirth-applications/cooldown-shortening/", { reason })
+      .then((r) => r.data),
   /**
    * The welcome transition has played for `civilization` (App「文明气质」1b). Idempotent;
    * the answer is the whole list, most recent welcome last (`/me/`'s `welcomed_civilizations`).
@@ -276,6 +284,9 @@ export const SOUL_ERROR_CODES = [
   "sentence_in_progress",
   "appeal_used",
   "not_appealable",
+  "not_in_cooldown",
+  "shortening_pending",
+  "shortening_used",
   "past_life_read_only",
   "not_found",
   "network",

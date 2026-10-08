@@ -21,6 +21,8 @@ from apps.soul_accounts.authentication import SoulJWTAuthentication, SoulRefresh
 from apps.soul_accounts.models import RebirthApplication, SoulAccount
 from apps.soul_accounts.serializers import (
     ChangePasswordRequestSerializer,
+    CooldownShorteningCreateSerializer,
+    MeCooldownShorteningSerializer,
     MeLifeSerializer,
     MeProfileSerializer,
     MeRebirthApplicationListSerializer,
@@ -291,9 +293,13 @@ class MeRebirthApplicationsView(SoulAPIView):
         can, reason, until = rebirth.eligibility(account)
         rows = (RebirthApplication.objects.filter(soul=account.soul, cycle=account.cycle)
                 .select_related("workflow__current_node", "appeal_workflow__current_node"))
+        can_shorten, _, _ = rebirth.cooldown_shortening_eligibility(account)
+        shortening = rebirth.current_cooldown_shortening(account)
         return Response({
             "can_apply": can, "reason": reason, "cooldown_until": until,
             "results": MeRebirthApplicationSerializer(rows, many=True, context={"account": account}).data,
+            "can_shorten_cooldown": can_shorten,
+            "cooldown_shortening": MeCooldownShorteningSerializer(shortening).data if shortening else None,
         })
 
     @extend_schema(request=RebirthApplicationCreateSerializer,
@@ -317,6 +323,21 @@ class MeRebirthApplicationDetailView(SoulAPIView):
         if application is None:
             return Response({"detail": "申请不存在。", "code": "not_found"}, status=404)
         return Response(MeRebirthApplicationSerializer(application, context={"account": self.account}).data)
+
+
+class MeCooldownShorteningView(SoulAPIView):
+    """冷却期内申请缩短本次冷却。状态在 `GET rebirth-applications/` 的 `cooldown_shortening` 里。"""
+
+    @extend_schema(request=CooldownShorteningCreateSerializer,
+                   responses={201: MeCooldownShorteningSerializer, 409: SoulErrorSerializer})
+    def post(self, request):
+        body = CooldownShorteningCreateSerializer(data=request.data)
+        body.is_valid(raise_exception=True)
+        try:
+            row = rebirth.request_cooldown_shortening(self.account, **body.validated_data)
+        except svc.SoulAccountError as exc:
+            return _error(exc)
+        return Response(MeCooldownShorteningSerializer(row).data, status=status.HTTP_201_CREATED)
 
 
 class MeRebirthAppealView(SoulAPIView):

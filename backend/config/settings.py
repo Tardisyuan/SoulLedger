@@ -600,6 +600,7 @@ SPECTACULAR_SETTINGS = {
         # apps.soul_accounts:`status` 与 `desired_form` 两个字段名在别处已有别的选项集。
         # 灵魂提交时不收 OTHER,于是 desired_form 有两套(完整的与去掉 OTHER 的),各自命名。
         "RebirthApplicationStatusEnum": "apps.soul_accounts.models.RebirthApplicationStatus.choices",
+        "CooldownShorteningStatusEnum": "apps.soul_accounts.models.CooldownShorteningStatus.choices",
         "RebirthFormEnum": "apps.reincarnation.models.RebirthForm.choices",
         # apps.soul_assist:两端各有一个 `screen` 选项集。灵魂端的保留原名(mobile 与 core 引用
         # `ScreenEnum`),官员端另起名 —— 不钉住就两个都变成带前缀的名字。

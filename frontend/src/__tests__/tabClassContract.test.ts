@@ -97,6 +97,8 @@ describe("the five strips read it from there", () => {
     // app/moderation/page.tsx 于 2026-09-25 离开:朋友圈审核四区(举报 / 敏感词 / 禁言 / 已处理)
     // 改成 E 组页头的分段切换(墨底为当前),与审判队列同一种写法。
     "app/notifications/page.tsx",
+    // 2026-10-08:转生申请页的「转生申请 / 缩短冷却申请」两个页签(同审判队列的写法)。
+    "app/rebirth-applications/page.tsx",
     // 2026-09-20:定时任务的「任务 / 运行历史」两个页签,第八条。
     "app/scheduler/page.tsx",
     // 2026-09-30(v2 第三批):动态与关注两页的页签此前各写一份强调色下划线,v2 没有强调色,

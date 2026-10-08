@@ -3537,6 +3537,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/me/rebirth-applications/cooldown-shortening/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 冷却期内申请缩短本次冷却。状态在 `GET rebirth-applications/` 的 `cooldown_shortening` 里。 */
+        post: operations["v1_me_rebirth_applications_cooldown_shortening_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/me/sentence-plan/": {
         parameters: {
             query?: never;
@@ -6538,6 +6555,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/soul-accounts/cooldown-shortenings/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 缩短冷却申请:与转生申请同一把权限(看 `workflow.read`,决定 `workflow.approve`),同一种租户隔离。 */
+        get: operations["v1_soul_accounts_cooldown_shortenings_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/soul-accounts/cooldown-shortenings/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 缩短冷却申请:与转生申请同一把权限(看 `workflow.read`,决定 `workflow.approve`),同一种租户隔离。 */
+        get: operations["v1_soul_accounts_cooldown_shortenings_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/soul-accounts/cooldown-shortenings/{id}/approve/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 缩短冷却申请:与转生申请同一把权限(看 `workflow.read`,决定 `workflow.approve`),同一种租户隔离。 */
+        post: operations["v1_soul_accounts_cooldown_shortenings_approve_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/soul-accounts/cooldown-shortenings/{id}/reject/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 缩短冷却申请:与转生申请同一把权限(看 `workflow.read`,决定 `workflow.approve`),同一种租户隔离。 */
+        post: operations["v1_soul_accounts_cooldown_shortenings_reject_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/soul-accounts/credentials/": {
         parameters: {
             query?: never;
@@ -8733,6 +8818,24 @@ export interface components {
          * @enum {string}
          */
         ConversationKindEnum: "DIRECT" | "OFFICER_INBOX";
+        CooldownShorteningApprove: {
+            approved_days: number;
+            /** @default  */
+            note: string;
+        };
+        CooldownShorteningCreate: {
+            reason: string;
+        };
+        CooldownShorteningReject: {
+            note: string;
+        };
+        /**
+         * @description * `PENDING` - 待决定
+         *     * `APPROVED` - 已批准
+         *     * `REJECTED` - 已驳回
+         * @enum {string}
+         */
+        CooldownShorteningStatusEnum: "PENDING" | "APPROVED" | "REJECTED";
         Corpus: {
             entries: components["schemas"]["CorpusEntry"][];
             prompts: components["schemas"]["CorpusPrompt"][];
@@ -9528,6 +9631,7 @@ export interface components {
          *     * `REBIRTH_APPLICATION_SUBMITTED` - Rebirth Application Submitted
          *     * `REBIRTH_STATUS_CHANGED` - Rebirth Status Changed
          *     * `REBIRTH_CROSS_CIV_DECIDED` - Rebirth Cross Civ Decided
+         *     * `COOLDOWN_SHORTENING_DECIDED` - Cooldown Shortening Decided
          *     * `SENTENCE_PLAN_CREATED` - Sentence Plan Created
          *     * `SENTENCE_NODE_ACTIVATED` - Sentence Node Activated
          *     * `SENTENCE_NODE_WAITING` - Sentence Node Waiting
@@ -9541,7 +9645,7 @@ export interface components {
          *     * `SCHEDULER_RUN_FAILED` - Scheduler Run Failed
          * @enum {string}
          */
-        EventTypeEnum: "SOUL_CREATED" | "STATE_CHANGED" | "SETTLEMENT_CORRECTED" | "RECORD_ADDED" | "JUDGMENT_INITIATED" | "JUDGMENT_CONCLUDED" | "DISPOSITION_CREATED" | "DISPOSITION_EXPIRED" | "REINCARNATION_TRIGGERED" | "KARMA_RECALCULATED" | "WORKFLOW_CREATED" | "WORKFLOW_ASSIGNED" | "WORKFLOW_APPROVED" | "WORKFLOW_REJECTED" | "DISPATCH_CREATED" | "DISPATCH_APPROVED" | "DISPATCH_REJECTED" | "DISPATCH_EXECUTED" | "DISPATCH_STATUS_CHANGED" | "DEATH_SYNC_RECEIVED" | "DEATH_SYNC_PROCESSED" | "POST_CREATED" | "POST_UPDATED" | "POST_DELETED" | "COMMENT_CREATED" | "COMMENT_DELETED" | "REACTION_ADDED" | "REACTION_REMOVED" | "USER_FOLLOWED" | "USER_UNFOLLOWED" | "NOTIFICATION_CREATED" | "SOUL_ACCOUNT_CREATED" | "SOUL_ACCOUNT_RETIRED" | "REBIRTH_APPLICATION_SUBMITTED" | "REBIRTH_STATUS_CHANGED" | "REBIRTH_CROSS_CIV_DECIDED" | "SENTENCE_PLAN_CREATED" | "SENTENCE_NODE_ACTIVATED" | "SENTENCE_NODE_WAITING" | "SENTENCE_NODE_COMPLETED" | "SENTENCE_NODE_REFUSED" | "SENTENCE_PLAN_AMENDED" | "SENTENCE_REQUEST_CREATED" | "SENTENCE_REQUEST_DECIDED" | "SENTENCE_PLAN_COMPLETED" | "SENTENCE_PLAN_CANCELLED" | "SCHEDULER_RUN_FAILED";
+        EventTypeEnum: "SOUL_CREATED" | "STATE_CHANGED" | "SETTLEMENT_CORRECTED" | "RECORD_ADDED" | "JUDGMENT_INITIATED" | "JUDGMENT_CONCLUDED" | "DISPOSITION_CREATED" | "DISPOSITION_EXPIRED" | "REINCARNATION_TRIGGERED" | "KARMA_RECALCULATED" | "WORKFLOW_CREATED" | "WORKFLOW_ASSIGNED" | "WORKFLOW_APPROVED" | "WORKFLOW_REJECTED" | "DISPATCH_CREATED" | "DISPATCH_APPROVED" | "DISPATCH_REJECTED" | "DISPATCH_EXECUTED" | "DISPATCH_STATUS_CHANGED" | "DEATH_SYNC_RECEIVED" | "DEATH_SYNC_PROCESSED" | "POST_CREATED" | "POST_UPDATED" | "POST_DELETED" | "COMMENT_CREATED" | "COMMENT_DELETED" | "REACTION_ADDED" | "REACTION_REMOVED" | "USER_FOLLOWED" | "USER_UNFOLLOWED" | "NOTIFICATION_CREATED" | "SOUL_ACCOUNT_CREATED" | "SOUL_ACCOUNT_RETIRED" | "REBIRTH_APPLICATION_SUBMITTED" | "REBIRTH_STATUS_CHANGED" | "REBIRTH_CROSS_CIV_DECIDED" | "COOLDOWN_SHORTENING_DECIDED" | "SENTENCE_PLAN_CREATED" | "SENTENCE_NODE_ACTIVATED" | "SENTENCE_NODE_WAITING" | "SENTENCE_NODE_COMPLETED" | "SENTENCE_NODE_REFUSED" | "SENTENCE_PLAN_AMENDED" | "SENTENCE_REQUEST_CREATED" | "SENTENCE_REQUEST_DECIDED" | "SENTENCE_PLAN_COMPLETED" | "SENTENCE_PLAN_CANCELLED" | "SCHEDULER_RUN_FAILED";
         /**
          * @description Read-only row of `GET /death-sync/webhook-deliveries/`.
          *
@@ -10752,6 +10856,26 @@ export interface components {
             /** Format: date-time */
             readonly created_at: string;
         };
+        /** @description 灵魂看自己的那份:没有 decided_by。 */
+        MeCooldownShortening: {
+            /** Format: uuid */
+            readonly id: string;
+            /**
+             * Format: uuid
+             * @description 其终局驳回引起这段冷却的那份申请。
+             */
+            readonly application: string;
+            readonly cycle: number;
+            readonly reason: string;
+            readonly status: components["schemas"]["CooldownShorteningStatusEnum"];
+            /** @description 批准后,自决定时刻起还要等的天数。 */
+            readonly approved_days: number | null;
+            readonly decision_note: string;
+            /** Format: date-time */
+            readonly decided_at: string | null;
+            /** Format: date-time */
+            readonly created_at: string;
+        };
         /** @description 当前所在节点:只有节点类型与**角色**,不含审批人是谁(2026-09-14 决定 2)。 */
         MeCurrentStep: {
             node_type: string;
@@ -10869,6 +10993,8 @@ export interface components {
             /** Format: date-time */
             cooldown_until: string | null;
             results: components["schemas"]["MeRebirthApplication"][];
+            can_shorten_cooldown: boolean;
+            cooldown_shortening: components["schemas"]["MeCooldownShortening"] | null;
         };
         MeRecord: {
             /** Format: uuid */
@@ -11227,6 +11353,39 @@ export interface components {
             readonly last_active_at: string;
             readonly first_question: string;
             readonly messages: components["schemas"]["AssistMessage"][];
+        };
+        OfficerCooldownShortening: {
+            /** Format: uuid */
+            readonly id: string;
+            /** Format: uuid */
+            readonly soul: string;
+            readonly soul_code: string;
+            readonly soul_name: string;
+            /** Format: uuid */
+            readonly account: string;
+            /**
+             * Format: uuid
+             * @description 其终局驳回引起这段冷却的那份申请。
+             */
+            readonly application: string;
+            readonly cycle: number;
+            readonly reason: string;
+            readonly status: components["schemas"]["CooldownShorteningStatusEnum"];
+            /** @description 批准后,自决定时刻起还要等的天数。 */
+            readonly approved_days: number | null;
+            readonly decision_note: string;
+            readonly decided_by: number | null;
+            readonly decided_by_username: string;
+            /** Format: date-time */
+            readonly decided_at: string | null;
+            /** Format: date-time */
+            readonly cooldown_until: string | null;
+            /** @description 批准的天数必须小于它(向上取整);0 = 冷却已结束。 */
+            readonly remaining_days: number;
+            /** Format: date-time */
+            readonly created_at: string;
+            /** Format: date-time */
+            readonly updated_at: string;
         };
         OfficerInbox: {
             /** Format: uuid */
@@ -11710,6 +11869,21 @@ export interface components {
              */
             previous?: string | null;
             results: components["schemas"]["ModeratedPost"][];
+        };
+        PaginatedOfficerCooldownShorteningList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["OfficerCooldownShortening"][];
         };
         PaginatedOfficerInboxList: {
             /** @example 123 */
@@ -19847,6 +20021,7 @@ export interface operations {
                  *     * `REBIRTH_APPLICATION_SUBMITTED` - Rebirth Application Submitted
                  *     * `REBIRTH_STATUS_CHANGED` - Rebirth Status Changed
                  *     * `REBIRTH_CROSS_CIV_DECIDED` - Rebirth Cross Civ Decided
+                 *     * `COOLDOWN_SHORTENING_DECIDED` - Cooldown Shortening Decided
                  *     * `SENTENCE_PLAN_CREATED` - Sentence Plan Created
                  *     * `SENTENCE_NODE_ACTIVATED` - Sentence Node Activated
                  *     * `SENTENCE_NODE_WAITING` - Sentence Node Waiting
@@ -19859,7 +20034,7 @@ export interface operations {
                  *     * `SENTENCE_PLAN_CANCELLED` - Sentence Plan Cancelled
                  *     * `SCHEDULER_RUN_FAILED` - Scheduler Run Failed
                  */
-                event_type?: "COMMENT_CREATED" | "COMMENT_DELETED" | "DEATH_SYNC_PROCESSED" | "DEATH_SYNC_RECEIVED" | "DISPATCH_APPROVED" | "DISPATCH_CREATED" | "DISPATCH_EXECUTED" | "DISPATCH_REJECTED" | "DISPATCH_STATUS_CHANGED" | "DISPOSITION_CREATED" | "DISPOSITION_EXPIRED" | "JUDGMENT_CONCLUDED" | "JUDGMENT_INITIATED" | "KARMA_RECALCULATED" | "NOTIFICATION_CREATED" | "POST_CREATED" | "POST_DELETED" | "POST_UPDATED" | "REACTION_ADDED" | "REACTION_REMOVED" | "REBIRTH_APPLICATION_SUBMITTED" | "REBIRTH_CROSS_CIV_DECIDED" | "REBIRTH_STATUS_CHANGED" | "RECORD_ADDED" | "REINCARNATION_TRIGGERED" | "SCHEDULER_RUN_FAILED" | "SENTENCE_NODE_ACTIVATED" | "SENTENCE_NODE_COMPLETED" | "SENTENCE_NODE_REFUSED" | "SENTENCE_NODE_WAITING" | "SENTENCE_PLAN_AMENDED" | "SENTENCE_PLAN_CANCELLED" | "SENTENCE_PLAN_COMPLETED" | "SENTENCE_PLAN_CREATED" | "SENTENCE_REQUEST_CREATED" | "SENTENCE_REQUEST_DECIDED" | "SETTLEMENT_CORRECTED" | "SOUL_ACCOUNT_CREATED" | "SOUL_ACCOUNT_RETIRED" | "SOUL_CREATED" | "STATE_CHANGED" | "USER_FOLLOWED" | "USER_UNFOLLOWED" | "WORKFLOW_APPROVED" | "WORKFLOW_ASSIGNED" | "WORKFLOW_CREATED" | "WORKFLOW_REJECTED";
+                event_type?: "COMMENT_CREATED" | "COMMENT_DELETED" | "COOLDOWN_SHORTENING_DECIDED" | "DEATH_SYNC_PROCESSED" | "DEATH_SYNC_RECEIVED" | "DISPATCH_APPROVED" | "DISPATCH_CREATED" | "DISPATCH_EXECUTED" | "DISPATCH_REJECTED" | "DISPATCH_STATUS_CHANGED" | "DISPOSITION_CREATED" | "DISPOSITION_EXPIRED" | "JUDGMENT_CONCLUDED" | "JUDGMENT_INITIATED" | "KARMA_RECALCULATED" | "NOTIFICATION_CREATED" | "POST_CREATED" | "POST_DELETED" | "POST_UPDATED" | "REACTION_ADDED" | "REACTION_REMOVED" | "REBIRTH_APPLICATION_SUBMITTED" | "REBIRTH_CROSS_CIV_DECIDED" | "REBIRTH_STATUS_CHANGED" | "RECORD_ADDED" | "REINCARNATION_TRIGGERED" | "SCHEDULER_RUN_FAILED" | "SENTENCE_NODE_ACTIVATED" | "SENTENCE_NODE_COMPLETED" | "SENTENCE_NODE_REFUSED" | "SENTENCE_NODE_WAITING" | "SENTENCE_PLAN_AMENDED" | "SENTENCE_PLAN_CANCELLED" | "SENTENCE_PLAN_COMPLETED" | "SENTENCE_PLAN_CREATED" | "SENTENCE_REQUEST_CREATED" | "SENTENCE_REQUEST_DECIDED" | "SETTLEMENT_CORRECTED" | "SOUL_ACCOUNT_CREATED" | "SOUL_ACCOUNT_RETIRED" | "SOUL_CREATED" | "STATE_CHANGED" | "USER_FOLLOWED" | "USER_UNFOLLOWED" | "WORKFLOW_APPROVED" | "WORKFLOW_ASSIGNED" | "WORKFLOW_CREATED" | "WORKFLOW_REJECTED";
                 /** @description Which field to use when ordering the results. */
                 ordering?: string;
                 /** @description A page number within the paginated result set. */
@@ -21910,6 +22085,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SoulError"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulError"];
+                };
+            };
+        };
+    };
+    v1_me_rebirth_applications_cooldown_shortening_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CooldownShorteningCreate"];
+                "application/x-www-form-urlencoded": components["schemas"]["CooldownShorteningCreate"];
+                "multipart/form-data": components["schemas"]["CooldownShorteningCreate"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeCooldownShortening"];
                 };
             };
             409: {
@@ -27315,6 +27523,149 @@ export interface operations {
                 };
             };
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulError"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulError"];
+                };
+            };
+        };
+    };
+    v1_soul_accounts_cooldown_shortenings_list: {
+        parameters: {
+            query?: {
+                /** @description Which field to use when ordering the results. */
+                ordering?: string;
+                /** @description A page number within the paginated result set. */
+                page?: number;
+                /** @description A search term. */
+                search?: string;
+                soul?: string;
+                /**
+                 * @description * `PENDING` - 待决定
+                 *     * `APPROVED` - 已批准
+                 *     * `REJECTED` - 已驳回
+                 */
+                status?: "APPROVED" | "PENDING" | "REJECTED";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedOfficerCooldownShorteningList"];
+                };
+            };
+        };
+    };
+    v1_soul_accounts_cooldown_shortenings_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this cooldown shortening request. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OfficerCooldownShortening"];
+                };
+            };
+        };
+    };
+    v1_soul_accounts_cooldown_shortenings_approve_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this cooldown shortening request. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CooldownShorteningApprove"];
+                "application/x-www-form-urlencoded": components["schemas"]["CooldownShorteningApprove"];
+                "multipart/form-data": components["schemas"]["CooldownShorteningApprove"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OfficerCooldownShortening"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulError"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulError"];
+                };
+            };
+        };
+    };
+    v1_soul_accounts_cooldown_shortenings_reject_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this cooldown shortening request. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CooldownShorteningReject"];
+                "application/x-www-form-urlencoded": components["schemas"]["CooldownShorteningReject"];
+                "multipart/form-data": components["schemas"]["CooldownShorteningReject"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OfficerCooldownShortening"];
+                };
+            };
+            400: {
                 headers: {
                     [name: string]: unknown;
                 };
