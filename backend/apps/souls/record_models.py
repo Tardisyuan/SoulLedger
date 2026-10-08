@@ -475,12 +475,14 @@ class SoulRecord(AuditUserFields, models.Model):
 
             from apps.judgment.snapshot import record_snapshot
             self.statute_snapshot = record_snapshot(self.statute, timezone.now())
-            # Stamp the life on insert. A caller may pass cycle explicitly;
-            # 0 is also the default, so 0 on a reborn soul means "unspecified"
-            # and is filled in -- there is no write path that files a deed
-            # under a life that already ended.
-            if is_new and self.cycle == 0:
-                self.cycle = self.soul.life_index
+        # Stamp the life on insert. A caller may pass cycle explicitly;
+        # 0 is also the default, so 0 on a reborn soul means "unspecified"
+        # and is filled in -- there is no write path that files a deed
+        # under a life that already ended.
+        # (2026-10-08: the statute-snapshot block above was once inserted so that this landed
+        # inside its `elif`, and a deed was stamped with its life only when it cited a statute.)
+        if is_new and self.cycle == 0:
+            self.cycle = self.soul.life_index
         super().save(*args, **kwargs)
         if is_new:
             depth, souls = _BATCH.get()

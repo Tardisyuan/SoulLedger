@@ -949,7 +949,8 @@ def test_warn_a_muted_soul_with_every_push_off_or_no_device_does_not_break_the_r
 ):
     from apps.soul_push.models import PushDelivery, PushPreference
 
-    # 没有设备:什么都不记,处置照常成立。
+    # 没有设备:不排推送，处置照常成立。警告不可关(偏好不管它),所以历史里留一行 NO_DEVICE
+    # —— 2026-10-08 用户定:没设备的灵魂也要在 App 的通知历史里看得到每件该通知的事。
     author, _, report = _reported_post(cn_tenant)
     SocialMute.objects.create(tenant=cn_tenant, user=author.user, until=timezone.now() + timedelta(days=3),
                               created_by=cn_moderator)
@@ -958,7 +959,8 @@ def test_warn_a_muted_soul_with_every_push_off_or_no_device_does_not_break_the_r
     _resolve_warn(cn_moderator, report, "注意言辞", django_capture_on_commit_callbacks)
     report.refresh_from_db()
     assert (report.status, report.resolution) == ("DISMISSED", "WARN")
-    assert not PushDelivery.objects.exists() and enqueued == []
+    assert not PushDelivery.objects.filter(device__isnull=False).exists() and enqueued == []
+    assert list(PushDelivery.objects.values_list("status", flat=True)) == ["NO_DEVICE"]
 
 
 def test_warn_on_another_civilizations_report_is_a_404(cn_tenant, eu_moderator):

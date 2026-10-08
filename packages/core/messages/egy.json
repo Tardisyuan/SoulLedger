@@ -188,7 +188,7 @@
     "life_stages": {
       "CHILDHOOD": "Ankh Nedjes",
       "YOUTH": "Ankh Renpi",
-      "ADULTHOOD": "Ankh Remetj",
+      "ADULTHOOD": "Ankh Qen",
       "OLD_AGE": "Ankh Wah"
     },
     "evidence_sources": {
@@ -2582,12 +2582,12 @@
       "cooldown_over": "Ahet Qebeh Khetem; Nen Wedja",
       "invalid_days": "Hru Nen Maat: 0 – Hru Khery",
       "note_required": "Khesef: Medu Er Ba Sesen",
-      "remaining_progress": "Hru {{past}} Khetem Seth Em {{total}}",
+      "remaining_progress": "Hru Iri: {{past}} / {{total}}",
       "approve_with_days": "Hesy · Hru {{days}} Khery",
-      "scope_note": "Hesy Khebi Ahet Qebeh Pen Wa; Hru Ahet Qebeh En Per Nen Menmen",
-      "sort_note": "Em Wedja Em Ahet Qebeh Khery Khebi Tepy; Ahet Qebeh Khetem Em Pehwy",
+      "scope_note": "Hesy Khebi Ahet Qebeh Pen Wa; Hru Ahet Qebeh En Wesekhet Nen Khemen",
+      "sort_note": "Nen Wedja Djer: Hru Khery Nedjes Er Tepy; Ahet Qebeh Khetem Em Pehwy",
       "source": "Ahet Qebeh In Khesef Pehwy En Dbh Wehem Mesut {{id}}",
-      "decide_failed": "Nen Wedja: {{reason}}",
+      "decide_failed": "Nen Iri Wedja: {{reason}}",
       "original": "Tepy {{date}}",
       "day_unit": "Hru"
     },
@@ -2868,7 +2868,8 @@
       "chat_reconcile_inbox": "Senb Sesh Wesekhet",
       "soul_assist_purge_history": "Fekh Medew Hehy Medu",
       "ledger_snapshot_balance_for_tenant": "Sesh Sepy Abed",
-      "notifications_email_action_needed_for_tenant": "Hab Sedjem Ba Em Smen Er Djeret"
+      "notifications_email_action_needed_for_tenant": "Hab Sedjem Ba Em Smen Er Djeret",
+      "notifications_email_action_needed_global": "Hab Sedjem Ba Em Smen Er Djeret · Sab Hery"
     },
     "status": {
       "PENDING": "Em Smen",
@@ -3753,7 +3754,7 @@
       "approved": "Dbh Khebi Hesy Seth; Ahet Qebeh Er {{date}}",
       "rejected": "Dbh Khebi Khesef Seth",
       "note": "Medu",
-      "brought_forward": "Khebi Seth"
+      "brought_forward": "Ahet Khebi"
     }
   },
   "soul_push": {

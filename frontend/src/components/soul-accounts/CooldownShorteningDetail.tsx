@@ -77,7 +77,6 @@ export function CooldownShorteningDetail({ row: listed, onClose }: { row: Office
       <dd className="mt-1 break-words text-sm text-[oklch(var(--color-ink))]">{value}</dd>
     </div>
   );
-  const heading = "text-2xs tracking-widest text-[oklch(var(--color-ink-subtle))] mb-1";
   const endDay = r.cooldown_end ? isoDay(r.cooldown_end) : null;
   const wasDay = r.status === "APPROVED" && r.cooldown_original_until ? isoDay(r.cooldown_original_until) : null;
 
@@ -167,12 +166,12 @@ export function CooldownShorteningDetail({ row: listed, onClose }: { row: Office
         </dl>
 
         <section>
-          <h3 className={heading}>{t("soul_accounts.cooldown.fields.reason")}</h3>
+          <h3 className="text-2xs uppercase tracking-widest text-[oklch(var(--color-ink-subtle))] mb-1">{t("soul_accounts.cooldown.fields.reason")}</h3>
           <p className="text-md whitespace-pre-wrap break-words">{r.reason}</p>
         </section>
         {r.decision_note && (
           <section>
-            <h3 className={heading}>{t("soul_accounts.cooldown.fields.note")}</h3>
+            <h3 className="text-2xs uppercase tracking-widest text-[oklch(var(--color-ink-subtle))] mb-1">{t("soul_accounts.cooldown.fields.note")}</h3>
             <p className="text-md whitespace-pre-wrap break-words">{r.decision_note}</p>
           </section>
         )}
