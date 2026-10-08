@@ -39,18 +39,7 @@ export const cooldownTone = (status: string): BadgeTone => COOLDOWN_TONE[status]
 /** The cooldown behind a shortening request is over (the server sends no `cooldown_until` then). */
 export const cooldownEnded = (r: { cooldown_until: string | null }) => r.cooldown_until === null;
 
-/**
- * A11 默认排序:待决定在前,按剩余冷却从少到多,冷却已结束的排最后;已决定的保持服务端顺序
- * (最近提交在前)排在待决定之后。稳定排序。
- * ponytail: sorts the page it is handed (PAGE_SIZE rows) — a server-side `ordering` if pending ever pages.
- */
-export function sortCooldownRows<T extends { status: string; cooldown_until: string | null; remaining_days: number }>(rows: T[]): T[] {
-  const key = (r: T) => (r.status !== "PENDING" ? [1, 0, 0] : [0, cooldownEnded(r) ? 1 : 0, r.remaining_days]);
-  return rows
-    .map((r, i) => ({ r, i, k: key(r) }))
-    .sort((a, b) => a.k[0] - b.k[0] || a.k[1] - b.k[1] || a.k[2] - b.k[2] || a.i - b.i)
-    .map((x) => x.r);
-}
+/** 顺序由服务端定(待决按剩余从少到多、已结束其次、已决定最后),这里不再重排,翻页才不乱。 */
 
 /** `2026-10-13` in the viewer's zone (the detail's 「冷却截止」); `-` shape, not locale-dependent. */
 export const isoDay = (value: string) => new Date(value).toLocaleDateString("sv-SE");

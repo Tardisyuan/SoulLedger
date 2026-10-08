@@ -94,6 +94,12 @@ export function useTransitionSoul() {
   });
 }
 
+/** 400 + 对象体 = 后端按字段(或 non_field_errors)说了哪里不对;表单把它画在字段下,不再弹通用 toast。 */
+function isFieldValidationError(error: unknown): boolean {
+  const r = (error as { response?: { status?: number; data?: unknown } })?.response;
+  return r?.status === 400 && typeof r.data === "object" && r.data !== null && !Array.isArray(r.data);
+}
+
 export function useAddSoulRecord() {
   const qc = useQueryClient();
   return useMutation({
@@ -103,8 +109,24 @@ export function useAddSoulRecord() {
       qc.invalidateQueries({ queryKey: soulKeys.detail(vars.id) });
       qc.invalidateQueries({ queryKey: soulKeys.ledger(vars.id) });
     },
-    onError: () => {
-      notify("souls.detail.failed", "error");
+    onError: (error) => {
+      if (!isFieldValidationError(error)) notify("souls.detail.failed", "error");
+    },
+  });
+}
+
+/** 改一条已入簿的功过。字段错误交给表单显示(不弹 toast);其余失败弹通用提示。 */
+export function useUpdateSoulRecord() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, recordId, data }: { id: string; recordId: string; data: object }) =>
+      soulsApi.updateRecord(id, recordId, data),
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: soulKeys.detail(vars.id) });
+      qc.invalidateQueries({ queryKey: soulKeys.ledger(vars.id) });
+    },
+    onError: (error) => {
+      if (!isFieldValidationError(error)) notify("souls.detail.failed", "error");
     },
   });
 }

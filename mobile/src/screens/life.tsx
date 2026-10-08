@@ -93,6 +93,8 @@ function RecordRow({ record, lex }: { record: MeRecord; lex: CivKey }) {
   const { stack } = useLayout();
   const demerit = record.record_type === "DEMERIT";
   const color = demerit ? t.neg : t.pos;
+  const ref = record.statute_snapshot;
+  const statute = ref ? `${ref.code} ${ref.title[locale === "zh-Hans" ? "zh" : locale === "egy" ? "egy" : "en"] ?? ""}`.trim() : "";
   const milestone = (
     <View testID={`milestone-${record.id}`} style={[styles.milestone, { borderColor: t.ink }]}>
       <Txt variant="label" tone="ink" style={styles.milestoneText}>
@@ -121,6 +123,21 @@ function RecordRow({ record, lex }: { record: MeRecord; lex: CivKey }) {
         <Txt variant="caption" tone="subtle">
           {record.description}
         </Txt>
+      ) : null}
+      {/* 依据与人生阶段;证据来源 / 说明服务端不给,这里也不读。 */}
+      {statute || record.life_stage ? (
+        <View style={styles.basisLine}>
+          {statute ? (
+            <Txt variant="caption" tone="subtle" testID={`record-statute-${record.id}`}>
+              {`${tr("soul_app.life.basis")} ${statute}`}
+            </Txt>
+          ) : null}
+          {record.life_stage ? (
+            <View testID={`record-stage-${record.id}`}>
+              <EnumValue namespace="souls.life_stages" value={record.life_stage} tone="subtle" variant="caption" />
+            </View>
+          ) : null}
+        </View>
       ) : null}
       <Txt variant="value" tone="subtle" style={styles.recordDate}>
         {formatHistoricalDate(record.event_date, locale) ?? tr("common.value.unrecorded")}
@@ -888,6 +905,7 @@ const styles = StyleSheet.create({
   milestoneText: { fontSize: 11, lineHeight: 14 },
   milestoneLine: { flexDirection: "row" },
   recordDate: { fontSize: 11, opacity: 0.8 },
+  basisLine: { flexDirection: "row", flexWrap: "wrap", columnGap: 12 },
   apps: { gap: 12 },
   appCard: { flexDirection: "row", alignItems: "center", gap: 12, borderWidth: 1, padding: 16 },
   appSummary: { gap: 8 },

@@ -195,13 +195,13 @@ it("the approve button says how many days are left, as typed", async () => {
   expect(within(dialog).getByTestId("shortening-approve")).toHaveTextContent("批准 · 还需 5 天");
 });
 
-it("lists pending rows by days left, ended ones last, with counts on the chips and the tab and a sort note", async () => {
+it("keeps the server order (days left, ended last), with counts on the chips and the tab and a sort note", async () => {
   as("GUARDIAN", "workflow.read");
   soulAccountsApi.cooldownShortenings.mockResolvedValue(
     page([
+      shortening({ id: "near", soul_name: "近", remaining_days: 2, cooldown_past_days: 28 }),
       shortening({ id: "far", soul_name: "远", remaining_days: 20, cooldown_past_days: 10 }),
       shortening({ id: "done", soul_name: "毕", remaining_days: 0, cooldown_until: null }),
-      shortening({ id: "near", soul_name: "近", remaining_days: 2, cooldown_past_days: 28 }),
       shortening({ id: "ok", soul_name: "决", status: "APPROVED", remaining_days: 1 }),
     ])
   );

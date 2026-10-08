@@ -1,0 +1,277 @@
+/**
+ * 功过台账的「新增一条 / 修改」:表单发出什么、拦下什么、后端的 400 落在哪、存好后的律条快照,
+ * 以及台账本身只在传了 `edit`(调用方判过 `soul.update`)时才画这两个入口。
+ */
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import type { ReactNode } from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+
+import type { LedgerRecord } from "@soulledger/core/api/ledger";
+import { SoulLedgerBook } from "@/src/components/souls/SoulLedgerBook";
+import { SoulRecordFormModal } from "@/src/components/souls/SoulRecordFormModal";
+import { tZh } from "./support/zhBundle";
+
+jest.mock("@soulledger/core/api", () => ({
+  soulsApi: { addRecord: jest.fn(), updateRecord: jest.fn() },
+}));
+const { soulsApi } = jest.requireMock("@soulledger/core/api") as {
+  soulsApi: { addRecord: jest.Mock; updateRecord: jest.Mock };
+};
+
+function mockStatute(id: string, code: string, civilization: string, clauses: string[] = []) {
+  return { id, code, civilization, display_title: `${code}题`, payload_json: { clauses: clauses.map((c) => ({ condition_zh: c })) } };
+}
+jest.mock("@soulledger/core/hooks/useStatutes", () => ({
+  useAllStatutes: () => ({
+    data: [
+      mockStatute("st-cn", "CN-1", "CHINESE", ["赈济穷民百钱", "施药"]),
+      mockStatute("st-eu", "EU-1", "EUROPEAN"),
+    ],
+  }),
+}));
+
+jest.mock("@/src/contexts/I18nContext", () => ({
+  ...jest.requireActual("@/src/contexts/I18nContext"),
+  useI18n: () => ({ t: tZh, formatDate: (v: string) => v, locale: "zh-Hans", hydrated: true }),
+}));
+jest.mock("@soulledger/core/platform", () => ({
+  ...jest.requireActual("@soulledger/core/platform"),
+  notify: jest.fn(),
+}));
+
+function wrap(node: ReactNode) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+  return render(<QueryClientProvider client={client}>{node}</QueryClientProvider>);
+}
+
+const RECORD: LedgerRecord = {
+  id: "r1", type: "DEMERIT", category: "GREED", description: "克扣", original_weight: 7, effective_weight: 7,
+  years_elapsed: 0, decay_factor: 1, civilization: "CHINESE", recorded_at: "2020-01-01T00:00:00Z",
+  event_date: { year: 1990, month: 5, day: 6 }, is_milestone: false,
+  statute_clause: "CN-1:施药", occurrence_count: 3,
+  statute_snapshot: { statute_id: "st-cn", code: "CN-1", revision: 1, effective_from: "2020-01-01", title: { zh: "题" }, text: {}, source: "", hash: "h", at: "2020-01-01T00:00:00Z" },
+  life_stage: "ADULTHOOD", evidence_source: "WITNESS", evidence_note: "邻人",
+};
+
+const label = (key: string) => screen.getByLabelText(new RegExp(tZh(key)));
+const yearInput = () => screen.getByLabelText(new RegExp(`· ${tZh("ledger.book.form.date_year")}`)) as HTMLInputElement;
+const monthInput = () => screen.getByLabelText(tZh("ledger.book.form.date_month")) as HTMLInputElement;
+const dayInput = () => screen.getByLabelText(tZh("ledger.book.form.date_day")) as HTMLInputElement;
+const type = (el: HTMLElement, value: string) => fireEvent.change(el, { target: { value } });
+const lastCall = (mock: jest.Mock) => mock.mock.calls[mock.mock.calls.length - 1];
+
+beforeEach(() => {
+  soulsApi.addRecord.mockReset();
+  soulsApi.updateRecord.mockReset();
+});
+
+function openAdd(onClose = jest.fn()) {
+  wrap(<SoulRecordFormModal isOpen onClose={onClose} soulId="s1" civilization="CHINESE" />);
+  return onClose;
+}
+
+describe("新增", () => {
+  it("sends the form as typed, with no event_date unless one was entered, and closes when no statute was cited", async () => {
+    soulsApi.addRecord.mockResolvedValue({ data: { statute_snapshot: null } });
+    const onClose = openAdd();
+    fireEvent.change(label("ledger.book.col_item"), { target: { value: "  赈济  " } });
+    fireEvent.change(label("ledger.figure_scale_weight"), { target: { value: "12" } });
+    fireEvent.click(screen.getByRole("button", { name: tZh("common.save") }));
+    await waitFor(() => expect(soulsApi.addRecord).toHaveBeenCalled());
+    expect(lastCall(soulsApi.addRecord)).toEqual([
+      "s1",
+      {
+        record_type: "MERIT", category: "OTHER", description: "赈济", weight: 12, occurrence_count: null,
+        statute_clause: "", statute: null, life_stage: "", evidence_source: "", evidence_note: "",
+      },
+    ]);
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+  });
+
+  it("blocks an empty description and a weight outside 1–100 before any request", () => {
+    openAdd();
+    fireEvent.change(label("ledger.figure_scale_weight"), { target: { value: "101" } });
+    fireEvent.click(screen.getByRole("button", { name: tZh("common.save") }));
+    expect(screen.getByText(tZh("common.field_required"))).toBeInTheDocument();
+    expect(screen.getByText(tZh("ledger.book.form.weight_range"))).toBeInTheDocument();
+    expect(soulsApi.addRecord).not.toHaveBeenCalled();
+  });
+
+  it("lists only the soul's own civilization's statutes, and a count needs a clause (and the reverse)", () => {
+    openAdd();
+    const select = label("ledger.book.form.statute") as HTMLSelectElement;
+    expect(Array.from(select.options).map((o) => o.value)).toEqual(["", "st-cn"]);
+    fireEvent.change(label("ledger.book.form.occurrence_count"), { target: { value: "2" } });
+    fireEvent.change(label("ledger.book.form.statute") as HTMLSelectElement, { target: { value: "st-cn" } });
+    fireEvent.change(label("ledger.book.col_item"), { target: { value: "事" } });
+    fireEvent.click(screen.getByRole("button", { name: tZh("common.save") }));
+    expect(screen.getByText(tZh("ledger.book.form.count_needs_clause"))).toBeInTheDocument();
+    expect(soulsApi.addRecord).not.toHaveBeenCalled();
+    fireEvent.change(screen.getByLabelText(new RegExp(`^${tZh("ledger.book.clause")}`)), { target: { value: "施药" } });
+    fireEvent.change(label("ledger.book.form.occurrence_count"), { target: { value: "" } });
+    fireEvent.click(screen.getByRole("button", { name: tZh("common.save") }));
+    expect(screen.getByText(tZh("ledger.book.form.clause_needs_count"))).toBeInTheDocument();
+    expect(soulsApi.addRecord).not.toHaveBeenCalled();
+  });
+
+  it("sends code:clause with the statute id, then shows the snapshot the server froze", async () => {
+    soulsApi.addRecord.mockResolvedValue({
+      data: { statute_snapshot: { code: "CN-1", title: { zh: "赈济篇", en: "Relief" } } },
+    });
+    const onClose = openAdd();
+    fireEvent.change(label("ledger.book.col_item"), { target: { value: "施药" } });
+    fireEvent.change(label("ledger.book.form.statute"), { target: { value: "st-cn" } });
+    fireEvent.change(screen.getByLabelText(new RegExp(`^${tZh("ledger.book.clause")}`)), { target: { value: "施药" } });
+    fireEvent.change(label("ledger.book.form.occurrence_count"), { target: { value: "2" } });
+    type(yearInput(), "1990");
+    type(monthInput(), "5");
+    type(dayInput(), "6");
+    fireEvent.click(screen.getByRole("button", { name: tZh("common.save") }));
+    await waitFor(() => expect(soulsApi.addRecord).toHaveBeenCalled());
+    expect(lastCall(soulsApi.addRecord)[1]).toMatchObject({
+      statute: "st-cn", statute_clause: "CN-1:施药", occurrence_count: 2, event_date: { year: 1990, month: 5, day: 6 },
+    });
+    const snapshot = await screen.findByTestId("record-snapshot");
+    expect(snapshot).toHaveTextContent("CN-1 赈济篇");
+    expect(onClose).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: tZh("common.close") }));
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  function save(reject: unknown) {
+    soulsApi.addRecord.mockRejectedValue(reject);
+    openAdd();
+    fireEvent.change(label("ledger.book.col_item"), { target: { value: "事" } });
+    fireEvent.click(screen.getByRole("button", { name: tZh("common.save") }));
+  }
+  const notify = () => (jest.requireMock("@soulledger/core/platform") as { notify: jest.Mock }).notify;
+  const bad = (data: object) => ({ response: { status: 400, data } });
+
+  it.each([
+    ["count below 1", { occurrence_count: ["Ensure this value is greater than or equal to 1."], error_codes: { occurrence_count: ["min_value"] } }, "ledger.book.form.err.count_min"],
+    ["weight out of range", { weight: ["Ensure this value is less than or equal to 100."], error_codes: { weight: ["max_value"] } }, "ledger.book.form.weight_range"],
+    ["unknown enum", { life_stage: ['"X" is not a valid choice.'], error_codes: { life_stage: ["invalid_choice"] } }, "ledger.book.form.err.unknown_enum"],
+    ["statute of another civilization", { statute: ["CN-1 belongs to EUROPEAN"], error_codes: { statute: ["statute_other_civilization"] } }, "ledger.book.form.err.statute_civ"],
+    ["unpaired clause and count", { non_field_errors: ["statute_clause and occurrence_count are the two halves"], error_codes: { non_field_errors: ["clause_count_pair"] } }, "ledger.book.form.err.pair"],
+  ])("translates the server's code for %s and raises no generic toast", async (_name, data, key) => {
+    notify().mockClear();
+    save(bad(data));
+    expect(await screen.findByText(tZh(key))).toBeInTheDocument();
+    expect(screen.queryByText(/Ensure this value|is not a valid choice|belongs to EUROPEAN|two halves/)).toBeNull();
+    expect(notify()).not.toHaveBeenCalled();
+  });
+
+  it("falls back to the server's text for a code it does not know, still under the field", async () => {
+    save(bad({ occurrence_count: ["Something new."], error_codes: { occurrence_count: ["brand_new"] } }));
+    expect(await screen.findByText(/Something new\./)).toBeInTheDocument();
+    expect(label("ledger.book.form.occurrence_count")).toHaveAttribute("aria-invalid", "true");
+  });
+
+  it("keeps the generic toast for errors that name no field", async () => {
+    notify().mockClear();
+    save({ response: { status: 500, data: "boom" } });
+    await waitFor(() => expect(notify()).toHaveBeenCalledWith("souls.detail.failed", "error"));
+  });
+});
+
+describe("日期:年 / 月 / 日", () => {
+  const fill = (y: string, m = "", d = "") => {
+    type(label("ledger.book.col_item"), "事");
+    type(yearInput(), y);
+    type(monthInput(), m);
+    type(dayInput(), d);
+    fireEvent.click(screen.getByRole("button", { name: tZh("common.save") }));
+  };
+  beforeEach(() => soulsApi.addRecord.mockResolvedValue({ data: { statute_snapshot: null } }));
+
+  it("sends a BCE year alone, with month and day null", async () => {
+    openAdd();
+    fill("-612");
+    await waitFor(() => expect(soulsApi.addRecord).toHaveBeenCalled());
+    expect(lastCall(soulsApi.addRecord)[1].event_date).toEqual({ year: -612, month: null, day: null });
+  });
+
+  it("allows a month without a day", async () => {
+    openAdd();
+    fill("-44", "3");
+    await waitFor(() => expect(soulsApi.addRecord).toHaveBeenCalled());
+    expect(lastCall(soulsApi.addRecord)[1].event_date).toEqual({ year: -44, month: 3, day: null });
+  });
+
+  it("sends no event_date at all when the three boxes are empty", async () => {
+    openAdd();
+    fill("");
+    await waitFor(() => expect(soulsApi.addRecord).toHaveBeenCalled());
+    expect(lastCall(soulsApi.addRecord)[1]).not.toHaveProperty("event_date");
+  });
+
+  it.each([
+    ["a day without a month", ["1990", "", "6"], "ledger.book.form.err.date_order"],
+    ["a month without a year", ["", "5", ""], "ledger.book.form.err.date_order"],
+    ["year 0", ["0"], "ledger.book.form.err.date_invalid"],
+    ["month 13", ["1990", "13"], "ledger.book.form.err.date_invalid"],
+  ])("blocks %s before any request", (_n, [y, m, d], key) => {
+    openAdd();
+    fill(y, m, d);
+    expect(screen.getByText(tZh(key))).toBeInTheDocument();
+    expect(soulsApi.addRecord).not.toHaveBeenCalled();
+  });
+});
+
+describe("修改", () => {
+  function openEdit() {
+    wrap(<SoulRecordFormModal isOpen onClose={jest.fn()} soulId="s1" civilization="CHINESE" record={RECORD} />);
+  }
+
+  it("prefills from the ledger row and leaves the date out unless it was touched", async () => {
+    soulsApi.updateRecord.mockResolvedValue({ data: { statute_snapshot: null } });
+    openEdit();
+    expect((label("ledger.book.col_item") as HTMLTextAreaElement).value).toBe("克扣");
+    expect((label("ledger.figure_scale_weight") as HTMLInputElement).value).toBe("7");
+    expect([yearInput().value, monthInput().value, dayInput().value]).toEqual(["1990", "5", "6"]);
+    expect((label("ledger.book.form.statute") as HTMLSelectElement).value).toBe("st-cn");
+    fireEvent.change(label("ledger.figure_scale_weight"), { target: { value: "9" } });
+    fireEvent.click(screen.getByRole("button", { name: tZh("common.save") }));
+    await waitFor(() => expect(soulsApi.updateRecord).toHaveBeenCalled());
+    const [id, recordId, data] = lastCall(soulsApi.updateRecord);
+    expect([id, recordId]).toEqual(["s1", "r1"]);
+    expect(data).toMatchObject({
+      record_type: "DEMERIT", weight: 9, statute: "st-cn", statute_clause: "CN-1:施药", occurrence_count: 3,
+      life_stage: "ADULTHOOD", evidence_source: "WITNESS", evidence_note: "邻人",
+    });
+    expect(data).not.toHaveProperty("event_date");
+    expect(soulsApi.addRecord).not.toHaveBeenCalled();
+  });
+
+  it("sends event_date: null when the date was cleared", async () => {
+    soulsApi.updateRecord.mockResolvedValue({ data: { statute_snapshot: null } });
+    openEdit();
+    type(yearInput(), "");
+    type(monthInput(), "");
+    type(dayInput(), "");
+    fireEvent.click(screen.getByRole("button", { name: tZh("common.save") }));
+    await waitFor(() => expect(soulsApi.updateRecord).toHaveBeenCalled());
+    expect(lastCall(soulsApi.updateRecord)[2]).toMatchObject({ event_date: null });
+  });
+});
+
+describe("台账里的入口", () => {
+  it("draws 新增一条 and a 修改 per row only when `edit` is given", () => {
+    const { unmount } = wrap(<SoulLedgerBook records={[RECORD]} />);
+    expect(screen.queryByTestId("record-add")).toBeNull();
+    expect(document.querySelector("[data-record-edit]")).toBeNull();
+    unmount();
+    wrap(<SoulLedgerBook records={[RECORD]} edit={{ soulId: "s1", civilization: "CHINESE" }} />);
+    expect(screen.getByTestId("record-add")).toHaveTextContent(tZh("ledger.book.form.add_button"));
+    const edit = document.querySelector('[data-record-edit="r1"]') as HTMLElement;
+    fireEvent.click(edit);
+    const dialog = screen.getByRole("dialog");
+    expect(within(dialog).getByText(tZh("ledger.book.form.edit_title"))).toBeInTheDocument();
+  });
+
+  it("offers 新增一条 on an empty book too", () => {
+    wrap(<SoulLedgerBook records={[]} edit={{ soulId: "s1", civilization: "CHINESE" }} />);
+    fireEvent.click(screen.getByTestId("record-add"));
+    expect(screen.getByText(tZh("ledger.book.form.add_title"))).toBeInTheDocument();
+  });
+});

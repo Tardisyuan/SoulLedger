@@ -142,6 +142,8 @@ const COLLECTED_FILES = [
   "SoulLedgerBook.test.tsx",
   "SoulLedgerDetail.test.tsx",
   "SoulLifecycleTimeline.test.tsx",
+  // 功过台账的新增 / 修改表单(2026-10-08)。
+  "SoulRecordFormModal.test.tsx",
   "SoulReadingPanel.test.tsx",
   "SoulReadingPanelFork.test.tsx",
   "SoulReadingPanelSentence.test.tsx",
