@@ -1869,6 +1869,13 @@
       "legend_count": "number = held",
       "read_only": "Read-only sketch"
     },
+    "facts": {
+      "show": "Details",
+      "hide": "Hide",
+      "cycle_limit": "Rebirth limit",
+      "judgment_required": "Judgment required before entry",
+      "judgment_not_required": "No judgment needed to enter"
+    },
     "tree": {
       "title": "Realm tree",
       "count": "{{n}} realms",

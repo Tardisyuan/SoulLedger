@@ -29573,6 +29573,17 @@ components:
           - $ref: '#/components/schemas/RealmForkEnum'
           - $ref: '#/components/schemas/BlankEnum'
           - $ref: '#/components/schemas/NullEnum'
+        memory_reset_mechanism:
+          oneOf:
+          - $ref: '#/components/schemas/MemoryResetMechanismEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        cycle_limit:
+          type: integer
+          nullable: true
+        is_judgment_required:
+          type: boolean
+          description: Whether this realm requires a formal judgment process before
+            entry
       required:
       - civilization
       - id

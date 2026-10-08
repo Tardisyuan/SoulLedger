@@ -1869,6 +1869,13 @@
       "legend_count": "Hesb = Em Sekhet",
       "read_only": "Maa Wa · Tut"
     },
+    "facts": {
+      "show": "Medu",
+      "hide": "Imen",
+      "cycle_limit": "Sep Wehem Mesut Er Pehwy",
+      "judgment_required": "Wedja: Em Tepy",
+      "judgment_not_required": "Nen Wedja"
+    },
     "tree": {
       "title": "Ta Neb",
       "count": "Ta {{n}}",

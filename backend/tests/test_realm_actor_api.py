@@ -286,6 +286,20 @@ class TestRealmDescriptionStaysOffTheCard:
         # under `notes` or `summary` would be the identical mistake renamed.
         assert "SOURCE UNKNOWN" not in str(row)
 
+    def test_the_list_row_carries_the_structured_facts_instead(self, api_client, admin_user, cn_tenant):
+        """What the realms page's 「说明」 row shows: enum code, cycle limit, judgment flag — no prose."""
+        _authenticate(api_client, admin_user)
+        realm = self._realm(cn_tenant)
+        Realm.objects.filter(pk=realm.pk).update(
+            memory_reset_mechanism="MENGPO", cycle_limit=3, is_judgment_required=False
+        )
+
+        rows = api_client.get("/api/v1/realms/").data["results"]
+        row = next(r for r in rows if r["realm_code"] == realm.realm_code)
+
+        assert (row["memory_reset_mechanism"], row["cycle_limit"], row["is_judgment_required"]) == ("MENGPO", 3, False)
+        assert "description" not in row
+
     def test_the_detail_row_still_carries_it(self, api_client, admin_user, cn_tenant):
         """Not hidden — placed. A maintainer reading one realm still gets it."""
         _authenticate(api_client, admin_user)

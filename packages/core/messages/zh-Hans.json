@@ -1869,6 +1869,13 @@
       "legend_count": "数字 = 在押",
       "read_only": "只读示意"
     },
+    "facts": {
+      "show": "说明",
+      "hide": "收起",
+      "cycle_limit": "轮回上限",
+      "judgment_required": "入界须经审判",
+      "judgment_not_required": "入界无需审判"
+    },
     "tree": {
       "title": "界域树",
       "count": "{{n}} 处",

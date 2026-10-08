@@ -81,6 +81,39 @@ it("the route map marks an eternal stop with ≡ and its legend says what that m
   expect(within(map as HTMLElement).getByTestId("map-legend-eternal")).toHaveTextContent("不出狱、不轮回");
 });
 
+it("opens a realm's structured facts on 说明 and never prints the maintainer prose", async () => {
+  mockedList.mockResolvedValue({
+    data: {
+      results: [
+        ...REALMS,
+        R("FACTS_REALM", "CHINESE", {
+          memory_reset_mechanism: "MENGPO",
+          cycle_limit: 3,
+          is_judgment_required: false,
+          description: "SOURCE UNKNOWN: maintainer prose",
+        }),
+      ],
+      count: 10,
+    },
+  });
+  renderPage();
+  const tree = await screen.findByTestId("realm-tree");
+  expect(within(tree).queryByTestId("realm-facts")).toBeNull();
+  fireEvent.click(tree.querySelector('[data-facts-toggle="FACTS_REALM"]')!);
+  const facts = within(tree).getByTestId("realm-facts");
+  expect(facts).toHaveTextContent("MENGPO");
+  expect(facts).toHaveTextContent("轮回上限");
+  expect(facts).toHaveTextContent("3");
+  expect(facts).toHaveTextContent("入界无需审判");
+  expect(document.body).not.toHaveTextContent("SOURCE UNKNOWN");
+  // 没有重置机制、没有上限的界域不画这两行;审判标志缺省按「须审判」。
+  fireEvent.click(tree.querySelector('[data-facts-toggle="SUB_GATE"]')!);
+  const gate = tree.querySelector('[data-realm-facts="SUB_GATE"]')!;
+  expect(gate).toHaveTextContent("入界须经审判");
+  expect(gate).not.toHaveTextContent("轮回上限");
+  expect(tree.querySelector('[data-facts-toggle="SUB_GATE"]')).toHaveAttribute("aria-expanded", "true");
+});
+
 it("nests children under their parent in the tree table", async () => {
   renderPage();
   const tree = await screen.findByTestId("realm-tree");
