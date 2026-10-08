@@ -2686,6 +2686,344 @@ paths:
               schema:
                 $ref: '#/components/schemas/InboxFolders'
           description: ''
+  /api/v1/death-sync/admin-webhooks/:
+    get:
+      operationId: v1_death_sync_admin_webhooks_list
+      description: |-
+        Browser-facing management of `WebhookConfig` (JWT, ADMIN only).
+
+        `WebhookViewSet` above is the external system's self-service endpoint: it
+        authenticates with its API key only, so an admin's Bearer JWT gets 401
+        there, and the /death-sync page had no way to see or change where this
+        tenant's events are posted. This viewset is the operator's door to the
+        same rows; the self-service one is unchanged.
+
+        Separate viewset rather than a second auth class on the one above, for
+        the same reason `DeathRegistrationReadViewSet` is separate from
+        `DeathRegistrationViewSet`: the key path scopes by key (fail-closed), the
+        browser path scopes by tenant, and merging them would weaken one.
+
+        No `destroy`: disabling is `PATCH {"is_active": false}`, which keeps the
+        row and its `EventWebhookDelivery` history (the FK is CASCADE). The
+        signing secret is generated here and returned once in the 201 as
+        `_signing_secret`, exactly like `ExternalApiKeyViewSet._raw_key`.
+
+        ADMIN cross-tenant: `scope_to_tenant` with the default `admin_bypass`,
+        matching `ExternalApiKeyViewSet` beside it — ADMIN is this codebase's one
+        globally-scoped role there too. Creation still pins `tenant` to the
+        request's tenant and refuses an `api_key` from another tenant.
+      parameters:
+      - in: query
+        name: api_key
+        schema:
+          type: string
+          format: uuid
+      - in: query
+        name: is_active
+        schema:
+          type: boolean
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedAdminWebhookConfigList'
+          description: ''
+    post:
+      operationId: v1_death_sync_admin_webhooks_create
+      description: |-
+        Browser-facing management of `WebhookConfig` (JWT, ADMIN only).
+
+        `WebhookViewSet` above is the external system's self-service endpoint: it
+        authenticates with its API key only, so an admin's Bearer JWT gets 401
+        there, and the /death-sync page had no way to see or change where this
+        tenant's events are posted. This viewset is the operator's door to the
+        same rows; the self-service one is unchanged.
+
+        Separate viewset rather than a second auth class on the one above, for
+        the same reason `DeathRegistrationReadViewSet` is separate from
+        `DeathRegistrationViewSet`: the key path scopes by key (fail-closed), the
+        browser path scopes by tenant, and merging them would weaken one.
+
+        No `destroy`: disabling is `PATCH {"is_active": false}`, which keeps the
+        row and its `EventWebhookDelivery` history (the FK is CASCADE). The
+        signing secret is generated here and returned once in the 201 as
+        `_signing_secret`, exactly like `ExternalApiKeyViewSet._raw_key`.
+
+        ADMIN cross-tenant: `scope_to_tenant` with the default `admin_bypass`,
+        matching `ExternalApiKeyViewSet` beside it — ADMIN is this codebase's one
+        globally-scoped role there too. Creation still pins `tenant` to the
+        request's tenant and refuses an `api_key` from another tenant.
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminWebhookConfig'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AdminWebhookConfig'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AdminWebhookConfig'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminWebhookConfig'
+          description: ''
+  /api/v1/death-sync/admin-webhooks/{id}/:
+    get:
+      operationId: v1_death_sync_admin_webhooks_retrieve
+      description: |-
+        Browser-facing management of `WebhookConfig` (JWT, ADMIN only).
+
+        `WebhookViewSet` above is the external system's self-service endpoint: it
+        authenticates with its API key only, so an admin's Bearer JWT gets 401
+        there, and the /death-sync page had no way to see or change where this
+        tenant's events are posted. This viewset is the operator's door to the
+        same rows; the self-service one is unchanged.
+
+        Separate viewset rather than a second auth class on the one above, for
+        the same reason `DeathRegistrationReadViewSet` is separate from
+        `DeathRegistrationViewSet`: the key path scopes by key (fail-closed), the
+        browser path scopes by tenant, and merging them would weaken one.
+
+        No `destroy`: disabling is `PATCH {"is_active": false}`, which keeps the
+        row and its `EventWebhookDelivery` history (the FK is CASCADE). The
+        signing secret is generated here and returned once in the 201 as
+        `_signing_secret`, exactly like `ExternalApiKeyViewSet._raw_key`.
+
+        ADMIN cross-tenant: `scope_to_tenant` with the default `admin_bypass`,
+        matching `ExternalApiKeyViewSet` beside it — ADMIN is this codebase's one
+        globally-scoped role there too. Creation still pins `tenant` to the
+        request's tenant and refuses an `api_key` from another tenant.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Webhook Config.
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminWebhookConfig'
+          description: ''
+    put:
+      operationId: v1_death_sync_admin_webhooks_update
+      description: |-
+        Browser-facing management of `WebhookConfig` (JWT, ADMIN only).
+
+        `WebhookViewSet` above is the external system's self-service endpoint: it
+        authenticates with its API key only, so an admin's Bearer JWT gets 401
+        there, and the /death-sync page had no way to see or change where this
+        tenant's events are posted. This viewset is the operator's door to the
+        same rows; the self-service one is unchanged.
+
+        Separate viewset rather than a second auth class on the one above, for
+        the same reason `DeathRegistrationReadViewSet` is separate from
+        `DeathRegistrationViewSet`: the key path scopes by key (fail-closed), the
+        browser path scopes by tenant, and merging them would weaken one.
+
+        No `destroy`: disabling is `PATCH {"is_active": false}`, which keeps the
+        row and its `EventWebhookDelivery` history (the FK is CASCADE). The
+        signing secret is generated here and returned once in the 201 as
+        `_signing_secret`, exactly like `ExternalApiKeyViewSet._raw_key`.
+
+        ADMIN cross-tenant: `scope_to_tenant` with the default `admin_bypass`,
+        matching `ExternalApiKeyViewSet` beside it — ADMIN is this codebase's one
+        globally-scoped role there too. Creation still pins `tenant` to the
+        request's tenant and refuses an `api_key` from another tenant.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Webhook Config.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminWebhookConfig'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AdminWebhookConfig'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AdminWebhookConfig'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminWebhookConfig'
+          description: ''
+    patch:
+      operationId: v1_death_sync_admin_webhooks_partial_update
+      description: |-
+        Browser-facing management of `WebhookConfig` (JWT, ADMIN only).
+
+        `WebhookViewSet` above is the external system's self-service endpoint: it
+        authenticates with its API key only, so an admin's Bearer JWT gets 401
+        there, and the /death-sync page had no way to see or change where this
+        tenant's events are posted. This viewset is the operator's door to the
+        same rows; the self-service one is unchanged.
+
+        Separate viewset rather than a second auth class on the one above, for
+        the same reason `DeathRegistrationReadViewSet` is separate from
+        `DeathRegistrationViewSet`: the key path scopes by key (fail-closed), the
+        browser path scopes by tenant, and merging them would weaken one.
+
+        No `destroy`: disabling is `PATCH {"is_active": false}`, which keeps the
+        row and its `EventWebhookDelivery` history (the FK is CASCADE). The
+        signing secret is generated here and returned once in the 201 as
+        `_signing_secret`, exactly like `ExternalApiKeyViewSet._raw_key`.
+
+        ADMIN cross-tenant: `scope_to_tenant` with the default `admin_bypass`,
+        matching `ExternalApiKeyViewSet` beside it — ADMIN is this codebase's one
+        globally-scoped role there too. Creation still pins `tenant` to the
+        request's tenant and refuses an `api_key` from another tenant.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Webhook Config.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedAdminWebhookConfig'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedAdminWebhookConfig'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedAdminWebhookConfig'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminWebhookConfig'
+          description: ''
+  /api/v1/death-sync/admin-webhooks/event-types/:
+    get:
+      operationId: v1_death_sync_admin_webhooks_event_types_list
+      description: |-
+        The event names a webhook can subscribe to.
+
+        `EventType` is the enum every publisher writes `envelope.event_type`
+        from, and the handler filters on it verbatim — so this list, not a
+        hand-written one in the client, is what a checklist must offer.
+      parameters:
+      - in: query
+        name: api_key
+        schema:
+          type: string
+          format: uuid
+      - in: query
+        name: is_active
+        schema:
+          type: boolean
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - count
+                - results
+                properties:
+                  count:
+                    type: integer
+                    example: 123
+                  next:
+                    type: string
+                    nullable: true
+                    format: uri
+                    example: http://api.example.org/accounts/?page=4
+                  previous:
+                    type: string
+                    nullable: true
+                    format: uri
+                    example: http://api.example.org/accounts/?page=2
+                  results:
+                    type: array
+                    items:
+                      type: string
+          description: ''
   /api/v1/death-sync/api-keys/:
     get:
       operationId: v1_death_sync_api_keys_list
@@ -3124,6 +3462,104 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/DeathRegistrationSummary'
+          description: ''
+  /api/v1/death-sync/webhook-deliveries/:
+    get:
+      operationId: v1_death_sync_webhook_deliveries_list
+      description: |-
+        `EventWebhookDelivery` rows for this tenant's webhooks (JWT, ADMIN only).
+
+        Newest first (model ordering), paginated, filterable by `webhook`,
+        `status` and `event_type`. Read-only: a delivery's status is written by
+        the worker (`apps/events/tasks.py`) and by nothing else.
+
+        Scoped through `webhook__tenant` rather than the row's own nullable
+        `tenant`: the webhook is the thing an operator manages, and a row whose
+        `tenant` were ever left null would otherwise be invisible to everyone.
+      parameters:
+      - in: query
+        name: event_type
+        schema:
+          type: string
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - ABANDONED
+          - FAILED
+          - PENDING
+          - SUCCESS
+        description: |-
+          * `PENDING` - Pending
+          * `SUCCESS` - Delivered
+          * `FAILED` - Failed
+          * `ABANDONED` - Abandoned after max retries
+      - in: query
+        name: webhook
+        schema:
+          type: string
+          format: uuid
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedEventWebhookDeliveryList'
+          description: ''
+  /api/v1/death-sync/webhook-deliveries/{id}/:
+    get:
+      operationId: v1_death_sync_webhook_deliveries_retrieve
+      description: |-
+        `EventWebhookDelivery` rows for this tenant's webhooks (JWT, ADMIN only).
+
+        Newest first (model ordering), paginated, filterable by `webhook`,
+        `status` and `event_type`. Read-only: a delivery's status is written by
+        the worker (`apps/events/tasks.py`) and by nothing else.
+
+        Scoped through `webhook__tenant` rather than the row's own nullable
+        `tenant`: the webhook is the thing an operator manages, and a row whose
+        `tenant` were ever left null would otherwise be invisible to everyone.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Event Webhook Delivery.
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventWebhookDelivery'
           description: ''
   /api/v1/death-sync/webhooks/:
     get:
@@ -16536,6 +16972,74 @@ components:
         * `GUARDIAN` - Guardian
         * `CONDUIT` - Soul Conduit / Guide
         * `OVERSEER` - Overseer / Admin
+    AdminWebhookConfig:
+      type: object
+      description: |-
+        `WebhookConfig` as the admin tab sees it.
+
+        `_signing_secret` is the plaintext and arrives exactly once, in the 201
+        of `create` — the same shape as `ExternalApiKeySerializer._raw_key`. The
+        field is `read_only` and the view sets it on the saved instance, so a
+        list / retrieve / update response never carries it (nothing puts it on
+        those instances). The model column is encrypted at rest and is not a
+        serializer field at all.
+
+        `events` is a list of real `EventType` members: the delivery code
+        (`apps/events/handlers/webhook_handler.py`) compares
+        `envelope.event_type` against this list verbatim, so a misspelt name
+        would silently subscribe to nothing. An empty list keeps the model's
+        meaning of "everything".
+
+        `api_key` is the external system the webhook belongs to: the
+        self-service endpoint (`WebhookViewSet`) scopes by it, so an admin-created
+        webhook is visible to that system under its own key. It must be one of
+        the request tenant's keys and cannot be moved after creation.
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        api_key:
+          type: string
+          format: uuid
+        api_key_name:
+          type: string
+          readOnly: true
+        url:
+          type: string
+          format: uri
+          description: Webhook callback URL (must be HTTPS in production)
+          maxLength: 500
+        is_active:
+          type: boolean
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/EventTypeEnum'
+        max_retries:
+          type: integer
+        timeout_seconds:
+          type: integer
+        create_time:
+          type: string
+          format: date-time
+          readOnly: true
+        update_time:
+          type: string
+          format: date-time
+          readOnly: true
+        _signing_secret:
+          type: string
+          readOnly: true
+          title: ' signing secret'
+      required:
+      - _signing_secret
+      - api_key
+      - api_key_name
+      - create_time
+      - id
+      - update_time
+      - url
     AdmittedBalance:
       type: object
       description: |-
@@ -20188,6 +20692,84 @@ components:
         * `SENTENCE_PLAN_COMPLETED` - Sentence Plan Completed
         * `SENTENCE_PLAN_CANCELLED` - Sentence Plan Cancelled
         * `SCHEDULER_RUN_FAILED` - Scheduler Run Failed
+    EventWebhookDelivery:
+      type: object
+      description: |-
+        Read-only row of `GET /death-sync/webhook-deliveries/`.
+
+        `payload_json` is deliberately absent: it is the envelope snapshot
+        (soul ids, verdicts) and the admin tab needs the outcome, not the body.
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        webhook:
+          type: string
+          format: uuid
+          readOnly: true
+          description: 目标端点。租户自己配的,所以它的可靠性不在本系统控制内。
+        webhook_url:
+          type: string
+          readOnly: true
+        domain:
+          type: string
+          readOnly: true
+        event_type:
+          type: string
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/EventWebhookDeliveryStatusEnum'
+          readOnly: true
+        attempt:
+          type: integer
+          readOnly: true
+        response_status:
+          type: integer
+          readOnly: true
+          nullable: true
+        error:
+          type: string
+          readOnly: true
+        delivered_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        create_time:
+          type: string
+          format: date-time
+          readOnly: true
+        update_time:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - attempt
+      - create_time
+      - delivered_at
+      - domain
+      - error
+      - event_type
+      - id
+      - response_status
+      - status
+      - update_time
+      - webhook
+      - webhook_url
+    EventWebhookDeliveryStatusEnum:
+      enum:
+      - PENDING
+      - SUCCESS
+      - FAILED
+      - ABANDONED
+      type: string
+      description: |-
+        * `PENDING` - Pending
+        * `SUCCESS` - Delivered
+        * `FAILED` - Failed
+        * `ABANDONED` - Abandoned after max retries
     EvidenceAdmission:
       type: object
       description: |-
@@ -24274,6 +24856,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ActorList'
+    PaginatedAdminWebhookConfigList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdminWebhookConfig'
     PaginatedApprovalNodeList:
       type: object
       required:
@@ -24472,6 +25077,29 @@ components:
           - pending
           - executing
           - expired
+    PaginatedEventWebhookDeliveryList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/EventWebhookDelivery'
     PaginatedExternalApiKeyList:
       type: object
       required:
@@ -25304,6 +25932,66 @@ components:
           type: string
       required:
       - password
+    PatchedAdminWebhookConfig:
+      type: object
+      description: |-
+        `WebhookConfig` as the admin tab sees it.
+
+        `_signing_secret` is the plaintext and arrives exactly once, in the 201
+        of `create` — the same shape as `ExternalApiKeySerializer._raw_key`. The
+        field is `read_only` and the view sets it on the saved instance, so a
+        list / retrieve / update response never carries it (nothing puts it on
+        those instances). The model column is encrypted at rest and is not a
+        serializer field at all.
+
+        `events` is a list of real `EventType` members: the delivery code
+        (`apps/events/handlers/webhook_handler.py`) compares
+        `envelope.event_type` against this list verbatim, so a misspelt name
+        would silently subscribe to nothing. An empty list keeps the model's
+        meaning of "everything".
+
+        `api_key` is the external system the webhook belongs to: the
+        self-service endpoint (`WebhookViewSet`) scopes by it, so an admin-created
+        webhook is visible to that system under its own key. It must be one of
+        the request tenant's keys and cannot be moved after creation.
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        api_key:
+          type: string
+          format: uuid
+        api_key_name:
+          type: string
+          readOnly: true
+        url:
+          type: string
+          format: uri
+          description: Webhook callback URL (must be HTTPS in production)
+          maxLength: 500
+        is_active:
+          type: boolean
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/EventTypeEnum'
+        max_retries:
+          type: integer
+        timeout_seconds:
+          type: integer
+        create_time:
+          type: string
+          format: date-time
+          readOnly: true
+        update_time:
+          type: string
+          format: date-time
+          readOnly: true
+        _signing_secret:
+          type: string
+          readOnly: true
+          title: ' signing secret'
     PatchedApprovalNode:
       type: object
       description: |-
