@@ -57,7 +57,8 @@ class SoulAccountError(Exception):
 # ── 审计 ─────────────────────────────────────────────────────────────────
 
 
-def audit(action, soul, description, *, actor=None, request=None, resource_id="", changes=None):
+def audit(action, soul, description, *, actor=None, request=None, resource_id="", changes=None,
+          resource="soul_account"):
     """显式写一条 AuditLog。不走 `apps/audit/signals.py` 的通用 diff:这几张表
     不继承 AuditUserFields,开通 / 重置 / 查看 / 交付是动作而不是字段变化,
     一条说清「谁对哪个灵魂做了什么」的行比一串字段 diff 有用。**不含密码。**"""
@@ -68,7 +69,7 @@ def audit(action, soul, description, *, actor=None, request=None, resource_id=""
         tenant=soul.home_tenant,
         user=actor if getattr(actor, "is_authenticated", False) else None,
         action=action,
-        resource="soul_account",
+        resource=resource,
         resource_id=str(resource_id or soul.pk),
         description=description[:500],
         changes=changes,

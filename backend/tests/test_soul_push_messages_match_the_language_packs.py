@@ -22,7 +22,8 @@ def test_backend_copy_equals_the_language_pack(locale):
 
 def test_every_kind_the_rules_can_produce_has_text_in_every_locale():
     kinds = set(services.KIND_CATEGORY)
-    assert {"rebirth_approved", "rebirth_rejected", "rebirth_appeal_rejected", "judgment_result",
+    assert {"rebirth_approved", "rebirth_rejected", "rebirth_appeal_rejected",
+            "cooldown_shortening_approved", "cooldown_shortening_rejected", "judgment_result",
             "disposition_executed", "residence_approved", "residence_started", "residence_returned",
             "sentence_waiting", "sentence_completed", "sentence_amended", "sentence_pardoned", "chat_message",
             "social_warned_post", "social_warned_comment", "social_warned_user"} == kinds

@@ -3626,6 +3626,14 @@
       "title": "申诉被驳回",
       "body": "你对转生申请的申诉被驳回,打开灵魂簿查看理由。"
     },
+    "cooldown_shortening_approved": {
+      "title": "缩短冷却申请已批准",
+      "body": "你的缩短冷却申请已批准,打开灵魂簿查看新的冷却截止。"
+    },
+    "cooldown_shortening_rejected": {
+      "title": "缩短冷却申请被驳回",
+      "body": "你的缩短冷却申请被驳回,打开灵魂簿查看理由。"
+    },
     "judgment_result": {
       "title": "审判有了结论",
       "body": "你的审判有了结论,打开灵魂簿查看。"

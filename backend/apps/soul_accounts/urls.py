@@ -4,6 +4,7 @@ from rest_framework.routers import DefaultRouter
 from apps.soul_accounts import me_views
 from apps.soul_accounts.views import (
     InitialCredentialViewSet,
+    OfficerCooldownShorteningViewSet,
     OfficerRebirthApplicationViewSet,
     SoulAccountViewSet,
 )
@@ -12,6 +13,7 @@ officer_router = DefaultRouter()
 officer_router.register(r"accounts", SoulAccountViewSet, basename="soul-account")
 officer_router.register(r"credentials", InitialCredentialViewSet, basename="soul-credential")
 officer_router.register(r"rebirth-applications", OfficerRebirthApplicationViewSet, basename="soul-rebirth-application")
+officer_router.register(r"cooldown-shortenings", OfficerCooldownShorteningViewSet, basename="soul-cooldown-shortening")
 
 officer_urlpatterns = [path("", include(officer_router.urls))]
 
@@ -29,6 +31,8 @@ me_urlpatterns = [
     path("past-lives/", me_views.MePastLivesView.as_view(), name="me-past-lives"),
     path("sentence-plan/", me_views.MeSentencePlanView.as_view(), name="me-sentence-plan"),
     path("rebirth-applications/", me_views.MeRebirthApplicationsView.as_view(), name="me-rebirth-applications"),
+    path("rebirth-applications/cooldown-shortening/", me_views.MeCooldownShorteningView.as_view(),
+         name="me-rebirth-cooldown-shortening"),
     path("rebirth-applications/<uuid:application_id>/", me_views.MeRebirthApplicationDetailView.as_view(),
          name="me-rebirth-application"),
     path("rebirth-applications/<uuid:application_id>/appeal/", me_views.MeRebirthAppealView.as_view(),

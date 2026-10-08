@@ -3626,6 +3626,14 @@
       "title": "Appeal rejected",
       "body": "Your appeal on the rebirth application was rejected. Open Soul Ledger to see why."
     },
+    "cooldown_shortening_approved": {
+      "title": "Cooldown shortening approved",
+      "body": "Your request to shorten the cooldown was approved. Open Soul Ledger to see the new end date."
+    },
+    "cooldown_shortening_rejected": {
+      "title": "Cooldown shortening rejected",
+      "body": "Your request to shorten the cooldown was rejected. Open Soul Ledger to see why."
+    },
     "judgment_result": {
       "title": "Judgment concluded",
       "body": "Your judgment has concluded. Open Soul Ledger to see it."

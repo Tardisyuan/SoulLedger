@@ -3626,6 +3626,14 @@
       "title": "Nehet Khesef Seth",
       "body": "Nehet-Ek Er Dbh Wehem Mesut Khesef Seth. Wen Medjat Ba Er Maa Khet."
     },
+    "cooldown_shortening_approved": {
+      "title": "Khebi Ahet Qebeh Hesy Seth",
+      "body": "Khebi Ahet Qebeh-Ek Hesy Seth. Wen Medjat Ba Er Maa Ahet Qebeh."
+    },
+    "cooldown_shortening_rejected": {
+      "title": "Khebi Ahet Qebeh Khesef Seth",
+      "body": "Khebi Ahet Qebeh-Ek Khesef Seth. Wen Medjat Ba Er Maa Khet."
+    },
     "judgment_result": {
       "title": "Wedja Khetem",
       "body": "Wedja-Ek Khetem Seth. Wen Medjat Ba Er Maa."
