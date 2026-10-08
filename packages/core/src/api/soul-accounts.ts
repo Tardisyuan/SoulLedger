@@ -139,9 +139,19 @@ export interface OfficerCooldownShortening {
   cooldown_until: string | null;
   /** Days still to wait, rounded up; an approval must be LESS than this. 0 = over. */
   remaining_days: number;
+  /** End of the cooldown with an approval applied; kept after it is over (`cooldown_until` is then null). */
+  cooldown_end: string | null;
+  /** The hall's own end date, never moved by an approval: the 「原 10-26」 in the detail. */
+  cooldown_original_until: string | null;
+  /** Length of the cooldown up to `cooldown_end`, and how many of those days have passed. */
+  cooldown_total_days: number;
+  cooldown_past_days: number;
   created_at: string;
   updated_at: string;
 }
+
+/** CooldownShorteningCountsSerializer: requests per status in this hall, unfiltered. */
+export type CooldownShorteningCounts = Record<CooldownShorteningStatus, number>;
 
 /** MeCurrentStepSerializer. */
 export interface RebirthCurrentStep {
@@ -208,6 +218,10 @@ export const soulAccountsApi = {
     }),
   cooldownShortenings: (params: CooldownShorteningFilters) =>
     api.get<PaginatedResponse<OfficerCooldownShortening>>("/soul-accounts/cooldown-shortenings/", { params }),
+  cooldownShortening: (id: string) =>
+    api.get<OfficerCooldownShortening>(`/soul-accounts/cooldown-shortenings/${id}/`),
+  cooldownShorteningCounts: () =>
+    api.get<CooldownShorteningCounts>("/soul-accounts/cooldown-shortenings/counts/"),
   /** 400 `invalid_days` (must be 0 ≤ days < remaining_days); 409 `already_decided` / `cooldown_over`. */
   approveCooldownShortening: (id: string, approvedDays: number, note = "") =>
     api.post<OfficerCooldownShortening>(`/soul-accounts/cooldown-shortenings/${id}/approve/`, {

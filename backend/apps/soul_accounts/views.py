@@ -26,6 +26,7 @@ from apps.soul_accounts.models import (
 )
 from apps.soul_accounts.serializers import (
     CooldownShorteningApproveSerializer,
+    CooldownShorteningCountsSerializer,
     CooldownShorteningRejectSerializer,
     CrossCivilizationDecisionSerializer,
     InitialCredentialSerializer,
@@ -206,6 +207,7 @@ class OfficerCooldownShorteningViewSet(CodenameViewSetMixin, viewsets.ReadOnlyMo
     extra_permissions = {
         "list": ["workflow.read"],
         "retrieve": ["workflow.read"],
+        "counts": ["workflow.read"],
         "approve": ["workflow.approve"],
         "reject": ["workflow.approve"],
     }
@@ -218,6 +220,16 @@ class OfficerCooldownShorteningViewSet(CodenameViewSetMixin, viewsets.ReadOnlyMo
             "soul__home_tenant", "application__soul__home_tenant", "decided_by"
         )
         return scope_to_tenant(qs, self.request, field="soul__home_tenant")
+
+    @extend_schema(responses={200: CooldownShorteningCountsSerializer})
+    @action(detail=False, methods=["get"])
+    def counts(self, request):
+        """筛选签与页签的计数:本租户范围内各状态的申请数(不受分页与筛选影响)。"""
+        from django.db.models import Count
+
+        rows = self.get_queryset().order_by().values("status").annotate(n=Count("pk"))
+        found = {r["status"]: r["n"] for r in rows}
+        return Response({s: found.get(s, 0) for s in ("PENDING", "APPROVED", "REJECTED")})
 
     def _decide(self, request, body, **kwargs):
         row = self.get_object()

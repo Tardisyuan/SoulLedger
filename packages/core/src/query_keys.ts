@@ -180,6 +180,8 @@ export const soulAccountKeys = {
     ["soul-accounts", "rebirth-applications", params] as const,
   cooldownShortenings: (params: Record<string, string | number | undefined>) =>
     ["soul-accounts", "cooldown-shortenings", params] as const,
+  cooldownShortening: (id: string) => ["soul-accounts", "cooldown-shortening", id] as const,
+  cooldownShorteningCounts: ["soul-accounts", "cooldown-shortening-counts"] as const,
 };
 
 /**
