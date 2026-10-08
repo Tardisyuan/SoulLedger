@@ -75,6 +75,8 @@ class EventType(models.TextChoices):
     REBIRTH_APPLICATION_SUBMITTED = "REBIRTH_APPLICATION_SUBMITTED"
     REBIRTH_STATUS_CHANGED = "REBIRTH_STATUS_CHANGED"
     REBIRTH_CROSS_CIV_DECIDED = "REBIRTH_CROSS_CIV_DECIDED"
+    # 缩短冷却申请被批准 / 驳回(apps/soul_accounts/rebirth.py);推送结果给灵魂。
+    COOLDOWN_SHORTENING_DECIDED = "COOLDOWN_SHORTENING_DECIDED"
 
     # Sentence plan events (受刑计划,docs/ARCHITECTURE-sentence-plan.md §2.4,Q9)
     #

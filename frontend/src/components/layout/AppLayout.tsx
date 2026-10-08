@@ -28,6 +28,7 @@ import { useWideViewport } from "@/src/hooks/useWideViewport";
 import { useRoomBeside } from "@/src/hooks/useRoomBeside";
 import { OfficerAssistEntry, OfficerAssistPanel } from "@/src/components/assist/OfficerAssist";
 import { useOfficerAssist } from "@/src/components/assist/useOfficerAssist";
+import { useSyncEmailLocale } from "@/src/components/layout/EmailLocaleSync";
 
 /**
  * The shell, 规范 v3:左侧中性导航(`GlobalNav`,252 / 68)+ 内容栏。内容栏自上而下:
@@ -66,6 +67,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const wide = useWideViewport() && roomy;
   const assist = useOfficerAssist(wide);
   const bannerShown = useConnectionBannerShown();
+  useSyncEmailLocale();
 
   const handleLogout = async () => {
     try { await authApi.logout(); } catch (err) { console.error("Logout failed:", err); }

@@ -845,15 +845,26 @@ class TestLoginLog:
             token["tenant_code"] = admin_user.tenant.code
         api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {token.access_token}")
 
-        # Create a FAILED log
-        LoginLog.objects.create(user=None, username="hacker", status="FAILED")
+        # Both rows belong to a user of this tenant, so the tenant scope keeps
+        # them. The old version created the FAILED row with user=None — which
+        # the tenant scope drops regardless of ?status= — and then asserted
+        # over whatever came back, so it passed before the filter existed.
+        LoginLog.objects.create(user=admin_user, username="admin", status="SUCCESS")
+        LoginLog.objects.create(user=admin_user, username="admin", status="FAILED",
+                                failure_reason="bad password")
 
-        # Filter by SUCCESS
         response = api_client.get("/api/v1/auth/login-logs/?status=SUCCESS")
         assert response.status_code == 200
-        results = response.data.get("results", response.data)
-        for log in results:
-            assert log["status"] == "SUCCESS"
+        results = response.data["results"]
+        assert {log["status"] for log in results} == {"SUCCESS"}
+
+        response = api_client.get("/api/v1/auth/login-logs/?status=FAILED")
+        assert [log["failure_reason"] for log in response.data["results"]] == ["bad password"]
+
+        response = api_client.get("/api/v1/auth/login-logs/?search=adm")
+        assert {log["status"] for log in response.data["results"]} == {"SUCCESS", "FAILED"}
+        response = api_client.get("/api/v1/auth/login-logs/?search=nobody")
+        assert response.data["results"] == []
 
     def test_judge_cannot_list_login_logs(self, api_client, judge_user, cn_tenant):
         """Non-ADMIN user cannot list login logs."""

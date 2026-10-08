@@ -110,6 +110,49 @@ export interface OfficerRebirthApplication {
   updated_at: string;
 }
 
+export type CooldownShorteningStatus = "PENDING" | "APPROVED" | "REJECTED";
+
+/**
+ * OfficerCooldownShorteningSerializer. A soul in rebirth cooldown asking for this
+ * cooldown to end earlier. One per cooldown (per finally-rejected application);
+ * `approved_days` is how many days remain FROM the decision, so the hall setting
+ * is never touched — `backend/apps/soul_accounts/rebirth.py` 「缩短冷却申请」.
+ */
+export interface OfficerCooldownShortening {
+  id: string;
+  soul: string;
+  soul_code: string;
+  soul_name: string;
+  account: string;
+  /** The rebirth application whose final rejection started the cooldown. */
+  application: string;
+  cycle: number;
+  reason: string;
+  status: CooldownShorteningStatus;
+  approved_days: number | null;
+  /** The officer's note for the soul; required on rejection. */
+  decision_note: string;
+  decided_by: number | null;
+  decided_by_username: string | null;
+  decided_at: string | null;
+  /** Current end of that cooldown (an approval already applied); null once it is over. */
+  cooldown_until: string | null;
+  /** Days still to wait, rounded up; an approval must be LESS than this. 0 = over. */
+  remaining_days: number;
+  /** End of the cooldown with an approval applied; kept after it is over (`cooldown_until` is then null). */
+  cooldown_end: string | null;
+  /** The hall's own end date, never moved by an approval: the 「原 10-26」 in the detail. */
+  cooldown_original_until: string | null;
+  /** Length of the cooldown up to `cooldown_end`, and how many of those days have passed. */
+  cooldown_total_days: number;
+  cooldown_past_days: number;
+  created_at: string;
+  updated_at: string;
+}
+
+/** CooldownShorteningCountsSerializer: requests per status in this hall, unfiltered. */
+export type CooldownShorteningCounts = Record<CooldownShorteningStatus, number>;
+
 /** MeCurrentStepSerializer. */
 export interface RebirthCurrentStep {
   node_type: string;
@@ -134,6 +177,8 @@ export interface RebirthApplicationFilters {
   soul?: string;
   page?: number;
 }
+
+export type CooldownShorteningFilters = RebirthApplicationFilters;
 
 /** Business refusals: `{detail, code}` with a stable `code`. */
 export interface SoulAccountErrorBody {
@@ -171,4 +216,19 @@ export const soulAccountsApi = {
     api.post<OfficerRebirthApplication>(`/soul-accounts/rebirth-applications/${id}/cross-civilization/`, {
       cross_civilization: crossCivilization,
     }),
+  cooldownShortenings: (params: CooldownShorteningFilters) =>
+    api.get<PaginatedResponse<OfficerCooldownShortening>>("/soul-accounts/cooldown-shortenings/", { params }),
+  cooldownShortening: (id: string) =>
+    api.get<OfficerCooldownShortening>(`/soul-accounts/cooldown-shortenings/${id}/`),
+  cooldownShorteningCounts: () =>
+    api.get<CooldownShorteningCounts>("/soul-accounts/cooldown-shortenings/counts/"),
+  /** 400 `invalid_days` (must be 0 ≤ days < remaining_days); 409 `already_decided` / `cooldown_over`. */
+  approveCooldownShortening: (id: string, approvedDays: number, note = "") =>
+    api.post<OfficerCooldownShortening>(`/soul-accounts/cooldown-shortenings/${id}/approve/`, {
+      approved_days: approvedDays,
+      note,
+    }),
+  /** The note is required (the soul reads it). 409 `already_decided` / `cooldown_over`. */
+  rejectCooldownShortening: (id: string, note: string) =>
+    api.post<OfficerCooldownShortening>(`/soul-accounts/cooldown-shortenings/${id}/reject/`, { note }),
 };

@@ -208,6 +208,12 @@ class LedgerRecordSummarySerializer(serializers.Serializer):
     statute_clause = serializers.CharField(allow_blank=True)
     #: 这一行覆盖几次;null = 没记(不是 0 次)。
     occurrence_count = serializers.IntegerField(allow_null=True, min_value=1)
+    #: 引用的律条在引用那天的样子(SoulRecord.statute_snapshot);null = 没引。
+    statute_snapshot = serializers.JSONField(allow_null=True)
+    #: 人生阶段 / 证据来源(souls.life_stages / souls.evidence_sources);空串 = 没记。
+    life_stage = serializers.CharField(allow_blank=True)
+    evidence_source = serializers.CharField(allow_blank=True)
+    evidence_note = serializers.CharField(allow_blank=True)
 
 
 class LedgerSummarySerializer(serializers.Serializer):
@@ -297,6 +303,8 @@ class TenantSoulStatsSerializer(serializers.Serializer):
     tenant_id = serializers.IntegerField()
     tenant_code = serializers.CharField()
     tenant_name = serializers.CharField()
+    #: 这个殿收不收调拨(`Tenant.dispatch_enabled`):发起移交页的目标殿单选据此禁用并说明。
+    dispatch_enabled = serializers.BooleanField()
     total_souls = serializers.IntegerField()
     # Keyed by SoulState member; every member is present, zeros included.
     state_breakdown = serializers.DictField(child=serializers.IntegerField())

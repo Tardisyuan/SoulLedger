@@ -1183,6 +1183,10 @@ def test_the_postgres_only_set_is_the_set_we_think_it_is():
         # test_a_case_whose_{open,tenant}_check_went_stale_before_the_lock_is_refused 每个引擎都跑。
         "tests/test_sentence_plan_concurrency.py::"
         "test_two_cases_past_the_unlocked_check_at_once_open_exactly_one",
+        # 2026-10-08 缩短冷却申请:批准与驳回同时到,行锁下只有先到的算数(decide_cooldown_shortening)。
+        # 串行版 test_the_same_rule_serially 同文件,每个引擎都跑。
+        "tests/test_rebirth_cooldown_shortening.py::"
+        "test_two_officers_deciding_one_request_at_once_record_one_decision",
         "tests/test_sentence_plan_concurrency.py::"
         "test_a_soul_going_home_while_a_case_waits_for_the_lock_strands_no_case",
         # 2026-09-24 审判认领:第二个认领人必须在案子的行锁上等,拿到锁后读到第一个的

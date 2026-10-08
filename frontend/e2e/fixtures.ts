@@ -1718,6 +1718,9 @@ export class ApiMock {
     this.on("POST", "/soul-accounts/credentials/:id/mark-delivered/", DELIVERED_CREDENTIAL);
     this.on("POST", "/soul-accounts/credentials/:id/retry/", CREDENTIALS_PENDING[0]);
     this.on("GET", "/soul-accounts/rebirth-applications/", paginated(REBIRTH_APPLICATIONS));
+    // 缩短冷却申请(A11):页签上的待决定数来自 counts/,列表在点开页签时才取。
+    this.on("GET", "/soul-accounts/cooldown-shortenings/counts/", { PENDING: 0, APPROVED: 0, REJECTED: 0 });
+    this.on("GET", "/soul-accounts/cooldown-shortenings/", paginated([]));
     this.on("POST", "/soul-accounts/rebirth-applications/:id/cross-civilization/", (call) => ({
       body: { ...REBIRTH_APPLICATIONS[0], cross_civilization: call.body.cross_civilization },
     }));

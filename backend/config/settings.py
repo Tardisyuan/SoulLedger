@@ -588,6 +588,10 @@ SPECTACULAR_SETTINGS = {
         # so Role.scope's until-then-unique `ScopeEnum` would be renamed to a
         # hashed `ScopeE81Enum`. Pinning it under its existing name keeps the
         # generated TypeScript identifier unchanged.
+        # `UserPreferencesSerializer.email_locale` 与 `EvalCase.locale` 是同一组 (zh-Hans, en):
+        # 不钉住,drf-spectacular 给第二处起名 EmailLocaleEnum,再把另一个 `locale` 字段改成
+        # 带哈希的 Locale188Enum。钉在既有的名字下,生成的 TypeScript 标识符不变。
+        "EvalCaseLocaleEnum": "apps.authentication.serializers.EMAIL_LOCALES",
         "TaskRunStatusEnum": "apps.scheduler.models.RunStatus.choices",
         "ScheduledJobScopeEnum": "apps.scheduler.models.JobScope.choices",
         # 助手管理「供应商」区块的平台(2026-09-30):`platform` 另有别的选项集用着。
@@ -596,6 +600,7 @@ SPECTACULAR_SETTINGS = {
         # apps.soul_accounts:`status` 与 `desired_form` 两个字段名在别处已有别的选项集。
         # 灵魂提交时不收 OTHER,于是 desired_form 有两套(完整的与去掉 OTHER 的),各自命名。
         "RebirthApplicationStatusEnum": "apps.soul_accounts.models.RebirthApplicationStatus.choices",
+        "CooldownShorteningStatusEnum": "apps.soul_accounts.models.CooldownShorteningStatus.choices",
         "RebirthFormEnum": "apps.reincarnation.models.RebirthForm.choices",
         # apps.soul_assist:两端各有一个 `screen` 选项集。灵魂端的保留原名(mobile 与 core 引用
         # `ScreenEnum`),官员端另起名 —— 不钉住就两个都变成带前缀的名字。
@@ -608,6 +613,9 @@ SPECTACULAR_SETTINGS = {
         "AssistProviderRoleEnum": "apps.soul_assist.models.AssistUsage.PROVIDER_ROLES",
         # 向量检索(§7.6):`error_kind` 在连通测试里已是供应商的那套;向量服务的另起名,供应商的保留原名。
         "ErrorKindEnum": "apps.soul_assist.admin_serializers.ERROR_KINDS",
+        # apps.death_sync 管理端 Webhook 的 `events` 是 EventType 的列表,与 SoulEvent.event_type
+        # 同一个选项集走两条路(`EventsEnum` / `EventTypeEnum`);钉住原名,TS 标识符不变。
+        "EventTypeEnum": "apps.events.models.EventType.choices",
         "EmbeddingErrorKindEnum": "apps.soul_assist.vectors.ERROR_KINDS",
         "AssistRetrievalEnum": "apps.soul_assist.admin_serializers.RETRIEVALS",
         "DesiredRebirthFormEnum": "apps.soul_accounts.serializers.DESIRED_REBIRTH_FORMS",

@@ -1,4 +1,5 @@
 import { api } from "./client";
+import type { components } from "./generated/schema";
 import type { PaginatedResponse } from "./users";
 
 /**
@@ -36,4 +37,13 @@ export interface AuditLogEntry {
 
 export const auditApi = {
   list: (params?: Record<string, string>) => api.get<PaginatedResponse<AuditLogEntry>>("/audit-logs/", { params }),
+};
+
+/** One row of `GET /auth/login-logs/` (ADMIN-only, `LoginLogViewSet`; this tenant's users). */
+export type LoginLogEntry = components["schemas"]["LoginLog"];
+export type LoginLogStatus = LoginLogEntry["status"];
+
+export const loginLogsApi = {
+  list: (params?: { page?: string; status?: LoginLogStatus; search?: string }) =>
+    api.get<PaginatedResponse<LoginLogEntry>>("/auth/login-logs/", { params }),
 };

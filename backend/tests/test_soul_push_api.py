@@ -61,7 +61,8 @@ def test_a_token_moves_to_the_account_that_registers_it(cn_tenant, enqueued):  #
     assert device.account_id == second.pk and device.soul_id == second.soul_id and device.is_active
 
     _judgment_concluded(first.soul)
-    assert not PushDelivery.objects.filter(account=first).exists()  # 旧账号的事件推不到这台手机
+    # 旧账号的事件推不到这台手机:只留一行没有设备的历史,不发送
+    assert not PushDelivery.objects.filter(account=first, device__isnull=False).exists()
     _judgment_concluded(second.soul, "j-2")
     assert PushDelivery.objects.filter(account=second, device=device).count() == 1
 

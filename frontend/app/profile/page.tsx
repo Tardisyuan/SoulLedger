@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { authApi } from "@soulledger/core/api";
+import { authApi, notificationsApi } from "@soulledger/core/api";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { showToast } from "@/src/components/ui/Toast";
@@ -96,6 +96,7 @@ export default function ProfilePage() {
   };
 
   const role = profile?.role || user?.role || "";
+  const email = profile?.email || user?.email || "";
 
   return (
     <PageShell title={t("profile.title")} variant="prose">
@@ -267,7 +268,78 @@ export default function ProfilePage() {
         ) : null}
         </div>
       </section>
+
+      {/* 邮件通道:待处理的站内通知再发一封到邮箱(apps/notifications/tasks.py)。默认关。 */}
+      <section>
+        <h2 className="pt-6 text-lg text-[oklch(var(--color-ink))]">
+          <span aria-hidden="true">丙 · </span>
+          {t("profile.email_notifications")}
+        </h2>
+        <EmailNotificationsToggle hasAddress={email !== ""} />
+      </section>
     </PageShell>
+  );
+}
+
+/**
+ * 开关记在 `preferences.email_notifications`;开的那一刻把界面语言记成 `email_locale`
+ * (官员没有别的存下来的语言偏好;邮件只有 zh-Hans / en,egy 界面落到 en)。
+ * 旁边是上次发送失败(`/notifications/email-status/`):没失败过什么也不显示。
+ */
+function EmailNotificationsToggle({ hasAddress }: { hasAddress: boolean }) {
+  const { t, locale, formatDateTime } = useI18n();
+  const queryClient = useQueryClient();
+  const prefs = useQuery({ queryKey: ["profile", "preferences"], queryFn: () => authApi.preferences().then((r) => r.data) });
+  const status = useQuery({
+    queryKey: ["profile", "email-status"],
+    queryFn: () => notificationsApi.emailStatus().then((r) => r.data),
+  });
+  const toggle = useMutation({
+    mutationFn: (on: boolean) =>
+      authApi
+        .updatePreferences(on ? { email_notifications: true, email_locale: locale === "zh-Hans" ? "zh-Hans" : "en" } : { email_notifications: false })
+        .then((r) => r.data),
+    onSuccess: (data) => queryClient.setQueryData(["profile", "preferences"], data),
+    onError: () => showToast(t("profile.profile_update_failed"), "error"),
+  });
+  const on = prefs.data?.email_notifications === true;
+  const failure = status.data?.last_failure ?? null;
+  return (
+    <div className="pt-3 space-y-2">
+      <div className="flex items-start gap-3">
+        <button
+          type="button"
+          role="switch"
+          aria-checked={on}
+          aria-label={t("profile.email_notifications")}
+          disabled={!prefs.data || toggle.isPending}
+          onClick={() => toggle.mutate(!on)}
+          // 与 SchedulerJobRow 的开关同一张皮:44 的点击区里画 32 × 18 的轨道。
+          className="group inline-flex size-(--control-h-sm) shrink-0 items-center justify-center disabled:cursor-not-allowed"
+        >
+          <span
+            aria-hidden="true"
+            className={`relative inline-flex h-[18px] w-8 items-center border-[1.5px] p-0.5 transition-colors duration-instant group-disabled:border-[oklch(var(--color-line))] group-disabled:bg-[oklch(var(--color-disabled-surface))] ${
+              on
+                ? "justify-end bg-[oklch(var(--color-ink))] border-[oklch(var(--color-ink))]"
+                : "justify-start bg-transparent border-[oklch(var(--color-line-strong))]"
+            }`}
+          >
+            <span className={`block size-[11px] ${on ? "bg-[oklch(var(--color-canvas))]" : "bg-[oklch(var(--color-line-strong))]"}`} />
+          </span>
+        </button>
+        <p className="text-sm text-[oklch(var(--color-ink-muted))]">{t("profile.email_notifications_note")}</p>
+      </div>
+      {!hasAddress ? (
+        <p className="text-sm text-[oklch(var(--color-ink-subtle))]">{t("profile.email_notifications_no_address")}</p>
+      ) : null}
+      {failure ? (
+        <p role="status" className="text-sm text-[oklch(var(--color-danger))]">
+          <span aria-hidden="true">✕ </span>
+          {t("profile.email_last_failure", { error: failure.error, at: formatDateTime(failure.at) })}
+        </p>
+      ) : null}
+    </div>
   );
 }
 

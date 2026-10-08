@@ -128,16 +128,16 @@ export {
 export { menusApi, menuButtonsApi, type MenuItem, type MenuButton } from "./menus";
 
 // Audit
-export { auditApi, type AuditLogEntry } from "./audit";
+export { auditApi, loginLogsApi, type AuditLogEntry, type LoginLogEntry, type LoginLogStatus } from "./audit";
 
 // Tenants
-export { tenantsApi, type Tenant } from "./tenants";
+export { tenantsApi, REBIRTH_COOLDOWN_SETTING, type Tenant, type TenantSettingsPatch } from "./tenants";
 
 // Organizations
 export { organizationsApi, type Organization } from "./organizations";
 
 // Notifications
-export { notificationsApi, type Notification } from "./notifications";
+export { notificationsApi, type Notification, type NotificationEmailStatus } from "./notifications";
 
 // Dispatch
 export { dispatchApi, crossTenantJudgmentsApi, DISPATCH_REASON_MIN_CHARS, dispatchReasonLength, type DispatchRecord, type DispatchDraftInput, type DispatchRealmOption, type CrossTenantJudgment, type CrossTenantJudgmentListItem, type CrossTenantJudgmentParticipant } from "./dispatch";
@@ -171,9 +171,13 @@ export {
 // Soul accounts (officer side)
 export {
   soulAccountsApi,
+  type CooldownShorteningCounts,
+  type CooldownShorteningFilters,
+  type CooldownShorteningStatus,
   type CredentialFilters,
   type InitialCredential,
   type InitialCredentialStatus,
+  type OfficerCooldownShortening,
   type OfficerRebirthApplication,
   type RebirthApplicationFilters,
   type RebirthApplicationForm,
@@ -187,7 +191,21 @@ export {
 } from "./soul-accounts";
 
 // Death sync (browser read side)
-export { deathSyncApi, type DeathRegistration, type DeathRegistrationStatus, type DeathRegistrationSummary } from "./death-sync";
+export {
+  deathSyncApi,
+  type DeathRegistration,
+  type DeathRegistrationStatus,
+  type DeathRegistrationSummary,
+  type ExternalApiKey,
+  type ExternalApiKeyCreate,
+  type ExternalApiKeySystemType,
+  type AdminWebhook,
+  type AdminWebhookEvent,
+  type AdminWebhookCreate,
+  type AdminWebhookUpdate,
+  type WebhookDelivery,
+  type WebhookDeliveryStatus,
+} from "./death-sync";
 
 // Recycle bin
 export { recycleBinApi, type RecycleBinEntry, type RecycleBinLocation, type RecycleBinListResponse, type RestoreResponse } from "./recycle-bin";

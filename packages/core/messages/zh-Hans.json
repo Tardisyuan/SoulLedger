@@ -188,6 +188,18 @@
       "MURDER": "杀业",
       "OTHER": "其他"
     },
+    "life_stages": {
+      "CHILDHOOD": "童年",
+      "YOUTH": "少年",
+      "ADULTHOOD": "壮年",
+      "OLD_AGE": "老年"
+    },
+    "evidence_sources": {
+      "REGISTRY": "司录",
+      "WITNESS": "证人",
+      "SELF_ACCOUNT": "自述",
+      "OTHER": "其他"
+    },
     "form": {
       "name_label": "名称 *",
       "name_placeholder": "灵魂名称",
@@ -360,6 +372,16 @@
         "ledger_tabs": "卷宗",
         "tab_judgments": "全部审判",
         "tab_records": "全部功过记录"
+      },
+      "correct_settlement": {
+        "action": "更正结案",
+        "title": "更正结案状态",
+        "message": "灵魂退回「已处置」;审判与处置记录不动,原因单独记入审计。",
+        "reason": "原因",
+        "reason_required": "必须写明原因",
+        "confirm": "更正",
+        "success": "已更正结案状态,灵魂回到「已处置」",
+        "failed": "没能更正结案状态"
       }
     },
     "date_problem_filter": "仅看有问题的",
@@ -1580,7 +1602,30 @@
     "needs_audit_read": "需要「查看审计日志」权限（audit.read）",
     "repeat_expand": "展开",
     "repeat_collapse": "收起",
-    "repeat_rule": "同一人、同一动作、同一类资源，前后相隔不超过 {{minutes}} 分钟的连续记录合为一行"
+    "repeat_rule": "同一人、同一动作、同一类资源，前后相隔不超过 {{minutes}} 分钟的连续记录合为一行",
+    "tabs": {
+      "audit": "审计日志",
+      "logins": "登录日志"
+    },
+    "login_log": {
+      "title": "登录日志",
+      "username": "用户名",
+      "status_label": "结果",
+      "status": {
+        "SUCCESS": "成功",
+        "FAILED": "失败"
+      },
+      "failure_reason": "失败原因",
+      "user_agent": "客户端",
+      "search_placeholder": "搜索用户名...",
+      "no_logs": "暂无登录日志"
+    },
+    "resource_tenant": "殿",
+    "descriptions": {
+      "hall_settings": "改了 {{code}} 殿的设置",
+      "hall_seal_glyphs": "改了 {{code}} 殿的印字",
+      "hall_assistant_switch": "改了 {{code}} 殿的问一问开关"
+    }
   },
   "profile": {
     "title": "个人中心",
@@ -1602,7 +1647,11 @@
     "profile_updated": "个人信息已更新",
     "profile_update_failed": "个人信息更新失败",
     "avatar": "头像",
-    "load_failed": "无法获取最新资料，下面显示的可能是旧值"
+    "load_failed": "无法获取最新资料，下面显示的可能是旧值",
+    "email_notifications": "邮件通知",
+    "email_notifications_note": "开启后，待你处理的事项（待审批、审批超时、改派请求、密码求助）会发到你的邮箱。",
+    "email_notifications_no_address": "账号没有邮箱，开启后也不会发送。",
+    "email_last_failure": "上次发送失败：{{error}}（{{at}}）"
   },
   "notifications": {
     "title": "通知中心",
@@ -1940,6 +1989,7 @@
     "soul_from_detail": "从详情页带入，不可改",
     "soul_from_detail_error": "带入的灵魂加载失败，请在这里重新选择。",
     "source_label": "来源",
+    "target_tenant_closed": "此殿暂不接收调拨",
     "discard": "放弃…",
     "discard_title": "放弃这份移交草稿？",
     "discard_message": "草稿会移入回收站，可在「系统设置 › 回收站」找回。已填写的理由一并保留。",
@@ -2229,7 +2279,102 @@
       "PARTIAL": "部分处理"
     },
     "source_system": "来源系统",
-    "status_label": "状态"
+    "status_label": "状态",
+    "tabs": {
+      "registrations": "登记记录",
+      "api_keys": "接入密钥",
+      "webhooks": "Webhook"
+    },
+    "api_keys": {
+      "title": "接入密钥",
+      "intro": "外部系统凭密钥调用死亡登记接口。密钥只在创建时显示一次，之后只能看到前缀。",
+      "create": "新建密钥",
+      "name": "名称",
+      "name_placeholder": "如「市立医院死亡登记」",
+      "system_type_label": "系统类型",
+      "system_type": {
+        "GOVERNMENT": "政府户籍",
+        "HOSPITAL": "医院死亡证明",
+        "POLICE": "公安户籍",
+        "MESSAGE_BUS": "消息总线",
+        "CUSTOM": "自定义"
+      },
+      "key_prefix": "前缀",
+      "permissions": "权限",
+      "can_register_death": "登记死亡",
+      "can_query_status": "查询状态",
+      "can_manage_webhooks": "管理 Webhook",
+      "last_used": "最近使用",
+      "never_used": "未使用",
+      "usage_count": "调用次数",
+      "status_label": "状态",
+      "status": {
+        "ACTIVE": "生效中",
+        "REVOKED": "已撤销"
+      },
+      "revoke": "撤销",
+      "revoke_title": "撤销密钥「{{name}}」？",
+      "revoke_message": "撤销后，持此密钥的外部系统立即无法调用。此操作不可撤销，需要时请新建密钥。",
+      "revoked_ok": "密钥已撤销",
+      "revoke_failed": "撤销失败",
+      "create_failed": "创建失败",
+      "no_keys": "暂无接入密钥",
+      "shown_title": "新密钥（仅此一次）",
+      "shown_warning": "这是密钥的唯一一次显示。关闭后服务器只保留散列，无法再次查看；请现在复制并交付给外部系统。",
+      "key_label": "密钥",
+      "copy": "复制密钥",
+      "copied": "密钥已复制",
+      "copy_failed": "复制失败",
+      "close": "我已保存，关闭",
+      "webhooks_note": "Webhook 在「Webhook」页签管理；外部系统也可持密钥自行配置。"
+    },
+    "webhooks": {
+      "title": "Webhook",
+      "intro": "事件发生时，系统向下列地址发送带签名的 HTTP 请求。签名密钥只在创建时显示一次。",
+      "create": "新建 Webhook",
+      "edit_title": "编辑 Webhook",
+      "url": "地址",
+      "api_key": "所属密钥",
+      "events": "订阅事件",
+      "events_hint": "不勾选即订阅全部事件。事件名即请求头 X-SoulLedger-Event 的值。",
+      "all_events": "全部事件",
+      "status_label": "状态",
+      "status": {
+        "ACTIVE": "生效中",
+        "DISABLED": "已停用"
+      },
+      "disable": "停用",
+      "enable": "启用",
+      "disable_title": "停用 Webhook「{{url}}」？",
+      "disable_message": "停用后不再向此地址投递事件。记录与投递历史保留，可随时重新启用。",
+      "disabled_ok": "Webhook 已停用",
+      "disable_failed": "停用失败",
+      "saved_ok": "Webhook 已保存",
+      "save_failed": "保存失败",
+      "no_webhooks": "暂无 Webhook",
+      "no_keys_hint": "Webhook 须挂在一把接入密钥下，请先在「接入密钥」页签新建密钥。",
+      "shown_title": "签名密钥（仅此一次）",
+      "shown_warning": "这是签名密钥的唯一一次显示。关闭后无法再次查看；请现在复制并交付给接收系统，用于校验 X-SoulLedger-Signature。",
+      "secret_label": "签名密钥",
+      "copy": "复制密钥",
+      "deliveries": "投递记录",
+      "deliveries_for": "{{url}} 的投递",
+      "all_deliveries": "查看全部",
+      "no_deliveries": "暂无投递记录",
+      "delivery": {
+        "event": "事件",
+        "attempt": "尝试次数",
+        "response": "响应码",
+        "error": "最近错误",
+        "time": "时间",
+        "status": {
+          "PENDING": "待投递",
+          "SUCCESS": "已投递",
+          "FAILED": "失败",
+          "ABANDONED": "已放弃"
+        }
+      }
+    }
   },
   "soul_accounts": {
     "refresh": "刷新",
@@ -2403,6 +2548,53 @@
       "empty_filtered": "该状态下没有申请",
       "cooldown_until": "冷却至 {{time}},期内灵魂不能重新申请",
       "step_appeal": "(申诉)"
+    },
+    "cooldown": {
+      "tabs": {
+        "applications": "转生申请",
+        "shortenings": "缩短冷却申请"
+      },
+      "title": "缩短冷却申请",
+      "subtitle": "冷却期内的灵魂请求提前结束本次冷却：批准给出剩余天数，驳回须附说明",
+      "empty": "还没有缩短冷却申请",
+      "empty_filtered": "该状态下没有申请",
+      "detail_title": "缩短冷却申请 · {{name}}",
+      "fields": {
+        "reason": "申请理由",
+        "remaining": "剩余冷却",
+        "approved_days": "批准后剩余天数",
+        "note": "给灵魂的说明",
+        "decided_by": "决定人",
+        "created_at": "提交于",
+        "cooldown_until": "冷却截止"
+      },
+      "remaining_days": "{{n}} 天",
+      "over": "冷却已结束",
+      "approve": "批准",
+      "reject": "驳回",
+      "days_label": "自今日起还需等待（天）",
+      "days_hint": "须小于剩余 {{n}} 天；0 表示立即可以重新申请",
+      "note_label": "给灵魂的说明",
+      "note_hint": "驳回必须填写；灵魂会读到",
+      "decided": "已保存",
+      "failed": "保存失败",
+      "already_decided": "已经决定过了",
+      "cooldown_over": "冷却已结束，无需决定",
+      "invalid_days": "天数须在 0 与剩余天数之间",
+      "note_required": "驳回必须填写说明；灵魂会读到",
+      "remaining_progress": "已过 {{past}} / 共 {{total}} 天",
+      "approve_with_days": "批准 · 还需 {{days}} 天",
+      "scope_note": "批准只提前这一段冷却；殿的冷却天数不变",
+      "sort_note": "待决定按剩余冷却从少到多；冷却已结束的排最后",
+      "source": "冷却来自转生申请 {{id}} 的终局驳回",
+      "decide_failed": "未能决定：{{reason}}",
+      "original": "原 {{date}}",
+      "day_unit": "天"
+    },
+    "cooldown_status": {
+      "PENDING": "待决定",
+      "APPROVED": "已批准",
+      "REJECTED": "已驳回"
     }
   },
   "disposition": {
@@ -2540,6 +2732,21 @@
       "preview": "预览",
       "saved": "印字已保存",
       "save_failed": "没能保存印字"
+    },
+    "settings": {
+      "edit": "改设置",
+      "title": "{{name}} · 设置",
+      "hall_name": "殿司展示名(中文)",
+      "hall_name_hint": "灵魂与殿司收件箱里看到的殿名;留空用租户名",
+      "hall_name_en": "殿司展示名(English)",
+      "hall_name_egy": "殿司展示名(egy)",
+      "description": "说明",
+      "cooldown_days": "转生申请冷却天数",
+      "cooldown_hint": "最近一次终局驳回之后这么多天内不能再申请;0 到 365,留空用默认 30 天",
+      "cooldown_invalid": "请填 0 到 365 之间的整数",
+      "dispatch_enabled": "可接收调拨(暂居)",
+      "saved": "设置已保存",
+      "save_failed": "没能保存设置"
     }
   },
   "table": {
@@ -2660,7 +2867,9 @@
       "social_cleanup_orphan_post_media": "清理未发出的朋友圈图片",
       "chat_reconcile_inbox": "按 Synapse 校对殿司收件箱",
       "soul_assist_purge_history": "清理助手会话",
-      "ledger_snapshot_balance_for_tenant": "记余额月快照"
+      "ledger_snapshot_balance_for_tenant": "记余额月快照",
+      "notifications_email_action_needed_for_tenant": "邮件提醒待处理通知",
+      "notifications_email_action_needed_global": "邮件提醒待处理通知(全局管理员)"
     },
     "status": {
       "PENDING": "排队中",
@@ -3037,7 +3246,10 @@
       "screen_body": "你的记录仍在。只是此刻取不到。",
       "section": "这一段没取到。其余部分照常显示。",
       "offline": "已离线",
-      "sentence_in_progress": "受刑计划尚未完成，完成后才能申请转生"
+      "sentence_in_progress": "受刑计划尚未完成，完成后才能申请转生",
+      "not_in_cooldown": "只有在冷却期内才能申请缩短冷却",
+      "shortening_pending": "已有一份待决的缩短冷却申请",
+      "shortening_used": "这段冷却期已申请过一次缩短"
     },
     "lexicon": {
       "eg": {
@@ -3138,7 +3350,9 @@
       "toggle_failed": "没能保存这项设置，已恢复原样",
       "version": "灵魂簿 {{version}}",
       "chat": "书信",
-      "chat_note": "有新书信、殿司回信时"
+      "chat_note": "有新书信、殿司回信时",
+      "history": "通知记录",
+      "history_note": "推送过的通知都在这里，包括没送达的"
     },
     "push": {
       "primer_title": "要不要在有结果时通知你？",
@@ -3522,6 +3736,25 @@
       "interrupted": "回答中断",
       "answering_aria": "正在回答",
       "jump_latest": "↓ 最新"
+    },
+    "history": {
+      "title": "通知记录",
+      "empty": "暂无通知",
+      "load_failed": "没能取到通知记录",
+      "not_delivered": "未送达",
+      "more": "更多"
+    },
+    "cooldown": {
+      "request": "申请缩短冷却",
+      "hint": "冷却期内可申请一次缩短，由原属文明决定。",
+      "reason": "申请理由",
+      "submit": "提交申请",
+      "submitted": "申请已提交",
+      "pending": "缩短冷却申请待决定",
+      "approved": "缩短冷却申请已批准，冷却期至 {{date}}",
+      "rejected": "缩短冷却申请被驳回",
+      "note": "说明",
+      "brought_forward": "已提前"
     }
   },
   "soul_push": {
@@ -3536,6 +3769,14 @@
     "rebirth_appeal_rejected": {
       "title": "申诉被驳回",
       "body": "你对转生申请的申诉被驳回,打开灵魂簿查看理由。"
+    },
+    "cooldown_shortening_approved": {
+      "title": "缩短冷却申请已批准",
+      "body": "你的缩短冷却申请已批准,打开灵魂簿查看新的冷却截止。"
+    },
+    "cooldown_shortening_rejected": {
+      "title": "缩短冷却申请被驳回",
+      "body": "你的缩短冷却申请被驳回,打开灵魂簿查看理由。"
     },
     "judgment_result": {
       "title": "审判有了结论",

@@ -6,4 +6,5 @@ urlpatterns = [
     path("push-tokens/", views.MePushTokensView.as_view(), name="me-push-tokens"),
     path("push-tokens/unregister/", views.MePushTokenUnregisterView.as_view(), name="me-push-token-unregister"),
     path("notification-settings/", views.MeNotificationSettingsView.as_view(), name="me-notification-settings"),
+    path("notifications/", views.MeNotificationsView.as_view(), name="me-notifications"),
 ]

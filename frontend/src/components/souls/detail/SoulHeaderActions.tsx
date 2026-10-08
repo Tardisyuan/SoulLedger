@@ -10,11 +10,14 @@ import { Button } from "@/src/components/ui/Button";
 export function SoulHeaderActions({
   onEdit,
   onDelete,
+  onCorrectSettlement,
   isOverflowMenuOpen,
   setIsOverflowMenuOpen,
 }: {
   onEdit: () => void;
   onDelete: () => void;
+  /** 「更正结案」:只在页面判定可做时(持有 `soul.correct_settlement` 且灵魂是 SETTLED)才给;没给就没有这一项。 */
+  onCorrectSettlement?: () => void;
   /* The open/closed flag stays owned by the page. It used to live there while
      this markup was inlined, and a menu left open across a data reload kept
      its state; hoisting the state in here would have quietly closed it. */
@@ -63,10 +66,9 @@ export function SoulHeaderActions({
   );
   const { containerRef: menuRef, itemRefs } = useRovingPopupKeys({
     open: isOverflowMenuOpen,
-    // One entry, always available. An array rather than a number because the
-    // hook's contract is per-entry: a second action added here gets arrow
-    // navigation without touching the hook.
-    enabled: [true],
+    // Per-entry, as the hook's contract says: delete is always there, the
+    // settlement correction only when the page handed one in.
+    enabled: [true, Boolean(onCorrectSettlement)],
     onRequestClose: close,
   });
 
@@ -121,6 +123,21 @@ export function SoulHeaderActions({
                 >
                   {t("souls.detail.delete")}
                 </button>
+                {onCorrectSettlement ? (
+                  <button
+                    ref={(el) => { itemRefs.current[1] = el; }}
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      close(true);
+                      onCorrectSettlement();
+                    }}
+                    /* 可逆(退回 DISPOSED,审判与处置都在)且单独审计:warning,不是 danger。 */
+                    className="w-full text-left px-3 py-1 text-sm text-[oklch(var(--color-warning))] hover:bg-[oklch(var(--color-surface-2))] transition-colors"
+                  >
+                    {t("souls.detail.correct_settlement.action")}
+                  </button>
+                ) : null}
               </div>
             </>
           )}

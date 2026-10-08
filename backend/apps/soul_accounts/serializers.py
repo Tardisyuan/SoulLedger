@@ -11,7 +11,7 @@ from rest_framework import serializers
 from apps.reincarnation.models import RebirthForm
 from apps.sentence_plan.soul_view import PLAN_STATES as SOUL_PLAN_STATES
 from apps.sentence_plan.soul_view import STATION_STATUSES as SOUL_STATION_STATUSES
-from apps.soul_accounts.models import InitialCredential, RebirthApplication, SoulAccount
+from apps.soul_accounts.models import CooldownShorteningRequest, InitialCredential, RebirthApplication, SoulAccount
 from apps.soul_accounts.services import email_not_synced as login_email_not_synced
 from apps.souls.fields import HistoricalDateField
 from apps.souls.models import Civilization
@@ -239,6 +239,16 @@ class MeLifeSerializer(serializers.Serializer):
     reincarnation = MeReincarnationSerializer(allow_null=True)
 
 
+class MeCooldownShorteningSerializer(serializers.ModelSerializer):
+    """灵魂看自己的那份:没有 decided_by。"""
+
+    class Meta:
+        model = CooldownShorteningRequest
+        fields = ["id", "application", "cycle", "reason", "status", "approved_days", "decision_note",
+                  "decided_at", "created_at"]
+        read_only_fields = fields
+
+
 class MeRebirthEligibilitySerializer(serializers.Serializer):
     can_apply = serializers.BooleanField()
     reason = serializers.CharField(allow_null=True)
@@ -247,6 +257,9 @@ class MeRebirthEligibilitySerializer(serializers.Serializer):
 
 class MeRebirthApplicationListSerializer(MeRebirthEligibilitySerializer):
     results = MeRebirthApplicationSerializer(many=True)
+    #: 冷却期内才有意义:能不能申请缩短,以及本世最近一份缩短申请(待决 / 已批准 / 已驳回)。
+    can_shorten_cooldown = serializers.BooleanField()
+    cooldown_shortening = MeCooldownShorteningSerializer(allow_null=True)
 
 
 # OTHER 不收:它是历史遗留值,「Nothing should write it any more」(RebirthForm 文档)。
@@ -407,3 +420,86 @@ class OfficerRebirthApplicationSerializer(serializers.ModelSerializer):
 
 class CrossCivilizationDecisionSerializer(serializers.Serializer):
     cross_civilization = serializers.BooleanField()
+
+
+# ── 缩短冷却申请 ──────────────────────────────────────────────────────────
+
+
+class CooldownShorteningCreateSerializer(serializers.Serializer):
+    reason = serializers.CharField(max_length=2000)
+
+
+class OfficerCooldownShorteningSerializer(serializers.ModelSerializer):
+    soul_code = serializers.CharField(source="soul.soul_code", read_only=True)
+    soul_name = serializers.CharField(source="soul.name", read_only=True)
+    decided_by_username = serializers.CharField(source="decided_by.username", read_only=True, default=None)
+    #: 此刻这段冷却的截止(含已批准的缩短);结束了为 None —— 待决的申请到那时就不必决定了。
+    cooldown_until = serializers.SerializerMethodField()
+    remaining_days = serializers.SerializerMethodField()
+    #: A11:详情里「冷却截止 2026-10-13(原 10-26)」与进度线「已过 a / 共 b 天」。
+    #: `cooldown_end` 含批准的缩短且结束后仍给出(`cooldown_until` 结束后为 None);
+    #: `cooldown_original_until` 是殿规截止,批准前后相同。
+    cooldown_end = serializers.SerializerMethodField()
+    cooldown_original_until = serializers.SerializerMethodField()
+    cooldown_total_days = serializers.SerializerMethodField()
+    cooldown_past_days = serializers.SerializerMethodField()
+
+    class Meta:
+        model = CooldownShorteningRequest
+        fields = ["id", "soul", "soul_code", "soul_name", "account", "application", "cycle", "reason", "status",
+                  "approved_days", "decision_note", "decided_by", "decided_by_username", "decided_at",
+                  "cooldown_until", "remaining_days", "cooldown_end", "cooldown_original_until",
+                  "cooldown_total_days", "cooldown_past_days", "created_at", "updated_at"]
+        read_only_fields = fields
+
+    @staticmethod
+    def _span(obj):
+        from apps.soul_accounts.rebirth import cooldown_span
+
+        return cooldown_span(obj.application)
+
+    @extend_schema_field(serializers.DateTimeField(allow_null=True))
+    def get_cooldown_end(self, obj):
+        span = self._span(obj)
+        return span[1] if span else None
+
+    @extend_schema_field(serializers.DateTimeField(allow_null=True))
+    def get_cooldown_original_until(self, obj):
+        span = self._span(obj)
+        return span[0] if span else None
+
+    def get_cooldown_total_days(self, obj) -> int:
+        span = self._span(obj)
+        return span[2] if span else 0
+
+    def get_cooldown_past_days(self, obj) -> int:
+        span = self._span(obj)
+        return span[3] if span else 0
+
+    @extend_schema_field(serializers.DateTimeField(allow_null=True))
+    def get_cooldown_until(self, obj):
+        from apps.soul_accounts.rebirth import cooldown_until
+
+        return cooldown_until(obj.application)
+
+    def get_remaining_days(self, obj) -> int:
+        """批准的天数必须小于它(向上取整);0 = 冷却已结束。"""
+        from apps.soul_accounts.rebirth import cooldown_until, remaining_cooldown_days
+
+        until = cooldown_until(obj.application)
+        return remaining_cooldown_days(until) if until else 0
+
+
+class CooldownShorteningCountsSerializer(serializers.Serializer):
+    PENDING = serializers.IntegerField()
+    APPROVED = serializers.IntegerField()
+    REJECTED = serializers.IntegerField()
+
+
+class CooldownShorteningApproveSerializer(serializers.Serializer):
+    approved_days = serializers.IntegerField(min_value=0)
+    note = serializers.CharField(max_length=2000, required=False, allow_blank=True, default="")
+
+
+class CooldownShorteningRejectSerializer(serializers.Serializer):
+    note = serializers.CharField(max_length=2000)

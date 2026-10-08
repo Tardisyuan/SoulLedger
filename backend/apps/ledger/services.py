@@ -413,6 +413,12 @@ class LedgerService:
                 # 不是 0 次 —— 早于这两列的行没有回填,也不该有(见 SoulRecord 上的注释)。
                 "statute_clause": r.statute_clause,
                 "occurrence_count": r.occurrence_count,
+                # V5 structure. The snapshot, not a join: the dossier shows
+                # what the article said when the deed was filed.
+                "statute_snapshot": r.statute_snapshot,
+                "life_stage": r.life_stage,
+                "evidence_source": r.evidence_source,
+                "evidence_note": r.evidence_note,
             })
 
         total_merit = round(merit)

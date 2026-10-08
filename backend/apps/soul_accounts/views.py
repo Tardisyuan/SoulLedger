@@ -17,10 +17,20 @@ from apps.core.tenant import scope_to_tenant
 from apps.core.viewsets import CodenameViewSetMixin
 from apps.soul_accounts import rebirth
 from apps.soul_accounts import services as svc
-from apps.soul_accounts.models import AccountOrigin, InitialCredential, RebirthApplication, SoulAccount
+from apps.soul_accounts.models import (
+    AccountOrigin,
+    CooldownShorteningRequest,
+    InitialCredential,
+    RebirthApplication,
+    SoulAccount,
+)
 from apps.soul_accounts.serializers import (
+    CooldownShorteningApproveSerializer,
+    CooldownShorteningCountsSerializer,
+    CooldownShorteningRejectSerializer,
     CrossCivilizationDecisionSerializer,
     InitialCredentialSerializer,
+    OfficerCooldownShorteningSerializer,
     OfficerRebirthApplicationSerializer,
     ProvisionRequestSerializer,
     ResetRequestSerializer,
@@ -187,3 +197,60 @@ class OfficerRebirthApplicationViewSet(CodenameViewSetMixin, viewsets.ReadOnlyMo
             return _error(exc)
         return Response(OfficerRebirthApplicationSerializer(application, context={"request": request}).data,
                         status=status.HTTP_200_OK)
+
+
+class OfficerCooldownShorteningViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
+    """缩短冷却申请:与转生申请同一把权限(看 `workflow.read`,决定 `workflow.approve`),同一种租户隔离。"""
+
+    permission_classes = [TenantPermission, CodenamePermission]
+    permission_codename = "workflow"
+    extra_permissions = {
+        "list": ["workflow.read"],
+        "retrieve": ["workflow.read"],
+        "counts": ["workflow.read"],
+        "approve": ["workflow.approve"],
+        "reject": ["workflow.approve"],
+    }
+    serializer_class = OfficerCooldownShorteningSerializer
+    queryset = CooldownShorteningRequest.objects.all()
+    filterset_fields = ["status", "soul"]
+
+    def get_queryset(self):
+        qs = CooldownShorteningRequest.objects.select_related(
+            "soul__home_tenant", "application__soul__home_tenant", "decided_by"
+        )
+        return scope_to_tenant(qs, self.request, field="soul__home_tenant")
+
+    @extend_schema(responses={200: CooldownShorteningCountsSerializer})
+    @action(detail=False, methods=["get"])
+    def counts(self, request):
+        """筛选签与页签的计数:本租户范围内各状态的申请数(不受分页与筛选影响)。"""
+        from django.db.models import Count
+
+        rows = self.get_queryset().order_by().values("status").annotate(n=Count("pk"))
+        found = {r["status"]: r["n"] for r in rows}
+        return Response({s: found.get(s, 0) for s in ("PENDING", "APPROVED", "REJECTED")})
+
+    def _decide(self, request, body, **kwargs):
+        row = self.get_object()
+        body.is_valid(raise_exception=True)
+        try:
+            row = rebirth.decide_cooldown_shortening(row.pk, request.user, request=request, **kwargs,
+                                                     **body.validated_data)
+        except svc.SoulAccountError as exc:
+            return _error(exc)
+        return Response(OfficerCooldownShorteningSerializer(row).data)
+
+    @extend_schema(request=CooldownShorteningApproveSerializer,
+                   responses={200: OfficerCooldownShorteningSerializer, 400: SoulErrorSerializer,
+                              409: SoulErrorSerializer})
+    @action(detail=True, methods=["post"])
+    def approve(self, request, pk=None):
+        return self._decide(request, CooldownShorteningApproveSerializer(data=request.data), approve=True)
+
+    @extend_schema(request=CooldownShorteningRejectSerializer,
+                   responses={200: OfficerCooldownShorteningSerializer, 400: SoulErrorSerializer,
+                              409: SoulErrorSerializer})
+    @action(detail=True, methods=["post"])
+    def reject(self, request, pk=None):
+        return self._decide(request, CooldownShorteningRejectSerializer(data=request.data), approve=False)

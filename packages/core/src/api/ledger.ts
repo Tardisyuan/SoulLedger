@@ -18,6 +18,8 @@ export interface LedgerStatsOverview {
     tenant_id: number;
     tenant_code: string;
     tenant_name: string;
+    /** `Tenant.dispatch_enabled`:false 的殿不收调拨 —— 发起移交页的目标殿单选据此禁用并说明。 */
+    dispatch_enabled: boolean;
     total_souls: number;
     state_breakdown: Record<string, number>;
   }[];
@@ -243,6 +245,26 @@ export interface LedgerRecord {
   statute_clause: string;
   /** 这一行覆盖几次;null = 没记(不是 0 次,也不当 1 次显示)。 */
   occurrence_count: number | null;
+  /** 引用的律条在引用那天的样子(SoulRecord.statute_snapshot);null / 缺 = 没引。 */
+  statute_snapshot?: StatuteSnapshot | null;
+  /** souls.life_stages 的成员;空串 / 缺 = 没记。 */
+  life_stage?: string;
+  /** souls.evidence_sources 的成员;空串 / 缺 = 没记。 */
+  evidence_source?: string;
+  evidence_note?: string;
+}
+
+/** `SoulRecord.statute_snapshot`(apps/judgment/snapshot.record_snapshot):引用时冻结的律条。 */
+export interface StatuteSnapshot {
+  statute_id: string;
+  code: string;
+  revision: number;
+  effective_from: string;
+  title: Record<string, string>;
+  text: Record<string, string>;
+  source: string;
+  hash: string;
+  at: string;
 }
 
 /** 200 body of GET /souls/{id}/karma/ and GET /ledger/balance/{soul_id}/. */
