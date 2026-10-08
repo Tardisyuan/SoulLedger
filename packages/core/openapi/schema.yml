@@ -14362,6 +14362,21 @@ paths:
               schema:
                 $ref: '#/components/schemas/SoulError'
           description: ''
+  /api/v1/soul-accounts/cooldown-shortenings/counts/:
+    get:
+      operationId: v1_soul_accounts_cooldown_shortenings_counts_retrieve
+      description: 筛选签与页签的计数:本租户范围内各状态的申请数(不受分页与筛选影响)。
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CooldownShorteningCounts'
+          description: ''
   /api/v1/soul-accounts/credentials/:
     get:
       operationId: v1_soul_accounts_credentials_list
@@ -19191,6 +19206,19 @@ components:
           maxLength: 2000
       required:
       - approved_days
+    CooldownShorteningCounts:
+      type: object
+      properties:
+        PENDING:
+          type: integer
+        APPROVED:
+          type: integer
+        REJECTED:
+          type: integer
+      required:
+      - APPROVED
+      - PENDING
+      - REJECTED
     CooldownShorteningCreate:
       type: object
       properties:
@@ -24894,6 +24922,22 @@ components:
           type: integer
           description: 批准的天数必须小于它(向上取整);0 = 冷却已结束。
           readOnly: true
+        cooldown_end:
+          type: string
+          format: date-time
+          nullable: true
+          readOnly: true
+        cooldown_original_until:
+          type: string
+          format: date-time
+          nullable: true
+          readOnly: true
+        cooldown_total_days:
+          type: integer
+          readOnly: true
+        cooldown_past_days:
+          type: integer
+          readOnly: true
         created_at:
           type: string
           format: date-time
@@ -24906,6 +24950,10 @@ components:
       - account
       - application
       - approved_days
+      - cooldown_end
+      - cooldown_original_until
+      - cooldown_past_days
+      - cooldown_total_days
       - cooldown_until
       - created_at
       - cycle

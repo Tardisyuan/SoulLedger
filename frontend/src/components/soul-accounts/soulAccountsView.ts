@@ -27,7 +27,33 @@ export const rebirthBadgeClass = (status: string) => badgeVariants({ tone: rebir
 /** The filter buttons on the pending-delivery page, in the order an officer works through them. */
 export const CREDENTIAL_FILTERS = ["PENDING", "REVEALED", "DELIVERED", "VOID", ""] as const;
 
+/** 缩短冷却申请的筛选签:待决定在前(默认),「全部」殿后。 */
+export const COOLDOWN_FILTERS = ["PENDING", "APPROVED", "REJECTED", ""] as const;
+
 export const REBIRTH_FILTERS = ["", "UNDER_REVIEW", "REJECTED", "APPEALING", "APPEAL_REJECTED", "APPROVED"] as const;
+
+/** Status → tone for 缩短冷却申请 (StatusBadge turns the tone into ◐ / ✓ / ✕). */
+const COOLDOWN_TONE: Record<string, BadgeTone> = { PENDING: "warning", APPROVED: "success", REJECTED: "error" };
+export const cooldownTone = (status: string): BadgeTone => COOLDOWN_TONE[status] ?? "neutral";
+
+/** The cooldown behind a shortening request is over (the server sends no `cooldown_until` then). */
+export const cooldownEnded = (r: { cooldown_until: string | null }) => r.cooldown_until === null;
+
+/**
+ * A11 默认排序:待决定在前,按剩余冷却从少到多,冷却已结束的排最后;已决定的保持服务端顺序
+ * (最近提交在前)排在待决定之后。稳定排序。
+ * ponytail: sorts the page it is handed (PAGE_SIZE rows) — a server-side `ordering` if pending ever pages.
+ */
+export function sortCooldownRows<T extends { status: string; cooldown_until: string | null; remaining_days: number }>(rows: T[]): T[] {
+  const key = (r: T) => (r.status !== "PENDING" ? [1, 0, 0] : [0, cooldownEnded(r) ? 1 : 0, r.remaining_days]);
+  return rows
+    .map((r, i) => ({ r, i, k: key(r) }))
+    .sort((a, b) => a.k[0] - b.k[0] || a.k[1] - b.k[1] || a.k[2] - b.k[2] || a.i - b.i)
+    .map((x) => x.r);
+}
+
+/** `2026-10-13` in the viewer's zone (the detail's 「冷却截止」); `-` shape, not locale-dependent. */
+export const isoDay = (value: string) => new Date(value).toLocaleDateString("sv-SE");
 
 /** 0-based `cycle` → the "第 N 世" number, same convention as SoulKarmaLedgerCard's `life.index + 1`. */
 export const lifeNumber = (cycle: number) => String(cycle + 1);

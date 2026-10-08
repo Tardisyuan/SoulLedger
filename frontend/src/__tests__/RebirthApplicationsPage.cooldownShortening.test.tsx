@@ -18,13 +18,15 @@ jest.mock("@soulledger/core/api", () => ({
     rebirthApplications: jest.fn(),
     decideCrossCivilization: jest.fn(),
     cooldownShortenings: jest.fn(),
+    cooldownShortening: jest.fn(),
+    cooldownShorteningCounts: jest.fn(),
     approveCooldownShortening: jest.fn(),
     rejectCooldownShortening: jest.fn(),
   },
   workflowApi: { get: jest.fn() },
 }));
 const { soulAccountsApi } = jest.requireMock("@soulledger/core/api") as {
-  soulAccountsApi: Record<"rebirthApplications" | "cooldownShortenings" | "approveCooldownShortening" | "rejectCooldownShortening", jest.Mock>;
+  soulAccountsApi: Record<"rebirthApplications" | "cooldownShortenings" | "cooldownShortening" | "cooldownShorteningCounts" | "approveCooldownShortening" | "rejectCooldownShortening", jest.Mock>;
 };
 
 let mockUser: { id: number; username: string; role: string; permissions: string[] } | null = null;
@@ -54,6 +56,10 @@ function shortening(over: Record<string, unknown> = {}) {
     decided_at: null,
     cooldown_until: "2026-11-07T00:00:00Z",
     remaining_days: 30,
+    cooldown_end: "2026-11-07T00:00:00Z",
+    cooldown_original_until: "2026-11-07T00:00:00Z",
+    cooldown_total_days: 30,
+    cooldown_past_days: 0,
     created_at: "2026-10-08T00:00:00Z",
     updated_at: "2026-10-08T00:00:00Z",
     ...over,
@@ -72,14 +78,17 @@ function renderPage() {
 const as = (role: string, ...permissions: string[]) => (mockUser = { id: 2, username: "op", role, permissions });
 
 beforeEach(() => {
-  jest.clearAllMocks();
+  jest.resetAllMocks();
   soulAccountsApi.rebirthApplications.mockResolvedValue(page([]));
   soulAccountsApi.cooldownShortenings.mockResolvedValue(page([shortening()]));
+  soulAccountsApi.cooldownShorteningCounts.mockResolvedValue({ data: { PENDING: 3, APPROVED: 2, REJECTED: 1 } });
 });
 
+const shorteningsTab = () => screen.findByRole("button", { name: new RegExp(`^${tZh("soul_accounts.cooldown.tabs.shortenings")}`) });
+
 async function openTab() {
-  fireEvent.click(await screen.findByRole("button", { name: tZh("soul_accounts.cooldown.tabs.shortenings") }));
-  expect(await screen.findByText("李四")).toBeInTheDocument();
+  fireEvent.click(await shorteningsTab());
+  expect((await screen.findAllByTestId("shortening-remaining")).length).toBeGreaterThan(0);
 }
 
 async function openDetail() {
@@ -93,11 +102,12 @@ it("the tab lists requests, shows the days left, and filters by status on the se
   // The first tab is the applications table; the second is asked for only once opened.
   expect(screen.getByRole("button", { name: tZh("soul_accounts.cooldown.tabs.applications") })).toHaveAttribute("aria-pressed", "true");
   await openTab();
-  expect(screen.getByRole("button", { name: tZh("soul_accounts.cooldown.tabs.shortenings") })).toHaveAttribute("aria-pressed", "true");
+  expect(await shorteningsTab()).toHaveAttribute("aria-pressed", "true");
   expect(screen.getByTestId("shortening-remaining")).toHaveTextContent("30 天");
-  // The badge in the row, not the filter chip of the same name.
-  expect(within(screen.getByText("李四").closest("li") as HTMLElement).getByText(tZh("soul_accounts.cooldown_status.PENDING"))).toBeInTheDocument();
-  fireEvent.click(screen.getByRole("button", { name: tZh("soul_accounts.cooldown_status.REJECTED") }));
+  // The default filter is 待决定; the badge in the row, not the chip of the same name.
+  expect(soulAccountsApi.cooldownShortenings).toHaveBeenLastCalledWith({ status: "PENDING", page: 1 });
+  expect(within(screen.getByTestId("shortening-remaining").closest("li") as HTMLElement).getAllByText(tZh("soul_accounts.cooldown_status.PENDING")).length).toBeGreaterThan(0);
+  fireEvent.click(screen.getByRole("button", { name: new RegExp(`^${tZh("soul_accounts.cooldown_status.REJECTED")}`) }));
   await waitFor(() => expect(soulAccountsApi.cooldownShortenings).toHaveBeenLastCalledWith({ status: "REJECTED", page: 1 }));
 });
 
@@ -128,20 +138,121 @@ it("approves with a day count below the days left, and refuses one at or above i
   await waitFor(() => expect(mockShowToast).toHaveBeenCalledWith(tZh("soul_accounts.cooldown.decided"), "success"));
 });
 
-it("a rejection needs a note, and the backend's code picks the toast", async () => {
+it("a rejection without a note is checked on press, not before: danger field, message, focus back, nothing sent", async () => {
   as("JUDGE", "workflow.read", "workflow.approve");
-  soulAccountsApi.rejectCooldownShortening.mockRejectedValue(http(409, { detail: "x", code: "already_decided" }));
   renderPage();
   await openTab();
   const dialog = await openDetail();
-  fireEvent.click(within(dialog).getByTestId("shortening-reject"));
+  const reject = within(dialog).getByTestId("shortening-reject");
+  // Never pre-disabled: the empty note does not grey the button out.
+  expect(reject).toBeEnabled();
+  const note = within(dialog).getByTestId("shortening-note");
+  expect(note).not.toHaveAttribute("aria-invalid");
+  fireEvent.click(reject);
   expect(within(dialog).getByText(tZh("soul_accounts.cooldown.note_required"))).toBeInTheDocument();
+  expect(note).toHaveAttribute("aria-invalid", "true");
+  expect(note).toHaveFocus();
+  // The hint is replaced by the message, not stacked with it.
+  expect(within(dialog).queryByText(tZh("soul_accounts.cooldown.note_hint"))).not.toBeInTheDocument();
   expect(soulAccountsApi.rejectCooldownShortening).not.toHaveBeenCalled();
+  // Typing clears it.
+  fireEvent.change(note, { target: { value: "理由不足" } });
+  expect(note).not.toHaveAttribute("aria-invalid");
+});
 
+it("a server refusal toasts the reason, keeps the dialog open and re-reads the row", async () => {
+  as("JUDGE", "workflow.read", "workflow.approve");
+  let refused = false;
+  soulAccountsApi.rejectCooldownShortening.mockImplementation(async () => {
+    refused = true;
+    throw http(409, { detail: "x", code: "already_decided" });
+  });
+  // Until the refusal the server still has it pending; after it, already decided (and gone from the PENDING list).
+  soulAccountsApi.cooldownShortening.mockImplementation(async () => ({
+    data: refused ? shortening({ status: "APPROVED", approved_days: 3, decided_at: "2026-10-09T00:00:00Z", decided_by_username: "other" }) : shortening(),
+  }));
+  renderPage();
+  await openTab();
+  const dialog = await openDetail();
   fireEvent.change(within(dialog).getByTestId("shortening-note"), { target: { value: "理由不足" } });
   fireEvent.click(within(dialog).getByTestId("shortening-reject"));
   await waitFor(() => expect(soulAccountsApi.rejectCooldownShortening).toHaveBeenCalledWith("c1", "理由不足"));
-  await waitFor(() => expect(mockShowToast).toHaveBeenCalledWith(tZh("soul_accounts.cooldown.already_decided"), "error"));
+  const reason = tZh("soul_accounts.cooldown.already_decided");
+  await waitFor(() => expect(mockShowToast).toHaveBeenCalledWith(tZh("soul_accounts.cooldown.decide_failed", { reason }), "error"));
+  // Still open, now showing the server's state: decided by someone else, no decision area.
+  expect(screen.getByRole("dialog")).toBeInTheDocument();
+  await waitFor(() => expect(within(screen.getByRole("dialog")).getByText(/other/)).toBeInTheDocument());
+  expect(within(screen.getByRole("dialog")).queryByTestId("cooldown-decision")).not.toBeInTheDocument();
+});
+
+it("the approve button says how many days are left, as typed", async () => {
+  as("JUDGE", "workflow.read", "workflow.approve");
+  renderPage();
+  await openTab();
+  const dialog = await openDetail();
+  expect(within(dialog).getByTestId("shortening-approve")).toHaveTextContent("批准 · 还需 0 天");
+  fireEvent.change(within(dialog).getByTestId("shortening-days"), { target: { value: "5" } });
+  expect(within(dialog).getByTestId("shortening-approve")).toHaveTextContent("批准 · 还需 5 天");
+});
+
+it("lists pending rows by days left, ended ones last, with counts on the chips and the tab and a sort note", async () => {
+  as("GUARDIAN", "workflow.read");
+  soulAccountsApi.cooldownShortenings.mockResolvedValue(
+    page([
+      shortening({ id: "far", soul_name: "远", remaining_days: 20, cooldown_past_days: 10 }),
+      shortening({ id: "done", soul_name: "毕", remaining_days: 0, cooldown_until: null }),
+      shortening({ id: "near", soul_name: "近", remaining_days: 2, cooldown_past_days: 28 }),
+      shortening({ id: "ok", soul_name: "决", status: "APPROVED", remaining_days: 1 }),
+    ])
+  );
+  renderPage();
+  await openTab();
+  const order = Array.from(document.querySelectorAll("li[data-shortening-id]")).map((li) => li.getAttribute("data-shortening-id"));
+  expect(order).toEqual(["near", "far", "done", "ok"]);
+  expect(screen.getByText(tZh("soul_accounts.cooldown.sort_note"))).toBeInTheDocument();
+  // Counts: the tab shows the pending number, each chip its own, 全部 the sum.
+  await waitFor(async () => expect(await shorteningsTab()).toHaveTextContent("3"));
+  expect(screen.getByRole("button", { name: new RegExp(`^${tZh("soul_accounts.cooldown_status.APPROVED")}`) })).toHaveTextContent("2");
+  expect(screen.getByRole("button", { name: new RegExp(`^${tZh("soul_accounts.rebirth.filters.all")}`) })).toHaveTextContent("6");
+  // The progress cell: N 天, 已过 a / 共 b 天, and a line at past/total.
+  const near = document.querySelector('li[data-shortening-id="near"] [data-testid="shortening-remaining"]') as HTMLElement;
+  expect(near).toHaveTextContent("2 天");
+  expect(near).toHaveTextContent("已过 28 / 共 30 天");
+  expect((near.querySelector('[data-testid="shortening-progress"] > div') as HTMLElement).style.width).toMatch(/^93\.3/);
+});
+
+it("an ended row says so in its cell only, and its detail has no decision area, just 关闭", async () => {
+  as("JUDGE", "workflow.read", "workflow.approve");
+  soulAccountsApi.cooldownShortenings.mockResolvedValue(page([shortening({ remaining_days: 0, cooldown_until: null })]));
+  renderPage();
+  await openTab();
+  expect(screen.getByTestId("shortening-remaining")).toHaveTextContent("○ 冷却已结束");
+  expect(screen.queryByTestId("shortening-progress")).not.toBeInTheDocument();
+  const dialog = await openDetail();
+  expect(within(dialog).queryByTestId("cooldown-decision")).not.toBeInTheDocument();
+  expect(within(dialog).queryByTestId("shortening-approve")).not.toBeInTheDocument();
+  expect(within(dialog).queryByTestId("shortening-reject")).not.toBeInTheDocument();
+  expect(within(dialog).getAllByRole("button", { name: tZh("common.close") }).length).toBeGreaterThan(0);
+});
+
+it("an approved request shows the new end date with the original beside it", async () => {
+  as("GUARDIAN", "workflow.read");
+  soulAccountsApi.cooldownShortenings.mockResolvedValue(
+    page([
+      shortening({
+        status: "APPROVED",
+        approved_days: 3,
+        decided_at: "2026-10-10T12:00:00Z",
+        decided_by_username: "judge",
+        cooldown_end: "2026-10-13T12:00:00Z",
+        cooldown_original_until: "2026-10-26T12:00:00Z",
+      }),
+    ])
+  );
+  renderPage();
+  await openTab();
+  const dialog = await openDetail();
+  expect(within(dialog).getByText("2026-10-13 (原 10-26)")).toBeInTheDocument();
 });
 
 it("a decided or expired request offers no decision even to an approver", async () => {

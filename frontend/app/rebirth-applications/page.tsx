@@ -6,10 +6,11 @@ import { useQueryClient } from "@tanstack/react-query";
 import { RefreshCw } from "lucide-react";
 import { PAGE_SIZE, type OfficerRebirthApplication } from "@soulledger/core/api";
 import { soulAccountKeys } from "@soulledger/core/query_keys";
-import { useRebirthApplications } from "@soulledger/core/hooks/useSoulAccounts";
+import { useCooldownShorteningCounts, useRebirthApplications } from "@soulledger/core/hooks/useSoulAccounts";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { usePlaque } from "@/src/components/plaque/Plaque";
 import { useCourtOffice, useHall } from "@/src/components/plaque/useHall";
+import { usePermissions } from "@/src/hooks/usePermissions";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
 import { PageShell } from "@/src/components/ui/PageShell";
@@ -177,6 +178,9 @@ const TABS = ["applications", "shortenings"] as const;
 export default function RebirthApplicationsPage() {
   const { t } = useI18n();
   const [tab, setTab] = useState<(typeof TABS)[number]>("applications");
+  const { hasPermission } = usePermissions();
+  // 「缩短冷却申请」页签后的待决定数(A11):与筛选签共用同一条 counts 查询。
+  const pending = useCooldownShorteningCounts(hasPermission("workflow.read")).data?.PENDING;
   /* 「转生申请 / 缩短冷却申请」: the judgment page's strip (TAB_BASE, aria-pressed — it swaps the
      table under one shell, not a tabpanel set). Both tables are `workflow.read`. */
   const tabs = (
@@ -190,6 +194,7 @@ export default function RebirthApplicationsPage() {
           className={`${TAB_BASE} ${tab === key ? TAB_ON : TAB_OFF}`}
         >
           {t(`soul_accounts.cooldown.tabs.${key}`)}
+          {key === "shortenings" && pending !== undefined && <span className="ml-2 font-mono text-xs">{pending}</span>}
         </button>
       ))}
     </div>

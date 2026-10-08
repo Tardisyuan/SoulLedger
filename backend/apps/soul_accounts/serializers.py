@@ -436,13 +436,45 @@ class OfficerCooldownShorteningSerializer(serializers.ModelSerializer):
     #: 此刻这段冷却的截止(含已批准的缩短);结束了为 None —— 待决的申请到那时就不必决定了。
     cooldown_until = serializers.SerializerMethodField()
     remaining_days = serializers.SerializerMethodField()
+    #: A11:详情里「冷却截止 2026-10-13(原 10-26)」与进度线「已过 a / 共 b 天」。
+    #: `cooldown_end` 含批准的缩短且结束后仍给出(`cooldown_until` 结束后为 None);
+    #: `cooldown_original_until` 是殿规截止,批准前后相同。
+    cooldown_end = serializers.SerializerMethodField()
+    cooldown_original_until = serializers.SerializerMethodField()
+    cooldown_total_days = serializers.SerializerMethodField()
+    cooldown_past_days = serializers.SerializerMethodField()
 
     class Meta:
         model = CooldownShorteningRequest
         fields = ["id", "soul", "soul_code", "soul_name", "account", "application", "cycle", "reason", "status",
                   "approved_days", "decision_note", "decided_by", "decided_by_username", "decided_at",
-                  "cooldown_until", "remaining_days", "created_at", "updated_at"]
+                  "cooldown_until", "remaining_days", "cooldown_end", "cooldown_original_until",
+                  "cooldown_total_days", "cooldown_past_days", "created_at", "updated_at"]
         read_only_fields = fields
+
+    @staticmethod
+    def _span(obj):
+        from apps.soul_accounts.rebirth import cooldown_span
+
+        return cooldown_span(obj.application)
+
+    @extend_schema_field(serializers.DateTimeField(allow_null=True))
+    def get_cooldown_end(self, obj):
+        span = self._span(obj)
+        return span[1] if span else None
+
+    @extend_schema_field(serializers.DateTimeField(allow_null=True))
+    def get_cooldown_original_until(self, obj):
+        span = self._span(obj)
+        return span[0] if span else None
+
+    def get_cooldown_total_days(self, obj) -> int:
+        span = self._span(obj)
+        return span[2] if span else 0
+
+    def get_cooldown_past_days(self, obj) -> int:
+        span = self._span(obj)
+        return span[3] if span else 0
 
     @extend_schema_field(serializers.DateTimeField(allow_null=True))
     def get_cooldown_until(self, obj):
@@ -456,6 +488,12 @@ class OfficerCooldownShorteningSerializer(serializers.ModelSerializer):
 
         until = cooldown_until(obj.application)
         return remaining_cooldown_days(until) if until else 0
+
+
+class CooldownShorteningCountsSerializer(serializers.Serializer):
+    PENDING = serializers.IntegerField()
+    APPROVED = serializers.IntegerField()
+    REJECTED = serializers.IntegerField()
 
 
 class CooldownShorteningApproveSerializer(serializers.Serializer):

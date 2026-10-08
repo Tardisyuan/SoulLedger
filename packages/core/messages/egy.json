@@ -2569,7 +2569,15 @@
       "already_decided": "Wedja Seth",
       "cooldown_over": "Ahet Qebeh Khetem; Nen Wedja",
       "invalid_days": "Hru Nen Maat: 0 – Hru Khery",
-      "note_required": "Khesef: Medu Er Ba Sesen"
+      "note_required": "Khesef: Medu Er Ba Sesen",
+      "remaining_progress": "Hru {{past}} Khetem Seth Em {{total}}",
+      "approve_with_days": "Hesy · Hru {{days}} Khery",
+      "scope_note": "Hesy Khebi Ahet Qebeh Pen Wa; Hru Ahet Qebeh En Per Nen Menmen",
+      "sort_note": "Em Wedja Em Ahet Qebeh Khery Khebi Tepy; Ahet Qebeh Khetem Em Pehwy",
+      "source": "Ahet Qebeh In Khesef Pehwy En Dbh Wehem Mesut {{id}}",
+      "decide_failed": "Nen Wedja: {{reason}}",
+      "original": "Tepy {{date}}",
+      "day_unit": "Hru"
     },
     "cooldown_status": {
       "PENDING": "Em Wedja",
@@ -3732,7 +3740,8 @@
       "pending": "Dbh Khebi Em Wedja",
       "approved": "Dbh Khebi Hesy Seth; Ahet Qebeh Er {{date}}",
       "rejected": "Dbh Khebi Khesef Seth",
-      "note": "Medu"
+      "note": "Medu",
+      "brought_forward": "Khebi Seth"
     }
   },
   "soul_push": {

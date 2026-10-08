@@ -127,6 +127,22 @@ def _cooldown_end(application):
     return until
 
 
+def cooldown_span(application):
+    """`(原截止, 现截止, 总天数, 已过天数)`:官员台的「已过 a / 共 b 天」用。
+
+    原截止 = 殿规截止(不含批准的缩短);现截止 = `_cooldown_end`(含缩短,可能已过去)。
+    总天数以**现截止**起算,所以批准后进度线仍然是满刻度:`past ≤ total`。
+    没有终局驳回的申请(`decided_at` 为空)返回 `None`。
+    """
+    if application.status not in FINAL_REJECTIONS or application.decided_at is None:
+        return None
+    original = application.decided_at + timedelta(days=cooldown_days(application.soul.home_tenant))
+    end = _cooldown_end(application)
+    total = max(0, -(-int((end - application.decided_at).total_seconds()) // 86400))
+    past = max(0, min(total, int((timezone.now() - application.decided_at).total_seconds() // 86400)))
+    return original, end, total, past
+
+
 REFUSALS = {
     "account_retired": "账号已停用。",
     "terminal_cosmology": "本文明没有转生。",

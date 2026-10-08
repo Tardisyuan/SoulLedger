@@ -162,7 +162,7 @@ export function landOn(navigate: NavigationProp<AppStackParams>["navigate"], lan
     navigate("Tabs", { screen: "Life", params: { sentenceLanding: landing.landing } });
   else if (landing.screen === "Sentence") navigate("Sentence", { landing: landing.landing });
   // 缩短冷却的决定(cooldown_shortening_*)落在申请页;两条分支合并时这一支只进了 navigation.tsx 的旧写法。
-  else if (landing.screen === "Applications") navigate("Tabs", { screen: "Applications" });
+  else if (landing.screen === "Applications") navigate("Tabs", { screen: "Applications", params: { landed: true } });
   else navigate("Tabs", { screen: "Life" });
 }
 
