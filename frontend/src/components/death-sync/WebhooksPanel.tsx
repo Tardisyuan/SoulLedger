@@ -18,7 +18,7 @@ import { PageSection } from "@/components/ui/page-section";
 import { Button } from "@/src/components/ui/Button";
 import { BaseModal, ConfirmDialog } from "@/src/components/ui/Modal";
 import { SelectField, TextField } from "@/src/components/ui/Field";
-import { MissingValue } from "@/src/components/ui/DomainValue";
+import { DomainEnum, MissingValue } from "@/src/components/ui/DomainValue";
 import { StatusBadge } from "@/src/components/ui/StatusBadge";
 import type { BadgeTone } from "@/src/components/ui/Badge";
 
@@ -364,7 +364,9 @@ function DeliveriesSection({ webhook, onClear }: { webhook: AdminWebhook | null;
             <td className="px-3 py-2 font-mono text-xs whitespace-nowrap text-[oklch(var(--color-ink-muted))]">
               {formatDateTime(row.create_time)}
             </td>
-            <td className="px-3 py-2 font-mono text-xs">{row.event_type}</td>
+            <td className="px-3 py-2 text-xs">
+              <DomainEnum namespace="souls.events" value={row.event_type} />
+            </td>
             <td className="px-3 py-2 font-mono text-xs break-all text-[oklch(var(--color-ink-muted))]">{row.webhook_url}</td>
             <td className="px-3 py-2 whitespace-nowrap">
               <StatusBadge namespace="death_sync.webhooks.delivery.status" value={row.status} tone={DELIVERY_TONE[row.status]} />
