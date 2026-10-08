@@ -1,7 +1,9 @@
 """
 Audit views - AuditLog ViewSet with filtering support.
 """
+from django.db.models import Q
 from django.utils.dateparse import parse_date
+from django_filters import rest_framework as filters
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
@@ -19,6 +21,24 @@ from .serializers import (
     AuditLogSerializer,
     AuditStatsSerializer,
 )
+
+
+class AuditLogFilter(filters.FilterSet):
+    """`resource` 精确匹配,只有一个别名:`tenant`(审计页的「殿」)同时含每殿助手开关的那几行 ——
+    它们的 resource 是 `assistant_config`、resource_id 是 `tenant:<殿码>`(soul_assist/admin_views.py)。
+    只在查询时并入,不改已存的行。"""
+
+    resource = filters.CharFilter(method="filter_resource")
+
+    class Meta:
+        model = AuditLog
+        fields = ["user", "action", "resource", "resource_id"]
+
+    def filter_resource(self, queryset, name, value):
+        if value == "tenant":
+            return queryset.filter(Q(resource="tenant") | Q(resource="assistant_config", resource_id__startswith="tenant:"))
+        return queryset.filter(resource=value)
+
 
 #: `/audit-logs/timeline/?limit=` 的上界。没有它,`?limit=999999999` 是一次全表
 #: 扫描,而它返回 **200** —— 一个「成功」的响应,是最不容易被发现的拒绝服务面。
@@ -106,7 +126,7 @@ class AuditLogViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
         'timeline': ['audit.read'],
     }
     serializer_class = AuditLogSerializer
-    filterset_fields = ["user", "action", "resource", "resource_id"]
+    filterset_class = AuditLogFilter
     ordering_fields = ["timestamp", "action", "resource"]
     ordering = ["-timestamp"]
 
@@ -125,10 +145,6 @@ class AuditLogViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
         action_param = self.request.query_params.get('action')
         if action_param:
             qs = qs.filter(action=action_param.upper())
-
-        resource = self.request.query_params.get('resource')
-        if resource:
-            qs = qs.filter(resource__icontains=resource)
 
         resource_id = self.request.query_params.get('resource_id')
         if resource_id:
