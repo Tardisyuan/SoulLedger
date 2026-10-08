@@ -1143,7 +1143,12 @@
         "clause_needs_count": "Sesh Sep Kheper Hena Djedu",
         "weight_range": "Aha: 1 Er 100",
         "snapshot": "Sau Hep",
+        "date_year": "Renpet",
+        "date_month": "Abed",
+        "date_day": "Hru",
         "err": {
+          "date_order": "Sesh Renpet Tepy Abed Hru",
+          "date_invalid": "Nen Maat Hru: Setep Renpet Abed Hru",
           "statute_civ": "Hep Pen Nen Em Taui Ba",
           "pair": "Sep Kheper Hena Djedu Wa",
           "count_min": "Sep Kheper: 1 Er Neb",
