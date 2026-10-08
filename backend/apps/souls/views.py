@@ -4,6 +4,7 @@ REST views for Soul app.
 import csv
 import uuid
 
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import transaction
 from django.http import HttpResponse
 from django.utils import timezone
@@ -44,6 +45,16 @@ from apps.souls.serializers import (
 )
 
 
+def _record_errors(serializer):
+    """400 for a record write: the usual `{field: [message]}` plus `error_codes` — `{field: [code]}` in the
+    same order — so a client maps the stable code to its own words instead of matching English text."""
+    codes = {
+        field: [d.get("code", "invalid") if isinstance(d, dict) else "invalid" for d in (details if isinstance(details, list) else [details])]
+        for field, details in serializer.get_full_details().items()
+    }
+    return Response({**serializer.errors, "error_codes": codes}, status=status.HTTP_400_BAD_REQUEST)
+
+
 class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetMixin, viewsets.ModelViewSet):
     """
     Soul CRUD + state transitions + record management.
@@ -61,6 +72,8 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
         'transition': ['soul.transition'],
         'karma': ['soul.read'],
         'add_record': ['soul.update'],
+        # 改一条已入簿的功过:与 add_record 同一把 `soul.update`。
+        'update_record': ['soul.update'],
         'records': ['soul.read'],
         'path': ['soul.read'],
         # Acknowledging a warning mutates the record (three new columns),
@@ -491,9 +504,42 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
         """Add a merit or demerit record to a soul."""
         soul = self.get_object()
         serializer = SoulRecordSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+        if not serializer.is_valid():
+            return _record_errors(serializer)
         record = serializer.save(soul=soul)
         return Response(SoulRecordSerializer(record).data, status=status.HTTP_201_CREATED)
+
+    @extend_schema(
+        request=SoulRecordSerializer,
+        responses=SoulRecordSerializer,
+        parameters=[
+            OpenApiParameter(
+                "record_id", OpenApiTypes.UUID, OpenApiParameter.PATH,
+                description="The SoulRecord's primary key (the id belongs to the related record, not to `Soul`).",
+            )
+        ],
+    )
+    @action(detail=True, methods=["patch"], url_path=r"records/(?P<record_id>[^/.]+)")
+    def update_record(self, request, pk=None, record_id=None):
+        """Edit one merit/demerit record on this soul (partial).
+
+        The same serializer and the same validation as `add_record` — dates against the soul,
+        the clause/count pair, the statute against the soul's civilization — with the record as
+        instance. The statute snapshot is re-taken by `SoulRecord.save` only when the cited
+        statute changes. Gated by `soul.update`, like `add_record`.
+        """
+        soul = self.get_object()
+        try:
+            record = soul.records.get(pk=record_id)
+        except (SoulRecord.DoesNotExist, DjangoValidationError):
+            return Response({"error": "Record not found on this soul."}, status=status.HTTP_404_NOT_FOUND)
+        serializer = SoulRecordSerializer(record, data=request.data, partial=True, context={"soul": soul})
+        if not serializer.is_valid():
+            return _record_errors(serializer)
+        record = serializer.save()
+        # save() 只在新建时重算;改权重 / 类型要同一条共用的重算路径,否则 merit_score 停在旧值。
+        record._update_soul_karma()
+        return Response(SoulRecordSerializer(record).data)
 
     @extend_schema(responses=SoulRecordSerializer(many=True))
     @action(detail=True, methods=["get"], pagination_class=None)

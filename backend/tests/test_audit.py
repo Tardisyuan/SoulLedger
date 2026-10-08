@@ -373,6 +373,29 @@ class TestAuditLogViewSet:
         assert "results" in response.data
         assert len(response.data["results"]) > 0
 
+    def test_hall_filter_includes_the_assistant_switch_rows_and_nothing_else_of_assistant_config(self, auth_client):
+        """审计页的「殿」(resource=tenant)同时含每殿助手开关(assistant_config + resource_id=tenant:<殿码>);
+        助手的别的配置行、别的资源都不进来;精确的 resource=assistant_config 仍只给 assistant_config。"""
+        from apps.audit.models import AuditLog
+
+        def row(resource, resource_id):
+            return AuditLog.objects.create(tenant=None, action="UPDATE", resource=resource,
+                                           resource_id=resource_id, description=f"{resource}/{resource_id}")
+
+        hall = row("tenant", "abc")
+        switch = row("assistant_config", "tenant:CN_DIYU")
+        other_config = row("assistant_config", "config")
+        soul = row("soul", "1")
+
+        def ids(**params):
+            data = auth_client.get("/api/v1/audit-logs/", params).data
+            return {r["id"] for r in data["results"]}
+
+        halls = ids(resource="tenant")  # 夹具建殿也可能写 tenant 行,所以用包含判断
+        assert {hall.pk, switch.pk} <= halls and not halls & {other_config.pk, soul.pk}
+        assert ids(resource="assistant_config") == {switch.pk, other_config.pk}
+        assert ids(resource="soul") >= {soul.pk} and not ids(resource="soul") & {hall.pk, switch.pk}
+
     # test_filter_by_action / _resource / _user_id, test_actions_endpoint and
     # test_resources_endpoint stood here and had same-named twins in
     # apps/audit/tests.py. Merged there on 2026-09-13 (that fixture writes the

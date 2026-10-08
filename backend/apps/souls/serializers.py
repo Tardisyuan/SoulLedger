@@ -241,7 +241,7 @@ class SoulRecordSerializer(serializers.ModelSerializer):
                     f"{statute.code} belongs to {statute.civilization}, "
                     f"not to this soul's {soul.civilization}."
                 )
-            })
+            }, code="statute_other_civilization")
 
     def validate_statute_clause(self, value):
         """A citation must resolve, or it is worse than a blank.
@@ -426,7 +426,8 @@ class SoulRecordSerializer(serializers.ModelSerializer):
                 "statute_clause and occurrence_count are the two halves of one "
                 "statement and must be given together or left together. One "
                 "without the other reads as unknown to the offset rule while "
-                "still showing on the record."
+                "still showing on the record.",
+                code="clause_count_pair",
             )
 
     def save(self, **kwargs):

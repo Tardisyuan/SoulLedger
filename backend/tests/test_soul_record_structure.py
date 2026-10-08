@@ -167,3 +167,96 @@ def test_the_records_endpoint_carries_the_structure_and_stays_tenant_scoped(
     token["tenant_code"] = eu_tenant.code
     theirs = api_client.get(url, HTTP_AUTHORIZATION=f"Bearer {token.access_token}")
     assert theirs.status_code == 404, theirs.content
+
+
+# ── Editing a booked record: PATCH /souls/<id>/records/<record_id>/ ───────────
+
+def _token_for(user, tenant):
+    from rest_framework_simplejwt.tokens import RefreshToken
+
+    token = RefreshToken.for_user(user)
+    token["tenant_code"] = tenant.code
+    return {"HTTP_AUTHORIZATION": f"Bearer {token.access_token}"}
+
+
+def test_a_record_can_be_edited_and_the_snapshot_follows_the_statute(cn_soul, api_client, auth_headers):
+    record = SoulRecord.objects.create(soul=cn_soul, **_payload())
+    url = f"/api/v1/souls/{cn_soul.pk}/records/{record.pk}/"
+    done = api_client.patch(url, {"description": "改后", "weight": 20, "statute": str(_cn_statute().pk),
+                                  "life_stage": "YOUTH", "evidence_source": "REGISTRY",
+                                  "evidence_note": "司录册"}, format="json", **auth_headers)
+    assert done.status_code == 200, done.content
+    body = done.json()
+    assert (body["description"], body["weight"], body["life_stage"]) == ("改后", 20, "YOUTH")
+    assert body["statute_snapshot"]["code"] == CN_CODE
+    record.refresh_from_db()
+    assert record.statute_id == _cn_statute().pk and record.statute_snapshot["code"] == CN_CODE
+    cleared = api_client.patch(url, {"statute": None}, format="json", **auth_headers)
+    assert cleared.status_code == 200 and cleared.json()["statute_snapshot"] is None
+
+
+def test_editing_the_weight_or_type_recomputes_the_souls_scores(cn_soul, api_client, auth_headers):
+    record = SoulRecord.objects.create(soul=cn_soul, event_year=1990, **_payload(weight=10))
+    cn_soul.refresh_from_db()
+    before = (cn_soul.merit_score, cn_soul.demerit_score)
+    assert before[0] > 0 and before[1] == 0
+    url = f"/api/v1/souls/{cn_soul.pk}/records/{record.pk}/"
+    assert api_client.patch(url, {"weight": 40}, format="json", **auth_headers).status_code == 200
+    cn_soul.refresh_from_db()
+    assert cn_soul.merit_score > before[0]
+    assert api_client.patch(url, {"record_type": "DEMERIT"}, format="json", **auth_headers).status_code == 200
+    cn_soul.refresh_from_db()
+    assert cn_soul.merit_score == 0 and cn_soul.demerit_score > 0
+
+
+def test_record_400s_carry_stable_error_codes(cn_soul, api_client, auth_headers):
+    record = SoulRecord.objects.create(soul=cn_soul, **_payload())
+    url = f"/api/v1/souls/{cn_soul.pk}/records/{record.pk}/"
+
+    def codes(body, **kw):
+        res = api_client.patch(url, body, format="json", **auth_headers)
+        assert res.status_code == 400, res.content
+        return res.json()["error_codes"]
+
+    assert codes({"occurrence_count": 0}) == {"occurrence_count": ["min_value"]}
+    assert codes({"weight": 101}) == {"weight": ["max_value"]}
+    assert codes({"life_stage": "INFANCY"}) == {"life_stage": ["invalid_choice"]}
+    assert codes({"occurrence_count": 2}) == {"non_field_errors": ["clause_count_pair"]}
+    eu = Statute.objects.exclude(civilization=cn_soul.civilization).first()
+    assert codes({"statute": str(eu.pk)}) == {"statute": ["statute_other_civilization"]}
+    # add_record answers the same way.
+    added = api_client.post(f"/api/v1/souls/{cn_soul.pk}/add_record/", _payload(weight=0), format="json", **auth_headers)
+    assert added.status_code == 400 and added.json()["error_codes"] == {"weight": ["min_value"]}
+
+
+def test_editing_runs_the_create_validation(cn_soul, api_client, auth_headers):
+    record = SoulRecord.objects.create(soul=cn_soul, **_payload())
+    url = f"/api/v1/souls/{cn_soul.pk}/records/{record.pk}/"
+    assert api_client.patch(url, {"occurrence_count": 0}, format="json", **auth_headers).status_code == 400
+    # 次数与条款成对:只给次数不给条款是 400。
+    assert api_client.patch(url, {"occurrence_count": 2}, format="json", **auth_headers).status_code == 400
+    ok = api_client.patch(url, {"occurrence_count": 2, "statute_clause": "CN-GGG-F-JJ-07:賑濟窮民百錢"},
+                          format="json", **auth_headers)
+    assert ok.status_code == 200 and ok.json()["occurrence_count"] == 2
+    record.refresh_from_db()
+    assert record.weight == 10  # 失败的那几次没写
+
+
+def test_editing_needs_soul_update_and_the_record_must_belong_to_this_soul(
+    cn_soul, api_client, auth_headers, cn_tenant, eu_tenant, django_user_model,
+):
+    import uuid
+
+    record = SoulRecord.objects.create(soul=cn_soul, **_payload())
+    url = f"/api/v1/souls/{cn_soul.pk}/records/{record.pk}/"
+    assert api_client.patch(f"/api/v1/souls/{cn_soul.pk}/records/{uuid.uuid4()}/", {"weight": 3}, format="json",
+                            **auth_headers).status_code == 404
+    other = Soul.objects.create(name="旁人", current_state=SoulState.JUDGING, tenant=cn_tenant)
+    assert api_client.patch(f"/api/v1/souls/{other.pk}/records/{record.pk}/", {"weight": 3}, format="json",
+                            **auth_headers).status_code == 404
+    viewer = django_user_model.objects.create_user(username="viewer_v5", password="x", role="VIEWER", tenant=cn_tenant)
+    assert api_client.patch(url, {"weight": 3}, format="json", **_token_for(viewer, cn_tenant)).status_code == 403
+    eu_judge = django_user_model.objects.create_user(username="eu_judge_v5b", password="x", role="JUDGE", tenant=eu_tenant)
+    assert api_client.patch(url, {"weight": 3}, format="json", **_token_for(eu_judge, eu_tenant)).status_code == 404
+    record.refresh_from_db()
+    assert record.weight == 10

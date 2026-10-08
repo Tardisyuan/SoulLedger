@@ -17,7 +17,7 @@ import { ListSkeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/src/components/ui/StatusBadge";
 import { FilterChipToggle } from "@/src/components/ui/FilterChip";
 import { CooldownShorteningDetail } from "./CooldownShorteningDetail";
-import { COOLDOWN_FILTERS, cooldownEnded, cooldownTone, lifeNumber, sortCooldownRows } from "./soulAccountsView";
+import { COOLDOWN_FILTERS, cooldownEnded, cooldownTone, lifeNumber } from "./soulAccountsView";
 
 // A11 列宽:灵魂 1.6fr、第几世 96、剩余冷却 220、状态 128、提交于 160、操作 112。
 const ROW_GRID =
@@ -60,7 +60,7 @@ export function CooldownShorteningsContent({ tabs }: { tabs: ReactNode }) {
 
   const list = useCooldownShortenings({ status: status || undefined, page });
   const counts = useCooldownShorteningCounts().data;
-  const rows = sortCooldownRows(list.data?.results ?? []);
+  const rows = list.data?.results ?? [];
   const count = list.data?.count ?? 0;
 
   const failed = list.isError && !list.data;
