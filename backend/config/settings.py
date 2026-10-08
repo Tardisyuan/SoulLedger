@@ -91,6 +91,7 @@ INSTALLED_APPS = [
     "apps.chat",
     "apps.sentence_plan",
     "apps.soul_assist",
+    "apps.officer_app",
 ]
 
 MIDDLEWARE = [
