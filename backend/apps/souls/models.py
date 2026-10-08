@@ -305,6 +305,10 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
         validators=[RegexValidator(r"^\+?[1-9]\d{6,14}$", "手机号须为 7-15 位数字,可带 + 前缀")],
     )
 
+    # CSV 批量导入的批次号(apps/souls/importer.py)。同一次提交创建的灵魂共用一个,
+    # 列表据此过滤出「这一批」。手工新建、调拨等其他来源的灵魂为空。
+    import_batch = models.UUIDField(null=True, blank=True, editable=False, db_index=True)
+
     class Meta:
         ordering = ["-create_time"]
         verbose_name = "Soul"

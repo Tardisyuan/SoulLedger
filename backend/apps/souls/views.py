@@ -23,6 +23,7 @@ from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, Data
 from apps.ledger.serializers import LedgerSummarySerializer
 from apps.ledger.services import LedgerService
 from apps.realms.serializers import SoulPathEntrySerializer
+from apps.souls import importer
 from apps.souls.dates import (
     ERROR,
     check_record_date,
@@ -38,6 +39,10 @@ from apps.souls.serializers import (
     SoulBatchRecycleErrorSerializer,
     SoulBatchRecycleResultSerializer,
     SoulBatchRecycleSerializer,
+    SoulImportCommitSerializer,
+    SoulImportFileErrorSerializer,
+    SoulImportPreviewSerializer,
+    SoulImportUploadSerializer,
     SoulListSerializer,
     SoulRecordSerializer,
     SoulSerializer,
@@ -90,6 +95,9 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
         'batch_recycle': ['soul.delete'],
         # 批量条的「导出」:读了什么就导出什么,与列表同一个码名。
         'export': ['soul.read'],
+        # CSV 导入:预览不写库,但问的是「我能不能建」,与提交同一个码名。
+        'import_preview': ['soul.create'],
+        'import_commit': ['soul.create'],
         'correct_settlement': ['soul.correct_settlement'],
     }
     # `reincarnations` because life_index counts them, and the date checks on
@@ -332,6 +340,74 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
                 soul.create_time.isoformat(),
             ])
         return response
+
+    def _import_rows(self, request):
+        """Upload -> (RowResults, tenant). Boundary checks live here and in importer._read."""
+        upload = SoulImportUploadSerializer(data=request.data)
+        upload.is_valid(raise_exception=True)
+        tenant = getattr(request, "tenant", None)
+        if tenant is None:
+            raise ValidationError({"code": "no_tenant"})
+        try:
+            data = upload.validated_data["file"].read(importer.MAX_BYTES + 1)
+            return importer.validate_csv(data, tenant), tenant
+        except importer.ImportFileError as exc:
+            raise ValidationError({"code": exc.code, **exc.detail}) from exc
+
+    @extend_schema(
+        request={"multipart/form-data": SoulImportUploadSerializer},
+        responses={200: SoulImportPreviewSerializer, 400: SoulImportFileErrorSerializer},
+    )
+    @action(detail=False, methods=["post"], url_path="import/preview", pagination_class=None, filter_backends=[])
+    def import_preview(self, request):
+        """Validate a soul CSV row by row. WRITES NOTHING.
+
+        Columns: name, civilization (required); birth_date, death_date, origin_location,
+        birth_name, description. Dates are `YYYY`, `YYYY-MM` or `YYYY-MM-DD`, negative for
+        BCE. At most `importer.MAX_ROWS` rows. `civilization` must be the caller's own.
+        """
+        results, _tenant = self._import_rows(request)
+        return Response(importer.summarize(results))
+
+    @extend_schema(
+        request={"multipart/form-data": SoulImportUploadSerializer},
+        responses={
+            201: SoulImportCommitSerializer,
+            400: SoulImportFileErrorSerializer,
+            422: SoulImportPreviewSerializer,
+        },
+    )
+    @action(detail=False, methods=["post"], url_path="import/commit", pagination_class=None, filter_backends=[])
+    def import_commit(self, request):
+        """Create every soul in the file, or none. Re-validates the file itself.
+
+        422 with the preview body when any row has an error (nothing written). On success
+        one `IMPORT` audit row names the batch; each soul also gets its ordinary CREATE row.
+        """
+        from apps.audit.models import AuditAction, AuditLog
+        from apps.core.client_ip import get_client_ip
+
+        results, tenant = self._import_rows(request)
+        if any(r.errors for r in results):
+            return Response(importer.summarize(results), status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+        with transaction.atomic():
+            batch = importer.create_souls(results, tenant)
+            AuditLog.objects.create(
+                tenant=tenant,
+                user=request.user,
+                action=AuditAction.IMPORT,
+                resource="soul",
+                resource_id=str(batch),
+                changes={
+                    "batch_id": str(batch),
+                    "created": len(results),
+                    "filename": request.data["file"].name[:200],
+                },
+                ip_address=get_client_ip(request) or "",
+                user_agent=request.META.get("HTTP_USER_AGENT", "")[:500],
+                description=f"CSV import of {len(results)} souls",
+            )
+        return Response({"created": len(results), "batch_id": batch}, status=status.HTTP_201_CREATED)
 
     @staticmethod
     def _batch_not_found(ids):
