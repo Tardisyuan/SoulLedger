@@ -2264,7 +2264,8 @@
     "status_label": "状态",
     "tabs": {
       "registrations": "登记记录",
-      "api_keys": "接入密钥"
+      "api_keys": "接入密钥",
+      "webhooks": "Webhook"
     },
     "api_keys": {
       "title": "接入密钥",
@@ -2307,7 +2308,54 @@
       "copied": "密钥已复制",
       "copy_failed": "复制失败",
       "close": "我已保存，关闭",
-      "webhooks_note": "Webhook 由外部系统持密钥自行配置（/death-sync/webhooks/ 只接受密钥认证），此处不提供。"
+      "webhooks_note": "Webhook 在「Webhook」页签管理；外部系统也可持密钥自行配置。"
+    },
+    "webhooks": {
+      "title": "Webhook",
+      "intro": "事件发生时，系统向下列地址发送带签名的 HTTP 请求。签名密钥只在创建时显示一次。",
+      "create": "新建 Webhook",
+      "edit_title": "编辑 Webhook",
+      "url": "地址",
+      "api_key": "所属密钥",
+      "events": "订阅事件",
+      "events_hint": "不勾选即订阅全部事件。事件名即请求头 X-SoulLedger-Event 的值。",
+      "all_events": "全部事件",
+      "status_label": "状态",
+      "status": {
+        "ACTIVE": "生效中",
+        "DISABLED": "已停用"
+      },
+      "disable": "停用",
+      "enable": "启用",
+      "disable_title": "停用 Webhook「{{url}}」？",
+      "disable_message": "停用后不再向此地址投递事件。记录与投递历史保留，可随时重新启用。",
+      "disabled_ok": "Webhook 已停用",
+      "disable_failed": "停用失败",
+      "saved_ok": "Webhook 已保存",
+      "save_failed": "保存失败",
+      "no_webhooks": "暂无 Webhook",
+      "no_keys_hint": "Webhook 须挂在一把接入密钥下，请先在「接入密钥」页签新建密钥。",
+      "shown_title": "签名密钥（仅此一次）",
+      "shown_warning": "这是签名密钥的唯一一次显示。关闭后无法再次查看；请现在复制并交付给接收系统，用于校验 X-SoulLedger-Signature。",
+      "secret_label": "签名密钥",
+      "copy": "复制密钥",
+      "deliveries": "投递记录",
+      "deliveries_for": "{{url}} 的投递",
+      "all_deliveries": "查看全部",
+      "no_deliveries": "暂无投递记录",
+      "delivery": {
+        "event": "事件",
+        "attempt": "尝试次数",
+        "response": "响应码",
+        "error": "最近错误",
+        "time": "时间",
+        "status": {
+          "PENDING": "待投递",
+          "SUCCESS": "已投递",
+          "FAILED": "失败",
+          "ABANDONED": "已放弃"
+        }
+      }
     }
   },
   "soul_accounts": {

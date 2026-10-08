@@ -2264,7 +2264,8 @@
     "status_label": "Status",
     "tabs": {
       "registrations": "Registrations",
-      "api_keys": "API keys"
+      "api_keys": "API keys",
+      "webhooks": "Webhooks"
     },
     "api_keys": {
       "title": "API keys",
@@ -2307,7 +2308,54 @@
       "copied": "Key copied",
       "copy_failed": "Copy failed",
       "close": "I have saved it, close",
-      "webhooks_note": "Webhooks are configured by the external system with its own key (/death-sync/webhooks/ accepts key authentication only) and are not managed here."
+      "webhooks_note": "Webhooks are managed on the Webhooks tab; the external system can also configure its own with its key."
+    },
+    "webhooks": {
+      "title": "Webhooks",
+      "intro": "When an event happens, the system POSTs a signed HTTP request to each address below. The signing secret is shown once, at creation.",
+      "create": "New webhook",
+      "edit_title": "Edit webhook",
+      "url": "URL",
+      "api_key": "API key",
+      "events": "Events",
+      "events_hint": "Nothing checked means every event. The name is the value of the X-SoulLedger-Event header.",
+      "all_events": "All events",
+      "status_label": "Status",
+      "status": {
+        "ACTIVE": "Active",
+        "DISABLED": "Disabled"
+      },
+      "disable": "Disable",
+      "enable": "Enable",
+      "disable_title": "Disable webhook “{{url}}”?",
+      "disable_message": "No more events are delivered to this address. The row and its delivery history stay; it can be enabled again at any time.",
+      "disabled_ok": "Webhook disabled",
+      "disable_failed": "Could not disable the webhook",
+      "saved_ok": "Webhook saved",
+      "save_failed": "Could not save the webhook",
+      "no_webhooks": "No webhooks yet",
+      "no_keys_hint": "A webhook belongs to an API key. Create one on the API keys tab first.",
+      "shown_title": "Signing secret (shown once)",
+      "shown_warning": "This is the only time the signing secret is shown. After closing it cannot be viewed again — copy it now and hand it to the receiving system to verify X-SoulLedger-Signature.",
+      "secret_label": "Signing secret",
+      "copy": "Copy secret",
+      "deliveries": "Deliveries",
+      "deliveries_for": "Deliveries for {{url}}",
+      "all_deliveries": "Show all",
+      "no_deliveries": "No deliveries yet",
+      "delivery": {
+        "event": "Event",
+        "attempt": "Attempts",
+        "response": "Response",
+        "error": "Last error",
+        "time": "Time",
+        "status": {
+          "PENDING": "Pending",
+          "SUCCESS": "Delivered",
+          "FAILED": "Failed",
+          "ABANDONED": "Abandoned"
+        }
+      }
     }
   },
   "soul_accounts": {

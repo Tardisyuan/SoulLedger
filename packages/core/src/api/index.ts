@@ -195,6 +195,12 @@ export {
   type ExternalApiKey,
   type ExternalApiKeyCreate,
   type ExternalApiKeySystemType,
+  type AdminWebhook,
+  type AdminWebhookEvent,
+  type AdminWebhookCreate,
+  type AdminWebhookUpdate,
+  type WebhookDelivery,
+  type WebhookDeliveryStatus,
 } from "./death-sync";
 
 // Recycle bin

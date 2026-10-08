@@ -2264,7 +2264,8 @@
     "status_label": "Kheperu",
     "tabs": {
       "registrations": "Medew Mut",
-      "api_keys": "Menf Aq"
+      "api_keys": "Menf Aq",
+      "webhooks": "Webhook"
     },
     "api_keys": {
       "title": "Menf Aq",
@@ -2307,7 +2308,54 @@
       "copied": "Menf Senn Seth",
       "copy_failed": "Nen Senn",
       "close": "Sau Seth, Khetem",
-      "webhooks_note": "Hemsu Ky Smen Wat Hab Medu Djes Em Menf Pen; Nen Em Aat Pen."
+      "webhooks_note": "Webhook Em Aat Webhook; Hemsu Ky Smen Djes Em Menf Pen."
+    },
+    "webhooks": {
+      "title": "Webhook",
+      "intro": "Medew Kheper: Hemsu Hab Medu Er Wat Pen. Menf Hab Maa Wa Djer, Em Iri.",
+      "create": "Iri Webhook Renpi",
+      "edit_title": "Khemen Webhook",
+      "url": "Wat",
+      "api_key": "Menf",
+      "events": "Medew",
+      "events_hint": "Nen Setep: Medew Neb.",
+      "all_events": "Medew Neb",
+      "status_label": "Kheperu",
+      "status": {
+        "ACTIVE": "Em Wenen",
+        "DISABLED": "Khetem Seth"
+      },
+      "disable": "Khetem",
+      "enable": "Wen",
+      "disable_title": "Khetem Webhook «{{url}}»?",
+      "disable_message": "Er Khet Khetem: Nen Hab Medu Er Wat Pen. Sesh Hena Sesh Hab Sau Seth; Wen Wehem Em Sepdet Neb.",
+      "disabled_ok": "Webhook Khetem Seth",
+      "disable_failed": "Nen Khetem",
+      "saved_ok": "Webhook Sau Seth",
+      "save_failed": "Nen Sau",
+      "no_webhooks": "Nen Webhook Djer",
+      "no_keys_hint": "Webhook Em Menf Wa. Iri Menf Tepy Em Aat Menf Aq.",
+      "shown_title": "Menf Hab (Wa Djer)",
+      "shown_warning": "Menf Hab Maa Wa Djer. Er Khet Khetem: Nen Maa Wehem; Senn Emu, Hab Er Hemsu Ky.",
+      "secret_label": "Menf Hab",
+      "copy": "Senn Menf",
+      "deliveries": "Sesh Hab",
+      "deliveries_for": "Sesh Hab En {{url}}",
+      "all_deliveries": "Maa Neb",
+      "no_deliveries": "Nen Sesh Hab Djer",
+      "delivery": {
+        "event": "Medew",
+        "attempt": "Sep Iri",
+        "response": "Medu Iyi",
+        "error": "Sethet Pehwy",
+        "time": "Sepdet",
+        "status": {
+          "PENDING": "Nen Hab Djer",
+          "SUCCESS": "Hab Seth",
+          "FAILED": "Nen Hab",
+          "ABANDONED": "Sehen Seth"
+        }
+      }
     }
   },
   "soul_accounts": {
