@@ -9736,6 +9736,14 @@ export interface components {
             /** @default  */
             reason: string;
         };
+        /**
+         * @description * `REGISTRY` - Registry
+         *     * `WITNESS` - Witness
+         *     * `SELF_ACCOUNT` - Self account
+         *     * `OTHER` - Other
+         * @enum {string}
+         */
+        EvidenceSourceEnum: "REGISTRY" | "WITNESS" | "SELF_ACCOUNT" | "OTHER";
         ExportedDataScope: {
             role: string;
             civilization?: string | null;
@@ -10668,6 +10676,10 @@ export interface components {
             is_milestone: boolean;
             statute_clause: string;
             occurrence_count: number | null;
+            statute_snapshot: unknown;
+            life_stage: string;
+            evidence_source: string;
+            evidence_note: string;
         };
         /**
          * @description 200 body of `LedgerBalanceView`.
@@ -10688,6 +10700,14 @@ export interface components {
             records: components["schemas"]["LedgerRecordSummary"][];
             reading: components["schemas"]["LedgerReading"];
         };
+        /**
+         * @description * `CHILDHOOD` - Childhood
+         *     * `YOUTH` - Youth
+         *     * `ADULTHOOD` - Adulthood
+         *     * `OLD_AGE` - Old age
+         * @enum {string}
+         */
+        LifeStageEnum: "CHILDHOOD" | "YOUTH" | "ADULTHOOD" | "OLD_AGE";
         /**
          * @description Doc-only: the 401 body of `LoginView` for wrong credentials.
          *
@@ -15030,6 +15050,30 @@ export interface components {
             inferno_article?: string;
             /** @description Life index this record belongs to; 0 is the first life. */
             readonly cycle: number;
+            /** Format: uuid */
+            statute?: string | null;
+            /** @description The cited article as it read when cited: statute_id, code, revision, effective_from, title/text per locale, source, hash, at. Taken by save(); never updated when the article changes. */
+            readonly statute_snapshot: unknown;
+            /**
+             * @description Which stage of the life the deed falls in; blank = unrecorded.
+             *
+             *     * `CHILDHOOD` - Childhood
+             *     * `YOUTH` - Youth
+             *     * `ADULTHOOD` - Adulthood
+             *     * `OLD_AGE` - Old age
+             */
+            life_stage?: components["schemas"]["LifeStageEnum"] | components["schemas"]["BlankEnum"];
+            /**
+             * @description Where this record came from; blank = unrecorded.
+             *
+             *     * `REGISTRY` - Registry
+             *     * `WITNESS` - Witness
+             *     * `SELF_ACCOUNT` - Self account
+             *     * `OTHER` - Other
+             */
+            evidence_source?: components["schemas"]["EvidenceSourceEnum"] | components["schemas"]["BlankEnum"];
+            /** @description Free text about the source, e.g. which witness or which register. */
+            evidence_note?: string;
         };
         /**
          * @description * `CHARITY` - Charity / Generosity

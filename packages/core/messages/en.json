@@ -188,6 +188,18 @@
       "MURDER": "Murder",
       "OTHER": "Other"
     },
+    "life_stages": {
+      "CHILDHOOD": "Childhood",
+      "YOUTH": "Youth",
+      "ADULTHOOD": "Adulthood",
+      "OLD_AGE": "Old age"
+    },
+    "evidence_sources": {
+      "REGISTRY": "Registry",
+      "WITNESS": "Witness",
+      "SELF_ACCOUNT": "Self-account",
+      "OTHER": "Other"
+    },
     "form": {
       "name_label": "Name *",
       "name_placeholder": "Soul name",

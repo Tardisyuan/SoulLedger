@@ -188,6 +188,18 @@
       "MURDER": "杀业",
       "OTHER": "其他"
     },
+    "life_stages": {
+      "CHILDHOOD": "童年",
+      "YOUTH": "少年",
+      "ADULTHOOD": "壮年",
+      "OLD_AGE": "老年"
+    },
+    "evidence_sources": {
+      "REGISTRY": "司录",
+      "WITNESS": "证人",
+      "SELF_ACCOUNT": "自述",
+      "OTHER": "其他"
+    },
     "form": {
       "name_label": "名称 *",
       "name_placeholder": "灵魂名称",
