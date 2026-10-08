@@ -143,6 +143,7 @@ export type Landing =
   | { screen: "ApplicationDetail"; id: string }
   | { screen: "Conversation"; id: string }
   | { screen: "Life" }
+  | { screen: "Applications" }
   | { screen: "Sentence"; landing: SentenceLanding };
 
 /** An application id as the server sends it (a UUID); anything else is not navigated to. */
@@ -156,6 +157,8 @@ export function landingOf(data: unknown): Landing | null {
   // Reserved: the server sends no chat push yet (no Synapse → push path; see the round's report).
   // A malformed id opens the app and no more — a letter is not worth guessing at.
   if (screen === "Conversation") return typeof conversation === "string" && ID.test(conversation) ? { screen, id: conversation } : null;
+  // 缩短冷却申请的结果:状态在转生申请页的冷却块里。
+  if (screen === "Applications") return { screen };
   if (screen === "Life") {
     // 受刑 1d: the four sentence pushes say `screen: Life` (an older app still lands there) and are
     // told apart by `kind`; `node_ids` names the stations to mark 「新」. A malformed id is dropped, not guessed at.
