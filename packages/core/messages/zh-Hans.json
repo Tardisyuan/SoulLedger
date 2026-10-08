@@ -2868,7 +2868,8 @@
       "chat_reconcile_inbox": "按 Synapse 校对殿司收件箱",
       "soul_assist_purge_history": "清理助手会话",
       "ledger_snapshot_balance_for_tenant": "记余额月快照",
-      "notifications_email_action_needed_for_tenant": "邮件提醒待处理通知"
+      "notifications_email_action_needed_for_tenant": "邮件提醒待处理通知",
+      "notifications_email_action_needed_global": "邮件提醒待处理通知(全局管理员)"
     },
     "status": {
       "PENDING": "排队中",

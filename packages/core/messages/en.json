@@ -2868,7 +2868,8 @@
       "chat_reconcile_inbox": "Reconcile the hall inbox with Synapse",
       "soul_assist_purge_history": "Purge assistant history",
       "ledger_snapshot_balance_for_tenant": "Snapshot monthly balances",
-      "notifications_email_action_needed_for_tenant": "Email action-needed notifications"
+      "notifications_email_action_needed_for_tenant": "Email action-needed notifications",
+      "notifications_email_action_needed_global": "Email action-needed notifications (global admins)"
     },
     "status": {
       "PENDING": "Queued",
