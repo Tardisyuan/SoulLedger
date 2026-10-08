@@ -10,6 +10,8 @@ every `post_save` that connected a model's signals on its first save — and
 the two disagreed about which models were excluded. See `connect_audit_signals`.
 """
 import logging
+from contextlib import contextmanager
+from contextvars import ContextVar
 
 from django.db.models.signals import post_delete, post_migrate, post_save, pre_migrate, pre_save
 from django.dispatch import receiver
@@ -17,6 +19,22 @@ from django.dispatch import receiver
 logger = logging.getLogger(__name__)
 
 _in_migration = False  # Guard: skip audit log creation during migrations
+
+#: (label_lower, pk) of rows whose generic UPDATE row is suppressed because the
+#: caller writes its own, richer audit row (hall settings / seal glyphs /
+#: assistant hall switch). Per-context, so it neither leaks across requests
+#: nor touches any other model or row.
+_explicitly_audited: ContextVar[frozenset] = ContextVar("explicitly_audited", default=frozenset())
+
+
+@contextmanager
+def explicit_audit_for(instance):
+    """Within the block, `instance`'s save writes no generic UPDATE row: the caller audits it itself."""
+    token = _explicitly_audited.set(_explicitly_audited.get() | {(instance._meta.label_lower, instance.pk)})
+    try:
+        yield
+    finally:
+        _explicitly_audited.reset(token)
 
 
 def _invalidate_permission_cache(sender, instance, created=False, **kwargs):
@@ -398,6 +416,8 @@ def _create_audit_log(action, instance, changes=None):
     """Create an AuditLog entry for the given action."""
     # Skip during migrations to avoid schema-not-ready errors
     if _is_migration_context():
+        return
+    if action == 'UPDATE' and (instance._meta.label_lower, instance.pk) in _explicitly_audited.get():
         return
 
     from apps.audit.models import AuditLog
