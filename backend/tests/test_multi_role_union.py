@@ -5,7 +5,7 @@
 when ANY held role grants the codename -- unless a hard rule forbids it:
 
 * a codename in `ROLE_FORBIDDEN_CODENAMES` for ANY held role is denied outright
-  (a 殿主 who is also 判官 still cannot approve);
+  (per role: a 殿主 who is also 判官 CAN approve, through 判官);
 * ADMIN / SOUL are never accepted as additional roles (API 400, checker ignores);
 * recycle-bin restore / hard delete stay ADMIN's act, whatever a second role holds.
 
@@ -111,26 +111,31 @@ def test_reported_codenames_follow_the_union(world):
 # --- hard rules beat the union ---------------------------------------------
 
 
-def test_moderator_forbidden_codenames_survive_any_extra_role(world):
-    judge_too = _user(world, "h_mod_judge", "MODERATOR", extra=["JUDGE"])
-    assert check_permission(judge_too, JUDGE_ONLY)  # the union still works
+def test_moderator_alone_is_still_refused_its_forbidden_codenames(world):
+    mod = _user(world, "h_mod", "MODERATOR")
     for codename in ROLE_FORBIDDEN_CODENAMES["MODERATOR"]:
-        assert not check_permission(judge_too, codename), codename
-
-
-def test_holding_moderator_as_the_extra_role_taints_too(world):
-    judge_first = _user(world, "h_judge_mod", "JUDGE", extra=["MODERATOR"])
-    assert check_permission(judge_first, "judgment.read")
+        assert not check_permission(mod, codename), codename
+    # a moderator with extras that grant none of them is refused too
+    mod_viewer = _user(world, "h_mod_viewer", "MODERATOR", extra=["VIEWER"])
     for codename in ROLE_FORBIDDEN_CODENAMES["MODERATOR"]:
-        assert not check_permission(judge_first, codename), codename
-    # and the control: the same JUDGE without MODERATOR may approve
-    assert check_permission(_user(world, "h_judge", "JUDGE"), APPROVE)
+        assert not check_permission(mod_viewer, codename), codename
 
 
-def test_a_custom_role_granted_a_forbidden_codename_still_cannot_help_a_moderator(world):
+def test_moderator_plus_judge_approves_and_advances_through_judge(world):
+    # Forbidden codenames are per role: they remove only what the MODERATOR role itself grants.
+    both = _user(world, "h_mod_judge", "MODERATOR", extra=["JUDGE"])
+    assert check_permission(both, APPROVE) and check_permission(both, "workflow.advance")
+    # the same holds with the roles the other way round
+    both2 = _user(world, "h_judge_mod", "JUDGE", extra=["MODERATOR"])
+    assert check_permission(both2, APPROVE) and check_permission(both2, "workflow.advance")
+    # what no held role grants stays refused: JUDGE does not hold user.manage
+    assert not check_permission(both, "user.manage")
+
+
+def test_a_custom_role_granting_a_forbidden_codename_counts_for_a_moderator(world):
     _custom_role("APPROVER", APPROVE)
-    user = _user(world, "h_mod_custom", "MODERATOR", extra=["APPROVER"])
-    assert not check_permission(user, APPROVE)
+    assert check_permission(_user(world, "h_mod_custom", "MODERATOR", extra=["APPROVER"]), APPROVE)
+    assert not check_permission(_user(world, "h_mod_only", "MODERATOR"), APPROVE)
 
 
 def test_admin_and_soul_are_not_accepted_as_additional_roles(world):

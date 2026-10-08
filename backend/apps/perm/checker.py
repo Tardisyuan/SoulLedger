@@ -52,14 +52,14 @@ def check_permission(user, codename):
     if role == 'SOUL':
         return False
 
-    # 多角色:权限是 `role` 与 `extra_roles` 各自答案的并集 —— 并集只在这里算。
-    # 硬规则排在并集之前:持有的任何一个角色禁用该 codename,整个人就答 False
-    # (殿主兼任判官也不能 approve)。ADMIN / SOUL 即使被写进 extra_roles 也无视,
-    # 它们只能是主角色。
+    # 多角色:每个持有的角色先过自己的硬规则,再对各角色的答案取并集。
+    # 殿主的禁用清单只剔掉「来自殿主这个角色」的授予;殿主兼任判官,判官的授予照算
+    # (用户 2026-10-09 定)。ADMIN / SOUL 即使被写进 extra_roles 也无视,它们只能是主角色。
     roles = [role, *_live_extra_roles(user)]
-    if any(codename in ROLE_FORBIDDEN_CODENAMES.get(r, ()) for r in roles):
-        return False
-    return any(_role_has(r, codename) for r in roles)
+    return any(
+        codename not in ROLE_FORBIDDEN_CODENAMES.get(r, ()) and _role_has(r, codename)
+        for r in roles
+    )
 
 
 def _live_extra_roles(user):
