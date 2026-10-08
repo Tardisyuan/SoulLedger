@@ -9,7 +9,7 @@ import time
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import OpenApiResponse, extend_schema
+from drf_spectacular.utils import OpenApiResponse, PolymorphicProxySerializer, extend_schema
 from rest_framework import status, viewsets
 from rest_framework.decorators import (
     action,
@@ -46,6 +46,7 @@ from .serializers import (
     LoginLogSerializer,
     LoginResponseSerializer,
     LogoutRequestSerializer,
+    MfaRequiredResponseSerializer,
     OfficerTokenObtainPairSerializer,
     PasswordHelpRequestSerializer,
     PasswordResetRefusalSerializer,
@@ -59,6 +60,7 @@ from .serializers import (
     UserCreateSerializer,
     UserImportResultSerializer,
     UserManagementSerializer,
+    UserMfaResetSerializer,
     UserPreferencesSerializer,
     UserRoleSerializer,
     UserSerializer,
@@ -140,6 +142,7 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
         'assign_roles': ['user.manage'],
         'export_csv': ['user.manage'],
         'import_csv': ['user.manage'],
+        'reset_mfa': ['user.manage'],
     }
 
     def get_serializer_class(self):
@@ -163,7 +166,7 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
         # 灵魂账号不归用户管理:它们的开通 / 重置走 `/api/v1/soul-accounts/`,
         # 那里有 72 小时、首登改密、只发一次三道保护;这里的 reset_password 会
         # 把明文直接交给官员,绕过全部三道。
-        qs = User.objects.select_related('tenant').exclude(role='SOUL')
+        qs = User.objects.select_related('tenant', 'mfa').exclude(role='SOUL')
 
         # ADMIN is the only global-scope role (apps/perm/models.py Role.scope);
         # every other role is tenant-scoped and must never see another
@@ -202,6 +205,26 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
         if role:
             qs = qs.filter(role=role)
 
+        # 两步验证筛选签(A12):enabled / disabled;`missing` = 角色被要求而没开(ADMIN 始终被要求,
+        # 其余角色读本殿设置里的 mfa_required_roles)。
+        mfa_filter = params.get('mfa', '').strip()
+        if mfa_filter == 'enabled':
+            qs = qs.filter(mfa__confirmed_at__isnull=False)
+        elif mfa_filter == 'disabled':
+            qs = qs.filter(mfa__confirmed_at__isnull=True)
+        elif mfa_filter == 'missing':
+            from django.db.models import Q
+
+            from apps.authentication.mfa import MFA_REQUIRED_ROLES_SETTING
+            from apps.tenants.models import Tenant
+
+            required = Q(role='ADMIN')
+            for tenant in Tenant.objects.exclude(settings={}):
+                roles = (tenant.settings or {}).get(MFA_REQUIRED_ROLES_SETTING) or []
+                if roles:
+                    required |= Q(tenant=tenant, role__in=roles)
+            qs = qs.filter(required, mfa__confirmed_at__isnull=True)
+
         # Filter by is_active
         is_active = params.get('is_active', '').strip()
         if is_active in ('true', '1'):
@@ -217,6 +240,21 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
             qs = qs.order_by(ordering)
 
         return qs
+
+    @extend_schema(request=UserMfaResetSerializer, responses={200: DetailResponseSerializer, 400: OpenApiTypes.OBJECT, 409: ErrorResponseSerializer})
+    @action(detail=True, methods=['post'], url_path='reset-mfa')
+    def reset_mfa(self, request, pk=None):
+        """管理员重置两步验证(A12):验证器、恢复码、「不再询问」设备令牌全清,该用户所有刷新令牌吊销。
+        理由必填,进审计。只对已开启的账号有意义(未开启答 409)。"""
+        from apps.authentication import mfa
+
+        user = self.get_object()
+        serializer = UserMfaResetSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        if not mfa.is_enabled(user):
+            return Response({"error": "该账号未开启两步验证", "code": "not_enabled"}, status=status.HTTP_409_CONFLICT)
+        mfa.admin_reset(user, actor=request.user, reason=serializer.validated_data["reason"], request=request)
+        return Response({"detail": "两步验证已重置"})
 
     @action(detail=True, methods=['post'])
     def activate(self, request, pk=None):
@@ -531,7 +569,12 @@ class LoginView(TokenObtainPairView):
     @extend_schema(
         request=CustomTokenObtainPairSerializer,
         responses={
-            200: LoginResponseSerializer,
+            # Two 200 shapes: tokens, or `mfa_required` + a pending token for /auth/mfa/verify/.
+            200: PolymorphicProxySerializer(
+                component_name="LoginOutcome",
+                serializers=[LoginResponseSerializer, MfaRequiredResponseSerializer],
+                resource_type_field_name=None,
+            ),
             # simplejwt's AuthenticationFailed: {"detail": "No active account ..."}
             401: LoginFailedResponseSerializer,
             429: LoginLockedResponseSerializer,
@@ -572,7 +615,10 @@ class LoginView(TokenObtainPairView):
         from .models import LoginLog
         try:
             response = super().post(request, *args, **kwargs)
-            if response.status_code == 200:
+            if response.status_code == 200 and response.data.get("mfa_required"):
+                # 密码对了,还要验码:计数清掉(第二步有自己的锁),登录日志等验码通过再写。
+                cache.delete(rate_key)
+            elif response.status_code == 200:
                 # Login success - clear rate limit counter
                 cache.delete(rate_key)
                 user = response.data.get('user', {})
@@ -624,7 +670,13 @@ class OfficerLoginView(LoginView):
     @extend_schema(
         request=OfficerTokenObtainPairSerializer,
         responses={
-            200: LoginResponseSerializer,
+            # Same two 200 shapes as /auth/login/: tokens, or `mfa_required` + pending token
+            # (then POST /auth/mfa/verify/).
+            200: PolymorphicProxySerializer(
+                component_name="LoginOutcome",
+                serializers=[LoginResponseSerializer, MfaRequiredResponseSerializer],
+                resource_type_field_name=None,
+            ),
             401: LoginFailedResponseSerializer,
             409: HallChoiceResponseSerializer,
             429: LoginLockedResponseSerializer,

@@ -10,6 +10,15 @@ export { api, getApiBaseUrl, PAGE_SIZE } from "./client";
 // Auth
 export {
   authApi,
+  mfaApi,
+  isMfaRequired,
+  type LoginOutcome,
+  type MfaRequiredResponse,
+  type MfaStatus,
+  type MfaRefusal,
+  type MfaSetupResponse,
+  type MfaRecoveryCodes,
+  type MfaVerifyRequest,
   type UserRole,
   type BuiltinUserRole,
   type LoginUser,
@@ -53,7 +62,7 @@ export {
 } from "./souls";
 
 // Users
-export { usersApi, type User, type CreateUserInput, type UpdateUserInput, type UserFilters, type UserImportResult, type PaginatedResponse } from "./users";
+export { usersApi, type User, type UserMfaRef, type CreateUserInput, type UpdateUserInput, type UserFilters, type UserImportResult, type PaginatedResponse } from "./users";
 
 // Judgment
 export {
@@ -142,7 +151,7 @@ export { menusApi, menuButtonsApi, type MenuItem, type MenuButton } from "./menu
 export { auditApi, loginLogsApi, type AuditLogEntry, type LoginLogEntry, type LoginLogStatus } from "./audit";
 
 // Tenants
-export { tenantsApi, REBIRTH_COOLDOWN_SETTING, type Tenant, type TenantSettingsPatch } from "./tenants";
+export { tenantsApi, REBIRTH_COOLDOWN_SETTING, MFA_REQUIRED_ROLES_SETTING, type Tenant, type TenantSettingsPatch, type TenantMfaRoleRow } from "./tenants";
 
 // Organizations
 export { organizationsApi, type Organization } from "./organizations";

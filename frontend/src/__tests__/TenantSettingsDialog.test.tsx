@@ -10,7 +10,7 @@ import { TenantSettingsDialog, parseCooldownDays, tenantSettingsErrors } from "@
 
 jest.mock("@soulledger/core/api", () => ({
   ...jest.requireActual("@soulledger/core/api"),
-  tenantsApi: { updateSettings: jest.fn() },
+  tenantsApi: { updateSettings: jest.fn(), mfaRoles: jest.fn().mockResolvedValue({ data: [] }) },
 }));
 jest.mock("@/src/contexts/I18nContext", () => ({
   useI18n: () => ({
