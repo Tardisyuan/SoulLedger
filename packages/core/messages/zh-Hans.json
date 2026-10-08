@@ -1088,7 +1088,18 @@
     "avg_scope": "全部已入簿灵魂",
     "occupancy": "占容量",
     "bucket_width": "每格 {{n}}",
-    "vs_last_month": "较上月"
+    "vs_last_month": "较上月",
+    "trends": {
+      "title": "趋势",
+      "range_label": "范围",
+      "range_30d": "近 30 天",
+      "range_90d": "近 90 天",
+      "range_12m": "近 12 个月",
+      "by_state": "按状态",
+      "by_civilization": "按文明",
+      "error": "趋势加载失败",
+      "not_enough": "快照还不足两天；每天夜里记一次，线随后出现。"
+    }
   },
   "ledger": {
     "title": "功德统计",
@@ -2868,6 +2879,7 @@
       "chat_reconcile_inbox": "按 Synapse 校对殿司收件箱",
       "soul_assist_purge_history": "清理助手会话",
       "ledger_snapshot_balance_for_tenant": "记余额月快照",
+      "ledger_snapshot_census_for_tenant": "记灵魂普查日快照",
       "notifications_email_action_needed_for_tenant": "邮件提醒待处理通知",
       "notifications_email_action_needed_global": "邮件提醒待处理通知(全局管理员)"
     },

@@ -3214,6 +3214,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/ledger/stats/trends/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description GET /ledger/stats/trends/?range=30d|90d|12m
+         *
+         *     灵魂普查日快照(`SoulCensusSnapshot`)的折线数据。划界与仪表盘同一口径:ADMIN 不带租户看全部
+         *     (按天把各租户的映射相加),带租户或非 ADMIN 只看本租户。没有快照的日子不补点 ——
+         *     趋势从第一份快照那天起有数,不回填。
+         */
+        get: operations["v1_ledger_stats_trends_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/me/": {
         parameters: {
             query?: never;
@@ -10700,6 +10723,30 @@ export interface components {
             records: components["schemas"]["LedgerRecordSummary"][];
             reading: components["schemas"]["LedgerReading"];
         };
+        /** @description 一天的普查。三个映射各是 `{键: 数}`;键集随数据变化(新界域、新状态),所以是自由映射。 */
+        LedgerTrendPoint: {
+            /** Format: date */
+            day: string;
+            soul_count: number;
+            by_state: {
+                [key: string]: number;
+            };
+            by_civilization: {
+                [key: string]: number;
+            };
+            by_realm: {
+                [key: string]: number;
+            };
+        };
+        /** @description `GET /ledger/stats/trends/` —— 范围内每个有快照的日子一个点,日期升序;没有快照是空数组。 */
+        LedgerTrends: {
+            range: components["schemas"]["RangeEnum"];
+            /** Format: date */
+            since: string;
+            /** Format: date */
+            until: string;
+            points: components["schemas"]["LedgerTrendPoint"][];
+        };
         /**
          * @description * `CHILDHOOD` - Childhood
          *     * `YOUTH` - Youth
@@ -13611,6 +13658,13 @@ export interface components {
         PushTokenUnregister: {
             token: string;
         };
+        /**
+         * @description * `30d` - 30d
+         *     * `90d` - 90d
+         *     * `12m` - 12m
+         * @enum {string}
+         */
+        RangeEnum: "30d" | "90d" | "12m";
         Reaction: {
             /** Format: uuid */
             readonly id: string;
@@ -21370,6 +21424,35 @@ export interface operations {
                 };
             };
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LedgerError"];
+                };
+            };
+        };
+    };
+    v1_ledger_stats_trends_retrieve: {
+        parameters: {
+            query?: {
+                range?: "12m" | "30d" | "90d";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LedgerTrends"];
+                };
+            };
+            400: {
                 headers: {
                     [name: string]: unknown;
                 };

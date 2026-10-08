@@ -2,6 +2,25 @@ import axios from "axios";
 import { api } from "./client";
 import type { HistoricalDate } from "../domain/dates";
 
+export type LedgerTrendRange = "30d" | "90d" | "12m";
+
+/** 一天的普查:三个 `{键: 数}` 映射(键集随数据变化)。 */
+export interface LedgerTrendPoint {
+  day: string;
+  soul_count: number;
+  by_state: Record<string, number>;
+  by_civilization: Record<string, number>;
+  by_realm: Record<string, number>;
+}
+
+/** `GET /ledger/stats/trends/` —— 日期升序;没有快照是空数组(趋势从第一份快照起有数,不回填)。 */
+export interface LedgerTrends {
+  range: LedgerTrendRange;
+  since: string;
+  until: string;
+  points: LedgerTrendPoint[];
+}
+
 export interface LedgerStatsOverview {
   /** 这份聚合算出来的时刻(ISO)—— 身份带「截至 HH:MM」。 */
   as_of: string;
@@ -390,5 +409,7 @@ export const ledgerApi = {
   exportJournal: (params: LedgerJournalParams) =>
     api.get<Blob>("/ledger/journal/export/", { params, responseType: "blob" }),
   statsOverview: () => api.get<LedgerStatsOverview>("/ledger/stats/overview/"),
+  statsTrends: (range: LedgerTrendRange) =>
+    api.get<LedgerTrends>("/ledger/stats/trends/", { params: { range } }),
   exportStats: (params?: Record<string, string>) => api.get<Blob>("/ledger/stats/export/", { params, responseType: "blob" }),
 };
