@@ -14895,6 +14895,11 @@ paths:
         schema:
           type: boolean
       - in: query
+        name: import_batch
+        schema:
+          type: string
+          format: uuid
+      - in: query
         name: karma_max
         schema:
           type: number
@@ -15354,6 +15359,11 @@ paths:
         description: A UUID string identifying this Soul.
         required: true
       - in: query
+        name: import_batch
+        schema:
+          type: string
+          format: uuid
+      - in: query
         name: karma_max
         schema:
           type: number
@@ -15484,6 +15494,11 @@ paths:
           format: uuid
         description: A UUID string identifying this Soul.
         required: true
+      - in: query
+        name: import_batch
+        schema:
+          type: string
+          format: uuid
       - in: query
         name: karma_max
         schema:
@@ -15802,6 +15817,75 @@ paths:
               schema:
                 type: object
                 additionalProperties: {}
+          description: ''
+  /api/v1/souls/import/commit/:
+    post:
+      operationId: v1_souls_import_commit_create
+      description: |-
+        Create every soul in the file, or none. Re-validates the file itself.
+
+        422 with the preview body when any row has an error (nothing written). On success
+        one `IMPORT` audit row names the batch; each soul also gets its ordinary CREATE row.
+      tags:
+      - v1
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SoulImportUpload'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulImportCommit'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulImportFileError'
+          description: ''
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulImportPreview'
+          description: ''
+  /api/v1/souls/import/preview/:
+    post:
+      operationId: v1_souls_import_preview_create
+      description: |-
+        Validate a soul CSV row by row. WRITES NOTHING.
+
+        Columns: name, civilization (required); birth_date, death_date, origin_location,
+        birth_name, description. Dates are `YYYY`, `YYYY-MM` or `YYYY-MM-DD`, negative for
+        BCE. At most `importer.MAX_ROWS` rows. `civilization` must be the caller's own.
+      tags:
+      - v1
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SoulImportUpload'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulImportPreview'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulImportFileError'
           description: ''
   /api/v1/tenants/:
     get:
@@ -31782,6 +31866,107 @@ components:
       required:
       - code
       - display_name
+    SoulImportCellError:
+      type: object
+      properties:
+        field:
+          type: string
+          description: CSV column the problem is in; `_row` for the row as a whole.
+        code:
+          type: string
+          description: Stable machine-readable code; the web translates it.
+      required:
+      - code
+      - field
+    SoulImportCommit:
+      type: object
+      properties:
+        created:
+          type: integer
+        batch_id:
+          type: string
+          format: uuid
+          description: Filter the list with `?import_batch=` to see this batch.
+      required:
+      - batch_id
+      - created
+    SoulImportFileError:
+      type: object
+      description: '400: the file as a whole is unusable. Nothing was read or written.'
+      properties:
+        code:
+          type: string
+        columns:
+          type: array
+          items:
+            type: string
+        max_rows:
+          type: integer
+        max_bytes:
+          type: integer
+      required:
+      - code
+    SoulImportPreview:
+      type: object
+      description: 200 of `…/import/preview/` and 422 of `…/import/commit/` (rows
+        have errors; nothing written).
+      properties:
+        total:
+          type: integer
+        ok_count:
+          type: integer
+        error_count:
+          type: integer
+        max_rows:
+          type: integer
+        rows:
+          type: array
+          items:
+            $ref: '#/components/schemas/SoulImportRow'
+      required:
+      - error_count
+      - max_rows
+      - ok_count
+      - rows
+      - total
+    SoulImportRow:
+      type: object
+      properties:
+        row:
+          type: integer
+          description: Line number in the file; the header is line 1.
+        status:
+          $ref: '#/components/schemas/SoulImportRowStatusEnum'
+        values:
+          type: object
+          additionalProperties:
+            type: string
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/SoulImportCellError'
+      required:
+      - errors
+      - row
+      - status
+      - values
+    SoulImportRowStatusEnum:
+      enum:
+      - ok
+      - error
+      type: string
+      description: |-
+        * `ok` - ok
+        * `error` - error
+    SoulImportUpload:
+      type: object
+      description: 'Multipart body of the two import endpoints: the CSV, nothing else.'
+      properties:
+        file:
+          type: string
+          format: uri
+      required:
+      - file
     SoulList:
       type: object
       description: Lightweight serializer for list views.
