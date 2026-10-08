@@ -5,6 +5,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
+from rest_framework.exceptions import APIException
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.serializers import TokenRefreshSerializer as SimpleJWTTokenRefreshSerializer
 from rest_framework_simplejwt.settings import api_settings as simplejwt_settings
@@ -179,6 +180,11 @@ class UserWithTenantSerializer(serializers.ModelSerializer):
         return get_role_permission_codenames(obj.role)
 
 
+class LoginHallSerializer(serializers.Serializer):
+    code = serializers.CharField()
+    display_name = serializers.CharField()
+
+
 class LoginResponseSerializer(serializers.Serializer):
     """Doc-only: the 200 body of `LoginView` — simplejwt's `access`/`refresh`
     plus the `user` that `CustomTokenObtainPairSerializer.validate` adds.
@@ -214,6 +220,14 @@ class LoginLockedResponseSerializer(serializers.Serializer):
     error = serializers.CharField()
     code = serializers.CharField()
     retry_after = serializers.IntegerField()
+
+
+class HallChoiceResponseSerializer(serializers.Serializer):
+    """Doc-only: the 409 body of the officer login (`code` is `hall_required`)."""
+
+    code = serializers.CharField()
+    detail = serializers.CharField()
+    halls = LoginHallSerializer(many=True)
 
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
@@ -255,7 +269,12 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         # TokenObtainPairSerializer.validate, restated so the token can be
         # marked *before* it is serialised: `super().validate` would hand back
         # strings already carrying the default expiry.
-        data = super(TokenObtainPairSerializer, self).validate(attrs)
+        super(TokenObtainPairSerializer, self).validate(attrs)
+        return self._issue(attrs)
+
+    def _issue(self, attrs):
+        """The tokens and `user` payload for `self.user`, already authenticated."""
+        data = {}
         refresh = self.get_token(self.user)
         if attrs.get("remember"):
             refresh.remember()
@@ -267,6 +286,69 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
             update_last_login(None, self.user)
         data["user"] = UserWithTenantSerializer(self.user).data
         return data
+
+
+class HallChoiceRequired(APIException):
+    """409 for the officer app's login: the password matched officers in more than
+    one hall. The body lists only those halls; the client retries with `tenant_code`."""
+
+    status_code = 409
+    default_code = "hall_required"
+
+    def __init__(self, halls):
+        super().__init__({"code": "hall_required", "detail": "请选择所属殿。", "halls": halls})
+
+
+class OfficerTokenObtainPairSerializer(CustomTokenObtainPairSerializer):
+    """Officer-app login: username + password, **no hall chosen** (2026-10-09).
+
+    The app is in the stores, so the hall is found from the account. `User.username`
+    is globally unique today, so the account names exactly one hall and this behaves
+    as the Web login does; the `hall_required` branch is the contract for the day
+    that stops being true (and is what `tenant_code` answers). The password is
+    verified BEFORE any hall is revealed, and every failure is the same
+    `no_active_account` — a wrong password, an unknown name, a soul account and a
+    hall hint that does not match are indistinguishable from outside.
+    """
+
+    tenant_code = serializers.CharField(required=False, allow_blank=True, write_only=True)
+
+    @staticmethod
+    def accounts_named(username):
+        return list(User.objects.filter(username=username).select_related("tenant"))
+
+    def require_second_factor(self, user):
+        """HOOK for officer 2FA (feat/officer-2fa). Called once the password is verified and
+        the account is settled, before any token exists. Raise from here to demand a second
+        factor; the base implementation asks for none."""
+
+    def validate(self, attrs):
+        from rest_framework.exceptions import AuthenticationFailed
+
+        refused = AuthenticationFailed(self.default_error_messages["no_active_account"], "no_active_account")
+        hint = (attrs.get("tenant_code") or "").strip()
+        accounts = self.accounts_named(attrs["username"])
+        if len(accounts) > 1:
+            matches = [u for u in accounts
+                       if u.is_active and u.role != "SOUL" and u.check_password(attrs["password"])]
+            if hint:
+                matches = [u for u in matches if u.tenant_id and u.tenant.code == hint]
+            if not matches:
+                raise refused
+            if len(matches) > 1:
+                raise HallChoiceRequired([
+                    {"code": u.tenant.code, "display_name": u.tenant.display_name}
+                    for u in matches if u.tenant_id
+                ])
+            self.user = matches[0]
+        else:
+            super(TokenObtainPairSerializer, self).validate(attrs)  # authenticates → self.user
+            if hint and not (self.user.tenant_id and self.user.tenant.code == hint):
+                raise refused
+        if self.user.role == "SOUL":
+            raise refused
+        self.require_second_factor(self.user)
+        return self._issue(attrs)
 
 
 class TokenRefreshSerializer(SimpleJWTTokenRefreshSerializer):

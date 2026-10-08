@@ -1630,6 +1630,55 @@ paths:
               schema:
                 $ref: '#/components/schemas/DetailResponse'
           description: ''
+  /api/v1/auth/officer-login/:
+    post:
+      operationId: v1_auth_officer_login_create
+      description: |-
+        POST /api/v1/auth/officer-login/
+        The officer app's login: username + password, no hall chosen. Same throttling and
+        LoginLog as `LoginView` (it is that view); the serializer finds the hall. See
+        `OfficerTokenObtainPairSerializer` for the 409 `hall_required` case.
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OfficerTokenObtainPair'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/OfficerTokenObtainPair'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/OfficerTokenObtainPair'
+        required: true
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginFailedResponse'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HallChoiceResponse'
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginLockedResponse'
+          description: ''
   /api/v1/auth/password-help/:
     post:
       operationId: v1_auth_password_help_create
@@ -9598,6 +9647,123 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/MarkAllReadResult'
+          description: ''
+  /api/v1/officer-app/items/{kind}/{item_id}/:
+    get:
+      operationId: officer_app_todo_item
+      description: 一条的详情:`actionable` 说我现在还能不能处理;已被处理时 `handled_by` 说是谁。
+      parameters:
+      - in: path
+        name: item_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: kind
+        schema:
+          type: string
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TodoItemDetail'
+          description: ''
+        '404':
+          description: No response body
+  /api/v1/officer-app/push-tokens/:
+    post:
+      operationId: officer_app_push_register
+      description: 只认官员令牌(灵魂令牌在认证层就被挡),并要求有租户。
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OfficerPushToken'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/OfficerPushToken'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/OfficerPushToken'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+        '201':
+          description: No response body
+        '400':
+          description: token 格式不对
+  /api/v1/officer-app/push-tokens/unregister/:
+    post:
+      operationId: officer_app_push_unregister
+      description: 204 与 token 是否存在、属于谁无关。
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OfficerPushUnregister'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/OfficerPushUnregister'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/OfficerPushUnregister'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/officer-app/signer-candidates/:
+    get:
+      operationId: officer_app_signer_candidates
+      description: 加签候选人。**只限本殿**(2026-10-09 用户决定:跨殿加签留给官员台)。
+      parameters:
+      - in: query
+        name: q
+        schema:
+          type: string
+        description: 用户名或显示名包含
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SignerCandidate'
+          description: ''
+  /api/v1/officer-app/todo/:
+    get:
+      operationId: officer_app_todo
+      description: 「待我处理」四组:审批节点 / 改派请求 / 缩短冷却申请 / 转生申请,每组计数 + 前 10 条。
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Todo'
           description: ''
   /api/v1/organizations/:
     get:
@@ -21652,6 +21818,33 @@ components:
       - display_name
       - id
       - souls_homed
+    HallChoiceResponse:
+      type: object
+      description: 'Doc-only: the 409 body of the officer login (`code` is `hall_required`).'
+      properties:
+        code:
+          type: string
+        detail:
+          type: string
+        halls:
+          type: array
+          items:
+            $ref: '#/components/schemas/LoginHall'
+      required:
+      - code
+      - detail
+      - halls
+    HandledBy:
+      type: object
+      properties:
+        id:
+          type: integer
+          nullable: true
+        name:
+          type: string
+      required:
+      - id
+      - name
     HandledContent:
       type: object
       description: |-
@@ -23510,6 +23703,16 @@ components:
           type: integer
       required:
       - detail
+    LoginHall:
+      type: object
+      properties:
+        code:
+          type: string
+        display_name:
+          type: string
+      required:
+      - code
+      - display_name
     LoginLockedResponse:
       type: object
       description: |-
@@ -25364,6 +25567,25 @@ components:
       - tenant
       - tenant_name
       - unread
+    OfficerPushToken:
+      type: object
+      properties:
+        token:
+          type: string
+          maxLength: 255
+        platform:
+          $ref: '#/components/schemas/PushPlatformEnum'
+      required:
+      - platform
+      - token
+    OfficerPushUnregister:
+      type: object
+      properties:
+        token:
+          type: string
+          maxLength: 255
+      required:
+      - token
     OfficerRebirthApplication:
       type: object
       description: |-
@@ -25560,6 +25782,35 @@ components:
         * `welcome` - welcome
         * `workflow` - workflow
         * `other` - other
+    OfficerTokenObtainPair:
+      type: object
+      description: |-
+        Officer-app login: username + password, **no hall chosen** (2026-10-09).
+
+        The app is in the stores, so the hall is found from the account. `User.username`
+        is globally unique today, so the account names exactly one hall and this behaves
+        as the Web login does; the `hall_required` branch is the contract for the day
+        that stops being true (and is what `tenant_code` answers). The password is
+        verified BEFORE any hall is revealed, and every failure is the same
+        `no_active_account` — a wrong password, an unknown name, a soul account and a
+        hall hint that does not match are indistinguishable from outside.
+      properties:
+        remember:
+          type: boolean
+          writeOnly: true
+          default: false
+        tenant_code:
+          type: string
+          writeOnly: true
+        username:
+          type: string
+          writeOnly: true
+        password:
+          type: string
+          writeOnly: true
+      required:
+      - password
+      - username
     OperationEnum:
       enum:
       - claim
@@ -31545,6 +31796,22 @@ components:
       description: |-
         * `error` - error
         * `warning` - warning
+    SignerCandidate:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        username:
+          type: string
+        role:
+          type: string
+      required:
+      - id
+      - name
+      - role
+      - username
     SignerPreview:
       type: object
       properties:
@@ -33422,6 +33689,113 @@ components:
       - heart_weight
       - heavier_than_feather
       - kind
+    Todo:
+      type: object
+      properties:
+        approvals:
+          $ref: '#/components/schemas/TodoGroup'
+        reassignments:
+          $ref: '#/components/schemas/TodoGroup'
+        cooldowns:
+          $ref: '#/components/schemas/TodoGroup'
+        rebirths:
+          $ref: '#/components/schemas/TodoGroup'
+      required:
+      - approvals
+      - cooldowns
+      - reassignments
+      - rebirths
+    TodoGroup:
+      type: object
+      properties:
+        count:
+          type: integer
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/TodoItem'
+      required:
+      - count
+      - items
+    TodoItem:
+      type: object
+      properties:
+        kind:
+          type: string
+          description: approval / reassignment / cooldown / rebirth
+        id:
+          type: string
+        title:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        target:
+          $ref: '#/components/schemas/TodoTarget'
+        node_name:
+          type: string
+          description: 仅审批节点:轮到的节点名。
+      required:
+      - created_at
+      - id
+      - kind
+      - target
+      - title
+    TodoItemDetail:
+      type: object
+      description: |-
+        `state`:actionable / already_handled / deadline_passed / permission_changed
+        (与决定失败的 `code` 同一组词)。`handled_by` 在调拨上恒为 null(调拨记录不存决定人)。
+      properties:
+        kind:
+          type: string
+          description: approval / reassignment / cooldown / rebirth
+        id:
+          type: string
+        title:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        actionable:
+          type: boolean
+        state:
+          type: string
+        handled_by:
+          allOf:
+          - $ref: '#/components/schemas/HandledBy'
+          nullable: true
+        handled_at:
+          type: string
+          format: date-time
+          nullable: true
+        workflow_id:
+          type: string
+          description: 审批节点与转生申请:决定走 workflows/<id>/approve_node/。
+        node_id:
+          type: string
+          description: 待决的节点;决定时作为 node_id 传回。
+      required:
+      - actionable
+      - created_at
+      - handled_at
+      - handled_by
+      - id
+      - kind
+      - state
+      - title
+    TodoTarget:
+      type: object
+      description: 推送与列表行落到哪一条:`GET items/<kind>/<id>/`。
+      properties:
+        kind:
+          type: string
+          description: approval / reassignment / cooldown / rebirth
+        id:
+          type: string
+      required:
+      - id
+      - kind
     TokenRefresh:
       type: object
       description: |-
@@ -34498,6 +34872,9 @@ components:
         notes:
           type: string
           default: ''
+        require_reason:
+          type: boolean
+          default: false
         rejection_reason_for_soul:
           type: string
           default: ''

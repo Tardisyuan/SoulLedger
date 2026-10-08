@@ -40,11 +40,13 @@ from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin
 from .serializers import (
     ChangePasswordSerializer,
     CustomTokenObtainPairSerializer,
+    HallChoiceResponseSerializer,
     LoginFailedResponseSerializer,
     LoginLockedResponseSerializer,
     LoginLogSerializer,
     LoginResponseSerializer,
     LogoutRequestSerializer,
+    OfficerTokenObtainPairSerializer,
     PasswordHelpRequestSerializer,
     PasswordResetRefusalSerializer,
     PasswordResetResultSerializer,
@@ -608,6 +610,28 @@ class LoginView(TokenObtainPairView):
                 # tries this address has left before the 429 above.
                 e.detail = {"detail": e.detail, "remaining_attempts": remaining}
             raise
+
+
+class OfficerLoginView(LoginView):
+    """
+    POST /api/v1/auth/officer-login/
+    The officer app's login: username + password, no hall chosen. Same throttling and
+    LoginLog as `LoginView` (it is that view); the serializer finds the hall. See
+    `OfficerTokenObtainPairSerializer` for the 409 `hall_required` case.
+    """
+    serializer_class = OfficerTokenObtainPairSerializer
+
+    @extend_schema(
+        request=OfficerTokenObtainPairSerializer,
+        responses={
+            200: LoginResponseSerializer,
+            401: LoginFailedResponseSerializer,
+            409: HallChoiceResponseSerializer,
+            429: LoginLockedResponseSerializer,
+        },
+    )
+    def post(self, request, *args, **kwargs):
+        return super().post(request, *args, **kwargs)
 
 
 class RefreshView(TokenRefreshView):

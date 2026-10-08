@@ -7,6 +7,7 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     LoginLogViewSet,
     LoginView,
+    OfficerLoginView,
     RefreshView,
     change_password,
     civilizations_view,
@@ -25,6 +26,7 @@ router.register(r"login-logs", LoginLogViewSet, basename="login-logs")
 urlpatterns = [
     path("register/", register_view, name="register"),
     path("login/", LoginView.as_view(), name="login"),
+    path("officer-login/", OfficerLoginView.as_view(), name="officer-login"),
     path("refresh/", RefreshView.as_view(), name="token_refresh"),
     path("logout/", logout_view, name="logout"),
     path("profile/", profile_view, name="profile"),

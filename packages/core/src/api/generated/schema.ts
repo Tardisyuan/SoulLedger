@@ -765,6 +765,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/officer-login/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description POST /api/v1/auth/officer-login/
+         *     The officer app's login: username + password, no hall chosen. Same throttling and
+         *     LoginLog as `LoginView` (it is that view); the serializer finds the hall. See
+         *     `OfficerTokenObtainPairSerializer` for the 409 `hall_required` case.
+         */
+        post: operations["v1_auth_officer_login_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/password-help/": {
         parameters: {
             query?: never;
@@ -4309,6 +4331,91 @@ export interface paths {
         put?: never;
         /** @description Mark all of the user's notifications as read. */
         post: operations["v1_notifications_mark_all_read_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/officer-app/items/{kind}/{item_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 一条的详情:`actionable` 说我现在还能不能处理;已被处理时 `handled_by` 说是谁。 */
+        get: operations["officer_app_todo_item"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/officer-app/push-tokens/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 只认官员令牌(灵魂令牌在认证层就被挡),并要求有租户。 */
+        post: operations["officer_app_push_register"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/officer-app/push-tokens/unregister/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 204 与 token 是否存在、属于谁无关。 */
+        post: operations["officer_app_push_unregister"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/officer-app/signer-candidates/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 加签候选人。**只限本殿**(2026-10-09 用户决定:跨殿加签留给官员台)。 */
+        get: operations["officer_app_signer_candidates"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/officer-app/todo/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 「待我处理」四组:审批节点 / 改派请求 / 缩短冷却申请 / 转生申请,每组计数 + 前 10 条。 */
+        get: operations["officer_app_todo"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -10014,6 +10121,16 @@ export interface components {
             souls_homed: number;
             assistant_enabled: boolean;
         };
+        /** @description Doc-only: the 409 body of the officer login (`code` is `hall_required`). */
+        HallChoiceResponse: {
+            code: string;
+            detail: string;
+            halls: components["schemas"]["LoginHall"][];
+        };
+        HandledBy: {
+            id: number | null;
+            name: string;
+        };
         /**
          * @description 「已处理」的一行,帖子与评论同一形状(见 moderation_views.HandledContentViewSet)。
          *
@@ -10854,6 +10971,10 @@ export interface components {
             detail: string;
             remaining_attempts?: number;
         };
+        LoginHall: {
+            code: string;
+            display_name: string;
+        };
         /**
          * @description Doc-only: the 429 body of `LoginView` once the limiter has tripped.
          *
@@ -11619,6 +11740,13 @@ export interface components {
             /** Format: date-time */
             readonly closed_at: string | null;
         };
+        OfficerPushToken: {
+            token: string;
+            platform: components["schemas"]["PushPlatformEnum"];
+        };
+        OfficerPushUnregister: {
+            token: string;
+        };
         /**
          * @description 官员侧。`current_step` / `can_appeal` 与 /me 同一个函数算(rebirth.py),
          *     `rejection_reason` 就是审批人驳回时填的「给灵魂的理由」,节点内部备注不在这里。
@@ -11698,6 +11826,24 @@ export interface components {
          * @enum {string}
          */
         OfficerScreenEnum: "about" | "actors" | "admin" | "audit" | "corpus" | "cross-judgments" | "dashboard" | "death-sync" | "dispatch" | "disposition" | "judgment" | "ledger" | "menus" | "moderation" | "notifications" | "organizations" | "permissions" | "profile" | "realms" | "rebirth-applications" | "recycle-bin" | "scheduler" | "sentence-requests" | "social" | "soul-credentials" | "soul-inbox" | "souls" | "tenants" | "users" | "welcome" | "workflow" | "other";
+        /**
+         * @description Officer-app login: username + password, **no hall chosen** (2026-10-09).
+         *
+         *     The app is in the stores, so the hall is found from the account. `User.username`
+         *     is globally unique today, so the account names exactly one hall and this behaves
+         *     as the Web login does; the `hall_required` branch is the contract for the day
+         *     that stops being true (and is what `tenant_code` answers). The password is
+         *     verified BEFORE any hall is revealed, and every failure is the same
+         *     `no_active_account` — a wrong password, an unknown name, a soul account and a
+         *     hall hint that does not match are indistinguishable from outside.
+         */
+        OfficerTokenObtainPair: {
+            /** @default false */
+            remember: boolean;
+            tenant_code?: string;
+            username: string;
+            password: string;
+        };
         /**
          * @description * `claim` - claim
          *     * `reassign` - reassign
@@ -14810,6 +14956,12 @@ export interface components {
          * @enum {string}
          */
         SeverityEnum: "error" | "warning";
+        SignerCandidate: {
+            id: number;
+            name: string;
+            username: string;
+            role: string;
+        };
         SignerPreview: {
             approver_type: string;
             actor: components["schemas"]["ApproverPreviewActor"] | null;
@@ -15633,6 +15785,54 @@ export interface components {
             counterweight: number;
             heavier_than_feather: boolean;
         };
+        Todo: {
+            approvals: components["schemas"]["TodoGroup"];
+            reassignments: components["schemas"]["TodoGroup"];
+            cooldowns: components["schemas"]["TodoGroup"];
+            rebirths: components["schemas"]["TodoGroup"];
+        };
+        TodoGroup: {
+            count: number;
+            items: components["schemas"]["TodoItem"][];
+        };
+        TodoItem: {
+            /** @description approval / reassignment / cooldown / rebirth */
+            kind: string;
+            id: string;
+            title: string;
+            /** Format: date-time */
+            created_at: string;
+            target: components["schemas"]["TodoTarget"];
+            /** @description 仅审批节点:轮到的节点名。 */
+            node_name?: string;
+        };
+        /**
+         * @description `state`:actionable / already_handled / deadline_passed / permission_changed
+         *     (与决定失败的 `code` 同一组词)。`handled_by` 在调拨上恒为 null(调拨记录不存决定人)。
+         */
+        TodoItemDetail: {
+            /** @description approval / reassignment / cooldown / rebirth */
+            kind: string;
+            id: string;
+            title: string;
+            /** Format: date-time */
+            created_at: string;
+            actionable: boolean;
+            state: string;
+            handled_by: components["schemas"]["HandledBy"] | null;
+            /** Format: date-time */
+            handled_at: string | null;
+            /** @description 审批节点与转生申请:决定走 workflows/<id>/approve_node/。 */
+            workflow_id?: string;
+            /** @description 待决的节点;决定时作为 node_id 传回。 */
+            node_id?: string;
+        };
+        /** @description 推送与列表行落到哪一条:`GET items/<kind>/<id>/`。 */
+        TodoTarget: {
+            /** @description approval / reassignment / cooldown / rebirth */
+            kind: string;
+            id: string;
+        };
         /**
          * @description SimpleJWT's refresh, on this app's token class — the one whose
          *     `set_exp` honours the `remember` claim on rotation (see `tokens.py`).
@@ -16172,6 +16372,8 @@ export interface components {
             verdict: components["schemas"]["NodeDecisionVerdictEnum"];
             /** @default  */
             notes: string;
+            /** @default false */
+            require_reason: boolean;
             /** @default  */
             rejection_reason_for_soul: string;
         };
@@ -17791,6 +17993,55 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DetailResponse"];
+                };
+            };
+        };
+    };
+    v1_auth_officer_login_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OfficerTokenObtainPair"];
+                "application/x-www-form-urlencoded": components["schemas"]["OfficerTokenObtainPair"];
+                "multipart/form-data": components["schemas"]["OfficerTokenObtainPair"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LoginResponse"];
+                };
+            };
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LoginFailedResponse"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HallChoiceResponse"];
+                };
+            };
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LoginLockedResponse"];
                 };
             };
         };
@@ -24248,6 +24499,138 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MarkAllReadResult"];
+                };
+            };
+        };
+    };
+    officer_app_todo_item: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: string;
+                kind: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TodoItemDetail"];
+                };
+            };
+            /** @description No response body */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    officer_app_push_register: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OfficerPushToken"];
+                "application/x-www-form-urlencoded": components["schemas"]["OfficerPushToken"];
+                "multipart/form-data": components["schemas"]["OfficerPushToken"];
+            };
+        };
+        responses: {
+            /** @description No response body */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No response body */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description token 格式不对 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    officer_app_push_unregister: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OfficerPushUnregister"];
+                "application/x-www-form-urlencoded": components["schemas"]["OfficerPushUnregister"];
+                "multipart/form-data": components["schemas"]["OfficerPushUnregister"];
+            };
+        };
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    officer_app_signer_candidates: {
+        parameters: {
+            query?: {
+                /** @description 用户名或显示名包含 */
+                q?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SignerCandidate"][];
+                };
+            };
+        };
+    };
+    officer_app_todo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Todo"];
                 };
             };
         };
