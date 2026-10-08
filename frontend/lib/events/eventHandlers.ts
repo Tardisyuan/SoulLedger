@@ -113,6 +113,7 @@ export const EVENT_LABELS: Record<string, string> = {
   REBIRTH_APPLICATION_SUBMITTED: "Rebirth application submitted",
   REBIRTH_STATUS_CHANGED: "Rebirth application updated",
   REBIRTH_CROSS_CIV_DECIDED: "Cross-civilization rebirth decided",
+  COOLDOWN_SHORTENING_DECIDED: "Cooldown shortening decided",
 
   // Sentence plan events (受刑计划)
   SENTENCE_PLAN_CREATED: "Sentence plan created",

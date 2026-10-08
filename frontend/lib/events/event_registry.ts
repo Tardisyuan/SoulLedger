@@ -84,6 +84,7 @@ const EVENT_REGISTRY: Record<string, Record<string, EventHandler>> = {
     REBIRTH_APPLICATION_SUBMITTED: handleSoulEvent,
     REBIRTH_STATUS_CHANGED: handleSoulEvent,
     REBIRTH_CROSS_CIV_DECIDED: handleSoulEvent,
+    COOLDOWN_SHORTENING_DECIDED: handleSoulEvent,
     // 受刑计划(docs/ARCHITECTURE-sentence-plan.md,Q9)。阶段 1 只声明,后端没有路径写入;
     // 落在灵魂时间线上,与上面几种同样处理。
     SENTENCE_PLAN_CREATED: handleSoulEvent,
@@ -247,6 +248,7 @@ export const BACKEND_EVENT_TYPES = [
   "SOUL_ACCOUNT_CREATED", "SOUL_ACCOUNT_RETIRED",
   "REBIRTH_APPLICATION_SUBMITTED", "REBIRTH_STATUS_CHANGED",
   "REBIRTH_CROSS_CIV_DECIDED",
+  "COOLDOWN_SHORTENING_DECIDED",
   // Sentence plans (受刑计划)
   "SENTENCE_PLAN_CREATED",
   "SENTENCE_NODE_ACTIVATED",

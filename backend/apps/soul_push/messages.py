@@ -19,6 +19,8 @@ MESSAGES = {
         "rebirth_approved": {"title": "转生申请已批准", "body": "你的转生申请已批准,打开灵魂簿查看。"},
         "rebirth_rejected": {"title": "转生申请被驳回", "body": "你的转生申请被驳回,打开灵魂簿查看理由。"},
         "rebirth_appeal_rejected": {"title": "申诉被驳回", "body": "你对转生申请的申诉被驳回,打开灵魂簿查看理由。"},
+        "cooldown_shortening_approved": {"title": "缩短冷却申请已批准", "body": "你的缩短冷却申请已批准,打开灵魂簿查看新的冷却截止。"},
+        "cooldown_shortening_rejected": {"title": "缩短冷却申请被驳回", "body": "你的缩短冷却申请被驳回,打开灵魂簿查看理由。"},
         "judgment_result": {"title": "审判有了结论", "body": "你的审判有了结论,打开灵魂簿查看。"},
         "disposition_executed": {"title": "处置已执行", "body": "你的处置已执行,打开灵魂簿查看。"},
         "residence_approved": {"title": "即将暂居", "body": "你即将被调往另一文明暂居,打开灵魂簿查看。"},
@@ -45,6 +47,14 @@ MESSAGES = {
         "rebirth_appeal_rejected": {
             "title": "Appeal rejected",
             "body": "Your appeal on the rebirth application was rejected. Open Soul Ledger to see why.",
+        },
+        "cooldown_shortening_approved": {
+            "title": "Cooldown shortening approved",
+            "body": "Your request to shorten the cooldown was approved. Open Soul Ledger to see the new end date.",
+        },
+        "cooldown_shortening_rejected": {
+            "title": "Cooldown shortening rejected",
+            "body": "Your request to shorten the cooldown was rejected. Open Soul Ledger to see why.",
         },
         "judgment_result": {
             "title": "Judgment concluded",
@@ -85,6 +95,8 @@ MESSAGES = {
         "rebirth_approved": {"title": "Dbh Wehem Mesut Hesy Seth", "body": "Dbh Wehem Mesut-Ek Hesy Seth. Wen Medjat Ba Er Maa."},
         "rebirth_rejected": {"title": "Dbh Wehem Mesut Khesef Seth", "body": "Dbh Wehem Mesut-Ek Khesef Seth. Wen Medjat Ba Er Maa Khet."},
         "rebirth_appeal_rejected": {"title": "Nehet Khesef Seth", "body": "Nehet-Ek Er Dbh Wehem Mesut Khesef Seth. Wen Medjat Ba Er Maa Khet."},
+        "cooldown_shortening_approved": {"title": "Khebi Ahet Qebeh Hesy Seth", "body": "Khebi Ahet Qebeh-Ek Hesy Seth. Wen Medjat Ba Er Maa Ahet Qebeh."},
+        "cooldown_shortening_rejected": {"title": "Khebi Ahet Qebeh Khesef Seth", "body": "Khebi Ahet Qebeh-Ek Khesef Seth. Wen Medjat Ba Er Maa Khet."},
         "judgment_result": {"title": "Wedja Khetem", "body": "Wedja-Ek Khetem Seth. Wen Medjat Ba Er Maa."},
         "disposition_executed": {"title": "Wetep Iri Seth", "body": "Wetep-Ek Iri Seth. Wen Medjat Ba Er Maa."},
         "residence_approved": {"title": "Hemes Taui Ky Hesy", "body": "Hemes-Ek Em Taui Ky Hesy Seth. Wen Medjat Ba Er Maa."},
