@@ -13900,6 +13900,10 @@ export interface components {
              *     * `FAIL` - 不过(第二次死亡)
              */
             fork?: (components["schemas"]["RealmForkEnum"] | components["schemas"]["BlankEnum"] | components["schemas"]["NullEnum"]) | null;
+            memory_reset_mechanism?: components["schemas"]["MemoryResetMechanismEnum"] | components["schemas"]["BlankEnum"];
+            cycle_limit?: number | null;
+            /** @description Whether this realm requires a formal judgment process before entry */
+            is_judgment_required?: boolean;
         };
         /**
          * @description Serializer that resolves the best-fit name based on Accept-Language header.

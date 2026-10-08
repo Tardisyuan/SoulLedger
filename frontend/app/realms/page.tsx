@@ -18,6 +18,7 @@ import { usePermissions } from "@/src/hooks/usePermissions";
 import { Drawer } from "@/src/components/ui/Drawer";
 import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
 import { realmStationLabel } from "@/src/components/realms/RouteTopology";
+import { RealmFacts } from "@/src/components/realms/RealmFacts";
 import { usePlaque } from "@/src/components/plaque/Plaque";
 import { useHall } from "@/src/components/plaque/useHall";
 import { RouteMap } from "@/src/components/realms/RouteMap";
@@ -272,6 +273,25 @@ function RealmTree({
   const [editing, setEditing] = useState<{ id: string; via: "row" | "sheet" } | null>(null);
   const [draft, setDraft] = useState("");
   const [saved, setSaved] = useState<RealmCapacityResult | null>(null);
+  const [factsOpen, setFactsOpen] = useState<ReadonlySet<string>>(new Set());
+  const toggleFacts = (id: string) =>
+    setFactsOpen((prev) => {
+      const next = new Set(prev);
+      if (!next.delete(id)) next.add(id);
+      return next;
+    });
+  const factsToggle = (realm: Realm) => (
+    <button
+      type="button"
+      onClick={() => toggleFacts(realm.id)}
+      aria-expanded={factsOpen.has(realm.id)}
+      aria-label={`${t(factsOpen.has(realm.id) ? "realms.facts.hide" : "realms.facts.show")} · ${nameOf(realm)}`}
+      data-facts-toggle={realm.realm_code}
+      className="ml-2 inline-flex items-center min-h-(--control-h-sm) text-2xs font-normal text-[oklch(var(--color-ink-muted))] underline decoration-dotted decoration-1 underline-offset-4"
+    >
+      {t(factsOpen.has(realm.id) ? "realms.facts.hide" : "realms.facts.show")}
+    </button>
+  );
   const save = useMutation({
     mutationFn: ({ id, capacity }: { id: string; capacity: number | null }) =>
       realmsApi.setCapacity(id, capacity).then((r) => r.data),
@@ -398,6 +418,7 @@ function RealmTree({
                       {parents.has(realm.id) ? "▾" : "　"}
                     </span>
                     {nameOf(realm)}
+                    {factsToggle(realm)}
                   </td>
                   <td title={realm.realm_code} className={`truncate pr-3 font-mono text-xs ${MUTED}`}>{realm.realm_code}</td>
                   <td title={realm.kind ? t(`realms.kind.${realm.kind}`) : realm.realm_type} className={`truncate pr-3 ${MUTED}`}>{typeOf(realm)}</td>
@@ -412,6 +433,13 @@ function RealmTree({
                   </td>
                   <td className={`pr-4 ${MUTED}`}>{eternal(realm)}</td>
                 </tr>
+                {factsOpen.has(realm.id) && (
+                  <tr className="border-b border-[oklch(var(--color-line))]">
+                    <td colSpan={5} className="py-2 pr-4 bg-[oklch(var(--color-ink)/0.04)]" style={{ paddingLeft: 16 + depth * 20 }}>
+                      <RealmFacts realm={realm} />
+                    </td>
+                  </tr>
+                )}
                 {inline && (
                   <tr className="border-b border-[oklch(var(--color-line))]">
                     <td colSpan={5} className="pb-3 pl-12 pr-4 text-xs bg-[oklch(var(--color-ink)/0.04)]">
@@ -457,6 +485,10 @@ function RealmTree({
               ) : (
                 body
               )}
+              <div className={`pb-2 ${depth ? "pl-8" : "pl-3"} pr-3`}>
+                {factsToggle(realm)}
+                {factsOpen.has(realm.id) && <RealmFacts realm={realm} />}
+              </div>
             </li>
           );
         })}
