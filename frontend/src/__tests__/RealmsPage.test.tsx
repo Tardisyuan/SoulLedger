@@ -68,6 +68,19 @@ it("opens on the first civilization with realms and draws its line, not a schema
   expect(topo).toHaveTextContent("第一殿");
 });
 
+it("the route map marks an eternal stop with ≡ and its legend says what that means", async () => {
+  mockedList.mockResolvedValue({
+    data: { results: [...REALMS, R("DY_COURT_06_ETERNAL", "CHINESE", { order: 6, kind: "HALL", is_eternal: true })], count: 10 },
+  });
+  renderPage();
+  const map = (await screen.findByTestId("realm-topology")).querySelector("[data-route-topology]")!;
+  const eternal = map.querySelectorAll('[data-eternal="true"]');
+  expect(eternal).toHaveLength(1);
+  expect(map.querySelector('[data-station="DY_COURT_06_ETERNAL"]')!.querySelector('[data-eternal="true"]')).not.toBeNull();
+  expect(map.querySelector('[data-station="DY_COURT_01_QINGUANG"]')!.querySelector('[data-eternal="true"]')).toBeNull();
+  expect(within(map as HTMLElement).getByTestId("map-legend-eternal")).toHaveTextContent("不出狱、不轮回");
+});
+
 it("nests children under their parent in the tree table", async () => {
   renderPage();
   const tree = await screen.findByTestId("realm-tree");

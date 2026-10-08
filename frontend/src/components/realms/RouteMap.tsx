@@ -50,6 +50,15 @@ export function RouteMap({
       />
     );
 
+  // ≡ = 永恒(不出狱、不轮回,含原狱):图例与树表同一句,键是 realms.tree.legend_eternal。
+  const eternal = (s: Station): ReactNode =>
+    s.realm?.is_eternal ? (
+      <span data-eternal="true" title={t("realms.tree.legend_eternal")} className={`shrink-0 text-xs ${MUTED}`}>
+        <span aria-hidden="true">≡</span>
+        <span className="sr-only">{t("realms.table.eternal_yes")}</span>
+      </span>
+    ) : null;
+
   /** One stop: mark · name · held. `end` mirrors it (the Greek right road). `terminal`: no place, no count. */
   const stop = (s: Station, { end = false, terminal = false } = {}) => {
     const on = held(s) > 0;
@@ -59,6 +68,7 @@ export function RouteMap({
         <span title={tip(s)} className={`min-w-0 flex-1 truncate text-sm ${end ? "text-right" : ""} ${on ? "text-[oklch(var(--color-ink))]" : MUTED}`}>
           {name(s)}
         </span>
+        {eternal(s)}
         {!terminal && <span className={`font-mono text-xs ${on ? "" : MUTED}`}>{count(s)}</span>}
       </li>
     );
@@ -112,6 +122,7 @@ export function RouteMap({
                           <span aria-hidden="true">{on ? "■ " : "□ "}</span>
                           {name(s)}
                         </span>
+                        {eternal(s)}
                         <span className={`font-mono text-xs ${on ? "" : MUTED}`}>{count(s)}</span>
                       </li>
                     );
@@ -195,6 +206,7 @@ export function RouteMap({
         <span>{t("realms.map.legend_held")}</span>
         <span>{t("realms.map.legend_empty")}</span>
         <span>{t("realms.map.legend_count")}</span>
+        <span data-testid="map-legend-eternal">{t("realms.tree.legend_eternal")}</span>
         <span className="ml-auto">{t("realms.map.read_only")}</span>
       </div>
     </div>
