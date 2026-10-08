@@ -1126,7 +1126,24 @@
       "empty": "Nen Medu.",
       "occurrences": "Kheper: Sep {{n}}",
       "milestone": "Sekhet Dens",
-      "clause": "Djedu"
+      "clause": "Djedu",
+      "form": {
+        "add_button": "Redi Sep",
+        "add_title": "Redi Sesh Nefer Hena Isfet",
+        "edit_title": "Khemen Sesh Nefer Hena Isfet",
+        "type": "Iru",
+        "occurrence_count": "Kheper Sep",
+        "life_stage": "Ankh",
+        "statute": "Djed Hep",
+        "statute_none": "Nen Djed",
+        "clause_none": "Nen Djedu",
+        "evidence_source": "Medu Maat",
+        "evidence_note": "Medu Seth",
+        "count_needs_clause": "Setep Djedu Hena Sep Kheper",
+        "clause_needs_count": "Sesh Sep Kheper Hena Djedu",
+        "weight_range": "Aha: 1 Er 100",
+        "snapshot": "Sau Hep"
+      }
     },
     "series_effective": "Em Iri",
     "series_decayed": "Khebi Seth",
