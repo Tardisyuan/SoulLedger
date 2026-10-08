@@ -22,6 +22,8 @@ class SoulFilter(filters.FilterSet):
     current_state = filters.ChoiceFilter(choices=SoulState.choices)
     state = filters.ChoiceFilter(field_name="current_state", choices=SoulState.choices)
     tenant__code = filters.CharFilter()
+    # 批量导入的批次(apps/souls/importer.py):提交成功后列表据此只看这一批。
+    import_batch = filters.UUIDFilter()
 
     # Derived civilization filter (maps to tenant)
     civilization = filters.ChoiceFilter(choices=Civilization.choices, method="filter_civilization")
@@ -56,7 +58,7 @@ class SoulFilter(filters.FilterSet):
 
     class Meta:
         model = Soul
-        fields = ["current_state", "tenant__code"]
+        fields = ["current_state", "tenant__code", "import_batch"]
 
     search_fields = ["name", "birth_name", "origin_location", "description"]
     # death_date was dropped as a real field in favour of death_year/month/day
