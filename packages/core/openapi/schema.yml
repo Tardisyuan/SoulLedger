@@ -16270,7 +16270,7 @@ paths:
           description: ''
   /api/v1/tenants/{code}/mfa-roles/:
     get:
-      operationId: v1_tenants_mfa_roles_retrieve
+      operationId: v1_tenants_mfa_roles_list
       description: 殿设置 › 安全(A12):每个可持有的角色一行 —— 要不要求、本殿几人持有、几人已开启。
       parameters:
       - in: path
@@ -16278,6 +16278,24 @@ paths:
         schema:
           type: string
         required: true
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
       tags:
       - v1
       security:
@@ -16287,7 +16305,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Tenant'
+                $ref: '#/components/schemas/PaginatedTenantMfaRoleRowList'
           description: ''
   /api/v1/tenants/{code}/seal-glyphs/:
     patch:
@@ -16337,13 +16355,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PatchedTenant'
+              $ref: '#/components/schemas/PatchedTenantSettings'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/PatchedTenant'
+              $ref: '#/components/schemas/PatchedTenantSettings'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/PatchedTenant'
+              $ref: '#/components/schemas/PatchedTenantSettings'
       security:
       - jwtAuth: []
       responses:
@@ -27040,6 +27058,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Tenant'
+    PaginatedTenantMfaRoleRowList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/TenantMfaRoleRow'
     PaginatedUserManagementList:
       type: object
       required:
@@ -28878,40 +28919,28 @@ components:
         evidence_note:
           type: string
           description: Free text about the source, e.g. which witness or which register.
-    PatchedTenant:
+    PatchedTenantSealGlyphs:
       type: object
+      description: '`PATCH /tenants/{code}/seal-glyphs/` 的请求体 —— 只有这一个字段可写。'
       properties:
-        id:
-          type: integer
-          readOnly: true
-        code:
-          type: string
-          readOnly: true
-        display_name:
-          type: string
-          maxLength: 200
-        description:
-          type: string
-        is_active:
-          type: boolean
-        dispatch_enabled:
-          type: boolean
-        api_endpoint:
-          oneOf:
-          - type: string
-            format: uri
-            maxLength: 200
-          - type: string
-            maxLength: 0
-        settings: {}
-        civilization:
-          type: string
-          readOnly: true
         seal_glyphs:
           type: array
           items:
             type: string
-          readOnly: true
+          maxItems: 2
+    PatchedTenantSettings:
+      type: object
+      description: |-
+        `PATCH /tenants/{code}/settings/` 的请求体(ADMIN):只收这几个**已知**的字段,不收整份 `settings` JSON。
+
+        `soul_rebirth_cooldown_days` 是 `settings` 里的一个键(`apps/soul_accounts/rebirth.py::cooldown_days`
+        读它,负数按 0 算,所以这里下限 0,上限 365);写它时**合并**进现有 `settings`,别的键(如助手管理页写的
+        `assistant_enabled`)原样保留;给 `null` 就删掉这个键,回到默认 30 天。
+      properties:
+        description:
+          type: string
+        dispatch_enabled:
+          type: boolean
         hall_name:
           type: string
           description: 殿司展示名(简体中文)
@@ -28924,19 +28953,16 @@ components:
           type: string
           description: 殿司展示名(egy)
           maxLength: 80
-        created_at:
-          type: string
-          format: date-time
-          readOnly: true
-    PatchedTenantSealGlyphs:
-      type: object
-      description: '`PATCH /tenants/{code}/seal-glyphs/` 的请求体 —— 只有这一个字段可写。'
-      properties:
-        seal_glyphs:
+        soul_rebirth_cooldown_days:
+          type: integer
+          maximum: 365
+          minimum: 0
+          nullable: true
+        mfa_required_roles:
           type: array
           items:
             type: string
-          maxItems: 2
+            maxLength: 20
     PatchedUser:
       type: object
       description: |-
@@ -33813,6 +33839,26 @@ components:
       - display_name
       - id
       - seal_glyphs
+    TenantMfaRoleRow:
+      type: object
+      description: One row of `GET /tenants/{code}/mfa-roles/` (殿设置 › 安全).
+      properties:
+        role:
+          type: string
+        required:
+          type: boolean
+        always:
+          type: boolean
+        total:
+          type: integer
+        enabled:
+          type: integer
+      required:
+      - always
+      - enabled
+      - required
+      - role
+      - total
     TenantSoulStats:
       type: object
       properties:

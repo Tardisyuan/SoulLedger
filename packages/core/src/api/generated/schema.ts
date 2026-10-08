@@ -7510,7 +7510,7 @@ export interface paths {
             cookie?: never;
         };
         /** @description 殿设置 › 安全(A12):每个可持有的角色一行 —— 要不要求、本殿几人持有、几人已开启。 */
-        get: operations["v1_tenants_mfa_roles_retrieve"];
+        get: operations["v1_tenants_mfa_roles_list"];
         put?: never;
         post?: never;
         delete?: never;
@@ -12577,6 +12577,21 @@ export interface components {
             previous?: string | null;
             results: components["schemas"]["Tenant"][];
         };
+        PaginatedTenantMfaRoleRowList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["TenantMfaRoleRow"][];
+        };
         PaginatedUserManagementList: {
             /** @example 123 */
             count: number;
@@ -13543,29 +13558,28 @@ export interface components {
             /** @description Free text about the source, e.g. which witness or which register. */
             evidence_note?: string;
         };
-        PatchedTenant: {
-            readonly id?: number;
-            readonly code?: string;
-            display_name?: string;
+        /** @description `PATCH /tenants/{code}/seal-glyphs/` 的请求体 —— 只有这一个字段可写。 */
+        PatchedTenantSealGlyphs: {
+            seal_glyphs?: string[];
+        };
+        /**
+         * @description `PATCH /tenants/{code}/settings/` 的请求体(ADMIN):只收这几个**已知**的字段,不收整份 `settings` JSON。
+         *
+         *     `soul_rebirth_cooldown_days` 是 `settings` 里的一个键(`apps/soul_accounts/rebirth.py::cooldown_days`
+         *     读它,负数按 0 算,所以这里下限 0,上限 365);写它时**合并**进现有 `settings`,别的键(如助手管理页写的
+         *     `assistant_enabled`)原样保留;给 `null` 就删掉这个键,回到默认 30 天。
+         */
+        PatchedTenantSettings: {
             description?: string;
-            is_active?: boolean;
             dispatch_enabled?: boolean;
-            api_endpoint?: string;
-            settings?: unknown;
-            readonly civilization?: string;
-            readonly seal_glyphs?: string[];
             /** @description 殿司展示名(简体中文) */
             hall_name?: string;
             /** @description 殿司展示名(English) */
             hall_name_en?: string;
             /** @description 殿司展示名(egy) */
             hall_name_egy?: string;
-            /** Format: date-time */
-            readonly created_at?: string;
-        };
-        /** @description `PATCH /tenants/{code}/seal-glyphs/` 的请求体 —— 只有这一个字段可写。 */
-        PatchedTenantSealGlyphs: {
-            seal_glyphs?: string[];
+            soul_rebirth_cooldown_days?: number | null;
+            mfa_required_roles?: string[];
         };
         /**
          * @description The serializer behind `PATCH /auth/profile/` — what a user may change
@@ -15827,6 +15841,14 @@ export interface components {
             hall_name_egy?: string;
             /** Format: date-time */
             readonly created_at: string;
+        };
+        /** @description One row of `GET /tenants/{code}/mfa-roles/` (殿设置 › 安全). */
+        TenantMfaRoleRow: {
+            role: string;
+            required: boolean;
+            always: boolean;
+            total: number;
+            enabled: number;
         };
         TenantSoulStats: {
             tenant_id: number;
@@ -29712,9 +29734,16 @@ export interface operations {
             };
         };
     };
-    v1_tenants_mfa_roles_retrieve: {
+    v1_tenants_mfa_roles_list: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Which field to use when ordering the results. */
+                ordering?: string;
+                /** @description A page number within the paginated result set. */
+                page?: number;
+                /** @description A search term. */
+                search?: string;
+            };
             header?: never;
             path: {
                 code: string;
@@ -29728,7 +29757,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Tenant"];
+                    "application/json": components["schemas"]["PaginatedTenantMfaRoleRowList"];
                 };
             };
         };
@@ -29771,9 +29800,9 @@ export interface operations {
         };
         requestBody?: {
             content: {
-                "application/json": components["schemas"]["PatchedTenant"];
-                "application/x-www-form-urlencoded": components["schemas"]["PatchedTenant"];
-                "multipart/form-data": components["schemas"]["PatchedTenant"];
+                "application/json": components["schemas"]["PatchedTenantSettings"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedTenantSettings"];
+                "multipart/form-data": components["schemas"]["PatchedTenantSettings"];
             };
         };
         responses: {
