@@ -1604,6 +1604,8 @@
     "all_resources": "Khet Neb",
     "no_logs": "Nen Medew Maa Djer",
     "clear_filters": "Fekh Setep",
+    "export": "Bek Seth",
+    "export_failed": "Nen Wehem Medew",
     "access_denied": "Nen Was Aq",
     "affected": "Khet Em Khet",
     "search_placeholder": "Hehy Khet Er Medu…",
@@ -1894,6 +1896,13 @@
       "legend_empty": "□ Nen",
       "legend_count": "Hesb = Em Sekhet",
       "read_only": "Maa Wa · Tut"
+    },
+    "facts": {
+      "show": "Medu",
+      "hide": "Imen",
+      "cycle_limit": "Sep Wehem Mesut Er Pehwy",
+      "judgment_required": "Wedja: Em Tepy",
+      "judgment_not_required": "Nen Wedja"
     },
     "tree": {
       "title": "Ta Neb",

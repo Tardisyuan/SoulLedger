@@ -4,6 +4,8 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { auditApi, PAGE_SIZE, type AuditLogEntry } from "@soulledger/core/api";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { useToast } from "@/src/contexts/ToastContext";
+import { saveBlob } from "@/src/lib/saveBlob";
 import { usePlaque } from "@/src/components/plaque/Plaque";
 import { useHall } from "@/src/components/plaque/useHall";
 import { useTenant } from "@/src/contexts/TenantContext";
@@ -116,21 +118,34 @@ export default function AuditPage() {
     return from.toISOString().slice(0, 10);
   }, [datePreset]);
 
+  // 列表与导出共用的服务端筛选。`search` 不在其中:它只筛已取回的这一页(见下),
+  // 所以导出的是这组筛选下的全部行,不受搜索框影响。
+  const filterParams: Record<string, string> = {};
+  if (actionFilter) filterParams.action = actionFilter;
+  if (resourceFilter) filterParams.resource = resourceFilter;
+  if (dateFrom) filterParams.start_date = dateFrom;
+  if (ordering) filterParams.ordering = ordering;
+
+  const { showToast } = useToast();
+  const [exporting, setExporting] = useState(false);
+  const exportCsv = async () => {
+    if (exporting) return;
+    setExporting(true);
+    try {
+      saveBlob((await auditApi.exportCsv(filterParams)).data, "audit_logs.csv");
+    } catch {
+      showToast(t("audit.export_failed"), "error");
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const { data, isLoading, isError, refetch } = useQuery({
     // `search` deliberately excluded — it filters the already-fetched page
     // client-side (see below) rather than triggering a new request per keystroke.
     queryKey: ["audit", page, actionFilter, resourceFilter, datePreset, ordering],
     queryFn: async () => {
-      const params: Record<string, string> = {
-        page: String(page),
-        page_size: String(PAGE_SIZE),
-      };
-      if (actionFilter) params.action = actionFilter;
-      if (resourceFilter) params.resource = resourceFilter;
-      if (dateFrom) params.start_date = dateFrom;
-      if (ordering) params.ordering = ordering;
-
-      const res = await auditApi.list(params);
+      const res = await auditApi.list({ page: String(page), page_size: String(PAGE_SIZE), ...filterParams });
       return res.data;
     },
     enabled: canReadAudit,
@@ -301,6 +316,11 @@ export default function AuditPage() {
       variant="full"
       title={title}
       tabs={<AuditTabs />}
+      actions={
+        <Button type="button" variant="secondary" loading={exporting} onClick={exportCsv}>
+          {t("audit.export")}
+        </Button>
+      }
       filters={
         /* 筛选签(规范 v1 §2),与灵魂列表同一套:搜索框用共享的 `fieldControl`,
            三个枚举筛选各是一枚「维度 · 值 ×」。

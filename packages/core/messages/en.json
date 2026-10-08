@@ -1604,6 +1604,8 @@
     "all_resources": "All Resources",
     "no_logs": "No audit logs",
     "clear_filters": "Clear Filters",
+    "export": "Export",
+    "export_failed": "Export failed",
     "access_denied": "Access Denied",
     "affected": "Affected",
     "search_placeholder": "Search resource or description…",
@@ -1894,6 +1896,13 @@
       "legend_empty": "□ empty",
       "legend_count": "number = held",
       "read_only": "Read-only sketch"
+    },
+    "facts": {
+      "show": "Details",
+      "hide": "Hide",
+      "cycle_limit": "Rebirth limit",
+      "judgment_required": "Judgment required before entry",
+      "judgment_not_required": "No judgment needed to enter"
     },
     "tree": {
       "title": "Realm tree",

@@ -275,6 +275,22 @@ class TestExport:
         assert "外" not in {r[3] for r in rows}
         assert len(rows) == 3
 
+    def test_an_admin_file_crosses_halls_exactly_as_the_screen_does(self, api_client, admin_user, souls):
+        # 用户决定:ADMIN 导出跨殿,与屏幕一致。文件与屏幕同取自 `journal_records`,
+        # 所以别殿的行既在四柱里,也在文件里;非 ADMIN 的文件里没有(上一条)。
+        eg = plan.tenant("EG_DUAT")
+        other = Soul.objects.create(name="外", tenant=eg, current_state=SoulState.ALIVE)
+        _record(other, RecordType.MERIT, 50, dt.datetime(2026, 6, 2, tzinfo=UTC), category="CHARITY")
+        _login(api_client, admin_user, "ledger.read")
+        _, *rows = _csv(api_client.get(EXPORT, {"month": "2026-06"}))
+        assert "外" in {r[3] for r in rows}
+        assert len(rows) == 4
+        body = api_client.get(URL, {"month": "2026-06"}).json()
+        assert len(rows) == body["record_count"]
+        assert sum(int(r[-2] or 0) for r in rows) == body["received"]
+        _, *rows = _csv(api_client.get(EXPORT, {"month": "2026-06", "category": "CHARITY"}))
+        assert sorted(r[3] for r in rows) == ["乙", "外", "甲"]
+
     def test_a_formula_in_a_name_or_description_is_neutralised(self, api_client, judge_user, cn):
         soul = Soul.objects.create(name='=HYPERLINK("http://evil","x")', tenant=cn, current_state=SoulState.ALIVE)
         _record(soul, RecordType.MERIT, 1, dt.datetime(2026, 6, 3, tzinfo=UTC), description="@SUM(A1)")
