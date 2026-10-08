@@ -111,6 +111,8 @@ describe("the five strips read it from there", () => {
     "src/components/assist-admin/parts.tsx",
     // 2026-10-04:审计页的「操作记录 / 登录日志」与 Death-Sync 页的「登记 / API 密钥」页签(两条路由，同 assist-admin)。
     "src/components/audit/AuditTabs.tsx",
+    // 2026-10-08:仪表盘「趋势」的区间与维度两组开关(aria-pressed,同仪表盘页签)。
+    "src/components/dashboard/TrendsPanel.tsx",
     "src/components/death-sync/DeathSyncTabs.tsx",
     // 2026-10-02(A5):动态页右列「关注」卡的「关注中 / 粉丝」两个页签。
     "src/components/social/FollowPanel.tsx",
