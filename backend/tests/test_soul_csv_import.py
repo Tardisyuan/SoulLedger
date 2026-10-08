@@ -214,9 +214,11 @@ def test_a_soft_deleted_soul_does_not_block_its_name(world):
 
 # ── commit ────────────────────────────────────────────────────────────────
 
-def test_commit_creates_souls_in_the_callers_tenant_and_audits_the_batch(world):
+def test_commit_creates_souls_in_the_callers_tenant_and_audits_the_batch(world, django_capture_on_commit_callbacks):
     body = HEADER + _row(name="甲魂", birth_date="-612", description="d") + _row(name="乙魂", death_date="1900-01-02")
-    r = _post(world["client"], COMMIT, body)
+    # The per-soul CREATE rows are written by the audit signal on commit; run those callbacks.
+    with django_capture_on_commit_callbacks(execute=True):
+        r = _post(world["client"], COMMIT, body)
     assert r.status_code == 201, r.content
     assert r.data["created"] == 2
     souls = Soul.objects.filter(import_batch=r.data["batch_id"])

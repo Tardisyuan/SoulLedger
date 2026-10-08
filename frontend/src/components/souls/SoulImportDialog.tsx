@@ -16,7 +16,6 @@ import {
 import { CIVILIZATION_OPTIONS } from "@soulledger/core/config/civilizations";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
-import { useToast } from "@/src/contexts/ToastContext";
 import { saveBlob } from "@/src/lib/saveBlob";
 import { Button } from "@/src/components/ui/Button";
 import { FilterChipToggle } from "@/src/components/ui/FilterChip";
@@ -44,7 +43,6 @@ export function soulImportTemplate(civilization: string): string {
 export function SoulImportDialog({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const { t } = useI18n();
   const { user } = useTenant();
-  const { showToast } = useToast();
   const previewMutation = useSoulImportPreview();
   const commitMutation = useSoulImportCommit();
   const input = useRef<HTMLInputElement>(null);
@@ -94,7 +92,6 @@ export function SoulImportDialog({ isOpen, onClose }: { isOpen: boolean; onClose
       onSuccess: (result) => {
         setBatchId(result.batch_id);
         setCreated(result.created);
-        showToast(t("souls.import.success", { n: String(result.created) }), "success");
       },
       onError: (error) => {
         const refusal = soulImportRowsRefusalOf(error);

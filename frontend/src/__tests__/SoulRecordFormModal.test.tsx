@@ -134,7 +134,8 @@ describe("新增", () => {
     const snapshot = await screen.findByTestId("record-snapshot");
     expect(snapshot).toHaveTextContent("CN-1 赈济篇");
     expect(onClose).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole("button", { name: tZh("common.close") }));
+    // The footer's 「关闭」, not the header's Esc chip (which carries the same accessible name).
+    fireEvent.click(screen.getByText(tZh("common.close"), { selector: "button" }));
     expect(onClose).toHaveBeenCalled();
   });
 

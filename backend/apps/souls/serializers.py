@@ -770,7 +770,9 @@ class SoulBatchRecycleErrorSerializer(serializers.Serializer):
 
 class SoulImportUploadSerializer(serializers.Serializer):
     """Multipart body of the two import endpoints: the CSV, nothing else."""
-    file = serializers.FileField()
+    # allow_empty_file: an empty upload must reach the importer, which names it `empty_file`;
+    # DRF's own refusal carries no code the web can translate.
+    file = serializers.FileField(allow_empty_file=True)
 
 
 class SoulImportCellErrorSerializer(serializers.Serializer):

@@ -53,11 +53,25 @@ from apps.souls.serializers import (
 def _record_errors(serializer):
     """400 for a record write: the usual `{field: [message]}` plus `error_codes` — `{field: [code]}` in the
     same order — so a client maps the stable code to its own words instead of matching English text."""
+    # `serializer.errors` holds DRF ErrorDetail strings, each carrying its `.code`. (A serializer has no
+    # `get_full_details()` — that is on ValidationError; calling it here was a 500 on every invalid write.)
     codes = {
-        field: [d.get("code", "invalid") if isinstance(d, dict) else "invalid" for d in (details if isinstance(details, list) else [details])]
-        for field, details in serializer.get_full_details().items()
+        field: [getattr(d, "code", None) or "invalid" for d in (details if isinstance(details, list) else [details])]
+        for field, details in serializer.errors.items()
     }
     return Response({**serializer.errors, "error_codes": codes}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class _ImportRefusedError(Exception):
+    """A file-level import refusal. Returned as a plain 400 body rather than raised as DRF's
+    ValidationError, which coerces every value to a string list (`max_rows` arrived as "1000")."""
+
+    def __init__(self, payload):
+        super().__init__(payload.get("code"))
+        self.payload = payload
+
+    def response(self):
+        return Response(self.payload, status=status.HTTP_400_BAD_REQUEST)
 
 
 class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetMixin, viewsets.ModelViewSet):
@@ -347,12 +361,12 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
         upload.is_valid(raise_exception=True)
         tenant = getattr(request, "tenant", None)
         if tenant is None:
-            raise ValidationError({"code": "no_tenant"})
+            raise _ImportRefusedError({"code": "no_tenant"})
         try:
             data = upload.validated_data["file"].read(importer.MAX_BYTES + 1)
             return importer.validate_csv(data, tenant), tenant
         except importer.ImportFileError as exc:
-            raise ValidationError({"code": exc.code, **exc.detail}) from exc
+            raise _ImportRefusedError({"code": exc.code, **exc.detail}) from exc
 
     @extend_schema(
         request={"multipart/form-data": SoulImportUploadSerializer},
@@ -366,7 +380,10 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
         birth_name, description. Dates are `YYYY`, `YYYY-MM` or `YYYY-MM-DD`, negative for
         BCE. At most `importer.MAX_ROWS` rows. `civilization` must be the caller's own.
         """
-        results, _tenant = self._import_rows(request)
+        try:
+            results, _tenant = self._import_rows(request)
+        except _ImportRefusedError as refused:
+            return refused.response()
         return Response(importer.summarize(results))
 
     @extend_schema(
@@ -387,7 +404,10 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
         from apps.audit.models import AuditAction, AuditLog
         from apps.core.client_ip import get_client_ip
 
-        results, tenant = self._import_rows(request)
+        try:
+            results, tenant = self._import_rows(request)
+        except _ImportRefusedError as refused:
+            return refused.response()
         if any(r.errors for r in results):
             return Response(importer.summarize(results), status=status.HTTP_422_UNPROCESSABLE_ENTITY)
         with transaction.atomic():

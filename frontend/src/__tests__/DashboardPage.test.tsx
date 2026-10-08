@@ -669,7 +669,8 @@ describe("DashboardPage export", () => {
     renderPage();
 
     await waitFor(() =>
-      expect(screen.getAllByRole("button", { pressed: true }).length).toBe(1)
+      // The trends panel's range / dimension toggles live in their own role="group"s.
+      expect(screen.getAllByRole("button", { pressed: true }).filter((b) => !b.closest('[role="group"]')).length).toBe(1)
     );
   });
 });

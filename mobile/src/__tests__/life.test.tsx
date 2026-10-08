@@ -255,6 +255,8 @@ describe("a record's basis", () => {
     expect(screen.queryByTestId("record-stage-r2")).toBeNull();
     // The soul never sees where the record came from.
     expect(screen.queryByText(/证人|WITNESS/)).toBeNull();
+    // An Animated.View update lands one tick after these assertions; flush it so it isn't an act() warning.
+    await act(async () => {});
   });
 });
 
