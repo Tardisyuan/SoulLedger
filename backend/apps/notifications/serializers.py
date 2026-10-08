@@ -118,3 +118,14 @@ class MarkAllReadResultSerializer(serializers.Serializer):
     """
 
     marked_read = serializers.IntegerField()
+
+
+class NotificationEmailFailureSerializer(serializers.Serializer):
+    error = serializers.CharField()
+    at = serializers.DateTimeField()
+
+
+class NotificationEmailStatusSerializer(serializers.Serializer):
+    """`{"last_failure": {error, at} | null}` — what `email_status` returns(apps/notifications/tasks.py)。"""
+
+    last_failure = NotificationEmailFailureSerializer(allow_null=True)

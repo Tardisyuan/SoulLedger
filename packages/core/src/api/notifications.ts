@@ -22,7 +22,13 @@ export interface Notification {
   request_context?: { hall: string | null; role: string; count_24h: number; username: string } | null;
 }
 
+/** `GET /notifications/email-status/`: the caller's last failed email, or null. */
+export interface NotificationEmailStatus {
+  last_failure: { error: string; at: string } | null;
+}
+
 export const notificationsApi = {
+  emailStatus: () => api.get<NotificationEmailStatus>("/notifications/email-status/"),
   list: (params?: Record<string, string>) => api.get<PaginatedResponse<Notification>>("/notifications/", { params }),
   markRead: (id: string | number) => api.post<Notification>(`/notifications/${id}/mark_read/`),
   markAllRead: () => api.post<{ marked_read: number }>("/notifications/mark_all_read/"),

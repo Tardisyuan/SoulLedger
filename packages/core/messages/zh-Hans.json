@@ -1629,7 +1629,11 @@
     "profile_updated": "个人信息已更新",
     "profile_update_failed": "个人信息更新失败",
     "avatar": "头像",
-    "load_failed": "无法获取最新资料，下面显示的可能是旧值"
+    "load_failed": "无法获取最新资料，下面显示的可能是旧值",
+    "email_notifications": "邮件通知",
+    "email_notifications_note": "开启后，待你处理的事项（待审批、审批超时、改派请求、密码求助）会发到你的邮箱。",
+    "email_notifications_no_address": "账号没有邮箱，开启后也不会发送。",
+    "email_last_failure": "上次发送失败：{{error}}（{{at}}）"
   },
   "notifications": {
     "title": "通知中心",
@@ -2750,7 +2754,8 @@
       "social_cleanup_orphan_post_media": "清理未发出的朋友圈图片",
       "chat_reconcile_inbox": "按 Synapse 校对殿司收件箱",
       "soul_assist_purge_history": "清理助手会话",
-      "ledger_snapshot_balance_for_tenant": "记余额月快照"
+      "ledger_snapshot_balance_for_tenant": "记余额月快照",
+      "notifications_email_action_needed_for_tenant": "邮件提醒待处理通知"
     },
     "status": {
       "PENDING": "排队中",
@@ -3228,7 +3233,9 @@
       "toggle_failed": "没能保存这项设置，已恢复原样",
       "version": "灵魂簿 {{version}}",
       "chat": "书信",
-      "chat_note": "有新书信、殿司回信时"
+      "chat_note": "有新书信、殿司回信时",
+      "history": "通知记录",
+      "history_note": "推送过的通知都在这里，包括没送达的"
     },
     "push": {
       "primer_title": "要不要在有结果时通知你？",
@@ -3612,6 +3619,13 @@
       "interrupted": "回答中断",
       "answering_aria": "正在回答",
       "jump_latest": "↓ 最新"
+    },
+    "history": {
+      "title": "通知记录",
+      "empty": "暂无通知",
+      "load_failed": "没能取到通知记录",
+      "not_delivered": "未送达",
+      "more": "更多"
     }
   },
   "soul_push": {

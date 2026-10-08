@@ -287,12 +287,13 @@ describe("password reset (「忘记密码」)", () => {
 
 describe("push tokens and notification settings", () => {
   function recordRequests(replies: Record<string, { status: number; data?: unknown }>) {
-    const seen: { method: string; url: string; auth: unknown; body: unknown }[] = [];
+    const seen: { method: string; url: string; auth: unknown; body: unknown; params?: unknown }[] = [];
     soulHttp.defaults.adapter = async (config: InternalAxiosRequestConfig) => {
       const url = config.url ?? "";
       seen.push({
         method: (config.method ?? "").toUpperCase(),
         url,
+        params: config.params,
         auth: config.headers?.Authorization,
         body: config.data ? JSON.parse(config.data as string) : undefined,
       });
@@ -324,6 +325,23 @@ describe("push tokens and notification settings", () => {
     await expect(soulApi.unregisterPushToken("ExponentPushToken[abc]")).resolves.toBeUndefined();
     expect(seen.map((c) => [c.method, c.url, c.body])).toEqual([
       ["POST", "/me/push-tokens/unregister/", { token: "ExponentPushToken[abc]" }],
+    ]);
+  });
+
+  it("reads one page of the push history with GET /me/notifications/?page=N", async () => {
+    storeSoulTokens({ access: "A1", refresh: "R1" });
+    const page = {
+      count: 1,
+      next: null,
+      previous: null,
+      results: [{ id: "d-1", kind: "judgment_result", title: "t", body: "b", status: "SENT", data: { screen: "Life" }, created_at: "2026-10-08T00:00:00Z" }],
+    };
+    const seen = recordRequests({ "/me/notifications/": { status: 200, data: page } });
+    await expect(soulApi.notifications(2)).resolves.toEqual(page);
+    await expect(soulApi.notifications()).resolves.toEqual(page);
+    expect(seen.map((c) => [c.method, c.url, c.params])).toEqual([
+      ["GET", "/me/notifications/", { page: 2 }],
+      ["GET", "/me/notifications/", { page: 1 }],
     ]);
   });
 
