@@ -34,19 +34,37 @@ const EVIDENCE_SOURCES = ["REGISTRY", "WITNESS", "SELF_ACCOUNT", "OTHER"] as con
 type FieldKey =
   | "category" | "description" | "weight" | "event_date" | "occurrence_count" | "statute"
   | "statute_clause" | "life_stage" | "evidence_source" | "evidence_note";
+const FIELD_KEYS = [
+  "category", "description", "weight", "event_date", "occurrence_count", "statute", "statute_clause",
+  "life_stage", "evidence_source", "evidence_note",
+] as const;
 type Errors = Partial<Record<FieldKey, string>> & { general?: string };
 
-/** DRF 的 400:`{字段: [消息]}`。认得的字段落到字段下,其余(non_field_errors / detail)落到表单顶上。 */
-export function recordFormErrorsOf(error: unknown): Errors {
+/** 后端稳定的错误码 → 文案键。码在 400 体的 `error_codes`(与消息同序);不认识的码退回后端原文。 */
+function messageKeyOf(field: string, code: string | undefined): string | null {
+  if (code === "statute_other_civilization") return "ledger.book.form.err.statute_civ";
+  if (code === "clause_count_pair") return "ledger.book.form.err.pair";
+  if (field === "occurrence_count" && code === "min_value") return "ledger.book.form.err.count_min";
+  if (field === "weight" && (code === "min_value" || code === "max_value")) return "ledger.book.form.weight_range";
+  if (code === "invalid_choice") return "ledger.book.form.err.unknown_enum";
+  return null;
+}
+
+/** DRF 的 400:`{字段: [消息], error_codes: {字段: [码]}}`。认得的码译成当前语言,否则用原文;
+ *  认得的字段落到字段下,其余(non_field_errors / detail)落到表单顶上。 */
+export function recordFormErrorsOf(error: unknown, t: (key: string) => string): Errors {
   const data = (error as { response?: { status?: number; data?: unknown } })?.response;
   if (data?.status !== 400 || typeof data.data !== "object" || data.data === null) return {};
+  const body = data.data as Record<string, unknown>;
+  const codes = (typeof body.error_codes === "object" && body.error_codes ? body.error_codes : {}) as Record<string, string[]>;
   const out: Errors = {};
-  for (const [key, value] of Object.entries(data.data as Record<string, unknown>)) {
-    const message = Array.isArray(value) ? String(value[0] ?? "") : typeof value === "string" ? value : "";
-    if (!message) continue;
-    if (key === "record_type") out.general = message;
-    else if ((["category", "description", "weight", "event_date", "occurrence_count", "statute", "statute_clause",
-      "life_stage", "evidence_source", "evidence_note"] as string[]).includes(key)) out[key as FieldKey] = message;
+  for (const [key, value] of Object.entries(body)) {
+    if (key === "error_codes") continue;
+    const raw = Array.isArray(value) ? String(value[0] ?? "") : typeof value === "string" ? value : "";
+    if (!raw) continue;
+    const mapped = messageKeyOf(key, codes[key]?.[0]);
+    const message = mapped ? t(mapped) : raw;
+    if ((FIELD_KEYS as readonly string[]).includes(key)) out[key as FieldKey] = message;
     else out.general = message;
   }
   return out;
@@ -171,7 +189,7 @@ export function SoulRecordFormModal({ isOpen, onClose, soulId, civilization, rec
         if (res.data.statute_snapshot) setSaved(res.data);
         else onClose();
       },
-      onError: (error: unknown) => setErrors(recordFormErrorsOf(error)),
+      onError: (error: unknown) => setErrors(recordFormErrorsOf(error, t)),
     };
     if (record) update.mutate({ id: soulId, recordId: record.id, data }, handlers);
     else add.mutate({ id: soulId, data }, handlers);

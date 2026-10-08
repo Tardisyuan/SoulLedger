@@ -209,6 +209,26 @@ def test_editing_the_weight_or_type_recomputes_the_souls_scores(cn_soul, api_cli
     assert cn_soul.merit_score == 0 and cn_soul.demerit_score > 0
 
 
+def test_record_400s_carry_stable_error_codes(cn_soul, api_client, auth_headers):
+    record = SoulRecord.objects.create(soul=cn_soul, **_payload())
+    url = f"/api/v1/souls/{cn_soul.pk}/records/{record.pk}/"
+
+    def codes(body, **kw):
+        res = api_client.patch(url, body, format="json", **auth_headers)
+        assert res.status_code == 400, res.content
+        return res.json()["error_codes"]
+
+    assert codes({"occurrence_count": 0}) == {"occurrence_count": ["min_value"]}
+    assert codes({"weight": 101}) == {"weight": ["max_value"]}
+    assert codes({"life_stage": "INFANCY"}) == {"life_stage": ["invalid_choice"]}
+    assert codes({"occurrence_count": 2}) == {"non_field_errors": ["clause_count_pair"]}
+    eu = Statute.objects.exclude(civilization=cn_soul.civilization).first()
+    assert codes({"statute": str(eu.pk)}) == {"statute": ["statute_other_civilization"]}
+    # add_record answers the same way.
+    added = api_client.post(f"/api/v1/souls/{cn_soul.pk}/add_record/", _payload(weight=0), format="json", **auth_headers)
+    assert added.status_code == 400 and added.json()["error_codes"] == {"weight": ["min_value"]}
+
+
 def test_editing_runs_the_create_validation(cn_soul, api_client, auth_headers):
     record = SoulRecord.objects.create(soul=cn_soul, **_payload())
     url = f"/api/v1/souls/{cn_soul.pk}/records/{record.pk}/"

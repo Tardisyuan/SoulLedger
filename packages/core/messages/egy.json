@@ -1142,7 +1142,13 @@
         "count_needs_clause": "Setep Djedu Hena Sep Kheper",
         "clause_needs_count": "Sesh Sep Kheper Hena Djedu",
         "weight_range": "Aha: 1 Er 100",
-        "snapshot": "Sau Hep"
+        "snapshot": "Sau Hep",
+        "err": {
+          "statute_civ": "Hep Pen Nen Em Taui Ba",
+          "pair": "Sep Kheper Hena Djedu Wa",
+          "count_min": "Sep Kheper: 1 Er Neb",
+          "unknown_enum": "Nen Setep"
+        }
       }
     },
     "series_effective": "Em Iri",
