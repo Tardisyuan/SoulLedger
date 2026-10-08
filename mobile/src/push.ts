@@ -19,6 +19,9 @@ import Constants from "expo-constants";
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 
+import type { NavigationProp } from "@react-navigation/native";
+
+import type { AppStackParams } from "./screens/applications";
 import { SENTENCE_PUSH_KINDS, type SentenceLanding, type SentencePushKind } from "./screens/sentence";
 
 /** The Expo token this device last registered — what sign-out must unregister. */
@@ -144,6 +147,21 @@ export type Landing =
   | { screen: "Conversation"; id: string }
   | { screen: "Life" }
   | { screen: "Sentence"; landing: SentenceLanding };
+
+/**
+ * Go where a landing points. The push bridge (a tapped notification) and the
+ * notification history (a tapped row) both route through here, so a new kind
+ * of landing is added once.
+ */
+export function landOn(navigate: NavigationProp<AppStackParams>["navigate"], landing: Landing): void {
+  if (landing.screen === "ApplicationDetail") navigate("ApplicationDetail", { id: landing.id, landed: true });
+  else if (landing.screen === "Conversation") navigate("Conversation", { id: landing.id, landed: true });
+  // 受刑 1d: completion lands on the life page's section (the new 「可申请转生」 row is there); the rest on the full list.
+  else if (landing.screen === "Sentence" && landing.landing.kind === "sentence_completed")
+    navigate("Tabs", { screen: "Life", params: { sentenceLanding: landing.landing } });
+  else if (landing.screen === "Sentence") navigate("Sentence", { landing: landing.landing });
+  else navigate("Tabs", { screen: "Life" });
+}
 
 /** An application id as the server sends it (a UUID); anything else is not navigated to. */
 const ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

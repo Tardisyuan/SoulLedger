@@ -93,6 +93,10 @@ export interface UserPreferences {
   default_view: DefaultView | null;
   /** /welcome 的首次设置做完或跳过了。Unset reads as false. */
   onboarded: boolean;
+  /** Officer email channel (action-needed notifications, `apps/notifications/tasks.py`). Default off. */
+  email_notifications: boolean;
+  /** Language of those emails: set from the UI locale when the switch is turned on; null = by civilization. */
+  email_locale: "zh-Hans" | "en" | null;
 }
 
 /** The body `/auth/password-help/` answers 200 with, for every username alike. */

@@ -96,6 +96,20 @@ class UserNotification(AuditUserFields, models.Model):
         return f"{self.user.username}: {self.title}"
 
 
+class NotificationEmail(models.Model):
+    """一条站内通知**尝试**发邮件的结果(apps/notifications/tasks.py)。一条通知最多一行:
+    发过(成功或失败)就不再发,失败不重试 —— 站内那条还在,邮件只是提醒。
+    /profile 开关旁显示的「上次发送失败」读的是本人最近一行失败。"""
+
+    notification = models.OneToOneField(UserNotification, on_delete=models.CASCADE, related_name="email")
+    sent = models.BooleanField()
+    error = models.CharField(max_length=300, blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+
 def notify_user(
     user,
     title: str,

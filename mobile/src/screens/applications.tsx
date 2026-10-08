@@ -67,6 +67,8 @@ export type AppStackParams = {
   /** 关于 / 致谢(补足 C16),从设置页进。 */
   About: undefined;
   NotificationPrimer: undefined;
+  /** 通知记录:推送过的都在,从设置页进。 */
+  NotificationHistory: undefined;
   /** `landed`: opened from a tapped notification — the newest letter from the other side is highlighted once. */
   Conversation: { id: string; landed?: boolean };
   FindSoul: undefined;

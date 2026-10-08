@@ -96,6 +96,7 @@ const COLLECTED_FILES = [
   "permissionGatesActuallyWithhold.test.tsx",
   "platformAdapterIsInstalled.test.tsx",
   "ProfileCard.test.tsx",
+  "ProfilePage.emailToggle.test.tsx",
   "ProfilePage.roleBadge.test.tsx",
   "RebirthApplicationsPage.test.tsx",
   "RebirthFormSelect.test.tsx",
