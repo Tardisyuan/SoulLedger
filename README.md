@@ -58,6 +58,23 @@ SoulLedger 是一个可运行的全栈 Web 应用（Django + Next.js），在同
 
 ---
 
+## 功能一览
+
+| 业务域 | 做什么 | 代码 |
+|---|---|---|
+| 审判流水线 | 案卷从审判到处置、轮回；殿的设置（仅 ADMIN）；SETTLED 灵魂的更正结案 | `judgment/`、`disposition/`、`reincarnation/`、`tenants/` |
+| 跨域调度 | 灵魂在租户之间转移，走审批 | `dispatch/` |
+| 审批流程 | 可配置的多节点审批流，含模板 | `workflow/` |
+| 受刑计划 | 刑期节点编排与加减项请求 | `sentence_plan/` |
+| 书信 | 灵魂之间的私信：Matrix / Synapse（仅本机回环、无联邦），后端代签凭据并接收新消息回调。**不是端到端加密** | `chat/` |
+| 朋友圈 | 帖子、评论、表态、关注，内容处置，图片走签名地址 | `social/` |
+| 外部死亡登记 | API Key 鉴权的登记接口（单条或批量）、HMAC 签名 webhook | `death_sync/` |
+| 两个前端 | 管理端 Web（Next.js 16）+ 灵魂端 App（Expo SDK 57 / React Native），共用 `packages/core` | `frontend/`、`mobile/` |
+
+后端应用都在 `backend/apps/` 下。
+
+---
+
 ## 快速启动
 
 **环境要求**：Python 3.11+（含 `uv`）、Node.js 20+；如需本地 PostgreSQL 与 Redis 则需要 Docker。
@@ -169,8 +186,6 @@ bash scripts/install-hooks.sh  # pre-commit：对暂存的前端文件跑 ESLint
                                # 钩子是生成出来的副本——改了这个脚本要在主 checkout 重跑它
 ```
 
-注意：`start-all.sh` 打印的前端地址是 `:3000`，实际 dev server 监听 `:3333`。
-
 ---
 
 ## 系统架构
@@ -247,17 +262,17 @@ ALIVE → JUDGING → DISPOSED → REINCARNATING → ALIVE（下一轮）
 
 | 前缀 | 应用 |
 |---|---|
-| `auth/`、`users/` | JWT 登录/刷新，用户管理 |
+| `auth/`、`users/` | JWT 登录/刷新，用户管理，登录日志（`auth/login-logs/`，只读，仅 ADMIN） |
 | `recycle-bin/` | 回收站：软删除记录的查看、恢复与彻底删除 |
-| `souls/` | 灵魂 CRUD 与状态转换 |
+| `souls/` | 灵魂 CRUD 与状态转换，更正结案（`{id}/correct_settlement/`，仅 SETTLED 灵魂，需 `soul.correct_settlement`） |
 | `ledger/` | 功过记录、余额、时间衰减、按文明的读数 |
 | `judgment/`、`disposition/`、`reincarnation/` | 审判流水线 |
 | `realms/`、`actors/` | 冥界地理及其人员 |
 | `dispatch/` | 跨域灵魂调度（含审批） |
 | `workflows/`、`nodes/`、`workflow/templates/` | 审批流程引擎 |
-| `perm/`、`menus/`、`organizations/`、`tenants/` | RBAC、导航、组织架构、租户 |
+| `perm/`、`menus/`、`organizations/`、`tenants/` | RBAC、导航、组织架构、租户（殿的设置 `tenants/{code}/settings/`，仅 ADMIN） |
 | `audit-logs/`、`events/`、`notifications/` | 审计轨迹、事件日志、通知 |
-| `death-sync/` | 外部死亡登记 API（API Key + HMAC 签名 webhook） |
+| `death-sync/` | 外部死亡登记 API（API Key + HMAC 签名 webhook；密钥管理 `death-sync/api-keys/`） |
 | `social/`、`social-moderation/` | 帖子、评论、表态、关注、资料，以及内容处置 |
 | `sentence-plans/` | 受刑计划与加减项请求 |
 | `scheduler/` | 定时任务与执行记录（`runs/` 支持多状态、时间区间与搜索） |
@@ -509,6 +524,12 @@ no-styles-in-csstext，`eslint.config.mjs:663-671`）加上 jsx-a11y，全部 `e
 已实现：JWT 与 API Key 认证、带数据与字段范围的 RBAC、webhook secret 与 PII 载荷的
 Fernet 加密、基于 Redis 的原子限流、webhook URL 的 SSRF 校验、CSP/HSTS/X-Frame-Options，
 以及写操作的审计轨迹。
+
+外部 API Key（`backend/apps/death_sync/`，管理页 `/death-sync/api-keys`）按能力分开授权：
+`can_register_death` / `can_query_status` / `can_manage_webhooks` 三个布尔位各管一类接口；
+`allowed_ips` 非空时只放行列表里的来源地址；`ApiKeyRateThrottle` 用 Redis `INCR` 按
+`rate_limit_per_minute` 限流。**`rate_limit_per_hour` 目前只存储并在用量接口里回报，
+没有任何视图按它限流**——视图只挂了分钟级那一档。
 
 Fernet 加密**依赖 `ENCRYPTION_KEY`**（`config/settings.py`）：`DEBUG=False` 且未设置时
 拒绝启动；`DEBUG=True` 且未设置时只打一条 warning，`WebhookConfig.signing_secret` 与
