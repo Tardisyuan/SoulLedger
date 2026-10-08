@@ -22,6 +22,8 @@ export {
   type DefaultView,
   type UserPreferences,
   type PasswordHelpAccepted,
+  type OfficerLoginRequest,
+  type HallChoiceBody,
 } from "./auth";
 
 // Souls
@@ -218,3 +220,18 @@ export {
 
 // Recycle bin
 export { recycleBinApi, type RecycleBinEntry, type RecycleBinLocation, type RecycleBinListResponse, type RestoreResponse } from "./recycle-bin";
+
+// Officer mobile app
+export {
+  officerAppApi,
+  decisionFailureOf,
+  DECISION_FAILURE_CODES,
+  type Todo,
+  type TodoGroup,
+  type TodoItem,
+  type TodoItemDetail,
+  type TodoKind,
+  type SignerCandidate,
+  type OfficerPushToken,
+  type DecisionFailureCode,
+} from "./officer-app";

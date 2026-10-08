@@ -4916,5 +4916,78 @@
       "eg": "Duat",
       "gr": "Hades"
     }
+  },
+  "officer_app": {
+    "name": "SoulLedger · Officers",
+    "tabs": {
+      "todo": "To do",
+      "queue": "Judgments",
+      "search": "Look up",
+      "notices": "Notices",
+      "me": "Me"
+    },
+    "todo": {
+      "title": "Waiting on me",
+      "groups": {
+        "approvals": "Approval steps",
+        "reassignments": "Reassignments",
+        "cooldowns": "Cooling-off requests",
+        "rebirths": "Rebirth applications"
+      },
+      "empty_title": "Nothing waiting on you",
+      "empty_body": "New approvals, reassignments and requests will be pushed to you."
+    },
+    "queue": {
+      "mine": "Mine",
+      "unclaimed": "Unclaimed",
+      "empty_title": "No cases in hand",
+      "empty_body": "Claim one from Unclaimed.",
+      "desk_only": "Ready for verdict · use the desk",
+      "scope_note": "On the phone you can claim, read and comment. Verdicts and seals are done at the desk."
+    },
+    "continue_on_desk": "Continue on desktop",
+    "search": {
+      "souls": "Souls",
+      "ask": "Ask",
+      "placeholder": "Name or ID",
+      "read_only": "Read-only. Make changes at the desk."
+    },
+    "detail": {
+      "your_step": "Your step",
+      "cosign": "Add signer",
+      "reject": "Reject",
+      "approve": "Approve"
+    },
+    "confirm": {
+      "approve_title": "Approve this step?",
+      "approve_ok": "Approve",
+      "reject_title": "Reject this step?",
+      "reject_body": "The flow goes back to {{name}}; this can't be undone.",
+      "reject_ok": "Reject",
+      "reason_label": "Reason · required, the requester will read it",
+      "reason_required": "A reason is required to reject",
+      "failed": "Couldn't submit · {{reason}}",
+      "reasons": {
+        "already_handled": "Someone else already signed",
+        "deadline_passed": "The deadline has passed",
+        "permission_changed": "Your permissions changed",
+        "network": "Network error"
+      }
+    },
+    "landing": {
+      "handled": "Already handled by {{name}}"
+    },
+    "state": {
+      "error_title": "Couldn't load",
+      "error_body": "Check your connection and retry. Open items aren't affected.",
+      "denied_title": "No access",
+      "denied_body": "Your role {{role}} can't see {{area}}. Ask your hall admin if you need it."
+    },
+    "push": {
+      "lock": "{{n}} items waiting on you"
+    },
+    "me": {
+      "push": "Push notifications"
+    }
   }
 }
