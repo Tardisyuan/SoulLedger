@@ -77,6 +77,21 @@ def fill(citation, statute, kind: str, at) -> None:
     citation.snapshot_kind = kind
 
 
+def record_snapshot(statute, at) -> dict:
+    """`SoulRecord.statute_snapshot`: the same rendering as `fill`, flattened
+    into one JSON value with the article's identity and version beside it."""
+    content = render(statute)
+    return {
+        "statute_id": str(statute.pk),
+        "code": statute.code,
+        "revision": statute.revision,
+        "effective_from": statute.effective_from.isoformat(),
+        **content,
+        "hash": content_hash(content),
+        "at": at.isoformat(),
+    }
+
+
 SNAPSHOT_FIELDS = [
     "snapshot_title", "snapshot_text", "snapshot_source",
     "snapshot_hash", "snapshot_at", "snapshot_kind",

@@ -188,6 +188,18 @@
       "MURDER": "杀业",
       "OTHER": "其他"
     },
+    "life_stages": {
+      "CHILDHOOD": "童年",
+      "YOUTH": "少年",
+      "ADULTHOOD": "壮年",
+      "OLD_AGE": "老年"
+    },
+    "evidence_sources": {
+      "REGISTRY": "司录",
+      "WITNESS": "证人",
+      "SELF_ACCOUNT": "自述",
+      "OTHER": "其他"
+    },
     "form": {
       "name_label": "名称 *",
       "name_placeholder": "灵魂名称",
@@ -3716,7 +3728,7 @@
       "load_failed": "没能取到通知记录",
       "not_delivered": "未送达",
       "more": "更多"
-  },
+    },
     "cooldown": {
       "request": "申请缩短冷却",
       "hint": "冷却期内可申请一次缩短，由原属文明决定。",

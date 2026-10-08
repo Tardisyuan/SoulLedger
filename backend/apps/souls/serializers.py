@@ -167,6 +167,16 @@ NOT_A_DEED_CIRCLES = {
 }
 
 
+class _StatuteField(serializers.PrimaryKeyRelatedField):
+    """Resolves against the tenant-scoped manager at request time. A class-level
+    `queryset=Statute.objects.all()` would be evaluated at import, under no
+    tenant context, and the import itself is circular (judgment imports souls)."""
+
+    def get_queryset(self):
+        from apps.judgment.models import Statute
+        return Statute.objects.all()
+
+
 class SoulRecordSerializer(serializers.ModelSerializer):
     # Backed by event_year/event_month/event_day (BCE-capable) rather than a
     # single DateField — see apps.souls.fields.HistoricalDateField.
@@ -185,6 +195,7 @@ class SoulRecordSerializer(serializers.ModelSerializer):
     # which is the behaviour the API's other derived field
     # (`SoulSerializer.civilization`) already has.
     civilization = serializers.CharField(read_only=True)
+    statute = _StatuteField(required=False, allow_null=True)
 
     class Meta:
         model = SoulRecord
@@ -210,8 +221,27 @@ class SoulRecordSerializer(serializers.ModelSerializer):
             # would put a deed in a life the reincarnation history says the
             # soul never lived, so it is read-only.
             "cycle",
+            # V5 structure: article link (snapshot taken by save, read-only
+            # here), life stage, and where the record came from.
+            "statute", "statute_snapshot", "life_stage", "evidence_source", "evidence_note",
         ]
-        read_only_fields = ["id", "recorded_at", "cycle"]
+        read_only_fields = ["id", "recorded_at", "cycle", "statute_snapshot"]
+        extra_kwargs = {
+            # PositiveIntegerField maps to min_value=0; a count of 0 occasions
+            # is not a record of anything.
+            "occurrence_count": {"min_value": 1},
+        }
+
+    def _check_statute_against_soul(self, attrs, soul) -> None:
+        """An article from another cosmology cannot be the basis of this deed."""
+        statute = attrs.get("statute", getattr(self.instance, "statute", None))
+        if statute is not None and statute.civilization != soul.civilization:
+            raise serializers.ValidationError({
+                "statute": (
+                    f"{statute.code} belongs to {statute.civilization}, "
+                    f"not to this soul's {soul.civilization}."
+                )
+            })
 
     def validate_statute_clause(self, value):
         """A citation must resolve, or it is worse than a blank.
@@ -362,6 +392,7 @@ class SoulRecordSerializer(serializers.ModelSerializer):
         soul = self.context.get("soul") or getattr(self.instance, "soul", None)
         if soul is not None:
             self._check_against_soul(attrs, soul)
+            self._check_statute_against_soul(attrs, soul)
         self._check_granularity_pair(attrs)
         return attrs
 
@@ -410,6 +441,7 @@ class SoulRecordSerializer(serializers.ModelSerializer):
         soul = kwargs.get("soul")
         if soul is not None:
             self._check_against_soul(self.validated_data, soul)
+            self._check_statute_against_soul(self.validated_data, soul)
         return super().save(**kwargs)
 
     def _check_against_soul(self, attrs, soul) -> None:

@@ -208,6 +208,12 @@ class LedgerRecordSummarySerializer(serializers.Serializer):
     statute_clause = serializers.CharField(allow_blank=True)
     #: 这一行覆盖几次;null = 没记(不是 0 次)。
     occurrence_count = serializers.IntegerField(allow_null=True, min_value=1)
+    #: 引用的律条在引用那天的样子(SoulRecord.statute_snapshot);null = 没引。
+    statute_snapshot = serializers.JSONField(allow_null=True)
+    #: 人生阶段 / 证据来源(souls.life_stages / souls.evidence_sources);空串 = 没记。
+    life_stage = serializers.CharField(allow_blank=True)
+    evidence_source = serializers.CharField(allow_blank=True)
+    evidence_note = serializers.CharField(allow_blank=True)
 
 
 class LedgerSummarySerializer(serializers.Serializer):

@@ -10,7 +10,7 @@ import { DomainEnum, DomainNumber, MissingValue } from "@/src/components/ui/Doma
 import { JudgmentSectionHead } from "@/src/components/judgment/JudgmentGroundsPanel";
 import { Kbd } from "@/src/components/judgment/JudgmentDesk";
 import { ReasonDialog } from "@/src/components/judgment/JudgmentClaimDialogs";
-import { ClauseLink, clauseCode, RecordFacts } from "@/src/components/souls/SoulLedgerBook";
+import { ClauseLink, clauseCode, hasRecordFacts, RecordFacts } from "@/src/components/souls/SoulLedgerBook";
 import { formatHistoricalDate } from "@/lib/utils";
 
 /**
@@ -153,7 +153,7 @@ export function JudgmentEvidenceAdmission({
                             <ClauseLink record={record} code={clause} />
                           </span>
                         )}
-                        {(record.occurrence_count != null || record.is_milestone) && " · "}
+                        {hasRecordFacts(record) && " · "}
                         <RecordFacts record={record} />
                       </>
                     ) : (

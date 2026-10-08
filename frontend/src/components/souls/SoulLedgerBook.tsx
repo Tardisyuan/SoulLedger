@@ -1,10 +1,11 @@
 "use client";
 
+import type React from "react";
 import Link from "next/link";
 import type { LedgerRecord } from "@soulledger/core/api/ledger";
 import { RECORD_QUANTITIES } from "@soulledger/core/api/ledgerQuantities";
 import { useI18n } from "@/src/contexts/I18nContext";
-import { MissingValue } from "@/src/components/ui/DomainValue";
+import { DomainEnum, MissingValue } from "@/src/components/ui/DomainValue";
 import { formatHistoricalDate } from "@/lib/utils";
 
 /**
@@ -111,10 +112,26 @@ function entryWeight(record: LedgerRecord): number {
   return record.original_weight;
 }
 
-/** `'<Statute.code>:<条款原文>'` 的律条号那一半(`救濟門#7`);没记就是 null。 */
+/**
+ * `'<Statute.code>:<条款原文>'` 的律条号那一半(`救濟門#7`);没有条款时退到律条快照的 code
+ * (`statute_snapshot`,V5 的律条链接);两样都没记就是 null。
+ */
 export function clauseCode(record: LedgerRecord): string | null {
   const code = (record.statute_clause ?? "").split(":")[0].trim();
-  return code || null;
+  return code || record.statute_snapshot?.code || null;
+}
+
+/** ClauseLink 的 title:条款全文,没有就是快照里引用那天的标题。 */
+function clauseTitle(record: LedgerRecord, locale: string): string | undefined {
+  if (record.statute_clause) return record.statute_clause;
+  const snap = record.statute_snapshot;
+  if (!snap) return undefined;
+  return snap.title[locale === "zh-Hans" ? "zh" : locale] || snap.title.zh || snap.code;
+}
+
+/** 事目第二行有没有东西可写(次数 / 节点 / 人生阶段 / 证据来源)。两处共用,免得各自漏一项。 */
+export function hasRecordFacts(record: LedgerRecord): boolean {
+  return record.occurrence_count != null || record.is_milestone || !!record.life_stage || !!record.evidence_source;
 }
 
 /**
@@ -123,10 +140,11 @@ export function clauseCode(record: LedgerRecord): string | null {
  * 审判台证据行与灵魂详情台账共用。
  */
 export function ClauseLink({ record, code, className, ...rest }: { record: LedgerRecord; code: string; className?: string } & Record<`data-${string}`, string>) {
+  const { locale } = useI18n();
   return (
     <Link
       href={`/corpus?code=${encodeURIComponent(code)}`}
-      title={record.statute_clause}
+      title={clauseTitle(record, locale)}
       className={`underline decoration-dotted decoration-[oklch(var(--color-hairline))] underline-offset-2 hover:text-[oklch(var(--color-ink))] hover:decoration-current ${className ?? ""}`}
       {...rest}
     >
@@ -142,9 +160,18 @@ export function ClauseLink({ record, code, className, ...rest }: { record: Ledge
  */
 export function RecordFacts({ record }: { record: LedgerRecord }) {
   const { t } = useI18n();
-  const parts: string[] = [];
+  const parts: React.ReactNode[] = [];
   if (record.occurrence_count != null) parts.push(t("ledger.book.occurrences", { n: String(record.occurrence_count) }));
   if (record.is_milestone) parts.push(`◆ ${t("ledger.book.milestone")}`);
+  // V5:人生阶段与证据来源。枚举走 DomainEnum(原始成员在 title);来源备注在 title 里,不占行。
+  if (record.life_stage) parts.push(<DomainEnum namespace="souls.life_stages" value={record.life_stage} />);
+  if (record.evidence_source) {
+    parts.push(
+      <span title={record.evidence_note || undefined} data-evidence-source="">
+        <DomainEnum namespace="souls.evidence_sources" value={record.evidence_source} />
+      </span>
+    );
+  }
   if (parts.length === 0) return null;
   // Each fact is one unbreakable unit: 「◆」 never ends a line with 「重要节点」 on the next
   // (用户 2026-10-02). The line may still break between facts, at the 「 · 」.
@@ -232,7 +259,7 @@ export function SoulLedgerBook({ records }: SoulLedgerBookProps) {
               const weight = entryWeight(record);
               const eventDate = formatHistoricalDate(record.event_date, locale);
               const clause = clauseCode(record);
-              const hasFacts = record.occurrence_count != null || record.is_milestone;
+              const hasFacts = hasRecordFacts(record);
 
               return (
                 <tr key={record.id} className="border-b border-[oklch(var(--color-hairline))]">
