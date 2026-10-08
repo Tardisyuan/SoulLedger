@@ -2189,7 +2189,32 @@
       "SOUL": "Soul"
     },
     "delete_title": "Delete user",
-    "delete_confirm": "Delete this user?"
+    "delete_confirm": "Delete this user?",
+    "edit_roles": "Set roles",
+    "roles_dialog": {
+      "title": "Set roles",
+      "for_user": "Account: {{name}}",
+      "primary": "Primary role",
+      "primary_hint": "The primary role decides whether the account is an administrator and how it ranks.",
+      "extra": "Additional roles",
+      "extra_hint": "Permissions are the union of the primary role and every additional role. The Realm Lead's refusals and the administrator-only actions still apply; a union never loosens them.",
+      "extra_none": "No roles available to add",
+      "admin_locked": "An administrator already holds everything and cannot take additional roles.",
+      "saved": "Roles updated",
+      "error": "Failed to update roles"
+    },
+    "batch": {
+      "region": "Batch actions",
+      "selected": "{{n}} selected",
+      "select_row": "Select \"{{name}}\"",
+      "select_all": "Select all on this page",
+      "clear": "Clear selection",
+      "activate": "Activate selected",
+      "deactivate": "Deactivate selected",
+      "done": "Updated {{n}} accounts",
+      "failed": "Batch update failed",
+      "skipped_note": "Administrator accounts and your own are left out of batches."
+    }
   },
   "settings": {
     "title": "Settings",

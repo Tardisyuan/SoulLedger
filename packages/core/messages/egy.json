@@ -2189,7 +2189,27 @@
     "create_success": "Netjer Iri Seth",
     "edit_user": "Khemen Netjer",
     "delete_title": "Wehem Netjer",
-    "delete_confirm": "Fekh Aq Pen?"
+    "delete_confirm": "Fekh Aq Pen?",
+    "edit_roles": "Khemen Netjeru",
+    "roles_dialog": {
+      "title": "Khemen Netjeru",
+      "for_user": "Ren: {{name}}",
+      "primary": "Netjer Tepy",
+      "extra": "Netjeru Ky",
+      "saved": "Netjeru Khemen Seth",
+      "error": "Nen Khemen Netjeru Seth"
+    },
+    "batch": {
+      "region": "Iri Neb",
+      "selected": "Setep Seth {{n}}",
+      "select_row": "Setep «{{name}}»",
+      "select_all": "Setep Neb Dy",
+      "clear": "Sehen Setep",
+      "activate": "Sesen Em Khet Setep Seth",
+      "deactivate": "Khetem Setep Seth",
+      "done": "Kheperu Sesen Seth {{n}}",
+      "failed": "Nen Sesen Kheperu"
+    }
   },
   "settings": {
     "title": "Smen",

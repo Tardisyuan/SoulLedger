@@ -51,7 +51,7 @@ export {
 } from "./souls";
 
 // Users
-export { usersApi, type User, type CreateUserInput, type UpdateUserInput, type UserFilters, type UserImportResult, type PaginatedResponse } from "./users";
+export { usersApi, type User, type CreateUserInput, type UpdateUserInput, type UserFilters, type UserImportResult, type AssignRolesInput, type UserBatchUpdateResult, type PaginatedResponse } from "./users";
 
 // Judgment
 export {
