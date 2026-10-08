@@ -9,9 +9,10 @@ from rest_framework.response import Response
 from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.tenant import scope_to_tenant
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin
-from apps.notifications.models import UserNotification
+from apps.notifications.models import NotificationEmail, UserNotification
 from apps.notifications.serializers import (
     MarkAllReadResultSerializer,
+    NotificationEmailStatusSerializer,
     UserNotificationListSerializer,
     UserNotificationSerializer,
 )
@@ -62,6 +63,7 @@ class NotificationViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.
         'update': ['notification.read'],
         'partial_update': ['notification.read'],
         'destroy': ['notification.read'],
+        'email_status': ['notification.read'],
     }
     serializer_class = UserNotificationSerializer
     # pagination_class = None  # Removed: paginate to prevent large payloads
@@ -115,6 +117,19 @@ class NotificationViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.
         # one person, but it is the same shape that was a real leak elsewhere,
         # so it goes through the same fail-closed helper as everything else.
         return scope_to_tenant(qs, self.request, field="user__tenant")
+
+    @extend_schema(responses={200: NotificationEmailStatusSerializer})
+    @action(detail=False, methods=["get"], url_path="email-status", pagination_class=None)
+    def email_status(self, request):
+        """`GET /notifications/email-status/`:本人邮件通道最近一次失败(apps/notifications/tasks.py),
+        没有失败过就是 null。/profile 的开关旁显示它。只看本人:按 `notification__user` 取。"""
+        last = (
+            NotificationEmail.objects.filter(notification__user=request.user, sent=False)
+            .order_by("-created_at")
+            .first()
+        )
+        failure = {"error": last.error, "at": last.created_at} if last else None
+        return Response(NotificationEmailStatusSerializer({"last_failure": failure}).data)
 
     @action(detail=True, methods=["post"])
     def mark_read(self, request, pk=None):

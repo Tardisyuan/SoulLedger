@@ -1629,7 +1629,11 @@
     "profile_updated": "Djes Renpi Seth",
     "profile_update_failed": "Nen Renpi Djes",
     "avatar": "Tut",
-    "load_failed": "Nen Ini Djes — Medu Em Khery Nen Renpi"
+    "load_failed": "Nen Ini Djes — Medu Em Khery Nen Renpi",
+    "email_notifications": "Sedjem Ba Em Djeret",
+    "email_notifications_note": "Wen: Khet Em Smen Er-Ek Hab Er Djeret-Ek.",
+    "email_notifications_no_address": "Nen Djeret Em Aq: Nen Hab.",
+    "email_last_failure": "Nen Hab Pehwy: {{error}} ({{at}})"
   },
   "notifications": {
     "title": "Sedjem Sab",
@@ -2749,7 +2753,8 @@
       "social_cleanup_orphan_post_media": "Fekh Tut Shemsu Nen Hab",
       "chat_reconcile_inbox": "Senb Sesh Wesekhet",
       "soul_assist_purge_history": "Fekh Medew Hehy Medu",
-      "ledger_snapshot_balance_for_tenant": "Sesh Sepy Abed"
+      "ledger_snapshot_balance_for_tenant": "Sesh Sepy Abed",
+      "notifications_email_action_needed_for_tenant": "Hab Sedjem Ba Em Smen Er Djeret"
     },
     "status": {
       "PENDING": "Em Smen",
@@ -3227,7 +3232,9 @@
       "toggle_failed": "Nen Sau Smen Pen. Wehem Er Tepy.",
       "version": "Medjat Ba {{version}}",
       "chat": "Shemes",
-      "chat_note": "Shemes Renpi, Weshed Wesekhet"
+      "chat_note": "Shemes Renpi, Weshed Wesekhet",
+      "history": "Sesh Sedjem Ba",
+      "history_note": "Sedjem Ba Neb Dy: Iyi Ky Nen Iyi"
     },
     "push": {
       "primer_title": "Sedjem Ba Er-Ek Em Wedja?",
@@ -3611,6 +3618,13 @@
       "interrupted": "Medu Nen Neb",
       "answering_aria": "Em Medu",
       "jump_latest": "↓ Renpi"
+    },
+    "history": {
+      "title": "Sesh Sedjem Ba",
+      "empty": "Nen Sedjem Ba Djer",
+      "load_failed": "Nen Ini Sesh Sedjem Ba",
+      "not_delivered": "Nen Iyi",
+      "more": "Ky"
     }
   },
   "soul_push": {

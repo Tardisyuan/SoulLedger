@@ -653,10 +653,15 @@ class PasswordHelpRequestSerializer(serializers.Serializer):
     username = serializers.CharField(max_length=150, trim_whitespace=True)
 
 
+#: 官员邮件的两种语言(apps/notifications/tasks.py 的文案只写了这两种)。与 `EvalCase.locale`
+#: 是同一个选项集,schema 里钉成同一个名字(settings `ENUM_NAME_OVERRIDES`)。
+EMAIL_LOCALES = ("zh-Hans", "en")
+
+
 class UserPreferencesSerializer(serializers.Serializer):
     """`User.preferences`, as the API reads and writes it.
 
-    Two keys. Language and theme are not here: both are browser-side
+    Four keys. Language and theme are not here: both are browser-side
     settings with no server home (the locale is a cookie the middleware reads,
     the theme a localStorage key), and moving them is a separate decision.
     """
@@ -669,6 +674,13 @@ class UserPreferencesSerializer(serializers.Serializer):
     #: /welcome 的首次设置做完或跳过了没有(`WelcomeSetup.tsx`)。Unset reads as false;
     #: `default` is only the read-side fallback — a partial PATCH never applies it.
     onboarded = serializers.BooleanField(required=False, default=False)
+    #: 官员邮件通道(apps/notifications/tasks.py):待你处理的站内通知再发一封到邮箱。
+    #: 默认关;开着而账号没有邮箱,什么也不发。
+    email_notifications = serializers.BooleanField(required=False, default=False)
+    #: 邮件用哪种语言。官员没有别的存下来的语言偏好(见 apps/notifications/messages.py),
+    #: 所以 /profile 开开关时把当时的界面语言记在这里;空则按所属文明(`mail_locale`)。
+    #: 只有 zh-Hans 与 en:官员邮件文案只写了这两种(egy 界面落到 en)。
+    email_locale = serializers.ChoiceField(choices=EMAIL_LOCALES, allow_null=True, required=False)
 
     def to_internal_value(self, data):
         # Unknown keys are refused rather than silently dropped: this is a

@@ -3172,6 +3172,29 @@ export interface paths {
         patch: operations["v1_me_notification_settings_partial_update"];
         trace?: never;
     };
+    "/api/v1/me/notifications/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description `GET /me/notifications/`:本灵魂收到过的推送,最新在前,分页(PAGE_SIZE 20)。
+         *
+         *     只读。范围是**灵魂**而不是本世账号:转世换账号,记录仍是同一个灵魂的。
+         *     `PushDelivery` 一台设备一行,两台手机登同一账号就是同一件事两行 —— 这里按
+         *     `dedupe_key` 只给最早那一行,记录讲的是「发生过什么」,不是「发到了哪台」。
+         */
+        get: operations["v1_me_notifications_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/me/password/": {
         parameters: {
             query?: never;
@@ -3960,6 +3983,26 @@ export interface paths {
         put?: never;
         /** @description Mark a single notification as read. */
         post: operations["v1_notifications_mark_read_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/notifications/email-status/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description `GET /notifications/email-status/`:本人邮件通道最近一次失败(apps/notifications/tasks.py),
+         *     没有失败过就是 null。/profile 的开关旁显示它。只看本人:按 `notification__user` 取。
+         */
+        get: operations["v1_notifications_email_status_retrieve"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -10806,6 +10849,15 @@ export interface components {
             granularity_unavailable: string;
             granularity_missing_inputs: string[];
         };
+        NotificationEmailFailure: {
+            error: string;
+            /** Format: date-time */
+            at: string;
+        };
+        /** @description `{"last_failure": {error, at} | null}` — what `email_status` returns(apps/notifications/tasks.py)。 */
+        NotificationEmailStatus: {
+            last_failure: components["schemas"]["NotificationEmailFailure"] | null;
+        };
         NotificationSettings: {
             /** @description 转生申请:提交确认、申诉确认、结果 */
             rebirth?: boolean;
@@ -11380,6 +11432,16 @@ export interface components {
              */
             previous?: string | null;
             results: components["schemas"]["PostList"][];
+        };
+        /**
+         * @description DRF 分页信封的显式声明 —— 理由同 `apps/social/soul_views.py::_page`:APIView 上
+         *     drf-spectacular 推不出 `{count, next, previous, results}`。
+         */
+        PaginatedPushHistory: {
+            count: number;
+            next: string | null;
+            previous: string | null;
+            results: components["schemas"]["PushHistoryItem"][];
         };
         PaginatedReactionList: {
             /** @example 123 */
@@ -12532,7 +12594,7 @@ export interface components {
         /**
          * @description `User.preferences`, as the API reads and writes it.
          *
-         *     Two keys. Language and theme are not here: both are browser-side
+         *     Four keys. Language and theme are not here: both are browser-side
          *     settings with no server home (the locale is a cookie the middleware reads,
          *     the theme a localStorage key), and moving them is a separate decision.
          */
@@ -12540,6 +12602,9 @@ export interface components {
             default_view?: (components["schemas"]["DefaultViewEnum"] | components["schemas"]["NullEnum"]) | null;
             /** @default false */
             onboarded: boolean;
+            /** @default false */
+            email_notifications: boolean;
+            email_locale?: (components["schemas"]["EvalCaseLocaleEnum"] | components["schemas"]["NullEnum"]) | null;
         };
         /**
          * @description Serializer for updating the profile bio. The avatar has its own upload
@@ -12895,6 +12960,33 @@ export interface components {
             /** Format: date-time */
             readonly created_at: string;
         };
+        /**
+         * @description 一条推送,按**内容**给:每个状态都在(被系统丢掉的、灵魂当时关掉的,内容照样可读)。
+         *     `data` 是推送带的导航目标(`{screen, …}`,见 `services.rule_for`),App 用 `landingOf` 解。
+         */
+        PushHistoryItem: {
+            /** Format: uuid */
+            readonly id: string;
+            readonly kind: string;
+            readonly title: string;
+            readonly body: string;
+            readonly status: components["schemas"]["PushHistoryItemStatusEnum"];
+            readonly data: unknown;
+            /** Format: date-time */
+            readonly created_at: string;
+        };
+        /**
+         * @description * `QUEUED` - 待发送
+         *     * `SENDING` - 发送中
+         *     * `SENT` - 已交给 Expo
+         *     * `DELIVERED` - 回执成功
+         *     * `FAILED` - 失败
+         *     * `DISABLED` - 推送未启用
+         *     * `EXPIRED` - 已过期
+         *     * `CANCELLED` - 已取消
+         * @enum {string}
+         */
+        PushHistoryItemStatusEnum: "QUEUED" | "SENDING" | "SENT" | "DELIVERED" | "FAILED" | "DISABLED" | "EXPIRED" | "CANCELLED";
         /**
          * @description * `zh-Hans` - 简体中文
          *     * `en` - English
@@ -15037,7 +15129,7 @@ export interface components {
         /**
          * @description `User.preferences`, as the API reads and writes it.
          *
-         *     Two keys. Language and theme are not here: both are browser-side
+         *     Four keys. Language and theme are not here: both are browser-side
          *     settings with no server home (the locale is a cookie the middleware reads,
          *     the theme a localStorage key), and moving them is a separate decision.
          */
@@ -15045,6 +15137,9 @@ export interface components {
             default_view?: (components["schemas"]["DefaultViewEnum"] | components["schemas"]["NullEnum"]) | null;
             /** @default false */
             onboarded: boolean;
+            /** @default false */
+            email_notifications: boolean;
+            email_locale?: (components["schemas"]["EvalCaseLocaleEnum"] | components["schemas"]["NullEnum"]) | null;
         };
         UserProfile: {
             /** Format: uuid */
@@ -20900,6 +20995,33 @@ export interface operations {
             };
         };
     };
+    v1_me_notifications_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedPushHistory"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulError"];
+                };
+            };
+        };
+    };
     v1_me_password_create: {
         parameters: {
             query?: never;
@@ -22857,6 +22979,25 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["UserNotification"];
+                };
+            };
+        };
+    };
+    v1_notifications_email_status_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationEmailStatus"];
                 };
             };
         };

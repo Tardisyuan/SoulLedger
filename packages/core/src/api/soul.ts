@@ -74,6 +74,9 @@ export type PushDevice = Schemas["PushDevice"];
 export type PushPlatform = Schemas["PushPlatformEnum"];
 export type NotificationSettings = Schemas["NotificationSettings"];
 export type NotificationSettingsPatch = Schemas["PatchedNotificationSettings"];
+/** One push the soul was sent, every status included (`/me/notifications/`); `data` is the tap target (`landingOf`). */
+export type PushHistoryItem = Schemas["PushHistoryItem"];
+export type PaginatedPushHistory = Schemas["PaginatedPushHistory"];
 export type Civilization = Schemas["CivilizationEnum"];
 
 /** The six forms a soul may ask for — the schema's enum, `OTHER` excluded server-side. */
@@ -235,6 +238,12 @@ export const soulApi = {
     soulHttp.get<NotificationSettings>("/me/notification-settings/").then((r) => r.data),
   updateNotificationSettings: (patch: NotificationSettingsPatch) =>
     soulHttp.patch<NotificationSettings>("/me/notification-settings/", patch).then((r) => r.data),
+  /**
+   * What this soul has been sent, newest first, 20 a page. Read-only and about the
+   * CONTENT: a push the OS dropped, or one the soul had switched off, is still here.
+   */
+  notifications: (page = 1) =>
+    soulHttp.get<PaginatedPushHistory>("/me/notifications/", { params: { page } }).then((r) => r.data),
 };
 
 /**

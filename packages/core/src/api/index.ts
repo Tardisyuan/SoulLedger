@@ -137,7 +137,7 @@ export { tenantsApi, REBIRTH_COOLDOWN_SETTING, type Tenant, type TenantSettingsP
 export { organizationsApi, type Organization } from "./organizations";
 
 // Notifications
-export { notificationsApi, type Notification } from "./notifications";
+export { notificationsApi, type Notification, type NotificationEmailStatus } from "./notifications";
 
 // Dispatch
 export { dispatchApi, crossTenantJudgmentsApi, DISPATCH_REASON_MIN_CHARS, dispatchReasonLength, type DispatchRecord, type DispatchDraftInput, type DispatchRealmOption, type CrossTenantJudgment, type CrossTenantJudgmentListItem, type CrossTenantJudgmentParticipant } from "./dispatch";
