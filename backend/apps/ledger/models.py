@@ -59,4 +59,38 @@ class BalanceSnapshot(models.Model):
         return f"{self.tenant_id} {self.month:%Y-%m}"
 
 
-__all__ = ["SoulRecord", "LedgerRecord", "RecordType", "RecordCategory", "BalanceSnapshot"]
+class SoulCensusSnapshot(models.Model):
+    """一个租户某一天的灵魂普查 —— 仪表盘「趋势」的数据点。
+
+    **日粒度**:状态、界域的变化以天计(处置期满、轮回都按天扫),更密(小时)只会把同一天的
+    抖动存成噪声;更疏(周/月)又画不出 30 天的折线。每租户每天一行(`unique(tenant, day)`),
+    一年 365 行,`ledger.snapshot_census_for_tenant` 顺手删掉超过 731 天的 —— 行数有界。
+
+    三个 JSON 列各是一个 `{键: 数}`:状态(`Soul.current_state`)、文明(租户的文明)、
+    界域(已执行未归档处置的去向 `realm_code`,与仪表盘「按界域」同一口径)。键集随数据变化
+    (新界域、新状态),所以是 JSON 而不是定列。
+
+    **不回填**:状态是会被改写的现值,过去某天有多少灵魂在哪个状态无法从记录倒推(见
+    `BalanceSnapshot`)。趋势从这张表开始写的那天起有数。
+    """
+
+    tenant = models.ForeignKey(
+        "tenants.Tenant", on_delete=models.CASCADE, related_name="census_snapshots",
+    )
+    day = models.DateField(help_text="UTC calendar day this census stands for.")
+    soul_count = models.PositiveIntegerField()
+    by_state = models.JSONField(default=dict)
+    by_civilization = models.JSONField(default=dict)
+    by_realm = models.JSONField(default=dict)
+    computed_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["tenant", "day"], name="uniq_census_snapshot_tenant_day"),
+        ]
+
+    def __str__(self):
+        return f"{self.tenant_id} {self.day}"
+
+
+__all__ = ["SoulRecord", "LedgerRecord", "RecordType", "RecordCategory", "BalanceSnapshot", "SoulCensusSnapshot"]

@@ -9,12 +9,14 @@ from apps.ledger.views import (
     LedgerJournalView,
     LedgerOverviewStatsView,
     LedgerRecalculateView,
+    LedgerTrendsView,
 )
 
 urlpatterns = [
     path("journal/", LedgerJournalView.as_view(), name="ledger-journal"),
     path("journal/export/", LedgerJournalExportView.as_view(), name="ledger-journal-export"),
     path("stats/overview/", LedgerOverviewStatsView.as_view(), name="ledger-stats-overview"),
+    path("stats/trends/", LedgerTrendsView.as_view(), name="ledger-stats-trends"),
     path("stats/export/", LedgerExportStatsView.as_view(), name="ledger-stats-export"),
     path("balance/<uuid:soul_id>/", LedgerBalanceView.as_view(), name="ledger-balance"),
     path("calculate/<uuid:soul_id>/", LedgerRecalculateView.as_view(), name="ledger-recalculate"),

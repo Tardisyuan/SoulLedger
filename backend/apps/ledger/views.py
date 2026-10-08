@@ -2,6 +2,7 @@
 REST views for Ledger app.
 """
 import csv
+from datetime import timedelta
 
 from django.db.models import Avg, Count, F, Q
 from django.http import HttpResponse
@@ -19,7 +20,7 @@ from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.tenant import scope_to_tenant
 from apps.disposition.models import Disposition
 from apps.ledger.journal import JournalParamError, build_journal, journal_records
-from apps.ledger.models import BalanceSnapshot
+from apps.ledger.models import BalanceSnapshot, SoulCensusSnapshot
 from apps.ledger.serializers import (
     LedgerEffectiveSerializer,
     LedgerErrorSerializer,
@@ -29,6 +30,7 @@ from apps.ledger.serializers import (
     LedgerOverviewStatsSerializer,
     LedgerRecalculateResultSerializer,
     LedgerSummarySerializer,
+    LedgerTrendsSerializer,
     RebirthNotApplicableSerializer,
 )
 from apps.ledger.services import LedgerService, RebirthNotApplicable
@@ -723,3 +725,55 @@ class LedgerExportStatsView(APIView):
             ])
 
         return response
+
+
+#: `range` 参数 → 回看天数。12m 取 365 天,不做日历月算术:折线的横轴是天。
+TREND_RANGES = {"30d": 30, "90d": 90, "12m": 365}
+
+
+class LedgerTrendsView(APIView):
+    """
+    GET /ledger/stats/trends/?range=30d|90d|12m
+
+    灵魂普查日快照(`SoulCensusSnapshot`)的折线数据。划界与仪表盘同一口径:ADMIN 不带租户看全部
+    (按天把各租户的映射相加),带租户或非 ADMIN 只看本租户。没有快照的日子不补点 ——
+    趋势从第一份快照那天起有数,不回填。
+    """
+    permission_classes = [TenantPermission, CodenamePermission]
+    serializer_class = LedgerTrendsSerializer
+
+    def get_required_permissions(self):
+        return ['ledger.read']
+
+    @extend_schema(
+        parameters=[OpenApiParameter("range", OpenApiTypes.STR, enum=list(TREND_RANGES), required=False)],
+        responses={200: LedgerTrendsSerializer, 400: LedgerErrorSerializer},
+    )
+    def get(self, request):
+        key = request.query_params.get("range", "30d")
+        if key not in TREND_RANGES:
+            return Response(
+                {"error": "INVALID_RANGE", "message": f"range must be one of {', '.join(TREND_RANGES)}"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        until = timezone.now().date()
+        since = until - timedelta(days=TREND_RANGES[key] - 1)
+
+        qs = SoulCensusSnapshot.objects.filter(day__gte=since, day__lte=until)
+        if getattr(request, 'tenant', None) is not None:
+            qs = scope_to_tenant(qs, request, admin_bypass=False)
+        else:
+            qs = scope_to_tenant(qs, request)  # ADMIN: all halls; anyone else without a hall: none
+
+        days: dict = {}
+        for row in qs.order_by("day").iterator():
+            point = days.setdefault(
+                row.day,
+                {"day": row.day, "soul_count": 0, "by_state": {}, "by_civilization": {}, "by_realm": {}},
+            )
+            point["soul_count"] += row.soul_count
+            for field in ("by_state", "by_civilization", "by_realm"):
+                target = point[field]
+                for k, n in getattr(row, field).items():
+                    target[k] = target.get(k, 0) + n
+        return Response({"range": key, "since": since, "until": until, "points": list(days.values())})
