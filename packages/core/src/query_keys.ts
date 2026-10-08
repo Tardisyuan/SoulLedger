@@ -178,6 +178,8 @@ export const soulAccountKeys = {
   credentials: (params: Record<string, string | number | undefined>) => ["soul-accounts", "credentials", params] as const,
   rebirthApplications: (params: Record<string, string | number | undefined>) =>
     ["soul-accounts", "rebirth-applications", params] as const,
+  cooldownShortenings: (params: Record<string, string | number | undefined>) =>
+    ["soul-accounts", "cooldown-shortenings", params] as const,
 };
 
 /**

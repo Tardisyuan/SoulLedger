@@ -110,6 +110,39 @@ export interface OfficerRebirthApplication {
   updated_at: string;
 }
 
+export type CooldownShorteningStatus = "PENDING" | "APPROVED" | "REJECTED";
+
+/**
+ * OfficerCooldownShorteningSerializer. A soul in rebirth cooldown asking for this
+ * cooldown to end earlier. One per cooldown (per finally-rejected application);
+ * `approved_days` is how many days remain FROM the decision, so the hall setting
+ * is never touched — `backend/apps/soul_accounts/rebirth.py` 「缩短冷却申请」.
+ */
+export interface OfficerCooldownShortening {
+  id: string;
+  soul: string;
+  soul_code: string;
+  soul_name: string;
+  account: string;
+  /** The rebirth application whose final rejection started the cooldown. */
+  application: string;
+  cycle: number;
+  reason: string;
+  status: CooldownShorteningStatus;
+  approved_days: number | null;
+  /** The officer's note for the soul; required on rejection. */
+  decision_note: string;
+  decided_by: number | null;
+  decided_by_username: string | null;
+  decided_at: string | null;
+  /** Current end of that cooldown (an approval already applied); null once it is over. */
+  cooldown_until: string | null;
+  /** Days still to wait, rounded up; an approval must be LESS than this. 0 = over. */
+  remaining_days: number;
+  created_at: string;
+  updated_at: string;
+}
+
 /** MeCurrentStepSerializer. */
 export interface RebirthCurrentStep {
   node_type: string;
@@ -134,6 +167,8 @@ export interface RebirthApplicationFilters {
   soul?: string;
   page?: number;
 }
+
+export type CooldownShorteningFilters = RebirthApplicationFilters;
 
 /** Business refusals: `{detail, code}` with a stable `code`. */
 export interface SoulAccountErrorBody {
@@ -171,4 +206,15 @@ export const soulAccountsApi = {
     api.post<OfficerRebirthApplication>(`/soul-accounts/rebirth-applications/${id}/cross-civilization/`, {
       cross_civilization: crossCivilization,
     }),
+  cooldownShortenings: (params: CooldownShorteningFilters) =>
+    api.get<PaginatedResponse<OfficerCooldownShortening>>("/soul-accounts/cooldown-shortenings/", { params }),
+  /** 400 `invalid_days` (must be 0 ≤ days < remaining_days); 409 `already_decided` / `cooldown_over`. */
+  approveCooldownShortening: (id: string, approvedDays: number, note = "") =>
+    api.post<OfficerCooldownShortening>(`/soul-accounts/cooldown-shortenings/${id}/approve/`, {
+      approved_days: approvedDays,
+      note,
+    }),
+  /** The note is required (the soul reads it). 409 `already_decided` / `cooldown_over`. */
+  rejectCooldownShortening: (id: string, note: string) =>
+    api.post<OfficerCooldownShortening>(`/soul-accounts/cooldown-shortenings/${id}/reject/`, { note }),
 };
