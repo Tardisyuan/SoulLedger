@@ -2530,6 +2530,45 @@
       "empty_filtered": "Nen Dbh Em Kheperu Pen",
       "cooldown_until": "Ahet Qebeh Er {{time}}; Ba Nen Dbh Djer",
       "step_appeal": "(Nehet)"
+    },
+    "cooldown": {
+      "tabs": {
+        "applications": "Dbh Wehem Mesut",
+        "shortenings": "Dbh Khebi Ahet Qebeh"
+      },
+      "title": "Dbh Khebi Ahet Qebeh",
+      "subtitle": "Ba Em Ahet Qebeh Dbh Khetem Tepy: Hesy Em Hru Khery, Khesef Em Medu",
+      "empty": "Nen Dbh Khebi Ahet Qebeh",
+      "empty_filtered": "Nen Dbh Em Kheperu Pen",
+      "detail_title": "Dbh Khebi Ahet Qebeh · {{name}}",
+      "fields": {
+        "reason": "Khet Dbh",
+        "remaining": "Ahet Qebeh Khery",
+        "approved_days": "Hru Khery Er Khet Hesy",
+        "note": "Medu Er Ba",
+        "decided_by": "Wedja In",
+        "created_at": "Dbh Em",
+        "cooldown_until": "Ahet Qebeh Er"
+      },
+      "remaining_days": "Hru {{n}}",
+      "over": "Ahet Qebeh Khetem",
+      "approve": "Hesy",
+      "reject": "Khesef",
+      "days_label": "Hru Khery Er Khet Hru Pen",
+      "days_hint": "Hru < {{n}}; 0 = Dbh Wehem Mesut Emu",
+      "note_label": "Medu Er Ba",
+      "note_hint": "Khesef: Medu Sesen; Ba Maa",
+      "decided": "Sau Seth",
+      "failed": "Nen Sau",
+      "already_decided": "Wedja Seth",
+      "cooldown_over": "Ahet Qebeh Khetem; Nen Wedja",
+      "invalid_days": "Hru Nen Maat: 0 – Hru Khery",
+      "note_required": "Khesef: Medu Er Ba Sesen"
+    },
+    "cooldown_status": {
+      "PENDING": "Em Wedja",
+      "APPROVED": "Hesy Seth",
+      "REJECTED": "Khesef Seth"
     }
   },
   "disposition": {
@@ -3180,7 +3219,10 @@
       "screen_body": "Sesh-Ek Wenen. Nen Gem Emu.",
       "section": "Aat Pen Nen Gem. Ky Wenen.",
       "offline": "Nen Em Senb",
-      "sentence_in_progress": "Wetep-Ek Nen Neb Seth. Dbh Wehem Mesut Em Khet Wetep"
+      "sentence_in_progress": "Wetep-Ek Nen Neb Seth. Dbh Wehem Mesut Em Khet Wetep",
+      "not_in_cooldown": "Nen Em Ahet Qebeh: Nen Dbh Khebi",
+      "shortening_pending": "Dbh Khebi Wa Em Wedja",
+      "shortening_used": "Dbh Khebi Sep Wa Seth"
     },
     "lexicon": {
       "eg": {
@@ -3674,6 +3716,17 @@
       "load_failed": "Nen Ini Sesh Sedjem Ba",
       "not_delivered": "Nen Iyi",
       "more": "Ky"
+  },
+    "cooldown": {
+      "request": "Dbh Khebi Ahet Qebeh",
+      "hint": "Dbh Khebi Wa Em Ahet Qebeh; Sab Wedja.",
+      "reason": "Khet Dbh",
+      "submit": "Dbh",
+      "submitted": "Dbh Seth",
+      "pending": "Dbh Khebi Em Wedja",
+      "approved": "Dbh Khebi Hesy Seth; Ahet Qebeh Er {{date}}",
+      "rejected": "Dbh Khebi Khesef Seth",
+      "note": "Medu"
     }
   },
   "soul_push": {
@@ -3688,6 +3741,14 @@
     "rebirth_appeal_rejected": {
       "title": "Nehet Khesef Seth",
       "body": "Nehet-Ek Er Dbh Wehem Mesut Khesef Seth. Wen Medjat Ba Er Maa Khet."
+    },
+    "cooldown_shortening_approved": {
+      "title": "Khebi Ahet Qebeh Hesy Seth",
+      "body": "Khebi Ahet Qebeh-Ek Hesy Seth. Wen Medjat Ba Er Maa Ahet Qebeh."
+    },
+    "cooldown_shortening_rejected": {
+      "title": "Khebi Ahet Qebeh Khesef Seth",
+      "body": "Khebi Ahet Qebeh-Ek Khesef Seth. Wen Medjat Ba Er Maa Khet."
     },
     "judgment_result": {
       "title": "Wedja Khetem",

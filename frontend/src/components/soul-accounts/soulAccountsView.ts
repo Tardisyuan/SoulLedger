@@ -70,6 +70,11 @@ const FAILURE_KEYS: Record<string, string> = {
   not_found: "soul_accounts.account.soul_not_found",
   not_the_approver: "soul_accounts.rebirth.cross_not_approver",
   not_in_initial_review: "soul_accounts.rebirth.cross_not_in_initial",
+  // 缩短冷却申请(OfficerCooldownShorteningViewSet approve/ reject/)
+  already_decided: "soul_accounts.cooldown.already_decided",
+  cooldown_over: "soul_accounts.cooldown.cooldown_over",
+  invalid_days: "soul_accounts.cooldown.invalid_days",
+  note_required: "soul_accounts.cooldown.note_required",
 };
 
 export function failureKey(failure: SoulAccountFailure, fallback: string): string {

@@ -46,6 +46,7 @@ import {
   useLayout,
   useTheme,
 } from "../ui";
+import { CooldownShorteningBlock } from "./cooldown";
 import { useResidence } from "./life";
 import { SentenceBlocked, type SentenceLanding } from "./sentence";
 
@@ -110,7 +111,7 @@ function TerminalEmpty() {
  * a refusal is always explained under the disabled button — the reason code,
  * and the cooling-off end date when there is one.
  */
-export function EligibilityCard({ list, onApply }: { list: MeRebirthApplicationList; onApply: () => void }) {
+export function EligibilityCard({ list, onApply, onChanged }: { list: MeRebirthApplicationList; onApply: () => void; onChanged?: () => void }) {
   const { t } = useI18n();
   const reason = list.reason ? soulCodeMessage(list.reason) : null;
   const until = formatStamp(list.cooldown_until);
@@ -136,6 +137,10 @@ export function EligibilityCard({ list, onApply }: { list: MeRebirthApplicationL
           text={t("soul_app.applications.cooldown_until")}
           parts={{ date: <Txt variant="value" tone="muted">{until}</Txt> }}
         />
+      ) : null}
+      {/* 缩短冷却:只在 cooldown 这一种拒绝下出现(服务端 can_shorten_cooldown / cooldown_shortening)。 */}
+      {!list.can_apply && list.reason === "cooldown" ? (
+        <CooldownShorteningBlock list={list} onChanged={onChanged ?? (() => undefined)} />
       ) : null}
     </Block>
   );
@@ -218,7 +223,7 @@ export function ApplicationsScreen() {
       ) : (
         <FadeIn>
           <ResidenceNote />
-          <EligibilityCard list={list.data} onApply={() => navigation.navigate("NewApplication")} />
+          <EligibilityCard list={list.data} onApply={() => navigation.navigate("NewApplication")} onChanged={() => void list.reload()} />
           {list.data.results.length === 0 ? (
             list.data.reason === TERMINAL_REASON ? (
               <TerminalEmpty />

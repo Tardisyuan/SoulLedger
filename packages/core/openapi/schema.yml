@@ -5137,6 +5137,7 @@ paths:
           enum:
           - COMMENT_CREATED
           - COMMENT_DELETED
+          - COOLDOWN_SHORTENING_DECIDED
           - DEATH_SYNC_PROCESSED
           - DEATH_SYNC_RECEIVED
           - DISPATCH_APPROVED
@@ -5219,6 +5220,7 @@ paths:
           * `REBIRTH_APPLICATION_SUBMITTED` - Rebirth Application Submitted
           * `REBIRTH_STATUS_CHANGED` - Rebirth Status Changed
           * `REBIRTH_CROSS_CIV_DECIDED` - Rebirth Cross Civ Decided
+          * `COOLDOWN_SHORTENING_DECIDED` - Cooldown Shortening Decided
           * `SENTENCE_PLAN_CREATED` - Sentence Plan Created
           * `SENTENCE_NODE_ACTIVATED` - Sentence Node Activated
           * `SENTENCE_NODE_WAITING` - Sentence Node Waiting
@@ -7683,6 +7685,40 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SoulError'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulError'
+          description: ''
+  /api/v1/me/rebirth-applications/cooldown-shortening/:
+    post:
+      operationId: v1_me_rebirth_applications_cooldown_shortening_create
+      description: 冷却期内申请缩短本次冷却。状态在 `GET rebirth-applications/` 的 `cooldown_shortening`
+        里。
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CooldownShorteningCreate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CooldownShorteningCreate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CooldownShorteningCreate'
+        required: true
+      security:
+      - soulJwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeCooldownShortening'
           description: ''
         '409':
           content:
@@ -14158,6 +14194,174 @@ paths:
               schema:
                 $ref: '#/components/schemas/SoulError'
           description: ''
+  /api/v1/soul-accounts/cooldown-shortenings/:
+    get:
+      operationId: v1_soul_accounts_cooldown_shortenings_list
+      description: 缩短冷却申请:与转生申请同一把权限(看 `workflow.read`,决定 `workflow.approve`),同一种租户隔离。
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      - in: query
+        name: soul
+        schema:
+          type: string
+          format: uuid
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - APPROVED
+          - PENDING
+          - REJECTED
+        description: |-
+          * `PENDING` - 待决定
+          * `APPROVED` - 已批准
+          * `REJECTED` - 已驳回
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedOfficerCooldownShorteningList'
+          description: ''
+  /api/v1/soul-accounts/cooldown-shortenings/{id}/:
+    get:
+      operationId: v1_soul_accounts_cooldown_shortenings_retrieve
+      description: 缩短冷却申请:与转生申请同一把权限(看 `workflow.read`,决定 `workflow.approve`),同一种租户隔离。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this cooldown shortening request.
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OfficerCooldownShortening'
+          description: ''
+  /api/v1/soul-accounts/cooldown-shortenings/{id}/approve/:
+    post:
+      operationId: v1_soul_accounts_cooldown_shortenings_approve_create
+      description: 缩短冷却申请:与转生申请同一把权限(看 `workflow.read`,决定 `workflow.approve`),同一种租户隔离。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this cooldown shortening request.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CooldownShorteningApprove'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CooldownShorteningApprove'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CooldownShorteningApprove'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OfficerCooldownShortening'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulError'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulError'
+          description: ''
+  /api/v1/soul-accounts/cooldown-shortenings/{id}/reject/:
+    post:
+      operationId: v1_soul_accounts_cooldown_shortenings_reject_create
+      description: 缩短冷却申请:与转生申请同一把权限(看 `workflow.read`,决定 `workflow.approve`),同一种租户隔离。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this cooldown shortening request.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CooldownShorteningReject'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CooldownShorteningReject'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CooldownShorteningReject'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OfficerCooldownShortening'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulError'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulError'
+          description: ''
   /api/v1/soul-accounts/credentials/:
     get:
       operationId: v1_soul_accounts_credentials_list
@@ -18975,6 +19179,44 @@ components:
       description: |-
         * `DIRECT` - 灵魂私聊
         * `OFFICER_INBOX` - 官员收件箱
+    CooldownShorteningApprove:
+      type: object
+      properties:
+        approved_days:
+          type: integer
+          minimum: 0
+        note:
+          type: string
+          default: ''
+          maxLength: 2000
+      required:
+      - approved_days
+    CooldownShorteningCreate:
+      type: object
+      properties:
+        reason:
+          type: string
+          maxLength: 2000
+      required:
+      - reason
+    CooldownShorteningReject:
+      type: object
+      properties:
+        note:
+          type: string
+          maxLength: 2000
+      required:
+      - note
+    CooldownShorteningStatusEnum:
+      enum:
+      - PENDING
+      - APPROVED
+      - REJECTED
+      type: string
+      description: |-
+        * `PENDING` - 待决定
+        * `APPROVED` - 已批准
+        * `REJECTED` - 已驳回
     Corpus:
       type: object
       properties:
@@ -20675,6 +20917,7 @@ components:
       - REBIRTH_APPLICATION_SUBMITTED
       - REBIRTH_STATUS_CHANGED
       - REBIRTH_CROSS_CIV_DECIDED
+      - COOLDOWN_SHORTENING_DECIDED
       - SENTENCE_PLAN_CREATED
       - SENTENCE_NODE_ACTIVATED
       - SENTENCE_NODE_WAITING
@@ -20724,6 +20967,7 @@ components:
         * `REBIRTH_APPLICATION_SUBMITTED` - Rebirth Application Submitted
         * `REBIRTH_STATUS_CHANGED` - Rebirth Status Changed
         * `REBIRTH_CROSS_CIV_DECIDED` - Rebirth Cross Civ Decided
+        * `COOLDOWN_SHORTENING_DECIDED` - Cooldown Shortening Decided
         * `SENTENCE_PLAN_CREATED` - Sentence Plan Created
         * `SENTENCE_NODE_ACTIVATED` - Sentence Node Activated
         * `SENTENCE_NODE_WAITING` - Sentence Node Waiting
@@ -23357,6 +23601,56 @@ components:
       required:
       - created_at
       - cycle
+    MeCooldownShortening:
+      type: object
+      description: 灵魂看自己的那份:没有 decided_by。
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        application:
+          type: string
+          format: uuid
+          readOnly: true
+          description: 其终局驳回引起这段冷却的那份申请。
+        cycle:
+          type: integer
+          readOnly: true
+        reason:
+          type: string
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/CooldownShorteningStatusEnum'
+          readOnly: true
+        approved_days:
+          type: integer
+          readOnly: true
+          nullable: true
+          description: 批准后,自决定时刻起还要等的天数。
+        decision_note:
+          type: string
+          readOnly: true
+        decided_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - application
+      - approved_days
+      - created_at
+      - cycle
+      - decided_at
+      - decision_note
+      - id
+      - reason
+      - status
     MeCurrentStep:
       type: object
       description: 当前所在节点:只有节点类型与**角色**,不含审批人是谁(2026-09-14 决定 2)。
@@ -23705,8 +23999,16 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/MeRebirthApplication'
+        can_shorten_cooldown:
+          type: boolean
+        cooldown_shortening:
+          allOf:
+          - $ref: '#/components/schemas/MeCooldownShortening'
+          nullable: true
       required:
       - can_apply
+      - can_shorten_cooldown
+      - cooldown_shortening
       - cooldown_until
       - reason
       - results
@@ -24527,6 +24829,98 @@ components:
       - last_active_at
       - messages
       - screen
+    OfficerCooldownShortening:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        soul:
+          type: string
+          format: uuid
+          readOnly: true
+        soul_code:
+          type: string
+          readOnly: true
+        soul_name:
+          type: string
+          readOnly: true
+        account:
+          type: string
+          format: uuid
+          readOnly: true
+        application:
+          type: string
+          format: uuid
+          readOnly: true
+          description: 其终局驳回引起这段冷却的那份申请。
+        cycle:
+          type: integer
+          readOnly: true
+        reason:
+          type: string
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/CooldownShorteningStatusEnum'
+          readOnly: true
+        approved_days:
+          type: integer
+          readOnly: true
+          nullable: true
+          description: 批准后,自决定时刻起还要等的天数。
+        decision_note:
+          type: string
+          readOnly: true
+        decided_by:
+          type: integer
+          readOnly: true
+          nullable: true
+        decided_by_username:
+          type: string
+          readOnly: true
+        decided_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        cooldown_until:
+          type: string
+          format: date-time
+          nullable: true
+          readOnly: true
+        remaining_days:
+          type: integer
+          description: 批准的天数必须小于它(向上取整);0 = 冷却已结束。
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - account
+      - application
+      - approved_days
+      - cooldown_until
+      - created_at
+      - cycle
+      - decided_at
+      - decided_by
+      - decided_by_username
+      - decision_note
+      - id
+      - reason
+      - remaining_days
+      - soul
+      - soul_code
+      - soul_name
+      - status
+      - updated_at
     OfficerInbox:
       type: object
       properties:
@@ -25394,6 +25788,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ModeratedPost'
+    PaginatedOfficerCooldownShorteningList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/OfficerCooldownShortening'
     PaginatedOfficerInboxList:
       type: object
       required:

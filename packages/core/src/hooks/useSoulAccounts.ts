@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   soulAccountsApi,
+  type CooldownShorteningFilters,
   type CredentialFilters,
   type RebirthApplicationFilters,
   type SoulContactUpdate,
@@ -46,6 +47,14 @@ export function useRebirthApplications(filters: RebirthApplicationFilters) {
   });
 }
 
+export function useCooldownShortenings(filters: CooldownShorteningFilters) {
+  return useQuery({
+    queryKey: soulAccountKeys.cooldownShortenings({ ...filters }),
+    queryFn: async () => (await soulAccountsApi.cooldownShortenings(filters)).data,
+    placeholderData: (previous) => previous,
+  });
+}
+
 function useSoulAccountWrite<TVars, TResult>(fn: (vars: TVars) => Promise<TResult>) {
   const qc = useQueryClient();
   return useMutation({
@@ -74,6 +83,18 @@ export function useMarkCredentialDelivered() {
 
 export function useRetryCredential() {
   return useSoulAccountWrite(async (id: string) => (await soulAccountsApi.retry(id)).data);
+}
+
+export function useApproveCooldownShortening() {
+  return useSoulAccountWrite(async ({ id, days, note }: { id: string; days: number; note?: string }) =>
+    (await soulAccountsApi.approveCooldownShortening(id, days, note)).data
+  );
+}
+
+export function useRejectCooldownShortening() {
+  return useSoulAccountWrite(async ({ id, note }: { id: string; note: string }) =>
+    (await soulAccountsApi.rejectCooldownShortening(id, note)).data
+  );
 }
 
 export function useDecideCrossCivilization() {
