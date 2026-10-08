@@ -80,6 +80,7 @@ class PushStatus(models.TextChoices):
     DISABLED = "DISABLED", "推送未启用"      # SOUL_PUSH_ENABLED 未打开:照常记录,开启后 24 小时内的补发
     EXPIRED = "EXPIRED", "已过期"            # 未启用期间记录、开启时已超过 24 小时:不补发,不删
     CANCELLED = "CANCELLED", "已取消"        # 发送前设备已失效或已转给别的账号
+    NO_DEVICE = "NO_DEVICE", "没有设备"      # 事件发生时灵魂没有可推的设备:只记历史,从不发送
 
 
 class PushDelivery(models.Model):
@@ -92,7 +93,8 @@ class PushDelivery(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     dedupe_key = models.CharField(max_length=120)
-    device = models.ForeignKey(PushDevice, on_delete=models.CASCADE, related_name="deliveries")
+    # 空 = 事件发生时没有可推的设备,只为通知记录留一行(`status=NO_DEVICE`,从不入队发送)。
+    device = models.ForeignKey(PushDevice, on_delete=models.CASCADE, related_name="deliveries", null=True, blank=True)
     account = models.ForeignKey("soul_accounts.SoulAccount", on_delete=models.CASCADE, related_name="push_deliveries")
     soul = models.ForeignKey("souls.Soul", on_delete=models.CASCADE, related_name="push_deliveries")
     event_type = models.CharField(max_length=40)
@@ -114,6 +116,11 @@ class PushDelivery(models.Model):
         ordering = ["-created_at"]
         constraints = [
             models.UniqueConstraint(fields=["dedupe_key", "device"], name="push_delivery_once_per_device"),
+            # NULL 在唯一约束里互不相等:没有设备的那一行要自己的约束,不然同一件事能记成两条历史。
+            models.UniqueConstraint(
+                fields=["dedupe_key", "account"], condition=models.Q(device__isnull=True),
+                name="push_delivery_once_without_device",
+            ),
         ]
         indexes = [
             models.Index(fields=["status", "created_at"]),

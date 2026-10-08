@@ -111,6 +111,7 @@ const COLLECTED_FILES = [
   "SealGlyphsDialog.test.tsx",
   "TenantSettingsDialog.test.tsx",
   "EditableNodeFrame.test.tsx",
+  "EmailLocaleSync.test.tsx",
   "queueRowScroll.test.ts",
   "sealStamp.test.tsx",
   "selectionIsNotColourOnly.test.tsx",

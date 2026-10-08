@@ -13539,9 +13539,10 @@ export interface components {
          *     * `DISABLED` - 推送未启用
          *     * `EXPIRED` - 已过期
          *     * `CANCELLED` - 已取消
+         *     * `NO_DEVICE` - 没有设备
          * @enum {string}
          */
-        PushHistoryItemStatusEnum: "QUEUED" | "SENDING" | "SENT" | "DELIVERED" | "FAILED" | "DISABLED" | "EXPIRED" | "CANCELLED";
+        PushHistoryItemStatusEnum: "QUEUED" | "SENDING" | "SENT" | "DELIVERED" | "FAILED" | "DISABLED" | "EXPIRED" | "CANCELLED" | "NO_DEVICE";
         /**
          * @description * `zh-Hans` - 简体中文
          *     * `en` - English

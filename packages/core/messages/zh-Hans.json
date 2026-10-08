@@ -1607,6 +1607,12 @@
       "user_agent": "客户端",
       "search_placeholder": "搜索用户名...",
       "no_logs": "暂无登录日志"
+    },
+    "resource_tenant": "殿",
+    "descriptions": {
+      "hall_settings": "改了 {{code}} 殿的设置",
+      "hall_seal_glyphs": "改了 {{code}} 殿的印字",
+      "hall_assistant_switch": "改了 {{code}} 殿的问一问开关"
     }
   },
   "profile": {
@@ -3716,7 +3722,7 @@
       "load_failed": "没能取到通知记录",
       "not_delivered": "未送达",
       "more": "更多"
-  },
+    },
     "cooldown": {
       "request": "申请缩短冷却",
       "hint": "冷却期内可申请一次缩短，由原属文明决定。",

@@ -114,3 +114,49 @@ def test_non_admin_is_refused_and_leaves_no_row(judge_user, cn_tenant, path, bod
     cn_tenant.refresh_from_db()
     assert cn_tenant.hall_name != "第五殿" and cn_tenant.seal_glyphs != ["府"]
     assert _rows() == []
+
+
+# ── 每次编辑恰好一行(泛化 UPDATE 行被 `explicit_audit_for` 压掉)────────────────────────
+
+
+def _all_tenant_rows(code):
+    return list(AuditLog.objects.filter(resource__in=("tenant", "assistant_config"), action="UPDATE")
+                .filter(resource_id__in=(code, f"tenant:{code}")))
+
+
+@pytest.mark.parametrize("path,body,prefix", [
+    ("settings", {"hall_name": "第五殿"}, "hall settings"),
+    ("seal-glyphs", {"seal_glyphs": ["府"]}, "hall seal glyphs"),
+])
+def test_one_edit_leaves_exactly_one_row(admin_user, cn_tenant, path, body, prefix):
+    """变异:视图里去掉 `with explicit_audit_for(tenant)` → 两行(另一条是泛化的),红。"""
+    AuditLog.objects.all().delete()
+    assert _patch(admin_user, cn_tenant, path, body).status_code == 200
+    (row,) = AuditLog.objects.filter(resource="tenant")
+    assert row.description == f"{prefix} {cn_tenant.code}"
+
+
+def test_the_assistant_hall_switch_leaves_exactly_one_row(admin_user, cn_tenant):
+    AuditLog.objects.all().delete()
+    resp = _client(admin_user).patch(f"/api/v1/assist-admin/halls/{cn_tenant.pk}/",
+                                     {"assistant_enabled": True}, format="json")
+    assert resp.status_code == 200, resp.data
+    assert AuditLog.objects.filter(resource="tenant").count() == 0
+    (row,) = _all_tenant_rows(cn_tenant.code)
+    assert row.description == f"hall assistant switch {cn_tenant.code}"
+
+
+def test_other_saves_still_get_their_generic_row(cn_tenant, eu_tenant):
+    """压制只认 (模型, pk) 且只在块内:块外的同一殿、块内的另一殿都照写泛化行。"""
+    from apps.audit.signals import explicit_audit_for
+
+    AuditLog.objects.all().delete()
+    with explicit_audit_for(cn_tenant):
+        cn_tenant.description = "块内"
+        cn_tenant.save()
+        eu_tenant.description = "别的殿"
+        eu_tenant.save()
+    cn_tenant.description = "块外"
+    cn_tenant.save()
+    rows = AuditLog.objects.filter(resource="tenant", action="UPDATE")
+    assert sorted(r.resource_id for r in rows) == sorted([str(eu_tenant.pk), str(cn_tenant.pk)])
