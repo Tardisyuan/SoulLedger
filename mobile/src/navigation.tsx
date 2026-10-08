@@ -253,6 +253,7 @@ function PushBridge({ signedIn, ready }: { signedIn: boolean; ready: number }) {
     else if (landing.screen === "Sentence" && landing.landing.kind === "sentence_completed")
       navigationRef.navigate("Tabs", { screen: "Life", params: { sentenceLanding: landing.landing } });
     else if (landing.screen === "Sentence") navigationRef.navigate("Sentence", { landing: landing.landing });
+    else if (landing.screen === "Applications") navigationRef.navigate("Tabs", { screen: "Applications" });
     else navigationRef.navigate("Tabs", { screen: "Life" });
   }, [arrived, signedIn, ready]);
 
