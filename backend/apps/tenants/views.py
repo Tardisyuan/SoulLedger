@@ -87,7 +87,6 @@ class TenantViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
         audit_hall_change(request, tenant, before, "hall seal glyphs")
         return Response(TenantSerializer(tenant).data)
 
-    @extend_schema(request=TenantSettingsSerializer, responses={200: TenantSerializer})
     @extend_schema(responses={200: TenantMfaRoleRowSerializer(many=True)})
     @action(detail=True, methods=["get"], url_path="mfa-roles",
             permission_classes=[TenantPermission, IsAdminPermission])
@@ -116,6 +115,7 @@ class TenantViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
         } for name in names]
         return Response(rows)
 
+    @extend_schema(request=TenantSettingsSerializer, responses={200: TenantSerializer})
     @action(detail=True, methods=["patch"], url_path="settings",
             permission_classes=[TenantPermission, IsAdminPermission])
     def hall_settings(self, request, code=None):
