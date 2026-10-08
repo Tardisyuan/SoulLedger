@@ -441,3 +441,22 @@ class LedgerJournalErrorSerializer(serializers.Serializer):
     error = serializers.CharField()
     field = serializers.CharField()
     message = serializers.CharField()
+
+
+class LedgerTrendPointSerializer(serializers.Serializer):
+    """一天的普查。三个映射各是 `{键: 数}`;键集随数据变化(新界域、新状态),所以是自由映射。"""
+
+    day = serializers.DateField()
+    soul_count = serializers.IntegerField()
+    by_state = serializers.DictField(child=serializers.IntegerField())
+    by_civilization = serializers.DictField(child=serializers.IntegerField())
+    by_realm = serializers.DictField(child=serializers.IntegerField())
+
+
+class LedgerTrendsSerializer(serializers.Serializer):
+    """`GET /ledger/stats/trends/` —— 范围内每个有快照的日子一个点,日期升序;没有快照是空数组。"""
+
+    range = serializers.ChoiceField(choices=["30d", "90d", "12m"])
+    since = serializers.DateField()
+    until = serializers.DateField()
+    points = LedgerTrendPointSerializer(many=True)

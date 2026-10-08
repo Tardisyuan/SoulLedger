@@ -94,6 +94,9 @@ REGISTRY: tuple[JobSpec, ...] = (
     # 每天覆盖当月那一行,所以过去的月份留下的是它最后一天 23:55(UTC)的值;漏跑一天
     # 只是那个月停在前一天。一条聚合查询加一次 upsert。
     JobSpec("ledger.snapshot_balance_for_tenant", TENANT, "55 23 * * *", max_runtime=600),
+    # 灵魂普查日快照(apps/ledger/snapshots.py::census_tenant):仪表盘「趋势」的数据点,按状态 / 文明 /
+    # 界域各数一遍。每天 23:50(UTC)覆盖当天一行,幂等;漏跑一天只是折线少一个点。三条聚合查询加一次 upsert。
+    JobSpec("ledger.snapshot_census_for_tenant", TENANT, "50 23 * * *", max_runtime=600),
     # 官员邮件通道(apps/notifications/tasks.py):待处理的站内通知再发一封给开了邮件的官员。
     # 按租户:收件人按 `User.tenant` 取。每 5 分钟 = 邮件最多晚 5 分钟;没人开开关时只是一条查询。
     # 锁 240s 的理由同上面的超时任务。

@@ -1088,7 +1088,18 @@
     "avg_scope": "All souls in the ledger",
     "occupancy": "Of capacity",
     "bucket_width": "{{n}} per bar",
-    "vs_last_month": "vs last month"
+    "vs_last_month": "vs last month",
+    "trends": {
+      "title": "Trends",
+      "range_label": "Range",
+      "range_30d": "Last 30 days",
+      "range_90d": "Last 90 days",
+      "range_12m": "Last 12 months",
+      "by_state": "By state",
+      "by_civilization": "By civilization",
+      "error": "Couldn't load the trends",
+      "not_enough": "Fewer than two days of snapshots so far. One is taken each night; the lines appear after that."
+    }
   },
   "ledger": {
     "title": "Deed Statistics",
@@ -2905,6 +2916,7 @@
       "chat_reconcile_inbox": "Reconcile the hall inbox with Synapse",
       "soul_assist_purge_history": "Purge assistant history",
       "ledger_snapshot_balance_for_tenant": "Snapshot monthly balances",
+      "ledger_snapshot_census_for_tenant": "Snapshot the daily soul census",
       "notifications_email_action_needed_for_tenant": "Email action-needed notifications",
       "notifications_email_action_needed_global": "Email action-needed notifications (global admins)"
     },

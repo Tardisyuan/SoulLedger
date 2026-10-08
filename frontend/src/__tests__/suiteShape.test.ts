@@ -152,6 +152,8 @@ const COLLECTED_FILES = [
   "Spinner.test.tsx",
   "TenantContext.test.tsx",
   "Toast.test.tsx",
+  // 2026-10-08 仪表盘「趋势」面板:加载 / 出错 / 快照不足 / 有线四态与范围、维度开关。
+  "TrendsPanel.test.tsx",
   "toastColourContract.test.ts",
   "OrganizationsPage.test.tsx",
   "UserDeleteDialog.test.tsx",

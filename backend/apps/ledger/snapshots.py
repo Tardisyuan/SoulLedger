@@ -8,7 +8,8 @@ from datetime import date, timedelta
 from django.db.models import Count, F, Sum
 from django.utils import timezone
 
-from apps.ledger.models import BalanceSnapshot
+from apps.disposition.models import Disposition
+from apps.ledger.models import BalanceSnapshot, SoulCensusSnapshot
 from apps.souls.models import Soul
 
 
@@ -46,3 +47,38 @@ def previous_month_average(snapshots, *, today: date | None = None) -> float | N
     if not agg["n"]:
         return None
     return agg["total"] / agg["n"]
+
+
+#: 普查快照保留天数;超过的在每次写入时顺手删掉(行数有界,见 SoulCensusSnapshot)。
+CENSUS_RETENTION_DAYS = 731
+
+
+def census_tenant(tenant, *, today: date | None = None) -> SoulCensusSnapshot:
+    """覆盖 `tenant` 当天的普查行:按状态、文明、界域各数一遍。幂等(键是 tenant + day)。"""
+    today = today or timezone.now().date()
+    by_state = {
+        r["current_state"]: r["n"]
+        for r in Soul.objects.filter(tenant=tenant).values("current_state").annotate(n=Count("id"))
+    }
+    total = sum(by_state.values())
+    by_realm = {
+        r["destination_realm__realm_code"]: r["n"]
+        for r in Disposition.objects.filter(tenant=tenant, is_executed=True, is_archived=False)
+        .exclude(destination_realm__isnull=True)
+        .values("destination_realm__realm_code")
+        .annotate(n=Count("id"))
+    }
+    row, _ = SoulCensusSnapshot.objects.update_or_create(
+        tenant=tenant,
+        day=today,
+        defaults={
+            "soul_count": total,
+            "by_state": by_state,
+            "by_civilization": {tenant.civilization: total} if total else {},
+            "by_realm": by_realm,
+        },
+    )
+    SoulCensusSnapshot.objects.filter(
+        tenant=tenant, day__lt=today - timedelta(days=CENSUS_RETENTION_DAYS),
+    ).delete()
+    return row

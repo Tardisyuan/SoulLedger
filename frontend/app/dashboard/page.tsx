@@ -18,6 +18,7 @@ import { RequireAdmin } from "@/src/components/rbac/RequirePermission";
 import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
 import { RealmBars, RealmLegend, PATTERN_CLASS, patternOf } from "@/src/components/dashboard/RealmBars";
 import { TodoStrip } from "@/src/components/dashboard/TodoStrip";
+import { TrendsPanel } from "@/src/components/dashboard/TrendsPanel";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
 import { DomainEnum, MissingValue } from "@/src/components/ui/DomainValue";
 import { resolveEnumDisplay } from "@/src/lib/domainDisplay";
@@ -379,6 +380,9 @@ function DashboardContent() {
                 ) : null}
               </ChartCard>
             </div>
+
+            {/* 趋势:日快照的折线(暂无 Design 稿,沿用 A4 的图表约定)。 */}
+            <TrendsPanel />
 
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.6fr_1fr]">
               {/* 按界域 — sorted descending: realms have no canonical order, so the

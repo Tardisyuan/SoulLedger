@@ -1088,7 +1088,18 @@
     "avg_scope": "Ba Neb Em Medjat",
     "occupancy": "Hesb Aq",
     "bucket_width": "Mesqet Wa: {{n}}",
-    "vs_last_month": "Abed Pehwy"
+    "vs_last_month": "Abed Pehwy",
+    "trends": {
+      "title": "Khemen Hru",
+      "range_label": "Pehwy",
+      "range_30d": "Pehwy Hru 30",
+      "range_90d": "Pehwy Hru 90",
+      "range_12m": "Pehwy Abed 12",
+      "by_state": "Em Kheperu",
+      "by_civilization": "Em Taui",
+      "error": "Nen Ini Khemen Hru",
+      "not_enough": "Nen Hru 2 Djer. Sesh Hru Neb."
+    }
   },
   "ledger": {
     "title": "Medew Nefer",
@@ -2905,6 +2916,7 @@
       "chat_reconcile_inbox": "Senb Sesh Wesekhet",
       "soul_assist_purge_history": "Fekh Medew Hehy Medu",
       "ledger_snapshot_balance_for_tenant": "Sesh Sepy Abed",
+      "ledger_snapshot_census_for_tenant": "Sesh Redu Ba Hru Neb",
       "notifications_email_action_needed_for_tenant": "Hab Sedjem Ba Em Smen Er Djeret",
       "notifications_email_action_needed_global": "Hab Sedjem Ba Em Smen Er Djeret · Sab Hery"
     },
