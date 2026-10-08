@@ -6,20 +6,27 @@
 
 > **`README.md` (Chinese) is the authority.** This translation has drifted before — it
 > sat 50 commits behind through the npm-workspaces move, and told readers to run
-> `npm test`, which does not evaluate the coverage threshold. Both files were brought
-> level on 2026-09-11, and nothing checks that they stay level. Where they disagree,
-> believe the Chinese one, and please fix this file.
+> `npm test`, which does not evaluate the coverage threshold. Both files were
+> restructured together on 2026-10-08, and nothing checks that they stay level. Where
+> they disagree, believe the Chinese one, and please fix this file.
 
-SoulLedger is a working full-stack web application — Django + Next.js — that tracks
-souls through an afterlife pipeline in four different mythologies at once: the
-Chinese Diyu, the Christian and Dantean afterlives grouped here as "European," the
-Egyptian Duat, and Plato's Greek underworld. It is an application, not a documentation repository: the
-`docs/` folder holds the domain research that the code was built from, and the
-research is genuinely load-bearing.
+SoulLedger is a working full-stack application — Django + Next.js, plus an Expo soul-side
+app — that tracks souls through an afterlife pipeline in four different mythologies at
+once: the Chinese Diyu, the Christian and Dantean afterlives grouped here as "European,"
+the Egyptian Duat, and Plato's Greek underworld. It is an application, not a
+documentation repository: the `docs/` folder holds the domain research that the code was
+built from, and the research is genuinely load-bearing.
 
 The interesting part is that the four cosmologies are not one data model in four
 colour schemes. They compute structurally different quantities, and the code
 refuses to average them.
+
+**Contents:** [Four civilizations](#why-the-four-civilizations-are-not-the-same-system) ·
+[What it does](#what-it-does) · [Architecture](#architecture) · [Quick start](#quick-start) ·
+[API and authentication](#api-and-authentication) · [Tech stack](#tech-stack) ·
+[Engineering contracts and design system](#engineering-contracts-and-design-system) ·
+[Testing, gates and CI](#testing-gates-and-ci) · [Repository and docs](#repository-and-docs) ·
+[Security, scope and license](#security-posture)
 
 ---
 
@@ -70,139 +77,18 @@ affected rows with ⊘/△ and offers a one-click filter for them.
 
 ## What it does
 
-| Domain | What it covers | Code |
+| Domain | What it covers | Code (`backend/apps/`) |
 |---|---|---|
-| Judgment pipeline | Cases from judgment to disposition and reincarnation; court settings (ADMIN only); settlement correction for SETTLED souls | `judgment/`, `disposition/`, `reincarnation/`, `tenants/` |
-| Cross-realm dispatch | Moving souls between tenants, through approval | `dispatch/` |
-| Approval workflows | Configurable multi-node approval flows, with templates | `workflow/` |
+| Judgment pipeline | Cases from judgment to disposition and reincarnation; court settings (ADMIN only); settlement correction for SETTLED souls | `judgment/`, `disposition/`, `reincarnation/`, `tenants/`, `souls/` |
+| Cross-realm dispatch | Moving souls between tenants, through approval, including cross-tenant joint judgment | `dispatch/` |
+| Approval workflows | Configurable multi-node approval flows, with templates and per-node timeouts | `workflow/` |
 | Sentence plans | Sentence stages and amendment requests | `sentence_plan/` |
 | Letters | Private messages between souls over Matrix / Synapse (loopback only, no federation); the backend mints credentials and receives the new-message hook. **Not end-to-end encrypted** | `chat/` |
 | Soul circle | Posts, comments, reactions, follows, moderation; images served via signed URLs | `social/` |
+| Ask (assistant) | A question-answering assistant for souls and for officers, one service layer; an ADMIN-only management page | `soul_assist/` |
 | External death registration | API-key-authenticated registration (single or batch), HMAC-signed webhooks | `death_sync/` |
+| Push and notifications | In-app notifications over WebSocket; Expo push for the soul app | `notifications/`, `soul_push/` |
 | Two front ends | Admin web (Next.js 16) + soul-side app (Expo SDK 57 / React Native), sharing `packages/core` | `frontend/`, `mobile/` |
-
-Backend apps live under `backend/apps/`.
-
----
-
-## Quick start
-
-**Prerequisites:** Python 3.11+ (with `uv`), Node.js 20+, and Docker if you want
-PostgreSQL and Redis locally.
-
-### Backend
-
-```bash
-cd backend
-cp .env.example .env
-uv venv --python 3.11 .venv
-uv pip install --python .venv/bin/python --no-deps -r requirements.lock -r requirements-dev.txt
-.venv/bin/python manage.py migrate
-.venv/bin/python manage.py runserver 0.0.0.0:8000
-```
-
-No `uv`: `python3.11 -m venv .venv`, then `.venv/bin/pip install --no-deps -r requirements.lock -r requirements-dev.txt`.
-
-With no `DATABASE_URL` set, Django falls back to SQLite at `backend/db.sqlite3`,
-so this works with nothing else running. (SQLite is rejected outright when
-`DEBUG=False`.) Redis is only needed for WebSockets and Celery — the REST API
-runs without it.
-
-### Frontend
-
-> **Node ≥ 20.9** (`frontend/package.json` `engines`). Next 16 requires it at build
-> time, and `eslint.config.mjs` derives its root from `import.meta.url`. On Node 18
-> this lint config once **crashed during rule loading and exited 2** — and exit 2 is
-> indistinguishable from 0 once it passes through a pipe. If `npm run lint` behaves
-> strangely, check `node --version` first.
-
-> **Install at the repository root, not inside `frontend/`.** Since 2026-09-02 this
-> is an npm workspaces repo (root + `frontend/` + `packages/*`) and the only lockfile
-> is the root `package-lock.json` — there is none under `frontend/`, so
-> `cd frontend && npm ci` simply fails.
->
-> Also: npm honours `overrides` only in the package it installs from. The pins in the
-> root `package.json` (`sharp` closes an advisory, `nwsapi` closes a 40x test-speed
-> regression) live there for that reason, with the evidence in `_overrides_notes` in
-> the same file. Do not copy them into `frontend/package.json` — a copy used to sit
-> there, did nothing, and looked like it was working.
-
-```bash
-# Repository root. Use npm 11, not the npm 10 that ships with nvm's node 20 (it exits 0
-# yet installs no typescript and no .bin); the measurements are in CLAUDE.md, Build & Test
-npx -y npm@11 ci
-npm rebuild @parcel/watcher unrs-resolver fsevents @sentry/cli   # npm 11 skips install scripts
-git checkout -- package-lock.json   # npm ci strips the lockfile's libc fields; restore it
-npm run dev --workspace frontend   # already pins PORT=3333
-```
-
-### PostgreSQL + Redis (optional, matches CI)
-
-```bash
-docker compose up -d db redis   # postgres:16-alpine on :5432, redis:7-alpine on :6379
-```
-
-The ports are published by `docker-compose.override.yml`, which a bare
-`docker compose up` reads on its own; `DB_PASSWORD` comes from the root `.env`
-(see `.env.example`).
-
-Then point the backend at it, e.g.
-`DATABASE_URL=postgres://soulledger:devpassword@localhost:5432/soulledger`.
-
-### Whole stack in Docker
-
-```bash
-docker compose up    # root docker-compose.yml: db, redis, backend, celery, celery-beat, synapse, frontend
-```
-
-Requires `DB_PASSWORD` and `SECRET_KEY` in the environment. This path runs
-migrations and seeds all four civilizations on boot.
-
-### Seed data
-
-The root compose file's boot sequence is `python manage.py migrate` then
-`python manage.py seed_mythology`, which loads realms and actors for all four
-civilizations. It used to run `python scripts/seed_chinese_data.py` — a second
-hand-maintained copy of the same tables, where every edit had to be remembered
-twice and the copy docker ran was the one no test covered. That script is gone;
-the command is the only seeding entry point. Further seeding also lives in
-Django management commands:
-
-```bash
-cd backend   # the interpreter is backend/.venv, not whatever `python` is on PATH
-.venv/bin/python manage.py seed_tenants               # CN_DIYU, EU_HEAVEN_HELL, EG_DUAT, GR_HADES
-.venv/bin/python manage.py seed_mythology             # realms + actors, all four (idempotent)
-.venv/bin/python manage.py consolidate_eu_pantheon
-.venv/bin/python manage.py seed_workflow_templates
-.venv/bin/python manage.py seed_field_permissions
-.venv/bin/python manage.py init_organizations
-.venv/bin/python manage.py create_api_key             # for the Death Sync external API
-.venv/bin/python manage.py sync_permissions           # create missing permission codenames and their
-                                                      # default grants; run after a deploy that adds
-                                                      # codenames (--dry-run lists, writes nothing)
-```
-
-Maintenance commands (can also be run by hand):
-
-```bash
-.venv/bin/python manage.py backfill_soul_entry_path   # first path station for souls that died before death wrote one (--dry-run)
-.venv/bin/python manage.py cleanup_orphan_post_media  # delete circle images uploaded but never attached to a post
-.venv/bin/python manage.py process_workflow_timeouts  # fire due per-node workflow timeouts (escalate / auto-reject / notify)
-.venv/bin/python manage.py reconcile_inbox            # recompute each hall-inbox conversation's latest message from Synapse
-```
-
-### Convenience scripts
-
-```bash
-bash scripts/start-all.sh      # backend + frontend, backgrounded, logs in scripts/logs/
-bash scripts/status.sh
-bash scripts/stop-all.sh
-bash scripts/install-hooks.sh  # pre-commit: ESLint on staged frontend files
-                               # pre-push: backend pytest / ruff / migration check, plus the
-                               #   frontend, packages/core and mobile gates, picked by what changed.
-                               # The hooks are generated copies — re-run this in the main
-                               #   checkout after editing the script.
-```
 
 ---
 
@@ -219,11 +105,6 @@ Synapse (letters)                  →  :8008   (loopback only, no federation)
 PostgreSQL 16                      →  :5432   (SQLite fallback for local dev)
 Redis 7                            →  :6379   (channel layer + Celery broker)
 ```
-
-After a native dependency changes in the soul app (e.g. `expo-image-picker`,
-`expo-image-manipulator`), rebuild the dev client with `npm run --workspace mobile android`
-/ `ios` (`expo run:*`). `expo start --clear` only swaps the JS bundle; it does not add
-native modules to the installed app.
 
 **Multi-tenancy.** A `Tenant` is an administrative record; a civilization is a
 claim about what happens to the dead. The mapping between them lives in exactly
@@ -285,15 +166,158 @@ ALIVE → JUDGING → DISPOSED → REINCARNATING → ALIVE (next cycle)
 ```
 
 `SETTLED` is deliberately absorbing: unlike `DISPOSED`, it does not keep `LOST`
-reachable.
+reachable. Settlement correction (the `souls/` row of the API table) is not a state
+transition: it reverts a SETTLED soul to DISPOSED to fix a data-entry error, requires a
+reason, and is audited separately.
 
 ---
 
-## API surface
+## Quick start
 
-Everything is under `/api/v1/`. Authenticated endpoints expect
-`Authorization: Bearer <access>`; the tenant is read from that JWT's
-`tenant_code` claim, and there is no separate tenant header.
+**Prerequisites:** Python 3.11+ (with `uv`), Node.js ≥ 20.9 (root `.nvmrc`), and Docker
+if you want PostgreSQL and Redis locally.
+
+### Backend
+
+```bash
+cd backend
+cp .env.example .env
+uv venv --python 3.11 .venv
+uv pip install --python .venv/bin/python --no-deps -r requirements.lock -r requirements-dev.txt
+.venv/bin/python manage.py migrate
+.venv/bin/python manage.py runserver 0.0.0.0:8000
+```
+
+No `uv`: `python3.11 -m venv .venv`, then `.venv/bin/pip install --no-deps -r requirements.lock -r requirements-dev.txt`.
+
+With no `DATABASE_URL` set, Django falls back to SQLite at `backend/db.sqlite3`,
+so this works with nothing else running. (SQLite is rejected outright when
+`DEBUG=False`.) Redis is only needed for WebSockets and Celery — the REST API
+runs without it.
+
+### Frontend
+
+> **Node ≥ 20.9** (`frontend/package.json` `engines`). Next 16 requires it at build
+> time, and `eslint.config.mjs` derives its root from `import.meta.url`. On Node 18
+> this lint config once **crashed during rule loading and exited 2** — and exit 2 is
+> indistinguishable from 0 once it passes through a pipe. If `npm run lint` behaves
+> strangely, check `node --version` first.
+
+> **Install at the repository root, not inside `frontend/`.** This is an npm workspaces
+> repo (root + `frontend/` + `packages/*` + `mobile/`) and the only lockfile is the root
+> `package-lock.json` — there is none under `frontend/`, so `cd frontend && npm ci`
+> simply fails.
+>
+> Also: npm honours `overrides` only in the package it installs from. The pins in the
+> root `package.json` (`sharp` closes an advisory, `nwsapi` closes a 40x test-speed
+> regression) live there for that reason, with the evidence in `_overrides_notes` in
+> the same file. Do not copy them into `frontend/package.json` — a copy used to sit
+> there, did nothing, and looked like it was working.
+
+```bash
+# Repository root. Use npm 11, not the npm 10 that ships with nvm's node 20 (it exits 0
+# yet installs no typescript and no .bin); the measurements are in CLAUDE.md, Build & Test
+npx -y npm@11 ci
+npm rebuild @parcel/watcher unrs-resolver fsevents @sentry/cli   # npm 11 skips install scripts
+git checkout -- package-lock.json   # npm ci strips the lockfile's libc fields; restore it
+npm run dev --workspace frontend   # already pins PORT=3333
+```
+
+### Soul app
+
+```bash
+npm run --workspace mobile android   # or ios — that is expo run:*, which builds and installs the dev client
+```
+
+After a native dependency changes (e.g. `expo-image-picker`, `expo-image-manipulator`),
+run that again to rebuild the dev client. `expo start --clear` only swaps the JS bundle;
+it does not add native modules to the installed app.
+
+### PostgreSQL + Redis (optional, matches CI)
+
+```bash
+docker compose up -d db redis   # postgres:16-alpine on :5432, redis:7-alpine on :6379
+```
+
+The ports are published by `docker-compose.override.yml`, which a bare
+`docker compose up` reads on its own; `DB_PASSWORD` comes from the root `.env`
+(see `.env.example`).
+
+Then point the backend at it, e.g.
+`DATABASE_URL=postgres://soulledger:devpassword@localhost:5432/soulledger`.
+
+### Whole stack in Docker
+
+```bash
+docker compose up    # root docker-compose.yml: db, redis, backend, celery, celery-beat, synapse, frontend
+```
+
+Requires `DB_PASSWORD` and `SECRET_KEY` in the environment. This path runs
+migrations and seeds all four civilizations on boot.
+
+The production stack (nginx, first TLS issuance and renewal, backup and restore) is in
+[`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
+
+### Seed data
+
+The root compose file's boot sequence is `python manage.py migrate` then
+`python manage.py seed_mythology`, which loads realms and actors for all four
+civilizations. It used to run `python scripts/seed_chinese_data.py` — a second
+hand-maintained copy of the same tables, where every edit had to be remembered
+twice and the copy docker ran was the one no test covered. That script is gone;
+the command is the only seeding entry point. Further seeding also lives in
+Django management commands:
+
+```bash
+cd backend   # the interpreter is backend/.venv, not whatever `python` is on PATH
+.venv/bin/python manage.py seed_tenants               # CN_DIYU, EU_HEAVEN_HELL, EG_DUAT, GR_HADES
+.venv/bin/python manage.py seed_mythology             # realms + actors, all four (idempotent)
+.venv/bin/python manage.py consolidate_eu_pantheon
+.venv/bin/python manage.py seed_workflow_templates
+.venv/bin/python manage.py seed_field_permissions
+.venv/bin/python manage.py init_organizations
+.venv/bin/python manage.py create_api_key             # for the Death Sync external API
+.venv/bin/python manage.py sync_permissions           # create missing permission codenames and their
+                                                      # default grants; run after a deploy that adds
+                                                      # codenames (--dry-run lists, writes nothing)
+```
+
+Maintenance commands (can also be run by hand):
+
+```bash
+.venv/bin/python manage.py backfill_soul_entry_path   # first path station for souls that died before death wrote one (--dry-run)
+.venv/bin/python manage.py cleanup_orphan_post_media  # delete circle images uploaded but never attached to a post
+.venv/bin/python manage.py process_workflow_timeouts  # fire due per-node workflow timeouts (escalate / auto-reject / notify)
+.venv/bin/python manage.py reconcile_inbox            # recompute each hall-inbox conversation's latest message from Synapse
+```
+
+### Convenience scripts
+
+```bash
+bash scripts/start-all.sh      # backend + frontend (build, then start on :3333), backgrounded, logs in scripts/logs/
+bash scripts/status.sh
+bash scripts/stop-all.sh
+bash scripts/install-hooks.sh  # installs the git hooks; see "Testing, gates and CI"
+```
+
+---
+
+## API and authentication
+
+Everything is under `/api/v1/`. The generated OpenAPI schema at `/api/schema/` and the
+Swagger UI at `/api/docs/` are authoritative; the table below is a map, not a contract.
+
+**Three kinds of credential, none accepted in another's place:**
+
+| Who | How | Where it gets in |
+|---|---|---|
+| Officer | `Authorization: Bearer <access>` (a simplejwt token from `auth/`) | The default authentication class, `OfficerJWTAuthentication`: every officer endpoint; soul tokens and the SOUL role get 403 |
+| The soul itself | `Authorization: Bearer <access>` (issued by `soul-auth/`, `token_type` `soul_access`) | Only the endpoints under `me/` (`SoulJWTAuthentication`) |
+| External system | `Authorization: ApiKey <key>` | Only the `death-sync/` registration, status and webhook endpoints, gated by capability flags |
+
+The tenant is read from the officer JWT's `tenant_code` claim; there is no separate
+tenant header. The boundary between the three is written up at the top of
+[`backend/apps/soul_accounts/authentication.py`](backend/apps/soul_accounts/authentication.py).
 
 | Prefix | App |
 |---|---|
@@ -311,8 +335,9 @@ Everything is under `/api/v1/`. Authenticated endpoints expect
 | `social/`, `social-moderation/` | Posts, comments, reactions, follows, profiles, and content moderation |
 | `sentence-plans/` | Sentence plans and their amendment requests |
 | `scheduler/` | Scheduled jobs and run history (`runs/` takes several statuses, a time range and a search) |
-| `soul-accounts/`, `soul-auth/`, `me/` | Soul account provisioning and credential handover, soul-side login, a soul's own endpoints |
+| `soul-accounts/`, `soul-auth/`, `me/` | Soul account provisioning and credential handover, soul-side login, a soul's own endpoints (push tokens, letters, assistant, circle) |
 | `chat/` | Letters: Matrix credentials minted by the backend, and Synapse's new-message hook |
+| `assist/`, `assist-admin/` | The officer-side assistant; the assistant management page (ADMIN only) |
 | `social-media/<uuid>/` | File exit for circle post images (signed URL, visibility re-checked on every request) |
 
 The ledger reading described above is served from
@@ -321,176 +346,50 @@ The ledger reading described above is served from
 `reading` (the instrument this soul's own cosmology uses). **Anything shown to a
 user should use `reading`.**
 
-The generated OpenAPI schema at `/api/schema/` and the Swagger UI at `/api/docs/`
-are authoritative; the table above is a map, not a contract.
-
 ---
 
-## Testing and CI
+## Tech stack
 
-`.github/workflows/ci.yml` defines four jobs. **It is now `workflow_dispatch` only**
-— no push or PR triggers it (GitHub Actions quota exhausted; `security.yml`'s weekly
-cron is off for the same reason). So "CI is green" is not a statement this repository
-makes automatically any more. The local gate is.
-
-| Job | Steps |
+| Layer | Technology |
 |---|---|
-| **backend** | `makemigrations --check --dry-run`, `migrate`, `pytest`, `ruff check`, `pip-audit` |
-| **frontend** | `packages/core` typecheck / lint / vitest, then `tsc --noEmit`, `eslint`, `next build`, `npm run test:coverage`, `npm audit` |
-| **mobile** | `mobile/` typecheck / lint / test |
-| **e2e** | Playwright matrix: one leg each for chromium / firefox / mobile-chrome, `fail-fast: false`, a separate report artifact per leg |
+| Frontend | Next.js 16, React 19, TypeScript 5, Tailwind CSS 4, TanStack Query v5, @xyflow/react (workflow canvas), Recharts, class-variance-authority |
+| Type | next/font + Archivo / Source Serif 4 / IBM Plex Mono; `@fontsource-variable/noto-sans-sc` and `-serif-sc` self-hosted (101 `unicode-range` slices each, so a browser fetches only what a page uses) |
+| Backend | Django 5, Django REST Framework, drf-spectacular, channels + daphne |
+| Database | PostgreSQL 16 (Docker/production, pgvector for assistant retrieval), SQLite (local default) |
+| Soul app | Expo SDK 57 + React Native (`mobile/`, sharing packages/core with the web) |
+| Letters | Matrix / Synapse v1.161 (loopback only, no federation) |
+| Realtime | WebSocket via channels with channels-redis |
+| Async | Celery 5 + django-celery-beat, Redis broker |
+| Auth | djangorestframework-simplejwt (separate officer and soul tokens), plus API keys for Death Sync |
+| Testing | pytest + pytest-django + pytest-cov + factory-boy; Jest + React Testing Library; vitest; Playwright |
+| Tooling | ruff, ESLint, TypeScript, Sentry, structlog |
 
-Backend CI runs against real PostgreSQL 16 and Redis 7 service containers.
-
-Both `pip-audit` and `npm audit` **block** now — neither is `continue-on-error`
-any more. The backend scan is scoped to `-r requirements.lock --no-deps` (`ci.yml:97`) rather than the whole
-runner environment, the frontend one is `npm audit --audit-level=high`, and the
-accepted-advisory count is none on both sides. The reasons are written into the
-workflow file next to each step, including an explicit instruction not to put
-`continue-on-error` back; read those before loosening anything.
-
-Locally:
-
-```bash
-cd backend && .venv/bin/python -m pytest --tb=short -q   # repo-root pytest.ini: --cov=apps, --cov-fail-under=80
-                                                 # The interpreter is .venv/bin/python, not the one on
-                                                 # PATH: that one usually has no Django, and its
-                                                 # ModuleNotFoundError reads as a missing dependency
-                                                 # when the real cause is the wrong interpreter.
-                                                 # Isolate DATABASE_URL *and* REDIS_URL first:
-                                                 # overriding only the database still lets the
-                                                 # suite write into the shared Redis.
-                                                 # Full recipe: CLAUDE.md, Build & Test.
-cd backend && .venv/bin/ruff check .
-npm run --workspace mobile typecheck           # the soul app's three gates; pre-push runs all
-npm run --workspace mobile lint                # three on any ^mobile/ change
-npm run --workspace mobile test                # jest + jest-expo
-cd frontend && npx tsc --noEmit && npm run lint && npm run test:coverage
-# `test:coverage`, NOT `npm test`. The latter is bare jest, and jest.config.js sets
-# coverageThreshold without collectCoverage — so the threshold is only evaluated when
-# --coverage is passed. Measured: bare `npm test` prints the word "coverage" zero times.
-
-# E2E — three projects, and build first. `webServer` serves the build output
-# (`start:e2e`), not `next dev`: a dev server compiles on demand, so
-# waitForLoadState("networkidle") waits on compilation — the same code failed 3/4/2
-# specs across three runs, hitting a different route each time. CI runs all three legs,
-# so running only chromium is not "ran the E2E suite".
-cd frontend && npm run build
-cd frontend && npx playwright test --project=chromium
-cd frontend && npx playwright test --project=firefox
-cd frontend && npx playwright test --project=mobile-chrome
-```
-
-**Backend tests live in two places** — `backend/tests/` and `test_*.py` / `tests.py`
-inside each app under `backend/apps/`. `pytest.ini` sets `testpaths = backend`, so
-running from the repo root collects both. Pointing pytest at only one of them
-gives you a green run that proves less than it looks like it does.
-
-Coverage is measured as `--cov=apps` (the importable package name, not a path) so
-that it reports the same numbers whether you run from the repo root or from
-`backend/`.
+**There are two copies of React here.** The web production build and jest use the
+one Next vendors (`next/dist/compiled/react`; `frontend/jest.config.js` maps
+`react` / `react-dom` onto it, and `jestRunsNextVendoredReact.test.ts` pins that);
+`packages/core`'s vitest and `mobile/` use the installed react 19.2.3. Expo 57
+pins 19.2.3 and every Next release vendors only a canary, so the two cannot be the
+same version — upgrading next also swaps the React the web tests run on.
 
 ---
 
-## Repository map
+## Engineering contracts and design system
 
-```
-backend/
-  apps/
-    souls/          Soul model, state machine, tenant→civilization map
-    ledger/         Merit/demerit records, time decay, per-cosmology readings
-    judgment/       Judgment records and verdicts
-    disposition/    Verdict → destination realm
-    reincarnation/  Rebirth records
-    actors/         Judges, guardians, psychopomps
-    realms/         Afterlife geography
-    dispatch/       Cross-realm transfers (includes cross-tenant joint judgment)
-    perm/           RBAC: Permission, Role, DataScope, FieldPermission
-    tenants/        Tenant model, contextvar-backed TenantManager
-    authentication/ JWT auth, User model, roles
-    workflow/       Approval workflow engine
-    menus/          Tree navigation + MenuButton
-    events/         EventBus, EventEnvelope, HandlerRegistry
-    notifications/  Notifications + WebSocket consumer
-    death_sync/     External death-registration API and webhooks
-    social/         Posts, comments, reactions, follows, profiles
-    sentence_plan/  Sentence plans: penalty nodes, amendment requests
-    scheduler/      Job registry, TaskRun history, the reap and prune passes
-    soul_accounts/  A soul's own account: provisioning, credential handover, login throttles
-    soul_push/      Expo push tokens and delivery for the soul app
-    chat/           Letters between souls: Matrix credentials, room policy, new-message hook
-    org/            Organization chart
-    audit/          Audit log with trace_id
-    core/           Shared viewsets/mixins, permission classes, tenant scoping,
-                    WebSocket auth, health checks. NOT in INSTALLED_APPS；
-                    `apps/core/middleware.py` was deleted whole on 2026-08-28 —
-                    what survives is `request_local.py::RequestContextMiddleware`
-  config/           Settings, URLs, ASGI, Celery
-  tests/            Cross-app pytest suite (half the backend tests live in
-                    apps/*/ — see Testing & CI)
-packages/core/      The platform-independent layer. **No DOM** — its tsconfig omits
-  src/api/          One typed client per backend app (was frontend/lib/api/)
-  src/hooks/        Sixteen data hooks (useSouls / useSocial / useSocialModeration /
-                    useJudgments / useJudgmentQueue / useStatutes / useDispositions /
-                    useDispatchDrafts / usePermissionMatrix /
-                    useReincarnation / useSentencePlans / useScheduler /
-                    useSoulAccounts / useSoulChat / useSoulInbox / useSoulMediaUploads)
-  src/platform/     Eight host-capability ports; the web impl is in
-                    frontend/lib/platform/web.ts
-  src/config/       Domain config: the four-cosmology maps, civilizationSigil,
-                    workflow-templates
-  messages/         i18n: zh-Hans, en, egy (was frontend/messages/)
-  openapi/          schema.yml — the source of the frontend's types, with a backend
-                    gate asserting it byte-for-byte
-frontend/
-  app/              Next.js App Router pages (43 page.tsx, 40 of them on PageShell)
-  src/hooks/        Only five view-layer hooks remain: useChartColors /
-                    usePermissions / useRowTransitions / useSidebarMenus / useWideViewport
-  src/components/   UI, including the RBAC gating components
-  src/__tests__/    The contract tests — these are the conventions that are enforced
-  components/ui/    A third source root: data-table / data-grid / page-section
-  lib/platform/     The web implementation of the platform ports
-  e2e/              Playwright specs
-mobile/             The soul app (Expo SDK 57 / React Native). Everything
-  src/              platform-independent comes from packages/core; only screens,
-                    navigation and the mobile ports live here
-config/synapse/     Synapse homeserver template and the room-policy module (letters)
-nginx.conf          the nginx main config the production merge mounts
-scripts/            start/stop/restart/status, DB backup/restore, git hooks
-docs/               Domain research, engineering docs, design handoff — see docs/README.md
-```
+### Two conventions that bite
 
----
+**The indentation of `packages/core/src/config/workflow-templates.ts` is a backend
+contract.** Three backend tests (`test_workflow_template_cast.py`,
+`test_workflow_preset_node_types.py`, `test_workflow_template_priority.py`) open
+this frontend file by hardcoded path and regex its *layout* — two-space keys,
+four-space fields, one-line node literals. All 499 of its lines (2026-10-08) are load-bearing text.
+**Running `prettier` over it silently breaks those three backend tests.**
 
-## Documentation
+**`min-h-screen` belongs only to routes outside `AppLayout`.** `AppLayout` hands a
+page a `min-h-[calc(100vh-4rem)]` slot; writing `min-h-screen` inside it nests 100vh
+in 100vh−4rem, which is 64px of dead scroll on every route — no error, no type
+error, no failing assertion. `src/__tests__/viewportHeightContract.test.ts` guards it.
 
-Start at [`docs/README.md`](docs/README.md), which indexes the whole folder. The
-short version:
-
-- **Domain research (Chinese-language).** ~20 files on the four afterlife
-  systems — the Ten Courts of Diyu, Dante's circles and the Norse and Greek
-  underworlds, the twelve gates of the Duat and the weighing of the heart. This
-  is the source material the domain model was derived from, and it is why
-  `readings.py` looks the way it does. These used to be mirrored byte-for-byte
-  at the repo root under `地府结构研究/`, `欧洲天堂地狱/` and `埃及冥界/`;
-  **de-duplicated on 2026-08-15** (`b2645e3`), which deleted the 19 copies and
-  left each directory holding one README that maps the old filenames into
-  `docs/`.
-- **Engineering docs.** Architecture, conventions, API notes, milestones, and a
-  set of dated review/audit reports.
-- **[`docs/design-handoff/`](docs/design-handoff/)** — a design brief package sent
-  to an external designer, with 29 full-page screenshots of the live UI, a design
-  token inventory, and localized table samples. `ADDENDUM.md` records what changed
-  after the package was assembled and should be read alongside `BRIEF.md`. This
-  package is referenced externally; treat it as frozen.
-
-Top level: [`SPEC.md`](SPEC.md) is the full project specification,
-[`DESIGN.md`](DESIGN.md) the design system, [`CONTRIBUTING.md`](CONTRIBUTING.md)
-the workflow, [`SECURITY.md`](SECURITY.md) the disclosure policy.
-
----
-
-## Frontend design system
+### Type and components
 
 The interface used to render in whatever UI font the reader's OS supplied — no
 family was loaded at all, so mixed Latin/CJK runs sat on two unrelated baselines.
@@ -502,7 +401,7 @@ There is now a written-down type system.
 | Scale | Seven steps, `text-2xs` / `xs` / `sm` / `md` / `quote` / `lg` / `xl` (11/12/13/16/20/22/28px, `frontend/app/globals.css:162-177`; spec v1). Table body is 13px, so density is not the price. |
 | Radius | **Square everywhere**, the focus ring included. `rounded-full` is for avatars and spinners only, in the files listed in `ROUND_ALLOW` in `eslint.config.mjs`. |
 | Rules | Four weights: 1px row rule / 1px block edge / 2px section underline / 3px civilization line and sealed-verdict band. |
-| Shell | One `PageShell` replaces 36 hand-written page shells; eight content widths collapse to three. |
+| Shell | Pages share one `PageShell`; eight content widths collapse to three. |
 | Primitives | `Button` `Field` `Badge` `Spinner` `EmptyState` `PageShell` |
 
 **Serif marks what someone said** — the 172 transcribed articles, confession text,
@@ -535,64 +434,179 @@ resolves, `rounded-lg` still resolves (to 0). So the seven type steps, the ten s
 steps and the one radius are all **restrictions**, and a restriction has no
 expression in Tailwind — only lint can impose it. `frontend/eslint.config.mjs`
 carries seven custom rules (type-scale / spacing-rhythm / dead-radius / no-page-shadow /
-no-raw-palette / no-hex-colour / no-styles-in-csstext, `eslint.config.mjs:663-671`) plus
-jsx-a11y, all at `error`. There are no civilization colours: `--color-civ-*` was removed in
-`a2044b28`, and `ledgerPaletteContract.test.ts` holds that.
+no-raw-palette / no-hex-colour / no-styles-in-csstext) plus jsx-a11y, all at `error`.
+There are no civilization colours: `--color-civ-*` was removed in `a2044b28`, and
+`ledgerPaletteContract.test.ts` holds that.
 
-Until 2026-09-05 `npm run lint` was a bare `eslint .`, which exits 0 when only warnings
-exist; it is now `eslint . --max-warnings 0` in both `frontend` and `packages/core`.
-Migration relief is a **baseline**:
-`frontend/eslint.design-guard-baseline.json` records each file's current violation
-count, and it fires in **both** directions — a count that drops below its budget is
-as red as one that exceeds it, because a stale baseline is an unwatched gap.
-
-### Two conventions that bite
-
-**The indentation of `packages/core/src/config/workflow-templates.ts` is a backend
-contract.** Three backend tests (`test_workflow_template_cast.py`,
-`test_workflow_preset_node_types.py`, `test_workflow_template_priority.py`) open
-this frontend file by hardcoded path and regex its *layout* — two-space keys,
-four-space fields, one-line node literals. All 499 of its lines (2026-09-26) are load-bearing text.
-**Running `prettier` over it silently breaks those three backend tests.**
-
-**`min-h-screen` belongs only to routes outside `AppLayout`.** `AppLayout` hands a
-page a `min-h-[calc(100vh-4rem)]` slot; writing `min-h-screen` inside it nests 100vh
-in 100vh−4rem, which is 64px of dead scroll on every route — no error, no type
-error, no failing assertion. `src/__tests__/viewportHeightContract.test.ts` guards it.
+`npm run lint` is `eslint . --max-warnings 0` in both `frontend` and `packages/core`
+(until 2026-09-05 it was a bare `eslint .`, which exits 0 when only warnings exist).
+Migration relief is a **baseline**: `frontend/eslint.design-guard-baseline.json` records
+each file's current violation count, and it fires in **both** directions — a count that
+drops below its budget is as red as one that exceeds it, because a stale baseline is an
+unwatched gap.
 
 ---
 
-## Tech stack
+## Testing, gates and CI
 
-| Layer | Technology |
+**CI is now `workflow_dispatch` only** — no push or PR triggers it (GitHub Actions quota
+exhausted; `security.yml`'s weekly cron is off for the same reason). So "CI is green" is
+not a statement this repository makes automatically any more. The local gate is.
+`.github/workflows/ci.yml` defines four jobs:
+
+| Job | Steps |
 |---|---|
-| Frontend | Next.js 16, React 19, TypeScript 5, Tailwind CSS 4, TanStack Query v5, @xyflow/react (workflow canvas), Recharts, class-variance-authority |
-| Type | next/font + Archivo / Source Serif 4 / IBM Plex Mono; `@fontsource-variable/noto-sans-sc` and `-serif-sc` self-hosted (101 `unicode-range` slices each, so a browser fetches only what a page uses) |
-| Backend | Django 5, Django REST Framework, drf-spectacular, channels + daphne |
-| Database | PostgreSQL 16 (Docker/production), SQLite (local default) |
-| Soul app | Expo SDK 57 + React Native (`mobile/`, sharing packages/core with the web) |
-| Letters | Matrix / Synapse v1.161 (loopback only, no federation) |
-| Realtime | WebSocket via channels with channels-redis |
-| Async | Celery 5 + django-celery-beat, Redis broker |
-| Auth | djangorestframework-simplejwt, plus API keys for Death Sync |
-| Testing | pytest + pytest-django + pytest-cov + factory-boy; Jest + React Testing Library; Playwright |
-| Tooling | ruff, ESLint, TypeScript, Sentry, structlog |
+| **backend** | `makemigrations --check --dry-run`, `migrate`, `pytest`, `ruff check`, `pip-audit` |
+| **frontend** | `packages/core` typecheck / lint / vitest, then `tsc --noEmit`, `eslint`, `next build`, `npm run test:coverage`, `npm audit` |
+| **mobile** | `mobile/` typecheck / lint / test |
+| **e2e** | Playwright matrix: one leg each for chromium / firefox / mobile-chrome, `fail-fast: false`, a separate report artifact per leg |
 
-**There are two copies of React here.** The web production build and jest use the
-one Next vendors (`next/dist/compiled/react`; `frontend/jest.config.js` maps
-`react` / `react-dom` onto it, and `jestRunsNextVendoredReact.test.ts` pins that);
-`packages/core`'s vitest and `mobile/` use the installed react 19.2.3. Expo 57
-pins 19.2.3 and every Next release vendors only a canary, so the two cannot be the
-same version — upgrading next also swaps the React the web tests run on.
+Backend CI runs against real PostgreSQL 16 and Redis 7 service containers. Both
+`pip-audit` (scoped to `-r requirements.lock --no-deps`) and `npm audit --audit-level=high`
+**block**, with no accepted advisories on either side; read the comments next to each
+step in the workflow file before loosening anything.
+
+**Local gates.** After `bash scripts/install-hooks.sh`, pre-commit runs ESLint on staged
+frontend files and pre-push calls [`scripts/run-gates.sh`](scripts/run-gates.sh), which
+picks the backend / frontend / `packages/core` / `mobile` gates by changed path, runs
+frontend jest selectively, and runs backend pytest in full. The same gates run by hand:
+
+```bash
+scripts/run-gates.sh           # compare with the merge-base against origin/main; what a push would run
+scripts/run-gates.sh --full    # jest in full as well
+scripts/run-gates.sh --help
+```
+
+Individual gates:
+
+```bash
+cd backend && .venv/bin/python -m pytest --tb=short -q   # isolate DATABASE_URL and REDIS_URL first, see below
+cd backend && .venv/bin/ruff check .
+cd frontend && npx tsc --noEmit && npm run lint && npm run test:coverage
+npm run --workspace packages/core typecheck && npm run --workspace packages/core lint && npm run --workspace packages/core test
+npm run --workspace mobile typecheck && npm run --workspace mobile lint && npm run --workspace mobile test
+cd frontend && npm run build && npx playwright test   # all three projects; build first
+```
+
+Things that trip people up:
+
+- **The interpreter is `backend/.venv/bin/python`**, not the `python` on PATH. That one
+  usually has no Django, and its `ModuleNotFoundError` reads as a missing dependency when
+  the real cause is the wrong interpreter.
+- **`.env` points both `DATABASE_URL` and `REDIS_URL` at a shared test box**; override
+  both before running tests. Overriding only the database still lets the suite write
+  permission-cache keys into the shared Redis.
+- **Backend tests live in two places** — `backend/tests/` and `test_*.py` / `tests.py`
+  inside each app under `backend/apps/`. `pytest.ini` sets `testpaths = backend`, so
+  running from the repo root collects both; pointing pytest at one of them gives a green
+  run that proves less than it looks. Coverage is measured as `--cov=apps` (floor 80%).
+- **Frontend uses `test:coverage`, not `npm test`**: the latter is bare jest, and
+  `coverageThreshold` is only evaluated when `--coverage` is passed.
+- **E2E has three projects and needs a build first**: `webServer` serves the build output
+  (`start:e2e`), not `next dev` — a dev server compiles on demand, so `networkidle` waits
+  on compilation and results turn random. Running only chromium is not "ran the E2E suite".
+- **SQLite hides a whole class of defect** (aborted transactions, `varchar` length); run a
+  change that touches transactions, constraints or column widths against real PostgreSQL too.
+
+The full recipes, measured numbers and the incidents behind them are in
+[`CLAUDE.md`](CLAUDE.md), Build & Test.
+
+---
+
+## Repository and docs
+
+```
+backend/
+  apps/
+    souls/          Soul model, state machine, tenant→civilization map
+    ledger/         Merit/demerit records, time decay, per-cosmology readings
+    judgment/       Judgment records and verdicts
+    disposition/    Verdict → destination realm
+    reincarnation/  Rebirth records
+    actors/         Judges, guardians, psychopomps, plus the four corpora and their seeds
+    realms/         Afterlife geography
+    dispatch/       Cross-realm transfers (includes cross-tenant joint judgment)
+    perm/           RBAC: Permission, Role, DataScope, FieldPermission
+    tenants/        Tenant model, court settings, TenantManager (soft deletes only)
+    authentication/ JWT auth, User model, roles, login log
+    workflow/       Approval workflow engine
+    menus/          Tree navigation + MenuButton
+    events/         EventBus, EventEnvelope, HandlerRegistry
+    notifications/  Notifications + WebSocket consumer
+    death_sync/     External death-registration API, API keys, webhooks
+    social/         Posts, comments, reactions, follows, profiles, moderation
+    sentence_plan/  Sentence plans: penalty nodes, amendment requests
+    scheduler/      Job registry, TaskRun history, the reap and prune passes
+    soul_accounts/  A soul's own account: provisioning, credential handover, login
+                    throttles, the officer/soul token boundary
+    soul_push/      Expo push tokens and delivery for the soul app
+    soul_assist/    Ask: the soul-side and officer-side assistant, its management page
+    chat/           Letters between souls: Matrix credentials, room policy, new-message hook
+    org/            Organization chart
+    audit/          Audit log with trace_id
+    core/           Shared viewsets/mixins, permission classes, tenant scoping,
+                    WebSocket auth, health checks (NOT in INSTALLED_APPS)
+  config/           Settings, URLs, ASGI, Celery
+  tests/            Cross-app pytest suite (half the backend tests live in apps/*/)
+packages/core/      The platform-independent layer. **No DOM** — its tsconfig omits "dom"
+  src/api/          One typed client per backend app
+  src/hooks/        Data hooks (useSouls, useJudgments, useSoulChat …), shared by web and app
+  src/platform/     Host-capability ports; the web impl is in frontend/lib/platform/web.ts
+  src/config/       Domain config: the four-cosmology maps, civilizationSigil,
+                    workflow-templates
+  messages/         i18n: zh-Hans, en, egy
+  openapi/          schema.yml — the source of the frontend's types, with a backend
+                    gate asserting it byte-for-byte
+frontend/
+  app/              Next.js App Router pages
+  src/hooks/        Hooks that belong to the web view layer only
+  src/components/   UI, including the RBAC gating components
+  src/__tests__/    The contract tests — these are the conventions that are enforced
+  components/ui/    A third source root: data-table / data-grid / page-section / skeleton
+  lib/platform/     The web implementation of the platform ports
+  e2e/              Playwright specs
+mobile/             The soul app (Expo SDK 57 / React Native). Everything
+  src/              platform-independent comes from packages/core; only screens,
+                    navigation and the mobile ports live here
+config/synapse/     Synapse homeserver template and the room-policy module (letters)
+nginx.conf          the nginx main config the production merge mounts
+scripts/            start/stop/status, gates (run-gates.sh), DB backup/restore, git hooks
+docs/               Domain research, engineering docs, design handoff — see docs/README.md
+```
+
+Documentation starts at [`docs/README.md`](docs/README.md), which indexes the whole
+folder. The short version:
+
+- **Domain research (Chinese-language).** ~20 files on the four afterlife
+  systems — the Ten Courts of Diyu, Dante's circles and the Norse and Greek
+  underworlds, the twelve gates of the Duat and the weighing of the heart. This
+  is the source material the domain model was derived from, and it is why
+  `readings.py` looks the way it does. These used to be mirrored byte-for-byte
+  at the repo root under `地府结构研究/`, `欧洲天堂地狱/` and `埃及冥界/`;
+  **de-duplicated on 2026-08-15** (`b2645e3`), which deleted the 19 copies and
+  left each directory holding one README that maps the old filenames into
+  `docs/`.
+- **Engineering docs.** Architecture, conventions, API notes, milestones, and a
+  set of dated review/audit reports.
+- **[`docs/design-handoff/`](docs/design-handoff/)** — a design brief package sent
+  to an external designer, with 29 full-page screenshots of the live UI, a design
+  token inventory, and localized table samples. `ADDENDUM.md` records what changed
+  after the package was assembled and should be read alongside `BRIEF.md`. This
+  package is referenced externally; treat it as frozen.
+
+Top level: [`SPEC.md`](SPEC.md) is the full project specification,
+[`DESIGN.md`](DESIGN.md) the design system, [`CONTRIBUTING.md`](CONTRIBUTING.md)
+the workflow, [`SECURITY.md`](SECURITY.md) the disclosure policy, and
+[`CLAUDE.md`](CLAUDE.md) the authority on builds, gates and commit format.
 
 ---
 
 ## Security posture
 
-Implemented: JWT and API-key authentication, RBAC with data and field scoping,
-Fernet encryption for webhook secrets and PII payloads, atomic Redis rate
-limiting, SSRF validation on webhook URLs, CSP/HSTS/X-Frame-Options, and an audit
-trail on mutations.
+Implemented: JWT and API-key authentication (officer, soul and external credentials,
+none accepted in another's place), RBAC with data and field scoping, Fernet encryption
+for webhook secrets and PII payloads, atomic Redis rate limiting, SSRF validation on
+webhook URLs, CSP/HSTS/X-Frame-Options, and an audit trail on mutations.
 
 External API keys (`backend/apps/death_sync/`, managed at `/death-sync/api-keys`) are
 granted per capability: three booleans, `can_register_death` / `can_query_status` /
@@ -608,6 +622,10 @@ and no key it only warns, and `WebhookConfig.signing_secret` plus
 `DeathRegistrationRequest.source_payload` are **stored in plaintext**. If you see
 that warning in development, those two columns are plaintext.
 
+Letter bodies live only in Synapse — none in the backend database or the audit log — and letters are not end-to-end encrypted. The Ask assistant is
+the one place in the repository that stores a soul's free text and sends it to a
+third-party model (the text is kept for 30 days; the audit log holds only a hash).
+
 That list describes what the code does, not a security guarantee. See
 [`SECURITY.md`](SECURITY.md) for how to report a problem.
 
@@ -616,7 +634,7 @@ That list describes what the code does, not a security guarantee. See
 ## Scope and status
 
 This is a personal project built for its own sake — a place to work out what it
-takes to model three incompatible moral accounting systems in one schema without
+takes to model four incompatible moral accounting systems in one schema without
 quietly flattening them into one. It has never been deployed anywhere real, has
 no users, and carries no uptime, support, or backward-compatibility promise. The
 production Docker Compose file, health checks, and CI exist because doing them
