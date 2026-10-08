@@ -277,3 +277,25 @@ def test_the_same_rule_serially(cn_tenant, judge_user, django_capture_on_commit_
     with pytest.raises(SoulAccountError) as refused:
         rebirth.decide_cooldown_shortening(row_id, judge_user, approve=True, approved_days=0)
     assert refused.value.code == "already_decided"
+
+
+def test_officer_row_carries_the_progress_numbers_and_counts_are_tenant_scoped(
+    cn_tenant, eu_tenant, judge_user, django_capture_on_commit_callbacks
+):
+    """A11:总天数 / 已过天数 / 原截止;批准后现截止提前而原截止不动;counts 只数本租户。"""
+    application, client, _ = _rejected_soul(cn_tenant, judge_user, django_capture_on_commit_callbacks)
+    row_id = _request(client).data["id"]
+    officer = officer_client(judge_user)
+    row = officer.get(f"{OFFICER}{row_id}/").data
+    assert row["cooldown_total_days"] == 30 and 0 <= row["cooldown_past_days"] <= 1
+    assert row["cooldown_end"] == row["cooldown_original_until"]
+    assert officer.get(f"{OFFICER}counts/").data == {"PENDING": 1, "APPROVED": 0, "REJECTED": 0}
+    eu_judge = User.objects.create_user(username="eu_judge2", password="x", role="JUDGE", tenant=eu_tenant)
+    assert officer_client(eu_judge).get(f"{OFFICER}counts/").data == {"PENDING": 0, "APPROVED": 0, "REJECTED": 0}
+
+    with django_capture_on_commit_callbacks(execute=True):
+        officer.post(f"{OFFICER}{row_id}/approve/", {"approved_days": 3}, format="json")
+    row = officer.get(f"{OFFICER}{row_id}/").data
+    assert row["cooldown_total_days"] == 3 and row["cooldown_end"] < row["cooldown_original_until"]
+    assert row["cooldown_past_days"] <= row["cooldown_total_days"]
+    assert officer.get(f"{OFFICER}counts/").data == {"PENDING": 0, "APPROVED": 1, "REJECTED": 0}
