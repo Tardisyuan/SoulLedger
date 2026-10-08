@@ -2563,7 +2563,15 @@
       "already_decided": "Already decided",
       "cooldown_over": "The cooldown is over; nothing to decide",
       "invalid_days": "Days must be between 0 and the days left",
-      "note_required": "A rejection needs a note for the soul"
+      "note_required": "A rejection needs a note; the soul will read it",
+      "remaining_progress": "{{past}} of {{total}} days passed",
+      "approve_with_days": "Approve · {{days}} days left",
+      "scope_note": "Approval only shortens this cooling-off period; the hall's setting is unchanged",
+      "sort_note": "Pending sorted by days left; ended cooling-off last",
+      "source": "Cooling-off from the final rejection of {{id}}",
+      "decide_failed": "Could not decide: {{reason}}",
+      "original": "was {{date}}",
+      "day_unit": "days"
     },
     "cooldown_status": {
       "PENDING": "Pending",
@@ -3716,7 +3724,7 @@
       "load_failed": "Could not load the notification history",
       "not_delivered": "Not delivered",
       "more": "More"
-  },
+    },
     "cooldown": {
       "request": "Ask to shorten the cooldown",
       "hint": "Once per cooldown; the home civilization decides.",
@@ -3726,7 +3734,8 @@
       "pending": "Cooldown shortening request pending",
       "approved": "Cooldown shortening approved; cooling-off ends {{date}}",
       "rejected": "Cooldown shortening request rejected",
-      "note": "Note"
+      "note": "Note",
+      "brought_forward": "Brought forward"
     }
   },
   "soul_push": {
