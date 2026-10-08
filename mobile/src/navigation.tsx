@@ -8,11 +8,12 @@
  * The theme is decided here too: neutral until a soul is signed in, then that
  * soul's civilization; light or dark follows the system.
  */
-import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { createBottomTabNavigator, type BottomTabScreenProps } from "@react-navigation/bottom-tabs";
 import {
   DarkTheme,
   DefaultTheme,
   NavigationContainer,
+  type ParamListBase,
   createNavigationContainerRef,
   type Theme as NavTheme,
 } from "@react-navigation/native";
@@ -62,6 +63,20 @@ const Tabs = createBottomTabNavigator();
 
 /** Lets a test read which routes are mounted — the guard is the set of route names, not what is on screen. */
 export const navigationRef = createNavigationContainerRef<RootParams>();
+
+/**
+ * The rebirth tab. `landed` (set by `landOn` for a tapped cooldown-decision push) washes the
+ * shortening block once; the param is cleared after the fade so coming back later does not repeat it.
+ */
+function ApplicationsTab({ route, navigation }: BottomTabScreenProps<ParamListBase, "Applications">) {
+  const landed = (route.params as { landed?: boolean } | undefined)?.landed;
+  useEffect(() => {
+    if (!landed) return;
+    const timer = setTimeout(() => navigation.setParams({ landed: undefined }), 1500);
+    return () => clearTimeout(timer);
+  }, [landed, navigation]);
+  return <ApplicationsScreen landed={landed} />;
+}
 
 function MainTabs() {
   const { t } = useI18n();
@@ -116,7 +131,7 @@ function MainTabs() {
       {/* v3: the life tab draws its own identity band (it compacts as the page scrolls), so no navigator header. */}
       <Tabs.Screen name="Life" component={MyLifeScreen} options={{ title: t("soul_app.tabs.life"), headerShown: false }} />
       {/* The tab is a signpost, the screen title the full name (chat handoff 1a): four two-character labels fit 98pt. */}
-      <Tabs.Screen name="Applications" component={ApplicationsScreen} options={{ title: t("soul_app.tabs.rebirth") }} />
+      <Tabs.Screen name="Applications" component={ApplicationsTab} options={{ title: t("soul_app.tabs.rebirth") }} />
       {/* Not deployed here: no tab at all, rather than one that opens onto "not available" (1b). */}
       {chat.availability === "not_configured" ? null : (
         <Tabs.Screen

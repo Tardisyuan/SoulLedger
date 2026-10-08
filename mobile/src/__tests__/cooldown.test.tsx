@@ -5,6 +5,7 @@
  */
 import { NavigationContainer } from "@react-navigation/native";
 import { fireEvent, render, screen } from "@testing-library/react-native";
+import { AccessibilityInfo } from "react-native";
 import type { ReactNode } from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
@@ -100,7 +101,7 @@ it("shows an approval with the list's (shortened) end date, and a rejection with
   });
   wrap(<ApplicationsScreen />);
   expect(await screen.findByText("缩短冷却申请被驳回")).toBeTruthy();
-  expect(screen.getByTestId("cooldown-shortening-note").props.children.join("")).toContain("理由不足");
+  expect(screen.getByText(/理由不足/)).toBeTruthy();
   expect(screen.queryByTestId("request-cooldown-shortening")).toBeNull();
 });
 
@@ -110,5 +111,56 @@ it("a push for the decision lands on the applications tab", () => {
   // And it really goes there: `landOn` is the one routing table for pushes and the history list.
   const navigate = jest.fn();
   landOn(navigate as never, landing!);
-  expect(navigate).toHaveBeenCalledWith("Tabs", { screen: "Applications" });
+  expect(navigate).toHaveBeenCalledWith("Tabs", { screen: "Applications", params: { landed: true } });
+});
+
+it("after an approval the cooling-off line carries 「↑ 已提前」 beside the new date; before one it does not", async () => {
+  stubApi({
+    "/me/rebirth-applications/": {
+      status: 200,
+      data: cooling({ cooldown_until: "2026-10-11T00:00:00Z", cooldown_shortening: row({ status: "APPROVED", approved_days: 3 }) }),
+    },
+  });
+  wrap(<ApplicationsScreen />);
+  expect(await screen.findByTestId("cooldown-brought-forward")).toBeTruthy();
+  expect(screen.getByText("↑ 已提前")).toBeTruthy();
+  screen.unmount();
+
+  for (const shortening of [null, row(), row({ status: "REJECTED", decision_note: "x" })]) {
+    stubApi({ "/me/rebirth-applications/": { status: 200, data: cooling({ cooldown_shortening: shortening }) } });
+    const view = wrap(<ApplicationsScreen />);
+    await screen.findByTestId("cooldown-until");
+    expect(screen.queryByTestId("cooldown-brought-forward")).toBeNull();
+    view.unmount();
+  }
+});
+
+describe("the push-arrival wash on the shortening block", () => {
+  const approved = () =>
+    stubApi({ "/me/rebirth-applications/": { status: 200, data: cooling({ cooldown_shortening: row({ status: "APPROVED", approved_days: 3 }) }) } });
+
+  it("is drawn only when the page was landed on from a push", async () => {
+    approved();
+    wrap(<ApplicationsScreen landed />);
+    await screen.findByTestId("cooldown-block");
+    expect(screen.getByTestId("cooldown-landing")).toBeTruthy();
+    screen.unmount();
+
+    approved();
+    wrap(<ApplicationsScreen />);
+    await screen.findByTestId("cooldown-block");
+    expect(screen.queryByTestId("cooldown-landing")).toBeNull();
+  });
+
+  it("is not drawn at all under reduce motion", async () => {
+    const spy = jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockResolvedValue(true);
+    approved();
+    wrap(<ApplicationsScreen landed />);
+    await screen.findByTestId("cooldown-block");
+    await screen.findByTestId("cooldown-shortening");
+    // Reduce motion is answered after the first render; by then the wash is gone.
+    await new Promise((r) => setTimeout(r, 0));
+    expect(screen.queryByTestId("cooldown-landing")).toBeNull();
+    spy.mockRestore();
+  });
 });
