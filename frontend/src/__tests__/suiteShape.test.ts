@@ -98,6 +98,7 @@ const COLLECTED_FILES = [
   "ProfileCard.test.tsx",
   "ProfilePage.roleBadge.test.tsx",
   "RebirthApplicationsPage.test.tsx",
+  "RebirthApplicationsPage.cooldownShortening.test.tsx",
   "RebirthFormSelect.test.tsx",
   "RequireButton.test.tsx",
   "RequirePermission.test.tsx",

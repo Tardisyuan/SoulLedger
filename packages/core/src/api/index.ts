@@ -171,9 +171,12 @@ export {
 // Soul accounts (officer side)
 export {
   soulAccountsApi,
+  type CooldownShorteningFilters,
+  type CooldownShorteningStatus,
   type CredentialFilters,
   type InitialCredential,
   type InitialCredentialStatus,
+  type OfficerCooldownShortening,
   type OfficerRebirthApplication,
   type RebirthApplicationFilters,
   type RebirthApplicationForm,

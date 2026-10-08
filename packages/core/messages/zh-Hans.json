@@ -2477,6 +2477,45 @@
       "empty_filtered": "该状态下没有申请",
       "cooldown_until": "冷却至 {{time}},期内灵魂不能重新申请",
       "step_appeal": "(申诉)"
+    },
+    "cooldown": {
+      "tabs": {
+        "applications": "转生申请",
+        "shortenings": "缩短冷却申请"
+      },
+      "title": "缩短冷却申请",
+      "subtitle": "冷却期内的灵魂请求提前结束本次冷却：批准给出剩余天数，驳回须附说明",
+      "empty": "还没有缩短冷却申请",
+      "empty_filtered": "该状态下没有申请",
+      "detail_title": "缩短冷却申请 · {{name}}",
+      "fields": {
+        "reason": "申请理由",
+        "remaining": "剩余冷却",
+        "approved_days": "批准后剩余天数",
+        "note": "给灵魂的说明",
+        "decided_by": "决定人",
+        "created_at": "提交于",
+        "cooldown_until": "冷却截止"
+      },
+      "remaining_days": "{{n}} 天",
+      "over": "冷却已结束",
+      "approve": "批准",
+      "reject": "驳回",
+      "days_label": "自今日起还需等待（天）",
+      "days_hint": "须小于剩余 {{n}} 天；0 表示立即可以重新申请",
+      "note_label": "给灵魂的说明",
+      "note_hint": "驳回必须填写；灵魂会读到",
+      "decided": "已保存",
+      "failed": "保存失败",
+      "already_decided": "已经决定过了",
+      "cooldown_over": "冷却已结束，无需决定",
+      "invalid_days": "天数须在 0 与剩余天数之间",
+      "note_required": "驳回须写给灵魂看的说明"
+    },
+    "cooldown_status": {
+      "PENDING": "待决定",
+      "APPROVED": "已批准",
+      "REJECTED": "已驳回"
     }
   },
   "disposition": {
@@ -3126,7 +3165,10 @@
       "screen_body": "你的记录仍在。只是此刻取不到。",
       "section": "这一段没取到。其余部分照常显示。",
       "offline": "已离线",
-      "sentence_in_progress": "受刑计划尚未完成，完成后才能申请转生"
+      "sentence_in_progress": "受刑计划尚未完成，完成后才能申请转生",
+      "not_in_cooldown": "只有在冷却期内才能申请缩短冷却",
+      "shortening_pending": "已有一份待决的缩短冷却申请",
+      "shortening_used": "这段冷却期已申请过一次缩短"
     },
     "lexicon": {
       "eg": {
@@ -3611,6 +3653,17 @@
       "interrupted": "回答中断",
       "answering_aria": "正在回答",
       "jump_latest": "↓ 最新"
+    },
+    "cooldown": {
+      "request": "申请缩短冷却",
+      "hint": "冷却期内可申请一次缩短，由原属文明决定。",
+      "reason": "申请理由",
+      "submit": "提交申请",
+      "submitted": "申请已提交",
+      "pending": "缩短冷却申请待决定",
+      "approved": "缩短冷却申请已批准，冷却期至 {{date}}",
+      "rejected": "缩短冷却申请被驳回",
+      "note": "说明"
     }
   },
   "soul_push": {

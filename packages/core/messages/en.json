@@ -2477,6 +2477,45 @@
       "empty_filtered": "No applications with this status",
       "cooldown_until": "Cooling down until {{time}}; the soul cannot apply again before then",
       "step_appeal": "(appeal)"
+    },
+    "cooldown": {
+      "tabs": {
+        "applications": "Rebirth applications",
+        "shortenings": "Cooldown shortening"
+      },
+      "title": "Cooldown shortening requests",
+      "subtitle": "Souls in cooldown asking to end it earlier: approve with the days left, reject with a note",
+      "empty": "No cooldown shortening requests yet",
+      "empty_filtered": "No requests with this status",
+      "detail_title": "Cooldown shortening · {{name}}",
+      "fields": {
+        "reason": "Reason",
+        "remaining": "Cooldown left",
+        "approved_days": "Days left after approval",
+        "note": "Note for the soul",
+        "decided_by": "Decided by",
+        "created_at": "Filed",
+        "cooldown_until": "Cooldown ends"
+      },
+      "remaining_days": "{{n}} days",
+      "over": "Cooldown over",
+      "approve": "Approve",
+      "reject": "Reject",
+      "days_label": "Days still to wait from today",
+      "days_hint": "Must be less than the {{n}} days left; 0 lets the soul apply again now",
+      "note_label": "Note for the soul",
+      "note_hint": "Required on rejection; the soul will read it",
+      "decided": "Saved",
+      "failed": "Could not save",
+      "already_decided": "Already decided",
+      "cooldown_over": "The cooldown is over; nothing to decide",
+      "invalid_days": "Days must be between 0 and the days left",
+      "note_required": "A rejection needs a note for the soul"
+    },
+    "cooldown_status": {
+      "PENDING": "Pending",
+      "APPROVED": "Approved",
+      "REJECTED": "Rejected"
     }
   },
   "disposition": {
@@ -3126,7 +3165,10 @@
       "screen_body": "Your record is still there. It just cannot be fetched right now.",
       "section": "This part could not be loaded. The rest is shown as usual.",
       "offline": "Offline",
-      "sentence_in_progress": "Your sentence plan is not finished. You can apply once it is complete"
+      "sentence_in_progress": "Your sentence plan is not finished. You can apply once it is complete",
+      "not_in_cooldown": "Only a soul in cooldown can ask to shorten it",
+      "shortening_pending": "A cooldown shortening request is already pending",
+      "shortening_used": "This cooldown has already been asked to be shortened once"
     },
     "lexicon": {
       "eg": {
@@ -3611,6 +3653,17 @@
       "interrupted": "Answer interrupted",
       "answering_aria": "Answering",
       "jump_latest": "↓ Latest"
+    },
+    "cooldown": {
+      "request": "Ask to shorten the cooldown",
+      "hint": "Once per cooldown; the home civilization decides.",
+      "reason": "Reason",
+      "submit": "Submit request",
+      "submitted": "Request submitted",
+      "pending": "Cooldown shortening request pending",
+      "approved": "Cooldown shortening approved; cooling-off ends {{date}}",
+      "rejected": "Cooldown shortening request rejected",
+      "note": "Note"
     }
   },
   "soul_push": {
