@@ -299,3 +299,26 @@ def test_officer_row_carries_the_progress_numbers_and_counts_are_tenant_scoped(
     assert row["cooldown_total_days"] == 3 and row["cooldown_end"] < row["cooldown_original_until"]
     assert row["cooldown_past_days"] <= row["cooldown_total_days"]
     assert officer.get(f"{OFFICER}counts/").data == {"PENDING": 0, "APPROVED": 1, "REJECTED": 0}
+
+
+def test_officer_list_is_ordered_by_the_server_remaining_cooldown_then_ended_then_decided(
+    cn_tenant, judge_user, django_capture_on_commit_callbacks
+):
+    """A11 默认顺序在库里排好(分页才对):待决按剩余从少到多,冷却已结束的待决其次,已决定的最后。"""
+    from datetime import timedelta
+
+    made = {}
+    for key, name, age_days in (("a", "甲", 10), ("b", "乙", 25), ("c", "丙", 40), ("d", "丁", 5)):
+        _, client, application = _rejected_soul(cn_tenant, judge_user, django_capture_on_commit_callbacks, name=name)
+        made[key] = _request(client).data["id"]
+        RebirthApplication.objects.filter(pk=application.pk).update(
+            decided_at=timezone.now() - timedelta(days=age_days))
+    officer = officer_client(judge_user)
+    with django_capture_on_commit_callbacks(execute=True):
+        assert officer.post(f"{OFFICER}{made['d']}/reject/", {"note": "不行"}, format="json").status_code == 200
+    rows = officer.get(OFFICER).data["results"]
+    assert [r["id"] for r in rows] == [made["b"], made["a"], made["c"], made["d"]]
+    assert [r["remaining_days"] for r in rows[:3]] == [5, 20, 0]
+    # 筛选仍可用,顺序规则不变。
+    only = officer.get(OFFICER, {"status": "PENDING"}).data["results"]
+    assert [r["id"] for r in only] == [made["b"], made["a"], made["c"]]
