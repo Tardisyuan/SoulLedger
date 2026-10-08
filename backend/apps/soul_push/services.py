@@ -234,7 +234,7 @@ SOCIAL_WARNED_EVENT = "SOCIAL_WARNED"
 
 
 def record_social_warning(user_id, report_id, target_type, reason):
-    """被警告的若是灵魂(有本世账号),给它记一条带理由的推送;官员、已转世的、没有设备的:不记。
+    """被警告的若是灵魂(有本世账号),给它记一条带理由的推送;官员、已转世的:不记;没有设备的照记一行历史(NO_DEVICE)。
 
     `target_type` 是举报对象(POST / COMMENT / USER),决定锁屏说「帖子」「评论」还是「账号」。"""
     from apps.soul_accounts.models import SoulAccount
@@ -256,7 +256,15 @@ def _record(account, event_type, category, kind, dedupe_key, data, params=None):
     title, body = title[:120], body[:300]  # 列宽(PushDelivery);警告理由最长 500
     data = {**data, "kind": kind}
     created_ids = []
-    for device in PushDevice.objects.filter(account=account, is_active=True):
+    devices = list(PushDevice.objects.filter(account=account, is_active=True))
+    if not devices:
+        # 没有可推的设备:仍记一行历史(通知记录读它),标 NO_DEVICE,不入队 —— 返回的 id 只含要发送的。
+        PushDelivery.objects.get_or_create(
+            dedupe_key=dedupe_key, device=None, account=account,
+            defaults={"soul_id": account.soul_id, "event_type": event_type, "kind": kind, "title": title,
+                      "body": body, "data": data, "status": PushStatus.NO_DEVICE},
+        )
+    for device in devices:
         delivery, created = PushDelivery.objects.get_or_create(
             dedupe_key=dedupe_key, device=device,
             defaults={"account": account, "soul_id": account.soul_id, "event_type": event_type, "kind": kind,

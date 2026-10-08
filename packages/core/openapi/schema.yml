@@ -28910,6 +28910,7 @@ components:
       - DISABLED
       - EXPIRED
       - CANCELLED
+      - NO_DEVICE
       type: string
       description: |-
         * `QUEUED` - 待发送
@@ -28920,6 +28921,7 @@ components:
         * `DISABLED` - 推送未启用
         * `EXPIRED` - 已过期
         * `CANCELLED` - 已取消
+        * `NO_DEVICE` - 没有设备
     PushLocaleEnum:
       enum:
       - zh-Hans
