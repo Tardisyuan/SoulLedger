@@ -9,9 +9,13 @@
 发什么:标题与正文按收件人语言重渲染(`messages.render`,与站内读时一致),加一行「去站内处理」。
 **不带密钥**:这几种通知的 params 里只有用户名、灵魂名、殿名与计数;密码求助说的是「有人求助」,
 不含任何密码。标题 / 正文之外不附任何别的字段。
-每条通知最多一行 `NotificationEmail`(成功或失败),失败不重试。只看未读且 24 小时内的:
-worker 停了两天,积压的那些已经过了「待处理」的时效,不再追发。
-按租户一行(apps/scheduler/registry.py),与别的租户任务一样先设租户 contextvar。
+每条通知最多一行 `NotificationEmail`(成功或失败),失败不重试。只看未读、且**晚于本人打开开关**
+(`preferences.email_opted_at`)的:不设 24 小时上限,worker 停了几天之后积压的照发;而事后才打开开关,
+不会把旧通知翻出来发一遍。老账号没有该字段时退回 24 小时窗口。
+语言:界面语言只存在浏览器 cookie 里,服务端没有;前端在界面语言变动时同步 `email_locale`(见
+`frontend/src/components/layout/EmailLocaleSync.tsx`),发送时读它,没有则按所属文明。
+按租户一行(apps/scheduler/registry.py),与别的租户任务一样先设租户 contextvar;
+`tenant=None` 的全局管理员由 `email_action_needed_global` 一行负责。
 """
 from datetime import timedelta
 
@@ -48,30 +52,31 @@ def render_email(notification, locale):
     return subject, f"{body}\n{pack['act']}", title, body
 
 
-@shared_task(name="notifications.email_action_needed_for_tenant")
-def email_action_needed_for_tenant(tenant_id: str):
-    from apps.authentication.mail import send_neutral_mail
-    from apps.authentication.models import User
-    from apps.notifications.models import NotificationEmail, UserNotification
-    from apps.tenants.managers import clear_current_tenant, set_current_tenant
-    from apps.tenants.models import Tenant
+def _opted_since(user):
+    """这位官员打开邮件开关的时刻(`preferences.email_opted_at`,PATCH 偏好时写)。
+    早于这个字段的老账号没有它:退回「24 小时内」,即此前的行为,不把历史一次性倒出去。"""
+    from django.utils.dateparse import parse_datetime
 
-    tenant = Tenant.objects.get(id=tenant_id)
-    set_current_tenant(tenant)
-    try:
-        recipients = (
-            User.objects.filter(tenant_id=tenant_id, is_active=True, preferences__email_notifications=True)
-            .exclude(email="")
-        )
+    stamp = parse_datetime((user.preferences or {}).get("email_opted_at") or "")
+    return stamp or timezone.now() - WINDOW
+
+
+def _email_pending(recipients):
+    """给 `recipients` 里每位发他们**开关之后**产生、未读、还没有 `NotificationEmail` 行的待处理通知。
+    不再按「24 小时内」截断:worker 停了几天之后恢复,积压的照发(每条仍最多一封)。"""
+    from apps.authentication.mail import send_neutral_mail
+    from apps.notifications.models import NotificationEmail, UserNotification
+
+    sent = failed = 0
+    for user in recipients:
         pending = (
             UserNotification.objects.filter(
-                user__in=recipients, notification_type__in=EMAILED_TYPES, is_read=False,
-                created_at__gte=timezone.now() - WINDOW, email__isnull=True,
+                user=user, notification_type__in=EMAILED_TYPES, is_read=False,
+                created_at__gte=_opted_since(user), email__isnull=True,
             )
             .select_related("user")
             .order_by("created_at")
         )
-        sent = failed = 0
         for notification in pending:
             locale = email_locale(notification.user)
             subject, text, title, body = render_email(notification, locale)
@@ -86,6 +91,31 @@ def email_action_needed_for_tenant(tenant_id: str):
             else:
                 NotificationEmail.objects.create(notification=notification, sent=True)
                 sent += 1
+    return sent, failed
+
+
+def _opted_in(**scope):
+    from apps.authentication.models import User
+
+    return User.objects.filter(is_active=True, preferences__email_notifications=True, **scope).exclude(email="")
+
+
+@shared_task(name="notifications.email_action_needed_for_tenant")
+def email_action_needed_for_tenant(tenant_id: str):
+    from apps.tenants.managers import clear_current_tenant, set_current_tenant
+    from apps.tenants.models import Tenant
+
+    tenant = Tenant.objects.get(id=tenant_id)
+    set_current_tenant(tenant)
+    try:
+        sent, failed = _email_pending(_opted_in(tenant_id=tenant_id))
         return {"tenant": tenant.code, "sent": sent, "failed": failed}
     finally:
         clear_current_tenant()
+
+
+@shared_task(name="notifications.email_action_needed_global")
+def email_action_needed_global():
+    """全局管理员(`tenant=None`)不属于任何租户,按租户那一行永远扫不到他们:单独一行。"""
+    sent, failed = _email_pending(_opted_in(tenant__isnull=True))
+    return {"tenant": None, "sent": sent, "failed": failed}

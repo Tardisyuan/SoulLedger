@@ -11,7 +11,7 @@ from django.utils import timezone
 
 from apps.authentication.models import User
 from apps.notifications.models import NotificationEmail, UserNotification
-from apps.notifications.tasks import email_action_needed_for_tenant
+from apps.notifications.tasks import email_action_needed_for_tenant, email_action_needed_global
 from apps.tenants.managers import get_current_tenant
 
 pytestmark = pytest.mark.django_db
@@ -47,7 +47,18 @@ def test_the_preference_defaults_off_and_round_trips(api_client, judge_user):
     on = api_client.patch(PREFS, {"email_notifications": True, "email_locale": "en"}, format="json")
     assert on.status_code == 200 and on.data == {**DEFAULTS, "email_notifications": True, "email_locale": "en"}
     judge_user.refresh_from_db()
-    assert judge_user.preferences == {"email_notifications": True, "email_locale": "en"}
+    stored = dict(judge_user.preferences)
+    opted_at = stored.pop("email_opted_at")  # 打开开关的时刻:邮件通道只发它之后的通知
+    assert stored == {"email_notifications": True, "email_locale": "en"}
+    assert "email_opted_at" not in on.data  # 内部字段,不出现在偏好的读写形状里
+    # 开着时再 PATCH(例如前端同步语言)不重置时刻;关了再开才重新记。
+    api_client.patch(PREFS, {"email_locale": "zh-Hans"}, format="json")
+    judge_user.refresh_from_db()
+    assert judge_user.preferences["email_opted_at"] == opted_at
+    api_client.patch(PREFS, {"email_notifications": False}, format="json")
+    api_client.patch(PREFS, {"email_notifications": True}, format="json")
+    judge_user.refresh_from_db()
+    assert judge_user.preferences["email_opted_at"] > opted_at
     assert api_client.patch(PREFS, {"email_notifications": False}, format="json").data["email_notifications"] is False
     assert api_client.patch(PREFS, {"email_locale": "egy"}, format="json").status_code == 400
 
@@ -128,3 +139,61 @@ def test_the_language_follows_the_preference_then_the_civilization(cn_tenant, eu
     assert by_to["en@example.com"].subject == "SoulLedger Password reset help"
     assert "This needs your action" in by_to["en@example.com"].body
     assert by_to["eu@example.com"].subject == "SoulLedger Password reset help"  # 欧洲文明默认 en
+
+
+# ── 全局管理员(tenant=None)─────────────────────────────────────────────
+
+
+def test_a_global_admin_is_emailed_by_the_global_run_and_only_that_one(cn_tenant):
+    glob = _officer(None, "globaladmin")
+    local = _officer(cn_tenant, "local")
+    _notify(glob)
+    _notify(local)
+
+    email_action_needed_for_tenant(str(cn_tenant.pk))
+    assert [m.to for m in mail.outbox] == [["local@example.com"]]
+
+    result = email_action_needed_global()
+    assert result == {"tenant": None, "sent": 1, "failed": 0}
+    assert [m.to for m in mail.outbox][-1] == ["globaladmin@example.com"]
+    email_action_needed_global()
+    assert len(mail.outbox) == 2  # 每条通知最多一封
+
+
+def test_the_global_run_is_registered_as_a_five_minutely_global_job():
+    from apps.scheduler import registry
+
+    spec = registry.get("notifications.email_action_needed_global")
+    assert (spec.scope, spec.cron) == (registry.GLOBAL, "*/5 * * * *")
+    assert registry.get("notifications.email_action_needed_for_tenant").scope == registry.TENANT
+
+
+# ── 积压与开关时刻 ───────────────────────────────────────────────────────
+
+
+def _opted_at(user, when):
+    user.preferences = {**user.preferences, "email_opted_at": when.isoformat()}
+    user.save(update_fields=["preferences"])
+
+
+def test_a_backlog_older_than_24h_is_sent_if_it_postdates_the_opt_in(cn_tenant):
+    """worker 停了几天:开关之后产生、还没发过的照发。变异:把 created_at__gte 改回 24 小时 → 红。"""
+    user = _officer(cn_tenant, "opted")
+    _opted_at(user, timezone.now() - timedelta(days=10))
+    old = _notify(user)
+    UserNotification.objects.filter(pk=old.pk).update(created_at=timezone.now() - timedelta(days=3))
+    email_action_needed_for_tenant(str(cn_tenant.pk))
+    assert len(mail.outbox) == 1 and NotificationEmail.objects.get().sent is True
+
+
+def test_notifications_from_before_the_opt_in_are_never_emailed(cn_tenant):
+    """后来才打开开关,不把旧历史倒出去。变异:去掉 created_at__gte=_opted_since → 红。"""
+    user = _officer(cn_tenant, "opted")
+    _opted_at(user, timezone.now() - timedelta(hours=1))
+    ancient = _notify(user)
+    UserNotification.objects.filter(pk=ancient.pk).update(created_at=timezone.now() - timedelta(days=40))
+    email_action_needed_for_tenant(str(cn_tenant.pk))
+    assert mail.outbox == [] and not NotificationEmail.objects.exists()
+    _notify(user)  # 开关之后的:发
+    email_action_needed_for_tenant(str(cn_tenant.pk))
+    assert len(mail.outbox) == 1
