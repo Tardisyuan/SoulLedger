@@ -44,6 +44,8 @@ const COLLECTED_FILES = [
   "ActorsPage.test.tsx",
   // 2026-10-04 外部接入与登录日志:/death-sync/api-keys 与 /audit/logins。
   "ApiKeysPanel.test.tsx",
+  // 2026-10-08 管理端 Webhook:/death-sync/webhooks。
+  "WebhooksPanel.test.tsx",
   "LoginLogPage.test.tsx",
   "AppLayout.test.tsx",
   "AuditPage.test.tsx",

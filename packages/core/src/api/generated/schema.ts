@@ -1285,6 +1285,181 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/death-sync/admin-webhooks/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description Browser-facing management of `WebhookConfig` (JWT, ADMIN only).
+         *
+         *     `WebhookViewSet` above is the external system's self-service endpoint: it
+         *     authenticates with its API key only, so an admin's Bearer JWT gets 401
+         *     there, and the /death-sync page had no way to see or change where this
+         *     tenant's events are posted. This viewset is the operator's door to the
+         *     same rows; the self-service one is unchanged.
+         *
+         *     Separate viewset rather than a second auth class on the one above, for
+         *     the same reason `DeathRegistrationReadViewSet` is separate from
+         *     `DeathRegistrationViewSet`: the key path scopes by key (fail-closed), the
+         *     browser path scopes by tenant, and merging them would weaken one.
+         *
+         *     No `destroy`: disabling is `PATCH {"is_active": false}`, which keeps the
+         *     row and its `EventWebhookDelivery` history (the FK is CASCADE). The
+         *     signing secret is generated here and returned once in the 201 as
+         *     `_signing_secret`, exactly like `ExternalApiKeyViewSet._raw_key`.
+         *
+         *     ADMIN cross-tenant: `scope_to_tenant` with the default `admin_bypass`,
+         *     matching `ExternalApiKeyViewSet` beside it — ADMIN is this codebase's one
+         *     globally-scoped role there too. Creation still pins `tenant` to the
+         *     request's tenant and refuses an `api_key` from another tenant.
+         */
+        get: operations["v1_death_sync_admin_webhooks_list"];
+        put?: never;
+        /**
+         * @description Browser-facing management of `WebhookConfig` (JWT, ADMIN only).
+         *
+         *     `WebhookViewSet` above is the external system's self-service endpoint: it
+         *     authenticates with its API key only, so an admin's Bearer JWT gets 401
+         *     there, and the /death-sync page had no way to see or change where this
+         *     tenant's events are posted. This viewset is the operator's door to the
+         *     same rows; the self-service one is unchanged.
+         *
+         *     Separate viewset rather than a second auth class on the one above, for
+         *     the same reason `DeathRegistrationReadViewSet` is separate from
+         *     `DeathRegistrationViewSet`: the key path scopes by key (fail-closed), the
+         *     browser path scopes by tenant, and merging them would weaken one.
+         *
+         *     No `destroy`: disabling is `PATCH {"is_active": false}`, which keeps the
+         *     row and its `EventWebhookDelivery` history (the FK is CASCADE). The
+         *     signing secret is generated here and returned once in the 201 as
+         *     `_signing_secret`, exactly like `ExternalApiKeyViewSet._raw_key`.
+         *
+         *     ADMIN cross-tenant: `scope_to_tenant` with the default `admin_bypass`,
+         *     matching `ExternalApiKeyViewSet` beside it — ADMIN is this codebase's one
+         *     globally-scoped role there too. Creation still pins `tenant` to the
+         *     request's tenant and refuses an `api_key` from another tenant.
+         */
+        post: operations["v1_death_sync_admin_webhooks_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/death-sync/admin-webhooks/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description Browser-facing management of `WebhookConfig` (JWT, ADMIN only).
+         *
+         *     `WebhookViewSet` above is the external system's self-service endpoint: it
+         *     authenticates with its API key only, so an admin's Bearer JWT gets 401
+         *     there, and the /death-sync page had no way to see or change where this
+         *     tenant's events are posted. This viewset is the operator's door to the
+         *     same rows; the self-service one is unchanged.
+         *
+         *     Separate viewset rather than a second auth class on the one above, for
+         *     the same reason `DeathRegistrationReadViewSet` is separate from
+         *     `DeathRegistrationViewSet`: the key path scopes by key (fail-closed), the
+         *     browser path scopes by tenant, and merging them would weaken one.
+         *
+         *     No `destroy`: disabling is `PATCH {"is_active": false}`, which keeps the
+         *     row and its `EventWebhookDelivery` history (the FK is CASCADE). The
+         *     signing secret is generated here and returned once in the 201 as
+         *     `_signing_secret`, exactly like `ExternalApiKeyViewSet._raw_key`.
+         *
+         *     ADMIN cross-tenant: `scope_to_tenant` with the default `admin_bypass`,
+         *     matching `ExternalApiKeyViewSet` beside it — ADMIN is this codebase's one
+         *     globally-scoped role there too. Creation still pins `tenant` to the
+         *     request's tenant and refuses an `api_key` from another tenant.
+         */
+        get: operations["v1_death_sync_admin_webhooks_retrieve"];
+        /**
+         * @description Browser-facing management of `WebhookConfig` (JWT, ADMIN only).
+         *
+         *     `WebhookViewSet` above is the external system's self-service endpoint: it
+         *     authenticates with its API key only, so an admin's Bearer JWT gets 401
+         *     there, and the /death-sync page had no way to see or change where this
+         *     tenant's events are posted. This viewset is the operator's door to the
+         *     same rows; the self-service one is unchanged.
+         *
+         *     Separate viewset rather than a second auth class on the one above, for
+         *     the same reason `DeathRegistrationReadViewSet` is separate from
+         *     `DeathRegistrationViewSet`: the key path scopes by key (fail-closed), the
+         *     browser path scopes by tenant, and merging them would weaken one.
+         *
+         *     No `destroy`: disabling is `PATCH {"is_active": false}`, which keeps the
+         *     row and its `EventWebhookDelivery` history (the FK is CASCADE). The
+         *     signing secret is generated here and returned once in the 201 as
+         *     `_signing_secret`, exactly like `ExternalApiKeyViewSet._raw_key`.
+         *
+         *     ADMIN cross-tenant: `scope_to_tenant` with the default `admin_bypass`,
+         *     matching `ExternalApiKeyViewSet` beside it — ADMIN is this codebase's one
+         *     globally-scoped role there too. Creation still pins `tenant` to the
+         *     request's tenant and refuses an `api_key` from another tenant.
+         */
+        put: operations["v1_death_sync_admin_webhooks_update"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * @description Browser-facing management of `WebhookConfig` (JWT, ADMIN only).
+         *
+         *     `WebhookViewSet` above is the external system's self-service endpoint: it
+         *     authenticates with its API key only, so an admin's Bearer JWT gets 401
+         *     there, and the /death-sync page had no way to see or change where this
+         *     tenant's events are posted. This viewset is the operator's door to the
+         *     same rows; the self-service one is unchanged.
+         *
+         *     Separate viewset rather than a second auth class on the one above, for
+         *     the same reason `DeathRegistrationReadViewSet` is separate from
+         *     `DeathRegistrationViewSet`: the key path scopes by key (fail-closed), the
+         *     browser path scopes by tenant, and merging them would weaken one.
+         *
+         *     No `destroy`: disabling is `PATCH {"is_active": false}`, which keeps the
+         *     row and its `EventWebhookDelivery` history (the FK is CASCADE). The
+         *     signing secret is generated here and returned once in the 201 as
+         *     `_signing_secret`, exactly like `ExternalApiKeyViewSet._raw_key`.
+         *
+         *     ADMIN cross-tenant: `scope_to_tenant` with the default `admin_bypass`,
+         *     matching `ExternalApiKeyViewSet` beside it — ADMIN is this codebase's one
+         *     globally-scoped role there too. Creation still pins `tenant` to the
+         *     request's tenant and refuses an `api_key` from another tenant.
+         */
+        patch: operations["v1_death_sync_admin_webhooks_partial_update"];
+        trace?: never;
+    };
+    "/api/v1/death-sync/admin-webhooks/event-types/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description The event names a webhook can subscribe to.
+         *
+         *     `EventType` is the enum every publisher writes `envelope.event_type`
+         *     from, and the handler filters on it verbatim — so this list, not a
+         *     hand-written one in the client, is what a checklist must offer.
+         */
+        get: operations["v1_death_sync_admin_webhooks_event_types_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/death-sync/api-keys/": {
         parameters: {
             query?: never;
@@ -1507,6 +1682,60 @@ export interface paths {
          *     goes on the wire so the dashboard links to the same filter it counted.
          */
         get: operations["v1_death_sync_registrations_summary_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/death-sync/webhook-deliveries/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description `EventWebhookDelivery` rows for this tenant's webhooks (JWT, ADMIN only).
+         *
+         *     Newest first (model ordering), paginated, filterable by `webhook`,
+         *     `status` and `event_type`. Read-only: a delivery's status is written by
+         *     the worker (`apps/events/tasks.py`) and by nothing else.
+         *
+         *     Scoped through `webhook__tenant` rather than the row's own nullable
+         *     `tenant`: the webhook is the thing an operator manages, and a row whose
+         *     `tenant` were ever left null would otherwise be invisible to everyone.
+         */
+        get: operations["v1_death_sync_webhook_deliveries_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/death-sync/webhook-deliveries/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description `EventWebhookDelivery` rows for this tenant's webhooks (JWT, ADMIN only).
+         *
+         *     Newest first (model ordering), paginated, filterable by `webhook`,
+         *     `status` and `event_type`. Read-only: a delivery's status is written by
+         *     the worker (`apps/events/tasks.py`) and by nothing else.
+         *
+         *     Scoped through `webhook__tenant` rather than the row's own nullable
+         *     `tenant`: the webhook is the thing an operator manages, and a row whose
+         *     `tenant` were ever left null would otherwise be invisible to everyone.
+         */
+        get: operations["v1_death_sync_webhook_deliveries_retrieve"];
         put?: never;
         post?: never;
         delete?: never;
@@ -7546,6 +7775,49 @@ export interface components {
          */
         ActorRoleEnum: "JUDGE" | "EXECUTOR" | "GUARDIAN" | "CONDUIT" | "OVERSEER";
         /**
+         * @description `WebhookConfig` as the admin tab sees it.
+         *
+         *     `_signing_secret` is the plaintext and arrives exactly once, in the 201
+         *     of `create` — the same shape as `ExternalApiKeySerializer._raw_key`. The
+         *     field is `read_only` and the view sets it on the saved instance, so a
+         *     list / retrieve / update response never carries it (nothing puts it on
+         *     those instances). The model column is encrypted at rest and is not a
+         *     serializer field at all.
+         *
+         *     `events` is a list of real `EventType` members: the delivery code
+         *     (`apps/events/handlers/webhook_handler.py`) compares
+         *     `envelope.event_type` against this list verbatim, so a misspelt name
+         *     would silently subscribe to nothing. An empty list keeps the model's
+         *     meaning of "everything".
+         *
+         *     `api_key` is the external system the webhook belongs to: the
+         *     self-service endpoint (`WebhookViewSet`) scopes by it, so an admin-created
+         *     webhook is visible to that system under its own key. It must be one of
+         *     the request tenant's keys and cannot be moved after creation.
+         */
+        AdminWebhookConfig: {
+            /** Format: uuid */
+            readonly id: string;
+            /** Format: uuid */
+            api_key: string;
+            readonly api_key_name: string;
+            /**
+             * Format: uri
+             * @description Webhook callback URL (must be HTTPS in production)
+             */
+            url: string;
+            is_active?: boolean;
+            events?: components["schemas"]["EventTypeEnum"][];
+            max_retries?: number;
+            timeout_seconds?: number;
+            /** Format: date-time */
+            readonly create_time: string;
+            /** Format: date-time */
+            readonly update_time: string;
+            /** signing secret */
+            readonly _signing_secret: string;
+        };
+        /**
          * @description `LedgerService.get_admitted_balance`. `balance` and `not_admitted_net`
          *     are null unless `reading_kind` is BALANCE (and the judgment is from the
          *     current life); `reason_code` says which.
@@ -9270,6 +9542,42 @@ export interface components {
          * @enum {string}
          */
         EventTypeEnum: "SOUL_CREATED" | "STATE_CHANGED" | "SETTLEMENT_CORRECTED" | "RECORD_ADDED" | "JUDGMENT_INITIATED" | "JUDGMENT_CONCLUDED" | "DISPOSITION_CREATED" | "DISPOSITION_EXPIRED" | "REINCARNATION_TRIGGERED" | "KARMA_RECALCULATED" | "WORKFLOW_CREATED" | "WORKFLOW_ASSIGNED" | "WORKFLOW_APPROVED" | "WORKFLOW_REJECTED" | "DISPATCH_CREATED" | "DISPATCH_APPROVED" | "DISPATCH_REJECTED" | "DISPATCH_EXECUTED" | "DISPATCH_STATUS_CHANGED" | "DEATH_SYNC_RECEIVED" | "DEATH_SYNC_PROCESSED" | "POST_CREATED" | "POST_UPDATED" | "POST_DELETED" | "COMMENT_CREATED" | "COMMENT_DELETED" | "REACTION_ADDED" | "REACTION_REMOVED" | "USER_FOLLOWED" | "USER_UNFOLLOWED" | "NOTIFICATION_CREATED" | "SOUL_ACCOUNT_CREATED" | "SOUL_ACCOUNT_RETIRED" | "REBIRTH_APPLICATION_SUBMITTED" | "REBIRTH_STATUS_CHANGED" | "REBIRTH_CROSS_CIV_DECIDED" | "SENTENCE_PLAN_CREATED" | "SENTENCE_NODE_ACTIVATED" | "SENTENCE_NODE_WAITING" | "SENTENCE_NODE_COMPLETED" | "SENTENCE_NODE_REFUSED" | "SENTENCE_PLAN_AMENDED" | "SENTENCE_REQUEST_CREATED" | "SENTENCE_REQUEST_DECIDED" | "SENTENCE_PLAN_COMPLETED" | "SENTENCE_PLAN_CANCELLED" | "SCHEDULER_RUN_FAILED";
+        /**
+         * @description Read-only row of `GET /death-sync/webhook-deliveries/`.
+         *
+         *     `payload_json` is deliberately absent: it is the envelope snapshot
+         *     (soul ids, verdicts) and the admin tab needs the outcome, not the body.
+         */
+        EventWebhookDelivery: {
+            /** Format: uuid */
+            readonly id: string;
+            /**
+             * Format: uuid
+             * @description 目标端点。租户自己配的,所以它的可靠性不在本系统控制内。
+             */
+            readonly webhook: string;
+            readonly webhook_url: string;
+            readonly domain: string;
+            readonly event_type: string;
+            readonly status: components["schemas"]["EventWebhookDeliveryStatusEnum"];
+            readonly attempt: number;
+            readonly response_status: number | null;
+            readonly error: string;
+            /** Format: date-time */
+            readonly delivered_at: string | null;
+            /** Format: date-time */
+            readonly create_time: string;
+            /** Format: date-time */
+            readonly update_time: string;
+        };
+        /**
+         * @description * `PENDING` - Pending
+         *     * `SUCCESS` - Delivered
+         *     * `FAILED` - Failed
+         *     * `ABANDONED` - Abandoned after max retries
+         * @enum {string}
+         */
+        EventWebhookDeliveryStatusEnum: "PENDING" | "SUCCESS" | "FAILED" | "ABANDONED";
         /**
          * @description One ruling on one ledger record in this case. A record with no ruling
          *     is admitted; only rulings that were made are listed.
@@ -11098,6 +11406,21 @@ export interface components {
             previous?: string | null;
             results: components["schemas"]["ActorList"][];
         };
+        PaginatedAdminWebhookConfigList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["AdminWebhookConfig"][];
+        };
         PaginatedApprovalNodeList: {
             /** @example 123 */
             count: number;
@@ -11222,6 +11545,21 @@ export interface components {
                 executing: number;
                 expired: number;
             };
+        };
+        PaginatedEventWebhookDeliveryList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["EventWebhookDelivery"][];
         };
         PaginatedExternalApiKeyList: {
             /** @example 123 */
@@ -11752,6 +12090,49 @@ export interface components {
          */
         PasswordResetResult: {
             password: string;
+        };
+        /**
+         * @description `WebhookConfig` as the admin tab sees it.
+         *
+         *     `_signing_secret` is the plaintext and arrives exactly once, in the 201
+         *     of `create` — the same shape as `ExternalApiKeySerializer._raw_key`. The
+         *     field is `read_only` and the view sets it on the saved instance, so a
+         *     list / retrieve / update response never carries it (nothing puts it on
+         *     those instances). The model column is encrypted at rest and is not a
+         *     serializer field at all.
+         *
+         *     `events` is a list of real `EventType` members: the delivery code
+         *     (`apps/events/handlers/webhook_handler.py`) compares
+         *     `envelope.event_type` against this list verbatim, so a misspelt name
+         *     would silently subscribe to nothing. An empty list keeps the model's
+         *     meaning of "everything".
+         *
+         *     `api_key` is the external system the webhook belongs to: the
+         *     self-service endpoint (`WebhookViewSet`) scopes by it, so an admin-created
+         *     webhook is visible to that system under its own key. It must be one of
+         *     the request tenant's keys and cannot be moved after creation.
+         */
+        PatchedAdminWebhookConfig: {
+            /** Format: uuid */
+            readonly id?: string;
+            /** Format: uuid */
+            api_key?: string;
+            readonly api_key_name?: string;
+            /**
+             * Format: uri
+             * @description Webhook callback URL (must be HTTPS in production)
+             */
+            url?: string;
+            is_active?: boolean;
+            events?: components["schemas"]["EventTypeEnum"][];
+            max_retries?: number;
+            timeout_seconds?: number;
+            /** Format: date-time */
+            readonly create_time?: string;
+            /** Format: date-time */
+            readonly update_time?: string;
+            /** signing secret */
+            readonly _signing_secret?: string;
         };
         /**
          * @description Serializer for ApprovalNode.
@@ -17727,6 +18108,179 @@ export interface operations {
             };
         };
     };
+    v1_death_sync_admin_webhooks_list: {
+        parameters: {
+            query?: {
+                api_key?: string;
+                is_active?: boolean;
+                /** @description Which field to use when ordering the results. */
+                ordering?: string;
+                /** @description A page number within the paginated result set. */
+                page?: number;
+                /** @description A search term. */
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedAdminWebhookConfigList"];
+                };
+            };
+        };
+    };
+    v1_death_sync_admin_webhooks_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminWebhookConfig"];
+                "application/x-www-form-urlencoded": components["schemas"]["AdminWebhookConfig"];
+                "multipart/form-data": components["schemas"]["AdminWebhookConfig"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminWebhookConfig"];
+                };
+            };
+        };
+    };
+    v1_death_sync_admin_webhooks_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this Webhook Config. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminWebhookConfig"];
+                };
+            };
+        };
+    };
+    v1_death_sync_admin_webhooks_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this Webhook Config. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminWebhookConfig"];
+                "application/x-www-form-urlencoded": components["schemas"]["AdminWebhookConfig"];
+                "multipart/form-data": components["schemas"]["AdminWebhookConfig"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminWebhookConfig"];
+                };
+            };
+        };
+    };
+    v1_death_sync_admin_webhooks_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this Webhook Config. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedAdminWebhookConfig"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedAdminWebhookConfig"];
+                "multipart/form-data": components["schemas"]["PatchedAdminWebhookConfig"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminWebhookConfig"];
+                };
+            };
+        };
+    };
+    v1_death_sync_admin_webhooks_event_types_list: {
+        parameters: {
+            query?: {
+                api_key?: string;
+                is_active?: boolean;
+                /** @description Which field to use when ordering the results. */
+                ordering?: string;
+                /** @description A page number within the paginated result set. */
+                page?: number;
+                /** @description A search term. */
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example 123 */
+                        count: number;
+                        /**
+                         * Format: uri
+                         * @example http://api.example.org/accounts/?page=4
+                         */
+                        next?: string | null;
+                        /**
+                         * Format: uri
+                         * @example http://api.example.org/accounts/?page=2
+                         */
+                        previous?: string | null;
+                        results: string[];
+                    };
+                };
+            };
+        };
+    };
     v1_death_sync_api_keys_list: {
         parameters: {
             query?: {
@@ -18041,6 +18595,63 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DeathRegistrationSummary"];
+                };
+            };
+        };
+    };
+    v1_death_sync_webhook_deliveries_list: {
+        parameters: {
+            query?: {
+                event_type?: string;
+                /** @description Which field to use when ordering the results. */
+                ordering?: string;
+                /** @description A page number within the paginated result set. */
+                page?: number;
+                /** @description A search term. */
+                search?: string;
+                /**
+                 * @description * `PENDING` - Pending
+                 *     * `SUCCESS` - Delivered
+                 *     * `FAILED` - Failed
+                 *     * `ABANDONED` - Abandoned after max retries
+                 */
+                status?: "ABANDONED" | "FAILED" | "PENDING" | "SUCCESS";
+                webhook?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedEventWebhookDeliveryList"];
+                };
+            };
+        };
+    };
+    v1_death_sync_webhook_deliveries_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this Event Webhook Delivery. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EventWebhookDelivery"];
                 };
             };
         };

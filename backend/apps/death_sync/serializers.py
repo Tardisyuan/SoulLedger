@@ -1,6 +1,8 @@
 """
 Serializers for death_sync app.
 """
+from urllib.parse import urlparse
+
 from rest_framework import serializers
 
 from apps.death_sync.models import (
@@ -8,6 +10,7 @@ from apps.death_sync.models import (
     ExternalApiKey,
     WebhookConfig,
 )
+from apps.events.models import EventType, EventWebhookDelivery
 
 
 class ExternalApiKeySerializer(serializers.ModelSerializer):
@@ -155,3 +158,86 @@ class DeathSyncHealthSerializer(serializers.Serializer):
 
     api_key = DeathSyncApiKeyHealthSerializer()
     system = DeathSyncSystemHealthSerializer()
+
+
+# ── Admin webhook management (JWT + ADMIN; see AdminWebhookViewSet) ─────────
+
+
+class AdminWebhookConfigSerializer(serializers.ModelSerializer):
+    """`WebhookConfig` as the admin tab sees it.
+
+    `_signing_secret` is the plaintext and arrives exactly once, in the 201
+    of `create` — the same shape as `ExternalApiKeySerializer._raw_key`. The
+    field is `read_only` and the view sets it on the saved instance, so a
+    list / retrieve / update response never carries it (nothing puts it on
+    those instances). The model column is encrypted at rest and is not a
+    serializer field at all.
+
+    `events` is a list of real `EventType` members: the delivery code
+    (`apps/events/handlers/webhook_handler.py`) compares
+    `envelope.event_type` against this list verbatim, so a misspelt name
+    would silently subscribe to nothing. An empty list keeps the model's
+    meaning of "everything".
+
+    `api_key` is the external system the webhook belongs to: the
+    self-service endpoint (`WebhookViewSet`) scopes by it, so an admin-created
+    webhook is visible to that system under its own key. It must be one of
+    the request tenant's keys and cannot be moved after creation.
+    """
+
+    _signing_secret = serializers.CharField(read_only=True, required=False)
+    api_key_name = serializers.CharField(source="api_key.name", read_only=True)
+    events = serializers.ListField(
+        child=serializers.ChoiceField(choices=EventType.choices), required=False, default=list
+    )
+
+    class Meta:
+        model = WebhookConfig
+        fields = [
+            "id", "api_key", "api_key_name", "url", "is_active", "events",
+            "max_retries", "timeout_seconds", "create_time", "update_time",
+            "_signing_secret",
+        ]
+        read_only_fields = ["create_time", "update_time"]
+
+    def validate_url(self, value):
+        """http(s) only, and nothing that resolves to a private or loopback
+        address — `_validate_webhook_url` is the SSRF blocklist the delivery
+        task already applies at send time; refusing here means the row is
+        never written rather than failing on every attempt."""
+        from apps.death_sync.webhook_service import _validate_webhook_url
+
+        if urlparse(value).scheme not in ("http", "https"):
+            raise serializers.ValidationError("Webhook URL must use http or https.")
+        try:
+            _validate_webhook_url(value)
+        except ValueError as exc:
+            raise serializers.ValidationError(str(exc)) from None
+        return value
+
+    def validate_api_key(self, value):
+        tenant = getattr(self.context.get("request"), "tenant", None)
+        if tenant is None or value.tenant_id != tenant.id:
+            raise serializers.ValidationError("API key does not belong to this tenant.")
+        if self.instance is not None and value.pk != self.instance.api_key_id:
+            raise serializers.ValidationError("A webhook cannot be moved to another API key.")
+        return value
+
+
+class EventWebhookDeliverySerializer(serializers.ModelSerializer):
+    """Read-only row of `GET /death-sync/webhook-deliveries/`.
+
+    `payload_json` is deliberately absent: it is the envelope snapshot
+    (soul ids, verdicts) and the admin tab needs the outcome, not the body.
+    """
+
+    webhook_url = serializers.CharField(source="webhook.url", read_only=True)
+
+    class Meta:
+        model = EventWebhookDelivery
+        fields = [
+            "id", "webhook", "webhook_url", "domain", "event_type", "status",
+            "attempt", "response_status", "error", "delivered_at",
+            "create_time", "update_time",
+        ]
+        read_only_fields = fields

@@ -612,6 +612,9 @@ SPECTACULAR_SETTINGS = {
         "AssistProviderRoleEnum": "apps.soul_assist.models.AssistUsage.PROVIDER_ROLES",
         # 向量检索(§7.6):`error_kind` 在连通测试里已是供应商的那套;向量服务的另起名,供应商的保留原名。
         "ErrorKindEnum": "apps.soul_assist.admin_serializers.ERROR_KINDS",
+        # apps.death_sync 管理端 Webhook 的 `events` 是 EventType 的列表,与 SoulEvent.event_type
+        # 同一个选项集走两条路(`EventsEnum` / `EventTypeEnum`);钉住原名,TS 标识符不变。
+        "EventTypeEnum": "apps.events.models.EventType.choices",
         "EmbeddingErrorKindEnum": "apps.soul_assist.vectors.ERROR_KINDS",
         "AssistRetrievalEnum": "apps.soul_assist.admin_serializers.RETRIEVALS",
         "DesiredRebirthFormEnum": "apps.soul_accounts.serializers.DESIRED_REBIRTH_FORMS",
