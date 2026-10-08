@@ -5055,14 +5055,19 @@
       "empty_title": "手上没有案子",
       "empty_body": "到「待认领」里认领一件。",
       "desk_only": "待宣判 · 请在官员台",
-      "scope_note": "手机上可以认领、查看、写评议。宣判和盖印请在官员台完成。"
+      "scope_note": "手机上可以认领、查看、写评议。宣判和盖印请在官员台完成。",
+      "claim": "认领",
+      "claim_failed": "没能认领"
     },
     "continue_on_desk": "在电脑上继续",
     "search": {
       "souls": "查灵魂",
       "ask": "问一问",
       "placeholder": "名字或编号",
-      "read_only": "只读。改动请在官员台进行。"
+      "read_only": "只读。改动请在官员台进行。",
+      "no_souls_title": "没有找到",
+      "no_souls_body": "换个名字或编号再试。",
+      "residing": "▲ {{where}} · 暂居"
     },
     "detail": {
       "your_step": "轮到你的节点",
@@ -5083,11 +5088,23 @@
         "already_handled": "他人已代签",
         "deadline_passed": "时限已过",
         "permission_changed": "权限已变",
-        "network": "网络错误"
-      }
+        "network": "网络错误",
+        "other": "服务器没有接受"
+      },
+      "requester": "发起人",
+      "approve_body": {
+        "approval": "批准后流程进入下一步。",
+        "rebirth": "批准后这份转生申请进入下一步。",
+        "cooldown": "批准后冷却缩短到你填的天数。",
+        "reassignment": "批准后这次调拨成立。"
+      },
+      "remaining_days": "还剩 {{n}} 天",
+      "days_label": "批准天数",
+      "days_invalid": "天数要是整数，且小于剩余天数"
     },
     "landing": {
-      "handled": "已由{{name}}处理"
+      "handled": "已由{{name}}处理",
+      "someone": "他人"
     },
     "state": {
       "error_title": "没取到",
@@ -5099,7 +5116,89 @@
       "lock": "有 {{n}} 件待你处理"
     },
     "me": {
-      "push": "推送"
+      "push": "推送",
+      "profile": "个人信息",
+      "name": "姓名",
+      "role": "角色",
+      "hall": "所属殿",
+      "mfa": "两步验证",
+      "mfa_on": "已开启",
+      "mfa_off": "未开启",
+      "mfa_required_off": "必须开启 · 尚未设置",
+      "mfa_note": "开启和管理请在官员台进行。",
+      "language": "语言",
+      "theme": "主题",
+      "theme_system": "跟随系统",
+      "theme_light": "浅色",
+      "theme_dark": "深色",
+      "push_on": "已开启",
+      "push_off": "已关闭",
+      "push_note": "锁屏只写有几件待办。",
+      "push_denied": "系统已关闭通知。请先在系统设置里放行。",
+      "push_unavailable": "推送暂未启用。",
+      "push_failed": "没能开启推送，稍后再试。",
+      "about": "关于",
+      "version": "版本 {{version}}",
+      "logout": "退出登录",
+      "logout_title": "退出登录？这台设备将不再收到推送。",
+      "logout_ok": "退出"
+    },
+    "back": "返回",
+    "areas": {
+      "todo": "待办",
+      "queue": "审判",
+      "search": "查询",
+      "notices": "通知"
+    },
+    "kinds": {
+      "approval": "审批节点",
+      "reassignment": "改派请求",
+      "cooldown": "缩短冷却申请",
+      "rebirth": "转生申请"
+    },
+    "notices": {
+      "empty_title": "没有通知",
+      "empty_body": "新的通知会出现在这里。"
+    },
+    "login": {
+      "username": "用户名",
+      "password": "密码",
+      "submit": "登录",
+      "hall_title": "选择殿",
+      "hall_body": "这个账号在多个殿任职，请选择要进入的殿。",
+      "reasons": {
+        "bad_credentials": "用户名或密码不对",
+        "locked": "尝试次数过多，请稍后再试",
+        "network": "网络错误",
+        "other": "没能登录，请稍后再试"
+      }
+    },
+    "mfa": {
+      "title": "两步验证",
+      "body": "输入验证器 App 上的 6 位动态码。",
+      "recovery_body": "输入一个还没用过的恢复码。",
+      "code_label": "动态码",
+      "recovery_label": "恢复码",
+      "remember": "在此设备上 30 天内不再询问",
+      "submit": "验证",
+      "use_recovery": "改用恢复码",
+      "use_code": "改用动态码",
+      "reasons": {
+        "wrong": "动态码不对",
+        "expired": "这次登录已超时，请重新登录",
+        "locked": "尝试次数过多，请稍后再试",
+        "network": "网络错误",
+        "other": "没能验证，请稍后再试"
+      }
+    },
+    "banner": {
+      "mfa_required": "你的角色必须使用两步验证，但还没有设置。请到官员台完成设置。"
+    },
+    "cosign": {
+      "search": "搜索姓名或用户名",
+      "empty": "没有可选的人",
+      "confirm": "确认加签",
+      "no_endpoint": "提交加签的功能还没开通，请先在官员台加签。"
     }
   }
 }

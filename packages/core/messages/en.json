@@ -5055,14 +5055,19 @@
       "empty_title": "No cases in hand",
       "empty_body": "Claim one from Unclaimed.",
       "desk_only": "Ready for verdict · use the desk",
-      "scope_note": "On the phone you can claim, read and comment. Verdicts and seals are done at the desk."
+      "scope_note": "On the phone you can claim, read and comment. Verdicts and seals are done at the desk.",
+      "claim": "Claim",
+      "claim_failed": "Couldn't claim"
     },
     "continue_on_desk": "Continue on desktop",
     "search": {
       "souls": "Souls",
       "ask": "Ask",
       "placeholder": "Name or ID",
-      "read_only": "Read-only. Make changes at the desk."
+      "read_only": "Read-only. Make changes at the desk.",
+      "no_souls_title": "Nothing found",
+      "no_souls_body": "Try another name or ID.",
+      "residing": "▲ {{where}} · Resident"
     },
     "detail": {
       "your_step": "Your step",
@@ -5083,11 +5088,23 @@
         "already_handled": "Someone else already signed",
         "deadline_passed": "The deadline has passed",
         "permission_changed": "Your permissions changed",
-        "network": "Network error"
-      }
+        "network": "Network error",
+        "other": "The server didn't accept it"
+      },
+      "requester": "the requester",
+      "approve_body": {
+        "approval": "The flow moves to the next step.",
+        "rebirth": "This rebirth application moves to the next step.",
+        "cooldown": "The cooling-off period is shortened to the days you enter.",
+        "reassignment": "The dispatch goes ahead."
+      },
+      "remaining_days": "{{n}} days left",
+      "days_label": "Days to approve",
+      "days_invalid": "Enter a whole number below the days left"
     },
     "landing": {
-      "handled": "Already handled by {{name}}"
+      "handled": "Already handled by {{name}}",
+      "someone": "someone"
     },
     "state": {
       "error_title": "Couldn't load",
@@ -5099,7 +5116,89 @@
       "lock": "{{n}} items waiting on you"
     },
     "me": {
-      "push": "Push notifications"
+      "push": "Push notifications",
+      "profile": "Profile",
+      "name": "Name",
+      "role": "Role",
+      "hall": "Hall",
+      "mfa": "Two-step verification",
+      "mfa_on": "On",
+      "mfa_off": "Off",
+      "mfa_required_off": "Required · not set up",
+      "mfa_note": "Turn it on and manage it at the desk.",
+      "language": "Language",
+      "theme": "Theme",
+      "theme_system": "System",
+      "theme_light": "Light",
+      "theme_dark": "Dark",
+      "push_on": "On",
+      "push_off": "Off",
+      "push_note": "The lock screen shows only a count.",
+      "push_denied": "Notifications are off in system settings.",
+      "push_unavailable": "Push isn't available in this build.",
+      "push_failed": "Couldn't turn push on. Try again later.",
+      "about": "About",
+      "version": "Version {{version}}",
+      "logout": "Sign out",
+      "logout_title": "Sign out? This device will stop receiving pushes.",
+      "logout_ok": "Sign out"
+    },
+    "back": "Back",
+    "areas": {
+      "todo": "the to-do list",
+      "queue": "judgments",
+      "search": "look-up",
+      "notices": "notices"
+    },
+    "kinds": {
+      "approval": "Approval step",
+      "reassignment": "Reassignment",
+      "cooldown": "Cooling-off request",
+      "rebirth": "Rebirth application"
+    },
+    "notices": {
+      "empty_title": "No notices",
+      "empty_body": "New notices will appear here."
+    },
+    "login": {
+      "username": "Username",
+      "password": "Password",
+      "submit": "Sign in",
+      "hall_title": "Choose a hall",
+      "hall_body": "This account serves in more than one hall. Choose which to enter.",
+      "reasons": {
+        "bad_credentials": "Wrong username or password",
+        "locked": "Too many attempts. Try again later",
+        "network": "Network error",
+        "other": "Couldn't sign in. Try again later"
+      }
+    },
+    "mfa": {
+      "title": "Two-step verification",
+      "body": "Enter the 6-digit code from your authenticator app.",
+      "recovery_body": "Enter a recovery code you haven't used.",
+      "code_label": "Code",
+      "recovery_label": "Recovery code",
+      "remember": "Don't ask again on this device for 30 days",
+      "submit": "Verify",
+      "use_recovery": "Use a recovery code",
+      "use_code": "Use an authenticator code",
+      "reasons": {
+        "wrong": "Wrong code",
+        "expired": "This sign-in timed out. Sign in again",
+        "locked": "Too many attempts. Try again later",
+        "network": "Network error",
+        "other": "Couldn't verify. Try again later"
+      }
+    },
+    "banner": {
+      "mfa_required": "Your role must use two-step verification and it isn't set up yet. Set it up at the desk."
+    },
+    "cosign": {
+      "search": "Search name or username",
+      "empty": "Nobody to choose",
+      "confirm": "Add signer",
+      "no_endpoint": "Adding a signer isn't available in the app yet. Use the desk."
     }
   }
 }
