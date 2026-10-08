@@ -68,6 +68,23 @@ affected rows with ⊘/△ and offers a one-click filter for them.
 
 ---
 
+## What it does
+
+| Domain | What it covers | Code |
+|---|---|---|
+| Judgment pipeline | Cases from judgment to disposition and reincarnation; court settings (ADMIN only); settlement correction for SETTLED souls | `judgment/`, `disposition/`, `reincarnation/`, `tenants/` |
+| Cross-realm dispatch | Moving souls between tenants, through approval | `dispatch/` |
+| Approval workflows | Configurable multi-node approval flows, with templates | `workflow/` |
+| Sentence plans | Sentence stages and amendment requests | `sentence_plan/` |
+| Letters | Private messages between souls over Matrix / Synapse (loopback only, no federation); the backend mints credentials and receives the new-message hook. **Not end-to-end encrypted** | `chat/` |
+| Soul circle | Posts, comments, reactions, follows, moderation; images served via signed URLs | `social/` |
+| External death registration | API-key-authenticated registration (single or batch), HMAC-signed webhooks | `death_sync/` |
+| Two front ends | Admin web (Next.js 16) + soul-side app (Expo SDK 57 / React Native), sharing `packages/core` | `frontend/`, `mobile/` |
+
+Backend apps live under `backend/apps/`.
+
+---
+
 ## Quick start
 
 **Prerequisites:** Python 3.11+ (with `uv`), Node.js 20+, and Docker if you want
@@ -187,9 +204,6 @@ bash scripts/install-hooks.sh  # pre-commit: ESLint on staged frontend files
                                #   checkout after editing the script.
 ```
 
-Note: `start-all.sh` prints the frontend URL as `:3000`; the dev server actually
-listens on `:3333`.
-
 ---
 
 ## Architecture
@@ -283,17 +297,17 @@ Everything is under `/api/v1/`. Authenticated endpoints expect
 
 | Prefix | App |
 |---|---|
-| `auth/`, `users/` | JWT login/refresh, user management |
+| `auth/`, `users/` | JWT login/refresh, user management, login log (`auth/login-logs/`, read-only, ADMIN only) |
 | `recycle-bin/` | Recycle bin: list, restore and hard-delete soft-deleted records |
-| `souls/` | Soul CRUD plus state transitions |
+| `souls/` | Soul CRUD plus state transitions, settlement correction (`{id}/correct_settlement/`, SETTLED souls only, needs `soul.correct_settlement`) |
 | `ledger/` | Merit/demerit records, balance, decay, per-civilization reading |
 | `judgment/`, `disposition/`, `reincarnation/` | The judgment pipeline |
 | `realms/`, `actors/` | Afterlife geography and its personnel |
 | `dispatch/` | Cross-realm soul transfer, with approval |
 | `workflows/`, `nodes/`, `workflow/templates/` | Approval workflow engine |
-| `perm/`, `menus/`, `organizations/`, `tenants/` | RBAC, navigation, org chart, tenants |
+| `perm/`, `menus/`, `organizations/`, `tenants/` | RBAC, navigation, org chart, tenants (court settings at `tenants/{code}/settings/`, ADMIN only) |
 | `audit-logs/`, `events/`, `notifications/` | Audit trail, event log, notifications |
-| `death-sync/` | External death-registration API (API key + HMAC-signed webhooks) |
+| `death-sync/` | External death-registration API (API key + HMAC-signed webhooks; key management at `death-sync/api-keys/`) |
 | `social/`, `social-moderation/` | Posts, comments, reactions, follows, profiles, and content moderation |
 | `sentence-plans/` | Sentence plans and their amendment requests |
 | `scheduler/` | Scheduled jobs and run history (`runs/` takes several statuses, a time range and a search) |
@@ -579,6 +593,14 @@ Implemented: JWT and API-key authentication, RBAC with data and field scoping,
 Fernet encryption for webhook secrets and PII payloads, atomic Redis rate
 limiting, SSRF validation on webhook URLs, CSP/HSTS/X-Frame-Options, and an audit
 trail on mutations.
+
+External API keys (`backend/apps/death_sync/`, managed at `/death-sync/api-keys`) are
+granted per capability: three booleans, `can_register_death` / `can_query_status` /
+`can_manage_webhooks`, each gate one class of endpoint. A non-empty `allowed_ips`
+admits only the listed source addresses. `ApiKeyRateThrottle` limits each key by
+`rate_limit_per_minute` with a Redis `INCR`. **`rate_limit_per_hour` is stored and
+reported by the usage endpoint, but no view throttles on it** — only the per-minute
+scope is wired.
 
 The Fernet encryption **depends on `ENCRYPTION_KEY`** (`config/settings.py`):
 with `DEBUG=False` and no key the process refuses to start; with `DEBUG=True`
