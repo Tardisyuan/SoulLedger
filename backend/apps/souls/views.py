@@ -525,6 +525,8 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
         serializer = SoulRecordSerializer(record, data=request.data, partial=True, context={"soul": soul})
         serializer.is_valid(raise_exception=True)
         record = serializer.save()
+        # save() 只在新建时重算;改权重 / 类型要同一条共用的重算路径,否则 merit_score 停在旧值。
+        record._update_soul_karma()
         return Response(SoulRecordSerializer(record).data)
 
     @extend_schema(responses=SoulRecordSerializer(many=True))
