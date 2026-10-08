@@ -7296,6 +7296,51 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/souls/import/commit/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Create every soul in the file, or none. Re-validates the file itself.
+         *
+         *     422 with the preview body when any row has an error (nothing written). On success
+         *     one `IMPORT` audit row names the batch; each soul also gets its ordinary CREATE row.
+         */
+        post: operations["v1_souls_import_commit_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/souls/import/preview/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Validate a soul CSV row by row. WRITES NOTHING.
+         *
+         *     Columns: name, civilization (required); birth_date, death_date, origin_location,
+         *     birth_name, description. Dates are `YYYY`, `YYYY-MM` or `YYYY-MM-DD`, negative for
+         *     BCE. At most `importer.MAX_ROWS` rows. `civilization` must be the caller's own.
+         */
+        post: operations["v1_souls_import_preview_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/tenants/": {
         parameters: {
             query?: never;
@@ -15051,6 +15096,55 @@ export interface components {
         SoulHomeTenant: {
             code: string;
             display_name: string;
+        };
+        SoulImportCellError: {
+            /** @description CSV column the problem is in; `_row` for the row as a whole. */
+            field: string;
+            /** @description Stable machine-readable code; the web translates it. */
+            code: string;
+        };
+        SoulImportCommit: {
+            created: number;
+            /**
+             * Format: uuid
+             * @description Filter the list with `?import_batch=` to see this batch.
+             */
+            batch_id: string;
+        };
+        /** @description 400: the file as a whole is unusable. Nothing was read or written. */
+        SoulImportFileError: {
+            code: string;
+            columns?: string[];
+            max_rows?: number;
+            max_bytes?: number;
+        };
+        /** @description 200 of `…/import/preview/` and 422 of `…/import/commit/` (rows have errors; nothing written). */
+        SoulImportPreview: {
+            total: number;
+            ok_count: number;
+            error_count: number;
+            max_rows: number;
+            rows: components["schemas"]["SoulImportRow"][];
+        };
+        SoulImportRow: {
+            /** @description Line number in the file; the header is line 1. */
+            row: number;
+            status: components["schemas"]["SoulImportRowStatusEnum"];
+            values: {
+                [key: string]: string;
+            };
+            errors: components["schemas"]["SoulImportCellError"][];
+        };
+        /**
+         * @description * `ok` - ok
+         *     * `error` - error
+         * @enum {string}
+         */
+        SoulImportRowStatusEnum: "ok" | "error";
+        /** @description Multipart body of the two import endpoints: the CSV, nothing else. */
+        SoulImportUpload: {
+            /** Format: uri */
+            file: string;
         };
         /** @description Lightweight serializer for list views. */
         SoulList: {
@@ -28400,6 +28494,7 @@ export interface operations {
                 death_date_after?: string;
                 death_date_before?: string;
                 has_date_problem?: boolean;
+                import_batch?: string;
                 karma_max?: number;
                 karma_min?: number;
                 karmic_balance_max?: number;
@@ -28719,6 +28814,7 @@ export interface operations {
                 death_date_after?: string;
                 death_date_before?: string;
                 has_date_problem?: boolean;
+                import_batch?: string;
                 karma_max?: number;
                 karma_min?: number;
                 karmic_balance_max?: number;
@@ -28781,6 +28877,7 @@ export interface operations {
                 death_date_after?: string;
                 death_date_before?: string;
                 has_date_problem?: boolean;
+                import_batch?: string;
                 karma_max?: number;
                 karma_min?: number;
                 karmic_balance_max?: number;
@@ -29006,6 +29103,76 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+        };
+    };
+    v1_souls_import_commit_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["SoulImportUpload"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulImportCommit"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulImportFileError"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulImportPreview"];
+                };
+            };
+        };
+    };
+    v1_souls_import_preview_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["SoulImportUpload"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulImportPreview"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulImportFileError"];
                 };
             };
         };

@@ -764,3 +764,44 @@ class SoulBatchRecycleErrorSerializer(serializers.Serializer):
     error = serializers.CharField()
     ids = serializers.ListField(child=serializers.UUIDField())
     archivable = serializers.BooleanField(required=False)
+
+
+# ── CSV import (apps/souls/importer.py) ────────────────────────────────────
+
+class SoulImportUploadSerializer(serializers.Serializer):
+    """Multipart body of the two import endpoints: the CSV, nothing else."""
+    file = serializers.FileField()
+
+
+class SoulImportCellErrorSerializer(serializers.Serializer):
+    field = serializers.CharField(help_text="CSV column the problem is in; `_row` for the row as a whole.")
+    code = serializers.CharField(help_text="Stable machine-readable code; the web translates it.")
+
+
+class SoulImportRowSerializer(serializers.Serializer):
+    row = serializers.IntegerField(help_text="Line number in the file; the header is line 1.")
+    status = serializers.ChoiceField(choices=["ok", "error"])
+    values = serializers.DictField(child=serializers.CharField(allow_blank=True))
+    errors = SoulImportCellErrorSerializer(many=True)
+
+
+class SoulImportPreviewSerializer(serializers.Serializer):
+    """200 of `…/import/preview/` and 422 of `…/import/commit/` (rows have errors; nothing written)."""
+    total = serializers.IntegerField()
+    ok_count = serializers.IntegerField()
+    error_count = serializers.IntegerField()
+    max_rows = serializers.IntegerField()
+    rows = SoulImportRowSerializer(many=True)
+
+
+class SoulImportCommitSerializer(serializers.Serializer):
+    created = serializers.IntegerField()
+    batch_id = serializers.UUIDField(help_text="Filter the list with `?import_batch=` to see this batch.")
+
+
+class SoulImportFileErrorSerializer(serializers.Serializer):
+    """400: the file as a whole is unusable. Nothing was read or written."""
+    code = serializers.CharField()
+    columns = serializers.ListField(child=serializers.CharField(), required=False)
+    max_rows = serializers.IntegerField(required=False)
+    max_bytes = serializers.IntegerField(required=False)
