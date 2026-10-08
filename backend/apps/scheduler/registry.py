@@ -98,6 +98,8 @@ REGISTRY: tuple[JobSpec, ...] = (
     # 按租户:收件人按 `User.tenant` 取。每 5 分钟 = 邮件最多晚 5 分钟;没人开开关时只是一条查询。
     # 锁 240s 的理由同上面的超时任务。
     JobSpec("notifications.email_action_needed_for_tenant", TENANT, "*/5 * * * *", max_runtime=240),
+    # 同一条通道给 `tenant=None` 的全局管理员:他们没有租户,按租户那一行扫不到。GLOBAL,同样每 5 分钟。
+    JobSpec("notifications.email_action_needed_global", GLOBAL, "*/5 * * * *", max_runtime=240),
     # ---- global jobs ---------------------------------------------------------
     JobSpec("authentication.flush_expired_tokens", GLOBAL, "30 3 * * *"),
     # Period 300s; lock TTL / LOST threshold 240s so a crashed run cannot make
