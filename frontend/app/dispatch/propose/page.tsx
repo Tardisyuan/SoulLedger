@@ -203,6 +203,9 @@ function ProposeDispatchForm() {
    */
   const sourceCode = user?.tenant?.code;
   const tenantName = (tn: { tenant_code: string; tenant_name: string }) => tn.tenant_name || tn.tenant_code;
+  // 关了调拨的殿(`dispatch_enabled=false`)仍列出来但禁用,右侧写原因;后端的
+  // `check_target_accepts` 是真正的门,这里只是不让人填了再被拒。
+  const closed = (tn: { dispatch_enabled?: boolean }) => tn.dispatch_enabled === false;
   const sourceTenantRow = tenants.find((tn) => tn.tenant_code === sourceCode);
   const targetTenantRow = tenants.find((tn) => tn.tenant_code === form.target_tenant_code);
   const dirty = Boolean(form.reason.trim() || form.target_tenant_code || (!soulId && form.soul_id));
@@ -245,6 +248,8 @@ function ProposeDispatchForm() {
         .filter(([apiField]) => FIELD_OF[apiField])
         .map(([apiField, message]) => [FIELD_OF[apiField], message])
     );
+    // 目标殿在填表期间关了调拨:后端答 400 + code,翻译后放到目标殿那一栏下。
+    if (byField.code === "target_dispatch_disabled") mapped.target_tenant_code = t("dispatch.target_tenant_closed");
     setFieldErrors(mapped);
     if (Object.keys(mapped).length > 0) {
       queueMicrotask(() => focusFirstInvalid(formRef.current));
@@ -445,13 +450,14 @@ function ProposeDispatchForm() {
           <div className="flex flex-col border-t border-[oklch(var(--color-block))]">
             {tenants.map((tn) => {
               const isSource = tn.tenant_code === sourceCode;
+              const isClosed = !isSource && closed(tn);
               const checked = form.target_tenant_code === tn.tenant_code;
               return (
                 <label
                   key={tn.tenant_code}
                   className={cn(
                     "flex min-h-(--control-h-sm) items-center gap-3 border-b border-[oklch(var(--color-rule))] px-2 text-sm",
-                    isSource
+                    isSource || isClosed
                       ? "cursor-not-allowed text-[oklch(var(--color-disabled-ink))]"
                       : "cursor-pointer text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))]",
                     checked && "bg-[oklch(var(--color-surface-2))]"
@@ -462,11 +468,11 @@ function ProposeDispatchForm() {
                     name="target_tenant_code"
                     value={tn.tenant_code}
                     checked={checked}
-                    disabled={isSource}
-                    // Not on the disabled source row: focusFirstInvalid takes the
+                    disabled={isSource || isClosed}
+                    // Not on a disabled row: focusFirstInvalid takes the
                     // first `[aria-invalid]` in DOM order, and a disabled radio
                     // cannot take focus.
-                    aria-invalid={tenantError && !isSource ? true : undefined}
+                    aria-invalid={tenantError && !isSource && !isClosed ? true : undefined}
                     onChange={() => {
                       setFieldErrors(({ target_tenant_code: _drop, target_realm: _realm, ...rest }) => rest);
                       // A realm belongs to one civilization: changing the target clears it.
@@ -476,8 +482,12 @@ function ProposeDispatchForm() {
                     className="size-3.5 shrink-0 appearance-none border border-[oklch(var(--color-line))] checked:border-[oklch(var(--color-block))] checked:bg-[oklch(var(--color-accent))] checked:shadow-[inset_0_0_0_3px_oklch(var(--color-canvas))] disabled:border-[oklch(var(--color-disabled-ink))]"
                   />
                   {tenantName(tn)}
-                  <span className={cn("ml-auto", isSource ? "text-xs" : "font-mono text-xs text-[oklch(var(--color-ink-subtle))]")}>
-                    {isSource ? t("dispatch.source_label") : NUMBERING_SAMPLE[getCivilizationFromTenantCode(tn.tenant_code)] ?? ""}
+                  <span className={cn("ml-auto", isSource || isClosed ? "text-xs" : "font-mono text-xs text-[oklch(var(--color-ink-subtle))]")}>
+                    {isSource
+                      ? t("dispatch.source_label")
+                      : isClosed
+                        ? t("dispatch.target_tenant_closed")
+                        : NUMBERING_SAMPLE[getCivilizationFromTenantCode(tn.tenant_code)] ?? ""}
                   </span>
                 </label>
               );

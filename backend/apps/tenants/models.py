@@ -16,7 +16,11 @@ class Tenant(AuditUserFields, models.Model):
     description = models.TextField(blank=True, default="")
     settings = models.JSONField(default=dict, blank=True)
     is_active = models.BooleanField(default=True)
-    dispatch_enabled = models.BooleanField(default=False)
+    #: 这个殿接不接收别的殿调来暂居的灵魂(`DispatchService.check_target_accepts`)。关掉是例外:
+    #: 两条种子(`seed_tenants`、`mythology/seeding.py`)都把四个殿建成开着的,而 2026-10-08
+    #: 之前这个字段没有任何读者,于是上百个测试夹具按 `default=False` 建殿再往里调。默认改成
+    #: 开着,让「可接收」是常态、关殿是管理员的一个动作(`TenantSettingsDialog`)。
+    dispatch_enabled = models.BooleanField(default=True)
     api_endpoint = models.URLField(blank=True, default="")
     #: 殿司展示名:灵魂写信的收件方在 App 与官员收件箱里叫什么(如「第五殿」)。与 `display_name`
     #: 分开 —— 那一个是租户的管理名(「Chinese Afterlife」),不是灵魂认得的殿名。三语各一份;
