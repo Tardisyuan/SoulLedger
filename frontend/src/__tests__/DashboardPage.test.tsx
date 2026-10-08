@@ -25,7 +25,12 @@ jest.mock("next/navigation", () => ({
 }));
 
 jest.mock("@soulledger/core/api", () => ({
-  ledgerApi: { statsOverview: jest.fn(), exportStats: jest.fn() },
+  // statsTrends: the 趋势 panel on the overview tab (its own states are in TrendsPanel.test.tsx).
+  ledgerApi: {
+    statsOverview: jest.fn(),
+    exportStats: jest.fn(),
+    statsTrends: jest.fn().mockResolvedValue({ data: { range: "30d", since: "2026-09-09", until: "2026-10-08", points: [] } }),
+  },
   dispatchApi: { proposed: jest.fn() },
   judgmentApi: { next: jest.fn() },
   deathSyncApi: { summary: jest.fn() },
