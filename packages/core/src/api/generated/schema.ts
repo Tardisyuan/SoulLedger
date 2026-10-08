@@ -7563,7 +7563,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description 分配角色给用户 */
+        /** @description 分配角色给用户:主角色 `role`、兼任角色 `extra_roles`(权限取并集) */
         post: operations["v1_users_assign_roles_create"];
         delete?: never;
         options?: never;
@@ -8333,6 +8333,18 @@ export interface components {
         ApproverPreviewUser: {
             display_name: string;
             role: string;
+        };
+        /**
+         * @description Body of `POST /users/{id}/assign_roles/`. At least one field.
+         *
+         *     `role` replaces the primary role, `extra_roles` replaces the whole list of
+         *     additional roles (send `[]` to clear it). ADMIN and SOUL are refused as
+         *     additional roles; the view checks each name against the role table and
+         *     against the caller's own rank.
+         */
+        AssignRoles: {
+            role?: string;
+            extra_roles?: string[];
         };
         /**
          * @description `GET /judgment/assignable-officers/` 的一行:改派弹层要的五样,别无其他 ——
@@ -15981,6 +15993,7 @@ export interface components {
             /** Format: uri */
             avatar?: string | null;
             readonly is_eval_identity: boolean;
+            readonly extra_roles: unknown;
         };
         /**
          * @description 分语言的类型按请求语言重渲染 title / message(见 `apps/notifications/messages.py`)。
@@ -16068,13 +16081,14 @@ export interface components {
             bio?: string;
         };
         /**
-         * @description `{"role": "..."}` — the single-role body `own_roles` returns.
+         * @description `{"role": "...", "extra_roles": [...]}` — the body `own_roles` returns.
          *
-         *     Schema-only. Named for what it is: this endpoint is plural in its URL and
-         *     singular in its body, because a user carries one role in this system.
+         *     Schema-only. `role` is the primary role (ADMIN bypass, ranking); the
+         *     permissions a user holds are the union of `role` and `extra_roles`.
          */
         UserRole: {
             role: string;
+            extra_roles: string[];
         };
         /**
          * @description The three keys `UserManagementSerializer.get_tenant` returns.
@@ -29466,11 +29480,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody: {
+        requestBody?: {
             content: {
-                "application/json": components["schemas"]["UserManagement"];
-                "application/x-www-form-urlencoded": components["schemas"]["UserManagement"];
-                "multipart/form-data": components["schemas"]["UserManagement"];
+                "application/json": components["schemas"]["AssignRoles"];
+                "application/x-www-form-urlencoded": components["schemas"]["AssignRoles"];
+                "multipart/form-data": components["schemas"]["AssignRoles"];
             };
         };
         responses: {

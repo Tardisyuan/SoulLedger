@@ -16394,7 +16394,7 @@ paths:
   /api/v1/users/{id}/assign_roles/:
     post:
       operationId: v1_users_assign_roles_create
-      description: 分配角色给用户
+      description: 分配角色给用户:主角色 `role`、兼任角色 `extra_roles`(权限取并集)
       parameters:
       - in: path
         name: id
@@ -16408,14 +16408,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UserManagement'
+              $ref: '#/components/schemas/AssignRoles'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/UserManagement'
+              $ref: '#/components/schemas/AssignRoles'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/UserManagement'
-        required: true
+              $ref: '#/components/schemas/AssignRoles'
       security:
       - jwtAuth: []
       responses:
@@ -18087,6 +18086,22 @@ components:
       required:
       - display_name
       - role
+    AssignRoles:
+      type: object
+      description: |-
+        Body of `POST /users/{id}/assign_roles/`. At least one field.
+
+        `role` replaces the primary role, `extra_roles` replaces the whole list of
+        additional roles (send `[]` to clear it). ADMIN and SOUL are refused as
+        additional roles; the view checks each name against the role table and
+        against the caller's own rank.
+      properties:
+        role:
+          type: string
+        extra_roles:
+          type: array
+          items:
+            type: string
     AssignableOfficer:
       type: object
       description: |-
@@ -34115,8 +34130,11 @@ components:
         is_eval_identity:
           type: boolean
           readOnly: true
+        extra_roles:
+          readOnly: true
       required:
       - create_time
+      - extra_roles
       - id
       - is_eval_identity
       - organization
@@ -34317,14 +34335,19 @@ components:
     UserRole:
       type: object
       description: |-
-        `{"role": "..."}` — the single-role body `own_roles` returns.
+        `{"role": "...", "extra_roles": [...]}` — the body `own_roles` returns.
 
-        Schema-only. Named for what it is: this endpoint is plural in its URL and
-        singular in its body, because a user carries one role in this system.
+        Schema-only. `role` is the primary role (ADMIN bypass, ranking); the
+        permissions a user holds are the union of `role` and `extra_roles`.
       properties:
         role:
           type: string
+        extra_roles:
+          type: array
+          items:
+            type: string
       required:
+      - extra_roles
       - role
     UserTenantRef:
       type: object
