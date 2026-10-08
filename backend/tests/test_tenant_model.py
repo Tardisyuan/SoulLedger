@@ -34,7 +34,7 @@ class TestTenantModel:
         tenant = Tenant.objects.create(code="EU_HEAVEN_HELL", display_name="European")
         assert tenant.code == "EU_HEAVEN_HELL"
         assert tenant.is_active is True  # default
-        assert tenant.dispatch_enabled is False  # default
+        assert tenant.dispatch_enabled is True  # default (tenants/0015: receiving is the norm)
 
     def test_code_must_be_unique(self):
         """Two tenants cannot have the same code."""

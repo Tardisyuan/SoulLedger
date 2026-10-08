@@ -64,9 +64,21 @@ def test_null_cooldown_removes_the_key_and_falls_back_to_the_default(admin_user,
     assert cooldown_days(cn_tenant) == 30
 
 
-@pytest.mark.parametrize("bad", [-1, "soon", 1.5, {"a": 1}])
+def test_cooldown_of_a_full_year_is_the_most_allowed(admin_user, cn_tenant):
+    """上限 365(2026-10-08):365 过,366 拒。变异:去掉 `max_value=365` → 366 那条 200,红。"""
+    assert _patch(admin_user, cn_tenant, {"soul_rebirth_cooldown_days": 365}).status_code == 200
+    cn_tenant.refresh_from_db()
+    assert cooldown_days(cn_tenant) == 365
+    resp = _patch(admin_user, cn_tenant, {"soul_rebirth_cooldown_days": 366})
+    assert resp.status_code == 400, resp.data
+    assert "soul_rebirth_cooldown_days" in resp.data
+    cn_tenant.refresh_from_db()
+    assert cooldown_days(cn_tenant) == 365
+
+
+@pytest.mark.parametrize("bad", [-1, 366, "soon", 1.5, {"a": 1}])
 def test_cooldown_outside_the_range_is_refused_and_nothing_is_written(admin_user, cn_tenant, bad):
-    """变异:去掉 `min_value=0` → `-1` 那条变绿,红。"""
+    """变异:去掉 `min_value=0` → `-1` 那条变绿,红;去掉 `max_value=365` → `366` 那条变绿,红。"""
     cn_tenant.settings = {"assistant_enabled": True}
     cn_tenant.save()
     resp = _patch(admin_user, cn_tenant, {"soul_rebirth_cooldown_days": bad, "description": "x"})

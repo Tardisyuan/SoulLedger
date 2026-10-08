@@ -119,6 +119,22 @@ describe("TenantSettingsDialog", () => {
     expect(update.mock.calls[0][1]).toMatchObject({ soul_rebirth_cooldown_days: null });
   });
 
+  it("365 is the most the form sends; 366 never reaches the API", async () => {
+    expect(parseCooldownDays("365")).toBe(365);
+    expect(parseCooldownDays("366")).toBeUndefined();
+    renderDialog(tenant());
+    fireEvent.change(screen.getByLabelText("tenants.settings.cooldown_days"), { target: { value: "366" } });
+    save();
+    expect(await screen.findByRole("alert")).toHaveTextContent("tenants.settings.cooldown_invalid");
+    expect(update).not.toHaveBeenCalled();
+
+    update.mockResolvedValue({ data: tenant() });
+    fireEvent.change(screen.getByLabelText("tenants.settings.cooldown_days"), { target: { value: "365" } });
+    save();
+    await waitFor(() => expect(update).toHaveBeenCalledTimes(1));
+    expect(update.mock.calls[0][1]).toMatchObject({ soul_rebirth_cooldown_days: 365 });
+  });
+
   it("a non-integer cooldown never reaches the API and is named under its own field", async () => {
     renderDialog(tenant());
     fireEvent.change(screen.getByLabelText("tenants.settings.cooldown_days"), { target: { value: "-3" } });

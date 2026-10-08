@@ -1967,6 +1967,7 @@
     "soul_from_detail": "从详情页带入，不可改",
     "soul_from_detail_error": "带入的灵魂加载失败，请在这里重新选择。",
     "source_label": "来源",
+    "target_tenant_closed": "此殿暂不接收调拨",
     "discard": "放弃…",
     "discard_title": "放弃这份移交草稿？",
     "discard_message": "草稿会移入回收站，可在「系统设置 › 回收站」找回。已填写的理由一并保留。",
@@ -2624,8 +2625,8 @@
       "hall_name_egy": "殿司展示名(egy)",
       "description": "说明",
       "cooldown_days": "转生申请冷却天数",
-      "cooldown_hint": "最近一次终局驳回之后这么多天内不能再申请;留空用默认 30 天",
-      "cooldown_invalid": "请填 0 或正整数",
+      "cooldown_hint": "最近一次终局驳回之后这么多天内不能再申请;0 到 365,留空用默认 30 天",
+      "cooldown_invalid": "请填 0 到 365 之间的整数",
       "dispatch_enabled": "可接收调拨(暂居)",
       "saved": "设置已保存",
       "save_failed": "没能保存设置"
