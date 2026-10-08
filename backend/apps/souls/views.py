@@ -4,6 +4,7 @@ REST views for Soul app.
 import csv
 import uuid
 
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import transaction
 from django.http import HttpResponse
 from django.utils import timezone
@@ -61,6 +62,8 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
         'transition': ['soul.transition'],
         'karma': ['soul.read'],
         'add_record': ['soul.update'],
+        # 改一条已入簿的功过:与 add_record 同一把 `soul.update`。
+        'update_record': ['soul.update'],
         'records': ['soul.read'],
         'path': ['soul.read'],
         # Acknowledging a warning mutates the record (three new columns),
@@ -494,6 +497,35 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
         serializer.is_valid(raise_exception=True)
         record = serializer.save(soul=soul)
         return Response(SoulRecordSerializer(record).data, status=status.HTTP_201_CREATED)
+
+    @extend_schema(
+        request=SoulRecordSerializer,
+        responses=SoulRecordSerializer,
+        parameters=[
+            OpenApiParameter(
+                "record_id", OpenApiTypes.UUID, OpenApiParameter.PATH,
+                description="The SoulRecord's primary key (the id belongs to the related record, not to `Soul`).",
+            )
+        ],
+    )
+    @action(detail=True, methods=["patch"], url_path=r"records/(?P<record_id>[^/.]+)")
+    def update_record(self, request, pk=None, record_id=None):
+        """Edit one merit/demerit record on this soul (partial).
+
+        The same serializer and the same validation as `add_record` — dates against the soul,
+        the clause/count pair, the statute against the soul's civilization — with the record as
+        instance. The statute snapshot is re-taken by `SoulRecord.save` only when the cited
+        statute changes. Gated by `soul.update`, like `add_record`.
+        """
+        soul = self.get_object()
+        try:
+            record = soul.records.get(pk=record_id)
+        except (SoulRecord.DoesNotExist, DjangoValidationError):
+            return Response({"error": "Record not found on this soul."}, status=status.HTTP_404_NOT_FOUND)
+        serializer = SoulRecordSerializer(record, data=request.data, partial=True, context={"soul": soul})
+        serializer.is_valid(raise_exception=True)
+        record = serializer.save()
+        return Response(SoulRecordSerializer(record).data)
 
     @extend_schema(responses=SoulRecordSerializer(many=True))
     @action(detail=True, methods=["get"], pagination_class=None)
