@@ -1604,7 +1604,7 @@
         "FAILED": "Nen Aq"
       },
       "failure_reason": "Khet Nen Aq",
-      "user_agent": "Wat Aq",
+      "user_agent": "Kat Wen Aq",
       "search_placeholder": "Hehy Ren Aq...",
       "no_logs": "Nen Medew Aq Djer"
     }
@@ -2275,17 +2275,17 @@
       "name_placeholder": "Ren Menf",
       "system_type_label": "Kher Seth Hemsu",
       "system_type": {
-        "GOVERNMENT": "Per Hery",
+        "GOVERNMENT": "Sesh Remetj",
         "HOSPITAL": "Per Senb",
-        "POLICE": "Per Sau",
-        "MESSAGE_BUS": "Wat Medu",
-        "CUSTOM": "Djes"
+        "POLICE": "Sesh Per",
+        "MESSAGE_BUS": "Itru Medu",
+        "CUSTOM": "Iri Djes-Ef"
       },
       "key_prefix": "Tepy Menf",
       "permissions": "Was",
       "can_register_death": "Sesh Mut",
       "can_query_status": "Hehy Kheperu",
-      "can_manage_webhooks": "Hab Medu Ky",
+      "can_manage_webhooks": "Iri Webhook",
       "last_used": "Iri Pehwy",
       "never_used": "Nen Iri Djer",
       "usage_count": "Sep Iri",
@@ -2673,8 +2673,8 @@
       "title": "{{name}} · Smen",
       "hall_name": "Ren Wesekhet · Medu Sherer",
       "hall_name_hint": "Ren Wesekhet Em Sesh Ba; Nen Sesh: Tepy Ren Per",
-      "hall_name_en": "Ren Wesekhet · Europa",
-      "hall_name_egy": "Ren Wesekhet · Kemet",
+      "hall_name_en": "Ren Wesekhet · Medu Europa",
+      "hall_name_egy": "Ren Wesekhet · Medu Kemet",
       "description": "Medu Seth",
       "cooldown_days": "Hru Ahet Qebeh Dbh Wehem Mesut",
       "cooldown_hint": "Er Khet Khesef: Nen Dbh Wehem Mesut Em Ahet Qebeh; 365 Er Pehwy; Nen Sesh: Tepy Hru 30",
