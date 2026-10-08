@@ -1604,6 +1604,8 @@
     "all_resources": "所有资源",
     "no_logs": "暂无审计日志",
     "clear_filters": "清除筛选",
+    "export": "导出",
+    "export_failed": "导出失败",
     "access_denied": "访问被拒绝",
     "affected": "影响对象",
     "search_placeholder": "搜索资源或描述…",
@@ -1894,6 +1896,13 @@
       "legend_empty": "□ 空",
       "legend_count": "数字 = 在押",
       "read_only": "只读示意"
+    },
+    "facts": {
+      "show": "说明",
+      "hide": "收起",
+      "cycle_limit": "轮回上限",
+      "judgment_required": "入界须经审判",
+      "judgment_not_required": "入界无需审判"
     },
     "tree": {
       "title": "界域树",
