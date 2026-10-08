@@ -24116,14 +24116,23 @@ components:
         recorded_at:
           type: string
           format: date-time
+        statute_snapshot:
+          allOf:
+          - $ref: '#/components/schemas/MeStatuteRef'
+          nullable: true
+          readOnly: true
+        life_stage:
+          type: string
       required:
       - category
       - description
       - event_date
       - id
       - is_milestone
+      - life_stage
       - record_type
       - recorded_at
+      - statute_snapshot
       - weight
     MeReincarnation:
       type: object
@@ -24204,6 +24213,19 @@ components:
       - sentence_years
       - started_on
       - status
+    MeStatuteRef:
+      type: object
+      description: 灵魂看到的律条引用:只有编号与各语言的短标题 —— 不带正文、出处、哈希、版本。
+      properties:
+        code:
+          type: string
+        title:
+          type: object
+          additionalProperties:
+            type: string
+      required:
+      - code
+      - title
     MeTenant:
       type: object
       properties:

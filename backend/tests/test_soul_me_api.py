@@ -28,7 +28,7 @@ PROFILE_KEYS = {
 ACCOUNT_KEYS = {"cycle", "must_change_password", "initial_password_expires_at", "created_at"}
 LIFE_KEYS = {"cycle", "records", "judgments", "dispositions", "rebirth_applications", "reincarnation"}
 RECORD_KEYS = {"id", "record_type", "category", "description", "weight", "event_date", "is_milestone",
-               "recorded_at"}
+               "recorded_at", "statute_snapshot", "life_stage"}
 JUDGMENT_KEYS = {"id", "court", "judge", "judgment_method", "verdict", "is_final", "created_at", "concluded_at"}
 JUDGE_KEYS = {"name", "name_zh", "title"}
 DISPOSITION_KEYS = {"id", "judgment_id", "destination_realm", "memory_reset", "is_eternal", "sentence_years",
@@ -96,6 +96,7 @@ def test_current_life_shows_only_this_life_and_only_whitelisted_fields(reborn_so
     assert set(data) == LIFE_KEYS and data["cycle"] == 1
     assert [r["description"] for r in data["records"]] == ["功1"], "只有本世;JUDGMENT 类记录不是功过"
     assert set(data["records"][0]) == RECORD_KEYS
+    assert data["records"][0]["statute_snapshot"] is None and data["records"][0]["life_stage"] == ""
     assert len(data["judgments"]) == 1 and set(data["judgments"][0]) == JUDGMENT_KEYS
     assert set(data["judgments"][0]["judge"]) == JUDGE_KEYS
     assert data["judgments"][0]["court"] == "第一殿"
@@ -141,3 +142,24 @@ def test_a_soul_in_another_tenant_is_equally_invisible(reborn_soul, eu_tenant):
     eu_account, eu_client = ready_soul(eu_tenant, name="Beatrice")
     assert "轮回者" not in json.dumps(eu_client.get("/api/v1/me/life/").data, ensure_ascii=False, default=str)
     assert eu_client.get("/api/v1/me/").data["tenant"]["code"] == "EU_HEAVEN_HELL"
+
+
+def test_a_record_shows_its_statute_code_and_life_stage_but_never_its_evidence_source(reborn_soul):
+    """本世页「依据 / 人生阶段」:律条只给编号与短标题(不带正文、出处、哈希),证据来源与说明永远不给。"""
+    from apps.judgment.models import Statute
+
+    soul, account = reborn_soul
+    statute = Statute.objects.create(
+        code="ME-1", civilization=soul.civilization, title_zh="不妄语", title_en="No false speech",
+        text_zh="正文-不外露", text_en="body-hidden", source="出处-不外露", tenant=soul.tenant)
+    SoulRecord.objects.create(soul=soul, record_type="DEMERIT", description="妄语", weight=2, statute=statute,
+                              life_stage="ELDER", evidence_source="WITNESS", evidence_note="证人笔录-机密")
+    data = soul_client(account).get("/api/v1/me/life/").data
+    record = next(r for r in data["records"] if r["description"] == "妄语")
+    assert set(record) == RECORD_KEYS
+    assert record["life_stage"] == "ELDER"
+    assert set(record["statute_snapshot"]) == {"code", "title"} and record["statute_snapshot"]["code"] == "ME-1"
+    assert record["statute_snapshot"]["title"]["zh"] == "不妄语"
+    raw = str(data)
+    for absent in ("证人笔录-机密", "WITNESS", "正文-不外露", "出处-不外露", "body-hidden"):
+        assert absent not in raw
