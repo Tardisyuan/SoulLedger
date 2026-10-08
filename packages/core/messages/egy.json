@@ -185,6 +185,18 @@
       "MURDER": "Sma",
       "OTHER": "Ky"
     },
+    "life_stages": {
+      "CHILDHOOD": "Ankh Nedjes",
+      "YOUTH": "Ankh Renpi",
+      "ADULTHOOD": "Ankh Remetj",
+      "OLD_AGE": "Ankh Wah"
+    },
+    "evidence_sources": {
+      "REGISTRY": "Sesh Sab",
+      "WITNESS": "Remetj Maa",
+      "SELF_ACCOUNT": "Medu Djes",
+      "OTHER": "Ky"
+    },
     "form": {
       "name_label": "Ren *",
       "name_placeholder": "Ren Ba",
@@ -3716,7 +3728,7 @@
       "load_failed": "Nen Ini Sesh Sedjem Ba",
       "not_delivered": "Nen Iyi",
       "more": "Ky"
-  },
+    },
     "cooldown": {
       "request": "Dbh Khebi Ahet Qebeh",
       "hint": "Dbh Khebi Wa Em Ahet Qebeh; Sab Wedja.",
