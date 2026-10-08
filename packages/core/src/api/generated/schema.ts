@@ -521,6 +521,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/audit-logs/export/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description GET /api/v1/audit-logs/export/?action=&resource=&start_date=&ordering=...
+         *     与列表同一组筛选、同一租户划界、同一权限(audit.read);不分页。自由文本格一律过 `csv_safe`。
+         */
+        get: operations["v1_audit_logs_export_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/audit-logs/resources/": {
         parameters: {
             query?: never;
@@ -17189,6 +17209,33 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["AuditActionOption"][];
                 };
+            };
+        };
+    };
+    v1_audit_logs_export_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description CSV of the audit rows the list would return for the same query params (same tenant scope, same filters, same ordering), all pages, not paginated: Timestamp, Tenant, User, Action, Resource, Resource ID, Description, IP, Trace ID. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": string;
+                };
+            };
+            /** @description A filter is malformed, or more than 50000 rows match. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

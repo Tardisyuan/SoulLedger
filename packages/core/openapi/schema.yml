@@ -1192,6 +1192,29 @@ paths:
                 items:
                   $ref: '#/components/schemas/AuditActionOption'
           description: ''
+  /api/v1/audit-logs/export/:
+    get:
+      operationId: v1_audit_logs_export_retrieve
+      description: |-
+        GET /api/v1/audit-logs/export/?action=&resource=&start_date=&ordering=...
+        与列表同一组筛选、同一租户划界、同一权限(audit.read);不分页。自由文本格一律过 `csv_safe`。
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+          description: 'CSV of the audit rows the list would return for the same query
+            params (same tenant scope, same filters, same ordering), all pages, not
+            paginated: Timestamp, Tenant, User, Action, Resource, Resource ID, Description,
+            IP, Trace ID.'
+        '400':
+          description: A filter is malformed, or more than 50000 rows match.
   /api/v1/audit-logs/resources/:
     get:
       operationId: v1_audit_logs_resources_retrieve

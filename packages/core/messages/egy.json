@@ -1576,6 +1576,8 @@
     "all_resources": "Khet Neb",
     "no_logs": "Nen Medew Maa Djer",
     "clear_filters": "Fekh Setep",
+    "export": "Bek Seth",
+    "export_failed": "Nen Wehem Medew",
     "access_denied": "Nen Was Aq",
     "affected": "Khet Em Khet",
     "search_placeholder": "Hehy Khet Er Medu…",
