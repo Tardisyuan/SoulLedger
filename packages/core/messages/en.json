@@ -1607,6 +1607,12 @@
       "user_agent": "Client",
       "search_placeholder": "Search username...",
       "no_logs": "No login logs"
+    },
+    "resource_tenant": "Hall",
+    "descriptions": {
+      "hall_settings": "Edited the settings of hall {{code}}",
+      "hall_seal_glyphs": "Edited the seal glyphs of hall {{code}}",
+      "hall_assistant_switch": "Changed the Ask switch of hall {{code}}"
     }
   },
   "profile": {
@@ -3716,7 +3722,7 @@
       "load_failed": "Could not load the notification history",
       "not_delivered": "Not delivered",
       "more": "More"
-  },
+    },
     "cooldown": {
       "request": "Ask to shorten the cooldown",
       "hint": "Once per cooldown; the home civilization decides.",

@@ -7,6 +7,7 @@ import secrets
 import time
 
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import status, viewsets
@@ -1156,7 +1157,11 @@ def preferences_view(request):
     if request.method == "PATCH":
         serializer = UserPreferencesSerializer(data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
-        user.preferences = {**(user.preferences or {}), **serializer.validated_data}
+        before = user.preferences or {}
+        user.preferences = {**before, **serializer.validated_data}
+        if serializer.validated_data.get("email_notifications") and not before.get("email_notifications"):
+            # 邮件通道只发这一刻之后的通知(apps/notifications/tasks.py),不翻旧账。
+            user.preferences["email_opted_at"] = timezone.now().isoformat()
         user.save(update_fields=["preferences"])
     return Response(UserPreferencesSerializer(_preferences_with_defaults(user)).data)
 

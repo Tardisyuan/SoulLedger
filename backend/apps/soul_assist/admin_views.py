@@ -213,6 +213,7 @@ class HallDetailView(AdminView):
     @extend_schema(operation_id="assist_admin_hall_update", request=HallUpdateSerializer,
                    responses={200: HallSerializer, 404: AssistErrorSerializer})
     def patch(self, request, tenant_id):
+        from apps.audit.signals import explicit_audit_for
         from apps.tenants.models import Tenant
 
         body = HallUpdateSerializer(data=request.data)
@@ -224,7 +225,8 @@ class HallDetailView(AdminView):
                 return _error("没有这个殿。", "not_found", status.HTTP_404_NOT_FOUND)
             old = (tenant.settings or {}).get("assistant_enabled") is True
             tenant.settings = {**(tenant.settings or {}), "assistant_enabled": on}
-            tenant.save(update_fields=["settings"])
+            with explicit_audit_for(tenant):
+                tenant.save(update_fields=["settings"])
             config.audit(request.user, f"hall assistant switch {tenant.code}",
                          {"assistant_enabled": [old, on]}, request, resource_id=f"tenant:{tenant.code}")
         return Response(HallSerializer(next(h for h in _halls() if h["id"] == tenant.pk)).data)
