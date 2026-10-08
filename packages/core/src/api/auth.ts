@@ -129,7 +129,19 @@ export interface LoginRequest {
   remember?: boolean;
 }
 
+/** Officer-app login: no hall chosen; `tenant_code` only answers a 409 `hall_required`. */
+export interface OfficerLoginRequest {
+  username: string;
+  password: string;
+  remember?: boolean;
+  tenant_code?: string;
+}
+
+/** 409 body of POST /auth/officer-login/: the password fits officers in several halls. */
+export type HallChoiceBody = components["schemas"]["HallChoiceResponse"];
+
 export const authApi = {
+  officerLogin: (data: OfficerLoginRequest) => api.post<LoginResponse>("/auth/officer-login/", data),
   login: (usernameOrData: string | LoginRequest, password?: string) => {
     const data = typeof usernameOrData === "string"
       ? { username: usernameOrData, password: password! }

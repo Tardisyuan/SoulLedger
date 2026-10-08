@@ -4916,5 +4916,78 @@
       "eg": "杜阿特",
       "gr": "哈迪斯"
     }
+  },
+  "officer_app": {
+    "name": "灵魂簿 · 官员",
+    "tabs": {
+      "todo": "待办",
+      "queue": "审判",
+      "search": "查询",
+      "notices": "通知",
+      "me": "我的"
+    },
+    "todo": {
+      "title": "待我处理",
+      "groups": {
+        "approvals": "审批节点",
+        "reassignments": "改派请求",
+        "cooldowns": "缩短冷却申请",
+        "rebirths": "转生申请"
+      },
+      "empty_title": "此刻没有轮到你的事",
+      "empty_body": "新的审批、改派和申请会推送给你。"
+    },
+    "queue": {
+      "mine": "我手上",
+      "unclaimed": "待认领",
+      "empty_title": "手上没有案子",
+      "empty_body": "到「待认领」里认领一件。",
+      "desk_only": "待宣判 · 请在官员台",
+      "scope_note": "手机上可以认领、查看、写评议。宣判和盖印请在官员台完成。"
+    },
+    "continue_on_desk": "在电脑上继续",
+    "search": {
+      "souls": "查灵魂",
+      "ask": "问一问",
+      "placeholder": "名字或编号",
+      "read_only": "只读。改动请在官员台进行。"
+    },
+    "detail": {
+      "your_step": "轮到你的节点",
+      "cosign": "加签",
+      "reject": "驳回",
+      "approve": "批准"
+    },
+    "confirm": {
+      "approve_title": "批准这一签？",
+      "approve_ok": "确认批准",
+      "reject_title": "驳回这一签？",
+      "reject_body": "驳回后流程退回{{name}}，不能撤回。",
+      "reject_ok": "确认驳回",
+      "reason_label": "驳回理由 · 必填，发起人会读到",
+      "reason_required": "驳回必须写理由",
+      "failed": "没能提交 · {{reason}}",
+      "reasons": {
+        "already_handled": "他人已代签",
+        "deadline_passed": "时限已过",
+        "permission_changed": "权限已变",
+        "network": "网络错误"
+      }
+    },
+    "landing": {
+      "handled": "已由{{name}}处理"
+    },
+    "state": {
+      "error_title": "没取到",
+      "error_body": "检查网络后重试。已打开的条目不受影响。",
+      "denied_title": "没有权限",
+      "denied_body": "你的角色「{{role}}」看不到{{area}}。需要时请找本殿管理员。"
+    },
+    "push": {
+      "lock": "有 {{n}} 件待你处理"
+    },
+    "me": {
+      "push": "推送"
+    }
   }
 }
