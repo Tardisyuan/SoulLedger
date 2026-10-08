@@ -6971,6 +6971,32 @@ paths:
               schema:
                 $ref: '#/components/schemas/SoulError'
           description: ''
+  /api/v1/me/notifications/:
+    get:
+      operationId: v1_me_notifications_retrieve
+      description: |-
+        `GET /me/notifications/`:本灵魂收到过的推送,最新在前,分页(PAGE_SIZE 20)。
+
+        只读。范围是**灵魂**而不是本世账号:转世换账号,记录仍是同一个灵魂的。
+        `PushDelivery` 一台设备一行,两台手机登同一账号就是同一件事两行 —— 这里按
+        `dedupe_key` 只给最早那一行,记录讲的是「发生过什么」,不是「发到了哪台」。
+      tags:
+      - v1
+      security:
+      - soulJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedPushHistory'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulError'
+          description: ''
   /api/v1/me/password/:
     post:
       operationId: v1_me_password_create
@@ -8999,6 +9025,23 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/UserNotification'
+          description: ''
+  /api/v1/notifications/email-status/:
+    get:
+      operationId: v1_notifications_email_status_retrieve
+      description: |-
+        `GET /notifications/email-status/`:本人邮件通道最近一次失败(apps/notifications/tasks.py),
+        没有失败过就是 null。/profile 的开关旁显示它。只看本人:按 `notification__user` 取。
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationEmailStatus'
           description: ''
   /api/v1/notifications/mark_all_read/:
     post:
@@ -23752,6 +23795,27 @@ components:
       - rule_zh
       - unoffset_demerit
       - unusable_merit
+    NotificationEmailFailure:
+      type: object
+      properties:
+        error:
+          type: string
+        at:
+          type: string
+          format: date-time
+      required:
+      - at
+      - error
+    NotificationEmailStatus:
+      type: object
+      description: '`{"last_failure": {error, at} | null}` — what `email_status` returns(apps/notifications/tasks.py)。'
+      properties:
+        last_failure:
+          allOf:
+          - $ref: '#/components/schemas/NotificationEmailFailure'
+          nullable: true
+      required:
+      - last_failure
     NotificationSettings:
       type: object
       properties:
@@ -24794,6 +24858,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/PostList'
+    PaginatedPushHistory:
+      type: object
+      description: |-
+        DRF 分页信封的显式声明 —— 理由同 `apps/social/soul_views.py::_page`:APIView 上
+        drf-spectacular 推不出 `{count, next, previous, results}`。
+      properties:
+        count:
+          type: integer
+        next:
+          type: string
+          nullable: true
+        previous:
+          type: string
+          nullable: true
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/PushHistoryItem'
+      required:
+      - count
+      - next
+      - previous
+      - results
     PaginatedReactionList:
       type: object
       required:
@@ -26955,7 +27042,7 @@ components:
       description: |-
         `User.preferences`, as the API reads and writes it.
 
-        Two keys. Language and theme are not here: both are browser-side
+        Four keys. Language and theme are not here: both are browser-side
         settings with no server home (the locale is a cookie the middleware reads,
         the theme a localStorage key), and moving them is a separate decision.
       properties:
@@ -26967,6 +27054,14 @@ components:
         onboarded:
           type: boolean
           default: false
+        email_notifications:
+          type: boolean
+          default: false
+        email_locale:
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/EvalCaseLocaleEnum'
+          - $ref: '#/components/schemas/NullEnum'
     PatchedUserProfileUpdate:
       type: object
       description: |-
@@ -27662,6 +27757,63 @@ components:
       - is_active
       - last_seen_at
       - platform
+    PushHistoryItem:
+      type: object
+      description: |-
+        一条推送,按**内容**给:每个状态都在(被系统丢掉的、灵魂当时关掉的,内容照样可读)。
+        `data` 是推送带的导航目标(`{screen, …}`,见 `services.rule_for`),App 用 `landingOf` 解。
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        kind:
+          type: string
+          readOnly: true
+        title:
+          type: string
+          readOnly: true
+        body:
+          type: string
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/PushHistoryItemStatusEnum'
+          readOnly: true
+        data:
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - body
+      - created_at
+      - data
+      - id
+      - kind
+      - status
+      - title
+    PushHistoryItemStatusEnum:
+      enum:
+      - QUEUED
+      - SENDING
+      - SENT
+      - DELIVERED
+      - FAILED
+      - DISABLED
+      - EXPIRED
+      - CANCELLED
+      type: string
+      description: |-
+        * `QUEUED` - 待发送
+        * `SENDING` - 发送中
+        * `SENT` - 已交给 Expo
+        * `DELIVERED` - 回执成功
+        * `FAILED` - 失败
+        * `DISABLED` - 推送未启用
+        * `EXPIRED` - 已过期
+        * `CANCELLED` - 已取消
     PushLocaleEnum:
       enum:
       - zh-Hans
@@ -32346,7 +32498,7 @@ components:
       description: |-
         `User.preferences`, as the API reads and writes it.
 
-        Two keys. Language and theme are not here: both are browser-side
+        Four keys. Language and theme are not here: both are browser-side
         settings with no server home (the locale is a cookie the middleware reads,
         the theme a localStorage key), and moving them is a separate decision.
       properties:
@@ -32358,6 +32510,14 @@ components:
         onboarded:
           type: boolean
           default: false
+        email_notifications:
+          type: boolean
+          default: false
+        email_locale:
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/EvalCaseLocaleEnum'
+          - $ref: '#/components/schemas/NullEnum'
     UserProfile:
       type: object
       properties:

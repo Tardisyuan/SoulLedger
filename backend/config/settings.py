@@ -588,6 +588,10 @@ SPECTACULAR_SETTINGS = {
         # so Role.scope's until-then-unique `ScopeEnum` would be renamed to a
         # hashed `ScopeE81Enum`. Pinning it under its existing name keeps the
         # generated TypeScript identifier unchanged.
+        # `UserPreferencesSerializer.email_locale` 与 `EvalCase.locale` 是同一组 (zh-Hans, en):
+        # 不钉住,drf-spectacular 给第二处起名 EmailLocaleEnum,再把另一个 `locale` 字段改成
+        # 带哈希的 Locale188Enum。钉在既有的名字下,生成的 TypeScript 标识符不变。
+        "EvalCaseLocaleEnum": "apps.authentication.serializers.EMAIL_LOCALES",
         "TaskRunStatusEnum": "apps.scheduler.models.RunStatus.choices",
         "ScheduledJobScopeEnum": "apps.scheduler.models.JobScope.choices",
         # 助手管理「供应商」区块的平台(2026-09-30):`platform` 另有别的选项集用着。
