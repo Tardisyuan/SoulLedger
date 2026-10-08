@@ -189,6 +189,15 @@ describe("AuditPage request parameters", () => {
     await waitFor(() => expect(lastParams().resource).toBe("user"));
   });
 
+  it("offers the hall (tenant) resource and sends it as resource=tenant", async () => {
+    renderPage();
+    await waitFor(() => expect(mockedList).toHaveBeenCalled());
+
+    pickChip("audit.filter_resource", "audit.resource_tenant");
+
+    await waitFor(() => expect(lastParams().resource).toBe("tenant"));
+  });
+
   it("turns the 7d preset into a start_date and leaves end_date unset", async () => {
     renderPage();
     await waitFor(() => expect(mockedList).toHaveBeenCalled());
@@ -279,6 +288,29 @@ describe("AuditPage table states", () => {
     expect(await screen.findByText("created a soul")).toBeInTheDocument();
     expect(screen.getByText("dt(2026-01-01T00:00:00Z)")).toBeInTheDocument();
     expect(screen.getByText("10.0.0.1")).toBeInTheDocument();
+  });
+
+  it("renders the known hall descriptions through i18n with the hall code, and any other raw", async () => {
+    mockedList.mockResolvedValue({
+      data: {
+        count: 4,
+        results: [
+          entry({ id: 1, resource: "tenant", description: "hall settings CN_DIYU", timestamp: "2026-01-01T00:00:00Z" }),
+          entry({ id: 2, resource: "tenant", description: "hall seal glyphs EU_HEAVEN_HELL", timestamp: "2026-01-02T00:00:00Z" }),
+          entry({ id: 3, resource: "assistant_config", description: "hall assistant switch CN_DIYU", timestamp: "2026-01-03T00:00:00Z" }),
+          entry({ id: 4, description: "hall settings", timestamp: "2026-01-04T00:00:00Z" }),
+        ],
+      },
+    });
+
+    renderPage();
+
+    expect(await screen.findByText("audit.descriptions.hall_settings(CN_DIYU)")).toBeInTheDocument();
+    expect(screen.getByText("audit.descriptions.hall_seal_glyphs(EU_HEAVEN_HELL)")).toBeInTheDocument();
+    expect(screen.getByText("audit.descriptions.hall_assistant_switch(CN_DIYU)")).toBeInTheDocument();
+    // 没有殿代码的、或不认识的句式:原样。
+    expect(screen.getByText("hall settings")).toBeInTheDocument();
+    expect(screen.queryByText("hall settings CN_DIYU")).not.toBeInTheDocument();
   });
 
   it("shows the empty message when the log has no entries", async () => {

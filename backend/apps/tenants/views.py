@@ -4,6 +4,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from apps.audit.models import AuditLog
+from apps.audit.signals import explicit_audit_for
 from apps.core.client_ip import get_client_ip
 from apps.core.permissions import IsAdminPermission, TenantPermission
 from apps.core.tenant import scope_to_tenant
@@ -26,8 +27,8 @@ def audit_hall_change(request, tenant, before, what):
     """管理员改了殿的设置或印字:谁、何时、哪个殿、每个变了的字段 `[旧, 新]`。一个字段都没变就不写。
 
     与 `soul_assist/config.py::audit`(助手开关)同一形状,但 `tenant` 记被改的殿而不是 None。
-    `apps/audit/signals.py` 另在提交后写一条泛化的 UPDATE 行(整份 `settings` 的 str),
-    这条是给 /audit 页读的那条。
+    调用方在 `explicit_audit_for(tenant)` 里保存,`apps/audit/signals.py` 因此不再另写一条泛化的 UPDATE 行
+    (整份 `settings` 的 str):每次编辑恰好一行,就是这一条。
     """
     after = _snapshot(tenant)
     changes = {k: [before[k], after[k]] for k in before if before[k] != after[k]}
@@ -76,7 +77,8 @@ class TenantViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
         serializer = TenantSealGlyphsSerializer(tenant, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         before = _snapshot(tenant)
-        serializer.save()
+        with explicit_audit_for(tenant):
+            serializer.save()
         audit_hall_change(request, tenant, before, "hall seal glyphs")
         return Response(TenantSerializer(tenant).data)
 
@@ -89,6 +91,7 @@ class TenantViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
         serializer = TenantSettingsSerializer(tenant, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         before = _snapshot(tenant)
-        serializer.save()
+        with explicit_audit_for(tenant):
+            serializer.save()
         audit_hall_change(request, tenant, before, "hall settings")
         return Response(TenantSerializer(tenant).data)

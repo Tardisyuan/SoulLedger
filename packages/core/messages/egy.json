@@ -1607,6 +1607,12 @@
       "user_agent": "Kat Wen Aq",
       "search_placeholder": "Hehy Ren Aq...",
       "no_logs": "Nen Medew Aq Djer"
+    },
+    "resource_tenant": "Wesekhet",
+    "descriptions": {
+      "hall_settings": "Khemen Smen {{code}}",
+      "hall_seal_glyphs": "Khemen Seth Medu Khetem {{code}}",
+      "hall_assistant_switch": "Khemen Wen-Khetem Hehy Medu {{code}}"
     }
   },
   "profile": {
@@ -3716,7 +3722,7 @@
       "load_failed": "Nen Ini Sesh Sedjem Ba",
       "not_delivered": "Nen Iyi",
       "more": "Ky"
-  },
+    },
     "cooldown": {
       "request": "Dbh Khebi Ahet Qebeh",
       "hint": "Dbh Khebi Wa Em Ahet Qebeh; Sab Wedja.",
