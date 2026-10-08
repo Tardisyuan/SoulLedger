@@ -53,6 +53,10 @@ DC="docker compose -f docker-compose.yml -f docker-compose.production.yml"
   概览的平均余额卡写「较上月」,要读上个月那一行快照;日常由 `ledger.snapshot_balance_for_tenant`(每天 23:55)
   覆盖当月,但 beat 没跑(见下节)时一行都不会有。这条命令现在就写当月的一行,不补更早的月份;重跑无害(覆盖当月)。
 
+- **灵魂普查日快照(`ledger` 0003):** 仪表盘「趋势」读 `ledger.snapshot_census_for_tenant`(每天 23:50 UTC)写的日快照,
+  按状态 / 文明 / 界域各数一遍,每租户每天一行、超过 731 天的顺手删掉。**不回填**(过去某天的状态无法倒推),趋势从第一份快照起有数;
+  beat 没跑时没有数据,面板会写「快照还不足两天」。
+
 ## 定时任务(celery beat)
 
 - **现状(2026-09-26):没有任何环境在跑 beat。** compose 里有 `celery-beat` 服务,但 115 测试环境

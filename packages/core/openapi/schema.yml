@@ -7010,6 +7010,41 @@ paths:
               schema:
                 $ref: '#/components/schemas/LedgerError'
           description: ''
+  /api/v1/ledger/stats/trends/:
+    get:
+      operationId: v1_ledger_stats_trends_retrieve
+      description: |-
+        GET /ledger/stats/trends/?range=30d|90d|12m
+
+        灵魂普查日快照(`SoulCensusSnapshot`)的折线数据。划界与仪表盘同一口径:ADMIN 不带租户看全部
+        (按天把各租户的映射相加),带租户或非 ADMIN 只看本租户。没有快照的日子不补点 ——
+        趋势从第一份快照那天起有数,不回填。
+      parameters:
+      - in: query
+        name: range
+        schema:
+          type: string
+          enum:
+          - 12m
+          - 30d
+          - 90d
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LedgerTrends'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LedgerError'
+          description: ''
   /api/v1/me/:
     get:
       operationId: v1_me_retrieve
@@ -23317,6 +23352,54 @@ components:
       - records
       - soul_id
       - soul_name
+    LedgerTrendPoint:
+      type: object
+      description: '一天的普查。三个映射各是 `{键: 数}`;键集随数据变化(新界域、新状态),所以是自由映射。'
+      properties:
+        day:
+          type: string
+          format: date
+        soul_count:
+          type: integer
+        by_state:
+          type: object
+          additionalProperties:
+            type: integer
+        by_civilization:
+          type: object
+          additionalProperties:
+            type: integer
+        by_realm:
+          type: object
+          additionalProperties:
+            type: integer
+      required:
+      - by_civilization
+      - by_realm
+      - by_state
+      - day
+      - soul_count
+    LedgerTrends:
+      type: object
+      description: '`GET /ledger/stats/trends/` —— 范围内每个有快照的日子一个点,日期升序;没有快照是空数组。'
+      properties:
+        range:
+          $ref: '#/components/schemas/RangeEnum'
+        since:
+          type: string
+          format: date
+        until:
+          type: string
+          format: date
+        points:
+          type: array
+          items:
+            $ref: '#/components/schemas/LedgerTrendPoint'
+      required:
+      - points
+      - range
+      - since
+      - until
     LifeStageEnum:
       enum:
       - CHILDHOOD
@@ -29268,6 +29351,16 @@ components:
           maxLength: 255
       required:
       - token
+    RangeEnum:
+      enum:
+      - 30d
+      - 90d
+      - 12m
+      type: string
+      description: |-
+        * `30d` - 30d
+        * `90d` - 90d
+        * `12m` - 12m
     Reaction:
       type: object
       properties:
