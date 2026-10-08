@@ -6,7 +6,7 @@ import json
 
 from django.db import IntegrityError
 from drf_spectacular.utils import extend_schema
-from rest_framework import mixins, status, viewsets
+from rest_framework import mixins, serializers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -24,14 +24,17 @@ from apps.death_sync.models import (
 )
 from apps.death_sync.permissions import CanManageWebhooks, CanQueryStatus
 from apps.death_sync.serializers import (
+    AdminWebhookConfigSerializer,
     DeathRegistrationCreateSerializer,
     DeathRegistrationRequestSerializer,
     DeathRegistrationSummarySerializer,
     DeathSyncHealthSerializer,
+    EventWebhookDeliverySerializer,
     ExternalApiKeySerializer,
     WebhookConfigSerializer,
 )
 from apps.death_sync.throttling import ApiKeyRateThrottle
+from apps.events.models import EventType, EventWebhookDelivery
 
 
 class ExternalApiKeyViewSet(AuditUserViewSetMixin, viewsets.ModelViewSet):
@@ -331,6 +334,89 @@ class WebhookViewSet(AuditUserViewSetMixin, viewsets.ModelViewSet):
             tenant=self.request.tenant,
             signing_secret=signing_secret,
         )
+
+
+class AdminWebhookViewSet(
+    AuditUserViewSetMixin,
+    mixins.CreateModelMixin,
+    mixins.RetrieveModelMixin,
+    mixins.UpdateModelMixin,
+    mixins.ListModelMixin,
+    viewsets.GenericViewSet,
+):
+    """Browser-facing management of `WebhookConfig` (JWT, ADMIN only).
+
+    `WebhookViewSet` above is the external system's self-service endpoint: it
+    authenticates with its API key only, so an admin's Bearer JWT gets 401
+    there, and the /death-sync page had no way to see or change where this
+    tenant's events are posted. This viewset is the operator's door to the
+    same rows; the self-service one is unchanged.
+
+    Separate viewset rather than a second auth class on the one above, for
+    the same reason `DeathRegistrationReadViewSet` is separate from
+    `DeathRegistrationViewSet`: the key path scopes by key (fail-closed), the
+    browser path scopes by tenant, and merging them would weaken one.
+
+    No `destroy`: disabling is `PATCH {"is_active": false}`, which keeps the
+    row and its `EventWebhookDelivery` history (the FK is CASCADE). The
+    signing secret is generated here and returned once in the 201 as
+    `_signing_secret`, exactly like `ExternalApiKeyViewSet._raw_key`.
+
+    ADMIN cross-tenant: `scope_to_tenant` with the default `admin_bypass`,
+    matching `ExternalApiKeyViewSet` beside it — ADMIN is this codebase's one
+    globally-scoped role there too. Creation still pins `tenant` to the
+    request's tenant and refuses an `api_key` from another tenant.
+    """
+
+    permission_classes = [IsAuthenticated, IsAdminPermission, TenantPermission]
+    queryset = WebhookConfig.objects.select_related("api_key").all()
+    serializer_class = AdminWebhookConfigSerializer
+    filterset_fields = ["is_active", "api_key"]
+
+    def get_queryset(self):
+        return scope_to_tenant(super().get_queryset(), self.request)
+
+    def perform_create(self, serializer):
+        import secrets
+
+        signing_secret = f"whsec_{secrets.token_urlsafe(32)}"
+        instance = serializer.save(tenant=self.request.tenant, signing_secret=signing_secret)
+        # On the saved instance, not in validated_data: `serializer.data` is
+        # `to_representation(instance)`, so this is the only place the
+        # read-only field can be read from. Gone with this request.
+        instance._signing_secret = signing_secret
+
+    @extend_schema(responses={200: serializers.ListSerializer(child=serializers.CharField())})
+    @action(detail=False, methods=["get"], url_path="event-types")
+    def event_types(self, request):
+        """The event names a webhook can subscribe to.
+
+        `EventType` is the enum every publisher writes `envelope.event_type`
+        from, and the handler filters on it verbatim — so this list, not a
+        hand-written one in the client, is what a checklist must offer.
+        """
+        return Response(EventType.values)
+
+
+class AdminWebhookDeliveryViewSet(viewsets.ReadOnlyModelViewSet):
+    """`EventWebhookDelivery` rows for this tenant's webhooks (JWT, ADMIN only).
+
+    Newest first (model ordering), paginated, filterable by `webhook`,
+    `status` and `event_type`. Read-only: a delivery's status is written by
+    the worker (`apps/events/tasks.py`) and by nothing else.
+
+    Scoped through `webhook__tenant` rather than the row's own nullable
+    `tenant`: the webhook is the thing an operator manages, and a row whose
+    `tenant` were ever left null would otherwise be invisible to everyone.
+    """
+
+    permission_classes = [IsAuthenticated, IsAdminPermission, TenantPermission]
+    queryset = EventWebhookDelivery.objects.select_related("webhook").all()
+    serializer_class = EventWebhookDeliverySerializer
+    filterset_fields = ["webhook", "status", "event_type"]
+
+    def get_queryset(self):
+        return scope_to_tenant(super().get_queryset(), self.request, field="webhook__tenant")
 
 
 class DeathSyncHealthView(APIView):
