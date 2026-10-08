@@ -765,6 +765,127 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/mfa/complete/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 向导「完成」。没走过第三步(`verified_at` 空)不能完成。 */
+        post: operations["v1_auth_mfa_complete_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/mfa/confirm/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 向导第三步。码对了 → 十个恢复码,明文只出现在这一个响应里。 */
+        post: operations["v1_auth_mfa_confirm_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/mfa/disable/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 关闭:`method=totp` 验一个动态码,`method=password` 验密码。错了计入同一个锁。 */
+        post: operations["v1_auth_mfa_disable_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/mfa/recovery-codes/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["v1_auth_mfa_recovery_codes_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/mfa/setup/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description POST:发一把新密钥(已开启答 409,先关闭再开)。DELETE:中途退出,未确认的密钥作废。 */
+        post: operations["v1_auth_mfa_setup_create"];
+        /** @description POST:发一把新密钥(已开启答 409,先关闭再开)。DELETE:中途退出,未确认的密钥作废。 */
+        delete: operations["v1_auth_mfa_setup_destroy"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/mfa/status/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["v1_auth_mfa_status_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/mfa/verify/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description 登录第二步:待验证令牌 + 动态码(或恢复码)→ 正常的 access / refresh / user。
+         *     `remember_device` 为真时再下发 30 天的 httpOnly 设备 cookie。
+         */
+        post: operations["v1_auth_mfa_verify_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/password-help/": {
         parameters: {
             query?: never;
@@ -7381,6 +7502,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/tenants/{code}/mfa-roles/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 殿设置 › 安全(A12):每个可持有的角色一行 —— 要不要求、本殿几人持有、几人已开启。 */
+        get: operations["v1_tenants_mfa_roles_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/tenants/{code}/seal-glyphs/": {
         parameters: {
             query?: never;
@@ -7599,6 +7737,26 @@ export interface paths {
         get: operations["v1_users_own_roles_retrieve"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/users/{id}/reset-mfa/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description 管理员重置两步验证(A12):验证器、恢复码、「不再询问」设备令牌全清,该用户所有刷新令牌吊销。
+         *     理由必填,进审计。只对已开启的账号有意义(未开启答 409)。
+         */
+        post: operations["v1_users_reset_mfa_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -10883,6 +11041,7 @@ export interface components {
          * @enum {string}
          */
         LoginLogStatusEnum: "SUCCESS" | "FAILED";
+        LoginOutcome: components["schemas"]["LoginResponse"] | components["schemas"]["MfaRequiredResponse"];
         /**
          * @description Doc-only: the 200 body of `LoginView` — simplejwt's `access`/`refresh`
          *     plus the `user` that `CustomTokenObtainPairSerializer.validate` adds.
@@ -11358,6 +11517,63 @@ export interface components {
         };
         MessageSent: {
             event_id: string;
+        };
+        /**
+         * @description * `totp` - totp
+         *     * `password` - password
+         * @enum {string}
+         */
+        MethodEnum: "totp" | "password";
+        MfaCodeRequest: {
+            code: string;
+        };
+        MfaDisableRequest: {
+            method: components["schemas"]["MethodEnum"];
+            code?: string;
+            password?: string;
+        };
+        MfaRecoveryCodes: {
+            recovery_codes: string[];
+        };
+        /** @description `code` is what to branch on. wrong → `remaining_attempts` + `lock_minutes`; locked → `retry_after` (seconds). */
+        MfaRefusal: {
+            error: string;
+            code: string;
+            remaining_attempts?: number;
+            lock_minutes?: number;
+            retry_after?: number;
+        };
+        /**
+         * @description Doc-only: the 200 body of `LoginView` when the password was right but the
+         *     account has two-step verification on and this browser holds no valid
+         *     「不再询问」 device cookie. No tokens: `pending_token` (5 minutes, type
+         *     `mfa_pending`, usable nowhere else) goes to `/auth/mfa/verify/`.
+         */
+        MfaRequiredResponse: {
+            mfa_required: boolean;
+            pending_token: string;
+            username: string;
+        };
+        MfaSetupResponse: {
+            secret: string;
+            otpauth_url: string;
+        };
+        MfaStatus: {
+            enabled: boolean;
+            required: boolean;
+            /** Format: date-time */
+            confirmed_at: string | null;
+            /** Format: date-time */
+            last_used_at: string | null;
+            last_used_method: string;
+            recovery_codes_remaining: number;
+        };
+        MfaVerifyRequest: {
+            pending_token: string;
+            code?: string;
+            recovery_code?: string;
+            /** @default false */
+            remember_device: boolean;
         };
         ModelEntry: {
             /** @description 模型名(平台 API 里的 id),填进「模型名」 */
@@ -13327,27 +13543,29 @@ export interface components {
             /** @description Free text about the source, e.g. which witness or which register. */
             evidence_note?: string;
         };
-        /** @description `PATCH /tenants/{code}/seal-glyphs/` 的请求体 —— 只有这一个字段可写。 */
-        PatchedTenantSealGlyphs: {
-            seal_glyphs?: string[];
-        };
-        /**
-         * @description `PATCH /tenants/{code}/settings/` 的请求体(ADMIN):只收这几个**已知**的字段,不收整份 `settings` JSON。
-         *
-         *     `soul_rebirth_cooldown_days` 是 `settings` 里的一个键(`apps/soul_accounts/rebirth.py::cooldown_days`
-         *     读它,负数按 0 算,所以这里下限 0,上限 365);写它时**合并**进现有 `settings`,别的键(如助手管理页写的
-         *     `assistant_enabled`)原样保留;给 `null` 就删掉这个键,回到默认 30 天。
-         */
-        PatchedTenantSettings: {
+        PatchedTenant: {
+            readonly id?: number;
+            readonly code?: string;
+            display_name?: string;
             description?: string;
+            is_active?: boolean;
             dispatch_enabled?: boolean;
+            api_endpoint?: string;
+            settings?: unknown;
+            readonly civilization?: string;
+            readonly seal_glyphs?: string[];
             /** @description 殿司展示名(简体中文) */
             hall_name?: string;
             /** @description 殿司展示名(English) */
             hall_name_en?: string;
             /** @description 殿司展示名(egy) */
             hall_name_egy?: string;
-            soul_rebirth_cooldown_days?: number | null;
+            /** Format: date-time */
+            readonly created_at?: string;
+        };
+        /** @description `PATCH /tenants/{code}/seal-glyphs/` 的请求体 —— 只有这一个字段可写。 */
+        PatchedTenantSealGlyphs: {
+            seal_glyphs?: string[];
         };
         /**
          * @description The serializer behind `PATCH /auth/profile/` — what a user may change
@@ -13387,6 +13605,8 @@ export interface components {
             organization?: number | null;
             /** @description 职位：如 第一殿殿主 */
             position?: string;
+            readonly mfa_enabled?: boolean;
+            readonly mfa_required?: boolean;
         };
         /**
          * @description 分语言的类型按请求语言重渲染 title / message(见 `apps/notifications/messages.py`)。
@@ -15902,6 +16122,8 @@ export interface components {
             organization?: number | null;
             /** @description 职位：如 第一殿殿主 */
             position?: string;
+            readonly mfa_enabled: boolean;
+            readonly mfa_required: boolean;
         };
         /**
          * @description `{"updated": N}` — what `batch_activate` and `batch_deactivate` return.
@@ -15981,6 +16203,20 @@ export interface components {
             /** Format: uri */
             avatar?: string | null;
             readonly is_eval_identity: boolean;
+            readonly mfa: components["schemas"]["UserMfaRef"];
+        };
+        /** @description The 「两步验证」 column of the users list. */
+        UserMfaRef: {
+            enabled: boolean;
+            required: boolean;
+            /** Format: date-time */
+            confirmed_at: string | null;
+            /** Format: date-time */
+            last_used_at: string | null;
+        };
+        /** @description `POST /users/{id}/reset-mfa/`: the reason is audited, and required. */
+        UserMfaReset: {
+            reason: string;
         };
         /**
          * @description 分语言的类型按请求语言重渲染 title / message(见 `apps/notifications/messages.py`)。
@@ -16123,6 +16359,8 @@ export interface components {
             /** @description Display name shown in the navbar (e.g. 系统管理员) */
             display_name?: string;
             readonly permissions: string[];
+            readonly mfa_enabled: boolean;
+            readonly mfa_required: boolean;
         };
         /**
          * @description * `PASSED` - Passed / Saved
@@ -17688,7 +17926,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["LoginResponse"];
+                    "application/json": components["schemas"]["LoginOutcome"];
                 };
             };
             401: {
@@ -17791,6 +18029,256 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DetailResponse"];
+                };
+            };
+        };
+    };
+    v1_auth_mfa_complete_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MfaStatus"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MfaRefusal"];
+                };
+            };
+        };
+    };
+    v1_auth_mfa_confirm_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MfaCodeRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["MfaCodeRequest"];
+                "multipart/form-data": components["schemas"]["MfaCodeRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MfaRecoveryCodes"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MfaRefusal"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MfaRefusal"];
+                };
+            };
+        };
+    };
+    v1_auth_mfa_disable_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MfaDisableRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["MfaDisableRequest"];
+                "multipart/form-data": components["schemas"]["MfaDisableRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MfaStatus"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MfaRefusal"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MfaRefusal"];
+                };
+            };
+        };
+    };
+    v1_auth_mfa_recovery_codes_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MfaRecoveryCodes"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MfaRefusal"];
+                };
+            };
+        };
+    };
+    v1_auth_mfa_setup_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MfaSetupResponse"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MfaRefusal"];
+                };
+            };
+        };
+    };
+    v1_auth_mfa_setup_destroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DetailResponse"];
+                };
+            };
+        };
+    };
+    v1_auth_mfa_status_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MfaStatus"];
+                };
+            };
+        };
+    };
+    v1_auth_mfa_verify_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MfaVerifyRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["MfaVerifyRequest"];
+                "multipart/form-data": components["schemas"]["MfaVerifyRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LoginResponse"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MfaRefusal"];
+                };
+            };
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MfaRefusal"];
+                };
+            };
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MfaRefusal"];
                 };
             };
         };
@@ -29224,6 +29712,27 @@ export interface operations {
             };
         };
     };
+    v1_tenants_mfa_roles_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Tenant"];
+                };
+            };
+        };
+    };
     v1_tenants_seal_glyphs_partial_update: {
         parameters: {
             query?: never;
@@ -29262,9 +29771,9 @@ export interface operations {
         };
         requestBody?: {
             content: {
-                "application/json": components["schemas"]["PatchedTenantSettings"];
-                "application/x-www-form-urlencoded": components["schemas"]["PatchedTenantSettings"];
-                "multipart/form-data": components["schemas"]["PatchedTenantSettings"];
+                "application/json": components["schemas"]["PatchedTenant"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedTenant"];
+                "multipart/form-data": components["schemas"]["PatchedTenant"];
             };
         };
         responses: {
@@ -29530,6 +30039,52 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["UserRole"];
+                };
+            };
+        };
+    };
+    v1_users_reset_mfa_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this User. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UserMfaReset"];
+                "application/x-www-form-urlencoded": components["schemas"]["UserMfaReset"];
+                "multipart/form-data": components["schemas"]["UserMfaReset"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DetailResponse"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };
