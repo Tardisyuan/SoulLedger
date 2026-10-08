@@ -2569,7 +2569,15 @@
       "already_decided": "已经决定过了",
       "cooldown_over": "冷却已结束，无需决定",
       "invalid_days": "天数须在 0 与剩余天数之间",
-      "note_required": "驳回须写给灵魂看的说明"
+      "note_required": "驳回必须填写说明；灵魂会读到",
+      "remaining_progress": "已过 {{past}} / 共 {{total}} 天",
+      "approve_with_days": "批准 · 还需 {{days}} 天",
+      "scope_note": "批准只提前这一段冷却；殿的冷却天数不变",
+      "sort_note": "待决定按剩余冷却从少到多；冷却已结束的排最后",
+      "source": "冷却来自转生申请 {{id}} 的终局驳回",
+      "decide_failed": "未能决定：{{reason}}",
+      "original": "原 {{date}}",
+      "day_unit": "天"
     },
     "cooldown_status": {
       "PENDING": "待决定",
@@ -3732,7 +3740,8 @@
       "pending": "缩短冷却申请待决定",
       "approved": "缩短冷却申请已批准，冷却期至 {{date}}",
       "rejected": "缩短冷却申请被驳回",
-      "note": "说明"
+      "note": "说明",
+      "brought_forward": "已提前"
     }
   },
   "soul_push": {

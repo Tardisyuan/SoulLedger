@@ -5,6 +5,7 @@ import {
   soulAccountsApi,
   type CooldownShorteningFilters,
   type CredentialFilters,
+  type OfficerCooldownShortening,
   type RebirthApplicationFilters,
   type SoulContactUpdate,
 } from "../api/index";
@@ -52,6 +53,28 @@ export function useCooldownShortenings(filters: CooldownShorteningFilters) {
     queryKey: soulAccountKeys.cooldownShortenings({ ...filters }),
     queryFn: async () => (await soulAccountsApi.cooldownShortenings(filters)).data,
     placeholderData: (previous) => previous,
+  });
+}
+
+/**
+ * One request, read independently of the list's filter: after a refused decision
+ * the row may have left the filtered list, and the open dialog must still show
+ * what the server says now. `initial` is the list's copy, so opening asks nothing.
+ */
+export function useCooldownShortening(id: string, initial: OfficerCooldownShortening) {
+  return useQuery({
+    queryKey: soulAccountKeys.cooldownShortening(id),
+    queryFn: async () => (await soulAccountsApi.cooldownShortening(id)).data,
+    initialData: initial,
+  });
+}
+
+/** Per-status counts for the filter chips and the tab's pending number. */
+export function useCooldownShorteningCounts(enabled = true) {
+  return useQuery({
+    queryKey: soulAccountKeys.cooldownShorteningCounts,
+    queryFn: async () => (await soulAccountsApi.cooldownShorteningCounts()).data,
+    enabled,
   });
 }
 

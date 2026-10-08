@@ -6623,6 +6623,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/soul-accounts/cooldown-shortenings/counts/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 筛选签与页签的计数:本租户范围内各状态的申请数(不受分页与筛选影响)。 */
+        get: operations["v1_soul_accounts_cooldown_shortenings_counts_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/soul-accounts/credentials/": {
         parameters: {
             query?: never;
@@ -8822,6 +8839,11 @@ export interface components {
             approved_days: number;
             /** @default  */
             note: string;
+        };
+        CooldownShorteningCounts: {
+            PENDING: number;
+            APPROVED: number;
+            REJECTED: number;
         };
         CooldownShorteningCreate: {
             reason: string;
@@ -11382,6 +11404,12 @@ export interface components {
             readonly cooldown_until: string | null;
             /** @description 批准的天数必须小于它(向上取整);0 = 冷却已结束。 */
             readonly remaining_days: number;
+            /** Format: date-time */
+            readonly cooldown_end: string | null;
+            /** Format: date-time */
+            readonly cooldown_original_until: string | null;
+            readonly cooldown_total_days: number;
+            readonly cooldown_past_days: number;
             /** Format: date-time */
             readonly created_at: string;
             /** Format: date-time */
@@ -27680,6 +27708,25 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SoulError"];
+                };
+            };
+        };
+    };
+    v1_soul_accounts_cooldown_shortenings_counts_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CooldownShorteningCounts"];
                 };
             };
         };
