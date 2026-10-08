@@ -28,6 +28,8 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 User = get_user_model()
 logger = logging.getLogger(__name__)
 
+from apps.audit.models import AuditAction
+from apps.audit.signals import create_batch_audit_log
 from apps.authentication.mail import MESSAGES as MAIL_MESSAGES
 from apps.authentication.mail import fill, mail_locale, send_neutral_mail
 from apps.authentication.models import UserRole, is_assignable_role
@@ -38,6 +40,7 @@ from apps.core.tenant import scope_to_tenant
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin
 
 from .serializers import (
+    AssignRolesSerializer,
     ChangePasswordSerializer,
     CustomTokenObtainPairSerializer,
     LoginFailedResponseSerializer,
@@ -258,70 +261,79 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
             .exclude(pk=self.request.user.pk)
         )
 
+    def _batch_set_active(self, request, active):
+        user_ids = request.data.get('user_ids', [])
+        if not user_ids:
+            return Response({'error': 'user_ids is required'}, status=status.HTTP_400_BAD_REQUEST)
+        # `.update()` fires no signals, so the audit row is written by hand
+        # (one BATCH_UPDATE row naming every user), from the same list the
+        # update runs on.
+        targets = list(self._batch_targets(user_ids))
+        updated = User.objects.filter(pk__in=[u.pk for u in targets]).update(is_active=active)
+        if targets:
+            create_batch_audit_log(AuditAction.BATCH_UPDATE, targets, {'is_active': active})
+        return Response({'updated': updated})
+
     @extend_schema(responses=UserBatchUpdateResultSerializer)
     @action(detail=False, methods=['post'])
     def batch_activate(self, request):
         """批量激活用户"""
-        user_ids = request.data.get('user_ids', [])
-        if not user_ids:
-            return Response({'error': 'user_ids is required'}, status=status.HTTP_400_BAD_REQUEST)
-        updated = self._batch_targets(user_ids).update(is_active=True)
-        return Response({'updated': updated})
+        return self._batch_set_active(request, True)
 
     @extend_schema(responses=UserBatchUpdateResultSerializer)
     @action(detail=False, methods=['post'])
     def batch_deactivate(self, request):
         """批量停用用户"""
-        user_ids = request.data.get('user_ids', [])
-        if not user_ids:
-            return Response({'error': 'user_ids is required'}, status=status.HTTP_400_BAD_REQUEST)
-        updated = self._batch_targets(user_ids).update(is_active=False)
-        return Response({'updated': updated})
+        return self._batch_set_active(request, False)
 
     @extend_schema(responses=UserRoleSerializer)
     @action(detail=True, methods=['get'])
     def own_roles(self, request, pk=None):
         """获取用户的角色"""
         user = self.get_object()
-        return Response({'role': user.role})
+        return Response({'role': user.role, 'extra_roles': user.extra_roles})
 
+    @extend_schema(request=AssignRolesSerializer, responses=UserManagementSerializer)
     @action(detail=True, methods=['post'])
     def assign_roles(self, request, pk=None):
-        """分配角色给用户"""
+        """分配角色给用户:主角色 `role`、兼任角色 `extra_roles`(权限取并集)"""
         user = self.get_object()
-        new_role = request.data.get('role')
-        # Against the Role table, not a restated enum. This and its twin in
-        # import_csv were two hand-written copies of UserRole that both missed
-        # MODERATOR; then they were `UserRole.values`, which made every role
-        # created through /perm/roles/create/ unholdable (BP-11).
-        if not is_assignable_role(new_role):
-            return Response(
-                {'error': f'Invalid role {new_role!r}: not a built-in role and not a live row in the role table.'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        # Prevent privilege escalation: assigning user's role must be >= target role.
-        # Shares apps/authentication/serializers.py's ROLE_HIERARCHY so this
-        # stays in sync with the same check applied on create/update.
-        # No `caller_role != 'ADMIN'` short-circuit.
-        #
-        # `IsAdminPermission` gates this action, so that clause guaranteed the
-        # whole check was **dead**: by the time control reaches here the caller
-        # is ADMIN, and the condition's first half is always False. Harmless
-        # today — and silently unprotective the day the ADMIN gate becomes a
-        # codename check, which the comments around here describe as planned.
-        #
-        # Removing it costs nothing: ADMIN ranks 0, the most privileged, so
-        # `role_rank('ADMIN') > role_rank(anything)` is never true. The check
-        # now says what it means — you cannot assign above your own rank —
-        # instead of naming one role for which it does not apply.
+        body = AssignRolesSerializer(data=request.data)
+        body.is_valid(raise_exception=True)
+        data = body.validated_data
+        if 'role' not in data and 'extra_roles' not in data:
+            return Response({'error': 'role or extra_roles is required'}, status=status.HTTP_400_BAD_REQUEST)
+        new_role = data.get('role', user.role)
+        # Against the Role table, not a restated enum (BP-11): a built-in or a
+        # live row in perm.Role.
+        extras = list(dict.fromkeys(data.get('extra_roles', user.extra_roles or [])))
+        extras = [r for r in extras if r != new_role]
+        for name in [new_role, *extras]:
+            if not is_assignable_role(name):
+                return Response(
+                    {'error': f'Invalid role {name!r}: not a built-in role and not a live row in the role table.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        # ADMIN is the bypass and SOUL is the soul app's account: neither can be
+        # combined with anything. The checker ignores them in extra_roles too.
+        if 'ADMIN' in extras:
+            return Response({'error': 'ADMIN cannot be an additional role'}, status=status.HTTP_400_BAD_REQUEST)
+        if extras and new_role == 'ADMIN':
+            return Response({'error': 'ADMIN already holds everything; no additional roles'}, status=status.HTTP_400_BAD_REQUEST)
+        # Prevent privilege escalation: the caller may not assign any role more
+        # privileged than their own (rank shared with create/update, see
+        # ROLE_HIERARCHY). No `caller_role != 'ADMIN'` short-circuit: ADMIN
+        # ranks 0, so the check never fires for it and still says what it means.
         caller_role = getattr(request.user, 'role', None)
-        if role_rank(caller_role) > role_rank(new_role):
+        if any(role_rank(caller_role) > role_rank(r) for r in [new_role, *extras]):
             return Response(
                 {'error': 'Cannot assign a role more privileged than your own'},
                 status=status.HTTP_403_FORBIDDEN,
             )
+        # The generic UPDATE audit row carries the role / extra_roles diff.
         user.role = new_role
-        user.save(update_fields=['role'])
+        user.extra_roles = extras
+        user.save(update_fields=['role', 'extra_roles'])
         return Response(UserManagementSerializer(user).data)
 
     @extend_schema(

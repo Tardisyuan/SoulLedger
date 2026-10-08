@@ -51,9 +51,34 @@ def check_permission(user, codename):
     # SOUL 的 Role 并挂上 RolePermission。
     if role == 'SOUL':
         return False
-    if codename in ROLE_FORBIDDEN_CODENAMES.get(role, ()):
-        return False
 
+    # 多角色:权限是 `role` 与 `extra_roles` 各自答案的并集 —— 并集只在这里算。
+    # 硬规则排在并集之前:持有的任何一个角色禁用该 codename,整个人就答 False
+    # (殿主兼任判官也不能 approve)。ADMIN / SOUL 即使被写进 extra_roles 也无视,
+    # 它们只能是主角色。
+    roles = [role, *_live_extra_roles(user)]
+    if any(codename in ROLE_FORBIDDEN_CODENAMES.get(r, ()) for r in roles):
+        return False
+    return any(_role_has(r, codename) for r in roles)
+
+
+def _live_extra_roles(user):
+    """`user.extra_roles` minus anything that may not be a second role.
+
+    One query, and only for a user who has extras: a role sitting in the
+    recycle bin no longer counts (the default manager hides it), though its
+    RolePermission rows still exist.
+    """
+    extras = {r for r in (getattr(user, 'extra_roles', None) or ()) if r not in ('ADMIN', 'SOUL')}
+    if not extras:
+        return []
+    from apps.perm.models import Role
+
+    return sorted(Role.objects.filter(name__in=extras).values_list('name', flat=True))
+
+
+def _role_has(role, codename):
+    """One role's own answer, cached under (role, codename). No user in the key."""
     # Check cache first
     cached = _permission_cache.get(role, codename)
     if cached is not None:
@@ -65,27 +90,17 @@ def check_permission(user, codename):
     from apps.perm.models import ROLE_PERMISSIONS, Permission, RolePermission
 
     if Permission.objects.filter(codename=codename).exists():
-        # DB is authoritative for seeded codenames.
+        # DB is authoritative for seeded codenames. `role` is the role NAME
+        # string, so the join goes through Role.name (filtering `role=role`
+        # fed a string into the FK's id column and raised ValueError, which a
+        # bare `except` used to turn into the dict's answer -- so this branch
+        # never decided anything for months).
         #
-        # `role` is the role NAME string carried on the user (User.role), not a
-        # Role instance, so the join has to go through Role.name. Filtering
-        # `role=role` fed a string into the FK's id column, which raised
-        # ValueError("Field 'id' expected a number but got 'VIEWER'") on every
-        # single call — and the bare `except Exception` that used to sit here
-        # caught it and answered from ROLE_PERMISSIONS instead. The effect was
-        # that this branch never decided anything: no row in RolePermission has
-        # ever granted a permission, and no revocation has ever taken one away.
-        #
-        # Nothing is caught here on purpose. Neither .exists() call can raise a
-        # model DoesNotExist — that only comes from .get() — so anything they do
-        # raise is a database or programming fault, and answering a permission
-        # question from a stale dict while the database is unreachable is how
-        # this stayed invisible for months. Let it surface.
-        #
-        # Note the consequence for a role with no Role row at all: it matches
-        # nothing and is denied every seeded codename, whatever the dict says.
-        # That is the correct DB answer, but it means the grant tables must be
-        # seeded for a role before this can be relied on.
+        # Nothing is caught here on purpose: anything these queries raise is a
+        # database or programming fault, and answering a permission question
+        # from a stale dict while the database is unreachable is how that
+        # stayed invisible. Note a role with no Role row matches nothing and is
+        # denied every seeded codename, whatever the dict says.
         has_perm = RolePermission.objects.filter(
             role__name=role,
             permission__codename=codename,
@@ -94,7 +109,6 @@ def check_permission(user, codename):
         # Fallback to ROLE_PERMISSIONS dict (unseeded codenames)
         has_perm = codename in ROLE_PERMISSIONS.get(role, [])
 
-    # Cache the result
     _permission_cache.set(role, codename, has_perm)
     return has_perm
 
