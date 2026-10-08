@@ -54,6 +54,10 @@ const RECORD: LedgerRecord = {
 };
 
 const label = (key: string) => screen.getByLabelText(new RegExp(tZh(key)));
+const yearInput = () => screen.getByLabelText(new RegExp(`· ${tZh("ledger.book.form.date_year")}`)) as HTMLInputElement;
+const monthInput = () => screen.getByLabelText(tZh("ledger.book.form.date_month")) as HTMLInputElement;
+const dayInput = () => screen.getByLabelText(tZh("ledger.book.form.date_day")) as HTMLInputElement;
+const type = (el: HTMLElement, value: string) => fireEvent.change(el, { target: { value } });
 const lastCall = (mock: jest.Mock) => mock.mock.calls[mock.mock.calls.length - 1];
 
 beforeEach(() => {
@@ -119,11 +123,13 @@ describe("新增", () => {
     fireEvent.change(label("ledger.book.form.statute"), { target: { value: "st-cn" } });
     fireEvent.change(screen.getByLabelText(new RegExp(`^${tZh("ledger.book.clause")}`)), { target: { value: "施药" } });
     fireEvent.change(label("ledger.book.form.occurrence_count"), { target: { value: "2" } });
-    fireEvent.change(label("ledger.book.col_date"), { target: { value: "1990-05-06" } });
+    type(yearInput(), "1990");
+    type(monthInput(), "5");
+    type(dayInput(), "6");
     fireEvent.click(screen.getByRole("button", { name: tZh("common.save") }));
     await waitFor(() => expect(soulsApi.addRecord).toHaveBeenCalled());
     expect(lastCall(soulsApi.addRecord)[1]).toMatchObject({
-      statute: "st-cn", statute_clause: "CN-1:施药", occurrence_count: 2, event_date: "1990-05-06",
+      statute: "st-cn", statute_clause: "CN-1:施药", occurrence_count: 2, event_date: { year: 1990, month: 5, day: 6 },
     });
     const snapshot = await screen.findByTestId("record-snapshot");
     expect(snapshot).toHaveTextContent("CN-1 赈济篇");
@@ -168,6 +174,50 @@ describe("新增", () => {
   });
 });
 
+describe("日期:年 / 月 / 日", () => {
+  const fill = (y: string, m = "", d = "") => {
+    type(label("ledger.book.col_item"), "事");
+    type(yearInput(), y);
+    type(monthInput(), m);
+    type(dayInput(), d);
+    fireEvent.click(screen.getByRole("button", { name: tZh("common.save") }));
+  };
+  beforeEach(() => soulsApi.addRecord.mockResolvedValue({ data: { statute_snapshot: null } }));
+
+  it("sends a BCE year alone, with month and day null", async () => {
+    openAdd();
+    fill("-612");
+    await waitFor(() => expect(soulsApi.addRecord).toHaveBeenCalled());
+    expect(lastCall(soulsApi.addRecord)[1].event_date).toEqual({ year: -612, month: null, day: null });
+  });
+
+  it("allows a month without a day", async () => {
+    openAdd();
+    fill("-44", "3");
+    await waitFor(() => expect(soulsApi.addRecord).toHaveBeenCalled());
+    expect(lastCall(soulsApi.addRecord)[1].event_date).toEqual({ year: -44, month: 3, day: null });
+  });
+
+  it("sends no event_date at all when the three boxes are empty", async () => {
+    openAdd();
+    fill("");
+    await waitFor(() => expect(soulsApi.addRecord).toHaveBeenCalled());
+    expect(lastCall(soulsApi.addRecord)[1]).not.toHaveProperty("event_date");
+  });
+
+  it.each([
+    ["a day without a month", ["1990", "", "6"], "ledger.book.form.err.date_order"],
+    ["a month without a year", ["", "5", ""], "ledger.book.form.err.date_order"],
+    ["year 0", ["0"], "ledger.book.form.err.date_invalid"],
+    ["month 13", ["1990", "13"], "ledger.book.form.err.date_invalid"],
+  ])("blocks %s before any request", (_n, [y, m, d], key) => {
+    openAdd();
+    fill(y, m, d);
+    expect(screen.getByText(tZh(key))).toBeInTheDocument();
+    expect(soulsApi.addRecord).not.toHaveBeenCalled();
+  });
+});
+
 describe("修改", () => {
   function openEdit() {
     wrap(<SoulRecordFormModal isOpen onClose={jest.fn()} soulId="s1" civilization="CHINESE" record={RECORD} />);
@@ -178,7 +228,7 @@ describe("修改", () => {
     openEdit();
     expect((label("ledger.book.col_item") as HTMLTextAreaElement).value).toBe("克扣");
     expect((label("ledger.figure_scale_weight") as HTMLInputElement).value).toBe("7");
-    expect((label("ledger.book.col_date") as HTMLInputElement).value).toBe("1990-05-06");
+    expect([yearInput().value, monthInput().value, dayInput().value]).toEqual(["1990", "5", "6"]);
     expect((label("ledger.book.form.statute") as HTMLSelectElement).value).toBe("st-cn");
     fireEvent.change(label("ledger.figure_scale_weight"), { target: { value: "9" } });
     fireEvent.click(screen.getByRole("button", { name: tZh("common.save") }));
@@ -196,7 +246,9 @@ describe("修改", () => {
   it("sends event_date: null when the date was cleared", async () => {
     soulsApi.updateRecord.mockResolvedValue({ data: { statute_snapshot: null } });
     openEdit();
-    fireEvent.change(label("ledger.book.col_date"), { target: { value: "" } });
+    type(yearInput(), "");
+    type(monthInput(), "");
+    type(dayInput(), "");
     fireEvent.click(screen.getByRole("button", { name: tZh("common.save") }));
     await waitFor(() => expect(soulsApi.updateRecord).toHaveBeenCalled());
     expect(lastCall(soulsApi.updateRecord)[2]).toMatchObject({ event_date: null });

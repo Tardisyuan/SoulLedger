@@ -19,8 +19,8 @@ import { useI18n } from "@/src/contexts/I18nContext";
  * 存好之后若引用了律条,窗口不立刻关,先给一张「已存入的律条快照」—— 快照由后端在存的那一刻冻结,
  * 之后律条改了它也不变。
  *
- * 事件日期只在被动过时才随修改发出:台账行里的日期可能只有年或带公元前年,而 `<input type="date">`
- * 画不出这些,原样回传会把它们抹掉。公元前日期因此只能在别处录入。
+ * 事件日期是年 / 月 / 日三个数字框(年可为负 = 公元前,月日可空),与后端
+ * `event_year / event_month / event_day` 一一对应;只在被动过时才随修改发出。
  */
 
 const RECORD_TYPES = ["MERIT", "DEMERIT"] as const;
@@ -76,12 +76,6 @@ export function clauseText(statuteClause: string): string {
   return i < 0 ? "" : statuteClause.slice(i + 1).trim();
 }
 
-/** 台账行里完整的日期(年月日齐全、公元后)→ `<input type="date">` 的值;其余画不出,给空。 */
-function dateInputOf(date: LedgerRecord["event_date"]): string {
-  if (!date || date.year < 1 || !date.month || !date.day) return "";
-  return `${String(date.year).padStart(4, "0")}-${String(date.month).padStart(2, "0")}-${String(date.day).padStart(2, "0")}`;
-}
-
 export interface SoulRecordFormModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -105,7 +99,9 @@ export function SoulRecordFormModal({ isOpen, onClose, soulId, civilization, rec
   const [description, setDescription] = useState("");
   const [weight, setWeight] = useState("1");
   const [count, setCount] = useState("");
-  const [eventDate, setEventDate] = useState("");
+  const [dateYear, setDateYear] = useState("");
+  const [dateMonth, setDateMonth] = useState("");
+  const [dateDay, setDateDay] = useState("");
   const [dateTouched, setDateTouched] = useState(false);
   const [lifeStage, setLifeStage] = useState("");
   const [statuteId, setStatuteId] = useState("");
@@ -125,7 +121,9 @@ export function SoulRecordFormModal({ isOpen, onClose, soulId, civilization, rec
     setDescription(record?.description ?? "");
     setWeight(String(record?.original_weight ?? 1));
     setCount(record?.occurrence_count != null ? String(record.occurrence_count) : "");
-    setEventDate(record ? dateInputOf(record.event_date) : "");
+    setDateYear(record?.event_date ? String(record.event_date.year) : "");
+    setDateMonth(record?.event_date?.month ? String(record.event_date.month) : "");
+    setDateDay(record?.event_date?.day ? String(record.event_date.day) : "");
     setLifeStage(record?.life_stage ?? "");
     setStatuteId(record?.statute_snapshot?.statute_id ?? "");
     setClause(record ? clauseText(record.statute_clause) : "");
@@ -165,6 +163,13 @@ export function SoulRecordFormModal({ isOpen, onClose, soulId, civilization, rec
     if (!description.trim()) next.description = t("common.field_required");
     if (!Number.isInteger(weightNumber) || weightNumber < 1 || weightNumber > 100) next.weight = t("ledger.book.form.weight_range");
     const code = chosen?.code ?? (statuteId ? record?.statute_snapshot?.code : undefined);
+    const [y, m, d] = [dateYear.trim(), dateMonth.trim(), dateDay.trim()];
+    if (y || m || d) {
+      const [yn, mn, dn] = [Number(y), Number(m), Number(d)];
+      if (!y || (d && !m)) next.event_date = t("ledger.book.form.err.date_order");
+      else if (!Number.isInteger(yn) || yn === 0 || (m && !(Number.isInteger(mn) && mn >= 1 && mn <= 12))
+        || (d && !(Number.isInteger(dn) && dn >= 1 && dn <= 31))) next.event_date = t("ledger.book.form.err.date_invalid");
+    }
     if (count.trim() && !clause) next.statute_clause = t("ledger.book.form.count_needs_clause");
     if (!count.trim() && clause) next.occurrence_count = t("ledger.book.form.clause_needs_count");
     if (clause && !code) next.statute = t("common.field_required");
@@ -182,7 +187,13 @@ export function SoulRecordFormModal({ isOpen, onClose, soulId, civilization, rec
       life_stage: lifeStage,
       evidence_source: evidenceSource,
       evidence_note: evidenceNote.trim(),
-      ...(dateTouched || (!record && eventDate) ? { event_date: eventDate || null } : {}),
+      ...(dateTouched || (!record && dateYear.trim())
+        ? {
+            event_date: dateYear.trim()
+              ? { year: Number(dateYear), month: dateMonth.trim() ? Number(dateMonth) : null, day: dateDay.trim() ? Number(dateDay) : null }
+              : null,
+          }
+        : {}),
     };
     const handlers = {
       onSuccess: (res: { data: SoulRecordEntry }) => {
@@ -272,7 +283,7 @@ export function SoulRecordFormModal({ isOpen, onClose, soulId, civilization, rec
           disabled={pending}
           error={errors.description}
         />
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2">
           <TextField
             label={t("ledger.figure_scale_weight")}
             required
@@ -285,14 +296,6 @@ export function SoulRecordFormModal({ isOpen, onClose, soulId, civilization, rec
             disabled={pending}
             error={errors.weight}
           />
-          <TextField
-            label={t("ledger.book.col_date")}
-            type="date"
-            value={eventDate}
-            onChange={(e) => { setEventDate(e.target.value); setDateTouched(true); clear("event_date"); }}
-            disabled={pending}
-            error={errors.event_date}
-          />
           <SelectField
             label={t("ledger.book.form.life_stage")}
             value={lifeStage}
@@ -300,6 +303,39 @@ export function SoulRecordFormModal({ isOpen, onClose, soulId, civilization, rec
             disabled={pending}
             error={errors.life_stage}
             options={stageOptions}
+          />
+        </div>
+        {/* 年可为负(公元前,-612 = 公元前 612 年);月、日可空,但日须有月、月须有年(后端同此规则)。 */}
+        <div className="grid grid-cols-3 gap-4">
+          <TextField
+            label={`${t("ledger.book.col_date")} · ${t("ledger.book.form.date_year")}`}
+            type="number"
+            step={1}
+            placeholder="-612"
+            value={dateYear}
+            onChange={(e) => { setDateYear(e.target.value); setDateTouched(true); clear("event_date"); }}
+            disabled={pending}
+            error={errors.event_date}
+          />
+          <TextField
+            label={t("ledger.book.form.date_month")}
+            type="number"
+            min={1}
+            max={12}
+            step={1}
+            value={dateMonth}
+            onChange={(e) => { setDateMonth(e.target.value); setDateTouched(true); clear("event_date"); }}
+            disabled={pending}
+          />
+          <TextField
+            label={t("ledger.book.form.date_day")}
+            type="number"
+            min={1}
+            max={31}
+            step={1}
+            value={dateDay}
+            onChange={(e) => { setDateDay(e.target.value); setDateTouched(true); clear("event_date"); }}
+            disabled={pending}
           />
         </div>
         <div className="grid gap-4 md:grid-cols-2">
