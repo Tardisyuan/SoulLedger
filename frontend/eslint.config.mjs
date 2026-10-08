@@ -87,7 +87,9 @@ const LEGACY_TYPE = /^-?text-(?:base|[3-9]xl|2xl|0[1-8]|quote)$/;
 // `text-display`(40/48)只给匾题字和登录页(A3「其他地方禁用」)。按**路径前缀**放行:
 // 登录页一个文件;匾组件还没有(下一阶段),先把它要住的目录留在这里 —— 那个目录今天
 // 不存在,所以这一条今天什么也不放行,而匾落地时不必再改守卫。加一项是一个决定,要写理由。
-const DISPLAY_ALLOW = ["app/(auth)/login/", "src/components/plaque/"];
+// `src/components/auth/LoginShell.tsx` 是登录页的两栏骨架与律条,从 `app/(auth)/login/page.tsx` 逐字搬出
+// (A12 的 /login/verify 共用它);律条的 display 40 跟着搬,放行范围没有变大。
+const DISPLAY_ALLOW = ["app/(auth)/login/", "src/components/auth/LoginShell.tsx", "src/components/plaque/"];
 // 展示数字(用户 2026-10-02):律条语料页的条号与被引用数画 40(Design A3)。按**单个文件**
 // 放行,不是目录 —— 语料的其他组件、审判台都仍然报红。加一项同样要写理由。
 const DISPLAY_NUMERAL_ALLOW = ["app/corpus/page.tsx"];
@@ -184,6 +186,9 @@ const HEX_ALLOW = [
   //
   // 这是唯一一个「真值颜色合法」不是设计取舍、而是**运行时事实**的地方。
   "app/global-error.tsx",
+  // 二维码(A12 向导)要给验证器 App 的相机看,不是给人看:黑白是扫码的对比度要求,
+  // 深色主题也白底。Design 的话原文是「白底,深色下也白」。
+  "src/components/auth/QrCode.tsx",
 ];
 
 // 同一份清单要给**两条**规则用(no-hex-colour 与 no-raw-palette 的任意值分支),

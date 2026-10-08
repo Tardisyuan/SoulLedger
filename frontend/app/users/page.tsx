@@ -10,6 +10,7 @@ import { usePlaque } from "@/src/components/plaque/Plaque";
 import { useHall } from "@/src/components/plaque/useHall";
 import { UserModal } from "@/src/components/users/UserModal";
 import { UserDeleteDialog } from "@/src/components/users/UserDeleteDialog";
+import { MfaResetDialog } from "@/src/components/users/MfaResetDialog";
 import { showToast } from "@/src/components/ui/Toast";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { DataTable, parseOrdering, type SortState } from "@/components/ui/data-table";
@@ -56,10 +57,12 @@ function UsersRoute() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [deleteUser, setDeleteUser] = useState<User | null>(null);
+  const [mfaFilter, setMfaFilter] = useState("");
+  const [resetMfaUser, setResetMfaUser] = useState<User | null>(null);
 
   // Fetch users list — params live in the queryKey, so filter/sort/page changes refetch on their own.
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: userKeys.list({ page, search, role: roleFilter, ordering, username: located }),
+    queryKey: userKeys.list({ page, search, role: roleFilter, ordering, username: located, mfa: mfaFilter }),
     queryFn: async () => {
       const res = await usersApi.list({
         page,
@@ -67,6 +70,7 @@ function UsersRoute() {
         role: roleFilter || undefined,
         ordering: ordering || undefined,
         username: located || undefined,
+        mfa: mfaFilter || undefined,
       });
       return res.data;
     },
@@ -160,6 +164,22 @@ function UsersRoute() {
               setPage(1);
             }}
           />
+          {/* 两步验证(A12):三态筛选,`missing` = 角色被要求而没开。 */}
+          <FilterChipSelect
+            label={t("mfa.admin.column")}
+            value={mfaFilter}
+            options={[
+              { value: "", label: t("mfa.admin.filter_all") },
+              { value: "enabled", label: t("mfa.admin.filter_on") },
+              { value: "disabled", label: t("mfa.admin.filter_off") },
+              { value: "missing", label: t("mfa.admin.filter_missing") },
+            ]}
+            clearLabel={t("filter.clear_one", { name: t("mfa.admin.column") })}
+            onChange={(v) => {
+              setMfaFilter(v);
+              setPage(1);
+            }}
+          />
         </>
       }
     >
@@ -176,6 +196,7 @@ function UsersRoute() {
           { key: "role", header: t("users.role"), sortable: true },
           { key: "tenant", header: t("users.tenant") },
           { key: "status", header: t("users.status") },
+          { key: "mfa", header: t("mfa.admin.column") },
           { key: "actions", header: t("users.actions"), align: "right", srOnlyHeader: true },
         ]}
         data={users}
@@ -216,8 +237,21 @@ function UsersRoute() {
               </Badge>
               {user.is_eval_identity && <EvalIdentityTag />}
             </td>
+            <td className={cn("px-4 py-3", user.username === located && LOCATED_BG)}>
+              {/* 三态,字形 + 文字(A12):✓ 已开启 + 日期 / ○ 未开启 · 角色不要求 / ! 要求开启 · 未开启。 */}
+              {user.mfa ? (
+                <MfaCell mfa={user.mfa} />
+              ) : null}
+            </td>
             <td className={cn("px-4 py-3 text-right", user.username === located && LOCATED_BG)}>
               <div className="flex items-center justify-end gap-1">
+                {user.mfa?.enabled ? (
+                  <RequirePermission permissions="user.manage">
+                    <Button type="button" size="sm" variant="ghost" onClick={() => setResetMfaUser(user)}>
+                      {t("mfa.admin.reset")}
+                    </Button>
+                  </RequirePermission>
+                ) : null}
                 <RequirePermission permissions="user.manage">
                   <Button type="button" size="sm" variant="ghost" onClick={() => setEditingUser(user)}>
                     {t("common.edit")}
@@ -252,10 +286,11 @@ function UsersRoute() {
           setOrdering(next ? `${next.direction === "desc" ? "-" : ""}${next.key}` : "");
           setPage(1);
         }}
-        isFiltered={Boolean(search || roleFilter || located)}
+        isFiltered={Boolean(search || roleFilter || located || mfaFilter)}
         onClearFilters={() => {
           setSearch("");
           setRoleFilter("");
+          setMfaFilter("");
           setPage(1);
           if (located) router.replace("/users");
         }}
@@ -282,6 +317,39 @@ function UsersRoute() {
         isOpen={!!deleteUser}
         onClose={() => setDeleteUser(null)}
       />
+
+      {resetMfaUser ? <MfaResetDialog user={resetMfaUser} onClose={() => setResetMfaUser(null)} /> : null}
     </PageShell>
+  );
+}
+
+/** 用户列表的「两步验证」格:三态。 */
+function MfaCell({ mfa }: { mfa: NonNullable<User["mfa"]> }) {
+  const { t, formatDate } = useI18n();
+  if (mfa.enabled) {
+    return (
+      <span className="flex flex-wrap items-center gap-2" data-mfa="on">
+        <Badge tone="success" glyph="✓">{t("mfa.admin.state_on")}</Badge>
+        {mfa.confirmed_at ? (
+          <span className="text-xs text-[oklch(var(--color-ink-muted))]">
+            {formatDate(mfa.confirmed_at)}
+            {mfa.last_used_at ? ` · ${formatDate(mfa.last_used_at)}` : ""}
+          </span>
+        ) : null}
+      </span>
+    );
+  }
+  if (mfa.required) {
+    return (
+      <Badge tone="warning" glyph="!" data-mfa="missing">
+        {t("mfa.admin.state_missing")}
+      </Badge>
+    );
+  }
+  return (
+    <span className="flex flex-wrap items-center gap-2" data-mfa="off">
+      <Badge tone="neutral" glyph="○">{t("mfa.admin.state_off")}</Badge>
+      <span className="text-xs text-[oklch(var(--color-ink-subtle))]">{t("mfa.admin.state_off_note")}</span>
+    </span>
   );
 }

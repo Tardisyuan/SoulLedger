@@ -1502,7 +1502,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/LoginResponse'
+                $ref: '#/components/schemas/LoginOutcome'
           description: ''
         '401':
           content:
@@ -1630,6 +1630,222 @@ paths:
               schema:
                 $ref: '#/components/schemas/DetailResponse'
           description: ''
+  /api/v1/auth/mfa/complete/:
+    post:
+      operationId: v1_auth_mfa_complete_create
+      description: 向导「完成」。没走过第三步(`verified_at` 空)不能完成。
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MfaStatus'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MfaRefusal'
+          description: ''
+  /api/v1/auth/mfa/confirm/:
+    post:
+      operationId: v1_auth_mfa_confirm_create
+      description: 向导第三步。码对了 → 十个恢复码,明文只出现在这一个响应里。
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MfaCodeRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/MfaCodeRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/MfaCodeRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MfaRecoveryCodes'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MfaRefusal'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MfaRefusal'
+          description: ''
+  /api/v1/auth/mfa/disable/:
+    post:
+      operationId: v1_auth_mfa_disable_create
+      description: 关闭:`method=totp` 验一个动态码,`method=password` 验密码。错了计入同一个锁。
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MfaDisableRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/MfaDisableRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/MfaDisableRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MfaStatus'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MfaRefusal'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MfaRefusal'
+          description: ''
+  /api/v1/auth/mfa/recovery-codes/:
+    post:
+      operationId: v1_auth_mfa_recovery_codes_create
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MfaRecoveryCodes'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MfaRefusal'
+          description: ''
+  /api/v1/auth/mfa/setup/:
+    post:
+      operationId: v1_auth_mfa_setup_create
+      description: POST:发一把新密钥(已开启答 409,先关闭再开)。DELETE:中途退出,未确认的密钥作废。
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MfaSetupResponse'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MfaRefusal'
+          description: ''
+    delete:
+      operationId: v1_auth_mfa_setup_destroy
+      description: POST:发一把新密钥(已开启答 409,先关闭再开)。DELETE:中途退出,未确认的密钥作废。
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailResponse'
+          description: ''
+  /api/v1/auth/mfa/status/:
+    get:
+      operationId: v1_auth_mfa_status_retrieve
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MfaStatus'
+          description: ''
+  /api/v1/auth/mfa/verify/:
+    post:
+      operationId: v1_auth_mfa_verify_create
+      description: |-
+        登录第二步:待验证令牌 + 动态码(或恢复码)→ 正常的 access / refresh / user。
+        `remember_device` 为真时再下发 30 天的 httpOnly 设备 cookie。
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MfaVerifyRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/MfaVerifyRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/MfaVerifyRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MfaRefusal'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MfaRefusal'
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MfaRefusal'
+          description: ''
   /api/v1/auth/officer-login/:
     post:
       operationId: v1_auth_officer_login_create
@@ -1659,7 +1875,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/LoginResponse'
+                $ref: '#/components/schemas/LoginOutcome'
           description: ''
         '401':
           content:
@@ -16218,6 +16434,45 @@ paths:
               schema:
                 $ref: '#/components/schemas/Tenant'
           description: ''
+  /api/v1/tenants/{code}/mfa-roles/:
+    get:
+      operationId: v1_tenants_mfa_roles_list
+      description: 殿设置 › 安全(A12):每个可持有的角色一行 —— 要不要求、本殿几人持有、几人已开启。
+      parameters:
+      - in: path
+        name: code
+        schema:
+          type: string
+        required: true
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedTenantMfaRoleRowList'
+          description: ''
   /api/v1/tenants/{code}/seal-glyphs/:
     patch:
       operationId: v1_tenants_seal_glyphs_partial_update
@@ -16646,6 +16901,55 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/UserRole'
+          description: ''
+  /api/v1/users/{id}/reset-mfa/:
+    post:
+      operationId: v1_users_reset_mfa_create
+      description: |-
+        管理员重置两步验证(A12):验证器、恢复码、「不再询问」设备令牌全清,该用户所有刷新令牌吊销。
+        理由必填,进审计。只对已开启的账号有意义(未开启答 409)。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this User.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserMfaReset'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UserMfaReset'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UserMfaReset'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
           description: ''
   /api/v1/users/{id}/reset_password/:
     post:
@@ -23780,6 +24084,10 @@ components:
       description: |-
         * `SUCCESS` - 成功
         * `FAILED` - 失败
+    LoginOutcome:
+      oneOf:
+      - $ref: '#/components/schemas/LoginResponse'
+      - $ref: '#/components/schemas/MfaRequiredResponse'
     LoginResponse:
       type: object
       description: |-
@@ -24965,6 +25273,127 @@ components:
           type: string
       required:
       - event_id
+    MethodEnum:
+      enum:
+      - totp
+      - password
+      type: string
+      description: |-
+        * `totp` - totp
+        * `password` - password
+    MfaCodeRequest:
+      type: object
+      properties:
+        code:
+          type: string
+      required:
+      - code
+    MfaDisableRequest:
+      type: object
+      properties:
+        method:
+          $ref: '#/components/schemas/MethodEnum'
+        code:
+          type: string
+        password:
+          type: string
+      required:
+      - method
+    MfaRecoveryCodes:
+      type: object
+      properties:
+        recovery_codes:
+          type: array
+          items:
+            type: string
+      required:
+      - recovery_codes
+    MfaRefusal:
+      type: object
+      description: '`code` is what to branch on. wrong → `remaining_attempts` + `lock_minutes`;
+        locked → `retry_after` (seconds).'
+      properties:
+        error:
+          type: string
+        code:
+          type: string
+        remaining_attempts:
+          type: integer
+        lock_minutes:
+          type: integer
+        retry_after:
+          type: integer
+      required:
+      - code
+      - error
+    MfaRequiredResponse:
+      type: object
+      description: |-
+        Doc-only: the 200 body of `LoginView` when the password was right but the
+        account has two-step verification on and this browser holds no valid
+        「不再询问」 device cookie. No tokens: `pending_token` (5 minutes, type
+        `mfa_pending`, usable nowhere else) goes to `/auth/mfa/verify/`.
+      properties:
+        mfa_required:
+          type: boolean
+        pending_token:
+          type: string
+        username:
+          type: string
+      required:
+      - mfa_required
+      - pending_token
+      - username
+    MfaSetupResponse:
+      type: object
+      properties:
+        secret:
+          type: string
+        otpauth_url:
+          type: string
+      required:
+      - otpauth_url
+      - secret
+    MfaStatus:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+        required:
+          type: boolean
+        confirmed_at:
+          type: string
+          format: date-time
+          nullable: true
+        last_used_at:
+          type: string
+          format: date-time
+          nullable: true
+        last_used_method:
+          type: string
+        recovery_codes_remaining:
+          type: integer
+      required:
+      - confirmed_at
+      - enabled
+      - last_used_at
+      - last_used_method
+      - recovery_codes_remaining
+      - required
+    MfaVerifyRequest:
+      type: object
+      properties:
+        pending_token:
+          type: string
+        code:
+          type: string
+        recovery_code:
+          type: string
+        remember_device:
+          type: boolean
+          default: false
+      required:
+      - pending_token
     ModelEntry:
       type: object
       properties:
@@ -26880,6 +27309,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Tenant'
+    PaginatedTenantMfaRoleRowList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/TenantMfaRoleRow'
     PaginatedUserManagementList:
       type: object
       required:
@@ -28757,6 +29209,11 @@ components:
           maximum: 365
           minimum: 0
           nullable: true
+        mfa_required_roles:
+          type: array
+          items:
+            type: string
+            maxLength: 20
     PatchedUser:
       type: object
       description: |-
@@ -28824,6 +29281,12 @@ components:
           type: string
           description: 职位：如 第一殿殿主
           maxLength: 100
+        mfa_enabled:
+          type: boolean
+          readOnly: true
+        mfa_required:
+          type: boolean
+          readOnly: true
     PatchedUserNotification:
       type: object
       description: |-
@@ -33643,6 +34106,26 @@ components:
       - display_name
       - id
       - seal_glyphs
+    TenantMfaRoleRow:
+      type: object
+      description: One row of `GET /tenants/{code}/mfa-roles/` (殿设置 › 安全).
+      properties:
+        role:
+          type: string
+        required:
+          type: boolean
+        always:
+          type: boolean
+        total:
+          type: integer
+        enabled:
+          type: integer
+      required:
+      - always
+      - enabled
+      - required
+      - role
+      - total
     TenantSoulStats:
       type: object
       properties:
@@ -34327,9 +34810,17 @@ components:
           type: string
           description: 职位：如 第一殿殿主
           maxLength: 100
+        mfa_enabled:
+          type: boolean
+          readOnly: true
+        mfa_required:
+          type: boolean
+          readOnly: true
       required:
       - id
       - is_active
+      - mfa_enabled
+      - mfa_required
       - role
       - tenant
       - username
@@ -34489,13 +34980,48 @@ components:
         is_eval_identity:
           type: boolean
           readOnly: true
+        mfa:
+          allOf:
+          - $ref: '#/components/schemas/UserMfaRef'
+          readOnly: true
       required:
       - create_time
       - id
       - is_eval_identity
+      - mfa
       - organization
       - tenant
       - username
+    UserMfaRef:
+      type: object
+      description: The 「两步验证」 column of the users list.
+      properties:
+        enabled:
+          type: boolean
+        required:
+          type: boolean
+        confirmed_at:
+          type: string
+          format: date-time
+          nullable: true
+        last_used_at:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+      - confirmed_at
+      - enabled
+      - last_used_at
+      - required
+    UserMfaReset:
+      type: object
+      description: '`POST /users/{id}/reset-mfa/`: the reason is audited, and required.'
+      properties:
+        reason:
+          type: string
+          maxLength: 200
+      required:
+      - reason
     UserNotification:
       type: object
       description: |-
@@ -34796,8 +35322,16 @@ components:
           items:
             type: string
           readOnly: true
+        mfa_enabled:
+          type: boolean
+          readOnly: true
+        mfa_required:
+          type: boolean
+          readOnly: true
       required:
       - id
+      - mfa_enabled
+      - mfa_required
       - permissions
       - tenant
       - username

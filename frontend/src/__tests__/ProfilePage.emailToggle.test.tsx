@@ -10,6 +10,7 @@ import ProfilePage from "@/app/profile/page";
 jest.mock("@soulledger/core/api", () => ({
   authApi: { profile: jest.fn(), updateProfile: jest.fn(), changePassword: jest.fn(), preferences: jest.fn(), updatePreferences: jest.fn() },
   notificationsApi: { emailStatus: jest.fn() },
+  mfaApi: { status: jest.fn().mockResolvedValue({ data: { enabled: false, required: false, confirmed_at: null, last_used_at: null, last_used_method: "", recovery_codes_remaining: 0 } }) },
 }));
 
 let mockLocale = "zh-Hans";

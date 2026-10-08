@@ -1,5 +1,6 @@
 import { api } from "./client";
 import type { PaginatedResponse } from "./users";
+import type { components } from "./generated/schema";
 
 export interface Tenant {
   id: number;
@@ -23,6 +24,11 @@ export interface Tenant {
 
 /** `settings` 里转生冷却天数的键名 —— 与 `apps/tenants/models.py::REBIRTH_COOLDOWN_SETTING` 同一个字符串。 */
 export const REBIRTH_COOLDOWN_SETTING = "soul_rebirth_cooldown_days";
+/** `settings` 里「要求开启两步验证的角色」的键名 —— 与 `apps/authentication/mfa.py::MFA_REQUIRED_ROLES_SETTING` 同一个字符串。 */
+export const MFA_REQUIRED_ROLES_SETTING = "mfa_required_roles";
+
+/** One row of `GET /tenants/{code}/mfa-roles/` (殿设置 › 安全). `always`: ADMIN, required regardless. */
+export type TenantMfaRoleRow = components["schemas"]["TenantMfaRoleRow"];
 
 /**
  * `PATCH /tenants/{code}/settings/` 的请求体:只有这几个已知字段,没有整份 `settings` JSON。
@@ -36,6 +42,8 @@ export interface TenantSettingsPatch {
   hall_name_en?: string;
   hall_name_egy?: string;
   soul_rebirth_cooldown_days?: number | null;
+  /** Role names that must use two-step verification. ADMIN is required whether or not it is listed. */
+  mfa_required_roles?: string[];
 }
 
 export const tenantsApi = {
@@ -49,4 +57,6 @@ export const tenantsApi = {
   /** ADMIN only. Field errors come back as a DRF 400 keyed by field; a negative cooldown is one of them. */
   updateSettings: (code: string, patch: TenantSettingsPatch) =>
     api.patch<Tenant>(`/tenants/${code}/settings/`, patch),
+  /** ADMIN only. */
+  mfaRoles: (code: string) => api.get<TenantMfaRoleRow[]>(`/tenants/${code}/mfa-roles/`),
 };

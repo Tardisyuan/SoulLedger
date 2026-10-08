@@ -10,7 +10,12 @@ from apps.core.permissions import IsAdminPermission, TenantPermission
 from apps.core.tenant import scope_to_tenant
 from apps.core.viewsets import CodenameViewSetMixin
 from apps.tenants.models import REBIRTH_COOLDOWN_SETTING, Tenant
-from apps.tenants.serializers import TenantSealGlyphsSerializer, TenantSerializer, TenantSettingsSerializer
+from apps.tenants.serializers import (
+    TenantMfaRoleRowSerializer,
+    TenantSealGlyphsSerializer,
+    TenantSerializer,
+    TenantSettingsSerializer,
+)
 
 #: 管理员改殿时审计逐字段记 [旧, 新] 的模型字段;`soul_rebirth_cooldown_days` 与 `seal_glyphs` 在 `_snapshot` 里另取。
 _AUDITED_FIELDS = ("description", "dispatch_enabled", "hall_name", "hall_name_en", "hall_name_egy")
@@ -81,6 +86,34 @@ class TenantViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
             serializer.save()
         audit_hall_change(request, tenant, before, "hall seal glyphs")
         return Response(TenantSerializer(tenant).data)
+
+    @extend_schema(responses={200: TenantMfaRoleRowSerializer(many=True)})
+    @action(detail=True, methods=["get"], url_path="mfa-roles",
+            permission_classes=[TenantPermission, IsAdminPermission])
+    def mfa_roles(self, request, code=None):
+        """殿设置 › 安全(A12):每个可持有的角色一行 —— 要不要求、本殿几人持有、几人已开启。"""
+        from django.db.models import Count, Q
+
+        from apps.authentication.mfa import MFA_REQUIRED_ROLES_SETTING
+        from apps.authentication.models import User, UserRole
+        from apps.perm.models import Role
+
+        tenant = self.get_object()
+        required = set((tenant.settings or {}).get(MFA_REQUIRED_ROLES_SETTING) or [])
+        counts = {
+            row["role"]: row for row in User.objects.filter(tenant=tenant).exclude(role=UserRole.SOUL)
+            .values("role").annotate(total=Count("id"), enabled=Count("id", filter=Q(mfa__confirmed_at__isnull=False)))
+        }
+        names = [r for r in UserRole.values if r != UserRole.SOUL]
+        names += list(Role.objects.exclude(name__in=names).order_by("name").values_list("name", flat=True))
+        rows = [{
+            "role": name,
+            "required": name == UserRole.ADMIN or name in required,
+            "always": name == UserRole.ADMIN,
+            "total": counts.get(name, {}).get("total", 0),
+            "enabled": counts.get(name, {}).get("enabled", 0),
+        } for name in names]
+        return Response(rows)
 
     @extend_schema(request=TenantSettingsSerializer, responses={200: TenantSerializer})
     @action(detail=True, methods=["patch"], url_path="settings",

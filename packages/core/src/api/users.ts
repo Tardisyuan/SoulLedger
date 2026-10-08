@@ -33,6 +33,15 @@ export interface User {
   /** The assistant admin's eval officer (apps/soul_assist/eval_identities.py). List / retrieve only: the create and
    *  update serializers do not carry it, so it is absent on their responses. */
   is_eval_identity?: boolean;
+  /** 两步验证列(A12):three states = enabled / required. List and retrieve only. */
+  mfa?: UserMfaRef;
+}
+
+export interface UserMfaRef {
+  enabled: boolean;
+  required: boolean;
+  confirmed_at: string | null;
+  last_used_at: string | null;
 }
 
 export interface CreateUserInput {
@@ -94,6 +103,9 @@ export const usersApi = {
   activate: (id: string) => api.post<User>(`/users/${id}/activate/`),
   deactivate: (id: string) => api.post<User>(`/users/${id}/deactivate/`),
   export: () => api.get<Blob>("/users/export_csv/", { responseType: "blob" }),
+  /** ADMIN. Clears the authenticator, recovery codes and 「不再询问」 devices, revokes every refresh token;
+   *  the reason is required and audited. 409 `not_enabled` on a row that has it off. */
+  resetMfa: (id: string | number, reason: string) => api.post<{ detail: string }>(`/users/${id}/reset-mfa/`, { reason }),
   import: (data: FormData) => api.post<UserImportResult>("/users/import_csv/", data, {
     headers: { "Content-Type": "multipart/form-data" },
   }),

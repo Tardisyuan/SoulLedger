@@ -103,18 +103,28 @@ def test_several_halls_with_a_matching_password_list_only_those_halls(monkeypatc
     assert nothing.status_code == 401 and "halls" not in nothing.data
 
 
-def test_the_second_factor_hook_runs_after_the_password_and_before_tokens(monkeypatch, judge_user):
-    from rest_framework.exceptions import PermissionDenied
+def test_an_officer_with_2fa_gets_the_pending_token_step_after_the_hall_is_found(judge_user):
+    from tests.test_officer_mfa import _enable
 
-    seen = []
+    _enable(judge_user)
+    wrong = _login("judge", "bad")
+    assert wrong.status_code == 401 and "pending_token" not in wrong.data
+    step = _login("judge", "judge123")
+    assert step.status_code == 200
+    assert step.data["mfa_required"] is True and step.data["pending_token"]
+    assert "access" not in step.data and "refresh" not in step.data
 
-    def hook(self, user):
-        seen.append(user.username)
-        raise PermissionDenied("2fa")
 
-    monkeypatch.setattr(OfficerTokenObtainPairSerializer, "require_second_factor", hook)
-    assert _login("judge", "bad").status_code == 401 and seen == []
-    assert _login("judge", "judge123").status_code == 403 and seen == ["judge"]
+def test_the_hall_choice_comes_before_the_second_step(monkeypatch, cn_tenant, eu_tenant):
+    from tests.test_officer_mfa import _enable
+
+    a = User.objects.create_user(username="m_a", password="same-pw-2", role="JUDGE", tenant=cn_tenant)
+    b = User.objects.create_user(username="m_b", password="same-pw-2", role="JUDGE", tenant=eu_tenant)
+    _enable(b)
+    monkeypatch.setattr(OfficerTokenObtainPairSerializer, "accounts_named", staticmethod(lambda _u: [a, b]))
+    assert _login("m", "same-pw-2").status_code == 409
+    assert _login("m", "same-pw-2", tenant_code="EU_HEAVEN_HELL").data["mfa_required"] is True
+    assert "access" in _login("m", "same-pw-2", tenant_code="CN_DIYU").data
 
 
 # ── 待我处理 ────────────────────────────────────────────────────────────
