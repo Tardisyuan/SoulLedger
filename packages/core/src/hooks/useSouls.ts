@@ -109,6 +109,19 @@ export function useAddSoulRecord() {
   });
 }
 
+/** 改一条已入簿的功过。成功后灵魂详情与台账重取;失败的细节(字段错误)交给调用方显示。 */
+export function useUpdateSoulRecord() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, recordId, data }: { id: string; recordId: string; data: object }) =>
+      soulsApi.updateRecord(id, recordId, data),
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: soulKeys.detail(vars.id) });
+      qc.invalidateQueries({ queryKey: soulKeys.ledger(vars.id) });
+    },
+  });
+}
+
 export function useUpdateSoul() {
   const qc = useQueryClient();
   return useMutation({

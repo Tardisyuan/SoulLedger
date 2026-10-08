@@ -1126,7 +1126,24 @@
       "empty": "尚无账目。",
       "occurrences": "发生 {{n}} 次",
       "milestone": "重要节点",
-      "clause": "条款"
+      "clause": "条款",
+      "form": {
+        "add_button": "新增一条",
+        "add_title": "新增功过记录",
+        "edit_title": "修改功过记录",
+        "type": "类型",
+        "occurrence_count": "发生次数",
+        "life_stage": "人生阶段",
+        "statute": "引用律条",
+        "statute_none": "不引用",
+        "clause_none": "不指定条款",
+        "evidence_source": "证据来源",
+        "evidence_note": "来源说明",
+        "count_needs_clause": "填写次数时须同时选择条款",
+        "clause_needs_count": "选了条款须同时填写次数",
+        "weight_range": "权重须是 1 到 100 的整数",
+        "snapshot": "已存入的律条快照"
+      }
     },
     "series_effective": "现值",
     "series_decayed": "已衰减",

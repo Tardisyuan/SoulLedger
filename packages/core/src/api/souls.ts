@@ -266,6 +266,9 @@ export const soulsApi = {
     api.post<Soul>(`/souls/${id}/correct_settlement/`, { reason }),
   karma: (id: string) => api.get<LedgerSummary>(`/souls/${id}/karma/`),
   addRecord: (id: string, data: object) => api.post<SoulRecordEntry>(`/souls/${id}/add_record/`, data),
+  /** PATCH /souls/{id}/records/{recordId}/ —— 改一条已入簿的功过(部分更新;soul.update)。 */
+  updateRecord: (id: string, recordId: string, data: object) =>
+    api.patch<SoulRecordEntry>(`/souls/${id}/records/${recordId}/`, data),
   // Bare array — the action returns `Response(serializer.data)` directly
   // (backend/apps/souls/views.py:164), not a pagination envelope.
   records: (id: string) => api.get<SoulRecordEntry[]>(`/souls/${id}/records/`),
