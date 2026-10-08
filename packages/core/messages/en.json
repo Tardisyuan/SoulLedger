@@ -1967,6 +1967,7 @@
     "soul_from_detail": "Carried from the detail page; cannot be changed",
     "soul_from_detail_error": "Could not load the soul carried from the detail page. Choose it again here.",
     "source_label": "Source",
+    "target_tenant_closed": "This hall is not receiving transfers",
     "discard": "Discard…",
     "discard_title": "Discard this dispatch draft?",
     "discard_message": "The draft moves to the recycle bin and can be recovered from Settings › Recycle bin, with the reason you wrote.",
@@ -2624,8 +2625,8 @@
       "hall_name_egy": "Hall name (egy)",
       "description": "Description",
       "cooldown_days": "Rebirth application cooldown (days)",
-      "cooldown_hint": "Days after the last final rejection before a soul may apply again; empty uses the default of 30",
-      "cooldown_invalid": "Enter 0 or a whole number",
+      "cooldown_hint": "Days after the last final rejection before a soul may apply again; 0 to 365, empty uses the default of 30",
+      "cooldown_invalid": "Enter a whole number from 0 to 365",
       "dispatch_enabled": "Can receive transfers (residence)",
       "saved": "Settings saved",
       "save_failed": "Could not save the settings"

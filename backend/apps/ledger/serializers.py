@@ -297,6 +297,8 @@ class TenantSoulStatsSerializer(serializers.Serializer):
     tenant_id = serializers.IntegerField()
     tenant_code = serializers.CharField()
     tenant_name = serializers.CharField()
+    #: 这个殿收不收调拨(`Tenant.dispatch_enabled`):发起移交页的目标殿单选据此禁用并说明。
+    dispatch_enabled = serializers.BooleanField()
     total_souls = serializers.IntegerField()
     # Keyed by SoulState member; every member is present, zeros included.
     state_breakdown = serializers.DictField(child=serializers.IntegerField())

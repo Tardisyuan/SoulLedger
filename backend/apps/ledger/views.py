@@ -434,7 +434,7 @@ class LedgerOverviewStatsView(APIView):
         # Per-tenant soul counts with state breakdown (single query, no N+1)
         tenant_state_data = (
             soul_qs
-            .values('tenant', 'tenant__code', 'tenant__display_name', 'current_state')
+            .values('tenant', 'tenant__code', 'tenant__display_name', 'tenant__dispatch_enabled', 'current_state')
             .annotate(count=Count('id'))
             .order_by('tenant__code')
         )
@@ -448,6 +448,7 @@ class LedgerOverviewStatsView(APIView):
                     "tenant_id": tid,
                     "tenant_code": row['tenant__code'],
                     "tenant_name": row['tenant__display_name'],
+                    "dispatch_enabled": row['tenant__dispatch_enabled'],
                     "total_souls": 0,
                     "state_breakdown": {s: 0 for s in SoulState.values},
                 }
