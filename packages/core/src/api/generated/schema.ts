@@ -7080,6 +7080,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/souls/{id}/records/{record_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * @description Edit one merit/demerit record on this soul (partial).
+         *
+         *     The same serializer and the same validation as `add_record` — dates against the soul,
+         *     the clause/count pair, the statute against the soul's civilization — with the record as
+         *     instance. The statute snapshot is re-taken by `SoulRecord.save` only when the cited
+         *     statute changes. Gated by `soul.update`, like `add_record`.
+         */
+        patch: operations["v1_souls_records_partial_update"];
+        trace?: never;
+    };
     "/api/v1/souls/{id}/records/{record_id}/acknowledge-date-warning/": {
         parameters: {
             query?: never;
@@ -13119,6 +13143,77 @@ export interface components {
         /** @description 长度、敏感词、重名在 `soul_circle.rename` 里判,各有自己的 `code`;这里只要一个字符串。 */
         PatchedSoulDisplayNameRequest: {
             display_name?: string;
+        };
+        PatchedSoulRecord: {
+            /** Format: uuid */
+            readonly id?: string;
+            record_type?: components["schemas"]["RecordTypeEnum"];
+            /**
+             * @description Standardized category for this record
+             *
+             *     * `CHARITY` - Charity / Generosity
+             *     * `COMPASSION` - Compassion / Kindness
+             *     * `HONESTY` - Honesty / Integrity
+             *     * `COURAGE` - Courage / Bravery
+             *     * `WISDOM` - Wisdom / Knowledge
+             *     * `PIETY` - Piety / Devotion
+             *     * `CRUELTY` - Cruelty / Violence
+             *     * `DECEPTION` - Deception / Lying
+             *     * `COWARDICE` - Cowardice
+             *     * `GREED` - Greed / Avarice
+             *     * `BLASPHEMY` - Blasphemy / Impiety
+             *     * `MURDER` - Murder / Killing
+             *     * `OTHER` - Other
+             */
+            category?: components["schemas"]["SoulRecordCategoryEnum"];
+            readonly civilization?: string;
+            description?: string;
+            /** @description Significance weight (1-100). Affects karma calculation. */
+            weight?: number;
+            /** @description A possibly-BCE date. `year` is signed (negative = BCE); `month` and `day` are null when the source does not record them, which is common for ancient records. On write, `YYYY-MM-DD` and `-YYYY-MM-DD` strings are also accepted for backward compatibility; see `HistoricalDateField.to_internal_value`. */
+            event_date?: {
+                year: number;
+                month: number | null;
+                day: number | null;
+            } | null;
+            /** @description Marks a turning point in the life. Display only — the lifecycle timeline stars and tints it. It does NOT change the deed's weight. */
+            is_milestone?: boolean;
+            evidence_json?: unknown;
+            /** Format: date-time */
+            readonly recorded_at?: string;
+            readonly date_problems?: components["schemas"]["RecordDateProblem"][];
+            /** @description Which scoring clause this deed was scored under, as '<Statute.code>:<clause condition_zh>' — e.g. '救濟門#7:賑濟窮民百錢'. Blank means unknown, which makes this record granularity-blind. */
+            statute_clause?: string;
+            /** @description How many separate occasions this row's weight covers. NOT a row count: one row may document a year of alms or three rows one killing. 1 means 一次 — earned or incurred at a stroke. Null means unknown, which makes this record granularity-blind. */
+            occurrence_count?: number | null;
+            /** @description Which Inferno article this deed belongs under, as a Statute code in the EU-INF-* corpus — e.g. 'EU-INF-C7-G1' (seventh circle, first girone) or 'EU-INF-C9-Z1' (Caina). Blank means unclassified, which leaves the European router on its culpa ladder for this deed. */
+            inferno_article?: string;
+            /** @description Life index this record belongs to; 0 is the first life. */
+            readonly cycle?: number;
+            /** Format: uuid */
+            statute?: string | null;
+            /** @description The cited article as it read when cited: statute_id, code, revision, effective_from, title/text per locale, source, hash, at. Taken by save(); never updated when the article changes. */
+            readonly statute_snapshot?: unknown;
+            /**
+             * @description Which stage of the life the deed falls in; blank = unrecorded.
+             *
+             *     * `CHILDHOOD` - Childhood
+             *     * `YOUTH` - Youth
+             *     * `ADULTHOOD` - Adulthood
+             *     * `OLD_AGE` - Old age
+             */
+            life_stage?: components["schemas"]["LifeStageEnum"] | components["schemas"]["BlankEnum"];
+            /**
+             * @description Where this record came from; blank = unrecorded.
+             *
+             *     * `REGISTRY` - Registry
+             *     * `WITNESS` - Witness
+             *     * `SELF_ACCOUNT` - Self account
+             *     * `OTHER` - Other
+             */
+            evidence_source?: components["schemas"]["EvidenceSourceEnum"] | components["schemas"]["BlankEnum"];
+            /** @description Free text about the source, e.g. which witness or which register. */
+            evidence_note?: string;
         };
         /** @description `PATCH /tenants/{code}/seal-glyphs/` 的请求体 —— 只有这一个字段可写。 */
         PatchedTenantSealGlyphs: {
@@ -28586,6 +28681,36 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SoulRecord"][];
+                };
+            };
+        };
+    };
+    v1_souls_records_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this Soul. */
+                id: string;
+                /** @description The SoulRecord's primary key (the id belongs to the related record, not to `Soul`). */
+                record_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedSoulRecord"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedSoulRecord"];
+                "multipart/form-data": components["schemas"]["PatchedSoulRecord"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulRecord"];
                 };
             };
         };

@@ -15547,6 +15547,54 @@ paths:
                 items:
                   $ref: '#/components/schemas/SoulRecord'
           description: ''
+  /api/v1/souls/{id}/records/{record_id}/:
+    patch:
+      operationId: v1_souls_records_partial_update
+      description: |-
+        Edit one merit/demerit record on this soul (partial).
+
+        The same serializer and the same validation as `add_record` — dates against the soul,
+        the clause/count pair, the statute against the soul's civilization — with the record as
+        instance. The statute snapshot is re-taken by `SoulRecord.save` only when the cited
+        statute changes. Gated by `soul.update`, like `add_record`.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Soul.
+        required: true
+      - in: path
+        name: record_id
+        schema:
+          type: string
+          format: uuid
+        description: The SoulRecord's primary key (the id belongs to the related record,
+          not to `Soul`).
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedSoulRecord'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedSoulRecord'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedSoulRecord'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulRecord'
+          description: ''
   /api/v1/souls/{id}/records/{record_id}/acknowledge-date-warning/:
     post:
       operationId: v1_souls_records_acknowledge_date_warning_create
@@ -28097,6 +28145,138 @@ components:
         display_name:
           type: string
           maxLength: 100
+    PatchedSoulRecord:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        record_type:
+          $ref: '#/components/schemas/RecordTypeEnum'
+        category:
+          allOf:
+          - $ref: '#/components/schemas/SoulRecordCategoryEnum'
+          description: |-
+            Standardized category for this record
+
+            * `CHARITY` - Charity / Generosity
+            * `COMPASSION` - Compassion / Kindness
+            * `HONESTY` - Honesty / Integrity
+            * `COURAGE` - Courage / Bravery
+            * `WISDOM` - Wisdom / Knowledge
+            * `PIETY` - Piety / Devotion
+            * `CRUELTY` - Cruelty / Violence
+            * `DECEPTION` - Deception / Lying
+            * `COWARDICE` - Cowardice
+            * `GREED` - Greed / Avarice
+            * `BLASPHEMY` - Blasphemy / Impiety
+            * `MURDER` - Murder / Killing
+            * `OTHER` - Other
+        civilization:
+          type: string
+          readOnly: true
+        description:
+          type: string
+        weight:
+          type: integer
+          maximum: 100
+          minimum: 1
+          description: Significance weight (1-100). Affects karma calculation.
+        event_date:
+          type: object
+          nullable: true
+          description: A possibly-BCE date. `year` is signed (negative = BCE); `month`
+            and `day` are null when the source does not record them, which is common
+            for ancient records. On write, `YYYY-MM-DD` and `-YYYY-MM-DD` strings
+            are also accepted for backward compatibility; see `HistoricalDateField.to_internal_value`.
+          properties:
+            year:
+              type: integer
+            month:
+              type: integer
+              nullable: true
+            day:
+              type: integer
+              nullable: true
+          required:
+          - year
+          - month
+          - day
+        is_milestone:
+          type: boolean
+          description: Marks a turning point in the life. Display only — the lifecycle
+            timeline stars and tints it. It does NOT change the deed's weight.
+        evidence_json: {}
+        recorded_at:
+          type: string
+          format: date-time
+          readOnly: true
+        date_problems:
+          type: array
+          items:
+            $ref: '#/components/schemas/RecordDateProblem'
+          readOnly: true
+        statute_clause:
+          type: string
+          description: Which scoring clause this deed was scored under, as '<Statute.code>:<clause
+            condition_zh>' — e.g. '救濟門#7:賑濟窮民百錢'. Blank means unknown, which makes
+            this record granularity-blind.
+          maxLength: 200
+        occurrence_count:
+          type: integer
+          minimum: 1
+          nullable: true
+          description: 'How many separate occasions this row''s weight covers. NOT
+            a row count: one row may document a year of alms or three rows one killing.
+            1 means 一次 — earned or incurred at a stroke. Null means unknown, which
+            makes this record granularity-blind.'
+        inferno_article:
+          type: string
+          description: Which Inferno article this deed belongs under, as a Statute
+            code in the EU-INF-* corpus — e.g. 'EU-INF-C7-G1' (seventh circle, first
+            girone) or 'EU-INF-C9-Z1' (Caina). Blank means unclassified, which leaves
+            the European router on its culpa ladder for this deed.
+          maxLength: 32
+        cycle:
+          type: integer
+          readOnly: true
+          description: Life index this record belongs to; 0 is the first life.
+        statute:
+          type: string
+          format: uuid
+          nullable: true
+        statute_snapshot:
+          readOnly: true
+          nullable: true
+          description: 'The cited article as it read when cited: statute_id, code,
+            revision, effective_from, title/text per locale, source, hash, at. Taken
+            by save(); never updated when the article changes.'
+        life_stage:
+          description: |-
+            Which stage of the life the deed falls in; blank = unrecorded.
+
+            * `CHILDHOOD` - Childhood
+            * `YOUTH` - Youth
+            * `ADULTHOOD` - Adulthood
+            * `OLD_AGE` - Old age
+          oneOf:
+          - $ref: '#/components/schemas/LifeStageEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        evidence_source:
+          description: |-
+            Where this record came from; blank = unrecorded.
+
+            * `REGISTRY` - Registry
+            * `WITNESS` - Witness
+            * `SELF_ACCOUNT` - Self account
+            * `OTHER` - Other
+          oneOf:
+          - $ref: '#/components/schemas/EvidenceSourceEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        evidence_note:
+          type: string
+          description: Free text about the source, e.g. which witness or which register.
     PatchedTenantSealGlyphs:
       type: object
       description: '`PATCH /tenants/{code}/seal-glyphs/` 的请求体 —— 只有这一个字段可写。'
