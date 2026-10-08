@@ -5028,5 +5028,59 @@
       "eg": "Duat",
       "gr": "Hades"
     }
+  },
+  "officer_app": {
+    "todo": {
+      "groups": {
+        "cooldowns": "Dbh Khebi Ahet Qebeh"
+      }
+    },
+    "queue": {
+      "unclaimed": "Nen Shesep Djer",
+      "claim": "Shesep"
+    },
+    "search": {
+      "ask": "Hehy Medu"
+    },
+    "detail": {
+      "reject": "Khesef"
+    },
+    "confirm": {
+      "requester": "Tepy Iri"
+    },
+    "state": {
+      "denied_title": "Nen Was"
+    },
+    "me": {
+      "role": "Netjer",
+      "mfa": "Maa Sep Sen",
+      "mfa_on": "Wen Seth",
+      "mfa_off": "Nen Wen",
+      "theme": "Hetep",
+      "theme_system": "Mi Hemsu",
+      "theme_light": "Hedj",
+      "theme_dark": "Kem",
+      "push_on": "Wen Seth",
+      "push_off": "Khetem Seth",
+      "about": "Khet Medjat Ba",
+      "logout": "Per Aq"
+    },
+    "back": "Wehem Er Medjat Pehwy",
+    "kinds": {
+      "cooldown": "Dbh Khebi Ahet Qebeh"
+    },
+    "login": {
+      "password": "Sekhem",
+      "submit": "Aq"
+    },
+    "mfa": {
+      "title": "Maa Sep Sen",
+      "code_label": "Medu Ahet",
+      "recovery_label": "Medu Ankh Wehem",
+      "submit": "Maa",
+      "reasons": {
+        "wrong": "Medu Ahet Nen Maat"
+      }
+    }
   }
 }
