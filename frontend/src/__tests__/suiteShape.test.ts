@@ -141,6 +141,8 @@ const COLLECTED_FILES = [
   "SoulEditModal.test.tsx",
   "SoulLedgerBook.test.tsx",
   "SoulLedgerDetail.test.tsx",
+  // 2026-10-08 /souls 的 CSV 导入对话框。
+  "SoulImportDialog.test.tsx",
   "SoulLifecycleTimeline.test.tsx",
   "SoulReadingPanel.test.tsx",
   "SoulReadingPanelFork.test.tsx",

@@ -173,6 +173,28 @@ export function useBatchRecycleSouls() {
   });
 }
 
+/**
+ * CSV 导入第一步:只校验、不写库。没有 onSuccess/notify —— 结果是预览表,由对话框自己呈现;
+ * 400(整份文件不可用)由调用方用 `soulImportFileErrorOf(error)` 读出。
+ */
+export function useSoulImportPreview() {
+  return useMutation({ mutationFn: (data: FormData) => soulsApi.importPreview(data).then((r) => r.data) });
+}
+
+/**
+ * CSV 导入第二步:全有或全无地建灵魂。成功后失效 souls 缓存;422(有行出错、一个都没写)
+ * 与 400 都留给调用方读,所以这里不报错误提示。
+ */
+export function useSoulImportCommit() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: FormData) => soulsApi.importCommit(data).then((r) => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: soulKeys.all });
+    },
+  });
+}
+
 // NOTE: Judgment hooks (useJudgments, useConcludeJudgment) are in useJudgments.ts
 // NOTE: Disposition hooks (useDispositions, useExecuteDisposition) are in useDispositions.ts
 // NOTE: Reincarnation hooks (useReborn) are in useReincarnation.ts
