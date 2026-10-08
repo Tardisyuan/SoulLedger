@@ -820,3 +820,53 @@ class TestReadersOfAnotherArea:
     def test_an_area_running_in_full_does_not_also_run_its_readers(self):
         areas, _, _ = _readers(["frontend/app/page.tsx", "mobile/src/App.tsx"])
         assert areas == {"jest": 0, "mobile": 0}
+
+
+# ── The officer app (mobile-officer/, 灵魂簿 · 官员) ────────────────────────────────
+#
+# A new top-level workspace is invisible to this hook until it is named: before it was, a push that
+# changed only mobile-officer/ printed `core:0 frontend:0 backend:0` and ran nothing (the same hole mobile/
+# once had, see run-gates.sh). The runner prints `classify-officer: officer=<0|1>`. mobile-officer/ also
+# imports mobile/src's leaf modules in place, so a change under mobile/ must run it too.
+
+
+def _classify_officer(hook, changed: list[str]) -> int:
+    env = {k: v for k, v in os.environ.items() if k not in ("SKIP_PREPUSH",)}
+    env["PREPUSH_CHANGED"] = "\n".join(changed)
+    env["PREPUSH_CLASSIFY_ONLY"] = "1"
+    proc = subprocess.run(
+        ["bash", str(hook)], cwd=REPO_ROOT, env=env, capture_output=True, text=True, timeout=60,
+    )
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    m = re.search(r"^classify-officer: officer=(\d)$", proc.stdout, re.M)
+    assert m, f"no classify-officer line in hook output:\n{proc.stdout}"
+    return int(m.group(1))
+
+
+class TestTheOfficerAppIsGated:
+    @pytest.mark.parametrize(
+        "changed",
+        [
+            ["mobile-officer/src/shell.tsx"],
+            ["mobile-officer/package.json"],
+            # Shared in place: mobile/src's ui / theme / i18n are the officer app's too.
+            ["mobile/src/ui.tsx"],
+            # It consumes packages/core's sources, and the root JS files decide every install.
+            ["packages/core/src/api/officer-app.ts"],
+            ["package-lock.json"],
+        ],
+    )
+    def test_these_changes_run_the_officer_gates(self, hook, changed):
+        assert _classify_officer(hook, changed) == 1
+
+    @pytest.mark.parametrize(
+        "changed",
+        [["backend/apps/souls/models.py"], ["frontend/app/page.tsx"], ["docs/README.md"]],
+    )
+    def test_unrelated_changes_do_not(self, hook, changed):
+        assert _classify_officer(hook, changed) == 0
+
+    def test_the_runner_runs_all_three_officer_gates(self):
+        runner = (REPO_ROOT / "scripts" / "run-gates.sh").read_text(encoding="utf-8")
+        for script in ("typecheck", "lint", "test"):
+            assert f"npm run --workspace officer {script}" in runner
