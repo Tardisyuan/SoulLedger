@@ -21141,6 +21141,18 @@ components:
           default: ''
       required:
       - admitted
+    EvidenceSourceEnum:
+      enum:
+      - REGISTRY
+      - WITNESS
+      - SELF_ACCOUNT
+      - OTHER
+      type: string
+      description: |-
+        * `REGISTRY` - Registry
+        * `WITNESS` - Witness
+        * `SELF_ACCOUNT` - Self account
+        * `OTHER` - Other
     ExportedDataScope:
       type: object
       properties:
@@ -23168,6 +23180,14 @@ components:
           type: integer
           minimum: 1
           nullable: true
+        statute_snapshot:
+          nullable: true
+        life_stage:
+          type: string
+        evidence_source:
+          type: string
+        evidence_note:
+          type: string
       required:
       - category
       - civilization
@@ -23175,13 +23195,17 @@ components:
       - description
       - effective_weight
       - event_date
+      - evidence_note
+      - evidence_source
       - fungibility_class
       - id
       - is_milestone
+      - life_stage
       - occurrence_count
       - original_weight
       - recorded_at
       - statute_clause
+      - statute_snapshot
       - type
       - years_elapsed
     LedgerSummary:
@@ -23222,6 +23246,18 @@ components:
       - records
       - soul_id
       - soul_name
+    LifeStageEnum:
+      enum:
+      - CHILDHOOD
+      - YOUTH
+      - ADULTHOOD
+      - OLD_AGE
+      type: string
+      description: |-
+        * `CHILDHOOD` - Childhood
+        * `YOUTH` - Youth
+        * `ADULTHOOD` - Adulthood
+        * `OLD_AGE` - Old age
     LoginFailedResponse:
       type: object
       description: |-
@@ -32176,7 +32212,7 @@ components:
           maxLength: 200
         occurrence_count:
           type: integer
-          minimum: 0
+          minimum: 1
           nullable: true
           description: 'How many separate occasions this row''s weight covers. NOT
             a row count: one row may document a year of alms or three rows one killing.
@@ -32193,6 +32229,41 @@ components:
           type: integer
           readOnly: true
           description: Life index this record belongs to; 0 is the first life.
+        statute:
+          type: string
+          format: uuid
+          nullable: true
+        statute_snapshot:
+          readOnly: true
+          nullable: true
+          description: 'The cited article as it read when cited: statute_id, code,
+            revision, effective_from, title/text per locale, source, hash, at. Taken
+            by save(); never updated when the article changes.'
+        life_stage:
+          description: |-
+            Which stage of the life the deed falls in; blank = unrecorded.
+
+            * `CHILDHOOD` - Childhood
+            * `YOUTH` - Youth
+            * `ADULTHOOD` - Adulthood
+            * `OLD_AGE` - Old age
+          oneOf:
+          - $ref: '#/components/schemas/LifeStageEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        evidence_source:
+          description: |-
+            Where this record came from; blank = unrecorded.
+
+            * `REGISTRY` - Registry
+            * `WITNESS` - Witness
+            * `SELF_ACCOUNT` - Self account
+            * `OTHER` - Other
+          oneOf:
+          - $ref: '#/components/schemas/EvidenceSourceEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        evidence_note:
+          type: string
+          description: Free text about the source, e.g. which witness or which register.
       required:
       - civilization
       - cycle
@@ -32201,6 +32272,7 @@ components:
       - id
       - record_type
       - recorded_at
+      - statute_snapshot
     SoulRecordCategoryEnum:
       enum:
       - CHARITY

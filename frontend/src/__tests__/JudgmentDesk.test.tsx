@@ -501,6 +501,38 @@ describe("丙 · 证据采信", () => {
     expect(bare.querySelector("[data-record-facts]")).toBeNull();
   });
 
+  it("V5:引了律条(快照)的行条款格不再写未记录;人生阶段与证据来源写译文,原始成员只在 title", async () => {
+    const snapshot = {
+      statute_id: "st-1", code: "CN-GGG-F-JJ-07", revision: 1, effective_from: "2026-01-01",
+      title: { zh: "賑濟窮民", en: "Relieving the poor", egy: "Redi Djeret" }, text: { zh: "", en: "", egy: "" },
+      source: "", hash: "h", at: "2026-06-02T00:00:00Z",
+    };
+    soulsApi.karma.mockResolvedValue({
+      data: {
+        soul_id: "s-1", soul_name: "沈青梧", merit_score: 1284, demerit_score: 937, karmic_balance: 347, record_count: 2,
+        records: [
+          record("r1", "MERIT", "救溺 · 胥江", 120, { statute_snapshot: snapshot, life_stage: "OLD_AGE", evidence_source: "REGISTRY", evidence_note: "縣司錄" }),
+          record("r3", "DEMERIT", "詈骂邻人", 25),
+        ],
+        reading: { kind: "BALANCE", civilization: "CHINESE", merit: 1284, demerit: 937, balance: 347 },
+      },
+    });
+    renderPage();
+    await screen.findAllByTestId("evidence-row");
+    const cited = evidenceRow("救溺");
+    const clause = within(cited).getByTestId("evidence-clause");
+    expect(clause).toHaveTextContent("CN-GGG-F-JJ-07");
+    expect(clause.querySelector('[data-missing="unrecorded"]')).toBeNull();
+    expect(within(cited).getAllByRole("link", { name: "CN-GGG-F-JJ-07" })[0]).toHaveAttribute("title", "賑濟窮民");
+    const facts = cited.querySelector("[data-record-facts]")!;
+    expect(facts.textContent).toBe(`${tZh("souls.life_stages.OLD_AGE")} · ${tZh("souls.evidence_sources.REGISTRY")}`);
+    expect(cited).not.toHaveTextContent(/OLD_AGE|REGISTRY/);
+    expect(facts.querySelector('[title="OLD_AGE"]')).not.toBeNull();
+    expect(facts.querySelector("[data-evidence-source]")).toHaveAttribute("title", "縣司錄");
+    // The bare row still says unrecorded.
+    expect(within(evidenceRow("詈骂邻人")).getByTestId("evidence-clause").querySelector('[data-missing="unrecorded"]')).not.toBeNull();
+  });
+
   it("案子不在这一世:不列证据,说为什么;已结案:没有开关", async () => {
     judgmentApi.get.mockResolvedValue({
       data: withEvidence({ admitted_balance: { reading_kind: null, balance: null, not_admitted_count: 0, not_admitted_net: null, reason_code: "NOT_CURRENT_LIFE" } }),
