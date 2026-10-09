@@ -69,16 +69,24 @@ export function CooldownShorteningBlock({ list, onChanged, landed }: { list: MeR
   const toast = useToast();
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState("");
+  const [desired, setDesired] = useState("");
+  const [now] = useState(() => Date.now());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<SoulErrorMessage | null>(null);
   const row = list.cooldown_shortening;
 
+  // Days left, rounded up like the server's. The wish must be a whole 0 <= n < left; blank = no wish.
+  const left = list.cooldown_until ? Math.max(0, Math.ceil((Date.parse(list.cooldown_until) - now) / 86_400_000)) : 0;
+  const wish = desired.trim();
+  const wishInvalid = wish !== "" && !(/^\d+$/.test(wish) && Number(wish) < left);
+
   const submit = async () => {
     if (!reason.trim()) return setError({ key: "soul_app.errors.validation" });
+    if (wishInvalid) return setError({ key: "soul_app.cooldown.desired_invalid", params: { max: String(Math.max(0, left - 1)) } });
     setBusy(true);
     setError(null);
     try {
-      await soulApi.requestCooldownShortening(reason);
+      await soulApi.requestCooldownShortening(reason, wish === "" ? undefined : Number(wish));
       toast(t("soul_app.cooldown.submitted"));
       setOpen(false);
       onChanged();
@@ -145,6 +153,15 @@ export function CooldownShorteningBlock({ list, onChanged, landed }: { list: MeR
           <View style={styles.form}>
             <Txt variant="section">{t("soul_app.cooldown.request")}</Txt>
             <Input testID="cooldown-shortening-reason" label={t("soul_app.cooldown.reason")} value={reason} onChangeText={setReason} multiline maxLength={2000} />
+            <Input
+              testID="cooldown-shortening-desired"
+              label={t("soul_app.cooldown.desired_label")}
+              hint={t("soul_app.cooldown.desired_hint", { n: String(left) })}
+              value={desired}
+              onChangeText={setDesired}
+              keyboardType="number-pad"
+              maxLength={5}
+            />
             {error ? <Notice tone="neg">{t(error.key, error.params)}</Notice> : null}
             <Button
               testID="submit-cooldown-shortening"

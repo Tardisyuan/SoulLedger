@@ -341,20 +341,32 @@ def current_cooldown_shortening(account):
     return CooldownShorteningRequest.objects.filter(soul=account.soul, cycle=account.cycle).first()
 
 
-def request_cooldown_shortening(account, reason):
+def request_cooldown_shortening(account, reason, desired_remaining_days=None):
     with transaction.atomic():
         account = _lock_account(account)
         can, code, application = cooldown_shortening_eligibility(account)
         if not can:
             raise SoulAccountError(REFUSALS[code], code, 409)
+        if desired_remaining_days is not None:
+            # 与官员批准同一条规则:0 ≤ 天数 < 此刻剩余天数。
+            remaining = remaining_cooldown_days(cooldown_until(application))
+            if not 0 <= desired_remaining_days < remaining:
+                raise SoulAccountError(f"希望的天数须在 0 到 {remaining - 1} 之间(剩余 {remaining} 天)。",
+                                       "invalid_days", 400)
         try:
             with transaction.atomic():
                 shortening = CooldownShorteningRequest.objects.create(
                     soul=account.soul, account=account, application=application, cycle=account.cycle,
-                    reason=reason,
+                    reason=reason, desired_remaining_days=desired_remaining_days,
                 )
         except IntegrityError:
             raise SoulAccountError(REFUSALS["shortening_pending"], "shortening_pending", 409) from None
+    from apps.authentication.models import User
+    from apps.officer_app.push import notify_users
+
+    # 本殿官员端的「待我处理」多了一件;没有审批权限的人在计数里是 0,不会被推。
+    notify_users(User.objects.filter(tenant_id=account.soul.home_tenant_id, is_active=True),
+                 target={"kind": "cooldown", "id": str(shortening.id)})
     return shortening
 
 

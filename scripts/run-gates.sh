@@ -9,7 +9,7 @@
 # `--prepush` and the pushed range's files in PREPUSH_CHANGED; there is one copy
 # of the logic, and it is this file.
 #
-# WHAT RUNS. Which areas run (core / frontend / mobile / backend) is decided
+# WHAT RUNS. Which areas run (core / frontend / mobile / officer / backend) is decided
 # from the changed paths, as it always was. Inside the frontend area, jest runs
 # SELECTIVELY unless something forces it FULL: the tests `jest
 # --findRelatedTests` reaches from the changed files, plus every test in
@@ -22,7 +22,7 @@
 # the default spelled out; it cannot override a rule, and neither can
 # GATES_FULL=0 — there is deliberately no way to force selective.
 #
-# EVERYTHING ELSE RUNS IN FULL: tsc, eslint, core, mobile, ruff,
+# EVERYTHING ELSE RUNS IN FULL: tsc, eslint, core, mobile, officer, ruff,
 # makemigrations — and the backend pytest. Selective backend runs with
 # pytest-testmon were built and measured on 2026-09-30 and not adopted, because
 # the safe version is slower than a full run (numbers in CLAUDE.md, Build &
@@ -167,6 +167,13 @@ TOUCHES_CORE=$(echo "$CHANGED" | grep -cE '^packages/' || true)
 # frontend/app/globals.css (the ink layer it copies) — so a change to either
 # of those can break it without touching mobile/.
 TOUCHES_MOBILE=$(echo "$CHANGED" | grep -cE '^(mobile/|frontend/app/globals\.css$)' || true)
+# `mobile-officer/` (灵魂簿 · 官员, the officer app, Expo; package @soulledger/officer) is the same
+# shape as mobile/ and ALSO imports mobile/src's leaf modules in place
+# (mobile-officer/src/shared.ts: ui, theme, fonts, i18n, feedback ...), so a change under mobile/
+# can break it without touching mobile-officer/ -- both directories trigger it. (Not `officer/`:
+# backend/tests/test_reads_outside_backend_list.py derives list entries from top-level directory
+# names quoted in test sources, and "officer" is a word a dozen backend tests already contain.)
+TOUCHES_OFFICER=$(echo "$CHANGED" | grep -cE '^(mobile-officer/|mobile/)' || true)
 
 # ── Root-level files ─────────────────────────────────────────────────────────
 #
@@ -228,7 +235,7 @@ fi
 # The gate decisions, computed ONCE. Every `if` below reads these rather than
 # re-deriving them, and so does the classify-only output — so the test asserts
 # the exact values that decide what runs, not a second copy of the rule.
-RUN_CORE=0; RUN_FRONTEND=0; RUN_BACKEND=0; RUN_MOBILE=0
+RUN_CORE=0; RUN_FRONTEND=0; RUN_BACKEND=0; RUN_MOBILE=0; RUN_OFFICER=0
 [ "$TOUCHES_CORE" -gt 0 ] && RUN_CORE=1
 # `|| TOUCHES_CORE` on purpose: the frontend compiles the package's sources
 # directly rather than a built artefact, so a change under packages/ can break
@@ -237,6 +244,7 @@ if [ "$TOUCHES_FRONTEND" -gt 0 ] || [ "$TOUCHES_CORE" -gt 0 ]; then RUN_FRONTEND
 [ "$TOUCHES_BACKEND" -gt 0 ] && RUN_BACKEND=1
 # TOUCHES_CORE already folds in the JS root files and unknown root files.
 if [ "$TOUCHES_MOBILE" -gt 0 ] || [ "$TOUCHES_CORE" -gt 0 ]; then RUN_MOBILE=1; fi
+if [ "$TOUCHES_OFFICER" -gt 0 ] || [ "$TOUCHES_CORE" -gt 0 ]; then RUN_OFFICER=1; fi
 
 # ── TESTS THAT READ ANOTHER AREA'S FILES ─────────────────────────────────────
 #
@@ -355,6 +363,7 @@ if [ "${PREPUSH_CLASSIFY_ONLY:-0}" = "1" ]; then
     # A separate line so the existing `classify:` contract (parsed by
     # backend/tests/test_prepush_runs_the_gates_a_change_can_break.py) is unchanged.
     echo "classify-mobile: mobile=$RUN_MOBILE"
+    echo "classify-officer: officer=$RUN_OFFICER"
     echo "classify-migration: migration=$RUN_MIGRATION"
     echo "classify-jest: full=$([ -n "$FULL_F" ] && echo 1 || echo 0)"
     printf '%s' "$FULL_F" | sed 's/^/  full because: /'
@@ -517,6 +526,26 @@ if [ "$RUN_MOBILE" = 1 ]; then
         fail "mobile jest failed. If it is theme.test.ts: frontend/app/globals.css changed an ink-layer token that mobile/src/theme.ts copies — copy the new triple, do not delete the check."
     fi
     rm -f "$MOBILE_LOG"
+fi
+
+if [ "$RUN_OFFICER" = 1 ]; then
+    need npm
+    cd "$ROOT" || exit 1
+    echo "  → officer tsc"
+    npm run --workspace officer typecheck --silent || fail "officer typecheck failed"
+    echo "  → officer eslint"
+    npm run --workspace officer lint --silent || fail "officer lint failed"
+    echo "  → officer jest"
+    OFFICER_LOG=$(mktemp -t prepush-officer-jest)
+    npm run --workspace officer test --silent -- --silent >"$OFFICER_LOG" 2>&1
+    OFFICER_STATUS=$?
+    tail -4 "$OFFICER_LOG"
+    if [ "$OFFICER_STATUS" -ne 0 ]; then
+        grep -E '^(FAIL |  ● )' "$OFFICER_LOG" | awk '!seen[$0]++' | head -20
+        echo "    full officer jest log: $OFFICER_LOG"
+        fail "officer jest failed. officer/ imports mobile/src's leaf modules in place (mobile-officer/src/shared.ts): a failure here after a change under mobile/ is that change reaching the officer app."
+    fi
+    rm -f "$OFFICER_LOG"
 fi
 
 if [ -n "$MOBILE_READERS" ]; then

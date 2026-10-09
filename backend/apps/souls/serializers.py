@@ -355,7 +355,11 @@ class SoulRecordSerializer(serializers.ModelSerializer):
 
         from apps.judgment.models import Statute
 
-        statute = Statute.all_objects.filter(code=value).first()
+        # Statute.code is unique per (tenant, code), so the lookup is the soul's
+        # hall's own corpus. No known tenant resolves nothing (fail closed).
+        soul = self.context.get("soul") or getattr(self.instance, "soul", None)
+        tenant_id = getattr(soul, "tenant_id", None) or self.context.get("tenant_id")
+        statute = Statute.all_objects.filter(tenant_id=tenant_id, code=value).first() if tenant_id else None
         if statute is None:
             raise serializers.ValidationError(
                 f"No Inferno article with code {value!r}. Codes come from the "

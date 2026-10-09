@@ -1,26 +1,21 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { TextField } from "@/src/components/ui/Field";
 import { Button } from "@/src/components/ui/Button";
 import { useSubmitErrorFocus } from "@/src/lib/submitErrorFocus";
-import { authApi, type PublicCivilization, type LoginFailedBody, type LoginLockedBody } from "@soulledger/core/api";
+import { authApi, isMfaRequired, type PublicCivilization, type LoginFailedBody, type LoginLockedBody } from "@soulledger/core/api";
 import { setAccessToken, setRefreshToken } from "@soulledger/core/platform";
-import { formatSigil } from "@soulledger/core/config/civilizationSigil";
-import { formatCitation } from "@soulledger/core/config/statuteCitation";
 import { loginSchema } from "@soulledger/core/validations/schemas";
 import { useFormValidation } from "@soulledger/core/validations/useFormValidation";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { useTenant } from "@/src/contexts/TenantContext";
-import { LanguageSwitcher } from "@/components/LanguageSwitcher";
-import { ThemeToggle } from "@/src/components/layout/ThemeToggle";
-import { BrandMark } from "@/src/components/brand/BrandMark";
-import { CIVILIZATION_MARK, NUMBERING_SAMPLE } from "@/src/lib/civilizationIdentity";
-import { LOGIN_STATUTES } from "@/src/lib/loginStatutes";
+import { LoginShell } from "@/src/components/auth/LoginShell";
+import { CIVILIZATION_MARK } from "@/src/lib/civilizationIdentity";
 import { defaultViewRoute } from "@/src/lib/defaultView";
-import { APP_VERSION } from "@/src/lib/appVersion";
+import { storeMfaPending } from "@/src/lib/mfaPending";
 import { cn } from "@/lib/utils";
 
 /**
@@ -38,13 +33,18 @@ import { cn } from "@/lib/utils";
  *   the marked row is the civilization this device last signed in to (`LAST_TENANT_KEY`).
  *   A9 does not draw this list; it is kept (a behaviour of the page) and listed in the report.
  * - 「在此设备上保持登录 30 天」: `remember` on the login request (30-day refresh token).
- * - 忘记密码: accounts are opened by an administrator, so it notifies them — no reset link.
+ * - 忘记密码: the link opens `/forgot-password` (2026-10-09): an e-mail reset link for officers whose
+ *   address is verified. The older "notify the administrator" form (`PasswordHelp`, below) is still
+ *   here for everyone else, reached from that page as `/login?help=1`.
  * - The three failure states (A9 §二「状态」): `LoginView` counts failures per IP
  *   (`LOGIN_MAX_ATTEMPTS` / `LOGIN_WINDOW_SECONDS` in backend/apps/authentication/views.py) and
  *   returns `remaining_attempts` on a 401; a lockout is a 429 with `code: "login_locked"` and
  *   `retry_after`; no response at all (or a 5xx) is 「连不上服务器」 with a retry.
+ * - 两步验证(A12):a 200 with `mfa_required` carries no tokens. The pending token goes to
+ *   `sessionStorage` (`src/lib/mfaPending.ts`) and the page hands over to `/login/verify`, which
+ *   wears the same shell (`src/components/auth/LoginShell.tsx` — the two-column skeleton, the
+ *   statute and the four civilizations moved there verbatim so both steps share them).
  */
-const CIVS = ["CHINESE", "EUROPEAN", "EGYPTIAN", "GREEK"] as const;
 
 /** The tenant code this device last signed in to — only ever used to mark a row. */
 const LAST_TENANT_KEY = "soulledger_last_tenant";
@@ -57,19 +57,6 @@ const REMEMBER_DAYS = 30;
  * to it, so a change there goes red here instead of leaving the page saying the old numbers.
  */
 const LOGIN_LIMIT = { attempts: 5, windowMinutes: 15 } as const;
-
-/** 律条长度三档(A9 §二):按字数,不按测量 —— 60 以内大字一行到两行,160 以上折到 10 行、可展开。 */
-function statuteTier(text: string): "short" | "medium" | "long" {
-  const n = Array.from(text).length;
-  return n <= 60 ? "short" : n <= 160 ? "medium" : "long";
-}
-
-const TIER_CLASS = {
-  // 36/56 与 28/46 不在八档字号里:36 取 display 40(登录页在 DISPLAY_ALLOW 里),行高照稿。
-  short: "md:text-display md:leading-14 md:max-w-[22em]",
-  medium: "md:text-xl md:leading-11.5",
-  long: "md:text-lg md:leading-9 md:max-w-[34em]",
-} as const;
 
 type LoginFailure =
   | { kind: "credentials"; remaining: number | null }
@@ -174,129 +161,6 @@ function PasswordHelp({ initialUsername, onClose }: { initialUsername: string; o
   );
 }
 
-/** 品牌行:天平标加「灵魂簿」与「SoulLedger · 官员台」。标对读屏隐藏 —— 旁边的字说了名字。 */
-function BrandRow({ compact = false }: { compact?: boolean }) {
-  const { t } = useI18n();
-  return (
-    <div data-testid="login-brand" className="flex min-w-0 items-center gap-3">
-      <BrandMark size={compact ? 24 : 32} />
-      <span className={cn("font-title text-[oklch(var(--color-ink))]", compact ? "text-md" : "text-lg")}>灵魂簿</span>
-      {compact ? null : <span title={t("auth.console")} className="truncate text-sm text-[oklch(var(--color-ink-muted))]">{t("auth.console")}</span>}
-    </div>
-  );
-}
-
-/** 今日律条。按字数三档;长条折到 10 行、底部渐隐,393 一律先 4 行。「展开全文」只展开这一条。 */
-function Statute() {
-  const { t } = useI18n();
-  // Index 0 on the server and the first client render, then a random pick
-  // after mount: a random index during render would hydrate against a
-  // different quote than the server sent.
-  const [statuteIndex, setStatuteIndex] = useState(0);
-  useEffect(() => {
-    setStatuteIndex(Math.floor(Math.random() * LOGIN_STATUTES.length));
-  }, []);
-  const statute = LOGIN_STATUTES[statuteIndex];
-  const tier = statuteTier(statute.text);
-  const [expanded, setExpanded] = useState(false);
-  useEffect(() => setExpanded(false), [statuteIndex]);
-
-  // 393 先 4 行(line-clamp):放不下才给「展开」。只在 clamp 生效时会量出溢出,宽屏上是 false。
-  const quoteRef = useRef<HTMLQuoteElement>(null);
-  const [clampedOnNarrow, setClampedOnNarrow] = useState(false);
-  useLayoutEffect(() => {
-    const el = quoteRef.current;
-    if (!el) return;
-    const measure = () => setClampedOnNarrow(el.scrollHeight > el.clientHeight + 1);
-    measure();
-    const observer = typeof ResizeObserver === "function" ? new ResizeObserver(measure) : null;
-    observer?.observe(el);
-    return () => observer?.disconnect();
-  }, [statute.text, expanded]);
-
-  const folded = !expanded;
-  const longFolded = tier === "long" && folded;
-  const canExpand = folded && (tier === "long" || clampedOnNarrow);
-
-  return (
-    <section aria-label={t("auth.statute_eyebrow")} data-statute-tier={tier} className="flex flex-col gap-6">
-      <p className="text-2xs text-[oklch(var(--color-ink-subtle))]">
-        {t("auth.statute_eyebrow")}
-        <span> · {t("auth.statute_rotates")}</span>
-      </p>
-      <figure className="m-0 flex flex-col gap-4">
-        <div className={cn("relative", longFolded && "md:max-h-90 md:overflow-hidden")}>
-          <blockquote
-            ref={quoteRef}
-            data-testid="login-statute"
-            title={folded ? statute.text : undefined}
-            className={cn(
-              "m-0 font-serif font-medium text-pretty text-[oklch(var(--color-ink))] text-lg leading-8.5",
-              folded && "line-clamp-4 md:line-clamp-none",
-              TIER_CLASS[tier]
-            )}
-          >
-            {statute.text}
-          </blockquote>
-          {longFolded ? (
-            <div
-              aria-hidden="true"
-              data-testid="login-statute-fade"
-              className="pointer-events-none absolute inset-x-0 bottom-0 hidden h-18 bg-linear-to-b from-transparent to-[oklch(var(--color-canvas))] md:block"
-            />
-          ) : null}
-        </div>
-        <figcaption className="flex flex-wrap items-center gap-3">
-          <span aria-hidden="true" className="h-px w-6 bg-[oklch(var(--color-line-strong))]" />
-          {/* 〔文献 · 条号〕—— 与语料页「复制引用」同一个括号(core/config/statuteCitation)。 */}
-          <span data-testid="login-statute-cite" className="text-sm text-[oklch(var(--color-ink-muted))]">
-            {formatCitation(
-              t(`judgment.statute_corpus.${statute.corpus}`),
-              formatSigil(statute.civilization, statute.ref) ?? statute.code
-            )}
-          </span>
-          {canExpand ? (
-            <span className={cn("flex items-center gap-3", tier !== "long" && "md:hidden")}>
-              <Button type="button" variant="ghost" size="sm" onClick={() => setExpanded(true)}>
-                {t("auth.statute_expand")}
-                <span aria-hidden="true"> ↓</span>
-              </Button>
-              <span className="font-mono text-xs text-[oklch(var(--color-ink-subtle))]">
-                {t("auth.statute_chars", { n: String(Array.from(statute.text).length) })}
-              </span>
-            </span>
-          ) : null}
-        </figcaption>
-      </figure>
-    </section>
-  );
-}
-
-/** 四文明:字形(墨色)加文明名,下面是那个文明的编号法。宽屏底行四等分,393 是 56 高的列表。 */
-function CivNumbering() {
-  const { t } = useI18n();
-  return (
-    <dl
-      aria-label={t("auth.numbering")}
-      data-testid="login-civs"
-      className="m-0 grid grid-cols-1 border-t border-[oklch(var(--color-ink))] md:grid-cols-4"
-    >
-      {CIVS.map((civ) => (
-        <div
-          key={civ}
-          className="flex min-h-14 items-center justify-between gap-3 border-b border-[oklch(var(--color-line))] md:flex-col md:items-start md:justify-start md:gap-1 md:border-b-0 md:border-r md:px-4 md:py-3 md:first:pl-0 md:last:border-r-0"
-        >
-          <dt className="text-xs text-[oklch(var(--color-ink-muted))]">
-            <span aria-hidden="true" className="text-[oklch(var(--color-ink))]">{CIVILIZATION_MARK[civ]} </span>
-            {t(`organization.civilizations.${civ}`)}
-          </dt>
-          <dd className="m-0 font-mono text-xs text-[oklch(var(--color-ink))]">{NUMBERING_SAMPLE[civ]}</dd>
-        </div>
-      ))}
-    </dl>
-  );
-}
-
 export default function LoginPage() {
   const { t, formatDate } = useI18n();
   const { showToast } = useToast();
@@ -304,6 +168,11 @@ export default function LoginPage() {
   const [form, setForm] = useState({ username: "", password: "" });
   const [remember, setRemember] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
+  // `/login?help=1` (from the 忘记密码 page's "notify an administrator") opens the older help form.
+  // Read after mount, not via useSearchParams: that hook would force this whole page behind Suspense.
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("help") === "1") setHelpOpen(true);
+  }, []);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   // Inline, not a toast (设计「错误」态), in a box under the form's title.
@@ -355,6 +224,12 @@ export default function LoginPage() {
     try {
       const res = await authApi.login({ username: form.username, password: form.password, remember });
 
+      if (isMfaRequired(res.data)) {
+        // 第二步。What was typed is not kept: the pending token is the proof the password was right.
+        storeMfaPending({ pending_token: res.data.pending_token, username: res.data.username });
+        window.location.assign("/login/verify");
+        return;
+      }
       const tokens = res.data;
       // Through the ports: `lib/platform/web.ts` is the one place that knows the
       // access token is session-scoped and the refresh token a cookie.
@@ -454,166 +329,126 @@ export default function LoginPage() {
   ) : null;
 
   return (
-    <div className="grid min-h-dvh grid-cols-1 md:h-dvh md:grid-cols-[minmax(0,1fr)_560px]">
-      {/* 左栏:律条与四文明。393 在表单下方(order-2),canvas 底加顶线,与表单那块分开。 */}
-      <div className="order-2 flex min-h-0 flex-col border-t border-[oklch(var(--color-line))] bg-[oklch(var(--color-canvas))] px-4 md:order-1 md:border-t-0 md:border-r md:px-12">
-        <div aria-hidden="true" className="hidden h-10 shrink-0 md:block" />
-        <div className="hidden h-11 shrink-0 items-center md:flex">
-          <BrandRow />
-        </div>
-        <div aria-hidden="true" className="h-8 shrink-0 md:h-33" />
-        <div className="min-h-0 flex-1 overflow-y-auto pb-8">
-          <Statute />
-        </div>
-        <div className="shrink-0 pb-8">
-          <CivNumbering />
-        </div>
-      </div>
-
-      {/* 右栏:表单。宽 400,左右各留 80(560 − 400)。
-          md 起整页定高一屏(md:h-dvh),窗口矮于表单时右栏在自己里面滚 —— 与左栏律条区同一做法。
-          此前没有 overflow,内容溢出栏外，栏底色停在视口底边，下面露出画布(用户 2026-10-03 截图)。 */}
-      <div className="order-1 flex min-h-0 flex-col bg-[oklch(var(--color-surface-1))] px-4 md:order-2 md:overflow-y-auto md:px-0">
-        <div aria-hidden="true" className="hidden h-10 shrink-0 md:block" />
-        <div className="flex h-14 shrink-0 items-center justify-between gap-3 md:mx-auto md:h-11 md:w-full md:max-w-[400px] md:justify-end">
-          <div className="md:hidden">
-            <BrandRow compact />
+    <LoginShell>
+      {helpOpen ? (
+        <PasswordHelp initialUsername={form.username} onClose={() => setHelpOpen(false)} />
+      ) : (
+        <form ref={formRef} onSubmit={handleSubmit} className="flex w-full flex-col gap-4" aria-busy={loading || undefined}>
+          <div>
+            {/* 这一页唯一的 <h1>。 */}
+            <h1 className="font-title text-xl font-semibold text-[oklch(var(--color-ink))]">{t("auth.login")}</h1>
+            <p className="mt-1 text-sm text-[oklch(var(--color-ink-muted))]">{t("auth.subtitle")}</p>
           </div>
-          <div className="flex items-center gap-2">
-            <LanguageSwitcher />
-            <ThemeToggle />
-          </div>
-        </div>
-        <div aria-hidden="true" className="h-6 shrink-0 md:h-33" />
-        <main className="mx-auto w-full max-w-[400px] flex-1 pb-8">
-          {helpOpen ? (
-            <PasswordHelp initialUsername={form.username} onClose={() => setHelpOpen(false)} />
-          ) : (
-            <form ref={formRef} onSubmit={handleSubmit} className="flex w-full flex-col gap-4" aria-busy={loading || undefined}>
-              <div>
-                {/* 这一页唯一的 <h1>。 */}
-                <h1 className="font-title text-xl font-semibold text-[oklch(var(--color-ink))]">{t("auth.login")}</h1>
-                <p className="mt-1 text-sm text-[oklch(var(--color-ink-muted))]">{t("auth.subtitle")}</p>
-              </div>
 
-              {notice}
+          {notice}
 
-              {civilizations.length > 0 && (
-                <section aria-labelledby="login-civilization-label" className="flex flex-col gap-2">
-                  <p id="login-civilization-label" className="text-xs text-[oklch(var(--color-ink-muted))]">
-                    {t("auth.civilization")}
-                  </p>
-                  <ul data-testid="login-civilizations" className="m-0 p-0 list-none border-t border-[oklch(var(--color-rule))]">
-                    {civilizations.map((row) => {
-                      const marked = row.code === lastTenant;
-                      return (
-                        <li
-                          key={row.code}
-                          aria-current={marked ? "true" : undefined}
-                          className={
-                            "flex items-center gap-2 border-b border-l-3 border-[oklch(var(--color-rule))] px-2 py-2 text-sm " +
-                            // An ink bar, not a ●/○ glyph: ● is already the European shape mark beside it.
-                            (marked
-                              ? "bg-[oklch(var(--color-surface-2))] text-[oklch(var(--color-ink))] border-l-[oklch(var(--color-ink))]"
-                              : "border-l-transparent text-[oklch(var(--color-ink-muted))]")
-                          }
-                        >
-                          <span aria-hidden="true">{CIVILIZATION_MARK[row.civilization] ?? ""}</span>
-                          <span>{t(`organization.civilizations.${row.civilization}`)}</span>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                  <p className="text-2xs text-[oklch(var(--color-ink-subtle))]">{t("auth.civilization_note")}</p>
-                </section>
-              )}
-
-              <TextField
-                id="login-username"
-                name="username"
-                autoComplete="username"
-                type="text"
-                label={t("auth.account")}
-                value={form.username}
-                onChange={(e) => {
-                  clearFieldError("username");
-                  setForm({ ...form, username: e.target.value });
-                }}
-                error={getError("username")}
-                disabled={loading}
-                required
-              />
-              <div className="relative">
-                <TextField
-                  id="login-password"
-                  name="password"
-                  autoComplete="current-password"
-                  type={showPassword ? "text" : "password"}
-                  label={t("auth.password")}
-                  value={form.password}
-                  onChange={(e) => {
-                    clearFieldError("password");
-                    setForm({ ...form, password: e.target.value });
-                  }}
-                  error={getError("password")}
-                  data-revealed={showPassword || undefined}
-                  disabled={loading || locked}
-                  // Room for the 显示 button laid over the input's right end.
-                  style={{ paddingRight: 64 }}
-                  required
-                />
-                {/* 叠在输入框右端:标签行 18 + 间距 4,按钮 44 在 48 的框里上下各让 2。
-                    The visible word is the whole name — an aria-label containing 「密码」 would make
-                    `getByLabel("密码")` match two elements. */}
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  aria-controls="login-password"
-                  aria-pressed={showPassword}
-                  onClick={() => setShowPassword((v) => !v)}
-                  className="absolute top-6 right-0.5"
-                >
-                  {showPassword ? t("soul_app.common.hide") : t("soul_app.common.show")}
-                </Button>
-              </div>
-
-              <div className="flex items-center justify-between gap-3">
-                <label className="flex min-h-11 items-center gap-2 text-xs text-[oklch(var(--color-ink-muted))]">
-                  <input
-                    type="checkbox"
-                    name="remember"
-                    className="size-4.5"
-                    checked={remember}
-                    onChange={(e) => setRemember(e.target.checked)}
-                  />
-                  {t("auth.remember_me", { days: String(REMEMBER_DAYS) })}
-                </label>
-                <button
-                  type="button"
-                  onClick={() => setHelpOpen(true)}
-                  className="min-h-11 shrink-0 text-xs text-[oklch(var(--color-ink))] underline underline-offset-2"
-                >
-                  {t("auth.forgot_password")}
-                </button>
-              </div>
-
-              <Button type="submit" variant="primary" size="lg" disabled={loading || locked} loading={loading} className="w-full">
-                {loading ? t("auth.submitting") : t("auth.login")}
-                {!loading && (
-                  <span aria-hidden="true" className="font-mono text-2xs opacity-80">↵</span>
-                )}
-              </Button>
-            </form>
+          {civilizations.length > 0 && (
+            <section aria-labelledby="login-civilization-label" className="flex flex-col gap-2">
+              <p id="login-civilization-label" className="text-xs text-[oklch(var(--color-ink-muted))]">
+                {t("auth.civilization")}
+              </p>
+              <ul data-testid="login-civilizations" className="m-0 p-0 list-none border-t border-[oklch(var(--color-rule))]">
+                {civilizations.map((row) => {
+                  const marked = row.code === lastTenant;
+                  return (
+                    <li
+                      key={row.code}
+                      aria-current={marked ? "true" : undefined}
+                      className={
+                        "flex items-center gap-2 border-b border-l-3 border-[oklch(var(--color-rule))] px-2 py-2 text-sm " +
+                        // An ink bar, not a ●/○ glyph: ● is already the European shape mark beside it.
+                        (marked
+                          ? "bg-[oklch(var(--color-surface-2))] text-[oklch(var(--color-ink))] border-l-[oklch(var(--color-ink))]"
+                          : "border-l-transparent text-[oklch(var(--color-ink-muted))]")
+                      }
+                    >
+                      <span aria-hidden="true">{CIVILIZATION_MARK[row.civilization] ?? ""}</span>
+                      <span>{t(`organization.civilizations.${row.civilization}`)}</span>
+                    </li>
+                  );
+                })}
+              </ul>
+              <p className="text-2xs text-[oklch(var(--color-ink-subtle))]">{t("auth.civilization_note")}</p>
+            </section>
           )}
-        </main>
-        <div className="mx-auto flex h-11 w-full max-w-[400px] shrink-0 items-center justify-between gap-3 pb-8 md:pb-0 md:mb-8">
-          <Link href="/welcome" className="text-xs text-[oklch(var(--color-ink))] underline underline-offset-2">
-            {t("auth.welcome_link")}
-          </Link>
-          <span className="font-mono text-xs text-[oklch(var(--color-ink-subtle))]">{APP_VERSION}</span>
-        </div>
-      </div>
-    </div>
+
+          <TextField
+            id="login-username"
+            name="username"
+            autoComplete="username"
+            type="text"
+            label={t("auth.account")}
+            value={form.username}
+            onChange={(e) => {
+              clearFieldError("username");
+              setForm({ ...form, username: e.target.value });
+            }}
+            error={getError("username")}
+            disabled={loading}
+            required
+          />
+          <div className="relative">
+            <TextField
+              id="login-password"
+              name="password"
+              autoComplete="current-password"
+              type={showPassword ? "text" : "password"}
+              label={t("auth.password")}
+              value={form.password}
+              onChange={(e) => {
+                clearFieldError("password");
+                setForm({ ...form, password: e.target.value });
+              }}
+              error={getError("password")}
+              data-revealed={showPassword || undefined}
+              disabled={loading || locked}
+              // Room for the 显示 button laid over the input's right end.
+              style={{ paddingRight: 64 }}
+              required
+            />
+            {/* 叠在输入框右端:标签行 18 + 间距 4,按钮 44 在 48 的框里上下各让 2。
+                The visible word is the whole name — an aria-label containing 「密码」 would make
+                `getByLabel("密码")` match two elements. */}
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              aria-controls="login-password"
+              aria-pressed={showPassword}
+              onClick={() => setShowPassword((v) => !v)}
+              className="absolute top-6 right-0.5"
+            >
+              {showPassword ? t("soul_app.common.hide") : t("soul_app.common.show")}
+            </Button>
+          </div>
+
+          <div className="flex items-center justify-between gap-3">
+            <label className="flex min-h-11 items-center gap-2 text-xs text-[oklch(var(--color-ink-muted))]">
+              <input
+                type="checkbox"
+                name="remember"
+                className="size-4.5"
+                checked={remember}
+                onChange={(e) => setRemember(e.target.checked)}
+              />
+              {t("auth.remember_me", { days: String(REMEMBER_DAYS) })}
+            </label>
+            <Link
+              href="/forgot-password"
+              className="inline-flex min-h-11 shrink-0 items-center text-xs text-[oklch(var(--color-ink))] underline underline-offset-2"
+            >
+              {t("auth.forgot_password")}
+            </Link>
+          </div>
+
+          <Button type="submit" variant="primary" size="lg" disabled={loading || locked} loading={loading} className="w-full">
+            {loading ? t("auth.submitting") : t("auth.login")}
+            {!loading && (
+              <span aria-hidden="true" className="font-mono text-2xs opacity-80">↵</span>
+            )}
+          </Button>
+        </form>
+      )}
+    </LoginShell>
   );
 }

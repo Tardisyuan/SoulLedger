@@ -16,6 +16,7 @@ jest.mock("@soulledger/core/api", () => ({
     updatePreferences: jest.fn(),
   },
   notificationsApi: { emailStatus: jest.fn().mockResolvedValue({ data: { last_failure: null } }) },
+  mfaApi: { status: jest.fn().mockResolvedValue({ data: { enabled: false, required: false, confirmed_at: null, last_used_at: null, last_used_method: "", recovery_codes_remaining: 0 } }) },
 }));
 
 jest.mock("@/src/contexts/I18nContext", () => ({

@@ -21,6 +21,17 @@ if (typeof globalThis.structuredClone === 'undefined') {
   globalThis.structuredClone = (value) => deserialize(serialize(value));
 }
 
+// `TextEncoder` / `TextDecoder`, which jsdom does not expose either.
+// Present in every supported browser and in Node; missing only inside jest's
+// jsdom environment. `toqr` (the 2FA enrolment QR) calls `new TextEncoder()`
+// at render time, so without this every suite that mounts it dies on
+// `ReferenceError: TextEncoder is not defined`.
+if (typeof globalThis.TextEncoder === 'undefined') {
+  const { TextEncoder, TextDecoder } = require('node:util');
+  globalThis.TextEncoder = TextEncoder;
+  globalThis.TextDecoder = TextDecoder;
+}
+
 // The browser adapter for `@soulledger/core`, installed for every suite.
 //
 // jsdom IS a browser for these purposes: the tests plant tokens in

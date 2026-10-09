@@ -19,6 +19,8 @@ export interface User {
   username: string;
   email: string;
   role: string;
+  /** 兼任角色(角色名)。权限 = `role` 与这里每个角色的并集;列表 / 详情都带。 */
+  extra_roles?: string[];
   tenant?: { id?: number; code: string; display_name: string } | null;
   tenant_id?: number;
   display_name?: string;
@@ -33,6 +35,15 @@ export interface User {
   /** The assistant admin's eval officer (apps/soul_assist/eval_identities.py). List / retrieve only: the create and
    *  update serializers do not carry it, so it is absent on their responses. */
   is_eval_identity?: boolean;
+  /** 两步验证列(A12):three states = enabled / required. List and retrieve only. */
+  mfa?: UserMfaRef;
+}
+
+export interface UserMfaRef {
+  enabled: boolean;
+  required: boolean;
+  confirmed_at: string | null;
+  last_used_at: string | null;
 }
 
 export interface CreateUserInput {
@@ -60,6 +71,17 @@ export interface UpdateUserInput {
   organization?: number;
   position?: string;
   password?: string;
+}
+
+/** POST /users/{id}/assign_roles/ —— 至少给一项。`extra_roles` 整表替换(`[]` 清空);不含 ADMIN / SOUL。 */
+export interface AssignRolesInput {
+  role?: string;
+  extra_roles?: string[];
+}
+
+/** 200 body of POST /users/batch_activate/ and /batch_deactivate/. 管理员账号与自己不在批量范围内。 */
+export interface UserBatchUpdateResult {
+  updated: number;
 }
 
 export interface UserFilters {
@@ -93,7 +115,13 @@ export const usersApi = {
   delete: (id: string) => api.delete<void>(`/users/${id}/`),
   activate: (id: string) => api.post<User>(`/users/${id}/activate/`),
   deactivate: (id: string) => api.post<User>(`/users/${id}/deactivate/`),
+  assignRoles: (id: string, data: AssignRolesInput) => api.post<User>(`/users/${id}/assign_roles/`, data),
+  batchActivate: (userIds: string[]) => api.post<UserBatchUpdateResult>("/users/batch_activate/", { user_ids: userIds }),
+  batchDeactivate: (userIds: string[]) => api.post<UserBatchUpdateResult>("/users/batch_deactivate/", { user_ids: userIds }),
   export: () => api.get<Blob>("/users/export_csv/", { responseType: "blob" }),
+  /** ADMIN. Clears the authenticator, recovery codes and 「不再询问」 devices, revokes every refresh token;
+   *  the reason is required and audited. 409 `not_enabled` on a row that has it off. */
+  resetMfa: (id: string | number, reason: string) => api.post<{ detail: string }>(`/users/${id}/reset-mfa/`, { reason }),
   import: (data: FormData) => api.post<UserImportResult>("/users/import_csv/", data, {
     headers: { "Content-Type": "multipart/form-data" },
   }),

@@ -47,7 +47,7 @@
     "forgot_failed": "Could not send. Try again later",
     "rate_limited": "Too many requests. Try again later",
     "back_to_login": "Back to sign in",
-    "forgot_sent_body": "If this account exists, an administrator will confirm who you are and contact you to reset the password. No reset link is sent.",
+    "forgot_sent_body": "If this account exists, an administrator will confirm who you are and contact you to reset the password.",
     "subtitle": "Sign in with the account your court issued.",
     "account": "Account",
     "console": "SoulLedger · Officer console",
@@ -62,7 +62,141 @@
     "error_locked_body": "{{n}} failed attempts. Try again after {{time}}, or ask your court admin to unlock it.",
     "error_network": "Can't reach the server",
     "error_network_body": "What you typed is kept. Check your connection and retry.",
-    "submitting": "Signing in"
+    "submitting": "Signing in",
+    "forgot_email_desc": "Enter your username or email. If the account exists and its email is verified, we will send you a link to reset the password.",
+    "forgot_email_label": "Username or email",
+    "forgot_email_submit": "Send reset email",
+    "forgot_email_sent": "Sent (if the account exists and its email is verified)",
+    "forgot_email_sent_body": "Check your inbox. The link works once and expires in 1 hour. If nothing arrives, the email may not be verified yet; you can notify an administrator instead.",
+    "forgot_notify_admin": "Email not verified or not arriving? Notify an administrator",
+    "reset_title": "Set a new password",
+    "reset_subtitle": "Enter a new password. Every device will be signed out after the reset.",
+    "reset_submit": "Reset password",
+    "reset_weak": "That password is not strong enough",
+    "reset_invalid": "This link is invalid or has expired",
+    "reset_invalid_body": "A reset link works once and lasts 1 hour. Request a new one.",
+    "reset_request_again": "Request a new link",
+    "reset_done": "Password reset",
+    "reset_done_body": "Every device was signed out. Sign in with the new password; if two-step verification is on, you still enter the code.",
+    "verify_title": "Verify email",
+    "verify_working": "Verifying…",
+    "verify_done": "Email verified",
+    "verify_done_body": "If you forget your password, this address can reset it.",
+    "verify_invalid": "This verification link is invalid or has expired",
+    "verify_invalid_body": "Send a new verification email from your profile.",
+    "verify_go_profile": "Go to profile"
+  },
+  "mfa": {
+    "title": "Two-step verification",
+    "badge_on": "On",
+    "badge_off": "Off",
+    "verify": {
+      "back": "Sign in with another account",
+      "title": "Two-step verification",
+      "subtitle": "Account {{id}} · enter the 6-digit code from your authenticator app",
+      "code_label": "Code",
+      "code_hint": "The 6 digits shown in the authenticator app; pasting works",
+      "remember_device": "Don't ask again on this device for {{days}} days",
+      "submit": "Verify",
+      "submitting": "Verifying",
+      "use_recovery": "Phone not at hand? Use a recovery code",
+      "use_totp": "Back to the authenticator code",
+      "recovery_title": "Sign in with a recovery code",
+      "recovery_subtitle": "Account {{id}} · enter one unused recovery code",
+      "recovery_label": "Recovery code",
+      "recovery_hint": "8 letters and digits, case-insensitive, the dash is optional",
+      "error_wrong": "That code is not right",
+      "error_recovery_wrong": "That recovery code is wrong or already used",
+      "error_wrong_body": "{{n}} more tries, then locked for {{m}} minutes",
+      "error_expired": "That code has expired",
+      "error_expired_body": "Wait for the authenticator app to refresh, then enter the new one",
+      "error_locked": "Two-step verification is locked",
+      "error_locked_body": "Too many wrong codes in a row. Try again after {{time}}",
+      "error_pending": "This sign-in timed out — enter your account and password again"
+    },
+    "setup": {
+      "open": "Turn on two-step verification",
+      "title": "Turn on two-step verification",
+      "step_of": "{{n}} / {{total}}",
+      "exit_note": "Leaving now does not turn it on",
+      "next": "Next",
+      "back": "Back",
+      "finish": "Finish",
+      "step1_title": "Get an authenticator app",
+      "step1_body": "Install any time-based authenticator app on your phone. Once this is on, signing in asks for its 6-digit code after your password.",
+      "step2_title": "Scan the QR code",
+      "step2_body": "Scan it with the authenticator app, or type the key below by hand.",
+      "step2_open": "Open in the authenticator app",
+      "manual_key": "Enter the key by hand",
+      "copy_key": "Copy key",
+      "key_meta": "Time-based · SHA-1 · 6 digits · every 30 seconds",
+      "setup_failed": "Could not start setup, try again later",
+      "step3_title": "Confirm with a code",
+      "step3_body": "Enter the 6 digits the authenticator app shows right now.",
+      "step3_error": "That code is not right — check that the phone's clock is accurate",
+      "step4_title": "Save your recovery codes",
+      "step4_warning": "If the phone is lost or replaced, each recovery code signs you in once in place of the app. They are not shown again after this step — save them now.",
+      "copy_all": "Copy all",
+      "download": "Download .txt",
+      "saved_check": "I have saved these recovery codes somewhere safe",
+      "complete_failed": "Could not finish setup, try again",
+      "done_title": "Two-step verification is on",
+      "done_body": "From the next sign-in, the authenticator code is asked for after your password."
+    },
+    "manage": {
+      "off_body": "When on, signing in asks for the 6-digit code from your authenticator app after the password — a stolen password alone no longer opens the account.",
+      "required_note": "This hall requires the “{{role}}” role to use two-step verification. Please set it up soon.",
+      "enabled_at": "Turned on",
+      "last_used": "Last used",
+      "never_used": "Not used yet",
+      "method_totp": "authenticator code",
+      "method_recovery": "recovery code",
+      "codes_left": "Recovery codes left",
+      "codes_left_value": "{{n}} of 10",
+      "regenerate": "Regenerate",
+      "regenerate_title": "Regenerate recovery codes?",
+      "regenerate_body": "The old 10 codes stop working immediately; a new set is shown afterwards — save it again.",
+      "regenerate_done_title": "New recovery codes",
+      "disable": "Turn off two-step verification",
+      "disable_title": "Turn off two-step verification?",
+      "disable_body": "Afterwards only the password is needed to sign in. Confirm it is you with a code or your password first.",
+      "confirm_by_totp": "Authenticator code",
+      "confirm_by_password": "Password",
+      "disable_confirm": "Turn off",
+      "disabled_toast": "Two-step verification turned off",
+      "disable_failed": "Could not turn it off — check the code or password",
+      "load_failed": "Could not read the two-step verification status"
+    },
+    "banner": {
+      "text": "This hall requires your role to use two-step verification; this reminder stays until it is set up.",
+      "action": "Set up"
+    },
+    "admin": {
+      "column": "Two-step",
+      "state_on": "On",
+      "state_off": "Off",
+      "state_off_note": "not required for the role",
+      "state_missing": "Required · not set up",
+      "filter_all": "All",
+      "filter_on": "On",
+      "filter_off": "Off",
+      "filter_missing": "Required but off",
+      "reset": "Reset two-step verification",
+      "reset_title": "Reset two-step verification for “{{name}}”?",
+      "reset_consequence_1": "The authenticator and all 10 recovery codes stop working; the next sign-in needs only the password",
+      "reset_consequence_2": "Every “don't ask again for 30 days” device record is cleared",
+      "reset_consequence_3": "The account is signed out on every device",
+      "reset_reason": "Reason (written to the audit log)",
+      "reset_done": "Two-step verification reset",
+      "reset_failed": "Could not reset two-step verification",
+      "roles_title": "Security · two-step verification",
+      "roles_hint": "Required roles see a standing reminder after sign-in until set up; sign-in itself is not blocked. Administrators are always required.",
+      "role_stat": "{{enabled}}/{{total}} on · {{pending}} to set up",
+      "require": "Required",
+      "not_require": "Not required",
+      "always": "Always",
+      "roles_load_failed": "Could not read the per-role status"
+    }
   },
   "home": {
     "console": "Console",
@@ -1140,13 +1274,22 @@
     "trends": {
       "title": "Trends",
       "range_label": "Range",
-      "range_30d": "Last 30 days",
-      "range_90d": "Last 90 days",
-      "range_12m": "Last 12 months",
+      "range_30d": "30 days",
+      "range_90d": "90 days",
+      "range_12m": "12 months",
       "by_state": "By state",
       "by_civilization": "By civilization",
-      "error": "Couldn't load the trends",
-      "not_enough": "Fewer than two days of snapshots so far. One is taken each night; the lines appear after that."
+      "error": "Trends couldn't be loaded",
+      "subtitle": "Snapshot every day at 00:00 · vs the start of the range",
+      "dimension_label": "Dimension",
+      "empty_title": "No snapshots yet",
+      "empty_body": "One is taken every day at 00:00. While the range isn't full, only the days that exist are drawn.",
+      "partial": "Only {{n}} days of snapshots. The empty part on the left isn't zero: those days have no record yet.",
+      "change_up": "up {{pct}}%",
+      "change_down": "down {{pct}}%",
+      "change_flat": "flat",
+      "change_from_zero": "from 0",
+      "figure_label": "{{name}}, {{value}}, {{change}}"
     }
   },
   "ledger": {
@@ -1714,7 +1857,9 @@
       "hall_settings": "Edited the settings of hall {{code}}",
       "hall_seal_glyphs": "Edited the seal glyphs of hall {{code}}",
       "hall_assistant_switch": "Changed the Ask switch of hall {{code}}"
-    }
+    },
+    "filter_hall": "Hall",
+    "all_halls": "All halls"
   },
   "profile": {
     "title": "Personal Center",
@@ -1740,7 +1885,14 @@
     "email_notifications": "Email notifications",
     "email_notifications_note": "When on, what needs your action (pending approvals, approval timeouts, reassignment requests, password help) is also sent to your email.",
     "email_notifications_no_address": "This account has no email address, so nothing is sent even when on.",
-    "email_last_failure": "Last send failed: {{error}} ({{at}})"
+    "email_last_failure": "Last send failed: {{error}} ({{at}})",
+    "email_verification": "Email verification",
+    "email_verified": "Verified",
+    "email_unverified": "Not verified",
+    "email_send_verification": "Send verification email",
+    "email_verification_sent": "Verification email sent. Check your inbox.",
+    "email_verification_failed": "Could not send. Try again later",
+    "email_verification_hint": "Once verified, this address can reset your password if you forget it."
   },
   "notifications": {
     "title": "Notifications",
@@ -2189,7 +2341,32 @@
       "SOUL": "Soul"
     },
     "delete_title": "Delete user",
-    "delete_confirm": "Delete this user?"
+    "delete_confirm": "Delete this user?",
+    "edit_roles": "Set roles",
+    "roles_dialog": {
+      "title": "Set roles",
+      "for_user": "Account: {{name}}",
+      "primary": "Primary role",
+      "primary_hint": "The primary role decides whether the account is an administrator and how it ranks.",
+      "extra": "Additional roles",
+      "extra_hint": "Permissions are the union of the primary role and every additional role. Each role's own refusals apply to that role only, so a Realm Lead who is also a Judge can approve as Judge. Administrator-only actions still follow the primary role.",
+      "extra_none": "No roles available to add",
+      "admin_locked": "An administrator already holds everything and cannot take additional roles.",
+      "saved": "Roles updated",
+      "error": "Failed to update roles"
+    },
+    "batch": {
+      "region": "Batch actions",
+      "selected": "{{n}} selected",
+      "select_row": "Select \"{{name}}\"",
+      "select_all": "Select all on this page",
+      "clear": "Clear selection",
+      "activate": "Activate selected",
+      "deactivate": "Deactivate selected",
+      "done": "Updated {{n}} accounts",
+      "failed": "Batch update failed",
+      "skipped_note": "Administrator accounts and your own are left out of batches."
+    }
   },
   "settings": {
     "title": "Settings",
@@ -2685,7 +2862,8 @@
       "source": "Cooling-off from the final rejection of {{id}}",
       "decide_failed": "Could not decide: {{reason}}",
       "original": "was {{date}}",
-      "day_unit": "days"
+      "day_unit": "days",
+      "desired": "Requested: {{n}} days left"
     },
     "cooldown_status": {
       "PENDING": "Pending",
@@ -2842,7 +3020,8 @@
       "cooldown_invalid": "Enter a whole number from 0 to 365",
       "dispatch_enabled": "Can receive transfers (residence)",
       "saved": "Settings saved",
-      "save_failed": "Could not save the settings"
+      "save_failed": "Could not save the settings",
+      "security": "Security"
     }
   },
   "table": {
@@ -3852,7 +4031,10 @@
       "approved": "Cooldown shortening approved; cooling-off ends {{date}}",
       "rejected": "Cooldown shortening request rejected",
       "note": "Note",
-      "brought_forward": "Brought forward"
+      "brought_forward": "Brought forward",
+      "desired_label": "Days you hope remain (optional)",
+      "desired_hint": "{{n}} days left now. Enter 0 to hope for an immediate end; leave blank to let the officer decide.",
+      "desired_invalid": "Enter a whole number from 0 to {{max}}"
     }
   },
   "soul_push": {
@@ -4915,6 +5097,191 @@
       "eu": "The Beyond",
       "eg": "Duat",
       "gr": "Hades"
+    }
+  },
+  "officer_app": {
+    "name": "SoulLedger · Officers",
+    "tabs": {
+      "todo": "To do",
+      "queue": "Judgments",
+      "search": "Look up",
+      "notices": "Notices",
+      "me": "Me"
+    },
+    "todo": {
+      "title": "Waiting on me",
+      "groups": {
+        "approvals": "Approval steps",
+        "reassignments": "Reassignments",
+        "cooldowns": "Cooling-off requests",
+        "rebirths": "Rebirth applications"
+      },
+      "empty_title": "Nothing waiting on you",
+      "empty_body": "New approvals, reassignments and requests will be pushed to you."
+    },
+    "queue": {
+      "mine": "Mine",
+      "unclaimed": "Unclaimed",
+      "empty_title": "No cases in hand",
+      "empty_body": "Claim one from Unclaimed.",
+      "desk_only": "Ready for verdict · use the desk",
+      "scope_note": "On the phone you can claim, read and comment. Verdicts and seals are done at the desk.",
+      "claim": "Claim",
+      "claim_failed": "Couldn't claim"
+    },
+    "continue_on_desk": "Continue on desktop",
+    "search": {
+      "souls": "Souls",
+      "ask": "Ask",
+      "placeholder": "Name or ID",
+      "read_only": "Read-only. Make changes at the desk.",
+      "no_souls_title": "Nothing found",
+      "no_souls_body": "Try another name or ID.",
+      "residing": "▲ {{where}} · Resident"
+    },
+    "detail": {
+      "your_step": "Your step",
+      "cosign": "Add signer",
+      "reject": "Reject",
+      "approve": "Approve"
+    },
+    "confirm": {
+      "approve_title": "Approve this step?",
+      "approve_ok": "Approve",
+      "reject_title": "Reject this step?",
+      "reject_body": "The flow goes back to {{name}}; this can't be undone.",
+      "reject_ok": "Reject",
+      "reason_label": "Reason · required, the requester will read it",
+      "reason_required": "A reason is required to reject",
+      "failed": "Couldn't submit · {{reason}}",
+      "reasons": {
+        "already_handled": "Someone else already signed",
+        "deadline_passed": "The deadline has passed",
+        "permission_changed": "Your permissions changed",
+        "network": "Network error",
+        "other": "The server didn't accept it"
+      },
+      "requester": "the requester",
+      "approve_body": {
+        "approval": "The flow moves to the next step.",
+        "rebirth": "This rebirth application moves to the next step.",
+        "cooldown": "The cooling-off period is shortened to the days you enter.",
+        "reassignment": "The dispatch goes ahead."
+      },
+      "remaining_days": "{{n}} days left",
+      "days_label": "Days to approve",
+      "days_invalid": "Enter a whole number below the days left",
+      "verdict_label": "Verdict to approve with",
+      "desired": "Requested: {{n}} days left"
+    },
+    "landing": {
+      "handled": "Already handled by {{name}}",
+      "someone": "someone"
+    },
+    "state": {
+      "error_title": "Couldn't load",
+      "error_body": "Check your connection and retry. Open items aren't affected.",
+      "denied_title": "No access",
+      "denied_body": "Your role {{role}} can't see {{area}}. Ask your hall admin if you need it."
+    },
+    "push": {
+      "lock": "{{n}} items waiting on you"
+    },
+    "me": {
+      "push": "Push notifications",
+      "profile": "Profile",
+      "name": "Name",
+      "role": "Role",
+      "hall": "Hall",
+      "mfa": "Two-step verification",
+      "mfa_on": "On",
+      "mfa_off": "Off",
+      "mfa_required_off": "Required · not set up",
+      "mfa_note": "Turn it on and manage it at the desk.",
+      "language": "Language",
+      "theme": "Theme",
+      "theme_system": "System",
+      "theme_light": "Light",
+      "theme_dark": "Dark",
+      "push_on": "On",
+      "push_off": "Off",
+      "push_note": "The lock screen shows only a count.",
+      "push_denied": "Notifications are off in system settings.",
+      "push_unavailable": "Push isn't available in this build.",
+      "push_failed": "Couldn't turn push on. Try again later.",
+      "about": "About",
+      "version": "Version {{version}}",
+      "logout": "Sign out",
+      "logout_title": "Sign out? This device will stop receiving pushes.",
+      "logout_ok": "Sign out"
+    },
+    "back": "Back",
+    "areas": {
+      "todo": "the to-do list",
+      "queue": "judgments",
+      "search": "look-up",
+      "notices": "notices"
+    },
+    "kinds": {
+      "approval": "Approval step",
+      "reassignment": "Reassignment",
+      "cooldown": "Cooling-off request",
+      "rebirth": "Rebirth application"
+    },
+    "notices": {
+      "empty_title": "No notices",
+      "empty_body": "New notices will appear here."
+    },
+    "login": {
+      "username": "Username",
+      "password": "Password",
+      "submit": "Sign in",
+      "hall_title": "Choose a hall",
+      "hall_body": "This account serves in more than one hall. Choose which to enter.",
+      "reasons": {
+        "bad_credentials": "Wrong username or password",
+        "locked": "Too many attempts. Try again later",
+        "network": "Network error",
+        "other": "Couldn't sign in. Try again later"
+      },
+      "forgot_password": "Forgot password"
+    },
+    "mfa": {
+      "title": "Two-step verification",
+      "body": "Enter the 6-digit code from your authenticator app.",
+      "recovery_body": "Enter a recovery code you haven't used.",
+      "code_label": "Code",
+      "recovery_label": "Recovery code",
+      "remember": "Don't ask again on this device for 30 days",
+      "submit": "Verify",
+      "use_recovery": "Use a recovery code",
+      "use_code": "Use an authenticator code",
+      "reasons": {
+        "wrong": "Wrong code",
+        "expired": "This sign-in timed out. Sign in again",
+        "locked": "Too many attempts. Try again later",
+        "network": "Network error",
+        "other": "Couldn't verify. Try again later"
+      }
+    },
+    "banner": {
+      "mfa_required": "Your role must use two-step verification and it isn't set up yet. Set it up at the desk."
+    },
+    "cosign": {
+      "search": "Search name or username",
+      "empty": "Nobody to choose",
+      "confirm": "Add signer",
+      "unavailable": "Adding a signer isn't possible right now; you can only look at the candidates.",
+      "added": "Signer added. Your approval counts once they have signed.",
+      "not_eligible": "This person can't be added (an active officer of this hall who may approve).",
+      "duplicate": "Already a co-signer, or already able to decide this step alone."
+    },
+    "comment": {
+      "title": "Comments",
+      "empty": "No comments yet",
+      "write": "Write a comment",
+      "send": "Post",
+      "failed": "Couldn't post the comment. Try again later."
     }
   }
 }

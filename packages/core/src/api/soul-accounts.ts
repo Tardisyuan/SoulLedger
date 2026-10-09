@@ -128,6 +128,8 @@ export interface OfficerCooldownShortening {
   application: string;
   cycle: number;
   reason: string;
+  /** What the soul hopes remains after approval (days); null = not stated. Pre-fills the officer's field. */
+  desired_remaining_days: number | null;
   status: CooldownShorteningStatus;
   approved_days: number | null;
   /** The officer's note for the soul; required on rejection. */

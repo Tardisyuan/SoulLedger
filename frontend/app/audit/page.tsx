@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { auditApi, PAGE_SIZE, type AuditLogEntry } from "@soulledger/core/api";
+import { auditApi, tenantsApi, PAGE_SIZE, type AuditLogEntry, type Tenant } from "@soulledger/core/api";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { saveBlob } from "@/src/lib/saveBlob";
@@ -28,6 +28,7 @@ import { fieldControl } from "@/src/components/ui/Field";
 import { Button } from "@/src/components/ui/Button";
 import { cn } from "@/lib/utils";
 import { auditActionGlyph } from "@/src/lib/auditActionGlyph";
+import { civSkinOf } from "@/src/lib/civSkin";
 import { AuditTabs } from "@/src/components/audit/AuditTabs";
 
 const ACTION_OPTIONS = [
@@ -99,11 +100,17 @@ export default function AuditPage() {
   // rather than the role.
   const { hasPermission } = usePermissions();
   const canReadAudit = hasPermission("audit.read");
+  // 「殿」下拉只给全局管理员(`ADMIN` 且不属于任何殿,后端审计列表与导出唯一跨殿的人)。绑了殿的人
+  // (含绑了殿的 ADMIN)只看得到自己殿的行,后端对他们点别的殿的名答 403 —— 所以这里不是权限闸,
+  // 只是不画一个选了也没用的控件。
+  const { user, tenantCode } = useTenant();
+  const isGlobalAdmin = user?.role === "ADMIN" && tenantCode === null;
 
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [actionFilter, setActionFilter] = useState("");
   const [resourceFilter, setResourceFilter] = useState("");
+  const [hallFilter, setHallFilter] = useState("");
   const [datePreset, setDatePreset] = useState<DatePreset>("");
   const [ordering, setOrdering] = useState("");
 
@@ -123,6 +130,7 @@ export default function AuditPage() {
   const filterParams: Record<string, string> = {};
   if (actionFilter) filterParams.action = actionFilter;
   if (resourceFilter) filterParams.resource = resourceFilter;
+  if (hallFilter) filterParams.tenant = hallFilter;
   if (dateFrom) filterParams.start_date = dateFrom;
   if (ordering) filterParams.ordering = ordering;
 
@@ -140,10 +148,21 @@ export default function AuditPage() {
     }
   };
 
+  // 殿的清单。一个殿的名字按文明的冥界名写(同身份带),认不出文明才退回租户展示名。
+  const { data: halls } = useQuery({
+    queryKey: ["audit-halls"],
+    queryFn: async () => (await tenantsApi.list()).data.results,
+    enabled: canReadAudit && isGlobalAdmin,
+  });
+  const hallLabel = (hall: Tenant) => {
+    const civ = civSkinOf(hall.code);
+    return civ === "neutral" ? hall.display_name : t(`plaque.realm.${civ}`);
+  };
+
   const { data, isLoading, isError, refetch } = useQuery({
     // `search` deliberately excluded — it filters the already-fetched page
     // client-side (see below) rather than triggering a new request per keystroke.
-    queryKey: ["audit", page, actionFilter, resourceFilter, datePreset, ordering],
+    queryKey: ["audit", page, actionFilter, resourceFilter, hallFilter, datePreset, ordering],
     queryFn: async () => {
       const res = await auditApi.list({ page: String(page), page_size: String(PAGE_SIZE), ...filterParams });
       return res.data;
@@ -203,10 +222,11 @@ export default function AuditPage() {
     });
 
   const totalPages = data ? Math.ceil(data.count / PAGE_SIZE) : 0;
-  const isFiltered = Boolean(actionFilter || resourceFilter || datePreset || search);
+  const isFiltered = Boolean(actionFilter || resourceFilter || hallFilter || datePreset || search);
   const clearFilters = () => {
     setActionFilter("");
     setResourceFilter("");
+    setHallFilter("");
     setDatePreset("");
     setSearch("");
     setPage(1);
@@ -352,11 +372,22 @@ export default function AuditPage() {
             options={[
               { value: "", label: t("audit.all_resources") },
               ...RESOURCE_OPTIONS,
-              { value: "tenant", label: t("audit.resource_tenant") },
             ]}
             clearLabel={t("filter.clear_one", { name: t("audit.filter_resource") })}
             onChange={(v) => { setResourceFilter(v); setPage(1); }}
           />
+          {isGlobalAdmin && halls && halls.length > 0 ? (
+            <FilterChipSelect
+              label={t("audit.filter_hall")}
+              value={hallFilter}
+              options={[
+                { value: "", label: t("audit.all_halls") },
+                ...halls.map((hall) => ({ value: hall.code, label: hallLabel(hall) })),
+              ]}
+              clearLabel={t("filter.clear_one", { name: t("audit.filter_hall") })}
+              onChange={(v) => { setHallFilter(v); setPage(1); }}
+            />
+          ) : null}
           <FilterChipSelect
             label={t("audit.timestamp")}
             value={datePreset}

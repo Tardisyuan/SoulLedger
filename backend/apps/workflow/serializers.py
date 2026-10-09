@@ -650,6 +650,8 @@ class WorkflowNodeActionSerializer(serializers.Serializer):
 
     verdict = serializers.ChoiceField(choices=NODE_DECISION_VERDICTS)
     notes = serializers.CharField(required=False, allow_blank=True, default="")
+    # 官员端 App 传 true:驳回(非 PASSED/CONFIRMED)必须带 `notes`,否则 400 `reason_required`。
+    require_reason = serializers.BooleanField(required=False, default=False)
     # 只对转生申请工作流有意义(CaseType.REBIRTH_APPLICATION):驳回时必填,是**灵魂能看到**
     # 的那段话。`notes` 仍是内部备注,灵魂接口不返回它。其他工作流忽略这个字段。
     rejection_reason_for_soul = serializers.CharField(

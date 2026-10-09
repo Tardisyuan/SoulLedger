@@ -246,6 +246,11 @@
       "name": "tailwind-merge",
       "licence": "MIT",
       "url": "https://www.npmjs.com/package/tailwind-merge"
+    },
+    {
+      "name": "toqr",
+      "licence": "MIT",
+      "url": "https://www.npmjs.com/package/toqr"
     }
   ],
   "app": [

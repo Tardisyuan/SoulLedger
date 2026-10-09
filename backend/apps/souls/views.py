@@ -599,7 +599,7 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
     def add_record(self, request, pk=None):
         """Add a merit or demerit record to a soul."""
         soul = self.get_object()
-        serializer = SoulRecordSerializer(data=request.data)
+        serializer = SoulRecordSerializer(data=request.data, context={"tenant_id": soul.tenant_id})
         if not serializer.is_valid():
             return _record_errors(serializer)
         record = serializer.save(soul=soul)

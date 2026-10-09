@@ -58,6 +58,9 @@ export interface AuthUser {
   role: UserRole;
   tenant: TenantInfo | null;
   permissions: string[];
+  /** 两步验证(A12)。Both optional: a pre-A12 cached envelope has neither, and absent reads as "no banner". */
+  mfa_enabled?: boolean;
+  mfa_required?: boolean;
 }
 
 // Safe subset persisted to localStorage (no permissions)

@@ -218,10 +218,13 @@ export const soulApi = {
     soulHttp
       .post<MeRebirthApplication>(`/me/rebirth-applications/${id}/appeal/`, { statement })
       .then((r) => r.data),
-  /** Only while `reason === "cooldown"` and `can_shorten_cooldown`; 409 `not_in_cooldown` / `shortening_pending` / `shortening_used`. */
-  requestCooldownShortening: (reason: string) =>
+  /** Optional `desiredRemainingDays`: 0 <= n < days left; 400 `invalid_days` otherwise. Only while `reason === "cooldown"` and `can_shorten_cooldown`; 409 `not_in_cooldown` / `shortening_pending` / `shortening_used`. */
+  requestCooldownShortening: (reason: string, desiredRemainingDays?: number) =>
     soulHttp
-      .post<MeCooldownShortening>("/me/rebirth-applications/cooldown-shortening/", { reason })
+      .post<MeCooldownShortening>("/me/rebirth-applications/cooldown-shortening/", {
+        reason,
+        ...(desiredRemainingDays === undefined ? {} : { desired_remaining_days: desiredRemainingDays }),
+      })
       .then((r) => r.data),
   /**
    * The welcome transition has played for `civilization` (App「文明气质」1b). Idempotent;

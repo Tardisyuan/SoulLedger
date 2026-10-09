@@ -15,6 +15,8 @@ import { LOGIN_STATUTES, type LoginStatute } from "@/src/lib/loginStatutes";
 import { defaultViewRoute } from "@/src/lib/defaultView";
 
 jest.mock("@soulledger/core/api", () => ({
+  // A12: the page branches on this; the real one is a one-line type guard.
+  isMfaRequired: (outcome: { mfa_required?: boolean }) => outcome?.mfa_required === true,
   authApi: {
     login: jest.fn(),
     civilizations: jest.fn(),
@@ -337,17 +339,34 @@ describe("LoginPage · layout and content", () => {
 });
 
 describe("忘记密码", () => {
+  // 2026-10-09: the 忘记密码 link goes to /forgot-password (the e-mail reset). The older
+  // "notify the administrator" form opens from `/login?help=1`, which that page links to.
+  afterEach(() => window.history.pushState({}, "", "/"));
+
+  it("is a link to the e-mail reset page, and does not open the inline form", () => {
+    render(<LoginPage />);
+    const link = screen.getByRole("link", { name: "auth.forgot_password" });
+    expect(link).toHaveAttribute("href", "/forgot-password");
+    fireEvent.click(link);
+    expect(screen.queryByTestId("password-help-form")).not.toBeInTheDocument();
+  });
+
   function openHelp() {
-    fireEvent.change(screen.getByLabelText(/auth\.account/), { target: { value: "yama" } });
-    fireEvent.click(screen.getByRole("button", { name: "auth.forgot_password" }));
+    // After mount the page reads `?help=1`; the form is already open by the time render returns.
+    expect(screen.getByTestId("password-help-form")).toBeInTheDocument();
   }
 
-  it("opens a small form carrying the typed username, and confirms neutrally", async () => {
+  function renderHelp() {
+    window.history.pushState({}, "", "/login?help=1");
+    return render(<LoginPage />);
+  }
+
+  it("opens a small form from ?help=1, and confirms neutrally", async () => {
     mockedHelp.mockResolvedValue({ data: { detail: "请求已受理" } });
-    render(<LoginPage />);
+    renderHelp();
     openHelp();
     const form = screen.getByTestId("password-help-form");
-    expect(within(form).getByLabelText(/auth\.account/)).toHaveValue("yama");
+    fireEvent.change(within(form).getByLabelText(/auth\.account/), { target: { value: "yama" } });
     fireEvent.click(within(form).getByRole("button", { name: "auth.forgot_submit" }));
 
     const status = await screen.findByRole("status");
@@ -364,8 +383,9 @@ describe("忘记密码", () => {
     const seen: string[] = [];
     for (const body of [{ detail: "请求已受理" }, { detail: "账号不存在" }, {}]) {
       mockedHelp.mockResolvedValueOnce({ data: body });
-      const view = render(<LoginPage />);
+      const view = renderHelp();
       openHelp();
+      fireEvent.change(screen.getByLabelText(/auth\.account/), { target: { value: "yama" } });
       fireEvent.click(screen.getByRole("button", { name: "auth.forgot_submit" }));
       seen.push((await screen.findByTestId("password-help-sent")).textContent ?? "");
       view.unmount();
@@ -375,15 +395,16 @@ describe("忘记密码", () => {
 
   it("says 'too frequent' on a 429 and stays on the form", async () => {
     mockedHelp.mockRejectedValue({ response: { status: 429 } });
-    render(<LoginPage />);
+    renderHelp();
     openHelp();
+    fireEvent.change(screen.getByLabelText(/auth\.account/), { target: { value: "yama" } });
     fireEvent.click(screen.getByRole("button", { name: "auth.forgot_submit" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("auth.rate_limited");
     expect(screen.getByTestId("password-help-form")).toBeInTheDocument();
   });
 
   it("goes back to the sign-in form", () => {
-    render(<LoginPage />);
+    renderHelp();
     openHelp();
     fireEvent.click(screen.getByRole("button", { name: "auth.back_to_login" }));
     expect(screen.getByRole("button", { name: "auth.login" })).toBeInTheDocument();
