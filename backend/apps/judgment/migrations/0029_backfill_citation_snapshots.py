@@ -16,21 +16,23 @@ from apps.judgment import snapshot
 
 
 def forward(apps, schema_editor):
+    alias = schema_editor.connection.alias
     JudgmentCitation = apps.get_model("judgment", "JudgmentCitation")
     at = timezone.now()
     rows = list(
-        JudgmentCitation._base_manager.filter(
+        JudgmentCitation._base_manager.using(alias).filter(
             is_deleted=False, snapshot_at__isnull=True, judgment__is_final=True,
         ).select_related("statute", "statute__source_actor")
     )
     for c in rows:
         snapshot.fill(c, c.statute, "BACKFILLED", at)
-    JudgmentCitation._base_manager.bulk_update(rows, snapshot.SNAPSHOT_FIELDS, batch_size=500)
+    JudgmentCitation._base_manager.using(alias).bulk_update(rows, snapshot.SNAPSHOT_FIELDS, batch_size=500)
 
 
 def backward(apps, schema_editor):
+    alias = schema_editor.connection.alias
     JudgmentCitation = apps.get_model("judgment", "JudgmentCitation")
-    JudgmentCitation._base_manager.filter(snapshot_kind="BACKFILLED").update(
+    JudgmentCitation._base_manager.using(alias).filter(snapshot_kind="BACKFILLED").update(
         snapshot_title=None, snapshot_text=None, snapshot_source="",
         snapshot_hash="", snapshot_at=None, snapshot_kind="",
     )

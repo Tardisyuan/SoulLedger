@@ -15,6 +15,7 @@ from apps.audit.models import AuditLog
 from apps.soul_accounts import services as svc
 from apps.soul_accounts.models import AccountOrigin
 from apps.souls.models import Soul, SoulState
+from tests.migration_schema_editor import SCHEMA_EDITOR
 from tests.soul_account_support import dead_soul, officer_client
 
 pytestmark = pytest.mark.django_db
@@ -138,14 +139,14 @@ def test_backfill_syncs_first_come_is_idempotent_and_reverses_only_what_it_set(c
     pre_set.email = "c@example.com"  # 已经一致的:不写,不留标记,反向不清
     pre_set.save(update_fields=["email"])
 
-    migration.forward(django_apps, None)
+    migration.forward(django_apps, SCHEMA_EDITOR)
     assert (_login_email(a), _login_email(b), _login_email(c)) == (SHARED, "", "c@example.com")
     markers = AuditLog.objects.filter(changes__login_email_backfill=migration.MARKER)
     assert markers.count() == 1
 
-    migration.forward(django_apps, None)  # 幂等
+    migration.forward(django_apps, SCHEMA_EDITOR)  # 幂等
     assert markers.count() == 1 and _login_email(b) == ""
 
-    migration.backward(django_apps, None)
+    migration.backward(django_apps, SCHEMA_EDITOR)
     assert (_login_email(a), _login_email(b), _login_email(c)) == ("", "", "c@example.com")
     assert markers.count() == 0

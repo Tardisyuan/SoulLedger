@@ -13,24 +13,26 @@ from django.utils import timezone
 
 
 def stamp(apps, schema_editor):
+    alias = schema_editor.connection.alias
     User = apps.get_model("authentication", "User")
     now = timezone.now().isoformat()
-    for user in User._base_manager.filter(preferences__email_notifications=True):
+    for user in User._base_manager.using(alias).filter(preferences__email_notifications=True):
         prefs = user.preferences or {}
         if prefs.get("email_opted_at"):
             continue
         user.preferences = {**prefs, "email_opted_at": now, "email_opted_backfilled": True}
-        user.save(update_fields=["preferences"])
+        user.save(using=alias, update_fields=["preferences"])
 
 
 def unstamp(apps, schema_editor):
+    alias = schema_editor.connection.alias
     User = apps.get_model("authentication", "User")
-    for user in User._base_manager.filter(preferences__email_opted_backfilled=True):
+    for user in User._base_manager.using(alias).filter(preferences__email_opted_backfilled=True):
         prefs = dict(user.preferences or {})
         prefs.pop("email_opted_at", None)
         prefs.pop("email_opted_backfilled", None)
         user.preferences = prefs
-        user.save(update_fields=["preferences"])
+        user.save(using=alias, update_fields=["preferences"])
 
 
 class Migration(migrations.Migration):

@@ -16,24 +16,26 @@ GRANTED_TO = ["ADMIN"]
 
 
 def forward(apps, schema_editor):
+    alias = schema_editor.connection.alias
     Permission = apps.get_model("perm", "Permission")
     Role = apps.get_model("perm", "Role")
     RolePermission = apps.get_model("perm", "RolePermission")
 
     for codename, name, category in PERMISSIONS:
-        perm, _ = Permission.all_objects.get_or_create(
+        perm, _ = Permission.all_objects.using(alias).get_or_create(
             codename=codename, is_deleted=False, defaults={"name": name, "category": category}
         )
         for role_name in GRANTED_TO:
-            role = Role.all_objects.filter(name=role_name, is_deleted=False).first()
+            role = Role.all_objects.using(alias).filter(name=role_name, is_deleted=False).first()
             if role is None:
                 continue
-            RolePermission.all_objects.get_or_create(role=role, permission=perm, is_deleted=False)
+            RolePermission.all_objects.using(alias).get_or_create(role=role, permission=perm, is_deleted=False)
 
 
 def backward(apps, schema_editor):
+    alias = schema_editor.connection.alias
     Permission = apps.get_model("perm", "Permission")
-    Permission.all_objects.filter(codename__in=[c for c, _, _ in PERMISSIONS]).delete()
+    Permission.all_objects.using(alias).filter(codename__in=[c for c, _, _ in PERMISSIONS]).delete()
 
 
 class Migration(migrations.Migration):

@@ -24,25 +24,27 @@ MENUS = [
 ]
 
 
-def _live(menu_model):
-    return menu_model.all_objects.filter(is_deleted=False)
+def _live(menu_model, alias):
+    return menu_model.all_objects.using(alias).filter(is_deleted=False)
 
 
 def add_menus(apps, schema_editor):
+    alias = schema_editor.connection.alias
     Menu = apps.get_model("menus", "Menu")
     for item in MENUS:
-        parent = _live(Menu).filter(name=item["parent"], menu_type="DIRECTORY").first()
-        Menu.all_objects.get_or_create(
+        parent = _live(Menu, alias).filter(name=item["parent"], menu_type="DIRECTORY").first()
+        Menu.all_objects.using(alias).get_or_create(
             path=item["path"], is_deleted=False, defaults={**item["defaults"], "parent": parent}
         )
-        _live(Menu).filter(path=item["path"]).exclude(menu_type="DIRECTORY").update(
+        _live(Menu, alias).filter(path=item["path"]).exclude(menu_type="DIRECTORY").update(
             parent=parent, order=item["defaults"]["order"]
         )
 
 
 def remove_menus(apps, schema_editor):
+    alias = schema_editor.connection.alias
     Menu = apps.get_model("menus", "Menu")
-    _live(Menu).filter(path__in=[m["path"] for m in MENUS]).exclude(menu_type="DIRECTORY").delete()
+    _live(Menu, alias).filter(path__in=[m["path"] for m in MENUS]).exclude(menu_type="DIRECTORY").delete()
 
 
 class Migration(migrations.Migration):

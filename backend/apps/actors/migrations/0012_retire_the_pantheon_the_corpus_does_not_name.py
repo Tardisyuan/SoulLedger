@@ -64,61 +64,63 @@ RETIRE = [
 REASON = "不在 EUROPEAN_ACTORS 语料里;2026-08-31 决定退役(与 Norse 四行同一套)"
 
 
-def _actor(actor_model, name):
-    return actor_model.all_objects.filter(name=name, is_deleted=False).first()
+def _actor(actor_model, name, alias):
+    return actor_model.all_objects.using(alias).filter(name=name, is_deleted=False).first()
 
 
 def forward(apps, schema_editor):
+    alias = schema_editor.connection.alias
     Actor = apps.get_model("actors", "Actor")
     User = apps.get_model("authentication", "User")
 
     # 一、合并拼写
-    stale, canonical = (_actor(Actor, MERGE[0]), _actor(Actor, MERGE[1]))
+    stale, canonical = (_actor(Actor, MERGE[0], alias), _actor(Actor, MERGE[1], alias))
     if stale is not None and canonical is not None:
-        User.objects.filter(actor=stale).update(actor=canonical)
+        User.objects.using(alias).filter(actor=stale).update(actor=canonical)
         stale.is_deleted = True
         stale.deleted_at = timezone.now()
         stale.delete_reason = f"与 {MERGE[1]} 是同一位女神的两种拼写;账号已改指正规行"
-        stale.save(update_fields=["is_deleted", "deleted_at", "delete_reason"])
+        stale.save(using=alias, update_fields=["is_deleted", "deleted_at", "delete_reason"])
 
     # 二、退役六行
     for name in RETIRE:
-        actor = _actor(Actor, name)
+        actor = _actor(Actor, name, alias)
         if actor is None:
             continue
         # 停用账号 → 清 actor_id → 软删 actor。顺序不能反。
-        User.objects.filter(actor=actor, is_active=True).update(is_active=False)
-        User.objects.filter(actor=actor).update(actor=None)
+        User.objects.using(alias).filter(actor=actor, is_active=True).update(is_active=False)
+        User.objects.using(alias).filter(actor=actor).update(actor=None)
         actor.is_deleted = True
         actor.deleted_at = timezone.now()
         actor.delete_reason = REASON
-        actor.save(update_fields=["is_deleted", "deleted_at", "delete_reason"])
+        actor.save(using=alias, update_fields=["is_deleted", "deleted_at", "delete_reason"])
 
 
 def backward(apps, schema_editor):
+    alias = schema_editor.connection.alias
     Actor = apps.get_model("actors", "Actor")
     User = apps.get_model("authentication", "User")
 
     for name in RETIRE:
-        actor = Actor.all_objects.filter(name=name, delete_reason=REASON).first()
+        actor = Actor.all_objects.using(alias).filter(name=name, delete_reason=REASON).first()
         if actor is None:
             continue
         actor.is_deleted = False
         actor.deleted_at = None
         actor.delete_reason = ""
-        actor.save(update_fields=["is_deleted", "deleted_at", "delete_reason"])
+        actor.save(using=alias, update_fields=["is_deleted", "deleted_at", "delete_reason"])
         # 账号按用户名找回来 —— `actor_id` 已经被清空,没有别的线索。
-        User.objects.filter(username=name).update(actor=actor, is_active=True)
+        User.objects.using(alias).filter(username=name).update(actor=actor, is_active=True)
 
-    stale = Actor.all_objects.filter(name=MERGE[0], is_deleted=True).first()
-    canonical = _actor(Actor, MERGE[1])
+    stale = Actor.all_objects.using(alias).filter(name=MERGE[0], is_deleted=True).first()
+    canonical = _actor(Actor, MERGE[1], alias)
     if stale is not None:
         stale.is_deleted = False
         stale.deleted_at = None
         stale.delete_reason = ""
-        stale.save(update_fields=["is_deleted", "deleted_at", "delete_reason"])
+        stale.save(using=alias, update_fields=["is_deleted", "deleted_at", "delete_reason"])
         if canonical is not None:
-            User.objects.filter(username=MERGE[0], actor=canonical).update(actor=stale)
+            User.objects.using(alias).filter(username=MERGE[0], actor=canonical).update(actor=stale)
 
 
 class Migration(migrations.Migration):

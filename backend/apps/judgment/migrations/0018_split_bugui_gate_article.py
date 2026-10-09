@@ -56,7 +56,7 @@ RENAMES = [
 INSERTED = "CN-GGG-G-BG-02"
 
 
-def _shift(statute_model, pairs, ordinal_delta):
+def _shift(statute_model, pairs, ordinal_delta, alias):
     """Rename `pairs` and move each row's ordinal, on every row `_base_manager`
     can see — soft-deleted ones included, because a soft-deleted article still
     owns its citations and must not be left behind under a code that somebody
@@ -64,7 +64,7 @@ def _shift(statute_model, pairs, ordinal_delta):
     """
     moved = 0
     for old_code, new_code in pairs:
-        for row in statute_model._base_manager.filter(code=old_code):
+        for row in statute_model._base_manager.using(alias).filter(code=old_code):
             row.code = new_code
             row.ordinal = (row.ordinal or 0) + ordinal_delta
             payload = row.payload_json or {}
@@ -72,28 +72,30 @@ def _shift(statute_model, pairs, ordinal_delta):
             if isinstance(gate_ordinal, int):
                 payload["gate_ordinal"] = gate_ordinal + ordinal_delta
                 row.payload_json = payload
-            row.save(update_fields=["code", "ordinal", "payload_json"])
+            row.save(using=alias, update_fields=["code", "ordinal", "payload_json"])
             moved += 1
     return moved
 
 
 def forwards(apps, schema_editor):
+    alias = schema_editor.connection.alias
     Statute = apps.get_model("judgment", "Statute")
     # Empty database: nothing seeded yet, so there is nothing to renumber and
     # seed_mythology will write the six articles directly. Same guard as 0013.
-    if not Statute._base_manager.filter(code__startswith="CN-GGG-G-BG-").exists():
+    if not Statute._base_manager.using(alias).filter(code__startswith="CN-GGG-G-BG-").exists():
         return
-    _shift(Statute, RENAMES, +1)
+    _shift(Statute, RENAMES, +1, alias)
 
 
 def backwards(apps, schema_editor):
+    alias = schema_editor.connection.alias
     Statute = apps.get_model("judgment", "Statute")
     JudgmentCitation = apps.get_model("judgment", "JudgmentCitation")
 
     inserted = list(
-        Statute._base_manager.filter(code=INSERTED).values_list("pk", flat=True)
+        Statute._base_manager.using(alias).filter(code=INSERTED).values_list("pk", flat=True)
     )
-    if JudgmentCitation._base_manager.filter(statute_id__in=inserted).exists():
+    if JudgmentCitation._base_manager.using(alias).filter(statute_id__in=inserted).exists():
         raise RuntimeError(
             f"{INSERTED} (注撰煙粉) is cited by a recorded judgment. "
             f"Reversing this migration would either orphan that citation "
@@ -105,8 +107,8 @@ def backwards(apps, schema_editor):
     # unique (tenant, code) — sitting on CN-GGG-G-BG-02 while the rename below
     # tries to move 食肉 back onto it. judgment/0013's reverse deletes the same
     # way for the same reason.
-    Statute._base_manager.filter(pk__in=inserted).delete()
-    _shift(Statute, [(new, old) for old, new in reversed(RENAMES)], -1)
+    Statute._base_manager.using(alias).filter(pk__in=inserted).delete()
+    _shift(Statute, [(new, old) for old, new in reversed(RENAMES)], -1, alias)
 
 
 class Migration(migrations.Migration):

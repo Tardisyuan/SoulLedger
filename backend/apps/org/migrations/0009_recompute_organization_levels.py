@@ -16,8 +16,9 @@ from django.db import migrations
 
 
 def recompute(apps, schema_editor):
+    alias = schema_editor.connection.alias
     Organization = apps.get_model("org", "Organization")
-    rows = list(Organization.all_objects.all())
+    rows = list(Organization.all_objects.using(alias).all())
     children: dict = {}
     for org in rows:
         children.setdefault(org.parent_id, []).append(org)
@@ -26,7 +27,7 @@ def recompute(apps, schema_editor):
     while frontier:
         org, depth = frontier.pop()
         if org.level != depth:
-            Organization.all_objects.filter(pk=org.pk).update(level=depth)
+            Organization.all_objects.using(alias).filter(pk=org.pk).update(level=depth)
         frontier.extend((child, depth + 1) for child in children.get(org.pk, []))
 
 

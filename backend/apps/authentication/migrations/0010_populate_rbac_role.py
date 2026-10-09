@@ -42,13 +42,14 @@ def populate_rbac_role(apps, schema_editor):
     ``.filter(...).first()`` so the ``Role.DoesNotExist`` branch below is
     reached exactly as before.
     """
+    alias = schema_editor.connection.alias
     User = apps.get_model("authentication", "User")
     Role = apps.get_model("perm", "Role")
 
     for user_role_name, perm_role_name in ROLE_MAPPING.items():
         try:
-            perm_role = Role._base_manager.get(name=perm_role_name)
-            User._base_manager.filter(
+            perm_role = Role._base_manager.using(alias).get(name=perm_role_name)
+            User._base_manager.using(alias).filter(
                 role=user_role_name, rbac_role__isnull=True
             ).update(rbac_role=perm_role)
         except Role.DoesNotExist:
@@ -93,16 +94,17 @@ def reverse_populate(apps, schema_editor):
     test_auth_0010_forward_runs_with_perm_already_past_0012`` runs it through a
     real ``migrate`` with perm left at 0018, which is where it used to raise.
     """
+    alias = schema_editor.connection.alias
     User = apps.get_model("authentication", "User")
     Role = apps.get_model("perm", "Role")
 
     for user_role_name, perm_role_name in ROLE_MAPPING.items():
-        perm_role = Role._base_manager.filter(name=perm_role_name).first()
+        perm_role = Role._base_manager.using(alias).filter(name=perm_role_name).first()
         if perm_role is None:
             # The forward's Role.DoesNotExist branch wrote nothing for this
             # pair, so there is nothing to take back.
             continue
-        User._base_manager.filter(
+        User._base_manager.using(alias).filter(
             role=user_role_name, rbac_role=perm_role
         ).update(rbac_role=None)
 

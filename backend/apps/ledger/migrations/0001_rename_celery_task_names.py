@@ -33,7 +33,8 @@ RENAMES = {
 }
 
 
-def _remap(apps, mapping):
+def _remap(apps, schema_editor, mapping):
+    alias = schema_editor.connection.alias
     """Rewrite PeriodicTask.task and .name according to ``mapping``.
 
     Skips any row whose target name is already taken, because `name` is unique
@@ -43,17 +44,17 @@ def _remap(apps, mapping):
     PeriodicTask = apps.get_model("django_celery_beat", "PeriodicTask")
 
     for old, new in mapping.items():
-        PeriodicTask.objects.filter(task=old).update(task=new)
-        if not PeriodicTask.objects.filter(name=new).exists():
-            PeriodicTask.objects.filter(name=old).update(name=new)
+        PeriodicTask.objects.using(alias).filter(task=old).update(task=new)
+        if not PeriodicTask.objects.using(alias).filter(name=new).exists():
+            PeriodicTask.objects.using(alias).filter(name=old).update(name=new)
 
 
 def rename_to_ledger(apps, schema_editor):
-    _remap(apps, RENAMES)
+    _remap(apps, schema_editor, RENAMES)
 
 
 def rename_back_to_karma(apps, schema_editor):
-    _remap(apps, {new: old for old, new in RENAMES.items()})
+    _remap(apps, schema_editor, {new: old for old, new in RENAMES.items()})
 
 
 class Migration(migrations.Migration):

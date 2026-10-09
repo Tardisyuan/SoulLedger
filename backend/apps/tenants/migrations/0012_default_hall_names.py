@@ -25,11 +25,12 @@ DEFAULTS = {
 
 
 def fill(apps, schema_editor):
+    alias = schema_editor.connection.alias
     Tenant = apps.get_model("tenants", "Tenant")
     for code, (zh, en, egy) in DEFAULTS.items():
-        Tenant._base_manager.filter(code=code, hall_name="").update(hall_name=zh)
-        Tenant._base_manager.filter(code=code, hall_name_en="").update(hall_name_en=en)
-        Tenant._base_manager.filter(code=code, hall_name_egy="").update(hall_name_egy=egy)
+        Tenant._base_manager.using(alias).filter(code=code, hall_name="").update(hall_name=zh)
+        Tenant._base_manager.using(alias).filter(code=code, hall_name_en="").update(hall_name_en=en)
+        Tenant._base_manager.using(alias).filter(code=code, hall_name_egy="").update(hall_name_egy=egy)
 
 
 class Migration(migrations.Migration):

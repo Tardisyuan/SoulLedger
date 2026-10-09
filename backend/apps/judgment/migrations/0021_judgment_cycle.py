@@ -10,17 +10,18 @@ def stamp_rows_with_their_life(apps, schema_editor):
     创建时恰有 N 条早于它的 Reincarnation。只遍历转过世的灵魂:其余的 cycle 本来
     就该是默认的 0。
     """
+    alias = schema_editor.connection.alias
     Row = apps.get_model("judgment", "Judgment")
     Reincarnation = apps.get_model("reincarnation", "Reincarnation")
-    reborn = Reincarnation._base_manager.values_list("soul_id", flat=True).distinct()
+    reborn = Reincarnation._base_manager.using(alias).values_list("soul_id", flat=True).distinct()
     for soul_id in set(reborn):
         rebirths = sorted(
-            Reincarnation._base_manager.filter(soul_id=soul_id).values_list("reincarnated_at", flat=True)
+            Reincarnation._base_manager.using(alias).filter(soul_id=soul_id).values_list("reincarnated_at", flat=True)
         )
-        for pk, created_at in Row._base_manager.filter(soul_id=soul_id).values_list("pk", "created_at"):
+        for pk, created_at in Row._base_manager.using(alias).filter(soul_id=soul_id).values_list("pk", "created_at"):
             n = sum(1 for at in rebirths if at < created_at)
             if n:
-                Row._base_manager.filter(pk=pk).update(cycle=n)
+                Row._base_manager.using(alias).filter(pk=pk).update(cycle=n)
 
 
 class Migration(migrations.Migration):

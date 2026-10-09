@@ -174,18 +174,19 @@ ORIGINAL_ORDERS = {
 }
 
 
-def _live(menu_model):
+def _live(menu_model, alias):
     """未被软删除的菜单。"""
-    return menu_model.all_objects.filter(is_deleted=False)
+    return menu_model.all_objects.using(alias).filter(is_deleted=False)
 
 
 def regroup(apps, schema_editor):
+    alias = schema_editor.connection.alias
     Menu = apps.get_model("menus", "Menu")
 
     # 1. 建立 6 个分组目录
     dirs = {}
     for spec in DIRECTORIES:
-        obj, _ = Menu.all_objects.get_or_create(
+        obj, _ = Menu.all_objects.using(alias).get_or_create(
             name=spec["name"],
             menu_type="DIRECTORY",
             is_deleted=False,
@@ -204,11 +205,11 @@ def regroup(apps, schema_editor):
 
     # 2. 重命名（只在旧名还在时动手，重复执行安全）
     for path, (old, new) in RENAMES.items():
-        _live(Menu).filter(path=path, name=old).update(name=new)
+        _live(Menu, alias).filter(path=path, name=old).update(name=new)
 
     # 3. 收编 5 个孤儿页面
     for spec in NEW_MENUS:
-        Menu.all_objects.get_or_create(
+        Menu.all_objects.using(alias).get_or_create(
             path=spec["path"],
             is_deleted=False,
             defaults={
@@ -227,62 +228,63 @@ def regroup(apps, schema_editor):
 
     # 4. 既有菜单归位到对应分组
     for path, (group, order) in ASSIGNMENTS.items():
-        _live(Menu).filter(path=path).exclude(menu_type="DIRECTORY").update(
+        _live(Menu, alias).filter(path=path).exclude(menu_type="DIRECTORY").update(
             parent=dirs[group], order=order
         )
 
     # 5. 新增叶子也确保 parent/order 正确（应对"上次跑了一半"的情况）
     for spec in NEW_MENUS:
-        _live(Menu).filter(path=spec["path"]).exclude(menu_type="DIRECTORY").update(
+        _live(Menu, alias).filter(path=spec["path"]).exclude(menu_type="DIRECTORY").update(
             parent=dirs[spec["group"]], order=spec["order"]
         )
 
     # 6. 三项移出侧边栏（保留路由本身）
-    _live(Menu).filter(path__in=HIDDEN_FROM_SIDEBAR).update(visible=False, parent=None)
+    _live(Menu, alias).filter(path__in=HIDDEN_FROM_SIDEBAR).update(visible=False, parent=None)
 
 
 def restore_flat(apps, schema_editor):
+    alias = schema_editor.connection.alias
     Menu = apps.get_model("menus", "Menu")
 
     # 1. 恢复三项可见
-    _live(Menu).filter(path__in=HIDDEN_FROM_SIDEBAR).update(visible=True)
+    _live(Menu, alias).filter(path__in=HIDDEN_FROM_SIDEBAR).update(visible=True)
 
     # 2. 删除本迁移新建的 5 个叶子菜单
-    _live(Menu).filter(path__in=[s["path"] for s in NEW_MENUS]).exclude(
+    _live(Menu, alias).filter(path__in=[s["path"] for s in NEW_MENUS]).exclude(
         menu_type="DIRECTORY"
     ).delete()
 
     # 3. 既有菜单拍回一级，顺序还原
     for path, (_group, _order) in ASSIGNMENTS.items():
-        _live(Menu).filter(path=path).exclude(menu_type="DIRECTORY").update(
+        _live(Menu, alias).filter(path=path).exclude(menu_type="DIRECTORY").update(
             parent=None, order=ORIGINAL_ORDERS.get(path, 0)
         )
 
     # /social/follows 原本挂在 /social 之下，单独还原这一层父子关系
-    social = _live(Menu).filter(path="/social").exclude(menu_type="DIRECTORY").first()
+    social = _live(Menu, alias).filter(path="/social").exclude(menu_type="DIRECTORY").first()
     if social is not None:
-        _live(Menu).filter(path="/social/follows").exclude(
+        _live(Menu, alias).filter(path="/social/follows").exclude(
             menu_type="DIRECTORY"
         ).update(parent=social, order=ORIGINAL_ORDERS["/social/follows"])
 
     # 4. 撤销重命名
     for path, (old, new) in RENAMES.items():
-        _live(Menu).filter(path=path, name=new).update(name=old)
+        _live(Menu, alias).filter(path=path, name=new).update(name=old)
 
     # 5. 删除 6 个分组目录
     #    先把仍然挂在目录下的"漏网"菜单（例如管理员后来手工新增的）拍回一级，
     #    否则 parent 的 CASCADE 会把它们一并删掉。
     dir_ids = list(
-        _live(Menu)
+        _live(Menu, alias)
         .filter(menu_type="DIRECTORY", name__in=[d["name"] for d in DIRECTORIES])
         .values_list("id", flat=True)
     )
-    Menu.all_objects.filter(parent_id__in=dir_ids).update(parent=None)
-    _live(Menu).filter(id__in=dir_ids).delete()
+    Menu.all_objects.using(alias).filter(parent_id__in=dir_ids).update(parent=None)
+    _live(Menu, alias).filter(id__in=dir_ids).delete()
 
     # 其余未在 ORIGINAL_ORDERS 中登记的项保持原样
     for path in HIDDEN_FROM_SIDEBAR:
-        _live(Menu).filter(path=path).update(order=ORIGINAL_ORDERS.get(path, 0))
+        _live(Menu, alias).filter(path=path).update(order=ORIGINAL_ORDERS.get(path, 0))
 
 
 class Migration(migrations.Migration):

@@ -59,8 +59,9 @@ OFFICER = [
 
 
 def draft(apps, schema_editor):
+    alias = schema_editor.connection.alias
     Case = apps.get_model("soul_assist", "AssistEvalCase")
-    Case.objects.bulk_create([
+    Case.objects.using(alias).bulk_create([
         Case(side=side, screen=screen, question=q, expected_tools=tools, must_include=inc, must_not_include=exc,
              locale=locale)
         for side, rows in (("soul", SOUL), ("officer", OFFICER))
@@ -69,8 +70,9 @@ def draft(apps, schema_editor):
 
 
 def undraft(apps, schema_editor):
+    alias = schema_editor.connection.alias
     Case = apps.get_model("soul_assist", "AssistEvalCase")
-    Case.objects.filter(question__in=[r[1] for r in SOUL + OFFICER]).delete()
+    Case.objects.using(alias).filter(question__in=[r[1] for r in SOUL + OFFICER]).delete()
 
 
 class Migration(migrations.Migration):

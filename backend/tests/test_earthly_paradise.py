@@ -39,6 +39,7 @@ from django.core.management import call_command
 
 from apps.actors.models import Actor
 from apps.realms.models import Realm
+from tests.migration_schema_editor import SCHEMA_EDITOR
 
 MOUNTAIN_CODE = "EU_PURGATORY"
 SUMMIT_CODE = "EU_EARTHLY_PARADISE"
@@ -404,7 +405,7 @@ class TestEarthlyParadiseMigration:
         self._undo_by_hand()
         assert not Realm.all_objects.filter(realm_code=SUMMIT_CODE).exists()
 
-        migration.forwards(registry, None)
+        migration.forwards(registry, SCHEMA_EDITOR)
 
         summit = Realm.all_objects.filter(realm_code=SUMMIT_CODE).first()
         assert summit is not None, "the migration did not create the summit"
@@ -434,7 +435,7 @@ class TestEarthlyParadiseMigration:
         ).memory_reset_mechanism == "LETHE"
 
     def test_it_reverses(self, migration, registry, seeded):
-        migration.backwards(registry, None)
+        migration.backwards(registry, SCHEMA_EDITOR)
 
         assert not Realm.all_objects.filter(realm_code=SUMMIT_CODE).exists(), (
             "backwards left the summit behind"
@@ -457,8 +458,8 @@ class TestEarthlyParadiseMigration:
         assert Realm.all_objects.filter(realm_code=MOUNTAIN_CODE).exists()
 
     def test_it_round_trips(self, migration, registry, seeded):
-        migration.backwards(registry, None)
-        migration.forwards(registry, None)
+        migration.backwards(registry, SCHEMA_EDITOR)
+        migration.forwards(registry, SCHEMA_EDITOR)
 
         summit = Realm.all_objects.filter(realm_code=SUMMIT_CODE).first()
         assert summit is not None and summit.tier == 8
@@ -468,7 +469,7 @@ class TestEarthlyParadiseMigration:
 
     def test_running_it_twice_creates_nothing(self, migration, registry, seeded):
         before = Realm.all_objects.count()
-        migration.forwards(registry, None)
+        migration.forwards(registry, SCHEMA_EDITOR)
         assert Realm.all_objects.count() == before
 
     def test_it_writes_nothing_to_an_empty_database(self, migration, registry, db):
@@ -476,7 +477,7 @@ class TestEarthlyParadiseMigration:
         hands it untenanted rows it did not create, and makes `--dry-run`
         against a fresh database report a plan no real run would take."""
         assert Realm.all_objects.count() == 0
-        migration.forwards(registry, None)
+        migration.forwards(registry, SCHEMA_EDITOR)
         assert Realm.all_objects.count() == 0
 
 

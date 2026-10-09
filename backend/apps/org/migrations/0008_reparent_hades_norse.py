@@ -21,35 +21,37 @@ backward 把 parent 放回 `HADES`,两步都是机械的。
 from django.db import migrations
 
 
-def _org(apps, code):
+def _org(apps, code, alias):
     Organization = apps.get_model("org", "Organization")
     # `all_objects`,不是 `objects`:`Organization` 混入 `SoftDeleteMixin`,
     # 迁移状态里的基础管理器叫 `all_objects` 且**根本没有 `objects`**
     # —— 与 org/0004、org/0007 同一个理由。
-    return Organization.all_objects.filter(code=code).first()
+    return Organization.all_objects.using(alias).filter(code=code).first()
 
 
 def reparent(apps, schema_editor):
-    norse = _org(apps, "HADES_NORSE")
+    alias = schema_editor.connection.alias
+    norse = _org(apps, "HADES_NORSE", alias)
     if norse is None:
         return
-    hell = _org(apps, "HELL")
+    hell = _org(apps, "HELL", alias)
     if hell is None or hell.tenant_id != norse.tenant_id:
         # 目标不存在或不同租户 —— 什么都不做比挪到一个更糟的地方好,
         # 而 `tests/test_no_organization_crosses_a_tenant.py` 会红,
         # 于是这件事被人看见,而不是被这个迁移悄悄决定。
         return
     norse.parent = hell
-    norse.save(update_fields=["parent"])
+    norse.save(using=alias, update_fields=["parent"])
 
 
 def restore(apps, schema_editor):
-    norse = _org(apps, "HADES_NORSE")
-    hades = _org(apps, "HADES")
+    alias = schema_editor.connection.alias
+    norse = _org(apps, "HADES_NORSE", alias)
+    hades = _org(apps, "HADES", alias)
     if norse is None or hades is None:
         return
     norse.parent = hades
-    norse.save(update_fields=["parent"])
+    norse.save(using=alias, update_fields=["parent"])
 
 
 class Migration(migrations.Migration):

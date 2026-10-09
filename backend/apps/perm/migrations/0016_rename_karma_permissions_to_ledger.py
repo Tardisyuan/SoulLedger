@@ -67,25 +67,25 @@ def _invalidate_cache():
         pass
 
 
-def _rename(permission_model, role_permission_model, pairs):
+def _rename(permission_model, role_permission_model, pairs, alias):
     Permission, RolePermission = permission_model, role_permission_model
     for old_codename, new_codename, new_name, new_category in pairs:
-        source = Permission.all_objects.filter(codename=old_codename).first()
+        source = Permission.all_objects.using(alias).filter(codename=old_codename).first()
         if source is None:
             continue
 
-        target = Permission.all_objects.filter(codename=new_codename).first()
+        target = Permission.all_objects.using(alias).filter(codename=new_codename).first()
         if target is None:
             # 常规路径：原地改名，主键不变 → RolePermission 全部保留。
             source.codename = new_codename
             source.name = new_name
             source.category = new_category
-            source.save(update_fields=["codename", "name", "category"])
+            source.save(using=alias, update_fields=["codename", "name", "category"])
             continue
 
         # 两个 codename 同时存在：把授权搬到 target 再删掉 source。
-        for rp in RolePermission.all_objects.filter(permission=source):
-            RolePermission.all_objects.get_or_create(
+        for rp in RolePermission.all_objects.using(alias).filter(permission=source):
+            RolePermission.all_objects.using(alias).get_or_create(
                 role_id=rp.role_id,
                 permission=target,
                 defaults={
@@ -94,14 +94,14 @@ def _rename(permission_model, role_permission_model, pairs):
                     "is_deleted": rp.is_deleted,
                 },
             )
-        RolePermission.all_objects.filter(permission=source).delete()
-        Permission.all_objects.filter(pk=source.pk).delete()
+        RolePermission.all_objects.using(alias).filter(permission=source).delete()
+        Permission.all_objects.using(alias).filter(pk=source.pk).delete()
 
 
 def forward(apps, schema_editor):
     Permission = apps.get_model("perm", "Permission")
     RolePermission = apps.get_model("perm", "RolePermission")
-    _rename(Permission, RolePermission, RENAMES)
+    _rename(Permission, RolePermission, RENAMES, schema_editor.connection.alias)
     _invalidate_cache()
 
 
@@ -112,7 +112,7 @@ def backward(apps, schema_editor):
         (new_codename, old_codename, old_name, "karma")
         for old_codename, new_codename, old_name, _ in RENAMES
     ]
-    _rename(Permission, RolePermission, reverse_pairs)
+    _rename(Permission, RolePermission, reverse_pairs, schema_editor.connection.alias)
     _invalidate_cache()
 
 
