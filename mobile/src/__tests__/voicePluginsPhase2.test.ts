@@ -86,9 +86,9 @@ describe("the generated Swift", () => {
 describe("the spoken strings", () => {
   it("come in both languages, the time first and the number second, with a neutral line when empty", () => {
     const zhStrings: string = localizableStrings(soul, "zh-Hans", MESSAGES);
-    expect(zhStrings).toContain('"voice.cooldownDays.line" = "截至 %@,冷却还剩 %lld 天。";');
-    expect(zhStrings).toContain('"voice.cooldownDays.empty" = "还没有数据。请先打开 App 看一眼,再来问我。";');
-    expect(zhStrings).toContain('"What would you like to ask?" = "你想问什么?";');
+    expect(zhStrings).toContain('"voice.cooldownDays.line" = "截至 %@，冷却还剩 %lld 天。";');
+    expect(zhStrings).toContain('"voice.cooldownDays.empty" = "还没有数据。请先打开 App 看一眼，再来问我。";');
+    expect(zhStrings).toContain('"What would you like to ask?" = "你想问什么？";');
     expect(localizableStrings(officer, "en", MESSAGES)).toContain('"voice.todoCount.line" = "As of %@, %lld items are waiting for you.";');
     expect(appShortcutsStrings(soul, "zh-Hans")).toContain('"Check my cooldown in ${applicationName}" = "用${applicationName}查冷却";');
     expect(appShortcutsStrings(soul, "zh-Hans")).toContain("向${applicationName}提问");
