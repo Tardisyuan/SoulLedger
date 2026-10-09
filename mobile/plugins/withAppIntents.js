@@ -46,7 +46,7 @@ module.exports = function withAppIntents(config, { app }) {
 
     fs.mkdirSync(appDir, { recursive: true });
     fs.writeFileSync(path.join(appDir, "ShortcutIntents.swift"), swiftSource(def, messages));
-    project = XcodeUtils.addBuildSourceFileToGroup({ filepath: "ShortcutIntents.swift", groupName: projectName, project });
+    project = XcodeUtils.addBuildSourceFileToGroup({ filepath: `${projectName}/ShortcutIntents.swift`, groupName: projectName, project });
 
     for (const lang of LANGS) {
       fs.mkdirSync(path.join(supporting, `${lang}.lproj`), { recursive: true });
