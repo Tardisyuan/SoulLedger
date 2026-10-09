@@ -22,6 +22,22 @@ x-django-env: &django-env
   ENCRYPTION_KEY: ${ENCRYPTION_KEY:-}
   SENTRY_DSN: ${SENTRY_DSN:-}
   TRUSTED_PROXY_COUNT: ${TRUSTED_PROXY_COUNT:-0}
+  # Officer e-mail links (password reset / e-mail verification) are built from
+  # DESK_URL; unset, settings.py falls back to http://localhost:3000 and every
+  # link in a production mail points at the reader's own machine. Defaults
+  # below equal settings.py's, so an unset root .env behaves as before.
+  DESK_URL: ${DESK_URL:-http://localhost:3000}
+  CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:3333}
+  # Empty EMAIL_HOST keeps the "EMAIL_HOST is not set" startup warning alive.
+  EMAIL_HOST: ${EMAIL_HOST:-}
+  EMAIL_PORT: ${EMAIL_PORT:-25}
+  EMAIL_HOST_USER: ${EMAIL_HOST_USER:-}
+  EMAIL_HOST_PASSWORD: ${EMAIL_HOST_PASSWORD:-}
+  EMAIL_USE_TLS: ${EMAIL_USE_TLS:-False}
+  EMAIL_USE_SSL: ${EMAIL_USE_SSL:-False}
+  DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL:-noreply@soulledger.local}
+  SOUL_PUSH_ENABLED: ${SOUL_PUSH_ENABLED:-False}
+  EXPO_ACCESS_TOKEN: ${EXPO_ACCESS_TOKEN:-}
   # Uploaded avatars. The backend mounts the media_files volume here; in
   # production nginx mounts the same volume read-only and serves it as /media/.
   MEDIA_ROOT: /app/media
