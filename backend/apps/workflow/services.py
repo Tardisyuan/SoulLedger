@@ -650,8 +650,10 @@ class WorkflowService:
             # `_create_nodes`. Inside the transaction, so a refusal leaves no
             # half-built workflow behind.
             cls._create_nodes(workflow, template, civilization)
+            # The WORKFLOW_CREATED row is part of the workflow's record: same transaction.
+            cls.record_events(workflow, created=True)
 
-        # After commit, not "outside the atomic block above": `conclude_judgment(create_workflow=True)` calls
+        # The notification half, after commit, not "outside the atomic block above": `conclude_judgment(create_workflow=True)` calls
         # this from inside the judgment's own transaction. A notification INSERT that fails there is swallowed
         # by the event bus but marks that transaction for rollback, so the conclusion is lost silently
         # (same defect as `30052b65`; tests/test_dispatch_notifications_after_commit.py). Outside any
@@ -674,9 +676,30 @@ class WorkflowService:
         return {"kind": "approval", "id": str(workflow.pk)}
 
     @staticmethod
+    def record_events(workflow, created: bool = False, node=None) -> None:
+        """Write the workflow's own events onto the soul's timeline (WORKFLOW_CREATED / _APPROVED / _REJECTED).
+
+        CALL INSIDE THE TRANSACTION of the change it records. The event row is part of the business record: if it
+        cannot be written, `AuditHandler` raises (`propagate_errors`) and the approval / rejection / creation
+        rolls back with it. The notification half is `announce`, which runs after commit.
+        """
+        from apps.events.services import EventService
+
+        if created:
+            EventService.log_workflow_created(workflow)
+        elif node is not None:
+            from apps.workflow.models import NodeStatus
+
+            if node.status == NodeStatus.APPROVED:
+                EventService.log_workflow_approved(workflow, node=node)
+            elif node.status == NodeStatus.REJECTED:
+                EventService.log_workflow_rejected(workflow, node=node)
+
+    @staticmethod
     def announce(workflow, created: bool = False, node=None) -> None:
-        """Emit the workflow's own events onto the soul's timeline, and tell the
-        approver a node is waiting for them.
+        """Tell whoever the workflow moved on to that a node is waiting for them (push + in-app notification).
+        BEST-EFFORT, AFTER COMMIT. The timeline events are `record_events`, written inside the transaction.
+        (`created` / `node` are kept so callers pass the same arguments to both halves.)
 
         WHY THIS EXISTS AS OF 2026-08-30. `apps/events/services.py` has carried
         `log_workflow_created`, `log_workflow_approved`, `log_workflow_rejected`
@@ -704,16 +727,6 @@ class WorkflowService:
         caller might still roll back.
         """
         from apps.events.services import EventService
-
-        if created:
-            EventService.log_workflow_created(workflow)
-        elif node is not None:
-            from apps.workflow.models import NodeStatus
-
-            if node.status == NodeStatus.APPROVED:
-                EventService.log_workflow_approved(workflow, node=node)
-            elif node.status == NodeStatus.REJECTED:
-                EventService.log_workflow_rejected(workflow, node=node)
 
         # Whoever the now-current node names. `None` after a terminal decision,
         # which is the correct time to tell nobody.
