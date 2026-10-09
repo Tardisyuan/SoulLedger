@@ -160,10 +160,14 @@ def test_todo_counts_dispatch_proposals_for_the_target_hall(cn_tenant, eu_tenant
     soul = dead_soul(eu_tenant, name="待调拨")
     record = DispatchRecord.objects.create(source_tenant=eu_tenant, target_tenant=cn_tenant, soul=soul,
                                            status=DispatchStatus.PROPOSED, tenant=eu_tenant)
-    data = officer_client(judge_user).get(TODO).data
+    # dispatch.approve belongs to the hall lead (MODERATOR), not to a judge.
+    cn_lead = User.objects.create_user(username="cn_lead", password="x", role="MODERATOR", tenant=cn_tenant)
+    data = officer_client(cn_lead).get(TODO).data
     assert [i["id"] for i in data["reassignments"]["items"]] == [str(record.pk)]
-    eu_judge = User.objects.create_user(username="eu_j", password="x", role="JUDGE", tenant=eu_tenant)
-    assert officer_client(eu_judge).get(TODO).data["reassignments"]["count"] == 0
+    assert officer_client(judge_user).get(TODO).data["reassignments"]["count"] == 0
+    # The source hall's lead is not the one asked.
+    eu_lead = User.objects.create_user(username="eu_lead", password="x", role="MODERATOR", tenant=eu_tenant)
+    assert officer_client(eu_lead).get(TODO).data["reassignments"]["count"] == 0
 
 
 def test_a_soul_token_cannot_read_the_officer_app(cn_tenant):
