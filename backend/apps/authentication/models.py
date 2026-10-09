@@ -128,6 +128,11 @@ class User(AuditUserFields, AbstractUser):
         related_name="users",
         help_text="RBAC role with hierarchy and permission inheritance",
     )
+    # 兼任的其它角色(角色名列表)。权限 = `role` 与这里每个角色的并集,
+    # 并集只在 `apps/perm/checker.py::check_permission` 里算一次。
+    # 不含 ADMIN / SOUL(`UserViewSet.assign_roles` 拒绝,检查器也无视),
+    # 主角色 `role` 仍是唯一决定 ADMIN 旁路、租户豁免、排名的那一个。
+    extra_roles = models.JSONField(default=list, blank=True)
     # For API display — linked to an Actor in the underworld system
     tenant = models.ForeignKey(
         "tenants.Tenant",

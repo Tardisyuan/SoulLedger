@@ -2189,7 +2189,32 @@
       "SOUL": "灵魂"
     },
     "delete_title": "删除用户",
-    "delete_confirm": "确认删除该用户？"
+    "delete_confirm": "确认删除该用户？",
+    "edit_roles": "设置角色",
+    "roles_dialog": {
+      "title": "设置角色",
+      "for_user": "账号：{{name}}",
+      "primary": "主角色",
+      "primary_hint": "主角色决定是否为管理员，以及权限高低的排名。",
+      "extra": "兼任角色",
+      "extra_hint": "权限取主角色与全部兼任角色的并集；殿主的三项禁令、管理员专属的操作仍然生效，并集不会放宽它们。",
+      "extra_none": "没有可兼任的角色",
+      "admin_locked": "管理员已拥有全部权限，不能再兼任其它角色。",
+      "saved": "角色已更新",
+      "error": "角色更新失败"
+    },
+    "batch": {
+      "region": "批量操作",
+      "selected": "已选 {{n}}",
+      "select_row": "选择「{{name}}」",
+      "select_all": "选择本页全部",
+      "clear": "取消选择",
+      "activate": "启用所选",
+      "deactivate": "停用所选",
+      "done": "已更新 {{n}} 个账号",
+      "failed": "批量更新失败",
+      "skipped_note": "管理员账号和你自己不在批量范围内。"
+    }
   },
   "settings": {
     "title": "设置",

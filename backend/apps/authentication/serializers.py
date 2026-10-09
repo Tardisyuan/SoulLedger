@@ -176,7 +176,7 @@ class UserWithTenantSerializer(serializers.ModelSerializer):
         a fourth answer to this same question and is not reconciled yet.
         """
         from apps.perm.services import get_role_permission_codenames
-        return get_role_permission_codenames(obj.role)
+        return get_role_permission_codenames(obj.role, obj.extra_roles)
 
 
 class LoginResponseSerializer(serializers.Serializer):
@@ -398,8 +398,8 @@ class UserManagementSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'role', 'tenant', 'organization', 'position', 'is_active', 'create_time', 'avatar', 'is_eval_identity']
-        read_only_fields = ['id', 'create_time']
+        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'role', 'tenant', 'organization', 'position', 'is_active', 'create_time', 'avatar', 'is_eval_identity', 'extra_roles']
+        read_only_fields = ['id', 'create_time', 'extra_roles']
 
     def get_is_eval_identity(self, obj) -> bool:
         from apps.soul_assist.eval_identities import tagged_ids
@@ -608,13 +608,27 @@ class UserImportResultSerializer(serializers.Serializer):
 
 
 class UserRoleSerializer(serializers.Serializer):
-    """`{"role": "..."}` — the single-role body `own_roles` returns.
+    """`{"role": "...", "extra_roles": [...]}` — the body `own_roles` returns.
 
-    Schema-only. Named for what it is: this endpoint is plural in its URL and
-    singular in its body, because a user carries one role in this system.
+    Schema-only. `role` is the primary role (ADMIN bypass, ranking); the
+    permissions a user holds are the union of `role` and `extra_roles`.
     """
 
     role = serializers.CharField()
+    extra_roles = serializers.ListField(child=serializers.CharField())
+
+
+class AssignRolesSerializer(serializers.Serializer):
+    """Body of `POST /users/{id}/assign_roles/`. At least one field.
+
+    `role` replaces the primary role, `extra_roles` replaces the whole list of
+    additional roles (send `[]` to clear it). ADMIN and SOUL are refused as
+    additional roles; the view checks each name against the role table and
+    against the caller's own rank.
+    """
+
+    role = serializers.CharField(required=False)
+    extra_roles = serializers.ListField(child=serializers.CharField(), required=False)
 
 
 class PasswordResetResultSerializer(serializers.Serializer):

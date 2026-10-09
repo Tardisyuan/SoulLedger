@@ -19,6 +19,8 @@ export interface User {
   username: string;
   email: string;
   role: string;
+  /** 兼任角色(角色名)。权限 = `role` 与这里每个角色的并集;列表 / 详情都带。 */
+  extra_roles?: string[];
   tenant?: { id?: number; code: string; display_name: string } | null;
   tenant_id?: number;
   display_name?: string;
@@ -62,6 +64,17 @@ export interface UpdateUserInput {
   password?: string;
 }
 
+/** POST /users/{id}/assign_roles/ —— 至少给一项。`extra_roles` 整表替换(`[]` 清空);不含 ADMIN / SOUL。 */
+export interface AssignRolesInput {
+  role?: string;
+  extra_roles?: string[];
+}
+
+/** 200 body of POST /users/batch_activate/ and /batch_deactivate/. 管理员账号与自己不在批量范围内。 */
+export interface UserBatchUpdateResult {
+  updated: number;
+}
+
 export interface UserFilters {
   page?: number;
   role?: string;
@@ -93,6 +106,9 @@ export const usersApi = {
   delete: (id: string) => api.delete<void>(`/users/${id}/`),
   activate: (id: string) => api.post<User>(`/users/${id}/activate/`),
   deactivate: (id: string) => api.post<User>(`/users/${id}/deactivate/`),
+  assignRoles: (id: string, data: AssignRolesInput) => api.post<User>(`/users/${id}/assign_roles/`, data),
+  batchActivate: (userIds: string[]) => api.post<UserBatchUpdateResult>("/users/batch_activate/", { user_ids: userIds }),
+  batchDeactivate: (userIds: string[]) => api.post<UserBatchUpdateResult>("/users/batch_deactivate/", { user_ids: userIds }),
   export: () => api.get<Blob>("/users/export_csv/", { responseType: "blob" }),
   import: (data: FormData) => api.post<UserImportResult>("/users/import_csv/", data, {
     headers: { "Content-Type": "multipart/form-data" },

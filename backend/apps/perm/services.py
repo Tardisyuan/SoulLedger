@@ -32,11 +32,12 @@ class RoleHolder:
 
     is_authenticated = True
 
-    def __init__(self, role_name):
+    def __init__(self, role_name, extra_roles=()):
         self.role = role_name
+        self.extra_roles = list(extra_roles or ())
 
 
-def get_role_permission_codenames(role_name):
+def get_role_permission_codenames(role_name, extra_roles=()):
     """Codenames this role effectively holds — answered by check_permission itself.
 
     This is what fills the frontend's permission list, by both routes that
@@ -81,10 +82,13 @@ def get_role_permission_codenames(role_name):
     with a 300s TTL, which is why the write endpoints in views.py invalidate
     explicitly — see the note on assign_role_permissions.
     """
+    # `extra_roles` (多角色): the union is computed by check_permission itself,
+    # so this only widens the candidate list to every held role's dict entries.
     candidates = (
         {codename for codename, _, _ in DEFAULT_PERMISSIONS}
         | set(Permission.objects.values_list("codename", flat=True))
         | set(ROLE_PERMISSIONS.get(role_name, []))
+        | {c for r in extra_roles or () for c in ROLE_PERMISSIONS.get(r, [])}
     )
-    holder = RoleHolder(role_name)
+    holder = RoleHolder(role_name, extra_roles)
     return sorted(codename for codename in candidates if check_permission(holder, codename))

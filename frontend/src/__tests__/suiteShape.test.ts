@@ -160,6 +160,8 @@ const COLLECTED_FILES = [
   "OrganizationsPage.test.tsx",
   "UserDeleteDialog.test.tsx",
   "UsersPage.locate.test.tsx",
+  // 2026-10-09 多角色:角色签、设置角色对话框、批量启用 / 停用、非管理员什么都看不到。
+  "UsersPage.multiRole.test.tsx",
   "UsersPage.roleBadge.test.tsx",
   "WebSocketContext.currentUserId.test.tsx",
   "WebSocketContext.sessionResume.test.tsx",
