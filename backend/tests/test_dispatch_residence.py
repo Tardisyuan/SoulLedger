@@ -320,7 +320,7 @@ def test_ending_an_active_stop_by_hand_aborts_it_and_the_next_stop_is_dispatched
 # ── 调拨被拒(Q4)与手动调拨(Q3)────────────────────────────────────────
 
 
-def test_a_refused_stop_goes_back_to_pending_and_the_home_judges_are_told(cn, eg):
+def test_a_refused_stop_goes_back_to_pending_and_the_home_judges_are_told(cn, eg, django_capture_on_commit_callbacks):
     from apps.notifications.models import UserNotification
 
     soul, p = plan.planned(cn, [(eg, plan.stop_realm(eg), 5)])
@@ -328,8 +328,9 @@ def test_a_refused_stop_goes_back_to_pending_and_the_home_judges_are_told(cn, eg
     plan.serve(soul, p, 1)
     [record] = plan.records(soul)
 
-    response = officer_client(_officer("eg_mod", "MODERATOR", eg)).post(
-        f"/api/v1/dispatch/records/{record.pk}/reject/", {"reason": "不收"}, format="json")
+    with django_capture_on_commit_callbacks(execute=True):
+        response = officer_client(_officer("eg_mod", "MODERATOR", eg)).post(
+            f"/api/v1/dispatch/records/{record.pk}/reject/", {"reason": "不收"}, format="json")
 
     assert response.status_code == 200, response.data
     stop = _node(p, 2)
@@ -530,14 +531,15 @@ def test_without_a_plan_withdrawing_the_blocking_judgment_no_longer_returns_the_
 # ── 刑满暂留(WAITING,Q7):受刑计划里被未结案审判拦下的回归 ─────────────────
 
 
-def test_an_open_judgment_holds_the_served_soul_at_the_stop_as_waiting(cn, eg):
+def test_an_open_judgment_holds_the_served_soul_at_the_stop_as_waiting(cn, eg, django_capture_on_commit_callbacks):
     from apps.notifications.models import UserNotification
 
     soul, p, record = plan.at_stop(cn, eg)
     judges = {"cn": _officer("cn_judge", "JUDGE", cn), "eg": _officer("eg_judge", "JUDGE", eg)}
     case = _open_judgment(soul, eg)
 
-    assert plan.serve(soul, p, 2) is True
+    with django_capture_on_commit_callbacks(execute=True):
+        assert plan.serve(soul, p, 2) is True
 
     soul.refresh_from_db()
     record.refresh_from_db()
