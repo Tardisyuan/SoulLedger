@@ -247,11 +247,13 @@ def test_assign_roles_is_admin_only(world):
     assert target.extra_roles == []
 
 
-def test_a_role_change_is_audited_with_the_extra_roles_diff(world):
+def test_a_role_change_is_audited_with_the_extra_roles_diff(world, django_capture_on_commit_callbacks):
     target = _user(world, "a_audit", "VIEWER")
     AuditLog.objects.all().delete()
-    assert _assign(world, target, {"extra_roles": ["JUDGE"]}).status_code == 200
-    rows = AuditLog.objects.filter(action=AuditAction.UPDATE, resource_id=str(target.pk), resource="authentication.user")
+    # The generic UPDATE row is written by the audit signal on commit.
+    with django_capture_on_commit_callbacks(execute=True):
+        assert _assign(world, target, {"extra_roles": ["JUDGE"]}).status_code == 200
+    rows = AuditLog.objects.filter(action=AuditAction.UPDATE, resource_id=str(target.pk), resource="user")
     changes = [r.changes for r in rows if r.changes and "extra_roles" in r.changes]
     assert changes, list(rows.values("resource", "changes"))
     assert "JUDGE" in changes[0]["extra_roles"][1]
@@ -276,9 +278,14 @@ def test_batch_deactivate_and_activate_are_audited_and_skip_admins_and_self(worl
     assert AuditLog.objects.filter(action=AuditAction.BATCH_UPDATE).count() == 2
 
 
-def test_batch_without_ids_is_400_and_writes_no_audit(world):
+# Callbacks are executed below, so "no BATCH_UPDATE row" is a real absence; the guard cannot
+# see that when nothing was written at all.
+@pytest.mark.allow_uncommitted_audit
+def test_batch_without_ids_is_400_and_writes_no_audit(world, django_capture_on_commit_callbacks):
     AuditLog.objects.all().delete()
-    res = world["client"].post("/api/v1/users/batch_activate/", {"user_ids": []}, format="json")
+    # Run on-commit callbacks so "no audit row" is a real absence, not an uncommitted table.
+    with django_capture_on_commit_callbacks(execute=True):
+        res = world["client"].post("/api/v1/users/batch_activate/", {"user_ids": []}, format="json")
     assert res.status_code == 400
     assert not AuditLog.objects.filter(action=AuditAction.BATCH_UPDATE).exists()
 
