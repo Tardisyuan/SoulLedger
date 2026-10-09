@@ -27,6 +27,7 @@ class EventType(models.TextChoices):
     # 记在灵魂自己的时间线上;灵魂状态不变 —— 期满的灵魂在等轮回,不是被推进了一步。
     DISPOSITION_EXPIRED = "DISPOSITION_EXPIRED"
     REINCARNATION_TRIGGERED = "REINCARNATION_TRIGGERED"
+    REINCARNATION_COMPLETED = "REINCARNATION_COMPLETED"
     KARMA_RECALCULATED = "KARMA_RECALCULATED"
 
     # Workflow events (M12 Phase 2)

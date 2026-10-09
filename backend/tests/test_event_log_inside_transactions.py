@@ -319,6 +319,39 @@ def _rebirth_cross_civ():
             "REBIRTH_CROSS_CIV_DECIDED")
 
 
+def _rebirth_decision_syncs_the_application():
+    """The officer rejects a rebirth application through the real endpoint. The workflow decision and the
+    application's status (`rebirth.sync_from_workflow`) are ONE transaction: an event failure in the SYNC step
+    (REBIRTH_STATUS_CHANGED) must undo the approval too."""
+    from apps.soul_accounts.models import RebirthApplication
+    from apps.workflow.models import ApprovalNode, NodeStatus
+    from tests.soul_account_support import officer_client
+
+    account, application = _submitted_application()
+    judge = _judge()
+    node = ApprovalNode.all_objects.get(workflow_id=application.workflow_id, node_order=1)
+    return (lambda: officer_client(judge).post(
+                f"/api/v1/workflows/{application.workflow_id}/approve_node/",
+                {"verdict": "FAILED", "notes": "x", "rejection_reason_for_soul": "业障未消"}, format="json"),
+            lambda: (ApprovalNode.all_objects.get(pk=node.pk).status != NodeStatus.PENDING
+                     or RebirthApplication.objects.get(pk=application.pk).status != "UNDER_REVIEW"),
+            "REBIRTH_STATUS_CHANGED")
+
+
+def _rebirth_timeout_syncs_the_application():
+    from apps.soul_accounts.models import RebirthApplication
+    from apps.workflow import timeouts
+    from apps.workflow.models import ApprovalNode, ApprovalWorkflow
+
+    account, application = _submitted_application()
+    ApprovalNode.all_objects.filter(workflow_id=application.workflow_id, node_order=1).update(
+        timeout_hours=1, timeout_action="AUTO_REJECT", activated_at=timezone.now() - datetime.timedelta(hours=2))
+    return (lambda: timeouts._fire(application.workflow_id, timezone.now()),
+            lambda: (ApprovalWorkflow.all_objects.get(pk=application.workflow_id).status != "IN_PROGRESS"
+                     or RebirthApplication.objects.get(pk=application.pk).status != "UNDER_REVIEW"),
+            "REBIRTH_STATUS_CHANGED")
+
+
 PATHS = {
     # judgment conclusion (ORIGINAL) -- three different log calls on one call stack
     "conclude/JUDGMENT_CONCLUDED": _conclude_original("JUDGMENT_CONCLUDED"),
@@ -348,6 +381,9 @@ PATHS = {
     "workflow_approve/WORKFLOW_APPROVED": _workflow_decision("PASSED", "WORKFLOW_APPROVED"),
     "workflow_reject/WORKFLOW_REJECTED": _workflow_decision("FAILED", "WORKFLOW_REJECTED"),
     "workflow_timeout_reject/WORKFLOW_REJECTED": _workflow_timeout_reject,
+    # the application's status follows the decision IN the decision's transaction (`sync_from_workflow`)
+    "rebirth_approve+sync/REBIRTH_STATUS_CHANGED": _rebirth_decision_syncs_the_application,
+    "rebirth_timeout+sync/REBIRTH_STATUS_CHANGED": _rebirth_timeout_syncs_the_application,
 }
 
 OUTSIDE_THE_GRID = {"expire_for_tenant/DISPOSITION_EXPIRED", "die/SOUL_ACCOUNT_CREATED"}
@@ -461,3 +497,25 @@ def test_a_failed_account_opening_tells_the_admins_after_commit_and_only_then():
     notes = UserNotification.objects.filter(related_resource="soul", related_id=str(soul.pk))
     assert sorted(n.user_id for n in notes) == sorted(a.pk for a in admins)             # one per home admin
     assert all("backfill_soul_accounts" in n.message and "亡魂" in n.message for n in notes)
+
+
+def test_a_successful_rebirth_decision_commits_workflow_and_application_together():
+    """No window in which the workflow is decided and the application still says UNDER_REVIEW: inside the very
+    transaction that decides the node, the application already shows the new status, and one commit makes both
+    durable. (It used to follow in an `on_commit` callback, after the decision had committed.)"""
+    from apps.soul_accounts.models import RebirthApplication
+    from apps.workflow.models import ApprovalWorkflow
+    from tests.soul_account_support import officer_client
+
+    account, application = _submitted_application()
+    judge = _judge()
+    with transaction.atomic():
+        response = officer_client(judge).post(
+            f"/api/v1/workflows/{application.workflow_id}/approve_node/",
+            {"verdict": "FAILED", "notes": "x", "rejection_reason_for_soul": "业障未消"}, format="json")
+        assert response.status_code == 200, response.data
+        assert ApprovalWorkflow.all_objects.get(pk=application.workflow_id).status == "REJECTED"
+        assert RebirthApplication.objects.get(pk=application.pk).status == "REJECTED"  # not deferred to on_commit
+    assert RebirthApplication.objects.get(pk=application.pk).status == "REJECTED"
+    assert SoulEvent.all_objects.filter(event_type="REBIRTH_STATUS_CHANGED",
+                                        payload__application_id=str(application.pk)).count() == 1

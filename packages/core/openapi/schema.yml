@@ -5606,6 +5606,7 @@ paths:
           - REBIRTH_CROSS_CIV_DECIDED
           - REBIRTH_STATUS_CHANGED
           - RECORD_ADDED
+          - REINCARNATION_COMPLETED
           - REINCARNATION_TRIGGERED
           - SCHEDULER_RUN_FAILED
           - SENTENCE_NODE_ACTIVATED
@@ -5639,6 +5640,7 @@ paths:
           * `DISPOSITION_CREATED` - Disposition Created
           * `DISPOSITION_EXPIRED` - Disposition Expired
           * `REINCARNATION_TRIGGERED` - Reincarnation Triggered
+          * `REINCARNATION_COMPLETED` - Reincarnation Completed
           * `KARMA_RECALCULATED` - Karma Recalculated
           * `WORKFLOW_CREATED` - Workflow Created
           * `WORKFLOW_ASSIGNED` - Workflow Assigned
@@ -22035,6 +22037,7 @@ components:
       - DISPOSITION_CREATED
       - DISPOSITION_EXPIRED
       - REINCARNATION_TRIGGERED
+      - REINCARNATION_COMPLETED
       - KARMA_RECALCULATED
       - WORKFLOW_CREATED
       - WORKFLOW_ASSIGNED
@@ -22085,6 +22088,7 @@ components:
         * `DISPOSITION_CREATED` - Disposition Created
         * `DISPOSITION_EXPIRED` - Disposition Expired
         * `REINCARNATION_TRIGGERED` - Reincarnation Triggered
+        * `REINCARNATION_COMPLETED` - Reincarnation Completed
         * `KARMA_RECALCULATED` - Karma Recalculated
         * `WORKFLOW_CREATED` - Workflow Created
         * `WORKFLOW_ASSIGNED` - Workflow Assigned
