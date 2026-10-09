@@ -42,5 +42,6 @@
  "officer_app.search.residing",
  "officer_app.todo.groups.approvals",
  "officer_app.todo.groups.reassignments",
- "officer_app.todo.groups.rebirths"
+ "officer_app.todo.groups.rebirths",
+ "tenants.settings.security"
 ]

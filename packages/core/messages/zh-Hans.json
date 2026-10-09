@@ -3010,7 +3010,8 @@
       "cooldown_invalid": "请填 0 到 365 之间的整数",
       "dispatch_enabled": "可接收调拨(暂居)",
       "saved": "设置已保存",
-      "save_failed": "没能保存设置"
+      "save_failed": "没能保存设置",
+      "security": "安全"
     }
   },
   "table": {
