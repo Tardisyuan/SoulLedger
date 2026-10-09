@@ -131,16 +131,18 @@ def _workflow_state(wf, user):
         last = wf.nodes.exclude(decided_at=None).order_by("-decided_at").first()
         return _state(False, "already_handled", decision_codes.handled_by(last) if last else None,
                       last.decided_at if last else None)
+    verdicts = list(node.required_verdicts or [])
     blocked = decision_codes.block_for(node, user)
     if blocked is None:
-        return _state(True, node_id=str(node.pk))
+        return _state(True, node_id=str(node.pk), required_verdicts=verdicts)
     code, extra = blocked
     # 流程已经往下走:当前节点是别人的,但刚才被决定的是上一个节点。
     if code == "permission_changed":
         last = wf.nodes.exclude(decided_at=None).order_by("-decided_at").first()
         if last is not None and last.pk != node.pk:
             return _state(False, "already_handled", decision_codes.handled_by(last), last.decided_at)
-    return _state(False, code, extra.get("handled_by"), node.decided_at, node_id=str(node.pk))
+    return _state(False, code, extra.get("handled_by"), node.decided_at, node_id=str(node.pk),
+                  required_verdicts=verdicts)
 
 
 def workflow_for(scope, kind, pk):

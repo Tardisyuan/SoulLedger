@@ -123,6 +123,15 @@ def test_an_item_outside_the_hall_is_a_404(cn_tenant, eu_tenant, colleague):
     assert eu_judge  # the hall's own judge is the one who could
 
 
+def test_item_detail_names_the_verdicts_the_node_accepts(cn_tenant, judge_user):
+    wf, node = _plain_workflow(cn_tenant)
+    client = officer_client(judge_user)
+    assert client.get(f"/api/v1/officer-app/items/approval/{wf.pk}/").data["required_verdicts"] == []
+    node.required_verdicts = ["CONFIRMED", "FAILED"]
+    node.save(update_fields=["required_verdicts"])
+    assert client.get(f"/api/v1/officer-app/items/approval/{wf.pk}/").data["required_verdicts"] == ["CONFIRMED", "FAILED"]
+
+
 def test_the_push_payload_carries_the_item_it_is_about(cn_tenant, judge_user, push_on):  # noqa: F811
     wf, _ = _plain_workflow(cn_tenant)
     push.register_device(judge_user, TOKEN, "IOS")
