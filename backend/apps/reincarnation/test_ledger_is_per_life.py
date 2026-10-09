@@ -115,6 +115,7 @@ def test_the_backfill_files_old_rows_under_the_life_the_soul_is_in_now():
     from django.apps import apps as live_apps
 
     from apps.reincarnation.models import Reincarnation
+    from tests.migration_schema_editor import SCHEMA_EDITOR
 
     stamp = import_module(
         "apps.souls.migrations.0034_ledger_is_per_life"
@@ -130,7 +131,7 @@ def test_the_backfill_files_old_rows_under_the_life_the_soul_is_in_now():
     # Pretend both rows predate the column.
     SoulRecord.all_objects.filter(pk__in=[old.pk, other.pk]).update(cycle=0)
 
-    stamp(live_apps, None)
+    stamp(live_apps, SCHEMA_EDITOR)
 
     old.refresh_from_db()
     other.refresh_from_db()

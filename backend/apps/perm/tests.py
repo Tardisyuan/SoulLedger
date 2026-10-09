@@ -14,6 +14,7 @@ from apps.perm.models import (
     Role,
     RolePermission,
 )
+from tests.migration_schema_editor import SCHEMA_EDITOR
 from tests.perm_support import seeded_grants
 
 User = get_user_model()
@@ -320,11 +321,11 @@ class WorkflowPermissionMigrationTest(TestCase):
 
     def _forward(self):
         from django.apps import apps as real_apps
-        self._migration().create_workflow_permissions(real_apps, None)
+        self._migration().create_workflow_permissions(real_apps, SCHEMA_EDITOR)
 
     def _backward(self):
         from django.apps import apps as real_apps
-        self._migration().remove_workflow_permissions(real_apps, None)
+        self._migration().remove_workflow_permissions(real_apps, SCHEMA_EDITOR)
 
     def test_forward_creates_six_permissions(self):
         self._forward()
@@ -519,7 +520,7 @@ class ModeratorRealmLeadTest(TestCase):
         from django.apps import apps as real_apps
 
         mod = importlib.import_module("apps.perm.migrations.0013_add_workflow_permissions")
-        mod.create_workflow_permissions(real_apps, None)
+        mod.create_workflow_permissions(real_apps, SCHEMA_EDITOR)
 
     @staticmethod
     def _migration():
@@ -530,11 +531,11 @@ class ModeratorRealmLeadTest(TestCase):
 
     def _forward(self):
         from django.apps import apps as real_apps
-        self._migration().grant(real_apps, None)
+        self._migration().grant(real_apps, SCHEMA_EDITOR)
 
     def _backward(self):
         from django.apps import apps as real_apps
-        self._migration().revoke(real_apps, None)
+        self._migration().revoke(real_apps, SCHEMA_EDITOR)
 
     def test_moderator_can_configure_workflows(self):
         from apps.perm.checker import check_permission
@@ -701,7 +702,7 @@ class LedgerPermissionRenameMigrationTest(TestCase):
         pairs = mod.RENAMES if forward else [
             (new, old, name, "karma") for old, new, name, _ in mod.RENAMES
         ]
-        mod._rename(Permission, RolePermission, pairs)
+        mod._rename(Permission, RolePermission, pairs, "default")
 
     def _seed_karma(self):
         """种下改名前的世界：两条 Permission + JUDGE 对 karma.read 的授权。"""
