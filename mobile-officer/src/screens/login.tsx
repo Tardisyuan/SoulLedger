@@ -85,7 +85,7 @@ export function LoginScreen() {
             <ActionButton
               testID="login-forgot"
               kind="outline"
-              title={`${t("officer_app.login.forgot_password")} ↗`}
+              title={`${t("officer_app.login.forgot_password")} ↗\uFE0E`}
               onPress={() => void Linking.openURL(forgotPasswordUrl()).catch(() => {})}
             />
           </View>
