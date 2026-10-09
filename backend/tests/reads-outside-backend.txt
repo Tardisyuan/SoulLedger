@@ -36,7 +36,7 @@ tests/test_no_second_copy_of_the_civilization_map.py             *
 tests/test_officer_assist_corpus.py                              frontend
 tests/test_official_notify_messages_match_the_language_packs.py  packages
 tests/test_page_gates_match_the_backend.py                       frontend
-tests/test_prepush_runs_the_gates_a_change_can_break.py          .dockerignore .gitignore .nvmrc CLAUDE.md README.md conftest.py docker-compose.yml docs frontend mobile package-lock.json package.json packages pytest.ini scripts
+tests/test_prepush_runs_the_gates_a_change_can_break.py          .dockerignore .gitignore .nvmrc CLAUDE.md README.md conftest.py docker-compose.yml docs frontend mobile mobile-officer package-lock.json package.json packages pytest.ini scripts
 tests/test_production.py                                         .env.example docker-compose.override.yml docker-compose.production.yml docker-compose.staging.yml docker-compose.yml frontend nginx.conf scripts
 tests/test_reads_outside_backend_list.py                         frontend packages pytest.ini
 tests/test_realm_path_fields.py                                  packages

@@ -707,6 +707,12 @@ class WorkflowService:
             # A 会签 signature that did not settle the node: the flow has not
             # moved, and the remaining signers were told when it arrived.
             return
+        if current is not None:
+            # 官员端 App 的「有 N 件待你处理」。节点指定的人(角色或个人,含转生申请)都算;
+            # 没有设备的人在 `send_to_user` 里被跳过。
+            from apps.officer_app.push import notify_users
+
+            notify_users(WorkflowService.designated_users(current, workflow.tenant_id))
         if current is not None and current.kind == NodeKind.COUNTERSIGN:
             # Every signer still owed a signature, actor-designated or not:
             # a 会签 is addressed to named people by construction.

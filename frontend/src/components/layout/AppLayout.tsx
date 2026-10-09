@@ -14,6 +14,7 @@ import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { authApi } from "@soulledger/core/api";
 import { SettingsDrawer } from "@/src/components/settings/SettingsDrawer";
 import { ConnectionBanner, useConnectionBannerShown } from "@/src/components/connection-status";
+import { MfaRequiredBanner } from "@/src/components/layout/MfaRequiredBanner";
 import { useSidebarMenus, type SidebarMenu } from "@/src/hooks/useSidebarMenus";
 import { Breadcrumb, useBreadcrumbs } from "@/src/components/layout/Breadcrumb";
 import { BottomBar, GlobalNav, groupOfPath, useNavMode } from "@/src/components/layout/GlobalNav";
@@ -299,6 +300,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             )}
           </div>
         </header>
+
+        {/* 被要求开启两步验证而未开启:常驻提示(A12),在文档流里,不盖工具条。 */}
+        <MfaRequiredBanner />
 
         {/* 身份带(规范 v3):吸在工具条下沿;页面滚动后自己收成 48px,只留印与殿名。
             z 与筛选栏同一层:两者不重叠 —— 筛选栏吸在 52 + 身份带此刻的高度(`--below-band`)。 */}

@@ -5,10 +5,12 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
+from rest_framework.exceptions import APIException
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.serializers import TokenRefreshSerializer as SimpleJWTTokenRefreshSerializer
 from rest_framework_simplejwt.settings import api_settings as simplejwt_settings
 
+from .models import OfficerMfa
 from .tokens import RefreshToken
 
 User = get_user_model()
@@ -133,10 +135,23 @@ class UserWithTenantSerializer(serializers.ModelSerializer):
     """User serializer with tenant info + role permissions for login response."""
     tenant = serializers.SerializerMethodField()
     permissions = serializers.SerializerMethodField()
+    # 两步验证(A12):`mfa_required` 是角色被殿设置要求(ADMIN 始终);不挡登录,前端据此挂常驻提示条。
+    mfa_enabled = serializers.SerializerMethodField()
+    mfa_required = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ["id", "username", "email", "role", "tenant", "display_name", "permissions"]
+        fields = ["id", "username", "email", "role", "tenant", "display_name", "permissions", "mfa_enabled", "mfa_required"]
+
+    def get_mfa_enabled(self, obj) -> bool:
+        from apps.authentication import mfa
+
+        return mfa.is_enabled(obj)
+
+    def get_mfa_required(self, obj) -> bool:
+        from apps.authentication import mfa
+
+        return mfa.is_required(obj)
 
     @extend_schema_field(LoginTenantRefSerializer(allow_null=True))
     def get_tenant(self, obj):
@@ -179,6 +194,11 @@ class UserWithTenantSerializer(serializers.ModelSerializer):
         return get_role_permission_codenames(obj.role, obj.extra_roles)
 
 
+class LoginHallSerializer(serializers.Serializer):
+    code = serializers.CharField()
+    display_name = serializers.CharField()
+
+
 class LoginResponseSerializer(serializers.Serializer):
     """Doc-only: the 200 body of `LoginView` — simplejwt's `access`/`refresh`
     plus the `user` that `CustomTokenObtainPairSerializer.validate` adds.
@@ -191,6 +211,18 @@ class LoginResponseSerializer(serializers.Serializer):
     access = serializers.CharField()
     refresh = serializers.CharField()
     user = UserWithTenantSerializer()
+
+
+class MfaRequiredResponseSerializer(serializers.Serializer):
+    """Doc-only: the 200 body of `LoginView` when the password was right but the
+    account has two-step verification on and this browser holds no valid
+    「不再询问」 device cookie. No tokens: `pending_token` (5 minutes, type
+    `mfa_pending`, usable nowhere else) goes to `/auth/mfa/verify/`.
+    """
+
+    mfa_required = serializers.BooleanField()
+    pending_token = serializers.CharField()
+    username = serializers.CharField()
 
 
 class LoginFailedResponseSerializer(serializers.Serializer):
@@ -214,6 +246,14 @@ class LoginLockedResponseSerializer(serializers.Serializer):
     error = serializers.CharField()
     code = serializers.CharField()
     retry_after = serializers.IntegerField()
+
+
+class HallChoiceResponseSerializer(serializers.Serializer):
+    """Doc-only: the 409 body of the officer login (`code` is `hall_required`)."""
+
+    code = serializers.CharField()
+    detail = serializers.CharField()
+    halls = LoginHallSerializer(many=True)
 
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
@@ -255,18 +295,91 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         # TokenObtainPairSerializer.validate, restated so the token can be
         # marked *before* it is serialised: `super().validate` would hand back
         # strings already carrying the default expiry.
-        data = super(TokenObtainPairSerializer, self).validate(attrs)
-        refresh = self.get_token(self.user)
-        if attrs.get("remember"):
-            refresh.remember()
-        data["refresh"] = str(refresh)
-        data["access"] = str(refresh.access_token)
-        if simplejwt_settings.UPDATE_LAST_LOGIN:
-            from django.contrib.auth.models import update_last_login
+        super(TokenObtainPairSerializer, self).validate(attrs)
+        return self._finish(attrs)
 
-            update_last_login(None, self.user)
-        data["user"] = UserWithTenantSerializer(self.user).data
-        return data
+    def _finish(self, attrs):
+        """Password settled for `self.user`: a second step if they have 2FA, else tokens."""
+        from apps.authentication import mfa
+
+        request = self.context.get("request")
+        if mfa.is_enabled(self.user) and not mfa.device_remembered(request, self.user):
+            # 第二步:密码对了,令牌还不发。`remember` 随待验证令牌走,验码后照样生效。
+            pending = mfa.PendingToken.for_user(self.user)
+            pending["remember"] = bool(attrs.get("remember"))
+            return {"mfa_required": True, "pending_token": str(pending), "username": self.user.username}
+        return issue_tokens(self.user, remember=bool(attrs.get("remember")))
+
+
+def issue_tokens(user, *, remember: bool) -> dict:
+    """登录成功的那份响应:access / refresh / user。密码登录与两步验证第二步共用。"""
+    refresh = CustomTokenObtainPairSerializer.get_token(user)
+    if remember:
+        refresh.remember()
+    data = {"refresh": str(refresh), "access": str(refresh.access_token)}
+    if simplejwt_settings.UPDATE_LAST_LOGIN:
+        from django.contrib.auth.models import update_last_login
+
+        update_last_login(None, user)
+    data["user"] = UserWithTenantSerializer(user).data
+    return data
+
+
+class HallChoiceRequired(APIException):
+    """409 for the officer app's login: the password matched officers in more than
+    one hall. The body lists only those halls; the client retries with `tenant_code`."""
+
+    status_code = 409
+    default_code = "hall_required"
+
+    def __init__(self, halls):
+        super().__init__({"code": "hall_required", "detail": "请选择所属殿。", "halls": halls})
+
+
+class OfficerTokenObtainPairSerializer(CustomTokenObtainPairSerializer):
+    """Officer-app login: username + password, **no hall chosen** (2026-10-09).
+
+    The app is in the stores, so the hall is found from the account. `User.username`
+    is globally unique today, so the account names exactly one hall and this behaves
+    as the Web login does; the `hall_required` branch is the contract for the day
+    that stops being true (and is what `tenant_code` answers). The password is
+    verified BEFORE any hall is revealed, and every failure is the same
+    `no_active_account` — a wrong password, an unknown name, a soul account and a
+    hall hint that does not match are indistinguishable from outside.
+    """
+
+    tenant_code = serializers.CharField(required=False, allow_blank=True, write_only=True)
+
+    @staticmethod
+    def accounts_named(username):
+        return list(User.objects.filter(username=username).select_related("tenant"))
+
+    def validate(self, attrs):
+        from rest_framework.exceptions import AuthenticationFailed
+
+        refused = AuthenticationFailed(self.default_error_messages["no_active_account"], "no_active_account")
+        hint = (attrs.get("tenant_code") or "").strip()
+        accounts = self.accounts_named(attrs["username"])
+        if len(accounts) > 1:
+            matches = [u for u in accounts
+                       if u.is_active and u.role != "SOUL" and u.check_password(attrs["password"])]
+            if hint:
+                matches = [u for u in matches if u.tenant_id and u.tenant.code == hint]
+            if not matches:
+                raise refused
+            if len(matches) > 1:
+                raise HallChoiceRequired([
+                    {"code": u.tenant.code, "display_name": u.tenant.display_name}
+                    for u in matches if u.tenant_id
+                ])
+            self.user = matches[0]
+        else:
+            super(TokenObtainPairSerializer, self).validate(attrs)  # authenticates → self.user
+            if hint and not (self.user.tenant_id and self.user.tenant.code == hint):
+                raise refused
+        if self.user.role == "SOUL":
+            raise refused
+        return self._finish(attrs)  # 2FA (feat/officer-2fa): same mfa_required + pending_token step as /auth/login/
 
 
 class TokenRefreshSerializer(SimpleJWTTokenRefreshSerializer):
@@ -345,8 +458,21 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ["id", "username", "email", "role", "tenant", "first_name", "last_name", "is_active", "display_name", "organization", "position"]
+        fields = ["id", "username", "email", "role", "tenant", "first_name", "last_name", "is_active", "display_name", "organization", "position", "mfa_enabled", "mfa_required"]
         read_only_fields = ["id", "is_active", "username", "role"]
+
+    mfa_enabled = serializers.SerializerMethodField()
+    mfa_required = serializers.SerializerMethodField()
+
+    def get_mfa_enabled(self, obj) -> bool:
+        from apps.authentication import mfa
+
+        return mfa.is_enabled(obj)
+
+    def get_mfa_required(self, obj) -> bool:
+        from apps.authentication import mfa
+
+        return mfa.is_required(obj)
 
     @extend_schema_field(LoginTenantRefSerializer(allow_null=True))
     def get_tenant(self, obj):
@@ -388,6 +514,21 @@ class UserSerializer(serializers.ModelSerializer):
 # ---------------------------------------------------------------------------
 
 
+class UserMfaRefSerializer(serializers.Serializer):
+    """The 「两步验证」 column of the users list."""
+
+    enabled = serializers.BooleanField()
+    required = serializers.BooleanField()
+    confirmed_at = serializers.DateTimeField(allow_null=True)
+    last_used_at = serializers.DateTimeField(allow_null=True)
+
+
+class UserMfaResetSerializer(serializers.Serializer):
+    """`POST /users/{id}/reset-mfa/`: the reason is audited, and required."""
+
+    reason = serializers.CharField(max_length=200, allow_blank=False, trim_whitespace=True)
+
+
 class UserManagementSerializer(serializers.ModelSerializer):
     """User serializer for list/retrieve operations in user management API."""
     tenant = serializers.SerializerMethodField()
@@ -398,8 +539,27 @@ class UserManagementSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'role', 'tenant', 'organization', 'position', 'is_active', 'create_time', 'avatar', 'is_eval_identity', 'extra_roles']
+        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'role', 'tenant', 'organization', 'position', 'is_active', 'create_time', 'avatar', 'is_eval_identity', 'extra_roles', 'mfa']
         read_only_fields = ['id', 'create_time', 'extra_roles']
+
+    # 两步验证列(A12):三态 = enabled / required。`get_queryset` 把 `mfa` 行 select_related 进来,这里不另查。
+    mfa = serializers.SerializerMethodField()
+
+    @extend_schema_field(UserMfaRefSerializer())
+    def get_mfa(self, obj):
+        from apps.authentication import mfa as mfa_rules
+
+        try:
+            row = obj.mfa
+        except OfficerMfa.DoesNotExist:
+            row = None
+        enabled = row is not None and row.enabled
+        return {
+            "enabled": enabled,
+            "required": mfa_rules.is_required(obj),
+            "confirmed_at": row.confirmed_at if enabled else None,
+            "last_used_at": row.last_used_at if enabled else None,
+        }
 
     def get_is_eval_identity(self, obj) -> bool:
         from apps.soul_assist.eval_identities import tagged_ids
