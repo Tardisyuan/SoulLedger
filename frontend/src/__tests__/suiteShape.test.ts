@@ -72,6 +72,8 @@ const COLLECTED_FILES = [
   "JudgmentQueueConsole.test.tsx",
   "LedgerPage.test.tsx",
   "LoginPage.test.tsx",
+  // 2026-10-09 官员邮箱重置密码:/forgot-password、/reset-password、/verify-email 与资料页的邮箱验证行。
+  "OfficerPasswordReset.test.tsx",
   // 2026-10-09 官员两步验证(A12):码框、登录第二步、向导、个人中心面板、用户列表列与重置、殿设置的角色开关。
   "CodeInput.test.tsx",
   "MfaVerifyPage.test.tsx",
