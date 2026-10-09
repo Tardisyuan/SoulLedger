@@ -15,7 +15,6 @@ from rest_framework.views import APIView
 
 from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.officer_app import push, todo
-from apps.perm.checker import check_permission
 from apps.officer_app.serializers import (
     CosignAddSerializer,
     CosignerSerializer,
@@ -26,6 +25,7 @@ from apps.officer_app.serializers import (
     TodoItemDetailSerializer,
     TodoSerializer,
 )
+from apps.perm.checker import check_permission
 from apps.soul_accounts.authentication import OfficerJWTAuthentication
 
 User = get_user_model()
