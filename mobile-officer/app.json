@@ -4,6 +4,7 @@
     "slug": "soulledger-officer",
     "version": "0.1.0",
     "orientation": "portrait",
+    "scheme": "soulledger-officer",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
     "ios": {
@@ -46,7 +47,9 @@
           "color": "#181A17"
         }
       ],
-      "../mobile/plugins/withSceneLifecycle"
+      "../mobile/plugins/withSceneLifecycle",
+      ["../mobile/plugins/withAndroidShortcuts", { "app": "officer" }],
+      ["../mobile/plugins/withAppIntents", { "app": "officer" }]
     ]
   }
 }
