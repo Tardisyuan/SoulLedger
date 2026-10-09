@@ -92,7 +92,8 @@ def menu_is_visible_to(menu, user) -> bool:
     if not menu.roles:
         return True
     role = getattr(user, "role", None)
-    if bool(role) and role in menu.roles:
+    # 主角色 + 兼任角色:任何一个被 `roles` 点名就可见。
+    if bool(role) and any(r in menu.roles for r in (role, *(getattr(user, "extra_roles", None) or ()))):
         return True
     if menu.permission:
         from apps.core.permissions import user_has_permission

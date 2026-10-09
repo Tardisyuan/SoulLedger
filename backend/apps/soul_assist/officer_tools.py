@@ -93,7 +93,7 @@ def _inbox_counts(request):
 
 def _my_permissions(request):
     user = request.user
-    return {"role": user.role, "scope": _scope(request),
+    return {"role": user.role, "extra_roles": list(user.extra_roles or []), "scope": _scope(request),
             "permissions": {c: check_permission(user, c) for c in REPORTED_CODENAMES}}
 
 
