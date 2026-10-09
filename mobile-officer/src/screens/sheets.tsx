@@ -193,6 +193,7 @@ export function CosignSheet({
       <View testID="sheet-cosign" style={{ paddingVertical: space[5], gap: space[4] }}>
         <View style={{ paddingHorizontal: space[5], gap: space[3] }}>
           <Txt variant="title">{t("officer_app.detail.cosign")}</Txt>
+          <Txt variant="caption" tone="muted" testID="cosign-rules">{t("officer_app.cosign.rules")}</Txt>
           <Input testID="cosign-search" label={t("officer_app.cosign.search")} value={q} onChangeText={setQ} />
           {load.error ? <FieldError text={t("officer_app.state.error_title")} /> : null}
         </View>
@@ -219,7 +220,14 @@ export function CosignSheet({
             // 14j: the reason is the line right above the button; no promise, no date.
             <Txt variant="caption" tone="muted" testID="cosign-unavailable">{`◇ ${t("officer_app.cosign.unavailable")}`}</Txt>
           ) : null}
-          <Button testID="cosign-confirm" title={t("officer_app.cosign.confirm")} busy={busy} disabled={unavailable} onPress={confirm} />
+          <Button
+            testID="cosign-confirm"
+            title={t("officer_app.cosign.confirm")}
+            busy={busy}
+            disabled={unavailable}
+            accessibilityHint={unavailable ? t("officer_app.cosign.unavailable") : undefined}
+            onPress={confirm}
+          />
         </View>
       </View>
     </Sheet>

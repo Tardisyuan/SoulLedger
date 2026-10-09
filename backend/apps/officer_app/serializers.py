@@ -2,6 +2,7 @@ from rest_framework import serializers
 
 from apps.soul_push.models import PushPlatform
 from apps.soul_push.views import EXPO_TOKEN_RE
+from apps.workflow.serializers import CosignerRowSerializer, WaitingOnCosignerSerializer
 
 
 class TodoTargetSerializer(serializers.Serializer):
@@ -54,6 +55,13 @@ class TodoItemDetailSerializer(serializers.Serializer):
     required_verdicts = serializers.ListField(
         child=serializers.CharField(), required=False,
         help_text="该节点接受的裁决(PASSED / CONFIRMED / FAILED / REJECTED …);空 = 不限。批准只在其中的通过类里选。",
+    )
+    cosigners = CosignerRowSerializer(
+        many=True, required=False, help_text="审批节点与转生申请:当前节点的加签人,及各自签了没有。",
+    )
+    waiting_on_cosigner = WaitingOnCosignerSerializer(
+        allow_null=True, required=False,
+        help_text="我是指定审批人而加签人还没签完时,第一位欠签的人;此时「批准」会被 409 cosigners_pending 拒绝,App 据此置灰。",
     )
 
 

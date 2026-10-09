@@ -732,6 +732,8 @@ export function Input({
   secureToggle,
   multiline,
   style,
+  inputWidth,
+  suffix,
   onFocus,
   onBlur,
   ...rest
@@ -745,6 +747,10 @@ export function Input({
   invalid?: boolean;
   mono?: boolean;
   secureToggle?: { show: string; hide: string };
+  /** A short field (a count of days): the box is this wide, the label and hint keep the full width. */
+  inputWidth?: number;
+  /** After a short field, on its row: the unit (「天」). */
+  suffix?: ReactNode;
 }) {
   const t = useTheme();
   const [focused, setFocused] = useState(false);
@@ -779,42 +785,47 @@ export function Input({
         </Txt>
         {labelAside}
       </View>
-      <FocusRing focused={focused && !off}>
-        <View style={[styles.inputBox, box]}>
-          <TextInput
-            accessibilityLabel={label}
-            placeholderTextColor={t.inkSubtle}
-            autoCapitalize="none"
-            autoCorrect={false}
-            multiline={multiline}
-            // Caret and handles in ink, like the focus ring — not the platform accent,
-            // which here reads as the seal red of an error. On Android `selectionColor`
-            // would also paint the selection box solid ink over ink text, so there only
-            // the caret and the handles are set.
-            cursorColor={t.ink}
-            selectionHandleColor={t.ink}
-            selectionColor={Platform.OS === "ios" ? t.ink : undefined}
-            {...rest}
-            secureTextEntry={secureToggle ? rest.secureTextEntry && !revealed : rest.secureTextEntry}
-            onFocus={(e) => {
-              setFocused(true);
-              onFocus?.(e);
-            }}
-            onBlur={(e) => {
-              setFocused(false);
-              onBlur?.(e);
-            }}
-            style={[
-              styles.input,
-              { color: off ? t.inkSubtle : t.ink, fontFamily },
-              mono && styles.monoInput,
-              multiline && styles.multiline,
-              style,
-            ]}
-          />
-          {secureToggle && !stack ? reveal : null}
+      <View style={inputWidth || suffix ? styles.inlineRow : undefined}>
+        <View style={inputWidth ? { width: inputWidth } : undefined}>
+          <FocusRing focused={focused && !off}>
+            <View style={[styles.inputBox, box]}>
+              <TextInput
+                accessibilityLabel={label}
+                placeholderTextColor={t.inkSubtle}
+                autoCapitalize="none"
+                autoCorrect={false}
+                multiline={multiline}
+                // Caret and handles in ink, like the focus ring — not the platform accent,
+                // which here reads as the seal red of an error. On Android `selectionColor`
+                // would also paint the selection box solid ink over ink text, so there only
+                // the caret and the handles are set.
+                cursorColor={t.ink}
+                selectionHandleColor={t.ink}
+                selectionColor={Platform.OS === "ios" ? t.ink : undefined}
+                {...rest}
+                secureTextEntry={secureToggle ? rest.secureTextEntry && !revealed : rest.secureTextEntry}
+                onFocus={(e) => {
+                  setFocused(true);
+                  onFocus?.(e);
+                }}
+                onBlur={(e) => {
+                  setFocused(false);
+                  onBlur?.(e);
+                }}
+                style={[
+                  styles.input,
+                  { color: off ? t.inkSubtle : t.ink, fontFamily },
+                  mono && styles.monoInput,
+                  multiline && styles.multiline,
+                  style,
+                ]}
+              />
+              {secureToggle && !stack ? reveal : null}
+            </View>
+          </FocusRing>
         </View>
-      </FocusRing>
+        {suffix}
+      </View>
       {secureToggle && stack ? reveal : null}
       {error ? <FieldError text={error} /> : hint ? <Txt variant="label" tone="subtle" style={styles.noSpacing}>{hint}</Txt> : null}
     </View>
@@ -845,6 +856,7 @@ export function Button({
   busy,
   reason,
   reasonTestID,
+  accessibilityHint,
   testID,
   style,
 }: {
@@ -856,6 +868,8 @@ export function Button({
   /** Why it is disabled. Required reading, not a tooltip: a phone has no hover. */
   reason?: ReactNode;
   reasonTestID?: string;
+  /** What a screen reader says after the label: the reason, when the button is disabled. */
+  accessibilityHint?: string;
   testID?: string;
   style?: StyleProp<ViewStyle>;
 }) {
@@ -877,6 +891,7 @@ export function Button({
         testID={testID}
         accessibilityRole="button"
         accessibilityLabel={title}
+        accessibilityHint={accessibilityHint}
         accessibilityState={{ disabled: !!inert, busy: !!busy }}
         disabled={inert}
         onPress={onPress}
@@ -1315,6 +1330,7 @@ export const styles = StyleSheet.create({
   divider: { flexDirection: "row", alignItems: "center", gap: space[3] },
   field: { gap: space[2] },
   labelRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: space[3] },
+  inlineRow: { flexDirection: "row", alignItems: "center", gap: space[2] },
   // The ring sits 4pt outside the field, so its corner is the field's plus 4.
   ring: { margin: -4, padding: 2, borderWidth: 2, borderRadius: radius.control + 4 },
   inputBox: { flexDirection: "row", borderWidth: 1, minHeight: 48, borderRadius: radius.control, overflow: "hidden" },
