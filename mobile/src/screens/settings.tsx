@@ -267,7 +267,7 @@ function Notifications({ settings, onChange }: { settings: NotificationSettings;
             <Txt variant="caption" tone="muted">
               {t("soul_app.settings.push_denied")}
             </Txt>
-            <Button testID="open-system-settings" kind="secondary" title={`${t("soul_app.settings.open_system_settings")} ↗`} onPress={() => void Linking.openSettings()} />
+            <Button testID="open-system-settings" kind="secondary" title={`${t("soul_app.settings.open_system_settings")} ↗\uFE0E`} onPress={() => void Linking.openSettings()} />
           </View>
         </View>
       ) : null}

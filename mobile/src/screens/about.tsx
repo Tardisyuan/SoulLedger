@@ -27,7 +27,7 @@ function Link({ label, url, testID }: { label: string; url: string; testID?: str
   return (
     <Pressable testID={testID} accessibilityRole="link" onPress={() => void Linking.openURL(url)} hitSlop={13}>
       <Txt variant="caption" tone="muted" style={styles.link}>
-        {label} ↗
+        {label} {"↗\uFE0E"}
       </Txt>
     </Pressable>
   );
