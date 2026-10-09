@@ -198,18 +198,21 @@ def people(cn, eg, eu):
 HOME_JUDGES = {"cn_judge", "cn_mod", "cn_admin"}
 
 
-def test_arrival_is_told_to_the_stops_judges_and_completion_to_the_homes(cn, eg, people):
-    soul, p, _ = plan.at_stop(cn, eg)
+def test_arrival_is_told_to_the_stops_judges_and_completion_to_the_homes(cn, eg, people, django_capture_on_commit_callbacks):
+    with django_capture_on_commit_callbacks(execute=True):
+        soul, p, _ = plan.at_stop(cn, eg)
     assert _told("SENTENCE_NODE_ACTIVE") == {"eg_judge"}
-    plan.serve(soul, p, 2)
+    with django_capture_on_commit_callbacks(execute=True):
+        plan.serve(soul, p, 2)
     # 原属节点与外地节点各一次「结束」,都只给原属判官。
     done = UserNotification.objects.filter(notification_type="SENTENCE_NODE_DONE")
     assert {n.user.username for n in done} == HOME_JUDGES and done.count() == 2 * len(HOME_JUDGES)
     assert _told("SENTENCE_PLAN_COMPLETED") == HOME_JUDGES
 
 
-def test_the_notice_names_soul_stop_and_civilization_but_no_case_detail(cn, eg, people):
-    soul, p, _ = plan.at_stop(cn, eg)
+def test_the_notice_names_soul_stop_and_civilization_but_no_case_detail(cn, eg, people, django_capture_on_commit_callbacks):
+    with django_capture_on_commit_callbacks(execute=True):
+        soul, p, _ = plan.at_stop(cn, eg)
     note = UserNotification.objects.get(notification_type="SENTENCE_NODE_ACTIVE")
     assert "客魂" in note.message and "2" in note.message and "EG_DUAT" in note.message
     assert note.params == {"soul": "客魂", "order": 2, "tenant": "EG_DUAT"}
@@ -217,16 +220,18 @@ def test_the_notice_names_soul_stop_and_civilization_but_no_case_detail(cn, eg, 
         assert secret not in note.message and secret not in note.title
 
 
-def test_the_notice_is_rendered_in_the_readers_language(cn, eg, people):
-    plan.at_stop(cn, eg)
+def test_the_notice_is_rendered_in_the_readers_language(cn, eg, people, django_capture_on_commit_callbacks):
+    with django_capture_on_commit_callbacks(execute=True):
+        plan.at_stop(cn, eg)
     client = officer_client(people["eg_judge"])
     rows = client.get("/api/v1/notifications/", HTTP_ACCEPT_LANGUAGE="en").data["results"]
     [row] = [r for r in rows if r["notification_type"] == "SENTENCE_NODE_ACTIVE"]
     assert row["title"] == "Sentence stop begun" and "Stop 2" in row["message"] and "{{" not in row["message"]
 
 
-def test_a_participants_sentence_is_told_to_the_initiators_judges(cn, eg, people):
-    plan.planned(cn, [(eg, plan.stop_realm(eg), 5)])
+def test_a_participants_sentence_is_told_to_the_initiators_judges(cn, eg, people, django_capture_on_commit_callbacks):
+    with django_capture_on_commit_callbacks(execute=True):
+        plan.planned(cn, [(eg, plan.stop_realm(eg), 5)])
     assert _told("CROSS_SENTENCE_SUBMITTED") == HOME_JUDGES
 
 
