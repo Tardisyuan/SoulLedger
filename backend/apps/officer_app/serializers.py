@@ -2,6 +2,7 @@ from rest_framework import serializers
 
 from apps.soul_push.models import PushPlatform
 from apps.soul_push.views import EXPO_TOKEN_RE
+from apps.workflow.serializers import CosignerRowSerializer, WaitingOnCosignerSerializer
 
 
 class TodoTargetSerializer(serializers.Serializer):
@@ -34,17 +35,6 @@ class TodoSerializer(serializers.Serializer):
 
 class HandledBySerializer(serializers.Serializer):
     id = serializers.IntegerField(allow_null=True)
-    name = serializers.CharField()
-
-
-class CosignerRowSerializer(serializers.Serializer):
-    user_id = serializers.IntegerField()
-    name = serializers.CharField()
-    signed = serializers.BooleanField()
-
-
-class WaitingOnCosignerSerializer(serializers.Serializer):
-    id = serializers.IntegerField()
     name = serializers.CharField()
 
 
