@@ -48,15 +48,17 @@ RENAMES = {
 
 
 def forwards(apps, schema_editor):
+    alias = schema_editor.connection.alias
     Realm = apps.get_model("realms", "Realm")
     for code, (old, new) in RENAMES.items():
-        Realm._base_manager.filter(realm_code=code, name_egy=old).update(name_egy=new)
+        Realm._base_manager.using(alias).filter(realm_code=code, name_egy=old).update(name_egy=new)
 
 
 def backwards(apps, schema_editor):
+    alias = schema_editor.connection.alias
     Realm = apps.get_model("realms", "Realm")
     for code, (old, new) in RENAMES.items():
-        Realm._base_manager.filter(realm_code=code, name_egy=new).update(name_egy=old)
+        Realm._base_manager.using(alias).filter(realm_code=code, name_egy=new).update(name_egy=old)
 
 
 class Migration(migrations.Migration):

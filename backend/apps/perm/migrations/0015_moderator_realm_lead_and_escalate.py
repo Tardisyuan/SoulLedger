@@ -98,64 +98,66 @@ def _invalidate_cache():
         pass
 
 
-def _grant(permission_model, role_model, role_permission_model, role_name, codenames):
+def _grant(permission_model, role_model, role_permission_model, role_name, codenames, alias):
     Permission, Role, RolePermission = (
         permission_model,
         role_model,
         role_permission_model,
     )
-    role = Role.all_objects.filter(name=role_name, is_deleted=False).first()
+    role = Role.all_objects.using(alias).filter(name=role_name, is_deleted=False).first()
     if role is None:
         # 角色种子数据缺失是别的迁移的问题，这里不代它补。
         return
     for codename in codenames:
-        perm = Permission.all_objects.filter(
+        perm = Permission.all_objects.using(alias).filter(
             codename=codename, is_deleted=False
         ).first()
         if perm is None:
             # 尚未落 Permission 表，checker 会回退到 ROLE_PERMISSIONS 字典。
             continue
-        RolePermission.all_objects.get_or_create(
+        RolePermission.all_objects.using(alias).get_or_create(
             role=role, permission=perm, is_deleted=False, defaults={}
         )
 
 
 def forward(apps, schema_editor):
+    alias = schema_editor.connection.alias
     Permission = apps.get_model("perm", "Permission")
     Role = apps.get_model("perm", "Role")
     RolePermission = apps.get_model("perm", "RolePermission")
 
     codename, name, category = ESCALATE
-    Permission.all_objects.get_or_create(
+    Permission.all_objects.using(alias).get_or_create(
         codename=codename,
         is_deleted=False,
         defaults={"name": name, "category": category},
     )
 
-    _grant(Permission, Role, RolePermission, "MODERATOR", MODERATOR_GRANTS)
-    _grant(Permission, Role, RolePermission, "ADMIN", ADMIN_GRANTS)
+    _grant(Permission, Role, RolePermission, "MODERATOR", MODERATOR_GRANTS, alias)
+    _grant(Permission, Role, RolePermission, "ADMIN", ADMIN_GRANTS, alias)
     _invalidate_cache()
 
 
 def backward(apps, schema_editor):
+    alias = schema_editor.connection.alias
     Permission = apps.get_model("perm", "Permission")
     Role = apps.get_model("perm", "Role")
     RolePermission = apps.get_model("perm", "RolePermission")
 
-    moderator = Role.all_objects.filter(name="MODERATOR", is_deleted=False).first()
+    moderator = Role.all_objects.using(alias).filter(name="MODERATOR", is_deleted=False).first()
     if moderator is not None:
-        RolePermission.all_objects.filter(
+        RolePermission.all_objects.using(alias).filter(
             role=moderator, permission__codename__in=MODERATOR_GRANTS
         ).delete()
 
-    admin = Role.all_objects.filter(name="ADMIN", is_deleted=False).first()
+    admin = Role.all_objects.using(alias).filter(name="ADMIN", is_deleted=False).first()
     if admin is not None:
-        RolePermission.all_objects.filter(
+        RolePermission.all_objects.using(alias).filter(
             role=admin, permission__codename__in=ADMIN_GRANTS
         ).delete()
 
     # workflow.escalate 是本迁移引入的，回滚时一并撤掉。
-    Permission.all_objects.filter(codename=ESCALATE[0]).delete()
+    Permission.all_objects.using(alias).filter(codename=ESCALATE[0]).delete()
     _invalidate_cache()
 
 

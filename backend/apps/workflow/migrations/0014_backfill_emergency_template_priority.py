@@ -67,8 +67,8 @@ URGENT = 1
 NORMAL = 0
 
 
-def _matching(template_model, name, civilization, case_type, priority):
-    return template_model._base_manager.filter(
+def _matching(template_model, name, civilization, case_type, priority, alias):
+    return template_model._base_manager.using(alias).filter(
         name=name,
         civilization=civilization,
         case_type=case_type,
@@ -77,23 +77,25 @@ def _matching(template_model, name, civilization, case_type, priority):
 
 
 def forwards(apps, schema_editor):
+    alias = schema_editor.connection.alias
     WorkflowTemplate = apps.get_model("workflow", "WorkflowTemplate")
 
     # 空库：什么都不写。见模块 docstring 的「空库守卫」。
-    if not WorkflowTemplate._base_manager.exists():
+    if not WorkflowTemplate._base_manager.using(alias).exists():
         return
 
     for name, civilization, case_type in EMERGENCY_TEMPLATES:
-        _matching(WorkflowTemplate, name, civilization, case_type, NORMAL).update(
+        _matching(WorkflowTemplate, name, civilization, case_type, NORMAL, alias).update(
             priority=URGENT
         )
 
 
 def backwards(apps, schema_editor):
+    alias = schema_editor.connection.alias
     WorkflowTemplate = apps.get_model("workflow", "WorkflowTemplate")
 
     for name, civilization, case_type in EMERGENCY_TEMPLATES:
-        _matching(WorkflowTemplate, name, civilization, case_type, URGENT).update(
+        _matching(WorkflowTemplate, name, civilization, case_type, URGENT, alias).update(
             priority=NORMAL
         )
 

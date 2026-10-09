@@ -61,6 +61,7 @@ TENANT_DISPLAY_NAMES = {
 
 
 def backfill_tenant(apps, schema_editor):
+    alias = schema_editor.connection.alias
     Organization = apps.get_model("org", "Organization")
     Tenant = apps.get_model("tenants", "Tenant")
 
@@ -73,14 +74,14 @@ def backfill_tenant(apps, schema_editor):
     # Organization still needs its tenant backfilled, and Tenant lookups must
     # not silently recreate a row that exists but is soft-deleted.
     for category, tenant_code in CIV_TO_TENANT.items():
-        pending = Organization.all_objects.filter(category=category, tenant__isnull=True)
+        pending = Organization.all_objects.using(alias).filter(category=category, tenant__isnull=True)
         if not pending.exists():
             # Nothing to backfill for this category — do not create the
             # Tenant row as a side effect of a migration that had no work to
             # do. Matters most for a from-scratch test database, which has no
             # Organization rows at all yet applies this migration anyway.
             continue
-        tenant, _ = Tenant.all_objects.get_or_create(
+        tenant, _ = Tenant.all_objects.using(alias).get_or_create(
             code=tenant_code, defaults={"display_name": TENANT_DISPLAY_NAMES[tenant_code]}
         )
         pending.update(tenant=tenant)
@@ -113,16 +114,17 @@ def clear_tenant(apps, schema_editor):
     reaches much further than an Organization FK; and leaving it costs nothing,
     because the forward get_or_creates rather than creates.
     """
+    alias = schema_editor.connection.alias
     Organization = apps.get_model("org", "Organization")
     Tenant = apps.get_model("tenants", "Tenant")
 
     for category, tenant_code in CIV_TO_TENANT.items():
-        tenant = Tenant.all_objects.filter(code=tenant_code).first()
+        tenant = Tenant.all_objects.using(alias).filter(code=tenant_code).first()
         if tenant is None:
             # No such Tenant row, so the forward cannot have pointed anything
             # at it for this category.
             continue
-        Organization.all_objects.filter(category=category, tenant=tenant).update(
+        Organization.all_objects.using(alias).filter(category=category, tenant=tenant).update(
             tenant=None
         )
 

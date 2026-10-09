@@ -9,7 +9,8 @@ def _delete_officer_conversations(apps, schema_editor):
     """Reverse only. Before 0002 every conversation had an account; reversing sets `account` back to
     NOT NULL, which fails on PostgreSQL once any officer row (account NULL) exists. Those rows cannot
     be represented before 0002, so they are deleted. Listed last, so it runs first on the way back."""
-    apps.get_model("soul_assist", "AssistConversation")._base_manager.filter(account__isnull=True).delete()
+    alias = schema_editor.connection.alias
+    apps.get_model("soul_assist", "AssistConversation")._base_manager.using(alias).filter(account__isnull=True).delete()
     # The delete cascades to messages through deferred FK constraints; on PostgreSQL their trigger
     # events stay pending in this transaction and the next ALTER TABLE is refused ("pending trigger
     # events"). Fire them now. SQLite has no such state, which is why only the PG run caught it.

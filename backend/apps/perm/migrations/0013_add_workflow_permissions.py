@@ -97,13 +97,14 @@ def _invalidate_cache(role_names):
 
 
 def create_workflow_permissions(apps, schema_editor):
+    alias = schema_editor.connection.alias
     Permission = apps.get_model("perm", "Permission")
     Role = apps.get_model("perm", "Role")
     RolePermission = apps.get_model("perm", "RolePermission")
 
     perms = {}
     for codename, name, category in WORKFLOW_PERMISSIONS:
-        perm, _ = Permission.all_objects.get_or_create(
+        perm, _ = Permission.all_objects.using(alias).get_or_create(
             codename=codename,
             is_deleted=False,
             defaults={"name": name, "category": category},
@@ -111,12 +112,12 @@ def create_workflow_permissions(apps, schema_editor):
         perms[codename] = perm
 
     for role_name, codenames in ROLE_GRANTS.items():
-        role = Role.all_objects.filter(name=role_name, is_deleted=False).first()
+        role = Role.all_objects.using(alias).filter(name=role_name, is_deleted=False).first()
         if role is None:
             # 角色种子数据缺失是别的迁移的问题，这里不代它补，跳过即可。
             continue
         for codename in codenames:
-            RolePermission.all_objects.get_or_create(
+            RolePermission.all_objects.using(alias).get_or_create(
                 role=role,
                 permission=perms[codename],
                 is_deleted=False,
@@ -152,6 +153,7 @@ def remove_workflow_permissions(apps, schema_editor):
 
     真删除而非软删除，仍然是为了保证反复 forward/backward 不撞 codename 唯一约束。
     """
+    alias = schema_editor.connection.alias
     Permission = apps.get_model("perm", "Permission")
     Role = apps.get_model("perm", "Role")
     RolePermission = apps.get_model("perm", "RolePermission")
@@ -159,11 +161,11 @@ def remove_workflow_permissions(apps, schema_editor):
     codenames = [codename for codename, _, _ in WORKFLOW_PERMISSIONS]
 
     for role_name, granted in ROLE_GRANTS.items():
-        role = Role.all_objects.filter(name=role_name, is_deleted=False).first()
+        role = Role.all_objects.using(alias).filter(name=role_name, is_deleted=False).first()
         if role is None:
             # forward 在同样的分支上什么都没授，这里也就没有什么可撤。
             continue
-        RolePermission.all_objects.filter(
+        RolePermission.all_objects.using(alias).filter(
             role=role, permission__codename__in=granted, is_deleted=False
         ).delete()
 
@@ -171,12 +173,12 @@ def remove_workflow_permissions(apps, schema_editor):
     # 硬删 Permission 一样会级联把它带走。
     orphaned = [
         permission.pk
-        for permission in Permission.all_objects.filter(
+        for permission in Permission.all_objects.using(alias).filter(
             codename__in=codenames, is_deleted=False
         )
-        if not RolePermission.all_objects.filter(permission=permission).exists()
+        if not RolePermission.all_objects.using(alias).filter(permission=permission).exists()
     ]
-    Permission.all_objects.filter(pk__in=orphaned).delete()
+    Permission.all_objects.using(alias).filter(pk__in=orphaned).delete()
 
     _invalidate_cache(ROLE_GRANTS.keys())
 

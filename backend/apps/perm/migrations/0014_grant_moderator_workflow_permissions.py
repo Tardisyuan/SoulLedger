@@ -90,24 +90,25 @@ def _invalidate_cache():
 
 
 def grant(apps, schema_editor):
+    alias = schema_editor.connection.alias
     Permission = apps.get_model("perm", "Permission")
     Role = apps.get_model("perm", "Role")
     RolePermission = apps.get_model("perm", "RolePermission")
 
-    role = Role.all_objects.filter(name=ROLE_NAME, is_deleted=False).first()
+    role = Role.all_objects.using(alias).filter(name=ROLE_NAME, is_deleted=False).first()
     if role is None:
         # 角色种子数据缺失是别的迁移的问题，这里不代它补。
         return
 
     for codename in GRANTS:
-        perm = Permission.all_objects.filter(
+        perm = Permission.all_objects.using(alias).filter(
             codename=codename, is_deleted=False
         ).first()
         if perm is None:
             # 该 codename 尚未落 Permission 表，checker 会回退到
             # ROLE_PERMISSIONS 字典，那边已经同步加了 MODERATOR。
             continue
-        RolePermission.all_objects.get_or_create(
+        RolePermission.all_objects.using(alias).get_or_create(
             role=role,
             permission=perm,
             is_deleted=False,
@@ -118,12 +119,13 @@ def grant(apps, schema_editor):
 
 
 def revoke(apps, schema_editor):
+    alias = schema_editor.connection.alias
     Role = apps.get_model("perm", "Role")
     RolePermission = apps.get_model("perm", "RolePermission")
 
-    role = Role.all_objects.filter(name=ROLE_NAME, is_deleted=False).first()
+    role = Role.all_objects.using(alias).filter(name=ROLE_NAME, is_deleted=False).first()
     if role is not None:
-        RolePermission.all_objects.filter(
+        RolePermission.all_objects.using(alias).filter(
             role=role, permission__codename__in=GRANTS
         ).delete()
 

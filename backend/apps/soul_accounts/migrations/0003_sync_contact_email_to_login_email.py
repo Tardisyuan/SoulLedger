@@ -15,23 +15,24 @@ MARKER = "0003_sync_contact_email_to_login_email"
 
 
 def forward(apps, schema_editor):
+    alias = schema_editor.connection.alias
     SoulAccount = apps.get_model("soul_accounts", "SoulAccount")
     User = apps.get_model("authentication", "User")
     AuditLog = apps.get_model("audit", "AuditLog")
 
     accounts = (
-        SoulAccount._default_manager.filter(retired_at__isnull=True).exclude(soul__contact_email="")
+        SoulAccount._default_manager.using(alias).filter(retired_at__isnull=True).exclude(soul__contact_email="")
         .select_related("soul", "user").order_by("created_at", "pk")
     )
     for account in accounts:
         user, email = account.user, account.soul.contact_email
         if user.email.lower() == email.lower():
             continue
-        if User._default_manager.filter(email__iexact=email, is_deleted=False).exclude(pk=user.pk).exists():
+        if User._default_manager.using(alias).filter(email__iexact=email, is_deleted=False).exclude(pk=user.pk).exists():
             continue
         user.email = email
-        user.save(update_fields=["email"])
-        AuditLog._default_manager.create(
+        user.save(using=alias, update_fields=["email"])
+        AuditLog._default_manager.using(alias).create(
             tenant_id=account.soul.home_tenant_id or account.soul.tenant_id, action="UPDATE",
             resource="soul_account", resource_id=str(account.pk),
             description="存量回填:联系邮箱同步为登录邮箱", changes={"login_email_backfill": MARKER},
@@ -39,15 +40,16 @@ def forward(apps, schema_editor):
 
 
 def backward(apps, schema_editor):
+    alias = schema_editor.connection.alias
     SoulAccount = apps.get_model("soul_accounts", "SoulAccount")
     AuditLog = apps.get_model("audit", "AuditLog")
 
-    markers = AuditLog._default_manager.filter(resource="soul_account", changes__login_email_backfill=MARKER)
+    markers = AuditLog._default_manager.using(alias).filter(resource="soul_account", changes__login_email_backfill=MARKER)
     ids = list(markers.values_list("resource_id", flat=True))
-    for account in SoulAccount._default_manager.filter(pk__in=ids).select_related("soul", "user"):
+    for account in SoulAccount._default_manager.using(alias).filter(pk__in=ids).select_related("soul", "user"):
         if account.user.email.lower() == account.soul.contact_email.lower():
             account.user.email = ""
-            account.user.save(update_fields=["email"])
+            account.user.save(using=alias, update_fields=["email"])
     markers.delete()
 
 

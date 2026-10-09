@@ -31,28 +31,30 @@ CHANGES = {
 }
 
 
-def _apply(apps, frm, to):
+def _apply(apps, alias, frm, to):
     Realm = apps.get_model("realms", "Realm")
     changed = set()
     for code, fields in CHANGES.items():
         for field, pair in fields.items():
-            if Realm._base_manager.filter(realm_code=code, **{field: pair[frm]}).update(**{field: pair[to]}):
+            if Realm._base_manager.using(alias).filter(realm_code=code, **{field: pair[frm]}).update(**{field: pair[to]}):
                 changed.add(code)
     return changed
 
 
 def forwards(apps, schema_editor):
-    _apply(apps, 0, 1)
+    alias = schema_editor.connection.alias
+    _apply(apps, alias, 0, 1)
 
 
 def backwards(apps, schema_editor):
-    _apply(apps, 1, 0)
+    alias = schema_editor.connection.alias
+    _apply(apps, alias, 1, 0)
     refuse_if_any_row_takes_pass_or_fail(apps, schema_editor)
 
 
 def refuse_if_any_row_takes_pass_or_fail(apps, schema_editor):
     Realm = apps.get_model("realms", "Realm")
-    codes = list(Realm._base_manager.filter(fork__in=["PASS", "FAIL"]).values_list("realm_code", flat=True))
+    codes = list(Realm._base_manager.using(schema_editor.connection.alias).filter(fork__in=["PASS", "FAIL"]).values_list("realm_code", flat=True))
     if codes:
         raise RuntimeError(
             f"Realm.fork = PASS/FAIL on {codes}; decide LEFT / RIGHT / NULL for them before removing the values."

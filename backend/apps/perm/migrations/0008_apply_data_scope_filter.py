@@ -104,6 +104,7 @@ def seed_sample_data_scopes(apps, schema_editor):
     guards, and therefore what every real database ends up holding, are
     untouched.
     """
+    alias = schema_editor.connection.alias
     # Skip if running in test environment without Role model
     try:
         Role = apps.get_model('perm', 'Role')
@@ -112,12 +113,12 @@ def seed_sample_data_scopes(apps, schema_editor):
         return
 
     # Only seed if tables exist and are empty
-    if not Role.objects.exists():
+    if not Role.objects.using(alias).exists():
         return
 
     def get_role(name):
         try:
-            return Role.objects.get(name=name)
+            return Role.objects.using(alias).get(name=name)
         except Role.DoesNotExist:
             return None
 
@@ -125,7 +126,7 @@ def seed_sample_data_scopes(apps, schema_editor):
 
     # ACTOR can only see PENDING souls in their civilization
     actor_role = get_role('ACTOR')
-    if actor_role and not RowLevelDataScope.objects.filter(role=actor_role, model_name='Soul').exists():
+    if actor_role and not RowLevelDataScope.objects.using(alias).filter(role=actor_role, model_name='Soul').exists():
         scopes_to_create.append(
             RowLevelDataScope(
                 id=uuid.uuid4(),
@@ -140,7 +141,7 @@ def seed_sample_data_scopes(apps, schema_editor):
 
     # GUARDIAN can see DISPOSED souls in their civilization
     guardian_role = get_role('GUARDIAN')
-    if guardian_role and not RowLevelDataScope.objects.filter(role=guardian_role, model_name='Soul').exists():
+    if guardian_role and not RowLevelDataScope.objects.using(alias).filter(role=guardian_role, model_name='Soul').exists():
         scopes_to_create.append(
             RowLevelDataScope(
                 id=uuid.uuid4(),
@@ -155,7 +156,7 @@ def seed_sample_data_scopes(apps, schema_editor):
 
     # VIEWER can see ALIVE souls
     viewer_role = get_role('VIEWER')
-    if viewer_role and not RowLevelDataScope.objects.filter(role=viewer_role, model_name='Soul').exists():
+    if viewer_role and not RowLevelDataScope.objects.using(alias).filter(role=viewer_role, model_name='Soul').exists():
         scopes_to_create.append(
             RowLevelDataScope(
                 id=uuid.uuid4(),
@@ -169,7 +170,7 @@ def seed_sample_data_scopes(apps, schema_editor):
         )
 
     if scopes_to_create:
-        RowLevelDataScope.objects.bulk_create(scopes_to_create, ignore_conflicts=True)
+        RowLevelDataScope.objects.using(alias).bulk_create(scopes_to_create, ignore_conflicts=True)
 
 
 def reverse_seed(apps, schema_editor):
@@ -201,6 +202,7 @@ def reverse_seed(apps, schema_editor):
     — so this is the one shape where the reverse still removes a row the
     forward did not create.
     """
+    alias = schema_editor.connection.alias
     try:
         RowLevelDataScope = apps.get_model('perm', 'RowLevelDataScope')
         apps.get_model('perm', 'Role')
@@ -213,7 +215,7 @@ def reverse_seed(apps, schema_editor):
     }
     doomed = [
         scope.pk
-        for scope in RowLevelDataScope._base_manager.filter(
+        for scope in RowLevelDataScope._base_manager.using(alias).filter(
             role__name__in=[name for name, _, _ in SEEDED_SCOPES],
             model_name=SEEDED_MODEL_NAME,
             is_active=True,
@@ -225,7 +227,7 @@ def reverse_seed(apps, schema_editor):
             _freeze(scope.filter_conditions),
         ) in seeded
     ]
-    RowLevelDataScope._base_manager.filter(pk__in=doomed).delete()
+    RowLevelDataScope._base_manager.using(alias).filter(pk__in=doomed).delete()
 
 
 class Migration(migrations.Migration):

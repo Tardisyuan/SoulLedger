@@ -13,8 +13,9 @@ from django.db import migrations, models
 
 
 def refuse_if_any_row_takes_middle(apps, schema_editor):
+    alias = schema_editor.connection.alias
     Realm = apps.get_model("realms", "Realm")
-    codes = list(Realm._base_manager.filter(fork="MIDDLE").values_list("realm_code", flat=True))
+    codes = list(Realm._base_manager.using(alias).filter(fork="MIDDLE").values_list("realm_code", flat=True))
     if codes:
         raise RuntimeError(
             f"Realm.fork = 'MIDDLE' on {codes}; decide LEFT / RIGHT / NULL for them before removing the value."

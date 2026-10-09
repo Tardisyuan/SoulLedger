@@ -171,7 +171,7 @@ ACTOR_ROLES = {
 }
 
 
-def _move_actors(apps, direction):
+def _move_actors(apps, alias, direction):
     """Repoint actors. `direction` is 'after' going forwards, 'before' on reverse.
 
     An actor whose current realm is not the one this migration expects is left
@@ -183,7 +183,7 @@ def _move_actors(apps, direction):
     """
     actor_model = apps.get_model("actors", "Actor")
     realm_model = apps.get_model("realms", "Realm")
-    by_code = {r.realm_code: r.pk for r in realm_model._base_manager.all()}
+    by_code = {r.realm_code: r.pk for r in realm_model._base_manager.using(alias).all()}
 
     for name, (civilization, before, after) in ACTOR_MOVES.items():
         source, target = (before, after) if direction == "after" else (after, before)
@@ -192,23 +192,24 @@ def _move_actors(apps, direction):
             # The destination realm is absent on this database. Leave the actor
             # where it is rather than nulling a posting that cannot be restored.
             continue
-        actor_model._base_manager.filter(
+        actor_model._base_manager.using(alias).filter(
             name=name,
             civilization=civilization,
             realm__realm_code=source,
         ).update(realm=target_pk)
 
 
-def _set_roles(apps, direction):
+def _set_roles(apps, alias, direction):
     actor_model = apps.get_model("actors", "Actor")
     for name, (civilization, before, after) in ACTOR_ROLES.items():
         source, target = (before, after) if direction == "after" else (after, before)
-        actor_model._base_manager.filter(
+        actor_model._base_manager.using(alias).filter(
             name=name, civilization=civilization, role=source
         ).update(role=target)
 
 
 def forwards(apps, schema_editor):
+    alias = schema_editor.connection.alias
     from django.utils import timezone
 
     realm = apps.get_model("realms", "Realm")
@@ -218,7 +219,7 @@ def forwards(apps, schema_editor):
     # ahead of it hands the seeder rows it did not create — untenanted, and
     # present on a database `seed_mythology --dry-run` is entitled to find
     # empty. realms/0012 learned this the hard way; see its guard.
-    if not realm._base_manager.exists():
+    if not realm._base_manager.using(alias).exists():
         return
 
     # 1. The two Greek realms. Tenant is taken from a sibling European realm so
@@ -227,15 +228,15 @@ def forwards(apps, schema_editor):
     #    fills it in on its next run. Guessing a tenant code here would file
     #    rows under an owner nobody has named.
     sibling = (
-        realm._base_manager.filter(civilization="EUROPEAN")
+        realm._base_manager.using(alias).filter(civilization="EUROPEAN")
         .exclude(tenant__isnull=True)
         .first()
     )
     tenant_id = sibling.tenant_id if sibling else None
-    if realm._base_manager.filter(civilization="EUROPEAN").exists():
+    if realm._base_manager.using(alias).filter(civilization="EUROPEAN").exists():
         for (realm_code, civilization, realm_type, tier, name_local, name_zh,
              name_en, name_egy, memory_reset) in NEW_REALMS:
-            realm._base_manager.get_or_create(
+            realm._base_manager.using(alias).get_or_create(
                 realm_code=realm_code,
                 defaults={
                     "civilization": civilization,
@@ -255,11 +256,11 @@ def forwards(apps, schema_editor):
     # 2. Move the actors, before anything is retired, so nobody is left standing
     #    on a tombstone. (Nothing is seeded into EG_AM_TYAT today, but an actor
     #    put there by hand would be.)
-    _move_actors(apps, "after")
-    _set_roles(apps, "after")
+    _move_actors(apps, alias, "after")
+    _set_roles(apps, alias, "after")
 
     # 3. Retire EG_AM_TYAT.
-    realm._base_manager.filter(realm_code__in=RETIRED_REALMS).update(
+    realm._base_manager.using(alias).filter(realm_code__in=RETIRED_REALMS).update(
         is_deleted=True,
         deleted_at=timezone.now(),
         delete_reason=RETIRE_REASON,
@@ -267,23 +268,24 @@ def forwards(apps, schema_editor):
 
 
 def backwards(apps, schema_editor):
+    alias = schema_editor.connection.alias
     realm = apps.get_model("realms", "Realm")
 
     # Reverse of 3.
-    realm._base_manager.filter(realm_code__in=RETIRED_REALMS).update(
+    realm._base_manager.using(alias).filter(realm_code__in=RETIRED_REALMS).update(
         is_deleted=False, deleted_at=None, delete_reason=""
     )
 
     # Reverse of 2. Must run before the realms are deleted: the actors are still
     # pointing at EU_ACHERON and EU_PLATO_MEADOW, and deleting those rows first
     # would SET_NULL the postings this step exists to restore.
-    _set_roles(apps, "before")
-    _move_actors(apps, "before")
+    _set_roles(apps, alias, "before")
+    _move_actors(apps, alias, "before")
 
     # Reverse of 1, last. Deleted rather than soft-deleted: 0012's world has no
     # such realm at all, and a tombstone it does not know about is not the same
     # thing as absence.
-    realm._base_manager.filter(
+    realm._base_manager.using(alias).filter(
         realm_code__in=[row[0] for row in NEW_REALMS]
     ).delete()
 

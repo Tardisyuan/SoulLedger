@@ -68,13 +68,13 @@ GREEK_TENANT_DISPLAY_NAME = "Greek Afterlife"
 GREEK_ORG_CODES = ["HADES", "HADES_GREEK"]
 
 
-def _move(apps, *, from_category, to_category, from_tenant_code, to_tenant_code,
+def _move(apps, alias, *, from_category, to_category, from_tenant_code, to_tenant_code,
           to_tenant_display_name):
     organization = apps.get_model("org", "Organization")
     tenant = apps.get_model("tenants", "Tenant")
 
     pks = list(
-        organization.all_objects.filter(
+        organization.all_objects.using(alias).filter(
             code__in=GREEK_ORG_CODES, category=from_category
         ).values_list("pk", flat=True)
     )
@@ -82,17 +82,17 @@ def _move(apps, *, from_category, to_category, from_tenant_code, to_tenant_code,
         # Empty database, or already applied. See the docstring.
         return
 
-    organization.all_objects.filter(pk__in=pks).update(category=to_category)
+    organization.all_objects.using(alias).filter(pk__in=pks).update(category=to_category)
 
-    source_tenant = tenant.all_objects.filter(code=from_tenant_code).first()
+    source_tenant = tenant.all_objects.using(alias).filter(code=from_tenant_code).first()
     if source_tenant is None:
         return
-    owned = organization.all_objects.filter(pk__in=pks, tenant=source_tenant)
+    owned = organization.all_objects.using(alias).filter(pk__in=pks, tenant=source_tenant)
     if not owned.exists():
         # No owner to transfer — do not create the destination tenant as a side
         # effect. org/0004's rule.
         return
-    destination, _ = tenant.all_objects.get_or_create(
+    destination, _ = tenant.all_objects.using(alias).get_or_create(
         code=to_tenant_code, defaults={"display_name": to_tenant_display_name}
     )
     owned.update(tenant=destination)
@@ -101,6 +101,7 @@ def _move(apps, *, from_category, to_category, from_tenant_code, to_tenant_code,
 def forwards(apps, schema_editor):
     _move(
         apps,
+        schema_editor.connection.alias,
         from_category=EUROPEAN,
         to_category=GREEK,
         from_tenant_code=EUROPEAN_TENANT_CODE,
@@ -112,6 +113,7 @@ def forwards(apps, schema_editor):
 def backwards(apps, schema_editor):
     _move(
         apps,
+        schema_editor.connection.alias,
         from_category=GREEK,
         to_category=EUROPEAN,
         from_tenant_code=GREEK_TENANT_CODE,
