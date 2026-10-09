@@ -101,7 +101,7 @@ class TestTenantGroup:
         connected, _ = await communicator.connect()
         assert connected
 
-        response = await communicator.receive_json_from()
+        response = await communicator.receive_json_from(timeout=10)
         assert response["type"] == "connected"
         assert response["tenant_code"] == "CN_DIYU"
 
@@ -113,7 +113,7 @@ class TestTenantGroup:
         communicator = await _connect_user(admin_user, cn_tenant.code)
         connected, _ = await communicator.connect()
         assert connected
-        await communicator.receive_json_from()  # connected message
+        await communicator.receive_json_from(timeout=10)  # connected message
 
         # Send to tenant group via channel layer
         channel_layer = get_channel_layer()
@@ -125,7 +125,7 @@ class TestTenantGroup:
             },
         )
 
-        response = await communicator.receive_json_from()
+        response = await communicator.receive_json_from(timeout=10)
         assert response["type"] == "notification"
         assert response["title"] == "Tenant broadcast"
 
@@ -141,8 +141,8 @@ class TestTenantGroup:
         eu_c, _ = await eu_comm.connect()
         assert cn_c and eu_c
 
-        await cn_comm.receive_json_from()  # connected
-        await eu_comm.receive_json_from()  # connected
+        await cn_comm.receive_json_from(timeout=10)  # connected
+        await eu_comm.receive_json_from(timeout=10)  # connected
 
         # Send to CN tenant group
         channel_layer = get_channel_layer()
@@ -155,12 +155,12 @@ class TestTenantGroup:
         )
 
         # CN user should receive it
-        cn_resp = await cn_comm.receive_json_from()
+        cn_resp = await cn_comm.receive_json_from(timeout=10)
         assert cn_resp["title"] == "CN only"
 
         # EU user should NOT receive it — send a heartbeat to verify connection is alive
         await eu_comm.send_json_to({"type": "heartbeat"})
-        eu_resp = await eu_comm.receive_json_from()
+        eu_resp = await eu_comm.receive_json_from(timeout=10)
         assert eu_resp["type"] == "pong"
 
         await cn_comm.disconnect()
@@ -182,7 +182,7 @@ class TestAutoPush:
         communicator = await _connect_user(admin_user, cn_tenant.code)
         connected, _ = await communicator.connect()
         assert connected
-        await communicator.receive_json_from()  # connected
+        await communicator.receive_json_from(timeout=10)  # connected
 
         # Create notification via notify_user
         from apps.notifications.models import notify_user
@@ -194,7 +194,7 @@ class TestAutoPush:
         )
 
         # Should receive WebSocket push (unified format)
-        response = await communicator.receive_json_from()
+        response = await communicator.receive_json_from(timeout=10)
         assert response["domain"] == "notification"
         assert response["event"] == "NOTIFICATION_CREATED"
         assert response["notification"]["title"] == "Test Push"

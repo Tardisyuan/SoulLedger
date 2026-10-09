@@ -1,6 +1,7 @@
 """
 Soul record model — merit/demerit/judgment evidence attached to a soul.
 """
+import logging
 import uuid
 from contextvars import ContextVar
 
@@ -11,6 +12,17 @@ from apps.core.models import AuditUserFields
 from apps.souls.dates import parse_historical_date, to_legacy_date
 from apps.souls.models import Civilization, Soul
 from apps.tenants.managers import TenantManager
+
+logger = logging.getLogger(__name__)
+
+
+class KarmaRecalculationError(Exception):
+    """`SoulRecord.batch()` committed its records but the deferred recalculation failed for `soul_ids`."""
+
+    def __init__(self, soul_ids):
+        self.soul_ids = list(soul_ids)
+        super().__init__(f"karma recalculation failed for {len(self.soul_ids)} soul(s): {', '.join(self.soul_ids)}")
+
 
 #: Batch state: `(depth, deferred_soul_ids)`.
 #:
@@ -430,23 +442,42 @@ class SoulRecord(AuditUserFields, models.Model):
                     # rows already committed inside it have stale denormalised
                     # scores either way, and leaving them stale is the quieter
                     # of the two failures.
-                    cls._flush_karma_recalculations(souls)
+                    failed = cls._flush_karma_recalculations(souls)
+                    if failed and exc_type is None:
+                        # The block's own exception, if any, is the one to surface; the failures are already
+                        # logged and marked either way.
+                        raise KarmaRecalculationError(failed)
                 return False
 
         return BatchContext()
 
     @classmethod
     def _flush_karma_recalculations(cls, soul_ids=None):
-        """Run karma recalculation once per unique soul."""
+        """Run karma recalculation once per unique soul; return the ids whose recalculation FAILED.
+
+        Runs after the batch's records have committed (user decision 2026-10-10: stays outside the transaction),
+        so a failure cannot undo them. It is therefore never silent: logged with the soul id, the soul is marked
+        `needs_ledger_recalculation` (the periodic ledger task recalculates it and clears the mark), and the
+        remaining souls are still flushed. `batch().__exit__` raises `KarmaRecalculationError` with the ids.
+        """
         from apps.ledger.services import LedgerService
         if soul_ids is None:
             soul_ids = _BATCH.get()[1]
+        failed = []
         for soul_id in soul_ids:
             try:
                 soul = Soul.objects.get(pk=soul_id)
                 LedgerService.recalculate_soul_ledger(soul)
             except Soul.DoesNotExist:
                 pass
+            except Exception:
+                logger.exception("deferred karma recalculation failed for soul %s; marked for recalculation", soul_id)
+                failed.append(str(soul_id))
+                try:
+                    Soul.all_objects.filter(pk=soul_id).update(needs_ledger_recalculation=True)
+                except Exception:
+                    logger.exception("could not mark soul %s as needing recalculation", soul_id)
+        return failed
 
     def save(self, *args, **kwargs):
         is_new = self._state.adding
