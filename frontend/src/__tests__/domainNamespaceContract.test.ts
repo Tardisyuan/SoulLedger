@@ -28,6 +28,8 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import egyPendingKeys from "./support/egyPendingKeys.json";
+
 const ROOT = path.resolve(__dirname, "../..");
 const LOCALES = ["en", "zh-Hans", "egy"] as const;
 
@@ -105,7 +107,9 @@ describe("每个 DomainEnum 命名空间在三份 bundle 里都存在", () => {
         return Object.keys((node ?? {}) as object).sort();
       });
       expect({ ns, "zh-Hans": keysets[1] }).toEqual({ ns, "zh-Hans": keysets[0] });
-      expect({ ns, egy: keysets[2] }).toEqual({ ns, egy: keysets[0] });
+      // egy 可以恰好缺 egyPendingKeys.json 里列的键(Design 还没给词;懒加载时读 zh-Hans),别的不许缺。
+      const pending = new Set((egyPendingKeys as string[]).filter((k) => k.startsWith(`${ns}.`)).map((k) => k.slice(ns.length + 1)));
+      expect({ ns, egy: keysets[2] }).toEqual({ ns, egy: keysets[0].filter((k) => !pending.has(k)) });
     }
   });
 });
