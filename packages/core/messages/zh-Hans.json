@@ -2862,7 +2862,8 @@
       "source": "冷却来自转生申请 {{id}} 的终局驳回",
       "decide_failed": "未能决定：{{reason}}",
       "original": "原 {{date}}",
-      "day_unit": "天"
+      "day_unit": "天",
+      "desired": "申请希望：还剩 {{n}} 天"
     },
     "cooldown_status": {
       "PENDING": "待决定",
@@ -4030,7 +4031,10 @@
       "approved": "缩短冷却申请已批准，冷却期至 {{date}}",
       "rejected": "缩短冷却申请被驳回",
       "note": "说明",
-      "brought_forward": "已提前"
+      "brought_forward": "已提前",
+      "desired_label": "希望缩短到几天（可选）",
+      "desired_hint": "现在还剩 {{n}} 天。填 0 表示希望立即结束；不填则由官员决定。",
+      "desired_invalid": "天数须是 0 到 {{max}} 的整数"
     }
   },
   "soul_push": {
@@ -5167,7 +5171,8 @@
       "remaining_days": "还剩 {{n}} 天",
       "days_label": "批准天数",
       "days_invalid": "天数要是整数，且小于剩余天数",
-      "verdict_label": "批准用的裁决"
+      "verdict_label": "批准用的裁决",
+      "desired": "申请希望：还剩 {{n}} 天"
     },
     "landing": {
       "handled": "已由{{name}}处理",

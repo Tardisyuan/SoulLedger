@@ -66,7 +66,7 @@ function TodoDetail({ kind, id, onSettled }: { kind: TodoKind; id: string; onSet
   const loadCooldown = useCallback(
     (): Promise<CooldownFacts | null> =>
       kind === "cooldown"
-        ? soulAccountsApi.cooldownShortening(id).then((r) => ({ reason: r.data.reason, remainingDays: r.data.remaining_days }))
+        ? soulAccountsApi.cooldownShortening(id).then((r) => ({ reason: r.data.reason, remainingDays: r.data.remaining_days, desiredDays: r.data.desired_remaining_days ?? null }))
         : Promise.resolve(null),
     [kind, id]
   );
@@ -113,6 +113,11 @@ function TodoDetail({ kind, id, onSettled }: { kind: TodoKind; id: string; onSet
               <Txt variant="caption" tone="muted">
                 {t("officer_app.confirm.remaining_days", { n: String(cooldown.data.remainingDays) })}
               </Txt>
+              {cooldown.data.desiredDays != null ? (
+                <Txt variant="caption" tone="muted" testID="detail-desired">
+                  {t("officer_app.confirm.desired", { n: String(cooldown.data.desiredDays) })}
+                </Txt>
+              ) : null}
             </View>
           ) : null}
           <ContinueOnDesk target={{ kind, id }} />
