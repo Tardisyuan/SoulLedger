@@ -1857,8 +1857,9 @@
       "hall_seal_glyphs": "Khemen Seth Medu Khetem {{code}}",
       "hall_assistant_switch": "Khemen Wen-Khetem Hehy Medu {{code}}"
     },
-    "filter_hall": "Wesekhet",
-    "all_halls": "Wesekhet Neb"
+    "filter_hall": "Per Wesekhet",
+    "all_halls": "Wesekhet Neb",
+    "resource_tenant": "Smen Wesekhet"
   },
   "profile": {
     "title": "Djes",
@@ -5142,7 +5143,8 @@
       "empty_title": "Nen Shesep-I Djer",
       "empty_body": "Shesep Wa Em «Nen Shesep Djer».",
       "desk_only": "Nen Djed Wedja Djer · Em Medjat Sab",
-      "scope_note": "Em Medjat Ba: Shesep, Maa Hena Sesh Wesheb. Djed Wedja Hena Khetem: Em Medjat Sab."
+      "scope_note": "Em Medjat Ba: Shesep, Maa Hena Sesh Wesheb. Djed Wedja Hena Khetem: Em Medjat Sab.",
+      "claim_failed": "Nen Shesep-Ek"
     },
     "search": {
       "souls": "Hehy Ba",
@@ -5168,7 +5170,8 @@
       "added": "Redi Sab Hena Seth. Er Khet Hesy-Ef: Hesy-Ek Smen.",
       "not_eligible": "Nen Redi Sab Pen Hena: Sab Wesekhet Pen, Em Iri, Was Hesy.",
       "duplicate": "Sab Hena Seth, Er Wedja Sekhet Pen Wa-Ef.",
-      "unavailable": "Redi Sab Hena Nen Wenen Djer: Maa Wa."
+      "unavailable": "Redi Sab Hena Nen Wenen Djer: Maa Wa.",
+      "rules": "Sab Wesekhet Pen Wa: Em Iri, Was Hesy. Hesy Sab Hena Tepy, Hesy-Ek Er Khet; Khesef Sab Hena: Sekhet Pen Khesef."
     },
     "comment": {
       "title": "Wesheb",
@@ -5261,7 +5264,8 @@
       "reasons": {
         "bad_credentials": "Ren Aq Er Sekhem Nen Maat",
         "locked": "Sep Menmen. Wehem Iri Er Khet.",
-        "network": "Nen Em Senb"
+        "network": "Nen Em Senb",
+        "other": "Nen Aq-Ek. Wehem Iri Er Khet."
       }
     },
     "mfa": {
@@ -5278,7 +5282,8 @@
         "wrong": "Medu Ahet Nen Maat",
         "expired": "Aq Unut Khetem. Wehem Er Aq.",
         "locked": "Sep Menmen. Wehem Iri Er Khet.",
-        "network": "Nen Em Senb"
+        "network": "Nen Em Senb",
+        "other": "Nen Maa-Ek. Wehem Iri Er Khet."
       }
     }
   }
