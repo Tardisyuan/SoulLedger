@@ -12,6 +12,8 @@ const structOf = (entry) => `Open${pascal(entry.id)}Intent`;
 const readoutStructOf = (readout) => `Speak${pascal(readout.id)}Intent`;
 const askStructOf = (ask) => `${pascal(ask.id)}Intent`;
 const quoted = (s) => `"${s.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
+/** Explicit LocalizedStringResource in the Localizable table: a bare literal in @Parameter / requestValueDialog stayed English on iOS 27 (zh-Hans) while the same table localised the titles. */
+const resource = (s) => `LocalizedStringResource(${quoted(s)}, table: "Localizable")`;
 const voiceKey = (entry, part) => `voice.${entry.id}.${part}`;
 
 function lookup(messages, key) {
@@ -90,7 +92,7 @@ struct ${askStructOf(a)}: AppIntent {
   static let title: LocalizedStringResource = ${quoted(a.title.en)}
   static let openAppWhenRun: Bool = true
 
-  @Parameter(title: ${quoted(a.parameter.en)}, requestValueDialog: ${quoted(a.prompt.en)})
+  @Parameter(title: ${resource(a.parameter.en)}, requestValueDialog: IntentDialog(${resource(a.prompt.en)}))
   var question: String
 
   // The app gets the question in the box and nothing more: it is the person who presses send.

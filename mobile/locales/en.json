@@ -1,0 +1,4 @@
+{
+  "ios": { "CFBundleDisplayName": "SoulLedger" },
+  "android": { "app_name": "SoulLedger" }
+}
