@@ -307,7 +307,7 @@ def test_an_unregistered_device_is_switched_off(cn_tenant, judge_user, push_on):
 def test_a_new_node_for_a_role_queues_a_push_for_the_officers_with_devices(
         cn_tenant, judge_user, monkeypatch, django_capture_on_commit_callbacks):
     sent = []
-    monkeypatch.setattr(push.send_todo_push, "delay", lambda ids: sent.append(list(ids)))
+    monkeypatch.setattr(push.send_todo_push, "delay", lambda ids, target=None: sent.append((list(ids), target)))
     push.register_device(judge_user, TOKEN, "IOS")
     User.objects.create_user(username="no_device", password="x", role="JUDGE", tenant=cn_tenant)
     wf, node = _plain_workflow(cn_tenant)
@@ -315,7 +315,7 @@ def test_a_new_node_for_a_role_queues_a_push_for_the_officers_with_devices(
 
     with django_capture_on_commit_callbacks(execute=True):
         WorkflowService.announce(wf, created=True)
-    assert sent == [[judge_user.pk]]
+    assert sent == [([judge_user.pk], {"kind": "approval", "id": str(wf.pk)})]
 
 
 def test_soul_push_tables_are_untouched_by_officer_devices(judge_user):

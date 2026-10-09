@@ -657,6 +657,20 @@ class WorkflowService:
         return workflow
 
     @staticmethod
+    def push_target(workflow) -> dict:
+        """The officer-App item this workflow is: a rebirth application (by the application's id) or an approval."""
+        from apps.workflow.models import CaseType
+
+        if workflow.case_type == CaseType.REBIRTH_APPLICATION:
+            from apps.soul_accounts.models import RebirthApplication
+
+            app = RebirthApplication.objects.filter(workflow=workflow).first() or RebirthApplication.objects.filter(
+                appeal_workflow=workflow).first()
+            if app is not None:
+                return {"kind": "rebirth", "id": str(app.pk)}
+        return {"kind": "approval", "id": str(workflow.pk)}
+
+    @staticmethod
     def announce(workflow, created: bool = False, node=None) -> None:
         """Emit the workflow's own events onto the soul's timeline, and tell the
         approver a node is waiting for them.
@@ -712,7 +726,8 @@ class WorkflowService:
             # 没有设备的人在 `send_to_user` 里被跳过。
             from apps.officer_app.push import notify_users
 
-            notify_users(WorkflowService.designated_users(current, workflow.tenant_id))
+            notify_users(WorkflowService.designated_users(current, workflow.tenant_id),
+                         target=WorkflowService.push_target(workflow))
         if current is not None and current.kind == NodeKind.COUNTERSIGN:
             # Every signer still owed a signature, actor-designated or not:
             # a 会签 is addressed to named people by construction.

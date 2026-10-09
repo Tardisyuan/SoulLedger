@@ -371,6 +371,15 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
 
         verdict = serializer.validated_data["verdict"]
         notes = serializer.validated_data.get("notes", "")
+
+        from apps.workflow import cosign
+
+        if node.cosigners_json and cosign.blocks_approval(node, request.user, verdict in ("PASSED", "CONFIRMED")):
+            return Response(
+                {"code": "cosigners_pending", "error": "Co-signatures are still owed.",
+                 "detail": "被加签的人还没有全部签完,你的批准暂不能生效。"},
+                status=status.HTTP_409_CONFLICT,
+            )
         soul_reason = serializer.validated_data.get("rejection_reason_for_soul", "")
 
         # 转生申请:驳回必须附一段给灵魂看的理由(2026-09-17 用户决定)。节点 notes 是内部备注。
