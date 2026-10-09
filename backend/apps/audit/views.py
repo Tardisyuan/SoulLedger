@@ -11,12 +11,12 @@ from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.response import Response
 
 from apps.core.csv_safe import csv_safe
 from apps.core.permissions import CodenamePermission, TenantPermission
-from apps.core.tenant import scope_to_tenant
+from apps.core.tenant import is_tenant_exempt, scope_to_tenant
 from apps.core.viewsets import CodenameViewSetMixin
 
 from .models import AuditAction, AuditLog
@@ -34,10 +34,29 @@ class AuditLogFilter(filters.FilterSet):
     只在查询时并入,不改已存的行。"""
 
     resource = filters.CharFilter(method="filter_resource")
+    #: 审计页的「殿」下拉:一个殿的**码**(`CN_DIYU`)。全局管理员(`ADMIN`,跨租户)可选任何一个殿;
+    #: 其余人只看得到自己殿的行(`get_queryset` 已划界),这里再拒绝他们点别的殿的名 —— 403,
+    #: 而不是一页恰好为空的 200。不存在的殿码是 400。
+    tenant = filters.CharFilter(method="filter_tenant")
 
     class Meta:
         model = AuditLog
         fields = ["user", "action", "resource", "resource_id"]
+
+    def filter_tenant(self, queryset, name, value):
+        from apps.tenants.models import Tenant
+
+        request = self.request
+        user = getattr(request, "user", None)
+        if not is_tenant_exempt(user):
+            own = getattr(request, "tenant", None) or getattr(user, "tenant", None)
+            if own is None or own.code != value:
+                raise PermissionDenied("Only an administrator can read another hall's audit log.")
+            return queryset.filter(tenant=own)
+        tenant = Tenant.objects.filter(code=value).first()
+        if tenant is None:
+            raise ValidationError({"tenant": "Unknown hall."})
+        return queryset.filter(tenant=tenant)
 
     def filter_resource(self, queryset, name, value):
         if value == "tenant":

@@ -47,7 +47,7 @@
     "forgot_failed": "未能发送，请稍后再试",
     "rate_limited": "请求过于频繁，请稍后再试",
     "back_to_login": "返回登录",
-    "forgot_sent_body": "如果这个账号存在，管理员会核对身份后联系你重设密码。系统不会发重置链接。",
+    "forgot_sent_body": "如果这个账号存在，管理员会核对身份后联系你重设密码。",
     "subtitle": "用本殿发给你的账号登录。",
     "account": "账号",
     "console": "SoulLedger · 官员台",
@@ -62,7 +62,29 @@
     "error_locked_body": "连续输错 {{n}} 次。{{time}} 后可再试，或请本殿管理员解锁。",
     "error_network": "连不上服务器",
     "error_network_body": "填好的内容还在。检查网络后重试。",
-    "submitting": "登录中"
+    "submitting": "登录中",
+    "forgot_email_desc": "输入用户名或邮箱。如果账号存在且邮箱已验证，我们会发一封重置密码的邮件。",
+    "forgot_email_label": "用户名或邮箱",
+    "forgot_email_submit": "发送重置邮件",
+    "forgot_email_sent": "已发送（如果账号存在且邮箱已验证）",
+    "forgot_email_sent_body": "请查收邮件。链接 1 小时内有效，只能用一次。收不到信，可能是邮箱还没验证，可以改为通知管理员。",
+    "forgot_notify_admin": "邮箱未验证或收不到邮件？通知管理员",
+    "reset_title": "设置新密码",
+    "reset_subtitle": "输入新密码。重置后所有设备上的登录都会退出。",
+    "reset_submit": "重置密码",
+    "reset_weak": "新密码不符合要求",
+    "reset_invalid": "链接无效或已过期",
+    "reset_invalid_body": "重置链接 1 小时内有效，只能用一次。请重新申请。",
+    "reset_request_again": "重新申请",
+    "reset_done": "密码已重置",
+    "reset_done_body": "所有设备上的登录已退出。请用新密码登录；如果开了两步验证，仍需输入动态码。",
+    "verify_title": "验证邮箱",
+    "verify_working": "正在验证…",
+    "verify_done": "邮箱已验证",
+    "verify_done_body": "以后忘记密码，可以用这个邮箱重置。",
+    "verify_invalid": "验证链接无效或已过期",
+    "verify_invalid_body": "请在个人中心重新发送验证邮件。",
+    "verify_go_profile": "前往个人中心"
   },
   "mfa": {
     "title": "两步验证",
@@ -1826,7 +1848,9 @@
       "hall_settings": "改了 {{code}} 殿的设置",
       "hall_seal_glyphs": "改了 {{code}} 殿的印字",
       "hall_assistant_switch": "改了 {{code}} 殿的问一问开关"
-    }
+    },
+    "filter_hall": "殿",
+    "all_halls": "全部殿"
   },
   "profile": {
     "title": "个人中心",
@@ -1852,7 +1876,14 @@
     "email_notifications": "邮件通知",
     "email_notifications_note": "开启后，待你处理的事项（待审批、审批超时、改派请求、密码求助）会发到你的邮箱。",
     "email_notifications_no_address": "账号没有邮箱，开启后也不会发送。",
-    "email_last_failure": "上次发送失败：{{error}}（{{at}}）"
+    "email_last_failure": "上次发送失败：{{error}}（{{at}}）",
+    "email_verification": "邮箱验证",
+    "email_verified": "已验证",
+    "email_unverified": "未验证",
+    "email_send_verification": "发送验证邮件",
+    "email_verification_sent": "验证邮件已发送，请查收",
+    "email_verification_failed": "未能发送，请稍后再试",
+    "email_verification_hint": "验证后，忘记密码时可用此邮箱重置。"
   },
   "notifications": {
     "title": "通知中心",
@@ -5196,7 +5227,8 @@
         "locked": "尝试次数过多，请稍后再试",
         "network": "网络错误",
         "other": "没能登录，请稍后再试"
-      }
+      },
+      "forgot_password": "忘记密码"
     },
     "mfa": {
       "title": "两步验证",

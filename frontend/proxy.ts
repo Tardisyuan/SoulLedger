@@ -66,7 +66,19 @@ export function contentSecurityPolicy(nonce: string, host: string): string {
 
 // Routes that don't require authentication
 // `/login/verify` (two-step verification) is reached before any refresh token exists.
-const PUBLIC_PATHS = ["/", "/welcome", "/(auth)/login", "/(auth)/login/verify", "/(auth)/register"];
+// `/forgot-password`, `/reset-password` and `/verify-email` are the officer e-mail reset flow
+// (2026-10-09): the first two are used while signed out, and the links in the mails land on the
+// last two with a one-time token as the only credential.
+const PUBLIC_PATHS = [
+  "/",
+  "/welcome",
+  "/(auth)/login",
+  "/(auth)/login/verify",
+  "/(auth)/register",
+  "/(auth)/forgot-password",
+  "/(auth)/reset-password",
+  "/(auth)/verify-email",
+];
 
 function isPublicPath(pathname: string): boolean {
   return PUBLIC_PATHS.some(

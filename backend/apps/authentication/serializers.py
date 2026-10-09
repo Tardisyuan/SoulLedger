@@ -458,9 +458,11 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ["id", "username", "email", "role", "tenant", "first_name", "last_name", "is_active", "display_name", "organization", "position", "mfa_enabled", "mfa_required"]
+        fields = ["id", "username", "email", "email_verified", "role", "tenant", "first_name", "last_name", "is_active", "display_name", "organization", "position", "mfa_enabled", "mfa_required"]
         read_only_fields = ["id", "is_active", "username", "role"]
 
+    #: 邮箱已验证(官员邮箱重置密码的前提);改邮箱即变回 false。见 `User.email_verified`。
+    email_verified = serializers.BooleanField(read_only=True)
     mfa_enabled = serializers.SerializerMethodField()
     mfa_required = serializers.SerializerMethodField()
 

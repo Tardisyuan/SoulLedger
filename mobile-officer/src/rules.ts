@@ -159,6 +159,11 @@ export function deskBaseUrl(): string {
   return (process.env.EXPO_PUBLIC_DESK_URL || "http://localhost:3000").replace(/\/+$/, "");
 }
 
+/** 忘记密码: the desk's e-mail reset request page. The app only opens it; the reset happens in the browser. */
+export function forgotPasswordUrl(): string {
+  return deskBaseUrl() + "/forgot-password";
+}
+
 /** The desk page for the same item. Pages that are lists (cooldown, rebirth) are the list itself. */
 export function deskPath(target: { kind: TodoKind | "judgment" | "soul"; id: string }): string {
   switch (target.kind) {

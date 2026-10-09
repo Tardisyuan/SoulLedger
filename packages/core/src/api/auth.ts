@@ -121,6 +121,8 @@ export interface AuthProfile {
   id: number;
   username: string;
   email: string;
+  /** 邮箱已验证(官员邮箱重置密码的前提);改邮箱即变回 false。Optional: older payloads lack it. */
+  email_verified?: boolean;
   role: UserRole;
   first_name: string;
   last_name: string;
@@ -156,6 +158,9 @@ export interface UserPreferences {
   /** Language of those emails: set from the UI locale when the switch is turned on; null = by civilization. */
   email_locale: "zh-Hans" | "en" | null;
 }
+
+/** `{error, code}` of the officer e-mail reset / verification endpoints; branch on `code`. */
+export type OfficerResetRefusal = components["schemas"]["OfficerResetRefusal"];
 
 /** The body `/auth/password-help/` answers 200 with, for every username alike. */
 export interface PasswordHelpAccepted {
@@ -212,6 +217,17 @@ export const authApi = {
   // page must not branch on anything but the status.
   requestPasswordHelp: (username: string) =>
     api.post<PasswordHelpAccepted>("/auth/password-help/", { username }),
+  // 官员「忘记密码」(邮箱重置链接,2026-10-09)。申请永远 200 同一个体 —— 账号不存在、邮箱未验证、
+  // 是灵魂,都一样;页面只能按状态码分支(429 = 太频繁)。
+  requestOfficerReset: (identifier: string) =>
+    api.post<{ detail: string }>("/auth/officer-reset/request/", { identifier }),
+  /** 400 `reset_link_invalid` / `weak_password`; 429 `rate_limited`. */
+  confirmOfficerReset: (data: { uid: string; token: string; new_password: string }) =>
+    api.post<{ detail: string }>("/auth/officer-reset/confirm/", data),
+  /** 资料页「发送验证邮件」(每小时 5 封)。 */
+  sendEmailVerification: () => api.post<{ detail: string }>("/auth/email/send-verification/"),
+  /** 邮件链接落在 /verify-email,令牌本身就是凭据。 */
+  verifyEmail: (data: { uid: string; token: string }) => api.post<{ detail: string }>("/auth/email/verify/", data),
   preferences: () => api.get<UserPreferences>("/auth/profile/preferences/"),
   updatePreferences: (data: Partial<UserPreferences>) =>
     api.patch<UserPreferences>("/auth/profile/preferences/", data),
