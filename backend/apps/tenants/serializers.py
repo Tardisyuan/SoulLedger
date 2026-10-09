@@ -75,13 +75,27 @@ class TenantSettingsSerializer(serializers.ModelSerializer):
 
     # 上限 365(2026-10-08 用户决定):一年之外的冷却没有业务含义,只会是手误。
     soul_rebirth_cooldown_days = serializers.IntegerField(min_value=0, max_value=365, required=False, allow_null=True)
+    # 两步验证(A12):要求开启的角色名;ADMIN 始终要求,写进来也原样留着。只认可持有的角色名。
+    mfa_required_roles = serializers.ListField(child=serializers.CharField(max_length=20), required=False)
 
     class Meta:
         model = Tenant
         fields = ["description", "dispatch_enabled", "hall_name", "hall_name_en", "hall_name_egy",
-                  "soul_rebirth_cooldown_days"]
+                  "soul_rebirth_cooldown_days", "mfa_required_roles"]
+
+    def validate_mfa_required_roles(self, value):
+        from apps.authentication.models import is_assignable_role
+
+        unknown = [r for r in value if not is_assignable_role(r)]
+        if unknown:
+            raise serializers.ValidationError(f"unknown role(s): {', '.join(unknown)}")
+        return sorted(set(value))
 
     def update(self, instance, validated_data):
+        if "mfa_required_roles" in validated_data:
+            from apps.authentication.mfa import MFA_REQUIRED_ROLES_SETTING
+
+            instance.settings = {**(instance.settings or {}), MFA_REQUIRED_ROLES_SETTING: validated_data.pop("mfa_required_roles")}
         if "soul_rebirth_cooldown_days" in validated_data:
             days = validated_data.pop("soul_rebirth_cooldown_days")
             merged = {k: v for k, v in (instance.settings or {}).items() if k != REBIRTH_COOLDOWN_SETTING}
@@ -89,6 +103,17 @@ class TenantSettingsSerializer(serializers.ModelSerializer):
                 merged[REBIRTH_COOLDOWN_SETTING] = days
             instance.settings = merged
         return super().update(instance, validated_data)
+
+
+class TenantMfaRoleRowSerializer(serializers.Serializer):
+    """One row of `GET /tenants/{code}/mfa-roles/` (殿设置 › 安全)."""
+
+    role = serializers.CharField()
+    required = serializers.BooleanField()
+    #: ADMIN: required regardless of the setting, shown as 「始终」.
+    always = serializers.BooleanField()
+    total = serializers.IntegerField()
+    enabled = serializers.IntegerField()
 
 
 class TenantSealGlyphsSerializer(serializers.ModelSerializer):

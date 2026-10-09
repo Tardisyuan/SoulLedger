@@ -1,0 +1,10 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    "types": ["jest", "node"]
+  },
+  // `../mobile/src/*` is reached through src/shared.ts; tsc follows those imports, so the
+  // borrowed files are type-checked here too, under this app's strictness.
+  "include": ["index.ts", "App.tsx", "src/**/*.ts", "src/**/*.tsx"]
+}

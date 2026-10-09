@@ -8,6 +8,7 @@ from django.db.models import Q
 from django.db.models.functions import Lower
 
 from apps.core.models import AuditUserFields
+from apps.death_sync.fields import EncryptedCharField
 
 
 class SoftDeleteUserManager(UserManager):
@@ -128,6 +129,11 @@ class User(AuditUserFields, AbstractUser):
         related_name="users",
         help_text="RBAC role with hierarchy and permission inheritance",
     )
+    # 兼任的其它角色(角色名列表)。权限 = `role` 与这里每个角色的并集,
+    # 并集只在 `apps/perm/checker.py::check_permission` 里算一次。
+    # 不含 ADMIN / SOUL(`UserViewSet.assign_roles` 拒绝,检查器也无视),
+    # 主角色 `role` 仍是唯一决定 ADMIN 旁路、租户豁免、排名的那一个。
+    extra_roles = models.JSONField(default=list, blank=True)
     # For API display — linked to an Actor in the underworld system
     tenant = models.ForeignKey(
         "tenants.Tenant",
@@ -163,6 +169,11 @@ class User(AuditUserFields, AbstractUser):
     # browser. Shape and allowed keys: `UserPreferencesSerializer`; served by
     # `GET/PATCH /auth/profile/preferences/`, and only for `request.user`.
     preferences = models.JSONField(default=dict, blank=True)
+    # 邮箱验证(2026-10-09,官员邮箱重置密码的前提)。存的是**被验证的那个地址**而不是一个布尔:
+    # 改邮箱的任何路径(资料页、用户管理、CSV 导入)都不必记得去清标志 —— 地址一变,
+    # `email_verified` 立刻为假。`email_verified_at` 只用来展示。
+    email_verified_address = models.EmailField(blank=True, default="")
+    email_verified_at = models.DateTimeField(null=True, blank=True)
 
     # Declared first so it becomes _base_manager (used by refresh_from_db(),
     # etc) — keeps create_user/create_superuser and stays unfiltered so
@@ -187,6 +198,10 @@ class User(AuditUserFields, AbstractUser):
                 name="unique_user_email_among_live_rows",
             ),
         ]
+
+    @property
+    def email_verified(self) -> bool:
+        return bool(self.email) and self.email_verified_address.lower() == self.email.lower()
 
     def __str__(self):
         return f"{self.username} ({self.role})"
@@ -225,3 +240,54 @@ class LoginLog(AuditUserFields, models.Model):
 
     def __str__(self):
         return f"{self.username} {self.status} at {self.timestamp}"
+
+
+# ── 两步验证(A12,2026-10-09)────────────────────────────────────────────────
+# 官员专用:灵魂账号(role=SOUL)走 apps/soul_accounts 的登录,不经过这里。
+# 规则与数字(窗口、锁定、恢复码)在 apps/authentication/mfa.py;这里只有存法。
+
+
+class OfficerMfa(models.Model):
+    """一个官员一行。`confirmed_at` 为空 = 向导没走到「完成」,等于没开启;
+    `secret` 用 death_sync 的 Fernet 字段加密落库(没配 ENCRYPTION_KEY 时明文,
+    settings.py 在 DEBUG=False 下拒绝那种配置)。"""
+
+    user = models.OneToOneField("authentication.User", on_delete=models.CASCADE, related_name="mfa")
+    secret = EncryptedCharField(max_length=255)
+    #: 向导第三步验过一次动态码(恢复码已生成),还没按「完成」。
+    verified_at = models.DateTimeField(null=True, blank=True)
+    #: 按下「完成」的时刻;有值才算开启。
+    confirmed_at = models.DateTimeField(null=True, blank=True)
+    last_used_at = models.DateTimeField(null=True, blank=True)
+    last_used_method = models.CharField(max_length=10, blank=True, default="")
+    #: 最近一次验证通过的 TOTP 时间步 —— 同一个码不能用第二次。
+    last_step = models.BigIntegerField(null=True, blank=True)
+    failed_attempts = models.PositiveSmallIntegerField(default=0)
+    locked_until = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Officer MFA"
+
+    @property
+    def enabled(self) -> bool:
+        return self.confirmed_at is not None
+
+
+class MfaRecoveryCode(models.Model):
+    """恢复码:像密码一样只存哈希(`make_password`),一次一用。"""
+
+    mfa = models.ForeignKey(OfficerMfa, on_delete=models.CASCADE, related_name="recovery_codes")
+    code_hash = models.CharField(max_length=128)
+    used_at = models.DateTimeField(null=True, blank=True)
+
+
+class MfaRememberedDevice(models.Model):
+    """「在此设备上 30 天内不再询问」的设备令牌。与「保持登录 30 天」的刷新令牌**无关**:
+    浏览器只拿到 httpOnly cookie 里的随机值,这里存它的 sha256;登出不清它,管理员重置清它。"""
+
+    user = models.ForeignKey("authentication.User", on_delete=models.CASCADE, related_name="mfa_devices")
+    token_hash = models.CharField(max_length=64, unique=True)
+    expires_at = models.DateTimeField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    last_used_at = models.DateTimeField(null=True, blank=True)

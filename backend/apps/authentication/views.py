@@ -9,7 +9,7 @@ import time
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import OpenApiResponse, extend_schema
+from drf_spectacular.utils import OpenApiResponse, PolymorphicProxySerializer, extend_schema
 from rest_framework import status, viewsets
 from rest_framework.decorators import (
     action,
@@ -28,6 +28,8 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 User = get_user_model()
 logger = logging.getLogger(__name__)
 
+from apps.audit.models import AuditAction
+from apps.audit.signals import create_batch_audit_log
 from apps.authentication.mail import MESSAGES as MAIL_MESSAGES
 from apps.authentication.mail import fill, mail_locale, send_neutral_mail
 from apps.authentication.models import UserRole, is_assignable_role
@@ -38,13 +40,17 @@ from apps.core.tenant import scope_to_tenant
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin
 
 from .serializers import (
+    AssignRolesSerializer,
     ChangePasswordSerializer,
     CustomTokenObtainPairSerializer,
+    HallChoiceResponseSerializer,
     LoginFailedResponseSerializer,
     LoginLockedResponseSerializer,
     LoginLogSerializer,
     LoginResponseSerializer,
     LogoutRequestSerializer,
+    MfaRequiredResponseSerializer,
+    OfficerTokenObtainPairSerializer,
     PasswordHelpRequestSerializer,
     PasswordResetRefusalSerializer,
     PasswordResetResultSerializer,
@@ -57,6 +63,7 @@ from .serializers import (
     UserCreateSerializer,
     UserImportResultSerializer,
     UserManagementSerializer,
+    UserMfaResetSerializer,
     UserPreferencesSerializer,
     UserRoleSerializer,
     UserSerializer,
@@ -138,6 +145,7 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
         'assign_roles': ['user.manage'],
         'export_csv': ['user.manage'],
         'import_csv': ['user.manage'],
+        'reset_mfa': ['user.manage'],
     }
 
     def get_serializer_class(self):
@@ -161,7 +169,7 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
         # 灵魂账号不归用户管理:它们的开通 / 重置走 `/api/v1/soul-accounts/`,
         # 那里有 72 小时、首登改密、只发一次三道保护;这里的 reset_password 会
         # 把明文直接交给官员,绕过全部三道。
-        qs = User.objects.select_related('tenant').exclude(role='SOUL')
+        qs = User.objects.select_related('tenant', 'mfa').exclude(role='SOUL')
 
         # ADMIN is the only global-scope role (apps/perm/models.py Role.scope);
         # every other role is tenant-scoped and must never see another
@@ -200,6 +208,26 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
         if role:
             qs = qs.filter(role=role)
 
+        # 两步验证筛选签(A12):enabled / disabled;`missing` = 角色被要求而没开(ADMIN 始终被要求,
+        # 其余角色读本殿设置里的 mfa_required_roles)。
+        mfa_filter = params.get('mfa', '').strip()
+        if mfa_filter == 'enabled':
+            qs = qs.filter(mfa__confirmed_at__isnull=False)
+        elif mfa_filter == 'disabled':
+            qs = qs.filter(mfa__confirmed_at__isnull=True)
+        elif mfa_filter == 'missing':
+            from django.db.models import Q
+
+            from apps.authentication.mfa import MFA_REQUIRED_ROLES_SETTING
+            from apps.tenants.models import Tenant
+
+            required = Q(role='ADMIN')
+            for tenant in Tenant.objects.exclude(settings={}):
+                roles = (tenant.settings or {}).get(MFA_REQUIRED_ROLES_SETTING) or []
+                if roles:
+                    required |= Q(tenant=tenant, role__in=roles)
+            qs = qs.filter(required, mfa__confirmed_at__isnull=True)
+
         # Filter by is_active
         is_active = params.get('is_active', '').strip()
         if is_active in ('true', '1'):
@@ -215,6 +243,21 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
             qs = qs.order_by(ordering)
 
         return qs
+
+    @extend_schema(request=UserMfaResetSerializer, responses={200: DetailResponseSerializer, 400: OpenApiTypes.OBJECT, 409: ErrorResponseSerializer})
+    @action(detail=True, methods=['post'], url_path='reset-mfa')
+    def reset_mfa(self, request, pk=None):
+        """管理员重置两步验证(A12):验证器、恢复码、「不再询问」设备令牌全清,该用户所有刷新令牌吊销。
+        理由必填,进审计。只对已开启的账号有意义(未开启答 409)。"""
+        from apps.authentication import mfa
+
+        user = self.get_object()
+        serializer = UserMfaResetSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        if not mfa.is_enabled(user):
+            return Response({"error": "该账号未开启两步验证", "code": "not_enabled"}, status=status.HTTP_409_CONFLICT)
+        mfa.admin_reset(user, actor=request.user, reason=serializer.validated_data["reason"], request=request)
+        return Response({"detail": "两步验证已重置"})
 
     @action(detail=True, methods=['post'])
     def activate(self, request, pk=None):
@@ -258,70 +301,79 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
             .exclude(pk=self.request.user.pk)
         )
 
+    def _batch_set_active(self, request, active):
+        user_ids = request.data.get('user_ids', [])
+        if not user_ids:
+            return Response({'error': 'user_ids is required'}, status=status.HTTP_400_BAD_REQUEST)
+        # `.update()` fires no signals, so the audit row is written by hand
+        # (one BATCH_UPDATE row naming every user), from the same list the
+        # update runs on.
+        targets = list(self._batch_targets(user_ids))
+        updated = User.objects.filter(pk__in=[u.pk for u in targets]).update(is_active=active)
+        if targets:
+            create_batch_audit_log(AuditAction.BATCH_UPDATE, targets, {'is_active': active})
+        return Response({'updated': updated})
+
     @extend_schema(responses=UserBatchUpdateResultSerializer)
     @action(detail=False, methods=['post'])
     def batch_activate(self, request):
         """批量激活用户"""
-        user_ids = request.data.get('user_ids', [])
-        if not user_ids:
-            return Response({'error': 'user_ids is required'}, status=status.HTTP_400_BAD_REQUEST)
-        updated = self._batch_targets(user_ids).update(is_active=True)
-        return Response({'updated': updated})
+        return self._batch_set_active(request, True)
 
     @extend_schema(responses=UserBatchUpdateResultSerializer)
     @action(detail=False, methods=['post'])
     def batch_deactivate(self, request):
         """批量停用用户"""
-        user_ids = request.data.get('user_ids', [])
-        if not user_ids:
-            return Response({'error': 'user_ids is required'}, status=status.HTTP_400_BAD_REQUEST)
-        updated = self._batch_targets(user_ids).update(is_active=False)
-        return Response({'updated': updated})
+        return self._batch_set_active(request, False)
 
     @extend_schema(responses=UserRoleSerializer)
     @action(detail=True, methods=['get'])
     def own_roles(self, request, pk=None):
         """获取用户的角色"""
         user = self.get_object()
-        return Response({'role': user.role})
+        return Response({'role': user.role, 'extra_roles': user.extra_roles})
 
+    @extend_schema(request=AssignRolesSerializer, responses=UserManagementSerializer)
     @action(detail=True, methods=['post'])
     def assign_roles(self, request, pk=None):
-        """分配角色给用户"""
+        """分配角色给用户:主角色 `role`、兼任角色 `extra_roles`(权限取并集)"""
         user = self.get_object()
-        new_role = request.data.get('role')
-        # Against the Role table, not a restated enum. This and its twin in
-        # import_csv were two hand-written copies of UserRole that both missed
-        # MODERATOR; then they were `UserRole.values`, which made every role
-        # created through /perm/roles/create/ unholdable (BP-11).
-        if not is_assignable_role(new_role):
-            return Response(
-                {'error': f'Invalid role {new_role!r}: not a built-in role and not a live row in the role table.'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        # Prevent privilege escalation: assigning user's role must be >= target role.
-        # Shares apps/authentication/serializers.py's ROLE_HIERARCHY so this
-        # stays in sync with the same check applied on create/update.
-        # No `caller_role != 'ADMIN'` short-circuit.
-        #
-        # `IsAdminPermission` gates this action, so that clause guaranteed the
-        # whole check was **dead**: by the time control reaches here the caller
-        # is ADMIN, and the condition's first half is always False. Harmless
-        # today — and silently unprotective the day the ADMIN gate becomes a
-        # codename check, which the comments around here describe as planned.
-        #
-        # Removing it costs nothing: ADMIN ranks 0, the most privileged, so
-        # `role_rank('ADMIN') > role_rank(anything)` is never true. The check
-        # now says what it means — you cannot assign above your own rank —
-        # instead of naming one role for which it does not apply.
+        body = AssignRolesSerializer(data=request.data)
+        body.is_valid(raise_exception=True)
+        data = body.validated_data
+        if 'role' not in data and 'extra_roles' not in data:
+            return Response({'error': 'role or extra_roles is required'}, status=status.HTTP_400_BAD_REQUEST)
+        new_role = data.get('role', user.role)
+        # Against the Role table, not a restated enum (BP-11): a built-in or a
+        # live row in perm.Role.
+        extras = list(dict.fromkeys(data.get('extra_roles', user.extra_roles or [])))
+        extras = [r for r in extras if r != new_role]
+        for name in [new_role, *extras]:
+            if not is_assignable_role(name):
+                return Response(
+                    {'error': f'Invalid role {name!r}: not a built-in role and not a live row in the role table.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        # ADMIN is the bypass and SOUL is the soul app's account: neither can be
+        # combined with anything. The checker ignores them in extra_roles too.
+        if 'ADMIN' in extras:
+            return Response({'error': 'ADMIN cannot be an additional role'}, status=status.HTTP_400_BAD_REQUEST)
+        if extras and new_role == 'ADMIN':
+            return Response({'error': 'ADMIN already holds everything; no additional roles'}, status=status.HTTP_400_BAD_REQUEST)
+        # Prevent privilege escalation: the caller may not assign any role more
+        # privileged than their own (rank shared with create/update, see
+        # ROLE_HIERARCHY). No `caller_role != 'ADMIN'` short-circuit: ADMIN
+        # ranks 0, so the check never fires for it and still says what it means.
         caller_role = getattr(request.user, 'role', None)
-        if role_rank(caller_role) > role_rank(new_role):
+        if any(role_rank(caller_role) > role_rank(r) for r in [new_role, *extras]):
             return Response(
                 {'error': 'Cannot assign a role more privileged than your own'},
                 status=status.HTTP_403_FORBIDDEN,
             )
+        # The generic UPDATE audit row carries the role / extra_roles diff.
         user.role = new_role
-        user.save(update_fields=['role'])
+        user.extra_roles = extras
+        user.save(update_fields=['role', 'extra_roles'])
         return Response(UserManagementSerializer(user).data)
 
     @extend_schema(
@@ -529,7 +581,12 @@ class LoginView(TokenObtainPairView):
     @extend_schema(
         request=CustomTokenObtainPairSerializer,
         responses={
-            200: LoginResponseSerializer,
+            # Two 200 shapes: tokens, or `mfa_required` + a pending token for /auth/mfa/verify/.
+            200: PolymorphicProxySerializer(
+                component_name="LoginOutcome",
+                serializers=[LoginResponseSerializer, MfaRequiredResponseSerializer],
+                resource_type_field_name=None,
+            ),
             # simplejwt's AuthenticationFailed: {"detail": "No active account ..."}
             401: LoginFailedResponseSerializer,
             429: LoginLockedResponseSerializer,
@@ -570,7 +627,10 @@ class LoginView(TokenObtainPairView):
         from .models import LoginLog
         try:
             response = super().post(request, *args, **kwargs)
-            if response.status_code == 200:
+            if response.status_code == 200 and response.data.get("mfa_required"):
+                # 密码对了,还要验码:计数清掉(第二步有自己的锁),登录日志等验码通过再写。
+                cache.delete(rate_key)
+            elif response.status_code == 200:
                 # Login success - clear rate limit counter
                 cache.delete(rate_key)
                 user = response.data.get('user', {})
@@ -608,6 +668,34 @@ class LoginView(TokenObtainPairView):
                 # tries this address has left before the 429 above.
                 e.detail = {"detail": e.detail, "remaining_attempts": remaining}
             raise
+
+
+class OfficerLoginView(LoginView):
+    """
+    POST /api/v1/auth/officer-login/
+    The officer app's login: username + password, no hall chosen. Same throttling and
+    LoginLog as `LoginView` (it is that view); the serializer finds the hall. See
+    `OfficerTokenObtainPairSerializer` for the 409 `hall_required` case.
+    """
+    serializer_class = OfficerTokenObtainPairSerializer
+
+    @extend_schema(
+        request=OfficerTokenObtainPairSerializer,
+        responses={
+            # Same two 200 shapes as /auth/login/: tokens, or `mfa_required` + pending token
+            # (then POST /auth/mfa/verify/).
+            200: PolymorphicProxySerializer(
+                component_name="LoginOutcome",
+                serializers=[LoginResponseSerializer, MfaRequiredResponseSerializer],
+                resource_type_field_name=None,
+            ),
+            401: LoginFailedResponseSerializer,
+            409: HallChoiceResponseSerializer,
+            429: LoginLockedResponseSerializer,
+        },
+    )
+    def post(self, request, *args, **kwargs):
+        return super().post(request, *args, **kwargs)
 
 
 class RefreshView(TokenRefreshView):
@@ -774,7 +862,8 @@ def _throttle_wait(request, throttles):
 
 
 #: The only role that may reset its own password by email (2026-09 product
-#: decision). Officers are admin-provisioned: see `password_help_request`.
+#: decision). Officers have their own email flow (a one-hour link, verified
+#: addresses only: `officer_reset.py`, 2026-10-09) and `password_help_request`.
 SELF_RESET_ROLE = UserRole.SOUL
 
 
@@ -863,10 +952,10 @@ def reset_password_request(request):
     # endpoint deliberately does not disclose whether an address is registered,
     # and "your address is ambiguous" would disclose it.
     #
-    # SOUL ACCOUNTS ONLY. Email self-reset is the souls' path; officers are
-    # provisioned by an administrator and use `/auth/password-help/`, which
-    # pages that administrator instead. An officer's address is therefore
-    # treated exactly like an unregistered one — same statements, same body —
+    # SOUL ACCOUNTS ONLY. This six-digit code is the souls' path; officers reset
+    # through `/auth/officer-reset/request/` (a link, verified addresses only)
+    # or page their administrator via `/auth/password-help/`. An officer's
+    # address is therefore treated exactly like an unregistered one here — same statements, same body —
     # so this endpoint does not become an "is this an officer?" oracle either.
     matches = list(User.objects.filter(email=email, role=SELF_RESET_ROLE)[:2])
     if len(matches) == 1:

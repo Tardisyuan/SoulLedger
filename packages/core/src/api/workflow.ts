@@ -298,7 +298,7 @@ export const workflowApi = {
   approveNode: (
     workflowId: string,
     nodeId: string,
-    data: { verdict: string; notes?: string; rejection_reason_for_soul?: string }
+    data: { verdict: string; notes?: string; rejection_reason_for_soul?: string; require_reason?: boolean }
   ) => api.post<ApprovalWorkflow>(`/workflows/${workflowId}/approve_node/`, { node_id: nodeId, ...data }),
   templates: {
     // WorkflowTemplateViewSet is the one view in the project that sets

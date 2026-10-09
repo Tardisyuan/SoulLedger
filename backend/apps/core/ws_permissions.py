@@ -67,7 +67,7 @@ def resolve_permissions_for(user) -> set:
 
     try:
         from apps.perm.services import get_role_permission_codenames
-        return set(get_role_permission_codenames(role))
+        return set(get_role_permission_codenames(role, fresh.extra_roles))
     except Exception:
         logger.exception("ws_permissions: error resolving permissions")
         return set()

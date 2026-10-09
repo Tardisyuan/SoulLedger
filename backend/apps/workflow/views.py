@@ -13,6 +13,7 @@ from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.tenant import scope_to_tenant
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
 from apps.perm.filters import DataScopeFilter
+from apps.workflow import decision_codes
 from apps.workflow.filters import WorkflowFilter
 from apps.workflow.models import ApprovalNode, ApprovalWorkflow, NodeStatus, WorkflowTemplate
 from apps.workflow.serializers import (
@@ -312,7 +313,9 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
             return Response({"error": "Node not found"}, status=status.HTTP_404_NOT_FOUND)
 
         if node.status != NodeStatus.PENDING:
-            return Response({"error": "Node already processed"}, status=status.HTTP_400_BAD_REQUEST)
+            code, extra = decision_codes.block_for(node, request.user)
+            return Response({"error": "Node already processed", "code": code, **extra},
+                            status=status.HTTP_400_BAD_REQUEST)
 
         # Approver identity. `workflow.approve` (CodenamePermission, above)
         # answers "may this user approve things" — it cannot answer "may this
@@ -347,6 +350,7 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
             if not node.designates_approver:
                 return Response(
                     {
+                        "code": "no_approver",
                         "error": "Node designates no approver",
                         "detail": (
                             "该节点未指定审批人（approver_type=SYSTEM 或 approver_actor 为空），"
@@ -358,6 +362,7 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
                 )
             return Response(
                 {
+                    "code": decision_codes.block_for(node, request.user)[0],
                     "error": "Not the designated approver for this node",
                     "detail": "只有该节点指定的审批人可以审批；如需推进请使用越级推进（escalate）",
                 },
@@ -366,6 +371,15 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
 
         verdict = serializer.validated_data["verdict"]
         notes = serializer.validated_data.get("notes", "")
+
+        from apps.workflow import cosign
+
+        if node.cosigners_json and cosign.blocks_approval(node, request.user, verdict in ("PASSED", "CONFIRMED")):
+            return Response(
+                {"code": "cosigners_pending", "error": "Co-signatures are still owed.",
+                 "detail": "被加签的人还没有全部签完,你的批准暂不能生效。"},
+                status=status.HTTP_409_CONFLICT,
+            )
         soul_reason = serializer.validated_data.get("rejection_reason_for_soul", "")
 
         # 转生申请:驳回必须附一段给灵魂看的理由(2026-09-17 用户决定)。节点 notes 是内部备注。
@@ -374,9 +388,23 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
         if rebirth.requires_reason_for_soul(workflow, verdict) and not soul_reason.strip():
             return Response(
                 {
+                    "code": "reason_required",
                     "error": "rejection_reason_for_soul is required",
                     "detail": "驳回转生申请必须填写给灵魂的驳回理由(rejection_reason_for_soul);内部备注写在 notes。",
                 },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # 官员端 App 驳回必须写理由(`require_reason`,桌面端不传,行为不变)。
+        # 转生申请的理由已由上面那道检查负责(给灵魂的那段)。
+        if (
+            serializer.validated_data["require_reason"]
+            and verdict not in rebirth.PASSING_VERDICTS
+            and not notes.strip()
+            and not rebirth.requires_reason_for_soul(workflow, verdict)
+        ):
+            return Response(
+                {"code": "reason_required", "error": "reason is required", "detail": "驳回必须写理由。"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -415,6 +443,8 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
         if node.status != NodeStatus.PENDING:
             return Response(
                 {
+                    "code": "already_handled",
+                    "handled_by": decision_codes.handled_by(node),
                     "error": "This node was already decided.",
                     "detail": (
                         f"Its verdict is {node.verdict or node.status}. Your "

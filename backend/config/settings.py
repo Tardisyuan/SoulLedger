@@ -91,6 +91,7 @@ INSTALLED_APPS = [
     "apps.chat",
     "apps.sentence_plan",
     "apps.soul_assist",
+    "apps.officer_app",
 ]
 
 MIDDLEWARE = [
@@ -230,6 +231,9 @@ CORS_ALLOW_ALL_ORIGINS = DEBUG
 # override it (BP-18). That box is reachable via `CORS_ALLOWED_ORIGINS` in its
 # own environment, and under DEBUG `CORS_ALLOW_ALL_ORIGINS` above makes the
 # list moot anyway.
+# 两步验证的「不再询问」设备 cookie 由 API 源下发(httpOnly),前端带 withCredentials 调登录与验码;
+# 允许的源是上面的显式清单,不是 *,所以可以带凭据。
+CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOWED_ORIGINS = os.getenv(
     "CORS_ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:3333"
 ).split(",")
@@ -281,6 +285,8 @@ REST_FRAMEWORK = {
         "password_reset": "3/5minute",
         # 「忘记密码」→ 通知本殿管理员(apps/authentication/views.py::password_help_request)。
         "password_help": "5/hour",
+        # 官员邮箱重置密码的申请(apps/authentication/officer_reset_views.py),按 IP 计。
+        "officer_password_reset": "5/hour",
         # 聊天按编号查人(apps/chat/views.py::MeChatLookupView),按灵魂账号计。编号空间
         # 31^10,穷举本来就不可行;这个数限制的是「拿一份收集来的编号表逐个验证」。
         "chat_lookup": "20/hour",
@@ -294,6 +300,11 @@ REST_FRAMEWORK = {
 }
 
 # JWT Settings
+# 官员端 App 的刷新令牌有效期(小时):A13 规格「会话更短」。默认 24 小时 —— 滑动的:App 每次刷新
+# 都从当下重新计 24 小时,所以每天用的人不会被踢,闲置一天就要重新登录(带两步验证)。
+# 官员台(Web)与灵魂端不受影响,仍是下面的 JWT_REFRESH_LIFETIME(默认 7 天)。
+OFFICER_APP_REFRESH_LIFETIME_HOURS = int(os.getenv("JWT_OFFICER_APP_REFRESH_LIFETIME_HOURS", "24"))
+
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=int(os.getenv("JWT_ACCESS_LIFETIME", "30"))),
     "REFRESH_TOKEN_LIFETIME": timedelta(minutes=int(os.getenv("JWT_REFRESH_LIFETIME", "10080"))),
@@ -749,6 +760,11 @@ if not DEBUG and not os.getenv("EMAIL_HOST"):
         "attempted against SMTP on localhost:25 and, if that fails, never arrive.",
         stacklevel=2,
     )
+
+# 官员邮件里的链接指向的 Web 地址(密码重置 / 邮箱验证),无末尾斜杠。
+DESK_URL = os.getenv("DESK_URL", "http://localhost:3000").rstrip("/")
+# Django 的一次性令牌(PasswordResetTokenGenerator)的有效期:官员重置密码与邮箱验证链接都是 1 小时。
+PASSWORD_RESET_TIMEOUT = 3600
 
 # Sentry integration
 import sentry_sdk

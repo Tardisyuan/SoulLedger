@@ -131,6 +131,7 @@ class DispositionService:
     @classmethod
     def create_from_judgment(
         cls, judgment: Judgment, *, realm=_AUTO, sentence_years=None, is_eternal=None,
+        auto_realm=None,
     ) -> Disposition:
         """
         Create a disposition based on judgment verdict and civilization.
@@ -147,6 +148,7 @@ class DispositionService:
         verdict = judgment.verdict
         civilization = soul.civilization
 
+        overridden = realm is not cls._AUTO or sentence_years is not None or is_eternal is not None
         if realm is cls._AUTO:
             realm = cls.route_realm(soul, verdict, judgment.judgment_method, judgment=judgment)
         if is_eternal is None:
@@ -187,7 +189,7 @@ class DispositionService:
             SoulPathService.enter(soul, realm, tenant_id=disposition.tenant_id)
 
         from apps.events.services import log_disposition_created
-        log_disposition_created(disposition)
+        log_disposition_created(disposition, auto_realm=auto_realm, overridden=overridden)
 
         return disposition
 
@@ -538,7 +540,7 @@ class DispositionService:
             return None
         circles = [
             circle
-            for circle in Statute.all_objects.filter(code__in=codes).values_list(
+            for circle in Statute.all_objects.filter(tenant_id=soul.tenant_id, code__in=codes).values_list(
                 "payload_json__circle", flat=True
             )
             if isinstance(circle, int)

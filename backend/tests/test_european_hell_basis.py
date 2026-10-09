@@ -597,9 +597,11 @@ def test_a_deed_may_not_cite_a_circle_that_is_not_about_deeds(
     tripartition gives them no heading, because one is not a sin and the other
     is a belief. Accepting either here would let a deed sort a soul into Limbo,
     which is the contradiction the ladder already has."""
+    from apps.judgment.models import Statute
     from apps.souls.serializers import SoulRecordSerializer
 
-    serializer = SoulRecordSerializer(data={
+    tenant_id = Statute.all_objects.filter(code=article).values_list("tenant_id", flat=True).first()
+    serializer = SoulRecordSerializer(context={"tenant_id": tenant_id}, data={
         "record_type": "DEMERIT",
         "category": RecordCategory.DECEPTION,
         "description": "x",

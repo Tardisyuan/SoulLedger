@@ -13,7 +13,7 @@ Covers:
   - EventBus handler_count / reset
   - Error swallowing in handlers
 """
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -407,6 +407,9 @@ class TestWebSocketHandler:
     def test_publishes_to_channel_layer(self):
         """WebSocketHandler calls group_send on the channel layer."""
         mock_layer = MagicMock()
+        # group_send is a coroutine on a real layer; a plain MagicMock made asgiref warn
+        # ("async_to_sync was passed a non-async-marked callable"), the suite's last warning.
+        mock_layer.group_send = AsyncMock()
 
         handler = WebSocketHandler()
         env = EventEnvelope(

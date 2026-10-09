@@ -33,7 +33,8 @@ export function CooldownShorteningDetail({ row: listed, onClose }: { row: Office
   const r = useCooldownShortening(listed.id, listed).data;
   const approve = useApproveCooldownShortening();
   const reject = useRejectCooldownShortening();
-  const [days, setDays] = useState("0");
+  // The soul's own wish pre-fills the field (the officer may edit it; the rules are unchanged); else 0.
+  const [days, setDays] = useState(String(r.desired_remaining_days ?? 0));
   const [note, setNote] = useState("");
   const [daysError, setDaysError] = useState<string | null>(null);
   const [noteError, setNoteError] = useState<string | null>(null);
@@ -203,6 +204,11 @@ export function CooldownShorteningDetail({ row: listed, onClose }: { row: Office
                     </div>
                     <span className="text-2xs text-[oklch(var(--color-ink-subtle))]">
                       {t("soul_accounts.cooldown.days_hint", { n: String(r.remaining_days) })}
+                      {r.desired_remaining_days !== null && r.desired_remaining_days !== undefined && (
+                        <span data-testid="shortening-desired" className="block">
+                          {t("soul_accounts.cooldown.desired", { n: String(r.desired_remaining_days) })}
+                        </span>
+                      )}
                     </span>
                   </div>
                 )}

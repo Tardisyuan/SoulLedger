@@ -259,6 +259,9 @@ class DispatchService:
                 related_resource="DispatchRecord",
                 related_id=str(dispatch_record.id),
             )
+        from apps.officer_app.push import notify_users
+
+        notify_users(target_users, target={"kind": "reassignment", "id": str(dispatch_record.id)})
 
     @staticmethod
     def approve(dispatch_record, approver):

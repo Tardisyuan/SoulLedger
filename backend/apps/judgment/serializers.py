@@ -16,6 +16,7 @@ from apps.judgment.models import (
     EvidenceAdmission,
     Judgment,
     JudgmentCitation,
+    JudgmentComment,
     Statute,
     Verdict,
     open_judgments,
@@ -672,3 +673,18 @@ class JudgmentQueueCountsSerializer(serializers.Serializer):
     others = serializers.IntegerField()
     deferred = serializers.IntegerField()
     total = serializers.IntegerField()
+
+
+class JudgmentCommentSerializer(serializers.ModelSerializer):
+    author_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = JudgmentComment
+        fields = ["id", "author", "author_name", "body", "created_at"]
+        read_only_fields = ["id", "author", "author_name", "created_at"]
+        extra_kwargs = {"body": {"max_length": JudgmentComment.MAX_LENGTH, "trim_whitespace": True}}
+
+    @extend_schema_field(serializers.CharField())
+    def get_author_name(self, obj):
+        user = obj.author
+        return (user.display_name or user.username) if user else ""

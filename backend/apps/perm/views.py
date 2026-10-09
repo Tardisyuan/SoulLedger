@@ -190,7 +190,7 @@ def get_role_permissions(request):
     # 现在由 `tests/test_perm_prefix_discloses_only_the_catalogue.py` 钉住 ——
     # 一句注释是一次没被执行的断言,而上一句就是这样错了很久的。
     role = request.user.role
-    permission_codenames = _get_role_permissions_from_db(role)
+    permission_codenames = _get_role_permissions_from_db(role, request.user.extra_roles)
     permissions = Permission.objects.filter(codename__in=permission_codenames)
     serializer = PermissionSerializer(permissions, many=True)
     return Response({

@@ -72,6 +72,15 @@ const COLLECTED_FILES = [
   "JudgmentQueueConsole.test.tsx",
   "LedgerPage.test.tsx",
   "LoginPage.test.tsx",
+  // 2026-10-09 官员邮箱重置密码:/forgot-password、/reset-password、/verify-email 与资料页的邮箱验证行。
+  "OfficerPasswordReset.test.tsx",
+  // 2026-10-09 官员两步验证(A12):码框、登录第二步、向导、个人中心面板、用户列表列与重置、殿设置的角色开关。
+  "CodeInput.test.tsx",
+  "MfaVerifyPage.test.tsx",
+  "MfaSetupWizard.test.tsx",
+  "MfaSection.test.tsx",
+  "UsersPage.mfaColumn.test.tsx",
+  "TenantSettingsDialog.mfaRoles.test.tsx",
   "brandTokensMatchIcon.test.ts",
   "draftSavedFlash.test.tsx",
   "judgmentFullCaseMotion.test.ts",
@@ -160,6 +169,8 @@ const COLLECTED_FILES = [
   "OrganizationsPage.test.tsx",
   "UserDeleteDialog.test.tsx",
   "UsersPage.locate.test.tsx",
+  // 2026-10-09 多角色:角色签、设置角色对话框、批量启用 / 停用、非管理员什么都看不到。
+  "UsersPage.multiRole.test.tsx",
   "UsersPage.roleBadge.test.tsx",
   "WebSocketContext.currentUserId.test.tsx",
   "WebSocketContext.sessionResume.test.tsx",

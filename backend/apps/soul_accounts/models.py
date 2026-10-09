@@ -210,6 +210,8 @@ class CooldownShorteningRequest(models.Model):
     )
     cycle = models.PositiveIntegerField()
     reason = models.TextField(max_length=2000)
+    desired_remaining_days = models.PositiveIntegerField(
+        null=True, blank=True, help_text="灵魂希望批准后还剩几天(0 = 立即结束);可选,仅供官员参考。")
     status = models.CharField(max_length=10, choices=CooldownShorteningStatus.choices,
                               default=CooldownShorteningStatus.PENDING)
     approved_days = models.PositiveIntegerField(null=True, blank=True, help_text="批准后,自决定时刻起还要等的天数。")
