@@ -169,6 +169,11 @@ class User(AuditUserFields, AbstractUser):
     # browser. Shape and allowed keys: `UserPreferencesSerializer`; served by
     # `GET/PATCH /auth/profile/preferences/`, and only for `request.user`.
     preferences = models.JSONField(default=dict, blank=True)
+    # 邮箱验证(2026-10-09,官员邮箱重置密码的前提)。存的是**被验证的那个地址**而不是一个布尔:
+    # 改邮箱的任何路径(资料页、用户管理、CSV 导入)都不必记得去清标志 —— 地址一变,
+    # `email_verified` 立刻为假。`email_verified_at` 只用来展示。
+    email_verified_address = models.EmailField(blank=True, default="")
+    email_verified_at = models.DateTimeField(null=True, blank=True)
 
     # Declared first so it becomes _base_manager (used by refresh_from_db(),
     # etc) — keeps create_user/create_superuser and stays unfiltered so
@@ -193,6 +198,10 @@ class User(AuditUserFields, AbstractUser):
                 name="unique_user_email_among_live_rows",
             ),
         ]
+
+    @property
+    def email_verified(self) -> bool:
+        return bool(self.email) and self.email_verified_address.lower() == self.email.lower()
 
     def __str__(self):
         return f"{self.username} ({self.role})"

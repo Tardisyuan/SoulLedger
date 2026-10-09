@@ -40,3 +40,9 @@ class PasswordHelpThrottle(ClientIPRateThrottle):
     of their own help request, and was removed."""
 
     scope = "password_help"
+
+
+class OfficerPasswordResetThrottle(ClientIPRateThrottle):
+    """官员邮箱重置密码的申请:5 per hour per IP。Called by `officer_reset_request`."""
+
+    scope = "officer_password_reset"

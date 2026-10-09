@@ -285,6 +285,8 @@ REST_FRAMEWORK = {
         "password_reset": "3/5minute",
         # 「忘记密码」→ 通知本殿管理员(apps/authentication/views.py::password_help_request)。
         "password_help": "5/hour",
+        # 官员邮箱重置密码的申请(apps/authentication/officer_reset_views.py),按 IP 计。
+        "officer_password_reset": "5/hour",
         # 聊天按编号查人(apps/chat/views.py::MeChatLookupView),按灵魂账号计。编号空间
         # 31^10,穷举本来就不可行;这个数限制的是「拿一份收集来的编号表逐个验证」。
         "chat_lookup": "20/hour",
@@ -753,6 +755,11 @@ if not DEBUG and not os.getenv("EMAIL_HOST"):
         "attempted against SMTP on localhost:25 and, if that fails, never arrive.",
         stacklevel=2,
     )
+
+# 官员邮件里的链接指向的 Web 地址(密码重置 / 邮箱验证),无末尾斜杠。
+DESK_URL = os.getenv("DESK_URL", "http://localhost:3000").rstrip("/")
+# Django 的一次性令牌(PasswordResetTokenGenerator)的有效期:官员重置密码与邮箱验证链接都是 1 小时。
+PASSWORD_RESET_TIMEOUT = 3600
 
 # Sentry integration
 import sentry_sdk
