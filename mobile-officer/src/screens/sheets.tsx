@@ -158,7 +158,7 @@ export function CosignSheet({
   /** The server added the signer. The caller reloads the item. */
   onDone: () => void;
 }) {
-  const { t } = useI18n();
+  const { t, enumLabel } = useI18n();
   const theme = useTheme();
   const toast = useToast();
   const [q, setQ] = useState("");
@@ -209,7 +209,7 @@ export function CosignSheet({
             minHeight={56}
             strong={picked === person.id}
             title={person.name || person.username}
-            lines={[`${person.username} · ${person.role}`]}
+            lines={[`${person.username} · ${roleLabel(enumLabel, person.role)}`]}
             right={<Txt variant="nav">{picked === person.id ? "✓" : "○"}</Txt>}
             onPress={() => setPicked(person.id)}
           />
@@ -239,4 +239,10 @@ function useCandidates(q: string, open: boolean) {
     () => (open ? officerAppApi.signerCandidates(q.trim() || undefined).then((r) => r.data) : Promise.resolve([] as SignerCandidate[])),
     [q, open]
   );
+}
+
+/** A role code through the bundles (审判者), the raw code only when the bundles do not know it. */
+function roleLabel(enumLabel: ReturnType<typeof useI18n>["enumLabel"], role: string | null | undefined): string {
+  const d = enumLabel("users.roles", role);
+  return d.state === "known" ? d.label : (role ?? "");
 }
