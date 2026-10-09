@@ -263,7 +263,7 @@ function PushBridge({ signedIn, ready }: { signedIn: boolean; ready: number }) {
 
   useEffect(() => {
     const landing = pending.current;
-    if (!landing || !signedIn || !navigationRef.isReady()) return;
+    if (!landing || !signedIn || !ready || !navigationRef.isReady()) return;
     pending.current = null;
     landOn(navigationRef.navigate, landing);
   }, [arrived, signedIn, ready]);
@@ -282,7 +282,10 @@ function LinkBridge({ signedIn, ready }: { signedIn: boolean; ready: number }) {
   const setDraft = assist?.setDraft;
   const lettersOff = chat.availability === "not_configured";
   useEffect(() => {
-    if (!signedIn || !navigationRef.isReady()) return;
+    // `ready` counts this mount's onReady. isReady() alone is not enough: when a launcher shortcut makes
+    // Android recreate the activity, the root remounts and the module-level ref still reports the old
+    // container until the new one is up -- navigate() then throws "navigation object hasn't been initialized".
+    if (!signedIn || !ready || !navigationRef.isReady()) return;
     return soulLinks.subscribe((link) => {
       if (link.page === "assist" || link.page === "ask") {
         landOn(navigationRef.navigate, { screen: "Life" });

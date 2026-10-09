@@ -38,6 +38,7 @@ export default function App() {
   const [fontsLoaded, fontError] = useFonts(FONT_ASSETS);
   useEffect(() => {
     hydratePersistentStore().finally(() => setHydrated(true));
+    officerLinks.readOpening();
   }, []);
   if (!hydrated || !(fontsLoaded || fontError)) return null;
   return (
