@@ -11,7 +11,7 @@ import { BackHandler, View } from "react-native";
 
 import { IdentityBand, StandingBanner, TabBar, type TabKey } from "./kit";
 import { listenForLandings, registerDevice } from "./push";
-import { HIGHLIGHT_MS } from "./rules";
+import { HIGHLIGHT_MS, hallLabel } from "./rules";
 import { Detail, type DetailTarget } from "./screens/detail";
 import { MeTab } from "./screens/me";
 import { NoticesTab } from "./screens/notices";
@@ -75,7 +75,7 @@ export function Shell() {
 
   return (
     <View testID="shell" style={{ flex: 1, backgroundColor: theme.s0 }}>
-      <IdentityBand hall={user.tenant?.display_name ?? t("officer_app.name")} name={user.display_name || user.username} />
+      <IdentityBand hall={hallLabel(t, user.tenant) ?? t("officer_app.name")} name={user.display_name || user.username} />
       {needsMfaSetup(user) ? <StandingBanner testID="mfa-banner">{t("officer_app.banner.mfa_required")}</StandingBanner> : null}
       <View style={{ flex: 1 }}>
         {detail ? (

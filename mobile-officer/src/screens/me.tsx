@@ -8,15 +8,17 @@ import { View } from "react-native";
 import { ActionButton, Row, Segmented } from "../kit";
 import { type ThemeChoice, usePrefs } from "../prefs";
 import { permission, registerDevice, requestPermission, unregisterDevice, hasRegisteredDevice, type Permission } from "../push";
+import { hallLabel } from "../rules";
 import { needsMfaSetup, useSession } from "../session";
 import { Notice, Screen, SectionLabel, Txt, space, translate, useI18n, useRemote } from "../shared";
 
 export function MeTab() {
-  const { t, locale, setLocale } = useI18n();
+  const { t, locale, setLocale, enumLabel } = useI18n();
   const { state, signOut } = useSession();
   const { themeChoice, setThemeChoice } = usePrefs();
   const [asking, setAsking] = useState(false);
   const user = state.status === "signedIn" ? state.user : null;
+  const role = enumLabel("users.roles", user?.role);
   const load = useCallback(() => mfaApi.status().then((r) => r.data), []);
   const mfa = useRemote(load);
   if (!user) return null;
@@ -35,8 +37,8 @@ export function MeTab() {
       <View style={{ padding: space[5], gap: space[5] }}>
         <Block label={t("officer_app.me.profile")}>
           <Fact label={t("officer_app.me.name")} value={user.display_name || user.username} />
-          <Fact label={t("officer_app.me.role")} value={user.role} />
-          <Fact label={t("officer_app.me.hall")} value={user.tenant?.display_name ?? ""} />
+          <Fact label={t("officer_app.me.role")} value={role.state === "known" ? role.label : user.role} />
+          <Fact label={t("officer_app.me.hall")} value={hallLabel(t, user.tenant) ?? ""} />
         </Block>
 
         <Block label={t("officer_app.me.mfa")}>
