@@ -53,7 +53,8 @@
           "cameraPermission": false,
           "microphonePermission": false
         }
-      ]
+      ],
+      "./plugins/withSceneLifecycle"
     ]
   }
 }
