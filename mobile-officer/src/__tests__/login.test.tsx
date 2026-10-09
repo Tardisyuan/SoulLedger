@@ -3,6 +3,7 @@
  * after mfa_required + pending_token. Driven through the real SessionProvider with core's auth
  * endpoints replaced.
  */
+import { Linking } from "react-native";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
@@ -122,4 +123,13 @@ it("says the password was wrong and stays on the form", async () => {
   });
   expect(await screen.findByText("! 用户名或密码不对")).toBeTruthy();
   expect(screen.getByTestId("login-username")).toBeTruthy();
+});
+
+it("忘记密码 opens the desk's request page in the browser and does nothing else", () => {
+  const open = jest.spyOn(Linking, "openURL").mockResolvedValue(true);
+  renderLogin();
+  fireEvent.press(screen.getByTestId("login-forgot"));
+  expect(open).toHaveBeenCalledWith(expect.stringMatching(/^https?:\/\/.+\/forgot-password$/));
+  expect(mockOfficerLogin).not.toHaveBeenCalled();
+  open.mockRestore();
 });

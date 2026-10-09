@@ -47,7 +47,7 @@
     "forgot_failed": "Nen Hab. Wehem Iri Er Khet",
     "rate_limited": "Dbh Menmen. Wehem Iri Er Khet",
     "back_to_login": "Wehem Er Aq",
-    "forgot_sent_body": "Aq Wenen: Sab Hery Maa Djes-Ek, Wehem Sekhem-Ek. Hemsu Nen Hab Wat.",
+    "forgot_sent_body": "Aq Wenen: Sab Hery Maa Djes-Ek, Wehem Sekhem-Ek.",
     "subtitle": "Aq Em Ren Aq Per Ahet Pen.",
     "account": "Ren Aq",
     "console": "Medjat Ba · Sab Hery",
@@ -62,7 +62,29 @@
     "error_locked_body": "Nen Maat: Sep {{n}}. Wehem Iri Er Khet {{time}}, Hab Er Sab Hery.",
     "error_network": "Nen Senb Per Hemsu",
     "error_network_body": "Sesh Smen Seth. Maa Senb, Wehem Iri.",
-    "submitting": "Em Aq"
+    "submitting": "Em Aq",
+    "forgot_email_desc": "Sesh Ren Aq. Aq Wenen, Sesh Smen Seth: Hab Menf Er Wehem Sekhem-Ek.",
+    "forgot_email_label": "Ren Aq",
+    "forgot_email_submit": "Hab Menf",
+    "forgot_email_sent": "Hab Seth (Aq Wenen, Sesh Smen Seth)",
+    "forgot_email_sent_body": "Maa Sesh. Menf Wenen: At 60, Sep Wa. Nen Iyi: Hab Er Sab Hery.",
+    "forgot_notify_admin": "Hab Er Sab Hery",
+    "reset_title": "Wehem Sekhem",
+    "reset_subtitle": "Sesh Sekhem Ky. Per Aq Neb.",
+    "reset_submit": "Wehem Sekhem",
+    "reset_weak": "Sekhem Nen Maat",
+    "reset_invalid": "Menf Nen Wenen",
+    "reset_invalid_body": "Menf Wenen: At 60, Sep Wa. Dbh Menf Ky.",
+    "reset_request_again": "Dbh Menf Ky",
+    "reset_done": "Sekhem Wehem Seth",
+    "reset_done_body": "Per Aq Neb. Aq Em Sekhem Ky.",
+    "verify_title": "Smen Sesh",
+    "verify_working": "Em Smen...",
+    "verify_done": "Sesh Smen Seth",
+    "verify_done_body": "Nen Rekh Sekhem: Wehem Sekhem Em Sesh Pen.",
+    "verify_invalid": "Menf Nen Wenen",
+    "verify_invalid_body": "Dbh Menf Ky.",
+    "verify_go_profile": "Wehem Er Djes"
   },
   "mfa": {
     "title": "Maa Sep Sen",
@@ -1826,7 +1848,9 @@
       "hall_settings": "Khemen Smen {{code}}",
       "hall_seal_glyphs": "Khemen Seth Medu Khetem {{code}}",
       "hall_assistant_switch": "Khemen Wen-Khetem Hehy Medu {{code}}"
-    }
+    },
+    "filter_hall": "Wesekhet",
+    "all_halls": "Wesekhet Neb"
   },
   "profile": {
     "title": "Djes",
@@ -1852,7 +1876,14 @@
     "email_notifications": "Sedjem Ba Em Djeret",
     "email_notifications_note": "Wen: Khet Em Smen Er-Ek Hab Er Djeret-Ek.",
     "email_notifications_no_address": "Nen Djeret Em Aq: Nen Hab.",
-    "email_last_failure": "Nen Hab Pehwy: {{error}} ({{at}})"
+    "email_last_failure": "Nen Hab Pehwy: {{error}} ({{at}})",
+    "email_verification": "Smen Sesh",
+    "email_verified": "Smen",
+    "email_unverified": "Nen Smen",
+    "email_send_verification": "Hab Menf",
+    "email_verification_sent": "Hab Seth. Maa Sesh.",
+    "email_verification_failed": "Nen Hab. Wehem Iri Er Khet",
+    "email_verification_hint": "Smen Seth: Nen Rekh Sekhem, Wehem Sekhem Em Sesh Pen."
   },
   "notifications": {
     "title": "Sedjem Sab",
@@ -5091,7 +5122,8 @@
     },
     "login": {
       "password": "Sekhem",
-      "submit": "Aq"
+      "submit": "Aq",
+      "forgot_password": "Nen Rekh Sekhem"
     },
     "mfa": {
       "title": "Maa Sep Sen",

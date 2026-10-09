@@ -1066,6 +1066,10 @@ paths:
         schema:
           type: string
       - in: query
+        name: tenant
+        schema:
+          type: string
+      - in: query
         name: user
         schema:
           type: integer
@@ -1173,6 +1177,10 @@ paths:
         required: false
         in: query
         description: A search term.
+        schema:
+          type: string
+      - in: query
+        name: tenant
         schema:
           type: string
       - in: query
@@ -1321,6 +1329,10 @@ paths:
         schema:
           type: string
       - in: query
+        name: tenant
+        schema:
+          type: string
+      - in: query
         name: user
         schema:
           type: integer
@@ -1398,6 +1410,10 @@ paths:
         description: A search term.
         schema:
           type: string
+      - in: query
+        name: tenant
+        schema:
+          type: string
       - in: path
         name: trace_id
         schema:
@@ -1473,6 +1489,73 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/PublicCivilization'
+          description: ''
+  /api/v1/auth/email/send-verification/:
+    post:
+      operationId: v1_auth_email_send_verification_create
+      description: POST /api/v1/auth/email/send-verification/ — 往本人资料页的邮箱发验证链接(每小时
+        5 封)。
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OfficerResetRefusal'
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OfficerResetRefusal'
+          description: ''
+  /api/v1/auth/email/verify/:
+    post:
+      operationId: v1_auth_email_verify_create
+      description: POST /api/v1/auth/email/verify/ — 邮件里的链接。令牌本身就是凭据,所以不要求已登录。
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmailVerify'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/EmailVerify'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/EmailVerify'
+        required: true
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OfficerResetRefusal'
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OfficerResetRefusal'
           description: ''
   /api/v1/auth/login/:
     post:
@@ -1894,6 +1977,81 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/LoginLockedResponse'
+          description: ''
+  /api/v1/auth/officer-reset/confirm/:
+    post:
+      operationId: v1_auth_officer_reset_confirm_create
+      description: POST /api/v1/auth/officer-reset/confirm/ — 令牌 + 新密码。成功后该官员所有设备的登录退出。
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OfficerResetConfirm'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/OfficerResetConfirm'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/OfficerResetConfirm'
+        required: true
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OfficerResetRefusal'
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OfficerResetRefusal'
+          description: ''
+  /api/v1/auth/officer-reset/request/:
+    post:
+      operationId: v1_auth_officer_reset_request_create
+      description: |-
+        POST /api/v1/auth/officer-reset/request/
+        官员「忘记密码」。不读用户表:按 IP 限频(拒绝对所有标识一视同仁),然后交给 worker 查人发信。
+        账号存在与否、邮箱是否已验证、是不是灵魂,应答与耗时都看不出来。
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OfficerResetRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/OfficerResetRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/OfficerResetRequest'
+        required: true
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailResponse'
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OfficerResetRefusal'
           description: ''
   /api/v1/auth/password-help/:
     post:
@@ -20882,6 +21040,18 @@ components:
       - taken
       type: string
       description: '* `taken` - taken'
+    EmailVerify:
+      type: object
+      properties:
+        uid:
+          type: string
+          maxLength: 64
+        token:
+          type: string
+          maxLength: 128
+      required:
+      - token
+      - uid
     EmbeddingCandidate:
       type: object
       description: 一套向量配置;没给的键沿用当前生效值。`embedding_dims` 为 null = 模型原生维度(不截断)。
@@ -26158,6 +26328,58 @@ components:
           maxLength: 4000
       required:
       - body
+    OfficerResetConfirm:
+      type: object
+      properties:
+        uid:
+          type: string
+          maxLength: 64
+        token:
+          type: string
+          maxLength: 128
+        new_password:
+          type: string
+          writeOnly: true
+          maxLength: 128
+          minLength: 8
+      required:
+      - new_password
+      - token
+      - uid
+    OfficerResetRefusal:
+      type: object
+      description: 'Doc-only. `code`: rate_limited / reset_link_invalid / verify_link_invalid
+        / weak_password.'
+      properties:
+        error:
+          type: string
+        code:
+          $ref: '#/components/schemas/OfficerResetRefusalCodeEnum'
+        retry_after:
+          type: integer
+      required:
+      - code
+      - error
+    OfficerResetRefusalCodeEnum:
+      enum:
+      - rate_limited
+      - reset_link_invalid
+      - verify_link_invalid
+      - weak_password
+      type: string
+      description: |-
+        * `rate_limited` - rate_limited
+        * `reset_link_invalid` - reset_link_invalid
+        * `verify_link_invalid` - verify_link_invalid
+        * `weak_password` - weak_password
+    OfficerResetRequest:
+      type: object
+      properties:
+        identifier:
+          type: string
+          maxLength: 254
+      required:
+      - identifier
     OfficerScreenEnum:
       enum:
       - about
@@ -29264,6 +29486,9 @@ components:
             maxLength: 254
           - type: string
             maxLength: 0
+        email_verified:
+          type: boolean
+          readOnly: true
         role:
           type: string
           readOnly: true
@@ -34793,6 +35018,9 @@ components:
             maxLength: 254
           - type: string
             maxLength: 0
+        email_verified:
+          type: boolean
+          readOnly: true
         role:
           type: string
           readOnly: true
@@ -34832,6 +35060,7 @@ components:
           type: boolean
           readOnly: true
       required:
+      - email_verified
       - id
       - is_active
       - mfa_enabled

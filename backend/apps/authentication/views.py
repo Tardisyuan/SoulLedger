@@ -862,7 +862,8 @@ def _throttle_wait(request, throttles):
 
 
 #: The only role that may reset its own password by email (2026-09 product
-#: decision). Officers are admin-provisioned: see `password_help_request`.
+#: decision). Officers have their own email flow (a one-hour link, verified
+#: addresses only: `officer_reset.py`, 2026-10-09) and `password_help_request`.
 SELF_RESET_ROLE = UserRole.SOUL
 
 
@@ -951,10 +952,10 @@ def reset_password_request(request):
     # endpoint deliberately does not disclose whether an address is registered,
     # and "your address is ambiguous" would disclose it.
     #
-    # SOUL ACCOUNTS ONLY. Email self-reset is the souls' path; officers are
-    # provisioned by an administrator and use `/auth/password-help/`, which
-    # pages that administrator instead. An officer's address is therefore
-    # treated exactly like an unregistered one — same statements, same body —
+    # SOUL ACCOUNTS ONLY. This six-digit code is the souls' path; officers reset
+    # through `/auth/officer-reset/request/` (a link, verified addresses only)
+    # or page their administrator via `/auth/password-help/`. An officer's
+    # address is therefore treated exactly like an unregistered one here — same statements, same body —
     # so this endpoint does not become an "is this an officer?" oracle either.
     matches = list(User.objects.filter(email=email, role=SELF_RESET_ROLE)[:2])
     if len(matches) == 1:

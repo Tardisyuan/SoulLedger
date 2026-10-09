@@ -124,3 +124,12 @@ def notify_password_help(username, ip_address=None, user_agent=""):
         user_agent=(user_agent or "")[:500],
     )
     return len(recipients)
+
+
+@shared_task(name="authentication.send_officer_reset_mail")
+def send_officer_reset_mail(identifier, ip_address=None, user_agent=""):
+    """官员「忘记密码」的查人与发信,放在 worker 里 —— 与 `notify_password_help` 同一理由:
+    申请端不读用户表,应答与耗时都不因账号存在与否而不同。见 `officer_reset.py`。"""
+    from .officer_reset import send_reset_mail_if_eligible
+
+    return send_reset_mail_if_eligible(identifier, ip=ip_address, ua=user_agent)

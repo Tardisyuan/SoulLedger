@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
+import Link from "next/link";
 import { TextField } from "@/src/components/ui/Field";
 import { Button } from "@/src/components/ui/Button";
 import { useSubmitErrorFocus } from "@/src/lib/submitErrorFocus";
@@ -32,7 +33,9 @@ import { cn } from "@/lib/utils";
  *   the marked row is the civilization this device last signed in to (`LAST_TENANT_KEY`).
  *   A9 does not draw this list; it is kept (a behaviour of the page) and listed in the report.
  * - 「在此设备上保持登录 30 天」: `remember` on the login request (30-day refresh token).
- * - 忘记密码: accounts are opened by an administrator, so it notifies them — no reset link.
+ * - 忘记密码: the link opens `/forgot-password` (2026-10-09): an e-mail reset link for officers whose
+ *   address is verified. The older "notify the administrator" form (`PasswordHelp`, below) is still
+ *   here for everyone else, reached from that page as `/login?help=1`.
  * - The three failure states (A9 §二「状态」): `LoginView` counts failures per IP
  *   (`LOGIN_MAX_ATTEMPTS` / `LOGIN_WINDOW_SECONDS` in backend/apps/authentication/views.py) and
  *   returns `remaining_attempts` on a 401; a lockout is a 429 with `code: "login_locked"` and
@@ -165,6 +168,11 @@ export default function LoginPage() {
   const [form, setForm] = useState({ username: "", password: "" });
   const [remember, setRemember] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
+  // `/login?help=1` (from the 忘记密码 page's "notify an administrator") opens the older help form.
+  // Read after mount, not via useSearchParams: that hook would force this whole page behind Suspense.
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("help") === "1") setHelpOpen(true);
+  }, []);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   // Inline, not a toast (设计「错误」态), in a box under the form's title.
@@ -425,13 +433,12 @@ export default function LoginPage() {
               />
               {t("auth.remember_me", { days: String(REMEMBER_DAYS) })}
             </label>
-            <button
-              type="button"
-              onClick={() => setHelpOpen(true)}
-              className="min-h-11 shrink-0 text-xs text-[oklch(var(--color-ink))] underline underline-offset-2"
+            <Link
+              href="/forgot-password"
+              className="inline-flex min-h-11 shrink-0 items-center text-xs text-[oklch(var(--color-ink))] underline underline-offset-2"
             >
               {t("auth.forgot_password")}
-            </button>
+            </Link>
           </div>
 
           <Button type="submit" variant="primary" size="lg" disabled={loading || locked} loading={loading} className="w-full">
