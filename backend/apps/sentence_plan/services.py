@@ -62,16 +62,29 @@ def judges_of(tenant_ids):
 
 def notify_judges(tenant_ids, kind, params, related_id, related_resource="SentencePlan"):
     """站内通知:存 zh-Hans(推送与兜底),读时按请求语言重渲染(apps/notifications/messages.py)。
-    文案只带灵魂名、文明代码、节点序号 —— 不带审判 id、裁决、理由。"""
-    from apps.events.services import EventService
-    from apps.notifications import messages
+    文案只带灵魂名、文明代码、节点序号 —— 不带审判 id、裁决、理由。
 
-    title, body = messages.render(messages.DEFAULT_LOCALE, kind, params)
-    for user in judges_of(tenant_ids):
-        EventService.notify_user(
-            user, title=title, message=body, notification_type=kind.upper(),
-            related_resource=related_resource, related_id=str(related_id), params=params,
-        )
+    **提交之后才发。** 事件总线吞掉处理器的异常,但失败的 INSERT 已把事务标成回滚,
+    于是最先退出的 `atomic()` 会静默回滚自己那一段、外层却照常提交(G4 守卫抓到的半成状态)。
+    收件人在回调里才算(提交后的权限状态,比提交前的更准);`tenant_ids`/`params` 在此先拷贝,
+    它们是调用方此刻的值,不随之后的改动变。
+    """
+    from django.db import transaction
+
+    tenant_ids, params = set(tenant_ids), dict(params)
+
+    def send():
+        from apps.events.services import EventService
+        from apps.notifications import messages
+
+        title, body = messages.render(messages.DEFAULT_LOCALE, kind, params)
+        for user in judges_of(tenant_ids):
+            EventService.notify_user(
+                user, title=title, message=body, notification_type=kind.upper(),
+                related_resource=related_resource, related_id=str(related_id), params=params,
+            )
+
+    transaction.on_commit(send)
 
 
 def record_event(soul, event_type, payload, *, tenant_id=None):

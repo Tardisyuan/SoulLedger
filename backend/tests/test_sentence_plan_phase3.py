@@ -86,13 +86,14 @@ def test_a_case_opened_where_the_soul_serves_is_an_amendment_of_its_plan(cn, eg,
     assert (case.kind, case.amends_plan_id, case.tenant_id) == ("AMENDMENT", p.pk, eg.pk)
 
 
-def test_concluding_an_amendment_files_a_request_and_moves_nothing_else(cn, eg, eu, judges):
+def test_concluding_an_amendment_files_a_request_and_moves_nothing_else(cn, eg, eu, judges, django_capture_on_commit_callbacks):
     soul, p = _two_stops(cn, eg, eu)
     case = _open_amendment(judges["eg"], soul)
     dispositions = Disposition.all_objects.filter(soul=soul).count()
 
-    response = _conclude(judges["eg"], case, notes="当地加刑",
-                         plan_changes={"add": [{"realm_code": plan.stop_realm(eg), "sentence_years": 3}]})
+    with django_capture_on_commit_callbacks(execute=True):
+        response = _conclude(judges["eg"], case, notes="当地加刑",
+                             plan_changes={"add": [{"realm_code": plan.stop_realm(eg), "sentence_years": 3}]})
 
     assert response.status_code == 200, response.data
     case.refresh_from_db()
@@ -110,13 +111,15 @@ def test_concluding_an_amendment_files_a_request_and_moves_nothing_else(cn, eg, 
     assert _shape(p) == [(1, "CN_DIYU", "COMPLETED"), (2, "EG_DUAT", "ACTIVE"), (3, "EU_HEAVEN_HELL", "PENDING")]
 
 
-def test_accepting_an_amendment_inserts_after_the_current_stop_and_shifts_the_rest(cn, eg, eu, judges):
+def test_accepting_an_amendment_inserts_after_the_current_stop_and_shifts_the_rest(
+        cn, eg, eu, judges, django_capture_on_commit_callbacks):
     soul, p = _two_stops(cn, eg, eu)
     case = _open_amendment(judges["eg"], soul)
     _conclude(judges["eg"], case, plan_changes={"add": [{"realm_code": plan.stop_realm(eg), "sentence_years": 3}]})
     req = SentencePlanRequest.all_objects.get(plan=p)
 
-    response = _c(judges["cn"]).post(f"{PLANS}{p.pk}/requests/{req.pk}/decide/", {"decision": "ACCEPT"}, format="json")
+    with django_capture_on_commit_callbacks(execute=True):
+        response = _c(judges["cn"]).post(f"{PLANS}{p.pk}/requests/{req.pk}/decide/", {"decision": "ACCEPT"}, format="json")
 
     assert response.status_code == 200, response.data
     assert _shape(p) == [(1, "CN_DIYU", "COMPLETED"), (2, "EG_DUAT", "ACTIVE"), (3, "EG_DUAT", "PENDING"),
@@ -455,7 +458,8 @@ def _cancel(user, p, reason="复核撤销"):
     return _c(user).post(f"{PLANS}{p.pk}/cancel/", {"reason": reason}, format="json")
 
 
-def test_cancelling_at_home_waives_the_rest_and_the_soul_may_apply_for_rebirth(cn, eg, eu, judges):
+def test_cancelling_at_home_waives_the_rest_and_the_soul_may_apply_for_rebirth(
+        cn, eg, eu, judges, django_capture_on_commit_callbacks):
     from tests.soul_account_support import ready_soul
 
     account, client = ready_soul(cn, name="赦免")
@@ -469,7 +473,8 @@ def test_cancelling_at_home_waives_the_rest_and_the_soul_may_apply_for_rebirth(c
     assert client.get("/api/v1/me/rebirth-applications/").data["reason"] == "sentence_in_progress"
     mod = plan.officer("cn_mod", "MODERATOR", cn)
 
-    response = _cancel(mod, p)
+    with django_capture_on_commit_callbacks(execute=True):
+        response = _cancel(mod, p)
 
     assert response.status_code == 200, response.data
     p.refresh_from_db()
