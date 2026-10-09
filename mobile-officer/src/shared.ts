@@ -10,7 +10,7 @@
  *
  * ONLY LEAF MODULES, on purpose. Everything below is free of the soul app's session, chat,
  * navigation and screens (checked by reading their imports): `ui`, `theme`, `fonts`, `i18n`,
- * `emblems`, `feedback`, `network`, `platform`, `brandMark`. NEVER import `session`, `chrome`,
+ * `emblems`, `feedback`, `network`, `platform`, `brandMark`, `deepLink`. NEVER import `session`, `chrome`,
  * `navigation`, `push`, `coldStart` or anything under `screens/` from here -- those pull the
  * soul's accounts into this bundle. A change to one of the modules below is a change to both
  * apps; both apps' tests cover it.
@@ -41,6 +41,7 @@ export {
   useRemote,
   useTheme,
 } from "../../mobile/src/ui";
+export { createLinkInbox, pathOf } from "../../mobile/src/deepLink";
 export { Sheet, ToastProvider, useToast } from "../../mobile/src/feedback";
 export { NetworkProvider, useOnline } from "../../mobile/src/network";
 export { I18nProvider, useI18n, translate } from "../../mobile/src/i18n";
