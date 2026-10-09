@@ -262,8 +262,8 @@ class MeCooldownShorteningSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CooldownShorteningRequest
-        fields = ["id", "application", "cycle", "reason", "status", "approved_days", "decision_note",
-                  "decided_at", "created_at"]
+        fields = ["id", "application", "cycle", "reason", "desired_remaining_days", "status", "approved_days",
+                  "decision_note", "decided_at", "created_at"]
         read_only_fields = fields
 
 
@@ -445,6 +445,8 @@ class CrossCivilizationDecisionSerializer(serializers.Serializer):
 
 class CooldownShorteningCreateSerializer(serializers.Serializer):
     reason = serializers.CharField(max_length=2000)
+    #: 上限(< 此刻剩余天数)在服务层校验,那里才知道剩余几天。
+    desired_remaining_days = serializers.IntegerField(min_value=0, max_value=36500, required=False, allow_null=True)
 
 
 class OfficerCooldownShorteningSerializer(serializers.ModelSerializer):
@@ -464,8 +466,8 @@ class OfficerCooldownShorteningSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CooldownShorteningRequest
-        fields = ["id", "soul", "soul_code", "soul_name", "account", "application", "cycle", "reason", "status",
-                  "approved_days", "decision_note", "decided_by", "decided_by_username", "decided_at",
+        fields = ["id", "soul", "soul_code", "soul_name", "account", "application", "cycle", "reason", "desired_remaining_days",
+                  "status", "approved_days", "decision_note", "decided_by", "decided_by_username", "decided_at",
                   "cooldown_until", "remaining_days", "cooldown_end", "cooldown_original_until",
                   "cooldown_total_days", "cooldown_past_days", "created_at", "updated_at"]
         read_only_fields = fields

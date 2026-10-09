@@ -6,7 +6,7 @@
  * `approve/` and `reject/`); the days rule (0 ≤ days < remaining_days) is
  * applied before the round trip and the backend's `code` is read on failure.
  */
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import RebirthApplicationsPage from "@/app/rebirth-applications/page";
@@ -48,6 +48,7 @@ function shortening(over: Record<string, unknown> = {}) {
     application: "r1",
     cycle: 0,
     reason: "家中有事",
+    desired_remaining_days: null,
     status: "PENDING",
     approved_days: null,
     decision_note: "",
@@ -136,6 +137,35 @@ it("approves with a day count below the days left, and refuses one at or above i
   fireEvent.click(within(dialog).getByTestId("shortening-approve"));
   await waitFor(() => expect(soulAccountsApi.approveCooldownShortening).toHaveBeenCalledWith("c1", 3, "情有可原"));
   await waitFor(() => expect(mockShowToast).toHaveBeenCalledWith(tZh("soul_accounts.cooldown.decided"), "success"));
+});
+
+it("pre-fills the days with the soul's wish and shows it; the officer may still edit it, and 0 is a wish", async () => {
+  as("JUDGE", "workflow.read", "workflow.approve");
+  soulAccountsApi.cooldownShortenings.mockResolvedValue(page([shortening({ desired_remaining_days: 7 })]));
+  soulAccountsApi.approveCooldownShortening.mockResolvedValue({ data: shortening({ status: "APPROVED", approved_days: 5 }) });
+  renderPage();
+  await openTab();
+  const dialog = await openDetail();
+  expect(within(dialog).getByTestId("shortening-days")).toHaveValue(7);
+  expect(within(dialog).getByTestId("shortening-desired")).toHaveTextContent(tZh("soul_accounts.cooldown.desired", { n: "7" }));
+  fireEvent.change(within(dialog).getByTestId("shortening-days"), { target: { value: "5" } });
+  fireEvent.click(within(dialog).getByTestId("shortening-approve"));
+  await waitFor(() => expect(soulAccountsApi.approveCooldownShortening).toHaveBeenCalledWith("c1", 5, ""));
+});
+
+it("without a wish the days default to 0 and no wish line is shown; a wish of 0 is shown", async () => {
+  as("JUDGE", "workflow.read", "workflow.approve");
+  renderPage();
+  await openTab();
+  let dialog = await openDetail();
+  expect(within(dialog).getByTestId("shortening-days")).toHaveValue(0);
+  expect(within(dialog).queryByTestId("shortening-desired")).not.toBeInTheDocument();
+  cleanup();
+  soulAccountsApi.cooldownShortenings.mockResolvedValue(page([shortening({ desired_remaining_days: 0 })]));
+  renderPage();
+  await openTab();
+  dialog = await openDetail();
+  expect(within(dialog).getByTestId("shortening-desired")).toHaveTextContent(tZh("soul_accounts.cooldown.desired", { n: "0" }));
 });
 
 it("a rejection without a note is checked on press, not before: danger field, message, focus back, nothing sent", async () => {
