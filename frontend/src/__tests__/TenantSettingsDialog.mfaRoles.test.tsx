@@ -69,6 +69,19 @@ describe("TenantSettingsDialog · 安全 · 两步验证", () => {
     expect(within(rowOf("JUDGE")).getByText("users.roles.JUDGE")).toBeTruthy();
   });
 
+  it("sits in its own group at the bottom: a rule above it and the group title 「安全」", async () => {
+    renderDialog();
+    await waitFor(() => expect(rowOf("ADMIN")).toBeTruthy());
+    const group = screen.getByTestId("tenant-security");
+    expect(group.className).toContain("border-t");
+    const title = within(group).getByRole("heading", { level: 3 });
+    expect(title.textContent).toBe("tenants.settings.security");
+    // the group is the last thing in the form, after the cooldown and dispatch fields
+    const form = group.closest("form") as HTMLFormElement;
+    expect(form.lastElementChild).toBe(group);
+    expect(within(group).getByTestId("tenant-mfa-roles")).toBeTruthy();
+  });
+
   it("toggling a switch and saving sends the sorted mfa_required_roles", async () => {
     renderDialog();
     await waitFor(() => expect(rowOf("GUARDIAN")).toBeTruthy());

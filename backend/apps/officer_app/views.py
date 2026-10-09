@@ -6,6 +6,7 @@
 「加签能选谁」和推送设备。
 """
 from django.contrib.auth import get_user_model
+from django.db import transaction
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework import status
 from rest_framework.exceptions import NotFound
@@ -15,6 +16,9 @@ from rest_framework.views import APIView
 from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.officer_app import push, todo
 from apps.officer_app.serializers import (
+    CosignAddSerializer,
+    CosignerSerializer,
+    CosignRefusalSerializer,
     OfficerPushTokenSerializer,
     OfficerPushUnregisterSerializer,
     SignerCandidateSerializer,
@@ -74,6 +78,61 @@ class SignerCandidatesView(OfficerAppBaseView):
             rows = rows.filter(Q(username__icontains=q) | Q(display_name__icontains=q))
         return Response([{"id": u.pk, "name": u.display_name or u.username, "username": u.username,
                           "role": u.role} for u in rows[:50]])
+
+
+class CosignView(OfficerAppBaseView):
+    """加签:当前节点的指定审批人,把本殿一位同僚加为联署人(`apps/workflow/cosign.py` 写明规则)。
+
+    403 `not_allowed`:这一条现在不能加签(不是你的节点、节点已被处理、会签节点…)——App 据此置灰;
+    400 `not_eligible`:这个人不能被加(不在本殿 / 无审批权 / 已停用…);400 `duplicate`:已是联署人,
+    或本来就能单独决定这个节点。留痕:一条审计;被加的人收到通知与官员端推送。
+    """
+
+    permission_classes = [TenantPermission, CodenamePermission]
+
+    def get_required_permissions(self):
+        return ["workflow.approve"]
+
+    @extend_schema(operation_id="officer_app_cosign_add", request=CosignAddSerializer,
+                   responses={201: CosignerSerializer, 400: CosignRefusalSerializer,
+                              403: CosignRefusalSerializer, 404: None})
+    def post(self, request, kind, item_id):
+        from apps.audit.models import AuditAction, AuditLog
+        from apps.events.services import EventService
+        from apps.workflow import cosign
+        from apps.workflow.models import ApprovalNode
+
+        body = CosignAddSerializer(data=request.data)
+        body.is_valid(raise_exception=True)
+        scope = todo.scope_of(request.user, request)
+        workflow = todo.workflow_for(scope, kind, item_id)
+        if workflow is None or workflow.current_node_id is None:
+            raise NotFound()
+        candidate = User.objects.filter(pk=body.validated_data["user_id"]).first()
+        try:
+            with transaction.atomic():
+                node = ApprovalNode.objects.select_for_update().get(pk=workflow.current_node_id)
+                if candidate is None:
+                    raise cosign.CosignRefusedError(cosign.NOT_ELIGIBLE, "unknown user")
+                entry = cosign.add(node, request.user, candidate)
+                node.save(update_fields=["cosigners_json"])
+                AuditLog.objects.create(
+                    tenant=workflow.tenant, user=request.user, action=AuditAction.EXECUTE,
+                    resource="workflow.cosign", resource_id=str(workflow.id),
+                    description=f"加签:{node.node_name} — {entry['user_name']}"[:500],
+                    changes={"node": str(node.id), "node_name": node.node_name, "cosigner_id": candidate.pk,
+                             "cosigner": entry["user_name"]},
+                    ip_address=request.META.get("REMOTE_ADDR"),
+                    user_agent=request.META.get("HTTP_USER_AGENT", "")[:500],
+                )
+        except cosign.CosignRefusedError as refused:
+            denied = refused.code == cosign.NOT_ALLOWED
+            return Response({"code": refused.code, "detail": refused.detail},
+                            status=status.HTTP_403_FORBIDDEN if denied else status.HTTP_400_BAD_REQUEST)
+        EventService.notify_workflow_assigned(candidate, workflow)
+        push.notify_users([candidate], target={"kind": kind, "id": str(item_id)})
+        return Response({k: entry[k] for k in ("user_id", "user_name", "added_at", "signed_at")},
+                        status=status.HTTP_201_CREATED)
 
 
 class PushTokenView(OfficerAppBaseView):

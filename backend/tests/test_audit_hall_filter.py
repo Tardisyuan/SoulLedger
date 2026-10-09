@@ -100,3 +100,28 @@ def test_the_export_takes_the_same_hall_filter_and_the_same_refusal(global_admin
     rows = list(csv.reader(io.StringIO(global_admin.get(EXPORT, {"tenant": "EG_DUAT"}).content.decode())))
     assert [r[1] for r in rows[1:]] == ["EG_DUAT"]
     assert moderator.get(EXPORT, {"tenant": "EG_DUAT"}).status_code == 403
+
+
+# --- 2026-10-09: the 「殿」 dropdown and the cross-hall read are for GLOBAL admins only ---
+
+@pytest.fixture
+def bound_admin(halls):
+    cn, _ = halls
+    return _client(User.objects.create_user(username="aud_bound", password="x", role="ADMIN", tenant=cn), cn)
+
+
+def test_a_hall_bound_admin_sees_only_their_own_hall_without_the_param(bound_admin, halls):
+    assert _descriptions(bound_admin.get(LIST)) == ["cn-1", "cn-2"]
+
+
+def test_a_hall_bound_admin_may_name_their_own_hall_but_not_another(bound_admin, halls):
+    assert _descriptions(bound_admin.get(LIST, {"tenant": "CN_DIYU"})) == ["cn-1", "cn-2"]
+    res = bound_admin.get(LIST, {"tenant": "EG_DUAT"})
+    assert res.status_code == 403
+    assert "eg-1" not in res.content.decode()
+
+
+def test_the_export_of_a_hall_bound_admin_is_their_hall_only(bound_admin, halls):
+    rows = list(csv.reader(io.StringIO(bound_admin.get(EXPORT).content.decode())))
+    assert {r[1] for r in rows[1:]} == {"CN_DIYU"}
+    assert bound_admin.get(EXPORT, {"tenant": "EG_DUAT"}).status_code == 403

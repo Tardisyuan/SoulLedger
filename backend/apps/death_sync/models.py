@@ -188,7 +188,8 @@ class DeathRegistrationRequest(AuditUserFields, models.Model):
         verbose_name_plural = "Death Registration Requests"
         constraints = [
             models.UniqueConstraint(
-                fields=["source_system", "idempotency_key"],
+                fields=["tenant", "source_system", "idempotency_key"],
+                # Per tenant: two halls may send the same explicit X-Idempotency-Key.
                 # Scoped to live rows. Without this, soft-deleting a row leaves
                 # its key occupied by something no filtered queryset can see:
                 # re-creating the same key then fails a uniqueness check
@@ -200,7 +201,7 @@ class DeathRegistrationRequest(AuditUserFields, models.Model):
         ]
         indexes = [
             models.Index(fields=["tenant", "status"]),
-            models.Index(fields=["source_system", "idempotency_key"]),
+            models.Index(fields=["tenant", "source_system", "idempotency_key"]),
             models.Index(fields=["status", "request_timestamp"]),
             models.Index(fields=["soul"]),
         ]

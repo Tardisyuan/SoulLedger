@@ -889,3 +889,39 @@ class EvidenceAdmission(AuditUserFields, models.Model):
 
     def __str__(self):
         return f"{self.judgment_id} {'admits' if self.admitted else 'excludes'} {self.record_id}"
+
+
+class JudgmentComment(AuditUserFields, models.Model):
+    """评议: a note one officer leaves on a judgment for the others who can read it.
+
+    Not the verdict text (`Judgment.notes`) and not evidence: it changes nothing about the case, so
+    it may be written on open and concluded cases alike. Append-only from the API (no edit, no
+    delete); `author` is who wrote it, `tenant` copies the judgment's hall at creation.
+    """
+    MAX_LENGTH = 2000
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    judgment = models.ForeignKey(Judgment, on_delete=models.CASCADE, related_name="comments")
+    author = models.ForeignKey(
+        "authentication.User", on_delete=models.SET_NULL, null=True, related_name="judgment_comments",
+    )
+    body = models.TextField(max_length=MAX_LENGTH)
+    created_at = models.DateTimeField(auto_now_add=True)
+    tenant = models.ForeignKey(
+        "tenants.Tenant", on_delete=models.CASCADE, related_name="judgment_comments", null=True,
+    )
+
+    class Meta:
+        ordering = ["created_at"]
+        verbose_name = "Judgment comment"
+        verbose_name_plural = "Judgment comments"
+        indexes = [
+            models.Index(fields=["judgment", "created_at"]),
+            models.Index(fields=["tenant", "created_at"]),
+        ]
+
+    all_objects = models.Manager()  # unfiltered; declared first so it's _base_manager
+    objects = TenantManager()
+
+    def __str__(self):
+        return f"{self.judgment_id} comment by {self.author_id}"

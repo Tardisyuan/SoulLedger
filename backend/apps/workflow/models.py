@@ -347,6 +347,20 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
                 passed = settled == countersign.PASSED
                 verdict = "PASSED" if passed else "FAILED"
 
+            # 加签: a co-signer's approval is recorded and the node stays put; the designated
+            # approver cannot pass the node while co-signatures are owed. Refusals are never held.
+            if node.cosigners_json and user is not None and node.kind != NodeKind.COUNTERSIGN:
+                from apps.workflow import cosign
+
+                if cosign.is_pending_cosigner(node, user):
+                    if passed:
+                        cosign.sign(node, user)
+                        node.save(update_fields=["cosigners_json"])
+                        self.save(update_fields=["updated_at"])
+                        return True
+                elif cosign.blocks_approval(node, user, passed):
+                    return False
+
             node.status = NodeStatus.APPROVED if passed else NodeStatus.REJECTED
             node.verdict = verdict
             node.notes = notes
@@ -1075,6 +1089,10 @@ class ApprovalNode(AuditUserFields, models.Model):
     # [{id, when: [clause…], target: <ApprovalNode pk as str>}]. See
     # `apps/workflow/conditions.py` — declarative clauses, nothing evaluated.
     branches_json = models.JSONField(default=list, blank=True)
+    # 加签 (apps/workflow/cosign.py): colleagues the designated approver added to THIS node,
+    # who must sign before the approver's own approval counts.
+    # [{user_id, user_name, added_by_id, added_at, signed_at}]
+    cosigners_json = models.JSONField(default=list, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -1183,6 +1201,12 @@ class ApprovalNode(AuditUserFields, models.Model):
         # 通知 / 结束 are run by the engine and decided by nobody.
         if self.kind in AUTOMATIC_KINDS:
             return False
+        # 加签: a co-signer who has not signed yet may act on the node.
+        if self.cosigners_json:
+            from apps.workflow import cosign
+
+            if cosign.is_pending_cosigner(self, user):
+                return True
         # 会签: the user must hold a slot that has not signed yet. The node's
         # own approver columns are not consulted — the signers are the
         # designation.

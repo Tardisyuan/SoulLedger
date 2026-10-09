@@ -9,9 +9,10 @@ import { httpError, renderOfficer } from "./harness";
 
 const mockItem = jest.fn();
 const mockApproveNode = jest.fn();
+const mockAddCosigner = jest.fn();
 jest.mock("@soulledger/core/api/officer-app", () => ({
   ...jest.requireActual("@soulledger/core/api/officer-app"),
-  officerAppApi: { item: (...a: unknown[]) => mockItem(...a), signerCandidates: jest.fn(async () => ({ data: [{ id: 2, name: "孟婆", username: "mengpo", role: "JUDGE" }] })) },
+  officerAppApi: { item: (...a: unknown[]) => mockItem(...a), addCosigner: (...a: unknown[]) => mockAddCosigner(...a), signerCandidates: jest.fn(async () => ({ data: [{ id: 2, name: "孟婆", username: "mengpo", role: "JUDGE" }] })) },
 }));
 jest.mock("@soulledger/core/api/workflow", () => ({ workflowApi: { approveNode: (...a: unknown[]) => mockApproveNode(...a) } }));
 
@@ -105,12 +106,64 @@ describe("reject", () => {
   });
 });
 
+describe("approve with several passing verdicts", () => {
+  it("sends the single accepted verdict as is", async () => {
+    mockApproveNode.mockResolvedValue({});
+    const { onSettled } = await open({ ...ITEM, required_verdicts: ["CONFIRMED", "FAILED"] });
+    fireEvent.press(screen.getByTestId("action-approve"));
+    await screen.findByTestId("sheet-approve");
+    expect(screen.queryByTestId("decision-verdict")).toBeNull();
+    fireEvent.press(screen.getByTestId("decision-confirm"));
+    await waitFor(() => expect(mockApproveNode).toHaveBeenCalledWith("wf-1", "node-1", { verdict: "CONFIRMED", notes: "", require_reason: true }));
+    await waitFor(() => expect(onSettled).toHaveBeenCalled());
+  });
+
+  it("lets the officer choose when the node accepts more than one", async () => {
+    mockApproveNode.mockResolvedValue({});
+    const { onSettled } = await open({ ...ITEM, required_verdicts: ["PASSED", "CONFIRMED"] });
+    fireEvent.press(screen.getByTestId("action-approve"));
+    await screen.findByTestId("decision-verdict");
+    fireEvent.press(screen.getByTestId("decision-verdict-CONFIRMED"));
+    fireEvent.press(screen.getByTestId("decision-confirm"));
+    await waitFor(() => expect(mockApproveNode).toHaveBeenCalledWith("wf-1", "node-1", { verdict: "CONFIRMED", notes: "", require_reason: true }));
+    await waitFor(() => expect(onSettled).toHaveBeenCalled());
+  });
+});
+
 describe("add signer", () => {
-  it("lists the hall's colleagues, but cannot be submitted yet and says why", async () => {
+  it("adds the picked colleague through the server and reloads the item", async () => {
+    mockAddCosigner.mockResolvedValue({ data: {} });
     await open();
     fireEvent.press(screen.getByTestId("action-cosign"));
-    expect(await screen.findByTestId("cosign-2")).toBeTruthy();
+    fireEvent.press(await screen.findByTestId("cosign-2"));
+    fireEvent.press(screen.getByTestId("cosign-confirm"));
+    await waitFor(() => expect(mockAddCosigner).toHaveBeenCalledWith("approval", "wf-1", 2));
+    await waitFor(() => expect(mockItem.mock.calls.length).toBeGreaterThan(1));
+    expect(screen.queryByTestId("cosign-unavailable")).toBeNull();
+  });
+
+  it("turns into the disabled state (reason above the button) only when the server says not allowed", async () => {
+    mockAddCosigner.mockRejectedValue(httpError(403, { code: "not_allowed", detail: "x" }));
+    await open();
+    fireEvent.press(screen.getByTestId("action-cosign"));
+    fireEvent.press(await screen.findByTestId("cosign-2"));
+    expect(screen.queryByTestId("cosign-unavailable")).toBeNull();
+    fireEvent.press(screen.getByTestId("cosign-confirm"));
+    expect(await screen.findByTestId("cosign-unavailable")).toBeTruthy();
+    expect(screen.getByText(/现在不能加签/)).toBeTruthy();
     expect(screen.getByTestId("cosign-confirm").props.accessibilityState.disabled).toBe(true);
-    expect(screen.getByText(/还没开通/)).toBeTruthy();
+    // the candidates stay choosable
+    expect(screen.getByTestId("cosign-2")).toBeTruthy();
+  });
+
+  it("a refusal about the person is said in place and does not disable the button", async () => {
+    mockAddCosigner.mockRejectedValue(httpError(400, { code: "duplicate", detail: "x" }));
+    await open();
+    fireEvent.press(screen.getByTestId("action-cosign"));
+    fireEvent.press(await screen.findByTestId("cosign-2"));
+    fireEvent.press(screen.getByTestId("cosign-confirm"));
+    expect(await screen.findByTestId("cosign-problem")).toBeTruthy();
+    expect(screen.getByTestId("cosign-confirm").props.accessibilityState.disabled).toBe(false);
+    expect(screen.queryByTestId("cosign-unavailable")).toBeNull();
   });
 });

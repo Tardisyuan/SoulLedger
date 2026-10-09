@@ -50,8 +50,11 @@ def unregister_device(user, token):
     OfficerPushDevice.objects.filter(user=user, token=token, is_active=True).update(is_active=False)
 
 
-def notify_users(users):
-    """提交后(若在事务里)给这些人各发一次计数推送。0 件的人不发。"""
+def notify_users(users, target=None):
+    """提交后(若在事务里)给这些人各发一次计数推送。0 件的人不发。
+
+    `target` = `{"kind", "id"}`:触发这次推送的那一条(最新落进待办的)。随推送带给 App,点开直接落到那一条的详情;
+    锁屏上仍只有计数,`data` 里不含人名、案由、灵魂。"""
     ids = sorted({u.pk for u in users})
     if not ids:
         return
@@ -62,7 +65,7 @@ def notify_users(users):
             ids_with_devices = list(OfficerPushDevice.objects.filter(
                 user_id__in=ids, is_active=True).values_list("user_id", flat=True).distinct())
             if ids_with_devices:
-                send_todo_push.delay(ids_with_devices)
+                send_todo_push.delay(ids_with_devices, target)
         except Exception:  # noqa: BLE001 — 推送是派生物,不能拖垮业务写入
             logger.exception("officer_app: 入队推送失败")
 
@@ -73,7 +76,7 @@ def _locale(user):
     return "en" if (user.preferences or {}).get("email_locale") == "en" else "zh-Hans"
 
 
-def send_to_user(user, sender=None):
+def send_to_user(user, sender=None, target=None):
     devices = list(OfficerPushDevice.objects.filter(user=user, is_active=True))
     if not devices:
         return 0
@@ -82,8 +85,9 @@ def send_to_user(user, sender=None):
         return 0
     locale = _locale(user)
     sender = sender or get_sender()
+    data = {"category": CATEGORY, **({"target": {"kind": target["kind"], "id": str(target["id"])}} if target else {})}
     messages = [{"to": d.token, "title": TITLE[locale], "body": BODY[locale].format(n=n),
-                 "data": {"category": CATEGORY}, "sound": "default", "priority": "high"} for d in devices]
+                 "data": data, "sound": "default", "priority": "high"} for d in devices]
     tickets = sender.send(messages)
     for device, ticket in zip(devices, tickets, strict=True):
         if isinstance(ticket, dict) and (ticket.get("details") or {}).get("error") == "DeviceNotRegistered":
@@ -92,13 +96,13 @@ def send_to_user(user, sender=None):
 
 
 @shared_task(name="officer_app.send_todo_push", bind=True, max_retries=3)
-def send_todo_push(self, user_ids):
+def send_todo_push(self, user_ids, target=None):
     from apps.authentication.models import User
 
     later = []
     for user in User.objects.filter(pk__in=user_ids, is_active=True).exclude(role="SOUL"):
         try:
-            send_to_user(user)
+            send_to_user(user, target=target)
         except PushTransientError:
             later.append(user.pk)
         except PushRequestError:
@@ -106,4 +110,4 @@ def send_todo_push(self, user_ids):
         except Exception:  # noqa: BLE001 — 一个人失败不拖累其余
             logger.exception("officer_app: 给用户 %s 推送失败", user.pk)
     if later:
-        raise self.retry(args=[later], countdown=60)
+        raise self.retry(args=[later, target], countdown=60)

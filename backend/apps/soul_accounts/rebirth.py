@@ -359,7 +359,8 @@ def request_cooldown_shortening(account, reason):
     from apps.officer_app.push import notify_users
 
     # 本殿官员端的「待我处理」多了一件;没有审批权限的人在计数里是 0,不会被推。
-    notify_users(User.objects.filter(tenant_id=account.soul.home_tenant_id, is_active=True))
+    notify_users(User.objects.filter(tenant_id=account.soul.home_tenant_id, is_active=True),
+                 target={"kind": "cooldown", "id": str(shortening.id)})
     return shortening
 
 

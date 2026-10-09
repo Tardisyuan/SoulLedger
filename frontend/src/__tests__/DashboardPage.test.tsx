@@ -9,7 +9,7 @@
  * into an average balance; a wrong parse there produces a plausible-looking
  * number and nothing else.
  */
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, fireEvent } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import DashboardPage from "@/app/dashboard/page";
@@ -144,6 +144,30 @@ describe("DashboardPage overview", () => {
         "2", "1", "1", "0", "0",
       ])
     );
+  });
+
+  it("carries the 趋势 small-multiples panel on the overview: empty first, then a figure per state once snapshots exist", async () => {
+    renderPage();
+    await waitFor(() => expect(document.querySelector("[data-trends-state='empty']")).not.toBeNull());
+    expect(document.querySelectorAll("[data-trend-cell]")).toHaveLength(0);
+
+    const trends = ledgerApi.statsTrends as jest.Mock;
+    trends.mockResolvedValueOnce({
+      data: {
+        range: "30d",
+        since: "2026-10-07",
+        until: "2026-10-08",
+        points: [
+          { day: "2026-10-07", soul_count: 3, by_state: { ALIVE: 3 }, by_civilization: {}, by_realm: {} },
+          { day: "2026-10-08", soul_count: 4, by_state: { ALIVE: 4 }, by_civilization: {}, by_realm: {} },
+        ],
+      },
+    });
+    cleanup();
+    renderPage();
+    await waitFor(() => expect(document.querySelector("[data-trends-state='ready']")).not.toBeNull());
+    expect(document.querySelectorAll("figure[data-trend-cell]")).toHaveLength(6);
+    expect(document.querySelector("[data-trend-cell='ALIVE'] [data-trend-change]")!.textContent).toBe("↑ 33%");
   });
 
   it("falls back to zero for a state the payload omits", async () => {

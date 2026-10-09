@@ -75,6 +75,9 @@ MODEL_UNRESOLVABLE: dict[str, str] = {
     "RefreshView": (
         "同 LoginView。刷新一个已签发的 token,不读任何租户数据。"
     ),
+    "OfficerLoginView": (
+        "同 LoginView(它就是那个视图,只换了序列化器去按账号找殿)。调用者此刻还没有身份。"
+    ),
 }
 #: `UserViewSet` 曾经在上面这份名单里。**移除它不是因为记录写好了,是因为它现在
 #: 真的受这份契约约束了** —— 给它加了类级 `queryset = User.objects.all()`,
