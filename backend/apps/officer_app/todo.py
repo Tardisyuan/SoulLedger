@@ -125,24 +125,36 @@ def _state(actionable, code=None, handled_by=None, handled_at=None, **extra):
             "handled_by": handled_by, "handled_at": handled_at, **extra}
 
 
+def _cosign_facts(node, user):
+    """加签 on the current node: who was added (and whether they signed), and the first signer
+    still owed when that blocks THIS user's approval (None = the approve button is free)."""
+    from apps.workflow import cosign
+
+    rows = [{"user_id": e.get("user_id"), "name": e.get("user_name", ""), "signed": bool(e.get("signed_at"))}
+            for e in node.cosigners_json or []]
+    owed = next((r for r in rows if not r["signed"]), None) if cosign.blocks_approval(node, user, True) else None
+    return {"cosigners": rows, "waiting_on_cosigner": owed and {"id": owed["user_id"], "name": owed["name"]}}
+
+
 def _workflow_state(wf, user):
     node = wf.current_node
     if node is None:
         last = wf.nodes.exclude(decided_at=None).order_by("-decided_at").first()
         return _state(False, "already_handled", decision_codes.handled_by(last) if last else None,
-                      last.decided_at if last else None)
+                      last.decided_at if last else None, cosigners=[], waiting_on_cosigner=None)
     verdicts = list(node.required_verdicts or [])
     blocked = decision_codes.block_for(node, user)
     if blocked is None:
-        return _state(True, node_id=str(node.pk), required_verdicts=verdicts)
+        return _state(True, node_id=str(node.pk), required_verdicts=verdicts, **_cosign_facts(node, user))
     code, extra = blocked
     # 流程已经往下走:当前节点是别人的,但刚才被决定的是上一个节点。
     if code == "permission_changed":
         last = wf.nodes.exclude(decided_at=None).order_by("-decided_at").first()
         if last is not None and last.pk != node.pk:
-            return _state(False, "already_handled", decision_codes.handled_by(last), last.decided_at)
+            return _state(False, "already_handled", decision_codes.handled_by(last), last.decided_at,
+                          cosigners=[], waiting_on_cosigner=None)
     return _state(False, code, extra.get("handled_by"), node.decided_at, node_id=str(node.pk),
-                  required_verdicts=verdicts)
+                  required_verdicts=verdicts, cosigners=[], waiting_on_cosigner=None)
 
 
 def workflow_for(scope, kind, pk):

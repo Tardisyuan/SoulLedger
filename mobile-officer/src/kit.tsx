@@ -174,6 +174,8 @@ export function ActionButton({
   onPress,
   kind,
   busy,
+  disabled,
+  accessibilityHint,
   testID,
   style,
 }: {
@@ -181,12 +183,17 @@ export function ActionButton({
   onPress: () => void;
   kind: "outline" | "ink-outline" | "ink" | "primary";
   busy?: boolean;
+  /** Greyed (s2 ground, ink3 text) and inert; give `accessibilityHint` the reason, as the sentence above it. */
+  disabled?: boolean;
+  accessibilityHint?: string;
   testID?: string;
   style?: StyleProp<ViewStyle>;
 }) {
   const t = useTheme();
-  const look =
-    kind === "primary"
+  const inert = busy || disabled;
+  const look = disabled
+    ? { bg: t.s2, border: t.s2, ink: t.inkSubtle }
+    : kind === "primary"
       ? { bg: t.plaqueFill, border: t.plaqueFill, ink: t.onPlaque }
       : kind === "ink"
         ? { bg: t.ink, border: t.ink, ink: t.s0 }
@@ -196,8 +203,9 @@ export function ActionButton({
       testID={testID}
       accessibilityRole="button"
       accessibilityLabel={title}
-      accessibilityState={{ busy: !!busy, disabled: !!busy }}
-      disabled={busy}
+      accessibilityHint={accessibilityHint}
+      accessibilityState={{ busy: !!busy, disabled: !!inert }}
+      disabled={inert}
       onPress={onPress}
       style={({ pressed }) => [styles.action, { backgroundColor: look.bg, borderColor: look.border, opacity: pressed || busy ? 0.7 : 1 }, style]}
     >

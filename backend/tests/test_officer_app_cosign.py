@@ -138,3 +138,30 @@ def test_the_push_payload_carries_the_item_it_is_about(cn_tenant, judge_user, pu
     assert push.send_to_user(judge_user, sender=FakeSender(), target={"kind": "approval", "id": wf.pk}) == 1
     (message,) = FakeSender.batches[-1]
     assert message["data"] == {"category": "officer_todo", "target": {"kind": "approval", "id": str(wf.pk)}}
+
+
+def test_signer_candidates_leave_out_officers_who_cannot_approve(cn_tenant, judge_user, colleague):
+    """书吏 and any other role without `workflow.approve` would only ever end in `not_eligible`."""
+    User.objects.create_user(username="clerk", password="x", role="VIEWER", tenant=cn_tenant, display_name="书吏")
+    rows = officer_client(judge_user).get("/api/v1/officer-app/signer-candidates/").data
+    assert [r["id"] for r in rows] == [colleague.pk]
+
+
+def test_item_detail_lists_cosigners_and_says_who_the_approver_is_waiting_on(cn_tenant, judge_user, colleague):
+    wf, node = _plain_workflow(cn_tenant)
+    mine, theirs = officer_client(judge_user), officer_client(colleague)
+    url = f"/api/v1/officer-app/items/approval/{wf.pk}/"
+    quiet = mine.get(url).data
+    assert quiet["cosigners"] == [] and quiet["waiting_on_cosigner"] is None
+
+    mine.post(_cosign_url(wf), {"user_id": colleague.pk}, format="json")
+    waiting = mine.get(url).data
+    assert waiting["actionable"] is True
+    assert waiting["cosigners"] == [{"user_id": colleague.pk, "name": "联署人", "signed": False}]
+    assert waiting["waiting_on_cosigner"] == {"id": colleague.pk, "name": "联署人"}
+    # the co-signer themself is not blocked: their approve is the signature
+    assert theirs.get(url).data["waiting_on_cosigner"] is None
+
+    assert _decide(theirs, wf, node).status_code == 200
+    done = mine.get(url).data
+    assert done["cosigners"][0]["signed"] is True and done["waiting_on_cosigner"] is None

@@ -37,6 +37,17 @@ class HandledBySerializer(serializers.Serializer):
     name = serializers.CharField()
 
 
+class CosignerRowSerializer(serializers.Serializer):
+    user_id = serializers.IntegerField()
+    name = serializers.CharField()
+    signed = serializers.BooleanField()
+
+
+class WaitingOnCosignerSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    name = serializers.CharField()
+
+
 class TodoItemDetailSerializer(serializers.Serializer):
     """`state`:actionable / already_handled / deadline_passed / permission_changed
     (与决定失败的 `code` 同一组词)。`handled_by` 在调拨上恒为 null(调拨记录不存决定人)。"""
@@ -54,6 +65,13 @@ class TodoItemDetailSerializer(serializers.Serializer):
     required_verdicts = serializers.ListField(
         child=serializers.CharField(), required=False,
         help_text="该节点接受的裁决(PASSED / CONFIRMED / FAILED / REJECTED …);空 = 不限。批准只在其中的通过类里选。",
+    )
+    cosigners = CosignerRowSerializer(
+        many=True, required=False, help_text="审批节点与转生申请:当前节点的加签人,及各自签了没有。",
+    )
+    waiting_on_cosigner = WaitingOnCosignerSerializer(
+        allow_null=True, required=False,
+        help_text="我是指定审批人而加签人还没签完时,第一位欠签的人;此时「批准」会被 409 cosigners_pending 拒绝,App 据此置灰。",
     )
 
 

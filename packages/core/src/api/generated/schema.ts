@@ -9407,6 +9407,11 @@ export interface components {
             added_at: string;
             signed_at: string | null;
         };
+        CosignerRow: {
+            user_id: number;
+            name: string;
+            signed: boolean;
+        };
         CrossCivilizationDecision: {
             cross_civilization: boolean;
         };
@@ -16251,6 +16256,10 @@ export interface components {
             node_id?: string;
             /** @description 该节点接受的裁决(PASSED / CONFIRMED / FAILED / REJECTED …);空 = 不限。批准只在其中的通过类里选。 */
             required_verdicts?: string[];
+            /** @description 审批节点与转生申请:当前节点的加签人,及各自签了没有。 */
+            cosigners?: components["schemas"]["CosignerRow"][];
+            /** @description 我是指定审批人而加签人还没签完时,第一位欠签的人;此时「批准」会被 409 cosigners_pending 拒绝,App 据此置灰。 */
+            waiting_on_cosigner?: components["schemas"]["WaitingOnCosigner"] | null;
         };
         /** @description 推送与列表行落到哪一条:`GET items/<kind>/<id>/`。 */
         TodoTarget: {
@@ -16786,6 +16795,10 @@ export interface components {
          * @enum {string}
          */
         VisibilityEnum: "PUBLIC" | "TENANT" | "FOLLOWERS" | "PRIVATE";
+        WaitingOnCosigner: {
+            id: number;
+            name: string;
+        };
         /**
          * @description Serializer for WebhookConfig (hides signing_secret).
          *

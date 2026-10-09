@@ -15,6 +15,7 @@ from rest_framework.views import APIView
 
 from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.officer_app import push, todo
+from apps.perm.checker import check_permission
 from apps.officer_app.serializers import (
     CosignAddSerializer,
     CosignerSerializer,
@@ -76,8 +77,11 @@ class SignerCandidatesView(OfficerAppBaseView):
             from django.db.models import Q
 
             rows = rows.filter(Q(username__icontains=q) | Q(display_name__icontains=q))
+        # Only people `cosign.add` would accept (hold workflow.approve): a role without it -- 书吏 and
+        # the like, a custom role -- is not offered a row that can only end in `not_eligible`.
+        people = [u for u in rows if check_permission(u, "workflow.approve")][:50]
         return Response([{"id": u.pk, "name": u.display_name or u.username, "username": u.username,
-                          "role": u.role} for u in rows[:50]])
+                          "role": u.role} for u in people])
 
 
 class CosignView(OfficerAppBaseView):
