@@ -82,6 +82,12 @@ def _item(kind, pk, title, created_at, **extra):
             "target": {"kind": kind, "id": str(pk)}, **extra}
 
 
+def _rebirth_facts(wf):
+    """转生申请条目的标题是灵魂名,「转生申请 · 名」由客户端按语言包拼;库里的 `workflow_name`
+    (「转生申请: 灵魂码」,检索与审计在用)不动。申诉走同一条工作流类型,客户端要用 `is_appeal` 选措辞。"""
+    return {"soul_code": wf.soul.soul_code, "is_appeal": wf.is_appeal}
+
+
 def _group(items):
     return {"count": len(items), "items": items[:LIST_LIMIT]}
 
@@ -99,7 +105,7 @@ def build(user, request=None):
 
     approvals = [_item("approval", wf.pk, wf.workflow_name, node.activated_at or wf.created_at,
                        node_name=node.node_name) for wf, node in plain]
-    rebirths = [_item("rebirth", apps_by_wf[wf.pk].pk, wf.workflow_name, wf.created_at)
+    rebirths = [_item("rebirth", apps_by_wf[wf.pk].pk, wf.soul.name, wf.created_at, **_rebirth_facts(wf))
                 for wf in rebirth_wfs if wf.pk in apps_by_wf]
 
     cooldowns, reassignments = [], []
@@ -163,8 +169,9 @@ def detail(user, kind, pk, request=None):
         wf = workflow_for(scope, kind, pk)
         if wf is None:
             return None
-        return {"kind": kind, "id": str(pk), "title": wf.workflow_name, "workflow_id": str(wf.pk),
-                "created_at": wf.created_at, **_workflow_state(wf, user)}
+        return {"kind": kind, "id": str(pk), "title": wf.soul.name if kind == "rebirth" else wf.workflow_name,
+                "workflow_id": str(wf.pk), "created_at": wf.created_at,
+                **(_rebirth_facts(wf) if kind == "rebirth" else {}), **_workflow_state(wf, user)}
     if kind == "cooldown":
         row = _cooldowns(scope).filter(pk=pk).first()
         if row is None:
