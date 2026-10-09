@@ -36,7 +36,7 @@ export function SearchTab({ onOpenSoul }: { onOpenSoul: (id: string) => void }) 
 }
 
 function SoulLookup({ onOpen }: { onOpen: (id: string) => void }) {
-  const { t } = useI18n();
+  const { t, enumLabel } = useI18n();
   const { state } = useSession();
   const role = state.status === "signedIn" ? state.user.role : "";
   const [text, setText] = useState("");
@@ -77,7 +77,7 @@ function SoulLookup({ onOpen }: { onOpen: (id: string) => void }) {
             testID={`soul-row-${soul.id}`}
             strong
             title={soul.name}
-            lines={[t(`souls.states.${soul.current_state}`)]}
+            lines={[stateLabel(enumLabel("souls.states", soul.current_state), soul.current_state)]}
             onPress={() => onOpen(soul.id)}
             right={<Txt tone="muted">›</Txt>}
           />
@@ -154,4 +154,9 @@ function Ask() {
       </Txt>
     </View>
   );
+}
+
+/** Known states read through the bundles; an unknown one keeps its raw code instead of a key path. */
+function stateLabel(d: { state: string; label?: string | null }, raw: string | null | undefined): string {
+  return d.state === "known" && d.label ? d.label : (raw ?? "");
 }

@@ -46,7 +46,9 @@ describe("the keys the code asks for", () => {
     for (const bundle of [zh, en]) {
       const found = at(bundle, base);
       // A template key (`officer_app.kinds.${kind}`) must at least name an object of strings.
-      if (dynamic) expect(found && typeof found === "object" && Object.keys(found).length).toBeGreaterThan(0);
+      // So must a namespace handed to enumLabel(`enumLabel("users.roles", role)`).
+      const namespace = CODE.includes(`enumLabel("${key}"`);
+      if (dynamic || namespace) expect(found && typeof found === "object" && Object.keys(found).length).toBeGreaterThan(0);
       else expect(typeof found).toBe("string");
     }
   });
