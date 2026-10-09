@@ -188,6 +188,7 @@ SITES = [
     ('apps/social/moderation_views.py', 'ReportViewSet', 'PostMedia.all_objects', 1, 'PK', 'Prefetch of media for already scoped reports'),
     ('apps/social/moderation_views.py', 'SensitiveWordViewSet.copy_from', 'Tenant.objects', 1, 'CROSS', "officer copies another civilization's sensitive-word list into its own; source tenant is named by code, destination is the caller's tenant"),
     ('apps/soul_accounts/rebirth.py', 'eligibility', 'SentencePlan.all_objects', 1, 'PK', 'plan of one soul and cycle'),
+    ('apps/soul_accounts/rebirth.py', 'decide_cross_civilization', 'ApprovalWorkflow._base_manager', 1, 'LOCK', 'locks the workflow row of an application already fetched by pk through the scoped path, before locking the application (lock order: workflow, then application)'),
     ('apps/soul_accounts/rebirth.py', 'submit', 'Soul.all_objects', 1, 'LOCK', 're-reads or locks one row by pk that the caller already reached through a scoped path; all_objects only skips the soft-delete filter'),
     ('apps/soul_accounts/services.py', '_ensure_soul_code', 'Soul.all_objects', 1, 'PK', 'writes soul_code of one soul by pk; code is globally unique (G5)'),
     ('apps/soul_accounts/services.py', 'provision_account', 'Soul.all_objects', 1, 'LOCK', 're-reads or locks one row by pk that the caller already reached through a scoped path; all_objects only skips the soft-delete filter'),

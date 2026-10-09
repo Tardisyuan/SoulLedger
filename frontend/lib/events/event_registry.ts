@@ -70,6 +70,8 @@ const EVENT_REGISTRY: Record<string, Record<string, EventHandler>> = {
     // The daily expiry check (backend apps/disposition/expiry.py).
     DISPOSITION_EXPIRED: handleSoulEvent,
     REINCARNATION_TRIGGERED: handleSoulEvent,
+    // complete_rebirth (apps/reincarnation/services.py): the soul starts its next life.
+    REINCARNATION_COMPLETED: handleSoulStateChanged,
     KARMA_RECALCULATED: handleSoulEvent,
     // `Soul.correct_settlement` writes this. Without a handler it fell to
     // `handleUnknownEvent`, which shows a bare English toast and **invalidates
@@ -229,7 +231,7 @@ export const BACKEND_EVENT_TYPES = [
   // backend, so the detector was structurally unable to see its own gap.
   "SETTLEMENT_CORRECTED", "STATE_CHANGED", "RECORD_ADDED",
   "JUDGMENT_INITIATED", "JUDGMENT_CONCLUDED",
-  "DISPOSITION_CREATED", "DISPOSITION_EXPIRED", "REINCARNATION_TRIGGERED", "KARMA_RECALCULATED",
+  "DISPOSITION_CREATED", "DISPOSITION_EXPIRED", "REINCARNATION_TRIGGERED", "REINCARNATION_COMPLETED", "KARMA_RECALCULATED",
   // Workflow
   "WORKFLOW_CREATED", "WORKFLOW_ASSIGNED", "WORKFLOW_APPROVED", "WORKFLOW_REJECTED",
   // Dispatch
