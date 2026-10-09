@@ -1274,13 +1274,22 @@
     "trends": {
       "title": "趋势",
       "range_label": "范围",
-      "range_30d": "近 30 天",
-      "range_90d": "近 90 天",
-      "range_12m": "近 12 个月",
+      "range_30d": "30 天",
+      "range_90d": "90 天",
+      "range_12m": "12 个月",
       "by_state": "按状态",
       "by_civilization": "按文明",
-      "error": "趋势加载失败",
-      "not_enough": "快照还不足两天；每天夜里记一次，线随后出现。"
+      "error": "趋势没取到",
+      "subtitle": "每日 00:00 快照 · 较区间起点",
+      "dimension_label": "维度",
+      "empty_title": "还没有快照",
+      "empty_body": "每天 00:00 记一张。区间没满时，只画已有的天数。",
+      "partial": "只有 {{n}} 天的快照。左边空着的部分不是零，是那几天还没有记录。",
+      "change_up": "升 {{pct}}%",
+      "change_down": "降 {{pct}}%",
+      "change_flat": "持平",
+      "change_from_zero": "自 0 起",
+      "figure_label": "{{name}}，{{value}}，{{change}}"
     }
   },
   "ledger": {
