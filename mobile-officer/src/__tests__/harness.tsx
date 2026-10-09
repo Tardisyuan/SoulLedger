@@ -16,7 +16,8 @@ export const OFFICER: LoginUser = {
   role: "JUDGE",
   display_name: "阎罗",
   permissions: ["workflow.approve"],
-  tenant: { code: "CN", display_name: "中国地府", civilization: "CHINESE_UNDERWORLD" },
+  // What the API really sends: the code and the database's English display name.
+  tenant: { code: "CN_DIYU", display_name: "Chinese Afterlife", civilization: "CHINESE_UNDERWORLD" },
   mfa_enabled: true,
   mfa_required: true,
 };
