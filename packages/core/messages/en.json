@@ -47,7 +47,7 @@
     "forgot_failed": "Could not send. Try again later",
     "rate_limited": "Too many requests. Try again later",
     "back_to_login": "Back to sign in",
-    "forgot_sent_body": "If this account exists, an administrator will confirm who you are and contact you to reset the password. No reset link is sent.",
+    "forgot_sent_body": "If this account exists, an administrator will confirm who you are and contact you to reset the password.",
     "subtitle": "Sign in with the account your court issued.",
     "account": "Account",
     "console": "SoulLedger · Officer console",
@@ -62,7 +62,29 @@
     "error_locked_body": "{{n}} failed attempts. Try again after {{time}}, or ask your court admin to unlock it.",
     "error_network": "Can't reach the server",
     "error_network_body": "What you typed is kept. Check your connection and retry.",
-    "submitting": "Signing in"
+    "submitting": "Signing in",
+    "forgot_email_desc": "Enter your username or email. If the account exists and its email is verified, we will send you a link to reset the password.",
+    "forgot_email_label": "Username or email",
+    "forgot_email_submit": "Send reset email",
+    "forgot_email_sent": "Sent (if the account exists and its email is verified)",
+    "forgot_email_sent_body": "Check your inbox. The link works once and expires in 1 hour. If nothing arrives, the email may not be verified yet; you can notify an administrator instead.",
+    "forgot_notify_admin": "Email not verified or not arriving? Notify an administrator",
+    "reset_title": "Set a new password",
+    "reset_subtitle": "Enter a new password. Every device will be signed out after the reset.",
+    "reset_submit": "Reset password",
+    "reset_weak": "That password is not strong enough",
+    "reset_invalid": "This link is invalid or has expired",
+    "reset_invalid_body": "A reset link works once and lasts 1 hour. Request a new one.",
+    "reset_request_again": "Request a new link",
+    "reset_done": "Password reset",
+    "reset_done_body": "Every device was signed out. Sign in with the new password; if two-step verification is on, you still enter the code.",
+    "verify_title": "Verify email",
+    "verify_working": "Verifying…",
+    "verify_done": "Email verified",
+    "verify_done_body": "If you forget your password, this address can reset it.",
+    "verify_invalid": "This verification link is invalid or has expired",
+    "verify_invalid_body": "Send a new verification email from your profile.",
+    "verify_go_profile": "Go to profile"
   },
   "mfa": {
     "title": "Two-step verification",
@@ -1826,7 +1848,9 @@
       "hall_settings": "Edited the settings of hall {{code}}",
       "hall_seal_glyphs": "Edited the seal glyphs of hall {{code}}",
       "hall_assistant_switch": "Changed the Ask switch of hall {{code}}"
-    }
+    },
+    "filter_hall": "Hall",
+    "all_halls": "All halls"
   },
   "profile": {
     "title": "Personal Center",
@@ -1852,7 +1876,14 @@
     "email_notifications": "Email notifications",
     "email_notifications_note": "When on, what needs your action (pending approvals, approval timeouts, reassignment requests, password help) is also sent to your email.",
     "email_notifications_no_address": "This account has no email address, so nothing is sent even when on.",
-    "email_last_failure": "Last send failed: {{error}} ({{at}})"
+    "email_last_failure": "Last send failed: {{error}} ({{at}})",
+    "email_verification": "Email verification",
+    "email_verified": "Verified",
+    "email_unverified": "Not verified",
+    "email_send_verification": "Send verification email",
+    "email_verification_sent": "Verification email sent. Check your inbox.",
+    "email_verification_failed": "Could not send. Try again later",
+    "email_verification_hint": "Once verified, this address can reset your password if you forget it."
   },
   "notifications": {
     "title": "Notifications",

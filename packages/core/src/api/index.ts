@@ -33,6 +33,7 @@ export {
   type PasswordHelpAccepted,
   type OfficerLoginRequest,
   type HallChoiceBody,
+  type OfficerResetRefusal,
 } from "./auth";
 
 // Souls
