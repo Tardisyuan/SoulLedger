@@ -58,7 +58,7 @@ export function RecoveryCodesPanel({
       </ol>
       <div className="flex flex-wrap gap-2">
         <Button type="button" variant="secondary" onClick={() => void copyAll()}>
-          {copied ? t("common.copied") : t("mfa.setup.copy_all")}
+          {copied ? t("common.value.copied") : t("mfa.setup.copy_all")}
         </Button>
         <Button type="button" variant="secondary" onClick={download}>
           {t("mfa.setup.download")}

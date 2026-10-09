@@ -19,6 +19,7 @@
  * member it must not find.
  */
 import { readFileSync } from "node:fs";
+import egyPendingKeys from "./support/egyPendingKeys.json";
 import path from "node:path";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { I18nProvider, useI18n } from "@/src/contexts/I18nContext";
@@ -157,11 +158,22 @@ describe("system-event copy resolves through the shipped bundles", () => {
 
 describe("bundle parity", () => {
   it("keeps the three catalogues on exactly the same key set", async () => {
+    // egy may lack exactly the keys in egyPendingKeys.json (Design has not approved a
+    // wording; a missing key reads as zh-Hans through the lazy bundle). Nothing else.
+    const pending = new Set<string>(egyPendingKeys);
     const [reference, ...rest] = LOCALES.map((l) => flatten(bundle(l)).sort());
-    for (const other of rest) {
-      expect(other).toEqual(reference);
+    for (const [i, other] of rest.entries()) {
+      const isEgy = LOCALES[i + 1] === "egy";
+      expect(other).toEqual(isEgy ? reference.filter((k) => !pending.has(k)) : reference);
     }
     expect(reference.length).toBeGreaterThan(0);
+  });
+
+  it("egyPendingKeys.json lists only keys that really are absent from egy (delete an entry once egy has it)", () => {
+    const zh = new Set(flatten(bundle("zh-Hans")));
+    const egy = new Set(flatten(bundle("egy")));
+    const stale = (egyPendingKeys as string[]).filter((k) => egy.has(k) || !zh.has(k));
+    expect(stale).toEqual([]);
   });
 
   it("carries every migrated event type in all three catalogues", async () => {
