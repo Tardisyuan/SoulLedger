@@ -7,6 +7,7 @@ import { useI18n } from "../i18n";
 import { formatStamp } from "../rules";
 import { radius, space } from "../theme";
 import { Button, Input, Interp, Notice, Txt, useReducedMotion, useTheme } from "../ui";
+import { daysLeft } from "../voiceCache";
 
 /** 6% ink over the page, as an 8-digit hex (the theme's ink is `#RRGGBB`): 0.06 × 255 ≈ 0x0F. */
 const WASH = "0F";
@@ -78,7 +79,7 @@ export function CooldownShorteningBlock({ list, onChanged, landed }: { list: MeR
   const row = list.cooldown_shortening;
 
   // Days left, rounded up like the server's. The wish must be a whole 0 <= n < left; blank = no wish.
-  const left = list.cooldown_until ? Math.max(0, Math.ceil((Date.parse(list.cooldown_until) - now) / 86_400_000)) : 0;
+  const left = daysLeft(list.cooldown_until, now);
   const wish = desired.trim();
   const wishInvalid = wish !== "" && !(/^\d+$/.test(wish) && Number(wish) < left);
 
