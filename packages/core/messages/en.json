@@ -5227,7 +5227,8 @@
         "locked": "Too many attempts. Try again later",
         "network": "Network error",
         "other": "Couldn't sign in. Try again later"
-      }
+      },
+      "forgot_password": "Forgot password"
     },
     "mfa": {
       "title": "Two-step verification",
