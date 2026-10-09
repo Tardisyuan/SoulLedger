@@ -18,7 +18,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 
 import { hasRegisteredDevice, unregisterDevice } from "./push";
 import { hallChoiceOf } from "./rules";
-import { setUnauthorizedHandler } from "./shared";
+import { clearVoiceNumbers, setUnauthorizedHandler } from "./shared";
 
 export const USER_KEY = "officer_user";
 
@@ -78,6 +78,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     setUnauthorizedHandler(() => {
       platform().persistent.remove(USER_KEY);
+      clearVoiceNumbers();
       setState({ status: "signedOut" });
     });
     return () => setUnauthorizedHandler(() => {});
@@ -137,6 +138,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     const refresh = getRefreshToken();
     setState({ status: "signedOut" });
     platform().persistent.remove(USER_KEY);
+    clearVoiceNumbers();
     // `authApi.logout` reads the stored refresh token, so the tokens go only after it has been sent
     // -- and only if no quick sign-in in between has replaced them.
     const end = () => {

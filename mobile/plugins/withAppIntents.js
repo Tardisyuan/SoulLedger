@@ -7,13 +7,14 @@
  * adds it to the app target, and writes en / zh-Hans AppShortcuts.strings (the phrases) and
  * Localizable.strings (the titles) under Supporting/, the way Expo writes InfoPlist.strings for `locales`.
  * Info.plist gets CFBundleLocalizations and INAlternativeAppNames (the Chinese name Siri also accepts).
- * Nothing it generates approves, rejects or submits: it only opens pages.
+ * Nothing it generates approves, rejects or submits: it opens pages, speaks a cached number, or puts a question in the box.
+ * Phase 2 adds the App Group (entitlement + Info.plist key SoulLedgerVoiceAppGroup, group.<bundle id>) the number cache lives in.
  */
-const { IOSConfig, withInfoPlist, withXcodeProject } = require("@expo/config-plugins");
+const { IOSConfig, withEntitlementsPlist, withInfoPlist, withXcodeProject } = require("@expo/config-plugins");
 const fs = require("fs");
 const path = require("path");
 
-const { LANGS, appShortcutsStrings, applyInfoPlist, localizableStrings, swiftSource } = require("./appIntents");
+const { LANGS, appGroupOf, appShortcutsStrings, applyEntitlements, applyInfoPlist, localizableStrings, swiftSource } = require("./appIntents");
 const { appOf } = require("./voiceEntries");
 
 /* global __dirname */
@@ -25,8 +26,14 @@ const readMessages = () => ({
 
 module.exports = function withAppIntents(config, { app }) {
   const def = appOf(app);
+  // One App Group per app, named from its bundle id: the JS-side cache (modules/soulledger-voice) and the intents share it.
+  const group = appGroupOf(config.ios?.bundleIdentifier);
   config = withInfoPlist(config, (cfg) => {
-    applyInfoPlist(cfg.modResults, def);
+    applyInfoPlist(cfg.modResults, def, group);
+    return cfg;
+  });
+  config = withEntitlementsPlist(config, (cfg) => {
+    applyEntitlements(cfg.modResults, group);
     return cfg;
   });
   return withXcodeProject(config, (cfg) => {
