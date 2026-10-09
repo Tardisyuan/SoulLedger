@@ -64,7 +64,7 @@ def soul(db, cn_tenant):
 
 
 def test_proposing_a_dispatch_notifies_the_target_tenant(
-    db, cn_tenant, target_tenant, proposer, target_operator, soul
+    db, cn_tenant, target_tenant, proposer, target_operator, soul, django_capture_on_commit_callbacks
 ):
     """The target tenant's operator can read the proposal notice.
 
@@ -72,13 +72,14 @@ def test_proposing_a_dispatch_notifies_the_target_tenant(
     fixed the row existed only as `apps.tenants.Notification`, so this query
     returned nothing while the feature looked implemented.
     """
-    DispatchService.propose(
-        source_tenant=cn_tenant,
-        target_tenant=target_tenant,
-        soul=soul,
-        dispatcher=proposer,
-        reason="Judged under the wrong cosmology.",
-    )
+    with django_capture_on_commit_callbacks(execute=True):  # notices go out after commit
+        DispatchService.propose(
+            source_tenant=cn_tenant,
+            target_tenant=target_tenant,
+            soul=soul,
+            dispatcher=proposer,
+            reason="Judged under the wrong cosmology.",
+        )
 
     delivered = UserNotification.objects.filter(user=target_operator)
     assert delivered.count() == 1, (

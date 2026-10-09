@@ -45,6 +45,15 @@ class TargetHallClosedError(ValueError):
         super().__init__(f"Hall {target_tenant.code} is not receiving transfers")
 
 
+def _after_commit(send):
+    """站内通知提交之后才发(与 `sentence_plan.services.notify_judges` 同一处理,`30052b65`)。
+
+    事件总线吞掉处理器的异常,但失败的通知 INSERT 已把事务标成回滚:最先退出的 `atomic()`
+    静默回滚自己那一段、调用方却拿到「成功」的返回值。回调里失败只丢这一条通知。
+    收件人在回调里才查(提交后的状态)。不在事务里时 `on_commit` 立刻执行,行为不变。"""
+    transaction.on_commit(send)
+
+
 class DispatchService:
     """
     Service for managing cross-tenant soul dispatch operations.
@@ -244,21 +253,25 @@ class DispatchService:
         populations.
         """
         from apps.authentication.models import User
-        from apps.events.services import EventService
 
         target_users = User.objects.filter(tenant=dispatch_record.target_tenant, is_active=True)
-        for user in target_users:
-            EventService.notify_user(
-                user,
-                title=f"Incoming Dispatch: {dispatch_record.soul.name}",
-                message=(
-                    f"A dispatch proposal for soul {dispatch_record.soul.name} "
-                    f"from {dispatch_record.source_tenant.code} is pending your approval."
-                ),
-                notification_type="DISPATCH_PROPOSED",
-                related_resource="DispatchRecord",
-                related_id=str(dispatch_record.id),
-            )
+        soul_name, source_code = dispatch_record.soul.name, dispatch_record.source_tenant.code
+        record_id = str(dispatch_record.id)
+
+        def send():
+            from apps.events.services import EventService
+
+            for user in target_users:
+                EventService.notify_user(
+                    user,
+                    title=f"Incoming Dispatch: {soul_name}",
+                    message=f"A dispatch proposal for soul {soul_name} from {source_code} is pending your approval.",
+                    notification_type="DISPATCH_PROPOSED",
+                    related_resource="DispatchRecord",
+                    related_id=record_id,
+                )
+
+        _after_commit(send)
         from apps.officer_app.push import notify_users
 
         notify_users(target_users, target={"kind": "reassignment", "id": str(dispatch_record.id)})
@@ -344,17 +357,22 @@ class DispatchService:
         if reason:
             message += f" Reason: {reason}"
 
-        from apps.events.services import EventService
+        record_id = str(dispatch_record.id)
 
-        for user in target_users:
-            EventService.notify_user(
-                user,
-                title=title,
-                message=message,
-                notification_type=notification_type,
-                related_resource="DispatchRecord",
-                related_id=str(dispatch_record.id),
-            )
+        def send():
+            from apps.events.services import EventService
+
+            for user in target_users:
+                EventService.notify_user(
+                    user,
+                    title=title,
+                    message=message,
+                    notification_type=notification_type,
+                    related_resource="DispatchRecord",
+                    related_id=record_id,
+                )
+
+        _after_commit(send)
 
     @staticmethod
     def execute(dispatch_record, executor):
@@ -604,17 +622,22 @@ class DispatchService:
     def _notify_return_blocked(soul, dispatch_id, open_count):
         """存下 zh-Hans 文本(WebSocket 推送与兜底),读时按请求语言重渲染(apps/notifications/messages.py)。
         只带灵魂名与未结案件数,**不带**审判 id、判决或任何案情。"""
-        from apps.events.services import EventService
         from apps.notifications import messages
 
         params = {"soul": soul.name, "count": open_count}
         title, body = messages.render(messages.DEFAULT_LOCALE, "dispatch_return_blocked", params)
-        for user in DispatchService.return_blocked_recipients(soul):
-            EventService.notify_user(
-                user, title=title, message=body, notification_type="DISPATCH_RETURN_BLOCKED",
-                related_resource="DispatchRecord" if dispatch_id else "soul",
-                related_id=dispatch_id or str(soul.pk), params=params,
-            )
+
+        def send():
+            from apps.events.services import EventService
+
+            for user in DispatchService.return_blocked_recipients(soul):
+                EventService.notify_user(
+                    user, title=title, message=body, notification_type="DISPATCH_RETURN_BLOCKED",
+                    related_resource="DispatchRecord" if dispatch_id else "soul",
+                    related_id=dispatch_id or str(soul.pk), params=params,
+                )
+
+        _after_commit(send)
 
 
 def _seat_actor_roles():
@@ -700,18 +723,24 @@ class CrossTenantJudgmentService:
         # Notify initiating tenant, through the bus so the row lands in the
         # model the notification API actually serves.
         from apps.authentication.models import User
-        from apps.events.services import EventService
 
         target_users = User.objects.filter(tenant=judgment.initiating_tenant, is_active=True)
-        for user in target_users:
-            EventService.notify_user(
-                user,
-                title=f"Participant Joined: {judgment.title}",
-                message=f"{participant_tenant.code} has joined as {role}.",
-                notification_type="CROSS_JUDGMENT_INVITED",
-                related_resource="CrossTenantJudgment",
-                related_id=str(judgment.id),
-            )
+        title, joined, judgment_id = f"Participant Joined: {judgment.title}", f"{participant_tenant.code} has joined as {role}.", str(judgment.id)
+
+        def send():
+            from apps.events.services import EventService
+
+            for user in target_users:
+                EventService.notify_user(
+                    user,
+                    title=title,
+                    message=joined,
+                    notification_type="CROSS_JUDGMENT_INVITED",
+                    related_resource="CrossTenantJudgment",
+                    related_id=judgment_id,
+                )
+
+        _after_commit(send)
 
         return participant
 
@@ -924,23 +953,26 @@ class CrossTenantJudgmentService:
 
         # Notify all participants, through the bus for the same reason.
         from apps.authentication.models import User
-        from apps.events.services import EventService
 
-        for participant in judgment.participants.all():
-            target_users = User.objects.filter(
-                tenant=participant.participant_tenant, is_active=True
-            )
-            for user in target_users:
-                EventService.notify_user(
-                    user,
-                    title=f"Judgment Concluded: {judgment.title}",
-                    message=(
-                        f"The cross-tenant judgment '{judgment.title}' has concluded "
-                        f"with result: {conclusion_type}"
-                    ),
-                    notification_type="JUDGMENT_CONCLUDED",
-                    related_resource="CrossTenantJudgment",
-                    related_id=str(judgment.id),
-                )
+        tenants = [p.participant_tenant for p in judgment.participants.all()]
+        title = f"Judgment Concluded: {judgment.title}"
+        message = f"The cross-tenant judgment '{judgment.title}' has concluded with result: {conclusion_type}"
+        judgment_id = str(judgment.id)
+
+        def send():
+            from apps.events.services import EventService
+
+            for tenant in tenants:
+                for user in User.objects.filter(tenant=tenant, is_active=True):
+                    EventService.notify_user(
+                        user,
+                        title=title,
+                        message=message,
+                        notification_type="JUDGMENT_CONCLUDED",
+                        related_resource="CrossTenantJudgment",
+                        related_id=judgment_id,
+                    )
+
+        _after_commit(send)
 
         return judgment
