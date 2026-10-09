@@ -288,6 +288,7 @@
       "DISPOSITION_CREATED": "处置生成",
       "DISPOSITION_EXPIRED": "处置期满",
       "REINCARNATION_TRIGGERED": "轮回触发",
+      "REINCARNATION_COMPLETED": "轮回完成",
       "KARMA_RECALCULATED": "业力重算",
       "WORKFLOW_CREATED": "工作流创建",
       "WORKFLOW_ASSIGNED": "工作流指派",

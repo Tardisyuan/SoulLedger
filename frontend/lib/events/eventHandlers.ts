@@ -74,6 +74,7 @@ export const EVENT_LABELS: Record<string, string> = {
   DISPOSITION_CREATED: "Disposition created",
   DISPOSITION_EXPIRED: "Disposition expired",
   REINCARNATION_TRIGGERED: "Reincarnation triggered",
+  REINCARNATION_COMPLETED: "Reincarnation completed",
   KARMA_RECALCULATED: "Balance recalculated",
 
   // Workflow events

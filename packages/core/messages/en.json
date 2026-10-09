@@ -288,6 +288,7 @@
       "DISPOSITION_CREATED": "Disposition issued",
       "DISPOSITION_EXPIRED": "Disposition expired",
       "REINCARNATION_TRIGGERED": "Reincarnation triggered",
+      "REINCARNATION_COMPLETED": "Reincarnation completed",
       "KARMA_RECALCULATED": "Ledger recalculated",
       "WORKFLOW_CREATED": "Workflow created",
       "WORKFLOW_ASSIGNED": "Workflow assigned",

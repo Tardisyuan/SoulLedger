@@ -141,6 +141,13 @@ def test_every_soul_event_has_copy_in_every_bundle(bundle):
     events = data.get("souls", {}).get("events", {})
     assert events, f"souls.events is empty in {bundle}.json"
     missing = _soul_domain_members() - set(events)
+    if bundle == "egy":
+        # egy wording comes from Design only; a key it has not approved yet is listed in the
+        # shared pending file (the jest parity tests read the same file) and reads as zh-Hans.
+        pending = json.loads(
+            (FRONTEND / "src" / "__tests__" / "support" / "egyPendingKeys.json").read_text(encoding="utf-8")
+        )
+        missing -= {k.rsplit(".", 1)[1] for k in pending if k.startswith("souls.events.")}
     assert not missing, (
         f"{bundle}.json has no copy for {sorted(missing)} -- the soul timeline "
         f"renders an unrecognised-value placeholder for those"
