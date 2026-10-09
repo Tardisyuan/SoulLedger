@@ -869,4 +869,22 @@ class TestTheOfficerAppIsGated:
     def test_the_runner_runs_all_three_officer_gates(self):
         runner = (REPO_ROOT / "scripts" / "run-gates.sh").read_text(encoding="utf-8")
         for script in ("typecheck", "lint", "test"):
-            assert f"npm run --workspace officer {script}" in runner
+            assert f"npm run --workspace mobile-officer {script}" in runner
+
+    def test_every_workspace_the_runner_names_exists(self):
+        """`--workspace officer` named no workspace: npm refused, and the hook read that as a failed
+        typecheck. This pin used to assert that very string, so it was green while every push was red."""
+        import json
+        import re
+
+        runner = (REPO_ROOT / "scripts" / "run-gates.sh").read_text(encoding="utf-8")
+        declared = json.loads((REPO_ROOT / "package.json").read_text(encoding="utf-8"))["workspaces"]
+        dirs = {d for d in declared if "*" not in d}
+        dirs |= {str(p.relative_to(REPO_ROOT)) for d in declared if "*" in d for p in REPO_ROOT.glob(d) if p.is_dir()}
+        names = {
+            json.loads((REPO_ROOT / d / "package.json").read_text(encoding="utf-8"))["name"]
+            for d in dirs if (REPO_ROOT / d / "package.json").exists()
+        }
+        named = set(re.findall(r"--workspace[ =]([^\s\"']+)", runner))
+        assert named, "the runner names no workspace at all"
+        assert named <= dirs | names, sorted(named - dirs - names)
