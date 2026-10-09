@@ -428,7 +428,17 @@ def decide_cooldown_shortening(request_id, user, *, approve: bool, approved_days
 
 
 def sync_from_workflow(workflow_id):
-    """工作流任何一次保存提交之后调用(signals.py)。状态没变什么也不做。"""
+    """把申请状态对齐到它的工作流。状态没变什么也不做,幂等。
+
+    **在决定工作流的那个事务里调用**(`approve_node`、超时自动驳回):审批和申请状态一起提交或一起回滚,
+    `REBIRTH_STATUS_CHANGED` 事件写不进去时整个审批回滚、调用方拿到原始错误。只有给灵魂的站内通知
+    挂在 `on_commit` 上(提交后才发,失败只丢通知)。`signals.py` 里工作流 post_save 的 `on_commit`
+    仍在,作为其余写路径(后台 CRUD 等)的兜底 —— 已对齐时它什么也不做。
+
+    **锁序:工作流行 → 节点行 → 申请行。** `complete_node` 先锁工作流再锁节点,这里随后才锁申请;
+    `decide_cross_civilization` 因此也先锁工作流再锁申请(此前是反过来)。其余写申请的路径
+    (`submit` / `appeal` 新建工作流、缩短冷却)不先持有这个申请的工作流行。
+    """
     with transaction.atomic():
         application = (
             RebirthApplication.objects.select_for_update()
@@ -448,7 +458,7 @@ def sync_from_workflow(workflow_id):
         # 写进 rejection_reason(record_reason_for_soul)。节点 notes 是内部备注,灵魂看不到。
         application.save()
         _log_status_change(application, old)
-    _notify_status_change(application)
+        transaction.on_commit(lambda: _notify_status_change(application))
     return application
 
 
@@ -518,8 +528,12 @@ def decide_cross_civilization(application_id, user, value: bool):
     """判官初审决定是否跨文明。只在初审节点仍待决、且调用者正是该节点指定的审批人时可写。
     跨文明时只发事件 —— 本服务不去写目标文明的任何数据(分库约束)。"""
     from apps.events.services import EventService
+    from apps.workflow.models import ApprovalWorkflow
 
     with transaction.atomic():
+        # 锁序与 `sync_from_workflow` 一致:工作流行在前,申请行在后。
+        workflow_id = RebirthApplication.objects.values_list("workflow_id", flat=True).get(pk=application_id)
+        ApprovalWorkflow._base_manager.select_for_update().get(pk=workflow_id)
         application = (
             RebirthApplication.objects.select_for_update(of=("self",))
             .select_related("workflow__current_node", "soul__tenant").get(pk=application_id)
