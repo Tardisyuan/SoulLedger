@@ -7,7 +7,8 @@ import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { LoginScreen } from "../screens/login";
-import { SessionProvider, useSession } from "../session";
+import { ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY, platform } from "@soulledger/core/platform";
+import { SessionProvider, USER_KEY, useSession } from "../session";
 import { I18nProvider, ThemeContext, themeFor } from "../shared";
 import { OFFICER, httpError } from "./harness";
 
@@ -51,7 +52,14 @@ function fill(user = "yama", password = "pw") {
   fireEvent.changeText(screen.getByTestId("login-password"), password);
 }
 
-beforeEach(() => jest.clearAllMocks());
+// A sign-in lands tokens and the profile in the platform stores, and SessionProvider starts
+// signed in when it finds them -- so each test begins from an empty device.
+beforeEach(() => {
+  jest.clearAllMocks();
+  platform().persistent.remove(USER_KEY);
+  platform().session.remove(ACCESS_TOKEN_KEY);
+  platform().secure.remove(REFRESH_TOKEN_KEY);
+});
 
 it("signs in with a username and password and no hall", async () => {
   mockOfficerLogin.mockResolvedValue({ data: TOKENS });

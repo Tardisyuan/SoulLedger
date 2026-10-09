@@ -154,6 +154,7 @@ describe("the shell", () => {
     renderOfficer(<Shell />, { user: { ...OFFICER, mfa_enabled: false, mfa_required: true } });
     expect(await screen.findByTestId("mfa-banner")).toBeTruthy();
     fireEvent.press(screen.getByTestId("tab-me"));
+    await act(async () => {}); // let the Me tab's own loads land before the test ends
     expect(screen.getByTestId("mfa-banner")).toBeTruthy();
   });
 });
