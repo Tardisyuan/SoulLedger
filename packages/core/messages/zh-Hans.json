@@ -5156,7 +5156,8 @@
       },
       "remaining_days": "还剩 {{n}} 天",
       "days_label": "批准天数",
-      "days_invalid": "天数要是整数，且小于剩余天数"
+      "days_invalid": "天数要是整数，且小于剩余天数",
+      "verdict_label": "批准用的裁决"
     },
     "landing": {
       "handled": "已由{{name}}处理",
@@ -5255,7 +5256,17 @@
       "search": "搜索姓名或用户名",
       "empty": "没有可选的人",
       "confirm": "确认加签",
-      "no_endpoint": "提交加签的功能还没开通，请先在官员台加签。"
+      "unavailable": "现在不能加签，只能查看候选人。",
+      "added": "已加签。对方签完后，你的批准才生效。",
+      "not_eligible": "这个人不能被加签（要是本殿、有审批权限的在职官员）。",
+      "duplicate": "已经是联署人，或本来就能单独决定这一步。"
+    },
+    "comment": {
+      "title": "评议",
+      "empty": "还没有评议",
+      "write": "写评议",
+      "send": "发表",
+      "failed": "没能发表评议，稍后再试。"
     }
   }
 }

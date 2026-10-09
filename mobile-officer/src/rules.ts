@@ -31,9 +31,33 @@ export function isTodoKind(value: unknown): value is TodoKind {
 
 export type Verdict = "approve" | "reject";
 
+/** The verdicts that pass a node (`complete_node`: `verdict in [PASSED, CONFIRMED]`). */
+const PASSING = ["PASSED", "CONFIRMED"] as const;
+
+/**
+ * The passing verdicts this node accepts, from its `required_verdicts` (empty list = no constraint,
+ * so plain PASSED). One entry: the approval sends it. Several: the approve sheet lets the officer pick.
+ * A node that declares only refusing verdicts has nothing to approve with; PASSED is returned and the
+ * server answers 400, rather than the app inventing a verdict the node never listed.
+ */
+export function passVerdictsOf(detail: Pick<TodoItemDetail, "required_verdicts">): string[] {
+  const declared = detail.required_verdicts ?? [];
+  if (declared.length === 0) return ["PASSED"];
+  const accepted = PASSING.filter((v) => declared.includes(v));
+  return accepted.length > 0 ? accepted : ["PASSED"];
+}
+
+/** The refusing verdict to send: REJECTED unless the node declares verdicts and only lists FAILED. */
+export function refuseVerdictOf(detail: Pick<TodoItemDetail, "required_verdicts">): "REJECTED" | "FAILED" {
+  const declared = detail.required_verdicts ?? [];
+  return declared.length > 0 && !declared.includes("REJECTED") && declared.includes("FAILED") ? "FAILED" : "REJECTED";
+}
+
 export interface DecisionInput {
   detail: TodoItemDetail;
   verdict: Verdict;
+  /** An approval of a workflow node: which passing verdict (when the node accepts several). */
+  passVerdict?: string;
   /** The reject reason (required to reject); an approval's optional note. */
   reason: string;
   /** Cooldown shortening only: the days to approve. */
@@ -50,13 +74,13 @@ export function reasonMissing(verdict: Verdict, reason: string): boolean {
  * asks the server to enforce the same rule (400 `reason_required`). Rejects with the axios error;
  * `decisionFailure` reads it.
  */
-export async function submitDecision({ detail, verdict, reason, days }: DecisionInput): Promise<void> {
+export async function submitDecision({ detail, verdict, reason, days, passVerdict }: DecisionInput): Promise<void> {
   const note = reason.trim();
   if (verdict === "reject" && note === "") throw new Error("reason_required");
   if (detail.kind === "approval" || detail.kind === "rebirth") {
     if (!detail.workflow_id || !detail.node_id) throw new Error("no_node");
     await workflowApi.approveNode(detail.workflow_id, detail.node_id, {
-      verdict: verdict === "approve" ? "PASSED" : "REJECTED",
+      verdict: verdict === "approve" ? (passVerdict ?? passVerdictsOf(detail)[0]) : refuseVerdictOf(detail),
       notes: note,
       require_reason: true,
       // A rebirth rejection is read by the soul; the same words, since the officer wrote one reason.

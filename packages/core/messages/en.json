@@ -5156,7 +5156,8 @@
       },
       "remaining_days": "{{n}} days left",
       "days_label": "Days to approve",
-      "days_invalid": "Enter a whole number below the days left"
+      "days_invalid": "Enter a whole number below the days left",
+      "verdict_label": "Verdict to approve with"
     },
     "landing": {
       "handled": "Already handled by {{name}}",
@@ -5255,7 +5256,17 @@
       "search": "Search name or username",
       "empty": "Nobody to choose",
       "confirm": "Add signer",
-      "no_endpoint": "Adding a signer isn't available in the app yet. Use the desk."
+      "unavailable": "Adding a signer isn't possible right now; you can only look at the candidates.",
+      "added": "Signer added. Your approval counts once they have signed.",
+      "not_eligible": "This person can't be added (an active officer of this hall who may approve).",
+      "duplicate": "Already a co-signer, or already able to decide this step alone."
+    },
+    "comment": {
+      "title": "Comments",
+      "empty": "No comments yet",
+      "write": "Write a comment",
+      "send": "Post",
+      "failed": "Couldn't post the comment. Try again later."
     }
   }
 }

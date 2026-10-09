@@ -14,6 +14,7 @@ import {
   landingOf,
   loginFailureKey,
   reasonMissing,
+  passVerdictsOf,
   submitDecision,
 } from "../rules";
 
@@ -56,6 +57,20 @@ describe("a decision goes to the endpoint the desk uses for that kind", () => {
     expect(mockApproveNode).toHaveBeenLastCalledWith("wf-1", "node-1", { verdict: "PASSED", notes: "", require_reason: true });
     await submitDecision({ detail: detail({}), verdict: "reject", reason: " 材料不全 " });
     expect(mockApproveNode).toHaveBeenLastCalledWith("wf-1", "node-1", { verdict: "REJECTED", notes: "材料不全", require_reason: true });
+  });
+
+  it("the verdict sent comes from the node's required_verdicts", async () => {
+    const send = async (required_verdicts: string[], verdict: "approve" | "reject", passVerdict?: string) => {
+      await submitDecision({ detail: detail({ required_verdicts }), verdict, reason: "r", passVerdict });
+      return mockApproveNode.mock.calls.at(-1)![2].verdict;
+    };
+    expect(await send([], "approve")).toBe("PASSED");
+    expect(await send(["CONFIRMED", "FAILED"], "approve")).toBe("CONFIRMED");
+    expect(await send(["PASSED", "CONFIRMED"], "approve", "CONFIRMED")).toBe("CONFIRMED");
+    expect(await send(["PASSED", "FAILED"], "reject")).toBe("FAILED");
+    expect(await send(["PASSED", "REJECTED", "FAILED"], "reject")).toBe("REJECTED");
+    expect(passVerdictsOf({ required_verdicts: ["PASSED", "CONFIRMED", "RETRY"] })).toEqual(["PASSED", "CONFIRMED"]);
+    expect(passVerdictsOf({ required_verdicts: ["REJECTED"] })).toEqual(["PASSED"]);
   });
 
   it("a rebirth rejection also fills the words the soul reads", async () => {
