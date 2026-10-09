@@ -8,6 +8,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { FONT_ASSETS } from "./src/fonts";
 import { I18nProvider } from "./src/i18n";
+import { soulLinks } from "./src/links";
 import { RootNavigator } from "./src/navigation";
 import { hydratePersistentStore, installMobilePlatform } from "./src/platform";
 import { installNotificationHandler } from "./src/push";
@@ -16,6 +17,7 @@ import { SessionProvider } from "./src/session";
 // Installed at module load, before any core module can read a store.
 installMobilePlatform();
 installNotificationHandler();
+soulLinks.install();
 // The native splash (the ground alone) stays until the cold start draws the same ground over it (src/coldStart.tsx).
 void SplashScreen.preventAutoHideAsync().catch(() => {});
 

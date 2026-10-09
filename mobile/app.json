@@ -4,6 +4,7 @@
     "slug": "soulledger-soul",
     "version": "0.1.0",
     "orientation": "portrait",
+    "scheme": "soulledger",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
     "ios": {
@@ -54,7 +55,9 @@
           "microphonePermission": false
         }
       ],
-      "./plugins/withSceneLifecycle"
+      "./plugins/withSceneLifecycle",
+      ["./plugins/withAndroidShortcuts", { "app": "soul" }],
+      ["./plugins/withAppIntents", { "app": "soul" }]
     ]
   }
 }
