@@ -199,8 +199,9 @@ def test_the_automatic_return_when_a_stop_is_served_is_all_or_nothing(cn, eg, dj
 
 
 # Tables each path writes inside its transaction, measured by the dry run (audit rows and notifications come
-# later, on_commit, so they are not steps of the path). The joint add/conclude notifications are NOT
-# `notify_judges`: they still run in the transaction, and the guard shows their failure is clean (see report).
+# later, on_commit, so they are not steps of the path). That includes the joint add/conclude notifications:
+# they ran in the transaction until `tests/test_dispatch_notifications_after_commit.py`, and a failed
+# notification INSERT then rolled the participant / conclusion back silently (the guard read that as "clean").
 _EXEC = {"dispatch_dispatchrecord", "events_soulevent", "realms_soulpathentry", "souls_soul"}
 _PLAN = {"sentence_plan_sentencenode"}
 TABLES = {
@@ -208,10 +209,10 @@ TABLES = {
     "execute_plan": _EXEC | _PLAN | {"disposition_disposition"},
     "return_manual": _EXEC | _PLAN | {"audit_auditlog", "sentence_plan_sentenceplan"},
     "return_auto": _EXEC | _PLAN | {"audit_auditlog", "sentence_plan_sentenceplan", "disposition_disposition"},
-    "joint_add": {"dispatch_crosstenantjudgmentparticipant", "notifications_usernotification"},
+    "joint_add": {"dispatch_crosstenantjudgmentparticipant"},
     "joint_submit": {"dispatch_crosstenantjudgmentparticipant"},
     "joint_activate": {"dispatch_crosstenantjudgment"},
-    "joint_conclude": {"dispatch_crosstenantjudgment", "notifications_usernotification"},
+    "joint_conclude": {"dispatch_crosstenantjudgment"},
     "reopen_decide": {"events_soulevent", "judgment_judgment", "judgment_judgmentcasecounter",
                       "sentence_plan_sentenceplan",
                       "sentence_plan_sentenceplanrequest"},

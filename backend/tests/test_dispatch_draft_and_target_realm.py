@@ -106,12 +106,13 @@ def test_a_draft_takes_a_short_reason_and_submit_refuses_it(w):
     assert record.status == DispatchStatus.DRAFT
 
 
-def test_submit_applies_the_last_form_values_and_proposes(w):
+def test_submit_applies_the_last_form_values_and_proposes(w, django_capture_on_commit_callbacks):
     record = _draft(w, soul=str(w["soul"].pk), reason="口业")
     drafted_at = record.proposed_at
-    resp = _client(w["cn_mod"]).post(f"{URL}{record.pk}/submit/", {
-        "target_tenant": w["eu"].pk, "target_realm": str(w["eu_ninth"].pk), "reason": LONG_REASON,
-    }, format="json")
+    with django_capture_on_commit_callbacks(execute=True):  # notifications go out after commit
+        resp = _client(w["cn_mod"]).post(f"{URL}{record.pk}/submit/", {
+            "target_tenant": w["eu"].pk, "target_realm": str(w["eu_ninth"].pk), "reason": LONG_REASON,
+        }, format="json")
     assert resp.status_code == 200, resp.data
     record.refresh_from_db()
     assert record.status == DispatchStatus.PROPOSED

@@ -651,9 +651,12 @@ class WorkflowService:
             # half-built workflow behind.
             cls._create_nodes(workflow, template, civilization)
 
-        # Inside the request's own transaction but outside the atomic block
-        # above, so a template that refuses to build leaves no event behind.
-        cls.announce(workflow, created=True)
+        # After commit, not "outside the atomic block above": `conclude_judgment(create_workflow=True)` calls
+        # this from inside the judgment's own transaction. A notification INSERT that fails there is swallowed
+        # by the event bus but marks that transaction for rollback, so the conclusion is lost silently
+        # (same defect as `30052b65`; tests/test_dispatch_notifications_after_commit.py). Outside any
+        # transaction `on_commit` runs at once.
+        transaction.on_commit(lambda: cls.announce(workflow, created=True))
         return workflow
 
     @staticmethod
