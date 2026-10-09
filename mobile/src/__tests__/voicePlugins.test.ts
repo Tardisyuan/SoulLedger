@@ -42,6 +42,7 @@ describe("withAndroidShortcuts", () => {
     expect(xml).toContain('android:data="soulledger-officer://todo"');
     expect(xml).toContain('android:targetClass="com.soulledger.officer.MainActivity"');
     expect(xml).toContain("@string/shortcut_todo");
+    expect(xml).toContain('android:icon="@mipmap/ic_launcher"');
   });
 
   it("takes the label from the messages, per language, and fails on a missing key", () => {
@@ -102,5 +103,16 @@ describe("withAppIntents", () => {
     const plist = applyInfoPlist({ CFBundleLocalizations: ["fr"] }, officer);
     expect(plist.CFBundleLocalizations).toEqual(["fr", "en", "zh-Hans"]);
     expect(plist.INAlternativeAppNames).toEqual([{ INAlternativeAppName: "灵魂簿官员" }]);
+  });
+});
+
+describe("the soul app's display name", () => {
+  it("is 灵魂簿 in zh-Hans and SoulLedger in en, on both platforms", () => {
+    /* eslint-disable @typescript-eslint/no-require-imports */
+    const cfg = require("../../app.json").expo;
+    const load = (file: string) => require(`../../${file}`);
+    /* eslint-enable @typescript-eslint/no-require-imports */
+    expect(load(cfg.locales["zh-Hans"])).toEqual({ ios: { CFBundleDisplayName: "灵魂簿" }, android: { app_name: "灵魂簿" } });
+    expect(load(cfg.locales.en)).toEqual({ ios: { CFBundleDisplayName: "SoulLedger" }, android: { app_name: "SoulLedger" } });
   });
 });

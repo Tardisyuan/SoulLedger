@@ -37,7 +37,8 @@ module.exports = function withAndroidShortcuts(config, { app }) {
       };
       write("xml/shortcuts.xml", shortcutsXml({ packageName: config.android.package, shortcuts }));
       write("values/strings_shortcuts.xml", stringsXml(shortcuts, read("en")));
-      write("values-zh/strings_shortcuts.xml", stringsXml(shortcuts, read("zh-Hans")));
+      // values-zh covers every Chinese device; b+zh+Hans is the same file under the BCP-47 name Expo's own locales use for app_name.
+      for (const dir of ["values-zh", "values-b+zh+Hans"]) write(`${dir}/strings_shortcuts.xml`, stringsXml(shortcuts, read("zh-Hans")));
       return cfg;
     },
   ]);

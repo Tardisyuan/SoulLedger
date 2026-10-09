@@ -5,6 +5,10 @@
     "version": "0.1.0",
     "orientation": "portrait",
     "scheme": "soulledger",
+    "locales": {
+      "en": "./locales/en.json",
+      "zh-Hans": "./locales/zh-Hans.json"
+    },
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
     "ios": {

@@ -16,7 +16,7 @@ function labelOf(messages, key) {
 function shortcutsXml({ packageName, shortcuts }) {
   const items = shortcuts
     .map(
-      (s) => `  <shortcut android:shortcutId="${s.id}" android:enabled="true" android:shortcutShortLabel="@string/shortcut_${s.id}">
+      (s) => `  <shortcut android:shortcutId="${s.id}" android:enabled="true" android:icon="@mipmap/ic_launcher" android:shortcutShortLabel="@string/shortcut_${s.id}">
     <intent android:action="android.intent.action.VIEW" android:data="${escapeXml(s.url)}" android:targetPackage="${packageName}" android:targetClass="${packageName}.MainActivity" />
   </shortcut>`
     )
@@ -24,7 +24,7 @@ function shortcutsXml({ packageName, shortcuts }) {
   return `<?xml version="1.0" encoding="utf-8"?>\n<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">\n${items}\n</shortcuts>\n`;
 }
 
-/** res/values[-zh]/strings_shortcuts.xml. A file of its own, so Expo's strings.xml is never touched. */
+/** res/values[-zh][-b+zh+Hans]/strings_shortcuts.xml. A file of its own, so Expo's strings.xml is never touched. */
 function stringsXml(shortcuts, messages) {
   const items = shortcuts.map((s) => `  <string name="shortcut_${s.id}">${escapeXml(labelOf(messages, s.label)).replace(/'/g, "\\'")}</string>`).join("\n");
   return `<?xml version="1.0" encoding="utf-8"?>\n<resources>\n${items}\n</resources>\n`;
