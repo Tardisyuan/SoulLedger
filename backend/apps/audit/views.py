@@ -28,6 +28,12 @@ from .serializers import (
 )
 
 
+def is_global_admin(user) -> bool:
+    """ADMIN with no hall of their own. Only this person may read across halls in the audit log
+    (list, export and the 「殿」 filter); an ADMIN bound to a hall sees that hall's rows only."""
+    return is_tenant_exempt(user) and getattr(user, "tenant_id", None) is None
+
+
 class AuditLogFilter(filters.FilterSet):
     """`resource` 精确匹配,只有一个别名:`tenant`(审计页的「殿」)同时含每殿助手开关的那几行 ——
     它们的 resource 是 `assistant_config`、resource_id 是 `tenant:<殿码>`(soul_assist/admin_views.py)。
@@ -48,7 +54,7 @@ class AuditLogFilter(filters.FilterSet):
 
         request = self.request
         user = getattr(request, "user", None)
-        if not is_tenant_exempt(user):
+        if not is_global_admin(user):
             own = getattr(request, "tenant", None) or getattr(user, "tenant", None)
             if own is None or own.code != value:
                 raise PermissionDenied("Only an administrator can read another hall's audit log.")
@@ -162,8 +168,11 @@ class AuditLogViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
     def get_queryset(self):
         """Filter queryset based on user permissions and query params."""
         # Non-admin users can only see their own tenant's logs.
+        # A hall-bound ADMIN is scoped like everyone else here (admin_bypass off); only a
+        # global admin (no hall) reads every hall.
         qs = scope_to_tenant(
-            AuditLog.objects.select_related("user", "tenant").all(), self.request
+            AuditLog.objects.select_related("user", "tenant").all(), self.request,
+            admin_bypass=is_global_admin(self.request.user),
         )
 
         # Apply query param filters

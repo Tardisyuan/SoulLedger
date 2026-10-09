@@ -33,6 +33,7 @@ jest.mock("@/src/lib/saveBlob", () => ({ saveBlob: jest.fn() }));
 let mockIsAdmin = true;
 let mockRole: string | null = null;
 let mockPermissions: string[] = ["audit.read"];
+let mockTenantCode: string | null = null;
 
 jest.mock("@/src/contexts/TenantContext", () => ({
   // `permissions` 现在有意义:页面外面包了
@@ -41,6 +42,7 @@ jest.mock("@/src/contexts/TenantContext", () => ({
   // 页面内部的 isAdmin 变成了那道门。
   useTenant: () => ({
     isAdmin: mockIsAdmin,
+    tenantCode: mockTenantCode,
     user: { role: mockRole ?? (mockIsAdmin ? "ADMIN" : "JUDGE"), permissions: mockPermissions },
   }),
 }));
@@ -105,6 +107,7 @@ beforeEach(() => {
   mockIsAdmin = true;
   mockRole = null;
   mockPermissions = ["audit.read"];
+  mockTenantCode = null;
   mockedList.mockResolvedValue({ data: { count: 1, results: [entry()] } });
   mockedTenants.mockResolvedValue({
     data: {
@@ -236,6 +239,15 @@ describe("AuditPage request parameters", () => {
   it("a hall-bound user gets no hall dropdown and the halls are never fetched", async () => {
     mockIsAdmin = false;
     mockRole = "MODERATOR";
+    renderPage();
+    await waitFor(() => expect(mockedList).toHaveBeenCalled());
+    expect(screen.queryByRole("combobox", { name: "audit.filter_hall" })).not.toBeInTheDocument();
+    expect(mockedTenants).not.toHaveBeenCalled();
+    expect(lastParams().tenant).toBeUndefined();
+  });
+
+  it("a hall-bound ADMIN gets no hall dropdown either: only a global admin (no hall) reads across halls", async () => {
+    mockTenantCode = "CN_DIYU";
     renderPage();
     await waitFor(() => expect(mockedList).toHaveBeenCalled());
     expect(screen.queryByRole("combobox", { name: "audit.filter_hall" })).not.toBeInTheDocument();

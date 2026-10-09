@@ -39,6 +39,7 @@ SITES = [
     ('apps/actors/mythology/seeding.py', 'MythologySeeder._seed_derived_statutes', 'Actor.all_objects', 1, 'CLI', 'mythology seed command: idempotent upsert by civilization/code; tenant passed explicitly on create'),
     ('apps/actors/mythology/seeding.py', 'MythologySeeder._seed_tenant', 'Tenant.objects', 2, 'FANOUT', 'resolves a Tenant by its globally unique code or id (Tenant has no tenant column; the lookup names exactly one row)'),
     ('apps/actors/mythology/seeding.py', 'MythologySeeder._upsert', 'model.all_objects', 2, 'CLI', 'mythology seed command: idempotent upsert by civilization/code; tenant passed explicitly on create'),
+    ('apps/audit/views.py', 'AuditLogFilter.filter_tenant', 'Tenant.objects', 1, 'FANOUT', 'resolves one hall by its globally unique code, for the global admin only; a hall-bound user is answered from their own tenant (403 for any other code)'),
     ('apps/audit/signals.py', '_on_pre_save', 'sender._base_manager', 1, 'PK', 'pre-save snapshot of the same row by pk, for the audit diff'),
     ('apps/authentication/views.py', 'UserViewSet.get_queryset', 'Tenant.objects', 1, 'GLOBAL', "reads every tenant's MFA-required-roles setting to build one OR filter; the resulting User queryset is then scoped by the caller as usual"),
     ('apps/authentication/views.py', 'civilizations_view', 'Tenant.objects', 1, 'GLOBAL', 'public list of active civilizations at login; exposes tenant codes only, no tenant rows'),
