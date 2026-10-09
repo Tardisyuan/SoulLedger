@@ -2820,7 +2820,8 @@
       "empty": "Nen Dbh Wehem Mesut",
       "empty_filtered": "Nen Dbh Em Kheperu Pen",
       "cooldown_until": "Ahet Qebeh Er {{time}}; Ba Nen Dbh Djer",
-      "step_appeal": "(Nehet)"
+      "step_appeal": "(Nehet)",
+      "appeal_title": "Dbh Wehem Mesut Nehet · {{name}}"
     },
     "cooldown": {
       "tabs": {
@@ -2839,7 +2840,8 @@
         "note": "Medu Er Ba",
         "decided_by": "Wedja In",
         "created_at": "Dbh Em",
-        "cooldown_until": "Ahet Qebeh Er"
+        "cooldown_until": "Ahet Qebeh Er",
+        "remaining_after": "Er Khet Hesy: Ahet Qebeh Khery"
       },
       "remaining_days": "Hru {{n}}",
       "over": "Ahet Qebeh Khetem",
@@ -5207,7 +5209,8 @@
         "network": "Nen Em Senb",
         "other": "Per Hemsu Nen Shesep"
       },
-      "desired": "Mer: Hru {{n}} Khery"
+      "desired": "Mer: Hru {{n}} Khery",
+      "remaining_after": "Er Khet Hesy: Hru {{n}} Khery"
     },
     "landing": {
       "handled": "Iri Seth Em {{name}}",
