@@ -20,6 +20,8 @@ directly with `tenant_id=` as a keyword, one row per tenant, instead of the old
 fan-out parents (`ledger.recalculate_all` etc.). The parents still exist in
 code; their PeriodicTask rows are what `LEGACY_TASKS` below removes.
 """
+import hashlib
+import re
 from dataclasses import dataclass, field
 
 TENANT = "TENANT"
@@ -30,6 +32,20 @@ GLOBAL = "GLOBAL"
 # (minute hour day_of_month month day_of_week) because that is what an
 # operator will read and type.
 CRON_FIELDS = ("minute", "hour", "day_of_month", "month_of_year", "day_of_week")
+
+
+def monitor_slug(raw: str) -> str:
+    """PeriodicTask.name doubles as the Sentry Crons monitor slug: sentry-sdk
+    2.71.0 (integrations/celery/beat.py) passes `schedule_entry.name` verbatim
+    and validates nothing. Sentry's slug rule (lowercase letters, digits, '-',
+    '_', at most 50 chars) is the server side one, so build a name that
+    satisfies it: readable base plus a 6-hex hash of the raw name, which keeps
+    it deterministic and unique even where sanitising merges two names
+    ('a.b' / 'a-b', 'CN' / 'cn') or truncation cuts them.
+    """
+    digest = hashlib.sha1(raw.encode()).hexdigest()[:6]
+    base = re.sub(r"[^a-z0-9_-]+", "-", raw.lower()).strip("-")
+    return f"{base[:43].rstrip('-')}-{digest}"
 
 
 @dataclass(frozen=True)
@@ -55,8 +71,12 @@ class JobSpec:
         # task name's own dots are flattened.
         return "scheduler.jobs." + self.key.replace(".", "_")
 
-    def periodic_task_name(self, tenant) -> str:
+    def legacy_name(self, tenant) -> str:
+        """The PeriodicTask name before names became Sentry-valid slugs."""
         return self.key if tenant is None else f"{self.key}@{tenant.code}"
+
+    def periodic_task_name(self, tenant) -> str:
+        return monitor_slug(self.legacy_name(tenant))
 
     def task_kwargs(self, tenant) -> dict:
         if tenant is None:
