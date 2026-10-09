@@ -10,6 +10,15 @@ export { api, getApiBaseUrl, PAGE_SIZE } from "./client";
 // Auth
 export {
   authApi,
+  mfaApi,
+  isMfaRequired,
+  type LoginOutcome,
+  type MfaRequiredResponse,
+  type MfaStatus,
+  type MfaRefusal,
+  type MfaSetupResponse,
+  type MfaRecoveryCodes,
+  type MfaVerifyRequest,
   type UserRole,
   type BuiltinUserRole,
   type LoginUser,
@@ -22,6 +31,8 @@ export {
   type DefaultView,
   type UserPreferences,
   type PasswordHelpAccepted,
+  type OfficerLoginRequest,
+  type HallChoiceBody,
 } from "./auth";
 
 // Souls
@@ -51,7 +62,7 @@ export {
 } from "./souls";
 
 // Users
-export { usersApi, type User, type CreateUserInput, type UpdateUserInput, type UserFilters, type UserImportResult, type AssignRolesInput, type UserBatchUpdateResult, type PaginatedResponse } from "./users";
+export { usersApi, type User, type UserMfaRef, type CreateUserInput, type UpdateUserInput, type UserFilters, type UserImportResult, type AssignRolesInput, type UserBatchUpdateResult, type PaginatedResponse } from "./users";
 
 // Judgment
 export {
@@ -140,7 +151,7 @@ export { menusApi, menuButtonsApi, type MenuItem, type MenuButton } from "./menu
 export { auditApi, loginLogsApi, type AuditLogEntry, type LoginLogEntry, type LoginLogStatus } from "./audit";
 
 // Tenants
-export { tenantsApi, REBIRTH_COOLDOWN_SETTING, type Tenant, type TenantSettingsPatch } from "./tenants";
+export { tenantsApi, REBIRTH_COOLDOWN_SETTING, MFA_REQUIRED_ROLES_SETTING, type Tenant, type TenantSettingsPatch, type TenantMfaRoleRow } from "./tenants";
 
 // Organizations
 export { organizationsApi, type Organization } from "./organizations";
@@ -218,3 +229,18 @@ export {
 
 // Recycle bin
 export { recycleBinApi, type RecycleBinEntry, type RecycleBinLocation, type RecycleBinListResponse, type RestoreResponse } from "./recycle-bin";
+
+// Officer mobile app
+export {
+  officerAppApi,
+  decisionFailureOf,
+  DECISION_FAILURE_CODES,
+  type Todo,
+  type TodoGroup,
+  type TodoItem,
+  type TodoItemDetail,
+  type TodoKind,
+  type SignerCandidate,
+  type OfficerPushToken,
+  type DecisionFailureCode,
+} from "./officer-app";

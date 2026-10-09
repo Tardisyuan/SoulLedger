@@ -91,6 +91,7 @@ INSTALLED_APPS = [
     "apps.chat",
     "apps.sentence_plan",
     "apps.soul_assist",
+    "apps.officer_app",
 ]
 
 MIDDLEWARE = [
@@ -230,6 +231,9 @@ CORS_ALLOW_ALL_ORIGINS = DEBUG
 # override it (BP-18). That box is reachable via `CORS_ALLOWED_ORIGINS` in its
 # own environment, and under DEBUG `CORS_ALLOW_ALL_ORIGINS` above makes the
 # list moot anyway.
+# 两步验证的「不再询问」设备 cookie 由 API 源下发(httpOnly),前端带 withCredentials 调登录与验码;
+# 允许的源是上面的显式清单,不是 *,所以可以带凭据。
+CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOWED_ORIGINS = os.getenv(
     "CORS_ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:3333"
 ).split(",")

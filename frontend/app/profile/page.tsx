@@ -11,6 +11,7 @@ import { PageShell } from "@/src/components/ui/PageShell";
 import { Button } from "@/src/components/ui/Button";
 import { Badge } from "@/src/components/ui/Badge";
 import { TextField, fieldControl } from "@/src/components/ui/Field";
+import { MfaSection } from "@/src/components/profile/MfaSection";
 import { cn } from "@/lib/utils";
 
 export default function ProfilePage() {
@@ -276,6 +277,15 @@ export default function ProfilePage() {
           {t("profile.email_notifications")}
         </h2>
         <EmailNotificationsToggle hasAddress={email !== ""} />
+      </section>
+
+      {/* 两步验证(A12):状态、向导、恢复码、关闭。组件自己拉 /auth/mfa/status/。 */}
+      <section>
+        <h2 className="pt-6 text-lg text-[oklch(var(--color-ink))]">
+          <span aria-hidden="true">丁 · </span>
+          {t("mfa.title")}
+        </h2>
+        <MfaSection />
       </section>
     </PageShell>
   );

@@ -212,6 +212,30 @@ jobs:
       - name: Test mobile
         run: npm run test --workspace @soulledger/mobile
 
+  # The officer app (灵魂簿 · 官员, mobile-officer/). Same JS gates as `mobile`. It imports
+  # mobile/src's leaf modules in place (mobile-officer/src/shared.ts), so it is a separate job:
+  # a change to the soul app's shared files shows here as its own red.
+  officer:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version-file: .nvmrc
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+      # npm 11 and the native rebuild: see the `mobile` job above.
+      - name: Install dependencies
+        run: |
+          npx -y npm@11 ci
+          npx -y npm@11 rebuild @parcel/watcher unrs-resolver fsevents @sentry/cli
+      - name: Typecheck officer
+        run: npm run typecheck --workspace @soulledger/officer
+      - name: Lint officer
+        run: npm run lint --workspace @soulledger/officer
+      - name: Test officer
+        run: npm run test --workspace @soulledger/officer
+
   # One leg per Playwright project, in parallel. Serial would be ~3x the wall
   # clock for no benefit, and a matrix keeps each engine's report separate so
   # a red run names the engine in the job title rather than in the log.

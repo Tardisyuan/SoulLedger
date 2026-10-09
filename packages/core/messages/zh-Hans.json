@@ -64,6 +64,118 @@
     "error_network_body": "填好的内容还在。检查网络后重试。",
     "submitting": "登录中"
   },
+  "mfa": {
+    "title": "两步验证",
+    "badge_on": "已开启",
+    "badge_off": "未开启",
+    "verify": {
+      "back": "换个账号登录",
+      "title": "两步验证",
+      "subtitle": "账号 {{id}} · 输入验证器 App 上的 6 位动态码",
+      "code_label": "动态码",
+      "code_hint": "验证器 App 上的 6 位数字，可直接粘贴",
+      "remember_device": "在此设备上 {{days}} 天内不再询问",
+      "submit": "验证",
+      "submitting": "验证中",
+      "use_recovery": "手机不在身边？改用恢复码",
+      "use_totp": "改回输入动态码",
+      "recovery_title": "用恢复码登录",
+      "recovery_subtitle": "账号 {{id}} · 输入一个还没用过的恢复码",
+      "recovery_label": "恢复码",
+      "recovery_hint": "8 位字母数字，不分大小写，连字符可不填",
+      "error_wrong": "动态码不对",
+      "error_recovery_wrong": "恢复码不对，或已经用过",
+      "error_wrong_body": "还可以再试 {{n}} 次，之后锁定 {{m}} 分钟",
+      "error_expired": "动态码已过期",
+      "error_expired_body": "等验证器 App 刷新后，输入新的一组",
+      "error_locked": "两步验证已锁定",
+      "error_locked_body": "连续输错太多次。{{time}} 后可再试",
+      "error_pending": "这次登录已超时，请重新输入账号密码"
+    },
+    "setup": {
+      "open": "开启两步验证",
+      "title": "开启两步验证",
+      "step_of": "{{n}} / {{total}}",
+      "exit_note": "中途退出不会开启",
+      "next": "下一步",
+      "back": "上一步",
+      "finish": "完成",
+      "step1_title": "准备验证器 App",
+      "step1_body": "在手机上安装任意一款基于时间的验证器 App。开启后，登录时除了密码，还要输入它显示的 6 位动态码。",
+      "step2_title": "扫描二维码",
+      "step2_body": "用验证器 App 扫描；扫不了就手动输入下面的密钥。",
+      "step2_open": "在验证器 App 中打开",
+      "manual_key": "手动输入密钥",
+      "copy_key": "复制密钥",
+      "key_meta": "基于时间 · SHA-1 · 6 位 · 每 30 秒一换",
+      "setup_failed": "没能开始设置，请稍后再试",
+      "step3_title": "输入动态码确认",
+      "step3_body": "输入验证器 App 上此刻显示的 6 位数字。",
+      "step3_error": "动态码不对，检查手机时间是否准确",
+      "step4_title": "保存恢复码",
+      "step4_warning": "手机丢失或换机时，每个恢复码可以代替动态码登录一次。离开这一步后不再显示，请现在保存。",
+      "copy_all": "复制全部",
+      "download": "下载 .txt",
+      "saved_check": "我已妥善保存这些恢复码",
+      "complete_failed": "没能完成设置，请重试",
+      "done_title": "两步验证已开启",
+      "done_body": "下次登录输入密码后，还要输入验证器 App 上的动态码。"
+    },
+    "manage": {
+      "off_body": "开启后，登录时除了密码还要输入验证器 App 上的 6 位动态码，账号被盗用的风险大幅降低。",
+      "required_note": "本殿要求『{{role}}』角色必须开启两步验证，请尽快完成设置。",
+      "enabled_at": "开启于",
+      "last_used": "最近一次使用",
+      "never_used": "还没用过",
+      "method_totp": "动态码",
+      "method_recovery": "恢复码",
+      "codes_left": "恢复码剩余",
+      "codes_left_value": "{{n}} / 10 个",
+      "regenerate": "重新生成",
+      "regenerate_title": "重新生成恢复码？",
+      "regenerate_body": "旧的 10 个恢复码立即作废；生成后会显示新的一组，请重新保存。",
+      "regenerate_done_title": "新的恢复码",
+      "disable": "关闭两步验证",
+      "disable_title": "关闭两步验证？",
+      "disable_body": "关闭后登录只需要密码。先用动态码或密码确认是你本人。",
+      "confirm_by_totp": "动态码",
+      "confirm_by_password": "密码",
+      "disable_confirm": "关闭",
+      "disabled_toast": "两步验证已关闭",
+      "disable_failed": "没能关闭，请检查动态码或密码",
+      "load_failed": "无法读取两步验证状态"
+    },
+    "banner": {
+      "text": "本殿要求你的角色开启两步验证，完成设置前会一直提醒。",
+      "action": "去设置"
+    },
+    "admin": {
+      "column": "两步验证",
+      "state_on": "已开启",
+      "state_off": "未开启",
+      "state_off_note": "角色不要求",
+      "state_missing": "要求开启 · 未开启",
+      "filter_all": "全部",
+      "filter_on": "已开启",
+      "filter_off": "未开启",
+      "filter_missing": "要求而未开启",
+      "reset": "重置两步验证",
+      "reset_title": "重置「{{name}}」的两步验证？",
+      "reset_consequence_1": "验证器与 10 个恢复码立即作废，该账号下次登录只需密码",
+      "reset_consequence_2": "所有「30 天内不再询问」的设备记录清除",
+      "reset_consequence_3": "该账号在所有设备上退出登录",
+      "reset_reason": "重置理由（写入审计）",
+      "reset_done": "两步验证已重置",
+      "reset_failed": "没能重置两步验证",
+      "roles_title": "安全 · 两步验证",
+      "roles_hint": "被要求的角色登录后会持续看到提醒，直到完成设置；不挡登录。管理员始终要求。",
+      "role_stat": "{{enabled}}/{{total}} 已开启 · {{pending}} 人待设置",
+      "require": "要求",
+      "not_require": "不要求",
+      "always": "始终",
+      "roles_load_failed": "没能读取各角色的开启情况"
+    }
+  },
   "home": {
     "console": "控制台",
     "hero_title": "灵魂账本",
@@ -2197,7 +2309,7 @@
       "primary": "主角色",
       "primary_hint": "主角色决定是否为管理员，以及权限高低的排名。",
       "extra": "兼任角色",
-      "extra_hint": "权限取主角色与全部兼任角色的并集；殿主的三项禁令、管理员专属的操作仍然生效，并集不会放宽它们。",
+      "extra_hint": "权限取主角色与全部兼任角色的并集。每个角色的禁令只管它自己那一份：殿主兼任判官，可以以判官身份审批。管理员专属的操作仍只看主角色。",
       "extra_none": "没有可兼任的角色",
       "admin_locked": "管理员已拥有全部权限，不能再兼任其它角色。",
       "saved": "角色已更新",
@@ -4940,6 +5052,178 @@
       "eu": "彼岸",
       "eg": "杜阿特",
       "gr": "哈迪斯"
+    }
+  },
+  "officer_app": {
+    "name": "灵魂簿 · 官员",
+    "tabs": {
+      "todo": "待办",
+      "queue": "审判",
+      "search": "查询",
+      "notices": "通知",
+      "me": "我的"
+    },
+    "todo": {
+      "title": "待我处理",
+      "groups": {
+        "approvals": "审批节点",
+        "reassignments": "改派请求",
+        "cooldowns": "缩短冷却申请",
+        "rebirths": "转生申请"
+      },
+      "empty_title": "此刻没有轮到你的事",
+      "empty_body": "新的审批、改派和申请会推送给你。"
+    },
+    "queue": {
+      "mine": "我手上",
+      "unclaimed": "待认领",
+      "empty_title": "手上没有案子",
+      "empty_body": "到「待认领」里认领一件。",
+      "desk_only": "待宣判 · 请在官员台",
+      "scope_note": "手机上可以认领、查看、写评议。宣判和盖印请在官员台完成。",
+      "claim": "认领",
+      "claim_failed": "没能认领"
+    },
+    "continue_on_desk": "在电脑上继续",
+    "search": {
+      "souls": "查灵魂",
+      "ask": "问一问",
+      "placeholder": "名字或编号",
+      "read_only": "只读。改动请在官员台进行。",
+      "no_souls_title": "没有找到",
+      "no_souls_body": "换个名字或编号再试。",
+      "residing": "▲ {{where}} · 暂居"
+    },
+    "detail": {
+      "your_step": "轮到你的节点",
+      "cosign": "加签",
+      "reject": "驳回",
+      "approve": "批准"
+    },
+    "confirm": {
+      "approve_title": "批准这一签？",
+      "approve_ok": "确认批准",
+      "reject_title": "驳回这一签？",
+      "reject_body": "驳回后流程退回{{name}}，不能撤回。",
+      "reject_ok": "确认驳回",
+      "reason_label": "驳回理由 · 必填，发起人会读到",
+      "reason_required": "驳回必须写理由",
+      "failed": "没能提交 · {{reason}}",
+      "reasons": {
+        "already_handled": "他人已代签",
+        "deadline_passed": "时限已过",
+        "permission_changed": "权限已变",
+        "network": "网络错误",
+        "other": "服务器没有接受"
+      },
+      "requester": "发起人",
+      "approve_body": {
+        "approval": "批准后流程进入下一步。",
+        "rebirth": "批准后这份转生申请进入下一步。",
+        "cooldown": "批准后冷却缩短到你填的天数。",
+        "reassignment": "批准后这次调拨成立。"
+      },
+      "remaining_days": "还剩 {{n}} 天",
+      "days_label": "批准天数",
+      "days_invalid": "天数要是整数，且小于剩余天数"
+    },
+    "landing": {
+      "handled": "已由{{name}}处理",
+      "someone": "他人"
+    },
+    "state": {
+      "error_title": "没取到",
+      "error_body": "检查网络后重试。已打开的条目不受影响。",
+      "denied_title": "没有权限",
+      "denied_body": "你的角色「{{role}}」看不到{{area}}。需要时请找本殿管理员。"
+    },
+    "push": {
+      "lock": "有 {{n}} 件待你处理"
+    },
+    "me": {
+      "push": "推送",
+      "profile": "个人信息",
+      "name": "姓名",
+      "role": "角色",
+      "hall": "所属殿",
+      "mfa": "两步验证",
+      "mfa_on": "已开启",
+      "mfa_off": "未开启",
+      "mfa_required_off": "必须开启 · 尚未设置",
+      "mfa_note": "开启和管理请在官员台进行。",
+      "language": "语言",
+      "theme": "主题",
+      "theme_system": "跟随系统",
+      "theme_light": "浅色",
+      "theme_dark": "深色",
+      "push_on": "已开启",
+      "push_off": "已关闭",
+      "push_note": "锁屏只写有几件待办。",
+      "push_denied": "系统已关闭通知。请先在系统设置里放行。",
+      "push_unavailable": "推送暂未启用。",
+      "push_failed": "没能开启推送，稍后再试。",
+      "about": "关于",
+      "version": "版本 {{version}}",
+      "logout": "退出登录",
+      "logout_title": "退出登录？这台设备将不再收到推送。",
+      "logout_ok": "退出"
+    },
+    "back": "返回",
+    "areas": {
+      "todo": "待办",
+      "queue": "审判",
+      "search": "查询",
+      "notices": "通知"
+    },
+    "kinds": {
+      "approval": "审批节点",
+      "reassignment": "改派请求",
+      "cooldown": "缩短冷却申请",
+      "rebirth": "转生申请"
+    },
+    "notices": {
+      "empty_title": "没有通知",
+      "empty_body": "新的通知会出现在这里。"
+    },
+    "login": {
+      "username": "用户名",
+      "password": "密码",
+      "submit": "登录",
+      "hall_title": "选择殿",
+      "hall_body": "这个账号在多个殿任职，请选择要进入的殿。",
+      "reasons": {
+        "bad_credentials": "用户名或密码不对",
+        "locked": "尝试次数过多，请稍后再试",
+        "network": "网络错误",
+        "other": "没能登录，请稍后再试"
+      }
+    },
+    "mfa": {
+      "title": "两步验证",
+      "body": "输入验证器 App 上的 6 位动态码。",
+      "recovery_body": "输入一个还没用过的恢复码。",
+      "code_label": "动态码",
+      "recovery_label": "恢复码",
+      "remember": "在此设备上 30 天内不再询问",
+      "submit": "验证",
+      "use_recovery": "改用恢复码",
+      "use_code": "改用动态码",
+      "reasons": {
+        "wrong": "动态码不对",
+        "expired": "这次登录已超时，请重新登录",
+        "locked": "尝试次数过多，请稍后再试",
+        "network": "网络错误",
+        "other": "没能验证，请稍后再试"
+      }
+    },
+    "banner": {
+      "mfa_required": "你的角色必须使用两步验证，但还没有设置。请到官员台完成设置。"
+    },
+    "cosign": {
+      "search": "搜索姓名或用户名",
+      "empty": "没有可选的人",
+      "confirm": "确认加签",
+      "no_endpoint": "提交加签的功能还没开通，请先在官员台加签。"
     }
   }
 }
