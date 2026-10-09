@@ -42,7 +42,7 @@
       [
         "expo-notifications",
         {
-          "icon": "./assets/notification-icon.png",
+          "icon": "./assets/ic_stat_officer.png",
           "color": "#181A17"
         }
       ]
