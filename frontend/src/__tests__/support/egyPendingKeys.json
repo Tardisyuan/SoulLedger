@@ -1,6 +1,7 @@
 [
- "officer_app.cosign.rules",
- "officer_app.login.reasons.other",
- "officer_app.mfa.reasons.other",
- "officer_app.queue.claim_failed"
+  "audit.resource_tenant",
+  "officer_app.cosign.rules",
+  "officer_app.login.reasons.other",
+  "officer_app.mfa.reasons.other",
+  "officer_app.queue.claim_failed"
 ]
