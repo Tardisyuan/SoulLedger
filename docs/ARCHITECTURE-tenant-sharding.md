@@ -278,9 +278,30 @@ RLS 能解决的问题。若用户坚持「终点就是 (c)」,上表只是定�
 | G6 | **ADMIN 汇总等价测试**:分库后全局概览 = 分库前同一份数据的概览 | 无 | 夹具:同一份数据装进单库与多库,对拍 |
 | G7 | **影子读 / 双写对账工具** | 无 | 见 4.2 |
 
+**2026-10-09 已落地(单库上就能做的三道;G3、G4、G6、G7 仍待,因为要多库才有意义):**
+
+- **G1 完成** —— `backend/tests/test_fk_inventory_across_tenants.py`,清单 `tests/tenancy_fk_inventory.py`。
+  从 `apps.get_models()` 推导,80 个应用模型(排除内置),其中 39 个带租户列。钉住 **198 条边**
+  (44 条租户外键列、47 条指向 `User` 的非审计外键、49 条「租户内模型 → 租户内模型」即**可能跨租户**的外键、
+  7 条租户内 → 无租户列、21 条无租户列 → 租户内父表、28 条无租户列之间、2 条 M2M),外加 `AuditUserFields`
+  的 40 个模型(每个 3 列,共 120 列,按模型清单钉住)。每条有一行理由;新增、消失、类别变化(给模型加 / 去租户列)都红并点名。
+- **G2 完成** —— `backend/tests/test_unscoped_query_sites_are_declared.py`,清单 `tests/tenancy_unscoped_sites.py`。
+  AST 扫 `apps/` 与 `config/` 非测试代码里的 `X.all_objects` / `._base_manager` / `._default_manager` / `Tenant.objects`。
+  **实测 212 处使用,落在 192 个(文件, 函数, 表达式)键上**(「未量」到此为止;上面 `dispatch/services.py` 那类锁行只是其中一种)。
+  每键一个标签加理由:PK 38、FANOUT 34、LOCK 33、FILTERED 28、CROSS 25、CLI 21、CODE 7、GLOBAL 6。
+  清单里没有的新用法红、清单里有而代码里没了的也红,次数变了也红。**不扫 `Model.objects`**:`TenantManager` 只滤软删,
+  它同样不按租户过滤,但那是整个代码库的每一条查询,归 `scope_to_tenant` 与视图契约测试管。
+- **G5 部分完成(单库内的部分)** —— `backend/tests/test_global_uniqueness_inventory.py`,清单 `tests/tenancy_global_uniqueness.py`。
+  推导出全部 72 个唯一键:**20 个 GLOBAL_VALUE**(`soul_code`、`case_number`、`username`、邮箱、`Tenant.code`、`Realm.realm_code`、
+  `Organization.code`、API key 哈希、各类 token、Matrix 标识、死亡同步的 `(source_system, idempotency_key)` 等)、
+  46 个 PER_PARENT(每灵魂一条之类,靠父键全局唯一与同库放置成立)、6 个 PER_TENANT。键消失或类别变化都红。
+  六个点名的值另有专项断言(`unique=True`、邮箱是 `Lower(email)` 且不含租户、`case_number` 发号器按「前缀-年」而不是租户计数、
+  `soul_code` 生成器遇碰撞重试且只写空值),并有两个真写库的测试(两个租户不能同名 / 同邮箱;共用前缀的两个租户发不出同一个案号)。
+  **「跨库证明」(号段或登记表)仍是分库时才有的工作,这里只保证不会静默丢掉一个单库内的保证。**
+
 **G2 是最大的缺口:** 契约测试守的是「viewset 过 `scope_to_tenant`」,而 service、任务、信号里的 `all_objects` 查询没有守卫。
 分库后这些全都要带路由,而现在没人知道有多少 —— 先用 grep 量一遍(本稿 `Tenant.objects` / `all_objects` 在 `apps/` 里的直取点数
-**未量**,第一步就是量)。
+当时未量;2026-10-09 已量为 212 处,见上)。
 
 ### 4.2 迁移路径(分阶段,每阶段可停)
 
