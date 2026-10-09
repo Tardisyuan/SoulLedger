@@ -17,5 +17,6 @@ Judgment queue (sidebar: "Judgment Queue"). The "Pending" tab splits open cases 
 - "Claimed by others": read-only for you; an officer with the reassign permission can move it with "Reassign…".
 - "Deferred": set aside with "Defer", which requires a reason.
 Filters: court, civilization, sort (waiting longest / newest), search. Batch actions apply to every selected case or to none. When nobody can take a case: if the "Reassign…" layer lists nobody but you, it shows "Ask an administrator to reassign", which notifies the administrators of the case's hall. Opening the reassign layer needs the reassign permission; the request itself is checked by the server against the judgment execute permission only, not the reassign permission. The same case can be asked about only once in a short while.
+The officer app's "Judgment" tab can claim and read cases and also write review comments and read others' (length-capped; a comment changes nothing about the case, and concluded cases accept them). Verdicts and seals are only at the officer desk.
 A case page holds the verdict actions (they need the judgment execute permission). The "Corpus" page is for looking up statutes and copying a citation into a verdict.
 For how many cases are in each group right now, use the judgment_queue_counts tool; the answer names no souls, so open the queue to see them.
