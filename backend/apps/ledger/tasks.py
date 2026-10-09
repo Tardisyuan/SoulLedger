@@ -8,8 +8,12 @@ nothing answers to, silently. Renaming these is therefore a data change, not
 just a code change; ledger/migrations/0001 rewrites the PeriodicTask rows that
 setup_ledger_tasks wrote.
 """
+import logging
+
 from celery import shared_task
 from django.utils import timezone
+
+logger = logging.getLogger(__name__)
 
 
 @shared_task(name="ledger.recalculate_all")
@@ -55,10 +59,20 @@ def recalculate_tenant_ledgers(tenant_id: str):
     set_current_tenant(tenant)
     try:
         updated = 0
+        failed = []
         for soul in Soul.objects.filter(tenant_id=tenant_id).iterator(chunk_size=500):
-            LedgerService.recalculate_soul_ledger(soul)
+            # A soul whose recalculation fails (today: its KARMA_RECALCULATED event could not be written, which
+            # rolls that soul's new scores back) is logged with the original exception, counted and reported;
+            # the other souls still run, and the next run retries it.
+            try:
+                LedgerService.recalculate_soul_ledger(soul)
+            except Exception:
+                logger.exception("ledger recalculation: soul %s of tenant %s failed", soul.pk, tenant.code)
+                failed.append(str(soul.pk))
+                continue
             updated += 1
-        return {"tenant": tenant.code, "updated": updated, "timestamp": timezone.now().isoformat()}
+        return {"tenant": tenant.code, "updated": updated, "failed": failed,
+                "timestamp": timezone.now().isoformat()}
     finally:
         clear_current_tenant()
 

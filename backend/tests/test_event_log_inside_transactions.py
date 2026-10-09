@@ -1,40 +1,27 @@
-"""`EventService.log*` (a `SoulEvent` row written through the event bus) called inside a business transaction.
+"""A `SoulEvent` row is part of the business record: if it cannot be written, the business write rolls back and
+the caller gets the REAL error (the failed insert), not a later `TransactionManagementError`.
 
-Companion to `test_dispatch_notifications_after_commit.py` (`8e3f33f7`), which proved the same defect for
-`EventService.notify_user`. This file does NOT change production code: it injects a failed `SoulEvent` INSERT
-into every distinct call site and records what the caller observes.
+History: `8e3f33f7` proved that `EventService.notify_user` inside a business transaction was defective; this file
+began as the same experiment for `EventService.log*` and found 17 of 51 (path, context) cells silently losing the
+business write while the function reported success (xfail(strict) in `dddee9e9`). The decision (user, 2026-10-10)
+was fail-loud, and these cells now pin it.
 
-ROOT CAUSE (one, shared by every path below)
-    `AuditHandler.handle` writes the row with `SoulEvent.objects.create(...)` inside `except Exception: log`.
-    Django's `Model.save_base` runs the INSERT under `mark_for_rollback_on_error`, which -- when a transaction is
-    open -- flags it `needs_rollback` BEFORE the handler's `except` swallows the error. So the bus reports
-    "handled", and the nearest enclosing `atomic()`:
-      * has a savepoint (an inner `atomic()`): exits by rolling back to it, silently, clears the flag, and the
-        function carries on and returns success  ->  the inner block's business writes are GONE   (SILENT_LOSS)
-      * is the outermost block the call sits in (the caller's own `atomic()`, or `transaction.atomic()` around a
-        whole request): the next query raises `TransactionManagementError`, and if there is no next query the
-        block exit rolls everything back without a word.
-    With no transaction open at all (autocommit) the flag is never set and only the event row is lost (SAFE).
+Mechanism that made it silent: `AuditHandler` swallowed the exception and the registry swallowed it again, but
+`Model.save_base` had already flagged the transaction `needs_rollback`, so the nearest enclosing `atomic()` rolled
+back silently. Fix: `DomainEventHandler.propagate_errors` (True only for `AuditHandler`); the registry runs such
+handlers first and re-raises their exception; and every call site now writes the event INSIDE the transaction of
+the write it describes (so "autocommit" callers roll back too).
 
-HOW EACH PATH IS OBSERVED -- three contexts, because the answer depends on who holds the transaction
-    bare            the service called with no transaction open (autocommit), as a view does today.
-    wrapped         called inside a caller's `with transaction.atomic():`, nothing queried afterwards.
-    wrapped_probe   same, and the caller then runs one more query (the usual "next thing a caller does").
-    The module is `transaction=True` so "bare" really is autocommit (inside `django_db`'s outer transaction there
-    is no autocommit to observe).
+Each path is observed in three contexts, because the answer used to depend on who held the transaction:
+    bare            the service called with no transaction open (autocommit), as a view does.
+    wrapped         called inside a caller's `with transaction.atomic():`.
+    wrapped_probe   same, and the caller then runs one more query.
+The module is `transaction=True` so "bare" really is autocommit.
 
-OUTCOME of one (path, context)
-    SAFE         no error reached the caller and the business write is in the database
-    SILENT_LOSS  no error reached the caller, the function reported success, the business write is NOT there
-    LOUD_FAIL    an exception reached the caller (so it knows; the whole write rolled back, consistently)
-
-Two tests per cell:
-  * `test_current_behaviour_is_as_documented`  -- pins what happens today (green; goes red when behaviour changes,
-    which is the cue to re-read the table in this docstring's sibling, the commit message).
-  * `test_a_failed_event_row_never_loses_the_business_write_silently` -- the property we want. The cells that
-    are SILENT_LOSS today are `xfail(strict=True)`: the suite stays green now and flips RED (XPASS) the day a
-    fix lands, which forces whoever fixes it to delete the mark and update EXPECTED. Kept in the default run on
-    purpose: an xfail that is never executed is the "check that can never fire" this repo keeps finding.
+Every cell below must be LOUD_FAIL: the original injected `OperationalError` reaches the caller, the business
+write is not in the database, and no event row exists. Two cells are not in the grid and have their own tests:
+`expire_for_tenant` and the ledger recalculation task (batch loops: one row's failure is logged, counted in the
+result and does not stop the batch) and WORKFLOW_CREATED (already `transaction.on_commit`, pinned as it was).
 """
 import datetime
 from dataclasses import dataclass
@@ -89,6 +76,10 @@ class Seen:
     error: Exception | None
     persisted: bool      # the business write, read back outside any transaction
     event_rows: int      # SoulEvent rows of the injected type that exist afterwards
+
+    @property
+    def cause_is_the_failed_insert(self):
+        return isinstance(self.error, OperationalError) and "injected" in str(self.error)
 
     @property
     def outcome(self):
@@ -235,43 +226,12 @@ PATHS = {
     "rebirth_submit/REBIRTH_APPLICATION_SUBMITTED": _rebirth_submit,
 }
 
-# What happens TODAY, measured on SQLite with the injected failure above. Columns: bare / wrapped / wrapped_probe.
-EXPECTED = {}
-
-
-def _row(name, bare, wrapped, probe):
-    for ctx, outcome in zip(CONTEXTS, (bare, wrapped, probe), strict=True):
-        EXPECTED[(name, ctx)] = outcome
-
-
-S, L, F = SAFE, SILENT_LOSS, LOUD_FAIL
-# The log call sits INSIDE an inner atomic() (or in a loop of them): the savepoint rolls back silently in every
-# context, including a plain autocommit call. These are the dangerous ones.
-_row("conclude_amendment/JUDGMENT_CONCLUDED", L, L, L)      # judgment/services.py:271; conclusion + plan advance lost
-_row("die/SOUL_ACCOUNT_CREATED", L, L, L)                   # soul_accounts/services.py:155; soul is JUDGING, no account
-_row("expire_for_tenant/DISPOSITION_EXPIRED", L, L, L)      # disposition/expiry.py:201; reports expired=1, nothing expired
-# The log call sits after the function's own atomic(), with no transaction of its own around it: SAFE under
-# autocommit, but the failure lands on whatever transaction the CALLER holds (lost silently, or next query raises).
-_row("conclude/JUDGMENT_CONCLUDED", S, L, F)                # judgment/services.py:311
-_row("transition_to/STATE_CHANGED", S, L, F)                # souls/models.py:652
-_row("soulrecord_create/KARMA_RECALCULATED", S, L, F)       # ledger/services.py:290, via SoulRecord.save
-_row("soul_create/SOUL_CREATED", S, L, F)                   # souls/models.py:372, in Soul.save
-_row("correct_settlement/SETTLEMENT_CORRECTED", S, L, F)    # souls/models.py:694
-_row("reincarnation_execute/REINCARNATION_TRIGGERED", S, L, F)  # reincarnation/services.py:83
-_row("complete_rebirth/REINCARNATION_COMPLETED", S, L, F)   # reincarnation/services.py:244
-_row("rebirth_submit/REBIRTH_APPLICATION_SUBMITTED", S, L, F)  # soul_accounts/rebirth.py:217
-# The log call sits inside an outer atomic() that still has queries to run: they raise TransactionManagementError,
-# the whole write rolls back, the caller is told (a 500, but nothing half-written).
-_row("conclude/DISPOSITION_CREATED", F, F, F)               # disposition/services.py:192 inside conclude's atomic
-_row("conclude/STATE_CHANGED", F, F, F)                     # transition_to inside conclude's atomic
-_row("die/STATE_CHANGED", F, F, F)                          # transition_to inside die()'s atomic
-_row("complete_rebirth/STATE_CHANGED", F, F, F)             # transition_to inside complete_rebirth's atomic
-_row("complete_rebirth/SOUL_ACCOUNT_RETIRED", F, F, F)      # soul_accounts/services.py:430 inside the same atomic
-# Already deferred with transaction.on_commit (workflow/services.py:659, `8e3f33f7`): a failed row costs the row only.
-_row("conclude+workflow/WORKFLOW_CREATED", S, S, S)
-
-
-CELLS = [(name, ctx) for name in PATHS for ctx in CONTEXTS]
+# WORKFLOW_CREATED is announced by `transaction.on_commit` (workflow/services.py:659, `8e3f33f7`), not inside the
+# business transaction. Pinned as it was: see the test below for what it does now that the audit insert raises.
+OUTSIDE_THE_GRID = {"conclude+workflow/WORKFLOW_CREATED", "expire_for_tenant/DISPOSITION_EXPIRED",
+                    "die/SOUL_ACCOUNT_CREATED"}
+GRID = [name for name in PATHS if name not in OUTSIDE_THE_GRID]
+CELLS = [(name, ctx) for name in GRID for ctx in CONTEXTS]
 
 
 def _id(cell):
@@ -279,26 +239,90 @@ def _id(cell):
 
 
 @pytest.mark.parametrize("cell", CELLS, ids=_id)
-def test_current_behaviour_is_as_documented(cell):
+def test_a_failed_event_row_rolls_the_business_write_back_and_raises_the_real_error(cell):
     name, ctx = cell
     seen = observe(PATHS[name], ctx)
     assert seen.hits, "the injected INSERT was never attempted, so this proved nothing"
-    summary = (f"{seen.outcome} (error={type(seen.error).__name__}, persisted={seen.persisted}, "
-               f"event_rows={seen.event_rows}, returned={seen.returned!r:.40})")
-    assert seen.outcome == EXPECTED.get(cell, "UNMEASURED"), f"{name} @ {ctx}: {summary}"
+    assert seen.outcome == LOUD_FAIL, f"{name} @ {ctx}: {seen.outcome} (persisted={seen.persisted})"
+    assert seen.cause_is_the_failed_insert, f"{name} @ {ctx}: caller saw {seen.error!r}, not the failed insert"
+    assert not seen.persisted, f"{name} @ {ctx}: the business write survived a failed event row"
+    assert seen.event_rows == 0
 
 
-def _silent(cell):
-    return pytest.param(cell, id=_id(cell), marks=pytest.mark.xfail(
-        strict=True, reason="SILENT_LOSS: a failed SoulEvent INSERT rolls back the surrounding atomic() "
-                            "silently while the function reports success"))
+@pytest.mark.parametrize("ctx", CONTEXTS)
+def test_a_failed_account_event_undoes_the_account_but_not_the_death_by_design(ctx, caplog):
+    """`provision_on_death` (soul_accounts/services.py) deliberately does NOT let an account-opening failure roll
+    the death back: "death is a fact, the account is derived, `backfill_soul_accounts` fills the gap". So the
+    account and its SOUL_ACCOUNT_CREATED event roll back TOGETHER in a savepoint (consistent, not silent: it is
+    logged at ERROR with the original exception) and the soul is still JUDGING. This is the one place the
+    fail-loud rule does not reach the caller; it was a documented decision before this change."""
+    path = PATHS["die/SOUL_ACCOUNT_CREATED"]
+    seen = observe(path, ctx)
+    assert seen.hits and seen.error is None
+    assert not seen.persisted and seen.event_rows == 0          # no account, no event
+    assert isinstance(seen.returned, Judgment)                   # the death stands
+    assert any(r.exc_info and isinstance(r.exc_info[1], OperationalError) and "provisioning" in r.getMessage()
+               for r in caplog.records), "swallowed without logging the original exception"
 
 
-@pytest.mark.parametrize("cell", [_silent(c) if EXPECTED.get(c) == SILENT_LOSS else pytest.param(c, id=_id(c))
-                                  for c in CELLS])
-def test_a_failed_event_row_never_loses_the_business_write_silently(cell):
-    """The property: either the business write survives, or the caller is told. SILENT_LOSS violates it."""
-    name, ctx = cell
-    seen = observe(PATHS[name], ctx)
+def test_the_workflow_created_event_is_still_after_commit():
+    """`on_commit` callbacks run after the business transaction has committed, so the business write stands
+    (persisted) and the failed audit insert now surfaces from the commit instead of vanishing into a log line.
+    Not rolled back: the event is announced after the fact. Left as the user asked; see the report."""
+    seen = observe(PATHS["conclude+workflow/WORKFLOW_CREATED"], BARE)
     assert seen.hits
-    assert seen.outcome != SILENT_LOSS, f"{name} @ {ctx}: function returned {seen.returned!r} but the write is gone"
+    assert seen.persisted
+    assert seen.cause_is_the_failed_insert
+
+
+def test_expiry_logs_counts_and_continues_when_one_row_event_cannot_be_written(caplog):
+    run, persisted, event_type = _expiry()
+    hits = []
+    with _fail_event_inserts(event_type, hits):
+        result = run()
+    assert hits
+    assert not persisted(), "the row was marked expired although its event row could not be written"
+    assert result["expired"] == 0 and len(result["failed"]) == 1
+    assert any("left unexpired" in r.getMessage() and r.exc_info and isinstance(r.exc_info[1], OperationalError)
+               for r in caplog.records), "the failure was not logged with the original exception"
+
+
+def test_expiry_does_not_let_one_failed_row_stop_the_others():
+    run, persisted, event_type = _expiry()
+    tenant = _cn()
+    soul = Soul.objects.create(name="期满乙", tenant=tenant, birth_year=1900, death_year=1950)
+    Soul.all_objects.filter(pk=soul.pk).update(current_state=SoulState.REINCARNATING)
+    Disposition.objects.create(soul=soul, tenant=tenant, is_executed=True, executed_at=timezone.now(),
+                                        sentence_years=10, term_start_year=2000, term_start_month=6,
+                                        term_start_day=15)
+    calls = []
+    table = SoulEvent._meta.db_table
+
+    def fail_first(execute, sql, params, many, context):
+        if sql.lstrip().upper().startswith("INSERT INTO") and f'"{table}"' in sql and event_type in (params or ()):
+            calls.append(1)
+            if len(calls) == 1:
+                raise OperationalError("injected: soulevent insert failed")
+        return execute(sql, params, many, context)
+
+    with connection.execute_wrapper(fail_first):
+        result = run()
+    assert (result["expired"], len(result["failed"])) == (1, 1)
+    assert Disposition.all_objects.filter(expired_at__isnull=False).count() == 1
+
+
+def test_the_ledger_task_logs_counts_and_continues_when_one_soul_cannot_be_recalculated(caplog):
+    from apps.ledger.tasks import recalculate_tenant_ledgers
+
+    tenant = _cn()
+    soul = Soul.objects.create(name="功过乙", tenant=tenant)
+    SoulRecord.objects.create(soul=soul, record_type="MERIT", civilization="CHINESE", description="善举",
+                              weight=10, event_year=2000)
+    Soul.all_objects.filter(pk=soul.pk).update(merit_score=0)
+    hits = []
+    with _fail_event_inserts("KARMA_RECALCULATED", hits):
+        result = recalculate_tenant_ledgers(str(tenant.pk))
+    assert hits
+    assert result["updated"] == 0 and result["failed"] == [str(soul.pk)]
+    assert Soul.all_objects.get(pk=soul.pk).merit_score == 0, "new scores survived a failed event row"
+    assert any(r.exc_info and isinstance(r.exc_info[1], OperationalError) for r in caplog.records)

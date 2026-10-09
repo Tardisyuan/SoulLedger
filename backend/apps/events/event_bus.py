@@ -99,9 +99,15 @@ class DomainEventHandler(ABC):
     whether to act based on its own domain/filter logic.
     """
 
+    # Best-effort by default: the registry logs and swallows what `handle` raises. A handler whose write is
+    # part of the business record (today only `AuditHandler`, the `SoulEvent` row) sets this True, and the
+    # registry then lets its exception reach the caller of `EventService.log*` so the surrounding
+    # transaction rolls back and the caller sees the real cause.
+    propagate_errors: bool = False
+
     @abstractmethod
     def handle(self, envelope: EventEnvelope) -> None:
-        """Process the event. Implementations MUST NOT raise."""
+        """Process the event. Best-effort handlers MUST NOT raise; `propagate_errors` handlers should."""
 
     def should_handle(self, envelope: EventEnvelope) -> bool:
         """

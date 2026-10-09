@@ -21,11 +21,14 @@
 """
 import calendar
 import datetime
+import logging
 
 from django.db import transaction
 from django.db.models import BigIntegerField, Case, F, Q, Value, When
 from django.db.models.functions import Cast, Coalesce, ExtractDay, ExtractMonth, ExtractYear
 from django.utils import timezone
+
+logger = logging.getLogger(__name__)
 
 #: 粗筛读候选时 `.iterator()` 的分块大小。
 EXPIRY_CHUNK = 500
@@ -186,19 +189,28 @@ def expire_for_tenant(tenant, today: datetime.date | None = None) -> dict:
     ]
 
     expired = 0
+    failed = []
     for pk in due:
-        with transaction.atomic():
-            row = (
-                Disposition.objects.select_for_update(of=("self",))
-                .select_related("soul", "destination_realm")
-                .filter(pk=pk, tenant_id=tenant.pk, expired_at__isnull=True)
-                .first()
-            )
-            if row is None:
-                continue
-            row.expired_at = now
-            row.save(update_fields=["expired_at"])
-            log_disposition_expired(row)
-            expired += 1
+        # One row's failure (today: its DISPOSITION_EXPIRED event could not be written, which rolls the row's
+        # expiry back with it) must neither pass silently nor stop the other rows. It is logged with the
+        # original exception, counted, and reported in the result; the row stays due and is retried by the next
+        # run (idempotent).
+        try:
+            with transaction.atomic():
+                row = (
+                    Disposition.objects.select_for_update(of=("self",))
+                    .select_related("soul", "destination_realm")
+                    .filter(pk=pk, tenant_id=tenant.pk, expired_at__isnull=True)
+                    .first()
+                )
+                if row is None:
+                    continue
+                row.expired_at = now
+                row.save(update_fields=["expired_at"])
+                log_disposition_expired(row)
+                expired += 1
+        except Exception:
+            logger.exception("disposition expiry: row %s of tenant %s left unexpired", pk, tenant.code)
+            failed.append(str(pk))
 
-    return {"tenant": tenant.code, "expired": expired, "today": today.isoformat()}
+    return {"tenant": tenant.code, "expired": expired, "failed": failed, "today": today.isoformat()}
