@@ -34,6 +34,12 @@ def is_global_admin(user) -> bool:
     return is_tenant_exempt(user) and getattr(user, "tenant_id", None) is None
 
 
+def _hall_scope(qs, request):
+    """The one scoping rule of this module: only a global admin reads across halls; a hall-bound ADMIN
+    and everyone else see their own hall's rows (nothing at all when no hall resolves)."""
+    return scope_to_tenant(qs, request, admin_bypass=is_global_admin(request.user))
+
+
 class AuditLogFilter(filters.FilterSet):
     """`resource` 精确匹配,只有一个别名:`tenant`(审计页的「殿」)同时含每殿助手开关的那几行 ——
     它们的 resource 是 `assistant_config`、resource_id 是 `tenant:<殿码>`(soul_assist/admin_views.py)。
@@ -277,10 +283,9 @@ class AuditLogViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
         GET /api/v1/audit-logs/resources/
         Returns all resource types that have audit logs (tenant-scoped).
         """
-        # A non-ADMIN with no resolvable tenant now gets an empty queryset
-        # rather than an early `Response([])`. Same response body, one less
-        # copy of the idiom — see apps/core/tenant.py.
-        qs = scope_to_tenant(AuditLog.objects.all(), request)
+        # A user with no resolvable hall gets an empty queryset rather than an early
+        # `Response([])`. Same response body, one less copy of the idiom -- see apps/core/tenant.py.
+        qs = _hall_scope(AuditLog.objects.all(), request)
         resources = (
             qs.values_list("resource", flat=True)
             .distinct()
@@ -304,10 +309,9 @@ class AuditLogViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
 
         from django.db.models import Count
 
-        # Filter by tenant for non-admin users. Unreachable today — the 403
-        # above already turned every non-ADMIN away — but kept so this stops
-        # being a leak the moment that guard is relaxed to a codename check.
-        qs = scope_to_tenant(AuditLog.objects.all(), request)
+        # The 403 above turns every non-ADMIN away; among ADMINs only the global one (no hall) counts
+        # every hall, a hall-bound ADMIN counts their own.
+        qs = _hall_scope(AuditLog.objects.all(), request)
 
         action_stats = (
             qs.values("action")
@@ -341,15 +345,7 @@ class AuditLogViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
             end_date: 结束日期 (YYYY-MM-DD)
             limit: 返回条数 (默认 50,上限 TIMELINE_MAX_LIMIT;非正整数 400)
         """
-        qs = AuditLog.objects.select_related("user").all()
-
-        # Tenant filter
-        if getattr(request.user, 'role', None) != 'ADMIN':
-            tenant = getattr(request, 'tenant', None)
-            if tenant:
-                qs = qs.filter(tenant=tenant)
-            else:
-                return Response([])
+        qs = _hall_scope(AuditLog.objects.select_related("user").all(), request)
 
         # Permission-related resource types. LOWERCASE: every write path derives
         # `resource` from `_meta.label_lower` and migration 0009 folded the old
@@ -399,15 +395,7 @@ class AuditLogViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
         GET /api/v1/audit-logs/trace/{trace_id}/
         按 trace_id 查询关联操作 — 查看同一请求内的所有变更。
         """
-        qs = AuditLog.objects.select_related("user").filter(trace_id=trace_id)
-
-        # Tenant filter
-        if getattr(request.user, 'role', None) != 'ADMIN':
-            tenant = getattr(request, 'tenant', None)
-            if tenant:
-                qs = qs.filter(tenant=tenant)
-            else:
-                return Response([])
+        qs = _hall_scope(AuditLog.objects.select_related("user").filter(trace_id=trace_id), request)
 
         qs = qs.order_by('timestamp')
         serializer = AuditLogSerializer(qs, many=True)
