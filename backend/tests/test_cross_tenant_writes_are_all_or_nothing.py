@@ -32,13 +32,13 @@ pytestmark = pytest.mark.django_db
 _WRITE = re.compile(r'^\s*(?:INSERT\s+INTO|UPDATE|DELETE\s+FROM)\s+"?(\w+)"?', re.I)
 
 
-class Injected(Exception):
+class InjectedError(Exception):
     pass
 
 
 #: A handler that swallows the injected error (the event bus does, for notifications) leaves the enclosing
 #: transaction marked for rollback, so the NEXT query raises this instead -- still a failure, still all-or-nothing.
-FAILURES = (Injected, TransactionManagementError)
+FAILURES = (InjectedError, TransactionManagementError)
 
 
 def _snapshot():
@@ -51,7 +51,7 @@ INJECTED_FROM_BUS = []
 
 
 def _writes_during(action, *, fail_at=None):
-    """Run `action`; return the tables written. Raise `Injected` just before write number `fail_at`."""
+    """Run `action`; return the tables written. Raise `InjectedError` just before write number `fail_at`."""
     seen = []
 
     def wrapper(execute, sql, params, many, context):
@@ -60,7 +60,7 @@ def _writes_during(action, *, fail_at=None):
             seen.append(found.group(1))
             if fail_at == len(seen):
                 INJECTED_FROM_BUS[:] = [any("apps/events/" in f.filename for f in traceback.extract_stack())]
-                raise Injected(f"write {fail_at} ({found.group(1)})")
+                raise InjectedError(f"write {fail_at} ({found.group(1)})")
         return execute(sql, params, many, context)
 
     with connection.execute_wrapper(wrapper):
