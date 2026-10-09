@@ -130,18 +130,9 @@ def _run_every_step(soul_pk, action, expected_tables, capture):
     return anomalies
 
 
-#: DEFECT, reported and not fixed here. Swallowed event-bus failures that leave a half-applied state (see the
-#: note above). Keyed by path -> [(write number, table)]. Empty once the defect is fixed; the test goes
-#: red the moment this list and reality differ in either direction.
-KNOWN_PARTIAL = {
-    # The last write of `SentencePlanService.advance` is the plan-completed notification. Its failure is swallowed
-    # by the bus but marks the transaction for rollback; the first `atomic()` to exit is `advance`'s own, so it
-    # silently rolls back just the completion (soul stays DISPOSED, plan stays ACTIVE) while the soul has already
-    # been sent home and nothing is raised.
-    "return_manual": [(14, "notifications_usernotification")],
-    "return_auto": [(15, "notifications_usernotification")],
-    "reopen_conclude": [(18, "notifications_usernotification")],
-}
+#: Swallowed event-bus failures that leave a half-applied state, keyed by path -> [(write number, table)].
+#: Empty since plan notifications are sent after commit (`sentence_plan.services.notify_judges`).
+KNOWN_PARTIAL = {}
 
 
 def _guard(name, *args):
@@ -207,20 +198,22 @@ def test_the_automatic_return_when_a_stop_is_served_is_all_or_nothing(cn, eg, dj
     _guard("return_auto", soul.pk, lambda: plan.serve(soul, p, 2), TABLES["return_auto"], django_capture_on_commit_callbacks)
 
 
-# Tables each path writes inside its transaction, measured by the dry run (audit rows come later, on_commit).
+# Tables each path writes inside its transaction, measured by the dry run (audit rows and notifications come
+# later, on_commit, so they are not steps of the path). The joint add/conclude notifications are NOT
+# `notify_judges`: they still run in the transaction, and the guard shows their failure is clean (see report).
 _EXEC = {"dispatch_dispatchrecord", "events_soulevent", "realms_soulpathentry", "souls_soul"}
-_PLAN = {"sentence_plan_sentencenode", "notifications_usernotification"}
+_PLAN = {"sentence_plan_sentencenode"}
 TABLES = {
     "execute": _EXEC,
     "execute_plan": _EXEC | _PLAN | {"disposition_disposition"},
     "return_manual": _EXEC | _PLAN | {"audit_auditlog", "sentence_plan_sentenceplan"},
     "return_auto": _EXEC | _PLAN | {"audit_auditlog", "sentence_plan_sentenceplan", "disposition_disposition"},
     "joint_add": {"dispatch_crosstenantjudgmentparticipant", "notifications_usernotification"},
-    "joint_submit": {"dispatch_crosstenantjudgmentparticipant", "notifications_usernotification"},
+    "joint_submit": {"dispatch_crosstenantjudgmentparticipant"},
     "joint_activate": {"dispatch_crosstenantjudgment"},
     "joint_conclude": {"dispatch_crosstenantjudgment", "notifications_usernotification"},
     "reopen_decide": {"events_soulevent", "judgment_judgment", "judgment_judgmentcasecounter",
-                      "notifications_usernotification", "sentence_plan_sentenceplan",
+                      "sentence_plan_sentenceplan",
                       "sentence_plan_sentenceplanrequest"},
     "reopen_conclude": _EXEC | _PLAN | {"audit_auditlog", "sentence_plan_sentenceplan", "disposition_disposition",
                                          "judgment_judgment"},

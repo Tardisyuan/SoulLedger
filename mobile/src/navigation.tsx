@@ -26,13 +26,14 @@ import { useColorScheme } from "react-native";
 
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 
-import { AssistProvider } from "./assist";
+import { AssistProvider, useAssist } from "./assist";
 import { AssistPanel } from "./assistPanel";
 import { ChatProvider, useChat } from "./chat";
 import { ColdStart } from "./coldStart";
 import { AppHeader, PlaqueHeader, TabBar } from "./chrome";
 import { LogoutProvider, ToastProvider } from "./feedback";
 import { useI18n } from "./i18n";
+import { soulLinks } from "./links";
 import { NetworkProvider } from "./network";
 import { useSession } from "./session";
 import { preLoginTheme, themeFor } from "./theme";
@@ -189,12 +190,13 @@ function CircleReport({ route }: NativeStackScreenProps<AppStackParams, "CircleR
 }
 
 /** 「问一问」 above the navigator, so a drawer closed mid-answer still gets its answer. */
-function AssistRoot({ profile, children }: { profile: MeProfile | null; children: ReactNode }) {
+function AssistRoot({ profile, signedIn, ready, children }: { profile: MeProfile | null; signedIn: boolean; ready: number; children: ReactNode }) {
   const chat = useChat();
   const openLetters = useCallback(() => navigationRef.navigate("Tabs", { screen: "Letters" }), []);
   return (
     <AssistProvider profile={profile} onOpenLetters={chat.availability === "not_configured" ? null : openLetters}>
       {children}
+      <LinkBridge signedIn={signedIn} ready={ready} />
       <AssistPanel />
     </AssistProvider>
   );
@@ -266,6 +268,28 @@ function PushBridge({ signedIn, ready }: { signedIn: boolean; ready: number }) {
     landOn(navigationRef.navigate, landing);
   }, [arrived, signedIn, ready]);
 
+  return null;
+}
+
+/**
+ * 语音与桌面快捷方式的链接(soulledger://life 等):只打开页面。未登录时链接留在收件箱,
+ * 登录且导航器就绪后才落地 —— 与 PushBridge 同一条规矩。信箱不可用时「书信」落到本世。
+ */
+function LinkBridge({ signedIn, ready }: { signedIn: boolean; ready: number }) {
+  const assist = useAssist();
+  const chat = useChat();
+  const open = assist?.open;
+  const lettersOff = chat.availability === "not_configured";
+  useEffect(() => {
+    if (!signedIn || !navigationRef.isReady()) return;
+    return soulLinks.subscribe((link) => {
+      if (link === "assist") {
+        landOn(navigationRef.navigate, { screen: "Life" });
+        open?.("life");
+      } else if (link === "letters" && !lettersOff) navigationRef.navigate("Tabs", { screen: "Letters" });
+      else landOn(navigationRef.navigate, { screen: link === "cooldown" ? "Applications" : "Life" });
+    });
+  }, [signedIn, ready, open, lettersOff]);
   return null;
 }
 
@@ -414,7 +438,7 @@ export function RootNavigator() {
       }
       body = (
         <ChatProvider account={state.status === "signedIn" ? state.profile.soul_code : null}>
-          <AssistRoot profile={state.status === "signedIn" ? state.profile : null}>
+          <AssistRoot profile={state.status === "signedIn" ? state.profile : null} signedIn={state.status === "signedIn"} ready={ready}>
             <NavigationContainer ref={navigationRef} theme={navTheme} onReady={() => setReady((n) => n + 1)}>
               <Stack.Navigator>{screens}</Stack.Navigator>
             </NavigationContainer>

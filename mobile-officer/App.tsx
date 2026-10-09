@@ -8,6 +8,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { ColdStart } from "./src/coldStart";
+import { officerLinks } from "./src/links";
 import { PrefsProvider, usePrefs } from "./src/prefs";
 import { installNotificationHandler } from "./src/push";
 import { LoginScreen } from "./src/screens/login";
@@ -28,6 +29,7 @@ import { Shell } from "./src/shell";
 // Installed at module load, before any core module can read a store.
 installMobilePlatform();
 installNotificationHandler();
+officerLinks.install();
 // The native splash (the paper ground alone) stays until the cold start draws the same ground over it.
 void SplashScreen.preventAutoHideAsync().catch(() => {});
 
