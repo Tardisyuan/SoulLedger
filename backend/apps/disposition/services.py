@@ -540,7 +540,7 @@ class DispositionService:
             return None
         circles = [
             circle
-            for circle in Statute.all_objects.filter(code__in=codes).values_list(
+            for circle in Statute.all_objects.filter(tenant_id=soul.tenant_id, code__in=codes).values_list(
                 "payload_json__circle", flat=True
             )
             if isinstance(circle, int)
