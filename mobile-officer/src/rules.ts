@@ -12,6 +12,7 @@ import {
 } from "@soulledger/core/api/officer-app";
 import { soulAccountsApi } from "@soulledger/core/api/soul-accounts";
 import { workflowApi } from "@soulledger/core/api/workflow";
+import { CIVILIZATION_SHORT_CODES } from "@soulledger/core/config/civilizations";
 
 export const TODO_KINDS: readonly TodoKind[] = ["approval", "reassignment", "cooldown", "rebirth"];
 
@@ -220,3 +221,18 @@ export function isDenied(error: unknown): boolean {
 export const HIGHLIGHT_MS = 1200;
 /** Its peak: `ink / .07`. */
 export const HIGHLIGHT_ALPHA = 0.07;
+
+/**
+ * The hall's name for the identity band and Me: the civilization's underworld name
+ * (`plaque.realm.<civ>`, e.g. 酆都), as the web console does (`useRealm`). The tenant's
+ * `display_name` is the database's English ("Chinese Afterlife") and showed through on a
+ * Chinese screen; it stays only as the fallback for a code no civilization claims.
+ */
+export function hallLabel(
+  t: (key: string) => string,
+  tenant: { code?: string | null; display_name?: string | null } | null | undefined,
+): string | undefined {
+  const civ = tenant?.code?.split("_")[0].toLowerCase();
+  if (civ && Object.values(CIVILIZATION_SHORT_CODES).includes(civ)) return t(`plaque.realm.${civ}`);
+  return tenant?.display_name ?? undefined;
+}

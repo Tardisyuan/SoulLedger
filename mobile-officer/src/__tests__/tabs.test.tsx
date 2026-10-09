@@ -145,7 +145,13 @@ describe("the pushed row's highlight (spec §五)", () => {
 describe("the shell", () => {
   it("shows the officer's hall in the identity band and five tabs", async () => {
     renderOfficer(<Shell />);
-    expect(await screen.findByText("中国地府")).toBeTruthy();
+    // The civilization's underworld name, not the tenant's English display_name (seen on the emulator).
+    expect(await screen.findByText("酆都")).toBeTruthy();
+    expect(screen.queryByText("Chinese Afterlife")).toBeNull();
+    // Me reads the role through the bundles, not the raw code.
+    fireEvent.press(screen.getByTestId("tab-me"));
+    expect(await screen.findByText("审判者")).toBeTruthy();
+    expect(screen.queryByText("JUDGE")).toBeNull();
     for (const tab of ["todo", "queue", "search", "notices", "me"]) expect(screen.getByTestId(`tab-${tab}`)).toBeTruthy();
     expect(screen.queryByTestId("mfa-banner")).toBeNull();
   });
