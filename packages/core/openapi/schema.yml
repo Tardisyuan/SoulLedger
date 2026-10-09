@@ -18524,6 +18524,16 @@ components:
           type: string
           readOnly: true
           nullable: true
+        cosigners:
+          type: array
+          items:
+            $ref: '#/components/schemas/CosignerRow'
+          readOnly: true
+        waiting_on_cosigner:
+          allOf:
+          - $ref: '#/components/schemas/WaitingOnCosigner'
+          nullable: true
+          readOnly: true
         decided_at:
           type: string
           format: date-time
@@ -18582,6 +18592,7 @@ components:
       - approver_display_name
       - approver_username
       - branches_json
+      - cosigners
       - created_at
       - decided_at
       - decision_history
@@ -18599,6 +18610,7 @@ components:
       - timeout_hours
       - timeout_role
       - verdict
+      - waiting_on_cosigner
       - workflow
     ApprovalNodeApproverTypeEnum:
       enum:
@@ -20403,6 +20415,19 @@ components:
       - signed_at
       - user_id
       - user_name
+    CosignerRow:
+      type: object
+      properties:
+        user_id:
+          type: integer
+        name:
+          type: string
+        signed:
+          type: boolean
+      required:
+      - name
+      - signed
+      - user_id
     CrossCivilizationDecision:
       type: object
       properties:
@@ -28170,6 +28195,16 @@ components:
           type: string
           readOnly: true
           nullable: true
+        cosigners:
+          type: array
+          items:
+            $ref: '#/components/schemas/CosignerRow'
+          readOnly: true
+        waiting_on_cosigner:
+          allOf:
+          - $ref: '#/components/schemas/WaitingOnCosigner'
+          nullable: true
+          readOnly: true
         decided_at:
           type: string
           format: date-time
@@ -34789,6 +34824,17 @@ components:
           items:
             type: string
           description: 该节点接受的裁决(PASSED / CONFIRMED / FAILED / REJECTED …);空 = 不限。批准只在其中的通过类里选。
+        cosigners:
+          type: array
+          items:
+            $ref: '#/components/schemas/CosignerRow'
+          description: 审批节点与转生申请:当前节点的加签人,及各自签了没有。
+        waiting_on_cosigner:
+          allOf:
+          - $ref: '#/components/schemas/WaitingOnCosigner'
+          nullable: true
+          description: 我是指定审批人而加签人还没签完时,第一位欠签的人;此时「批准」会被 409 cosigners_pending 拒绝,App
+            据此置灰。
       required:
       - actionable
       - created_at
@@ -35902,6 +35948,16 @@ components:
         * `TENANT` - Tenant Only
         * `FOLLOWERS` - Followers Only
         * `PRIVATE` - Private
+    WaitingOnCosigner:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+      required:
+      - id
+      - name
     WebhookConfig:
       type: object
       description: |-

@@ -62,6 +62,15 @@ def blocks_approval(node, user, passed: bool) -> bool:
     return bool(passed and owes_signatures(node) and _slot(node, user) is None)
 
 
+def facts(node, user) -> dict:
+    """What a screen shows about 加签 on `node` for `user`: who was added (and whether they signed), and
+    the first signer still owed when that blocks THIS user's approval (None = approving is free)."""
+    rows = [{"user_id": e.get("user_id"), "name": e.get("user_name", ""), "signed": bool(e.get("signed_at"))}
+            for e in node.cosigners_json or []]
+    owed = next((r for r in rows if not r["signed"]), None) if blocks_approval(node, user, True) else None
+    return {"cosigners": rows, "waiting_on_cosigner": owed and {"id": owed["user_id"], "name": owed["name"]}}
+
+
 def add(node, adder, candidate) -> dict:
     """Validate and append `candidate` as a co-signer of `node`. Raises CosignRefusedError.
 

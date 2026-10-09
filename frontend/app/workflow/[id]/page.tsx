@@ -316,6 +316,11 @@ export default function WorkflowDetailPage() {
     .sort((a, b) => new Date(b.decided_at!).getTime() - new Date(a.decided_at!).getTime())[0];
   const decidedCount = sortedNodes.filter((n) => n.status !== "PENDING").length;
   const signatures = currentNode?.signatures_json ?? [];
+  // 加签: while an added signer owes a signature, a passing verdict is refused (409 cosigners_pending);
+  // a refusal never is. Greyed here with the reason beside it, as in the officer App.
+  const waitingOn = currentNode?.waiting_on_cosigner?.name ?? null;
+  const approveHeld = waitingOn !== null && (selectedVerdict === "PASSED" || selectedVerdict === "CONFIRMED");
+  const cosigners = currentNode?.cosigners ?? [];
 
   return (
     /* v3 A1 实例详情: three columns — nodes 300 · current node · info 320, gap 24.
@@ -454,6 +459,19 @@ export default function WorkflowDetailPage() {
                 ) : null}
               </div>
 
+              {/* 加签人: who the designated approver added, signed (✓) or still owed (◐). */}
+              {cosigners.length > 0 && (
+                <ul data-testid="cosigners" className="flex flex-col gap-1 text-sm text-[oklch(var(--color-ink))]">
+                  {cosigners.map((c) => (
+                    <li key={c.user_id}>
+                      <span aria-hidden="true">{c.signed ? "✓" : "◐"} </span>
+                      {c.name}
+                      {c.signed ? null : ` · ${t("officer_app.detail.cosigner_pending")}`}
+                    </li>
+                  ))}
+                </ul>
+              )}
+
               {/* 会签人: who has signed so far (`signatures_json`). Signers not yet
                   signed are not in the API, so they are not drawn. */}
               {signatures.length > 0 && (
@@ -539,9 +557,23 @@ export default function WorkflowDetailPage() {
                 />
               )}
 
+              {waitingOn !== null && (
+                <p id="wait-cosigner" data-testid="wait-cosigner" className="text-sm text-[oklch(var(--color-ink-muted))]">
+                  <span aria-hidden="true">◇ </span>
+                  {t("officer_app.detail.wait_cosigner", { name: waitingOn })}
+                </p>
+              )}
+
               <div className="flex flex-wrap items-center gap-2">
                 <RequirePermission permissions="workflow.approve">
-                  <Button type="button" variant="primary" onClick={handleApproveNode} loading={approveMutation.isPending}>
+                  <Button
+                    type="button"
+                    variant="primary"
+                    onClick={handleApproveNode}
+                    loading={approveMutation.isPending}
+                    disabled={approveHeld}
+                    aria-describedby={approveHeld ? "wait-cosigner" : undefined}
+                  >
                     {approveMutation.isPending ? t("workflow.detail.processing") : t("workflow.detail.submit_decision")}
                   </Button>
                 </RequirePermission>

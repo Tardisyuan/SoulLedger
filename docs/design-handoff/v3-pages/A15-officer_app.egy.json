@@ -3,16 +3,39 @@
     "name": "Medjat Ba · Sab",
     "back": "Wehem Er Medjat Pehwy",
     "continue_on_desk": "Em Khet Em Medjat Sab",
-    "areas": { "todo": "Nen Iri-I Djer", "queue": "Sepu Wedja", "search": "Hehy", "notices": "Sedjem Sab" },
-    "tabs": { "todo": "Nen Iri-I Djer", "queue": "Sepu Wedja", "search": "Hehy", "notices": "Sedjem Sab", "me": "Djes" },
-    "banner": { "mfa_required": "Netjer-Ek: Aq Sep Sen Nen Shu; Nen Smen Djer. Smen Em Medjat Sab." },
+    "areas": {
+      "todo": "Nen Iri-I Djer",
+      "queue": "Sepu Wedja",
+      "search": "Hehy",
+      "notices": "Sedjem Sab"
+    },
+    "tabs": {
+      "todo": "Nen Iri-I Djer",
+      "queue": "Sepu Wedja",
+      "search": "Hehy",
+      "notices": "Sedjem Sab",
+      "me": "Djes"
+    },
+    "banner": {
+      "mfa_required": "Netjer-Ek: Aq Sep Sen Nen Shu; Nen Smen Djer. Smen Em Medjat Sab."
+    },
     "todo": {
       "title": "Nen Iri-I Djer",
       "empty_title": "Nen Iri-Ek Djer",
       "empty_body": "Wat Hesy, Dbh Hab Ky Hena Dbh Renpi: Sedjem Sab.",
-      "groups": { "approvals": "Sekhet Wat Hesy", "reassignments": "Dbh Hab Ky", "cooldowns": "Dbh Khebi Ahet Qebeh", "rebirths": "Dbh Wehem Mesut" }
+      "groups": {
+        "approvals": "Sekhet Wat Hesy",
+        "reassignments": "Dbh Hab Ky",
+        "cooldowns": "Dbh Khebi Ahet Qebeh",
+        "rebirths": "Dbh Wehem Mesut"
+      }
     },
-    "kinds": { "approval": "Sekhet Wat Hesy", "reassignment": "Dbh Hab Ky", "cooldown": "Dbh Khebi Ahet Qebeh", "rebirth": "Dbh Wehem Mesut" },
+    "kinds": {
+      "approval": "Sekhet Wat Hesy",
+      "reassignment": "Dbh Hab Ky",
+      "cooldown": "Dbh Khebi Ahet Qebeh",
+      "rebirth": "Dbh Wehem Mesut"
+    },
     "queue": {
       "mine": "Shesep-I",
       "unclaimed": "Nen Shesep Djer",
@@ -32,7 +55,14 @@
       "no_souls_body": "Khemen Ren, Er Sesh Ren Ta Neb.",
       "residing": "▲ {{where}} · Hemes"
     },
-    "detail": { "your_step": "Sekhet-Ek", "cosign": "Redi Sab Hena", "reject": "Khesef", "approve": "Hesy" },
+    "detail": {
+      "your_step": "Sekhet-Ek",
+      "cosign": "Redi Sab Hena",
+      "reject": "Khesef",
+      "approve": "Hesy",
+      "cosigner_pending": "Redi Sab Hena · Nen Hesy Djer",
+      "wait_cosigner": "Hesy {{name}} Tepy: Hesy-Ek Er Khet. Khesef {{name}}: Sekhet Pen Khesef."
+    },
     "cosign": {
       "search": "Hehy Ren Er Ren Aq",
       "empty": "Nen Sab Er Setep",
@@ -75,17 +105,26 @@
         "permission_changed": "Was Khemen Seth",
         "network": "Nen Em Senb",
         "other": "Per Hemsu Nen Shesep"
-      }
+      },
+      "desired": "Mer: Hru {{n}} Khery"
     },
-    "landing": { "handled": "Iri Seth Em {{name}}", "someone": "Sab Ky" },
+    "landing": {
+      "handled": "Iri Seth Em {{name}}",
+      "someone": "Sab Ky"
+    },
     "state": {
       "error_title": "Nen Ini",
       "error_body": "Maa Wat Hena Wehem Iri. Sesh Wen Nen Khemen.",
       "denied_title": "Nen Was",
       "denied_body": "Netjer-Ek «{{role}}» Nen Maa {{area}}. Hehy Sab Hery En Wesekhet Pen."
     },
-    "notices": { "empty_title": "Nen Sedjem Sab", "empty_body": "Sedjem Sab Renpi Em Dy." },
-    "push": { "lock": "Nen Iri-Ek Djer: {{n}}" },
+    "notices": {
+      "empty_title": "Nen Sedjem Sab",
+      "empty_body": "Sedjem Sab Renpi Em Dy."
+    },
+    "push": {
+      "lock": "Nen Iri-Ek Djer: {{n}}"
+    },
     "me": {
       "profile": "Djes",
       "name": "Ren",
@@ -147,5 +186,43 @@
       }
     }
   },
-  "tenants": { "settings": { "security": "Sa" } }
+  "tenants": {
+    "settings": {
+      "security": "Sa"
+    }
+  },
+  "dashboard": {
+    "trends": {
+      "title": "Kheper Hru",
+      "subtitle": "Tut Hru Neb 00:00 · Er Tepy Sepdet",
+      "range_label": "Sepdet",
+      "range_30d": "Hru 30",
+      "range_90d": "Hru 90",
+      "range_12m": "Abed 12",
+      "dimension_label": "Redu",
+      "by_state": "Per Kheperu",
+      "by_civilization": "Per Taui",
+      "empty_title": "Nen Tut Djer",
+      "empty_body": "Tut Wa Em Hru Neb 00:00. Sepdet Nen Neb Djer: Sesh Hru Wenen Wa.",
+      "partial": "Tut Hru {{n}} Wa. Shu Em Tepy Nen 0: Hru Pen Nen Sesh Djer.",
+      "change_up": "Er Hry {{pct}}%",
+      "change_down": "Er Khery {{pct}}%",
+      "change_flat": "Nen Khemen",
+      "change_from_zero": "Em 0",
+      "figure_label": "{{name}}, {{value}}, {{change}}",
+      "error": "Kheper Hru Nen Ini"
+    }
+  },
+  "soul_app": {
+    "cooldown": {
+      "desired_label": "Hru Khery Mer-Ek (Setep)",
+      "desired_hint": "Hru {{n}} Khery. 0: Mer Ahet Qebeh Khetem; Nen Sesh: Sab Wedja.",
+      "desired_invalid": "Hru Nen Maat · 0 Er {{max}}"
+    }
+  },
+  "soul_accounts": {
+    "cooldown": {
+      "desired": "Mer: Hru {{n}} Khery"
+    }
+  }
 }

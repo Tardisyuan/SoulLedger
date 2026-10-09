@@ -305,6 +305,17 @@ class WorkflowTemplateListSerializer(serializers.ModelSerializer):
         return obj.published_version.number if obj.published_version_id else None
 
 
+class CosignerRowSerializer(serializers.Serializer):
+    user_id = serializers.IntegerField()
+    name = serializers.CharField()
+    signed = serializers.BooleanField()
+
+
+class WaitingOnCosignerSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    name = serializers.CharField()
+
+
 class ApprovalNodeSerializer(serializers.ModelSerializer):
     """Serializer for ApprovalNode.
 
@@ -359,6 +370,26 @@ class ApprovalNodeSerializer(serializers.ModelSerializer):
     # the node is undecided or the account is gone.
     approver_username = serializers.CharField(source="approver.username", read_only=True, allow_null=True)
     approver_display_name = serializers.CharField(source="approver.display_name", read_only=True, allow_null=True)
+    # 加签 (apps/workflow/cosign.py): who was added, and -- for the requester only -- the first signer
+    # still owed when that holds back the requester's approval.
+    cosigners = serializers.SerializerMethodField()
+    waiting_on_cosigner = serializers.SerializerMethodField()
+
+    @extend_schema_field(CosignerRowSerializer(many=True))
+    def get_cosigners(self, node):
+        return self._cosign_facts(node)["cosigners"]
+
+    @extend_schema_field(WaitingOnCosignerSerializer(allow_null=True))
+    def get_waiting_on_cosigner(self, node):
+        return self._cosign_facts(node)["waiting_on_cosigner"]
+
+    def _cosign_facts(self, node):
+        from apps.workflow import cosign
+
+        user = getattr(self.context.get("request"), "user", None)
+        if not node.cosigners_json or user is None:
+            return {"cosigners": [], "waiting_on_cosigner": None}
+        return cosign.facts(node, user)
 
     class Meta:
         model = ApprovalNode
@@ -381,6 +412,8 @@ class ApprovalNodeSerializer(serializers.ModelSerializer):
             "approver",
             "approver_username",
             "approver_display_name",
+            "cosigners",
+            "waiting_on_cosigner",
             "decided_at",
             "created_at",
             "reject_to",

@@ -120,10 +120,20 @@ function TodoDetail({ kind, id, onSettled }: { kind: TodoKind; id: string; onSet
               ) : null}
             </View>
           ) : null}
+          {data.cosigners && data.cosigners.length > 0 ? (
+            // 加签: who was added to this step and whether they have signed. An owed signature is a ◐ row.
+            <View testID="detail-cosigners" style={{ gap: space[1] }}>
+              {data.cosigners.map((c) => (
+                <Txt key={c.user_id} variant="body" testID={`cosigner-${c.user_id}`}>
+                  {c.signed ? `✓ ${c.name}` : `◐ ${c.name} · ${t("officer_app.detail.cosigner_pending")}`}
+                </Txt>
+              ))}
+            </View>
+          ) : null}
           <ContinueOnDesk target={{ kind, id }} />
         </View>
       </Screen>
-      {data.actionable ? <ActionBar kind={kind} onPick={pick} /> : null}
+      {data.actionable ? <ActionBar kind={kind} onPick={pick} waitingOn={data.waiting_on_cosigner?.name ?? null} /> : null}
       <DecisionSheet key={`decision-${opened}`} open={sheet === "approve" || sheet === "reject"} verdict={sheet === "reject" ? "reject" : "approve"} detail={data as TodoItemDetail} cooldown={cooldown.data} onClose={() => setSheet(null)} onDone={settled} />
       <CosignSheet key={`cosign-${opened}`} open={sheet === "cosign"} kind={kind} id={id} onClose={() => setSheet(null)} onDone={() => void reload()} />
     </View>
@@ -131,16 +141,22 @@ function TodoDetail({ kind, id, onSettled }: { kind: TodoKind; id: string; onSet
 }
 
 /** 加签 (secondary) · 驳回 (ink outline) · 批准 (primary): 44 high, square. 加签 only exists on a workflow node. */
-function ActionBar({ kind, onPick }: { kind: TodoKind; onPick: (next: Verdict | "cosign") => void }) {
+function ActionBar({ kind, onPick, waitingOn }: { kind: TodoKind; onPick: (next: Verdict | "cosign") => void; waitingOn: string | null }) {
   const { t } = useI18n();
   const theme = useTheme();
+  // The added signer has not approved yet: 批准 is greyed and the sentence above says why (and is the
+  // button's hint). 驳回 and 加签 are never held.
+  const wait = waitingOn !== null ? t("officer_app.detail.wait_cosigner", { name: waitingOn }) : null;
   return (
-    <View testID="action-bar" style={{ flexDirection: "row", gap: space[3], padding: space[4], borderTopWidth: 1, borderTopColor: theme.hair, backgroundColor: theme.s1 }}>
-      {kind === "approval" || kind === "rebirth" ? (
-        <ActionButton testID="action-cosign" kind="outline" title={t("officer_app.detail.cosign")} onPress={() => onPick("cosign")} />
-      ) : null}
-      <ActionButton testID="action-reject" kind="ink-outline" title={t("officer_app.detail.reject")} onPress={() => onPick("reject")} />
-      <ActionButton testID="action-approve" kind="primary" title={t("officer_app.detail.approve")} onPress={() => onPick("approve")} />
+    <View testID="action-bar" style={{ padding: space[4], gap: space[3], borderTopWidth: 1, borderTopColor: theme.hair, backgroundColor: theme.s1 }}>
+      {wait ? <Txt variant="caption" tone="muted" testID="detail-wait-cosigner">{`◇ ${wait}`}</Txt> : null}
+      <View style={{ flexDirection: "row", gap: space[3] }}>
+        {kind === "approval" || kind === "rebirth" ? (
+          <ActionButton testID="action-cosign" kind="outline" title={t("officer_app.detail.cosign")} onPress={() => onPick("cosign")} />
+        ) : null}
+        <ActionButton testID="action-reject" kind="ink-outline" title={t("officer_app.detail.reject")} onPress={() => onPick("reject")} />
+        <ActionButton testID="action-approve" kind="primary" title={t("officer_app.detail.approve")} disabled={wait !== null} accessibilityHint={wait ?? undefined} onPress={() => onPick("approve")} />
+      </View>
     </View>
   );
 }
