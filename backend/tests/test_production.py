@@ -220,6 +220,23 @@ class TestDockerConfiguration:
         # auditor it switched on could itself be abused. CSP covers it.
         assert 'X-XSS-Protection' not in content
 
+    def test_nginx_admin_is_allow_listed_and_rate_limited(self):
+        """/admin/ was open to the internet with no throttle (DEPLOY.md, 2026-10-09). It must
+        include the allow-list, which must end in `deny all`, and compose must mount that file
+        (a missing bind-mount source becomes a directory and nginx dies, as for nginx.conf)."""
+        content = _read(NGINX_CONF)
+        admin = content[content.index("location /admin/"):]
+        admin = admin[:admin.index("}")]
+        assert "include /etc/nginx/admin-allow.conf;" in admin
+        assert "limit_req zone=admin_limit" in admin
+        assert "zone=admin_limit:" in content
+        allow = _read(os.path.join(REPO_ROOT, "nginx-admin-allow.conf"))
+        rules = [line.strip() for line in allow.splitlines() if line.strip() and not line.strip().startswith("#")]
+        assert rules[-1] == "deny all;", rules
+        assert not any(r in ("allow all;", "allow 0.0.0.0/0;") for r in rules), rules
+        compose = _read(os.path.join(REPO_ROOT, "docker-compose.production.yml"))
+        assert "./nginx-admin-allow.conf:/etc/nginx/admin-allow.conf:ro" in compose
+
     def test_nginx_proxies_the_websocket_route(self):
         """channels serves /ws/ only through an Upgrade handshake; a proxy
         that forwards a plain GET there makes every deployment's WebSocket
@@ -361,10 +378,15 @@ class TestDockerConfiguration:
                 if src.startswith('./') and src.endswith('.conf'):
                     full = os.path.join(os.path.dirname(path), src)
                     assert os.path.isfile(full), f"{path}: {src} does not exist"
-                    assert vol.split(':')[1] == '/etc/nginx/nginx.conf', (
-                        "a complete nginx.conf (with events{}) is only "
-                        "valid as the main file, not under conf.d/"
-                    )
+                    if os.path.basename(src) == 'nginx.conf':
+                        assert vol.split(':')[1] == '/etc/nginx/nginx.conf', (
+                            "a complete nginx.conf (with events{}) is only "
+                            "valid as the main file, not under conf.d/"
+                        )
+                    else:
+                        # Fragments nginx.conf includes by path (the /admin/ allow-list):
+                        # under conf.d/ the default http block would also load them.
+                        assert '/conf.d/' not in vol.split(':')[1], vol
 
 
 class TestRootComposeShape:

@@ -215,6 +215,8 @@ services:
       # nginx dies on it; a file with events{} under conf.d/ is a syntax error
       # (IS-09). tests/test_production.py checks the source exists.
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      # Allow-list for /admin/ (nginx.conf includes it); edit before go-live, see DEPLOY.md.
+      - ./nginx-admin-allow.conf:/etc/nginx/admin-allow.conf:ro
       - static_files:/var/www/static:ro
       # Uploaded avatars, written by the backend at MEDIA_ROOT (/app/media).
       - media_files:/var/www/media:ro
