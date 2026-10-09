@@ -178,14 +178,14 @@ export function MfaSetupWizard({ username, onClose, onEnabled }: { username: str
 
         {step === 1 ? (
           <section className="flex flex-col gap-2">
-            <h3 className="text-md text-[oklch(var(--color-ink))]">{t("mfa.setup.step1_title")}</h3>
+            <h3 className="text-lg text-[oklch(var(--color-ink))]">{t("mfa.setup.step1_title")}</h3>
             <p className="text-sm text-[oklch(var(--color-ink-muted))]">{t("mfa.setup.step1_body")}</p>
           </section>
         ) : null}
 
         {step === 2 ? (
           <section className="flex flex-col gap-4">
-            <h3 className="text-md text-[oklch(var(--color-ink))]">{t("mfa.setup.step2_title")}</h3>
+            <h3 className="text-lg text-[oklch(var(--color-ink))]">{t("mfa.setup.step2_title")}</h3>
             <p className="text-sm text-[oklch(var(--color-ink-muted))]">{t("mfa.setup.step2_body")}</p>
             {setupError ? (
               <p role="alert" className="text-sm text-[oklch(var(--color-danger))]">
@@ -212,7 +212,7 @@ export function MfaSetupWizard({ username, onClose, onEnabled }: { username: str
                   </code>
                   <div>
                     <Button type="button" variant="secondary" size="sm" onClick={() => void copyKey()}>
-                      {keyCopied ? t("common.copied") : t("mfa.setup.copy_key")}
+                      {keyCopied ? t("common.value.copied") : t("mfa.setup.copy_key")}
                     </Button>
                   </div>
                   <p className="text-2xs text-[oklch(var(--color-ink-subtle))]">{t("mfa.setup.key_meta")}</p>
@@ -226,7 +226,7 @@ export function MfaSetupWizard({ username, onClose, onEnabled }: { username: str
 
         {step === 3 ? (
           <section className="flex flex-col gap-4">
-            <h3 className="text-md text-[oklch(var(--color-ink))]">{t("mfa.setup.step3_title")}</h3>
+            <h3 className="text-lg text-[oklch(var(--color-ink))]">{t("mfa.setup.step3_title")}</h3>
             <p className="text-sm text-[oklch(var(--color-ink-muted))]">{t("mfa.setup.step3_body")}</p>
             {codeError ? (
               <p role="alert" className="text-sm font-medium text-[oklch(var(--color-danger))]">
@@ -253,7 +253,7 @@ export function MfaSetupWizard({ username, onClose, onEnabled }: { username: str
 
         {step === 4 ? (
           <section className="flex flex-col gap-4">
-            <h3 className="text-md text-[oklch(var(--color-ink))]">{t("mfa.setup.step4_title")}</h3>
+            <h3 className="text-lg text-[oklch(var(--color-ink))]">{t("mfa.setup.step4_title")}</h3>
             <RecoveryCodesPanel codes={codes} saved={saved} onSavedChange={setSaved} username={username} />
             {completeError ? (
               <p role="alert" className="text-sm text-[oklch(var(--color-danger))]">

@@ -4,13 +4,12 @@
  * expired, locked with the input and button disabled, network with a retry, a dead pending
  * token); the recovery-code mode; and success storing the tokens through the platform ports,
  * clearing the hand-over and honouring 「不再询问」.
- *
- * Written 2026-10-09 and NOT run (user instruction: write, don't run).
  */
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import LoginVerifyPage from "@/app/(auth)/login/verify/page";
 import { mfaApi } from "@soulledger/core/api";
 import { setAccessToken, setRefreshToken } from "@soulledger/core/platform";
+import { goTo, replaceWith } from "@/src/lib/navigate";
 import { MFA_PENDING_KEY, readMfaPending, storeMfaPending } from "@/src/lib/mfaPending";
 
 jest.mock("@soulledger/core/api", () => ({
@@ -18,6 +17,8 @@ jest.mock("@soulledger/core/api", () => ({
   authApi: { preferences: jest.fn() },
 }));
 jest.mock("@soulledger/core/platform", () => ({ setAccessToken: jest.fn(), setRefreshToken: jest.fn() }));
+// jsdom's window.location is non-configurable, so the redirects go through a seam.
+jest.mock("@/src/lib/navigate", () => ({ goTo: jest.fn(), replaceWith: jest.fn() }));
 jest.mock("@/src/lib/defaultView", () => ({ defaultViewRoute: jest.fn().mockResolvedValue("/dashboard") }));
 
 const mockShowToast = jest.fn();
@@ -40,10 +41,6 @@ const verify = mfaApi.verify as jest.Mock;
 const PENDING = { pending_token: "pending.jwt", username: "yama" };
 const TOKENS = { access: "a", refresh: "r", user: { id: 1, username: "yama", role: "ADMIN", tenant: null, permissions: [], mfa_enabled: true, mfa_required: true } };
 
-const location = { replace: jest.fn(), assign: jest.fn(), href: "" };
-beforeAll(() => {
-  Object.defineProperty(window, "location", { value: location, writable: true });
-});
 beforeEach(() => {
   jest.clearAllMocks();
   sessionStorage.clear();
@@ -58,7 +55,7 @@ describe("LoginVerifyPage", () => {
   it("goes back to /login when there is no pending hand-over", () => {
     sessionStorage.clear();
     render(<LoginVerifyPage />);
-    expect(location.replace).toHaveBeenCalledWith("/login");
+    expect(replaceWith).toHaveBeenCalledWith("/login");
     expect(screen.queryByTestId("mfa-verify-form")).toBeNull();
   });
 
@@ -81,7 +78,7 @@ describe("LoginVerifyPage", () => {
     expect(mockSetUser).toHaveBeenCalledWith(TOKENS.user);
     expect(readMfaPending()).toBeNull();
     expect(sessionStorage.getItem(MFA_PENDING_KEY)).toBeNull();
-    await waitFor(() => expect(location.href).toBe("/dashboard"));
+    await waitFor(() => expect(goTo).toHaveBeenCalledWith("/dashboard"));
   });
 
   it("sends remember_device when the 30-day box is ticked", async () => {

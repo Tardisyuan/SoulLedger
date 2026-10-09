@@ -42,7 +42,11 @@ jest.mock("@/src/components/ui/Toast", () => ({
 
 jest.mock("@/src/contexts/I18nContext", () => ({
   useI18n: () => ({
-    t: (key: string, params?: Record<string, string>) => (params ? `${key}:${Object.values(params).join(",")}` : key),
+    // Echoes the key, except for the built-in role enum: DomainEnum treats an
+    // echoed key as "no translation" (data-enum-state="unrecognized"), so the
+    // double has to translate those or the chips could never read as known.
+    t: (key: string, params?: Record<string, string>) =>
+      key.startsWith("users.roles.") ? `label.${key.slice("users.roles.".length)}` : params ? `${key}:${Object.values(params).join(",")}` : key,
     locale: "zh-Hans",
     hydrated: true,
   }),
@@ -163,11 +167,11 @@ describe("the roles dialog", () => {
     await within(dialog).findByRole("checkbox", { name: "书记" });
     const names = within(dialog).getAllByRole("checkbox").map((c) => c.closest("label")?.textContent);
     // ADMIN (never additional), SOUL (not a post) and the primary VIEWER itself are absent.
-    expect(names).toEqual(["users.roles.JUDGE", "书记"]);
-    expect(within(dialog).getByRole("checkbox", { name: "users.roles.JUDGE" })).toBeChecked();
+    expect(names).toEqual(["label.JUDGE", "书记"]);
+    expect(within(dialog).getByRole("checkbox", { name: "label.JUDGE" })).toBeChecked();
     expect(within(dialog).getByRole("checkbox", { name: "书记" })).toBeChecked();
 
-    fireEvent.click(within(dialog).getByRole("checkbox", { name: "users.roles.JUDGE" })); // untick one
+    fireEvent.click(within(dialog).getByRole("checkbox", { name: "label.JUDGE" })); // untick one
     fireEvent.click(within(dialog).getByRole("button", { name: "common.save" }));
 
     await waitFor(() => expect(mockAssign).toHaveBeenCalledTimes(1));
@@ -181,8 +185,8 @@ describe("the roles dialog", () => {
     await within(dialog).findByRole("checkbox", { name: "书记" });
     fireEvent.change(within(dialog).getByLabelText("users.roles_dialog.primary"), { target: { value: "JUDGE" } });
     // JUDGE is now the primary: its box is gone, VIEWER's has appeared (unticked).
-    expect(within(dialog).queryByRole("checkbox", { name: "users.roles.JUDGE" })).toBeNull();
-    expect(within(dialog).getByRole("checkbox", { name: "users.roles.VIEWER" })).not.toBeChecked();
+    expect(within(dialog).queryByRole("checkbox", { name: "label.JUDGE" })).toBeNull();
+    expect(within(dialog).getByRole("checkbox", { name: "label.VIEWER" })).not.toBeChecked();
     fireEvent.click(within(dialog).getByRole("button", { name: "common.save" }));
     await waitFor(() => expect(mockAssign).toHaveBeenCalled());
     expect(mockAssign).toHaveBeenCalledWith("2", { role: "JUDGE", extra_roles: ["CLERK"] });

@@ -387,7 +387,7 @@ describe('API Client — @soulledger/core/api', () => {
       expect(mockInstance.post).toHaveBeenCalledWith('/auth/login/', {
         username: 'judge_yama',
         password: 'password123',
-      });
+      }, { withCredentials: true }); // the 「不再询问」 device cookie lives on the API origin
     });
 
     it('register() should POST to /auth/register/', () => {
