@@ -10,6 +10,7 @@ import { useCallback, useEffect, useState } from "react";
 import { BackHandler, View } from "react-native";
 
 import { IdentityBand, StandingBanner, TabBar, type TabKey } from "./kit";
+import { officerLinks } from "./links";
 import { listenForLandings, registerDevice } from "./push";
 import { HIGHLIGHT_MS, hallLabel } from "./rules";
 import { Detail, type DetailTarget } from "./screens/detail";
@@ -45,6 +46,23 @@ export function Shell() {
       }
     });
   }, []);
+
+  useEffect(
+    // A link held while signed out (or before this mounted) arrives here first. Same landing as a push.
+    () =>
+      officerLinks.subscribe((link) => {
+        setVersion((v) => v + 1);
+        if (link.item) {
+          setTab("todo");
+          setLanded(link.item);
+          setDetail({ type: "todo", ...link.item });
+        } else {
+          setDetail(null);
+          setTab(link.tab);
+        }
+      }),
+    []
+  );
 
   const close = useCallback(() => {
     setDetail(null);
