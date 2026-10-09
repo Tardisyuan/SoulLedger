@@ -353,7 +353,14 @@ cd backend && SECRET_KEY=ci-test-key-not-for-production-32-bytes-min \
   REDIS_URL="redis://127.0.0.1:6399/0" \
   CELERY_BROKER_URL="redis://127.0.0.1:6399/1" \
   CELERY_RESULT_BACKEND="redis://127.0.0.1:6399/2" \
-  .venv/bin/python -m pytest -q --no-cov --create-db
+  .venv/bin/python -m pytest -q --no-cov --create-db -n 4 -m "not migration"
+# 2026-10-09 起(用户决定):**4 进程并行，迁移往返只在改了迁移时跑。**
+# 这条慢在和 115 的网络来回，不在本机 CPU:串行全量 53 分钟(6384 passed),
+# 卡在 76% 附近的是迁移往返与 transaction=True 的并发测试。
+# `-n 4 -m "not migration"` 实测 13.5 分钟(`d51b7d2e`:6360 passed / 7 skipped / exit 0,
+# 跑完 115 残留 NONE)。每个 worker 在 115 上建自己的库(`test_soulledger_gw0_<后缀>`)。
+# 改到迁移、`tests/migration_roundtrip.py`、conftest 或 `pytest.ini` 时，去掉 `-m "not migration"`
+# 跑全量(规则同 pre-push 的 SQLite 那条)。
 ```
 
 **`tests/test_concurrency.py` 里有 4 条 `skipif(SQLITE)` 的测试,是这个仓库里唯一
