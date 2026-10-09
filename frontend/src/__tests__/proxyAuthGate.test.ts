@@ -53,7 +53,7 @@ const ALL_ROUTES = [...new Set(routesFromDisk())].sort();
 /** 不需要登录的那几条,与 `proxy.ts` 的 `PUBLIC_PATHS` 对应。
  *  写死是有意的:这是一个**决定**,新增页面不该自动进来。下面第一条断言比对的
  *  正是「磁盘上的页面减去这几条」。 */
-const EXPECTED_PUBLIC = ["/", "/welcome", "/login"];
+const EXPECTED_PUBLIC = ["/", "/welcome", "/login", "/login/verify"];
 
 function request(pathname: string, cookies: Record<string, string> = {}) {
   const req = new NextRequest(new URL(`http://localhost:3000${pathname}`));
