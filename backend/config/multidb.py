@@ -35,9 +35,9 @@ class ShadowTenantRouter:
         return None
 
     def allow_migrate(self, db, app_label, model_name=None, **hints):
-        # Both aliases carry the full schema. Data migrations (RunPython / RunSQL: no model_name)
-        # are skipped on the shadow: 75 of the 76 RunPython migrations query through the router
-        # rather than `schema_editor.connection.alias`, so they would read `default`, already
-        # fully migrated, and die on a column a later migration dropped (souls 0020, measured).
-        # A real split must make them alias-aware first.
-        return db != SHADOW_ALIAS or model_name is not None
+        # Both aliases carry the full schema, and data migrations (RunPython / RunSQL: no
+        # model_name) run on both. They used to be skipped on the shadow, because they queried
+        # through the router rather than `schema_editor.connection.alias` and so read `default`,
+        # already fully migrated, and died on a column a later migration had dropped (souls 0020,
+        # measured). tests/test_migrations_use_the_migrated_alias.py now keeps them alias-aware.
+        return True

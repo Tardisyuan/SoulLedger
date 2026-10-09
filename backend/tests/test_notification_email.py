@@ -13,6 +13,7 @@ from apps.authentication.models import User
 from apps.notifications.models import NotificationEmail, UserNotification
 from apps.notifications.tasks import email_action_needed_for_tenant, email_action_needed_global
 from apps.tenants.managers import get_current_tenant
+from tests.migration_schema_editor import SCHEMA_EDITOR
 
 pytestmark = pytest.mark.django_db
 
@@ -217,7 +218,7 @@ def test_backfill_stamps_only_opted_in_officers_without_a_moment_and_reverses_on
     real = _officer(cn_tenant, "real")
     _opted_at(real, timezone.now() - timedelta(days=9))
     real_at = real.preferences["email_opted_at"]
-    mod.stamp(apps, None)
+    mod.stamp(apps, SCHEMA_EDITOR)
     for u in (old, off, real):
         u.refresh_from_db()
     assert old.preferences["email_opted_at"] and old.preferences["email_opted_backfilled"] is True
@@ -225,10 +226,10 @@ def test_backfill_stamps_only_opted_in_officers_without_a_moment_and_reverses_on
     assert real.preferences["email_opted_at"] == real_at  # 有真实时刻的不覆盖
     assert "email_opted_backfilled" not in real.preferences
     stamped = old.preferences["email_opted_at"]
-    mod.stamp(apps, None)  # 幂等
+    mod.stamp(apps, SCHEMA_EDITOR)  # 幂等
     old.refresh_from_db()
     assert old.preferences["email_opted_at"] == stamped
-    mod.unstamp(apps, None)
+    mod.unstamp(apps, SCHEMA_EDITOR)
     for u in (old, real):
         u.refresh_from_db()
     assert "email_opted_at" not in old.preferences and "email_opted_backfilled" not in old.preferences

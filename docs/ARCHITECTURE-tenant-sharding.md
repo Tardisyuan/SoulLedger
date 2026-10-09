@@ -312,8 +312,9 @@ RLS 能解决的问题。若用户坚持「终点就是 (c)」,上表只是定�
   证明三件事:两个别名的表集合相同;租户 B 的实例 `save()` 落在影子库;`realms.Realm.parent_realm`(取自 G1 清单的 `S->S` 边)
   跨别名赋值被拒。三处变异各让对应测试变红。**迁移那一条跑出一个发现:** 75 个 `RunPython` 迁移里的查询走路由而不是
   `schema_editor.connection.alias`,在第二个库上会去查已迁完的 `default`,`souls/0020` 就死在 `no such column: birth_date`。
-  测试路由因此在影子库上跳过无 `model_name` 的操作(RunPython / RunSQL;唯一的 RunSQL 也只是数据回填),只迁结构。
-  **真分库前这 75 个迁移要先改成认别名。**
+  测试路由当时因此在影子库上跳过无 `model_name` 的操作(RunPython / RunSQL),只迁结构。
+  **已修(`fix/runpython-uses-migrated-alias`):** 全部 `RunPython` 函数改走 `schema_editor.connection.alias`,路由不再跳过;
+  `tests/test_migrations_use_the_migrated_alias.py` 用 AST 守着,`test_data_migrations_ran_on_the_shadow_too` 断言影子库里有 RunPython 播的行。
 - **G7 单库形态** —— `manage.py reconcile_tenant_shadow --tenant <code> [--alias tenant_shadow]`
   (`apps/tenants/management/commands/reconcile_tenant_shadow.py`):对每个带 `tenant` 外键的模型,比 `default` 与影子库里该租户的行数和
   `(pk, update_time | updated_at | 全部列)` 的哈希(含软删行),逐条打印 `模型 pk=… differs / missing in / only in`,有任何不同退出码 1。

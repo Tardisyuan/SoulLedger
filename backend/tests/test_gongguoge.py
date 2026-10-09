@@ -39,6 +39,7 @@ import pytest
 from django.core.management import call_command
 
 from apps.judgment.models import Statute, StatuteCorpus, StatutePolarity
+from tests.migration_schema_editor import SCHEMA_EDITOR
 
 # --------------------------------------------------------------------------
 # The document. 功格三十六條 in four 門, 過律三十九條 in four 門 — as TITLED.
@@ -894,7 +895,7 @@ class TestGongguogeMigration:
         `seed_mythology` hands it rows it did not create and makes `--dry-run`
         against a fresh database report a plan a real run would not take."""
         assert Statute.all_objects.count() == 0
-        migration.forwards(registry, None)
+        migration.forwards(registry, SCHEMA_EDITOR)
         assert Statute.all_objects.count() == 0
 
     def test_it_creates_the_skeleton_on_a_populated_database(
@@ -904,7 +905,7 @@ class TestGongguogeMigration:
         Statute.all_objects.filter(code__in=codes).delete()
         assert not Statute.all_objects.filter(code__in=codes).exists()
 
-        migration.forwards(registry, None)
+        migration.forwards(registry, SCHEMA_EDITOR)
 
         rebuilt = dict(
             Statute.all_objects.filter(code__in=codes).values_list("code", "ordinal")
@@ -920,7 +921,7 @@ class TestGongguogeMigration:
         copy of the corpus that nothing keeps in step."""
         codes = _migration_0013_codes()
         Statute.all_objects.filter(code__in=codes).delete()
-        migration.forwards(registry, None)
+        migration.forwards(registry, SCHEMA_EDITOR)
 
         row = Statute.all_objects.get(code="CN-GGG-F-JJ-04")
         assert row.text_zh == ""
@@ -934,7 +935,7 @@ class TestGongguogeMigration:
 
     def test_running_it_twice_creates_nothing(self, migration, registry, seeded):
         before = Statute.all_objects.count()
-        migration.forwards(registry, None)
+        migration.forwards(registry, SCHEMA_EDITOR)
         assert Statute.all_objects.count() == before
 
     def test_the_reverse_keeps_a_cited_article(self, migration, registry, seeded):
@@ -960,7 +961,7 @@ class TestGongguogeMigration:
             judgment=judgment, statute=cited, tenant=tenant
         )
 
-        migration.backwards(registry, None)
+        migration.backwards(registry, SCHEMA_EDITOR)
 
         assert Statute.all_objects.filter(code="CN-GGG-G-BR-07").exists(), (
             "The rollback deleted an article a judgment had cited."
@@ -1018,7 +1019,7 @@ class TestBuguiSplitMigration:
     ):
         citation, meat = cited_meat
 
-        migration.backwards(registry_apps, None)
+        migration.backwards(registry_apps, SCHEMA_EDITOR)
         citation.refresh_from_db()
         assert citation.statute_id == meat.id
         assert citation.statute.code == "CN-GGG-G-BG-02", (
@@ -1030,7 +1031,7 @@ class TestBuguiSplitMigration:
             f"the silent repoint 0018 exists to prevent"
         )
 
-        migration.forwards(registry_apps, None)
+        migration.forwards(registry_apps, SCHEMA_EDITOR)
         citation.refresh_from_db()
         assert citation.statute_id == meat.id
         assert citation.statute.code == "CN-GGG-G-BG-03"
@@ -1040,7 +1041,7 @@ class TestBuguiSplitMigration:
         self, migration, registry_apps, seeded
     ):
         assert Statute.all_objects.filter(code="CN-GGG-G-BG-02").exists()
-        migration.backwards(registry_apps, None)
+        migration.backwards(registry_apps, SCHEMA_EDITOR)
         remaining = sorted(
             Statute.all_objects.filter(code__startswith="CN-GGG-G-BG-").values_list(
                 "code", flat=True
@@ -1072,7 +1073,7 @@ class TestBuguiSplitMigration:
         )
 
         with pytest.raises(RuntimeError, match="cited by a recorded judgment"):
-            migration.backwards(registry_apps, None)
+            migration.backwards(registry_apps, SCHEMA_EDITOR)
 
         assert Statute.all_objects.filter(code="CN-GGG-G-BG-02").exists()
 
@@ -1080,7 +1081,7 @@ class TestBuguiSplitMigration:
         self, migration, registry_apps, db
     ):
         assert Statute.all_objects.count() == 0
-        migration.forwards(registry_apps, None)
+        migration.forwards(registry_apps, SCHEMA_EDITOR)
         assert Statute.all_objects.count() == 0
 
 

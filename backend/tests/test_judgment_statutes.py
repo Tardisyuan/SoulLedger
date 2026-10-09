@@ -48,6 +48,7 @@ from apps.judgment.services import CitationRefusedError, StatuteCitationService
 from apps.judgment.views import StatuteViewSet
 from apps.souls.models import Civilization, Soul, SoulState
 from apps.tenants.models import Tenant
+from tests.migration_schema_editor import SCHEMA_EDITOR
 
 
 def make_statute(tenant, code, **kwargs):
@@ -914,7 +915,7 @@ class TestWithdrawalMigration:
             polarity=StatutePolarity.DENIAL,
         )
 
-        migration.forward(registry, None)
+        migration.forward(registry, SCHEMA_EDITOR)
 
         for statute in (chinese, european):
             statute.refresh_from_db()
@@ -940,7 +941,7 @@ class TestWithdrawalMigration:
         uncited = make_statute(cn_tenant, "CN-HL-O04", ordinal=4, title_zh="妄语")
         StatuteCitationService.cite(cn_judgment, cited.id, "as decided")
 
-        migration.forward(registry, None)
+        migration.forward(registry, SCHEMA_EDITOR)
 
         cited.refresh_from_db()
         uncited.refresh_from_db()
@@ -954,8 +955,8 @@ class TestWithdrawalMigration:
     def test_the_withdrawal_reverses(self, migration, registry, cn_tenant):
         statute = make_statute(cn_tenant, "CN-HL-O01")
 
-        migration.forward(registry, None)
-        migration.backward(registry, None)
+        migration.forward(registry, SCHEMA_EDITOR)
+        migration.backward(registry, SCHEMA_EDITOR)
 
         statute.refresh_from_db()
         assert statute.is_deleted is False
@@ -972,8 +973,8 @@ class TestWithdrawalMigration:
         other = make_statute(cn_tenant, "CN-HL-O04", ordinal=4)
         other.soft_delete(reason="retired by hand, nothing to do with 0012")
 
-        migration.forward(registry, None)
-        migration.backward(registry, None)
+        migration.forward(registry, SCHEMA_EDITOR)
+        migration.backward(registry, SCHEMA_EDITOR)
 
         other.refresh_from_db()
         assert other.is_deleted is True
@@ -981,11 +982,11 @@ class TestWithdrawalMigration:
 
     def test_running_it_twice_is_a_no_op(self, migration, registry, cn_tenant):
         statute = make_statute(cn_tenant, "CN-HL-O01")
-        migration.forward(registry, None)
+        migration.forward(registry, SCHEMA_EDITOR)
         statute.refresh_from_db()
         first_deleted_at = statute.deleted_at
 
-        migration.forward(registry, None)
+        migration.forward(registry, SCHEMA_EDITOR)
         statute.refresh_from_db()
         assert statute.deleted_at == first_deleted_at
 
@@ -1006,7 +1007,7 @@ class TestWithdrawalMigration:
             corpus=StatuteCorpus.NEGATIVE_CONFESSION,
             polarity=StatutePolarity.DENIAL,
         )
-        migration.forward(registry, None)
+        migration.forward(registry, SCHEMA_EDITOR)
         egyptian.refresh_from_db()
         assert egyptian.is_deleted is False
 

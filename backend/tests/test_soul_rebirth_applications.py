@@ -10,6 +10,7 @@ from apps.events.models import SoulEvent
 from apps.notifications.models import UserNotification
 from apps.soul_accounts.models import RebirthApplication, RebirthApplicationStatus
 from apps.workflow.models import ApprovalWorkflow, CaseType
+from tests.migration_schema_editor import SCHEMA_EDITOR
 from tests.soul_account_support import officer_client, ready_soul, rebirth_ready_soul
 
 pytestmark = pytest.mark.django_db
@@ -394,7 +395,7 @@ def test_backfill_restores_the_first_decision_time_of_existing_appeals(cn_tenant
     RebirthApplication.objects.filter(pk=application.pk).update(first_decided_at=None, first_rejection_reason="")
     application.refresh_from_db()
 
-    migration.backfill(django_apps, None)
+    migration.backfill(django_apps, SCHEMA_EDITOR)
 
     application.refresh_from_db()
     assert application.workflow.completed_at is not None

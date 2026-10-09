@@ -13,6 +13,7 @@ from importlib import import_module
 
 from apps.perm.cache import invalidate_all_permissions
 from apps.perm.models import DEFAULT_PERMISSIONS, ROLE_PERMISSIONS, Permission, Role, RolePermission
+from tests.migration_schema_editor import SCHEMA_EDITOR
 
 _ROLE_NAMES = dict(import_module("apps.perm.migrations.0017_seed_roles_and_grants").ROLES)
 _PERMISSIONS = {codename: (name, category) for codename, name, category in DEFAULT_PERMISSIONS}
@@ -61,4 +62,4 @@ def seeded_menus():
     for app, name in sorted(k for k in loader.disk_migrations if k[0] == "menus"):
         for op in loader.disk_migrations[(app, name)].operations:
             if isinstance(op, m.RunPython) and op.code is not None:
-                op.code(django_apps, None)
+                op.code(django_apps, SCHEMA_EDITOR)

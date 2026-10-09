@@ -61,6 +61,18 @@ def test_migrate_ran_on_both_aliases():
     assert connections["default"].settings_dict["NAME"] != connections[SHADOW_ALIAS].settings_dict["NAME"]
 
 
+def test_data_migrations_ran_on_the_shadow_too():
+    """RunPython seeds (menus, roles, permissions) must exist on the shadow: they run against
+    `schema_editor.connection.alias`, not against whatever the router answers."""
+    from apps.menus.models import Menu
+    from apps.perm.models import Permission, Role
+
+    for model in (Menu, Role, Permission):
+        on_default = model.all_objects.using("default").count()
+        assert on_default > 0, model
+        assert model.all_objects.using(SHADOW_ALIAS).count() == on_default, model
+
+
 def test_a_tenant_scoped_write_lands_on_the_routed_alias(halls):
     from apps.realms.models import Realm
 
