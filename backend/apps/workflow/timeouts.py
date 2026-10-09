@@ -150,6 +150,10 @@ def _fire(workflow_pk, now) -> str | None:
 
             workflow.refresh_from_db()
             WorkflowService.record_events(workflow, node=node)
+            if workflow.case_type == "REBIRTH_APPLICATION":
+                from apps.soul_accounts.rebirth import sync_from_workflow
+
+                sync_from_workflow(workflow.pk)  # same transaction as the auto-rejection
 
         transaction.on_commit(lambda: _tell(workflow, node, action))
     return action

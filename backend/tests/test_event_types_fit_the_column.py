@@ -10,9 +10,9 @@ Nothing here is a hand-written list. The types come from two places:
   * the `EventType` enum (what the column's `choices` say is allowed), and
   * every string literal handed to `EventService.log(...)` / `event_bus.publish_soul_event(...)` anywhere under
     `apps/` (found by walking the source), so a literal that was never added to the enum cannot dodge the first
-    check. (Not asserted: that those literals are in the enum. `REINCARNATION_COMPLETED` is written but not
-    declared; `choices` is not enforced on write, and declaring it changes the OpenAPI enum and the generated
-    TypeScript types -- a separate change.)
+    check. Each must also BE an `EventType` member: `choices` is not enforced on write, so an undeclared
+    literal (`REINCARNATION_COMPLETED` was one) writes happily, and then the OpenAPI enum and the generated
+    TypeScript types do not know it exists.
 """
 import ast
 from pathlib import Path
@@ -52,10 +52,12 @@ def test_every_declared_event_type_fits_the_column():
     assert not too_long, f"longer than SoulEvent.event_type ({_width()}): {too_long}"
 
 
-def test_every_literal_event_type_written_by_the_code_fits():
+def test_every_literal_event_type_written_by_the_code_is_declared_and_fits():
     literals = _literals_passed_to_the_log()
     assert literals, "the scan found no EventService.log(...) literals; it is looking in the wrong place"
     assert {k: v for k, v in literals.items() if len(k) > _width()} == {}
+    declared = {t.value for t in EventType}
+    assert {k: v for k, v in literals.items() if k not in declared} == {}, "written but not in EventType"
 
 
 def test_the_column_is_not_so_tight_that_the_next_type_overflows():

@@ -419,6 +419,10 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
                     # row rolls the approval / rejection back and the real error reaches this request.
                     node.refresh_from_db()
                     WorkflowService.record_events(workflow, node=node)
+                    if workflow.case_type == "REBIRTH_APPLICATION":
+                        # The application's status follows the workflow in the SAME transaction (lock order:
+                        # workflow, node, then application; see rebirth.sync_from_workflow).
+                        rebirth.sync_from_workflow(workflow.pk)
         except ValueError as exc:
             # `complete_node` raises when the node declares
             # `required_verdicts` and this verdict is not in it. A 400 rather
