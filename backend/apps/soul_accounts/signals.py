@@ -2,11 +2,12 @@
 
 挂在 `ApprovalWorkflow` 的 post_save 上,而不是挂在某个视图里:工作流的状态有
 好几条写路径(`approve_node`、`escalate`、工作流 / 节点的 CRUD),只挂视图会漏。
-`on_commit`:这是**兜底**。决定工作流的两条路(`approve_node`、超时自动驳回)已在同一事务里
-直接调 `rebirth.sync_from_workflow`(审批与申请状态一起提交或回滚);其余写路径(后台 CRUD 等)
-走到这里,提交后再对齐,已对齐时什么也不做。
+**同一事务,同步执行**(用户 2026-10-10 决定):所有写路径(`approve_node`、超时、后台 CRUD、序列化器)
+的工作流保存与申请状态对齐一起提交或一起回滚;对齐或事件写失败时工作流保存也回滚、调用方拿到原始错误。
+`approve_node` / 超时仍直接调 `sync_from_workflow`,信号这次调用发现已对齐就什么也不做(幂等,不重复写事件)。
+`sync_from_workflow` 自带 `transaction.atomic()`,调用方没开事务时它就是这次保存之后的独立事务。
+锁序:工作流行(本次 save 已写)→ 申请行。
 """
-from django.db import transaction
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
@@ -19,5 +20,4 @@ def _sync_rebirth_application(sender, instance, **kwargs):
         return
     from apps.soul_accounts.rebirth import sync_from_workflow
 
-    workflow_id = instance.pk
-    transaction.on_commit(lambda: sync_from_workflow(workflow_id))
+    sync_from_workflow(instance.pk)

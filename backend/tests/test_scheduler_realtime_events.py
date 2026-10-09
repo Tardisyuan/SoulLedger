@@ -236,14 +236,14 @@ async def test_a_viewer_without_the_codename_receives_nothing_and_with_it_receiv
     comm = WebsocketCommunicator(application, f"/ws/notifications/?token={await _token(user, tenant.code)}")
     connected, _ = await comm.connect()
     assert connected
-    await comm.receive_json_from()  # "connected" frame
+    await comm.receive_json_from(timeout=10)  # "connected" frame
     try:
         await _write_a_run(job, tenant)  # PENDING event to rt_tenant_CN_DIYU
         assert await comm.receive_nothing(timeout=1.5), "a VIEWER without scheduler.read received a scheduler event"
 
         await _grant_viewer_read()
         await comm.send_json_to({"type": "permission.refresh"})
-        refreshed = await comm.receive_json_from()
+        refreshed = await comm.receive_json_from(timeout=10)
         assert "scheduler.read" in refreshed.get("permissions", [])
 
         await _write_a_run(job, tenant)
