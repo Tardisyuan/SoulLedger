@@ -279,17 +279,20 @@ function LinkBridge({ signedIn, ready }: { signedIn: boolean; ready: number }) {
   const assist = useAssist();
   const chat = useChat();
   const open = assist?.open;
+  const setDraft = assist?.setDraft;
   const lettersOff = chat.availability === "not_configured";
   useEffect(() => {
     if (!signedIn || !navigationRef.isReady()) return;
     return soulLinks.subscribe((link) => {
-      if (link === "assist") {
+      if (link.page === "assist" || link.page === "ask") {
         landOn(navigationRef.navigate, { screen: "Life" });
         open?.("life");
-      } else if (link === "letters" && !lettersOff) navigationRef.navigate("Tabs", { screen: "Letters" });
-      else landOn(navigationRef.navigate, { screen: link === "cooldown" ? "Applications" : "Life" });
+        // 问一问 with the question typed in, not sent: the soul reads it and presses send.
+        if (link.question) setDraft?.(link.question);
+      } else if (link.page === "letters" && !lettersOff) navigationRef.navigate("Tabs", { screen: "Letters" });
+      else landOn(navigationRef.navigate, { screen: link.page === "cooldown" ? "Applications" : "Life" });
     });
-  }, [signedIn, ready, open, lettersOff]);
+  }, [signedIn, ready, open, setDraft, lettersOff]);
   return null;
 }
 

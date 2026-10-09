@@ -70,6 +70,17 @@
 | 二 | iOS 「念出数字」(方案 A:App Group 缓存);灵魂端「问一问」带入问题 | 一期 |
 | 三 | 小爱云端技能(OAuth 授权服务 + 技能审核) | 上线环境、小米开发者账号、你的决定 |
 
+**二期状态(分支 `feat/voice-phase2`,2026-10-09):代码与单测已完成,设备验证未做。**
+- 念数字(方案 A):本地 Expo 模块 `mobile/modules/soulledger-voice`(Swift,仅 iOS)把「数字 + 时间戳」写进 App Group 的 UserDefaults;
+  配置插件加 `com.apple.security.application-groups`(`group.<bundle id>`)与 Info.plist 键 `SoulLedgerVoiceAppGroup`;
+  Intent 读缓存念「截至 HH:MM,有 N 件待你处理 / 冷却还剩 N 天」,`.requiresAuthentication`,无缓存或已登出念中性提示。
+  官员端数字 = 待办四组 count 之和(待办页每次拉取时写);灵魂端 = `cooldown_until` 向上取整的天数(申请页每次拉取时写)。登出 / 会话失效即清空。
+- 问一问带入问题:`soulledger://ask?q=...` 打开抽屉并把问题填进输入框(不自动发送,长度 ≤ 1000 字、去控制字符);
+  Siri 说法「向灵魂簿提问」,问题作为 `@Parameter` 由 Siri 追问。官员端仍无任何审批 / 提交类 Intent。
+- 播报文案是插件内的 en / zh-Hans(iOS 系统语音没有 egy),没有新增 App 内文案,`egyPendingKeys.json` 不变。
+- 未验证(只有设备/模拟器能证明):Siri 实际识别短语、锁屏下要求解锁、App Group 在真机签名下可用(真机需在开发者后台登记两个 group)、
+  `soulledger://ask?q=` 经 Siri 参数唤起后的实际落地。
+
 一、二期都在我们自己的代码里，可以照现在的方式派子代理做，在 iOS 和 Android 模拟器上验收(iOS 的 Siri 能在模拟器里用键盘输入测)。
 
 ## 7. 需要你定的

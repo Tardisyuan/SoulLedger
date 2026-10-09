@@ -1,12 +1,12 @@
 /** 待办: the four kinds of item waiting on this officer, grouped, each group titled with its count. */
 import { officerAppApi, type TodoItem, type TodoKind } from "@soulledger/core/api/officer-app";
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 import { View } from "react-native";
 
 import { Row, StateView, viewStateOf } from "../kit";
 import { TODO_GROUPS, isDenied, isTodoKind, todoTitle } from "../rules";
 import { useSession } from "../session";
-import { Screen, SectionLabel, Txt, space, useI18n, useRemote } from "../shared";
+import { Screen, SectionLabel, Txt, publishVoiceNumber, space, useI18n, useRemote } from "../shared";
 import { formatWhen } from "../format";
 
 export interface ItemRef {
@@ -21,6 +21,10 @@ export function TodoTab({ onOpen, highlight }: { onOpen: (item: ItemRef) => void
   // The shell gives this tab a new `key` whenever the list should ask again (back from a detail, a push).
   const load = useCallback(() => officerAppApi.todo().then((r) => r.data), []);
   const { data, error, loading, reload } = useRemote(load);
+  // Siri's 「有几件待办」 speaks this total back (voiceCache.ts): a number and a time, never a case.
+  useEffect(() => {
+    if (data) publishVoiceNumber("todo", TODO_GROUPS.reduce((sum, g) => sum + data[g.field].count, 0));
+  }, [data]);
   const view = viewStateOf({ data, error }, (d) => TODO_GROUPS.every((g) => d[g.field].count === 0), isDenied);
 
   return (

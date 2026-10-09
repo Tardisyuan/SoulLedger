@@ -27,6 +27,7 @@ import { clearOutbox } from "./chat";
 import { useI18n } from "./i18n";
 import { setUnauthorizedHandler } from "./platform";
 import { hasRegisteredDevice, unregisterDevice } from "./push";
+import { clearVoiceNumbers } from "./voiceCache";
 
 export type SessionState =
   | { status: "booting" }
@@ -58,6 +59,7 @@ export function stateAfterFailedMe(error: unknown): SessionState {
   // e.g. 403 initial_password_expired: this session can go nowhere; say why.
   clearSoulTokens();
   clearOutbox();
+  clearVoiceNumbers();
   return { status: "signedOut", notice: soulErrorMessage(error) };
 }
 
@@ -107,6 +109,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     // An expired session ends like a sign-out: the unsent letters leave the device too.
     setUnauthorizedHandler(() => {
       clearOutbox();
+      clearVoiceNumbers();
       setState({ status: "signedOut" });
     });
     const off = onSoulPasswordChangeRequired(() =>
@@ -154,6 +157,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const signOut = useCallback(() => {
     const refresh = getRefreshToken();
     clearOutbox();
+    clearVoiceNumbers();
     setState({ status: "signedOut" });
     const end = () => {
       if (getRefreshToken() === refresh) clearSoulTokens();

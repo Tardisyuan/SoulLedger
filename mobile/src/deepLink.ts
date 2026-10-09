@@ -21,6 +21,24 @@ export function pathOf(url: unknown, scheme: string): string[] | null {
   }
 }
 
+/** One query parameter of a link, percent-decoded (`+` is a space). Null when absent or malformed. Never throws. */
+export function queryOf(url: unknown, name: string): string | null {
+  if (typeof url !== "string") return null;
+  const query = url.split("#")[0].split("?")[1];
+  if (!query) return null;
+  for (const pair of query.split("&")) {
+    const eq = pair.indexOf("=");
+    const key = eq < 0 ? pair : pair.slice(0, eq);
+    if (key !== name) continue;
+    try {
+      return decodeURIComponent((eq < 0 ? "" : pair.slice(eq + 1)).replace(/\+/g, " "));
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
 export function createLinkInbox<T>(parse: (url: string) => T | null) {
   let pending: T | null = null;
   let installed = false;

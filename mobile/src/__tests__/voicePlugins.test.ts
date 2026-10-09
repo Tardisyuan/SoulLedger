@@ -18,7 +18,7 @@ const MESSAGES = { en, "zh-Hans": zh };
 describe("voiceEntries", () => {
   it("lists two entries per app, and the soul ones are links the soul app understands", () => {
     for (const app of Object.values(APPS) as { entries: unknown[] }[]) expect(app.entries).toHaveLength(2);
-    for (const e of APPS.soul.entries) expect(parseSoulLink(`${APPS.soul.scheme}://${e.path}`)).toBe(e.path);
+    for (const e of APPS.soul.entries) expect(parseSoulLink(`${APPS.soul.scheme}://${e.path}`)).toEqual({ page: e.path });
   });
 
   it("every label exists in both languages, and every phrase carries the app name", () => {
