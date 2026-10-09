@@ -1,13 +1,20 @@
 """
 Audit views - AuditLog ViewSet with filtering support.
 """
+import csv
+
+from django.db.models import Q
+from django.http import HttpResponse
 from django.utils.dateparse import parse_date
+from django_filters import rest_framework as filters
+from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 
+from apps.core.csv_safe import csv_safe
 from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.tenant import scope_to_tenant
 from apps.core.viewsets import CodenameViewSetMixin
@@ -20,6 +27,24 @@ from .serializers import (
     AuditStatsSerializer,
 )
 
+
+class AuditLogFilter(filters.FilterSet):
+    """`resource` 精确匹配,只有一个别名:`tenant`(审计页的「殿」)同时含每殿助手开关的那几行 ——
+    它们的 resource 是 `assistant_config`、resource_id 是 `tenant:<殿码>`(soul_assist/admin_views.py)。
+    只在查询时并入,不改已存的行。"""
+
+    resource = filters.CharFilter(method="filter_resource")
+
+    class Meta:
+        model = AuditLog
+        fields = ["user", "action", "resource", "resource_id"]
+
+    def filter_resource(self, queryset, name, value):
+        if value == "tenant":
+            return queryset.filter(Q(resource="tenant") | Q(resource="assistant_config", resource_id__startswith="tenant:"))
+        return queryset.filter(resource=value)
+
+
 #: `/audit-logs/timeline/?limit=` 的上界。没有它,`?limit=999999999` 是一次全表
 #: 扫描,而它返回 **200** —— 一个「成功」的响应,是最不容易被发现的拒绝服务面。
 #:
@@ -27,6 +52,10 @@ from .serializers import (
 #: 引用它 —— 记为已修、实际未落地,直到 2026-09-12(BP-02)`_parse_limit` 用上它。
 TIMELINE_MAX_LIMIT = 500
 TIMELINE_DEFAULT_LIMIT = 50
+
+#: 导出一次最多多少行。超过就是 400,不是截断的文件:一份悄悄少了行的审计导出,
+#: 比没有导出更糟(与 `/ledger/journal/export/` 的 MONTH_TOO_LARGE 同一立场)。
+EXPORT_MAX_ROWS = 50_000
 
 
 def _parse_date_param(params, name):
@@ -104,9 +133,10 @@ class AuditLogViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
         'stats': ['audit.read'],
         'by_trace': ['audit.read'],
         'timeline': ['audit.read'],
+        'export': ['audit.read'],
     }
     serializer_class = AuditLogSerializer
-    filterset_fields = ["user", "action", "resource", "resource_id"]
+    filterset_class = AuditLogFilter
     ordering_fields = ["timestamp", "action", "resource"]
     ordering = ["-timestamp"]
 
@@ -126,10 +156,6 @@ class AuditLogViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
         if action_param:
             qs = qs.filter(action=action_param.upper())
 
-        resource = self.request.query_params.get('resource')
-        if resource:
-            qs = qs.filter(resource__icontains=resource)
-
         resource_id = self.request.query_params.get('resource_id')
         if resource_id:
             qs = qs.filter(resource_id=resource_id)
@@ -148,6 +174,52 @@ class AuditLogViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
         if self.action == "retrieve":
             return AuditLogDetailSerializer
         return AuditLogSerializer
+
+    @extend_schema(
+        responses={
+            (200, "text/csv"): OpenApiResponse(
+                response=OpenApiTypes.BINARY,
+                description=(
+                    "CSV of the audit rows the list would return for the same query params "
+                    "(same tenant scope, same filters, same ordering), all pages, not paginated: "
+                    "Timestamp, Tenant, User, Action, Resource, Resource ID, Description, IP, Trace ID."
+                ),
+            ),
+            400: OpenApiResponse(description=f"A filter is malformed, or more than {EXPORT_MAX_ROWS} rows match."),
+        },
+    )
+    @action(detail=False, methods=["get"], pagination_class=None)
+    def export(self, request):
+        """
+        GET /api/v1/audit-logs/export/?action=&resource=&start_date=&ordering=...
+        与列表同一组筛选、同一租户划界、同一权限(audit.read);不分页。自由文本格一律过 `csv_safe`。
+        """
+        # `filter_queryset(get_queryset())` is exactly what `list` runs, so the file
+        # and the screen cannot drift apart on scope or filters.
+        qs = self.filter_queryset(self.get_queryset())
+        if qs.count() > EXPORT_MAX_ROWS:
+            raise ValidationError({"detail": f"More than {EXPORT_MAX_ROWS} rows match; narrow the filters."})
+
+        response = HttpResponse(content_type="text/csv")
+        response["Content-Disposition"] = "attachment; filename=audit_logs.csv"
+        writer = csv.writer(response)
+        writer.writerow([
+            "Timestamp", "Tenant", "User", "Action", "Resource", "Resource ID",
+            "Description", "IP", "Trace ID",
+        ])
+        for log in qs.iterator(chunk_size=1000):
+            writer.writerow([
+                log.timestamp.isoformat(),
+                csv_safe(log.tenant.code if log.tenant else ""),
+                csv_safe(log.user.username if log.user else "System"),
+                csv_safe(log.action),
+                csv_safe(log.resource),
+                csv_safe(log.resource_id),
+                csv_safe(log.description),
+                csv_safe(log.ip_address),
+                csv_safe(log.trace_id),
+            ])
+        return response
 
     @extend_schema(responses=AuditActionOptionSerializer(many=True))
     # `pagination_class=None` because this returns the whole enum as a bare

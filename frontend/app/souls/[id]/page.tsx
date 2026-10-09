@@ -531,7 +531,10 @@ export default function SoulDetailPage() {
             : null
         }
       />
-      <SoulLedgerBook records={ledger.records} />
+      <SoulLedgerBook
+        records={ledger.records}
+        edit={soul && hasPermission("soul.update") ? { soulId: soul.id, civilization: soul.civilization } : undefined}
+      />
     </div>
   ) : (
     <div className="p-6">

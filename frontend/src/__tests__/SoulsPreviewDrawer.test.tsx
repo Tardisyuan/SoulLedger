@@ -27,6 +27,8 @@ const mockRefetch = jest.fn();
 
 const mockListParams: Record<string, unknown>[] = [];
 jest.mock("@soulledger/core/hooks/useSouls", () => ({
+  useSoulImportPreview: () => ({ mutate: jest.fn(), mutateAsync: jest.fn(), isPending: false, reset: jest.fn() }),
+  useSoulImportCommit: () => ({ mutate: jest.fn(), mutateAsync: jest.fn(), isPending: false, reset: jest.fn() }),
   useSouls: (params: Record<string, unknown>) => (mockListParams.push(params), { data: { results: souls, count: souls.length }, isLoading: false, isError: false, isPlaceholderData: false, refetch: jest.fn() }),
   useSoul: (id: string) => ({ ...(id ? detail(id) : { isLoading: false, isError: false }), refetch: mockRefetch }),
   useCreateSoul: () => ({ mutateAsync: jest.fn() }),

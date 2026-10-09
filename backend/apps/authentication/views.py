@@ -1162,6 +1162,7 @@ def preferences_view(request):
         if serializer.validated_data.get("email_notifications") and not before.get("email_notifications"):
             # 邮件通道只发这一刻之后的通知(apps/notifications/tasks.py),不翻旧账。
             user.preferences["email_opted_at"] = timezone.now().isoformat()
+            user.preferences.pop("email_opted_backfilled", None)  # 真实时刻,迁移 0018 的反向不该再删它
         user.save(update_fields=["preferences"])
     return Response(UserPreferencesSerializer(_preferences_with_defaults(user)).data)
 

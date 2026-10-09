@@ -91,3 +91,28 @@ def snapshot_balance_for_tenant(tenant_id: str):
         "soul_count": row.soul_count,
         "timestamp": timezone.now().isoformat(),
     }
+
+
+@shared_task(name="ledger.snapshot_census_for_tenant")
+def snapshot_census_for_tenant(tenant_id: str):
+    """Write (overwrite) today's soul census for exactly one tenant — idempotent per day.
+
+    Sets the tenant contextvar like the other TENANT jobs, so any tenant-scoped manager
+    read stays inside this tenant. See apps.ledger.snapshots.census_tenant.
+    """
+    from apps.ledger.snapshots import census_tenant
+    from apps.tenants.managers import clear_current_tenant, set_current_tenant
+    from apps.tenants.models import Tenant
+
+    tenant = Tenant.objects.get(id=tenant_id)
+    set_current_tenant(tenant)
+    try:
+        row = census_tenant(tenant)
+    finally:
+        clear_current_tenant()
+    return {
+        "tenant": tenant.code,
+        "day": row.day.isoformat(),
+        "soul_count": row.soul_count,
+        "timestamp": timezone.now().isoformat(),
+    }

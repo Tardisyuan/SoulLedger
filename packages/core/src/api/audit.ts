@@ -37,6 +37,9 @@ export interface AuditLogEntry {
 
 export const auditApi = {
   list: (params?: Record<string, string>) => api.get<PaginatedResponse<AuditLogEntry>>("/audit-logs/", { params }),
+  /** 与 `list` 同一组筛选 / 租户划界的 CSV,不分页(`AuditLogViewSet.export`);页码参数不要传。 */
+  exportCsv: (params?: Record<string, string>) =>
+    api.get<Blob>("/audit-logs/export/", { params, responseType: "blob" }),
 };
 
 /** One row of `GET /auth/login-logs/` (ADMIN-only, `LoginLogViewSet`; this tenant's users). */

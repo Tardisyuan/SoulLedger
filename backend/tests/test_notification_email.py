@@ -197,3 +197,50 @@ def test_notifications_from_before_the_opt_in_are_never_emailed(cn_tenant):
     _notify(user)  # 开关之后的:发
     email_action_needed_for_tenant(str(cn_tenant.pk))
     assert len(mail.outbox) == 1
+
+
+# ── 迁移 0018:给老账号补开关时刻 ─────────────────────────────────────────
+
+
+def _backfill():
+    import importlib
+
+    from django.apps import apps
+
+    return importlib.import_module("apps.authentication.migrations.0018_backfill_email_opted_at"), apps
+
+
+def test_backfill_stamps_only_opted_in_officers_without_a_moment_and_reverses_only_its_own(cn_tenant):
+    mod, apps = _backfill()
+    old = _officer(cn_tenant, "old")
+    off = _officer(cn_tenant, "off", opted=False)
+    real = _officer(cn_tenant, "real")
+    _opted_at(real, timezone.now() - timedelta(days=9))
+    real_at = real.preferences["email_opted_at"]
+    mod.stamp(apps, None)
+    for u in (old, off, real):
+        u.refresh_from_db()
+    assert old.preferences["email_opted_at"] and old.preferences["email_opted_backfilled"] is True
+    assert "email_opted_at" not in off.preferences  # 没开开关的不动
+    assert real.preferences["email_opted_at"] == real_at  # 有真实时刻的不覆盖
+    assert "email_opted_backfilled" not in real.preferences
+    stamped = old.preferences["email_opted_at"]
+    mod.stamp(apps, None)  # 幂等
+    old.refresh_from_db()
+    assert old.preferences["email_opted_at"] == stamped
+    mod.unstamp(apps, None)
+    for u in (old, real):
+        u.refresh_from_db()
+    assert "email_opted_at" not in old.preferences and "email_opted_backfilled" not in old.preferences
+    assert real.preferences["email_opted_at"] == real_at  # 反向不碰自己打开的
+
+
+def test_turning_the_switch_on_again_replaces_a_backfilled_moment_and_drops_the_marker(api_client, cn_tenant):
+    user = _officer(cn_tenant, "again", opted=False)
+    user.preferences = {"email_notifications": False, "email_opted_at": "2026-01-01T00:00:00+00:00",
+                        "email_opted_backfilled": True}
+    user.save(update_fields=["preferences"])
+    api_client.force_authenticate(user)
+    assert api_client.patch(PREFS, {"email_notifications": True}, format="json").status_code == 200
+    user.refresh_from_db()
+    assert user.preferences["email_opted_at"] > "2026-01-01" and "email_opted_backfilled" not in user.preferences

@@ -29,6 +29,15 @@ export {
   soulsApi,
   SOUL_BATCH_RECYCLE_ERROR_CODES,
   soulBatchRecycleErrorOf,
+  soulImportFileErrorOf,
+  soulImportRowsRefusalOf,
+  SOUL_IMPORT_COLUMNS,
+  SOUL_IMPORT_ROW_CODES,
+  SOUL_IMPORT_FILE_CODES,
+  type SoulImportPreview,
+  type SoulImportRow,
+  type SoulImportCommitResult,
+  type SoulImportFileError,
   type SoulInput,
   type Soul,
   type SoulListItem,
@@ -78,7 +87,7 @@ export {
 } from "./judgment";
 
 // Ledger
-export { ledgerApi, isMonthTooLarge, type LedgerStatsOverview, type LedgerRecord, type LedgerSummary, type LedgerReading, type LedgerRecalculation, type LedgerInheritance, type LedgerInheritanceNotApplicable, type LedgerJournal, type LedgerJournalRow, type LedgerJournalCategory, type LedgerJournalParams } from "./ledger";
+export { ledgerApi, isMonthTooLarge, type LedgerStatsOverview, type LedgerTrends, type LedgerTrendPoint, type LedgerTrendRange,type LedgerRecord, type LedgerSummary, type LedgerReading, type LedgerRecalculation, type LedgerInheritance, type LedgerInheritanceNotApplicable, type LedgerJournal, type LedgerJournalRow, type LedgerJournalCategory, type LedgerJournalParams } from "./ledger";
 
 // Realms
 export { realmsApi, type Realm, type RealmOccupancy, type RealmCapacityResult } from "./realms";

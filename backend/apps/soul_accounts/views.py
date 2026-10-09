@@ -7,6 +7,7 @@
 原属租户照常管理它的账号、审批它的转生申请;暂居租户看不到这三样。
 """
 from django.db import transaction
+from django.db.models import Q
 from drf_spectacular.utils import extend_schema
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
@@ -20,6 +21,7 @@ from apps.soul_accounts import services as svc
 from apps.soul_accounts.models import (
     AccountOrigin,
     CooldownShorteningRequest,
+    CooldownShorteningStatus,
     InitialCredential,
     RebirthApplication,
     SoulAccount,
@@ -219,7 +221,40 @@ class OfficerCooldownShorteningViewSet(CodenameViewSetMixin, viewsets.ReadOnlyMo
         qs = CooldownShorteningRequest.objects.select_related(
             "soul__home_tenant", "application__soul__home_tenant", "decided_by"
         )
-        return scope_to_tenant(qs, self.request, field="soul__home_tenant")
+        qs = scope_to_tenant(qs, self.request, field="soul__home_tenant")
+        return self._ordered(qs) if self.action == "list" else qs
+
+    @staticmethod
+    def _ordered(qs):
+        """A11 默认顺序,在库里排好,分页才对:待决且冷却未结束的在前、按剩余从少到多;
+        待决但冷却已结束的其次;已决定的最后、保持最近提交在前。
+
+        待决的申请不可能已有批准的缩短,所以它的冷却截止 = 终局驳回时刻 + 本殿冷却天数
+        (`rebirth._cooldown_end` 的第一项)。天数在 `Tenant.settings` 的 JSON 里、因殿而异,
+        这里按本页范围内的殿各发一个 `When`,不依赖 JSON 到整数的方言转换(SQLite 与 PostgreSQL 一致)。
+        """
+        from datetime import timedelta
+
+        from django.db.models import Case, DateTimeField, DurationField, ExpressionWrapper, F, IntegerField, Value, When
+        from django.utils import timezone
+
+        from apps.tenants.models import Tenant
+
+        tenants = Tenant.objects.filter(pk__in=qs.order_by().values("soul__home_tenant"))
+        days = Case(
+            *[When(soul__home_tenant=t.pk, then=Value(timedelta(days=rebirth.cooldown_days(t)))) for t in tenants],
+            default=Value(timedelta(days=rebirth.DEFAULT_COOLDOWN_DAYS)), output_field=DurationField(),
+        )
+        end = ExpressionWrapper(F("application__decided_at") + days, output_field=DateTimeField())
+        pending = Q(status=CooldownShorteningStatus.PENDING)
+        group = Case(
+            When(pending & Q(sort_end__gt=timezone.now()), then=Value(0)),
+            When(pending, then=Value(1)),
+            default=Value(2), output_field=IntegerField(),
+        )
+        qs = qs.annotate(sort_end=end).annotate(sort_group=group)
+        live_end = Case(When(sort_group=0, then=F("sort_end")), default=None, output_field=DateTimeField())
+        return qs.annotate(sort_live_end=live_end).order_by("sort_group", "sort_live_end", "-created_at")
 
     @extend_schema(responses={200: CooldownShorteningCountsSerializer})
     @action(detail=False, methods=["get"])

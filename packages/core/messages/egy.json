@@ -415,6 +415,54 @@
       "transfer_one_only": "Hab-Ba: Ba Wa Pen. Setep Seth {{n}}.",
       "export": "Bek Seth",
       "export_failed": "Nen Wehem Medew"
+    },
+    "import": {
+      "button": "Ini Seth",
+      "title": "Ini Ba",
+      "choose_file": "Setep Sesh",
+      "template": "Ini Pet-Sesh",
+      "hint_required": "Em Tepy: {{columns}}",
+      "hint_max": "Khet Er Pehwy: {{max}}.",
+      "checking": "Em Maa…",
+      "summary": "Khet {{total}} · Menkh {{ok}} · Sethet {{bad}}",
+      "only_errors": "Maa Sethet Wa",
+      "col_row": "Khet",
+      "col_status": "Kheperu",
+      "status_ok": "Menkh",
+      "status_error": "Sethet",
+      "empty_filtered": "Nen Sethet.",
+      "commit": "Ini Ba {{n}}",
+      "committing": "Em Ini…",
+      "blocked": "Nen Ini: Sethet {{n}}. Khemen Sesh, Setep Wehem.",
+      "success": "Ba {{n}} Ini Seth",
+      "view_batch": "Maa Ba Ini Seth",
+      "batch_chip": "Maa Ini Seth Wa",
+      "failed": "Nen Ini Seth",
+      "row_codes": {
+        "required": "Em Tepy",
+        "too_long": "Nen Menkh · Er Pehwy",
+        "too_many_cells": "Nen Menkh · Hesb",
+        "invalid_civilization": "Nen Menkh · Taui",
+        "civilization_mismatch": "Nen Taui Pen",
+        "invalid_date": "Nen Menkh · Hru",
+        "death_before_birth": "Mut Tepy Er Mesut",
+        "implausible_lifespan": "Ankh Nen Maat",
+        "duplicate_in_file": "Sen Medu · Sesh",
+        "duplicate_existing": "Sen Medu · Medjat"
+      },
+      "file_codes": {
+        "file_too_large": "Nen Menkh · Sesh Er Pehwy",
+        "bad_encoding": "Nen Menkh · Sesh Medu",
+        "empty_file": "Nen Medu Em Sesh",
+        "no_rows": "Nen Khet Em Sesh",
+        "duplicate_columns": "Sen Medu · Ren",
+        "unknown_columns": "Nen Rekh: {{columns}}",
+        "missing_columns": "Nen Gem: {{columns}}",
+        "too_many_rows": "Nen Menkh · Khet Er Pehwy: {{max}}",
+        "malformed_csv": "Nen Menkh · Sesh",
+        "no_tenant": "Nen Taui Pen",
+        "unknown": "Nen Ini Seth"
+      }
     }
   },
   "common": {
@@ -1088,7 +1136,18 @@
     "avg_scope": "Ba Neb Em Medjat",
     "occupancy": "Hesb Aq",
     "bucket_width": "Mesqet Wa: {{n}}",
-    "vs_last_month": "Abed Pehwy"
+    "vs_last_month": "Abed Pehwy",
+    "trends": {
+      "title": "Khemen Hru",
+      "range_label": "Pehwy",
+      "range_30d": "Pehwy Hru 30",
+      "range_90d": "Pehwy Hru 90",
+      "range_12m": "Pehwy Abed 12",
+      "by_state": "Em Kheperu",
+      "by_civilization": "Em Taui",
+      "error": "Nen Ini Khemen Hru",
+      "not_enough": "Nen Hru 2 Djer. Sesh Hru Neb."
+    }
   },
   "ledger": {
     "title": "Medew Nefer",
@@ -1126,7 +1185,35 @@
       "empty": "Nen Medu.",
       "occurrences": "Kheper: Sep {{n}}",
       "milestone": "Sekhet Dens",
-      "clause": "Djedu"
+      "clause": "Djedu",
+      "form": {
+        "add_button": "Redi Sep",
+        "add_title": "Redi Sesh Nefer Hena Isfet",
+        "edit_title": "Khemen Sesh Nefer Hena Isfet",
+        "type": "Iru",
+        "occurrence_count": "Kheper Sep",
+        "life_stage": "Ankh",
+        "statute": "Djed Hep",
+        "statute_none": "Nen Djed",
+        "clause_none": "Nen Djedu",
+        "evidence_source": "Medu Maat",
+        "evidence_note": "Medu Seth",
+        "count_needs_clause": "Setep Djedu Hena Sep Kheper",
+        "clause_needs_count": "Sesh Sep Kheper Hena Djedu",
+        "weight_range": "Aha: 1 Er 100",
+        "snapshot": "Sau Hep",
+        "date_year": "Renpet",
+        "date_month": "Abed",
+        "date_day": "Hru",
+        "err": {
+          "date_order": "Sesh Renpet Tepy Abed Hru",
+          "date_invalid": "Nen Maat Hru: Setep Renpet Abed Hru",
+          "statute_civ": "Hep Pen Nen Em Taui Ba",
+          "pair": "Sep Kheper Hena Djedu Wa",
+          "count_min": "Sep Kheper: 1 Er Neb",
+          "unknown_enum": "Nen Setep"
+        }
+      }
     },
     "series_effective": "Em Iri",
     "series_decayed": "Khebi Seth",
@@ -1576,6 +1663,8 @@
     "all_resources": "Khet Neb",
     "no_logs": "Nen Medew Maa Djer",
     "clear_filters": "Fekh Setep",
+    "export": "Bek Seth",
+    "export_failed": "Nen Wehem Medew",
     "access_denied": "Nen Was Aq",
     "affected": "Khet Em Khet",
     "search_placeholder": "Hehy Khet Er Medu…",
@@ -1866,6 +1955,13 @@
       "legend_empty": "□ Nen",
       "legend_count": "Hesb = Em Sekhet",
       "read_only": "Maa Wa · Tut"
+    },
+    "facts": {
+      "show": "Medu",
+      "hide": "Imen",
+      "cycle_limit": "Sep Wehem Mesut Er Pehwy",
+      "judgment_required": "Wedja: Em Tepy",
+      "judgment_not_required": "Nen Wedja"
     },
     "tree": {
       "title": "Ta Neb",
@@ -2868,6 +2964,7 @@
       "chat_reconcile_inbox": "Senb Sesh Wesekhet",
       "soul_assist_purge_history": "Fekh Medew Hehy Medu",
       "ledger_snapshot_balance_for_tenant": "Sesh Sepy Abed",
+      "ledger_snapshot_census_for_tenant": "Sesh Redu Ba Hru Neb",
       "notifications_email_action_needed_for_tenant": "Hab Sedjem Ba Em Smen Er Djeret",
       "notifications_email_action_needed_global": "Hab Sedjem Ba Em Smen Er Djeret · Sab Hery"
     },
@@ -3128,6 +3225,7 @@
       "no_dispositions": "Nen Wetep Djer. Er Khet Wedja Khetem, Sesh Dy.",
       "no_applications": "Nen Dbh Em Ankh Pen",
       "milestone": "Khet Dens",
+      "basis": "Djedu",
       "merit_entry": "Nefer",
       "demerit_entry": "Isfet",
       "court": "Wesekhet",

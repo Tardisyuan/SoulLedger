@@ -38,6 +38,8 @@ const PAGE_1 = [soul("a1", "沈青梧"), soul("b2", "周慕云")];
 const PAGE_2 = [soul("c3", "王素心")];
 
 jest.mock("@soulledger/core/hooks/useSouls", () => ({
+  useSoulImportPreview: () => ({ mutate: jest.fn(), mutateAsync: jest.fn(), isPending: false, reset: jest.fn() }),
+  useSoulImportCommit: () => ({ mutate: jest.fn(), mutateAsync: jest.fn(), isPending: false, reset: jest.fn() }),
   useSouls: (params: { page?: number }) => ({
     data: { results: params.page === 2 ? PAGE_2 : PAGE_1, count: 21 },
     isLoading: false,

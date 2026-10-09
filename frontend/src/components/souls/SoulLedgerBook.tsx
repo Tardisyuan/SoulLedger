@@ -1,12 +1,15 @@
 "use client";
 
 import type React from "react";
+import { useState } from "react";
 import Link from "next/link";
 import type { LedgerRecord } from "@soulledger/core/api/ledger";
 import { RECORD_QUANTITIES } from "@soulledger/core/api/ledgerQuantities";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { DomainEnum, MissingValue } from "@/src/components/ui/DomainValue";
 import { formatHistoricalDate } from "@/lib/utils";
+import { Button } from "@/src/components/ui/Button";
+import { SoulRecordFormModal } from "@/src/components/souls/SoulRecordFormModal";
 
 /**
  * 功过台账 —— 逐条账页。Stage 12 C2。
@@ -189,11 +192,34 @@ export function RecordFacts({ record }: { record: LedgerRecord }) {
 
 export interface SoulLedgerBookProps {
   records: LedgerRecord[];
+  /**
+   * 有这三样才画「新增一条 / 修改」:灵魂 id、它的文明(只列该文明的律条)、调用方已判过的
+   * `soul.update`(后端对 add_record / 改一条强制同一把码名)。审判台的证据行不传,只读。
+   */
+  edit?: { soulId: string; civilization: string };
 }
 
-export function SoulLedgerBook({ records }: SoulLedgerBookProps) {
+export function SoulLedgerBook({ records, edit }: SoulLedgerBookProps) {
   const { t, formatDate, locale } = useI18n();
   const rows = settlementOrder(records);
+  // `null` = 窗口关着;`"new"` = 新增;一条记录 = 修改它。
+  const [form, setForm] = useState<LedgerRecord | "new" | null>(null);
+  const formModal = edit ? (
+    <SoulRecordFormModal
+      isOpen={form !== null}
+      onClose={() => setForm(null)}
+      soulId={edit.soulId}
+      civilization={edit.civilization}
+      record={form === "new" ? null : form}
+    />
+  ) : null;
+  const addButton = edit ? (
+    <div className="mb-3 flex justify-end">
+      <Button type="button" size="sm" variant="secondary" data-testid="record-add" onClick={() => setForm("new")}>
+        {t("ledger.book.form.add_button")}
+      </Button>
+    </div>
+  ) : null;
 
   const meritTotal = rows
     .filter((r) => r.record.type === "MERIT")
@@ -208,6 +234,8 @@ export function SoulLedgerBook({ records }: SoulLedgerBookProps) {
       <section>
         <BookHeading title={t("ledger.book.title")} />
         <p className="text-sm text-[oklch(var(--color-ink-subtle))]">{t("ledger.book.empty")}</p>
+        {addButton}
+        {formModal}
       </section>
     );
   }
@@ -215,6 +243,7 @@ export function SoulLedgerBook({ records }: SoulLedgerBookProps) {
   return (
     <section>
       <BookHeading title={t("ledger.book.title")} />
+      {addButton}
       {/* 396px of fixed columns plus the entry column (492 with 条款 from 768 up);
           below 600 the book scrolls rather than crushing the numerals out of alignment —
           600, not 640, so the ~604px middle column of the soul page at 1440 holds all seven. */}
@@ -294,6 +323,16 @@ export function SoulLedgerBook({ records }: SoulLedgerBookProps) {
                         )}
                         <RecordFacts record={record} />
                       </span>
+                    )}
+                    {edit && (
+                      <button
+                        type="button"
+                        data-record-edit={record.id}
+                        onClick={() => setForm(record)}
+                        className="mt-1 block text-xs text-[oklch(var(--color-ink-subtle))] underline decoration-dotted underline-offset-2 hover:text-[oklch(var(--color-ink))]"
+                      >
+                        {t("common.edit")}
+                      </button>
                     )}
                   </BodyCell>
 
@@ -386,6 +425,7 @@ export function SoulLedgerBook({ records }: SoulLedgerBookProps) {
           </tfoot>
         </table>
       </div>
+      {formModal}
     </section>
   );
 }

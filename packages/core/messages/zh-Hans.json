@@ -415,6 +415,54 @@
       "transfer_one_only": "发起移交一次只带一个灵魂，已选 {{n}} 个。请只勾选一个，或逐个发起。",
       "export": "导出",
       "export_failed": "导出失败"
+    },
+    "import": {
+      "button": "导入",
+      "title": "导入灵魂",
+      "choose_file": "选择文件",
+      "template": "下载模板",
+      "hint_required": "必填列：{{columns}}",
+      "hint_max": "至多 {{max}} 行。",
+      "checking": "校验中…",
+      "summary": "共 {{total}} 行，{{ok}} 行通过，{{bad}} 行有错误",
+      "only_errors": "只看有错误的",
+      "col_row": "行",
+      "col_status": "状态",
+      "status_ok": "通过",
+      "status_error": "有错误",
+      "empty_filtered": "没有有错误的行。",
+      "commit": "导入 {{n}} 个灵魂",
+      "committing": "导入中…",
+      "blocked": "有 {{n}} 行有错误，导入被禁用。修正文件后重新选择。",
+      "success": "已导入 {{n}} 个灵魂",
+      "view_batch": "查看这一批",
+      "batch_chip": "仅看导入批次",
+      "failed": "导入失败",
+      "row_codes": {
+        "required": "必填",
+        "too_long": "超出长度上限",
+        "too_many_cells": "列数多于表头",
+        "invalid_civilization": "不是已知的文明",
+        "civilization_mismatch": "不是本文明",
+        "invalid_date": "日期格式不对",
+        "death_before_birth": "死亡早于出生",
+        "implausible_lifespan": "寿命不合理",
+        "duplicate_in_file": "与文件中前面的行重复",
+        "duplicate_existing": "与已有灵魂重复"
+      },
+      "file_codes": {
+        "file_too_large": "文件太大",
+        "bad_encoding": "文件不是 UTF-8 编码",
+        "empty_file": "文件是空的",
+        "no_rows": "文件里没有数据行",
+        "duplicate_columns": "列名重复",
+        "unknown_columns": "有不认识的列：{{columns}}",
+        "missing_columns": "缺少必填列：{{columns}}",
+        "too_many_rows": "超过 {{max}} 行的上限",
+        "malformed_csv": "文件格式不对",
+        "no_tenant": "当前账号没有所属文明",
+        "unknown": "导入失败"
+      }
     }
   },
   "common": {
@@ -1088,7 +1136,18 @@
     "avg_scope": "全部已入簿灵魂",
     "occupancy": "占容量",
     "bucket_width": "每格 {{n}}",
-    "vs_last_month": "较上月"
+    "vs_last_month": "较上月",
+    "trends": {
+      "title": "趋势",
+      "range_label": "范围",
+      "range_30d": "近 30 天",
+      "range_90d": "近 90 天",
+      "range_12m": "近 12 个月",
+      "by_state": "按状态",
+      "by_civilization": "按文明",
+      "error": "趋势加载失败",
+      "not_enough": "快照还不足两天；每天夜里记一次，线随后出现。"
+    }
   },
   "ledger": {
     "title": "功德统计",
@@ -1126,7 +1185,35 @@
       "empty": "尚无账目。",
       "occurrences": "发生 {{n}} 次",
       "milestone": "重要节点",
-      "clause": "条款"
+      "clause": "条款",
+      "form": {
+        "add_button": "新增一条",
+        "add_title": "新增功过记录",
+        "edit_title": "修改功过记录",
+        "type": "类型",
+        "occurrence_count": "发生次数",
+        "life_stage": "人生阶段",
+        "statute": "引用律条",
+        "statute_none": "不引用",
+        "clause_none": "不指定条款",
+        "evidence_source": "证据来源",
+        "evidence_note": "来源说明",
+        "count_needs_clause": "填写次数时须同时选择条款",
+        "clause_needs_count": "选了条款须同时填写次数",
+        "weight_range": "权重须是 1 到 100 的整数",
+        "snapshot": "已存入的律条快照",
+        "date_year": "年",
+        "date_month": "月",
+        "date_day": "日",
+        "err": {
+          "date_order": "年、月、日须从大到小依次填写",
+          "date_invalid": "日期不合法,请检查年、月、日(没有 0 年)",
+          "statute_civ": "该律条不属于这个灵魂的文明",
+          "pair": "次数与条款须同时填写,或同时留空",
+          "count_min": "次数须是不小于 1 的整数",
+          "unknown_enum": "取值不在可选范围内"
+        }
+      }
     },
     "series_effective": "现值",
     "series_decayed": "已衰减",
@@ -1576,6 +1663,8 @@
     "all_resources": "所有资源",
     "no_logs": "暂无审计日志",
     "clear_filters": "清除筛选",
+    "export": "导出",
+    "export_failed": "导出失败",
     "access_denied": "访问被拒绝",
     "affected": "影响对象",
     "search_placeholder": "搜索资源或描述…",
@@ -1866,6 +1955,13 @@
       "legend_empty": "□ 空",
       "legend_count": "数字 = 在押",
       "read_only": "只读示意"
+    },
+    "facts": {
+      "show": "说明",
+      "hide": "收起",
+      "cycle_limit": "轮回上限",
+      "judgment_required": "入界须经审判",
+      "judgment_not_required": "入界无需审判"
     },
     "tree": {
       "title": "界域树",
@@ -2868,6 +2964,7 @@
       "chat_reconcile_inbox": "按 Synapse 校对殿司收件箱",
       "soul_assist_purge_history": "清理助手会话",
       "ledger_snapshot_balance_for_tenant": "记余额月快照",
+      "ledger_snapshot_census_for_tenant": "记灵魂普查日快照",
       "notifications_email_action_needed_for_tenant": "邮件提醒待处理通知",
       "notifications_email_action_needed_global": "邮件提醒待处理通知(全局管理员)"
     },
@@ -3128,6 +3225,7 @@
       "no_dispositions": "尚未处置。审判结束后此处入簿。",
       "no_applications": "这一世没有转生申请",
       "milestone": "要事",
+      "basis": "依据",
       "merit_entry": "功",
       "demerit_entry": "过",
       "court": "审理殿",

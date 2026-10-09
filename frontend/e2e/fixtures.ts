@@ -1345,6 +1345,8 @@ export class ApiMock {
     this.on("GET", "/menus/list-public/", MENUS);
 
     this.on("GET", "/ledger/stats/overview/", LEDGER_STATS);
+    // Dashboard 「趋势」: no snapshots yet — the panel's empty state, not a default 200 list.
+    this.on("GET", "/ledger/stats/trends/", { range: "30d", since: "2026-09-08", until: "2026-10-08", points: [] });
 
     // ── Souls ──
     this.on("GET", "/souls/", (call) =>

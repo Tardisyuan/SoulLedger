@@ -521,6 +521,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/audit-logs/export/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description GET /api/v1/audit-logs/export/?action=&resource=&start_date=&ordering=...
+         *     与列表同一组筛选、同一租户划界、同一权限(audit.read);不分页。自由文本格一律过 `csv_safe`。
+         */
+        get: operations["v1_audit_logs_export_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/audit-logs/resources/": {
         parameters: {
             query?: never;
@@ -3206,6 +3226,29 @@ export interface paths {
          *     recent activity, and souls by realm.
          */
         get: operations["v1_ledger_stats_overview_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ledger/stats/trends/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description GET /ledger/stats/trends/?range=30d|90d|12m
+         *
+         *     灵魂普查日快照(`SoulCensusSnapshot`)的折线数据。划界与仪表盘同一口径:ADMIN 不带租户看全部
+         *     (按天把各租户的映射相加),带租户或非 ADMIN 只看本租户。没有快照的日子不补点 ——
+         *     趋势从第一份快照那天起有数,不回填。
+         */
+        get: operations["v1_ledger_stats_trends_retrieve"];
         put?: never;
         post?: never;
         delete?: never;
@@ -7080,6 +7123,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/souls/{id}/records/{record_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * @description Edit one merit/demerit record on this soul (partial).
+         *
+         *     The same serializer and the same validation as `add_record` — dates against the soul,
+         *     the clause/count pair, the statute against the soul's civilization — with the record as
+         *     instance. The statute snapshot is re-taken by `SoulRecord.save` only when the cited
+         *     statute changes. Gated by `soul.update`, like `add_record`.
+         */
+        patch: operations["v1_souls_records_partial_update"];
+        trace?: never;
+    };
     "/api/v1/souls/{id}/records/{record_id}/acknowledge-date-warning/": {
         parameters: {
             query?: never;
@@ -7223,6 +7290,51 @@ export interface paths {
         get: operations["v1_souls_export_retrieve"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/souls/import/commit/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Create every soul in the file, or none. Re-validates the file itself.
+         *
+         *     422 with the preview body when any row has an error (nothing written). On success
+         *     one `IMPORT` audit row names the batch; each soul also gets its ordinary CREATE row.
+         */
+        post: operations["v1_souls_import_commit_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/souls/import/preview/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Validate a soul CSV row by row. WRITES NOTHING.
+         *
+         *     Columns: name, civilization (required); birth_date, death_date, origin_location,
+         *     birth_name, description. Dates are `YYYY`, `YYYY-MM` or `YYYY-MM-DD`, negative for
+         *     BCE. At most `importer.MAX_ROWS` rows. `civilization` must be the caller's own.
+         */
+        post: operations["v1_souls_import_preview_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -10700,6 +10812,30 @@ export interface components {
             records: components["schemas"]["LedgerRecordSummary"][];
             reading: components["schemas"]["LedgerReading"];
         };
+        /** @description 一天的普查。三个映射各是 `{键: 数}`;键集随数据变化(新界域、新状态),所以是自由映射。 */
+        LedgerTrendPoint: {
+            /** Format: date */
+            day: string;
+            soul_count: number;
+            by_state: {
+                [key: string]: number;
+            };
+            by_civilization: {
+                [key: string]: number;
+            };
+            by_realm: {
+                [key: string]: number;
+            };
+        };
+        /** @description `GET /ledger/stats/trends/` —— 范围内每个有快照的日子一个点,日期升序;没有快照是空数组。 */
+        LedgerTrends: {
+            range: components["schemas"]["RangeEnum"];
+            /** Format: date */
+            since: string;
+            /** Format: date */
+            until: string;
+            points: components["schemas"]["LedgerTrendPoint"][];
+        };
         /**
          * @description * `CHILDHOOD` - Childhood
          *     * `YOUTH` - Youth
@@ -11054,6 +11190,8 @@ export interface components {
             is_milestone: boolean;
             /** Format: date-time */
             recorded_at: string;
+            readonly statute_snapshot: components["schemas"]["MeStatuteRef"] | null;
+            life_stage: string;
         };
         /** @description 结束这一世的那次转世。**没有 new_identity、没有 notes。** */
         MeReincarnation: {
@@ -11087,6 +11225,13 @@ export interface components {
             started_on: string | null;
             /** Format: date */
             ends_on: string | null;
+        };
+        /** @description 灵魂看到的律条引用:只有编号与各语言的短标题 —— 不带正文、出处、哈希、版本。 */
+        MeStatuteRef: {
+            code: string;
+            title: {
+                [key: string]: string;
+            };
         };
         MeTenant: {
             code: string;
@@ -13111,6 +13256,77 @@ export interface components {
         PatchedSoulDisplayNameRequest: {
             display_name?: string;
         };
+        PatchedSoulRecord: {
+            /** Format: uuid */
+            readonly id?: string;
+            record_type?: components["schemas"]["RecordTypeEnum"];
+            /**
+             * @description Standardized category for this record
+             *
+             *     * `CHARITY` - Charity / Generosity
+             *     * `COMPASSION` - Compassion / Kindness
+             *     * `HONESTY` - Honesty / Integrity
+             *     * `COURAGE` - Courage / Bravery
+             *     * `WISDOM` - Wisdom / Knowledge
+             *     * `PIETY` - Piety / Devotion
+             *     * `CRUELTY` - Cruelty / Violence
+             *     * `DECEPTION` - Deception / Lying
+             *     * `COWARDICE` - Cowardice
+             *     * `GREED` - Greed / Avarice
+             *     * `BLASPHEMY` - Blasphemy / Impiety
+             *     * `MURDER` - Murder / Killing
+             *     * `OTHER` - Other
+             */
+            category?: components["schemas"]["SoulRecordCategoryEnum"];
+            readonly civilization?: string;
+            description?: string;
+            /** @description Significance weight (1-100). Affects karma calculation. */
+            weight?: number;
+            /** @description A possibly-BCE date. `year` is signed (negative = BCE); `month` and `day` are null when the source does not record them, which is common for ancient records. On write, `YYYY-MM-DD` and `-YYYY-MM-DD` strings are also accepted for backward compatibility; see `HistoricalDateField.to_internal_value`. */
+            event_date?: {
+                year: number;
+                month: number | null;
+                day: number | null;
+            } | null;
+            /** @description Marks a turning point in the life. Display only — the lifecycle timeline stars and tints it. It does NOT change the deed's weight. */
+            is_milestone?: boolean;
+            evidence_json?: unknown;
+            /** Format: date-time */
+            readonly recorded_at?: string;
+            readonly date_problems?: components["schemas"]["RecordDateProblem"][];
+            /** @description Which scoring clause this deed was scored under, as '<Statute.code>:<clause condition_zh>' — e.g. '救濟門#7:賑濟窮民百錢'. Blank means unknown, which makes this record granularity-blind. */
+            statute_clause?: string;
+            /** @description How many separate occasions this row's weight covers. NOT a row count: one row may document a year of alms or three rows one killing. 1 means 一次 — earned or incurred at a stroke. Null means unknown, which makes this record granularity-blind. */
+            occurrence_count?: number | null;
+            /** @description Which Inferno article this deed belongs under, as a Statute code in the EU-INF-* corpus — e.g. 'EU-INF-C7-G1' (seventh circle, first girone) or 'EU-INF-C9-Z1' (Caina). Blank means unclassified, which leaves the European router on its culpa ladder for this deed. */
+            inferno_article?: string;
+            /** @description Life index this record belongs to; 0 is the first life. */
+            readonly cycle?: number;
+            /** Format: uuid */
+            statute?: string | null;
+            /** @description The cited article as it read when cited: statute_id, code, revision, effective_from, title/text per locale, source, hash, at. Taken by save(); never updated when the article changes. */
+            readonly statute_snapshot?: unknown;
+            /**
+             * @description Which stage of the life the deed falls in; blank = unrecorded.
+             *
+             *     * `CHILDHOOD` - Childhood
+             *     * `YOUTH` - Youth
+             *     * `ADULTHOOD` - Adulthood
+             *     * `OLD_AGE` - Old age
+             */
+            life_stage?: components["schemas"]["LifeStageEnum"] | components["schemas"]["BlankEnum"];
+            /**
+             * @description Where this record came from; blank = unrecorded.
+             *
+             *     * `REGISTRY` - Registry
+             *     * `WITNESS` - Witness
+             *     * `SELF_ACCOUNT` - Self account
+             *     * `OTHER` - Other
+             */
+            evidence_source?: components["schemas"]["EvidenceSourceEnum"] | components["schemas"]["BlankEnum"];
+            /** @description Free text about the source, e.g. which witness or which register. */
+            evidence_note?: string;
+        };
         /** @description `PATCH /tenants/{code}/seal-glyphs/` 的请求体 —— 只有这一个字段可写。 */
         PatchedTenantSealGlyphs: {
             seal_glyphs?: string[];
@@ -13611,6 +13827,13 @@ export interface components {
         PushTokenUnregister: {
             token: string;
         };
+        /**
+         * @description * `30d` - 30d
+         *     * `90d` - 90d
+         *     * `12m` - 12m
+         * @enum {string}
+         */
+        RangeEnum: "30d" | "90d" | "12m";
         Reaction: {
             /** Format: uuid */
             readonly id: string;
@@ -13880,6 +14103,10 @@ export interface components {
              *     * `FAIL` - 不过(第二次死亡)
              */
             fork?: (components["schemas"]["RealmForkEnum"] | components["schemas"]["BlankEnum"] | components["schemas"]["NullEnum"]) | null;
+            memory_reset_mechanism?: components["schemas"]["MemoryResetMechanismEnum"] | components["schemas"]["BlankEnum"];
+            cycle_limit?: number | null;
+            /** @description Whether this realm requires a formal judgment process before entry */
+            is_judgment_required?: boolean;
         };
         /**
          * @description Serializer that resolves the best-fit name based on Accept-Language header.
@@ -14869,6 +15096,55 @@ export interface components {
         SoulHomeTenant: {
             code: string;
             display_name: string;
+        };
+        SoulImportCellError: {
+            /** @description CSV column the problem is in; `_row` for the row as a whole. */
+            field: string;
+            /** @description Stable machine-readable code; the web translates it. */
+            code: string;
+        };
+        SoulImportCommit: {
+            created: number;
+            /**
+             * Format: uuid
+             * @description Filter the list with `?import_batch=` to see this batch.
+             */
+            batch_id: string;
+        };
+        /** @description 400: the file as a whole is unusable. Nothing was read or written. */
+        SoulImportFileError: {
+            code: string;
+            columns?: string[];
+            max_rows?: number;
+            max_bytes?: number;
+        };
+        /** @description 200 of `…/import/preview/` and 422 of `…/import/commit/` (rows have errors; nothing written). */
+        SoulImportPreview: {
+            total: number;
+            ok_count: number;
+            error_count: number;
+            max_rows: number;
+            rows: components["schemas"]["SoulImportRow"][];
+        };
+        SoulImportRow: {
+            /** @description Line number in the file; the header is line 1. */
+            row: number;
+            status: components["schemas"]["SoulImportRowStatusEnum"];
+            values: {
+                [key: string]: string;
+            };
+            errors: components["schemas"]["SoulImportCellError"][];
+        };
+        /**
+         * @description * `ok` - ok
+         *     * `error` - error
+         * @enum {string}
+         */
+        SoulImportRowStatusEnum: "ok" | "error";
+        /** @description Multipart body of the two import endpoints: the CSV, nothing else. */
+        SoulImportUpload: {
+            /** Format: uri */
+            file: string;
         };
         /** @description Lightweight serializer for list views. */
         SoulList: {
@@ -17189,6 +17465,33 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["AuditActionOption"][];
                 };
+            };
+        };
+    };
+    v1_audit_logs_export_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description CSV of the audit rows the list would return for the same query params (same tenant scope, same filters, same ordering), all pages, not paginated: Timestamp, Tenant, User, Action, Resource, Resource ID, Description, IP, Trace ID. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": string;
+                };
+            };
+            /** @description A filter is malformed, or more than 50000 rows match. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -21370,6 +21673,35 @@ export interface operations {
                 };
             };
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LedgerError"];
+                };
+            };
+        };
+    };
+    v1_ledger_stats_trends_retrieve: {
+        parameters: {
+            query?: {
+                range?: "12m" | "30d" | "90d";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LedgerTrends"];
+                };
+            };
+            400: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -28162,6 +28494,7 @@ export interface operations {
                 death_date_after?: string;
                 death_date_before?: string;
                 has_date_problem?: boolean;
+                import_batch?: string;
                 karma_max?: number;
                 karma_min?: number;
                 karmic_balance_max?: number;
@@ -28481,6 +28814,7 @@ export interface operations {
                 death_date_after?: string;
                 death_date_before?: string;
                 has_date_problem?: boolean;
+                import_batch?: string;
                 karma_max?: number;
                 karma_min?: number;
                 karmic_balance_max?: number;
@@ -28543,6 +28877,7 @@ export interface operations {
                 death_date_after?: string;
                 death_date_before?: string;
                 has_date_problem?: boolean;
+                import_batch?: string;
                 karma_max?: number;
                 karma_min?: number;
                 karmic_balance_max?: number;
@@ -28577,6 +28912,36 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SoulRecord"][];
+                };
+            };
+        };
+    };
+    v1_souls_records_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this Soul. */
+                id: string;
+                /** @description The SoulRecord's primary key (the id belongs to the related record, not to `Soul`). */
+                record_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedSoulRecord"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedSoulRecord"];
+                "multipart/form-data": components["schemas"]["PatchedSoulRecord"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulRecord"];
                 };
             };
         };
@@ -28738,6 +29103,76 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+        };
+    };
+    v1_souls_import_commit_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["SoulImportUpload"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulImportCommit"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulImportFileError"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulImportPreview"];
+                };
+            };
+        };
+    };
+    v1_souls_import_preview_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["SoulImportUpload"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulImportPreview"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulImportFileError"];
                 };
             };
         };
