@@ -19,9 +19,9 @@ Each path is observed in three contexts, because the answer used to depend on wh
 The module is `transaction=True` so "bare" really is autocommit.
 
 Every cell below must be LOUD_FAIL: the original injected `OperationalError` reaches the caller, the business
-write is not in the database, and no event row exists. Two cells are not in the grid and have their own tests:
-`expire_for_tenant` and the ledger recalculation task (batch loops: one row's failure is logged, counted in the
-result and does not stop the batch) and WORKFLOW_CREATED (already `transaction.on_commit`, pinned as it was).
+write is not in the database, and no event row exists. Not in the grid, with their own tests: `expire_for_tenant` and the ledger recalculation task (batch loops: one
+row's failure is logged, counted in the result and does not stop the batch) and `die()` account provisioning
+(kept by design: the death stands, the officers are told after commit).
 """
 import datetime
 from dataclasses import dataclass
@@ -205,6 +205,120 @@ def _workflow_created():
     return run, persisted, "WORKFLOW_CREATED"
 
 
+def _judge(username="evlog_judge"):
+    from apps.authentication.models import User
+
+    return User.objects.get_or_create(username=username, defaults={"role": "JUDGE", "tenant": _cn()})[0]
+
+
+def _workflow_decision(verdict, event_type):
+    """An officer decides the current node through the real endpoint (workflow/views.py approve_node)."""
+    from apps.workflow.models import ApprovalNode, ApprovalWorkflow, ApprovalWorkflowStatus, NodeStatus
+    from tests.soul_account_support import dead_soul, officer_client
+
+    def path():
+        tenant = _cn()
+        soul = dead_soul(tenant, name="审批灵魂")
+        wf = ApprovalWorkflow.objects.create(soul=soul, workflow_name="普通审批", case_type="STANDARD",
+                                             status=ApprovalWorkflowStatus.IN_PROGRESS, tenant=tenant)
+        node = ApprovalNode.objects.create(workflow=wf, node_name="初审", node_order=1, node_type="EVALUATION",
+                                           approver_type="ROLE", approver_role="JUDGE", status=NodeStatus.PENDING,
+                                           activated_at=timezone.now())
+        wf.current_node = node
+        wf.save(update_fields=["current_node"])
+        judge = _judge()
+        return (lambda: officer_client(judge).post(f"/api/v1/workflows/{wf.pk}/approve_node/",
+                                                   {"verdict": verdict, "notes": "x"}, format="json"),
+                lambda: ApprovalNode.all_objects.get(pk=node.pk).status != NodeStatus.PENDING, event_type)
+    return path
+
+
+def _workflow_timeout_reject():
+    from apps.workflow import timeouts
+    from apps.workflow.models import ApprovalNode, ApprovalWorkflow, ApprovalWorkflowStatus
+    from tests.test_workflow_timeout_and_reject_to import _age, _node, _workflow
+
+    wf = _workflow(_cn(), [_node(1, timeout_hours=1, timeout_action="AUTO_REJECT"), _node(2)])
+    _age(wf.current_node, 2)
+    return (lambda: timeouts._fire(wf.pk, timezone.now()),
+            lambda: ApprovalWorkflow.all_objects.get(pk=wf.pk).status == ApprovalWorkflowStatus.REJECTED
+            and ApprovalNode.all_objects.filter(workflow=wf, notes="超时自动驳回").exists(), "WORKFLOW_REJECTED")
+
+
+def _submitted_application():
+    from apps.soul_accounts import rebirth
+
+    account, _client = rebirth_ready_soul(_cn())
+    return account, rebirth.submit(SoulAccount.objects.get(pk=account.pk), "HUMAN", "愿为人")
+
+
+def _rejected_application():
+    """Submitted, then the workflow is rejected and the application follows (the real sync, uninjected)."""
+    from apps.soul_accounts import rebirth
+    from apps.workflow.models import ApprovalWorkflow
+
+    account, application = _submitted_application()
+    ApprovalWorkflow.all_objects.filter(pk=application.workflow_id).update(status="REJECTED")
+    rebirth.sync_from_workflow(application.workflow_id)
+    return account, type(application).objects.get(pk=application.pk)
+
+
+def _rebirth_submit_workflow_created():
+    from apps.soul_accounts import rebirth
+    from apps.soul_accounts.models import RebirthApplication
+
+    account, _client = rebirth_ready_soul(_cn())
+    return (lambda: rebirth.submit(SoulAccount.objects.get(pk=account.pk), "HUMAN", "愿为人"),
+            lambda: RebirthApplication.objects.filter(soul=account.soul).exists(), "WORKFLOW_CREATED")
+
+
+def _rebirth_appeal(event_type):
+    def path():
+        from apps.soul_accounts import rebirth
+        from apps.soul_accounts.models import RebirthApplication
+
+        account, application = _rejected_application()
+        return (lambda: rebirth.appeal(SoulAccount.objects.get(pk=account.pk), application.pk, "申诉"),
+                lambda: RebirthApplication.objects.get(pk=application.pk).appeal_workflow_id is not None,
+                event_type)
+    return path
+
+
+def _rebirth_sync():
+    from apps.soul_accounts import rebirth
+    from apps.soul_accounts.models import RebirthApplication, RebirthApplicationStatus
+    from apps.workflow.models import ApprovalWorkflow
+
+    account, application = _submitted_application()
+    ApprovalWorkflow.all_objects.filter(pk=application.workflow_id).update(status="REJECTED")
+    return (lambda: rebirth.sync_from_workflow(application.workflow_id),
+            lambda: RebirthApplication.objects.get(pk=application.pk).status == RebirthApplicationStatus.REJECTED,
+            "REBIRTH_STATUS_CHANGED")
+
+
+def _rebirth_cooldown_decide():
+    from apps.soul_accounts import rebirth
+    from apps.soul_accounts.models import CooldownShorteningRequest, CooldownShorteningStatus
+
+    account, application = _rejected_application()
+    request = rebirth.request_cooldown_shortening(SoulAccount.objects.get(pk=account.pk), "家中有事")
+    judge = _judge()
+    return (lambda: rebirth.decide_cooldown_shortening(request.pk, judge, approve=False, note="冷却照旧"),
+            lambda: CooldownShorteningRequest.objects.get(pk=request.pk).status == CooldownShorteningStatus.REJECTED,
+            "COOLDOWN_SHORTENING_DECIDED")
+
+
+def _rebirth_cross_civ():
+    from apps.soul_accounts import rebirth
+    from apps.soul_accounts.models import RebirthApplication
+
+    account, application = _submitted_application()
+    judge = _judge()
+    return (lambda: rebirth.decide_cross_civilization(application.pk, judge, True),
+            lambda: RebirthApplication.objects.get(pk=application.pk).cross_civilization is True,
+            "REBIRTH_CROSS_CIV_DECIDED")
+
+
 PATHS = {
     # judgment conclusion (ORIGINAL) -- three different log calls on one call stack
     "conclude/JUDGMENT_CONCLUDED": _conclude_original("JUDGMENT_CONCLUDED"),
@@ -224,12 +338,19 @@ PATHS = {
     "complete_rebirth/STATE_CHANGED": _rebirth("STATE_CHANGED"),
     "complete_rebirth/SOUL_ACCOUNT_RETIRED": _rebirth("SOUL_ACCOUNT_RETIRED"),
     "rebirth_submit/REBIRTH_APPLICATION_SUBMITTED": _rebirth_submit,
+    "rebirth_submit/WORKFLOW_CREATED": _rebirth_submit_workflow_created,
+    "rebirth_appeal/WORKFLOW_CREATED": _rebirth_appeal("WORKFLOW_CREATED"),
+    "rebirth_appeal/REBIRTH_STATUS_CHANGED": _rebirth_appeal("REBIRTH_STATUS_CHANGED"),
+    "rebirth_sync/REBIRTH_STATUS_CHANGED": _rebirth_sync,
+    "rebirth_cooldown_decide/COOLDOWN_SHORTENING_DECIDED": _rebirth_cooldown_decide,
+    "rebirth_cross_civ/REBIRTH_CROSS_CIV_DECIDED": _rebirth_cross_civ,
+    # workflow decisions: the timeline event is written in the decision's transaction (`record_events`)
+    "workflow_approve/WORKFLOW_APPROVED": _workflow_decision("PASSED", "WORKFLOW_APPROVED"),
+    "workflow_reject/WORKFLOW_REJECTED": _workflow_decision("FAILED", "WORKFLOW_REJECTED"),
+    "workflow_timeout_reject/WORKFLOW_REJECTED": _workflow_timeout_reject,
 }
 
-# WORKFLOW_CREATED is announced by `transaction.on_commit` (workflow/services.py:659, `8e3f33f7`), not inside the
-# business transaction. Pinned as it was: see the test below for what it does now that the audit insert raises.
-OUTSIDE_THE_GRID = {"conclude+workflow/WORKFLOW_CREATED", "expire_for_tenant/DISPOSITION_EXPIRED",
-                    "die/SOUL_ACCOUNT_CREATED"}
+OUTSIDE_THE_GRID = {"expire_for_tenant/DISPOSITION_EXPIRED", "die/SOUL_ACCOUNT_CREATED"}
 GRID = [name for name in PATHS if name not in OUTSIDE_THE_GRID]
 CELLS = [(name, ctx) for name in GRID for ctx in CONTEXTS]
 
@@ -263,16 +384,6 @@ def test_a_failed_account_event_undoes_the_account_but_not_the_death_by_design(c
     assert isinstance(seen.returned, Judgment)                   # the death stands
     assert any(r.exc_info and isinstance(r.exc_info[1], OperationalError) and "provisioning" in r.getMessage()
                for r in caplog.records), "swallowed without logging the original exception"
-
-
-def test_the_workflow_created_event_is_still_after_commit():
-    """`on_commit` callbacks run after the business transaction has committed, so the business write stands
-    (persisted) and the failed audit insert now surfaces from the commit instead of vanishing into a log line.
-    Not rolled back: the event is announced after the fact. Left as the user asked; see the report."""
-    seen = observe(PATHS["conclude+workflow/WORKFLOW_CREATED"], BARE)
-    assert seen.hits
-    assert seen.persisted
-    assert seen.cause_is_the_failed_insert
 
 
 def test_expiry_logs_counts_and_continues_when_one_row_event_cannot_be_written(caplog):
@@ -326,3 +437,27 @@ def test_the_ledger_task_logs_counts_and_continues_when_one_soul_cannot_be_recal
     assert result["updated"] == 0 and result["failed"] == [str(soul.pk)]
     assert Soul.all_objects.get(pk=soul.pk).merit_score == 0, "new scores survived a failed event row"
     assert any(r.exc_info and isinstance(r.exc_info[1], OperationalError) for r in caplog.records)
+
+
+def test_a_failed_account_opening_tells_the_admins_after_commit_and_only_then():
+    """`die()` keeps its design (death stands, account backfilled later) but no longer fails quietly: the
+    soul's home-tenant admins -- and the acting officer, if any -- get one in-app notification each, sent by
+    `transaction.on_commit`, so a failed notification insert can never take the death with it."""
+    from apps.authentication.models import User
+    from apps.notifications.models import UserNotification
+
+    tenant = _cn()
+    admins = [User.objects.create_user(username=f"evlog_admin{i}", role="ADMIN", tenant=tenant) for i in (1, 2)]
+    User.objects.create_user(username="evlog_other_hall_admin", role="ADMIN", tenant=plan.tenant("EG_DUAT"))
+    User.objects.create_user(username="evlog_judge_not_admin", role="JUDGE", tenant=tenant)
+    soul = Soul.objects.create(name="亡魂", tenant=tenant)
+    hits = []
+    with _fail_event_inserts("SOUL_ACCOUNT_CREATED", hits), transaction.atomic():
+        judgment = Soul.all_objects.get(pk=soul.pk).die()
+        assert UserNotification.objects.count() == 0, "notified before the death committed"
+    assert hits and judgment is not None
+    assert Soul.all_objects.get(pk=soul.pk).current_state == SoulState.JUDGING          # death committed
+    assert not SoulAccount.objects.filter(soul=soul).exists()                           # no account
+    notes = UserNotification.objects.filter(related_resource="soul", related_id=str(soul.pk))
+    assert sorted(n.user_id for n in notes) == sorted(a.pk for a in admins)             # one per home admin
+    assert all("backfill_soul_accounts" in n.message and "亡魂" in n.message for n in notes)

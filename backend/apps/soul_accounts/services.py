@@ -500,4 +500,39 @@ def provision_on_death(soul, origin):
             return provision_account(soul, origin)[0]
     except Exception:
         logger.error("soul account provisioning on death failed for soul %s", soul.pk, exc_info=True)
+        _tell_officers_provisioning_failed(soul)
         return None
+
+
+def _tell_officers_provisioning_failed(soul):
+    """开号失败不回滚死亡,但不能只留一行日志:通知灵魂原属租户的在职 ADMIN(该租户没有就通知
+    全局 ADMIN,与 `judgment.claims.request_reassign` 同一条退路),外加当下操作的官员。
+
+    站内通知提交之后才发(与 `dispatch` / `sentence_plan` 同一处理,`30052b65`、`8e3f33f7`):失败的
+    通知 INSERT 会把外层事务标成回滚。注册在失败的保存点之外 —— 保存点里注册的回调会随它回滚而丢掉。
+    """
+    from apps.core.request_local import get_current_user
+
+    User = get_user_model()
+    admins = User.objects.filter(role="ADMIN", is_active=True).order_by("pk")
+    home = soul.home_tenant_id or soul.tenant_id
+    recipient_ids = {u.pk for u in (admins.filter(tenant_id=home) or admins.filter(tenant__isnull=True))}
+    actor = get_current_user()
+    if actor is not None and getattr(actor, "is_authenticated", False) and actor.role != SOUL_ROLE:
+        recipient_ids.add(actor.pk)
+    soul_id, soul_name = str(soul.pk), soul.name
+
+    def send():
+        from apps.events.services import EventService
+
+        for user in User.objects.filter(pk__in=recipient_ids, is_active=True).select_related("tenant").order_by("pk"):
+            EventService.notify_user(
+                user,
+                title="灵魂账号开通失败",
+                message=f"灵魂「{soul_name}」已登记死亡,但灵魂账号没有开成。请运行 backfill_soul_accounts 补开。",
+                notification_type="SYSTEM",
+                related_resource="soul",
+                related_id=soul_id,
+            )
+
+    transaction.on_commit(send)

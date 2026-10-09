@@ -72,7 +72,15 @@ def process_due(now=None, tenant_id=None) -> dict:
     for workflow in candidates(tenant_id):
         if not _due(workflow.current_node, now):
             continue
-        action = _fire(workflow.pk, now)
+        # One workflow whose AUTO_REJECT event row cannot be written is rolled back whole (the rejection with
+        # it): logged with the original exception, counted, and left due for the next run. It does not stop the
+        # others.
+        try:
+            action = _fire(workflow.pk, now)
+        except Exception:
+            logger.exception("workflow timeout: workflow %s left untouched", workflow.pk)
+            counts["failed"] = counts.get("failed", 0) + 1  # only present when something failed
+            continue
         counts[action or "skipped"] += 1
     return {str(k): v for k, v in counts.items()}
 
@@ -137,6 +145,11 @@ def _fire(workflow_pk, now) -> str | None:
                 logger.warning("auto-reject refused by node %s's required_verdicts", node.pk)
                 return action
             node.refresh_from_db()
+            # The auto-rejection on the soul's timeline: inside the timeout's transaction.
+            from apps.workflow.services import WorkflowService
+
+            workflow.refresh_from_db()
+            WorkflowService.record_events(workflow, node=node)
 
         transaction.on_commit(lambda: _tell(workflow, node, action))
     return action

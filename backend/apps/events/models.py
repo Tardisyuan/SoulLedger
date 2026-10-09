@@ -119,7 +119,7 @@ class SoulEvent(AuditUserFields, models.Model):
         on_delete=models.CASCADE,
         related_name="events",
     )
-    event_type = models.CharField(max_length=30, choices=EventType.choices)
+    event_type = models.CharField(max_length=50, choices=EventType.choices)
     payload = models.JSONField(default=dict)
     actor = models.CharField(max_length=255, blank=True, help_text="User or system")
 
