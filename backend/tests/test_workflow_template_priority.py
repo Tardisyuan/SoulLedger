@@ -60,6 +60,7 @@ from apps.tenants.managers import clear_current_tenant
 from apps.tenants.models import Tenant
 from apps.workflow.models import CaseType, WorkflowTemplate
 from apps.workflow.services import WorkflowService
+from tests.migration_schema_editor import SCHEMA_EDITOR
 
 TEMPLATES = "/api/v1/workflow/templates"
 WORKFLOWS = "/api/v1/workflows"
@@ -376,7 +377,7 @@ def test_the_migration_writes_nothing_to_an_empty_database(db):
 
     clear_current_tenant()
     assert WorkflowTemplate.all_objects.count() == 0
-    import_module(MIGRATION).forwards(apps, None)
+    import_module(MIGRATION).forwards(apps, SCHEMA_EDITOR)
     assert WorkflowTemplate.all_objects.count() == 0
 
 
@@ -401,7 +402,7 @@ def test_the_migration_leaves_a_template_somebody_already_decided_alone(db):
         case_type=CaseType.ROUTINE, priority=0, tenant=tenant, nodes_json=NODES,
     )
 
-    import_module(MIGRATION).forwards(apps, None)
+    import_module(MIGRATION).forwards(apps, SCHEMA_EDITOR)
 
     decided.refresh_from_db()
     unrelated.refresh_from_db()

@@ -15,6 +15,7 @@ from django.apps import apps as registry
 from django.core.management import call_command
 
 from apps.actors.mythology.realms import CHINESE_REALMS, EGYPTIAN_REALMS, EUROPEAN_REALMS, GREEK_REALMS
+from tests.migration_schema_editor import SCHEMA_EDITOR
 
 PACK = Path(__file__).resolve().parents[2] / "packages" / "core" / "messages" / "egy.json"
 
@@ -44,8 +45,8 @@ def test_the_section_ten_rename_moves_only_rows_still_holding_the_old_name():
         return dict(Realm.all_objects.filter(realm_code__in=mig.RENAMES).values_list("realm_code", "name_egy"))
 
     assert snap() == new
-    mig.backwards(registry, None)
+    mig.backwards(registry, SCHEMA_EDITOR)
     assert snap() == old
     Realm.all_objects.filter(realm_code="EU_HELL_2ND").update(name_egy="手改过的名字")
-    mig.forwards(registry, None)
+    mig.forwards(registry, SCHEMA_EDITOR)
     assert snap() == {**new, "EU_HELL_2ND": "手改过的名字"}

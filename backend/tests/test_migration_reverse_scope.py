@@ -40,6 +40,7 @@ from importlib import import_module
 import pytest
 
 from tests.migration_roundtrip import migrate_to, migrate_to_latest, snapshot_rows
+from tests.migration_schema_editor import SCHEMA_EDITOR
 
 AUTH_0010 = import_module("apps.authentication.migrations.0010_populate_rbac_role")
 PERM_0008 = import_module("apps.perm.migrations.0008_apply_data_scope_filter")
@@ -226,7 +227,7 @@ def test_auth_0010_reverse_leaves_a_later_posting_alone():
     )[0]
 
     filled = User.all_objects.create(username="rt_filled", role="ADMIN")
-    AUTH_0010.populate_rbac_role(apps, None)
+    AUTH_0010.populate_rbac_role(apps, SCHEMA_EDITOR)
     filled.refresh_from_db()
     assert filled.rbac_role_id == admin_role.pk
 
@@ -235,7 +236,7 @@ def test_auth_0010_reverse_leaves_a_later_posting_alone():
         username="rt_promoted", role="ADMIN", rbac_role=moderator
     )
 
-    AUTH_0010.reverse_populate(apps, None)
+    AUTH_0010.reverse_populate(apps, SCHEMA_EDITOR)
 
     filled.refresh_from_db()
     promoted.refresh_from_db()
@@ -515,7 +516,7 @@ def test_perm_0008_reverse_deletes_what_it_seeded_and_no_more():
         is_active=True,
     )
 
-    PERM_0008.seed_sample_data_scopes(apps, None)
+    PERM_0008.seed_sample_data_scopes(apps, SCHEMA_EDITOR)
 
     seeded = _scope_rows(RowLevelDataScope.objects)
     assert HAND_WRITTEN_SCOPE in seeded
@@ -523,7 +524,7 @@ def test_perm_0008_reverse_deletes_what_it_seeded_and_no_more():
         f"expected GUARDIAN and VIEWER seeded and ACTOR skipped, got {seeded}"
     )
 
-    PERM_0008.reverse_seed(apps, None)
+    PERM_0008.reverse_seed(apps, SCHEMA_EDITOR)
 
     assert _scope_rows(RowLevelDataScope.objects) == [HAND_WRITTEN_SCOPE], (
         "the reverse deleted the hand-written ACTOR scope it never created"
@@ -564,7 +565,7 @@ def test_perm_0008_seeded_scopes_table_matches_the_forward():
         Role.all_objects.get_or_create(name=name, defaults={"display_name": name})
     RowLevelDataScope.objects.all().delete()
 
-    PERM_0008.seed_sample_data_scopes(apps, None)
+    PERM_0008.seed_sample_data_scopes(apps, SCHEMA_EDITOR)
 
     declared = sorted(
         (
@@ -762,7 +763,7 @@ def test_perm_0013_reverse_leaves_a_later_grant_alone():
         for name in ("ADMIN", "JUDGE", "GUARDIAN")
     }
 
-    PERM_0013.create_workflow_permissions(apps, None)
+    PERM_0013.create_workflow_permissions(apps, SCHEMA_EDITOR)
 
     approve = Permission.all_objects.get(codename="workflow.approve", is_deleted=False)
     RolePermission.all_objects.get_or_create(
@@ -770,7 +771,7 @@ def test_perm_0013_reverse_leaves_a_later_grant_alone():
     )
     guardian, admin = roles["GUARDIAN"], roles["ADMIN"]
 
-    PERM_0013.remove_workflow_permissions(apps, None)
+    PERM_0013.remove_workflow_permissions(apps, SCHEMA_EDITOR)
 
     assert RolePermission.all_objects.filter(
         role=guardian, permission__codename="workflow.approve"

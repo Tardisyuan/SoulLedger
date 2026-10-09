@@ -6,6 +6,7 @@ from django.apps import apps as django_apps
 
 from apps.authentication.models import User
 from apps.menus.models import Menu
+from tests.migration_schema_editor import SCHEMA_EDITOR
 from tests.perm_support import seeded_menus
 from tests.soul_account_support import officer_client
 
@@ -56,8 +57,8 @@ def test_only_the_admin_sees_it(cn_tenant, path):
 
 
 def test_the_migration_is_reversible_and_idempotent():
-    migration.remove_menus(django_apps, None)
+    migration.remove_menus(django_apps, SCHEMA_EDITOR)
     assert not Menu.objects.filter(path="/admin/assistant").exists()
-    migration.add_menus(django_apps, None)
-    migration.add_menus(django_apps, None)
+    migration.add_menus(django_apps, SCHEMA_EDITOR)
+    migration.add_menus(django_apps, SCHEMA_EDITOR)
     assert Menu.objects.filter(path="/admin/assistant").count() == 1
