@@ -3010,7 +3010,8 @@
       "cooldown_invalid": "Enter a whole number from 0 to 365",
       "dispatch_enabled": "Can receive transfers (residence)",
       "saved": "Settings saved",
-      "save_failed": "Could not save the settings"
+      "save_failed": "Could not save the settings",
+      "security": "Security"
     }
   },
   "table": {
