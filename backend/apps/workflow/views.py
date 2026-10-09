@@ -414,6 +414,11 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
                 success = workflow.complete_node(node.id, verdict, notes, user=request.user)
                 if success and rebirth.requires_reason_for_soul(workflow, verdict):
                     rebirth.record_reason_for_soul(workflow, soul_reason.strip())
+                if success:
+                    # The decision on the soul's timeline: same transaction as the decision, so a failed event
+                    # row rolls the approval / rejection back and the real error reaches this request.
+                    node.refresh_from_db()
+                    WorkflowService.record_events(workflow, node=node)
         except ValueError as exc:
             # `complete_node` raises when the node declares
             # `required_verdicts` and this verdict is not in it. A 400 rather
@@ -428,9 +433,8 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
                 status=status.HTTP_400_BAD_REQUEST,
             )
         if success:
-            # The decision is on the soul's timeline, and whoever the workflow
-            # moved on to hears about it. See `WorkflowService.announce` for why
-            # this is here and not inside `complete_node`.
+            # Whoever the workflow moved on to hears about it (the timeline event was written above, in the
+            # decision's transaction).
             node.refresh_from_db()
             WorkflowService.announce(workflow, node=node)
             return Response(ApprovalWorkflowSerializer(workflow).data)

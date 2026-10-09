@@ -213,7 +213,8 @@ def submit(account, desired_form, statement=""):
                 )
         except IntegrityError:
             raise SoulAccountError(REFUSALS["application_open"], "application_open", 409) from None
-        # The event row is part of the application's record: same transaction as the application.
+        # The event rows are part of the application's record: same transaction as the application.
+        WorkflowService.record_events(workflow, created=True)
         EventService.log(soul, "REBIRTH_APPLICATION_SUBMITTED", {
             "application_id": str(application.pk), "cycle": application.cycle,
             "desired_form": desired_form, "workflow_id": str(workflow.pk),
@@ -255,6 +256,7 @@ def appeal(account, application_id, statement=""):
         application.rejection_reason = ""
         application.decided_at = None
         application.save()
+        WorkflowService.record_events(workflow, created=True)
         _log_status_change(application, old)
     WorkflowService.announce(workflow, created=True)
     _notify_status_change(application)
