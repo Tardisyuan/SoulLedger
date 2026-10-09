@@ -53,6 +53,22 @@ class TodoItemDetailSerializer(serializers.Serializer):
     node_id = serializers.CharField(required=False, help_text="待决的节点;决定时作为 node_id 传回。")
 
 
+class CosignAddSerializer(serializers.Serializer):
+    user_id = serializers.IntegerField(help_text="A `signer-candidates/` id: an officer of the same hall.")
+
+
+class CosignerSerializer(serializers.Serializer):
+    user_id = serializers.IntegerField()
+    user_name = serializers.CharField()
+    added_at = serializers.CharField()
+    signed_at = serializers.CharField(allow_null=True)
+
+
+class CosignRefusalSerializer(serializers.Serializer):
+    code = serializers.CharField(help_text="not_allowed / not_eligible / duplicate")
+    detail = serializers.CharField()
+
+
 class OfficerPushTokenSerializer(serializers.Serializer):
     token = serializers.CharField(max_length=255)
     platform = serializers.ChoiceField(choices=PushPlatform.choices)

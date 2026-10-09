@@ -67,7 +67,8 @@ def _waiting_workflows(scope):
         return []
     from django.db.models import Q
 
-    mine = Q(current_node__kind=NodeKind.COUNTERSIGN) | Q(
+    # 加签: a node with co-signers is a candidate for anyone; `can_approve` below decides.
+    mine = Q(current_node__kind=NodeKind.COUNTERSIGN) | ~Q(current_node__cosigners_json=[]) | Q(
         current_node__approver_type="ROLE", current_node__approver_role=user.role)
     if user.actor_id:
         mine |= Q(current_node__approver_type="ACTOR", current_node__approver_actor_id=user.actor_id)
@@ -142,15 +143,21 @@ def _workflow_state(wf, user):
     return _state(False, code, extra.get("handled_by"), node.decided_at, node_id=str(node.pk))
 
 
+def workflow_for(scope, kind, pk):
+    """The in-scope workflow behind an `approval` / `rebirth` item, or None."""
+    if kind == "rebirth":
+        app = RebirthApplication.objects.filter(pk=pk).first()
+        return app and _workflows(scope).filter(pk=app.appeal_workflow_id or app.workflow_id).first()
+    if kind == "approval":
+        return _workflows(scope).filter(pk=pk).exclude(case_type=CaseType.REBIRTH_APPLICATION).first()
+    return None
+
+
 def detail(user, kind, pk, request=None):
     """None = 范围之外(404)。其余都带 `actionable` / `state` / `handled_by`。"""
     scope = scope_of(user, request)
     if kind in ("approval", "rebirth"):
-        if kind == "rebirth":
-            app = RebirthApplication.objects.filter(pk=pk).first()
-            wf = app and _workflows(scope).filter(pk=app.appeal_workflow_id or app.workflow_id).first()
-        else:
-            wf = _workflows(scope).filter(pk=pk).exclude(case_type=CaseType.REBIRTH_APPLICATION).first()
+        wf = workflow_for(scope, kind, pk)
         if wf is None:
             return None
         return {"kind": kind, "id": str(pk), "title": wf.workflow_name, "workflow_id": str(wf.pk),
