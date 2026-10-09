@@ -272,13 +272,13 @@ RLS 能解决的问题。若用户坚持「终点就是 (c)」,上表只是定�
 |---|---|---|---|
 | G1 | **跨库外键清单测试**(3.4 第一条) | 无 | 新写;初值见 1.2 |
 | G2 | **读 / 写路由全覆盖测试**:任何查询必须带租户或显式标 `global` | 契约测试只管 viewset 的 queryset(`test_tenant_scoping_contract.py`),不管 service 层、Celery、signal | service 层 `Soul.all_objects.select_for_update(...)`(`dispatch/services.py:376`、`:448`、`:475`、`:547`)全是绕过 manager 的直取 |
-| G3 | **真 PG 多库测试通路** | SQLite 单库为主;真 PG 单库那条是手动 | 要一条自动的多库 CI 通路,否则跨库事务无人检验 |
+| G3 | **真 PG 多库测试通路** | **单库形态已落地(2026-10-09,见下)**:第二个别名 + 测试路由,opt-in | 真分库时:把它接进 CI、在真 PG 上跑、加跨库事务(Saga)用例 |
 | G4 | **跨库调拨 Saga 的模型检查**:每一步失败注入,断言「一个灵魂同一时刻只属于一个租户」 | 现有的是单事务并发测试(`test_concurrency.py` 4 条) | 新写 |
 | G5 | **全局唯一性的跨库证明**:`soul_code`、`case_number`、邮箱 | 数据库约束 | 号段或登记表 + 测试 |
 | G6 | **ADMIN 汇总等价测试**:分库后全局概览 = 分库前同一份数据的概览 | 无 | 夹具:同一份数据装进单库与多库,对拍 |
-| G7 | **影子读 / 双写对账工具** | 无 | 见 4.2 |
+| G7 | **影子读 / 双写对账工具** | **单库形态已落地(2026-10-09,见下)**:`reconcile_tenant_shadow` | 真分库时:对真的租户库跑,异步双写要有重试窗口(见下) |
 
-**2026-10-09 已落地(单库上就能做的三道;G3、G4、G6、G7 仍待,因为要多库才有意义):**
+**2026-10-09 已落地(单库上就能做的几道;G4、G6 仍待,因为要多库才有意义;G3、G7 只有单库形态):**
 
 - **G1 完成** —— `backend/tests/test_fk_inventory_across_tenants.py`,清单 `tests/tenancy_fk_inventory.py`。
   从 `apps.get_models()` 推导,80 个应用模型(排除内置),其中 39 个带租户列。钉住 **198 条边**
@@ -298,6 +298,28 @@ RLS 能解决的问题。若用户坚持「终点就是 (c)」,上表只是定�
   六个点名的值另有专项断言(`unique=True`、邮箱是 `Lower(email)` 且不含租户、`case_number` 发号器按「前缀-年」而不是租户计数、
   `soul_code` 生成器遇碰撞重试且只写空值),并有两个真写库的测试(两个租户不能同名 / 同邮箱;共用前缀的两个租户发不出同一个案号)。
   **「跨库证明」(号段或登记表)仍是分库时才有的工作,这里只保证不会静默丢掉一个单库内的保证。**
+
+- **G3 单库形态** —— `backend/config/settings_multidb.py`(在正常 settings 上加别名 `tenant_shadow` 和路由)、
+  `backend/config/multidb.py`(`ShadowTenantRouter`:`tenant_id` 在 `SHADOW_TENANTS` 里的实例写到影子库,跨别名的关系 `allow_relation` 拒绝)、
+  `backend/tests/test_multidb_shadow.py`(`multidb` 标记,`pytest.ini` 已注册)。**生产 settings 与路由未动**,只有 `--ds=config.settings_multidb` 才有第二个库,
+  不带它这组测试 skip。SQLite 路径第二个库是临时目录里的另一个文件;真 PG 路径是 `<库名>_shadow`,测试库名 `test_<库名>_shadow_<后缀>`,
+  后缀走 `config/testdb.py` 的每次运行规则(**真 PG 路径只验了名字的推导,没连库跑**)。命令:
+
+      cd backend && SECRET_KEY=ci-test-key-not-for-production-32-bytes-min DEBUG=true \
+        DATABASE_URL=sqlite:///:memory: REDIS_URL=redis://127.0.0.1:6399/0 \
+        .venv/bin/python -m pytest --ds=config.settings_multidb -m multidb --no-cov tests/test_multidb_shadow.py
+
+  证明三件事:两个别名的表集合相同;租户 B 的实例 `save()` 落在影子库;`realms.Realm.parent_realm`(取自 G1 清单的 `S->S` 边)
+  跨别名赋值被拒。三处变异各让对应测试变红。**迁移那一条跑出一个发现:** 75 个 `RunPython` 迁移里的查询走路由而不是
+  `schema_editor.connection.alias`,在第二个库上会去查已迁完的 `default`,`souls/0020` 就死在 `no such column: birth_date`。
+  测试路由因此在影子库上跳过无 `model_name` 的操作(RunPython / RunSQL;唯一的 RunSQL 也只是数据回填),只迁结构。
+  **真分库前这 75 个迁移要先改成认别名。**
+- **G7 单库形态** —— `manage.py reconcile_tenant_shadow --tenant <code> [--alias tenant_shadow]`
+  (`apps/tenants/management/commands/reconcile_tenant_shadow.py`):对每个带 `tenant` 外键的模型,比 `default` 与影子库里该租户的行数和
+  `(pk, update_time | updated_at | 全部列)` 的哈希(含软删行),逐条打印 `模型 pk=… differs / missing in / only in`,有任何不同退出码 1。
+  测试在 G3 配置里:相同数据通过、改一行的 `update_time` 红并点名模型与 pk、缺行与多行都红;把比较改成恒等,两条红。
+  顺带发现:建租户会在 `default` 里播种它的 `ScheduledJob`,对账第一次就把它们报成「影子库缺失」—— 工具对,夹具没复制。
+  **真分库时:**异步双写有延迟,对账要能容忍一个重试窗口(再比一次再报),本版没有。
 
 **G2 是最大的缺口:** 契约测试守的是「viewset 过 `scope_to_tenant`」,而 service、任务、信号里的 `all_objects` 查询没有守卫。
 分库后这些全都要带路由,而现在没人知道有多少 —— 先用 grep 量一遍(本稿 `Tenant.objects` / `all_objects` 在 `apps/` 里的直取点数
