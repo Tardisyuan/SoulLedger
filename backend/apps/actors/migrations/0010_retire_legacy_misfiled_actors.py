@@ -70,26 +70,27 @@ DUPLICATES = [
 ]
 
 
-def _tenant_id(apps):
+def _tenant_id(apps, alias):
     Tenant = apps.get_model("tenants", "Tenant")
-    row = Tenant._base_manager.filter(code=TENANT_CODE).first()
+    row = Tenant._base_manager.using(alias).filter(code=TENANT_CODE).first()
     return row.id if row else None
 
 
-def _inbound_refs(actor_model, row):
+def _inbound_refs(actor_model, row, alias):
     """有多少行指着它。空 = 可以安全退役。"""
     total = 0
     for rel in actor_model._meta.related_objects:
         model = rel.related_model
-        total += model._base_manager.filter(**{rel.field.name: row}).count()
+        total += model._base_manager.using(alias).filter(**{rel.field.name: row}).count()
     return total
 
 
 def forwards(apps, schema_editor):
+    alias = schema_editor.connection.alias
     Actor = apps.get_model("actors", "Actor")
     User = apps.get_model("authentication", "User")
 
-    tenant_id = _tenant_id(apps)
+    tenant_id = _tenant_id(apps, alias)
     if tenant_id is None:
         return
 
@@ -101,12 +102,12 @@ def forwards(apps, schema_editor):
 
     # 一、重复行：先改 User 指向，再退役。顺序不能反。
     for slug, canonical_name in DUPLICATES:
-        old = Actor._base_manager.filter(
+        old = Actor._base_manager.using(alias).filter(
             tenant_id=tenant_id, name=slug, is_deleted=False
         ).first()
         if old is None:
             continue
-        canonical = Actor._base_manager.filter(
+        canonical = Actor._base_manager.using(alias).filter(
             tenant_id=tenant_id, name=canonical_name, is_deleted=False
         ).first()
         if canonical is None:
@@ -114,28 +115,28 @@ def forwards(apps, schema_editor):
             # 一份数据比留着一份放错位置的更糟。
             skipped.append(f"{slug}(无正规行)")
             continue
-        moved = User._base_manager.filter(actor_id=old.id).update(actor_id=canonical.id)
+        moved = User._base_manager.using(alias).filter(actor_id=old.id).update(actor_id=canonical.id)
         if moved:
             repointed.append(f"{slug}->{canonical_name}({moved})")
-        if _inbound_refs(Actor, old) == 0:
+        if _inbound_refs(Actor, old, alias) == 0:
             old.is_deleted = True
             old.deleted_at = now
-            old.save(update_fields=["is_deleted", "deleted_at"])
+            old.save(using=alias, update_fields=["is_deleted", "deleted_at"])
             retired.append(slug)
         else:
             skipped.append(f"{slug}(仍被引用)")
 
     # 二、错放的外国神：只退役真的没人引用的。
     for name in MISFILED:
-        row = Actor._base_manager.filter(
+        row = Actor._base_manager.using(alias).filter(
             tenant_id=tenant_id, name=name, is_deleted=False
         ).first()
         if row is None:
             continue
-        if _inbound_refs(Actor, row) == 0:
+        if _inbound_refs(Actor, row, alias) == 0:
             row.is_deleted = True
             row.deleted_at = now
-            row.save(update_fields=["is_deleted", "deleted_at"])
+            row.save(using=alias, update_fields=["is_deleted", "deleted_at"])
             retired.append(name)
         else:
             skipped.append(f"{name}(仍被引用)")
@@ -149,25 +150,26 @@ def forwards(apps, schema_editor):
 
 
 def backwards(apps, schema_editor):
+    alias = schema_editor.connection.alias
     Actor = apps.get_model("actors", "Actor")
     User = apps.get_model("authentication", "User")
 
-    tenant_id = _tenant_id(apps)
+    tenant_id = _tenant_id(apps, alias)
     if tenant_id is None:
         return
 
     for name in MISFILED + [slug for slug, _ in DUPLICATES]:
-        Actor._base_manager.filter(
+        Actor._base_manager.using(alias).filter(
             tenant_id=tenant_id, name=name, is_deleted=True
         ).update(is_deleted=False, deleted_at=None)
 
     # User.actor 指回旧行。按用户名匹配 slug —— forward 改指的正是这三个账号，
     # 它们的 username 与 slug 相同，这是本迁移唯一能重建的对应关系。
     for slug, _canonical_name in DUPLICATES:
-        old = Actor._base_manager.filter(tenant_id=tenant_id, name=slug).first()
+        old = Actor._base_manager.using(alias).filter(tenant_id=tenant_id, name=slug).first()
         if old is None:
             continue
-        User._base_manager.filter(username=slug).update(actor_id=old.id)
+        User._base_manager.using(alias).filter(username=slug).update(actor_id=old.id)
 
 
 class Migration(migrations.Migration):

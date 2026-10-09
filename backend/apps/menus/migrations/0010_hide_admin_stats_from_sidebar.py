@@ -23,19 +23,21 @@ from django.db import migrations
 TARGET_PATH = "/admin/stats"
 
 
-def _live(menu_model):
+def _live(menu_model, alias):
     """未被软删除的菜单。"""
-    return menu_model.all_objects.filter(is_deleted=False)
+    return menu_model.all_objects.using(alias).filter(is_deleted=False)
 
 
 def hide_from_sidebar(apps, schema_editor):
+    alias = schema_editor.connection.alias
     Menu = apps.get_model("menus", "Menu")
-    _live(Menu).filter(path=TARGET_PATH).update(visible=False)
+    _live(Menu, alias).filter(path=TARGET_PATH).update(visible=False)
 
 
 def restore_to_sidebar(apps, schema_editor):
+    alias = schema_editor.connection.alias
     Menu = apps.get_model("menus", "Menu")
-    _live(Menu).filter(path=TARGET_PATH).update(visible=True)
+    _live(Menu, alias).filter(path=TARGET_PATH).update(visible=True)
 
 
 class Migration(migrations.Migration):

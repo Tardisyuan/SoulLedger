@@ -23,24 +23,25 @@ OLD = "LETIES"
 NEW = "LETHE"
 
 
-def _rewrite(apps, old, new):
+def _rewrite(apps, schema_editor, old, new):
+    alias = schema_editor.connection.alias
     disposition = apps.get_model("disposition", "Disposition")
     realm = apps.get_model("realms", "Realm")
     # `_base_manager` is the unfiltered plain manager: the tenant-scoped and
     # soft-delete managers would silently skip rows, and a data migration that
     # skips rows is exactly the failure this migration exists to fix.
-    disposition._base_manager.filter(memory_reset=old).update(memory_reset=new)
-    realm._base_manager.filter(memory_reset_mechanism=old).update(
+    disposition._base_manager.using(alias).filter(memory_reset=old).update(memory_reset=new)
+    realm._base_manager.using(alias).filter(memory_reset_mechanism=old).update(
         memory_reset_mechanism=new
     )
 
 
 def forwards(apps, schema_editor):
-    _rewrite(apps, OLD, NEW)
+    _rewrite(apps, schema_editor, OLD, NEW)
 
 
 def backwards(apps, schema_editor):
-    _rewrite(apps, NEW, OLD)
+    _rewrite(apps, schema_editor, NEW, OLD)
 
 
 class Migration(migrations.Migration):

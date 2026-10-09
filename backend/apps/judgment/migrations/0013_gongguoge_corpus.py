@@ -94,23 +94,24 @@ def _skeleton():
 
 
 def forwards(apps, schema_editor):
+    alias = schema_editor.connection.alias
     Statute = apps.get_model("judgment", "Statute")
 
     # 空库：什么都不写。见模块 docstring 的「空库守卫」。
-    if not Statute._base_manager.exists():
+    if not Statute._base_manager.using(alias).exists():
         return
 
     # 租户从中国侧任意一行既有条文取，包括 0012 软删掉的 CN-HL-*。猜一个
     # tenant code 会把这些行挂到一个没人指定过的所有者名下。
     sibling = (
-        Statute._base_manager.filter(civilization=CIVILIZATION)
+        Statute._base_manager.using(alias).filter(civilization=CIVILIZATION)
         .exclude(tenant__isnull=True)
         .first()
     )
     tenant_id = sibling.tenant_id if sibling else None
 
     for code, ordinal, polarity, payload in _skeleton():
-        Statute._base_manager.get_or_create(
+        Statute._base_manager.using(alias).get_or_create(
             code=code,
             defaults={
                 "civilization": CIVILIZATION,
@@ -126,18 +127,19 @@ def forwards(apps, schema_editor):
 
 
 def backwards(apps, schema_editor):
+    alias = schema_editor.connection.alias
     Statute = apps.get_model("judgment", "Statute")
     JudgmentCitation = apps.get_model("judgment", "JudgmentCitation")
 
     codes = [row[0] for row in _skeleton()]
     rows = list(
-        Statute._base_manager.filter(code__in=codes, corpus=CORPUS).values_list("pk", "code")
+        Statute._base_manager.using(alias).filter(code__in=codes, corpus=CORPUS).values_list("pk", "code")
     )
     if not rows:
         return
 
     cited = set(
-        JudgmentCitation._base_manager.filter(
+        JudgmentCitation._base_manager.using(alias).filter(
             statute_id__in=[pk for pk, _ in rows]
         ).values_list("statute_id", flat=True)
     )
@@ -151,7 +153,7 @@ def backwards(apps, schema_editor):
 
     removable = [pk for pk, _ in rows if pk not in cited]
     if removable:
-        Statute._base_manager.filter(pk__in=removable).delete()
+        Statute._base_manager.using(alias).filter(pk__in=removable).delete()
 
 
 class Migration(migrations.Migration):

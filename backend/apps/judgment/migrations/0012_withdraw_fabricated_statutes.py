@@ -55,6 +55,7 @@ CASCADE_ID = uuid.UUID("f0bb1e5e-0000-4d00-9a00-5741746854dc")
 
 
 def forward(apps, schema_editor):
+    alias = schema_editor.connection.alias
     Statute = apps.get_model("judgment", "Statute")
     JudgmentCitation = apps.get_model("judgment", "JudgmentCitation")
 
@@ -63,7 +64,7 @@ def forward(apps, schema_editor):
     # tenant in context — it would filter these rows out and report a silent
     # success over an untouched table.
     live = list(
-        Statute._base_manager.filter(
+        Statute._base_manager.using(alias).filter(
             corpus__in=WITHDRAWN_CORPORA, is_deleted=False
         ).values_list("pk", "code")
     )
@@ -72,7 +73,7 @@ def forward(apps, schema_editor):
 
     live_pks = [pk for pk, _ in live]
     cited_pks = set(
-        JudgmentCitation._base_manager.filter(statute_id__in=live_pks).values_list(
+        JudgmentCitation._base_manager.using(alias).filter(statute_id__in=live_pks).values_list(
             "statute_id", flat=True
         )
     )
@@ -92,7 +93,7 @@ def forward(apps, schema_editor):
     if not retire_pks:
         return
 
-    Statute._base_manager.filter(pk__in=retire_pks).update(
+    Statute._base_manager.using(alias).filter(pk__in=retire_pks).update(
         is_deleted=True,
         deleted_at=timezone.now(),
         delete_reason=DELETE_REASON,
@@ -101,8 +102,9 @@ def forward(apps, schema_editor):
 
 
 def backward(apps, schema_editor):
+    alias = schema_editor.connection.alias
     Statute = apps.get_model("judgment", "Statute")
-    Statute._base_manager.filter(
+    Statute._base_manager.using(alias).filter(
         corpus__in=WITHDRAWN_CORPORA,
         is_deleted=True,
         delete_reason=DELETE_REASON,
