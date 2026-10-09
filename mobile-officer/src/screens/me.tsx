@@ -76,18 +76,20 @@ export function MeTab() {
           <Txt variant="bodyLg">{`${t("officer_app.name")} · ${t("officer_app.me.version", { version })}`}</Txt>
         </Block>
 
-        <ActionButton testID="me-logout" kind="ink-outline" title={t("officer_app.me.logout")} onPress={() => setAsking(true)} />
         {asking ? (
-          <Notice tone="neutral">
-            <Txt variant="caption">{t("officer_app.me.logout_title")}</Txt>
-          </Notice>
-        ) : null}
-        {asking ? (
-          <View style={{ flexDirection: "row", gap: space[3] }}>
-            <ActionButton testID="me-logout-cancel" kind="outline" title={t("soul_app.common.cancel")} onPress={() => setAsking(false)} />
-            <ActionButton testID="me-logout-confirm" kind="ink" title={t("officer_app.me.logout_ok")} onPress={signOut} />
+          // Replaces the button it was asked from, so the question opens where the finger just was instead of below the fold.
+          <View style={{ gap: space[3] }}>
+            <Notice tone="neutral">
+              <Txt variant="caption">{t("officer_app.me.logout_title")}</Txt>
+            </Notice>
+            <View style={{ flexDirection: "row", gap: space[3] }}>
+              <ActionButton testID="me-logout-cancel" kind="outline" title={t("soul_app.common.cancel")} onPress={() => setAsking(false)} />
+              <ActionButton testID="me-logout-confirm" kind="ink" title={t("officer_app.me.logout_ok")} onPress={signOut} />
+            </View>
           </View>
-        ) : null}
+        ) : (
+          <ActionButton testID="me-logout" kind="ink-outline" title={t("officer_app.me.logout")} onPress={() => setAsking(true)} />
+        )}
       </View>
     </Screen>
   );
