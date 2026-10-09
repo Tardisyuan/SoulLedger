@@ -12,6 +12,7 @@ import { Button } from "@/src/components/ui/Button";
 import { Badge } from "@/src/components/ui/Badge";
 import { TextField, fieldControl } from "@/src/components/ui/Field";
 import { MfaSection } from "@/src/components/profile/MfaSection";
+import { EmailVerificationRow } from "@/src/components/profile/EmailVerificationRow";
 import { cn } from "@/lib/utils";
 
 export default function ProfilePage() {
@@ -171,6 +172,9 @@ export default function ProfilePage() {
               onCancel={() => setEditingField(null)}
             />
           ))}
+
+          {/* 只有已验证的邮箱收得到「忘记密码」的重置邮件。 */}
+          {!isLoading && <EmailVerificationRow hasEmail={email !== ""} verified={profile?.email_verified === true} />}
 
           <dt className={DT}>{t("profile.role")}</dt>
           <dd className={DD}>
