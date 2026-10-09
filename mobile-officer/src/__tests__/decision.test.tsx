@@ -135,6 +135,9 @@ describe("add signer", () => {
     mockAddCosigner.mockResolvedValue({ data: {} });
     await open();
     fireEvent.press(screen.getByTestId("action-cosign"));
+    // The candidate row reads the role through the bundles (seen as raw "JUDGE" on the emulator).
+    expect(await screen.findByText("mengpo · 审判者")).toBeTruthy();
+    expect(screen.queryByText(/JUDGE/)).toBeNull();
     fireEvent.press(await screen.findByTestId("cosign-2"));
     fireEvent.press(screen.getByTestId("cosign-confirm"));
     await waitFor(() => expect(mockAddCosigner).toHaveBeenCalledWith("approval", "wf-1", 2));
