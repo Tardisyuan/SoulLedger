@@ -1852,13 +1852,13 @@
       "search_placeholder": "搜索用户名...",
       "no_logs": "暂无登录日志"
     },
-    "resource_tenant": "殿",
+    "resource_tenant": "殿设置",
     "descriptions": {
       "hall_settings": "改了 {{code}} 殿的设置",
       "hall_seal_glyphs": "改了 {{code}} 殿的印字",
       "hall_assistant_switch": "改了 {{code}} 殿的问一问开关"
     },
-    "filter_hall": "殿",
+    "filter_hall": "按殿",
     "all_halls": "全部殿"
   },
   "profile": {
