@@ -63,7 +63,7 @@ async def _connect_query_token(user, tenant_code):
     comm = WebsocketCommunicator(application, f"/ws/notifications/?token={token}")
     connected, _ = await comm.connect()
     assert connected
-    return comm, await comm.receive_json_from()
+    return comm, await comm.receive_json_from(timeout=10)
 
 
 async def _connect_first_frame(user, tenant_code):
@@ -74,7 +74,7 @@ async def _connect_first_frame(user, tenant_code):
     assert connected
     token = await _make_token(user, tenant_code)
     await comm.send_json_to({"type": "auth", "token": token})
-    frame = await comm.receive_json_from()
+    frame = await comm.receive_json_from(timeout=10)
     assert frame["type"] == "connected", frame
     return comm, frame
 

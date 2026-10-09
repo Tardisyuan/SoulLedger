@@ -352,6 +352,27 @@ def _rebirth_timeout_syncs_the_application():
             "REBIRTH_STATUS_CHANGED")
 
 
+def _rebirth_workflow_orm_save():
+    """An admin-style `workflow.save()` of the rebirth workflow's status (not `approve_node`, not a timeout; the
+    PATCH endpoint cannot set `status`, so the ORM save is the route). The post_save signal syncs the application IN
+    the save's own transaction, so a failed REBIRTH_STATUS_CHANGED event rolls the workflow edit back too. (It used
+    to run in `on_commit`: the edit stayed, and the error was swallowed.)"""
+    from apps.soul_accounts.models import RebirthApplication
+    from apps.workflow.models import ApprovalWorkflow
+
+    account, application = _submitted_application()
+    pk = application.workflow_id
+
+    def run():
+        wf = ApprovalWorkflow.all_objects.get(pk=pk)
+        wf.status = "REJECTED"
+        wf.save()
+    return (run,
+            lambda: (ApprovalWorkflow.all_objects.get(pk=pk).status != "IN_PROGRESS"
+                     or RebirthApplication.objects.get(pk=application.pk).status != "UNDER_REVIEW"),
+            "REBIRTH_STATUS_CHANGED")
+
+
 PATHS = {
     # judgment conclusion (ORIGINAL) -- three different log calls on one call stack
     "conclude/JUDGMENT_CONCLUDED": _conclude_original("JUDGMENT_CONCLUDED"),
@@ -384,6 +405,8 @@ PATHS = {
     # the application's status follows the decision IN the decision's transaction (`sync_from_workflow`)
     "rebirth_approve+sync/REBIRTH_STATUS_CHANGED": _rebirth_decision_syncs_the_application,
     "rebirth_timeout+sync/REBIRTH_STATUS_CHANGED": _rebirth_timeout_syncs_the_application,
+    # every other write of the workflow: the post_save signal syncs in the save's own transaction
+    "rebirth_workflow_orm_save+signal/REBIRTH_STATUS_CHANGED": _rebirth_workflow_orm_save,
 }
 
 OUTSIDE_THE_GRID = {"expire_for_tenant/DISPOSITION_EXPIRED", "die/SOUL_ACCOUNT_CREATED"}

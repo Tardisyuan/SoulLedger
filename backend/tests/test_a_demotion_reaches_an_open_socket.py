@@ -66,13 +66,13 @@ async def _connect(user, tenant_code):
     comm = WebsocketCommunicator(application, f"/ws/notifications/?token={token}")
     connected, _ = await comm.connect()
     assert connected
-    await comm.receive_json_from()  # the "connected" frame
+    await comm.receive_json_from(timeout=10)  # the "connected" frame
     return comm
 
 
 async def _refresh(comm):
     await comm.send_json_to({"type": "permission.refresh"})
-    return await comm.receive_json_from()
+    return await comm.receive_json_from(timeout=10)
 
 
 @pytest.mark.django_db(transaction=True)

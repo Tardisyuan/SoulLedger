@@ -161,7 +161,7 @@ class TestJWTAuthentication:
         connected, _ = await communicator.connect()
         assert connected
 
-        response = await communicator.receive_json_from()
+        response = await communicator.receive_json_from(timeout=10)
         assert response["type"] == "connected"
         assert response["user_id"] == admin_user.id
         assert response["tenant_code"] == cn_tenant.code
@@ -181,7 +181,7 @@ class TestJWTAuthentication:
         await communicator.send_json_to({"type": "auth", "token": "invalid"})
         # Consumer sends error then closes — communicator may raise on close
         try:
-            response = await communicator.receive_json_from()
+            response = await communicator.receive_json_from(timeout=10)
             assert response["type"] == "error"
         except Exception:
             # Close frame received — expected behavior
@@ -240,7 +240,7 @@ class TestJWTAuthentication:
         token = await _make_token(admin_user, cn_tenant.code)
         await communicator.send_json_to({"type": "auth", "token": token})
 
-        response = await communicator.receive_json_from()
+        response = await communicator.receive_json_from(timeout=10)
         assert response["type"] == "connected", response
         assert response.get("user_id") == admin_user.id, response
 
@@ -264,7 +264,7 @@ class TestJWTAuthentication:
 
         token = await _make_token(admin_user, cn_tenant.code)
         await communicator.send_json_to({"type": "auth", "token": token})
-        assert (await communicator.receive_json_from())["type"] == "connected"
+        assert (await communicator.receive_json_from(timeout=10))["type"] == "connected"
 
         await get_channel_layer().group_send(
             ChannelNaming.tenant_group(cn_tenant.code),
@@ -292,7 +292,7 @@ class TestTenantIsolation:
         connected, _ = await communicator.connect()
         assert connected
 
-        response = await communicator.receive_json_from()
+        response = await communicator.receive_json_from(timeout=10)
         assert response["tenant_code"] == "CN_DIYU"
 
         await communicator.disconnect()
@@ -304,7 +304,7 @@ class TestTenantIsolation:
         connected, _ = await communicator.connect()
         assert connected
 
-        response = await communicator.receive_json_from()
+        response = await communicator.receive_json_from(timeout=10)
         assert response["tenant_code"] == "EU_HEAVEN_HELL"
 
         await communicator.disconnect()
@@ -319,8 +319,8 @@ class TestTenantIsolation:
         eu_connected, _ = await eu_comm.connect()
         assert cn_connected and eu_connected
 
-        cn_resp = await cn_comm.receive_json_from()
-        eu_resp = await eu_comm.receive_json_from()
+        cn_resp = await cn_comm.receive_json_from(timeout=10)
+        eu_resp = await eu_comm.receive_json_from(timeout=10)
 
         assert cn_resp["tenant_code"] == "CN_DIYU"
         assert eu_resp["tenant_code"] == "EU_HEAVEN_HELL"
@@ -346,7 +346,7 @@ class TestPermissionValidation:
         connected, _ = await communicator.connect()
         assert connected
 
-        response = await communicator.receive_json_from()
+        response = await communicator.receive_json_from(timeout=10)
         perms = response["permissions"]
         assert "soul.read" in perms
         assert "system.settings" in perms
@@ -361,7 +361,7 @@ class TestPermissionValidation:
         connected, _ = await communicator.connect()
         assert connected
 
-        response = await communicator.receive_json_from()
+        response = await communicator.receive_json_from(timeout=10)
         perms = response["permissions"]
         # JUDGE role via RBAC should have judgment permissions
         assert "judgment.read" in perms
@@ -377,7 +377,7 @@ class TestPermissionValidation:
         connected, _ = await communicator.connect()
         assert connected
 
-        response = await communicator.receive_json_from()
+        response = await communicator.receive_json_from(timeout=10)
         perms = response["permissions"]
         assert "soul.read" in perms
         assert "soul.create" not in perms
@@ -392,10 +392,10 @@ class TestPermissionValidation:
         connected, _ = await communicator.connect()
         assert connected
 
-        await communicator.receive_json_from()  # connected message
+        await communicator.receive_json_from(timeout=10)  # connected message
 
         await communicator.send_json_to({"type": "permission.refresh"})
-        response = await communicator.receive_json_from()
+        response = await communicator.receive_json_from(timeout=10)
         assert response["type"] == "permission.refreshed"
         assert isinstance(response["permissions"], list)
         assert "soul.read" in response["permissions"]
@@ -419,7 +419,7 @@ class TestNotificationConsumerLifecycle:
         connected, _ = await communicator.connect()
         assert connected
 
-        response = await communicator.receive_json_from()
+        response = await communicator.receive_json_from(timeout=10)
         assert response["type"] == "connected"
         assert "user_id" in response
         assert "tenant_code" in response
@@ -434,7 +434,7 @@ class TestNotificationConsumerLifecycle:
         connected, _ = await communicator.connect()
         assert connected
 
-        await communicator.receive_json_from()
+        await communicator.receive_json_from(timeout=10)
 
         await communicator.disconnect()
         # No assertion needed — just verify no exception
@@ -446,10 +446,10 @@ class TestNotificationConsumerLifecycle:
         connected, _ = await communicator.connect()
         assert connected
 
-        await communicator.receive_json_from()  # connected
+        await communicator.receive_json_from(timeout=10)  # connected
 
         await communicator.send_json_to({"type": "heartbeat"})
-        response = await communicator.receive_json_from()
+        response = await communicator.receive_json_from(timeout=10)
         assert response["type"] == "pong"
 
         await communicator.disconnect()
@@ -461,13 +461,13 @@ class TestNotificationConsumerLifecycle:
         connected, _ = await communicator.connect()
         assert connected
 
-        await communicator.receive_json_from()  # connected
+        await communicator.receive_json_from(timeout=10)  # connected
 
         await communicator.send_json_to({"type": "unknown_type"})
         # Should not crash — consumer just ignores it
         # Send heartbeat to verify consumer is still alive
         await communicator.send_json_to({"type": "heartbeat"})
-        response = await communicator.receive_json_from()
+        response = await communicator.receive_json_from(timeout=10)
         assert response["type"] == "pong"
 
         await communicator.disconnect()
@@ -482,15 +482,15 @@ class TestNotificationConsumerLifecycle:
         c2, _ = await comm2.connect()
         assert c1 and c2
 
-        r1 = await comm1.receive_json_from()
-        r2 = await comm2.receive_json_from()
+        r1 = await comm1.receive_json_from(timeout=10)
+        r2 = await comm2.receive_json_from(timeout=10)
         assert r1["user_id"] == admin_user.id
         assert r2["user_id"] == judge_user.id
 
         await comm1.disconnect()
         # comm2 should still be alive
         await comm2.send_json_to({"type": "heartbeat"})
-        r = await comm2.receive_json_from()
+        r = await comm2.receive_json_from(timeout=10)
         assert r["type"] == "pong"
 
         await comm2.disconnect()

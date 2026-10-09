@@ -409,7 +409,7 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
             )
 
         try:
-            # 决定与给灵魂的理由同一事务:申请状态的同步挂在 on_commit 上,提交时理由已在。
+            # 决定与给灵魂的理由同一事务(申请状态的同步也在这个事务里,见下)。
             with transaction.atomic():
                 success = workflow.complete_node(node.id, verdict, notes, user=request.user)
                 if success and rebirth.requires_reason_for_soul(workflow, verdict):
