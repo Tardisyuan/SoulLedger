@@ -5270,6 +5270,7 @@
       "mfa_required": "Your role must use two-step verification and it isn't set up yet. Set it up at the desk."
     },
     "cosign": {
+      "rules": "Only active officers of this hall who may approve are listed. The added signer approves first, then you can; if they reject, the whole step is rejected.",
       "search": "Search name or username",
       "empty": "Nobody to choose",
       "confirm": "Add signer",

@@ -845,6 +845,7 @@ export function Button({
   busy,
   reason,
   reasonTestID,
+  accessibilityHint,
   testID,
   style,
 }: {
@@ -856,6 +857,8 @@ export function Button({
   /** Why it is disabled. Required reading, not a tooltip: a phone has no hover. */
   reason?: ReactNode;
   reasonTestID?: string;
+  /** What a screen reader says after the label: the reason, when the button is disabled. */
+  accessibilityHint?: string;
   testID?: string;
   style?: StyleProp<ViewStyle>;
 }) {
@@ -877,6 +880,7 @@ export function Button({
         testID={testID}
         accessibilityRole="button"
         accessibilityLabel={title}
+        accessibilityHint={accessibilityHint}
         accessibilityState={{ disabled: !!inert, busy: !!busy }}
         disabled={inert}
         onPress={onPress}

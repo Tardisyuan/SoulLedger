@@ -152,6 +152,7 @@ describe("add signer", () => {
     expect(await screen.findByTestId("cosign-unavailable")).toBeTruthy();
     expect(screen.getByText(/现在不能加签/)).toBeTruthy();
     expect(screen.getByTestId("cosign-confirm").props.accessibilityState.disabled).toBe(true);
+    expect(screen.getByTestId("cosign-confirm").props.accessibilityHint).toBe("现在不能加签，只能查看候选人。");
     // the candidates stay choosable
     expect(screen.getByTestId("cosign-2")).toBeTruthy();
   });
@@ -165,5 +166,42 @@ describe("add signer", () => {
     expect(await screen.findByTestId("cosign-problem")).toBeTruthy();
     expect(screen.getByTestId("cosign-confirm").props.accessibilityState.disabled).toBe(false);
     expect(screen.queryByTestId("cosign-unavailable")).toBeNull();
+    expect(screen.getByTestId("cosign-confirm").props.accessibilityHint).toBeUndefined();
+  });
+
+  it("states the rules under the title", async () => {
+    await open();
+    fireEvent.press(screen.getByTestId("action-cosign"));
+    expect(await screen.findByTestId("cosign-rules")).toBeTruthy();
+    expect(screen.getByText(/加签人先批，你才能批/)).toBeTruthy();
+  });
+});
+
+describe("waiting for an added signer", () => {
+  const WAITING = {
+    ...ITEM,
+    cosigners: [{ user_id: 2, name: "孟判官", signed: false }],
+    waiting_on_cosigner: { id: 2, name: "孟判官" },
+  };
+
+  it("lists the signer as owed, greys 批准 with the reason above and in its hint, and leaves 驳回 and 加签 alone", async () => {
+    await open(WAITING);
+    expect(screen.getByTestId("cosigner-2").props.children).toBe("◐ 孟判官 · 加签 · 待批");
+    const reason = "等孟判官先批，你才能批。孟判官驳回则这一节点驳回。";
+    expect(screen.getByTestId("detail-wait-cosigner").props.children).toBe(`◇ ${reason}`);
+    const approve = screen.getByTestId("action-approve");
+    expect(approve.props.accessibilityState.disabled).toBe(true);
+    expect(approve.props.accessibilityHint).toBe(reason);
+    expect(screen.getByTestId("action-reject").props.accessibilityState.disabled).toBe(false);
+    expect(screen.getByTestId("action-cosign").props.accessibilityState.disabled).toBe(false);
+    fireEvent.press(approve);
+    expect(screen.queryByTestId("sheet-approve")).toBeNull();
+  });
+
+  it("shows a signed co-signer with a tick and frees 批准", async () => {
+    await open({ ...ITEM, cosigners: [{ user_id: 2, name: "孟判官", signed: true }], waiting_on_cosigner: null });
+    expect(screen.getByTestId("cosigner-2").props.children).toBe("✓ 孟判官");
+    expect(screen.queryByTestId("detail-wait-cosigner")).toBeNull();
+    expect(screen.getByTestId("action-approve").props.accessibilityState.disabled).toBe(false);
   });
 });
