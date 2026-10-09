@@ -49,6 +49,10 @@ describe("the generated Swift", () => {
     expect(swift).toContain('key: "cooldown"');
     expect(swift).toContain("struct AskIntent: AppIntent");
     expect(swift).toContain("@Parameter(");
+    // Explicit resources in the Localizable table: bare literals stayed English on a zh-Hans device.
+    expect(swift).toContain('title: LocalizedStringResource("Question", table: "Localizable")');
+    expect(swift).toContain('requestValueDialog: IntentDialog(LocalizedStringResource("What would you like to ask?", table: "Localizable"))');
+    expect(localizableStrings(soul, "zh-Hans", MESSAGES)).toContain('"Question" = "问题";');
     expect(swift).toContain("var question: String");
     expect(swift).toContain(`.prefix(${ASK_MAX})`);
     expect(swift).toContain('"soulledger://ask?q="');
