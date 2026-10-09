@@ -71,8 +71,9 @@ def test_a_cooling_soul_requests_once_and_the_status_shows_in_its_list(cn_tenant
     created = _request(client)
     assert created.status_code == 201, created.data
     assert created.data["status"] == "PENDING" and str(created.data["application"]) == str(application.pk)
-    assert set(created.data) == {"id", "application", "cycle", "reason", "status", "approved_days", "decision_note",
-                                 "decided_at", "created_at"}
+    assert set(created.data) == {"id", "application", "cycle", "reason", "desired_remaining_days", "status",
+                                 "approved_days", "decision_note", "decided_at", "created_at"}
+    assert created.data["desired_remaining_days"] is None
     # 一份待决:第二份 409。
     again = _request(client)
     assert again.status_code == 409 and again.data["code"] == "shortening_pending"
@@ -80,6 +81,28 @@ def test_a_cooling_soul_requests_once_and_the_status_shows_in_its_list(cn_tenant
     assert listing["can_shorten_cooldown"] is False
     assert listing["cooldown_shortening"]["id"] == created.data["id"]
     assert listing["cooldown_shortening"]["status"] == "PENDING"
+
+
+def test_desired_remaining_days_is_optional_bounded_and_shown_to_the_officer(
+        cn_tenant, judge_user, django_capture_on_commit_callbacks):
+    account, client, application = _rejected_soul(cn_tenant, judge_user, django_capture_on_commit_callbacks)
+    remaining = rebirth.remaining_cooldown_days(rebirth.cooldown_until(application))
+    assert remaining > 1
+    for bad in (-1, remaining, remaining + 5):
+        refused = client.post(SHORTEN, {"reason": "x", "desired_remaining_days": bad}, format="json")
+        assert refused.status_code == 400, bad
+    assert not CooldownShorteningRequest.objects.exists()
+    created = client.post(SHORTEN, {"reason": "x", "desired_remaining_days": remaining - 1}, format="json")
+    assert created.status_code == 201, created.data
+    assert created.data["desired_remaining_days"] == remaining - 1
+    row = officer_client(judge_user).get(f"{OFFICER}{created.data['id']}/").data
+    assert row["desired_remaining_days"] == remaining - 1
+
+
+def test_zero_is_a_real_wish_not_a_missing_one(cn_tenant, judge_user, django_capture_on_commit_callbacks):
+    _, client, _ = _rejected_soul(cn_tenant, judge_user, django_capture_on_commit_callbacks)
+    created = client.post(SHORTEN, {"reason": "x", "desired_remaining_days": 0}, format="json")
+    assert created.status_code == 201 and created.data["desired_remaining_days"] == 0
 
 
 def test_one_pending_per_soul_is_also_a_database_constraint(cn_tenant, judge_user, django_capture_on_commit_callbacks):
