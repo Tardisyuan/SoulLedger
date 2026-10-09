@@ -250,6 +250,10 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
         default=0,
         validators=[MinValueValidator(0)],
     )
+    # Set when a deferred recalculation (`SoulRecord.batch()`, which runs after its records have committed)
+    # failed: the records exist but merit/demerit are stale. Cleared by the next successful
+    # `LedgerService.recalculate_soul_ledger` (the periodic `recalculate_tenant_ledgers` run reaches every soul).
+    needs_ledger_recalculation = models.BooleanField(default=False, db_index=True)
     # What the previous life handed to this one. `complete_rebirth` writes
     # the carried-over share here as well as into merit_score/demerit_score,
     # because the latter two are re-derived by every recalculation: without a

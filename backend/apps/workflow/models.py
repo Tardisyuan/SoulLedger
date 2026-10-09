@@ -244,6 +244,15 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
     def __str__(self):
         return f"{self.workflow_name} - {self.soul.name} ({self.status})"
 
+    def save(self, *args, **kwargs):
+        """The save and its post_save receivers are ONE transaction (`soul_accounts/signals.py` syncs the rebirth
+        application there and a failure must undo this save). `Model.save` alone is a bare autocommit UPDATE, so
+        without this a caller holding no transaction would keep the edit when the sync raised."""
+        from django.db import transaction
+
+        with transaction.atomic():
+            super().save(*args, **kwargs)
+
     def get_next_node(self) -> "ApprovalNode | None":
         """Get the next pending node in the workflow."""
         nodes = self.nodes.filter(status=NodeStatus.PENDING).order_by("node_order").first()

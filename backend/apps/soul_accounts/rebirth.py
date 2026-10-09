@@ -432,8 +432,8 @@ def sync_from_workflow(workflow_id):
 
     **在决定工作流的那个事务里调用**(`approve_node`、超时自动驳回):审批和申请状态一起提交或一起回滚,
     `REBIRTH_STATUS_CHANGED` 事件写不进去时整个审批回滚、调用方拿到原始错误。只有给灵魂的站内通知
-    挂在 `on_commit` 上(提交后才发,失败只丢通知)。`signals.py` 里工作流 post_save 的 `on_commit`
-    仍在,作为其余写路径(后台 CRUD 等)的兜底 —— 已对齐时它什么也不做。
+    挂在 `on_commit` 上(提交后才发,失败只丢通知)。`signals.py` 里工作流 post_save 也同步调用它(同一事务,
+    2026-10-10),覆盖其余写路径(后台 CRUD 等)—— 已对齐时那次调用什么也不做,不重复写事件。
 
     **锁序:工作流行 → 节点行 → 申请行。** `complete_node` 先锁工作流再锁节点,这里随后才锁申请;
     `decide_cross_civilization` 因此也先锁工作流再锁申请(此前是反过来)。其余写申请的路径
