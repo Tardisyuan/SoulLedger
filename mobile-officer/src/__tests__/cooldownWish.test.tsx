@@ -71,3 +71,24 @@ it("without a wish the field starts empty as before and no wish line is shown", 
   expect(screen.queryByTestId("decision-desired")).toBeNull();
   expect(screen.queryByTestId("detail-desired")).toBeNull();
 });
+
+it("after an approval the detail asks again and says 批后还剩 M 天, not the request-time days", async () => {
+  mockApprove.mockResolvedValue({});
+  await openApprove(null);
+  expect(screen.getByText("还剩 10 天")).toBeTruthy();
+  mockShortening.mockResolvedValue({ data: { reason: "家中有事", remaining_days: 3, status: "APPROVED", desired_remaining_days: null } });
+  fireEvent.changeText(screen.getByTestId("decision-days"), "3");
+  fireEvent.press(screen.getByTestId("decision-confirm"));
+  expect(await screen.findByText("批后还剩 3 天")).toBeTruthy();
+  expect(screen.queryByText("还剩 10 天")).toBeNull();
+});
+
+it("a rebirth item reads 「转生申请 · 名」 with the soul code on its own line", async () => {
+  const { officerAppApi } = jest.requireMock("@soulledger/core/api/officer-app");
+  officerAppApi.item.mockResolvedValueOnce({
+    data: { ...ITEM, kind: "rebirth", id: "r-1", title: "李四", soul_code: "YX39MP69VW", is_appeal: false },
+  });
+  renderOfficer(<Detail target={{ type: "todo", kind: "rebirth", id: "r-1" }} onBack={() => {}} onSettled={onSettled} />);
+  expect(await screen.findByText("转生申请 · 李四")).toBeTruthy();
+  expect(screen.getByTestId("detail-soul-code").props.children).toBe("YX39MP69VW");
+});

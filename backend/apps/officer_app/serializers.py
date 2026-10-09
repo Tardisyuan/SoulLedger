@@ -19,6 +19,8 @@ class TodoItemSerializer(serializers.Serializer):
     created_at = serializers.DateTimeField()
     target = TodoTargetSerializer()
     node_name = serializers.CharField(required=False, help_text="仅审批节点:轮到的节点名。")
+    soul_code = serializers.CharField(required=False, help_text="仅转生申请:此时 `title` 是灵魂名,灵魂码作副行。")
+    is_appeal = serializers.BooleanField(required=False, help_text="仅转生申请:是否申诉(客户端据此选标题措辞)。")
 
 
 class TodoGroupSerializer(serializers.Serializer):
@@ -50,6 +52,8 @@ class TodoItemDetailSerializer(serializers.Serializer):
     state = serializers.CharField()
     handled_by = HandledBySerializer(allow_null=True)
     handled_at = serializers.DateTimeField(allow_null=True)
+    soul_code = serializers.CharField(required=False, help_text="仅转生申请:此时 `title` 是灵魂名,灵魂码作副行。")
+    is_appeal = serializers.BooleanField(required=False, help_text="仅转生申请:是否申诉(客户端据此选标题措辞)。")
     workflow_id = serializers.CharField(required=False, help_text="审批节点与转生申请:决定走 workflows/<id>/approve_node/。")
     node_id = serializers.CharField(required=False, help_text="待决的节点;决定时作为 node_id 传回。")
     required_verdicts = serializers.ListField(

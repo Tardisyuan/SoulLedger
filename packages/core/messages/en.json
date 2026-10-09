@@ -2786,6 +2786,7 @@
       },
       "view": "Details",
       "detail_title": "Rebirth application · {{name}}",
+      "appeal_title": "Rebirth appeal · {{name}}",
       "fields": {
         "desired_form": "Desired form",
         "current_step": "Current step",
@@ -2835,6 +2836,7 @@
       "fields": {
         "reason": "Reason",
         "remaining": "Cooldown left",
+        "remaining_after": "Cooldown left after approval",
         "approved_days": "Days left after approval",
         "note": "Note for the soul",
         "decided_by": "Decided by",
@@ -5171,6 +5173,7 @@
         "reassignment": "The reassignment goes ahead."
       },
       "remaining_days": "{{n}} days left",
+      "remaining_after": "{{n}} days left after approval",
       "days_label": "Days to approve",
       "days_invalid": "Enter a whole number below the days left",
       "verdict_label": "Verdict to approve with",

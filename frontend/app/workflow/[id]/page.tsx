@@ -13,6 +13,7 @@ import {
 import { workflowKeys } from "@soulledger/core/query_keys";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
+import { workflowTitle } from "@/src/components/workflow/workflowTitle";
 import Link from "next/link";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { DomainEnum, DomainText } from "@/src/components/ui/DomainValue";
@@ -206,7 +207,7 @@ export default function WorkflowDetailPage() {
     hall,
     meta: workflow
       ? [
-          workflow.template_version_number ? `${workflow.workflow_name} v${workflow.template_version_number}` : workflow.workflow_name,
+          workflow.template_version_number ? `${workflowTitle(workflow, t)} v${workflow.template_version_number}` : workflowTitle(workflow, t),
           stepIndex >= 0 ? t("plaque.step", { k: String(stepIndex + 1), n: String(sortedNodes.length) }) : null,
         ]
           .filter(Boolean)
@@ -327,7 +328,7 @@ export default function WorkflowDetailPage() {
        Below 1024 they stack in reading order: current node first. */
     <PageShell
       variant="full"
-      title={workflow.workflow_name}
+      title={workflowTitle(workflow, t)}
       backLink={backLink}
       actions={
         <div className="flex items-center gap-2">
