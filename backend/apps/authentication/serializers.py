@@ -270,6 +270,8 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     """
 
     token_class = RefreshToken
+    #: True on the officer App's login: its refresh token gets the shorter App lifetime (tokens.py).
+    officer_app = False
 
     # 「在此设备上保持登录 30 天」. See `tokens.py` for why the choice is a
     # claim in the refresh token rather than a flag the server remembers.
@@ -307,14 +309,17 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
             # 第二步:密码对了,令牌还不发。`remember` 随待验证令牌走,验码后照样生效。
             pending = mfa.PendingToken.for_user(self.user)
             pending["remember"] = bool(attrs.get("remember"))
+            pending["officer_app"] = self.officer_app
             return {"mfa_required": True, "pending_token": str(pending), "username": self.user.username}
-        return issue_tokens(self.user, remember=bool(attrs.get("remember")))
+        return issue_tokens(self.user, remember=bool(attrs.get("remember")), officer_app=self.officer_app)
 
 
-def issue_tokens(user, *, remember: bool) -> dict:
+def issue_tokens(user, *, remember: bool, officer_app: bool = False) -> dict:
     """登录成功的那份响应:access / refresh / user。密码登录与两步验证第二步共用。"""
     refresh = CustomTokenObtainPairSerializer.get_token(user)
-    if remember:
+    if officer_app:
+        refresh.for_officer_app()
+    elif remember:
         refresh.remember()
     data = {"refresh": str(refresh), "access": str(refresh.access_token)}
     if simplejwt_settings.UPDATE_LAST_LOGIN:
@@ -349,6 +354,7 @@ class OfficerTokenObtainPairSerializer(CustomTokenObtainPairSerializer):
     """
 
     tenant_code = serializers.CharField(required=False, allow_blank=True, write_only=True)
+    officer_app = True
 
     @staticmethod
     def accounts_named(username):
