@@ -5122,7 +5122,8 @@
     },
     "login": {
       "password": "Sekhem",
-      "submit": "Aq"
+      "submit": "Aq",
+      "forgot_password": "Nen Rekh Sekhem"
     },
     "mfa": {
       "title": "Maa Sep Sen",

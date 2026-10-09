@@ -4,11 +4,11 @@
  * has two-step verification, a code step follows (`mfa_required` + `pending_token`).
  */
 import { useState } from "react";
-import { View } from "react-native";
+import { Linking, View } from "react-native";
 
 import { OFFICER_BRAND } from "../brand";
 import { ActionButton, Row } from "../kit";
-import { loginFailureKey } from "../rules";
+import { forgotPasswordUrl, loginFailureKey } from "../rules";
 import { useSession, type Hall } from "../session";
 import { BrandMark, Button, Input, Notice, Screen, Txt, space, useI18n } from "../shared";
 
@@ -81,6 +81,13 @@ export function LoginScreen() {
               secureToggle={{ show: t("soul_app.common.show"), hide: t("soul_app.common.hide") }}
             />
             <Button testID="login-submit" title={t("officer_app.login.submit")} busy={busy} disabled={!username.trim() || !password} onPress={() => void submit()} />
+            {/* 忘记密码 opens the desk's request page in the browser; the app does nothing more. */}
+            <ActionButton
+              testID="login-forgot"
+              kind="outline"
+              title={`${t("officer_app.login.forgot_password")} ↗`}
+              onPress={() => void Linking.openURL(forgotPasswordUrl()).catch(() => {})}
+            />
           </View>
         ) : null}
 
