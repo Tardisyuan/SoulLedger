@@ -11,6 +11,7 @@ import { LoginShell } from "@/src/components/auth/LoginShell";
 import { CodeInput } from "@/src/components/auth/CodeInput";
 import { Button } from "@/src/components/ui/Button";
 import { defaultViewRoute } from "@/src/lib/defaultView";
+import { goTo, replaceWith } from "@/src/lib/navigate";
 import { clearMfaPending, readMfaPending, type MfaPending } from "@/src/lib/mfaPending";
 import { cn } from "@/lib/utils";
 
@@ -48,7 +49,7 @@ export default function LoginVerifyPage() {
   useEffect(() => {
     const p = readMfaPending();
     setPending(p);
-    if (!p) window.location.replace("/login");
+    if (!p) replaceWith("/login");
   }, []);
 
   // 焦点一进页面就在码框里(不用 autoFocus 属性,jsx-a11y)。
@@ -87,7 +88,7 @@ export default function LoginVerifyPage() {
       setRefreshToken(res.data.refresh);
       setUser(res.data.user);
       showToast(t("auth.login_success"), "success");
-      window.location.href = await defaultViewRoute();
+      goTo(await defaultViewRoute());
       return;
     } catch (err: unknown) {
       const response = (err as { response?: { status?: number; data?: Partial<MfaRefusal> } })?.response;

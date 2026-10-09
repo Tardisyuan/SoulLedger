@@ -179,7 +179,7 @@ export function TenantSettingsDialog({ tenant, onClose }: { tenant: Tenant; onCl
         ) : null}
 
         <section aria-labelledby="tenant-mfa-roles-title" className="flex flex-col gap-2 border-t border-[oklch(var(--color-block))] pt-4" data-testid="tenant-mfa-roles">
-          <h3 id="tenant-mfa-roles-title" className="text-sm text-[oklch(var(--color-ink))]">{t("mfa.admin.roles_title")}</h3>
+          <h3 id="tenant-mfa-roles-title" className="text-sm font-medium text-[oklch(var(--color-ink))]">{t("mfa.admin.roles_title")}</h3>
           <p className="text-xs text-[oklch(var(--color-ink-muted))]">{t("mfa.admin.roles_hint")}</p>
           {mfaRoles.isError ? (
             <p role="alert" className="text-xs text-[oklch(var(--color-danger))]">{t("mfa.admin.roles_load_failed")}</p>

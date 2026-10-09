@@ -192,7 +192,7 @@ function DisableDialog({ onClose, onDisabled }: { onClose: () => void; onDisable
           <Button type="button" variant="ghost" onClick={onClose} disabled={disable.isPending}>
             {t("common.cancel")}
           </Button>
-          <Button type="button" variant="danger" data-testid="mfa-disable-confirm" disabled={!ready || disable.isPending} loading={disable.isPending} onClick={() => disable.mutate()}>
+          <Button type="button" variant="secondary" data-testid="mfa-disable-confirm" disabled={!ready || disable.isPending} loading={disable.isPending} onClick={() => disable.mutate()}>
             <span aria-hidden="true">✕</span>
             {t("mfa.manage.disable_confirm")}
           </Button>
