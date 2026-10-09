@@ -56,11 +56,11 @@ CHINESE = "CHINESE"
 COURT_PREFIX = "DY_COURT_"
 
 
-def court_map(realm_model):
+def court_map(realm_model, alias):
     """{name: court} for every name exactly one live court answers to."""
     seen = {}
     ambiguous = set()
-    courts = realm_model._base_manager.filter(
+    courts = realm_model._base_manager.using(alias).filter(
         civilization=CHINESE, realm_code__startswith=COURT_PREFIX, is_deleted=False,
     )
     for court in courts:
@@ -87,12 +87,13 @@ def resolve(judgment, courts):
 
 
 def forwards(apps, schema_editor):
+    alias = schema_editor.connection.alias
     judgment_model = apps.get_model("judgment", "Judgment")
-    courts = court_map(apps.get_model("realms", "Realm"))
+    courts = court_map(apps.get_model("realms", "Realm"), alias)
     if not courts:
         return
     candidates = (
-        judgment_model._base_manager
+        judgment_model._base_manager.using(alias)
         .filter(civilization=CHINESE, realm__isnull=True)
         .exclude(court="")
         .only("pk", "civilization", "court", "tenant")
@@ -100,23 +101,24 @@ def forwards(apps, schema_editor):
     for judgment in candidates.iterator():
         court = resolve(judgment, courts)
         if court is not None:
-            judgment_model._base_manager.filter(pk=judgment.pk).update(realm=court)
+            judgment_model._base_manager.using(alias).filter(pk=judgment.pk).update(realm=court)
 
 
 def backwards(apps, schema_editor):
+    alias = schema_editor.connection.alias
     judgment_model = apps.get_model("judgment", "Judgment")
-    courts = court_map(apps.get_model("realms", "Realm"))
+    courts = court_map(apps.get_model("realms", "Realm"), alias)
     if not courts:
         return
     linked = (
-        judgment_model._base_manager
+        judgment_model._base_manager.using(alias)
         .filter(civilization=CHINESE, realm__isnull=False)
         .only("pk", "civilization", "court", "tenant", "realm")
     )
     for judgment in linked.iterator():
         court = resolve(judgment, courts)
         if court is not None and court.pk == judgment.realm_id:
-            judgment_model._base_manager.filter(pk=judgment.pk).update(realm=None)
+            judgment_model._base_manager.using(alias).filter(pk=judgment.pk).update(realm=None)
 
 
 class Migration(migrations.Migration):

@@ -13,8 +13,9 @@ def _drop_drafts(apps, schema_editor):
     made and withdrawn, which it never was. Drafts (discarded ones in the
     recycle bin included) are removed; every other row is untouched.
     """
+    alias = schema_editor.connection.alias
     record = apps.get_model("dispatch", "DispatchRecord")
-    record._base_manager.filter(status="DRAFT").delete()
+    record._base_manager.using(alias).filter(status="DRAFT").delete()
 
 
 class Migration(migrations.Migration):

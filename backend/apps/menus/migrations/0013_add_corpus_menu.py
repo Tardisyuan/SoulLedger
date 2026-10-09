@@ -73,28 +73,29 @@ MENU_DEFAULTS = {
 }
 
 
-def _live(menu_model):
+def _live(menu_model, alias):
     """未被软删除的菜单。"""
-    return menu_model.all_objects.filter(is_deleted=False)
+    return menu_model.all_objects.using(alias).filter(is_deleted=False)
 
 
 def add_corpus_menu(apps, schema_editor):
+    alias = schema_editor.connection.alias
     Menu = apps.get_model("menus", "Menu")
 
     parent = (
-        _live(Menu)
+        _live(Menu, alias)
         .filter(name=PARENT_DIRECTORY, menu_type="DIRECTORY")
         .first()
     )
 
-    Menu.all_objects.get_or_create(
+    Menu.all_objects.using(alias).get_or_create(
         path=MENU_PATH,
         is_deleted=False,
         defaults={**MENU_DEFAULTS, "parent": parent},
     )
 
     # 应对「上次跑了一半」或行已被手工建过：确保归位与顺序正确。
-    _live(Menu).filter(path=MENU_PATH).exclude(menu_type="DIRECTORY").update(
+    _live(Menu, alias).filter(path=MENU_PATH).exclude(menu_type="DIRECTORY").update(
         parent=parent, order=MENU_DEFAULTS["order"]
     )
 
@@ -106,8 +107,9 @@ def remove_corpus_menu(apps, schema_editor):
     迁移链无法回退到 0012 之前。按 path 且排除 DIRECTORY 删除，不碰
     「灵魂业务」目录本身（它是 0009 建的，由 0009 负责回收）。
     """
+    alias = schema_editor.connection.alias
     Menu = apps.get_model("menus", "Menu")
-    _live(Menu).filter(path=MENU_PATH).exclude(menu_type="DIRECTORY").delete()
+    _live(Menu, alias).filter(path=MENU_PATH).exclude(menu_type="DIRECTORY").delete()
 
 
 class Migration(migrations.Migration):

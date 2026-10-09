@@ -23,34 +23,36 @@ def _prefix(tenant_code):
 
 
 def forward(apps, schema_editor):
+    alias = schema_editor.connection.alias
     Judgment = apps.get_model("judgment", "Judgment")
     Counter = apps.get_model("judgment", "JudgmentCaseCounter")
     Statute = apps.get_model("judgment", "Statute")
 
     groups = defaultdict(list)
-    rows = Judgment._base_manager.filter(case_number__isnull=True).values_list(
+    rows = Judgment._base_manager.using(alias).filter(case_number__isnull=True).values_list(
         "pk", "created_at", "tenant__code"
     )
     for pk, created_at, code in rows:
         groups[(_prefix(code), timezone.localtime(created_at).year)].append((created_at, str(pk), pk))
 
     for (prefix, year), members in sorted(groups.items()):
-        counter, _ = Counter.objects.get_or_create(key=f"{prefix}-{year}")
+        counter, _ = Counter.objects.using(alias).get_or_create(key=f"{prefix}-{year}")
         seq = counter.last
         for _, _, pk in sorted(members):
             seq += 1
-            Judgment._base_manager.filter(pk=pk).update(case_number=f"{prefix}-{year}-{seq:04d}")
+            Judgment._base_manager.using(alias).filter(pk=pk).update(case_number=f"{prefix}-{year}-{seq:04d}")
         counter.last = seq
-        counter.save(update_fields=["last"])
+        counter.save(using=alias, update_fields=["last"])
 
-    for pk, created in Statute._base_manager.filter(effective_from__isnull=True).values_list("pk", "create_time"):
-        Statute._base_manager.filter(pk=pk).update(effective_from=timezone.localdate(created))
+    for pk, created in Statute._base_manager.using(alias).filter(effective_from__isnull=True).values_list("pk", "create_time"):
+        Statute._base_manager.using(alias).filter(pk=pk).update(effective_from=timezone.localdate(created))
 
 
 def reverse(apps, schema_editor):
-    apps.get_model("judgment", "Judgment")._base_manager.update(case_number=None)
-    apps.get_model("judgment", "JudgmentCaseCounter").objects.all().delete()
-    apps.get_model("judgment", "Statute")._base_manager.update(effective_from=None)
+    alias = schema_editor.connection.alias
+    apps.get_model("judgment", "Judgment")._base_manager.using(alias).update(case_number=None)
+    apps.get_model("judgment", "JudgmentCaseCounter").objects.using(alias).all().delete()
+    apps.get_model("judgment", "Statute")._base_manager.using(alias).update(effective_from=None)
 
 
 class Migration(migrations.Migration):

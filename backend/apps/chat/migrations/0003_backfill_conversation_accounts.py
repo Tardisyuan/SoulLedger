@@ -14,20 +14,21 @@
 from django.db import migrations
 
 
-def _account_at(accounts, soul_id, moment):
+def _account_at(accounts, soul_id, moment, alias):
     if soul_id is None:
         return None
-    return (accounts.objects.filter(soul_id=soul_id, created_at__lte=moment)
+    return (accounts.objects.using(alias).filter(soul_id=soul_id, created_at__lte=moment)
             .order_by("-created_at").values_list("pk", flat=True).first())
 
 
 def backfill(apps, schema_editor):
+    alias = schema_editor.connection.alias
     Conversation = apps.get_model("chat", "Conversation")
     SoulAccount = apps.get_model("soul_accounts", "SoulAccount")
-    for row in Conversation.objects.filter(account_a__isnull=True).iterator():
-        Conversation.objects.filter(pk=row.pk).update(
-            account_a_id=_account_at(SoulAccount, row.soul_a_id, row.created_at),
-            account_b_id=_account_at(SoulAccount, row.soul_b_id, row.created_at),
+    for row in Conversation.objects.using(alias).filter(account_a__isnull=True).iterator():
+        Conversation.objects.using(alias).filter(pk=row.pk).update(
+            account_a_id=_account_at(SoulAccount, row.soul_a_id, row.created_at, alias),
+            account_b_id=_account_at(SoulAccount, row.soul_b_id, row.created_at, alias),
         )
 
 

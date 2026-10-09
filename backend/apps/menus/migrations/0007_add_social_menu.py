@@ -13,10 +13,11 @@ from django.db import migrations
 
 
 def add_social_menu(apps, schema_editor):
+    alias = schema_editor.connection.alias
     Menu = apps.get_model("menus", "Menu")
 
     # Create top-level Social menu (visible to all roles)
-    social_menu, created = Menu.objects.get_or_create(
+    social_menu, created = Menu.objects.using(alias).get_or_create(
         name="Social",
         defaults={
             "path": "/social",
@@ -33,7 +34,7 @@ def add_social_menu(apps, schema_editor):
 
     if created:
         # Create child menu items for sub-routes
-        Menu.objects.get_or_create(
+        Menu.objects.using(alias).get_or_create(
             name="Follows",
             parent=social_menu,
             defaults={
@@ -50,9 +51,10 @@ def add_social_menu(apps, schema_editor):
 
 
 def remove_social_menu(apps, schema_editor):
+    alias = schema_editor.connection.alias
     Menu = apps.get_model("menus", "Menu")
-    Menu.objects.filter(name="Social", path="/social").delete()
-    Menu.objects.filter(name="Follows", path="/social/follows").delete()
+    Menu.objects.using(alias).filter(name="Social", path="/social").delete()
+    Menu.objects.using(alias).filter(name="Follows", path="/social/follows").delete()
 
 
 class Migration(migrations.Migration):
