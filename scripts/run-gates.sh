@@ -740,6 +740,11 @@ PROBE_PY
         RPORT=$("$PY" -c "import socket; s=socket.socket(); s.bind(('127.0.0.1',0)); p=s.getsockname()[1]; s.close(); print(p)")
         redis-server --port "$RPORT" --daemonize yes --save '' --appendonly no >/dev/null 2>&1 \
             || fail "could not start a throwaway redis-server on port $RPORT"
+        # Also stop it when the run is interrupted (Ctrl-C, a killed push): the shutdown
+        # below only runs on a normal finish, and one interrupted push on 2026-10-09 left
+        # this daemon running for a day. Chains the gate lock's own EXIT trap.
+        trap 'redis-cli -p "$RPORT" shutdown nosave >/dev/null 2>&1; type gate_unlock >/dev/null 2>&1 && gate_unlock' EXIT
+        trap 'exit 130' INT TERM
         export REDIS_URL="redis://127.0.0.1:$RPORT/0"
         export CELERY_BROKER_URL="redis://127.0.0.1:$RPORT/1"
         export CELERY_RESULT_BACKEND="redis://127.0.0.1:$RPORT/2"
