@@ -18524,6 +18524,16 @@ components:
           type: string
           readOnly: true
           nullable: true
+        cosigners:
+          type: array
+          items:
+            $ref: '#/components/schemas/CosignerRow'
+          readOnly: true
+        waiting_on_cosigner:
+          allOf:
+          - $ref: '#/components/schemas/WaitingOnCosigner'
+          nullable: true
+          readOnly: true
         decided_at:
           type: string
           format: date-time
@@ -18582,6 +18592,7 @@ components:
       - approver_display_name
       - approver_username
       - branches_json
+      - cosigners
       - created_at
       - decided_at
       - decision_history
@@ -18599,6 +18610,7 @@ components:
       - timeout_hours
       - timeout_role
       - verdict
+      - waiting_on_cosigner
       - workflow
     ApprovalNodeApproverTypeEnum:
       enum:
@@ -28183,6 +28195,16 @@ components:
           type: string
           readOnly: true
           nullable: true
+        cosigners:
+          type: array
+          items:
+            $ref: '#/components/schemas/CosignerRow'
+          readOnly: true
+        waiting_on_cosigner:
+          allOf:
+          - $ref: '#/components/schemas/WaitingOnCosigner'
+          nullable: true
+          readOnly: true
         decided_at:
           type: string
           format: date-time

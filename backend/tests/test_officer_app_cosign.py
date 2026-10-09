@@ -165,3 +165,15 @@ def test_item_detail_lists_cosigners_and_says_who_the_approver_is_waiting_on(cn_
     assert _decide(theirs, wf, node).status_code == 200
     done = mine.get(url).data
     assert done["cosigners"][0]["signed"] is True and done["waiting_on_cosigner"] is None
+
+
+def test_the_desks_workflow_detail_carries_the_same_cosign_facts(cn_tenant, judge_user, colleague):
+    wf, node = _plain_workflow(cn_tenant)
+    mine, theirs = officer_client(judge_user), officer_client(colleague)
+    url = f"/api/v1/workflows/{wf.pk}/"
+    assert mine.get(url).data["current_node_detail"]["cosigners"] == []
+    mine.post(_cosign_url(wf), {"user_id": colleague.pk}, format="json")
+    seen = mine.get(url).data["current_node_detail"]
+    assert seen["cosigners"] == [{"user_id": colleague.pk, "name": "联署人", "signed": False}]
+    assert seen["waiting_on_cosigner"] == {"id": colleague.pk, "name": "联署人"}
+    assert theirs.get(url).data["current_node_detail"]["waiting_on_cosigner"] is None

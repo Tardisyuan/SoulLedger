@@ -97,6 +97,13 @@ export interface ApprovalNode {
   /** Decisions a 驳回到 re-opened, and timeout events, oldest first. */
   decision_history?: Record<string, unknown>[];
   signatures_json?: { signer: number; user_name: string; verdict: string; passed: boolean; at: string }[];
+  /** 加签: the colleagues the designated approver added to this node, and whether each has signed. */
+  cosigners?: { user_id: number; name: string; signed: boolean }[];
+  /**
+   * 加签: set (for the requester) while an added signer owes a signature that holds back the requester's
+   * own approval -- `approve_node` would answer 409 `cosigners_pending`. A refusal is never held.
+   */
+  waiting_on_cosigner?: { id: number; name: string } | null;
   timeout_hours?: number | null;
   timeout_action?: WorkflowTimeoutAction | "";
 }

@@ -8535,6 +8535,8 @@ export interface components {
             readonly approver: number | null;
             readonly approver_username: string | null;
             readonly approver_display_name: string | null;
+            readonly cosigners: components["schemas"]["CosignerRow"][];
+            readonly waiting_on_cosigner: components["schemas"]["WaitingOnCosigner"] | null;
             /** Format: date-time */
             readonly decided_at: string | null;
             /** Format: date-time */
@@ -13135,6 +13137,8 @@ export interface components {
             readonly approver?: number | null;
             readonly approver_username?: string | null;
             readonly approver_display_name?: string | null;
+            readonly cosigners?: components["schemas"]["CosignerRow"][];
+            readonly waiting_on_cosigner?: components["schemas"]["WaitingOnCosigner"] | null;
             /** Format: date-time */
             readonly decided_at?: string | null;
             /** Format: date-time */
