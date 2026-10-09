@@ -255,8 +255,11 @@ describe("a record's basis", () => {
     expect(screen.queryByTestId("record-stage-r2")).toBeNull();
     // The soul never sees where the record came from.
     expect(screen.queryByText(/证人|WITNESS/)).toBeNull();
-    // An Animated.View update lands one tick after these assertions; flush it so it isn't an act() warning.
-    await act(async () => {});
+    // FadeIn (ui.tsx) animates opacity over 120 ms on real timers; one tick was enough when idle but
+    // not under load (the pre-push run went red). Wait out the whole fade inside act().
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 200));
+    });
   });
 });
 
