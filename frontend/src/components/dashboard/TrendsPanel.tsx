@@ -244,7 +244,7 @@ export function TrendsPanel() {
     <section
       data-trends-panel=""
       aria-busy={isLoading}
-      className="flex min-w-0 flex-col gap-4 border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] p-[20px]"
+      className="flex min-w-0 flex-col gap-4 border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] p-6"
     >
       <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
         <div className="flex flex-col gap-1">
