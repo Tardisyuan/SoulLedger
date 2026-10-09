@@ -163,29 +163,24 @@ class DomainEventHandlerRegistry:
             3. Domain handlers (should_handle check)
             4. Global handlers (should_handle check)
 
-        Exceptions in handlers are logged and swallowed — they never
-        propagate to the caller.
+        Exceptions in best-effort handlers are logged and swallowed. A handler with
+        `propagate_errors = True` (AuditHandler) is run before the others and its
+        exception is logged and RE-RAISED, unchanged, to the caller.
 
         Args:
             envelope: The EventEnvelope to dispatch.
         """
-        # 1. Specific event_type handlers
-        for handler in self._handlers.get(envelope.event_type, []):
-            if handler.should_handle(envelope):
-                self._safe_call(handler, envelope)
-
-        # 2. Wildcard handlers
-        for handler in self._handlers.get("*", []):
-            if handler.should_handle(envelope):
-                self._safe_call(handler, envelope)
-
-        # 3. Domain handlers
-        for handler in self._domain_handlers.get(envelope.domain, []):
-            if handler.should_handle(envelope):
-                self._safe_call(handler, envelope)
-
-        # 4. Global handlers
-        for handler in self._global_handlers:
+        ordered = [
+            *self._handlers.get(envelope.event_type, []),
+            *self._handlers.get("*", []),
+            *self._domain_handlers.get(envelope.domain, []),
+            *self._global_handlers,
+        ]
+        # Handlers whose failure must reach the caller run FIRST (stable sort): if the record cannot be written
+        # the exception aborts the dispatch before any best-effort side effect (WebSocket push, webhook,
+        # soul push) announces a fact that is about to be rolled back.
+        ordered.sort(key=lambda h: not getattr(h, "propagate_errors", False))
+        for handler in ordered:
             if handler.should_handle(envelope):
                 self._safe_call(handler, envelope)
 
@@ -226,7 +221,7 @@ class DomainEventHandlerRegistry:
 
     @staticmethod
     def _safe_call(handler: DomainEventHandler, envelope: EventEnvelope) -> None:
-        """Call a handler, swallowing exceptions."""
+        """Call a handler; swallow its exceptions unless it declares `propagate_errors`."""
         try:
             handler.handle(envelope)
         except Exception:
@@ -236,6 +231,8 @@ class DomainEventHandlerRegistry:
                 envelope.domain,
                 envelope.event_type,
             )
+            if getattr(handler, "propagate_errors", False):
+                raise
 
 
 # ---------------------------------------------------------------------------

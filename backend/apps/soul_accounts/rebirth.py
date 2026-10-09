@@ -213,11 +213,12 @@ def submit(account, desired_form, statement=""):
                 )
         except IntegrityError:
             raise SoulAccountError(REFUSALS["application_open"], "application_open", 409) from None
+        # The event row is part of the application's record: same transaction as the application.
+        EventService.log(soul, "REBIRTH_APPLICATION_SUBMITTED", {
+            "application_id": str(application.pk), "cycle": application.cycle,
+            "desired_form": desired_form, "workflow_id": str(workflow.pk),
+        })
     WorkflowService.announce(workflow, created=True)
-    EventService.log(soul, "REBIRTH_APPLICATION_SUBMITTED", {
-        "application_id": str(application.pk), "cycle": application.cycle,
-        "desired_form": desired_form, "workflow_id": str(workflow.pk),
-    })
     return application
 
 
@@ -254,8 +255,9 @@ def appeal(account, application_id, statement=""):
         application.rejection_reason = ""
         application.decided_at = None
         application.save()
+        _log_status_change(application, old)
     WorkflowService.announce(workflow, created=True)
-    _announce_status(application, old)
+    _notify_status_change(application)
     return application
 
 
@@ -407,10 +409,11 @@ def decide_cooldown_shortening(request_id, user, *, approve: bool, approved_days
               + (f"(剩余 {approved_days} 天)" if approve else ""),
               actor=user, request=request, resource_id=shortening.pk, resource="cooldown_shortening",
               changes={"status": ["PENDING", shortening.status], "approved_days": [None, shortening.approved_days]})
-    EventService.log(soul, "COOLDOWN_SHORTENING_DECIDED", {
-        "request_id": str(shortening.pk), "application_id": str(shortening.application_id),
-        "status": shortening.status, "decided_by": user.username,
-    })
+        # The event row is part of the decision's record: same transaction as the decision.
+        EventService.log(soul, "COOLDOWN_SHORTENING_DECIDED", {
+            "request_id": str(shortening.pk), "application_id": str(shortening.application_id),
+            "status": shortening.status, "decided_by": user.username,
+        })
     EventService.notify_user(
         user=shortening.account.user,
         title="缩短冷却申请有了结果",
@@ -442,7 +445,8 @@ def sync_from_workflow(workflow_id):
         # 驳回理由不在这里取:它是审批人另填的「给灵魂的理由」,由 approve_node 在同一事务里
         # 写进 rejection_reason(record_reason_for_soul)。节点 notes 是内部备注,灵魂看不到。
         application.save()
-    _announce_status(application, old)
+        _log_status_change(application, old)
+    _notify_status_change(application)
     return application
 
 
@@ -462,13 +466,19 @@ def record_reason_for_soul(workflow, reason):
     )
 
 
-def _announce_status(application, old_status):
+def _log_status_change(application, old_status):
+    """The status change on the soul's timeline. Call INSIDE the transaction that saved the new status."""
     from apps.events.services import EventService
 
-    soul = application.soul
-    EventService.log(soul, "REBIRTH_STATUS_CHANGED", {
+    EventService.log(application.soul, "REBIRTH_STATUS_CHANGED", {
         "application_id": str(application.pk), "old_status": old_status, "new_status": application.status,
     })
+
+
+def _notify_status_change(application):
+    """Tell the soul. Best-effort, after the transaction."""
+    from apps.events.services import EventService
+
     EventService.notify_user(
         user=application.account.user,
         title="转生申请状态更新",
@@ -520,8 +530,8 @@ def decide_cross_civilization(application_id, user, value: bool):
         application.save(update_fields=["cross_civilization", "updated_at"])
         workflow.cross_civilization = value
         workflow.save(update_fields=["cross_civilization"])
-    EventService.log(application.soul, "REBIRTH_CROSS_CIV_DECIDED", {
-        "application_id": str(application.pk), "cross_civilization": value,
-        "desired_form": application.desired_form, "decided_by": user.username,
-    })
+        EventService.log(application.soul, "REBIRTH_CROSS_CIV_DECIDED", {
+            "application_id": str(application.pk), "cross_civilization": value,
+            "desired_form": application.desired_form, "decided_by": user.username,
+        })
     return application

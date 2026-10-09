@@ -306,9 +306,10 @@ class JudgmentConclusionService:
             # waiting on (docs/ARCHITECTURE-sentence-plan.md §3.3).
             SentencePlanService.advance(judgment.soul)
 
-        # Step 5: Log domain event (outside transaction for performance)
-        from apps.events.services import EventService
-        EventService.log_judgment_concluded(judgment)
+            # Step 5: the event row is part of the conclusion's record: written in the same transaction, so a
+            # failed insert rolls the whole conclusion back and reaches the caller (tests/test_event_log_*).
+            from apps.events.services import EventService
+            EventService.log_judgment_concluded(judgment)
 
         return True
 

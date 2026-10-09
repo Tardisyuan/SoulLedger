@@ -483,14 +483,19 @@ class SoulRecord(AuditUserFields, models.Model):
         # inside its `elif`, and a deed was stamped with its life only when it cited a statute.)
         if is_new and self.cycle == 0:
             self.cycle = self.soul.life_index
-        super().save(*args, **kwargs)
-        if is_new:
-            depth, souls = _BATCH.get()
-            if depth:
-                # Defer karma recalculation until batch completes
-                souls.add(self.soul_id)
-            else:
-                self._update_soul_karma()
+        from django.db import transaction
+
+        # The record, the recalculation it triggers and that recalculation's KARMA_RECALCULATED event are one
+        # unit: a failed event insert un-files the deed.
+        with transaction.atomic():
+            super().save(*args, **kwargs)
+            if is_new:
+                depth, souls = _BATCH.get()
+                if depth:
+                    # Defer karma recalculation until batch completes
+                    souls.add(self.soul_id)
+                else:
+                    self._update_soul_karma()
 
     def _update_soul_karma(self):
         """Recalculate karma. Uses cache debounce only for bulk operations."""
