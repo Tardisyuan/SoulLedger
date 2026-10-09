@@ -16,6 +16,15 @@ import { CIVILIZATION_SHORT_CODES } from "@soulledger/core/config/civilizations"
 
 export const TODO_KINDS: readonly TodoKind[] = ["approval", "reassignment", "cooldown", "rebirth"];
 
+/**
+ * 转生申请的标题:后端给的是灵魂名,「转生申请 · 名」(申诉:「转生申请申诉 · 名」)在这里按语言包拼。
+ * 其他种类的 `title` 原样。
+ */
+export function todoTitle(item: { kind: string; title: string; is_appeal?: boolean }, t: (key: string, vars?: Record<string, string>) => string): string {
+  if (item.kind !== "rebirth" || !item.title) return item.title;
+  return t(item.is_appeal ? "soul_accounts.rebirth.appeal_title" : "soul_accounts.rebirth.detail_title", { name: item.title });
+}
+
 /** The four lists in `GET todo/`, in the spec's order, with the kind each one holds. */
 export const TODO_GROUPS: readonly { field: keyof Todo; kind: TodoKind; label: string }[] = [
   { field: "approvals", kind: "approval", label: "officer_app.todo.groups.approvals" },

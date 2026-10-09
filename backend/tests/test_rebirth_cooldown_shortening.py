@@ -167,7 +167,9 @@ def test_approval_moves_the_effective_cooldown_end_and_leaves_the_hall_setting_a
     assert approved.status_code == 200, approved.data
     assert approved.data["status"] == "APPROVED" and approved.data["approved_days"] == 3
     assert approved.data["decided_by_username"] == judge_user.username
-    row = CooldownShorteningRequest.objects.get(pk=row_id)
+    # 批后详情读到的是「现在还剩几天」(批准已计入),不是申请时的 30:客户端据此写「批后还剩 M 天」。
+    assert officer.get(f"{OFFICER}{row_id}/").data["remaining_days"] == 3
+    row =CooldownShorteningRequest.objects.get(pk=row_id)
     # 同一个函数(rebirth.cooldown_until)给 /me 的资格与官员侧的截止:都提前到决定后 3 天。
     until = rebirth.cooldown_until(application)
     assert abs((until - (row.decided_at + timezone.timedelta(days=3))).total_seconds()) < 1
