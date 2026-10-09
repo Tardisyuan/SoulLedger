@@ -6261,6 +6261,148 @@ paths:
               schema:
                 $ref: '#/components/schemas/JudgmentClaimRefusal'
           description: ''
+  /api/v1/judgment/{id}/comments/:
+    get:
+      operationId: v1_judgment_comments_list
+      description: 评议, oldest first. `GET /api/v1/judgment/{id}/comments/` (tenant-scoped
+        through `get_object`).
+      parameters:
+      - in: query
+        name: civilization
+        schema:
+          type: string
+          enum:
+          - CHINESE
+          - EGYPTIAN
+          - EUROPEAN
+          - GREEK
+        description: |-
+          * `CHINESE` - Chinese Diyu
+          * `EUROPEAN` - European Heaven/Hell
+          * `EGYPTIAN` - Egyptian Duat
+          * `GREEK` - Greek Underworld
+      - in: query
+        name: court
+        schema:
+          type: string
+      - in: query
+        name: group
+        schema:
+          type: string
+          enum:
+          - deferred
+          - mine
+          - others
+          - unclaimed
+        description: |-
+          * `mine` - 我认领
+          * `unclaimed` - 待认领
+          * `others` - 他人认领
+          * `deferred` - 暂缓
+      - in: query
+        name: has_verdict
+        schema:
+          type: boolean
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Judgment.
+        required: true
+      - in: query
+        name: is_final
+        schema:
+          type: boolean
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      - in: query
+        name: soul
+        schema:
+          type: string
+          format: uuid
+      - in: query
+        name: statute
+        schema:
+          type: string
+          format: uuid
+      - in: query
+        name: verdict
+        schema:
+          type: string
+          nullable: true
+          enum:
+          - FAILED
+          - PASSED
+          - PURGATORY
+          - RETRY
+        description: |-
+          * `PASSED` - Passed / Saved
+          * `FAILED` - Failed / Condemned
+          * `PURGATORY` - Purgatory / Intermediate
+          * `RETRY` - Retry / Appeal
+      - in: query
+        name: verdict_null
+        schema:
+          type: boolean
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/JudgmentComment'
+          description: ''
+    post:
+      operationId: v1_judgment_comments_create
+      description: 'Leave a comment. `POST /api/v1/judgment/{id}/comments/` `{"body":
+        "..."}` (1..2000 chars).'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Judgment.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JudgmentComment'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/JudgmentComment'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/JudgmentComment'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JudgmentComment'
+          description: ''
   /api/v1/judgment/{id}/conclude/:
     post:
       operationId: v1_judgment_conclude_create
@@ -10048,6 +10190,64 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TodoItemDetail'
+          description: ''
+        '404':
+          description: No response body
+  /api/v1/officer-app/items/{kind}/{item_id}/cosigners/:
+    post:
+      operationId: officer_app_cosign_add
+      description: |-
+        加签:当前节点的指定审批人,把本殿一位同僚加为联署人(`apps/workflow/cosign.py` 写明规则)。
+
+        403 `not_allowed`:这一条现在不能加签(不是你的节点、节点已被处理、会签节点…)——App 据此置灰;
+        400 `not_eligible`:这个人不能被加(不在本殿 / 无审批权 / 已停用…);400 `duplicate`:已是联署人,
+        或本来就能单独决定这个节点。留痕:一条审计;被加的人收到通知与官员端推送。
+      parameters:
+      - in: path
+        name: item_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: kind
+        schema:
+          type: string
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CosignAdd'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CosignAdd'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CosignAdd'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cosigner'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CosignRefusal'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CosignRefusal'
           description: ''
         '404':
           description: No response body
@@ -20156,6 +20356,42 @@ components:
       - audience
       - locale
       - tokens
+    CosignAdd:
+      type: object
+      properties:
+        user_id:
+          type: integer
+          description: 'A `signer-candidates/` id: an officer of the same hall.'
+      required:
+      - user_id
+    CosignRefusal:
+      type: object
+      properties:
+        code:
+          type: string
+          description: not_allowed / not_eligible / duplicate
+        detail:
+          type: string
+      required:
+      - code
+      - detail
+    Cosigner:
+      type: object
+      properties:
+        user_id:
+          type: integer
+        user_name:
+          type: string
+        added_at:
+          type: string
+        signed_at:
+          type: string
+          nullable: true
+      required:
+      - added_at
+      - signed_at
+      - user_id
+      - user_name
     CrossCivilizationDecision:
       type: object
       properties:
@@ -23037,6 +23273,33 @@ components:
       required:
       - code
       - error
+    JudgmentComment:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        author:
+          type: integer
+          readOnly: true
+          nullable: true
+        author_name:
+          type: string
+          readOnly: true
+        body:
+          type: string
+          maxLength: 2000
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - author
+      - author_name
+      - body
+      - created_at
+      - id
     JudgmentConclude:
       type: object
       properties:
@@ -34498,6 +34761,11 @@ components:
         node_id:
           type: string
           description: 待决的节点;决定时作为 node_id 传回。
+        required_verdicts:
+          type: array
+          items:
+            type: string
+          description: 该节点接受的裁决(PASSED / CONFIRMED / FAILED / REJECTED …);空 = 不限。批准只在其中的通过类里选。
       required:
       - actionable
       - created_at

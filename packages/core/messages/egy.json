@@ -5201,7 +5201,7 @@
     },
     "continue_on_desk": "Em Khet Em Medjat Sab",
     "cosign": {
-      "no_endpoint": "Redi Sab Hena Nen Wenen Djer: Maa Wa."
+      "unavailable": "Redi Sab Hena Nen Wenen Djer: Maa Wa."
     },
     "landing": {
       "handled": "Iri Seth Em {{name}}",

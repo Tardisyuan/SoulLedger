@@ -3,7 +3,7 @@
  * (read-only). Each ends with 「在电脑上继续」, a link to the desk's same page that the officer can
  * send to a computer.
  */
-import { judgmentApi } from "@soulledger/core/api/judgment";
+import { JUDGMENT_COMMENT_MAX, judgmentApi } from "@soulledger/core/api/judgment";
 import { officerAppApi, type TodoItemDetail, type TodoKind } from "@soulledger/core/api/officer-app";
 import { soulAccountsApi } from "@soulledger/core/api/soul-accounts";
 import { soulsApi, type Soul } from "@soulledger/core/api/souls";
@@ -14,7 +14,7 @@ import { formatWhen } from "../format";
 import { ActionButton, StateView, viewStateOf } from "../kit";
 import { deskUrl, handledNotice, isDenied, type Verdict } from "../rules";
 import { useSession } from "../session";
-import { Icon, Notice, Screen, SectionLabel, Txt, space, useI18n, useRemote, useTheme } from "../shared";
+import { Icon, Input, Notice, Screen, SectionLabel, Txt, space, useI18n, useRemote, useTheme } from "../shared";
 import { CosignSheet, DecisionSheet, type CooldownFacts } from "./sheets";
 
 export type DetailTarget =
@@ -120,7 +120,7 @@ function TodoDetail({ kind, id, onSettled }: { kind: TodoKind; id: string; onSet
       </Screen>
       {data.actionable ? <ActionBar kind={kind} onPick={pick} /> : null}
       <DecisionSheet key={`decision-${opened}`} open={sheet === "approve" || sheet === "reject"} verdict={sheet === "reject" ? "reject" : "approve"} detail={data as TodoItemDetail} cooldown={cooldown.data} onClose={() => setSheet(null)} onDone={settled} />
-      <CosignSheet key={`cosign-${opened}`} open={sheet === "cosign"} onClose={() => setSheet(null)} />
+      <CosignSheet key={`cosign-${opened}`} open={sheet === "cosign"} kind={kind} id={id} onClose={() => setSheet(null)} onDone={() => void reload()} />
     </View>
   );
 }
@@ -154,9 +154,51 @@ function JudgmentDetail({ id }: { id: string }) {
         <Txt variant="caption" tone="muted">{[data.court, data.claimed_by_name].filter(Boolean).join(" · ")}</Txt>
         {!data.is_final ? <Txt variant="bodyLg">{`◇ ${t("officer_app.queue.desk_only")}`}</Txt> : null}
         <Txt variant="caption" tone="muted">{t("officer_app.queue.scope_note")}</Txt>
+        <JudgmentComments id={id} />
         <ContinueOnDesk target={{ kind: "judgment", id }} />
       </View>
     </Screen>
+  );
+}
+
+/** 写评议: read the others' comments and add one. A comment changes nothing about the case. */
+function JudgmentComments({ id }: { id: string }) {
+  const { t } = useI18n();
+  const load = useCallback(() => judgmentApi.comments(id).then((r) => r.data), [id]);
+  const { data, reload } = useRemote(load);
+  const [body, setBody] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const send = () => {
+    const text = body.trim();
+    if (text === "") return;
+    setBusy(true);
+    setFailed(false);
+    judgmentApi
+      .addComment(id, text)
+      .then(() => {
+        setBody("");
+        void reload();
+      })
+      .catch(() => setFailed(true))
+      .finally(() => setBusy(false));
+  };
+  return (
+    <View testID="judgment-comments" style={{ gap: space[3] }}>
+      <SectionLabel>{t("officer_app.comment.title")}</SectionLabel>
+      {data && data.length === 0 ? (
+        <Txt variant="caption" tone="muted">{t("officer_app.comment.empty")}</Txt>
+      ) : null}
+      {(data ?? []).map((c) => (
+        <View key={c.id} testID={`comment-${c.id}`} style={{ gap: space[1] }}>
+          <Txt variant="caption" tone="muted">{`${c.author_name} · ${formatWhen(c.created_at)}`}</Txt>
+          <Txt variant="body">{c.body}</Txt>
+        </View>
+      ))}
+      <Input testID="comment-input" label={t("officer_app.comment.write")} multiline maxLength={JUDGMENT_COMMENT_MAX} value={body} onChangeText={setBody} />
+      {failed ? <Notice tone="neg" testID="comment-failed">{`! ${t("officer_app.comment.failed")}`}</Notice> : null}
+      <ActionButton testID="comment-send" kind="outline" busy={busy} title={t("officer_app.comment.send")} onPress={send} />
+    </View>
   );
 }
 
