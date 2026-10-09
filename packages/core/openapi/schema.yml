@@ -8343,6 +8343,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/MeCooldownShortening'
           description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulError'
+          description: ''
         '409':
           content:
             application/json:
@@ -20258,6 +20264,11 @@ components:
         reason:
           type: string
           maxLength: 2000
+        desired_remaining_days:
+          type: integer
+          maximum: 36500
+          minimum: 0
+          nullable: true
       required:
       - reason
     CooldownShorteningReject:
@@ -24881,6 +24892,11 @@ components:
         reason:
           type: string
           readOnly: true
+        desired_remaining_days:
+          type: integer
+          readOnly: true
+          nullable: true
+          description: 灵魂希望批准后还剩几天(0 = 立即结束);可选,仅供官员参考。
         status:
           allOf:
           - $ref: '#/components/schemas/CooldownShorteningStatusEnum'
@@ -24909,6 +24925,7 @@ components:
       - cycle
       - decided_at
       - decision_note
+      - desired_remaining_days
       - id
       - reason
       - status
@@ -26265,6 +26282,11 @@ components:
         reason:
           type: string
           readOnly: true
+        desired_remaining_days:
+          type: integer
+          readOnly: true
+          nullable: true
+          description: 灵魂希望批准后还剩几天(0 = 立即结束);可选,仅供官员参考。
         status:
           allOf:
           - $ref: '#/components/schemas/CooldownShorteningStatusEnum'
@@ -26337,6 +26359,7 @@ components:
       - decided_by
       - decided_by_username
       - decision_note
+      - desired_remaining_days
       - id
       - reason
       - remaining_days

@@ -2862,7 +2862,8 @@
       "source": "Cooling-off from the final rejection of {{id}}",
       "decide_failed": "Could not decide: {{reason}}",
       "original": "was {{date}}",
-      "day_unit": "days"
+      "day_unit": "days",
+      "desired": "Requested: {{n}} days left"
     },
     "cooldown_status": {
       "PENDING": "Pending",
@@ -4030,7 +4031,10 @@
       "approved": "Cooldown shortening approved; cooling-off ends {{date}}",
       "rejected": "Cooldown shortening request rejected",
       "note": "Note",
-      "brought_forward": "Brought forward"
+      "brought_forward": "Brought forward",
+      "desired_label": "Days you hope remain (optional)",
+      "desired_hint": "{{n}} days left now. Enter 0 to hope for an immediate end; leave blank to let the officer decide.",
+      "desired_invalid": "Enter a whole number from 0 to {{max}}"
     }
   },
   "soul_push": {
@@ -5167,7 +5171,8 @@
       "remaining_days": "{{n}} days left",
       "days_label": "Days to approve",
       "days_invalid": "Enter a whole number below the days left",
-      "verdict_label": "Verdict to approve with"
+      "verdict_label": "Verdict to approve with",
+      "desired": "Requested: {{n}} days left"
     },
     "landing": {
       "handled": "Already handled by {{name}}",

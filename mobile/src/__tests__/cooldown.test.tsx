@@ -46,6 +46,7 @@ const row = (over: Record<string, unknown> = {}) => ({
   application: "a1",
   cycle: 0,
   reason: "家中有事",
+  desired_remaining_days: null,
   status: "PENDING",
   approved_days: null,
   decision_note: "",
@@ -162,5 +163,44 @@ describe("the push-arrival wash on the shortening block", () => {
     await new Promise((r) => setTimeout(r, 0));
     expect(screen.queryByTestId("cooldown-landing")).toBeNull();
     spy.mockRestore();
+  });
+});
+
+describe("the optional 「希望缩短到几天」 field", () => {
+  // The reduce-motion test above `mockRestore`s a jest-mocked RN function back to returning undefined.
+  beforeEach(() => {
+    jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockResolvedValue(false);
+  });
+  const inDays = (n: number) => new Date(Date.now() + n * 86_400_000 - 3_600_000).toISOString(); // n days left, rounded up
+  const open = async () => {
+    const calls = stubApi({
+      "GET /me/rebirth-applications/": { status: 200, data: cooling({ cooldown_until: inDays(8), can_shorten_cooldown: true }) },
+      "POST /me/rebirth-applications/cooldown-shortening/": { status: 201, data: row({ desired_remaining_days: 2 }) },
+    });
+    wrap(<ApplicationsScreen />);
+    fireEvent.press(await screen.findByTestId("request-cooldown-shortening"));
+    fireEvent.changeText(screen.getByTestId("cooldown-shortening-reason"), "家中有事");
+    return calls;
+  };
+
+  it("shows the days left as its hint and sends the wish with the reason", async () => {
+    const calls = await open();
+    expect(screen.getByText("现在还剩 8 天。填 0 表示希望立即结束；不填则由官员决定。")).toBeTruthy();
+    fireEvent.changeText(screen.getByTestId("cooldown-shortening-desired"), "2");
+    fireEvent.press(screen.getByTestId("submit-cooldown-shortening"));
+    expect(await screen.findByTestId("cooldown-shortening")).toBeTruthy();
+    expect(calls.find((c) => c.method === "POST")?.body).toEqual({ reason: "家中有事", desired_remaining_days: 2 });
+  });
+
+  it("sends 0 as a real wish, and refuses a number that is not below the days left", async () => {
+    const calls = await open();
+    fireEvent.changeText(screen.getByTestId("cooldown-shortening-desired"), "8");
+    fireEvent.press(screen.getByTestId("submit-cooldown-shortening"));
+    expect(await screen.findByText("天数须是 0 到 7 的整数")).toBeTruthy();
+    expect(calls.filter((c) => c.method === "POST")).toEqual([]);
+    fireEvent.changeText(screen.getByTestId("cooldown-shortening-desired"), "0");
+    fireEvent.press(screen.getByTestId("submit-cooldown-shortening"));
+    await screen.findByTestId("cooldown-shortening");
+    expect(calls.find((c) => c.method === "POST")?.body).toEqual({ reason: "家中有事", desired_remaining_days: 0 });
   });
 });

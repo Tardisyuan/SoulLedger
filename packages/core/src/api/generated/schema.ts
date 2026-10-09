@@ -9349,6 +9349,7 @@ export interface components {
         };
         CooldownShorteningCreate: {
             reason: string;
+            desired_remaining_days?: number | null;
         };
         CooldownShorteningReject: {
             note: string;
@@ -11478,6 +11479,8 @@ export interface components {
             readonly application: string;
             readonly cycle: number;
             readonly reason: string;
+            /** @description 灵魂希望批准后还剩几天(0 = 立即结束);可选,仅供官员参考。 */
+            readonly desired_remaining_days: number | null;
             readonly status: components["schemas"]["CooldownShorteningStatusEnum"];
             /** @description 批准后,自决定时刻起还要等的天数。 */
             readonly approved_days: number | null;
@@ -12047,6 +12050,8 @@ export interface components {
             readonly application: string;
             readonly cycle: number;
             readonly reason: string;
+            /** @description 灵魂希望批准后还剩几天(0 = 立即结束);可选,仅供官员参考。 */
+            readonly desired_remaining_days: number | null;
             readonly status: components["schemas"]["CooldownShorteningStatusEnum"];
             /** @description 批准后,自决定时刻起还要等的天数。 */
             readonly approved_days: number | null;
@@ -23701,6 +23706,14 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MeCooldownShortening"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulError"];
                 };
             };
             409: {
