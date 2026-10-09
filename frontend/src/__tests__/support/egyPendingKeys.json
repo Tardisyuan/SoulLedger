@@ -24,6 +24,7 @@
  "officer_app.confirm.approve_body.rebirth",
  "officer_app.confirm.days_invalid",
  "officer_app.confirm.days_label",
+ "officer_app.confirm.desired",
  "officer_app.confirm.reasons.network",
  "officer_app.confirm.remaining_days",
  "officer_app.confirm.verdict_label",
@@ -53,5 +54,9 @@
  "officer_app.todo.groups.approvals",
  "officer_app.todo.groups.reassignments",
  "officer_app.todo.groups.rebirths",
+ "soul_accounts.cooldown.desired",
+ "soul_app.cooldown.desired_hint",
+ "soul_app.cooldown.desired_invalid",
+ "soul_app.cooldown.desired_label",
  "tenants.settings.security"
 ]

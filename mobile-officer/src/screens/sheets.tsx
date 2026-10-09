@@ -16,6 +16,8 @@ import { Button, FieldError, Input, Notice, Sheet, Txt, space, useI18n, useRemot
 export interface CooldownFacts {
   reason: string;
   remainingDays: number;
+  /** What the soul hopes remains after approval; pre-fills the days field. */
+  desiredDays: number | null;
 }
 
 export function DecisionSheet({
@@ -38,7 +40,8 @@ export function DecisionSheet({
   const { t } = useI18n();
   const theme = useTheme();
   const [reason, setReason] = useState("");
-  const [days, setDays] = useState("");
+  // The soul's wish pre-fills the days (editable, same rules); with none the field starts empty as before.
+  const [days, setDays] = useState(cooldown?.desiredDays != null ? String(cooldown.desiredDays) : "");
   const [flagged, setFlagged] = useState(false);
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<FailureReason | null>(null);
@@ -83,6 +86,9 @@ export function DecisionSheet({
         </Txt>
         {cooldown && detail.kind === "cooldown" ? (
           <Txt variant="caption" tone="muted">{`${cooldown.reason} · ${t("officer_app.confirm.remaining_days", { n: String(cooldown.remainingDays) })}`}</Txt>
+        ) : null}
+        {verdict === "approve" && cooldown && cooldown.desiredDays != null ? (
+          <Txt variant="caption" tone="muted" testID="decision-desired">{t("officer_app.confirm.desired", { n: String(cooldown.desiredDays) })}</Txt>
         ) : null}
         {verdict === "approve" && passChoices.length > 1 ? (
           <View style={{ gap: space[2] }}>

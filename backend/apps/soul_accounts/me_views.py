@@ -329,7 +329,7 @@ class MeCooldownShorteningView(SoulAPIView):
     """冷却期内申请缩短本次冷却。状态在 `GET rebirth-applications/` 的 `cooldown_shortening` 里。"""
 
     @extend_schema(request=CooldownShorteningCreateSerializer,
-                   responses={201: MeCooldownShorteningSerializer, 409: SoulErrorSerializer})
+                   responses={201: MeCooldownShorteningSerializer, 400: SoulErrorSerializer, 409: SoulErrorSerializer})
     def post(self, request):
         body = CooldownShorteningCreateSerializer(data=request.data)
         body.is_valid(raise_exception=True)
