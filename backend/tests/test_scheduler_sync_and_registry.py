@@ -39,7 +39,9 @@ def test_the_command_registers_one_row_per_job_and_tenant_however_often_it_runs(
     call_command("setup_scheduled_tasks")
     call_command("setup_scheduled_tasks")
 
-    expected = GLOBAL_KEYS | {f"{k}@{t.code}" for k in TENANT_KEYS for t in (cn_tenant, eu_tenant)}
+    expected = {s.periodic_task_name(None) for s in registry.REGISTRY if s.key in GLOBAL_KEYS} | {
+        s.periodic_task_name(t) for s in registry.REGISTRY if s.key in TENANT_KEYS for t in (cn_tenant, eu_tenant)
+    }
     assert _names() == expected
     assert ScheduledJob.objects.count() == len(expected)
     for job in ScheduledJob.objects.select_related("periodic_task"):
@@ -53,7 +55,7 @@ def test_the_command_registers_one_row_per_job_and_tenant_however_often_it_runs(
 @pytest.mark.django_db
 def test_operator_changes_survive_a_resync_and_reset_discards_them(cn_tenant):
     sync_schedules()
-    pt = PeriodicTask.objects.get(name="authentication.flush_expired_tokens")
+    pt = PeriodicTask.objects.get(task="authentication.flush_expired_tokens")
     custom, _ = CrontabSchedule.objects.get_or_create(
         minute="15", hour="6", day_of_month="*", month_of_year="*", day_of_week="1-5", timezone="Asia/Shanghai"
     )
@@ -74,7 +76,7 @@ def test_operator_changes_survive_a_resync_and_reset_discards_them(cn_tenant):
 @pytest.mark.django_db
 def test_task_name_and_kwargs_follow_the_registry_even_if_edited(cn_tenant):
     sync_schedules()
-    name = f"ledger.recalculate_tenant@{cn_tenant.code}"
+    name = next(s for s in registry.REGISTRY if s.key == "ledger.recalculate_tenant").periodic_task_name(cn_tenant)
     PeriodicTask.objects.filter(name=name).update(task="ledger.recalculate_all", kwargs="{}")
 
     stats = sync_schedules()
@@ -102,7 +104,7 @@ def test_old_fan_out_rows_are_removed_whatever_they_are_named(cn_tenant):
 @pytest.mark.django_db
 def test_a_deactivated_tenant_loses_its_rows_and_an_unknown_key_is_removed(cn_tenant, eu_tenant):
     sync_schedules()
-    assert PeriodicTask.objects.filter(name__endswith=f"@{eu_tenant.code}").count() == len(TENANT_KEYS)
+    assert PeriodicTask.objects.filter(scheduled_job__tenant=eu_tenant).count() == len(TENANT_KEYS)
 
     # A key that left the registry: adopt one of our rows under a foreign key.
     stray = ScheduledJob.objects.filter(tenant=cn_tenant).first()
@@ -112,12 +114,11 @@ def test_a_deactivated_tenant_loses_its_rows_and_an_unknown_key_is_removed(cn_te
     Tenant.objects.filter(pk=eu_tenant.pk).update(is_active=False)  # bypasses the signal on purpose
     stats = sync_schedules()
 
-    assert not PeriodicTask.objects.filter(name__endswith=f"@{eu_tenant.code}").exists()
+    assert not PeriodicTask.objects.filter(scheduled_job__tenant=eu_tenant).exists()
     assert not PeriodicTask.objects.filter(name="gone.from_registry@CN").exists()
     assert stats["removed"] == len(TENANT_KEYS) + 1
     # And the row the stray displaced is back.
-    assert PeriodicTask.objects.filter(name=f"{stray.job_key}@{cn_tenant.code}").exists() or True
-    assert PeriodicTask.objects.filter(name__endswith=f"@{cn_tenant.code}").count() == len(TENANT_KEYS)
+    assert PeriodicTask.objects.filter(scheduled_job__tenant=cn_tenant).count() == len(TENANT_KEYS)
 
 
 @pytest.mark.django_db
@@ -128,7 +129,7 @@ def test_a_new_tenant_is_registered_by_the_signal_and_deactivation_unregisters_i
     tenant.is_active = False
     tenant.save()
     assert not ScheduledJob.objects.filter(tenant=tenant).exists()
-    assert not PeriodicTask.objects.filter(name__endswith="@SCHED_NEW").exists()
+    assert not PeriodicTask.objects.filter(scheduled_job__tenant=tenant).exists()
 
 
 def test_every_registry_task_is_one_a_worker_can_run_with_the_kwargs_we_send():
@@ -165,11 +166,14 @@ def test_the_three_maintenance_commands_are_scheduled_jobs(cn_tenant, eu_tenant)
         assert key in app.tasks, key
 
     sync_schedules()
+    pt = registry.get("workflow.process_timeouts_for_tenant")
     names = _names()
-    assert {f"workflow.process_timeouts_for_tenant@{t.code}" for t in (cn_tenant, eu_tenant)} <= names
-    assert "workflow.process_timeouts_for_tenant" not in names  # per tenant, never one global row
-    assert {"social.cleanup_orphan_post_media", "chat.reconcile_inbox"} <= names
-    assert not any(n.startswith(("social.cleanup_orphan_post_media@", "chat.reconcile_inbox@")) for n in names)
+    assert {pt.periodic_task_name(t) for t in (cn_tenant, eu_tenant)} <= names
+    assert pt.periodic_task_name(None) not in names  # per tenant, never one global row
+    assert {registry.get(k).periodic_task_name(None) for k in ("social.cleanup_orphan_post_media", "chat.reconcile_inbox")} <= names
+    assert not ScheduledJob.objects.filter(
+        job_key__in=("social.cleanup_orphan_post_media", "chat.reconcile_inbox"), tenant__isnull=False
+    ).exists()
 
 
 def test_the_lock_ttl_of_a_five_minutely_job_stays_under_its_period():
