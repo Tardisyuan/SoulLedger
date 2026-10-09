@@ -1852,13 +1852,13 @@
       "search_placeholder": "搜索用户名...",
       "no_logs": "暂无登录日志"
     },
-    "resource_tenant": "殿",
+    "resource_tenant": "殿设置",
     "descriptions": {
       "hall_settings": "改了 {{code}} 殿的设置",
       "hall_seal_glyphs": "改了 {{code}} 殿的印字",
       "hall_assistant_switch": "改了 {{code}} 殿的问一问开关"
     },
-    "filter_hall": "殿",
+    "filter_hall": "按殿",
     "all_halls": "全部殿"
   },
   "profile": {
@@ -5143,7 +5143,9 @@
       "your_step": "轮到你的节点",
       "cosign": "加签",
       "reject": "驳回",
-      "approve": "批准"
+      "approve": "批准",
+      "cosigner_pending": "加签 · 待批",
+      "wait_cosigner": "等{{name}}先批，你才能批。{{name}}驳回则这一节点驳回。"
     },
     "confirm": {
       "approve_title": "批准这一签？",
@@ -5166,7 +5168,7 @@
         "approval": "批准后流程进入下一步。",
         "rebirth": "批准后这份转生申请进入下一步。",
         "cooldown": "批准后冷却缩短到你填的天数。",
-        "reassignment": "批准后这次调拨成立。"
+        "reassignment": "批准后这次改派成立。"
       },
       "remaining_days": "还剩 {{n}} 天",
       "days_label": "批准天数",
@@ -5268,13 +5270,14 @@
       "mfa_required": "你的角色必须使用两步验证，但还没有设置。请到官员台完成设置。"
     },
     "cosign": {
+      "rules": "只列本殿在职、有审批权限的官员。加签人先批，你才能批；加签人驳回，整个节点驳回。",
       "search": "搜索姓名或用户名",
       "empty": "没有可选的人",
       "confirm": "确认加签",
       "unavailable": "现在不能加签，只能查看候选人。",
       "added": "已加签。对方签完后，你的批准才生效。",
       "not_eligible": "这个人不能被加签（要是本殿、有审批权限的在职官员）。",
-      "duplicate": "已经是联署人，或本来就能单独决定这一步。"
+      "duplicate": "已经是加签人，或本来就能单独决定这一步。"
     },
     "comment": {
       "title": "评议",

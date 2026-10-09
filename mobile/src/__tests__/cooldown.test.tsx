@@ -196,11 +196,46 @@ describe("the optional 「希望缩短到几天」 field", () => {
     const calls = await open();
     fireEvent.changeText(screen.getByTestId("cooldown-shortening-desired"), "8");
     fireEvent.press(screen.getByTestId("submit-cooldown-shortening"));
-    expect(await screen.findByText("天数须是 0 到 7 的整数")).toBeTruthy();
+    expect(await screen.findByText("! 天数须是 0 到 7 的整数")).toBeTruthy();
     expect(calls.filter((c) => c.method === "POST")).toEqual([]);
     fireEvent.changeText(screen.getByTestId("cooldown-shortening-desired"), "0");
     fireEvent.press(screen.getByTestId("submit-cooldown-shortening"));
     await screen.findByTestId("cooldown-shortening");
     expect(calls.find((c) => c.method === "POST")?.body).toEqual({ reason: "家中有事", desired_remaining_days: 0 });
+  });
+
+  it("is a 96-wide box followed by 「天」, below the reason and above the submit button, red only after a bad submit", async () => {
+    await open();
+    const field = screen.getByTestId("cooldown-shortening-desired");
+    expect(screen.getByText("天")).toBeTruthy();
+    // order on the form: reason, then days, then submit
+    const order = screen.getAllByTestId(/^(cooldown-shortening-reason|cooldown-shortening-desired|submit-cooldown-shortening)$/).map((n) => n.props.testID);
+    expect(order).toEqual(["cooldown-shortening-reason", "cooldown-shortening-desired", "submit-cooldown-shortening"]);
+    expect(screen.queryByText(/^! 天数须是/)).toBeNull();
+    fireEvent.changeText(field, "8");
+    fireEvent.press(screen.getByTestId("submit-cooldown-shortening"));
+    expect(await screen.findByText("! 天数须是 0 到 7 的整数")).toBeTruthy();
+    // typing again clears the flag
+    fireEvent.changeText(field, "7");
+    expect(screen.queryByText(/^! 天数须是/)).toBeNull();
+  });
+});
+
+describe("a pending request that carries a wish", () => {
+  beforeEach(() => {
+    jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockResolvedValue(false);
+  });
+
+  it("reads 申请希望：还剩 N 天, from the key the officer side uses", async () => {
+    stubApi({ "GET /me/rebirth-applications/": { status: 200, data: cooling({ cooldown_shortening: row({ status: "PENDING", desired_remaining_days: 2 }) }) } });
+    wrap(<ApplicationsScreen />);
+    expect(await screen.findByText("申请希望：还剩 2 天")).toBeTruthy();
+  });
+
+  it("says nothing about a wish when there was none", async () => {
+    stubApi({ "GET /me/rebirth-applications/": { status: 200, data: cooling({ cooldown_shortening: row({ status: "PENDING", desired_remaining_days: null }) }) } });
+    wrap(<ApplicationsScreen />);
+    await screen.findByTestId("cooldown-shortening-status");
+    expect(screen.queryByTestId("cooldown-shortening-desired-shown")).toBeNull();
   });
 });

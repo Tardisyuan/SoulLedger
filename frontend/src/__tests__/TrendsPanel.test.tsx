@@ -89,6 +89,15 @@ describe("TrendsPanel · frame", () => {
     expect(within(range).getByRole("button", { name: zh("dashboard.trends.range_90d") }).className).not.toContain("bg-[oklch(var(--color-ink))]");
   });
 
+  it("pads on the spacing scale (24, p-6), not an arbitrary pixel value", async () => {
+    mockedTrends.mockResolvedValue({ data: FULL });
+    const { container } = renderPanel();
+    await waitFor(() => expect(container.querySelector("[data-trends-state='ready']")).not.toBeNull());
+    const panel = container.querySelector("[data-trends-panel]") as HTMLElement;
+    expect(panel.className).toContain(" p-6");
+    expect(panel.className).not.toMatch(/\bp-\[/);
+  });
+
   it("switching the range refetches with that range and marks only it as pressed", async () => {
     mockedTrends.mockResolvedValue({ data: FULL });
     renderPanel();

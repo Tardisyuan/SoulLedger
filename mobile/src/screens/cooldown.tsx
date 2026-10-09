@@ -73,6 +73,8 @@ export function CooldownShorteningBlock({ list, onChanged, landed }: { list: MeR
   const [now] = useState(() => Date.now());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<SoulErrorMessage | null>(null);
+  // The days field is flagged only after a submit that found it wrong (red border and 「! …」 under it).
+  const [wishFlagged, setWishFlagged] = useState(false);
   const row = list.cooldown_shortening;
 
   // Days left, rounded up like the server's. The wish must be a whole 0 <= n < left; blank = no wish.
@@ -82,7 +84,7 @@ export function CooldownShorteningBlock({ list, onChanged, landed }: { list: MeR
 
   const submit = async () => {
     if (!reason.trim()) return setError({ key: "soul_app.errors.validation" });
-    if (wishInvalid) return setError({ key: "soul_app.cooldown.desired_invalid", params: { max: String(Math.max(0, left - 1)) } });
+    if (wishInvalid) return setWishFlagged(true);
     setBusy(true);
     setError(null);
     try {
@@ -106,6 +108,12 @@ export function CooldownShorteningBlock({ list, onChanged, landed }: { list: MeR
               {t("soul_app.cooldown.pending")}
             </Txt>
           </StatusLine>
+        ) : null}
+        {row?.status === "PENDING" && row.desired_remaining_days != null ? (
+          // Same copy as the officer's desk and App: one key (decision 2026-10-09). Not a sentence about a promise.
+          <Txt testID="cooldown-shortening-desired-shown" variant="body" tone="muted" style={styles.noteLine}>
+            {t("soul_accounts.cooldown.desired", { n: String(row.desired_remaining_days) })}
+          </Txt>
         ) : null}
         {row?.status === "APPROVED" ? (
           <StatusLine glyph="✓">
@@ -158,9 +166,16 @@ export function CooldownShorteningBlock({ list, onChanged, landed }: { list: MeR
               label={t("soul_app.cooldown.desired_label")}
               hint={t("soul_app.cooldown.desired_hint", { n: String(left) })}
               value={desired}
-              onChangeText={setDesired}
+              onChangeText={(next) => {
+                setDesired(next);
+                setWishFlagged(false);
+              }}
               keyboardType="number-pad"
               maxLength={5}
+              inputWidth={96}
+              suffix={<Txt variant="body">{t("soul_accounts.cooldown.day_unit")}</Txt>}
+              invalid={wishFlagged}
+              error={wishFlagged ? `! ${t("soul_app.cooldown.desired_invalid", { max: String(Math.max(0, left - 1)) })}` : null}
             />
             {error ? <Notice tone="neg">{t(error.key, error.params)}</Notice> : null}
             <Button

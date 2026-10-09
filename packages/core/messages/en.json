@@ -1852,13 +1852,13 @@
       "search_placeholder": "Search username...",
       "no_logs": "No login logs"
     },
-    "resource_tenant": "Hall",
+    "resource_tenant": "Hall settings",
     "descriptions": {
       "hall_settings": "Edited the settings of hall {{code}}",
       "hall_seal_glyphs": "Edited the seal glyphs of hall {{code}}",
       "hall_assistant_switch": "Changed the Ask switch of hall {{code}}"
     },
-    "filter_hall": "Hall",
+    "filter_hall": "By hall",
     "all_halls": "All halls"
   },
   "profile": {
@@ -5143,7 +5143,9 @@
       "your_step": "Your step",
       "cosign": "Add signer",
       "reject": "Reject",
-      "approve": "Approve"
+      "approve": "Approve",
+      "cosigner_pending": "Added signer · pending",
+      "wait_cosigner": "{{name}} signs first; then you can approve. If {{name}} rejects, this step is rejected."
     },
     "confirm": {
       "approve_title": "Approve this step?",
@@ -5166,7 +5168,7 @@
         "approval": "The flow moves to the next step.",
         "rebirth": "This rebirth application moves to the next step.",
         "cooldown": "The cooling-off period is shortened to the days you enter.",
-        "reassignment": "The dispatch goes ahead."
+        "reassignment": "The reassignment goes ahead."
       },
       "remaining_days": "{{n}} days left",
       "days_label": "Days to approve",
@@ -5268,6 +5270,7 @@
       "mfa_required": "Your role must use two-step verification and it isn't set up yet. Set it up at the desk."
     },
     "cosign": {
+      "rules": "Only active officers of this hall who may approve are listed. The added signer approves first, then you can; if they reject, the whole step is rejected.",
       "search": "Search name or username",
       "empty": "Nobody to choose",
       "confirm": "Add signer",
