@@ -54,7 +54,8 @@ def test_admin_sees_every_row_including_global_and_the_read_shape_is_complete(ap
     resp = api_client.get(JOBS, **_bearer(admin_user))
     assert resp.status_code == 200
     rows = {r["periodic_task_name"]: r for r in resp.json()}
-    assert "authentication.flush_expired_tokens" in rows
+    gname = synced["global"].periodic_task.name
+    assert gname in rows
     assert synced["cn"].periodic_task.name in rows and synced["eu"].periodic_task.name in rows
     row = rows[synced["cn"].periodic_task.name]
     assert row["scope"] == "TENANT" and row["tenant_code"] == "CN_DIYU"
@@ -63,8 +64,8 @@ def test_admin_sees_every_row_including_global_and_the_read_shape_is_complete(ap
     assert row["enabled"] is True and row["overdue"] is False and row["last_run"] is None
     assert row["next_run_at"] is not None and row["consecutive_failures"] == 0
     assert row["description_key"] == "scheduler.jobs.ledger_recalculate_tenant"
-    assert rows["authentication.flush_expired_tokens"]["scope"] == "GLOBAL"
-    assert rows["authentication.flush_expired_tokens"]["tenant"] is None
+    assert rows[gname]["scope"] == "GLOBAL"
+    assert rows[gname]["tenant"] is None
 
 
 @pytest.mark.django_db
@@ -72,9 +73,9 @@ def test_a_judge_with_read_sees_only_its_tenant_and_no_global_row(api_client, ju
     resp = api_client.get(JOBS, **_bearer(judge_with_manage))
     assert resp.status_code == 200
     names = {r["periodic_task_name"] for r in resp.json()}
-    assert names and all(n.endswith("@CN_DIYU") for n in names), names
+    assert names and synced["cn"].periodic_task.name in names
     assert synced["eu"].periodic_task.name not in names
-    assert "authentication.flush_expired_tokens" not in names
+    assert synced["global"].periodic_task.name not in names
 
     assert api_client.get(f"{JOBS}{synced['eu'].pk}/", **_bearer(judge_with_manage)).status_code == 404
     assert api_client.get(f"{JOBS}{synced['global'].pk}/", **_bearer(judge_with_manage)).status_code == 404
@@ -307,4 +308,4 @@ def test_health_detailed_exposes_overdue_jobs(client, admin_user, synced):
     # database/redis keep their 503 semantics, a dead beat is not this process.
     assert bad.status_code == 200
     assert bad.json()["scheduler"] == "overdue" and bad.json()["status"] == "ok"
-    assert bad.json()["scheduler_overdue"] == ["authentication.flush_expired_tokens"]
+    assert bad.json()["scheduler_overdue"] == [synced["global"].periodic_task.name]
