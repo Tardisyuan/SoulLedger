@@ -5,6 +5,7 @@
 **不该收到的人不在场**:只断言「该收的收到了」,在「所有人都收到」时照样是绿的。
 """
 import pytest
+from django.test import TestCase
 
 from apps.authentication.models import User
 from apps.dispatch.models import DispatchRecord, DispatchStatus
@@ -67,7 +68,8 @@ def _block(world, n_cases=2):
     for _ in range(n_cases):
         Judgment.objects.create(soul=world["soul"], tenant=world["away"], civilization=world["soul"].civilization)
     disposition = Disposition.objects.create(soul=world["soul"], tenant=world["away"])
-    assert DispositionService.execute(disposition) is True
+    with TestCase.captureOnCommitCallbacks(execute=True):  # the notice goes out after commit
+        assert DispositionService.execute(disposition) is True
 
 
 def _recipients(world):

@@ -86,13 +86,14 @@ def make_flow(soul, tenant, node_count=2, first_actor=None):
 
 
 @pytest.mark.django_db
-def test_creating_a_workflow_lands_on_the_timeline(soul, cn_tenant):
+def test_creating_a_workflow_lands_on_the_timeline(soul, cn_tenant, django_capture_on_commit_callbacks):
     from apps.workflow.services import WorkflowService
 
     judgment = Judgment.objects.create(soul=soul, tenant=cn_tenant)
     before = len(events_for(soul))
 
-    WorkflowService.create_from_judgment(judgment)
+    with django_capture_on_commit_callbacks(execute=True):  # announced after commit
+        WorkflowService.create_from_judgment(judgment)
 
     created = events_for(soul, "WORKFLOW_CREATED")
     assert len(created) == 1, (

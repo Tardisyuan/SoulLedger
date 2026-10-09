@@ -235,7 +235,7 @@ def test_a_participants_sentence_is_told_to_the_initiators_judges(cn, eg, people
     assert _told("CROSS_SENTENCE_SUBMITTED") == HOME_JUDGES
 
 
-def test_the_blocked_return_inside_a_plan_keeps_the_notify_judges_rule(cn, eg, eu):
+def test_the_blocked_return_inside_a_plan_keeps_the_notify_judges_rule(cn, eg, eu, django_capture_on_commit_callbacks):
     """feat/notify-judges(Q8,§7.3)的规则在计划路径上同样成立:暂居地判官收,原属 / 第三文明 / 离职判官不收。"""
     soul, p, _ = plan.at_stop(cn, eg)
     away_judge = plan.officer("away_judge", "JUDGE", eg)
@@ -243,7 +243,8 @@ def test_the_blocked_return_inside_a_plan_keeps_the_notify_judges_rule(cn, eg, e
     third_judge = plan.officer("third_judge", "JUDGE", eu)
     retired = plan.officer("away_retired_judge", "JUDGE", eg, is_active=False)
     Judgment.objects.create(soul=soul, tenant=eg, civilization=soul.civilization)
-    plan.serve(soul, p, 2)
+    with django_capture_on_commit_callbacks(execute=True):
+        plan.serve(soul, p, 2)
     told = {n.user_id for n in UserNotification.objects.filter(notification_type="DISPATCH_RETURN_BLOCKED")}
     assert away_judge.pk in told
     assert not told & {home_judge.pk, third_judge.pk, retired.pk}
