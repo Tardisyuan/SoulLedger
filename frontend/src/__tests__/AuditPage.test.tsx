@@ -17,6 +17,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import AuditPage from "@/app/audit/page";
 import { auditApi, tenantsApi } from "@soulledger/core/api";
 import { saveBlob } from "@/src/lib/saveBlob";
+import { tZh } from "./support/zhBundle";
 
 jest.mock("@soulledger/core/api", () => ({
   auditApi: { list: jest.fn(), exportCsv: jest.fn() },
@@ -205,11 +206,32 @@ describe("AuditPage request parameters", () => {
     await waitFor(() => expect(lastParams().resource).toBe("user"));
   });
 
-  it("no longer offers 「殿」 as a resource: that filter is a per-hall dropdown now", async () => {
+  it("offers 「殿设置」 as a resource (resource=tenant), alongside the per-hall dropdown", async () => {
     renderPage();
     await waitFor(() => expect(mockedList).toHaveBeenCalled());
     const resource = screen.getByRole("combobox", { name: "audit.filter_resource" });
-    expect(within(resource).queryByText("audit.resource_tenant")).not.toBeInTheDocument();
+    expect(within(resource).getByText("audit.resource_tenant")).toBeInTheDocument();
+
+    pickChip("audit.filter_resource", "audit.resource_tenant");
+
+    await waitFor(() => expect(lastParams().resource).toBe("tenant"));
+    expect(lastParams().tenant).toBeUndefined();
+  });
+
+  it("the resource option and the hall dropdown read differently: 殿设置 vs 按殿", () => {
+    expect(tZh("audit.resource_tenant")).toBe("殿设置");
+    expect(tZh("audit.filter_hall")).toBe("按殿");
+    expect(tZh("audit.resource_tenant")).not.toBe(tZh("audit.filter_hall"));
+  });
+
+  it("the hall dropdown and the 殿设置 resource compose: one hall's rows of hall-settings edits", async () => {
+    renderPage();
+    await waitFor(() => expect(mockedList).toHaveBeenCalled());
+    pickChip("audit.filter_resource", "audit.resource_tenant");
+    await waitFor(() => expect(lastParams().resource).toBe("tenant"));
+    await screen.findByRole("combobox", { name: "audit.filter_hall" });
+    pickChip("audit.filter_hall", "plaque.realm.eg");
+    await waitFor(() => expect(lastParams()).toMatchObject({ resource: "tenant", tenant: "EG_DUAT" }));
   });
 
   it("a global admin picks one hall and the list is asked for that hall only", async () => {

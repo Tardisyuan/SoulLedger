@@ -372,6 +372,9 @@ export default function AuditPage() {
             options={[
               { value: "", label: t("audit.all_resources") },
               ...RESOURCE_OPTIONS,
+              // 殿设置: the audit rows of editing a hall's settings themselves (resource=tenant). Distinct
+              // from the 「按殿」 dropdown below, which narrows ANY resource to one hall's rows.
+              { value: "tenant", label: t("audit.resource_tenant") },
             ]}
             clearLabel={t("filter.clear_one", { name: t("audit.filter_resource") })}
             onChange={(v) => { setResourceFilter(v); setPage(1); }}
