@@ -207,6 +207,8 @@ SITES = [
     ('apps/souls/models.py', 'Soul.transition_to', 'Soul.all_objects', 1, 'LOCK', 're-reads or locks one row by pk that the caller already reached through a scoped path; all_objects only skips the soft-delete filter'),
     ('apps/souls/serializers.py', 'SoulRecordSerializer.validate_inferno_article', 'Statute.all_objects', 1, 'FILTERED', 'Statute looked up by code AND the soul tenant_id (Statute.code is unique per (tenant, code))'),
     ('apps/souls/views.py', 'SoulViewSet.batch_recycle', 'Soul.all_objects', 1, 'LOCK', 'locks souls by pk; ids were taken from the scoped queryset (see the view)'),
+    ('apps/tenants/management/commands/reconcile_tenant_shadow.py', 'Command.handle', 'Tenant.objects', 1, 'FANOUT', 'resolves a Tenant by its globally unique code (Tenant has no tenant column; the lookup names exactly one row)'),
+    ('apps/tenants/management/commands/reconcile_tenant_shadow.py', 'fingerprints', 'model._base_manager', 1, 'CLI', 'reconciliation tool: reads one database at a time, always filtered by the --tenant id; soft-deleted rows must be compared too'),
     ('apps/tenants/management/commands/seed_tenants.py', 'Command.handle', 'Tenant.objects', 1, 'FANOUT', 'resolves a Tenant by its globally unique code or id (Tenant has no tenant column; the lookup names exactly one row)'),
     ('apps/tenants/middleware.py', 'TenantMiddleware._resolve_tenant', 'Tenant.objects', 1, 'FANOUT', 'resolves a Tenant by its globally unique code or id (Tenant has no tenant column; the lookup names exactly one row)'),
     ('apps/tenants/views.py', 'TenantViewSet.get_queryset', 'Tenant.objects', 1, 'FILTERED', "wrapped in scope_to_tenant(field='pk')"),
