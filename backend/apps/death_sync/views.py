@@ -179,6 +179,7 @@ class DeathRegistrationViewSet(
         except IntegrityError:
             # Idempotency conflict
             existing = DeathRegistrationRequest.objects.filter(
+                tenant=tenant,
                 source_system=source_system,
                 idempotency_key=idempotency_key,
             ).first()
