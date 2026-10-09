@@ -481,7 +481,7 @@ describe("about / credits (spec v2 C16)", () => {
     await screen.findByTestId("about");
     expect(route()?.name).toBe("About");
 
-    fireEvent.press(within(screen.getByTestId("credit-Archivo")).getByText("SIL Open Font License 1.1 ↗"));
+    fireEvent.press(within(screen.getByTestId("credit-Archivo")).getByText("SIL Open Font License 1.1 ↗\uFE0E"));
     expect(open).toHaveBeenCalledWith("https://openfontlicense.org/open-font-license-official-text/");
     // The four museum scans masked only v2's filled seal, which ships nowhere since 2026-10-03.
     expect(screen.queryByTestId("credit-Museo Egizio, Torino")).toBeNull();
