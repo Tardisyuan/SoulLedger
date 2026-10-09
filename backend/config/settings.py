@@ -300,6 +300,11 @@ REST_FRAMEWORK = {
 }
 
 # JWT Settings
+# 官员端 App 的刷新令牌有效期(小时):A13 规格「会话更短」。默认 24 小时 —— 滑动的:App 每次刷新
+# 都从当下重新计 24 小时,所以每天用的人不会被踢,闲置一天就要重新登录(带两步验证)。
+# 官员台(Web)与灵魂端不受影响,仍是下面的 JWT_REFRESH_LIFETIME(默认 7 天)。
+OFFICER_APP_REFRESH_LIFETIME_HOURS = int(os.getenv("JWT_OFFICER_APP_REFRESH_LIFETIME_HOURS", "24"))
+
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=int(os.getenv("JWT_ACCESS_LIFETIME", "30"))),
     "REFRESH_TOKEN_LIFETIME": timedelta(minutes=int(os.getenv("JWT_REFRESH_LIFETIME", "10080"))),
