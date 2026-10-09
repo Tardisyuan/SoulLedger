@@ -18,6 +18,7 @@ import { useToast } from "../feedback";
 import { useI18n } from "../i18n";
 import { APPLICATION_BADGES, buildFlow, formatStamp, lexiconKey, wasAppealed, type FlowStep } from "../rules";
 import { SessionContext } from "../session";
+import { daysLeft, publishVoiceNumber } from "../voiceCache";
 import { radius, space } from "../theme";
 import {
   Block,
@@ -234,6 +235,10 @@ export function ApplicationsScreen({ landed }: { landed?: boolean } = {}) {
   const navigation = useNavigation<NavigationProp<AppStackParams>>();
   const list = useRemote(soulApi.applications);
   useReloadOnRefocus(list.reload);
+  // Siri's 「冷却还剩几天」 reads this number back (voiceCache.ts). Every fresh fetch re-stamps it.
+  useEffect(() => {
+    if (list.data) publishVoiceNumber("cooldown", daysLeft(list.data.cooldown_until));
+  }, [list.data]);
   if (list.error && !list.data) {
     return (
       <Screen scroll={false} edges={["left", "right"]}>

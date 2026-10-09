@@ -9,9 +9,9 @@ import * as SecureStore from "expo-secure-store";
 import { Linking } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
-import { createLinkInbox, pathOf } from "../deepLink";
+import { createLinkInbox, pathOf, queryOf } from "../deepLink";
 import { I18nProvider } from "../i18n";
-import { parseSoulLink, soulLinks } from "../links";
+import { ASK_MAX_LENGTH, parseSoulLink, soulLinks } from "../links";
 import { RootNavigator, navigationRef } from "../navigation";
 import { installMobilePlatform } from "../platform";
 import { SessionProvider } from "../session";
@@ -25,7 +25,7 @@ describe("parseSoulLink", () => {
     ["soulledger://letters", "letters"],
     ["soulledger://assist/", "assist"],
     ["SoulLedger://Cooldown?from=siri", "cooldown"],
-  ])("%s -> %s", (url, link) => expect(parseSoulLink(url)).toBe(link));
+  ])("%s -> %s", (url, link) => expect(parseSoulLink(url)).toEqual({ page: link }));
 
   it.each([
     "soulledger://",
@@ -38,6 +38,47 @@ describe("parseSoulLink", () => {
     null,
     42,
   ])("ignores %p", (url) => expect(parseSoulLink(url)).toBeNull());
+});
+
+describe("the ask link", () => {
+  const question = (url: string) => parseSoulLink(url);
+
+  it("carries the question, decoded", () => {
+    expect(question("soulledger://ask?q=%E6%80%8E%E4%B9%88%E7%94%B3%E8%AF%B7%EF%BC%9F")).toEqual({ page: "ask", question: "怎么申请？" });
+    expect(question("soulledger://ask?q=a+b%20c&x=1")).toEqual({ page: "ask", question: "a b c" });
+    expect(question("soulledger://ask?x=1&q=C%2B%2B%20%26%20go#frag")).toEqual({ page: "ask", question: "C++ & go" });
+  });
+
+  it("opens the box empty when there is no usable question", () => {
+    for (const url of ["soulledger://ask", "soulledger://ask?q=", "soulledger://ask?q=%20%0A%20", "soulledger://ask?q=%E0%A4%A", "soulledger://ask?other=1"]) {
+      expect(question(url)).toEqual({ page: "ask" });
+    }
+  });
+
+  it("strips control characters and trims", () => {
+    expect(question("soulledger://ask?q=%20%20hi%00there%07%20")).toEqual({ page: "ask", question: "hi there" });
+  });
+
+  it("is cut at the drawer's limit, by characters", () => {
+    const long = "问".repeat(ASK_MAX_LENGTH + 50);
+    const got = question(`soulledger://ask?q=${encodeURIComponent(long)}`);
+    expect(Array.from(got?.question ?? "")).toHaveLength(ASK_MAX_LENGTH);
+  });
+
+  it("is only recognised on the soul scheme, as one segment", () => {
+    expect(question("soulledger-officer://ask?q=x")).toBeNull();
+    expect(question("soulledger://ask/more?q=x")).toBeNull();
+  });
+});
+
+describe("queryOf", () => {
+  it("reads one parameter, first match, and never throws", () => {
+    expect(queryOf("x://a?p=1&p=2", "p")).toBe("1");
+    expect(queryOf("x://a?p", "p")).toBe("");
+    expect(queryOf("x://a", "p")).toBeNull();
+    expect(queryOf("x://a?p=%E0%A4%A", "p")).toBeNull();
+    expect(queryOf(42, "p")).toBeNull();
+  });
 });
 
 describe("pathOf", () => {
@@ -117,6 +158,13 @@ function signedIn() {
   });
 }
 
+/** The drawer's one-time 「它只看不做」 notice shows once per account per device; a later test may not meet it. */
+async function passNotice() {
+  await screen.findByTestId("assist-panel");
+  const ack = screen.queryByTestId("assist-ack");
+  if (ack) fireEvent.press(ack);
+}
+
 beforeEach(async () => {
   installMobilePlatform();
   secure.clear();
@@ -140,6 +188,29 @@ describe("landing", () => {
     await screen.findByTestId("profile-card");
     await act(async () => soulLinks.push("soulledger://assist"));
     expect(await screen.findByTestId("assist-panel")).toBeTruthy();
+  });
+
+  it("ask opens the drawer with the question typed in and sends nothing", async () => {
+    signedIn();
+    renderApp();
+    await screen.findByTestId("profile-card");
+    await act(async () => soulLinks.push("soulledger://ask?q=%E6%80%8E%E4%B9%88%E7%94%B3%E8%AF%B7"));
+    // First use: the 「它只看不做」 notice comes first; the question waits behind it.
+    await passNotice();
+    const input = await screen.findByTestId("assist-input");
+    await waitFor(() => expect(input.props.value).toBe("怎么申请"));
+    // A sent question empties the box and starts an answer; neither has happened.
+    await act(async () => {});
+    expect(screen.getByTestId("assist-input").props.value).toBe("怎么申请");
+  });
+
+  it("assist without a question leaves the box empty", async () => {
+    signedIn();
+    renderApp();
+    await screen.findByTestId("profile-card");
+    await act(async () => soulLinks.push("soulledger://assist"));
+    await passNotice();
+    expect((await screen.findByTestId("assist-input")).props.value).toBe("");
   });
 
   it("a link opened while signed out is kept and applied after login", async () => {

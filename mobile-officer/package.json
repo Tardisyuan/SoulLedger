@@ -5,6 +5,11 @@
   "license": "Apache-2.0",
   "description": "灵魂簿 · 官员(Expo / React Native)。官员的待办、审判、查询、通知与个人设置;宣判、盖印与所有配置留在官员台。平台无关的一切来自 @soulledger/core,通用组件借自 mobile/src(见 src/shared.ts)。",
   "main": "index.ts",
+  "expo": {
+    "autolinking": {
+      "nativeModulesDir": "../mobile/modules"
+    }
+  },
   "scripts": {
     "start": "expo start",
     "ios": "expo run:ios",
