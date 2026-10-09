@@ -53,6 +53,11 @@ const text = files.map((f) => fs.readFileSync(f, "utf8")).join("\n");
 const locales = Object.keys(BUNDLES) as (keyof typeof BUNDLES)[];
 const flat = Object.fromEntries(locales.map((l) => [l, flatten(BUNDLES[l])]));
 const placeholders = (s: string) => [...s.matchAll(/\{\{(\w+)\}\}/g)].map((m) => m[1]).sort();
+// Keys awaiting Design's egy: the one shared list the web bundle-parity test also reads. The web guard
+// next to it fails once an entry gets an egy value, so the list only shrinks.
+const EGY_PENDING = new Set<string>(
+  JSON.parse(fs.readFileSync(path.join(SRC, "..", "..", "frontend", "src", "__tests__", "support", "egyPendingKeys.json"), "utf8"))
+);
 
 describe("soul_app copy", () => {
   const used = [...new Set([...text.matchAll(/(?<!namespace=)"(soul_app\.[a-z_.]+[a-z_])"/g)].map((m) => m[1]))];
@@ -63,7 +68,7 @@ describe("soul_app copy", () => {
   });
 
   it.each(locales)("every key used in the app exists in %s", (locale) => {
-    expect(used.filter((key) => !(key in flat[locale]))).toEqual([]);
+    expect(used.filter((key) => !(key in flat[locale]) && !(locale === "egy" && EGY_PENDING.has(key)))).toEqual([]);
   });
 
   it("the three bundles carry the same soul_app keys with the same placeholders", () => {
@@ -73,7 +78,7 @@ describe("soul_app copy", () => {
         .map(([k, v]) => `${k}:${placeholders(v).join(",")}`)
         .sort();
     expect(shape("en")).toEqual(shape("zh-Hans"));
-    expect(shape("egy")).toEqual(shape("zh-Hans"));
+    expect(shape("egy")).toEqual(shape("zh-Hans").filter((entry) => !EGY_PENDING.has(entry.split(":")[0])));
   });
 
   it.each(locales)("every error code the client can emit has copy in %s", (locale) => {
