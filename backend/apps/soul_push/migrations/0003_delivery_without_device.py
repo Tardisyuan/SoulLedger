@@ -6,7 +6,8 @@ from django.db import migrations, models
 
 def drop_deviceless_rows(apps, schema_editor):
     """反向时 `device` 要变回非空:没有设备的历史行(NO_DEVICE)先删,它们本来就从未发送过。"""
-    apps.get_model("soul_push", "PushDelivery").objects.filter(device__isnull=True).delete()
+    alias = schema_editor.connection.alias
+    apps.get_model("soul_push", "PushDelivery").objects.using(alias).filter(device__isnull=True).delete()
 
 
 class Migration(migrations.Migration):

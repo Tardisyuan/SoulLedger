@@ -31,6 +31,7 @@ def drop_dead_table(apps, schema_editor):
     content type with no model is the kind of debris that makes the next
     person's audit query lie.
     """
+    alias = schema_editor.connection.alias
     connection = schema_editor.connection
     quoted = connection.ops.quote_name(DEAD_TABLE)
     with connection.cursor() as cursor:
@@ -38,7 +39,7 @@ def drop_dead_table(apps, schema_editor):
 
     ContentType = apps.get_model("contenttypes", "ContentType")
     # Deleting the content type cascades to `auth_permission` through its FK.
-    ContentType.objects.filter(app_label=DEAD_APP_LABEL).delete()
+    ContentType.objects.using(alias).filter(app_label=DEAD_APP_LABEL).delete()
 
     with connection.cursor() as cursor:
         cursor.execute(

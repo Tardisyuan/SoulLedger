@@ -164,7 +164,7 @@ MEMORY_RESET_BEFORE = "LETHE"
 MEMORY_RESET_AFTER = "NONE"
 
 
-def _move_actors(apps, direction):
+def _move_actors(apps, alias, direction):
     """Repoint the river(s). `direction` is 'after' forwards, 'before' back.
 
     An actor whose current realm is not the one this migration expects is left
@@ -176,7 +176,7 @@ def _move_actors(apps, direction):
     """
     actor = apps.get_model("actors", "Actor")
     realm = apps.get_model("realms", "Realm")
-    by_code = {row.realm_code: row.pk for row in realm._base_manager.all()}
+    by_code = {row.realm_code: row.pk for row in realm._base_manager.using(alias).all()}
 
     for name, (civilization, before, after) in ACTOR_MOVES.items():
         source, target = (before, after) if direction == "after" else (after, before)
@@ -185,37 +185,38 @@ def _move_actors(apps, direction):
             # Destination absent on this database. Leaving the actor where it
             # is beats nulling a posting that cannot then be restored.
             continue
-        actor._base_manager.filter(
+        actor._base_manager.using(alias).filter(
             name=name, civilization=civilization, realm__realm_code=source,
         ).update(realm=target_pk)
 
 
-def _set_memory_reset(apps, before, after):
+def _set_memory_reset(apps, alias, before, after):
     realm = apps.get_model("realms", "Realm")
-    realm._base_manager.filter(
+    realm._base_manager.using(alias).filter(
         realm_code__in=MEMORY_RESET_CORRECTED, memory_reset_mechanism=before,
     ).update(memory_reset_mechanism=after)
 
 
 def forwards(apps, schema_editor):
+    alias = schema_editor.connection.alias
     realm = apps.get_model("realms", "Realm")
 
     # A database with no European cosmology yet gets nothing written to it —
     # see the "Empty-database guard" note above.
-    if not realm._base_manager.filter(civilization="EUROPEAN").exists():
+    if not realm._base_manager.using(alias).filter(civilization="EUROPEAN").exists():
         return
 
-    parent = realm._base_manager.filter(realm_code=MOUNTAIN_CODE).first()
+    parent = realm._base_manager.using(alias).filter(realm_code=MOUNTAIN_CODE).first()
 
     # Tenant is taken from a European sibling rather than guessed from a tenant
     # code, so the row does not land under an owner nobody named. If the
     # siblings are untenanted this inherits that and the seeder fills it in.
     sibling = (
-        realm._base_manager.filter(civilization="EUROPEAN")
+        realm._base_manager.using(alias).filter(civilization="EUROPEAN")
         .exclude(tenant__isnull=True)
         .first()
     )
-    realm._base_manager.get_or_create(
+    realm._base_manager.using(alias).get_or_create(
         realm_code=SUMMIT_CODE,
         defaults={
             **SUMMIT,
@@ -229,28 +230,29 @@ def forwards(apps, schema_editor):
         # the database keeps whatever parent it has; only an unset link is
         # filled in. Repointing one that is already set is somebody's decision
         # to reverse, not this migration's. realms/0014's rule.
-        realm._base_manager.filter(
+        realm._base_manager.using(alias).filter(
             realm_code=SUMMIT_CODE, parent_realm__isnull=True,
         ).update(parent_realm=parent.pk)
 
-    _move_actors(apps, "after")
-    _set_memory_reset(apps, MEMORY_RESET_BEFORE, MEMORY_RESET_AFTER)
+    _move_actors(apps, alias, "after")
+    _set_memory_reset(apps, alias, MEMORY_RESET_BEFORE, MEMORY_RESET_AFTER)
 
 
 def backwards(apps, schema_editor):
+    alias = schema_editor.connection.alias
     realm = apps.get_model("realms", "Realm")
 
-    _set_memory_reset(apps, MEMORY_RESET_AFTER, MEMORY_RESET_BEFORE)
+    _set_memory_reset(apps, alias, MEMORY_RESET_AFTER, MEMORY_RESET_BEFORE)
 
     # Before the delete. `Actor.realm` is SET_NULL, so removing the summit
     # first would wipe the posting this line exists to restore and the reverse
     # would still exit 0 — realms/0012's bug exactly.
-    _move_actors(apps, "before")
+    _move_actors(apps, alias, "before")
 
     # Hard delete, not a tombstone: 0015's world has no such realm at all, and
     # a soft-deleted row it does not know about is not the same thing as
     # absence. realms/0013's reasoning for the two Greek rows.
-    realm._base_manager.filter(realm_code=SUMMIT_CODE).delete()
+    realm._base_manager.using(alias).filter(realm_code=SUMMIT_CODE).delete()
 
 
 class Migration(migrations.Migration):

@@ -154,9 +154,9 @@ ACTOR_MOVES = {
 }
 
 
-def _apply_fields(realm_model, rows):
+def _apply_fields(realm_model, rows, alias):
     for realm_code, tier, name_local, name_zh, name_en, name_egy in rows:
-        realm_model._base_manager.filter(realm_code=realm_code).update(
+        realm_model._base_manager.using(alias).filter(realm_code=realm_code).update(
             tier=tier,
             name_local=name_local,
             name_zh=name_zh,
@@ -165,13 +165,13 @@ def _apply_fields(realm_model, rows):
         )
 
 
-def _move_actors(apps, mapping):
+def _move_actors(apps, alias, mapping):
     """Repoint Chinese actors by realm_code. `mapping` is name -> target code."""
     actor_model = apps.get_model("actors", "Actor")
     realm_model = apps.get_model("realms", "Realm")
     by_code = {
         r.realm_code: r.pk
-        for r in realm_model._base_manager.filter(civilization="CHINESE")
+        for r in realm_model._base_manager.using(alias).filter(civilization="CHINESE")
     }
     for name, target_code in mapping.items():
         realm_pk = by_code.get(target_code)
@@ -180,12 +180,13 @@ def _move_actors(apps, mapping):
             # the seeder). Nothing to point at; leave the actor as it is rather
             # than nulling a posting we cannot restore on reverse.
             continue
-        actor_model._base_manager.filter(
+        actor_model._base_manager.using(alias).filter(
             name=name, civilization="CHINESE"
         ).update(realm=realm_pk)
 
 
 def forwards(apps, schema_editor):
+    alias = schema_editor.connection.alias
     from django.utils import timezone
 
     realm = apps.get_model("realms", "Realm")
@@ -199,16 +200,16 @@ def forwards(apps, schema_editor):
     # to), and `seed_mythology --dry-run` on a supposedly empty database finds
     # realms already there. Both of those are assertions in
     # tests/test_seed_mythology.py, and both fired before this guard existed.
-    if not realm._base_manager.filter(civilization="CHINESE").exists():
+    if not realm._base_manager.using(alias).filter(civilization="CHINESE").exists():
         return
 
     # 1. Rename in place. Ordered so a rename can never collide with a code that
     #    is still occupied: none of the DY_COURT_* targets exist yet.
     for old, new in RENAMES.items():
-        realm._base_manager.filter(realm_code=old).update(realm_code=new)
+        realm._base_manager.using(alias).filter(realm_code=old).update(realm_code=new)
 
     # 2. Correct the renamed rows' number and display name.
-    _apply_fields(realm, RENAMED_COURT_FIELDS)
+    _apply_fields(realm, RENAMED_COURT_FIELDS, alias)
 
     # 3. Create the five courts that never had a row. The tenant is whatever the
     #    other Chinese realms are filed under, so these do not land unowned and
@@ -217,13 +218,13 @@ def forwards(apps, schema_editor):
     #    the tenant in on its next run, and guessing CN_DIYU here would file
     #    rows under a tenant nobody has said owns them.
     sibling = (
-        realm._base_manager.filter(civilization="CHINESE")
+        realm._base_manager.using(alias).filter(civilization="CHINESE")
         .exclude(tenant__isnull=True)
         .first()
     )
     tenant_id = sibling.tenant_id if sibling else None
     for realm_code, tier, name_local, name_zh, name_en, name_egy in NEW_COURTS:
-        realm._base_manager.get_or_create(
+        realm._base_manager.using(alias).get_or_create(
             realm_code=realm_code,
             defaults={
                 "civilization": "CHINESE",
@@ -241,11 +242,11 @@ def forwards(apps, schema_editor):
         )
 
     # 4. Seat each king in his own court.
-    _move_actors(apps, {name: after for name, (_, after) in ACTOR_MOVES.items()})
+    _move_actors(apps, alias, {name: after for name, (_, after) in ACTOR_MOVES.items()})
 
     # 5. Retire the three 小地狱. Soft-delete, after the actor move, so 钟馗 is
     #    already out of DY_09_YANG.
-    realm._base_manager.filter(realm_code__in=RETIRED).update(
+    realm._base_manager.using(alias).filter(realm_code__in=RETIRED).update(
         is_deleted=True,
         deleted_at=timezone.now(),
         delete_reason=RETIRE_REASON,
@@ -254,27 +255,28 @@ def forwards(apps, schema_editor):
     # 6. Reincarnation.target_realm is a CharField, not an FK, so it does not
     #    follow a rename.
     for old, new in RENAMES.items():
-        reincarnation._base_manager.filter(target_realm=old).update(target_realm=new)
+        reincarnation._base_manager.using(alias).filter(target_realm=old).update(target_realm=new)
 
 
 def backwards(apps, schema_editor):
+    alias = schema_editor.connection.alias
     realm = apps.get_model("realms", "Realm")
     reincarnation = apps.get_model("reincarnation", "Reincarnation")
 
     # Reverse of 6.
     for old, new in RENAMES.items():
-        reincarnation._base_manager.filter(target_realm=new).update(target_realm=old)
+        reincarnation._base_manager.using(alias).filter(target_realm=new).update(target_realm=old)
 
     # Reverse of 5.
-    realm._base_manager.filter(realm_code__in=RETIRED).update(
+    realm._base_manager.using(alias).filter(realm_code__in=RETIRED).update(
         is_deleted=False, deleted_at=None, delete_reason=""
     )
 
     # Reverse of 2 and 1, in that order: restore the old tier and names first
     # (they are keyed by the new codes), then the codes themselves.
-    _apply_fields(realm, [(RENAMES[old], *rest) for old, *rest in PRE_RENAME_FIELDS])
+    _apply_fields(realm, [(RENAMES[old], *rest) for old, *rest in PRE_RENAME_FIELDS], alias)
     for old, new in RENAMES.items():
-        realm._base_manager.filter(realm_code=new).update(realm_code=old)
+        realm._base_manager.using(alias).filter(realm_code=new).update(realm_code=old)
 
     # Reverse of 4 — put every actor back where it was. This has to come *after*
     # the rename above, not before it: the destinations are pre-migration codes
@@ -283,12 +285,12 @@ def backwards(apps, schema_editor):
     # court was created rather than renamed, and the next statement then deleted
     # the rows they were still pointing at — SET_NULL left 楚江王, 宋帝王, 五官王,
     # 卞城王 and 平等王 with no realm at all, which the round-trip check caught.
-    _move_actors(apps, {name: before for name, (before, _) in ACTOR_MOVES.items()})
+    _move_actors(apps, alias, {name: before for name, (before, _) in ACTOR_MOVES.items()})
 
     # Reverse of 3, last: by now nothing points at these rows. Deleting rather
     # than soft-deleting, because 0011's world has no such realm at all and a
     # tombstone it does not know about is not the same thing as its absence.
-    realm._base_manager.filter(
+    realm._base_manager.using(alias).filter(
         realm_code__in=[row[0] for row in NEW_COURTS]
     ).delete()
 

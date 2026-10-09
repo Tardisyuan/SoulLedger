@@ -118,7 +118,7 @@ ROWS = [
 ]
 
 
-def _find_actor(actor_model, actor_name, civilization, tenant_id):
+def _find_actor(actor_model, actor_name, civilization, tenant_id, alias):
     """The named actor on this workflow's own bench, or None.
 
     四个名字列任一相符即可：中国侧 cast 的 `name` 是中文(秦广王)，埃及侧的
@@ -148,7 +148,7 @@ def _find_actor(actor_model, actor_name, civilization, tenant_id):
     if not actor_name:
         return None
 
-    candidates = actor_model._base_manager.filter(
+    candidates = actor_model._base_manager.using(alias).filter(
         civilization=civilization,
         tenant_id=tenant_id,
         is_deleted=False,
@@ -172,13 +172,13 @@ def _find_actor(actor_model, actor_name, civilization, tenant_id):
     return None
 
 
-def _candidates(node_model, node_name, court_code, node_order):
+def _candidates(node_model, node_name, court_code, node_order, alias):
     """Undecided, unconfigured nodes matching one ROWS signature.
 
     三列必须同时相符。只用 node_name 会把一个租户自建的、名字碰巧一样的节点也
     卷进来；加上 court_code 与 node_order，则要求这一行确实是模板生成的那一步。
     """
-    return node_model._base_manager.filter(
+    return node_model._base_manager.using(alias).filter(
         node_name=node_name,
         court_code=court_code,
         node_order=node_order,
@@ -192,18 +192,19 @@ def _candidates(node_model, node_name, court_code, node_order):
 
 
 def forwards(apps, schema_editor):
+    alias = schema_editor.connection.alias
     ApprovalNode = apps.get_model("workflow", "ApprovalNode")
     Actor = apps.get_model("actors", "Actor")
 
     # 空库：什么都不写。见模块 docstring 的「空库守卫」。
-    if not ApprovalNode._base_manager.exists():
+    if not ApprovalNode._base_manager.using(alias).exists():
         return
 
     skipped = []
     for node_name, court_code, node_order, civilization, actor_name in ROWS:
-        for node in _candidates(ApprovalNode, node_name, court_code, node_order):
+        for node in _candidates(ApprovalNode, node_name, court_code, node_order, alias):
             tenant_id = node.workflow.tenant_id
-            actor = _find_actor(Actor, actor_name, civilization, tenant_id)
+            actor = _find_actor(Actor, actor_name, civilization, tenant_id, alias)
             if actor is None:
                 # 该租户的 cast 里没有这位。跳过而不是新建——节点保持 SYSTEM，
                 # 也就是只能走 escalate，这是安全的一侧。
@@ -211,7 +212,7 @@ def forwards(apps, schema_editor):
                 continue
             node.approver_type = "ACTOR"
             node.approver_actor = actor
-            node.save(update_fields=["approver_type", "approver_actor"])
+            node.save(using=alias, update_fields=["approver_type", "approver_actor"])
 
     if skipped:
         print(
@@ -224,11 +225,12 @@ def forwards(apps, schema_editor):
 
 
 def backwards(apps, schema_editor):
+    alias = schema_editor.connection.alias
     ApprovalNode = apps.get_model("workflow", "ApprovalNode")
     Actor = apps.get_model("actors", "Actor")
 
     for node_name, court_code, node_order, civilization, actor_name in ROWS:
-        qs = ApprovalNode._base_manager.filter(
+        qs = ApprovalNode._base_manager.using(alias).filter(
             node_name=node_name,
             court_code=court_code,
             node_order=node_order,
@@ -241,14 +243,14 @@ def backwards(apps, schema_editor):
         )
         for node in qs:
             tenant_id = node.workflow.tenant_id
-            actor = _find_actor(Actor, actor_name, civilization, tenant_id)
+            actor = _find_actor(Actor, actor_name, civilization, tenant_id, alias)
             # 只回退**本迁移会指派的那一位**。有人后来把节点改指给别人，那是一
             # 次决定；回滚这个迁移不该顺手抹掉它。
             if actor is None or node.approver_actor_id != actor.pk:
                 continue
             node.approver_type = "SYSTEM"
             node.approver_actor = None
-            node.save(update_fields=["approver_type", "approver_actor"])
+            node.save(using=alias, update_fields=["approver_type", "approver_actor"])
 
 
 class Migration(migrations.Migration):

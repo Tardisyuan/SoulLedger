@@ -34,14 +34,15 @@ from django.db.models import Count
 
 
 def stamp_existing_records_with_the_current_life(apps, schema_editor):
+    alias = schema_editor.connection.alias
     Soul = apps.get_model("souls", "Soul")
     SoulRecord = apps.get_model("souls", "SoulRecord")
     reborn = (
-        Soul._base_manager.annotate(n=Count("reincarnations")).filter(n__gt=0)
+        Soul._base_manager.using(alias).annotate(n=Count("reincarnations")).filter(n__gt=0)
         .values_list("pk", "n")
     )
     for soul_pk, n in reborn:
-        SoulRecord._base_manager.filter(soul_id=soul_pk).update(cycle=n)
+        SoulRecord._base_manager.using(alias).filter(soul_id=soul_pk).update(cycle=n)
 
 
 class Migration(migrations.Migration):

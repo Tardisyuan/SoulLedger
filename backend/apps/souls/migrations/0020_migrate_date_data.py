@@ -64,6 +64,7 @@ def _migrate_backward(manager, source_field, prefix, batch_size=1000):
 
 
 def forwards(apps, schema_editor):
+    alias = schema_editor.connection.alias
     Soul = apps.get_model('souls', 'Soul')
     SoulRecord = apps.get_model('souls', 'SoulRecord')
     # Soul's migration-state manager set only tracks `all_objects` (the
@@ -71,17 +72,18 @@ def forwards(apps, schema_editor):
     # is also the more correct choice: we want every row migrated,
     # including soft-deleted ones, not just what the default manager's
     # is_deleted filter would return.
-    _migrate_forward(Soul.all_objects, 'birth_date', 'birth')
-    _migrate_forward(Soul.all_objects, 'death_date', 'death')
-    _migrate_forward(SoulRecord.objects, 'event_date', 'event')
+    _migrate_forward(Soul.all_objects.using(alias), 'birth_date', 'birth')
+    _migrate_forward(Soul.all_objects.using(alias), 'death_date', 'death')
+    _migrate_forward(SoulRecord.objects.using(alias), 'event_date', 'event')
 
 
 def backwards(apps, schema_editor):
+    alias = schema_editor.connection.alias
     Soul = apps.get_model('souls', 'Soul')
     SoulRecord = apps.get_model('souls', 'SoulRecord')
-    _migrate_backward(Soul.all_objects, 'birth_date', 'birth')
-    _migrate_backward(Soul.all_objects, 'death_date', 'death')
-    _migrate_backward(SoulRecord.objects, 'event_date', 'event')
+    _migrate_backward(Soul.all_objects.using(alias), 'birth_date', 'birth')
+    _migrate_backward(Soul.all_objects.using(alias), 'death_date', 'death')
+    _migrate_backward(SoulRecord.objects.using(alias), 'event_date', 'event')
 
 
 class Migration(migrations.Migration):

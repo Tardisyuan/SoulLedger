@@ -119,14 +119,15 @@ OFFICER = [
 
 
 def fill(apps, schema_editor):
+    alias = schema_editor.connection.alias
     Case = apps.get_model("soul_assist", "AssistEvalCase")
     for side, rows in FILL.items():
         for question, expected in rows.items():
-            for case in Case.objects.filter(side=side, question=question):
+            for case in Case.objects.using(alias).filter(side=side, question=question):
                 if not case.expected_entries:
                     case.expected_entries = expected
-                    case.save(update_fields=["expected_entries"])
-    Case.objects.bulk_create([
+                    case.save(using=alias, update_fields=["expected_entries"])
+    Case.objects.using(alias).bulk_create([
         Case(side=side, screen=screen, question=q, expected_tools=tools, must_include=inc, must_not_include=exc,
              locale=locale, expected_entries=expected)
         for side, rows in (("soul", SOUL), ("officer", OFFICER))
@@ -135,11 +136,12 @@ def fill(apps, schema_editor):
 
 
 def unfill(apps, schema_editor):
+    alias = schema_editor.connection.alias
     Case = apps.get_model("soul_assist", "AssistEvalCase")
     for side, rows in FILL.items():
-        Case.objects.filter(side=side, question__in=list(rows)).update(expected_entries=[])
+        Case.objects.using(alias).filter(side=side, question__in=list(rows)).update(expected_entries=[])
     for side, rows in (("soul", SOUL), ("officer", OFFICER)):
-        Case.objects.filter(side=side, question__in=[r[1] for r in rows]).delete()
+        Case.objects.using(alias).filter(side=side, question__in=[r[1] for r in rows]).delete()
 
 
 class Migration(migrations.Migration):

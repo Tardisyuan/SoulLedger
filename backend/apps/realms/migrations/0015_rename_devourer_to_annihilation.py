@@ -75,25 +75,27 @@ OLD_CODE = "EG_DEVOURER"
 NEW_CODE = "EG_ANNIHILATION"
 
 
-def _rename(apps, old, new):
+def _rename(apps, alias, old, new):
     realm = apps.get_model("realms", "Realm")
     reincarnation = apps.get_model("reincarnation", "Reincarnation")
 
     # Nothing to rename on a database with no Egyptian cosmology — see the
     # "Empty-database guard" note above.
-    if not realm._base_manager.filter(civilization="EGYPTIAN").exists():
+    if not realm._base_manager.using(alias).filter(civilization="EGYPTIAN").exists():
         return
 
-    realm._base_manager.filter(realm_code=old).update(realm_code=new)
-    reincarnation._base_manager.filter(target_realm=old).update(target_realm=new)
+    realm._base_manager.using(alias).filter(realm_code=old).update(realm_code=new)
+    reincarnation._base_manager.using(alias).filter(target_realm=old).update(target_realm=new)
 
 
 def forwards(apps, schema_editor):
-    _rename(apps, OLD_CODE, NEW_CODE)
+    alias = schema_editor.connection.alias
+    _rename(apps, alias, OLD_CODE, NEW_CODE)
 
 
 def backwards(apps, schema_editor):
-    _rename(apps, NEW_CODE, OLD_CODE)
+    alias = schema_editor.connection.alias
+    _rename(apps, alias, NEW_CODE, OLD_CODE)
 
 
 class Migration(migrations.Migration):
