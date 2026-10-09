@@ -46,6 +46,9 @@ class RealmListSerializer(serializers.ModelSerializer):
         fields = [
             "id", "realm_code", "civilization", "name_en", "realm_type", "tier",
             "parent_realm", "is_eternal", *TOPOLOGY_FIELDS,
+            # 三条结构化事实(官员端界域页「说明」展开行)。**不含 `description`**:那是写给维护者的
+            # 英文出处笔记,不是产品文案 —— tests/test_realm_actor_api.py::TestRealmDescriptionStaysOffTheCard。
+            "memory_reset_mechanism", "cycle_limit", "is_judgment_required",
         ]
         extra_kwargs = _IS_ETERNAL_KWARGS
 

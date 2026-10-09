@@ -114,6 +114,13 @@ class MeWelcomedSerializer(serializers.Serializer):
     welcomed_civilizations = serializers.ListField(child=serializers.ChoiceField(choices=Civilization.choices))
 
 
+class MeStatuteRefSerializer(serializers.Serializer):
+    """灵魂看到的律条引用:只有编号与各语言的短标题 —— 不带正文、出处、哈希、版本。"""
+
+    code = serializers.CharField()
+    title = serializers.DictField(child=serializers.CharField())
+
+
 class MeRecordSerializer(serializers.Serializer):
     id = serializers.UUIDField()
     record_type = serializers.CharField()
@@ -123,6 +130,17 @@ class MeRecordSerializer(serializers.Serializer):
     event_date = HistoricalDateField(prefix="event", read_only=True)
     is_milestone = serializers.BooleanField()
     recorded_at = serializers.DateTimeField()
+    #: 本世页「依据」与「人生阶段」。**刻意不含** `evidence_source` / `evidence_note`:
+    #: 记录从哪来(哪位证人、哪本册)是官员的内部信息,灵魂端不读。
+    statute_snapshot = serializers.SerializerMethodField()
+    life_stage = serializers.CharField()
+
+    @extend_schema_field(MeStatuteRefSerializer(allow_null=True))
+    def get_statute_snapshot(self, obj):
+        snap = obj.statute_snapshot
+        if not snap or not snap.get("code"):
+            return None
+        return {"code": snap["code"], "title": snap.get("title") or {}}
 
 
 class MeJudgeSerializer(serializers.Serializer):

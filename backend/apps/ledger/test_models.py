@@ -110,4 +110,6 @@ class TestSoulRecordStaysInTheSoulsApp:
             "SoulRecord", "LedgerRecord", "RecordType", "RecordCategory",
             # The ledger's own table (仪表盘「较上月」), not a re-export.
             "BalanceSnapshot",
+            # Also the ledger's own: the daily census behind the dashboard trends (2026-10-08).
+            "SoulCensusSnapshot",
         }

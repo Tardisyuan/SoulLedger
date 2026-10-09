@@ -8,6 +8,8 @@
 每个用户都**不是** ADMIN,除非测试名说它是:ADMIN 绕过租户对象检查,
 全用 ADMIN 的测试证明不了原租户 / 目标租户各自能做什么(apps/dispatch/permissions.py)。
 """
+import uuid
+
 import pytest
 
 from apps.audit.models import AuditLog
@@ -703,6 +705,7 @@ def test_the_home_tenant_cannot_write_to_the_residing_soul_or_its_residence_rows
         ("post", f"/api/v1/souls/{soul.pk}/die/", {}),
         ("post", f"/api/v1/souls/{soul.pk}/transition/", {"new_state": "LOST"}),
         ("post", f"/api/v1/souls/{soul.pk}/add_record/", {"record_type": "MERIT", "category": "x", "weight": 1}),
+        ("patch", f"/api/v1/souls/{soul.pk}/records/{uuid.uuid4()}/", {"weight": 1}),
         ("patch", f"/api/v1/judgment/{away['judgment'].pk}/", {"notes": "改"}),
         ("post", f"/api/v1/judgment/{away['judgment'].pk}/archive/", {"reason": "x"}),
         ("post", f"/api/v1/disposition/{away['disposition'].pk}/execute/", {}),

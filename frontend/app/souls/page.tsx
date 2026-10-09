@@ -25,6 +25,7 @@ import { fieldControl } from "@/src/components/ui/Field";
 import { soulStateBadgeClass, soulStateGlyph } from "@/src/lib/soulStateBadge";
 import { FilterChipSelect, FilterChipToggle } from "@/src/components/ui/FilterChip";
 import { SoulPreviewDrawer } from "@/src/components/souls/SoulPreviewDrawer";
+import { SoulImportDialog } from "@/src/components/souls/SoulImportDialog";
 import { EvalIdentityTag } from "@/src/components/assist-admin/parts";
 
 /**
@@ -70,10 +71,20 @@ function SoulsRoute() {
   const q = params?.get("q")?.trim() ?? "";
   // `?state=` is how /welcome's 本殿灵魂 cells land on a filtered list.
   const state = params?.get("state")?.trim() ?? "";
-  return <SoulsList key={`${q}|${state}`} initialQuery={q} initialState={state} />;
+  // `?import_batch=` is where the import dialog's 「查看这一批」 lands: the list narrowed to one CSV import.
+  const batch = params?.get("import_batch")?.trim() ?? "";
+  return <SoulsList key={`${q}|${state}|${batch}`} initialQuery={q} initialState={state} initialBatch={batch} />;
 }
 
-function SoulsList({ initialQuery, initialState }: { initialQuery: string; initialState: string }) {
+function SoulsList({
+  initialQuery,
+  initialState,
+  initialBatch,
+}: {
+  initialQuery: string;
+  initialState: string;
+  initialBatch: string;
+}) {
   const { t, locale } = useI18n();
   usePlaque({ hall: useHall(t("plaque.office.records")) });
   const [page, setPage] = useState(1);
@@ -85,6 +96,8 @@ function SoulsList({ initialQuery, initialState }: { initialQuery: string; initi
   const [balanceMax, setBalanceMax] = useState("");
   const [ordering, setOrdering] = useState("");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isImportOpen, setIsImportOpen] = useState(false);
+  const [batch, setBatch] = useState(initialBatch);
   const [problemsOnly, setProblemsOnly] = useState(false);
   // The previewed row's id, not its index: a background refetch can reorder
   // the page, and the drawer must keep showing the soul it was opened on.
@@ -116,6 +129,7 @@ function SoulsList({ initialQuery, initialState }: { initialQuery: string; initi
   if (balanceMax) params.karma_max = parseInt(balanceMax, 10);
   if (ordering) params.ordering = ordering;
   if (problemsOnly) params.has_date_problem = "true";
+  if (batch) params.import_batch = batch;
 
   // TanStack Query — automatic caching, background refetch, loading/error states.
   // Params live in the queryKey, so filter/sort/page changes refetch on their own.
@@ -184,7 +198,7 @@ function SoulsList({ initialQuery, initialState }: { initialQuery: string; initi
     })),
   ];
 
-  const isFiltered = Boolean(search || stateFilter || civilizationFilter || balanceMin || balanceMax || problemsOnly);
+  const isFiltered = Boolean(search || stateFilter || civilizationFilter || balanceMin || balanceMax || problemsOnly || batch);
 
   const resetFilters = () => {
     setSearchInput("");
@@ -194,6 +208,7 @@ function SoulsList({ initialQuery, initialState }: { initialQuery: string; initi
     setBalanceMin("");
     setBalanceMax("");
     setProblemsOnly(false);
+    setBatch("");
     setPage(1);
   };
 
@@ -207,6 +222,9 @@ function SoulsList({ initialQuery, initialState }: { initialQuery: string; initi
       title={t("souls.title")}
       actions={
         <RequirePermission permissions="soul.create">
+          <Button type="button" variant="secondary" onClick={() => setIsImportOpen(true)}>
+            {t("souls.import.button")}
+          </Button>
           <Button type="button" variant="primary" onClick={() => setIsCreateModalOpen(true)}>
             + {t("souls.create")}
           </Button>
@@ -289,6 +307,17 @@ function SoulsList({ initialQuery, initialState }: { initialQuery: string; initi
               <span className="font-mono text-[oklch(var(--color-ink-subtle))]">{problemCountQuery.data}</span>
             )}
           </FilterChipToggle>
+          {batch && (
+            <FilterChipToggle
+              pressed
+              onPressedChange={() => {
+                setBatch("");
+                setPage(1);
+              }}
+            >
+              {t("souls.import.batch_chip")}
+            </FilterChipToggle>
+          )}
         </>
       }
     >
@@ -435,6 +464,8 @@ function SoulsList({ initialQuery, initialState }: { initialQuery: string; initi
         onPrev={stepPreview(-1)}
         finalFocus={() => previewButtons.current.get(lastPreviewId.current ?? "") ?? null}
       />
+
+      <SoulImportDialog isOpen={isImportOpen} onClose={() => setIsImportOpen(false)} />
 
       <SoulCreateModal
         isOpen={isCreateModalOpen}

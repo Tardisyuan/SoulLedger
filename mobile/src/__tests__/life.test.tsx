@@ -41,10 +41,10 @@ function renderApp() {
   );
 }
 
-async function open() {
+async function open(data: unknown = life(1)) {
   stubApi({
     "/me/": { status: 200, data: PROFILE },
-    "/me/life/": { status: 200, data: life(1) },
+    "/me/life/": { status: 200, data },
     "/me/past-lives/": { status: 200, data: [] },
     "/me/sentence-plan/": { status: 200, data: { state: "none", rebirth_open: true, stations: [] } },
   });
@@ -233,6 +233,30 @@ describe("the ledger rows", () => {
     expect(screen.queryByTestId("grow")).toBeNull();
     // Letting go keeps the body — the same element, not a remount of it (and of whatever it holds).
     expect(screen.getByTestId("section-judgments-body") === growing).toBe(true);
+  });
+});
+
+describe("a record's basis", () => {
+  const record = (id: string, overrides: Record<string, unknown> = {}) => ({
+    id, record_type: "DEMERIT", category: "SPEECH", description: "妄语", weight: 2, event_date: null,
+    is_milestone: false, recorded_at: "2026-09-10T00:00:00Z", statute_snapshot: null, life_stage: "", ...overrides,
+  });
+
+  it("shows the statute code with its title and the life stage, and says nothing for a record without either", async () => {
+    await open(life(1, {
+      records: [
+        record("r1", { statute_snapshot: { code: "CN-GGG-F-01", title: { zh: "不妄语", en: "No false speech", egy: "" } }, life_stage: "OLD_AGE" }),
+        record("r2"),
+      ],
+    }));
+    expect(screen.getByTestId("record-statute-r1")).toHaveTextContent("依据 CN-GGG-F-01 不妄语");
+    expect(screen.getByTestId("record-stage-r1")).toHaveTextContent("老年");
+    expect(screen.queryByTestId("record-statute-r2")).toBeNull();
+    expect(screen.queryByTestId("record-stage-r2")).toBeNull();
+    // The soul never sees where the record came from.
+    expect(screen.queryByText(/证人|WITNESS/)).toBeNull();
+    // An Animated.View update lands one tick after these assertions; flush it so it isn't an act() warning.
+    await act(async () => {});
   });
 });
 

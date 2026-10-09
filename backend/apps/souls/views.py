@@ -4,6 +4,7 @@ REST views for Soul app.
 import csv
 import uuid
 
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import transaction
 from django.http import HttpResponse
 from django.utils import timezone
@@ -22,6 +23,7 @@ from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, Data
 from apps.ledger.serializers import LedgerSummarySerializer
 from apps.ledger.services import LedgerService
 from apps.realms.serializers import SoulPathEntrySerializer
+from apps.souls import importer
 from apps.souls.dates import (
     ERROR,
     check_record_date,
@@ -37,11 +39,39 @@ from apps.souls.serializers import (
     SoulBatchRecycleErrorSerializer,
     SoulBatchRecycleResultSerializer,
     SoulBatchRecycleSerializer,
+    SoulImportCommitSerializer,
+    SoulImportFileErrorSerializer,
+    SoulImportPreviewSerializer,
+    SoulImportUploadSerializer,
     SoulListSerializer,
     SoulRecordSerializer,
     SoulSerializer,
     SoulTransitionSerializer,
 )
+
+
+def _record_errors(serializer):
+    """400 for a record write: the usual `{field: [message]}` plus `error_codes` — `{field: [code]}` in the
+    same order — so a client maps the stable code to its own words instead of matching English text."""
+    # `serializer.errors` holds DRF ErrorDetail strings, each carrying its `.code`. (A serializer has no
+    # `get_full_details()` — that is on ValidationError; calling it here was a 500 on every invalid write.)
+    codes = {
+        field: [getattr(d, "code", None) or "invalid" for d in (details if isinstance(details, list) else [details])]
+        for field, details in serializer.errors.items()
+    }
+    return Response({**serializer.errors, "error_codes": codes}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class _ImportRefusedError(Exception):
+    """A file-level import refusal. Returned as a plain 400 body rather than raised as DRF's
+    ValidationError, which coerces every value to a string list (`max_rows` arrived as "1000")."""
+
+    def __init__(self, payload):
+        super().__init__(payload.get("code"))
+        self.payload = payload
+
+    def response(self):
+        return Response(self.payload, status=status.HTTP_400_BAD_REQUEST)
 
 
 class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetMixin, viewsets.ModelViewSet):
@@ -61,6 +91,8 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
         'transition': ['soul.transition'],
         'karma': ['soul.read'],
         'add_record': ['soul.update'],
+        # 改一条已入簿的功过:与 add_record 同一把 `soul.update`。
+        'update_record': ['soul.update'],
         'records': ['soul.read'],
         'path': ['soul.read'],
         # Acknowledging a warning mutates the record (three new columns),
@@ -77,6 +109,9 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
         'batch_recycle': ['soul.delete'],
         # 批量条的「导出」:读了什么就导出什么,与列表同一个码名。
         'export': ['soul.read'],
+        # CSV 导入:预览不写库,但问的是「我能不能建」,与提交同一个码名。
+        'import_preview': ['soul.create'],
+        'import_commit': ['soul.create'],
         'correct_settlement': ['soul.correct_settlement'],
     }
     # `reincarnations` because life_index counts them, and the date checks on
@@ -320,6 +355,80 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
             ])
         return response
 
+    def _import_rows(self, request):
+        """Upload -> (RowResults, tenant). Boundary checks live here and in importer._read."""
+        upload = SoulImportUploadSerializer(data=request.data)
+        upload.is_valid(raise_exception=True)
+        tenant = getattr(request, "tenant", None)
+        if tenant is None:
+            raise _ImportRefusedError({"code": "no_tenant"})
+        try:
+            data = upload.validated_data["file"].read(importer.MAX_BYTES + 1)
+            return importer.validate_csv(data, tenant), tenant
+        except importer.ImportFileError as exc:
+            raise _ImportRefusedError({"code": exc.code, **exc.detail}) from exc
+
+    @extend_schema(
+        request={"multipart/form-data": SoulImportUploadSerializer},
+        responses={200: SoulImportPreviewSerializer, 400: SoulImportFileErrorSerializer},
+    )
+    @action(detail=False, methods=["post"], url_path="import/preview", pagination_class=None, filter_backends=[])
+    def import_preview(self, request):
+        """Validate a soul CSV row by row. WRITES NOTHING.
+
+        Columns: name, civilization (required); birth_date, death_date, origin_location,
+        birth_name, description. Dates are `YYYY`, `YYYY-MM` or `YYYY-MM-DD`, negative for
+        BCE. At most `importer.MAX_ROWS` rows. `civilization` must be the caller's own.
+        """
+        try:
+            results, _tenant = self._import_rows(request)
+        except _ImportRefusedError as refused:
+            return refused.response()
+        return Response(importer.summarize(results))
+
+    @extend_schema(
+        request={"multipart/form-data": SoulImportUploadSerializer},
+        responses={
+            201: SoulImportCommitSerializer,
+            400: SoulImportFileErrorSerializer,
+            422: SoulImportPreviewSerializer,
+        },
+    )
+    @action(detail=False, methods=["post"], url_path="import/commit", pagination_class=None, filter_backends=[])
+    def import_commit(self, request):
+        """Create every soul in the file, or none. Re-validates the file itself.
+
+        422 with the preview body when any row has an error (nothing written). On success
+        one `IMPORT` audit row names the batch; each soul also gets its ordinary CREATE row.
+        """
+        from apps.audit.models import AuditAction, AuditLog
+        from apps.core.client_ip import get_client_ip
+
+        try:
+            results, tenant = self._import_rows(request)
+        except _ImportRefusedError as refused:
+            return refused.response()
+        if any(r.errors for r in results):
+            return Response(importer.summarize(results), status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+        with transaction.atomic():
+            batch = importer.create_souls(results, tenant)
+            AuditLog.objects.create(
+                tenant=tenant,
+                user=request.user,
+                action=AuditAction.IMPORT,
+                resource="soul",
+                resource_id=str(batch),
+                changes={
+                    "batch_id": str(batch),
+                    "created": len(results),
+                    "filename": request.data["file"].name[:200],
+                },
+                ip_address=get_client_ip(request) or "",
+                user_agent=request.META.get("HTTP_USER_AGENT", "")[:500],
+                description=f"CSV import of {len(results)} souls",
+            )
+        return Response({"created": len(results), "batch_id": batch}, status=status.HTTP_201_CREATED)
+
     @staticmethod
     def _batch_not_found(ids):
         return Response(
@@ -491,9 +600,42 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
         """Add a merit or demerit record to a soul."""
         soul = self.get_object()
         serializer = SoulRecordSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+        if not serializer.is_valid():
+            return _record_errors(serializer)
         record = serializer.save(soul=soul)
         return Response(SoulRecordSerializer(record).data, status=status.HTTP_201_CREATED)
+
+    @extend_schema(
+        request=SoulRecordSerializer,
+        responses=SoulRecordSerializer,
+        parameters=[
+            OpenApiParameter(
+                "record_id", OpenApiTypes.UUID, OpenApiParameter.PATH,
+                description="The SoulRecord's primary key (the id belongs to the related record, not to `Soul`).",
+            )
+        ],
+    )
+    @action(detail=True, methods=["patch"], url_path=r"records/(?P<record_id>[^/.]+)")
+    def update_record(self, request, pk=None, record_id=None):
+        """Edit one merit/demerit record on this soul (partial).
+
+        The same serializer and the same validation as `add_record` — dates against the soul,
+        the clause/count pair, the statute against the soul's civilization — with the record as
+        instance. The statute snapshot is re-taken by `SoulRecord.save` only when the cited
+        statute changes. Gated by `soul.update`, like `add_record`.
+        """
+        soul = self.get_object()
+        try:
+            record = soul.records.get(pk=record_id)
+        except (SoulRecord.DoesNotExist, DjangoValidationError):
+            return Response({"error": "Record not found on this soul."}, status=status.HTTP_404_NOT_FOUND)
+        serializer = SoulRecordSerializer(record, data=request.data, partial=True, context={"soul": soul})
+        if not serializer.is_valid():
+            return _record_errors(serializer)
+        record = serializer.save()
+        # save() 只在新建时重算;改权重 / 类型要同一条共用的重算路径,否则 merit_score 停在旧值。
+        record._update_soul_karma()
+        return Response(SoulRecordSerializer(record).data)
 
     @extend_schema(responses=SoulRecordSerializer(many=True))
     @action(detail=True, methods=["get"], pagination_class=None)

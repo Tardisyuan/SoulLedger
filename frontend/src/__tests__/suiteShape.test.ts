@@ -141,7 +141,11 @@ const COLLECTED_FILES = [
   "SoulEditModal.test.tsx",
   "SoulLedgerBook.test.tsx",
   "SoulLedgerDetail.test.tsx",
+  // 2026-10-08 /souls 的 CSV 导入对话框。
+  "SoulImportDialog.test.tsx",
   "SoulLifecycleTimeline.test.tsx",
+  // 功过台账的新增 / 修改表单(2026-10-08)。
+  "SoulRecordFormModal.test.tsx",
   "SoulReadingPanel.test.tsx",
   "SoulReadingPanelFork.test.tsx",
   "SoulReadingPanelSentence.test.tsx",
@@ -150,6 +154,8 @@ const COLLECTED_FILES = [
   "Spinner.test.tsx",
   "TenantContext.test.tsx",
   "Toast.test.tsx",
+  // 2026-10-08 仪表盘「趋势」面板:加载 / 出错 / 快照不足 / 有线四态与范围、维度开关。
+  "TrendsPanel.test.tsx",
   "toastColourContract.test.ts",
   "OrganizationsPage.test.tsx",
   "UserDeleteDialog.test.tsx",

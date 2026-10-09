@@ -94,6 +94,12 @@ export function useTransitionSoul() {
   });
 }
 
+/** 400 + 对象体 = 后端按字段(或 non_field_errors)说了哪里不对;表单把它画在字段下,不再弹通用 toast。 */
+function isFieldValidationError(error: unknown): boolean {
+  const r = (error as { response?: { status?: number; data?: unknown } })?.response;
+  return r?.status === 400 && typeof r.data === "object" && r.data !== null && !Array.isArray(r.data);
+}
+
 export function useAddSoulRecord() {
   const qc = useQueryClient();
   return useMutation({
@@ -103,8 +109,24 @@ export function useAddSoulRecord() {
       qc.invalidateQueries({ queryKey: soulKeys.detail(vars.id) });
       qc.invalidateQueries({ queryKey: soulKeys.ledger(vars.id) });
     },
-    onError: () => {
-      notify("souls.detail.failed", "error");
+    onError: (error) => {
+      if (!isFieldValidationError(error)) notify("souls.detail.failed", "error");
+    },
+  });
+}
+
+/** 改一条已入簿的功过。字段错误交给表单显示(不弹 toast);其余失败弹通用提示。 */
+export function useUpdateSoulRecord() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, recordId, data }: { id: string; recordId: string; data: object }) =>
+      soulsApi.updateRecord(id, recordId, data),
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: soulKeys.detail(vars.id) });
+      qc.invalidateQueries({ queryKey: soulKeys.ledger(vars.id) });
+    },
+    onError: (error) => {
+      if (!isFieldValidationError(error)) notify("souls.detail.failed", "error");
     },
   });
 }
@@ -169,6 +191,28 @@ export function useBatchRecycleSouls() {
     onError: (error) => {
       if (soulBatchRecycleErrorOf(error)) return;
       notify("souls.detail.error_delete", "error");
+    },
+  });
+}
+
+/**
+ * CSV 导入第一步:只校验、不写库。没有 onSuccess/notify —— 结果是预览表,由对话框自己呈现;
+ * 400(整份文件不可用)由调用方用 `soulImportFileErrorOf(error)` 读出。
+ */
+export function useSoulImportPreview() {
+  return useMutation({ mutationFn: (data: FormData) => soulsApi.importPreview(data).then((r) => r.data) });
+}
+
+/**
+ * CSV 导入第二步:全有或全无地建灵魂。成功后失效 souls 缓存;422(有行出错、一个都没写)
+ * 与 400 都留给调用方读,所以这里不报错误提示。
+ */
+export function useSoulImportCommit() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: FormData) => soulsApi.importCommit(data).then((r) => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: soulKeys.all });
     },
   });
 }

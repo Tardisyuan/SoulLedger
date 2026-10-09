@@ -232,6 +232,68 @@ export interface SoulPathEntry {
   left_at: string | null;
 }
 
+// ── CSV import (backend/apps/souls/importer.py) ────────────────────────────
+
+/** 200 of POST /souls/import/preview/, and the 422 body of …/import/commit/ (nothing written). */
+export type SoulImportPreview = Schemas["SoulImportPreview"];
+export type SoulImportRow = Schemas["SoulImportRow"];
+export type SoulImportCommitResult = Schemas["SoulImportCommit"];
+/** 400 body: the file as a whole is unusable (`code`, plus `columns` / `max_rows` / `max_bytes` where they apply). */
+export type SoulImportFileError = Schemas["SoulImportFileError"];
+
+/** Columns of the import file, in template order. `name` and `civilization` are required. */
+export const SOUL_IMPORT_COLUMNS = [
+  "name",
+  "civilization",
+  "birth_date",
+  "death_date",
+  "origin_location",
+  "birth_name",
+  "description",
+] as const;
+
+/** Row-level `code`s (importer.py): the web has a message for each. */
+export const SOUL_IMPORT_ROW_CODES = [
+  "required",
+  "too_long",
+  "too_many_cells",
+  "invalid_civilization",
+  "civilization_mismatch",
+  "invalid_date",
+  "death_before_birth",
+  "implausible_lifespan",
+  "duplicate_in_file",
+  "duplicate_existing",
+] as const;
+
+/** File-level `code`s (400). `no_tenant` and DRF's own `file` error are folded into "unknown" by the web. */
+export const SOUL_IMPORT_FILE_CODES = [
+  "file_too_large",
+  "bad_encoding",
+  "empty_file",
+  "no_rows",
+  "duplicate_columns",
+  "unknown_columns",
+  "missing_columns",
+  "too_many_rows",
+  "malformed_csv",
+  "no_tenant",
+] as const;
+
+/** The 400 file-level refusal in an axios error, or `null` for any other failure. */
+export function soulImportFileErrorOf(error: unknown): SoulImportFileError | null {
+  if (!axios.isAxiosError(error) || error.response?.status !== 400) return null;
+  const data = error.response.data as Partial<SoulImportFileError> | undefined;
+  return data && typeof data.code === "string" ? (data as SoulImportFileError) : null;
+}
+
+/** The 422 body of a refused commit (rows with errors), or `null`. */
+export function soulImportRowsRefusalOf(error: unknown): SoulImportPreview | null {
+  if (!axios.isAxiosError(error) || error.response?.status !== 422) return null;
+  const data = error.response.data as Partial<SoulImportPreview> | undefined;
+  return data && Array.isArray(data.rows) ? (data as SoulImportPreview) : null;
+}
+
 export const soulsApi = {
   list: (params?: {
     page?: number;
@@ -247,6 +309,8 @@ export const soulsApi = {
     // has_date_problem is a django-filter BooleanFilter, which parses the
     // string the same as it would a real query-string value.
     has_date_problem?: string;
+    /** UUID of one CSV import batch (SoulImportCommitResult.batch_id). */
+    import_batch?: string;
   }) => api.get<PaginatedResponse<SoulListItem>>("/souls/", { params }),
   get: (id: string) => api.get<Soul>(`/souls/${id}/`),
   create: (data: object) => api.post<Soul>("/souls/", data),
@@ -258,6 +322,16 @@ export const soulsApi = {
   // The batch bar's 「导出」: a CSV of the selected souls, scoped like the list (`soul.read`).
   export: (ids: string[]) =>
     api.get<Blob>("/souls/export/", { params: { ids: ids.join(",") }, responseType: "blob" }),
+  // Bulk CSV import, two steps. `soul.create`. Preview writes nothing; commit is all or nothing
+  // and re-validates the file itself (422 + preview body when any row has an error).
+  importPreview: (data: FormData) =>
+    api.post<SoulImportPreview>("/souls/import/preview/", data, {
+      headers: { "Content-Type": "multipart/form-data" },
+    }),
+  importCommit: (data: FormData) =>
+    api.post<SoulImportCommitResult>("/souls/import/commit/", data, {
+      headers: { "Content-Type": "multipart/form-data" },
+    }),
   die: (id: string, data?: object) => api.post<Soul>(`/souls/${id}/die/`, data),
   transition: (id: string, data: object) => api.post<Soul>(`/souls/${id}/transition/`, data),
   /** ADMIN 更正:SETTLED → DISPOSED,必须带原因;不是状态流转,后端单独记 SETTLEMENT_CORRECTED 事件。
@@ -266,6 +340,9 @@ export const soulsApi = {
     api.post<Soul>(`/souls/${id}/correct_settlement/`, { reason }),
   karma: (id: string) => api.get<LedgerSummary>(`/souls/${id}/karma/`),
   addRecord: (id: string, data: object) => api.post<SoulRecordEntry>(`/souls/${id}/add_record/`, data),
+  /** PATCH /souls/{id}/records/{recordId}/ —— 改一条已入簿的功过(部分更新;soul.update)。 */
+  updateRecord: (id: string, recordId: string, data: object) =>
+    api.patch<SoulRecordEntry>(`/souls/${id}/records/${recordId}/`, data),
   // Bare array — the action returns `Response(serializer.data)` directly
   // (backend/apps/souls/views.py:164), not a pagination envelope.
   records: (id: string) => api.get<SoulRecordEntry[]>(`/souls/${id}/records/`),

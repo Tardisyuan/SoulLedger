@@ -241,7 +241,7 @@ class SoulRecordSerializer(serializers.ModelSerializer):
                     f"{statute.code} belongs to {statute.civilization}, "
                     f"not to this soul's {soul.civilization}."
                 )
-            })
+            }, code="statute_other_civilization")
 
     def validate_statute_clause(self, value):
         """A citation must resolve, or it is worse than a blank.
@@ -426,7 +426,8 @@ class SoulRecordSerializer(serializers.ModelSerializer):
                 "statute_clause and occurrence_count are the two halves of one "
                 "statement and must be given together or left together. One "
                 "without the other reads as unknown to the offset rule while "
-                "still showing on the record."
+                "still showing on the record.",
+                code="clause_count_pair",
             )
 
     def save(self, **kwargs):
@@ -763,3 +764,46 @@ class SoulBatchRecycleErrorSerializer(serializers.Serializer):
     error = serializers.CharField()
     ids = serializers.ListField(child=serializers.UUIDField())
     archivable = serializers.BooleanField(required=False)
+
+
+# ── CSV import (apps/souls/importer.py) ────────────────────────────────────
+
+class SoulImportUploadSerializer(serializers.Serializer):
+    """Multipart body of the two import endpoints: the CSV, nothing else."""
+    # allow_empty_file: an empty upload must reach the importer, which names it `empty_file`;
+    # DRF's own refusal carries no code the web can translate.
+    file = serializers.FileField(allow_empty_file=True)
+
+
+class SoulImportCellErrorSerializer(serializers.Serializer):
+    field = serializers.CharField(help_text="CSV column the problem is in; `_row` for the row as a whole.")
+    code = serializers.CharField(help_text="Stable machine-readable code; the web translates it.")
+
+
+class SoulImportRowSerializer(serializers.Serializer):
+    row = serializers.IntegerField(help_text="Line number in the file; the header is line 1.")
+    status = serializers.ChoiceField(choices=["ok", "error"])
+    values = serializers.DictField(child=serializers.CharField(allow_blank=True))
+    errors = SoulImportCellErrorSerializer(many=True)
+
+
+class SoulImportPreviewSerializer(serializers.Serializer):
+    """200 of `…/import/preview/` and 422 of `…/import/commit/` (rows have errors; nothing written)."""
+    total = serializers.IntegerField()
+    ok_count = serializers.IntegerField()
+    error_count = serializers.IntegerField()
+    max_rows = serializers.IntegerField()
+    rows = SoulImportRowSerializer(many=True)
+
+
+class SoulImportCommitSerializer(serializers.Serializer):
+    created = serializers.IntegerField()
+    batch_id = serializers.UUIDField(help_text="Filter the list with `?import_batch=` to see this batch.")
+
+
+class SoulImportFileErrorSerializer(serializers.Serializer):
+    """400: the file as a whole is unusable. Nothing was read or written."""
+    code = serializers.CharField()
+    columns = serializers.ListField(child=serializers.CharField(), required=False)
+    max_rows = serializers.IntegerField(required=False)
+    max_bytes = serializers.IntegerField(required=False)

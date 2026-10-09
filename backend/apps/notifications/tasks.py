@@ -11,7 +11,7 @@
 不含任何密码。标题 / 正文之外不附任何别的字段。
 每条通知最多一行 `NotificationEmail`(成功或失败),失败不重试。只看未读、且**晚于本人打开开关**
 (`preferences.email_opted_at`)的:不设 24 小时上限,worker 停了几天之后积压的照发;而事后才打开开关,
-不会把旧通知翻出来发一遍。老账号没有该字段时退回 24 小时窗口。
+不会把旧通知翻出来发一遍。没有该字段时(迁移 0018 之外的极少数)退回 24 小时窗口。
 语言:界面语言只存在浏览器 cookie 里,服务端没有;前端在界面语言变动时同步 `email_locale`(见
 `frontend/src/components/layout/EmailLocaleSync.tsx`),发送时读它,没有则按所属文明。
 按租户一行(apps/scheduler/registry.py),与别的租户任务一样先设租户 contextvar;
@@ -54,7 +54,8 @@ def render_email(notification, locale):
 
 def _opted_since(user):
     """这位官员打开邮件开关的时刻(`preferences.email_opted_at`,PATCH 偏好时写)。
-    早于这个字段的老账号没有它:退回「24 小时内」,即此前的行为,不把历史一次性倒出去。"""
+    迁移 authentication/0018 已给打开着开关的老账号补上迁移时刻;仍没有它的(迁移后才被直接写库的账号)
+    退回「24 小时内」,不把历史一次性倒出去。"""
     from django.utils.dateparse import parse_datetime
 
     stamp = parse_datetime((user.preferences or {}).get("email_opted_at") or "")

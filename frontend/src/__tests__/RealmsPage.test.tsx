@@ -68,6 +68,52 @@ it("opens on the first civilization with realms and draws its line, not a schema
   expect(topo).toHaveTextContent("第一殿");
 });
 
+it("the route map marks an eternal stop with ≡ and its legend says what that means", async () => {
+  mockedList.mockResolvedValue({
+    data: { results: [...REALMS, R("DY_COURT_06_ETERNAL", "CHINESE", { order: 6, kind: "HALL", is_eternal: true })], count: 10 },
+  });
+  renderPage();
+  const map = (await screen.findByTestId("realm-topology")).querySelector("[data-route-topology]")!;
+  const eternal = map.querySelectorAll('[data-eternal="true"]');
+  expect(eternal).toHaveLength(1);
+  expect(map.querySelector('[data-station="DY_COURT_06_ETERNAL"]')!.querySelector('[data-eternal="true"]')).not.toBeNull();
+  expect(map.querySelector('[data-station="DY_COURT_01_QINGUANG"]')!.querySelector('[data-eternal="true"]')).toBeNull();
+  expect(within(map as HTMLElement).getByTestId("map-legend-eternal")).toHaveTextContent("不出狱、不轮回");
+});
+
+it("opens a realm's structured facts on 说明 and never prints the maintainer prose", async () => {
+  mockedList.mockResolvedValue({
+    data: {
+      results: [
+        ...REALMS,
+        R("FACTS_REALM", "CHINESE", {
+          memory_reset_mechanism: "MENGPO",
+          cycle_limit: 3,
+          is_judgment_required: false,
+          description: "SOURCE UNKNOWN: maintainer prose",
+        }),
+      ],
+      count: 10,
+    },
+  });
+  renderPage();
+  const tree = await screen.findByTestId("realm-tree");
+  expect(within(tree).queryByTestId("realm-facts")).toBeNull();
+  fireEvent.click(tree.querySelector('[data-facts-toggle="FACTS_REALM"]')!);
+  const facts = within(tree).getByTestId("realm-facts");
+  expect(facts).toHaveTextContent("MENGPO");
+  expect(facts).toHaveTextContent("轮回上限");
+  expect(facts).toHaveTextContent("3");
+  expect(facts).toHaveTextContent("入界无需审判");
+  expect(document.body).not.toHaveTextContent("SOURCE UNKNOWN");
+  // 没有重置机制、没有上限的界域不画这两行;审判标志缺省按「须审判」。
+  fireEvent.click(tree.querySelector('[data-facts-toggle="SUB_GATE"]')!);
+  const gate = tree.querySelector('[data-realm-facts="SUB_GATE"]')!;
+  expect(gate).toHaveTextContent("入界须经审判");
+  expect(gate).not.toHaveTextContent("轮回上限");
+  expect(tree.querySelector('[data-facts-toggle="SUB_GATE"]')).toHaveAttribute("aria-expanded", "true");
+});
+
 it("nests children under their parent in the tree table", async () => {
   renderPage();
   const tree = await screen.findByTestId("realm-tree");
@@ -121,8 +167,8 @@ it("folds the tree into two-line cards for the phone, with the same rows in the 
   const order = (root: Element, attr: string) => Array.from(root.querySelectorAll(`[${attr}]`)).map((r) => r.getAttribute(attr));
   expect(order(cards, "data-realm-card")).toEqual(order(tree, "data-realm-row"));
   expect(cards.querySelector('[data-realm-card="SUB_GATE"]')).toHaveTextContent("SUB_GATE · 门");
-  // Read-only: a card is not a button.
-  expect(within(cards).queryByRole("button")).toBeNull();
+  // Read-only: a card is not a button. Its only control is the 「说明」 disclosure (0f16d5fc).
+  for (const b of within(cards).queryAllByRole("button")) expect(b).toHaveAttribute("data-facts-toggle");
 });
 
 it("draws the Duat as a trunk, then 过 / 不过: the fail column dashed, its end a dashed box, uncounted", async () => {

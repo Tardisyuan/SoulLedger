@@ -16,15 +16,18 @@ import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import AuditPage from "@/app/audit/page";
 import { auditApi } from "@soulledger/core/api";
+import { saveBlob } from "@/src/lib/saveBlob";
 
 jest.mock("@soulledger/core/api", () => ({
-  auditApi: { list: jest.fn() },
+  auditApi: { list: jest.fn(), exportCsv: jest.fn() },
   PAGE_SIZE: 20,
   menusApi: {
     all: jest.fn().mockResolvedValue({ data: [] }),
     list: jest.fn().mockResolvedValue({ data: { results: [] } }),
   },
 }));
+
+jest.mock("@/src/lib/saveBlob", () => ({ saveBlob: jest.fn() }));
 
 let mockIsAdmin = true;
 let mockRole: string | null = null;
@@ -391,5 +394,40 @@ describe("AuditPage repeats and day headers", () => {
     await screen.findByText("restored A");
     const heads = Array.from(container.querySelectorAll("[data-group-head]")).map((h) => h.textContent);
     expect(heads).toEqual(["day(2026-1-3) · 3", "day(2026-1-2) · 1"]);
+  });
+});
+
+describe("AuditPage export", () => {
+  const exportCsv = auditApi.exportCsv as jest.Mock;
+
+  it("exports the server-side filters in force, without page or the client-side search box", async () => {
+    exportCsv.mockResolvedValue({ data: "csv" });
+    renderPage();
+    await screen.findByText("created a soul");
+    pickChip("audit.filter_action", "audit.actions.DELETE");
+    fireEvent.change(screen.getByPlaceholderText("audit.search_placeholder"), { target: { value: "soul" } });
+    fireEvent.click(screen.getByRole("button", { name: "audit.export" }));
+
+    await waitFor(() => expect(saveBlob).toHaveBeenCalledWith("csv", "audit_logs.csv"));
+    expect(exportCsv).toHaveBeenCalledWith({ action: "DELETE" });
+  });
+
+  it("says so when the export fails, and saves nothing", async () => {
+    exportCsv.mockRejectedValue(new Error("400"));
+    renderPage();
+    await screen.findByText("created a soul");
+    fireEvent.click(screen.getByRole("button", { name: "audit.export" }));
+
+    await waitFor(() => expect(exportCsv).toHaveBeenCalled());
+    expect(saveBlob).not.toHaveBeenCalled();
+  });
+
+  it("offers no export to a caller without audit.read", async () => {
+    mockIsAdmin = false;
+    mockRole = "VIEWER";
+    mockPermissions = [];
+    renderPage();
+    await screen.findByText("audit.access_denied");
+    expect(screen.queryByRole("button", { name: "audit.export" })).not.toBeInTheDocument();
   });
 });
