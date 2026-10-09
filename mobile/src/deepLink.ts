@@ -65,14 +65,22 @@ export function createLinkInbox<T>(parse: (url: string) => T | null) {
         subscribers.delete(fn);
       };
     },
-    /** At module load, once: the link that opened the app and every later one. */
+    /** At module load, once: every link that arrives while the app is running. */
     install(): void {
       if (installed) return;
       installed = true;
+      Linking.addEventListener("url", ({ url }) => push(url));
+    },
+    /**
+     * On every mount of the root component: the link that opened this activity. Not at module load --
+     * an Android launcher shortcut starts the activity with CLEAR_TASK, so the activity is recreated
+     * inside the same JS runtime, the root remounts, and no "url" event fires (seen 2026-10-09: the
+     * "Ask" shortcut opened the app on its default page). Read once per JS runtime, that link was lost.
+     */
+    readOpening(): void {
       Linking.getInitialURL()
         .then(push)
         .catch(() => {});
-      Linking.addEventListener("url", ({ url }) => push(url));
     },
   };
 }

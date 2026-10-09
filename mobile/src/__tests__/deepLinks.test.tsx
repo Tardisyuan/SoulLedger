@@ -115,20 +115,27 @@ describe("the link inbox", () => {
     expect(seen).toEqual(["OK", "OK"]);
   });
 
-  it("install() reads the opening URL and listens for later ones, once", async () => {
+  it("install() listens for later links once; readOpening() reads the opening URL on every root mount", async () => {
     const inbox = createLinkInbox(parse);
     const initial = jest.spyOn(Linking, "getInitialURL").mockResolvedValue("ok");
     const listen = jest.spyOn(Linking, "addEventListener").mockReturnValue({ remove: jest.fn() } as never);
     inbox.install();
     inbox.install();
-    expect(initial).toHaveBeenCalledTimes(1);
     expect(listen).toHaveBeenCalledTimes(1);
+    expect(initial).not.toHaveBeenCalled();
     const seen: string[] = [];
-    await act(async () => {});
     inbox.subscribe((l) => seen.push(l));
+    inbox.readOpening();
+    await act(async () => {});
     expect(seen).toEqual(["OK"]);
-    listen.mock.calls[0][1]({ url: "ok" });
+    // An Android launcher shortcut recreates the activity in the same JS runtime: the root remounts and
+    // reads again, and that read must reach the screen (no "url" event comes for it).
+    initial.mockResolvedValue("ok");
+    inbox.readOpening();
+    await act(async () => {});
     expect(seen).toEqual(["OK", "OK"]);
+    listen.mock.calls[0][1]({ url: "ok" });
+    expect(seen).toEqual(["OK", "OK", "OK"]);
     jest.restoreAllMocks();
   });
 });

@@ -27,6 +27,7 @@ export default function App() {
   const [fontsLoaded, fontError] = useFonts(FONT_ASSETS);
   useEffect(() => {
     hydratePersistentStore().finally(() => setHydrated(true));
+    soulLinks.readOpening();
   }, []);
   if (!hydrated || !(fontsLoaded || fontError)) return null;
   // Gesture Handler and @gorhom/bottom-sheet (v2 motion) need this root; on its own it changes nothing.
