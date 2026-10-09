@@ -248,7 +248,7 @@ export function TrendsPanel() {
     >
       <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
         <div className="flex flex-col gap-1">
-          <h2 className="m-0 font-[family-name:var(--font-title)] text-xl font-semibold text-[oklch(var(--color-ink))]">{t("dashboard.trends.title")}</h2>
+          <h2 className="m-0 font-[family-name:var(--font-title)] text-lg text-[oklch(var(--color-ink))]">{t("dashboard.trends.title")}</h2>
           <p className="m-0 text-xs text-[oklch(var(--color-ink-muted))]">{t("dashboard.trends.subtitle")}</p>
         </div>
         <div className="flex flex-wrap gap-x-4 gap-y-2">

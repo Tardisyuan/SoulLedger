@@ -885,7 +885,17 @@ const H1_COVER = { file: "app/page.tsx", steps: "text-xl md:text-display-lg" };
  * 同样只许在那一个文件、必须真的出现一次。
  * 登录第二步 `/login/verify`(A12:标题「两步验证」font-title 28/36)沿用同一档,同一规则。
  */
-const H1_LOGIN = { files: ["app/(auth)/login/page.tsx", "app/(auth)/login/verify/page.tsx"], steps: "text-xl" };
+// The officer e-mail reset pages sit in the same LoginShell and take the login title step.
+const H1_LOGIN = {
+  files: [
+    "app/(auth)/login/page.tsx",
+    "app/(auth)/login/verify/page.tsx",
+    "app/(auth)/forgot-password/page.tsx",
+    "app/(auth)/reset-password/page.tsx",
+    "app/(auth)/verify-email/page.tsx",
+  ],
+  steps: "text-xl",
+};
 
 describe("页面标题 <h1>", () => {
   it("pins every literal <h1> outside the shell to the page-title step, text-lg", () => {
@@ -920,7 +930,7 @@ describe("页面标题 <h1>", () => {
 
     const offenders: string[] = [];
     let coverSeen = 0;
-    let loginSeen = 0;
+    const loginSeen = new Set<string>();
     for (const h of found) {
       if (h.file === "app/global-error.tsx") {
         if (!/fontSize:\s*"1\.25rem"/.test(h.tag)) {
@@ -937,7 +947,7 @@ describe("页面标题 <h1>", () => {
         continue;
       }
       if (H1_LOGIN.files.includes(h.file)) {
-        loginSeen += 1;
+        loginSeen.add(h.file);
         if (h.steps.join(" ") !== H1_LOGIN.steps) offenders.push(`${h.file}:${h.line}  the login title is ${H1_LOGIN.steps} (A9: 28/36)`);
         continue;
       }
@@ -951,7 +961,7 @@ describe("页面标题 <h1>", () => {
     }
 
     expect(coverSeen).toBe(1);
-    expect(loginSeen).toBe(H1_LOGIN.files.length);
+    expect(loginSeen.size).toBe(H1_LOGIN.files.length);
     if (offenders.length > 0) {
       throw new Error(
         `<h1> is the page title and has one step: text-lg (20px / 600). The plaque title ` +

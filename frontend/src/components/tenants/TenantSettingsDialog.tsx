@@ -181,7 +181,7 @@ export function TenantSettingsDialog({ tenant, onClose }: { tenant: Tenant; onCl
         {/* 安全 (A14 §4): the group sits at the bottom behind a 1px rule and its own title; a tab
             only when security settings reach two groups. */}
         <div className="flex flex-col gap-3 border-t border-[oklch(var(--color-block))] pt-6" data-testid="tenant-security">
-        <h3 id="tenant-security-title" className="m-0 font-[family-name:var(--font-title)] text-md font-semibold text-[oklch(var(--color-ink))]">
+        <h3 id="tenant-security-title" className="m-0 font-[family-name:var(--font-title)] text-lg text-[oklch(var(--color-ink))]">
           {t("tenants.settings.security")}
         </h3>
         <section aria-labelledby="tenant-mfa-roles-title" className="flex flex-col gap-2" data-testid="tenant-mfa-roles">
