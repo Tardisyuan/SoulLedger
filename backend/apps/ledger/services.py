@@ -282,18 +282,19 @@ class LedgerService:
             soul.demerit_score = round(demerit)
             soul.save(update_fields=["merit_score", "demerit_score", "update_time"])
 
+            # The event row is part of the recalculation's record: same transaction, so a failed insert rolls
+            # the new scores back and reaches the caller.
+            from apps.events.services import EventService
+            EventService.log_karma_recalculated(
+                soul,
+                old_merit,
+                soul.merit_score,
+                old_demerit=old_demerit,
+                new_demerit=soul.demerit_score,
+            )
+
         # Invalidate cache
         cls._invalidate_cache(soul)
-
-        # Log domain event
-        from apps.events.services import EventService
-        EventService.log_karma_recalculated(
-            soul,
-            old_merit,
-            soul.merit_score,
-            old_demerit=old_demerit,
-            new_demerit=soul.demerit_score,
-        )
 
         return {
             "soul_id": str(soul.id),

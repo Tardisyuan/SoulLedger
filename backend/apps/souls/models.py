@@ -364,11 +364,16 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
         if is_new and self.home_tenant_id is None:
             self.home_tenant_id = self.tenant_id
 
-        super().save(*args, **kwargs)
+        if not is_new:
+            super().save(*args, **kwargs)
+            return
 
-        # Log SOUL_CREATED event after first save (not on updates)
-        if is_new:
-            from apps.events.services import EventService
+        # SOUL_CREATED is part of the soul's creation: one transaction, so a failed event insert un-creates it.
+        from django.db import transaction
+
+        from apps.events.services import EventService
+        with transaction.atomic():
+            super().save(*args, **kwargs)
             EventService.log_soul_created(self)
 
     def __str__(self):
@@ -648,8 +653,11 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
 
                 SoulPathService.enter_on_death(locked_soul)
 
-        # Log outside the transaction to avoid holding locks during external calls
-        log_soul_state_change(locked_soul, old_state, new_state, reason)
+            # Inside the transaction: the event row is part of the transition's record, and a failed insert
+            # must roll the transition back. (It used to be written after the lock was released; the bus only
+            # writes a row, it makes no external call.)
+            log_soul_state_change(locked_soul, old_state, new_state, reason)
+
         # Sync back to self instance. Copy the raw year/month/day (not via
         # the birth_date/death_date properties) so a BCE death date isn't
         # silently dropped — the legacy property getter returns None for
@@ -690,11 +698,11 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
             locked_soul.current_state = SoulState.DISPOSED
             locked_soul.save()
 
-        from apps.events.services import EventService
-        EventService.log_settlement_corrected(
-            locked_soul, old_state, SoulState.DISPOSED, reason,
-            actor=getattr(user, "username", "system") if user else "system",
-        )
+            from apps.events.services import EventService
+            EventService.log_settlement_corrected(
+                locked_soul, old_state, SoulState.DISPOSED, reason,
+                actor=getattr(user, "username", "system") if user else "system",
+            )
         self.current_state = locked_soul.current_state
         return True
 

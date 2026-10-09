@@ -188,8 +188,9 @@ class DispositionService:
             from apps.realms.path import SoulPathService
             SoulPathService.enter(soul, realm, tenant_id=disposition.tenant_id)
 
-        from apps.events.services import log_disposition_created
-        log_disposition_created(disposition, auto_realm=auto_realm, overridden=overridden)
+            # Same transaction as the row it describes: a failed event insert rolls the disposition back.
+            from apps.events.services import log_disposition_created
+            log_disposition_created(disposition, auto_realm=auto_realm, overridden=overridden)
 
         return disposition
 
