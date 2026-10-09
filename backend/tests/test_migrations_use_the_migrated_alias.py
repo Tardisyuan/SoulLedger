@@ -126,7 +126,7 @@ def violations(path):
     return found
 
 
-@pytest.mark.parametrize("path", _migration_files(), ids=lambda p: f"{p.parent.parent.name}/{p.name}")
+@pytest.mark.parametrize("path", _migration_files(), ids=lambda p: f"{p.parts[-3]}/{p.name}")
 def test_runpython_uses_the_alias_being_migrated(path):
     found = violations(path)
     assert not found, "\n".join(f"{path.name}:{line} {fn}: {kind}" for fn, kind, line in found)
