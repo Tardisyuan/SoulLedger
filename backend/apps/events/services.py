@@ -50,12 +50,21 @@ class EventService:
         }, actor)
 
     @staticmethod
-    def log_disposition_created(disposition, actor: str = "system") -> None:
-        EventService.log(disposition.soul, "DISPOSITION_CREATED", {
+    def log_disposition_created(disposition, actor: str = "system", *, auto_realm=None, overridden=False) -> None:
+        payload = {
             "disposition_id": str(disposition.id),
             "realm": disposition.destination_realm.realm_code if disposition.destination_realm else None,
             "is_eternal": disposition.is_eternal,
-        }, actor)
+        }
+        if overridden:
+            # 审判台「戊 · 发落」: the officer's own choice, with the automatic
+            # routing recorded beside it (absent on automatic conclusions).
+            payload.update(
+                overridden=True,
+                auto_realm=auto_realm.realm_code if auto_realm else None,
+                sentence_years=disposition.sentence_years,
+            )
+        EventService.log(disposition.soul, "DISPOSITION_CREATED", payload, actor)
 
     @staticmethod
     def log_disposition_expired(disposition, actor: str = "system") -> None:
