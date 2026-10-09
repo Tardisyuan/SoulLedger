@@ -25,7 +25,7 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils import timezone
 
-from apps.scheduler import services
+from apps.scheduler import beat_guard, services
 from apps.scheduler.models import FINAL_STATUSES, RunStatus, RunTrigger, TaskRun
 
 logger = logging.getLogger(__name__)
@@ -141,6 +141,9 @@ def on_postrun(sender=None, task_id=None, retval=None, state=None, **_):
 # ---------------------------------------------------------------------------
 # Worker restart: what this hostname left RUNNING is gone
 # ---------------------------------------------------------------------------
+
+celery_signals.beat_init.connect(beat_guard.guard_beat, dispatch_uid="scheduler_beat_guard", weak=False)
+
 
 @celery_signals.worker_ready.connect
 def on_worker_ready(sender=None, **_):

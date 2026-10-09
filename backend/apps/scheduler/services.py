@@ -62,7 +62,17 @@ def _ensure_job(spec: registry.JobSpec, tenant, *, reset: bool, stats: Counter) 
         "one_off": False,
         "description": f"managed by setup_scheduled_tasks ({spec.key})",
     }
-    task = PeriodicTask.objects.filter(name=name).first()
+    tenant_id = tenant.pk if tenant is not None else None
+    # Find the row by identity first, then by the pre-slug name (adopts rows the
+    # old commands wrote), and rename it: the name is the Sentry monitor slug.
+    existing = ScheduledJob.objects.filter(job_key=spec.key, tenant_id=tenant_id).select_related("periodic_task").first()
+    task = existing.periodic_task if existing else PeriodicTask.objects.filter(name=spec.legacy_name(tenant)).first()
+    if task is None:
+        task = PeriodicTask.objects.filter(name=name).first()
+    if task is not None and task.name != name:
+        task.name = name
+        task.save(update_fields=["name"])
+        stats["updated"] += 1
     if task is None:
         task = PeriodicTask.objects.create(name=name, crontab=default_schedule(spec), enabled=True, **wanted)
         stats["created"] += 1
@@ -83,7 +93,6 @@ def _ensure_job(spec: registry.JobSpec, tenant, *, reset: bool, stats: Counter) 
             task.save()
             stats["updated"] += 1
 
-    tenant_id = tenant.pk if tenant is not None else None
     job, created = ScheduledJob.objects.get_or_create(
         periodic_task=task, defaults={"job_key": spec.key, "tenant_id": tenant_id}
     )
