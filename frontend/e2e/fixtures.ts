@@ -1601,6 +1601,10 @@ export class ApiMock {
     }));
     // 忘记密码: one body for every username, as the backend answers.
     this.on("POST", "/auth/password-help/", { detail: "请求已受理" });
+    // Profile 「丁 · 两步验证」: not enabled, not required for this user.
+    this.on("GET", "/auth/mfa/status/", {
+      enabled: false, required: false, confirmed_at: null, last_used_at: null, last_used_method: "", recovery_codes_remaining: 0,
+    });
     this.on("GET", "/auth/profile/", {
       id: TEST_USER.id,
       username: TEST_USER.username,
@@ -1847,6 +1851,9 @@ function corsHeaders(request: Request): Record<string, string> {
     "Access-Control-Allow-Origin": request.headers()["origin"] ?? "*",
     "Access-Control-Allow-Methods": "GET,POST,PUT,PATCH,DELETE,OPTIONS",
     "Access-Control-Allow-Headers": "authorization,content-type",
+    // login and 2FA verify send `withCredentials` (the remembered-device cookie), and the backend
+    // answers with CORS_ALLOW_CREDENTIALS = True. Without this header the browser drops the response.
+    "Access-Control-Allow-Credentials": "true",
     "Access-Control-Max-Age": "86400",
   };
 }

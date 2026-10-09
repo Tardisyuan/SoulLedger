@@ -7,7 +7,7 @@
 - 确认重置:跑密码校验器、吊销所有刷新令牌、清「不再询问」设备令牌但**不关两步验证**、写审计行、发改密通知。
 """
 import re
-from datetime import timedelta
+from datetime import datetime, timedelta
 from unittest.mock import patch
 
 import pytest
@@ -165,8 +165,9 @@ class TestConfirm:
     def test_expired_tampered_and_unknown_links_are_one_refusal(self, officer):
         _ask("pw_officer")
         uid, token = _link_params()
+        # The token generator's clock is naive local time (`datetime.now()`), not timezone.now().
         with patch("django.contrib.auth.tokens.PasswordResetTokenGenerator._now",
-                   return_value=timezone.now() + timedelta(hours=2)):
+                   return_value=datetime.now() + timedelta(hours=2)):
             expired = _confirm(uid, token)
         tampered = _confirm(uid, token[:-1] + ("a" if token[-1] != "a" else "b"))
         unknown = _confirm("MTIzNDU2", token)
