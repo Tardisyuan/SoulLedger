@@ -32,6 +32,10 @@ def _enable(user):
     outcome, codes = mfa.confirm_setup(row, _code(row.secret))
     assert outcome == "ok"
     mfa.complete_setup(row)
+    # Setup consumed the current time step, so a login code in the same 30 s would be a replay.
+    # Tests that log in right after enabling mean a later window: forget the setup step.
+    row.last_step = None
+    row.save(update_fields=["last_step"])
     row.refresh_from_db()
     return row, codes
 
