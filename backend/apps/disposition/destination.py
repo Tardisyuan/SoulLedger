@@ -130,6 +130,9 @@ def resolve_placement(judgment, verdict, *, realm_id=None, term_years=None, eter
                 raise DestinationRefusedError(
                     f"{realm.realm_code} is full ({held}/{realm.capacity})", "realm_full", status=409)
         placement["realm"] = realm
+        # The automatic answer, kept next to the chosen one for the audit event.
+        placement["auto_realm"] = DispositionService.route_realm(
+            soul, verdict, judgment.judgment_method, judgment=judgment)
     else:
         realm = DispositionService.route_realm(judgment.soul, verdict, judgment.judgment_method, judgment=judgment)
 
