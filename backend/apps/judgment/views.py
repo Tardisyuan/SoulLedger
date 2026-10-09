@@ -24,7 +24,7 @@ from apps.disposition.destination import DestinationRefusedError, destination_op
 from apps.disposition.services import DispositionService
 from apps.judgment import claims
 from apps.judgment.claims import ClaimRefusedError
-from apps.judgment.models import Judgment, JudgmentKind, Statute, Verdict
+from apps.judgment.models import Judgment, JudgmentComment, JudgmentKind, Statute, Verdict
 from apps.judgment.precedents import DEFAULT_LIMIT as DEFAULT_PRECEDENTS
 from apps.judgment.precedents import MAX_LIMIT as MAX_PRECEDENTS
 from apps.judgment.precedents import precedents_for
@@ -37,6 +37,7 @@ from apps.judgment.serializers import (
     JudgmentCitationSerializer,
     JudgmentCitationWriteSerializer,
     JudgmentClaimRefusalSerializer,
+    JudgmentCommentSerializer,
     JudgmentConcludeSerializer,
     JudgmentCourtSerializer,
     JudgmentDeferSerializer,
@@ -232,6 +233,9 @@ class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSe
         'citations': ['judgment.read'],
         # 「据 · 先例」是读:给判官看的参考,不改任何东西。
         'precedents': ['judgment.read'],
+        # 评议:能读这件案子的人就能看、能写 —— 它不改案子。
+        'comments': ['judgment.read'],
+        'add_comment': ['judgment.read'],
         'cite_statute': ['judgment.execute'],
         'uncite': ['judgment.execute'],
         # Ruling evidence in or out and saving the verdict draft are part of
@@ -1096,6 +1100,36 @@ class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSe
                 context=self.get_serializer_context(),
             ).data
         )
+
+    @extend_schema(responses=JudgmentCommentSerializer(many=True))
+    @action(detail=True, methods=["get"], url_path="comments", pagination_class=None)
+    def comments(self, request, pk=None):
+        """评议, oldest first. `GET /api/v1/judgment/{id}/comments/` (tenant-scoped through `get_object`)."""
+        judgment = self.get_object()
+        return Response(JudgmentCommentSerializer(judgment.comments.select_related("author"), many=True).data)
+
+    @extend_schema(request=JudgmentCommentSerializer, responses={201: JudgmentCommentSerializer})
+    @comments.mapping.post
+    def add_comment(self, request, pk=None):
+        """Leave a comment. `POST /api/v1/judgment/{id}/comments/` `{"body": "..."}` (1..2000 chars)."""
+        from apps.audit.models import AuditAction, AuditLog
+
+        judgment = self.get_object()
+        serializer = JudgmentCommentSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        comment = JudgmentComment.objects.create(
+            judgment=judgment, author=request.user, tenant_id=judgment.tenant_id,
+            body=serializer.validated_data["body"],
+        )
+        AuditLog.objects.create(
+            tenant=judgment.tenant, user=request.user, action=AuditAction.CREATE,
+            resource="judgment.comment", resource_id=str(judgment.id),
+            description=f"评议:{judgment.case_number}"[:500],
+            changes={"comment": str(comment.id), "length": len(comment.body)},
+            ip_address=request.META.get("REMOTE_ADDR"),
+            user_agent=request.META.get("HTTP_USER_AGENT", "")[:500],
+        )
+        return Response(JudgmentCommentSerializer(comment).data, status=status.HTTP_201_CREATED)
 
     @extend_schema(
         request=JudgmentCitationWriteSerializer,
