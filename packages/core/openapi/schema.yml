@@ -34779,6 +34779,12 @@ components:
         node_name:
           type: string
           description: 仅审批节点:轮到的节点名。
+        soul_code:
+          type: string
+          description: 仅转生申请:此时 `title` 是灵魂名,灵魂码作副行。
+        is_appeal:
+          type: boolean
+          description: 仅转生申请:是否申诉(客户端据此选标题措辞)。
       required:
       - created_at
       - id
@@ -34813,6 +34819,12 @@ components:
           type: string
           format: date-time
           nullable: true
+        soul_code:
+          type: string
+          description: 仅转生申请:此时 `title` 是灵魂名,灵魂码作副行。
+        is_appeal:
+          type: boolean
+          description: 仅转生申请:是否申诉(客户端据此选标题措辞)。
         workflow_id:
           type: string
           description: 审批节点与转生申请:决定走 workflows/<id>/approve_node/。

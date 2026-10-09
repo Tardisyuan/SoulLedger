@@ -16237,6 +16237,10 @@ export interface components {
             target: components["schemas"]["TodoTarget"];
             /** @description 仅审批节点:轮到的节点名。 */
             node_name?: string;
+            /** @description 仅转生申请:此时 `title` 是灵魂名,灵魂码作副行。 */
+            soul_code?: string;
+            /** @description 仅转生申请:是否申诉(客户端据此选标题措辞)。 */
+            is_appeal?: boolean;
         };
         /**
          * @description `state`:actionable / already_handled / deadline_passed / permission_changed
@@ -16254,6 +16258,10 @@ export interface components {
             handled_by: components["schemas"]["HandledBy"] | null;
             /** Format: date-time */
             handled_at: string | null;
+            /** @description 仅转生申请:此时 `title` 是灵魂名,灵魂码作副行。 */
+            soul_code?: string;
+            /** @description 仅转生申请:是否申诉(客户端据此选标题措辞)。 */
+            is_appeal?: boolean;
             /** @description 审批节点与转生申请:决定走 workflows/<id>/approve_node/。 */
             workflow_id?: string;
             /** @description 待决的节点;决定时作为 node_id 传回。 */

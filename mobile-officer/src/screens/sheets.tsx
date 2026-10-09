@@ -10,12 +10,14 @@ import { useCallback, useState } from "react";
 import { View } from "react-native";
 
 import { ActionButton, Row, Segmented } from "../kit";
-import { decisionFailure, failureReasonKey, passVerdictsOf, reasonMissing, submitDecision, type FailureReason, type Verdict } from "../rules";
+import { decisionFailure, failureReasonKey, passVerdictsOf, reasonMissing, submitDecision, todoTitle, type FailureReason, type Verdict } from "../rules";
 import { Button, FieldError, Input, Notice, Sheet, Txt, space, useI18n, useRemote, useTheme, useToast } from "../shared";
 
 export interface CooldownFacts {
   reason: string;
   remainingDays: number;
+  /** APPROVED: `remainingDays` is then the cooldown left now, with the approval applied. */
+  approved: boolean;
   /** What the soul hopes remains after approval; pre-fills the days field. */
   desiredDays: number | null;
 }
@@ -78,7 +80,7 @@ export function DecisionSheet({
     <Sheet open={open} onClose={onClose} edge={theme.hair} closeLabel={t("soul_app.common.cancel")}>
       <View testID={`sheet-${verdict}`} style={{ padding: space[5], gap: space[4] }}>
         <Txt variant="title">{t(verdict === "approve" ? "officer_app.confirm.approve_title" : "officer_app.confirm.reject_title")}</Txt>
-        <Txt variant="bodyLg">{detail.title}</Txt>
+        <Txt variant="bodyLg">{todoTitle(detail, t)}</Txt>
         <Txt variant="body" tone="muted">
           {verdict === "approve"
             ? t(`officer_app.confirm.approve_body.${detail.kind}`)

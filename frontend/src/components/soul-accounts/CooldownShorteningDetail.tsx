@@ -152,7 +152,8 @@ export function CooldownShorteningDetail({ row: listed, onClose }: { row: Office
             )
           )}
           {field(
-            t("soul_accounts.cooldown.fields.remaining"),
+            // After an approval the figure is the cooldown left with it applied, not the request-time days.
+            r.status === "APPROVED" ? t("soul_accounts.cooldown.fields.remaining_after") : t("soul_accounts.cooldown.fields.remaining"),
             ended ? `○ ${t("soul_accounts.cooldown.over")}` : t("soul_accounts.cooldown.remaining_days", { n: String(r.remaining_days) })
           )}
           {r.status === "APPROVED" &&

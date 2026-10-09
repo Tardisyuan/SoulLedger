@@ -2,6 +2,7 @@
 
 import { type ApprovalWorkflow } from "@soulledger/core/api";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { workflowTitle } from "@/src/components/workflow/workflowTitle";
 import { CaseNumber, DomainEnum, DomainText, MissingValue } from "@/src/components/ui/DomainValue";
 
 /**
@@ -38,7 +39,7 @@ export function WorkflowInfoCard({
         <dd className={`${DD} font-medium`}>{workflow.soul_name || workflow.soul}</dd>
         <dt className={DT}>{t("workflow.detail.template")}</dt>
         <dd className={DD}>
-          {workflow.workflow_name}
+          {workflowTitle(workflow, t)}
           {workflow.template_version_number != null && (
             <span className="ml-2 font-mono text-xs text-[oklch(var(--color-ink-muted))]">v{workflow.template_version_number}</span>
           )}

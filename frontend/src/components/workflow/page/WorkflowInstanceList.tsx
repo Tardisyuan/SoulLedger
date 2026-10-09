@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { type ApprovalWorkflowListItem } from "@soulledger/core/api";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { workflowTitle } from "@/src/components/workflow/workflowTitle";
 import { ListSkeleton } from "@/components/ui/skeleton";
 import { DomainEnum, MissingValue } from "@/src/components/ui/DomainValue";
 import { Badge } from "@/src/components/ui/Badge";
@@ -56,7 +57,7 @@ export function WorkflowInstanceList({
           >
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-sm font-medium text-[oklch(var(--color-ink))]">{wf.workflow_name}</div>
+                <div className="text-sm font-medium text-[oklch(var(--color-ink))]">{workflowTitle(wf, t)}</div>
                 <div className="text-xs text-[oklch(var(--color-ink-muted))] mt-1">
                   <DomainEnum namespace="workflow.case_types" value={wf.case_type} />{" · "}
                   {/* `wf.soul` is the primary key. This row used to print the

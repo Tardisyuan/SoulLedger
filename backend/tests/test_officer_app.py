@@ -154,6 +154,25 @@ def test_todo_lists_the_four_kinds_scoped_to_the_hall_and_the_role(cn_tenant, eu
     assert [g["count"] for g in empty.values()] == [0, 0, 0, 0]
 
 
+def test_rebirth_item_title_is_the_soul_name_with_the_code_beside_it(cn_tenant, judge_user,
+                                                                    django_capture_on_commit_callbacks):
+    """标题「转生申请 · 名」由客户端按语言包拼;后端给灵魂名 + 灵魂码,不再把「转生申请: 码」当标题。
+    库里的 workflow_name 不变(检索、审计在用)。"""
+    soul_account, soul_client = rebirth_ready_soul(cn_tenant, name="转生乙")
+    with django_capture_on_commit_callbacks(execute=True):
+        assert soul_client.post("/api/v1/me/rebirth-applications/", {"desired_form": "HUMAN"}, format="json")\
+            .status_code == 201
+    client = officer_client(judge_user)
+    item = client.get(TODO).data["rebirths"]["items"][0]
+    assert item["title"] == "转生乙"
+    assert item["soul_code"] == soul_account.soul.soul_code and item["is_appeal"] is False
+    detail = client.get(f"/api/v1/officer-app/items/rebirth/{item['id']}/").data
+    assert detail["title"] == "转生乙" and detail["soul_code"] == soul_account.soul.soul_code
+    from apps.workflow.models import ApprovalWorkflow
+
+    assert ApprovalWorkflow._base_manager.get(pk=detail["workflow_id"]).workflow_name.startswith("转生申请: ")
+
+
 def test_todo_counts_dispatch_proposals_for_the_target_hall(cn_tenant, eu_tenant, judge_user):
     from apps.dispatch.models import DispatchRecord, DispatchStatus
 

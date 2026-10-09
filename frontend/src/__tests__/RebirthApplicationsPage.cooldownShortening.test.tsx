@@ -285,6 +285,24 @@ it("an approved request shows the new end date with the original beside it", asy
   expect(within(dialog).getByText("2026-10-13 (原 10-26)")).toBeInTheDocument();
 });
 
+it("after an approval the remaining figure is labelled as the days left with it applied; before, the plain label", async () => {
+  as("GUARDIAN", "workflow.read");
+  soulAccountsApi.cooldownShortenings.mockResolvedValue(
+    page([shortening({ status: "APPROVED", approved_days: 3, remaining_days: 3, decided_at: "2026-10-10T12:00:00Z" })])
+  );
+  renderPage();
+  await openTab();
+  const dialog = await openDetail();
+  expect(within(dialog).getByText(tZh("soul_accounts.cooldown.fields.remaining_after"))).toBeInTheDocument();
+  expect(within(dialog).queryByText(tZh("soul_accounts.cooldown.fields.remaining"))).toBeNull();
+  cleanup();
+  soulAccountsApi.cooldownShortenings.mockResolvedValue(page([shortening()]));
+  renderPage();
+  await openTab();
+  const pending = await openDetail();
+  expect(within(pending).getByText(tZh("soul_accounts.cooldown.fields.remaining"))).toBeInTheDocument();
+});
+
 it("a decided or expired request offers no decision even to an approver", async () => {
   as("JUDGE", "workflow.read", "workflow.approve");
   soulAccountsApi.cooldownShortenings.mockResolvedValue(
