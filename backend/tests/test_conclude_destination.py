@@ -464,3 +464,26 @@ def test_after_is_tenant_isolated(cn_judge, eu_judge, three, eu_tenant):
     assert _id(_next(eu_judge)) is not None
     assert _id(_next(eu_judge, after=str(a.id))) is None
     assert _id(_next(cn_judge, after=str(c.id))) is None
+
+
+# ── 审计:自动值与所选值并排 ────────────────────────────────────────────────
+
+
+def test_an_override_is_audited_with_the_automatic_realm_beside_it(cn_judge, cn_realms, cn_tenant):
+    from apps.events.models import SoulEvent
+
+    case = _case(cn_tenant)
+    realm = cn_realms["hell5"]
+    assert _conclude(cn_judge, case, destination_realm_id=str(realm.pk), term_years=3).status_code == 200
+    payload = SoulEvent.objects.filter(soul=case.soul, event_type="DISPOSITION_CREATED").get().payload
+    assert payload["overridden"] is True
+    assert (payload["realm"], payload["auto_realm"], payload["sentence_years"]) == (HELL_5, "DY_COURT_02_CHUJIANG", 3)
+
+
+def test_an_automatic_conclusion_carries_no_override_marker(cn_judge, cn_realms, cn_tenant):
+    from apps.events.models import SoulEvent
+
+    case = _case(cn_tenant)
+    assert _conclude(cn_judge, case).status_code == 200
+    payload = SoulEvent.objects.filter(soul=case.soul, event_type="DISPOSITION_CREATED").get().payload
+    assert "overridden" not in payload and "auto_realm" not in payload
