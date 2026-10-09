@@ -123,6 +123,7 @@ TERRACE_MEMORY_RESET = "NONE"
 
 
 def forwards(apps, schema_editor):
+    alias = schema_editor.connection.alias
     realm = apps.get_model("realms", "Realm")
 
     # A database with no cosmology yet gets nothing written to it: populating a
@@ -130,24 +131,24 @@ def forwards(apps, schema_editor):
     # hands the seeder rows it did not create — untenanted, and present on a
     # database `seed_mythology --dry-run` is entitled to find empty. The same
     # guard realms/0012 and 0013 carry, for the same reason.
-    if not realm._base_manager.filter(civilization="EUROPEAN").exists():
+    if not realm._base_manager.using(alias).filter(civilization="EUROPEAN").exists():
         return
 
-    parent = realm._base_manager.filter(realm_code=PARENT_CODE).first()
+    parent = realm._base_manager.using(alias).filter(realm_code=PARENT_CODE).first()
 
     # Tenant is taken from a sibling European realm rather than guessed from a
     # tenant code, so the rows do not land under an owner nobody named. If the
     # siblings are themselves untenanted these inherit that and the seeder fills
     # it in on its next run.
     sibling = (
-        realm._base_manager.filter(civilization="EUROPEAN")
+        realm._base_manager.using(alias).filter(civilization="EUROPEAN")
         .exclude(tenant__isnull=True)
         .first()
     )
     tenant_id = sibling.tenant_id if sibling else None
 
     for realm_code, tier, name_local, name_zh, name_en, name_egy in TERRACES:
-        realm._base_manager.get_or_create(
+        realm._base_manager.using(alias).get_or_create(
             realm_code=realm_code,
             defaults={
                 "civilization": "EUROPEAN",
@@ -172,14 +173,15 @@ def forwards(apps, schema_editor):
 
     # Rows that already existed — created by a `seed_mythology` run that got
     # here before this migration did — keep their posting unless they have none.
-    realm._base_manager.filter(
+    realm._base_manager.using(alias).filter(
         realm_code__in=[row[0] for row in TERRACES], parent_realm__isnull=True
     ).update(parent_realm=parent.pk)
 
 
 def backwards(apps, schema_editor):
+    alias = schema_editor.connection.alias
     realm = apps.get_model("realms", "Realm")
-    realm._base_manager.filter(
+    realm._base_manager.using(alias).filter(
         realm_code__in=[row[0] for row in TERRACES]
     ).delete()
 

@@ -12,12 +12,13 @@ from django.db import migrations, models
 
 
 def backfill(apps, schema_editor):
+    alias = schema_editor.connection.alias
     RebirthApplication = apps.get_model("soul_accounts", "RebirthApplication")
-    rows = RebirthApplication.objects.filter(appeal_workflow__isnull=False, first_decided_at__isnull=True)
+    rows = RebirthApplication.objects.using(alias).filter(appeal_workflow__isnull=False, first_decided_at__isnull=True)
     for application in rows.select_related("workflow"):
         if application.workflow.completed_at is not None:
             application.first_decided_at = application.workflow.completed_at
-            application.save(update_fields=["first_decided_at"])
+            application.save(using=alias, update_fields=["first_decided_at"])
 
 
 class Migration(migrations.Migration):

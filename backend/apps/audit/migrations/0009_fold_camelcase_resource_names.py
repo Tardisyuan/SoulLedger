@@ -36,17 +36,19 @@ FOLDS = [
 
 
 def forward(apps, schema_editor):
+    alias = schema_editor.connection.alias
     AuditLog = apps.get_model("audit", "AuditLog")
     # 0008_alter_auditlog_managers renamed the default manager to
     # all_objects, so the historical model has no `objects`.
     for camel, lower in FOLDS:
-        AuditLog.all_objects.filter(resource=camel).update(resource=lower)
+        AuditLog.all_objects.using(alias).filter(resource=camel).update(resource=lower)
 
 
 def backward(apps, schema_editor):
+    alias = schema_editor.connection.alias
     AuditLog = apps.get_model("audit", "AuditLog")
     for camel, lower in FOLDS:
-        AuditLog.all_objects.filter(resource=lower).update(resource=camel)
+        AuditLog.all_objects.using(alias).filter(resource=lower).update(resource=camel)
 
 
 class Migration(migrations.Migration):

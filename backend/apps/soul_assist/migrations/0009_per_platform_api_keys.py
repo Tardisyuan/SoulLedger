@@ -23,20 +23,22 @@ def _slot(values):
 
 
 def forward(apps, schema_editor):
+    alias = schema_editor.connection.alias
     AssistConfig = apps.get_model("soul_assist", "AssistConfig")
-    for row in AssistConfig.objects.exclude(api_key_set_at=None):
+    for row in AssistConfig.objects.using(alias).exclude(api_key_set_at=None):
         row.api_keys = json.dumps({_slot(row.values or {}): {"key": row.api_key,
                                                              "set_at": row.api_key_set_at.isoformat()}})
-        row.save(update_fields=["api_keys"])
+        row.save(using=alias, update_fields=["api_keys"])
 
 
 def backward(apps, schema_editor):
+    alias = schema_editor.connection.alias
     AssistConfig = apps.get_model("soul_assist", "AssistConfig")
-    for row in AssistConfig.objects.exclude(api_keys=""):
+    for row in AssistConfig.objects.using(alias).exclude(api_keys=""):
         entry = json.loads(row.api_keys).get(_slot(row.values or {}))
         if entry is not None:
             row.api_key, row.api_key_set_at = entry["key"], parse_datetime(entry["set_at"])
-            row.save(update_fields=["api_key", "api_key_set_at"])
+            row.save(using=alias, update_fields=["api_key", "api_key_set_at"])
 
 
 class Migration(migrations.Migration):

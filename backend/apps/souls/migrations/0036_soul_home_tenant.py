@@ -11,8 +11,9 @@ from django.db.models import F
 
 
 def backfill(apps, schema_editor):
+    alias = schema_editor.connection.alias
     Soul = apps.get_model("souls", "Soul")
-    Soul._base_manager.filter(home_tenant__isnull=True).update(home_tenant=F("tenant"))
+    Soul._base_manager.using(alias).filter(home_tenant__isnull=True).update(home_tenant=F("tenant"))
 
 
 class Migration(migrations.Migration):

@@ -22,6 +22,7 @@ from apps.realms.models import CommediaRegion, Realm, RealmFork, RealmKind, Soul
 from apps.realms.path import SoulPathService
 from apps.souls.models import Soul, SoulState
 from tests import sentence_plan_support as plan
+from tests.migration_schema_editor import SCHEMA_EDITOR
 from tests.soul_account_support import officer_client
 
 backfill = import_module("apps.judgment.migrations.0024_backfill_judgment_realm")
@@ -152,17 +153,17 @@ def test_the_weighing_fork_migration_moves_only_rows_still_holding_the_old_value
         return {r.realm_code: (r.tier, r.order, r.fork) for r in Realm.all_objects.filter(civilization="EGYPTIAN")}
 
     new = snap()
-    _duat_mig.backwards(registry, None)
+    _duat_mig.backwards(registry, SCHEMA_EDITOR)
     old = snap()
     assert (old["EG_HALL_TWO_TRUTHS"], old["EG_SEVEN_ARRWT"]) == ((2, None, None), (3, None, None))
     assert {v[1:] for v in old.values()} == {(None, None)}
-    _duat_mig.forwards(registry, None)
+    _duat_mig.forwards(registry, SCHEMA_EDITOR)
     assert snap() == new
 
     # 有人手改过的列:迁移不碰它。
-    _duat_mig.backwards(registry, None)
+    _duat_mig.backwards(registry, SCHEMA_EDITOR)
     Realm.all_objects.filter(realm_code="EG_HALL_TWO_TRUTHS").update(tier=7)
-    _duat_mig.forwards(registry, None)
+    _duat_mig.forwards(registry, SCHEMA_EDITOR)
     assert snap()["EG_HALL_TWO_TRUTHS"] == (7, 3, None)
 
 
@@ -172,7 +173,7 @@ def test_the_weighing_fork_migration_refuses_to_reverse_over_a_stray_pass_or_fai
 
     Realm.all_objects.filter(realm_code="GR_TARTARUS").update(fork="FAIL")
     with pytest.raises(RuntimeError, match="GR_TARTARUS"):
-        _duat_mig.backwards(registry, None)
+        _duat_mig.backwards(registry, SCHEMA_EDITOR)
 
 
 @pytest.mark.django_db
@@ -181,10 +182,10 @@ def test_the_migration_that_drops_middle_refuses_a_row_still_holding_it(seeded):
     from django.apps import apps as registry
 
     check = import_module("apps.realms.migrations.0020_remove_greek_fork_middle").refuse_if_any_row_takes_middle
-    check(registry, None)  # the seed has none
+    check(registry, SCHEMA_EDITOR)  # the seed has none
     Realm.objects.filter(realm_code="GR_TARTARUS").update(fork="MIDDLE")
     with pytest.raises(RuntimeError, match="GR_TARTARUS"):
-        check(registry, None)
+        check(registry, SCHEMA_EDITOR)
 
 
 @pytest.mark.django_db
@@ -277,7 +278,7 @@ def _realm_of(rows):
 @pytest.mark.django_db
 def test_backfill_maps_exact_court_names_and_nothing_else(cases):
     registry, rows = cases
-    backfill.forwards(registry, None)
+    backfill.forwards(registry, SCHEMA_EDITOR)
     got = _realm_of(rows)
     assert {k: v for k, v in got.items() if v is not None} == {
         "name_local": "DY_COURT_01_QINGUANG",
@@ -295,8 +296,8 @@ def test_backfill_maps_exact_court_names_and_nothing_else(cases):
 @pytest.mark.django_db
 def test_backfill_reverse_clears_only_what_forward_set(cases):
     registry, rows = cases
-    backfill.forwards(registry, None)
-    backfill.backwards(registry, None)
+    backfill.forwards(registry, SCHEMA_EDITOR)
+    backfill.backwards(registry, SCHEMA_EDITOR)
     got = _realm_of(rows)
     assert {k: v for k, v in got.items() if v is not None} == {"already_set": "DY_COURT_09_PINGDENG"}
 
@@ -305,7 +306,7 @@ def test_backfill_reverse_clears_only_what_forward_set(cases):
 def test_backfill_drops_a_name_two_courts_share(cases):
     registry, rows = cases
     Realm.all_objects.filter(pk=_court(2).pk).update(name_local="第一殿")
-    backfill.forwards(registry, None)
+    backfill.forwards(registry, SCHEMA_EDITOR)
     got = _realm_of(rows)
     assert got["name_local"] is None, "an ambiguous court name was resolved anyway"
     assert got["name_zh"] == "DY_COURT_03_SONGDI"
@@ -315,7 +316,7 @@ def test_backfill_drops_a_name_two_courts_share(cases):
 def test_backfill_ignores_a_retired_court(cases):
     registry, rows = cases
     Realm.all_objects.filter(pk=_court(1).pk).update(is_deleted=True)
-    backfill.forwards(registry, None)
+    backfill.forwards(registry, SCHEMA_EDITOR)
     assert _realm_of(rows)["name_local"] is None
 
 

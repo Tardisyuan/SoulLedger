@@ -42,24 +42,26 @@ MENU_DEFAULTS = {
 }
 
 
-def _live(menu_model):
-    return menu_model.all_objects.filter(is_deleted=False)
+def _live(menu_model, alias):
+    return menu_model.all_objects.using(alias).filter(is_deleted=False)
 
 
 def add_scheduler_menu(apps, schema_editor):
+    alias = schema_editor.connection.alias
     Menu = apps.get_model("menus", "Menu")
-    parent = _live(Menu).filter(name=PARENT_DIRECTORY, menu_type="DIRECTORY").first()
-    Menu.all_objects.get_or_create(
+    parent = _live(Menu, alias).filter(name=PARENT_DIRECTORY, menu_type="DIRECTORY").first()
+    Menu.all_objects.using(alias).get_or_create(
         path=MENU_PATH, is_deleted=False, defaults={**MENU_DEFAULTS, "parent": parent}
     )
-    _live(Menu).filter(path=MENU_PATH).exclude(menu_type="DIRECTORY").update(
+    _live(Menu, alias).filter(path=MENU_PATH).exclude(menu_type="DIRECTORY").update(
         parent=parent, order=MENU_DEFAULTS["order"]
     )
 
 
 def remove_scheduler_menu(apps, schema_editor):
+    alias = schema_editor.connection.alias
     Menu = apps.get_model("menus", "Menu")
-    _live(Menu).filter(path=MENU_PATH).exclude(menu_type="DIRECTORY").delete()
+    _live(Menu, alias).filter(path=MENU_PATH).exclude(menu_type="DIRECTORY").delete()
 
 
 class Migration(migrations.Migration):

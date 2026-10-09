@@ -118,24 +118,24 @@ MOVED_REALM_CODES = ["EU_PLATO_MEADOW"]
 MOVED_ACTOR_NAMES = ["Hades", "Aeacus", "Rhadamanthus"]
 
 
-def _rows(apps, civilization):
+def _rows(apps, alias, civilization):
     """The realm and actor querysets this migration owns, at `civilization`."""
     realm = apps.get_model("realms", "Realm")
     actor = apps.get_model("actors", "Actor")
     return (
-        realm._base_manager.filter(
+        realm._base_manager.using(alias).filter(
             realm_code__in=MOVED_REALM_CODES, civilization=civilization
         ),
-        actor._base_manager.filter(
+        actor._base_manager.using(alias).filter(
             name__in=MOVED_ACTOR_NAMES, civilization=civilization
         ),
     )
 
 
-def _move(apps, *, from_civilization, to_civilization, from_tenant_code,
+def _move(apps, alias, *, from_civilization, to_civilization, from_tenant_code,
           to_tenant_code, to_tenant_display_name):
     tenant = apps.get_model("tenants", "Tenant")
-    realms, actors = _rows(apps, from_civilization)
+    realms, actors = _rows(apps, alias, from_civilization)
 
     # Primary keys first: the second update below has to address the same rows
     # after the first has changed the column it selected them by.
@@ -148,22 +148,22 @@ def _move(apps, *, from_civilization, to_civilization, from_tenant_code,
 
     realm = apps.get_model("realms", "Realm")
     actor = apps.get_model("actors", "Actor")
-    realm._base_manager.filter(pk__in=realm_pks).update(civilization=to_civilization)
-    actor._base_manager.filter(pk__in=actor_pks).update(civilization=to_civilization)
+    realm._base_manager.using(alias).filter(pk__in=realm_pks).update(civilization=to_civilization)
+    actor._base_manager.using(alias).filter(pk__in=actor_pks).update(civilization=to_civilization)
 
-    source_tenant = tenant._base_manager.filter(code=from_tenant_code).first()
+    source_tenant = tenant._base_manager.using(alias).filter(code=from_tenant_code).first()
     if source_tenant is None:
         # Nothing to re-own. Rows with a NULL tenant, or with an owner nobody
         # named, are left exactly as they are — see the docstring.
         return
-    owned_realms = realm._base_manager.filter(pk__in=realm_pks, tenant=source_tenant)
-    owned_actors = actor._base_manager.filter(pk__in=actor_pks, tenant=source_tenant)
+    owned_realms = realm._base_manager.using(alias).filter(pk__in=realm_pks, tenant=source_tenant)
+    owned_actors = actor._base_manager.using(alias).filter(pk__in=actor_pks, tenant=source_tenant)
     if not owned_realms.exists() and not owned_actors.exists():
         # Do not create the destination tenant as a side effect of a migration
         # that had no owner to transfer. org/0004's rule.
         return
 
-    destination, _ = tenant._base_manager.get_or_create(
+    destination, _ = tenant._base_manager.using(alias).get_or_create(
         code=to_tenant_code, defaults={"display_name": to_tenant_display_name}
     )
     owned_realms.update(tenant=destination)
@@ -173,6 +173,7 @@ def _move(apps, *, from_civilization, to_civilization, from_tenant_code,
 def forwards(apps, schema_editor):
     _move(
         apps,
+        schema_editor.connection.alias,
         from_civilization=EUROPEAN,
         to_civilization=GREEK,
         from_tenant_code=EUROPEAN_TENANT_CODE,
@@ -184,6 +185,7 @@ def forwards(apps, schema_editor):
 def backwards(apps, schema_editor):
     _move(
         apps,
+        schema_editor.connection.alias,
         from_civilization=GREEK,
         to_civilization=EUROPEAN,
         from_tenant_code=GREEK_TENANT_CODE,

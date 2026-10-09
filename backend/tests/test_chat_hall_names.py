@@ -7,6 +7,7 @@ from django.apps import apps as live_apps
 from apps.authentication.models import User
 from apps.tenants.models import Tenant
 from tests.chat_support import matrix, room_of  # noqa: F401
+from tests.migration_schema_editor import SCHEMA_EDITOR
 from tests.soul_account_support import officer_client, ready_soul
 
 pytestmark = pytest.mark.django_db
@@ -97,8 +98,8 @@ def test_the_default_hall_names_fill_only_blanks(cn_tenant, eu_tenant):
     fill = importlib.import_module("apps.tenants.migrations.0012_default_hall_names").fill
     eu_tenant.hall_name = "运维改过的名字"
     eu_tenant.save()
-    fill(live_apps, None)
-    fill(live_apps, None)
+    fill(live_apps, SCHEMA_EDITOR)
+    fill(live_apps, SCHEMA_EDITOR)
     cn, eu = Tenant.objects.get(pk=cn_tenant.pk), Tenant.objects.get(pk=eu_tenant.pk)
     assert (cn.hall_name, cn.hall_name_en, cn.hall_name_egy) == ("第五殿", "The Fifth Court", "Yanluo Qedi")
     assert (eu.hall_name, eu.hall_name_en) == ("运维改过的名字", "Purgatory")
@@ -110,11 +111,11 @@ def test_the_section_ten_hall_name_moves_only_the_old_value(cn_tenant, eu_tenant
     mig = importlib.import_module("apps.tenants.migrations.0013_egy_hall_name_section_ten")
     _hall(cn_tenant, egy="Yanluo Qedi")
     _hall(eu_tenant, egy="Ta Hesmen")
-    mig.forwards(live_apps, None)
+    mig.forwards(live_apps, SCHEMA_EDITOR)
     assert Tenant.objects.get(pk=cn_tenant.pk).hall_name_egy == "Yanluo Wesekhet"
-    mig.backwards(live_apps, None)
+    mig.backwards(live_apps, SCHEMA_EDITOR)
     assert Tenant.objects.get(pk=cn_tenant.pk).hall_name_egy == "Yanluo Qedi"
     _hall(cn_tenant, egy="运维改过的名字")
-    mig.forwards(live_apps, None)
+    mig.forwards(live_apps, SCHEMA_EDITOR)
     assert Tenant.objects.get(pk=cn_tenant.pk).hall_name_egy == "运维改过的名字"
     assert Tenant.objects.get(pk=eu_tenant.pk).hall_name_egy == "Ta Hesmen"

@@ -6,6 +6,7 @@ from django.apps import apps as django_apps
 
 from apps.authentication.models import User
 from apps.menus.models import Menu
+from tests.migration_schema_editor import SCHEMA_EDITOR
 from tests.perm_support import seeded_menus
 from tests.soul_account_support import officer_client
 
@@ -67,9 +68,9 @@ def test_guardian_is_not_offered_a_page_it_would_get_403_on(cn_tenant):
 
 
 def test_the_migration_is_reversible_and_idempotent():
-    migration.remove_menus(django_apps, None)
+    migration.remove_menus(django_apps, SCHEMA_EDITOR)
     assert not Menu.objects.filter(path__in=["/soul-credentials", "/rebirth-applications"]).exists()
-    migration.add_menus(django_apps, None)
-    migration.add_menus(django_apps, None)
+    migration.add_menus(django_apps, SCHEMA_EDITOR)
+    migration.add_menus(django_apps, SCHEMA_EDITOR)
     assert Menu.objects.filter(path="/soul-credentials").count() == 1
     assert Menu.objects.filter(path="/rebirth-applications").count() == 1

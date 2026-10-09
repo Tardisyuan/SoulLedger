@@ -100,14 +100,14 @@ RENAMES = [
 ]
 
 
-def _matching(node_model, node_name, court_code, node_order, node_type):
+def _matching(node_model, node_name, court_code, node_order, node_type, alias):
     """本迁移一个签名对应的行。
 
     三列同时相符才算：只按 node_name 会把某个租户自建的、名字碰巧一样的节点也
     卷进来。`node_type` 也要相符，这样正向不会重写一个已经被人手工改成别的类型
     的节点，反向也只回退自己写过的那种。与 `0011._candidates` 同一条分工。
     """
-    return node_model._base_manager.filter(
+    return node_model._base_manager.using(alias).filter(
         node_name=node_name,
         court_code=court_code,
         node_order=node_order,
@@ -116,23 +116,25 @@ def _matching(node_model, node_name, court_code, node_order, node_type):
 
 
 def forwards(apps, schema_editor):
+    alias = schema_editor.connection.alias
     ApprovalNode = apps.get_model("workflow", "ApprovalNode")
 
     # 空库：什么都不写。见模块 docstring 的「空库守卫」。
-    if not ApprovalNode._base_manager.exists():
+    if not ApprovalNode._base_manager.using(alias).exists():
         return
 
     for old_name, new_name, court, order, old_type, new_type in RENAMES:
-        _matching(ApprovalNode, old_name, court, order, old_type).update(
+        _matching(ApprovalNode, old_name, court, order, old_type, alias).update(
             node_name=new_name, node_type=new_type
         )
 
 
 def backwards(apps, schema_editor):
+    alias = schema_editor.connection.alias
     ApprovalNode = apps.get_model("workflow", "ApprovalNode")
 
     for old_name, new_name, court, order, old_type, new_type in RENAMES:
-        _matching(ApprovalNode, new_name, court, order, new_type).update(
+        _matching(ApprovalNode, new_name, court, order, new_type, alias).update(
             node_name=old_name, node_type=old_type
         )
 

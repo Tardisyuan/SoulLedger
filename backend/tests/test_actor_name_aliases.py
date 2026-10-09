@@ -264,7 +264,7 @@ def test_a_node_label_resolves_to_the_actor_that_node_designates(seeded, resolve
         if resolver == "live"
         else (lambda name, civ, tenant: import_module(
             "apps.workflow.migrations.0011_backfill_ten_court_approvers"
-        )._find_actor(Actor, name, civ, tenant))
+        )._find_actor(Actor, name, civ, tenant, "default"))
     )
 
     from apps.tenants.models import Tenant

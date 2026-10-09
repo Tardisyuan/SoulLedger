@@ -26,9 +26,10 @@ TENANT_CIVILIZATION = {
 
 
 def backfill(apps, schema_editor):
+    alias = schema_editor.connection.alias
     SoulRecord = apps.get_model("souls", "SoulRecord")
     for code, civ in TENANT_CIVILIZATION.items():
-        SoulRecord.objects.filter(soul__tenant__code=code).exclude(
+        SoulRecord.objects.using(alias).filter(soul__tenant__code=code).exclude(
             civilization=civ
         ).update(civilization=civ)
 

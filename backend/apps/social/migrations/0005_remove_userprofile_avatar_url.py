@@ -20,8 +20,9 @@ from django.db import migrations
 
 
 def report_discarded_links(apps, schema_editor):
+    alias = schema_editor.connection.alias
     UserProfile = apps.get_model("social", "UserProfile")
-    n = UserProfile.objects.exclude(avatar_url="").count()
+    n = UserProfile.objects.using(alias).exclude(avatar_url="").count()
     if n:
         print(f"\n  social.0005: discarding {n} external avatar_url value(s); users re-upload.")
 

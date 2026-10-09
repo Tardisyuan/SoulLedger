@@ -30,12 +30,13 @@ TERMINAL_TENANT_CODES = ("EU_HEAVEN_HELL", "EG_DUAT")
 
 
 def settle_terminal_souls(apps, schema_editor):
+    alias = schema_editor.connection.alias
     Soul = apps.get_model("souls", "Soul")
     # all_objects, not objects: Soul's default manager is tenant-scoped
     # (SoulManager), and a migration has no request and therefore no tenant
     # context, so the scoped manager would silently see nothing. It is also
     # the only manager the historical model carries — see 0018.
-    Soul.all_objects.filter(
+    Soul.all_objects.using(alias).filter(
         current_state="REINCARNATING",
         tenant__code__in=TERMINAL_TENANT_CODES,
     ).update(current_state="SETTLED")
@@ -49,12 +50,13 @@ def unsettle_terminal_souls(apps, schema_editor):
     old code would have parked in REINCARNATING, so sending them back there on
     a rollback restores the state the rolled-back code expects to find.
     """
+    alias = schema_editor.connection.alias
     Soul = apps.get_model("souls", "Soul")
     # all_objects, not objects: Soul's default manager is tenant-scoped
     # (SoulManager), and a migration has no request and therefore no tenant
     # context, so the scoped manager would silently see nothing. It is also
     # the only manager the historical model carries — see 0018.
-    Soul.all_objects.filter(
+    Soul.all_objects.using(alias).filter(
         current_state="SETTLED",
         tenant__code__in=TERMINAL_TENANT_CODES,
     ).update(current_state="REINCARNATING")

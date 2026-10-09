@@ -43,6 +43,7 @@ import pytest
 from django.core.management import call_command
 
 from apps.judgment.models import Statute, StatuteCorpus
+from tests.migration_schema_editor import SCHEMA_EDITOR
 
 # --------------------------------------------------------------------------
 # The wall of Dis. THE SECOND, HAND-WRITTEN COPY of
@@ -831,7 +832,7 @@ class TestInfernoMigration:
         Statute.all_objects.filter(code__in=codes).delete()
         assert not Statute.all_objects.filter(code__in=codes).exists()
 
-        migration.forwards(registry, None)
+        migration.forwards(registry, SCHEMA_EDITOR)
 
         rebuilt = dict(
             Statute.all_objects.filter(code__in=codes).values_list("code", "ordinal")
@@ -849,7 +850,7 @@ class TestInfernoMigration:
 
     def test_it_reverses(self, migration, registry, seeded):
         codes = _all_codes()
-        migration.backwards(registry, None)
+        migration.backwards(registry, SCHEMA_EDITOR)
         left = sorted(
             Statute.all_objects.filter(code__in=codes).values_list("code", flat=True)
         )
@@ -858,15 +859,15 @@ class TestInfernoMigration:
         assert Statute.all_objects.filter(code="EU-DS-T1").exists()
 
     def test_it_round_trips(self, migration, registry, seeded):
-        migration.backwards(registry, None)
-        migration.forwards(registry, None)
+        migration.backwards(registry, SCHEMA_EDITOR)
+        migration.forwards(registry, SCHEMA_EDITOR)
         assert Statute.all_objects.filter(code__in=_all_codes()).count() == (
             ARTICLE_COUNT
         )
 
     def test_running_it_twice_creates_nothing(self, migration, registry, seeded):
         before = Statute.all_objects.count()
-        migration.forwards(registry, None)
+        migration.forwards(registry, SCHEMA_EDITOR)
         assert Statute.all_objects.count() == before
 
     def test_it_writes_nothing_to_an_empty_database(self, migration, registry, db):
@@ -875,7 +876,7 @@ class TestInfernoMigration:
         against a fresh database report a plan that is not the one a real run
         would take. realms/0012 learned this the hard way."""
         assert Statute.all_objects.count() == 0
-        migration.forwards(registry, None)
+        migration.forwards(registry, SCHEMA_EDITOR)
         assert Statute.all_objects.count() == 0
 
     def test_the_reverse_keeps_an_article_a_judgment_cited(
@@ -899,7 +900,7 @@ class TestInfernoMigration:
         )
         JudgmentCitation.objects.create(judgment=case, statute=cited, tenant=tenant)
 
-        migration.backwards(registry, None)
+        migration.backwards(registry, SCHEMA_EDITOR)
 
         left = sorted(
             Statute.all_objects.filter(code__in=_all_codes()).values_list(

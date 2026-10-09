@@ -10,6 +10,7 @@ from apps.chat.models import Conversation, ConversationKind
 from apps.soul_accounts import services as accounts
 from apps.soul_accounts.models import AccountOrigin
 from tests.chat_support import FakeMatrix, can_speak, matrix, mutual, mxid  # noqa: F401
+from tests.migration_schema_editor import SCHEMA_EDITOR
 from tests.soul_account_support import ready_soul, soul_client
 
 pytestmark = pytest.mark.django_db
@@ -175,8 +176,8 @@ def test_the_backfill_picks_the_life_that_was_live_when_the_room_was_made(
     new_room = new_client.post(CONVERSATIONS, {"target_user": b.user_id}, format="json").data["id"]
     Conversation.objects.update(account_a=None, account_b=None)
 
-    backfill(live_apps, None)
-    backfill(live_apps, None)  # 幂等
+    backfill(live_apps, SCHEMA_EDITOR)
+    backfill(live_apps, SCHEMA_EDITOR)  # 幂等
 
     def lives(pk):
         row = Conversation.objects.get(pk=pk)

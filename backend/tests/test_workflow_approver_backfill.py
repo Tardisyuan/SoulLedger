@@ -17,6 +17,8 @@ from importlib import import_module
 
 import pytest
 
+from tests.migration_schema_editor import SCHEMA_EDITOR
+
 MIGRATION = "apps.workflow.migrations.0011_backfill_ten_court_approvers"
 
 # The signature rows the migration is keyed on. Imported from the migration
@@ -97,7 +99,7 @@ class TestBackfillForwards:
         from apps.workflow.models import ApprovalNode
 
         assert ApprovalNode.objects.count() == 0
-        migration.forwards(registry, None)
+        migration.forwards(registry, SCHEMA_EDITOR)
         assert ApprovalNode.objects.count() == 0
 
     def test_each_court_gets_its_own_king(self, migration, registry, db):
@@ -109,7 +111,7 @@ class TestBackfillForwards:
         kings = _kings(tenant)
         workflow = _ten_court_workflow(tenant)
 
-        migration.forwards(registry, None)
+        migration.forwards(registry, SCHEMA_EDITOR)
 
         for node_name, _, node_order, _, actor_name in TEN_COURTS:
             node = ApprovalNode.objects.get(workflow=workflow, node_order=node_order)
@@ -140,7 +142,7 @@ class TestBackfillForwards:
             },
         )
 
-        migration.forwards(registry, None)
+        migration.forwards(registry, SCHEMA_EDITOR)
 
         for node_order in (1, 2):
             node = ApprovalNode.objects.get(workflow=workflow, node_order=node_order)
@@ -174,7 +176,7 @@ class TestBackfillForwards:
             {5: {"approver_type": "ACTOR", "approver_actor": stand_in}},
         )
 
-        migration.forwards(registry, None)
+        migration.forwards(registry, SCHEMA_EDITOR)
 
         node = ApprovalNode.objects.get(workflow=workflow, node_order=5)
         assert node.approver_actor_id == stand_in.pk, (
@@ -195,7 +197,7 @@ class TestBackfillForwards:
         workflow = _ten_court_workflow(tenant)  # no kings seeded at all
         actors_before = Actor.objects.count()
 
-        migration.forwards(registry, None)
+        migration.forwards(registry, SCHEMA_EDITOR)
 
         assert Actor.objects.count() == actors_before, (
             "the migration created Actor rows to satisfy a workflow template"
@@ -217,7 +219,7 @@ class TestBackfillForwards:
         mine = _tenant()
         workflow = _ten_court_workflow(mine)
 
-        migration.forwards(registry, None)
+        migration.forwards(registry, SCHEMA_EDITOR)
 
         assert ApprovalNode.objects.filter(
             workflow=workflow, approver_type="SYSTEM"
@@ -232,13 +234,13 @@ class TestBackfillForwards:
         _kings(tenant)
         workflow = _ten_court_workflow(tenant)
 
-        migration.forwards(registry, None)
+        migration.forwards(registry, SCHEMA_EDITOR)
         first = dict(
             ApprovalNode.objects.filter(workflow=workflow).values_list(
                 "node_order", "approver_actor_id"
             )
         )
-        migration.forwards(registry, None)
+        migration.forwards(registry, SCHEMA_EDITOR)
         second = dict(
             ApprovalNode.objects.filter(workflow=workflow).values_list(
                 "node_order", "approver_actor_id"
@@ -255,8 +257,8 @@ class TestBackfillForwards:
         _kings(tenant)
         workflow = _ten_court_workflow(tenant)
 
-        migration.forwards(registry, None)
-        migration.backwards(registry, None)
+        migration.forwards(registry, SCHEMA_EDITOR)
+        migration.backwards(registry, SCHEMA_EDITOR)
 
         rows = ApprovalNode.objects.filter(workflow=workflow)
         assert rows.count() == 10
@@ -275,7 +277,7 @@ class TestBackfillForwards:
         tenant = _tenant()
         _kings(tenant)
         workflow = _ten_court_workflow(tenant)
-        migration.forwards(registry, None)
+        migration.forwards(registry, SCHEMA_EDITOR)
 
         stand_in = Actor.objects.create(
             name="崔府君", civilization="CHINESE", role="JUDGE", tenant=tenant
@@ -284,7 +286,7 @@ class TestBackfillForwards:
             approver_actor=stand_in
         )
 
-        migration.backwards(registry, None)
+        migration.backwards(registry, SCHEMA_EDITOR)
 
         node = ApprovalNode.objects.get(workflow=workflow, node_order=5)
         assert node.approver_actor_id == stand_in.pk

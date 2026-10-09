@@ -35,6 +35,7 @@ from django.core.management import call_command
 
 from apps.judgment.models import Statute, StatuteCorpus
 from apps.realms.models import Realm
+from tests.migration_schema_editor import SCHEMA_EDITOR
 
 # --------------------------------------------------------------------------
 # What Dante's mountain looks like. Purgatorio X-XXVII, bottom to top, with the
@@ -579,7 +580,7 @@ class TestTerraceMigration:
         Realm.all_objects.filter(realm_code__in=codes).delete()
         assert not Realm.all_objects.filter(realm_code__in=codes).exists()
 
-        migration.forwards(registry, None)
+        migration.forwards(registry, SCHEMA_EDITOR)
 
         rebuilt = dict(
             Realm.all_objects.filter(realm_code__in=codes).values_list(
@@ -603,7 +604,7 @@ class TestTerraceMigration:
 
     def test_it_reverses(self, migration, registry, seeded):
         codes = [terrace["realm_code"] for terrace in TERRACES.values()]
-        migration.backwards(registry, None)
+        migration.backwards(registry, SCHEMA_EDITOR)
         left = sorted(
             Realm.all_objects.filter(realm_code__in=codes).values_list(
                 "realm_code", flat=True
@@ -616,8 +617,8 @@ class TestTerraceMigration:
 
     def test_it_round_trips(self, migration, registry, seeded):
         codes = [terrace["realm_code"] for terrace in TERRACES.values()]
-        migration.backwards(registry, None)
-        migration.forwards(registry, None)
+        migration.backwards(registry, SCHEMA_EDITOR)
+        migration.forwards(registry, SCHEMA_EDITOR)
         parents = dict(
             Realm.all_objects.filter(realm_code__in=codes).values_list(
                 "realm_code", "parent_realm__realm_code"
@@ -628,7 +629,7 @@ class TestTerraceMigration:
 
     def test_running_it_twice_creates_nothing(self, migration, registry, seeded):
         before = Realm.all_objects.count()
-        migration.forwards(registry, None)
+        migration.forwards(registry, SCHEMA_EDITOR)
         assert Realm.all_objects.count() == before
 
     def test_it_writes_nothing_to_an_empty_database(self, migration, registry, db):
@@ -637,7 +638,7 @@ class TestTerraceMigration:
         against a fresh database report a plan that is not the one a real run
         would take. realms/0012 learned this the hard way."""
         assert Realm.all_objects.count() == 0
-        migration.forwards(registry, None)
+        migration.forwards(registry, SCHEMA_EDITOR)
         assert Realm.all_objects.count() == 0
 
 

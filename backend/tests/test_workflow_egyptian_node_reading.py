@@ -78,6 +78,7 @@ from apps.workflow.services import (
     WORKFLOW_TEMPLATES,
     WorkflowService,
 )
+from tests.migration_schema_editor import SCHEMA_EDITOR
 
 MIGRATION = "apps.workflow.migrations.0012_correct_the_egyptian_weighing_nodes"
 
@@ -222,7 +223,7 @@ def test_the_migration_writes_nothing_to_an_empty_database(db):
     from apps.workflow.models import ApprovalNode
 
     assert ApprovalNode.objects.count() == 0
-    import_module(MIGRATION).forwards(apps, None)
+    import_module(MIGRATION).forwards(apps, SCHEMA_EDITOR)
     assert ApprovalNode.objects.count() == 0
 
 
@@ -250,7 +251,7 @@ def test_the_migration_leaves_a_node_somebody_else_re_typed_alone(db):
         node_type="APPEAL", approver_type="SYSTEM", status="PENDING",
     )
 
-    import_module(MIGRATION).forwards(apps, None)
+    import_module(MIGRATION).forwards(apps, SCHEMA_EDITOR)
 
     hand_edited.refresh_from_db()
     assert (hand_edited.node_name, hand_edited.node_type) == (

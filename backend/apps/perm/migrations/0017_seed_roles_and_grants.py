@@ -168,38 +168,39 @@ def _invalidate_cache():
 
 
 def forward(apps, schema_editor):
+    alias = schema_editor.connection.alias
     Permission = apps.get_model("perm", "Permission")
     Role = apps.get_model("perm", "Role")
     RolePermission = apps.get_model("perm", "RolePermission")
 
     for name, display_name in ROLES:
-        Role.all_objects.get_or_create(
+        Role.all_objects.using(alias).get_or_create(
             name=name,
             is_deleted=False,
             defaults={"display_name": display_name},
         )
 
     codename, name, category = MENU_READ
-    Permission.all_objects.get_or_create(
+    Permission.all_objects.using(alias).get_or_create(
         codename=codename,
         is_deleted=False,
         defaults={"name": name, "category": category},
     )
 
     for role_name, codenames in GRANTS.items():
-        role = Role.all_objects.filter(name=role_name, is_deleted=False).first()
+        role = Role.all_objects.using(alias).filter(name=role_name, is_deleted=False).first()
         if role is None:
             # 上面刚建过，走到这里说明有并发或数据异常，跳过而不是崩掉迁移。
             continue
         for codename in codenames:
-            perm = Permission.all_objects.filter(
+            perm = Permission.all_objects.using(alias).filter(
                 codename=codename, is_deleted=False
             ).first()
             if perm is None:
                 # 尚未落 Permission 表 —— checker 会回退到 ROLE_PERMISSIONS
                 # 字典，那边已同步。刻意不代它建行，理由见模块 docstring。
                 continue
-            RolePermission.all_objects.get_or_create(
+            RolePermission.all_objects.using(alias).get_or_create(
                 role=role, permission=perm, is_deleted=False, defaults={}
             )
 
@@ -207,12 +208,13 @@ def forward(apps, schema_editor):
 
 
 def backward(apps, schema_editor):
+    alias = schema_editor.connection.alias
     Permission = apps.get_model("perm", "Permission")
     RolePermission = apps.get_model("perm", "RolePermission")
 
     # 只撤本迁移引入的 codename。Role 行与其余授权刻意保留，理由见模块 docstring。
-    RolePermission.all_objects.filter(permission__codename=MENU_READ[0]).delete()
-    Permission.all_objects.filter(codename=MENU_READ[0]).delete()
+    RolePermission.all_objects.using(alias).filter(permission__codename=MENU_READ[0]).delete()
+    Permission.all_objects.using(alias).filter(codename=MENU_READ[0]).delete()
     _invalidate_cache()
 
 

@@ -26,19 +26,21 @@ OLD_PATH = "/karma"
 NEW_PATH = "/ledger"
 
 
-def _live(menu_model):
+def _live(menu_model, alias):
     """未被软删除的菜单。"""
-    return menu_model.all_objects.filter(is_deleted=False)
+    return menu_model.all_objects.using(alias).filter(is_deleted=False)
 
 
 def move_to_ledger(apps, schema_editor):
+    alias = schema_editor.connection.alias
     Menu = apps.get_model("menus", "Menu")
-    _live(Menu).filter(path=OLD_PATH).update(path=NEW_PATH)
+    _live(Menu, alias).filter(path=OLD_PATH).update(path=NEW_PATH)
 
 
 def move_back_to_karma(apps, schema_editor):
+    alias = schema_editor.connection.alias
     Menu = apps.get_model("menus", "Menu")
-    _live(Menu).filter(path=NEW_PATH).update(path=OLD_PATH)
+    _live(Menu, alias).filter(path=NEW_PATH).update(path=OLD_PATH)
 
 
 class Migration(migrations.Migration):
