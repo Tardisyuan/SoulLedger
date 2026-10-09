@@ -4,7 +4,7 @@ import { useCallback } from "react";
 import { View } from "react-native";
 
 import { Row, StateView, viewStateOf } from "../kit";
-import { TODO_GROUPS, isDenied, isTodoKind } from "../rules";
+import { TODO_GROUPS, isDenied, isTodoKind, todoTitle } from "../rules";
 import { useSession } from "../session";
 import { Screen, SectionLabel, Txt, space, useI18n, useRemote } from "../shared";
 import { formatWhen } from "../format";
@@ -59,13 +59,13 @@ export function TodoTab({ onOpen, highlight }: { onOpen: (item: ItemRef) => void
 
 function TodoRow({ item, highlight, onOpen }: { item: TodoItem; highlight: boolean; onOpen: (item: ItemRef) => void }) {
   const { t } = useI18n();
-  const lines = [item.node_name, formatWhen(item.created_at)].filter((x): x is string => !!x);
+  const lines = [item.soul_code, item.node_name, formatWhen(item.created_at)].filter((x): x is string => !!x);
   return (
     <Row
       testID={`todo-row-${item.kind}-${item.id}`}
       glyph="◐"
       strong
-      title={item.title || t(`officer_app.kinds.${item.kind}`)}
+      title={todoTitle(item, t) || t(`officer_app.kinds.${item.kind}`)}
       lines={lines}
       highlight={highlight}
       right={<Txt tone="muted">›</Txt>}

@@ -12,7 +12,7 @@ import { Pressable, Share, View } from "react-native";
 
 import { formatWhen } from "../format";
 import { ActionButton, StateView, viewStateOf } from "../kit";
-import { deskUrl, handledNotice, isDenied, type Verdict } from "../rules";
+import { deskUrl, handledNotice, isDenied, todoTitle, type Verdict } from "../rules";
 import { useSession } from "../session";
 import { Icon, Input, Notice, Screen, SectionLabel, Txt, space, useI18n, useRemote, useTheme } from "../shared";
 import { CosignSheet, DecisionSheet, type CooldownFacts } from "./sheets";
@@ -66,7 +66,7 @@ function TodoDetail({ kind, id, onSettled }: { kind: TodoKind; id: string; onSet
   const loadCooldown = useCallback(
     (): Promise<CooldownFacts | null> =>
       kind === "cooldown"
-        ? soulAccountsApi.cooldownShortening(id).then((r) => ({ reason: r.data.reason, remainingDays: r.data.remaining_days, desiredDays: r.data.desired_remaining_days ?? null }))
+        ? soulAccountsApi.cooldownShortening(id).then((r) => ({ reason: r.data.reason, remainingDays: r.data.remaining_days, approved: r.data.status === "APPROVED", desiredDays: r.data.desired_remaining_days ?? null }))
         : Promise.resolve(null),
     [kind, id]
   );
@@ -83,6 +83,8 @@ function TodoDetail({ kind, id, onSettled }: { kind: TodoKind; id: string; onSet
   const settled = () => {
     // The list behind this screen reloads; this item is asked again, and it answers "already handled".
     void reload();
+    // The cooldown facts are read once; after an approval they are the request-time days until asked again.
+    cooldown.reload();
     onSettled();
   };
 
@@ -100,7 +102,12 @@ function TodoDetail({ kind, id, onSettled }: { kind: TodoKind; id: string; onSet
             </Notice>
           ) : null}
           <SectionLabel>{t(`officer_app.kinds.${kind}`)}</SectionLabel>
-          <Txt variant="title">{data.title}</Txt>
+          <Txt variant="title">{todoTitle(data, t)}</Txt>
+          {data.soul_code ? (
+            <Txt variant="caption" tone="muted" testID="detail-soul-code">
+              {data.soul_code}
+            </Txt>
+          ) : null}
           <Txt variant="caption" tone="muted">
             {formatWhen(data.created_at)}
           </Txt>
@@ -111,7 +118,7 @@ function TodoDetail({ kind, id, onSettled }: { kind: TodoKind; id: string; onSet
             <View style={{ gap: space[2] }}>
               <Txt variant="body">{cooldown.data.reason}</Txt>
               <Txt variant="caption" tone="muted">
-                {t("officer_app.confirm.remaining_days", { n: String(cooldown.data.remainingDays) })}
+                {t(cooldown.data.approved ? "officer_app.confirm.remaining_after" : "officer_app.confirm.remaining_days", { n: String(cooldown.data.remainingDays) })}
               </Txt>
               {cooldown.data.desiredDays != null ? (
                 <Txt variant="caption" tone="muted" testID="detail-desired">

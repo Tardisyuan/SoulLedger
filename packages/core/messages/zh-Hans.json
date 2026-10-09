@@ -2786,6 +2786,7 @@
       },
       "view": "查看详情",
       "detail_title": "转生申请 · {{name}}",
+      "appeal_title": "转生申请申诉 · {{name}}",
       "fields": {
         "desired_form": "期望形态",
         "current_step": "当前节点",
@@ -2835,6 +2836,7 @@
       "fields": {
         "reason": "申请理由",
         "remaining": "剩余冷却",
+        "remaining_after": "批后剩余冷却",
         "approved_days": "批准后剩余天数",
         "note": "给灵魂的说明",
         "decided_by": "决定人",
@@ -5171,6 +5173,7 @@
         "reassignment": "批准后这次改派成立。"
       },
       "remaining_days": "还剩 {{n}} 天",
+      "remaining_after": "批后还剩 {{n}} 天",
       "days_label": "批准天数",
       "days_invalid": "天数要是整数，且小于剩余天数",
       "verdict_label": "批准用的裁决",
