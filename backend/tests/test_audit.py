@@ -32,6 +32,17 @@ def admin_user(db, django_user_model, cn_tenant):
 
 
 @pytest.fixture
+def global_admin_client(db, django_user_model):
+    """ADMIN with no hall: the only role that reads every hall's audit log (2026-10-09)."""
+    from rest_framework.test import APIClient
+
+    client = APIClient()
+    client.force_authenticate(user=django_user_model.objects.create_user(
+        username="audit_global", password="admin123", role="ADMIN", tenant=None))
+    return client
+
+
+@pytest.fixture
 def auth_client(api_client, admin_user):
     """APIClient authenticated as admin_user."""
     import contextlib
@@ -357,7 +368,7 @@ class TestAuditLogViewSet:
     Uses transaction=True so that transaction.on_commit() callbacks fire.
     """
 
-    def test_list_audit_logs(self, auth_client):
+    def test_list_audit_logs(self, auth_client, global_admin_client):
         """GET /api/v1/audit-logs/ returns paginated audit logs."""
 
         # Create a soul to generate audit logs
@@ -368,12 +379,12 @@ class TestAuditLogViewSet:
         assert response.status_code == 201
 
         # List audit logs
-        response = auth_client.get("/api/v1/audit-logs/")
+        response = global_admin_client.get("/api/v1/audit-logs/")
         assert response.status_code == 200
         assert "results" in response.data
         assert len(response.data["results"]) > 0
 
-    def test_hall_filter_includes_the_assistant_switch_rows_and_nothing_else_of_assistant_config(self, auth_client):
+    def test_hall_filter_includes_the_assistant_switch_rows_and_nothing_else_of_assistant_config(self, global_admin_client):
         """审计页的「殿」(resource=tenant)同时含每殿助手开关(assistant_config + resource_id=tenant:<殿码>);
         助手的别的配置行、别的资源都不进来;精确的 resource=assistant_config 仍只给 assistant_config。"""
         from apps.audit.models import AuditLog
@@ -388,7 +399,7 @@ class TestAuditLogViewSet:
         soul = row("soul", "1")
 
         def ids(**params):
-            data = auth_client.get("/api/v1/audit-logs/", params).data
+            data = global_admin_client.get("/api/v1/audit-logs/", params).data
             return {r["id"] for r in data["results"]}
 
         halls = ids(resource="tenant")  # 夹具建殿也可能写 tenant 行,所以用包含判断
@@ -540,7 +551,7 @@ class TestAuditApiEndpoint:
     Uses transaction=True so that transaction.on_commit() callbacks fire.
     """
 
-    def test_list_audit_returns_paginated_results(self, auth_client):
+    def test_list_audit_returns_paginated_results(self, auth_client, global_admin_client):
         """GET /api/v1/audit-logs/ returns paginated results."""
 
         # Create a soul to generate an audit log
@@ -551,7 +562,7 @@ class TestAuditApiEndpoint:
         assert response.status_code == 201
 
         # List audit logs via /api/v1/audit-logs/
-        response = auth_client.get("/api/v1/audit-logs/")
+        response = global_admin_client.get("/api/v1/audit-logs/")
         assert response.status_code == 200
         assert "results" in response.data
         assert "count" in response.data

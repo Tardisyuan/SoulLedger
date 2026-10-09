@@ -150,7 +150,7 @@ const ENUM_STRING_CONTEXTS: Record<string, string> = {
   [path.join("app", "dashboard", "page.tsx")]:
     "State labels inside composed card / ledger labels (glyph + word) and rows that fall back to the API's own label; each carries title={state} by hand.",
   [path.join("src", "components", "dashboard", "TrendsPanel.tsx")]:
-    "Series names for the trends chart's legend and tooltip: recharts takes a string per series, and an unknown member reads as common.value.unrecorded.",
+    "Each small-multiple cell's name goes into its <figure aria-label> sentence (a string, not an element); the visible name is a <DomainEnum>. An unknown member reads as common.value.unrecorded.",
   [path.join("src", "components", "realms", "RouteTopology.tsx")]:
     "A realm's station label resolves across two namespaces (realms.names, then realms.codes) and falls back to the API's own name — <DomainEnum> reads one namespace. The string is both the truncated text and its title, and the realm code rides in that title for triage.",
   [path.join("app", "dispatch", "[id]", "page.tsx")]:

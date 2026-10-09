@@ -503,6 +503,10 @@ export interface JudgmentQueueParams {
  */
 export type JudgmentPrecedent = components["schemas"]["JudgmentPrecedent"];
 
+export type JudgmentComment = components["schemas"]["JudgmentComment"];
+/** The server's cap on one comment's length. */
+export const JUDGMENT_COMMENT_MAX = 2000;
+
 export const judgmentApi = {
   list: (params?: Record<string, string>) => api.get<PaginatedResponse<Judgment>>("/judgment/", { params }),
   create: (data: object) => api.post<Judgment>("/judgment/", data),
@@ -535,6 +539,9 @@ export const judgmentApi = {
     api.get<JudgmentPrecedent[]>(`/judgment/${id}/precedents/`, {
       params: limit === undefined ? undefined : { limit },
     }),
+  /** 评议: oldest first. Anyone who can read the judgment can read and write them. */
+  comments: (id: string) => api.get<JudgmentComment[]>(`/judgment/${id}/comments/`),
+  addComment: (id: string, body: string) => api.post<JudgmentComment>(`/judgment/${id}/comments/`, { body }),
   cite: (id: string, statute: string, note = "") =>
     api.post<JudgmentCitation>(`/judgment/${id}/citations/`, { statute, note }),
   uncite: (id: string, statute: string) =>

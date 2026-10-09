@@ -14,6 +14,7 @@ export type Todo = components["schemas"]["Todo"];
 export type TodoItemDetail = components["schemas"]["TodoItemDetail"];
 export type SignerCandidate = components["schemas"]["SignerCandidate"];
 export type OfficerPushToken = components["schemas"]["OfficerPushToken"];
+export type Cosigner = components["schemas"]["Cosigner"];
 
 /** The four kinds of waiting item; `target` on a row is `{ kind, id }`. */
 export type TodoKind = "approval" | "reassignment" | "cooldown" | "rebirth";
@@ -44,11 +45,24 @@ export function decisionFailureOf(error: unknown): { code: DecisionFailureCode; 
   return response.status === 403 ? { code: "permission_changed", handledBy: null } : null;
 }
 
+/** The refusal body of `addCosigner`, or null when the error is not one (network, 5xx...). */
+export function cosignRefusalOf(error: unknown): "not_allowed" | "not_eligible" | "duplicate" | null {
+  const response = (error as { response?: { data?: { code?: string } } })?.response;
+  const code = response?.data?.code;
+  return code === "not_allowed" || code === "not_eligible" || code === "duplicate" ? code : null;
+}
+
 export const officerAppApi = {
   todo: () => api.get<Todo>("/officer-app/todo/"),
   item: (kind: TodoKind, id: string) => api.get<TodoItemDetail>(`/officer-app/items/${kind}/${id}/`),
   /** 加签候选人: same hall only. */
   signerCandidates: (q?: string) => api.get<SignerCandidate[]>("/officer-app/signer-candidates/", { params: q ? { q } : undefined }),
+  /**
+   * 加签: add a same-hall colleague as co-signer of the current node. 403 `not_allowed` = adding is not
+   * possible right now (read it with `cosignRefusalOf`); 400 `not_eligible` / `duplicate` = this person.
+   */
+  addCosigner: (kind: TodoKind, id: string, userId: number) =>
+    api.post<Cosigner>(`/officer-app/items/${kind}/${id}/cosigners/`, { user_id: userId }),
   registerPush: (data: OfficerPushToken) => api.post<void>("/officer-app/push-tokens/", data),
   unregisterPush: (token: string) => api.post<void>("/officer-app/push-tokens/unregister/", { token }),
 };

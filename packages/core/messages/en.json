@@ -1274,13 +1274,22 @@
     "trends": {
       "title": "Trends",
       "range_label": "Range",
-      "range_30d": "Last 30 days",
-      "range_90d": "Last 90 days",
-      "range_12m": "Last 12 months",
+      "range_30d": "30 days",
+      "range_90d": "90 days",
+      "range_12m": "12 months",
       "by_state": "By state",
       "by_civilization": "By civilization",
-      "error": "Couldn't load the trends",
-      "not_enough": "Fewer than two days of snapshots so far. One is taken each night; the lines appear after that."
+      "error": "Trends couldn't be loaded",
+      "subtitle": "Snapshot every day at 00:00 · vs the start of the range",
+      "dimension_label": "Dimension",
+      "empty_title": "No snapshots yet",
+      "empty_body": "One is taken every day at 00:00. While the range isn't full, only the days that exist are drawn.",
+      "partial": "Only {{n}} days of snapshots. The empty part on the left isn't zero: those days have no record yet.",
+      "change_up": "up {{pct}}%",
+      "change_down": "down {{pct}}%",
+      "change_flat": "flat",
+      "change_from_zero": "from 0",
+      "figure_label": "{{name}}, {{value}}, {{change}}"
     }
   },
   "ledger": {
@@ -3010,7 +3019,8 @@
       "cooldown_invalid": "Enter a whole number from 0 to 365",
       "dispatch_enabled": "Can receive transfers (residence)",
       "saved": "Settings saved",
-      "save_failed": "Could not save the settings"
+      "save_failed": "Could not save the settings",
+      "security": "Security"
     }
   },
   "table": {
@@ -5156,7 +5166,8 @@
       },
       "remaining_days": "{{n}} days left",
       "days_label": "Days to approve",
-      "days_invalid": "Enter a whole number below the days left"
+      "days_invalid": "Enter a whole number below the days left",
+      "verdict_label": "Verdict to approve with"
     },
     "landing": {
       "handled": "Already handled by {{name}}",
@@ -5255,7 +5266,17 @@
       "search": "Search name or username",
       "empty": "Nobody to choose",
       "confirm": "Add signer",
-      "no_endpoint": "Adding a signer isn't available in the app yet. Use the desk."
+      "unavailable": "Adding a signer isn't possible right now; you can only look at the candidates.",
+      "added": "Signer added. Your approval counts once they have signed.",
+      "not_eligible": "This person can't be added (an active officer of this hall who may approve).",
+      "duplicate": "Already a co-signer, or already able to decide this step alone."
+    },
+    "comment": {
+      "title": "Comments",
+      "empty": "No comments yet",
+      "write": "Write a comment",
+      "send": "Post",
+      "failed": "Couldn't post the comment. Try again later."
     }
   }
 }

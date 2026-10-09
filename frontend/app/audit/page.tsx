@@ -100,10 +100,11 @@ export default function AuditPage() {
   // rather than the role.
   const { hasPermission } = usePermissions();
   const canReadAudit = hasPermission("audit.read");
-  // 「殿」下拉只给全局管理员(`ADMIN`,后端唯一跨租户的角色)。绑了殿的人本来就只看得到自己殿的行,
-  // 后端对他们点别的殿的名答 403 —— 所以这里不是权限闸,只是不画一个选了也没用的控件。
-  const { user } = useTenant();
-  const isGlobalAdmin = user?.role === "ADMIN";
+  // 「殿」下拉只给全局管理员(`ADMIN` 且不属于任何殿,后端审计列表与导出唯一跨殿的人)。绑了殿的人
+  // (含绑了殿的 ADMIN)只看得到自己殿的行,后端对他们点别的殿的名答 403 —— 所以这里不是权限闸,
+  // 只是不画一个选了也没用的控件。
+  const { user, tenantCode } = useTenant();
+  const isGlobalAdmin = user?.role === "ADMIN" && tenantCode === null;
 
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");

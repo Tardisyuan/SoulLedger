@@ -131,7 +131,7 @@ def verify_view(request):
         return _refuse_outcome(outcome)
 
     LoginLog.objects.create(user=user, username=user.username, status="SUCCESS", ip_address=ip_address, user_agent=user_agent)
-    response = Response(issue_tokens(user, remember=bool(pending.get("remember"))))
+    response = Response(issue_tokens(user, remember=bool(pending.get("remember")), officer_app=bool(pending.get("officer_app"))))
     if data.get("remember_device"):
         mfa.set_device_cookie(response, mfa.remember_device(user))
     return response

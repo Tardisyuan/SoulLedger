@@ -178,8 +178,14 @@ export function TenantSettingsDialog({ tenant, onClose }: { tenant: Tenant; onCl
           <p role="alert" className="text-xs text-[oklch(var(--color-danger))]">{errors.dispatch_enabled}</p>
         ) : null}
 
-        <section aria-labelledby="tenant-mfa-roles-title" className="flex flex-col gap-2 border-t border-[oklch(var(--color-block))] pt-4" data-testid="tenant-mfa-roles">
-          <h3 id="tenant-mfa-roles-title" className="text-sm font-medium text-[oklch(var(--color-ink))]">{t("mfa.admin.roles_title")}</h3>
+        {/* 安全 (A14 §4): the group sits at the bottom behind a 1px rule and its own title; a tab
+            only when security settings reach two groups. */}
+        <div className="flex flex-col gap-3 border-t border-[oklch(var(--color-block))] pt-6" data-testid="tenant-security">
+        <h3 id="tenant-security-title" className="m-0 font-[family-name:var(--font-title)] text-md font-semibold text-[oklch(var(--color-ink))]">
+          {t("tenants.settings.security")}
+        </h3>
+        <section aria-labelledby="tenant-mfa-roles-title" className="flex flex-col gap-2" data-testid="tenant-mfa-roles">
+          <h4 id="tenant-mfa-roles-title" className="m-0 text-sm font-medium text-[oklch(var(--color-ink))]">{t("mfa.admin.roles_title")}</h4>
           <p className="text-xs text-[oklch(var(--color-ink-muted))]">{t("mfa.admin.roles_hint")}</p>
           {mfaRoles.isError ? (
             <p role="alert" className="text-xs text-[oklch(var(--color-danger))]">{t("mfa.admin.roles_load_failed")}</p>
@@ -206,6 +212,7 @@ export function TenantSettingsDialog({ tenant, onClose }: { tenant: Tenant; onCl
             ))}
           </ul>
         </section>
+        </div>
       </form>
     </BaseModal>
   );

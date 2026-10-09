@@ -7,7 +7,7 @@ Key:   "app.Model:column_or_constraint_name"
 Value: (kind, one-line reason)
 
   GLOBAL_VALUE  unique over the whole database -- what a per-tenant database
-                split would silently weaken. 20 today; each has a guarantee
+                split would silently weaken. 19 today; each has a guarantee
                 (a UNIQUE index, plus a generator for soul_code / case_number).
   PER_PARENT    unique within one parent row; a placement rule for sharding.
   PER_TENANT    tenant is part of the key; NOT global.
@@ -23,7 +23,7 @@ UNIQUE_KEYS = {
     'chat.ChatIdentity:localpart': ('GLOBAL_VALUE', 'Matrix localpart, one namespace over all halls (chat is cross-hall)'),
     'chat.ChatIdentity:matrix_user_id': ('GLOBAL_VALUE', 'Matrix user id, one namespace over all halls'),
     'chat.Conversation:room_id': ('GLOBAL_VALUE', 'Matrix room id'),
-    'death_sync.DeathRegistrationRequest:uniq_death_reg_idempotency': ('GLOBAL_VALUE', '(source_system, idempotency_key) over ALL tenants: two halls sending the same explicit X-Idempotency-Key collide (see report)'),
+    'death_sync.DeathRegistrationRequest:uniq_death_reg_idempotency': ('PER_TENANT', '(tenant, source_system, idempotency_key): two halls may send the same explicit X-Idempotency-Key'),
     'death_sync.ExternalApiKey:key_hash': ('GLOBAL_VALUE', 'hash of an API key; the key alone selects the tenant on the machine-to-machine path'),
     'judgment.Judgment:case_number': ('GLOBAL_VALUE', 'printed case number; generated from JudgmentCaseCounter keyed by <prefix>-<year>, so two halls sharing a prefix cannot repeat a number'),
     'officer_app.OfficerPushDevice:token': ('GLOBAL_VALUE', 'push token of an officer device'),

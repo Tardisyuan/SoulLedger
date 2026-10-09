@@ -2764,6 +2764,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/judgment/{id}/comments/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 评议, oldest first. `GET /api/v1/judgment/{id}/comments/` (tenant-scoped through `get_object`). */
+        get: operations["v1_judgment_comments_list"];
+        put?: never;
+        /** @description Leave a comment. `POST /api/v1/judgment/{id}/comments/` `{"body": "..."}` (1..2000 chars). */
+        post: operations["v1_judgment_comments_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/judgment/{id}/conclude/": {
         parameters: {
             query?: never;
@@ -4541,6 +4559,29 @@ export interface paths {
         get: operations["officer_app_todo_item"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/officer-app/items/{kind}/{item_id}/cosigners/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description 加签:当前节点的指定审批人,把本殿一位同僚加为联署人(`apps/workflow/cosign.py` 写明规则)。
+         *
+         *     403 `not_allowed`:这一条现在不能加签(不是你的节点、节点已被处理、会签节点…)——App 据此置灰;
+         *     400 `not_eligible`:这个人不能被加(不在本殿 / 无审批权 / 已停用…);400 `duplicate`:已是联署人,
+         *     或本来就能单独决定这个节点。留痕:一条审计;被加的人收到通知与官员端推送。
+         */
+        post: operations["officer_app_cosign_add"];
         delete?: never;
         options?: never;
         head?: never;
@@ -9350,6 +9391,21 @@ export interface components {
             audience: string;
             tokens: number;
         };
+        CosignAdd: {
+            /** @description A `signer-candidates/` id: an officer of the same hall. */
+            user_id: number;
+        };
+        CosignRefusal: {
+            /** @description not_allowed / not_eligible / duplicate */
+            code: string;
+            detail: string;
+        };
+        Cosigner: {
+            user_id: number;
+            user_name: string;
+            added_at: string;
+            signed_at: string | null;
+        };
         CrossCivilizationDecision: {
             cross_civilization: boolean;
         };
@@ -10682,6 +10738,15 @@ export interface components {
             /** Format: uuid */
             id?: string;
             missing?: string[];
+        };
+        JudgmentComment: {
+            /** Format: uuid */
+            readonly id: string;
+            readonly author: number | null;
+            readonly author_name: string;
+            body: string;
+            /** Format: date-time */
+            readonly created_at: string;
         };
         JudgmentConclude: {
             verdict: components["schemas"]["JudgmentConcludeVerdictEnum"];
@@ -16179,6 +16244,8 @@ export interface components {
             workflow_id?: string;
             /** @description 待决的节点;决定时作为 node_id 传回。 */
             node_id?: string;
+            /** @description 该节点接受的裁决(PASSED / CONFIRMED / FAILED / REJECTED …);空 = 不限。批准只在其中的通过类里选。 */
+            required_verdicts?: string[];
         };
         /** @description 推送与列表行落到哪一条:`GET items/<kind>/<id>/`。 */
         TodoTarget: {
@@ -21834,6 +21901,88 @@ export interface operations {
             };
         };
     };
+    v1_judgment_comments_list: {
+        parameters: {
+            query?: {
+                /**
+                 * @description * `CHINESE` - Chinese Diyu
+                 *     * `EUROPEAN` - European Heaven/Hell
+                 *     * `EGYPTIAN` - Egyptian Duat
+                 *     * `GREEK` - Greek Underworld
+                 */
+                civilization?: "CHINESE" | "EGYPTIAN" | "EUROPEAN" | "GREEK";
+                court?: string;
+                /**
+                 * @description * `mine` - 我认领
+                 *     * `unclaimed` - 待认领
+                 *     * `others` - 他人认领
+                 *     * `deferred` - 暂缓
+                 */
+                group?: "deferred" | "mine" | "others" | "unclaimed";
+                has_verdict?: boolean;
+                is_final?: boolean;
+                /** @description Which field to use when ordering the results. */
+                ordering?: string;
+                /** @description A search term. */
+                search?: string;
+                soul?: string;
+                statute?: string;
+                /**
+                 * @description * `PASSED` - Passed / Saved
+                 *     * `FAILED` - Failed / Condemned
+                 *     * `PURGATORY` - Purgatory / Intermediate
+                 *     * `RETRY` - Retry / Appeal
+                 */
+                verdict?: "FAILED" | "PASSED" | "PURGATORY" | "RETRY" | null;
+                verdict_null?: boolean;
+            };
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this Judgment. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JudgmentComment"][];
+                };
+            };
+        };
+    };
+    v1_judgment_comments_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this Judgment. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["JudgmentComment"];
+                "application/x-www-form-urlencoded": components["schemas"]["JudgmentComment"];
+                "multipart/form-data": components["schemas"]["JudgmentComment"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JudgmentComment"];
+                };
+            };
+        };
+    };
     v1_judgment_conclude_create: {
         parameters: {
             query?: never;
@@ -25299,6 +25448,57 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TodoItemDetail"];
+                };
+            };
+            /** @description No response body */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    officer_app_cosign_add: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: string;
+                kind: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CosignAdd"];
+                "application/x-www-form-urlencoded": components["schemas"]["CosignAdd"];
+                "multipart/form-data": components["schemas"]["CosignAdd"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Cosigner"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CosignRefusal"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CosignRefusal"];
                 };
             };
             /** @description No response body */

@@ -67,7 +67,8 @@ def _waiting_workflows(scope):
         return []
     from django.db.models import Q
 
-    mine = Q(current_node__kind=NodeKind.COUNTERSIGN) | Q(
+    # 加签: a node with co-signers is a candidate for anyone; `can_approve` below decides.
+    mine = Q(current_node__kind=NodeKind.COUNTERSIGN) | ~Q(current_node__cosigners_json=[]) | Q(
         current_node__approver_type="ROLE", current_node__approver_role=user.role)
     if user.actor_id:
         mine |= Q(current_node__approver_type="ACTOR", current_node__approver_actor_id=user.actor_id)
@@ -130,27 +131,35 @@ def _workflow_state(wf, user):
         last = wf.nodes.exclude(decided_at=None).order_by("-decided_at").first()
         return _state(False, "already_handled", decision_codes.handled_by(last) if last else None,
                       last.decided_at if last else None)
+    verdicts = list(node.required_verdicts or [])
     blocked = decision_codes.block_for(node, user)
     if blocked is None:
-        return _state(True, node_id=str(node.pk))
+        return _state(True, node_id=str(node.pk), required_verdicts=verdicts)
     code, extra = blocked
     # 流程已经往下走:当前节点是别人的,但刚才被决定的是上一个节点。
     if code == "permission_changed":
         last = wf.nodes.exclude(decided_at=None).order_by("-decided_at").first()
         if last is not None and last.pk != node.pk:
             return _state(False, "already_handled", decision_codes.handled_by(last), last.decided_at)
-    return _state(False, code, extra.get("handled_by"), node.decided_at, node_id=str(node.pk))
+    return _state(False, code, extra.get("handled_by"), node.decided_at, node_id=str(node.pk),
+                  required_verdicts=verdicts)
+
+
+def workflow_for(scope, kind, pk):
+    """The in-scope workflow behind an `approval` / `rebirth` item, or None."""
+    if kind == "rebirth":
+        app = RebirthApplication.objects.filter(pk=pk).first()
+        return app and _workflows(scope).filter(pk=app.appeal_workflow_id or app.workflow_id).first()
+    if kind == "approval":
+        return _workflows(scope).filter(pk=pk).exclude(case_type=CaseType.REBIRTH_APPLICATION).first()
+    return None
 
 
 def detail(user, kind, pk, request=None):
     """None = 范围之外(404)。其余都带 `actionable` / `state` / `handled_by`。"""
     scope = scope_of(user, request)
     if kind in ("approval", "rebirth"):
-        if kind == "rebirth":
-            app = RebirthApplication.objects.filter(pk=pk).first()
-            wf = app and _workflows(scope).filter(pk=app.appeal_workflow_id or app.workflow_id).first()
-        else:
-            wf = _workflows(scope).filter(pk=pk).exclude(case_type=CaseType.REBIRTH_APPLICATION).first()
+        wf = workflow_for(scope, kind, pk)
         if wf is None:
             return None
         return {"kind": kind, "id": str(pk), "title": wf.workflow_name, "workflow_id": str(wf.pk),

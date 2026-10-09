@@ -51,6 +51,26 @@ class TodoItemDetailSerializer(serializers.Serializer):
     handled_at = serializers.DateTimeField(allow_null=True)
     workflow_id = serializers.CharField(required=False, help_text="审批节点与转生申请:决定走 workflows/<id>/approve_node/。")
     node_id = serializers.CharField(required=False, help_text="待决的节点;决定时作为 node_id 传回。")
+    required_verdicts = serializers.ListField(
+        child=serializers.CharField(), required=False,
+        help_text="该节点接受的裁决(PASSED / CONFIRMED / FAILED / REJECTED …);空 = 不限。批准只在其中的通过类里选。",
+    )
+
+
+class CosignAddSerializer(serializers.Serializer):
+    user_id = serializers.IntegerField(help_text="A `signer-candidates/` id: an officer of the same hall.")
+
+
+class CosignerSerializer(serializers.Serializer):
+    user_id = serializers.IntegerField()
+    user_name = serializers.CharField()
+    added_at = serializers.CharField()
+    signed_at = serializers.CharField(allow_null=True)
+
+
+class CosignRefusalSerializer(serializers.Serializer):
+    code = serializers.CharField(help_text="not_allowed / not_eligible / duplicate")
+    detail = serializers.CharField()
 
 
 class OfficerPushTokenSerializer(serializers.Serializer):
