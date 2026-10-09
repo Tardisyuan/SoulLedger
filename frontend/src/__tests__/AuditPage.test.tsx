@@ -15,11 +15,12 @@ import { render, screen, waitFor, fireEvent, within } from "@testing-library/rea
 import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import AuditPage from "@/app/audit/page";
-import { auditApi } from "@soulledger/core/api";
+import { auditApi, tenantsApi } from "@soulledger/core/api";
 import { saveBlob } from "@/src/lib/saveBlob";
 
 jest.mock("@soulledger/core/api", () => ({
   auditApi: { list: jest.fn(), exportCsv: jest.fn() },
+  tenantsApi: { list: jest.fn() },
   PAGE_SIZE: 20,
   menusApi: {
     all: jest.fn().mockResolvedValue({ data: [] }),
@@ -60,6 +61,7 @@ jest.mock("@/src/contexts/I18nContext", () => ({
 }));
 
 const mockedList = auditApi.list as jest.Mock;
+const mockedTenants = tenantsApi.list as jest.Mock;
 
 function entry(over: Record<string, unknown> = {}) {
   return {
@@ -104,6 +106,14 @@ beforeEach(() => {
   mockRole = null;
   mockPermissions = ["audit.read"];
   mockedList.mockResolvedValue({ data: { count: 1, results: [entry()] } });
+  mockedTenants.mockResolvedValue({
+    data: {
+      results: [
+        { id: 1, code: "CN_DIYU", display_name: "Chinese Afterlife" },
+        { id: 2, code: "EG_DUAT", display_name: "Egyptian Afterlife" },
+      ],
+    },
+  });
 });
 
 // ── Admin gate ───────────────────────────────────────────────────────
@@ -192,13 +202,45 @@ describe("AuditPage request parameters", () => {
     await waitFor(() => expect(lastParams().resource).toBe("user"));
   });
 
-  it("offers the hall (tenant) resource and sends it as resource=tenant", async () => {
+  it("no longer offers 「殿」 as a resource: that filter is a per-hall dropdown now", async () => {
     renderPage();
     await waitFor(() => expect(mockedList).toHaveBeenCalled());
+    const resource = screen.getByRole("combobox", { name: "audit.filter_resource" });
+    expect(within(resource).queryByText("audit.resource_tenant")).not.toBeInTheDocument();
+  });
 
-    pickChip("audit.filter_resource", "audit.resource_tenant");
+  it("a global admin picks one hall and the list is asked for that hall only", async () => {
+    renderPage();
+    await waitFor(() => expect(mockedList).toHaveBeenCalled());
+    expect(lastParams().tenant).toBeUndefined();
 
-    await waitFor(() => expect(lastParams().resource).toBe("tenant"));
+    const select = await screen.findByRole("combobox", { name: "audit.filter_hall" });
+    // Options are the halls the admin can see, named by realm, plus "all".
+    expect(within(select).getByText("audit.all_halls")).toBeInTheDocument();
+    pickChip("audit.filter_hall", "plaque.realm.eg");
+
+    await waitFor(() => expect(lastParams().tenant).toBe("EG_DUAT"));
+  });
+
+  it("the hall filter is cleared by 'clear filters'", async () => {
+    renderPage();
+    await waitFor(() => expect(mockedList).toHaveBeenCalled());
+    await screen.findByRole("combobox", { name: "audit.filter_hall" });
+    pickChip("audit.filter_hall", "plaque.realm.cn");
+    await waitFor(() => expect(lastParams().tenant).toBe("CN_DIYU"));
+
+    fireEvent.click(screen.getByRole("button", { name: "audit.clear_filters" }));
+    await waitFor(() => expect(lastParams().tenant).toBeUndefined());
+  });
+
+  it("a hall-bound user gets no hall dropdown and the halls are never fetched", async () => {
+    mockIsAdmin = false;
+    mockRole = "MODERATOR";
+    renderPage();
+    await waitFor(() => expect(mockedList).toHaveBeenCalled());
+    expect(screen.queryByRole("combobox", { name: "audit.filter_hall" })).not.toBeInTheDocument();
+    expect(mockedTenants).not.toHaveBeenCalled();
+    expect(lastParams().tenant).toBeUndefined();
   });
 
   it("turns the 7d preset into a start_date and leaves end_date unset", async () => {

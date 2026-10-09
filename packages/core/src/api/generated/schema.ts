@@ -674,6 +674,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/email/send-verification/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description POST /api/v1/auth/email/send-verification/ — 往本人资料页的邮箱发验证链接(每小时 5 封)。 */
+        post: operations["v1_auth_email_send_verification_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/email/verify/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description POST /api/v1/auth/email/verify/ — 邮件里的链接。令牌本身就是凭据,所以不要求已登录。 */
+        post: operations["v1_auth_email_verify_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/login/": {
         parameters: {
             query?: never;
@@ -902,6 +936,44 @@ export interface paths {
          *     `OfficerTokenObtainPairSerializer` for the 409 `hall_required` case.
          */
         post: operations["v1_auth_officer_login_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/officer-reset/confirm/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description POST /api/v1/auth/officer-reset/confirm/ — 令牌 + 新密码。成功后该官员所有设备的登录退出。 */
+        post: operations["v1_auth_officer_reset_confirm_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/officer-reset/request/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description POST /api/v1/auth/officer-reset/request/
+         *     官员「忘记密码」。不读用户表:按 IP 限频(拒绝对所有标识一视同仁),然后交给 worker 查人发信。
+         *     账号存在与否、邮箱是否已验证、是不是灵魂,应答与耗时都看不出来。
+         */
+        post: operations["v1_auth_officer_reset_request_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -9699,6 +9771,10 @@ export interface components {
          * @enum {string}
          */
         EmailNotSyncedEnum: "taken";
+        EmailVerify: {
+            uid: string;
+            token: string;
+        };
         /** @description 一套向量配置;没给的键沿用当前生效值。`embedding_dims` 为 null = 模型原生维度(不截断)。 */
         EmbeddingCandidate: {
             /** Format: uri */
@@ -12018,6 +12094,28 @@ export interface components {
         OfficerReply: {
             body: string;
         };
+        OfficerResetConfirm: {
+            uid: string;
+            token: string;
+            new_password: string;
+        };
+        /** @description Doc-only. `code`: rate_limited / reset_link_invalid / verify_link_invalid / weak_password. */
+        OfficerResetRefusal: {
+            error: string;
+            code: components["schemas"]["OfficerResetRefusalCodeEnum"];
+            retry_after?: number;
+        };
+        /**
+         * @description * `rate_limited` - rate_limited
+         *     * `reset_link_invalid` - reset_link_invalid
+         *     * `verify_link_invalid` - verify_link_invalid
+         *     * `weak_password` - weak_password
+         * @enum {string}
+         */
+        OfficerResetRefusalCodeEnum: "rate_limited" | "reset_link_invalid" | "verify_link_invalid" | "weak_password";
+        OfficerResetRequest: {
+            identifier: string;
+        };
         /**
          * @description * `about` - about
          *     * `actors` - actors
@@ -13762,6 +13860,7 @@ export interface components {
             readonly username?: string;
             /** Email address */
             email?: string;
+            readonly email_verified?: boolean;
             readonly role?: string;
             readonly tenant?: components["schemas"]["LoginTenantRef"] | null;
             first_name?: string;
@@ -16341,6 +16440,7 @@ export interface components {
             readonly username: string;
             /** Email address */
             email?: string;
+            readonly email_verified: boolean;
             readonly role: string;
             readonly tenant: components["schemas"]["LoginTenantRef"] | null;
             first_name?: string;
@@ -17860,6 +17960,7 @@ export interface operations {
                 resource_id?: string;
                 /** @description A search term. */
                 search?: string;
+                tenant?: string;
                 user?: number;
             };
             header?: never;
@@ -17926,6 +18027,7 @@ export interface operations {
                 resource_id?: string;
                 /** @description A search term. */
                 search?: string;
+                tenant?: string;
                 user?: number;
             };
             header?: never;
@@ -18036,6 +18138,7 @@ export interface operations {
                 resource_id?: string;
                 /** @description A search term. */
                 search?: string;
+                tenant?: string;
                 user?: number;
             };
             header?: never;
@@ -18080,6 +18183,7 @@ export interface operations {
                 resource_id?: string;
                 /** @description A search term. */
                 search?: string;
+                tenant?: string;
                 user?: number;
             };
             header?: never;
@@ -18140,6 +18244,82 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PublicCivilization"][];
+                };
+            };
+        };
+    };
+    v1_auth_email_send_verification_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DetailResponse"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OfficerResetRefusal"];
+                };
+            };
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OfficerResetRefusal"];
+                };
+            };
+        };
+    };
+    v1_auth_email_verify_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EmailVerify"];
+                "application/x-www-form-urlencoded": components["schemas"]["EmailVerify"];
+                "multipart/form-data": components["schemas"]["EmailVerify"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DetailResponse"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OfficerResetRefusal"];
+                };
+            };
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OfficerResetRefusal"];
                 };
             };
         };
@@ -18566,6 +18746,80 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["LoginLockedResponse"];
+                };
+            };
+        };
+    };
+    v1_auth_officer_reset_confirm_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OfficerResetConfirm"];
+                "application/x-www-form-urlencoded": components["schemas"]["OfficerResetConfirm"];
+                "multipart/form-data": components["schemas"]["OfficerResetConfirm"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DetailResponse"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OfficerResetRefusal"];
+                };
+            };
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OfficerResetRefusal"];
+                };
+            };
+        };
+    };
+    v1_auth_officer_reset_request_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OfficerResetRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["OfficerResetRequest"];
+                "multipart/form-data": components["schemas"]["OfficerResetRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DetailResponse"];
+                };
+            };
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OfficerResetRefusal"];
                 };
             };
         };
