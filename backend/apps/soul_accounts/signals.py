@@ -2,8 +2,9 @@
 
 挂在 `ApprovalWorkflow` 的 post_save 上,而不是挂在某个视图里:工作流的状态有
 好几条写路径(`approve_node`、`escalate`、工作流 / 节点的 CRUD),只挂视图会漏。
-`on_commit`:`complete_node` 在 `select_for_update` 里保存,事件不能从一个调用方
-可能回滚的锁里发出去(与 `WorkflowService.announce` 的注释同一理由)。
+`on_commit`:这是**兜底**。决定工作流的两条路(`approve_node`、超时自动驳回)已在同一事务里
+直接调 `rebirth.sync_from_workflow`(审批与申请状态一起提交或回滚);其余写路径(后台 CRUD 等)
+走到这里,提交后再对齐,已对齐时什么也不做。
 """
 from django.db import transaction
 from django.db.models.signals import post_save
