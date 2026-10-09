@@ -532,12 +532,12 @@ if [ "$RUN_OFFICER" = 1 ]; then
     need npm
     cd "$ROOT" || exit 1
     echo "  → officer tsc"
-    npm run --workspace officer typecheck --silent || fail "officer typecheck failed"
+    npm run --workspace mobile-officer typecheck --silent || fail "officer typecheck failed"
     echo "  → officer eslint"
-    npm run --workspace officer lint --silent || fail "officer lint failed"
+    npm run --workspace mobile-officer lint --silent || fail "officer lint failed"
     echo "  → officer jest"
     OFFICER_LOG=$(mktemp -t prepush-officer-jest)
-    npm run --workspace officer test --silent -- --silent >"$OFFICER_LOG" 2>&1
+    npm run --workspace mobile-officer test --silent -- --silent >"$OFFICER_LOG" 2>&1
     OFFICER_STATUS=$?
     tail -4 "$OFFICER_LOG"
     if [ "$OFFICER_STATUS" -ne 0 ]; then
