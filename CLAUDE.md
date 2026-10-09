@@ -361,6 +361,11 @@ cd backend && SECRET_KEY=ci-test-key-not-for-production-32-bytes-min \
 # 跑完 115 残留 NONE)。每个 worker 在 115 上建自己的库(`test_soulledger_gw0_<后缀>`)。
 # 改到迁移、`tests/migration_roundtrip.py`、conftest 或 `pytest.ini` 时，去掉 `-m "not migration"`
 # 跑全量(规则同 pre-push 的 SQLite 那条)。
+# 多库守卫(G3/G7,opt-in,2026-10-09):第二个别名 `tenant_shadow` + 测试路由,只在这个 settings 下存在,
+# 正常门禁不跑(skip)。说明与限制见 docs/ARCHITECTURE-tenant-sharding.md 4.1。
+cd backend && SECRET_KEY=ci-test-key-not-for-production-32-bytes-min DEBUG=true \
+  DATABASE_URL=sqlite:///:memory: REDIS_URL=redis://127.0.0.1:6399/0 \
+  .venv/bin/python -m pytest --ds=config.settings_multidb -m multidb --no-cov tests/test_multidb_shadow.py
 ```
 
 **`tests/test_concurrency.py` 里有 4 条 `skipif(SQLITE)` 的测试,是这个仓库里唯一
