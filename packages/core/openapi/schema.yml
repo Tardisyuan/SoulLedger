@@ -103,6 +103,40 @@ paths:
               schema:
                 $ref: '#/components/schemas/Actor'
           description: ''
+  /api/v1/app-version/:
+    get:
+      operationId: v1_app_version_retrieve
+      description: |-
+        GET /api/v1/app-version/?app=soul|officer&platform=ios|android (public, read-only).
+
+        Anonymous on purpose: the check runs before sign-in. The default anon
+        throttle applies (DEFAULT_THROTTLE_CLASSES).
+      parameters:
+      - in: query
+        name: app
+        schema:
+          type: string
+          enum:
+          - officer
+          - soul
+      - in: query
+        name: platform
+        schema:
+          type: string
+          enum:
+          - android
+          - ios
+      tags:
+      - v1
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppVersion'
+          description: ''
   /api/v1/assist/:
     post:
       operationId: officer_assist_ask
@@ -18422,6 +18456,20 @@ components:
       description: |-
         * `page` - page
         * `env` - env
+    AppVersion:
+      type: object
+      description: 空串 = 没配置 = 不限制。版本比较在 App 里做,这里只给数字。
+      properties:
+        min_supported:
+          type: string
+        latest:
+          type: string
+        store_url:
+          type: string
+      required:
+      - latest
+      - min_supported
+      - store_url
     ApprovalNode:
       type: object
       description: |-

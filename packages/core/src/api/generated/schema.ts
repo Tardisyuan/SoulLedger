@@ -44,6 +44,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/app-version/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description GET /api/v1/app-version/?app=soul|officer&platform=ios|android (public, read-only).
+         *
+         *     Anonymous on purpose: the check runs before sign-in. The default anon
+         *     throttle applies (DEFAULT_THROTTLE_CLASSES).
+         */
+        get: operations["v1_app_version_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/assist/": {
         parameters: {
             query?: never;
@@ -8463,6 +8485,12 @@ export interface components {
          * @enum {string}
          */
         ApiKeyStateSourceEnum: "page" | "env";
+        /** @description 空串 = 没配置 = 不限制。版本比较在 App 里做,这里只给数字。 */
+        AppVersion: {
+            min_supported: string;
+            latest: string;
+            store_url: string;
+        };
         /**
          * @description Serializer for ApprovalNode.
          *
@@ -17098,6 +17126,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Actor"];
+                };
+            };
+        };
+    };
+    v1_app_version_retrieve: {
+        parameters: {
+            query?: {
+                app?: "officer" | "soul";
+                platform?: "android" | "ios";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AppVersion"];
                 };
             };
         };

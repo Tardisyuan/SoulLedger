@@ -14,6 +14,7 @@ from rest_framework.routers import DefaultRouter
 
 from apps.authentication.views import UserViewSet
 from apps.chat import urls as chat_urls
+from apps.core.app_version import AppVersionView
 from apps.core.health import HealthCheck, HealthCheckDetailed
 from apps.core.recycle_bin_views import RecycleBinViewSet
 from apps.social import soul_urls as social_urls
@@ -48,6 +49,7 @@ def _serve_media(request, path, document_root=None):
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("health/", HealthCheck.as_view(), name="health"),
+    path("api/v1/app-version/", AppVersionView.as_view(), name="app-version"),
     path("health/detailed/", HealthCheckDetailed.as_view(), name="health_detailed"),
     path("api/v1/auth/", include("apps.authentication.urls")),
     path("api/v1/users/", include(user_router.urls)),
