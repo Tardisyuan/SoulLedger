@@ -7,8 +7,8 @@
  * where the new password is chosen: the app has no universal-link domain to receive it.
  *
  * 修改密码 signs every OTHER device out and keeps this one: `authApi.changePassword` sends this device's
- * refresh token and stores the new pair it gets back. Its refusals are the server's own sentences, one
- * per rule; the password is never echoed.
+ * refresh token and stores the new pair it gets back. Its refusals are one line per reason, by the
+ * server's reason code, under the field they are about; the password is never echoed.
  */
 import { authApi } from "@soulledger/core/api/auth";
 import { useEffect, useState, type ReactNode } from "react";
@@ -148,7 +148,7 @@ export function ChangePasswordScreen({ onBack }: { onBack: () => void }) {
         autoComplete="current-password"
         secureToggle={{ show: t("soul_app.common.show"), hide: t("soul_app.common.hide") }}
       />
-      {fail?.old.map((line) => <FieldError key={line} testID="password-old-error" text={line} />)}
+      {fail?.old.map((key) => <FieldError key={key} testID="password-old-error" text={t(key)} />)}
       <Input
         testID="password-new"
         label={t("profile.new_password")}
@@ -160,7 +160,7 @@ export function ChangePasswordScreen({ onBack }: { onBack: () => void }) {
         autoComplete="new-password"
         secureToggle={{ show: t("soul_app.common.show"), hide: t("soul_app.common.hide") }}
       />
-      {fail?.next.map((line) => <FieldError key={line} testID="password-new-error" text={line} />)}
+      {fail?.next.map((key) => <FieldError key={key} testID="password-new-error" text={t(key)} />)}
       <Input
         testID="password-confirm"
         label={t("profile.confirm_password")}

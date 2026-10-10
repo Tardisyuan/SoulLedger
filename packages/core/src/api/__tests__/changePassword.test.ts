@@ -1,11 +1,12 @@
 /**
  * `authApi.changePassword`: this device's refresh token goes along, and the new pair that comes back
- * replaces the stored one (every other device was signed out by the server).
+ * replaces the stored one (every other device was signed out by the server). `passwordReasonKeys`
+ * turns a refusal's reason codes into i18n keys.
  */
 import { type AxiosResponse, type InternalAxiosRequestConfig } from "axios";
 import { beforeEach, describe, expect, it } from "vitest";
 import { api } from "../client";
-import { authApi } from "../auth";
+import { authApi, passwordReasonKeys } from "../auth";
 import {
   ACCESS_TOKEN_KEY,
   configurePlatform,
@@ -62,5 +63,32 @@ describe("changePassword", () => {
     await authApi.changePassword({ old_password: "a", new_password: "b" });
     expect(getAccessToken()).toBe("OLD-A");
     expect(getRefreshToken()).toBe("OLD-R");
+  });
+});
+
+describe("passwordReasonKeys", () => {
+  it("maps each validator code to a key, once", () => {
+    const body = {
+      new_password: [
+        { code: "password_too_short", message: "x" },
+        { code: "password_too_common", message: "x" },
+        { code: "password_entirely_numeric", message: "x" },
+        { code: "password_too_similar", message: "x" },
+        { code: "something_new", message: "x" },
+        "This field may not be blank.",
+      ],
+    };
+    expect(passwordReasonKeys(body)).toEqual([
+      "profile.password_too_short",
+      "profile.password_reason_common",
+      "profile.password_reason_numeric",
+      "profile.password_reason_similar",
+      "profile.password_reason_invalid",
+    ]);
+  });
+
+  it("is empty for a body without reasons", () => {
+    expect(passwordReasonKeys(undefined)).toEqual([]);
+    expect(passwordReasonKeys({ old_password: ["x"] })).toEqual([]);
   });
 });

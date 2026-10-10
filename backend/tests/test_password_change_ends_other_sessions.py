@@ -1,4 +1,4 @@
-"""官员改密码 / 邮箱重置密码:其他设备立刻退出,当前设备保持。
+"""官员改密码 / 邮箱重置密码:其他设备立刻退出,当前设备保持;新密码逐条带原因码。
 
 机制(`apps/authentication/passwords.py`):刷新令牌进黑名单 + `User.session_version` +1。
 官员令牌带 `sv` 声明,比对不上的 access 在 HTTP(`OfficerJWTAuthentication`)与
@@ -100,7 +100,7 @@ class TestChangePassword:
         before = officer.session_version
         res = _change(a, old="wrong-old-password")
         assert res.status_code == 400 and "old_password" in res.data
-        weak = _change(a, new="short")
+        weak = _change(a, new="12345678")
         assert weak.status_code == 400
         officer.refresh_from_db()
         assert officer.session_version == before
@@ -138,6 +138,25 @@ class TestChangePassword:
         assert AuditLog.objects.filter(user=officer, description__contains="其他设备已退出").count() == 1
 
 
+class TestStrength:
+    @pytest.mark.parametrize(
+        "password, codes",
+        [
+            ("Ab1!", {"password_too_short"}),
+            ("12345678901", {"password_entirely_numeric"}),
+            ("password123", {"password_too_common"}),
+            ("two_devices99", {"password_too_similar"}),
+            ("12345678", {"password_too_common", "password_entirely_numeric"}),
+        ],
+    )
+    def test_each_reason_comes_back_under_new_password_with_its_code(self, officer, password, codes):
+        res = _change(_login(), new=password)
+        assert res.status_code == 400
+        got = {r["code"] for r in res.data["new_password"]}
+        assert codes <= got, got
+        assert all(r["message"] for r in res.data["new_password"])
+
+
 class TestEmailReset:
     def _link(self, officer):
         from apps.authentication import officer_reset
@@ -161,6 +180,15 @@ class TestEmailReset:
         assert self._confirm(uid, token, NEW).status_code == 200
         assert _get(a["access"]) == _get(b["access"]) == 401
         assert _refresh(a["refresh"]) == _refresh(b["refresh"]) == 401
+
+    def test_a_weak_password_lists_its_reasons_and_keeps_the_link_and_sessions(self, officer):
+        a = _login()
+        uid, token = self._link(officer)
+        res = self._confirm(uid, token, "12345678")
+        assert res.status_code == 400 and res.data["code"] == "weak_password"
+        assert {"password_too_common", "password_entirely_numeric"} <= {r["code"] for r in res.data["new_password"]}
+        assert _get(a["access"]) == 200
+        assert self._confirm(uid, token, NEW).status_code == 200
 
 
 @database_sync_to_async

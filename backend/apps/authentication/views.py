@@ -45,6 +45,7 @@ from .officer_reset import _audit
 from .passwords import end_sessions
 from .serializers import (
     AssignRolesSerializer,
+    ChangePasswordRefusalSerializer,
     ChangePasswordResponseSerializer,
     ChangePasswordSerializer,
     CustomTokenObtainPairSerializer,
@@ -819,7 +820,7 @@ def profile_view(request):
 
 @extend_schema(
     request=ChangePasswordSerializer,
-    responses={200: ChangePasswordResponseSerializer},
+    responses={200: ChangePasswordResponseSerializer, 400: ChangePasswordRefusalSerializer},
 )
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
