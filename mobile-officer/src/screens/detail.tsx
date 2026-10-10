@@ -1,6 +1,6 @@
 /**
  * Item details: a waiting item (with the decision bar), a judgment (claim / read) and a soul
- * (read-only). Each ends with 「在电脑上继续」, a link to the desk's same page that the officer can
+ * (read-only), plus a letter thread (待回书信, `letter.tsx`). Each ends with 「在电脑上继续」, a link to the desk's same page that the officer can
  * send to a computer.
  */
 import { JUDGMENT_COMMENT_MAX, judgmentApi } from "@soulledger/core/api/judgment";
@@ -15,6 +15,7 @@ import { ActionButton, StateView, viewStateOf } from "../kit";
 import { deskUrl, handledNotice, isDenied, todoTitle, type Verdict } from "../rules";
 import { useSession } from "../session";
 import { Icon, Input, Notice, Screen, SectionLabel, Txt, space, useI18n, useRemote, useTheme } from "../shared";
+import { LetterThread } from "./letter";
 import { CosignSheet, DecisionSheet, type CooldownFacts } from "./sheets";
 
 export type DetailTarget =
@@ -37,7 +38,8 @@ export function Detail({ target, onBack, onSettled }: { target: DetailTarget; on
         <Icon name="back" size={16} color={theme.ink} />
         <Txt variant="nav">{t("officer_app.back")}</Txt>
       </Pressable>
-      {target.type === "todo" ? <TodoDetail kind={target.kind} id={target.id} onSettled={onSettled} /> : null}
+      {target.type === "todo" && target.kind === "letter" ? <LetterThread key={target.id} id={target.id} onSettled={onSettled} /> : null}
+      {target.type === "todo" && target.kind !== "letter" ? <TodoDetail kind={target.kind} id={target.id} onSettled={onSettled} /> : null}
       {target.type === "judgment" ? <JudgmentDetail id={target.id} /> : null}
       {target.type === "soul" ? <SoulDetail id={target.id} /> : null}
     </View>

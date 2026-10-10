@@ -31,8 +31,13 @@ export interface InboxListParams {
   hall?: number;
 }
 
+/** A reply (and a draft) is at most this long -- `OfficerReplySerializer.body`, `inbox.DRAFT_MAX_LENGTH`. */
+export const INBOX_REPLY_MAX = 4000;
+
 export const soulInboxApi = {
   list: (params: InboxListParams) => api.get<PaginatedResponse<InboxConversation>>("/chat/inbox/", { params }),
+  /** One conversation (soul name, hall names, `closed_at`, `last_from`). */
+  get: (id: string) => api.get<InboxConversation>(`/chat/inbox/${id}/`),
   /** Totals per folder, the same filter as `list` — so a count is what paging to the end gives. */
   folders: () => api.get<InboxFolderCounts>("/chat/inbox/folders/"),
   /** Newest first. 503 `chat_not_configured` / `chat_unavailable` when Synapse is off or down. */

@@ -130,7 +130,7 @@ def test_the_hall_choice_comes_before_the_second_step(monkeypatch, cn_tenant, eu
 # ── 待我处理 ────────────────────────────────────────────────────────────
 
 
-def test_todo_lists_the_four_kinds_scoped_to_the_hall_and_the_role(cn_tenant, eu_tenant, judge_user,
+def test_todo_lists_the_kinds_scoped_to_the_hall_and_the_role(cn_tenant, eu_tenant, judge_user,
                                                                    django_capture_on_commit_callbacks):
     wf, node = _plain_workflow(cn_tenant)
     _plain_workflow(cn_tenant, role="ADMIN", name="别人的节点")
@@ -151,7 +151,7 @@ def test_todo_lists_the_four_kinds_scoped_to_the_hall_and_the_role(cn_tenant, eu
 
     viewer = User.objects.create_user(username="v", password="x", role="VIEWER", tenant=cn_tenant)
     empty = officer_client(viewer).get(TODO).data
-    assert [g["count"] for g in empty.values()] == [0, 0, 0, 0]
+    assert [g["count"] for g in empty.values()] == [0, 0, 0, 0, 0]
 
 
 def test_rebirth_item_title_is_the_soul_name_with_the_code_beside_it(cn_tenant, judge_user,

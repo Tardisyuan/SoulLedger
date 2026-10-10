@@ -55,5 +55,10 @@
   "permissions.config.download_skipped",
   "dashboard.data_as_of",
   "souls.detail.case_open",
-  "souls.detail.case_closed"
+  "souls.detail.case_closed",
+  "officer_app.todo.groups.letters",
+  "officer_app.kinds.letter",
+  "officer_app.letter.irreversible",
+  "officer_app.letter.unavailable",
+  "officer_app.letter.failed"
 ]

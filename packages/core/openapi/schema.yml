@@ -10514,7 +10514,7 @@ paths:
   /api/v1/officer-app/todo/:
     get:
       operationId: officer_app_todo
-      description: 「待我处理」四组:审批节点 / 改派请求 / 缩短冷却申请 / 转生申请,每组计数 + 前 10 条。
+      description: 「待我处理」五组:审批节点 / 改派请求 / 缩短冷却申请 / 转生申请 / 待回书信,每组计数 + 前 10 条。
       tags:
       - v1
       security:
@@ -35082,9 +35082,14 @@ components:
           $ref: '#/components/schemas/TodoGroup'
         rebirths:
           $ref: '#/components/schemas/TodoGroup'
+        letters:
+          allOf:
+          - $ref: '#/components/schemas/TodoGroup'
+          description: 待回书信:标给我、灵魂最后一封还没回的(最早在前)。需 `soul_inbox.reply`。
       required:
       - approvals
       - cooldowns
+      - letters
       - reassignments
       - rebirths
     TodoGroup:
@@ -35104,7 +35109,7 @@ components:
       properties:
         kind:
           type: string
-          description: approval / reassignment / cooldown / rebirth
+          description: approval / reassignment / cooldown / rebirth / letter
         id:
           type: string
         title:
@@ -35200,7 +35205,7 @@ components:
       properties:
         kind:
           type: string
-          description: approval / reassignment / cooldown / rebirth
+          description: approval / reassignment / cooldown / rebirth / letter
         id:
           type: string
       required:

@@ -16,8 +16,12 @@ export type SignerCandidate = components["schemas"]["SignerCandidate"];
 export type OfficerPushToken = components["schemas"]["OfficerPushToken"];
 export type Cosigner = components["schemas"]["Cosigner"];
 
-/** The four kinds of waiting item; `target` on a row is `{ kind, id }`. */
-export type TodoKind = "approval" | "reassignment" | "cooldown" | "rebirth";
+/**
+ * The kinds of waiting item; `target` on a row is `{ kind, id }`. `letter` (待回书信) is a soul's
+ * letter assigned to me: its id is the inbox conversation's, and it has no `item()` detail --
+ * the thread is read and answered through `soulInboxApi`.
+ */
+export type TodoKind = "approval" | "reassignment" | "cooldown" | "rebirth" | "letter";
 
 /**
  * Why a decision (approve / reject) did not go through. `code` on the error body of
