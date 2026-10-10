@@ -1980,6 +1980,7 @@
     "help_open_users": "Open users",
     "help_ignore": "Not them · ignore",
     "open_case": "Open the case",
+    "open_dispatch": "Open the dispatch",
     "select_all": "Select all",
     "select_row": "Select notification: {{title}}",
     "batch_region": "Batch actions for notifications",
@@ -4341,6 +4342,26 @@
     "password_help_requested_moderator": {
       "title": "Password reset help",
       "body": "Someone on the sign-in page asked for a password reset for account {{username}}. Once you have confirmed who is asking, ask an administrator to reset it."
+    },
+    "dispatch_proposed": {
+      "title": "Dispatch proposal received",
+      "body": "{{source}} proposes to send soul {{soul}} to your hall. It awaits your approval."
+    },
+    "dispatch_approved": {
+      "title": "Dispatch proposal approved",
+      "body": "{{target}} approved your hall's proposal to send soul {{soul}}."
+    },
+    "dispatch_rejected": {
+      "title": "Dispatch proposal rejected",
+      "body": "{{target}} rejected your hall's proposal to send soul {{soul}}. Reason: {{reason}}"
+    },
+    "dispatch_rejected_bare": {
+      "title": "Dispatch proposal rejected",
+      "body": "{{target}} rejected your hall's proposal to send soul {{soul}}."
+    },
+    "dispatch_cancelled": {
+      "title": "Dispatch proposal cancelled by its sender",
+      "body": "{{source}} cancelled its proposal to send soul {{soul}}. Reason: {{reason}}"
     },
     "dispatch_return_blocked": {
       "title": "Residence return blocked",
