@@ -316,7 +316,7 @@ export function ChangePasswordScreen() {
     setError(null);
     try {
       await changePassword(oldPassword, newPassword);
-      toast(t("soul_app.change_password.success"));
+      toast(t(voluntary ? "soul_app.change_password.success_others_out" : "soul_app.change_password.success"));
       if (voluntary && navigation.canGoBack()) navigation.goBack();
     } catch (e) {
       setError(soulErrorMessage(e));

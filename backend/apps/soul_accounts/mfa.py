@@ -224,7 +224,7 @@ def reset_by_officer(account, *, actor, reason, request=None):
     """官员替灵魂关闭:密钥、恢复码、设备令牌全清,吊销刷新令牌(灵魂重新登录时用密码,
     并在通知记录里看到是谁关的)。理由进审计行。**只能关,不能替灵魂开。**
     通知行在同一事务里写(回滚则一起不存在),推送在提交之后才入队。"""
-    from apps.soul_accounts.services import _revoke_refresh_tokens
+    from apps.soul_accounts.services import end_account_sessions
     from apps.soul_push import services as push
 
     with transaction.atomic():
@@ -234,7 +234,7 @@ def reset_by_officer(account, *, actor, reason, request=None):
         if not is_enabled(account):
             raise SoulAccountError("该灵魂没有开启两步验证。", "not_enabled", 409)
         void_all(account)
-        _revoke_refresh_tokens(account.user)
+        end_account_sessions(account)  # 刷新令牌进黑名单 + sv+1:已签发的 access 当场 401,推送登记停用
         audit("EXECUTE", account.soul, f"官员关闭灵魂两步验证:{reason}", actor=actor, request=request,
               resource_id=account.pk, resource="mfa",
               changes={"mfa_enabled": [True, False], "reason": reason, "sessions_revoked": True})

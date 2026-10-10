@@ -85,4 +85,7 @@ class SoulJWTAuthentication(JWTAuthentication):
         account = getattr(user, "soul_account", None)
         if account is None or account.retired_at is not None:
             raise AuthenticationFailed("账号已停用。", code="account_retired")
+        # 官员关闭两步验证、重置密码、改密码、邮箱重置、转世都会 `session_version`+1:更早签发的 access 立刻 401。
+        if not session_is_current(validated_token, user):
+            raise AuthenticationFailed("登录已失效,请重新登录。", code="session_revoked")
         return user

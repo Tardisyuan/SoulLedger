@@ -210,8 +210,12 @@ export const soulApi = {
   mfaVerify: (body: SoulMfaVerifyRequest) =>
     soulHttp.post<SoulMfaVerifyResponse>("/soul-auth/mfa/verify/", body).then((r) => r.data),
   mfaStatus: () => soulHttp.get<SoulMfaStatus>("/me/mfa/").then((r) => r.data),
-  /** A new secret (and the previous unconfirmed one is void). Not enabled until `mfaConfirm`. */
-  mfaSetup: () => soulHttp.post<SoulMfaSetup>("/me/mfa/setup/").then((r) => r.data),
+  /**
+   * Needs the CURRENT PASSWORD (being signed in is not being the owner): 400 `wrong_password` makes no secret, 429
+   * `rate_limited` once the password login's own counters are spent. A new secret (the previous unconfirmed one is
+   * void). Not enabled until `mfaConfirm`.
+   */
+  mfaSetup: (password: string) => soulHttp.post<SoulMfaSetup>("/me/mfa/setup/", { password }).then((r) => r.data),
   mfaCancelSetup: () => soulHttp.delete("/me/mfa/setup/").then(() => undefined),
   /** Right digits → enabled, and the ten recovery codes, ONCE. Hold them in component state only. */
   mfaConfirm: (code: string) =>
@@ -224,8 +228,10 @@ export const soulApi = {
   /** Best effort: the server answers 204 whatever the token's state. */
   logout: (refresh: string) => soulHttp.post("/soul-auth/logout/", { refresh }),
   /** 200 is a NEW token pair; the old refresh token is dead the moment this returns. */
-  changePassword: (old_password: string, new_password: string) =>
-    soulHttp.post<SoulTokenPair>("/me/password/", { old_password, new_password }).then((r) => r.data),
+  changePassword: (old_password: string, new_password: string, push_token?: string) =>
+    soulHttp
+      .post<SoulTokenPair>("/me/password/", { old_password, new_password, ...(push_token ? { push_token } : {}) })
+      .then((r) => r.data),
   /**
    * 「忘记密码」, step 1: mail a six-digit code (valid 5 minutes) to the contact
    * email on the soul's account. `/auth/*`, not `/soul-auth/*` — the email-code

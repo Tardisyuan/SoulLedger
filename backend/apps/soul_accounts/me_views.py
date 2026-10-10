@@ -238,7 +238,8 @@ class MePasswordView(SoulAPIView):
         body.is_valid(raise_exception=True)
         try:
             tokens = svc.change_password(self.account, body.validated_data["old_password"],
-                                         body.validated_data["new_password"])
+                                         body.validated_data["new_password"],
+                                         push_token=body.validated_data["push_token"])
         except svc.SoulAccountError as exc:
             return _error(exc)
         except ValidationError as exc:
