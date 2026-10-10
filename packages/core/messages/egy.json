@@ -5119,9 +5119,6 @@
       "notices": "Sedjem Sab",
       "me": "Djes"
     },
-    "banner": {
-      "mfa_required": "Netjer-Ek: Aq Sep Sen Nen Shu; Nen Smen Djer. Smen Em Medjat Sab."
-    },
     "todo": {
       "title": "Nen Iri-I Djer",
       "empty_title": "Nen Iri-Ek Djer",
@@ -5239,7 +5236,6 @@
       "mfa_on": "Wen Seth",
       "mfa_off": "Nen Wen",
       "mfa_required_off": "Nen Shu · Nen Smen Djer",
-      "mfa_note": "Wen Hena Iri: Em Medjat Sab.",
       "language": "Medew Seth",
       "theme": "Hetep",
       "theme_system": "Mi Hemsu",

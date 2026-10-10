@@ -4,15 +4,16 @@
  * has two-step verification, a code step follows (`mfa_required` + `pending_token`).
  */
 import { useState } from "react";
-import { Linking, View } from "react-native";
+import { View } from "react-native";
 
 import { OFFICER_BRAND } from "../brand";
 import { ActionButton, Row } from "../kit";
-import { forgotPasswordUrl, loginFailureKey } from "../rules";
+import { loginFailureKey } from "../rules";
+import { ForgotPassword } from "./account";
 import { useSession, type Hall } from "../session";
 import { BrandMark, Button, Input, Notice, Screen, Txt, space, useI18n } from "../shared";
 
-type Step = { name: "credentials" } | { name: "hall"; halls: Hall[] } | { name: "mfa"; pendingToken: string; recovery: boolean };
+type Step = { name: "credentials" } | { name: "forgot" } | { name: "hall"; halls: Hall[] } | { name: "mfa"; pendingToken: string; recovery: boolean };
 
 export function LoginScreen() {
   const { t } = useI18n();
@@ -81,15 +82,19 @@ export function LoginScreen() {
               secureToggle={{ show: t("soul_app.common.show"), hide: t("soul_app.common.hide") }}
             />
             <Button testID="login-submit" title={t("officer_app.login.submit")} busy={busy} disabled={!username.trim() || !password} onPress={() => void submit()} />
-            {/* 忘记密码 opens the desk's request page in the browser; the app does nothing more. */}
             <ActionButton
               testID="login-forgot"
               kind="outline"
-              title={`${t("officer_app.login.forgot_password")} ↗\uFE0E`}
-              onPress={() => void Linking.openURL(forgotPasswordUrl()).catch(() => {})}
+              title={t("officer_app.login.forgot_password")}
+              onPress={() => {
+                setFailure(null);
+                setStep({ name: "forgot" });
+              }}
             />
           </View>
         ) : null}
+
+        {step.name === "forgot" ? <ForgotPassword initial={username} onBack={() => setStep({ name: "credentials" })} /> : null}
 
         {step.name === "hall" ? (
           <View testID="login-halls" style={{ gap: space[3] }}>
