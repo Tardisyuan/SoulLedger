@@ -2,6 +2,7 @@
  * The officer app's rules that are not pixels: what a decision sends, why one failed, where a
  * push lands, where "continue on desktop" points. Pure functions so a test can pin each.
  */
+import { passwordReasonKeys } from "@soulledger/core/api/auth";
 import { dispatchApi } from "@soulledger/core/api/dispatch";
 import {
   decisionFailureOf,
@@ -263,8 +264,9 @@ export function forgotFailureKey(error: unknown): string {
 }
 
 /**
- * What a refused change-password says: the server's own sentences, one per rule, by field
- * (`{old_password: [...], new_password: [...]}`) -- never the password itself.
+ * What a refused change-password says, by field, as i18n KEYS (`old`, `next`: one per reason --
+ * the server's `new_password: [{code, message}]` is read by code, Django's English sentence is
+ * never shown) -- never the password itself. `other` is a plain `detail` / `error` sentence.
  * `network` when there was no answer at all.
  */
 export function passwordFailure(error: unknown): { network: boolean; old: string[]; next: string[]; other: string[] } {
@@ -272,7 +274,12 @@ export function passwordFailure(error: unknown): { network: boolean; old: string
   if (!response) return { network: true, old: [], next: [], other: [] };
   const lines = (v: unknown): string[] => (Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : typeof v === "string" ? [v] : []);
   const body = (response.data && typeof response.data === "object" ? response.data : {}) as Record<string, unknown>;
-  return { network: false, old: lines(body.old_password), next: lines(body.new_password), other: [...lines(body.detail), ...lines(body.error)] };
+  return {
+    network: false,
+    old: lines(body.old_password).length ? ["profile.password_old_wrong"] : [],
+    next: passwordReasonKeys(body),
+    other: [...lines(body.detail), ...lines(body.error)],
+  };
 }
 
 /** Why a two-step confirm / disable was refused, as an i18n key; `fallback` is the key for a plain refusal. */

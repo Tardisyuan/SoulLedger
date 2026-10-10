@@ -61,12 +61,14 @@ def _csv(response):
 
 @pytest.mark.django_db
 def test_the_file_is_the_list_for_the_same_filters_and_nothing_from_another_tenant(moderator, rows):
+    # Count the list first: the export audits itself (an EXPORT row), so a count taken after it is +1.
+    listed = moderator.get(LIST).json()["count"]
     response = moderator.get(EXPORT)
     assert response.status_code == 200
     assert response["Content-Type"].startswith("text/csv")
     header, *body = _csv(response)
     assert header[:6] == ["Timestamp", "Tenant", "User", "Action", "Resource", "Resource ID"]
-    assert len(body) == moderator.get(LIST).json()["count"] == 3
+    assert len(body) == listed == 3
     assert {r[1] for r in body} == {"CN_DIYU"}
     assert "9" not in {r[5] for r in body}
 

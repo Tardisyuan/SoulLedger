@@ -1,8 +1,10 @@
 """Retention of AuditLog / LoginLog (apps/audit/retention.py).
 
-Default is "keep forever"; once a window is set only expired rows of the task's
-own tenant go; the other tenant's rows and the unexpired rows stay.
+Defaults are 365 days (AuditLog) and 180 days (LoginLog); 0 means keep forever.
+Only expired rows of the task's own tenant go; the other tenant's rows and the
+unexpired rows stay.
 """
+import os
 from datetime import timedelta
 
 import pytest
@@ -42,6 +44,30 @@ def world(db, cn_tenant, eu_tenant, admin_user, eu_admin_user):
         "cn_old_login": _login(cn_user, OLD), "cn_new_login": _login(cn_user, FRESH),
         "eu_old_login": _login(eu_admin_user, OLD), "ghost_old_login": _login(None, OLD, "nobody"),
     }
+
+
+ENV_OVERRIDES = pytest.mark.skipif(
+    "AUDIT_LOG_RETENTION_DAYS" in os.environ or "LOGIN_LOG_RETENTION_DAYS" in os.environ,
+    reason="the environment overrides the defaults under test",
+)
+
+
+@ENV_OVERRIDES
+def test_the_defaults_are_a_year_of_audit_and_half_a_year_of_logins(settings):
+    assert (settings.AUDIT_LOG_RETENTION_DAYS, settings.LOGIN_LOG_RETENTION_DAYS) == (365, 180)
+
+
+@ENV_OVERRIDES
+def test_the_default_windows_prune_rows_past_them_and_keep_the_rest(world, cn_tenant, settings):
+    # No window set here: whatever the settings default to is what runs. OLD is 400 days.
+    result = prune_logs_for_tenant(str(cn_tenant.pk))
+    assert result["audit_deleted"] == 1 and result["login_deleted"] == 1
+    assert _alive(AuditLog, [world["cn_new_audit"]]) == {world["cn_new_audit"]}
+
+
+def test_zero_still_means_keep_forever(world, cn_tenant, settings):
+    settings.AUDIT_LOG_RETENTION_DAYS = settings.LOGIN_LOG_RETENTION_DAYS = 0
+    assert prune_logs_for_tenant(str(cn_tenant.pk))["audit_deleted"] == 0
 
 
 def test_unset_deletes_nothing(world, cn_tenant, settings):

@@ -32,6 +32,11 @@ class SoulRefreshToken(RefreshToken):
     access_token_class = SoulAccessToken
 
 
+def session_is_current(token, user) -> bool:
+    """官员令牌的 `sv` 声明还等于用户当前的 `session_version`(缺省都按 0)。"""
+    return token.get("sv", 0) == getattr(user, "session_version", 0)
+
+
 def _parses_as(token_class, raw) -> bool:
     try:
         token_class(raw)
@@ -55,6 +60,9 @@ class OfficerJWTAuthentication(JWTAuthentication):
         user = super().get_user(validated_token)
         if getattr(user, "role", None) == SOUL_ROLE:
             raise PermissionDenied("灵魂账号不能访问官员接口。")
+        # 改密码 / 邮箱重置后 `session_version` 已 +1:更早签发的 access 立刻 401,不等它过期。
+        if not session_is_current(validated_token, user):
+            raise AuthenticationFailed("登录已失效,请重新登录。", code="session_revoked")
         return user
 
 

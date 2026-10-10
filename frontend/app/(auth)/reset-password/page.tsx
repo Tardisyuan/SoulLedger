@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { authApi, type OfficerResetRefusal } from "@soulledger/core/api";
+import { passwordReasonKeys } from "@soulledger/core/api/auth";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { LoginShell } from "@/src/components/auth/LoginShell";
 import { TextField } from "@/src/components/ui/Field";
@@ -60,7 +61,9 @@ export default function ResetPasswordPage() {
       if (response?.data?.code === "reset_link_invalid") {
         setPhase("invalid");
       } else if (response?.data?.code === "weak_password") {
-        setError(`${t("auth.reset_weak")}${response.data.error ? ` · ${response.data.error}` : ""}`);
+        // One line per validator that refused, by its code; Django's English sentence is not shown.
+        const reasons = passwordReasonKeys(response.data).map((key) => t(key));
+        setError([t("auth.reset_weak"), ...reasons].join(" · "));
       } else {
         setError(t(response?.status === 429 ? "auth.rate_limited" : "auth.forgot_failed"));
       }
