@@ -15,6 +15,7 @@ from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.response import Response
 
 from apps.core.csv_safe import csv_safe
+from apps.core.exports import record_export
 from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.tenant import is_tenant_exempt, scope_to_tenant
 from apps.core.viewsets import CodenameViewSetMixin
@@ -241,7 +242,9 @@ class AuditLogViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
             "Timestamp", "Tenant", "User", "Action", "Resource", "Resource ID",
             "Description", "IP", "Trace ID",
         ])
+        rows = 0
         for log in qs.iterator(chunk_size=1000):
+            rows += 1
             writer.writerow([
                 log.timestamp.isoformat(),
                 csv_safe(log.tenant.code if log.tenant else ""),
@@ -253,6 +256,8 @@ class AuditLogViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
                 csv_safe(log.ip_address),
                 csv_safe(log.trace_id),
             ])
+        # The export itself is audited -- after the loop, so the file never lists its own row.
+        record_export(request, resource="audit_log", rows=rows)
         return response
 
     @extend_schema(responses=AuditActionOptionSerializer(many=True))

@@ -54,17 +54,28 @@ def export_csv(request, *, qs, serializer_class, columns, filename, resource):
     if chunk:
         flush()
 
+    record_export(request, resource=resource, rows=written)
+    return response
+
+
+def record_export(request, *, resource, rows):
+    """The audit row every CSV export leaves: who, which filters (`query`), how many rows.
+
+    Called by `export_csv` and by the older exports that stream their own columns (souls,
+    audit log, ledger stats and journal), so all of them write the same row. Tenant is the
+    request's, else the caller's own (`force_authenticate` skips the middleware).
+    """
     from apps.audit.models import AuditAction, AuditLog
     from apps.core.client_ip import get_client_ip
 
+    user =request.user if request.user.is_authenticated else None
     AuditLog.objects.create(
-        tenant=getattr(request, "tenant", None),
-        user=request.user if request.user.is_authenticated else None,
+        tenant=getattr(request, "tenant", None) or getattr(user, "tenant", None),
+        user=user,
         action=AuditAction.EXPORT,
         resource=resource,
-        changes={"query": request.query_params.dict(), "rows": written},
-        description=f"Exported {written} {resource} rows"[:500],
+        changes={"query": request.query_params.dict(), "rows": rows},
+        description=f"Exported {rows} {resource} rows"[:500],
         ip_address=get_client_ip(request),
         user_agent=request.META.get("HTTP_USER_AGENT", "")[:500],
     )
-    return response
