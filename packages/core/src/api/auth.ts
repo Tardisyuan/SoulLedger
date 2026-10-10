@@ -1,6 +1,7 @@
 import { api } from "./client";
 import { ACCESS_TOKEN_KEY, getRefreshToken, platform, setAccessToken, setRefreshToken } from "../platform/index";
 import type { components } from "./generated/schema";
+import { trackCredentialChange } from "../ws/credentialChange";
 
 /**
  * The five BUILT-IN roles — `apps.authentication.models.UserRole`.
@@ -249,13 +250,24 @@ export const authApi = {
    * stored here, so callers have nothing to swap. 400 `{old_password: [sentence], new_password:
    * [{code, message}]}` -- read the codes with `passwordReasonKeys`.
    */
-  changePassword: async (
+  changePassword: (
     oldPasswordOrData: string | { old_password: string; new_password: string },
     newPassword?: string,
     /** Officer app only: this device's Expo push token. The server keeps its registration and deletes the
      *  user's others; the web sends none and so loses them all. */
     pushToken?: string
-  ) => {
+  ) =>
+    // Registered while in flight: the server closes this device's own sockets (4002) at commit, and the
+    // realtime client must not reconnect before the new tokens below are stored (ws/credentialChange.ts).
+    trackCredentialChange(changePasswordNow(oldPasswordOrData, newPassword, pushToken)),
+};
+
+async function changePasswordNow(
+  oldPasswordOrData: string | { old_password: string; new_password: string },
+  newPassword?: string,
+  pushToken?: string
+) {
+  {
     const data = typeof oldPasswordOrData === "string"
       ? { old_password: oldPasswordOrData, new_password: newPassword! }
       : oldPasswordOrData;
@@ -271,8 +283,8 @@ export const authApi = {
       setRefreshToken(res.data.refresh);
     }
     return res;
-  },
-};
+  }
+}
 
 /** 200 body of `POST /auth/change-password/` (`access` / `refresh`: this device's new pair). */
 export type ChangePasswordResponse = components["schemas"]["ChangePasswordResponse"];
