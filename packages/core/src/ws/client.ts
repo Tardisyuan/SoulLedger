@@ -16,6 +16,7 @@
  * its own copy of the reader and its own paraphrase of the warning that goes
  * with it; `../platform/index.ts` now holds one of each. */
 import { getAccessToken, getWebSocketUrl } from "../platform/index";
+import { hasCredentialChangeInFlight, waitForCredentialChange } from "./credentialChange";
 
 
 export type WSStatus = "connecting" | "connected" | "disconnected" | "reconnecting" | "failed";
@@ -39,6 +40,9 @@ export const WS_CLOSE_AUTH_REJECTED = 4001;
  * preceded it, reports `onSessionEnded` so the host can find out the login is gone.
  */
 export const WS_CLOSE_SESSION_ENDED = 4002;
+
+/** How long a 4002 waits for this device's own change-password request before reconnecting anyway. */
+export const CREDENTIAL_WAIT_MS = 15_000;
 
 /**
  * Whether a close with this code should be followed by another attempt.
@@ -120,6 +124,8 @@ export class WSClient {
   private shutdown = false;
   /** A 4002 was seen and no `connected` frame has followed. */
   private sessionEndedSeen = false;
+  /** Invalidates a pending wait-for-credential-change when the client is disconnected meanwhile. */
+  private waitGen = 0;
 
   constructor(options: WSClientOptions = {}) {
     this.options = {
@@ -232,6 +238,17 @@ export class WSClient {
         return;
       }
 
+      if (event.code === WS_CLOSE_SESSION_ENDED && hasCredentialChangeInFlight()) {
+        // This device is the one changing the password: its new token is not stored yet.
+        // Reconnect only once that request has settled (or after the cap).
+        this.setStatus("reconnecting");
+        const gen = ++this.waitGen;
+        void waitForCredentialChange(CREDENTIAL_WAIT_MS).then(() => {
+          if (gen === this.waitGen && !this.shutdown) this.scheduleReconnect();
+        });
+        return;
+      }
+
       this.scheduleReconnect();
     };
 
@@ -263,6 +280,7 @@ export class WSClient {
    * just never had the same treatment. The harness is fixed alongside this.
    */
   disconnect(): void {
+    this.waitGen++;
     this.stopHeartbeat();
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer);

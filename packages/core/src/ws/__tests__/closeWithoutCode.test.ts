@@ -4,8 +4,10 @@ import {
   WSClient,
   WS_CLOSE_AUTH_REJECTED,
   WS_CLOSE_SESSION_ENDED,
+  CREDENTIAL_WAIT_MS,
   shouldReconnectAfterClose,
 } from "../client";
+import { trackCredentialChange } from "../credentialChange";
 import { ACCESS_TOKEN_KEY, configurePlatform, resetPlatform } from "../../platform/index";
 
 /**
@@ -65,7 +67,11 @@ class FakeWebSocket {
     FakeWebSocket.instances.push(this);
   }
 
-  send(): void {}
+  sent: string[] = [];
+
+  send(frame: string): void {
+    this.sent.push(frame);
+  }
 
   close(): void {
     this.readyState = FakeWebSocket.CLOSED;
@@ -245,5 +251,103 @@ describe("WSClient — the server ended the login (4002)", () => {
     lastSocket().serverClose(WS_CLOSE_AUTH_REJECTED);
     expect(ended).not.toHaveBeenCalled();
     client.close();
+  });
+});
+
+describe("WSClient — 4002 while this device is changing its password", () => {
+  /** A change-password request we settle by hand. */
+  const unsettled: (() => void)[] = [];
+  function inFlight() {
+    let finish!: () => void;
+    const work = trackCredentialChange(new Promise<void>((resolve) => (finish = resolve)));
+    unsettled.push(finish);
+    return { work, finish };
+  }
+  afterEach(() => {
+    // The registry is module-level: never leave a request pending for the next test.
+    while (unsettled.length) unsettled.pop()!();
+  });
+  const tokenSent = (socket: FakeWebSocket) => JSON.parse(socket.sent[0] ?? "{}").token;
+  let currentToken = "tok-123";
+  beforeEach(() => {
+    currentToken = "tok-123";
+    configurePlatform({
+      session: { ...emptyStore, get: (key: string) => (key === ACCESS_TOKEN_KEY ? currentToken : null) },
+      persistent: emptyStore,
+      secure: emptyStore,
+      onUnauthorized: () => {},
+      onSessionSuspend: () => () => {},
+      onSessionResume: () => () => {},
+      notify: () => {},
+      baseUrl: "http://api.test/api/v1",
+    });
+  });
+
+  it("does not reconnect while the request is in flight, then connects with the NEW token", async () => {
+    const client = new WSClient();
+    client.connect();
+    lastSocket().open();
+    const { finish } = inFlight();
+    lastSocket().serverClose(WS_CLOSE_SESSION_ENDED);
+
+    await vi.advanceTimersByTimeAsync(5_000);
+    expect(FakeWebSocket.instances).toHaveLength(1); // the old 0.5-1 s reconnect would be long gone
+
+    currentToken = "tok-new"; // the response arrived and the pair was stored...
+    finish(); // ...and then the request settled
+    await vi.advanceTimersByTimeAsync(1_100);
+    expect(FakeWebSocket.instances).toHaveLength(2);
+    lastSocket().open();
+    expect(tokenSent(lastSocket())).toBe("tok-new");
+    client.close();
+  });
+
+  it("a failed request leaves the token alone and the client reconnects", async () => {
+    const client = new WSClient();
+    client.connect();
+    lastSocket().open();
+    let fail!: (e: Error) => void;
+    const work = trackCredentialChange(new Promise<void>((_, reject) => (fail = reject)));
+    work.catch(() => {});
+    lastSocket().serverClose(WS_CLOSE_SESSION_ENDED);
+    fail(new Error("400"));
+    await vi.advanceTimersByTimeAsync(1_100);
+    expect(FakeWebSocket.instances).toHaveLength(2);
+    client.close();
+  });
+
+  it("with nothing in flight (every other device) it reconnects at once, as before", async () => {
+    const client = new WSClient();
+    client.connect();
+    lastSocket().open();
+    lastSocket().serverClose(WS_CLOSE_SESSION_ENDED);
+    await vi.advanceTimersByTimeAsync(1_100);
+    expect(FakeWebSocket.instances).toHaveLength(2);
+    client.close();
+  });
+
+  it("a request that never settles holds the reconnect only up to the cap", async () => {
+    const client = new WSClient();
+    client.connect();
+    lastSocket().open();
+    inFlight(); // never finished
+    lastSocket().serverClose(WS_CLOSE_SESSION_ENDED);
+    await vi.advanceTimersByTimeAsync(CREDENTIAL_WAIT_MS - 1_000);
+    expect(FakeWebSocket.instances).toHaveLength(1);
+    await vi.advanceTimersByTimeAsync(3_000);
+    expect(FakeWebSocket.instances).toHaveLength(2);
+    client.close();
+  });
+
+  it("disconnecting during the wait cancels the reconnect", async () => {
+    const client = new WSClient();
+    client.connect();
+    lastSocket().open();
+    const { finish } = inFlight();
+    lastSocket().serverClose(WS_CLOSE_SESSION_ENDED);
+    client.disconnect();
+    finish();
+    await vi.advanceTimersByTimeAsync(5_000);
+    expect(FakeWebSocket.instances).toHaveLength(1);
   });
 });
