@@ -2420,6 +2420,31 @@ paths:
               schema:
                 $ref: '#/components/schemas/PasswordResetRefusal'
           description: ''
+  /api/v1/chat-images/{image_id}/:
+    get:
+      operationId: v1_chat_image_file
+      parameters:
+      - in: path
+        name: image_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: query
+        name: t
+        schema:
+          type: string
+        description: '`GET /me/chat/images/<id>/` 或收件箱消息给出的签名。'
+        required: true
+      tags:
+      - v1
+      security:
+      - {}
+      responses:
+        '200':
+          description: 图片文件(PNG / JPEG / WebP)。
+        '404':
+          description: 签名无效或过期,或查看者此刻看不见这张图。
   /api/v1/chat/inbox/:
     get:
       operationId: v1_chat_inbox_list
@@ -7939,6 +7964,78 @@ paths:
               schema:
                 $ref: '#/components/schemas/ChatError'
           description: ''
+  /api/v1/me/chat/conversations/{conversation_id}/images/:
+    post:
+      operationId: v1_me_chat_image_upload
+      description: |-
+        先传后发的第一步:一张图一个请求(App 逐张显示进度、失败的单独重试)。校验与朋友圈图片同一个函数:
+        按魔数认 PNG / JPEG / WebP,5 MB / 4000 万像素上限,重编码去掉 EXIF。400 `not_an_image` / `too_large` /
+        `too_many_pixels`;一个会话里未发出的图最多 4 张,409 `too_many_pending`;会话此刻不能说话时与发送同一个拒绝。
+      parameters:
+      - in: path
+        name: conversation_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+              required:
+              - file
+      security:
+      - soulJwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatImageUploaded'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatError'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatError'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatError'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatError'
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatError'
+          description: ''
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatError'
+          description: ''
   /api/v1/me/chat/conversations/{conversation_id}/messages/:
     post:
       operationId: v1_me_chat_conversations_messages_create
@@ -7995,6 +8092,80 @@ paths:
                 $ref: '#/components/schemas/ChatError'
           description: ''
         '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatError'
+          description: ''
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatError'
+          description: ''
+  /api/v1/me/chat/images/{image_id}/:
+    get:
+      operationId: v1_me_chat_image_url
+      description: 这一世账号能看的书信图的签名地址(约一小时有效)。不是会话参与方、对方还没发出:404。
+      parameters:
+      - in: path
+        name: image_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - v1
+      security:
+      - soulJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatImage'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatError'
+          description: ''
+  /api/v1/me/chat/images/{image_id}/send/:
+    post:
+      operationId: v1_me_chat_image_send
+      description: 把上传好的图作为一条消息发出(一条消息一张图,与文字分开)。同一张图再发回第一次的 `event_id`。
+      parameters:
+      - in: path
+        name: image_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - v1
+      security:
+      - soulJwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageSent'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatError'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatError'
+          description: ''
+        '409':
           content:
             application/json:
               schema:
@@ -20000,6 +20171,40 @@ components:
       required:
       - code
       - detail
+    ChatImage:
+      type: object
+      description: 一张书信图的取图地址:签给调用者、约一小时有效、取文件时重新核对权限。
+      properties:
+        id:
+          type: string
+          format: uuid
+        url:
+          type: string
+          description: 站点根相对路径 `/api/v1/chat-images/<id>/?t=…`。
+        width:
+          type: integer
+        height:
+          type: integer
+      required:
+      - height
+      - id
+      - url
+      - width
+    ChatImageUploaded:
+      type: object
+      description: 上传成功:引用这张图的 id(再 `POST /me/chat/images/{id}/send/` 发出)与它的像素尺寸。
+      properties:
+        id:
+          type: string
+          format: uuid
+        width:
+          type: integer
+        height:
+          type: integer
+      required:
+      - height
+      - id
+      - width
     ChatLookup:
       type: object
       description: '`POST /me/chat/lookup/`。走请求体而不是查询串:编号是登录名,不该落进访问日志的 URL 里。'
@@ -22983,12 +23188,18 @@ components:
           description: 回信官员的职位(官员回信;灵魂的信为空)。
         body:
           type: string
+        image:
+          allOf:
+          - $ref: '#/components/schemas/ChatImage'
+          nullable: true
+          description: 灵魂来信里的图片;`body` 此时是「[图片]」。没有为 null。
         timestamp:
           type: integer
       required:
       - body
       - event_id
       - from_officer
+      - image
       - officer_title
       - sender_name
       - timestamp

@@ -11,6 +11,7 @@ tests/test_audit_assertions_are_not_vacuous.py                   config pytest.i
 tests/test_chat_conversation_state.py                            config
 tests/test_check_deploy_env_script.py                            scripts
 tests/test_chat_hall_names.py                                    config
+tests/test_chat_images.py                                        config
 tests/test_chat_inbox_folders.py                                 config
 tests/test_chat_lives.py                                         config
 tests/test_chat_lookup.py                                        config

@@ -393,8 +393,26 @@ def refresh_throttle(conversation, *, client=None):
     return conversation
 
 
-def send_direct_message(account, conversation, body, *, request=None):
+#: 图片消息:事件正文是这行字(老客户端、别的 Matrix 客户端照常显示),引用放在这个自定义字段里。
+IMAGE_KEY = "io.soulledger.image"
+IMAGE_LABEL = "[图片]"
+
+
+def _image_extra(image):
+    return {IMAGE_KEY: {"id": str(image.pk), "width": image.width, "height": image.height}}
+
+
+def _mark_image_sent(image, event_id, now):
+    """事件已落进 Synapse:这张图从此对另一方可见。在调用方持有的图片行锁里。"""
+    image.event_id, image.sent_at = event_id, now
+    image.save(update_fields=["event_id", "sent_at"])
+
+
+def send_direct_message(account, conversation, body, *, request=None, image=None):
     """私聊经后端发一条。被节流时**这是 24 小时规则的唯一执行点**。
+
+    `image`(已校验的 `ChatImage`):发一条图片消息,`body` 由调用方给成 `IMAGE_LABEL`。
+    请求阶段(被节流的房间)不能发图:那一条要留给文字。
 
     行锁 `select_for_update(of=("self",))` 罩住「读上次时间 → 发 → 写这次时间」整段:
     两个并发请求若只靠读后写,两条都会认为额度还在。
@@ -412,6 +430,8 @@ def send_direct_message(account, conversation, body, *, request=None):
         client = get_client()
         conversation = refresh_throttle(conversation, client=client)
         identity = _live_identity(account)
+        if conversation.throttled and image is not None:
+            raise ChatError("对方回复之前只能发文字请求。", "images_unavailable", status=409)
         if conversation.throttled:
             if conversation.initiator_id != account.soul_id:
                 raise ChatError("这是对方发起的请求,你可以直接回复。", "not_initiator", status=409)
@@ -421,8 +441,11 @@ def send_direct_message(account, conversation, body, *, request=None):
                 raise _throttled(last + timedelta(seconds=interval))
             event_id = _send_request(client, conversation, identity, body)
         else:
-            event_id = client.send_message(conversation.room_id, body, as_localpart=identity.localpart)
+            event_id = client.send_message(conversation.room_id, body, as_localpart=identity.localpart,
+                                           extra=_image_extra(image) if image else None)
         now = timezone.now()
+        if image is not None:
+            _mark_image_sent(image, event_id, now)
         conversation.last_message_at = now
         fields = ["last_message_at"]
         if conversation.throttled:
@@ -567,7 +590,7 @@ def open_officer_inbox(account, *, request=None):
     return conversation, True
 
 
-def send_inbox_message(account, conversation, body, *, request=None):
+def send_inbox_message(account, conversation, body, *, request=None, image=None):
     """灵魂在收件箱里发一条。没有 24 小时限制,也不受朋友圈禁言约束(待拍板:见报告)——
     禁言的是灵魂之间的发言,给殿司写信(申诉、求助)不在其列。只能写给**当前所在**的殿司。"""
     error = refusal(conversation, account)
@@ -575,8 +598,11 @@ def send_inbox_message(account, conversation, body, *, request=None):
         raise error
     identity = _live_identity(account)
     client = get_client()
-    event_id = client.send_message(conversation.room_id, body, as_localpart=identity.localpart)
+    event_id = client.send_message(conversation.room_id, body, as_localpart=identity.localpart,
+                                   extra=_image_extra(image) if image else None)
     now = timezone.now()
+    if image is not None:
+        _mark_image_sent(image, event_id, now)
     conversation.last_message_at = conversation.last_soul_message_at = now
     conversation.last_from = SOUL
     conversation.save(update_fields=["last_message_at", "last_soul_message_at", "last_from"])
@@ -601,6 +627,10 @@ def officer_messages(conversation, officer, *, request=None, limit=50):
     rows = []
     timeline = client.recent_messages(conversation.room_id, limit=limit)
     reconcile_inbox(conversation, timeline, client.service_user)
+    from apps.chat import images
+
+    pictures = images.officer_views(conversation, officer, timeline, client.service_user,
+                                    tenant=getattr(request, "tenant", None))
     for message in timeline:
         from_officer = message["sender"] == client.service_user
         rows.append({
@@ -609,6 +639,7 @@ def officer_messages(conversation, officer, *, request=None, limit=50):
             "sender_name": (message["officer"] or "殿司") if from_officer else names.get(message["sender"], ""),
             "officer_title": message.get("officer_title", "") if from_officer else "",
             "body": message["body"],
+            "image": pictures.get(message["event_id"]),
             "timestamp": message["timestamp"],
         })
     audit("READ", conversation, "查看殿司收件箱", actor=officer, request=request)
