@@ -3,7 +3,8 @@
  * hall's replies at the right -- told apart by alignment and a line of author and time, never by a
  * bubble colour. Below: 「模板」 (a bottom sheet whose pick is FILLED INTO the box, still editable,
  * never sent), the box, 「发出后不能撤回」, and 「发送」. A reply cannot be taken back, so the line is
- * said above the button instead of asking again after it; there is no picture to attach here.
+ * said above the button instead of asking again after it; there is no picture to attach here -- a soul's
+ * picture is shown (letterImages.tsx) but a reply is text only.
  *
  * Bodies are plain text everywhere: a letter, a template and the box are drawn and sent as typed.
  * Nothing here writes a body to a log or into an error message.
@@ -16,6 +17,7 @@ import { formatWhen } from "../format";
 import { ActionButton, Row, StateView, viewStateOf } from "../kit";
 import { hallLabel, isDenied, lettersUnavailable, replyFailureKey, replyReady, withTemplate } from "../rules";
 import { useSession } from "../session";
+import { LetterImage, LetterImageViewer } from "./letterImages";
 import { Input, Notice, Screen, Sheet, SmallButton, Txt, space, useI18n, useRemote, useTheme, useToast } from "../shared";
 
 export function LetterThread({ id, onSettled }: { id: string; onSettled: () => void }) {
@@ -36,6 +38,7 @@ export function LetterThread({ id, onSettled }: { id: string; onSettled: () => v
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
   const [picking, setPicking] = useState(false);
+  const [viewing, setViewing] = useState<number | null>(null);
   // Two quick taps must not make two replies: `busy` is state (a render behind), this is not.
   const sending = useRef(false);
 
@@ -77,6 +80,8 @@ export function LetterThread({ id, onSettled }: { id: string; onSettled: () => v
   const values = { soul_name: conversation.soul_name, hall_name: hallLabel(t, user?.tenant) ?? "" };
   // The server sends the newest first; the screen reads from the top down.
   const ordered = [...messages].reverse();
+  // The viewer pages through every picture in the thread, oldest first.
+  const gallery = ordered.flatMap((m) => (m.image ? [m.image] : []));
 
   return (
     <KeyboardAvoidingView testID="letter-thread" style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
@@ -85,7 +90,12 @@ export function LetterThread({ id, onSettled }: { id: string; onSettled: () => v
           <Txt variant="title">{conversation.soul_name}</Txt>
           {ordered.length === 0 ? <Txt variant="caption" tone="muted">{t("soul_inbox.no_messages")}</Txt> : null}
           {ordered.map((m) => (
-            <LetterLine key={m.event_id} message={m} soulName={conversation.soul_name} />
+            <LetterLine
+              key={m.event_id}
+              message={m}
+              soulName={conversation.soul_name}
+              onOpenImage={(id) => setViewing(Math.max(0, gallery.findIndex((g) => g.id === id)))}
+            />
           ))}
         </View>
       </Screen>
@@ -113,6 +123,7 @@ export function LetterThread({ id, onSettled }: { id: string; onSettled: () => v
           <ActionButton testID="letter-send" kind="primary" busy={busy} title={t("soul_inbox.send")} onPress={send} />
         </View>
       )}
+      <LetterImageViewer images={gallery} index={viewing} onClose={() => setViewing(null)} />
       <Sheet open={picking} onClose={() => setPicking(false)} edge={theme.hair} closeLabel={t("soul_app.common.cancel")}>
         <View testID="sheet-templates" style={{ paddingVertical: space[5] }}>
           <View style={{ paddingHorizontal: space[5], paddingBottom: space[3] }}>
@@ -141,7 +152,7 @@ export function LetterThread({ id, onSettled }: { id: string; onSettled: () => v
 }
 
 /** One letter: the author and time on a line, the words under it; the hall's go to the right. */
-function LetterLine({ message, soulName }: { message: InboxMessage; soulName: string }) {
+function LetterLine({ message, soulName, onOpenImage }: { message: InboxMessage; soulName: string; onOpenImage: (id: string) => void }) {
   const { t } = useI18n();
   const mine = message.from_officer;
   const who = mine
@@ -153,7 +164,12 @@ function LetterLine({ message, soulName }: { message: InboxMessage; soulName: st
       style={{ alignSelf: mine ? "flex-end" : "flex-start", maxWidth: "85%", gap: space[1], alignItems: mine ? "flex-end" : "flex-start" }}
     >
       <Txt variant="caption" tone="muted">{`${who} · ${formatWhen(new Date(message.timestamp).toISOString())}`}</Txt>
-      <Txt variant="body" style={{ textAlign: mine ? "right" : "left" }}>{message.body}</Txt>
+      {message.image ? (
+        // A picture is its own letter, without words ("[图片]" is only what an older reader shows).
+        <LetterImage image={message.image} onOpen={() => onOpenImage(message.image!.id)} />
+      ) : (
+        <Txt variant="body" style={{ textAlign: mine ? "right" : "left" }}>{message.body}</Txt>
+      )}
     </View>
   );
 }

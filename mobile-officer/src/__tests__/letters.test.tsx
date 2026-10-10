@@ -3,8 +3,8 @@
  * left, the hall's right, no bubble colour), the template that is FILLED not sent, the send (once, the
  * words kept on a failure), and the quiet 503.
  */
-import { fireEvent, screen, waitFor } from "@testing-library/react-native";
-import { StyleSheet } from "react-native";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react-native";
+import { Dimensions, Image, StyleSheet } from "react-native";
 
 import { TodoTab } from "../screens/todo";
 import { Detail } from "../screens/detail";
@@ -38,8 +38,8 @@ const NONE = { approvals: group([]), reassignments: group([]), cooldowns: group(
 const CONVO = { id: "c-1", soul_name: "李白", closed_at: null, last_from: "soul" };
 // Newest first, as the server sends them.
 const MESSAGES = [
-  { event_id: "e2", from_officer: true, sender_name: "崔珏", officer_title: "判官", body: "已收到，容我细查。", timestamp: Date.UTC(2026, 9, 9, 3, 0) },
-  { event_id: "e1", from_officer: false, sender_name: "李白", officer_title: "", body: "请问我的案子何时判？", timestamp: Date.UTC(2026, 9, 9, 2, 0) },
+  { event_id: "e2", from_officer: true, sender_name: "崔珏", officer_title: "判官", body: "已收到，容我细查。", image: null, timestamp: Date.UTC(2026, 9, 9, 3, 0) },
+  { event_id: "e1", from_officer: false, sender_name: "李白", officer_title: "", body: "请问我的案子何时判？", image: null, timestamp: Date.UTC(2026, 9, 9, 2, 0) },
 ];
 const TEMPLATE = { id: "tp-1", title: "已收到", body: "{{soul_name}}：{{hall_name}}已收到您的来信。<b>x</b>", created_at: "", updated_at: "" };
 
@@ -222,5 +222,73 @@ describe("the thread", () => {
     await waitFor(() => expect(mockTemplates).toHaveBeenCalled());
     expect(screen.queryByTestId("letter-template")).toBeNull();
     expect(screen.getByTestId("letter-input")).toBeTruthy();
+  });
+});
+
+describe("a soul's pictures in the thread (2026-10-10)", () => {
+  const A = { id: "1b9e8f2a-0000-4000-8000-00000000000a", url: "/api/v1/chat-images/1b9e8f2a-0000-4000-8000-00000000000a/?t=sigA", width: 800, height: 600 };
+  const B = { id: "1b9e8f2a-0000-4000-8000-00000000000b", url: "/api/v1/chat-images/1b9e8f2a-0000-4000-8000-00000000000b/?t=sigB", width: 600, height: 800 };
+  // Newest first, as the server sends them: a picture, a line of words, a picture.
+  const WITH_PICTURES = [
+    { event_id: "e3", from_officer: false, sender_name: "李白", officer_title: "", body: "[图片]", image: B, timestamp: Date.UTC(2026, 9, 9, 4, 0) },
+    { event_id: "e2", from_officer: false, sender_name: "李白", officer_title: "", body: "附上一张", image: null, timestamp: Date.UTC(2026, 9, 9, 3, 0) },
+    { event_id: "e1", from_officer: false, sender_name: "李白", officer_title: "", body: "[图片]", image: A, timestamp: Date.UTC(2026, 9, 9, 2, 0) },
+  ];
+
+  it("draws each as its own letter, at its ratio and at most 60% of the thread's width, not the placeholder line", async () => {
+    mockMessages.mockResolvedValue({ data: WITH_PICTURES });
+    await openThread();
+    await screen.findByText("附上一张");
+    const tiles = screen.getAllByTestId("letter-image");
+    expect(tiles).toHaveLength(2);
+    const style = StyleSheet.flatten(tiles[0].props.style);
+    const content = Dimensions.get("window").width - 2 * 24; // the thread pads 24 on each side
+    expect(style).toMatchObject({ width: Math.round(content * 0.6), aspectRatio: 800 / 600 });
+    expect(style.width).toBeLessThanOrEqual(content * 0.6);
+    // The words are another letter; a picture's letter has none of its own.
+    expect(screen.queryByText("[图片]")).toBeNull();
+    const source = screen.UNSAFE_getAllByType(Image).find((n) => String(n.props.source?.uri).includes("sigA"))!;
+    expect(source.props.source.uri).toMatch(/\/api\/v1\/chat-images\/1b9e8f2a-0000-4000-8000-00000000000a\/\?t=sigA$/);
+  });
+
+  it("a refused address says so instead of leaving a blank", async () => {
+    mockMessages.mockResolvedValue({ data: [WITH_PICTURES[2]] });
+    await openThread();
+    await screen.findByTestId("letter-image");
+    fireEvent(screen.UNSAFE_getAllByType(Image)[0], "error");
+    expect(await screen.findByTestId("letter-image-broken")).toBeTruthy();
+    expect(screen.getByText("图片加载失败")).toBeTruthy();
+    expect(screen.queryByTestId("letter-image")).toBeNull();
+  });
+
+  it("a tap opens a black viewer on that picture, paged across the thread's pictures; a tap closes it; nothing saves", async () => {
+    mockMessages.mockResolvedValue({ data: WITH_PICTURES });
+    await openThread();
+    await screen.findByText("附上一张");
+    expect(screen.queryByTestId("letter-image-viewer")).toBeNull();
+    fireEvent.press(screen.getAllByTestId("letter-image")[1]); // B, the second in reading order
+    const viewer = await screen.findByTestId("letter-image-viewer");
+    expect(StyleSheet.flatten(viewer.props.style).backgroundColor).toBe("#000000");
+    const pages = screen.getByTestId("letter-image-viewer-pages");
+    expect(pages.props.pagingEnabled).toBe(true);
+    expect(pages.props.contentOffset).toEqual({ x: Dimensions.get("window").width, y: 0 });
+    expect(screen.getByTestId(`letter-viewer-image-${A.id}`)).toBeTruthy();
+    expect(screen.getByTestId(`letter-viewer-image-${B.id}`)).toBeTruthy();
+    for (const word of [/保存/, /分享/, /下载/]) expect(within(viewer).queryByText(word)).toBeNull();
+    fireEvent.press(within(viewer).getAllByLabelText("关闭")[0]);
+    await waitFor(() => expect(screen.queryByTestId("letter-image-viewer")).toBeNull());
+  });
+
+  it("the hall's reply box has no way to attach a picture: a reply is words only", async () => {
+    mockMessages.mockResolvedValue({ data: WITH_PICTURES });
+    await openThread();
+    await screen.findByText("附上一张");
+    const composer = screen.getByTestId("letter-composer");
+    const labels = within(composer).getAllByRole("button").map((b) => String(b.props.accessibilityLabel ?? ""));
+    expect(labels.length).toBeGreaterThan(0); // the buttons are there to be checked: 模板 and 发送
+    expect(labels.filter((l) => /图|image|photo|上传/i.test(l))).toEqual([]);
+    expect(within(composer).queryByTestId("letter-image-add")).toBeNull();
+    expect(within(composer).queryByTestId("chat-image-add")).toBeNull();
+    expect(within(composer).queryByText("图")).toBeNull();
   });
 });
