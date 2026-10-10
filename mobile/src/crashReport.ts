@@ -134,14 +134,48 @@ export function setCrashUser(id: number | null): void {
   }
 }
 
-/** Reports a render error caught by the error boundary. A no-op when reporting is off. */
-export function captureCrash(error: unknown): void {
-  if (!started) return;
+/** How long to wait for the SDK to say an event reached the server. */
+const DELIVERY_WAIT_MS = 5000;
+
+/**
+ * Reports a render error caught by the error boundary and resolves `true` only when the server
+ * accepted it. `captureException` returns an event id the moment the event is queued -- not a
+ * delivery -- and `flush()` resolves `true` once the queue is empty, which a failed send also
+ * leaves. The one signal that carries the outcome is the client's `afterSendEvent` hook: it fires
+ * with the transport response (a 2xx `statusCode`) for that event id, and with an error object when
+ * the send failed. An event the SDK drops (no client, deduped, sampled) never reaches it, so the
+ * wait times out and answers `false`. Off, or anything unexpected: `false`, never a throw.
+ */
+export function captureCrash(error: unknown): Promise<boolean> {
+  if (!started) return Promise.resolve(false);
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const Sentry = require("@sentry/react-native") as typeof import("@sentry/react-native");
-    Sentry.captureException(error);
+    const client = Sentry.getClient() as unknown as
+      | { on?: (hook: string, cb: (event: Loose, response: unknown) => void) => void | (() => void) }
+      | undefined;
+    const on = client?.on?.bind(client);
+    if (!on) {
+      Sentry.captureException(error);
+      return Promise.resolve(false);
+    }
+    return new Promise<boolean>((resolve) => {
+      let id: string | undefined;
+      let off: void | (() => void);
+      const finish = (ok: boolean) => {
+        clearTimeout(timer);
+        if (typeof off === "function") off();
+        resolve(ok);
+      };
+      const timer = setTimeout(() => finish(false), DELIVERY_WAIT_MS);
+      off = on("afterSendEvent", (event, response) => {
+        if (id === undefined || event?.event_id !== id) return;
+        const status = (response as { statusCode?: unknown } | undefined)?.statusCode;
+        finish(typeof status === "number" && status >= 200 && status < 300);
+      });
+      id = Sentry.captureException(error);
+    });
   } catch {
-    /* reporting is best-effort */
+    return Promise.resolve(false); // reporting is best-effort
   }
 }

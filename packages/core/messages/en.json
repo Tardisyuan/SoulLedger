@@ -3319,8 +3319,9 @@
     "app_name": "Soul Ledger",
     "update_required": {
       "title": "Update required",
-      "body": "This version of the app is no longer supported. Update it from the store to continue.",
-      "button": "Open the store"
+      "body": "This version can no longer be used. After you update, your letters and records will still be there.",
+      "button": "Update",
+      "version": "Version {{version}}"
     },
     "common": {
       "loading": "Loading…",
@@ -3551,6 +3552,8 @@
       "network": "Cannot reach the server. Check your connection and retry",
       "validation": "Some fields are invalid",
       "unknown": "Something went wrong ({{code}})",
+      "reported": "Reported automatically.",
+      "go_home": "Back to home",
       "screen_title": "Could not reach the ledger",
       "screen_body": "Your record is still there. It just cannot be fetched right now.",
       "section": "This part could not be loaded. The rest is shown as usual.",
@@ -5144,6 +5147,9 @@
     }
   },
   "officer_app": {
+    "update_required": {
+      "body": "Version {{version}} is below the minimum this hall requires, {{min}}."
+    },
     "name": "SoulLedger · Officers",
     "tabs": {
       "todo": "To do",
@@ -5156,12 +5162,12 @@
       "title": "Waiting on me",
       "groups": {
         "approvals": "Approval steps",
-        "reassignments": "Reassignments",
+        "reassignments": "Handovers",
         "cooldowns": "Cooling-off requests",
         "rebirths": "Rebirth applications"
       },
       "empty_title": "Nothing waiting on you",
-      "empty_body": "New approvals, reassignments and requests will be pushed to you."
+      "empty_body": "New approvals, handovers and requests will be pushed to you."
     },
     "queue": {
       "mine": "Mine",
@@ -5212,7 +5218,7 @@
         "approval": "The flow moves to the next step.",
         "rebirth": "This rebirth application moves to the next step.",
         "cooldown": "The cooling-off period is shortened to the days you enter.",
-        "reassignment": "The reassignment goes ahead."
+        "reassignment": "The handover goes ahead."
       },
       "remaining_days": "{{n}} days left",
       "remaining_after": "{{n}} days left after approval",
@@ -5270,7 +5276,7 @@
     },
     "kinds": {
       "approval": "Approval step",
-      "reassignment": "Reassignment",
+      "reassignment": "Handover",
       "cooldown": "Cooling-off request",
       "rebirth": "Rebirth application"
     },

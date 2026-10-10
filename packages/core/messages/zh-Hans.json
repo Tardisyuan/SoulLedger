@@ -3319,8 +3319,9 @@
     "app_name": "灵魂簿",
     "update_required": {
       "title": "需要更新",
-      "body": "当前版本已不再支持。请前往商店更新后继续使用。",
-      "button": "前往商店"
+      "body": "这一版已经不能用了。更新后，你的书信和档案都还在。",
+      "button": "去更新",
+      "version": "版本 {{version}}"
     },
     "common": {
       "loading": "加载中…",
@@ -3551,6 +3552,8 @@
       "network": "无法连接服务器,请检查网络后重试",
       "validation": "填写的内容有误,请检查",
       "unknown": "出错了({{code}})",
+      "reported": "已自动报告。",
+      "go_home": "回到首页",
       "screen_title": "簿册未能连上",
       "screen_body": "你的记录仍在。只是此刻取不到。",
       "section": "这一段没取到。其余部分照常显示。",
@@ -5144,6 +5147,9 @@
     }
   },
   "officer_app": {
+    "update_required": {
+      "body": "当前版本 {{version}} 低于本殿要求的最低版本 {{min}}。"
+    },
     "name": "灵魂簿 · 官员",
     "tabs": {
       "todo": "待办",
@@ -5156,12 +5162,12 @@
       "title": "待我处理",
       "groups": {
         "approvals": "审批节点",
-        "reassignments": "改派请求",
+        "reassignments": "移交",
         "cooldowns": "缩短冷却申请",
         "rebirths": "转生申请"
       },
       "empty_title": "此刻没有轮到你的事",
-      "empty_body": "新的审批、改派和申请会推送给你。"
+      "empty_body": "新的审批、移交和申请会推送给你。"
     },
     "queue": {
       "mine": "我手上",
@@ -5212,7 +5218,7 @@
         "approval": "批准后流程进入下一步。",
         "rebirth": "批准后这份转生申请进入下一步。",
         "cooldown": "批准后冷却缩短到你填的天数。",
-        "reassignment": "批准后这次改派成立。"
+        "reassignment": "批准后这次移交成立。"
       },
       "remaining_days": "还剩 {{n}} 天",
       "remaining_after": "批后还剩 {{n}} 天",
@@ -5270,7 +5276,7 @@
     },
     "kinds": {
       "approval": "审批节点",
-      "reassignment": "改派请求",
+      "reassignment": "移交",
       "cooldown": "缩短冷却申请",
       "rebirth": "转生申请"
     },

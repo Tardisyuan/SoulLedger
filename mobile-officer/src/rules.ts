@@ -25,7 +25,13 @@ export function todoTitle(item: { kind: string; title: string; is_appeal?: boole
   return t(item.is_appeal ? "soul_accounts.rebirth.appeal_title" : "soul_accounts.rebirth.detail_title", { name: item.title });
 }
 
-/** The four lists in `GET todo/`, in the spec's order, with the kind each one holds. */
+/**
+ * The lists in `GET todo/`, in the order the screen draws them (Design batch 15): 审批节点, 移交,
+ * 缩短冷却申请, 转生申请. 移交 is the dispatch proposals aimed at this hall (the field and kind are
+ * still called `reassignment`; it is the same queue as the desk's 移交 inbox, `DispatchRecordViewSet.
+ * proposed`), and it is counted with the rest everywhere the to-do total is read.
+ * 待回书信 comes last when it exists: add its entry here, after `rebirths`, and nowhere else.
+ */
 export const TODO_GROUPS: readonly { field: keyof Todo; kind: TodoKind; label: string }[] = [
   { field: "approvals", kind: "approval", label: "officer_app.todo.groups.approvals" },
   { field: "reassignments", kind: "reassignment", label: "officer_app.todo.groups.reassignments" },
