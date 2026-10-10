@@ -5379,8 +5379,6 @@
     "button": "打印",
     "case_no": "案号",
     "soul_no": "灵魂编号",
-    "page_pre": "第 ",
-    "page_mid": " 页 / 共 ",
-    "page_post": " 页"
+    "page_label": "第 {{n}} 页 / 共 {{m}} 页"
   }
 }

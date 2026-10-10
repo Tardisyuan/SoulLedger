@@ -74,7 +74,7 @@ describe("/dispatch", () => {
     expect(buttons).toHaveLength(2);
     fireEvent.click(buttons[0]);
     await waitFor(() => expect(dispatchApi.exportCsv).toHaveBeenCalledWith({ section: "proposed" }));
-    await waitFor(() => expect(saveBlob).toHaveBeenCalledWith(csv.data, "dispatch_proposed.csv"));
+    await waitFor(() => expect(saveBlob).toHaveBeenCalledWith(csv.data, expect.stringMatching(/^dispatch\.title-plaque\.office\.court\.cn-\d{8}-\d{4}\.csv$/)));
     fireEvent.click(buttons[1]);
     await waitFor(() => expect(dispatchApi.exportCsv).toHaveBeenLastCalledWith({ section: "history" }));
   });
@@ -100,7 +100,7 @@ describe("/cross-judgments", () => {
     renderWith(<CrossJudgmentsPage />);
     fireEvent.click(await screen.findByRole("button", { name: "common.export" }));
     await waitFor(() => expect(crossTenantJudgmentsApi.exportCsv).toHaveBeenCalledWith());
-    expect(saveBlob).toHaveBeenCalledWith(csv.data, "cross_judgments_export.csv");
+    expect(saveBlob).toHaveBeenCalledWith(csv.data, expect.stringMatching(/^crossJudgments\.title-plaque\.office\.trials-\d{8}-\d{4}\.csv$/));
   });
 
   it("offers nothing to someone without cross_judgment.read", async () => {

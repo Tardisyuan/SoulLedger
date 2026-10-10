@@ -51,7 +51,8 @@ const SECTION_MARK: Record<DispositionSection, string> = { pending: "甲", execu
 
 export default function DispositionPage() {
   const { t, formatDate } = useI18n();
-  usePlaque({ hall: useHall(useCourtOffice()) });
+  const hall = useHall(useCourtOffice());
+  usePlaque({ hall });
   const { user } = useTenant();
   const { showToast } = useToast();
   const queryClient = useQueryClient();
@@ -126,7 +127,8 @@ export default function DispositionPage() {
         <ExportCsvButton
           size="sm"
           fetchCsv={() => dispositionApi.exportCsv(SECTION_FILTERS[section])}
-          filename={`dispositions_${section}.csv`}
+          page={t("disposition.title")}
+          hall={hall}
         />
       </RequirePermission>
     ),
