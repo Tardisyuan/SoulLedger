@@ -607,6 +607,7 @@ def send_inbox_message(account, conversation, body, *, request=None, image=None)
     conversation.last_from = SOUL
     conversation.save(update_fields=["last_message_at", "last_soul_message_at", "last_from"])
     inbox.unarchive_for_letter(conversation, now)
+    inbox.push_to_assignee(conversation)
     audit("EXECUTE", conversation, f"致殿司:{conversation.tenant.display_name}",
           actor=account.user, request=request)
     return event_id
@@ -712,6 +713,8 @@ def reconcile_inbox(conversation, timeline, service_user):
         for name, value in fields.items():
             setattr(conversation, name, value)
         Conversation.objects.filter(pk=conversation.pk).update(**fields)
+        if "last_soul_message_at" in fields:
+            inbox.push_to_assignee(conversation)  # 绕过后端直接在 Matrix 里写的来信,在这里才被看见
 
 
 def record_inbox_event(conversation, *, client=None):
