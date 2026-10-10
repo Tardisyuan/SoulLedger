@@ -1778,10 +1778,14 @@ export class ApiMock {
 
     // ── Sentence plans (backend/apps/sentence_plan/views.py) ──
     // One plan, for the soul panel (`?soul=`) and the request inbox (`?pending_request=true`).
+    // `?awaiting_redispatch=true` (dashboard todo strip, 4th cell): plans whose refused / cancelled dispatch
+    // awaits being sent again. Empty by default; a test that needs one injects it with `api.on(...)`.
     this.on("GET", "/sentence-plans/", (call) =>
-      call.query.soul === SOULS[0].id || call.query.pending_request === "true"
-        ? { body: paginated([SENTENCE_PLAN]) }
-        : { body: paginated([]) }
+      call.query.awaiting_redispatch === "true"
+        ? { body: paginated([]) }
+        : call.query.soul === SOULS[0].id || call.query.pending_request === "true"
+          ? { body: paginated([SENTENCE_PLAN]) }
+          : { body: paginated([]) }
     );
     this.on("POST", "/sentence-plans/:id/requests/:id/decide/", SENTENCE_PLAN_DECIDED);
 
