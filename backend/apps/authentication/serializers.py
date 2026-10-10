@@ -699,6 +699,11 @@ class ChangePasswordSerializer(serializers.Serializer):
     old_password = serializers.CharField(write_only=True, required=True)
     new_password = serializers.CharField(write_only=True, required=True, max_length=128)
     refresh = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    token = serializers.CharField(
+        write_only=True, required=False, allow_blank=True, max_length=255,
+        help_text="Officer app only: this device's Expo push token. Every other push registration of "
+                  "the user is deleted with the sessions; without it (the web) all of them are.",
+    )
 
     def validate_old_password(self, value):
         user = self.context['request'].user
