@@ -291,6 +291,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         token = super().get_token(user)
         if user.tenant:
             token["tenant_code"] = user.tenant.code
+        token["sv"] = user.session_version
         return token
 
     def validate(self, attrs):
@@ -328,6 +329,18 @@ def issue_tokens(user, *, remember: bool, officer_app: bool = False) -> dict:
         update_last_login(None, user)
     data["user"] = UserWithTenantSerializer(user).data
     return data
+
+
+def reissue_for_device(user, previous) -> dict:
+    """A new `{access, refresh}` for the device that held `previous` (its refresh token), after
+    `end_sessions` bumped the user's `session_version`. The device keeps the lifetime it logged
+    in with: the officer App's short one, or 「保持登录 30 天」."""
+    refresh = CustomTokenObtainPairSerializer.get_token(user)
+    if previous.payload.get("officer_app") is True:
+        refresh.for_officer_app()
+    elif previous.payload.get("remember") is True:
+        refresh.remember()
+    return {"refresh": str(refresh), "access": str(refresh.access_token)}
 
 
 class HallChoiceRequired(APIException):
@@ -667,9 +680,15 @@ class UserUpdateSerializer(serializers.ModelSerializer):
 
 
 class ChangePasswordSerializer(serializers.Serializer):
-    """Serializer for changing password with old password verification."""
+    """Serializer for changing password with old password verification.
+
+    `refresh` is this device's refresh token: the change ends every OTHER session, and the
+    response carries a fresh pair for this one, with the same 7 / 30 day lifetime this
+    device logged in with. Without it, this device is signed out too.
+    """
     old_password = serializers.CharField(write_only=True, required=True)
     new_password = serializers.CharField(write_only=True, required=True, min_length=8)
+    refresh = serializers.CharField(write_only=True, required=False, allow_blank=True)
 
     def validate_old_password(self, value):
         user = self.context['request'].user
@@ -681,6 +700,14 @@ class ChangePasswordSerializer(serializers.Serializer):
         if len(value) < 8:
             raise serializers.ValidationError("密码至少8位")
         return value
+
+
+class ChangePasswordResponseSerializer(serializers.Serializer):
+    """200 body. `access` / `refresh` are this device's new pair (absent when no `refresh` was sent)."""
+
+    detail = serializers.CharField()
+    access = serializers.CharField(required=False)
+    refresh = serializers.CharField(required=False)
 
 
 class ResetPasswordSerializer(serializers.Serializer):

@@ -1,5 +1,5 @@
 import { api } from "./client";
-import { getRefreshToken } from "../platform/index";
+import { ACCESS_TOKEN_KEY, getRefreshToken, platform, setAccessToken, setRefreshToken } from "../platform/index";
 import type { components } from "./generated/schema";
 
 /**
@@ -243,10 +243,28 @@ export const authApi = {
   logout: () => api.post<{ detail: string }>("/auth/logout/", { refresh: getRefreshToken() }),
   profile: () => api.get<AuthProfile>("/auth/profile/"),
   updateProfile: (data: object) => api.patch<AuthProfile>("/auth/profile/", data),
-  changePassword: (oldPasswordOrData: string | { old_password: string; new_password: string }, newPassword?: string) => {
+  /**
+   * Changing the password signs every OTHER device out at once. This device keeps its login:
+   * its refresh token goes along, and the new `access` / `refresh` pair in the 200 body is
+   * stored here, so callers have nothing to swap.
+   */
+  changePassword: async (
+    oldPasswordOrData: string | { old_password: string; new_password: string },
+    newPassword?: string
+  ) => {
     const data = typeof oldPasswordOrData === "string"
       ? { old_password: oldPasswordOrData, new_password: newPassword! }
       : oldPasswordOrData;
-    return api.post<{ detail: string }>("/auth/change-password/", data);
+    const refresh = getRefreshToken();
+    const res = await api.post<ChangePasswordResponse>("/auth/change-password/", refresh ? { ...data, refresh } : data);
+    if (res.data.access && res.data.refresh) {
+      setAccessToken(res.data.access);
+      platform().persistent.remove(ACCESS_TOKEN_KEY); // as `rotateRefreshToken`: no stale 24 h cookie
+      setRefreshToken(res.data.refresh);
+    }
+    return res;
   },
 };
+
+/** 200 body of `POST /auth/change-password/` (`access` / `refresh`: this device's new pair). */
+export type ChangePasswordResponse = components["schemas"]["ChangePasswordResponse"];

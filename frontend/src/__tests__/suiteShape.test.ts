@@ -113,6 +113,7 @@ const COLLECTED_FILES = [
   "platformAdapterIsInstalled.test.tsx",
   "ProfileCard.test.tsx",
   "ProfilePage.emailToggle.test.tsx",
+  "ProfilePage.password.test.tsx",
   "ProfilePage.roleBadge.test.tsx",
   "RebirthApplicationsPage.test.tsx",
   "RebirthApplicationsPage.cooldownShortening.test.tsx",
