@@ -21,6 +21,9 @@ const { SoulLedgerProvider, Plaque, Button } = window.SoulLedger;
   pre-login neutral skin (no seal, ink-black plaque).
 - `pathname`: the current route. `GlobalNav` highlights from it and `Breadcrumb` builds
   its trail from it (there is no router). Default `/dashboard`.
+- `mfaRequired` (with `civ`): the signed-in user must still set up two-step sign-in, so
+  `MfaRequiredBanner` shows. `ConnectionBanner` / `ConnectionStatus` always read "disconnected"
+  here (no live socket), and `GlobalSearch` renders its box but finds nothing (no API).
 - Theme follows the OS (`.dark` / `.light` on `<html>`); `ThemeToggle` switches it.
 
 ## Styling idiom: Tailwind utilities + OKLCH colour tokens

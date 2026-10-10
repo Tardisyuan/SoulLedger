@@ -52,6 +52,21 @@
     "ThemeToggle": "../../frontend/src/components/layout/ThemeToggle.tsx",
     "Plaque": "../../frontend/src/components/plaque/Plaque.tsx",
     "Seal": "../../frontend/src/components/plaque/Seal.tsx",
+    "ToastContainer": "../../frontend/src/components/ui/Toast.tsx",
+    "Collapse": "../../frontend/src/components/ui/Collapse.tsx",
+    "IconPicker": "../../frontend/src/components/ui/IconPicker.tsx",
+    "BrandMark": "../../frontend/src/components/brand/BrandMark.tsx",
+    "TablePageSkeleton": "../../frontend/components/ui/page-skeletons.tsx",
+    "CardListPageSkeleton": "../../frontend/components/ui/page-skeletons.tsx",
+    "DataGrid": "../../frontend/components/ui/data-grid/DataGrid.tsx",
+    "FilterBar": "../../frontend/components/ui/data-grid/FilterBar.tsx",
+    "ActionsMenu": "../../frontend/components/ui/data-grid/ActionsMenu.tsx",
+    "EnumBadge": "../../frontend/components/ui/data-grid/columns.tsx",
+    "GlobalSearch": "../../frontend/src/components/layout/GlobalSearch.tsx",
+    "LogoutConfirmDialog": "../../frontend/src/components/layout/LogoutConfirmDialog.tsx",
+    "MfaRequiredBanner": "../../frontend/src/components/layout/MfaRequiredBanner.tsx",
+    "ConnectionStatus": "../../frontend/src/components/connection-status.tsx",
+    "ConnectionBanner": "../../frontend/src/components/connection-status.tsx",
     "SoulLedgerProvider": null
   },
   "guidelinesGlob": [
@@ -92,7 +107,22 @@
     "TreeName": "../groups/data.md",
     "PageShell": "../groups/page.md",
     "PageSection": "../groups/page.md",
-    "Plaque": "../groups/layout.md"
+    "Plaque": "../groups/layout.md",
+    "ToastContainer": "../groups/feedback.md",
+    "Collapse": "../groups/layout.md",
+    "IconPicker": "../groups/forms.md",
+    "BrandMark": "../groups/layout.md",
+    "TablePageSkeleton": "../groups/feedback.md",
+    "CardListPageSkeleton": "../groups/feedback.md",
+    "DataGrid": "../groups/data.md",
+    "FilterBar": "../groups/data.md",
+    "ActionsMenu": "../groups/data.md",
+    "EnumBadge": "../groups/data.md",
+    "GlobalSearch": "../groups/layout.md",
+    "LogoutConfirmDialog": "../groups/overlays.md",
+    "MfaRequiredBanner": "../groups/feedback.md",
+    "ConnectionStatus": "../groups/feedback.md",
+    "ConnectionBanner": "../groups/feedback.md"
   },
   "overrides": {
     "BaseModal": {
@@ -130,6 +160,64 @@
     },
     "PageSection": {
       "cardMode": "column"
+    },
+    "LogoutConfirmDialog": {
+      "cardMode": "single",
+      "viewport": "720x520"
+    },
+    "ConnectionBanner": {
+      "cardMode": "single",
+      "viewport": "900x200"
+    },
+    "DataGrid": {
+      "cardMode": "column"
+    },
+    "TablePageSkeleton": {
+      "cardMode": "column"
+    },
+    "CardListPageSkeleton": {
+      "cardMode": "column"
+    },
+    "MfaRequiredBanner": {
+      "cardMode": "column"
+    },
+    "FilterBar": {
+      "cardMode": "column"
+    },
+    "BottomBar": {
+      "cardMode": "single",
+      "viewport": "420x180",
+      "primaryStory": "Mobile"
+    },
+    "PageError": {
+      "cardMode": "column"
+    },
+    "StatusCard": {
+      "cardMode": "column"
+    },
+    "Field": {
+      "cardMode": "column"
+    },
+    "IconPicker": {
+      "cardMode": "column"
+    },
+    "TextAreaField": {
+      "cardMode": "column"
+    },
+    "Collapse": {
+      "cardMode": "column"
+    },
+    "PageShell": {
+      "cardMode": "column"
+    },
+    "ToastContainer": {
+      "cardMode": "single",
+      "viewport": "720x360"
+    },
+    "SearchSelectField": {
+      "cardMode": "single",
+      "viewport": "720x420",
+      "primaryStory": "Selected"
     }
   },
   "readmeHeader": ".design-sync/conventions.md"
