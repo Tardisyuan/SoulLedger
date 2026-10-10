@@ -46,5 +46,6 @@
   "permissions.config.did.add",
   "permissions.config.did.update",
   "permissions.config.did.skip",
-  "permissions.config.download_skipped"
+  "permissions.config.download_skipped",
+  "dashboard.data_as_of"
 ]

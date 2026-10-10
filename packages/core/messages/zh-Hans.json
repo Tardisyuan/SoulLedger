@@ -1326,7 +1326,8 @@
       "change_flat": "持平",
       "change_from_zero": "自 0 起",
       "figure_label": "{{name}}，{{value}}，{{change}}"
-    }
+    },
+    "data_as_of": "数据截至 {{time}}"
   },
   "ledger": {
     "title": "功德统计",

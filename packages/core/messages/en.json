@@ -1326,7 +1326,8 @@
       "change_flat": "flat",
       "change_from_zero": "from 0",
       "figure_label": "{{name}}, {{value}}, {{change}}"
-    }
+    },
+    "data_as_of": "Data as of {{time}}"
   },
   "ledger": {
     "title": "Deed Statistics",
