@@ -5,6 +5,7 @@ import {
   permApi,
   type MatrixChange,
   type MatrixChangesResult,
+  type PermissionImportDocument,
   type RoleCopyPayload,
   type RoleDeleteRefusal,
 } from "../api/index";
@@ -119,5 +120,28 @@ export function useDeleteRole() {
       await permApi.roles.delete(id);
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: permKeys.roles }),
+  });
+}
+
+/** 导出全部权限配置:拿到 JSON blob,存成文件由调用方(平台层)负责。 */
+export function useExportPermissionConfig() {
+  return useMutation({
+    mutationFn: async () => (await permApi.exportConfig()).data,
+  });
+}
+
+/**
+ * 导入权限配置(只合并,`overwrite` 固定 false)。导入改了权限定义、角色与授权,
+ * 所以三组缓存一并失效,页面与依赖它们的界面立刻重取。
+ */
+export function useImportPermissionConfig() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (document: PermissionImportDocument) => (await permApi.importConfig(document)).data,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: permKeys.permissions });
+      queryClient.invalidateQueries({ queryKey: permKeys.roles });
+      queryClient.invalidateQueries({ queryKey: permKeys.allRolePermissions });
+    },
   });
 }

@@ -26,6 +26,7 @@ import { MatrixLegend } from "@/src/components/permissions/MatrixLegend";
 import { PermissionMatrixTable, PermLegend, type MatrixCellInfo } from "@/src/components/permissions/PermissionMatrixTable";
 import { MatrixSaveConfirmModal } from "@/src/components/permissions/MatrixSaveConfirmModal";
 import { ImpactConflictBanner, PartialFailBanner, UnsavedBar, conflictCounts } from "@/src/components/permissions/MatrixBanners";
+import { PermissionConfigTransfer } from "@/src/components/permissions/PermissionConfigTransfer";
 import { RolesSection } from "@/src/components/permissions/RolesSection";
 import { DeleteConfirmModal } from "@/src/components/permissions/DeleteConfirmModal";
 import { buildPermissionColumns } from "@/src/components/permissions/permissionColumns";
@@ -317,7 +318,9 @@ export default function PermissionsPage() {
       }
       subtitle={t("permissions.subtitle")}
       actions={
-        segment === "roles" ? (
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <PermissionConfigTransfer />
+          {segment === "roles" ? (
           <RequirePermission permissions="system.settings">
             <Button type="button" variant="secondary" onClick={() => setIsRoleCreateOpen(true)}>
               + {t("permissions.create_role")}
@@ -329,7 +332,8 @@ export default function PermissionsPage() {
               + {t("permissions.create")}
             </Button>
           </RequirePermission>
-        ) : undefined
+        ) : undefined}
+        </div>
       }
       tabs={
         <div role="group" aria-label={t("permissions.segments.label")} className="flex w-fit flex-wrap border border-[oklch(var(--color-block))]">

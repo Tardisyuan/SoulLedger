@@ -128,7 +128,7 @@ interface Blob {
 declare const Blob: { new (parts?: unknown[], options?: { type?: string }): Blob };
 
 /**
- * Multipart upload bodies. `usersApi.import` and `permApi.import` both take one
+ * Multipart upload bodies. `usersApi.import` takes one
  * and hand it straight to axios.
  *
  * WHY THIS IS ALLOWED AND NOT BANNED. It is on the allowlist for the same
