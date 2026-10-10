@@ -23,6 +23,7 @@ import { MenuGloss } from "@/src/components/layout/MenuGloss";
 import { DomainEnum, MissingValue } from "@/src/components/ui/DomainValue";
 import { resolveEnumDisplay } from "@/src/lib/domainDisplay";
 import { PageShell } from "@/src/components/ui/PageShell";
+import { formatAsOf } from "@/src/lib/formatAsOf";
 import { usePlaque } from "@/src/components/plaque/Plaque";
 import { useCourtOffice, useHall } from "@/src/components/plaque/useHall";
 import { TAB_BASE, TAB_ON, TAB_OFF } from "@/src/lib/tabClasses";
@@ -84,13 +85,16 @@ function DashboardContent() {
   });
   const error = queryError ? t("dashboard.error_load") : null;
 
-  // 身份带(A4):题是当前标签名(「概览」/「账本」),右栏只写今天的日期 —— 统计接口不带
-  // 「数据截至」时间,稿里的「截至 08:00」没有来源,不写。
+  // 身份带(A4):题是当前标签名(「概览」/「账本」),右栏「今天的日期 · 数据截至 HH:MM」。
+  // 「数据截至」读统计接口的 `as_of`(这份聚合算出来的时刻,接口不缓存,所以就是这次请求的时刻);
+  // 接口没给就整句不写,不放占位。
   const hall = useHall(useCourtOffice());
+  const today = formatDateTime(new Date(), { year: "numeric", month: "2-digit", day: "2-digit" });
+  const asOf = formatAsOf(stats?.as_of, new Date(), formatDateTime);
   usePlaque({
     hall,
     title: t(activeTab === "ledger" ? "dashboard.tab_ledger" : "dashboard.tab_overview"),
-    meta: formatDateTime(new Date(), { year: "numeric", month: "2-digit", day: "2-digit" }),
+    meta: asOf ? `${today} · ${t("dashboard.data_as_of", { time: asOf })}` : today,
   });
 
   const setTab = useCallback(

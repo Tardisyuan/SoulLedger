@@ -95,6 +95,7 @@ const COLLECTED_FILES = [
   "PageSection.test.tsx",
   "PageShell.test.tsx",
   "Pagination.test.tsx",
+  "formatAsOf.test.ts",
   "PermissionConfigTransfer.test.tsx",
   "PermissionDenied.test.tsx",
   "PermissionFormModal.test.tsx",
