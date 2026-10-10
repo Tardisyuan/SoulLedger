@@ -5,11 +5,11 @@ import { View } from "react-native";
 
 import { formatWhen } from "../format";
 import { Row, StateView, viewStateOf } from "../kit";
-import { isDenied } from "../rules";
+import { isDenied, noticeLanding, type Landing } from "../rules";
 import { useSession } from "../session";
 import { Screen, SmallButton, Txt, space, useI18n, useRemote } from "../shared";
 
-export function NoticesTab({ onUnread }: { onUnread: (unread: boolean) => void }) {
+export function NoticesTab({ onUnread, onLand }: { onUnread: (unread: boolean) => void; onLand?: (landing: Landing) => void }) {
   const { t } = useI18n();
   const { state } = useSession();
   const role = state.status === "signedIn" ? state.user.role : "";
@@ -26,9 +26,13 @@ export function NoticesTab({ onUnread }: { onUnread: (unread: boolean) => void }
   }, [data, read, onUnread]);
 
   const open = (n: Notification) => {
-    if (!isUnread(n)) return;
-    setRead((prev) => new Set(prev).add(n.id));
-    void notificationsApi.markRead(n.id).catch(() => reload());
+    if (isUnread(n)) {
+      setRead((prev) => new Set(prev).add(n.id));
+      void notificationsApi.markRead(n.id).catch(() => reload());
+    }
+    // Read or not, a row that names an item opens it -- the same landing as a tapped push.
+    const landing = noticeLanding(n);
+    if (landing) onLand?.(landing);
   };
   const markAll = () => {
     setRead(new Set((data ?? []).map((n) => n.id)));
