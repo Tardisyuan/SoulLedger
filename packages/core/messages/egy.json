@@ -4173,7 +4173,8 @@
         "copy_all": "Senn Neb",
         "confirm": "Smen-I Medu Ankh Wehem, Nen Em Medjat Pen.",
         "done": "Khetem",
-        "no_back": "Nen Er Hat. Setep: Khetem."
+        "no_back": "Nen Er Hat. Setep: Khetem.",
+        "save_file": "Smen Em Djama"
       },
       "manage": {
         "body": "Er Aq: Sesh Medu Ahet 6.",

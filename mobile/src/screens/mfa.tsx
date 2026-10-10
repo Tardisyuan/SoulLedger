@@ -9,8 +9,8 @@
  *   left until the box is ticked and 「完成」 pressed: the iOS swipe is off (`gestureEnabled`), the Android key
  *   and the header have no way out (`beforeRemove` refuses), and a deep link or a tapped notification waits
  *   (`holdNavigation`) instead of dragging the soul off the page.
- *   "存为文件" is not here: saving a file needs a file-system / sharing module this App does not ship, and a
- *   new native module is a new dev client. Copy-all and long-press selection are the two ways out.
+ *   「存为文件」 writes the codes to a cache file and opens the system share sheet (`recoveryFile.ts`); the file is
+ *   deleted when the sheet closes. 「复制全部」 and long-press selection are the other ways out.
  *   The key is shown in groups of four, four groups to a line, as one selectable string (the officer app's way);
  *   the QR code is skipped -- a camera cannot scan its own screen -- and `otpauth://` opens the authenticator.
  */
@@ -26,8 +26,10 @@ import { useToast } from "../feedback";
 import { family } from "../fonts";
 import { useI18n } from "../i18n";
 import { holdNavigation } from "../navLock";
+import { shareRecoveryFile, sweepRecoveryFiles } from "../recoveryFile";
 import { secretLines, stateOfFailure, type StepState } from "../mfa";
 import { formatStamp } from "../rules";
+import { useSession } from "../session";
 import { Button, Input, Interp, Notice, Screen, ScreenError, Skeleton, Txt, useRemote, useTheme } from "../ui";
 import type { AppStackParams } from "./applications";
 import { ButtonPair, CheckRow, CoverRule, DigitField, Heading, MfaSheet, StepNotice, TextLink } from "./mfaParts";
@@ -108,7 +110,11 @@ function WizardFooter({ label, note, onPress, disabled, busy, testID }: { label:
 function CodesPage({ codes, onDone, header, ownTop }: { codes: string[]; onDone: () => void; header: ReactNode; ownTop: boolean }) {
   const t = useTheme();
   const { t: tr } = useI18n();
+  const { state } = useSession();
   const toast = useToast();
+  const [sharing, setSharing] = useState(false);
+  // A file left in the cache (the app was killed while the share sheet was up) goes when this page does.
+  useEffect(() => sweepRecoveryFiles, []);
   const [saved, setSaved] = useState(false);
   const allowLeave = useCodesGuard(true);
 
@@ -117,6 +123,19 @@ function CodesPage({ codes, onDone, header, ownTop }: { codes: string[]; onDone:
       () => toast(tr("soul_app.mfa.copied")),
       () => toast(tr("soul_app.life.code_copy_failed"), "failure")
     );
+  const soulCode = state.status === "signedIn" ? state.profile.soul_code : "";
+  const saveFile = async () => {
+    if (sharing) return;
+    setSharing(true);
+    const shown = await shareRecoveryFile({
+      header: tr("soul_app.mfa.codes.file_header"),
+      soulCodeLine: `${tr("soul_app.login.soul_code")}: ${soulCode}`,
+      codes,
+      dialogTitle: tr("soul_app.mfa.codes.save_file"),
+    });
+    setSharing(false);
+    if (!shown) toast(tr("soul_app.mfa.codes.save_failed"), "failure");
+  };
   const done = () => {
     allowLeave();
     onDone();
@@ -136,7 +155,10 @@ function CodesPage({ codes, onDone, header, ownTop }: { codes: string[]; onDone:
               </Txt>
             ))}
           </View>
-          <Button testID="codes-copy" kind="secondary" title={tr("soul_app.mfa.codes.copy_all")} onPress={() => void copyAll()} />
+          <ButtonPair>
+            <Button testID="codes-copy" kind="secondary" title={tr("soul_app.mfa.codes.copy_all")} onPress={() => void copyAll()} style={styles.fill} />
+            <Button testID="codes-save-file" kind="secondary" title={tr("soul_app.mfa.codes.save_file")} onPress={() => void saveFile()} busy={sharing} style={styles.fill} />
+          </ButtonPair>
           <CheckRow testID="codes-confirm" on={saved} onToggle={() => setSaved((v) => !v)}>
             {tr("soul_app.mfa.codes.confirm")}
           </CheckRow>

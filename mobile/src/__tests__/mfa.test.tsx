@@ -13,6 +13,7 @@ import { I18nProvider } from "../i18n";
 import { soulLinks } from "../links";
 import { MFA_DEVICES_KEY, clockOf, deviceTokenFor, digitsOf, forgetDevice, recoveryOf, rememberDevice, secretLines, stateOfFailure } from "../mfa";
 import { navigationHeld } from "../navLock";
+import { recoveryFileBody, recoveryFileName, shareRecoveryFile, sweepRecoveryFiles } from "../recoveryFile";
 import { RootNavigator, navigationRef } from "../navigation";
 import { installMobilePlatform, persistentStore, sessionStore } from "../platform";
 import { PUSH_TOKEN_KEY } from "../push";
@@ -20,6 +21,9 @@ import { SessionProvider } from "../session";
 import { PROFILE, life, stubApi, type Reply } from "./stubApi";
 
 jest.mock("expo-clipboard", () => ({ setStringAsync: jest.fn(async () => true) }));
+// The cache directory and the share sheet are doubles (jest.setup.js): `__files` is what the cache holds right now.
+const files = (jest.requireMock("expo-file-system") as { __files: Map<string, string> }).__files;
+const sharing = jest.requireMock("expo-sharing") as { isAvailableAsync: jest.Mock; shareAsync: jest.Mock };
 
 const secure = (SecureStore as unknown as { __store: Map<string, string> }).__store;
 
@@ -71,6 +75,9 @@ beforeEach(async () => {
   sessionStore.remove("soulledger_access");
   await AsyncStorage.clear();
   logs.length = 0;
+  files.clear();
+  sharing.isAvailableAsync.mockReset().mockResolvedValue(true);
+  sharing.shareAsync.mockReset().mockResolvedValue(undefined);
   for (const level of ["log", "info", "warn", "error", "debug"] as const) {
     const original = console[level];
     spies.push(
@@ -334,7 +341,7 @@ describe("the wizard", () => {
     expect(screen.queryByTestId("wizard-close")).toBeNull(); // no ✕ on this step
     expect(screen.getByText("这一步不能返回，勾选后才能完成")).toBeTruthy();
     expect(screen.getByText("我已把恢复码存在这部手机以外的地方")).toBeTruthy();
-    expect(screen.queryByText("存为文件")).toBeNull(); // not shipped: no file module (see mfa.tsx)
+    expect(screen.getByTestId("codes-save-file")).toBeTruthy();
 
     // Not ticked: 完成 does nothing.
     expect(screen.getByTestId("codes-done").props.accessibilityState).toMatchObject({ disabled: true });
@@ -754,5 +761,103 @@ describe("changing the password signs the other devices out", () => {
     ]);
     expect(secure.get(REFRESH_TOKEN_KEY)).toBe("R2");
     persistentStore.remove(PUSH_TOKEN_KEY);
+  });
+});
+
+describe("存为文件", () => {
+  const NOW = new Date(2026, 9, 11, 21, 46);
+
+  it("the file is named for the app and the day, and says what it is before the codes; nothing else about the soul", () => {
+    expect(recoveryFileName(NOW)).toBe("SoulLedger-recovery-codes-2026-10-11.txt");
+    const body = recoveryFileBody("HEADER", "Soul code: S-1", CODES);
+    expect(body.split("\n")[0]).toBe("HEADER");
+    expect(body.split("\n")[1]).toBe("Soul code: S-1");
+    CODES.forEach((c) => expect(body).toContain(c));
+  });
+
+  it("writes the file, shares it as plain text, and deletes it once the sheet has closed", async () => {
+    let during: string[] = [];
+    sharing.shareAsync.mockImplementationOnce(async () => {
+      during = [...files.values()];
+    });
+    const shown = await shareRecoveryFile({ header: "H", soulCodeLine: "C: S-1", codes: CODES, dialogTitle: "T", now: NOW });
+    expect(shown).toBe(true);
+    expect(during).toHaveLength(1);
+    expect(during[0]).toContain(CODES[0]);
+    expect(sharing.shareAsync).toHaveBeenCalledWith("file:///cache/SoulLedger-recovery-codes-2026-10-11.txt", expect.objectContaining({ mimeType: "text/plain" }));
+    expect(files.size).toBe(0);
+  });
+
+  it("a cancelled or failed sheet deletes it too, and so does a sharing that is not available", async () => {
+    sharing.shareAsync.mockRejectedValueOnce(new Error(`cancelled ${CODES[0]}`));
+    expect(await shareRecoveryFile({ header: "H", soulCodeLine: "C", codes: CODES, dialogTitle: "T", now: NOW })).toBe(false);
+    expect(files.size).toBe(0);
+    sharing.isAvailableAsync.mockResolvedValueOnce(false);
+    expect(await shareRecoveryFile({ header: "H", soulCodeLine: "C", codes: CODES, dialogTitle: "T", now: NOW })).toBe(false);
+    expect(sharing.shareAsync).toHaveBeenCalledTimes(1);
+    expect(files.size).toBe(0);
+  });
+
+  it("a file left behind (the app was killed while the sheet was up) is swept before the next, and on demand", async () => {
+    files.set("file:///cache/SoulLedger-recovery-codes-2026-01-01.txt", "old");
+    files.set("file:///cache/unrelated.txt", "keep");
+    sweepRecoveryFiles();
+    expect([...files.keys()]).toEqual(["file:///cache/unrelated.txt"]);
+    files.set("file:///cache/SoulLedger-recovery-codes-2026-01-02.txt", "old");
+    sharing.shareAsync.mockImplementationOnce(async () => {
+      expect(files.has("file:///cache/SoulLedger-recovery-codes-2026-01-02.txt")).toBe(false);
+    });
+    await shareRecoveryFile({ header: "H", soulCodeLine: "C", codes: CODES, dialogTitle: "T", now: NOW });
+    expect([...files.keys()]).toEqual(["file:///cache/unrelated.txt"]);
+  });
+
+  it("the button on step ③ shares the codes with the soul code and no name, leaves no file, and logs nothing", async () => {
+    let body = "";
+    sharing.shareAsync.mockImplementationOnce(async () => {
+      body = [...files.values()][0] ?? "";
+    });
+    signedIn({
+      "GET /me/mfa/": { status: 200, data: OFF },
+      "POST /me/mfa/setup/": { status: 200, data: { secret: SECRET, otpauth_url: OTPAUTH } },
+      "POST /me/mfa/confirm/": { status: 200, data: { recovery_codes: CODES } },
+    });
+    renderApp();
+    await screen.findByTestId("profile-card");
+    act(() => navigationRef.navigate("Mfa"));
+    await startWith();
+    await screen.findByTestId("secret-key");
+    fireEvent.changeText(screen.getByTestId("bind-code"), "482913");
+    fireEvent.press(screen.getByTestId("bind-next"));
+    await screen.findByTestId("recovery-codes");
+    await act(async () => {
+      fireEvent.press(screen.getByTestId("codes-save-file"));
+    });
+    await waitFor(() => expect(sharing.shareAsync).toHaveBeenCalledTimes(1));
+    CODES.forEach((c) => expect(body).toContain(c));
+    expect(body).toContain(PROFILE.soul_code);
+    expect(body).not.toContain(PROFILE.name);
+    expect(body.split("\n")[0]).toBe("灵魂簿恢复码：手机丢了或换了，用恢复码登录。每个只能用一次。请存在这部手机以外的地方。");
+    expect(files.size).toBe(0);
+    await expectNothingKept(CODES);
+  });
+
+  it("when it cannot be shared the soul is told, and the codes stay on screen", async () => {
+    sharing.isAvailableAsync.mockResolvedValue(false);
+    signedIn({
+      "GET /me/mfa/": { status: 200, data: OFF },
+      "POST /me/mfa/setup/": { status: 200, data: { secret: SECRET, otpauth_url: OTPAUTH } },
+      "POST /me/mfa/confirm/": { status: 200, data: { recovery_codes: CODES } },
+    });
+    renderApp();
+    await screen.findByTestId("profile-card");
+    act(() => navigationRef.navigate("Mfa"));
+    await startWith();
+    await screen.findByTestId("secret-key");
+    fireEvent.changeText(screen.getByTestId("bind-code"), "482913");
+    fireEvent.press(screen.getByTestId("bind-next"));
+    await screen.findByTestId("recovery-codes");
+    fireEvent.press(screen.getByTestId("codes-save-file"));
+    expect((await screen.findByTestId("toast")).props.children).toBe("没能存成文件");
+    expect(screen.getByTestId("recovery-codes")).toBeTruthy();
   });
 });
