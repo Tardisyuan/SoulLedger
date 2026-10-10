@@ -169,14 +169,21 @@ def begin_setup(user) -> OfficerMfa:
     return OfficerMfa.objects.create(user=user, secret=generate_secret())
 
 
-def _issue_recovery_codes(mfa) -> list[str]:
-    mfa.recovery_codes.all().delete()
-    codes = []
+def new_recovery_codes() -> list[tuple[str, str]]:
+    """`RECOVERY_CODE_COUNT` 个新恢复码 → [(给人看的 "xxxx-xxxx", 哈希)]。官员与灵魂两侧共用这一处生成与哈希。"""
+    out = []
     for _ in range(RECOVERY_CODE_COUNT):
         raw = "".join(secrets.choice(RECOVERY_ALPHABET) for _ in range(8))
-        codes.append(f"{raw[:4]}-{raw[4:]}")
-        MfaRecoveryCode.objects.create(mfa=mfa, code_hash=make_password(raw))
-    return codes
+        out.append((f"{raw[:4]}-{raw[4:]}", make_password(raw)))
+    return out
+
+
+def _issue_recovery_codes(mfa) -> list[str]:
+    mfa.recovery_codes.all().delete()
+    pairs = new_recovery_codes()
+    for _, code_hash in pairs:
+        MfaRecoveryCode.objects.create(mfa=mfa, code_hash=code_hash)
+    return [shown for shown, _ in pairs]
 
 
 def confirm_setup(mfa, code) -> tuple[str, list[str]]:

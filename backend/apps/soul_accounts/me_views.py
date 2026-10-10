@@ -7,7 +7,7 @@
 `tests/test_soul_auth_boundary.py::test_every_me_route_is_a_soul_api_view` 走真实 URLconf 钉住这一点。
 """
 from django.core.cache import cache
-from drf_spectacular.utils import OpenApiResponse, extend_schema
+from drf_spectacular.utils import OpenApiResponse, PolymorphicProxySerializer, extend_schema
 from rest_framework import status
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import AllowAny, BasePermission
@@ -15,6 +15,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import TokenError
 
+from apps.soul_accounts import mfa as soul_mfa
 from apps.soul_accounts import rebirth
 from apps.soul_accounts import services as svc
 from apps.soul_accounts.authentication import SoulJWTAuthentication, SoulRefreshToken
@@ -28,6 +29,7 @@ from apps.soul_accounts.serializers import (
     MeRebirthApplicationListSerializer,
     MeRebirthApplicationSerializer,
     MeSentencePlanSerializer,
+    MeTenantSerializer,
     MeWelcomedRequestSerializer,
     MeWelcomedSerializer,
     RebirthAppealSerializer,
@@ -35,6 +37,7 @@ from apps.soul_accounts.serializers import (
     SoulErrorSerializer,
     SoulLoginRequestSerializer,
     SoulLoginResponseSerializer,
+    SoulMfaRequiredSerializer,
     SoulRefreshRequestSerializer,
     SoulTokenPairSerializer,
 )
@@ -94,8 +97,16 @@ class SoulLoginView(APIView):
 
     @extend_schema(
         request=SoulLoginRequestSerializer,
-        responses={200: SoulLoginResponseSerializer, 400: OpenApiResponse(description="字段校验失败"),
-                   401: SoulErrorSerializer, 429: SoulErrorSerializer},
+        responses={
+            # 两种 200:令牌,或开着两步验证时的 `mfa_required` + 短时效的待验证凭据(去 /soul-auth/mfa/verify/)。
+            200: PolymorphicProxySerializer(
+                component_name="SoulLoginOutcome",
+                serializers=[SoulLoginResponseSerializer, SoulMfaRequiredSerializer],
+                resource_type_field_name=None,
+            ),
+            400: OpenApiResponse(description="字段校验失败"),
+            401: SoulErrorSerializer, 429: SoulErrorSerializer,
+        },
     )
     def post(self, request):
         from apps.authentication.models import LoginLog
@@ -113,7 +124,7 @@ class SoulLoginView(APIView):
                             status=status.HTTP_429_TOO_MANY_REQUESTS)
         user_agent = request.META.get("HTTP_USER_AGENT", "")[:500]
         try:
-            account, tokens = svc.login(soul_code, body.validated_data["password"])
+            account = svc.authenticate(soul_code, body.validated_data["password"])
         except svc.SoulAccountError as exc:
             cache.set(ip_key, ip_attempts + 1, timeout=LOGIN_WINDOW_SECONDS)
             cache.set(code_key, code_attempts + 1, timeout=LOGIN_WINDOW_SECONDS)
@@ -123,6 +134,16 @@ class SoulLoginView(APIView):
         # 成功只清这个编号的计数。IP 计数不清:否则攻击者用自己的一个真账号登录一次,
         # 就能把整台机器的扫描预算重置。
         cache.delete(code_key)
+        if soul_mfa.is_enabled(account) and not soul_mfa.device_remembered(
+                account, body.validated_data.get("device_token")):
+            # 第二步:密码对了,令牌还不发。待验证凭据只开 /soul-auth/mfa/verify/ 这一扇门。
+            # 殿名随之返回(此时已过密码这一关),供「手机和恢复码都没有了」一屏使用。
+            return Response({
+                "mfa_required": True, "pending_token": soul_mfa.issue_pending(account),
+                "soul_code": account.soul.soul_code,
+                "home_tenant": MeTenantSerializer(account.soul.home_tenant).data,
+            })
+        tokens = svc.complete_login(account)
         LoginLog.objects.create(user=account.user, username=f"soul:{soul_code}"[:150], status="SUCCESS",
                                 ip_address=ip, user_agent=user_agent)
         return Response({

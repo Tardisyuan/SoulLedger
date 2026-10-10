@@ -30,6 +30,7 @@ MESSAGES = {
         "social_warned_post": {"title": "帖子收到警告", "body": "你的帖子收到警告：{{reason}}"},
         "social_warned_comment": {"title": "评论收到警告", "body": "你的评论收到警告：{{reason}}"},
         "social_warned_user": {"title": "账号收到警告", "body": "你的账号收到警告：{{reason}}"},
+        "mfa_reset_by_officer": {"title": "两步验证已关闭", "body": "本殿官员 {{name}} 已关闭你的两步验证"},
     },
     "en": {
         "sentence_pardoned": {"title": "Remaining term pardoned", "body": "Part of your term was pardoned. Open Soul Ledger to see it."},
@@ -86,6 +87,10 @@ MESSAGES = {
             "title": "Your account was warned",
             "body": "Your account received a warning: {{reason}}",
         },
+        "mfa_reset_by_officer": {
+            "title": "Two-step verification turned off",
+            "body": "{{name}}, an officer of your hall, turned off your two-step verification",
+        },
     },
     "egy": {
         "sentence_pardoned": {"title": "Renpet Sepy Nedj Seth", "body": "Renpet-Ek Nedj Seth. Wen Medjat Ba Er Maa."},
@@ -106,6 +111,7 @@ MESSAGES = {
         "social_warned_post": {"title": "Sebayt Er Medu", "body": "Sebayt Er Medu-Ek: {{reason}}"},
         "social_warned_comment": {"title": "Sebayt Er Wesheb", "body": "Sebayt Er Wesheb-Ek: {{reason}}"},
         "social_warned_user": {"title": "Sebayt Er Aq", "body": "Sebayt Er Aq-Ek: {{reason}}"},
+        "mfa_reset_by_officer": {"title": "Khetem Aq Sep Sen", "body": "Sab {{name}}: Khetem Aq Sep Sen-Ek Seth."},
     },
 }
 

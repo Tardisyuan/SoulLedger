@@ -8328,6 +8328,157 @@ paths:
               schema:
                 $ref: '#/components/schemas/SoulError'
           description: ''
+  /api/v1/me/mfa/:
+    get:
+      operationId: v1_me_mfa_retrieve
+      tags:
+      - v1
+      security:
+      - soulJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulMfaStatus'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulMfaRefusal'
+          description: ''
+  /api/v1/me/mfa/confirm/:
+    post:
+      operationId: v1_me_mfa_confirm_create
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SoulMfaCodeRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SoulMfaCodeRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SoulMfaCodeRequest'
+        required: true
+      security:
+      - soulJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulMfaRecoveryCodes'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulMfaRefusal'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulMfaRefusal'
+          description: ''
+  /api/v1/me/mfa/disable/:
+    post:
+      operationId: v1_me_mfa_disable_create
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SoulMfaDisableRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SoulMfaDisableRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SoulMfaDisableRequest'
+        required: true
+      security:
+      - soulJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulMfaStatus'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulMfaRefusal'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulMfaRefusal'
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulMfaRefusal'
+          description: ''
+  /api/v1/me/mfa/recovery-codes/:
+    post:
+      operationId: v1_me_mfa_recovery_codes_create
+      tags:
+      - v1
+      security:
+      - soulJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulMfaRecoveryCodes'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulMfaRefusal'
+          description: ''
+  /api/v1/me/mfa/setup/:
+    post:
+      operationId: v1_me_mfa_setup_create
+      tags:
+      - v1
+      security:
+      - soulJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulMfaSetupResponse'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulMfaRefusal'
+          description: ''
+    delete:
+      operationId: v1_me_mfa_setup_destroy
+      tags:
+      - v1
+      security:
+      - soulJwtAuth: []
+      responses:
+        '204':
+          description: 已作废
   /api/v1/me/notification-settings/:
     get:
       operationId: v1_me_notification_settings_retrieve
@@ -15400,6 +15551,61 @@ paths:
               schema:
                 $ref: '#/components/schemas/SoulError'
           description: ''
+  /api/v1/soul-accounts/accounts/{id}/reset-mfa/:
+    post:
+      operationId: v1_soul_accounts_accounts_reset_mfa_create
+      description: |-
+        `POST /soul-accounts/accounts/{id}/reset-mfa/`:官员替灵魂关闭两步验证。
+
+        码名 `souls.mfa_reset`(默认只 ADMIN,其它角色由管理员授予),不是 soul_account.manage。
+        **只关不开**;理由必填并写进审计行;只有灵魂的**原属殿**的官员能做(ADMIN 也一样 ——
+        租户豁免只放宽查询,不放宽「谁是本殿官员」);关闭后灵魂收到一条通知。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SoulMfaResetRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SoulMfaResetRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SoulMfaResetRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulAccount'
+          description: ''
+        '400':
+          description: 字段校验失败
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulError'
+          description: ''
+        '404':
+          description: 账号不存在或不在本殿
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulError'
+          description: ''
   /api/v1/soul-accounts/accounts/provision/:
     post:
       operationId: v1_soul_accounts_accounts_provision_create
@@ -16012,7 +16218,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SoulLoginResponse'
+                $ref: '#/components/schemas/SoulLoginOutcome'
           description: ''
         '400':
           description: 字段校验失败
@@ -16050,6 +16256,53 @@ paths:
       responses:
         '204':
           description: No response body
+  /api/v1/soul-auth/mfa/verify/:
+    post:
+      operationId: v1_soul_auth_mfa_verify_create
+      description: |-
+        登录第二步。**限流**:同一账号 5 次不通过锁 15 分钟(记在账号上,换 IP、换待验证凭据都绕不过);
+        另按 IP 记失败,15 分钟 50 次 —— 与密码登录同一组数字,挡一台机器拿很多凭据扫很多账号。
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SoulMfaVerifyRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SoulMfaVerifyRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SoulMfaVerifyRequest'
+        required: true
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulMfaVerifyResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulMfaRefusal'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulMfaRefusal'
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulMfaRefusal'
+          description: ''
   /api/v1/soul-auth/refresh/:
     post:
       operationId: v1_soul_auth_refresh_create
@@ -33974,6 +34227,15 @@ components:
           oneOf:
           - $ref: '#/components/schemas/EmailNotSyncedEnum'
           - $ref: '#/components/schemas/NullEnum'
+        mfa_enabled:
+          type: boolean
+          description: 是否已开启两步验证 —— 只给布尔值与开启时间,不给任何密钥材料。
+          readOnly: true
+        mfa_enabled_at:
+          type: string
+          format: date-time
+          nullable: true
+          readOnly: true
       required:
       - contact_email_masked
       - contact_phone_masked
@@ -33983,6 +34245,8 @@ components:
       - id
       - initial_password_expires_at
       - last_login
+      - mfa_enabled
+      - mfa_enabled_at
       - must_change_password
       - origin
       - previous_account
@@ -34418,6 +34682,10 @@ components:
       - karmic_balance
       - name
       - tenant_code
+    SoulLoginOutcome:
+      oneOf:
+      - $ref: '#/components/schemas/SoulLoginResponse'
+      - $ref: '#/components/schemas/SoulMfaRequired'
     SoulLoginRequest:
       type: object
       properties:
@@ -34425,6 +34693,9 @@ components:
           type: string
           maxLength: 32
         password:
+          type: string
+          maxLength: 128
+        device_token:
           type: string
           maxLength: 128
       required:
@@ -34441,6 +34712,156 @@ components:
           type: string
         account:
           $ref: '#/components/schemas/MeAccount'
+      required:
+      - access
+      - account
+      - refresh
+      - soul_code
+    SoulMfaCodeRequest:
+      type: object
+      properties:
+        code:
+          type: string
+          maxLength: 32
+      required:
+      - code
+    SoulMfaDisableRequest:
+      type: object
+      properties:
+        method:
+          $ref: '#/components/schemas/MethodEnum'
+        code:
+          type: string
+          maxLength: 32
+        password:
+          type: string
+          maxLength: 128
+      required:
+      - method
+    SoulMfaRecoveryCodes:
+      type: object
+      properties:
+        recovery_codes:
+          type: array
+          items:
+            type: string
+      required:
+      - recovery_codes
+    SoulMfaRefusal:
+      type: object
+      description: |-
+        `code` is what to branch on: wrong / expired (400; `remaining_attempts`, `lock_minutes`), locked (429;
+        `retry_after` seconds + `locked_until`), pending_invalid (401: the step timed out), rate_limited (429),
+        wrong_password / not_enabled / already_enabled / not_started (setup and disable).
+      properties:
+        detail:
+          type: string
+        code:
+          type: string
+        remaining_attempts:
+          type: integer
+        lock_minutes:
+          type: integer
+        retry_after:
+          type: integer
+        locked_until:
+          type: string
+          format: date-time
+      required:
+      - code
+      - detail
+    SoulMfaRequired:
+      type: object
+      description: |-
+        Doc-only: the 200 body of the login step 1 when the password was right but the account has
+        two-step verification on and the request carried no valid device token. No tokens:
+        `pending_token` (5 minutes, type `soul_mfa_pending`, good for `/soul-auth/mfa/verify/` only) goes to step 2.
+        `home_tenant` is here so the 「lost phone」 screen can name the hall before there is a session.
+      properties:
+        mfa_required:
+          type: boolean
+        pending_token:
+          type: string
+        soul_code:
+          type: string
+        home_tenant:
+          $ref: '#/components/schemas/MeTenant'
+      required:
+      - home_tenant
+      - mfa_required
+      - pending_token
+      - soul_code
+    SoulMfaResetRequest:
+      type: object
+      description: 理由必填(同官员重置密码:非空、去首尾空白),写进审计行。
+      properties:
+        reason:
+          type: string
+          maxLength: 500
+      required:
+      - reason
+    SoulMfaSetupResponse:
+      type: object
+      properties:
+        secret:
+          type: string
+        otpauth_url:
+          type: string
+      required:
+      - otpauth_url
+      - secret
+    SoulMfaStatus:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+        confirmed_at:
+          type: string
+          format: date-time
+          nullable: true
+        last_used_at:
+          type: string
+          format: date-time
+          nullable: true
+        last_used_method:
+          type: string
+        recovery_codes_remaining:
+          type: integer
+      required:
+      - confirmed_at
+      - enabled
+      - last_used_at
+      - last_used_method
+      - recovery_codes_remaining
+    SoulMfaVerifyRequest:
+      type: object
+      properties:
+        pending_token:
+          type: string
+        code:
+          type: string
+          maxLength: 32
+        recovery_code:
+          type: string
+          maxLength: 32
+        remember_device:
+          type: boolean
+          default: false
+      required:
+      - pending_token
+    SoulMfaVerifyResponse:
+      type: object
+      properties:
+        access:
+          type: string
+        refresh:
+          type: string
+        soul_code:
+          type: string
+        account:
+          $ref: '#/components/schemas/MeAccount'
+        device_token:
+          type: string
       required:
       - access
       - account

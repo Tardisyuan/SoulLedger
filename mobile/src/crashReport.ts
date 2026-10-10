@@ -39,7 +39,14 @@ const BEARER = /\b(Bearer|Token)\s+[A-Za-z0-9._~+/=-]+/gi;
 
 /** Redacts bearer tokens / JWTs in free text and drops the query string of any `scheme://` URL (https, and the apps' own deep links: `soulledger-officer://reset?uid=..&token=..`). */
 export function scrubString(s: string): string {
-  return s.replace(JWT, FILTERED).replace(BEARER, `$1 ${FILTERED}`).replace(/([a-z][a-z0-9+.-]*:\/\/[^\s?#]*)\?[^\s#]*/gi, "$1");
+  return (
+    s
+      .replace(JWT, FILTERED)
+      .replace(BEARER, `$1 ${FILTERED}`)
+      // An authenticator link is the two-step secret itself, and its path carries the soul code / username: all of it goes.
+      .replace(/otpauth:\/\/\S*/gi, `otpauth://${FILTERED}`)
+      .replace(/([a-z][a-z0-9+.-]*:\/\/[^\s?#]*)\?[^\s#]*/gi, "$1")
+  );
 }
 
 function scrubValue(value: unknown, depth: number): unknown {

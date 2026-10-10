@@ -9,6 +9,7 @@
  */
 import {
   clearSoulTokens,
+  isMfaRequired,
   onSoulPasswordChangeRequired,
   soulApi,
   soulErrorCode,
@@ -17,6 +18,7 @@ import {
   storeSoulTokens,
   type MeProfile,
   type SoulErrorMessage,
+  type SoulLoginResponse,
 } from "@soulledger/core/api/soul";
 import { getRefreshToken, platform } from "@soulledger/core/platform";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
@@ -25,6 +27,7 @@ import { LOCALE_COOKIE, isLocale } from "@soulledger/core/config/locale";
 
 import { clearOutbox } from "./chat";
 import { useI18n } from "./i18n";
+import { deviceTokenFor, forgetDevice, rememberDevice } from "./mfa";
 import { setUnauthorizedHandler } from "./platform";
 import { hasRegisteredDevice, unregisterDevice } from "./push";
 import { clearVoiceNumbers } from "./voiceCache";
@@ -36,9 +39,28 @@ export type SessionState =
   | { status: "mustChangePassword"; expiresAt: string | null }
   | { status: "signedIn"; profile: MeProfile };
 
+/**
+ * Sign-in step 1 passed and this soul has two-step verification on: the password is right, no token has been
+ * issued. `pendingToken` opens exactly one door (the second step, five minutes) and lives in the login
+ * screen's state only -- not in the session, a store, a navigation param or a log. `hall` is what the
+ * 「手机和恢复码都没有了」 page names, taken from step 1's answer so no anonymous endpoint has to tell it.
+ */
+export interface MfaChallenge {
+  pendingToken: string;
+  soulCode: string;
+  hall: { displayName: string; hallNames: Record<string, string> };
+}
+
 export interface Session {
   state: SessionState;
-  signIn: (soulCode: string, password: string) => Promise<void>;
+  /** `null`: signed in (or must change the password). A challenge: the second step is next. */
+  signIn: (soulCode: string, password: string) => Promise<MfaChallenge | null>;
+  /** Step 2. Throws the axios error: the screen reads it with `soulMfaFailure`. */
+  verifyMfa: (
+    challenge: MfaChallenge,
+    proof: { code: string } | { recoveryCode: string },
+    remember: boolean
+  ) => Promise<void>;
   changePassword: (oldPassword: string, newPassword: string) => Promise<void>;
   signOut: () => void;
   refreshProfile: () => Promise<void>;
@@ -127,9 +149,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- boot runs once
   }, []);
 
-  const signIn = useCallback(
-    async (soulCode: string, password: string) => {
-      const response = await soulApi.login(soulCode, password);
+  /** Both ways in (the password alone, or the password and the second step) end here. */
+  const finishSignIn = useCallback(
+    async (response: SoulLoginResponse) => {
       storeSoulTokens(response);
       if (response.account.must_change_password) {
         setState({ status: "mustChangePassword", expiresAt: response.account.initial_password_expires_at ?? null });
@@ -138,6 +160,39 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       await enter();
     },
     [enter]
+  );
+
+  const signIn = useCallback(
+    async (soulCode: string, password: string): Promise<MfaChallenge | null> => {
+      const sent = deviceTokenFor(soulCode);
+      const response = await soulApi.login(soulCode, password, sent);
+      if (isMfaRequired(response)) {
+        // The server did not honour the remembered phone (expired, voided, another account's): forget it.
+        if (sent) forgetDevice(soulCode);
+        const home = response.home_tenant;
+        return {
+          pendingToken: response.pending_token,
+          soulCode: response.soul_code,
+          hall: { displayName: home.display_name, hallNames: home.hall_names },
+        };
+      }
+      await finishSignIn(response);
+      return null;
+    },
+    [finishSignIn]
+  );
+
+  const verifyMfa = useCallback<Session["verifyMfa"]>(
+    async (challenge, proof, remember) => {
+      const response = await soulApi.mfaVerify({
+        pending_token: challenge.pendingToken,
+        ...("code" in proof ? { code: proof.code } : { recovery_code: proof.recoveryCode }),
+        remember_device: remember,
+      });
+      if (remember && response.device_token) rememberDevice(challenge.soulCode, response.device_token);
+      await finishSignIn(response);
+    },
+    [finishSignIn]
   );
 
   const changePassword = useCallback(
@@ -173,8 +228,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo<Session>(
-    () => ({ state, signIn, changePassword, signOut, refreshProfile, retryBoot }),
-    [state, signIn, changePassword, signOut, refreshProfile, retryBoot]
+    () => ({ state, signIn, verifyMfa, changePassword, signOut, refreshProfile, retryBoot }),
+    [state, signIn, verifyMfa, changePassword, signOut, refreshProfile, retryBoot]
   );
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }

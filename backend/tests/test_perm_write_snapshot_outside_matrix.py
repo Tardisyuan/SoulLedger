@@ -1706,6 +1706,8 @@ def test_migrate_only_database_seeds_none_of_these_families(db):
         "soul_inbox.reply",
         # perm/0026 (2026-09-26, 界域容量). Same reasoning as the scheduler pair.
         "realms.manage",
+        # perm/0027 (2026-10-11, 灵魂端两步验证). Same reasoning as the scheduler pair.
+        "souls.mfa_reset",
         "workflow.advance",
         "workflow.approve",
         "workflow.create",

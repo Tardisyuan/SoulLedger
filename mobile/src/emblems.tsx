@@ -306,7 +306,8 @@ export type IconName =
   | "circle"
   | "lamp"
   | "lampLit"
-  | "more";
+  | "more"
+  | "image";
 
 const ICONS: Record<IconName, { box: number; body: ReactNode }> = {
   ledger: { box: 16, body: [<Rect key="a" x={3} y={2.5} width={10} height={11} />, <Path key="b" d="M5.5 2.5v11M3 6.5h10" />] },
@@ -346,6 +347,15 @@ const ICONS: Record<IconName, { box: number; body: ReactNode }> = {
     ],
   },
   lamp: { box: 16, body: [<Path key="a" d="M8 2.2c1.6 1.9 2.2 3.1 2.2 4.2a2.2 2.2 0 01-4.4 0c0-1.1.6-2.3 2.2-4.2z" />, <Path key="b" d="M4.5 10.5h7M5.5 10.5l.8 3.3h3.4l.8-3.3" />] },
+  // 书信发图键(第十八批 Design):20 画布、1.5 描边、方角 —— 与搜索图标同规格;用 strokeWidth 1.5 画。
+  image: {
+    box: 20,
+    body: [
+      <Rect key="a" x={2.75} y={4.25} width={14.5} height={11.5} strokeLinejoin="miter" />,
+      <Circle key="b" cx={7} cy={8.5} r={1.25} />,
+      <Path key="c" d="M2.75 14l4.5-4 3 2.5 3-3 4 3.5" strokeLinejoin="miter" />,
+    ],
+  },
   more: { box: 18, body: [<Rect key="a" x={3.5} y={8.5} width={1} height={1} />, <Rect key="b" x={8.5} y={8.5} width={1} height={1} />, <Rect key="c" x={13.5} y={8.5} width={1} height={1} />] },
   // The one filled glyph: the lit flame takes the stroke colour (`currentColor`, set on the Svg).
   lampLit: {

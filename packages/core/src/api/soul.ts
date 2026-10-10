@@ -51,6 +51,19 @@ import type { components } from "./generated/schema";
 type Schemas = components["schemas"];
 export type SoulLoginResponse = Schemas["SoulLoginResponse"];
 export type SoulTokenPair = Schemas["SoulTokenPair"];
+/** Step 1 of sign-in answers with tokens, or — when two-step verification is on — with a pending credential. */
+export type SoulLoginOutcome = Schemas["SoulLoginOutcome"];
+export type SoulMfaRequired = Schemas["SoulMfaRequired"];
+export type SoulMfaStatus = Schemas["SoulMfaStatus"];
+export type SoulMfaSetup = Schemas["SoulMfaSetupResponse"];
+export type SoulMfaVerifyResponse = Schemas["SoulMfaVerifyResponse"];
+/** `remember_device` defaults to false on the server (the generated type makes it required). */
+export type SoulMfaVerifyRequest = Omit<Schemas["SoulMfaVerifyRequest"], "remember_device"> & { remember_device?: boolean };
+export type SoulMfaDisableRequest = Schemas["SoulMfaDisableRequest"];
+
+export function isMfaRequired(outcome: SoulLoginOutcome): outcome is SoulMfaRequired {
+  return "mfa_required" in outcome && outcome.mfa_required === true;
+}
 /**
  * Residence (a soul dispatched to another civilization) comes with the generated
  * type: `home_tenant`, `home_civilization` and `is_residing` are always present,
@@ -130,7 +143,8 @@ export function clearSoulTokens(): void {
 }
 
 function isSoulAuthEndpoint(url: string | undefined): boolean {
-  return /\/soul-auth\/(login|refresh|logout)\/?$/.test(url || "");
+  // `mfa/verify` too: its 401 is `pending_invalid` (the step timed out), not an expired session.
+  return /\/soul-auth\/(login|refresh|logout|mfa\/verify)\/?$/.test(url || "");
 }
 
 let refreshInFlight: Promise<string> | null = null;
@@ -179,8 +193,34 @@ soulHttp.interceptors.response.use(
 );
 
 export const soulApi = {
-  login: (soul_code: string, password: string) =>
-    soulHttp.post<SoulLoginResponse>("/soul-auth/login/", { soul_code, password }).then((r) => r.data),
+  /**
+   * `deviceToken`: the opaque value an earlier 「这部手机 30 天内不再询问」 returned. When it is still good
+   * the server skips the second step and this answers with tokens; when it is not (expired, voided, another
+   * account's), the answer is the pending credential, as if none had been sent.
+   */
+  login: (soul_code: string, password: string, deviceToken?: string) =>
+    soulHttp
+      .post<SoulLoginOutcome>("/soul-auth/login/", {
+        soul_code,
+        password,
+        ...(deviceToken ? { device_token: deviceToken } : {}),
+      })
+      .then((r) => r.data),
+  /** Sign-in step 2. `device_token` in the answer only when `remember_device` was asked for. */
+  mfaVerify: (body: SoulMfaVerifyRequest) =>
+    soulHttp.post<SoulMfaVerifyResponse>("/soul-auth/mfa/verify/", body).then((r) => r.data),
+  mfaStatus: () => soulHttp.get<SoulMfaStatus>("/me/mfa/").then((r) => r.data),
+  /** A new secret (and the previous unconfirmed one is void). Not enabled until `mfaConfirm`. */
+  mfaSetup: () => soulHttp.post<SoulMfaSetup>("/me/mfa/setup/").then((r) => r.data),
+  mfaCancelSetup: () => soulHttp.delete("/me/mfa/setup/").then(() => undefined),
+  /** Right digits → enabled, and the ten recovery codes, ONCE. Hold them in component state only. */
+  mfaConfirm: (code: string) =>
+    soulHttp.post<Schemas["SoulMfaRecoveryCodes"]>("/me/mfa/confirm/", { code }).then((r) => r.data.recovery_codes),
+  /** The old set is void at once; the new ten are shown once. */
+  mfaRegenerate: () =>
+    soulHttp.post<Schemas["SoulMfaRecoveryCodes"]>("/me/mfa/recovery-codes/").then((r) => r.data.recovery_codes),
+  mfaDisable: (body: SoulMfaDisableRequest) =>
+    soulHttp.post<SoulMfaStatus>("/me/mfa/disable/", body).then((r) => r.data),
   /** Best effort: the server answers 204 whatever the token's state. */
   logout: (refresh: string) => soulHttp.post("/soul-auth/logout/", { refresh }),
   /** 200 is a NEW token pair; the old refresh token is dead the moment this returns. */
@@ -400,4 +440,51 @@ export function passwordResetRetryAfter(error: unknown): number | null {
   if (!axios.isAxiosError(error)) return null;
   const wait = (error.response?.data as Partial<PasswordResetRefusal> | undefined)?.retry_after;
   return typeof wait === "number" && wait > 0 ? wait : null;
+}
+
+/**
+ * What went wrong with a two-step call, by the body's stable `code`. `network`: no response at all (the
+ * digits typed are still in the box). `pending_invalid`: the step timed out — start again from the password.
+ */
+export type SoulMfaFailureCode =
+  | "wrong"
+  | "expired"
+  | "locked"
+  | "pending_invalid"
+  | "rate_limited"
+  | "wrong_password"
+  | "not_enabled"
+  | "already_enabled"
+  | "not_started"
+  | "network"
+  | "other";
+
+export interface SoulMfaFailure {
+  code: SoulMfaFailureCode;
+  /** `wrong` / `wrong_password`: tries left before the lock. */
+  remainingAttempts: number | null;
+  /** `locked`: server time after which it can be tried again (ISO). */
+  lockedUntil: string | null;
+  /** `locked` / `rate_limited`: seconds. */
+  retryAfter: number | null;
+}
+
+const MFA_CODES: readonly string[] = [
+  "wrong", "expired", "locked", "pending_invalid", "rate_limited", "wrong_password",
+  "not_enabled", "already_enabled", "not_started",
+];
+
+export function soulMfaFailure(error: unknown): SoulMfaFailure {
+  const none = { remainingAttempts: null, lockedUntil: null, retryAfter: null };
+  if (!axios.isAxiosError(error)) return { code: "other", ...none };
+  const response = error.response;
+  if (!response) return { code: "network", ...none };
+  const body = (response.data ?? {}) as Record<string, unknown>;
+  const code = typeof body.code === "string" && MFA_CODES.includes(body.code) ? (body.code as SoulMfaFailureCode) : "other";
+  return {
+    code,
+    remainingAttempts: typeof body.remaining_attempts === "number" ? body.remaining_attempts : null,
+    lockedUntil: typeof body.locked_until === "string" ? body.locked_until : null,
+    retryAfter: typeof body.retry_after === "number" ? body.retry_after : null,
+  };
 }

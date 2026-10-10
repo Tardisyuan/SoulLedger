@@ -1,11 +1,12 @@
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
-from apps.soul_accounts import me_views
+from apps.soul_accounts import me_views, mfa_views
 from apps.soul_accounts.views import (
     InitialCredentialViewSet,
     OfficerCooldownShorteningViewSet,
     OfficerRebirthApplicationViewSet,
+    SoulAccountMfaResetView,
     SoulAccountViewSet,
 )
 
@@ -15,18 +16,28 @@ officer_router.register(r"credentials", InitialCredentialViewSet, basename="soul
 officer_router.register(r"rebirth-applications", OfficerRebirthApplicationViewSet, basename="soul-rebirth-application")
 officer_router.register(r"cooldown-shortenings", OfficerCooldownShorteningViewSet, basename="soul-cooldown-shortening")
 
-officer_urlpatterns = [path("", include(officer_router.urls))]
+officer_urlpatterns = [
+    # 在 router 之前:`accounts/<pk>/` 的详情路由不吃这个后缀,但顺序写明比靠正则互斥更不容易错。
+    path("accounts/<uuid:pk>/reset-mfa/", SoulAccountMfaResetView.as_view(), name="soul-account-reset-mfa"),
+    path("", include(officer_router.urls)),
+]
 
 soul_auth_urlpatterns = [
     path("login/", me_views.SoulLoginView.as_view(), name="soul-login"),
     path("refresh/", me_views.SoulRefreshView.as_view(), name="soul-refresh"),
     path("logout/", me_views.SoulLogoutView.as_view(), name="soul-logout"),
+    path("mfa/verify/", mfa_views.SoulMfaVerifyView.as_view(), name="soul-mfa-verify"),
 ]
 
 me_urlpatterns = [
     path("", me_views.MeView.as_view(), name="me"),
     path("password/", me_views.MePasswordView.as_view(), name="me-password"),
     path("welcomed/", me_views.MeWelcomedView.as_view(), name="me-welcomed"),
+    path("mfa/", mfa_views.MeMfaStatusView.as_view(), name="me-mfa"),
+    path("mfa/setup/", mfa_views.MeMfaSetupView.as_view(), name="me-mfa-setup"),
+    path("mfa/confirm/", mfa_views.MeMfaConfirmView.as_view(), name="me-mfa-confirm"),
+    path("mfa/recovery-codes/", mfa_views.MeMfaRecoveryCodesView.as_view(), name="me-mfa-recovery-codes"),
+    path("mfa/disable/", mfa_views.MeMfaDisableView.as_view(), name="me-mfa-disable"),
     path("life/", me_views.MeLifeView.as_view(), name="me-life"),
     path("past-lives/", me_views.MePastLivesView.as_view(), name="me-past-lives"),
     path("sentence-plan/", me_views.MeSentencePlanView.as_view(), name="me-sentence-plan"),

@@ -5,6 +5,8 @@
 新加到模型上的字段也不会自己漏出来。`tests/test_soul_me_api.py` 断言每个响应的
 键集合**恰好**等于这里的白名单,并断言 evidence_json / new_identity / notes 等不在场。
 """
+from datetime import datetime
+
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
@@ -22,6 +24,8 @@ from apps.souls.models import Civilization
 class SoulLoginRequestSerializer(serializers.Serializer):
     soul_code = serializers.CharField(max_length=32)
     password = serializers.CharField(max_length=128, trim_whitespace=False)
+    #: 开着两步验证的账号,App 带上上次「这部手机 30 天内不再询问」时拿到的设备令牌;有效就跳过第二步。
+    device_token = serializers.CharField(max_length=128, required=False, allow_blank=True)
 
 
 class SoulRefreshRequestSerializer(serializers.Serializer):
@@ -44,6 +48,69 @@ class SoulLoginResponseSerializer(SoulTokenPairSerializer):
     account = MeAccountSerializer()
 
 
+class SoulMfaVerifyRequestSerializer(serializers.Serializer):
+    pending_token = serializers.CharField()
+    code = serializers.CharField(required=False, allow_blank=True, max_length=32)
+    recovery_code = serializers.CharField(required=False, allow_blank=True, max_length=32)
+    remember_device = serializers.BooleanField(default=False)
+
+    def validate(self, attrs):
+        if not attrs.get("code") and not attrs.get("recovery_code"):
+            raise serializers.ValidationError({"code": "code or recovery_code is required"})
+        return attrs
+
+
+class SoulMfaVerifyResponseSerializer(SoulLoginResponseSerializer):
+    #: 只在请求带 `remember_device` 时出现:App 存进安全存储,下次登录第一步带上。
+    device_token = serializers.CharField(required=False)
+
+
+class SoulMfaRefusalSerializer(serializers.Serializer):
+    """`code` is what to branch on: wrong / expired (400; `remaining_attempts`, `lock_minutes`), locked (429;
+    `retry_after` seconds + `locked_until`), pending_invalid (401: the step timed out), rate_limited (429),
+    wrong_password / not_enabled / already_enabled / not_started (setup and disable)."""
+
+    detail = serializers.CharField()
+    code = serializers.CharField()
+    remaining_attempts = serializers.IntegerField(required=False)
+    lock_minutes = serializers.IntegerField(required=False)
+    retry_after = serializers.IntegerField(required=False)
+    locked_until = serializers.DateTimeField(required=False)
+
+
+class SoulMfaStatusSerializer(serializers.Serializer):
+    enabled = serializers.BooleanField()
+    confirmed_at = serializers.DateTimeField(allow_null=True)
+    last_used_at = serializers.DateTimeField(allow_null=True)
+    last_used_method = serializers.CharField()
+    recovery_codes_remaining = serializers.IntegerField()
+
+
+class SoulMfaSetupResponseSerializer(serializers.Serializer):
+    secret = serializers.CharField()
+    otpauth_url = serializers.CharField()
+
+
+class SoulMfaCodeRequestSerializer(serializers.Serializer):
+    code = serializers.CharField(max_length=32)
+
+
+class SoulMfaRecoveryCodesSerializer(serializers.Serializer):
+    recovery_codes = serializers.ListField(child=serializers.CharField())
+
+
+class SoulMfaDisableRequestSerializer(serializers.Serializer):
+    method = serializers.ChoiceField(choices=["totp", "password"])
+    code = serializers.CharField(required=False, allow_blank=True, max_length=32)
+    password = serializers.CharField(required=False, allow_blank=True, max_length=128, trim_whitespace=False)
+
+
+class SoulMfaResetRequestSerializer(serializers.Serializer):
+    """理由必填(同官员重置密码:非空、去首尾空白),写进审计行。"""
+
+    reason = serializers.CharField(max_length=500, allow_blank=False, trim_whitespace=True)
+
+
 class ChangePasswordRequestSerializer(serializers.Serializer):
     old_password = serializers.CharField(max_length=128, trim_whitespace=False)
     new_password = serializers.CharField(min_length=8, max_length=128, trim_whitespace=False)
@@ -63,6 +130,18 @@ class MeTenantSerializer(serializers.Serializer):
                                        help_text="殿司展示名,按语言:{zh-Hans, en, egy}(`Tenant.hall_names`)。")
     seal_glyphs = serializers.ListField(child=serializers.CharField(), read_only=True,
                                         help_text="匾上的印字(1–2 个);空 = 用文明默认字。")
+
+
+class SoulMfaRequiredSerializer(serializers.Serializer):
+    """Doc-only: the 200 body of the login step 1 when the password was right but the account has
+    two-step verification on and the request carried no valid device token. No tokens:
+    `pending_token` (5 minutes, type `soul_mfa_pending`, good for `/soul-auth/mfa/verify/` only) goes to step 2.
+    `home_tenant` is here so the 「lost phone」 screen can name the hall before there is a session."""
+
+    mfa_required = serializers.BooleanField()
+    pending_token = serializers.CharField()
+    soul_code = serializers.CharField()
+    home_tenant = MeTenantSerializer()
 
 
 class MeProfileSerializer(serializers.Serializer):
@@ -320,15 +399,26 @@ class SoulAccountSerializer(serializers.ModelSerializer):
     contact_email_masked = serializers.SerializerMethodField()
     contact_phone_masked = serializers.SerializerMethodField()
     email_not_synced = serializers.SerializerMethodField()
+    mfa_enabled = serializers.SerializerMethodField()
+    mfa_enabled_at = serializers.SerializerMethodField()
 
     class Meta:
         model = SoulAccount
         fields = [
             "id", "soul", "soul_code", "soul_name", "cycle", "previous_account", "origin", "username",
             "must_change_password", "initial_password_expires_at", "retired_at", "created_at", "last_login",
-            "contact_email_masked", "contact_phone_masked", "email_not_synced",
+            "contact_email_masked", "contact_phone_masked", "email_not_synced", "mfa_enabled", "mfa_enabled_at",
         ]
         read_only_fields = fields
+
+    def get_mfa_enabled(self, obj) -> bool:
+        """是否已开启两步验证 —— 只给布尔值与开启时间,不给任何密钥材料。"""
+        row = getattr(obj, "mfa", None)
+        return row is not None and row.enabled
+
+    def get_mfa_enabled_at(self, obj) -> datetime | None:
+        row = getattr(obj, "mfa", None)
+        return row.confirmed_at if row is not None and row.enabled else None
 
     @extend_schema_field(EMAIL_NOT_SYNCED_FIELD)
     def get_email_not_synced(self, obj):

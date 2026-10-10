@@ -14,6 +14,7 @@ import {
 } from "../../platform/index";
 import {
   clearSoulTokens,
+  isMfaRequired,
   onSoulPasswordChangeRequired,
   passwordResetAttemptsLeft,
   passwordResetErrorMessage,
@@ -21,6 +22,7 @@ import {
   soulApi,
   soulErrorMessage,
   soulHttp,
+  soulMfaFailure,
   storeSoulTokens,
 } from "../soul";
 
@@ -354,6 +356,97 @@ describe("push tokens and notification settings", () => {
     expect(seen.map((c) => [c.method, c.body])).toEqual([
       ["GET", undefined],
       ["PATCH", { judgment: false }],
+    ]);
+  });
+});
+
+describe("two-step verification (soul)", () => {
+  const PENDING = { mfa_required: true, pending_token: "P", soul_code: "S1", home_tenant: { code: "CN_DIYU" } };
+  function recordRequests(replies: Record<string, { status: number; data?: unknown }>) {
+    const seen: { method: string; url: string; auth: unknown; body: unknown; params?: unknown }[] = [];
+    soulHttp.defaults.adapter = async (config: InternalAxiosRequestConfig) => {
+      const url = config.url ?? "";
+      seen.push({
+        method: (config.method ?? "").toUpperCase(),
+        url,
+        params: config.params,
+        auth: config.headers?.Authorization,
+        body: config.data ? JSON.parse(config.data as string) : undefined,
+      });
+      const reply = replies[url];
+      if (!reply) throw new Error(`unscripted request: ${url}`);
+      return { status: reply.status, data: reply.data, headers: {}, config, statusText: "" } as AxiosResponse;
+    };
+    return seen;
+  }
+
+
+  it("sends a device token only when there is one, and tells the pending answer from tokens", async () => {
+    script({
+      "/soul-auth/login/": [
+        { status: 200, data: PENDING },
+        { status: 200, data: { access: "A", refresh: "R", soul_code: "S1", account: {} } },
+      ],
+    });
+    const first = await soulApi.login("S1", "pw");
+    expect(isMfaRequired(first)).toBe(true);
+    const second = await soulApi.login("S1", "pw", "DEV");
+    expect(isMfaRequired(second)).toBe(false);
+    expect(calls.map((c) => c.body)).toEqual([
+      { soul_code: "S1", password: "pw" },
+      { soul_code: "S1", password: "pw", device_token: "DEV" },
+    ]);
+  });
+
+  it("a 401 from the verify step is a timed-out step, not an expired session", async () => {
+    storeSoulTokens({ access: "old", refresh: "R1" });
+    script({ "/soul-auth/mfa/verify/": [{ status: 401, data: { code: "pending_invalid", detail: "x" } }] });
+    const error = await soulApi.mfaVerify({ pending_token: "P", code: "123456" }).catch((e) => e);
+    expect(calls.map((c) => c.url)).toEqual(["/soul-auth/mfa/verify/"]); // no refresh-and-replay
+    expect(onUnauthorized).not.toHaveBeenCalled();
+    expect(secure.data.get(REFRESH_TOKEN_KEY)).toBe("R1");
+    expect(soulMfaFailure(error).code).toBe("pending_invalid");
+  });
+
+  it("reads the structured reason: tries left, lock time, network", async () => {
+    script({
+      "/soul-auth/mfa/verify/": [
+        { status: 400, data: { code: "wrong", remaining_attempts: 3 } },
+        { status: 429, data: { code: "locked", retry_after: 900, locked_until: "2026-10-11T21:46:00Z" } },
+        "offline",
+        { status: 500, data: "boom" },
+      ],
+    });
+    const failures = [];
+    for (let i = 0; i < 4; i++) failures.push(soulMfaFailure(await soulApi.mfaVerify({ pending_token: "P", code: "1" }).catch((e) => e)));
+    expect(failures[0]).toEqual({ code: "wrong", remainingAttempts: 3, lockedUntil: null, retryAfter: null });
+    expect(failures[1]).toEqual({ code: "locked", remainingAttempts: null, lockedUntil: "2026-10-11T21:46:00Z", retryAfter: 900 });
+    expect(failures[2].code).toBe("network");
+    expect(failures[3].code).toBe("other");
+    expect(soulMfaFailure(new Error("x")).code).toBe("other");
+  });
+
+  it("the management calls hit /me/mfa/ with the access token, and the recovery codes come back bare", async () => {
+    storeSoulTokens({ access: "A1", refresh: "R1" });
+    const seen = recordRequests({
+      "/me/mfa/": { status: 200, data: { enabled: false } },
+      "/me/mfa/setup/": { status: 200, data: { secret: "S", otpauth_url: "otpauth://x" } },
+      "/me/mfa/confirm/": { status: 200, data: { recovery_codes: ["a-b"] } },
+      "/me/mfa/recovery-codes/": { status: 200, data: { recovery_codes: ["c-d"] } },
+      "/me/mfa/disable/": { status: 200, data: { enabled: false } },
+    });
+    await soulApi.mfaStatus();
+    await soulApi.mfaSetup();
+    await expect(soulApi.mfaConfirm("123456")).resolves.toEqual(["a-b"]);
+    await expect(soulApi.mfaRegenerate()).resolves.toEqual(["c-d"]);
+    await soulApi.mfaDisable({ method: "password", password: "pw" });
+    await soulApi.mfaCancelSetup().catch(() => undefined);
+    expect(seen.slice(0, 5).map((c) => [c.method, c.url, c.body])).toEqual([
+      ["GET", "/me/mfa/", undefined],
+      ["POST", "/me/mfa/setup/", undefined],
+      ["POST", "/me/mfa/confirm/", { code: "123456" }],
+      ["POST", "/me/mfa/recovery-codes/", undefined],
+      ["POST", "/me/mfa/disable/", { method: "password", password: "pw" }],
     ]);
   });
 });
