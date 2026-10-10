@@ -24,6 +24,7 @@ import {
   TenantName,
   refusalKey,
 } from "./sentencePlanDisplay";
+import { SentenceNodeRetry } from "./SentenceNodeRetry";
 import { SentenceRequestActions } from "./SentenceRequestActions";
 import { SentenceRequestForm } from "./SentenceRequestForm";
 
@@ -38,7 +39,7 @@ import { SentenceRequestForm } from "./SentenceRequestForm";
 const PANEL = "bg-[oklch(var(--color-surface-1))] p-4 border border-[oklch(var(--color-hairline))]";
 const MUTED = "text-xs text-[oklch(var(--color-ink-subtle))]";
 
-function NodeRow({ node, current }: { node: SentenceNode; current: boolean }) {
+function NodeRow({ plan, node, current }: { plan: SentencePlan; node: SentenceNode; current: boolean }) {
   const { t } = useI18n();
   const gone = node.status === "REMOVED" || node.status === "CANCELLED";
   return (
@@ -67,6 +68,7 @@ function NodeRow({ node, current }: { node: SentenceNode; current: boolean }) {
       </Badge>
       {current && <Badge tone="accent">{t("sentence_plan.current")}</Badge>}
       {node.reason && <p className={`w-full ${MUTED}`}>{node.reason}</p>}
+      <SentenceNodeRetry plan={plan} node={node} />
     </li>
   );
 }
@@ -118,7 +120,7 @@ function PlanBody({ plan }: { plan: SentencePlan }) {
       {open && !current && <p className={MUTED}>{t("sentence_plan.between_stops")}</p>}
       <ol aria-label={t("sentence_plan.nodes_label")}>
         {plan.nodes.map((n) => (
-          <NodeRow key={n.id} node={n} current={n.id === current?.id} />
+          <NodeRow key={n.id} plan={plan} node={n} current={n.id === current?.id} />
         ))}
       </ol>
 

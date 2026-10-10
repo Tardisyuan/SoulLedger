@@ -149,6 +149,8 @@ SITES = [
     ('apps/sentence_plan/requests.py', 'conclude_reopened', 'Realm.all_objects', 1, 'CODE', "lookup by a globally unique code, then checked against the caller's civilization/tenant"),
     ('apps/sentence_plan/requests.py', 'normalize_changes', 'Realm.all_objects', 1, 'CODE', "lookup by a globally unique code, then checked against the caller's civilization/tenant"),
     ('apps/sentence_plan/requests.py', 'normalize_changes', 'SentenceNode.all_objects', 1, 'CODE', "lookup by a globally unique code, then checked against the caller's civilization/tenant"),
+    ('apps/sentence_plan/requests.py', 'retry_dispatch', 'SentenceNode.all_objects', 1, 'PK', 're-reads the one node by pk that was just locked through its plan'),
+    ('apps/sentence_plan/requests.py', 'retry_dispatch', 'SentencePlanRequest.all_objects', 1, 'PK', 'pending-request probe by the locked plan'),
     ('apps/sentence_plan/services.py', 'SentencePlanService._activate_home_node', 'Disposition.all_objects', 1, 'FILTERED', 'judgment lookup carries tenant_id=plan.tenant_id; realm by global realm_code'),
     ('apps/sentence_plan/services.py', 'SentencePlanService._activate_home_node', 'Judgment.all_objects', 1, 'FILTERED', 'judgment lookup carries tenant_id=plan.tenant_id; realm by global realm_code'),
     ('apps/sentence_plan/services.py', 'SentencePlanService._activate_home_node', 'Realm.all_objects', 1, 'FILTERED', 'judgment lookup carries tenant_id=plan.tenant_id; realm by global realm_code'),

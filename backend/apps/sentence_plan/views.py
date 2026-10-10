@@ -5,6 +5,7 @@
 * `POST /{id}/requests/`                     情况 2.1 / 2.2:提出方判官提 AMEND / REOPEN 请求
 * `POST /{id}/requests/{request_id}/decide/`   原审判官(原属租户)ACCEPT / REJECT
 * `POST /{id}/requests/{request_id}/withdraw/` 提出方撤回
+* `POST /{id}/nodes/{node_id}/retry-dispatch/` 调拨被拒 / 取消后,原属判官对这一站重新发起调拨
 * `POST /{id}/cancel/`                       撤销整份计划(`sentence_plan.cancel`,原属租户)
 """
 from django.db.models import Prefetch
@@ -96,6 +97,7 @@ class SentencePlanViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
         "decide": ["judgment.execute"],
         "withdraw": ["judgment.execute"],
         "cancel": ["sentence_plan.cancel"],
+        "retry_dispatch": ["judgment.execute"],
     }
     #: 暂居写例外(apps/core/tenant.py::residence_writable)的唯一声明处:批准 REOPEN 请求时,
     #: 原属地为暂居在外的灵魂开重开审判。清单钉在 tests/test_tenant_scoping_contract.py::RESIDENCE_WRITABLE。
@@ -192,6 +194,24 @@ class SentencePlanViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
         body.is_valid(raise_exception=True)
         try:
             plan_requests.cancel(plan, reason=body.validated_data["reason"], user=request.user)
+        except plan_requests.PlanChangeRefusedError as exc:
+            return _refused(exc)
+        return self._plan_response(plan)
+
+    @extend_schema(
+        parameters=[OpenApiParameter("node_id", OpenApiTypes.UUID, OpenApiParameter.PATH,
+                                     description="The SentenceNode whose dispatch was refused or cancelled.")],
+        request=None, responses=SentencePlanSerializer,
+    )
+    @action(detail=True, methods=["post"], url_path=r"nodes/(?P<node_id>[^/.]+)/retry-dispatch")
+    def retry_dispatch(self, request, pk=None, node_id=None):
+        """调拨被拒或取消后重新发起(D5 的「阶段 4 入口」):只有原属租户(或 ADMIN)的判官。"""
+        plan = self.get_object()
+        refused = self._home_or_403(plan)
+        if refused is not None:
+            return refused
+        try:
+            plan_requests.retry_dispatch(plan, node_id, user=request.user)
         except plan_requests.PlanChangeRefusedError as exc:
             return _refused(exc)
         return self._plan_response(plan)

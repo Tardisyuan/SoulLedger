@@ -5611,6 +5611,7 @@ paths:
           - SCHEDULER_RUN_FAILED
           - SENTENCE_NODE_ACTIVATED
           - SENTENCE_NODE_COMPLETED
+          - SENTENCE_NODE_REDISPATCHED
           - SENTENCE_NODE_REFUSED
           - SENTENCE_NODE_WAITING
           - SENTENCE_PLAN_AMENDED
@@ -5674,6 +5675,7 @@ paths:
           * `SENTENCE_NODE_WAITING` - Sentence Node Waiting
           * `SENTENCE_NODE_COMPLETED` - Sentence Node Completed
           * `SENTENCE_NODE_REFUSED` - Sentence Node Refused
+          * `SENTENCE_NODE_REDISPATCHED` - Sentence Node Redispatched
           * `SENTENCE_PLAN_AMENDED` - Sentence Plan Amended
           * `SENTENCE_REQUEST_CREATED` - Sentence Request Created
           * `SENTENCE_REQUEST_DECIDED` - Sentence Request Decided
@@ -12356,6 +12358,36 @@ paths:
             schema:
               $ref: '#/components/schemas/SentencePlanCancel'
         required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SentencePlan'
+          description: ''
+  /api/v1/sentence-plans/{id}/nodes/{node_id}/retry-dispatch/:
+    post:
+      operationId: v1_sentence_plans_nodes_retry_dispatch_create
+      description: 调拨被拒或取消后重新发起(D5 的「阶段 4 入口」):只有原属租户(或 ADMIN)的判官。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Sentence plan.
+        required: true
+      - in: path
+        name: node_id
+        schema:
+          type: string
+          format: uuid
+        description: The SentenceNode whose dispatch was refused or cancelled.
+        required: true
+      tags:
+      - v1
       security:
       - jwtAuth: []
       responses:
@@ -22071,6 +22103,7 @@ components:
       - SENTENCE_NODE_WAITING
       - SENTENCE_NODE_COMPLETED
       - SENTENCE_NODE_REFUSED
+      - SENTENCE_NODE_REDISPATCHED
       - SENTENCE_PLAN_AMENDED
       - SENTENCE_REQUEST_CREATED
       - SENTENCE_REQUEST_DECIDED
@@ -22122,6 +22155,7 @@ components:
         * `SENTENCE_NODE_WAITING` - Sentence Node Waiting
         * `SENTENCE_NODE_COMPLETED` - Sentence Node Completed
         * `SENTENCE_NODE_REFUSED` - Sentence Node Refused
+        * `SENTENCE_NODE_REDISPATCHED` - Sentence Node Redispatched
         * `SENTENCE_PLAN_AMENDED` - Sentence Plan Amended
         * `SENTENCE_REQUEST_CREATED` - Sentence Request Created
         * `SENTENCE_REQUEST_DECIDED` - Sentence Request Decided
@@ -32450,6 +32484,30 @@ components:
       - hits_30d
       - id
       - word
+    SentenceLastRefusal:
+      type: object
+      description: 调拨上一次为什么没成(`services.last_refusal`)。
+      properties:
+        status:
+          $ref: '#/components/schemas/SentenceLastRefusalStatusEnum'
+        reason:
+          type: string
+          nullable: true
+        at:
+          type: string
+          format: date-time
+      required:
+      - at
+      - reason
+      - status
+    SentenceLastRefusalStatusEnum:
+      enum:
+      - REJECTED
+      - CANCELLED
+      type: string
+      description: |-
+        * `REJECTED` - REJECTED
+        * `CANCELLED` - CANCELLED
     SentenceNode:
       type: object
       properties:
@@ -32522,6 +32580,11 @@ components:
           format: date-time
           readOnly: true
           nullable: true
+        last_refusal:
+          allOf:
+          - $ref: '#/components/schemas/SentenceLastRefusal'
+          nullable: true
+          readOnly: true
       required:
       - activated_at
       - added_by_judgment_id
@@ -32532,6 +32595,7 @@ components:
       - id
       - is_eternal
       - is_home
+      - last_refusal
       - memory_reset
       - order
       - realm_code

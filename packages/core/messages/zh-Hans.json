@@ -4559,7 +4559,12 @@
       "foreign_node": "只能给本文明加站；别处的站由原属另开联审",
       "foreign_realm": "该界域不属于本文明",
       "unknown_node": "计划里没有这一站",
-      "soul_is_here": "灵魂就在本文明，请开加减项审判"
+      "soul_is_here": "灵魂就在本文明，请开加减项审判",
+      "node_not_retryable": "这一站不是调拨被拒后等着的那一站",
+      "not_refused": "这一站的调拨没有被拒绝或取消过",
+      "not_next": "前面还有没开始的站，先处理它",
+      "soul_away": "灵魂不在原属地，不能重新发起",
+      "dispatch_not_started": "调拨没能发出（例如还有一条手动调拨在途），稍后再试"
     },
     "cross": {
       "title": "受刑计划各站",
@@ -4625,7 +4630,14 @@
     "amend": {
       "title": "结案时对受刑计划的改动",
       "hint": "这是加减项审判：结案不建处置，改动作为一条请求交原审判官批准；不带改动则不生成请求。"
-    }
+    },
+    "retry_dispatch": "重新发起调拨",
+    "retry_title": "重新发起「{{soul}}」第 {{order}} 站的调拨",
+    "retry_warning": "将向执行地重新提出一次调拨，等它批准并执行；与上一次一样不会自动重试，再被拒还要再来。",
+    "retried": "调拨已重新发起",
+    "last_refusal_rejected": "上次调拨被执行地拒绝：{{reason}}",
+    "last_refusal_rejected_bare": "上次调拨被执行地拒绝",
+    "last_refusal_cancelled": "上次调拨已被取消"
   },
   "seal": {
     "aria": "{{court}}之印"

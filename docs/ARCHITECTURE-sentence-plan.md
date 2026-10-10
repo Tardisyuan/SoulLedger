@@ -31,7 +31,7 @@
 | D2 | **(2026-09-19 用户确认)无计划的暂居(手动调拨)撤案后不自动回归**,由原属手动 `return-home`(`resume_return_after_case_closed` 已删)。 |
 | D3 | **(2026-09-19 用户确认)原属节点是永久刑期而后面还有节点:原审判结案时就拒绝**,409,错误码沿用 Q5 在请求路径上的 `eternal_not_last`(同一条规则一个码);「计划进 HELD」的兜底删掉 —— HELD 只剩外地永久刑期这一种。 |
 | D4 | **(2026-09-19 用户确认,以下按推荐)** 计划里没有节点的租户看不到计划(404),情况 2.2 的「X 不在计划里」由原属另开联审。 |
-| D5 | 调拨被拒后节点退回 PENDING,不自动重试;重新发起的入口留给阶段 4。 |
+| D5 | 调拨被拒后节点退回 PENDING,不自动重试;原属租户持有 `judgment.execute` 的判官(或 ADMIN)可对这一站「重新发起调拨」(`POST /sentence-plans/{id}/nodes/{node_id}/retry-dispatch/`,走首次发起的同一条 `advance` → `_dispatch` 路径,写 `SENTENCE_NODE_REDISPATCHED`;节点的 `last_refusal` 由现有事件与调拨记录推导,说明上次为何失败)。 |
 | D6 | G11(未结案唯一落成数据库约束)不做:ADMIN 豁免是 2026-09-12 的用户决定,约束会取消它,且存量数据可能让迁移失败;G7 的灵魂行锁覆盖非 ADMIN 的竞态。 |
 | D7 | 重开审判只由「批准 REOPEN 请求」开(`SentencePlanViewSet.decide`,契约表 `RESIDENCE_WRITABLE`);`POST /judgment/` 不接受 REOPEN(§4.3 表格那一行的写法以此为准)。 |
 | D8 | 细节取法:`SENTENCE_PLAN_AMENDED` 写在灵魂此刻所在的租户(推送只认「事件租户 = 灵魂租户」);请求的创建 / 决定事件写在原属;`sentence_completed` / `sentence_pardoned` 只推给可转世文明;HELD 计划也拒绝 REOPEN;Q3 同样挡 RETRIAL 计划;加减项审判结案不带改动不生成请求;重开审判的新原属节点排在已开始节点之后、未执行节点之前,永久而后面还有节点答 409。 |
