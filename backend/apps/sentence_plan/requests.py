@@ -29,6 +29,7 @@ from apps.sentence_plan.services import (
     _route_home_realm,
     _save,
     _tenant_id,
+    last_refusal,
     notify_judges,
     record_event,
 )
@@ -464,7 +465,65 @@ def cancel(plan, *, reason, user):
     return plan
 
 
+# ── 重新发起调拨 ────────────────────────────────────────────────────────
+
+
+def retry_dispatch(plan, node_id, *, user):
+    """调拨被拒或取消后节点退回 PENDING(Q4、D5 不自动重试):官员对这一站重新发起调拨。
+
+    走的是首次发起的同一条路径 —— `SentencePlanService.advance` → `_step` → `_dispatch` —— 这里只在
+    它前面加「这一站确实被拒过、现在轮到它」的检查,并在它后面确认调拨真的发出去了。拒绝(什么都不写):
+    计划不在进行中(`plan_closed` / `plan_held`);节点不存在(`unknown_node` 404)、不是外地的 PENDING
+    (`node_not_retryable`)、从没被拒或取消过(`not_refused`)、前面还有没执行的节点(`not_next`);
+    灵魂不在原属(`soul_away`);有未结案审判(`open_judgment`)、待决请求(`request_pending`);
+    调拨没发出去(`dispatch_not_started`,例如还有一条手动调拨在 PROPOSED)。
+
+    锁序同本 app:灵魂 → 计划 → 节点 → 调拨记录。并发的第二个调用在锁后看到节点已是 DISPATCHING,
+    答 409 `node_not_retryable`。事件写在这笔业务的事务里。
+    """
+    from apps.events.models import EventType
+    from apps.judgment.models import open_judgments
+
+    with transaction.atomic():
+        soul = _lock_soul(plan.soul)
+        plan = _lock_plan(plan.pk)
+        if plan.status == SentencePlanStatus.HELD:
+            raise PlanChangeRefusedError("The plan is held on an eternal stop", "plan_held", status=409)
+        if plan.status not in (SentencePlanStatus.ACTIVE, SentencePlanStatus.RETRIAL):
+            raise PlanChangeRefusedError(f"This plan is {plan.status}", "plan_closed", status=409)
+        nodes = _lock_nodes(plan)
+        node = next((n for n in nodes if str(n.pk) == str(node_id)), None)
+        if node is None:
+            raise PlanChangeRefusedError("No such stop on this plan", "unknown_node", status=404)
+        if node.status != SentenceNodeStatus.PENDING or node.is_home:
+            raise PlanChangeRefusedError(f"This stop is {node.status}; there is nothing to send again",
+                                         "node_not_retryable", status=409)
+        if last_refusal(node) is None:
+            raise PlanChangeRefusedError("This stop's dispatch was never refused or cancelled", "not_refused",
+                                         status=409)
+        if next(n for n in nodes if n.status == SentenceNodeStatus.PENDING).pk != node.pk:
+            raise PlanChangeRefusedError("An earlier stop is still waiting to start", "not_next", status=409)
+        if soul.is_residing:
+            raise PlanChangeRefusedError("The soul is not at home", "soul_away", status=409)
+        if open_judgments(soul).exists():
+            raise PlanChangeRefusedError("The soul has an open judgment", "open_judgment", status=409)
+        if SentencePlanRequest.all_objects.filter(
+            plan_id=plan.pk, is_deleted=False, status=SentenceRequestStatus.PENDING,
+        ).exists():
+            raise PlanChangeRefusedError("A request on this plan awaits the original judge", "request_pending",
+                                         status=409)
+        SentencePlanService.advance(soul)
+        node = SentenceNode.all_objects.get(pk=node.pk)
+        if node.status != SentenceNodeStatus.DISPATCHING:
+            raise PlanChangeRefusedError("The dispatch could not be started now", "dispatch_not_started", status=409)
+        record_event(soul, EventType.SENTENCE_NODE_REDISPATCHED, {
+            "sentence_plan_id": str(plan.pk), "node_id": str(node.pk), "order": node.order,
+            "tenant_code": node.tenant_code, "dispatch_id": str(node.dispatch_record_id),
+        })
+    return node
+
+
 __all__ = [
-    "PlanChangeRefusedError", "SentencePlan", "cancel", "conclude_reopened", "decide", "file_request",
+    "PlanChangeRefusedError", "SentencePlan", "cancel", "retry_dispatch", "conclude_reopened", "decide", "file_request",
     "normalize_changes", "request_from_amendment", "withdraw",
 ]

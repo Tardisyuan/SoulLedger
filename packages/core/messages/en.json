@@ -4557,7 +4557,12 @@
       "foreign_node": "Stops can be added only in your own civilization; elsewhere the home judge opens a joint judgment",
       "foreign_realm": "That realm is not one of your civilization's",
       "unknown_node": "No such stop on this plan",
-      "soul_is_here": "The soul is here; open an amendment judgment"
+      "soul_is_here": "The soul is here; open an amendment judgment",
+      "node_not_retryable": "This is not a stop waiting after a refused dispatch",
+      "not_refused": "This stop's dispatch was never refused or cancelled",
+      "not_next": "An earlier stop has not started yet; deal with that one first",
+      "soul_away": "The soul is not at home, so the dispatch cannot be sent again",
+      "dispatch_not_started": "The dispatch could not be sent (for example another manual dispatch is in flight); try again later"
     },
     "cross": {
       "title": "Sentence plan stops",
@@ -4623,7 +4628,14 @@
     "amend": {
       "title": "Changes to the sentence plan",
       "hint": "This is an amendment judgment. Concluding it creates no disposition; the changes go to the original judge as one request, and with no changes no request is filed."
-    }
+    },
+    "retry_dispatch": "Send dispatch again",
+    "retry_title": "Send the dispatch for stop {{order}} of {{soul}} again",
+    "retry_warning": "This proposes a new dispatch to the destination hall and waits for it to approve and carry it out. Like the last one it is not retried automatically; if it is refused again you must send it again.",
+    "retried": "Dispatch sent again",
+    "last_refusal_rejected": "The last dispatch was refused by the destination: {{reason}}",
+    "last_refusal_rejected_bare": "The last dispatch was refused by the destination",
+    "last_refusal_cancelled": "The last dispatch was cancelled"
   },
   "seal": {
     "aria": "Seal of {{court}}"

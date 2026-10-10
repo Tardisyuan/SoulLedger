@@ -66,3 +66,10 @@ export function useCancelSentencePlan() {
     async (v: { planId: string; reason: string }) => (await sentencePlansApi.cancel(v.planId, v.reason)).data,
   );
 }
+
+/** A refused / cancelled dispatch sent again; the plan and the soul refresh like every other plan write. */
+export function useRetrySentenceDispatch() {
+  return usePlanWrite(
+    async (v: { planId: string; nodeId: string }) => (await sentencePlansApi.retryDispatch(v.planId, v.nodeId)).data,
+  );
+}

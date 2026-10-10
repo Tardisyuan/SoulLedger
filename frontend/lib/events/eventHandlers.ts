@@ -122,6 +122,7 @@ export const EVENT_LABELS: Record<string, string> = {
   SENTENCE_NODE_WAITING: "Sentence served, waiting for retrial",
   SENTENCE_NODE_COMPLETED: "Sentence node completed",
   SENTENCE_NODE_REFUSED: "Sentence dispatch refused",
+  SENTENCE_NODE_REDISPATCHED: "Sentence dispatch sent again",
   SENTENCE_PLAN_AMENDED: "Sentence plan amended",
   SENTENCE_REQUEST_CREATED: "Sentence plan request submitted",
   SENTENCE_REQUEST_DECIDED: "Sentence plan request decided",
