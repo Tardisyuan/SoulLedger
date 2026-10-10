@@ -53,6 +53,26 @@ from apps.souls.models import Soul, SoulState
 from apps.tenants.models import Tenant
 
 
+class _Thread(threading.Thread):
+    """A test thread that closes its own database connections when it ends.
+
+    Django's connections are per thread, and a thread that just returns leaves its
+    connection open until the Thread object is collected. On PostgreSQL that is one
+    more session on the test database: when such a test is the last one a pytest
+    worker runs, DROP DATABASE fails with "is being accessed by other users" and the
+    database is left behind (seen 2026-10-11 with `test_concurrent_die_only_one_succeeds`
+    last on a worker; alone it reproduces every time). SQLite does not show it.
+    """
+
+    def run(self):
+        from django.db import connections
+
+        try:
+            super().run()
+        finally:
+            connections.close_all()
+
+
 @pytest.fixture
 def cn_tenant(db):
     tenant, _ = Tenant.objects.get_or_create(
@@ -129,8 +149,8 @@ class TestDispatchApprovalConcurrency:
             except Exception as e:
                 errors[label] = str(e)
 
-        thread_a = threading.Thread(target=approve_as, args=("a", eu_admin))
-        thread_b = threading.Thread(target=approve_as, args=("b", eu_admin))
+        thread_a = _Thread(target=approve_as, args=("a", eu_admin))
+        thread_b = _Thread(target=approve_as, args=("b", eu_admin))
 
         thread_a.start()
         thread_b.start()
@@ -180,8 +200,8 @@ class TestDispatchApprovalConcurrency:
             except Exception as e:
                 errors["reject"] = str(e)
 
-        thread_approve = threading.Thread(target=try_approve)
-        thread_reject = threading.Thread(target=try_reject)
+        thread_approve = _Thread(target=try_approve)
+        thread_reject = _Thread(target=try_reject)
 
         thread_approve.start()
         thread_reject.start()
@@ -228,7 +248,7 @@ class TestDispatchApprovalConcurrency:
             except Exception as e:
                 errors["cancel"] = e
 
-        threads = [threading.Thread(target=try_approve), threading.Thread(target=try_cancel)]
+        threads = [_Thread(target=try_approve), _Thread(target=try_cancel)]
         for t in threads:
             t.start()
         for t in threads:
@@ -267,8 +287,8 @@ class TestSoulStateTransitionConcurrency:
             result = s.die()
             results[label] = "JUDGING" if result is not None else "UNCHANGED"
 
-        thread_a = threading.Thread(target=attempt_die, args=("a",))
-        thread_b = threading.Thread(target=attempt_die, args=("b",))
+        thread_a = _Thread(target=attempt_die, args=("a",))
+        thread_b = _Thread(target=attempt_die, args=("b",))
 
         thread_a.start()
         thread_b.start()
@@ -306,8 +326,8 @@ class TestSoulStateTransitionConcurrency:
             ok = s.transition_to(SoulState.DISPOSED, reason=f"Concurrent dispose by {label}")
             results[label] = "DISPOSED" if ok else "UNCHANGED"
 
-        thread_a = threading.Thread(target=attempt_dispose, args=("a",))
-        thread_b = threading.Thread(target=attempt_dispose, args=("b",))
+        thread_a = _Thread(target=attempt_dispose, args=("a",))
+        thread_b = _Thread(target=attempt_dispose, args=("b",))
 
         thread_a.start()
         thread_b.start()
@@ -346,8 +366,8 @@ class TestSoulStateTransitionConcurrency:
             ok = s.transition_to(SoulState.REINCARNATING, reason=f"Skip attempt by {label}")
             results[label] = "REINCARNATING" if ok else "REJECTED"
 
-        thread_a = threading.Thread(target=attempt_skip, args=("a",))
-        thread_b = threading.Thread(target=attempt_skip, args=("b",))
+        thread_a = _Thread(target=attempt_skip, args=("a",))
+        thread_b = _Thread(target=attempt_skip, args=("b",))
 
         thread_a.start()
         thread_b.start()
@@ -462,8 +482,8 @@ class TestWorkflowDecisionConcurrency:
 
         with patch.object(ApprovalNode, "save", save_then_linger):
             threads = [
-                threading.Thread(target=decide, args=(n1, "FAILED"), name="a"),
-                threading.Thread(target=decide, args=(n2, "PASSED"), name="b"),
+                _Thread(target=decide, args=(n1, "FAILED"), name="a"),
+                _Thread(target=decide, args=(n2, "PASSED"), name="b"),
             ]
             for t in threads:
                 t.start()
@@ -604,7 +624,7 @@ class TestDispositionExecuteHoldsItsLock:
                 connections.close_all()
 
         with patch.object(DispositionService, "execute", lingering_execute):
-            threads = [threading.Thread(target=post, args=(n,), name=n) for n in ("a", "b")]
+            threads = [_Thread(target=post, args=(n,), name=n) for n in ("a", "b")]
             for t in threads:
                 t.start()
             for t in threads:
@@ -738,7 +758,7 @@ class TestReincarnationTriggerHoldsTheDispositionLock:
                 connections.close_all()
 
         with patch.object(ReincarnationService, "execute", lingering_execute):
-            threads = [threading.Thread(target=post, args=(n,), name=n) for n in ("a", "b")]
+            threads = [_Thread(target=post, args=(n,), name=n) for n in ("a", "b")]
             for t in threads:
                 t.start()
             for t in threads:
@@ -860,7 +880,7 @@ class TestJudgmentClaimConcurrency:
                 connections.close_all()
 
         with patch.object(claims, "_apply_claim", lingering_apply):
-            threads = [threading.Thread(target=post, args=(n,), name=n) for n in ("a", "b")]
+            threads = [_Thread(target=post, args=(n,), name=n) for n in ("a", "b")]
             for t in threads:
                 t.start()
             for t in threads:
@@ -973,7 +993,7 @@ class TestConcludeDestinationCapacityHoldsTheRealmLock:
                 connections.close_all()
 
         with patch.object(destination, "resolve_placement", lingering):
-            threads = [threading.Thread(target=post, args=(n,), name=n) for n in ("a", "b")]
+            threads = [_Thread(target=post, args=(n,), name=n) for n in ("a", "b")]
             for t in threads:
                 t.start()
             for t in threads:
