@@ -300,6 +300,11 @@
       "url": "https://www.npmjs.com/package/@react-navigation/native-stack"
     },
     {
+      "name": "@sentry/react-native",
+      "licence": "MIT",
+      "url": "https://www.npmjs.com/package/@sentry/react-native"
+    },
+    {
       "name": "expo",
       "licence": "MIT",
       "url": "https://www.npmjs.com/package/expo"
