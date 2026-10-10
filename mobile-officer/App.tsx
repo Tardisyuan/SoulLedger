@@ -16,6 +16,10 @@ import { SessionProvider, useSession } from "./src/session";
 import {
   FONT_ASSETS,
   I18nProvider,
+  RootErrorBoundary,
+  VersionGate,
+  initCrashReporting,
+  setCrashUser,
   NetworkProvider,
   ThemeContext,
   ToastProvider,
@@ -28,6 +32,8 @@ import { Shell } from "./src/shell";
 
 // Installed at module load, before any core module can read a store.
 installMobilePlatform();
+// Off (and the SDK never loaded) unless the build sets this public env var.
+initCrashReporting(process.env.EXPO_PUBLIC_SENTRY_DSN_OFFICER, "officer");
 installNotificationHandler();
 officerLinks.install();
 // The native splash (the paper ground alone) stays until the cold start draws the same ground over it.
@@ -45,11 +51,15 @@ export default function App() {
     <GestureHandlerRootView style={styles.root}>
       <SafeAreaProvider>
         <I18nProvider>
-          <PrefsProvider>
-            <SessionProvider>
-              <Themed />
-            </SessionProvider>
-          </PrefsProvider>
+          <RootErrorBoundary>
+            <VersionGate app="officer">
+              <PrefsProvider>
+                <SessionProvider>
+                  <Themed />
+                </SessionProvider>
+              </PrefsProvider>
+            </VersionGate>
+          </RootErrorBoundary>
         </I18nProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
@@ -65,6 +75,9 @@ function Themed() {
   const system = useColorScheme() === "dark" ? "dark" : "light";
   const { themeChoice } = usePrefs();
   const { state } = useSession();
+  const userId = state.status === "signedIn" ? state.user.id : null;
+  // The internal id only -- never the name, email or role.
+  useEffect(() => setCrashUser(userId), [userId]);
   const scheme: ColorScheme = themeChoice === "system" ? system : themeChoice;
   const theme = themeFor(state.status === "signedIn" ? state.user.tenant?.civilization : null, scheme);
   return (

@@ -34,5 +34,8 @@
   "permissions.config.importing",
   "permissions.config.result",
   "permissions.config.import_error",
-  "permissions.config.reason_unknown"
+  "permissions.config.reason_unknown",
+  "soul_app.update_required.title",
+  "soul_app.update_required.body",
+  "soul_app.update_required.button"
 ]
