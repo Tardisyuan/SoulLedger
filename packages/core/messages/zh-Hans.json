@@ -519,7 +519,8 @@
         "failed": "没能更正结案状态"
       },
       "case_open": "未结",
-      "case_closed": "已结"
+      "case_closed": "已结",
+      "case_all": "全部 {{n}} 场 ›"
     },
     "date_problem_filter": "仅看有问题的",
     "balance_not_applicable": "不适用 — 详见灵魂详情",
@@ -1444,6 +1445,8 @@
     "pending": "待审",
     "concluded": "已结案",
     "no_judgments": "暂无审判记录",
+    "soul_filter": "灵魂",
+    "soul_filter_clear": "清除灵魂筛选",
     "soul_name": "灵魂名称",
     "civilization": "文明",
     "court": "法庭",

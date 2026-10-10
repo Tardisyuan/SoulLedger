@@ -68,7 +68,7 @@ export const judgmentKeys = {
   /** 「戊 · 发落」 options. Under `all`: a conclusion elsewhere changes occupancy. */
   destinations: (id: string, verdict: string) => [...judgmentKeys.all, "destinations", id, verdict] as const,
   /** The four queue groups' sizes. Under `all` so a claim's invalidate reaches it. */
-  queueCounts: (params?: { court?: string; search?: string }) =>
+  queueCounts: (params?: { court?: string; search?: string; soul?: string }) =>
     [...judgmentKeys.all, "queue-counts", params ?? null] as const,
   /** The court filter's options. Under `all`: a new case in a new court should show up. */
   courts: () => [...judgmentKeys.all, "courts"] as const,

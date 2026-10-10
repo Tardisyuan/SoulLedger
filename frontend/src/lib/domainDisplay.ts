@@ -187,6 +187,18 @@ export interface IdentifierPolicyException {
  */
 export const IDENTIFIER_POLICY_EXCEPTIONS: readonly IdentifierPolicyException[] = [
   {
+    file: "app/judgment/page.tsx",
+    site: 'soul filter chip: "灵魂 · <name ?? IdentifierChip>" when the name cannot be read',
+    reason:
+      "`?soul=<id>` narrows the list to one soul, and the chip must say which. " +
+      "The name is shown whenever the soul can be read; only when it cannot " +
+      "(no soul.read, a deleted soul) is the id the only thing left that " +
+      "identifies the filter, and it is copyable and never printed bare as a " +
+      "name. Clauses 1-2 are waived for that fallback; clause 3 holds " +
+      "(IdentifierChip, not text) and clause 4 holds (the name wins).",
+    registered: "2026-10-10",
+  },
+  {
     file: "app/death-sync/page.tsx",
     site: 'registration rows: "Ref: <source_reference_id ?? idempotency_key>"',
     reason:
