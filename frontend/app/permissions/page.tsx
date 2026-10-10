@@ -319,7 +319,6 @@ export default function PermissionsPage() {
       subtitle={t("permissions.subtitle")}
       actions={
         <div className="flex flex-wrap items-center justify-end gap-2">
-          <PermissionConfigTransfer />
           {segment === "roles" ? (
           <RequirePermission permissions="system.settings">
             <Button type="button" variant="secondary" onClick={() => setIsRoleCreateOpen(true)}>
@@ -333,6 +332,7 @@ export default function PermissionsPage() {
             </Button>
           </RequirePermission>
         ) : undefined}
+          <PermissionConfigTransfer />
         </div>
       }
       tabs={

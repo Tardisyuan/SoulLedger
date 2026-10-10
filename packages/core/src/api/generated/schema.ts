@@ -14289,18 +14289,48 @@ export interface components {
             data_scopes?: components["schemas"]["ExportedDataScope"][];
             /** @default false */
             overwrite: boolean;
+            /** @default false */
+            dry_run: boolean;
         };
         PermissionImportResult: {
             message: string;
             stats: components["schemas"]["PermissionImportStats"];
         };
-        /** @description Rows CREATED per table — `get_or_create` misses are not counted. */
+        PermissionImportSectionStats: {
+            created: number;
+            /** @description Rows of the file that were not added. */
+            skipped: number;
+        };
+        PermissionImportSkipped: {
+            section: components["schemas"]["PermissionImportSkippedSectionEnum"];
+            key: string;
+            reason: components["schemas"]["PermissionImportSkippedReasonEnum"];
+        };
+        /**
+         * @description * `already_exists` - already_exists
+         *     * `admin_only` - admin_only
+         *     * `role_forbidden` - role_forbidden
+         *     * `unknown_reference` - unknown_reference
+         * @enum {string}
+         */
+        PermissionImportSkippedReasonEnum: "already_exists" | "admin_only" | "role_forbidden" | "unknown_reference";
+        /**
+         * @description * `permissions` - permissions
+         *     * `roles` - roles
+         *     * `role_permissions` - role_permissions
+         *     * `field_permissions` - field_permissions
+         *     * `data_scopes` - data_scopes
+         * @enum {string}
+         */
+        PermissionImportSkippedSectionEnum: "permissions" | "roles" | "role_permissions" | "field_permissions" | "data_scopes";
+        /** @description Per table: rows created and rows skipped (merge mode never updates). */
         PermissionImportStats: {
-            permissions: number;
-            roles: number;
-            role_permissions: number;
-            field_permissions: number;
-            data_scopes: number;
+            permissions: components["schemas"]["PermissionImportSectionStats"];
+            roles: components["schemas"]["PermissionImportSectionStats"];
+            role_permissions: components["schemas"]["PermissionImportSectionStats"];
+            field_permissions: components["schemas"]["PermissionImportSectionStats"];
+            data_scopes: components["schemas"]["PermissionImportSectionStats"];
+            skipped_details: components["schemas"]["PermissionImportSkipped"][];
         };
         Phase4: {
             corpus_tokens: number;

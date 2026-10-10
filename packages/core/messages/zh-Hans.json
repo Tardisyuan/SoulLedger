@@ -517,7 +517,9 @@
         "confirm": "更正",
         "success": "已更正结案状态,灵魂回到「已处置」",
         "failed": "没能更正结案状态"
-      }
+      },
+      "case_open": "未结",
+      "case_closed": "已结"
     },
     "date_problem_filter": "仅看有问题的",
     "balance_not_applicable": "不适用 — 详见灵魂详情",
@@ -906,8 +908,8 @@
       "export": "导出配置",
       "exporting": "导出中…",
       "export_error": "导出失败,请稍后重试。",
-      "import": "导入配置",
-      "import_title": "导入权限配置",
+      "import": "导入配置…",
+      "import_title": "导入配置 · {step}/3",
       "choose_file": "选择文件",
       "file_hint": "选择由「导出配置」得到的 JSON 文件,最大 {max}。",
       "merge_note": "只做合并:文件里有而系统里没有的条目会被新增;已存在的条目不会被修改或删除。",
@@ -917,12 +919,25 @@
         "bad_structure": "文件结构不对:需要是导出配置得到的 JSON 对象,且至少含 permissions、roles、role_permissions、field_permissions、data_scopes 之一。",
         "empty": "文件里没有任何可导入的条目。"
       },
-      "summary": "文件含:{permissions} 项权限、{roles} 个角色、{role_permissions} 条授权、{field_permissions} 条字段权限、{data_scopes} 条数据范围。",
       "confirm": "确认导入",
       "importing": "导入中…",
-      "result": "导入完成。新增:{permissions} 项权限、{roles} 个角色、{role_permissions} 条授权、{field_permissions} 条字段权限、{data_scopes} 条数据范围。已存在的条目保持不变。",
       "import_error": "导入失败:{reason}",
-      "reason_unknown": "服务器没有给出原因。"
+      "reason_unknown": "服务器没有给出原因。",
+      "more": "更多",
+      "next": "下一步",
+      "checking": "检查中…",
+      "done": "完成",
+      "will": {
+        "add": "将新增",
+        "update": "将更新",
+        "skip": "将跳过(已存在,或被规则挡下)"
+      },
+      "did": {
+        "add": "新增",
+        "update": "更新",
+        "skip": "跳过(已存在,或被规则挡下)"
+      },
+      "download_skipped": "下载跳过明细"
     }
   },
   "workflow": {
@@ -1315,7 +1330,8 @@
       "change_flat": "持平",
       "change_from_zero": "自 0 起",
       "figure_label": "{{name}}，{{value}}，{{change}}"
-    }
+    },
+    "data_as_of": "数据截至 {{time}}"
   },
   "ledger": {
     "title": "功德统计",

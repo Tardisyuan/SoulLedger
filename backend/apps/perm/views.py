@@ -858,16 +858,18 @@ def import_permissions(request):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     document = serializer.validated_data
     overwrite = document["overwrite"]
+    dry_run = document["dry_run"]
 
-    # One transaction: an overwrite that fails half-way rolls its deletes back
-    # instead of answering 500 over an empty grant table.
-    with transaction.atomic():
-        stats = do_import(document, overwrite=overwrite)
+    # One transaction (inside `do_import`): an overwrite that fails half-way
+    # rolls its deletes back instead of answering 500 over an empty grant
+    # table; a dry run rolls the whole merge back on purpose.
+    stats = do_import(document, overwrite=overwrite, dry_run=dry_run)
 
-    # An import rewrites permissions and grants wholesale.
-    invalidate_all_permissions()
+    # An import rewrites permissions and grants wholesale. A dry run changed nothing.
+    if not dry_run:
+        invalidate_all_permissions()
 
     return Response({
-        "message": "Permissions imported successfully",
+        "message": "Dry run: nothing was changed" if dry_run else "Permissions imported successfully",
         "stats": stats,
     })

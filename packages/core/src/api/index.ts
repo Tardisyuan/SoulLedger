@@ -135,6 +135,7 @@ export {
   type PermissionAssignResult,
   type RolePermissionConflict,
   type PermissionImportResult,
+  type PermissionImportSkipped,
   type PermissionImportDocument,
   type MatrixChange,
   type MatrixChangeResult,

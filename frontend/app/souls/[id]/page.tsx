@@ -146,7 +146,9 @@ export default function SoulDetailPage() {
     enabled: !!id,
     staleTime: 30_000,
   });
-  const judgmentsQuery = useJudgments({ soul: id });
+  // 无 judgment.read 的人不发这个请求(只会拿到 403);身份带的案号一栏同样显示「—」。
+  const canReadJudgments = hasPermission("judgment.read");
+  const judgmentsQuery = useJudgments({ soul: id }, { enabled: canReadJudgments });
   const dispositionsQuery = useDispositions({ soul: id });
   const reincarnationsQuery = useQuery({
     queryKey: [...soulKeys.all, "reincarnations", id],
@@ -332,9 +334,26 @@ export default function SoulDetailPage() {
     }
   }
 
-  // 身份带:题「灵魂详情」(v3 `soul-product`;面包屑末段是原始 id)。案号(`Judgment.case_number`)属于某一场审判,灵魂详情不对应单个案子,所以不写右栏。
+  // 身份带:题「灵魂详情」(v3 `soul-product`;面包屑末段是原始 id)。灵魂不对应单个案子,右栏写
+  // 它最相关的一场:有未结的写未结那场,否则写最近一场已结的,后面跟「未结 / 已结」,点进审判详情;
+  // 一场都没有就是「案号 —」。未结 = 无裁决且未终局(`open_judgments`,apps/judgment/models.py:
+  // `verdict IS NULL AND is_final = False`),同一个灵魂同时只有一场。没读到列表(加载中 / 出错)
+  // 不下结论,不画这一栏。「全部 N 场 ›」没做:审判列表页还不认 `?soul=`(后端的筛选有)。
   const hall = useHall(t("plaque.office.records"));
-  usePlaque({ title: t("plaque.soul"), hall });
+  const isOpenJudgment = (j: Judgment) => j.verdict === null && !j.is_final;
+  const shownJudgment =
+    judgments.find(isOpenJudgment) ?? latest(judgments.filter((j) => !isOpenJudgment(j)), (j) => j.created_at);
+  const caseRef =
+    !canReadJudgments || (judgmentsQuery.isSuccess && !shownJudgment)
+      ? {}
+      : shownJudgment
+        ? {
+            number: shownJudgment.case_number,
+            href: `/judgment/${shownJudgment.id}`,
+            label: t(isOpenJudgment(shownJudgment) ? "souls.detail.case_open" : "souls.detail.case_closed"),
+          }
+        : undefined;
+  usePlaque({ title: t("plaque.soul"), hall, caseRef });
 
   // Error state - only show when we have actual data fetch error, not during initial load
   if (error && !soul) {

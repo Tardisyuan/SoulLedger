@@ -30426,6 +30426,9 @@ components:
         overwrite:
           type: boolean
           default: false
+        dry_run:
+          type: boolean
+          default: false
     PermissionImportResult:
       type: object
       properties:
@@ -30436,26 +30439,81 @@ components:
       required:
       - message
       - stats
+    PermissionImportSectionStats:
+      type: object
+      properties:
+        created:
+          type: integer
+        skipped:
+          type: integer
+          description: Rows of the file that were not added.
+      required:
+      - created
+      - skipped
+    PermissionImportSkipped:
+      type: object
+      properties:
+        section:
+          $ref: '#/components/schemas/PermissionImportSkippedSectionEnum'
+        key:
+          type: string
+        reason:
+          $ref: '#/components/schemas/PermissionImportSkippedReasonEnum'
+      required:
+      - key
+      - reason
+      - section
+    PermissionImportSkippedReasonEnum:
+      enum:
+      - already_exists
+      - admin_only
+      - role_forbidden
+      - unknown_reference
+      type: string
+      description: |-
+        * `already_exists` - already_exists
+        * `admin_only` - admin_only
+        * `role_forbidden` - role_forbidden
+        * `unknown_reference` - unknown_reference
+    PermissionImportSkippedSectionEnum:
+      enum:
+      - permissions
+      - roles
+      - role_permissions
+      - field_permissions
+      - data_scopes
+      type: string
+      description: |-
+        * `permissions` - permissions
+        * `roles` - roles
+        * `role_permissions` - role_permissions
+        * `field_permissions` - field_permissions
+        * `data_scopes` - data_scopes
     PermissionImportStats:
       type: object
-      description: Rows CREATED per table — `get_or_create` misses are not counted.
+      description: 'Per table: rows created and rows skipped (merge mode never updates).'
       properties:
         permissions:
-          type: integer
+          $ref: '#/components/schemas/PermissionImportSectionStats'
         roles:
-          type: integer
+          $ref: '#/components/schemas/PermissionImportSectionStats'
         role_permissions:
-          type: integer
+          $ref: '#/components/schemas/PermissionImportSectionStats'
         field_permissions:
-          type: integer
+          $ref: '#/components/schemas/PermissionImportSectionStats'
         data_scopes:
-          type: integer
+          $ref: '#/components/schemas/PermissionImportSectionStats'
+        skipped_details:
+          type: array
+          items:
+            $ref: '#/components/schemas/PermissionImportSkipped'
       required:
       - data_scopes
       - field_permissions
       - permissions
       - role_permissions
       - roles
+      - skipped_details
     Phase4:
       type: object
       properties:
