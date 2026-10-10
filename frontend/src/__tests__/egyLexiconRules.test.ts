@@ -532,8 +532,12 @@ const PARTICLES = [
   // 第十五节(Design E 组):后置 -Ek(你的),接在词后(Hesb Maa-Ek)。
   "-Ek",
 ];
+/** 第十五批(Design,2026-10-10):Hat 新词根,前面 / 在前;只用在 sentence_plan.errors.not_next。 */
+const ROOTS_BATCH15 = [
+  "Hat", //           前面 / 在前
+];
 const LEXICON = new Set([
-  ...[...ROOTS, ...ROOTS_MOD, ...ROOTS_FIX, ...ROOTS_SPLIT, ...ROOTS_CLOSE, ...ROOTS_FINAL, ...ROOTS_LATE, ...ROOTS_APP, ...ROOTS_NINE, ...ROOTS_TEN, ...ROOTS_ELEVEN, ...ROOTS_TWELVE, ...PROPER_NAMES, ...PARTICLES].flatMap((e) => e.split(/ \/ | /)),
+  ...[...ROOTS, ...ROOTS_MOD, ...ROOTS_FIX, ...ROOTS_SPLIT, ...ROOTS_CLOSE, ...ROOTS_FINAL, ...ROOTS_LATE, ...ROOTS_APP, ...ROOTS_NINE, ...ROOTS_TEN, ...ROOTS_ELEVEN, ...ROOTS_TWELVE, ...ROOTS_BATCH15, ...PROPER_NAMES, ...PARTICLES].flatMap((e) => e.split(/ \/ | /)),
   ...WHOLE_PHRASES,
 ]);
 
