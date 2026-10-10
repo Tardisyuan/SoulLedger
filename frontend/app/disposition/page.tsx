@@ -19,6 +19,7 @@ import { ConfirmDialog } from "@/src/components/ui/Modal";
 import { EmptyState } from "@/src/components/ui/EmptyState";
 import { QueryError } from "@/src/components/ui/PageError";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
+import { ExportCsvButton } from "@/src/components/ExportCsvButton";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
 import { formatHistoricalDate } from "@/lib/utils";
 import { termState, type TermState } from "@/src/lib/dispositionTerm";
@@ -113,7 +114,22 @@ export default function DispositionPage() {
       />
     );
   };
+  // 每段的导出带这一段列表用的同一组筛选(不含页码),导出的就是该段「当前筛选下的结果」。
+  const SECTION_FILTERS: Record<DispositionSection, DispositionListParams> = {
+    pending: { section: "pending" },
+    executing: { section: "executing", ordering: "term_end" },
+    expired: { section: "expired", soul_reborn: "false" },
+  };
   const sectionProps = (section: DispositionSection) => ({
+    action: (
+      <RequirePermission permissions="disposition.read">
+        <ExportCsvButton
+          size="sm"
+          fetchCsv={() => dispositionApi.exportCsv(SECTION_FILTERS[section])}
+          filename={`dispositions_${section}.csv`}
+        />
+      </RequirePermission>
+    ),
     mark: SECTION_MARK[section],
     title: t(SECTION_TITLE[section]),
     count: queries[section].data?.count ?? 0,
@@ -302,21 +318,26 @@ function Section({
   title,
   count,
   testId,
+  action,
   children,
 }: {
   mark: string;
   title: string;
   count: number;
   testId: string;
+  action?: ReactNode;
   children: ReactNode;
 }) {
   const { t } = useI18n();
   return (
     <section className="mb-6" data-testid={testId}>
-      <h2 className="pt-4 pb-1 border-b border-[oklch(var(--color-block))] text-2xs uppercase text-[oklch(var(--color-ink-subtle))]">
-        <span aria-hidden="true">{mark} · </span>
-        {title} <span className="tabular-nums" data-testid="section-count">{count}</span>
-      </h2>
+      <div className="flex items-end justify-between gap-3 pt-4 pb-1 border-b border-[oklch(var(--color-block))]">
+        <h2 className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))]">
+          <span aria-hidden="true">{mark} · </span>
+          {title} <span className="tabular-nums" data-testid="section-count">{count}</span>
+        </h2>
+        {count > 0 && action}
+      </div>
       {count === 0 ? (
         <p className="py-2 text-sm text-[oklch(var(--color-ink-subtle))]">{t("disposition.section_empty")}</p>
       ) : (

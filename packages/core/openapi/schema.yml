@@ -4609,6 +4609,31 @@ paths:
               schema:
                 $ref: '#/components/schemas/CrossTenantJudgment'
           description: ''
+  /api/v1/dispatch/cross-tenant-judgments/export/:
+    get:
+      operationId: v1_dispatch_cross_tenant_judgments_export_retrieve
+      description: |-
+        导出本殿看得见的跨殿审判 CSV:行取自 `get_queryset()`(发起方或参与方),
+        列只取列表序列化器给本殿的那些 —— 参与方名单、描述、判词细节不在文件里。
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
   /api/v1/dispatch/records/:
     get:
       operationId: v1_dispatch_records_list
@@ -5078,6 +5103,41 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/DispatchRecord'
+          description: ''
+  /api/v1/dispatch/records/export/:
+    get:
+      operationId: v1_dispatch_records_export_retrieve
+      description: |-
+        导出当前列表(或 `?section=` 那一段)的 CSV:同一租户划界、同一筛选、同一权限(dispatch.read)。
+        草稿仍只给发起人。列取自列表序列化器。
+      parameters:
+      - in: query
+        name: section
+        schema:
+          type: string
+          enum:
+          - history
+          - proposed
+        description: proposed = 待我审批 (the approval inbox), history = 我方发起的; omit for
+          everything `list` returns
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
           description: ''
   /api/v1/dispatch/records/history/:
     get:
@@ -5581,6 +5641,31 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Disposition'
+          description: ''
+  /api/v1/disposition/export/:
+    get:
+      operationId: v1_disposition_export_retrieve
+      description: |-
+        导出当前筛选下的处置 CSV:与列表同一租户划界、同一筛选(`section`、`soul_reborn`、
+        `show_archived`……)、同一权限(disposition.read)。列取自列表序列化器,所以字段权限照常生效。
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
           description: ''
   /api/v1/events/:
     get:
@@ -10164,6 +10249,64 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/UserNotification'
+          description: ''
+  /api/v1/notifications/batch-delete/:
+    post:
+      operationId: v1_notifications_batch_delete_create
+      description: |-
+        Delete the given notifications, the way `DELETE /notifications/{id}/` does (soft delete).
+        Only the caller's own rows; any other id is ignored without an error. `deleted` is the real count.
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotificationBatch'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/NotificationBatch'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/NotificationBatch'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BatchDeleteResult'
+          description: ''
+  /api/v1/notifications/batch-read/:
+    post:
+      operationId: v1_notifications_batch_read_create
+      description: |-
+        Mark the given notifications read. Only the caller's own rows are touched (`get_queryset`);
+        any other id is ignored without an error. `marked_read` counts rows that were still unread.
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotificationBatch'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/NotificationBatch'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/NotificationBatch'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MarkAllReadResult'
           description: ''
   /api/v1/notifications/email-status/:
     get:
@@ -19728,6 +19871,14 @@ components:
       - demerit
       - kind
       - merit
+    BatchDeleteResult:
+      type: object
+      description: '`{"deleted": N}` —— 实际被删的条数(不含别人的、不存在的、已删的)。'
+      properties:
+        deleted:
+          type: integer
+      required:
+      - deleted
     BlankEnum:
       enum:
       - ''
@@ -26211,6 +26362,19 @@ components:
       - rule_zh
       - unoffset_demerit
       - unusable_merit
+    NotificationBatch:
+      type: object
+      description: '`{"ids": [...]}`:要标已读 / 删除的通知。别人的、不存在的 id 不报错,只是不被动到。'
+      properties:
+        ids:
+          type: array
+          items:
+            type: integer
+            minimum: 1
+          maxItems: 100
+          minItems: 1
+      required:
+      - ids
     NotificationEmailFailure:
       type: object
       properties:

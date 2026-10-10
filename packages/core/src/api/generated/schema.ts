@@ -2198,6 +2198,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/dispatch/cross-tenant-judgments/export/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description 导出本殿看得见的跨殿审判 CSV:行取自 `get_queryset()`(发起方或参与方),
+         *     列只取列表序列化器给本殿的那些 —— 参与方名单、描述、判词细节不在文件里。
+         */
+        get: operations["v1_dispatch_cross_tenant_judgments_export_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/dispatch/records/": {
         parameters: {
             query?: never;
@@ -2385,6 +2405,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/dispatch/records/export/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description 导出当前列表(或 `?section=` 那一段)的 CSV:同一租户划界、同一筛选、同一权限(dispatch.read)。
+         *     草稿仍只给发起人。列取自列表序列化器。
+         */
+        get: operations["v1_dispatch_records_export_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/dispatch/records/history/": {
         parameters: {
             query?: never;
@@ -2559,6 +2599,26 @@ export interface paths {
          *     POST /disposition/{id}/execute/
          */
         post: operations["v1_disposition_execute_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/disposition/export/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description 导出当前筛选下的处置 CSV:与列表同一租户划界、同一筛选(`section`、`soul_reborn`、
+         *     `show_archived`……)、同一权限(disposition.read)。列取自列表序列化器,所以字段权限照常生效。
+         */
+        get: operations["v1_disposition_export_retrieve"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -4527,6 +4587,46 @@ export interface paths {
         put?: never;
         /** @description Mark a single notification as read. */
         post: operations["v1_notifications_mark_read_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/notifications/batch-delete/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Delete the given notifications, the way `DELETE /notifications/{id}/` does (soft delete).
+         *     Only the caller's own rows; any other id is ignored without an error. `deleted` is the real count.
+         */
+        post: operations["v1_notifications_batch_delete_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/notifications/batch-read/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Mark the given notifications read. Only the caller's own rows are touched (`get_queryset`);
+         *     any other id is ignored without an error. `marked_read` counts rows that were still unread.
+         */
+        post: operations["v1_notifications_batch_read_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -9104,6 +9204,10 @@ export interface components {
             demerit: number;
             non_fungible?: components["schemas"]["NonFungible"];
         };
+        /** @description `{"deleted": N}` —— 实际被删的条数(不含别人的、不存在的、已删的)。 */
+        BatchDeleteResult: {
+            deleted: number;
+        };
         /** @enum {unknown} */
         BlankEnum: "";
         Breaker: {
@@ -12016,6 +12120,10 @@ export interface components {
             granularity_applied: boolean;
             granularity_unavailable: string;
             granularity_missing_inputs: string[];
+        };
+        /** @description `{"ids": [...]}`:要标已读 / 删除的通知。别人的、不存在的 id 不报错,只是不被动到。 */
+        NotificationBatch: {
+            ids: number[];
         };
         NotificationEmailFailure: {
             error: string;
@@ -20880,6 +20988,35 @@ export interface operations {
             };
         };
     };
+    v1_dispatch_cross_tenant_judgments_export_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": string;
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
     v1_dispatch_records_list: {
         parameters: {
             query?: {
@@ -21238,6 +21375,38 @@ export interface operations {
             };
         };
     };
+    v1_dispatch_records_export_retrieve: {
+        parameters: {
+            query?: {
+                /** @description proposed = 待我审批 (the approval inbox), history = 我方发起的; omit for everything `list` returns */
+                section?: "history" | "proposed";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": string;
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
     v1_dispatch_records_history_list: {
         parameters: {
             query?: {
@@ -21561,6 +21730,35 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Disposition"];
+                };
+            };
+        };
+    };
+    v1_disposition_export_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": string;
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
         };
@@ -25505,6 +25703,56 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["UserNotification"];
+                };
+            };
+        };
+    };
+    v1_notifications_batch_delete_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NotificationBatch"];
+                "application/x-www-form-urlencoded": components["schemas"]["NotificationBatch"];
+                "multipart/form-data": components["schemas"]["NotificationBatch"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BatchDeleteResult"];
+                };
+            };
+        };
+    };
+    v1_notifications_batch_read_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NotificationBatch"];
+                "application/x-www-form-urlencoded": components["schemas"]["NotificationBatch"];
+                "multipart/form-data": components["schemas"]["NotificationBatch"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MarkAllReadResult"];
                 };
             };
         };

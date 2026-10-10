@@ -633,7 +633,9 @@
     },
     "field_required": "This field is required",
     "dismiss": "Dismiss",
-    "type_name_to_confirm": "Type “{{name}}” to confirm"
+    "type_name_to_confirm": "Type “{{name}}” to confirm",
+    "export": "Export",
+    "export_failed": "Export failed"
   },
   "pagination": {
     "info": "Page {{page}} / {{total}} ({{count}} records)",

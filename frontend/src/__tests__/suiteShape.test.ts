@@ -84,6 +84,7 @@ const COLLECTED_FILES = [
   "brandTokensMatchIcon.test.ts",
   "draftSavedFlash.test.tsx",
   "judgmentFullCaseMotion.test.ts",
+  "listExportButtons.test.tsx",
   "loginStatutes.test.ts",
   "RealmsPage.test.tsx",
   "RecycleBinPage.test.tsx",

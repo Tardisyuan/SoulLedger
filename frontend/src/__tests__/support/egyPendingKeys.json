@@ -47,5 +47,7 @@
   "notifications.batch_deleted",
   "notifications.batch_delete_error",
   "notifications.batch_delete_title",
-  "notifications.batch_delete_message"
+  "notifications.batch_delete_message",
+  "common.export",
+  "common.export_failed"
 ]
