@@ -951,7 +951,8 @@
         "warning_own": "Overwrite deletes {n} permission entries that are not in the file, including your own. This cannot be undone.",
         "all_halls": "Permission configuration is not per hall: overwrite affects every hall, not only {hall}.",
         "blocked_own": "The entries missing from the file include your own, so overwrite is blocked. Add them to the file, or merge instead.",
-        "action": "Overwrite and import"
+        "action": "Overwrite and import",
+        "confirm_hint": "Type \"Overwrite\" to confirm"
       },
       "download_skipped": "Download skipped details"
     }
