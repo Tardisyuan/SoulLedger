@@ -25,3 +25,12 @@ def reconcile_inbox():
         sample = "; ".join(f"{room}: {err}" for room, err in list(failed.items())[:5])
         raise InboxReconcileError(f"{len(failed)} of {done + len(failed)} inbox room(s) unreadable: {sample}")
     return {"reconciled": done}
+
+
+@shared_task(name="chat.cleanup_unsent_images")
+def cleanup_unsent_images():
+    """上传超过 24 小时仍未发出的书信图片,行与文件真删(`images.purge_all_stale`)。
+    GLOBAL:`ChatImage` 没有租户列(经会话),这里本来就是要扫全部。已发出的不动。"""
+    from apps.chat import images
+
+    return images.purge_all_stale()

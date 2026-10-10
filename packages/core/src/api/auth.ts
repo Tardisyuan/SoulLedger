@@ -251,13 +251,20 @@ export const authApi = {
    */
   changePassword: async (
     oldPasswordOrData: string | { old_password: string; new_password: string },
-    newPassword?: string
+    newPassword?: string,
+    /** Officer app only: this device's Expo push token. The server keeps its registration and deletes the
+     *  user's others; the web sends none and so loses them all. */
+    pushToken?: string
   ) => {
     const data = typeof oldPasswordOrData === "string"
       ? { old_password: oldPasswordOrData, new_password: newPassword! }
       : oldPasswordOrData;
     const refresh = getRefreshToken();
-    const res = await api.post<ChangePasswordResponse>("/auth/change-password/", refresh ? { ...data, refresh } : data);
+    const res = await api.post<ChangePasswordResponse>("/auth/change-password/", {
+      ...data,
+      ...(refresh ? { refresh } : {}),
+      ...(pushToken ? { token: pushToken } : {}),
+    });
     if (res.data.access && res.data.refresh) {
       setAccessToken(res.data.access);
       platform().persistent.remove(ACCESS_TOKEN_KEY); // as `rotateRefreshToken`: no stale 24 h cookie

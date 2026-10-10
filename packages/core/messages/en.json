@@ -918,7 +918,8 @@
         "not_json": "This is not a valid JSON file.",
         "too_large": "The file is too large. The limit is {max}.",
         "bad_structure": "Wrong structure: expected a JSON object from \"Export configuration\" containing at least one of permissions, roles, role_permissions, field_permissions, data_scopes.",
-        "empty": "The file contains nothing to import."
+        "empty": "The file contains nothing to import.",
+        "overwrite_disabled": "The server has turned overwrite import off; use merge."
       },
       "confirm": "Confirm import",
       "importing": "Importing…",
@@ -3219,6 +3220,7 @@
       "workflow_process_timeouts_for_tenant": "Process approval-node timeouts",
       "social_cleanup_orphan_post_media": "Delete unposted circle images",
       "chat_reconcile_inbox": "Reconcile the hall inbox with Synapse",
+      "chat_cleanup_unsent_images": "Delete unsent letter images",
       "soul_assist_purge_history": "Purge assistant history",
       "audit_prune_logs_for_tenant": "Prune old audit and login logs",
       "audit_prune_untenanted_logs": "Prune untenanted audit and login logs",

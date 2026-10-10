@@ -22,6 +22,10 @@ def _env_bool(name, default):
 
 DEBUG = _env_bool("DEBUG", "False")
 
+# Permission config is global, not per hall, so an overwrite import by any one hall's admin rewrites
+# every hall's. Off by default; turn on once a cross-hall super-admin role exists.
+PERM_IMPORT_OVERWRITE_ENABLED = _env_bool("PERM_IMPORT_OVERWRITE_ENABLED", "False")
+
 if DEBUG:
     # In DEBUG mode, allow localhost by default
     ALLOWED_HOSTS = os.getenv(
