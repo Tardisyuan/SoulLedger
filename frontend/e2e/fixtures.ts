@@ -786,6 +786,8 @@ export const SOUL_ACCOUNT = {
   contact_email_masked: "",
   contact_phone_masked: "",
   email_not_synced: null as "taken" | null,
+  mfa_enabled: false,
+  mfa_enabled_at: null as string | null,
 };
 
 /** `/soul-accounts/credentials/?status=PENDING` — no contact on file, never sent. */

@@ -12,13 +12,13 @@ import { SoulAccountCard } from "@/src/components/soul-accounts/SoulAccountCard"
 import { tZh } from "./support/zhBundle";
 
 jest.mock("@soulledger/core/api", () => ({
-  soulAccountsApi: { accounts: jest.fn(), provision: jest.fn(), resetCredential: jest.fn() },
+  soulAccountsApi: { accounts: jest.fn(), provision: jest.fn(), resetCredential: jest.fn(), resetMfa: jest.fn() },
 }));
 const { soulAccountsApi } = jest.requireMock("@soulledger/core/api") as {
-  soulAccountsApi: Record<"accounts" | "provision" | "resetCredential", jest.Mock>;
+  soulAccountsApi: Record<"accounts" | "provision" | "resetCredential" | "resetMfa", jest.Mock>;
 };
 
-let mockUser: { id: number; username: string; role: string; permissions: string[] } | null = null;
+let mockUser: { id: number; username: string; role: string; permissions: string[]; tenant?: { code: string } | null } | null = null;
 jest.mock("@/src/contexts/TenantContext", () => ({ useTenant: () => ({ user: mockUser }) }));
 jest.mock("@/src/contexts/I18nContext", () => ({
   ...jest.requireActual("@/src/contexts/I18nContext"),
@@ -47,6 +47,8 @@ function account(over: Record<string, unknown> = {}) {
     contact_email_masked: "z***@example.com",
     contact_phone_masked: "",
     email_not_synced: null,
+    mfa_enabled: false,
+    mfa_enabled_at: null,
     ...over,
   };
 }
@@ -226,4 +228,110 @@ it("an unknown origin renders as unrecognized with the raw member in title", asy
   const [first] = await screen.findAllByTitle("TELEPORTED");
   expect(first).toHaveTextContent(tZh("common.value.unrecognized"));
   expect(screen.queryByText("TELEPORTED")).toBeNull();
+});
+
+describe("关闭两步验证 (souls.mfa_reset)", () => {
+  const ON = account({ mfa_enabled: true, mfa_enabled_at: "2026-10-11T09:12:00Z" });
+  const officer = (tenant: string | null, ...permissions: string[]) =>
+    (mockUser = { id: 2, username: "op", role: "MODERATOR", permissions, tenant: tenant ? { code: tenant } : null });
+  const home = (code = "CN_DIYU") => soul({ home_tenant: { code, display_name: code } });
+  const open = () => screen.findByTestId("soul-mfa-reset-open");
+  const none = async () => {
+    await screen.findByTestId("current-soul-account");
+    expect(screen.queryByTestId("soul-mfa-reset-open")).toBeNull();
+    expect(screen.queryByRole("button", { name: tZh("soul_accounts.account.actions.mfa_reset") })).toBeNull();
+  };
+
+  it("the card says whether it is on, with the time, and never anything about the key", async () => {
+    asRole("soul_account.read");
+    soulAccountsApi.accounts.mockResolvedValue(page([ON]));
+    renderCard();
+    expect((await screen.findByTestId("soul-mfa-state")).textContent).toBe(`${tZh("mfa.badge_on")} · dt(2026-10-11T09:12:00Z)`);
+    soulAccountsApi.accounts.mockResolvedValue(page([account()]));
+    const { unmount } = renderCard();
+    unmount();
+    renderCard();
+    await waitFor(() => expect(screen.getAllByTestId("soul-mfa-state").some((n) => n.textContent === tZh("mfa.badge_off"))).toBe(true));
+  });
+
+  it("the button is absent without souls.mfa_reset, however much else the officer may do", async () => {
+    officer("CN_DIYU", "soul_account.read", "soul_account.manage");
+    soulAccountsApi.accounts.mockResolvedValue(page([ON]));
+    renderCard(home());
+    await none();
+  });
+
+  it("absent when the soul has not turned it on (there is no way to turn it on for a soul)", async () => {
+    officer("CN_DIYU", "soul_account.read", "souls.mfa_reset");
+    renderCard(home());
+    await none();
+  });
+
+  it("absent for an officer of another hall (the soul is only visiting) and for one with no hall", async () => {
+    soulAccountsApi.accounts.mockResolvedValue(page([ON]));
+    officer("EU_HEAVEN_HELL", "soul_account.read", "souls.mfa_reset");
+    const { unmount } = renderCard(home("CN_DIYU"));
+    await none();
+    unmount();
+    officer(null, "soul_account.read", "souls.mfa_reset");
+    renderCard(home("CN_DIYU"));
+    await none();
+  });
+
+  it("present for the home hall's officer who holds it; ADMIN holds it by role", async () => {
+    soulAccountsApi.accounts.mockResolvedValue(page([ON]));
+    officer("CN_DIYU", "soul_account.read", "souls.mfa_reset");
+    const { unmount } = renderCard(home());
+    expect(await open()).toBeInTheDocument();
+    unmount();
+    mockUser = { id: 3, username: "root", role: "ADMIN", permissions: [], tenant: { code: "CN_DIYU" } };
+    renderCard(home());
+    expect(await open()).toBeInTheDocument();
+  });
+
+  it("the dangerous key stays off until a reason is written AND the soul code is typed", async () => {
+    soulAccountsApi.accounts.mockResolvedValue(page([ON]));
+    officer("CN_DIYU", "soul_account.read", "souls.mfa_reset");
+    renderCard(home());
+    fireEvent.click(await open());
+    const dialog = await screen.findByRole("alertdialog");
+    const action = screen.getByTestId("soul-mfa-reset-action");
+    expect(action).toBeDisabled();
+    fireEvent.change(within(dialog).getByLabelText(new RegExp(tZh("soul_accounts.account.mfa_reset.reason").slice(0, 2))), { target: { value: "手机丢了，已当面核对身份" } });
+    expect(action).toBeDisabled(); // a reason alone is not enough
+    fireEvent.change(within(dialog).getByLabelText(tZh("common.type_name_to_confirm", { name: "ABCDEFGH23" })), { target: { value: "ABCDEFGH23" } });
+    expect(action).toBeEnabled();
+    fireEvent.change(within(dialog).getByLabelText(new RegExp(tZh("soul_accounts.account.mfa_reset.reason").slice(0, 2))), { target: { value: "   " } });
+    expect(action).toBeDisabled(); // a blank reason is no reason
+    expect(soulAccountsApi.resetMfa).not.toHaveBeenCalled();
+  });
+
+  it("sends the trimmed reason for this account, says it is done, and the dialog goes", async () => {
+    soulAccountsApi.accounts.mockResolvedValue(page([ON]));
+    soulAccountsApi.resetMfa.mockResolvedValue({ data: account() });
+    officer("CN_DIYU", "soul_account.read", "souls.mfa_reset");
+    renderCard(home());
+    fireEvent.click(await open());
+    const dialog = await screen.findByRole("alertdialog");
+    fireEvent.change(within(dialog).getByLabelText(new RegExp(tZh("soul_accounts.account.mfa_reset.reason").slice(0, 2))), { target: { value: "  手机丢了，已当面核对身份  " } });
+    fireEvent.change(within(dialog).getByLabelText(tZh("common.type_name_to_confirm", { name: "ABCDEFGH23" })), { target: { value: "abcdefgh23" } });
+    fireEvent.click(screen.getByTestId("soul-mfa-reset-action"));
+    await waitFor(() => expect(soulAccountsApi.resetMfa).toHaveBeenCalledWith("a1", "手机丢了，已当面核对身份"));
+    await waitFor(() => expect(mockShowToast).toHaveBeenCalledWith(tZh("soul_accounts.account.mfa_reset.done"), "success"));
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+  });
+
+  it("a refusal is told by its code and the dialog stays", async () => {
+    soulAccountsApi.accounts.mockResolvedValue(page([ON]));
+    soulAccountsApi.resetMfa.mockRejectedValue(http(403, { detail: "x", code: "not_home_hall" }));
+    officer("CN_DIYU", "soul_account.read", "souls.mfa_reset");
+    renderCard(home());
+    fireEvent.click(await open());
+    const dialog = await screen.findByRole("alertdialog");
+    fireEvent.change(within(dialog).getByLabelText(new RegExp(tZh("soul_accounts.account.mfa_reset.reason").slice(0, 2))), { target: { value: "理由" } });
+    fireEvent.change(within(dialog).getByLabelText(tZh("common.type_name_to_confirm", { name: "ABCDEFGH23" })), { target: { value: "ABCDEFGH23" } });
+    fireEvent.click(screen.getByTestId("soul-mfa-reset-action"));
+    await waitFor(() => expect(mockShowToast).toHaveBeenCalledWith(tZh("soul_accounts.account.mfa_reset.not_home_hall"), "error"));
+    expect(screen.getByRole("alertdialog")).toBeInTheDocument();
+  });
 });

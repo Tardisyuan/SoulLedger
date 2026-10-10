@@ -40,6 +40,9 @@ export interface SoulAccount {
   /** "taken": the contact email is held by another account, so it was not made this
    *  account's login email and the soul cannot reset by email — only the hall can. */
   email_not_synced: "taken" | null;
+  /** Two-step verification is on for this life's account. A flag and a time only — never any key material. */
+  mfa_enabled: boolean;
+  mfa_enabled_at: string | null;
 }
 
 /** InitialCredentialSerializer. **No secret** — the plaintext only ever leaves through `revealCredential`. */
@@ -198,6 +201,13 @@ export const soulAccountsApi = {
   /** New password, new 72 h, previous open credentials voided. 409 `account_retired`. */
   resetCredential: (accountId: string, contacts: SoulContactUpdate = {}) =>
     api.post<InitialCredential>(`/soul-accounts/accounts/${accountId}/reset-credential/`, contacts),
+  /**
+   * 官员替灵魂关闭两步验证 (`souls.mfa_reset`, the soul's own hall only). `reason` is required and goes into the
+   * audit row. Closes only — there is no way to turn it on for a soul. 403 `not_home_hall`; 409 `not_enabled`.
+   * Answers with the refreshed account row.
+   */
+  resetMfa: (accountId: string, reason: string) =>
+    api.post<SoulAccount>(`/soul-accounts/accounts/${accountId}/reset-mfa/`, { reason }),
   credentials: (params: CredentialFilters) =>
     api.get<PaginatedResponse<InitialCredential>>("/soul-accounts/credentials/", { params }),
   /**
