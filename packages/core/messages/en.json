@@ -5302,7 +5302,9 @@
       "empty": "No comments yet",
       "write": "Write a comment",
       "send": "Post",
-      "failed": "Couldn't post the comment. Try again later."
+      "failed": "Couldn't post the comment. Try again later.",
+      "show_rest": "Show {{n}} more",
+      "after_close": "After closing"
     }
   }
 }

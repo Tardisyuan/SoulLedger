@@ -1,1 +1,4 @@
-[]
+[
+  "officer_app.comment.show_rest",
+  "officer_app.comment.after_close"
+]
