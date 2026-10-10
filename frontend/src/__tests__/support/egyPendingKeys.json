@@ -1,1 +1,14 @@
-[]
+[
+  "sentence_plan.errors.dispatch_not_started",
+  "sentence_plan.errors.node_not_retryable",
+  "sentence_plan.errors.not_next",
+  "sentence_plan.errors.not_refused",
+  "sentence_plan.errors.soul_away",
+  "sentence_plan.last_refusal_cancelled",
+  "sentence_plan.last_refusal_rejected",
+  "sentence_plan.last_refusal_rejected_bare",
+  "sentence_plan.retried",
+  "sentence_plan.retry_dispatch",
+  "sentence_plan.retry_title",
+  "sentence_plan.retry_warning"
+]

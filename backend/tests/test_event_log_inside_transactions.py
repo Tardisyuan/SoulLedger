@@ -373,7 +373,24 @@ def _rebirth_workflow_orm_save():
             "REBIRTH_STATUS_CHANGED")
 
 
+def _retry_dispatch():
+    """调拨被拒后官员重新发起(`requests.retry_dispatch`):节点回到 DISPATCHING 与 SENTENCE_NODE_REDISPATCHED 同一事务。"""
+    from apps.dispatch.models import DispatchRecord
+    from apps.dispatch.services import DispatchService
+    from apps.sentence_plan import requests as plan_requests
+
+    home, away = _cn(), plan.tenant("EG_DUAT")
+    soul, p = plan.planned(home, [(away, plan.stop_realm(away), 5)])
+    plan.serve(soul, p, 1)
+    DispatchService.reject(DispatchRecord.all_objects.get(pk=plan.node(p, 2).dispatch_record_id),
+                           plan.officer("evlog_eg_rej", "MODERATOR", away), "不收")
+    node = plan.node(p, 2)
+    return (lambda: plan_requests.retry_dispatch(p, node.pk, user=None),
+            lambda: plan.node(p, 2).status == "DISPATCHING", "SENTENCE_NODE_REDISPATCHED")
+
+
 PATHS = {
+    "retry_dispatch/SENTENCE_NODE_REDISPATCHED": _retry_dispatch,
     # judgment conclusion (ORIGINAL) -- three different log calls on one call stack
     "conclude/JUDGMENT_CONCLUDED": _conclude_original("JUDGMENT_CONCLUDED"),
     "conclude/DISPOSITION_CREATED": _conclude_original("DISPOSITION_CREATED"),

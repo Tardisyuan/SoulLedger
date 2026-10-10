@@ -131,6 +131,7 @@ const COLLECTED_FILES = [
   "SoulCredentialsPage.test.tsx",
   "SoulInboxPage.test.tsx",
   "SentencePlanPanels.test.tsx",
+  "SentenceNodeRetry.test.tsx",
   "SentencePlanForms.test.tsx",
   "JudgmentAmendmentConclude.test.tsx",
   // 2026-09-25 审判台 / 审判队列 / 处置(规范 v1 第三类 A)。

@@ -63,4 +63,12 @@ export const sentencePlansApi = {
   /** Pardons the rest of the sentence (D1). `reason` is required and audited. */
   cancel: (planId: string, reason: string) =>
     api.post<SentencePlan>(`/sentence-plans/${planId}/cancel/`, { reason }),
+  /**
+   * Send a stop's refused or cancelled dispatch again (home judges only). The node carries
+   * `last_refusal` while it can be sent. Refusals: 404 `unknown_node`; 403 `not_home`; 409
+   * `node_not_retryable`, `not_refused`, `not_next`, `soul_away`, `open_judgment`,
+   * `request_pending`, `plan_closed`, `plan_held`, `dispatch_not_started`.
+   */
+  retryDispatch: (planId: string, nodeId: string) =>
+    api.post<SentencePlan>(`/sentence-plans/${planId}/nodes/${nodeId}/retry-dispatch/`),
 };

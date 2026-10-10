@@ -1183,6 +1183,11 @@ def test_the_postgres_only_set_is_the_set_we_think_it_is():
         # test_a_case_whose_{open,tenant}_check_went_stale_before_the_lock_is_refused 每个引擎都跑。
         "tests/test_sentence_plan_concurrency.py::"
         "test_two_cases_past_the_unlocked_check_at_once_open_exactly_one",
+        # 调拨被拒后重新发起(`requests.retry_dispatch`):两个官员同时点,灵魂行锁上只有先到的发出调拨,
+        # 后到的读到 DISPATCHING 得 409。SQLite 没有行锁可等;串行版 test_a_second_attempt_is_refused_and_writes_nothing_more
+        # (tests/test_sentence_plan_retry_dispatch.py)每个引擎都跑。
+        "tests/test_sentence_plan_concurrency.py::"
+        "test_two_officers_retrying_one_refused_dispatch_at_once_send_it_once",
         # 2026-10-08 缩短冷却申请:批准与驳回同时到,行锁下只有先到的算数(decide_cooldown_shortening)。
         # 串行版 test_the_same_rule_serially 同文件,每个引擎都跑。
         "tests/test_rebirth_cooldown_shortening.py::"
