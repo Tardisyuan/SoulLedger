@@ -1,5 +1,13 @@
 [
-  "scheduler.jobs.chat_cleanup_unsent_images",
-  "permissions.config.errors.overwrite_disabled",
-  "auth.reset_open_in_app"
+  "auth.reset_open_in_app",
+  "soul_app.mfa.copied",
+  "soul_app.mfa.wrong_password",
+  "soul_app.mfa.intro.no_app_body",
+  "soul_accounts.account.mfa_reset.title",
+  "soul_accounts.account.mfa_reset.consequence_1",
+  "soul_accounts.account.mfa_reset.consequence_2",
+  "soul_accounts.account.mfa_reset.consequence_3",
+  "soul_accounts.account.mfa_reset.done",
+  "soul_accounts.account.mfa_reset.not_enabled",
+  "soul_accounts.account.mfa_reset.not_home_hall"
 ]
