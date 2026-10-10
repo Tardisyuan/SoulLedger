@@ -823,6 +823,35 @@ def export_permissions(request):
     return export_permissions_json_response()
 
 
+def _audit_import(request, overwrite, stats):
+    """One summary row: who, when (created_at), mode, and how many entries it added, updated and removed."""
+    from apps.audit.models import AuditAction, AuditLog
+    from apps.perm.export import SECTIONS
+
+    created = {s: stats[s]['created'] for s in SECTIONS}
+    mode = 'overwrite' if overwrite else 'merge'
+    AuditLog.objects.create(
+        tenant=getattr(request, "tenant", None),
+        user=request.user,
+        action=AuditAction.IMPORT,
+        resource="permission_config",
+        resource_id="",
+        changes={
+            "mode": mode,
+            "created": created,
+            "skipped": {s: stats[s]['skipped'] for s in SECTIONS},
+            "updated": stats['updated'],
+            "removed": stats['removed'],
+        },
+        description=(
+            f"Permission config imported ({mode}): {sum(created.values())} created, "
+            f"{stats['updated']} updated, {stats['removed']['total']} removed"
+        )[:500],
+        ip_address=get_client_ip(request),
+        user_agent=request.META.get("HTTP_USER_AGENT", "")[:500],
+    )
+
+
 @extend_schema(
     request=PermissionImportRequestSerializer,
     responses={200: PermissionImportResultSerializer, 400: ErrorResponseSerializer},
@@ -863,7 +892,12 @@ def import_permissions(request):
     # One transaction (inside `do_import`): an overwrite that fails half-way
     # rolls its deletes back instead of answering 500 over an empty grant
     # table; a dry run rolls the whole merge back on purpose.
-    stats = do_import(document, overwrite=overwrite, dry_run=dry_run)
+    # The summary audit row goes in the same transaction as the import: an
+    # import that cannot be recorded does not happen. A dry run writes none.
+    with transaction.atomic():
+        stats = do_import(document, overwrite=overwrite, dry_run=dry_run, user=request.user)
+        if not dry_run:
+            _audit_import(request, overwrite, stats)
 
     # An import rewrites permissions and grants wholesale. A dry run changed nothing.
     if not dry_run:

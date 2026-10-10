@@ -162,6 +162,8 @@ export interface JudgmentCourt {
 export interface JudgmentQueueCountsParams {
   court?: string;
   search?: string;
+  /** Soul id (the list's `?soul=`). */
+  soul?: string;
 }
 
 export type JudgmentBatchOperation = "claim" | "reassign" | "defer";

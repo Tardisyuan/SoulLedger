@@ -131,14 +131,21 @@ export function useExportPermissionConfig() {
 }
 
 /**
- * 导入权限配置(只合并,`overwrite` 固定 false)。`dryRun` 为真时是预演:后端回滚,
+ * 导入权限配置(`overwrite` 默认 false = 只合并)。`dryRun` 为真时是预演:后端回滚,
  * 什么都没变,所以不失效缓存。真导入改了权限定义、角色与授权,三组缓存一并失效。
  */
 export function useImportPermissionConfig() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ document, dryRun }: { document: PermissionImportDocument; dryRun: boolean }) =>
-      (await permApi.importConfig(document, dryRun)).data,
+    mutationFn: async ({
+      document,
+      dryRun,
+      overwrite = false,
+    }: {
+      document: PermissionImportDocument;
+      dryRun: boolean;
+      overwrite?: boolean;
+    }) => (await permApi.importConfig(document, dryRun, overwrite)).data,
     onSuccess: (_data, { dryRun }) => {
       if (dryRun) return;
       queryClient.invalidateQueries({ queryKey: permKeys.permissions });

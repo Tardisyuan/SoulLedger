@@ -4,7 +4,8 @@
  * 页面经 `usePlaque({ caseRef })` 报给身份带:有未结的写未结那场(「未结」),否则写最近一场已结的
  * (「已结」),一场都没有是 `{}`(「案号 —」);无 judgment.read 的人不发审判列表请求,也是 `{}`。
  * 未读到列表(加载中)不下结论 —— 此时没有 caseRef,不能先闪一个「—」。
- * 「全部 N 场 ›」没做(审判列表页还不认 `?soul=`),这里也钉住页面不报它。
+ * 审判不止一场时多报 `allHref` / `allCount`(「全部 N 场 ›」):N 是列表接口的 `count`,不是当前页的条数;
+ * 只有一场或没有时不报。
  *
  * 真页面,只替换 HTTP 层与身份带的 setter(同 WelcomePage.test 的做法)。
  */
@@ -100,7 +101,7 @@ describe("the identity band's case number on a soul", () => {
     ]);
     renderPage();
     await waitFor(() =>
-      expect(lastCaseRef()).toEqual({ number: "CN-open", href: "/judgment/open", label: "souls.detail.case_open" }),
+      expect(lastCaseRef()).toEqual({ number: "CN-open", href: "/judgment/open", label: "souls.detail.case_open", allHref: `/judgment?soul=${SOUL_ID}`, allCount: 2 }),
     );
   });
 
@@ -111,7 +112,7 @@ describe("the identity band's case number on a soul", () => {
     ]);
     renderPage();
     await waitFor(() =>
-      expect(lastCaseRef()).toEqual({ number: "CN-newer", href: "/judgment/newer", label: "souls.detail.case_closed" }),
+      expect(lastCaseRef()).toEqual({ number: "CN-newer", href: "/judgment/newer", label: "souls.detail.case_closed", allHref: `/judgment?soul=${SOUL_ID}`, allCount: 2 }),
     );
   });
 
@@ -138,10 +139,25 @@ describe("the identity band's case number on a soul", () => {
     expect(JSON.stringify(caseRefs())).not.toContain("CN-secret");
   });
 
-  it("reports no 'all N' link: the judgment list cannot filter by soul yet", async () => {
-    withJudgments([judgment("a", {}), judgment("b", { created_at: "2026-09-02T00:00:00Z" })]);
+  it("with several judgments adds the 'all N' link to this soul's list; N is the API total, not the page length", async () => {
+    mockJudgmentList.mockResolvedValue({
+      data: { count: 21, next: "?page=2", previous: null, results: [judgment("a", {}), judgment("b", { created_at: "2026-09-02T00:00:00Z" })] },
+    });
     renderPage();
     await waitFor(() => expect(lastCaseRef()?.number).toBe("CN-b"));
+    expect(lastCaseRef()).toMatchObject({ allHref: `/judgment?soul=${SOUL_ID}`, allCount: 21 });
+  });
+
+  it("with exactly one judgment reports no 'all N' link", async () => {
+    withJudgments([judgment("only", {})]);
+    renderPage();
+    await waitFor(() => expect(lastCaseRef()?.number).toBe("CN-only"));
     expect(Object.keys(lastCaseRef() as object).sort()).toEqual(["href", "label", "number"]);
+  });
+
+  it("with none reports no 'all N' link either", async () => {
+    withJudgments([]);
+    renderPage();
+    await waitFor(() => expect(lastCaseRef()).toEqual({}));
   });
 });

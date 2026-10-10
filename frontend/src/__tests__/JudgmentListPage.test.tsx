@@ -22,13 +22,19 @@ import { tZh } from "./support/zhBundle";
 jest.mock("@soulledger/core/api", () => ({
   judgmentApi: { list: jest.fn(), queueCounts: jest.fn(), courts: jest.fn(), claim: jest.fn(), release: jest.fn(), batch: jest.fn(), assignableOfficers: jest.fn(), requestReassign: jest.fn() },
   usersApi: { list: jest.fn() },
+  soulsApi: { get: jest.fn() },
   PAGE_SIZE: 20,
 }));
-const { judgmentApi, usersApi } = jest.requireMock("@soulledger/core/api") as Record<string, Record<string, jest.Mock>>;
+const { judgmentApi, usersApi, soulsApi } = jest.requireMock("@soulledger/core/api") as Record<string, Record<string, jest.Mock>>;
 
 const mockPush = jest.fn();
+const mockReplace = jest.fn();
 let mockSearch = "";
-jest.mock("next/navigation", () => ({ useRouter: () => ({ push: mockPush }), useSearchParams: () => new URLSearchParams(mockSearch) }));
+jest.mock("next/navigation", () => ({
+  useRouter: () => ({ push: mockPush, replace: mockReplace }),
+  usePathname: () => "/judgment",
+  useSearchParams: () => new URLSearchParams(mockSearch),
+}));
 jest.mock("@/src/contexts/I18nContext", () => ({
   ...jest.requireActual("@/src/contexts/I18nContext"),
   useI18n: () => ({ t: tZh, formatDate: (v: unknown) => String(v), formatDateTime: (v: unknown) => String(v), locale: "zh-Hans", hydrated: true }),
@@ -727,5 +733,71 @@ describe("审判队列 · 世次 / 种类", () => {
     } finally {
       GROUP_ROWS.mine = [row("a", "沈青梧", { claimed_by: 1, claimed_by_name: "阎罗" })];
     }
+  });
+
+  describe("?soul= 按灵魂筛选", () => {
+    const SOUL = "3f2b8c1e-9a4d-4e57-8b6a-1c2d3e4f5a6b";
+
+    it("带合法的 ?soul=:待审四组、计数、已结案都带 soul;页上有「灵魂 · 名字」,并与 ?q= 同时生效", async () => {
+      mockSearch = `q=CN-2026-0042&soul=${SOUL}`;
+      soulsApi.get.mockResolvedValue({ data: { id: SOUL, name: "沈青梧" } });
+      renderPage();
+      const chip = await screen.findByTestId("soul-filter");
+      await waitFor(() => expect(chip).toHaveTextContent("沈青梧"));
+      expect(chip).toHaveTextContent(tZh("judgment.soul_filter"));
+      expect(soulsApi.get).toHaveBeenCalledWith(SOUL);
+      await waitFor(() => expect(judgmentApi.queueCounts).toHaveBeenCalledWith({ search: "CN-2026-0042", soul: SOUL }));
+      expect(judgmentApi.list).toHaveBeenCalledWith({ search: "CN-2026-0042", soul: SOUL, group: "unclaimed", page: "1", ordering: "created_at" });
+      expect(judgmentApi.list).toHaveBeenCalledWith({ page: "1", has_verdict: "true", search: "CN-2026-0042", soul: SOUL });
+      // 反面:没有一个请求漏掉 soul。
+      expect(judgmentApi.queueCounts).not.toHaveBeenCalledWith({ search: "CN-2026-0042" });
+      for (const [params] of judgmentApi.list.mock.calls) expect(params.soul).toBe(SOUL);
+    });
+
+    it("不带 ?soul=:没有标记,没有任何请求带 soul,也不去取灵魂", async () => {
+      renderPage();
+      await screen.findByText("沈青梧");
+      expect(screen.queryByTestId("soul-filter")).toBeNull();
+      for (const [params] of judgmentApi.list.mock.calls) expect(params).not.toHaveProperty("soul");
+      for (const [params] of judgmentApi.queueCounts.mock.calls) expect(params ?? {}).not.toHaveProperty("soul");
+      expect(soulsApi.get).not.toHaveBeenCalled();
+    });
+
+    it("点 × 清除:回到 /judgment(保留 ?q=),不再带 soul", async () => {
+      mockSearch = `q=abc&soul=${SOUL}`;
+      soulsApi.get.mockResolvedValue({ data: { id: SOUL, name: "沈青梧" } });
+      renderPage();
+      const chip = await screen.findByTestId("soul-filter");
+      fireEvent.click(within(chip).getByRole("button", { name: tZh("judgment.soul_filter_clear") }));
+      expect(mockReplace).toHaveBeenCalledWith("/judgment?q=abc");
+    });
+
+    it("只有 ?soul= 时清除回到干净的 /judgment", async () => {
+      mockSearch = `soul=${SOUL}`;
+      soulsApi.get.mockResolvedValue({ data: { id: SOUL, name: "沈青梧" } });
+      renderPage();
+      const chip = await screen.findByTestId("soul-filter");
+      fireEvent.click(within(chip).getByRole("button", { name: tZh("judgment.soul_filter_clear") }));
+      expect(mockReplace).toHaveBeenCalledWith("/judgment");
+    });
+
+    it("名字取不到:显示编号(IdentifierChip),不把裸 id 当名字印", async () => {
+      mockSearch = `soul=${SOUL}`;
+      soulsApi.get.mockRejectedValue(new Error("403"));
+      renderPage();
+      const chip = await screen.findByTestId("soul-filter");
+      expect(within(chip).getByRole("button", { name: tZh("common.value.copy_id") })).toBeInTheDocument();
+      expect(chip).not.toHaveTextContent(SOUL);
+    });
+
+    it("非法的 ?soul=:忽略,没有标记,也没有请求带它", async () => {
+      mockSearch = "soul=not-a-uuid";
+      renderPage();
+      await screen.findByText("沈青梧");
+      expect(screen.queryByTestId("soul-filter")).toBeNull();
+      expect(soulsApi.get).not.toHaveBeenCalled();
+      for (const [params] of judgmentApi.list.mock.calls) expect(params).not.toHaveProperty("soul");
+      for (const [params] of judgmentApi.queueCounts.mock.calls) expect(params ?? {}).not.toHaveProperty("soul");
+    });
   });
 });

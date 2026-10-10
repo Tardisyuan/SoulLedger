@@ -11,8 +11,8 @@ overwrite 导入一份「不含任何 ADMIN 行」的文件之后,ADMIN 还进�
   3. `check_permission` 对 ADMIN 在读授权之前就放行(apps/perm/checker.py)。
 所以连第 1 重被将来的改动拿掉,第 2、3 重仍然让 ADMIN 进得来 —— 下面各有一条断言分别钉住。
 
-另外两条事实一并钉住(它们决定界面该怎么说):导入没有汇总审计行,只有逐行信号留下的
-PERMISSION_CHANGE;「合并」模式只新增、不改已有行、不删。
+另外两条事实一并钉住(它们决定界面该怎么说):真导入留一条 IMPORT 汇总审计行(2026-10-10 起;
+此前只有逐行信号的 PERMISSION_CHANGE);「合并」模式只新增、不改已有行、不删。
 """
 import pytest
 from rest_framework.test import APIClient
@@ -95,17 +95,26 @@ def test_overwrite_never_deletes_the_admin_role_itself(world):
 
 
 @pytest.mark.django_db
-def test_import_has_no_summary_audit_row_only_per_row_signal_rows(world):
-    """事实,不是期望:视图本身不写「导入」的汇总审计行;留痕只来自逐行的模型信号
-    (apps/audit/signals.py 的 PERMISSION_CHANGE)。界面因此不承诺「审计里能看到这次导入」。"""
+def test_a_real_import_leaves_one_summary_audit_row_and_a_dry_run_none(world):
+    """2026-10-10 前这里钉的是「没有汇总行」;现在真导入(合并与覆盖)各留一条 IMPORT 行:谁、何时、
+    模式、新增 / 更新 / 删除的条数。预演不留(它的事务回滚)。"""
     from apps.audit.models import AuditAction
 
-    before = set(AuditLog.objects.values_list("pk", flat=True))
-    _overwrite_with_a_file_that_has_no_admin_rows(_client(world["admin"], world["tenant"]))
-    new = AuditLog.objects.exclude(pk__in=before)
-    assert not new.exclude(action=AuditAction.PERMISSION_CHANGE).exists(), (
-        "出现了 PERMISSION_CHANGE 以外的审计行 —— 若是新加的导入汇总行,这条事实变了,界面文案可以跟着改"
-    )
+    client = _client(world["admin"], world["tenant"])
+    doc = {"roles": [{"name": "LOCKOUT_PROBE", "display_name": "probe"}]}
+
+    client.post(IMPORT, {**doc, "dry_run": True, "overwrite": True}, format="json")
+    assert not AuditLog.objects.filter(action=AuditAction.IMPORT).exists()
+
+    assert client.post(IMPORT, doc, format="json").status_code == 200
+    assert client.post(IMPORT, {**doc, "overwrite": True}, format="json").status_code == 200
+
+    rows = list(AuditLog.objects.filter(action=AuditAction.IMPORT).order_by("timestamp"))
+    assert [r.changes["mode"] for r in rows] == ["merge", "overwrite"]
+    assert all(r.user_id == world["admin"].pk and r.resource == "permission_config" for r in rows)
+    overwrite = rows[1].changes
+    assert set(overwrite) == {"mode", "created", "skipped", "updated", "removed"}
+    assert overwrite["removed"]["total"] == overwrite["removed"]["role_permissions"] + overwrite["removed"]["field_permissions"] + overwrite["removed"]["data_scopes"]
 
 
 @pytest.mark.django_db

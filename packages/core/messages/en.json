@@ -519,7 +519,8 @@
         "failed": "Could not correct the settlement"
       },
       "case_open": "Open",
-      "case_closed": "Concluded"
+      "case_closed": "Concluded",
+      "case_all": "All {{n}} ›"
     },
     "date_problem_filter": "Problems only",
     "balance_not_applicable": "Not applicable — see soul detail",
@@ -912,7 +913,7 @@
       "import_title": "Import configuration · {step}/3",
       "choose_file": "Choose file",
       "file_hint": "Choose a JSON file produced by \"Export configuration\". Up to {max}.",
-      "merge_note": "Merge only: entries in the file that the system lacks are added; existing entries are neither changed nor deleted.",
+      "merge_note": "Merge by default: entries in the file that the system lacks are added; existing entries are neither changed nor deleted. To overwrite, choose it in the next step.",
       "errors": {
         "not_json": "This is not a valid JSON file.",
         "too_large": "The file is too large. The limit is {max}.",
@@ -925,17 +926,32 @@
       "reason_unknown": "The server gave no reason.",
       "more": "More",
       "next": "Next",
+      "back": "Back",
       "checking": "Checking…",
       "done": "Done",
       "will": {
         "add": "Will add",
         "update": "Will update",
-        "skip": "Will skip (already present, or blocked by a rule)"
+        "skip": "Will skip (already present, or blocked by a rule)",
+        "remove": "Will delete"
       },
       "did": {
         "add": "Added",
         "update": "Updated",
-        "skip": "Skipped (already present, or blocked by a rule)"
+        "skip": "Skipped (already present, or blocked by a rule)",
+        "remove": "Deleted"
+      },
+      "mode": {
+        "label": "Import mode",
+        "merge": "Merge (default)",
+        "overwrite": "Overwrite"
+      },
+      "overwrite": {
+        "warning": "Overwrite deletes {n} permission entries that are not in the file. This cannot be undone.",
+        "warning_own": "Overwrite deletes {n} permission entries that are not in the file, including your own. This cannot be undone.",
+        "all_halls": "Permission configuration is not per hall: overwrite affects every hall, not only {hall}.",
+        "blocked_own": "The entries missing from the file include your own, so overwrite is blocked. Add them to the file, or merge instead.",
+        "action": "Overwrite and import"
       },
       "download_skipped": "Download skipped details"
     }
@@ -1444,6 +1460,8 @@
     "pending": "Pending",
     "concluded": "Concluded",
     "no_judgments": "No judgments found",
+    "soul_filter": "Soul",
+    "soul_filter_clear": "Clear the soul filter",
     "soul_name": "Soul Name",
     "civilization": "Civilization",
     "court": "Court",

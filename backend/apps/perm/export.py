@@ -85,7 +85,78 @@ SKIP_ROLE_FORBIDDEN = 'role_forbidden'
 SKIP_UNKNOWN_REFERENCE = 'unknown_reference'
 
 
-def import_permissions(data, overwrite=False, dry_run=False):
+GRANT_SECTIONS = ('role_permissions', 'field_permissions', 'data_scopes')
+
+
+def _snapshot():
+    """The three tables an overwrite rewrites, as ``{natural key: values}``.
+
+    The natural keys are the ones the merge itself uses for ``get_or_create``
+    (role + permission / role + model + field / role + model + scope type), so
+    "the same entry before and after" means what the importer means by it. The
+    values are what would differ if the entry were rebuilt with other content.
+    """
+    return {
+        'role_permissions': {
+            (role, codename): conditions
+            for role, codename, conditions in RolePermission.objects.values_list(
+                'role__name', 'permission__codename', 'conditions')
+        },
+        'field_permissions': {
+            (role, model, field): (visible, read_only, editable)
+            for role, model, field, visible, read_only, editable in FieldPermission.objects.values_list(
+                'role__name', 'model_name', 'field_name', 'visible', 'read_only', 'editable')
+        },
+        'data_scopes': {
+            (role, model, scope): (civilization, conditions, priority, active)
+            for role, model, scope, civilization, conditions, priority, active in RowLevelDataScope.objects.values_list(
+                'role__name', 'model_name', 'scope_type', 'civilization', 'filter_conditions', 'priority', 'is_active')
+        },
+    }
+
+
+def _caller_role_names(user):
+    """The roles whose grants, field rules and data scopes actually decide what
+    ``user`` can do - the same answer ``check_permission`` and the field / row
+    filters give, not the role column read naively.
+
+    ADMIN bypasses all three (``check_permission``, ``FieldPermissionMixin``,
+    ``DataScopeFilter``), so for ADMIN no stored row is "its own": the set is
+    empty. Everyone else: the primary role plus live extra roles.
+    """
+    role = getattr(user, 'role', None)
+    if not role or role == ADMIN_ROLE_NAME:
+        return set()
+    from apps.perm.checker import _live_extra_roles
+
+    return {role, *_live_extra_roles(user)}
+
+
+def _overwrite_outcome(before, after, user):
+    """What an overwrite really did, from the tables before and after the merge.
+
+    ``removed``: entries that existed and do not any more (before - after) - NOT
+    the number deleted first. The importer deletes everything and rebuilds from
+    the file, so rows the file carries again are not lost; "the file does not
+    have N entries" is what the dialog says, and this is that N.
+    ``created``: entries that did not exist before. ``updated``: entries that
+    survive with different content.
+    """
+    removed, created, updated = {}, {}, 0
+    gone = {}
+    for section in GRANT_SECTIONS:
+        b, a = before[section], after[section]
+        gone[section] = set(b) - set(a)
+        removed[section] = len(gone[section])
+        created[section] = len(set(a) - set(b))
+        updated += sum(1 for key in set(a) & set(b) if a[key] != b[key])
+    removed['total'] = sum(removed[s] for s in GRANT_SECTIONS)
+    mine = _caller_role_names(user) if user is not None else set()
+    own = any(key[0] in mine for section in GRANT_SECTIONS for key in gone[section])
+    return removed, created, updated, own
+
+
+def import_permissions(data, overwrite=False, dry_run=False, user=None):
     """
     Import permission configuration from a JSON dict.
 
@@ -97,14 +168,22 @@ def import_permissions(data, overwrite=False, dry_run=False):
         dry_run: run the whole merge, then roll the transaction back. The stats
             are what a real import would return; no row survives, and the
             audit rows (written on commit) are never written.
+        user: the caller, for ``removes_own_permissions``.
 
     Returns:
         dict: per section ``{'created': n, 'skipped': n}``, plus
         ``skipped_details`` - ``[{'section', 'key', 'reason'}]`` for every
-        row of the file that was not added.
+        row of the file that was not added. Also ``updated`` (roles whose
+        labels changed, plus surviving entries whose content changed - always
+        0 for a merge), ``removed`` (``{role_permissions, field_permissions,
+        data_scopes, total}``: entries an overwrite leaves gone) and
+        ``removes_own_permissions`` (a removed entry belongs to a role that
+        decides what the caller may do). In an overwrite the three grant
+        sections' ``created`` is the net: entries that did not exist before.
     """
     stats = {s: {'created': 0, 'skipped': 0} for s in SECTIONS}
     details = []
+    role_labels_updated = []
 
     def made(section):
         stats[section]['created'] += 1
@@ -113,16 +192,29 @@ def import_permissions(data, overwrite=False, dry_run=False):
         stats[section]['skipped'] += 1
         details.append({'section': section, 'key': key, 'reason': reason})
 
+    removed = {s: 0 for s in GRANT_SECTIONS}
+    removed['total'] = 0
+    updated = 0
+    own = False
     with transaction.atomic():
-        _merge(data, overwrite, made, skip)
+        before = _snapshot() if overwrite else None
+        _merge(data, overwrite, made, skip, role_labels_updated)
+        if overwrite:
+            removed, created, grants_updated, own = _overwrite_outcome(before, _snapshot(), user)
+            for section, n in created.items():
+                stats[section]['created'] = n
+            updated = len(role_labels_updated) + grants_updated
         if dry_run:
             transaction.set_rollback(True)
 
     stats['skipped_details'] = details
+    stats['updated'] = updated
+    stats['removed'] = removed
+    stats['removes_own_permissions'] = own
     return stats
 
 
-def _merge(data, overwrite, made, skip):
+def _merge(data, overwrite, made, skip, role_labels_updated):
     if overwrite:
         FieldPermission.objects.all().delete()
         RowLevelDataScope.objects.all().delete()
@@ -161,6 +253,8 @@ def _merge(data, overwrite, made, skip):
             for k, v in labels.items():
                 setattr(role, k, v)
             role.save(update_fields=list(labels))
+            if not created:
+                role_labels_updated.append(role.name)
 
     # Import role-permission assignments
     for rp_data in data.get('role_permissions', []):
