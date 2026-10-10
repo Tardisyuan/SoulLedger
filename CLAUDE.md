@@ -63,6 +63,24 @@ Named agents coordinate via `SendMessage`, not polling or shared state.
 写在最终回复里的报告 —— 那份回复本来就会回到主会话。**要报告就直说「把报告写在
 最终回复里」。**
 
+**子代理只跑它自己挑的测试,守卫测试常常不在其中 —— 合并后主会话必须跑一次全量。**
+2026-10-09/10 两天里同一个形状出现三次,每次子代理的定向测试都是绿的:
+
+- 迁移改成「读写被迁移的库」那条分支:定向测试全过,合并后全量 **18 条红** ——
+  三个测试文件仍然把 `None` 当 `schema_editor` 传进去,它没搜到。
+- 把 `REINCARNATION_COMPLETED` 补进事件类型枚举:定向 2284 条全过,真 PostgreSQL 全量 **7 条红** ——
+  前端的事件清单镜像、标签表、时间线处理器、三份语言包各有一道守卫(`tests/test_frontend_event_types_track_the_backend.py`),
+  还有一处新加的 `_base_manager` 没登记(`tests/tenancy_unscoped_sites.py`)。
+  子代理还报告说「前端不存在要求全覆盖的模式」—— 那道守卫恰恰就是。
+- 接着 pre-push 的 jest 又红一条:`domainNamespaceContract.test.ts` 不认 `egyPendingKeys.json`。
+
+所以:**子代理报的「N passed」只说明它跑的那部分;改了枚举、迁移、文案、路由、未加租户过滤的查询时,
+先在合并后的树上跑 `scripts/run-gates.sh --full`,碰事务的再跑一次真 PostgreSQL,然后才推送。**
+给子代理的 prompt 里可以直接点名这些守卫文件,省一轮返工。
+
+**主会话可以用 `SendMessage` 把后续决定发回同一个子代理**(它带着上下文继续,不用重新读代码)。
+事件日志那一轮连续三次这样做。子代理自己没有这个工具,这一点不变。
+
 ## Build & Test
 
 **前端命令需要 node >= 20.9.0**(两份 package.json 都声明了),而这台机器的默认
@@ -89,6 +107,25 @@ npm 10 与 11 的真正区别在装出来的树是否完整。所以**装完一�
 - 书信在本机没配 Matrix 时 `/me/chat/session/` 返回 503 `chat_not_configured`,这是设计如此;App 现在收到它只问一次。
 - **改了原生依赖(如 `expo-image-picker`、`expo-image-manipulator`)要重建 dev client**:`npm run --workspace mobile android` / `ios`
   (即 `expo run:*`,`mobile/package.json` 的脚本)。`expo start --clear` 只换 JS bundle,不会把新的原生模块装进已安装的 App。
+
+**语音入口(Siri / 快捷方式)怎么在模拟器上验(2026-10-09/10 实测):**
+- **iOS 不用对着 Siri 说话**:打开模拟器里的「快捷指令」App → 资料库 → 底部「App」里点对应 App,
+  每个 App Intent 是一个图标,点它就执行。念出来的那句话以顶部横幅的形式出现,**约 1 秒就消失**,截图抓不到:
+  用 `xcrun simctl io <udid> recordVideo --codec=h264 --force out.mp4`,点完等 9 秒再 `pkill -INT -f recordVideo`,
+  然后 `ffmpeg -i out.mp4 -vf fps=6 f%02d.png` 取帧。模拟器刚启动的头一两分钟里点了没反应,是系统服务还没起来,不是代码坏了。
+- 数字缓存在 App Group 里:`xcrun simctl get_app_container <udid> <bundle id> groups` 拿到目录,
+  再 `xcrun simctl spawn <udid> defaults read <目录>/Library/Preferences/<group id>`。直接 `plutil -p` 读 plist 会读到还没落盘的旧值。
+- **模拟器上「提问」的追问弹框是英文,连系统自带的 Cancel / Done 也是英文**,把模拟器语言改成 zh-Hans-CN 重启也一样;
+  同一个 App 念数字的句子是中文。这是模拟器里运行快捷指令的那个系统进程的语言,不是我们的文案缺了,要真机才能下结论。
+- **安卓桌面长按快捷方式会重建 Activity**(启动标志带 `CLEAR_TASK`):JS 运行时还在,根组件重新挂载,而且**不发 `url` 事件**。
+  所以「打开时带的链接」不能只在模块加载时读一次 —— `mobile/src/deepLink.ts` 的 `readOpening()` 在每次根组件挂载时读。
+  同理 `navigationRef.isReady()` 在重挂后仍然报旧容器的「已就绪」,要同时看本次挂载的 `ready` 计数(`navigation.tsx`)。
+  `adb shell am start -a android.intent.action.VIEW -d <链接>` 走的是 `onNewIntent`,**验不到这条路径**;
+  要么真的长按图标,要么加 `-f 0x1000c000`。
+- 长按菜单的文字跟**系统语言**走,不跟 App 内的语言设置走;模拟器系统是英文时看到英文是对的。
+- 插件生成的 Swift 文件要按 `<工程名>/文件名` 登记进 Xcode 工程(Expo 模板的组没有自己的路径),写成裸文件名会让 iOS 整个编译不过,
+  而插件的 jest 测试只测纯函数,测不出这一点 —— **改了 `mobile/plugins/` 就要真的 `expo run:ios` 一次。**
+- **验完就关**:`xcrun simctl shutdown all`、`adb emu kill`,连同为它起的 Metro 和 runserver。
 
 **App(`mobile/`)换了代码而模拟器上没变,先怀疑 Metro 没看见,别先怀疑代码。**
 2026-09-19 App 聊天那一轮实测:用 `cp` 还原的文件 Metro **不会自动察觉** —— 文件监视看不到这类变更,
@@ -395,6 +432,24 @@ core vitest 15 文件 / 145,mobile 259,E2E chromium 153 / firefox 153 / mobile-c
 差值 26 − 5 = **21** = 名单长度(21);通过数之差大于 21,因为两个数量的是不同的树。
 第六轮 integ 门禁:jest 192 suites / 3183(egy-sec14 之后 3187),core vitest 16 文件 / 158,
 mobile 300,E2E chromium 155 / firefox 155 / mobile-chrome 151,egyLexiconRules 28。
+
+**2026-10-10 再测(`d6242d87`,读退出码):** pre-push SQLite **6608 passed / 40 skipped**;真 PostgreSQL
+**6602 passed / 15 skipped**,跑完 `test_soulledger*` 残留 `NONE`。PG 的 15 = 原来的 7 加 8 条多库守卫
+(`tests/test_multidb_shadow.py`,不带 `--ds=config.settings_multidb` 就跳过,设计如此)。
+jest 250 suites / 4252,core vitest 18 文件 / 180(改到 core 时),mobile 616,官员端 244。E2E 这两天没有跑。
+`-n 4` 下真 PG 约 18 分钟(测试变多了,此前 13.5 分钟)。
+
+**事件日志(`EventService.log*`)是业务记录的一部分(2026-10-10 用户决定):**写 `SoulEvent` 失败,整笔业务回滚,
+调用方拿到原始异常。因此 **`log*` 必须写在它所描述的那笔业务的事务里面**,给人的通知和推送才放 `transaction.on_commit`。
+写在事务之后的 `log*` 在失败时业务已经提交、无从回滚;写在内层 `atomic` 里又被吞掉异常的,会静默回滚却报成功 ——
+修之前有 17 处是后一种。`tests/test_event_log_inside_transactions.py` 按「不在事务里 / 调用方有事务 / 调用方之后还查询」
+三种上下文逐条注入失败。新加一个会写事件的业务路径,就在那张网格里加一格。
+事件类型必须先登记进 `EventType`(`tests/test_event_types_fit_the_column.py` 会点名),登记后前端那几道守卫会跟着要词条;
+egy 没有 Design 的词时把键写进 `frontend/src/__tests__/support/egyPendingKeys.json`,后端和前端的守卫现在都认这份清单。
+
+**`scripts/run-gates.sh` 自己起的临时 Redis 现在在被打断时也会关掉**(EXIT trap,2026-10-10)。
+此前只有正常跑完才关:2026-10-09 一次中途停掉的推送留下一个 `redis-server`(随机端口)挂了一天。
+`pgrep -fl redis-server` 看到除 6399 以外的,先看启动时间和 `lsof -p <pid> | grep cwd`,确认是门禁留下的空库再 `redis-cli -p <端口> shutdown nosave`。
 
 多的 5 条正是那 4 条并发测试加 `test_two_judges_cannot_both_decide_one_node.py`;
 剩下的 2 个 skip 是 `Menu` / `MenuButton`,它们**确实没有 tenant 字段**。
