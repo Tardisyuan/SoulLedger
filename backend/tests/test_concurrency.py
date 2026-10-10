@@ -200,6 +200,48 @@ class TestDispatchApprovalConcurrency:
         dr.refresh_from_db()
         assert dr.status in (DispatchStatus.APPROVED, DispatchStatus.REJECTED)
 
+    @pytest.mark.skipif(SQLITE, reason=NEEDS_ROW_LOCKS)
+    def test_concurrent_approve_and_cancel(self, db, cn_tenant, eu_tenant, cn_soul, cn_admin, eu_admin):
+        """
+        The target approves while the sender cancels. Exactly one wins; if the approval won, the cancel
+        is refused (`not_cancellable`) rather than turning an APPROVED dispatch into CANCELLED.
+        Serial counterpart: test_dispatch_cancel.py::test_once_it_is_no_longer_proposed_the_sender_cannot_cancel_it.
+        """
+        from apps.dispatch.services import DispatchNotCancellableError
+
+        dr = DispatchService.propose(cn_tenant, eu_tenant, cn_soul, cn_admin, "Approve vs Cancel")
+        results, errors = {}, {}
+        barrier = threading.Barrier(2)
+
+        def try_approve():
+            try:
+                barrier.wait(timeout=10)
+                results["approve"] = DispatchService.approve(DispatchRecord.objects.get(pk=dr.pk), eu_admin).status
+            except Exception as e:
+                errors["approve"] = e
+
+        def try_cancel():
+            try:
+                barrier.wait(timeout=10)
+                record = DispatchRecord.objects.get(pk=dr.pk)
+                results["cancel"] = DispatchService.cancel_proposed(record, cn_admin, "Cancelled concurrently").status
+            except Exception as e:
+                errors["cancel"] = e
+
+        threads = [threading.Thread(target=try_approve), threading.Thread(target=try_cancel)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join(timeout=15)
+
+        assert len(results) == 1, f"Expected exactly one winner. Results: {results}, Errors: {errors}"
+        dr.refresh_from_db()
+        if "approve" in results:
+            assert dr.status == DispatchStatus.APPROVED
+            assert isinstance(errors.get("cancel"), DispatchNotCancellableError), errors
+        else:
+            assert dr.status == DispatchStatus.CANCELLED and "approve" in errors, errors
+
 
 @pytest.mark.django_db(transaction=True)
 class TestSoulStateTransitionConcurrency:
@@ -1142,6 +1184,10 @@ def test_the_postgres_only_set_is_the_set_we_think_it_is():
         # every engine.
         here + "TestDispositionExecuteHoldsItsLock::test_a_second_executor_waits_and_is_told_already_executed",
         here + "TestDispatchApprovalConcurrency::test_concurrent_approve_and_reject",
+        # 2026-10-11 发起方取消移交:对方批准与发起方取消同时到,行锁下只有先到的算数,
+        # 后到的取消读到 APPROVED 答 not_cancellable。SQLite 没有行锁可等;串行版本
+        # tests/test_dispatch_cancel.py::test_once_it_is_no_longer_proposed_the_sender_cannot_cancel_it 每个引擎都跑。
+        here + "TestDispatchApprovalConcurrency::test_concurrent_approve_and_cancel",
         here + "TestDispatchApprovalConcurrency::test_concurrent_approve_only_one_succeeds",
         here + "TestSoulStateTransitionConcurrency::test_concurrent_die_only_one_succeeds",
         here + "TestSoulStateTransitionConcurrency::test_concurrent_state_transition_to_disposed",
