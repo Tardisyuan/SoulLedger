@@ -37,5 +37,9 @@
   "profile.password_reason_numeric",
   "profile.password_reason_similar",
   "profile.password_reason_invalid",
-  "profile.password_old_wrong"
+  "profile.password_old_wrong",
+  "soul_app.chat.image.failed",
+  "soul_app.chat.image.errors.too_many_pending",
+  "soul_app.chat.image.errors.images_unavailable",
+  "soul_app.chat.image.button"
 ]

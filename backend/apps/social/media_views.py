@@ -40,6 +40,20 @@ def accel_path(name):
     return ACCEL_PREFIX + name[len(PRIVATE_MEDIA_PREFIX):]
 
 
+def serve_private_file(media, ttl):
+    """检查通过之后发文件(`media.file`、`media.content_type`)。朋友圈图片与书信图片共用。
+
+    私有缓存,且不超过签名的有效期:可见性收回之后,共享缓存里不能还留着一份。"""
+    if settings.POST_MEDIA_X_ACCEL:
+        response = HttpResponse(content_type=media.content_type)
+        response["X-Accel-Redirect"] = accel_path(media.file.name)
+    else:
+        response = FileResponse(media.file.open("rb"), content_type=media.content_type)
+    response["Cache-Control"] = f"private, max-age={ttl}"
+    response["X-Content-Type-Options"] = "nosniff"
+    return response
+
+
 class PostMediaThrottle(ClientIPRateThrottle):
     """按签名里的查看者计数:一屏动态流就有几十张图,全局匿名限额(60/分钟)会把它掐断。
     签名无效时退回按 IP。"""
@@ -74,12 +88,4 @@ class PostMediaFileView(APIView):
         viewer = User.objects.filter(pk=viewer_id).first() if media is not None else None
         if viewer is None or not post_media.may_view(viewer, media, tenant_id):
             raise Http404
-        if settings.POST_MEDIA_X_ACCEL:
-            response = HttpResponse(content_type=media.content_type)
-            response["X-Accel-Redirect"] = accel_path(media.file.name)
-        else:
-            response = FileResponse(media.file.open("rb"), content_type=media.content_type)
-        # 私有缓存,且不超过签名的有效期:帖子被隐藏后,共享缓存里不能还留着一份。
-        response["Cache-Control"] = f"private, max-age={post_media.URL_TTL}"
-        response["X-Content-Type-Options"] = "nosniff"
-        return response
+        return serve_private_file(media, post_media.URL_TTL)

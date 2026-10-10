@@ -73,8 +73,8 @@ const COUNTS = {
 const noDraft = { data: { last_read_at: null, archived_at: null, draft: "", draft_saved_at: null } };
 // 接口新的在前。
 const MESSAGES = [
-  { event_id: "$2", from_officer: true, sender_name: "崔珏", officer_title: "判官", body: "已收到", timestamp: 2000 },
-  { event_id: "$1", from_officer: false, sender_name: "张三", officer_title: "", body: "我想申诉", timestamp: 1000 },
+  { event_id: "$2", from_officer: true, sender_name: "崔珏", officer_title: "判官", body: "已收到", image: null, timestamp: 2000 },
+  { event_id: "$1", from_officer: false, sender_name: "张三", officer_title: "", body: "我想申诉", image: null, timestamp: 1000 },
 ];
 const page = (results: unknown[]) => ({ data: { count: results.length, next: null, previous: null, results } });
 const http = (status: number, data?: unknown) => Object.assign(new Error(`HTTP ${status}`), { response: { status, data } });
@@ -502,5 +502,79 @@ describe("标给同僚", () => {
     await waitFor(() => expect(folder).toHaveTextContent("3"));
     fireEvent.click(folder);
     await waitFor(() => expect(apiMock.list).toHaveBeenLastCalledWith({ page: 1, folder: "assigned_to_me" }));
+  });
+});
+
+describe("images in a soul's letter (2026-10-10)", () => {
+  const IMG_A = { id: "1b9e8f2a-0000-4000-8000-00000000000a", url: "/api/v1/chat-images/1b9e8f2a-0000-4000-8000-00000000000a/?t=sigA", width: 800, height: 600 };
+  const IMG_B = { id: "1b9e8f2a-0000-4000-8000-00000000000b", url: "/api/v1/chat-images/1b9e8f2a-0000-4000-8000-00000000000b/?t=sigB", width: 600, height: 800 };
+  // 接口新的在前:图 B 是最新一封,在它之前有一句文字和图 A。
+  const WITH_IMAGES = [
+    { event_id: "$3", from_officer: false, sender_name: "张三", officer_title: "", body: "[图片]", image: IMG_B, timestamp: 3000 },
+    { event_id: "$2", from_officer: false, sender_name: "张三", officer_title: "", body: "附上一张", image: null, timestamp: 2000 },
+    { event_id: "$1", from_officer: false, sender_name: "张三", officer_title: "", body: "[图片]", image: IMG_A, timestamp: 1000 },
+  ];
+
+  it("draws each image as its own message, at its ratio and at most 60% wide — and not the placeholder line", async () => {
+    asRole("soul_inbox.read", "soul_inbox.reply");
+    apiMock.messages.mockResolvedValue({ data: WITH_IMAGES });
+    renderPage();
+    const thread = await openThread();
+    // The thread shows the last two and folds the rest behind 「更早的 N 封」; unfold to see all three.
+    fireEvent.click(await within(thread).findByRole("button", { name: /更早的/ }));
+    const tiles = thread.querySelectorAll("[data-letter-image]");
+    expect(tiles).toHaveLength(2);
+    expect((tiles[0] as HTMLElement).style.width).toBe("60%");
+    expect((tiles[0] as HTMLElement).style.aspectRatio).toBe("800 / 600");
+    const img = tiles[0].querySelector("img")!;
+    expect(img.getAttribute("src")).toMatch(/\/api\/v1\/chat-images\/1b9e8f2a-0000-4000-8000-00000000000a\/\?t=sigA$/);
+    // The words and the pictures are separate rows; an image row has no "[图片]" of its own.
+    expect(within(thread).getByText("附上一张")).toBeInTheDocument();
+    expect(within(thread).queryByText("[图片]")).toBeNull();
+    expect(within(thread).getAllByRole("listitem")).toHaveLength(3);
+  });
+
+  it("a refused or expired address says so instead of leaving a blank", async () => {
+    asRole("soul_inbox.read", "soul_inbox.reply");
+    apiMock.messages.mockResolvedValue({ data: [WITH_IMAGES[2]] });
+    renderPage();
+    const thread = await openThread();
+    await within(thread).findAllByRole("listitem");
+    fireEvent.error(thread.querySelector("[data-letter-image] img")!);
+    expect(thread.querySelector("[data-letter-image]")).toBeNull();
+    expect(thread.querySelector("[data-letter-image-broken]")).toHaveTextContent(tZh("social_moderation.review.media_load_failed"));
+  });
+
+  it("a tap opens the black viewer on that image; the arrow keys page through the thread's images; Esc closes", async () => {
+    asRole("soul_inbox.read", "soul_inbox.reply");
+    apiMock.messages.mockResolvedValue({ data: WITH_IMAGES });
+    renderPage();
+    const thread = await openThread();
+    fireEvent.click(await within(thread).findByRole("button", { name: /更早的/ }));
+    expect(document.querySelector("[data-media-viewer]")).toBeNull();
+    fireEvent.click(thread.querySelectorAll("[data-letter-image]")[1]); // 图 B, the second in reading order
+    const viewer = await waitFor(() => {
+      const v = document.querySelector("[data-media-viewer]") as HTMLElement;
+      expect(v).toBeTruthy();
+      return v;
+    });
+    expect(viewer.className).toContain("bg-black");
+    expect(viewer.querySelector("img")!.getAttribute("src")).toMatch(/sigB$/);
+    fireEvent.keyDown(viewer, { key: "ArrowLeft" });
+    expect(viewer.querySelector("img")!.getAttribute("src")).toMatch(/sigA$/);
+    fireEvent.keyDown(viewer, { key: "Escape" });
+    await waitFor(() => expect(document.querySelector("[data-media-viewer]")).toBeNull());
+  });
+
+  it("the officer's reply box has no way to attach a picture — a reply is text only", async () => {
+    asRole("soul_inbox.read", "soul_inbox.reply");
+    apiMock.messages.mockResolvedValue({ data: WITH_IMAGES });
+    renderPage();
+    const thread = await openThread();
+    await within(thread).findAllByRole("listitem");
+    const form = within(thread).getByLabelText(tZh("soul_inbox.reply_label")).closest("form")!;
+    expect(form.querySelector('input[type="file"]')).toBeNull();
+    expect(thread.querySelector('input[type="file"]')).toBeNull();
+    expect(within(form).queryByRole("button", { name: /图|image|photo|上传|upload/i })).toBeNull();
   });
 });

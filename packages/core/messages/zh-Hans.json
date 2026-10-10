@@ -3831,6 +3831,14 @@
         "not_found": "未找到。",
         "invalid_code": "灵魂编号须为 10 位。",
         "self": "不能写信给自己。"
+      },
+      "image": {
+        "failed": "没能发出",
+        "errors": {
+          "too_many_pending": "未发出的图片太多，稍等一下再选",
+          "images_unavailable": "对方回信之前只能写文字"
+        },
+        "button": "图"
       }
     },
     "circle": {

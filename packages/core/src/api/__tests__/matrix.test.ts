@@ -242,6 +242,36 @@ describe("timeline", () => {
     expect(state.rooms[ROOM].messages.map((m) => [m.eventId, m.officer, m.officerTitle])).toEqual([["$a", "崔珏", "判官"]]);
   });
 
+  it("a letter image is a message with a reference and the body '[图片]'; anything off-shape is a plain text message", () => {
+    const id = "1b9e8f2a-0000-4000-8000-00000000000a";
+    const at = (eventId: string, ref: unknown): MatrixEvent => ({
+      event_id: eventId, type: "m.room.message", sender: PEER, origin_server_ts: Number(eventId.slice(1)),
+      content: { msgtype: "m.text", body: "[图片]", "io.soulledger.image": ref },
+    });
+    const state = applySync(EMPTY_TIMELINE, {
+      next_batch: "s1",
+      rooms: {
+        join: {
+          [ROOM]: {
+            timeline: {
+              events: [
+                at("$1", { id, width: 800, height: 600 }),
+                at("$2", { id: "not-a-uuid", width: 800, height: 600 }), // a forged id
+                at("$3", { id, width: 0, height: 600 }), // no ratio to draw
+                at("$4", "javascript:alert(1)"),
+                at("$5", undefined),
+              ],
+            },
+          },
+        },
+      },
+    });
+    const messages = state.rooms[ROOM].messages;
+    expect(messages[0].image).toEqual({ id, width: 800, height: 600 });
+    // Malformed references are not images; they stay what an older build shows: the line "[图片]".
+    expect(messages.slice(1).map((m) => [m.image, m.body])).toEqual(Array(4).fill([null, "[图片]"]));
+  });
+
   it("history pages merge behind what sync loaded, and the room's start ends paging", () => {
     const synced = applySync(EMPTY_TIMELINE, {
       next_batch: "s1",

@@ -22,7 +22,7 @@ const FILTERED = "[Filtered]";
 const SENSITIVE = [
   "authorization", "cookie", "token", "password", "passwd", "secret", "otp", "totp", "mfa",
   "recovery", "backup", "verif", "code", "email", "phone", "body", "content", "question",
-  "prompt", "letter", "draft", "caption", "answer", "text", "payload", "input", "message", "soul", "name",
+  "prompt", "letter", "image", "draft", "caption", "answer", "text", "payload", "input", "message", "soul", "name",
 ];
 /** Present in every report and not secret. */
 const ALLOWED_KEYS = new Set(["statuscode"]);
