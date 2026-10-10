@@ -1,1 +1,6 @@
-[]
+[
+  "officer_app.mfa.setup_key_title",
+  "officer_app.mfa.setup_key_body",
+  "officer_app.mfa.open_failed",
+  "officer_app.mfa.select_hint"
+]

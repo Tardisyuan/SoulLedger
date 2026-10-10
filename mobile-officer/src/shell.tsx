@@ -14,7 +14,9 @@ import { officerLinks } from "./links";
 import { listenForLandings, registerDevice } from "./push";
 import { HIGHLIGHT_MS, hallLabel } from "./rules";
 import { Detail, type DetailTarget } from "./screens/detail";
-import { MeTab } from "./screens/me";
+import { ChangePasswordScreen } from "./screens/account";
+import { MeTab, type AccountScreen } from "./screens/me";
+import { MfaScreen } from "./screens/mfa";
 import { NoticesTab } from "./screens/notices";
 import { QueueTab } from "./screens/queue";
 import { SearchTab } from "./screens/search";
@@ -28,6 +30,9 @@ export function Shell() {
   const { state } = useSession();
   const [tab, setTab] = useState<TabKey>("todo");
   const [detail, setDetail] = useState<DetailTarget | null>(null);
+  // 我的's two sub-screens, drawn over the tabs like a detail (not a tab, so no tab-bar entry).
+  const [account, setAccount] = useState<AccountScreen | null>(null);
+  const [locked, setLocked] = useState(false);
   // Bumped whenever a list should ask again: after a detail closes, after a push.
   const [version, setVersion] = useState(0);
   const [landed, setLanded] = useState<ItemRef | null>(null);
@@ -94,9 +99,17 @@ export function Shell() {
   return (
     <View testID="shell" style={{ flex: 1, backgroundColor: theme.s0 }}>
       <IdentityBand hall={hallLabel(t, user.tenant) ?? t("officer_app.name")} name={user.display_name || user.username} />
-      {needsMfaSetup(user) ? <StandingBanner testID="mfa-banner">{t("officer_app.banner.mfa_required")}</StandingBanner> : null}
+      {needsMfaSetup(user) ? (
+        <StandingBanner testID="mfa-banner" action={{ label: t("mfa.banner.action"), onPress: () => { setDetail(null); setTab("me"); setAccount("mfa"); } }}>
+          {t("mfa.banner.text")}
+        </StandingBanner>
+      ) : null}
       <View style={{ flex: 1 }}>
-        {detail ? (
+        {account === "mfa" ? (
+          <MfaScreen onBack={() => setAccount(null)} onLocked={setLocked} />
+        ) : account === "password" ? (
+          <ChangePasswordScreen onBack={() => setAccount(null)} />
+        ) : detail ? (
           <Detail target={detail} onBack={close} onSettled={() => setVersion((v) => v + 1)} />
         ) : tab === "todo" ? (
           <TodoTab key={version} highlight={highlight} onOpen={(item) => setDetail({ type: "todo", ...item })} />
@@ -107,14 +120,16 @@ export function Shell() {
         ) : tab === "notices" ? (
           <NoticesTab onUnread={setUnread} />
         ) : (
-          <MeTab />
+          <MeTab onOpen={setAccount} />
         )}
       </View>
       <TabBar
         current={tab}
         unread={unread}
         onSelect={(next) => {
+          if (locked) return; // the recovery codes are on screen and not yet confirmed saved
           setDetail(null);
+          setAccount(null);
           setTab(next);
         }}
       />
