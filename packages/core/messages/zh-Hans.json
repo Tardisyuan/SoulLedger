@@ -633,7 +633,9 @@
     },
     "field_required": "此项为必填",
     "dismiss": "知道了",
-    "type_name_to_confirm": "输入「{{name}}」以确认"
+    "type_name_to_confirm": "输入「{{name}}」以确认",
+    "export": "导出",
+    "export_failed": "导出失败"
   },
   "pagination": {
     "info": "第 {{page}} / {{total}} 页 ({{count}} 条记录)",

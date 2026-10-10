@@ -17,6 +17,7 @@ import { buttonVariants } from "@/src/components/ui/Button";
 import { type BadgeTone } from "@/src/components/ui/Badge";
 import { StatusBadge } from "@/src/components/ui/StatusBadge";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
+import { ExportCsvButton } from "@/src/components/ExportCsvButton";
 import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
 
 /**
@@ -106,7 +107,12 @@ function DispatchPageContent() {
     >
       {/* 账页表格(规范 v1 §2):整行点进详情,不再是一叠卡片。加载、失败、空与分页交给
           DataTable —— 失败仍与空分开(「! 加载失败」+ 重试,不是「暂无」)。 */}
-      <PageSection title={t("dispatch.pending")} isRefreshing={proposedStale} className="mb-6">
+      <PageSection
+        title={t("dispatch.pending")}
+        isRefreshing={proposedStale}
+        className="mb-6"
+        actions={<ExportCsvButton size="sm" fetchCsv={() => dispatchApi.exportCsv({ section: "proposed" })} filename="dispatch_proposed.csv" />}
+      >
         <DispatchTable
           rows={proposed}
           isLoading={loadingProposed}
@@ -120,7 +126,11 @@ function DispatchPageContent() {
         />
       </PageSection>
 
-      <PageSection title={t("dispatch.history")} isRefreshing={historyStale}>
+      <PageSection
+        title={t("dispatch.history")}
+        isRefreshing={historyStale}
+        actions={<ExportCsvButton size="sm" fetchCsv={() => dispatchApi.exportCsv({ section: "history" })} filename="dispatch_history.csv" />}
+      >
         <DispatchTable
           rows={history}
           isLoading={loadingHistory}

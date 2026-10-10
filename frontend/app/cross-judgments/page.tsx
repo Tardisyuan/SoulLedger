@@ -14,6 +14,8 @@ import { MenuGloss } from "@/src/components/layout/MenuGloss";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { type BadgeTone } from "@/src/components/ui/Badge";
 import { StatusBadge } from "@/src/components/ui/StatusBadge";
+import { RequirePermission } from "@/src/components/rbac/RequirePermission";
+import { ExportCsvButton } from "@/src/components/ExportCsvButton";
 
 /**
  * Case state → badge tone.
@@ -75,7 +77,14 @@ export default function CrossJudgmentsPage() {
       }
       subtitle={t("crossJudgments.subtitle")}
     >
-      <PageSection title={t("crossJudgments.list_title")}>
+      <PageSection
+        title={t("crossJudgments.list_title")}
+        actions={
+          <RequirePermission permissions="cross_judgment.read">
+            <ExportCsvButton size="sm" fetchCsv={() => crossTenantJudgmentsApi.exportCsv()} filename="cross_judgments_export.csv" />
+          </RequirePermission>
+        }
+      >
         {/* 账页表格(规范 v1 §2):整行点进 /cross-judgments/[id]。失败与空仍分开 ——
             DataTable 的失败行是「! 加载失败」+ 重试,不会落到「暂无」。
             `placeholderData` 让翻页时 `isLoading` 不再为真,所以翻页中的那一段交给

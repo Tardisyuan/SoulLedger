@@ -144,6 +144,9 @@ export type DispatchRealmOption = components["schemas"]["RealmLocalized"];
 
 export const dispatchApi = {
   list: (params?: Record<string, string>) => api.get<PaginatedResponse<DispatchRecord>>("/dispatch/records/", { params }),
+  /** CSV of the list (or `section: "proposed" | "history"`, the page's two tables); same scope and filters, `dispatch.read`. */
+  exportCsv: (params?: Record<string, string>) =>
+    api.get<Blob>("/dispatch/records/export/", { params, responseType: "blob" }),
   get: (id: string) => api.get<DispatchRecord>(`/dispatch/records/${id}/`),
   propose: (data: {
     source_tenant?: number;
@@ -203,6 +206,8 @@ export type SeatableActor = components["schemas"]["SeatableActor"];
 
 export const crossTenantJudgmentsApi = {
   list: (params?: Record<string, string>) => api.get<PaginatedResponse<CrossTenantJudgmentListItem>>("/dispatch/cross-tenant-judgments/", { params }),
+  /** CSV of the list: only the columns the list shows this hall (`cross_judgment.read`). */
+  exportCsv: () => api.get<Blob>("/dispatch/cross-tenant-judgments/export/", { responseType: "blob" }),
   get: (id: string) => api.get<CrossTenantJudgment>(`/dispatch/cross-tenant-judgments/${id}/`),
   /** `judgment`: the home tenant's own open ORIGINAL case this bench sets the stops for (fixed once given). */
   create: (data: { title: string; description: string; judgment?: string }) =>
