@@ -78,6 +78,11 @@ previews authored for the core set; the rest ship on the floor card.
   ignores the late `:root`), and tags four Tailwind theme defaults (animate-spin/pulse,
   default-transition-*) that have no line in globals.css.
 
+- `build-css: @kind tokens not in compiled output: --ease-drop, --transition-duration-slow,
+  --transition-duration-ritual` (first seen 2026-10-10). The three motion tokens are declared in
+  globals.css with a kind but no class uses them yet, so Tailwind leaves them out of the compiled
+  CSS. Informational: nothing to fix until a component uses them, and then the line goes away.
+
 ## Re-sync risks
 
 - Bundle is ~4.7 MB: lucide-react whole (~1.6 MB, GlobalNav resolves icon names from
