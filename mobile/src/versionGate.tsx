@@ -1,11 +1,12 @@
 import Constants from "expo-constants";
 import { useEffect, useState, type ReactNode } from "react";
-import { AppState, Linking, Platform, useColorScheme } from "react-native";
+import { AppState, Linking, Platform, StyleSheet, View, useColorScheme } from "react-native";
 
 import { fetchVersionPolicy, isBelowMinimum, type VersionApp, type VersionPolicy } from "./appVersion";
+import { BrandMark } from "./brandMarkView";
 import { useI18n } from "./i18n";
-import { themeFor } from "./theme";
-import { Block, Button, Screen, ThemeContext, Txt } from "./ui";
+import { space, themeFor } from "./theme";
+import { Button, Screen, ThemeContext, Txt, useTheme } from "./ui";
 
 /**
  * Checks at start and every return to the foreground. A failed check leaves the last answer in place
@@ -39,26 +40,49 @@ export function VersionGate({ app, children }: { app: VersionApp; children: Reac
   if (policy && isBelowMinimum(Constants.expoConfig?.version, policy.minSupported)) {
     return (
       <ThemeContext.Provider value={themeFor(null, scheme)}>
-        <UpdateRequired storeUrl={policy.storeUrl} />
+        <UpdateRequired app={app} storeUrl={policy.storeUrl} min={policy.minSupported} />
       </ThemeContext.Provider>
     );
   }
   return <>{children}</>;
 }
 
-export function UpdateRequired({ storeUrl }: { storeUrl: string }) {
+/**
+ * The whole screen, no way out: mark, title, body, one button (only when the backend named a store
+ * link), the running version in small type at the foot. The officer app's body names both versions.
+ */
+export function UpdateRequired({ app, storeUrl, min }: { app: VersionApp; storeUrl: string; min: string }) {
   const { t } = useI18n();
+  const theme = useTheme();
+  const version = Constants.expoConfig?.version ?? "";
   return (
     <Screen testID="update-required" scroll={false} edges={["top", "left", "right", "bottom"]}>
-      <Block last>
-        <Txt variant="title">{t("soul_app.update_required.title")}</Txt>
-        <Txt variant="body" tone="muted">
-          {t("soul_app.update_required.body")}
+      <View style={styles.body}>
+        <BrandMark testID="update-mark" size={96} color={theme.ink} />
+        <Txt variant="title" style={styles.center}>
+          {t("soul_app.update_required.title")}
+        </Txt>
+        <Txt variant="body" tone="muted" style={styles.center}>
+          {app === "officer" ? t("officer_app.update_required.body", { version, min }) : t("soul_app.update_required.body")}
         </Txt>
         {storeUrl ? (
-          <Button testID="update-open-store" title={t("soul_app.update_required.button")} onPress={() => void Linking.openURL(storeUrl).catch(() => {})} />
+          <Button
+            testID="update-open-store"
+            title={t("soul_app.update_required.button")}
+            onPress={() => void Linking.openURL(storeUrl).catch(() => {})}
+            style={styles.button}
+          />
         ) : null}
-      </Block>
+      </View>
+      <Txt testID="update-version" variant="caption" tone="subtle" style={styles.center}>
+        {t("soul_app.update_required.version", { version })}
+      </Txt>
     </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  body: { flex: 1, alignItems: "center", justifyContent: "center", gap: space[4], paddingHorizontal: space[6] },
+  center: { textAlign: "center" },
+  button: { alignSelf: "stretch", marginTop: space[2] },
+});
