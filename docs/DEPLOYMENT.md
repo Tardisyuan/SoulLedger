@@ -87,6 +87,9 @@ DC="docker compose -f docker-compose.yml -f docker-compose.production.yml"
   任务至少留 `SCHEDULER_RUN_KEEP_MIN`(默认 20)条;卡死的 RUNNING 超过任务的 max_runtime、
   或 PENDING 超过 `SCHEDULER_PENDING_GRACE_SECONDS`(默认 900)没被取走,都由每 5 分钟的
   `scheduler.reap_stale_runs` 标成 LOST;worker 重启时它名下遗留的 RUNNING 也标 LOST。
+- 审计日志(`AuditLog`)默认保留 `AUDIT_LOG_RETENTION_DAYS`(默认 365)天,登录日志(`LoginLog`)保留
+  `LOGIN_LOG_RETENTION_DAYS`(默认 180)天,由定时清理任务按租户删除过期行。设为 `0`(或留空)表示
+  不清理;**升级到这个默认值后第一轮清理会删掉早于窗口的旧行**,要保留更久先在环境里设大或设 0。
 - **beat 只能起一个实例。** 两个 beat 读同一张调度表，会把每个任务派发两次。compose 里 `celery-beat`
   只有一份，**不要** `docker compose up --scale celery-beat=2`,也不要在另一台机器上对同一个库再起 beat。
   误起了第二个时，按 (任务, 租户) 的单飞锁只挡得住**时间重叠**的那次(记成 SKIPPED);

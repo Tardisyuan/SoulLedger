@@ -15,6 +15,7 @@ from rest_framework.views import APIView
 
 from apps.audit.models import AuditLog
 from apps.core.csv_safe import csv_safe
+from apps.core.exports import record_export
 from apps.core.locale import locale_from_request
 from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.tenant import scope_to_tenant
@@ -328,7 +329,9 @@ class LedgerJournalExportView(APIView):
             "Description", "Statute", "Merit", "Demerit",
         ])
         rows = period.select_related("soul").order_by("-recorded_at", "-id")
+        written = 0
         for r in rows.iterator(chunk_size=1000):
+            written += 1
             merit = r.record_type == "MERIT"
             writer.writerow([
                 r.recorded_at.isoformat(),
@@ -342,6 +345,7 @@ class LedgerJournalExportView(APIView):
                 r.weight if merit else "",
                 "" if merit else r.weight,
             ])
+        record_export(request, resource="ledger_journal", rows=written)
         return response
 
 
@@ -701,7 +705,9 @@ class LedgerExportStatsView(APIView):
             else Soul.objects.none()
         )
         # Use iterator() to stream results without loading all into memory
+        rows = 0
         for soul in qs.iterator(chunk_size=1000):
+            rows += 1
             writer.writerow([
                 str(soul.id),
                 # `csv_safe` on every free-text cell (apps/core/csv_safe.py —
@@ -724,6 +730,7 @@ class LedgerExportStatsView(APIView):
                 soul.create_time.isoformat(),
             ])
 
+        record_export(request, resource="soul_ledger", rows=rows)
         return response
 
 

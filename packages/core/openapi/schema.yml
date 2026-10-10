@@ -1476,7 +1476,11 @@ paths:
       operationId: v1_auth_change_password_create
       description: |-
         POST /api/v1/auth/change-password/
-        Change password — requires old password verification.
+        Change password — requires old password verification. Every OTHER device is signed out
+        at once (refresh tokens blacklisted, `session_version` bumped so their access tokens stop
+        working too). This device keeps its login: send its `refresh` token and the response
+        carries a new `access` / `refresh` pair to swap in. No `refresh` -> this device is signed
+        out as well and the response has no tokens.
       tags:
       - v1
       requestBody:
@@ -1498,7 +1502,13 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DetailResponse'
+                $ref: '#/components/schemas/ChangePasswordResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChangePasswordRefusal'
           description: ''
   /api/v1/auth/civilizations/:
     get:
@@ -19961,7 +19971,12 @@ components:
         * `REBIRTH_APPLICATION` - 转生申请
     ChangePassword:
       type: object
-      description: Serializer for changing password with old password verification.
+      description: |-
+        Serializer for changing password with old password verification.
+
+        `refresh` is this device's refresh token: the change ends every OTHER session, and the
+        response carries a fresh pair for this one, with the same 7 / 30 day lifetime this
+        device logged in with. Without it, this device is signed out too.
       properties:
         old_password:
           type: string
@@ -19969,10 +19984,30 @@ components:
         new_password:
           type: string
           writeOnly: true
-          minLength: 8
+          maxLength: 128
+        refresh:
+          type: string
+          writeOnly: true
       required:
       - new_password
       - old_password
+    ChangePasswordRefusal:
+      type: object
+      description: 'Doc-only 400 body: `old_password` is a list of sentences, `new_password`
+        a list of reasons.'
+      properties:
+        old_password:
+          type: array
+          items:
+            type: string
+        new_password:
+          type: array
+          items:
+            $ref: '#/components/schemas/PasswordReason'
+        refresh:
+          type: array
+          items:
+            type: string
     ChangePasswordRequest:
       type: object
       properties:
@@ -19986,6 +20021,19 @@ components:
       required:
       - new_password
       - old_password
+    ChangePasswordResponse:
+      type: object
+      description: 200 body. `access` / `refresh` are this device's new pair (absent
+        when no `refresh` was sent).
+      properties:
+        detail:
+          type: string
+        access:
+          type: string
+        refresh:
+          type: string
+      required:
+      - detail
     ChatError:
       type: object
       properties:
@@ -26904,7 +26952,6 @@ components:
           type: string
           writeOnly: true
           maxLength: 128
-          minLength: 8
       required:
       - new_password
       - token
@@ -26920,6 +26967,10 @@ components:
           $ref: '#/components/schemas/OfficerResetRefusalCodeEnum'
         retry_after:
           type: integer
+        new_password:
+          type: array
+          items:
+            $ref: '#/components/schemas/PasswordReason'
       required:
       - code
       - error
@@ -28233,6 +28284,20 @@ components:
           maxLength: 150
       required:
       - username
+    PasswordReason:
+      type: object
+      description: |-
+        Doc-only: one reason a new password was refused. `code` is Django's validator code
+        (`password_too_short` / `password_too_common` / `password_entirely_numeric` /
+        `password_too_similar`); `message` is its English sentence, a fallback for clients.
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+      required:
+      - code
+      - message
     PasswordResetRefusal:
       type: object
       description: |-

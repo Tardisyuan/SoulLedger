@@ -31,5 +31,11 @@
   "permissions.config.overwrite.warning_own",
   "permissions.config.overwrite.all_halls",
   "permissions.config.overwrite.blocked_own",
-  "permissions.config.overwrite.action"
+  "permissions.config.overwrite.action",
+  "profile.password_changed_others_out",
+  "profile.password_reason_common",
+  "profile.password_reason_numeric",
+  "profile.password_reason_similar",
+  "profile.password_reason_invalid",
+  "profile.password_old_wrong"
 ]

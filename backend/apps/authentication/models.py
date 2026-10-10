@@ -174,6 +174,10 @@ class User(AuditUserFields, AbstractUser):
     # `email_verified` 立刻为假。`email_verified_at` 只用来展示。
     email_verified_address = models.EmailField(blank=True, default="")
     email_verified_at = models.DateTimeField(null=True, blank=True)
+    # 会话代数(2026-10-10)。官员的 access / refresh 都带 `sv` 声明 = 签发时的这个数;
+    # 改密码、邮箱重置密码时 +1,于是**所有旧令牌立刻作废**(HTTP 与 WebSocket 握手都比对),
+    # 不必等 access 自然过期。不带 `sv` 的旧令牌按 0 算,上线不会让任何人掉线。
+    session_version = models.PositiveIntegerField(default=0)
 
     # Declared first so it becomes _base_manager (used by refresh_from_db(),
     # etc) — keeps create_user/create_superuser and stays unfiltered so

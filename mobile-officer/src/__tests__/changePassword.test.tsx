@@ -1,12 +1,13 @@
 /**
  * 修改密码 (from 我的): the three fields, the checks done before any request, the server's refusals
- * shown rule by rule under the field they are about, and the session left alone on success (as the
- * web profile page does -- the endpoint revokes nothing).
+ * shown reason by reason (by code) under the field they are about, and on success the officer stays
+ * signed in here (the server signed the OTHER devices out) with a toast that says so.
  */
 import { act, fireEvent, screen } from "@testing-library/react-native";
 
 import { ChangePasswordScreen } from "../screens/account";
 import { MeTab } from "../screens/me";
+import { ToastProvider } from "../shared";
 import { httpError, renderOfficer, sessionOf, OFFICER } from "./harness";
 
 const mockChange = jest.fn();
@@ -38,12 +39,18 @@ it("sends old and new, goes back, and does not sign the officer out", async () =
   mockChange.mockResolvedValue({ data: { detail: "ok" } });
   const onBack = jest.fn();
   const session = sessionOf(OFFICER);
-  renderOfficer(<ChangePasswordScreen onBack={onBack} />, { session });
+  renderOfficer(
+    <ToastProvider>
+      <ChangePasswordScreen onBack={onBack} />
+    </ToastProvider>,
+    { session }
+  );
   fillAll();
   await submit();
   expect(mockChange).toHaveBeenCalledWith("oldpw-123", "newpw-4567");
   expect(onBack).toHaveBeenCalledTimes(1);
   expect(session.signOut).not.toHaveBeenCalled();
+  expect(screen.getByText("密码已修改,其他设备上的登录已退出")).toBeTruthy();
 });
 
 it("sends nothing while a field is empty", async () => {
@@ -64,15 +71,24 @@ it("refuses a short or mismatched new password before any request", async () => 
   expect(mockChange).not.toHaveBeenCalled();
 });
 
-it("shows each of the server's rules under its field, keeps the form, and never echoes a password", async () => {
-  mockChange.mockRejectedValue(httpError(400, { old_password: ["旧密码不正确"], new_password: ["密码太常见", "密码不能全是数字"] }));
+it("shows each reason under its field by its code (not the server's English), keeps the form, and never echoes a password", async () => {
+  mockChange.mockRejectedValue(
+    httpError(400, {
+      old_password: ["旧密码不正确"],
+      new_password: [
+        { code: "password_too_common", message: "This password is too common." },
+        { code: "password_entirely_numeric", message: "This password is entirely numeric." },
+      ],
+    })
+  );
   const onBack = jest.fn();
   renderOfficer(<ChangePasswordScreen onBack={onBack} />);
   fillAll("oldpw-123", "newpw-4567");
   await submit();
   expect(screen.getByText("旧密码不正确")).toBeTruthy();
-  expect(screen.getByText("密码太常见")).toBeTruthy();
+  expect(screen.getByText("这个密码太常见,请换一个")).toBeTruthy();
   expect(screen.getByText("密码不能全是数字")).toBeTruthy();
+  expect(screen.queryByText(/This password/)).toBeNull();
   expect(screen.getAllByTestId("password-new-error")).toHaveLength(2);
   expect(screen.getAllByTestId("password-old-error")).toHaveLength(1);
   expect(onBack).not.toHaveBeenCalled();

@@ -18,6 +18,7 @@ from apps.core.schema import DetailResponseSerializer
 
 from . import officer_reset
 from .officer_reset import ResetRefusedError
+from .serializers import PasswordReasonSerializer
 from .views import _rate_limited, _reset_refusal, _throttle_wait
 
 OFFICER_RESET_ACCEPTED = {"detail": "如果账号存在且邮箱已验证,重置邮件已发送"}
@@ -30,7 +31,9 @@ class OfficerResetRequestSerializer(serializers.Serializer):
 class OfficerResetConfirmSerializer(serializers.Serializer):
     uid = serializers.CharField(max_length=64)
     token = serializers.CharField(max_length=128)
-    new_password = serializers.CharField(write_only=True, min_length=8, max_length=128)
+    # No min_length: the length rule is a validator too, and answers with its code
+    # (`password_too_short`) like every other reason.
+    new_password = serializers.CharField(write_only=True, max_length=128)
 
 
 class EmailVerifySerializer(serializers.Serializer):
@@ -46,10 +49,13 @@ class OfficerResetRefusalSerializer(serializers.Serializer):
         choices=["rate_limited", "reset_link_invalid", "verify_link_invalid", "weak_password"]
     )
     retry_after = serializers.IntegerField(required=False)
+    # `weak_password` only: one reason per validator, each with Django's stable code.
+    new_password = PasswordReasonSerializer(many=True, required=False)
 
 
 def _refusal(exc: ResetRefusedError):
-    return _reset_refusal(exc.message, exc.code, status.HTTP_400_BAD_REQUEST)
+    extra = {"new_password": exc.reasons} if exc.reasons else {}
+    return _reset_refusal(exc.message, exc.code, status.HTTP_400_BAD_REQUEST, **extra)
 
 
 @extend_schema(

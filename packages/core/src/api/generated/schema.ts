@@ -662,7 +662,11 @@ export interface paths {
         put?: never;
         /**
          * @description POST /api/v1/auth/change-password/
-         *     Change password — requires old password verification.
+         *     Change password — requires old password verification. Every OTHER device is signed out
+         *     at once (refresh tokens blacklisted, `session_version` bumped so their access tokens stop
+         *     working too). This device keeps its login: send its `refresh` token and the response
+         *     carries a new `access` / `refresh` pair to swap in. No `refresh` -> this device is signed
+         *     out as well and the response has no tokens.
          */
         post: operations["v1_auth_change_password_create"];
         delete?: never;
@@ -9246,14 +9250,33 @@ export interface components {
          * @enum {string}
          */
         CaseTypeEnum: "ROUTINE" | "APPEAL" | "CROSS_REALM" | "SPECIAL" | "CANONIZATION" | "PURGATORY_REVIEW" | "HERESY_TRIAL" | "HEART_WEIGHING" | "DIVINE_TRIAL" | "REBIRTH_APPLICATION";
-        /** @description Serializer for changing password with old password verification. */
+        /**
+         * @description Serializer for changing password with old password verification.
+         *
+         *     `refresh` is this device's refresh token: the change ends every OTHER session, and the
+         *     response carries a fresh pair for this one, with the same 7 / 30 day lifetime this
+         *     device logged in with. Without it, this device is signed out too.
+         */
         ChangePassword: {
             old_password: string;
             new_password: string;
+            refresh?: string;
+        };
+        /** @description Doc-only 400 body: `old_password` is a list of sentences, `new_password` a list of reasons. */
+        ChangePasswordRefusal: {
+            old_password?: string[];
+            new_password?: components["schemas"]["PasswordReason"][];
+            refresh?: string[];
         };
         ChangePasswordRequest: {
             old_password: string;
             new_password: string;
+        };
+        /** @description 200 body. `access` / `refresh` are this device's new pair (absent when no `refresh` was sent). */
+        ChangePasswordResponse: {
+            detail: string;
+            access?: string;
+            refresh?: string;
         };
         ChatError: {
             detail: string;
@@ -12337,6 +12360,7 @@ export interface components {
             error: string;
             code: components["schemas"]["OfficerResetRefusalCodeEnum"];
             retry_after?: number;
+            new_password?: components["schemas"]["PasswordReason"][];
         };
         /**
          * @description * `rate_limited` - rate_limited
@@ -13144,6 +13168,15 @@ export interface components {
         /** @description `POST /auth/password-help/` — 「忘记密码」 on an admin-provisioned console. */
         PasswordHelpRequest: {
             username: string;
+        };
+        /**
+         * @description Doc-only: one reason a new password was refused. `code` is Django's validator code
+         *     (`password_too_short` / `password_too_common` / `password_entirely_numeric` /
+         *     `password_too_similar`); `message` is its English sentence, a fallback for clients.
+         */
+        PasswordReason: {
+            code: string;
+            message: string;
         };
         /**
          * @description Doc-only: every refusal of the two email-reset endpoints.
@@ -18558,7 +18591,15 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DetailResponse"];
+                    "application/json": components["schemas"]["ChangePasswordResponse"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChangePasswordRefusal"];
                 };
             };
         };

@@ -1,5 +1,5 @@
 import { api } from "./client";
-import { getRefreshToken } from "../platform/index";
+import { ACCESS_TOKEN_KEY, getRefreshToken, platform, setAccessToken, setRefreshToken } from "../platform/index";
 import type { components } from "./generated/schema";
 
 /**
@@ -243,10 +243,53 @@ export const authApi = {
   logout: () => api.post<{ detail: string }>("/auth/logout/", { refresh: getRefreshToken() }),
   profile: () => api.get<AuthProfile>("/auth/profile/"),
   updateProfile: (data: object) => api.patch<AuthProfile>("/auth/profile/", data),
-  changePassword: (oldPasswordOrData: string | { old_password: string; new_password: string }, newPassword?: string) => {
+  /**
+   * Changing the password signs every OTHER device out at once. This device keeps its login:
+   * its refresh token goes along, and the new `access` / `refresh` pair in the 200 body is
+   * stored here, so callers have nothing to swap. 400 `{old_password: [sentence], new_password:
+   * [{code, message}]}` -- read the codes with `passwordReasonKeys`.
+   */
+  changePassword: async (
+    oldPasswordOrData: string | { old_password: string; new_password: string },
+    newPassword?: string
+  ) => {
     const data = typeof oldPasswordOrData === "string"
       ? { old_password: oldPasswordOrData, new_password: newPassword! }
       : oldPasswordOrData;
-    return api.post<{ detail: string }>("/auth/change-password/", data);
+    const refresh = getRefreshToken();
+    const res = await api.post<ChangePasswordResponse>("/auth/change-password/", refresh ? { ...data, refresh } : data);
+    if (res.data.access && res.data.refresh) {
+      setAccessToken(res.data.access);
+      platform().persistent.remove(ACCESS_TOKEN_KEY); // as `rotateRefreshToken`: no stale 24 h cookie
+      setRefreshToken(res.data.refresh);
+    }
+    return res;
   },
 };
+
+/** 200 body of `POST /auth/change-password/` (`access` / `refresh`: this device's new pair). */
+export type ChangePasswordResponse = components["schemas"]["ChangePasswordResponse"];
+
+/**
+ * Why a new password was refused, as i18n keys, one per reason, from a 400 body of
+ * `change-password` or `officer-reset/confirm` (`new_password: [{code, message}]`).
+ * Django's English sentence is never shown: an unknown code (or a plain DRF string such as
+ * "too long") reads as the generic key.
+ */
+const PASSWORD_REASON_KEYS: Record<string, string> = {
+  password_too_short: "profile.password_too_short",
+  password_too_common: "profile.password_reason_common",
+  password_entirely_numeric: "profile.password_reason_numeric",
+  password_too_similar: "profile.password_reason_similar",
+};
+
+export function passwordReasonKeys(body: unknown): string[] {
+  const list = (body as { new_password?: unknown } | null | undefined)?.new_password;
+  if (!Array.isArray(list)) return [];
+  const keys = list.map((item) => {
+    const code = item && typeof item === "object" ? (item as { code?: unknown }).code : undefined;
+    return (typeof code === "string" && PASSWORD_REASON_KEYS[code]) || "profile.password_reason_invalid";
+  });
+  return [...new Set(keys)];
+}
+
