@@ -1,6 +1,7 @@
 """
 Permission views — full CRUD for permissions and role-permission assignment
 """
+from django.conf import settings
 from django.db import transaction
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema
@@ -854,7 +855,11 @@ def _audit_import(request, overwrite, stats):
 
 @extend_schema(
     request=PermissionImportRequestSerializer,
-    responses={200: PermissionImportResultSerializer, 400: ErrorResponseSerializer},
+    responses={
+        200: PermissionImportResultSerializer,
+        400: ErrorResponseSerializer,
+        403: OpenApiTypes.OBJECT,
+    },
 )
 @api_view(["POST"])
 @permission_classes([IsAuthenticated, IsAdminPermission])
@@ -889,6 +894,16 @@ def import_permissions(request):
     overwrite = document["overwrite"]
     dry_run = document["dry_run"]
 
+    # Permission config is global, not per hall: an overwrite by any one hall's admin rewrites
+    # every hall's. Off until there is a cross-hall super-admin role (PERM_IMPORT_OVERWRITE_ENABLED).
+    # Refused before any row, cache key or audit row is touched - dry run included.
+    overwrite_enabled = settings.PERM_IMPORT_OVERWRITE_ENABLED
+    if overwrite and not overwrite_enabled:
+        return Response(
+            {"error": "Overwrite import is disabled.", "code": "overwrite_disabled"},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+
     # One transaction (inside `do_import`): an overwrite that fails half-way
     # rolls its deletes back instead of answering 500 over an empty grant
     # table; a dry run rolls the whole merge back on purpose.
@@ -906,4 +921,5 @@ def import_permissions(request):
     return Response({
         "message": "Dry run: nothing was changed" if dry_run else "Permissions imported successfully",
         "stats": stats,
+        "overwrite_enabled": overwrite_enabled,
     })

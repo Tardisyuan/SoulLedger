@@ -58,6 +58,13 @@ describe("changePassword", () => {
     expect(getRefreshToken()).toBe("NEW-R");
   });
 
+  it("sends the push token as `token` only when given (the officer app), never otherwise", async () => {
+    await authApi.changePassword("old-pw", "new-pw-123", "ExponentPushToken[x]");
+    await authApi.changePassword("old-pw", "new-pw-123");
+    expect(sent[0].body).toEqual({ old_password: "old-pw", new_password: "new-pw-123", refresh: "OLD-R", token: "ExponentPushToken[x]" });
+    expect(sent[1].body).not.toHaveProperty("token");
+  });
+
   it("keeps the stored pair when the answer carries none", async () => {
     reply = { detail: "ok" };
     await authApi.changePassword({ old_password: "a", new_password: "b" });

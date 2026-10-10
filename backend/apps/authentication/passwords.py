@@ -31,3 +31,19 @@ def end_sessions(user) -> None:
     user.session_version = F("session_version") + 1
     user.save(update_fields=["session_version"])
     user.refresh_from_db(fields=["session_version"])
+
+
+def end_push_registrations(user, keep_token: str = "") -> None:
+    """Delete the user's officer-app push registrations, except the one holding `keep_token`.
+
+    Their logins just ended (`end_sessions`), so a signed-out device must not keep receiving pushes.
+    `keep_token` is the device that changed the password and stays signed in. A token that is not
+    this user's matches nothing here, so it keeps nothing: the same result as sending none, and no
+    error that would reveal whose token it is. Caller owns the transaction.
+    """
+    from apps.officer_app.models import OfficerPushDevice
+
+    rows = OfficerPushDevice.objects.filter(user=user)
+    if keep_token:
+        rows = rows.exclude(token=keep_token)
+    rows.delete()

@@ -11103,6 +11103,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
           description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
   /api/v1/perm/permissions/:
     get:
       operationId: v1_perm_permissions_list
@@ -20159,6 +20166,13 @@ components:
         refresh:
           type: string
           writeOnly: true
+        token:
+          type: string
+          writeOnly: true
+          description: 'Officer app only: this device''s Expo push token. Every other
+            push registration of the user is deleted with the sessions; without it
+            (the web) all of them are.'
+          maxLength: 255
       required:
       - new_password
       - old_password
@@ -30732,8 +30746,13 @@ components:
           type: string
         stats:
           $ref: '#/components/schemas/PermissionImportStats'
+        overwrite_enabled:
+          type: boolean
+          description: Whether this server accepts overwrite=true (PERM_IMPORT_OVERWRITE_ENABLED);
+            the client shows the merge / overwrite choice only when true.
       required:
       - message
+      - overwrite_enabled
       - stats
     PermissionImportSectionStats:
       type: object

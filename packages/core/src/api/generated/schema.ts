@@ -9332,6 +9332,8 @@ export interface components {
             old_password: string;
             new_password: string;
             refresh?: string;
+            /** @description Officer app only: this device's Expo push token. Every other push registration of the user is deleted with the sessions; without it (the web) all of them are. */
+            token?: string;
         };
         /** @description Doc-only 400 body: `old_password` is a list of sentences, `new_password` a list of reasons. */
         ChangePasswordRefusal: {
@@ -14425,6 +14427,8 @@ export interface components {
         PermissionImportResult: {
             message: string;
             stats: components["schemas"]["PermissionImportStats"];
+            /** @description Whether this server accepts overwrite=true (PERM_IMPORT_OVERWRITE_ENABLED); the client shows the merge / overwrite choice only when true. */
+            overwrite_enabled: boolean;
         };
         PermissionImportSectionStats: {
             created: number;
@@ -26570,6 +26574,16 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
         };

@@ -490,3 +490,7 @@ class PermissionImportStatsSerializer(serializers.Serializer):
 class PermissionImportResultSerializer(serializers.Serializer):
     message = serializers.CharField()
     stats = PermissionImportStatsSerializer()
+    overwrite_enabled = serializers.BooleanField(
+        help_text="Whether this server accepts overwrite=true (PERM_IMPORT_OVERWRITE_ENABLED); "
+                  "the client shows the merge / overwrite choice only when true.",
+    )

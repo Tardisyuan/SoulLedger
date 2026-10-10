@@ -71,6 +71,7 @@ DC="docker compose -f docker-compose.yml -f docker-compose.production.yml"
   | `workflow.process_timeouts_for_tenant` | 按租户 | `*/5 * * * *` | 审批节点超时按节点配置自动处理 |
   | `social.cleanup_orphan_post_media` | 全局 | `15 3 * * *` | 删上传了但没发出去的朋友圈图片 |
   | `chat.reconcile_inbox` | 全局 | `45 3 * * *` | 按 Synapse 校对殿司收件箱;聊天没配置时记成功并跳过 |
+  | `chat.cleanup_unsent_images` | 全局 | `20 3 * * *` | 删上传超过 24 小时仍未发出的书信图片(行与文件);已发出的不动 |
 
   beat 没跑时审批**不会**因超时自动处理,节点会一直停在待办。
 
@@ -114,6 +115,13 @@ DC="docker compose -f docker-compose.yml -f docker-compose.production.yml"
   由 Django 自己流文件;误开了,图片全是空响应。
 - 改 `nginx.conf` 的这个 location 时**不要**加 `add_header` / `expires`,否则 server 级的安全头
   在这个 location 里全部失效(注释里写了原因)。
+
+## 权限配置「覆盖」导入
+
+- `PERM_IMPORT_OVERWRITE_ENABLED`(默认 `False`)。权限配置不分殿、是全局的:任何一个殿的管理员做「覆盖」导入,
+  改的都是所有殿的权限。所以默认关闭 —— `POST /perm/import/` 收到 `overwrite=true`(预演也算)一律回 403
+  `overwrite_disabled`,不碰任何行;合并导入与预演不受影响。有了跨殿的超级管理员角色之后再打开。
+  接口响应里的 `overwrite_enabled` 告诉前端要不要显示「合并 / 覆盖」的选择。
 
 ## 邮件(找回密码验证码)
 

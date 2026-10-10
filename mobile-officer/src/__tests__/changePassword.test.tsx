@@ -4,9 +4,11 @@
  * signed in here (the server signed the OTHER devices out) with a toast that says so.
  */
 import { act, fireEvent, screen } from "@testing-library/react-native";
+import { platform } from "@soulledger/core/platform";
 
 import { ChangePasswordScreen } from "../screens/account";
 import { MeTab } from "../screens/me";
+import { PUSH_TOKEN_KEY } from "../push";
 import { ToastProvider } from "../shared";
 import { httpError, renderOfficer, sessionOf, OFFICER } from "./harness";
 
@@ -17,7 +19,10 @@ jest.mock("@soulledger/core/api/auth", () => ({
   mfaApi: { status: jest.fn(async () => ({ data: { enabled: true, required: true } })) },
 }));
 
-beforeEach(() => jest.clearAllMocks());
+beforeEach(() => {
+  jest.clearAllMocks();
+  platform().persistent.remove(PUSH_TOKEN_KEY);
+});
 
 function fillAll(old = "oldpw-123", next = "newpw-4567", again = next) {
   fireEvent.changeText(screen.getByTestId("password-old"), old);
@@ -47,10 +52,23 @@ it("sends old and new, goes back, and does not sign the officer out", async () =
   );
   fillAll();
   await submit();
-  expect(mockChange).toHaveBeenCalledWith("oldpw-123", "newpw-4567");
+  expect(mockChange).toHaveBeenCalledWith("oldpw-123", "newpw-4567", undefined); // never registered: no token to keep
   expect(onBack).toHaveBeenCalledTimes(1);
   expect(session.signOut).not.toHaveBeenCalled();
   expect(screen.getByText("密码已修改,其他设备上的登录已退出")).toBeTruthy();
+});
+
+it("sends this device's push token so the server keeps only that registration", async () => {
+  platform().persistent.set(PUSH_TOKEN_KEY, "ExponentPushToken[this-device]");
+  mockChange.mockResolvedValue({ data: { detail: "ok" } });
+  renderOfficer(
+    <ToastProvider>
+      <ChangePasswordScreen onBack={() => {}} />
+    </ToastProvider>
+  );
+  fillAll();
+  await submit();
+  expect(mockChange).toHaveBeenCalledWith("oldpw-123", "newpw-4567", "ExponentPushToken[this-device]");
 });
 
 it("sends nothing while a field is empty", async () => {

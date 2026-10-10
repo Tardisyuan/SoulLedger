@@ -139,6 +139,9 @@ export function PermissionConfigTransfer() {
   // 摘要对应的导入方式(= 预演时传的 overwrite)与覆盖要输入的殿名。
   const [mode, setMode] = useState<Mode>("merge");
   const [typed, setTyped] = useState("");
+  // 服务器是否接受覆盖(PERM_IMPORT_OVERWRITE_ENABLED),取自预演响应的 `overwrite_enabled`。
+  // 只有恰为 true 才显示「合并 / 覆盖」与其后的全部覆盖界面;缺失或 false 与纯合并模式一样,不显示一个禁用的选项。
+  const [canOverwrite, setCanOverwrite] = useState(false);
 
   // 后端只许 ADMIN;这里同一条件,不显示一个注定 403 的入口。
   if (user?.role !== "ADMIN") return null;
@@ -164,6 +167,7 @@ export function PermissionConfigTransfer() {
     setStats(null);
     setMode("merge");
     setTyped("");
+    setCanOverwrite(false);
     if (input.current) input.current.value = "";
   };
   const close = () => {
@@ -182,6 +186,19 @@ export function PermissionConfigTransfer() {
     else setParsed(outcome);
   };
 
+  /** 开关在预演之后被关掉时后端答 403 `overwrite_disabled`:显示文案,并退回合并。 */
+  const fail = (error: unknown) => {
+    const code = (error as { response?: { data?: { code?: unknown } } })?.response?.data?.code;
+    if (code === "overwrite_disabled") {
+      setCanOverwrite(false);
+      setMode("merge");
+      setTyped("");
+      setFailure(t("permissions.config.errors.overwrite_disabled"));
+      return;
+    }
+    setFailure(backendReason(error) ?? t("permissions.config.reason_unknown"));
+  };
+
   /** 预演某种方式:成功才切过去(表里的数是后端按这种方式算的),失败留在原来的方式上。 */
   const preview = (next: Mode) => {
     if (!parsed) return;
@@ -190,28 +207,30 @@ export function PermissionConfigTransfer() {
       { document: parsed.document, dryRun: true, overwrite: next === "overwrite" },
       {
         onSuccess: (data) => {
+          const enabled = data.overwrite_enabled === true;
+          setCanOverwrite(enabled);
           setStats(data.stats);
-          setMode(next);
+          setMode(enabled ? next : "merge");
           setTyped("");
           setStep(2);
         },
-        onError: (error) => setFailure(backendReason(error) ?? t("permissions.config.reason_unknown")),
+        onError: (error) => fail(error),
       },
     );
   };
 
   /** 真导入。`overwrite` 只在走完确认(覆盖方式 + 殿名 + 不含自己的权限)之后才是 true。 */
   const confirmImport = () => {
-    if (!parsed || (mode === "overwrite" && !overwriteAllowed)) return;
+    if (!parsed || (overwriting && !overwriteAllowed)) return;
     setFailure(null);
     importer.mutate(
-      { document: parsed.document, dryRun: false, overwrite: mode === "overwrite" },
+      { document: parsed.document, dryRun: false, overwrite: overwriting },
       {
         onSuccess: (data) => {
           setStats(data.stats);
           setStep(3);
         },
-        onError: (error) => setFailure(backendReason(error) ?? t("permissions.config.reason_unknown")),
+        onError: (error) => fail(error),
       },
     );
   };
@@ -230,7 +249,7 @@ export function PermissionConfigTransfer() {
 
   const sum = stats ? totals(stats) : null;
   const tense = step === 3 ? "did" : "will";
-  const overwriting = mode === "overwrite";
+  const overwriting = canOverwrite && mode === "overwrite";
   const removed = stats?.removed.total ?? 0;
   const blockedOwn = overwriting && stats?.removes_own_permissions === true;
   // 确认词就是「覆盖」选项本身的当前语言文案(permissions.config.mode.overwrite),不另写一份常量;en 不分大小写。
@@ -347,24 +366,26 @@ export function PermissionConfigTransfer() {
               />
               {step === 2 && (
                 <>
-                  <fieldset className="flex flex-wrap items-center gap-x-4 gap-y-1 border-0 p-0" disabled={importer.isPending}>
-                    <legend className="sr-only">{t("permissions.config.mode.label")}</legend>
-                    <span aria-hidden="true" className="text-xs text-[oklch(var(--color-ink-muted))]">
-                      {t("permissions.config.mode.label")}
-                    </span>
-                    {(["merge", "overwrite"] as const).map((m) => (
-                      <label key={m} className="flex min-h-8 cursor-pointer items-center gap-2 text-sm text-[oklch(var(--color-ink))]">
-                        <input
-                          type="radio"
-                          name="import-mode"
-                          value={m}
-                          checked={mode === m}
-                          onChange={() => preview(m)}
-                        />
-                        {t(`permissions.config.mode.${m}`)}
-                      </label>
-                    ))}
-                  </fieldset>
+                  {canOverwrite && (
+                    <fieldset className="flex flex-wrap items-center gap-x-4 gap-y-1 border-0 p-0" disabled={importer.isPending}>
+                      <legend className="sr-only">{t("permissions.config.mode.label")}</legend>
+                      <span aria-hidden="true" className="text-xs text-[oklch(var(--color-ink-muted))]">
+                        {t("permissions.config.mode.label")}
+                      </span>
+                      {(["merge", "overwrite"] as const).map((m) => (
+                        <label key={m} className="flex min-h-8 cursor-pointer items-center gap-2 text-sm text-[oklch(var(--color-ink))]">
+                          <input
+                            type="radio"
+                            name="import-mode"
+                            value={m}
+                            checked={mode === m}
+                            onChange={() => preview(m)}
+                          />
+                          {t(`permissions.config.mode.${m}`)}
+                        </label>
+                      ))}
+                    </fieldset>
+                  )}
                   {overwriting && (
                     <div className="flex flex-col gap-3" data-testid="overwrite-warning">
                       <p role="alert" className="text-sm text-[oklch(var(--color-status-error))]">

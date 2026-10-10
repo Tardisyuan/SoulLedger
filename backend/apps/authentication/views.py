@@ -36,13 +36,14 @@ from apps.authentication.mail import MESSAGES as MAIL_MESSAGES
 from apps.authentication.mail import fill, mail_locale, send_neutral_mail
 from apps.authentication.models import UserRole, is_assignable_role
 from apps.core.csv_safe import csv_safe
+from apps.core.exports import record_export
 from apps.core.permissions import IsAdminPermission, TenantPermission
 from apps.core.schema import DetailResponseSerializer, ErrorResponseSerializer
 from apps.core.tenant import scope_to_tenant
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin
 
 from .officer_reset import _audit
-from .passwords import end_sessions
+from .passwords import end_push_registrations, end_sessions
 from .serializers import (
     AssignRolesSerializer,
     ChangePasswordRefusalSerializer,
@@ -405,7 +406,9 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
         response['Content-Disposition'] = 'attachment; filename="users.csv"'
         writer = csv.writer(response)
         writer.writerow(['username', 'email', 'role', 'is_active', 'tenant', 'create_time'])
+        rows = 0
         for user in qs:
+            rows += 1
             writer.writerow([
                 # `csv_safe` on every free-text cell (apps/core/csv_safe.py).
                 # `username` is picked by whoever registers — `/auth/register/`
@@ -421,6 +424,7 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
                 csv_safe(user.tenant.code if user.tenant else ''),
                 user.create_time.isoformat() if hasattr(user, 'create_time') else '',
             ])
+        record_export(request, resource='user', rows=rows)
         return response
 
     @extend_schema(responses=UserImportResultSerializer)
@@ -851,6 +855,7 @@ def change_password(request):
         user.set_password(serializer.validated_data["new_password"])
         user.save(update_fields=["password"])
         end_sessions(user)
+        end_push_registrations(user, keep_token=serializer.validated_data.get("token", ""))
         _audit(user, "官员修改密码,其他设备已退出", request=request,
                changes={"password_changed": True, "sessions_revoked": True})
 

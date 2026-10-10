@@ -182,7 +182,7 @@ describe("import: client-side checks", () => {
 
 describe("import: the three steps", () => {
   it("previews first (dry run), imports only on confirm, and merges unless overwrite was chosen", async () => {
-    importConfig.mockResolvedValue({ data: { message: "ok", stats: STATS } });
+    importConfig.mockResolvedValue({ data: { message: "ok", overwrite_enabled: true, stats: STATS } });
     const { invalidate } = setup();
     openImport();
     expect(screen.getByRole("dialog").textContent).toContain("permissions.config.import_title:1");
@@ -231,7 +231,7 @@ describe("import: the three steps", () => {
   });
 
   it("offers the skipped-details download when something was skipped, and writes a CSV", async () => {
-    importConfig.mockResolvedValue({ data: { message: "ok", stats: STATS } });
+    importConfig.mockResolvedValue({ data: { message: "ok", overwrite_enabled: true, stats: STATS } });
     setup();
     await toSummary();
     fireEvent.click(screen.getByRole("button", { name: "permissions.config.confirm" }));
@@ -243,7 +243,7 @@ describe("import: the three steps", () => {
   });
 
   it("has no download link when nothing was skipped", async () => {
-    importConfig.mockResolvedValue({ data: { message: "ok", stats: NOTHING_SKIPPED } });
+    importConfig.mockResolvedValue({ data: { message: "ok", overwrite_enabled: true, stats: NOTHING_SKIPPED } });
     setup();
     await toSummary();
     fireEvent.click(screen.getByRole("button", { name: "permissions.config.confirm" }));
@@ -282,9 +282,9 @@ const CONFIRM_WORD = "permissions.config.mode.overwrite";
 
 /** 第 2 步,选「覆盖」:预演换成 overwrite: true。 */
 async function toOverwrite(stats: object = OVERWRITE_STATS) {
-  importConfig.mockResolvedValueOnce({ data: { message: "ok", stats: STATS } });
+  importConfig.mockResolvedValueOnce({ data: { message: "ok", overwrite_enabled: true, stats: STATS } });
   await toSummary();
-  importConfig.mockResolvedValueOnce({ data: { message: "ok", stats } });
+  importConfig.mockResolvedValueOnce({ data: { message: "ok", overwrite_enabled: true, stats } });
   fireEvent.click(radio("overwrite"));
   await screen.findByTestId("overwrite-warning");
 }
@@ -325,7 +325,7 @@ describe("import: overwrite", () => {
     fireEvent.change(nameField(), { target: { value: ` ${CONFIRM_WORD} ` } });
     expect(dangerButton()).toBeEnabled();
 
-    importConfig.mockResolvedValueOnce({ data: { message: "ok", stats: OVERWRITE_STATS } });
+    importConfig.mockResolvedValueOnce({ data: { message: "ok", overwrite_enabled: true, stats: OVERWRITE_STATS } });
     fireEvent.click(dangerButton());
     await screen.findByText("permissions.config.did.remove");
     expect(importConfig).toHaveBeenCalledTimes(3);
@@ -347,7 +347,7 @@ describe("import: overwrite", () => {
     fireEvent.click(dangerButton());
     expect(importConfig.mock.calls.every((c) => c[1] === true)).toBe(true);
     // Merge is still available from here.
-    importConfig.mockResolvedValueOnce({ data: { message: "ok", stats: STATS } });
+    importConfig.mockResolvedValueOnce({ data: { message: "ok", overwrite_enabled: true, stats: STATS } });
     fireEvent.click(radio("merge"));
     await waitFor(() => expect(screen.queryByTestId("overwrite-warning")).toBeNull());
     expect(importConfig.mock.calls.at(-1)?.[2]).toBe(false);
@@ -356,7 +356,7 @@ describe("import: overwrite", () => {
   it("switching back to merge drops the extra rows and the warning", async () => {
     setup();
     await toOverwrite();
-    importConfig.mockResolvedValueOnce({ data: { message: "ok", stats: STATS } });
+    importConfig.mockResolvedValueOnce({ data: { message: "ok", overwrite_enabled: true, stats: STATS } });
     fireEvent.click(radio("merge"));
     await waitFor(() => expect(screen.queryByTestId("overwrite-warning")).toBeNull());
     expect(screen.queryByText("permissions.config.will.update")).toBeNull();
@@ -367,12 +367,42 @@ describe("import: overwrite", () => {
 
   it("stays on merge when the overwrite preview fails", async () => {
     setup();
-    importConfig.mockResolvedValueOnce({ data: { message: "ok", stats: STATS } });
+    importConfig.mockResolvedValueOnce({ data: { message: "ok", overwrite_enabled: true, stats: STATS } });
     await toSummary();
     importConfig.mockRejectedValueOnce({ response: { data: { error: "nope" } } });
     fireEvent.click(radio("overwrite"));
     expect((await screen.findByRole("alert")).textContent).toContain("nope");
     expect(radio("merge")).toBeChecked();
+    expect(screen.queryByTestId("overwrite-action")).toBeNull();
+  });
+});
+
+describe("import: the server's overwrite switch (overwrite_enabled)", () => {
+  // Off (false) or absent: exactly the merge-only flow -- no radio, no warning, no confirm field,
+  // and every request carries overwrite: false. Not a disabled "overwrite" option.
+  it.each([["false", { overwrite_enabled: false }], ["missing", {}]])("%s: no mode radios, no confirm field, overwrite stays false", async (_n, flag) => {
+    setup();
+    importConfig.mockResolvedValue({ data: { message: "ok", ...flag, stats: STATS } });
+    await toSummary();
+    expect(screen.queryByRole("radio")).toBeNull();
+    expect(screen.queryByLabelText("permissions.config.overwrite.confirm_hint")).toBeNull();
+    expect(screen.queryByTestId("overwrite-warning")).toBeNull();
+    expect(screen.queryByText("permissions.config.mode.overwrite")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "permissions.config.confirm" }));
+    await waitFor(() => expect(importConfig).toHaveBeenCalledTimes(2));
+    expect(importConfig.mock.calls.map((c) => c[2])).toEqual([false, false]);
+  });
+
+  it("a 403 overwrite_disabled (switched off after the preview) shows its own sentence and falls back to merge", async () => {
+    setup();
+    importConfig.mockResolvedValueOnce({ data: { message: "ok", overwrite_enabled: true, stats: STATS } });
+    await toSummary();
+    importConfig.mockRejectedValueOnce({ response: { status: 403, data: { error: "Overwrite import is disabled.", code: "overwrite_disabled" } } });
+    fireEvent.click(radio("overwrite"));
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toContain("permissions.config.errors.overwrite_disabled");
+    expect(alert.textContent).not.toContain("Overwrite import is disabled");
+    expect(screen.queryByRole("radio")).toBeNull();
     expect(screen.queryByTestId("overwrite-action")).toBeNull();
   });
 });
@@ -394,7 +424,7 @@ describe("import: overwrite confirm word in the language packs", () => {
 
 describe("import: back", () => {
   it("step 2 has Back (left of the confirm button); it returns to step 1 with the file name still shown", async () => {
-    importConfig.mockResolvedValue({ data: { message: "ok", stats: STATS } });
+    importConfig.mockResolvedValue({ data: { message: "ok", overwrite_enabled: true, stats: STATS } });
     setup();
     await toSummary();
     const back = screen.getByRole("button", { name: "permissions.config.back" });
@@ -414,14 +444,14 @@ describe("import: back", () => {
     pick(JSON.stringify(DOC));
     await waitFor(() => expect(nextButton()).toBeEnabled());
     expect(screen.queryByRole("button", { name: "permissions.config.back" })).toBeNull();
-    importConfig.mockResolvedValueOnce({ data: { message: "ok", stats: STATS } });
+    importConfig.mockResolvedValueOnce({ data: { message: "ok", overwrite_enabled: true, stats: STATS } });
     fireEvent.click(nextButton());
     await screen.findByText("permissions.config.will.add");
-    importConfig.mockResolvedValueOnce({ data: { message: "ok", stats: OVERWRITE_STATS } });
+    importConfig.mockResolvedValueOnce({ data: { message: "ok", overwrite_enabled: true, stats: OVERWRITE_STATS } });
     fireEvent.click(radio("overwrite"));
     await screen.findByTestId("overwrite-warning");
     fireEvent.click(screen.getByRole("button", { name: "permissions.config.back" }));
-    importConfig.mockResolvedValueOnce({ data: { message: "ok", stats: STATS } });
+    importConfig.mockResolvedValueOnce({ data: { message: "ok", overwrite_enabled: true, stats: STATS } });
     fireEvent.click(nextButton());
     await screen.findByText("permissions.config.will.add");
     expect(importConfig.mock.calls.at(-1)?.[2]).toBe(false);

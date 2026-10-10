@@ -7,7 +7,7 @@
  * where the new password is chosen: the app has no universal-link domain to receive it.
  *
  * 修改密码 signs every OTHER device out and keeps this one: `authApi.changePassword` sends this device's
- * refresh token and stores the new pair it gets back. Its refusals are one line per reason, by the
+ * refresh token and push token (the others' push registrations go with their sessions) and stores the new pair it gets back. Its refusals are one line per reason, by the
  * server's reason code, under the field they are about; the password is never echoed.
  */
 import { authApi } from "@soulledger/core/api/auth";
@@ -15,6 +15,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { BackHandler, Linking, Pressable, View } from "react-native";
 
 import { ActionButton } from "../kit";
+import { registeredToken } from "../push";
 import { adminHelpUrl, forgotFailureKey, passwordFailure } from "../rules";
 import { Button, FieldError, Icon, Input, Notice, Screen, Txt, space, useI18n, useTheme, useToast } from "../shared";
 
@@ -114,7 +115,7 @@ export function ChangePasswordScreen({ onBack }: { onBack: () => void }) {
     setLocal(null);
     setBusy(true);
     authApi
-      .changePassword(oldPassword, newPassword)
+      .changePassword(oldPassword, newPassword, registeredToken())
       .then(
         () => {
           // The server signed every other device out; `changePassword` stored this device's new token pair.
