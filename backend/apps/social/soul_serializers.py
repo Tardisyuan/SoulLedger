@@ -92,6 +92,7 @@ class SoulPostSerializer(serializers.Serializer):
     my_reaction = serializers.ChoiceField(choices=ReactionType.choices, allow_null=True)
     media = serializers.SerializerMethodField(help_text="按显示顺序,最多 9 张。")
     is_mine = serializers.SerializerMethodField()
+    edited_at = serializers.DateTimeField(allow_null=True, help_text="作者改过正文的时间;没改过为 null。")
     create_time = serializers.DateTimeField()
 
     def get_is_mine(self, post) -> bool:

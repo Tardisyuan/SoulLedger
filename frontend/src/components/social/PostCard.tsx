@@ -60,6 +60,14 @@ export function PostCard({ post }: { post: Post }) {
             <span className="font-mono tabular-nums">{formatDate(post.create_time)}</span>
             {" · "}
             <DomainEnum namespace="social.visibility" value={post.visibility} />
+            {post.edited_at && (
+              <>
+                {" · "}
+                <span data-edited="" title={t("social.edited_at", { time: formatDate(post.edited_at) })}>
+                  {t("social.edited")}
+                </span>
+              </>
+            )}
           </p>
         </div>
         {isAuthor && (

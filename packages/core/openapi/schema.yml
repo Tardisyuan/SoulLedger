@@ -26810,6 +26810,11 @@ components:
           format: date-time
         visibility:
           type: string
+        edited_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: 作者改过正文的时间;没改过为 null。
         comment_count:
           type: integer
         reaction_counts:
@@ -26830,6 +26835,7 @@ components:
       - comment_count
       - content
       - create_time
+      - edited_at
       - id
       - media
       - media_count
@@ -30194,6 +30200,11 @@ components:
         tenant:
           type: integer
           readOnly: true
+        edited_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
         create_time:
           type: string
           format: date-time
@@ -31273,6 +31284,11 @@ components:
         tenant:
           type: integer
           readOnly: true
+        edited_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
         create_time:
           type: string
           format: date-time
@@ -31288,6 +31304,7 @@ components:
       - comment_count
       - content
       - create_time
+      - edited_at
       - id
       - media
       - reaction_count
@@ -31358,6 +31375,10 @@ components:
           allOf:
           - $ref: '#/components/schemas/SoulReactionCounts'
           readOnly: true
+        edited_at:
+          type: string
+          format: date-time
+          nullable: true
         create_time:
           type: string
           format: date-time
@@ -34949,6 +34970,11 @@ components:
         is_mine:
           type: boolean
           readOnly: true
+        edited_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: 作者改过正文的时间;没改过为 null。
         create_time:
           type: string
           format: date-time
@@ -34957,6 +34983,7 @@ components:
       - comment_count
       - content
       - create_time
+      - edited_at
       - id
       - is_mine
       - media

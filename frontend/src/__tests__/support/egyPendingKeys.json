@@ -35,5 +35,7 @@
   "official_notify.dispatch_rejected",
   "official_notify.dispatch_rejected_bare",
   "official_notify.dispatch_cancelled",
-  "notifications.open_dispatch"
+  "notifications.open_dispatch",
+  "social.edited",
+  "social.edited_at"
 ]

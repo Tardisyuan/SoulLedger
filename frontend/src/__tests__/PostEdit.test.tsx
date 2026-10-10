@@ -68,6 +68,23 @@ describe("PostCard 编辑入口", () => {
   });
 });
 
+describe("PostCard「已编辑」", () => {
+  it("有 edited_at:显示,悬停给出编辑时间", () => {
+    render(<PostCard post={{ ...post, edited_at: "2026-08-02T00:00:00Z" }} />);
+    const mark = document.querySelector("[data-edited]")!;
+    expect(mark).toHaveTextContent("social.edited");
+    expect(mark).toHaveAttribute("title", "social.edited_at");
+  });
+
+  it("没有 edited_at(null 或缺省):不显示", () => {
+    const { unmount } = render(<PostCard post={{ ...post, edited_at: null }} />);
+    expect(document.querySelector("[data-edited]")).toBeNull();
+    unmount();
+    render(<PostCard post={post} />);
+    expect(document.querySelector("[data-edited]")).toBeNull();
+  });
+});
+
 describe("PostEditModal", () => {
   it("预填原文;没改动时保存不可点", () => {
     const dialog = open();

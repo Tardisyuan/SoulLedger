@@ -27,6 +27,7 @@ IsProfileOwnerOrReadOnly), so authorship still governs writes.
 """
 from django.db import transaction
 from django.db.models import Prefetch
+from django.utils import timezone
 from drf_spectacular.utils import extend_schema
 from rest_framework import mixins, serializers, status, viewsets
 from rest_framework.decorators import action
@@ -38,7 +39,8 @@ from apps.core.permissions import TenantPermission
 from apps.core.tenant import scope_to_tenant
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin
 from apps.social import media as post_media
-from apps.social.models import Comment, Follow, Post, PostMedia, Reaction, UserProfile
+from apps.social.models import Comment, Follow, ModerationStatus, Post, PostMedia, Reaction, UserProfile
+from apps.social.moderation import record_hits, screen_content
 from apps.social.permissions import (
     IsAuthorOrReadOnly,
     IsFollowOwnerOrReadOnly,
@@ -112,17 +114,42 @@ class PostViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, viewsets.ModelVie
         )
 
     def perform_create(self, serializer):
-        """Images are attached in the same transaction as the post: one that
+        """Same word-list screening as the soul circle (`moderation.screen_content`):
+        MASK rewrites the text, REVIEW starts the post PENDING, HIDE starts it HIDDEN.
+        Images are attached in the same transaction as the post: one that
         cannot be attached (not the caller's, already used, deleted) means no
         post at all — `media.attach`, the soul circle's rule."""
         media_ids = serializer.validated_data.pop("media", [])
+        screening = screen_content(getattr(self.request, "tenant", None), serializer.validated_data.get("content", ""))
         try:
             with transaction.atomic():
-                post = serializer.save(author=self.request.user)
+                post = serializer.save(
+                    author=self.request.user, content=screening.content,
+                    moderation_status=screening.status, **screening.moderation_fields,
+                )
                 post_media.attach(post, self.request.user, media_ids)
+                record_hits(screening.hit_ids)
         except SocialError as exc:
             raise serializers.ValidationError({"media": [str(exc)]}, code=exc.code) from None
         PostService.increment_post_count(self.request.user.pk)
+
+    def perform_update(self, serializer):
+        """A changed `content` is screened like a new post and stamps `edited_at`; a
+        PATCH of `visibility` alone is neither. A clean edit leaves `moderation_status`
+        alone (an officer's HIDE must survive the author fixing a typo)."""
+        data = serializer.validated_data
+        screening = None
+        if "content" in data and data["content"] != serializer.instance.content:
+            screening = screen_content(serializer.instance.tenant, data["content"])
+            data["content"] = screening.content
+            data["edited_at"] = timezone.now()
+            if screening.status != ModerationStatus.PUBLISHED:
+                data["moderation_status"] = screening.status
+                data.update(screening.moderation_fields)
+        with transaction.atomic():
+            super().perform_update(serializer)
+            if screening:
+                record_hits(screening.hit_ids)
 
     def perform_destroy(self, instance):
         """The author's own delete never reaches the recycle bin (apps/social/apps.py
@@ -262,15 +289,20 @@ class CommentViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, viewsets.Model
     def perform_create(self, serializer):
         post = serializer.validated_data["post"]
         parent = serializer.validated_data.get("parent")
-        content = serializer.validated_data["content"]
         tenant = getattr(self.request, "tenant", None)
-        CommentService.create_comment(
-            author=self.request.user,
-            post=post,
-            content=content,
-            parent=parent,
-            tenant=tenant,
-        )
+        # The soul circle's screening (soul_circle.create_comment), not a second copy of it.
+        screening = screen_content(tenant or post.tenant, serializer.validated_data["content"])
+        with transaction.atomic():
+            CommentService.create_comment(
+                author=self.request.user,
+                post=post,
+                content=screening.content,
+                parent=parent,
+                tenant=tenant,
+                moderation_status=screening.status,
+                **screening.moderation_fields,
+            )
+            record_hits(screening.hit_ids)
 
     def perform_destroy(self, instance):
         CommentService.delete_comment(instance)
