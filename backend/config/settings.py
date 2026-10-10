@@ -299,6 +299,21 @@ REST_FRAMEWORK = {
     },
 }
 
+# App 版本检查(GET /api/v1/app-version/)。后端只给数字,比较在 App 里做。
+# 默认全空 = 不限制;具体版本号由发布时设环境变量决定:
+#   APP_VERSION_<APP>_<PLATFORM>_{MIN,LATEST,STORE_URL},APP ∈ SOUL/OFFICER,PLATFORM ∈ IOS/ANDROID。
+APP_VERSION_POLICY = {
+    app: {
+        platform: {
+            "min_supported": os.getenv(f"APP_VERSION_{app.upper()}_{platform.upper()}_MIN", ""),
+            "latest": os.getenv(f"APP_VERSION_{app.upper()}_{platform.upper()}_LATEST", ""),
+            "store_url": os.getenv(f"APP_VERSION_{app.upper()}_{platform.upper()}_STORE_URL", ""),
+        }
+        for platform in ("ios", "android")
+    }
+    for app in ("soul", "officer")
+}
+
 # JWT Settings
 # 官员端 App 的刷新令牌有效期(小时):A13 规格「会话更短」。默认 24 小时 —— 滑动的:App 每次刷新
 # 都从当下重新计 24 小时,所以每天用的人不会被踢,闲置一天就要重新登录(带两步验证)。
