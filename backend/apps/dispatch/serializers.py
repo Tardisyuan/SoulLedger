@@ -286,6 +286,11 @@ class DispatchRejectSerializer(serializers.Serializer):
     reason = serializers.CharField(max_length=1000, required=False, default="")
 
 
+class DispatchCancelSerializer(serializers.Serializer):
+    """发起方在对方批准前取消移交。理由必填(不设 20 字下限:驳回也没有,这里只要求说得清为什么)。"""
+    reason = serializers.CharField(max_length=1000)
+
+
 class DispatchReturnSerializer(serializers.Serializer):
     """手动结束暂居。理由必填:这是一次越过「处置执行完毕」的决定,审计里要说得清为什么。"""
     reason = serializers.CharField(max_length=1000)

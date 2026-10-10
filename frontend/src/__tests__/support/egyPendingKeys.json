@@ -3,5 +3,14 @@
   "permissions.config.errors.overwrite_disabled",
   "dashboard.todo.resend_dispatch",
   "dashboard.todo.go_resend",
-  "sentence_plan.last_refusal_redispatched"
+  "sentence_plan.last_refusal_redispatched",
+  "dispatch.cancel_dispatch",
+  "dispatch.cancel_title",
+  "dispatch.cancel_warning",
+  "dispatch.cancel_reason",
+  "dispatch.cancel_placeholder",
+  "dispatch.confirm_cancel",
+  "dispatch.cancel_success",
+  "dispatch.cancel_error",
+  "dispatch.cancel_not_cancellable"
 ]
