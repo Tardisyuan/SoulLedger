@@ -522,3 +522,27 @@ describe("about / credits (spec v2 C16)", () => {
     await act(async () => {});
   });
 });
+
+describe("changing the password from settings", () => {
+  it("opens the same screen by choice, hides the first-login story, and returns to settings on success", async () => {
+    const calls = signedIn({ "POST /me/password/": { status: 200, data: { access: "A2", refresh: "R2" } } });
+    renderApp();
+    await screen.findByTestId("profile-card");
+    fireEvent.press(screen.getByTestId("header-account"));
+    fireEvent.press(await screen.findByTestId("open-change-password"));
+    await screen.findByTestId("old-password");
+    expect(route()?.name).toBe("AccountPassword");
+    // Not the forced flow: no first-login intro, no way "back to login".
+    expect(screen.queryByText(/72/)).toBeNull();
+    expect(screen.queryByText("返回登录")).toBeNull();
+
+    fireEvent.changeText(screen.getByTestId("old-password"), "old-secret");
+    fireEvent.changeText(screen.getByTestId("new-password"), "new-secret-123");
+    fireEvent.changeText(screen.getByTestId("confirm-password"), "new-secret-123");
+    fireEvent.press(screen.getByTestId("change-password-submit"));
+    await screen.findByTestId("settings");
+    expect(route()?.name).toBe("Settings");
+    expect(calls.find((c) => c.url === "/me/password/")?.body).toEqual({ old_password: "old-secret", new_password: "new-secret-123" });
+    await act(async () => {});
+  });
+});

@@ -111,6 +111,26 @@ describe("the other tabs have the same four states", () => {
     await waitFor(() => expect(onUnread).toHaveBeenLastCalledWith(false));
   });
 
+  it("notices: a row that names an item lands on it (read or not); one that names nothing only marks read", async () => {
+    mockNotices.mockResolvedValue({
+      data: {
+        results: [
+          { id: 1, title: "新审批", message: "", is_read: false, related_resource: "workflow", related_id: "wf-9", created_at: "2026-10-09T01:00:00Z" },
+          { id: 2, title: "系统", message: "", is_read: false, related_resource: "scheduler", related_id: "5", created_at: "2026-10-09T01:00:00Z" },
+        ],
+      },
+    });
+    const onLand = jest.fn();
+    renderOfficer(<NoticesTab onUnread={() => {}} onLand={onLand} />);
+    fireEvent.press(await screen.findByTestId("notice-1"));
+    expect(onLand).toHaveBeenCalledWith({ tab: "todo", item: { kind: "approval", id: "wf-9" } });
+    fireEvent.press(screen.getByTestId("notice-2"));
+    expect(onLand).toHaveBeenCalledTimes(1);
+    // Already read: still opens.
+    fireEvent.press(screen.getByTestId("notice-1"));
+    expect(onLand).toHaveBeenCalledTimes(2);
+  });
+
   it("notices: error", async () => {
     mockNotices.mockRejectedValue(httpError(500));
     renderOfficer(<NoticesTab onUnread={() => {}} />);

@@ -66,6 +66,8 @@ export type AppStackParams = {
   /** `landed`: opened from a tapped notification — the result block is highlighted once. */
   ApplicationDetail: { id: string; landed?: boolean };
   Settings: undefined;
+  /** 设置页主动进入的改密屏。名字与强制改密的根屏 ChangePassword 不同:改密成功后会话变为已登录,同名屏会留在栈里。 */
+  AccountPassword: undefined;
   /** 关于 / 致谢(补足 C16),从设置页进。 */
   About: undefined;
   NotificationPrimer: undefined;
