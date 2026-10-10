@@ -33,6 +33,28 @@ export function useJudgmentPrecedents(id: string, limit?: number) {
   });
 }
 
+/** 评议 for one judgment, oldest first — see `judgmentApi.comments`. */
+export function useJudgmentComments(id: string) {
+  return useQuery({
+    queryKey: judgmentKeys.comments(id),
+    queryFn: async () => (await judgmentApi.comments(id)).data,
+    enabled: !!id,
+    staleTime: 30_000,
+  });
+}
+
+/**
+ * Leave a 评议. Refetches the list on success. No toast either way: the form shows a failure in
+ * place and keeps what was typed, and the new comment appearing in the list is the confirmation.
+ */
+export function useAddJudgmentComment(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: string) => judgmentApi.addComment(id, body).then((r) => r.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: judgmentKeys.comments(id) }),
+  });
+}
+
 /** 「戊 · 发落」's options for one candidate verdict — see `judgmentApi.destinations`. */
 export function useJudgmentDestinations(id: string, verdict: JudgmentVerdict | null | undefined) {
   return useQuery({
