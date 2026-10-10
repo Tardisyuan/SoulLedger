@@ -1320,7 +1320,9 @@
       "go_view": "View →",
       "load_error": "Failed to load",
       "sync_ok": "In sync",
-      "unbooked": "Not entered"
+      "unbooked": "Not entered",
+      "resend_dispatch": "Dispatches to send again",
+      "go_resend": "Handle →"
     },
     "civ_share": "Share",
     "civ_empty": "No souls yet · register one",
@@ -2284,6 +2286,15 @@
     "return_home_success": "The soul has returned to its home tenant",
     "return_home_error": "Failed to end the residence",
     "return_home_blocked_open_judgment": "The soul still has an open judgment; it can return once that case is concluded or withdrawn",
+    "cancel_dispatch": "Cancel dispatch",
+    "cancel_title": "Cancel this dispatch?",
+    "cancel_warning": "The other hall has not approved it yet. Cancelling voids the dispatch, the soul stays in this hall, and the other hall is notified.",
+    "cancel_reason": "Reason for cancelling",
+    "cancel_placeholder": "Say why you are cancelling",
+    "confirm_cancel": "Cancel the dispatch",
+    "cancel_success": "Dispatch cancelled",
+    "cancel_error": "Could not cancel the dispatch",
+    "cancel_not_cancellable": "The other hall has already acted on this dispatch; it can no longer be cancelled",
     "approve": "Approve",
     "reject": "Reject",
     "execute": "Execute",
@@ -3154,7 +3165,8 @@
       "soul_inbox": "Hall Inbox",
       "sentence_requests": "Sentence Requests",
       "assistant_admin": "Assistant Admin",
-      "moderation": "Circle Moderation"
+      "moderation": "Circle Moderation",
+      "recycle_bin": "Recycle Bin"
     },
     "queue": "Triage queue",
     "about": "About",
@@ -4738,7 +4750,8 @@
     "retried": "Dispatch sent again",
     "last_refusal_rejected": "The last dispatch was refused by the destination: {{reason}}",
     "last_refusal_rejected_bare": "The last dispatch was refused by the destination",
-    "last_refusal_cancelled": "The last dispatch was cancelled"
+    "last_refusal_cancelled": "The last dispatch was cancelled",
+    "last_refusal_redispatched": "Sent again {{n}} time(s)"
   },
   "seal": {
     "aria": "Seal of {{court}}"

@@ -37,9 +37,17 @@ def _names(payload):
 def _seen_by(role, tenant, path):
     user = User.objects.create_user(username=f"m_{role.lower()}", password="x", role=role,
                                     tenant=None if role == "ADMIN" else tenant)
-    response = officer_client(user).get(path)
+    client = officer_client(user)
+    response = client.get(path)
     assert response.status_code == 200, response.data
-    return _names(response.json())
+    body = response.json()
+    if isinstance(body, dict) and "results" in body:  # the list exit is paginated (20 a page)
+        results = list(body["results"])
+        while body.get("next"):
+            body = client.get(body["next"]).json()
+            results += body["results"]
+        body = results
+    return _names(body)
 
 
 def test_the_migration_seeded_the_entry_under_system_settings_without_a_codename():

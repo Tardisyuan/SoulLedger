@@ -37,6 +37,10 @@ jest.mock("@soulledger/core/api", () => ({
   menusApi: { all: jest.fn().mockResolvedValue({ data: [] }), list: jest.fn().mockResolvedValue({ data: { results: [] } }) },
 }));
 
+jest.mock("@soulledger/core/api/sentence-plans", () => ({ sentencePlansApi: { list: jest.fn() } }));
+const mockedPlans = (jest.requireMock("@soulledger/core/api/sentence-plans") as { sentencePlansApi: { list: jest.Mock } })
+  .sentencePlansApi.list;
+
 // The identity band's right column is what the page reports through usePlaque.
 const mockPlaque = jest.fn();
 jest.mock("@/src/components/plaque/Plaque", () => ({
@@ -135,6 +139,7 @@ beforeEach(() => {
   mockedProposed.mockResolvedValue({ data: { count: 1, results: [] } });
   mockedNext.mockResolvedValue({ data: { total: 0 } });
   mockedDeathSummary.mockResolvedValue({ data: { anomaly_status: "FAILED", anomaly_count: 3 } });
+  mockedPlans.mockResolvedValue({ data: { count: 0, results: [] } });
 });
 
 // ── Overview tab ─────────────────────────────────────────────────────
@@ -319,7 +324,7 @@ describe("DashboardPage overview", () => {
       expect(link).toHaveAttribute("href", "/dispatch");
       // The count comes from the inbox endpoint, not the both-directions list.
       expect(mockedProposed).toHaveBeenCalled();
-      expect(await screen.findByText("dashboard.todo.none")).toBeInTheDocument();
+      expect((await screen.findAllByText("dashboard.todo.none")).length).toBeGreaterThan(0);
       expect(screen.queryByRole("link", { name: "dashboard.todo.enter" })).not.toBeInTheDocument();
     });
 
@@ -341,10 +346,10 @@ describe("DashboardPage overview", () => {
       const retry = await screen.findByRole("button", { name: "common.retry" });
       // The queue and death-sync cells still show their numbers beside the failure.
       const counts = () => Array.from(container.querySelectorAll("[data-todo-count]")).map((el) => el.textContent);
-      await waitFor(() => expect(counts()).toEqual(["0", "3"]));
+      await waitFor(() => expect(counts()).toEqual(["0", "3", "0"]));
       const nextCalls = mockedNext.mock.calls.length;
       fireEvent.click(retry);
-      await waitFor(() => expect(counts()).toEqual(["4", "0", "3"]));
+      await waitFor(() => expect(counts()).toEqual(["4", "0", "3", "0"]));
       expect(screen.queryByText("dashboard.todo.load_error")).not.toBeInTheDocument();
       expect(mockedNext.mock.calls.length).toBe(nextCalls);
     });
@@ -354,9 +359,9 @@ describe("DashboardPage overview", () => {
       const { container } = renderPage();
       await screen.findByText("dashboard.todo.unbooked");
       const cells = Array.from(container.querySelectorAll<HTMLElement>("[data-todo]"));
-      expect(cells).toHaveLength(3);
-      expect(cells.map((c) => c.hasAttribute("data-todo-mine"))).toEqual([true, false, true]);
-      expect(cells.map((c) => c.querySelectorAll('[data-testid="row-mark"]').length)).toEqual([1, 0, 1]);
+      expect(cells).toHaveLength(4);
+      expect(cells.map((c) => c.hasAttribute("data-todo-mine"))).toEqual([true, false, true, false]);
+      expect(cells.map((c) => c.querySelectorAll('[data-testid="row-mark"]').length)).toEqual([1, 0, 1, 0]);
       expect(cells[1].querySelector("[data-todo-count]")).toHaveTextContent("0");
       expect(cells[1]).toHaveTextContent("dashboard.todo.none");
     });
@@ -384,6 +389,26 @@ describe("DashboardPage overview", () => {
       expect(mockedDeathSummary).not.toHaveBeenCalled();
     });
 
+    it("the 重新发起 cell counts this hall's refused dispatches and links to the first soul's plan card", async () => {
+      mockedPlans.mockResolvedValue({ data: { count: 2, results: [{ soul: "s-9" }, { soul: "s-4" }] } });
+      renderPage();
+      const link = await screen.findByRole("link", { name: "dashboard.todo.go_resend" });
+      expect(link).toHaveAttribute("href", "/souls/s-9");
+      expect(mockedPlans).toHaveBeenCalledWith({ awaiting_redispatch: true, page: 1 });
+    });
+
+    it("the 重新发起 cell is for whoever may send a dispatch again (judgment.execute), and asks nothing of anyone else", async () => {
+      mockUser = { role: "JUDGE", permissions: ["dispatch.read", "judgment.read"] };
+      renderPage();
+      await screen.findByText("dashboard.todo.approve_dispatch");
+      expect(screen.queryByText("dashboard.todo.resend_dispatch")).not.toBeInTheDocument();
+      expect(mockedPlans).not.toHaveBeenCalled();
+
+      mockUser = { role: "JUDGE", permissions: ["judgment.execute"] };
+      renderPage();
+      expect(await screen.findByText("dashboard.todo.resend_dispatch")).toBeInTheDocument();
+    });
+
     it("is not shown, and asks nothing, for someone who may open neither page", async () => {
       mockUser = { role: "VIEWER", permissions: [] };
       renderPage();
@@ -392,6 +417,7 @@ describe("DashboardPage overview", () => {
       expect(mockedProposed).not.toHaveBeenCalled();
       expect(mockedNext).not.toHaveBeenCalled();
       expect(mockedDeathSummary).not.toHaveBeenCalled();
+      expect(mockedPlans).not.toHaveBeenCalled();
     });
   });
 

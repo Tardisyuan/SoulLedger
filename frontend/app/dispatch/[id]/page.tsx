@@ -22,6 +22,7 @@ import { QueryError } from "@/src/components/ui/PageError";
 import { BaseModal } from "@/src/components/ui/Modal";
 import { badgeVariants } from "@/src/components/ui/Badge";
 import { PageSection } from "@/components/ui/page-section";
+import { CancelDispatchButton } from "@/src/components/dispatch/CancelDispatchButton";
 
 const STATUS_COLORS: Record<string, string> = {
   // 规范 v3:等待审批不是风险、被驳回不是错误 —— 两个都是墨色,字形(◐ / ✕)把它们分开。
@@ -342,6 +343,8 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
               <div className="flex flex-wrap justify-end gap-2">
                 {isProposed && (
                   <>
+                    {/* 发起方撤回自己的提案(对方批准之前);不是本殿发起的、没有 dispatch.manage 时不渲染。 */}
+                    <CancelDispatchButton dispatch={dispatch} />
                     <RequirePermission permissions="dispatch.reject">
                       <Button type="button" variant="secondary" onClick={() => setShowRejectModal(true)}>
                         {t("dispatch.reject")}

@@ -15,6 +15,20 @@ from apps.dispatch.models import (
 from apps.events.models import EventType, SoulEvent
 
 
+class DispatchNotCancellableError(ValueError):
+    """发起方取消移交时,这条记录已不在 PROPOSED(对方批准了、驳回了、已取消…)。
+
+    对方批准之后发起方不能单方面撤回(2026-10-11 用户决定);状态机仍允许 APPROVED → CANCELLED
+    (受刑计划撤销整份计划要用),所以「只能取消 PROPOSED」是这里在行锁下查的,不是状态机的事。
+    """
+
+    code = "not_cancellable"
+
+    def __init__(self, status):
+        self.status = status
+        super().__init__(f"Only a proposed dispatch can be cancelled by its sender; this one is {status}")
+
+
 class ResidenceReturnBlockedError(Exception):
     """灵魂还有未结案的审判,暂居不能结束(2026-09-18 用户决定)。
 
@@ -461,6 +475,61 @@ class DispatchService:
             SentencePlanService.on_dispatch_refused(soul, dispatch_record)
 
         return dispatch_record
+
+    @staticmethod
+    def cancel_proposed(dispatch_record, canceller, reason):
+        """发起方在对方批准之前取消移交:PROPOSED → CANCELLED,理由记在记录上,通知执行地。
+
+        与 `cancel` 的区别:`cancel` 是状态机允许的任何取消(受刑计划撤销整份计划时也走它),
+        这里只放行 PROPOSED,而且在**行锁下**查 —— 对方的批准与发起方的取消同时到,只有先拿到锁的
+        那一个成功,后到的看到 APPROVED 答 `not_cancellable`。锁序同本 app:灵魂 → (计划 → 节点 →) 调拨记录。
+        受刑计划自动发起的调拨被取消后,节点照 `on_dispatch_refused` 退回 PENDING(不自动重试)。
+        事件写在事务里;站内通知提交后才发。
+        """
+        with transaction.atomic():
+            soul = DispatchService._lock_soul(dispatch_record.soul_id)
+            current = DispatchRecord._base_manager.select_for_update(of=("self",)).get(pk=dispatch_record.pk)
+            if current.status != DispatchStatus.PROPOSED:
+                raise DispatchNotCancellableError(current.status)
+            if not dispatch_record.transition_to(DispatchStatus.CANCELLED, decided_at=timezone.now()):
+                raise DispatchNotCancellableError(current.status)
+            dispatch_record.reason = f"{dispatch_record.reason}\n\nCancellation reason: {reason}"
+            dispatch_record.save(update_fields=["reason"])
+            from apps.sentence_plan.services import SentencePlanService
+            SentencePlanService.on_dispatch_refused(soul, dispatch_record)
+            SoulEvent.objects.create(
+                tenant=dispatch_record.source_tenant,
+                soul=dispatch_record.soul,
+                event_type=EventType.STATE_CHANGED,
+                payload={"action": "DISPATCH_CANCELLED", "dispatch_id": str(dispatch_record.id), "reason": reason},
+                actor=str(canceller),
+            )
+            DispatchService._notify_cancelled(dispatch_record, reason)
+        return dispatch_record
+
+    @staticmethod
+    def _notify_cancelled(dispatch_record, reason):
+        """告诉执行地:这次移交已被发起方取消(他们的待批列表里它已经消失)。"""
+        from apps.authentication.models import User
+
+        target_users = User.objects.filter(tenant=dispatch_record.target_tenant, is_active=True)
+        soul_name, source_code = dispatch_record.soul.name, dispatch_record.source_tenant.code
+        record_id = str(dispatch_record.id)
+
+        def send():
+            from apps.events.services import EventService
+
+            for user in target_users:
+                EventService.notify_user(
+                    user,
+                    title=f"Dispatch Cancelled: {soul_name}",
+                    message=f"{source_code} cancelled its dispatch proposal for soul {soul_name}. Reason: {reason}",
+                    notification_type="SYSTEM",
+                    related_resource="DispatchRecord",
+                    related_id=record_id,
+                )
+
+        _after_commit(send)
 
     @staticmethod
     def _lock_soul(soul_id):

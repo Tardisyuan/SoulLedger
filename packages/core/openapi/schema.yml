@@ -4879,7 +4879,10 @@ paths:
           description: ''
     delete:
       operationId: v1_dispatch_records_destroy
-      description: DispatchRecord CRUD + actions.
+      description: |-
+        只有草稿能删(= 放弃)。其余状态答 409 `not_a_draft`:此前 PROPOSED / APPROVED / EXECUTED 的记录
+        DELETE 也是 204 并被删掉(2026-10-11 复现),绕过了状态机 —— 一条已批准 / 已执行的移交不该能这样消失;
+        要结束一次移交,走 `cancel` / `reject` / `return-home`。
       parameters:
       - in: path
         name: id
@@ -4920,6 +4923,47 @@ paths:
           multipart/form-data:
             schema:
               $ref: '#/components/schemas/DispatchRecord'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DispatchRecord'
+          description: ''
+  /api/v1/dispatch/records/{id}/cancel/:
+    post:
+      operationId: v1_dispatch_records_cancel_create
+      description: |-
+        The sending hall withdraws a proposal the target has not yet approved (PROPOSED only).
+
+        Only the hall that proposed it (ADMIN excepted, as on `create`): the target party reaches the
+        record but gets 403, a third tenant never sees it (404). 409 `not_cancellable` once the target
+        has approved, rejected or the record is anything but PROPOSED — the state machine still lets
+        APPROVED be cancelled (a cancelled sentence plan needs that), this endpoint does not.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Dispatch Record.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DispatchCancel'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DispatchCancel'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DispatchCancel'
         required: true
       security:
       - jwtAuth: []
@@ -12598,6 +12642,10 @@ paths:
         `request.view` attribute nothing sets, and took its `view is None` early
         return on every request ever made. It was deleted 2026-08-28.
       parameters:
+      - in: query
+        name: awaiting_redispatch
+        schema:
+          type: boolean
       - in: query
         name: cycle
         schema:
@@ -21416,6 +21464,15 @@ components:
           type: string
       required:
       - detail
+    DispatchCancel:
+      type: object
+      description: 发起方在对方批准前取消移交。理由必填(不设 20 字下限:驳回也没有,这里只要求说得清为什么)。
+      properties:
+        reason:
+          type: string
+          maxLength: 1000
+      required:
+      - reason
     DispatchDraft:
       type: object
       description: |-
@@ -33101,9 +33158,12 @@ components:
         at:
           type: string
           format: date-time
+        redispatched:
+          type: integer
       required:
       - at
       - reason
+      - redispatched
       - status
     SentenceLastRefusalStatusEnum:
       enum:

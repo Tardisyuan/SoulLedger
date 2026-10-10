@@ -129,14 +129,25 @@ class TestDispatchRecordCRUD:
         assert rec.reason == "New"
 
     def test_delete_dispatch_record(self):
+        # 只有草稿能删(放弃);已提交的记录 DELETE 答 409,见 tests/test_dispatch_cancel.py。
         rec = DispatchRecord.objects.create(
-            source_tenant=self.tenant_a, target_tenant=self.tenant_b,
+            source_tenant=self.tenant_a, target_tenant=self.tenant_b, status=DispatchStatus.DRAFT,
             soul=self.soul, dispatched_by=self.user, reason="Del", tenant=self.tenant_a,
         )
         resp = self.client.delete(f"{BASE}/records/{rec.pk}/")
         assert resp.status_code == status.HTTP_204_NO_CONTENT
         rec.refresh_from_db()
         assert rec.is_deleted is True
+
+    def test_delete_refuses_a_submitted_record(self):
+        rec = DispatchRecord.objects.create(
+            source_tenant=self.tenant_a, target_tenant=self.tenant_b, status=DispatchStatus.PROPOSED,
+            soul=self.soul, dispatched_by=self.user, reason="Del", tenant=self.tenant_a,
+        )
+        resp = self.client.delete(f"{BASE}/records/{rec.pk}/")
+        assert resp.status_code == status.HTTP_409_CONFLICT and resp.data["code"] == "not_a_draft"
+        rec.refresh_from_db()
+        assert rec.is_deleted is False
 
 
 # ---------------------------------------------------------------------------

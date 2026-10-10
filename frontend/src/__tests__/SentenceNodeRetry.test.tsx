@@ -41,7 +41,7 @@ const node = (order: number, tenant_code: string, status: string, over: Record<s
   added_by_judgment_id: null, added_by_request_id: null, removed_by_request_id: null, reason: "",
   activated_at: null, completed_at: null, last_refusal: null, ...over,
 });
-const REJECTED = { status: "REJECTED", reason: "名额已满", at: "2026-09-10T00:00:00Z" };
+const REJECTED = { status: "REJECTED", reason: "名额已满", at: "2026-09-10T00:00:00Z", redispatched: 0 };
 const plan = (over: Record<string, unknown> = {}) => ({
   id: "p1", soul: "s1", soul_name: "张三", tenant: 1, tenant_code: "CN_DIYU", cycle: 0, status: "ACTIVE",
   origin_judgment_id: null, cross_judgment_id: null, completed_at: null, cancel_reason: "",
@@ -86,6 +86,18 @@ describe("重新发起调拨", () => {
     planApi.list.mockResolvedValue(page([plan({ nodes: [node(1, "CN_DIYU", "COMPLETED"), node(2, "EG_DUAT", "PENDING", { last_refusal: { ...REJECTED, reason: null } })] })]));
     renderCard();
     expect(await screen.findByText(tZh("sentence_plan.last_refusal_rejected_bare"))).toBeInTheDocument();
+  });
+
+  it("重发过才说重发几次;没重发过一个字都不写", async () => {
+    as("JUDGE", "CN_DIYU", ...JUDGE);
+    const fresh = renderCard();
+    await screen.findByText(tZh("sentence_plan.last_refusal_rejected", { reason: "名额已满" }));
+    expect(screen.queryByTestId("sentence-node-redispatched")).toBeNull();
+    fresh.unmount();
+
+    planApi.list.mockResolvedValue(page([plan({ nodes: [node(1, "CN_DIYU", "COMPLETED"), node(2, "EG_DUAT", "PENDING", { last_refusal: { ...REJECTED, redispatched: 2 } })] })]));
+    renderCard();
+    expect((await screen.findByTestId("sentence-node-redispatched")).textContent).toContain(tZh("sentence_plan.last_refusal_redispatched", { n: "2" }));
   });
 
   it("服务端拒绝时显示它的原因,不显示成功", async () => {

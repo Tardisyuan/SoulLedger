@@ -32,6 +32,7 @@ from apps.dispatch.serializers import (
     CrossTenantJudgmentParticipateSerializer,
     CrossTenantJudgmentSentenceSerializer,
     CrossTenantJudgmentSerializer,
+    DispatchCancelSerializer,
     DispatchDraftSerializer,
     DispatchRecordListSerializer,
     DispatchRecordSerializer,
@@ -40,7 +41,12 @@ from apps.dispatch.serializers import (
     DispatchSubmitSerializer,
     SeatableActorSerializer,
 )
-from apps.dispatch.services import CrossTenantJudgmentService, DispatchService, ResidenceReturnBlockedError
+from apps.dispatch.services import (
+    CrossTenantJudgmentService,
+    DispatchNotCancellableError,
+    DispatchService,
+    ResidenceReturnBlockedError,
+)
 from apps.perm.filters import DataScopeFilter
 from apps.realms.serializers import RealmLocalizedSerializer
 from apps.tenants.models import Tenant
@@ -131,6 +137,8 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
         'create_draft': ['dispatch.manage'],
         'draft': ['dispatch.manage'],
         'submit': ['dispatch.manage'],
+        # 发起方在对方批准前取消:与发起(create)同一权限。
+        'cancel': ['dispatch.manage'],
         'realm_options': ['dispatch.manage'],
         'create': ['dispatch.manage'],
         'update': ['dispatch.manage'],
@@ -264,13 +272,22 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
         headers = self.get_success_headers(output_serializer.data)
         return Response(output_serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
+    def destroy(self, request, *args, **kwargs):
+        """只有草稿能删(= 放弃)。其余状态答 409 `not_a_draft`:此前 PROPOSED / APPROVED / EXECUTED 的记录
+        DELETE 也是 204 并被删掉(2026-10-11 复现),绕过了状态机 —— 一条已批准 / 已执行的移交不该能这样消失;
+        要结束一次移交,走 `cancel` / `reject` / `return-home`。"""
+        instance = self.get_object()
+        if instance.status != DispatchStatus.DRAFT:
+            return Response(
+                {"error": f"Only a draft can be deleted; this dispatch is {instance.status}", "code": "not_a_draft"},
+                status=status.HTTP_409_CONFLICT,
+            )
+        return super().destroy(request, *args, **kwargs)
+
     def perform_destroy(self, instance):
         """放弃草稿 = 软删并记下是谁(`deleted_by`),进回收站(`apps/dispatch/apps.py` 注册了
-        `dispatch_draft`),ADMIN 可从那里恢复。其余状态的删除照旧。"""
-        if instance.status == DispatchStatus.DRAFT:
-            instance.soft_delete(user=self.request.user)
-            return
-        super().perform_destroy(instance)
+        `dispatch_draft`),ADMIN 可从那里恢复。"""
+        instance.soft_delete(user=self.request.user)
 
     def _requester_tenant(self, request):
         return getattr(request, "tenant", None) or getattr(request.user, "tenant", None)
@@ -548,6 +565,34 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
             return Response(DispatchRecordSerializer(dispatch_record).data)
         except ValueError as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    @extend_schema(request=DispatchCancelSerializer, responses=DispatchRecordSerializer)
+    @action(detail=True, methods=["post"])
+    def cancel(self, request, pk=None):
+        """
+        The sending hall withdraws a proposal the target has not yet approved (PROPOSED only).
+
+        Only the hall that proposed it (ADMIN excepted, as on `create`): the target party reaches the
+        record but gets 403, a third tenant never sees it (404). 409 `not_cancellable` once the target
+        has approved, rejected or the record is anything but PROPOSED — the state machine still lets
+        APPROVED be cancelled (a cancelled sentence plan needs that), this endpoint does not.
+        """
+        dispatch_record = self.get_object()
+        if not is_tenant_exempt(request.user):
+            tenant = self._requester_tenant(request)
+            if tenant is None or tenant.pk != dispatch_record.source_tenant_id:
+                return Response({"error": "Only the sending tenant may cancel this dispatch"},
+                                status=status.HTTP_403_FORBIDDEN)
+        body = DispatchCancelSerializer(data=request.data)
+        body.is_valid(raise_exception=True)
+        try:
+            dispatch_record = DispatchService.cancel_proposed(
+                dispatch_record, request.user, body.validated_data["reason"],
+            )
+        except DispatchNotCancellableError as exc:
+            return Response({"error": str(exc), "code": exc.code, "status": exc.status},
+                            status=status.HTTP_409_CONFLICT)
+        return Response(DispatchRecordSerializer(dispatch_record).data)
 
     @action(detail=True, methods=["post"])
     def execute(self, request, pk=None):

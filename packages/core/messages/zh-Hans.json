@@ -1320,7 +1320,9 @@
       "go_view": "去查看 →",
       "load_error": "加载失败",
       "sync_ok": "同步正常",
-      "unbooked": "未入簿"
+      "unbooked": "未入簿",
+      "resend_dispatch": "待重新发起的调拨",
+      "go_resend": "去处理 →"
     },
     "civ_share": "占比",
     "civ_empty": "尚未入册 · 去登记",
@@ -2284,6 +2286,15 @@
     "return_home_success": "灵魂已回归原属租户",
     "return_home_error": "结束暂居失败",
     "return_home_blocked_open_judgment": "灵魂仍有未结案的审判,结案或撤案后才能结束暂居",
+    "cancel_dispatch": "取消移交",
+    "cancel_title": "取消这次移交?",
+    "cancel_warning": "对方还没有批准。取消后这次移交作废,灵魂仍留在本殿,对方会收到通知。",
+    "cancel_reason": "取消理由",
+    "cancel_placeholder": "请说明为什么取消",
+    "confirm_cancel": "确认取消移交",
+    "cancel_success": "移交已取消",
+    "cancel_error": "取消移交失败",
+    "cancel_not_cancellable": "对方已经处理了这次移交,不能再取消",
     "approve": "批准",
     "reject": "驳回",
     "execute": "执行",
@@ -3154,7 +3165,8 @@
       "soul_inbox": "殿司收件箱",
       "sentence_requests": "受刑请求",
       "assistant_admin": "助手管理",
-      "moderation": "朋友圈审核"
+      "moderation": "朋友圈审核",
+      "recycle_bin": "回收站"
     },
     "queue": "分诊队列",
     "about": "关于",
@@ -4738,7 +4750,8 @@
     "retried": "调拨已重新发起",
     "last_refusal_rejected": "上次调拨被执行地拒绝：{{reason}}",
     "last_refusal_rejected_bare": "上次调拨被执行地拒绝",
-    "last_refusal_cancelled": "上次调拨已被取消"
+    "last_refusal_cancelled": "上次调拨已被取消",
+    "last_refusal_redispatched": "已重发 {{n}} 次"
   },
   "seal": {
     "aria": "{{court}}之印"

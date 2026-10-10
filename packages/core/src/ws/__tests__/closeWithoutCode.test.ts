@@ -1,6 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { WSClient, WS_CLOSE_AUTH_REJECTED, shouldReconnectAfterClose } from "../client";
+import {
+  WSClient,
+  WS_CLOSE_AUTH_REJECTED,
+  WS_CLOSE_SESSION_ENDED,
+  shouldReconnectAfterClose,
+} from "../client";
 import { ACCESS_TOKEN_KEY, configurePlatform, resetPlatform } from "../../platform/index";
 
 /**
@@ -190,5 +195,55 @@ describe("WSClient — a close with no code", () => {
     vi.advanceTimersByTime(31000);
     expect(FakeWebSocket.instances.length).toBeGreaterThan(1);
     dropped.close();
+  });
+});
+
+describe("WSClient — the server ended the login (4002)", () => {
+  it("is spelled 4002, matching apps/events/realtime.py, and is retried", () => {
+    expect(WS_CLOSE_SESSION_ENDED).toBe(4002);
+    expect(shouldReconnectAfterClose(WS_CLOSE_SESSION_ENDED)).toBe(true);
+  });
+
+  it("reconnects after 4002 and stays quiet when the new token is accepted", () => {
+    const ended = vi.fn();
+    const client = new WSClient({ onSessionEnded: ended });
+    client.connect();
+    lastSocket().open();
+    lastSocket().serverClose(WS_CLOSE_SESSION_ENDED);
+    expect(client.getStatus()).toBe("reconnecting");
+
+    vi.advanceTimersByTime(1100);
+    expect(FakeWebSocket.instances).toHaveLength(2);
+    lastSocket().open();
+    lastSocket().onmessage?.({ data: JSON.stringify({ type: "connected" }) });
+    lastSocket().serverClose(WS_CLOSE_AUTH_REJECTED);
+
+    expect(ended).not.toHaveBeenCalled(); // the 4001 after a good reconnect is an ordinary one
+    client.close();
+  });
+
+  it("reports the end of the login when the reconnect is refused with 4001", () => {
+    const ended = vi.fn();
+    const client = new WSClient({ onSessionEnded: ended });
+    client.connect();
+    lastSocket().open();
+    lastSocket().serverClose(WS_CLOSE_SESSION_ENDED);
+    vi.advanceTimersByTime(1100);
+    lastSocket().open();
+    lastSocket().serverClose(WS_CLOSE_AUTH_REJECTED);
+
+    expect(ended).toHaveBeenCalledTimes(1);
+    expect(client.getStatus()).toBe("failed");
+    client.close();
+  });
+
+  it("a plain 4001 without a preceding 4002 does not report it", () => {
+    const ended = vi.fn();
+    const client = new WSClient({ onSessionEnded: ended });
+    client.connect();
+    lastSocket().open();
+    lastSocket().serverClose(WS_CLOSE_AUTH_REJECTED);
+    expect(ended).not.toHaveBeenCalled();
+    client.close();
   });
 });

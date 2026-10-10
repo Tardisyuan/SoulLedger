@@ -29,6 +29,19 @@ def _client(api_client, user):
     return api_client
 
 
+def _fetch(client, url):
+    """The body of `url`, every page of it: the list exit is paginated (20 a page), and the seeded menu
+    table outgrew one page when menus/0021 put the first sixteen rows back."""
+    body = client.get(url).json()
+    if not isinstance(body, dict) or "results" not in body:
+        return body
+    results = list(body["results"])
+    while body.get("next"):
+        body = client.get(body["next"]).json()
+        results += body["results"]
+    return results
+
+
 def _names(payload):
     """Every menu name reachable in a response body, at any depth."""
     rows = payload.get("results", payload) if isinstance(payload, dict) else payload
@@ -75,17 +88,17 @@ def test_a_viewer_sees_the_page_and_its_directory_only_while_holding_the_codenam
 ):
     client = _client(api_client, viewer_user)
 
-    before = _names(client.get(exit_url).json())
+    before = _names(_fetch(client, exit_url))
     assert "定时任务" not in before and "系统设置" not in before
     assert "动态" in before  # the walk is not vacuous
 
     grant = grant_viewer_scheduler_read()
-    during = _names(client.get(exit_url).json())
+    during = _names(_fetch(client, exit_url))
     assert {"定时任务", "系统设置"} <= during
     assert "用户管理" not in during, "opening the directory for one page must not open its siblings"
 
     grant.delete()
-    after = _names(client.get(exit_url).json())
+    after = _names(_fetch(client, exit_url))
     assert "定时任务" not in after and "系统设置" not in after
 
 
@@ -93,7 +106,7 @@ def test_a_viewer_sees_the_page_and_its_directory_only_while_holding_the_codenam
 def test_admin_sees_everything_regardless(api_client, admin_user, system_settings):
     client = _client(api_client, admin_user)
     for exit_url in MENU_EXITS:
-        names = _names(client.get(exit_url).json())
+        names = _names(_fetch(client, exit_url))
         assert {"系统设置", "用户管理", "定时任务", "动态"} <= names, exit_url
 
 
@@ -106,7 +119,7 @@ def test_a_codename_free_admin_row_is_not_opened_by_an_unrelated_grant(
     grant_viewer_scheduler_read()
     client = _client(api_client, viewer_user)
     for exit_url in MENU_EXITS:
-        assert "用户管理" not in _names(client.get(exit_url).json()), exit_url
+        assert "用户管理" not in _names(_fetch(client, exit_url)), exit_url
 
 
 @pytest.mark.django_db
@@ -123,7 +136,7 @@ def test_a_soft_deleted_child_does_not_hold_its_directory_open(
     # and a live one would keep the seeded directory open for its own reason.
     for page in Menu.objects.filter(path="/scheduler"):
         page.soft_delete()
-    names = _names(_client(api_client, viewer_user).get(exit_url).json())
+    names = _names(_fetch(_client(api_client, viewer_user), exit_url))
     assert "系统设置" not in names
     assert "定时任务" not in names
     assert "动态" in names  # the walk is not vacuous

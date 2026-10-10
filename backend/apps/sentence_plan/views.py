@@ -28,6 +28,7 @@ from apps.sentence_plan.serializers import (
     SentencePlanRequestSerializer,
     SentencePlanSerializer,
 )
+from apps.sentence_plan.services import awaiting_redispatch_plan_ids
 
 
 class SentencePlanPartyPermission(TenantPermission):
@@ -70,10 +71,20 @@ class SentencePlanFilter(filters.FilterSet):
     `tenant_code` / `from_tenant_code` 判,服务端再判一次。"""
 
     pending_request = filters.BooleanFilter(method="_pending_request")
+    #: `true`:调拨被拒 / 取消后等着原属判官重新发起的计划(只算本租户是原属的;ADMIN 不限)。
+    #: Web 仪表盘待办条的一格,落点是灵魂详情页的受刑计划卡。
+    awaiting_redispatch = filters.BooleanFilter(method="_awaiting_redispatch")
 
     class Meta:
         model = SentencePlan
         fields = ["soul", "status", "cycle"]
+
+    def _awaiting_redispatch(self, queryset, name, value):
+        tenant = getattr(self.request, "tenant", None)
+        if not is_tenant_exempt(self.request.user):
+            queryset = queryset.filter(tenant=tenant) if tenant is not None else queryset.none()
+        ids = awaiting_redispatch_plan_ids(queryset)
+        return queryset.filter(pk__in=ids) if value else queryset.exclude(pk__in=ids)
 
     def _pending_request(self, queryset, name, value):
         pending = SentencePlan.all_objects.filter(

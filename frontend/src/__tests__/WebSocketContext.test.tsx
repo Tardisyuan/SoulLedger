@@ -71,6 +71,9 @@ const lastSocket = () => FakeWebSocket.instances[FakeWebSocket.instances.length 
 
 // ── Mocked surroundings ──────────────────────────────────────────────
 
+const mockProfile = jest.fn(() => Promise.resolve({}));
+jest.mock("@soulledger/core/api/auth", () => ({ authApi: { profile: () => mockProfile() } }));
+
 const mockShowToast = jest.fn();
 let mockUser: { id: number; username: string } | null = { id: 1, username: "yama" };
 
@@ -261,6 +264,24 @@ describe("WebSocketProvider status propagation", () => {
       jest.advanceTimersByTime(120_000);
     });
     expect(FakeWebSocket.instances).toHaveLength(1);
+  });
+
+  it("4002 (login ended elsewhere) reconnects once, and a refusal after it probes the session over REST", () => {
+    mockProfile.mockClear();
+    renderProvider();
+    act(() => lastSocket().open());
+    act(() => lastSocket().serverClose(4002));
+    act(() => {
+      jest.advanceTimersByTime(1_100);
+    });
+    expect(FakeWebSocket.instances).toHaveLength(2);
+    expect(mockProfile).not.toHaveBeenCalled();
+
+    act(() => lastSocket().open());
+    act(() => lastSocket().serverClose(4001));
+
+    expect(status()).toBe("failed");
+    expect(mockProfile).toHaveBeenCalledTimes(1);
   });
 });
 

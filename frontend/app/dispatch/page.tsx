@@ -18,6 +18,7 @@ import { type BadgeTone } from "@/src/components/ui/Badge";
 import { StatusBadge } from "@/src/components/ui/StatusBadge";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { ExportCsvButton } from "@/src/components/ExportCsvButton";
+import { CancelDispatchButton } from "@/src/components/dispatch/CancelDispatchButton";
 import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
 
 /**
@@ -142,6 +143,7 @@ function DispatchPageContent() {
           count={historyData?.count ?? 0}
           onPageChange={setHistoryPage}
           caption={t("dispatch.history")}
+          cancelable
         />
       </PageSection>
     </PageShell>
@@ -149,7 +151,7 @@ function DispatchPageContent() {
 }
 
 function DispatchTable({
-  rows, isLoading, isError, onRetry, emptyMessage, page, count, onPageChange, caption,
+  rows, isLoading, isError, onRetry, emptyMessage, page, count, onPageChange, caption, cancelable = false,
 }: {
   rows: DispatchRecord[];
   isLoading: boolean;
@@ -160,6 +162,8 @@ function DispatchTable({
   count: number;
   onPageChange: (_page: number) => void;
   caption: string;
+  /** 「我方发起的」那一段:本殿发起、还没被批准的行末尾有「取消移交」。 */
+  cancelable?: boolean;
 }) {
   const { t, formatDateTime } = useI18n();
   return (
@@ -171,6 +175,7 @@ function DispatchTable({
         { key: "route", header: `${t("dispatch.source_tenant")} → ${t("dispatch.target_tenant")}` },
         { key: "proposed_at", header: t("dispatch.proposed_at") },
         { key: "status", header: t("dispatch.status") },
+        ...(cancelable ? [{ key: "cancel", header: t("dispatch.cancel_dispatch") }] : []),
       ]}
       data={rows}
       isLoading={isLoading}
@@ -210,6 +215,12 @@ function DispatchTable({
           <td className="px-3 py-2 whitespace-nowrap">
             <StatusBadge namespace="dispatch.states" value={d.status} tone={STATUS_TONES[d.status] ?? "neutral"} />
           </td>
+          {cancelable && (
+            <td className="px-3 py-2 whitespace-nowrap">
+              {/* 不满足条件时渲染空(整格留空):不是本殿的、已被处理的、没有 dispatch.manage 的都不出按钮。 */}
+              <CancelDispatchButton dispatch={d} size="sm" triggerClassName="relative z-10" />
+            </td>
+          )}
         </>
       )}
       page={page}
