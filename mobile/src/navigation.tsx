@@ -34,6 +34,7 @@ import { AppHeader, PlaqueHeader, TabBar } from "./chrome";
 import { LogoutProvider, ToastProvider } from "./feedback";
 import { useI18n } from "./i18n";
 import { soulLinks } from "./links";
+import { navigationHeld, useNavigationHeld } from "./navLock";
 import { NetworkProvider } from "./network";
 import { useSession } from "./session";
 import { preLoginTheme, themeFor } from "./theme";
@@ -47,6 +48,8 @@ import {
 } from "./screens/applications";
 import { ChangePasswordScreen, LoginScreen, type LoginParams } from "./screens/auth";
 import { ForgotPasswordScreen } from "./screens/forgotPassword";
+import { MfaLostScreen, type LoginMfaParams } from "./screens/loginMfa";
+import { MfaScreen } from "./screens/mfa";
 import { AboutScreen } from "./screens/about";
 import { NotificationPrimerScreen, SettingsScreen } from "./screens/settings";
 import { PRIMER_SEEN_KEY, easProjectId, landOn, landingOf, permission, registerDevice, syncPushLocale, type Landing } from "./push";
@@ -58,7 +61,7 @@ import { CircleSearchScreen, FollowListScreen, MyCircleScreen, ReportScreen, Sou
 import { ConversationScreen } from "./screens/conversation";
 import { ANDROID, FindSoulScreen, LettersScreen } from "./screens/letters";
 
-type RootParams = AppStackParams & { Login: LoginParams; ForgotPassword: undefined; ChangePassword: undefined };
+type RootParams = AppStackParams & LoginMfaParams & { Login: LoginParams; ForgotPassword: undefined; ChangePassword: undefined };
 const Stack = createNativeStackNavigator<RootParams>();
 const Tabs = createBottomTabNavigator();
 
@@ -215,6 +218,8 @@ const HANDLED_TAPS = new Set<string>();
 function PushBridge({ signedIn, ready }: { signedIn: boolean; ready: number }) {
   const pending = useRef<Landing | null>(null);
   const [arrived, setArrived] = useState(0);
+  // Recovery codes on screen (两步验证 step ③): a tapped notification waits until they are saved.
+  const held = useNavigationHeld();
 
   useEffect(() => {
     let alive = true;
@@ -252,7 +257,8 @@ function PushBridge({ signedIn, ready }: { signedIn: boolean; ready: number }) {
         easProjectId() !== null &&
         !platform().persistent.get(PRIMER_SEEN_KEY) &&
         (await permission()) === "undetermined";
-      if (offer && navigationRef.isReady()) navigationRef.navigate("NotificationPrimer");
+      // Not over the recovery codes (两步验证 step ③): leaving that page loses them.
+      if (offer && navigationRef.isReady() && !navigationHeld()) navigationRef.navigate("NotificationPrimer");
     });
     const sub = Notifications.addPushTokenListener(() => void registerDevice());
     return () => {
@@ -263,10 +269,10 @@ function PushBridge({ signedIn, ready }: { signedIn: boolean; ready: number }) {
 
   useEffect(() => {
     const landing = pending.current;
-    if (!landing || !signedIn || !ready || !navigationRef.isReady()) return;
+    if (!landing || !signedIn || !ready || held || !navigationRef.isReady()) return;
     pending.current = null;
     landOn(navigationRef.navigate, landing);
-  }, [arrived, signedIn, ready]);
+  }, [arrived, signedIn, ready, held]);
 
   return null;
 }
@@ -281,11 +287,13 @@ function LinkBridge({ signedIn, ready }: { signedIn: boolean; ready: number }) {
   const open = assist?.open;
   const setDraft = assist?.setDraft;
   const lettersOff = chat.availability === "not_configured";
+  // Not subscribed while the recovery codes are on screen: the inbox keeps the link, and it lands on release.
+  const held = useNavigationHeld();
   useEffect(() => {
     // `ready` counts this mount's onReady. isReady() alone is not enough: when a launcher shortcut makes
     // Android recreate the activity, the root remounts and the module-level ref still reports the old
     // container until the new one is up -- navigate() then throws "navigation object hasn't been initialized".
-    if (!signedIn || !ready || !navigationRef.isReady()) return;
+    if (!signedIn || !ready || held || !navigationRef.isReady()) return;
     return soulLinks.subscribe((link) => {
       if (link.page === "assist" || link.page === "ask") {
         landOn(navigationRef.navigate, { screen: "Life" });
@@ -295,7 +303,7 @@ function LinkBridge({ signedIn, ready }: { signedIn: boolean; ready: number }) {
       } else if (link.page === "letters" && !lettersOff) navigationRef.navigate("Tabs", { screen: "Letters" });
       else landOn(navigationRef.navigate, { screen: link.page === "cooldown" ? "Applications" : "Life" });
     });
-  }, [signedIn, ready, open, setDraft, lettersOff]);
+  }, [signedIn, ready, held, open, setDraft, lettersOff]);
   return null;
 }
 
@@ -342,6 +350,8 @@ export function RootNavigator() {
                 header: () => <AppHeader title={t("soul_app.app_name")} onBack={navigation.goBack} serif />,
               })}
             />
+            {/* 手机和恢复码都没有了: draws its own bar. Reached from the sign-in second step (hall and code come as params). */}
+            <Stack.Screen name="MfaLost" component={MfaLostScreen} options={{ headerShown: false }} />
           </>
         );
       } else if (state.status === "mustChangePassword") {
@@ -384,6 +394,8 @@ export function RootNavigator() {
                 header: () => <AppHeader title={t("about.title")} onBack={navigation.goBack} />,
               })}
             />
+            {/* 两步验证: the wizard draws its own bar (✕ and 1 / 3); the management page draws the app's. */}
+            <Stack.Screen name="Mfa" component={MfaScreen} options={{ headerShown: false }} />
             <Stack.Screen
               name="NotificationHistory"
               component={NotificationHistoryScreen}

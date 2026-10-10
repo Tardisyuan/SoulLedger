@@ -29,7 +29,6 @@ import { useSession } from "../session";
 import {
   Block,
   Button,
-  EmblemDivider,
   EnumValue,
   GUTTER,
   Hairline,
@@ -43,6 +42,7 @@ import {
   SwitchMark,
   Txt,
   useLayout,
+  useReloadOnRefocus,
   useRemote,
   useTheme,
 } from "../ui";
@@ -314,6 +314,44 @@ function Notifications({ settings, onChange }: { settings: NotificationSettings;
   );
 }
 
+/**
+ * One row of the grouped list (第十八批): 56 high, the name at the left, a state or nothing, then the chevron.
+ * 账号安全 and 关于 are rows; language and notifications keep their inline controls under 偏好.
+ */
+function NavRow({ testID, label, state, bold, onPress }: { testID: string; label: string; state?: string | null; bold?: boolean; onPress: () => void }) {
+  const theme = useTheme();
+  const { gutter } = useLayout();
+  return (
+    <Pressable
+      testID={testID}
+      accessibilityRole="button"
+      onPress={onPress}
+      style={({ pressed }) => [styles.navRow, { paddingHorizontal: gutter, borderBottomColor: theme.hair }, pressed && styles.pressed]}
+    >
+      <Txt variant="bodyLg" style={styles.fill}>
+        {label}
+      </Txt>
+      {state ? (
+        <Txt testID={`${testID}-state`} variant={bold ? "section" : "bodyLg"} tone={bold ? "ink" : "muted"}>
+          {state}
+        </Txt>
+      ) : null}
+      <Icon name="chevron" size={14} color={theme.inkSubtle} />
+    </Pressable>
+  );
+}
+
+function GroupLabel({ children, testID }: { children: string; testID?: string }) {
+  const { gutter } = useLayout();
+  return (
+    <View style={[styles.groupLabel, { paddingHorizontal: gutter }]}>
+      <Txt testID={testID} accessibilityRole="header" variant="section">
+        {children}
+      </Txt>
+    </View>
+  );
+}
+
 export function SettingsScreen() {
   const theme = useTheme();
   const { t } = useI18n();
@@ -323,6 +361,10 @@ export function SettingsScreen() {
   const { gutter } = useLayout();
   const navigation = useNavigation<NavigationProp<AppStackParams>>();
   const remote = useRemote(soulApi.notificationSettings);
+  // Where 两步验证 stands, for the 账号安全 row; read again whenever this page is shown (the wizard and the
+  // management page both come back here).
+  const mfa = useRemote(soulApi.mfaStatus);
+  useReloadOnRefocus(mfa.reload);
   // The last settings the SERVER confirmed; a toggle shows its new value at once and falls back on failure.
   const [settings, setSettings] = useState<NotificationSettings | null>(null);
   const shown = settings ?? remote.data;
@@ -342,18 +384,14 @@ export function SettingsScreen() {
   return (
     <Screen testID="settings">
       <View style={[styles.identity, { paddingHorizontal: gutter, borderBottomColor: theme.hair }]}>
-        <View style={styles.nameRow}>
-          <Txt variant="title">{me.name}</Txt>
-          <Txt variant="value" tone="subtle" style={styles.code}>
-            {me.soul_code}
-          </Txt>
-        </View>
+        <Txt variant="title">{me.name}</Txt>
         <View style={styles.civRow}>
           <Emblem civ={theme.civ} size={13} stroke={theme.inkMuted} />
           <EnumValue namespace="souls.civilizations" value={me.civilization} tone="muted" variant="label" />
         </View>
       </View>
 
+      <GroupLabel testID="group-prefs">{t("soul_app.settings.group_prefs")}</GroupLabel>
       <View style={[styles.group, { borderBottomColor: theme.hair }]}>
         <View style={{ paddingHorizontal: gutter }}>
           <Heading>{t("soul_app.settings.language")}</Heading>
@@ -380,11 +418,29 @@ export function SettingsScreen() {
         )}
       </View>
 
+      <GroupLabel testID="group-security">{t("soul_app.settings.group_security")}</GroupLabel>
+      <View style={[styles.rows, { borderTopColor: theme.hair }]}>
+        <NavRow testID="open-change-password" label={t("profile.change_password")} onPress={() => navigation.navigate("AccountPassword")} />
+        <NavRow
+          testID="open-mfa"
+          label={t("officer_app.mfa.title")}
+          state={mfa.data ? t(mfa.data.enabled ? "soul_app.settings.mfa_on" : "soul_app.settings.mfa_off") : null}
+          bold={mfa.data?.enabled === true}
+          onPress={() => navigation.navigate("Mfa")}
+        />
+      </View>
+      <View style={[styles.rows, styles.gapTop, { borderTopColor: theme.hair }]}>
+        <NavRow testID="open-about" label={t("about.title")} onPress={() => navigation.navigate("About")} />
+      </View>
+
       <View style={[styles.end, { paddingHorizontal: gutter }]}>
-        <EmblemDivider />
-        <Button testID="open-change-password" kind="secondary" title={t("profile.change_password")} onPress={() => navigation.navigate("AccountPassword")} />
-        <Button testID="open-about" kind="secondary" title={t("about.title")} onPress={() => navigation.navigate("About")} />
         <Button testID="logout" kind="secondary" title={t("soul_app.life.logout")} onPress={askLogout} style={styles.logout} />
+        <Txt testID="settings-soul-code" variant="body" tone="muted" style={styles.version}>
+          {`${t("soul_app.login.soul_code")} `}
+          <Txt variant="value" tone="muted">
+            {me.soul_code}
+          </Txt>
+        </Txt>
         <Txt variant="value" tone="subtle" style={styles.version}>
           {t("soul_app.settings.version", { version: Constants.expoConfig?.version ?? "" })}
         </Txt>
@@ -466,8 +522,6 @@ const styles = StyleSheet.create({
   pressed: { opacity: 0.8 },
   heading: { paddingTop: 24, paddingBottom: 12 },
   identity: { paddingVertical: GUTTER, borderBottomWidth: 1, gap: 8 },
-  nameRow: { flexDirection: "row", alignItems: "baseline", flexWrap: "wrap", columnGap: 12 },
-  code: { letterSpacing: 1.6 },
   civRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   group: { borderBottomWidth: 1 },
   row: { minHeight: 54, flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, borderBottomWidth: 1, borderLeftWidth: 2 },
@@ -483,6 +537,10 @@ const styles = StyleSheet.create({
   notice: { paddingBottom: 12 },
   denied: { borderWidth: 1, borderLeftWidth: 3, padding: 16, gap: 12 },
   end: { paddingTop: 24, paddingBottom: 32, gap: 16, alignItems: "stretch" },
+  groupLabel: { paddingTop: 24, paddingBottom: 8 },
+  rows: { borderTopWidth: 1 },
+  gapTop: { marginTop: 24 },
+  navRow: { minHeight: 56, flexDirection: "row", alignItems: "center", gap: 8, borderBottomWidth: 1 },
   logout: { alignSelf: "center", minWidth: 160 },
   version: { textAlign: "center", fontSize: 11 },
   primerHead: { alignItems: "center", gap: 12, paddingTop: 32, paddingBottom: 24, borderBottomWidth: 1 },
