@@ -2,7 +2,7 @@
 
 import { drfFieldErrors, drfNonFieldError } from "../validations/drfErrors";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { socialApi, type PaginatedResponse, type UserProfile } from "../api/index";
+import { socialApi, type PaginatedResponse, type Post, type UserProfile } from "../api/index";
 import { notify, type NotifyMessage } from "../platform/index";
 import { socialKeys } from "../query_keys";
 
@@ -120,6 +120,26 @@ export function useCreatePost() {
     },
     onError: () => {
       notify("social.post_error", "error");
+    },
+  });
+}
+
+/**
+ * The author's own edit (`PATCH /social/posts/:id/`): text and visibility only —
+ * the serializer's `media` is read-only. Same invalidation as create/delete.
+ * A server-said reason (DRF non-field error) wins over the generic key.
+ */
+export function useUpdatePost() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Pick<Partial<Post>, "content" | "visibility"> }) =>
+      socialApi.updatePost(id, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: socialKeys.posts.all });
+      notify("social.post_updated", "success");
+    },
+    onError: (error) => {
+      notify(serverSaidOr(error, "social.post_update_error"), "error");
     },
   });
 }

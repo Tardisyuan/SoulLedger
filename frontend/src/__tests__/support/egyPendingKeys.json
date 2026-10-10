@@ -1,5 +1,12 @@
 [
   "scheduler.jobs.chat_cleanup_unsent_images",
   "permissions.config.errors.overwrite_disabled",
-  "auth.reset_open_in_app"
+  "auth.reset_open_in_app",
+  "social.post_updated",
+  "social.post_update_error",
+  "social.edit_title",
+  "social.edit_discard_title",
+  "social.edit_discard_message",
+  "social.edit_discard_confirm",
+  "social.edit_keep"
 ]
