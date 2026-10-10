@@ -136,7 +136,35 @@ def last_refusal(node):
     reason = None
     if record is not None and record.status == DispatchStatus.REJECTED and REJECTION_MARKER in record.reason:
         reason = record.reason.split(REJECTION_MARKER, 1)[1].strip() or None
-    return {"status": event.payload.get("dispatch_status"), "reason": reason, "at": event.create_time}
+    redispatched = SoulEvent.objects.filter(
+        soul_id=node.plan.soul_id, event_type=EventType.SENTENCE_NODE_REDISPATCHED, payload__node_id=str(node.pk),
+    ).count()
+    return {"status": event.payload.get("dispatch_status"), "reason": reason, "at": event.create_time,
+            "redispatched": redispatched}
+
+
+def awaiting_redispatch_plan_ids(plans):
+    """这些计划里,哪些正等着原属判官「重新发起调拨」:返回计划 id 的集合。
+
+    口径 = `requests.retry_dispatch` 里与时间无关的前置条件:计划 ACTIVE / RETRIAL、下一站(第一个 PENDING)
+    不是原属站、而且它被拒 / 取消过(有 `SENTENCE_NODE_REFUSED` 事件 —— 与 `last_refusal` 同一个来源)。
+    没有查的是会随时间变的拦截(灵魂不在原属、有未结案审判、有待决请求):它们解除前,卡上的按钮会答 409
+    与原因码,待办仍在 —— 事情确实还没办。两次查询,不逐站问 `last_refusal`。"""
+    from apps.events.models import EventType, SoulEvent
+
+    open_plans = plans.filter(status__in=(SentencePlanStatus.ACTIVE, SentencePlanStatus.RETRIAL)).values("pk")
+    first = {}
+    for node in SentenceNode.all_objects.filter(
+        plan_id__in=open_plans, is_deleted=False, status=SentenceNodeStatus.PENDING,
+    ).order_by("plan_id", "order"):
+        first.setdefault(node.plan_id, node)
+    candidates = {str(n.pk): plan_id for plan_id, n in first.items() if not n.is_home}
+    if not candidates:
+        return set()
+    refused = SoulEvent.objects.filter(
+        event_type=EventType.SENTENCE_NODE_REFUSED, payload__node_id__in=list(candidates),
+    ).values_list("payload__node_id", flat=True)
+    return {candidates[node_id] for node_id in set(refused) if node_id in candidates}
 
 
 

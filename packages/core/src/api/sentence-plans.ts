@@ -33,6 +33,8 @@ export interface SentencePlanFilters {
   status?: SentencePlanStatus;
   /** `true`: plans with a request awaiting the original judge — the request inbox. */
   pending_request?: boolean;
+  /** `true`: plans of this hall whose refused / cancelled dispatch awaits being sent again. */
+  awaiting_redispatch?: boolean;
   page?: number;
 }
 

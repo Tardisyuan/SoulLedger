@@ -30,6 +30,8 @@ class SentenceLastRefusalSerializer(serializers.Serializer):
     status = serializers.ChoiceField(choices=["REJECTED", "CANCELLED"])
     reason = serializers.CharField(allow_null=True)
     at = serializers.DateTimeField()
+    #: 这一站已经重新发起过几次(`SENTENCE_NODE_REDISPATCHED` 事件数,不是模型字段)。
+    redispatched = serializers.IntegerField()
 
 
 class SentenceNodeSerializer(serializers.ModelSerializer):

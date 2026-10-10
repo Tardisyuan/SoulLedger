@@ -66,6 +66,12 @@ export function SentenceNodeRetry({ plan, node }: { plan: SentencePlan; node: Se
       >
         <span aria-hidden="true">{cancelled ? "○ " : "! "}</span>
         <span>{why}</span>
+        {refusal.redispatched > 0 && (
+          <span data-testid="sentence-node-redispatched">
+            {" · "}
+            {t("sentence_plan.last_refusal_redispatched", { n: String(refusal.redispatched) })}
+          </span>
+        )}
       </p>
       {canRetry && (
         <Button type="button" size="sm" variant="secondary" onClick={() => setConfirm(true)}>
