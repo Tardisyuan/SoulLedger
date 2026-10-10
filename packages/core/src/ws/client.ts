@@ -16,7 +16,7 @@
  * its own copy of the reader and its own paraphrase of the warning that goes
  * with it; `../platform/index.ts` now holds one of each. */
 import { getAccessToken, getWebSocketUrl } from "../platform/index";
-import { hasCredentialChangeInFlight, waitForCredentialChange } from "./credentialChange";
+import { hasCredentialChangeInFlight, waitForCredentialChange } from "../api/credentialChange";
 
 
 export type WSStatus = "connecting" | "connected" | "disconnected" | "reconnecting" | "failed";

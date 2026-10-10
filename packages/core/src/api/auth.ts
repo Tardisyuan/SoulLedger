@@ -1,7 +1,7 @@
 import { api } from "./client";
 import { ACCESS_TOKEN_KEY, getRefreshToken, platform, setAccessToken, setRefreshToken } from "../platform/index";
 import type { components } from "./generated/schema";
-import { trackCredentialChange } from "../ws/credentialChange";
+import { trackCredentialChange } from "./credentialChange";
 
 /**
  * The five BUILT-IN roles — `apps.authentication.models.UserRole`.
