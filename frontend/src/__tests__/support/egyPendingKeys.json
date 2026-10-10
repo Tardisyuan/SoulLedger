@@ -37,5 +37,15 @@
   "permissions.config.reason_unknown",
   "soul_app.update_required.title",
   "soul_app.update_required.body",
-  "soul_app.update_required.button"
+  "soul_app.update_required.button",
+  "notifications.select_all",
+  "notifications.select_row",
+  "notifications.batch_region",
+  "notifications.batch_selected",
+  "notifications.batch_limit",
+  "notifications.batch_clear",
+  "notifications.batch_deleted",
+  "notifications.batch_delete_error",
+  "notifications.batch_delete_title",
+  "notifications.batch_delete_message"
 ]

@@ -90,6 +90,7 @@ const COLLECTED_FILES = [
   "TreeRow.test.tsx",
   "Modal.test.tsx",
   "ModerationPage.test.tsx",
+  "NotificationsPage.batch.test.tsx",
   "NotificationsPage.test.tsx",
   "PageError.test.tsx",
   "PageSection.test.tsx",
