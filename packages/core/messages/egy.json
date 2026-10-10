@@ -3148,7 +3148,9 @@
       "ledger_snapshot_balance_for_tenant": "Sesh Sepy Abed",
       "ledger_snapshot_census_for_tenant": "Sesh Redu Ba Hru Neb",
       "notifications_email_action_needed_for_tenant": "Hab Sedjem Ba Em Smen Er Djeret",
-      "notifications_email_action_needed_global": "Hab Sedjem Ba Em Smen Er Djeret · Sab Hery"
+      "notifications_email_action_needed_global": "Hab Sedjem Ba Em Smen Er Djeret · Sab Hery",
+      "audit_prune_logs_for_tenant": "Khetem Medew Maa Hena Medew Aq Tepy",
+      "audit_prune_untenanted_logs": "Khetem Medew Maa Hena Medew Aq Nen Per Hemes"
     },
     "status": {
       "PENDING": "Em Smen",
@@ -4557,7 +4559,12 @@
       "foreign_node": "Redi Sekhet Em Taui Pen Wa",
       "foreign_realm": "Ta Nen Em Taui Pen",
       "unknown_node": "Nen Sekhet Pen Em Wetep",
-      "soul_is_here": "Ba Em Taui Pen; Wen Wedja Khemen Sekhet"
+      "soul_is_here": "Ba Em Taui Pen; Wen Wedja Khemen Sekhet",
+      "node_not_retryable": "Sekhet Pen Nen Smen Er Khesef Hab-Ba",
+      "not_refused": "Hab-Ba Sekhet Pen Nen Khesef, Nen Sehen",
+      "not_next": "Sekhet Em Hat Nen Tepy Djer; Iri Sekhet Pen Tepy",
+      "soul_away": "Ba Nen Em Per Tepy; Nen Wehem Hab-Ba",
+      "dispatch_not_started": "Hab-Ba Nen Per (Mi: Hab-Ba Em Djeret Ky Em Hab). Wehem Iri Er Khet."
     },
     "cross": {
       "title": "Sekhet Wetep",
@@ -4623,7 +4630,14 @@
     "amend": {
       "title": "Khemen Wetep",
       "hint": "Wedja Khemen Sekhet: Khetem Hab Dbh Er Sab Wedja Tepy. Nen Khemen, Nen Dbh."
-    }
+    },
+    "retry_dispatch": "Wehem Hab-Ba",
+    "retry_title": "Wehem Hab-Ba: {{soul}} · Sekhet {{order}}",
+    "retry_warning": "Wehem Hab-Ba Er Per Hemes Setep Seth; Smen Er Hesy Hena Iri. Mi Tepy: Nen Wehem Em Djes-Ef; Khesef Wehem: Wehem Hab-Ba Em Djeret.",
+    "retried": "Wehem Hab-Ba Seth",
+    "last_refusal_rejected": "Hab-Ba Pehwy: Khesef Em Per Hemes Setep Seth · {{reason}}",
+    "last_refusal_rejected_bare": "Hab-Ba Pehwy: Khesef Em Per Hemes Setep Seth",
+    "last_refusal_cancelled": "Hab-Ba Pehwy: Sehen Seth"
   },
   "seal": {
     "aria": "Khetem En {{court}}"
@@ -5284,7 +5298,11 @@
         "locked": "Sep Menmen. Wehem Iri Er Khet.",
         "network": "Nen Em Senb",
         "other": "Nen Maa-Ek. Wehem Iri Er Khet."
-      }
+      },
+      "setup_key_title": "Redi Er Kat Medu Ahet",
+      "setup_key_body": "Wen Em Kat Medu Ahet. Nen Wen: Djer Medu Imen, Senn, Sesh Em Djeret.",
+      "open_failed": "Nen Gem Kat Medu Ahet Er Wen. Sesh Medu Imen Khery Em Djeret.",
+      "select_hint": "Djer Medu: Setep Hena Senn."
     }
   }
 }
