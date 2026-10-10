@@ -31,6 +31,11 @@ def end_sessions(user) -> None:
     user.session_version = F("session_version") + 1
     user.save(update_fields=["session_version"])
     user.refresh_from_db(fields=["session_version"])
+    # 已经连上的 socket 握手时版本更低:提交后关掉它们,不等下次重连才被拒。
+    # 当前设备的 socket 也在其中 —— 它带着新令牌重连即可(客户端对 4002 会重连)。
+    from apps.events.realtime import close_user_sockets
+
+    close_user_sockets(user.pk, user.session_version)
 
 
 def end_push_registrations(user, keep_token: str = "") -> None:

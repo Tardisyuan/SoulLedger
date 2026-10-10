@@ -8,5 +8,18 @@
   "social.edit_discard_title",
   "social.edit_discard_message",
   "social.edit_discard_confirm",
-  "social.edit_keep"
+  "social.edit_keep",
+  "dashboard.todo.resend_dispatch",
+  "dashboard.todo.go_resend",
+  "sentence_plan.last_refusal_redispatched",
+  "dispatch.cancel_dispatch",
+  "dispatch.cancel_title",
+  "dispatch.cancel_warning",
+  "dispatch.cancel_reason",
+  "dispatch.cancel_placeholder",
+  "dispatch.confirm_cancel",
+  "dispatch.cancel_success",
+  "dispatch.cancel_error",
+  "dispatch.cancel_not_cancellable",
+  "breadcrumb.menu.recycle_bin"
 ]

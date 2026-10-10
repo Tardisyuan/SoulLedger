@@ -46,3 +46,31 @@ class ChannelNaming:
     def user_group(user_id: int) -> str:
         """Channel group name for per-user delivery."""
         return f"rt_user_{user_id}"
+
+
+# 服务端因「登录已结束」主动关闭 socket 用的关闭码。**不是 4001**:4001 是「你的令牌不行」,
+# 客户端不重连;这条要客户端带着(可能已换新的)令牌重连 —— 当前设备拿到新令牌就连得上,
+# 被踢的设备重连被握手拒绝(4001),随后走「登录已失效」。见 packages/core/src/ws/client.ts。
+WS_CLOSE_SESSION_ENDED = 4002
+
+
+def close_user_sockets(user_id: int, min_version: int | None = None) -> None:
+    """事务提交后,关闭该用户所有「过时」的实时连接。
+
+    `min_version`:`User.session_version` 的新值 —— 握手时版本低于它的连接关闭(改密码、邮箱重置);
+    `None` 表示该用户的全部连接都关(停用账号)。发送失败不影响业务。
+    """
+    from asgiref.sync import async_to_sync
+    from channels.layers import get_channel_layer
+    from django.db import transaction
+
+    def _send():
+        try:
+            async_to_sync(get_channel_layer().group_send)(
+                ChannelNaming.user_group(user_id),
+                {"type": "session_ended", "min_version": min_version},
+            )
+        except Exception:
+            logger.warning("close_user_sockets: publish failed for user %s", user_id, exc_info=True)
+
+    transaction.on_commit(_send)

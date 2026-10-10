@@ -212,6 +212,7 @@ const COLLECTED_FILES = [
   "cssTokenReferenceContract.test.ts",
   "ledgerPaletteContract.test.ts",
   "dispatchApproveConfirms.test.tsx",
+  "dispatchCancel.test.tsx",
   "dispatchListDrafts.test.tsx",
   "dispatchProposeValidation.test.tsx",
   "dispatchReturnHome.test.tsx",

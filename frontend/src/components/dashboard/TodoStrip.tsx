@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { deathSyncApi, dispatchApi, judgmentApi } from "@soulledger/core/api";
+import { sentencePlansApi } from "@soulledger/core/api/sentence-plans";
 import { usePermissions } from "@/src/hooks/usePermissions";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/src/components/ui/Button";
@@ -12,7 +13,8 @@ import { groupDigits } from "@/src/components/dashboard/numberFormat";
 import { MissingValue } from "@/src/components/ui/DomainValue";
 
 /**
- * 待办条 TodoStrip(Design A4):三格 —— 调派待批 / 审判队列 / 死亡同步异常。
+ * 待办条 TodoStrip(Design A4):三格 —— 调派待批 / 审判队列 / 死亡同步异常;
+ * 第四格「待重新发起的调拨」(2026-10-11 用户加,Design 未画 —— 待确认版式),只给持有 `judgment.execute` 的人。
  *
  * - 有数据:数字 + 去处;数字大于 0 的格子是「待我处理」,左边 3px 匾色竖条(`RowMark`,
  *   与审判队列同一个记号)。死亡同步那格的数字后再跟一句 danger「! 未入簿」。
@@ -120,9 +122,22 @@ export function TodoStrip() {
     enabled: canDeathSync,
     staleTime: 60_000,
   });
+  // 被拒 / 取消后等着重新发起的调拨:口径在服务端(`?awaiting_redispatch=true`,本殿是原属的计划),
+  // 按钮在灵魂详情的受刑计划卡上,故链接落到第一份计划的灵魂;办完一份,下一份顶上来。
+  const canResend = hasPermission("judgment.execute");
+  const resendQ = useQuery({
+    queryKey: ["dashboard", "todo", "redispatch"],
+    queryFn: async () => {
+      const { data } = await sentencePlansApi.list({ awaiting_redispatch: true, page: 1 });
+      return { count: data.count, soul: data.results[0]?.soul ?? "" };
+    },
+    enabled: canResend,
+    staleTime: 60_000,
+  });
+  const resendCountQ = { ...resendQ, data: resendQ.data?.count } as UseQueryResult<number>;
   // The cell reads a number; the link also needs the status the server counted.
   const deathCountQ = { ...deathSyncQ, data: deathSyncQ.data?.anomaly_count } as UseQueryResult<number>;
-  if (!canDispatch && !canJudge && !canDeathSync) return null;
+  if (!canDispatch && !canJudge && !canDeathSync && !canResend) return null;
   return (
     <div
       data-todo-strip=""
@@ -154,6 +169,15 @@ export function TodoStrip() {
           linkText={t("dashboard.todo.go_view")}
           clearText={t("dashboard.todo.sync_ok")}
           alarm={t("dashboard.todo.unbooked")}
+        />
+      )}
+      {canResend && (
+        <TodoCell
+          label={t("dashboard.todo.resend_dispatch")}
+          query={resendCountQ}
+          href={`/souls/${resendQ.data?.soul ?? ""}`}
+          linkText={t("dashboard.todo.go_resend")}
+          clearText={t("dashboard.todo.none")}
         />
       )}
     </div>

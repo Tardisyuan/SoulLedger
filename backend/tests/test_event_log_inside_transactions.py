@@ -389,7 +389,21 @@ def _retry_dispatch():
             lambda: plan.node(p, 2).status == "DISPATCHING", "SENTENCE_NODE_REDISPATCHED")
 
 
+def _cancel_proposed_dispatch():
+    """发起方在对方批准前取消移交(`DispatchService.cancel_proposed`):状态 CANCELLED 与 DISPATCH_CANCELLED 事件同一事务。"""
+    from apps.dispatch.models import DispatchRecord, DispatchStatus
+    from apps.dispatch.services import DispatchService
+
+    home, away = _cn(), plan.tenant("EG_DUAT")
+    officer = plan.officer("evlog_cancel_mod", "MODERATOR", home)
+    soul = Soul.objects.create(name="取消之魂", tenant=home)
+    record = DispatchService.propose(home, away, soul, officer, "x" * 30)
+    return (lambda: DispatchService.cancel_proposed(DispatchRecord.all_objects.get(pk=record.pk), officer, "改主意"),
+            lambda: DispatchRecord.all_objects.get(pk=record.pk).status == DispatchStatus.CANCELLED, "STATE_CHANGED")
+
+
 PATHS = {
+    "cancel_proposed_dispatch/STATE_CHANGED": _cancel_proposed_dispatch,
     "retry_dispatch/SENTENCE_NODE_REDISPATCHED": _retry_dispatch,
     # judgment conclusion (ORIGINAL) -- three different log calls on one call stack
     "conclude/JUDGMENT_CONCLUDED": _conclude_original("JUDGMENT_CONCLUDED"),

@@ -41,6 +41,7 @@ from apps.core.permissions import IsAdminPermission, TenantPermission
 from apps.core.schema import DetailResponseSerializer, ErrorResponseSerializer
 from apps.core.tenant import scope_to_tenant
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin
+from apps.events.realtime import close_user_sockets
 
 from .officer_reset import _audit
 from .passwords import end_push_registrations, end_sessions
@@ -281,6 +282,7 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
         user = self.get_object()
         user.is_active = False
         user.save(update_fields=['is_active'])
+        close_user_sockets(user.pk)  # 已连上的实时连接一并关(握手本来就拒停用账号)
         return Response(UserManagementSerializer(user).data)
 
     @extend_schema(responses=PasswordResetResultSerializer)
@@ -320,6 +322,9 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
         updated = User.objects.filter(pk__in=[u.pk for u in targets]).update(is_active=active)
         if targets:
             create_batch_audit_log(AuditAction.BATCH_UPDATE, targets, {'is_active': active})
+        if not active:
+            for target in targets:
+                close_user_sockets(target.pk)
         return Response({'updated': updated})
 
     @extend_schema(responses=UserBatchUpdateResultSerializer)

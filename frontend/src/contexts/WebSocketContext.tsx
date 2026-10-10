@@ -13,6 +13,7 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { WSClient, type WSStatus, type WSMessage } from "@soulledger/core/ws/client";
 import { onAccessTokenChanged, onSessionResume } from "@soulledger/core/platform";
+import { authApi } from "@soulledger/core/api/auth";
 import { useTenant } from "./TenantContext";
 import { useToast } from "./ToastContext";
 import { dispatchEvent, type EventPayload } from "@/lib/events/event_registry";
@@ -125,6 +126,11 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
       onNotification: handleNotification,
       onWorkflowEvent: handleWorkflowEvent,
       onGenericEvent: handleGenericEvent,
+      // 登录被服务端结束(别的设备改了密码)且这台设备重连被拒:发一个普通请求,
+      // 拦截器刷新失败就走 onUnauthorized 回登录页,而不是让横幅一直转。
+      onSessionEnded: () => {
+        authApi.profile().catch(() => {});
+      },
     });
 
     clientRef.current = client;

@@ -32,6 +32,15 @@ export type WSStatus = "connecting" | "connected" | "disconnected" | "reconnecti
 export const WS_CLOSE_AUTH_REJECTED = 4001;
 
 /**
+ * The server ended this login on purpose (password changed / reset, account deactivated):
+ * `apps/events/realtime.py::WS_CLOSE_SESSION_ENDED`. Unlike 4001 it IS retried —
+ * the device that changed the password holds a new token by then and comes straight back.
+ * A device that was signed out is refused at the handshake (4001) and, because this close
+ * preceded it, reports `onSessionEnded` so the host can find out the login is gone.
+ */
+export const WS_CLOSE_SESSION_ENDED = 4002;
+
+/**
  * Whether a close with this code should be followed by another attempt.
  *
  * WHY `undefined` IS A CASE AND NOT AN OVERSIGHT. Both clients used to ask
@@ -89,6 +98,11 @@ export interface WSClientOptions {
   onGenericEvent?: (event: Record<string, unknown>) => void;
   /** 服务端对 `{"type":"permission.refresh"}` 的应答。见 onmessage 里的 case。 */
   onPermissionsRefreshed?: (permissions: string[]) => void;
+  /**
+   * 一次 4002(登录被服务端结束)之后,重连又被 4001 拒绝时调用:这台设备已被退出。
+   * 宿主应发一个走 REST 拦截器的请求 —— 刷新失败会走 `onUnauthorized` 回登录页。
+   */
+  onSessionEnded?: () => void;
 }
 
 
@@ -104,6 +118,8 @@ export class WSClient {
   private options: Required<WSClientOptions>;
   /** False = client is active (can reconnect). True = permanently shut down. */
   private shutdown = false;
+  /** A 4002 was seen and no `connected` frame has followed. */
+  private sessionEndedSeen = false;
 
   constructor(options: WSClientOptions = {}) {
     this.options = {
@@ -119,6 +135,7 @@ export class WSClient {
       onWorkflowEvent: () => {},
       onGenericEvent: () => {},
       onPermissionsRefreshed: () => {},
+      onSessionEnded: () => {},
       ...options,
     };
   }
@@ -161,6 +178,7 @@ export class WSClient {
 
         switch (data.type) {
           case "connected":
+            this.sessionEndedSeen = false;
             this.setStatus("connected");
             this.options.onConnected(data as unknown as { user_id: number; tenant_code: string; permissions: string[] });
             break;
@@ -203,8 +221,14 @@ export class WSClient {
       this.stopHeartbeat();
       if (this.shutdown) return;
 
+      if (event.code === WS_CLOSE_SESSION_ENDED) this.sessionEndedSeen = true;
+
       if (!shouldReconnectAfterClose(event.code)) {
         this.setStatus("failed");
+        if (this.sessionEndedSeen) {
+          this.sessionEndedSeen = false;
+          this.options.onSessionEnded();
+        }
         return;
       }
 

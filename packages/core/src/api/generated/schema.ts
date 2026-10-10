@@ -2285,7 +2285,11 @@ export interface paths {
         /** @description DispatchRecord CRUD + actions. */
         put: operations["v1_dispatch_records_update"];
         post?: never;
-        /** @description DispatchRecord CRUD + actions. */
+        /**
+         * @description 只有草稿能删(= 放弃)。其余状态答 409 `not_a_draft`:此前 PROPOSED / APPROVED / EXECUTED 的记录
+         *     DELETE 也是 204 并被删掉(2026-10-11 复现),绕过了状态机 —— 一条已批准 / 已执行的移交不该能这样消失;
+         *     要结束一次移交,走 `cancel` / `reject` / `return-home`。
+         */
         delete: operations["v1_dispatch_records_destroy"];
         options?: never;
         head?: never;
@@ -2304,6 +2308,30 @@ export interface paths {
         put?: never;
         /** @description Approve a proposed dispatch. */
         post: operations["v1_dispatch_records_approve_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dispatch/records/{id}/cancel/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description The sending hall withdraws a proposal the target has not yet approved (PROPOSED only).
+         *
+         *     Only the hall that proposed it (ADMIN excepted, as on `create`): the target party reaches the
+         *     record but gets 403, a third tenant never sees it (404). 409 `not_cancellable` once the target
+         *     has approved, rejected or the record is anything but PROPOSED — the state machine still lets
+         *     APPROVED be cancelled (a cancelled sentence plan needs that), this endpoint does not.
+         */
+        post: operations["v1_dispatch_records_cancel_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -9907,6 +9935,10 @@ export interface components {
         DetailResponse: {
             detail: string;
         };
+        /** @description 发起方在对方批准前取消移交。理由必填(不设 20 字下限:驳回也没有,这里只要求说得清为什么)。 */
+        DispatchCancel: {
+            reason: string;
+        };
         /**
          * @description 存草稿的请求体:四个字段全可省、全可空,只查界域属不属目标租户。
          *
@@ -15556,6 +15588,7 @@ export interface components {
             reason: string | null;
             /** Format: date-time */
             at: string;
+            redispatched: number;
         };
         /**
          * @description * `REJECTED` - REJECTED
@@ -21407,6 +21440,34 @@ export interface operations {
                 "application/json": components["schemas"]["DispatchRecord"];
                 "application/x-www-form-urlencoded": components["schemas"]["DispatchRecord"];
                 "multipart/form-data": components["schemas"]["DispatchRecord"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DispatchRecord"];
+                };
+            };
+        };
+    };
+    v1_dispatch_records_cancel_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this Dispatch Record. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DispatchCancel"];
+                "application/x-www-form-urlencoded": components["schemas"]["DispatchCancel"];
+                "multipart/form-data": components["schemas"]["DispatchCancel"];
             };
         };
         responses: {
@@ -27751,6 +27812,7 @@ export interface operations {
     v1_sentence_plans_list: {
         parameters: {
             query?: {
+                awaiting_redispatch?: boolean;
                 cycle?: number;
                 /** @description Which field to use when ordering the results. */
                 ordering?: string;
