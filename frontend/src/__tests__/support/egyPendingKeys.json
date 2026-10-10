@@ -47,5 +47,7 @@
   "permissions.config.did.update",
   "permissions.config.did.skip",
   "permissions.config.download_skipped",
-  "dashboard.data_as_of"
+  "dashboard.data_as_of",
+  "souls.detail.case_open",
+  "souls.detail.case_closed"
 ]

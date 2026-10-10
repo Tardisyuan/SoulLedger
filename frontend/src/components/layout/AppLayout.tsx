@@ -307,7 +307,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         {/* 身份带(规范 v3):吸在工具条下沿;页面滚动后自己收成 48px,只留印与殿名。
             z 与筛选栏同一层:两者不重叠 —— 筛选栏吸在 52 + 身份带此刻的高度(`--below-band`)。 */}
         <div className={`sticky top-13 z-filters ${assist.pushed ? "pr-[420px]" : ""}`}>
-          <Plaque title={title} meta={plaque?.meta} caseNumber={plaque?.caseNumber} hall={plaque?.hall} collapsible short={shortBandFor(pathname)} />
+          <Plaque title={title} meta={plaque?.meta} caseNumber={plaque?.caseNumber} caseRef={plaque?.caseRef} hall={plaque?.hall} collapsible short={shortBandFor(pathname)} />
         </div>
 
         {/* 问一问 pushed (≥ 1024): the page gives up the panel's 420 px, and 1024–1279 its

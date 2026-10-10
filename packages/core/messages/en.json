@@ -517,7 +517,9 @@
         "confirm": "Correct",
         "success": "Settlement corrected; the soul is back to Disposed",
         "failed": "Could not correct the settlement"
-      }
+      },
+      "case_open": "Open",
+      "case_closed": "Concluded"
     },
     "date_problem_filter": "Problems only",
     "balance_not_applicable": "Not applicable — see soul detail",
