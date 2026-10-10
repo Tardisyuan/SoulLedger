@@ -918,7 +918,8 @@
         "not_json": "这不是有效的 JSON 文件。",
         "too_large": "文件过大,上限 {max}。",
         "bad_structure": "文件结构不对:需要是导出配置得到的 JSON 对象,且至少含 permissions、roles、role_permissions、field_permissions、data_scopes 之一。",
-        "empty": "文件里没有任何可导入的条目。"
+        "empty": "文件里没有任何可导入的条目。",
+        "overwrite_disabled": "服务器已关闭「覆盖」导入,请用「合并」。"
       },
       "confirm": "确认导入",
       "importing": "导入中…",

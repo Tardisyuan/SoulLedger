@@ -918,7 +918,8 @@
         "not_json": "This is not a valid JSON file.",
         "too_large": "The file is too large. The limit is {max}.",
         "bad_structure": "Wrong structure: expected a JSON object from \"Export configuration\" containing at least one of permissions, roles, role_permissions, field_permissions, data_scopes.",
-        "empty": "The file contains nothing to import."
+        "empty": "The file contains nothing to import.",
+        "overwrite_disabled": "The server has turned overwrite import off; use merge."
       },
       "confirm": "Confirm import",
       "importing": "Importing…",
