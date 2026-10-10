@@ -27,6 +27,10 @@ const TYPED_NAME_DIALOGS = [
   // 管理员「重置两步验证」(A12):理由必填之外,还要输入被重置账号的用户名才解锁确认键(`typed.trim() === user.username`);
   // Design 定稿保留红色确认键。
   "src/components/users/MfaResetDialog.tsx",
+  // 权限配置「覆盖」导入(Design 第十六批,用户 2026-10-10):覆盖删光字段权限、数据范围与除 ADMIN 外的全部授权,
+  // 不能撤回、影响所有殿;危险键在输入殿名(`typed.trim() === hall.trim()`)之前禁用,且名单含自己的权限时永远禁用。
+  // 输入的是当前殿的名字,不是翻译出来的动作词。
+  "src/components/permissions/PermissionConfigTransfer.tsx",
 ];
 
 function walk(dir: string, out: string[] = []): string[] {

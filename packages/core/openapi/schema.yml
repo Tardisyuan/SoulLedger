@@ -22567,6 +22567,8 @@ components:
           type: string
         display_name:
           type: string
+        description:
+          type: string
         scope:
           type: string
       required:
@@ -30385,6 +30387,24 @@ components:
       - role_permissions
       - roles
       - version
+    PermissionImportRemoved:
+      type: object
+      description: 'Entries an overwrite leaves gone: existed before, absent after
+        the rebuild from the file.'
+      properties:
+        role_permissions:
+          type: integer
+        field_permissions:
+          type: integer
+        data_scopes:
+          type: integer
+        total:
+          type: integer
+      required:
+      - data_scopes
+      - field_permissions
+      - role_permissions
+      - total
     PermissionImportRequest:
       type: object
       description: |-
@@ -30491,7 +30511,8 @@ components:
         * `data_scopes` - data_scopes
     PermissionImportStats:
       type: object
-      description: 'Per table: rows created and rows skipped (merge mode never updates).'
+      description: 'Per table: rows created and rows skipped. A merge never updates
+        or removes.'
       properties:
         permissions:
           $ref: '#/components/schemas/PermissionImportSectionStats'
@@ -30507,13 +30528,32 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/PermissionImportSkipped'
+        updated:
+          type: integer
+          description: 'Overwrite only (0 for a merge): roles whose name / description
+            the file replaced, plus surviving grants, field rules and scopes whose
+            content differs.'
+        removed:
+          allOf:
+          - $ref: '#/components/schemas/PermissionImportRemoved'
+          description: 'Overwrite only: entries that exist now and will not after
+            the import - the file does not have them. Not the number deleted first
+            (the rest are rebuilt).'
+        removes_own_permissions:
+          type: boolean
+          description: 'Overwrite only: a removed entry belongs to a role that decides
+            what the caller may do. ADMIN bypasses grants, field rules and scopes,
+            so this is false for ADMIN.'
       required:
       - data_scopes
       - field_permissions
       - permissions
+      - removed
+      - removes_own_permissions
       - role_permissions
       - roles
       - skipped_details
+      - updated
     Phase4:
       type: object
       properties:
