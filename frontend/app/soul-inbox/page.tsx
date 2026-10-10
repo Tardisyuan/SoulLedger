@@ -6,6 +6,7 @@ import { RefreshCw } from "lucide-react";
 import { judgmentApi, type Statute } from "@soulledger/core/api";
 import { renderTemplate, type InboxConversation, type InboxFolder, type InboxListParams, type InboxMessage } from "@soulledger/core/api/soul-inbox";
 import { judgmentKeys, soulInboxKeys } from "@soulledger/core/query_keys";
+import { mediaUrl } from "@soulledger/core/domain/postMedia";
 import {
   useInboxArchive,
   useInboxAssign,
@@ -33,6 +34,7 @@ import { EmptyState } from "@/src/components/ui/EmptyState";
 import { QueryError } from "@/src/components/ui/PageError";
 import { Pagination } from "@/src/components/ui/Pagination";
 import { ListSkeleton } from "@/components/ui/skeleton";
+import { MediaViewer } from "@/src/components/moderation/MediaGrid";
 import { TemplateManager } from "./TemplateManager";
 import { AssignDialog } from "./AssignDialog";
 import { ROW_HOVER, ROW_SELECTED } from "@/components/ui/data-table";
@@ -265,8 +267,9 @@ function Composer({
 }
 
 /** One letter. The newest is read at quote size; earlier ones step down and hang off a 2 px structure line. */
-function Letter({ m, conversation, latest, previous }: { m: InboxMessage; conversation: InboxConversation; latest: boolean; previous: boolean }) {
+function Letter({ m, conversation, latest, previous, onOpenImage }: { m: InboxMessage; conversation: InboxConversation; latest: boolean; previous: boolean; onOpenImage: (id: string) => void }) {
   const { t, formatDateTime, locale } = useI18n();
+  const [broken, setBroken] = useState(false);
   const who = m.from_officer
     ? `${t("soul_inbox.officer_reply")} · ${t("soul_inbox.from_hall", { hall: hallOf(conversation, locale), title: m.officer_title, name: m.sender_name })
         .replace(/\s+/g, " ")
@@ -283,13 +286,40 @@ function Letter({ m, conversation, latest, previous }: { m: InboxMessage; conver
         {formatDateTime(new Date(m.timestamp).toISOString())}
         {previous && ` · ${t("soul_inbox.previous")}`}
       </p>
-      <p
-        className={`mt-2 max-w-[60ch] font-serif whitespace-pre-wrap break-words ${
-          latest ? "text-md font-normal text-[oklch(var(--color-ink))]" : "text-md font-normal text-[oklch(var(--color-ink-muted))]"
-        }`}
-      >
-        {m.body}
-      </p>
+      {m.image ? (
+        // 灵魂来信里的图(2026-10-10):一条消息一张,不带文字;按原比例,宽不超过线程宽度的 60%。
+        // 地址是服务器签给当前官员的短时路径(取文件时再按码名与殿司查一次);取不到时说一句,不留空白。
+        broken ? (
+          <p data-letter-image-broken className="mt-2 text-xs text-[oklch(var(--color-ink-subtle))]">
+            {t("social_moderation.review.media_load_failed")}
+          </p>
+        ) : (
+          <button
+            type="button"
+            data-letter-image=""
+            onClick={() => onOpenImage(m.image!.id)}
+            style={{ width: "60%", aspectRatio: `${m.image.width} / ${m.image.height}` }}
+            className="mt-2 block overflow-hidden border border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-2))]"
+          >
+            {/* 裸 <img>,不是 next/image:签名地址、按请求鉴权,不能经图片优化代理转一道。 */}
+            <img
+              src={mediaUrl(m.image.url)}
+              alt={t("social_moderation.review.media_caption", { i: "1", w: String(m.image.width), h: String(m.image.height) })}
+              loading="lazy"
+              onError={() => setBroken(true)}
+              className="h-full w-full object-cover"
+            />
+          </button>
+        )
+      ) : (
+        <p
+          className={`mt-2 max-w-[60ch] font-serif whitespace-pre-wrap break-words ${
+            latest ? "text-md font-normal text-[oklch(var(--color-ink))]" : "text-md font-normal text-[oklch(var(--color-ink-muted))]"
+          }`}
+        >
+          {m.body}
+        </p>
+      )}
     </li>
   );
 }
@@ -363,6 +393,7 @@ function Thread({ conversation }: { conversation: InboxConversation }) {
   const archive = useInboxArchive();
   const unassign = useInboxAssign();
   const [showEarlier, setShowEarlier] = useState(false);
+  const [viewing, setViewing] = useState<number | null>(null);
   const [managing, setManaging] = useState(false);
   const [assigning, setAssigning] = useState(false);
   const canReply = hasPermission("soul_inbox.reply") && !conversation.closed_at;
@@ -372,6 +403,8 @@ function Thread({ conversation }: { conversation: InboxConversation }) {
   // 接口新的在前;读信从旧到新。
   const rows = [...(messages.data ?? [])].reverse();
   const last = rows.at(-1);
+  // 全屏查看翻的是整个线程里灵魂来信的图,从旧到新。
+  const gallery = rows.flatMap((r) => (r.image ? [r.image] : []));
   // 最后一封是灵魂写的、会话还开着 → 待回复,天数从那一封算。
   const waitingDays =
     last && !last.from_officer && !conversation.closed_at
@@ -482,6 +515,7 @@ function Thread({ conversation }: { conversation: InboxConversation }) {
         </span>
       </header>
       <AssignDialog conversation={assigning ? conversation : null} onClose={() => setAssigning(false)} />
+      <MediaViewer media={gallery} index={viewing} onIndex={setViewing} onClose={() => setViewing(null)} />
       {messages.isLoading ? (
         <div className="pt-4">
           <ListSkeleton count={2} />
@@ -509,6 +543,7 @@ function Thread({ conversation }: { conversation: InboxConversation }) {
                 conversation={conversation}
                 latest={i === shown.length - 1}
                 previous={i === shown.length - 2}
+                onOpenImage={(id) => setViewing(Math.max(0, gallery.findIndex((g) => g.id === id)))}
               />
             ))}
           </ol>

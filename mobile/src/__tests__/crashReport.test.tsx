@@ -21,6 +21,8 @@ const JWT = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIn0.c2lnbmF0dXJl";
 const SECRETS = [
   JWT, "hunter2-password", "654321-code", "JBSWY3DPEHPK3PXP-totp", "recov-AAAA-BBBB", "Dear-Mother-letter-body",
   "ask-about-my-past-life", "soul-ABCDEFGHIJ", "me@example.test", "Alice-Real-Name", "page=secret-query", "opaque-refresh-xyz",
+  // A letter image (2026-10-10): its id, its local file, and the signed address it is fetched from.
+  "img-secret-id", "file:///cache/secret.jpg", "sig-secret",
 ];
 
 const dirty = () => ({
@@ -36,6 +38,9 @@ const dirty = () => ({
     totp_secret: "JBSWY3DPEHPK3PXP-totp",
     recovery_codes: ["recov-AAAA-BBBB"],
     letter_body: "Dear-Mother-letter-body",
+    letter_image: { id: "img-secret-id", uri: "file:///cache/secret.jpg" },
+    image_url: "https://api.test/api/v1/chat-images/1/?t=sig-secret",
+    outbox: { image: { imageId: "img-secret-id", uri: "file:///cache/secret.jpg" } },
     question: "ask-about-my-past-life",
     nested: { refresh_token: "opaque-refresh-xyz", access_token: JWT, harmless: "kept" },
   },

@@ -3831,6 +3831,14 @@
         "not_found": "Not found.",
         "invalid_code": "A soul code has 10 characters.",
         "self": "You cannot write to yourself."
+      },
+      "image": {
+        "failed": "Could not send",
+        "errors": {
+          "too_many_pending": "Too many images waiting to send; wait a moment",
+          "images_unavailable": "Until they reply, only text can be sent"
+        },
+        "button": "Photo"
       }
     },
     "circle": {

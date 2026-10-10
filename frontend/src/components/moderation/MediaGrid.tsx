@@ -52,7 +52,8 @@ function Tile({ media, index, onOpen }: { media: PostMedia; index: number; onOpe
   );
 }
 
-function Viewer({ media, index, onIndex, onClose }: { media: PostMedia[]; index: number | null; onIndex: (i: number) => void; onClose: () => void }) {
+/** 全屏查看器。审阅详情的配图格与殿司收件箱里灵魂来信的图共用(`index` 为 null 时不显示)。 */
+export function MediaViewer({ media, index, onIndex, onClose }: { media: PostMedia[]; index: number | null; onIndex: (i: number) => void; onClose: () => void }) {
   const { t } = useI18n();
   const open = index !== null;
   const current = open ? media[index] : null;
@@ -113,7 +114,7 @@ export function MediaGrid({ media }: { media: PostMedia[] }) {
           <Tile key={m.id} media={m} index={i} onOpen={() => setViewing(i)} />
         ))}
       </ul>
-      <Viewer media={media} index={viewing} onIndex={setViewing} onClose={() => setViewing(null)} />
+      <MediaViewer media={media} index={viewing} onIndex={setViewing} onClose={() => setViewing(null)} />
     </>
   );
 }

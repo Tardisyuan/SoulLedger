@@ -15,6 +15,7 @@ from rest_framework.routers import DefaultRouter
 
 from apps.authentication.views import UserViewSet
 from apps.chat import urls as chat_urls
+from apps.chat.image_views import ChatImageFileView
 from apps.core.app_version import AppVersionView
 from apps.core.health import HealthCheck, HealthCheckDetailed
 from apps.core.permissions import IsAdminPermission
@@ -106,6 +107,8 @@ urlpatterns = [
     path("api/v1/social-moderation/", include(social_urls.moderation_urlpatterns)),
     # 朋友圈帖子图片的文件出口:签名地址、每次重查可见性(apps/social/media_views.py)。
     path("api/v1/social-media/<uuid:media_id>/", PostMediaFileView.as_view(), name="social-media-file"),
+    # 书信图片的文件出口:同一种签名地址、每次重查参与方(apps/chat/image_views.py)。
+    path("api/v1/chat-images/<uuid:image_id>/", ChatImageFileView.as_view(), name="chat-image-file"),
     # API docs
     # 仅 ADMIN(与 /health/detailed/ 同一套认证与权限,DEBUG 下也不放开)。门禁与前端类型生成
     # 走 SchemaGenerator / `manage.py spectacular`,不走这两个 HTTP 路由。浏览器里的 Swagger 页

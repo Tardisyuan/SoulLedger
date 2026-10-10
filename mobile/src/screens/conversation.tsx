@@ -11,6 +11,9 @@
  *   muted                                   → no composer; the hall button right under the reason
  *   closed / hall_sealed                    → no composer at all (as sealed past lives: no after-image)
  *
+ * Images (2026-10-10): the composer of a free conversation and of the hall also has the 图 key;
+ * an image is its own message (chatImages.tsx). A request room (throttled) has no key: a request is text.
+ *
  * `chat_unavailable` is not a state of the conversation but of the service: the
  * composer stays and still takes text — it queues — and only the send key
  * steps down to secondary (1c ⑦).
@@ -41,9 +44,12 @@ import { family, quoteFamily } from "../fonts";
 import { useI18n } from "../i18n";
 import { formatStamp, TAG_GLYPH } from "../rules";
 import type { CivKey } from "../theme";
+import { useToast } from "../feedback";
 import { Button, Interp, Loader, Notice, Skeleton, SmallButton, Txt, shade, useReducedMotion, useTheme } from "../ui";
 import type { AppStackParams } from "./applications";
 import { useNow } from "./auth";
+import { CHAT_IMAGE_MAX, ChatImageMessage, ChatImageViewer, ImageButton, PendingImage } from "./chatImages";
+import { compressWithSize, pickImages } from "./circleMedia";
 import { ANDROID, Glyph, Tag, hallOf, useCurrentHall, wash } from "./letters";
 
 type Line =
@@ -67,6 +73,9 @@ export function ConversationScreen({ id, landed }: { id: string; landed?: boolea
   const hallName = useCurrentHall();
   const navigation = useNavigation<NavigationProp<AppStackParams>>();
   const [draft, setDraft] = useState("");
+  const toast = useToast();
+  const [viewing, setViewing] = useState<number | null>(null);
+  const [picking, setPicking] = useState(false);
   const [mutedUntil, setMutedUntil] = useState<string | null>(null);
   const list = useRef<FlatList<Line>>(null);
   // `gone`: it left the list while open — the server closed it; still readable (1c ⑥).
@@ -197,6 +206,32 @@ export function ConversationScreen({ id, landed }: { id: string; landed?: boolea
     setDraft("");
   };
 
+  // Images: the same picker and compression as the circle. Each lands in the outbox as its own message,
+  // as the compressed file (the thing that is still there after a restart).
+  const unfinished = pending.filter((o) => o.image && o.state !== "failed").length;
+  const addImages = async () => {
+    if (picking) return;
+    const room = CHAT_IMAGE_MAX - unfinished;
+    if (room <= 0) return toast(tr("soul_app.circle.media.limit", { max: String(CHAT_IMAGE_MAX) }), "failure");
+    setPicking(true);
+    try {
+      const got = await pickImages(room);
+      if (got === null) return toast(tr("soul_app.circle.media.permission"), "failure");
+      if (got.unreadable) {
+        const key = got.images.length ? "soul_app.circle.media.unreadable_some" : "soul_app.circle.media.unreadable";
+        toast(tr(key, { n: String(got.unreadable) }), "failure");
+      }
+      if (!got.images.length) return;
+      const files = await Promise.all(got.images.map(compressWithSize));
+      chat.sendImages(c, files.map(({ file, width, height }) => ({ ...file, width, height })));
+    } finally {
+      setPicking(false);
+    }
+  };
+  // The viewer pages through every image in the thread, oldest first, and opens on the one tapped.
+  const gallery = messages.flatMap((m) => (m.image ? [m.image] : []));
+  const open = (id: string) => setViewing(Math.max(0, gallery.findIndex((g) => g.id === id)));
+
   return (
     <KeyboardAvoidingView
       style={[styles.fill, { backgroundColor: t.s0 }]}
@@ -255,7 +290,24 @@ export function ConversationScreen({ id, landed }: { id: string; landed?: boolea
               {line.day}
             </Txt>
           ) : line.kind === "pending" ? (
-            <PendingBubble o={line.o} onResend={() => chat.resend(line.o.txnId)} now={now} />
+            line.o.image ? (
+              <PendingImage o={line.o} progress={chat.progress[line.o.txnId]} onResend={() => chat.resend(line.o.txnId)} />
+            ) : (
+              <PendingBubble o={line.o} onResend={() => chat.resend(line.o.txnId)} now={now} />
+            )
+          ) : line.m.image ? (
+            <ChatImageMessage
+              image={line.m.image}
+              mine={line.mine}
+              ts={line.m.ts}
+              now={now}
+              onOpen={() => open(line.m.image!.id)}
+              receipt={
+                line.mine
+                  ? tr(!inbox && Object.keys(room?.readUpTo ?? {}).some((u) => u !== chat.me && hasRead(room, u, line.m)) ? "soul_app.chat.receipt.read" : "soul_app.chat.receipt.sent")
+                  : undefined
+              }
+            />
           ) : line.mine ? (
             <Bubble mine m={line.m} now={now} read={!inbox && Object.keys(room?.readUpTo ?? {}).some((u) => u !== chat.me && hasRead(room, u, line.m))} />
           ) : inbox ? (
@@ -295,11 +347,14 @@ export function ConversationScreen({ id, landed }: { id: string; landed?: boolea
           )
         }
       />
+      <ChatImageViewer images={gallery} index={viewing} onClose={() => setViewing(null)} />
       <Dock
         mode={mode}
         draft={draft}
         onDraft={setDraft}
         onSend={send}
+        onImage={() => void addImages()}
+        picking={picking}
         secondary={unavailable}
         hallName={hallName}
         onHall={() => void goHall()}
@@ -592,6 +647,8 @@ function Dock({
   draft,
   onDraft,
   onSend,
+  onImage,
+  picking,
   secondary,
   hallName,
   onHall,
@@ -602,6 +659,8 @@ function Dock({
   onDraft: (v: string) => void;
   /** Called with the text to send — on iOS, what the field holds once the keyboard has committed it. */
   onSend: (text: string) => void;
+  onImage: () => void;
+  picking: boolean;
   secondary: boolean;
   hallName: string;
   onHall: () => void;
@@ -651,6 +710,8 @@ function Dock({
       const size = ANDROID ? 48 : 44;
       return (
         <View testID="composer" style={[styles.dock, styles.composer, pad]}>
+          {/* A request room (throttled) takes text only: the server refuses an image there. */}
+          {mode.kind === "free" || mode.kind === "hall" ? <ImageButton size={size} onPress={onImage} disabled={picking} /> : null}
           <TextInput
             ref={input}
             testID="compose"

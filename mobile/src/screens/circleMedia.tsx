@@ -166,6 +166,11 @@ export const UPLOAD_JPEG_QUALITY = 0.85;
  * 压缩失败(格式解不开之类)就传原图 —— 服务器照旧校验,能不能收由它说。
  */
 export async function compressForUpload(image: PickedImage): Promise<PickedImage> {
+  return (await compressWithSize(image)).file;
+}
+
+/** 同上,并带回压缩后的像素尺寸(解不开、传原图时没有)。书信的发送中气泡在服务器回话之前就要按比例画。 */
+export async function compressWithSize(image: PickedImage): Promise<{ file: PickedImage; width?: number; height?: number }> {
   try {
     const decoded = await ImageManipulator.manipulate(image.uri).renderAsync();
     const long = Math.max(decoded.width, decoded.height);
@@ -176,11 +181,12 @@ export async function compressForUpload(image: PickedImage): Promise<PickedImage
             .renderAsync()
         : decoded;
     const saved = await fitted.saveAsync({ format: SaveFormat.JPEG, compress: UPLOAD_JPEG_QUALITY });
-    return { uri: saved.uri, name: image.name.replace(/\.[^.]*$/, "") + ".jpg", type: "image/jpeg" };
+    const file = { uri: saved.uri, name: image.name.replace(/\.[^.]*$/, "") + ".jpg", type: "image/jpeg" };
+    return { file, width: saved.width, height: saved.height };
   } catch (error) {
     // The App has no error reporter; a dev build at least says why the original went up.
     if (__DEV__) console.warn("compressForUpload failed; uploading the original", error);
-    return image;
+    return { file: image };
   }
 }
 
