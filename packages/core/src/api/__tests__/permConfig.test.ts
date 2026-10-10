@@ -10,12 +10,23 @@ describe("permApi export/import config", () => {
 
   it("importConfig posts the document as JSON with overwrite pinned to false", async () => {
     await permApi.importConfig({ roles: [{ name: "R", display_name: "R" }] } as never);
-    expect(api.post).toHaveBeenCalledWith("/perm/import/", { roles: [{ name: "R", display_name: "R" }], overwrite: false });
+    expect(api.post).toHaveBeenCalledWith("/perm/import/", {
+      roles: [{ name: "R", display_name: "R" }],
+      overwrite: false,
+      dry_run: false,
+    });
   });
 
   it("importConfig cannot be talked into overwrite by the document", async () => {
     await permApi.importConfig({ overwrite: true } as never);
     expect((api.post as ReturnType<typeof vi.fn>).mock.calls[0][1].overwrite).toBe(false);
+  });
+
+  it("importConfig(doc, true) is a dry run and still pins overwrite to false", async () => {
+    await permApi.importConfig({ overwrite: true } as never, true);
+    const body = (api.post as ReturnType<typeof vi.fn>).mock.calls[0][1];
+    expect(body.dry_run).toBe(true);
+    expect(body.overwrite).toBe(false);
   });
 
   it("exportConfig asks for a blob", async () => {
