@@ -172,5 +172,5 @@ def test_a_real_export_round_trips_with_overwrite(seeded):
     # Overwrite keeps ADMIN's rows in place (admin_always_all), so only the
     # other roles' rows are deleted and recreated.
     assert set(RolePermission.objects.filter(role__name="ADMIN").values_list("pk", flat=True)) == admin_rows
-    assert response.data["stats"]["role_permissions"] == RolePermission.objects.exclude(role__name="ADMIN").count()
+    assert response.data["stats"]["role_permissions"]["created"] == RolePermission.objects.exclude(role__name="ADMIN").count()
     assert _grants_of(seeded["role"]) == ["imp.read", "imp.write"]

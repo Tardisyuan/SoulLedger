@@ -82,7 +82,7 @@ def test_an_overwrite_import_updates_an_existing_roles_display_name_and_descript
     stats = import_permissions(FILE, overwrite=True)
     clerk_role.refresh_from_db()
     assert (clerk_role.display_name, clerk_role.description) == ("文书殿司", "文件里的说明")
-    assert stats["roles"] == 0, "更新不是新建"
+    assert stats["roles"]["created"] == 0, "更新不是新建"
     assert Role.all_objects.filter(name="YIN_CLERK").count() == 1
 
 
@@ -92,7 +92,7 @@ def test_a_normal_import_leaves_an_existing_role_alone_and_still_creates_missing
     stats = import_permissions(data)
     clerk_role.refresh_from_db()
     assert (clerk_role.display_name, clerk_role.description) == ("殿司", "")
-    assert stats["roles"] == 1 and Role.objects.get(name="NEW_ONE").display_name == "新角色"
+    assert stats["roles"]["created"] == 1 and Role.objects.get(name="NEW_ONE").display_name == "新角色"
 
 
 @pytest.mark.django_db

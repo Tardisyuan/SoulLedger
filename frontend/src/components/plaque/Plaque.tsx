@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type ReactNode, type RefObject } from "react";
 import { useI18n } from "@/src/contexts/I18nContext";
-import { CaseNumber } from "@/src/components/ui/DomainValue";
+import { CaseNumber, MissingValue } from "@/src/components/ui/DomainValue";
 import { Seal } from "./Seal";
 import { useRealm } from "./useHall";
 
@@ -30,19 +30,35 @@ import { useRealm } from "./useHall";
  * `<CaseNumber>`(CASE_NUMBER_POLICY)。是一个具名的字符串槽,不是 ReactNode:`usePlaque` 的依赖
  * 按值比较,传节点会每次渲染都换引用、每次都重设一遍壳的状态。给了它就不画 `meta`。
  */
-export type PlaqueText = { title?: string; meta?: string; hall?: string; caseNumber?: string };
+export type PlaqueText = { title?: string; meta?: string; hall?: string; caseNumber?: string; caseRef?: PlaqueCase };
+
+/**
+ * `caseRef`(灵魂详情,用户 2026-10-10 · Design 第十五批):灵魂不对应单个案子,所以右栏写的是
+ * 「它的案号 · 状态」。有 `number` 就是一个指向审判详情的链接(`href`)加后缀字(`label`:未结 / 已结);
+ * `{}`(没有 `number`)是「没有审判」—— 标签「案号」保留,值是 `MissingValue`。不给就没有这一栏。
+ * 与 `caseNumber`(审判台自己那一场、可复制)互斥,`caseNumber` 优先。
+ */
+export type PlaqueCase = { number?: string; href?: string; label?: string };
 
 const PlaqueContext = createContext<(text: PlaqueText | null) => void>(() => {});
 /** AppLayout 用:把 setter 交给页面。壳外(测试、登录页)没有 Provider,`usePlaque` 什么都不做。 */
 export const PlaqueProvider = PlaqueContext.Provider;
 
 /** 页面调用:挂载期间身份带用这几样;卸载时还给壳。 */
-export function usePlaque({ title, meta, hall, caseNumber }: PlaqueText): void {
+export function usePlaque({ title, meta, hall, caseNumber, caseRef }: PlaqueText): void {
   const set = useContext(PlaqueContext);
+  // 依赖按值比较:`caseRef` 是对象,每次渲染都是新引用,所以以它的 JSON 为键,进 effect 再还原。
+  const caseKey = caseRef ? JSON.stringify(caseRef) : "";
   useEffect(() => {
-    set({ title: title || undefined, meta: meta || undefined, hall: hall || undefined, caseNumber: caseNumber || undefined });
+    set({
+      title: title || undefined,
+      meta: meta || undefined,
+      hall: hall || undefined,
+      caseNumber: caseNumber || undefined,
+      caseRef: caseKey ? (JSON.parse(caseKey) as PlaqueCase) : undefined,
+    });
     return () => set(null);
-  }, [set, title, meta, hall, caseNumber]);
+  }, [set, title, meta, hall, caseNumber, caseKey]);
 }
 
 const TIER_CLASS = [
@@ -138,6 +154,7 @@ export function Plaque({
   title,
   meta,
   caseNumber,
+  caseRef,
   hall,
   heading = false,
   collapsible = false,
@@ -148,6 +165,8 @@ export function Plaque({
   meta?: ReactNode;
   /** 右栏的案号(v3 `identity-case`):可复制;收起时与 ≤ 768 都还在(v3 `is-compact` / `is-mobile`)。 */
   caseNumber?: string;
+  /** 灵魂详情的右栏:最相关一场审判的案号 + 状态,或「没有审判」。见 `PlaqueCase`。 */
+  caseRef?: PlaqueCase;
   /** 殿名;不给就是文明的冥界名(`useRealm`)。 */
   hall?: string;
   /** 壳外页(登录)没有 PageShell,那一页唯一的 <h1> 就是题字。 */
@@ -213,6 +232,21 @@ export function Plaque({
         <div className="identity-case" data-case="">
           <span>{t("judgment.case_number")}</span>
           <CaseNumber value={caseNumber} variant="band" />
+        </div>
+      ) : caseRef ? (
+        <div className="identity-case" data-case="">
+          <span>{t("judgment.case_number")}</span>
+          {caseRef.number ? (
+            <div data-case-ref="" className="inline-block">
+              <CaseNumber value={caseRef.number} href={caseRef.href} variant="band" />
+              {caseRef.label ? <span className="text-xs"> · {caseRef.label}</span> : null}
+            </div>
+          ) : (
+            // 匾色底上 MissingValue 自己的灰看不见 —— 字色随带。
+            <div data-case-ref="" className="inline-block [&_[data-missing]]:text-current">
+              <MissingValue kind="unrecorded" />
+            </div>
+          )}
         </div>
       ) : meta ? (
         <div className="identity-case">{meta}</div>

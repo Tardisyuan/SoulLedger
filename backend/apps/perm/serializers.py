@@ -431,16 +431,35 @@ class PermissionImportRequestSerializer(serializers.Serializer):
     # Deletes FieldPermission / RowLevelDataScope / RolePermission wholesale
     # before importing. Read off the same body as the document itself.
     overwrite = StrictBooleanField(required=False, default=False)
+    # Run the whole merge and roll it back: same stats, no rows, no cache
+    # invalidation. The import dialog's summary step.
+    dry_run = StrictBooleanField(required=False, default=False)
+
+
+class PermissionImportSectionStatsSerializer(serializers.Serializer):
+    created = serializers.IntegerField()
+    skipped = serializers.IntegerField(help_text="Rows of the file that were not added.")
+
+
+class PermissionImportSkippedSerializer(serializers.Serializer):
+    section = serializers.ChoiceField(
+        choices=["permissions", "roles", "role_permissions", "field_permissions", "data_scopes"]
+    )
+    key = serializers.CharField()
+    reason = serializers.ChoiceField(
+        choices=["already_exists", "admin_only", "role_forbidden", "unknown_reference"]
+    )
 
 
 class PermissionImportStatsSerializer(serializers.Serializer):
-    """Rows CREATED per table — `get_or_create` misses are not counted."""
+    """Per table: rows created and rows skipped (merge mode never updates)."""
 
-    permissions = serializers.IntegerField()
-    roles = serializers.IntegerField()
-    role_permissions = serializers.IntegerField()
-    field_permissions = serializers.IntegerField()
-    data_scopes = serializers.IntegerField()
+    permissions = PermissionImportSectionStatsSerializer()
+    roles = PermissionImportSectionStatsSerializer()
+    role_permissions = PermissionImportSectionStatsSerializer()
+    field_permissions = PermissionImportSectionStatsSerializer()
+    data_scopes = PermissionImportSectionStatsSerializer()
+    skipped_details = PermissionImportSkippedSerializer(many=True)
 
 
 class PermissionImportResultSerializer(serializers.Serializer):

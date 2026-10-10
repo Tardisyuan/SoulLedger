@@ -517,7 +517,9 @@
         "confirm": "Correct",
         "success": "Settlement corrected; the soul is back to Disposed",
         "failed": "Could not correct the settlement"
-      }
+      },
+      "case_open": "Open",
+      "case_closed": "Concluded"
     },
     "date_problem_filter": "Problems only",
     "balance_not_applicable": "Not applicable — see soul detail",
@@ -906,8 +908,8 @@
       "export": "Export configuration",
       "exporting": "Exporting…",
       "export_error": "Export failed. Try again later.",
-      "import": "Import configuration",
-      "import_title": "Import permission configuration",
+      "import": "Import configuration…",
+      "import_title": "Import configuration · {step}/3",
       "choose_file": "Choose file",
       "file_hint": "Choose a JSON file produced by \"Export configuration\". Up to {max}.",
       "merge_note": "Merge only: entries in the file that the system lacks are added; existing entries are neither changed nor deleted.",
@@ -917,12 +919,25 @@
         "bad_structure": "Wrong structure: expected a JSON object from \"Export configuration\" containing at least one of permissions, roles, role_permissions, field_permissions, data_scopes.",
         "empty": "The file contains nothing to import."
       },
-      "summary": "The file contains {permissions} permissions, {roles} roles, {role_permissions} grants, {field_permissions} field permissions, {data_scopes} data scopes.",
       "confirm": "Confirm import",
       "importing": "Importing…",
-      "result": "Import finished. Added: {permissions} permissions, {roles} roles, {role_permissions} grants, {field_permissions} field permissions, {data_scopes} data scopes. Existing entries were left unchanged.",
       "import_error": "Import failed: {reason}",
-      "reason_unknown": "The server gave no reason."
+      "reason_unknown": "The server gave no reason.",
+      "more": "More",
+      "next": "Next",
+      "checking": "Checking…",
+      "done": "Done",
+      "will": {
+        "add": "Will add",
+        "update": "Will update",
+        "skip": "Will skip (already present, or blocked by a rule)"
+      },
+      "did": {
+        "add": "Added",
+        "update": "Updated",
+        "skip": "Skipped (already present, or blocked by a rule)"
+      },
+      "download_skipped": "Download skipped details"
     }
   },
   "workflow": {
@@ -1315,7 +1330,8 @@
       "change_flat": "flat",
       "change_from_zero": "from 0",
       "figure_label": "{{name}}, {{value}}, {{change}}"
-    }
+    },
+    "data_as_of": "Data as of {{time}}"
   },
   "ledger": {
     "title": "Deed Statistics",

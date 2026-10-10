@@ -126,4 +126,4 @@ def test_merge_mode_adds_but_never_changes_or_deletes(world):
     assert world["admin_role"].display_name == label
     assert Role.objects.filter(name="NEW_ROLE").exists()
     assert RolePermission.objects.filter(role=world["admin_role"]).count() == keep
-    assert response.data["stats"]["roles"] == 1
+    assert response.data["stats"]["roles"]["created"] == 1

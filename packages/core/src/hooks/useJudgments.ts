@@ -9,13 +9,15 @@ import { judgmentKeys } from "../query_keys";
 
 // ── Queries ──────────────────────────────────────────────────────────
 
-export function useJudgments(params?: Record<string, string>) {
+/** `enabled: false` sends no request (a caller without `judgment.read` would only get a 403). */
+export function useJudgments(params?: Record<string, string>, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: judgmentKeys.list(params),
     queryFn: async () => {
       const res = await judgmentApi.list(params);
       return res.data;
     },
+    enabled: options?.enabled ?? true,
     staleTime: 30_000,
   });
 }

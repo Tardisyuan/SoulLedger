@@ -37,6 +37,13 @@ jest.mock("@soulledger/core/api", () => ({
   menusApi: { all: jest.fn().mockResolvedValue({ data: [] }), list: jest.fn().mockResolvedValue({ data: { results: [] } }) },
 }));
 
+// The identity band's right column is what the page reports through usePlaque.
+const mockPlaque = jest.fn();
+jest.mock("@/src/components/plaque/Plaque", () => ({
+  usePlaque: (text: unknown) => mockPlaque(text),
+}));
+const plaqueMeta = () => mockPlaque.mock.calls.at(-1)?.[0]?.meta as string | undefined;
+
 const mockShowToast = jest.fn();
 const mockT = jest.fn((key: string, _params?: Record<string, string>) => key);
 let mockUser: { role: string; permissions?: string[] } | null = { role: "ADMIN" };
@@ -131,6 +138,25 @@ beforeEach(() => {
 });
 
 // ── Overview tab ─────────────────────────────────────────────────────
+
+describe("DashboardPage 数据截至 (identity band meta)", () => {
+  it("adds 'data as of' after the date once the stats carry as_of", async () => {
+    renderPage();
+    await waitFor(() => expect(mockT).toHaveBeenCalledWith("dashboard.data_as_of", { time: expect.any(String) }));
+    expect(plaqueMeta()).toMatch(/^dt\(.*\) · dashboard\.data_as_of$/);
+  });
+
+  it("writes the date alone, with no placeholder, when the stats have no as_of", async () => {
+    const { as_of: _omit, ...withoutAsOf } = baseStats;
+    void _omit;
+    mockedStats.mockResolvedValue({ data: withoutAsOf });
+    renderPage();
+    await waitFor(() => expect(document.querySelector("[data-kpi]")).not.toBeNull());
+    expect(mockT).not.toHaveBeenCalledWith("dashboard.data_as_of", expect.anything());
+    expect(plaqueMeta()).toMatch(/^dt\(.*\)$/);
+    expect(plaqueMeta()).not.toContain("·");
+  });
+});
 
 describe("DashboardPage overview", () => {
   it("renders the lifecycle row from the payload, in lifecycle order", async () => {
