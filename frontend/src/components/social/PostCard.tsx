@@ -10,6 +10,7 @@ import { Button } from "@/src/components/ui/Button";
 import { ReactionBar } from "./ReactionBar";
 import { Avatar } from "./Avatar";
 import { PostMediaGrid } from "./PostMedia";
+import { PostEditModal } from "./PostEditModal";
 import type { Post } from "@soulledger/core/api";
 import { DomainEnum } from "@/src/components/ui/DomainValue";
 
@@ -31,6 +32,7 @@ export function PostCard({ post }: { post: Post }) {
   const deletePost = useDeletePost();
   const refreshPosts = useRefreshPosts();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [editing, setEditing] = useState(false);
   const isAuthor = !!user && String(user.id) === String(post.author);
   const name = post.author_name || post.author_username;
 
@@ -61,15 +63,26 @@ export function PostCard({ post }: { post: Post }) {
           </p>
         </div>
         {isAuthor && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowDeleteConfirm(true)}
-            className="text-[oklch(var(--color-ink-muted))]"
-          >
-            {t("common.delete")}
-          </Button>
+          <>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setEditing(true)}
+              className="text-[oklch(var(--color-ink-muted))]"
+            >
+              {t("common.edit")}
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowDeleteConfirm(true)}
+              className="text-[oklch(var(--color-ink-muted))]"
+            >
+              {t("common.delete")}
+            </Button>
+          </>
         )}
       </div>
 
@@ -95,6 +108,7 @@ export function PostCard({ post }: { post: Post }) {
       {/* 作者自己删帖:软删但不进回收站(apps/social/apps.py 只登记官员删的),界面上拿不回来 ——
           不可撤回。帖子没有名称,所以不走「输入名称以确认」而用普通确认框(2026-09-30 用户拍板:
           让人打动作词「删除」只是多一步,不是多一层确认)。 */}
+      {isAuthor && editing && <PostEditModal post={post} onClose={() => setEditing(false)} />}
       {isAuthor && (
         <ConfirmDialog
           isOpen={showDeleteConfirm}
