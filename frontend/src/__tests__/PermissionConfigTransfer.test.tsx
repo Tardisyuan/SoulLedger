@@ -7,13 +7,16 @@
  *
  * 覆盖(Design 第十六批):默认合并,表里只有「将新增 / 将跳过」;选了覆盖才重新预演
  * (`overwrite: true`),多出「将更新」与 danger 色的「将删除 N」,危险提示说明影响所有殿,要先输入
- * 殿名危险按钮才可点,真导入才带 `overwrite: true`;删除名单里有自己的权限(`removes_own_permissions`)时
+ * 确认词(= mode.overwrite 的文案,不是殿名)危险按钮才可点,真导入才带 `overwrite: true`;删除名单里有自己的权限(`removes_own_permissions`)时
  * 禁止覆盖。第 2 步有「上一步」,回第 1 步、文件名还在;第 3 步没有。
  */
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { permApi } from "@soulledger/core/api";
 import { PermissionConfigTransfer, parsePermissionConfig, MAX_IMPORT_BYTES } from "@/src/components/permissions/PermissionConfigTransfer";
+import zh from "@soulledger/core/messages/zh-Hans.json";
+import en from "@soulledger/core/messages/en.json";
+import egy from "@soulledger/core/messages/egy.json";
 import { saveBlob } from "@/src/lib/saveBlob";
 
 jest.mock("@soulledger/core/api", () => ({
@@ -273,7 +276,9 @@ describe("import: the three steps", () => {
 
 const radio = (mode: "merge" | "overwrite") => screen.getByRole("radio", { name: `permissions.config.mode.${mode}` });
 const dangerButton = () => screen.getByTestId("overwrite-action");
-const nameField = () => screen.getByLabelText("common.type_name_to_confirm:x");
+const nameField = () => screen.getByLabelText("permissions.config.overwrite.confirm_hint");
+// The mocked t() echoes the key, so the confirm word in these tests is the key of the mode label.
+const CONFIRM_WORD = "permissions.config.mode.overwrite";
 
 /** 第 2 步,选「覆盖」:预演换成 overwrite: true。 */
 async function toOverwrite(stats: object = OVERWRITE_STATS) {
@@ -308,16 +313,16 @@ describe("import: overwrite", () => {
     expect(importConfig.mock.calls.every((c) => c[1] === true)).toBe(true);
   });
 
-  it("the danger button needs the hall name typed exactly; only then does the real import carry overwrite: true", async () => {
+  it("the danger button needs the confirm word typed (not the hall name); only then does the real import carry overwrite: true", async () => {
     const { invalidate } = setup();
     await toOverwrite();
     expect(dangerButton()).toBeDisabled();
     expect(screen.queryByRole("button", { name: "permissions.config.confirm" })).toBeNull(); // no plain confirm in this mode
-    fireEvent.change(nameField(), { target: { value: "y" } });
+    fireEvent.change(nameField(), { target: { value: "x" } }); // the hall's name no longer unlocks it
     expect(dangerButton()).toBeDisabled();
     fireEvent.click(dangerButton());
     expect(importConfig).toHaveBeenCalledTimes(2); // a disabled button sends nothing
-    fireEvent.change(nameField(), { target: { value: " x " } });
+    fireEvent.change(nameField(), { target: { value: ` ${CONFIRM_WORD} ` } });
     expect(dangerButton()).toBeEnabled();
 
     importConfig.mockResolvedValueOnce({ data: { message: "ok", stats: OVERWRITE_STATS } });
@@ -337,7 +342,7 @@ describe("import: overwrite", () => {
     const warning = screen.getByTestId("overwrite-warning").textContent ?? "";
     expect(warning).toContain("permissions.config.overwrite.warning_own:5");
     expect(warning).toContain("permissions.config.overwrite.blocked_own");
-    expect(screen.queryByLabelText("common.type_name_to_confirm:x")).toBeNull(); // nothing to type
+    expect(screen.queryByLabelText("permissions.config.overwrite.confirm_hint")).toBeNull(); // nothing to type
     expect(dangerButton()).toBeDisabled();
     fireEvent.click(dangerButton());
     expect(importConfig.mock.calls.every((c) => c[1] === true)).toBe(true);
@@ -369,6 +374,21 @@ describe("import: overwrite", () => {
     expect((await screen.findByRole("alert")).textContent).toContain("nope");
     expect(radio("merge")).toBeChecked();
     expect(screen.queryByTestId("overwrite-action")).toBeNull();
+  });
+});
+
+describe("import: overwrite confirm word in the language packs", () => {
+  it.each([["zh-Hans", zh], ["en", en], ["egy", egy]] as const)("%s: confirm_hint contains that language's mode.overwrite", (_n, pack) => {
+    const c = pack.permissions.config;
+    expect(c.mode.overwrite.length).toBeGreaterThan(0);
+    expect(c.overwrite.confirm_hint).toContain(c.mode.overwrite);
+  });
+
+  it("all_halls sits directly above the confirm field", async () => {
+    setup();
+    await toOverwrite();
+    const sentence = screen.getByText("permissions.config.overwrite.all_halls:x");
+    expect(sentence.nextElementSibling?.contains(nameField())).toBe(true);
   });
 });
 
