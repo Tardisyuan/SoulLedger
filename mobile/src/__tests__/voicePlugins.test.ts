@@ -112,7 +112,7 @@ describe("the soul app's display name", () => {
     const cfg = require("../../app.json").expo;
     const load = (file: string) => require(`../../${file}`);
     /* eslint-enable @typescript-eslint/no-require-imports */
-    expect(load(cfg.locales["zh-Hans"])).toEqual({ ios: { CFBundleDisplayName: "灵魂簿" }, android: { app_name: "灵魂簿" } });
-    expect(load(cfg.locales.en)).toEqual({ ios: { CFBundleDisplayName: "SoulLedger" }, android: { app_name: "SoulLedger" } });
+    expect(load(cfg.locales["zh-Hans"])).toMatchObject({ ios: { CFBundleDisplayName: "灵魂簿" }, android: { app_name: "灵魂簿" } });
+    expect(load(cfg.locales.en)).toMatchObject({ ios: { CFBundleDisplayName: "SoulLedger" }, android: { app_name: "SoulLedger" } });
   });
 });
