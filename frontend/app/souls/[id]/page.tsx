@@ -331,7 +331,7 @@ export default function SoulDetailPage() {
     }
   }
 
-  // 身份带:题「灵魂详情」(v3 `soul-product`;面包屑末段是原始 id)。案号后端没有,不写右栏。
+  // 身份带:题「灵魂详情」(v3 `soul-product`;面包屑末段是原始 id)。案号(`Judgment.case_number`)属于某一场审判,灵魂详情不对应单个案子,所以不写右栏。
   const hall = useHall(t("plaque.office.records"));
   usePlaque({ title: t("plaque.soul"), hall });
 
