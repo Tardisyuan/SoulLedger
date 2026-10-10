@@ -8,6 +8,7 @@
  * 图库与压缩是系统界面 / 原生模块,换成替身(同 circleMedia.test.tsx)。
  * 每个「能」旁边配一个「不能」。
  */
+import { Svg } from "react-native-svg";
 import type { SoulConversation } from "@soulledger/core/api/soul-chat";
 import { EMPTY_TIMELINE, matrixHttp, type ChatMessage } from "@soulledger/core/api/matrix";
 import { NavigationContainer } from "@react-navigation/native";
@@ -154,7 +155,7 @@ describe("the 图 key", () => {
       // The picture icon (第十八批: 20 canvas, 1.5 stroke, square), not the word 图; the label is still chat.image.button.
       expect(within(key).queryByText("图")).toBeNull();
       expect(key.props.accessibilityLabel).toBe("图");
-      expect(within(key).UNSAFE_getByType(require("react-native-svg").Svg).props).toMatchObject({ width: 20, height: 20, strokeWidth: 1.5 });
+      expect(within(key).UNSAFE_getByType(Svg).props).toMatchObject({ width: 20, height: 20, strokeWidth: 1.5 });
       expect(StyleSheet.flatten(key.props.style)).toMatchObject({ width: 44, height: 44 });
       // Left of the field: it comes first in the composer.
       const ids = screen.UNSAFE_root.findAll((n: { type: unknown; props: Record<string, unknown> }) => typeof n.type === "string" && !!n.props.testID).map((n: { props: Record<string, unknown> }) => n.props.testID);
