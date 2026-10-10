@@ -390,6 +390,12 @@ export function ReportsReview() {
                 {selected.report ? <DomainEnum namespace="social_moderation.target_type" value={selected.report.target_type} /> : t(`social_moderation.kind.${selected.pending!.kind}`)}
                 {" · "}
                 {formatDateTime(full?.create_time ?? selected.time)}
+                {full && "edited_at" in full && full.edited_at && (
+                  <>
+                    {" · "}
+                    <span data-edited="" title={formatDateTime(full.edited_at)}>{t("social.edited")}</span>
+                  </>
+                )}
               </div>
             </div>
             {(full?.moderation_status || selected.report?.content_status) && (

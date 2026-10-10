@@ -3031,6 +3031,8 @@
     "post_delete_error": "Failed to delete post",
     "post_updated": "Saved",
     "post_update_error": "Failed to save post",
+    "edited": "Edited",
+    "edited_at": "Edited {{time}}",
     "edit_title": "Edit post",
     "edit_discard_title": "Discard changes?",
     "edit_discard_message": "Your edits will not be saved.",
