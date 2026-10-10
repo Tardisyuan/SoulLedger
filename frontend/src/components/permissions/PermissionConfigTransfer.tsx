@@ -23,11 +23,11 @@ import { saveBlob } from "@/src/lib/saveBlob";
  *   1 选文件(客户端校验 JSON / 大小 / 顶层结构)→ 2 摘要(后端 `dry_run` 预演:跑完整合并再回滚,
  *   什么都没写;「上一步」回第 1 步,文件名还在)→ 确认 → 3 结果(真导入返回的 stats;有跳过项时可
  *   下载跳过明细)。
- * 第 2 步表格下面是单选「合并(默认)/ 覆盖」。**默认合并,`overwrite` 只在用户选了覆盖、并输入殿名
+ * 第 2 步表格下面是单选「合并(默认)/ 覆盖」。**默认合并,`overwrite` 只在用户选了覆盖、并输入确认词「覆盖」
  * 之后才传 true**;切换方式就带着 `overwrite` 重新预演一次,表里的数都是后端算的。
  * 合并只有「将新增 / 将跳过」两行;选了覆盖才多出「将更新」与「将删除 N」(danger 色)。
  * 「将删除 N」是**覆盖之后不再存在的条目数**(现有 − 文件里会重建的),不是先删掉的总数;
- * 后端 `removed.total` 给出。危险提示、殿名确认(与删除确认同一个「输入…以确认」)、danger 按钮在其下。
+ * 后端 `removed.total` 给出。危险提示、确认词输入框(输入「覆盖」才能点;确认词取 mode.overwrite 的当前语言文案,all_halls 紧贴其上)、danger 按钮在其下。
  * 删除名单里有调用者自己的权限(`removes_own_permissions`)时覆盖被禁止,按钮不可点并说明原因。
  * 导出文件里没有殿(租户)标识 —— Permission / Role 两张表是全局的 —— 所以摘要第一行只写
  * 文件名与当前殿名,不做「来自别的殿」的提醒;但覆盖影响所有殿,危险提示里要说。
@@ -233,8 +233,10 @@ export function PermissionConfigTransfer() {
   const overwriting = mode === "overwrite";
   const removed = stats?.removed.total ?? 0;
   const blockedOwn = overwriting && stats?.removes_own_permissions === true;
-  const nameMatches = hall.length > 0 && typed.trim() === hall.trim();
-  const overwriteAllowed = overwriting && !blockedOwn && nameMatches;
+  // 确认词就是「覆盖」选项本身的当前语言文案(permissions.config.mode.overwrite),不另写一份常量;en 不分大小写。
+  const confirmWord = t("permissions.config.mode.overwrite").trim();
+  const wordMatches = confirmWord.length > 0 && typed.trim().toLowerCase() === confirmWord.toLowerCase();
+  const overwriteAllowed = overwriting && !blockedOwn && wordMatches;
 
   return (
     <>
@@ -369,7 +371,9 @@ export function PermissionConfigTransfer() {
                         <span aria-hidden="true">✕ </span>
                         {t(blockedOwn ? "permissions.config.overwrite.warning_own" : "permissions.config.overwrite.warning", {
                           n: String(removed),
-                        })}{" "}
+                        })}
+                      </p>
+                      <p className="text-sm text-[oklch(var(--color-status-error))]">
                         {t("permissions.config.overwrite.all_halls", { hall })}
                       </p>
                       {blockedOwn ? (
@@ -378,7 +382,7 @@ export function PermissionConfigTransfer() {
                         </p>
                       ) : (
                         <TextField
-                          label={t("common.type_name_to_confirm", { name: hall })}
+                          label={t("permissions.config.overwrite.confirm_hint")}
                           value={typed}
                           onChange={(e) => setTyped(e.target.value)}
                           autoComplete="off"

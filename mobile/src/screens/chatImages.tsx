@@ -23,6 +23,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { Outgoing } from "../chat";
 import { bubbleStamp } from "../chatRules";
 import { useI18n } from "../i18n";
+import { ON_PLAQUE } from "../theme";
 import { Loader, Txt, useTheme } from "../ui";
 
 /** 一次最多挑几张(规格;服务器按会话限制未发出的张数,同值)。 */
@@ -209,7 +210,11 @@ export function PendingImage({ o, progress, onResend }: { o: Outgoing; progress:
 
 // ── 全屏查看 ───────────────────────────────────────────────────────────
 
-/** 黑底、左右滑动、点一下关闭;没有保存、没有任何按钮(与朋友圈一致)。`index` 为 null 时不显示。 */
+/**
+ * 黑底、左右滑动、点一下关闭;没有保存、没有任何按钮。`index` 为 null 时不显示。
+ * 不止一张时,顶部居中有「2 / 4」计数(13px 白字,不拦点击);朋友圈的查看器是另一个组件(circleMedia.tsx),
+ * 它本来就有带关闭键的顶栏与「图片 i / n」,这里没有动它。
+ */
 export function ChatImageViewer({ images, index, onClose }: { images: ChatImageRef[]; index: number | null; onClose: () => void }) {
   return (
     <Modal visible={index !== null} animationType="fade" onRequestClose={onClose} transparent={false} statusBarTranslucent>
@@ -240,14 +245,36 @@ function ViewerPage({ image, width, height, onClose }: { image: ChatImageRef; wi
 function ViewerPages({ images, start, onClose }: { images: ChatImageRef[]; start: number; onClose: () => void }) {
   const { width, height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
+  const { t: tr } = useI18n();
+  const [current, setCurrent] = useState(start);
   const pageHeight = height - insets.top - insets.bottom;
+  const n = images.length;
   return (
     <View testID="chat-image-viewer" style={[styles.viewer, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
-      <ScrollView testID="chat-image-viewer-pages" horizontal pagingEnabled showsHorizontalScrollIndicator={false} contentOffset={{ x: start * width, y: 0 }}>
+      <ScrollView
+        testID="chat-image-viewer-pages"
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        contentOffset={{ x: start * width, y: 0 }}
+        onMomentumScrollEnd={(e) => setCurrent(Math.min(n - 1, Math.max(0, Math.round(e.nativeEvent.contentOffset.x / Math.max(1, width)))))}
+      >
         {images.map((image) => (
           <ViewerPage key={image.id} image={image} width={width} height={pageHeight} onClose={onClose} />
         ))}
       </ScrollView>
+      {n > 1 ? (
+        <View pointerEvents="none" style={[styles.counterWrap, { top: insets.top + 12 }]}>
+          <Txt
+            testID="chat-image-viewer-counter"
+            variant="caption"
+            accessibilityLabel={tr("soul_app.circle.media.viewer", { i: String(current + 1), n: String(n) })}
+            style={styles.counter}
+          >
+            {`${current + 1} / ${n}`}
+          </Txt>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -292,6 +319,8 @@ const styles = StyleSheet.create({
   reason: { marginTop: 2 },
   viewer: { flex: 1, backgroundColor: "#000000" },
   viewerText: { color: "#FFFFFF" },
+  counterWrap: { position: "absolute", left: 0, right: 0, alignItems: "center" },
+  counter: { color: ON_PLAQUE, fontSize: 13, lineHeight: 18 },
   button: { borderWidth: 1, alignItems: "center", justifyContent: "center" },
   buttonText: { fontSize: 15, lineHeight: 20 },
 });
