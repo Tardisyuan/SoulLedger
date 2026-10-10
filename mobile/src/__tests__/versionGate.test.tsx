@@ -43,6 +43,28 @@ test("below the minimum: the update screen replaces the app and opens the store"
   expect(open).toHaveBeenCalledWith("https://store.test/app");
 });
 
+test("the screen: mark, title, the soul's own body, one button, the running version; nothing to close", async () => {
+  reply(policy("0.2.0"));
+  await mount();
+  expect(screen.getByTestId("update-mark", { includeHiddenElements: true })).toBeTruthy();
+  expect(screen.getByText("需要更新")).toBeTruthy();
+  expect(screen.getByText("这一版已经不能用了。更新后，你的书信和档案都还在。")).toBeTruthy();
+  expect(screen.getByText("去更新")).toBeTruthy();
+  expect(screen.getByTestId("update-version").props.children).toBe("版本 0.1.0");
+  // Absence: the officer wording, a second button, a close control.
+  expect(screen.queryByText(/低于本殿要求/)).toBeNull();
+  expect(screen.getAllByRole("button")).toHaveLength(1);
+  expect(screen.queryByText("取消")).toBeNull();
+});
+
+test("no store link from the backend: no button, the rest of the screen stays", async () => {
+  reply(policy("0.2.0", ""));
+  await mount();
+  expect(screen.getByTestId("update-required")).toBeTruthy();
+  expect(screen.queryByTestId("update-open-store")).toBeNull();
+  expect(screen.getByTestId("update-version")).toBeTruthy();
+});
+
 test.each([
   ["version is enough", () => reply(policy("0.1.0"))],
   ["above the current version only as latest, minimum empty", () => reply({ min_supported: "", latest: "9.9.9", store_url: "" })],

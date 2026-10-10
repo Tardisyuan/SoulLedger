@@ -5,7 +5,7 @@
 * 审批节点 / 转生申请:`ApprovalWorkflowViewSet.get_queryset` 的租户 + 行级范围,再逐个问
   `ApprovalNode.can_approve`(与 `approve_node` 的闸门同一个函数);转生申请的工作流
   (case_type REBIRTH_APPLICATION)归「转生申请」,其余归「审批节点」,两类不重复计数。
-* 改派请求 = 调拨提案:`DispatchRecordViewSet.proposed` 的谓词(目标殿 = 我的殿,状态 PROPOSED)。
+* 移交(字段与 kind 仍叫 reassignment/改派请求)= 调拨提案:`DispatchRecordViewSet.proposed` 的谓词(目标殿 = 我的殿,状态 PROPOSED)。
   判官「请管理员改派」(`judgment.claims.request_reassign`)只发一条通知,没有可查询的队列,不在此列。
 * 缩短冷却申请:`OfficerCooldownShorteningViewSet` 的范围(`soul__home_tenant`),状态 PENDING。
 
