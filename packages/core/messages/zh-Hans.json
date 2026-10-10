@@ -2840,7 +2840,8 @@
       "pending_link": "查看待交付列表",
       "actions": {
         "provision": "开通本世账号",
-        "reset": "重置初始密码"
+        "reset": "重置初始密码",
+        "mfa_reset": "关闭两步验证"
       },
       "provision_title": "为 {{name}} 开通本世账号？",
       "provision_body": "将生成随机初始密码（72 小时有效，首次登录须改密）。有联系方式时自动发送，否则进入待交付列表。",
@@ -2853,7 +2854,18 @@
       "retired_cannot_reset": "该账号已随转世停用，不能重置",
       "soul_alive": "灵魂尚在世，不能开通灵魂账号",
       "soul_not_found": "灵魂不存在",
-      "failed": "操作失败，请重试"
+      "failed": "操作失败，请重试",
+      "mfa_reset": {
+        "title": "关闭 {{name}} 的两步验证？",
+        "consequence_1": "验证器密钥、恢复码和「这部手机不再询问」全部作废；已登录的设备要重新登录。",
+        "consequence_2": "灵魂之后只凭密码登录，并会在通知里看到是哪位官员关闭的。",
+        "consequence_3": "只能关闭，不能替灵魂开启；灵魂可以自己再开启。",
+        "reason": "理由（必填，记入审计）",
+        "reason_required": "需要填写理由",
+        "done": "已关闭两步验证",
+        "not_enabled": "这个灵魂没有开启两步验证",
+        "not_home_hall": "只有灵魂所属的本殿官员能关闭它的两步验证"
+      }
     },
     "rebirth": {
       "title": "转生申请",
@@ -3720,7 +3732,11 @@
       "chat": "书信",
       "chat_note": "有新书信、殿司回信时",
       "history": "通知记录",
-      "history_note": "推送过的通知都在这里，包括没送达的"
+      "history_note": "推送过的通知都在这里，包括没送达的",
+      "group_prefs": "偏好",
+      "group_security": "账号安全",
+      "mfa_off": "○ 未开启",
+      "mfa_on": "✓ 已开启"
     },
     "push": {
       "primer_title": "要不要在有结果时通知你？",
@@ -4134,6 +4150,90 @@
       "desired_label": "希望缩短到几天（可选）",
       "desired_hint": "现在还剩 {{n}} 天。填 0 表示希望立即结束；不填则由官员决定。",
       "desired_invalid": "天数须是 0 到 {{max}} 的整数"
+    },
+    "mfa": {
+      "setup": {
+        "title": "开启两步验证",
+        "exit_note": "中途退出不会开启"
+      },
+      "intro": {
+        "title": "先在手机上装一个验证器",
+        "body": "开启后，登录时除了密码，还要输入一个 6 位数字。这个数字由「验证器」App 生成，每 30 秒换一次，只在你的手机上。",
+        "no_app_title": "还没有验证器？",
+        "no_app_body": "在手机的应用商店搜索「验证器」或「Authenticator」，免费的任选一款。已经装过的，直接下一步。",
+        "why": "开了以后，就算别人知道你的密码，没有你的手机也登不进来。",
+        "next": "我已装好 · 下一步"
+      },
+      "bind": {
+        "title": "把灵魂簿添加到验证器",
+        "add": "① 添加",
+        "open": "在验证器 App 中打开 ↗",
+        "manual": "打不开的话，复制下面的密钥，在验证器里选「手动输入」：",
+        "copy": "复制",
+        "select_hint": "长按选中的是整串。",
+        "code_label": "② 输入验证器上「{{app}}」那一项的 6 位数字",
+        "wrong": "! 数字不对。数字每 30 秒换一次，请输入现在显示的那个。",
+        "next": "验证 · 下一步"
+      },
+      "codes": {
+        "title": "保存恢复码",
+        "body": "手机丢了或换了，用恢复码登录。每个只能用一次，只显示这一次。",
+        "copy_all": "复制全部",
+        "confirm": "我已把恢复码存在这部手机以外的地方",
+        "done": "完成",
+        "no_back": "这一步不能返回，勾选后才能完成"
+      },
+      "manage": {
+        "body": "登录时要输入验证器上的 6 位数字。",
+        "enabled_at": "开启于",
+        "last_used": "最近一次使用",
+        "via_code": "6 位数字",
+        "codes_left": "恢复码 · 剩 {{n}} / 10",
+        "regen": "重新生成",
+        "low": "恢复码只剩 {{n}} 个。用完之前请重新生成。",
+        "disable": "关闭两步验证",
+        "new_phone": "换手机时：先在旧手机上关闭，再在新手机上重新开启。"
+      },
+      "disable": {
+        "title": "关闭两步验证？",
+        "body": "关闭后，登录只要密码。剩下的恢复码一起作废。",
+        "ok": "关闭",
+        "use_password": "手机不在身边？改用密码"
+      },
+      "regen": {
+        "title": "重新生成恢复码？",
+        "body": "旧的 {{n}} 个立即作废。新的 10 个只显示一次。"
+      },
+      "login": {
+        "code_label": "验证器上的 6 位数字",
+        "auto_submit": "输满 6 位自动提交。",
+        "sending": "验证中…",
+        "wrong": "! 数字不对",
+        "tries_left": "还可以再试 {{n}} 次。",
+        "expired": "! 这一步超时了",
+        "expired_body": "请重新输入密码。",
+        "expired_button": "重新输入密码",
+        "locked": "◐ 试错太多次，先暂停",
+        "locked_until": "{{time}} 后可以再试。",
+        "network": "! 没有连上",
+        "network_body": "检查网络后再点「验证」。输入的数字还在。",
+        "remember": "这部手机 30 天内不再询问",
+        "use_recovery": "手机不在身边？改用恢复码",
+        "use_code": "改回 6 位数字",
+        "recovery_title": "用恢复码登录",
+        "recovery_hint": "输入保存的 10 个恢复码之一，每个只能用一次。",
+        "lost": "手机和恢复码都没有了"
+      },
+      "lost": {
+        "title": "请本殿官员帮你关闭",
+        "body": "官员核对你的身份后，会替你关闭两步验证。关闭后用密码就能登录，你可以再重新开启。",
+        "hall": "本殿",
+        "bring": "报上",
+        "same_as_password": "和找回密码收不到验证码时一样，去找本殿官员就行。",
+        "no_email": "联系邮箱不能用来关闭两步验证。"
+      },
+      "copied": "已复制",
+      "wrong_password": "! 密码不对"
     }
   },
   "soul_push": {
@@ -4208,6 +4308,10 @@
     "social_warned_user": {
       "title": "账号收到警告",
       "body": "你的账号收到警告：{{reason}}"
+    },
+    "mfa_reset_by_officer": {
+      "title": "两步验证已关闭",
+      "body": "本殿官员 {{name}} 已关闭你的两步验证"
     }
   },
   "official_notify": {

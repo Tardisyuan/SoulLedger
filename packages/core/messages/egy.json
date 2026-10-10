@@ -918,7 +918,8 @@
         "not_json": "Djama Pen Nen JSON Maat.",
         "too_large": "Djama Nen Smen: Aa Er {max}.",
         "bad_structure": "Djama Nen Maat: Er JSON Em Redi Per Smen, Hena Wa Em permissions, roles, role_permissions, field_permissions, data_scopes.",
-        "empty": "Nen Khet Er Ini Em Djama."
+        "empty": "Nen Khet Er Ini Em Djama.",
+        "overwrite_disabled": "Hemsu Khetem Hedj Hena Ini: Setep Redi Hena."
       },
       "confirm": "Ini",
       "importing": "Ini Djer…",
@@ -2838,7 +2839,8 @@
       "pending_link": "Maa Sekhem Em Djeret",
       "actions": {
         "provision": "Iri Aq Ankh Pen",
-        "reset": "Wehem Sekhem"
+        "reset": "Wehem Sekhem",
+        "mfa_reset": "Khetem Aq Sep Sen"
       },
       "provision_title": "Iri Aq Ankh Pen Er {{name}}?",
       "provision_body": "Sekhem Tepy Iri (Wenen Unut 72, Khemen Em Aq Tepy). Em Wat: Hab Djes-Ef; Nen Wat: Em Djeret.",
@@ -2851,7 +2853,11 @@
       "retired_cannot_reset": "Aq Khetem Em Wehem Mesut; Nen Wehem",
       "soul_alive": "Ba Em Ankh; Nen Iri Aq Ba",
       "soul_not_found": "Nen Gem Ba",
-      "failed": "Nen Iri. Wehem Iri."
+      "failed": "Nen Iri. Wehem Iri.",
+      "mfa_reset": {
+        "reason": "Medu (Em Tepy, Sesh Em Medew Maa)",
+        "reason_required": "Medu Em Tepy"
+      }
     },
     "rebirth": {
       "title": "Dbh Wehem Mesut",
@@ -3225,7 +3231,8 @@
       "notifications_email_action_needed_for_tenant": "Hab Sedjem Ba Em Smen Er Djeret",
       "notifications_email_action_needed_global": "Hab Sedjem Ba Em Smen Er Djeret · Sab Hery",
       "audit_prune_logs_for_tenant": "Khetem Medew Maa Hena Medew Aq Tepy",
-      "audit_prune_untenanted_logs": "Khetem Medew Maa Hena Medew Aq Nen Per Hemes"
+      "audit_prune_untenanted_logs": "Khetem Medew Maa Hena Medew Aq Nen Per Hemes",
+      "chat_cleanup_unsent_images": "Fekh Tut Sesh Nen Hab"
     },
     "status": {
       "PENDING": "Em Smen",
@@ -3711,7 +3718,11 @@
       "chat": "Shemes",
       "chat_note": "Shemes Renpi, Weshed Wesekhet",
       "history": "Sesh Sedjem Ba",
-      "history_note": "Sedjem Ba Neb Dy: Iyi Ky Nen Iyi"
+      "history_note": "Sedjem Ba Neb Dy: Iyi Ky Nen Iyi",
+      "group_prefs": "Smen",
+      "group_security": "Senb Ren Aq",
+      "mfa_off": "○ Nen Wen Djer",
+      "mfa_on": "✓ Wen Seth"
     },
     "push": {
       "primer_title": "Sedjem Ba Er-Ek Em Wedja?",
@@ -4131,6 +4142,87 @@
       "body": "Hemet-Sesh Pen Nen Iri Djer. Iri Mawy: Sesh-Ek Hena Medjat-Ek Wenen Djer.",
       "button": "Iri Mawy",
       "version": "Hemet-Sesh {{version}}"
+    },
+    "mfa": {
+      "setup": {
+        "title": "Wen Aq Sep Sen",
+        "exit_note": "Sehen: Nen Wen."
+      },
+      "intro": {
+        "title": "Redi Kat Medu Ahet Em Medjat-Ek",
+        "body": "Wen Seth: Er Aq, Sesh Sekhem Hena Medu Ahet 6. Kat Medu Ahet Iri Medu Ahet Mawy; Wenen Em Medjat-Ek Wa.",
+        "no_app_title": "Nen Kat Medu Ahet Djer?",
+        "why": "Rekh Ky Sekhem-Ek: Nen Medjat-Ek, Nen Aq.",
+        "next": "Wenen Seth · Nemet Ky"
+      },
+      "bind": {
+        "title": "Redi Er Kat Medu Ahet",
+        "add": "① Redi Hena",
+        "open": "Wen Em Kat Medu Ahet ↗",
+        "manual": "Nen Wen: Senn Medu Imen, Sesh Em Djeret.",
+        "copy": "Senn",
+        "select_hint": "Djer Medu: Setep Hena Senn.",
+        "code_label": "② Sesh Medu Ahet 6 Em {{app}}",
+        "wrong": "! Medu Ahet Nen Maat. Sesh Medu Ahet Tepy.",
+        "next": "Maa · Nemet Ky"
+      },
+      "codes": {
+        "title": "Smen Medu Ankh Wehem",
+        "body": "Medjat Nen Gem, Mi Mawy: Aq Em Medu Ankh Wehem. Medu Wa: Sep Wa. Maa Sep Wa.",
+        "copy_all": "Senn Neb",
+        "confirm": "Smen-I Medu Ankh Wehem, Nen Em Medjat Pen.",
+        "done": "Khetem",
+        "no_back": "Nen Er Hat. Setep: Khetem."
+      },
+      "manage": {
+        "body": "Er Aq: Sesh Medu Ahet 6.",
+        "enabled_at": "Wen Seth Em",
+        "last_used": "Pehwy",
+        "via_code": "Medu Ahet 6",
+        "codes_left": "Medu Ankh Wehem · Khery {{n}} / 10",
+        "regen": "Wehem Iri",
+        "low": "Medu Ankh Wehem Khery {{n}}: Wehem Iri.",
+        "disable": "Khetem Aq Sep Sen",
+        "new_phone": "Medjat Mawy: Khetem Em Medjat Tepy, Wen Em Medjat Mawy."
+      },
+      "disable": {
+        "title": "Khetem Aq Sep Sen?",
+        "body": "Khetem: Er Aq, Sekhem Wa. Medu Ankh Wehem Khery: Hedj.",
+        "ok": "Khetem",
+        "use_password": "Iri Em Sekhem"
+      },
+      "regen": {
+        "title": "Wehem Iri Medu Ankh Wehem?",
+        "body": "Medu Tepy {{n}}: Hedj. Medu Mawy 10: Maa Sep Wa."
+      },
+      "login": {
+        "code_label": "Medu Ahet",
+        "auto_submit": "Medu 6: Hab Em Djes-Ef.",
+        "sending": "Maa Djer…",
+        "wrong": "Medu Ahet Nen Maat",
+        "tries_left": "Wehem Iri: Sep {{n}}.",
+        "expired": "Aq Unut Khetem",
+        "expired_body": "Wehem Er Aq.",
+        "expired_button": "Wehem Sesh Sekhem",
+        "locked": "Sep Menmen. Wehem Iri Er Khet.",
+        "locked_until": "Wehem Iri Em {{time}}.",
+        "network": "Nen Em Senb",
+        "network_body": "Medu-Ek Wenen Djer. Wehem Maa.",
+        "remember": "Medjat Pen: Nen Hehy Djer Em Hru 30",
+        "use_recovery": "Iri Em Medu Ankh Wehem",
+        "use_code": "Iri Em Medu Ahet",
+        "recovery_title": "Aq Em Medu Ankh Wehem",
+        "recovery_hint": "Sesh Medu Ankh Wehem Wa; Medu Wa: Sep Wa.",
+        "lost": "Nen Medjat, Nen Medu Ankh Wehem"
+      },
+      "lost": {
+        "title": "Sab Wesekhet: Khetem Aq Sep Sen",
+        "body": "Sab Wesekhet Maa Ba-Ek, Khetem Aq Sep Sen. Er Khet: Aq Em Sekhem; Wen Mawy Er Khet.",
+        "hall": "Wesekhet",
+        "bring": "Djed",
+        "same_as_password": "Mi Nen Rekh Sekhem: Sab Wesekhet.",
+        "no_email": "Nen Khetem Aq Sep Sen Em Wat Sesh."
+      }
     }
   },
   "soul_push": {
@@ -4205,6 +4297,10 @@
     "social_warned_user": {
       "title": "Sebayt Er Aq",
       "body": "Sebayt Er Aq-Ek: {{reason}}"
+    },
+    "mfa_reset_by_officer": {
+      "title": "Khetem Aq Sep Sen",
+      "body": "Sab {{name}}: Khetem Aq Sep Sen-Ek Seth."
     }
   },
   "official_notify": {

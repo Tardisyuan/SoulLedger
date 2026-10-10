@@ -2840,7 +2840,8 @@
       "pending_link": "See passwords awaiting delivery",
       "actions": {
         "provision": "Open this life's account",
-        "reset": "Reset initial password"
+        "reset": "Reset initial password",
+        "mfa_reset": "Turn off two-step verification"
       },
       "provision_title": "Open this life's account for {{name}}?",
       "provision_body": "A random initial password is generated (valid 72 hours, must be changed at first sign-in). It is sent to a contact if there is one; otherwise it waits in the delivery list.",
@@ -2853,7 +2854,18 @@
       "retired_cannot_reset": "This account was retired at rebirth and cannot be reset",
       "soul_alive": "The soul is alive; no soul account can be opened",
       "soul_not_found": "Soul not found",
-      "failed": "Something went wrong; try again"
+      "failed": "Something went wrong; try again",
+      "mfa_reset": {
+        "title": "Turn off two-step verification for {{name}}?",
+        "consequence_1": "The authenticator key, the recovery codes and every “don't ask again on this phone” are voided; signed-in devices must sign in again.",
+        "consequence_2": "From then on the soul signs in with its password alone, and sees in its notifications which officer turned it off.",
+        "consequence_3": "It can only be turned off, never on, for a soul; the soul can turn it on again itself.",
+        "reason": "Reason (required, goes into the audit log)",
+        "reason_required": "A reason is needed",
+        "done": "Two-step verification turned off",
+        "not_enabled": "This soul has not turned two-step verification on",
+        "not_home_hall": "Only an officer of the soul's own hall can turn off its two-step verification"
+      }
     },
     "rebirth": {
       "title": "Rebirth applications",
@@ -3720,7 +3732,11 @@
       "chat": "Letters",
       "chat_note": "When a new letter or a reply from the hall arrives",
       "history": "Notification history",
-      "history_note": "Every notification sent to you, delivered or not"
+      "history_note": "Every notification sent to you, delivered or not",
+      "group_prefs": "Preferences",
+      "group_security": "Account security",
+      "mfa_off": "○ Off",
+      "mfa_on": "✓ On"
     },
     "push": {
       "primer_title": "Tell you when there is a result?",
@@ -4134,6 +4150,90 @@
       "desired_label": "Days you hope remain (optional)",
       "desired_hint": "{{n}} days left now. Enter 0 to hope for an immediate end; leave blank to let the officer decide.",
       "desired_invalid": "Enter a whole number from 0 to {{max}}"
+    },
+    "mfa": {
+      "setup": {
+        "title": "Turn on two-step verification",
+        "exit_note": "Leaving now does not turn it on"
+      },
+      "intro": {
+        "title": "First, put an authenticator on your phone",
+        "body": "Once it is on, signing in takes a 6-digit number as well as your password. An authenticator app makes the number, a new one every 30 seconds, and it exists only on your phone.",
+        "no_app_title": "No authenticator yet?",
+        "no_app_body": "Search your phone's app store for “authenticator”; any free one will do. If you already have one, go straight on.",
+        "why": "With it on, someone who learns your password still cannot sign in without your phone.",
+        "next": "I have one · Next"
+      },
+      "bind": {
+        "title": "Add Soul Ledger to the authenticator",
+        "add": "① Add",
+        "open": "Open in the authenticator app ↗",
+        "manual": "If it will not open, copy the key below and choose “enter manually” in the authenticator:",
+        "copy": "Copy",
+        "select_hint": "Long-press selects the whole key.",
+        "code_label": "② Enter the 6-digit number the authenticator shows for “{{app}}”",
+        "wrong": "! That number is wrong. It changes every 30 seconds; enter the one showing now.",
+        "next": "Verify · Next"
+      },
+      "codes": {
+        "title": "Save your recovery codes",
+        "body": "If you lose or change your phone, sign in with a recovery code. Each works once, and they are shown only this once.",
+        "copy_all": "Copy all",
+        "confirm": "I have saved the recovery codes somewhere other than this phone",
+        "done": "Done",
+        "no_back": "There is no going back from here; tick the box to finish"
+      },
+      "manage": {
+        "body": "Signing in asks for the 6-digit number from your authenticator.",
+        "enabled_at": "Turned on",
+        "last_used": "Last used",
+        "via_code": "6-digit number",
+        "codes_left": "Recovery codes · {{n}} / 10 left",
+        "regen": "Regenerate",
+        "low": "Only {{n}} recovery codes left. Regenerate them before they run out.",
+        "disable": "Turn off two-step verification",
+        "new_phone": "Changing phone: turn it off on the old phone first, then turn it on again on the new one."
+      },
+      "disable": {
+        "title": "Turn off two-step verification?",
+        "body": "Once it is off, signing in takes only your password. Any recovery codes left stop working.",
+        "ok": "Turn off",
+        "use_password": "Phone not with you? Use your password"
+      },
+      "regen": {
+        "title": "Regenerate recovery codes?",
+        "body": "The old {{n}} stop working at once. The new 10 are shown only once."
+      },
+      "login": {
+        "code_label": "The 6-digit number in your authenticator",
+        "auto_submit": "It is sent as soon as all 6 are in.",
+        "sending": "Verifying…",
+        "wrong": "! That number is wrong",
+        "tries_left": "{{n}} tries left.",
+        "expired": "! This step timed out",
+        "expired_body": "Enter your password again.",
+        "expired_button": "Enter password again",
+        "locked": "◐ Too many wrong tries; paused",
+        "locked_until": "You can try again after {{time}}.",
+        "network": "! Could not connect",
+        "network_body": "Check your connection, then press “Verify”. The number you typed is still there.",
+        "remember": "Do not ask again on this phone for 30 days",
+        "use_recovery": "Phone not with you? Use a recovery code",
+        "use_code": "Back to the 6-digit number",
+        "recovery_title": "Sign in with a recovery code",
+        "recovery_hint": "Enter one of the 10 recovery codes you saved. Each works once.",
+        "lost": "No phone and no recovery codes"
+      },
+      "lost": {
+        "title": "Ask an officer of your hall to turn it off",
+        "body": "Once the officer has checked who you are, they will turn two-step verification off for you. After that your password is enough to sign in, and you can turn it on again.",
+        "hall": "Hall",
+        "bring": "Give them",
+        "same_as_password": "As when no reset code reaches you, just go to an officer of your hall.",
+        "no_email": "A contact email cannot be used to turn off two-step verification."
+      },
+      "copied": "Copied",
+      "wrong_password": "! That password is wrong"
     }
   },
   "soul_push": {
@@ -4208,6 +4308,10 @@
     "social_warned_user": {
       "title": "Your account was warned",
       "body": "Your account received a warning: {{reason}}"
+    },
+    "mfa_reset_by_officer": {
+      "title": "Two-step verification turned off",
+      "body": "{{name}}, an officer of your hall, turned off your two-step verification"
     }
   },
   "official_notify": {
