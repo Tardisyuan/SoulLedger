@@ -1,1 +1,4 @@
-[]
+[
+  "scheduler.jobs.audit_prune_logs_for_tenant",
+  "scheduler.jobs.audit_prune_untenanted_logs"
+]
