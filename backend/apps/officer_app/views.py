@@ -41,7 +41,7 @@ class OfficerAppBaseView(APIView):
 class TodoView(OfficerAppBaseView):
     @extend_schema(operation_id="officer_app_todo", responses=TodoSerializer)
     def get(self, request):
-        """「待我处理」四组:审批节点 / 改派请求 / 缩短冷却申请 / 转生申请,每组计数 + 前 10 条。"""
+        """「待我处理」五组:审批节点 / 改派请求 / 缩短冷却申请 / 转生申请 / 待回书信,每组计数 + 前 10 条。"""
         return Response(todo.build(request.user, request))
 
 

@@ -5192,7 +5192,8 @@
         "approvals": "审批节点",
         "reassignments": "移交",
         "cooldowns": "缩短冷却申请",
-        "rebirths": "转生申请"
+        "rebirths": "转生申请",
+        "letters": "待回书信"
       },
       "empty_title": "此刻没有轮到你的事",
       "empty_body": "新的审批、移交和申请会推送给你。"
@@ -5306,7 +5307,8 @@
       "approval": "审批节点",
       "reassignment": "移交",
       "cooldown": "缩短冷却申请",
-      "rebirth": "转生申请"
+      "rebirth": "转生申请",
+      "letter": "书信"
     },
     "notices": {
       "empty_title": "没有通知",
@@ -5366,6 +5368,11 @@
       "failed": "没能发表评议，稍后再试。",
       "show_rest": "展开其余 {{n}} 条",
       "after_close": "结案后"
+    },
+    "letter": {
+      "irreversible": "发出后不能撤回",
+      "unavailable": "书信暂未开通",
+      "failed": "没能发出。内容还在，请重试。"
     }
   },
   "print": {

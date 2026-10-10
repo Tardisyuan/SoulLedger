@@ -4768,7 +4768,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description 「待我处理」四组:审批节点 / 改派请求 / 缩短冷却申请 / 转生申请,每组计数 + 前 10 条。 */
+        /** @description 「待我处理」五组:审批节点 / 改派请求 / 缩短冷却申请 / 转生申请 / 待回书信,每组计数 + 前 10 条。 */
         get: operations["officer_app_todo"];
         put?: never;
         post?: never;
@@ -16421,13 +16421,15 @@ export interface components {
             reassignments: components["schemas"]["TodoGroup"];
             cooldowns: components["schemas"]["TodoGroup"];
             rebirths: components["schemas"]["TodoGroup"];
+            /** @description 待回书信:标给我、灵魂最后一封还没回的(最早在前)。需 `soul_inbox.reply`。 */
+            letters: components["schemas"]["TodoGroup"];
         };
         TodoGroup: {
             count: number;
             items: components["schemas"]["TodoItem"][];
         };
         TodoItem: {
-            /** @description approval / reassignment / cooldown / rebirth */
+            /** @description approval / reassignment / cooldown / rebirth / letter */
             kind: string;
             id: string;
             title: string;
@@ -16474,7 +16476,7 @@ export interface components {
         };
         /** @description 推送与列表行落到哪一条:`GET items/<kind>/<id>/`。 */
         TodoTarget: {
-            /** @description approval / reassignment / cooldown / rebirth */
+            /** @description approval / reassignment / cooldown / rebirth / letter */
             kind: string;
             id: string;
         };

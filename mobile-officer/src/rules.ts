@@ -11,10 +11,11 @@ import {
   type TodoKind,
 } from "@soulledger/core/api/officer-app";
 import { soulAccountsApi } from "@soulledger/core/api/soul-accounts";
+import { INBOX_REPLY_MAX, renderTemplate } from "@soulledger/core/api/soul-inbox";
 import { workflowApi } from "@soulledger/core/api/workflow";
 import { CIVILIZATION_SHORT_CODES } from "@soulledger/core/config/civilizations";
 
-export const TODO_KINDS: readonly TodoKind[] = ["approval", "reassignment", "cooldown", "rebirth"];
+export const TODO_KINDS: readonly TodoKind[] = ["approval", "reassignment", "cooldown", "rebirth", "letter"];
 
 /**
  * 转生申请的标题:后端给的是灵魂名,「转生申请 · 名」(申诉:「转生申请申诉 · 名」)在这里按语言包拼。
@@ -27,16 +28,18 @@ export function todoTitle(item: { kind: string; title: string; is_appeal?: boole
 
 /**
  * The lists in `GET todo/`, in the order the screen draws them (Design batch 15): 审批节点, 移交,
- * 缩短冷却申请, 转生申请. 移交 is the dispatch proposals aimed at this hall (the field and kind are
+ * 缩短冷却申请, 转生申请, 待回书信. 移交 is the dispatch proposals aimed at this hall (the field and kind are
  * still called `reassignment`; it is the same queue as the desk's 移交 inbox, `DispatchRecordViewSet.
  * proposed`), and it is counted with the rest everywhere the to-do total is read.
- * 待回书信 comes last when it exists: add its entry here, after `rebirths`, and nowhere else.
+ * 待回书信 (`letters`): letters assigned to me that the soul wrote last -- the desk inbox's 待回复 and
+ * 交给我的 together. It is counted with the rest, and drawn only when it has something.
  */
 export const TODO_GROUPS: readonly { field: keyof Todo; kind: TodoKind; label: string }[] = [
   { field: "approvals", kind: "approval", label: "officer_app.todo.groups.approvals" },
   { field: "reassignments", kind: "reassignment", label: "officer_app.todo.groups.reassignments" },
   { field: "cooldowns", kind: "cooldown", label: "officer_app.todo.groups.cooldowns" },
   { field: "rebirths", kind: "rebirth", label: "officer_app.todo.groups.rebirths" },
+  { field: "letters", kind: "letter", label: "officer_app.todo.groups.letters" },
 ];
 
 export function isTodoKind(value: unknown): value is TodoKind {
@@ -188,7 +191,8 @@ export function landingOf(data: unknown): Landing | null {
  * workflow an approval todo is keyed by. Anything else -- no target, an unknown resource -- is `null`.
  */
 export function noticeLanding(n: { related_resource?: string | null; related_id?: string | null }): Landing | null {
-  const kind = n.related_resource === "workflow" ? "approval" : n.related_resource;
+  // `SOUL_INBOX_ASSIGNED` (a letter was handed to me) names the inbox conversation.
+  const kind = n.related_resource === "workflow" ? "approval" : n.related_resource === "soul_inbox" ? "letter" : n.related_resource;
   return landingOf({ target: { kind, id: n.related_id } });
 }
 
@@ -200,6 +204,36 @@ export function handledNotice(detail: Pick<TodoItemDetail, "actionable" | "state
   if (detail.actionable) return null;
   if (detail.state === "deadline_passed" || detail.state === "permission_changed") return { kind: detail.state };
   return { kind: "handled", name: detail.handled_by?.name ?? null };
+}
+
+// ── letters (待回书信) ─────────────────────────────────────────────────
+
+/** Can this text go out as a reply: not blank, not longer than the server takes (`INBOX_REPLY_MAX`). */
+export function replyReady(text: string): boolean {
+  const body = text.trim();
+  return body !== "" && body.length <= INBOX_REPLY_MAX;
+}
+
+/**
+ * A chosen template goes INTO the box as plain text (the two known placeholders filled, nothing
+ * rendered, nothing sent). An empty box takes it whole; text already typed keeps going, the template
+ * after a blank line. Never longer than a reply may be.
+ */
+export function withTemplate(current: string, template: string, values: { soul_name: string; hall_name: string }): string {
+  const filled = renderTemplate(template, values);
+  return (current.trim() === "" ? filled : `${current}\n\n${filled}`).slice(0, INBOX_REPLY_MAX);
+}
+
+/** 503: the letters service is off or down. Not the officer's doing and nothing to retry at once: said quietly. */
+export function lettersUnavailable(error: unknown): boolean {
+  return statusOf(error) === 503;
+}
+
+/** Why a reply (or the thread) failed, as an i18n key. */
+export function replyFailureKey(error: unknown): string {
+  if (lettersUnavailable(error)) return "officer_app.letter.unavailable";
+  if (statusOf(error) === 409) return "soul_inbox.errors.closed";
+  return "officer_app.letter.failed";
 }
 
 // ── continue on desktop ────────────────────────────────────────────────
@@ -260,6 +294,8 @@ export function deskPath(target: { kind: TodoKind | "judgment" | "soul"; id: str
     case "cooldown":
     case "rebirth":
       return "/rebirth-applications";
+    case "letter":
+      return "/soul-inbox";
     case "judgment":
       return `/judgment/${target.id}`;
     case "soul":

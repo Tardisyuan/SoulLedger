@@ -1,5 +1,5 @@
-/** 待办: the four kinds of item waiting on this officer, grouped, each group titled with its count. */
-import { officerAppApi, type TodoItem, type TodoKind } from "@soulledger/core/api/officer-app";
+/** 待办: the kinds of item waiting on this officer, grouped, each group titled with its count. */
+import { officerAppApi, type Todo, type TodoItem, type TodoKind } from "@soulledger/core/api/officer-app";
 import { useCallback, useEffect } from "react";
 import { View } from "react-native";
 
@@ -14,6 +14,9 @@ export interface ItemRef {
   id: string;
 }
 
+/** A server that predates a group (an older build) does not send it: that group is empty, not an error. */
+const countOf = (data: Todo, field: keyof Todo): number => data[field]?.count ?? 0;
+
 export function TodoTab({ onOpen, highlight }: { onOpen: (item: ItemRef) => void; highlight: ItemRef | null }) {
   const { t } = useI18n();
   const { state } = useSession();
@@ -23,9 +26,9 @@ export function TodoTab({ onOpen, highlight }: { onOpen: (item: ItemRef) => void
   const { data, error, loading, reload } = useRemote(load);
   // Siri's 「有几件待办」 speaks this total back (voiceCache.ts): a number and a time, never a case.
   useEffect(() => {
-    if (data) publishVoiceNumber("todo", TODO_GROUPS.reduce((sum, g) => sum + data[g.field].count, 0));
+    if (data) publishVoiceNumber("todo", TODO_GROUPS.reduce((sum, g) => sum + countOf(data, g.field), 0));
   }, [data]);
-  const view = viewStateOf({ data, error }, (d) => TODO_GROUPS.every((g) => d[g.field].count === 0), isDenied);
+  const view = viewStateOf({ data, error }, (d) => TODO_GROUPS.every((g) => countOf(d, g.field) === 0), isDenied);
 
   return (
     <Screen testID="tab-todo-screen" edges={["left", "right"]} refreshing={loading && data !== null} onRefresh={reload}>
@@ -44,7 +47,7 @@ export function TodoTab({ onOpen, highlight }: { onOpen: (item: ItemRef) => void
       ) : (
         TODO_GROUPS.map(({ field, kind, label }) => {
           const group = data![field];
-          if (group.count === 0) return null;
+          if (!group || group.count === 0) return null;
           return (
             <View key={kind} testID={`todo-group-${kind}`}>
               <View style={{ paddingHorizontal: space[5], paddingVertical: space[3] }}>

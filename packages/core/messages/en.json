@@ -5192,7 +5192,8 @@
         "approvals": "Approval steps",
         "reassignments": "Handovers",
         "cooldowns": "Cooling-off requests",
-        "rebirths": "Rebirth applications"
+        "rebirths": "Rebirth applications",
+        "letters": "Letters to answer"
       },
       "empty_title": "Nothing waiting on you",
       "empty_body": "New approvals, handovers and requests will be pushed to you."
@@ -5306,7 +5307,8 @@
       "approval": "Approval step",
       "reassignment": "Handover",
       "cooldown": "Cooling-off request",
-      "rebirth": "Rebirth application"
+      "rebirth": "Rebirth application",
+      "letter": "Letter"
     },
     "notices": {
       "empty_title": "No notices",
@@ -5366,6 +5368,11 @@
       "failed": "Couldn't post the comment. Try again later.",
       "show_rest": "Show {{n}} more",
       "after_close": "After closing"
+    },
+    "letter": {
+      "irreversible": "Cannot be undone once sent",
+      "unavailable": "Letters are not available yet",
+      "failed": "Could not send. Your text is still here; try again."
     }
   },
   "print": {

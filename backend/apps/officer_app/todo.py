@@ -9,7 +9,13 @@
   判官「请管理员改派」(`judgment.claims.request_reassign`)只发一条通知,没有可查询的队列,不在此列。
 * 缩短冷却申请:`OfficerCooldownShorteningViewSet` 的范围(`soul__home_tenant`),状态 PENDING。
 
-每一类还要有对应的权限码(`workflow.approve` / `dispatch.approve`)。没有时该组为空,不报错。
+* 待回书信(`letters`):殿司收件箱里**标给我**、灵魂最后一封还没回、会话没关、我没归档的。就是官员台收件箱
+  「待回复」文件夹(`inbox.folder_q("awaiting_reply")`)与「交给我的」(`Conversation.assignee`)的交集,同一个过滤,
+  所以这里的数与官员台翻到底的条数是同一个数。最早来信的在前(先来先回)。只读我们库里的列与 `last_from`,
+  **不碰 Synapse**:信的正文不进这个接口。
+
+每一类还要有对应的权限码(`workflow.approve` / `dispatch.approve` / `soul_inbox.reply`)。没有时该组为空,不报错。
+`total()` 是所有组的和 —— 角标、推送里的数字、语音读数都读它或同一个和,加一组就同步变。
 
 范围由一个「像请求的对象」(`.user` / `.tenant`)给出,这样推送(没有请求)也能算同一个数。
 """
@@ -34,7 +40,7 @@ from apps.workflow.models import (
 )
 
 LIST_LIMIT = 10
-KINDS = ("approval", "reassignment", "cooldown", "rebirth")
+KINDS = ("approval", "reassignment", "cooldown", "rebirth", "letter")
 
 
 def scope_of(user, request=None):
@@ -58,6 +64,19 @@ def _dispatches(scope):
     tenant = getattr(scope, "tenant", None)
     qs = DispatchRecord._base_manager.filter(is_deleted=False, target_tenant=tenant) if tenant else DispatchRecord.objects.none()
     return qs.select_related("soul")
+
+
+def _letters(scope):
+    """标给我、等我回的书信:收件箱「待回复」∩「交给我的」,最早来信在前。"""
+    from django.db.models import F
+
+    from apps.chat import inbox
+    from apps.chat.models import Conversation, ConversationKind
+
+    qs = Conversation.objects.filter(kind=ConversationKind.OFFICER_INBOX).select_related("soul_a")
+    qs = inbox.annotate_for(scope_to_tenant(qs, scope), scope.user)
+    return qs.filter(inbox.folder_q("awaiting_reply"), assignee_id=scope.user.pk).order_by(
+        F("last_soul_message_at").asc(nulls_last=True), "created_at")
 
 
 def _waiting_workflows(scope):
@@ -115,8 +134,13 @@ def build(user, request=None):
     if check_permission(user, "dispatch.approve"):
         reassignments = [_item("reassignment", d.pk, d.soul.name if d.soul_id else "", d.proposed_at)
                          for d in _dispatches(scope).filter(status=DispatchStatus.PROPOSED).order_by("proposed_at")]
+    letters = []
+    if check_permission(user, "soul_inbox.reply"):
+        # 条目只带灵魂名与来信时刻;正文在 Synapse,不经这里。
+        letters = [_item("letter", c.pk, c.soul_a.name, c.last_soul_message_at or c.created_at)
+                   for c in _letters(scope)]
     return {"approvals": _group(approvals), "reassignments": _group(reassignments),
-            "cooldowns": _group(cooldowns), "rebirths": _group(rebirths)}
+            "cooldowns": _group(cooldowns), "rebirths": _group(rebirths), "letters": _group(letters)}
 
 
 def total(user) -> int:
