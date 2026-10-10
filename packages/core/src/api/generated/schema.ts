@@ -9332,6 +9332,8 @@ export interface components {
             old_password: string;
             new_password: string;
             refresh?: string;
+            /** @description Officer app only: this device's Expo push token. Every other push registration of the user is deleted with the sessions; without it (the web) all of them are. */
+            token?: string;
         };
         /** @description Doc-only 400 body: `old_password` is a list of sentences, `new_password` a list of reasons. */
         ChangePasswordRefusal: {

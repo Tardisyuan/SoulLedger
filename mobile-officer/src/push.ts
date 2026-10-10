@@ -85,6 +85,11 @@ export function hasRegisteredDevice(): boolean {
   return !!platform().persistent.get(PUSH_TOKEN_KEY);
 }
 
+/** The Expo token this device registered, or undefined (never granted / no projectId): nothing to keep then. */
+export function registeredToken(): string | undefined {
+  return platform().persistent.get(PUSH_TOKEN_KEY) || undefined;
+}
+
 /** MUST run while the officer's tokens are still stored: the endpoint is authenticated. Never throws. */
 export async function unregisterDevice(): Promise<void> {
   const token = platform().persistent.get(PUSH_TOKEN_KEY);

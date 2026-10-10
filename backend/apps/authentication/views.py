@@ -43,7 +43,7 @@ from apps.core.tenant import scope_to_tenant
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin
 
 from .officer_reset import _audit
-from .passwords import end_sessions
+from .passwords import end_push_registrations, end_sessions
 from .serializers import (
     AssignRolesSerializer,
     ChangePasswordRefusalSerializer,
@@ -855,6 +855,7 @@ def change_password(request):
         user.set_password(serializer.validated_data["new_password"])
         user.save(update_fields=["password"])
         end_sessions(user)
+        end_push_registrations(user, keep_token=serializer.validated_data.get("token", ""))
         _audit(user, "官员修改密码,其他设备已退出", request=request,
                changes={"password_changed": True, "sessions_revoked": True})
 
