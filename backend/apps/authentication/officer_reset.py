@@ -29,6 +29,7 @@ from apps.core.client_ip import get_client_ip
 
 from .mail import fill, send_neutral_mail
 from .models import MfaRememberedDevice, User, UserRole
+from .passwords import end_sessions
 
 logger = logging.getLogger(__name__)
 
@@ -194,12 +195,10 @@ def confirm_reset(uid, token, new_password, *, request=None) -> User:
     except ValidationError as exc:
         raise ResetRefusedError("weak_password", " ".join(exc.messages)) from exc
 
-    from apps.soul_accounts.services import _revoke_refresh_tokens
-
     with transaction.atomic():
         user.set_password(new_password)
         user.save(update_fields=["password"])
-        _revoke_refresh_tokens(user)
+        end_sessions(user)  # 刷新令牌进黑名单 + session_version +1:已签发的 access 也立刻失效
         # 只清「不再询问」设备令牌,不碰 OfficerMfa:两步验证仍开着,下次登录照问动态码。
         MfaRememberedDevice.objects.filter(user=user).delete()
         _audit(user, "官员通过邮箱链接重置密码", request=request,

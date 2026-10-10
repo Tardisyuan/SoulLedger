@@ -7,6 +7,7 @@ import secrets
 import time
 
 from django.contrib.auth import get_user_model
+from django.db import transaction
 from django.utils import timezone
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiResponse, PolymorphicProxySerializer, extend_schema
@@ -22,6 +23,7 @@ from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.fields import empty
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
+from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
@@ -39,8 +41,11 @@ from apps.core.schema import DetailResponseSerializer, ErrorResponseSerializer
 from apps.core.tenant import scope_to_tenant
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin
 
+from .officer_reset import _audit
+from .passwords import end_sessions
 from .serializers import (
     AssignRolesSerializer,
+    ChangePasswordResponseSerializer,
     ChangePasswordSerializer,
     CustomTokenObtainPairSerializer,
     HallChoiceResponseSerializer,
@@ -69,6 +74,7 @@ from .serializers import (
     UserSerializer,
     UserUpdateSerializer,
     email_already_registered,
+    reissue_for_device,
     role_rank,
 )
 
@@ -813,23 +819,44 @@ def profile_view(request):
 
 @extend_schema(
     request=ChangePasswordSerializer,
-    responses={200: DetailResponseSerializer},
+    responses={200: ChangePasswordResponseSerializer},
 )
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def change_password(request):
     """
     POST /api/v1/auth/change-password/
-    Change password — requires old password verification.
+    Change password — requires old password verification. Every OTHER device is signed out
+    at once (refresh tokens blacklisted, `session_version` bumped so their access tokens stop
+    working too). This device keeps its login: send its `refresh` token and the response
+    carries a new `access` / `refresh` pair to swap in. No `refresh` -> this device is signed
+    out as well and the response has no tokens.
     """
     serializer = ChangePasswordSerializer(data=request.data, context={"request": request})
     serializer.is_valid(raise_exception=True)
 
     user = request.user
-    user.set_password(serializer.validated_data["new_password"])
-    user.save(update_fields=["password"])
+    current = None
+    raw = serializer.validated_data.get("refresh")
+    if raw:
+        try:
+            current = RefreshToken(raw)
+        except TokenError:
+            current = None
+        if current is None or str(current.payload.get("user_id")) != str(user.pk):
+            return Response({"refresh": ["刷新令牌无效"]}, status=status.HTTP_400_BAD_REQUEST)
 
-    return Response({"detail": "密码修改成功"})
+    with transaction.atomic():
+        user.set_password(serializer.validated_data["new_password"])
+        user.save(update_fields=["password"])
+        end_sessions(user)
+        _audit(user, "官员修改密码,其他设备已退出", request=request,
+               changes={"password_changed": True, "sessions_revoked": True})
+
+    body = {"detail": "密码修改成功"}
+    if current is not None:
+        body.update(reissue_for_device(user, current))
+    return Response(body)
 
 
 def _reset_refusal(error, code, http_status, retry_after=None, **extra):

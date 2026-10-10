@@ -6,8 +6,9 @@
  * identifier, so nothing here may say whether an account exists). The mailed link lands on the desk,
  * where the new password is chosen: the app has no universal-link domain to receive it.
  *
- * 修改密码 keeps the session, as the web profile page does: the endpoint does not revoke tokens.
- * Its refusals are the server's own sentences, one per rule; the password is never echoed.
+ * 修改密码 signs every OTHER device out and keeps this one: `authApi.changePassword` sends this device's
+ * refresh token and stores the new pair it gets back. Its refusals are the server's own sentences, one
+ * per rule; the password is never echoed.
  */
 import { authApi } from "@soulledger/core/api/auth";
 import { useEffect, useState, type ReactNode } from "react";
@@ -116,7 +117,8 @@ export function ChangePasswordScreen({ onBack }: { onBack: () => void }) {
       .changePassword(oldPassword, newPassword)
       .then(
         () => {
-          toast(t("profile.password_changed"), "success");
+          // The server signed every other device out; `changePassword` stored this device's new token pair.
+          toast(t("profile.password_changed_others_out"), "success");
           onBack();
         },
         (e: unknown) => setFail(passwordFailure(e))

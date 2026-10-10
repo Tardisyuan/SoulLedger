@@ -662,7 +662,11 @@ export interface paths {
         put?: never;
         /**
          * @description POST /api/v1/auth/change-password/
-         *     Change password — requires old password verification.
+         *     Change password — requires old password verification. Every OTHER device is signed out
+         *     at once (refresh tokens blacklisted, `session_version` bumped so their access tokens stop
+         *     working too). This device keeps its login: send its `refresh` token and the response
+         *     carries a new `access` / `refresh` pair to swap in. No `refresh` -> this device is signed
+         *     out as well and the response has no tokens.
          */
         post: operations["v1_auth_change_password_create"];
         delete?: never;
@@ -9246,14 +9250,27 @@ export interface components {
          * @enum {string}
          */
         CaseTypeEnum: "ROUTINE" | "APPEAL" | "CROSS_REALM" | "SPECIAL" | "CANONIZATION" | "PURGATORY_REVIEW" | "HERESY_TRIAL" | "HEART_WEIGHING" | "DIVINE_TRIAL" | "REBIRTH_APPLICATION";
-        /** @description Serializer for changing password with old password verification. */
+        /**
+         * @description Serializer for changing password with old password verification.
+         *
+         *     `refresh` is this device's refresh token: the change ends every OTHER session, and the
+         *     response carries a fresh pair for this one, with the same 7 / 30 day lifetime this
+         *     device logged in with. Without it, this device is signed out too.
+         */
         ChangePassword: {
             old_password: string;
             new_password: string;
+            refresh?: string;
         };
         ChangePasswordRequest: {
             old_password: string;
             new_password: string;
+        };
+        /** @description 200 body. `access` / `refresh` are this device's new pair (absent when no `refresh` was sent). */
+        ChangePasswordResponse: {
+            detail: string;
+            access?: string;
+            refresh?: string;
         };
         ChatError: {
             detail: string;
@@ -18542,7 +18559,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DetailResponse"];
+                    "application/json": components["schemas"]["ChangePasswordResponse"];
                 };
             };
         };

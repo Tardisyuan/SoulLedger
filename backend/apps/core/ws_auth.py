@@ -183,6 +183,10 @@ class JWTAuthMiddleware(BaseMiddleware):
             # OfficerJWTAuthentication.get_user 同一条规则。
             if user.role == "SOUL":
                 return None
+            # 改密码后更早签发的令牌:与 HTTP 侧同一条规则(`session_is_current`)。
+            from apps.soul_accounts.authentication import session_is_current
+            if not session_is_current(token, user):
+                return None
             return user
         except (TokenError, InvalidToken):
             logger.debug("JWTAuthMiddleware: invalid token")

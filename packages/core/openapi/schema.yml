@@ -1476,7 +1476,11 @@ paths:
       operationId: v1_auth_change_password_create
       description: |-
         POST /api/v1/auth/change-password/
-        Change password — requires old password verification.
+        Change password — requires old password verification. Every OTHER device is signed out
+        at once (refresh tokens blacklisted, `session_version` bumped so their access tokens stop
+        working too). This device keeps its login: send its `refresh` token and the response
+        carries a new `access` / `refresh` pair to swap in. No `refresh` -> this device is signed
+        out as well and the response has no tokens.
       tags:
       - v1
       requestBody:
@@ -1498,7 +1502,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DetailResponse'
+                $ref: '#/components/schemas/ChangePasswordResponse'
           description: ''
   /api/v1/auth/civilizations/:
     get:
@@ -19961,7 +19965,12 @@ components:
         * `REBIRTH_APPLICATION` - 转生申请
     ChangePassword:
       type: object
-      description: Serializer for changing password with old password verification.
+      description: |-
+        Serializer for changing password with old password verification.
+
+        `refresh` is this device's refresh token: the change ends every OTHER session, and the
+        response carries a fresh pair for this one, with the same 7 / 30 day lifetime this
+        device logged in with. Without it, this device is signed out too.
       properties:
         old_password:
           type: string
@@ -19970,6 +19979,9 @@ components:
           type: string
           writeOnly: true
           minLength: 8
+        refresh:
+          type: string
+          writeOnly: true
       required:
       - new_password
       - old_password
@@ -19986,6 +19998,19 @@ components:
       required:
       - new_password
       - old_password
+    ChangePasswordResponse:
+      type: object
+      description: 200 body. `access` / `refresh` are this device's new pair (absent
+        when no `refresh` was sent).
+      properties:
+        detail:
+          type: string
+        access:
+          type: string
+        refresh:
+          type: string
+      required:
+      - detail
     ChatError:
       type: object
       properties:

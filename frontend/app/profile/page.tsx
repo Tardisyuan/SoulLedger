@@ -66,7 +66,8 @@ export default function ProfilePage() {
     onSuccess: () => {
       setPasswordForm({ oldPassword: "", newPassword: "", confirmPassword: "" });
       setShowPasswordForm(false);
-      showToast(t("profile.password_changed"), "success");
+      // The change signed every other device out; this one already holds a fresh token pair.
+      showToast(t("profile.password_changed_others_out"), "success");
     },
     onError: () => {
       showToast(t("profile.password_change_failed"), "error");
