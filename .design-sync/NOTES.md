@@ -83,6 +83,32 @@ previews authored for the core set; the rest ship on the floor card.
   globals.css with a kind but no class uses them yet, so Tailwind leaves them out of the compiled
   CSS. Informational: nothing to fix until a component uses them, and then the line goes away.
 
+- Authored previews (2026-10-10 wave): the 12 that were still on the floor card, plus 15 components
+  added to the entry that day (BrandMark, Collapse, IconPicker, ToastContainer, DataGrid, FilterBar,
+  ActionsMenu, EnumBadge, TablePageSkeleton, CardListPageSkeleton, GlobalSearch, LogoutConfirmDialog,
+  MfaRequiredBanner, ConnectionStatus, ConnectionBanner). 55 components in all.
+  - The provider gained three things for them: a no-op `AppRouterContext` and an offline
+    `QueryClient` (GlobalSearch calls `useRouter()` / `useQuery()`; a search finds nothing), and a
+    `mfaRequired` prop that marks the faked user as needing two-step sign-in (MfaRequiredBanner).
+  - Not added: MenuGloss (its content comes from the menus API) and RouteProgress (a bar that only
+    exists during a route change).
+  - BottomBar is `position: fixed` and hidden from 769 px up: `cardMode: single`, viewport 390x300.
+  - ConnectionStatus / ConnectionBanner can only show `disconnected` (no WebSocket provider here).
+  - GlobalSearch, ActionsMenu and FilterBar show the closed control only; their popups need interaction.
+  - ToastContainer itself returns null: the preview fires `showToast(…, 600000)` in an effect.
+  - SearchSelectField shows the controlled `searchText`, not the selected label; a "selected" cell
+    passes `searchText` equal to the label.
+  - Spinner's label is visually hidden, so PageSpinner has one cell.
+  - DataGrid has no Loading cell: its skeleton rows captured ragged.
+  - Groups for the new ones follow their source folder where it is specific (`brand`, `data-grid`,
+    `layout`) even though `docsMap` names another group; left as is.
+
+- `[RENDER_BLANK] BottomBar` (2026-10-10): the validate screenshot is taken at desktop width, where the
+  bar is hidden by its own `min-[769px]:hidden`. The per-cell capture (narrow) shows it; the card is
+  `cardMode: single` at 420x180 and the preview frames it in a transformed 390 px box.
+- `[RENDER_THIN]` on ConnectionBanner, ConnectionStatus, GlobalSearch, LogoutConfirmDialog,
+  MfaRequiredBanner: fixed / portal / `display: contents` roots measure 0 px; the sheets are complete.
+
 ## Re-sync risks
 
 - Bundle is ~4.7 MB: lucide-react whole (~1.6 MB, GlobalNav resolves icon names from
