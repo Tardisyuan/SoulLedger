@@ -283,6 +283,11 @@ const TECHNICAL: Record<string, string[]> = {
   "permissions.config.file_hint": ["JSON", "{max}"],
   "permissions.config.errors.not_json": ["JSON"],
   "permissions.config.errors.bad_structure": ["JSON", "permissions", "roles", "role_permissions", "field_permissions", "data_scopes"],
+  // 第十七批:同一批占位符(单花括号,与 zh-Hans 同形)。
+  "permissions.config.errors.too_large": ["{max}"],
+  "permissions.config.overwrite.warning": ["{n}"],
+  "permissions.config.overwrite.warning_own": ["{n}"],
+  "permissions.config.overwrite.all_halls": ["{hall}"],
 };
 
 /** 空白切出的记号去掉两端标点(括号、引号、逗号、句点……),留下可与 TECHNICAL 比对的原形。 */
@@ -549,8 +554,13 @@ const ROOTS_BATCH16 = [
   "Pesh", //          页
   "Smi", //           报告
 ];
+/** 第十七批(Design,2026-10-10):Mawy 更新、Sni 跳过;其余词根此前已登记。 */
+const ROOTS_BATCH17 = [
+  "Mawy", //          更新
+  "Sni", //           跳过
+];
 const LEXICON = new Set([
-  ...[...ROOTS, ...ROOTS_MOD, ...ROOTS_FIX, ...ROOTS_SPLIT, ...ROOTS_CLOSE, ...ROOTS_FINAL, ...ROOTS_LATE, ...ROOTS_APP, ...ROOTS_NINE, ...ROOTS_TEN, ...ROOTS_ELEVEN, ...ROOTS_TWELVE, ...ROOTS_BATCH15, ...ROOTS_BATCH16, ...PROPER_NAMES, ...PARTICLES].flatMap((e) => e.split(/ \/ | /)),
+  ...[...ROOTS, ...ROOTS_MOD, ...ROOTS_FIX, ...ROOTS_SPLIT, ...ROOTS_CLOSE, ...ROOTS_FINAL, ...ROOTS_LATE, ...ROOTS_APP, ...ROOTS_NINE, ...ROOTS_TEN, ...ROOTS_ELEVEN, ...ROOTS_TWELVE, ...ROOTS_BATCH15, ...ROOTS_BATCH16, ...ROOTS_BATCH17, ...PROPER_NAMES, ...PARTICLES].flatMap((e) => e.split(/ \/ | /)),
   ...WHOLE_PHRASES,
 ]);
 
