@@ -31,8 +31,9 @@ export function SentenceNodeRetry({ plan, node }: { plan: SentencePlan; node: Se
 
   const isHome = isAdmin || (!!user?.tenant?.code && user.tenant.code === plan.tenant_code);
   const canRetry = isHome && hasPermission("judgment.execute") && (plan.status === "ACTIVE" || plan.status === "RETRIAL");
+  const cancelled = refusal.status === "CANCELLED";
   const why =
-    refusal.status === "CANCELLED"
+    cancelled
       ? t("sentence_plan.last_refusal_cancelled")
       : refusal.reason
         ? t("sentence_plan.last_refusal_rejected", { reason: refusal.reason })
@@ -54,8 +55,18 @@ export function SentenceNodeRetry({ plan, node }: { plan: SentencePlan; node: Se
     );
 
   return (
-    <div className="w-full space-y-2" data-testid="sentence-node-retry">
-      <p className="text-xs text-[oklch(var(--color-ink-muted))]">{why}</p>
+    <div className="flex w-full flex-wrap items-start justify-between gap-x-3 gap-y-2" data-testid="sentence-node-retry">
+      {/* 被拒用 danger,被取消不是错误,用 ink-muted;符号只是装饰,读屏读原因文字。 */}
+      <p
+        data-testid="sentence-node-refusal"
+        data-refusal={cancelled ? "cancelled" : "rejected"}
+        className={`min-w-0 grow basis-60 break-words text-sm ${
+          cancelled ? "text-[oklch(var(--color-ink-muted))]" : "text-[oklch(var(--color-danger))]"
+        }`}
+      >
+        <span aria-hidden="true">{cancelled ? "○ " : "! "}</span>
+        <span>{why}</span>
+      </p>
       {canRetry && (
         <Button type="button" size="sm" variant="secondary" onClick={() => setConfirm(true)}>
           {t("sentence_plan.retry_dispatch")}
