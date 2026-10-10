@@ -171,6 +171,7 @@ def assign(conversation, target, *, actor):
     conversation.save(update_fields=["assignee", "assigned_at"])
     if target.pk != actor.pk:
         _notify_assigned(conversation, target, actor)
+        push_to_assignee(conversation, force=True)
     return conversation
 
 
@@ -193,3 +194,29 @@ def _notify_assigned(conversation, target, actor):
         target, title=title, message=body, notification_type="SOUL_INBOX_ASSIGNED",
         related_resource="soul_inbox", related_id=str(conversation.pk), params=params,
     )
+
+
+#: 同一会话两次手机推送之间至少隔这么久。灵魂连发几封信只推第一封;
+#: 经办人拿到的是「有 N 件待你处理」,点开就是会话,后几封不必再响。
+PUSH_QUIET_MINUTES = 10
+
+
+def push_to_assignee(conversation, *, force=False):
+    """给经办官员发一条手机推送(泛化计数,不含灵魂名与信的内容),落地到这个会话。
+
+    只在「等他回」时发:会话没关、最后一封是灵魂写的。`force`(刚被分派 / 改派)无视静默期,
+    但仍会开启静默期,于是紧接着来的信不重复响。官员的推送开关就是他登记的设备
+    (`OfficerPushDevice`),没有设备或待办为 0 都不发。提交后才入队,失败不影响业务。"""
+    from django.core.cache import cache
+
+    from apps.officer_app.push import notify_users
+
+    officer = conversation.assignee
+    if officer is None or conversation.closed_at is not None or conversation.last_from != "soul":
+        return
+    key = f"officer_letter_push:{conversation.pk}"
+    if force:
+        cache.set(key, 1, PUSH_QUIET_MINUTES * 60)
+    elif not cache.add(key, 1, PUSH_QUIET_MINUTES * 60):
+        return
+    notify_users([officer], target={"kind": "letter", "id": str(conversation.pk)})

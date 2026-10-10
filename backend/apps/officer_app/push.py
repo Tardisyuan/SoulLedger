@@ -10,6 +10,7 @@
 触发点(「有东西落进四组之一」):`WorkflowService.announce`(新节点轮到某人,含转生申请)、
 `DispatchService._notify_target_tenant`(调拨提案)、`rebirth.request_cooldown_shortening`
 (缩短冷却申请)。三处都只调 `notify_users(用户们)`,由本模块重算计数。
+书信:`chat.inbox.push_to_assignee`(会话被分派 / 改派给他;已分派给他的会话来了灵魂的新信,同会话 10 分钟静默)。
 """
 import logging
 
