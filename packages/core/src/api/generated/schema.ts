@@ -12331,6 +12331,11 @@ export interface components {
             /** Format: date-time */
             create_time: string;
             visibility: string;
+            /**
+             * Format: date-time
+             * @description 作者改过正文的时间;没改过为 null。
+             */
+            edited_at: string | null;
             comment_count: number;
             readonly reaction_counts: components["schemas"]["SoulReactionCounts"];
             /** @description 按显示顺序;`url` 是发给当前官员的签名地址。 */
@@ -14129,6 +14134,8 @@ export interface components {
             readonly reaction_counts?: components["schemas"]["SoulReactionCounts"];
             readonly tenant?: number;
             /** Format: date-time */
+            readonly edited_at?: string | null;
+            /** Format: date-time */
             readonly create_time?: string;
             /** Format: date-time */
             readonly update_time?: string;
@@ -14682,6 +14689,8 @@ export interface components {
             readonly reaction_counts: components["schemas"]["SoulReactionCounts"];
             readonly tenant: number;
             /** Format: date-time */
+            readonly edited_at: string | null;
+            /** Format: date-time */
             readonly create_time: string;
             /** Format: date-time */
             readonly update_time: string;
@@ -14716,6 +14725,8 @@ export interface components {
             /** @description 按显示顺序,最多 9 张。 */
             readonly media: components["schemas"]["PostMedia"][];
             readonly reaction_counts: components["schemas"]["SoulReactionCounts"];
+            /** Format: date-time */
+            edited_at?: string | null;
             /** Format: date-time */
             readonly create_time: string;
         };
@@ -16369,6 +16380,11 @@ export interface components {
             /** @description 按显示顺序,最多 9 张。 */
             readonly media: components["schemas"]["PostMedia"][];
             readonly is_mine: boolean;
+            /**
+             * Format: date-time
+             * @description 作者改过正文的时间;没改过为 null。
+             */
+            edited_at: string | null;
             /** Format: date-time */
             create_time: string;
         };
