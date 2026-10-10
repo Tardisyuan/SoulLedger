@@ -28,6 +28,7 @@ export function sessionOf(user: LoginUser | null, over: Partial<Session> = {}): 
     signIn: jest.fn(async () => ({ kind: "done" as const })),
     verifyMfa: jest.fn(async () => {}),
     signOut: jest.fn(),
+    setMfaEnabled: jest.fn(),
     ...over,
   };
 }

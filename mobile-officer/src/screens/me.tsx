@@ -1,4 +1,4 @@
-/** 我的: profile, two-step verification status, language, theme, push, about, sign out. */
+/** 我的: profile, two-step verification (opens its screen), change password, language, theme, push, about, sign out. */
 import { mfaApi } from "@soulledger/core/api/auth";
 import { SUPPORTED_LOCALES } from "@soulledger/core/config/locale";
 import Constants from "expo-constants";
@@ -12,7 +12,9 @@ import { hallLabel } from "../rules";
 import { needsMfaSetup, useSession } from "../session";
 import { Notice, Screen, SectionLabel, Txt, space, translate, useI18n, useRemote } from "../shared";
 
-export function MeTab() {
+export type AccountScreen = "password" | "mfa";
+
+export function MeTab({ onOpen }: { onOpen: (screen: AccountScreen) => void }) {
   const { t, locale, setLocale, enumLabel } = useI18n();
   const { state, signOut } = useSession();
   const { themeChoice, setThemeChoice } = usePrefs();
@@ -42,10 +44,11 @@ export function MeTab() {
         </Block>
 
         <Block label={t("officer_app.me.mfa")}>
-          <Txt testID="me-mfa" variant="bodyLg">{mfaLine}</Txt>
-          <Txt variant="caption" tone="muted">
-            {t("officer_app.me.mfa_note")}
-          </Txt>
+          <Row testID="me-mfa" minHeight={56} title={mfaLine} onPress={() => onOpen("mfa")} right={<Txt variant="nav">›</Txt>} />
+        </Block>
+
+        <Block label={t("profile.change_password")}>
+          <Row testID="me-password" minHeight={56} title={t("profile.change_password")} onPress={() => onOpen("password")} right={<Txt variant="nav">›</Txt>} />
         </Block>
 
         <Block label={t("officer_app.me.language")}>

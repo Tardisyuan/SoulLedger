@@ -11,7 +11,7 @@ jest.mock("@soulledger/core/api/auth", () => ({
 
 describe("the sign-out confirm", () => {
   it("replaces the button where it stood, and cancel brings the button back", async () => {
-    renderOfficer(<MeTab />);
+    renderOfficer(<MeTab onOpen={() => {}} />);
     fireEvent.press(await screen.findByTestId("me-logout"));
     expect(screen.queryByTestId("me-logout")).toBeNull();
     expect(screen.getByTestId("me-logout-confirm")).toBeTruthy();
