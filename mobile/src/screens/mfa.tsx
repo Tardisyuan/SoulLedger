@@ -156,6 +156,9 @@ function Wizard({ onExit, onEnabled }: { onExit: () => void; onEnabled: () => vo
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [setup, setSetup] = useState<{ secret: string; otpauth_url: string } | null>(null);
   const [setupFailed, setSetupFailed] = useState<{ key: string; params?: Record<string, string> } | null>(null);
+  const [password, setPassword] = useState("");
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [starting, setStarting] = useState(false);
   const [openFailed, setOpenFailed] = useState(false);
   const [code, setCode] = useState("");
   const [bind, setBind] = useState<StepState>({ kind: "idle" });
@@ -171,23 +174,27 @@ function Wizard({ onExit, onEnabled }: { onExit: () => void; onEnabled: () => vo
     []
   );
 
-  // A new secret is asked for once, when step 2 first appears; going back and forth does not change it.
-  useEffect(() => {
-    if (step !== 2 || requested.current) return;
-    requested.current = true;
-    soulApi.mfaSetup().then(setSetup, (e: unknown) => {
-      requested.current = false;
-      setSetupFailed(soulErrorMessage(e));
-    });
-  }, [step]);
-
-  const retrySetup = () => {
+  // 第一步「下一步」带着当前密码去要一把新密钥(已登录不等于是本人);要到了就不再要,往返不换码,也不再问密码。
+  const start = async () => {
+    if (setup) return setStep(2);
+    if (starting || password.length === 0) return;
+    setStarting(true);
+    setPasswordError(null);
     setSetupFailed(null);
-    requested.current = true;
-    soulApi.mfaSetup().then(setSetup, (e: unknown) => {
-      requested.current = false;
-      setSetupFailed(soulErrorMessage(e));
-    });
+    try {
+      const made = await soulApi.mfaSetup(password);
+      requested.current = true;
+      setSetup(made);
+      setPassword("");
+      setStep(2);
+    } catch (e) {
+      const failure = soulMfaFailure(e);
+      if (failure.code === "wrong_password") setPasswordError(tr("soul_app.mfa.wrong_password"));
+      else if (failure.code === "rate_limited") setPasswordError(tr("soul_app.errors.rate_limited"));
+      else setSetupFailed(soulErrorMessage(e));
+    } finally {
+      setStarting(false);
+    }
   };
 
   const openAuthenticator = () => {
@@ -257,6 +264,29 @@ function Wizard({ onExit, onEnabled }: { onExit: () => void; onEnabled: () => vo
                   {tr("soul_app.mfa.intro.why")}
                 </Txt>
               </View>
+              {setup ? null : (
+                <Input
+                  testID="setup-password"
+                  label={tr("soul_app.login.password")}
+                  hint={tr("soul_app.mfa.intro.password_hint")}
+                  error={passwordError}
+                  value={password}
+                  onChangeText={(next) => {
+                    setPassword(next);
+                    setPasswordError(null);
+                  }}
+                  editable={!starting}
+                  secureTextEntry
+                  textContentType="password"
+                  autoComplete="current-password"
+                  secureToggle={{ show: tr("soul_app.common.show"), hide: tr("soul_app.common.hide") }}
+                />
+              )}
+              {setupFailed ? (
+                <Notice tone="neg" testID="setup-failed">
+                  {tr(setupFailed.key, setupFailed.params)}
+                </Notice>
+              ) : null}
             </>
           ) : (
             <>
@@ -265,11 +295,7 @@ function Wizard({ onExit, onEnabled }: { onExit: () => void; onEnabled: () => vo
                 <Txt variant="body" tone="muted" style={styles.bold}>
                   {tr("soul_app.mfa.bind.add")}
                 </Txt>
-                {setupFailed ? (
-                  <Notice tone="neg" testID="setup-failed" onRetry={retrySetup}>
-                    {tr(setupFailed.key, setupFailed.params)}
-                  </Notice>
-                ) : setup ? (
+                {setup ? (
                   <>
                     <Button testID="open-authenticator" title={`${tr("soul_app.mfa.bind.open")}︎`} onPress={openAuthenticator} />
                     {openFailed ? (
@@ -321,7 +347,14 @@ function Wizard({ onExit, onEnabled }: { onExit: () => void; onEnabled: () => vo
           )}
         </ScrollView>
         {step === 1 ? (
-          <WizardFooter testID="intro-next" label={tr("soul_app.mfa.intro.next")} note={tr("soul_app.mfa.setup.exit_note")} onPress={() => setStep(2)} />
+          <WizardFooter
+            testID="intro-next"
+            label={tr("soul_app.mfa.intro.next")}
+            note={tr("soul_app.mfa.setup.exit_note")}
+            onPress={() => void start()}
+            disabled={!setup && password.length === 0}
+            busy={starting}
+          />
         ) : (
           <WizardFooter
             testID="bind-next"

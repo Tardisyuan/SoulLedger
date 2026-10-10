@@ -253,6 +253,8 @@ function Wizard({ onLeave, onEnabled, onLocked }: { onLeave: () => void; onEnabl
   const [saved, setSaved] = useState(false);
   const [busy, setBusy] = useState(false);
   const [completeError, setCompleteError] = useState<string | null>(null);
+  const [password, setPassword] = useState("");
+  const [passwordError, setPasswordError] = useState<string | null>(null);
   const requested = useRef(false);
   const finished = useRef(false);
   const done = step > STEPS;
@@ -271,18 +273,31 @@ function Wizard({ onLeave, onEnabled, onLocked }: { onLeave: () => void; onEnabl
     []
   );
 
-  // A new secret is asked for once, when step 2 first appears; going back and forth does not change it.
-  useEffect(() => {
-    if (step !== 2 || requested.current) return;
-    requested.current = true;
-    mfaApi.setup().then(
-      (r) => setSetup(r.data),
-      (e: unknown) => {
-        requested.current = false;
-        setSetupFailed(t(mfaManageFailureKey(e, "mfa.setup.setup_failed")));
-      }
-    );
-  }, [step, t]);
+  // 第一步「下一步」带着当前密码去要一把新密钥(已登录不等于是本人);要到了就不再要,往返不换码,也不再问密码。
+  const start = () => {
+    if (setup) return setStep(2);
+    if (busy) return;
+    setBusy(true);
+    setPasswordError(null);
+    setSetupFailed(null);
+    mfaApi
+      .setup(password)
+      .then(
+        (r) => {
+          requested.current = true;
+          setSetup(r.data);
+          setPassword("");
+          setStep(2);
+        },
+        (e: unknown) => {
+          const code = (e as { response?: { data?: { code?: string } } })?.response?.data?.code;
+          if (code === "wrong_password") setPasswordError(t("mfa.setup.password_wrong"));
+          else if (code === "login_locked") setPasswordError(t("mfa.setup.password_locked"));
+          else setSetupFailed(t(mfaManageFailureKey(e, "mfa.setup.setup_failed")));
+        }
+      )
+      .finally(() => setBusy(false));
+  };
 
   const confirm = () => {
     setBusy(true);
@@ -343,6 +358,24 @@ function Wizard({ onLeave, onEnabled, onLocked }: { onLeave: () => void; onEnabl
         <View style={{ gap: space[3] }}>
           <Txt variant="title">{t("mfa.setup.step1_title")}</Txt>
           <Txt variant="body" tone="muted">{t("mfa.setup.step1_body")}</Txt>
+          {setup ? null : (
+            <Input
+              testID="mfa-setup-password"
+              label={t("mfa.manage.confirm_by_password")}
+              hint={t("mfa.setup.password_hint")}
+              error={passwordError}
+              value={password}
+              onChangeText={(v) => {
+                setPassword(v);
+                setPasswordError(null);
+              }}
+              secureTextEntry
+              textContentType="password"
+              autoComplete="current-password"
+              secureToggle={{ show: t("soul_app.common.show"), hide: t("soul_app.common.hide") }}
+            />
+          )}
+          {setupFailed ? <Notice tone="neg" testID="mfa-setup-failed">{`! ${setupFailed}`}</Notice> : null}
         </View>
       ) : null}
 
@@ -402,7 +435,13 @@ function Wizard({ onLeave, onEnabled, onLocked }: { onLeave: () => void; onEnabl
 
       <View style={{ gap: space[3] }}>
         {step < 3 ? (
-          <Button testID="mfa-next" title={t("mfa.setup.next")} disabled={step === 2 && !setup} onPress={() => setStep(step + 1)} />
+          <Button
+            testID="mfa-next"
+            title={t("mfa.setup.next")}
+            busy={step === 1 && busy}
+            disabled={step === 1 ? !setup && password.length === 0 : !setup}
+            onPress={() => (step === 1 ? start() : setStep(step + 1))}
+          />
         ) : step === 3 ? (
           <Button testID="mfa-confirm" title={t("mfa.setup.next")} busy={busy} disabled={code.length !== 6} onPress={confirm} />
         ) : (

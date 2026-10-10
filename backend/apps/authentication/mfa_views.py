@@ -57,6 +57,13 @@ class MfaStatusSerializer(serializers.Serializer):
     recovery_codes_remaining = serializers.IntegerField()
 
 
+class MfaSetupRequestSerializer(serializers.Serializer):
+    """开始设置要先输当前密码:已登录不等于是本人(偷到登录状态的人能给账号绑上自己的验证器)。
+    缺省 / 空按「密码不对」算,同一个原因码。"""
+
+    password = serializers.CharField(required=False, allow_blank=True, default="", trim_whitespace=False)
+
+
 class MfaSetupResponseSerializer(serializers.Serializer):
     secret = serializers.CharField()
     otpauth_url = serializers.CharField()
@@ -80,6 +87,8 @@ _MESSAGES = {
     "wrong": "动态码不对",
     "expired": "动态码已过期",
     "locked": "两步验证已锁定,请稍后再试",
+    "login_locked": "密码尝试过于频繁,请稍后再试",
+    "wrong_password": "密码不对",
 }
 
 
@@ -145,16 +154,43 @@ def status_view(request):
 
 
 @extend_schema(
-    methods=["POST"], request=None, responses={200: MfaSetupResponseSerializer, 409: MfaRefusalSerializer},
+    methods=["POST"], request=MfaSetupRequestSerializer,
+    responses={200: MfaSetupResponseSerializer, 400: MfaRefusalSerializer, 409: MfaRefusalSerializer, 429: MfaRefusalSerializer},
 )
 @extend_schema(methods=["DELETE"], request=None, responses={200: DetailResponseSerializer})
 @api_view(["POST", "DELETE"])
 @permission_classes([IsAuthenticated])
 def setup_view(request):
-    """POST:发一把新密钥(已开启答 409,先关闭再开)。DELETE:中途退出,未确认的密钥作废。"""
+    """POST:当前密码 + 发一把新密钥(已开启答 409,先关闭再开)。DELETE:中途退出,未确认的密钥作废。
+
+    密码错 → 400 `wrong_password`,不产生密钥;错的次数记进**登录页那一个**计数(同一 IP 15 分钟 5 次,
+    `login_rate:{ip}`),满了答 429 `login_locked` —— 不为猜密码另开一个口子。"""
     if request.method == "DELETE":
         mfa.cancel_setup(request.user)
         return Response({"detail": "setup discarded"})
+    from django.core.cache import cache
+
+    from .views import LOGIN_MAX_ATTEMPTS, LOGIN_WINDOW_SECONDS, _get_client_ip
+
+    body = MfaSetupRequestSerializer(data=request.data)
+    body.is_valid(raise_exception=True)
+    ip = _get_client_ip(request)
+    rate_key, until_key = f"login_rate:{ip}", f"login_rate_until:{ip}"
+    attempts = cache.get(rate_key, 0)
+    if attempts >= LOGIN_MAX_ATTEMPTS:
+        import math
+        import time
+
+        until = cache.get(until_key)
+        retry_after = max(1, math.ceil(until - time.time())) if until else LOGIN_WINDOW_SECONDS
+        return _refuse("login_locked", status.HTTP_429_TOO_MANY_REQUESTS, retry_after=retry_after)
+    password = body.validated_data["password"]
+    if not password or not request.user.check_password(password):
+        import time
+
+        cache.set(rate_key, attempts + 1, timeout=LOGIN_WINDOW_SECONDS)
+        cache.set(until_key, time.time() + LOGIN_WINDOW_SECONDS, timeout=LOGIN_WINDOW_SECONDS)
+        return _refuse("wrong_password", status.HTTP_400_BAD_REQUEST, remaining_attempts=max(0, LOGIN_MAX_ATTEMPTS - attempts - 1))
     if mfa.is_enabled(request.user):
         return _refuse("already_enabled", status.HTTP_409_CONFLICT)
     row = mfa.begin_setup(request.user)

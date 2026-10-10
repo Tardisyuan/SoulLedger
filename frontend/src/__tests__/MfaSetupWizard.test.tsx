@@ -45,10 +45,15 @@ function renderWizard() {
 }
 
 const next = () => fireEvent.click(screen.getByRole("button", { name: "mfa.setup.next" }));
+/** Step 1 → 2 asks for the current password first. */
+const start = (password = "my-password") => {
+  fireEvent.change(screen.getByLabelText(/mfa\.manage\.confirm_by_password/), { target: { value: password } });
+  next();
+};
 const wizard = () => screen.getByTestId("mfa-wizard");
 
 async function goToStep4() {
-  next(); // 1 → 2
+  start(); // 1 → 2
   await waitFor(() => expect(setup).toHaveBeenCalledTimes(1));
   await screen.findByTestId("mfa-manual-key");
   next(); // 2 → 3
@@ -65,6 +70,42 @@ describe("groupKey", () => {
   });
 });
 
+describe("MfaSetupWizard: the current password comes first", () => {
+  it("「下一步」 waits for a password, and no secret is asked for before one is sent", () => {
+    renderWizard();
+    expect((screen.getByTestId("mfa-start") as HTMLButtonElement).disabled).toBe(true);
+    expect(setup).not.toHaveBeenCalled();
+  });
+
+  it("a wrong password is said under the box, the wizard stays on step 1 and no secret arrives", async () => {
+    setup.mockRejectedValueOnce({ response: { status: 400, data: { code: "wrong_password" } } });
+    renderWizard();
+    start("nope");
+    expect(await screen.findByText("mfa.setup.password_wrong")).toBeTruthy();
+    expect(wizard().getAttribute("data-step")).toBe("1");
+    expect(screen.queryByTestId("mfa-manual-key")).toBeNull();
+  });
+
+  it("a spent login budget is told as such", async () => {
+    setup.mockRejectedValueOnce({ response: { status: 429, data: { code: "login_locked", retry_after: 600 } } });
+    renderWizard();
+    start();
+    expect(await screen.findByText("mfa.setup.password_locked")).toBeTruthy();
+    expect(wizard().getAttribute("data-step")).toBe("1");
+  });
+
+  it("going back from step 2 does not ask for the password again, nor for a new secret", async () => {
+    renderWizard();
+    start();
+    await screen.findByTestId("mfa-manual-key");
+    fireEvent.click(screen.getByRole("button", { name: "mfa.setup.back" }));
+    expect(screen.queryByLabelText(/mfa\.manage\.confirm_by_password/)).toBeNull();
+    next();
+    await screen.findByTestId("mfa-manual-key");
+    expect(setup).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe("MfaSetupWizard", () => {
   it("opens on step 1 with a four-segment step bar and the exit footnote, and asks for no secret yet", () => {
     renderWizard();
@@ -74,11 +115,12 @@ describe("MfaSetupWizard", () => {
     expect(setup).not.toHaveBeenCalled();
   });
 
-  it("step 2 fetches the secret once and shows the QR and the grouped manual key", async () => {
+  it("step 1 → 2 fetches the secret once and shows the QR and the grouped manual key", async () => {
     renderWizard();
-    next();
+    start();
     await screen.findByTestId("mfa-manual-key");
     expect(setup).toHaveBeenCalledTimes(1);
+    expect(setup).toHaveBeenCalledWith("my-password");
     expect(screen.getByTestId("mfa-manual-key").textContent).toBe(groupKey(SECRET));
     expect(screen.getByTestId("mfa-qr").tagName.toLowerCase()).toBe("svg");
     expect((screen.getByRole("link", { name: /mfa\.setup\.step2_open/ }) as HTMLAnchorElement).getAttribute("href")).toMatch(/^otpauth:\/\/totp\//);
@@ -93,7 +135,7 @@ describe("MfaSetupWizard", () => {
   it("step 3: a wrong code shows the clock hint and stays on step 3", async () => {
     confirm.mockRejectedValueOnce({ response: { status: 400, data: { code: "wrong" } } });
     renderWizard();
-    next();
+    start();
     await screen.findByTestId("mfa-manual-key");
     next();
     fireEvent.change(screen.getByLabelText(/mfa\.verify\.code_label/), { target: { value: "000000" } });

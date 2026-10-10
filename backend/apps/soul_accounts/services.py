@@ -183,7 +183,7 @@ def _issue_credential(account, soul):
     account.must_change_password = True
     account.initial_password_expires_at = expires_at
     account.save(update_fields=["must_change_password", "initial_password_expires_at"])
-    _revoke_refresh_tokens(user)
+    end_account_sessions(account)
     _void_mfa_devices(account)  # 重置密码不关两步验证,但「这部手机不再询问」要重新确认
 
     delivery = pick_delivery(soul)
@@ -338,6 +338,9 @@ def issue_tokens(account):
     refresh = SoulRefreshToken.for_user(account.user)
     refresh["soul_account_id"] = str(account.pk)
     refresh["cycle"] = account.cycle
+    # 与官员令牌同一个 `sv`:账号的会话被「立刻结束」时 `session_version` +1,更早签发的 access 当场 401。
+    # 缺省按 0 算(`session_is_current`),所以上线前签发的令牌不受影响。
+    refresh["sv"] = account.user.session_version
     return {"access": str(refresh.access_token), "refresh": str(refresh)}
 
 
@@ -375,7 +378,7 @@ def login(soul_code, password):
     return account, complete_login(account)
 
 
-def change_password(account, old_password, new_password):
+def change_password(account, old_password, new_password, push_token=""):
     from django.contrib.auth.password_validation import validate_password
 
     if initial_password_expired(account):
@@ -386,11 +389,13 @@ def change_password(account, old_password, new_password):
     if old_password == new_password:
         raise SoulAccountError("新密码不能与原密码相同。", "password_unchanged", 400)
     validate_password(new_password, user)
-    set_password_chosen_by_soul(account, new_password)
+    # 其他设备全部退出,这一台保持:调用者用返回的新令牌对替换手里的(新令牌带新的 `sv`)。
+    # `push_token` 是这台手机自己的推送 token,留着;其余推送登记停用。
+    set_password_chosen_by_soul(account, new_password, keep_push_token=push_token)
     return issue_tokens(account)
 
 
-def set_password_chosen_by_soul(account, new_password):
+def set_password_chosen_by_soul(account, new_password, keep_push_token=""):
     """灵魂自己定的密码 —— 改初始密码与邮箱重置(`set_new_password`)共用。
     初始密码的生命周期到此结束:不再强制改密、不再过期;否则邮箱重置之后
     仍被要求「修改初始密码」,而初始密码已过期时新密码也登不进去。"""
@@ -403,8 +408,22 @@ def set_password_chosen_by_soul(account, new_password):
         account.save(update_fields=["must_change_password", "initial_password_expires_at"])
         # 灵魂已经自己设了密码:还没交付的初始密码没有意义了,明文立即作废。
         _void_open_credentials(account)
-        _revoke_refresh_tokens(user)
+        end_account_sessions(account, keep_push_token=keep_push_token)
         _void_mfa_devices(account)  # 改密码不关两步验证,但「这部手机不再询问」全部作废
+
+
+def end_account_sessions(account, keep_push_token=""):
+    """这个灵魂账号此前签发的全部令牌作废(刷新令牌进黑名单 + `session_version` +1,access 当场失效),
+    推送登记除 `keep_push_token` 外一律停用 —— 退出的设备不该再收到推送。与官员端同一套
+    (`authentication.passwords.end_sessions`);调用方负责事务,之后给当前设备签的新令牌带新的 `sv`。"""
+    from apps.authentication.passwords import end_sessions
+    from apps.soul_push.models import DeviceInvalidReason, PushDevice
+
+    end_sessions(account.user)
+    rows = PushDevice.objects.filter(account=account, is_active=True)
+    if keep_push_token:
+        rows = rows.exclude(token=keep_push_token)
+    rows.update(is_active=False, invalid_reason=DeviceInvalidReason.UNREGISTERED)
 
 
 def _void_mfa_devices(account):
@@ -439,7 +458,9 @@ def retire_account_for_rebirth(soul, ended_cycle):
     account.user.email = ""
     account.user.save(update_fields=["is_active", "email"])
     _void_open_credentials(account)
-    _revoke_refresh_tokens(account.user)
+    from apps.authentication.passwords import end_sessions
+
+    end_sessions(account.user)  # 推送设备在下面按「转世停用」原因单独停用
     # 两步验证跟着「这一世的账号」:密钥、恢复码、记住的设备一起作废;新一世的账号默认没有。
     from apps.soul_accounts import mfa
 

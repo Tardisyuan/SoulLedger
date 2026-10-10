@@ -91,7 +91,7 @@ class TestClassifyCode:
 class TestSetupWizard:
     def test_only_complete_turns_it_on_and_leaving_voids_it(self, api_client, admin_user):
         api_client.force_authenticate(admin_user)
-        r = api_client.post("/api/v1/auth/mfa/setup/")
+        r = api_client.post("/api/v1/auth/mfa/setup/", {"password": "admin123"}, format="json")
         assert r.status_code == 200
         assert r.data["otpauth_url"].startswith("otpauth://totp/SoulLedger%3Aadmin?secret=")
         secret = r.data["secret"]
@@ -109,7 +109,7 @@ class TestSetupWizard:
 
     def test_complete_enables_and_audits(self, api_client, admin_user):
         api_client.force_authenticate(admin_user)
-        secret = api_client.post("/api/v1/auth/mfa/setup/").data["secret"]
+        secret = api_client.post("/api/v1/auth/mfa/setup/", {"password": "admin123"}, format="json").data["secret"]
         api_client.post("/api/v1/auth/mfa/confirm/", {"code": _code(secret)}, format="json")
         r = api_client.post("/api/v1/auth/mfa/complete/")
         assert r.status_code == 200
@@ -118,12 +118,12 @@ class TestSetupWizard:
         assert AuditLog.objects.filter(resource="mfa", resource_id=str(admin_user.pk), action="UPDATE",
                                        changes={"mfa_enabled": [False, True]}).count() == 1
         # 开着的时候再 setup:409,密钥不动。
-        assert api_client.post("/api/v1/auth/mfa/setup/").status_code == 409
+        assert api_client.post("/api/v1/auth/mfa/setup/", {"password": "admin123"}, format="json").status_code == 409
         assert OfficerMfa.objects.get(user=admin_user).secret == secret
 
     def test_confirm_with_a_wrong_code_says_so(self, api_client, admin_user):
         api_client.force_authenticate(admin_user)
-        api_client.post("/api/v1/auth/mfa/setup/")
+        api_client.post("/api/v1/auth/mfa/setup/", {"password": "admin123"}, format="json")
         r = api_client.post("/api/v1/auth/mfa/confirm/", {"code": "000000"}, format="json")
         assert r.status_code == 400
         assert r.data["code"] == "wrong"
@@ -433,6 +433,54 @@ class TestRequiredRolesAndListing:
         cn_tenant.save(update_fields=["settings"])
         mfa.disable(judge_user)
         assert {u["username"] for u in api_client.get("/api/v1/users/", {"mfa": "missing"}).data["results"]} == {"admin", "judge"}
+
+
+@pytest.mark.django_db
+class TestSetupNeedsThePassword:
+    """已登录不等于是本人:开始设置先输当前密码。"""
+
+    URL = "/api/v1/auth/mfa/setup/"
+
+    @pytest.fixture(autouse=True)
+    def _fresh_login_counter(self):
+        from django.core.cache import cache
+
+        cache.clear()
+        yield
+        cache.clear()
+
+    def test_without_it_or_with_a_wrong_one_nothing_starts_and_no_secret_is_made(self, api_client, admin_user):
+        api_client.force_authenticate(admin_user)
+        for body in (None, {}, {"password": ""}, {"password": "nope"}):
+            r = api_client.post(self.URL, body, format="json")
+            assert (r.status_code, r.data["code"]) == (400, "wrong_password"), body
+            assert "secret" not in r.data
+        assert OfficerMfa.objects.filter(user=admin_user).count() == 0
+
+    def test_the_right_one_starts_it(self, api_client, admin_user):
+        api_client.force_authenticate(admin_user)
+        r = api_client.post(self.URL, {"password": "admin123"}, format="json")
+        assert r.status_code == 200 and r.data["secret"]
+
+    def test_wrong_passwords_spend_the_login_budget_and_lock_even_the_right_one(self, api_client, admin_user):
+        api_client.force_authenticate(admin_user)
+        for left in (4, 3, 2, 1, 0):
+            r = api_client.post(self.URL, {"password": "nope"}, format="json")
+            assert (r.status_code, r.data["remaining_attempts"]) == (400, left)
+        locked = api_client.post(self.URL, {"password": "admin123"}, format="json")
+        assert (locked.status_code, locked.data["code"]) == (429, "login_locked")
+        assert OfficerMfa.objects.filter(user=admin_user).count() == 0
+        # The same counter the login page reads: the password login is locked out too.
+        login = api_client.post("/api/v1/auth/login/", {"username": "admin", "password": "admin123"}, format="json")
+        assert login.status_code == 429
+
+    def test_a_forced_officer_goes_through_the_same_door(self, api_client, admin_user, cn_tenant):
+        """The banner path (role required by the hall) is this endpoint too: no separate way in."""
+        cn_tenant.settings = {"mfa_required_roles": ["ADMIN"]}
+        cn_tenant.save(update_fields=["settings"])
+        api_client.force_authenticate(admin_user)
+        assert api_client.post(self.URL, {}, format="json").status_code == 400
+        assert api_client.post(self.URL, {"password": "admin123"}, format="json").status_code == 200
 
 
 # ── 灵魂账号不受影响 ────────────────────────────────────────────────────────────

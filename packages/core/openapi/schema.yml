@@ -1879,9 +1879,24 @@ paths:
   /api/v1/auth/mfa/setup/:
     post:
       operationId: v1_auth_mfa_setup_create
-      description: POST:发一把新密钥(已开启答 409,先关闭再开)。DELETE:中途退出,未确认的密钥作废。
+      description: |-
+        POST:当前密码 + 发一把新密钥(已开启答 409,先关闭再开)。DELETE:中途退出,未确认的密钥作废。
+
+        密码错 → 400 `wrong_password`,不产生密钥;错的次数记进**登录页那一个**计数(同一 IP 15 分钟 5 次,
+        `login_rate:{ip}`),满了答 429 `login_locked` —— 不为猜密码另开一个口子。
       tags:
       - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MfaSetupRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/MfaSetupRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/MfaSetupRequest'
       security:
       - jwtAuth: []
       responses:
@@ -1891,7 +1906,19 @@ paths:
               schema:
                 $ref: '#/components/schemas/MfaSetupResponse'
           description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MfaRefusal'
+          description: ''
         '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MfaRefusal'
+          description: ''
+        '429':
           content:
             application/json:
               schema:
@@ -1899,7 +1926,11 @@ paths:
           description: ''
     delete:
       operationId: v1_auth_mfa_setup_destroy
-      description: POST:发一把新密钥(已开启答 409,先关闭再开)。DELETE:中途退出,未确认的密钥作废。
+      description: |-
+        POST:当前密码 + 发一把新密钥(已开启答 409,先关闭再开)。DELETE:中途退出,未确认的密钥作废。
+
+        密码错 → 400 `wrong_password`,不产生密钥;错的次数记进**登录页那一个**计数(同一 IP 15 分钟 5 次,
+        `login_rate:{ip}`),满了答 429 `login_locked` —— 不为猜密码另开一个口子。
       tags:
       - v1
       security:
@@ -8453,8 +8484,23 @@ paths:
   /api/v1/me/mfa/setup/:
     post:
       operationId: v1_me_mfa_setup_create
+      description: |-
+        当前密码 + 开始设置。密码不对 → 400 `wrong_password`,不产生密钥。错的次数记进**密码登录的那两个计数**
+        (同一灵魂编号 5 次 / 同一 IP 50 次,15 分钟):偷到登录状态的人在这里猜密码,和在登录页猜吃同一份预算,
+        满了答 429 `rate_limited`。
       tags:
       - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SoulMfaSetupRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SoulMfaSetupRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SoulMfaSetupRequest'
       security:
       - soulJwtAuth: []
       responses:
@@ -8464,7 +8510,19 @@ paths:
               schema:
                 $ref: '#/components/schemas/SoulMfaSetupResponse'
           description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulMfaRefusal'
+          description: ''
         '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulMfaRefusal'
+          description: ''
+        '429':
           content:
             application/json:
               schema:
@@ -20504,6 +20562,10 @@ components:
           type: string
           maxLength: 128
           minLength: 8
+        push_token:
+          type: string
+          default: ''
+          maxLength: 255
       required:
       - new_password
       - old_password
@@ -26656,6 +26718,15 @@ components:
       - mfa_required
       - pending_token
       - username
+    MfaSetupRequest:
+      type: object
+      description: |-
+        开始设置要先输当前密码:已登录不等于是本人(偷到登录状态的人能给账号绑上自己的验证器)。
+        缺省 / 空按「密码不对」算,同一个原因码。
+      properties:
+        password:
+          type: string
+          default: ''
     MfaSetupResponse:
       type: object
       properties:
@@ -34800,6 +34871,14 @@ components:
           maxLength: 500
       required:
       - reason
+    SoulMfaSetupRequest:
+      type: object
+      description: 开始设置要先输当前密码(已登录不等于是本人);缺省 / 空按「密码不对」算,同一个原因码。
+      properties:
+        password:
+          type: string
+          default: ''
+          maxLength: 128
     SoulMfaSetupResponse:
       type: object
       properties:

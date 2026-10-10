@@ -91,6 +91,12 @@ class SoulMfaSetupResponseSerializer(serializers.Serializer):
     otpauth_url = serializers.CharField()
 
 
+class SoulMfaSetupRequestSerializer(serializers.Serializer):
+    """开始设置要先输当前密码(已登录不等于是本人);缺省 / 空按「密码不对」算,同一个原因码。"""
+
+    password = serializers.CharField(required=False, allow_blank=True, default="", max_length=128, trim_whitespace=False)
+
+
 class SoulMfaCodeRequestSerializer(serializers.Serializer):
     code = serializers.CharField(max_length=32)
 
@@ -114,6 +120,8 @@ class SoulMfaResetRequestSerializer(serializers.Serializer):
 class ChangePasswordRequestSerializer(serializers.Serializer):
     old_password = serializers.CharField(max_length=128, trim_whitespace=False)
     new_password = serializers.CharField(min_length=8, max_length=128, trim_whitespace=False)
+    #: 这台手机自己的推送 token:其他设备都退出了,它们的推送登记停用,这一条留着。不带就一条都不留。
+    push_token = serializers.CharField(max_length=255, required=False, allow_blank=True, default="")
 
 
 class SoulErrorSerializer(serializers.Serializer):
