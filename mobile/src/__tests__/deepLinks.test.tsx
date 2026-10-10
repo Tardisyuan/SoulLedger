@@ -124,18 +124,35 @@ describe("the link inbox", () => {
     expect(listen).toHaveBeenCalledTimes(1);
     expect(initial).not.toHaveBeenCalled();
     const seen: string[] = [];
-    inbox.subscribe((l) => seen.push(l));
     inbox.readOpening();
     await act(async () => {});
+    inbox.subscribe((l) => seen.push(l));
     expect(seen).toEqual(["OK"]);
     // An Android launcher shortcut recreates the activity in the same JS runtime: the root remounts and
-    // reads again, and that read must reach the screen (no "url" event comes for it).
+    // reads again, and that read must reach the new mount's screen (no "url" event comes for it).
     initial.mockResolvedValue("ok");
     inbox.readOpening();
     await act(async () => {});
+    inbox.subscribe((l) => seen.push(l));
     expect(seen).toEqual(["OK", "OK"]);
     listen.mock.calls[0][1]({ url: "ok" });
     expect(seen).toEqual(["OK", "OK", "OK"]);
+    jest.restoreAllMocks();
+  });
+
+  it("readOpening() drops the previous mount's subscribers: its link waits for the new mount", async () => {
+    // Android can recreate the activity without running the old tree's effect cleanups. The stale
+    // subscriber must not receive (and lose) the link that opened the new activity.
+    const inbox = createLinkInbox(parse);
+    jest.spyOn(Linking, "getInitialURL").mockResolvedValue("ok");
+    const stale: string[] = [];
+    inbox.subscribe((l) => stale.push(l));
+    inbox.readOpening();
+    await act(async () => {});
+    expect(stale).toEqual([]);
+    const fresh: string[] = [];
+    inbox.subscribe((l) => fresh.push(l));
+    expect(fresh).toEqual(["OK"]);
     jest.restoreAllMocks();
   });
 });

@@ -78,6 +78,12 @@ export function createLinkInbox<T>(parse: (url: string) => T | null) {
      * "Ask" shortcut opened the app on its default page). Read once per JS runtime, that link was lost.
      */
     readOpening(): void {
+      // A new root mount means the previous tree is gone, and on a real phone (Huawei, Android 12,
+      // 2026-10-10) its effects were never cleaned up: the old subscriber was still in the set, got
+      // the new link, and navigated a container that no longer existed ("navigation object hasn't
+      // been initialized"), so the link was lost. Subscribers of this mount register later, when
+      // signed in and ready; until then the link waits in `pending`.
+      subscribers.clear();
       Linking.getInitialURL()
         .then(push)
         .catch(() => {});
