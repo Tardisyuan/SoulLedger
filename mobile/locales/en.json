@@ -1,4 +1,7 @@
 {
-  "ios": { "CFBundleDisplayName": "SoulLedger" },
+  "ios": {
+    "CFBundleDisplayName": "SoulLedger",
+    "NSPhotoLibraryUsageDescription": "SoulLedger uses your photos only when you choose images to attach to a circle post."
+  },
   "android": { "app_name": "SoulLedger" }
 }
