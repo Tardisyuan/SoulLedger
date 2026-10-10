@@ -85,6 +85,9 @@ const FAILURE_KEYS: Record<string, string> = {
   not_found: "soul_accounts.account.soul_not_found",
   not_the_approver: "soul_accounts.rebirth.cross_not_approver",
   not_in_initial_review: "soul_accounts.rebirth.cross_not_in_initial",
+  // 关闭灵魂两步验证(SoulAccountMfaResetView)
+  not_enabled: "soul_accounts.account.mfa_reset.not_enabled",
+  not_home_hall: "soul_accounts.account.mfa_reset.not_home_hall",
   // 缩短冷却申请(OfficerCooldownShorteningViewSet approve/ reject/)
   already_decided: "soul_accounts.cooldown.already_decided",
   cooldown_over: "soul_accounts.cooldown.cooldown_over",
