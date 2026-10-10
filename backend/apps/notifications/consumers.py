@@ -176,6 +176,19 @@ class NotificationConsumer(AsyncWebsocketConsumer):
 
         await self.send(text_data=json.dumps(data))
 
+    async def session_ended(self, event):
+        """登录已结束(改密码 / 重置 / 停用):握手时版本过时的连接关闭。
+
+        `min_version` 为 None = 全部关(停用)。关闭码 4002 让客户端重连:
+        当前设备带新令牌连得上,被踢的设备被握手拒绝后走「登录已失效」。
+        """
+        from apps.events.realtime import WS_CLOSE_SESSION_ENDED
+
+        min_version = event.get("min_version")
+        if min_version is not None and getattr(self.user, "session_version", 0) >= min_version:
+            return
+        await self.close(code=WS_CLOSE_SESSION_ENDED)
+
     # Legacy handler — backward compat with old notification_push
     async def notification_push(self, event):
         """Handle legacy notification_push — forward data to client."""
