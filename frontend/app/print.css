@@ -1,0 +1,131 @@
+/*
+ * 打印(Design 第十五批 C1)—— 只对挂了 PrintFrame(`data-print-doc`)的页面生效:判词(审判详情)
+ * 与灵魂档案(受刑计划是档案里的一张卡,随档案一起印)。别的页面照旧,不受这里影响。
+ *
+ * 版面做法(都是纯 CSS,不用分页脚本):
+ *   · 壳去掉:挂了文档的页面里,凡不是文档的祖先、也不在文档里的元素一律不印
+ *     (侧栏、顶栏、身份带、底栏、浮层);文档的祖先拉回普通流(去掉网格 / 吸顶 / 满高 / 裁切)。
+ *   · 页眉页脚每页重复:文档是 `display: table`,页眉 = `table-header-group`,页脚 = `table-footer-group`,
+ *     所有主流浏览器的打印都会在每一页重复这两组并给它们留出位置。
+ *   · 「第 N 页 / 共 M 页」:`@page` 边距盒里的 `counter(page)` / `counter(pages)`。边距盒目前只有
+ *     Chromium 系(Chrome / Edge 131+)支持;Firefox、Safari 不识别这条规则,页脚就只剩左边的案号 / 编号。
+ *     页码前后的字由 PrintFrame 按语言写进根元素的 `--print-page-*`。
+ *   · 黑白:系统色 CanvasText / Canvas,不写色值。状态徽章本来就带文字与字形,去色即可。
+ *   · 按钮、输入、折叠开关、`[data-print-hide]` 不印;折叠区内容由 Collapse 在打印时强制展开
+ *     (`usePrinting`),这里再把它的动画 / hidden 压平。
+ */
+
+[data-print-head],
+[data-print-foot] {
+  display: none;
+}
+
+@page {
+  size: A4;
+  margin: 16mm 14mm 18mm;
+
+  @bottom-right {
+    content: var(--print-page-pre, "") counter(page) var(--print-page-mid, " / ") counter(pages) var(--print-page-post, "");
+    font: 9pt/1 serif;
+    color: CanvasText;
+  }
+}
+
+@media print {
+  html,
+  body {
+    background: Canvas !important;
+    color: CanvasText !important;
+  }
+
+  /* 不是文档的祖先、也不在文档里的元素:不印。 */
+  body:has([data-print-doc]) *:not(:has([data-print-doc])):not([data-print-doc]):not([data-print-doc] *) {
+    display: none !important;
+  }
+
+  /* 文档的祖先:回到普通流。 */
+  body:has([data-print-doc]) *:has([data-print-doc]) {
+    display: block !important;
+    position: static !important;
+    overflow: visible !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: 0 !important;
+    transform: none !important;
+  }
+
+  [data-print-doc] {
+    display: table;
+    width: 100%;
+    color: CanvasText;
+  }
+  [data-print-head] {
+    display: table-header-group;
+  }
+  [data-print-body] {
+    display: table-row-group;
+  }
+  [data-print-foot] {
+    display: table-footer-group;
+  }
+  [data-print-head] > div,
+  [data-print-foot] > div {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12pt;
+    padding: 4pt 0;
+    font-size: 9pt;
+  }
+  [data-print-head] > div {
+    border-bottom: 0.5pt solid CanvasText;
+    margin-bottom: 8pt;
+  }
+  [data-print-foot] > div {
+    border-top: 0.5pt solid CanvasText;
+    margin-top: 8pt;
+  }
+
+  /* 黑白,不留阴影与底色;徽章的文字与字形原样保留。 */
+  [data-print-doc] * {
+    color: CanvasText !important;
+    background: transparent !important;
+    border-color: CanvasText !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+    animation: none !important;
+    transition: none !important;
+    filter: none !important;
+  }
+  [data-print-doc] svg {
+    fill: CanvasText !important;
+  }
+
+  /* 交互件不印。 */
+  [data-print-doc] button,
+  [data-print-doc] input,
+  [data-print-doc] select,
+  [data-print-doc] textarea,
+  [data-print-doc] [role="tablist"],
+  [data-print-doc] [data-print-hide] {
+    display: none !important;
+  }
+
+  /* 折叠区:内容全部展开。 */
+  [data-print-doc] [data-collapse] {
+    display: block !important;
+    visibility: visible !important;
+    grid-template-rows: 1fr !important;
+    height: auto !important;
+    opacity: 1 !important;
+  }
+
+  /* 别把一组键值或一行表切在页缝上。 */
+  [data-print-doc] dl,
+  [data-print-doc] tr {
+    break-inside: avoid;
+  }
+}

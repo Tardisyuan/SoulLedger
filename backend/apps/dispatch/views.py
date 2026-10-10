@@ -3,12 +3,14 @@ REST views for dispatch app.
 """
 from django.db import IntegrityError
 from django.db.models import Prefetch
+from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import serializers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from apps.actors.models import Actor
+from apps.core.exports import export_csv
 from apps.core.permissions import CodenamePermission
 from apps.core.request_local import clear_current_user, set_current_request, set_current_user
 from apps.core.tenant import is_tenant_exempt
@@ -120,6 +122,7 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
     extra_permissions = {
         'proposed': ['dispatch.read'],
         'history': ['dispatch.read'],
+        'export': ['dispatch.read'],
         'approve': ['dispatch.approve'],
         'reject': ['dispatch.reject'],
         'execute': ['dispatch.execute'],
@@ -388,6 +391,60 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
         realms = DispatchService.eligible_realms(tenant)
         return Response(RealmLocalizedSerializer(realms, many=True, context={"request": request}).data)
 
+    @staticmethod
+    def _proposed_queryset(tenant):
+        return DispatchRecord._base_manager.filter(
+            target_tenant=tenant,
+            status=DispatchStatus.PROPOSED,
+            is_deleted=False,
+        ).select_related("source_tenant", "soul", "dispatched_by").order_by("proposed_at")
+
+    @staticmethod
+    def _history_queryset(tenant, user):
+        return hide_others_drafts(DispatchRecord._base_manager.filter(
+            source_tenant=tenant,
+            is_deleted=False,
+        ), user).select_related("target_tenant", "soul").order_by("-proposed_at")
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                "section", str, enum=["proposed", "history"], required=False,
+                description="proposed = 待我审批 (the approval inbox), history = 我方发起的; omit for everything `list` returns",
+            ),
+        ],
+        responses={(200, "text/csv"): OpenApiTypes.BINARY, 400: OpenApiTypes.OBJECT},
+    )
+    @action(detail=False, methods=["get"], url_path="export", pagination_class=None)
+    def export(self, request):
+        """导出当前列表(或 `?section=` 那一段)的 CSV:同一租户划界、同一筛选、同一权限(dispatch.read)。
+        草稿仍只给发起人。列取自列表序列化器。"""
+        section = request.query_params.get("section")
+        if section in ("proposed", "history"):
+            tenant = getattr(request, "tenant", None)
+            if not tenant:
+                return Response({"error": "No tenant context"}, status=status.HTTP_400_BAD_REQUEST)
+            qs = (
+                self._proposed_queryset(tenant) if section == "proposed"
+                else self._history_queryset(tenant, request.user)
+            )
+        elif section:
+            raise serializers.ValidationError({"section": ["proposed or history."]})
+        else:
+            qs = self.get_queryset()
+        return export_csv(
+            request,
+            qs=self.filter_queryset(qs),
+            serializer_class=DispatchRecordListSerializer,
+            columns=[
+                ("Dispatch ID", "id"), ("Soul", "soul_name"), ("From", "source_tenant_code"),
+                ("To", "target_tenant_code"), ("Target Realm", "target_realm"), ("Status", "status"),
+                ("Proposed At", "proposed_at"), ("Executed At", "executed_at"), ("Returned At", "returned_at"),
+            ],
+            filename="dispatch_export.csv",
+            resource="dispatch",
+        )
+
     @extend_schema(responses=DispatchRecordListSerializer(many=True))
     @action(detail=False, methods=["get"])
     def proposed(self, request):
@@ -416,11 +473,7 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
 
         # _base_manager (unfiltered) dodges the contextvar issue but also
         # drops the soft-delete filter — exclude deleted records explicitly.
-        proposals = DispatchRecord._base_manager.filter(
-            target_tenant=tenant,
-            status=DispatchStatus.PROPOSED,
-            is_deleted=False,
-        ).select_related("source_tenant", "soul", "dispatched_by").order_by("proposed_at")
+        proposals = self._proposed_queryset(tenant)
 
         page = self.paginate_queryset(proposals)
         if page is not None:
@@ -447,10 +500,7 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
 
         # _base_manager (unfiltered) dodges the contextvar issue but also
         # drops the soft-delete filter — exclude deleted records explicitly.
-        history = hide_others_drafts(DispatchRecord._base_manager.filter(
-            source_tenant=tenant,
-            is_deleted=False,
-        ), request.user).select_related("target_tenant", "soul").order_by("-proposed_at")
+        history = self._history_queryset(tenant, request.user)
 
         page = self.paginate_queryset(history)
         if page is not None:
@@ -605,6 +655,7 @@ class CrossTenantJudgmentViewSet(AuditUserViewSetMixin, CodenameViewSetMixin,
     permission_classes = [CrossJudgmentPartyPermission, CodenamePermission]
     permission_codename = "cross_judgment"
     extra_permissions = {
+        'export': ['cross_judgment.read'],
         'participate': ['cross_judgment.create'],
         'activate': ['cross_judgment.create'],
         'conclude': ['cross_judgment.create'],
@@ -628,6 +679,24 @@ class CrossTenantJudgmentViewSet(AuditUserViewSetMixin, CodenameViewSetMixin,
         if self.action == "list":
             return CrossTenantJudgmentListSerializer
         return CrossTenantJudgmentSerializer
+
+    @extend_schema(responses={(200, "text/csv"): OpenApiTypes.BINARY, 400: OpenApiTypes.OBJECT})
+    @action(detail=False, methods=["get"], url_path="export", pagination_class=None)
+    def export(self, request):
+        """导出本殿看得见的跨殿审判 CSV:行取自 `get_queryset()`(发起方或参与方),
+        列只取列表序列化器给本殿的那些 —— 参与方名单、描述、判词细节不在文件里。"""
+        return export_csv(
+            request,
+            qs=self.filter_queryset(self.get_queryset()),
+            serializer_class=CrossTenantJudgmentListSerializer,
+            columns=[
+                ("Case ID", "id"), ("Title", "title"), ("Initiating Hall", "initiating_tenant_code"),
+                ("Initiating Hall Name", "initiating_tenant_display_name"), ("Status", "status"),
+                ("Concluded At", "concluded_at"), ("Conclusion", "conclusion_type"),
+            ],
+            filename="cross_judgments_export.csv",
+            resource="cross_judgment",
+        )
 
     def get_queryset(self):
         # Design decision: CrossTenantJudgment records are accessible to both

@@ -24,6 +24,7 @@ import {
   useDraftAutosave,
 } from "@/src/components/judgment/JudgmentDraftAutosave";
 import { PageShell } from "@/src/components/ui/PageShell";
+import { PrintFrame } from "@/src/components/print/PrintFrame";
 import { PageSpinner } from "@/src/components/ui/Spinner";
 import { EmptyState } from "@/src/components/ui/EmptyState";
 import { QueryError } from "@/src/components/ui/PageError";
@@ -622,6 +623,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
     {!isFinal && <QueueBar judgmentId={judgment.id} canDefer={canExecute} />}
     {/* 语料页「插入审判台」带着 ?cite= 进来:确认后引用;并记下这是最后打开的未结案。 */}
     <CiteFromCorpus judgment={judgment} canCite={canEditGrounds} onCite={(statuteId) => citeMutation.mutate(statuteId)} />
+    <PrintFrame hall={hall} reference={judgment.case_number} referenceLabel={t("print.case_no")}>
     <PageShell
       density="document"
       variant="full"
@@ -632,8 +634,14 @@ export default function JudgmentDetailPage({ params }: PageProps) {
       title={<DomainText value={soulName} />}
       subtitle={subtitle}
       actions={
-        previousId || nextId ? (
+        previousId || nextId || isFinal ? (
           <span className="inline-flex items-center gap-4">
+            {/* 判词(结案后的文书)可以打印;未结案的草稿不是文书,不给入口。 */}
+            {isFinal && (
+              <Button type="button" variant="secondary" size="sm" onClick={() => window.print()}>
+                {t("print.button")}
+              </Button>
+            )}
             {previousId && (
               <Link ref={previousLink} href={withFrom(`/judgment/${previousId}`, from)} className={CURSOR_LINK}>
                 <Kbd>K</Kbd>
@@ -1068,6 +1076,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
         <JudgmentComments id={id} canWrite={hasPermission("judgment.read")} concludedAt={judgment.concluded_at} />
       </div>
     </PageShell>
+    </PrintFrame>
     {!isFinal || concludeMutation.isSuccess ? (
       <JudgmentConfirmLayer
         open={confirming}

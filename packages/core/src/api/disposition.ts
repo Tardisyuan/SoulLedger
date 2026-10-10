@@ -68,5 +68,8 @@ export const dispositionApi = {
   // DispositionViewSet is a plain ModelViewSet, so `list` goes through the
   // project-wide PageNumberPagination — the envelope, not a bare array.
   list: (params?: DispositionListParams) => api.get<DispositionPage>("/disposition/", { params }),
+  /** 当前筛选下的 CSV(`DispositionViewSet.export`):与 `list` 同一组筛选参数;页码不要传。 */
+  exportCsv: (params?: DispositionListParams) =>
+    api.get<Blob>("/disposition/export/", { params, responseType: "blob" }),
   execute: (id: string, data?: object) => api.post<Disposition>(`/disposition/${id}/execute/`, data),
 };

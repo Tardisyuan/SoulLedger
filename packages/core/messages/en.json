@@ -633,7 +633,9 @@
     },
     "field_required": "This field is required",
     "dismiss": "Dismiss",
-    "type_name_to_confirm": "Type “{{name}}” to confirm"
+    "type_name_to_confirm": "Type “{{name}}” to confirm",
+    "export": "Export",
+    "export_failed": "Export failed"
   },
   "pagination": {
     "info": "Page {{page}} / {{total}} ({{count}} records)",
@@ -1932,7 +1934,17 @@
     "help_count_24h": "request {{n}} in the last 24 hours",
     "help_open_users": "Open users",
     "help_ignore": "Not them · ignore",
-    "open_case": "Open the case"
+    "open_case": "Open the case",
+    "select_all": "Select all",
+    "select_row": "Select notification: {{title}}",
+    "batch_region": "Batch actions for notifications",
+    "batch_selected": "{{n}} selected",
+    "batch_limit": "at most {{n}} at a time",
+    "batch_clear": "Clear selection",
+    "batch_deleted": "Deleted {{count}}",
+    "batch_delete_error": "Failed to delete",
+    "batch_delete_title": "Delete {{n}} notifications?",
+    "batch_delete_message": "They disappear from your inbox. This does not affect anyone else's notifications."
   },
   "realms": {
     "title": "Realms",
@@ -5339,5 +5351,13 @@
       "show_rest": "Show {{n}} more",
       "after_close": "After closing"
     }
+  },
+  "print": {
+    "button": "Print",
+    "case_no": "Case no.",
+    "soul_no": "Soul no.",
+    "page_pre": "Page ",
+    "page_mid": " of ",
+    "page_post": ""
   }
 }
