@@ -12,5 +12,6 @@
   "dispatch.confirm_cancel",
   "dispatch.cancel_success",
   "dispatch.cancel_error",
-  "dispatch.cancel_not_cancellable"
+  "dispatch.cancel_not_cancellable",
+  "breadcrumb.menu.recycle_bin"
 ]

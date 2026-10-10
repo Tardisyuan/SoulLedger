@@ -56,6 +56,8 @@ const LEAF_KEYS: Record<string, string> = {
   // backend/apps/menus/migrations/0017_add_moderation_menu.py — missed when it landed, so the
   // sidebar showed 朋友圈审核 in en and egy too (2026-10-03).
   "/moderation": "breadcrumb.menu.moderation",
+  // backend/apps/menus/migrations/0022_add_recycle_bin_menu.py (egy: see egyPendingKeys.json)
+  "/recycle-bin": "breadcrumb.menu.recycle_bin",
 };
 
 const DIRECTORY_KEYS: Record<string, string> = {
