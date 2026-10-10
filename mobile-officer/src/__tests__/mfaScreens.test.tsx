@@ -49,10 +49,15 @@ beforeEach(() => {
 });
 
 const press = (id: string) => act(async () => { fireEvent.press(screen.getByTestId(id)); });
+/** Step 1 → 2 asks for the current password first (being signed in is not being the owner). */
+const startWith = async (password = "my-password") => {
+  fireEvent.changeText(await screen.findByTestId("mfa-setup-password"), password);
+  await press("mfa-next");
+};
 
 async function toStep(n: 2 | 3 | 4) {
   fireEvent.press(await screen.findByTestId("mfa-start"));
-  await press("mfa-next");
+  await startWith();
   if (n === 2) return;
   await screen.findByTestId("mfa-manual-key");
   await press("mfa-next");
@@ -70,7 +75,8 @@ describe("the wizard", () => {
     fireEvent.press(await screen.findByTestId("mfa-start"));
     expect(screen.getByTestId("mfa-step").props.children).toMatch("1 / 4");
     expect(mockApi.setup).not.toHaveBeenCalled();
-    await press("mfa-next");
+    await startWith();
+    expect(mockApi.setup).toHaveBeenCalledWith("my-password");
 
     // step 2: the key as selectable text in groups of four; the link opens the authenticator
     expect((await screen.findByTestId("mfa-manual-key")).props.selectable).toBe(true);
@@ -183,14 +189,43 @@ describe("the wizard", () => {
     expect(screen.queryByTestId("mfa-recovery-codes")).toBeNull();
   });
 
-  it("if no secret can be had it says so and cannot go on; if no authenticator opens, the key is still there", async () => {
+  it("if no secret can be had it says so and stays on step 1", async () => {
     mockApi.setup.mockRejectedValueOnce(httpError(500, {}));
     renderOfficer(<MfaScreen onBack={() => {}} />);
     await toStep(2);
     expect(await screen.findByTestId("mfa-setup-failed")).toBeTruthy();
     expect(screen.queryByTestId("mfa-manual-key")).toBeNull();
+    expect(screen.getByTestId("mfa-step").props.children).toMatch("1 / 4");
+  });
+
+  it("a wrong password is said under the box: no secret, step 1, and the box is kept", async () => {
+    mockApi.setup.mockRejectedValueOnce(httpError(400, { code: "wrong_password", error: "x" }));
+    renderOfficer(<MfaScreen onBack={() => {}} />);
+    fireEvent.press(await screen.findByTestId("mfa-start"));
+    expect(screen.getByTestId("mfa-next").props.accessibilityState).toMatchObject({ disabled: true }); // nothing typed yet
+    await startWith("nope");
+    expect(await screen.findByText("密码不对")).toBeTruthy();
+    expect(screen.queryByTestId("mfa-manual-key")).toBeNull();
+    expect(screen.getByTestId("mfa-step").props.children).toMatch("1 / 4");
+    expect(screen.getByTestId("mfa-setup-password").props.value).toBe("nope");
+  });
+
+  it("a spent login budget is told as such", async () => {
+    mockApi.setup.mockRejectedValueOnce(httpError(429, { code: "login_locked", retry_after: 600 }));
+    renderOfficer(<MfaScreen onBack={() => {}} />);
+    fireEvent.press(await screen.findByTestId("mfa-start"));
+    await startWith();
+    expect(await screen.findByText("密码尝试过于频繁,请稍后再试")).toBeTruthy();
+  });
+
+  it("the password box is gone once the secret is in, and going back does not ask again", async () => {
+    renderOfficer(<MfaScreen onBack={() => {}} />);
+    await toStep(2);
+    await screen.findByTestId("mfa-manual-key");
+    await press("mfa-prev");
+    expect(screen.queryByTestId("mfa-setup-password")).toBeNull();
     await press("mfa-next");
-    expect(screen.getByTestId("mfa-step").props.children).toMatch("2 / 4");
+    expect(mockApi.setup).toHaveBeenCalledTimes(1);
   });
 
   it("no authenticator app: says so and keeps the key on screen", async () => {
@@ -343,7 +378,7 @@ describe("the standing banner", () => {
     renderOfficer(<Live mfaEnabled={false} />);
     fireEvent.press(await screen.findByTestId("mfa-banner-action"));
     fireEvent.press(await screen.findByTestId("mfa-start"));
-    await press("mfa-next");
+    await startWith();
     await screen.findByTestId("mfa-manual-key");
     await press("mfa-next");
     fireEvent.changeText(screen.getByTestId("mfa-setup-code"), "123456");

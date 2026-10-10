@@ -95,8 +95,12 @@ export interface MfaVerifyRequest {
 export const mfaApi = {
   verify: (data: MfaVerifyRequest) => api.post<LoginResponse>("/auth/mfa/verify/", data, { withCredentials: true }),
   status: () => api.get<MfaStatus>("/auth/mfa/status/"),
-  /** 409 `already_enabled` when it is already on; an unfinished earlier setup is discarded. */
-  setup: () => api.post<MfaSetupResponse>("/auth/mfa/setup/"),
+  /**
+   * Starting needs the current password (being signed in is not being the owner). 400 `wrong_password` (no secret is
+   * made); 429 `login_locked` once the login page's own counter is spent; 409 `already_enabled` when it is already on;
+   * an unfinished earlier setup is discarded.
+   */
+  setup: (password: string) => api.post<MfaSetupResponse>("/auth/mfa/setup/", { password }),
   /** Leaving the wizard at any step: the unconfirmed secret is dropped server-side. */
   cancelSetup: () => api.delete<{ detail: string }>("/auth/mfa/setup/"),
   /** Step 3. The ten recovery codes come back in plaintext here and nowhere else. */

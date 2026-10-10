@@ -37,5 +37,11 @@
   "official_notify.dispatch_cancelled",
   "notifications.open_dispatch",
   "social.edited",
-  "social.edited_at"
+  "social.edited_at",
+  "mfa.setup.password_hint",
+  "mfa.setup.password_wrong",
+  "mfa.setup.password_locked",
+  "soul_app.mfa.intro.password_hint",
+  "soul_app.mfa.codes.file_header",
+  "soul_app.mfa.codes.save_failed"
 ]

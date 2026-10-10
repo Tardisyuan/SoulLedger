@@ -901,9 +901,19 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description POST:发一把新密钥(已开启答 409,先关闭再开)。DELETE:中途退出,未确认的密钥作废。 */
+        /**
+         * @description POST:当前密码 + 发一把新密钥(已开启答 409,先关闭再开)。DELETE:中途退出,未确认的密钥作废。
+         *
+         *     密码错 → 400 `wrong_password`,不产生密钥;错的次数记进**登录页那一个**计数(同一 IP 15 分钟 5 次,
+         *     `login_rate:{ip}`),满了答 429 `login_locked` —— 不为猜密码另开一个口子。
+         */
         post: operations["v1_auth_mfa_setup_create"];
-        /** @description POST:发一把新密钥(已开启答 409,先关闭再开)。DELETE:中途退出,未确认的密钥作废。 */
+        /**
+         * @description POST:当前密码 + 发一把新密钥(已开启答 409,先关闭再开)。DELETE:中途退出,未确认的密钥作废。
+         *
+         *     密码错 → 400 `wrong_password`,不产生密钥;错的次数记进**登录页那一个**计数(同一 IP 15 分钟 5 次,
+         *     `login_rate:{ip}`),满了答 429 `login_locked` —— 不为猜密码另开一个口子。
+         */
         delete: operations["v1_auth_mfa_setup_destroy"];
         options?: never;
         head?: never;
@@ -3919,6 +3929,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * @description 当前密码 + 开始设置。密码不对 → 400 `wrong_password`,不产生密钥。错的次数记进**密码登录的那两个计数**
+         *     (同一灵魂编号 5 次 / 同一 IP 50 次,15 分钟):偷到登录状态的人在这里猜密码,和在登录页猜吃同一份预算,
+         *     满了答 429 `rate_limited`。
+         */
         post: operations["v1_me_mfa_setup_create"];
         delete: operations["v1_me_mfa_setup_destroy"];
         options?: never;
@@ -9495,6 +9510,8 @@ export interface components {
         ChangePasswordRequest: {
             old_password: string;
             new_password: string;
+            /** @default  */
+            push_token: string;
         };
         /** @description 200 body. `access` / `refresh` are this device's new pair (absent when no `refresh` was sent). */
         ChangePasswordResponse: {
@@ -12258,6 +12275,14 @@ export interface components {
             mfa_required: boolean;
             pending_token: string;
             username: string;
+        };
+        /**
+         * @description 开始设置要先输当前密码:已登录不等于是本人(偷到登录状态的人能给账号绑上自己的验证器)。
+         *     缺省 / 空按「密码不对」算,同一个原因码。
+         */
+        MfaSetupRequest: {
+            /** @default  */
+            password: string;
         };
         MfaSetupResponse: {
             secret: string;
@@ -16316,6 +16341,11 @@ export interface components {
         SoulMfaResetRequest: {
             reason: string;
         };
+        /** @description 开始设置要先输当前密码(已登录不等于是本人);缺省 / 空按「密码不对」算,同一个原因码。 */
+        SoulMfaSetupRequest: {
+            /** @default  */
+            password: string;
+        };
         SoulMfaSetupResponse: {
             secret: string;
             otpauth_url: string;
@@ -19309,7 +19339,13 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["MfaSetupRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["MfaSetupRequest"];
+                "multipart/form-data": components["schemas"]["MfaSetupRequest"];
+            };
+        };
         responses: {
             200: {
                 headers: {
@@ -19319,7 +19355,23 @@ export interface operations {
                     "application/json": components["schemas"]["MfaSetupResponse"];
                 };
             };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MfaRefusal"];
+                };
+            };
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MfaRefusal"];
+                };
+            };
+            429: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -24405,7 +24457,13 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["SoulMfaSetupRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["SoulMfaSetupRequest"];
+                "multipart/form-data": components["schemas"]["SoulMfaSetupRequest"];
+            };
+        };
         responses: {
             200: {
                 headers: {
@@ -24415,7 +24473,23 @@ export interface operations {
                     "application/json": components["schemas"]["SoulMfaSetupResponse"];
                 };
             };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulMfaRefusal"];
+                };
+            };
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulMfaRefusal"];
+                };
+            };
+            429: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -29,7 +29,7 @@ import { clearOutbox } from "./chat";
 import { useI18n } from "./i18n";
 import { deviceTokenFor, forgetDevice, rememberDevice } from "./mfa";
 import { setUnauthorizedHandler } from "./platform";
-import { hasRegisteredDevice, unregisterDevice } from "./push";
+import { PUSH_TOKEN_KEY, hasRegisteredDevice, unregisterDevice } from "./push";
 import { clearVoiceNumbers } from "./voiceCache";
 
 export type SessionState =
@@ -197,7 +197,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   const changePassword = useCallback(
     async (oldPassword: string, newPassword: string) => {
-      storeSoulTokens(await soulApi.changePassword(oldPassword, newPassword));
+      // The other devices are signed out (and their push registrations stopped); this phone keeps its own push
+      // token and swaps to the new token pair the server hands back.
+      storeSoulTokens(await soulApi.changePassword(oldPassword, newPassword, platform().persistent.get(PUSH_TOKEN_KEY) ?? undefined));
       await enter();
     },
     [enter]

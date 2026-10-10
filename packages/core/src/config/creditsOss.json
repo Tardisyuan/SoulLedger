@@ -320,6 +320,11 @@
       "url": "https://www.npmjs.com/package/expo-constants"
     },
     {
+      "name": "expo-file-system",
+      "licence": "MIT",
+      "url": "https://www.npmjs.com/package/expo-file-system"
+    },
+    {
       "name": "expo-font",
       "licence": "MIT",
       "url": "https://www.npmjs.com/package/expo-font"
@@ -358,6 +363,11 @@
       "name": "expo-secure-store",
       "licence": "MIT",
       "url": "https://www.npmjs.com/package/expo-secure-store"
+    },
+    {
+      "name": "expo-sharing",
+      "licence": "MIT",
+      "url": "https://www.npmjs.com/package/expo-sharing"
     },
     {
       "name": "expo-splash-screen",
