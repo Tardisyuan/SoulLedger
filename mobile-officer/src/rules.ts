@@ -282,6 +282,21 @@ export function passwordFailure(error: unknown): { network: boolean; old: string
   };
 }
 
+/**
+ * What a refused `officer-reset/confirm/` is, by its `code` (the server's sentence is never shown): `invalid`
+ * (`reset_link_invalid` -- the server does not say whether the link expired, was used, or never existed),
+ * `weak` with one i18n key per validator that refused, `rate` (429), `network` (no answer), else `other`.
+ */
+export type ResetFailure = { kind: "network" | "invalid" | "rate" | "other" } | { kind: "weak"; reasons: string[] };
+
+export function resetFailure(error: unknown): ResetFailure {
+  const response = (error as { response?: { status?: number; data?: { code?: unknown } } })?.response;
+  if (!response) return { kind: "network" };
+  if (response.data?.code === "reset_link_invalid") return { kind: "invalid" };
+  if (response.data?.code === "weak_password") return { kind: "weak", reasons: passwordReasonKeys(response.data) };
+  return { kind: response.status === 429 ? "rate" : "other" };
+}
+
 /** Why a two-step confirm / disable was refused, as an i18n key; `fallback` is the key for a plain refusal. */
 export function mfaManageFailureKey(error: unknown, fallback: string): string {
   const response = (error as { response?: { data?: { code?: string } } })?.response;

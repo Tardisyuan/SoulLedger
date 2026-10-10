@@ -7,10 +7,10 @@
  * back to the list washes that row for 1.2 s (kit.tsx `Highlight`; none under reduce-motion).
  */
 import { useCallback, useEffect, useState } from "react";
-import { BackHandler, View } from "react-native";
+import { BackHandler, StyleSheet, View } from "react-native";
 
 import { IdentityBand, StandingBanner, TabBar, type TabKey } from "./kit";
-import { officerLinks } from "./links";
+import { isRetiredResetLink, officerLinks, resetLinks, type ResetLink } from "./links";
 import { listenForLandings, registerDevice } from "./push";
 import { HIGHLIGHT_MS, hallLabel, type Landing } from "./rules";
 import { Detail, type DetailTarget } from "./screens/detail";
@@ -19,15 +19,19 @@ import { MeTab, type AccountScreen } from "./screens/me";
 import { MfaScreen } from "./screens/mfa";
 import { NoticesTab } from "./screens/notices";
 import { QueueTab } from "./screens/queue";
+import { ResetPasswordScreen } from "./screens/reset";
 import { SearchTab } from "./screens/search";
 import { TodoTab, type ItemRef } from "./screens/todo";
 import { needsMfaSetup, useSession } from "./session";
 import { useI18n, useTheme } from "./shared";
 
-export function Shell() {
+export function Shell({ onResetDone }: { onResetDone?: () => void } = {}) {
   const { t } = useI18n();
   const theme = useTheme();
-  const { state } = useSession();
+  const { state, signOut } = useSession();
+  // A reset link opened while signed in. Its form is drawn over the shell (nothing under it is lost on close);
+  // while the recovery codes are on screen unconfirmed it waits, like every other thing that would move the officer away.
+  const [resetLink, setResetLink] = useState<ResetLink | null>(null);
   const [tab, setTab] = useState<TabKey>("todo");
   const [detail, setDetail] = useState<DetailTarget | null>(null);
   // 我的's two sub-screens, drawn over the tabs like a detail (not a tab, so no tab-bar entry).
@@ -67,6 +71,14 @@ export function Shell() {
           setDetail(null);
           setTab(link.tab);
         }
+      }),
+    []
+  );
+
+  useEffect(
+    () =>
+      resetLinks.subscribe((link) => {
+        if (!isRetiredResetLink(link)) setResetLink(link);
       }),
     []
   );
@@ -135,6 +147,20 @@ export function Shell() {
           setTab(next);
         }}
       />
+      {resetLink && !locked ? (
+        <View testID="reset-overlay" style={StyleSheet.absoluteFill}>
+          <ResetPasswordScreen
+            credential={resetLink}
+            onClose={() => setResetLink(null)}
+            onDone={() => {
+              // The reset signed every device out, this one included, as of its next request; end it here and now.
+              setResetLink(null);
+              onResetDone?.();
+              signOut();
+            }}
+          />
+        </View>
+      ) : null}
     </View>
   );
 }

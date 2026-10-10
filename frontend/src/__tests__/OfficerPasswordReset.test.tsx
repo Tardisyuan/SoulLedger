@@ -114,6 +114,37 @@ describe("/reset-password", () => {
     expect(confirm).toHaveBeenCalledWith({ uid: "MQ", token: "abc-123", new_password: "N0t-Guessable!2026" });
   });
 
+  describe("the 'open in the officer app' link", () => {
+    const TOKEN = "cdx1k2-0123456789abcdef0123456789abcdef";
+
+    it("carries uid and token to the app's reset link, encoded, next to a form that is still there", async () => {
+      open(`?uid=MQ&token=${TOKEN}`);
+      const link = await screen.findByTestId("officer-reset-open-app");
+      expect(link).toHaveAttribute("href", `soulledger-officer://reset?uid=MQ&token=${encodeURIComponent(TOKEN)}`);
+      expect(link).toHaveTextContent("auth.reset_open_in_app");
+      expect(screen.getByRole("button", { name: "auth.reset_submit" })).toBeInTheDocument();
+    });
+
+    it.each([
+      ["no credential at all", ""],
+      ["a uid with characters a link could use to smuggle a parameter", `?uid=${encodeURIComponent("MQ&x=1")}&token=${TOKEN}`],
+      ["a token with a slash", `?uid=MQ&token=${encodeURIComponent("abc/def-0123456789")}`],
+      ["a token that is too short to be one", "?uid=MQ&token=t"],
+    ])("is not offered with %s", async (_why, query) => {
+      open(query);
+      await waitFor(() => expect(screen.queryByTestId("officer-reset-open-app")).not.toBeInTheDocument());
+    });
+
+    it("is not offered on the invalid-link or done pages", async () => {
+      confirm.mockResolvedValue({ data: { detail: "ok" } });
+      open(`?uid=MQ&token=${TOKEN}`);
+      await screen.findByTestId("officer-reset-open-app");
+      fill("N0t-Guessable!2026", "N0t-Guessable!2026");
+      await screen.findByTestId("officer-reset-done");
+      expect(screen.queryByTestId("officer-reset-open-app")).not.toBeInTheDocument();
+    });
+  });
+
   it("without a token it is the invalid-link state, not a form", async () => {
     open("");
     expect(await screen.findByTestId("officer-reset-invalid")).toBeInTheDocument();

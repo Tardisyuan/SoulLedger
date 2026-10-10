@@ -8,10 +8,10 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { ColdStart } from "./src/coldStart";
-import { officerLinks } from "./src/links";
+import { Gate } from "./src/gate";
+import { officerLinks, resetLinks } from "./src/links";
 import { PrefsProvider, usePrefs } from "./src/prefs";
 import { installNotificationHandler } from "./src/push";
-import { LoginScreen } from "./src/screens/login";
 import { SessionProvider, useSession } from "./src/session";
 import {
   FONT_ASSETS,
@@ -28,7 +28,6 @@ import {
   themeFor,
   type ColorScheme,
 } from "./src/shared";
-import { Shell } from "./src/shell";
 
 // Installed at module load, before any core module can read a store.
 installMobilePlatform();
@@ -36,6 +35,7 @@ installMobilePlatform();
 initCrashReporting(process.env.EXPO_PUBLIC_SENTRY_DSN_OFFICER, "officer");
 installNotificationHandler();
 officerLinks.install();
+resetLinks.install();
 // The native splash (the paper ground alone) stays until the cold start draws the same ground over it.
 void SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -45,6 +45,7 @@ export default function App() {
   useEffect(() => {
     hydratePersistentStore().finally(() => setHydrated(true));
     officerLinks.readOpening();
+    resetLinks.readOpening();
   }, []);
   if (!hydrated || !(fontsLoaded || fontError)) return null;
   return (
@@ -86,7 +87,7 @@ function Themed() {
         <ToastProvider>
           <NetworkProvider>
             <StatusBar style={scheme === "dark" ? "light" : "dark"} />
-            {state.status === "signedIn" ? <Shell /> : <LoginScreen />}
+            <Gate />
             <ColdStart booting={state.status === "booting"} />
           </NetworkProvider>
         </ToastProvider>

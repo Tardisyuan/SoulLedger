@@ -44,7 +44,7 @@ export {
 export { initCrashReporting, setCrashUser } from "../../mobile/src/crashReport";
 export { RootErrorBoundary } from "../../mobile/src/errorBoundary";
 export { VersionGate } from "../../mobile/src/versionGate";
-export { createLinkInbox, pathOf } from "../../mobile/src/deepLink";
+export { createLinkInbox, pathOf, queryOf } from "../../mobile/src/deepLink";
 export { clearVoiceNumbers, publishVoiceNumber } from "../../mobile/src/voiceCache";
 export { Sheet, ToastProvider, useToast } from "../../mobile/src/feedback";
 export { NetworkProvider, useOnline } from "../../mobile/src/network";

@@ -76,6 +76,7 @@
     "reset_invalid": "This link is invalid or has expired",
     "reset_invalid_body": "A reset link works once and lasts 1 hour. Request a new one.",
     "reset_request_again": "Request a new link",
+    "reset_open_in_app": "Open in the officer app",
     "reset_done": "Password reset",
     "reset_done_body": "Every device was signed out. Sign in with the new password; if two-step verification is on, you still enter the code.",
     "verify_title": "Verify email",

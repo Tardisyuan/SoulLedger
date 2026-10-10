@@ -57,6 +57,27 @@ const APPS = {
           "zh-Hans": ["用${applicationName}打开审判", "打开${applicationName}的审判"],
         },
       },
+      // Order is priority: Android launchers show only the first four static shortcuts. Link-only entries, no parameters.
+      {
+        id: "notices",
+        path: "notices",
+        label: "officer_app.tabs.notices",
+        symbol: "bell",
+        phrases: {
+          en: ["Open ${applicationName} notices", "Open notices in ${applicationName}"],
+          "zh-Hans": ["用${applicationName}打开通知", "打开${applicationName}的通知"],
+        },
+      },
+      {
+        id: "search",
+        path: "search",
+        label: "officer_app.tabs.search",
+        symbol: "magnifyingglass",
+        phrases: {
+          en: ["Open ${applicationName} look up", "Open look up in ${applicationName}"],
+          "zh-Hans": ["用${applicationName}打开查询", "打开${applicationName}的查询"],
+        },
+      },
     ],
   },
   soul: {

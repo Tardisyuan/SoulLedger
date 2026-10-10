@@ -76,6 +76,7 @@
     "reset_invalid": "链接无效或已过期",
     "reset_invalid_body": "重置链接 1 小时内有效，只能用一次。请重新申请。",
     "reset_request_again": "重新申请",
+    "reset_open_in_app": "在官员 App 中打开",
     "reset_done": "密码已重置",
     "reset_done_body": "所有设备上的登录已退出。请用新密码登录；如果开了两步验证，仍需输入动态码。",
     "verify_title": "验证邮箱",

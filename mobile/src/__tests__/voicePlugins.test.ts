@@ -16,8 +16,9 @@ const zh = require("@soulledger/core/messages/zh-Hans.json");
 const MESSAGES = { en, "zh-Hans": zh };
 
 describe("voiceEntries", () => {
-  it("lists two entries per app, and the soul ones are links the soul app understands", () => {
-    for (const app of Object.values(APPS) as { entries: unknown[] }[]) expect(app.entries).toHaveLength(2);
+  it("lists the officer's four pages in priority order and the soul's two, and the soul ones are links the soul app understands", () => {
+    expect(APPS.officer.entries.map((e: { id: string }) => e.id)).toEqual(["todo", "queue", "notices", "search"]);
+    expect(APPS.soul.entries).toHaveLength(2);
     for (const e of APPS.soul.entries) expect(parseSoulLink(`${APPS.soul.scheme}://${e.path}`)).toEqual({ page: e.path });
   });
 
@@ -25,6 +26,13 @@ describe("voiceEntries", () => {
     for (const app of Object.values(APPS) as { entries: { id: string; label: string }[] }[]) {
       checkEntries(app.entries);
       for (const e of app.entries) for (const lang of LANGS) expect(titleOf(e, lang, MESSAGES).length).toBeGreaterThan(3);
+    }
+  });
+
+  it("stays inside what the systems show: Android launchers display the first 4 static shortcuts, iOS allows 10 App Shortcuts per app", () => {
+    for (const app of Object.values(APPS) as { entries: unknown[]; readouts: unknown[]; asks: unknown[] }[]) {
+      expect(app.entries.length).toBeLessThanOrEqual(4);
+      expect(app.entries.length + app.readouts.length + app.asks.length).toBeLessThanOrEqual(10);
     }
   });
 
@@ -43,6 +51,17 @@ describe("withAndroidShortcuts", () => {
     expect(xml).toContain('android:targetClass="com.soulledger.officer.MainActivity"');
     expect(xml).toContain("@string/shortcut_todo");
     expect(xml).toContain('android:icon="@mipmap/ic_launcher"');
+  });
+
+  it("the officer's real entries become four shortcuts with both languages' labels", () => {
+    const real = appOf("officer").entries.map((e: { id: string; path: string; label: string }) => ({ id: e.id, url: `soulledger-officer://${e.path}`, label: e.label }));
+    const xml: string = shortcutsXml({ packageName: "com.soulledger.officer", shortcuts: real });
+    expect(xml.match(/<shortcut /g)).toHaveLength(4);
+    expect(xml.indexOf("shortcut_notices")).toBeLessThan(xml.indexOf("shortcut_search"));
+    expect(xml.indexOf("shortcut_queue")).toBeLessThan(xml.indexOf("shortcut_notices"));
+    expect(stringsXml(real, zh)).toContain('<string name="shortcut_notices">通知</string>');
+    expect(stringsXml(real, zh)).toContain('<string name="shortcut_search">查询</string>');
+    expect(stringsXml(real, en)).toContain('<string name="shortcut_search">Look up</string>');
   });
 
   it("takes the label from the messages, per language, and fails on a missing key", () => {
@@ -78,6 +97,15 @@ describe("withAppIntents", () => {
     expect(swift).toContain("static let openAppWhenRun: Bool = true");
     expect(swift).toContain('URL(string: "soulledger-officer://todo")');
     expect(swift).toContain('URL(string: "soulledger-officer://queue")');
+    for (const [id, path, phrase] of [
+      ["Notices", "notices", "Open \\(.applicationName) notices"],
+      ["Search", "search", "Open look up in \\(.applicationName)"],
+    ]) {
+      expect(swift).toContain(`struct Open${id}Intent: AppIntent`);
+      expect(swift).toContain(`URL(string: "soulledger-officer://${path}")`);
+      expect(swift).toContain(`"${phrase}"`);
+      expect(swift).toContain(`intent: Open${id}Intent()`);
+    }
     expect(swift).toContain("struct OfficerShortcuts: AppShortcutsProvider");
     expect(swift).toContain('"Open \\(.applicationName) to do"');
     // The Swift never decides anything.
@@ -88,6 +116,8 @@ describe("withAppIntents", () => {
     const strings: string = appShortcutsStrings(officer, "zh-Hans");
     expect(strings).toContain('"Open ${applicationName} to do" = "用${applicationName}打开待办";');
     expect(strings).toContain('"Open ${applicationName} judgments" = "用${applicationName}打开审判";');
+    expect(strings).toContain('"Open ${applicationName} notices" = "用${applicationName}打开通知";');
+    expect(strings).toContain('"Open look up in ${applicationName}" = "打开${applicationName}的查询";');
     expect(appShortcutsStrings(appOf("soul"), "zh-Hans")).toContain("打开${applicationName}的本世");
   });
 
