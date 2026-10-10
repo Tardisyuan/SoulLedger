@@ -5162,12 +5162,12 @@
       "title": "Waiting on me",
       "groups": {
         "approvals": "Approval steps",
-        "reassignments": "Reassignments",
+        "reassignments": "Handovers",
         "cooldowns": "Cooling-off requests",
         "rebirths": "Rebirth applications"
       },
       "empty_title": "Nothing waiting on you",
-      "empty_body": "New approvals, reassignments and requests will be pushed to you."
+      "empty_body": "New approvals, handovers and requests will be pushed to you."
     },
     "queue": {
       "mine": "Mine",
@@ -5218,7 +5218,7 @@
         "approval": "The flow moves to the next step.",
         "rebirth": "This rebirth application moves to the next step.",
         "cooldown": "The cooling-off period is shortened to the days you enter.",
-        "reassignment": "The reassignment goes ahead."
+        "reassignment": "The handover goes ahead."
       },
       "remaining_days": "{{n}} days left",
       "remaining_after": "{{n}} days left after approval",
@@ -5276,7 +5276,7 @@
     },
     "kinds": {
       "approval": "Approval step",
-      "reassignment": "Reassignment",
+      "reassignment": "Handover",
       "cooldown": "Cooling-off request",
       "rebirth": "Rebirth application"
     },

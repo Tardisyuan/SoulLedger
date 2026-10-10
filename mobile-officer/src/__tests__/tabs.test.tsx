@@ -55,6 +55,34 @@ describe("the to-do tab", () => {
     expect(screen.getByText("转生配额审批")).toBeTruthy();
   });
 
+  it("draws the groups in the fixed order, titles the dispatch group 移交, and draws only the groups that have items", async () => {
+    const row = (kind: string, id: string) => ({ kind, id, title: `t-${id}`, created_at: "2026-10-09T01:00:00Z", target: { kind, id } });
+    // The server's keys arrive in a scrambled order on purpose: the screen's order does not come from them.
+    mockTodo.mockResolvedValue({
+      data: {
+        rebirths: group([row("rebirth", "r1")]),
+        reassignments: group([row("reassignment", "d1"), row("reassignment", "d2")]),
+        cooldowns: group([row("cooldown", "c1")]),
+        approvals: group([row("approval", "a1")]),
+      },
+    });
+    renderOfficer(<TodoTab highlight={null} onOpen={() => {}} />);
+    expect(await screen.findByText("移交 · 2")).toBeTruthy();
+    const drawn = screen.root.findAll((n) => typeof n.props.testID === "string" && /^todo-group-/.test(n.props.testID)).map((n) => n.props.testID);
+    expect([...new Set(drawn)]).toEqual(["todo-group-approval", "todo-group-reassignment", "todo-group-cooldown", "todo-group-rebirth"]);
+    expect(screen.queryByText(/改派请求/)).toBeNull();
+  });
+
+  it("a handover row opens the same detail as a push would", async () => {
+    mockTodo.mockResolvedValue({
+      data: { ...EMPTY, reassignments: group([{ kind: "reassignment", id: "d1", title: "李白", created_at: "2026-10-09T01:00:00Z", target: { kind: "reassignment", id: "d1" } }]) },
+    });
+    const onOpen = jest.fn();
+    renderOfficer(<TodoTab highlight={null} onOpen={onOpen} />);
+    fireEvent.press(await screen.findByTestId("todo-row-reassignment-d1"));
+    expect(onOpen).toHaveBeenCalledWith({ kind: "reassignment", id: "d1" });
+  });
+
   it("opens the item's detail", async () => {
     const onOpen = jest.fn();
     renderOfficer(<TodoTab highlight={null} onOpen={onOpen} />);
@@ -66,7 +94,7 @@ describe("the to-do tab", () => {
     mockTodo.mockResolvedValue({ data: EMPTY });
     renderOfficer(<TodoTab highlight={null} onOpen={() => {}} />);
     expect(await screen.findByText("此刻没有轮到你的事")).toBeTruthy();
-    expect(screen.getByText("新的审批、改派和申请会推送给你。")).toBeTruthy();
+    expect(screen.getByText("新的审批、移交和申请会推送给你。")).toBeTruthy();
   });
 
   it("error: ! 没取到 and a retry that asks again", async () => {
