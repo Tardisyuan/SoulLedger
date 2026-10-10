@@ -17,6 +17,7 @@ from rest_framework.response import Response
 
 from apps.core.archive import DeletionNotAllowedError
 from apps.core.csv_safe import csv_safe
+from apps.core.exports import record_export
 from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.tenant import is_tenant_exempt, residence_read_allowed, scope_to_tenant
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
@@ -341,7 +342,9 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
             "Soul ID", "Name", "Civilization", "State", "Merit Score", "Demerit Score",
             "Karmic Balance", "Death Date", "Created At",
         ])
+        rows = 0
         for soul in self.get_queryset().filter(pk__in=ids, is_deleted=False).order_by("name", "pk"):
+            rows += 1
             writer.writerow([
                 str(soul.id),
                 csv_safe(soul.name),
@@ -353,6 +356,7 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
                 csv_safe(_format_death_date(soul)),
                 soul.create_time.isoformat(),
             ])
+        record_export(request, resource="soul", rows=rows)
         return response
 
     def _import_rows(self, request):
