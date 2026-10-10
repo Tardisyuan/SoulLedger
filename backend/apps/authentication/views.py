@@ -36,6 +36,7 @@ from apps.authentication.mail import MESSAGES as MAIL_MESSAGES
 from apps.authentication.mail import fill, mail_locale, send_neutral_mail
 from apps.authentication.models import UserRole, is_assignable_role
 from apps.core.csv_safe import csv_safe
+from apps.core.exports import record_export
 from apps.core.permissions import IsAdminPermission, TenantPermission
 from apps.core.schema import DetailResponseSerializer, ErrorResponseSerializer
 from apps.core.tenant import scope_to_tenant
@@ -405,7 +406,9 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
         response['Content-Disposition'] = 'attachment; filename="users.csv"'
         writer = csv.writer(response)
         writer.writerow(['username', 'email', 'role', 'is_active', 'tenant', 'create_time'])
+        rows = 0
         for user in qs:
+            rows += 1
             writer.writerow([
                 # `csv_safe` on every free-text cell (apps/core/csv_safe.py).
                 # `username` is picked by whoever registers — `/auth/register/`
@@ -421,6 +424,7 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
                 csv_safe(user.tenant.code if user.tenant else ''),
                 user.create_time.isoformat() if hasattr(user, 'create_time') else '',
             ])
+        record_export(request, resource='user', rows=rows)
         return response
 
     @extend_schema(responses=UserImportResultSerializer)
