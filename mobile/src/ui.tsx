@@ -982,7 +982,19 @@ export function SmallButton({ title, onPress, testID }: { title: string; onPress
 }
 
 /** The whole screen could not load: say that the record still exists, offer a retry, show the code. */
-export function ScreenError({ error, onRetry }: { error: SoulErrorMessage; onRetry: () => void }) {
+export function ScreenError({
+  error,
+  onRetry,
+  onHome,
+  reported,
+}: {
+  error: SoulErrorMessage;
+  onRetry: () => void;
+  /** The crash screen only: a second, quieter way out. */
+  onHome?: () => void;
+  /** The crash screen only: said once the report has really been delivered. */
+  reported?: boolean;
+}) {
   const t = useTheme();
   const { t: tr } = useI18n();
   const [at] = useState(() => new Date());
@@ -1000,7 +1012,13 @@ export function ScreenError({ error, onRetry }: { error: SoulErrorMessage; onRet
       <Txt testID="failure" accessibilityRole="alert" variant="caption" tone="muted" style={styles.center}>
         {tr(error.key, error.params)}
       </Txt>
+      {reported ? (
+        <Txt testID="crash-reported" variant="caption" tone="subtle" style={styles.center}>
+          {tr("soul_app.errors.reported")}
+        </Txt>
+      ) : null}
       <Button kind="secondary" title={tr("soul_app.common.retry")} onPress={onRetry} style={styles.retry} />
+      {onHome ? <Button testID="crash-home" kind="secondary" title={tr("soul_app.errors.go_home")} onPress={onHome} style={styles.home} /> : null}
       <Txt variant="value" tone="subtle" style={styles.errorCode}>
         {`${code} · ${clock}`}
       </Txt>
@@ -1360,6 +1378,7 @@ export const styles = StyleSheet.create({
   small: { borderWidth: 1, paddingHorizontal: space[3], paddingVertical: space[2] },
   screenError: { flex: 1, alignItems: "center", justifyContent: "center", gap: space[4], paddingHorizontal: space[6], paddingVertical: space[7] },
   retry: { alignSelf: "stretch", marginTop: space[1] },
+  home: { alignSelf: "stretch" },
   errorCode: { fontSize: 11, opacity: 0.8 },
   rows: { gap: space[2] },
   row: { flexDirection: "row", gap: space[4], alignItems: "flex-start" },
