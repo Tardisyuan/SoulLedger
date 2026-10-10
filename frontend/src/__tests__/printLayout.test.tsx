@@ -8,15 +8,17 @@
 import { act, render, screen } from "@testing-library/react";
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { PrintFrame } from "@/src/components/print/PrintFrame";
+import { PrintFrame, splitPageLabel } from "@/src/components/print/PrintFrame";
 import { Collapse } from "@/src/components/ui/Collapse";
 
 jest.mock("@/src/contexts/I18nContext", () => ({
   useI18n: () => ({
-    t: (k: string) => ({ "print.page_pre": "第 ", "print.page_mid": " 页 / 共 ", "print.page_post": " 页" })[k] ?? k,
+    t: (k: string, p?: Record<string, string>) =>
+      k === "print.page_label" ? mockLabel.replace("{{n}}", p!.n).replace("{{m}}", p!.m) : k,
   }),
 }));
 
+let mockLabel = "第 {{n}} 页 / 共 {{m}} 页";
 const root = () => document.documentElement.style;
 
 describe("PrintFrame", () => {
@@ -36,6 +38,21 @@ describe("PrintFrame", () => {
     expect(root().getPropertyValue("--print-page-post")).toBe('" 页"');
     unmount();
     expect(root().getPropertyValue("--print-page-pre")).toBe("");
+  });
+
+  it("splits the page label around its two placeholders; an empty tail adds no stray characters", () => {
+    expect(splitPageLabel("Page \uE000 of \uE001")).toEqual(["Page ", " of ", ""]);
+    expect(splitPageLabel("Pesh \uE000 / \uE001")).toEqual(["Pesh ", " / ", ""]);
+    mockLabel = "Page {{n}} of {{m}}";
+    const { unmount } = render(
+      <PrintFrame referenceLabel="x">
+        <p>b</p>
+      </PrintFrame>
+    );
+    expect(root().getPropertyValue("--print-page-post")).toBe('""');
+    expect(root().getPropertyValue("--print-page-mid")).toBe('" of "');
+    unmount();
+    mockLabel = "第 {{n}} 页 / 共 {{m}} 页";
   });
 
   it("prints no reference cell text while there is no reference yet", () => {
@@ -94,6 +111,13 @@ describe("app/print.css", () => {
     expect(css).toContain("@bottom-right");
     expect(css).toContain("counter(page)");
     expect(css).toContain("counter(pages)");
+  });
+
+  it("keeps the sentence-plan card, each plan and each stop on one page", () => {
+    const block = printBlock.match(/\[data-testid="sentence-plan-card"\][^{]*\{[^}]*\}/)![0];
+    expect(block).toContain("[data-plan-id]");
+    expect(block).toContain("[data-node-order]");
+    expect(block).toContain("break-inside: avoid");
   });
 
   it("only touches pages that mounted a print document", () => {

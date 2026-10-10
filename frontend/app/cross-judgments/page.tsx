@@ -48,7 +48,8 @@ const STATUS_TONES: Record<string, BadgeTone> = {
  */
 export default function CrossJudgmentsPage() {
   const { t } = useI18n();
-  usePlaque({ hall: useHall(t("plaque.office.trials")) });
+  const hall = useHall(t("plaque.office.trials"));
+  usePlaque({ hall });
   const { user } = useTenant();
 
   /**
@@ -81,7 +82,7 @@ export default function CrossJudgmentsPage() {
         title={t("crossJudgments.list_title")}
         actions={
           <RequirePermission permissions="cross_judgment.read">
-            <ExportCsvButton size="sm" fetchCsv={() => crossTenantJudgmentsApi.exportCsv()} filename="cross_judgments_export.csv" />
+            <ExportCsvButton size="sm" fetchCsv={() => crossTenantJudgmentsApi.exportCsv()} page={t("crossJudgments.title")} hall={hall} />
           </RequirePermission>
         }
       >

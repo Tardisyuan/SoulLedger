@@ -4,6 +4,17 @@ import { useEffect, type ReactNode } from "react";
 import { BrandMark } from "@/src/components/brand/BrandMark";
 import { useI18n } from "@/src/contexts/I18nContext";
 
+const N = "\uE000";
+const M = "\uE001";
+
+/** 「第 {n} 页 / 共 {m} 页」→ ["第 ", " 页 / 共 ", " 页"];缺哪个占位符,对应的段就并进相邻段。 */
+export function splitPageLabel(label: string): [string, string, string] {
+  const i = label.indexOf(N);
+  const j = label.indexOf(M);
+  if (i < 0 || j < i) return [label.replace(N, "").replace(M, ""), "", ""];
+  return [label.slice(0, i), label.slice(i + 1, j), label.slice(j + 1)];
+}
+
 /**
  * 打印时的文书框(Design 第十五批 C1):页眉左殿名、右殿印(BrandMark 线稿 24px);页脚左案号或灵魂编号,
  * 右「第 N 页 / 共 M 页」。屏幕上页眉页脚不显示,框也只是个普通块。
@@ -26,9 +37,9 @@ export function PrintFrame({
   children: ReactNode;
 }) {
   const { t } = useI18n();
-  const pre = t("print.page_pre");
-  const mid = t("print.page_mid");
-  const post = t("print.page_post");
+  // 整句键 print.page_label 带 {{n}} 与 {{m}};用两个私用区字符占位,再拆成前 / 中 / 后三段
+  // (后段可以是空串 —— 那是这里的值,不是语言包里的值,语言包不许放空串)。
+  const [pre, mid, post] = splitPageLabel(t("print.page_label", { n: N, m: M }));
   useEffect(() => {
     const root = document.documentElement;
     const q = (s: string) => JSON.stringify(s);
