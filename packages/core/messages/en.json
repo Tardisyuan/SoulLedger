@@ -3157,7 +3157,8 @@
       "soul_inbox": "Hall Inbox",
       "sentence_requests": "Sentence Requests",
       "assistant_admin": "Assistant Admin",
-      "moderation": "Circle Moderation"
+      "moderation": "Circle Moderation",
+      "recycle_bin": "Recycle Bin"
     },
     "queue": "Triage queue",
     "about": "About",
