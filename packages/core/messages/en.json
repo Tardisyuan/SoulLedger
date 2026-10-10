@@ -3319,8 +3319,9 @@
     "app_name": "Soul Ledger",
     "update_required": {
       "title": "Update required",
-      "body": "This version of the app is no longer supported. Update it from the store to continue.",
-      "button": "Open the store"
+      "body": "This version can no longer be used. After you update, your letters and records will still be there.",
+      "button": "Update",
+      "version": "Version {{version}}"
     },
     "common": {
       "loading": "Loading…",
@@ -5144,6 +5145,9 @@
     }
   },
   "officer_app": {
+    "update_required": {
+      "body": "Version {{version}} is below the minimum this hall requires, {{min}}."
+    },
     "name": "SoulLedger · Officers",
     "tabs": {
       "todo": "To do",

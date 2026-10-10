@@ -3319,8 +3319,9 @@
     "app_name": "灵魂簿",
     "update_required": {
       "title": "需要更新",
-      "body": "当前版本已不再支持。请前往商店更新后继续使用。",
-      "button": "前往商店"
+      "body": "这一版已经不能用了。更新后，你的书信和档案都还在。",
+      "button": "去更新",
+      "version": "版本 {{version}}"
     },
     "common": {
       "loading": "加载中…",
@@ -5144,6 +5145,9 @@
     }
   },
   "officer_app": {
+    "update_required": {
+      "body": "当前版本 {{version}} 低于本殿要求的最低版本 {{min}}。"
+    },
     "name": "灵魂簿 · 官员",
     "tabs": {
       "todo": "待办",
