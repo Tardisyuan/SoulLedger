@@ -202,6 +202,37 @@ npm run --workspace mobile android   # 或 ios —— 即 expo run:*,构建并�
 改了原生依赖（如 `expo-image-picker`、`expo-image-manipulator`）之后要重新跑上面这条
 重建 dev client —— `expo start --clear` 只换 JS bundle，不会把新的原生模块装进已安装的 App。
 
+#### 两件有意留着没做的事（2026-10-10 决定，上真机前再做）
+
+两个 App（`mobile/`、`mobile-officer/`）的代码都已接好，只差用自己的账号做最后一步。
+不做不影响模拟器开发。
+
+**1. 真机推送：登记 Expo 项目。** 推送走 Expo 的推送服务，它要知道 App 属于哪个 Expo
+项目。两份 `app.json` 里现在都没有 `extra.eas.projectId`，于是真机上推送被当成「不可用」
+（不崩，只是收不到；模拟器本来就收不到真推送，所以平时看不出来）。
+
+```bash
+npm install -g eas-cli
+eas login                              # 用自己的 Expo 账号
+cd mobile && eas init                  # 项目名 soulledger-soul，会把 projectId 写进 app.json
+cd ../mobile-officer && eas init       # 项目名 soulledger-officer
+```
+
+做完提交两份 `app.json` 的改动。这一步只是登记，**不等于**用 EAS 打包或发版；仓库里的
+`eas.json` 是为将来留的。iOS 的推送另外需要付费的 Apple 开发者账号，Android 不需要。
+
+**2. 崩溃上报：填 Sentry 的 DSN。** 两个 App 用 `@sentry/react-native`（与 Web 同一家）。
+没配 DSN 时完全不初始化，行为与没接入时一样。
+
+1. 在 sentry.io 建两个 React Native 项目，各复制一个 DSN。
+2. 新建 `mobile/.env`，写 `EXPO_PUBLIC_SENTRY_DSN_SOUL=<DSN>`；
+   新建 `mobile-officer/.env`，写 `EXPO_PUBLIC_SENTRY_DSN_OFFICER=<DSN>`。
+   两个文件都被 `.gitignore` 挡住，不要提交。
+3. 重建 dev client（Sentry 是原生依赖）。
+
+要让崩溃堆栈可读，发版时还要在构建环境里配 `SENTRY_AUTH_TOKEN`、组织名与项目名来上传
+source map；这一步没有配置，等真要发版再做。
+
 ### PostgreSQL + Redis（可选，与 CI 一致）
 
 ```bash
