@@ -46,6 +46,8 @@ class NotificationType(models.TextChoices):
     SOUL_INBOX_ASSIGNED = "SOUL_INBOX_ASSIGNED", "Soul Inbox Assigned"
     # 改派名单空时「请管理员改派」→ 案子所在租户的 ADMIN(apps/judgment/claims.py::request_reassign)。
     JUDGMENT_REASSIGN_REQUESTED = "JUDGMENT_REASSIGN_REQUESTED", "Judgment Reassign Requested"
+    # 发起方在对方批准前取消移交 → 执行地的官员(DispatchService.cancel_proposed)。文案键见 messages.py。
+    DISPATCH_CANCELLED = "DISPATCH_CANCELLED", "Dispatch Cancelled"
 
 
 class UserNotification(AuditUserFields, models.Model):

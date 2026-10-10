@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  Bell, FileText, Scale, AlertCircle, RefreshCw, TrendingUp, User,
+  Bell, FileText, Scale, AlertCircle, ArrowRightLeft, RefreshCw, TrendingUp, User,
   type LucideIcon
 } from "lucide-react";
 import { notificationKeys } from "@soulledger/core/query_keys";
@@ -168,6 +168,11 @@ export default function NotificationsPage() {
         return TrendingUp;
       case "ROLE_ASSIGNED":
         return User;
+      case "DISPATCH_PROPOSED":
+      case "DISPATCH_APPROVED":
+      case "DISPATCH_REJECTED":
+      case "DISPATCH_CANCELLED":
+        return ArrowRightLeft;
       default:
         return Bell;
     }
@@ -410,6 +415,18 @@ export default function NotificationsPage() {
                     {t("notifications.open_case")}
                   </Link>
                 )}
+
+                {/* 调度通知(提案 / 批准 / 驳回 / 取消):直接去那次移交的详情。 */}
+                {notification.related_resource === "DispatchRecord" &&
+                  notification.related_id &&
+                  notification.notification_type?.startsWith("DISPATCH_") && (
+                    <Link
+                      href={`/dispatch/${notification.related_id}`}
+                      className={cn(buttonVariants({ variant: "secondary", size: "sm" }), "mt-2 mr-2")}
+                    >
+                      {t("notifications.open_dispatch")}
+                    </Link>
+                  )}
 
                 {/* Actions */}
                 {!notification.is_read && !notification.request_context && (

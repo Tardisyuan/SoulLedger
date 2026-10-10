@@ -129,6 +129,25 @@ describe("a reassign-request notification", () => {
     expect(await screen.findByRole("link", { name: "notifications.open_case" })).toHaveAttribute("href", "/judgment/j-42");
   });
 
+  it.each(["DISPATCH_PROPOSED", "DISPATCH_APPROVED", "DISPATCH_REJECTED", "DISPATCH_CANCELLED"])(
+    "%s links to the dispatch it names, and only that kind of notification does",
+    async (type) => {
+      mockUser = { role: "ADMIN", permissions: [] };
+      mockedList.mockResolvedValue({
+        data: {
+          results: [
+            notification({ id: 9, notification_type: type, title: "t", message: "m", related_resource: "DispatchRecord", related_id: "d-7" }),
+            notification({ id: 10, notification_type: "SYSTEM", title: "s", message: "m", related_resource: "DispatchRecord", related_id: "d-8" }),
+          ],
+        },
+      });
+      renderPage();
+      const links = await screen.findAllByRole("link", { name: "notifications.open_dispatch" });
+      expect(links).toHaveLength(1);
+      expect(links[0]).toHaveAttribute("href", "/dispatch/d-7");
+    },
+  );
+
   it("no other notification gets that link", async () => {
     renderPage();
     await screen.findByText("Verdict ready");
