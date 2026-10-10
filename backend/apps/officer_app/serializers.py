@@ -8,12 +8,12 @@ from apps.workflow.serializers import CosignerRowSerializer, WaitingOnCosignerSe
 class TodoTargetSerializer(serializers.Serializer):
     """推送与列表行落到哪一条:`GET items/<kind>/<id>/`。"""
 
-    kind = serializers.CharField(help_text="approval / reassignment / cooldown / rebirth")
+    kind = serializers.CharField(help_text="approval / reassignment / cooldown / rebirth / letter")
     id = serializers.CharField()
 
 
 class TodoItemSerializer(serializers.Serializer):
-    kind = serializers.CharField(help_text="approval / reassignment / cooldown / rebirth")
+    kind = serializers.CharField(help_text="approval / reassignment / cooldown / rebirth / letter")
     id = serializers.CharField()
     title = serializers.CharField()
     created_at = serializers.DateTimeField()
@@ -33,6 +33,7 @@ class TodoSerializer(serializers.Serializer):
     reassignments = TodoGroupSerializer()
     cooldowns = TodoGroupSerializer()
     rebirths = TodoGroupSerializer()
+    letters = TodoGroupSerializer(help_text="待回书信:标给我、灵魂最后一封还没回的(最早在前)。需 `soul_inbox.reply`。")
 
 
 class HandledBySerializer(serializers.Serializer):
