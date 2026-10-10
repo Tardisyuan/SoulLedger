@@ -29,5 +29,11 @@
   "soul_accounts.account.mfa_reset.consequence_3",
   "soul_accounts.account.mfa_reset.done",
   "soul_accounts.account.mfa_reset.not_enabled",
-  "soul_accounts.account.mfa_reset.not_home_hall"
+  "soul_accounts.account.mfa_reset.not_home_hall",
+  "official_notify.dispatch_proposed",
+  "official_notify.dispatch_approved",
+  "official_notify.dispatch_rejected",
+  "official_notify.dispatch_rejected_bare",
+  "official_notify.dispatch_cancelled",
+  "notifications.open_dispatch"
 ]

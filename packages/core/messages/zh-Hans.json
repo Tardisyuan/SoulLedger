@@ -1980,6 +1980,7 @@
     "help_open_users": "去用户页",
     "help_ignore": "不是本人 · 忽略",
     "open_case": "打开案件",
+    "open_dispatch": "打开移交",
     "select_all": "全选",
     "select_row": "选择通知:{{title}}",
     "batch_region": "通知批量操作",
@@ -4341,6 +4342,26 @@
     "password_help_requested_moderator": {
       "title": "重设密码求助",
       "body": "有人在登录页以账号「{{username}}」请求重设密码。核实身份后，请联系管理员为其重置。"
+    },
+    "dispatch_proposed": {
+      "title": "收到移交提案",
+      "body": "{{source}} 提议把灵魂「{{soul}}」移交到你殿，等你批准。"
+    },
+    "dispatch_approved": {
+      "title": "移交提案已批准",
+      "body": "{{target}} 批准了你殿移交灵魂「{{soul}}」的提案。"
+    },
+    "dispatch_rejected": {
+      "title": "移交提案被驳回",
+      "body": "{{target}} 驳回了你殿移交灵魂「{{soul}}」的提案。理由：{{reason}}"
+    },
+    "dispatch_rejected_bare": {
+      "title": "移交提案被驳回",
+      "body": "{{target}} 驳回了你殿移交灵魂「{{soul}}」的提案。"
+    },
+    "dispatch_cancelled": {
+      "title": "移交提案已被发起方取消",
+      "body": "{{source}} 取消了移交灵魂「{{soul}}」的提案。理由：{{reason}}"
     },
     "dispatch_return_blocked": {
       "title": "暂居回归被拦下",

@@ -27026,6 +27026,7 @@ components:
       - PASSWORD_HELP_REQUESTED
       - SOUL_INBOX_ASSIGNED
       - JUDGMENT_REASSIGN_REQUESTED
+      - DISPATCH_CANCELLED
       type: string
       description: |-
         * `WORKFLOW_ASSIGNED` - Workflow Assigned
@@ -27054,6 +27055,7 @@ components:
         * `PASSWORD_HELP_REQUESTED` - Password Help Requested
         * `SOUL_INBOX_ASSIGNED` - Soul Inbox Assigned
         * `JUDGMENT_REASSIGN_REQUESTED` - Judgment Reassign Requested
+        * `DISPATCH_CANCELLED` - Dispatch Cancelled
     NullEnum:
       enum:
       - null

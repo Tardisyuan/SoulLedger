@@ -24,6 +24,11 @@ MESSAGES = {
         "password_help_requested_moderator": {"title": "重设密码求助", "body": "有人在登录页以账号「{{username}}」请求重设密码。核实身份后，请联系管理员为其重置。"},
         "soul_inbox_assigned": {"title": "来信交给你办", "body": "灵魂「{{soul}}」写给殿司的信已由 {{by}} 交给你办理。"},
         "judgment_reassign_requested": {"title": "请求改派", "body": "{{by}} 请求改派案件 {{soul}}"},
+        "dispatch_proposed": {"title": "收到移交提案", "body": "{{source}} 提议把灵魂「{{soul}}」移交到你殿，等你批准。"},
+        "dispatch_approved": {"title": "移交提案已批准", "body": "{{target}} 批准了你殿移交灵魂「{{soul}}」的提案。"},
+        "dispatch_rejected": {"title": "移交提案被驳回", "body": "{{target}} 驳回了你殿移交灵魂「{{soul}}」的提案。理由：{{reason}}"},
+        "dispatch_rejected_bare": {"title": "移交提案被驳回", "body": "{{target}} 驳回了你殿移交灵魂「{{soul}}」的提案。"},
+        "dispatch_cancelled": {"title": "移交提案已被发起方取消", "body": "{{source}} 取消了移交灵魂「{{soul}}」的提案。理由：{{reason}}"},
         "dispatch_return_blocked": {
             "title": "暂居回归被拦下",
             "body": "灵魂「{{soul}}」的暂居回归被未结案审判拦下，共 {{count}} 件；结案或撤案后才能回归。",
@@ -44,6 +49,11 @@ MESSAGES = {
         "password_help_requested_moderator": {"title": "Password reset help", "body": "Someone on the sign-in page asked for a password reset for account {{username}}. Once you have confirmed who is asking, ask an administrator to reset it."},
         "soul_inbox_assigned": {"title": "A letter handed to you", "body": "{{by}} handed you the letter soul {{soul}} wrote to the hall."},
         "judgment_reassign_requested": {"title": "Reassignment requested", "body": "{{by}} asks for the case of {{soul}} to be reassigned"},
+        "dispatch_proposed": {"title": "Dispatch proposal received", "body": "{{source}} proposes to send soul {{soul}} to your hall. It awaits your approval."},
+        "dispatch_approved": {"title": "Dispatch proposal approved", "body": "{{target}} approved your hall's proposal to send soul {{soul}}."},
+        "dispatch_rejected": {"title": "Dispatch proposal rejected", "body": "{{target}} rejected your hall's proposal to send soul {{soul}}. Reason: {{reason}}"},
+        "dispatch_rejected_bare": {"title": "Dispatch proposal rejected", "body": "{{target}} rejected your hall's proposal to send soul {{soul}}."},
+        "dispatch_cancelled": {"title": "Dispatch proposal cancelled by its sender", "body": "{{source}} cancelled its proposal to send soul {{soul}}. Reason: {{reason}}"},
         "dispatch_return_blocked": {
             "title": "Residence return blocked",
             "body": (
@@ -76,6 +86,10 @@ MESSAGES = {
 
 #: 通知类型 → 文案键。不在这里的类型照存下来的 title / message 原样返回。
 KIND_BY_TYPE = {
+    "DISPATCH_PROPOSED": "dispatch_proposed",
+    "DISPATCH_APPROVED": "dispatch_approved",
+    "DISPATCH_REJECTED": "dispatch_rejected",
+    "DISPATCH_CANCELLED": "dispatch_cancelled",
     "DISPATCH_RETURN_BLOCKED": "dispatch_return_blocked",
     "SENTENCE_NODE_ACTIVE": "sentence_node_active",
     "SENTENCE_NODE_DONE": "sentence_node_done",
@@ -102,6 +116,8 @@ KIND_BY_TYPE = {
 #: their text says to ask an administrator instead (2026-09-25 decision).
 VARIANTS = {
     "password_help_requested": {"password_help_requested_moderator"},
+    # 驳回没写理由时用无理由的句子(没有「理由：」后面空着的一行)。
+    "dispatch_rejected": {"dispatch_rejected_bare"},
 }
 
 
@@ -114,7 +130,9 @@ def kind_for(notification_type, params):
 
 
 def render(locale, kind, params):
-    entry = MESSAGES[locale][kind]
+    # egy 可以缺 Design 还没给词的种类(`egyPendingKeys.json` 里的 `official_notify.<kind>`):读作 zh-Hans,
+    # 与前端「egy 缺键读 zh-Hans」同一条规则。
+    entry = MESSAGES[locale].get(kind) or MESSAGES[DEFAULT_LOCALE][kind]
     body = entry["body"]
     for name, value in params.items():
         body = body.replace("{{" + name + "}}", str(value))
