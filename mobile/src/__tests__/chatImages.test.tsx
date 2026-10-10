@@ -279,11 +279,35 @@ describe("full screen", () => {
     expect(screen.getByTestId("chat-image-viewer-pages").props.contentOffset).toEqual({ x: 390, y: 0 });
     await waitFor(() => expect(screen.getByTestId(`chat-viewer-image-${IMG_B}`)).toBeTruthy());
     expect(screen.getByTestId(`chat-viewer-image-${IMG_A}`).props.contentFit).toBe("contain");
-    // No save, no share, no counter, no close button: the one control is a tap anywhere.
+    // No save, no share, no close button: the one control is a tap anywhere. (The "2 / 2" counter is read-only.)
     for (const word of [/保存/, /分享/, /下载/]) expect(screen.queryByText(word)).toBeNull();
     expect(screen.queryByLabelText(/保存|save/i)).toBeNull();
     fireEvent.press(screen.getAllByLabelText("关闭")[0]);
     await waitFor(() => expect(screen.queryByTestId("chat-image-viewer")).toBeNull());
+  });
+
+  it("counter: none for a single image", async () => {
+    stubApi({ [`/me/chat/images/${IMG_A}/`]: view(IMG_A), [`/me/chat/images/${IMG_B}/`]: view(IMG_B) });
+    open(conv(), [picture("e1", PEER, IMG_A, NOW - 90_000)]);
+    fireEvent.press(screen.getAllByTestId("chat-image")[0]);
+    await screen.findByTestId("chat-image-viewer");
+    expect(screen.queryByTestId("chat-image-viewer-counter")).toBeNull(); // one image: nothing to count
+    fireEvent.press(screen.getAllByLabelText("关闭")[0]);
+    await waitFor(() => expect(screen.queryByTestId("chat-image-viewer")).toBeNull());
+  });
+
+  it("counter on several images follows the swipe", async () => {
+    stubApi({ [`/me/chat/images/${IMG_A}/`]: view(IMG_A), [`/me/chat/images/${IMG_B}/`]: view(IMG_B) });
+    open(conv(), [picture("e1", PEER, IMG_A, NOW - 90_000), picture("e3", ME, IMG_B, NOW - 30_000)]);
+    fireEvent.press(screen.getAllByTestId("chat-image")[0]); // the newest: second in reading order
+    await screen.findByTestId("chat-image-viewer");
+    const counter = screen.getByTestId("chat-image-viewer-counter");
+    expect(counter.props.children).toBe("2 / 2");
+    const style = StyleSheet.flatten(counter.props.style);
+    expect([style.fontSize, style.color]).toEqual([13, "#FFFFFF"]);
+    expect(counter.props.accessibilityLabel).toBe("图片 2 / 2");
+    fireEvent(screen.getByTestId("chat-image-viewer-pages"), "momentumScrollEnd", { nativeEvent: { contentOffset: { x: 0, y: 0 } } });
+    expect(screen.getByTestId("chat-image-viewer-counter").props.children).toBe("1 / 2");
   });
 });
 
