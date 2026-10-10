@@ -24,20 +24,22 @@ const SENSITIVE = [
   "recovery", "backup", "verif", "code", "email", "phone", "body", "content", "question",
   "prompt", "letter", "image", "draft", "caption", "answer", "text", "payload", "input", "message", "soul", "name",
 ];
+/** Whole key names too short to be a substring rule (`guide`, `uuid` contain it): the reset link's `uid`, half of a credential. */
+const SENSITIVE_EXACT = new Set(["uid"]);
 /** Present in every report and not secret. */
 const ALLOWED_KEYS = new Set(["statuscode"]);
 
 function sensitiveKey(key: string): boolean {
   const k = key.toLowerCase().replace(/[^a-z0-9]/g, "");
-  return !ALLOWED_KEYS.has(k) && SENSITIVE.some((s) => k.includes(s));
+  return !ALLOWED_KEYS.has(k) && (SENSITIVE_EXACT.has(k) || SENSITIVE.some((s) => k.includes(s)));
 }
 
 const JWT = /eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]*/g;
 const BEARER = /\b(Bearer|Token)\s+[A-Za-z0-9._~+/=-]+/gi;
 
-/** Redacts bearer tokens / JWTs in free text and drops any URL query string. */
+/** Redacts bearer tokens / JWTs in free text and drops the query string of any `scheme://` URL (https, and the apps' own deep links: `soulledger-officer://reset?uid=..&token=..`). */
 export function scrubString(s: string): string {
-  return s.replace(JWT, FILTERED).replace(BEARER, `$1 ${FILTERED}`).replace(/(https?:\/\/[^\s?#]+)\?[^\s#]*/g, "$1");
+  return s.replace(JWT, FILTERED).replace(BEARER, `$1 ${FILTERED}`).replace(/([a-z][a-z0-9+.-]*:\/\/[^\s?#]*)\?[^\s#]*/gi, "$1");
 }
 
 function scrubValue(value: unknown, depth: number): unknown {

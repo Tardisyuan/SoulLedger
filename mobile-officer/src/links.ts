@@ -5,7 +5,7 @@
  */
 import type { TabKey } from "./kit";
 import { isTodoKind, type Landing } from "./rules";
-import { createLinkInbox, pathOf } from "./shared";
+import { createLinkInbox, pathOf, queryOf } from "./shared";
 
 export const OFFICER_SCHEME = "soulledger-officer";
 export type OfficerLink = { tab: TabKey; item?: Landing["item"] };
@@ -21,3 +21,43 @@ export function parseOfficerLink(url: unknown): OfficerLink | null {
 }
 
 export const officerLinks = createLinkInbox(parseOfficerLink);
+
+/**
+ * `soulledger-officer://reset?uid=<uid>&token=<token>`: the half of the e-mailed reset link the desk's
+ * page hands over ("open in the officer app"). Unlike every link above it is NOT held for after sign-in:
+ * the officer who opens it has just forgotten the password, so it has its own inbox, taken by whoever is on
+ * screen (the sign-in side, or the shell). It opens a form; nothing is sent until the new password is.
+ *
+ * The credential is secret and works once: it is never logged, stored or reported (crashReport scrubs
+ * `uid`, `token` and any `scheme://...?query`), and the screen drops it when it closes. Shape-checked here
+ * (Django's urlsafe-base64 uid, `<base36>-<hex>` token) so anything else is discarded unseen.
+ */
+export type ResetLink = { uid: string; token: string };
+const UID_SHAPE = /^[A-Za-z0-9_-]{1,32}$/;
+const TOKEN_SHAPE = /^[A-Za-z0-9_-]{8,128}$/;
+
+export function parseResetLink(url: unknown): ResetLink | null {
+  const path = pathOf(url, OFFICER_SCHEME);
+  if (!path || path.length !== 1 || path[0].toLowerCase() !== "reset") return null;
+  const uid = queryOf(url, "uid");
+  const token = queryOf(url, "token");
+  return uid && token && UID_SHAPE.test(uid) && TOKEN_SHAPE.test(token) ? { uid, token } : null;
+}
+
+export const resetLinks = createLinkInbox(parseResetLink);
+
+/**
+ * A credential this process has already used up (or been told is dead). On Android the activity can be
+ * recreated and the opening URL is then handed over again; this keeps it from reopening a form for a token
+ * that cannot work. Only a short hash is kept -- never the token -- and only in memory.
+ */
+let spent: number | null = null;
+const fingerprint = (link: ResetLink): number => {
+  let h = 5381;
+  for (const ch of `${link.uid}.${link.token}`) h = ((h << 5) + h + ch.charCodeAt(0)) | 0;
+  return h;
+};
+export const retireResetLink = (link: ResetLink): void => {
+  spent = fingerprint(link);
+};
+export const isRetiredResetLink = (link: ResetLink): boolean => spent !== null && spent === fingerprint(link);

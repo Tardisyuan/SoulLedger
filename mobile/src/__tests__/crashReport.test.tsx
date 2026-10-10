@@ -85,6 +85,20 @@ test("scrubString removes tokens and query strings", () => {
   expect(scrubString(`GET https://a.test/x?code=1&b=2 Bearer ${JWT}`)).toBe("GET https://a.test/x Bearer [Filtered]");
 });
 
+test("a password-reset deep link never leaves the device: not in text, not under a uid / token key, not in a breadcrumb", () => {
+  const link = "soulledger-officer://reset?uid=MQ&token=cdx1k2-0123456789abcdef0123456789abcdef";
+  expect(scrubString(`opened ${link} ok`)).toBe("opened soulledger-officer://reset ok");
+  const event = scrubEvent({
+    message: `Linking ${link}`,
+    extra: { uid: "MQ", UID: "MQ", reset_token: "cdx1k2-0123456789abcdef0123456789abcdef", guide: "kept", url: link },
+    breadcrumbs: [{ category: "navigation", message: link, data: { to: link, uid: "MQ" } }],
+    exception: { values: [{ value: `bad link ${link}` }] },
+  });
+  const json = JSON.stringify(event);
+  for (const secret of ["MQ", "cdx1k2", "0123456789abcdef", "uid=", "token="]) expect(json).not.toContain(secret);
+  expect(event.extra.guide).toBe("kept"); // `uid` is matched as a whole key name, not as a substring of "guide"
+});
+
 describe("initialisation", () => {
   beforeEach(() => jest.clearAllMocks());
 

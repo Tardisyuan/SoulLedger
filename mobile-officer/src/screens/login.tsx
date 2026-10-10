@@ -15,10 +15,13 @@ import { BrandMark, Button, Input, Notice, Screen, Txt, space, useI18n } from ".
 
 type Step = { name: "credentials" } | { name: "forgot" } | { name: "hall"; halls: Hall[] } | { name: "mfa"; pendingToken: string; recovery: boolean };
 
-export function LoginScreen() {
+/** Why the sign-in page opens as it does after a reset link: `reset_done` says so; `forgot` starts at 忘记密码 (the link was dead). */
+export type LoginHint = "reset_done" | "forgot";
+
+export function LoginScreen({ hint }: { hint?: LoginHint | null } = {}) {
   const { t } = useI18n();
   const { signIn, verifyMfa } = useSession();
-  const [step, setStep] = useState<Step>({ name: "credentials" });
+  const [step, setStep] = useState<Step>(hint === "forgot" ? { name: "forgot" } : { name: "credentials" });
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [code, setCode] = useState("");
@@ -70,6 +73,9 @@ export function LoginScreen() {
 
         {step.name === "credentials" ? (
           <View style={{ gap: space[4] }}>
+            {hint === "reset_done" && !failure ? (
+              <Notice tone="neutral" testID="login-reset-done">{`${t("auth.reset_done")}\n${t("auth.reset_done_body")}`}</Notice>
+            ) : null}
             <Input testID="login-username" label={t("officer_app.login.username")} value={username} onChangeText={setUsername} textContentType="username" autoComplete="username" />
             <Input
               testID="login-password"

@@ -18,6 +18,11 @@ import { Button } from "@/src/components/ui/Button";
  */
 type Phase = "reading" | "form" | "invalid" | "done";
 
+/** The shape Django's uid (urlsafe base64) and reset token (`<base36>-<hex>`) have; the app accepts the same and nothing else. */
+const UID_SHAPE = /^[A-Za-z0-9_-]{1,32}$/;
+const TOKEN_SHAPE = /^[A-Za-z0-9_-]{8,128}$/;
+const OFFICER_APP_RESET = "soulledger-officer://reset";
+
 export default function ResetPasswordPage() {
   const { t } = useI18n();
   const [phase, setPhase] = useState<Phase>("reading");
@@ -139,6 +144,16 @@ export default function ResetPasswordPage() {
           <Button type="submit" variant="primary" size="lg" disabled={loading} loading={loading} className="w-full">
             {t("auth.reset_submit")}
           </Button>
+          {/* A plain link into the app: without the app installed it does nothing, and this form stays the way to finish. */}
+          {credential && UID_SHAPE.test(credential.uid) && TOKEN_SHAPE.test(credential.token) ? (
+            <a
+              data-testid="officer-reset-open-app"
+              href={`${OFFICER_APP_RESET}?uid=${encodeURIComponent(credential.uid)}&token=${encodeURIComponent(credential.token)}`}
+              className={link}
+            >
+              {t("auth.reset_open_in_app")}
+            </a>
+          ) : null}
         </form>
       )}
     </LoginShell>
