@@ -39,6 +39,12 @@ def _client_for(user, tenant):
     return client
 
 
+
+@pytest.fixture(autouse=True)
+def _overwrite_import_on(settings):
+    """Overwrite import is off by default (PERM_IMPORT_OVERWRITE_ENABLED); this file tests it."""
+    settings.PERM_IMPORT_OVERWRITE_ENABLED = True
+
 @pytest.fixture
 def seeded(db):
     """A role holding two grants, so "the grants are still there" is a real assertion."""

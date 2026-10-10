@@ -115,6 +115,13 @@ DC="docker compose -f docker-compose.yml -f docker-compose.production.yml"
 - 改 `nginx.conf` 的这个 location 时**不要**加 `add_header` / `expires`,否则 server 级的安全头
   在这个 location 里全部失效(注释里写了原因)。
 
+## 权限配置「覆盖」导入
+
+- `PERM_IMPORT_OVERWRITE_ENABLED`(默认 `False`)。权限配置不分殿、是全局的:任何一个殿的管理员做「覆盖」导入,
+  改的都是所有殿的权限。所以默认关闭 —— `POST /perm/import/` 收到 `overwrite=true`(预演也算)一律回 403
+  `overwrite_disabled`,不碰任何行;合并导入与预演不受影响。有了跨殿的超级管理员角色之后再打开。
+  接口响应里的 `overwrite_enabled` 告诉前端要不要显示「合并 / 覆盖」的选择。
+
 ## 邮件(找回密码验证码)
 
 - 目前只有找回密码的验证码会发邮件。非 DEBUG 时走 SMTP,变量:`EMAIL_HOST`、`EMAIL_PORT`(默认 25)、
