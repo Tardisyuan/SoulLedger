@@ -3293,6 +3293,11 @@
   },
   "soul_app": {
     "app_name": "Soul Ledger",
+    "update_required": {
+      "title": "Update required",
+      "body": "This version of the app is no longer supported. Update it from the store to continue.",
+      "button": "Open the store"
+    },
     "common": {
       "loading": "Loading…",
       "retry": "Retry",
