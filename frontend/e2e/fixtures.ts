@@ -1397,6 +1397,9 @@ export class ApiMock {
     // 据 · 先例 panel. After `:id/` for the same reason as `next/`.
     this.on("GET", "/judgment/queue-counts/", { mine: 0, unclaimed: 0, others: 0, deferred: 0, total: 0 });
     this.on("GET", "/judgment/:id/precedents/", []);
+    // 评议 (JudgmentComments, shown on every judgment page): JudgmentCommentSerializer, a plain list --
+    // NOT paginated, so the default empty page would be an object where the page reads an array.
+    this.on("GET", "/judgment/:id/comments/", []);
     // The queue's court (殿) filter options. After `:id/`: "courts" is not an id.
     this.on("GET", "/judgment/courts/", []);
     // The desk's K 上一件 (nothing before) and 戊 · 发落 (no options = automatic routing).
