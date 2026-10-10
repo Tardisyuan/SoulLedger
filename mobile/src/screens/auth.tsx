@@ -274,6 +274,9 @@ export function ChangePasswordScreen() {
   const [confirm, setConfirm] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<SoulErrorMessage | null>(null);
+  const navigation = useNavigation();
+  // Signed in = opened from settings by choice: no 72-hour story, no "back to login", and success returns there.
+  const voluntary = state.status === "signedIn";
   const expiresAt = state.status === "mustChangePassword" ? state.expiresAt : null;
   const field = error ? FIELD_OF[error.key] : undefined;
   const fieldError = (name: PasswordField) => (error && field === name ? t(error.key, error.params) : null);
@@ -286,6 +289,7 @@ export function ChangePasswordScreen() {
     try {
       await changePassword(oldPassword, newPassword);
       toast(t("soul_app.change_password.success"));
+      if (voluntary && navigation.canGoBack()) navigation.goBack();
     } catch (e) {
       setError(soulErrorMessage(e));
       setBusy(false);
@@ -295,7 +299,7 @@ export function ChangePasswordScreen() {
   return (
     <Screen>
       <Block last style={styles.stack}>
-        <Txt tone="muted">{t("soul_app.change_password.intro")}</Txt>
+        {voluntary ? null : <Txt tone="muted">{t("soul_app.change_password.intro")}</Txt>}
         <ExpiryBox expiresAt={expiresAt} now={now} />
         <View style={styles.fields}>
           <Input
@@ -336,7 +340,7 @@ export function ChangePasswordScreen() {
           onPress={submit}
           busy={busy}
         />
-        <Button kind="secondary" title={t("soul_app.change_password.back_to_login")} onPress={signOut} />
+        {voluntary ? null : <Button kind="secondary" title={t("soul_app.change_password.back_to_login")} onPress={signOut} />}
       </Block>
     </Screen>
   );

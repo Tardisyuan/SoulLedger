@@ -382,6 +382,7 @@ export function SettingsScreen() {
 
       <View style={[styles.end, { paddingHorizontal: gutter }]}>
         <EmblemDivider />
+        <Button testID="open-change-password" kind="secondary" title={t("profile.change_password")} onPress={() => navigation.navigate("AccountPassword")} />
         <Button testID="open-about" kind="secondary" title={t("about.title")} onPress={() => navigation.navigate("About")} />
         <Button testID="logout" kind="secondary" title={t("soul_app.life.logout")} onPress={askLogout} style={styles.logout} />
         <Txt variant="value" tone="subtle" style={styles.version}>
