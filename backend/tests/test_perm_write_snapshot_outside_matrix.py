@@ -724,9 +724,14 @@ def test_dispatch_record_destroy(role_clients, snapshot_tenants, role):
     """dispatch.manage. JUDGE and VIEWER can no longer erase the record of a proposed transfer."""
     from apps.dispatch.models import DispatchRecord
 
-    clients, _ = role_clients
+    clients, users = role_clients
     home, other = snapshot_tenants
-    record = _dispatch_record(home, other, _soul(other, f"wsnap-dd-{role}"))
+    # The caller's own draft: DELETE only removes drafts (a submitted transfer answers 409
+    # `not_a_draft` whoever asks), and a draft is visible to its author alone -- so the
+    # codename gate is measured on the one row each role could still delete.
+    record = _dispatch_record(home, other, _soul(other, f"wsnap-dd-{role}"), status="DRAFT")
+    record.dispatched_by = users[role]
+    record.save(update_fields=["dispatched_by"])
     response = clients[role].delete(f"/api/v1/dispatch/records/{record.id}/")
     assert response.status_code == DISPATCH_RECORD_DELETE[role], _msg(
         role, "DELETE /dispatch/records/{id}/", response
