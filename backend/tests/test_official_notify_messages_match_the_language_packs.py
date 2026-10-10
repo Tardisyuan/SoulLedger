@@ -30,7 +30,8 @@ def test_every_localized_type_is_a_real_type_with_text_in_every_locale():
         variants = set().union(*VARIANTS.values())
         expected = set(KIND_BY_TYPE.values()) | variants
         if locale == "egy":  # egy may lack exactly the kinds Design has not worded yet (egyPendingKeys.json)
-            expected -= {k for k in expected if f"official_notify.{k}" in EGY_PENDING}
+            # The pending file lists leaf keys (`official_notify.<kind>.title`), as the jest parity test reads it.
+            expected -= {k for k in expected if f"official_notify.{k}.title" in EGY_PENDING}
         assert set(pack) == expected, locale
         for kind, entry in pack.items():
             # 每条都点名主语 —— 灵魂,或(登录页「忘记密码」)官员账号;各自的其余占位符与发送方给的
