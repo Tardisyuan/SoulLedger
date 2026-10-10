@@ -78,7 +78,8 @@ def test_the_sending_hall_cancels_a_proposal_and_the_target_is_told_after_commit
     [event] = SoulEvent.objects.filter(soul=world["soul"], payload__action="DISPATCH_CANCELLED")
     assert event.payload["dispatch_id"] == str(record.pk) and event.payload["reason"] == REASON
     [note] = UserNotification.objects.filter(user=world["mod_b"], related_id=str(record.pk))
-    assert "cancelled" in note.message and REASON in note.message
+    assert note.notification_type == "DISPATCH_CANCELLED" and note.params["reason"] == REASON
+    assert note.related_resource == "DispatchRecord" and REASON in note.message
     # 发起方自己不收通知,它在做这件事。
     assert not UserNotification.objects.filter(user__tenant=world["a"], related_id=str(record.pk)).exists()
     # 取消后目标殿的待批列表里没有它了。

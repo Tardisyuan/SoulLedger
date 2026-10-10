@@ -10,6 +10,11 @@ from apps.notifications.models import NotificationType
 #: 主语是官员账号而不是灵魂的通知种类。
 ACCOUNT_KINDS = {"password_help_requested", "password_help_requested_moderator"}
 
+EGY_PENDING = set(json.loads(
+    (Path(__file__).resolve().parents[2] / "frontend" / "src" / "__tests__" / "support" / "egyPendingKeys.json")
+    .read_text(encoding="utf-8")
+))
+
 PACKS = Path(__file__).resolve().parents[2] / "packages" / "core" / "messages"
 
 
@@ -23,7 +28,10 @@ def test_every_localized_type_is_a_real_type_with_text_in_every_locale():
     assert set(KIND_BY_TYPE) <= set(NotificationType.values)
     for locale, pack in MESSAGES.items():
         variants = set().union(*VARIANTS.values())
-        assert set(pack) == set(KIND_BY_TYPE.values()) | variants, locale
+        expected = set(KIND_BY_TYPE.values()) | variants
+        if locale == "egy":  # egy may lack exactly the kinds Design has not worded yet (egyPendingKeys.json)
+            expected -= {k for k in expected if f"official_notify.{k}" in EGY_PENDING}
+        assert set(pack) == expected, locale
         for kind, entry in pack.items():
             # 每条都点名主语 —— 灵魂,或(登录页「忘记密码」)官员账号;各自的其余占位符与发送方给的
             # params 对上(egy 与 zh 同键一致由前端测试守)。

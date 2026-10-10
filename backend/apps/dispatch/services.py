@@ -15,6 +15,21 @@ from apps.dispatch.models import (
 from apps.events.models import EventType, SoulEvent
 
 
+def _notify_localized(users, notification_type, params, record_id):
+    """一条分语言的调度通知给这些人:库里存 zh-Hans 渲染的标题 / 正文(WebSocket 推送与未知语言的兜底)
+    和 `params`,读的时候按请求语言重渲染(`apps/notifications/messages.py`)。`related_*` 指向这次移交。"""
+    from apps.events.services import EventService
+    from apps.notifications import messages
+
+    kind = messages.kind_for(notification_type, params)
+    title, body = messages.render(messages.DEFAULT_LOCALE, kind, params)
+    for user in users:
+        EventService.notify_user(
+            user, title=title, message=body, notification_type=notification_type,
+            related_resource="DispatchRecord", related_id=record_id, params=params,
+        )
+
+
 class DispatchNotCancellableError(ValueError):
     """发起方取消移交时,这条记录已不在 PROPOSED(对方批准了、驳回了、已取消…)。
 
@@ -273,17 +288,9 @@ class DispatchService:
         record_id = str(dispatch_record.id)
 
         def send():
-            from apps.events.services import EventService
-
-            for user in target_users:
-                EventService.notify_user(
-                    user,
-                    title=f"Incoming Dispatch: {soul_name}",
-                    message=f"A dispatch proposal for soul {soul_name} from {source_code} is pending your approval.",
-                    notification_type="DISPATCH_PROPOSED",
-                    related_resource="DispatchRecord",
-                    related_id=record_id,
-                )
+            _notify_localized(
+                target_users, "DISPATCH_PROPOSED", {"soul": soul_name, "source": source_code}, record_id,
+            )
 
         _after_commit(send)
         from apps.officer_app.push import notify_users
@@ -366,25 +373,15 @@ class DispatchService:
 
         target_users = User.objects.filter(tenant=dispatch_record.source_tenant, is_active=True)
         notification_type = "DISPATCH_APPROVED" if approved else "DISPATCH_REJECTED"
-        title = f"Dispatch {'Approved' if approved else 'Rejected'}: {dispatch_record.soul.name}"
-        message = f"Your dispatch proposal for soul {dispatch_record.soul.name} to {dispatch_record.target_tenant.code} has been {'approved' if approved else 'rejected'}."
-        if reason:
-            message += f" Reason: {reason}"
-
+        params = {"soul": dispatch_record.soul.name, "target": dispatch_record.target_tenant.code}
+        if not approved:
+            params["reason"] = reason
+            if not reason:
+                params["kind"] = "dispatch_rejected_bare"  # 没写理由就用没有「理由：」的句子
         record_id = str(dispatch_record.id)
 
         def send():
-            from apps.events.services import EventService
-
-            for user in target_users:
-                EventService.notify_user(
-                    user,
-                    title=title,
-                    message=message,
-                    notification_type=notification_type,
-                    related_resource="DispatchRecord",
-                    related_id=record_id,
-                )
+            _notify_localized(target_users, notification_type, params, record_id)
 
         _after_commit(send)
 
@@ -517,17 +514,10 @@ class DispatchService:
         record_id = str(dispatch_record.id)
 
         def send():
-            from apps.events.services import EventService
-
-            for user in target_users:
-                EventService.notify_user(
-                    user,
-                    title=f"Dispatch Cancelled: {soul_name}",
-                    message=f"{source_code} cancelled its dispatch proposal for soul {soul_name}. Reason: {reason}",
-                    notification_type="SYSTEM",
-                    related_resource="DispatchRecord",
-                    related_id=record_id,
-                )
+            _notify_localized(
+                target_users, "DISPATCH_CANCELLED",
+                {"soul": soul_name, "source": source_code, "reason": reason}, record_id,
+            )
 
         _after_commit(send)
 
