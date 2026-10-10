@@ -6,6 +6,8 @@ import { StyleSheet } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
+import { initCrashReporting } from "./src/crashReport";
+import { RootErrorBoundary } from "./src/errorBoundary";
 import { FONT_ASSETS } from "./src/fonts";
 import { I18nProvider } from "./src/i18n";
 import { soulLinks } from "./src/links";
@@ -13,9 +15,12 @@ import { RootNavigator } from "./src/navigation";
 import { hydratePersistentStore, installMobilePlatform } from "./src/platform";
 import { installNotificationHandler } from "./src/push";
 import { SessionProvider } from "./src/session";
+import { VersionGate } from "./src/versionGate";
 
 // Installed at module load, before any core module can read a store.
 installMobilePlatform();
+// Off (and the SDK never loaded) unless the build sets this public env var.
+initCrashReporting(process.env.EXPO_PUBLIC_SENTRY_DSN_SOUL, "soul");
 installNotificationHandler();
 soulLinks.install();
 // The native splash (the ground alone) stays until the cold start draws the same ground over it (src/coldStart.tsx).
@@ -35,10 +40,14 @@ export default function App() {
     <GestureHandlerRootView style={styles.root}>
       <SafeAreaProvider>
         <I18nProvider>
-          <SessionProvider>
-            <StatusBar style="auto" />
-            <RootNavigator />
-          </SessionProvider>
+          <RootErrorBoundary>
+            <VersionGate app="soul">
+              <SessionProvider>
+                <StatusBar style="auto" />
+                <RootNavigator />
+              </SessionProvider>
+            </VersionGate>
+          </RootErrorBoundary>
         </I18nProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

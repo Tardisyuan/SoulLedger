@@ -26,6 +26,7 @@
     "@gorhom/bottom-sheet": "^5.2.14",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-navigation/native": "^7.4.1",
+    "@sentry/react-native": "~7.11.0",
     "@soulledger/core": "0.0.0",
     "expo": "~57.0.23",
     "expo-constants": "~57.0.18",
