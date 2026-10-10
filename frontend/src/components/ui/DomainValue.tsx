@@ -15,6 +15,7 @@
  * fails when a new copy appears.
  */
 
+import Link from "next/link";
 import { useCallback, useState, type ReactNode } from "react";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
@@ -260,7 +261,16 @@ export function IdentifierChip({ id, ariaLabel, variant = "chip" }: IdentifierCh
 const CASE_NUMBER_BAND_CLASS =
   "font-mono font-medium text-xs underline decoration-dotted decoration-current/50 underline-offset-2 hover:decoration-current";
 
-export function CaseNumber({ value, variant = "chip" }: { value: string | null | undefined; variant?: "chip" | "inline" | "band" }) {
+export function CaseNumber({
+  value,
+  variant = "chip",
+  href,
+}: {
+  value: string | null | undefined;
+  variant?: "chip" | "inline" | "band";
+  /** 给了就渲染成指向这一场审判的链接(灵魂详情的身份带),不再是复制按钮;案号照样整段、不截断。 */
+  href?: string;
+}) {
   const { t } = useI18n();
   const { showToast } = useToast();
   const [copied, setCopied] = useState(false);
@@ -278,6 +288,19 @@ export function CaseNumber({ value, variant = "chip" }: { value: string | null |
   }, [value, showToast, t]);
 
   if (!value) return <MissingValue kind="unrecorded" />;
+  if (href) {
+    return (
+      <Link
+        href={href}
+        title={value}
+        className={`${variant === "band" ? CASE_NUMBER_BAND_CLASS : IDENTIFIER_VARIANT_CLASSES[variant]} whitespace-nowrap`}
+        data-identifier-variant={variant}
+        data-case-number={value}
+      >
+        {value}
+      </Link>
+    );
+  }
   return (
     <button
       type="button"

@@ -146,7 +146,9 @@ const COLLECTED_FILES = [
   "SoulDetailPage.correctSettlement.test.tsx",
   "SoulDetailPage.cacheInvalidation.test.tsx",
   "SoulDetailPage.inheritance.test.tsx",
+  "SoulDetailPage.caseRef.test.tsx",
   "SoulDetailPage.openJudgment.test.tsx",
+  "Plaque.caseRef.test.tsx",
   "SoulDetailPage.rebirthForm.test.tsx",
   // 2026-10-01 灵魂详情 v3(首字页头、账页两标签、功过栏、PageShell 首格 / 尾格)。
   "SoulDetailV3.test.tsx",

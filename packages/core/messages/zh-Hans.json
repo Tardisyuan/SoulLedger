@@ -517,7 +517,9 @@
         "confirm": "更正",
         "success": "已更正结案状态,灵魂回到「已处置」",
         "failed": "没能更正结案状态"
-      }
+      },
+      "case_open": "未结",
+      "case_closed": "已结"
     },
     "date_problem_filter": "仅看有问题的",
     "balance_not_applicable": "不适用 — 详见灵魂详情",
