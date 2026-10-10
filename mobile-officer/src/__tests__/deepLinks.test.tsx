@@ -95,6 +95,13 @@ describe("landing in the shell", () => {
     await waitFor(() => expect(screen.getByTestId("tab-notices").props.accessibilityState?.selected).toBe(true));
   });
 
+  it.each(["queue", "notices", "search"])("each voice / shortcut page (%s) lands on its own tab while signed in", async (tab) => {
+    renderOfficer(<Shell />);
+    await screen.findByTestId("tab-bar");
+    await act(async () => officerLinks.push(`soulledger-officer://${tab}`));
+    await waitFor(() => expect(screen.getByTestId(`tab-${tab}`).props.accessibilityState?.selected).toBe(true));
+  });
+
   it("an unknown link changes nothing", async () => {
     renderOfficer(<Shell />);
     await screen.findByTestId("tab-bar");
