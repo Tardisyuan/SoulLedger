@@ -105,6 +105,9 @@ export interface PermissionImportResult {
 
 type Schemas = components["schemas"];
 
+/** 导出文档(`GET /perm/export/` 的 body),去掉 `overwrite` —— 导入时由 `importConfig` 固定。 */
+export type PermissionImportDocument = Omit<Schemas["PermissionImportRequest"], "overwrite">;
+
 /**
  * Per-cell matrix save — POST /perm/role-permissions/changes/
  * (backend/apps/perm/matrix.py). One result per change, in request order:
@@ -204,9 +207,16 @@ export const permApi = {
       ...(expectedVersion !== undefined ? { expected_version: expectedVersion } : {}),
     }),
 
-  // Export/Import
-  export: () => api.get<Blob>("/perm/export/", { responseType: "blob" }),
-  import: (data: FormData) => api.post<PermissionImportResult>("/perm/import/", data, {
-    headers: { "Content-Type": "multipart/form-data" },
-  }),
+  /**
+   * 导出全部权限配置(仅 ADMIN)。body 是 `PermissionExport` 这份 JSON 文档;
+   * 以附件形式返回,客户端用 blob 接。不分租户:Permission / Role 两张表本身无租户字段。
+   */
+  exportConfig: () => api.get<Blob>("/perm/export/", { responseType: "blob" }),
+  /**
+   * 导入权限配置(仅 ADMIN)。body 是 JSON 文档本身(不是 multipart)。
+   * 这里**固定 `overwrite: false`**:只合并,get_or_create 语义,已有的行不动、不删。
+   * 要覆盖得另开口子,由产品决定,不在这个方法里。
+   */
+  importConfig: (document: PermissionImportDocument) =>
+    api.post<PermissionImportResult>("/perm/import/", { ...document, overwrite: false }),
 };

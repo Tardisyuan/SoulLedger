@@ -1,1 +1,20 @@
-[]
+[
+  "permissions.config.export",
+  "permissions.config.exporting",
+  "permissions.config.export_error",
+  "permissions.config.import",
+  "permissions.config.import_title",
+  "permissions.config.choose_file",
+  "permissions.config.file_hint",
+  "permissions.config.merge_note",
+  "permissions.config.errors.not_json",
+  "permissions.config.errors.too_large",
+  "permissions.config.errors.bad_structure",
+  "permissions.config.errors.empty",
+  "permissions.config.summary",
+  "permissions.config.confirm",
+  "permissions.config.importing",
+  "permissions.config.result",
+  "permissions.config.import_error",
+  "permissions.config.reason_unknown"
+]
