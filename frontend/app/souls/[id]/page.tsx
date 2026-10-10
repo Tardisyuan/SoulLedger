@@ -351,6 +351,10 @@ export default function SoulDetailPage() {
             number: shownJudgment.case_number,
             href: `/judgment/${shownJudgment.id}`,
             label: t(isOpenJudgment(shownJudgment) ? "souls.detail.case_open" : "souls.detail.case_closed"),
+            // 不止一场才有「全部 N 场 ›」;N 是列表接口的总数(`count`),不是这一页的条数。
+            ...((judgmentsQuery.data?.count ?? 0) > 1
+              ? { allHref: `/judgment?soul=${encodeURIComponent(id)}`, allCount: judgmentsQuery.data?.count }
+              : {}),
           }
         : undefined;
   usePlaque({ title: t("plaque.soul"), hall, caseRef });

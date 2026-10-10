@@ -18,5 +18,19 @@
   "officer_app.kinds.letter",
   "officer_app.letter.irreversible",
   "officer_app.letter.unavailable",
-  "officer_app.letter.failed"
+  "officer_app.letter.failed",
+  "souls.detail.case_all",
+  "judgment.soul_filter",
+  "judgment.soul_filter_clear",
+  "permissions.config.back",
+  "permissions.config.will.remove",
+  "permissions.config.did.remove",
+  "permissions.config.mode.label",
+  "permissions.config.mode.merge",
+  "permissions.config.mode.overwrite",
+  "permissions.config.overwrite.warning",
+  "permissions.config.overwrite.warning_own",
+  "permissions.config.overwrite.all_halls",
+  "permissions.config.overwrite.blocked_own",
+  "permissions.config.overwrite.action"
 ]

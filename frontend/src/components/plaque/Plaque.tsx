@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type ReactNode, type RefObject } from "react";
+import Link from "next/link";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { CaseNumber, MissingValue } from "@/src/components/ui/DomainValue";
 import { Seal } from "./Seal";
@@ -38,7 +39,14 @@ export type PlaqueText = { title?: string; meta?: string; hall?: string; caseNum
  * `{}`(没有 `number`)是「没有审判」—— 标签「案号」保留,值是 `MissingValue`。不给就没有这一栏。
  * 与 `caseNumber`(审判台自己那一场、可复制)互斥,`caseNumber` 优先。
  */
-export type PlaqueCase = { number?: string; href?: string; label?: string };
+export type PlaqueCase = {
+  number?: string;
+  href?: string;
+  label?: string;
+  /** 审判不止一场时,案号下面的「全部 N 场 ›」:`allHref` 是这个灵魂的审判列表,`allCount` 是列表接口的总数。 */
+  allHref?: string;
+  allCount?: number;
+};
 
 const PlaqueContext = createContext<(text: PlaqueText | null) => void>(() => {});
 /** AppLayout 用:把 setter 交给页面。壳外(测试、登录页)没有 Provider,`usePlaque` 什么都不做。 */
@@ -240,6 +248,11 @@ export function Plaque({
             <div data-case-ref="" className="inline-block">
               <CaseNumber value={caseRef.number} href={caseRef.href} variant="band" />
               {caseRef.label ? <span className="text-xs"> · {caseRef.label}</span> : null}
+              {caseRef.allHref && caseRef.allCount ? (
+                <Link href={caseRef.allHref} data-case-all="" className="block text-xs underline underline-offset-2">
+                  {t("souls.detail.case_all", { n: String(caseRef.allCount) })}
+                </Link>
+              ) : null}
             </div>
           ) : (
             // 匾色底上 MissingValue 自己的灰看不见 —— 字色随带。

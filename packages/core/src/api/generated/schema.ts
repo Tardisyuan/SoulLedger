@@ -10449,6 +10449,7 @@ export interface components {
         ExportedRole: {
             name: string;
             display_name: string;
+            description?: string;
             scope?: string;
         };
         ExportedRolePermission: {
@@ -14266,6 +14267,13 @@ export interface components {
             field_permissions: components["schemas"]["ExportedFieldPermission"][];
             data_scopes: components["schemas"]["ExportedDataScope"][];
         };
+        /** @description Entries an overwrite leaves gone: existed before, absent after the rebuild from the file. */
+        PermissionImportRemoved: {
+            role_permissions: number;
+            field_permissions: number;
+            data_scopes: number;
+            total: number;
+        };
         /**
          * @description Body of POST /perm/import/ — an export document, plus `overwrite`.
          *
@@ -14323,7 +14331,7 @@ export interface components {
          * @enum {string}
          */
         PermissionImportSkippedSectionEnum: "permissions" | "roles" | "role_permissions" | "field_permissions" | "data_scopes";
-        /** @description Per table: rows created and rows skipped (merge mode never updates). */
+        /** @description Per table: rows created and rows skipped. A merge never updates or removes. */
         PermissionImportStats: {
             permissions: components["schemas"]["PermissionImportSectionStats"];
             roles: components["schemas"]["PermissionImportSectionStats"];
@@ -14331,6 +14339,12 @@ export interface components {
             field_permissions: components["schemas"]["PermissionImportSectionStats"];
             data_scopes: components["schemas"]["PermissionImportSectionStats"];
             skipped_details: components["schemas"]["PermissionImportSkipped"][];
+            /** @description Overwrite only (0 for a merge): roles whose name / description the file replaced, plus surviving grants, field rules and scopes whose content differs. */
+            updated: number;
+            /** @description Overwrite only: entries that exist now and will not after the import - the file does not have them. Not the number deleted first (the rest are rebuilt). */
+            removed: components["schemas"]["PermissionImportRemoved"];
+            /** @description Overwrite only: a removed entry belongs to a role that decides what the caller may do. ADMIN bypasses grants, field rules and scopes, so this is false for ADMIN. */
+            removes_own_permissions: boolean;
         };
         Phase4: {
             corpus_tokens: number;

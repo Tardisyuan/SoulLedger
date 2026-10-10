@@ -342,6 +342,10 @@ class ExportedPermissionSerializer(serializers.Serializer):
 class ExportedRoleSerializer(serializers.Serializer):
     name = serializers.CharField()
     display_name = serializers.CharField()
+    # The export carries it and the importer reads it. Without this member the
+    # serializer dropped it, so an overwrite import blanked every existing role's
+    # description (found 2026-10-10 while counting what an overwrite updates).
+    description = serializers.CharField(required=False, allow_blank=True)
     scope = serializers.CharField(required=False)
 
 
@@ -451,8 +455,17 @@ class PermissionImportSkippedSerializer(serializers.Serializer):
     )
 
 
+class PermissionImportRemovedSerializer(serializers.Serializer):
+    """Entries an overwrite leaves gone: existed before, absent after the rebuild from the file."""
+
+    role_permissions = serializers.IntegerField()
+    field_permissions = serializers.IntegerField()
+    data_scopes = serializers.IntegerField()
+    total = serializers.IntegerField()
+
+
 class PermissionImportStatsSerializer(serializers.Serializer):
-    """Per table: rows created and rows skipped (merge mode never updates)."""
+    """Per table: rows created and rows skipped. A merge never updates or removes."""
 
     permissions = PermissionImportSectionStatsSerializer()
     roles = PermissionImportSectionStatsSerializer()
@@ -460,6 +473,18 @@ class PermissionImportStatsSerializer(serializers.Serializer):
     field_permissions = PermissionImportSectionStatsSerializer()
     data_scopes = PermissionImportSectionStatsSerializer()
     skipped_details = PermissionImportSkippedSerializer(many=True)
+    updated = serializers.IntegerField(
+        help_text="Overwrite only (0 for a merge): roles whose name / description the file replaced, "
+                  "plus surviving grants, field rules and scopes whose content differs.",
+    )
+    removed = PermissionImportRemovedSerializer(
+        help_text="Overwrite only: entries that exist now and will not after the import - "
+                  "the file does not have them. Not the number deleted first (the rest are rebuilt).",
+    )
+    removes_own_permissions = serializers.BooleanField(
+        help_text="Overwrite only: a removed entry belongs to a role that decides what the caller "
+                  "may do. ADMIN bypasses grants, field rules and scopes, so this is false for ADMIN.",
+    )
 
 
 class PermissionImportResultSerializer(serializers.Serializer):
