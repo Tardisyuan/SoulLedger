@@ -3,8 +3,8 @@
  * browser as a file. The `download` attribute names the file; the server's
  * Content-Disposition only matters to someone calling the endpoint directly.
  */
-export function saveBlob(data: BlobPart, filename: string): void {
-  const url = URL.createObjectURL(new Blob([data], { type: "text/csv;charset=utf-8" }));
+export function saveBlob(data: BlobPart, filename: string, type = "text/csv;charset=utf-8"): void {
+  const url = URL.createObjectURL(new Blob([data], { type }));
   const link = document.createElement("a");
   link.href = url;
   link.download = filename;

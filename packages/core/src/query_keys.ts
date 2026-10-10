@@ -279,7 +279,11 @@ export const socialKeys = {
  * the queries that page owns.
  */
 export const permKeys = {
+  /** The permission definitions list (`permApi.list`). */
+  permissions: ["permissions"] as const,
   roles: ["roles"] as const,
+  /** Prefix of every `rolePermissions(name)` — for invalidating all roles' grants at once. */
+  allRolePermissions: ["role-permissions"] as const,
   rolePermissions: (roleName: string) => ["role-permissions", roleName] as const,
 };
 
