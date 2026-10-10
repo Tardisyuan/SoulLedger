@@ -10,16 +10,24 @@ from django.http import Http404
 from django.urls import include, path, re_path
 from django.views.static import serve as static_serve
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
+from rest_framework.authentication import SessionAuthentication
 from rest_framework.routers import DefaultRouter
 
 from apps.authentication.views import UserViewSet
 from apps.chat import urls as chat_urls
 from apps.core.health import HealthCheck, HealthCheckDetailed
+from apps.core.permissions import IsAdminPermission
 from apps.core.recycle_bin_views import RecycleBinViewSet
 from apps.social import soul_urls as social_urls
 from apps.social.media_views import PostMediaFileView
 from apps.soul_accounts import urls as soul_account_urls
+from apps.soul_accounts.authentication import OfficerJWTAuthentication
 from apps.soul_assist import urls as soul_assist_urls
+
+_DOCS_ACCESS = {
+    "authentication_classes": [OfficerJWTAuthentication, SessionAuthentication],
+    "permission_classes": [IsAdminPermission],
+}
 
 # User management router (registered at api/v1/users/ via path)
 user_router = DefaultRouter()
@@ -97,8 +105,11 @@ urlpatterns = [
     # 朋友圈帖子图片的文件出口:签名地址、每次重查可见性(apps/social/media_views.py)。
     path("api/v1/social-media/<uuid:media_id>/", PostMediaFileView.as_view(), name="social-media-file"),
     # API docs
-    path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
-    path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
+    # 仅 ADMIN(与 /health/detailed/ 同一套认证与权限,DEBUG 下也不放开)。门禁与前端类型生成
+    # 走 SchemaGenerator / `manage.py spectacular`,不走这两个 HTTP 路由。浏览器里的 Swagger 页
+    # 带不了 Bearer 头,靠同源 session(登录 /admin/ 后)取 schema。
+    path("api/schema/", SpectacularAPIView.as_view(**_DOCS_ACCESS), name="schema"),
+    path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema", **_DOCS_ACCESS), name="swagger-ui"),
 ]
 
 # Uploaded avatars under DEBUG (the route below exists only when DEBUG is on); in
