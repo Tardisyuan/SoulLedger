@@ -89,7 +89,7 @@ const offenders = (keys: string[], bad: Rule) =>
   keys.filter((k) => bad(EGY[k], k)).map((k) => `${k}: ${EGY[k]}`);
 
 /** 技术词原样引用(词表「技术词不转写」):缩写与角色码。 */
-const CAPS_ALLOWED = new Set(["IP", "PNG", "JPEG", "MB", "MODERATOR", "ID", "GLM"]); // GLM: 智谱的模型名,平台下拉(2026-09-30)
+const CAPS_ALLOWED = new Set(["IP", "PNG", "JPEG", "MB", "MODERATOR", "ID", "GLM", "JSON"]); // JSON: 权限配置文件格式名(第十六批);GLM: 智谱的模型名,平台下拉(2026-09-30)
 
 /** 已确认改掉的英文残留。新发现一个,改掉之后加进来。 */
 const ENGLISH_RESIDUE = [
@@ -277,6 +277,12 @@ const TECHNICAL: Record<string, string[]> = {
   "assist_admin.try.switched": ["s"],
   "assist_admin.try.waited": ["s"],
   "assist_admin.usage.reason.server_error": ["5xx"],
+  // 第十六批:权限配置导入导出 —— 单花括号占位符(与 zh-Hans 同形)、文件格式名、配置文件里的顶层键名。
+  "permissions.config.import_title": ["{step}/3"],
+  "permissions.config.import_error": ["{reason}"],
+  "permissions.config.file_hint": ["JSON", "{max}"],
+  "permissions.config.errors.not_json": ["JSON"],
+  "permissions.config.errors.bad_structure": ["JSON", "permissions", "roles", "role_permissions", "field_permissions", "data_scopes"],
 };
 
 /** 空白切出的记号去掉两端标点(括号、引号、逗号、句点……),留下可与 TECHNICAL 比对的原形。 */
@@ -536,8 +542,15 @@ const PARTICLES = [
 const ROOTS_BATCH15 = [
   "Hat", //           前面 / 在前
 ];
+/** 第十六批(Design,2026-10-10):新词根;只登记已有键用到的(Mawy / Sni 等随待审键一起等)。 */
+const ROOTS_BATCH16 = [
+  "Djama", //         文件
+  "Nemet", //         步
+  "Pesh", //          页
+  "Smi", //           报告
+];
 const LEXICON = new Set([
-  ...[...ROOTS, ...ROOTS_MOD, ...ROOTS_FIX, ...ROOTS_SPLIT, ...ROOTS_CLOSE, ...ROOTS_FINAL, ...ROOTS_LATE, ...ROOTS_APP, ...ROOTS_NINE, ...ROOTS_TEN, ...ROOTS_ELEVEN, ...ROOTS_TWELVE, ...ROOTS_BATCH15, ...PROPER_NAMES, ...PARTICLES].flatMap((e) => e.split(/ \/ | /)),
+  ...[...ROOTS, ...ROOTS_MOD, ...ROOTS_FIX, ...ROOTS_SPLIT, ...ROOTS_CLOSE, ...ROOTS_FINAL, ...ROOTS_LATE, ...ROOTS_APP, ...ROOTS_NINE, ...ROOTS_TEN, ...ROOTS_ELEVEN, ...ROOTS_TWELVE, ...ROOTS_BATCH15, ...ROOTS_BATCH16, ...PROPER_NAMES, ...PARTICLES].flatMap((e) => e.split(/ \/ | /)),
   ...WHOLE_PHRASES,
 ]);
 
