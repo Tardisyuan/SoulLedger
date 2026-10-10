@@ -408,6 +408,11 @@ DEFAULT_PERMISSIONS = [
     # 灵魂的角色。JUDGE / GUARDIAN / VIEWER 不持有 —— 被举报的内容里会有
     # PRIVATE 与待审的帖子,按最小可见收。perm 迁移 0023 播种这一行。
     ("social.moderate", "审核灵魂朋友圈", "social"),
+    # souls.mfa_reset(灵魂端两步验证,2026-10-11):官员替灵魂关闭两步验证(丢了手机又没有恢复码时)。
+    # **默认只 ADMIN 持有**,其它角色由管理员在权限页授予 —— 它能让一个知道密码的人绕过第二道锁,
+    # 比 soul_account.manage 更敏感。授予后该角色也只能动本殿的灵魂(视图里按原属殿核对)。
+    # 只能关,不能替灵魂开启。perm 迁移 0027 播种这一行。
+    ("souls.mfa_reset", "关闭灵魂两步验证", "souls"),
 ]
 
 
@@ -432,6 +437,7 @@ ROLE_PERMISSIONS = {
         "soul_account.read", "soul_account.manage",
         "soul_inbox.read", "soul_inbox.reply",
         "social.moderate",
+        "souls.mfa_reset",
         "workflow.read", "workflow.create", "workflow.update", "workflow.delete", "workflow.approve", "workflow.advance",
         # Migration 0015 grants this to ADMIN in the database (ADMIN_GRANTS =
         # ["workflow.escalate"]) — this static list had drifted from that intent

@@ -100,6 +100,12 @@ export function useResetSoulCredential() {
   );
 }
 
+export function useResetSoulMfa() {
+  return useSoulAccountWrite(async ({ accountId, reason }: { accountId: string; reason: string }) =>
+    (await soulAccountsApi.resetMfa(accountId, reason)).data
+  );
+}
+
 export function useMarkCredentialDelivered() {
   return useSoulAccountWrite(async (id: string) => (await soulAccountsApi.markDelivered(id)).data);
 }

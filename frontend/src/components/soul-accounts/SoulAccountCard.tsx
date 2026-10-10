@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { Soul, SoulAccount } from "@soulledger/core/api";
 import { useSoulAccountChain } from "@soulledger/core/hooks/useSoulAccounts";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { useTenant } from "@/src/contexts/TenantContext";
 import { usePermissions } from "@/src/hooks/usePermissions";
 import { Badge } from "@/src/components/ui/Badge";
 import { Button } from "@/src/components/ui/Button";
@@ -13,6 +14,7 @@ import { QueryError } from "@/src/components/ui/PageError";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AccountCredentialModal } from "./AccountCredentialModal";
 import { EmailNotSyncedNote } from "./EmailNotSyncedNote";
+import { SoulMfaResetDialog } from "./SoulMfaResetDialog";
 import { lifeNumber } from "./soulAccountsView";
 
 /**
@@ -21,18 +23,27 @@ import { lifeNumber } from "./soulAccountsView";
  *
  * Rendered by the page only for `soul_account.read`; the two verbs need
  * `soul_account.manage` and are absent — not disabled — without it.
+ *
+ * 「关闭两步验证」 (第十八批) is a third verb with its own codename: shown only when the soul's account has
+ * two-step verification on, the viewer holds `souls.mfa_reset`, and the viewer belongs to the soul's HOME
+ * hall (a soul dispatched here is still its home hall's to look after). Absent otherwise — never a disabled
+ * button with no word about it. There is no verb to turn it ON for a soul.
  */
 export function SoulAccountCard({ soul }: { soul: Soul }) {
   const { t, formatDateTime } = useI18n();
   const { hasPermission } = usePermissions();
   const canManage = hasPermission("soul_account.manage");
+  const { user } = useTenant();
   const chain = useSoulAccountChain(soul.id);
-  const [modal, setModal] = useState<"provision" | "reset" | null>(null);
+  const [modal, setModal] = useState<"provision" | "reset" | "mfa" | null>(null);
 
   const accounts = chain.data ?? [];
   const current: SoulAccount | undefined = accounts.find((a) => a.retired_at === null);
   const life = soul.life_index ?? 0;
   const thisLifeHasAccount = accounts.some((a) => a.cycle === life);
+  const myHall = user?.tenant?.code;
+  const homeHall = soul.home_tenant?.code ?? myHall;
+  const canResetMfa = hasPermission("souls.mfa_reset") && current?.mfa_enabled === true && !!myHall && myHall === homeHall;
   const passwordExpired =
     current?.must_change_password === true &&
     current.initial_password_expires_at !== null &&
@@ -92,6 +103,15 @@ export function SoulAccountCard({ soul }: { soul: Soul }) {
                 <MissingValue kind="unrecorded" reason={t("soul_accounts.account.never_logged_in")} />
               )
             )}
+            {row(
+              t("mfa.title"),
+              <span data-testid="soul-mfa-state">
+                {current.mfa_enabled ? t("mfa.badge_on") : t("mfa.badge_off")}
+                {current.mfa_enabled && current.mfa_enabled_at && (
+                  <span className="font-mono"> · {formatDateTime(current.mfa_enabled_at)}</span>
+                )}
+              </span>
+            )}
             {row(t("soul_accounts.account.contact_email"), current.contact_email_masked || <MissingValue kind="unrecorded" />)}
             {row(t("soul_accounts.account.contact_phone"), current.contact_phone_masked || <MissingValue kind="unrecorded" />)}
           </dl>
@@ -104,6 +124,11 @@ export function SoulAccountCard({ soul }: { soul: Soul }) {
         {canManage && current && (
           <Button type="button" size="sm" variant="warning" className="w-full" onClick={() => setModal("reset")}>
             {t("soul_accounts.account.actions.reset")}
+          </Button>
+        )}
+        {canResetMfa && (
+          <Button type="button" size="sm" variant="secondary" className="w-full" data-testid="soul-mfa-reset-open" onClick={() => setModal("mfa")}>
+            {t("soul_accounts.account.actions.mfa_reset")}
           </Button>
         )}
         {canManage && !thisLifeHasAccount && soul.current_state !== "ALIVE" && (
@@ -152,6 +177,7 @@ export function SoulAccountCard({ soul }: { soul: Soul }) {
       {modal === "provision" && (
         <AccountCredentialModal mode="provision" soulId={soul.id} soulName={soul.name} onClose={() => setModal(null)} />
       )}
+      {modal === "mfa" && current && <SoulMfaResetDialog account={current} soulName={soul.name} onClose={() => setModal(null)} />}
       {modal === "reset" && current && (
         <AccountCredentialModal mode="reset" accountId={current.id} soulName={soul.name} onClose={() => setModal(null)} />
       )}

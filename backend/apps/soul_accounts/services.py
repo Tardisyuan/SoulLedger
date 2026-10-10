@@ -184,6 +184,7 @@ def _issue_credential(account, soul):
     account.initial_password_expires_at = expires_at
     account.save(update_fields=["must_change_password", "initial_password_expires_at"])
     _revoke_refresh_tokens(user)
+    _void_mfa_devices(account)  # 重置密码不关两步验证,但「这部手机不再询问」要重新确认
 
     delivery = pick_delivery(soul)
     credential = InitialCredential.objects.create(
@@ -340,8 +341,8 @@ def issue_tokens(account):
     return {"access": str(refresh.access_token), "refresh": str(refresh)}
 
 
-def login(soul_code, password):
-    """返回 `(account, tokens)`;失败抛 SoulAccountError(status 401)。
+def authenticate(soul_code, password):
+    """第一步:编号 + 密码 → 账号(尚未发令牌);失败抛 SoulAccountError(status 401)。
 
     只找**当前**账号 —— 前世账号在这里根本不是候选,于是「前世账号不能登录」不靠
     一条 if,而靠查询的形状。编号不存在时仍跑一次哈希,响应时间不泄露编号是否存在。
@@ -358,8 +359,20 @@ def login(soul_code, password):
         raise bad
     if initial_password_expired(account):
         raise SoulAccountError("初始密码已过期,请联系官员重置。", "initial_password_expired", 401)
+    return account
+
+
+def complete_login(account):
+    """密码(以及开着两步验证时的第二步)都过了:记登录时间并发令牌。"""
     update_last_login(None, account.user)
-    return account, issue_tokens(account)
+    return issue_tokens(account)
+
+
+def login(soul_code, password):
+    """返回 `(account, tokens)`;失败抛 SoulAccountError(status 401)。不看两步验证 ——
+    视图在 `authenticate` 与 `complete_login` 之间插第二步。"""
+    account = authenticate(soul_code, password)
+    return account, complete_login(account)
 
 
 def change_password(account, old_password, new_password):
@@ -391,6 +404,13 @@ def set_password_chosen_by_soul(account, new_password):
         # 灵魂已经自己设了密码:还没交付的初始密码没有意义了,明文立即作废。
         _void_open_credentials(account)
         _revoke_refresh_tokens(user)
+        _void_mfa_devices(account)  # 改密码不关两步验证,但「这部手机不再询问」全部作废
+
+
+def _void_mfa_devices(account):
+    from apps.soul_accounts import mfa
+
+    mfa.void_devices(account)
 
 
 def _revoke_refresh_tokens(user):
@@ -420,11 +440,16 @@ def retire_account_for_rebirth(soul, ended_cycle):
     account.user.save(update_fields=["is_active", "email"])
     _void_open_credentials(account)
     _revoke_refresh_tokens(account.user)
+    # 两步验证跟着「这一世的账号」:密钥、恢复码、记住的设备一起作废;新一世的账号默认没有。
+    from apps.soul_accounts import mfa
+
+    had_mfa = mfa.void_all(account)
     # 同一事务里停用推送设备:停用的账号不再收到任何推送,回滚则一起回滚。
     from apps.soul_push.services import invalidate_account_devices
 
     invalidate_account_devices(account)
-    audit("UPDATE", soul, f"转世完成,第 {ended_cycle} 世灵魂账号停用", resource_id=account.pk)
+    audit("UPDATE", soul, f"转世完成,第 {ended_cycle} 世灵魂账号停用", resource_id=account.pk,
+          changes={"mfa_voided": True} if had_mfa else None)
     from apps.events.services import EventService
 
     EventService.log(soul, "SOUL_ACCOUNT_RETIRED", {"account_id": str(account.pk), "cycle": ended_cycle})

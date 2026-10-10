@@ -22,6 +22,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import type { Outgoing } from "../chat";
 import { bubbleStamp } from "../chatRules";
+import { Icon } from "../emblems";
 import { useI18n } from "../i18n";
 import { ON_PLAQUE } from "../theme";
 import { Loader, Txt, useTheme } from "../ui";
@@ -289,13 +290,13 @@ export function ImageButton({ size, onPress, disabled }: { size: number; onPress
     <Pressable
       testID="chat-image-add"
       accessibilityRole="button"
-      accessibilityLabel={tr("soul_app.circle.media.add")}
+      accessibilityLabel={tr("soul_app.chat.image.button")}
       accessibilityState={{ disabled: !!disabled }}
       disabled={disabled}
       onPress={onPress}
       style={({ pressed }) => [styles.button, { width: size, height: size, borderColor: t.hair2, backgroundColor: pressed ? t.s1 : "transparent" }]}
     >
-      <Txt style={[styles.buttonText, { color: t.ink }]}>{tr("soul_app.chat.image.button")}</Txt>
+      <Icon name="image" size={20} color={t.ink} strokeWidth={1.5} />
     </Pressable>
   );
 }
@@ -322,5 +323,4 @@ const styles = StyleSheet.create({
   counterWrap: { position: "absolute", left: 0, right: 0, alignItems: "center" },
   counter: { color: ON_PLAQUE, fontSize: 13, lineHeight: 18 },
   button: { borderWidth: 1, alignItems: "center", justifyContent: "center" },
-  buttonText: { fontSize: 15, lineHeight: 20 },
 });

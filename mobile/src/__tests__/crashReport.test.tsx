@@ -99,6 +99,31 @@ test("a password-reset deep link never leaves the device: not in text, not under
   expect(event.extra.guide).toBe("kept"); // `uid` is matched as a whole key name, not as a substring of "guide"
 });
 
+test("two-step verification (soul): the secret, the recovery codes, the digits, the pending credential and the device token never leave", () => {
+  const SECRET = "JBSWY3DPEHPK3PXPQK7M2RTAJBSWY3DP";
+  const CODES = ["7kq4-m2xd", "p9tr-3hwe"];
+  const event = scrubEvent({
+    message: `setup failed for otpauth://totp/SoulLedger%3ASOULCODE01?secret=${SECRET}&issuer=SoulLedger`,
+    extra: {
+      secret: SECRET,
+      otpauth_url: `otpauth://totp/SoulLedger%3ASOULCODE01?secret=${SECRET}`,
+      recovery_codes: CODES,
+      recovery_code: CODES[0],
+      code: "482913",
+      pending_token: "pending-opaque-abc",
+      device_token: "device-opaque-xyz",
+      mfa_devices: { SOULCODE01: "device-opaque-xyz" },
+      remember_device: true,
+      mfa_status: { enabled: true, recovery_codes_remaining: 8 },
+      harmless: "kept",
+    },
+    breadcrumbs: [{ category: "fetch", data: { url: "https://api.test/api/v1/soul-auth/mfa/verify/", pending_token: "pending-opaque-abc", code: "482913" } }],
+  });
+  const json = JSON.stringify(event);
+  for (const secret of [SECRET, ...CODES, "482913", "pending-opaque-abc", "device-opaque-xyz", "SOULCODE01"]) expect(json).not.toContain(secret);
+  expect(event.extra.harmless).toBe("kept");
+});
+
 describe("initialisation", () => {
   beforeEach(() => jest.clearAllMocks());
 

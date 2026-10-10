@@ -70,6 +70,8 @@ export type AppStackParams = {
   AccountPassword: undefined;
   /** 关于 / 致谢(补足 C16),从设置页进。 */
   About: undefined;
+  /** 两步验证:关着是开启向导,开着是管理页。从设置页「账号安全」进。 */
+  Mfa: undefined;
   NotificationPrimer: undefined;
   /** 通知记录:推送过的都在,从设置页进。 */
   NotificationHistory: undefined;

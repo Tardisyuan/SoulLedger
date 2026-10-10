@@ -9,8 +9,9 @@ import { useToast } from "../feedback";
 import { family } from "../fonts";
 import { useI18n } from "../i18n";
 import { expiryOf, formatStamp } from "../rules";
-import { useSession } from "../session";
+import { useSession, type MfaChallenge } from "../session";
 import { Block, Button, GUTTER, Interp, Input, Notice, Screen, Txt, useLayout, useTheme } from "../ui";
+import { LoginSecondStep } from "./loginMfa";
 
 /** Refusals are the user's to fix (red); a rate limit or a dead network is not (neutral). */
 export const NEUTRAL_ERRORS = new Set(["soul_app.errors.rate_limited", "soul_app.errors.network"]);
@@ -56,6 +57,8 @@ export function LoginScreen() {
   const [soulCode, setSoulCode] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
+  // Set when the password was right and the account has two-step verification on: the screen shows the second step.
+  const [challenge, setChallenge] = useState<MfaChallenge | null>(null);
   const [error, setError] = useState<SoulErrorMessage | null>(state.status === "signedOut" ? (state.notice ?? null) : null);
   // `popTo("Login")` returns to THIS screen, not a fresh one: an earlier failed
   // sign-in's error (which hid the notice) and the old password are still here.
@@ -79,12 +82,37 @@ export function LoginScreen() {
     setBusy(true);
     setError(null);
     try {
-      await signIn(soulCode.trim(), password);
+      const next = await signIn(soulCode.trim(), password);
+      if (next) {
+        setChallenge(next);
+        setPassword("");
+        setBusy(false);
+      }
     } catch (e) {
       setError(soulErrorMessage(e));
       setBusy(false);
     }
   };
+
+  if (challenge) {
+    return (
+      <Screen scroll={false} edges={["top", "left", "right", "bottom"]} testID="login-mfa">
+        <LoginSecondStep
+          challenge={challenge}
+          // A timed-out step goes back to the password with the soul code kept; "another account" clears it too.
+          onRestart={() => {
+            setChallenge(null);
+            setError(null);
+          }}
+          onChangeAccount={() => {
+            setChallenge(null);
+            setError(null);
+            setSoulCode("");
+          }}
+        />
+      </Screen>
+    );
+  }
 
   return (
     <Screen edges={["top", "left", "right", "bottom"]}>

@@ -84,8 +84,10 @@ def soul_login_rate_keys():
 
     store = cache._cache
     if hasattr(store, "get_client"):
-        return [k.decode() for k in store.get_client().scan_iter(match="*soul_login_rate:*")]
-    return [k for k in list(store.keys()) if "soul_login_rate:" in k]
+        client = store.get_client()
+        return [k.decode() for pattern in ("*soul_login_rate:*", "*soul_mfa_rate:*")
+                for k in client.scan_iter(match=pattern)]
+    return [k for k in list(store.keys()) if "soul_login_rate:" in k or "soul_mfa_rate:" in k]
 
 
 def clear_soul_login_counters():

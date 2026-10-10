@@ -187,6 +187,8 @@ KIND_CATEGORY = {
     "sentence_amended": "judgment",
     "sentence_pardoned": "rebirth",
     "chat_message": "chat",
+    # 官员关闭了灵魂的两步验证:安全通知,不给关(同警告)。
+    "mfa_reset_by_officer": None,
     # 没有「朋友圈」偏好类别:警告是殿司对灵魂说的话,不给关(2026-09-26 产品定:理由走推送)。
     # 按被举报的是什么分三种文案(2026-09-26 产品定):帖子 / 评论 / 账号。
     **{f"social_warned_{target}": None for target in ("post", "comment", "user")},
@@ -245,6 +247,18 @@ def record_social_warning(user_id, report_id, target_type, reason):
     kind = f"social_warned_{target_type.lower()}"
     return _record(account, SOCIAL_WARNED_EVENT, None, kind, f"warn:{report_id}"[:120],
                    {"screen": "Life"}, params=lambda locale: {"reason": reason})
+
+
+#: 官员替灵魂关闭了两步验证(apps/soul_accounts/mfa.py::reset_by_officer)。**不经事件总线**,也不进偏好:
+#: 如果不是本人去找的官员,灵魂要能马上发现(Design 第十八批)。锁屏上带官员的显示名;没有设备的照记一行
+#: 历史(NO_DEVICE),灵魂重新登录后在「通知记录」里看到。dedupe 用时间戳:同一账号可以被关多次。
+MFA_RESET_EVENT = "SOUL_MFA_RESET"
+
+
+def record_mfa_reset(account, officer_name):
+    return _record(account, MFA_RESET_EVENT, None, "mfa_reset_by_officer",
+                   f"mfa-reset:{account.pk}:{timezone.now().timestamp()}"[:120], {},
+                   params=lambda locale: {"name": officer_name})
 
 
 def _record(account, event_type, category, kind, dedupe_key, data, params=None):
