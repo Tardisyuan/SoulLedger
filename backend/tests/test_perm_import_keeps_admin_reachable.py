@@ -35,6 +35,12 @@ def _client(user, tenant):
     return client
 
 
+
+@pytest.fixture(autouse=True)
+def _overwrite_import_on(settings):
+    """Overwrite import is off by default (PERM_IMPORT_OVERWRITE_ENABLED); this file tests it."""
+    settings.PERM_IMPORT_OVERWRITE_ENABLED = True
+
 @pytest.fixture
 def world(db):
     tenant, _ = Tenant.objects.get_or_create(code="CN_DIYU", defaults={"display_name": "中国地府"})

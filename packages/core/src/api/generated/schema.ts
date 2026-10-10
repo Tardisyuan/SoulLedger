@@ -14425,6 +14425,8 @@ export interface components {
         PermissionImportResult: {
             message: string;
             stats: components["schemas"]["PermissionImportStats"];
+            /** @description Whether this server accepts overwrite=true (PERM_IMPORT_OVERWRITE_ENABLED); the client shows the merge / overwrite choice only when true. */
+            overwrite_enabled: boolean;
         };
         PermissionImportSectionStats: {
             created: number;
@@ -26570,6 +26572,16 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
         };

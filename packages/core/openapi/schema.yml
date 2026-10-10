@@ -11103,6 +11103,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
           description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
   /api/v1/perm/permissions/:
     get:
       operationId: v1_perm_permissions_list
@@ -30732,8 +30739,13 @@ components:
           type: string
         stats:
           $ref: '#/components/schemas/PermissionImportStats'
+        overwrite_enabled:
+          type: boolean
+          description: Whether this server accepts overwrite=true (PERM_IMPORT_OVERWRITE_ENABLED);
+            the client shows the merge / overwrite choice only when true.
       required:
       - message
+      - overwrite_enabled
       - stats
     PermissionImportSectionStats:
       type: object

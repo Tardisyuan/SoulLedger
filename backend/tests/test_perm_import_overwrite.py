@@ -32,6 +32,12 @@ def _client(user, tenant):
     return client
 
 
+
+@pytest.fixture(autouse=True)
+def _overwrite_import_on(settings):
+    """Overwrite import is off by default (PERM_IMPORT_OVERWRITE_ENABLED); this file tests it."""
+    settings.PERM_IMPORT_OVERWRITE_ENABLED = True
+
 @pytest.fixture
 def world(db):
     tenant, _ = Tenant.objects.get_or_create(code="CN_DIYU", defaults={"display_name": "中国地府"})
@@ -204,3 +210,41 @@ def test_through_the_api_an_admin_gets_false(world):
     client = _client(world["admin"], world["tenant"])
     response = client.post(IMPORT, {**FILE, "overwrite": True, "dry_run": True}, format="json")
     assert response.data["stats"]["removes_own_permissions"] is False
+
+
+
+# --- the switch: overwrite is off unless PERM_IMPORT_OVERWRITE_ENABLED -----------------------
+# Permission config is global, so one hall's admin overwriting it rewrites every hall's.
+
+def _counts():
+    return (RolePermission.objects.count(), FieldPermission.objects.count(),
+            RowLevelDataScope.objects.count(), AuditLog.objects.count())
+
+
+@pytest.mark.parametrize("dry_run", [False, True])
+def test_with_the_switch_off_an_overwrite_is_refused_and_nothing_changes(world, settings, dry_run):
+    settings.PERM_IMPORT_OVERWRITE_ENABLED = False
+    before = _counts()
+    with mock.patch("apps.perm.views.invalidate_all_permissions") as invalidate:
+        response = _client(world["admin"], world["tenant"]).post(
+            IMPORT, {**FILE, "overwrite": True, "dry_run": dry_run}, format="json")
+    assert response.status_code == 403
+    assert response.data["code"] == "overwrite_disabled"
+    assert _counts() == before
+    invalidate.assert_not_called()
+
+
+def test_with_the_switch_off_a_merge_and_its_dry_run_still_work_and_say_so(world, settings):
+    settings.PERM_IMPORT_OVERWRITE_ENABLED = False
+    client = _client(world["admin"], world["tenant"])
+    dry = client.post(IMPORT, {**FILE, "dry_run": True}, format="json")
+    real = client.post(IMPORT, {**FILE}, format="json")
+    assert (dry.status_code, real.status_code) == (200, 200)
+    assert dry.data["overwrite_enabled"] is False and real.data["overwrite_enabled"] is False
+
+
+def test_the_response_reports_the_switch_when_on(world, settings):
+    settings.PERM_IMPORT_OVERWRITE_ENABLED = True
+    response = _client(world["admin"], world["tenant"]).post(IMPORT, {**FILE, "dry_run": True}, format="json")
+    assert response.data["overwrite_enabled"] is True
+
