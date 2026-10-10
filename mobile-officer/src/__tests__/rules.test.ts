@@ -12,6 +12,7 @@ import {
   handledNotice,
   isDenied,
   landingOf,
+  noticeLanding,
   loginFailureKey,
   reasonMissing,
   passVerdictsOf,
@@ -142,6 +143,13 @@ describe("where a tapped push lands", () => {
   });
   it("a payload that names an item lands on its detail", () => {
     expect(landingOf({ category: "officer_todo", target: { kind: "approval", id: "wf-9" } })).toEqual({ tab: "todo", item: { kind: "approval", id: "wf-9" } });
+  });
+  it("a notification row lands like a push: a workflow is an approval, anything unnamed stays put", () => {
+    expect(noticeLanding({ related_resource: "workflow", related_id: "wf-9" })).toEqual({ tab: "todo", item: { kind: "approval", id: "wf-9" } });
+    expect(noticeLanding({ related_resource: "cooldown", related_id: "4" })).toEqual({ tab: "todo", item: { kind: "cooldown", id: "4" } });
+    expect(noticeLanding({ related_resource: "scheduler", related_id: "5" })).toBeNull();
+    expect(noticeLanding({ related_resource: "workflow", related_id: null })).toBeNull();
+    expect(noticeLanding({})).toBeNull();
   });
   it("an unknown kind, an empty id or no payload just opens the app", () => {
     expect(landingOf({ target: { kind: "mystery", id: "1" } })).toBeNull();

@@ -176,6 +176,16 @@ export function landingOf(data: unknown): Landing | null {
   return category === "officer_todo" ? { tab: "todo" } : null;
 }
 
+/**
+ * Where a tapped row in 通知 goes: the same landing as a tapped push, built from the row's own
+ * `related_resource` / `related_id`. A workflow notification (`WORKFLOW_ASSIGNED`) names the
+ * workflow an approval todo is keyed by. Anything else -- no target, an unknown resource -- is `null`.
+ */
+export function noticeLanding(n: { related_resource?: string | null; related_id?: string | null }): Landing | null {
+  const kind = n.related_resource === "workflow" ? "approval" : n.related_resource;
+  return landingOf({ target: { kind, id: n.related_id } });
+}
+
 /** The note on a detail whose item someone else already settled; `null` when it is still ours. */
 export function handledNotice(detail: Pick<TodoItemDetail, "actionable" | "state" | "handled_by">):
   | { kind: "handled"; name: string | null }

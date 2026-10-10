@@ -12,7 +12,7 @@ import { BackHandler, View } from "react-native";
 import { IdentityBand, StandingBanner, TabBar, type TabKey } from "./kit";
 import { officerLinks } from "./links";
 import { listenForLandings, registerDevice } from "./push";
-import { HIGHLIGHT_MS, hallLabel } from "./rules";
+import { HIGHLIGHT_MS, hallLabel, type Landing } from "./rules";
 import { Detail, type DetailTarget } from "./screens/detail";
 import { MeTab } from "./screens/me";
 import { NoticesTab } from "./screens/notices";
@@ -34,18 +34,20 @@ export function Shell() {
   const [highlight, setHighlight] = useState<ItemRef | null>(null);
   const [unread, setUnread] = useState(false);
 
+  const land = useCallback((landing: Landing) => {
+    setTab("todo");
+    setVersion((v) => v + 1);
+    if (landing.item) {
+      setLanded(landing.item);
+      setDetail({ type: "todo", ...landing.item });
+    }
+  }, []);
+
   useEffect(() => {
     // Idempotent on the server; does nothing without the system permission (asked in 我的, never here).
     void registerDevice();
-    return listenForLandings((landing) => {
-      setTab("todo");
-      setVersion((v) => v + 1);
-      if (landing.item) {
-        setLanded(landing.item);
-        setDetail({ type: "todo", ...landing.item });
-      }
-    });
-  }, []);
+    return listenForLandings(land);
+  }, [land]);
 
   useEffect(
     // A link held while signed out (or before this mounted) arrives here first. Same landing as a push.
@@ -105,7 +107,7 @@ export function Shell() {
         ) : tab === "search" ? (
           <SearchTab onOpenSoul={(id) => setDetail({ type: "soul", id })} />
         ) : tab === "notices" ? (
-          <NoticesTab onUnread={setUnread} />
+          <NoticesTab onUnread={setUnread} onLand={land} />
         ) : (
           <MeTab />
         )}
