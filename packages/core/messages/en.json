@@ -3145,6 +3145,8 @@
       "social_cleanup_orphan_post_media": "Delete unposted circle images",
       "chat_reconcile_inbox": "Reconcile the hall inbox with Synapse",
       "soul_assist_purge_history": "Purge assistant history",
+      "audit_prune_logs_for_tenant": "Prune old audit and login logs",
+      "audit_prune_untenanted_logs": "Prune untenanted audit and login logs",
       "ledger_snapshot_balance_for_tenant": "Snapshot monthly balances",
       "ledger_snapshot_census_for_tenant": "Snapshot the daily soul census",
       "notifications_email_action_needed_for_tenant": "Email action-needed notifications",

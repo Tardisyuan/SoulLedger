@@ -276,11 +276,16 @@ REST_FRAMEWORK = {
     # is the one setting that says how many proxies are in front of us.
     "DEFAULT_THROTTLE_CLASSES": [
         "apps.core.throttling.AnonRateThrottle",
+        "apps.core.throttling.UserRateThrottle",
     ],
     # `login` (10/minute) is gone with `LoginThrottle`: nothing referenced
     # either, and `LoginView.post` enforces a stricter counter of its own.
     "DEFAULT_THROTTLE_RATES": {
         "anon": "60/minute",
+        # 登录后接口的默认限流,按用户(官员与灵魂账号都是 User 行)计。自己声明了
+        # `throttle_classes` 的视图不受它影响。默认值依据:重页面一次加载 ≤ 10 个请求,
+        # 正常官员持续 ≲ 60 次/分钟,取约 10 倍;用 API_USER_THROTTLE_RATE 调整。
+        "user": os.getenv("API_USER_THROTTLE_RATE", "600/minute"),
         "register": "5/hour",
         "password_reset": "3/5minute",
         # 「忘记密码」→ 通知本殿管理员(apps/authentication/views.py::password_help_request)。
@@ -392,6 +397,11 @@ CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = "UTC"
 CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
+
+# apps.audit retention (apps/audit/retention.py). Days to keep AuditLog / LoginLog rows;
+# 0 or unset = keep forever, i.e. the scheduled prune deletes nothing.
+AUDIT_LOG_RETENTION_DAYS = int(os.getenv("AUDIT_LOG_RETENTION_DAYS", "0") or 0)
+LOGIN_LOG_RETENTION_DAYS = int(os.getenv("LOGIN_LOG_RETENTION_DAYS", "0") or 0)
 
 # apps.scheduler — TaskRun history and the "did it run" detection.
 # Retention: delete finished runs older than this many days ...
