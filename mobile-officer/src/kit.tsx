@@ -319,11 +319,16 @@ export function TabBar({ current, onSelect, unread }: { current: TabKey; onSelec
 }
 
 /** A band under the identity band that does not go away: the two-step-verification reminder. */
-export function StandingBanner({ children, testID }: { children: string; testID?: string }) {
+export function StandingBanner({ children, testID, action }: { children: string; testID?: string; action?: { label: string; onPress: () => void } }) {
   const t = useTheme();
   return (
     <View testID={testID} accessibilityRole="alert" style={[styles.banner, { backgroundColor: t.warnBg, borderBottomColor: t.warn }]}>
       <Txt variant="caption" style={{ color: t.warn }}>{`! ${children}`}</Txt>
+      {action ? (
+        <Pressable testID={testID ? `${testID}-action` : undefined} accessibilityRole="button" accessibilityLabel={action.label} onPress={action.onPress} style={{ minHeight: 44, justifyContent: "center" }}>
+          <Txt variant="nav" style={{ color: t.warn }}>{`${action.label} ›`}</Txt>
+        </Pressable>
+      ) : null}
     </View>
   );
 }

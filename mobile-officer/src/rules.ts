@@ -193,9 +193,45 @@ export function deskBaseUrl(): string {
   return (process.env.EXPO_PUBLIC_DESK_URL || "http://localhost:3000").replace(/\/+$/, "");
 }
 
-/** 忘记密码: the desk's e-mail reset request page. The app only opens it; the reset happens in the browser. */
-export function forgotPasswordUrl(): string {
-  return deskBaseUrl() + "/forgot-password";
+/**
+ * 忘记密码: the reset link in the e-mail lands on the DESK (`/reset-password`), so the new password is
+ * chosen in the browser -- the app only sends the request. This is the way out for an address that
+ * is not verified: the desk's 「通知管理员」 form.
+ */
+export function adminHelpUrl(): string {
+  return deskBaseUrl() + "/login?help=1";
+}
+
+// ── account: forgot / change password, two-step verification ───────────
+
+const statusOf = (error: unknown): number | undefined => (error as { response?: { status?: number } })?.response?.status;
+
+/** Why the e-mail reset request failed: only 429 is told apart; no answer at all is the network. */
+export function forgotFailureKey(error: unknown): string {
+  if (!(error as { response?: unknown })?.response) return "officer_app.login.reasons.network";
+  return statusOf(error) === 429 ? "auth.rate_limited" : "auth.forgot_failed";
+}
+
+/**
+ * What a refused change-password says: the server's own sentences, one per rule, by field
+ * (`{old_password: [...], new_password: [...]}`) -- never the password itself.
+ * `network` when there was no answer at all.
+ */
+export function passwordFailure(error: unknown): { network: boolean; old: string[]; next: string[]; other: string[] } {
+  const response = (error as { response?: { data?: unknown } })?.response;
+  if (!response) return { network: true, old: [], next: [], other: [] };
+  const lines = (v: unknown): string[] => (Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : typeof v === "string" ? [v] : []);
+  const body = (response.data && typeof response.data === "object" ? response.data : {}) as Record<string, unknown>;
+  return { network: false, old: lines(body.old_password), next: lines(body.new_password), other: [...lines(body.detail), ...lines(body.error)] };
+}
+
+/** Why a two-step confirm / disable was refused, as an i18n key; `fallback` is the key for a plain refusal. */
+export function mfaManageFailureKey(error: unknown, fallback: string): string {
+  const response = (error as { response?: { data?: { code?: string } } })?.response;
+  if (!response) return "officer_app.mfa.reasons.network";
+  if (statusOf(error) === 429 || response.data?.code === "locked") return "officer_app.mfa.reasons.locked";
+  if (response.data?.code === "expired") return "mfa.verify.error_expired";
+  return fallback;
 }
 
 /** The desk page for the same item. Pages that are lists (cooldown, rebirth) are the list itself. */

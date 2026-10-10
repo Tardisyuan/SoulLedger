@@ -43,6 +43,8 @@ export interface Session {
   signIn: (username: string, password: string, tenantCode?: string) => Promise<SignInResult>;
   verifyMfa: (input: { pendingToken: string; code?: string; recoveryCode?: string; remember?: boolean }) => Promise<void>;
   signOut: () => void;
+  /** Two-step verification was turned on or off here: keep the cached profile (and so the banner) in step. */
+  setMfaEnabled: (enabled: boolean) => void;
 }
 
 export const SessionContext = createContext<Session | null>(null);
@@ -155,7 +157,16 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     else end();
   }, []);
 
-  const value = useMemo<Session>(() => ({ state, signIn, verifyMfa, signOut }), [state, signIn, verifyMfa, signOut]);
+  const setMfaEnabled = useCallback((enabled: boolean) => {
+    setState((prev) => {
+      if (prev.status !== "signedIn") return prev;
+      const user = { ...prev.user, mfa_enabled: enabled };
+      platform().persistent.set(USER_KEY, JSON.stringify(user));
+      return { status: "signedIn", user };
+    });
+  }, []);
+
+  const value = useMemo<Session>(() => ({ state, signIn, verifyMfa, signOut, setMfaEnabled }), [state, signIn, verifyMfa, signOut, setMfaEnabled]);
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }
 

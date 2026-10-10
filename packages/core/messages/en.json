@@ -5203,7 +5203,6 @@
       "mfa_on": "On",
       "mfa_off": "Off",
       "mfa_required_off": "Required · not set up",
-      "mfa_note": "Turn it on and manage it at the desk.",
       "language": "Language",
       "theme": "Theme",
       "theme_system": "System",
@@ -5262,6 +5261,10 @@
       "submit": "Verify",
       "use_recovery": "Use a recovery code",
       "use_code": "Use an authenticator code",
+      "setup_key_title": "Add to your authenticator",
+      "setup_key_body": "Tap the button to open it in your authenticator app. If nothing opens, press and hold the key to select and copy it, then enter it in the app by hand.",
+      "open_failed": "No authenticator app could open it. Enter the key below by hand.",
+      "select_hint": "Press and hold the text to select and copy it.",
       "reasons": {
         "wrong": "Wrong code",
         "expired": "This sign-in timed out. Sign in again",
@@ -5269,9 +5272,6 @@
         "network": "Network error",
         "other": "Couldn't verify. Try again later"
       }
-    },
-    "banner": {
-      "mfa_required": "Your role must use two-step verification and it isn't set up yet. Set it up at the desk."
     },
     "cosign": {
       "rules": "Only active officers of this hall who may approve are listed. The added signer approves first, then you can; if they reject, the whole step is rejected.",

@@ -15,10 +15,12 @@ import { OFFICER, httpError } from "./harness";
 
 const mockOfficerLogin = jest.fn();
 const mockVerify = jest.fn();
+const mockRequestReset = jest.fn();
 jest.mock("@soulledger/core/api/auth", () => ({
   ...jest.requireActual("@soulledger/core/api/auth"),
   authApi: {
     officerLogin: (...a: unknown[]) => mockOfficerLogin(...a),
+    requestOfficerReset: (...a: unknown[]) => mockRequestReset(...a),
     profile: jest.fn(async () => ({ data: {} })),
     logout: jest.fn(async () => ({})),
   },
@@ -125,11 +127,52 @@ it("says the password was wrong and stays on the form", async () => {
   expect(screen.getByTestId("login-username")).toBeTruthy();
 });
 
-it("忘记密码 opens the desk's request page in the browser and does nothing else", () => {
+it("忘记密码 asks for the e-mail reset in the app and says one neutral sentence", async () => {
   const open = jest.spyOn(Linking, "openURL").mockResolvedValue(true);
+  mockRequestReset.mockResolvedValue({ data: { detail: "x" } });
+  renderLogin();
+  fireEvent.changeText(screen.getByTestId("login-username"), "yama");
+  fireEvent.press(screen.getByTestId("login-forgot"));
+  // the typed username is carried over; nothing is sent until the officer presses send
+  expect(screen.getByTestId("forgot-identifier").props.value).toBe("yama");
+  expect(mockRequestReset).not.toHaveBeenCalled();
+  await act(async () => {
+    fireEvent.press(screen.getByTestId("forgot-submit"));
+  });
+  expect(mockRequestReset).toHaveBeenCalledWith("yama");
+  expect(await screen.findByTestId("forgot-sent")).toBeTruthy();
+  expect(screen.getByText("已发送（如果账号存在且邮箱已验证）")).toBeTruthy();
+  // never says whether the account exists
+  expect(screen.queryByText(/不存在|未找到|not found|no account/i)).toBeNull();
+  expect(open).not.toHaveBeenCalled();
+  fireEvent.press(screen.getByTestId("forgot-admin"));
+  expect(open).toHaveBeenCalledWith(expect.stringMatching(/^https?:\/\/.+\/login\?help=1$/));
+  fireEvent.press(screen.getByTestId("forgot-back"));
+  expect(screen.getByTestId("login-submit")).toBeTruthy();
+  open.mockRestore();
+});
+
+it("忘记密码: 429 says rate limited, no answer says network, and the form stays", async () => {
+  mockRequestReset.mockRejectedValueOnce(httpError(429, { code: "rate_limited", retry_after: 30 }));
   renderLogin();
   fireEvent.press(screen.getByTestId("login-forgot"));
-  expect(open).toHaveBeenCalledWith(expect.stringMatching(/^https?:\/\/.+\/forgot-password$/));
-  expect(mockOfficerLogin).not.toHaveBeenCalled();
-  open.mockRestore();
+  fireEvent.changeText(screen.getByTestId("forgot-identifier"), "a@b.co");
+  await act(async () => {
+    fireEvent.press(screen.getByTestId("forgot-submit"));
+  });
+  expect(await screen.findByText("! 请求过于频繁，请稍后再试")).toBeTruthy();
+  mockRequestReset.mockRejectedValueOnce(Object.assign(new Error("Network Error"), {}));
+  await act(async () => {
+    fireEvent.press(screen.getByTestId("forgot-submit"));
+  });
+  expect(await screen.findByText("! 网络错误")).toBeTruthy();
+  expect(screen.queryByTestId("forgot-sent")).toBeNull();
+  expect(screen.getByTestId("forgot-form")).toBeTruthy();
+});
+
+it("忘记密码 sends nothing for an empty identifier", () => {
+  renderLogin();
+  fireEvent.press(screen.getByTestId("login-forgot"));
+  fireEvent.press(screen.getByTestId("forgot-submit"));
+  expect(mockRequestReset).not.toHaveBeenCalled();
 });
