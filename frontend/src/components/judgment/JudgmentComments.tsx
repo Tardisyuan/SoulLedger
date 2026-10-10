@@ -27,7 +27,12 @@ export function JudgmentComments({ id, canWrite, concludedAt }: { id: string; ca
   const [chosen, setChosen] = useState<boolean | null>(null);
   const [showAll, setShowAll] = useState(false);
   const [body, setBody] = useState("");
-  const { data, isLoading, isError, refetch } = useJudgmentComments(id);
+  const q = useJudgmentComments(id);
+  const { isLoading, refetch } = q;
+  // The server sends a plain list. Anything else (a paginated page from a proxy or a stub) is a failed
+  // load: reading `.slice` off it used to take the whole judgment page down to the error boundary.
+  const data = Array.isArray(q.data) ? q.data : undefined;
+  const isError = q.isError || (q.data !== undefined && data === undefined);
   const add = useAddJudgmentComment(id);
   const text = body.trim();
   const open = chosen ?? (data ? data.length > 0 : false);
