@@ -5343,5 +5343,13 @@
       "send": "Post",
       "failed": "Couldn't post the comment. Try again later."
     }
+  },
+  "print": {
+    "button": "Print",
+    "case_no": "Case no.",
+    "soul_no": "Soul no.",
+    "page_pre": "Page ",
+    "page_mid": " of ",
+    "page_post": ""
   }
 }

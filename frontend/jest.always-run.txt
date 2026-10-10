@@ -38,6 +38,7 @@ src/__tests__/jestAlwaysRunList.test.ts
 src/__tests__/jestRunsNextVendoredReact.test.ts
 src/__tests__/ledgerPaletteContract.test.ts
 src/__tests__/loginStatutes.test.ts
+src/__tests__/printLayout.test.tsx
 src/__tests__/menuCacheRootsAreInvalidatedTogether.test.ts
 src/__tests__/motionTokens.test.ts
 src/__tests__/notifyKeysExistInTheBundles.test.ts

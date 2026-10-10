@@ -49,5 +49,11 @@
   "notifications.batch_delete_title",
   "notifications.batch_delete_message",
   "common.export",
-  "common.export_failed"
+  "common.export_failed",
+  "print.button",
+  "print.case_no",
+  "print.soul_no",
+  "print.page_pre",
+  "print.page_mid",
+  "print.page_post"
 ]
