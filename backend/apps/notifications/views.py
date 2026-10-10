@@ -1,6 +1,7 @@
 """
 Views for notifications.
 """
+from django.db import transaction
 from drf_spectacular.utils import extend_schema
 from rest_framework import viewsets
 from rest_framework.decorators import action
@@ -11,7 +12,9 @@ from apps.core.tenant import scope_to_tenant
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin
 from apps.notifications.models import NotificationEmail, UserNotification
 from apps.notifications.serializers import (
+    BatchDeleteResultSerializer,
     MarkAllReadResultSerializer,
+    NotificationBatchSerializer,
     NotificationEmailStatusSerializer,
     UserNotificationListSerializer,
     UserNotificationSerializer,
@@ -59,6 +62,8 @@ class NotificationViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.
     extra_permissions = {
         'mark_read': ['notification.read'],
         'mark_all_read': ['notification.read'],
+        'batch_read': ['notification.read'],
+        'batch_delete': ['notification.read'],
         'create': ['notification.read'],
         'update': ['notification.read'],
         'partial_update': ['notification.read'],
@@ -145,3 +150,26 @@ class NotificationViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.
         """Mark all of the user's notifications as read."""
         updated = self.get_queryset().update(is_read=True)
         return Response({"marked_read": updated})
+
+    @extend_schema(request=NotificationBatchSerializer, responses=MarkAllReadResultSerializer)
+    @action(detail=False, methods=["post"], url_path="batch-read")
+    def batch_read(self, request):
+        """Mark the given notifications read. Only the caller's own rows are touched (`get_queryset`);
+        any other id is ignored without an error. `marked_read` counts rows that were still unread."""
+        body = NotificationBatchSerializer(data=request.data)
+        body.is_valid(raise_exception=True)
+        updated = self.get_queryset().filter(pk__in=body.validated_data["ids"], is_read=False).update(is_read=True)
+        return Response({"marked_read": updated})
+
+    @extend_schema(request=NotificationBatchSerializer, responses=BatchDeleteResultSerializer)
+    @action(detail=False, methods=["post"], url_path="batch-delete")
+    def batch_delete(self, request):
+        """Delete the given notifications, the way `DELETE /notifications/{id}/` does (soft delete).
+        Only the caller's own rows; any other id is ignored without an error. `deleted` is the real count."""
+        body = NotificationBatchSerializer(data=request.data)
+        body.is_valid(raise_exception=True)
+        rows = list(self.get_queryset().filter(pk__in=body.validated_data["ids"]))
+        with transaction.atomic():
+            for row in rows:
+                row.delete()
+        return Response({"deleted": len(rows)})

@@ -1932,7 +1932,17 @@
     "help_count_24h": "近 24 小时第 {{n}} 次",
     "help_open_users": "去用户页",
     "help_ignore": "不是本人 · 忽略",
-    "open_case": "打开案件"
+    "open_case": "打开案件",
+    "select_all": "全选",
+    "select_row": "选择通知:{{title}}",
+    "batch_region": "通知批量操作",
+    "batch_selected": "已选 {{n}} 条",
+    "batch_limit": "一次至多 {{n}} 条",
+    "batch_clear": "取消选择",
+    "batch_deleted": "已删除 {{count}} 条",
+    "batch_delete_error": "删除失败",
+    "batch_delete_title": "删除所选的 {{n}} 条通知?",
+    "batch_delete_message": "删除后将从你的收件箱消失,不影响别人的通知。"
   },
   "realms": {
     "title": "地域",

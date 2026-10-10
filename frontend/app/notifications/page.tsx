@@ -22,6 +22,7 @@ import { QueryError } from "@/src/components/ui/PageError";
 import { TAB_BASE, TAB_ON, TAB_OFF } from "@/src/lib/tabClasses";
 import { cn } from "@/lib/utils";
 import { ROW_HOVER } from "@/components/ui/data-table";
+import { NotificationBatchBar, NOTIFICATION_BATCH_MAX } from "@/src/components/notifications/NotificationBatchBar";
 
 type FilterType = "all" | "unread";
 
@@ -67,6 +68,17 @@ export default function NotificationsPage() {
   // User management is ADMIN only (`user.manage`); a realm lead's notice says to ask one instead.
   const canManageUsers = hasPermission("user.manage");
   const [filter, setFilter] = useState<FilterType>("all");
+  // 勾选属于一次查询:和筛选一起存,筛选换了就当场读成空(同 `useSoulSelection`,不靠 effect)。
+  const [selection, setSelection] = useState<{ key: FilterType; ids: Set<string> }>({ key: "all", ids: new Set() });
+  if (selection.key !== filter) setSelection({ key: filter, ids: new Set() });
+  const selectedIds = selection.key === filter ? selection.ids : new Set<string>();
+  const select = (ids: Set<string>) => setSelection({ key: filter, ids });
+  const toggleOne = (id: string, checked: boolean) => {
+    const next = new Set(selectedIds);
+    if (!checked) next.delete(id);
+    else if (next.size < NOTIFICATION_BATCH_MAX) next.add(id);
+    select(next);
+  };
 
   const { data: notifications = [], isLoading, isError, refetch } = useQuery({
     // `notificationKeys.list(...)`, not a hand-written `["notifications", filter]`.
@@ -164,6 +176,9 @@ export default function NotificationsPage() {
   const formatDate = (dateString: string) => formatDateTime(dateString);
 
   const unreadCount = notifications.filter((n) => !n.is_read).length;
+  const allSelected = notifications.length > 0 && notifications.every((n) => selectedIds.has(String(n.id)));
+  const toggleAll = (checked: boolean) =>
+    select(new Set(checked ? notifications.slice(0, NOTIFICATION_BATCH_MAX).map((n) => String(n.id)) : []));
 
   return (
     <PageShell
@@ -272,6 +287,15 @@ export default function NotificationsPage() {
           组头是一行 32 px 的等宽日期,下接区块边界线(第三类 A 审判队列的组头)。
           未读 = 行首 6 px 强调色方块 + 标题 600(第三类 C 收件箱的 `dot` / `nst`),
           不再是一圈淡蓝边框 —— 方块之外还有字重,不只靠颜色。 */}
+      <label className="flex h-(--control-h-sm) w-fit items-center gap-2 px-3 text-xs text-[oklch(var(--color-ink-muted))] cursor-pointer">
+        <input
+          type="checkbox"
+          checked={allSelected}
+          onChange={(e) => toggleAll(e.target.checked)}
+          className="h-3.5 w-3.5 accent-[oklch(var(--color-accent))]"
+        />
+        {t("notifications.select_all")}
+      </label>
       {groupByDay(notifications, formatDay).map((day) => (
         <section key={day.key} aria-label={day.label} data-notification-day={day.key} className="mt-3 first:mt-0">
           <div
@@ -290,6 +314,14 @@ export default function NotificationsPage() {
             className={`min-h-(--table-row-h) px-3 py-3 border-b border-[oklch(var(--color-rule))] transition-colors ${ROW_HOVER}`}
           >
             <div className="flex items-start gap-3">
+              <input
+                type="checkbox"
+                data-notification-select=""
+                checked={selectedIds.has(String(notification.id))}
+                onChange={(e) => toggleOne(String(notification.id), e.target.checked)}
+                aria-label={t("notifications.select_row", { title: notification.title })}
+                className="mt-2 h-3.5 w-3.5 shrink-0 accent-[oklch(var(--color-accent))]"
+              />
               {/* Unread mark: a 6 px square, not a dot. Drawn on every row
                   (transparent when read) so read and unread titles line up. */}
               <span
@@ -407,6 +439,7 @@ export default function NotificationsPage() {
           ))}
         </section>
       ))}
+      <NotificationBatchBar ids={[...selectedIds]} onClear={() => select(new Set())} onDone={invalidateNotifications} />
     </PageShell>
   );
 }
