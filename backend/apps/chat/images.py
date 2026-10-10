@@ -15,6 +15,7 @@ Pillow 解码 + 去 EXIF/GPS + 5 MB / 4000 万像素上限)、同一个 `private
 发送是两步:先传(`upload`,每张一个请求,App 逐张显示进度),再发(`send`,经后端代发那一条事件,
 带 `txn_id` 幂等:同一张图重发回第一次的 event_id,不发第二条)。图片和文字是两条消息,一条消息一张图。
 """
+import logging
 import uuid
 from datetime import timedelta
 
@@ -28,6 +29,8 @@ from apps.chat import services as svc
 from apps.chat.models import ChatImage, Conversation, ConversationKind
 from apps.social import images as social_images
 from apps.social.soul_circle import SOUL_ROLE
+
+logger = logging.getLogger(__name__)
 
 #: 一次最多发几张,也是「传了还没发」的上限(App 的挑选上限同值)。
 MAX_PER_SEND = 4
@@ -81,9 +84,26 @@ def upload(account, conversation, uploaded_file):
 
 def purge_stale(account):
     """这个账号 24 小时前传了却没发的图:行与文件真删(文件由 post_delete 在提交后删)。
-    ponytail: 只在该账号下一次上传时清;账号不再回来就留着最多 4 张/会话。要准点清再加一个定时任务。"""
+    账号不再回来的由每日任务 `chat.cleanup_unsent_images`(`purge_all_stale`)清。"""
     ChatImage.objects.filter(uploader=account, sent_at__isnull=True,
                              created_at__lt=timezone.now() - STALE_AFTER).delete()
+
+
+def purge_all_stale():
+    """所有账号的废弃图:上传超过 `STALE_AFTER` 仍未发出(`sent_at` 为空)的行与文件。已发出的绝不动。
+    先删行、提交后再删文件(`_remove_file`),与朋友圈孤儿图同一个顺序:行没了就没有指向文件的引用,
+    文件删失败只留一个无主文件;反过来先删文件则可能留下指向不存在文件的行。幂等。"""
+    deleted, _ = ChatImage.objects.filter(
+        sent_at__isnull=True, created_at__lt=timezone.now() - STALE_AFTER).delete()
+    return {"deleted": deleted}
+
+
+def _delete_file(storage, name):
+    # 一个文件删不掉不能让同一批里其余的文件也留下(on_commit 回调抛错会中断后面的)。
+    try:
+        storage.delete(name)
+    except Exception:
+        logger.exception("could not delete chat image file %s", name)
 
 
 @receiver(post_delete, sender=ChatImage)
@@ -91,7 +111,7 @@ def _remove_file(sender, instance, **kwargs):
     name = instance.file.name
     if name:
         storage = instance.file.storage
-        transaction.on_commit(lambda: storage.delete(name))
+        transaction.on_commit(lambda: _delete_file(storage, name))
 
 
 # ── 发出 ─────────────────────────────────────────────────────────────────

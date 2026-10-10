@@ -149,11 +149,12 @@ MAINTENANCE_JOBS = {
     "workflow.process_timeouts_for_tenant": (registry.TENANT, "*/5 * * * *"),
     "social.cleanup_orphan_post_media": (registry.GLOBAL, "15 3 * * *"),
     "chat.reconcile_inbox": (registry.GLOBAL, "45 3 * * *"),
+    "chat.cleanup_unsent_images": (registry.GLOBAL, "20 3 * * *"),  # 2026-10-10
 }
 
 
 @pytest.mark.django_db
-def test_the_three_maintenance_commands_are_scheduled_jobs(cn_tenant, eu_tenant):
+def test_the_maintenance_commands_are_scheduled_jobs(cn_tenant, eu_tenant):
     """Named, not derived: every other test here reads the registry, so a job
     dropped from it would take its own checks along silently."""
     from config.celery import app
@@ -170,9 +171,9 @@ def test_the_three_maintenance_commands_are_scheduled_jobs(cn_tenant, eu_tenant)
     names = _names()
     assert {pt.periodic_task_name(t) for t in (cn_tenant, eu_tenant)} <= names
     assert pt.periodic_task_name(None) not in names  # per tenant, never one global row
-    assert {registry.get(k).periodic_task_name(None) for k in ("social.cleanup_orphan_post_media", "chat.reconcile_inbox")} <= names
+    assert {registry.get(k).periodic_task_name(None) for k in ("social.cleanup_orphan_post_media", "chat.reconcile_inbox", "chat.cleanup_unsent_images")} <= names
     assert not ScheduledJob.objects.filter(
-        job_key__in=("social.cleanup_orphan_post_media", "chat.reconcile_inbox"), tenant__isnull=False
+        job_key__in=("social.cleanup_orphan_post_media", "chat.reconcile_inbox", "chat.cleanup_unsent_images"), tenant__isnull=False
     ).exists()
 
 

@@ -41,5 +41,6 @@
   "soul_app.chat.image.failed",
   "soul_app.chat.image.errors.too_many_pending",
   "soul_app.chat.image.errors.images_unavailable",
-  "soul_app.chat.image.button"
+  "soul_app.chat.image.button",
+  "scheduler.jobs.chat_cleanup_unsent_images"
 ]

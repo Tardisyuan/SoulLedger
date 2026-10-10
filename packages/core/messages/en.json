@@ -3218,6 +3218,7 @@
       "workflow_process_timeouts_for_tenant": "Process approval-node timeouts",
       "social_cleanup_orphan_post_media": "Delete unposted circle images",
       "chat_reconcile_inbox": "Reconcile the hall inbox with Synapse",
+      "chat_cleanup_unsent_images": "Delete unsent letter images",
       "soul_assist_purge_history": "Purge assistant history",
       "audit_prune_logs_for_tenant": "Prune old audit and login logs",
       "audit_prune_untenanted_logs": "Prune untenanted audit and login logs",

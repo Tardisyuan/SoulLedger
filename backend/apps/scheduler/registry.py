@@ -148,6 +148,9 @@ REGISTRY: tuple[JobSpec, ...] = (
     # 用同一个服务账号,它不可达是全局的事,按租户拆只会把一次故障告警 N 遍;写的是 `.update()`,
     # 不经审计信号,不需要租户 contextvar。聊天没配置时什么也不做,记 SUCCESS。
     JobSpec("chat.reconcile_inbox", GLOBAL, "45 3 * * *", max_runtime=1800),
+    # 书信里传了没发出的图(apps/chat/images.py::purge_all_stale):上传超过 24 小时的行与文件。
+    # GLOBAL:ChatImage 没有租户列(租户经会话),账号再不上传就没人顺手清了。每天一次,阈值以天计。
+    JobSpec("chat.cleanup_unsent_images", GLOBAL, "20 3 * * *", max_runtime=1800),
     # 助手会话留存(apps/soul_assist/service.py::purge_history):超过 30 天的消息、灵魂删掉的会话、
     # 前世账号的会话真删。GLOBAL:会话挂在账号上,账号没有租户列。每天一次,留存以天计。
     JobSpec("soul_assist.purge_history", GLOBAL, "30 4 * * *", max_runtime=1800),

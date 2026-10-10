@@ -71,6 +71,7 @@ DC="docker compose -f docker-compose.yml -f docker-compose.production.yml"
   | `workflow.process_timeouts_for_tenant` | 按租户 | `*/5 * * * *` | 审批节点超时按节点配置自动处理 |
   | `social.cleanup_orphan_post_media` | 全局 | `15 3 * * *` | 删上传了但没发出去的朋友圈图片 |
   | `chat.reconcile_inbox` | 全局 | `45 3 * * *` | 按 Synapse 校对殿司收件箱;聊天没配置时记成功并跳过 |
+  | `chat.cleanup_unsent_images` | 全局 | `20 3 * * *` | 删上传超过 24 小时仍未发出的书信图片(行与文件);已发出的不动 |
 
   beat 没跑时审批**不会**因超时自动处理,节点会一直停在待办。
 
