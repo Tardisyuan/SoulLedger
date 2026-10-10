@@ -45,6 +45,14 @@ def _keys(throttle_cls, xffs, **kw):
     return {throttle_cls().get_cache_key(_request(xff, **kw), None) for xff in xffs}
 
 
+def _ip_keyed(classes):
+    from apps.core.throttling import UserRateThrottle
+
+    ip_keyed = [c for c in classes if not issubclass(c, UserRateThrottle)]
+    assert ip_keyed, "no IP-keyed default throttle would make the loops below vacuous"
+    return ip_keyed
+
+
 @pytest.fixture(autouse=True)
 def _no_proxies(settings):
     settings.TRUSTED_PROXY_COUNT = 0
@@ -54,7 +62,8 @@ def test_the_default_throttles_key_one_client_to_one_bucket():
     """`APIView.throttle_classes` is what every view actually inherits —
     bound at import from DEFAULT_THROTTLE_CLASSES — so it is what is checked."""
     assert APIView.throttle_classes, "no default throttle at all would make this vacuous"
-    for cls in APIView.throttle_classes:
+    # The per-user throttle is keyed on the user, not the address (and skips anonymous).
+    for cls in _ip_keyed(APIView.throttle_classes):
         keys = _keys(cls, ROTATING_XFF)
         assert len(keys) == 1, f"{cls.__module__}.{cls.__name__} 按 XFF 分桶:{sorted(keys)}"
         (key,) = keys
@@ -92,7 +101,7 @@ def test_behind_a_trusted_proxy_a_forged_prefix_cannot_move_the_bucket(settings)
     header, one hop further in."""
     settings.TRUSTED_PROXY_COUNT = 1
     xffs = [f"1.2.3.{i}, 203.0.113.9, 198.51.100.7" for i in range(4)]
-    for cls in APIView.throttle_classes:
+    for cls in _ip_keyed(APIView.throttle_classes):
         keys = _keys(cls, xffs, remote="10.0.0.2")
         assert len(keys) == 1, sorted(keys)
         (key,) = keys
