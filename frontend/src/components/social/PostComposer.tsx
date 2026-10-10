@@ -10,7 +10,7 @@ import { Button } from "@/src/components/ui/Button";
 import { fieldControl } from "@/src/components/ui/Field";
 import { cn } from "@/lib/utils";
 
-const VISIBILITIES = ["PUBLIC", "TENANT", "FOLLOWERS", "PRIVATE"] as const;
+export const VISIBILITIES =["PUBLIC", "TENANT", "FOLLOWERS", "PRIVATE"] as const;
 const UPLOAD_ERRORS = ["not_an_image", "too_large", "too_many_pixels", "too_many_pending"] as const;
 
 /** One picked file → the multipart body `POST /social/media/` reads (`file`). Module-level: a hook dependency. */
