@@ -1,4 +1,4 @@
-"""The four older CSV exports leave the same `EXPORT` audit row the newer ones do.
+"""The older CSV exports leave the same `EXPORT` audit row the newer ones do.
 
 Souls (`/souls/export/`), audit log (`/audit-logs/export/`), ledger stats
 (`/ledger/stats/export/`) and ledger journal (`/ledger/journal/export/`) wrote nothing,
@@ -48,11 +48,15 @@ def _case_journal(w):
     return "/api/v1/ledger/journal/export/", {"month": "2026-06"}, "ledger_journal", 0
 
 
+def _case_users(w):
+    return "/api/v1/users/export_csv/", {}, "user", 1
+
+
 def _case_audit(w):
     return "/api/v1/audit-logs/export/", {}, "audit_log", None
 
 
-@pytest.mark.parametrize("case", [_case_souls, _case_ledger_stats, _case_journal, _case_audit])
+@pytest.mark.parametrize("case", [_case_souls, _case_ledger_stats, _case_journal, _case_audit, _case_users])
 def test_one_call_adds_exactly_one_export_row_in_the_callers_hall(world, case):
     url, params, resource, rows = case(world)
     assert _exports(resource).count() == 0
@@ -90,3 +94,15 @@ def test_a_refused_export_leaves_no_row(world):
     # Malformed `ids` is a 400 before any file is built.
     assert world["client"].get("/api/v1/souls/export/", {"ids": "not-a-uuid"}).status_code == 400
     assert _exports("soul").count() == 1
+
+
+@pytest.mark.allow_uncommitted_audit
+def test_a_user_export_that_fails_leaves_no_row(world):
+    from unittest import mock
+
+    assert world["client"].get("/api/v1/users/export_csv/").status_code == 200
+    assert _exports("user").count() == 1  # proves a row would show up here
+    with mock.patch("apps.authentication.views.csv_safe", side_effect=RuntimeError("boom")), \
+            pytest.raises(RuntimeError):
+        world["client"].get("/api/v1/users/export_csv/")
+    assert _exports("user").count() == 1
