@@ -1,4 +1,7 @@
 {
-  "ios": { "CFBundleDisplayName": "灵魂簿" },
+  "ios": {
+    "CFBundleDisplayName": "灵魂簿",
+    "NSPhotoLibraryUsageDescription": "灵魂簿只在你选择图片、附到朋友圈动态时才会读取相册。"
+  },
   "android": { "app_name": "灵魂簿" }
 }
