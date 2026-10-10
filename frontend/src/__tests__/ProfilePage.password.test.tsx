@@ -1,5 +1,6 @@
 /**
- * /profile 修改密码: a success says the other devices were signed out.
+ * /profile 修改密码: the server's refusal is shown under the field it is about, one line per reason
+ * by its code (never Django's English sentence), and a success says the other devices were signed out.
  */
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -45,6 +46,33 @@ async function openForm() {
 }
 
 beforeEach(() => jest.clearAllMocks());
+
+it("lists each refusal reason by its code under the new-password field, without the English sentence", async () => {
+  (authApi.changePassword as jest.Mock).mockRejectedValue({
+    response: {
+      status: 400,
+      data: {
+        new_password: [
+          { code: "password_too_common", message: "This password is too common." },
+          { code: "password_entirely_numeric", message: "This password is entirely numeric." },
+        ],
+      },
+    },
+  });
+  await openForm();
+  const alert = await screen.findByRole("alert");
+  expect(alert).toHaveTextContent("profile.password_reason_common · profile.password_reason_numeric");
+  expect(alert).not.toHaveTextContent("This password");
+  expect(mockToast).not.toHaveBeenCalled();
+});
+
+it("a wrong old password shows under the old-password field", async () => {
+  (authApi.changePassword as jest.Mock).mockRejectedValue({
+    response: { status: 400, data: { old_password: ["旧密码不正确"] } },
+  });
+  await openForm();
+  expect(await screen.findByRole("alert")).toHaveTextContent("profile.password_old_wrong");
+});
 
 it("a success says the other devices were signed out", async () => {
   (authApi.changePassword as jest.Mock).mockResolvedValue({ data: { detail: "ok", access: "a", refresh: "r" } });

@@ -139,12 +139,26 @@ describe("/reset-password", () => {
     expect(await screen.findByTestId("officer-reset-invalid")).toBeInTheDocument();
   });
 
-  it("a weak password keeps the form and shows the server's reason", async () => {
-    confirm.mockRejectedValue({ response: { status: 400, data: { code: "weak_password", error: "太常见" } } });
+  it("a weak password keeps the form and lists each reason by its code, not the server's English", async () => {
+    confirm.mockRejectedValue({
+      response: {
+        status: 400,
+        data: {
+          code: "weak_password",
+          error: "This password is too common.",
+          new_password: [
+            { code: "password_too_common", message: "This password is too common." },
+            { code: "password_entirely_numeric", message: "This password is entirely numeric." },
+          ],
+        },
+      },
+    });
     open("?uid=MQ&token=t");
     await screen.findByTestId("officer-reset-password-form");
     fill("12345678", "12345678");
-    expect(await screen.findByRole("alert")).toHaveTextContent("auth.reset_weak · 太常见");
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("auth.reset_weak · profile.password_reason_common · profile.password_reason_numeric");
+    expect(alert).not.toHaveTextContent("This password");
     expect(screen.getByTestId("officer-reset-password-form")).toBeInTheDocument();
   });
 });

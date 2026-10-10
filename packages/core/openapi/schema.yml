@@ -1504,6 +1504,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/ChangePasswordResponse'
           description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChangePasswordRefusal'
+          description: ''
   /api/v1/auth/civilizations/:
     get:
       operationId: v1_auth_civilizations_list
@@ -19978,13 +19984,30 @@ components:
         new_password:
           type: string
           writeOnly: true
-          minLength: 8
+          maxLength: 128
         refresh:
           type: string
           writeOnly: true
       required:
       - new_password
       - old_password
+    ChangePasswordRefusal:
+      type: object
+      description: 'Doc-only 400 body: `old_password` is a list of sentences, `new_password`
+        a list of reasons.'
+      properties:
+        old_password:
+          type: array
+          items:
+            type: string
+        new_password:
+          type: array
+          items:
+            $ref: '#/components/schemas/PasswordReason'
+        refresh:
+          type: array
+          items:
+            type: string
     ChangePasswordRequest:
       type: object
       properties:
@@ -26927,7 +26950,6 @@ components:
           type: string
           writeOnly: true
           maxLength: 128
-          minLength: 8
       required:
       - new_password
       - token
@@ -26943,6 +26965,10 @@ components:
           $ref: '#/components/schemas/OfficerResetRefusalCodeEnum'
         retry_after:
           type: integer
+        new_password:
+          type: array
+          items:
+            $ref: '#/components/schemas/PasswordReason'
       required:
       - code
       - error
@@ -28256,6 +28282,20 @@ components:
           maxLength: 150
       required:
       - username
+    PasswordReason:
+      type: object
+      description: |-
+        Doc-only: one reason a new password was refused. `code` is Django's validator code
+        (`password_too_short` / `password_too_common` / `password_entirely_numeric` /
+        `password_too_similar`); `message` is its English sentence, a fallback for clients.
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+      required:
+      - code
+      - message
     PasswordResetRefusal:
       type: object
       description: |-

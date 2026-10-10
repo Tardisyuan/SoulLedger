@@ -15,10 +15,8 @@ import logging
 from urllib.parse import quote
 
 from django.conf import settings
-from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from django.core.cache import cache
-from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
 from django.utils.encoding import force_bytes, force_str
@@ -29,7 +27,7 @@ from apps.core.client_ip import get_client_ip
 
 from .mail import fill, send_neutral_mail
 from .models import MfaRememberedDevice, User, UserRole
-from .passwords import end_sessions
+from .passwords import end_sessions, weak_password_reasons
 
 logger = logging.getLogger(__name__)
 
@@ -180,9 +178,11 @@ def send_reset_mail_if_eligible(identifier: str, ip=None, ua="") -> bool:
 
 
 class ResetRefusedError(Exception):
-    def __init__(self, code, message):
+    def __init__(self, code, message, reasons=None):
         super().__init__(message)
         self.code, self.message = code, message
+        #: `weak_password` only: `[{code, message}]`, one per validator that refused.
+        self.reasons = reasons
 
 
 def confirm_reset(uid, token, new_password, *, request=None) -> User:
@@ -190,10 +190,9 @@ def confirm_reset(uid, token, new_password, *, request=None) -> User:
     # 无效 / 过期 / 已用 / 非官员 / 邮箱未验证 / 已停用,一律同一个答案。
     if not can_receive_reset(user) or not reset_tokens.check_token(user, token):
         raise ResetRefusedError("reset_link_invalid", "链接无效或已过期,请重新申请")
-    try:
-        validate_password(new_password, user)
-    except ValidationError as exc:
-        raise ResetRefusedError("weak_password", " ".join(exc.messages)) from exc
+    reasons = weak_password_reasons(new_password, user)
+    if reasons:
+        raise ResetRefusedError("weak_password", " ".join(r["message"] for r in reasons), reasons)
 
     with transaction.atomic():
         user.set_password(new_password)

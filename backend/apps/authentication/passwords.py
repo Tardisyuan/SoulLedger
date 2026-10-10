@@ -1,10 +1,26 @@
-"""官员改密码、邮箱重置密码共用的:让旧会话作废。
+"""官员改密码、邮箱重置密码共用的两件事:密码强度的逐条原因,与让旧会话作废。
 
-两层:刷新令牌进黑名单(`_revoke_refresh_tokens`,灵魂端、两步验证重置也用它),
+**强度** 走 Django 的 `AUTH_PASSWORD_VALIDATORS`(带 `user`,「与用户名太像」才生效)。
+原因按条返回,每条带校验器自己的稳定 `code`(`password_too_short` / `password_too_common` /
+`password_entirely_numeric` / `password_too_similar`):客户端按码显示本地化文案,
+`message` 是 Django 的英文原句,只作兜底。
+
+**作废** 两层:刷新令牌进黑名单(`_revoke_refresh_tokens`,灵魂端、两步验证重置也用它),
 再把 `User.session_version` +1 —— 官员令牌带 `sv` 声明,比对不上的 access 立刻 401
 (`OfficerJWTAuthentication`、WebSocket 握手),不等 access 自然过期。
 """
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db.models import F
+
+
+def weak_password_reasons(password: str, user) -> list[dict]:
+    """空列表 = 通过。每条 `{"code", "message"}`。"""
+    try:
+        validate_password(password, user)
+    except DjangoValidationError as exc:
+        return [{"code": e.code or "password_invalid", "message": " ".join(e.messages)} for e in exc.error_list]
+    return []
 
 
 def end_sessions(user) -> None:

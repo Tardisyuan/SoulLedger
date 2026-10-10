@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { authApi, notificationsApi } from "@soulledger/core/api";
+import { passwordReasonKeys } from "@soulledger/core/api/auth";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { showToast } from "@/src/components/ui/Toast";
@@ -28,6 +29,8 @@ export default function ProfilePage() {
     confirmPassword: "",
   });
   const [showPasswordForm, setShowPasswordForm] = useState(false);
+  // The server's refusal, shown under the field it is about (never the passwords themselves).
+  const [passwordErrors, setPasswordErrors] = useState<{ old: string | null; next: string | null }>({ old: null, next: null });
 
   // Fetch latest profile
   const { data: profile, isLoading, isError, refetch } = useQuery({
@@ -66,11 +69,16 @@ export default function ProfilePage() {
     onSuccess: () => {
       setPasswordForm({ oldPassword: "", newPassword: "", confirmPassword: "" });
       setShowPasswordForm(false);
+      setPasswordErrors({ old: null, next: null });
       // The change signed every other device out; this one already holds a fresh token pair.
       showToast(t("profile.password_changed_others_out"), "success");
     },
-    onError: () => {
-      showToast(t("profile.password_change_failed"), "error");
+    onError: (err: unknown) => {
+      const data = (err as { response?: { data?: { old_password?: unknown } } })?.response?.data;
+      const next = passwordReasonKeys(data).map((key) => t(key));
+      const old = Array.isArray(data?.old_password) && data.old_password.length ? t("profile.password_old_wrong") : null;
+      if (!next.length && !old) showToast(t("profile.password_change_failed"), "error");
+      setPasswordErrors({ old, next: next.length ? next.join(" · ") : null });
     },
   });
 
@@ -84,6 +92,7 @@ export default function ProfilePage() {
 
   const handlePasswordSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setPasswordErrors({ old: null, next: null });
     if (passwordForm.newPassword !== passwordForm.confirmPassword) {
       showToast(t("profile.password_mismatch"), "error");
       return;
@@ -231,6 +240,7 @@ export default function ProfilePage() {
               label={t("profile.old_password")}
               value={passwordForm.oldPassword}
               onChange={(e) => setPasswordForm({ ...passwordForm, oldPassword: e.target.value })}
+              error={passwordErrors.old}
               required
             />
             <TextField
@@ -238,6 +248,7 @@ export default function ProfilePage() {
               label={t("profile.new_password")}
               value={passwordForm.newPassword}
               onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
+              error={passwordErrors.next}
               minLength={8}
               required
             />

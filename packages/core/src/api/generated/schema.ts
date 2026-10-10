@@ -9262,6 +9262,12 @@ export interface components {
             new_password: string;
             refresh?: string;
         };
+        /** @description Doc-only 400 body: `old_password` is a list of sentences, `new_password` a list of reasons. */
+        ChangePasswordRefusal: {
+            old_password?: string[];
+            new_password?: components["schemas"]["PasswordReason"][];
+            refresh?: string[];
+        };
         ChangePasswordRequest: {
             old_password: string;
             new_password: string;
@@ -12353,6 +12359,7 @@ export interface components {
             error: string;
             code: components["schemas"]["OfficerResetRefusalCodeEnum"];
             retry_after?: number;
+            new_password?: components["schemas"]["PasswordReason"][];
         };
         /**
          * @description * `rate_limited` - rate_limited
@@ -13160,6 +13167,15 @@ export interface components {
         /** @description `POST /auth/password-help/` — 「忘记密码」 on an admin-provisioned console. */
         PasswordHelpRequest: {
             username: string;
+        };
+        /**
+         * @description Doc-only: one reason a new password was refused. `code` is Django's validator code
+         *     (`password_too_short` / `password_too_common` / `password_entirely_numeric` /
+         *     `password_too_similar`); `message` is its English sentence, a fallback for clients.
+         */
+        PasswordReason: {
+            code: string;
+            message: string;
         };
         /**
          * @description Doc-only: every refusal of the two email-reset endpoints.
@@ -18560,6 +18576,14 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ChangePasswordResponse"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChangePasswordRefusal"];
                 };
             };
         };

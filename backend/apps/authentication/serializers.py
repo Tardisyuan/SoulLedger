@@ -11,6 +11,7 @@ from rest_framework_simplejwt.serializers import TokenRefreshSerializer as Simpl
 from rest_framework_simplejwt.settings import api_settings as simplejwt_settings
 
 from .models import OfficerMfa
+from .passwords import weak_password_reasons
 from .tokens import RefreshToken
 
 User = get_user_model()
@@ -679,6 +680,15 @@ class UserUpdateSerializer(serializers.ModelSerializer):
         return value
 
 
+class PasswordReasonSerializer(serializers.Serializer):
+    """Doc-only: one reason a new password was refused. `code` is Django's validator code
+    (`password_too_short` / `password_too_common` / `password_entirely_numeric` /
+    `password_too_similar`); `message` is its English sentence, a fallback for clients."""
+
+    code = serializers.CharField()
+    message = serializers.CharField()
+
+
 class ChangePasswordSerializer(serializers.Serializer):
     """Serializer for changing password with old password verification.
 
@@ -687,7 +697,7 @@ class ChangePasswordSerializer(serializers.Serializer):
     device logged in with. Without it, this device is signed out too.
     """
     old_password = serializers.CharField(write_only=True, required=True)
-    new_password = serializers.CharField(write_only=True, required=True, min_length=8)
+    new_password = serializers.CharField(write_only=True, required=True, max_length=128)
     refresh = serializers.CharField(write_only=True, required=False, allow_blank=True)
 
     def validate_old_password(self, value):
@@ -697,9 +707,19 @@ class ChangePasswordSerializer(serializers.Serializer):
         return value
 
     def validate_new_password(self, value):
-        if len(value) < 8:
-            raise serializers.ValidationError("密码至少8位")
+        # Reasons one by one, each with the validator's code: `new_password: [{code, message}]`.
+        reasons = weak_password_reasons(value, self.context['request'].user)
+        if reasons:
+            raise serializers.ValidationError(reasons)
         return value
+
+
+class ChangePasswordRefusalSerializer(serializers.Serializer):
+    """Doc-only 400 body: `old_password` is a list of sentences, `new_password` a list of reasons."""
+
+    old_password = serializers.ListField(child=serializers.CharField(), required=False)
+    new_password = PasswordReasonSerializer(many=True, required=False)
+    refresh = serializers.ListField(child=serializers.CharField(), required=False)
 
 
 class ChangePasswordResponseSerializer(serializers.Serializer):
