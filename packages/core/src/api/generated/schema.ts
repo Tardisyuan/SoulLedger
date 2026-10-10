@@ -3818,6 +3818,86 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/me/mfa/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["v1_me_mfa_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/mfa/confirm/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["v1_me_mfa_confirm_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/mfa/disable/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["v1_me_mfa_disable_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/mfa/recovery-codes/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["v1_me_mfa_recovery_codes_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/mfa/setup/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["v1_me_mfa_setup_create"];
+        delete: operations["v1_me_mfa_setup_destroy"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/me/notification-settings/": {
         parameters: {
             query?: never;
@@ -7136,6 +7216,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/soul-accounts/accounts/{id}/reset-mfa/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description `POST /soul-accounts/accounts/{id}/reset-mfa/`:官员替灵魂关闭两步验证。
+         *
+         *     码名 `souls.mfa_reset`(默认只 ADMIN,其它角色由管理员授予),不是 soul_account.manage。
+         *     **只关不开**;理由必填并写进审计行;只有灵魂的**原属殿**的官员能做(ADMIN 也一样 ——
+         *     租户豁免只放宽查询,不放宽「谁是本殿官员」);关闭后灵魂收到一条通知。
+         */
+        post: operations["v1_soul_accounts_accounts_reset_mfa_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/soul-accounts/accounts/provision/": {
         parameters: {
             query?: never;
@@ -7461,6 +7564,26 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["v1_soul_auth_logout_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/soul-auth/mfa/verify/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description 登录第二步。**限流**:同一账号 5 次不通过锁 15 分钟(记在账号上,换 IP、换待验证凭据都绕不过);
+         *     另按 IP 记失败,15 分钟 50 次 —— 与密码登录同一组数字,挡一台机器拿很多凭据扫很多账号。
+         */
+        post: operations["v1_soul_auth_mfa_verify_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -15902,6 +16025,10 @@ export interface components {
             readonly contact_email_masked: string;
             readonly contact_phone_masked: string;
             readonly email_not_synced: (components["schemas"]["EmailNotSyncedEnum"] | components["schemas"]["NullEnum"]) | null;
+            /** @description 是否已开启两步验证 —— 只给布尔值与开启时间,不给任何密钥材料。 */
+            readonly mfa_enabled: boolean;
+            /** Format: date-time */
+            readonly mfa_enabled_at: string | null;
         };
         /** @description Request body of `POST /souls/batch-recycle/`. */
         SoulBatchRecycle: {
@@ -16091,15 +16218,85 @@ export interface components {
             readonly has_record_error: boolean;
             readonly is_eval_identity: boolean;
         };
+        SoulLoginOutcome: components["schemas"]["SoulLoginResponse"] | components["schemas"]["SoulMfaRequired"];
         SoulLoginRequest: {
             soul_code: string;
             password: string;
+            device_token?: string;
         };
         SoulLoginResponse: {
             access: string;
             refresh: string;
             soul_code: string;
             account: components["schemas"]["MeAccount"];
+        };
+        SoulMfaCodeRequest: {
+            code: string;
+        };
+        SoulMfaDisableRequest: {
+            method: components["schemas"]["MethodEnum"];
+            code?: string;
+            password?: string;
+        };
+        SoulMfaRecoveryCodes: {
+            recovery_codes: string[];
+        };
+        /**
+         * @description `code` is what to branch on: wrong / expired (400; `remaining_attempts`, `lock_minutes`), locked (429;
+         *     `retry_after` seconds + `locked_until`), pending_invalid (401: the step timed out), rate_limited (429),
+         *     wrong_password / not_enabled / already_enabled / not_started (setup and disable).
+         */
+        SoulMfaRefusal: {
+            detail: string;
+            code: string;
+            remaining_attempts?: number;
+            lock_minutes?: number;
+            retry_after?: number;
+            /** Format: date-time */
+            locked_until?: string;
+        };
+        /**
+         * @description Doc-only: the 200 body of the login step 1 when the password was right but the account has
+         *     two-step verification on and the request carried no valid device token. No tokens:
+         *     `pending_token` (5 minutes, type `soul_mfa_pending`, good for `/soul-auth/mfa/verify/` only) goes to step 2.
+         *     `home_tenant` is here so the 「lost phone」 screen can name the hall before there is a session.
+         */
+        SoulMfaRequired: {
+            mfa_required: boolean;
+            pending_token: string;
+            soul_code: string;
+            home_tenant: components["schemas"]["MeTenant"];
+        };
+        /** @description 理由必填(同官员重置密码:非空、去首尾空白),写进审计行。 */
+        SoulMfaResetRequest: {
+            reason: string;
+        };
+        SoulMfaSetupResponse: {
+            secret: string;
+            otpauth_url: string;
+        };
+        SoulMfaStatus: {
+            enabled: boolean;
+            /** Format: date-time */
+            confirmed_at: string | null;
+            /** Format: date-time */
+            last_used_at: string | null;
+            last_used_method: string;
+            recovery_codes_remaining: number;
+        };
+        SoulMfaVerifyRequest: {
+            pending_token: string;
+            code?: string;
+            recovery_code?: string;
+            /** @default false */
+            remember_device: boolean;
+        };
+        SoulMfaVerifyResponse: {
+            access: string;
+            refresh: string;
+            soul_code: string;
+            account: components["schemas"]["MeAccount"];
+            device_token?: string;
         };
         /**
          * @description One stop in `GET /souls/{id}/path/`. `realm_code` rides along because it
@@ -23979,6 +24176,195 @@ export interface operations {
             };
         };
     };
+    v1_me_mfa_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulMfaStatus"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulMfaRefusal"];
+                };
+            };
+        };
+    };
+    v1_me_mfa_confirm_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SoulMfaCodeRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["SoulMfaCodeRequest"];
+                "multipart/form-data": components["schemas"]["SoulMfaCodeRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulMfaRecoveryCodes"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulMfaRefusal"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulMfaRefusal"];
+                };
+            };
+        };
+    };
+    v1_me_mfa_disable_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SoulMfaDisableRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["SoulMfaDisableRequest"];
+                "multipart/form-data": components["schemas"]["SoulMfaDisableRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulMfaStatus"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulMfaRefusal"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulMfaRefusal"];
+                };
+            };
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulMfaRefusal"];
+                };
+            };
+        };
+    };
+    v1_me_mfa_recovery_codes_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulMfaRecoveryCodes"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulMfaRefusal"];
+                };
+            };
+        };
+    };
+    v1_me_mfa_setup_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulMfaSetupResponse"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulMfaRefusal"];
+                };
+            };
+        };
+    };
+    v1_me_mfa_setup_destroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 已作废 */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     v1_me_notification_settings_retrieve: {
         parameters: {
             query?: never;
@@ -30030,6 +30416,63 @@ export interface operations {
             };
         };
     };
+    v1_soul_accounts_accounts_reset_mfa_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SoulMfaResetRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["SoulMfaResetRequest"];
+                "multipart/form-data": components["schemas"]["SoulMfaResetRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulAccount"];
+                };
+            };
+            /** @description 字段校验失败 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulError"];
+                };
+            };
+            /** @description 账号不存在或不在本殿 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulError"];
+                };
+            };
+        };
+    };
     v1_soul_accounts_accounts_provision_create: {
         parameters: {
             query?: never;
@@ -30519,7 +30962,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SoulLoginResponse"];
+                    "application/json": components["schemas"]["SoulLoginOutcome"];
                 };
             };
             /** @description 字段校验失败 */
@@ -30568,6 +31011,55 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    v1_soul_auth_mfa_verify_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SoulMfaVerifyRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["SoulMfaVerifyRequest"];
+                "multipart/form-data": components["schemas"]["SoulMfaVerifyRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulMfaVerifyResponse"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulMfaRefusal"];
+                };
+            };
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulMfaRefusal"];
+                };
+            };
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulMfaRefusal"];
+                };
             };
         };
     };

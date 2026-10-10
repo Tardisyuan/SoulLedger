@@ -8,15 +8,17 @@
 """
 from django.db import transaction
 from django.db.models import Q
-from drf_spectacular.utils import extend_schema
+from django.shortcuts import get_object_or_404
+from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.tenant import scope_to_tenant
 from apps.core.viewsets import CodenameViewSetMixin
-from apps.soul_accounts import rebirth
+from apps.soul_accounts import mfa, rebirth
 from apps.soul_accounts import services as svc
 from apps.soul_accounts.models import (
     AccountOrigin,
@@ -39,6 +41,7 @@ from apps.soul_accounts.serializers import (
     RevealedCredentialSerializer,
     SoulAccountSerializer,
     SoulErrorSerializer,
+    SoulMfaResetRequestSerializer,
 )
 
 
@@ -66,7 +69,7 @@ class SoulAccountViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
     filterset_fields = ["soul", "cycle"]
 
     def get_queryset(self):
-        qs = SoulAccount.objects.select_related("soul", "user").order_by("soul", "cycle")
+        qs = SoulAccount.objects.select_related("soul", "user", "mfa").order_by("soul", "cycle")
         return scope_to_tenant(qs, self.request, field="soul__home_tenant")
 
     @extend_schema(request=ProvisionRequestSerializer,
@@ -107,6 +110,37 @@ class SoulAccountViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
             return _error(exc)
         credential.refresh_from_db()
         return Response(InitialCredentialSerializer(credential).data)
+
+
+class SoulAccountMfaResetView(APIView):
+    """`POST /soul-accounts/accounts/{id}/reset-mfa/`:官员替灵魂关闭两步验证。
+
+    码名 `souls.mfa_reset`(默认只 ADMIN,其它角色由管理员授予),不是 soul_account.manage。
+    **只关不开**;理由必填并写进审计行;只有灵魂的**原属殿**的官员能做(ADMIN 也一样 ——
+    租户豁免只放宽查询,不放宽「谁是本殿官员」);关闭后灵魂收到一条通知。"""
+
+    permission_classes = [TenantPermission, CodenamePermission]
+
+    def get_required_permissions(self):
+        return ["souls.mfa_reset"]
+
+    @extend_schema(request=SoulMfaResetRequestSerializer,
+                   responses={200: SoulAccountSerializer, 400: OpenApiResponse(description="字段校验失败"),
+                              403: SoulErrorSerializer, 404: OpenApiResponse(description="账号不存在或不在本殿"),
+                              409: SoulErrorSerializer})
+    def post(self, request, pk):
+        accounts = scope_to_tenant(SoulAccount.objects.select_related("soul", "user", "mfa"), request,
+                                   field="soul__home_tenant")
+        account = get_object_or_404(accounts, pk=pk)
+        if request.user.tenant_id is None or request.user.tenant_id != account.soul.home_tenant_id:
+            return Response({"detail": "只有本殿官员能关闭灵魂的两步验证。", "code": "not_home_hall"}, status=403)
+        body = SoulMfaResetRequestSerializer(data=request.data)
+        body.is_valid(raise_exception=True)
+        try:
+            mfa.reset_by_officer(account, actor=request.user, reason=body.validated_data["reason"], request=request)
+        except svc.SoulAccountError as exc:
+            return _error(exc)
+        return Response(SoulAccountSerializer(accounts.get(pk=account.pk)).data)
 
 
 class InitialCredentialViewSet(CodenameViewSetMixin, mixins.ListModelMixin, mixins.RetrieveModelMixin,

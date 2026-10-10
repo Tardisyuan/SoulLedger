@@ -231,3 +231,52 @@ class CooldownShorteningRequest(models.Model):
                 name="cooldown_shortening_one_pending_per_soul",
             ),
         ]
+
+
+class SoulMfa(models.Model):
+    """灵魂账号的两步验证(2026-10-11)。**挂在账号上,于是跟着这一世走**:转世换账号时旧行被删
+    (`mfa.void_all`),新账号默认没有这一行。规则与数字(窗口、锁定、重放、恢复码)全在
+    `apps/authentication/mfa.py`,与官员共用同一份 —— 这个模型的字段名刻意与 `OfficerMfa` 逐个相同,
+    那些函数按鸭子类型读写它。`confirmed_at` 为空 = 向导没走完,等于没开启;灵魂端向导
+    「验证 · 下一步」一步就开启并给出恢复码(没有官员那样单独的「完成」)。
+    `secret` 与官员一样用 Fernet 字段加密落库。"""
+
+    account = models.OneToOneField(SoulAccount, on_delete=models.CASCADE, related_name="mfa")
+    secret = EncryptedCharField(max_length=255)
+    confirmed_at = models.DateTimeField(null=True, blank=True)
+    last_used_at = models.DateTimeField(null=True, blank=True)
+    last_used_method = models.CharField(max_length=10, blank=True, default="")
+    #: 最近一次验证通过的 TOTP 时间步 —— 同一个码不能用第二次。
+    last_step = models.BigIntegerField(null=True, blank=True)
+    failed_attempts = models.PositiveSmallIntegerField(default=0)
+    locked_until = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    @property
+    def enabled(self) -> bool:
+        return self.confirmed_at is not None
+
+    @property
+    def user(self):
+        """`apps.authentication.mfa` 的审计与失败计数按 `mfa.user` 找人。"""
+        return self.account.user
+
+
+class SoulMfaRecoveryCode(models.Model):
+    """恢复码:像密码一样只存哈希,一次一用。"""
+
+    mfa = models.ForeignKey(SoulMfa, on_delete=models.CASCADE, related_name="recovery_codes")
+    code_hash = models.CharField(max_length=128)
+    used_at = models.DateTimeField(null=True, blank=True)
+
+
+class SoulMfaDevice(models.Model):
+    """「这部手机 30 天内不再询问」。原生 App 没有 cookie:登录第二步成功且勾选时下发一个不透明的
+    随机令牌,App 存进安全存储,下次登录第一步带上;这里只存 sha256,绑定账号,30 天过期。
+    关闭 / 重新开启 / 官员关闭 / 转世 / 改密码都会删光该账号的设备行。"""
+
+    account = models.ForeignKey(SoulAccount, on_delete=models.CASCADE, related_name="mfa_devices")
+    token_hash = models.CharField(max_length=64, unique=True)
+    expires_at = models.DateTimeField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    last_used_at = models.DateTimeField(null=True, blank=True)
