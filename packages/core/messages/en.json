@@ -3552,6 +3552,8 @@
       "network": "Cannot reach the server. Check your connection and retry",
       "validation": "Some fields are invalid",
       "unknown": "Something went wrong ({{code}})",
+      "reported": "Reported automatically.",
+      "go_home": "Back to home",
       "screen_title": "Could not reach the ledger",
       "screen_body": "Your record is still there. It just cannot be fetched right now.",
       "section": "This part could not be loaded. The rest is shown as usual.",

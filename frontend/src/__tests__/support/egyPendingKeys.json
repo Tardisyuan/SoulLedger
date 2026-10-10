@@ -23,5 +23,7 @@
   "officer_app.comment.show_rest",
   "officer_app.comment.after_close",
   "soul_app.update_required.version",
-  "officer_app.update_required.body"
+  "officer_app.update_required.body",
+  "soul_app.errors.reported",
+  "soul_app.errors.go_home"
 ]
