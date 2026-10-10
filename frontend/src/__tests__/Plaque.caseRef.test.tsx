@@ -34,6 +34,18 @@ describe("Plaque caseRef", () => {
     expect(screen.queryByRole("button")).toBeNull();
   });
 
+  it("allHref + allCount: a second line '全部 N 场 ›' linking to the soul's judgment list", () => {
+    band({ caseRef: { number: "CN-2026-0007", href: "/judgment/j1", label: "已结", allHref: "/judgment?soul=s1", allCount: 3 } });
+    const all = screen.getByRole("link", { name: "全部 3 场 ›" });
+    expect(all).toHaveAttribute("href", "/judgment?soul=s1");
+  });
+
+  it("without allCount (one judgment) there is no 'all' line", () => {
+    band({ caseRef: { number: "CN-2026-0007", href: "/judgment/j1", label: "已结" } });
+    expect(screen.queryByText(/全部/)).toBeNull();
+    expect(screen.getAllByRole("link")).toHaveLength(1);
+  });
+
   it("empty: the label stays, the value is a missing-value dash, nothing is clickable", () => {
     band({ caseRef: {} });
     expect(screen.getByText("案号")).toBeInTheDocument();

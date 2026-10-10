@@ -2,15 +2,17 @@
 
 import { Suspense, useState } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { usePlaque } from "@/src/components/plaque/Plaque";
 import { useHall } from "@/src/components/plaque/useHall";
 import { judgmentApi, PAGE_SIZE, type Judgment } from "@soulledger/core/api";
+import { useSoul } from "@soulledger/core/hooks/useSouls";
 import { DataTable, parseOrdering, ROW_LINK } from "@/components/ui/data-table";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
-import { DomainEnum, MissingValue } from "@/src/components/ui/DomainValue";
+import { filterChipClass } from "@/src/components/ui/FilterChip";
+import { DomainEnum, IdentifierChip, MissingValue } from "@/src/components/ui/DomainValue";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { buttonVariants } from "@/src/components/ui/Button";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
@@ -37,23 +39,57 @@ import { JudgmentClaimQueue } from "@/src/components/judgment/JudgmentClaimQueue
 
 type Tab = "pending" | "concluded";
 
+/** `?soul=` 只认合法的灵魂 id(UUID);别的值忽略,也不带进任何请求(后端对坏 UUID 回 400)。 */
+const SOUL_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** 「灵魂：某某 ×」。名字取不到时显示编号(`IdentifierChip`),不把裸 id 当名字印。× 是单独的按钮,不嵌在别的按钮里。 */
+function SoulFilterChip({ soulId, onClear }: { soulId: string; onClear: () => void }) {
+  const { t } = useI18n();
+  const name = useSoul(soulId).data?.name;
+  return (
+    <div className="pb-3">
+      <span data-filter-chip="" data-active="" data-testid="soul-filter" className={filterChipClass(true)}>
+        <span aria-hidden="true">✓</span>
+        <span>{t("judgment.soul_filter")} ·</span>
+        {name ? <span>{name}</span> : <IdentifierChip id={soulId} />}
+        <button type="button" aria-label={t("judgment.soul_filter_clear")} onClick={onClear} className="text-inherit">
+          ×
+        </button>
+      </span>
+    </div>
+  );
+}
+
 function JudgmentQueuePageContent() {
   const { t, formatDate } = useI18n();
   usePlaque({ hall: useHall(t("plaque.office.trials")) });
   const router = useRouter();
   // 全局搜索「查看全部 N 个案件 →」带来的 `?q=`:待审一面填进搜索框,已结案一面同样按它筛。
-  const q = useSearchParams()?.get("q")?.trim() ?? "";
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
+  const q = searchParams?.get("q")?.trim() ?? "";
+  // 灵魂详情右栏「全部 N 场 ›」带来的 `?soul=`:只看这个灵魂的审判。
+  const rawSoul = searchParams?.get("soul")?.trim() ?? "";
+  const soul = SOUL_ID.test(rawSoul) ? rawSoul : "";
+  const clearSoul = () => {
+    const next = new URLSearchParams(searchParams?.toString() ?? "");
+    next.delete("soul");
+    const qs = next.toString();
+    setPage(1);
+    router.replace(qs ? `${pathname}?${qs}` : pathname);
+  };
   const [tab, setTab] = useState<Tab>("pending");
   const [page, setPage] = useState(1);
   const [ordering, setOrdering] = useState("");
 
   const listQuery = (which: Tab, p: number) => ({
-    queryKey: ["judgments", which, p, ordering, q],
+    queryKey: ["judgments", which, p, ordering, q, soul],
     queryFn: async () => {
       const params: Record<string, string> = { page: String(p) };
       params.has_verdict = which === "pending" ? "false" : "true";
       if (ordering) params.ordering = ordering;
       if (q) params.search = q;
+      if (soul) params.soul = soul;
       const res = await judgmentApi.list(params);
       return res.data;
     },
@@ -120,8 +156,9 @@ function JudgmentQueuePageContent() {
         </div>
       }
     >
+      {soul && <SoulFilterChip soulId={soul} onClear={clearSoul} />}
       {pending ? (
-        <JudgmentClaimQueue key={q} initialSearch={q} />
+        <JudgmentClaimQueue key={`${q}|${soul}`} initialSearch={q} soul={soul} />
       ) : (
       <DataTable<Judgment>
         linkedRows
@@ -143,7 +180,7 @@ function JudgmentQueuePageContent() {
            question. A `JUDGMENT_CONCLUDED` pushed by another operator moves a
            row between the two tabs without any of them changing, which is the
            case this exists to show. */
-        transitionKey={`${tab}|${page}|${ordering}`}
+        transitionKey={`${tab}|${page}|${ordering}|${soul}`}
         isLoading={isLoading}
         isError={isError}
         onRetry={() => refetch()}

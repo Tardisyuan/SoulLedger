@@ -519,7 +519,8 @@
         "failed": "Could not correct the settlement"
       },
       "case_open": "Open",
-      "case_closed": "Concluded"
+      "case_closed": "Concluded",
+      "case_all": "All {{n}} ›"
     },
     "date_problem_filter": "Problems only",
     "balance_not_applicable": "Not applicable — see soul detail",
@@ -1444,6 +1445,8 @@
     "pending": "Pending",
     "concluded": "Concluded",
     "no_judgments": "No judgments found",
+    "soul_filter": "Soul",
+    "soul_filter_clear": "Clear the soul filter",
     "soul_name": "Soul Name",
     "civilization": "Civilization",
     "court": "Court",

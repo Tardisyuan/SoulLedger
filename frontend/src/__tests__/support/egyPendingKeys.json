@@ -55,5 +55,8 @@
   "permissions.config.download_skipped",
   "dashboard.data_as_of",
   "souls.detail.case_open",
-  "souls.detail.case_closed"
+  "souls.detail.case_closed",
+  "souls.detail.case_all",
+  "judgment.soul_filter",
+  "judgment.soul_filter_clear"
 ]

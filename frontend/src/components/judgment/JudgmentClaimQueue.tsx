@@ -125,8 +125,8 @@ export function scrollRowIntoView(row: HTMLElement) {
   });
 }
 
-/** `initialSearch`:全局搜索带来的词(`/judgment?q=`),进页即填进搜索框。 */
-export function JudgmentClaimQueue({ initialSearch = "" }: { initialSearch?: string } = {}) {
+/** `initialSearch`:全局搜索带来的词(`/judgment?q=`),进页即填进搜索框。`soul`:`?soul=`,只看这个灵魂的案子(列表与四组计数同用)。 */
+export function JudgmentClaimQueue({ initialSearch = "", soul = "" }: { initialSearch?: string; soul?: string } = {}) {
   const { t, formatDateTime } = useI18n();
   const { showToast } = useToast();
   const { user } = useTenant();
@@ -172,6 +172,7 @@ export function JudgmentClaimQueue({ initialSearch = "" }: { initialSearch?: str
 
   const filters: Record<string, string> = {};
   if (search) filters.search = search;
+  if (soul) filters.soul = soul;
   if (court) filters.court = court;
   if (civilization) filters.civilization = civilization;
   /* 文明的选项:ADMIN 看得到全部文明;其余角色只列自己租户的那一个(后端按租户收窄,
