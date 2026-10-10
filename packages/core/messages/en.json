@@ -4205,7 +4205,10 @@
         "copy_all": "Copy all",
         "confirm": "I have saved the recovery codes somewhere other than this phone",
         "done": "Done",
-        "no_back": "There is no going back from here; tick the box to finish"
+        "no_back": "There is no going back from here; tick the box to finish",
+        "save_file": "Save as file",
+        "file_header": "Soul Ledger recovery codes: sign in with one if you lose or change your phone. Each works once. Keep them somewhere other than this phone.",
+        "save_failed": "Could not save the file"
       },
       "manage": {
         "body": "Signing in asks for the 6-digit number from your authenticator.",

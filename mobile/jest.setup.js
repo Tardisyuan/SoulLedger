@@ -133,6 +133,37 @@ jest.mock("react-native-reanimated", () => require("react-native-reanimated/mock
 
 // expo-network: the OS's view of the network. `__set` changes it and tells the listeners,
 // as the OS does; `getNetworkStateAsync` answers from the same state. Connected by default.
+// 恢复码「存为文件」:内存里的缓存目录 + 一个只记调用的分享面板。`__files` 是缓存里现在有什么,
+// `__share` 的实现可被测试改写(成功 / 取消 / 抛错),测试据此断言「面板关闭后文件已删」。
+jest.mock("expo-file-system", () => {
+  const files = new Map();
+  class File {
+    constructor(dir, name) {
+      this.name = name ?? String(dir).split("/").pop();
+      this.uri = `file:///cache/${this.name}`;
+    }
+    create() {
+      files.set(this.uri, "");
+    }
+    write(text) {
+      files.set(this.uri, text);
+    }
+    delete() {
+      files.delete(this.uri);
+    }
+    get exists() {
+      return files.has(this.uri);
+    }
+  }
+  const Paths = { cache: { uri: "file:///cache/", list: () => [...files.keys()].map((uri) => new File("", uri.split("/").pop())) } };
+  return { __esModule: true, File, Paths, __files: files };
+});
+jest.mock("expo-sharing", () => ({
+  __esModule: true,
+  isAvailableAsync: jest.fn(async () => true),
+  shareAsync: jest.fn(async () => undefined),
+}));
+
 jest.mock("expo-network", () => {
   const listeners = new Set();
   const state = { current: { type: "WIFI", isConnected: true, isInternetReachable: true } };
