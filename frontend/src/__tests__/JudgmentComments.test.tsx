@@ -60,6 +60,14 @@ test("a failed load says so, not 'empty'", async () => {
   expect(screen.queryByText("officer_app.comment.empty")).not.toBeInTheDocument();
 });
 
+test("a body that is not a list (a paginated page) is a load failure, not a crash", async () => {
+  // E2E found this: an unmodelled endpoint answered {count, results} and `.slice` took the whole page down.
+  comments.mockResolvedValue({ data: { count: 0, next: null, previous: null, results: [] } });
+  await renderIt();
+  expect(await screen.findByRole("alert")).toBeInTheDocument();
+  expect(screen.queryByText("officer_app.comment.empty")).not.toBeInTheDocument();
+});
+
 test("without write permission there is no input and no send button", async () => {
   comments.mockResolvedValue({ data: [row("c1", "只读")] });
   await renderIt(false);

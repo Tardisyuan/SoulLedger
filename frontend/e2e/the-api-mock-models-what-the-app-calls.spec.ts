@@ -15,7 +15,7 @@
  * `interceptWebSockets` 把打开过的 URL 记下来,这里断言它们指向本机。
  */
 
-import { MOCK_ACCESS_TOKEN, expect, test, setupAuthenticatedPage } from "./fixtures";
+import { MOCK_ACCESS_TOKEN, OPENED_JUDGMENT, SOULS, expect, test, setupAuthenticatedPage } from "./fixtures";
 
 const ROUTES = [
   "/dashboard",
@@ -38,6 +38,9 @@ const ROUTES = [
   "/scheduler",
   "/soul-credentials",
   "/rebirth-applications",
+  // Detail pages: the judgment page's 评议 list went unmodelled for a whole round because only list routes were here.
+  `/judgment/${OPENED_JUDGMENT.id}`,
+  `/souls/${SOULS[0].id}`,
 ];
 
 test.describe("ApiMock 覆盖了应用真的会调的东西", () => {
