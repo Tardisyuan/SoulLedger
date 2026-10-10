@@ -48,7 +48,7 @@ tests/test_system_mail_speaks_the_recipients_language.py         packages
 tests/test_testdb_name.py                                        conftest.py pytest.ini
 tests/test_the_image_installs_locked_versions.py                 .dockerignore .github
 tests/test_the_locale_header_reaches_the_name.py                 packages
-tests/test_verdict_names_exist_in_every_bundle.py                packages
+tests/test_verdict_names_exist_in_every_bundle.py                frontend packages
 tests/test_workflow_preset_approvers.py                          config packages
 tests/test_workflow_preset_case_types.py                         config frontend packages
 tests/test_workflow_preset_node_types.py                         config packages
