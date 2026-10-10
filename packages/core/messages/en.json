@@ -5379,8 +5379,6 @@
     "button": "Print",
     "case_no": "Case no.",
     "soul_no": "Soul no.",
-    "page_pre": "Page ",
-    "page_mid": " of ",
-    "page_post": "."
+    "page_label": "Page {{n}} of {{m}}"
   }
 }
