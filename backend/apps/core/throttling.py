@@ -66,6 +66,22 @@ class AnonRateThrottle(ClientIPIdentMixin, throttling.AnonRateThrottle):
     """Drop-in for `DEFAULT_THROTTLE_CLASSES`; anonymous requests only."""
 
 
+class UserRateThrottle(ClientIPIdentMixin, throttling.UserRateThrottle):
+    """Default per-user limit for logged-in callers (scope `user`).
+
+    DRF's version keys *anonymous* requests by IP as well; here that would
+    count them a second time beside `AnonRateThrottle`, so anonymous requests
+    return None (no limit from this class). Views that set their own
+    `throttle_classes` replace the defaults and are not counted here.
+    """
+
+    def get_cache_key(self, request, view):
+        user = getattr(request, "user", None)
+        if not user or not user.is_authenticated:
+            return None
+        return self.cache_format % {"scope": self.scope, "ident": user.pk}
+
+
 class ClientIPRateThrottle(ClientIPIdentMixin, throttling.SimpleRateThrottle):
     """Per-IP, **whether or not the caller is authenticated**.
 
