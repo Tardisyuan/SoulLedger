@@ -55,7 +55,9 @@ describe("the generated Swift", () => {
     expect(localizableStrings(soul, "zh-Hans", MESSAGES)).toContain('"Question" = "问题";');
     expect(swift).toContain("var question: String");
     expect(swift).toContain(`.prefix(${ASK_MAX})`);
-    expect(swift).toContain('"soulledger://ask?q="');
+    expect(swift).toContain('URL(string: "soulledger://ask" + (encoded.isEmpty ? "" : "?q=" + encoded))');
+    // An empty answer still opens the drawer: the link is never skipped on an empty question.
+    expect(swift).not.toContain("if !text.isEmpty");
     expect(swift).toContain("addingPercentEncoding(withAllowedCharacters: .alphanumerics)");
     expect(swift).toContain("AskIntent()");
     expect(ASK_MAX).toBe(ASK_MAX_LENGTH);

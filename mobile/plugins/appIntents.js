@@ -99,9 +99,10 @@ struct ${askStructOf(a)}: AppIntent {
   @MainActor
   func perform() async throws -> some IntentResult {
     let text = String(question.trimmingCharacters(in: .whitespacesAndNewlines).prefix(${ASK_MAX}))
-    if !text.isEmpty,
-       let encoded = text.addingPercentEncoding(withAllowedCharacters: .alphanumerics),
-       let url = URL(string: ${quoted(`${scheme}://${a.path}?q=`)} + encoded) {
+    // An empty answer still opens the drawer, with an empty box (2026-10-10, on a phone: it only
+    // brought the app forward and left the person on whatever page they were on).
+    let encoded = text.addingPercentEncoding(withAllowedCharacters: .alphanumerics) ?? ""
+    if let url = URL(string: ${quoted(`${scheme}://${a.path}`)} + (encoded.isEmpty ? "" : "?q=" + encoded)) {
       await UIApplication.shared.open(url)
     }
     return .result()
