@@ -229,6 +229,7 @@ const COLLECTED_FILES = [
   "egyLexiconRules.test.ts",
   "eventInvalidationReachesCache.test.ts",
   "eventRegistry.test.ts",
+  "exportFileName.test.ts",
   "enumsMatchTheSchema.test.ts",
   "errorIsNotAnEmptyState.test.ts",
   "focusRingContract.test.ts",

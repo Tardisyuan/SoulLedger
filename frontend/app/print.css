@@ -128,4 +128,11 @@
   [data-print-doc] tr {
     break-inside: avoid;
   }
+
+  /* 受刑计划卡(整张)与卡里每个计划、每一站:不拆到两页。 */
+  [data-print-doc] [data-testid="sentence-plan-card"],
+  [data-print-doc] [data-plan-id],
+  [data-print-doc] [data-node-order] {
+    break-inside: avoid;
+  }
 }

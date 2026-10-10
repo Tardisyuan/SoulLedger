@@ -43,7 +43,8 @@ const STATUS_TONES: Record<string, BadgeTone> = {
 
 function DispatchPageContent() {
   const { t } = useI18n();
-  usePlaque({ hall: useHall(useCourtOffice()) });
+  const hall = useHall(useCourtOffice());
+  usePlaque({ hall });
   const { user } = useTenant();
 
   // `isError` on both. The `= []` defaults mean a failed request lands on the
@@ -111,7 +112,7 @@ function DispatchPageContent() {
         title={t("dispatch.pending")}
         isRefreshing={proposedStale}
         className="mb-6"
-        actions={<ExportCsvButton size="sm" fetchCsv={() => dispatchApi.exportCsv({ section: "proposed" })} filename="dispatch_proposed.csv" />}
+        actions={<ExportCsvButton size="sm" fetchCsv={() => dispatchApi.exportCsv({ section: "proposed" })} page={t("dispatch.title")} hall={hall} />}
       >
         <DispatchTable
           rows={proposed}
@@ -129,7 +130,7 @@ function DispatchPageContent() {
       <PageSection
         title={t("dispatch.history")}
         isRefreshing={historyStale}
-        actions={<ExportCsvButton size="sm" fetchCsv={() => dispatchApi.exportCsv({ section: "history" })} filename="dispatch_history.csv" />}
+        actions={<ExportCsvButton size="sm" fetchCsv={() => dispatchApi.exportCsv({ section: "history" })} page={t("dispatch.title")} hall={hall} />}
       >
         <DispatchTable
           rows={history}
