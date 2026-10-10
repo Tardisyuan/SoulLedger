@@ -921,6 +921,7 @@
       "import_error": "Nen Ini Smen: {reason}",
       "reason_unknown": "Hemsu Nen Djed Khet.",
       "next": "Nemet Ky",
+      "back": "Er Hat",
       "done": "Khetem",
       "will": {
         "add": "Er Redi Hena"
