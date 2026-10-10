@@ -76,7 +76,7 @@ function conv(overrides: Partial<SoulConversation> = {}): SoulConversation {
 const hall = (overrides: Partial<SoulConversation> = {}) =>
   conv({ id: "c-hall", kind: "OFFICER_INBOX", room_id: "!hall:hs.test", peer_user: null, peer_name: "", hall: "第五殿", mutual: false, ...overrides });
 
-const msg = (id: string, sender: string, body: string, ts: number): ChatMessage => ({ eventId: id, sender, body, ts, officer: null, officerTitle: null, txnId: null });
+const msg = (id: string, sender: string, body: string, ts: number): ChatMessage => ({ eventId: id, sender, body, ts, officer: null, officerTitle: null, image: null, txnId: null });
 
 const facts = (overrides = {}) => ({ now: NOW, peerHasSpoken: false, iHaveSpoken: false, refused: null, ...overrides });
 
@@ -188,6 +188,8 @@ function chatState(overrides: Partial<Chat> = {}): Chat {
     reload: jest.fn(async () => {}),
     reconnect: jest.fn(),
     send: jest.fn(),
+    sendImages: jest.fn(),
+    progress: {},
     resend: jest.fn(),
     loadOlder: jest.fn(async () => {}),
     markRead: jest.fn(),
