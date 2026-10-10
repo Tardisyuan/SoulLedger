@@ -100,7 +100,7 @@ type Schemas = components["schemas"];
 export type PermissionImportResult = Schemas["PermissionImportResult"];
 export type PermissionImportSkipped = Schemas["PermissionImportSkipped"];
 
-/** 导出文档(`GET /perm/export/` 的 body),去掉 `overwrite` —— 导入时由 `importConfig` 固定。 */
+/** 导出文档(`GET /perm/export/` 的 body),去掉 `overwrite` / `dry_run` —— 导入时由 `importConfig` 的参数给。 */
 export type PermissionImportDocument = Omit<Schemas["PermissionImportRequest"], "overwrite" | "dry_run">;
 
 /**
@@ -209,10 +209,12 @@ export const permApi = {
   exportConfig: () => api.get<Blob>("/perm/export/", { responseType: "blob" }),
   /**
    * 导入权限配置(仅 ADMIN)。body 是 JSON 文档本身(不是 multipart)。
-   * 这里**固定 `overwrite: false`**:只合并,get_or_create 语义,已有的行不动、不删。
-   * 要覆盖得另开口子,由产品决定,不在这个方法里。
-   * `dryRun`:后端跑完整合并再回滚,返回同形状的 stats,不留任何行(导入弹层的摘要步)。
+   * `overwrite` 默认 **false**:只合并,get_or_create 语义,已有的行不动、不删。
+   * 覆盖(`true`)会删光字段权限、行级数据范围与除 ADMIN 外的全部授权再按文件重建 —— 只由导入弹层
+   * 在用户选了「覆盖」、对上殿名之后传;任何别的路径不传。
+   * `dryRun`:后端跑完整合并再回滚,返回同形状的 stats,不留任何行(导入弹层的摘要步);
+   * 与 `overwrite` 同用时 stats 里有 `updated` / `removed` / `removes_own_permissions`。
    */
-  importConfig: (document: PermissionImportDocument, dryRun = false) =>
-    api.post<PermissionImportResult>("/perm/import/", { ...document, overwrite: false, dry_run: dryRun }),
+  importConfig: (document: PermissionImportDocument, dryRun = false, overwrite = false) =>
+    api.post<PermissionImportResult>("/perm/import/", { ...document, overwrite, dry_run: dryRun }),
 };

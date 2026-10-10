@@ -58,5 +58,16 @@
   "souls.detail.case_closed",
   "souls.detail.case_all",
   "judgment.soul_filter",
-  "judgment.soul_filter_clear"
+  "judgment.soul_filter_clear",
+  "permissions.config.back",
+  "permissions.config.will.remove",
+  "permissions.config.did.remove",
+  "permissions.config.mode.label",
+  "permissions.config.mode.merge",
+  "permissions.config.mode.overwrite",
+  "permissions.config.overwrite.warning",
+  "permissions.config.overwrite.warning_own",
+  "permissions.config.overwrite.all_halls",
+  "permissions.config.overwrite.blocked_own",
+  "permissions.config.overwrite.action"
 ]

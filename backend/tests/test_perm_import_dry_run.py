@@ -97,7 +97,7 @@ def test_the_stats_count_created_and_skipped_per_section_with_the_reason_for_eac
     assert reasons[("role_permissions", "JUDGE / recycle_bin.restore")] == "admin_only"
     assert reasons[("role_permissions", "MODERATOR / workflow.approve")] == "role_forbidden"
     assert reasons[("role_permissions", "GHOST / dry.read")] == "unknown_reference"
-    assert len(stats["skipped_details"]) == sum(s["skipped"] for k, s in stats.items() if k != "skipped_details")
+    assert len(stats["skipped_details"]) == sum(stats[k]["skipped"] for k in ("permissions", "roles", "role_permissions", "field_permissions", "data_scopes"))
 
 
 @pytest.mark.django_db(transaction=True)
