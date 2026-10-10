@@ -110,8 +110,19 @@ def test_the_two_vocabularies_really_are_different():
 def test_the_three_bundles_agree_on_these_namespaces():
     """键集一致由全局检查管;这里断的是**这两个命名空间**逐一相同 ——
     「三份一致地都缺同一个成员」是全局检查抓不到的形状。"""
+    # egy wording comes from Design only; a key it has not approved yet is listed in the
+    # shared pending file (the jest parity tests read the same file) and reads as zh-Hans.
+    pending = json.loads(
+        (REPO_ROOT / "frontend" / "src" / "__tests__" / "support" / "egyPendingKeys.json").read_text(
+            encoding="utf-8"
+        )
+    )
     for path in (("souls", "detail"), ("workflow", "verdicts")):
-        sets = [set(_node(locale, *path)) for locale in LOCALES]
+        prefix = ".".join(path) + "."
+        waiting = {k[len(prefix):] for k in pending if k.startswith(prefix)}
+        sets = [
+            set(_node(locale, *path)) | (waiting if locale == "egy" else set()) for locale in LOCALES
+        ]
         assert sets[0] == sets[1] == sets[2], (
             path,
             {locale: sorted(keys) for locale, keys in zip(LOCALES, sets, strict=True)},
