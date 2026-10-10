@@ -321,15 +321,30 @@ export function TabBar({ current, onSelect, unread }: { current: TabKey; onSelec
 /** A band under the identity band that does not go away: the two-step-verification reminder. */
 export function StandingBanner({ children, testID, action }: { children: string; testID?: string; action?: { label: string; onPress: () => void } }) {
   const t = useTheme();
+  const colours = { backgroundColor: t.warnBg, borderBottomColor: t.warn };
+  const text = (
+    <Txt variant="caption" style={{ color: t.warn, flexShrink: 1 }}>{`! ${children}`}</Txt>
+  );
+  if (!action) {
+    return (
+      <View testID={testID} accessibilityRole="alert" style={[styles.banner, colours]}>
+        {text}
+      </View>
+    );
+  }
+  // The whole band is the target (>= 44 high) and reads as ONE button: its text plus the action. The
+  // action is a plain trailing label at the far right, not drawn as a button.
   return (
-    <View testID={testID} accessibilityRole="alert" style={[styles.banner, { backgroundColor: t.warnBg, borderBottomColor: t.warn }]}>
-      <Txt variant="caption" style={{ color: t.warn }}>{`! ${children}`}</Txt>
-      {action ? (
-        <Pressable testID={testID ? `${testID}-action` : undefined} accessibilityRole="button" accessibilityLabel={action.label} onPress={action.onPress} style={{ minHeight: 44, justifyContent: "center" }}>
-          <Txt variant="nav" style={{ color: t.warn }}>{`${action.label} ›`}</Txt>
-        </Pressable>
-      ) : null}
-    </View>
+    <Pressable
+      testID={testID}
+      accessibilityRole="button"
+      accessibilityLabel={`${children} ${action.label}`}
+      onPress={action.onPress}
+      style={[styles.banner, styles.bannerRow, colours]}
+    >
+      {text}
+      <Txt testID={testID ? `${testID}-action` : undefined} variant="nav" style={{ color: t.warn }}>{`${action.label} ›`}</Txt>
+    </Pressable>
   );
 }
 
@@ -364,4 +379,5 @@ const styles = StyleSheet.create({
   tabBar: { flexDirection: "row", borderTopWidth: 1 },
   tab: { flex: 1, minHeight: 56, alignItems: "center", justifyContent: "center", gap: space[1] },
   banner: { paddingHorizontal: GUTTER, paddingVertical: space[3], borderBottomWidth: 1 },
+  bannerRow: { minHeight: 44, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: space[3] },
 });

@@ -1065,7 +1065,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
           />
         </div>
         {/* 评议:与资料舱同级的次要信息,默认收起;写不写只看 judgment.read(服务端同一码名),结案后照样可写。 */}
-        <JudgmentComments id={id} canWrite={hasPermission("judgment.read")} />
+        <JudgmentComments id={id} canWrite={hasPermission("judgment.read")} concludedAt={judgment.concluded_at} />
       </div>
     </PageShell>
     {!isFinal || concludeMutation.isSuccess ? (

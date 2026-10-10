@@ -6,7 +6,7 @@
  */
 import { useState } from "react";
 import { act, fireEvent, screen, waitFor } from "@testing-library/react-native";
-import { Linking } from "react-native";
+import { BackHandler, Linking, StyleSheet } from "react-native";
 
 import { MfaScreen } from "../screens/mfa";
 import { Shell } from "../shell";
@@ -91,8 +91,13 @@ describe("the wizard", () => {
     expect(mockApi.confirm).toHaveBeenCalledWith("123456");
 
     // step 4: still not on
-    expect((await screen.findByTestId("mfa-codes-text")).props.selectable).toBe(true);
-    for (const c of CODES) expect(screen.getByTestId("mfa-codes-text").props.children).toContain(c);
+    await screen.findByTestId("mfa-codes-text");
+    expect(screen.getByTestId("mfa-codes-col-0").props.selectable).toBe(true);
+    expect(screen.getByTestId("mfa-codes-col-0").props.children).toBe(CODES.slice(0, 5).join("\n"));
+    expect(screen.getByTestId("mfa-codes-col-1").props.children).toBe(CODES.slice(5).join("\n"));
+    expect(screen.queryByTestId("mfa-codes-col-2")).toBeNull();
+    // no serial numbers beside the codes
+    expect(screen.queryByText(/^\s*1[.)]/)).toBeNull();
     expect(mockApi.complete).not.toHaveBeenCalled();
     expect(session.setMfaEnabled).not.toHaveBeenCalled();
     await press("mfa-saved");
@@ -245,7 +250,8 @@ describe("the managed state", () => {
     fireEvent.press(screen.getByTestId("mfa-regen"));
     await press("mfa-regen-confirm");
     expect(mockApi.regenerateRecoveryCodes).toHaveBeenCalledTimes(1);
-    expect((await screen.findByTestId("mfa-codes-text")).props.children).toContain("AAAA-1111");
+    await screen.findByTestId("mfa-codes-text");
+    expect(screen.getByTestId("mfa-codes-col-0").props.children).toContain("AAAA-1111");
     await press("mfa-regenerated-close");
     expect(screen.queryByTestId("mfa-codes-text")).toBeNull();
   });
@@ -291,6 +297,37 @@ describe("the managed state", () => {
   });
 });
 
+describe("step 2 and 4 layout", () => {
+  const LONG = "JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXQ";
+  it("shows the key in mono, four groups a row, as one selectable string, then the open button, then the hint", async () => {
+    mockApi.setup.mockResolvedValue({ data: { secret: LONG, otpauth_url: URL } });
+    renderOfficer(<MfaScreen onBack={() => {}} />);
+    await toStep(2);
+    const key = await screen.findByTestId("mfa-manual-key");
+    expect(key.props.children).toBe("JBSW Y3DP EHPK 3PXP\nJBSW Y3DP EHPK 3PXQ");
+    expect(StyleSheet.flatten(key.props.style).fontFamily).toMatch(/Mono/);
+    expect(screen.queryByTestId("mfa-manual-key-0")).toBeNull();
+    const order = JSON.stringify(screen.toJSON());
+    const at = (needle: string) => order.indexOf(needle);
+    expect(at("mfa-manual-key")).toBeLessThan(at("mfa-open-authenticator"));
+    expect(at("mfa-open-authenticator")).toBeLessThan(at("长按文字可以选中并复制。"));
+  });
+
+  it("swallows the Android back key on step 4 and lets it through on step 1", async () => {
+    const handlers: (() => boolean)[] = [];
+    const spy = jest.spyOn(BackHandler, "addEventListener").mockImplementation((_e, h) => {
+      handlers.push(h as () => boolean);
+      return { remove: () => {} };
+    });
+    const onBack = jest.fn();
+    renderOfficer(<MfaScreen onBack={onBack} />);
+    await toStep(4);
+    expect(handlers.at(-1)!()).toBe(true);
+    expect(onBack).not.toHaveBeenCalled();
+    spy.mockRestore();
+  });
+});
+
 describe("the standing banner", () => {
   function Live({ mfaEnabled }: { mfaEnabled: boolean }) {
     const [user, setUser] = useState({ ...OFFICER, mfa_enabled: mfaEnabled, mfa_required: true });
@@ -324,6 +361,19 @@ describe("the standing banner", () => {
     // and now the tab bar works again
     await press("tab-todo");
     expect(screen.queryByTestId("mfa-screen")).toBeNull();
+  });
+
+  it("is one button of at least 44 high, named by its text plus 去设置, and pressing the band itself opens the wizard", async () => {
+    renderOfficer(<Live mfaEnabled={false} />);
+    const banner = await screen.findByTestId("mfa-banner");
+    expect(banner.props.accessibilityRole).toBe("button");
+    expect(banner.props.accessibilityLabel).toMatch(/去设置$/);
+    expect(banner.props.accessibilityLabel).toMatch(/^[^›]+ 去设置$/);
+    expect(StyleSheet.flatten(banner.props.style).minHeight).toBeGreaterThanOrEqual(44);
+    // the action is a trailing label, not a second button
+    expect(screen.getByTestId("mfa-banner-action").props.accessibilityRole).toBeUndefined();
+    fireEvent.press(banner);
+    expect(await screen.findByTestId("mfa-start")).toBeTruthy();
   });
 
   it("is not shown, and the entry is not offered, when two-step verification is already on", async () => {
