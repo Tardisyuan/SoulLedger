@@ -111,6 +111,7 @@ class ModeratedContentSerializer(serializers.Serializer):
 
 class ModeratedPostSerializer(ModeratedContentSerializer):
     visibility = serializers.CharField()
+    edited_at = serializers.DateTimeField(allow_null=True, help_text="作者改过正文的时间;没改过为 null。")
     comment_count = serializers.IntegerField()
     #: 五种表态各自的数(未删除的),与灵魂端同一份注解。没有转发:朋友圈没有转发模型。
     reaction_counts = SoulReactionCountsSerializer(source="*", read_only=True)

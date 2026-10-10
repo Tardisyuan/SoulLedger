@@ -67,6 +67,9 @@ class Post(AuditUserFields, models.Model):
     )
     moderated_at = models.DateTimeField(null=True, blank=True)
     moderation_reason = models.CharField(max_length=500, blank=True, default="")
+    #: 作者改过**正文**的时间。只有 `PostViewSet.perform_update` 在正文真的变了时写它;
+    #: 改可见范围、表态、评论、审核、软删除都不碰(`update_time` 会随任何保存变,不能当它用)。
+    edited_at = models.DateTimeField(null=True, blank=True, default=None)
     comment_count = models.PositiveIntegerField(default=0)
     reaction_count = models.PositiveIntegerField(default=0)
     tenant = models.ForeignKey(

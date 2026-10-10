@@ -49,12 +49,14 @@ class PostSerializer(PostMediaFieldMixin, serializers.ModelSerializer):
             "media",
             "reaction_counts",
             "tenant",
+            "edited_at",
             "create_time",
             "update_time",
         ]
         read_only_fields = [
             "id",
             "author",
+            "edited_at",
             "comment_count",
             "reaction_count",
             "tenant",
@@ -113,6 +115,7 @@ class PostListSerializer(PostMediaFieldMixin, serializers.ModelSerializer):
             "reaction_count",
             "media",
             "reaction_counts",
+            "edited_at",
             "create_time",
         ]
 

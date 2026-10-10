@@ -28,6 +28,8 @@ export interface Post {
   /** 五种表态各自的数(未删除的)。 */
   reaction_counts: Record<"LIKE" | "LOVE" | "RESPECT" | "SYMPATHY" | "ETERNAL_LIGHT", number>;
   tenant?: number;
+  /** 作者改过正文的时间;没改过为 null。 */
+  edited_at?: string | null;
   create_time: string;
   update_time?: string;
 }
