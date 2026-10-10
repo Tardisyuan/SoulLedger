@@ -5343,5 +5343,13 @@
       "send": "发表",
       "failed": "没能发表评议，稍后再试。"
     }
+  },
+  "print": {
+    "button": "打印",
+    "case_no": "案号",
+    "soul_no": "灵魂编号",
+    "page_pre": "第 ",
+    "page_mid": " 页 / 共 ",
+    "page_post": " 页"
   }
 }

@@ -48,6 +48,7 @@ import { ConfirmDialog } from "@/src/components/ui/Modal";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatHistoricalDate } from "@/lib/utils";
 import { PageShell } from "@/src/components/ui/PageShell";
+import { PrintFrame } from "@/src/components/print/PrintFrame";
 import { usePlaque } from "@/src/components/plaque/Plaque";
 import { useHall } from "@/src/components/plaque/useHall";
 import { DOMAIN_BADGE, soulStateBadgeClass, soulStateGlyph } from "@/src/lib/soulStateBadge";
@@ -553,6 +554,7 @@ export default function SoulDetailPage() {
   );
 
   return (
+    <PrintFrame hall={hall} reference={soul?.id} referenceLabel={t("print.soul_no")}>
     <PageShell
       variant="page"
       backLink={backLink}
@@ -691,6 +693,7 @@ export default function SoulDetailPage() {
         variant="warning"
       />
     </PageShell>
+    </PrintFrame>
   );
 }
 
