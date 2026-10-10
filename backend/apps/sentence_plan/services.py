@@ -110,6 +110,35 @@ def _node_params(soul, node):
 
 # ── 查询 ────────────────────────────────────────────────────────────────
 
+REJECTION_MARKER = "Rejection reason:"
+
+
+def last_refusal(node):
+    """节点上一次调拨为什么没成:`{status: REJECTED|CANCELLED, reason, at}`;不是「被拒后退回 PENDING」则 None。
+
+    从现有记录推导,不加模型字段:`on_dispatch_refused` 写的 `SENTENCE_NODE_REFUSED` 事件带 `dispatch_id`,
+    拒绝理由在那条调拨记录的 `reason` 里(`DispatchService.reject` 追加在末尾)。事件 payload 不带理由
+    (灵魂时间线读得到它),所以理由只从调拨记录取。取消没有理由。
+    """
+    from apps.dispatch.models import DispatchRecord, DispatchStatus
+    from apps.events.models import EventType, SoulEvent
+
+    if node.status != SentenceNodeStatus.PENDING or node.is_home:
+        return None
+    event = (
+        SoulEvent.objects.filter(
+            soul_id=node.plan.soul_id, event_type=EventType.SENTENCE_NODE_REFUSED, payload__node_id=str(node.pk),
+        ).order_by("-create_time").first()
+    )
+    if event is None:
+        return None
+    record = DispatchRecord.objects.filter(pk=event.payload.get("dispatch_id")).first()
+    reason = None
+    if record is not None and record.status == DispatchStatus.REJECTED and REJECTION_MARKER in record.reason:
+        reason = record.reason.split(REJECTION_MARKER, 1)[1].strip() or None
+    return {"status": event.payload.get("dispatch_status"), "reason": reason, "at": event.create_time}
+
+
 
 def in_progress_plan(soul, *, lock=False):
     qs = SentencePlan.all_objects.filter(soul_id=soul.pk, is_deleted=False, status__in=IN_PROGRESS_PLAN_STATUSES)

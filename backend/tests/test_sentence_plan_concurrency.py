@@ -453,3 +453,29 @@ def test_a_case_whose_tenant_check_went_stale_before_the_lock_is_refused():
 @pytest.mark.django_db(transaction=True)
 def test_a_soul_going_home_while_a_case_waits_for_the_lock_strands_no_case():
     _open_while_it_goes_home(plan.tenant("CN_DIYU"), plan.tenant("EG_DUAT"), threaded=True)
+
+
+# ── 8. 两个官员同时「重新发起调拨」→ 恰一条新调拨、一个成功 ───────────────────────
+
+
+@pytest.mark.skipif(SQLITE, reason=NEEDS_ROW_LOCKS)
+@pytest.mark.django_db(transaction=True)
+def test_two_officers_retrying_one_refused_dispatch_at_once_send_it_once():
+    from apps.dispatch.services import DispatchService
+
+    cn, eg = plan.tenant("CN_DIYU"), plan.tenant("EG_DUAT")
+    soul, p = plan.planned(cn, [(eg, plan.stop_realm(eg), 5)])
+    plan.serve(soul, p, 1)
+    DispatchService.reject(DispatchRecord.all_objects.get(pk=plan.node(p, 2).dispatch_record_id),
+                           plan.officer("pg8_eg", "MODERATOR", eg), "不收")
+    node = plan.node(p, 2)
+    url = f"/api/v1/sentence-plans/{p.pk}/nodes/{node.pk}/retry-dispatch/"
+    a, b = _client(plan.officer("pg8_a", "JUDGE", cn)), _client(plan.officer("pg8_b", "JUDGE", cn))
+
+    results = _race({"a": lambda: a.post(url, {}, format="json").status_code,
+                     "b": lambda: b.post(url, {}, format="json").status_code})
+
+    assert sorted(results.values()) == [200, 409], results
+    assert DispatchRecord.all_objects.filter(soul=soul).count() == 2
+    assert SoulEvent.objects.filter(soul=soul, event_type="SENTENCE_NODE_REDISPATCHED").count() == 1
+    assert plan.node(p, 2).status == "DISPATCHING"
