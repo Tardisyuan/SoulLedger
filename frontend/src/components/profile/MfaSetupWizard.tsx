@@ -5,6 +5,7 @@ import { mfaApi, type MfaRefusal, type MfaSetupResponse } from "@soulledger/core
 import { useI18n } from "@/src/contexts/I18nContext";
 import { BaseModal } from "@/src/components/ui/Modal";
 import { Button } from "@/src/components/ui/Button";
+import { TextField } from "@/src/components/ui/Field";
 import { CodeInput } from "@/src/components/auth/CodeInput";
 import { QrCode } from "@/src/components/auth/QrCode";
 import { RecoveryCodesPanel } from "@/src/components/auth/RecoveryCodesPanel";
@@ -29,6 +30,10 @@ export function MfaSetupWizard({ username, onClose, onEnabled }: { username: str
   const [step, setStep] = useState(1);
   const [setup, setSetup] = useState<MfaSetupResponse | null>(null);
   const [setupError, setSetupError] = useState(false);
+  // 开始设置先输当前密码:已登录不等于是本人。错误在第一步的密码框下说。
+  const [password, setPassword] = useState("");
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [starting, setStarting] = useState(false);
   const [code, setCode] = useState("");
   const [codeError, setCodeError] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
@@ -40,22 +45,27 @@ export function MfaSetupWizard({ username, onClose, onEnabled }: { username: str
   const codeRef = useRef<HTMLInputElement>(null);
   const done = step > STEPS;
 
-  // 第二步进场时要一把新密钥;已经拿过就不再要(回到上一步再来不换码)。
-  useEffect(() => {
-    if (step !== 2 || setup) return;
-    let cancelled = false;
-    mfaApi
-      .setup()
-      .then((r) => {
-        if (!cancelled) setSetup(r.data);
-      })
-      .catch(() => {
-        if (!cancelled) setSetupError(true);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [step, setup]);
+  // 第一步「下一步」带着密码去要一把新密钥;已经拿过(回到上一步再来)就不再要,也不再问密码。
+  const start = async () => {
+    if (setup) return setStep(2);
+    if (starting) return;
+    setStarting(true);
+    setPasswordError(null);
+    setSetupError(false);
+    try {
+      const r = await mfaApi.setup(password);
+      setSetup(r.data);
+      setPassword("");
+      setStep(2);
+    } catch (err: unknown) {
+      const body = (err as { response?: { data?: Partial<MfaRefusal> } })?.response?.data;
+      if (body?.code === "wrong_password") setPasswordError(t("mfa.setup.password_wrong"));
+      else if (body?.code === "login_locked") setPasswordError(t("mfa.setup.password_locked"));
+      else setSetupError(true);
+    } finally {
+      setStarting(false);
+    }
+  };
 
   // 第三步进场把焦点放进码框(不用 autoFocus 属性,jsx-a11y)。
   useEffect(() => {
@@ -125,8 +135,12 @@ export function MfaSetupWizard({ username, onClose, onEnabled }: { username: str
         <Button type="button" variant="ghost" size="lg" onClick={() => setStep((s) => Math.max(1, s - 1))} disabled={step === 1 || step === 4}>
           {t("mfa.setup.back")}
         </Button>
-        {step < 3 ? (
-          <Button type="button" variant="primary" size="lg" onClick={() => setStep((s) => s + 1)} disabled={step === 2 && !setup}>
+        {step === 1 ? (
+          <Button type="button" variant="primary" size="lg" data-testid="mfa-start" onClick={() => void start()} disabled={(!setup && password.length === 0) || starting} loading={starting}>
+            {t("mfa.setup.next")}
+          </Button>
+        ) : step === 2 ? (
+          <Button type="button" variant="primary" size="lg" onClick={() => setStep(3)}>
             {t("mfa.setup.next")}
           </Button>
         ) : step === 3 ? (
@@ -180,6 +194,30 @@ export function MfaSetupWizard({ username, onClose, onEnabled }: { username: str
           <section className="flex flex-col gap-2">
             <h3 className="text-lg text-[oklch(var(--color-ink))]">{t("mfa.setup.step1_title")}</h3>
             <p className="text-sm text-[oklch(var(--color-ink-muted))]">{t("mfa.setup.step1_body")}</p>
+            {setup ? null : (
+              <TextField
+                label={t("mfa.manage.confirm_by_password")}
+                description={t("mfa.setup.password_hint")}
+                type="password"
+                autoComplete="current-password"
+                value={password}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  setPasswordError(null);
+                }}
+                error={passwordError ?? undefined}
+                disabled={starting}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") void start();
+                }}
+              />
+            )}
+            {setupError ? (
+              <p role="alert" className="text-sm text-[oklch(var(--color-danger))]">
+                <span aria-hidden="true">! </span>
+                {t("mfa.setup.setup_failed")}
+              </p>
+            ) : null}
           </section>
         ) : null}
 
@@ -187,12 +225,7 @@ export function MfaSetupWizard({ username, onClose, onEnabled }: { username: str
           <section className="flex flex-col gap-4">
             <h3 className="text-lg text-[oklch(var(--color-ink))]">{t("mfa.setup.step2_title")}</h3>
             <p className="text-sm text-[oklch(var(--color-ink-muted))]">{t("mfa.setup.step2_body")}</p>
-            {setupError ? (
-              <p role="alert" className="text-sm text-[oklch(var(--color-danger))]">
-                <span aria-hidden="true">! </span>
-                {t("mfa.setup.setup_failed")}
-              </p>
-            ) : setup ? (
+            {setup ? (
               <div className="flex flex-col gap-4 md:flex-row md:items-start">
                 <div className="hidden shrink-0 md:block">
                   <QrCode value={setup.otpauth_url} label={t("mfa.setup.step2_title")} />

@@ -76,6 +76,7 @@ describe("MfaSection — off", () => {
     renderSection();
     fireEvent.click(await screen.findByRole("button", { name: "mfa.setup.open" }));
     expect(await screen.findByTestId("mfa-wizard")).toBeTruthy();
+    fireEvent.change(screen.getByLabelText(/mfa\.manage\.confirm_by_password/), { target: { value: "my-password" } });
     fireEvent.click(screen.getByRole("button", { name: "mfa.setup.next" }));
     await screen.findByTestId("mfa-manual-key");
     fireEvent.click(screen.getByRole("button", { name: "mfa.setup.next" }));

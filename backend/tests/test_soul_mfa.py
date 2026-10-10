@@ -96,7 +96,7 @@ class TestSetup:
 
     def test_the_whole_flow_enables_and_gives_ten_codes_once(self, soul):
         client = soul_client(soul)
-        started = client.post("/api/v1/me/mfa/setup/")
+        started = client.post("/api/v1/me/mfa/setup/", {"password": PASSWORD}, format="json")
         assert started.status_code == 200
         secret = started.data["secret"]
         assert started.data["otpauth_url"].startswith("otpauth://totp/")
@@ -119,7 +119,7 @@ class TestSetup:
 
     def test_a_wrong_code_does_not_enable(self, soul):
         client = soul_client(soul)
-        secret = client.post("/api/v1/me/mfa/setup/").data["secret"]
+        secret = client.post("/api/v1/me/mfa/setup/", {"password": PASSWORD}, format="json").data["secret"]
         bad = f"{(int(_code(secret)) + 1) % 10**6:06d}"
         response = client.post("/api/v1/me/mfa/confirm/", {"code": bad}, format="json")
         assert response.status_code == 400 and response.data["code"] == "wrong"
@@ -128,8 +128,8 @@ class TestSetup:
 
     def test_starting_again_voids_the_previous_secret(self, soul):
         client = soul_client(soul)
-        first = client.post("/api/v1/me/mfa/setup/").data["secret"]
-        second = client.post("/api/v1/me/mfa/setup/").data["secret"]
+        first = client.post("/api/v1/me/mfa/setup/", {"password": PASSWORD}, format="json").data["secret"]
+        second = client.post("/api/v1/me/mfa/setup/", {"password": PASSWORD}, format="json").data["secret"]
         assert first != second and SoulMfa.objects.filter(account=soul).count() == 1
         old = client.post("/api/v1/me/mfa/confirm/", {"code": _code(first)}, format="json")
         assert old.status_code == 400
@@ -141,7 +141,7 @@ class TestSetup:
 
     def test_cancel_discards_an_unconfirmed_secret_and_leaves_an_enabled_one(self, soul):
         client = soul_client(soul)
-        client.post("/api/v1/me/mfa/setup/")
+        client.post("/api/v1/me/mfa/setup/", {"password": PASSWORD}, format="json")
         assert client.delete("/api/v1/me/mfa/setup/").status_code == 204
         assert not SoulMfa.objects.filter(account=soul).exists()
         _enable(soul)
@@ -150,7 +150,7 @@ class TestSetup:
 
     def test_setup_is_refused_while_enabled(self, soul):
         _enable(soul)
-        response = soul_client(soul).post("/api/v1/me/mfa/setup/")
+        response = soul_client(soul).post("/api/v1/me/mfa/setup/", {"password": PASSWORD}, format="json")
         assert response.status_code == 409 and response.data["code"] == "already_enabled"
 
     def test_the_secret_is_encrypted_at_rest_like_the_officers(self, soul):
@@ -650,7 +650,11 @@ class TestOfficerReset:
     def test_the_notice_is_readable_after_login_in_the_history(self, soul, admin_user):
         _enable(soul)
         officer_client(admin_user).post(self._url(soul), {"reason": "手机丢了,已当面核对身份"}, format="json")
-        history = soul_client(soul).get("/api/v1/me/notifications/")
+        # The reset ended every session at once: the soul signs in again (password only now) and reads it.
+        tokens = _login(soul).data
+        client = APIClient()
+        client.credentials(HTTP_AUTHORIZATION=f"Bearer {tokens['access']}")
+        history = client.get("/api/v1/me/notifications/")
         assert history.status_code == 200
         item = next(i for i in history.data["results"] if i["kind"] == "mfa_reset_by_officer")
         assert item["title"] == "两步验证已关闭" and (admin_user.display_name or admin_user.username) in item["body"]
@@ -715,7 +719,150 @@ class TestOfficerReset:
         tokens = _login(soul).data
         client = APIClient()
         client.credentials(HTTP_AUTHORIZATION=f"Bearer {tokens['access']}")
-        assert client.post("/api/v1/me/mfa/setup/").status_code == 200
+        assert client.post("/api/v1/me/mfa/setup/", {"password": PASSWORD}, format="json").status_code == 200
+
+
+# ── 开始设置要先输密码 ────────────────────────────────────────────────────────
+
+
+class TestSetupNeedsThePassword:
+    URL = "/api/v1/me/mfa/setup/"
+
+    def test_without_it_or_with_a_wrong_one_nothing_starts_and_no_secret_is_made(self, soul):
+        client = soul_client(soul)
+        for body in (None, {}, {"password": ""}, {"password": "nope"}):
+            response = client.post(self.URL, body, format="json")
+            assert (response.status_code, response.data["code"]) == (400, "wrong_password"), body
+            assert "secret" not in response.data
+        assert not SoulMfa.objects.exists()
+
+    def test_wrong_passwords_spend_the_login_budget_and_lock_even_the_right_one(self, soul):
+        client = soul_client(soul)
+        for left in (4, 3, 2, 1, 0):
+            response = client.post(self.URL, {"password": "nope"}, format="json")
+            assert (response.status_code, response.data["remaining_attempts"]) == (400, left)
+        locked = client.post(self.URL, {"password": PASSWORD}, format="json")
+        assert (locked.status_code, locked.data["code"]) == (429, "rate_limited")
+        assert not SoulMfa.objects.exists()
+        # The very counter the password login reads: signing in is locked out for this soul code too.
+        assert _login(soul).status_code == 429
+
+    def test_a_right_password_while_enabled_is_still_a_conflict(self, soul):
+        _enable(soul)
+        response = soul_client(soul).post(self.URL, {"password": PASSWORD}, format="json")
+        assert (response.status_code, response.data["code"]) == (409, "already_enabled")
+
+
+# ── 会话立刻失效(sv) ────────────────────────────────────────────────────────
+
+
+def _bearer(access):
+    client = APIClient()
+    client.credentials(HTTP_AUTHORIZATION=f"Bearer {access}")
+    return client
+
+
+class TestSessionsEndAtOnce:
+    def test_an_officer_closing_it_kills_the_access_token_the_soul_already_holds(self, soul, admin_user):
+        _enable(soul)
+        held = svc.issue_tokens(soul)
+        assert _bearer(held["access"]).get("/api/v1/me/").status_code == 200
+        mfa.reset_by_officer(soul, actor=admin_user, reason="手机丢了,已核对身份")
+        assert _bearer(held["access"]).get("/api/v1/me/").status_code == 401
+        refreshed = APIClient().post("/api/v1/soul-auth/refresh/", {"refresh": held["refresh"]}, format="json")
+        assert refreshed.status_code == 401
+
+    def test_the_officer_resetting_the_password_does_too(self, soul, admin_user):
+        held = svc.issue_tokens(soul)
+        svc.reset_credential(soul, actor=admin_user)
+        assert _bearer(held["access"]).get("/api/v1/me/").status_code == 401
+
+    def test_changing_the_password_keeps_this_device_and_ends_the_others(self, soul):
+        a, b = svc.issue_tokens(soul), svc.issue_tokens(soul)
+        response = _bearer(a["access"]).post(
+            "/api/v1/me/password/", {"old_password": PASSWORD, "new_password": "another-long-password-2"}, format="json")
+        assert response.status_code == 200
+        fresh = response.data
+        assert _bearer(fresh["access"]).get("/api/v1/me/").status_code == 200  # this device, on the new pair
+        for stale in (a["access"], b["access"]):
+            assert _bearer(stale).get("/api/v1/me/").status_code == 401
+        for stale in (a["refresh"], b["refresh"]):
+            assert APIClient().post("/api/v1/soul-auth/refresh/", {"refresh": stale}, format="json").status_code == 401
+        assert APIClient().post("/api/v1/soul-auth/refresh/", {"refresh": fresh["refresh"]}, format="json").status_code == 200
+
+    def test_the_forced_first_password_change_does_not_sign_this_device_out(self, cn_tenant):
+        soul_row = dead_soul(cn_tenant)
+        account, initial = provision_with_password(soul_row)
+        login = APIClient().post("/api/v1/soul-auth/login/", {"soul_code": soul_row.soul_code, "password": initial}, format="json")
+        assert login.status_code == 200 and login.data["account"]["must_change_password"] is True
+        client = _bearer(login.data["access"])
+        changed = client.post("/api/v1/me/password/", {"old_password": initial, "new_password": "a-first-long-password"}, format="json")
+        assert changed.status_code == 200
+        assert _bearer(changed.data["access"]).get("/api/v1/me/").status_code == 200
+
+    def test_an_email_reset_ends_every_device(self, soul):
+        held = svc.issue_tokens(soul)
+        svc.set_password_chosen_by_soul(soul, "another-long-password-2")
+        assert _bearer(held["access"]).get("/api/v1/me/").status_code == 401
+
+    def test_tokens_from_before_this_change_carry_no_sv_and_still_work_until_the_session_ends(self, soul):
+        """No `sv` reads as 0: the day this ships nobody is signed out."""
+        from apps.authentication.models import User
+        from apps.soul_accounts.authentication import SoulRefreshToken
+
+        User.objects.filter(pk=soul.user.pk).update(session_version=0)  # an account that predates `sv`
+        soul.user.refresh_from_db()
+        refresh = SoulRefreshToken.for_user(soul.user)
+        refresh["soul_account_id"] = str(soul.pk)
+        assert "sv" not in refresh.payload
+        old = str(refresh.access_token)
+        assert _bearer(old).get("/api/v1/me/").status_code == 200
+        svc.end_account_sessions(soul)
+        assert _bearer(old).get("/api/v1/me/").status_code == 401
+
+    def test_a_new_login_after_the_session_ended_works_and_carries_the_new_version(self, soul):
+        before = soul.user.session_version
+        svc.end_account_sessions(soul)
+        soul.user.refresh_from_db()
+        assert soul.user.session_version == before + 1
+        tokens = _login(soul).data
+        assert _bearer(tokens["access"]).get("/api/v1/me/").status_code == 200
+
+    def test_rebirth_kills_the_old_account_tokens(self, cn_tenant):
+        from apps.reincarnation.services import ReincarnationService
+        from apps.souls.models import Soul, SoulState
+
+        soul_row = dead_soul(cn_tenant)
+        first, _ = provision_with_password(soul_row)
+        held = svc.issue_tokens(first)
+        before = first.user.session_version
+        Soul.all_objects.filter(pk=soul_row.pk).update(current_state=SoulState.REINCARNATING)
+        soul_row.refresh_from_db()
+        ReincarnationService.complete_rebirth(soul_row, new_identity="新名字")
+        assert _bearer(held["access"]).get("/api/v1/me/").status_code == 401
+        first.user.refresh_from_db()
+        assert first.user.session_version == before + 1
+
+    def test_push_registrations_follow_the_sessions_and_this_phones_survives(self, soul):
+        from apps.soul_push.models import PushDevice
+
+        PushDevice.objects.create(account=soul, soul=soul.soul, token="ExponentPushToken[mine]", platform="IOS", last_seen_at=timezone.now())
+        PushDevice.objects.create(account=soul, soul=soul.soul, token="ExponentPushToken[other]", platform="ANDROID", last_seen_at=timezone.now())
+        held = svc.issue_tokens(soul)
+        response = _bearer(held["access"]).post(
+            "/api/v1/me/password/",
+            {"old_password": PASSWORD, "new_password": "another-long-password-2", "push_token": "ExponentPushToken[mine]"},
+            format="json")
+        assert response.status_code == 200
+        active = set(PushDevice.objects.filter(is_active=True).values_list("token", flat=True))
+        assert active == {"ExponentPushToken[mine]"}
+
+    def test_without_a_push_token_no_registration_is_kept(self, soul):
+        from apps.soul_push.models import PushDevice
+
+        PushDevice.objects.create(account=soul, soul=soul.soul, token="ExponentPushToken[x]", platform="IOS", last_seen_at=timezone.now())
+        svc.set_password_chosen_by_soul(soul, "another-long-password-2")
+        assert not PushDevice.objects.filter(is_active=True).exists()
 
 
 # ── 守卫的守卫 ───────────────────────────────────────────────────────────

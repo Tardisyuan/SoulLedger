@@ -142,7 +142,10 @@
       "saved_check": "我已妥善保存这些恢复码",
       "complete_failed": "没能完成设置，请重试",
       "done_title": "两步验证已开启",
-      "done_body": "下次登录输入密码后，还要输入验证器 App 上的动态码。"
+      "done_body": "下次登录输入密码后，还要输入验证器 App 上的动态码。",
+      "password_hint": "先输入当前密码，确认是你本人。",
+      "password_wrong": "密码不对",
+      "password_locked": "密码尝试过于频繁,请稍后再试"
     },
     "manage": {
       "off_body": "开启后，登录时除了密码还要输入验证器 App 上的 6 位动态码，账号被盗用的风险大幅降低。",
@@ -3447,7 +3450,8 @@
       "hours_left_consequence": "剩余 {{hours}} 小时 · 过期后须由官员重置",
       "under_hour_consequence": "剩余不足 1 小时 · 过期后须由官员重置",
       "expired_consequence": "已过期 · 须由官员重置",
-      "new_hint": "至少 8 位"
+      "new_hint": "至少 8 位",
+      "success_others_out": "密码已修改,其他设备上的登录已退出"
     },
     "forgot_password": {
       "link": "忘记密码",
@@ -4181,7 +4185,8 @@
         "no_app_title": "还没有验证器？",
         "no_app_body": "在手机的应用商店搜索「验证器」或「Authenticator」，免费的任选一款。已经装过的，直接下一步。",
         "why": "开了以后，就算别人知道你的密码，没有你的手机也登不进来。",
-        "next": "我已装好 · 下一步"
+        "next": "我已装好 · 下一步",
+        "password_hint": "先输入当前密码，确认是你本人。"
       },
       "bind": {
         "title": "把灵魂簿添加到验证器",

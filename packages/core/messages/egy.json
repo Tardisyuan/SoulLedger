@@ -3414,7 +3414,8 @@
       "hours_left_consequence": "Unut {{hours}} Wenen · Er Khet: Sab Wehem Sekhem",
       "under_hour_consequence": "Nen Unut Wa Wenen · Er Khet: Sab Wehem Sekhem",
       "expired_consequence": "Mut · Sab Wehem Sekhem",
-      "new_hint": "Sesh 8 Er Hry"
+      "new_hint": "Sesh 8 Er Hry",
+      "success_others_out": "Sekhem Mawy Seth. Medjat Ky: Per Aq Seth."
     },
     "forgot_password": {
       "link": "Nen Rekh Sekhem",

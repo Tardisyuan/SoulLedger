@@ -25,12 +25,13 @@ from rest_framework.views import APIView
 
 from apps.soul_accounts import mfa
 from apps.soul_accounts import services as svc
-from apps.soul_accounts.me_views import IP_ATTEMPTS, LOGIN_WINDOW_SECONDS, SoulAPIView
+from apps.soul_accounts.me_views import CODE_ATTEMPTS, IP_ATTEMPTS, LOGIN_WINDOW_SECONDS, SoulAPIView, _rate_keys
 from apps.soul_accounts.serializers import (
     SoulMfaCodeRequestSerializer,
     SoulMfaDisableRequestSerializer,
     SoulMfaRecoveryCodesSerializer,
     SoulMfaRefusalSerializer,
+    SoulMfaSetupRequestSerializer,
     SoulMfaSetupResponseSerializer,
     SoulMfaStatusSerializer,
     SoulMfaVerifyRequestSerializer,
@@ -69,10 +70,14 @@ def _error(exc: svc.SoulAccountError):
     return Response({"detail": str(exc), "code": exc.code}, status=exc.status)
 
 
-def _ip_key(request):
+def _client_ip(request):
     from apps.core.client_ip import get_client_ip
 
-    return f"soul_mfa_rate:ip:{get_client_ip(request)}"
+    return get_client_ip(request)
+
+
+def _ip_key(request):
+    return f"soul_mfa_rate:ip:{_client_ip(request)}"
 
 
 class SoulMfaVerifyView(APIView):
@@ -138,8 +143,25 @@ class MeMfaStatusView(SoulAPIView):
 
 
 class MeMfaSetupView(SoulAPIView):
-    @extend_schema(request=None, responses={200: SoulMfaSetupResponseSerializer, 409: SoulMfaRefusalSerializer})
+    @extend_schema(request=SoulMfaSetupRequestSerializer,
+                   responses={200: SoulMfaSetupResponseSerializer, 400: SoulMfaRefusalSerializer,
+                              409: SoulMfaRefusalSerializer, 429: SoulMfaRefusalSerializer})
     def post(self, request):
+        """当前密码 + 开始设置。密码不对 → 400 `wrong_password`,不产生密钥。错的次数记进**密码登录的那两个计数**
+        (同一灵魂编号 5 次 / 同一 IP 50 次,15 分钟):偷到登录状态的人在这里猜密码,和在登录页猜吃同一份预算,
+        满了答 429 `rate_limited`。"""
+        body = SoulMfaSetupRequestSerializer(data=request.data)
+        body.is_valid(raise_exception=True)
+        ip_key, code_key = _rate_keys(_client_ip(request), self.account.soul.soul_code)
+        ip_attempts, code_attempts = cache.get(ip_key, 0), cache.get(code_key, 0)
+        if ip_attempts >= IP_ATTEMPTS or code_attempts >= CODE_ATTEMPTS:
+            return _refuse("rate_limited", status.HTTP_429_TOO_MANY_REQUESTS)
+        password = body.validated_data["password"]
+        if not password or not request.user.check_password(password):
+            cache.set(ip_key, ip_attempts + 1, timeout=LOGIN_WINDOW_SECONDS)
+            cache.set(code_key, code_attempts + 1, timeout=LOGIN_WINDOW_SECONDS)
+            return _refuse("wrong_password", status.HTTP_400_BAD_REQUEST,
+                           remaining_attempts=max(0, CODE_ATTEMPTS - code_attempts - 1))
         try:
             secret, url = mfa.begin_setup(self.account)
         except svc.SoulAccountError as exc:

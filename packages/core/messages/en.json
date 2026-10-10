@@ -142,7 +142,10 @@
       "saved_check": "I have saved these recovery codes somewhere safe",
       "complete_failed": "Could not finish setup, try again",
       "done_title": "Two-step verification is on",
-      "done_body": "From the next sign-in, the authenticator code is asked for after your password."
+      "done_body": "From the next sign-in, the authenticator code is asked for after your password.",
+      "password_hint": "Enter your current password first, to show it is you.",
+      "password_wrong": "That password is wrong",
+      "password_locked": "Too many password tries; try again later"
     },
     "manage": {
       "off_body": "When on, signing in asks for the 6-digit code from your authenticator app after the password — a stolen password alone no longer opens the account.",
@@ -3447,7 +3450,8 @@
       "hours_left_consequence": "{{hours}} hours left · after that an officer must reset it",
       "under_hour_consequence": "Less than an hour left · after that an officer must reset it",
       "expired_consequence": "Expired · an officer must reset it",
-      "new_hint": "At least 8 characters"
+      "new_hint": "At least 8 characters",
+      "success_others_out": "Password changed; sign-ins on your other devices are signed out"
     },
     "forgot_password": {
       "link": "Forgot password",
@@ -4181,7 +4185,8 @@
         "no_app_title": "No authenticator yet?",
         "no_app_body": "Search your phone's app store for “authenticator”; any free one will do. If you already have one, go straight on.",
         "why": "With it on, someone who learns your password still cannot sign in without your phone.",
-        "next": "I have one · Next"
+        "next": "I have one · Next",
+        "password_hint": "Enter your current password first, to show it is you."
       },
       "bind": {
         "title": "Add Soul Ledger to the authenticator",

@@ -1142,8 +1142,9 @@ def set_new_password(request):
     # 「其他设备上的登录已全部退出」: every refresh token this account holds is
     # blacklisted there. An access token already issued lives out its lifetime
     # (`ACCESS_TOKEN_LIFETIME`, 30 minutes by default) and cannot be renewed.
+    from apps.authentication.passwords import end_sessions
     from apps.soul_accounts.models import SoulAccount
-    from apps.soul_accounts.services import _revoke_refresh_tokens, set_password_chosen_by_soul
+    from apps.soul_accounts.services import set_password_chosen_by_soul
 
     account = SoulAccount.objects.filter(user=user).first()
     if account is not None:
@@ -1152,7 +1153,7 @@ def set_new_password(request):
     else:  # a SOUL-role user with no soul account (none are created that way now)
         user.set_password(new_password)
         user.save(update_fields=["password"])
-        _revoke_refresh_tokens(user)
+        end_sessions(user)
 
     # Invalidate the code
     cache.delete(f"pwd_reset:{email}")
