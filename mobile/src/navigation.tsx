@@ -371,6 +371,13 @@ export function RootNavigator() {
               })}
             />
             <Stack.Screen
+              name="AccountPassword"
+              component={ChangePasswordScreen}
+              options={({ navigation }) => ({
+                header: () => <AppHeader title={t("profile.change_password")} onBack={navigation.goBack} />,
+              })}
+            />
+            <Stack.Screen
               name="About"
               component={AboutScreen}
               options={({ navigation }) => ({
