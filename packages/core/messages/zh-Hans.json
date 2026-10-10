@@ -1319,7 +1319,9 @@
       "go_view": "去查看 →",
       "load_error": "加载失败",
       "sync_ok": "同步正常",
-      "unbooked": "未入簿"
+      "unbooked": "未入簿",
+      "resend_dispatch": "待重新发起的调拨",
+      "go_resend": "去处理 →"
     },
     "civ_share": "占比",
     "civ_empty": "尚未入册 · 去登记",
@@ -4730,7 +4732,8 @@
     "retried": "调拨已重新发起",
     "last_refusal_rejected": "上次调拨被执行地拒绝：{{reason}}",
     "last_refusal_rejected_bare": "上次调拨被执行地拒绝",
-    "last_refusal_cancelled": "上次调拨已被取消"
+    "last_refusal_cancelled": "上次调拨已被取消",
+    "last_refusal_redispatched": "已重发 {{n}} 次"
   },
   "seal": {
     "aria": "{{court}}之印"

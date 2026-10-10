@@ -12599,6 +12599,10 @@ paths:
         return on every request ever made. It was deleted 2026-08-28.
       parameters:
       - in: query
+        name: awaiting_redispatch
+        schema:
+          type: boolean
+      - in: query
         name: cycle
         schema:
           type: integer
@@ -33101,9 +33105,12 @@ components:
         at:
           type: string
           format: date-time
+        redispatched:
+          type: integer
       required:
       - at
       - reason
+      - redispatched
       - status
     SentenceLastRefusalStatusEnum:
       enum:

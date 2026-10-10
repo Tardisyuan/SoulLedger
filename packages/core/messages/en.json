@@ -1319,7 +1319,9 @@
       "go_view": "View →",
       "load_error": "Failed to load",
       "sync_ok": "In sync",
-      "unbooked": "Not entered"
+      "unbooked": "Not entered",
+      "resend_dispatch": "Dispatches to send again",
+      "go_resend": "Handle →"
     },
     "civ_share": "Share",
     "civ_empty": "No souls yet · register one",
@@ -4730,7 +4732,8 @@
     "retried": "Dispatch sent again",
     "last_refusal_rejected": "The last dispatch was refused by the destination: {{reason}}",
     "last_refusal_rejected_bare": "The last dispatch was refused by the destination",
-    "last_refusal_cancelled": "The last dispatch was cancelled"
+    "last_refusal_cancelled": "The last dispatch was cancelled",
+    "last_refusal_redispatched": "Sent again {{n}} time(s)"
   },
   "seal": {
     "aria": "Seal of {{court}}"

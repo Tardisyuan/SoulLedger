@@ -15556,6 +15556,7 @@ export interface components {
             reason: string | null;
             /** Format: date-time */
             at: string;
+            redispatched: number;
         };
         /**
          * @description * `REJECTED` - REJECTED
@@ -27751,6 +27752,7 @@ export interface operations {
     v1_sentence_plans_list: {
         parameters: {
             query?: {
+                awaiting_redispatch?: boolean;
                 cycle?: number;
                 /** @description Which field to use when ordering the results. */
                 ordering?: string;

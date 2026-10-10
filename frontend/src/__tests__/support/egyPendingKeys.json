@@ -1,4 +1,7 @@
 [
   "scheduler.jobs.chat_cleanup_unsent_images",
-  "permissions.config.errors.overwrite_disabled"
+  "permissions.config.errors.overwrite_disabled",
+  "dashboard.todo.resend_dispatch",
+  "dashboard.todo.go_resend",
+  "sentence_plan.last_refusal_redispatched"
 ]
