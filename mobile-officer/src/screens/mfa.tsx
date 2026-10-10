@@ -18,13 +18,16 @@ import { Linking, View } from "react-native";
 import { ActionButton, Segmented } from "../kit";
 import { mfaManageFailureKey } from "../rules";
 import { useSession } from "../session";
-import { Button, FieldError, Input, Notice, Txt, space, useI18n, useRemote, useToast } from "../shared";
+import { Button, FieldError, Input, Notice, Txt, family, space, useI18n, useRemote, useToast } from "../shared";
 import { AccountFrame } from "./account";
 
 const STEPS = 4;
 
-/** 密钥四位一组,手抄用。 */
-const groupKey = (secret: string) => secret.replace(/(.{4})/g, "$1 ").trim();
+/** 密钥四位一组、组间一格、每行四组(16 位),手抄用。仍是一整串文字,长按选中整串。 */
+const groupKey = (secret: string) =>
+  (secret.match(/.{1,4}/g) ?? [])
+    .map((g, i) => (i === 0 ? g : i % 4 === 0 ? `\n${g}` : ` ${g}`))
+    .join("");
 const digits = (s: string) => s.replace(/\D/g, "").slice(0, 6);
 
 export function MfaScreen({ onBack, onLocked }: { onBack: () => void; onLocked?: (locked: boolean) => void }) {
@@ -98,7 +101,7 @@ function Disabled({ status, onStart }: { status: MfaStatus; onStart: () => void 
   );
 }
 
-/** Ten codes, selectable as one block so a long-press copies them all. */
+/** Ten codes in two equal columns of five, no numbering; each column is selectable text. */
 function RecoveryCodes({ codes }: { codes: string[] }) {
   const { t } = useI18n();
   return (
@@ -106,9 +109,13 @@ function RecoveryCodes({ codes }: { codes: string[] }) {
       <Notice tone="neutral">
         <Txt variant="caption">{`◐ ${t("mfa.setup.step4_warning")}`}</Txt>
       </Notice>
-      <Txt testID="mfa-codes-text" selectable variant="bodyLg" style={{ fontVariant: ["tabular-nums"], lineHeight: 30 }}>
-        {codes.join("\n")}
-      </Txt>
+      <View testID="mfa-codes-text" style={{ flexDirection: "row", gap: space[5] }}>
+        {[codes.slice(0, Math.ceil(codes.length / 2)), codes.slice(Math.ceil(codes.length / 2))].map((col, i) => (
+          <Txt key={i} testID={`mfa-codes-col-${i}`} selectable variant="bodyLg" style={{ fontFamily: family.mono[500], lineHeight: 30 }}>
+            {col.join("\n")}
+          </Txt>
+        ))}
+      </View>
       <Txt variant="caption" tone="muted">{t("officer_app.mfa.select_hint")}</Txt>
     </View>
   );
@@ -347,12 +354,12 @@ function Wizard({ onLeave, onEnabled, onLocked }: { onLeave: () => void; onEnabl
             <Notice tone="neg" testID="mfa-setup-failed">{`! ${setupFailed}`}</Notice>
           ) : setup ? (
             <>
-              <ActionButton testID="mfa-open-authenticator" kind="primary" title={`${t("mfa.setup.step2_open")} ↗︎`} onPress={openAuthenticator} />
-              {openFailed ? <Notice tone="neutral" testID="mfa-open-failed">{t("officer_app.mfa.open_failed")}</Notice> : null}
               <Txt variant="caption" tone="muted">{t("mfa.setup.manual_key")}</Txt>
-              <Txt testID="mfa-manual-key" selectable variant="bodyLg" style={{ lineHeight: 28 }}>
+              <Txt testID="mfa-manual-key" selectable variant="bodyLg" style={{ fontFamily: family.mono[500], lineHeight: 28 }}>
                 {groupKey(setup.secret)}
               </Txt>
+              <ActionButton testID="mfa-open-authenticator" kind="primary" title={`${t("mfa.setup.step2_open")} ↗︎`} onPress={openAuthenticator} />
+              {openFailed ? <Notice tone="neutral" testID="mfa-open-failed">{t("officer_app.mfa.open_failed")}</Notice> : null}
               <Txt variant="caption" tone="muted">{t("officer_app.mfa.select_hint")}</Txt>
               <Txt variant="caption" tone="muted">{t("mfa.setup.key_meta")}</Txt>
             </>

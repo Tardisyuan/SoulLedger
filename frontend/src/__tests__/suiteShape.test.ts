@@ -134,6 +134,7 @@ const COLLECTED_FILES = [
   "SentenceNodeRetry.test.tsx",
   "SentencePlanForms.test.tsx",
   "JudgmentAmendmentConclude.test.tsx",
+  "JudgmentComments.test.tsx",
   // 2026-09-25 审判台 / 审判队列 / 处置(规范 v1 第三类 A)。
   "JudgmentDesk.test.tsx",
   "JudgmentListPage.test.tsx",

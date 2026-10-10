@@ -127,4 +127,36 @@ describe("重新发起调拨", () => {
     expect(retryButton()).toBeNull();
     expect(screen.queryByText(/上次调拨/)).toBeNull();
   });
+  it("被拒:原因行用 danger、13px、前面有「!」(装饰,对读屏隐藏),长理由完整留着;按钮与它同在一行容器里", async () => {
+    as("JUDGE", "CN_DIYU", ...JUDGE);
+    const LONG = "名额已满".repeat(60);
+    planApi.list.mockResolvedValue(page([plan({ nodes: [node(1, "CN_DIYU", "COMPLETED"), node(2, "EG_DUAT", "PENDING", { last_refusal: { ...REJECTED, reason: LONG } })] })]));
+    renderCard();
+    const reasonText = await screen.findByText(tZh("sentence_plan.last_refusal_rejected", { reason: LONG }));
+    const row = screen.getByTestId("sentence-node-refusal");
+    expect(row).toHaveAttribute("data-refusal", "rejected");
+    expect(row.className).toMatch(/color-danger/);
+    expect(row.className).not.toMatch(/ink-muted/);
+    expect(row.className).toMatch(/text-sm/);
+    expect(row.className).not.toMatch(/truncate|line-clamp|overflow-hidden/);
+    expect(reasonText.textContent).toBe(tZh("sentence_plan.last_refusal_rejected", { reason: LONG })); // 不截断
+    const mark = row.querySelector("[aria-hidden='true']");
+    expect(mark?.textContent?.trim()).toBe("!");
+    expect(reasonText).not.toHaveAttribute("aria-hidden");
+    expect(screen.getByTestId("sentence-node-retry")).toContainElement(retryButton() as HTMLElement);
+    expect(screen.getByTestId("sentence-node-retry").className).toMatch(/flex-wrap/);
+  });
+
+  it("被取消:不用 danger,用 ink-muted,前面是「○」而不是「!」", async () => {
+    as("JUDGE", "CN_DIYU", ...JUDGE);
+    planApi.list.mockResolvedValue(page([plan({ nodes: [node(1, "CN_DIYU", "COMPLETED"), node(2, "EG_DUAT", "PENDING", { last_refusal: { ...REJECTED, status: "CANCELLED", reason: null } })] })]));
+    renderCard();
+    await screen.findByText(tZh("sentence_plan.last_refusal_cancelled"));
+    const row = screen.getByTestId("sentence-node-refusal");
+    expect(row).toHaveAttribute("data-refusal", "cancelled");
+    expect(row.className).toMatch(/ink-muted/);
+    expect(row.className).not.toMatch(/danger/);
+    expect(row.querySelector("[aria-hidden='true']")?.textContent?.trim()).toBe("○");
+    expect(row.textContent).not.toMatch(/!/);
+  });
 });
