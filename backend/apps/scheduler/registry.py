@@ -123,7 +123,12 @@ REGISTRY: tuple[JobSpec, ...] = (
     JobSpec("notifications.email_action_needed_for_tenant", TENANT, "*/5 * * * *", max_runtime=240),
     # 同一条通道给 `tenant=None` 的全局管理员:他们没有租户,按租户那一行扫不到。GLOBAL,同样每 5 分钟。
     JobSpec("notifications.email_action_needed_global", GLOBAL, "*/5 * * * *", max_runtime=240),
+    # 审计 / 登录日志留存(apps/audit/retention.py)。保留天数来自 AUDIT_LOG_RETENTION_DAYS /
+    # LOGIN_LOG_RETENTION_DAYS,默认 0 = 不清理(任务只记一行日志)。每天一次,分批删除。
+    JobSpec("audit.prune_logs_for_tenant", TENANT, "20 4 * * *", max_runtime=3600),
     # ---- global jobs ---------------------------------------------------------
+    # 同上,但处理不属于任何租户的行(审计 tenant=NULL;登录日志无用户或用户无租户)。
+    JobSpec("audit.prune_untenanted_logs", GLOBAL, "40 4 * * *", max_runtime=3600),
     JobSpec("authentication.flush_expired_tokens", GLOBAL, "30 3 * * *"),
     # Period 300s; lock TTL / LOST threshold 240s so a crashed run cannot make
     # the next tick SKIPPED.

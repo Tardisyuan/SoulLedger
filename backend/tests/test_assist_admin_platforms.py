@@ -270,7 +270,9 @@ def test_an_unreachable_table_is_remembered_briefly_and_is_not_found(api, net, m
     routes[platforms.LITELLM_URL] = requests.Timeout()
     ttls = []
     real_set = platforms.cache.set
-    monkeypatch.setattr(platforms.cache, "set", lambda k, v, t: (ttls.append(t), real_set(k, v, t)))
+    monkeypatch.setattr(platforms.cache, "set", lambda k, v, t: (
+        # `cache` is the shared default cache: the rate-limit counters write to it too.
+        ttls.append(t) if not k.startswith("throttle_") else None, real_set(k, v, t)))
     assert _price(api, "deepseek", "deepseek-chat")["found"] is False
     assert _price(api, "deepseek", "deepseek-chat")["found"] is False
     assert len(calls) == 1 and ttls == [platforms.PRICE_FAIL_SECONDS]
