@@ -216,3 +216,45 @@ class InboxReplyTemplate(models.Model):
 
     def __str__(self):
         return self.title
+
+
+#: 书信图片存在 MEDIA_ROOT/private/ 之下:nginx 与 DEBUG 路由都不公开这个前缀,
+#: 文件只经 `GET /api/v1/chat-images/<id>/?t=<签名>`(`apps/chat/images.py`)。
+CHAT_IMAGE_DIR = "private/chat_images"
+
+
+def _chat_image_path(instance, filename):
+    from django.utils import timezone
+
+    return f"{CHAT_IMAGE_DIR}/{timezone.now():%Y/%m}/{filename}"
+
+
+class ChatImage(models.Model):
+    """书信里的一张图(2026-10-10)。**图片本身不在 Synapse**:消息事件里只有 `{id, width, height}`
+    这个引用(`io.soulledger.image`,正文是「[图片]」,老客户端照常显示一行字),文件在我们自己的存储里,
+    与朋友圈帖子图片同一条校验与重编码(`apps/social/images.py`)。
+
+    **谁能取到由这一行决定,不由事件里写了什么决定**:只有 `conversation` 的参与方(灵魂:这一世的账号;
+    收件箱:有 `soul_inbox.read` 且在收件殿司里的官员)取得到,别的会话的 id 拿在手里也是 404。
+    先传后发:`sent_at` 为空时只有上传者自己看得见;发出去(事件落进 Synapse)之后才对另一方可见。
+    未发出的图超过 24 小时由下一次上传顺手清掉(`images.purge_stale`)。
+    租户经 `conversation__tenant`;同库外键,符合本文件顶部的分库约束。
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    conversation = models.ForeignKey(Conversation, on_delete=models.CASCADE, related_name="images")
+    uploader = models.ForeignKey("soul_accounts.SoulAccount", on_delete=models.CASCADE, related_name="+")
+    file = models.FileField(upload_to=_chat_image_path, max_length=200)
+    width = models.PositiveIntegerField()
+    height = models.PositiveIntegerField()
+    byte_size = models.PositiveIntegerField()
+    content_type = models.CharField(max_length=20)
+    event_id = models.CharField(max_length=255, blank=True, default="")
+    sent_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [models.Index(fields=["conversation", "uploader", "sent_at"])]
+
+    def __str__(self):
+        return f"ChatImage({self.pk}) in {self.conversation_id}"

@@ -1177,6 +1177,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/chat-images/{image_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["v1_chat_image_file"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/chat/inbox/": {
         parameters: {
             query?: never;
@@ -3660,6 +3676,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/me/chat/conversations/{conversation_id}/images/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description 先传后发的第一步:一张图一个请求(App 逐张显示进度、失败的单独重试)。校验与朋友圈图片同一个函数:
+         *     按魔数认 PNG / JPEG / WebP,5 MB / 4000 万像素上限,重编码去掉 EXIF。400 `not_an_image` / `too_large` /
+         *     `too_many_pixels`;一个会话里未发出的图最多 4 张,409 `too_many_pending`;会话此刻不能说话时与发送同一个拒绝。
+         */
+        post: operations["v1_me_chat_image_upload"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/me/chat/conversations/{conversation_id}/messages/": {
         parameters: {
             query?: never;
@@ -3681,6 +3718,40 @@ export interface paths {
          *     ponytail: 同一个 txn_id 的两个请求**同时**到达仍可能各发一条;App 同一封信不并发送。
          */
         post: operations["v1_me_chat_conversations_messages_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/chat/images/{image_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 这一世账号能看的书信图的签名地址(约一小时有效)。不是会话参与方、对方还没发出:404。 */
+        get: operations["v1_me_chat_image_url"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/chat/images/{image_id}/send/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 把上传好的图作为一条消息发出(一条消息一张图,与文字分开)。同一张图再发回第一次的 `event_id`。 */
+        post: operations["v1_me_chat_image_send"];
         delete?: never;
         options?: never;
         head?: never;
@@ -9264,6 +9335,22 @@ export interface components {
              */
             retry_at?: string;
         };
+        /** @description 一张书信图的取图地址:签给调用者、约一小时有效、取文件时重新核对权限。 */
+        ChatImage: {
+            /** Format: uuid */
+            id: string;
+            /** @description 站点根相对路径 `/api/v1/chat-images/<id>/?t=…`。 */
+            url: string;
+            width: number;
+            height: number;
+        };
+        /** @description 上传成功:引用这张图的 id(再 `POST /me/chat/images/{id}/send/` 发出)与它的像素尺寸。 */
+        ChatImageUploaded: {
+            /** Format: uuid */
+            id: string;
+            width: number;
+            height: number;
+        };
         /** @description `POST /me/chat/lookup/`。走请求体而不是查询串:编号是登录名,不该落进访问日志的 URL 里。 */
         ChatLookup: {
             /** @description 完整的灵魂编号,大小写不论;不做前缀或模糊匹配。 */
@@ -10656,6 +10743,8 @@ export interface components {
             /** @description 回信官员的职位(官员回信;灵魂的信为空)。 */
             officer_title: string;
             body: string;
+            /** @description 灵魂来信里的图片;`body` 此时是「[图片]」。没有为 null。 */
+            image: components["schemas"]["ChatImage"] | null;
             timestamp: number;
         };
         /** @description 一位官员:经办人,或「标给同僚」弹层里的一个候选。 */
@@ -19453,6 +19542,36 @@ export interface operations {
             };
         };
     };
+    v1_chat_image_file: {
+        parameters: {
+            query: {
+                /** @description `GET /me/chat/images/<id>/` 或收件箱消息给出的签名。 */
+                t: string;
+            };
+            header?: never;
+            path: {
+                image_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 图片文件(PNG / JPEG / WebP)。 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 签名无效或过期,或查看者此刻看不见这张图。 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     v1_chat_inbox_list: {
         parameters: {
             query?: {
@@ -23473,6 +23592,82 @@ export interface operations {
             };
         };
     };
+    v1_me_chat_image_upload: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatImageUploaded"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatError"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatError"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatError"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatError"];
+                };
+            };
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatError"];
+                };
+            };
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatError"];
+                };
+            };
+        };
+    };
     v1_me_chat_conversations_messages_create: {
         parameters: {
             query?: never;
@@ -23515,6 +23710,88 @@ export interface operations {
                 };
             };
             429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatError"];
+                };
+            };
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatError"];
+                };
+            };
+        };
+    };
+    v1_me_chat_image_url: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                image_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatImage"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatError"];
+                };
+            };
+        };
+    };
+    v1_me_chat_image_send: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                image_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessageSent"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatError"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatError"];
+                };
+            };
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

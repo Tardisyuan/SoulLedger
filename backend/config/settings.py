@@ -298,6 +298,10 @@ REST_FRAMEWORK = {
         # 朋友圈帖子图片的文件出口(apps/social/media_views.py),按签名里的查看者计。
         # 一屏动态流 20 条 × 9 张 = 180 张图;匿名的 60/minute 会把它掐断。
         "post_media": "600/minute",
+        # 书信图片:文件出口按签名里的查看者计(一屏书信几张图);上传按灵魂账号计,
+        # 每张最多 5 MB、一个会话同时最多 4 张未发出(apps/chat/images.py)。
+        "chat_image": "600/minute",
+        "chat_image_upload": "120/hour",
         # 助手提问(apps/soul_assist/views.py::MeAssistView 按灵魂账号计;OfficerAssistView 按官员计,
         # 读的也是这一个速率 —— docs/ARCHITECTURE-officer-assist.md §6 Q3 = A)。
         "assist": "30/hour",

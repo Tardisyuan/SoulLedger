@@ -118,6 +118,7 @@ class FakeMatrix:
         message = {"event_id": event_id, "sender": sender, "body": body,
                    "officer": (extra or {}).get("io.soulledger.officer", ""),
                    "officer_title": (extra or {}).get("io.soulledger.officer_title", ""),
+                   "image": (extra or {}).get("io.soulledger.image"),
                    "grant": (extra or {}).get(GRANT_KEY),
                    # 真 Synapse 的 origin_server_ts:墙钟毫秒。收件箱按它推「灵魂最后一封的时刻」
                    # (`services.reconcile_inbox`),与我们自己的 `timezone.now()` 比较 —— 1970 年的

@@ -121,6 +121,23 @@ class MessageSentSerializer(serializers.Serializer):
     event_id = serializers.CharField()
 
 
+class ChatImageUploadedSerializer(serializers.Serializer):
+    """上传成功:引用这张图的 id(再 `POST /me/chat/images/{id}/send/` 发出)与它的像素尺寸。"""
+
+    id = serializers.UUIDField()
+    width = serializers.IntegerField()
+    height = serializers.IntegerField()
+
+
+class ChatImageSerializer(serializers.Serializer):
+    """一张书信图的取图地址:签给调用者、约一小时有效、取文件时重新核对权限。"""
+
+    id = serializers.UUIDField()
+    url = serializers.CharField(help_text="站点根相对路径 `/api/v1/chat-images/<id>/?t=…`。")
+    width = serializers.IntegerField()
+    height = serializers.IntegerField()
+
+
 class InboxMessageSerializer(serializers.Serializer):
     """官员后台读到的一条。`body` 从 Synapse 来,不经过我们的库,也不进审计。"""
 
@@ -129,6 +146,7 @@ class InboxMessageSerializer(serializers.Serializer):
     sender_name = serializers.CharField()
     officer_title = serializers.CharField(help_text="回信官员的职位(官员回信;灵魂的信为空)。")
     body = serializers.CharField()
+    image = ChatImageSerializer(allow_null=True, help_text="灵魂来信里的图片;`body` 此时是「[图片]」。没有为 null。")
     timestamp = serializers.IntegerField()
 
 
