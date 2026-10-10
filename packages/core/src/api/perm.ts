@@ -91,22 +91,17 @@ export interface RolePermissionConflict {
   current_version: number;
 }
 
-/** 200 body of POST /perm/import/ (views.py:401, stats from export.py:87). */
-export interface PermissionImportResult {
-  message: string;
-  stats: {
-    permissions: number;
-    roles: number;
-    role_permissions: number;
-    field_permissions: number;
-    data_scopes: number;
-  };
-}
-
 type Schemas = components["schemas"];
 
+/**
+ * 200 body of POST /perm/import/ - 每段 `{created, skipped}`,外加 `skipped_details`
+ * (哪一段、哪个标识、为什么没加)。`dry_run` 时形状相同,但什么都没写。
+ */
+export type PermissionImportResult = Schemas["PermissionImportResult"];
+export type PermissionImportSkipped = Schemas["PermissionImportSkipped"];
+
 /** 导出文档(`GET /perm/export/` 的 body),去掉 `overwrite` —— 导入时由 `importConfig` 固定。 */
-export type PermissionImportDocument = Omit<Schemas["PermissionImportRequest"], "overwrite">;
+export type PermissionImportDocument = Omit<Schemas["PermissionImportRequest"], "overwrite" | "dry_run">;
 
 /**
  * Per-cell matrix save — POST /perm/role-permissions/changes/
@@ -216,7 +211,8 @@ export const permApi = {
    * 导入权限配置(仅 ADMIN)。body 是 JSON 文档本身(不是 multipart)。
    * 这里**固定 `overwrite: false`**:只合并,get_or_create 语义,已有的行不动、不删。
    * 要覆盖得另开口子,由产品决定,不在这个方法里。
+   * `dryRun`:后端跑完整合并再回滚,返回同形状的 stats,不留任何行(导入弹层的摘要步)。
    */
-  importConfig: (document: PermissionImportDocument) =>
-    api.post<PermissionImportResult>("/perm/import/", { ...document, overwrite: false }),
+  importConfig: (document: PermissionImportDocument, dryRun = false) =>
+    api.post<PermissionImportResult>("/perm/import/", { ...document, overwrite: false, dry_run: dryRun }),
 };
