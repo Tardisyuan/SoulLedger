@@ -633,7 +633,9 @@
     },
     "field_required": "此项为必填",
     "dismiss": "知道了",
-    "type_name_to_confirm": "输入「{{name}}」以确认"
+    "type_name_to_confirm": "输入「{{name}}」以确认",
+    "export": "导出",
+    "export_failed": "导出失败"
   },
   "pagination": {
     "info": "第 {{page}} / {{total}} 页 ({{count}} 条记录)",
@@ -1932,7 +1934,17 @@
     "help_count_24h": "近 24 小时第 {{n}} 次",
     "help_open_users": "去用户页",
     "help_ignore": "不是本人 · 忽略",
-    "open_case": "打开案件"
+    "open_case": "打开案件",
+    "select_all": "全选",
+    "select_row": "选择通知:{{title}}",
+    "batch_region": "通知批量操作",
+    "batch_selected": "已选 {{n}} 条",
+    "batch_limit": "一次至多 {{n}} 条",
+    "batch_clear": "取消选择",
+    "batch_deleted": "已删除 {{count}} 条",
+    "batch_delete_error": "删除失败",
+    "batch_delete_title": "删除所选的 {{n}} 条通知?",
+    "batch_delete_message": "删除后将从你的收件箱消失,不影响别人的通知。"
   },
   "realms": {
     "title": "地域",
@@ -5339,5 +5351,13 @@
       "show_rest": "展开其余 {{n}} 条",
       "after_close": "结案后"
     }
+  },
+  "print": {
+    "button": "打印",
+    "case_no": "案号",
+    "soul_no": "灵魂编号",
+    "page_pre": "第 ",
+    "page_mid": " 页 / 共 ",
+    "page_post": " 页"
   }
 }

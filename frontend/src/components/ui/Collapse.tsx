@@ -3,6 +3,7 @@
 import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
+import { usePrinting } from "@/src/hooks/usePrinting";
 
 /** 超过这么多行的整节不做高度动画,只淡入淡出(Design 第三批回复)。 */
 export const COLLAPSE_FADE_ONLY_ABOVE = 40;
@@ -23,7 +24,7 @@ type Phase = "unmounted" | "rest" | "enter" | "leave" | "hidden";
  * 内容留在 DOM 里(`hidden`)。一开始就是展开的内容不播展开动画。
  */
 export function Collapse({
-  open,
+  open: openProp,
   id,
   rows,
   className,
@@ -36,6 +37,9 @@ export function Collapse({
   className?: string;
   children: ReactNode;
 }) {
+  // 打印时一律展开:收着的内容这里根本不渲染,光靠打印样式展不开(`usePrinting`)。
+  const printing = usePrinting();
+  const open = openProp || printing;
   const [phase, setPhase] = useState<Phase>(open ? "rest" : "unmounted");
   const closed = phase === "unmounted" || phase === "leave" || phase === "hidden";
   if (open === closed) setPhase(open ? "enter" : "leave");

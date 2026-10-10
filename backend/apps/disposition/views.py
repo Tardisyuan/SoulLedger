@@ -3,12 +3,15 @@ REST views for Disposition app.
 """
 from django.db.models import Count, Exists, OuterRef
 from django_filters import rest_framework as filters
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 
 from apps.core.archive import DeletionNotAllowedError
+from apps.core.exports import export_csv
 from apps.core.mixins import TenantCreateMixin, TenantQuerySetMixin
 from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
@@ -90,6 +93,7 @@ class DispositionViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeVie
     permission_codename = "disposition"
     extra_permissions = {
         'execute': ['disposition.execute'],
+        'export': ['disposition.read'],
         'create': ['disposition.execute'],
         'update': ['disposition.execute'],
         'partial_update': ['disposition.execute'],
@@ -291,6 +295,26 @@ class DispositionViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeVie
                 status=status.HTTP_409_CONFLICT,
             )
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @extend_schema(responses={(200, "text/csv"): OpenApiTypes.BINARY, 400: OpenApiTypes.OBJECT})
+    @action(detail=False, methods=["get"], url_path="export", pagination_class=None)
+    def export(self, request):
+        """导出当前筛选下的处置 CSV:与列表同一租户划界、同一筛选(`section`、`soul_reborn`、
+        `show_archived`……)、同一权限(disposition.read)。列取自列表序列化器,所以字段权限照常生效。"""
+        return export_csv(
+            request,
+            qs=self.filter_queryset(self.get_queryset()),
+            serializer_class=DispositionSerializer,
+            columns=[
+                ("Disposition ID", "id"), ("Soul", "soul_name"), ("Section", "section"),
+                ("Verdict", "verdict"), ("Realm", "realm_code"), ("Sentence Years", "sentence_years"),
+                ("Eternal", "is_eternal"), ("Memory Reset", "memory_reset"), ("Executed", "is_executed"),
+                ("Term Start", "term_start"), ("Executed At", "executed_at"), ("Term End", "term_end"),
+                ("Expired At", "expired_at"), ("Notes", "notes"), ("Created At", "created_at"),
+            ],
+            filename="dispositions_export.csv",
+            resource="disposition",
+        )
 
     @action(detail=True, methods=["post"])
     def archive(self, request, pk=None):

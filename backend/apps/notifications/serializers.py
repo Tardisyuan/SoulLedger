@@ -110,6 +110,24 @@ class UserNotificationListSerializer(_LocalizedMixin, serializers.ModelSerialize
         ]
 
 
+#: 批量条一次至多勾选一页;与灵魂批量(`SOUL_BATCH_RECYCLE_MAX`)同一上限。
+NOTIFICATION_BATCH_MAX = 100
+
+
+class NotificationBatchSerializer(serializers.Serializer):
+    """`{"ids": [...]}`:要标已读 / 删除的通知。别人的、不存在的 id 不报错,只是不被动到。"""
+
+    ids = serializers.ListField(
+        child=serializers.IntegerField(min_value=1), min_length=1, max_length=NOTIFICATION_BATCH_MAX,
+    )
+
+
+class BatchDeleteResultSerializer(serializers.Serializer):
+    """`{"deleted": N}` —— 实际被删的条数(不含别人的、不存在的、已删的)。"""
+
+    deleted = serializers.IntegerField()
+
+
 class MarkAllReadResultSerializer(serializers.Serializer):
     """`{"marked_read": N}` — what `mark_all_read` returns.
 

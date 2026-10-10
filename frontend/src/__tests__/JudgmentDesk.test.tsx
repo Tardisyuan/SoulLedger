@@ -325,7 +325,9 @@ describe("甲 · 灵魂栏的所在界域、审判方式、世次 / 种类", () 
     await waitFor(() => expect(plaque).toHaveBeenLastCalledWith(expect.objectContaining({ caseNumber: "CN-2026-0042" })));
     expect(plaque).toHaveBeenLastCalledWith(expect.objectContaining({ meta: undefined }));
     // 页面本身(这里没有壳,身份带不在)一个案号也不画:可复制的那一个只在身份带右栏。
-    expect(screen.queryByText(/CN-2026-0042/)).toBeNull();
+    // 唯一的例外是打印页脚(第十五批 C1):屏幕上不显示,只在打印时印在页脚左边,不可复制。
+    const shown = screen.queryAllByText(/CN-2026-0042/).filter((el) => !el.closest("[data-print-foot]"));
+    expect(shown).toEqual([]);
     expect(document.querySelector("[data-case-number]")).toBeNull();
   });
 
