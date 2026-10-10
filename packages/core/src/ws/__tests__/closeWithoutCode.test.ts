@@ -7,7 +7,7 @@ import {
   CREDENTIAL_WAIT_MS,
   shouldReconnectAfterClose,
 } from "../client";
-import { trackCredentialChange } from "../credentialChange";
+import { trackCredentialChange } from "../../api/credentialChange";
 import { ACCESS_TOKEN_KEY, configurePlatform, resetPlatform } from "../../platform/index";
 
 /**
