@@ -414,9 +414,11 @@ CELERY_TIMEZONE = "UTC"
 CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
 
 # apps.audit retention (apps/audit/retention.py). Days to keep AuditLog / LoginLog rows;
-# 0 or unset = keep forever, i.e. the scheduled prune deletes nothing.
-AUDIT_LOG_RETENTION_DAYS = int(os.getenv("AUDIT_LOG_RETENTION_DAYS", "0") or 0)
-LOGIN_LOG_RETENTION_DAYS = int(os.getenv("LOGIN_LOG_RETENTION_DAYS", "0") or 0)
+# Defaults (2026-10-10, owner's decision): 365 days of audit log, 180 days of login log.
+# Set the variable to 0 to keep forever, i.e. the scheduled prune deletes nothing.
+# An empty value (`AUDIT_LOG_RETENTION_DAYS=`) is 0 as well -- it does not fall back to the default.
+AUDIT_LOG_RETENTION_DAYS = int(os.getenv("AUDIT_LOG_RETENTION_DAYS", "365") or 0)
+LOGIN_LOG_RETENTION_DAYS = int(os.getenv("LOGIN_LOG_RETENTION_DAYS", "180") or 0)
 
 # apps.scheduler — TaskRun history and the "did it run" detection.
 # Retention: delete finished runs older than this many days ...
