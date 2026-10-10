@@ -1,3 +1,4 @@
 [
-  "scheduler.jobs.chat_cleanup_unsent_images"
+  "scheduler.jobs.chat_cleanup_unsent_images",
+  "permissions.config.errors.overwrite_disabled"
 ]
