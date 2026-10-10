@@ -30,11 +30,21 @@
  * for 7 days: sent again, it answers with the first event id and posts nothing
  * — which also keeps a throttled room's resend from being refused as a second
  * request.
+ *
+ * IMAGES (2026-10-10) ride the same outbox. An image item holds the compressed
+ * file's local uri (the thing that survives a restart), and goes in two steps
+ * through the backend: upload (its id is written back onto the item the moment
+ * it is known), then send. The send is idempotent per uploaded image on the
+ * server, so a restart anywhere between the two steps cannot post twice: after
+ * the upload it sends the saved image id, before it uploads again (an orphan the
+ * server sweeps). Images are delivered one at a time, in the order picked —
+ * four concurrent uploads would land in whatever order they finished.
  */
 import { soulErrorStatus } from "@soulledger/core/api/soul";
 import {
   soulChatApi,
   soulChatErrorCode,
+  soulChatImageErrorCode,
   soulChatRetryAt,
   type SoulConversation,
 } from "@soulledger/core/api/soul-chat";
@@ -57,15 +67,28 @@ import { sendsThroughBackend } from "./chatRules";
 export type Availability = "probing" | "ready" | "unavailable" | "not_configured";
 export type Refused = { code: string; retryAt: string | null };
 
+/** A letter image waiting to go: the compressed local file, and once uploaded the server's id for it. */
+export interface OutgoingImage {
+  uri: string;
+  name: string;
+  type: string;
+  /** Pixel size of the file (known from compression, replaced by the server's once uploaded). */
+  width?: number;
+  height?: number;
+  imageId?: string;
+}
+
 export interface Outgoing {
   txnId: string;
   conversationId: string;
   roomId: string;
+  /** Empty for an image: an image is its own message, never mixed with text. */
   body: string;
   ts: number;
   state: "sending" | "sent" | "queued" | "failed";
   eventId?: string;
   refused?: Refused;
+  image?: OutgoingImage;
 }
 
 export interface Chat {
@@ -85,6 +108,10 @@ export interface Chat {
   /** Try Synapse again now (the retry button; also flushes the queue). */
   reconnect: () => void;
   send: (c: SoulConversation, body: string) => void;
+  /** One message per image, in order; each uploads then sends, one at a time. */
+  sendImages: (c: SoulConversation, images: OutgoingImage[]) => void;
+  /** 0..1 while an image's file is going up, by txn id. Not persisted. */
+  progress: Record<string, number>;
   resend: (txnId: string) => void;
   loadOlder: (roomId: string) => Promise<void>;
   markRead: (roomId: string, eventId: string) => void;
@@ -112,6 +139,8 @@ const INERT: Chat = {
   reload: async () => {},
   reconnect: noop,
   send: noop,
+  sendImages: noop,
+  progress: {},
   resend: noop,
   loadOlder: async () => {},
   markRead: noop,
@@ -143,7 +172,9 @@ interface StoredOutbox {
 
 const isStoredItem = (o: unknown): o is Outgoing => {
   const x = o as Record<string, unknown> | null;
-  return !!x && ["txnId", "conversationId", "roomId", "body"].every((k) => typeof x[k] === "string") && typeof x.ts === "number";
+  const image = x?.image as Record<string, unknown> | undefined;
+  const imageOk = image === undefined || (!!image && ["uri", "name", "type"].every((k) => typeof image[k] === "string"));
+  return !!x && ["txnId", "conversationId", "roomId", "body"].every((k) => typeof x[k] === "string") && typeof x.ts === "number" && imageOk;
 };
 
 /** This account's record, or an empty one. Anything else on disk (another account, an old build, garbage) reads as empty. */
@@ -184,6 +215,7 @@ export function ChatProvider({ account, children }: { account: string | null; ch
   const [me, setMe] = useState<string | null>(null);
   const [outbox, setOutbox] = useState<Outgoing[]>(() => (account ? readOutbox(account).items : []));
   const [refused, setRefused] = useState<Record<string, Refused>>({});
+  const [progress, setProgress] = useState<Record<string, number>>({});
   const client = useRef<MatrixClient | null>(null);
   const since = useRef<string | null>(null);
   const known = useRef<Set<string>>(new Set());
@@ -263,8 +295,75 @@ export function ChatProvider({ account, children }: { account: string | null; ch
     setOutbox((all) => all.map((o) => (o.txnId === txnId ? { ...o, ...change } : o)));
   }, []);
 
+  /** Images go one at a time, in order; `inflight` keeps a flush from queueing one that is already on its way. */
+  const imageChain = useRef<Promise<void>>(Promise.resolve());
+  const inflight = useRef(new Set<string>());
+
+  const deliverImage = useCallback(
+    (o: Outgoing): Promise<void> => {
+      if (inflight.current.has(o.txnId)) return Promise.resolve();
+      inflight.current.add(o.txnId);
+      patch(o.txnId, { state: "sending", refused: undefined });
+      const run = async () => {
+        try {
+          const c = convs.current.find((row) => row.id === o.conversationId);
+          // Before the list has loaded, unknown is not gone: keep waiting (as for text).
+          if (!c) return patch(o.txnId, { state: listed.current ? "failed" : "queued" });
+          const image = outboxRef.current.find((x) => x.txnId === o.txnId)?.image ?? o.image!;
+          try {
+            let imageId = image.imageId;
+            if (!imageId) {
+              const body = new FormData();
+              body.append("file", { uri: image.uri, name: image.name, type: image.type } as unknown as Blob);
+              const up = await soulChatApi.uploadImage(c.id, body, (fraction) => setProgress((p) => ({ ...p, [o.txnId]: fraction })));
+              imageId = up.id;
+              // Written back at once: from here a restart sends this image instead of uploading another.
+              setOutbox((all) => all.map((x) => (x.txnId === o.txnId ? { ...x, image: { ...image, imageId: up.id, width: up.width, height: up.height } } : x)));
+            }
+            const eventId = await soulChatApi.sendImage(imageId);
+            patch(o.txnId, { state: "sent", eventId });
+          } catch (error) {
+            if (isOffline(error)) {
+              patch(o.txnId, { state: "queued" });
+              setAvailability("unavailable");
+              return;
+            }
+            const code = soulChatErrorCode(error);
+            const imageCode = soulChatImageErrorCode(error);
+            // `not_found`: the server no longer has the uploaded file (swept after a day) — send again from the local file.
+            const stale = code === "not_found";
+            // Final for this image: a fact about the conversation (muted, closed, …) or about the file itself.
+            // Not final: a full upload queue, a throttle, a server fault — the retry may well work.
+            const refusal =
+              code && !stale
+                ? { code, retryAt: soulChatRetryAt(error) }
+                : imageCode && imageCode !== "too_many_pending"
+                  ? { code: imageCode, retryAt: null }
+                  : undefined;
+            setOutbox((all) =>
+              all.map((x) =>
+                x.txnId === o.txnId ? { ...x, state: "failed" as const, refused: refusal, image: stale && x.image ? { ...x.image, imageId: undefined } : x.image } : x
+              )
+            );
+            if (code && !stale) {
+              setRefused((r) => ({ ...r, [c.id]: { code, retryAt: soulChatRetryAt(error) } }));
+              void reload().then(() => setRefused((r) => ({ ...r, [c.id]: { code, retryAt: soulChatRetryAt(error) } })));
+            }
+          }
+        } finally {
+          inflight.current.delete(o.txnId);
+          setProgress(({ [o.txnId]: _done, ...rest }) => rest);
+        }
+      };
+      imageChain.current = imageChain.current.then(run, run);
+      return imageChain.current;
+    },
+    [patch, reload]
+  );
+
   const deliver = useCallback(
     async (o: Outgoing) => {
+      if (o.image) return deliverImage(o);
       // Its echo already came back (a restart after the response was lost): delivered, do not post again.
       const seen = echoed.current.get(o.txnId);
       if (seen) return patch(o.txnId, { state: "sent", eventId: seen });
@@ -293,7 +392,7 @@ export function ChatProvider({ account, children }: { account: string | null; ch
         void reload().then(() => refusal && setRefused((r) => ({ ...r, [c.id]: refusal })));
       }
     },
-    [patch, reload]
+    [patch, reload, deliverImage]
   );
 
   const flush = useCallback(() => {
@@ -402,6 +501,7 @@ export function ChatProvider({ account, children }: { account: string | null; ch
       me,
       outbox,
       refused,
+      progress,
       reload,
       reconnect: () => {
         wake.current();
@@ -418,6 +518,20 @@ export function ChatProvider({ account, children }: { account: string | null; ch
         };
         setOutbox((all) => [...all, o]);
         if (o.state === "sending") void deliver(o);
+      },
+      sendImages: (c, images) => {
+        const at = Date.now();
+        const items: Outgoing[] = images.map((image, i) => ({
+          txnId: newTxn(),
+          conversationId: c.id,
+          roomId: c.room_id,
+          body: "",
+          ts: at + i,
+          state: "sending",
+          image,
+        }));
+        setOutbox((all) => [...all, ...items]);
+        for (const o of items) void deliverImage(o);
       },
       resend: (txnId) => {
         const o = outboxRef.current.find((x) => x.txnId === txnId);
@@ -450,7 +564,7 @@ export function ChatProvider({ account, children }: { account: string | null; ch
         return c;
       },
     }),
-    [availability, conversations, listError, gone, timeline, me, outbox, refused, reload, flush, deliver]
+    [availability, conversations, listError, gone, timeline, me, outbox, refused, progress, reload, flush, deliver, deliverImage]
   );
 
   return <ChatContext.Provider value={enabled ? value : INERT}>{children}</ChatContext.Provider>;

@@ -18,5 +18,9 @@
   "officer_app.kinds.letter",
   "officer_app.letter.irreversible",
   "officer_app.letter.unavailable",
-  "officer_app.letter.failed"
+  "officer_app.letter.failed",
+  "soul_app.chat.image.failed",
+  "soul_app.chat.image.errors.too_many_pending",
+  "soul_app.chat.image.errors.images_unavailable",
+  "soul_app.chat.image.button"
 ]

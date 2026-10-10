@@ -193,8 +193,31 @@ export interface ChatMessage {
   officer: string | null;
   /** That officer's position (`io.soulledger.officer_title`, e.g. 判官); `null` when not given or not a hall reply. */
   officerTitle: string | null;
+  /**
+   * A letter image (`io.soulledger.image`, 2026-10-10): only the reference. The file is not in Matrix —
+   * its signed URL comes from the backend (`soulChatApi.imageUrl`), which checks the viewer is a party to
+   * the conversation. `body` is "[图片]" on such a message, so a build that does not know images shows a line.
+   */
+  image: ChatImageRef | null;
   /** Set on this device's own sends: matches a queued message to its echo. */
   txnId: string | null;
+}
+
+export interface ChatImageRef {
+  id: string;
+  width: number;
+  height: number;
+}
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** The event's image reference, or null when absent or not the shape the backend writes. */
+function toImageRef(raw: unknown): ChatImageRef | null {
+  const ref = raw as Record<string, unknown> | null;
+  if (!ref || typeof ref.id !== "string" || !UUID.test(ref.id)) return null;
+  const { width, height } = ref;
+  if (typeof width !== "number" || typeof height !== "number" || !(width > 0) || !(height > 0)) return null;
+  return { id: ref.id, width, height };
 }
 
 export interface RoomTimeline {
@@ -227,6 +250,7 @@ export function toMessage(event: MatrixEvent): ChatMessage | null {
     ts: event.origin_server_ts,
     officer: typeof officer === "string" && officer ? officer : null,
     officerTitle: typeof officerTitle === "string" && officerTitle ? officerTitle : null,
+    image: toImageRef(event.content["io.soulledger.image"]),
     txnId: event.unsigned?.transaction_id ?? null,
   };
 }
