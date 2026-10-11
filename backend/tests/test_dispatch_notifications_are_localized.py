@@ -114,9 +114,9 @@ def test_a_cancellation_tells_the_target_hall_only_and_names_soul_and_reason(hal
     assert "孟婆之魂" in row["message"] and "改派别处" in row["message"]
     [zh] = [r for r in _read(hall.ub, "zh-Hans") if r["notification_type"] == "DISPATCH_CANCELLED"]
     assert zh["title"] == "移交提案已被发起方取消"
-    # egy 还没有 Design 的词:读作 zh-Hans,而不是 500。
+    # egy 的词由 Design 第十九批给出(2026-10-11);此前缺词时读作 zh-Hans,而不是 500。
     [egy] = [r for r in _read(hall.ub, "egy") if r["notification_type"] == "DISPATCH_CANCELLED"]
-    assert egy["title"] == "移交提案已被发起方取消"
+    assert egy["title"] == "Dbh Hab-Ba Sehen Seth Em Tepy Iri"
 
 
 def test_a_rolled_back_cancellation_notifies_nobody(hall, django_capture_on_commit_callbacks):
