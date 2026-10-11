@@ -576,8 +576,10 @@ export default function SoulDetailPage() {
     <SoulJudgmentHistory judgments={judgments} />
   );
 
+  // 页脚的灵魂编号:灵魂本身没有给人读的编号(`Soul` 只有内部 id;「灵魂编号」是账号的,而且只有读得了账号的人才取得到),
+  // 所以这里不印这一项 —— 宁可空着,也不把 UUID 当编号印出来。
   return (
-    <PrintFrame hall={hall} reference={soul?.id} referenceLabel={t("print.soul_no")}>
+    <PrintFrame hall={hall} reference={null} referenceLabel={t("print.soul_no")}>
     <PageShell
       variant="page"
       backLink={backLink}

@@ -116,6 +116,19 @@ describe("the identity band's case number on a soul", () => {
     );
   });
 
+  it("the printed footer never carries the soul's internal id: no human-readable soul number exists, so none is printed", async () => {
+    // 灵魂本身没有给人读的编号(只有内部 id;「灵魂编号」属于账号)。此前页脚印的是 `soul.id` —— 一个 UUID。
+    withJudgments([]);
+    const { container } = renderPage();
+    await waitFor(() => expect(lastCaseRef()).toEqual({}));
+    const footer = container.querySelector("[data-print-reference]");
+    expect(footer).not.toBeNull();
+    expect(footer).toBeEmptyDOMElement();
+    expect(container.querySelector("[data-print-foot]")?.textContent ?? "").not.toMatch(
+      /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|soul-1/i,
+    );
+  });
+
   it("with no judgment at all keeps the label and reports an empty value", async () => {
     withJudgments([]);
     renderPage();

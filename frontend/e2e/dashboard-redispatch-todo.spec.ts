@@ -53,7 +53,7 @@ test.describe("dashboard todo strip — dispatches awaiting a resend", () => {
     await page.goto("/dashboard");
     const cells = page.locator("[data-todo]");
     await expect(cells).toHaveCount(4);
-    await expect(cells.nth(3).locator("[data-todo-count]")).toHaveText("12,345");
+    await expect(cells.nth(3).locator("[data-todo-count]")).toHaveText("12 345");
     const boxes = await cells.evaluateAll((els) =>
       els.map((el) => {
         const r = el.getBoundingClientRect();
