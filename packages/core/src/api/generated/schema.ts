@@ -3841,6 +3841,39 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/me/device-login/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 开启。要当前密码(与两步验证开启向导同一套计数:错 5 次 429 `rate_limited`,错的 400 `wrong_password`)。 */
+        post: operations["v1_me_device_login_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/device-login/revoke/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["v1_me_device_login_revoke_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/me/life/": {
         parameters: {
             query?: never;
@@ -7440,6 +7473,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/soul-accounts/credentials/{id}/print-slip/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description 交付单要印的内容(灵魂名、编号、殿、有效期、官员、打印时间)+ 一条 `credentials.print_slip` 审计。
+         *     **绝不含密码,不改状态**;待交付 / 已查看 / 已交付可打,过期与作废 409。
+         */
+        post: operations["v1_soul_accounts_credentials_print_slip_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/soul-accounts/credentials/{id}/retry/": {
         parameters: {
             query?: never;
@@ -7576,6 +7629,22 @@ export interface paths {
          *     return on every request ever made. It was deleted 2026-08-28.
          */
         post: operations["v1_soul_accounts_rebirth_applications_cross_civilization_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/soul-auth/device-login/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["v1_soul_auth_device_login_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -9517,6 +9586,8 @@ export interface components {
             new_password: string;
             /** @default  */
             push_token: string;
+            /** @default  */
+            device_credential: string;
         };
         /** @description 200 body. `access` / `refresh` are this device's new pair (absent when no `refresh` was sent). */
         ChangePasswordResponse: {
@@ -16198,6 +16269,17 @@ export interface components {
             /** Format: uuid */
             parent?: string | null;
         };
+        /** @description 交付单要印的东西。**没有密码。** */
+        SoulCredentialSlip: {
+            soul_name: string;
+            soul_code: string;
+            home_tenant: components["schemas"]["MeTenant"];
+            /** Format: date-time */
+            expires_at: string;
+            officer_name: string;
+            /** Format: date-time */
+            printed_at: string;
+        };
         /**
          * @description The shape `_soul_level_date_problems` returns, for the schema only.
          *
@@ -16215,6 +16297,31 @@ export interface components {
             severity: components["schemas"]["SeverityEnum"];
             code: string;
             message: string;
+        };
+        SoulDeviceLoginCredential: {
+            credential: string;
+        };
+        SoulDeviceLoginEnableRequest: {
+            /** @default  */
+            password: string;
+        };
+        SoulDeviceLoginIssued: {
+            /** @description 不透明凭据,只此一次;App 放进要验证生物特征才能取出的安全存储。 */
+            credential: string;
+        };
+        /**
+         * @description `code`: device_login_revoked(401,带 `reason`:password_changed / password_reset_by_officer /
+         *     account_reincarnated / turned_off)、device_login_invalid(401)、rate_limited(429)。
+         */
+        SoulDeviceLoginRefusal: {
+            detail: string;
+            code: string;
+            reason?: string;
+        };
+        SoulDeviceLoginRequest: {
+            soul_code: string;
+            credential: string;
+            device_token?: string;
         };
         /** @description 所有业务拒绝的形状。`code` 稳定,App 按它分支;`detail` 是给人看的中文。 */
         SoulError: {
@@ -24334,6 +24441,71 @@ export interface operations {
             };
         };
     };
+    v1_me_device_login_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["SoulDeviceLoginEnableRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["SoulDeviceLoginEnableRequest"];
+                "multipart/form-data": components["schemas"]["SoulDeviceLoginEnableRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulDeviceLoginIssued"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulMfaRefusal"];
+                };
+            };
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulMfaRefusal"];
+                };
+            };
+        };
+    };
+    v1_me_device_login_revoke_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SoulDeviceLoginCredential"];
+                "application/x-www-form-urlencoded": components["schemas"]["SoulDeviceLoginCredential"];
+                "multipart/form-data": components["schemas"]["SoulDeviceLoginCredential"];
+            };
+        };
+        responses: {
+            /** @description 已关闭(不认识或早已关闭也是 204) */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     v1_me_life_retrieve: {
         parameters: {
             query?: never;
@@ -31003,6 +31175,36 @@ export interface operations {
             };
         };
     };
+    v1_soul_accounts_credentials_print_slip_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this initial credential. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulCredentialSlip"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulError"];
+                };
+            };
+        };
+    };
     v1_soul_accounts_credentials_retry_create: {
         parameters: {
             query?: never;
@@ -31168,6 +31370,54 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SoulError"];
+                };
+            };
+        };
+    };
+    v1_soul_auth_device_login_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SoulDeviceLoginRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["SoulDeviceLoginRequest"];
+                "multipart/form-data": components["schemas"]["SoulDeviceLoginRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulLoginOutcome"];
+                };
+            };
+            /** @description 字段校验失败 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulDeviceLoginRefusal"];
+                };
+            };
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulDeviceLoginRefusal"];
                 };
             };
         };

@@ -1,7 +1,7 @@
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
-from apps.soul_accounts import me_views, mfa_views
+from apps.soul_accounts import device_login_views, me_views, mfa_views
 from apps.soul_accounts.views import (
     InitialCredentialViewSet,
     OfficerCooldownShorteningViewSet,
@@ -27,6 +27,7 @@ soul_auth_urlpatterns = [
     path("refresh/", me_views.SoulRefreshView.as_view(), name="soul-refresh"),
     path("logout/", me_views.SoulLogoutView.as_view(), name="soul-logout"),
     path("mfa/verify/", mfa_views.SoulMfaVerifyView.as_view(), name="soul-mfa-verify"),
+    path("device-login/", device_login_views.SoulDeviceLoginView.as_view(), name="soul-device-login"),
 ]
 
 me_urlpatterns = [
@@ -38,6 +39,8 @@ me_urlpatterns = [
     path("mfa/confirm/", mfa_views.MeMfaConfirmView.as_view(), name="me-mfa-confirm"),
     path("mfa/recovery-codes/", mfa_views.MeMfaRecoveryCodesView.as_view(), name="me-mfa-recovery-codes"),
     path("mfa/disable/", mfa_views.MeMfaDisableView.as_view(), name="me-mfa-disable"),
+    path("device-login/", device_login_views.MeDeviceLoginView.as_view(), name="me-device-login"),
+    path("device-login/revoke/", device_login_views.MeDeviceLoginRevokeView.as_view(), name="me-device-login-revoke"),
     path("life/", me_views.MeLifeView.as_view(), name="me-life"),
     path("past-lives/", me_views.MePastLivesView.as_view(), name="me-past-lives"),
     path("sentence-plan/", me_views.MeSentencePlanView.as_view(), name="me-sentence-plan"),
