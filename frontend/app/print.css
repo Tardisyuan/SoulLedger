@@ -11,7 +11,8 @@
  *     Chromium 系(Chrome / Edge 131+)支持;Firefox、Safari 不识别这条规则,页脚就只剩左边的案号 / 编号。
  *     页码前后的字由 PrintFrame 按语言写进根元素的 `--print-page-*`。
  *   · 黑白:系统色 CanvasText / Canvas,不写色值。状态徽章本来就带文字与字形,去色即可。
- *   · 按钮、输入、折叠开关、`[data-print-hide]` 不印;折叠区内容由 Collapse 在打印时强制展开
+ *   · 交互与导航不印(按钮、输入、控件的标签、页壳的返回 / 动作 / 标签页 / 筛选 / 分页槽、nav、`[data-print-hide]`),
+ *     规则按「类」写,见「交互与导航不印」一段;折叠区内容由 Collapse 在打印时强制展开
  *     (`usePrinting`),这里再把它的动画 / hidden 压平。
  */
 
@@ -100,18 +101,52 @@
     transition: none !important;
     filter: none !important;
   }
-  [data-print-doc] svg {
+  /* 实心图标跟着变黑;线稿(根上 fill="none")不动 —— 否则描边图形会被填成实心块。 */
+  [data-print-doc] svg:not([fill="none"]) {
     fill: CanvasText !important;
   }
 
-  /* 交互件不印。 */
+  /* 交互与导航不印 —— 它们不属于文书。按「类」而不是逐个元素:
+   *   · 控件本身(button / input / select / textarea)与按 ARIA 角色声明的控件;
+   *   · 控件的标签:包着控件的 label(裁决键、开关),紧跟在控件后面的 label(复选框),
+   *     以及 Field 壳(标签在控件前面;`data-field` 由 Field 自己带);
+   *   · 页壳的返回 / 动作 / 标签页 / 筛选 / 分页槽,与 nav;
+   *   · 其余没有统一特征的(操作卡、列表行里的「查看」、装饰图形、只对未结案有意义的提示)
+   *     页面自己标 `data-print-hide`。
+   * 正文里的链接文字(案号、条款号)与徽章不在其中,照印。
+   */
   [data-print-doc] button,
   [data-print-doc] input,
   [data-print-doc] select,
   [data-print-doc] textarea,
   [data-print-doc] [role="tablist"],
+  [data-print-doc] [role="button"],
+  [data-print-doc] [role="switch"],
+  [data-print-doc] [role="checkbox"],
+  [data-print-doc] [role="radio"],
+  [data-print-doc] [role="tab"],
+  [data-print-doc] [role="menuitem"],
+  [data-print-doc] [role="combobox"],
+  [data-print-doc] nav,
+  [data-print-doc] label:has(input, select, textarea),
+  [data-print-doc] :is(input, select, textarea) + label,
+  [data-print-doc] [data-field],
+  [data-print-doc] [data-page-shell-back],
+  [data-print-doc] [data-page-shell-actions],
+  [data-print-doc] [data-page-shell-tabs],
+  [data-print-doc] [data-page-shell-filters],
+  [data-print-doc] [data-page-shell-pagination],
   [data-print-doc] [data-print-hide] {
     display: none !important;
+  }
+
+  /* 例外:当区块标题用的展开开关(评议 · N)—— 它的字是标题,以纯文字印出来。 */
+  [data-print-doc] button[data-print-title] {
+    display: block !important;
+    padding: 0;
+    border: 0;
+    font-weight: 600;
+    text-align: left;
   }
 
   /* 折叠区:内容全部展开。 */

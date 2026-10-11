@@ -84,7 +84,8 @@
     "verify_done_body": "Nen Rekh Sekhem: Wehem Sekhem Em Sesh Pen.",
     "verify_invalid": "Menf Nen Wenen",
     "verify_invalid_body": "Dbh Menf Ky.",
-    "verify_go_profile": "Wehem Er Djes"
+    "verify_go_profile": "Wehem Er Djes",
+    "reset_open_in_app": "Wen Em Medjat Sab"
   },
   "mfa": {
     "title": "Aq Sep Sen",
@@ -141,7 +142,10 @@
       "saved_check": "Sau Seth Medu Ankh Wehem Pen",
       "complete_failed": "Nen Iri Seth. Wehem Iri",
       "done_title": "Aq Sep Sen Wen Seth",
-      "done_body": "Aq Khery: Sekhem, Er Khet Medu Ahet Em Kat Medu Ahet."
+      "done_body": "Aq Khery: Sekhem, Er Khet Medu Ahet Em Kat Medu Ahet.",
+      "password_hint": "Sesh Sekhem-Ek Tepy: Maa Ba-Ek.",
+      "password_wrong": "Sekhem Nen Maat",
+      "password_locked": "Sep Menmen. Wehem Iri Er Khet."
     },
     "manage": {
       "off_body": "Wen Seth: Aq Dbh Sekhem Hena Medu Ahet 6 Em Kat Medu Ahet. Sekhem Wa Nen Wen Ren Aq.",
@@ -1319,7 +1323,9 @@
       "go_view": "Maa →",
       "load_error": "Nen Ini",
       "sync_ok": "Mi Smen",
-      "unbooked": "Nen Em Medjat Djer"
+      "unbooked": "Nen Em Medjat Djer",
+      "resend_dispatch": "Hab-Ba Er Wehem",
+      "go_resend": "Iri →"
     },
     "civ_share": "Redu",
     "civ_empty": "Nen Sesh Djer · Sesh",
@@ -1986,7 +1992,8 @@
     "batch_deleted": "Hedj {{count}} Seth",
     "batch_delete_error": "Nen Hedj",
     "batch_delete_title": "Hedj Sedjem {{n}} Setep?",
-    "batch_delete_message": "Hedj: Nen Gem-Ek Em Sedjem-Ek. Sedjem Ky Nen Hedj."
+    "batch_delete_message": "Hedj: Nen Gem-Ek Em Sedjem-Ek. Sedjem Ky Nen Hedj.",
+    "open_dispatch": "Wen Hab-Ba"
   },
   "realms": {
     "title": "Ta",
@@ -2337,7 +2344,16 @@
       "target_unchosen": "Nen Setep",
       "pending_submit": "Nen Hab Djer",
       "not_yet": "Nen Shesep"
-    }
+    },
+    "cancel_dispatch": "Sehen Hab-Ba",
+    "cancel_title": "Sehen Hab-Ba Pen?",
+    "cancel_warning": "Wesekhet Ky Nen Hesy Djer. Sehen: Hab-Ba Pen Hedj; Ba Wenen Em Wesekhet Pen; Sedjem Sab Er Wesekhet Ky.",
+    "cancel_reason": "Khet Sehen",
+    "cancel_placeholder": "Sesh Khet Sehen",
+    "confirm_cancel": "Sehen Hab-Ba",
+    "cancel_success": "Sehen Hab-Ba Seth",
+    "cancel_error": "Nen Sehen Hab-Ba",
+    "cancel_not_cancellable": "Wesekhet Ky Iri Seth: Nen Sehen Hab-Ba Pen."
   },
   "crossJudgments": {
     "title": "Wedja Taui Ky",
@@ -2856,7 +2872,14 @@
       "failed": "Nen Iri. Wehem Iri.",
       "mfa_reset": {
         "reason": "Medu (Em Tepy, Sesh Em Medew Maa)",
-        "reason_required": "Medu Em Tepy"
+        "reason_required": "Medu Em Tepy",
+        "title": "Khetem Aq Sep Sen {{name}}?",
+        "consequence_1": "Medu Imen, Medu Ankh Wehem, «Medjat Pen: Nen Hehy Djer» Neb: Hedj. Medjat Aq Seth: Wehem Er Aq.",
+        "consequence_2": "Er Khet: Ba Aq Em Sekhem Wa; Ba Maa Ren Sab Em Sedjem Sab.",
+        "consequence_3": "Khetem Wa, Nen Wen Er Ba. Ba Djes-Ef Wen Mawy.",
+        "done": "Khetem Aq Sep Sen Seth",
+        "not_enabled": "Ba Pen Nen Wen Aq Sep Sen",
+        "not_home_hall": "Sab Wesekhet Ba Wa: Khetem Aq Sep Sen-Ef."
       }
     },
     "rebirth": {
@@ -3070,7 +3093,16 @@
     "legend": {
       "light": "{{list}}: Hesb Neb Wa",
       "lamp": "Khabes Djet: Aat Wa; Nen Hesb Hena Sehed Ky"
-    }
+    },
+    "post_updated": "Smen Seth",
+    "post_update_error": "Nen Smen",
+    "edit_title": "Sesh Mawy",
+    "edit_discard_title": "Hedj Sesh Mawy?",
+    "edit_discard_message": "Sesh Mawy-Ek Nen Smen.",
+    "edit_discard_confirm": "Hedj Sesh Mawy",
+    "edit_keep": "Sesh Mawy Djer",
+    "edited": "Sesh Mawy Seth",
+    "edited_at": "Sesh Mawy Em {{time}}"
   },
   "tenants": {
     "active": "Em Iri",
@@ -3151,7 +3183,8 @@
       "soul_inbox": "Sesh Wesekhet",
       "sentence_requests": "Dbh Wetep",
       "assistant_admin": "Smen Hehy Medu",
-      "moderation": "Maat Shemsu"
+      "moderation": "Maat Shemsu",
+      "recycle_bin": "Per Khet Hedj"
     },
     "queue": "Sepu Wedja",
     "about": "Khet Medjat Ba",
@@ -4154,7 +4187,9 @@
         "body": "Wen Seth: Er Aq, Sesh Sekhem Hena Medu Ahet 6. Kat Medu Ahet Iri Medu Ahet Mawy; Wenen Em Medjat-Ek Wa.",
         "no_app_title": "Nen Kat Medu Ahet Djer?",
         "why": "Rekh Ky Sekhem-Ek: Nen Medjat-Ek, Nen Aq.",
-        "next": "Wenen Seth · Nemet Ky"
+        "next": "Wenen Seth · Nemet Ky",
+        "no_app_body": "Hehy «Authenticator» Em Medjat-Ek; Setep Wa. Wenen Seth: Nemet Ky.",
+        "password_hint": "Sesh Sekhem-Ek Tepy: Maa Ba-Ek."
       },
       "bind": {
         "title": "Redi Er Kat Medu Ahet",
@@ -4174,7 +4209,9 @@
         "confirm": "Smen-I Medu Ankh Wehem, Nen Em Medjat Pen.",
         "done": "Khetem",
         "no_back": "Nen Er Hat. Setep: Khetem.",
-        "save_file": "Smen Em Djama"
+        "save_file": "Smen Em Djama",
+        "file_header": "Medu Ankh Wehem Medjat Ba: Medjat Nen Gem, Mi Mawy — Aq Em Medu Ankh Wehem. Medu Wa: Sep Wa. Smen Nen Em Medjat Pen.",
+        "save_failed": "Nen Smen Em Djama"
       },
       "manage": {
         "body": "Er Aq: Sesh Medu Ahet 6.",
@@ -4224,7 +4261,9 @@
         "bring": "Djed",
         "same_as_password": "Mi Nen Rekh Sekhem: Sab Wesekhet.",
         "no_email": "Nen Khetem Aq Sep Sen Em Wat Sesh."
-      }
+      },
+      "copied": "Senn Seth",
+      "wrong_password": "! Sekhem Nen Maat"
     }
   },
   "soul_push": {
@@ -4365,6 +4404,26 @@
     "judgment_reassign_requested": {
       "title": "Dbh Hab Ky",
       "body": "{{by}}: Dbh Hab Ky Wedja En {{soul}}"
+    },
+    "dispatch_proposed": {
+      "title": "Dbh Hab-Ba Iyi",
+      "body": "{{source}}: Dbh Hab-Ba Ba «{{soul}}» Er Wesekhet-Ek. Er Hesy-Ek."
+    },
+    "dispatch_approved": {
+      "title": "Dbh Hab-Ba Hesy Seth",
+      "body": "{{target}}: Hesy Dbh Hab-Ba Ba «{{soul}}» Em Wesekhet-Ek."
+    },
+    "dispatch_rejected": {
+      "title": "Dbh Hab-Ba Khesef Seth",
+      "body": "{{target}}: Khesef Dbh Hab-Ba Ba «{{soul}}» Em Wesekhet-Ek. Khet Khesef: {{reason}}"
+    },
+    "dispatch_rejected_bare": {
+      "title": "Dbh Hab-Ba Khesef Seth",
+      "body": "{{target}}: Khesef Dbh Hab-Ba Ba «{{soul}}» Em Wesekhet-Ek."
+    },
+    "dispatch_cancelled": {
+      "title": "Dbh Hab-Ba Sehen Seth Em Tepy Iri",
+      "body": "{{source}}: Sehen Dbh Hab-Ba Ba «{{soul}}». Khet Sehen: {{reason}}"
     }
   },
   "social_moderation": {
@@ -4826,7 +4885,8 @@
     "retried": "Wehem Hab-Ba Seth",
     "last_refusal_rejected": "Hab-Ba Pehwy: Khesef Em Per Hemes Setep Seth · {{reason}}",
     "last_refusal_rejected_bare": "Hab-Ba Pehwy: Khesef Em Per Hemes Setep Seth",
-    "last_refusal_cancelled": "Hab-Ba Pehwy: Sehen Seth"
+    "last_refusal_cancelled": "Hab-Ba Pehwy: Sehen Seth",
+    "last_refusal_redispatched": "Wehem Hab-Ba: Sep {{n}}"
   },
   "seal": {
     "aria": "Khetem En {{court}}"

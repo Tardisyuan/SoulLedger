@@ -11,6 +11,7 @@ import { TextAreaField } from "@/src/components/ui/Field";
 import { MissingValue } from "@/src/components/ui/DomainValue";
 import { QueryError } from "@/src/components/ui/PageError";
 import { PageSpinner } from "@/src/components/ui/Spinner";
+import { usePrinting } from "@/src/hooks/usePrinting";
 
 /**
  * 评议: what the officers who can read this case have noted on it. Same words as the officer app
@@ -26,6 +27,8 @@ export function JudgmentComments({ id, canWrite, concludedAt }: { id: string; ca
   // null = not chosen yet: open when there are comments, closed when there are none.
   const [chosen, setChosen] = useState<boolean | null>(null);
   const [showAll, setShowAll] = useState(false);
+  // 打印的是全部评议:「展开其余 N 条」是屏幕上的省略,纸上没有那个按钮,其余的就没了。
+  const printing = usePrinting();
   const [body, setBody] = useState("");
   const q = useJudgmentComments(id);
   const { isLoading, refetch } = q;
@@ -37,7 +40,7 @@ export function JudgmentComments({ id, canWrite, concludedAt }: { id: string; ca
   const text = body.trim();
   const open = chosen ?? (data ? data.length > 0 : false);
   const all = data ?? [];
-  const shown = showAll ? all : all.slice(-COMMENTS_SHOWN);
+  const shown = showAll || printing ? all : all.slice(-COMMENTS_SHOWN);
   const hidden = all.length - shown.length;
   // The first comment written after the case was concluded (ISO strings compare as text), if any.
   const firstAfter = concludedAt ? all.find((c) => c.created_at > concludedAt)?.id : undefined;
@@ -53,6 +56,8 @@ export function JudgmentComments({ id, canWrite, concludedAt }: { id: string; ca
         type="button"
         aria-expanded={open}
         aria-controls={regionId}
+        // 打印时这个开关当区块标题印(「评议 · N」纯文字),见 app/print.css。
+        data-print-title=""
         onClick={() => setChosen(!open)}
         className="text-sm font-semibold text-[oklch(var(--color-ink))]"
       >

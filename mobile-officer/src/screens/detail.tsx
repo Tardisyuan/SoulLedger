@@ -4,6 +4,7 @@
  * send to a computer.
  */
 import { JUDGMENT_COMMENT_MAX, judgmentApi } from "@soulledger/core/api/judgment";
+import { dispatchApi } from "@soulledger/core/api/dispatch";
 import { officerAppApi, type TodoItemDetail, type TodoKind } from "@soulledger/core/api/officer-app";
 import { soulAccountsApi } from "@soulledger/core/api/soul-accounts";
 import { soulsApi, type Soul } from "@soulledger/core/api/souls";
@@ -12,14 +13,14 @@ import { Pressable, Share, View } from "react-native";
 
 import { formatWhen } from "../format";
 import { ActionButton, StateView, viewStateOf } from "../kit";
-import { deskUrl, handledNotice, isDenied, todoTitle, type Verdict } from "../rules";
+import { deskUrl, dispatchStatusLine, dispatchView, handledNotice, isDenied, todoTitle, type ItemKind, type Verdict } from "../rules";
 import { useSession } from "../session";
 import { Icon, Input, Notice, Screen, SectionLabel, Txt, space, useI18n, useRemote, useTheme } from "../shared";
 import { LetterThread } from "./letter";
 import { CosignSheet, DecisionSheet, type CooldownFacts } from "./sheets";
 
 export type DetailTarget =
-  | { type: "todo"; kind: TodoKind; id: string }
+  | { type: "todo"; kind: ItemKind; id: string }
   | { type: "judgment"; id: string }
   | { type: "soul"; id: string };
 
@@ -39,7 +40,8 @@ export function Detail({ target, onBack, onSettled }: { target: DetailTarget; on
         <Txt variant="nav">{t("officer_app.back")}</Txt>
       </Pressable>
       {target.type === "todo" && target.kind === "letter" ? <LetterThread key={target.id} id={target.id} onSettled={onSettled} /> : null}
-      {target.type === "todo" && target.kind !== "letter" ? <TodoDetail kind={target.kind} id={target.id} onSettled={onSettled} /> : null}
+      {target.type === "todo" && target.kind === "dispatch" ? <DispatchLanding key={target.id} id={target.id} onSettled={onSettled} /> : null}
+      {target.type === "todo" && target.kind !== "letter" && target.kind !== "dispatch" ? <TodoDetail kind={target.kind} id={target.id} onSettled={onSettled} /> : null}
       {target.type === "judgment" ? <JudgmentDetail id={target.id} /> : null}
       {target.type === "soul" ? <SoulDetail id={target.id} /> : null}
     </View>
@@ -56,6 +58,43 @@ function ContinueOnDesk({ target }: { target: Parameters<typeof deskUrl>[0] }) {
       title={t("officer_app.continue_on_desk")}
       onPress={() => void Share.share({ message: deskUrl(target) }).catch(() => {})}
     />
+  );
+}
+
+/**
+ * What a dispatch notice lands on. The record decides, not the notice's type (`dispatchView`): this hall is the
+ * receiver and the proposal is still open -> the actionable detail (批准 / 驳回); anything else -> the same
+ * layout read-only, with one status line where the action bar would be. Read through the desk's own endpoint
+ * (`dispatch/records/<id>/`, which lets both parties in); a record this officer cannot read is the same
+ * denied / error state every other detail shows.
+ */
+function DispatchLanding({ id, onSettled }: { id: string; onSettled: () => void }) {
+  const { t } = useI18n();
+  const { state } = useSession();
+  const role = state.status === "signedIn" ? state.user.role : "";
+  const ownHall = state.status === "signedIn" ? state.user.tenant?.code : null;
+  const load = useCallback(() => dispatchApi.get(id).then((r) => r.data), [id]);
+  const { data, error, reload } = useRemote(load);
+  const view = viewStateOf({ data, error }, () => false, isDenied);
+  if (view || !data) return <StateView state={view ?? "loading"} onRetry={reload} role={role} area={t("officer_app.areas.todo")} />;
+  const mode = dispatchView(data, ownHall);
+  if (mode.mode === "act") return <TodoDetail kind="reassignment" id={id} onSettled={onSettled} />;
+  const line = dispatchStatusLine(data, mode.side);
+  return (
+    <Screen testID="dispatch-readonly" edges={["left", "right"]}>
+      <View style={{ padding: space[5], gap: space[4] }}>
+        <SectionLabel>{t("officer_app.kinds.reassignment")}</SectionLabel>
+        <Txt variant="title">{data.soul_name ?? ""}</Txt>
+        <Txt variant="caption" tone="muted">
+          {formatWhen(data.proposed_at)}
+        </Txt>
+        <View style={{ gap: space[1] }}>
+          <Txt variant="bodyLg" testID="dispatch-status">{`${line.glyph} ${t(line.key)}`}</Txt>
+          {line.reason ? <Txt variant="body" testID="dispatch-status-reason">{t("officer_app.dispatch_status.reason", { reason: line.reason })}</Txt> : null}
+        </View>
+        <ContinueOnDesk target={{ kind: "reassignment", id }} />
+      </View>
+    </Screen>
   );
 }
 

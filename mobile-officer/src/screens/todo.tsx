@@ -1,16 +1,16 @@
 /** 待办: the kinds of item waiting on this officer, grouped, each group titled with its count. */
-import { officerAppApi, type Todo, type TodoItem, type TodoKind } from "@soulledger/core/api/officer-app";
+import { officerAppApi, type Todo, type TodoItem } from "@soulledger/core/api/officer-app";
 import { useCallback, useEffect } from "react";
 import { View } from "react-native";
 
 import { Row, StateView, viewStateOf } from "../kit";
-import { TODO_GROUPS, isDenied, isTodoKind, todoTitle } from "../rules";
+import { TODO_GROUPS, isDenied, isTodoKind, todoTitle, type ItemKind } from "../rules";
 import { useSession } from "../session";
 import { Screen, SectionLabel, Txt, publishVoiceNumber, space, useI18n, useRemote } from "../shared";
 import { formatWhen } from "../format";
 
 export interface ItemRef {
-  kind: TodoKind;
+  kind: ItemKind;
   id: string;
 }
 
