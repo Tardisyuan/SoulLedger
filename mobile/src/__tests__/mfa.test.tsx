@@ -790,11 +790,12 @@ describe("sign-in, second step", () => {
     expect(bodies(calls, "POST /soul-auth/login/")).toEqual([{ soul_code: "QU33Q9FW5F", password: "my-long-password" }]);
   });
 
-  it("‹ goes back to the password as another account", async () => {
+  it("‹ goes back to the password with the number still in the box", async () => {
     await toSecondStep();
     fireEvent.press(screen.getByTestId("mfa-change-account"));
     await screen.findByTestId("login-submit");
-    expect(screen.getByTestId("login-soul-code").props.value).toBe("");
+    expect(screen.getByTestId("login-soul-code").props.value).not.toBe("");
+    expect(screen.getByTestId("login-soul-code").props.value).toHaveLength(10);
   });
 });
 
