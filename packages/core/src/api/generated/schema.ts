@@ -885,6 +885,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** @description 重新生成:先确认是本人(6 位数字或密码,与「关闭」同一个确认、同一把锁;不收恢复码),过了才作废旧码。 */
         post: operations["v1_auth_mfa_recovery_codes_create"];
         delete?: never;
         options?: never;
@@ -3913,6 +3914,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * @description 重新生成要确认是本人 —— 6 位数字或密码,与「关闭」同一个确认、同一把锁。用恢复码确认不行。
+         *     没带 / 错了 → 旧码原样有效。
+         */
         post: operations["v1_me_mfa_recovery_codes_create"];
         delete?: never;
         options?: never;
@@ -19312,7 +19317,13 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MfaDisableRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["MfaDisableRequest"];
+                "multipart/form-data": components["schemas"]["MfaDisableRequest"];
+            };
+        };
         responses: {
             200: {
                 headers: {
@@ -19322,7 +19333,23 @@ export interface operations {
                     "application/json": components["schemas"]["MfaRecoveryCodes"];
                 };
             };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MfaRefusal"];
+                };
+            };
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MfaRefusal"];
+                };
+            };
+            429: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -24430,7 +24457,13 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SoulMfaDisableRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["SoulMfaDisableRequest"];
+                "multipart/form-data": components["schemas"]["SoulMfaDisableRequest"];
+            };
+        };
         responses: {
             200: {
                 headers: {
@@ -24440,7 +24473,23 @@ export interface operations {
                     "application/json": components["schemas"]["SoulMfaRecoveryCodes"];
                 };
             };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulMfaRefusal"];
+                };
+            };
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulMfaRefusal"];
+                };
+            };
+            429: {
                 headers: {
                     [name: string]: unknown;
                 };

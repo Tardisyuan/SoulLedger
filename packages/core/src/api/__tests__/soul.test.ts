@@ -438,14 +438,14 @@ describe("two-step verification (soul)", () => {
     await soulApi.mfaStatus();
     await soulApi.mfaSetup("pw");
     await expect(soulApi.mfaConfirm("123456")).resolves.toEqual(["a-b"]);
-    await expect(soulApi.mfaRegenerate()).resolves.toEqual(["c-d"]);
+    await expect(soulApi.mfaRegenerate({ method: "password", password: "pw" })).resolves.toEqual(["c-d"]);
     await soulApi.mfaDisable({ method: "password", password: "pw" });
     await soulApi.mfaCancelSetup().catch(() => undefined);
     expect(seen.slice(0, 5).map((c) => [c.method, c.url, c.body])).toEqual([
       ["GET", "/me/mfa/", undefined],
       ["POST", "/me/mfa/setup/", { password: "pw" }],
       ["POST", "/me/mfa/confirm/", { code: "123456" }],
-      ["POST", "/me/mfa/recovery-codes/", undefined],
+      ["POST", "/me/mfa/recovery-codes/", { method: "password", password: "pw" }],
       ["POST", "/me/mfa/disable/", { method: "password", password: "pw" }],
     ]);
   });

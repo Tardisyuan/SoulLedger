@@ -276,29 +276,55 @@ describe("the managed state", () => {
     expect(screen.queryByTestId("mfa-disable")).toBeNull();
   });
 
-  it("regenerate asks first, then shows the new codes", async () => {
+  it("regenerate asks to be confirmed (the same code-or-password box as disable), then shows the new codes", async () => {
     mockApi.status.mockResolvedValue({ data: ON });
     renderOfficer(<MfaScreen onBack={() => {}} />);
     fireEvent.press(await screen.findByTestId("mfa-regen"));
     fireEvent.press(screen.getByTestId("mfa-regen-cancel"));
     expect(mockApi.regenerateRecoveryCodes).not.toHaveBeenCalled();
     fireEvent.press(screen.getByTestId("mfa-regen"));
+    // Inert until there is something to confirm with; five digits are not six.
+    expect(screen.getByTestId("mfa-regen-confirm").props.accessibilityState).toMatchObject({ disabled: true });
+    fireEvent.changeText(screen.getByTestId("mfa-regen-code"), "12345");
     await press("mfa-regen-confirm");
-    expect(mockApi.regenerateRecoveryCodes).toHaveBeenCalledTimes(1);
+    expect(mockApi.regenerateRecoveryCodes).not.toHaveBeenCalled();
+    fireEvent.changeText(screen.getByTestId("mfa-regen-code"), "123456");
+    await press("mfa-regen-confirm");
+    expect(mockApi.regenerateRecoveryCodes).toHaveBeenCalledWith({ method: "totp", code: "123456" });
     await screen.findByTestId("mfa-codes-text");
     expect(screen.getByTestId("mfa-codes-col-0").props.children).toContain("AAAA-1111");
     await press("mfa-regenerated-close");
     expect(screen.queryByTestId("mfa-codes-text")).toBeNull();
   });
 
-  it("a failed regenerate shows no codes", async () => {
+  it("regenerate by password when the phone is not at hand", async () => {
     mockApi.status.mockResolvedValue({ data: ON });
-    mockApi.regenerateRecoveryCodes.mockRejectedValue(new Error("Network Error"));
     renderOfficer(<MfaScreen onBack={() => {}} />);
     fireEvent.press(await screen.findByTestId("mfa-regen"));
+    fireEvent.press(screen.getByTestId("mfa-regen-method-password"));
+    expect(screen.getByTestId("mfa-regen-password").props.secureTextEntry).toBe(true);
+    fireEvent.changeText(screen.getByTestId("mfa-regen-password"), "my-password");
+    await press("mfa-regen-confirm");
+    expect(mockApi.regenerateRecoveryCodes).toHaveBeenCalledWith({ method: "password", password: "my-password" });
+  });
+
+  it("a refused or failed regenerate shows no codes, keeps the box open, and a lock is told as a lock", async () => {
+    mockApi.status.mockResolvedValue({ data: ON });
+    mockApi.regenerateRecoveryCodes
+      .mockRejectedValueOnce(new Error("Network Error"))
+      .mockRejectedValueOnce(httpError(400, { code: "wrong" }))
+      .mockRejectedValueOnce(httpError(429, { code: "locked" }));
+    renderOfficer(<MfaScreen onBack={() => {}} />);
+    fireEvent.press(await screen.findByTestId("mfa-regen"));
+    fireEvent.changeText(screen.getByTestId("mfa-regen-code"), "123456");
     await press("mfa-regen-confirm");
     expect(await screen.findByText("! 网络错误")).toBeTruthy();
+    await press("mfa-regen-confirm");
+    expect(await screen.findByText("! 没能关闭，请检查动态码或密码")).toBeTruthy();
+    await press("mfa-regen-confirm");
+    expect(await screen.findByText("! 尝试次数过多，请稍后再试")).toBeTruthy();
     expect(screen.queryByTestId("mfa-codes-text")).toBeNull();
+    expect(screen.getByTestId("mfa-regen-code")).toBeTruthy();
   });
 
   it("disable by code: inert until six digits, sends the code, and tells the session", async () => {
