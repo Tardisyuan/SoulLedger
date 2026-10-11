@@ -413,6 +413,58 @@ describe("B2 · 面容 / 指纹 after the first sign-in", () => {
   });
 });
 
+describe("B2 · the sheet waits for the welcome", () => {
+  // The welcome plays once per soul x civilization per process: each test is a soul of its own.
+  let n = 0;
+  async function signInWith(welcomed: string[]) {
+    bioMod.__state.enrolled = true;
+    const profile = { ...PROFILE, soul_code: `SL-CN-B${++n}`, welcomed_civilizations: welcomed };
+    const calls = stubApi({
+      "/soul-auth/login/": { status: 200, data: TOKENS },
+      ...HOME,
+      "/me/": { status: 200, data: profile },
+      "POST /me/welcomed/": { status: 200, data: { welcomed_civilizations: ["CHINESE"] } },
+      "/me/device-login/": { status: 201, data: { credential: CRED } },
+    });
+    await renderApp();
+    typeCode(CODE);
+    typePassword("initial-pass");
+    fireEvent.press(screen.getByTestId("login-submit"));
+    return { calls, soul: profile.soul_code };
+  }
+
+  it("first time in this civilization: the welcome is up and the sheet is not; once the welcome ends the sheet comes, with the password still held", async () => {
+    const { calls } = await signInWith([]);
+    expect(await screen.findByTestId("welcome")).toBeTruthy();
+    await act(async () => {});
+    expect(screen.queryByTestId("bio-ask")).toBeNull();
+    fireEvent.press(screen.getByTestId("welcome-skip"));
+    expect(await screen.findByTestId("bio-ask")).toBeTruthy();
+    expect(screen.queryByTestId("welcome")).toBeNull();
+    fireEvent.press(screen.getByTestId("bio-ask-ok"));
+    await waitFor(() => expect(persistentStore.get(BIO_KEY)).toBe("face"));
+    expect(calls.find((c) => c.url === "/me/device-login/")?.body).toEqual({ password: "initial-pass" });
+  });
+
+  it("waiting is not answering: the question is still open until the soul says 「以后再说」", async () => {
+    const { soul } = await signInWith([]);
+    await screen.findByTestId("welcome");
+    await act(async () => {});
+    expect(persistentStore.get(`${ASKED_PREFIX}${soul}`)).toBeNull();
+    fireEvent.press(screen.getByTestId("welcome-skip"));
+    fireEvent.press(await screen.findByTestId("bio-ask-later"));
+    await waitFor(() => expect(persistentStore.get(`${ASKED_PREFIX}${soul}`)).toBe("1"));
+    await waitFor(() => expect(screen.queryByTestId("bio-ask")).toBeNull());
+    expect(screen.queryByTestId("welcome")).toBeNull();
+  });
+
+  it("not the first time: no welcome, and the sheet comes at once", async () => {
+    await signInWith(["CHINESE"]);
+    expect(await screen.findByTestId("bio-ask")).toBeTruthy();
+    expect(screen.queryByTestId("welcome")).toBeNull();
+  });
+});
+
 describe("B2 · the row under 设置 › 账号安全", () => {
   async function openSettings(extra: Record<string, Reply | Reply[]> = {}) {
     secureMod.__store.set(REFRESH_TOKEN_KEY, "R");

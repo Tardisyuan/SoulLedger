@@ -77,9 +77,10 @@ export function shouldAutoPrompt(o: { enabled: boolean; coldStart: boolean; canc
 /**
  * The 「下次用面容登录？」 sheet: only when there is a password to turn it on with (this very sign-in or password
  * change), the phone has a face or finger enrolled, it is not on already, and the soul has not said 「以后再说」.
+ * Never over the welcome (the first scene of entering a civilization): it waits, and waiting is not answering.
  */
-export function shouldAskBio(o: { hasPassword: boolean; enrolled: boolean; enabled: boolean; asked: boolean }): boolean {
-  return o.hasPassword && o.enrolled && !o.enabled && !o.asked;
+export function shouldAskBio(o: { hasPassword: boolean; enrolled: boolean; enabled: boolean; asked: boolean; welcomePending: boolean }): boolean {
+  return o.hasPassword && o.enrolled && !o.enabled && !o.asked && !o.welcomePending;
 }
 
 /**
