@@ -29,6 +29,8 @@ pytestmark = pytest.mark.django_db
 PASSWORD = "a-long-test-password-1"
 NEW_PASSWORD = "another-long-password-2"
 
+REVOKE = "/api/v1/soul-auth/device-login/revoke/"
+
 
 @pytest.fixture(autouse=True)
 def _fresh_counters():
@@ -102,18 +104,23 @@ class TestEnableAndTurnOff:
     def test_turning_off_revokes_with_turned_off_and_is_idempotent(self, soul):
         credential = _enable(soul)
         client = soul_client(soul)
-        assert client.post("/api/v1/me/device-login/revoke/", {"credential": credential}, format="json").status_code == 204
-        assert client.post("/api/v1/me/device-login/revoke/", {"credential": credential}, format="json").status_code == 204
-        assert client.post("/api/v1/me/device-login/revoke/", {"credential": "unknown"}, format="json").status_code == 204
+        assert client.post(REVOKE, {"credential": credential}, format="json").status_code == 204
+        assert client.post(REVOKE, {"credential": credential}, format="json").status_code == 204
+        assert client.post(REVOKE, {"credential": "unknown"}, format="json").status_code == 204
         assert _reasons() == ["turned_off"]
         refused = _device_login(soul, credential)
         assert refused.status_code == 401
         assert refused.data["code"] == "device_login_revoked" and refused.data["reason"] == "turned_off"
 
-    def test_one_soul_cannot_turn_off_another_souls_credential(self, soul, cn_tenant):
-        other, _ = ready_soul(cn_tenant, name="亡魂乙")
-        mine = _enable(soul)
-        soul_client(other).post("/api/v1/me/device-login/revoke/", {"credential": mine}, format="json")
+    def test_the_phone_can_turn_it_off_after_signing_out(self, soul):
+        """登录页的「换一个账号」:没有令牌,只有凭据。"""
+        credential = _enable(soul)
+        assert APIClient().post(REVOKE, {"credential": credential}, format="json").status_code == 204
+        assert _reasons() == ["turned_off"]
+
+    def test_a_credential_nobody_holds_turns_nothing_off(self, soul):
+        _enable(soul)
+        assert APIClient().post(REVOKE, {"credential": "not-the-credential"}, format="json").status_code == 204
         assert SoulDeviceLogin.objects.get().revoked_at is None
 
 
@@ -176,7 +183,7 @@ class TestLogin:
 
     def test_a_revoked_credential_is_not_a_guess_and_does_not_count(self, soul):
         credential = _enable(soul)
-        soul_client(soul).post("/api/v1/me/device-login/revoke/", {"credential": credential}, format="json")
+        soul_client(soul).post(REVOKE, {"credential": credential}, format="json")
         for _ in range(6):
             assert _device_login(soul, credential).data["code"] == "device_login_revoked"
         assert _password_login(soul).status_code == 200

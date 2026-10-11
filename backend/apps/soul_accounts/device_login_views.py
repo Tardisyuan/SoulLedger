@@ -1,7 +1,7 @@
 """面容 / 指纹登录的接口(规则在 `device_login.py`)。
 
     POST /me/device-login/            开启:当前密码 → `{credential}`(只此一次)
-    POST /me/device-login/revoke/     关闭这部手机的凭据(幂等)
+    POST /soul-auth/device-login/revoke/  关闭这部手机的凭据(幂等,不要求登录)
     POST /soul-auth/device-login/     用「编号 + 凭据」代替「编号 + 密码」登录;响应与密码登录逐字段相同
 
 登录的限流、失败计数、锁定与密码登录**共用同一组缓存键**(同一编号 5 次 / 同一 IP 50 次,15 分钟)。
@@ -54,14 +54,20 @@ class MeDeviceLoginView(SoulAPIView):
         return Response({"credential": raw}, status=status.HTTP_201_CREATED)
 
 
-class MeDeviceLoginRevokeView(SoulAPIView):
+class SoulDeviceLoginRevokeView(APIView):
+    """关闭这部手机的面容 / 指纹登录。**不要求登录**:凭据本身就是证明(256 位随机数,只有这部手机有)。
+    登录页的「换一个账号」发生在退出登录之后,那时手里只有凭据、没有令牌(2026-10-11 上模拟器前查到:
+    这个接口原先挂在 /me/ 下,那一下只会 401,服务端那一行永远关不掉)。"""
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
     @extend_schema(request=SoulDeviceLoginCredentialSerializer,
                    responses={204: OpenApiResponse(description="已关闭(不认识或早已关闭也是 204)")})
     def post(self, request):
         body = SoulDeviceLoginCredentialSerializer(data=request.data)
         body.is_valid(raise_exception=True)
         with transaction.atomic():
-            device_login.turn_off(self.account, body.validated_data["credential"])
+            device_login.turn_off(body.validated_data["credential"])
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 

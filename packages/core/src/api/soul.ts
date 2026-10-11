@@ -145,7 +145,7 @@ export function clearSoulTokens(): void {
 
 function isSoulAuthEndpoint(url: string | undefined): boolean {
   // `mfa/verify` too: its 401 is `pending_invalid` (the step timed out), not an expired session.
-  return /\/soul-auth\/(login|device-login|refresh|logout|mfa\/verify)\/?$/.test(url || "");
+  return /\/soul-auth\/(login|device-login|device-login\/revoke|refresh|logout|mfa\/verify)\/?$/.test(url || "");
 }
 
 let refreshInFlight: Promise<string> | null = null;
@@ -224,7 +224,7 @@ export const soulApi = {
     soulHttp.post<Schemas["SoulDeviceLoginIssued"]>("/me/device-login/", { password }).then((r) => r.data.credential),
   /** 204 whatever the credential's state. */
   revokeDeviceLogin: (credential: string) =>
-    soulHttp.post("/me/device-login/revoke/", { credential }).then(() => undefined),
+    soulHttp.post("/soul-auth/device-login/revoke/", { credential }).then(() => undefined),
   /** Sign-in step 2. `device_token` in the answer only when `remember_device` was asked for. */
   mfaVerify: (body: SoulMfaVerifyRequest) =>
     soulHttp.post<SoulMfaVerifyResponse>("/soul-auth/mfa/verify/", body).then((r) => r.data),

@@ -28,6 +28,7 @@ soul_auth_urlpatterns = [
     path("logout/", me_views.SoulLogoutView.as_view(), name="soul-logout"),
     path("mfa/verify/", mfa_views.SoulMfaVerifyView.as_view(), name="soul-mfa-verify"),
     path("device-login/", device_login_views.SoulDeviceLoginView.as_view(), name="soul-device-login"),
+    path("device-login/revoke/", device_login_views.SoulDeviceLoginRevokeView.as_view(), name="soul-device-login-revoke"),
 ]
 
 me_urlpatterns = [
@@ -40,7 +41,6 @@ me_urlpatterns = [
     path("mfa/recovery-codes/", mfa_views.MeMfaRecoveryCodesView.as_view(), name="me-mfa-recovery-codes"),
     path("mfa/disable/", mfa_views.MeMfaDisableView.as_view(), name="me-mfa-disable"),
     path("device-login/", device_login_views.MeDeviceLoginView.as_view(), name="me-device-login"),
-    path("device-login/revoke/", device_login_views.MeDeviceLoginRevokeView.as_view(), name="me-device-login-revoke"),
     path("life/", me_views.MeLifeView.as_view(), name="me-life"),
     path("past-lives/", me_views.MePastLivesView.as_view(), name="me-past-lives"),
     path("sentence-plan/", me_views.MeSentencePlanView.as_view(), name="me-sentence-plan"),
