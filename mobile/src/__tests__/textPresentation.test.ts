@@ -23,3 +23,14 @@ it("every ↗ in the apps asks for text presentation", () => {
   );
   expect(offenders).toEqual([]);
 });
+
+it("an arrow that comes from a language bundle is given text presentation by translate()", () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { translate } = require("../i18n") as typeof import("../i18n");
+  for (const locale of ["zh-Hans", "en", "egy"] as const) {
+    const text = translate(locale, "soul_app.scan.open_settings");
+    expect(text).toContain("↗\uFE0E");
+    expect(text).not.toMatch(/↗(?!\uFE0E)/);
+    expect(text).not.toContain("\uFE0E\uFE0E");
+  }
+});

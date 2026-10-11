@@ -340,7 +340,7 @@ function Wizard({ onExit, onEnabled }: { onExit: () => void; onEnabled: () => vo
                 </Txt>
                 {setup ? (
                   <>
-                    <Button testID="open-authenticator" title={`${tr("soul_app.mfa.bind.open")}︎`} onPress={openAuthenticator} />
+                    <Button testID="open-authenticator" title={tr("soul_app.mfa.bind.open")} onPress={openAuthenticator} />
                     {openFailed ? (
                       <Notice tone="neutral" testID="open-failed">
                         {tr("officer_app.mfa.open_failed")}

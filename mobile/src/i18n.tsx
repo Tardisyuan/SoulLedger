@@ -25,8 +25,12 @@ function lookup(bundle: unknown, key: string): string | undefined {
 export function translate(locale: Locale, key: string, params?: Record<string, string>): string {
   const value = lookup(BUNDLES[locale], key) ?? lookup(BUNDLES[DEFAULT_LOCALE], key);
   if (value === undefined) return key;
-  if (!params) return value;
-  return value.replace(/\{\{(\w+)\}\}/g, (whole, name: string) => (name in params ? params[name] : whole));
+  // iOS draws a bare north-east arrow (U+2197) as a colour emoji. The sources' own arrows carry U+FE0E
+  // (textPresentation.test.ts); the bundles' arrows get it here, once, so no screen has to remember
+  // (the scanner's "open system settings" button, 2026-10-11). Written as escapes: that guard reads this file.
+  const text = value.replace(/\u2197(?!\uFE0E)/g, "\u2197\uFE0E");
+  if (!params) return text;
+  return text.replace(/\{\{(\w+)\}\}/g, (whole, name: string) => (name in params ? params[name] : whole));
 }
 
 interface I18n {
