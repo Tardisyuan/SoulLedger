@@ -294,6 +294,28 @@ describe("composer", () => {
     expect(calls.filter((c) => c.method === "DELETE")).toEqual([]);
   });
 
+  it.each([
+    ["masked", "已发布。部分内容已被替换。"],
+    ["hidden", "这条内容没有通过筛查,已被隐藏。"],
+  ])("the word list's outcome %s is told to the author after posting", async (screening, text) => {
+    await openWith({ "POST /me/social/feed/": { status: 201, data: post({ id: "new", is_mine: true, screening }) } });
+    fireEvent.changeText(screen.getByTestId("post-body"), "一句");
+    fireEvent.press(submit());
+    await waitFor(() => expect(screen.getByTestId("toast").props.children).toBe(text));
+  });
+
+  it("pending_review is told by the feed banner, not twice; clean says nothing", async () => {
+    for (const screening of ["pending_review", "clean"]) {
+      await openWith({ "POST /me/social/feed/": { status: 201, data: post({ id: "new", is_mine: true, screening }) } });
+      fireEvent.changeText(screen.getByTestId("post-body"), "一句");
+      fireEvent.press(submit());
+      await waitFor(() => expect(mockPopTo).toHaveBeenCalled());
+      expect(screen.queryByTestId("toast")).toBeNull();
+      screen.unmount();
+      mockPopTo.mockClear();
+    }
+  });
+
   it("a failed upload blocks the post until it is retried or removed", async () => {
     const calls = await openWith({
       "POST /me/social/media/": [{ status: 400, data: { detail: "too big", code: "too_large" } }, uploaded("u2"), uploaded("u3")],

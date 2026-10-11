@@ -154,6 +154,7 @@ class MeSocialFeedView(SoulSocialView):
 
     def _one(self, post):
         row = circle.annotate_posts_for(self.request.user, Post.objects.filter(pk=post.pk)).first()
+        row.screening_outcome = getattr(post, "screening_outcome", None)
         return SoulPostSerializer(row, context={"viewer": self.request.user}).data
 
 

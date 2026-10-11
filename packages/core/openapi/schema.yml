@@ -20833,10 +20833,16 @@ components:
           nullable: true
         content:
           type: string
+        screening:
+          allOf:
+          - $ref: '#/components/schemas/ScreeningEnum'
+          nullable: true
+          readOnly: true
       required:
       - content
       - id
       - post
+      - screening
     CommentList:
       type: object
       description: Lightweight serializer for listing comments.
@@ -30304,6 +30310,10 @@ components:
           type: string
         visibility:
           $ref: '#/components/schemas/VisibilityEnum'
+        moderation_status:
+          allOf:
+          - $ref: '#/components/schemas/SocialModerationStatusEnum'
+          readOnly: true
         comment_count:
           type: integer
           readOnly: true
@@ -30328,6 +30338,11 @@ components:
           format: date-time
           readOnly: true
           nullable: true
+        screening:
+          allOf:
+          - $ref: '#/components/schemas/ScreeningEnum'
+          nullable: true
+          readOnly: true
         create_time:
           type: string
           format: date-time
@@ -31388,6 +31403,10 @@ components:
           type: string
         visibility:
           $ref: '#/components/schemas/VisibilityEnum'
+        moderation_status:
+          allOf:
+          - $ref: '#/components/schemas/SocialModerationStatusEnum'
+          readOnly: true
         comment_count:
           type: integer
           readOnly: true
@@ -31412,6 +31431,11 @@ components:
           format: date-time
           readOnly: true
           nullable: true
+        screening:
+          allOf:
+          - $ref: '#/components/schemas/ScreeningEnum'
+          nullable: true
+          readOnly: true
         create_time:
           type: string
           format: date-time
@@ -31430,8 +31454,10 @@ components:
       - edited_at
       - id
       - media
+      - moderation_status
       - reaction_count
       - reaction_counts
+      - screening
       - tenant
       - update_time
     PostCreate:
@@ -31459,8 +31485,14 @@ components:
           writeOnly: true
           description: 先经 POST /social/media/ 上传的图片 id,按显示顺序。
           maxItems: 9
+        screening:
+          allOf:
+          - $ref: '#/components/schemas/ScreeningEnum'
+          nullable: true
+          readOnly: true
       required:
       - id
+      - screening
     PostList:
       type: object
       description: Lightweight serializer for listing posts.
@@ -31482,6 +31514,8 @@ components:
           type: string
         visibility:
           $ref: '#/components/schemas/VisibilityEnum'
+        moderation_status:
+          $ref: '#/components/schemas/SocialModerationStatusEnum'
         comment_count:
           type: integer
           minimum: 0
@@ -33368,6 +33402,13 @@ components:
         * `circle` - circle
         * `settings` - settings
         * `other` - other
+    ScreeningEnum:
+      type: string
+      enum:
+      - clean
+      - masked
+      - pending_review
+      - hidden
     SeatableActor:
       type: object
       description: |-
@@ -34503,6 +34544,11 @@ components:
     SoulComment:
       type: object
       properties:
+        screening:
+          allOf:
+          - $ref: '#/components/schemas/ScreeningEnum'
+          nullable: true
+          readOnly: true
         id:
           type: string
           format: uuid
@@ -34534,6 +34580,7 @@ components:
       - moderation_status
       - parent
       - post
+      - screening
     SoulCommentCreate:
       type: object
       properties:
@@ -35063,6 +35110,11 @@ components:
     SoulPost:
       type: object
       properties:
+        screening:
+          allOf:
+          - $ref: '#/components/schemas/ScreeningEnum'
+          nullable: true
+          readOnly: true
         id:
           type: string
           format: uuid
@@ -35122,6 +35174,7 @@ components:
       - my_reaction
       - reaction_count
       - reaction_counts
+      - screening
       - visibility
     SoulPostCreate:
       type: object

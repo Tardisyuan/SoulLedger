@@ -140,3 +140,58 @@ def test_officer_comment_with_review_word_starts_pending(world):
     assert r.status_code == 201
     assert Comment.objects.get().moderation_status == ModerationStatus.PENDING
     assert SensitiveWordDailyHit.objects.get().count == 1
+
+
+# ── 响应里的 screening:告诉本人结果,不泄露命中的词 ───────────────────────────
+
+
+@pytest.mark.parametrize(
+    "action,expected",
+    [
+        (SensitiveWordAction.MASK, "masked"),
+        (SensitiveWordAction.REVIEW, "pending_review"),
+        (SensitiveWordAction.HIDE, "hidden"),
+    ],
+)
+def test_post_comment_and_edit_responses_carry_the_outcome_and_never_the_word(world, action, expected):
+    tenant, author, other = world
+    _word(tenant, "secretword", action)
+    c = _client(author, tenant)
+    created = c.post(f"{BASE}/posts/", {"content": "has secretword"}, format="json")
+    assert created.data["screening"] == expected
+    clean = Post.objects.create(author=author, content="fine", tenant=tenant)
+    edited = c.patch(f"{BASE}/posts/{clean.pk}/", {"content": "now secretword"}, format="json")
+    assert edited.data["screening"] == expected
+    # 评论的目标帖:换一条公开的干净帖,免得被上面的编辑送审后 other 看不见
+    target = Post.objects.create(author=author, content="open", tenant=tenant)
+    commented = _client(other, tenant).post(
+        f"{BASE}/comments/", {"post": str(target.pk), "content": "secretword"}, format="json"
+    )
+    assert commented.status_code == 201
+    assert commented.data["screening"] == expected
+    for r in (created, edited, commented):
+        assert "secretword" not in str(r.data["screening"]), "只给结果,不给词"
+
+
+def test_clean_and_visibility_only_responses(world):
+    tenant, author, _ = world
+    c = _client(author, tenant)
+    assert c.post(f"{BASE}/posts/", {"content": "fine"}, format="json").data["screening"] == "clean"
+    post = Post.objects.create(author=author, content="p", tenant=tenant)
+    assert c.patch(f"{BASE}/posts/{post.pk}/", {"visibility": "PRIVATE"}, format="json").data["screening"] is None
+    assert c.get(f"{BASE}/posts/{post.pk}/").data["screening"] is None
+
+
+def test_authors_pending_post_is_visible_to_the_author_only(world):
+    tenant, author, other = world
+    _word(tenant, "badword", SensitiveWordAction.REVIEW)
+    r = _client(author, tenant).post(f"{BASE}/posts/", {"content": "badword", "visibility": "PUBLIC"}, format="json")
+    assert r.status_code == 201
+    pid = str(Post.objects.get(author=author).pk)
+
+    def ids(who):
+        return {p["id"] for p in _client(who, tenant).get(f"{BASE}/posts/").data["results"]}
+
+    assert pid in ids(author)
+    assert pid not in ids(other)
+    assert _client(other, tenant).get(f"{BASE}/posts/{pid}/").status_code == 404

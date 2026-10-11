@@ -14,6 +14,9 @@ export type PostMediaUpload = components["schemas"]["SoulPostMediaUpload"];
  * optional here — they were declared required and are absent from every
  * element of GET /social/posts/ and GET /social/posts/feed/.
  */
+/** `moderation.Screening.outcome`: what the word list did to what was just written. */
+export type ScreeningOutcome = "clean" | "masked" | "pending_review" | "hidden";
+
 export interface Post {
   id: string;
   author: string;
@@ -28,6 +31,10 @@ export interface Post {
   /** 五种表态各自的数(未删除的)。 */
   reaction_counts: Record<"LIKE" | "LOVE" | "RESPECT" | "SYMPATHY" | "ETERNAL_LIGHT", number>;
   tenant?: number;
+  /** 非 PUBLISHED 只会出现在作者本人看到的数据里:PENDING=审核中,HIDDEN=已被隐藏。 */
+  moderation_status?: "PUBLISHED" | "PENDING" | "HIDDEN";
+  /** 只在发帖 / 改正文的响应里有值:这次写入过词表的结果(从不含命中的词)。 */
+  screening?: ScreeningOutcome | null;
   /** 作者改过正文的时间;没改过为 null。 */
   edited_at?: string | null;
   create_time: string;
@@ -44,6 +51,8 @@ export interface Comment {
   parent: string | null;
   content: string;
   tenant?: number;
+  /** 只在发评论的响应里有值,见 `Post.screening`。 */
+  screening?: ScreeningOutcome | null;
   create_time: string;
   update_time?: string;
 }

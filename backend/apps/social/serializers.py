@@ -9,7 +9,12 @@ from rest_framework import serializers
 from apps.social import images
 from apps.social import media as post_media
 from apps.social.models import Comment, Follow, Post, Reaction, ReactionType, UserProfile, Visibility
-from apps.social.soul_serializers import PostMediaSerializer, SoulReactionCountsSerializer, live_media
+from apps.social.soul_serializers import (
+    PostMediaSerializer,
+    ScreeningFieldMixin,
+    SoulReactionCountsSerializer,
+    live_media,
+)
 
 # ---------------------------------------------------------------------------
 # Post serializers
@@ -29,7 +34,7 @@ class PostMediaFieldMixin(serializers.Serializer):
         return post_media.describe(live_media(post), request.user, getattr(request, "tenant", None))
 
 
-class PostSerializer(PostMediaFieldMixin, serializers.ModelSerializer):
+class PostSerializer(ScreeningFieldMixin, PostMediaFieldMixin, serializers.ModelSerializer):
     author_name = serializers.CharField(source="author.display_name", read_only=True, default="")
     author_username = serializers.CharField(source="author.username", read_only=True)
     #: 五种表态各自的数(未删除的),读 `reaction_kind_counts()` 的注解 —— 与灵魂端、审核后台同一份。
@@ -44,18 +49,21 @@ class PostSerializer(PostMediaFieldMixin, serializers.ModelSerializer):
             "author_username",
             "content",
             "visibility",
+            "moderation_status",
             "comment_count",
             "reaction_count",
             "media",
             "reaction_counts",
             "tenant",
             "edited_at",
+            "screening",
             "create_time",
             "update_time",
         ]
         read_only_fields = [
             "id",
             "author",
+            "moderation_status",
             "edited_at",
             "comment_count",
             "reaction_count",
@@ -70,7 +78,7 @@ class PostSerializer(PostMediaFieldMixin, serializers.ModelSerializer):
         return value
 
 
-class PostCreateSerializer(serializers.ModelSerializer):
+class PostCreateSerializer(ScreeningFieldMixin, serializers.ModelSerializer):
     """content + visibility, plus `media`: ids uploaded first through
     `POST /social/media/`, in display order (attached in `PostViewSet.perform_create`).
     Text may be empty when there are images — the soul circle's rule
@@ -85,7 +93,7 @@ class PostCreateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Post
-        fields = ["id", "content", "visibility", "media"]
+        fields = ["id", "content", "visibility", "media", "screening"]
         read_only_fields = ["id"]
 
     def validate(self, attrs):
@@ -111,6 +119,7 @@ class PostListSerializer(PostMediaFieldMixin, serializers.ModelSerializer):
             "author_username",
             "content",
             "visibility",
+            "moderation_status",
             "comment_count",
             "reaction_count",
             "media",
@@ -160,12 +169,12 @@ class CommentSerializer(serializers.ModelSerializer):
         ]
 
 
-class CommentCreateSerializer(serializers.ModelSerializer):
+class CommentCreateSerializer(ScreeningFieldMixin, serializers.ModelSerializer):
     """Serializer for creating comments."""
 
     class Meta:
         model = Comment
-        fields = ["id", "post", "parent", "content"]
+        fields = ["id", "post", "parent", "content", "screening"]
         read_only_fields = ["id"]
 
     def validate(self, attrs):
