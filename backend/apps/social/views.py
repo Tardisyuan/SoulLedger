@@ -26,7 +26,7 @@ TenantPermission plus an object-level owner check
 IsProfileOwnerOrReadOnly), so authorship still governs writes.
 """
 from django.db import transaction
-from django.db.models import Prefetch
+from django.db.models import Prefetch, Q
 from django.utils import timezone
 from drf_spectacular.utils import extend_schema
 from rest_framework import mixins, serializers, status, viewsets
@@ -129,6 +129,7 @@ class PostViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, viewsets.ModelVie
                 )
                 post_media.attach(post, self.request.user, media_ids)
                 record_hits(screening.hit_ids)
+            serializer.context["screening"] = screening.outcome
         except SocialError as exc:
             raise serializers.ValidationError({"media": [str(exc)]}, code=exc.code) from None
         PostService.increment_post_count(self.request.user.pk)
@@ -150,6 +151,8 @@ class PostViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, viewsets.ModelVie
             super().perform_update(serializer)
             if screening:
                 record_hits(screening.hit_ids)
+        if screening:
+            serializer.context["screening"] = screening.outcome
 
     def perform_destroy(self, instance):
         """The author's own delete never reaches the recycle bin (apps/social/apps.py
@@ -172,6 +175,7 @@ class PostViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, viewsets.ModelVie
         qs = Post.objects.filter(
             author_id__in=following_ids,
             visibility__in=["PUBLIC", "FOLLOWERS"],
+            moderation_status=ModerationStatus.PUBLISHED,
             tenant=tenant,
         ).select_related("author").annotate(**reaction_kind_counts()).prefetch_related(WITH_MEDIA).order_by("-create_time")
         context = self.get_serializer_context()
@@ -280,6 +284,7 @@ class CommentViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, viewsets.Model
         # holding its UUID -- measured, `GET /comments/?post=<private>` came
         # back 200 with the contents.
         qs = qs.filter(post__in=visible_posts(self.request))
+        qs = qs.filter(Q(moderation_status=ModerationStatus.PUBLISHED) | Q(author=self.request.user))
         # Allow filtering by post
         post_id = self.request.query_params.get("post")
         if post_id:
@@ -303,6 +308,7 @@ class CommentViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, viewsets.Model
                 **screening.moderation_fields,
             )
             record_hits(screening.hit_ids)
+        serializer.context["screening"] = screening.outcome
 
     def perform_destroy(self, instance):
         CommentService.delete_comment(instance)

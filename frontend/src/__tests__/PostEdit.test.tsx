@@ -85,6 +85,25 @@ describe("PostCard「已编辑」", () => {
   });
 });
 
+describe("PostCard 作者视角的审核状态", () => {
+  it.each([
+    ["PENDING", "待审"],
+    ["HIDDEN", "已隐藏"],
+  ])("%s:卡片上有状态标记", (status) => {
+    render(<PostCard post={{ ...post, moderation_status: status as "PENDING" | "HIDDEN" }} />);
+    // 原始枚举值留在 title 上(显示契约);测试里 t() 回显键,所以认 title。
+    expect(document.querySelector(`[title="${status}"]`)).not.toBeNull();
+  });
+
+  it("PUBLISHED 或缺省:没有标记", () => {
+    const { unmount } = render(<PostCard post={{ ...post, moderation_status: "PUBLISHED" }} />);
+    expect(document.querySelector('[title="PUBLISHED"]')).toBeNull();
+    unmount();
+    render(<PostCard post={post} />);
+    expect(document.querySelector('[title="PENDING"], [title="HIDDEN"]')).toBeNull();
+  });
+});
+
 describe("PostEditModal", () => {
   it("预填原文;没改动时保存不可点", () => {
     const dialog = open();

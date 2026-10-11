@@ -169,6 +169,7 @@ export { dispatchApi, crossTenantJudgmentsApi, DISPATCH_REASON_MIN_CHARS, dispat
 export {
   socialApi,
   type Post,
+  type ScreeningOutcome,
   type Comment,
   type Reaction,
   type Follow,

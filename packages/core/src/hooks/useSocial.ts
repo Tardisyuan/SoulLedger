@@ -2,7 +2,7 @@
 
 import { drfFieldErrors, drfNonFieldError } from "../validations/drfErrors";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { socialApi, type PaginatedResponse, type Post, type UserProfile } from "../api/index";
+import { socialApi, type PaginatedResponse, type Post, type ScreeningOutcome, type UserProfile } from "../api/index";
 import { notify, type NotifyMessage } from "../platform/index";
 import { socialKeys } from "../query_keys";
 
@@ -25,6 +25,21 @@ import { socialKeys } from "../query_keys";
 function serverSaidOr(error: unknown, key: string): NotifyMessage {
   const said = drfNonFieldError(error, "");
   return said ? { text: said } : key;
+}
+
+/**
+ * What the author is told after a write that went through the word list. The server answers
+ * with the outcome only, never the word. `clean` / absent: the caller's own message.
+ */
+const SCREENING_MESSAGE = {
+  masked: "social.screening.masked",
+  pending_review: "social.screening.pending_review",
+  hidden: "social.screening.hidden",
+} as const;
+
+function tellScreening(outcome: ScreeningOutcome | null | undefined, fallbackKey?: string) {
+  if (outcome && outcome !== "clean") notify(SCREENING_MESSAGE[outcome], "info");
+  else if (fallbackKey) notify(fallbackKey, "success");
 }
 
 // ── Posts ────────────────────────────────────────────────────────────
@@ -114,9 +129,9 @@ export function useCreatePost() {
   return useMutation({
     mutationFn: (data: { content: string; visibility?: string; media?: string[] }) =>
       socialApi.createPost(data),
-    onSuccess: () => {
+    onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: socialKeys.posts.all });
-      notify("social.post_created", "success");
+      tellScreening(res.data.screening, "social.post_created");
     },
     onError: () => {
       notify("social.post_error", "error");
@@ -134,9 +149,9 @@ export function useUpdatePost() {
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: Pick<Partial<Post>, "content" | "visibility"> }) =>
       socialApi.updatePost(id, data),
-    onSuccess: () => {
+    onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: socialKeys.posts.all });
-      notify("social.post_updated", "success");
+      tellScreening(res.data.screening, "social.post_updated");
     },
     onError: (error) => {
       notify(serverSaidOr(error, "social.post_update_error"), "error");
@@ -203,9 +218,10 @@ export function useCreateComment() {
   return useMutation({
     mutationFn: (data: { post: string; content: string; parent?: string }) =>
       socialApi.createComment(data),
-    onSuccess: (_data, vars) => {
+    onSuccess: (res, vars) => {
       qc.invalidateQueries({ queryKey: socialKeys.comments.all });
       qc.invalidateQueries({ queryKey: socialKeys.posts.detail(vars.post) });
+      tellScreening(res.data.screening);
     },
     onError: (error) => {
       notify(serverSaidOr(error, "social.comment_error"), "error");

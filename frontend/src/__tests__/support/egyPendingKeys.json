@@ -48,5 +48,11 @@
   "mfa.setup.password_locked",
   "soul_app.mfa.intro.password_hint",
   "soul_app.mfa.codes.file_header",
-  "soul_app.mfa.codes.save_failed"
+  "soul_app.mfa.codes.save_failed",
+  "social.screening.masked",
+  "social.screening.pending_review",
+  "social.screening.hidden",
+  "soul_app.circle.screening.masked",
+  "soul_app.circle.screening.pending_review",
+  "soul_app.circle.screening.hidden"
 ]

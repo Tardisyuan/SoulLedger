@@ -3041,6 +3041,11 @@
     "edit_discard_message": "Your edits will not be saved.",
     "edit_discard_confirm": "Discard changes",
     "edit_keep": "Keep editing",
+    "screening": {
+      "masked": "Published. Some of the text was replaced.",
+      "pending_review": "Sent, under review. Only you can see it until it is approved.",
+      "hidden": "This did not pass screening and has been hidden."
+    },
     "no_posts": "No posts yet",
     "user_posts": "Their posts",
     "view_all_posts": "View all posts",
@@ -3926,6 +3931,11 @@
         "hidden_note": "The hall hid this; only you can still see it.",
         "comments": "{{n}} comments",
         "more": "More"
+      },
+      "screening": {
+        "masked": "Published. Some of the text was replaced.",
+        "pending_review": "Sent, under review. Only you can see it until it is approved.",
+        "hidden": "This did not pass screening and has been hidden."
       },
       "comment": {
         "pending": "Pending",

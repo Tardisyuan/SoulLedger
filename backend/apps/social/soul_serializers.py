@@ -9,6 +9,20 @@ from rest_framework import serializers
 from apps.social import media as post_media
 from apps.social.models import ModerationStatus, ReactionType, ReportReason, ReportTargetType, Visibility
 
+#: `moderation.Screening.outcome` 的取值(接口里的 `screening`)。
+SCREENING_OUTCOMES = ("clean", "masked", "pending_review", "hidden")
+
+class ScreeningFieldMixin(serializers.Serializer):
+    # 这次写入过了词表之后的结果,只在发帖 / 改正文 / 发评论的响应里有值,别处为 null。
+    # 官员端由视图放进 serializer context("screening"),灵魂端由 soul_circle 挂在实例上。
+    # 只给结果,不给命中的词。(注释而非 docstring:docstring 会变成 schema 的 description。)
+    screening = serializers.SerializerMethodField()
+
+    @extend_schema_field({"type": "string", "enum": list(SCREENING_OUTCOMES), "nullable": True})
+    def get_screening(self, obj):
+        return self.context.get("screening") or getattr(obj, "screening_outcome", None)
+
+
 CONTENT_MAX = 2000
 COMMENT_MAX = 500
 
@@ -77,7 +91,7 @@ def live_media(post):
     return rows
 
 
-class SoulPostSerializer(serializers.Serializer):
+class SoulPostSerializer(ScreeningFieldMixin, serializers.Serializer):
     id = serializers.UUIDField()
     author = SoulCardSerializer()
     content = serializers.CharField()
@@ -103,7 +117,7 @@ class SoulPostSerializer(serializers.Serializer):
         return post_media.describe(live_media(post), self.context["viewer"])
 
 
-class SoulCommentSerializer(serializers.Serializer):
+class SoulCommentSerializer(ScreeningFieldMixin, serializers.Serializer):
     id = serializers.UUIDField()
     post = serializers.UUIDField(source="post_id")
     parent = serializers.UUIDField(source="parent_id", allow_null=True)

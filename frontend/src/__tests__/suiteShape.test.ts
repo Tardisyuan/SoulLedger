@@ -296,6 +296,7 @@ const COLLECTED_FILES = [
   "useSidebarMenus.test.tsx",
   "useSocial.queries.test.ts",
   "useSocial.test.ts",
+  "useSocialScreening.test.ts",
   "useSoulChat.test.ts",
   "useSoulMediaUploads.test.ts",
   "useSouls.lifecycle.test.ts",
