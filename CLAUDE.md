@@ -132,6 +132,18 @@ npm 10 与 11 的真正区别在装出来的树是否完整。所以**装完一�
   装好后另起 Metro(`npx expo start --dev-client --port 8081`,不带 `CI=1`)。
 - **Android 重建要有 `ANDROID_HOME`**:`export ANDROID_HOME=~/Library/Android/sdk`,否则 gradle 报 `SDK location not found`
   (这台机器的非交互 shell 里没有这个变量,2026-10-11)。没有安卓的设备工具时用 `adb exec-out screencap -p` 截图、`adb shell input tap/text` 操作。
+- **改了 `app.json` 的 plugins(权限文案、新的原生模块)要先 `npx expo prebuild --platform ios|android --no-install`,再 `expo run:*`。**
+  `ios/` 和 `android/` 是生成物(gitignored),目录已存在时 `expo run:*` 不会重新生成,新权限进不了 Info.plist / Manifest。
+  iOS 重新生成后还要 `cd ios && pod install`。2026-10-11:加了扫码,点「扫码」直接崩在 `missing NSCameraUsageDescription`。
+- **两个插件写同一个权限时,后者会被前者删掉**:`expo-image-picker` 的 `cameraPermission: false` 会移除相机权限,不管 `expo-camera` 要了什么
+  (`cameraPermissionSurvivesPlugins.test.ts` 守着)。
+- **jest 看不见、只有设备上才现形的几类(2026-10-11 一轮抓到六处)**:`opacity: 0` 的视图在 iOS 上收不到触摸(用透明文字,别用透明视图);
+  受控 TextInput 被 React 回填旧值时 iOS 也发一次 `onChangeText`;嵌在页头下面的 `KeyboardAvoidingView` 要给 `keyboardVerticalOffset`
+  (它在窗口里的 y),否则少让出页头那么高;语言包里的 `↗` 在 iOS 上是彩色表情(`translate()` 现在统一补 U+FE0E)。
+  所以**界面改动合并后要真的上一次模拟器**,测试全绿不够。
+- **iOS 模拟器的钥匙串不强制生物验证**:`requireAuthentication: true` 的 secure-store 条目不弹面容就能读。面容相关只能真机验(清单在备忘 `real-device-checklist`)。
+- **本机连 115 的 Matrix 要先开隧道**:`ssh -f -N -L 8008:127.0.0.1:8008 tardis@pi`;runserver 的 `ALLOWED_HOSTS` 还要加本机局域网地址
+  (Synapse 回调 `/chat/hooks/new-message/` 用的是它,否则 400 `DisallowedHost`,信能发、推送钩子丢)。验完 `pkill -f "ssh -f -N -L 8008"`。
 - **一次只开一个模拟器、一个 App**:这台机器内存吃紧(交换区近满),模拟器启动或编译时 1 分钟负载会冲到几百。
   重步骤之间等负载回到 12 以下再点;模拟器截图会慢一帧,操作后截两张看第二张。
 - **只收字母数字的输入框要设 `keyboardType="ascii-capable"`**(编号、恢复码):不设时中文拼音键盘会把输入当拼音、弹候选条。
