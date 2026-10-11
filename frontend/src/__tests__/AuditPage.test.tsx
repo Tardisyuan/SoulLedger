@@ -178,6 +178,34 @@ describe("AuditPage access control", () => {
   });
 });
 
+describe("changes.action in the detail", () => {
+  it("shows the lexicon name of a mapped action, never the bare name", async () => {
+    mockedList.mockResolvedValue({
+      data: { count: 1, results: [entry({ id: 5, action: "EXECUTE", changes: { action: "credentials.print_slip" } })] },
+    });
+    renderPage();
+    expect(await screen.findByText("soul_accounts.credentials.print_slip")).toBeInTheDocument();
+    expect(screen.queryByText("credentials.print_slip")).not.toBeInTheDocument();
+  });
+
+  it("leaves an unmapped action unshown", async () => {
+    mockedList.mockResolvedValue({
+      data: { count: 1, results: [entry({ id: 6, changes: { action: "something.else" } })] },
+    });
+    renderPage();
+    await screen.findByText("created a soul");
+    expect(screen.queryByText("something.else")).not.toBeInTheDocument();
+    expect(screen.queryByText("soul_accounts.credentials.print_slip")).not.toBeInTheDocument();
+  });
+
+  it("the key resolves to a real word in every shipped bundle", () => {
+    for (const f of ["zh-Hans", "en", "egy"]) {
+      const bundle = require(`@soulledger/core/messages/${f}.json`);
+      expect(bundle.soul_accounts.credentials.print_slip).toEqual(expect.any(String));
+    }
+  });
+});
+
 // ── Request parameters ───────────────────────────────────────────────
 
 describe("AuditPage request parameters", () => {
