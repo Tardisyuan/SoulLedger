@@ -108,6 +108,8 @@ jest.mock("@soulledger/core/api", () => ({
   eventsApi: { list: jest.fn().mockResolvedValue({ data: { results: [] } }) },
 }));
 
+// The name is on the page twice since the print footer names the soul when it has no account (2026-10-11):
+// the tests below read the heading.
 const FIRST_NAME = "孟婆亭前的甲";
 const SECOND_NAME = "转生之后的乙";
 
@@ -167,7 +169,7 @@ describe("SoulDetailPage is on the query cache", () => {
   it("renders the soul a realtime STATE_CHANGED push refetched, not the copy it took at mount", async () => {
     const { queryClient } = renderPage();
 
-    await screen.findByText(FIRST_NAME);
+    await screen.findByRole("heading", { name: FIRST_NAME });
     expect(mockSoulsGet).toHaveBeenCalledTimes(1);
 
     // The soul changed on the server, and the change reaches this client as a
@@ -179,7 +181,7 @@ describe("SoulDetailPage is on the query cache", () => {
       soul_id: SOUL_ID,
     } as EventPayload);
 
-    await screen.findByText(SECOND_NAME);
+    await screen.findByRole("heading", { name: SECOND_NAME });
     // Absence as well as presence: a page that appended rather than replaced,
     // or that rendered both a stale header and a fresh badge, passes a bare
     // `findByText` on the new name.
@@ -203,7 +205,7 @@ describe("SoulDetailPage is on the query cache", () => {
   it("refetches the karma ledger on that same push, not only the soul", async () => {
     const { queryClient } = renderPage();
 
-    await screen.findByText(FIRST_NAME);
+    await screen.findByRole("heading", { name: FIRST_NAME });
     expect(mockSoulsKarma).toHaveBeenCalledTimes(1);
 
     push(queryClient, {
@@ -218,7 +220,7 @@ describe("SoulDetailPage is on the query cache", () => {
   it("ignores a push aimed at something else, so the refetch above is the push and not a poll", async () => {
     const { queryClient } = renderPage();
 
-    await screen.findByText(FIRST_NAME);
+    await screen.findByRole("heading", { name: FIRST_NAME });
     expect(mockSoulsGet).toHaveBeenCalledTimes(1);
 
     mockSoulsGet.mockResolvedValue({ data: soulNamed(SECOND_NAME) });
@@ -231,7 +233,7 @@ describe("SoulDetailPage is on the query cache", () => {
     // here too, the two tests above would be measuring an over-broad
     // invalidation rather than the soul key.
     await waitFor(() => expect(mockSoulsGet).toHaveBeenCalledTimes(1));
-    expect(screen.getByText(FIRST_NAME)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: FIRST_NAME })).toBeInTheDocument();
     expect(screen.queryByText(SECOND_NAME)).not.toBeInTheDocument();
   });
 
@@ -242,7 +244,7 @@ describe("SoulDetailPage is on the query cache", () => {
     // `soulKeys.detail(id)`, so the page must come back on its own.
     renderPage();
 
-    await screen.findByText(FIRST_NAME);
+    await screen.findByRole("heading", { name: FIRST_NAME });
 
     fireEvent.click(screen.getByRole("button", { name: "souls.detail.edit" }));
 
@@ -257,7 +259,7 @@ describe("SoulDetailPage is on the query cache", () => {
       expect.objectContaining({ name: SECOND_NAME })
     );
 
-    await screen.findByText(SECOND_NAME);
+    await screen.findByRole("heading", { name: SECOND_NAME });
     expect(screen.queryByText(FIRST_NAME)).not.toBeInTheDocument();
   });
 });
@@ -334,7 +336,7 @@ describe("SoulDetailPage shows a residence", () => {
       data: { ...soulNamed(FIRST_NAME), is_residing: false, home_tenant: { code: "CN_DIYU", display_name: "中国地府" } },
     });
     renderPage();
-    await screen.findByText(FIRST_NAME);
+    await screen.findByRole("heading", { name: FIRST_NAME });
     expect(screen.queryByTestId("soul-residing")).toBeNull();
     expect(screen.queryByText(/中国地府/)).toBeNull();
   });
