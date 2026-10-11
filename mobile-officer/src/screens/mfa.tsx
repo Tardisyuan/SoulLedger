@@ -386,7 +386,7 @@ function Wizard({ onLeave, onEnabled, onLocked }: { onLeave: () => void; onEnabl
       <View testID="mfa-done" style={{ gap: space[4] }}>
         <Txt variant="title">{`✓ ${t("mfa.setup.done_title")}`}</Txt>
         <Txt variant="body" tone="muted">{t("mfa.setup.done_body")}</Txt>
-        <Button testID="mfa-done-close" title={t("common.close")} onPress={onLeave} />
+        <Button testID="mfa-done-close" title={t("officer_app.mfa.setup.done")} onPress={onLeave} />
       </View>
     );
   }

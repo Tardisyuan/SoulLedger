@@ -5637,6 +5637,9 @@
         "locked": "Too many attempts. Try again later",
         "network": "Network error",
         "other": "Couldn't verify. Try again later"
+      },
+      "setup": {
+        "done": "Done"
       }
     },
     "cosign": {
