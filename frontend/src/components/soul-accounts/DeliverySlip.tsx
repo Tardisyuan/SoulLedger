@@ -63,7 +63,8 @@ export function DeliverySlip({ slip }: { slip: CredentialSlip }) {
           </div>
           <div className="flex flex-col items-center gap-2">
             <QrCode text={soulCodeQrPayload(slip.soul_code)} size="42mm" />
-            <span className="text-center text-[12px] leading-4">{t("soul_accounts.credentials.slip.qr_hint")}</span>
+            {/* Balanced, so the two lines break between phrases and not inside 「扫码」 (seen in the first printed PDF). */}
+            <span className="text-center text-[12px] leading-4 [text-wrap:balance]">{t("soul_accounts.credentials.slip.qr_hint")}</span>
           </div>
         </div>
         <div className="flex gap-6 border-t pt-2 text-[12px]">
