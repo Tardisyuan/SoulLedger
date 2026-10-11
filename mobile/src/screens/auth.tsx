@@ -1,6 +1,6 @@
 import { LOCALE_LABELS, SUPPORTED_LOCALES } from "@soulledger/core/config/locale";
 import { soulDeviceLoginFailure, soulErrorMessage, type SoulErrorMessage } from "@soulledger/core/api/soul";
-import { formatSoulCode } from "@soulledger/core/domain/soulCode";
+import { SOUL_CODE_LENGTH, formatSoulCode } from "@soulledger/core/domain/soulCode";
 import { useNavigation, useRoute, type NavigationProp, type RouteProp } from "@react-navigation/native";
 import { useEffect, useRef, useState } from "react";
 import { Pressable, StyleSheet, TextInput, View } from "react-native";
@@ -241,10 +241,12 @@ export function LoginScreen() {
             setChallenge(null);
             setError(null);
           }}
+          // The back arrow. The number stays: someone whose step timed out and went back found the box empty
+          // under 「✓ 已从二维码填入」 and had to scan again (iPhone 15 Pro Max, 2026-10-11). To sign in as someone
+          // else there is 「换一个账号」 and the box itself.
           onChangeAccount={() => {
             setChallenge(null);
             setError(null);
-            setSoulCode("");
           }}
         />
       </Screen>
@@ -342,7 +344,7 @@ export function LoginScreen() {
               onComplete={() => passwordRef.current?.focus()}
               onScan={() => navigation.navigate("ScanCode")}
               editable={!busy}
-              scanned={scanned}
+              scanned={scanned && soulCode.length === SOUL_CODE_LENGTH}
             />
           )}
           {bioScreen ? null : (
