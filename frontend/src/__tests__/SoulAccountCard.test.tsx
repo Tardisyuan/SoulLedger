@@ -184,10 +184,10 @@ it("one soul's chain never shows on another soul's card (keys are per soul)", as
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const Wrapper = ({ children }: { children: ReactNode }) => <QueryClientProvider client={client}>{children}</QueryClientProvider>;
   const { rerender } = render(<SoulAccountCard soul={soul()} />, { wrapper: Wrapper });
-  expect(await screen.findByText("ABCDEFGH23")).toBeInTheDocument();
+  expect(await screen.findByText("ABC DEFG H23")).toBeInTheDocument();
   rerender(<SoulAccountCard soul={soul({ id: "s2", name: "李四", life_index: 0 })} />);
-  expect(await screen.findByText("ZZZZZZZZ99")).toBeInTheDocument();
-  expect(screen.queryByText("ABCDEFGH23")).toBeNull();
+  expect(await screen.findByText("ZZZ ZZZZ Z99")).toBeInTheDocument();
+  expect(screen.queryByText("ABC DEFG H23")).toBeNull();
 });
 
 it("loading failure shows a retry, not 'no account'", async () => {

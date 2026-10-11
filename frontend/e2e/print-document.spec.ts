@@ -84,6 +84,6 @@ test.describe("print media", () => {
     expect(foot ?? "").not.toMatch(UUID);
     // 页脚认得出是谁的档案:夹具里该灵魂有当前账号,印它的灵魂编号。
     await expect(page.locator("[data-print-reference]")).not.toBeEmpty();
-    await expect(page.locator("[data-print-reference]")).toContainText(SOUL_ACCOUNT.soul_code);
+    await expect(page.locator("[data-print-reference]")).toContainText("MPK 7Q2R X9T");
   });
 });
