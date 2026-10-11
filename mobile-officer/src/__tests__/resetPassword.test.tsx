@@ -132,18 +132,55 @@ describe("ResetPasswordScreen", () => {
     expect(isRetiredResetLink(cred())).toBe(true);
   });
 
-  it("a mismatch or a short password never reaches the server", async () => {
+  const mark = (id: string) => screen.getByTestId(`pw-rules-${id}-mark`, { includeHiddenElements: true }).props.children as string;
+  const matchMark = () => screen.getByTestId("pw-match-mark", { includeHiddenElements: true }).props.children as string;
+
+  it("lists two rows (no 当前密码 box here), all ○, plus the ◇ note", () => {
+    mount();
+    expect([mark("min_length"), mark("not_digits"), matchMark()]).toEqual(["○", "○", "○"]);
+    expect(screen.queryByTestId("pw-rules-not_current")).toBeNull();
+    expect(screen.getByTestId("pw-rules-note")).toBeTruthy();
+  });
+
+  it("ticks while typing without !, shows ! on leaving the box, ticks again at once", () => {
+    mount();
+    fireEvent.changeText(screen.getByTestId("reset-new"), "1234");
+    expect([mark("min_length"), mark("not_digits")]).toEqual(["○", "○"]);
+    fireEvent(screen.getByTestId("reset-new"), "blur");
+    expect([mark("min_length"), mark("not_digits")]).toEqual(["!", "!"]);
+    fireEvent.changeText(screen.getByTestId("reset-new"), PASSWORD);
+    expect([mark("min_length"), mark("not_digits")]).toEqual(["✓", "✓"]);
+  });
+
+  it("a mismatch or a short password never reaches the server, and is told by the list, not by a sentence", async () => {
     mount();
     fill(PASSWORD, "something-else-1");
     await submit();
-    expect(screen.getByTestId("reset-local-error").props.children).toBe("两次输入的密码不一致");
+    expect(matchMark()).toBe("!");
+    expect(screen.queryByTestId("reset-local-error")).toBeNull();
     fill("short", "short");
     await submit();
-    expect(screen.getByTestId("reset-local-error").props.children).toBe("密码至少8位");
+    expect(mark("min_length")).toBe("!");
+    expect(screen.queryByTestId("reset-local-error")).toBeNull();
     expect(mockConfirm).not.toHaveBeenCalled();
   });
 
-  it("a weak password stays on the form with one line per reason, by code, under the field", async () => {
+  it("a refusal as too common is the block above the list; the ticks stay and the words stay", async () => {
+    mockConfirm.mockRejectedValue(
+      httpError(400, { code: "weak_password", new_password: [{ code: "password_too_common", message: "m" }] })
+    );
+    const { onDone } = mount();
+    fill();
+    await submit();
+    expect(screen.getByText("! 这个密码太容易被猜到")).toBeTruthy();
+    expect([mark("min_length"), mark("not_digits"), matchMark()]).toEqual(["✓", "✓", "✓"]);
+    expect(screen.queryByTestId("reset-new-error")).toBeNull();
+    expect(screen.getByTestId("reset-new").props.value).toBe(PASSWORD);
+    expect(screen.getByTestId("reset-confirm").props.value).toBe(PASSWORD);
+    expect(onDone).not.toHaveBeenCalled();
+  });
+
+  it("a weak password stays on the form: the common reason in the list's block, each other reason as a line, by code, under the field", async () => {
     mockConfirm.mockRejectedValue(
       httpError(400, {
         code: "weak_password",
@@ -157,7 +194,8 @@ describe("ResetPasswordScreen", () => {
     const { onDone } = mount();
     fill();
     await submit();
-    expect(screen.getAllByTestId("reset-new-error").map((n) => n.props.children)).toEqual(["这个密码太常见,请换一个", "密码不能全是数字"]);
+    expect(screen.getAllByTestId("reset-new-error").map((n) => n.props.children)).toEqual(["密码不能全是数字"]);
+    expect(screen.getByText("! 这个密码太容易被猜到")).toBeTruthy();
     expect(screen.queryByText(/This password/)).toBeNull();
     expect(onDone).not.toHaveBeenCalled();
     expect(isRetiredResetLink(cred())).toBe(false); // it can still be used

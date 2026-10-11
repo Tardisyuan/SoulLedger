@@ -52,6 +52,7 @@ import { radius } from "../theme";
 import { useI18n } from "../i18n";
 import { RESEND_AFTER_SECONDS, RESET_CODE, RESET_CODE_TTL_SECONDS, formatCountdown, isPlausibleEmail } from "../rules";
 import { Button, GUTTER, Input, Screen, Txt, useTheme } from "../ui";
+import { PasswordMatch, PasswordRules, usePasswordForm } from "../passwordRulesView";
 import { MIN_PASSWORD_LENGTH } from "./auth";
 
 /**
@@ -322,7 +323,8 @@ function NoEmail({ onBack }: { onBack: () => void }) {
 
 // ── step 2 ─────────────────────────────────────────────────────────────
 
-type FieldName = "code" | "new" | "confirm";
+// The new password and its confirmation are told by the checklist under them (passwordRulesView), not by a Problem.
+type FieldName = "code";
 type Problem = { field: FieldName; title: string; body?: string };
 
 /** Six cells over one hidden input: 52 high, mono 22. The input keeps the testID and the one-time-code autofill. */
@@ -423,6 +425,7 @@ function CodeStep({ sent, onResent, onDone }: { sent: Sent; onResent: (sent: Sen
   // An attempt-level refusal that is not rate / offline: expired, used up, or anything unmapped.
   const [refusal, setRefusal] = useState<"expired" | "exhausted" | { key: string } | null>(null);
   const attempt = useAttemptBanner();
+  const { fields, holdScroller, holdSection, newJudged, confirmJudged, common: commonRejected, check, rejectCommon } = usePasswordForm({ next: newPassword, confirm });
   // When a refused resend was told it may try again (`retry_after`), epoch ms.
   const [resendAt, setResendAt] = useState<number | null>(null);
 
@@ -437,30 +440,10 @@ function CodeStep({ sent, onResent, onDone }: { sent: Sent; onResent: (sent: Sen
       <FieldProblem testID={`forgot-${name}-error`} title={problem.title} body={problem.body} />
     ) : null;
 
-  // A field's message goes as soon as what is typed passes that field's check —
-  // not only on the next submit. Only the field being edited is rechecked (a new
-  // password does not clear a wrong code), plus confirm when the password it must
-  // match changes. `values` is the form as it is after this keystroke.
-  const recheck = (edited: FieldName, values: Record<FieldName, string>) => {
-    if (!problem || (problem.field !== edited && !(edited === "new" && problem.field === "confirm"))) return;
-    const ok = {
-      code: RESET_CODE.test(values.code),
-      new: values.new.length >= MIN_PASSWORD_LENGTH,
-      confirm: values.confirm === values.new,
-    }[problem.field];
-    if (ok) setProblem(null);
-  };
+  // The code's message goes as soon as what is typed is a code, not only on the next submit.
   const changeCode = (v: string) => {
     setCode(v);
-    recheck("code", { code: v, new: newPassword, confirm });
-  };
-  const changeNew = (v: string) => {
-    setNew(v);
-    recheck("new", { code, new: v, confirm });
-  };
-  const changeConfirm = (v: string) => {
-    setConfirm(v);
-    recheck("confirm", { code, new: newPassword, confirm: v });
+    if (problem?.field === "code" && RESET_CODE.test(v)) setProblem(null);
   };
 
   const clearAll = () => {
@@ -472,14 +455,8 @@ function CodeStep({ sent, onResent, onDone }: { sent: Sent; onResent: (sent: Sen
   const submit = async () => {
     clearAll();
     if (!RESET_CODE.test(code)) return setProblem({ field: "code", title: t("soul_app.forgot_password.code_format") });
-    if (newPassword.length < MIN_PASSWORD_LENGTH) {
-      return setProblem({
-        field: "new",
-        title: t("soul_app.forgot_password.err_weak_title"),
-        body: t("soul_app.forgot_password.err_weak_body"),
-      });
-    }
-    if (newPassword !== confirm) return setProblem({ field: "confirm", title: t("soul_app.forgot_password.err_mismatch_title") });
+    // The checklist says what is missing; nothing is sent until it is all met.
+    if (!check()) return;
     setBusy(true);
     try {
       await soulApi.setNewPassword({ email: sent.email, code, new_password: newPassword });
@@ -499,11 +476,7 @@ function CodeStep({ sent, onResent, onDone }: { sent: Sent; onResent: (sent: Sen
       } else if (key === "soul_app.forgot_password.err_expired_title") {
         setRefusal("expired");
       } else if (key === "soul_app.errors.weak_password") {
-        setProblem({
-          field: "new",
-          title: t("soul_app.forgot_password.err_weak_title"),
-          body: t("soul_app.forgot_password.err_weak_body"),
-        });
+        rejectCommon();
       } else if (key === "soul_app.errors.rate_limited" || key === "soul_app.errors.network") {
         attempt.take(e, submit);
       } else {
@@ -556,7 +529,7 @@ function CodeStep({ sent, onResent, onDone }: { sent: Sent; onResent: (sent: Sen
   );
 
   return (
-    <Screen>
+    <Screen belowHeader scrollRef={holdScroller}>
       <View style={styles.page}>
         <Head kicker={t("soul_app.forgot_password.step2_kicker")} title={t("soul_app.forgot_password.step2_title")} />
         {banner ? <ErrorBanner testID={bannerID} banner={banner} /> : null}
@@ -591,19 +564,19 @@ function CodeStep({ sent, onResent, onDone }: { sent: Sent; onResent: (sent: Sen
           {fieldProblem("code")}
         </View>
 
-        <View style={styles.field}>
+        <View ref={holdSection} collapsable={false} style={styles.field}>
           <Input
             testID="forgot-new-password"
             label={t("soul_app.change_password.new_password")}
             value={newPassword}
-            onChangeText={changeNew}
+            onChangeText={setNew}
             editable={!busy}
             secureTextEntry
             secureToggle={{ show: t("soul_app.common.show"), hide: t("soul_app.common.hide") }}
-            invalid={problem?.field === "new"}
+            {...fields.next}
           />
           <StrengthBar password={newPassword} />
-          {fieldProblem("new")}
+          <PasswordRules next={newPassword} judged={newJudged} common={commonRejected} />
         </View>
 
         <View style={styles.field}>
@@ -611,12 +584,12 @@ function CodeStep({ sent, onResent, onDone }: { sent: Sent; onResent: (sent: Sen
             testID="forgot-confirm-password"
             label={t("soul_app.change_password.confirm_password")}
             value={confirm}
-            onChangeText={changeConfirm}
+            onChangeText={setConfirm}
             editable={!busy}
             secureTextEntry
-            invalid={problem?.field === "confirm"}
+            {...fields.confirm}
           />
-          {fieldProblem("confirm")}
+          <PasswordMatch next={newPassword} confirm={confirm} judged={confirmJudged} />
         </View>
 
         <Button

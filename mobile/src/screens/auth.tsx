@@ -14,6 +14,7 @@ import { useSession, type MfaChallenge } from "../session";
 import { clearCredential, bioEnabled, forgetAccount, isColdStart, readCredential, rememberedAccount, revokeCredential, spendAutoPrompt } from "../deviceLogin";
 import { LAPSE_KEYS, canSubmitLogin, lapseOfReason, shouldAutoPrompt, type Lapse } from "../loginRules";
 import { forgetDevice } from "../mfa";
+import { PasswordMatch, PasswordRules, usePasswordForm } from "../passwordRulesView";
 import { SoulCodeField, SoulCodeText } from "../soulCodeView";
 import { Block, Button, GUTTER, Interp, Input, Notice, Screen, SmallButton, Txt, useLayout, useTheme } from "../ui";
 import { useBiometry } from "../useBiometry";
@@ -412,25 +413,11 @@ export function LoginScreen() {
 
 export const MIN_PASSWORD_LENGTH = 8;
 
-/**
- * The App's own password rules, before anything is sent: the first-login change
- * and the 「忘记密码」 reset both ask this, so the two cannot drift apart. The
- * server's validators still have the last word (`errors.weak_password`).
- */
-export function newPasswordProblem(newPassword: string, confirm: string): SoulErrorMessage | null {
-  if (newPassword.length < MIN_PASSWORD_LENGTH) return { key: "soul_app.change_password.too_short" };
-  if (newPassword !== confirm) return { key: "soul_app.change_password.mismatch" };
-  return null;
-}
-
 type PasswordField = "old" | "new" | "confirm";
 
 /** Which field a failure belongs to; anything else is shown above the button. */
 const FIELD_OF: Record<string, PasswordField> = {
-  "soul_app.change_password.too_short": "new",
   "soul_app.errors.password_unchanged": "new",
-  "soul_app.errors.weak_password": "new",
-  "soul_app.change_password.mismatch": "confirm",
   "soul_app.errors.invalid_old_password": "old",
 };
 
@@ -502,14 +489,15 @@ export function ChangePasswordScreen() {
   // Signed in = opened from settings by choice: no 72-hour story, no "back to login", and success returns there.
   const voluntary = state.status === "signedIn";
   const expiresAt = state.status === "mustChangePassword" ? state.expiresAt : null;
+  const { fields, holdScroller, holdSection, newJudged, confirmJudged, common: commonRejected, check, rejectCommon } = usePasswordForm({ old: oldPassword, next: newPassword, confirm });
   const field = error ? FIELD_OF[error.key] : undefined;
   // Someone who changed the initial password long ago is typing their current one (Design 第二十二批).
   const said = (key: string) => (voluntary && key === "soul_app.errors.invalid_old_password" ? "profile.password_old_wrong" : key);
   const fieldError = (name: PasswordField) => (error && field === name ? t(said(error.key), error.params) : null);
 
   const submit = async () => {
-    const problem = newPasswordProblem(newPassword, confirm);
-    if (problem) return setError(problem);
+    // The checklist under the box says what is missing; nothing is sent until it is all met.
+    if (!check()) return;
     setBusy(true);
     setError(null);
     try {
@@ -517,13 +505,16 @@ export function ChangePasswordScreen() {
       toast(t(voluntary ? "soul_app.change_password.success_others_out" : "soul_app.change_password.success"));
       if (voluntary && navigation.canGoBack()) navigation.goBack();
     } catch (e) {
-      setError(soulErrorMessage(e));
+      const message = soulErrorMessage(e);
+      // Too common / too like the name: said in the checklist (Design 第二十三批 §三), not as a one-line error.
+      if (message.key === "soul_app.errors.weak_password") rejectCommon();
+      else setError(message);
       setBusy(false);
     }
   };
 
   return (
-    <Screen>
+    <Screen belowHeader scrollRef={holdScroller}>
       <Block last style={styles.stack}>
         {voluntary ? null : <Txt tone="muted">{t("soul_app.change_password.intro")}</Txt>}
         <ExpiryBox expiresAt={expiresAt} now={now} />
@@ -535,24 +526,32 @@ export function ChangePasswordScreen() {
             onChangeText={setOld}
             secureTextEntry
             error={fieldError("old")}
+            {...fields.old}
           />
-          <Input
-            testID="new-password"
-            label={t("soul_app.change_password.new_password")}
-            hint={t("soul_app.change_password.new_hint")}
-            value={newPassword}
-            onChangeText={setNew}
-            secureTextEntry
-            error={fieldError("new")}
-          />
-          <Input
-            testID="confirm-password"
-            label={t("soul_app.change_password.confirm_password")}
-            value={confirm}
-            onChangeText={setConfirm}
-            secureTextEntry
-            error={fieldError("confirm")}
-          />
+          <View ref={holdSection} collapsable={false} style={styles.ruleField}>
+            <Input
+              testID="new-password"
+              label={t("soul_app.change_password.new_password")}
+              value={newPassword}
+              onChangeText={setNew}
+              secureTextEntry
+              error={fieldError("new")}
+              {...fields.next}
+            />
+            <PasswordRules next={newPassword} old={oldPassword} judged={newJudged} common={commonRejected} />
+          </View>
+          <View style={styles.ruleField}>
+            <Input
+              testID="confirm-password"
+              label={t("soul_app.change_password.confirm_password")}
+              value={confirm}
+              onChangeText={setConfirm}
+              secureTextEntry
+              error={fieldError("confirm")}
+              {...fields.confirm}
+            />
+            <PasswordMatch next={newPassword} confirm={confirm} judged={confirmJudged} />
+          </View>
         </View>
         {error && !field ? (
           <Notice tone={NEUTRAL_ERRORS.has(error.key) ? "neutral" : "neg"} testID="change-password-error">
@@ -573,6 +572,7 @@ export function ChangePasswordScreen() {
 }
 
 const styles = StyleSheet.create({
+  ruleField: { gap: 8 },
   fill: { flex: 1 },
   brand: { alignItems: "center", paddingTop: 48, paddingBottom: 32 },
   appName: { marginTop: 24, letterSpacing: 1.6 },
@@ -580,7 +580,7 @@ const styles = StyleSheet.create({
   login: { borderTopWidth: 1, marginHorizontal: 24, paddingTop: 24 },
   lead: { marginTop: 8 },
   gapTop: { marginTop: 16 },
-  fields: { marginTop: 20, gap: 16 },
+  fields: { marginTop: 20, gap: 24 },
   dimmed: { opacity: 0.6 },
   submit: { marginTop: 24 },
   forgot: { minHeight: 44, minWidth: 44, justifyContent: "center", alignItems: "flex-end" },

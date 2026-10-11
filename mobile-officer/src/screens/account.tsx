@@ -11,16 +11,29 @@
  * server's reason code, under the field they are about; the password is never echoed.
  */
 import { authApi } from "@soulledger/core/api/auth";
-import { useEffect, useState, type ReactNode } from "react";
-import { BackHandler, Linking, Pressable, View } from "react-native";
+import { useEffect, useState, type ReactNode, type Ref } from "react";
+import { BackHandler, Linking, Pressable, View, type ScrollView } from "react-native";
 
 import { ActionButton } from "../kit";
 import { registeredToken } from "../push";
-import { adminHelpUrl, forgotFailureKey, passwordFailure } from "../rules";
-import { Button, FieldError, Icon, Input, Notice, Screen, Txt, space, useI18n, useTheme, useToast } from "../shared";
+import { adminHelpUrl, forgotFailureKey, passwordFailure, splitCommonReasons } from "../rules";
+import { Button, FieldError, Icon, Input, Notice, PasswordMatch, PasswordRules, Screen, Txt, space, useI18n, usePasswordForm, useTheme, useToast } from "../shared";
 
 /** A back row over a screen. `locked`: leaving is not allowed now (the Android back key is swallowed too). */
-export function AccountFrame({ testID, onBack, locked, children }: { testID: string; onBack: () => void; locked?: boolean; children: ReactNode }) {
+export function AccountFrame({
+  testID,
+  onBack,
+  locked,
+  scrollRef,
+  children,
+}: {
+  testID: string;
+  onBack: () => void;
+  locked?: boolean;
+  /** For a form that scrolls its new-password block to the top when it is focused. */
+  scrollRef?: Ref<ScrollView>;
+  children: ReactNode;
+}) {
   const { t } = useI18n();
   const theme = useTheme();
   useEffect(() => {
@@ -44,7 +57,7 @@ export function AccountFrame({ testID, onBack, locked, children }: { testID: str
           <Txt variant="nav">{t("officer_app.back")}</Txt>
         </Pressable>
       )}
-      <Screen edges={["left", "right"]}>
+      <Screen edges={["left", "right"]} belowHeader scrollRef={scrollRef}>
         <View style={{ padding: space[5], gap: space[4] }}>{children}</View>
       </Screen>
     </View>
@@ -96,8 +109,6 @@ export function ForgotPassword({ initial, onBack }: { initial: string; onBack: (
   );
 }
 
-const MIN_PASSWORD_LENGTH = 8;
-
 export function ChangePasswordScreen({ onBack }: { onBack: () => void }) {
   const { t } = useI18n();
   const toast = useToast();
@@ -105,14 +116,13 @@ export function ChangePasswordScreen({ onBack }: { onBack: () => void }) {
   const [newPassword, setNew] = useState("");
   const [confirm, setConfirm] = useState("");
   const [busy, setBusy] = useState(false);
-  const [local, setLocal] = useState<string | null>(null);
-  const [fail, setFail] = useState<ReturnType<typeof passwordFailure> | null>(null);
+  const [fail, setFail] = useState<(ReturnType<typeof passwordFailure> & { common?: boolean }) | null>(null);
+  const { fields, holdScroller, holdSection, newJudged, confirmJudged, common: commonRejected, check, rejectCommon } = usePasswordForm({ old: oldPassword, next: newPassword, confirm });
 
   const submit = () => {
     setFail(null);
-    if (newPassword.length < MIN_PASSWORD_LENGTH) return setLocal(t("profile.password_too_short"));
-    if (newPassword !== confirm) return setLocal(t("profile.password_mismatch"));
-    setLocal(null);
+    // The checklist under the box says what is missing; nothing is sent until it is all met.
+    if (!check()) return;
     setBusy(true);
     authApi
       .changePassword(oldPassword, newPassword, registeredToken())
@@ -122,14 +132,20 @@ export function ChangePasswordScreen({ onBack }: { onBack: () => void }) {
           toast(t("profile.password_changed_others_out"), "success");
           onBack();
         },
-        (e: unknown) => setFail(passwordFailure(e))
+        (e: unknown) => {
+          const failure = passwordFailure(e);
+          // Too common / too like the name: said in the checklist, not as a line under the field.
+          const { common, rest } = splitCommonReasons(failure.next);
+          if (common) rejectCommon();
+          setFail({ ...failure, next: rest, common });
+        }
       )
       .finally(() => setBusy(false));
   };
 
-  const none = fail && !fail.network && !fail.old.length && !fail.next.length && !fail.other.length;
+  const none = fail && !fail.network && !fail.common && !fail.old.length && !fail.next.length && !fail.other.length;
   return (
-    <AccountFrame testID="password-screen" onBack={onBack}>
+    <AccountFrame testID="password-screen" onBack={onBack} scrollRef={holdScroller}>
       <Txt variant="title">{t("profile.change_password")}</Txt>
       {fail?.network ? <Notice tone="neg" testID="password-failure">{`! ${t("officer_app.login.reasons.network")}`}</Notice> : null}
       {none ? <Notice tone="neg" testID="password-failure">{`! ${t("profile.password_change_failed")}`}</Notice> : null}
@@ -148,32 +164,40 @@ export function ChangePasswordScreen({ onBack }: { onBack: () => void }) {
         textContentType="password"
         autoComplete="current-password"
         secureToggle={{ show: t("soul_app.common.show"), hide: t("soul_app.common.hide") }}
+        {...fields.old}
       />
       {fail?.old.map((key) => <FieldError key={key} testID="password-old-error" text={t(key)} />)}
-      <Input
-        testID="password-new"
-        label={t("profile.new_password")}
-        value={newPassword}
-        onChangeText={setNew}
-        invalid={!!fail?.next.length}
-        secureTextEntry
-        textContentType="newPassword"
-        autoComplete="new-password"
-        secureToggle={{ show: t("soul_app.common.show"), hide: t("soul_app.common.hide") }}
-      />
-      {fail?.next.map((key) => <FieldError key={key} testID="password-new-error" text={t(key)} />)}
-      <Input
-        testID="password-confirm"
-        label={t("profile.confirm_password")}
-        value={confirm}
-        onChangeText={setConfirm}
-        secureTextEntry
-        textContentType="newPassword"
-        autoComplete="new-password"
-        secureToggle={{ show: t("soul_app.common.show"), hide: t("soul_app.common.hide") }}
-      />
-      {local ? <FieldError testID="password-local-error" text={local} /> : null}
-      <Button testID="password-submit" title={t("common.save")} busy={busy} disabled={!oldPassword || !newPassword || !confirm} onPress={submit} />
+      <View ref={holdSection} collapsable={false} style={{ gap: space[3] }}>
+        <Input
+          testID="password-new"
+          label={t("profile.new_password")}
+          value={newPassword}
+          onChangeText={setNew}
+          secureTextEntry
+          textContentType="newPassword"
+          autoComplete="new-password"
+          secureToggle={{ show: t("soul_app.common.show"), hide: t("soul_app.common.hide") }}
+          {...fields.next}
+          invalid={fields.next.invalid || !!fail?.next.length}
+        />
+        {fail?.next.map((key) => <FieldError key={key} testID="password-new-error" text={t(key)} />)}
+        <PasswordRules next={newPassword} old={oldPassword} judged={newJudged} common={commonRejected} />
+      </View>
+      <View style={{ gap: space[3] }}>
+        <Input
+          testID="password-confirm"
+          label={t("profile.confirm_password")}
+          value={confirm}
+          onChangeText={setConfirm}
+          secureTextEntry
+          textContentType="newPassword"
+          autoComplete="new-password"
+          secureToggle={{ show: t("soul_app.common.show"), hide: t("soul_app.common.hide") }}
+          {...fields.confirm}
+        />
+        <PasswordMatch next={newPassword} confirm={confirm} judged={confirmJudged} />
+      </View>
+      <Button testID="password-submit" title={t("common.save")} busy={busy} onPress={submit} />
     </AccountFrame>
   );
 }
