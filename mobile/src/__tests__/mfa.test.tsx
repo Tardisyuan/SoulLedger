@@ -438,19 +438,65 @@ describe("the management page", () => {
     expect(screen.getByText("恢复码只剩 2 个。用完之前请重新生成。")).toBeTruthy();
   });
 
-  it("regenerating asks to be confirmed, needs no digits, and shows the new ten once", async () => {
+  it("regenerating asks to be confirmed with the same box as turning off, then shows the new ten once on the step-③ page", async () => {
     const calls = await open(ON, { "POST /me/mfa/recovery-codes/": { status: 200, data: { recovery_codes: CODES } } });
     fireEvent.press(screen.getByTestId("mfa-regen"));
     expect(await screen.findByText("旧的 8 个立即作废。新的 10 个只显示一次。")).toBeTruthy();
-    expect(screen.queryByTestId("disable-code")).toBeNull();
     expect(calls.some((c) => c.url === "/me/mfa/recovery-codes/")).toBe(false); // not before the confirm
+    // Nothing to confirm with yet; five numbers are not six.
+    expect(screen.getByTestId("regen-confirm").props.accessibilityState).toMatchObject({ disabled: true });
+    fireEvent.changeText(screen.getByTestId("regen-code"), "30715");
+    expect(screen.getByTestId("regen-confirm").props.accessibilityState).toMatchObject({ disabled: true });
+    fireEvent.changeText(screen.getByTestId("regen-code"), "307155");
     fireEvent.press(screen.getByTestId("regen-confirm"));
     await screen.findByTestId("recovery-codes");
-    expect(bodies(calls, "POST /me/mfa/recovery-codes/")).toEqual([undefined]);
+    expect(bodies(calls, "POST /me/mfa/recovery-codes/")).toEqual([{ method: "totp", code: "307155" }]);
     CODES.forEach((code, i) => expect(screen.getByTestId(`recovery-code-${i}`).props.children).toBe(code));
+    // The same page as ③: the tick, copy-all and save-as-file are there, and there is no way back before 完成.
+    expect(screen.getByTestId("codes-confirm")).toBeTruthy();
+    expect(screen.getByTestId("codes-copy")).toBeTruthy();
+    expect(screen.getByTestId("codes-save-file")).toBeTruthy();
+    expect(screen.getByTestId("codes-done").props.accessibilityState).toMatchObject({ disabled: true });
     act(() => navigationRef.goBack());
-    expect(route()).toBe("Mfa"); // the same rule as ③
-    await expectNothingKept(CODES);
+    expect(route()).toBe("Mfa");
+    await expectNothingKept([...CODES, "307155"]);
+  });
+
+  it("regenerating by password when the phone is not at hand", async () => {
+    const calls = await open(ON, { "POST /me/mfa/recovery-codes/": { status: 200, data: { recovery_codes: CODES } } });
+    fireEvent.press(screen.getByTestId("mfa-regen"));
+    fireEvent.press(await screen.findByTestId("regen-use-password"));
+    expect(screen.getByTestId("regen-password").props.secureTextEntry).toBe(true);
+    fireEvent.changeText(screen.getByTestId("regen-password"), "my-long-password");
+    fireEvent.press(screen.getByTestId("regen-confirm"));
+    await screen.findByTestId("recovery-codes");
+    expect(bodies(calls, "POST /me/mfa/recovery-codes/")).toEqual([{ method: "password", password: "my-long-password" }]);
+    await expectNothingKept(["my-long-password"]);
+  });
+
+  it("a wrong number, a wrong password and a lock each say so; no new codes are shown", async () => {
+    await open(ON, {
+      "POST /me/mfa/recovery-codes/": [
+        { status: 400, data: { detail: "x", code: "wrong", remaining_attempts: 4 } },
+        { status: 400, data: { detail: "x", code: "wrong_password", remaining_attempts: 3 } },
+        { status: 429, data: { detail: "x", code: "locked", retry_after: 900, locked_until: new Date(Date.now() + 900_000).toISOString() } },
+      ],
+    });
+    fireEvent.press(screen.getByTestId("mfa-regen"));
+    fireEvent.changeText(await screen.findByTestId("regen-code"), "307155");
+    fireEvent.press(screen.getByTestId("regen-confirm"));
+    expect(await screen.findByText("! 数字不对")).toBeTruthy();
+    expect(screen.getByText("还可以再试 4 次。")).toBeTruthy();
+    fireEvent.press(screen.getByTestId("regen-use-password"));
+    fireEvent.changeText(await screen.findByTestId("regen-password"), "nope");
+    fireEvent.press(screen.getByTestId("regen-confirm"));
+    await waitFor(() => expect(screen.getByText("! 密码不对")).toBeTruthy());
+    fireEvent.changeText(screen.getByTestId("regen-password"), "nope2");
+    fireEvent.press(screen.getByTestId("regen-confirm"));
+    await screen.findByTestId("step-locked");
+    expect(screen.getByTestId("regen-confirm").props.accessibilityState).toMatchObject({ disabled: true });
+    expect(screen.queryByTestId("recovery-codes")).toBeNull();
+    expect(route()).toBe("Mfa");
   });
 
   it("cancelling the regenerate sheet asks nothing", async () => {

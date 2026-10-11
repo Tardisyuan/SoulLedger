@@ -304,6 +304,20 @@ def verify_login_code(mfa, *, code=None, recovery_code=None, request=None) -> di
     return {"code": "ok", "method": "totp"}
 
 
+def confirm_owner(mfa, user, *, method, code="", password="", request=None) -> dict:
+    """敏感动作(关闭、重新生成恢复码)前的「确认是本人」:6 位数字(`method=totp`,不收恢复码)或密码。
+    官员与灵魂、关闭与重新生成共用这一处 —— 校验方式、原因码、错误计数、锁定都在这里。
+    错误数字与错误密码**记进同一把锁**(连续 5 次锁 15 分钟);锁着时连对的也不行。
+    → {"code": "ok"} 或 {"code": wrong|expired|locked|wrong_password, …}。"""
+    if method == "totp":
+        return verify_login_code(mfa, code=code or "", request=request)
+    if _lock_remaining(mfa) > 0:
+        return {"code": "locked", "retry_after": _lock_remaining(mfa)}
+    if not user.check_password(password or ""):
+        return _count_failure(mfa, "wrong_password", request=request)
+    return {"code": "ok"}
+
+
 # ── 设备令牌 ───────────────────────────────────────────────────────────────────
 
 

@@ -121,6 +121,51 @@ function RecoveryCodes({ codes }: { codes: string[] }) {
   );
 }
 
+/**
+ * 「确认是本人」:6 位动态码或密码二选一。关闭与重新生成恢复码共用这一块(后端也是同一个确认、同一把锁);
+ * `id` 是两处各自的 testID 前缀。
+ */
+function OwnerConfirm({
+  id, method, onMethod, code, onCode, password, onPassword,
+}: {
+  id: string;
+  method: "totp" | "password";
+  onMethod: (m: "totp" | "password") => void;
+  code: string;
+  onCode: (v: string) => void;
+  password: string;
+  onPassword: (v: string) => void;
+}) {
+  const { t } = useI18n();
+  return (
+    <>
+      <Segmented
+        testID={`${id}-method`}
+        value={method}
+        onChange={onMethod}
+        options={[
+          { key: "totp", label: t("mfa.manage.confirm_by_totp") },
+          { key: "password", label: t("mfa.manage.confirm_by_password") },
+        ]}
+      />
+      {method === "totp" ? (
+        <Input testID={`${id}-code`} label={t("mfa.verify.code_label")} value={code} onChangeText={(v) => onCode(digits(v))} mono keyboardType="number-pad" maxLength={6} autoComplete="one-time-code" textContentType="oneTimeCode" />
+      ) : (
+        <Input
+          testID={`${id}-password`}
+          label={t("auth.password")}
+          value={password}
+          onChangeText={onPassword}
+          secureTextEntry
+          textContentType="password"
+          autoComplete="current-password"
+          secureToggle={{ show: t("soul_app.common.show"), hide: t("soul_app.common.hide") }}
+        />
+      )}
+    </>
+  );
+}
+
 function Enabled({ status, onChanged, onDisabled }: { status: MfaStatus; onChanged: () => void; onDisabled: () => void }) {
   const { t } = useI18n();
   const toast = useToast();
@@ -136,14 +181,16 @@ function Enabled({ status, onChanged, onDisabled }: { status: MfaStatus; onChang
     setBusy(true);
     setFailure(null);
     mfaApi
-      .regenerateRecoveryCodes()
+      .regenerateRecoveryCodes(method === "totp" ? { method: "totp", code } : { method: "password", password })
       .then(
         (r) => {
           setFresh(r.data.recovery_codes);
           setAsking(null);
+          setCode("");
+          setPassword("");
           onChanged();
         },
-        (e: unknown) => setFailure(t(mfaManageFailureKey(e, "profile.profile_update_failed")))
+        (e: unknown) => setFailure(t(mfaManageFailureKey(e, "mfa.manage.disable_failed")))
       )
       .finally(() => setBusy(false));
   };
@@ -161,6 +208,18 @@ function Enabled({ status, onChanged, onDisabled }: { status: MfaStatus; onChang
         (e: unknown) => setFailure(t(mfaManageFailureKey(e, "mfa.manage.disable_failed")))
       )
       .finally(() => setBusy(false));
+  };
+
+  const ready = method === "totp" ? code.length === 6 : password.length > 0;
+  const changeMethod = (m: "totp" | "password") => {
+    setMethod(m);
+    setFailure(null);
+  };
+  const cancel = () => {
+    setAsking(null);
+    setFailure(null);
+    setCode("");
+    setPassword("");
   };
 
   if (fresh) {
@@ -183,52 +242,20 @@ function Enabled({ status, onChanged, onDisabled }: { status: MfaStatus; onChang
         <View style={{ gap: space[3] }}>
           <Txt variant="section">{t("mfa.manage.regenerate_title")}</Txt>
           <Txt variant="body" tone="muted">{t("mfa.manage.regenerate_body")}</Txt>
+          <OwnerConfirm id="mfa-regen" method={method} onMethod={changeMethod} code={code} onCode={setCode} password={password} onPassword={setPassword} />
           <View style={{ flexDirection: "row", gap: space[3] }}>
-            <ActionButton testID="mfa-regen-cancel" kind="outline" title={t("soul_app.common.cancel")} onPress={() => setAsking(null)} />
-            <ActionButton testID="mfa-regen-confirm" kind="ink" title={t("mfa.manage.regenerate")} busy={busy} onPress={regenerate} />
+            <ActionButton testID="mfa-regen-cancel" kind="outline" title={t("soul_app.common.cancel")} onPress={cancel} />
+            <ActionButton testID="mfa-regen-confirm" kind="ink" title={t("mfa.manage.regenerate")} busy={busy} disabled={!ready} onPress={regenerate} />
           </View>
         </View>
       ) : asking === "disable" ? (
         <View style={{ gap: space[3] }}>
           <Txt variant="section">{t("mfa.manage.disable_title")}</Txt>
           <Txt variant="body" tone="muted">{t("mfa.manage.disable_body")}</Txt>
-          <Segmented
-            testID="mfa-disable-method"
-            value={method}
-            onChange={(m) => {
-              setMethod(m);
-              setFailure(null);
-            }}
-            options={[
-              { key: "totp", label: t("mfa.manage.confirm_by_totp") },
-              { key: "password", label: t("mfa.manage.confirm_by_password") },
-            ]}
-          />
-          {method === "totp" ? (
-            <Input testID="mfa-disable-code" label={t("mfa.verify.code_label")} value={code} onChangeText={(v) => setCode(digits(v))} mono keyboardType="number-pad" maxLength={6} autoComplete="one-time-code" textContentType="oneTimeCode" />
-          ) : (
-            <Input
-              testID="mfa-disable-password"
-              label={t("auth.password")}
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              textContentType="password"
-              autoComplete="current-password"
-              secureToggle={{ show: t("soul_app.common.show"), hide: t("soul_app.common.hide") }}
-            />
-          )}
+          <OwnerConfirm id="mfa-disable" method={method} onMethod={changeMethod} code={code} onCode={setCode} password={password} onPassword={setPassword} />
           <View style={{ flexDirection: "row", gap: space[3] }}>
-            <ActionButton
-              testID="mfa-disable-cancel"
-              kind="outline"
-              title={t("soul_app.common.cancel")}
-              onPress={() => {
-                setAsking(null);
-                setFailure(null);
-              }}
-            />
-            <ActionButton testID="mfa-disable-confirm" kind="ink" title={t("mfa.manage.disable_confirm")} busy={busy} disabled={method === "totp" ? code.length !== 6 : !password} onPress={disable} />
+            <ActionButton testID="mfa-disable-cancel" kind="outline" title={t("soul_app.common.cancel")} onPress={cancel} />
+            <ActionButton testID="mfa-disable-confirm" kind="ink" title={t("mfa.manage.disable_confirm")} busy={busy} disabled={!ready} onPress={disable} />
           </View>
         </View>
       ) : (
