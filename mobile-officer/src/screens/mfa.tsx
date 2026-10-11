@@ -13,12 +13,12 @@
  */
 import { mfaApi, type MfaSetupResponse, type MfaStatus } from "@soulledger/core/api/auth";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Linking, View } from "react-native";
+import { Linking, TextInput, View } from "react-native";
 
 import { ActionButton, Segmented } from "../kit";
 import { mfaManageFailureKey } from "../rules";
 import { useSession } from "../session";
-import { Button, FieldError, Input, Notice, Txt, family, space, useI18n, useRemote, useToast } from "../shared";
+import { Button, FieldError, Input, Notice, Txt, family, space, useI18n, useRemote, useTheme, useToast } from "../shared";
 import { AccountFrame } from "./account";
 
 const STEPS = 4;
@@ -270,6 +270,7 @@ function Enabled({ status, onChanged, onDisabled }: { status: MfaStatus; onChang
 
 function Wizard({ onLeave, onEnabled, onLocked }: { onLeave: () => void; onEnabled: () => void; onLocked: (locked: boolean) => void }) {
   const { t } = useI18n();
+  const theme = useTheme();
   const [step, setStep] = useState(1);
   const [setup, setSetup] = useState<MfaSetupResponse | null>(null);
   const [setupFailed, setSetupFailed] = useState<string | null>(null);
@@ -282,6 +283,14 @@ function Wizard({ onLeave, onEnabled, onLocked }: { onLeave: () => void; onEnabl
   const [completeError, setCompleteError] = useState<string | null>(null);
   const [password, setPassword] = useState("");
   const [passwordError, setPasswordError] = useState<string | null>(null);
+  // 登录的尝试次数用完(429):框下说一句,「下一步」这一轮不再可点。
+  const [locked, setLocked] = useState(false);
+  // 密码不对:焦点回到框里(第十九批)。
+  const passwordRef = useRef<TextInput>(null);
+  const [refusals, setRefusals] = useState(0);
+  useEffect(() => {
+    if (refusals > 0) passwordRef.current?.focus();
+  }, [refusals]);
   const requested = useRef(false);
   const finished = useRef(false);
   const done = step > STEPS;
@@ -303,7 +312,7 @@ function Wizard({ onLeave, onEnabled, onLocked }: { onLeave: () => void; onEnabl
   // 第一步「下一步」带着当前密码去要一把新密钥(已登录不等于是本人);要到了就不再要,往返不换码,也不再问密码。
   const start = () => {
     if (setup) return setStep(2);
-    if (busy) return;
+    if (busy || locked) return;
     setBusy(true);
     setPasswordError(null);
     setSetupFailed(null);
@@ -318,9 +327,14 @@ function Wizard({ onLeave, onEnabled, onLocked }: { onLeave: () => void; onEnabl
         },
         (e: unknown) => {
           const code = (e as { response?: { data?: { code?: string } } })?.response?.data?.code;
-          if (code === "wrong_password") setPasswordError(t("mfa.setup.password_wrong"));
-          else if (code === "login_locked") setPasswordError(t("mfa.setup.password_locked"));
-          else setSetupFailed(t(mfaManageFailureKey(e, "mfa.setup.setup_failed")));
+          if (code === "wrong_password") {
+            setPasswordError(t("mfa.setup.password_wrong"));
+            setRefusals((n) => n + 1);
+          } else if (code === "login_locked") {
+            setPasswordError(t("mfa.setup.password_locked"));
+            setLocked(true);
+            setRefusals((n) => n + 1);
+          } else setSetupFailed(t(mfaManageFailureKey(e, "mfa.setup.setup_failed")));
         }
       )
       .finally(() => setBusy(false));
@@ -386,21 +400,26 @@ function Wizard({ onLeave, onEnabled, onLocked }: { onLeave: () => void; onEnabl
           <Txt variant="title">{t("mfa.setup.step1_title")}</Txt>
           <Txt variant="body" tone="muted">{t("mfa.setup.step1_body")}</Txt>
           {setup ? null : (
-            <Input
-              testID="mfa-setup-password"
-              label={t("mfa.manage.confirm_by_password")}
-              hint={t("mfa.setup.password_hint")}
-              error={passwordError}
-              value={password}
-              onChangeText={(v) => {
-                setPassword(v);
-                setPasswordError(null);
-              }}
-              secureTextEntry
-              textContentType="password"
-              autoComplete="current-password"
-              secureToggle={{ show: t("soul_app.common.show"), hide: t("soul_app.common.hide") }}
-            />
+            <>
+              <View testID="mfa-password-divider" style={{ height: 1, backgroundColor: theme.hair }} />
+              <Txt testID="mfa-password-hint" variant="body" tone="muted">{t("mfa.setup.password_hint")}</Txt>
+              <Input
+                inputRef={passwordRef}
+                testID="mfa-setup-password"
+                label={t("mfa.manage.confirm_by_password")}
+                error={passwordError}
+                value={password}
+                onChangeText={(v) => {
+                  setPassword(v);
+                  if (!locked) setPasswordError(null);
+                }}
+                editable={!busy}
+                secureTextEntry
+                textContentType="password"
+                autoComplete="current-password"
+                secureToggle={{ show: t("soul_app.common.show"), hide: t("soul_app.common.hide") }}
+              />
+            </>
           )}
           {setupFailed ? <Notice tone="neg" testID="mfa-setup-failed">{`! ${setupFailed}`}</Notice> : null}
         </View>
@@ -466,7 +485,7 @@ function Wizard({ onLeave, onEnabled, onLocked }: { onLeave: () => void; onEnabl
             testID="mfa-next"
             title={t("mfa.setup.next")}
             busy={step === 1 && busy}
-            disabled={step === 1 ? !setup && password.length === 0 : !setup}
+            disabled={step === 1 ? !setup && (locked || password.length === 0) : !setup}
             onPress={() => (step === 1 ? start() : setStep(step + 1))}
           />
         ) : step === 3 ? (

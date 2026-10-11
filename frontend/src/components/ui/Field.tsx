@@ -256,7 +256,12 @@ type ControlSizeProp = { size?: FieldSize };
 
 export type TextFieldProps = FieldShellOwnProps &
   ControlSizeProp &
-  Omit<React.InputHTMLAttributes<HTMLInputElement>, "size" | "className">;
+  Omit<React.InputHTMLAttributes<HTMLInputElement>, "size" | "className"> & {
+    /** Monospace text and placeholder: a code the user copies or compares character by character. */
+    mono?: boolean;
+    /** The <input>, for a form that puts the cursor back after a refusal. */
+    inputRef?: React.Ref<HTMLInputElement>;
+  };
 
 export function TextField({
   label,
@@ -265,6 +270,8 @@ export function TextField({
   required,
   className,
   size = "md",
+  mono,
+  inputRef,
   ...input
 }: TextFieldProps) {
   return (
@@ -277,7 +284,12 @@ export function TextField({
       className={className}
     >
       {(control) => (
-        <input {...control} {...input} className={fieldControl({ size, invalid: Boolean(error) })} />
+        <input
+          {...control}
+          {...input}
+          ref={inputRef}
+          className={cn(fieldControl({ size, invalid: Boolean(error) }), mono && "font-mono")}
+        />
       )}
     </Field>
   );

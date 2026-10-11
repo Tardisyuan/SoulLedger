@@ -6,7 +6,7 @@
  */
 import { useState } from "react";
 import { act, fireEvent, screen, waitFor } from "@testing-library/react-native";
-import { BackHandler, Linking, StyleSheet } from "react-native";
+import { BackHandler, Linking, StyleSheet, TextInput } from "react-native";
 
 import { MfaScreen } from "../screens/mfa";
 import { Shell } from "../shell";
@@ -203,8 +203,11 @@ describe("the wizard", () => {
     renderOfficer(<MfaScreen onBack={() => {}} />);
     fireEvent.press(await screen.findByTestId("mfa-start"));
     expect(screen.getByTestId("mfa-next").props.accessibilityState).toMatchObject({ disabled: true }); // nothing typed yet
+    const focus = jest.spyOn(TextInput.prototype, "focus");
+    focus.mockClear();
     await startWith("nope");
     expect(await screen.findByText("密码不对")).toBeTruthy();
+    await waitFor(() => expect(focus).toHaveBeenCalled()); // the cursor is back in the box
     expect(screen.queryByTestId("mfa-manual-key")).toBeNull();
     expect(screen.getByTestId("mfa-step").props.children).toMatch("1 / 4");
     expect(screen.getByTestId("mfa-setup-password").props.value).toBe("nope");
@@ -216,6 +219,27 @@ describe("the wizard", () => {
     fireEvent.press(await screen.findByTestId("mfa-start"));
     await startWith();
     expect(await screen.findByText("密码尝试过于频繁,请稍后再试")).toBeTruthy();
+    // The button is off while the budget is spent, and typing does not wipe the sentence.
+    expect(screen.getByTestId("mfa-next").props.accessibilityState).toMatchObject({ disabled: true });
+    fireEvent.changeText(screen.getByTestId("mfa-setup-password"), "another-try");
+    expect(screen.getByText("密码尝试过于频繁,请稍后再试")).toBeTruthy();
+    expect(screen.getByTestId("mfa-next").props.accessibilityState).toMatchObject({ disabled: true });
+    expect(screen.getByTestId("mfa-step").props.children).toMatch("1 / 4");
+  });
+
+  it("step 1 reads: the explanation, a rule, the sentence, the box, then the button", async () => {
+    renderOfficer(<MfaScreen onBack={() => {}} />);
+    fireEvent.press(await screen.findByTestId("mfa-start"));
+    await screen.findByTestId("mfa-setup-password");
+    const ids = screen.UNSAFE_root
+      .findAll((n: { type: unknown; props: Record<string, unknown> }) => typeof n.type === "string" && !!n.props.testID)
+      .map((n: { props: Record<string, unknown> }) => n.props.testID as string);
+    const at = (id: string) => ids.indexOf(id);
+    expect(screen.getByTestId("mfa-password-hint").props.children).toBe("先输入当前密码，确认是你本人。");
+    expect(at("mfa-password-divider")).toBeGreaterThan(-1);
+    expect(at("mfa-password-divider")).toBeLessThan(at("mfa-password-hint"));
+    expect(at("mfa-password-hint")).toBeLessThan(at("mfa-setup-password"));
+    expect(at("mfa-setup-password")).toBeLessThan(at("mfa-next"));
   });
 
   it("the password box is gone once the secret is in, and going back does not ask again", async () => {

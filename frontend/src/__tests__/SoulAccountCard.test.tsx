@@ -306,6 +306,27 @@ describe("关闭两步验证 (souls.mfa_reset)", () => {
     expect(soulAccountsApi.resetMfa).not.toHaveBeenCalled();
   });
 
+  it("the soul code box shows the code itself as its placeholder, in mono, and compares without case or edge blanks but never a character off", async () => {
+    soulAccountsApi.accounts.mockResolvedValue(page([ON]));
+    officer("CN_DIYU", "soul_account.read", "souls.mfa_reset");
+    renderCard(home());
+    fireEvent.click(await open());
+    const dialog = await screen.findByRole("alertdialog");
+    const box = within(dialog).getByLabelText(tZh("common.type_name_to_confirm", { name: "ABCDEFGH23" })) as HTMLInputElement;
+    expect(box.placeholder).toBe("ABCDEFGH23");
+    expect(box.className).toContain("font-mono");
+    fireEvent.change(within(dialog).getByLabelText(new RegExp(tZh("soul_accounts.account.mfa_reset.reason").slice(0, 2))), { target: { value: "手机丢了" } });
+    const action = screen.getByTestId("soul-mfa-reset-action");
+    for (const wrong of ["ABCDEFGH2", "ABCDEFGH24", "ABCDEFGH233", "BCDEFGH23", ""]) {
+      fireEvent.change(box, { target: { value: wrong } });
+      expect(action).toBeDisabled();
+    }
+    for (const right of ["ABCDEFGH23", "abcdefgh23", "  AbCdEfGh23  "]) {
+      fireEvent.change(box, { target: { value: right } });
+      expect(action).toBeEnabled();
+    }
+  });
+
   it("sends the trimmed reason for this account, says it is done, and the dialog goes", async () => {
     soulAccountsApi.accounts.mockResolvedValue(page([ON]));
     soulAccountsApi.resetMfa.mockResolvedValue({ data: account() });
