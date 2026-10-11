@@ -25,7 +25,9 @@ export function SoulMfaResetDialog({ account, soulName, onClose }: { account: So
   const [reason, setReason] = useState("");
   const [typed, setTyped] = useState("");
   const [reasonMissing, setReasonMissing] = useState(false);
-  const ready = reason.trim().length > 0 && typed.trim().toUpperCase() === account.soul_code.toUpperCase();
+  // 逐字一致,大小写不敏感:两边统一大小写、去掉首尾空白再比(第十九批)。差一个字符就不行。
+  const same = (a: string, b: string) => a.trim().toUpperCase() === b.trim().toUpperCase();
+  const ready = reason.trim().length > 0 && same(typed, account.soul_code);
 
   const submit = () => {
     if (reason.trim().length === 0) return setReasonMissing(true);
@@ -98,6 +100,8 @@ export function SoulMfaResetDialog({ account, soulName, onClose }: { account: So
         <TextField
           label={t("common.type_name_to_confirm", { name: account.soul_code })}
           value={typed}
+          placeholder={account.soul_code}
+          mono
           onChange={(e) => setTyped(e.target.value)}
           autoComplete="off"
           spellCheck={false}

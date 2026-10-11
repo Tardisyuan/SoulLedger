@@ -34,6 +34,14 @@ export function MfaSetupWizard({ username, onClose, onEnabled }: { username: str
   const [password, setPassword] = useState("");
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
+  // 登录的尝试次数用完(429):框下说一句,「下一步」这一轮不再可点。
+  const [locked, setLocked] = useState(false);
+  // 密码不对:焦点回到框里(第十九批)。框在请求期间是禁用的,所以等它恢复后再聚焦。
+  const passwordRef = useRef<HTMLInputElement>(null);
+  const [refusals, setRefusals] = useState(0);
+  useEffect(() => {
+    if (refusals > 0) passwordRef.current?.focus();
+  }, [refusals]);
   const [code, setCode] = useState("");
   const [codeError, setCodeError] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
@@ -48,7 +56,7 @@ export function MfaSetupWizard({ username, onClose, onEnabled }: { username: str
   // 第一步「下一步」带着密码去要一把新密钥;已经拿过(回到上一步再来)就不再要,也不再问密码。
   const start = async () => {
     if (setup) return setStep(2);
-    if (starting) return;
+    if (starting || locked) return;
     setStarting(true);
     setPasswordError(null);
     setSetupError(false);
@@ -59,9 +67,14 @@ export function MfaSetupWizard({ username, onClose, onEnabled }: { username: str
       setStep(2);
     } catch (err: unknown) {
       const body = (err as { response?: { data?: Partial<MfaRefusal> } })?.response?.data;
-      if (body?.code === "wrong_password") setPasswordError(t("mfa.setup.password_wrong"));
-      else if (body?.code === "login_locked") setPasswordError(t("mfa.setup.password_locked"));
-      else setSetupError(true);
+      if (body?.code === "wrong_password") {
+        setPasswordError(t("mfa.setup.password_wrong"));
+        setRefusals((n) => n + 1);
+      } else if (body?.code === "login_locked") {
+        setPasswordError(t("mfa.setup.password_locked"));
+        setLocked(true);
+        setRefusals((n) => n + 1);
+      } else setSetupError(true);
     } finally {
       setStarting(false);
     }
@@ -136,7 +149,7 @@ export function MfaSetupWizard({ username, onClose, onEnabled }: { username: str
           {t("mfa.setup.back")}
         </Button>
         {step === 1 ? (
-          <Button type="button" variant="primary" size="lg" data-testid="mfa-start" onClick={() => void start()} disabled={(!setup && password.length === 0) || starting} loading={starting}>
+          <Button type="button" variant="primary" size="lg" data-testid="mfa-start" onClick={() => void start()} disabled={(!setup && (locked || password.length === 0)) || starting} loading={starting}>
             {t("mfa.setup.next")}
           </Button>
         ) : step === 2 ? (
@@ -195,22 +208,28 @@ export function MfaSetupWizard({ username, onClose, onEnabled }: { username: str
             <h3 className="text-lg text-[oklch(var(--color-ink))]">{t("mfa.setup.step1_title")}</h3>
             <p className="text-sm text-[oklch(var(--color-ink-muted))]">{t("mfa.setup.step1_body")}</p>
             {setup ? null : (
-              <TextField
-                label={t("mfa.manage.confirm_by_password")}
-                description={t("mfa.setup.password_hint")}
-                type="password"
-                autoComplete="current-password"
-                value={password}
-                onChange={(e) => {
-                  setPassword(e.target.value);
-                  setPasswordError(null);
-                }}
-                error={passwordError ?? undefined}
-                disabled={starting}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") void start();
-                }}
-              />
+              <>
+                <hr data-testid="mfa-password-divider" className="m-0 border-0 border-t border-[oklch(var(--color-line))]" />
+                <p data-testid="mfa-password-hint" className="text-sm text-[oklch(var(--color-ink-muted))]">
+                  {t("mfa.setup.password_hint")}
+                </p>
+                <TextField
+                  inputRef={passwordRef}
+                  label={t("mfa.manage.confirm_by_password")}
+                  type="password"
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    if (!locked) setPasswordError(null);
+                  }}
+                  error={passwordError ?? undefined}
+                  disabled={starting}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") void start();
+                  }}
+                />
+              </>
             )}
             {setupError ? (
               <p role="alert" className="text-sm text-[oklch(var(--color-danger))]">

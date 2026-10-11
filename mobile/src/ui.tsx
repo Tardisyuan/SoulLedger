@@ -734,10 +734,13 @@ export function Input({
   style,
   inputWidth,
   suffix,
+  inputRef,
   onFocus,
   onBlur,
   ...rest
 }: TextInputProps & {
+  /** The field's TextInput, for a screen that puts the cursor back after a refusal. */
+  inputRef?: Ref<TextInput>;
   label: string;
   /** Beside the label, at its right: a link (「忘记密码」) or a live value (a countdown). */
   labelAside?: ReactNode;
@@ -790,6 +793,7 @@ export function Input({
           <FocusRing focused={focused && !off}>
             <View style={[styles.inputBox, box]}>
               <TextInput
+                ref={inputRef}
                 accessibilityLabel={label}
                 placeholderTextColor={t.inkSubtle}
                 autoCapitalize="none"
