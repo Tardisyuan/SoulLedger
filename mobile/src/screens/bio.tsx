@@ -150,7 +150,7 @@ export function BioRow() {
  * sign-in) the session still holds the password that was just typed, and that is what 「开启」 uses. Saying 「以后再说」
  * ends the question for this soul code. The password is dropped here either way.
  */
-export function BioAsk({ soulCode }: { soulCode: string }) {
+export function BioAsk({ soulCode, welcomePending }: { soulCode: string; welcomePending: boolean }) {
   const { t } = useI18n();
   const toast = useToast();
   const { heldPassword, dropPassword } = useSession();
@@ -158,11 +158,11 @@ export function BioAsk({ soulCode }: { soulCode: string }) {
   const [answered, setAnswered] = useState(false);
   const [busy, setBusy] = useState(false);
   // Due once the phone has said what it has enrolled, until the soul answers. A password that is not going to be
-  // used is dropped at once.
-  const due = bio.ready && !answered && shouldAskBio({ hasPassword: heldPassword() !== null, enrolled: bio.enrolled, enabled: bioEnabled(), asked: wasAsked(soulCode) });
+  // used is dropped at once -- but not while the welcome holds the question back: it is still going to be used.
+  const due = bio.ready && !answered && shouldAskBio({ hasPassword: heldPassword() !== null, enrolled: bio.enrolled, enabled: bioEnabled(), asked: wasAsked(soulCode), welcomePending });
   useEffect(() => {
-    if (bio.ready && !due) dropPassword();
-  }, [bio.ready, due, dropPassword]);
+    if (bio.ready && !due && !welcomePending) dropPassword();
+  }, [bio.ready, due, welcomePending, dropPassword]);
 
   const finish = () => {
     markAsked(soulCode);
