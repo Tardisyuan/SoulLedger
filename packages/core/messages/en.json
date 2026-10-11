@@ -1324,7 +1324,7 @@
       "load_error": "Failed to load",
       "sync_ok": "In sync",
       "unbooked": "Not entered",
-      "resend_dispatch": "Dispatches to send again",
+      "resend_dispatch": "Dispatches to resend",
       "go_resend": "Handle →"
     },
     "civ_share": "Share",
