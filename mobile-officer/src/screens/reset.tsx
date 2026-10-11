@@ -14,11 +14,9 @@ import { View } from "react-native";
 
 import { ActionButton } from "../kit";
 import { retireResetLink, type ResetLink } from "../links";
-import { resetFailure, type ResetFailure } from "../rules";
+import { resetFailure, splitCommonReasons, type ResetFailure } from "../rules";
 import { AccountFrame } from "./account";
-import { Button, FieldError, Input, Notice, Txt, space, useI18n } from "../shared";
-
-const MIN_PASSWORD_LENGTH = 8;
+import { Button, FieldError, Input, Notice, PasswordMatch, PasswordRules, Txt, space, useI18n, usePasswordForm } from "../shared";
 
 export function ResetPasswordScreen({
   credential,
@@ -38,14 +36,14 @@ export function ResetPasswordScreen({
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [busy, setBusy] = useState(false);
-  const [local, setLocal] = useState<string | null>(null);
   const [fail, setFail] = useState<ResetFailure | null>(null);
+
+  const { fields, holdScroller, holdSection, newJudged, confirmJudged, common: commonRejected, check, rejectCommon } = usePasswordForm({ next: password, confirm });
 
   const submit = () => {
     setFail(null);
-    if (password.length < MIN_PASSWORD_LENGTH) return setLocal(t("profile.password_too_short"));
-    if (password !== confirm) return setLocal(t("profile.password_mismatch"));
-    setLocal(null);
+    // The checklist under the box says what is missing; nothing is sent until it is all met.
+    if (!check()) return;
     setBusy(true);
     authApi
       .confirmOfficerReset({ uid: credential.uid, token: credential.token, new_password: password })
@@ -57,6 +55,8 @@ export function ResetPasswordScreen({
         (e: unknown) => {
           const failure = resetFailure(e);
           if (failure.kind === "invalid") retireResetLink(credential);
+          // Too common / too like the name: said in the checklist, not as a line under the field.
+          if (failure.kind === "weak" && splitCommonReasons(failure.reasons).common) rejectCommon();
           setFail(failure);
           setBusy(false);
         }
@@ -76,38 +76,46 @@ export function ResetPasswordScreen({
     );
   }
 
-  const weak = fail?.kind === "weak" ? (fail.reasons.length ? fail.reasons : ["auth.reset_weak"]) : [];
+  const weakCommon = fail?.kind === "weak" ? splitCommonReasons(fail.reasons) : null;
+  const weak = fail?.kind === "weak" ? (weakCommon!.rest.length ? weakCommon!.rest : fail.reasons.length ? [] : ["auth.reset_weak"]) : [];
   const notice =
     fail?.kind === "network" ? "officer_app.login.reasons.network" : fail?.kind === "rate" ? "auth.rate_limited" : fail?.kind === "other" ? "auth.forgot_failed" : null;
   return (
-    <AccountFrame testID="reset-screen" onBack={onClose}>
+    <AccountFrame testID="reset-screen" onBack={onClose} scrollRef={holdScroller}>
       <Txt variant="title">{t("auth.reset_title")}</Txt>
       <Txt variant="body" tone="muted">{t("auth.reset_subtitle")}</Txt>
       {notice ? <Notice tone="neg" testID="reset-failure">{`! ${t(notice)}`}</Notice> : null}
-      <Input
-        testID="reset-new"
-        label={t("profile.new_password")}
-        value={password}
-        onChangeText={setPassword}
-        invalid={weak.length > 0}
-        secureTextEntry
-        textContentType="newPassword"
-        autoComplete="new-password"
-        secureToggle={{ show: t("soul_app.common.show"), hide: t("soul_app.common.hide") }}
-      />
-      {weak.map((key) => <FieldError key={key} testID="reset-new-error" text={t(key)} />)}
-      <Input
-        testID="reset-confirm"
-        label={t("profile.confirm_password")}
-        value={confirm}
-        onChangeText={setConfirm}
-        secureTextEntry
-        textContentType="newPassword"
-        autoComplete="new-password"
-        secureToggle={{ show: t("soul_app.common.show"), hide: t("soul_app.common.hide") }}
-      />
-      {local ? <FieldError testID="reset-local-error" text={local} /> : null}
-      <Button testID="reset-submit" title={t("auth.reset_submit")} busy={busy} disabled={!password || !confirm} onPress={submit} />
+      <View ref={holdSection} collapsable={false} style={{ gap: space[3] }}>
+        <Input
+          testID="reset-new"
+          label={t("profile.new_password")}
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry
+          textContentType="newPassword"
+          autoComplete="new-password"
+          secureToggle={{ show: t("soul_app.common.show"), hide: t("soul_app.common.hide") }}
+          {...fields.next}
+          invalid={fields.next.invalid || weak.length > 0}
+        />
+        {weak.map((key) => <FieldError key={key} testID="reset-new-error" text={t(key)} />)}
+        <PasswordRules next={password} judged={newJudged} common={commonRejected} />
+      </View>
+      <View style={{ gap: space[3] }}>
+        <Input
+          testID="reset-confirm"
+          label={t("profile.confirm_password")}
+          value={confirm}
+          onChangeText={setConfirm}
+          secureTextEntry
+          textContentType="newPassword"
+          autoComplete="new-password"
+          secureToggle={{ show: t("soul_app.common.show"), hide: t("soul_app.common.hide") }}
+          {...fields.confirm}
+        />
+        <PasswordMatch next={password} confirm={confirm} judged={confirmJudged} />
+      </View>
+      <Button testID="reset-submit" title={t("auth.reset_submit")} busy={busy} onPress={submit} />
     </AccountFrame>
   );
 }

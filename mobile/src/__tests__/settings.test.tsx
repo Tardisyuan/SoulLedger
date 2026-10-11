@@ -547,3 +547,82 @@ describe("changing the password from settings", () => {
     await act(async () => {});
   });
 });
+
+describe("the password checklist on the change-password screen (Design 第二十三批)", () => {
+  async function openChange(extra: Record<string, Reply | Reply[]> = {}) {
+    const calls = signedIn(extra);
+    renderApp();
+    await screen.findByTestId("profile-card");
+    fireEvent.press(screen.getByTestId("header-account"));
+    fireEvent.press(await screen.findByTestId("open-change-password"));
+    await screen.findByTestId("old-password");
+    return calls;
+  }
+  const mark = (id: string) => screen.getByTestId(`pw-rules-${id}-mark`, { includeHiddenElements: true }).props.children as string;
+  const matchMark = () => screen.getByTestId("pw-match-mark", { includeHiddenElements: true }).props.children as string;
+  const posts = (calls: { url: string }[]) => calls.filter((c) => c.url === "/me/password/");
+
+  it("lists three rows on arrival, all ○, and the old 「至少 8 位」 hint under the box is gone", async () => {
+    await openChange();
+    expect([mark("min_length"), mark("not_digits"), mark("not_current")]).toEqual(["○", "○", "○"]);
+    expect(matchMark()).toBe("○");
+    // The words 「至少 8 位」 are now the first row, and only that row: the hint line under the box is not also there.
+    expect(screen.getAllByText("至少 8 位")).toHaveLength(1);
+    expect(within(screen.getByTestId("pw-rules-min_length")).getByText("至少 8 位")).toBeTruthy();
+  });
+
+  it("ticks while typing without ever showing !, turns unmet into ! on leaving the box, and ticks again at once", async () => {
+    await openChange();
+    fireEvent.changeText(screen.getByTestId("old-password"), "old-secret");
+    fireEvent.changeText(screen.getByTestId("new-password"), "old");
+    expect([mark("min_length"), mark("not_digits"), mark("not_current")]).toEqual(["○", "✓", "✓"]);
+    fireEvent(screen.getByTestId("new-password"), "blur");
+    expect([mark("min_length"), mark("not_digits"), mark("not_current")]).toEqual(["!", "✓", "✓"]);
+    fireEvent.changeText(screen.getByTestId("new-password"), "old-secret");
+    expect([mark("min_length"), mark("not_digits"), mark("not_current")]).toEqual(["✓", "✓", "!"]);
+    fireEvent.changeText(screen.getByTestId("new-password"), "new-secret-123");
+    expect([mark("min_length"), mark("not_digits"), mark("not_current")]).toEqual(["✓", "✓", "✓"]);
+  });
+
+  it("saving with something unmet sends nothing and shows it as !; the old one-sentence local errors are gone", async () => {
+    const calls = await openChange();
+    fireEvent.changeText(screen.getByTestId("old-password"), "old-secret");
+    fireEvent.changeText(screen.getByTestId("new-password"), "short");
+    fireEvent.changeText(screen.getByTestId("confirm-password"), "other");
+    fireEvent.press(screen.getByTestId("change-password-submit"));
+    await act(async () => {});
+    expect(posts(calls)).toEqual([]);
+    expect(mark("min_length")).toBe("!");
+    expect(matchMark()).toBe("!");
+    expect(screen.queryByTestId("change-password-error")).toBeNull();
+    expect(screen.queryByText("新密码至少 8 位")).toBeNull();
+    expect(screen.queryByText("两次输入的新密码不一致")).toBeNull();
+  });
+
+  it("saving without the current password sends nothing", async () => {
+    const calls = await openChange();
+    fireEvent.changeText(screen.getByTestId("new-password"), "new-secret-123");
+    fireEvent.changeText(screen.getByTestId("confirm-password"), "new-secret-123");
+    fireEvent.press(screen.getByTestId("change-password-submit"));
+    await act(async () => {});
+    expect(posts(calls)).toEqual([]);
+    expect(mark("not_current")).toBe("!");
+  });
+
+  it("the server refusing it as too common is said above the list, the ticks stay, and the old 「强度不足」 sentence is not shown", async () => {
+    const calls = await openChange({ "POST /me/password/": { status: 400, data: { error: "x", code: "weak_password" } } });
+    fireEvent.changeText(screen.getByTestId("old-password"), "old-secret");
+    fireEvent.changeText(screen.getByTestId("new-password"), "password123");
+    fireEvent.changeText(screen.getByTestId("confirm-password"), "password123");
+    fireEvent.press(screen.getByTestId("change-password-submit"));
+    await screen.findByTestId("pw-rules-common");
+    expect(posts(calls)).toHaveLength(1);
+    expect(screen.getByText("! 这个密码太容易被猜到")).toBeTruthy();
+    expect(screen.getByText("它在常见密码名单里，或和你的名字、编号太像。换一个再保存。")).toBeTruthy();
+    expect([mark("min_length"), mark("not_digits"), mark("not_current"), matchMark()]).toEqual(["✓", "✓", "✓", "✓"]);
+    expect(screen.queryByText(/强度不足/)).toBeNull();
+    expect(screen.queryByTestId("change-password-error")).toBeNull();
+    expect(screen.getByTestId("new-password").props.value).toBe("password123");
+    expect(screen.getByTestId("confirm-password").props.value).toBe("password123");
+  });
+});

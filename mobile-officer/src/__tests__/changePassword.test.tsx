@@ -71,25 +71,98 @@ it("sends this device's push token so the server keeps only that registration", 
   expect(mockChange).toHaveBeenCalledWith("oldpw-123", "newpw-4567", "ExponentPushToken[this-device]");
 });
 
-it("sends nothing while a field is empty", async () => {
+it("sends nothing while a field is empty (the button stays pressable; the list says what is missing)", async () => {
   renderOfficer(<ChangePasswordScreen onBack={() => {}} />);
   fireEvent.changeText(screen.getByTestId("password-old"), "x");
   await submit();
   expect(mockChange).not.toHaveBeenCalled();
 });
 
-it("refuses a short or mismatched new password before any request", async () => {
-  renderOfficer(<ChangePasswordScreen onBack={() => {}} />);
-  fillAll("oldpw-123", "short");
-  await submit();
-  expect(screen.getByText("密码至少8位")).toBeTruthy();
-  fillAll("oldpw-123", "newpw-4567", "newpw-0000");
-  await submit();
-  expect(screen.getByText("两次输入的密码不一致")).toBeTruthy();
-  expect(mockChange).not.toHaveBeenCalled();
+describe("the password checklist (Design 第二十三批)", () => {
+  const mark = (id: string) => screen.getByTestId(`pw-rules-${id}-mark`, { includeHiddenElements: true }).props.children as string;
+  const matchMark = () => screen.getByTestId("pw-match-mark", { includeHiddenElements: true }).props.children as string;
+  const rules = () => [mark("min_length"), mark("not_digits"), mark("not_current")];
+
+  it("is listed on arrival, three rows, all ○", () => {
+    renderOfficer(<ChangePasswordScreen onBack={() => {}} />);
+    expect(rules()).toEqual(["○", "○", "○"]);
+    expect(matchMark()).toBe("○");
+    expect(screen.getByTestId("pw-rules-note")).toBeTruthy();
+  });
+
+  it("ticks while typing without showing !, turns unmet into ! on leaving the box, and ticks again at once", () => {
+    renderOfficer(<ChangePasswordScreen onBack={() => {}} />);
+    fireEvent.changeText(screen.getByTestId("password-old"), "oldpw-123");
+    fireEvent.changeText(screen.getByTestId("password-new"), "1234");
+    expect(rules()).toEqual(["○", "○", "✓"]);
+    fireEvent(screen.getByTestId("password-new"), "blur");
+    expect(rules()).toEqual(["!", "!", "✓"]);
+    fireEvent.changeText(screen.getByTestId("password-new"), "oldpw-123");
+    expect(rules()).toEqual(["✓", "✓", "!"]);
+    fireEvent.changeText(screen.getByTestId("password-new"), "newpw-4567");
+    expect(rules()).toEqual(["✓", "✓", "✓"]);
+  });
+
+  it("the confirmation is ○ while typed in and ! only after leaving it", () => {
+    renderOfficer(<ChangePasswordScreen onBack={() => {}} />);
+    fireEvent.changeText(screen.getByTestId("password-new"), "newpw-4567");
+    fireEvent.changeText(screen.getByTestId("password-confirm"), "newpw");
+    expect(matchMark()).toBe("○");
+    fireEvent(screen.getByTestId("password-confirm"), "blur");
+    expect(matchMark()).toBe("!");
+    fireEvent.changeText(screen.getByTestId("password-confirm"), "newpw-4567");
+    expect(matchMark()).toBe("✓");
+  });
+
+  it("saving with a short or mismatched new password sends nothing and shows ! (no one-sentence local error)", async () => {
+    renderOfficer(<ChangePasswordScreen onBack={() => {}} />);
+    fillAll("oldpw-123", "short");
+    await submit();
+    expect(mark("min_length")).toBe("!");
+    expect(screen.queryByTestId("password-local-error")).toBeNull();
+    expect(screen.queryByText("密码至少8位")).toBeNull();
+    fillAll("oldpw-123", "newpw-4567", "newpw-0000");
+    await submit();
+    expect(matchMark()).toBe("!");
+    expect(screen.queryByText("两次输入的密码不一致")).toBeNull();
+    expect(mockChange).not.toHaveBeenCalled();
+  });
+
+  it("saving is always pressable: with the current password empty it sends nothing and marks the row", async () => {
+    renderOfficer(<ChangePasswordScreen onBack={() => {}} />);
+    expect(screen.getByTestId("password-submit").props.accessibilityState?.disabled).toBeFalsy();
+    fireEvent.changeText(screen.getByTestId("password-new"), "newpw-4567");
+    fireEvent.changeText(screen.getByTestId("password-confirm"), "newpw-4567");
+    await submit();
+    expect(mockChange).not.toHaveBeenCalled();
+    expect(mark("not_current")).toBe("!");
+  });
+
+  it("a refusal as too common is said above the list; the ticks stay, the other reasons stay as lines, the words stay", async () => {
+    mockChange.mockRejectedValue(
+      httpError(400, {
+        new_password: [
+          { code: "password_too_common", message: "This password is too common." },
+          { code: "password_too_similar", message: "too similar" },
+        ],
+      })
+    );
+    renderOfficer(<ChangePasswordScreen onBack={() => {}} />);
+    fillAll("oldpw-123", "newpw-4567");
+    await submit();
+    expect(screen.getByText("! 这个密码太容易被猜到")).toBeTruthy();
+    expect(screen.getByText("它在常见密码名单里，或和你的名字、编号太像。换一个再保存。")).toBeTruthy();
+    expect([...rules(), matchMark()]).toEqual(["✓", "✓", "✓", "✓"]);
+    // Both "common" and "similar" are this one block, not one line each, and not the generic failure either.
+    expect(screen.queryByTestId("password-new-error")).toBeNull();
+    expect(screen.queryByText("这个密码太常见,请换一个")).toBeNull();
+    expect(screen.queryByTestId("password-failure")).toBeNull();
+    expect(screen.getByTestId("password-new").props.value).toBe("newpw-4567");
+    expect(screen.getByTestId("password-confirm").props.value).toBe("newpw-4567");
+  });
 });
 
-it("shows each reason under its field by its code (not the server's English), keeps the form, and never echoes a password", async () => {
+it("shows the old-password reason under its field and the other new-password reasons as lines, by code (not the server's English), keeps the form, and never echoes a password", async () => {
   mockChange.mockRejectedValue(
     httpError(400, {
       old_password: ["旧密码不正确"],
@@ -104,10 +177,12 @@ it("shows each reason under its field by its code (not the server's English), ke
   fillAll("oldpw-123", "newpw-4567");
   await submit();
   expect(screen.getByText("旧密码不正确")).toBeTruthy();
-  expect(screen.getByText("这个密码太常见,请换一个")).toBeTruthy();
+  // "Too common" is the checklist's block now (see above); the numeric reason is still its own line.
+  expect(screen.getByText("! 这个密码太容易被猜到")).toBeTruthy();
+  expect(screen.queryByText("这个密码太常见,请换一个")).toBeNull();
   expect(screen.getByText("密码不能全是数字")).toBeTruthy();
   expect(screen.queryByText(/This password/)).toBeNull();
-  expect(screen.getAllByTestId("password-new-error")).toHaveLength(2);
+  expect(screen.getAllByTestId("password-new-error")).toHaveLength(1);
   expect(screen.getAllByTestId("password-old-error")).toHaveLength(1);
   expect(onBack).not.toHaveBeenCalled();
   expect(screen.getByTestId("password-new").props.value).toBe("newpw-4567");

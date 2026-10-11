@@ -336,6 +336,15 @@ export function passwordFailure(error: unknown): { network: boolean; old: string
 }
 
 /**
+ * "Too common" and "too like your name" are the two refusals only the server can make; the password checklist says them
+ * as one block (Design 第二十三批 §三), so they are split off the reasons that are shown one line each.
+ */
+export function splitCommonReasons(keys: string[]): { common: boolean; rest: string[] } {
+  const isCommon = (key: string) => key === "profile.password_reason_common" || key === "profile.password_reason_similar";
+  return { common: keys.some(isCommon), rest: keys.filter((key) => !isCommon(key)) };
+}
+
+/**
  * What a refused `officer-reset/confirm/` is, by its `code` (the server's sentence is never shown): `invalid`
  * (`reset_link_invalid` -- the server does not say whether the link expired, was used, or never existed),
  * `weak` with one i18n key per validator that refused, `rate` (429), `network` (no answer), else `other`.
