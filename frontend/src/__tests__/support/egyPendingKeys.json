@@ -9,5 +9,6 @@
   "officer_app.dispatch_status.waiting",
   "officer_app.dispatch_status.approved",
   "officer_app.dispatch_status.rejected",
-  "officer_app.dispatch_status.reason"
+  "officer_app.dispatch_status.reason",
+  "soul_accounts.credentials.print_mono_hint"
 ]

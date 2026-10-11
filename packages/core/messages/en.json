@@ -2833,8 +2833,22 @@
         "stub_printed": "Printed",
         "sign_soul": "Soul's signature · date",
         "sign_officer": "Officer's signature",
-        "after_sign": "After signing, tap Mark delivered on the desk."
-      }
+        "after_sign": "After signing, tap Mark delivered on the desk.",
+        "system": "Soul Ledger",
+        "doc_title": "Sign-in slip",
+        "password_label": "Initial password",
+        "password_hint": "Written or told in person by the officer",
+        "valid_label": "Valid until",
+        "valid_hours": "72 hours",
+        "must_change_head": "■ You must change the password at first sign-in.",
+        "must_change_tail": "After that, the one written here no longer works.",
+        "qr_where": "Soul Ledger app · sign-in page",
+        "qr_action": "Tap Scan, then scan this",
+        "officer_label": "Issued by",
+        "printed_label": "Printed"
+      },
+      "print_mono": "Print in black and white",
+      "print_mono_hint": "Tick this for a black-and-white printer. The band prints solid black, so the lettering stays sharp."
     },
     "reveal": {
       "confirm_title": "View the initial password?",

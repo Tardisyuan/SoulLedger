@@ -2833,8 +2833,21 @@
         "stub_printed": "Sesh Djama",
         "sign_soul": "Sesh Ren Ba · Hru",
         "sign_officer": "Sesh Ren Sab",
-        "after_sign": "Er Khet: «Sesh Djeret» Em Medjat Sab."
-      }
+        "after_sign": "Er Khet: «Sesh Djeret» Em Medjat Sab.",
+        "system": "Medjat Ba",
+        "doc_title": "Djama Redi",
+        "password_label": "Sekhem Tepy",
+        "password_hint": "Sab Sesh, Mi Djed",
+        "valid_label": "Wenen Er",
+        "valid_hours": "Unut 72",
+        "must_change_head": "■ Aq Tepy: Smen Sekhem Mawy.",
+        "must_change_tail": "Er Khet: Sekhem Tepy Hedj.",
+        "qr_where": "Medjat Ba: Aq",
+        "qr_action": "«Maa Tut Medu»",
+        "officer_label": "Sab",
+        "printed_label": "Sesh Djama Em"
+      },
+      "print_mono": "Sesh Kem"
     },
     "reveal": {
       "confirm_title": "Maa Sekhem Tepy?",
