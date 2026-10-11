@@ -15,6 +15,7 @@ import { fireGestureHandler, getByGestureTestId } from "react-native-gesture-han
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { I18nProvider } from "../i18n";
+import { ToastProvider } from "../feedback";
 import { installMobilePlatform } from "../platform";
 import { CircleScreen, ComposePostScreen, PostScreen, usePaged } from "../screens/circle";
 import { themeFor, type ColorScheme } from "../theme";
@@ -40,7 +41,9 @@ function wrap(children: ReactNode) {
   return render(
     <SafeAreaProvider initialMetrics={{ frame: { x: 0, y: 0, width: 390, height: 844 }, insets: { top: 0, left: 0, right: 0, bottom: 0 } }}>
       <I18nProvider>
-        <NavigationContainer>{children}</NavigationContainer>
+        <ToastProvider>
+          <NavigationContainer>{children}</NavigationContainer>
+        </ToastProvider>
       </I18nProvider>
     </SafeAreaProvider>
   );
@@ -447,6 +450,31 @@ describe("replying", () => {
     await waitFor(() => expect(sent(calls, "POST")).toHaveLength(1));
     expect(sent(calls, "POST")[0].body).toEqual({ content: "谢谢", parent: "c1" });
     await waitFor(() => expect(screen.queryByTestId("replying")).not.toBeOnTheScreen());
+  });
+
+  it.each([
+    ["masked", "已发布。部分内容已被替换。"],
+    ["pending_review", "已发出,正在审核。审核通过前只有你看得到。"],
+    ["hidden", "这条内容没有通过筛查,已被隐藏。"],
+  ])("a comment the word list touched (%s) tells the author", async (screening, text) => {
+    stubApi({
+      "GET /me/social/posts/p1/": { status: 200, data: post() },
+      "/me/social/posts/p1/comments/": page([]),
+      "/me/social/status/": STATUS,
+      "POST /me/social/posts/p1/comments/": { status: 201, data: comment("new", { screening }) },
+    });
+    wrap(<PostScreen id="p1" />);
+    fireEvent.changeText(await screen.findByTestId("comment-body"), "一句");
+    fireEvent.press(screen.getByTestId("comment-send"));
+    await waitFor(() => expect(screen.getByTestId("toast").props.children).toBe(text));
+  });
+
+  it("a clean comment says nothing", async () => {
+    const calls = open([]);
+    fireEvent.changeText(await screen.findByTestId("comment-body"), "一句");
+    fireEvent.press(screen.getByTestId("comment-send"));
+    await waitFor(() => expect(sent(calls, "POST")).toHaveLength(1));
+    expect(screen.queryByTestId("toast")).toBeNull();
   });
 
   it("cancelled, it is a plain comment again — no parent at all", async () => {

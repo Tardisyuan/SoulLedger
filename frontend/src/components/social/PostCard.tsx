@@ -11,6 +11,8 @@ import { ReactionBar } from "./ReactionBar";
 import { Avatar } from "./Avatar";
 import { PostMediaGrid } from "./PostMedia";
 import { PostEditModal } from "./PostEditModal";
+import { StatusBadge } from "@/src/components/ui/StatusBadge";
+import { MODERATION_TONES } from "@/src/components/moderation/shared";
 import type { Post } from "@soulledger/core/api";
 import { DomainEnum } from "@/src/components/ui/DomainValue";
 
@@ -70,6 +72,13 @@ export function PostCard({ post }: { post: Post }) {
             )}
           </p>
         </div>
+        {post.moderation_status && post.moderation_status !== "PUBLISHED" && (
+          <StatusBadge
+            namespace="social_moderation.moderation_status"
+            value={post.moderation_status}
+            tone={MODERATION_TONES[post.moderation_status] ?? "neutral"}
+          />
+        )}
         {isAuthor && (
           <>
             <Button

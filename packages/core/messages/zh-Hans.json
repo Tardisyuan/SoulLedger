@@ -3041,6 +3041,11 @@
     "edit_discard_message": "已改动的内容不会保存。",
     "edit_discard_confirm": "放弃修改",
     "edit_keep": "继续编辑",
+    "screening": {
+      "masked": "已发布。部分内容已被替换。",
+      "pending_review": "已发出,正在审核。审核通过前只有你看得到。",
+      "hidden": "这条内容没有通过筛查,已被隐藏。"
+    },
     "no_posts": "暂无帖子",
     "user_posts": "TA 的帖子",
     "view_all_posts": "查看全部帖子",
@@ -3926,6 +3931,11 @@
         "hidden_note": "这条被殿司隐藏，只有你还看得到。",
         "comments": "评论 {{n}}",
         "more": "更多"
+      },
+      "screening": {
+        "masked": "已发布。部分内容已被替换。",
+        "pending_review": "已发出,正在审核。审核通过前只有你看得到。",
+        "hidden": "这条内容没有通过筛查,已被隐藏。"
       },
       "comment": {
         "pending": "待审",

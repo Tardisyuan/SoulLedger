@@ -110,6 +110,16 @@ class Screening:
     hit_ids: list = field(default_factory=list)
 
     @property
+    def outcome(self):
+        """What the author is told (never which word): `hidden` / `pending_review` / `masked` /
+        `clean`. Same order as the actions' weight: HIDE > REVIEW > MASK."""
+        if self.status == ModerationStatus.HIDDEN:
+            return "hidden"
+        if self.status == ModerationStatus.PENDING:
+            return "pending_review"
+        return "masked" if self.hit_ids else "clean"
+
+    @property
     def moderation_fields(self):
         """写入时要一并落库的审核字段。只有 HIDE 算「已处理」—— 进已处理列表,由系统处理,
         所以带 `moderated_at`。REVIEW 送审只记为什么(2026-09-25 决定):`moderation_reason`

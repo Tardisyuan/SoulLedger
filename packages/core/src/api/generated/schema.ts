@@ -9615,6 +9615,7 @@ export interface components {
             /** Format: uuid */
             parent?: string | null;
             content: string;
+            readonly screening: components["schemas"]["ScreeningEnum"] | null;
         };
         /** @description Lightweight serializer for listing comments. */
         CommentList: {
@@ -14153,6 +14154,7 @@ export interface components {
             readonly author_username?: string;
             content?: string;
             visibility?: components["schemas"]["VisibilityEnum"];
+            readonly moderation_status?: components["schemas"]["SocialModerationStatusEnum"];
             readonly comment_count?: number;
             readonly reaction_count?: number;
             /** @description 按显示顺序,最多 9 张。 */
@@ -14161,6 +14163,7 @@ export interface components {
             readonly tenant?: number;
             /** Format: date-time */
             readonly edited_at?: string | null;
+            readonly screening?: components["schemas"]["ScreeningEnum"] | null;
             /** Format: date-time */
             readonly create_time?: string;
             /** Format: date-time */
@@ -14708,6 +14711,7 @@ export interface components {
             readonly author_username: string;
             content: string;
             visibility?: components["schemas"]["VisibilityEnum"];
+            readonly moderation_status: components["schemas"]["SocialModerationStatusEnum"];
             readonly comment_count: number;
             readonly reaction_count: number;
             /** @description 按显示顺序,最多 9 张。 */
@@ -14716,6 +14720,7 @@ export interface components {
             readonly tenant: number;
             /** Format: date-time */
             readonly edited_at: string | null;
+            readonly screening: components["schemas"]["ScreeningEnum"] | null;
             /** Format: date-time */
             readonly create_time: string;
             /** Format: date-time */
@@ -14735,6 +14740,7 @@ export interface components {
             visibility?: components["schemas"]["VisibilityEnum"];
             /** @description 先经 POST /social/media/ 上传的图片 id,按显示顺序。 */
             media?: string[];
+            readonly screening: components["schemas"]["ScreeningEnum"] | null;
         };
         /** @description Lightweight serializer for listing posts. */
         PostList: {
@@ -14746,6 +14752,7 @@ export interface components {
             readonly author_username: string;
             content: string;
             visibility?: components["schemas"]["VisibilityEnum"];
+            moderation_status?: components["schemas"]["SocialModerationStatusEnum"];
             comment_count?: number;
             reaction_count?: number;
             /** @description 按显示顺序,最多 9 张。 */
@@ -15668,6 +15675,8 @@ export interface components {
          * @enum {string}
          */
         ScreenEnum: "applications" | "sentence" | "life" | "letters" | "circle" | "settings" | "other";
+        /** @enum {string} */
+        ScreeningEnum: "clean" | "masked" | "pending_review" | "hidden";
         /**
          * @description `seatable-actors/` 的只读最小字段集:入席表单只需要认得出是谁;顾问席混着几种神祇,
          *     所以带上 `role`(ActorRole)。
@@ -16148,6 +16157,7 @@ export interface components {
             readonly is_active: boolean;
         };
         SoulComment: {
+            readonly screening: components["schemas"]["ScreeningEnum"] | null;
             /** Format: uuid */
             id: string;
             /** Format: uuid */
@@ -16391,6 +16401,7 @@ export interface components {
             readonly left_at: string | null;
         };
         SoulPost: {
+            readonly screening: components["schemas"]["ScreeningEnum"] | null;
             /** Format: uuid */
             id: string;
             author: components["schemas"]["SoulCard"];
