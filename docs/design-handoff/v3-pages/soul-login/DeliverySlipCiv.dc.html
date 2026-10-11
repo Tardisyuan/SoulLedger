@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><script src="./ds-base.js"></script></helmet>
+<div class="light" style="--color-main:0 0 0;width:794px;height:1123px;box-sizing:border-box;position:relative;overflow:hidden;background:#fff;color:#000;font-family:var(--font-sans);font-size:13px;line-height:20px">
+
+<div data-civ="{{ accent }}" style="position:absolute;left:24px;top:24px;width:746px;height:357px;color:oklch(var(--color-main))">
+<sc-if value="{{ isCn }}" hint-placeholder-val="{{ false }}"><svg width="746" height="357" viewBox="0 0 746 357" fill="none" stroke="currentColor" aria-hidden="true"><rect x="1" y="1" width="744" height="355" stroke-width="2"></rect><rect x="5.5" y="5.5" width="735" height="346" stroke-width=".75"></rect><rect x="8" y="8" width="730" height="60" fill="currentColor" stroke="none"></rect><rect x="11.5" y="11.5" width="723" height="53" stroke="#fff" stroke-width=".75"></rect><path stroke="#fff" stroke-width="1" d="M16 16H28V28H20V22H24M16 60H28V48H20V54H24M730 16H718V28H726V22H722M730 60H718V48H726V54H722"></path><path stroke-width=".75" d="M10 333V347H24M14 333V343H20V337H17M736 333V347H722M732 333V343H726V337H729"></path></svg></sc-if>
+<sc-if value="{{ isEg }}" hint-placeholder-val="{{ false }}"><svg width="746" height="357" viewBox="0 0 746 357" fill="none" stroke="currentColor" aria-hidden="true"><defs><pattern id="sl-kh-w" width="8" height="6" patternUnits="userSpaceOnUse" x="9" y="61"><path d="M2 6V3.5a2 2 0 0 1 4 0V6" stroke="#fff" stroke-width=".75"></path></pattern></defs><rect x=".5" y=".5" width="745" height="356" stroke-width="1"></rect><path d="M4.5 8V346M741.5 8V346" stroke-width=".5"></path><rect x="8" y="8" width="730" height="60" fill="currentColor" stroke="none"></rect><path d="M8 59.5H738" stroke="#fff" stroke-width=".5"></path><rect x="9" y="61" width="728" height="6" fill="url(#sl-kh-w)" stroke="none"></rect><g transform="translate(373 36)" fill="#fff" stroke="none"><circle r="6.5"></circle><path d="M-9-3H-46L-42 0H-9ZM-9 1.5H-38L-34 4.5H-9ZM9-3H46L42 0H9ZM9 1.5H38L34 4.5H9Z"></path></g><path d="M1 346.25H745" stroke-width=".5"></path><path d="M1 351H745" stroke-width="3"></path></svg></sc-if>
+<sc-if value="{{ isEu }}" hint-placeholder-val="{{ false }}"><svg width="746" height="357" viewBox="0 0 746 357" fill="none" stroke="currentColor" overflow="visible" aria-hidden="true"><path stroke-width="1.5" d="M12 1H734A11 11 0 0 0 745 12V345A11 11 0 0 0 734 356H12A11 11 0 0 0 1 345V12A11 11 0 0 0 12 1Z"></path><path stroke-width=".5" d="M14 5H732A9 9 0 0 0 741 14V343A9 9 0 0 0 732 352H14A9 9 0 0 0 5 343V14A9 9 0 0 0 14 5Z"></path><path fill="currentColor" stroke="none" d="{{ euBand }}"></path><g transform="translate(373 36)" stroke="#fff" stroke-width=".75"><circle r="13"></circle><circle cx="-5" r="5"></circle><circle cx="5" r="5"></circle><circle cy="-5" r="5"></circle><circle cy="5" r="5"></circle></g><path fill="#fff" stroke-width="1" d="M373-4L378 1 373 6 368 1ZM373 351L378 356 373 361 368 356Z"></path></svg></sc-if>
+<sc-if value="{{ isGr }}" hint-placeholder-val="{{ false }}"><svg width="746" height="357" viewBox="0 0 746 357" fill="none" stroke="currentColor" aria-hidden="true"><defs><pattern id="sl-mz-w" width="9" height="6" patternUnits="userSpaceOnUse" x="10" y="61"><path d="M0 5.5H7V.5H2V3.5H5" stroke="#fff" stroke-width=".6"></path></pattern><pattern id="sl-dentil" width="7" height="3" patternUnits="userSpaceOnUse" x="10" y="10.5"><rect width="4" height="3" fill="#fff"></rect></pattern><pattern id="sl-mz-b" width="12" height="8" patternUnits="userSpaceOnUse" x="10" y="341"><path d="M0 7.5H9.5V.5H2.5V5H6.5" stroke-width=".75"></path></pattern></defs><rect x=".75" y=".75" width="744.5" height="355.5" stroke-width="1.5"></rect><path d="M4.5 8V352.5M741.5 8V352.5M4.5 352.5H741.5" stroke-width=".5"></path><rect x="8" y="8" width="730" height="60" fill="currentColor" stroke="none"></rect><rect x="10" y="10.5" width="726" height="3" fill="url(#sl-dentil)" stroke="none"></rect><path d="M10 59.5H736" stroke="#fff" stroke-width=".5"></path><rect x="10" y="61" width="726" height="6" fill="url(#sl-mz-w)" stroke="none"></rect></svg></sc-if>
+</div>
+
+<div style="position:absolute;left:60px;top:38px;width:686px;height:44px;display:flex;align-items:center;justify-content:space-between;gap:24px;color:#fff">
+<div style="display:flex;flex-direction:column;min-width:0"><span style="font-size:11px;line-height:16px;letter-spacing:.24em;font-weight:500">{{ realm }}</span><span style="font-family:var(--font-title);font-weight:600;font-size:24px;line-height:28px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ hall }}</span></div>
+<div style="display:flex;flex-direction:column;align-items:flex-end;flex:none"><span style="font-size:11px;line-height:16px;letter-spacing:.24em;font-weight:500">{{ t.sys }}</span><sc-if value="{{ isZh }}" hint-placeholder-val="{{ true }}"><span style="font-family:var(--font-title);font-weight:600;font-size:24px;line-height:28px;letter-spacing:.3em;margin-right:-.3em">{{ t.docTitle }}</span></sc-if><sc-if value="{{ isEn }}" hint-placeholder-val="{{ false }}"><span style="font-family:var(--font-title);font-weight:600;font-size:24px;line-height:28px;letter-spacing:.06em">{{ t.docTitle }}</span></sc-if></div>
+</div>
+
+<div style="position:absolute;left:48px;top:116px;width:460px;height:252px;display:flex;flex-direction:column">
+<div style="display:grid;grid-template-columns:96px minmax(0,1fr);row-gap:10px;align-items:center">
+<span style="font-size:11px;line-height:16px;letter-spacing:.1em;font-weight:500">{{ t.soul }}</span><span style="font-weight:600;font-size:20px;line-height:28px;max-width:290px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ soul }}</span>
+<span style="font-size:11px;line-height:16px;letter-spacing:.1em;font-weight:500">{{ t.id }}</span><span style="display:flex;gap:20px;font-family:var(--font-mono);font-size:34px;line-height:44px;font-weight:600;letter-spacing:.06em"><sc-for list="{{ idGroups }}" as="g" hint-placeholder-count="3"><span>{{ g }}</span></sc-for></span>
+<span style="font-size:11px;line-height:16px;letter-spacing:.1em;font-weight:500">{{ t.pw }}</span><span style="display:flex;align-items:center;gap:12px"><span style="width:220px;height:40px;flex:none;box-sizing:border-box;border:1px solid #000"></span><span style="font-size:11px;line-height:16px;text-wrap:balance">{{ t.pwHint }}</span></span>
+</div>
+<div style="margin-top:10px;display:flex;flex-direction:column"><span style="font-weight:600">{{ t.validity }}</span><span><b>{{ t.must }}</b>{{ t.mustRest }}</span><span style="font-weight:600">{{ t.private }}</span></div>
+<div data-civ="{{ accent }}" style="margin-top:auto;height:8px;color:oklch(var(--color-main))">
+<sc-if value="{{ isCn }}" hint-placeholder-val="{{ false }}"><svg width="100%" height="8" fill="none" stroke="currentColor" aria-hidden="true"><line x1="0" y1="1" x2="100%" y2="1" stroke-width="2"></line><line x1="0" y1="5.5" x2="100%" y2="5.5" stroke-width=".75"></line></svg></sc-if>
+<sc-if value="{{ isEg }}" hint-placeholder-val="{{ false }}"><svg width="100%" height="8" fill="none" stroke="currentColor" aria-hidden="true"><defs><pattern id="sl-dots" width="6" height="8" patternUnits="userSpaceOnUse"><circle cx="3" cy="6" r=".9" fill="currentColor" stroke="none"></circle></pattern></defs><line x1="0" y1="1.5" x2="100%" y2="1.5" stroke-width="1.5"></line><rect x="0" y="0" width="100%" height="8" fill="url(#sl-dots)" stroke="none"></rect></svg></sc-if>
+<sc-if value="{{ isEu }}" hint-placeholder-val="{{ false }}"><svg width="100%" height="8" fill="none" stroke="currentColor" overflow="visible" aria-hidden="true"><line x1="0" y1="4" x2="100%" y2="4" stroke-width=".75"></line><svg x="50%" y="0" overflow="visible"><path d="M0 0L4 4 0 8-4 4Z" fill="#fff" stroke-width=".75"></path></svg></svg></sc-if>
+<sc-if value="{{ isGr }}" hint-placeholder-val="{{ false }}"><svg width="100%" height="8" fill="none" stroke="currentColor" aria-hidden="true"><defs><pattern id="sl-meander-d" width="12" height="8" patternUnits="userSpaceOnUse"><path d="M0 7.5H9.5V.5H2.5V5H6.5" stroke-width=".75"></path></pattern></defs><rect x="0" y="0" width="100%" height="8" fill="url(#sl-meander-d)" stroke="none"></rect></svg></sc-if>
+</div>
+<div style="margin-top:6px;display:flex;gap:24px;font-size:12px;line-height:16px"><span>{{ t.officer }} {{ officer }}</span><span>{{ t.printed }} <span style="font-family:var(--font-mono)">{{ printedAt }}</span></span></div>
+</div>
+
+<sc-if value="{{ sealMono }}" hint-placeholder-val="{{ true }}"><span style="position:absolute;left:448px;top:104px;display:flex;filter:grayscale(1) brightness(0)"><x-import component-from-global-scope="SoulLedger.SoulLedgerProvider" civ="{{ civ }}" pathname="/credentials" hint-size="64px,64px"><x-import component-from-global-scope="SoulLedger.Seal" size="{{ 64 }}" civ="{{ civ }}" glyphs="{{ glyphs }}" court="{{ hall }}" hint-size="64px,64px"></x-import></x-import></span></sc-if>
+<sc-if value="{{ sealColor }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;left:448px;top:104px;display:flex"><x-import component-from-global-scope="SoulLedger.SoulLedgerProvider" civ="{{ civ }}" pathname="/credentials" hint-size="64px,64px"><x-import component-from-global-scope="SoulLedger.Seal" size="{{ 64 }}" civ="{{ civ }}" glyphs="{{ glyphs }}" court="{{ hall }}" hint-size="64px,64px"></x-import></x-import></span></sc-if>
+
+<span aria-hidden="true" style="position:absolute;left:536px;top:104px;height:268px;border-left:.5px solid #000"></span>
+<div style="position:absolute;left:565px;top:118px;width:160px;height:160px;box-sizing:border-box;border:1px solid #000;display:flex;align-items:center;justify-content:center"><span style="position:absolute;left:0;top:0;width:40px;height:40px;box-sizing:border-box;border:6px solid #000;padding:6px"><span style="display:block;width:16px;height:16px;background:#000"></span></span><span style="position:absolute;right:0;top:0;width:40px;height:40px;box-sizing:border-box;border:6px solid #000;padding:6px"><span style="display:block;width:16px;height:16px;background:#000"></span></span><span style="position:absolute;left:0;bottom:0;width:40px;height:40px;box-sizing:border-box;border:6px solid #000;padding:6px"><span style="display:block;width:16px;height:16px;background:#000"></span></span><span style="font-family:var(--font-mono);font-size:10px;line-height:14px;text-align:center">QR · 42 mm<br></br>SL1:{{ idRaw }}</span></div>
+<div style="position:absolute;left:540px;top:304px;width:210px;display:flex;flex-direction:column;align-items:center;text-align:center;font-size:12px;line-height:16px"><span>{{ t.scan1 }}</span><span>{{ t.scan2 }}</span></div>
+
+<div style="position:absolute;left:0;right:0;top:397px;border-top:1px dashed #000"><span style="position:absolute;left:40px;top:-10px;padding:0 8px;background:#fff;font-size:12px;line-height:20px">{{ t.cut }}</span></div>
+
+<section style="position:absolute;left:24px;top:429px;width:746px;box-sizing:border-box;padding:20px 24px 24px;border:.5px solid #000;display:flex;flex-direction:column">
+<div style="display:flex;align-items:baseline;justify-content:space-between;gap:16px;padding-bottom:8px"><span style="font-weight:600;font-size:15px;line-height:24px">{{ t.stub }}</span><span style="font-size:12px;line-height:16px">{{ realm }} · {{ hall }}</span></div>
+<div data-civ="{{ accent }}" style="height:8px;color:oklch(var(--color-main))">
+<sc-if value="{{ isCn }}" hint-placeholder-val="{{ false }}"><svg width="100%" height="8" fill="none" stroke="currentColor" aria-hidden="true"><line x1="0" y1="1" x2="100%" y2="1" stroke-width="2"></line><line x1="0" y1="5.5" x2="100%" y2="5.5" stroke-width=".75"></line></svg></sc-if>
+<sc-if value="{{ isEg }}" hint-placeholder-val="{{ false }}"><svg width="100%" height="8" fill="none" stroke="currentColor" aria-hidden="true"><line x1="0" y1="1.5" x2="100%" y2="1.5" stroke-width="1.5"></line><rect x="0" y="0" width="100%" height="8" fill="url(#sl-dots)" stroke="none"></rect></svg></sc-if>
+<sc-if value="{{ isEu }}" hint-placeholder-val="{{ false }}"><svg width="100%" height="8" fill="none" stroke="currentColor" overflow="visible" aria-hidden="true"><line x1="0" y1="4" x2="100%" y2="4" stroke-width=".75"></line><svg x="50%" y="0" overflow="visible"><path d="M0 0L4 4 0 8-4 4Z" fill="#fff" stroke-width=".75"></path></svg></svg></sc-if>
+<sc-if value="{{ isGr }}" hint-placeholder-val="{{ false }}"><svg width="100%" height="8" fill="none" stroke="currentColor" aria-hidden="true"><rect x="0" y="0" width="100%" height="8" fill="url(#sl-meander-d)" stroke="none"></rect></svg></sc-if>
+</div>
+<dl style="margin:20px 0 0;display:grid;grid-template-columns:160px minmax(0,1fr);gap:8px 16px"><dt>{{ t.soul }}</dt><dd style="margin:0">{{ soul }}</dd><dt>{{ t.id }}</dt><dd style="margin:0;font-family:var(--font-mono);letter-spacing:.06em">{{ idSpaced }}</dd><dt>{{ t.stubValid }}</dt><dd style="margin:0;font-family:var(--font-mono)">{{ validAt }}</dd><dt>{{ t.print }}</dt><dd style="margin:0">{{ officer }} · <span style="font-family:var(--font-mono)">{{ printedAt }}</span></dd></dl>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:48px;margin-top:64px"><span style="display:flex;flex-direction:column;gap:4px"><span style="height:40px;border-bottom:1px solid #000"></span><span style="font-size:12px;line-height:16px">{{ t.sign1 }}</span></span><span style="display:flex;flex-direction:column;gap:4px"><span style="height:40px;border-bottom:1px solid #000"></span><span style="font-size:12px;line-height:16px">{{ t.sign2 }}</span></span></div>
+<span style="margin-top:20px;font-size:12px;line-height:16px">{{ t.mark }}</span>
+</section>
+
+<div style="position:absolute;left:40px;right:40px;bottom:24px;display:flex;align-items:center;gap:8px;font-size:11px;line-height:16px"><x-import component-from-global-scope="SoulLedger.SoulLedgerProvider" civ="{{ civ }}" pathname="/credentials" hint-size="16px,14px"><dc-import name="BrandMark" size="{{ 14 }}" tone="ink" hint-size="16px,14px"></dc-import></x-import><span>{{ t.sys }}</span><span style="font-family:var(--font-mono);margin-left:16px">{{ idSpaced }}</span><span style="margin-left:auto">{{ t.page }}</span></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:794,&quot;height&quot;:1123},&quot;civ&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;cn&quot;,&quot;eg&quot;,&quot;eu&quot;,&quot;gr&quot;],&quot;default&quot;:&quot;cn&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;color&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;},&quot;lang&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;zh&quot;,&quot;en&quot;],&quot;default&quot;:&quot;zh&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const civ = this.props.civ ?? 'cn';
+    const lang = this.props.lang ?? 'zh';
+    const color = !!this.props.color;
+    const D = {
+      cn: { realm: { zh: '酆都', en: 'FENGDU' }, hall: { zh: '第二殿 · 楚江', en: 'Second Court · Chujiang' }, glyphs: ['楚'], soul: { zh: '孟婆的第一位客人', en: 'Meng Po’s First Guest' }, id: 'MPK7Q2RX9T', officer: { zh: '判官崔珏', en: 'Judge Cui Jue' } },
+      eg: { realm: { zh: '杜阿特', en: 'DUAT' }, hall: { zh: '第二殿', en: 'Second Hall' }, glyphs: undefined, soul: { zh: '塞内布', en: 'Seneb' }, id: 'QU33Q9FW5F', officer: { zh: '书吏阿尼', en: 'Scribe Ani' } },
+      eu: { realm: { zh: '地狱', en: 'INFERNO' }, hall: { zh: '第二环', en: 'Second Circle' }, glyphs: undefined, soul: { zh: '弗朗切斯卡', en: 'Francesca' }, id: 'H4N8KWT2CE', officer: { zh: '米诺斯', en: 'Minos' } },
+      gr: { realm: { zh: '哈迪斯', en: 'HADES' }, hall: { zh: '阿斯福德尔原野', en: 'Asphodel Meadows' }, glyphs: undefined, soul: { zh: '欧律狄刻', en: 'Eurydice' }, id: 'K7M4TRX2HN', officer: { zh: '卡戎', en: 'Charon' } }
+    }[civ];
+    const T = {
+      zh: { sys: '灵魂簿', docTitle: '登录交付单', soul: '灵魂', id: '灵魂编号', pw: '初始密码', pwHint: '官员当面写上，或只口头告诉', validity: '有效至 2026-10-14 21:40(72 小时)', must: '■ 首次登录必须改密码。', mustRest: '改完以后，这里写的初始密码就作废了。', officer: '交付官员', printed: '打印于', scan1: '灵魂簿 App 登录页', scan2: '点「扫码」扫这里', private: '只发给本人，不要拍照转发。', cut: '✂ 沿此线剪下 · 上面交给灵魂，下面本殿留存', stub: '存根 · 本殿留存', stubValid: '初始密码有效至', print: '打印', sign1: '灵魂签收 · 日期', sign2: '交付官员签名', mark: '签收后请在官员台点「标记已交付」。', page: '第 1 页 / 共 1 页' },
+      en: { sys: 'SOULLEDGER', docTitle: 'Sign-in Slip', soul: 'SOUL', id: 'SOUL NUMBER', pw: 'INITIAL PASSWORD', pwHint: 'Written by the officer, or told aloud', validity: 'Valid until 14 Oct 2026 21:40 (72 hours)', must: '■ Change it at first sign-in. ', mustRest: 'After that, the password written here stops working.', officer: 'Issued by', printed: 'Printed', scan1: 'SoulLedger app sign-in page:', scan2: 'tap Scan and scan this', private: 'For the named soul only. Do not photograph or forward.', cut: '✂ Cut here · top goes to the soul, bottom stays with the hall', stub: 'Stub · kept by the hall', stubValid: 'Initial password valid until', print: 'Printed', sign1: 'Soul’s signature · date', sign2: 'Officer’s signature', mark: 'After signing, click Mark as delivered on the desk.', page: 'Page 1 of 1' }
+    }[lang];
+    const n = 36, w = 730 / n, r = (w * 0.75).toFixed(2);
+    let euBand = 'M8 8H738V68';
+    for (let i = 0; i < n; i++) {
+      const x1 = 738 - i * w, xm = (x1 - w / 2).toFixed(2), x2 = (x1 - w).toFixed(2);
+      euBand += `A${r} ${r} 0 0 0 ${xm} 58A${r} ${r} 0 0 0 ${x2} 68`;
+    }
+    euBand += 'Z';
+    const id = D.id;
+    const groups = [id.slice(0, 3), id.slice(3, 7), id.slice(7)];
+    return {
+      civ, accent: color ? civ : 'mono', t: T, isZh: lang === 'zh', isEn: lang === 'en',
+      isCn: civ === 'cn', isEg: civ === 'eg', isEu: civ === 'eu', isGr: civ === 'gr', euBand,
+      sealMono: !color, sealColor: color,
+      realm: D.realm[lang], hall: D.hall[lang], glyphs: D.glyphs, soul: D.soul[lang], officer: D.officer[lang],
+      idGroups: groups, idSpaced: groups.join(' '), idRaw: id,
+      validAt: '2026-10-14 21:40', printedAt: '2026-10-11 21:52'
+    };
+  }
+}
+</script>
+</body>
+</html>
