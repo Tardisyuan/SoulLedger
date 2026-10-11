@@ -1,14 +1,16 @@
 "use client";
 
 import { useState } from "react";
+import { flushSync } from "react-dom";
 import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query";
 import { RefreshCw } from "lucide-react";
-import { PAGE_SIZE, type InitialCredential } from "@soulledger/core/api";
+import { PAGE_SIZE, type CredentialSlip, type InitialCredential } from "@soulledger/core/api";
 import { soulAccountKeys } from "@soulledger/core/query_keys";
 import {
   classifySoulAccountError,
   useMarkCredentialDelivered,
+  usePrintCredentialSlip,
   useRetryCredential,
   useSoulCredentials,
 } from "@soulledger/core/hooks/useSoulAccounts";
@@ -29,6 +31,8 @@ import { QueryError } from "@/src/components/ui/PageError";
 import { Pagination } from "@/src/components/ui/Pagination";
 import { ListSkeleton } from "@/components/ui/skeleton";
 import { RevealCredentialDialog } from "@/src/components/soul-accounts/RevealCredentialDialog";
+import { DeliverySlip } from "@/src/components/soul-accounts/DeliverySlip";
+import { SoulCode } from "@/src/components/soul-accounts/SoulCode";
 import { EmailNotSyncedNote } from "@/src/components/soul-accounts/EmailNotSyncedNote";
 import {
   CREDENTIAL_FILTERS,
@@ -41,6 +45,13 @@ import {
 
 // 操作列定宽,不是 `auto`:表头那一格是空的,`auto` 在表头里解成 0、在数据行里解成
 // 按钮宽,两边的 fr 列于是按不同的余量分配,表头与数据错开(2026-09-25 截图里实测)。
+/** 打印机图标(第二十批画稿 CredentialDesk 的那一条 path)。 */
+const PrinterIcon = () => (
+  <svg aria-hidden="true" width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" className="mr-1 inline">
+    <path d="M5.75 7.25v-4.5h8.5v4.5M5.75 13.75h-3v-6.5h14.5v6.5h-3M5.75 11.25h8.5v6h-8.5z" />
+  </svg>
+);
+
 const ROW_GRID = "md:grid md:grid-cols-[minmax(0,2fr)_minmax(0,0.6fr)_minmax(0,2fr)_minmax(0,1.3fr)_10rem] md:items-center md:gap-4";
 
 function CredentialsPageContent() {
@@ -54,10 +65,13 @@ function CredentialsPageContent() {
   const [status, setStatus] = useState<string>("PENDING");
   const [page, setPage] = useState(1);
   const [revealing, setRevealing] = useState<InitialCredential | null>(null);
+  // 只在调起打印的那一刻挂着;交付单不是页面的一部分,屏幕上也看不到它。
+  const [slip, setSlip] = useState<CredentialSlip | null>(null);
 
   const list = useSoulCredentials({ status: status || undefined, page });
   const retry = useRetryCredential();
   const deliver = useMarkCredentialDelivered();
+  const printSlip = usePrintCredentialSlip();
 
   const rows = list.data?.results ?? [];
   const count = list.data?.count ?? 0;
@@ -79,6 +93,39 @@ function CredentialsPageContent() {
       onError: (error) =>
         showToast(t(failureKey(classifySoulAccountError(error), "soul_accounts.credentials.deliver_failed")), "error"),
     });
+
+  // 先让服务端写审计并给出内容;失败就不打印。成功后同步挂载交付单再调起浏览器打印
+  // (window.print 在多数浏览器里阻塞到对话框关闭),随后卸载。打印不改行的状态,不刷新列表。
+  const doPrint = (c: InitialCredential) =>
+    printSlip.mutate(c.id, {
+      onSuccess: (data) => {
+        flushSync(() => setSlip(data));
+        window.print();
+        setSlip(null);
+      },
+      onError: (error) => {
+        const key = failureKey(classifySoulAccountError(error), "");
+        const detail = (error as { response?: { status?: number; data?: { detail?: unknown } } })?.response;
+        showToast(
+          key ? t(key) : detail?.status === 409 && typeof detail.data?.detail === "string" ? detail.data.detail : t("soul_accounts.credentials.print_failed"),
+          "error",
+        );
+      },
+    });
+
+  const printButton = (c: InitialCredential, label: string, muted = false) => (
+    <Button
+      type="button"
+      size="sm"
+      variant="ghost"
+      className={muted ? "text-[oklch(var(--color-ink-muted))]" : undefined}
+      loading={printSlip.isPending && printSlip.variables === c.id}
+      onClick={() => doPrint(c)}
+    >
+      <PrinterIcon />
+      {label}
+    </Button>
+  );
 
   const actions = (
     <Button
@@ -173,7 +220,9 @@ function CredentialsPageContent() {
                       {c.soul_name}
                     </Link>
                   </p>
-                  <p className="font-mono text-xs text-[oklch(var(--color-ink-tertiary))] break-all">{c.soul_code}</p>
+                  <p className="text-xs text-[oklch(var(--color-ink-tertiary))] break-all">
+                    <SoulCode code={c.soul_code} />
+                  </p>
                   <StatusBadge namespace="soul_accounts.credential_status" value={c.status} tone={credentialTone(c.status)} />
                 </div>
                 <div className="min-w-0">
@@ -217,6 +266,9 @@ function CredentialsPageContent() {
                       </Button>
                     </>
                   )}
+                  {canManage && (c.status === "PENDING" || c.status === "REVEALED") && !expired &&
+                    printButton(c, t("soul_accounts.credentials.print_slip"))}
+                  {canManage && c.status === "DELIVERED" && !expired && printButton(c, t("soul_accounts.credentials.reprint_slip"), true)}
                   {canManage && c.status === "REVEALED" && !expired && (
                     <Button
                       type="button"
@@ -244,6 +296,7 @@ function CredentialsPageContent() {
         </ul>
       </div>
 
+      {slip && <DeliverySlip slip={slip} />}
       {revealing && <RevealCredentialDialog key={revealing.id} credential={revealing} onClose={() => setRevealing(null)} />}
     </PageShell>
   );

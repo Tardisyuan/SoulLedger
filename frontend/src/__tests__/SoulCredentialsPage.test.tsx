@@ -23,10 +23,11 @@ jest.mock("@soulledger/core/api", () => ({
     revealCredential: jest.fn(),
     markDelivered: jest.fn(),
     retry: jest.fn(),
+    printSlip: jest.fn(),
   },
 }));
 const { soulAccountsApi } = jest.requireMock("@soulledger/core/api") as {
-  soulAccountsApi: Record<"credentials" | "revealCredential" | "markDelivered" | "retry", jest.Mock>;
+  soulAccountsApi: Record<"credentials" | "revealCredential" | "markDelivered" | "retry" | "printSlip", jest.Mock>;
 };
 
 let mockUser: { id: number; username: string; role: string; permissions: string[] } | null = null;
@@ -303,4 +304,101 @@ it("an unknown status renders as unrecognized with the raw member in title", asy
   expect(screen.queryByText("LOST_IN_DUAT")).toBeNull();
   // An unknown status offers no action at all.
   expect(screen.queryByRole("button", { name: tZh("soul_accounts.credentials.actions.reveal") })).toBeNull();
+});
+
+describe("print the delivery slip", () => {
+  const PRINT = () => tZh("soul_accounts.credentials.print_slip");
+  const REPRINT = () => tZh("soul_accounts.credentials.reprint_slip");
+  const SLIP = {
+    soul_name: "张三",
+    soul_code: "ABCDEFGH23",
+    home_tenant: { code: "cn", display_name: "Chinese Afterlife", hall_names: { "zh-Hans": "酆都 · 第二殿" }, seal_glyphs: [] },
+    expires_at: FUTURE,
+    officer_name: "书吏阿尼",
+    printed_at: "2026-10-11T01:00:00Z",
+  };
+  let printSpy: jest.SpyInstance;
+  beforeEach(() => {
+    printSpy = jest.spyOn(window, "print").mockImplementation(() => undefined);
+  });
+  afterEach(() => printSpy.mockRestore());
+
+  const rows = async (...list: unknown[]) => {
+    soulAccountsApi.credentials.mockResolvedValue(page(list));
+    const { container } = renderPage();
+    await screen.findAllByText("张三");
+    return (id: string) => within(container.querySelector(`[data-credential-id="${id}"]`) as HTMLElement);
+  };
+  const labels = (row: ReturnType<typeof within>) =>
+    row.queryAllByRole("button").map((b: HTMLElement) => b.textContent);
+
+  it("the entry shows per status: print on PENDING and REVEALED, reprint on DELIVERED, nothing on VOID or expired", async () => {
+    asManager();
+    const row = await rows(
+      credential({ id: "p" }),
+      credential({ id: "r", status: "REVEALED" }),
+      credential({ id: "d", status: "DELIVERED" }),
+      credential({ id: "d-old", status: "DELIVERED", expires_at: PAST }),
+      credential({ id: "v", status: "VOID", expires_at: PAST }),
+      credential({ id: "p-old", expires_at: PAST }),
+    );
+    expect(labels(row("p"))).toEqual([tZh("soul_accounts.credentials.actions.reveal"), tZh("soul_accounts.credentials.actions.retry"), PRINT()]);
+    // Between view-password / retry and mark-delivered.
+    expect(labels(row("r"))).toEqual([PRINT(), tZh("soul_accounts.credentials.actions.mark_delivered")]);
+    expect(labels(row("d"))).toEqual([REPRINT()]);
+    for (const id of ["d-old", "v", "p-old"]) expect(labels(row(id))).toEqual([]);
+  });
+
+  it("without soul_account.manage there is no print entry", async () => {
+    asRole("soul_account.read");
+    await rows(credential({ id: "p" }), credential({ id: "d", status: "DELIVERED" }));
+    expect(screen.queryByRole("button", { name: PRINT() })).toBeNull();
+    expect(screen.queryByRole("button", { name: REPRINT() })).toBeNull();
+  });
+
+  it("asks the server first, then prints the returned slip with no password anywhere, and unmounts it", async () => {
+    asManager();
+    soulAccountsApi.printSlip.mockResolvedValue({ data: SLIP });
+    let slipDuringPrint = "";
+    printSpy.mockImplementation(() => {
+      slipDuringPrint = document.querySelector('[data-testid="delivery-slip"]')?.textContent ?? "";
+    });
+    const row = await rows(credential({ id: "p" }));
+    fireEvent.click(row("p").getByRole("button", { name: PRINT() }));
+    await waitFor(() => expect(printSpy).toHaveBeenCalledTimes(1));
+    expect(soulAccountsApi.printSlip).toHaveBeenCalledWith("p");
+    expect(slipDuringPrint).toContain("ABC DEFG H23");
+    expect(slipDuringPrint).toContain("书吏阿尼");
+    expect(slipDuringPrint).toContain("酆都 · 第二殿");
+    expect(slipDuringPrint).not.toContain(SECRET);
+    // Printing changes nothing on the row: the list is not asked again.
+    expect(soulAccountsApi.credentials).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(document.querySelector('[data-testid="delivery-slip"]')).toBeNull());
+  });
+
+  it("a failed request prints nothing and says so", async () => {
+    asManager();
+    soulAccountsApi.printSlip.mockRejectedValue(http(500));
+    const row = await rows(credential({ id: "p" }));
+    fireEvent.click(row("p").getByRole("button", { name: PRINT() }));
+    await waitFor(() => expect(mockShowToast).toHaveBeenCalledWith(tZh("soul_accounts.credentials.print_failed"), "error"));
+    expect(printSpy).not.toHaveBeenCalled();
+  });
+
+  it("a 409 shows the backend's own reason, and prints nothing", async () => {
+    asManager();
+    soulAccountsApi.printSlip.mockRejectedValue(http(409, { detail: "这份初始密码已作废。", code: "credential_void" }));
+    const row = await rows(credential({ id: "p" }));
+    fireEvent.click(row("p").getByRole("button", { name: PRINT() }));
+    await waitFor(() => expect(mockShowToast).toHaveBeenCalledWith("这份初始密码已作废。", "error"));
+    expect(printSpy).not.toHaveBeenCalled();
+  });
+
+  it("shows the soul code in 3-4-3 groups with a spelled-out label, never the raw ten", async () => {
+    asManager();
+    const row = await rows(credential({ id: "p" }));
+    const shown = row("p").getByText("ABC DEFG H23");
+    expect(shown).toHaveAttribute("aria-label", tZh("soul_app.login.id_aria", { spelled: "A B C，D E F G，H 2 3" }));
+    expect(screen.queryByText("ABCDEFGH23")).toBeNull();
+  });
 });

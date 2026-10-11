@@ -78,7 +78,7 @@ jest.mock("@soulledger/core/api", () => ({
 }));
 const mockAccounts = jest.fn();
 const account = (over: Record<string, unknown>) => ({
-  id: "acc-1", soul: SOUL_ID, cycle: 1, soul_code: "SL-7K3Q-0042", origin: "AUTO", retired_at: null,
+  id: "acc-1", soul: SOUL_ID, cycle: 1, soul_code: "7K3Q4G8B2M", origin: "AUTO", retired_at: null,
   must_change_password: false, initial_password_expires_at: null, mfa_enabled: false, mfa_enabled_at: null,
   last_login: null, email_not_synced: null, ...over,
 });
@@ -132,7 +132,7 @@ describe("the identity band's case number on a soul", () => {
       data: { results: [account({ id: "old", cycle: 0, soul_code: "SL-OLD-0001", retired_at: "2026-01-01T00:00:00Z" }), account({})] },
     });
     const { container } = renderPage();
-    await waitFor(() => expect(container.querySelector("[data-print-reference]")).toHaveTextContent("print.soul_no SL-7K3Q-0042"));
+    await waitFor(() => expect(container.querySelector("[data-print-reference]")).toHaveTextContent("print.soul_no 7K3 Q4G8 B2M"));
     expect(container.querySelector("[data-print-foot]")?.textContent ?? "").not.toMatch(UUID_SHAPE);
     expect(mockAccounts).toHaveBeenCalledTimes(1);
   });

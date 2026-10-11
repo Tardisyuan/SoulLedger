@@ -11,6 +11,8 @@ import { BaseModal } from "@/src/components/ui/Modal";
 import { Button } from "@/src/components/ui/Button";
 import { EmailNotSyncedNote } from "./EmailNotSyncedNote";
 import { failureKey, lifeNumber } from "./soulAccountsView";
+import { formatSoulCode } from "@soulledger/core/domain/soulCode";
+import { SoulCode } from "./SoulCode";
 
 interface Props {
   credential: InitialCredential;
@@ -101,7 +103,7 @@ export function RevealCredentialDialog({ credential, onClose }: Props) {
         <p className="text-sm text-[oklch(var(--color-ink))]">
           {t("soul_accounts.reveal.confirm_body", {
             name: credential.soul_name,
-            code: credential.soul_code,
+            code: formatSoulCode(credential.soul_code),
             n: lifeNumber(credential.cycle),
           })}
         </p>
@@ -133,7 +135,9 @@ export function RevealCredentialDialog({ credential, onClose }: Props) {
         </p>
         <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-2 text-sm">
           <dt className="text-[oklch(var(--color-ink-subtle))]">{t("soul_accounts.fields.soul_code")}</dt>
-          <dd className="font-mono break-all text-[oklch(var(--color-ink))]">{secret.soul_code}</dd>
+          <dd className="break-all text-[oklch(var(--color-ink))]">
+            <SoulCode code={secret.soul_code} />
+          </dd>
           <dt className="text-[oklch(var(--color-ink-subtle))]">{t("soul_accounts.reveal.password_label")}</dt>
           <dd className="font-mono text-md break-all select-all text-[oklch(var(--color-ink))]" data-testid="revealed-password">
             {secret.password}

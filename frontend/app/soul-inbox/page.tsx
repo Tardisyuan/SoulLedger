@@ -38,6 +38,7 @@ import { MediaViewer } from "@/src/components/moderation/MediaGrid";
 import { TemplateManager } from "./TemplateManager";
 import { AssignDialog } from "./AssignDialog";
 import { ROW_HOVER, ROW_SELECTED } from "@/components/ui/data-table";
+import { SoulCode } from "@/src/components/soul-accounts/SoulCode";
 
 /*
  * 殿司收件箱:灵魂写给**当前所在**殿司的信(backend/apps/chat/views.py `OfficerInboxViewSet`)。
@@ -476,7 +477,7 @@ function Thread({ conversation }: { conversation: InboxConversation }) {
     <section aria-label={t("soul_inbox.thread_label", { name: conversation.soul_name })} className="min-w-0 px-4 lg:px-6 pt-4 pb-6">
       <header className="flex flex-wrap items-baseline gap-3 pb-3 border-b border-[oklch(var(--color-block))]">
         <h2 className="text-lg text-[oklch(var(--color-ink))]">{conversation.soul_name}</h2>
-        <span className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">{conversation.soul_code}</span>
+        <SoulCode code={conversation.soul_code} className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))]" />
         {conversation.closed_at && <Badge tone="neutral">{t("soul_inbox.closed")}</Badge>}
         {waitingDays !== null && <Badge tone="warning">{t("soul_inbox.awaiting", { n: String(waitingDays) })}</Badge>}
         {conversation.assignee && (
@@ -755,7 +756,7 @@ function SoulInboxContent() {
                           </span>
                         </span>
                         <span className="mt-1 flex items-center gap-2">
-                          <span className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">{r.soul_code}</span>
+                          <SoulCode code={r.soul_code} className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))]" />
                           {r.has_draft && <span className="font-mono text-2xs text-[oklch(var(--color-ink-muted))]">{t("soul_inbox.folder.drafts")}</span>}
                           {r.closed_at && <Badge tone="neutral">{t("soul_inbox.closed")}</Badge>}
                         </span>
