@@ -138,6 +138,17 @@ test.describe("Delivery slip", () => {
     await expect(printed).toContainText("酆都 · 第二殿");
     await expect(printed).toContainText("第 1 页 / 共 1 页");
     await expect(printed.locator("svg[data-qr]")).toBeVisible();
+    // 按文明重做的版面(第二十四批):酆都的匾额带与纹章在,上联以实心带开头。
+    await expect(printed.locator('[data-slip-emblem="cn"]')).toBeVisible();
+    await expect(printed).toContainText("酆都");
+    // 匾额带是实心块(SVG 的 fill)。通用打印规则把背景压成透明、颜色压成 CanvasText,这里证明带没被一起压掉:
+    // 它的填充既不是 none 也不是白,于是反白的殿名读得出来。
+    const bandFill = await printed.locator("[data-slip-band]").evaluate((el) => getComputedStyle(el).fill);
+    expect(bandFill).not.toMatch(/^(none|rgba?\(0, 0, 0, 0\)|rgb\(255, 255, 255\)|transparent)$/);
+    const hallColour = await printed.locator("[data-slip-hall]").evaluate((el) => getComputedStyle(el).color);
+    expect(hallColour).toBe("rgb(255, 255, 255)");
+    // 二维码与编号永远纯黑。
+    expect(await printed.locator("[data-slip-code]").evaluate((el) => getComputedStyle(el).color)).toBe("rgb(0, 0, 0)");
     await expect(printed).not.toContainText(REVEALED_PASSWORD.password);
     await expect(page.locator("h1")).toBeHidden();
     await expect(page.locator("nav").first()).toBeHidden();

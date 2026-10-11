@@ -376,6 +376,72 @@ describe("print the delivery slip", () => {
     await waitFor(() => expect(document.querySelector('[data-testid="delivery-slip"]')).toBeNull());
   });
 
+  describe("colour accent switch", () => {
+    // TODO(design): the label has no language-pack entry yet, so the switch only renders once a bundle supplies it;
+    // the tests supply it themselves, under the key the page looks up.
+    const KEY = "soul_accounts.credentials.slip_color";
+    const realT = mockI18n.t;
+    beforeEach(() => {
+      mockI18n.t = ((key: string, params?: Record<string, string>) => (key === KEY ? "彩色点缀" : realT(key, params))) as typeof realT;
+    });
+    afterEach(() => {
+      mockI18n.t = realT;
+    });
+
+    it("is off by default, remembers a tick on this computer, and the slip is printed in colour only after that", async () => {
+      asManager();
+      soulAccountsApi.printSlip.mockResolvedValue({ data: SLIP });
+      let colour: string | null = "unset";
+      printSpy.mockImplementation(() => {
+        colour = document.querySelector('[data-testid="delivery-slip"]')?.getAttribute("data-slip-color") ?? null;
+      });
+      const row = await rows(credential({ id: "p" }));
+      const box = screen.getByRole("checkbox", { name: "彩色点缀" });
+      expect(box).not.toBeChecked();
+
+      fireEvent.click(row("p").getByRole("button", { name: PRINT() }));
+      await waitFor(() => expect(printSpy).toHaveBeenCalledTimes(1));
+      expect(colour).toBeNull();
+
+      fireEvent.click(box);
+      expect(box).toBeChecked();
+      expect(window.localStorage.getItem("soulledger.slip.color")).toBe("1");
+      fireEvent.click(row("p").getByRole("button", { name: PRINT() }));
+      await waitFor(() => expect(printSpy).toHaveBeenCalledTimes(2));
+      expect(colour).toBe("");
+    });
+
+    it("reads the remembered choice back on the next visit, and a storage that throws counts as off", async () => {
+      asManager();
+      window.localStorage.setItem("soulledger.slip.color", "1");
+      await rows(credential({ id: "p" }));
+      await waitFor(() => expect(screen.getByRole("checkbox", { name: "彩色点缀" })).toBeChecked());
+
+      const get = jest.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+        throw new Error("blocked");
+      });
+      try {
+        document.body.innerHTML = "";
+        await rows(credential({ id: "q" }));
+        expect(screen.getByRole("checkbox", { name: "彩色点缀" })).not.toBeChecked();
+      } finally {
+        get.mockRestore();
+      }
+    });
+
+    it("is not offered without soul_account.manage", async () => {
+      asRole("soul_account.read");
+      await rows(credential({ id: "p" }));
+      expect(screen.queryByRole("checkbox", { name: "彩色点缀" })).toBeNull();
+    });
+  });
+
+  it("without a language-pack entry for the switch there is no switch (no raw key on screen)", async () => {
+    asManager();
+    await rows(credential({ id: "p" }));
+    expect(screen.queryByRole("checkbox")).toBeNull();
+  });
+
   it("a failed request prints nothing and says so", async () => {
     asManager();
     soulAccountsApi.printSlip.mockRejectedValue(http(500));
