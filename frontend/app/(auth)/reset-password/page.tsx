@@ -3,10 +3,9 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { authApi, type OfficerResetRefusal } from "@soulledger/core/api";
-import { passwordReasonKeys } from "@soulledger/core/api/auth";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { LoginShell } from "@/src/components/auth/LoginShell";
-import { TextField } from "@/src/components/ui/Field";
+import { PasswordRuleFields, usePasswordRules } from "@/src/components/auth/PasswordRules";
 import { Button } from "@/src/components/ui/Button";
 
 /**
@@ -27,8 +26,7 @@ export default function ResetPasswordPage() {
   const { t } = useI18n();
   const [phase, setPhase] = useState<Phase>("reading");
   const [credential, setCredential] = useState<{ uid: string; token: string } | null>(null);
-  const [password, setPassword] = useState("");
-  const [confirm, setConfirm] = useState("");
+  const rules = usePasswordRules();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -48,27 +46,19 @@ export default function ResetPasswordPage() {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!credential || loading) return;
-    if (password !== confirm) {
-      setError(t("profile.password_mismatch"));
-      return;
-    }
-    if (password.length < 8) {
-      setError(t("profile.password_too_short"));
-      return;
-    }
+    if (!rules.check()) return;
     setLoading(true);
     setError(null);
     try {
-      await authApi.confirmOfficerReset({ ...credential, new_password: password });
+      await authApi.confirmOfficerReset({ ...credential, new_password: rules.next });
       setPhase("done");
     } catch (err: unknown) {
       const response = (err as { response?: { status?: number; data?: Partial<OfficerResetRefusal> } })?.response;
       if (response?.data?.code === "reset_link_invalid") {
         setPhase("invalid");
       } else if (response?.data?.code === "weak_password") {
-        // One line per validator that refused, by its code; Django's English sentence is not shown.
-        const reasons = passwordReasonKeys(response.data).map((key) => t(key));
-        setError([t("auth.reset_weak"), ...reasons].join(" · "));
+        // 清单上的 ◇ 换成 password_rules.common_*;Django 的英文句子与逐条原因都不再显示。
+        rules.reject();
       } else {
         setError(t(response?.status === 429 ? "auth.rate_limited" : "auth.forgot_failed"));
       }
@@ -108,32 +98,16 @@ export default function ResetPasswordPage() {
           </Link>
         </div>
       ) : (
-        <form onSubmit={submit} className="flex w-full flex-col gap-4" data-testid="officer-reset-password-form" aria-busy={loading || undefined}>
+        <form onSubmit={submit} noValidate className="flex w-full flex-col gap-4" data-testid="officer-reset-password-form" aria-busy={loading || undefined}>
           <div>
             <h1 className="font-title text-xl font-semibold text-[oklch(var(--color-ink))]">{t("auth.reset_title")}</h1>
             <p className="mt-1 text-sm text-[oklch(var(--color-ink-muted))]">{t("auth.reset_subtitle")}</p>
           </div>
-          <TextField
-            id="reset-new-password"
-            name="new_password"
-            autoComplete="new-password"
-            type="password"
-            label={t("profile.new_password")}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            minLength={8}
-            required
-          />
-          <TextField
-            id="reset-confirm-password"
-            name="confirm_password"
-            autoComplete="new-password"
-            type="password"
-            label={t("profile.confirm_password")}
-            value={confirm}
-            onChange={(e) => setConfirm(e.target.value)}
-            minLength={8}
-            required
+          <PasswordRuleFields
+            rules={rules}
+            idPrefix="reset-password"
+            newLabel={t("profile.new_password")}
+            confirmLabel={t("profile.confirm_password")}
           />
           {error && (
             <div role="alert" className={`${box} font-medium text-[oklch(var(--color-danger))]`}>
