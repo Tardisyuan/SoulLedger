@@ -388,9 +388,9 @@ class TestRecoveryCodes:
             assert _verify(pending, recovery_code="zzzz-zzzz").status_code == 400
         assert _verify(pending, recovery_code="zzzz-zzzz").status_code == 429
 
-    def test_regenerating_voids_the_old_set_and_needs_no_code(self, soul):
+    def test_regenerating_voids_the_old_set(self, soul):
         secret, old = _enable(soul)
-        response = soul_client(soul).post("/api/v1/me/mfa/recovery-codes/")
+        response = soul_client(soul).post("/api/v1/me/mfa/recovery-codes/", {"method": "password", "password": PASSWORD}, format="json")
         assert response.status_code == 200
         new = response.data["recovery_codes"]
         assert len(new) == 10 and not set(new) & set(old)
@@ -400,8 +400,34 @@ class TestRecoveryCodes:
         assert AuditLog.objects.filter(resource="mfa", description__contains="重新生成").exists()
 
     def test_regenerating_needs_an_enabled_account(self, soul):
-        response = soul_client(soul).post("/api/v1/me/mfa/recovery-codes/")
+        response = soul_client(soul).post("/api/v1/me/mfa/recovery-codes/", {"method": "password", "password": PASSWORD}, format="json")
         assert response.status_code == 409 and response.data["code"] == "not_enabled"
+
+    def test_no_confirmation_a_wrong_one_or_a_recovery_code_changes_nothing(self, soul):
+        secret, old = _enable(soul)
+        client = soul_client(soul)
+        for body in (None, {}, {"method": "password", "password": "nope"}, {"method": "totp", "code": "000000"},
+                     {"method": "recovery", "code": old[0]}):
+            response = client.post("/api/v1/me/mfa/recovery-codes/", body, format="json")
+            assert response.status_code == 400 and "recovery_codes" not in response.data, body
+        assert SoulMfaRecoveryCode.objects.filter(used_at__isnull=True).count() == 10
+        assert _verify(_pending(soul), recovery_code=old[0]).status_code == 200  # the old set still works
+
+    def test_the_six_number_code_confirms_too(self, soul):
+        secret, old = _enable(soul)
+        response = soul_client(soul).post("/api/v1/me/mfa/recovery-codes/", {"method": "totp", "code": _code(secret)}, format="json")
+        assert response.status_code == 200 and not set(response.data["recovery_codes"]) & set(old)
+
+    def test_wrong_confirmations_share_the_lock_with_disable(self, soul):
+        _enable(soul)
+        client = soul_client(soul)
+        url = "/api/v1/me/mfa/recovery-codes/"
+        for _ in range(4):
+            assert client.post(url, {"method": "password", "password": "nope"}, format="json").status_code == 400
+        assert client.post(url, {"method": "password", "password": "nope"}, format="json").status_code == 429
+        assert client.post(url, {"method": "password", "password": PASSWORD}, format="json").status_code == 429
+        assert client.post("/api/v1/me/mfa/disable/", {"method": "password", "password": PASSWORD}, format="json").status_code == 429
+        assert SoulMfaRecoveryCode.objects.filter(used_at__isnull=True).count() == 10
 
 
 # ── 「这部手机 30 天内不再询问」 ───────────────────────────────────────────────

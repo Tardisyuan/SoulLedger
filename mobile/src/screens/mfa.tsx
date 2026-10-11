@@ -408,6 +408,82 @@ function Fact({ label, children }: { label: string; children: ReactNode }) {
 
 type Asking = "disable" | "regen" | null;
 
+/**
+ * 「确认是本人」:6 位数字,手机不在身边改用密码。关闭与重新生成恢复码共用这一块(后端也是同一个确认、同一把锁),
+ * 失败的几种状态(错了几次、锁到几点、网络)也共用 `StepNotice`。`id` 是两个弹层各自的 testID 前缀。
+ */
+function OwnerFields({
+  id, method, onMethod, digits, onDigits, password, onPassword, state, onState, busy,
+}: {
+  id: string;
+  method: "totp" | "password";
+  onMethod: (m: "totp" | "password") => void;
+  digits: string;
+  onDigits: (v: string) => void;
+  password: string;
+  onPassword: (v: string) => void;
+  state: StepState;
+  onState: (s: StepState) => void;
+  busy: boolean;
+}) {
+  const { t: tr } = useI18n();
+  const idle = () => {
+    if (!busy) onState({ kind: "idle" });
+  };
+  return (
+    <>
+      <StepNotice state={state} password={method === "password"} />
+      {method === "totp" ? (
+        <>
+          <DigitField
+            testID={`${id}-code`}
+            label={tr("soul_app.mfa.login.code_label")}
+            value={digits}
+            onChange={(next) => {
+              onDigits(next);
+              idle();
+            }}
+            locked={busy || state.kind === "locked"}
+          />
+          <TextLink
+            testID={`${id}-use-password`}
+            title={tr("soul_app.mfa.disable.use_password")}
+            onPress={() => {
+              onMethod("password");
+              onState({ kind: "idle" });
+            }}
+          />
+        </>
+      ) : (
+        <>
+          <Input
+            testID={`${id}-password`}
+            label={tr("soul_app.login.password")}
+            value={password}
+            onChangeText={(next) => {
+              onPassword(next);
+              idle();
+            }}
+            editable={!busy && state.kind !== "locked"}
+            secureTextEntry
+            textContentType="password"
+            autoComplete="current-password"
+            secureToggle={{ show: tr("soul_app.common.show"), hide: tr("soul_app.common.hide") }}
+          />
+          <TextLink
+            testID={`${id}-use-code`}
+            title={tr("soul_app.mfa.login.use_code")}
+            onPress={() => {
+              onMethod("totp");
+              onState({ kind: "idle" });
+            }}
+          />
+        </>
+      )}
+    </>
+  );
+}
+
 function Manage({ status, onBack, onRegenerated, onDisabled }: { status: SoulMfaStatus; onBack: () => void; onRegenerated: (codes: string[]) => void; onDisabled: () => void }) {
   const t = useTheme();
   const { t: tr } = useI18n();
@@ -417,6 +493,7 @@ function Manage({ status, onBack, onRegenerated, onDisabled }: { status: SoulMfa
   const [password, setPassword] = useState("");
   const [state, setState] = useState<StepState>({ kind: "idle" });
   const busy = state.kind === "busy";
+  const confirmReady = method === "totp" ? digits.length === 6 : password.length > 0;
   const left = status.recovery_codes_remaining;
 
   const close = () => {
@@ -431,9 +508,11 @@ function Manage({ status, onBack, onRegenerated, onDisabled }: { status: SoulMfa
   const regenerate = async () => {
     setState({ kind: "busy" });
     try {
-      const codes = await soulApi.mfaRegenerate();
+      const codes = await soulApi.mfaRegenerate(method === "totp" ? { method: "totp", code: digits } : { method: "password", password });
       setAsking(null);
       setState({ kind: "idle" });
+      setDigits("");
+      setPassword("");
       onRegenerated(codes);
     } catch (e) {
       setState(stateOfFailure(soulMfaFailure(e)));
@@ -511,10 +590,17 @@ function Manage({ status, onBack, onRegenerated, onDisabled }: { status: SoulMfa
           {tr("soul_app.mfa.regen.title")}
         </Txt>
         <Txt variant="bodyLg">{tr("soul_app.mfa.regen.body", { n: String(left) })}</Txt>
-        <StepNotice state={state} />
+        <OwnerFields id="regen" method={method} onMethod={setMethod} digits={digits} onDigits={setDigits} password={password} onPassword={setPassword} state={state} onState={setState} busy={busy} />
         <ButtonPair>
           <Button testID="regen-cancel" kind="secondary" title={tr("soul_app.common.cancel")} onPress={close} disabled={busy} style={styles.fill} />
-          <Button testID="regen-confirm" title={tr("soul_app.mfa.manage.regen")} onPress={() => void regenerate()} busy={busy} style={styles.fill} />
+          <Button
+            testID="regen-confirm"
+            title={tr("soul_app.mfa.manage.regen")}
+            onPress={() => void regenerate()}
+            busy={busy}
+            disabled={state.kind === "locked" || !confirmReady}
+            style={styles.fill}
+          />
         </ButtonPair>
       </MfaSheet>
 
@@ -523,54 +609,7 @@ function Manage({ status, onBack, onRegenerated, onDisabled }: { status: SoulMfa
           {tr("soul_app.mfa.disable.title")}
         </Txt>
         <Txt variant="bodyLg">{tr("soul_app.mfa.disable.body")}</Txt>
-        <StepNotice state={state} password={method === "password"} />
-        {method === "totp" ? (
-          <>
-            <DigitField
-              testID="disable-code"
-              label={tr("soul_app.mfa.login.code_label")}
-              value={digits}
-              onChange={(next) => {
-                setDigits(next);
-                if (!busy) setState({ kind: "idle" });
-              }}
-              locked={busy || state.kind === "locked"}
-            />
-            <TextLink
-              testID="disable-use-password"
-              title={tr("soul_app.mfa.disable.use_password")}
-              onPress={() => {
-                setMethod("password");
-                setState({ kind: "idle" });
-              }}
-            />
-          </>
-        ) : (
-          <>
-            <Input
-              testID="disable-password"
-              label={tr("soul_app.login.password")}
-              value={password}
-              onChangeText={(next) => {
-                setPassword(next);
-                if (!busy) setState({ kind: "idle" });
-              }}
-              editable={!busy && state.kind !== "locked"}
-              secureTextEntry
-              textContentType="password"
-              autoComplete="current-password"
-              secureToggle={{ show: tr("soul_app.common.show"), hide: tr("soul_app.common.hide") }}
-            />
-            <TextLink
-              testID="disable-use-code"
-              title={tr("soul_app.mfa.login.use_code")}
-              onPress={() => {
-                setMethod("totp");
-                setState({ kind: "idle" });
-              }}
-            />
-          </>
-        )}
+        <OwnerFields id="disable" method={method} onMethod={setMethod} digits={digits} onDigits={setDigits} password={password} onPassword={setPassword} state={state} onState={setState} busy={busy} />
         <ButtonPair>
           <Button testID="disable-cancel" kind="secondary" title={tr("soul_app.common.cancel")} onPress={close} disabled={busy} style={styles.fill} />
           <Button
@@ -579,7 +618,7 @@ function Manage({ status, onBack, onRegenerated, onDisabled }: { status: SoulMfa
             title={tr("soul_app.mfa.disable.ok")}
             onPress={() => void disable()}
             busy={busy}
-            disabled={state.kind === "locked" || (method === "totp" ? digits.length !== 6 : !password)}
+            disabled={state.kind === "locked" || !confirmReady}
             style={styles.fill}
           />
         </ButtonPair>

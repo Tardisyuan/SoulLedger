@@ -103,17 +103,41 @@ describe("MfaSection — on", () => {
     expect(screen.queryByRole("button", { name: "mfa.setup.open" })).toBeNull();
   });
 
-  it("重新生成 asks first (old codes voided), then shows the new set", async () => {
+  it("重新生成 asks to be confirmed (6-digit code or password, as 关闭 does), then shows the new set", async () => {
     status.mockResolvedValue({ data: ON });
     regenerate.mockResolvedValue({ data: { recovery_codes: Array.from({ length: 10 }, (_, i) => `new-${i}`) } });
     renderSection();
     fireEvent.click(await screen.findByRole("button", { name: "mfa.manage.regenerate" }));
     expect(regenerate).not.toHaveBeenCalled();
     expect(await screen.findByText("mfa.manage.regenerate_body")).toBeTruthy();
-    fireEvent.click(screen.getAllByRole("button", { name: "mfa.manage.regenerate" }).at(-1)!);
-    await waitFor(() => expect(regenerate).toHaveBeenCalledTimes(1));
+    const action = screen.getByTestId("mfa-regenerate-confirm") as HTMLButtonElement;
+    expect(action.disabled).toBe(true); // nothing to confirm with yet
+    fireEvent.change(screen.getByLabelText(/mfa\.verify\.code_label/), { target: { value: "12345" } });
+    expect(action.disabled).toBe(true);
+    fireEvent.change(screen.getByLabelText(/mfa\.verify\.code_label/), { target: { value: "123456" } });
+    expect(action.disabled).toBe(false);
+    fireEvent.click(screen.getByRole("radio", { name: "mfa.manage.confirm_by_password" }));
+    expect((screen.getByTestId("mfa-regenerate-confirm") as HTMLButtonElement).disabled).toBe(true); // the code no longer counts
+    fireEvent.change(screen.getByLabelText(/auth\.password/), { target: { value: "pw" } });
+    fireEvent.click(screen.getByTestId("mfa-regenerate-confirm"));
+    await waitFor(() => expect(regenerate).toHaveBeenCalledWith({ method: "password", password: "pw" }));
     expect(await screen.findByTestId("mfa-recovery-codes")).toBeTruthy();
     expect(screen.getByText("new-9")).toBeTruthy();
+  });
+
+  it("重新生成: a refusal stays in the dialog and shows no codes; a lock is told as a lock", async () => {
+    status.mockResolvedValue({ data: ON });
+    regenerate
+      .mockRejectedValueOnce({ response: { status: 400, data: { code: "wrong" } } })
+      .mockRejectedValueOnce({ response: { status: 429, data: { code: "locked" } } });
+    renderSection();
+    fireEvent.click(await screen.findByRole("button", { name: "mfa.manage.regenerate" }));
+    fireEvent.change(await screen.findByLabelText(/mfa\.verify\.code_label/), { target: { value: "000000" } });
+    fireEvent.click(screen.getByTestId("mfa-regenerate-confirm"));
+    expect((await screen.findByRole("alert")).textContent).toContain("mfa.manage.disable_failed");
+    fireEvent.click(screen.getByTestId("mfa-regenerate-confirm"));
+    await waitFor(() => expect(screen.getByRole("alert").textContent).toContain("officer_app.mfa.reasons.locked"));
+    expect(screen.queryByTestId("mfa-recovery-codes")).toBeNull();
   });
 
   it("关闭: the danger button is disabled until a 6-digit code (or a password) is given, and sends the chosen method", async () => {

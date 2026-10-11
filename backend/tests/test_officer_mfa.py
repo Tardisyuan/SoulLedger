@@ -288,7 +288,7 @@ class TestRecoveryCodes:
     def test_regenerate_voids_the_old_set_and_audits(self, api_client, admin_user):
         _, old = _enable(admin_user)
         api_client.force_authenticate(admin_user)
-        r = api_client.post("/api/v1/auth/mfa/recovery-codes/")
+        r = api_client.post("/api/v1/auth/mfa/recovery-codes/", {"method": "password", "password": "admin123"}, format="json")
         assert r.status_code == 200
         new = r.data["recovery_codes"]
         assert len(new) == 10 and not set(new) & set(old)
@@ -297,6 +297,47 @@ class TestRecoveryCodes:
         api_client.force_authenticate(None)
         pending = api_client.post("/api/v1/auth/login/", {"username": "admin", "password": "admin123"}, format="json").data["pending_token"]
         assert api_client.post("/api/v1/auth/mfa/verify/", {"pending_token": pending, "recovery_code": old[1]}, format="json").status_code == 400
+
+
+@pytest.mark.django_db
+class TestRegenerateNeedsConfirmation:
+    """重新生成与「关闭」同一个确认(6 位数字或密码)、同一把锁;确认不过,旧码原样有效、不返回新码。"""
+
+    URL = "/api/v1/auth/mfa/recovery-codes/"
+
+    def test_no_confirmation_a_wrong_one_or_a_recovery_code_changes_nothing(self, api_client, admin_user):
+        row, old = _enable(admin_user)
+        api_client.force_authenticate(admin_user)
+        for body in (None, {}, {"method": "password", "password": "nope"}, {"method": "totp", "code": "000000"},
+                     {"method": "recovery", "code": old[0]}):
+            r = api_client.post(self.URL, body, format="json")
+            assert r.status_code == 400 and "recovery_codes" not in r.data, body
+        assert MfaRecoveryCode.objects.filter(used_at__isnull=True).count() == 10
+        # The old set is still good: one signs in with it.
+        api_client.force_authenticate(None)
+        pending = api_client.post("/api/v1/auth/login/", {"username": "admin", "password": "admin123"}, format="json").data["pending_token"]
+        assert api_client.post("/api/v1/auth/mfa/verify/", {"pending_token": pending, "recovery_code": old[0]}, format="json").status_code == 200
+
+    def test_a_current_six_number_code_confirms(self, api_client, admin_user):
+        row, old = _enable(admin_user)
+        api_client.force_authenticate(admin_user)
+        r = api_client.post(self.URL, {"method": "totp", "code": _code(row.secret)}, format="json")
+        assert r.status_code == 200 and not set(r.data["recovery_codes"]) & set(old)
+
+    def test_wrong_confirmations_share_the_lock_with_disable(self, api_client, admin_user):
+        _enable(admin_user)
+        api_client.force_authenticate(admin_user)
+        for _ in range(4):
+            assert api_client.post(self.URL, {"method": "password", "password": "nope"}, format="json").status_code == 400
+        locked = api_client.post(self.URL, {"method": "password", "password": "nope"}, format="json")
+        assert locked.status_code == 429 and locked.data["code"] == "locked"
+        # Locked: the right password is refused here AND at disable (one lock).
+        assert api_client.post(self.URL, {"method": "password", "password": "admin123"}, format="json").status_code == 429
+        assert api_client.post("/api/v1/auth/mfa/disable/", {"method": "password", "password": "admin123"}, format="json").status_code == 429
+
+    def test_not_enabled_is_a_conflict(self, api_client, admin_user):
+        api_client.force_authenticate(admin_user)
+        assert api_client.post(self.URL, {"method": "password", "password": "admin123"}, format="json").status_code == 409
 
 
 # ── 设备令牌 ───────────────────────────────────────────────────────────────────
