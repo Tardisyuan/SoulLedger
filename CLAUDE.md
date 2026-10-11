@@ -144,6 +144,16 @@ npm 10 与 11 的真正区别在装出来的树是否完整。所以**装完一�
 - **iOS 模拟器的钥匙串不强制生物验证**:`requireAuthentication: true` 的 secure-store 条目不弹面容就能读。面容相关只能真机验(清单在备忘 `real-device-checklist`)。
 - **本机连 115 的 Matrix 要先开隧道**:`ssh -f -N -L 8008:127.0.0.1:8008 tardis@pi`;runserver 的 `ALLOWED_HOSTS` 还要加本机局域网地址
   (Synapse 回调 `/chat/hooks/new-message/` 用的是它,否则 400 `DisallowedHost`,信能发、推送钩子丢)。验完 `pkill -f "ssh -f -N -L 8008"`。
+- **装到 iOS 真机(2026-10-11):这台 Mac 的签名是免费的个人开发团队,签不了「推送」和「App 组」——这是必然的,不是配置坏了。**
+  `expo run:ios --device <udid>` 会报 `Personal development teams … do not support the Push Notifications capability` /
+  `doesn't support the App Groups capability`。做法:只在生成的工程里(`mobile/ios/SoulLedger/SoulLedger.entitlements`,gitignored)删掉
+  `aps-environment` 与 `com.apple.security.application-groups` 两项再编:
+  `/usr/libexec/PlistBuddy -c "Delete :aps-environment" …` 、`-c "Delete :com.apple.security.application-groups" …`。
+  这样装上的版本没有推送、语音入口读不到 App 组里的数字;其余功能正常。**不要改 `app.json` 去掉这两项**——那是正式构建要的。
+  下次 `expo prebuild` 会把这两项生成回来,真机要再删一次。设备 UDID 用 `xcrun devicectl list devices` 看。
+  手机首次打开要在「设置 › 通用 › VPN 与设备管理」里信任开发者;手机连本机后端用 Mac 的局域网地址
+  (起 Metro 时带 `EXPO_PUBLIC_API_URL=http://<Mac 地址>:8000/api/v1`,runserver 的 `ALLOWED_HOSTS` 也要加这个地址)。
+  我的工具只能点模拟器,真机上的操作要用户自己点。
 - **一次只开一个模拟器、一个 App**:这台机器内存吃紧(交换区近满),模拟器启动或编译时 1 分钟负载会冲到几百。
   重步骤之间等负载回到 12 以下再点;模拟器截图会慢一帧,操作后截两张看第二张。
 - **只收字母数字的输入框要设 `keyboardType="ascii-capable"`**(编号、恢复码):不设时中文拼音键盘会把输入当拼音、弹候选条。
