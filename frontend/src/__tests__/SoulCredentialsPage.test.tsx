@@ -376,46 +376,42 @@ describe("print the delivery slip", () => {
     await waitFor(() => expect(document.querySelector('[data-testid="delivery-slip"]')).toBeNull());
   });
 
-  describe("colour accent switch", () => {
-    // TODO(design): the label has no language-pack entry yet, so the switch only renders once a bundle supplies it;
-    // the tests supply it themselves, under the key the page looks up.
-    const KEY = "soul_accounts.credentials.slip_color";
-    const realT = mockI18n.t;
-    beforeEach(() => {
-      mockI18n.t = ((key: string, params?: Record<string, string>) => (key === KEY ? "彩色点缀" : realT(key, params))) as typeof realT;
-    });
-    afterEach(() => {
-      mockI18n.t = realT;
-    });
+  describe("black-and-white switch", () => {
+    const MONO = () => tZh("soul_accounts.credentials.print_mono");
+    const inkOf = (slipEl: Element | null) => slipEl?.querySelector("[data-slip-ink]")?.getAttribute("data-slip-ink");
 
-    it("is on by default, remembers being turned off on this computer, and the slip is printed in black only after that", async () => {
+    it("is off by default (= colour), shows its hint, remembers being ticked on this computer, and then the slip is printed in mono", async () => {
       asManager();
       soulAccountsApi.printSlip.mockResolvedValue({ data: SLIP });
-      let colour: string | null = "unset";
+      let ink: string | null | undefined = "unset";
       printSpy.mockImplementation(() => {
-        colour = document.querySelector('[data-testid="delivery-slip"]')?.getAttribute("data-slip-color") ?? null;
+        ink = inkOf(document.querySelector('[data-testid="delivery-slip"]'));
       });
       const row = await rows(credential({ id: "p" }));
-      const box = screen.getByRole("checkbox", { name: "彩色点缀" });
-      expect(box).toBeChecked();
+      const box = screen.getByRole("checkbox", { name: MONO() });
+      expect(box).not.toBeChecked();
+      expect(screen.getByTitle(tZh("soul_accounts.credentials.print_mono_hint"))).toBeInTheDocument();
 
       fireEvent.click(row("p").getByRole("button", { name: PRINT() }));
       await waitFor(() => expect(printSpy).toHaveBeenCalledTimes(1));
-      expect(colour).toBe("");
+      expect(ink).toBe("cn");
 
       fireEvent.click(box);
-      expect(box).not.toBeChecked();
+      expect(box).toBeChecked();
       expect(window.localStorage.getItem("soulledger.slip.color")).toBe("0");
       fireEvent.click(row("p").getByRole("button", { name: PRINT() }));
       await waitFor(() => expect(printSpy).toHaveBeenCalledTimes(2));
-      expect(colour).toBeNull();
+      expect(ink).toBe("mono");
+
+      fireEvent.click(box);
+      expect(window.localStorage.getItem("soulledger.slip.color")).toBe("1");
     });
 
-    it("reads the remembered choice back on the next visit, and a storage that throws counts as the default: colour", async () => {
+    it("reads the remembered choice back on the next visit (an old \"0\" still means black-and-white), and a storage that throws counts as the default: colour", async () => {
       asManager();
       window.localStorage.setItem("soulledger.slip.color", "0");
       await rows(credential({ id: "p" }));
-      await waitFor(() => expect(screen.getByRole("checkbox", { name: "彩色点缀" })).not.toBeChecked());
+      await waitFor(() => expect(screen.getByRole("checkbox", { name: MONO() })).toBeChecked());
 
       const get = jest.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
         throw new Error("blocked");
@@ -423,7 +419,7 @@ describe("print the delivery slip", () => {
       try {
         document.body.innerHTML = "";
         await rows(credential({ id: "q" }));
-        expect(screen.getByRole("checkbox", { name: "彩色点缀" })).toBeChecked();
+        expect(screen.getByRole("checkbox", { name: MONO() })).not.toBeChecked();
       } finally {
         get.mockRestore();
       }
@@ -432,14 +428,22 @@ describe("print the delivery slip", () => {
     it("is not offered without soul_account.manage", async () => {
       asRole("soul_account.read");
       await rows(credential({ id: "p" }));
-      expect(screen.queryByRole("checkbox", { name: "彩色点缀" })).toBeNull();
+      expect(screen.queryByRole("checkbox")).toBeNull();
     });
   });
 
-  it("without a language-pack entry for the switch there is no switch (no raw key on screen)", async () => {
+  it("prints the upper slip in the civilisation's script whatever the desk language (this one: Chinese, with English lines)", async () => {
     asManager();
-    await rows(credential({ id: "p" }));
-    expect(screen.queryByRole("checkbox")).toBeNull();
+    soulAccountsApi.printSlip.mockResolvedValue({ data: SLIP });
+    let upper = "";
+    printSpy.mockImplementation(() => {
+      upper = document.querySelector('[data-testid="delivery-slip"]')?.textContent ?? "";
+    });
+    const row = await rows(credential({ id: "p" }));
+    fireEvent.click(row("p").getByRole("button", { name: PRINT() }));
+    await waitFor(() => expect(printSpy).toHaveBeenCalledTimes(1));
+    expect(upper).toContain("登录交付单");
+    expect(upper).toContain("INITIAL PASSWORD");
   });
 
   it("a failed request prints nothing and says so", async () => {
