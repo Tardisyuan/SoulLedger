@@ -2847,7 +2847,8 @@
         "officer_label": "Sab",
         "printed_label": "Sesh Djama Em"
       },
-      "print_mono": "Sesh Kem"
+      "print_mono": "Sesh Kem",
+      "print_mono_hint": "Sesh Kem: Djama Kem, Medu Nefer."
     },
     "reveal": {
       "confirm_title": "Maa Sekhem Tepy?",
