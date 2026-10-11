@@ -208,6 +208,7 @@ export {
   type RebirthApplicationStatus,
   type RebirthCurrentStep,
   type RevealedCredential,
+  type CredentialSlip,
   type SoulAccount,
   type SoulAccountErrorBody,
   type SoulAccountOrigin,

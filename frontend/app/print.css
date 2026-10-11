@@ -32,6 +32,20 @@
   }
 }
 
+/* 登录交付单(第二十批 §三 F2)的命名页与屏幕上的隐藏;打印时的版面在文件末尾。 */
+@page slip {
+  size: A4 portrait;
+  margin: 0;
+
+  @bottom-right {
+    content: none;
+  }
+}
+
+[data-print-slip] {
+  display: none;
+}
+
 @media print {
   html,
   body {
@@ -178,5 +192,28 @@
   [data-print-doc] [data-plan-id],
   [data-print-doc] [data-node-order] {
     break-inside: avoid;
+  }
+}
+
+/*
+ * 登录交付单(第二十批 §三 F2)—— 官员台的 `DeliverySlip`,挂在 body 上,打印时才出现。
+ * 它借 `data-print-doc` 让上面的规则收掉别的一切、并把颜色压成黑白,但自己不是表格式文书:
+ * 一页 A4(210×297 mm,版心边距自己带),页脚贴着纸底,页码固定「第 1 页 / 共 1 页」。
+ * 命名页 `slip`(定义在文件上方)把页边距压成 0,并去掉全局 @page 里的页码边距盒(否则会印出第二个页码)。
+ */
+@media print {
+  [data-print-doc][data-print-slip] {
+    display: flex;
+    flex-direction: column;
+    page: slip;
+    width: 210mm;
+    /* 比 297mm 矮 1 mm:取整误差不能把页脚挤到第二页。 */
+    height: 296mm;
+    overflow: hidden;
+    font-size: 13px;
+    line-height: 20px;
+  }
+  [data-print-slip] [data-slip-foot] {
+    margin-top: auto;
   }
 }

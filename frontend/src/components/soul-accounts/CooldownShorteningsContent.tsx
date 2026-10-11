@@ -18,6 +18,7 @@ import { StatusBadge } from "@/src/components/ui/StatusBadge";
 import { FilterChipToggle } from "@/src/components/ui/FilterChip";
 import { CooldownShorteningDetail } from "./CooldownShorteningDetail";
 import { COOLDOWN_FILTERS, cooldownEnded, cooldownTone, lifeNumber } from "./soulAccountsView";
+import { SoulCode } from "@/src/components/soul-accounts/SoulCode";
 
 // A11 列宽:灵魂 1.6fr、第几世 96、剩余冷却 220、状态 128、提交于 160、操作 112。
 const ROW_GRID =
@@ -154,7 +155,9 @@ export function CooldownShorteningsContent({ tabs }: { tabs: ReactNode }) {
                   <Link href={`/souls/${r.soul}`} className="text-md font-medium text-[oklch(var(--color-ink))] hover:underline break-words">
                     {r.soul_name}
                   </Link>
-                  <p className="font-mono text-xs text-[oklch(var(--color-ink-muted))] break-all">{r.soul_code}</p>
+                  <p className="text-xs text-[oklch(var(--color-ink-muted))] break-all">
+                    <SoulCode code={r.soul_code} />
+                  </p>
                 </div>
                 <p className="text-sm">{t("soul_accounts.life", { n: lifeNumber(r.cycle) })}</p>
                 <div data-testid="shortening-remaining">
@@ -179,7 +182,7 @@ export function CooldownShorteningsContent({ tabs }: { tabs: ReactNode }) {
               >
                 <span className="min-w-0 flex-1 space-y-1">
                   <span className="block text-md font-medium break-words">
-                    {r.soul_name} <span className="font-mono text-xs text-[oklch(var(--color-ink-muted))]">{r.soul_code}</span>{" "}
+                    {r.soul_name} <SoulCode code={r.soul_code} className="font-mono text-xs text-[oklch(var(--color-ink-muted))]" />{" "}
                     <span className="text-xs text-[oklch(var(--color-ink-muted))]">{t("soul_accounts.life", { n: lifeNumber(r.cycle) })}</span>
                   </span>
                   <span className="block text-xs text-[oklch(var(--color-ink-muted))]">

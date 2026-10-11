@@ -110,6 +110,11 @@ export function useMarkCredentialDelivered() {
   return useSoulAccountWrite(async (id: string) => (await soulAccountsApi.markDelivered(id)).data);
 }
 
+/** Printing changes nothing on the row, so unlike the other writes this one does not invalidate the list. */
+export function usePrintCredentialSlip() {
+  return useMutation({ mutationFn: async (id: string) => (await soulAccountsApi.printSlip(id)).data });
+}
+
 export function useRetryCredential() {
   return useSoulAccountWrite(async (id: string) => (await soulAccountsApi.retry(id)).data);
 }

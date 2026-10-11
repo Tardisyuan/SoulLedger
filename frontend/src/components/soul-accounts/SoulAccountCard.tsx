@@ -16,6 +16,7 @@ import { AccountCredentialModal } from "./AccountCredentialModal";
 import { EmailNotSyncedNote } from "./EmailNotSyncedNote";
 import { SoulMfaResetDialog } from "./SoulMfaResetDialog";
 import { lifeNumber } from "./soulAccountsView";
+import { SoulCode } from "@/src/components/soul-accounts/SoulCode";
 
 /**
  * Left-column 灵魂账号 card on a soul's detail page: this life's account, the
@@ -73,7 +74,7 @@ export function SoulAccountCard({ soul }: { soul: Soul }) {
         {current ? (
           <dl className="space-y-2 text-sm" data-testid="current-soul-account">
             {row(t("soul_accounts.fields.cycle"), t("soul_accounts.life", { n: lifeNumber(current.cycle) }))}
-            {row(t("soul_accounts.fields.soul_code"), <span className="font-mono break-all">{current.soul_code}</span>)}
+            {row(t("soul_accounts.fields.soul_code"), <SoulCode code={current.soul_code} className="font-mono break-all" />)}
             {row(t("soul_accounts.account.origin_label"), <DomainEnum namespace="soul_accounts.origin" value={current.origin} />)}
             {row(
               t("soul_accounts.account.password_label"),

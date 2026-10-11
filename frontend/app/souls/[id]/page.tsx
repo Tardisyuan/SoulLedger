@@ -53,6 +53,7 @@ import { PrintFrame } from "@/src/components/print/PrintFrame";
 import { usePlaque } from "@/src/components/plaque/Plaque";
 import { useHall } from "@/src/components/plaque/useHall";
 import { DOMAIN_BADGE, soulStateBadgeClass, soulStateGlyph } from "@/src/lib/soulStateBadge";
+import { formatSoulCode } from "@soulledger/core/domain/soulCode";
 
 /** 详情页头上那两个徽章的形状。颜色由调用点给,形状只有一种。 */
 /* D1:世数不是状态,更不给「轮回中」的色 —— 与状态徽章同一副 ink 字 / ink3 框。 */
@@ -581,7 +582,7 @@ export default function SoulDetailPage() {
   // 页脚:当前这一世账号的灵魂编号(账号卡用的是同一份查询,键相同,不多发请求);
   // 没开通账号、没有读账号的权限或还没加载到,就印灵魂名 —— 每页都认得出是谁的档案。永不印内部 UUID。
   const currentAccount = accountChain.data?.find((a) => a.retired_at === null);
-  const printRef = currentAccount?.soul_code ?? soul?.name ?? null;
+  const printRef = currentAccount ? formatSoulCode(currentAccount.soul_code) : (soul?.name ?? null);
   return (
     <PrintFrame hall={hall} reference={printRef} referenceLabel={currentAccount ? t("print.soul_no") : ""}>
     <PageShell

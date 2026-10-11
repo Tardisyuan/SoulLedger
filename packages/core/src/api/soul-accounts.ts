@@ -70,6 +70,16 @@ export interface InitialCredential {
   email_not_synced: "taken" | null;
 }
 
+/** SoulCredentialSlipSerializer — what the delivery slip prints. **No password.** */
+export interface CredentialSlip {
+  soul_name: string;
+  soul_code: string;
+  home_tenant: { code: string; display_name: string; hall_names: Record<string, string>; seal_glyphs: string[] };
+  expires_at: string;
+  officer_name: string;
+  printed_at: string;
+}
+
 /** RevealedCredentialSerializer — served once, with `Cache-Control: no-store`. */
 export interface RevealedCredential {
   soul_code: string;
@@ -217,6 +227,11 @@ export const soulAccountsApi = {
    * no storage.
    */
   revealCredential: (id: string) => api.post<RevealedCredential>(`/soul-accounts/credentials/${id}/reveal/`),
+  /**
+   * The slip's content plus one `credentials.print_slip` audit row. Never the password, never a state change.
+   * PENDING / REVEALED / DELIVERED only: 409 `credential_void` / `credential_expired` / `credential_not_printable`.
+   */
+  printSlip: (id: string) => api.post<CredentialSlip>(`/soul-accounts/credentials/${id}/print-slip/`),
   /** Only a REVEALED credential; 409 `credential_not_revealed`, 410 expired. */
   markDelivered: (id: string) => api.post<InitialCredential>(`/soul-accounts/credentials/${id}/mark-delivered/`),
   /** Only PENDING; 409 `credential_not_pending`. The 200 row says whether it went out (SENT) or not (PENDING). */

@@ -26,6 +26,7 @@ import { StatusBadge } from "@/src/components/ui/StatusBadge";
 import { FilterChipToggle } from "@/src/components/ui/FilterChip";
 import { CooldownShorteningsContent } from "@/src/components/soul-accounts/CooldownShorteningsContent";
 import { TAB_BASE, TAB_OFF, TAB_ON } from "@/src/lib/tabClasses";
+import { SoulCode } from "@/src/components/soul-accounts/SoulCode";
 
 // 操作列定宽,不是 `auto`:表头那一格是空的,`auto` 在表头里解成 0、在数据行里解成
 // 按钮宽,两边的 fr 列于是按不同的余量分配,表头与数据错开(2026-09-25 截图里实测)。
@@ -140,7 +141,9 @@ function RebirthApplicationsContent({ tabs }: { tabs: ReactNode }) {
                 <Link href={`/souls/${a.soul}`} className="text-sm font-medium text-[oklch(var(--color-ink))] hover:underline break-words">
                   {a.soul_name}
                 </Link>
-                <p className="font-mono text-xs text-[oklch(var(--color-ink-tertiary))] break-all">{a.soul_code}</p>
+                <p className="text-xs text-[oklch(var(--color-ink-tertiary))] break-all">
+                  <SoulCode code={a.soul_code} />
+                </p>
               </div>
               <div className="min-w-0">
                 <p className={label}>{t("soul_accounts.fields.cycle")}</p>

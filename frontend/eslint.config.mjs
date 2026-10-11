@@ -714,6 +714,15 @@ const eslintConfig = [
   },
 
   {
+    // 登录交付单是一张 A4 纸(第二十批画稿,794×1123 px = 210×297 mm),按纸面的字号与边距排,
+    // 不是屏幕界面:七档字号与间距节奏管的是屏幕。其余设计守卫(颜色、圆角、阴影)照旧管它。
+    files: ["src/components/soul-accounts/DeliverySlip.tsx"],
+    rules: {
+      "design-system/type-scale": "off",
+      "design-system/spacing-rhythm": "off",
+    },
+  },
+  {
     files: ["**/*.js", "**/*.mjs"],
     languageOptions: {
       globals: {

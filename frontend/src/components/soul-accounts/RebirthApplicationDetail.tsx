@@ -9,6 +9,7 @@ import { BaseModal } from "@/src/components/ui/Modal";
 import { Button } from "@/src/components/ui/Button";
 import { DomainEnum, MissingValue } from "@/src/components/ui/DomainValue";
 import { failureKey, lifeNumber, rebirthBadgeClass } from "./soulAccountsView";
+import { SoulCode } from "@/src/components/soul-accounts/SoulCode";
 
 interface Props {
   application: OfficerRebirthApplication;
@@ -64,7 +65,7 @@ export function RebirthApplicationDetail({ application: a, onClose }: Props) {
     <BaseModal isOpen onClose={onClose} title={t("soul_accounts.rebirth.detail_title", { name: a.soul_name })}>
       <div className="space-y-4">
         <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-2 text-sm">
-          {row(t("soul_accounts.fields.soul_code"), <span className="font-mono">{a.soul_code}</span>)}
+          {row(t("soul_accounts.fields.soul_code"), <SoulCode code={a.soul_code} />)}
           {row(t("soul_accounts.fields.cycle"), t("soul_accounts.life", { n: lifeNumber(a.cycle) }))}
           {row(t("soul_accounts.fields.status"), <DomainEnum namespace="soul_accounts.rebirth_status" value={a.status} className={rebirthBadgeClass(a.status)} />)}
           {row(t("soul_accounts.rebirth.fields.desired_form"), <DomainEnum namespace="reincarnation.forms" value={a.desired_form} />)}
