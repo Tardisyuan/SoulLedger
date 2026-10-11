@@ -848,6 +848,16 @@ export const REVEALED_PASSWORD = {
   expires_at: "2999-01-01T00:00:00Z",
 };
 
+/** POST `/soul-accounts/credentials/:id/print-slip/` — SoulCredentialSlipSerializer. No password, by contract. */
+export const CREDENTIAL_SLIP = {
+  soul_name: SOULS[0].name,
+  soul_code: SOUL_ACCOUNT.soul_code,
+  home_tenant: { code: "cn", display_name: "Chinese Afterlife", hall_names: { "zh-Hans": "酆都 · 第二殿" }, seal_glyphs: [] as string[] },
+  expires_at: "2999-01-01T00:00:00Z",
+  officer_name: "书吏阿尼",
+  printed_at: "2026-10-11T13:52:00Z",
+};
+
 // ── Soul circle moderation (backend/apps/social/moderation_serializers.py) ──
 
 const MODERATION_AUTHOR = { user_id: 41, display_name: "被举报的灵魂" };
@@ -1732,6 +1742,7 @@ export class ApiMock {
             : { body: paginated([]) }
     );
     this.on("POST", "/soul-accounts/credentials/:id/reveal/", REVEALED_PASSWORD);
+    this.on("POST", "/soul-accounts/credentials/:id/print-slip/", CREDENTIAL_SLIP);
     this.on("POST", "/soul-accounts/credentials/:id/mark-delivered/", DELIVERED_CREDENTIAL);
     this.on("POST", "/soul-accounts/credentials/:id/retry/", CREDENTIALS_PENDING[0]);
     this.on("GET", "/soul-accounts/rebirth-applications/", paginated(REBIRTH_APPLICATIONS));

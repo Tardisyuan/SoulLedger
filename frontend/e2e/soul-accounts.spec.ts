@@ -28,7 +28,7 @@ test.describe("Pending initial passwords", () => {
 
     await expect(page.locator("h1")).toContainText("待交付初始密码");
     const pending = credentialRow(page, CREDENTIALS_PENDING[0].id);
-    await expect(pending).toContainText(SOUL_ACCOUNT.soul_code);
+    await expect(pending).toContainText("MPK 7Q2R X9T");
     await expect(pending).toContainText("第 1 世");
     await expect(pending).toContainText("无可用联系方式");
     await expect(domainEnum(pending, "PENDING")).toHaveText("待交付");
@@ -95,6 +95,72 @@ test.describe("Pending initial passwords", () => {
   });
 });
 
+test.describe("Delivery slip", () => {
+  /**
+   * `window.print` is replaced by a stub that copies the mounted slip into a node that outlives it (the page
+   * unmounts the slip right after printing), so print media can be emulated on what was handed to the printer.
+   */
+  const stubPrint = (page: import("@playwright/test").Page) =>
+    page.addInitScript(() => {
+      (window as unknown as { print: () => void }).print = () => {
+        const slip = document.querySelector('[data-testid="delivery-slip"]');
+        if (!slip) return;
+        const copy = slip.cloneNode(true) as HTMLElement;
+        copy.setAttribute("data-testid", "printed-slip");
+        document.body.appendChild(copy);
+      };
+    });
+
+  test("prints from the list: server first, then a one-page slip that shows only in print media", async ({ page }) => {
+    await stubPrint(page);
+    await page.setViewportSize({ width: 393, height: 800 });
+    const api = await setupAuthenticatedPage(page);
+    await page.goto("/soul-credentials");
+
+    await credentialRow(page, CREDENTIALS_PENDING[0].id).getByRole("button", { name: "打印交付单" }).click();
+    const printed = page.getByTestId("printed-slip");
+    await expect(printed).toHaveCount(1);
+    expect(api.countOf("POST", "/soul-accounts/credentials/:id/print-slip/")).toBe(1);
+    expect(api.lastCall("POST", "/soul-accounts/credentials/:id/print-slip/")?.path).toBe(
+      `/soul-accounts/credentials/${CREDENTIALS_PENDING[0].id}/print-slip/`
+    );
+    // Printing does not touch the row's state: no list refetch, no delivery call.
+    expect(api.countOf("GET", "/soul-accounts/credentials/")).toBe(1);
+
+    // Screen: no space taken, no sideways scroll at 393 wide.
+    await expect(printed).toBeHidden();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+
+    // Print: the slip is the document -- the list, the heading and the navigation are gone.
+    await page.emulateMedia({ media: "print" });
+    await expect(printed).toBeVisible();
+    await expect(printed).toContainText("MPK 7Q2R X9T");
+    await expect(printed).toContainText("酆都 · 第二殿");
+    await expect(printed).toContainText("第 1 页 / 共 1 页");
+    await expect(printed.locator("svg[data-qr]")).toBeVisible();
+    await expect(printed).not.toContainText(REVEALED_PASSWORD.password);
+    await expect(page.locator("h1")).toBeHidden();
+    await expect(page.locator("nav").first()).toBeHidden();
+    await expect(credentialRow(page, CREDENTIALS_PENDING[0].id)).toBeHidden();
+    const box = await printed.boundingBox();
+    expect(Math.round(box!.width)).toBeGreaterThan(780); // 210 mm at 96 dpi = 794 px
+    await page.emulateMedia({ media: "screen" });
+  });
+
+  test("a refused print says why and prints nothing", async ({ page }) => {
+    await stubPrint(page);
+    const api = await setupAuthenticatedPage(page);
+    api.on("POST", "/soul-accounts/credentials/:id/print-slip/", () => ({
+      status: 409,
+      body: { detail: "这份初始密码已作废，不能打印交付单。", code: "credential_void" },
+    }));
+    await page.goto("/soul-credentials");
+    await credentialRow(page, CREDENTIALS_PENDING[0].id).getByRole("button", { name: "打印交付单" }).click();
+    await expect(page.getByText("这份初始密码已作废，不能打印交付单。")).toBeVisible();
+    await expect(page.getByTestId("printed-slip")).toHaveCount(0);
+  });
+});
+
 test.describe("Soul account card on the soul page", () => {
   test("shows this life's account and chain, and resets without clearing contacts", async ({ page }) => {
     const api = await setupAuthenticatedPage(page);
@@ -102,7 +168,7 @@ test.describe("Soul account card on the soul page", () => {
 
     const card = page.locator("section#soul-account");
     await expect(card).toContainText("灵魂账号");
-    await expect(card).toContainText(SOUL_ACCOUNT.soul_code);
+    await expect(card).toContainText("MPK 7Q2R X9T");
     await expect(card).toContainText("首次登录须改密");
     await expect(card.getByTestId("soul-account-chain").locator("li")).toHaveCount(1);
     // This life has an account: reset, not provision.

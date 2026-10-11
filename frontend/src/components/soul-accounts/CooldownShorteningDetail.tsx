@@ -17,6 +17,7 @@ import { DomainEnum } from "@/src/components/ui/DomainValue";
 import { Field, TextAreaField, fieldControl } from "@/src/components/ui/Field";
 import { badgeVariants } from "@/src/components/ui/Badge";
 import { cooldownEnded, cooldownTone, failureKey, isoDay, lifeNumber } from "./soulAccountsView";
+import { SoulCode } from "@/src/components/soul-accounts/SoulCode";
 
 /**
  * A11 详情:四列字段、两段正文、决定区。决定区只在「待决定、冷却未结束、有 workflow.approve」时出现;
@@ -130,10 +131,10 @@ export function CooldownShorteningDetail({ row: listed, onClose }: { row: Office
     >
       <div className="space-y-4">
         <p className="text-xs text-[oklch(var(--color-ink-muted))]">
-          <span className="font-mono">{r.soul_code}</span> · {t("soul_accounts.cooldown.source", { id: r.application.slice(0, 8) })}
+          <SoulCode code={r.soul_code} /> · {t("soul_accounts.cooldown.source", { id: r.application.slice(0, 8) })}
         </p>
         <dl className="grid grid-cols-2 gap-x-3 gap-y-4 sm:grid-cols-4">
-          {field(t("soul_accounts.fields.soul_code"), <span className="font-mono">{r.soul_code}</span>)}
+          {field(t("soul_accounts.fields.soul_code"), <SoulCode code={r.soul_code} />)}
           {field(t("soul_accounts.fields.cycle"), t("soul_accounts.life", { n: lifeNumber(r.cycle) }))}
           {field(
             t("soul_accounts.fields.status"),
