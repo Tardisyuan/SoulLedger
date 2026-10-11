@@ -51,6 +51,8 @@ export interface Comment {
   parent: string | null;
   content: string;
   tenant?: number;
+  /** 非 PUBLISHED 只会出现在作者本人看到的数据里,见 `Post.moderation_status`。 */
+  moderation_status?: "PUBLISHED" | "PENDING" | "HIDDEN";
   /** 只在发评论的响应里有值,见 `Post.screening`。 */
   screening?: ScreeningOutcome | null;
   create_time: string;

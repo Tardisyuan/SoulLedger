@@ -64,7 +64,7 @@ from apps.social.serializers import (
     UserProfileUpdateSerializer,
 )
 from apps.social.services import CommentService, FollowService, PostService, ReactionService
-from apps.social.soul_circle import SocialError, reaction_kind_counts
+from apps.social.soul_circle import SocialError, reaction_kind_counts, visible_comment_count
 from apps.social.soul_serializers import SoulPostMediaUploadSerializer, SoulSocialErrorSerializer
 from apps.social.visibility import visible_posts
 
@@ -108,7 +108,7 @@ class PostViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, viewsets.ModelVie
         # 五种表态各自的数(`PostSerializer.reaction_counts`);每页一次聚合。图随帖子一次预取。
         return (
             visible_posts(self.request, qs)
-            .annotate(**reaction_kind_counts())
+            .annotate(visible_comment_count=visible_comment_count(), **reaction_kind_counts())
             .prefetch_related(WITH_MEDIA)
             .order_by("-create_time")
         )
@@ -177,7 +177,7 @@ class PostViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, viewsets.ModelVie
             visibility__in=["PUBLIC", "FOLLOWERS"],
             moderation_status=ModerationStatus.PUBLISHED,
             tenant=tenant,
-        ).select_related("author").annotate(**reaction_kind_counts()).prefetch_related(WITH_MEDIA).order_by("-create_time")
+        ).select_related("author").annotate(visible_comment_count=visible_comment_count(), **reaction_kind_counts()).prefetch_related(WITH_MEDIA).order_by("-create_time")
         context = self.get_serializer_context()
         page = self.paginate_queryset(qs)
         if page is not None:

@@ -54,5 +54,6 @@
   "social.screening.hidden",
   "soul_app.circle.screening.masked",
   "soul_app.circle.screening.pending_review",
-  "soul_app.circle.screening.hidden"
+  "soul_app.circle.screening.hidden",
+  "social.edit_media_locked"
 ]

@@ -104,6 +104,37 @@ describe("PostCard 作者视角的审核状态", () => {
   });
 });
 
+describe("PostCard 头部按钮", () => {
+  it("「编辑」在「删除」左边,点按区各 44 高", () => {
+    render(<PostCard post={post} />);
+    const edit = screen.getByRole("button", { name: "common.edit" });
+    const del = screen.getByRole("button", { name: "common.delete" });
+    expect(edit.compareDocumentPosition(del) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(edit.className).toContain("min-h-11");
+    expect(del.className).toContain("min-h-11");
+    expect(edit.parentElement).toHaveClass("gap-4");
+  });
+});
+
+describe("PostEditModal 图片只读", () => {
+  const media = [{ id: "m1", url: "/api/v1/social-media/m1/?t=s", width: 10, height: 10 }];
+
+  it("有图:缩略图 + 「图片不能修改」,缩略图区里没有任何控件", () => {
+    render(<PostCard post={{ ...post, media }} />);
+    fireEvent.click(screen.getByRole("button", { name: "common.edit" }));
+    const area = screen.getByRole("dialog").querySelector("[data-edit-media]")!;
+    expect(area.querySelectorAll("img")).toHaveLength(1);
+    expect(area).toHaveTextContent("social.edit_media_locked");
+    expect(area.querySelectorAll("button, input, a")).toHaveLength(0);
+  });
+
+  it("没图:不画这一块", () => {
+    render(<PostCard post={post} />);
+    fireEvent.click(screen.getByRole("button", { name: "common.edit" }));
+    expect(screen.getByRole("dialog").querySelector("[data-edit-media]")).toBeNull();
+  });
+});
+
 describe("PostEditModal", () => {
   it("预填原文;没改动时保存不可点", () => {
     const dialog = open();

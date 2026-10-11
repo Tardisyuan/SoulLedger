@@ -182,6 +182,43 @@ def test_clean_and_visibility_only_responses(world):
     assert c.get(f"{BASE}/posts/{post.pk}/").data["screening"] is None
 
 
+def test_comment_count_follows_the_comments_status_for_everyone_including_the_author(world):
+    from apps.social.moderation import moderate_content
+
+    tenant, author, other = world
+    _word(tenant, "badword", SensitiveWordAction.REVIEW)
+    post = Post.objects.create(author=author, content="p", tenant=tenant)
+    _client(other, tenant).post(f"{BASE}/comments/", {"post": str(post.pk), "content": "ok"}, format="json")
+    _client(other, tenant).post(f"{BASE}/comments/", {"post": str(post.pk), "content": "badword"}, format="json")
+    pending = Comment.objects.get(content="badword")
+
+    def counts():
+        return {
+            who: (
+                _client(who, tenant).get(f"{BASE}/posts/{post.pk}/").data["comment_count"],
+                _client(who, tenant).get(f"{BASE}/posts/").data["results"][0]["comment_count"],
+            )
+            for who in (author, other)
+        }
+
+    assert counts() == {author: (1, 1), other: (1, 1)}, "待审的那条不进任何人的计数"
+    moderate_content(pending, "APPROVE", actor=author)
+    assert counts() == {author: (2, 2), other: (2, 2)}
+    moderate_content(pending, "HIDE", actor=author)
+    assert counts() == {author: (1, 1), other: (1, 1)}
+
+
+def test_comment_serializers_carry_moderation_status_for_the_author(world):
+    tenant, author, other = world
+    _word(tenant, "badword", SensitiveWordAction.REVIEW)
+    post = Post.objects.create(author=author, content="p", tenant=tenant)
+    c = _client(other, tenant)
+    c.post(f"{BASE}/comments/", {"post": str(post.pk), "content": "badword"}, format="json")
+    rows = c.get(f"{BASE}/comments/", {"post": str(post.pk)}).data["results"]
+    assert [r["moderation_status"] for r in rows] == ["PENDING"]
+    assert _client(author, tenant).get(f"{BASE}/comments/", {"post": str(post.pk)}).data["results"] == []
+
+
 def test_authors_pending_post_is_visible_to_the_author_only(world):
     tenant, author, other = world
     _word(tenant, "badword", SensitiveWordAction.REVIEW)

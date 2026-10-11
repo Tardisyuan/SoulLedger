@@ -55,6 +55,24 @@ jest.mock("@soulledger/core/hooks/useSocial", () => ({
   useReactions: () => ({ data: { results: [] } }),
 }));
 
+describe("CommentThread 作者视角的审核状态", () => {
+  it("待审 / 已隐藏的评论有状态标记,已发布的没有", () => {
+    comments.push(
+      { ...comments[0], id: "comment-p", content: "pending one", moderation_status: "PENDING" },
+      { ...comments[0], id: "comment-h", content: "hidden one", moderation_status: "HIDDEN" },
+      { ...comments[0], id: "comment-ok", content: "ok one", moderation_status: "PUBLISHED" },
+    );
+    try {
+      render(<CommentThread postId="post-1" />);
+      expect(document.querySelector('[title="PENDING"]')).not.toBeNull();
+      expect(document.querySelector('[title="HIDDEN"]')).not.toBeNull();
+      expect(document.querySelector('[title="PUBLISHED"]')).toBeNull();
+    } finally {
+      comments.length = 2;
+    }
+  });
+});
+
 describe("CommentThread delete UI", () => {
   beforeEach(() => {
     jest.clearAllMocks();

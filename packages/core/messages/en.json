@@ -3041,6 +3041,7 @@
     "edit_discard_message": "Your edits will not be saved.",
     "edit_discard_confirm": "Discard changes",
     "edit_keep": "Keep editing",
+    "edit_media_locked": "Images cannot be changed",
     "screening": {
       "masked": "Published. Some of the text was replaced.",
       "pending_review": "Sent, under review. Only you can see it until it is approved.",
