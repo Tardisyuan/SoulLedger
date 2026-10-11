@@ -32,6 +32,7 @@ import { Pagination } from "@/src/components/ui/Pagination";
 import { ListSkeleton } from "@/components/ui/skeleton";
 import { RevealCredentialDialog } from "@/src/components/soul-accounts/RevealCredentialDialog";
 import { DeliverySlip } from "@/src/components/soul-accounts/DeliverySlip";
+import { loadSlipBundles, type SlipBundles } from "@/src/components/soul-accounts/slipTexts";
 import { SoulCode } from "@/src/components/soul-accounts/SoulCode";
 import { EmailNotSyncedNote } from "@/src/components/soul-accounts/EmailNotSyncedNote";
 import {
@@ -52,10 +53,8 @@ const PrinterIcon = () => (
   </svg>
 );
 
+// 存的是「彩色」的旧键,语义不变:"0" = 黑白。开关现在叫「黑白打印」,勾上 = 黑白。
 const SLIP_COLOR_STORAGE = "soulledger.slip.color";
-// TODO(design): 「彩色点缀」(回复 §二.1 的勾选项)还没有语言包词条,三种语言都要 Design 给(egy 只能由 Design 给)。
-// 词条到位之前开关不渲染 —— 缺词条时 t() 回出 key 本身,下面就是靠这一点判断。
-const SLIP_COLOR_LABEL_KEY = "soul_accounts.credentials.slip_color";
 
 const ROW_GRID = "md:grid md:grid-cols-[minmax(0,2fr)_minmax(0,0.6fr)_minmax(0,2fr)_minmax(0,1.3fr)_10rem] md:items-center md:gap-4";
 
@@ -71,27 +70,24 @@ function CredentialsPageContent() {
   const [page, setPage] = useState(1);
   const [revealing, setRevealing] = useState<InitialCredential | null>(null);
   // 只在调起打印的那一刻挂着;交付单不是页面的一部分,屏幕上也看不到它。
-  const [slip, setSlip] = useState<CredentialSlip | null>(null);
-  // 文明色:**默认开**(用户 2026-10-11:四种文明的交付单要有颜色;Design 第二十四批原定默认关)。
-  // 只有这台电脑上明确关过才是黑白;读不到存储(隐私窗口、被禁用)按默认,即彩色。
-  // 黑白打印机上文明色会印成灰,匾额带上的白字仍读得出;要纯黑就关掉这一项。
-  const [slipColor, setSlipColor] = useState(true);
+  const [slip, setSlip] = useState<{ data: CredentialSlip; texts: SlipBundles } | null>(null);
+  // 黑白打印:默认不勾(= 彩色,用户 2026-10-11),记在这台电脑上;读不到存储(隐私窗口、被禁用)按默认。
+  const [mono, setMono] = useState(false);
   useEffect(() => {
     try {
-      setSlipColor(localStorage.getItem(SLIP_COLOR_STORAGE) !== "0");
+      setMono(localStorage.getItem(SLIP_COLOR_STORAGE) === "0");
     } catch {
       /* 按默认:彩色 */
     }
   }, []);
-  const changeSlipColor = (on: boolean) => {
-    setSlipColor(on);
+  const changeMono = (on: boolean) => {
+    setMono(on);
     try {
-      localStorage.setItem(SLIP_COLOR_STORAGE, on ? "1" : "0");
+      localStorage.setItem(SLIP_COLOR_STORAGE, on ? "0" : "1");
     } catch {
-      /* 本次有效,下次回到关 */
+      /* 本次有效,下次回到默认 */
     }
   };
-  const slipColorLabel = t(SLIP_COLOR_LABEL_KEY);
 
   const list = useSoulCredentials({ status: status || undefined, page });
   const retry = useRetryCredential();
@@ -119,12 +115,18 @@ function CredentialsPageContent() {
         showToast(t(failureKey(classifySoulAccountError(error), "soul_accounts.credentials.deliver_failed")), "error"),
     });
 
-  // 先让服务端写审计并给出内容;失败就不打印。成功后同步挂载交付单再调起浏览器打印
-  // (window.print 在多数浏览器里阻塞到对话框关闭),随后卸载。打印不改行的状态,不刷新列表。
+  // 先让服务端写审计并给出内容;失败就不打印。成功后先把三种语言的词条加载好(交付单上联按文明印文字,不跟界面语言),
+  // 再同步挂载交付单并调起浏览器打印(window.print 在多数浏览器里阻塞到对话框关闭),随后卸载。打印不改行的状态,不刷新列表。
   const doPrint = (c: InitialCredential) =>
     printSlip.mutate(c.id, {
-      onSuccess: (data) => {
-        flushSync(() => setSlip(data));
+      onSuccess: async (data) => {
+        try {
+          const texts = await loadSlipBundles();
+          flushSync(() => setSlip({ data, texts }));
+        } catch {
+          showToast(t("soul_accounts.credentials.print_failed"), "error");
+          return;
+        }
         window.print();
         setSlip(null);
       },
@@ -154,10 +156,10 @@ function CredentialsPageContent() {
 
   const actions = (
     <div className="flex flex-wrap items-center gap-3">
-      {canManage && slipColorLabel !== SLIP_COLOR_LABEL_KEY && (
-        <label className="inline-flex items-center gap-2 text-sm">
-          <input type="checkbox" checked={slipColor} onChange={(e) => changeSlipColor(e.target.checked)} />
-          {slipColorLabel}
+      {canManage && (
+        <label className="inline-flex items-center gap-2 text-sm" title={t("soul_accounts.credentials.print_mono_hint")}>
+          <input type="checkbox" checked={mono} onChange={(e) => changeMono(e.target.checked)} />
+          {t("soul_accounts.credentials.print_mono")}
         </label>
       )}
       <Button
@@ -329,7 +331,7 @@ function CredentialsPageContent() {
         </ul>
       </div>
 
-      {slip && <DeliverySlip slip={slip} color={slipColor} />}
+      {slip && <DeliverySlip slip={slip.data} texts={slip.texts} color={!mono} />}
       {revealing && <RevealCredentialDialog key={revealing.id} credential={revealing} onClose={() => setRevealing(null)} />}
     </PageShell>
   );

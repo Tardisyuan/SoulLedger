@@ -2,7 +2,7 @@ import { useId } from "react";
 
 /**
  * 登录交付单的装饰(Design 第二十四批第二稿,`docs/design-handoff/v3-pages/soul-login/DeliverySlipCiv.dc.html`):
- * 外框 + 匾额带 + 带上的纹样,与正文分隔线。坐标原样取自画稿(746 × 357 的框,左上角距纸边 24)。
+ * 外框 + 匾额带 + 带上的纹样,与正文分隔线。坐标原样取自画稿(746 × 376 的框,左上角距纸边 24)。
  *
  * 颜色:线与实心块取 `currentColor`,由外层的 `data-slip-ink`(`app/print-slip-ink.css`)决定是纯黑还是文明色;
  * 匾额上的白色纹样固定 `white`。装饰里没有文字,四种语言共用。
@@ -30,18 +30,17 @@ const BAND = <rect data-slip-band="" x="8" y="8" width="730" height="60" fill="c
 
 export function SlipFrame({ civ }: { civ: SlipCiv }) {
   const uid = useId().replace(/:/g, "");
-  const common = { width: 746, height: 357, viewBox: "0 0 746 357", fill: "none", stroke: "currentColor", "aria-hidden": true } as const;
+  const common = { width: 746, height: 376, viewBox: "0 0 746 376", fill: "none", stroke: "currentColor", "aria-hidden": true } as const;
   const emblem = civ === "neutral" ? undefined : civ;
 
   if (civ === "cn") {
     return (
       <svg {...common} data-slip-emblem={emblem}>
-        <rect x="1" y="1" width="744" height="355" strokeWidth="2" />
-        <rect x="5.5" y="5.5" width="735" height="346" strokeWidth=".75" />
+        <rect x="1" y="1" width="744" height="374" strokeWidth="2" />
+        <rect x="5.5" y="5.5" width="735" height="365" strokeWidth=".75" />
         {BAND}
         <rect x="11.5" y="11.5" width="723" height="53" stroke="white" strokeWidth=".75" />
         <path stroke="white" strokeWidth="1" d="M16 16H28V28H20V22H24M16 60H28V48H20V54H24M730 16H718V28H726V22H722M730 60H718V48H726V54H722" />
-        <path strokeWidth=".75" d="M10 333V347H24M14 333V343H20V337H17M736 333V347H722M732 333V343H726V337H729" />
       </svg>
     );
   }
@@ -53,8 +52,8 @@ export function SlipFrame({ civ }: { civ: SlipCiv }) {
             <path d="M2 6V3.5a2 2 0 0 1 4 0V6" stroke="white" strokeWidth=".75" />
           </pattern>
         </defs>
-        <rect x=".5" y=".5" width="745" height="356" strokeWidth="1" />
-        <path d="M4.5 8V346M741.5 8V346" strokeWidth=".5" />
+        <rect x=".5" y=".5" width="745" height="375" strokeWidth="1" />
+        <path d="M4.5 8V365M741.5 8V365" strokeWidth=".5" />
         {BAND}
         <path d="M8 59.5H738" stroke="white" strokeWidth=".5" />
         <rect x="9" y="61" width="728" height="6" fill={`url(#${uid}-kh)`} stroke="none" />
@@ -62,16 +61,16 @@ export function SlipFrame({ civ }: { civ: SlipCiv }) {
           <circle r="6.5" />
           <path d="M-9-3H-46L-42 0H-9ZM-9 1.5H-38L-34 4.5H-9ZM9-3H46L42 0H9ZM9 1.5H38L34 4.5H9Z" />
         </g>
-        <path d="M1 346.25H745" strokeWidth=".5" />
-        <path d="M1 351H745" strokeWidth="3" />
+        <path d="M1 365.25H745" strokeWidth=".5" />
+        <path d="M1 370H745" strokeWidth="3" />
       </svg>
     );
   }
   if (civ === "eu") {
     return (
       <svg {...common} overflow="visible" data-slip-emblem={emblem}>
-        <path strokeWidth="1.5" d="M12 1H734A11 11 0 0 0 745 12V345A11 11 0 0 0 734 356H12A11 11 0 0 0 1 345V12A11 11 0 0 0 12 1Z" />
-        <path strokeWidth=".5" d="M14 5H732A9 9 0 0 0 741 14V343A9 9 0 0 0 732 352H14A9 9 0 0 0 5 343V14A9 9 0 0 0 14 5Z" />
+        <path strokeWidth="1.5" d="M12 1H734A11 11 0 0 0 745 12V364A11 11 0 0 0 734 375H12A11 11 0 0 0 1 364V12A11 11 0 0 0 12 1Z" />
+        <path strokeWidth=".5" d="M14 5H732A9 9 0 0 0 741 14V362A9 9 0 0 0 732 371H14A9 9 0 0 0 5 362V14A9 9 0 0 0 14 5Z" />
         <path data-slip-band="" fill="currentColor" stroke="none" d={EU_BAND} />
         <g transform="translate(373 36)" stroke="white" strokeWidth=".75">
           <circle r="13" />
@@ -80,7 +79,7 @@ export function SlipFrame({ civ }: { civ: SlipCiv }) {
           <circle cy="-5" r="5" />
           <circle cy="5" r="5" />
         </g>
-        <path fill="white" strokeWidth="1" d="M373-4L378 1 373 6 368 1ZM373 351L378 356 373 361 368 356Z" />
+        <path fill="white" strokeWidth="1" d="M373-4L378 1 373 6 368 1ZM373 370L378 375 373 380 368 375Z" />
       </svg>
     );
   }
@@ -95,8 +94,8 @@ export function SlipFrame({ civ }: { civ: SlipCiv }) {
             <rect width="4" height="3" fill="white" />
           </pattern>
         </defs>
-        <rect x=".75" y=".75" width="744.5" height="355.5" strokeWidth="1.5" />
-        <path d="M4.5 8V352.5M741.5 8V352.5M4.5 352.5H741.5" strokeWidth=".5" />
+        <rect x=".75" y=".75" width="744.5" height="374.5" strokeWidth="1.5" />
+        <path d="M4.5 8V371.5M741.5 8V371.5M4.5 371.5H741.5" strokeWidth=".5" />
         {BAND}
         <rect x="10" y="10.5" width="726" height="3" fill={`url(#${uid}-dn)`} stroke="none" />
         <path d="M10 59.5H736" stroke="white" strokeWidth=".5" />
@@ -107,7 +106,7 @@ export function SlipFrame({ civ }: { civ: SlipCiv }) {
   // 中性:实心匾额带 + 单线框,没有文明纹章。
   return (
     <svg {...common}>
-      <rect x=".75" y=".75" width="744.5" height="355.5" strokeWidth="1.5" />
+      <rect x=".75" y=".75" width="744.5" height="374.5" strokeWidth="1.5" />
       {BAND}
     </svg>
   );
