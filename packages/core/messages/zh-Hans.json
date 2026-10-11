@@ -5675,5 +5675,18 @@
     "case_no": "案号",
     "soul_no": "灵魂编号",
     "page_label": "第 {{n}} 页 / 共 {{m}} 页"
+  },
+  "password_rules": {
+    "min_length": "至少 8 位",
+    "not_digits": "不只是数字",
+    "not_current": "和当前密码不同",
+    "match": "两次输入一致",
+    "match_bad": "两次输入不一致",
+    "note": "别用常见密码，也别用自己的名字或编号",
+    "common_title": "这个密码太容易被猜到",
+    "common_body": "它在常见密码名单里，或和你的名字、编号太像。换一个再保存。",
+    "state_ok": "已满足",
+    "state_bad": "未满足",
+    "summary": "新密码还有 {{n}} 条没满足：{{list}}"
   }
 }

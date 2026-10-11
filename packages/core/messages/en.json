@@ -5675,5 +5675,18 @@
     "case_no": "Case no.",
     "soul_no": "Soul no.",
     "page_label": "Page {{n}} of {{m}}"
+  },
+  "password_rules": {
+    "min_length": "At least 8 characters",
+    "not_digits": "Not only numbers",
+    "not_current": "Different from your current password",
+    "match": "Both entries match",
+    "match_bad": "Entries don't match",
+    "note": "Avoid common passwords, your name or your soul number",
+    "common_title": "This password is too easy to guess",
+    "common_body": "It's on a list of common passwords, or too close to your name or number. Choose another.",
+    "state_ok": "met",
+    "state_bad": "not met",
+    "summary": "{{n}} requirements not met: {{list}}"
   }
 }

@@ -69,3 +69,4 @@ src/__tests__/zIndexOrderContract.test.ts
 src/__tests__/zhuyinShell.test.tsx
 src/__tests__/menuTranslationCoverage.test.ts
 src/__tests__/loadingScreensFitAPhone.test.ts
+src/__tests__/passwordRulesMatchBackend.test.ts
