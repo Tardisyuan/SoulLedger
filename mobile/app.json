@@ -55,7 +55,7 @@
         "expo-image-picker",
         {
           "photosPermission": "SoulLedger uses your photos only when you choose images to attach to a circle post.",
-          "cameraPermission": false,
+          "cameraPermission": "用来扫交付单上的二维码。",
           "microphonePermission": false
         }
       ],
