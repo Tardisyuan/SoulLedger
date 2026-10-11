@@ -1,6 +1,6 @@
 "use client";
 
-import type { CSSProperties, ReactNode } from "react";
+import type { CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import type { CredentialSlip } from "@soulledger/core/api";
 import { formatSoulCode, soulCodeQrPayload } from "@soulledger/core/domain/soulCode";
@@ -8,38 +8,45 @@ import { BrandMark } from "@/src/components/brand/BrandMark";
 import { QrCode } from "@/src/components/print/QrCode";
 import { Seal } from "@/src/components/plaque/Seal";
 import { SlipFrame, SlipRule, type SlipCiv } from "@/src/components/soul-accounts/DeliverySlipArt";
+import type { SlipBundles, SlipLocale } from "@/src/components/soul-accounts/slipTexts";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { civSkinOf } from "@/src/lib/civSkin";
 
 const SEP = " · ";
-const LABEL: CSSProperties = { fontSize: 11, lineHeight: "16px", letterSpacing: ".1em", fontWeight: 500 };
-const EYEBROW: CSSProperties = { fontSize: 11, lineHeight: "16px", letterSpacing: ".24em", fontWeight: 500 };
-const HEADLINE: CSSProperties = { fontFamily: "var(--font-title)", fontWeight: 600, fontSize: 24, lineHeight: "28px" };
 const MONO = "var(--font-mono)";
+const LABEL: CSSProperties = { fontSize: 11, lineHeight: "14px", letterSpacing: ".1em", fontWeight: 500 };
+const SUB_LABEL: CSSProperties = { fontSize: 10, lineHeight: "12px", letterSpacing: ".06em" };
+const SUB_TEXT: CSSProperties = { fontSize: 10, lineHeight: "13px" };
+const EYEBROW: CSSProperties = { fontSize: 11, lineHeight: "16px", letterSpacing: ".2em", fontWeight: 500 };
+const HEADLINE: CSSProperties = { fontFamily: "var(--font-title)", fontWeight: 600, fontSize: 24, lineHeight: "28px" };
+const COL: CSSProperties = { display: "flex", flexDirection: "column" };
 const abs = (left: number, top: number, extra: CSSProperties = {}): CSSProperties => ({ position: "absolute", left, top, ...extra });
 
-/** 语言包里「A · B」的整句,画稿拆成两段(眉题 + 标题、标签 + 提示)。没有分隔符就整句当后一段。 */
-function splitOnce(text: string): [string, string] {
-  const i = text.indexOf(SEP);
-  return i < 0 ? ["", text] : [text.slice(0, i), text.slice(i + SEP.length)];
-}
+// 版式固定的几段英文 / 古文字(第二十五批回复:不进语言包,不随文案翻译)。
+const EYEBROW_EN = "SOUL LEDGER · SIGN-IN SLIP";
+const MUST_CHANGE_EN = "■ Change the password at first sign-in.";
+const EYEBROW_RIGHT: Partial<Record<SlipCiv, string>> = { eu: "LIBER ANIMARVM", gr: "ΒΙΒΛΟΣ ΨΥΧΩΝ" };
+const EYEBROW_LEFT_GR = "ΑΙΔΗΣ · HADES";
 
-/** 「■ 首次登录必须改密码。改完以后……」:第一句加粗,其余照排。 */
-function boldFirstSentence(text: string): ReactNode {
-  const m = /^([\s\S]*?[。.])\s*([\s\S]*)$/.exec(text);
-  if (!m) return text;
-  return (
-    <>
-      <b>{m[1]}</b>
-      {m[2]}
-    </>
-  );
+/** 文明决定上联印哪种文字;中性皮(四种之外的殿)跟官员台。 */
+const OWN_LOCALE: Partial<Record<SlipCiv, SlipLocale>> = { cn: "zh-Hans", eg: "egy", eu: "en", gr: "en" };
+
+const pad = (n: number) => String(n).padStart(2, "0");
+/** `YYYY-MM-DD HH:mm`:本地时间、24 小时、不带秒,与界面语言无关(不走 `formatDateTime`,它随语言变)。读不出来印破折号。 */
+function slipTime(value: string): string {
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "—";
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
 /**
- * 登录交付单(第二十批 §三 F2;第二十四批第二稿按文明重做):A4 竖版一页,上联 105 mm 交给灵魂,剪切线,下面是存根。
+ * 登录交付单(第二十批 §三 F2;第二十四批第二稿按文明重做;第二十五批双语):A4 竖版一页,上联 110 mm 交给灵魂,剪切线,下面是存根。
  * 版面是 794 × 1123 px 的绝对定位稿(= 210 × 297 mm),坐标取自 `DeliverySlipCiv.dc.html`。
  * 内容全部来自 `print-slip` 的返回,**没有密码** —— 密码处是一个空框,官员当面写,或只口头告诉。
+ *
+ * 文字:**上联按文明印**(酆都中文、杜阿特埃及文、欧洲与希腊英文),本文字之外再加一行 10px 英文副行(本文字是英文时不加);
+ * 存根、剪线说明与页脚是官员看的,跟官员台的界面语言(`useI18n`),只印一种。
+ * 三种语言的词条由调用方在打印前加载好传进来(`slipTexts.ts`),组件自己同步渲染。
  *
  * 文明由 `home_tenant.code` 的前缀决定;四种之外的殿是中性版(实心带 + 单线框,殿印位置放品牌标)。
  * `color` 为真时,匾额带、框、分隔线、殿印取文明色(`data-slip-ink`,颜色在 `app/print-slip-ink.css`);
@@ -48,59 +55,75 @@ function boldFirstSentence(text: string): ReactNode {
  * 屏幕上不显示、不占位;只在打印媒体下出现(`app/print.css` 的 `[data-print-slip]`)。挂在 `document.body` 上:
  * print.css 会把不属于文书的东西都收掉,交付单于是单独成页。打印前由调用方挂载、打印后卸载。
  */
-export function DeliverySlip({ slip, color = false }: { slip: CredentialSlip; color?: boolean }) {
-  const { t, locale, formatDateTime } = useI18n();
+export function DeliverySlip({ slip, texts, color = false }: { slip: CredentialSlip; texts: SlipBundles; color?: boolean }) {
+  const { t, locale } = useI18n();
   const tenant = slip.home_tenant;
-  const hall = tenant.hall_names[locale] || tenant.display_name;
   const skin = civSkinOf(tenant.code) as SlipCiv;
-  const realm = skin === "neutral" ? "" : t(`plaque.realm.${skin}`);
+  const own = OWN_LOCALE[skin] ?? locale;
+  const bi = own !== "en";
+  const p = texts[own].slip;
+  const e = texts.en.slip;
   const ink = color ? skin : "mono";
   const code = formatSoulCode(slip.soul_code);
-  const until = formatDateTime(slip.expires_at);
-  const printedAt = formatDateTime(slip.printed_at);
-  const [titleSys, docTitle] = splitOnce(t("soul_accounts.credentials.slip.title"));
-  const sys = titleSys || t("soul_app.app_name");
-  const [pwLabel, pwHint] = splitOnce(t("soul_accounts.credentials.slip.password_box"));
-  const zh = locale.startsWith("zh");
-  const s = (key: string, params?: Record<string, string>) => t(`soul_accounts.credentials.slip.${key}`, params);
+  const until = slipTime(slip.expires_at);
+  const printedAt = slipTime(slip.printed_at);
+  const hall = tenant.hall_names[own] || tenant.display_name;
+  const deskHall = tenant.hall_names[locale] || tenant.display_name;
+  const deskRealm = skin === "neutral" ? "" : t(`plaque.realm.${skin}`);
+  const s = (key: string) => t(`soul_accounts.credentials.slip.${key}`);
+  const upper = (text: string) => text.toUpperCase();
+
+  const ownRealm = skin === "neutral" ? "" : texts[own].realm[skin];
+  const enRealm = skin === "neutral" ? "" : upper(texts.en.realm[skin]);
+  const bandLeft = skin === "gr" ? EYEBROW_LEFT_GR : upper(ownRealm) === enRealm ? enRealm : `${ownRealm}${SEP}${enRealm}`;
+  const bandRight = EYEBROW_RIGHT[skin] ?? EYEBROW_EN;
+  const zh = own === "zh-Hans";
+  const hours = bi ? `(${p.valid_hours}${SEP}72 h)` : `(${p.valid_hours})`;
+
+  /** 标签:本文字一行,英文副行(只在双语时)紧跟其后。 */
+  const label = (key: string, upperCase: boolean) => (
+    <span style={COL}>
+      <span style={LABEL}>{upperCase ? upper(p[key]) : p[key]}</span>
+      {bi && <span style={SUB_LABEL}>{upper(e[key])}</span>}
+    </span>
+  );
 
   return createPortal(
     <div data-print-doc="" data-print-slip="" data-testid="delivery-slip" data-slip-civ={skin} data-slip-color={color ? "" : undefined}>
       <div style={{ position: "relative", width: 794, height: 1123, overflow: "hidden", fontSize: 13, lineHeight: "20px" }}>
-        <div data-slip-ink={ink} style={abs(24, 24, { width: 746, height: 357 })}>
+        <div data-slip-ink={ink} style={abs(24, 24, { width: 746, height: 376 })}>
           <SlipFrame civ={skin} />
         </div>
 
         <div
           data-slip-white=""
-          // 酆都的匾两端各有一对回纹(x 16–28 与 718–730,框内坐标):文字区两侧各让出 12,否则「登录交付单」的末字压在回纹上
-          // (第一次导出的 PDF 上看到的;稿上的示例殿名短,没碰到)。
-          style={abs(60, 38, { width: 686, height: 44, boxSizing: "border-box", paddingInline: skin === "cn" ? 12 : 0, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 24 })}
+          // 文字区 72–722(四种文明一致):酆都的匾两端各有一对回纹(框内 x 16–28 与 718–730),两侧各让 12。
+          style={abs(72, 38, { width: 650, height: 44, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 24 })}
         >
-          <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
-            <span style={EYEBROW}>{realm || " "}</span>
+          <div style={{ ...COL, minWidth: 0 }}>
+            <span style={{ ...EYEBROW, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{bandLeft || " "}</span>
             <span data-slip-hall="" style={{ ...HEADLINE, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
               {hall}
             </span>
           </div>
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", flex: "none" }}>
-            <span style={EYEBROW}>{sys}</span>
+          <div style={{ ...COL, alignItems: "flex-end", flex: "none" }}>
+            <span style={EYEBROW}>{bandRight}</span>
             <span
               data-slip-doc-title=""
               style={{ ...HEADLINE, letterSpacing: zh ? ".3em" : ".06em", marginRight: zh ? "-.3em" : undefined }}
             >
-              {docTitle}
+              {p.doc_title}
             </span>
           </div>
         </div>
 
-        <div style={abs(48, 116, { width: 460, height: 252, display: "flex", flexDirection: "column" })}>
-          <div style={{ display: "grid", gridTemplateColumns: "96px minmax(0,1fr)", rowGap: 10, alignItems: "center" }}>
-            <span style={LABEL}>{s("soul")}</span>
+        <div style={abs(48, 108, { width: 460, height: 284, ...COL })}>
+          <div style={{ display: "grid", gridTemplateColumns: "112px minmax(0,1fr)", rowGap: 8, alignItems: "center" }}>
+            {label("soul", true)}
             <span style={{ fontWeight: 600, fontSize: 20, lineHeight: "28px", maxWidth: 290, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
               {slip.soul_name}
             </span>
-            <span style={LABEL}>{s("soul_id")}</span>
+            {label("soul_id", true)}
             <span
               data-slip-code=""
               style={{ display: "flex", gap: 20, fontFamily: MONO, fontSize: 34, lineHeight: "44px", fontWeight: 600, letterSpacing: ".06em" }}
@@ -109,23 +132,50 @@ export function DeliverySlip({ slip, color = false }: { slip: CredentialSlip; co
                 <span key={i}>{g}</span>
               ))}
             </span>
-            <span style={LABEL}>{pwLabel || s("password_box")}</span>
+            {label("password_label", true)}
             <span style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <span data-slip-password-box="" style={{ width: 220, height: 40, flex: "none", boxSizing: "border-box", border: "1px solid black" }} />
-              {pwLabel && <span style={{ fontSize: 11, lineHeight: "16px", textWrap: "balance" }}>{pwHint}</span>}
+              <span data-slip-password-box="" style={{ width: 192, height: 40, flex: "none", boxSizing: "border-box", border: "1px solid black" }} />
+              <span style={{ ...COL, minWidth: 0 }}>
+                <span style={{ fontSize: 11, lineHeight: "14px" }}>{p.password_hint}</span>
+                {bi && <span style={SUB_TEXT}>{e.password_hint}</span>}
+              </span>
+            </span>
+            {label("valid_label", true)}
+            <span style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+              <span data-slip-valid="" style={{ fontFamily: MONO, fontWeight: 600, fontSize: 15, lineHeight: "24px" }}>
+                {until}
+              </span>
+              <span style={{ fontSize: 12, lineHeight: "16px" }}>{hours}</span>
             </span>
           </div>
-          <div style={{ marginTop: 10, display: "flex", flexDirection: "column" }}>
-            <b>{s("valid_until", { time: until })}</b>
-            <span>{boldFirstSentence(s("must_change"))}</span>
-            <b>{s("personal")}</b>
+          <div style={{ ...COL, marginTop: 10 }}>
+            <span style={{ fontSize: 13, lineHeight: "18px" }}>
+              <b>{p.must_change_head}</b>
+              {zh ? "" : " "}
+              {p.must_change_tail}
+            </span>
+            {bi && <span style={SUB_TEXT}>{MUST_CHANGE_EN}</span>}
+          </div>
+          <div style={{ ...COL, marginTop: 6 }}>
+            <span style={{ fontSize: 13, lineHeight: "18px", fontWeight: 600 }}>{p.personal}</span>
+            {bi && <span style={{ ...SUB_TEXT, fontWeight: 600 }}>{e.personal}</span>}
           </div>
           <div data-slip-ink={ink} style={{ marginTop: "auto", height: 8 }}>
             <SlipRule civ={skin} />
           </div>
-          <div style={{ marginTop: 6, display: "flex", gap: 24, fontSize: 12, lineHeight: "16px" }}>
-            <span>{s("officer", { name: slip.officer_name })}</span>
-            <span>{s("printed_at", { time: printedAt })}</span>
+          <div style={{ marginTop: 6, display: "flex", alignItems: "baseline", gap: 24, fontSize: 12, lineHeight: "16px" }}>
+            <span style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
+              <span>{p.officer_label}</span>
+              {bi && <span style={{ fontSize: 10 }}>{e.officer_label}</span>}
+              <span style={{ fontWeight: 600 }}>{slip.officer_name}</span>
+            </span>
+            <span style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
+              <span>{p.printed_label}</span>
+              {bi && <span style={{ fontSize: 10 }}>{e.printed_label}</span>}
+              <span data-slip-printed="" style={{ fontFamily: MONO }}>
+                {printedAt}
+              </span>
+            </span>
           </div>
         </div>
 
@@ -137,27 +187,35 @@ export function DeliverySlip({ slip, color = false }: { slip: CredentialSlip; co
           )}
         </span>
 
-        <span aria-hidden="true" style={abs(536, 104, { height: 268, borderLeft: ".5px solid black" })} />
+        <span aria-hidden="true" style={abs(536, 104, { height: 288, borderLeft: ".5px solid black" })} />
         {/* 二维码与编号永远纯黑,不随 data-slip-ink;二维码四周 26 的静区里没有墨。 */}
         <div data-slip-qr="" style={abs(565, 118, { width: 160, height: 160 })}>
           <QrCode text={soulCodeQrPayload(slip.soul_code)} size="160px" />
         </div>
-        {/* Balanced, so the lines break between phrases and not inside 「扫码」 (seen in the first printed PDF). */}
-        <span style={abs(540, 304, { width: 210, textAlign: "center", fontSize: 12, lineHeight: "16px", textWrap: "balance" })}>{s("qr_hint")}</span>
+        <div style={abs(548, 304, { width: 194, ...COL, alignItems: "center", gap: 4, textAlign: "center" })}>
+          <span style={{ ...COL, fontSize: 12, lineHeight: "16px" }}>
+            <span>{p.qr_where}</span>
+            <b style={{ fontWeight: 600 }}>{p.qr_action}</b>
+          </span>
+          {bi && (
+            <span style={{ ...COL, fontSize: 10, lineHeight: "13px" }}>
+              <span>{e.qr_where}</span>
+              <b style={{ fontWeight: 600 }}>{e.qr_action}</b>
+            </span>
+          )}
+        </div>
 
-        <div style={abs(0, 387, { right: 0, display: "flex", alignItems: "center", gap: 8, fontSize: 12, lineHeight: "20px" })}>
-          <span style={{ width: 32, borderTop: "1px dashed black" }} />
-          <span>{s("cut")}</span>
-          <span style={{ flex: 1, borderTop: "1px dashed black" }} />
+        <div style={abs(0, 416, { right: 0, borderTop: "1px dashed black" })}>
+          <span style={abs(40, -10, { padding: "0 8px", background: "white", fontSize: 12, lineHeight: "20px" })}>{s("cut")}</span>
         </div>
 
         <section
-          style={abs(24, 429, { width: 746, boxSizing: "border-box", padding: "20px 24px 24px", border: ".5px solid black", display: "flex", flexDirection: "column" })}
+          style={abs(24, 448, { width: 746, boxSizing: "border-box", padding: "20px 24px 24px", border: ".5px solid black", ...COL })}
         >
           <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 16, paddingBottom: 8 }}>
             <span style={{ fontWeight: 600, fontSize: 15, lineHeight: "24px" }}>{s("stub")}</span>
             <span data-slip-stub-hall="" style={{ fontSize: 12, lineHeight: "16px" }}>
-              {realm ? `${realm}${SEP}${hall}` : hall}
+              {deskRealm ? `${deskRealm}${SEP}${deskHall}` : deskHall}
             </span>
           </div>
           <div data-slip-ink={ink} style={{ height: 8 }}>
@@ -177,7 +235,7 @@ export function DeliverySlip({ slip, color = false }: { slip: CredentialSlip; co
           </dl>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 48, marginTop: 64 }}>
             {(["sign_soul", "sign_officer"] as const).map((k) => (
-              <span key={k} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              <span key={k} style={{ ...COL, gap: 4 }}>
                 <span style={{ height: 40, borderBottom: "1px solid black" }} />
                 <span style={{ fontSize: 12, lineHeight: "16px" }}>{s(k)}</span>
               </span>
@@ -188,7 +246,7 @@ export function DeliverySlip({ slip, color = false }: { slip: CredentialSlip; co
 
         <div data-slip-foot="" style={{ position: "absolute", left: 40, right: 40, bottom: 24, display: "flex", alignItems: "center", gap: 8, fontSize: 11, lineHeight: "16px" }}>
           <BrandMark size={14} tone="ink" />
-          <span>{sys}</span>
+          <span>{s("system")}</span>
           <span style={{ fontFamily: MONO, marginLeft: 16 }}>{code}</span>
           <span style={{ marginLeft: "auto" }}>{t("print.page_label", { n: "1", m: "1" })}</span>
         </div>
