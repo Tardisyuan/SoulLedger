@@ -60,11 +60,73 @@ jest.mock("expo-constants", () => ({ __esModule: true, default: { expoConfig: { 
 
 jest.mock("expo-secure-store", () => {
   const store = new Map();
+  // Items kept with `requireAuthentication` (the 面容 / 指纹 login credential) live apart, as the Keychain's
+  // biometric class does, and come back only when the system "verifies": `__auth.error` is what the native
+  // module throws (null = the face / finger matched). `prompts` records the reason text shown.
+  const guarded = new Map();
+  const auth = { error: null, prompts: [] };
   return {
     __store: store,
+    __guarded: guarded,
+    __auth: auth,
     getItem: (key) => (store.has(key) ? store.get(key) : null),
     setItem: (key, value) => void store.set(key, value),
-    deleteItemAsync: async (key) => void store.delete(key),
+    deleteItemAsync: async (key) => {
+      store.delete(key);
+      guarded.delete(key);
+    },
+    getItemAsync: async (key, options) => {
+      if (!options?.requireAuthentication) return store.has(key) ? store.get(key) : null;
+      auth.prompts.push(options.authenticationPrompt);
+      if (auth.error) throw auth.error;
+      return guarded.has(key) ? guarded.get(key) : null;
+    },
+    setItemAsync: async (key, value, options) => {
+      if (!options?.requireAuthentication) return void store.set(key, value);
+      auth.prompts.push(options.authenticationPrompt);
+      if (auth.error) throw auth.error;
+      guarded.set(key, value);
+    },
+  };
+});
+
+// The phone's face / finger. Not enrolled by default: a sign-in test must not meet the 「下次用面容登录？」 sheet
+// it did not ask for. A test that wants it sets `__state.enrolled`.
+jest.mock("expo-local-authentication", () => {
+  const state = { hardware: true, enrolled: false, types: [2] };
+  return {
+    __state: state,
+    AuthenticationType: { FINGERPRINT: 1, FACIAL_RECOGNITION: 2, IRIS: 3 },
+    hasHardwareAsync: async () => state.hardware,
+    isEnrolledAsync: async () => state.enrolled,
+    supportedAuthenticationTypesAsync: async () => state.types,
+  };
+});
+
+// The camera: `__state.last` holds the props of the last CameraView render (a test calls `last.onBarcodeScanned`),
+// `__state.permission` is what the OS answers, `answer` what a request turns an undetermined one into.
+jest.mock("expo-camera", () => {
+  const React = require("react");
+  const { View } = require("react-native");
+  const state = { permission: { status: "granted", granted: true, canAskAgain: true }, answer: "granted", requests: 0, last: null };
+  const settle = (status) => ({ status, granted: status === "granted", canAskAgain: status === "undetermined" });
+  return {
+    __state: state,
+    CameraView: (props) => {
+      state.last = props;
+      return React.createElement(View, { testID: props.testID });
+    },
+    useCameraPermissions: () => {
+      const [permission, setPermission] = React.useState(state.permission);
+      const request = async () => {
+        state.requests += 1;
+        const next = state.permission.status === "undetermined" ? settle(state.answer) : state.permission;
+        state.permission = next;
+        setPermission(next);
+        return next;
+      };
+      return [permission, request];
+    },
   };
 });
 

@@ -49,6 +49,8 @@ import {
 import { ChangePasswordScreen, LoginScreen, type LoginParams } from "./screens/auth";
 import { ForgotPasswordScreen } from "./screens/forgotPassword";
 import { MfaLostScreen, type LoginMfaParams } from "./screens/loginMfa";
+import { BioAsk } from "./screens/bio";
+import { ScanScreen } from "./screens/scan";
 import { MfaScreen } from "./screens/mfa";
 import { AboutScreen } from "./screens/about";
 import { NotificationPrimerScreen, SettingsScreen } from "./screens/settings";
@@ -61,7 +63,7 @@ import { CircleSearchScreen, FollowListScreen, MyCircleScreen, ReportScreen, Sou
 import { ConversationScreen } from "./screens/conversation";
 import { ANDROID, FindSoulScreen, LettersScreen } from "./screens/letters";
 
-type RootParams = AppStackParams & LoginMfaParams & { Login: LoginParams; ForgotPassword: undefined; ChangePassword: undefined };
+type RootParams = AppStackParams & LoginMfaParams & { Login: LoginParams; ForgotPassword: undefined; ChangePassword: undefined; ScanCode: undefined };
 const Stack = createNativeStackNavigator<RootParams>();
 const Tabs = createBottomTabNavigator();
 
@@ -352,6 +354,7 @@ export function RootNavigator() {
             />
             {/* 手机和恢复码都没有了: draws its own bar. Reached from the sign-in second step (hall and code come as params). */}
             <Stack.Screen name="MfaLost" component={MfaLostScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="ScanCode" component={ScanScreen} options={{ headerShown: false, animation: "slide_from_bottom" }} />
           </>
         );
       } else if (state.status === "mustChangePassword") {
@@ -471,6 +474,8 @@ export function RootNavigator() {
           <PushBridge signedIn={state.status === "signedIn"} ready={ready} />
           {/* 文明气质 1b: over everything, the first time this soul enters its current civilization. */}
           {state.status === "signedIn" ? <Welcome profile={state.profile} scheme={scheme} /> : null}
+          {/* 第二十批 §一.4: 「下次用面容登录？」, once, with the password the soul has just typed. */}
+          {state.status === "signedIn" ? <BioAsk soulCode={state.profile.soul_code} /> : null}
         </ChatProvider>
       );
     }

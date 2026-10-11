@@ -19,7 +19,7 @@ import { RootNavigator, navigationRef } from "../navigation";
 import { installMobilePlatform, sessionStore } from "../platform";
 import { maskEmail, passwordStrength } from "../screens/forgotPassword";
 import { SessionProvider } from "../session";
-import { stubApi, type Reply } from "./stubApi";
+import { stubApi, type Reply, resetLoginMemory } from "./stubApi";
 
 const secure = (SecureStore as unknown as { __store: Map<string, string> }).__store;
 
@@ -46,6 +46,7 @@ function renderApp() {
 beforeEach(async () => {
   jest.useFakeTimers({ now: new Date("2026-09-25T08:00:00Z") });
   installMobilePlatform();
+  resetLoginMemory();
   secure.clear();
   sessionStore.remove("soulledger_access");
   await AsyncStorage.clear();

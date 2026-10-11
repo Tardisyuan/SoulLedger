@@ -47,6 +47,8 @@ import {
   useTheme,
 } from "../ui";
 import type { AppStackParams } from "./applications";
+import { formatSoulCode, spellSoulCode } from "@soulledger/core/domain/soulCode";
+import { BioRow } from "./bio";
 
 type Save =
   | { state: "idle" }
@@ -428,6 +430,7 @@ export function SettingsScreen() {
           bold={mfa.data?.enabled === true}
           onPress={() => navigation.navigate("Mfa")}
         />
+        <BioRow />
       </View>
       <View style={[styles.rows, styles.gapTop, { borderTopColor: theme.hair }]}>
         <NavRow testID="open-about" label={t("about.title")} onPress={() => navigation.navigate("About")} />
@@ -435,10 +438,10 @@ export function SettingsScreen() {
 
       <View style={[styles.end, { paddingHorizontal: gutter }]}>
         <Button testID="logout" kind="secondary" title={t("soul_app.life.logout")} onPress={askLogout} style={styles.logout} />
-        <Txt testID="settings-soul-code" variant="body" tone="muted" style={styles.version}>
+        <Txt testID="settings-soul-code" variant="body" tone="muted" style={styles.version} accessibilityLabel={t("soul_app.login.id_aria", { spelled: spellSoulCode(me.soul_code) })}>
           {`${t("soul_app.login.soul_code")} `}
           <Txt variant="value" tone="muted">
-            {me.soul_code}
+            {formatSoulCode(me.soul_code)}
           </Txt>
         </Txt>
         <Txt variant="value" tone="subtle" style={styles.version}>

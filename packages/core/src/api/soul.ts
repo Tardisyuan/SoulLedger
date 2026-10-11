@@ -60,6 +60,7 @@ export type SoulMfaVerifyResponse = Schemas["SoulMfaVerifyResponse"];
 /** `remember_device` defaults to false on the server (the generated type makes it required). */
 export type SoulMfaVerifyRequest = Omit<Schemas["SoulMfaVerifyRequest"], "remember_device"> & { remember_device?: boolean };
 export type SoulMfaDisableRequest = Schemas["SoulMfaDisableRequest"];
+export type SoulDeviceLoginRequest = Schemas["SoulDeviceLoginRequest"];
 
 export function isMfaRequired(outcome: SoulLoginOutcome): outcome is SoulMfaRequired {
   return "mfa_required" in outcome && outcome.mfa_required === true;
@@ -144,7 +145,7 @@ export function clearSoulTokens(): void {
 
 function isSoulAuthEndpoint(url: string | undefined): boolean {
   // `mfa/verify` too: its 401 is `pending_invalid` (the step timed out), not an expired session.
-  return /\/soul-auth\/(login|refresh|logout|mfa\/verify)\/?$/.test(url || "");
+  return /\/soul-auth\/(login|device-login|refresh|logout|mfa\/verify)\/?$/.test(url || "");
 }
 
 let refreshInFlight: Promise<string> | null = null;
@@ -206,6 +207,24 @@ export const soulApi = {
         ...(deviceToken ? { device_token: deviceToken } : {}),
       })
       .then((r) => r.data),
+  /**
+   * 面容 / 指纹登录: 「编号 + 这部手机的凭据」 in place of 「编号 + 密码」. The answer has exactly the shape of `login`'s
+   * (tokens, or `mfa_required` + the pending credential). Refusals: `soulDeviceLoginFailure`.
+   */
+  deviceLogin: ({ soul_code, credential, device_token }: SoulDeviceLoginRequest) =>
+    soulHttp
+      .post<SoulLoginOutcome>("/soul-auth/device-login/", {
+        soul_code,
+        credential,
+        ...(device_token ? { device_token } : {}),
+      })
+      .then((r) => r.data),
+  /** Signed in. The current password; 201 `{credential}` is shown ONCE. A new credential every call: revoke the old one first. */
+  enableDeviceLogin: (password: string) =>
+    soulHttp.post<Schemas["SoulDeviceLoginIssued"]>("/me/device-login/", { password }).then((r) => r.data.credential),
+  /** 204 whatever the credential's state. */
+  revokeDeviceLogin: (credential: string) =>
+    soulHttp.post("/me/device-login/revoke/", { credential }).then(() => undefined),
   /** Sign-in step 2. `device_token` in the answer only when `remember_device` was asked for. */
   mfaVerify: (body: SoulMfaVerifyRequest) =>
     soulHttp.post<SoulMfaVerifyResponse>("/soul-auth/mfa/verify/", body).then((r) => r.data),
@@ -231,9 +250,15 @@ export const soulApi = {
   /** Best effort: the server answers 204 whatever the token's state. */
   logout: (refresh: string) => soulHttp.post("/soul-auth/logout/", { refresh }),
   /** 200 is a NEW token pair; the old refresh token is dead the moment this returns. */
-  changePassword: (old_password: string, new_password: string, push_token?: string) =>
+  changePassword: (old_password: string, new_password: string, push_token?: string, device_credential?: string) =>
     soulHttp
-      .post<SoulTokenPair>("/me/password/", { old_password, new_password, ...(push_token ? { push_token } : {}) })
+      .post<SoulTokenPair>("/me/password/", {
+        old_password,
+        new_password,
+        ...(push_token ? { push_token } : {}),
+        // This phone's 面容 / 指纹 credential: it is kept; every other device's is revoked.
+        ...(device_credential ? { device_credential } : {}),
+      })
       .then((r) => r.data),
   /**
    * 「忘记密码」, step 1: mail a six-digit code (valid 5 minutes) to the contact
@@ -496,4 +521,20 @@ export function soulMfaFailure(error: unknown): SoulMfaFailure {
     lockedUntil: typeof body.locked_until === "string" ? body.locked_until : null,
     retryAfter: typeof body.retry_after === "number" ? body.retry_after : null,
   };
+}
+
+/** A refused `deviceLogin`, by the body's stable `code`. `network`: no response. `reason`: `password_changed` / `password_reset_by_officer` / `account_reincarnated` / `turned_off`. */
+export type SoulDeviceLoginFailure =
+  | { code: "revoked"; reason: string | null }
+  | { code: "invalid" | "rate_limited" | "network" | "other" };
+
+export function soulDeviceLoginFailure(error: unknown): SoulDeviceLoginFailure {
+  if (!axios.isAxiosError(error)) return { code: "other" };
+  const response = error.response;
+  if (!response) return { code: "network" };
+  const body = (response.data ?? {}) as Record<string, unknown>;
+  if (body.code === "device_login_revoked") return { code: "revoked", reason: typeof body.reason === "string" ? body.reason : null };
+  if (body.code === "device_login_invalid") return { code: "invalid" };
+  if (body.code === "rate_limited") return { code: "rate_limited" };
+  return { code: "other" };
 }

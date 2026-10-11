@@ -64,6 +64,7 @@ import {
 import type { AppStackParams, LifeParams } from "./applications";
 import { useCurrentHall } from "./letters";
 import { SentenceSection, useSentencePlan, type SentenceLanding } from "./sentence";
+import { formatSoulCode, spellSoulCode } from "@soulledger/core/domain/soulCode";
 
 /**
  * The soul app's own names for the six states (在世 / 丢失 / 已结算 …), not the
@@ -360,7 +361,7 @@ function LifeBand({ me, compact, onAccount }: { me: MeProfile; compact: boolean;
             <Pressable
               testID="copy-soul-code"
               accessibilityRole="button"
-              accessibilityLabel={`${tr("soul_app.life.soul_code")} ${me.soul_code}`}
+              accessibilityLabel={`${tr("soul_app.life.soul_code")} ${spellSoulCode(me.soul_code)}`}
               accessibilityHint={tr("soul_app.life.copy_code")}
               onPress={copy}
               // The row is 16pt (the code's line). It used to be `hitSlop={12}`: 40 at best, and less
@@ -372,7 +373,7 @@ function LifeBand({ me, compact, onAccount }: { me: MeProfile; compact: boolean;
               style={[styles.code, small ? styles.codeTargetSmall : styles.codeTarget]}
             >
               <Txt variant="value" style={[styles.codeText, { color: on }]}>
-                {me.soul_code}
+                {formatSoulCode(me.soul_code)}
               </Txt>
               <Icon name="copy" size={13} color={on} strokeWidth={1.2} />
             </Pressable>

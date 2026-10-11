@@ -13,7 +13,7 @@ import { I18nProvider } from "../i18n";
 import { RootNavigator, navigationRef } from "../navigation";
 import { installMobilePlatform } from "../platform";
 import { SessionProvider } from "../session";
-import { PROFILE, application, life, stubApi, type Reply } from "./stubApi";
+import { PROFILE, application, life, stubApi, type Reply, resetLoginMemory } from "./stubApi";
 
 const secure = (SecureStore as unknown as { __store: Map<string, string> }).__store;
 const SETTINGS = { rebirth: true, judgment: true, residence: true, chat: true, locale: "zh-Hans" };
@@ -68,6 +68,7 @@ async function openHistory() {
 
 beforeEach(async () => {
   installMobilePlatform();
+  resetLoginMemory();
   secure.clear();
   await AsyncStorage.clear();
 });
