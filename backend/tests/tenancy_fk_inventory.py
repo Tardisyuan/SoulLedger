@@ -126,6 +126,7 @@ EDGES = {
     'soul_accounts.InitialCredential.account->soul_accounts.SoulAccount': ('U->U', 'stays inside one global/child table family (no tenant column on either side)'),
     'soul_accounts.RebirthApplication.account->soul_accounts.SoulAccount': ('U->U', 'stays inside one global/child table family (no tenant column on either side)'),
     'soul_accounts.SoulAccount.previous_account->soul_accounts.SoulAccount': ('U->U', 'stays inside one global/child table family (no tenant column on either side)'),
+    'soul_accounts.SoulDeviceLogin.account->soul_accounts.SoulAccount': ('U->U', 'stays inside one global/child table family (no tenant column on either side)'),
     'soul_accounts.SoulMfa.account->soul_accounts.SoulAccount': ('U->U', 'stays inside one global/child table family (no tenant column on either side)'),
     'soul_accounts.SoulMfaDevice.account->soul_accounts.SoulAccount': ('U->U', 'stays inside one global/child table family (no tenant column on either side)'),
     'soul_accounts.SoulMfaRecoveryCode.mfa->soul_accounts.SoulMfa': ('U->U', 'stays inside one global/child table family (no tenant column on either side)'),

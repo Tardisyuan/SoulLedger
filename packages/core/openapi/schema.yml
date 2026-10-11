@@ -8364,6 +8364,66 @@ paths:
               schema:
                 $ref: '#/components/schemas/ChatError'
           description: ''
+  /api/v1/me/device-login/:
+    post:
+      operationId: v1_me_device_login_create
+      description: 开启。要当前密码(与两步验证开启向导同一套计数:错 5 次 429 `rate_limited`,错的 400 `wrong_password`)。
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SoulDeviceLoginEnableRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SoulDeviceLoginEnableRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SoulDeviceLoginEnableRequest'
+      security:
+      - soulJwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulDeviceLoginIssued'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulMfaRefusal'
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulMfaRefusal'
+          description: ''
+  /api/v1/me/device-login/revoke/:
+    post:
+      operationId: v1_me_device_login_revoke_create
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SoulDeviceLoginCredential'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SoulDeviceLoginCredential'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SoulDeviceLoginCredential'
+        required: true
+      security:
+      - soulJwtAuth: []
+      responses:
+        '204':
+          description: 已关闭(不认识或早已关闭也是 204)
   /api/v1/me/life/:
     get:
       operationId: v1_me_life_retrieve
@@ -16058,6 +16118,37 @@ paths:
               schema:
                 $ref: '#/components/schemas/SoulError'
           description: ''
+  /api/v1/soul-accounts/credentials/{id}/print-slip/:
+    post:
+      operationId: v1_soul_accounts_credentials_print_slip_create
+      description: |-
+        交付单要印的内容(灵魂名、编号、殿、有效期、官员、打印时间)+ 一条 `credentials.print_slip` 审计。
+        **绝不含密码,不改状态**;待交付 / 已查看 / 已交付可打,过期与作废 409。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this initial credential.
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulCredentialSlip'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulError'
+          description: ''
   /api/v1/soul-accounts/credentials/{id}/retry/:
     post:
       operationId: v1_soul_accounts_credentials_retry_create
@@ -16300,6 +16391,46 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SoulError'
+          description: ''
+  /api/v1/soul-auth/device-login/:
+    post:
+      operationId: v1_soul_auth_device_login_create
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SoulDeviceLoginRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SoulDeviceLoginRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SoulDeviceLoginRequest'
+        required: true
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulLoginOutcome'
+          description: ''
+        '400':
+          description: 字段校验失败
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulDeviceLoginRefusal'
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulDeviceLoginRefusal'
           description: ''
   /api/v1/soul-auth/login/:
     post:
@@ -20618,6 +20749,10 @@ components:
           type: string
           default: ''
           maxLength: 255
+        device_credential:
+          type: string
+          default: ''
+          maxLength: 128
       required:
       - new_password
       - old_password
@@ -34645,6 +34780,31 @@ components:
           nullable: true
       required:
       - content
+    SoulCredentialSlip:
+      type: object
+      description: 交付单要印的东西。**没有密码。**
+      properties:
+        soul_name:
+          type: string
+        soul_code:
+          type: string
+        home_tenant:
+          $ref: '#/components/schemas/MeTenant'
+        expires_at:
+          type: string
+          format: date-time
+        officer_name:
+          type: string
+        printed_at:
+          type: string
+          format: date-time
+      required:
+      - expires_at
+      - home_tenant
+      - officer_name
+      - printed_at
+      - soul_code
+      - soul_name
     SoulDateProblem:
       type: object
       description: |-
@@ -34670,6 +34830,59 @@ components:
       - code
       - message
       - severity
+    SoulDeviceLoginCredential:
+      type: object
+      properties:
+        credential:
+          type: string
+          maxLength: 128
+      required:
+      - credential
+    SoulDeviceLoginEnableRequest:
+      type: object
+      properties:
+        password:
+          type: string
+          default: ''
+          maxLength: 128
+    SoulDeviceLoginIssued:
+      type: object
+      properties:
+        credential:
+          type: string
+          description: 不透明凭据,只此一次;App 放进要验证生物特征才能取出的安全存储。
+      required:
+      - credential
+    SoulDeviceLoginRefusal:
+      type: object
+      description: |-
+        `code`: device_login_revoked(401,带 `reason`:password_changed / password_reset_by_officer /
+        account_reincarnated / turned_off)、device_login_invalid(401)、rate_limited(429)。
+      properties:
+        detail:
+          type: string
+        code:
+          type: string
+        reason:
+          type: string
+      required:
+      - code
+      - detail
+    SoulDeviceLoginRequest:
+      type: object
+      properties:
+        soul_code:
+          type: string
+          maxLength: 32
+        credential:
+          type: string
+          maxLength: 128
+        device_token:
+          type: string
+          maxLength: 128
+      required:
+      - credential
+      - soul_code
     SoulError:
       type: object
       description: 所有业务拒绝的形状。`code` 稳定,App 按它分支;`detail` 是给人看的中文。
