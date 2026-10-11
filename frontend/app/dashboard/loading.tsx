@@ -22,7 +22,7 @@ export default function Loading() {
             <div className="h-10 w-64 bg-[oklch(var(--color-hairline))]" />
             <div className="ml-auto h-9 w-32 bg-[oklch(var(--color-hairline))]" />
           </div>
-          <div className="h-6 w-96 bg-[oklch(var(--color-hairline))] mt-3" />
+          <div className="h-6 w-96 max-w-full bg-[oklch(var(--color-hairline))] mt-3" />
         </div>
       </header>
 
