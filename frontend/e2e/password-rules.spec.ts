@@ -14,7 +14,7 @@ test("profile change-password checklist: ○ on arrival, ✓ while typing, nothi
   expect(await state("not_digits")).toBe("idle");
   expect(await state("not_current")).toBe("idle");
 
-  await page.getByLabel(/^旧密码/).fill("old-password-1");
+  await page.getByLabel(/^当前密码/).fill("old-password-1");
   await page.locator("#profile-password-new").fill("abc");
   expect(await state("not_digits")).toBe("ok");
   expect(await state("min_length")).toBe("idle");

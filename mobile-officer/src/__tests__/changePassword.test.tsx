@@ -176,7 +176,7 @@ it("shows the old-password reason under its field and the other new-password rea
   renderOfficer(<ChangePasswordScreen onBack={onBack} />);
   fillAll("oldpw-123", "newpw-4567");
   await submit();
-  expect(screen.getByText("旧密码不正确")).toBeTruthy();
+  expect(screen.getByText("当前密码不正确")).toBeTruthy();
   // "Too common" is the checklist's block now (see above); the numeric reason is still its own line.
   expect(screen.getByText("! 这个密码太容易被猜到")).toBeTruthy();
   expect(screen.queryByText("这个密码太常见,请换一个")).toBeNull();
