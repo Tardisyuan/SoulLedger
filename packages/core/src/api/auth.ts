@@ -92,6 +92,9 @@ export interface MfaVerifyRequest {
  * accounts never reach these. `login` and `verify` send credentials so the API origin can set / read
  * the device cookie (`CORS_ALLOW_CREDENTIALS`).
  */
+/** 「确认是本人」: the 6-digit code or the password. A recovery code does not count. */
+export type MfaOwnerConfirmation = { method: "totp"; code: string } | { method: "password"; password: string };
+
 export const mfaApi = {
   verify: (data: MfaVerifyRequest) => api.post<LoginResponse>("/auth/mfa/verify/", data, { withCredentials: true }),
   status: () => api.get<MfaStatus>("/auth/mfa/status/"),
@@ -107,9 +110,9 @@ export const mfaApi = {
   confirm: (code: string) => api.post<MfaRecoveryCodes>("/auth/mfa/confirm/", { code }),
   /** Step 4 完成 — the only call that turns it on. */
   complete: () => api.post<MfaStatus>("/auth/mfa/complete/"),
-  regenerateRecoveryCodes: () => api.post<MfaRecoveryCodes>("/auth/mfa/recovery-codes/"),
-  disable: (data: { method: "totp"; code: string } | { method: "password"; password: string }) =>
-    api.post<MfaStatus>("/auth/mfa/disable/", data),
+  /** The same confirmation as `disable` (the 6-digit code or the password, one lock); the old set stays good until it passes. */
+  regenerateRecoveryCodes: (data: MfaOwnerConfirmation) => api.post<MfaRecoveryCodes>("/auth/mfa/recovery-codes/", data),
+  disable: (data: MfaOwnerConfirmation) => api.post<MfaStatus>("/auth/mfa/disable/", data),
 };
 
 /** 401 body of POST /auth/login/ for wrong credentials: tries left before 429. */

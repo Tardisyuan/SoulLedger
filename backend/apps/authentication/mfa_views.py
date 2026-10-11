@@ -225,13 +225,25 @@ def complete_view(request):
     return Response(mfa.status_of(request.user))
 
 
-@extend_schema(request=None, responses={200: MfaRecoveryCodesSerializer, 409: MfaRefusalSerializer})
+@extend_schema(
+    request=MfaDisableRequestSerializer,
+    responses={200: MfaRecoveryCodesSerializer, 400: MfaRefusalSerializer, 409: MfaRefusalSerializer, 429: MfaRefusalSerializer},
+)
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def recovery_codes_view(request):
+    """重新生成:先确认是本人(6 位数字或密码,与「关闭」同一个确认、同一把锁;不收恢复码),过了才作废旧码。"""
+    serializer = MfaDisableRequestSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    data = serializer.validated_data
     row = mfa.get_mfa(request.user)
     if row is None or not row.enabled:
         return _refuse("not_enabled", status.HTTP_409_CONFLICT)
+    outcome = mfa.confirm_owner(
+        row, request.user, method=data["method"], code=data.get("code") or "", password=data.get("password") or "",
+        request=request)
+    if outcome["code"] != "ok":
+        return _refuse_outcome(outcome)
     return Response({"recovery_codes": mfa.regenerate_recovery_codes(row, request=request)})
 
 
@@ -246,11 +258,10 @@ def disable_view(request):
     row = mfa.get_mfa(request.user)
     if row is None or not row.enabled:
         return _refuse("not_enabled", status.HTTP_409_CONFLICT)
-    if data["method"] == "totp":
-        outcome = mfa.verify_login_code(row, code=data.get("code") or "", request=request)
-        if outcome["code"] != "ok":
-            return _refuse_outcome(outcome)
-    elif not request.user.check_password(data.get("password") or ""):
-        return _refuse("wrong_password", status.HTTP_400_BAD_REQUEST)
+    outcome = mfa.confirm_owner(
+        row, request.user, method=data["method"], code=data.get("code") or "", password=data.get("password") or "",
+        request=request)
+    if outcome["code"] != "ok":
+        return _refuse_outcome(outcome)
     mfa.disable(request.user, request=request)
     return Response(mfa.status_of(request.user))

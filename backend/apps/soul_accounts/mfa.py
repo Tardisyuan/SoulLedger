@@ -168,17 +168,21 @@ def confirm_setup(account, code, *, request=None):
     return "ok", [shown for shown, _ in pairs]
 
 
-def regenerate_recovery_codes(account, *, request=None) -> list[str]:
+def regenerate_recovery_codes(account, *, method, code="", password="", request=None):
+    """重新生成:先过与「关闭」同一个确认(`confirm`),过了才作废旧码。→ ("ok", 新码) 或 (拒绝体, [])。"""
     with transaction.atomic():
         account = _lock(account)
         row = get_mfa(account)
         if row is None or not row.enabled:
             raise SoulAccountError("两步验证未开启。", "not_enabled", 409)
+        outcome = core.confirm_owner(row, account.user, method=method, code=code, password=password, request=request)
+        if outcome["code"] != "ok":
+            return outcome, []
         row.recovery_codes.all().delete()
         pairs = core.new_recovery_codes()
         SoulMfaRecoveryCode.objects.bulk_create(SoulMfaRecoveryCode(mfa=row, code_hash=h) for _, h in pairs)
         core.audit(core.AuditAction.UPDATE, account.user, "灵魂恢复码已重新生成,旧码作废", request=request)
-    return [shown for shown, _ in pairs]
+    return outcome, [shown for shown, _ in pairs]
 
 
 # ── 登录第二步 / 关闭 ──────────────────────────────────────────────────────────
@@ -195,22 +199,15 @@ def verify_second_step(account, *, code=None, recovery_code=None, request=None) 
 
 
 def disable(account, *, method, code="", password="", request=None) -> dict:
-    """关闭。`method=totp` 验一个 6 位数字;`method=password` 验密码。两条的失败都记进同一个锁
-    (官员那套的密码路径不计次;灵魂端偷到会话的人能无限猜密码来关掉它,所以这里计)。"""
+    """关闭。确认方式见 `core.confirm_owner`(6 位数字或密码,失败记进同一把锁;重新生成恢复码共用)。"""
     with transaction.atomic():
         account = _lock(account)
         row = get_mfa(account)
         if row is None or not row.enabled:
             raise SoulAccountError("两步验证未开启。", "not_enabled", 409)
-        if method == "totp":
-            outcome = core.verify_login_code(row, code=code or "", request=request)
-            if outcome["code"] != "ok":
-                return outcome
-        else:
-            if core._lock_remaining(row) > 0:
-                return {"code": "locked", "retry_after": core._lock_remaining(row)}
-            if not account.user.check_password(password or ""):
-                return core._count_failure(row, "wrong_password", request=request)
+        outcome = core.confirm_owner(row, account.user, method=method, code=code, password=password, request=request)
+        if outcome["code"] != "ok":
+            return outcome
         void_all(account)
         core.audit(core.AuditAction.UPDATE, account.user, "灵魂两步验证已关闭", request=request,
                    changes={"mfa_enabled": [True, False], "method": method})

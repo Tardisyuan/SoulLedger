@@ -191,12 +191,23 @@ class MeMfaConfirmView(SoulAPIView):
 
 
 class MeMfaRecoveryCodesView(SoulAPIView):
-    @extend_schema(request=None, responses={200: SoulMfaRecoveryCodesSerializer, 409: SoulMfaRefusalSerializer})
+    @extend_schema(request=SoulMfaDisableRequestSerializer,
+                   responses={200: SoulMfaRecoveryCodesSerializer, 400: SoulMfaRefusalSerializer,
+                              409: SoulMfaRefusalSerializer, 429: SoulMfaRefusalSerializer})
     def post(self, request):
+        """重新生成要确认是本人 —— 6 位数字或密码,与「关闭」同一个确认、同一把锁。用恢复码确认不行。
+        没带 / 错了 → 旧码原样有效。"""
+        body = SoulMfaDisableRequestSerializer(data=request.data)
+        body.is_valid(raise_exception=True)
+        data = body.validated_data
         try:
-            codes = mfa.regenerate_recovery_codes(self.account, request=request)
+            outcome, codes = mfa.regenerate_recovery_codes(
+                self.account, method=data["method"], code=data.get("code", ""), password=data.get("password", ""),
+                request=request)
         except svc.SoulAccountError as exc:
             return _error(exc)
+        if outcome["code"] != "ok":
+            return _refuse_outcome(outcome)
         return Response({"recovery_codes": codes})
 
 

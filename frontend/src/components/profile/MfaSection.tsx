@@ -9,7 +9,7 @@ import { showToast } from "@/src/components/ui/Toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/src/components/ui/Badge";
 import { Button } from "@/src/components/ui/Button";
-import { BaseModal, ConfirmDialog } from "@/src/components/ui/Modal";
+import { BaseModal } from "@/src/components/ui/Modal";
 import { TextField } from "@/src/components/ui/Field";
 import { CodeInput } from "@/src/components/auth/CodeInput";
 import { RecoveryCodesPanel } from "@/src/components/auth/RecoveryCodesPanel";
@@ -41,16 +41,6 @@ export function MfaSection() {
     queryClient.setQueryData(MFA_STATUS_KEY, next);
     if (user) setUser({ ...user, mfa_enabled: next.enabled, mfa_required: next.required });
   };
-
-  const regenerate = useMutation({
-    mutationFn: () => mfaApi.regenerateRecoveryCodes().then((r) => r.data.recovery_codes),
-    onSuccess: (codes) => {
-      setRegenConfirm(false);
-      setNewCodes(codes);
-      void queryClient.invalidateQueries({ queryKey: MFA_STATUS_KEY });
-    },
-    onError: () => showToast(t("profile.profile_update_failed"), "error"),
-  });
 
   const data = status.data;
   const username = user?.username ?? "";
@@ -128,16 +118,16 @@ export function MfaSection() {
         />
       ) : null}
 
-      <ConfirmDialog
-        isOpen={regenConfirm}
-        title={t("mfa.manage.regenerate_title")}
-        message={t("mfa.manage.regenerate_body")}
-        variant="warning"
-        confirmText={t("mfa.manage.regenerate")}
-        confirmLoading={regenerate.isPending}
-        onConfirm={() => regenerate.mutate()}
-        onCancel={() => setRegenConfirm(false)}
-      />
+      {regenConfirm ? (
+        <RegenerateDialog
+          onClose={() => setRegenConfirm(false)}
+          onRegenerated={(codes) => {
+            setRegenConfirm(false);
+            setNewCodes(codes);
+            void queryClient.invalidateQueries({ queryKey: MFA_STATUS_KEY });
+          }}
+        />
+      ) : null}
 
       {newCodes ? (
         <BaseModal
@@ -162,22 +152,97 @@ export function MfaSection() {
   );
 }
 
-/** 关闭:分段「动态码 / 密码」二选一确认,危险实心键。错了留在对话框里,提示跟着后端的 code。 */
+type OwnerMethod = "totp" | "password";
+
+/** 「确认是本人」的请求体:6 位动态码或密码二选一。关闭与重新生成恢复码共用 —— 后端也是同一个确认、同一把锁。 */
+const ownerBody = (method: OwnerMethod, code: string, password: string) =>
+  method === "totp" ? ({ method: "totp", code } as const) : ({ method: "password", password } as const);
+
+/** 失败时对话框里说的话:被锁了说锁,其余说「检查动态码或密码」。 */
+function ownerFailure(err: unknown, fallback: string, t: (key: string) => string): string {
+  const body = (err as { response?: { status?: number; data?: { code?: string } } })?.response;
+  return body?.status === 429 || body?.data?.code === "locked" ? t("officer_app.mfa.reasons.locked") : fallback;
+}
+
+/** 分段「动态码 / 密码」二选一 + 输入框 + 错误行。关闭与重新生成共用同一块。 */
+function OwnerConfirmFields({
+  label,
+  method,
+  onMethod,
+  code,
+  onCode,
+  password,
+  onPassword,
+  error,
+  disabled,
+}: {
+  label: string;
+  method: OwnerMethod;
+  onMethod: (m: OwnerMethod) => void;
+  code: string;
+  onCode: (v: string) => void;
+  password: string;
+  onPassword: (v: string) => void;
+  error: string | null;
+  disabled: boolean;
+}) {
+  const { t } = useI18n();
+  return (
+    <>
+      <div role="radiogroup" aria-label={label} className="grid grid-cols-2 border border-[oklch(var(--color-line-strong))]">
+        {(["totp", "password"] as const).map((m) => (
+          <button
+            key={m}
+            type="button"
+            role="radio"
+            aria-checked={method === m}
+            onClick={() => onMethod(m)}
+            className={cn(
+              "h-11 text-sm",
+              method === m ? "bg-[oklch(var(--color-ink))] text-[oklch(var(--color-canvas))]" : "text-[oklch(var(--color-ink))]"
+            )}
+          >
+            {t(m === "totp" ? "mfa.manage.confirm_by_totp" : "mfa.manage.confirm_by_password")}
+          </button>
+        ))}
+      </div>
+      {error ? (
+        <p role="alert" className="text-sm font-medium text-[oklch(var(--color-danger))]">
+          <span aria-hidden="true">! </span>
+          {error}
+        </p>
+      ) : null}
+      {method === "totp" ? (
+        <CodeInput kind="totp" label={t("mfa.verify.code_label")} value={code} onChange={onCode} disabled={disabled} />
+      ) : (
+        <TextField
+          type="password"
+          autoComplete="current-password"
+          label={t("auth.password")}
+          value={password}
+          onChange={(e) => onPassword(e.target.value)}
+          disabled={disabled}
+        />
+      )}
+    </>
+  );
+}
+
+/** 关闭:动态码或密码确认,危险实心键。错了留在对话框里,提示跟着后端的 code。 */
 function DisableDialog({ onClose, onDisabled }: { onClose: () => void; onDisabled: (s: MfaStatus) => void }) {
   const { t } = useI18n();
-  const [method, setMethod] = useState<"totp" | "password">("totp");
+  const [method, setMethod] = useState<OwnerMethod>("totp");
   const [code, setCode] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const disable = useMutation({
-    mutationFn: () =>
-      mfaApi.disable(method === "totp" ? { method: "totp", code } : { method: "password", password }).then((r) => r.data),
+    mutationFn: () => mfaApi.disable(ownerBody(method, code, password)).then((r) => r.data),
     onSuccess: (next) => {
       onDisabled(next);
       showToast(t("mfa.manage.disabled_toast"), "success");
       onClose();
     },
-    onError: () => setError(t("mfa.manage.disable_failed")),
+    onError: (err) => setError(ownerFailure(err, t("mfa.manage.disable_failed"), t)),
   });
   const ready = method === "totp" ? code.length === 6 : password.length > 0;
 
@@ -201,47 +266,84 @@ function DisableDialog({ onClose, onDisabled }: { onClose: () => void; onDisable
     >
       <div className="flex flex-col gap-4">
         <p className="text-sm text-[oklch(var(--color-ink-muted))]">{t("mfa.manage.disable_body")}</p>
-        <div role="radiogroup" aria-label={t("mfa.manage.disable_title")} className="grid grid-cols-2 border border-[oklch(var(--color-line-strong))]">
-          {(["totp", "password"] as const).map((m) => (
-            <button
-              key={m}
-              type="button"
-              role="radio"
-              aria-checked={method === m}
-              onClick={() => {
-                setMethod(m);
-                setError(null);
-              }}
-              className={cn(
-                "h-11 text-sm",
-                method === m ? "bg-[oklch(var(--color-ink))] text-[oklch(var(--color-canvas))]" : "text-[oklch(var(--color-ink))]"
-              )}
-            >
-              {t(m === "totp" ? "mfa.manage.confirm_by_totp" : "mfa.manage.confirm_by_password")}
-            </button>
-          ))}
+        <OwnerConfirmFields
+          label={t("mfa.manage.disable_title")}
+          method={method}
+          onMethod={(m) => {
+            setMethod(m);
+            setError(null);
+          }}
+          code={code}
+          onCode={(v) => {
+            setError(null);
+            setCode(v);
+          }}
+          password={password}
+          onPassword={(v) => {
+            setError(null);
+            setPassword(v);
+          }}
+          error={error}
+          disabled={disable.isPending}
+        />
+      </div>
+    </BaseModal>
+  );
+}
+
+/** 重新生成恢复码:与关闭同一个确认(动态码或密码);旧码在确认通过之前原样有效,通过后立即作废。 */
+function RegenerateDialog({ onClose, onRegenerated }: { onClose: () => void; onRegenerated: (codes: string[]) => void }) {
+  const { t } = useI18n();
+  const [method, setMethod] = useState<OwnerMethod>("totp");
+  const [code, setCode] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const regenerate = useMutation({
+    mutationFn: () => mfaApi.regenerateRecoveryCodes(ownerBody(method, code, password)).then((r) => r.data.recovery_codes),
+    onSuccess: onRegenerated,
+    onError: (err) => setError(ownerFailure(err, t("mfa.manage.disable_failed"), t)),
+  });
+  const ready = method === "totp" ? code.length === 6 : password.length > 0;
+
+  return (
+    <BaseModal
+      isOpen
+      title={t("mfa.manage.regenerate_title")}
+      onClose={() => !regenerate.isPending && onClose()}
+      dismissOnOutsideClick={false}
+      footer={
+        <div className="flex justify-end gap-2">
+          <Button type="button" variant="ghost" onClick={onClose} disabled={regenerate.isPending}>
+            {t("common.cancel")}
+          </Button>
+          <Button type="button" variant="primary" data-testid="mfa-regenerate-confirm" disabled={!ready || regenerate.isPending} loading={regenerate.isPending} onClick={() => regenerate.mutate()}>
+            {t("mfa.manage.regenerate")}
+          </Button>
         </div>
-        {error ? (
-          <p role="alert" className="text-sm font-medium text-[oklch(var(--color-danger))]">
-            <span aria-hidden="true">! </span>
-            {error}
-          </p>
-        ) : null}
-        {method === "totp" ? (
-          <CodeInput kind="totp" label={t("mfa.verify.code_label")} value={code} onChange={(v) => { setError(null); setCode(v); }} disabled={disable.isPending} />
-        ) : (
-          <TextField
-            type="password"
-            autoComplete="current-password"
-            label={t("auth.password")}
-            value={password}
-            onChange={(e) => {
-              setError(null);
-              setPassword(e.target.value);
-            }}
-            disabled={disable.isPending}
-          />
-        )}
+      }
+    >
+      <div className="flex flex-col gap-4">
+        <p className="text-sm text-[oklch(var(--color-ink-muted))]">{t("mfa.manage.regenerate_body")}</p>
+        <OwnerConfirmFields
+          label={t("mfa.manage.regenerate_title")}
+          method={method}
+          onMethod={(m) => {
+            setMethod(m);
+            setError(null);
+          }}
+          code={code}
+          onCode={(v) => {
+            setError(null);
+            setCode(v);
+          }}
+          password={password}
+          onPassword={(v) => {
+            setError(null);
+            setPassword(v);
+          }}
+          error={error}
+          disabled={regenerate.isPending}
+        />
       </div>
     </BaseModal>
   );

@@ -220,9 +220,12 @@ export const soulApi = {
   /** Right digits → enabled, and the ten recovery codes, ONCE. Hold them in component state only. */
   mfaConfirm: (code: string) =>
     soulHttp.post<Schemas["SoulMfaRecoveryCodes"]>("/me/mfa/confirm/", { code }).then((r) => r.data.recovery_codes),
-  /** The old set is void at once; the new ten are shown once. */
-  mfaRegenerate: () =>
-    soulHttp.post<Schemas["SoulMfaRecoveryCodes"]>("/me/mfa/recovery-codes/").then((r) => r.data.recovery_codes),
+  /**
+   * The same confirmation as `mfaDisable` (the 6-digit code or the password; one lock; a recovery code does not
+   * count). Until it passes the old set stays good; then it is void at once and the new ten are shown once.
+   */
+  mfaRegenerate: (body: SoulMfaDisableRequest) =>
+    soulHttp.post<Schemas["SoulMfaRecoveryCodes"]>("/me/mfa/recovery-codes/", body).then((r) => r.data.recovery_codes),
   mfaDisable: (body: SoulMfaDisableRequest) =>
     soulHttp.post<SoulMfaStatus>("/me/mfa/disable/", body).then((r) => r.data),
   /** Best effort: the server answers 204 whatever the token's state. */
