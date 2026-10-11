@@ -37,9 +37,9 @@ import { soulLinks } from "./links";
 import { navigationHeld, useNavigationHeld } from "./navLock";
 import { NetworkProvider } from "./network";
 import { useSession } from "./session";
-import { preLoginTheme, themeFor } from "./theme";
+import { preLoginTheme, themeFor, type ColorScheme } from "./theme";
 import { Block, Screen, ScreenError, Skeleton, ThemeContext, useReducedMotionDurations } from "./ui";
-import { Welcome } from "./welcome";
+import { Welcome, welcomeFrom } from "./welcome";
 import {
   ApplicationDetailScreen,
   ApplicationsScreen,
@@ -309,6 +309,23 @@ function LinkBridge({ signedIn, ready }: { signedIn: boolean; ready: number }) {
   return null;
 }
 
+/**
+ * The welcome and the 「下次用面容登录？」 sheet share the first home page, and the welcome goes first: the sheet is
+ * held back while a welcome is due for this soul × civilization and has not ended (played, skipped, or had nothing
+ * left to show). Not due at all (not the first time): the sheet is asked at once.
+ */
+function SignedInOverlays({ profile, scheme }: { profile: MeProfile; scheme: ColorScheme }) {
+  const key = `${profile.soul_code}:${profile.civilization}`;
+  const [settled, setSettled] = useState<string | null>(null);
+  const onSettled = useCallback(() => setSettled(key), [key]);
+  return (
+    <>
+      <Welcome profile={profile} scheme={scheme} onSettled={onSettled} />
+      <BioAsk soulCode={profile.soul_code} welcomePending={welcomeFrom(profile) !== null && settled !== key} />
+    </>
+  );
+}
+
 export function RootNavigator() {
   const { t } = useI18n();
   const { state, retryBoot, signOut } = useSession();
@@ -473,9 +490,8 @@ export function RootNavigator() {
           </AssistRoot>
           <PushBridge signedIn={state.status === "signedIn"} ready={ready} />
           {/* 文明气质 1b: over everything, the first time this soul enters its current civilization. */}
-          {state.status === "signedIn" ? <Welcome profile={state.profile} scheme={scheme} /> : null}
-          {/* 第二十批 §一.4: 「下次用面容登录？」, once, with the password the soul has just typed. */}
-          {state.status === "signedIn" ? <BioAsk soulCode={state.profile.soul_code} /> : null}
+          {/* 第二十批 §一.4: 「下次用面容登录？」, once, with the password the soul has just typed -- after the welcome. */}
+          {state.status === "signedIn" ? <SignedInOverlays profile={state.profile} scheme={scheme} /> : null}
         </ChatProvider>
       );
     }

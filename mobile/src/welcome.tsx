@@ -55,7 +55,7 @@ const PLAYED = new Set<string>();
 /** Record the welcome as seen. A failure is left for the next launch to re-decide. */
 const record = (civilization: string) => void soulApi.markWelcomed(civilization as Civilization).catch(() => {});
 
-export function Welcome({ profile, scheme }: { profile: MeProfile; scheme: ColorScheme }) {
+export function Welcome({ profile, scheme, onSettled }: { profile: MeProfile; scheme: ColorScheme; onSettled?: () => void }) {
   const { t } = useI18n();
   const [shown, setShown] = useState<{ from: CivKey; civilization: string } | null>(null);
   const [top] = useState(() => new Animated.Value(0));
@@ -65,24 +65,29 @@ export function Welcome({ profile, scheme }: { profile: MeProfile; scheme: Color
   const key = `${profile.soul_code}:${civilization}`;
 
   useEffect(() => {
-    if (from === null || PLAYED.has(key)) return;
+    if (from === null) return;
+    // Played before in this process: nothing to show, so whoever waits on the welcome need not.
+    if (PLAYED.has(key)) return onSettled?.();
     PLAYED.add(key);
     let alive = true;
     void AccessibilityInfo.isReduceMotionEnabled()
       .catch(() => false)
       .then((reduced) => {
-        if (reduced) record(civilization);
-        else if (alive) setShown({ from, civilization });
+        if (reduced) {
+          record(civilization);
+          onSettled?.();
+        } else if (alive) setShown({ from, civilization });
       });
     return () => {
       alive = false;
     };
-  }, [key, from, civilization]);
+  }, [key, from, civilization, onSettled]);
 
   /** Seen: to the end, or skipped. */
   const done = (civilization: string) => {
     record(civilization);
     setShown(null);
+    onSettled?.();
   };
 
   useEffect(() => {
@@ -99,9 +104,10 @@ export function Welcome({ profile, scheme }: { profile: MeProfile; scheme: Color
       if (!finished) return;
       record(shown.civilization);
       setShown(null);
+      onSettled?.();
     });
     return () => run.stop();
-  }, [shown, top, whole]);
+  }, [shown, top, whole, onSettled]);
 
   if (!shown) return null;
   const to = themeFor(shown.civilization, scheme);

@@ -70,13 +70,14 @@ describe("shouldAutoPrompt: the system prompt opens by itself once, on a cold st
 });
 
 describe("shouldAskBio: the question after the first sign-in", () => {
-  const due = { hasPassword: true, enrolled: true, enabled: false, asked: false };
+  const due = { hasPassword: true, enrolled: true, enabled: false, asked: false, welcomePending: false };
   it("is due", () => expect(shouldAskBio(due)).toBe(true));
   it.each([
     ["no password in memory (a restored session)", { hasPassword: false }],
     ["nothing enrolled on the phone", { enrolled: false }],
     ["already on", { enabled: true }],
     ["already answered", { asked: true }],
+    ["the welcome has not ended", { welcomePending: true }],
   ])("not when %s", (_name, over) => expect(shouldAskBio({ ...due, ...over })).toBe(false));
 });
 
