@@ -1,0 +1,48 @@
+/*
+ * 登录交付单的「墨」(第二十四批第二稿)—— 与 print.css 分开放,因为那份文件的守卫
+ * (printLayout.test.tsx「is black and white by system colour」)规定打印一律是系统色、不写色值,
+ * 而交付单的彩色点缀(官员台勾选,默认关)恰恰要用文明色。其余打印文书不受这里影响:
+ * 选择器全部在 `[data-print-slip]` 之下。
+ */
+
+@media print {
+  /*
+   * 第二十四批第二稿:匾额带 / 外框 / 分隔线 / 殿印是「墨」(`data-slip-ink`),黑白时纯黑,开了彩色点缀取文明色;
+   * 匾额带上的字是反白(`data-slip-white`)。上面通用的 `[data-print-doc] *` 把一切压成 CanvasText 且 !important,
+   * 所以这里用更高的特异度 + !important 把这两类放回去。正文、二维码、编号、密码框、签收线不在其中,永远是纯黑。
+   * 墨的颜色写在 `--slip-ink`:SVG 里的 `currentColor` 与 Seal 的描边 / 轮廓都从 color 取。
+   */
+  [data-slip-ink] {
+    --slip-ink: CanvasText;
+  }
+  [data-slip-ink="cn"] {
+    --slip-ink: oklch(var(--color-civ-cn));
+  }
+  [data-slip-ink="eu"] {
+    --slip-ink: oklch(var(--color-civ-eu));
+  }
+  [data-slip-ink="eg"] {
+    --slip-ink: oklch(var(--color-civ-eg));
+  }
+  [data-slip-ink="gr"] {
+    --slip-ink: oklch(var(--color-civ-gr));
+  }
+  [data-slip-ink="neutral"] {
+    --slip-ink: oklch(var(--color-civ-neutral));
+  }
+  [data-print-slip] [data-slip-ink],
+  [data-print-slip] [data-slip-ink] * {
+    color: var(--slip-ink) !important;
+    border-color: var(--slip-ink) !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  [data-print-slip] [data-slip-white],
+  [data-print-slip] [data-slip-white] * {
+    color: white !important;
+  }
+  /* 匾额带本身是 SVG 实心块,填的是 currentColor(= 墨);这条让「带是实心」可以从计算样式里读到。 */
+  [data-print-slip] [data-slip-band] {
+    fill: var(--slip-ink) !important;
+  }
+}

@@ -203,17 +203,17 @@
  */
 @media print {
   [data-print-doc][data-print-slip] {
-    display: flex;
-    flex-direction: column;
+    display: block;
+    position: relative;
     page: slip;
     width: 210mm;
-    /* 比 297mm 矮 1 mm:取整误差不能把页脚挤到第二页。 */
+    /* 比 297mm 矮 1 mm:取整误差不能把页脚挤到第二页。里面的画布是 794 × 1123 px,超出的 4 px 空白被裁。 */
     height: 296mm;
     overflow: hidden;
     font-size: 13px;
     line-height: 20px;
-  }
-  [data-print-slip] [data-slip-foot] {
-    margin-top: auto;
+    /* 实心匾额带是这张单的重心;浏览器默认不印背景色,这里要它印。 */
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
 }

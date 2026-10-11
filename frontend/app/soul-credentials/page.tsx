@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { flushSync } from "react-dom";
 import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query";
@@ -52,6 +52,11 @@ const PrinterIcon = () => (
   </svg>
 );
 
+const SLIP_COLOR_STORAGE = "soulledger.slip.color";
+// TODO(design): 「彩色点缀」(回复 §二.1 的勾选项)还没有语言包词条,三种语言都要 Design 给(egy 只能由 Design 给)。
+// 词条到位之前开关不渲染 —— 缺词条时 t() 回出 key 本身,下面就是靠这一点判断。
+const SLIP_COLOR_LABEL_KEY = "soul_accounts.credentials.slip_color";
+
 const ROW_GRID = "md:grid md:grid-cols-[minmax(0,2fr)_minmax(0,0.6fr)_minmax(0,2fr)_minmax(0,1.3fr)_10rem] md:items-center md:gap-4";
 
 function CredentialsPageContent() {
@@ -67,6 +72,24 @@ function CredentialsPageContent() {
   const [revealing, setRevealing] = useState<InitialCredential | null>(null);
   // 只在调起打印的那一刻挂着;交付单不是页面的一部分,屏幕上也看不到它。
   const [slip, setSlip] = useState<CredentialSlip | null>(null);
+  // 彩色点缀:默认关,记在这台电脑上。读不到(隐私窗口、被禁用)当作关。
+  const [slipColor, setSlipColor] = useState(false);
+  useEffect(() => {
+    try {
+      setSlipColor(localStorage.getItem(SLIP_COLOR_STORAGE) === "1");
+    } catch {
+      /* 当作关 */
+    }
+  }, []);
+  const changeSlipColor = (on: boolean) => {
+    setSlipColor(on);
+    try {
+      localStorage.setItem(SLIP_COLOR_STORAGE, on ? "1" : "0");
+    } catch {
+      /* 本次有效,下次回到关 */
+    }
+  };
+  const slipColorLabel = t(SLIP_COLOR_LABEL_KEY);
 
   const list = useSoulCredentials({ status: status || undefined, page });
   const retry = useRetryCredential();
@@ -128,16 +151,24 @@ function CredentialsPageContent() {
   );
 
   const actions = (
-    <Button
-      type="button"
-      variant="secondary"
-      size="sm"
-      onClick={() => void queryClient.invalidateQueries({ queryKey: soulAccountKeys.all })}
-      aria-busy={list.isFetching}
-    >
-      <RefreshCw aria-hidden="true" className={`w-4 h-4 mr-1 inline ${list.isFetching ? "animate-spin motion-reduce:animate-none" : ""}`} />
-      {t("soul_accounts.refresh")}
-    </Button>
+    <div className="flex flex-wrap items-center gap-3">
+      {canManage && slipColorLabel !== SLIP_COLOR_LABEL_KEY && (
+        <label className="inline-flex items-center gap-2 text-sm">
+          <input type="checkbox" checked={slipColor} onChange={(e) => changeSlipColor(e.target.checked)} />
+          {slipColorLabel}
+        </label>
+      )}
+      <Button
+        type="button"
+        variant="secondary"
+        size="sm"
+        onClick={() => void queryClient.invalidateQueries({ queryKey: soulAccountKeys.all })}
+        aria-busy={list.isFetching}
+      >
+        <RefreshCw aria-hidden="true" className={`w-4 h-4 mr-1 inline ${list.isFetching ? "animate-spin motion-reduce:animate-none" : ""}`} />
+        {t("soul_accounts.refresh")}
+      </Button>
+    </div>
   );
 
   const filters = (
@@ -296,7 +327,7 @@ function CredentialsPageContent() {
         </ul>
       </div>
 
-      {slip && <DeliverySlip slip={slip} />}
+      {slip && <DeliverySlip slip={slip} color={slipColor} />}
       {revealing && <RevealCredentialDialog key={revealing.id} credential={revealing} onClose={() => setRevealing(null)} />}
     </PageShell>
   );
