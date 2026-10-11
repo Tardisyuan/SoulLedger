@@ -35,7 +35,10 @@ const mockSdk = {
     return id;
   }),
 };
-jest.mock("@sentry/react-native", () => mockSdk, { virtual: true });
+// Not `virtual`: the SDK is installed, and a virtual mock of a real module is registered under a different id
+// whenever jest's resolver answers differently for the two lookups -- a candidate (unproven) for the rare
+// run where `initCrashReporting` got the real SDK and returned false. crashReport.test.tsx mocks it the same way.
+jest.mock("@sentry/react-native", () => mockSdk);
 
 const emit = (event_id: string, response: unknown) => [...mockListeners].forEach((l) => l({ event_id }, response));
 
@@ -81,7 +84,11 @@ test("no DSN: nothing was sent, so the screen does not say it was", async () => 
 
 describe("with reporting on", () => {
   beforeAll(() => {
-    expect(initCrashReporting("https://k@o0.ingest.test/1", "soul")).toBe(true);
+    // The hook runs jest with --silent, so the warning that names the cause is thrown away: carry it in the assertion.
+    const warn = jest.spyOn(console, "warn").mockImplementation(() => {});
+    const started = initCrashReporting("https://k@o0.ingest.test/1", "soul");
+    expect({ started, why: warn.mock.calls.map((c) => c.map((x) => (x instanceof Error ? (x.stack ?? x.message) : String(x))).join(" ")) }).toEqual({ started: true, why: [] });
+    warn.mockRestore();
   });
 
   test("accepted by the server (2xx): the line appears", async () => {
