@@ -750,6 +750,22 @@ describe("已处理 · E-08d", () => {
     await waitFor(() => expect(apiMock.act).toHaveBeenCalledWith("posts", "h1", "restore", undefined));
   });
 
+  it("改过正文的帖子:抽屉里直接写出「编辑于 时间」,不靠悬停;没改过的没有", async () => {
+    asRole("social.moderate");
+    apiMock.handled.mockResolvedValue(page(handled));
+    apiMock.item.mockResolvedValue({ data: post({ id: "h1", content: "改过的全文", moderation_status: "HIDDEN", edited_at: "2026-09-19T02:00:00Z" }) });
+    renderPage();
+    fireEvent.click(segment("handled"));
+    const row = (await screen.findByText("被隐藏的帖子")).closest("tr") as HTMLElement;
+    fireEvent.click(within(row).getByRole("button", { name: "王五" }));
+    const drawer = await screen.findByRole("dialog");
+    await within(drawer).findByText("改过的全文");
+    const mark = drawer.querySelector("[data-edited]");
+    expect(mark).not.toBeNull();
+    expect(mark!.textContent).toMatch(/2026/);
+    expect(mark!.getAttribute("title")).toBeNull();
+  });
+
   it("时间范围:默认近 30 天(date_from 进请求),放宽到全部时不再带 date_from", async () => {
     asRole("social.moderate");
     apiMock.handled.mockResolvedValue(page(handled));

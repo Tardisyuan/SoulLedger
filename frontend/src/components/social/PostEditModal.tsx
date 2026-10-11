@@ -7,6 +7,7 @@ import { Button } from "@/src/components/ui/Button";
 import { TextAreaField, fieldControl } from "@/src/components/ui/Field";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { cn } from "@/lib/utils";
+import { mediaUrl } from "@soulledger/core/domain/postMedia";
 import { VISIBILITIES } from "./PostComposer";
 import type { Post } from "@soulledger/core/api";
 
@@ -68,6 +69,19 @@ export function PostEditModal({ post, onClose }: { post: Post; onClose: () => vo
             disabled={update.isPending}
             rows={4}
           />
+          {post.media?.length ? (
+            <div data-edit-media="" className="flex flex-col gap-1">
+              <ul className="flex flex-wrap gap-2">
+                {post.media.map((m) => (
+                  <li key={m.id} className="size-14 overflow-hidden bg-[oklch(var(--color-surface-2))]">
+                    {/* 裸 <img>:签名地址按请求鉴权,不经 next/image(同 PostMedia)。无任何控件。 */}
+                    <img src={mediaUrl(m.url)} alt="" className="h-full w-full object-cover" />
+                  </li>
+                ))}
+              </ul>
+              <p className="text-xs text-[oklch(var(--color-ink-muted))]">{t("social.edit_media_locked")}</p>
+            </div>
+          ) : null}
           <label className="flex flex-wrap items-center gap-2">
             <span className="text-xs text-[oklch(var(--color-ink-muted))]">{t("social.visibility_label")}</span>
             <select
