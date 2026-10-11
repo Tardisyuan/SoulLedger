@@ -151,7 +151,7 @@ export function LoginSecondStep({
           </Txt>
         </View>
 
-        <StepNotice state={state} />
+        <StepNotice state={state} recovery={mode !== "code"} />
 
         {mode === "code" ? (
           <DigitField
