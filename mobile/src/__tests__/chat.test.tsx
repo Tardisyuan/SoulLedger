@@ -33,7 +33,7 @@ import { formatStamp } from "../rules";
 import { ConversationScreen } from "../screens/conversation";
 import { FindSoulScreen, LettersScreen, hallOf } from "../screens/letters";
 import { SessionProvider } from "../session";
-import { PROFILE, heldReply, pressTab, stubApi, type Reply } from "./stubApi";
+import { PROFILE, heldReply, pressTab, stubApi, type Reply, resetLoginMemory } from "./stubApi";
 
 const mockNavigate = jest.fn();
 jest.mock("@react-navigation/native", () => {
@@ -222,6 +222,7 @@ function providers(chat: Chat, children: ReactNode) {
 
 beforeEach(() => {
   installMobilePlatform();
+  resetLoginMemory();
   mockNavigate.mockReset();
   jest.spyOn(Date, "now").mockReturnValue(NOW);
 });
@@ -827,7 +828,7 @@ describe("the outbox (real ChatProvider, Synapse double)", () => {
 
   afterEach(() => synapse.release());
 
-  function start(account = "SL-CN-000042") {
+  function start(account = "QU33Q9FW5F") {
     return render(
       <ChatProvider account={account}>
         <Probe />
@@ -878,7 +879,7 @@ describe("the outbox (real ChatProvider, Synapse double)", () => {
       await waitFor(() => expect(probe.availability).toBe("unavailable"));
       await act(async () => probe.send(conv(), "枯树那边风大"));
       const txn = probe.outbox[0].txnId;
-      expect(stored()).toMatchObject({ owner: "SL-CN-000042", items: [{ txnId: txn, body: "枯树那边风大" }] });
+      expect(stored()).toMatchObject({ owner: "QU33Q9FW5F", items: [{ txnId: txn, body: "枯树那边风大" }] });
       first.unmount();
 
       synapse.offline = false;
@@ -946,7 +947,7 @@ describe("the outbox (real ChatProvider, Synapse double)", () => {
 
     it("another account signing in finds nothing of the last one's, and its record replaces it", async () => {
       synapse.offline = true;
-      const first = start("SL-CN-000042");
+      const first = start("QU33Q9FW5F");
       await waitFor(() => expect(probe.availability).toBe("unavailable"));
       await act(async () => probe.send(conv(), "枯树那边风大"));
       first.unmount();
@@ -963,9 +964,9 @@ describe("the outbox (real ChatProvider, Synapse double)", () => {
 
     it("what is on disk is checked before it is sent: garbage and foreign shapes read as nothing", () => {
       persistentStore.set(OUTBOX_KEY, "{not json");
-      expect(readOutbox("SL-CN-000042").items).toEqual([]);
-      persistentStore.set(OUTBOX_KEY, JSON.stringify({ owner: "SL-CN-000042", items: [{ txnId: 1 }, { txnId: "t", conversationId: "c", roomId: "r", body: "b", ts: 1, state: "sending" }] }));
-      expect(readOutbox("SL-CN-000042").items).toEqual([{ txnId: "t", conversationId: "c", roomId: "r", body: "b", ts: 1, state: "queued", refused: undefined }]);
+      expect(readOutbox("QU33Q9FW5F").items).toEqual([]);
+      persistentStore.set(OUTBOX_KEY, JSON.stringify({ owner: "QU33Q9FW5F", items: [{ txnId: 1 }, { txnId: "t", conversationId: "c", roomId: "r", body: "b", ts: 1, state: "sending" }] }));
+      expect(readOutbox("QU33Q9FW5F").items).toEqual([{ txnId: "t", conversationId: "c", roomId: "r", body: "b", ts: 1, state: "queued", refused: undefined }]);
     });
   });
 });
@@ -998,7 +999,7 @@ describe("retrying the session: 5 → 10 → 20 → 30 → 30 s (fake timers)", 
   function start(session: Reply | Reply[]) {
     const calls = stubApi({ "/me/chat/conversations/": { status: 200, data: [] }, "/me/chat/session/": session });
     const view = render(
-      <ChatProvider account="SL-CN-000042">
+      <ChatProvider account="QU33Q9FW5F">
         <Probe />
       </ChatProvider>
     );

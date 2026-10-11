@@ -21,7 +21,7 @@ import { LIFE_OPEN_PREFIX } from "../screens/life";
 import { SessionProvider } from "../session";
 import { GUTTER_PT, space, themeFor, v3 } from "../theme";
 import { SectionError, Skeleton, ThemeContext, sectionTransitions } from "../ui";
-import { PROFILE, life, stubApi } from "./stubApi";
+import { PROFILE, life, stubApi, resetLoginMemory } from "./stubApi";
 
 const flat = (el: { props: { style?: unknown } }) => StyleSheet.flatten(el.props.style as never) as Record<string, unknown>;
 const secure = (SecureStore as unknown as { __store: Map<string, string> }).__store;
@@ -41,6 +41,7 @@ function wrap(children: ReactNode, civilization: string | null = "CHINESE") {
 
 beforeEach(() => {
   installMobilePlatform();
+  resetLoginMemory();
   jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockResolvedValue(false);
 });
 afterEach(() => jest.restoreAllMocks());

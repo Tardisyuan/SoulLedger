@@ -4,7 +4,7 @@
  * on every screen including the sign-in.
  */
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { render, screen } from "@testing-library/react-native";
+import { fireEvent, render, screen } from "@testing-library/react-native";
 import * as SecureStore from "expo-secure-store";
 import { StyleSheet } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -14,6 +14,7 @@ import { RootNavigator } from "../navigation";
 import { installMobilePlatform } from "../platform";
 import { SessionProvider } from "../session";
 import { NEUTRAL_PLAQUE, v3, v3Band } from "../theme";
+import { resetLoginMemory } from "./stubApi";
 
 const appJson = require("../../app.json") as { expo: { userInterfaceStyle?: string } };
 
@@ -50,6 +51,7 @@ function loginGround(): string | undefined {
 
 beforeEach(async () => {
   installMobilePlatform();
+  resetLoginMemory();
   secure.clear();
   await AsyncStorage.clear();
 });
@@ -66,6 +68,9 @@ it.each(["dark", "light"] as const)("system %s → v3's neutrals of that scheme,
   renderApp();
   await screen.findByTestId("login-submit");
   expect(loginGround()).toBe(v3[scheme].surface);
+  // 「登录」 is pressable once there is a full number and a password: only then is it the plaque button.
+  fireEvent.changeText(screen.getByTestId("login-soul-code"), "QU33Q9FW5F");
+  fireEvent.changeText(screen.getByTestId("login-password"), "x");
   expect(StyleSheet.flatten(screen.getByTestId("login-submit").props.style)).toMatchObject({
     backgroundColor: scheme === "dark" ? v3Band(NEUTRAL_PLAQUE.dark) : NEUTRAL_PLAQUE.light,
   });

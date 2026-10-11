@@ -17,7 +17,7 @@ import { installMobilePlatform, persistentStore } from "../platform";
 import { LIFE_OPEN_PREFIX } from "../screens/life";
 import { SessionProvider } from "../session";
 import { ON_PLAQUE, motion, v3, v3Band } from "../theme";
-import { PROFILE, life, stubApi } from "./stubApi";
+import { PROFILE, life, stubApi, resetLoginMemory } from "./stubApi";
 
 const mockWindow = { width: 390, height: 844, scale: 3, fontScale: 1 };
 jest.mock("react-native/Libraries/Utilities/useWindowDimensions", () => ({
@@ -60,6 +60,7 @@ const scrollTo = (y: number) =>
 
 beforeEach(async () => {
   installMobilePlatform();
+  resetLoginMemory();
   Object.assign(mockWindow, { fontScale: 1 });
   jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockResolvedValue(false);
   secure.clear();
@@ -124,7 +125,7 @@ describe("the copy-the-soul-code target", () => {
   /** The target's own box: the code's line plus the padding around it (no `hitSlop`, which Android drops outside a parent). */
   const target = () => {
     const box = flat(screen.getByTestId("copy-soul-code")) as Record<string, number>;
-    const line = Number(flat(screen.getByText(PROFILE.soul_code)).lineHeight);
+    const line = Number(flat(screen.getByText("QU3 3Q9F W5F")).lineHeight);
     return { box, line, height: (box.paddingTop ?? box.paddingVertical) + line + (box.paddingBottom ?? box.paddingVertical) };
   };
 

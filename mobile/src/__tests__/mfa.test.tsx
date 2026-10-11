@@ -18,7 +18,7 @@ import { RootNavigator, navigationRef } from "../navigation";
 import { installMobilePlatform, persistentStore, sessionStore } from "../platform";
 import { PUSH_TOKEN_KEY } from "../push";
 import { SessionProvider } from "../session";
-import { PROFILE, life, stubApi, type Reply } from "./stubApi";
+import { PROFILE, life, stubApi, type Reply, resetLoginMemory } from "./stubApi";
 
 jest.mock("expo-clipboard", () => ({ setStringAsync: jest.fn(async () => true) }));
 // The cache directory and the share sheet are doubles (jest.setup.js): `__files` is what the cache holds right now.
@@ -28,12 +28,12 @@ const sharing = jest.requireMock("expo-sharing") as { isAvailableAsync: jest.Moc
 const secure = (SecureStore as unknown as { __store: Map<string, string> }).__store;
 
 const SECRET = "JBSWY3DPEHPK3PXPQK7M2RTAJBSWY3DP";
-const OTPAUTH = `otpauth://totp/SoulLedger%3ASL-CN-000042?secret=${SECRET}&issuer=SoulLedger&algorithm=SHA1&digits=6&period=30`;
+const OTPAUTH = `otpauth://totp/SoulLedger%3AQU33Q9FW5F?secret=${SECRET}&issuer=SoulLedger&algorithm=SHA1&digits=6&period=30`;
 const CODES = ["7kq4-m2xd", "p9tr-3hwe", "b6nc-qx8l", "v2jf-k7sa", "d4gm-r9up", "h8zt-5wqc", "l3xe-n6kb", "s7pv-2djr", "y5cw-h4mt", "f9aq-8eln"];
 const OFF = { enabled: false, confirmed_at: null, last_used_at: null, last_used_method: "", recovery_codes_remaining: 0 };
 const ON = { enabled: true, confirmed_at: "2026-10-11T09:12:00Z", last_used_at: "2026-10-11T20:40:00Z", last_used_method: "totp", recovery_codes_remaining: 8 };
-const PENDING = { mfa_required: true, pending_token: "pending-opaque-abc", soul_code: "SL-CN-000042", home_tenant: PROFILE.home_tenant };
-const TOKENS = { access: "A", refresh: "R", soul_code: "SL-CN-000042", account: PROFILE.account };
+const PENDING = { mfa_required: true, pending_token: "pending-opaque-abc", soul_code: "QU33Q9FW5F", home_tenant: PROFILE.home_tenant };
+const TOKENS = { access: "A", refresh: "R", soul_code: "QU33Q9FW5F", account: PROFILE.account };
 const VERIFY = "POST /soul-auth/mfa/verify/";
 
 function renderApp() {
@@ -71,6 +71,7 @@ const logs: unknown[][] = [];
 const spies: jest.SpyInstance[] = [];
 beforeEach(async () => {
   installMobilePlatform();
+  resetLoginMemory();
   secure.clear();
   sessionStore.remove("soulledger_access");
   await AsyncStorage.clear();
@@ -134,14 +135,14 @@ describe("the pure parts", () => {
   });
 
   it("the device token store keeps one value per soul code, in the secure store only", async () => {
-    rememberDevice("sl-cn-000042", "DEV1");
+    rememberDevice("qu33q9fw5f", "DEV1");
     rememberDevice("SL-CN-000043", "DEV2");
-    expect(deviceTokenFor(" SL-CN-000042 ")).toBe("DEV1");
+    expect(deviceTokenFor(" QU33Q9FW5F ")).toBe("DEV1");
     expect(deviceTokenFor("SL-CN-000043")).toBe("DEV2");
-    expect(JSON.parse(secure.get(MFA_DEVICES_KEY) ?? "{}")).toEqual({ "SL-CN-000042": "DEV1", "SL-CN-000043": "DEV2" });
+    expect(JSON.parse(secure.get(MFA_DEVICES_KEY) ?? "{}")).toEqual({ "QU33Q9FW5F": "DEV1", "SL-CN-000043": "DEV2" });
     expect(await AsyncStorage.getAllKeys()).toEqual([]);
-    forgetDevice("SL-CN-000042");
-    expect(deviceTokenFor("SL-CN-000042")).toBeUndefined();
+    forgetDevice("QU33Q9FW5F");
+    expect(deviceTokenFor("QU33Q9FW5F")).toBeUndefined();
     expect(deviceTokenFor("SL-CN-000043")).toBe("DEV2");
     secure.set(MFA_DEVICES_KEY, "{not json");
     expect(deviceTokenFor("SL-CN-000043")).toBeUndefined(); // an unreadable store is an empty one
@@ -161,7 +162,7 @@ describe("settings: 账号安全", () => {
     expect(screen.getByTestId("open-change-password")).toBeTruthy();
     // 页底保留灵魂编号。
     expect(screen.getByTestId("settings-soul-code")).toBeTruthy();
-    expect(screen.getByText(PROFILE.soul_code)).toBeTruthy();
+    expect(screen.getByText("QU3 3Q9F W5F")).toBeTruthy();
     await act(async () => {}); // the page's permission read settles before the test ends
   });
 
@@ -597,7 +598,7 @@ describe("sign-in, second step", () => {
       ...routes,
     });
     renderApp();
-    fireEvent.changeText(await screen.findByTestId("login-soul-code"), "SL-CN-000042");
+    fireEvent.changeText(await screen.findByTestId("login-soul-code"), "QU33Q9FW5F");
     fireEvent.changeText(screen.getByTestId("login-password"), "my-long-password");
     fireEvent.press(screen.getByTestId("login-submit"));
     await screen.findByTestId("login-second-step");
@@ -607,9 +608,9 @@ describe("sign-in, second step", () => {
   it("the password alone gives no session: the app stays signed out and the password is not kept", async () => {
     await toSecondStep();
     expect(secure.get(REFRESH_TOKEN_KEY) || null).toBeNull();
-    expect(navigationRef.getRootState()?.routeNames).toEqual(["Login", "ForgotPassword", "MfaLost"]);
+    expect(navigationRef.getRootState()?.routeNames).toEqual(["Login", "ForgotPassword", "MfaLost", "ScanCode"]);
     expect(screen.getByText(/灵魂编号/)).toBeTruthy();
-    expect(screen.getByText("SL-CN-000042")).toBeTruthy();
+    expect(screen.getByText("QU3 3Q9F W5F")).toBeTruthy();
     expect(screen.getByText("输满 6 位自动提交。")).toBeTruthy();
     await expectNothingKept(["pending-opaque-abc", "my-long-password"]);
   });
@@ -690,7 +691,7 @@ describe("sign-in, second step", () => {
     expect(secure.get(REFRESH_TOKEN_KEY) || null).toBeNull(); // a 401 here is a timed-out step, not a dead session
     fireEvent.press(screen.getByTestId("login-verify"));
     await screen.findByTestId("login-submit");
-    expect(screen.getByTestId("login-soul-code").props.value).toBe("SL-CN-000042");
+    expect(screen.getByTestId("login-soul-code").props.value).toBe("QU33Q9FW5F");
     expect(screen.getByTestId("login-password").props.value).toBe("");
   });
 
@@ -751,42 +752,42 @@ describe("sign-in, second step", () => {
     fireEvent.changeText(screen.getByTestId("login-code"), "482913");
     await screen.findByTestId("profile-card");
     expect(bodies(calls, VERIFY)).toEqual([{ pending_token: "pending-opaque-abc", code: "482913", remember_device: true }]);
-    expect(deviceTokenFor("SL-CN-000042")).toBe("device-opaque-xyz");
+    expect(deviceTokenFor("QU33Q9FW5F")).toBe("device-opaque-xyz");
     expect(await AsyncStorage.getAllKeys()).not.toContain(MFA_DEVICES_KEY);
   });
 
   it("a remembered phone is sent with the password and skips the second step", async () => {
-    rememberDevice("SL-CN-000042", "device-opaque-xyz");
+    rememberDevice("QU33Q9FW5F", "device-opaque-xyz");
     const calls = stubApi({
       "/soul-auth/login/": { status: 200, data: TOKENS },
       "/me/": { status: 200, data: PROFILE },
       "/me/life/": { status: 200, data: life(1) },
     });
     renderApp();
-    fireEvent.changeText(await screen.findByTestId("login-soul-code"), "sl-cn-000042");
+    fireEvent.changeText(await screen.findByTestId("login-soul-code"), "qu33q9fw5f");
     fireEvent.changeText(screen.getByTestId("login-password"), "my-long-password");
     fireEvent.press(screen.getByTestId("login-submit"));
     await screen.findByTestId("profile-card");
     expect(bodies(calls, "POST /soul-auth/login/")).toEqual([
-      { soul_code: "sl-cn-000042", password: "my-long-password", device_token: "device-opaque-xyz" },
+      { soul_code: "QU33Q9FW5F", password: "my-long-password", device_token: "device-opaque-xyz" },
     ]);
   });
 
   it("a remembered phone the server no longer honours is forgotten at once", async () => {
-    rememberDevice("SL-CN-000042", "device-opaque-xyz");
+    rememberDevice("QU33Q9FW5F", "device-opaque-xyz");
     await toSecondStep();
-    expect(deviceTokenFor("SL-CN-000042")).toBeUndefined();
+    expect(deviceTokenFor("QU33Q9FW5F")).toBeUndefined();
   });
 
   it("a soul code without two-step sends no device token", async () => {
     rememberDevice("SL-CN-000099", "someone-elses");
     const calls = stubApi({ "/soul-auth/login/": { status: 200, data: TOKENS }, "/me/": { status: 200, data: PROFILE }, "/me/life/": { status: 200, data: life(1) } });
     renderApp();
-    fireEvent.changeText(await screen.findByTestId("login-soul-code"), "SL-CN-000042");
+    fireEvent.changeText(await screen.findByTestId("login-soul-code"), "QU33Q9FW5F");
     fireEvent.changeText(screen.getByTestId("login-password"), "my-long-password");
     fireEvent.press(screen.getByTestId("login-submit"));
     await screen.findByTestId("profile-card");
-    expect(bodies(calls, "POST /soul-auth/login/")).toEqual([{ soul_code: "SL-CN-000042", password: "my-long-password" }]);
+    expect(bodies(calls, "POST /soul-auth/login/")).toEqual([{ soul_code: "QU33Q9FW5F", password: "my-long-password" }]);
   });
 
   it("‹ goes back to the password as another account", async () => {
@@ -801,7 +802,7 @@ describe("手机和恢复码都没有了", () => {
   it("names the hall and the soul code from step 1's answer, says the email cannot do it, and offers no way to write", async () => {
     stubApi({ "/soul-auth/login/": { status: 200, data: PENDING } });
     renderApp();
-    fireEvent.changeText(await screen.findByTestId("login-soul-code"), "SL-CN-000042");
+    fireEvent.changeText(await screen.findByTestId("login-soul-code"), "QU33Q9FW5F");
     fireEvent.changeText(screen.getByTestId("login-password"), "my-long-password");
     fireEvent.press(screen.getByTestId("login-submit"));
     fireEvent.press(await screen.findByTestId("lost-phone"));
@@ -809,7 +810,7 @@ describe("手机和恢复码都没有了", () => {
     expect(route()).toBe("MfaLost");
     expect(screen.getByText("请本殿官员帮你关闭")).toBeTruthy();
     expect(screen.getByTestId("lost-hall").props.children).toBe("第五殿");
-    expect(screen.getByTestId("lost-code").props.children).toBe("SL-CN-000042");
+    expect(screen.getByTestId("lost-code").props.children).toBe("QU3 3Q9F W5F");
     expect(screen.getByText("联系邮箱不能用来关闭两步验证。")).toBeTruthy();
     expect(screen.getByText("和找回密码收不到验证码时一样，去找本殿官员就行。")).toBeTruthy();
     expect(screen.queryByText(/写信/)).toBeNull();
@@ -842,7 +843,7 @@ describe("changing the password signs the other devices out", () => {
 describe("存为文件", () => {
   
   it("the file is named for the app and the day, and says what it is before the codes; nothing else about the soul", () => {
-    expect(recoveryFileName("SL-CN-000042")).toBe("soulledger-recovery-SL-CN-000042.txt");
+    expect(recoveryFileName("QU33Q9FW5F")).toBe("soulledger-recovery-QU33Q9FW5F.txt");
     // Not localised, no date; nothing unsafe survives (a slash, a colon, a space, a non-ASCII letter).
     expect(recoveryFileName("A/B:C D灵")).toBe("soulledger-recovery-A_B_C_D_.txt");
     const body = recoveryFileBody("HEADER", "Soul code: S-1", CODES);
@@ -912,7 +913,7 @@ describe("存为文件", () => {
     // Named for this life's soul code, as the profile has it.
     expect(sharing.shareAsync.mock.calls[0][0]).toBe(`file:///cache/soulledger-recovery-${PROFILE.soul_code}.txt`);
     CODES.forEach((c) => expect(body).toContain(c));
-    expect(body).toContain(PROFILE.soul_code);
+    expect(body).toContain("QU3 3Q9F W5F");
     expect(body).not.toContain(PROFILE.name);
     expect(body.split("\n")[0]).toBe("灵魂簿恢复码：手机丢了或换了，用恢复码登录。每个只能用一次。请存在这部手机以外的地方。");
     expect(files.size).toBe(0);

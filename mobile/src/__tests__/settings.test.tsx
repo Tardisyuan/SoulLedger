@@ -19,7 +19,7 @@ import { RootNavigator, navigationRef } from "../navigation";
 import { installMobilePlatform, persistentStore } from "../platform";
 import { PRIMER_SEEN_KEY, PUSH_TOKEN_KEY, landingOf, registerDevice } from "../push";
 import { SessionProvider } from "../session";
-import { PROFILE, application, life, pressTab, settleTabs, stubApi, type Reply } from "./stubApi";
+import { PROFILE, application, life, pressTab, settleTabs, stubApi, type Reply, resetLoginMemory } from "./stubApi";
 
 type NotificationsDouble = {
   status: string;
@@ -74,6 +74,7 @@ const route = () => navigationRef.getCurrentRoute();
 
 beforeEach(async () => {
   installMobilePlatform();
+  resetLoginMemory();
   secure.clear();
   await AsyncStorage.clear();
   for (const key of [PUSH_TOKEN_KEY, PRIMER_SEEN_KEY, LOCALE_COOKIE]) persistentStore.remove(key);
