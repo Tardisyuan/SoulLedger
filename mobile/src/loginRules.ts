@@ -13,8 +13,11 @@ import { SOUL_CODE_LENGTH, acceptSoulCodeInput, type SoulCodeInputResult, type S
  * else (a paste over a selection, a replace) is read as a paste into an empty box.
  */
 export function soulCodeStep(prev: string, next: string): SoulCodeInputResult {
-  if (next.startsWith(prev)) return acceptSoulCodeInput(prev, next.slice(prev.length));
-  if (prev.startsWith(next)) return { value: next, problem: null };
+  // Compared without case: the box holds capitals, but a hardware keyboard (or a keyboard that ignores
+  // autoCapitalize) sends the field's own lower-case text back, and one wrong letter then read as a paste.
+  const [was, now] = [prev.toUpperCase(), next.toUpperCase()];
+  if (now.startsWith(was)) return acceptSoulCodeInput(prev, next.slice(prev.length));
+  if (was.startsWith(now)) return { value: prev.slice(0, next.length), problem: null };
   const replaced = acceptSoulCodeInput("", next);
   // A refused replacement leaves the box as it was.
   return replaced.problem ? { value: prev, problem: replaced.problem } : replaced;

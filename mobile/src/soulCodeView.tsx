@@ -74,6 +74,9 @@ export function SoulCodeField({
   const off = !editable;
 
   const change = (text: string) => {
+    // The box is controlled: after a refused character React puts the old text back, and iOS reports that as a
+    // change too. Nothing was typed, so the message about the refused character stays (iPhone 17, 2026-10-11).
+    if (text.toUpperCase() === value) return;
     const step = soulCodeStep(value, text);
     setProblem(step.problem);
     if (step.value !== value) onChange(step.value);
@@ -178,7 +181,9 @@ const styles = StyleSheet.create({
   digits: { fontFamily: family.mono[500], fontSize: 22, lineHeight: 30, letterSpacing: 1.8 },
   groups: { letterSpacing: 1 },
   caret: { width: 2, height: 26, marginLeft: -12 },
-  hidden: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, opacity: 0, fontSize: 22 },
+  // Transparent text, NOT opacity 0: iOS does not hit-test a view whose alpha is 0, so the box could not be
+  // tapped into at all (iPhone 17 simulator, 2026-10-11; jest presses the node directly and cannot see it).
+  hidden: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, color: "transparent", fontSize: 22 },
   scan: { minHeight: 48, minWidth: 48, paddingHorizontal: 12, flexDirection: "row", alignItems: "center", gap: 8, borderLeftWidth: 1 },
   scanText: { letterSpacing: 0 },
   problem: { fontFamily: family.ui[600] },

@@ -93,4 +93,10 @@ describe("classifyCredentialError", () => {
   ] as const)("%j -> %s", (error, kind) => {
     expect(classifyCredentialError(error)).toBe(kind);
   });
+
+  it("reads one wrong letter as a letter even when the field sends its text back in lower case", () => {
+    expect(soulCodeStep("QU33Q", "qu33qo")).toEqual({ value: "QU33Q", problem: { kind: "bad_char", char: "O" } });
+    expect(soulCodeStep("QU33Q", "qu33q9")).toEqual({ value: "QU33Q9", problem: null });
+    expect(soulCodeStep("QU33Q", "qu33")).toEqual({ value: "QU33", problem: null });
+  });
 });
