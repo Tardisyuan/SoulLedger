@@ -77,6 +77,11 @@ MESSAGES = {
         "password_help_requested_moderator": {"title": "Dbh · Wehem Sekhem", "body": "Wa Dbh Wehem Sekhem En Aq «{{username}}» Em Aq. Maa Tepy; Er Khet: Dbh Sab Hery Er Wehem Sekhem."},
         "soul_inbox_assigned": {"title": "Sesh Hab Er-Ek", "body": "{{soul}}: Sesh Hab In {{by}} Er-Ek."},
         "judgment_reassign_requested": {"title": "Dbh Hab Ky", "body": "{{by}}: Dbh Hab Ky Wedja En {{soul}}"},
+        "dispatch_proposed": {"title": "Dbh Hab-Ba Iyi", "body": "{{source}}: Dbh Hab-Ba Ba «{{soul}}» Er Wesekhet-Ek. Er Hesy-Ek."},
+        "dispatch_approved": {"title": "Dbh Hab-Ba Hesy Seth", "body": "{{target}}: Hesy Dbh Hab-Ba Ba «{{soul}}» Em Wesekhet-Ek."},
+        "dispatch_rejected": {"title": "Dbh Hab-Ba Khesef Seth", "body": "{{target}}: Khesef Dbh Hab-Ba Ba «{{soul}}» Em Wesekhet-Ek. Khet Khesef: {{reason}}"},
+        "dispatch_rejected_bare": {"title": "Dbh Hab-Ba Khesef Seth", "body": "{{target}}: Khesef Dbh Hab-Ba Ba «{{soul}}» Em Wesekhet-Ek."},
+        "dispatch_cancelled": {"title": "Dbh Hab-Ba Sehen Seth Em Tepy Iri", "body": "{{source}}: Sehen Dbh Hab-Ba Ba «{{soul}}». Khet Sehen: {{reason}}"},
         "dispatch_return_blocked": {
             "title": "Ankh Er Taui Khesef",
             "body": "{{soul}}: Ankh Er Taui Khesef In Wedja {{count}}. Wedja Pehwy, Ankh Er Taui.",
