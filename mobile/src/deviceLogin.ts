@@ -11,6 +11,7 @@
  * one per call, so turning it on again revokes the old one first.
  */
 import { soulApi } from "@soulledger/core/api/soul";
+import { BIO_KEY } from "./loginRules";
 import { platform } from "@soulledger/core/platform";
 import * as LocalAuthentication from "expo-local-authentication";
 import * as SecureStore from "expo-secure-store";
@@ -18,7 +19,7 @@ import * as SecureStore from "expo-secure-store";
 import { classifyCredentialError, type CredentialFailure } from "./loginRules";
 
 export const ACCOUNT_KEY = "soulledger.login.account";
-export const BIO_KEY = "soulledger.login.bio";
+export { BIO_KEY };
 export const ASKED_PREFIX = "soulledger.login.bio_asked.";
 const CREDENTIAL_KEY = "soulledger_device_login";
 const SERVICE = "soulledger.devicelogin";

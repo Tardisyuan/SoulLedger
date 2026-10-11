@@ -3506,7 +3506,8 @@
       "under_hour_consequence": "剩余不足 1 小时 · 过期后须由官员重置",
       "expired_consequence": "已过期 · 须由官员重置",
       "new_hint": "至少 8 位",
-      "success_others_out": "密码已修改,其他设备上的登录已退出"
+      "success_others_out": "密码已修改,其他设备上的登录已退出",
+      "current_password": "当前密码"
     },
     "forgot_password": {
       "link": "忘记密码",
@@ -3737,8 +3738,10 @@
     },
     "logout": {
       "title": "退出登录？",
-      "body": "再次登录需要你的灵魂编号与新设的密码。初始密码已失效。",
-      "cancel": "留在簿中"
+      "body": "这部手机会记住你的编号，下次只要输入密码。",
+      "cancel": "留在簿中",
+      "body_bio": "这部手机会记住你的编号，下次用{{bio}}就能登录，也可以输入密码。",
+      "forget_hint": "要让这部手机忘掉编号，在登录页点「换一个账号」。"
     },
     "form_notes": {
       "DIVINE": "福报盛，然有尽时。",

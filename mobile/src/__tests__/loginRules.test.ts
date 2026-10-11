@@ -9,6 +9,7 @@ import {
   lapseOfReason,
   shouldAskBio,
   shouldAutoPrompt,
+  logoutBody,
   soulCodeStep,
 } from "../loginRules";
 
@@ -98,5 +99,11 @@ describe("classifyCredentialError", () => {
     expect(soulCodeStep("QU33Q", "qu33qo")).toEqual({ value: "QU33Q", problem: { kind: "bad_char", char: "O" } });
     expect(soulCodeStep("QU33Q", "qu33q9")).toEqual({ value: "QU33Q9", problem: null });
     expect(soulCodeStep("QU33Q", "qu33")).toEqual({ value: "QU33", problem: null });
+  });
+
+  it("the sign-out sheet says what the next sign-in takes: the password, or the face / finger", () => {
+    expect(logoutBody(null)).toEqual({ key: "soul_app.logout.body", bioKey: null });
+    expect(logoutBody("face")).toEqual({ key: "soul_app.logout.body_bio", bioKey: "soul_app.bio.face" });
+    expect(logoutBody("finger")).toEqual({ key: "soul_app.logout.body_bio", bioKey: "soul_app.bio.finger" });
   });
 });

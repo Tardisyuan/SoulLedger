@@ -501,7 +501,9 @@ export function ChangePasswordScreen() {
   const voluntary = state.status === "signedIn";
   const expiresAt = state.status === "mustChangePassword" ? state.expiresAt : null;
   const field = error ? FIELD_OF[error.key] : undefined;
-  const fieldError = (name: PasswordField) => (error && field === name ? t(error.key, error.params) : null);
+  // Someone who changed the initial password long ago is typing their current one (Design 第二十二批).
+  const said = (key: string) => (voluntary && key === "soul_app.errors.invalid_old_password" ? "profile.password_old_wrong" : key);
+  const fieldError = (name: PasswordField) => (error && field === name ? t(said(error.key), error.params) : null);
 
   const submit = async () => {
     const problem = newPasswordProblem(newPassword, confirm);
@@ -526,7 +528,7 @@ export function ChangePasswordScreen() {
         <View style={styles.fields}>
           <Input
             testID="old-password"
-            label={t("soul_app.change_password.old_password")}
+            label={t(voluntary ? "soul_app.change_password.current_password" : "soul_app.change_password.old_password")}
             value={oldPassword}
             onChangeText={setOld}
             secureTextEntry

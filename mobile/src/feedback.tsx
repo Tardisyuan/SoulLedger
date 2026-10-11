@@ -19,6 +19,8 @@ import { Easing } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Icon } from "./emblems";
+import { BIO_KEY, logoutBody } from "./loginRules";
+import { platform } from "@soulledger/core/platform";
 import { useI18n } from "./i18n";
 import { radius } from "./theme";
 import { Button, GUTTER, Txt, useReducedMotion, useReducedMotionDurations, useTheme } from "./ui";
@@ -90,6 +92,8 @@ export function LogoutProvider({ children, onConfirm }: { children: ReactNode; o
   const [visible, setVisible] = useState(false);
   const ask = useCallback(() => setVisible(true), []);
   const cancel = () => setVisible(false);
+  // Read when the sheet is drawn: the flag changes in Settings while this provider stays mounted.
+  const body = logoutBody(visible ? platform().persistent.get(BIO_KEY) : null);
   return (
     <LogoutContext.Provider value={ask}>
       {children}
@@ -104,8 +108,11 @@ export function LogoutProvider({ children, onConfirm }: { children: ReactNode; o
             <Txt variant="title">
               {tr("soul_app.logout.title")}
             </Txt>
-            <Txt variant="caption" tone="muted">
-              {tr("soul_app.logout.body")}
+            <Txt testID="logout-body" variant="caption" tone="muted">
+              {body.bioKey ? tr(body.key, { bio: tr(body.bioKey) }) : tr(body.key)}
+            </Txt>
+            <Txt testID="logout-forget-hint" variant="caption" tone="muted">
+              {tr("soul_app.logout.forget_hint")}
             </Txt>
             <View style={styles.sheetButtons}>
               <Button
