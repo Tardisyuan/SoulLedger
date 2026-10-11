@@ -6,8 +6,8 @@
  *   SoulCodeField  the sign-in box: a hidden TextInput holds the raw characters, the groups are drawn over it
  */
 import { SOUL_CODE_LENGTH, formatSoulCode, groupSoulCode, spellSoulCode } from "@soulledger/core/domain/soulCode";
-import { useState, type Ref } from "react";
-import { Pressable, StyleSheet, TextInput, View } from "react-native";
+import { useRef, useState, type Ref } from "react";
+import { Platform, Pressable, StyleSheet, TextInput, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
 
 import { family } from "./fonts";
@@ -72,15 +72,23 @@ export function SoulCodeField({
     if (scanned) setProblem(null);
   }
   const off = !editable;
+  // What this box last accepted, and the `value` it was accepted under. The parent can also set the value (a scan,
+  // 换一个账号): a prop that moved since then wins.
+  const latest = useRef({ under: value, accepted: value });
 
   const change = (text: string) => {
     // The box is controlled: after a refused character React puts the old text back, and iOS reports that as a
     // change too. Nothing was typed, so the message about the refused character stays (iPhone 17, 2026-10-11).
-    if (text.toUpperCase() === value) return;
-    const step = soulCodeStep(value, text);
+    // Against what was last accepted, not the `value` prop: a fast typist's next change arrives before the parent
+    // has re-rendered, and against the stale prop two keystrokes looked like a two-character paste (Android, 2026-10-11).
+    if (latest.current.under !== value) latest.current = { under: value, accepted: value };
+    const before = latest.current.accepted;
+    if (text.toUpperCase() === before) return;
+    const step = soulCodeStep(before, text);
+    latest.current.accepted = step.value;
     setProblem(step.problem);
-    if (step.value !== value) onChange(step.value);
-    if (step.value.length === SOUL_CODE_LENGTH && value.length < SOUL_CODE_LENGTH) onComplete();
+    if (step.value !== before) onChange(step.value);
+    if (step.value.length === SOUL_CODE_LENGTH && before.length < SOUL_CODE_LENGTH) onComplete();
   };
 
   const borderColor = problem ? theme.neg : focused ? theme.ink : theme.inkSubtle;
@@ -124,7 +132,9 @@ export function SoulCodeField({
               onBlur={() => setFocused(false)}
               // Soul codes are ASCII. With a Chinese (pinyin) keyboard active, letters otherwise go into an
               // uncommitted composition that is dropped when focus moves to the password field.
-              keyboardType="ascii-capable"
+              // Android has no "ascii-capable"; "visible-password" is its keyboard without the suggestion strip, which
+              // otherwise offers words ("QUEEN") for a code that is not one.
+              keyboardType={Platform.OS === "android" ? "visible-password" : "ascii-capable"}
               autoCapitalize="characters"
               autoCorrect={false}
               spellCheck={false}
@@ -183,7 +193,9 @@ const styles = StyleSheet.create({
   caret: { width: 2, height: 26, marginLeft: -12 },
   // Transparent text, NOT opacity 0: iOS does not hit-test a view whose alpha is 0, so the box could not be
   // tapped into at all (iPhone 17 simulator, 2026-10-11; jest presses the node directly and cannot see it).
-  hidden: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, color: "transparent", fontSize: 22 },
+  // Android is the other way round: it does hit-test an alpha-0 view, and it drew the "transparent" text anyway,
+  // on top of the groups (Medium_Phone emulator, 2026-10-11). So: transparent text on iOS, alpha 0 on Android.
+  hidden: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, color: "transparent", fontSize: 22, opacity: Platform.OS === "android" ? 0 : 1 },
   scan: { minHeight: 48, minWidth: 48, paddingHorizontal: 12, flexDirection: "row", alignItems: "center", gap: 8, borderLeftWidth: 1 },
   scanText: { letterSpacing: 0 },
   problem: { fontFamily: family.ui[600] },
