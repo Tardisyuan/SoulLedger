@@ -86,7 +86,7 @@ export function CancelDispatchButton({
             </Button>
             <Button
               type="button"
-              variant="secondary"
+              variant="primary"
               onClick={submit}
               loading={cancel.isPending}
               disabled={!reason.trim()}
