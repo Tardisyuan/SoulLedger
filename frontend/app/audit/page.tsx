@@ -55,6 +55,16 @@ const HALL_DESCRIPTIONS: [prefix: string, key: string][] = [
   ["hall assistant switch ", "audit.descriptions.hall_assistant_switch"],
 ];
 
+/** `changes.action` values that have a name in the lexicon; any other value stays unshown, as before. */
+const CHANGE_ACTION_KEYS: Record<string, string> = {
+  "credentials.print_slip": "soul_accounts.credentials.print_slip",
+};
+
+function changeActionLabels(g: AuditGroup, t: (key: string) => string): string[] {
+  const keys = g.entries.map((e) => CHANGE_ACTION_KEYS[String(e.changes?.action ?? "")]).filter(Boolean);
+  return Array.from(new Set(keys)).map((k) => t(k));
+}
+
 function describeAudit(description: string, t: (key: string, params?: Record<string, string>) => string): string {
   for (const [prefix, key] of HALL_DESCRIPTIONS) {
     if (description.startsWith(prefix) && description.length > prefix.length) {
@@ -295,6 +305,9 @@ export default function AuditPage() {
               {/* 02 档正是 ID / 时间戳 / 资源标识那一档。`mt-0.5`(2px) 不在节奏
                   阶梯上，收到最小的一格 `mt-1`(4px)。 */}
               <div className="font-mono text-xs text-[oklch(var(--color-ink-tertiary))] mt-1">{g.resourceDetail}</div>
+              {changeActionLabels(g, t).map((label) => (
+                <div key={label} className="text-xs text-[oklch(var(--color-ink-secondary))] mt-1">{label}</div>
+              ))}
             </div>
           </TreeName>
         );
