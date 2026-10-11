@@ -528,6 +528,9 @@ const PROPER_NAMES = [
   "IP", "JPEG", "MB", "PNG", "WebP", "Webhook", "MODERATOR", "A", "N",
   // 词表第十三节:厂商名原样引用(兼容写 Mi OpenAI),不再用 Iru Wa / Iru Sen(要看下拉顺序才读得懂)。
   "Anthropic", "OpenAI",
+  // 第十九批(Design):Authenticator 是去应用商店搜索的关键词 —— 译成 egy 就搜不到了,所以按专名原样登记。
+  // 规则:凡是「要用户照抄去别处输入的词」才算专名;不是随手把英文词放进来的口子。
+  "Authenticator",
   // 同一条规则用于「供应商」区块的平台下拉(画布 provider-platforms,2026-09-30):厂商 / 产品名原样。
   "DeepSeek", "Qwen", "Kimi", "Doubao", "Gemini", "SiliconFlow", "OpenRouter", "Ollama",
 ];
