@@ -492,7 +492,7 @@ describe("面容 / 指纹 login", () => {
     storeSoulTokens({ access: "A1", refresh: "R1" });
     script({
       "/me/device-login/": [{ status: 201, data: { credential: "C1" } }],
-      "/me/device-login/revoke/": [{ status: 204 }],
+      "/soul-auth/device-login/revoke/": [{ status: 204 }],
       "/me/password/": [{ status: 200, data: { access: "A2", refresh: "R2" } }, { status: 200, data: { access: "A3", refresh: "R3" } }],
     });
     expect(await soulApi.enableDeviceLogin("pw")).toBe("C1");

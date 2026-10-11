@@ -296,7 +296,7 @@ describe("B1 · the phone remembers the account", () => {
 
   it("「换一个账号」 asks first; confirming forgets the number, closes 面容 login at the server, and shows the empty form", async () => {
     remembered({ bio: true });
-    const calls = stubApi({ "/me/device-login/revoke/": { status: 204 } });
+    const calls = stubApi({ "/soul-auth/device-login/revoke/": { status: 204 } });
     await renderApp();
     expect(screen.getByTestId("login-bio")).toBeTruthy(); // 面容 is on: its button, not the password
     fireEvent.press(screen.getByTestId("login-switch"));
@@ -310,7 +310,7 @@ describe("B1 · the phone remembers the account", () => {
     expect(rememberedAccount()).toBeNull();
     expect(persistentStore.get(BIO_KEY)).toBeNull();
     expect(secureMod.__guarded.size).toBe(0);
-    await waitFor(() => expect(calls.find((c) => c.url === "/me/device-login/revoke/")?.body).toEqual({ credential: CRED }));
+    await waitFor(() => expect(calls.find((c) => c.url === "/soul-auth/device-login/revoke/")?.body).toEqual({ credential: CRED }));
   });
 
   it("backing out of 「换一个账号」 changes nothing", async () => {
@@ -473,12 +473,12 @@ describe("B2 · the row under 设置 › 账号安全", () => {
   it("walking away from the system check turns nothing on", async () => {
     bioMod.__state.enrolled = true;
     secureMod.__auth.error = new Error("User canceled the operation.");
-    const calls = await openSettings({ "/me/device-login/": { status: 201, data: { credential: CRED } }, "/me/device-login/revoke/": { status: 204 } });
+    const calls = await openSettings({ "/me/device-login/": { status: 201, data: { credential: CRED } }, "/soul-auth/device-login/revoke/": { status: 204 } });
     fireEvent.press(screen.getByTestId("bio-row"));
     fireEvent.changeText(await screen.findByTestId("bio-password"), "right-one");
     fireEvent.press(screen.getByTestId("bio-enable-next"));
     // the credential the server issued is given back at once
-    await waitFor(() => expect(calls.find((c) => c.url === "/me/device-login/revoke/")?.body).toEqual({ credential: CRED }));
+    await waitFor(() => expect(calls.find((c) => c.url === "/soul-auth/device-login/revoke/")?.body).toEqual({ credential: CRED }));
     await waitFor(() => expect(screen.queryByTestId("bio-enable-sheet")).toBeNull());
     expect(persistentStore.get(BIO_KEY)).toBeNull();
     expect(screen.getByTestId("bio-row-state")).toHaveTextContent("关");
@@ -488,12 +488,12 @@ describe("B2 · the row under 设置 › 账号安全", () => {
     bioMod.__state.enrolled = true;
     persistentStore.set(BIO_KEY, "face");
     secureMod.__guarded.set("soulledger_device_login", CRED);
-    const calls = await openSettings({ "/me/device-login/revoke/": { status: 204 } });
+    const calls = await openSettings({ "/soul-auth/device-login/revoke/": { status: 204 } });
     expect(screen.getByTestId("bio-row").props.accessibilityState).toMatchObject({ checked: true });
     fireEvent.press(screen.getByTestId("bio-row"));
     await waitFor(() => expect(screen.getByTestId("bio-row-state")).toHaveTextContent("关"));
     expect(screen.queryByTestId("bio-enable-sheet")).toBeNull();
-    expect(calls.find((c) => c.url === "/me/device-login/revoke/")?.body).toEqual({ credential: CRED });
+    expect(calls.find((c) => c.url === "/soul-auth/device-login/revoke/")?.body).toEqual({ credential: CRED });
     expect(persistentStore.get(BIO_KEY)).toBeNull();
     expect(secureMod.__guarded.size).toBe(0);
   });

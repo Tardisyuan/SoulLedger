@@ -8402,28 +8402,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/SoulMfaRefusal'
           description: ''
-  /api/v1/me/device-login/revoke/:
-    post:
-      operationId: v1_me_device_login_revoke_create
-      tags:
-      - v1
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/SoulDeviceLoginCredential'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/SoulDeviceLoginCredential'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/SoulDeviceLoginCredential'
-        required: true
-      security:
-      - soulJwtAuth: []
-      responses:
-        '204':
-          description: 已关闭(不认识或早已关闭也是 204)
   /api/v1/me/life/:
     get:
       operationId: v1_me_life_retrieve
@@ -16432,6 +16410,32 @@ paths:
               schema:
                 $ref: '#/components/schemas/SoulDeviceLoginRefusal'
           description: ''
+  /api/v1/soul-auth/device-login/revoke/:
+    post:
+      operationId: v1_soul_auth_device_login_revoke_create
+      description: |-
+        关闭这部手机的面容 / 指纹登录。**不要求登录**:凭据本身就是证明(256 位随机数,只有这部手机有)。
+        登录页的「换一个账号」发生在退出登录之后,那时手里只有凭据、没有令牌(2026-10-11 上模拟器前查到:
+        这个接口原先挂在 /me/ 下,那一下只会 401,服务端那一行永远关不掉)。
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SoulDeviceLoginCredential'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SoulDeviceLoginCredential'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SoulDeviceLoginCredential'
+        required: true
+      security:
+      - {}
+      responses:
+        '204':
+          description: 已关闭(不认识或早已关闭也是 204)
   /api/v1/soul-auth/login/:
     post:
       operationId: v1_soul_auth_login_create

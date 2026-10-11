@@ -44,12 +44,13 @@ def revoke_all(account, reason, *, keep_credential="") -> int:
     return count
 
 
-def turn_off(account, raw) -> bool:
-    """灵魂自己在这部手机上关。幂等:不认识 / 已吊销 → False,不报错。"""
-    row = SoulDeviceLogin.objects.filter(account=account, credential_hash=_hash_device(raw or ""),
-                                         revoked_at__isnull=True).first()
+def turn_off(raw) -> bool:
+    """这部手机自己关:持有凭据即可,不看是谁登录着。幂等:不认识 / 已吊销 → False,不报错。"""
+    row = SoulDeviceLogin.objects.select_related("account__soul", "account__user").filter(
+        credential_hash=_hash_device(raw or ""), revoked_at__isnull=True).first()
     if row is None:
         return False
+    account = row.account
     row.revoked_at, row.revoked_reason = timezone.now(), DeviceLoginRevokeReason.TURNED_OFF
     row.save(update_fields=["revoked_at", "revoked_reason"])
     audit("UPDATE", account.soul, "关闭面容/指纹登录(这部手机)", actor=account.user, resource="device_login",
