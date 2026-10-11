@@ -2833,8 +2833,22 @@
         "stub_printed": "打印",
         "sign_soul": "灵魂签收 · 日期",
         "sign_officer": "交付官员签名",
-        "after_sign": "签收后请在官员台点「标记已交付」。"
-      }
+        "after_sign": "签收后请在官员台点「标记已交付」。",
+        "system": "灵魂簿",
+        "doc_title": "登录交付单",
+        "password_label": "初始密码",
+        "password_hint": "官员当面写上，或只口头告诉",
+        "valid_label": "有效至",
+        "valid_hours": "72 小时",
+        "must_change_head": "■ 首次登录必须改密码。",
+        "must_change_tail": "改完以后，这里写的初始密码就作废了。",
+        "qr_where": "灵魂簿 App 登录页",
+        "qr_action": "点「扫码」扫这里",
+        "officer_label": "交付官员",
+        "printed_label": "打印于"
+      },
+      "print_mono": "黑白打印",
+      "print_mono_hint": "打印机只能印黑白时勾上。匾额会印成纯黑，字更清楚。"
     },
     "reveal": {
       "confirm_title": "查看初始密码？",
