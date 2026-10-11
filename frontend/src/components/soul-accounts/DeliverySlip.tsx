@@ -118,7 +118,9 @@ export function DeliverySlip({ slip, texts, color = false }: { slip: CredentialS
           </div>
         </div>
 
-        <div style={abs(48, 108, { width: 460, height: 284, ...COL })}>
+        {/* 杜阿特的框底有两条通栏线(画布 y 389 与 392.5–395.5);稿上正文区与竖线都伸到 392,官员那一行压在线上
+            (导出的 PDF 上看到的)。这一种文明收到 384 为止。 */}
+        <div style={abs(48, 108, { width: 460, height: skin === "eg" ? 276 : 284, ...COL })}>
           <div style={{ display: "grid", gridTemplateColumns: "112px minmax(0,1fr)", rowGap: 8, alignItems: "center" }}>
             {label("soul", true)}
             <span style={{ fontWeight: 600, fontSize: 20, lineHeight: "28px", maxWidth: 290, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
@@ -188,7 +190,7 @@ export function DeliverySlip({ slip, texts, color = false }: { slip: CredentialS
           )}
         </span>
 
-        <span aria-hidden="true" style={abs(536, 104, { height: 288, borderLeft: ".5px solid black" })} />
+        <span aria-hidden="true" style={abs(536, 104, { height: skin === "eg" ? 280 : 288, borderLeft: ".5px solid black" })} />
         {/* 二维码与编号永远纯黑,不随 data-slip-ink;二维码四周 26 的静区里没有墨。 */}
         <div data-slip-qr="" style={abs(565, 118, { width: 160, height: 160 })}>
           <QrCode text={soulCodeQrPayload(slip.soul_code)} size="160px" />
@@ -206,8 +208,12 @@ export function DeliverySlip({ slip, texts, color = false }: { slip: CredentialS
           )}
         </div>
 
-        <div style={abs(0, 416, { right: 0, borderTop: "1px dashed black" })}>
-          <span style={abs(40, -10, { padding: "0 8px", background: "white", fontSize: 12, lineHeight: "20px" })}>{s("cut")}</span>
+        {/* 稿上是一条通栏虚线、字垫白底盖在线上;打印规则把背景一律压成透明,字于是被虚线划穿(导出的 PDF 上看到的)。
+            所以线分两段画在字的两侧,字的位置与稿相同(左 48,线在 416)。 */}
+        <div style={abs(0, 406, { right: 0, display: "flex", alignItems: "center", gap: 8, fontSize: 12, lineHeight: "20px" })}>
+          <span style={{ width: 40, borderTop: "1px dashed black" }} />
+          <span>{s("cut")}</span>
+          <span style={{ flex: 1, borderTop: "1px dashed black" }} />
         </div>
 
         <section
