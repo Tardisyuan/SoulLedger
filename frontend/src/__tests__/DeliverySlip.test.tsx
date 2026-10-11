@@ -287,11 +287,15 @@ describe("DeliverySlip by civilisation", () => {
     const { rerender } = renderSlip(withCode("CN_DIYU"));
     const inks = () => [...screen.getByTestId("delivery-slip").querySelectorAll("[data-slip-ink]")].map((e) => e.getAttribute("data-slip-ink"));
     expect(new Set(inks())).toEqual(new Set(["mono"]));
+    // The colour arrives through --color-main, selected by data-civ on the inked element itself; black ink carries none.
+    const civs = () => [...screen.getByTestId("delivery-slip").querySelectorAll("[data-slip-ink]")].map((e) => e.getAttribute("data-civ"));
+    expect(new Set(civs())).toEqual(new Set([null]));
     expect(screen.getByTestId("delivery-slip")).not.toHaveAttribute("data-slip-color");
 
     rerender(<DeliverySlip slip={withCode("CN_DIYU")} texts={TEXTS} color />);
     const slip = screen.getByTestId("delivery-slip");
     expect(new Set(inks())).toEqual(new Set(["cn"]));
+    expect(new Set(civs())).toEqual(new Set(["cn"]));
     // frame, two rules, seal slot — and nothing else, in particular not the QR or the number.
     expect(inks()).toHaveLength(4);
     expect(slip.querySelector("[data-slip-qr]")?.closest("[data-slip-ink]")).toBeNull();
