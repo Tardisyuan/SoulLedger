@@ -214,6 +214,9 @@ export const PROPOSED_DISPATCH_DETAIL_ONLY = {
   dispatched_by: "5",
   dispatched_by_name: "崔判官",
   decided_at: null,
+  decided_by: null,
+  decided_by_name: null,
+  decision_reason: "",
   create_time: "2026-08-10T02:00:00Z",
   update_time: "2026-08-10T02:00:00Z",
 };
