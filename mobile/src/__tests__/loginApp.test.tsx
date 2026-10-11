@@ -16,6 +16,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { ACCOUNT_KEY, ASKED_PREFIX, BIO_KEY, rememberAccount, rememberedAccount, spendAutoPrompt } from "../deviceLogin";
 import { I18nProvider } from "../i18n";
+import { SoulCodeField } from "../soulCodeView";
 import { deviceTokenFor, rememberDevice } from "../mfa";
 import { RootNavigator, navigationRef } from "../navigation";
 import { installMobilePlatform, persistentStore, sessionStore } from "../platform";
@@ -265,6 +266,24 @@ describe("A · the scanner", () => {
     expect(screen.getByTestId("login-soul-code").props.value).toBe("");
     open.mockRestore();
   });
+});
+
+it("D · two keystrokes before the parent re-renders are still two keystrokes, not a paste", () => {
+  // The field is driven directly with a parent that never re-renders: `value` stays "" while the box accepts.
+  const onChange = jest.fn();
+  render(
+    <SafeAreaProvider initialMetrics={{ frame: { x: 0, y: 0, width: 390, height: 844 }, insets: { top: 0, left: 0, right: 0, bottom: 0 } }}>
+      <I18nProvider>
+        <SoulCodeField value="" onChange={onChange} onComplete={() => {}} onScan={() => {}} editable scanned={false} />
+      </I18nProvider>
+    </SafeAreaProvider>,
+  );
+  const box = screen.getByTestId("login-soul-code");
+  fireEvent.changeText(box, "q");
+  fireEvent.changeText(box, "qo");
+  expect(screen.getByText("! 编号里没有「O」")).toBeTruthy();
+  expect(screen.queryByText("! 粘贴的内容里有编号不用的字符")).toBeNull();
+  expect(onChange).toHaveBeenCalledTimes(1);
 });
 
 describe("B1 · the phone remembers the account", () => {
