@@ -171,6 +171,21 @@ def test_audit_rows_are_the_single_deletes_rows(world, django_capture_on_commit_
 
 
 @pytest.mark.django_db
+def test_batch_recycle_records_its_author_on_every_soul(world, django_capture_on_commit_callbacks):
+    """`test_audit_rows_are_the_single_deletes_rows` pins the author for a one-soul
+    batch; this pins it for each soul of a several-soul batch, by officer id."""
+    souls = world["souls"]
+    response, rows = _audit_deletes(
+        django_capture_on_commit_callbacks,
+        lambda: world["clerk"].post(URL, {"ids": _ids(*souls)}, format="json"),
+    )
+    assert response.status_code == 200, response.content
+    clerk_id = world["clerk_user"].pk
+    by_soul = {pk: u for r, pk, u in rows if r == "soul"}
+    assert by_soul == {str(s.pk): clerk_id for s in souls}
+
+
+@pytest.mark.django_db
 def test_archive_records_its_author_too(world, django_capture_on_commit_callbacks):
     """`archive` is another @action write that never reached perform_*; the
     report that found the NULL author inferred it here and did not measure it."""
