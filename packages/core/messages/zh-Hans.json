@@ -1324,7 +1324,7 @@
       "load_error": "加载失败",
       "sync_ok": "同步正常",
       "unbooked": "未入簿",
-      "resend_dispatch": "待重新发起的调拨",
+      "resend_dispatch": "待重发的调拨",
       "go_resend": "去处理 →"
     },
     "civ_share": "占比",
