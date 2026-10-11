@@ -3506,7 +3506,8 @@
       "under_hour_consequence": "Less than an hour left · after that an officer must reset it",
       "expired_consequence": "Expired · an officer must reset it",
       "new_hint": "At least 8 characters",
-      "success_others_out": "Password changed; sign-ins on your other devices are signed out"
+      "success_others_out": "Password changed; sign-ins on your other devices are signed out",
+      "current_password": "Current password"
     },
     "forgot_password": {
       "link": "Forgot password",
@@ -3737,8 +3738,10 @@
     },
     "logout": {
       "title": "Sign out?",
-      "body": "Signing in again takes your soul code and the password you set. The initial password no longer works.",
-      "cancel": "Stay signed in"
+      "body": "This phone remembers your soul number. Next time, just enter your password.",
+      "cancel": "Stay signed in",
+      "body_bio": "This phone remembers your soul number. Next time, sign in with {{bio}} or your password.",
+      "forget_hint": "To make this phone forget your number, tap Use another account on the sign-in page."
     },
     "form_notes": {
       "DIVINE": "Great fortune, but it runs out.",

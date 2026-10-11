@@ -3494,7 +3494,8 @@
       "under_hour_consequence": "Nen Unut Wa Wenen · Er Khet: Sab Wehem Sekhem",
       "expired_consequence": "Mut · Sab Wehem Sekhem",
       "new_hint": "Sesh 8 Er Hry",
-      "success_others_out": "Sekhem Mawy Seth. Medjat Ky: Per Aq Seth."
+      "success_others_out": "Sekhem Mawy Seth. Medjat Ky: Per Aq Seth.",
+      "current_password": "Sekhem-Ek"
     },
     "forgot_password": {
       "link": "Nen Rekh Sekhem",
@@ -3725,8 +3726,10 @@
     },
     "logout": {
       "title": "Per Aq?",
-      "body": "Wehem Aq: Ren Hesb Ba-Ek Hena Sekhem Mawy-Ek. Sekhem Tepy Wenen Khetem Seth.",
-      "cancel": "Wenen Em Medjat"
+      "body": "Medjat Pen Rekh Ren Hesb Ba-Ek. Wehem Aq: Sesh Sekhem-Ek Wa.",
+      "cancel": "Wenen Em Medjat",
+      "body_bio": "Medjat Pen Rekh Ren Hesb Ba-Ek. Wehem Aq Em {{bio}}, Mi Sesh Sekhem-Ek.",
+      "forget_hint": "Medjat Pen Nen Rekh Djer: «Aq Em Ba Ky» Em Aq."
     },
     "form_notes": {
       "DIVINE": "Nefer Dens, Nen Djet.",

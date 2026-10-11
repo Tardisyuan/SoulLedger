@@ -100,3 +100,14 @@ export function classifyCredentialError(error: unknown): CredentialFailure {
   if (/cancel|dismiss|-128|user_cancel|negative button/i.test(text)) return "cancelled";
   return "failed";
 }
+
+/** Where "面容 / 指纹 login is on" is kept on the phone: `face` or `finger`. Here, not in deviceLogin, so a module
+ *  the officer app shares (feedback) can read it without pulling in the native credential store. */
+export const BIO_KEY = "soulledger.login.bio";
+
+/** The sign-out sheet's body (Design 第二十二批): what the next sign-in takes on this phone. */
+export function logoutBody(bio: string | null | undefined): { key: string; bioKey: string | null } {
+  if (bio === "face") return { key: "soul_app.logout.body_bio", bioKey: "soul_app.bio.face" };
+  if (bio === "finger") return { key: "soul_app.logout.body_bio", bioKey: "soul_app.bio.finger" };
+  return { key: "soul_app.logout.body", bioKey: null };
+}
