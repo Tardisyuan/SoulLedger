@@ -105,6 +105,7 @@ export function SoulJudgmentHistory({ judgments }: { judgments: Judgment[] }) {
             </span>
             <Link
               href={`/judgment/${j.id}`}
+              data-print-hide=""
               className="inline-flex h-(--control-h-sm) items-center px-2 text-xs text-[oklch(var(--color-ink))] underline-offset-4 hover:underline"
             >
               {t("judgment.view")}

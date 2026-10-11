@@ -34,7 +34,7 @@ export function SoulActionsCard({
   const { t } = useI18n();
 
   return (
-    <section aria-labelledby="soul-actions-title" className="min-w-0 space-y-4 bg-[oklch(var(--color-surface-1))] p-6">
+    <section aria-labelledby="soul-actions-title" data-print-hide="" className="min-w-0 space-y-4 bg-[oklch(var(--color-surface-1))] p-6">
       <h2 id="soul-actions-title" className="text-2xs uppercase tracking-widest text-[oklch(var(--color-ink-subtle))]">
         {t("souls.detail.actions")}
       </h2>

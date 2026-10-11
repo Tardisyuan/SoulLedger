@@ -876,7 +876,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
                 </span>
               </p>
               {!fullCase && (
-                <p className="mx-auto mt-3 max-w-prose text-xs text-[oklch(var(--color-ink-muted))]">{t("judgment.desk.ruling_hint")}</p>
+                <p data-print-hide="" className="mx-auto mt-3 max-w-prose text-xs text-[oklch(var(--color-ink-muted))]">{t("judgment.desk.ruling_hint")}</p>
               )}
             </>
           )}
@@ -887,6 +887,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
               group; on a decided case there is nothing to choose. */}
           <ol
             data-testid="verdict-bar"
+            data-print-hide=""
             className={`mx-auto mt-6 grid max-w-[540px] gap-2 text-left ${fullCase ? "grid-cols-1" : "grid-cols-2 sm:grid-cols-4"}`}
             {...(isFinal ? {} : { role: "group", "aria-labelledby": clausesId })}
           >
@@ -931,7 +932,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
 
           {/* ── 进入盖印确认:落判在确认层里,不在这里 ─────────────────────── */}
           {!isFinal && (
-            <div className="mt-6 flex flex-col items-center gap-2">
+            <div data-print-hide="" className="mt-6 flex flex-col items-center gap-2">
               <RequirePermission permissions="judgment.execute">
                 <Button
                   type="button"
@@ -1041,7 +1042,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
           )}
 
           {!isFinal && (
-            <div className="mt-6 flex flex-col gap-4 border-t border-[oklch(var(--color-line))] pt-4">
+            <div data-print-hide="" className="mt-6 flex flex-col gap-4 border-t border-[oklch(var(--color-line))] pt-4">
               <div className="flex items-start gap-2 min-w-0">
                 <input
                   id={createWorkflowId}

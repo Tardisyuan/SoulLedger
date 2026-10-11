@@ -162,6 +162,28 @@ describe("default open state and the 3-comment window", () => {
     expect(screen.queryByTestId("comments-show-rest")).not.toBeInTheDocument();
   });
 
+  test("printing: every comment is rendered and the title is marked to print as plain text; afterwards back to three", async () => {
+    // 纸上没有「展开其余 N 条」那个按钮,所以打印时要把省略的评议全部渲染出来;
+    // 标题是个 button,打印规则一律隐藏 button,故它自己带 `data-print-title` 才印得出「评议 · N」。
+    comments.mockResolvedValue({ data: ["1", "2", "3", "4", "5"].map((n) => at(`c${n}`, `2026-10-0${n}T01:00:00Z`)) });
+    mount(null);
+    await screen.findByTestId("comment-c5");
+    expect(screen.queryByTestId("comment-c1")).not.toBeInTheDocument();
+    expect(titleButton()).toHaveAttribute("data-print-title");
+    expect(titleButton()).toHaveTextContent("officer_app.comment.title · 5");
+
+    act(() => {
+      window.dispatchEvent(new Event("beforeprint"));
+    });
+    expect(screen.getAllByTestId(/^comment-c/)).toHaveLength(5);
+    expect(screen.getByTestId("comment-c1")).toBeInTheDocument();
+
+    act(() => {
+      window.dispatchEvent(new Event("afterprint"));
+    });
+    expect(screen.getAllByTestId(/^comment-c/)).toHaveLength(3);
+  });
+
   test("three comments: no expand row", async () => {
     comments.mockResolvedValue({ data: ["1", "2", "3"].map((n) => at(`c${n}`, `2026-10-0${n}T01:00:00Z`)) });
     mount(null);
