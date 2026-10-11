@@ -270,6 +270,7 @@ const COLLECTED_FILES = [
   "routeTopology.test.ts",
   "searchSelectIsServerFiltered.test.tsx",
   "setup.test.ts",
+  "soulCodeMatchesBackend.test.ts",
   "soulFallbackCopyContract.test.tsx",
   "soulLifecycleEventCopy.test.tsx",
   "soulLifecycleRows.test.ts",
