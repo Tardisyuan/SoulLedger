@@ -23,7 +23,7 @@ export function splitPageLabel(label: string): [string, string, string] {
  * 页码右栏是 `@page` 边距盒,目前只有 Chromium 系印得出来 —— 这里只负责把页码前后的字
  * 按语言写进根元素的 `--print-page-*`(边距盒读的是根上的变量),挂载期间有效。
  *
- * `reference`:案号或灵魂编号,字符串,页脚左边原样印;没有(还在加载)就不印这一格。
+ * `reference`:案号或灵魂编号,字符串,页脚左边原样印;没有(还在加载)就不印这一格。`referenceLabel` 可为空串(只印 reference)。
  */
 export function PrintFrame({
   hall,
@@ -62,7 +62,7 @@ export function PrintFrame({
       <div data-print-body="">{children}</div>
       <div data-print-foot="" aria-hidden="true">
         <div>
-          <span data-print-reference="">{reference ? `${referenceLabel} ${reference}` : ""}</span>
+          <span data-print-reference="">{reference ? [referenceLabel, reference].filter(Boolean).join(" ") : ""}</span>
           {/* 右侧页码由 @page 边距盒承担(见 print.css);不支持的浏览器这一格留空。 */}
           <span />
         </div>

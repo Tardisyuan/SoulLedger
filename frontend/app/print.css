@@ -158,6 +158,15 @@
     opacity: 1 !important;
   }
 
+  /* 判词页的「当前这一判」:裁决键组与确认区整块不印(display: none),留下的只有区块自己的上下内边距
+   * 与各子块的上边距 —— 屏幕上给键位呼吸的空,到纸上就是一块白。打印时收掉。 */
+  [data-print-doc] [data-print-ruling] {
+    padding-block: 0.25rem !important;
+  }
+  [data-print-doc] [data-print-ruling] > * {
+    margin-top: 0.5rem !important;
+  }
+
   /* 别把一组键值或一行表切在页缝上。 */
   [data-print-doc] dl,
   [data-print-doc] tr {

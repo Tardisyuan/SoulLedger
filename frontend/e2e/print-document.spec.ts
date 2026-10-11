@@ -5,9 +5,9 @@
  * `page.emulateMedia({ media: "print" })`。要点(都来自主会话用打印媒体截图看到的缺陷):
  *   · 裁决键、操作提示、返回链接、「写评议」的标签、装饰图形 —— 交互与导航,不印;
  *   · 评议全部印出来,并带「评议 · N」标题(屏幕上只露最近 3 条,「展开其余」在纸上没有);
- *   · 页脚:判词印案号;灵魂档案没有给人读的编号,宁可空着也不印 UUID。
+ *   · 页脚:判词印案号;灵魂档案印这一世账号的灵魂编号,没有账号就印灵魂名,永不印 UUID。
  */
-import { expect, test, OPENED_JUDGMENT, SOULS, setupAuthenticatedPage } from "./fixtures";
+import { expect, test, OPENED_JUDGMENT, SOULS, SOUL_ACCOUNT, setupAuthenticatedPage } from "./fixtures";
 
 const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
 const comments = Array.from({ length: 5 }, (_, i) => ({
@@ -82,6 +82,8 @@ test.describe("print media", () => {
 
     const foot = await page.locator("[data-print-foot]").evaluate((el) => (el as HTMLElement).innerText ?? el.textContent);
     expect(foot ?? "").not.toMatch(UUID);
-    await expect(page.locator("[data-print-reference]")).toBeEmpty();
+    // 页脚认得出是谁的档案:夹具里该灵魂有当前账号,印它的灵魂编号。
+    await expect(page.locator("[data-print-reference]")).not.toBeEmpty();
+    await expect(page.locator("[data-print-reference]")).toContainText(SOUL_ACCOUNT.soul_code);
   });
 });
