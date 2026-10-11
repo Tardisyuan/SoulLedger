@@ -23,7 +23,7 @@ jest.mock("next/navigation", () => ({
 jest.mock("@/src/contexts/ToastContext", () => ({ useToast: () => ({ showToast: jest.fn() }) }));
 
 const mockT = (key: string) => key;
-const mockI18n = { t: mockT, tf: makeTranslateWithFallback(mockT), formatDate: (v: unknown) => String(v), locale: "zh" };
+const mockI18n = { t: mockT, tf: makeTranslateWithFallback(mockT), formatDate: (v: unknown) => String(v), formatDateTime: (v: unknown) => String(v), locale: "zh" };
 jest.mock("@/src/contexts/I18nContext", () => ({
   ...jest.requireActual("@/src/contexts/I18nContext"),
   useI18n: () => mockI18n,
@@ -74,10 +74,17 @@ jest.mock("@soulledger/core/api", () => ({
   dispositionApi: { list: jest.fn().mockResolvedValue({ data: { results: [] } }) },
   reincarnationApi: { list: jest.fn().mockResolvedValue({ data: { results: [] } }) },
   eventsApi: { list: jest.fn().mockResolvedValue({ data: { results: [] } }) },
+  soulAccountsApi: { accounts: (params?: Record<string, string>) => mockAccounts(params) },
 }));
+const mockAccounts = jest.fn();
+const account = (over: Record<string, unknown>) => ({
+  id: "acc-1", soul: SOUL_ID, cycle: 1, soul_code: "SL-7K3Q-0042", origin: "AUTO", retired_at: null,
+  must_change_password: false, initial_password_expires_at: null, mfa_enabled: false, mfa_enabled_at: null,
+  last_login: null, email_not_synced: null, ...over,
+});
 
 function renderPage() {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: 30_000 }, mutations: { retry: false } } });
   return render(
     <QueryClientProvider client={queryClient}>
       <SoulDetailPage />
@@ -91,6 +98,7 @@ const withJudgments = (results: unknown[]) =>
 beforeEach(() => {
   jest.clearAllMocks();
   mockUser = { id: 1, username: "admin", role: "ADMIN", tenant: null, permissions: [] };
+  mockAccounts.mockResolvedValue({ data: { results: [] } });
 });
 
 describe("the identity band's case number on a soul", () => {
@@ -116,17 +124,33 @@ describe("the identity band's case number on a soul", () => {
     );
   });
 
-  it("the printed footer never carries the soul's internal id: no human-readable soul number exists, so none is printed", async () => {
-    // 灵魂本身没有给人读的编号(只有内部 id;「灵魂编号」属于账号)。此前页脚印的是 `soul.id` —— 一个 UUID。
+  const UUID_SHAPE = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|soul-1/i;
+
+  it("the printed footer carries this life's account soul code, from the account card's own query (one request)", async () => {
+    withJudgments([]);
+    mockAccounts.mockResolvedValue({
+      data: { results: [account({ id: "old", cycle: 0, soul_code: "SL-OLD-0001", retired_at: "2026-01-01T00:00:00Z" }), account({})] },
+    });
+    const { container } = renderPage();
+    await waitFor(() => expect(container.querySelector("[data-print-reference]")).toHaveTextContent("print.soul_no SL-7K3Q-0042"));
+    expect(container.querySelector("[data-print-foot]")?.textContent ?? "").not.toMatch(UUID_SHAPE);
+    expect(mockAccounts).toHaveBeenCalledTimes(1);
+  });
+
+  it("with no account yet the footer carries the soul's name, never its internal id", async () => {
     withJudgments([]);
     const { container } = renderPage();
-    await waitFor(() => expect(lastCaseRef()).toEqual({}));
-    const footer = container.querySelector("[data-print-reference]");
-    expect(footer).not.toBeNull();
-    expect(footer).toBeEmptyDOMElement();
-    expect(container.querySelector("[data-print-foot]")?.textContent ?? "").not.toMatch(
-      /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|soul-1/i,
-    );
+    await waitFor(() => expect(container.querySelector("[data-print-reference]")).toHaveTextContent("待审之魂"));
+    expect(container.querySelector("[data-print-reference]")?.textContent).toBe("待审之魂");
+    expect(container.querySelector("[data-print-foot]")?.textContent ?? "").not.toMatch(UUID_SHAPE);
+  });
+
+  it("a viewer without soul_account.read sends no account request and gets the soul's name", async () => {
+    mockUser = { ...mockUser, role: "OFFICER", permissions: ["soul.read"] };
+    withJudgments([]);
+    const { container } = renderPage();
+    await waitFor(() => expect(container.querySelector("[data-print-reference]")).toHaveTextContent("待审之魂"));
+    expect(mockAccounts).not.toHaveBeenCalled();
   });
 
   it("with no judgment at all keeps the label and reports an empty value", async () => {

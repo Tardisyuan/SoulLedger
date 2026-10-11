@@ -21,6 +21,7 @@ import {
 import { ledgerApi, type LedgerInheritance } from "@soulledger/core/api/ledger";
 import { useSoul, useSoulLedger, useDeleteSoul } from "@soulledger/core/hooks/useSouls";
 import { useJudgments } from "@soulledger/core/hooks/useJudgments";
+import { useSoulAccountChain } from "@soulledger/core/hooks/useSoulAccounts";
 import { useDispositions } from "@soulledger/core/hooks/useDispositions";
 import { dispositionKeys, judgmentKeys, soulKeys } from "@soulledger/core/query_keys";
 import { SoulEditModal } from "@/src/components/souls/SoulEditModal";
@@ -165,6 +166,7 @@ export default function SoulDetailPage() {
   });
 
   const soul = soulQuery.data ?? null;
+  const accountChain = useSoulAccountChain(id, hasPermission("soul_account.read"));
   const ledger = ledgerQuery.data ?? null;
   const records = recordsQuery.data ?? NO_RECORDS;
   const judgments = judgmentsQuery.data?.results ?? NO_JUDGMENTS;
@@ -508,7 +510,7 @@ export default function SoulDetailPage() {
   const eyebrow = soul?.id ? (
     <span className="inline-flex flex-wrap items-baseline gap-x-2">
       <span>{t("souls.detail.profile.eyebrow")}</span>
-      <span aria-hidden="true">/</span>
+      <span aria-hidden="true" data-print-hide="">/</span>
       <IdentifierChip id={soul.id} ariaLabel={tf("souls.detail.copy_id_aria", "Copy soul ID")} />
     </span>
   ) : undefined;
@@ -576,10 +578,12 @@ export default function SoulDetailPage() {
     <SoulJudgmentHistory judgments={judgments} />
   );
 
-  // 页脚的灵魂编号:灵魂本身没有给人读的编号(`Soul` 只有内部 id;「灵魂编号」是账号的,而且只有读得了账号的人才取得到),
-  // 所以这里不印这一项 —— 宁可空着,也不把 UUID 当编号印出来。
+  // 页脚:当前这一世账号的灵魂编号(账号卡用的是同一份查询,键相同,不多发请求);
+  // 没开通账号、没有读账号的权限或还没加载到,就印灵魂名 —— 每页都认得出是谁的档案。永不印内部 UUID。
+  const currentAccount = accountChain.data?.find((a) => a.retired_at === null);
+  const printRef = currentAccount?.soul_code ?? soul?.name ?? null;
   return (
-    <PrintFrame hall={hall} reference={null} referenceLabel={t("print.soul_no")}>
+    <PrintFrame hall={hall} reference={printRef} referenceLabel={currentAccount ? t("print.soul_no") : ""}>
     <PageShell
       variant="page"
       backLink={backLink}

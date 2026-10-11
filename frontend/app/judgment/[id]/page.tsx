@@ -816,6 +816,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
         <section
           aria-labelledby={clausesId}
           data-testid="current-decision"
+          data-print-ruling=""
           className={`relative isolate min-w-0 overflow-clip py-6 text-center ${
             fullCase ? "order-2 border border-[oklch(var(--color-line))] px-4 md:self-start" : "order-1 md:order-2 md:py-8"
           }`}
