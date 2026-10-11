@@ -266,6 +266,7 @@ def create_post(author, content, visibility, media=()):
         post_media.attach(post, author, media)
         PostService.increment_post_count(author.pk)
         _record_hits(screening)
+    post.screening_outcome = screening.outcome
     return post
 
 
@@ -321,6 +322,7 @@ def create_comment(author, post_id, content, parent_id=None):
             recipients = {post.author_id, parent.author_id if parent else None} - {author.pk}
             publish_event("SOCIAL_COMMENTED", tenant, sorted(r for r in recipients if r),
                      {"post_id": str(post.pk), "comment_id": str(comment.pk), "actor_user_id": author.pk})
+    comment.screening_outcome = screening.outcome
     return comment
 
 

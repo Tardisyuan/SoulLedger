@@ -23,7 +23,7 @@ it.
 """
 from django.db.models import Q
 
-from apps.social.models import Follow, Post
+from apps.social.models import Follow, ModerationStatus, Post
 
 
 def visible_posts(request, queryset=None):
@@ -56,6 +56,8 @@ def visible_posts(request, queryset=None):
     # read, comment on or react to it through /api/v1/social/ — moderation
     # goes through /api/v1/social-moderation/ instead.
     qs = qs.exclude(author__role="SOUL")
+    # 与灵魂端同一条规则:送审 / 隐藏的帖子只有作者本人看得见(官员端帖子 2026-10 起也过词表)。
+    qs = qs.filter(Q(moderation_status=ModerationStatus.PUBLISHED) | Q(author=user))
     return qs.filter(
         Q(visibility="PUBLIC")
         | Q(visibility="TENANT", tenant=tenant)

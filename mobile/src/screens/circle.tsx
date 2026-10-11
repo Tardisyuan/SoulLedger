@@ -84,6 +84,23 @@ const VISIBILITY: { value: SoulPostVisibility; label: string; hint: string }[] =
 const visLabel = (v: string) => VISIBILITY.find((o) => o.value === v)?.label ?? "soul_app.circle.compose.vis.tenant";
 
 /** A refusal as copy: the circle's own codes first, then the app's shared table. */
+/** The server tells the author what the word list did (never which word); `clean` / absent: nothing to say. */
+const SCREENING_TOASTS = {
+  masked: "soul_app.circle.screening.masked",
+  pending_review: "soul_app.circle.screening.pending_review",
+  hidden: "soul_app.circle.screening.hidden",
+} as const;
+
+export function tellScreening(
+  toast: (message: string, kind?: "success" | "failure") => void,
+  tr: (key: string) => string,
+  outcome: string | null | undefined,
+) {
+  if (outcome && outcome in SCREENING_TOASTS) {
+    toast(tr(SCREENING_TOASTS[outcome as keyof typeof SCREENING_TOASTS]), outcome === "hidden" ? "failure" : "success");
+  }
+}
+
 const REFUSALS: Record<string, string> = {
   muted: "soul_app.circle.muted.body",
   eternal_light_locked: "soul_app.circle.react.lamp_locked",
@@ -613,6 +630,8 @@ export function ComposePostScreen() {
       const post = await soulSocialApi.createPost(text.trim(), visibility, uploads.mediaIds);
       posted.current = true;
       uploads.clear();
+      // 送审的由朋友圈顶上的「已发出,正在审核」横幅说;打码、隐藏没有别处说,这里补一条。
+      if (post.screening !== "pending_review") tellScreening(toast, tr, post.screening);
       navigation.popTo("Tabs", { screen: "Circle", params: { pendingId: post.moderation_status === "PENDING" ? post.id : undefined } });
     } catch (e) {
       setBusy(false);
@@ -949,11 +968,13 @@ export function PostScreen({ id }: { id: string }) {
     }
     void post.reload();
   };
+  const toast = useToast();
   const send = async (text: string) => {
     if (sending || !text.trim()) return;
     setSending(true);
     try {
-      await soulSocialApi.comment(id, text.trim(), replyTo?.id);
+      const sent = await soulSocialApi.comment(id, text.trim(), replyTo?.id);
+      tellScreening(toast, tr, sent.screening);
       setDraft("");
       setReplyTo(null);
       void comments.reload();

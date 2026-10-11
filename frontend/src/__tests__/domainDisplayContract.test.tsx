@@ -71,6 +71,9 @@ const ENUM_FIELDS = [
   // DEMERIT, drawn as 收 / 支 columns, never as text) and the realm topology
   // columns `region` / `fork` (drawn through realms.topology.region.* / fork.*).
   "record_type",
+  // Added 2026-10-11: `Post.moderation_status`, drawn on the author's own post card
+  // through `StatusBadge` (social_moderation.moderation_status.*).
+  "moderation_status",
   "region",
   "fork",
   "approver_type",
