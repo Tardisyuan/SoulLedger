@@ -4336,7 +4336,7 @@
       "off": "Khetem",
       "button": "Aq Em {{bio}}",
       "ask_title": "Aq Em {{bio}} Er Khet?",
-      "ask_body": "Em Medjat Pen Wa: Nen Sesh Sekhem. {{bio}} Neb Em Medjat: Aq. Medjat En Per: Nen Wen.",
+      "ask_body": "Em Medjat Pen Wa: Nen Sesh Sekhem. {{bio}}, Djes Ky Neb Em Medjat: Aq. Medjat En Per: Nen Wen.",
       "ask_note": "Khetem Er Khet Em «Smen › Senb Ren Aq».",
       "ask_later": "Er Khet",
       "ask_ok": "Wen",
