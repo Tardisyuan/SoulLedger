@@ -4,7 +4,7 @@
  * A link only opens a page -- nothing here decides, approves or submits.
  */
 import type { TabKey } from "./kit";
-import { isTodoKind, type Landing } from "./rules";
+import { isItemKind, type Landing } from "./rules";
 import { createLinkInbox, pathOf, queryOf } from "./shared";
 
 export const OFFICER_SCHEME = "soulledger-officer";
@@ -16,7 +16,7 @@ export function parseOfficerLink(url: unknown): OfficerLink | null {
   if (!path) return null;
   const head = path[0]?.toLowerCase();
   if (path.length === 1 && (TABS as readonly string[]).includes(head)) return { tab: head as TabKey };
-  if (path.length === 3 && head === "item" && isTodoKind(path[1])) return { tab: "todo", item: { kind: path[1], id: path[2] } };
+  if (path.length === 3 && head === "item" && isItemKind(path[1])) return { tab: "todo", item: { kind: path[1], id: path[2] } };
   return null;
 }
 

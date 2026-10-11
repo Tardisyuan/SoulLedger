@@ -5451,6 +5451,12 @@
       "handled": "Already handled by {{name}}",
       "someone": "someone"
     },
+    "dispatch_status": {
+      "waiting": "Waiting for the other hall to approve",
+      "approved": "Approved by the other hall",
+      "rejected": "Rejected by the other hall",
+      "reason": "Reason: {{reason}}"
+    },
     "state": {
       "error_title": "Couldn't load",
       "error_body": "Check your connection and retry. Open items aren't affected.",

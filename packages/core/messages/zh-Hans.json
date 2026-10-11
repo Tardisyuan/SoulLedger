@@ -5451,6 +5451,12 @@
       "handled": "已由{{name}}处理",
       "someone": "他人"
     },
+    "dispatch_status": {
+      "waiting": "等对方批准",
+      "approved": "对方已批准",
+      "rejected": "对方已驳回",
+      "reason": "理由：{{reason}}"
+    },
     "state": {
       "error_title": "没取到",
       "error_body": "检查网络后重试。已打开的条目不受影响。",
