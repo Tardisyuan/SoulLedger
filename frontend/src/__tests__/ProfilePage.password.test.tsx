@@ -29,7 +29,7 @@ jest.mock("@/src/components/ui/Toast", () => ({ showToast: (...a: unknown[]) => 
 
 const { authApi } = require("@soulledger/core/api");
 
-async function openForm() {
+async function openForm(next = "N0t-Guessable!2026", confirm = next, submit = true) {
   (authApi.profile as jest.Mock).mockResolvedValue({ data: { username: "u", email: "", role: "JUDGE" } });
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
@@ -40,30 +40,68 @@ async function openForm() {
   fireEvent.click((await screen.findAllByRole("button", { name: "profile.change_password" }))[0]);
   const [oldInput, newInput, confirmInput] = Array.from(document.querySelectorAll('input[type="password"]'));
   fireEvent.change(oldInput, { target: { value: "oldpw-123" } });
-  fireEvent.change(newInput, { target: { value: "12345678" } });
-  fireEvent.change(confirmInput, { target: { value: "12345678" } });
-  fireEvent.submit(oldInput.closest("form")!);
+  fireEvent.change(newInput, { target: { value: next } });
+  fireEvent.change(confirmInput, { target: { value: confirm } });
+  if (submit) fireEvent.submit(oldInput.closest("form")!);
+  return { oldInput, newInput: newInput as HTMLInputElement, confirmInput };
 }
+
+const state = (rule: string) => screen.getByTestId(`password-rule-${rule}`).getAttribute("data-state");
 
 beforeEach(() => jest.clearAllMocks());
 
-it("lists each refusal reason by its code under the new-password field, without the English sentence", async () => {
+it("a 'too common' refusal replaces the reasons and the old sentence with the checklist's own line, keeping the ticks", async () => {
   (authApi.changePassword as jest.Mock).mockRejectedValue({
     response: {
       status: 400,
-      data: {
-        new_password: [
-          { code: "password_too_common", message: "This password is too common." },
-          { code: "password_entirely_numeric", message: "This password is entirely numeric." },
-        ],
-      },
+      data: { new_password: [{ code: "password_too_common", message: "This password is too common." }] },
     },
   });
-  await openForm();
-  const alert = await screen.findByRole("alert");
-  expect(alert).toHaveTextContent("profile.password_reason_common · profile.password_reason_numeric");
-  expect(alert).not.toHaveTextContent("This password");
+  const { newInput } = await openForm("password-123");
+  const common = await screen.findByTestId("password-rules-common");
+  expect(common).toHaveTextContent("password_rules.common_title");
+  expect(common).toHaveTextContent("password_rules.common_body");
+  expect(document.body).not.toHaveTextContent("This password");
+  expect(document.body).not.toHaveTextContent("profile.password_reason");
+  for (const rule of ["min_length", "not_digits", "not_current", "match"]) expect(state(rule)).toBe("ok");
+  expect(newInput).toHaveAttribute("aria-invalid", "true");
+  expect(newInput).toHaveFocus();
+  expect(newInput.value).toBe("password-123");
   expect(mockToast).not.toHaveBeenCalled();
+});
+
+it("is all unmarked on arrival and typing never shows '!'", async () => {
+  const { newInput } = await openForm("abc", "", false);
+  expect(["min_length", "not_digits", "not_current"].map(state)).toEqual(["idle", "ok", "ok"]);
+  expect(screen.getByTestId("password-rules-list").textContent).not.toContain("!");
+  expect(screen.queryByTestId("password-rules-announce")).not.toBeInTheDocument();
+  fireEvent.blur(newInput);
+  expect(state("min_length")).toBe("bad");
+  fireEvent.change(newInput, { target: { value: "N0t-Guessable!2026" } });
+  expect(state("min_length")).toBe("ok");
+});
+
+it("saving with an unmet rule sends nothing, marks it, focuses the box and announces the summary", async () => {
+  const { newInput } = await openForm("1234567");
+  expect(authApi.changePassword).not.toHaveBeenCalled();
+  expect(state("min_length")).toBe("bad");
+  expect(newInput).toHaveFocus();
+  expect(newInput).toHaveAttribute("aria-invalid", "true");
+  expect(screen.getByTestId("password-rules-announce")).toHaveTextContent("password_rules.summary");
+  expect(mockToast).not.toHaveBeenCalled();
+});
+
+it("a mismatch sends nothing and focuses the confirm box", async () => {
+  const { confirmInput } = await openForm("N0t-Guessable!2026", "other");
+  expect(authApi.changePassword).not.toHaveBeenCalled();
+  expect(state("match")).toBe("bad");
+  expect(confirmInput).toHaveFocus();
+});
+
+it("a clean form sends the request", async () => {
+  (authApi.changePassword as jest.Mock).mockResolvedValue({ data: { detail: "ok" } });
+  await openForm();
+  await waitFor(() => expect(authApi.changePassword).toHaveBeenCalledWith("oldpw-123", "N0t-Guessable!2026"));
 });
 
 it("a wrong old password shows under the old-password field", async () => {
