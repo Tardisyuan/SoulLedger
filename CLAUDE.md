@@ -126,6 +126,16 @@ npm 10 与 11 的真正区别在装出来的树是否完整。所以**装完一�
 - 插件生成的 Swift 文件要按 `<工程名>/文件名` 登记进 Xcode 工程(Expo 模板的组没有自己的路径),写成裸文件名会让 iOS 整个编译不过,
   而插件的 jest 测试只测纯函数,测不出这一点 —— **改了 `mobile/plugins/` 就要真的 `expo run:ios` 一次。**
 - **验完就关**:`xcrun simctl shutdown all`、`adb emu kill`,连同为它起的 Metro 和 runserver。
+- **iOS 重建在这台机器上要先设 UTF-8 locale(2026-10-11 实测)**:不设时 CocoaPods 死在
+  `Unicode Normalization not appropriate for ASCII-8BIT`,读起来像 Podfile 坏了。
+  `export LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8`,再 `npx expo run:ios --device <udid> --no-bundler`;
+  装好后另起 Metro(`npx expo start --dev-client --port 8081`,不带 `CI=1`)。
+- **Android 重建要有 `ANDROID_HOME`**:`export ANDROID_HOME=~/Library/Android/sdk`,否则 gradle 报 `SDK location not found`
+  (这台机器的非交互 shell 里没有这个变量,2026-10-11)。没有安卓的设备工具时用 `adb exec-out screencap -p` 截图、`adb shell input tap/text` 操作。
+- **一次只开一个模拟器、一个 App**:这台机器内存吃紧(交换区近满),模拟器启动或编译时 1 分钟负载会冲到几百。
+  重步骤之间等负载回到 12 以下再点;模拟器截图会慢一帧,操作后截两张看第二张。
+- **只收字母数字的输入框要设 `keyboardType="ascii-capable"`**(编号、恢复码):不设时中文拼音键盘会把输入当拼音、弹候选条。
+  2026-10-11 灵魂端和官员端的恢复码框都漏了;编号框(`auth.tsx`、`letters.tsx`)早就设了。
 
 **App(`mobile/`)换了代码而模拟器上没变,先怀疑 Metro 没看见,别先怀疑代码。**
 2026-09-19 App 聊天那一轮实测:用 `cp` 还原的文件 Metro **不会自动察觉** —— 文件监视看不到这类变更,
@@ -368,6 +378,11 @@ cd frontend && npm run build
 cd frontend && npx playwright test --project=chromium
 cd frontend && npx playwright test --project=firefox
 cd frontend && npx playwright test --project=mobile-chrome
+# **跑 E2E 之前先看 3333 有没有人在听,而且要在推送之前跑(2026-10-11)。**
+# `lsof -iTCP:3333 -sTCP:LISTEN` 有输出就查那个进程的 cwd:config 默认 3333 且 reuseExistingServer,
+# 一次连到了子代理没关的 `next-server`,测的是它 worktree 里的旧代码,结果不作数(子代理说「已关」不可信)。
+# 自己起服务用别的端口 + `PLAYWRIGHT_BASE_URL`。同一轮里先推送后跑 E2E,漏过 3 条真回归
+# (评议区拿到非数组响应把整个审判页打成 500)—— jest 与 pytest 全绿。
 
 # 真 PostgreSQL 上跑一遍 —— 上面那条 SQLite 命令跑不到的东西在这里
 # (这条不拿 gate lock,理由见上面「只锁吃 CPU 的门禁」。)
