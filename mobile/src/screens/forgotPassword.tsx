@@ -53,7 +53,6 @@ import { useI18n } from "../i18n";
 import { RESEND_AFTER_SECONDS, RESET_CODE, RESET_CODE_TTL_SECONDS, formatCountdown, isPlausibleEmail } from "../rules";
 import { Button, GUTTER, Input, Screen, Txt, useTheme } from "../ui";
 import { PasswordMatch, PasswordRules, usePasswordForm } from "../passwordRulesView";
-import { MIN_PASSWORD_LENGTH } from "./auth";
 
 /**
  * What a failed step-1 request says. `null` means "say what a 200 says": a 400
@@ -68,21 +67,6 @@ export function maskEmail(email: string): string {
   const at = email.lastIndexOf("@");
   if (at < 1) return email;
   return `${email[0]}***${email.slice(at)}`;
-}
-
-/**
- * The strength bar: four segments. Length ≥ 8, letters and digits both, length
- * ≥ 12, and a character that is neither. A hint, not a rule — the server's
- * validators decide (`err_weak_*` says which rules they are).
- */
-export function passwordStrength(password: string): number {
-  if (!password) return 0;
-  return [
-    password.length >= MIN_PASSWORD_LENGTH,
-    /[A-Za-z]/.test(password) && /\d/.test(password),
-    password.length >= 12,
-    /[^A-Za-z0-9]/.test(password),
-  ].filter(Boolean).length;
 }
 
 /** Epoch ms `seconds` from now: when a `retry_after` runs out. */
@@ -390,28 +374,6 @@ function CodeCells({
   );
 }
 
-function StrengthBar({ password }: { password: string }) {
-  const theme = useTheme();
-  const { t } = useI18n();
-  const score = passwordStrength(password);
-  const lit = score < 2 ? theme.neg : score < 4 ? theme.inkMuted : theme.pos;
-  const level = score < 2 ? "weak" : score < 4 ? "fair" : "strong";
-  return (
-    <View style={styles.strength}>
-      <View style={styles.segments} testID="forgot-strength" accessibilityValue={{ min: 0, max: 4, now: score }}>
-        {[0, 1, 2, 3].map((i) => (
-          <View key={i} style={[styles.segment, { backgroundColor: i < score ? lit : theme.hair }]} />
-        ))}
-      </View>
-      {password ? (
-        <Txt variant="caption" tone="subtle">
-          {t("soul_app.forgot_password.strength", { level: t(`soul_app.forgot_password.strength_${level}`) })}
-        </Txt>
-      ) : null}
-    </View>
-  );
-}
-
 function CodeStep({ sent, onResent, onDone }: { sent: Sent; onResent: (sent: Sent) => void; onDone: () => void }) {
   const theme = useTheme();
   const { t } = useI18n();
@@ -575,7 +537,6 @@ function CodeStep({ sent, onResent, onDone }: { sent: Sent; onResent: (sent: Sen
             secureToggle={{ show: t("soul_app.common.show"), hide: t("soul_app.common.hide") }}
             {...fields.next}
           />
-          <StrengthBar password={newPassword} />
           <PasswordRules next={newPassword} judged={newJudged} common={commonRejected} />
         </View>
 
@@ -649,9 +610,6 @@ const styles = StyleSheet.create({
   // behind the first cell even where a platform does not honour a transparent
   // text colour (the Android "ghost digits").
   hiddenInput: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, opacity: 0.01, color: "transparent", fontSize: 1 },
-  strength: { gap: 8 },
-  segments: { flexDirection: "row", gap: 4 },
-  segment: { flex: 1, height: 4 },
   primary: { marginTop: 4 },
   link: { minHeight: 44, justifyContent: "center", alignSelf: "flex-start" },
   underline: { textDecorationLine: "underline" },
