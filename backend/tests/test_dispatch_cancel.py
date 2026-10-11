@@ -50,7 +50,7 @@ def world(db):
         dispatched_by=mod_a, status=DispatchStatus.PROPOSED, tenant=a,
     )
     return {
-        "a": a, "b": b, "soul": soul, "record": record, "mod_b": mod_b,
+        "a": a, "b": b, "soul": soul, "record": record, "mod_a": mod_a, "mod_b": mod_b,
         "client_a": _client(mod_a, a), "client_b": _client(mod_b, b), "client_c": _client(mod_c, c),
         "client_judge_a": _client(judge_a, a),
     }
@@ -63,7 +63,7 @@ def _cancel(client, record, reason=REASON):
 
 def _untouched(world, status=DispatchStatus.PROPOSED):
     record = DispatchRecord.all_objects.get(pk=world["record"].pk)
-    assert record.status == status and "Cancellation reason" not in record.reason
+    assert record.status == status and record.decision_reason == "" and record.decided_by_id is None
     assert not SoulEvent.objects.filter(soul=world["soul"], payload__action="DISPATCH_CANCELLED").exists()
 
 
@@ -74,7 +74,9 @@ def test_the_sending_hall_cancels_a_proposal_and_the_target_is_told_after_commit
     assert res.status_code == 200, res.data
     record = DispatchRecord.all_objects.get(pk=world["record"].pk)
     assert record.status == DispatchStatus.CANCELLED and record.decided_at is not None
-    assert record.reason.endswith(f"Cancellation reason: {REASON}")
+    # 决定理由与决定人在自己的字段里;`reason` 仍是发起时的原文,不被追加。
+    assert record.decision_reason == REASON and record.decided_by_id == world["mod_a"].pk
+    assert record.reason == world["record"].reason and "Cancellation reason" not in record.reason
     [event] = SoulEvent.objects.filter(soul=world["soul"], payload__action="DISPATCH_CANCELLED")
     assert event.payload["dispatch_id"] == str(record.pk) and event.payload["reason"] == REASON
     [note] = UserNotification.objects.filter(user=world["mod_b"], related_id=str(record.pk))

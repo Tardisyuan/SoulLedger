@@ -10157,6 +10157,9 @@ export interface components {
             readonly proposed_at: string;
             /** Format: date-time */
             readonly decided_at: string | null;
+            readonly decided_by: number | null;
+            readonly decided_by_name: string | null;
+            readonly decision_reason: string;
             /** Format: date-time */
             readonly executed_at: string | null;
             /** Format: date-time */
@@ -13862,6 +13865,9 @@ export interface components {
             readonly proposed_at?: string;
             /** Format: date-time */
             readonly decided_at?: string | null;
+            readonly decided_by?: number | null;
+            readonly decided_by_name?: string | null;
+            readonly decision_reason?: string;
             /** Format: date-time */
             readonly executed_at?: string | null;
             /** Format: date-time */

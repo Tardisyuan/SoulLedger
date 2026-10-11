@@ -53,6 +53,7 @@ class DispatchRecordSerializer(serializers.ModelSerializer):
     source_tenant_code = serializers.CharField(source="source_tenant.code", read_only=True)
     target_tenant_code = serializers.CharField(source="target_tenant.code", read_only=True, allow_null=True)
     dispatched_by_name = serializers.CharField(source="dispatched_by.username", read_only=True, allow_null=True)
+    decided_by_name = serializers.CharField(source="decided_by.username", read_only=True, allow_null=True)
 
     class Meta:
         model = DispatchRecord
@@ -71,6 +72,9 @@ class DispatchRecordSerializer(serializers.ModelSerializer):
             "reason",
             "proposed_at",
             "decided_at",
+            "decided_by",
+            "decided_by_name",
+            "decision_reason",
             "executed_at",
             "returned_at",
             "create_time",
@@ -95,6 +99,8 @@ class DispatchRecordSerializer(serializers.ModelSerializer):
             # same shape `status` uses two fields up.
             "proposed_at",
             "decided_at",
+            "decided_by",
+            "decision_reason",
             "executed_at",
             "returned_at",
             "create_time",
