@@ -6,7 +6,7 @@ import { REFRESH_TOKEN_KEY } from "@soulledger/core/platform";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import * as SecureStore from "expo-secure-store";
-import { Linking } from "react-native";
+import { Linking, TextInput } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { I18nProvider } from "../i18n";
@@ -247,6 +247,17 @@ describe("the wizard", () => {
     await screen.findByTestId("intro-next");
     expect(screen.getByTestId("wizard-step").props.children).toBe("1 / 3"); // still three steps
     expect(screen.getByTestId("setup-password").props.secureTextEntry).toBe(true);
+    // 第十九批 order: the account, 「还没有验证器？」, a rule, the sentence, the box, then the button.
+    const ids = screen.UNSAFE_root
+      .findAll((n: { type: unknown; props: Record<string, unknown> }) => typeof n.type === "string" && !!n.props.testID)
+      .map((n: { props: Record<string, unknown> }) => n.props.testID as string);
+    const at = (id: string) => ids.indexOf(id);
+    expect(screen.getByText("还没有验证器？")).toBeTruthy();
+    expect(screen.getByTestId("setup-password-hint").props.children).toBe("先输入当前密码，确认是你本人。");
+    expect(at("setup-divider")).toBeGreaterThan(-1);
+    expect(at("setup-divider")).toBeLessThan(at("setup-password-hint"));
+    expect(at("setup-password-hint")).toBeLessThan(at("setup-password"));
+    expect(at("setup-password")).toBeLessThan(at("intro-next"));
     expect(screen.getByTestId("intro-next").props.accessibilityState).toMatchObject({ disabled: true });
     fireEvent.press(screen.getByTestId("intro-next"));
     expect(calls.some((c) => c.url === "/me/mfa/setup/")).toBe(false);
@@ -261,8 +272,11 @@ describe("the wizard", () => {
     await screen.findByTestId("profile-card");
     act(() => navigationRef.navigate("Mfa"));
     await screen.findByTestId("intro-next");
+    const focus = jest.spyOn(TextInput.prototype, "focus");
+    focus.mockClear();
     await startWith("nope");
     expect(await screen.findByText("! 密码不对")).toBeTruthy();
+    await waitFor(() => expect(focus).toHaveBeenCalled()); // the cursor is back in the box
     expect(screen.queryByTestId("secret-key")).toBeNull();
     expect(screen.getByTestId("wizard-step").props.children).toBe("1 / 3");
     expect(screen.getByTestId("setup-password").props.value).toBe("nope");
@@ -280,9 +294,24 @@ describe("the wizard", () => {
     await screen.findByTestId("intro-next");
     await startWith();
     expect(await screen.findByText("尝试过于频繁,请稍后再试")).toBeTruthy();
-    fireEvent.press(screen.getByTestId("intro-next"));
+    // The button is off while the budget is spent, and typing does not wipe the sentence.
+    expect(screen.getByTestId("intro-next").props.accessibilityState).toMatchObject({ disabled: true });
+    fireEvent.changeText(screen.getByTestId("setup-password"), "another-try");
+    expect(screen.getByText("尝试过于频繁,请稍后再试")).toBeTruthy();
+    expect(screen.getByTestId("intro-next").props.accessibilityState).toMatchObject({ disabled: true });
+    expect(screen.queryByTestId("secret-key")).toBeNull();
+  });
+
+  it("any other failure is told as a failure and the button stays usable", async () => {
+    signedIn({ "GET /me/mfa/": { status: 200, data: OFF }, "POST /me/mfa/setup/": "offline" });
+    renderApp();
+    await screen.findByTestId("profile-card");
+    act(() => navigationRef.navigate("Mfa"));
+    await screen.findByTestId("intro-next");
+    await startWith();
     await screen.findByTestId("setup-failed");
     expect(screen.queryByTestId("secret-key")).toBeNull();
+    expect(screen.getByTestId("intro-next").props.accessibilityState).toMatchObject({ disabled: false });
   });
 
   it("the password was asked once, and leaving ② does not ask for a second key", async () => {
@@ -811,10 +840,11 @@ describe("changing the password signs the other devices out", () => {
 });
 
 describe("存为文件", () => {
-  const NOW = new Date(2026, 9, 11, 21, 46);
-
+  
   it("the file is named for the app and the day, and says what it is before the codes; nothing else about the soul", () => {
-    expect(recoveryFileName(NOW)).toBe("SoulLedger-recovery-codes-2026-10-11.txt");
+    expect(recoveryFileName("SL-CN-000042")).toBe("soulledger-recovery-SL-CN-000042.txt");
+    // Not localised, no date; nothing unsafe survives (a slash, a colon, a space, a non-ASCII letter).
+    expect(recoveryFileName("A/B:C D灵")).toBe("soulledger-recovery-A_B_C_D_.txt");
     const body = recoveryFileBody("HEADER", "Soul code: S-1", CODES);
     expect(body.split("\n")[0]).toBe("HEADER");
     expect(body.split("\n")[1]).toBe("Soul code: S-1");
@@ -826,34 +856,34 @@ describe("存为文件", () => {
     sharing.shareAsync.mockImplementationOnce(async () => {
       during = [...files.values()];
     });
-    const shown = await shareRecoveryFile({ header: "H", soulCodeLine: "C: S-1", codes: CODES, dialogTitle: "T", now: NOW });
+    const shown = await shareRecoveryFile({ header: "H", soulCode: "S-1", soulCodeLine: "C: S-1", codes: CODES, dialogTitle: "T" });
     expect(shown).toBe(true);
     expect(during).toHaveLength(1);
     expect(during[0]).toContain(CODES[0]);
-    expect(sharing.shareAsync).toHaveBeenCalledWith("file:///cache/SoulLedger-recovery-codes-2026-10-11.txt", expect.objectContaining({ mimeType: "text/plain" }));
+    expect(sharing.shareAsync).toHaveBeenCalledWith("file:///cache/soulledger-recovery-S-1.txt", expect.objectContaining({ mimeType: "text/plain" }));
     expect(files.size).toBe(0);
   });
 
   it("a cancelled or failed sheet deletes it too, and so does a sharing that is not available", async () => {
     sharing.shareAsync.mockRejectedValueOnce(new Error(`cancelled ${CODES[0]}`));
-    expect(await shareRecoveryFile({ header: "H", soulCodeLine: "C", codes: CODES, dialogTitle: "T", now: NOW })).toBe(false);
+    expect(await shareRecoveryFile({ header: "H", soulCode: "S-1", soulCodeLine: "C", codes: CODES, dialogTitle: "T" })).toBe(false);
     expect(files.size).toBe(0);
     sharing.isAvailableAsync.mockResolvedValueOnce(false);
-    expect(await shareRecoveryFile({ header: "H", soulCodeLine: "C", codes: CODES, dialogTitle: "T", now: NOW })).toBe(false);
+    expect(await shareRecoveryFile({ header: "H", soulCode: "S-1", soulCodeLine: "C", codes: CODES, dialogTitle: "T" })).toBe(false);
     expect(sharing.shareAsync).toHaveBeenCalledTimes(1);
     expect(files.size).toBe(0);
   });
 
   it("a file left behind (the app was killed while the sheet was up) is swept before the next, and on demand", async () => {
-    files.set("file:///cache/SoulLedger-recovery-codes-2026-01-01.txt", "old");
+    files.set("file:///cache/soulledger-recovery-OLD1.txt", "old");
     files.set("file:///cache/unrelated.txt", "keep");
     sweepRecoveryFiles();
     expect([...files.keys()]).toEqual(["file:///cache/unrelated.txt"]);
-    files.set("file:///cache/SoulLedger-recovery-codes-2026-01-02.txt", "old");
+    files.set("file:///cache/soulledger-recovery-OLD2.txt", "old");
     sharing.shareAsync.mockImplementationOnce(async () => {
-      expect(files.has("file:///cache/SoulLedger-recovery-codes-2026-01-02.txt")).toBe(false);
+      expect(files.has("file:///cache/soulledger-recovery-OLD2.txt")).toBe(false);
     });
-    await shareRecoveryFile({ header: "H", soulCodeLine: "C", codes: CODES, dialogTitle: "T", now: NOW });
+    await shareRecoveryFile({ header: "H", soulCode: "S-1", soulCodeLine: "C", codes: CODES, dialogTitle: "T" });
     expect([...files.keys()]).toEqual(["file:///cache/unrelated.txt"]);
   });
 
@@ -879,6 +909,8 @@ describe("存为文件", () => {
       fireEvent.press(screen.getByTestId("codes-save-file"));
     });
     await waitFor(() => expect(sharing.shareAsync).toHaveBeenCalledTimes(1));
+    // Named for this life's soul code, as the profile has it.
+    expect(sharing.shareAsync.mock.calls[0][0]).toBe(`file:///cache/soulledger-recovery-${PROFILE.soul_code}.txt`);
     CODES.forEach((c) => expect(body).toContain(c));
     expect(body).toContain(PROFILE.soul_code);
     expect(body).not.toContain(PROFILE.name);
