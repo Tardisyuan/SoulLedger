@@ -10,7 +10,7 @@
  *
  * ONLY LEAF MODULES, on purpose. Everything below is free of the soul app's session, chat,
  * navigation and screens (checked by reading their imports): `ui`, `theme`, `fonts`, `i18n`,
- * `emblems`, `feedback`, `network`, `platform`, `brandMark`, `deepLink`, `voiceCache`, `crashReport`, `errorBoundary`, `versionGate` (+ `appVersion`). NEVER import `session`, `chrome`,
+ * `emblems`, `feedback`, `network`, `platform`, `brandMark`, `deepLink`, `voiceCache`, `crashReport`, `errorBoundary`, `versionGate` (+ `appVersion`), `passwordRulesView` (imports only `fonts`, `i18n`, `ui` and core). NEVER import `session`, `chrome`,
  * `navigation`, `push`, `coldStart` or anything under `screens/` from here -- those pull the
  * soul's accounts into this bundle. A change to one of the modules below is a change to both
  * apps; both apps' tests cover it.
@@ -41,6 +41,7 @@ export {
   useRemote,
   useTheme,
 } from "../../mobile/src/ui";
+export { PasswordMatch, PasswordRules, usePasswordForm } from "../../mobile/src/passwordRulesView";
 export { initCrashReporting, setCrashUser } from "../../mobile/src/crashReport";
 export { RootErrorBoundary } from "../../mobile/src/errorBoundary";
 export { VersionGate } from "../../mobile/src/versionGate";

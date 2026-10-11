@@ -215,8 +215,6 @@ describe("step 2: the code and the new password", () => {
 
   it.each([
     ["12345", "new-password-1", "new-password-1", "code", "! 验证码是 6 位数字"],
-    ["123456", "short", "short", "new", "! 密码太弱"],
-    ["123456", "new-password-1", "new-password-2", "confirm", "! 两次输入的密码不一样"],
   ])("code %p / %p / %p is refused on the device, under the %s field: %s", async (code, password, confirm, field, message) => {
     const calls = await toCodeStep();
     fillCode(code, password, confirm);
@@ -229,10 +227,6 @@ describe("step 2: the code and the new password", () => {
 
   it.each([
     ["12345", "new-password-1", "new-password-1", "code", "forgot-code", "123456"],
-    ["123456", "short", "short", "new", "forgot-new-password", "new-password-1"],
-    ["123456", "new-password-1", "new-password-2", "confirm", "forgot-confirm-password", "new-password-1"],
-    // Confirm is also valid again when the password it must match is changed to it.
-    ["123456", "new-password-1", "new-password-2", "confirm", "forgot-new-password", "new-password-2"],
   ])("code %p / %p / %p: the %s message goes as soon as %s becomes valid", async (code, password, confirm, field, input, fixed) => {
     await toCodeStep();
     fillCode(code, password, confirm);
@@ -243,6 +237,119 @@ describe("step 2: the code and the new password", () => {
     expect(screen.getByTestId(`forgot-${field}-error`)).toBeTruthy();
     fireEvent.changeText(screen.getByTestId(input), fixed);
     expect(screen.queryByTestId(`forgot-${field}-error`)).toBeNull();
+  });
+
+  describe("the password checklist (Design 第二十三批)", () => {
+    const SET_NEW = (calls: { url: string }[]) => calls.filter((c) => c.url === "/auth/set-new-password/");
+    const mark = (id: string) => {
+      const node = screen.getByTestId(`pw-rules-${id}-mark`, { includeHiddenElements: true });
+      return node.props.children as string;
+    };
+    const matchMark = () => screen.getByTestId("pw-match-mark", { includeHiddenElements: true }).props.children as string;
+    const blur = (id: string) => fireEvent(screen.getByTestId(id), "blur");
+
+    it("is listed on arrival, all ○, with two rows (no 当前密码 box here) and the ◇ note", async () => {
+      await toCodeStep();
+      expect(mark("min_length")).toBe("○");
+      expect(mark("not_digits")).toBe("○");
+      expect(screen.queryByTestId("pw-rules-not_current")).toBeNull();
+      expect(screen.getByTestId("pw-rules-note")).toBeTruthy();
+      expect(matchMark()).toBe("○");
+    });
+
+    it("ticks while typing, and never shows ! while the box is still being typed in", async () => {
+      await toCodeStep();
+      fireEvent.changeText(screen.getByTestId("forgot-new-password"), "1234");
+      // Only digits: not-only-numbers is NOT met, and is still ○ -- not !.
+      expect([mark("min_length"), mark("not_digits")]).toEqual(["○", "○"]);
+      fireEvent.changeText(screen.getByTestId("forgot-new-password"), "abcd");
+      expect([mark("min_length"), mark("not_digits")]).toEqual(["○", "✓"]);
+      fireEvent.changeText(screen.getByTestId("forgot-new-password"), "abcdefgh");
+      expect([mark("min_length"), mark("not_digits")]).toEqual(["✓", "✓"]);
+    });
+
+    it("leaving the box turns what is unmet into !, and fixing it ticks at once (no second blur)", async () => {
+      await toCodeStep();
+      fireEvent.changeText(screen.getByTestId("forgot-new-password"), "1234");
+      blur("forgot-new-password");
+      expect([mark("min_length"), mark("not_digits")]).toEqual(["!", "!"]);
+      fireEvent.changeText(screen.getByTestId("forgot-new-password"), "abcdefgh1");
+      expect([mark("min_length"), mark("not_digits")]).toEqual(["✓", "✓"]);
+    });
+
+    it("the confirmation reads ○ while typed in, and ! only after leaving it", async () => {
+      await toCodeStep();
+      fireEvent.changeText(screen.getByTestId("forgot-new-password"), "abcdefgh1");
+      fireEvent.changeText(screen.getByTestId("forgot-confirm-password"), "abc");
+      expect(matchMark()).toBe("○");
+      expect(screen.getByText("两次输入一致")).toBeTruthy();
+      blur("forgot-confirm-password");
+      expect(matchMark()).toBe("!");
+      expect(screen.getByText("两次输入不一致")).toBeTruthy();
+      fireEvent.changeText(screen.getByTestId("forgot-confirm-password"), "abcdefgh1");
+      expect(matchMark()).toBe("✓");
+    });
+
+    it("saving with something unmet sends nothing, and turns it into !", async () => {
+      const calls = await toCodeStep();
+      fillCode("123456", "short", "short");
+      await submitCode();
+      expect(SET_NEW(calls)).toEqual([]);
+      expect(mark("min_length")).toBe("!");
+      expect(mark("not_digits")).toBe("✓");
+      // The old one-sentence local errors are gone: the checklist is the only voice.
+      expect(screen.queryByTestId("forgot-new-error")).toBeNull();
+      expect(screen.queryByText("! 密码太弱")).toBeNull();
+    });
+
+    it("saving with a different confirmation sends nothing and says so under the confirmation", async () => {
+      const calls = await toCodeStep();
+      fillCode("123456", "new-password-1", "new-password-2");
+      await submitCode();
+      expect(SET_NEW(calls)).toEqual([]);
+      expect(matchMark()).toBe("!");
+      expect(screen.queryByTestId("forgot-confirm-error")).toBeNull();
+    });
+
+    it("saving with everything met sends the request", async () => {
+      await toCodeStep();
+      const calls = stubApi({ [CONFIRM]: { status: 200, data: { detail: "ok" } } });
+      fillCode("123456", "new-password-1");
+      await submitCode();
+      expect(SET_NEW(calls)).toHaveLength(1);
+    });
+
+    it("the server refusing it as too common says so above the list; the ticks stay, the words stay, the old sentence is gone", async () => {
+      await toCodeStep();
+      stubApi({ [CONFIRM]: { status: 400, data: refusal("weak_password") } });
+      fillCode("123456", "new-password-1");
+      await submitCode();
+      expect(text("pw-rules-common-title")).toBe("! 这个密码太容易被猜到");
+      expect(screen.getByText("它在常见密码名单里，或和你的名字、编号太像。换一个再保存。")).toBeTruthy();
+      // The block replaces the ◇ note, and what was right is still right.
+      expect(screen.queryByTestId("pw-rules-note")).toBeNull();
+      expect([mark("min_length"), mark("not_digits"), matchMark()]).toEqual(["✓", "✓", "✓"]);
+      expect(screen.getByTestId("forgot-new-password").props.value).toBe("new-password-1");
+      expect(screen.getByTestId("forgot-confirm-password").props.value).toBe("new-password-1");
+      expect(screen.queryByText("! 密码太弱")).toBeNull();
+      expect(screen.queryByTestId("forgot-new-error")).toBeNull();
+      // Typing another password retires the verdict: it is about that one.
+      fireEvent.changeText(screen.getByTestId("forgot-new-password"), "another-pass-2");
+      expect(screen.queryByTestId("pw-rules-common")).toBeNull();
+      expect(screen.getByTestId("pw-rules-note")).toBeTruthy();
+    });
+
+    it("each row reads as its words plus its state, and the symbol is hidden from the screen reader", async () => {
+      await toCodeStep();
+      fireEvent.changeText(screen.getByTestId("forgot-new-password"), "abcdefgh1");
+      expect(screen.getByTestId("pw-rules-min_length").props.accessibilityLabel).toBe("至少 8 位，已满足");
+      fireEvent.changeText(screen.getByTestId("forgot-new-password"), "1234");
+      blur("forgot-new-password");
+      expect(screen.getByTestId("pw-rules-min_length").props.accessibilityLabel).toBe("至少 8 位，未满足");
+      // ○ takes no suffix.
+      expect(screen.getByTestId("pw-match").props.accessibilityLabel).toBe("两次输入一致");
+      expect(screen.getByTestId("pw-rules-min_length-mark", { includeHiddenElements: true }).props.accessibilityElementsHidden).toBe(true);
+    });
   });
 
   it("the hidden code input shows nothing of itself, yet stays a real focusable field", async () => {
@@ -293,7 +400,6 @@ describe("step 2: the code and the new password", () => {
     ["an expired code", { status: 400, data: refusal("reset_code_expired") }, "forgot-expired", "! 验证码已过期", "5 分钟已过。重新发一个即可，已填的新密码会保留。"],
     // The sentence the App used to match for 「验证码错误」, under another code: the code wins.
     ["an expired code worded like a wrong one", { status: 400, data: { error: "验证码错误", code: "reset_code_expired" } }, "forgot-expired", "! 验证码已过期", "5 分钟已过。重新发一个即可，已填的新密码会保留。"],
-    ["a password the validators refuse", { status: 400, data: refusal("weak_password") }, "forgot-new-error", "! 密码太弱", "至少 8 位，不能全是数字，也不能太常见。"],
     ["a throttled confirm (429)", THROTTLED(30), "forgot-error", "! 请求太频繁", "请 30 秒后再试。倒计时结束后按钮自动恢复。"],
     ["no network", "offline", "forgot-error", "! 没有连接", "已填的内容不会丢。恢复连接后再点一次。"],
     ["no soul account on the address (404)", { status: 404, data: refusal("no_soul_account") }, "forgot-error", "! 这个邮箱无法重设密码，请向所属殿司申请重置密码", null],

@@ -391,6 +391,7 @@ export function Screen({
   testID,
   scrollRef,
   onScroll,
+  belowHeader,
 }: {
   children: ReactNode;
   refreshing?: boolean;
@@ -402,8 +403,16 @@ export function Screen({
   scrollRef?: Ref<ScrollView>;
   /** The scroll offset, for a header that compacts as the page moves under it (v3 life band). */
   onScroll?: (y: number) => void;
+  /**
+   * This screen starts below a header (or a back row). KeyboardAvoidingView pads by its frame measured from its
+   * parent, so it comes up short by exactly the distance from the top of the window and the button under a
+   * form stays beneath the keyboard; passing the distance fixes that (`mobile-officer` letter.tsx, 2026-10-11).
+   */
+  belowHeader?: boolean;
 }) {
   const t = useTheme();
+  const keyboardFrame = useRef<View>(null);
+  const [top, setTop] = useState(0);
   const pull = usePullRefresh(refreshing, onRefresh);
   // When the system text size changes while a screen is open, iOS re-sizes the
   // glyphs but Yoga keeps the old line boxes, and text is clipped (seen on the
@@ -415,12 +424,19 @@ export function Screen({
       testID={testID}
       edges={edges}
       style={[styles.fill, { backgroundColor: t.s0 }]}
+      // The keyboard frame fills this view from its top, so this view's distance from the window's top is the offset.
+      ref={keyboardFrame}
+      onLayout={belowHeader ? () => keyboardFrame.current?.measureInWindow((_x, y) => setTop(y)) : undefined}
     >
       {scroll ? (
         // The keyboard covers the lower half of the screen; without this a focused field low on
         // the page (登录的密码框) sits under it. Android is edge-to-edge (SDK 35+), where
         // `adjustResize` no longer shrinks the window, so both platforms pad by the keyboard.
-        <KeyboardAvoidingView style={styles.fill} behavior="padding">
+        <KeyboardAvoidingView
+          style={styles.fill}
+          behavior="padding"
+          keyboardVerticalOffset={belowHeader ? top : undefined}
+        >
         {pull.frame(
           <ScrollView
             ref={scrollRef}
