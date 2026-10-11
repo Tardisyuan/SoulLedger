@@ -64,6 +64,7 @@ export function DeliverySlip({ slip, texts, color = false }: { slip: CredentialS
   const p = texts[own].slip;
   const e = texts.en.slip;
   const ink = color ? skin : "mono";
+  const inkCiv = ink === "mono" || ink === "neutral" ? undefined : ink;
   const code = formatSoulCode(slip.soul_code);
   const until = slipTime(slip.expires_at);
   const printedAt = slipTime(slip.printed_at);
@@ -91,7 +92,7 @@ export function DeliverySlip({ slip, texts, color = false }: { slip: CredentialS
   return createPortal(
     <div data-print-doc="" data-print-slip="" data-testid="delivery-slip" data-slip-civ={skin} data-slip-color={color ? "" : undefined}>
       <div style={{ position: "relative", width: 794, height: 1123, overflow: "hidden", fontSize: 13, lineHeight: "20px" }}>
-        <div data-slip-ink={ink} style={abs(24, 24, { width: 746, height: 376 })}>
+        <div data-slip-ink={ink} data-civ={inkCiv} style={abs(24, 24, { width: 746, height: 376 })}>
           <SlipFrame civ={skin} />
         </div>
 
@@ -160,7 +161,7 @@ export function DeliverySlip({ slip, texts, color = false }: { slip: CredentialS
             <span style={{ fontSize: 13, lineHeight: "18px", fontWeight: 600 }}>{p.personal}</span>
             {bi && <span style={{ ...SUB_TEXT, fontWeight: 600 }}>{e.personal}</span>}
           </div>
-          <div data-slip-ink={ink} style={{ marginTop: "auto", height: 8 }}>
+          <div data-slip-ink={ink} data-civ={inkCiv} style={{ marginTop: "auto", height: 8 }}>
             <SlipRule civ={skin} />
           </div>
           <div style={{ marginTop: 6, display: "flex", alignItems: "baseline", gap: 24, fontSize: 12, lineHeight: "16px" }}>
@@ -179,7 +180,7 @@ export function DeliverySlip({ slip, texts, color = false }: { slip: CredentialS
           </div>
         </div>
 
-        <span data-slip-ink={ink} data-slip-seal-slot="" style={abs(448, 104, { display: "flex" })}>
+        <span data-slip-ink={ink} data-civ={inkCiv} data-slip-seal-slot="" style={abs(448, 104, { display: "flex" })}>
           {skin === "neutral" ? (
             <BrandMark size={64} tone="ink" />
           ) : (
@@ -218,7 +219,7 @@ export function DeliverySlip({ slip, texts, color = false }: { slip: CredentialS
               {deskRealm ? `${deskRealm}${SEP}${deskHall}` : deskHall}
             </span>
           </div>
-          <div data-slip-ink={ink} style={{ height: 8 }}>
+          <div data-slip-ink={ink} data-civ={inkCiv} style={{ height: 8 }}>
             <SlipRule civ={skin} />
           </div>
           <dl style={{ margin: "20px 0 0", display: "grid", gridTemplateColumns: "160px minmax(0,1fr)", gap: "8px 16px" }}>

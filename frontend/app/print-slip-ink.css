@@ -15,20 +15,11 @@
   [data-slip-ink] {
     --slip-ink: CanvasText;
   }
-  [data-slip-ink="cn"] {
-    --slip-ink: oklch(var(--color-civ-cn));
-  }
-  [data-slip-ink="eu"] {
-    --slip-ink: oklch(var(--color-civ-eu));
-  }
-  [data-slip-ink="eg"] {
-    --slip-ink: oklch(var(--color-civ-eg));
-  }
-  [data-slip-ink="gr"] {
-    --slip-ink: oklch(var(--color-civ-gr));
-  }
-  [data-slip-ink="neutral"] {
-    --slip-ink: oklch(var(--color-civ-neutral));
+  /* 文明色经 `--color-main` 取(ledgerPaletteContract:源码不直接读文明令牌):带墨的元素自己挂 `data-civ`,
+     globals.css 的 [data-civ] 块于是在它身上把 --color-main 换成这张单子的文明,不管官员台自己是哪种皮。
+     四种文明之外的殿没有 data-civ,墨是纯黑。 */
+  [data-slip-ink][data-civ] {
+    --slip-ink: oklch(var(--color-main));
   }
   [data-print-slip] [data-slip-ink],
   [data-print-slip] [data-slip-ink] * {
