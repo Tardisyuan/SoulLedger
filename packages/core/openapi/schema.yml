@@ -26969,6 +26969,14 @@ components:
           type: integer
           readOnly: true
           description: 已发布、未删除的评论数。
+        pending_comment_count:
+          type: integer
+          readOnly: true
+          description: 待审、未删除的评论数。
+        hidden_comment_count:
+          type: integer
+          readOnly: true
+          description: 已隐藏、未删除的评论数。
         reaction_counts:
           allOf:
           - $ref: '#/components/schemas/SoulReactionCounts'
@@ -26988,12 +26996,14 @@ components:
       - content
       - create_time
       - edited_at
+      - hidden_comment_count
       - id
       - media
       - media_count
       - moderation_reason
       - moderation_status
       - open_report_count
+      - pending_comment_count
       - reaction_counts
       - visibility
     ModerationAction:

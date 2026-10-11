@@ -205,9 +205,11 @@ class ModeratedPostViewSet(ModeratedContentViewSet):
     serializer_class = ModeratedPostSerializer
 
     def get_queryset(self):
-        from apps.social.soul_circle import reaction_kind_counts, visible_comment_count
+        from apps.social.soul_circle import moderation_comment_counts, reaction_kind_counts, visible_comment_count
 
-        return super().get_queryset().annotate(visible_comment_count=visible_comment_count(), **reaction_kind_counts())
+        return super().get_queryset().annotate(
+            visible_comment_count=visible_comment_count(), **moderation_comment_counts(), **reaction_kind_counts(),
+        )
 
     @extend_schema(responses={200: ModeratedPostSerializer(many=True)})
     def list(self, request, *args, **kwargs):
