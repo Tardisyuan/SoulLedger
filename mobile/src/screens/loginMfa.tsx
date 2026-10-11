@@ -28,6 +28,7 @@ import { recoveryOf, stateOfFailure, type StepState } from "../mfa";
 import { useSession, type MfaChallenge } from "../session";
 import { Button, Input, Screen, Txt, useTheme } from "../ui";
 import { CheckRow, CoverRule, DigitField, Heading, StepNotice, TextLink } from "./mfaParts";
+import { formatSoulCode, spellSoulCode } from "@soulledger/core/domain/soulCode";
 
 /** The hall's name in the interface language, as the profile does: the language's own entry, else the display name. */
 export function hallNameOf(hall: MfaChallenge["hall"], locale: string): string {
@@ -144,9 +145,9 @@ export function LoginSecondStep({
       <ScrollView style={{ backgroundColor: theme.s1 }} contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
         <View style={styles.titleBlock}>
           <Heading size={28}>{t(mode === "code" ? "officer_app.mfa.title" : "soul_app.mfa.login.recovery_title")}</Heading>
-          <Txt variant="bodyLg" tone="muted">
+          <Txt variant="bodyLg" tone="muted" accessibilityLabel={t("soul_app.login.id_aria", { spelled: spellSoulCode(challenge.soulCode) })}>
             {`${t("soul_app.login.soul_code")} `}
-            <Txt style={styles.mono}>{challenge.soulCode}</Txt>
+            <Txt style={styles.mono}>{formatSoulCode(challenge.soulCode)}</Txt>
           </Txt>
         </View>
 
@@ -235,10 +236,10 @@ export function MfaLostScreen() {
             <Txt variant="bodyLg" tone="muted" style={styles.cardKey}>
               {tr("soul_app.mfa.lost.bring")}
             </Txt>
-            <Txt variant="bodyLg" style={styles.fill}>
+            <Txt variant="bodyLg" style={styles.fill} accessibilityLabel={tr("soul_app.login.id_aria", { spelled: spellSoulCode(soulCode) })}>
               {`${tr("soul_app.login.soul_code")} `}
               <Txt testID="lost-code" style={styles.mono}>
-                {soulCode}
+                {formatSoulCode(soulCode)}
               </Txt>
             </Txt>
           </View>

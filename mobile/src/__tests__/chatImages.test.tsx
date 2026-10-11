@@ -389,7 +389,7 @@ describe("the outbox with images (real ChatProvider)", () => {
     { uri: "file:///cache/b.jpg", name: "b.jpg", type: "image/jpeg", width: 1000, height: 1000 },
   ];
   const stored = () => JSON.parse(persistentStore.get(OUTBOX_KEY) ?? "null");
-  const start = (account = "SL-CN-000042") =>
+  const start = (account = "QU33Q9FW5F") =>
     render(
       <ChatProvider account={account}>
         <Probe />
@@ -505,7 +505,7 @@ describe("the outbox with images (real ChatProvider)", () => {
       await act(async () => probe.sendImages(conv(), [files[0]]));
       await waitFor(() => expect(probe.outbox[0].state).toBe("queued"));
       // On disk: the compressed file's path, not the picture.
-      expect(stored()).toMatchObject({ owner: "SL-CN-000042", items: [{ body: "", image: { uri: "file:///cache/a.jpg", name: "a.jpg" } }] });
+      expect(stored()).toMatchObject({ owner: "QU33Q9FW5F", items: [{ body: "", image: { uri: "file:///cache/a.jpg", name: "a.jpg" } }] });
       expect(JSON.stringify(stored())).not.toContain("base64");
       first.unmount();
 
@@ -551,7 +551,7 @@ describe("the outbox with images (real ChatProvider)", () => {
 
     it("another account signing in finds none of it, and a record without a file path reads as nothing", async () => {
       stubApi({ "/me/chat/conversations/": { status: 200, data: [conv()] }, "/me/chat/session/": session, [UP]: "offline" });
-      const first = start("SL-CN-000042");
+      const first = start("QU33Q9FW5F");
       await waitFor(() => expect(probe.availability).toBe("ready"));
       await act(async () => probe.sendImages(conv(), [files[0]]));
       first.unmount();
@@ -560,9 +560,9 @@ describe("the outbox with images (real ChatProvider)", () => {
       expect(probe.outbox).toEqual([]);
       second.unmount();
 
-      persistentStore.set(OUTBOX_KEY, JSON.stringify({ owner: "SL-CN-000042", items: [{ txnId: "t", conversationId: "c", roomId: "r", body: "", ts: 1, state: "queued", image: { name: "x" } }] }));
+      persistentStore.set(OUTBOX_KEY, JSON.stringify({ owner: "QU33Q9FW5F", items: [{ txnId: "t", conversationId: "c", roomId: "r", body: "", ts: 1, state: "queued", image: { name: "x" } }] }));
       const { readOutbox } = jest.requireActual("../chat") as typeof import("../chat");
-      expect(readOutbox("SL-CN-000042").items).toEqual([]);
+      expect(readOutbox("QU33Q9FW5F").items).toEqual([]);
     });
   });
 });

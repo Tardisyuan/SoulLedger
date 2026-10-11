@@ -18,14 +18,16 @@ import {
   storeSoulTokens,
   type MeProfile,
   type SoulErrorMessage,
+  type SoulLoginOutcome,
   type SoulLoginResponse,
 } from "@soulledger/core/api/soul";
 import { getRefreshToken, platform } from "@soulledger/core/platform";
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import { LOCALE_COOKIE, isLocale } from "@soulledger/core/config/locale";
 
 import { clearOutbox } from "./chat";
+import { bioEnabled, readCredential, rememberAccount, spendAutoPrompt } from "./deviceLogin";
 import { useI18n } from "./i18n";
 import { deviceTokenFor, forgetDevice, rememberDevice } from "./mfa";
 import { setUnauthorizedHandler } from "./platform";
@@ -55,6 +57,14 @@ export interface Session {
   state: SessionState;
   /** `null`: signed in (or must change the password). A challenge: the second step is next. */
   signIn: (soulCode: string, password: string) => Promise<MfaChallenge | null>;
+  /** 面容 / 指纹: the credential read from the secure store in place of a password. Same answer as `signIn`; throws the axios error. */
+  deviceSignIn: (soulCode: string, credential: string) => Promise<MfaChallenge | null>;
+  /**
+   * The password typed at this sign-in or password change, held in memory only so 「下次用面容登录？」 can use it.
+   * Never stored; `dropPassword` ends it (the question was answered, or the soul signed out).
+   */
+  heldPassword: () => string | null;
+  dropPassword: () => void;
   /** Step 2. Throws the axios error: the screen reads it with `soulMfaFailure`. */
   verifyMfa: (
     challenge: MfaChallenge,
@@ -90,6 +100,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     getRefreshToken() ? { status: "booting" } : { status: "signedOut" }
   );
   const { setLocale } = useI18n();
+  const password = useRef<string | null>(null);
 
   /**
    * The account's language is the one the settings screen promises to follow:
@@ -111,6 +122,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const land = useCallback(
     (profile: MeProfile) => {
       setState(signedIn(profile));
+      // The sign-in page of the next cold start is this account's (name included, so a rename shows).
+      rememberAccount(profile.soul_code, profile.name);
+      spendAutoPrompt();
       adoptAccountLocale();
     },
     [adoptAccountLocale]
@@ -162,10 +176,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     [enter]
   );
 
-  const signIn = useCallback(
-    async (soulCode: string, password: string): Promise<MfaChallenge | null> => {
-      const sent = deviceTokenFor(soulCode);
-      const response = await soulApi.login(soulCode, password, sent);
+  /** The answer to a password or a device-credential sign-in, which have one shape. */
+  const afterFirstStep = useCallback(
+    async (response: SoulLoginOutcome, sent: string | undefined, soulCode: string): Promise<MfaChallenge | null> => {
       if (isMfaRequired(response)) {
         // The server did not honour the remembered phone (expired, voided, another account's): forget it.
         if (sent) forgetDevice(soulCode);
@@ -180,6 +193,30 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       return null;
     },
     [finishSignIn]
+  );
+
+  const signIn = useCallback(
+    async (soulCode: string, typed: string): Promise<MfaChallenge | null> => {
+      const sent = deviceTokenFor(soulCode);
+      const response = await soulApi.login(soulCode, typed, sent);
+      // Held before the profile lands: the question on the home page reads it as the page appears.
+      password.current = typed;
+      try {
+        return await afterFirstStep(response, sent, soulCode);
+      } catch (e) {
+        password.current = null;
+        throw e;
+      }
+    },
+    [afterFirstStep]
+  );
+
+  const deviceSignIn = useCallback<Session["deviceSignIn"]>(
+    async (soulCode, credential) => {
+      const sent = deviceTokenFor(soulCode);
+      return afterFirstStep(await soulApi.deviceLogin({ soul_code: soulCode, credential, device_token: sent }), sent, soulCode);
+    },
+    [afterFirstStep]
   );
 
   const verifyMfa = useCallback<Session["verifyMfa"]>(
@@ -197,9 +234,21 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   const changePassword = useCallback(
     async (oldPassword: string, newPassword: string) => {
+      // 面容 / 指纹 on this phone survives its own password change (第二十批 §5): the credential goes along and the
+      // server keeps it. That costs one system verification; if the soul declines it the request goes without,
+      // and the credential lapses -- the sign-in page then says so.
+      const credential = bioEnabled() ? await readCredential() : null;
       // The other devices are signed out (and their push registrations stopped); this phone keeps its own push
       // token and swaps to the new token pair the server hands back.
-      storeSoulTokens(await soulApi.changePassword(oldPassword, newPassword, platform().persistent.get(PUSH_TOKEN_KEY) ?? undefined));
+      storeSoulTokens(
+        await soulApi.changePassword(
+          oldPassword,
+          newPassword,
+          platform().persistent.get(PUSH_TOKEN_KEY) ?? undefined,
+          credential?.status === "ok" ? credential.credential : undefined
+        )
+      );
+      password.current = newPassword;
       await enter();
     },
     [enter]
@@ -215,6 +264,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     const refresh = getRefreshToken();
     clearOutbox();
     clearVoiceNumbers();
+    password.current = null;
     setState({ status: "signedOut" });
     const end = () => {
       if (getRefreshToken() === refresh) clearSoulTokens();
@@ -230,8 +280,19 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo<Session>(
-    () => ({ state, signIn, verifyMfa, changePassword, signOut, refreshProfile, retryBoot }),
-    [state, signIn, verifyMfa, changePassword, signOut, refreshProfile, retryBoot]
+    () => ({
+      state,
+      signIn,
+      deviceSignIn,
+      heldPassword: () => password.current,
+      dropPassword: () => void (password.current = null),
+      verifyMfa,
+      changePassword,
+      signOut,
+      refreshProfile,
+      retryBoot,
+    }),
+    [state, signIn, deviceSignIn, verifyMfa, changePassword, signOut, refreshProfile, retryBoot]
   );
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }

@@ -681,7 +681,7 @@ export function EmblemDivider() {
  * square, like the field (A2). Ink, not a civilization colour (第三类 F 组, A1): a
  * focused field must not read as a refused one.
  */
-function FocusRing({ focused, children }: { focused: boolean; children: ReactNode }) {
+export function FocusRing({ focused, children }: { focused: boolean; children: ReactNode }) {
   const t = useTheme();
   return <View style={[styles.ring, { borderColor: focused ? t.ink : "transparent" }]}>{children}</View>;
 }

@@ -23,7 +23,7 @@ import { landingOf } from "../push";
 import { ApplicationsScreen } from "../screens/applications";
 import { SentenceScreen, SentenceSection, useSentencePlan, type SentenceLanding } from "../screens/sentence";
 import { SessionContext, SessionProvider, type Session } from "../session";
-import { PROFILE, life, pressTab, stubApi } from "./stubApi";
+import { PROFILE, life, pressTab, stubApi, resetLoginMemory } from "./stubApi";
 
 const mockNavigate = jest.fn();
 /** The whole-app tests need the real navigation; the screen tests record navigate(). */
@@ -94,6 +94,7 @@ const nodeIDs = () => screen.queryAllByTestId(/^station-node-/).map((n) => n.pro
 
 beforeEach(() => {
   installMobilePlatform();
+  resetLoginMemory();
   mockNavigate.mockReset();
   mockUseReal.current = false;
 });

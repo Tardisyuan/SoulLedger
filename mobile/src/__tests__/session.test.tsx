@@ -16,7 +16,7 @@ import { OUTBOX_KEY } from "../chat";
 import { installMobilePlatform, persistentStore, sessionStore } from "../platform";
 import { SessionProvider } from "../session";
 import { NEUTRAL_PLAQUE, v3, v3Band } from "../theme";
-import { PROFILE, application, heldReply, life, pressTab, stubApi } from "./stubApi";
+import { PROFILE, application, heldReply, life, pressTab, stubApi, resetLoginMemory } from "./stubApi";
 
 const secure = (SecureStore as unknown as { __store: Map<string, string> }).__store;
 
@@ -34,13 +34,14 @@ function renderApp() {
 
 beforeEach(async () => {
   installMobilePlatform();
+  resetLoginMemory();
   secure.clear();
   sessionStore.remove("soulledger_access");
   await AsyncStorage.clear();
 });
 
 async function signIn(mustChange: boolean) {
-  fireEvent.changeText(screen.getByTestId("login-soul-code"), "SL-CN-000042");
+  fireEvent.changeText(screen.getByTestId("login-soul-code"), "QU33Q9FW5F");
   fireEvent.changeText(screen.getByTestId("login-password"), "initial-pass");
   fireEvent.press(screen.getByTestId("login-submit"));
   if (mustChange) await screen.findByTestId("change-password-submit");
@@ -51,7 +52,7 @@ describe("login", () => {
     stubApi({
       "/soul-auth/login/": {
         status: 200,
-        data: { access: "A", refresh: "R", soul_code: "SL-CN-000042", account: { ...PROFILE.account, must_change_password: true } },
+        data: { access: "A", refresh: "R", soul_code: "QU33Q9FW5F", account: { ...PROFILE.account, must_change_password: true } },
       },
     });
     renderApp();
@@ -64,7 +65,7 @@ describe("login", () => {
     stubApi({
       "/soul-auth/login/": {
         status: 200,
-        data: { access: "A", refresh: "R", soul_code: "SL-CN-000042", account: { ...PROFILE.account, must_change_password: true } },
+        data: { access: "A", refresh: "R", soul_code: "QU33Q9FW5F", account: { ...PROFILE.account, must_change_password: true } },
       },
     });
     renderApp();
@@ -79,7 +80,7 @@ describe("login", () => {
     const calls = stubApi({
       "/soul-auth/login/": {
         status: 200,
-        data: { access: "A", refresh: "R", soul_code: "SL-CN-000042", account: { ...PROFILE.account, must_change_password: true } },
+        data: { access: "A", refresh: "R", soul_code: "QU33Q9FW5F", account: { ...PROFILE.account, must_change_password: true } },
       },
       "/me/password/": { status: 200, data: { access: "A2", refresh: "R2" } },
       "/me/": { status: 200, data: PROFILE },
@@ -297,7 +298,7 @@ describe("a stored session", () => {
 describe("the interface language follows the account", () => {
   const login = {
     status: 200,
-    data: { access: "A", refresh: "R", soul_code: "SL-CN-000042", account: PROFILE.account },
+    data: { access: "A", refresh: "R", soul_code: "QU33Q9FW5F", account: PROFILE.account },
   };
   const settings = (locale: string) => ({ status: 200, data: { rebirth: true, judgment: true, residence: true, chat: true, locale } });
 

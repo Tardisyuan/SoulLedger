@@ -19,7 +19,7 @@ import { installMobilePlatform, persistentStore } from "../platform";
 import { LIFE_OPEN_PREFIX, RESIDENCE_MEMO_PREFIX } from "../screens/life";
 import { SessionProvider } from "../session";
 import { v3, v3Band } from "../theme";
-import { PROFILE, application, life, pressTab, stubApi } from "./stubApi";
+import { PROFILE, application, life, pressTab, stubApi, resetLoginMemory } from "./stubApi";
 
 const secure = (SecureStore as unknown as { __store: Map<string, string> }).__store;
 
@@ -63,6 +63,7 @@ function renderApp() {
 
 beforeEach(async () => {
   installMobilePlatform();
+  resetLoginMemory();
   secure.clear();
   secure.set(REFRESH_TOKEN_KEY, "R");
   await AsyncStorage.clear();

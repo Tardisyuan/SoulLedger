@@ -16,7 +16,7 @@ import { RootNavigator } from "../navigation";
 import { installMobilePlatform, sessionStore } from "../platform";
 import { SessionProvider } from "../session";
 import { motion } from "../theme";
-import { PROFILE, life, stubApi } from "./stubApi";
+import { PROFILE, life, stubApi, resetLoginMemory } from "./stubApi";
 
 const net = Network as unknown as {
   __set: (s: Partial<Network.NetworkState>) => void;
@@ -44,6 +44,7 @@ const restore = () => act(async () => net.__set({ isConnected: true, isInternetR
 
 beforeEach(async () => {
   installMobilePlatform();
+  resetLoginMemory();
   secure.clear();
   sessionStore.remove("soulledger_access");
   await AsyncStorage.clear();

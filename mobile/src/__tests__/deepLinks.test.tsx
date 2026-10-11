@@ -15,7 +15,7 @@ import { ASK_MAX_LENGTH, parseSoulLink, soulLinks } from "../links";
 import { RootNavigator, navigationRef } from "../navigation";
 import { installMobilePlatform } from "../platform";
 import { SessionProvider } from "../session";
-import { PROFILE, life, stubApi } from "./stubApi";
+import { PROFILE, life, stubApi, resetLoginMemory } from "./stubApi";
 
 const secure = (SecureStore as unknown as { __store: Map<string, string> }).__store;
 
@@ -191,6 +191,7 @@ async function passNotice() {
 
 beforeEach(async () => {
   installMobilePlatform();
+  resetLoginMemory();
   secure.clear();
   await AsyncStorage.clear();
 });
@@ -246,7 +247,7 @@ describe("landing", () => {
       "GET /me/notification-settings/": { status: 200, data: { rebirth: true, judgment: true, residence: true, chat: true, locale: "zh-Hans" } },
     });
     renderApp();
-    fireEvent.changeText(await screen.findByTestId("login-soul-code"), "SL-CN-000042");
+    fireEvent.changeText(await screen.findByTestId("login-soul-code"), "QU33Q9FW5F");
     await act(async () => soulLinks.push("soulledger://cooldown"));
     expect(navigationRef.getCurrentRoute()?.name).toBe("Login");
     fireEvent.changeText(screen.getByTestId("login-password"), "initial-pass");

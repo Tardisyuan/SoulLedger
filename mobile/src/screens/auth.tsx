@@ -1,8 +1,9 @@
 import { LOCALE_LABELS, SUPPORTED_LOCALES } from "@soulledger/core/config/locale";
-import { soulErrorMessage, type SoulErrorMessage } from "@soulledger/core/api/soul";
+import { soulDeviceLoginFailure, soulErrorMessage, type SoulErrorMessage } from "@soulledger/core/api/soul";
+import { formatSoulCode } from "@soulledger/core/domain/soulCode";
 import { useNavigation, useRoute, type NavigationProp, type RouteProp } from "@react-navigation/native";
-import { useEffect, useState } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import { Pressable, StyleSheet, TextInput, View } from "react-native";
 
 import { BrandMark } from "../brandMarkView";
 import { useToast } from "../feedback";
@@ -10,7 +11,13 @@ import { family } from "../fonts";
 import { useI18n } from "../i18n";
 import { expiryOf, formatStamp } from "../rules";
 import { useSession, type MfaChallenge } from "../session";
-import { Block, Button, GUTTER, Interp, Input, Notice, Screen, Txt, useLayout, useTheme } from "../ui";
+import { clearCredential, bioEnabled, forgetAccount, isColdStart, readCredential, rememberedAccount, revokeCredential, spendAutoPrompt } from "../deviceLogin";
+import { LAPSE_KEYS, canSubmitLogin, lapseOfReason, shouldAutoPrompt, type Lapse } from "../loginRules";
+import { forgetDevice } from "../mfa";
+import { SoulCodeField, SoulCodeText } from "../soulCodeView";
+import { Block, Button, GUTTER, Interp, Input, Notice, Screen, SmallButton, Txt, useLayout, useTheme } from "../ui";
+import { useBiometry } from "../useBiometry";
+import { SwitchAccountSheet } from "./bio";
 import { LoginSecondStep } from "./loginMfa";
 
 /** Refusals are the user's to fix (red); a rate limit or a dead network is not (neutral). */
@@ -44,22 +51,77 @@ export function LanguageSwitch() {
   );
 }
 
-export type LoginParams = { passwordReset?: boolean } | undefined;
+export type LoginParams = { passwordReset?: boolean; scanned?: string; at?: number } | undefined;
+
+/** 「没有连上」: a refusal the soul did not cause, and the one the typed text survives (第二十批 §四). */
+function NetworkNotice({ onRetry }: { onRetry: () => void }) {
+  const theme = useTheme();
+  const { t } = useI18n();
+  return (
+    <View testID="login-error" accessibilityRole="alert" style={[styles.network, { borderColor: theme.neg, backgroundColor: theme.s0 }]}>
+      <View style={styles.fill}>
+        <Txt testID="login-network-title" style={[styles.noticeTitle, { color: theme.negInk }]}>
+          {t("soul_app.mfa.login.network")}
+        </Txt>
+        <Txt testID="login-network-body" variant="caption" tone="muted">
+          {t("soul_app.login.network_body")}
+        </Txt>
+      </View>
+      <SmallButton testID="login-retry" title={t("soul_app.common.retry")} onPress={onRetry} />
+    </View>
+  );
+}
+
+/** ◇ + a title and a sentence: the credential on this phone no longer works. Neutral, not an error. */
+function LapsedNotice({ lapse, bio }: { lapse: Lapse; bio: string }) {
+  const theme = useTheme();
+  const { t } = useI18n();
+  const keys = LAPSE_KEYS[lapse];
+  return (
+    <View testID="login-lapsed" accessibilityRole="text" accessibilityLiveRegion="polite" style={[styles.lapsed, { borderColor: theme.inkSubtle, backgroundColor: theme.s0 }]}>
+      <Txt accessibilityElementsHidden importantForAccessibility="no">
+        ◇
+      </Txt>
+      <View style={styles.fill}>
+        <Txt testID="login-lapsed-title" style={styles.noticeTitle}>
+          {t(keys.title, { bio })}
+        </Txt>
+        <Txt testID="login-lapsed-body" variant="caption" tone="muted">
+          {t(keys.body, { bio })}
+        </Txt>
+      </View>
+    </View>
+  );
+}
 
 export function LoginScreen() {
   const theme = useTheme();
   const { t } = useI18n();
-  const navigation = useNavigation<NavigationProp<{ Login: LoginParams; ForgotPassword: undefined }>>();
+  const navigation = useNavigation<NavigationProp<{ Login: LoginParams; ForgotPassword: undefined; ScanCode: undefined }>>();
   // Set by the 「忘记密码」 flow on its way back here. It says the reset worked; it does not sign in.
   const params = useRoute<RouteProp<{ Login: LoginParams }, "Login">>().params;
   const reset = params?.passwordReset === true;
-  const { state, signIn } = useSession();
+  const { state, signIn, deviceSignIn } = useSession();
+  const bio = useBiometry();
+  // The account this phone remembers (null: a first visit, or 「换一个账号」), and whether its 面容 / 指纹 is on.
+  const [account, setAccount] = useState(rememberedAccount);
+  const [bioActive, setBioActive] = useState(bioEnabled);
+  const known = account !== null;
   const [soulCode, setSoulCode] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
+  const [scanned, setScanned] = useState(false);
+  const [lapse, setLapse] = useState<Lapse | null>(null);
+  // The password box instead of the 面容 button: 「输入密码」 was tapped, or the system said no.
+  const [wantPassword, setWantPassword] = useState(false);
+  const [bioFailed, setBioFailed] = useState(false);
+  const [switching, setSwitching] = useState(false);
   // Set when the password was right and the account has two-step verification on: the screen shows the second step.
   const [challenge, setChallenge] = useState<MfaChallenge | null>(null);
   const [error, setError] = useState<SoulErrorMessage | null>(state.status === "signedOut" ? (state.notice ?? null) : null);
+  const passwordRef = useRef<TextInput>(null);
+  const code = account?.code ?? soulCode;
+  const bioScreen = known && bioActive && !wantPassword && !bioFailed;
   // `popTo("Login")` returns to THIS screen, not a fresh one: an earlier failed
   // sign-in's error (which hid the notice) and the old password are still here.
   // Each arrival carries a new params object, so a second reset clears them too.
@@ -72,26 +134,101 @@ export function LoginScreen() {
       setError(null);
       setPassword("");
     }
+    // The scanner went back with a code: it is the number now, and the cursor belongs in the password.
+    if (params?.scanned && params.at !== arrival?.at) {
+      setSoulCode(params.scanned);
+      setScanned(true);
+      setError(null);
+    }
   }
+  useEffect(() => {
+    if (scanned) passwordRef.current?.focus();
+  }, [scanned, params?.at]);
+
+  /** The phone's credential is no good: forget it and say why; the number stays, the password box takes over. */
+  const lapseTo = (why: Lapse, forCode: string) => {
+    clearCredential();
+    if (why === "reborn") forgetDevice(forCode);
+    setBioActive(false);
+    setBioFailed(false);
+    setWantPassword(false);
+    setLapse(why);
+    setError(null);
+    setBusy(false);
+  };
+
+  const enter = async (next: Promise<MfaChallenge | null>) => {
+    const challenged = await next;
+    if (challenged) {
+      setChallenge(challenged);
+      setPassword("");
+      setBusy(false);
+    }
+  };
 
   const submit = async () => {
-    if (!soulCode.trim() || !password) {
-      setError({ key: "soul_app.login.required" });
-      return;
-    }
+    if (!canSubmitLogin(code, password, busy)) return;
     setBusy(true);
     setError(null);
+    setLapse(null);
     try {
-      const next = await signIn(soulCode.trim(), password);
-      if (next) {
-        setChallenge(next);
-        setPassword("");
-        setBusy(false);
-      }
+      await enter(signIn(code, password));
     } catch (e) {
       setError(soulErrorMessage(e));
       setBusy(false);
     }
+  };
+
+  const signInWithBio = async () => {
+    if (!account || busy) return;
+    setBusy(true);
+    setError(null);
+    const read = await readCredential();
+    if (read.status === "cancelled") return setBusy(false);
+    if (read.status === "invalidated") return lapseTo("bio_changed", account.code);
+    if (read.status === "failed") {
+      setBusy(false);
+      setBioFailed(true);
+      return;
+    }
+    try {
+      await enter(deviceSignIn(account.code, read.credential));
+    } catch (e) {
+      const failure = soulDeviceLoginFailure(e);
+      if (failure.code === "revoked") lapseTo(lapseOfReason(failure.reason), account.code);
+      else if (failure.code === "invalid") lapseTo("bio_changed", account.code);
+      else {
+        setError(failure.code === "rate_limited" ? { key: "soul_app.errors.rate_limited" } : soulErrorMessage(e));
+        setBusy(false);
+      }
+    }
+  };
+
+  // The first sign-in page of a process opens the system prompt by itself, once (§一.4 C3).
+  const autoDone = useRef(false);
+  useEffect(() => {
+    if (autoDone.current) return;
+    autoDone.current = true;
+    const cold = isColdStart();
+    spendAutoPrompt();
+    // On the next tick: the sign-in sets state, and an effect body does not.
+    if (account && shouldAutoPrompt({ enabled: bioActive, coldStart: cold, cancelled: false, lapsed: lapse })) void Promise.resolve().then(signInWithBio);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the cold start is decided once, when the page first appears
+  }, []);
+
+  const switchAccount = async () => {
+    setSwitching(false);
+    if (bioEnabled()) await revokeCredential();
+    forgetAccount();
+    setAccount(null);
+    setBioActive(false);
+    setSoulCode("");
+    setPassword("");
+    setLapse(null);
+    setError(null);
+    setBioFailed(false);
+    setWantPassword(false);
+    setScanned(false);
   };
 
   if (challenge) {
@@ -114,6 +251,15 @@ export function LoginScreen() {
     );
   }
 
+  const network = error?.key === "soul_app.errors.network";
+  const canSubmit = canSubmitLogin(code, password, busy);
+  const forgot = (
+    <Pressable testID="login-forgot" accessibilityRole="link" disabled={busy} onPress={() => navigation.navigate("ForgotPassword")} style={styles.forgot}>
+      <Txt variant="label" tone="muted" style={[styles.noSpacing, styles.underline]}>
+        {t("soul_app.forgot_password.link")}
+      </Txt>
+    </Pressable>
+  );
   return (
     <Screen edges={["top", "left", "right", "bottom"]}>
       <View style={styles.brand}>
@@ -129,9 +275,11 @@ export function LoginScreen() {
         <Txt variant="title" accessibilityRole="header">
           {t("soul_app.login.title")}
         </Txt>
-        <Txt tone="muted" style={styles.lead}>
-          {t(busy ? "soul_app.login.verifying" : "soul_app.login.subtitle")}
-        </Txt>
+        {known ? null : (
+          <Txt tone="muted" style={styles.lead}>
+            {t("soul_app.login.subtitle")}
+          </Txt>
+        )}
         {reset && !error ? (
           // 第三类 F 组 屏 3:1px 墨框,左侧 3px 功色;粗体一句,小字一句。
           <View
@@ -148,68 +296,114 @@ export function LoginScreen() {
             </Txt>
           </View>
         ) : null}
-        {error ? (
+        {network ? (
           <View style={styles.gapTop}>
-            <Notice
-              tone={NEUTRAL_ERRORS.has(error.key) ? "neutral" : "neg"}
-              testID="login-error"
-              onRetry={error.key === "soul_app.errors.network" ? submit : undefined}
-            >
+            <NetworkNotice onRetry={() => void (bioScreen ? signInWithBio() : submit())} />
+          </View>
+        ) : error ? (
+          <View style={styles.gapTop}>
+            <Notice tone={NEUTRAL_ERRORS.has(error.key) ? "neutral" : "neg"} testID="login-error">
               {t(error.key, error.params)}
             </Notice>
           </View>
         ) : null}
+        {lapse ? (
+          <View style={styles.gapTop}>
+            <LapsedNotice lapse={lapse} bio={bio.word} />
+          </View>
+        ) : null}
+        {bioFailed ? (
+          <Txt testID="login-bio-failed" accessibilityRole="alert" style={[styles.gapTop, styles.noticeTitle]}>
+            {t("soul_app.bio.failed", { bio: bio.word })}
+          </Txt>
+        ) : null}
         <View style={[styles.fields, busy && styles.dimmed]}>
-          <Input
-            testID="login-soul-code"
-            label={t("soul_app.login.soul_code")}
-            hint={t("soul_app.login.soul_code_hint")}
-            value={soulCode}
-            onChangeText={setSoulCode}
-            editable={!busy}
-            mono
-            autoCapitalize="characters"
-            // Soul codes are ASCII. With a Chinese (pinyin) keyboard active, letters
-            // otherwise go into an uncommitted composition that is dropped when focus
-            // moves to the password field (seen on the iPhone run).
-            keyboardType="ascii-capable"
-          />
-          <Input
-            testID="login-password"
-            label={t("soul_app.login.password")}
-            labelAside={
-              <Pressable
-                testID="login-forgot"
-                accessibilityRole="link"
-                disabled={busy}
-                onPress={() => navigation.navigate("ForgotPassword")}
-                style={styles.forgot}
-              >
-                <Txt variant="label" tone="muted" style={[styles.noSpacing, styles.underline]}>
-                  {t("soul_app.forgot_password.link")}
+          {account ? (
+            <View testID="login-known" style={[styles.card, { borderColor: theme.hair, backgroundColor: theme.s0 }]}>
+              <View style={styles.fill}>
+                <Txt testID="login-known-name" style={styles.knownName}>
+                  {account.name}
+                </Txt>
+                <SoulCodeText testID="login-known-code" code={account.code} />
+              </View>
+              <Pressable testID="login-switch" accessibilityRole="button" disabled={busy} onPress={() => setSwitching(true)} style={styles.switch}>
+                <Txt variant="bodyLg" style={styles.underline}>
+                  {t("soul_app.login.switch")}
                 </Txt>
               </Pressable>
-            }
-            value={password}
-            onChangeText={setPassword}
-            editable={!busy}
-            secureTextEntry
-            secureToggle={{ show: t("soul_app.common.show"), hide: t("soul_app.common.hide") }}
-            onSubmitEditing={submit}
-          />
+            </View>
+          ) : (
+            <SoulCodeField
+              value={soulCode}
+              onChange={(next) => {
+                setSoulCode(next);
+                setScanned(false);
+              }}
+              onComplete={() => passwordRef.current?.focus()}
+              onScan={() => navigation.navigate("ScanCode")}
+              editable={!busy}
+              scanned={scanned}
+            />
+          )}
+          {bioScreen ? null : (
+            <Input
+              testID="login-password"
+              inputRef={passwordRef}
+              label={t("soul_app.login.password")}
+              labelAside={known ? undefined : forgot}
+              value={password}
+              onChangeText={setPassword}
+              editable={!busy}
+              secureTextEntry
+              secureToggle={{ show: t("soul_app.common.show"), hide: t("soul_app.common.hide") }}
+              autoComplete="current-password"
+              textContentType="password"
+              autoFocus={known}
+              onSubmitEditing={submit}
+            />
+          )}
         </View>
-        <Button
-          testID="login-submit"
-          style={styles.submit}
-          title={t(busy ? "soul_app.login.submitting" : "soul_app.login.submit")}
-          onPress={submit}
-          busy={busy}
-        />
+        {bioScreen ? (
+          <Button
+            testID="login-bio"
+            style={styles.submit}
+            title={t(busy ? "soul_app.login.sending" : "soul_app.bio.button", { bio: bio.word })}
+            onPress={() => void signInWithBio()}
+            busy={busy}
+          />
+        ) : (
+          <Button
+            testID="login-submit"
+            style={styles.submit}
+            title={t(busy ? "soul_app.login.sending" : "soul_app.login.submit")}
+            onPress={submit}
+            busy={busy}
+            disabled={!canSubmit && !busy}
+          />
+        )}
+        {bioFailed ? (
+          <Button testID="login-bio-retry" kind="secondary" style={styles.retry} title={t("soul_app.bio.retry", { bio: bio.word })} onPress={() => void signInWithBio()} disabled={busy} />
+        ) : null}
+        {bioScreen ? (
+          <Pressable testID="login-use-password" accessibilityRole="link" disabled={busy} onPress={() => setWantPassword(true)} style={styles.forgot}>
+            <Txt variant="bodyLg" style={styles.underline}>
+              {t("soul_app.login.use_password")}
+            </Txt>
+          </Pressable>
+        ) : null}
+        {known ? <View style={styles.leftLink}>{forgot}</View> : null}
       </View>
       <View style={styles.fill} />
       <View style={[styles.footer, { borderTopColor: theme.hair }]}>
         <LanguageSwitch />
       </View>
+      <SwitchAccountSheet
+        open={switching}
+        id={account ? formatSoulCode(account.code) : ""}
+        bio={bio.word}
+        onCancel={() => setSwitching(false)}
+        onConfirm={() => void switchAccount()}
+      />
     </Screen>
   );
 }
@@ -399,4 +593,12 @@ const styles = StyleSheet.create({
   expiryValue: { fontSize: 15, lineHeight: 22, fontFamily: family.mono[500] },
   inlineMono: { fontSize: 11 },
   noSpacing: { letterSpacing: 0 },
+  noticeTitle: { fontFamily: family.ui[600], fontSize: 15, lineHeight: 22 },
+  network: { flexDirection: "row", alignItems: "center", gap: 8, borderWidth: 1, paddingVertical: 12, paddingHorizontal: 16 },
+  lapsed: { flexDirection: "row", gap: 8, borderWidth: 1, paddingVertical: 12, paddingHorizontal: 16 },
+  card: { flexDirection: "row", alignItems: "center", gap: 8, borderWidth: 1, paddingVertical: 8, paddingLeft: 16, paddingRight: 4 },
+  knownName: { fontFamily: family.ui[600], fontSize: 17, lineHeight: 24 },
+  switch: { minHeight: 44, minWidth: 44, justifyContent: "center", paddingHorizontal: 12 },
+  retry: { marginTop: 12 },
+  leftLink: { alignItems: "flex-start" },
 });
