@@ -10157,6 +10157,9 @@ export interface components {
             readonly proposed_at: string;
             /** Format: date-time */
             readonly decided_at: string | null;
+            readonly decided_by: number | null;
+            readonly decided_by_name: string | null;
+            readonly decision_reason: string;
             /** Format: date-time */
             readonly executed_at: string | null;
             /** Format: date-time */
@@ -12371,6 +12374,10 @@ export interface components {
             edited_at: string | null;
             /** @description 已发布、未删除的评论数。 */
             readonly comment_count: number;
+            /** @description 待审、未删除的评论数。 */
+            readonly pending_comment_count: number;
+            /** @description 已隐藏、未删除的评论数。 */
+            readonly hidden_comment_count: number;
             readonly reaction_counts: components["schemas"]["SoulReactionCounts"];
             /** @description 按显示顺序;`url` 是发给当前官员的签名地址。 */
             readonly media: components["schemas"]["PostMedia"][];
@@ -13862,6 +13869,9 @@ export interface components {
             readonly proposed_at?: string;
             /** Format: date-time */
             readonly decided_at?: string | null;
+            readonly decided_by?: number | null;
+            readonly decided_by_name?: string | null;
+            readonly decision_reason?: string;
             /** Format: date-time */
             readonly executed_at?: string | null;
             /** Format: date-time */

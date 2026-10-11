@@ -191,14 +191,28 @@ def reaction_kind_counts():
     }
 
 
+def comment_count_in(status):
+    """某个审核状态下、未删除的评论数。三个读者(已发布 / 待审 / 已隐藏)共用这一处口径。"""
+    return Count(
+        "comments",
+        filter=Q(comments__moderation_status=status, comments__is_deleted=False),
+        distinct=True,
+    )
+
+
 def visible_comment_count():
     """已发布、未删除的评论数 —— 待审 / 隐藏的评论不能经计数泄露存在。灵魂端、官员端、审核后台
     读的是同一个数(存储的 `Post.comment_count` 不随审核状态变,不再有读者)。"""
-    return Count(
-        "comments",
-        filter=Q(comments__moderation_status=ModerationStatus.PUBLISHED, comments__is_deleted=False),
-        distinct=True,
-    )
+    return comment_count_in(ModerationStatus.PUBLISHED)
+
+
+def moderation_comment_counts():
+    """审核后台独有的两个数:待审与已隐藏的评论,注解名 `pending_comment_count` / `hidden_comment_count`。
+    只有审核后台注解它们 —— 灵魂端和官员端的列表看不到待审 / 已隐藏的数。"""
+    return {
+        "pending_comment_count": comment_count_in(ModerationStatus.PENDING),
+        "hidden_comment_count": comment_count_in(ModerationStatus.HIDDEN),
+    }
 
 
 def annotate_posts_for(viewer, qs):

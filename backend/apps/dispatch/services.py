@@ -30,6 +30,14 @@ def _notify_localized(users, notification_type, params, record_id):
         )
 
 
+def _decider(actor):
+    """`decided_by` takes a User row. The services also accept a plain label for the actor (the event log
+    keeps `str(actor)`); a label has no row to point at, so it leaves `decided_by` empty."""
+    from apps.authentication.models import User
+
+    return actor if isinstance(actor, User) else None
+
+
 class DispatchNotCancellableError(ValueError):
     """发起方取消移交时,这条记录已不在 PROPOSED(对方批准了、驳回了、已取消…)。
 
@@ -311,7 +319,9 @@ class DispatchService:
         """
         # 殿可以在提案挂着的时候关掉:批准是目标殿的「收下」,关着的殿不收(驳回仍可以)。
         DispatchService.check_target_accepts(dispatch_record.target_tenant)
-        if not dispatch_record.transition_to(DispatchStatus.APPROVED, decided_at=timezone.now()):
+        if not dispatch_record.transition_to(
+            DispatchStatus.APPROVED, decided_at=timezone.now(), decided_by=_decider(approver),
+        ):
             raise ValueError(f"Cannot approve dispatch in status: {dispatch_record.status}")
 
         # Notify source tenant
@@ -344,10 +354,10 @@ class DispatchService:
         with transaction.atomic():
             # 锁序 灵魂 → 计划 → 节点 → 调拨记录(docs/ARCHITECTURE-sentence-plan.md §8)。
             soul = DispatchService._lock_soul(dispatch_record.soul_id)
-            if not dispatch_record.transition_to(DispatchStatus.REJECTED, decided_at=timezone.now()):
+            if not dispatch_record.transition_to(
+                DispatchStatus.REJECTED, decided_at=timezone.now(), decided_by=_decider(rejector), decision_reason=reason or "",
+            ):
                 raise ValueError(f"Cannot reject dispatch in status: {dispatch_record.status}")
-            dispatch_record.reason = f"{dispatch_record.reason}\n\nRejection reason: {reason}"
-            dispatch_record.save(update_fields=["reason"])
             # 系统为受刑计划发起的调拨被拒(Q4):节点退回 PENDING,通知原属判官。
             from apps.sentence_plan.services import SentencePlanService
             SentencePlanService.on_dispatch_refused(soul, dispatch_record)
@@ -466,7 +476,9 @@ class DispatchService:
         """
         with transaction.atomic():
             soul = DispatchService._lock_soul(dispatch_record.soul_id)
-            if not dispatch_record.transition_to(DispatchStatus.CANCELLED, decided_at=timezone.now()):
+            if not dispatch_record.transition_to(
+                DispatchStatus.CANCELLED, decided_at=timezone.now(), decided_by=_decider(canceller),
+            ):
                 raise ValueError(f"Cannot cancel dispatch in status: {dispatch_record.status}")
             from apps.sentence_plan.services import SentencePlanService
             SentencePlanService.on_dispatch_refused(soul, dispatch_record)
@@ -488,10 +500,10 @@ class DispatchService:
             current = DispatchRecord._base_manager.select_for_update(of=("self",)).get(pk=dispatch_record.pk)
             if current.status != DispatchStatus.PROPOSED:
                 raise DispatchNotCancellableError(current.status)
-            if not dispatch_record.transition_to(DispatchStatus.CANCELLED, decided_at=timezone.now()):
+            if not dispatch_record.transition_to(
+                DispatchStatus.CANCELLED, decided_at=timezone.now(), decided_by=_decider(canceller), decision_reason=reason or "",
+            ):
                 raise DispatchNotCancellableError(current.status)
-            dispatch_record.reason = f"{dispatch_record.reason}\n\nCancellation reason: {reason}"
-            dispatch_record.save(update_fields=["reason"])
             from apps.sentence_plan.services import SentencePlanService
             SentencePlanService.on_dispatch_refused(soul, dispatch_record)
             SoulEvent.objects.create(

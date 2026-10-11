@@ -65,6 +65,17 @@ describe("PrintFrame", () => {
   });
 });
 
+describe("PrintFrame reference with an empty label", () => {
+  it("prints the reference alone, with no leading space", () => {
+    const { container } = render(
+      <PrintFrame referenceLabel="" reference="待审之魂">
+        <p>body</p>
+      </PrintFrame>
+    );
+    expect(container.querySelector("[data-print-reference]")?.textContent).toBe("待审之魂");
+  });
+});
+
 describe("Collapse while printing", () => {
   it("renders a closed section for the printer and puts it away afterwards", () => {
     render(

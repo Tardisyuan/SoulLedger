@@ -197,6 +197,7 @@ EDGES = {
     'chat.InboxOfficerState.user->authentication.User': ('user-other', 'global identity: the owning account'),
     'chat.InboxReplyTemplate.created_by->authentication.User': ('user-other', 'global identity: creator'),
     'dispatch.CrossTenantJudgmentParticipant.sentence_submitted_by->authentication.User': ('user-other', 'global identity: officer who filled the sentence node'),
+    'dispatch.DispatchRecord.decided_by->authentication.User': ('user-other', 'global identity: officer who approved, rejected or cancelled the dispatch'),
     'dispatch.DispatchRecord.dispatched_by->authentication.User': ('user-other', 'global identity: officer who proposed the dispatch'),
     'disposition.Disposition.archived_by->authentication.User': ('user-other', 'global identity: officer who archived it'),
     'judgment.Judgment.archived_by->authentication.User': ('user-other', 'global identity: officer who archived it'),

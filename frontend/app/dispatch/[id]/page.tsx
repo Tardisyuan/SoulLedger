@@ -337,6 +337,15 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
             </PageSection>
           )}
 
+          {/* 驳回 / 取消时对方写的理由:独立字段 `decision_reason`(`reason` 是发起时的原文,不再被追加)。 */}
+          {dispatch.decision_reason && (dispatch.status === "REJECTED" || dispatch.status === "CANCELLED") && (
+            <PageSection title={t(dispatch.status === "REJECTED" ? "dispatch.reject_reason" : "dispatch.cancel_reason")}>
+              <p data-testid="dispatch-decision-reason" className="max-w-[72ch] font-serif text-sm text-[oklch(var(--color-ink))] text-pretty">
+                {dispatch.decision_reason}
+              </p>
+            </PageSection>
+          )}
+
           {/* 操作:仍是三道权限门各管一个按钮,状态决定出现哪一组。 */}
           {(isProposed || isApproved || isResiding) && (
             <PageSection title={t("dispatch.actions")}>

@@ -39,10 +39,16 @@ export interface DispatchRecord {
   dispatched_by_name: string | null;
   /** `DRAFT` is visible only to its creator (and ADMIN); see `dispatchApi.createDraft`. */
   status: string;
+  /** The proposer's own words, as proposed. Never carries a rejection / cancellation reason. */
   reason: string;
   /** On a DRAFT, when it was saved; set again when it is submitted. */
   proposed_at: string;
   decided_at: string | null;
+  /** The user who approved / rejected / cancelled (integer pk), or null. */
+  decided_by: number | null;
+  decided_by_name: string | null;
+  /** Why it was rejected or cancelled; "" when none was given (and always "" for an approval). */
+  decision_reason: string;
   executed_at: string | null;
   /** When the residence ended and the soul went back to its home tenant (status RETURNED). */
   returned_at: string | null;

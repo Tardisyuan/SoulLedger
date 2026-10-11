@@ -4,6 +4,8 @@ import { moderationErrorCode } from "@soulledger/core/hooks/useSocialModeration"
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import type { BadgeTone } from "@/src/components/ui/Badge";
+import { DomainNumber } from "@/src/components/ui/DomainValue";
+import type { ModeratedPost } from "@soulledger/core/api/social-moderation";
 
 /**
  * Shared by the four /moderation segments (E 组 08 / 08b / 08c / 08d).
@@ -46,3 +48,29 @@ export function isTyping(target: EventTarget | null): boolean {
   return target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName);
 }
 
+
+/**
+ * 帖子的评论数,按审核状态拆开:「评论 5 · 待审 2 · 已隐藏 1」。评论数(已发布)总是画;待审、已隐藏为 0 的不画。
+ * 字用已有的词:「评论」是 `target_type.COMMENT`,「待审」「已隐藏」是 `moderation_status.*`。
+ * 审核队列的详情与「已处理」的抽屉共用。
+ */
+export function CommentCounts({ post }: { post: Pick<ModeratedPost, "comment_count" | "pending_comment_count" | "hidden_comment_count"> }) {
+  const { t } = useI18n();
+  const parts = [
+    { key: "published", label: t("social_moderation.target_type.COMMENT"), n: post.comment_count, always: true },
+    { key: "pending", label: t("social_moderation.moderation_status.PENDING"), n: post.pending_comment_count, always: false },
+    { key: "hidden", label: t("social_moderation.moderation_status.HIDDEN"), n: post.hidden_comment_count, always: false },
+  ].filter((p) => p.always || p.n > 0);
+  return (
+    <div className="mt-3 flex flex-wrap gap-2 text-xs text-[oklch(var(--color-ink-muted))]" data-comment-counts>
+      {parts.map((p, i) => (
+        <span key={p.key} className="contents">
+          {i > 0 && <span aria-hidden="true">·</span>}
+          <span>
+            {p.label} <DomainNumber value={p.n} />
+          </span>
+        </span>
+      ))}
+    </div>
+  );
+}

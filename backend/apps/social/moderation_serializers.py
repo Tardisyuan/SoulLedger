@@ -109,10 +109,20 @@ class ModeratedContentSerializer(serializers.Serializer):
         return getattr(row, "open_report_count", 0) or 0
 
 
+def _comments_in(post, status) -> int:
+    """视图注解 `<status>_comment_count`(`soul_circle.moderation_comment_counts`);没注解的行现查。"""
+    n = getattr(post, f"{status.lower()}_comment_count", None)
+    if n is not None:
+        return n
+    return post.comments.filter(moderation_status=status, is_deleted=False).count()
+
+
 class ModeratedPostSerializer(ModeratedContentSerializer):
     visibility = serializers.CharField()
     edited_at = serializers.DateTimeField(allow_null=True, help_text="作者改过正文的时间;没改过为 null。")
     comment_count = serializers.SerializerMethodField(help_text="已发布、未删除的评论数。")
+    pending_comment_count = serializers.SerializerMethodField(help_text="待审、未删除的评论数。")
+    hidden_comment_count = serializers.SerializerMethodField(help_text="已隐藏、未删除的评论数。")
     #: 五种表态各自的数(未删除的),与灵魂端同一份注解。没有转发:朋友圈没有转发模型。
     reaction_counts = SoulReactionCountsSerializer(source="*", read_only=True)
     media = serializers.SerializerMethodField(help_text="按显示顺序;`url` 是发给当前官员的签名地址。")
@@ -125,6 +135,12 @@ class ModeratedPostSerializer(ModeratedContentSerializer):
 
     def get_comment_count(self, post) -> int:
         return visible_comment_total(post)
+
+    def get_pending_comment_count(self, post) -> int:
+        return _comments_in(post, ModerationStatus.PENDING)
+
+    def get_hidden_comment_count(self, post) -> int:
+        return _comments_in(post, ModerationStatus.HIDDEN)
 
     def get_media_count(self, post) -> int:
         return len(officer_media(post))

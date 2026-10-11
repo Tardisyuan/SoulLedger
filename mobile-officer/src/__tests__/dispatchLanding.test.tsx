@@ -46,6 +46,7 @@ const record = (over: Record<string, unknown> = {}) => ({
   target_tenant_code: OTHER,
   soul_name: "李白",
   reason: "移交理由",
+  decision_reason: "",
   proposed_at: "2026-10-09T01:00:00Z",
   ...over,
 });
@@ -97,13 +98,15 @@ describe("dispatchView: the record decides", () => {
 });
 
 describe("the reason and the status line", () => {
-  it("reads the reason the server appended; the last marker wins; none -> null", () => {
-    expect(dispatchReasonOf({ status: "REJECTED", reason: "移交理由\n\nRejection reason: 不收" })).toBe("不收");
-    expect(dispatchReasonOf({ status: "CANCELLED", reason: "x\n\nRejection reason: a\n\nCancellation reason:  改派 " })).toBe("改派");
-    expect(dispatchReasonOf({ status: "REJECTED", reason: "移交理由" })).toBeNull();
-    expect(dispatchReasonOf({ status: "REJECTED", reason: "x\n\nRejection reason: " })).toBeNull();
-    // A reason that is only the proposal's own is not a rejection reason.
-    expect(dispatchReasonOf({ status: "APPROVED", reason: "x\n\nRejection reason: a" })).toBeNull();
+  it("reads the server's decision_reason field -- never the proposal's own `reason` text; blank / none -> null", () => {
+    expect(dispatchReasonOf({ status: "REJECTED", decision_reason: "不收" })).toBe("不收");
+    expect(dispatchReasonOf({ status: "CANCELLED", decision_reason: " 改派 " })).toBe("改派");
+    expect(dispatchReasonOf({ status: "REJECTED", decision_reason: "" })).toBeNull();
+    expect(dispatchReasonOf({ status: "REJECTED", decision_reason: "  " })).toBeNull();
+    // Words that look like the old appended marker are just words: the reason is the field, not a slice of `reason`.
+    expect(dispatchReasonOf({ status: "REJECTED", decision_reason: "", reason: "x\n\nRejection reason: a" } as never)).toBeNull();
+    // Only a rejected / cancelled record has a decision reason to show.
+    expect(dispatchReasonOf({ status: "APPROVED", decision_reason: "a" })).toBeNull();
   });
 
   it.each([
@@ -112,12 +115,12 @@ describe("the reason and the status line", () => {
     ["REJECTED", "✕", "officer_app.dispatch_status.rejected"],
     ["CANCELLED", "○", "dispatch.states.CANCELLED"],
   ])("the sender sees %s as %s", (status, glyph, key) => {
-    expect(dispatchStatusLine({ status, reason: "" } as never, "sender")).toMatchObject({ glyph, key });
+    expect(dispatchStatusLine({ status, decision_reason: "" } as never, "sender")).toMatchObject({ glyph, key });
   });
 
   it("someone who is not the sender is not told 'the other hall' decided", () => {
-    expect(dispatchStatusLine({ status: "APPROVED", reason: "" } as never, "other")).toMatchObject({ glyph: "✓", key: "dispatch.states.APPROVED" });
-    expect(dispatchStatusLine({ status: "EXECUTED", reason: "" } as never, "sender")).toMatchObject({ glyph: "→", key: "dispatch.states.EXECUTED" });
+    expect(dispatchStatusLine({ status: "APPROVED", decision_reason: "" } as never, "other")).toMatchObject({ glyph: "✓", key: "dispatch.states.APPROVED" });
+    expect(dispatchStatusLine({ status: "EXECUTED", decision_reason: "" } as never, "sender")).toMatchObject({ glyph: "→", key: "dispatch.states.EXECUTED" });
   });
 });
 
@@ -142,7 +145,7 @@ describe("each notice lands on the right screen (through the notices tab)", () =
   });
 
   it("DISPATCH_REJECTED, I am the sender: '✕ 对方已驳回' and the reason on the next line", async () => {
-    mockGet.mockResolvedValue({ data: record({ status: "REJECTED", reason: "移交理由\n\nRejection reason: 不收" }) });
+    mockGet.mockResolvedValue({ data: record({ status: "REJECTED", decision_reason: "不收" }) });
     await openNotice("DISPATCH_REJECTED");
     expect((await screen.findByTestId("dispatch-status")).props.children).toBe("✕ 对方已驳回");
     expect(screen.getByTestId("dispatch-status-reason").props.children).toBe("理由：不收");
@@ -150,7 +153,7 @@ describe("each notice lands on the right screen (through the notices tab)", () =
   });
 
   it("DISPATCH_CANCELLED, I am the receiver: read-only '○ 已取消' with the reason; the proposal is gone, nothing to decide", async () => {
-    mockGet.mockResolvedValue({ data: record({ status: "CANCELLED", source_tenant_code: OTHER, target_tenant_code: ME, reason: "x\n\nCancellation reason: 改派别处" }) });
+    mockGet.mockResolvedValue({ data: record({ status: "CANCELLED", source_tenant_code: OTHER, target_tenant_code: ME, decision_reason: "改派别处" }) });
     await openNotice("DISPATCH_CANCELLED");
     expect((await screen.findByTestId("dispatch-status")).props.children).toBe("○ 已取消");
     expect(screen.getByTestId("dispatch-status-reason").props.children).toBe("理由：改派别处");

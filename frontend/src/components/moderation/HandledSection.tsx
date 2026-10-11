@@ -13,7 +13,7 @@ import { Drawer } from "@/src/components/ui/Drawer";
 import { MissingValue } from "@/src/components/ui/DomainValue";
 import { FilterChipSelect } from "@/src/components/ui/FilterChip";
 import { DataTable, ROW_LINK } from "@/components/ui/data-table";
-import { useFailureToast } from "./shared";
+import { CommentCounts, useFailureToast } from "./shared";
 
 const HANDLING_TONE = { HIDDEN: "warning", DELETED: "error" } as const;
 
@@ -214,6 +214,7 @@ export function HandledSection() {
             <p className="whitespace-pre-wrap break-words font-serif text-md text-[oklch(var(--color-ink))]">
               {item.data?.content ?? open.excerpt}
             </p>
+            {item.data && "comment_count" in item.data && <CommentCounts post={item.data} />}
             <dl className="grid grid-cols-[6rem_1fr] gap-x-3 gap-y-1 border-t border-[oklch(var(--color-block))] pt-3 text-sm">
               <dt className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">{t("social_moderation.fields.reason")}</dt>
               <dd>{open.reason || <MissingValue kind="unrecorded" />}</dd>

@@ -30,7 +30,7 @@ import { ListSkeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { REACTIONS } from "@/src/components/social/ReactionBar";
 import { MediaGrid } from "./MediaGrid";
-import { MODERATION_TONES, MUTE_DAYS, isTyping, useFailureToast } from "./shared";
+import { CommentCounts, MODERATION_TONES, MUTE_DAYS, isTyping, useFailureToast } from "./shared";
 import { ROW_HOVER, ROW_SELECTED } from "@/components/ui/data-table";
 
 /**
@@ -421,13 +421,13 @@ export function ReportsReview() {
           {full && "media" in full && <MediaGrid media={full.media} />}
 
           {/*
-            反应用文字,不用表情(C-08):「评 N · 喜 N · 念 N · …」,字与灵魂端表态按钮同一套
+            反应用文字,不用表情(C-08):「喜 N · 念 N · …」,字与灵魂端表态按钮同一套
             (`REACTIONS`, `soul_app.circle.react.*`);为 0 的不画(2026-09-26 产品定)。
             画布上的「转 N」不画:朋友圈没有转发模型,没有这个数可显示。
           */}
+          {full && "comment_count" in full && <CommentCounts post={full} />}
           {full && "comment_count" in full && (() => {
             const counts = [
-              { key: "comment", label: t("social_moderation.review.reaction_comment"), n: full.comment_count },
               ...REACTIONS.map((r) => ({ key: r.type, label: t(r.key), n: full.reaction_counts[r.type] })),
             ].filter((c) => c.n > 0);
             if (!counts.length) return null;

@@ -93,6 +93,9 @@ def test_the_plan_says_why_the_last_dispatch_failed(cn, eg):
     [stop] = [n for n in shown["nodes"] if n["order"] == 2]
     assert stop["last_refusal"]["status"] == "REJECTED" and stop["last_refusal"]["reason"] == "不收"
     assert stop["last_refusal"]["at"]
+    # 理由取自决定理由字段;调拨记录的 `reason` 仍是发起时的原文,里面没有它。
+    [refused] = DispatchRecord.all_objects.filter(soul=soul, status="REJECTED")
+    assert refused.decision_reason == "不收" and "不收" not in refused.reason
     [home] = [n for n in shown["nodes"] if n["order"] == 1]
     assert home["last_refusal"] is None
     # 理由不进灵魂能读到的事件

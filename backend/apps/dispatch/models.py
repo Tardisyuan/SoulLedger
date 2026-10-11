@@ -87,7 +87,18 @@ class DispatchRecord(AuditUserFields, models.Model):
         choices=DispatchStatus.choices,
         default=DispatchStatus.PROPOSED,
     )
+    # 发起方提出时的原文,之后不再被改写。
     reason = models.TextField(blank=True, default="")
+    # 决定(批准 / 驳回 / 取消)的理由与决定人:驳回与取消把理由写在这里,不再追加进 `reason`。
+    # 批准没有理由,这里留空。`decided_at` 是同一次决定的时刻。
+    decision_reason = models.TextField(blank=True, default="")
+    decided_by = models.ForeignKey(
+        "authentication.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="dispatch_records_decided",
+    )
     # 草稿上是建草稿的时刻;提交时改写为提交的时刻(审批收件箱按它先进先出)。
     proposed_at = models.DateTimeField(auto_now_add=True)
     decided_at = models.DateTimeField(null=True, blank=True)
