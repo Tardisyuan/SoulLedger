@@ -14,11 +14,20 @@ from apps.social.soul_serializers import (
     ScreeningFieldMixin,
     SoulReactionCountsSerializer,
     live_media,
+    visible_comment_total,
 )
 
 # ---------------------------------------------------------------------------
 # Post serializers
 # ---------------------------------------------------------------------------
+
+class VisibleCommentCountMixin(serializers.Serializer):
+    # 与灵魂端同一个数:已发布、未删除的评论(视图注解 `visible_comment_count`)。
+    comment_count = serializers.SerializerMethodField(help_text="已发布、未删除的评论数。")
+
+    def get_comment_count(self, post) -> int:
+        return visible_comment_total(post)
+
 
 class PostMediaFieldMixin(serializers.Serializer):
     # 官员帖子的配图(2026-10-02):与灵魂端同一个 `media.describe` —— 按顺序、地址签给
@@ -34,7 +43,7 @@ class PostMediaFieldMixin(serializers.Serializer):
         return post_media.describe(live_media(post), request.user, getattr(request, "tenant", None))
 
 
-class PostSerializer(ScreeningFieldMixin, PostMediaFieldMixin, serializers.ModelSerializer):
+class PostSerializer(ScreeningFieldMixin, VisibleCommentCountMixin, PostMediaFieldMixin, serializers.ModelSerializer):
     author_name = serializers.CharField(source="author.display_name", read_only=True, default="")
     author_username = serializers.CharField(source="author.username", read_only=True)
     #: 五种表态各自的数(未删除的),读 `reaction_kind_counts()` 的注解 —— 与灵魂端、审核后台同一份。
@@ -65,7 +74,6 @@ class PostSerializer(ScreeningFieldMixin, PostMediaFieldMixin, serializers.Model
             "author",
             "moderation_status",
             "edited_at",
-            "comment_count",
             "reaction_count",
             "tenant",
             "create_time",
@@ -102,7 +110,7 @@ class PostCreateSerializer(ScreeningFieldMixin, serializers.ModelSerializer):
         return attrs
 
 
-class PostListSerializer(PostMediaFieldMixin, serializers.ModelSerializer):
+class PostListSerializer(VisibleCommentCountMixin, PostMediaFieldMixin, serializers.ModelSerializer):
     """Lightweight serializer for listing posts."""
 
     author_name = serializers.CharField(source="author.display_name", read_only=True, default="")
@@ -147,6 +155,7 @@ class CommentSerializer(serializers.ModelSerializer):
             "author_username",
             "parent",
             "content",
+            "moderation_status",
             "tenant",
             "create_time",
             "update_time",
@@ -165,7 +174,7 @@ class CommentSerializer(serializers.ModelSerializer):
         # CommentViewSet.get_serializer_class), so read-only here costs
         # creation nothing.
         read_only_fields = [
-            "id", "author", "tenant", "post", "parent", "create_time", "update_time",
+            "id", "author", "moderation_status", "tenant", "post", "parent", "create_time", "update_time",
         ]
 
 
@@ -256,6 +265,7 @@ class CommentListSerializer(serializers.ModelSerializer):
             "author_username",
             "parent",
             "content",
+            "moderation_status",
             "create_time",
         ]
 

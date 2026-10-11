@@ -393,7 +393,7 @@ export function ReportsReview() {
                 {full && "edited_at" in full && full.edited_at && (
                   <>
                     {" · "}
-                    <span data-edited="" title={formatDateTime(full.edited_at)}>{t("social.edited")}</span>
+                    <span data-edited="">{t("social.edited_at", { time: formatDateTime(full.edited_at) })}</span>
                   </>
                 )}
               </div>

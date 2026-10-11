@@ -20794,6 +20794,10 @@ components:
           nullable: true
         content:
           type: string
+        moderation_status:
+          allOf:
+          - $ref: '#/components/schemas/SocialModerationStatusEnum'
+          readOnly: true
         tenant:
           type: integer
           readOnly: true
@@ -20812,6 +20816,7 @@ components:
       - content
       - create_time
       - id
+      - moderation_status
       - parent
       - post
       - tenant
@@ -20869,6 +20874,8 @@ components:
           nullable: true
         content:
           type: string
+        moderation_status:
+          $ref: '#/components/schemas/SocialModerationStatusEnum'
         create_time:
           type: string
           format: date-time
@@ -26946,6 +26953,8 @@ components:
           description: 作者改过正文的时间;没改过为 null。
         comment_count:
           type: integer
+          readOnly: true
+          description: 已发布、未删除的评论数。
         reaction_counts:
           allOf:
           - $ref: '#/components/schemas/SoulReactionCounts'
@@ -29423,6 +29432,10 @@ components:
           nullable: true
         content:
           type: string
+        moderation_status:
+          allOf:
+          - $ref: '#/components/schemas/SocialModerationStatusEnum'
+          readOnly: true
         tenant:
           type: integer
           readOnly: true
@@ -30317,6 +30330,7 @@ components:
         comment_count:
           type: integer
           readOnly: true
+          description: 已发布、未删除的评论数。
         reaction_count:
           type: integer
           readOnly: true
@@ -31410,6 +31424,7 @@ components:
         comment_count:
           type: integer
           readOnly: true
+          description: 已发布、未删除的评论数。
         reaction_count:
           type: integer
           readOnly: true
@@ -31518,7 +31533,8 @@ components:
           $ref: '#/components/schemas/SocialModerationStatusEnum'
         comment_count:
           type: integer
-          minimum: 0
+          readOnly: true
+          description: 已发布、未删除的评论数。
         reaction_count:
           type: integer
           minimum: 0
@@ -31544,6 +31560,7 @@ components:
       - author
       - author_name
       - author_username
+      - comment_count
       - content
       - create_time
       - id

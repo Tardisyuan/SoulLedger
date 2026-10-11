@@ -9605,6 +9605,7 @@ export interface components {
             /** Format: uuid */
             readonly parent: string | null;
             content: string;
+            readonly moderation_status: components["schemas"]["SocialModerationStatusEnum"];
             readonly tenant: number;
             /** Format: date-time */
             readonly create_time: string;
@@ -9635,6 +9636,7 @@ export interface components {
             /** Format: uuid */
             parent?: string | null;
             content: string;
+            moderation_status?: components["schemas"]["SocialModerationStatusEnum"];
             /** Format: date-time */
             readonly create_time: string;
         };
@@ -12367,7 +12369,8 @@ export interface components {
              * @description 作者改过正文的时间;没改过为 null。
              */
             edited_at: string | null;
-            comment_count: number;
+            /** @description 已发布、未删除的评论数。 */
+            readonly comment_count: number;
             readonly reaction_counts: components["schemas"]["SoulReactionCounts"];
             /** @description 按显示顺序;`url` 是发给当前官员的签名地址。 */
             readonly media: components["schemas"]["PostMedia"][];
@@ -13721,6 +13724,7 @@ export interface components {
             /** Format: uuid */
             readonly parent?: string | null;
             content?: string;
+            readonly moderation_status?: components["schemas"]["SocialModerationStatusEnum"];
             readonly tenant?: number;
             /** Format: date-time */
             readonly create_time?: string;
@@ -14160,6 +14164,7 @@ export interface components {
             content?: string;
             visibility?: components["schemas"]["VisibilityEnum"];
             readonly moderation_status?: components["schemas"]["SocialModerationStatusEnum"];
+            /** @description 已发布、未删除的评论数。 */
             readonly comment_count?: number;
             readonly reaction_count?: number;
             /** @description 按显示顺序,最多 9 张。 */
@@ -14717,6 +14722,7 @@ export interface components {
             content: string;
             visibility?: components["schemas"]["VisibilityEnum"];
             readonly moderation_status: components["schemas"]["SocialModerationStatusEnum"];
+            /** @description 已发布、未删除的评论数。 */
             readonly comment_count: number;
             readonly reaction_count: number;
             /** @description 按显示顺序,最多 9 张。 */
@@ -14758,7 +14764,8 @@ export interface components {
             content: string;
             visibility?: components["schemas"]["VisibilityEnum"];
             moderation_status?: components["schemas"]["SocialModerationStatusEnum"];
-            comment_count?: number;
+            /** @description 已发布、未删除的评论数。 */
+            readonly comment_count: number;
             reaction_count?: number;
             /** @description 按显示顺序,最多 9 张。 */
             readonly media: components["schemas"]["PostMedia"][];

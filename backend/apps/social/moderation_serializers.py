@@ -22,7 +22,7 @@ from apps.social.models import (
     SensitiveWordCategory,
     SocialMute,
 )
-from apps.social.soul_serializers import PostMediaSerializer, SoulReactionCountsSerializer
+from apps.social.soul_serializers import PostMediaSerializer, SoulReactionCountsSerializer, visible_comment_total
 
 EXCERPT = 200
 
@@ -112,7 +112,7 @@ class ModeratedContentSerializer(serializers.Serializer):
 class ModeratedPostSerializer(ModeratedContentSerializer):
     visibility = serializers.CharField()
     edited_at = serializers.DateTimeField(allow_null=True, help_text="作者改过正文的时间;没改过为 null。")
-    comment_count = serializers.IntegerField()
+    comment_count = serializers.SerializerMethodField(help_text="已发布、未删除的评论数。")
     #: 五种表态各自的数(未删除的),与灵魂端同一份注解。没有转发:朋友圈没有转发模型。
     reaction_counts = SoulReactionCountsSerializer(source="*", read_only=True)
     media = serializers.SerializerMethodField(help_text="按显示顺序;`url` 是发给当前官员的签名地址。")
@@ -122,6 +122,9 @@ class ModeratedPostSerializer(ModeratedContentSerializer):
     def get_media(self, post):
         request = self.context["request"]
         return post_media.describe(officer_media(post), request.user, getattr(request, "tenant", None))
+
+    def get_comment_count(self, post) -> int:
+        return visible_comment_total(post)
 
     def get_media_count(self, post) -> int:
         return len(officer_media(post))

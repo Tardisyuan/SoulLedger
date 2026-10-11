@@ -23,6 +23,14 @@ class ScreeningFieldMixin(serializers.Serializer):
         return self.context.get("screening") or getattr(obj, "screening_outcome", None)
 
 
+def visible_comment_total(post) -> int:
+    """`Post.visible_comment_count` 注解(`soul_circle.visible_comment_count`);没注解的行现查。"""
+    n = getattr(post, "visible_comment_count", None)
+    if n is not None:
+        return n
+    return post.comments.filter(moderation_status=ModerationStatus.PUBLISHED, is_deleted=False).count()
+
+
 CONTENT_MAX = 2000
 COMMENT_MAX = 500
 

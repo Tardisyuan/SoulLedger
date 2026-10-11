@@ -80,13 +80,13 @@ export function PostCard({ post }: { post: Post }) {
           />
         )}
         {isAuthor && (
-          <>
+          <div className="flex shrink-0 items-center gap-4">
             <Button
               type="button"
               variant="ghost"
               size="sm"
               onClick={() => setEditing(true)}
-              className="text-[oklch(var(--color-ink-muted))]"
+              className="min-h-11 min-w-11 text-[oklch(var(--color-ink-muted))]"
             >
               {t("common.edit")}
             </Button>
@@ -95,11 +95,11 @@ export function PostCard({ post }: { post: Post }) {
               variant="ghost"
               size="sm"
               onClick={() => setShowDeleteConfirm(true)}
-              className="text-[oklch(var(--color-ink-muted))]"
+              className="min-h-11 min-w-11 text-[oklch(var(--color-ink-muted))]"
             >
               {t("common.delete")}
             </Button>
-          </>
+          </div>
         )}
       </div>
 
