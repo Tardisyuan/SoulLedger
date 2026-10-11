@@ -323,6 +323,7 @@ const COLLECTED_FILES = [
   // 规范 v3 A8 全局搜索:四类顺序、403 整类隐去、单类失败重试、完整案号、键盘、最近打开、防抖。
   "globalSearch.test.tsx",
   "loadingScreensFitAPhone.test.ts",
+  "passwordRulesMatchBackend.test.ts",
 ];
 
 /** Floor, not a pin — `it.each` makes the real test count larger and it moves

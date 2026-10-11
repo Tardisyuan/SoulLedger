@@ -5658,5 +5658,18 @@
     "case_no": "Hesb Wedja",
     "soul_no": "Hesb Ba",
     "page_label": "Pesh {{n}} / {{m}}"
+  },
+  "password_rules": {
+    "min_length": "Sesh 8 Er Hry",
+    "not_digits": "Nen Em Hesb Djes-Ef",
+    "not_current": "Ky Er Sekhem-Ek",
+    "match": "Sen Wa",
+    "match_bad": "Sen Nen Wa",
+    "note": "Nen Sekhem Rekh-Tw, Nen Ren-Ek, Nen Ren Hesb",
+    "common_title": "Sekhem Mawy Rekh-Tw",
+    "common_body": "Rekh-Tw Pw, Mi Ren-Ek. Sesh Ky.",
+    "state_ok": "Maat",
+    "state_bad": "Nen Maat",
+    "summary": "Sekhem Mawy: {{n}} Nen Maat — {{list}}"
   }
 }
