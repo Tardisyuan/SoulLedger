@@ -59,6 +59,15 @@ def _rate_keys(ip, soul_code):
     return f"soul_login_rate:ip:{ip}", f"soul_login_rate:code:{digest}"
 
 
+#: 两种 200:令牌,或开着两步验证时的 `mfa_required` + 短时效的待验证凭据(去 /soul-auth/mfa/verify/)。
+#: 密码登录与面容/指纹登录同一个形状。
+LOGIN_OUTCOME = PolymorphicProxySerializer(
+    component_name="SoulLoginOutcome",
+    serializers=[SoulLoginResponseSerializer, SoulMfaRequiredSerializer],
+    resource_type_field_name=None,
+)
+
+
 def _error(exc: svc.SoulAccountError):
     return Response({"detail": str(exc), "code": exc.code}, status=exc.status)
 
@@ -98,12 +107,7 @@ class SoulLoginView(APIView):
     @extend_schema(
         request=SoulLoginRequestSerializer,
         responses={
-            # 两种 200:令牌,或开着两步验证时的 `mfa_required` + 短时效的待验证凭据(去 /soul-auth/mfa/verify/)。
-            200: PolymorphicProxySerializer(
-                component_name="SoulLoginOutcome",
-                serializers=[SoulLoginResponseSerializer, SoulMfaRequiredSerializer],
-                resource_type_field_name=None,
-            ),
+            200: LOGIN_OUTCOME,
             400: OpenApiResponse(description="字段校验失败"),
             401: SoulErrorSerializer, 429: SoulErrorSerializer,
         },
@@ -131,30 +135,38 @@ class SoulLoginView(APIView):
             LoginLog.objects.create(username=f"soul:{soul_code}"[:150], status="FAILED", ip_address=ip,
                                     user_agent=user_agent, failure_reason=exc.code)
             return _error(exc)
-        # 成功只清这个编号的计数。IP 计数不清:否则攻击者用自己的一个真账号登录一次,
-        # 就能把整台机器的扫描预算重置。
-        cache.delete(code_key)
-        if soul_mfa.is_enabled(account) and not soul_mfa.device_remembered(
-                account, body.validated_data.get("device_token")):
-            # 第二步:密码对了,令牌还不发。待验证凭据只开 /soul-auth/mfa/verify/ 这一扇门。
-            # 殿名随之返回(此时已过密码这一关),供「手机和恢复码都没有了」一屏使用。
-            return Response({
-                "mfa_required": True, "pending_token": soul_mfa.issue_pending(account),
-                "soul_code": account.soul.soul_code,
-                "home_tenant": MeTenantSerializer(account.soul.home_tenant).data,
-            })
-        tokens = svc.complete_login(account)
-        LoginLog.objects.create(user=account.user, username=f"soul:{soul_code}"[:150], status="SUCCESS",
-                                ip_address=ip, user_agent=user_agent)
+        return finish_first_step(account, soul_code, ip_key=ip_key, code_key=code_key, ip=ip,
+                                 user_agent=user_agent, device_token=body.validated_data.get("device_token"))
+
+
+def finish_first_step(account, soul_code, *, ip_key, code_key, ip, user_agent, device_token):
+    """第一步(密码或面容凭据)过了之后的共同尾巴:清编号计数;开着两步验证且手机不在免询问期内 →
+    `mfa_required`,否则发令牌。**面容只代替密码,两步验证照常。**"""
+    from apps.authentication.models import LoginLog
+
+    # 成功只清这个编号的计数。IP 计数不清:否则攻击者用自己的一个真账号登录一次,
+    # 就能把整台机器的扫描预算重置。
+    cache.delete(code_key)
+    if soul_mfa.is_enabled(account) and not soul_mfa.device_remembered(account, device_token):
+        # 第二步:第一步对了,令牌还不发。待验证凭据只开 /soul-auth/mfa/verify/ 这一扇门。
+        # 殿名随之返回(此时已过第一步这一关),供「手机和恢复码都没有了」一屏使用。
         return Response({
-            **tokens,
+            "mfa_required": True, "pending_token": soul_mfa.issue_pending(account),
             "soul_code": account.soul.soul_code,
-            "account": {
-                "cycle": account.cycle, "must_change_password": account.must_change_password,
-                "initial_password_expires_at": account.initial_password_expires_at,
-                "created_at": account.created_at,
-            },
+            "home_tenant": MeTenantSerializer(account.soul.home_tenant).data,
         })
+    tokens = svc.complete_login(account)
+    LoginLog.objects.create(user=account.user, username=f"soul:{soul_code}"[:150], status="SUCCESS",
+                            ip_address=ip, user_agent=user_agent)
+    return Response({
+        **tokens,
+        "soul_code": account.soul.soul_code,
+        "account": {
+            "cycle": account.cycle, "must_change_password": account.must_change_password,
+            "initial_password_expires_at": account.initial_password_expires_at,
+            "created_at": account.created_at,
+        },
+    })
 
 
 class SoulRefreshView(APIView):
@@ -239,7 +251,8 @@ class MePasswordView(SoulAPIView):
         try:
             tokens = svc.change_password(self.account, body.validated_data["old_password"],
                                          body.validated_data["new_password"],
-                                         push_token=body.validated_data["push_token"])
+                                         push_token=body.validated_data["push_token"],
+                                         device_credential=body.validated_data["device_credential"])
         except svc.SoulAccountError as exc:
             return _error(exc)
         except ValidationError as exc:

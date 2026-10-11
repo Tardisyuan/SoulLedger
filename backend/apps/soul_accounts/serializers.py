@@ -122,6 +122,36 @@ class ChangePasswordRequestSerializer(serializers.Serializer):
     new_password = serializers.CharField(min_length=8, max_length=128, trim_whitespace=False)
     #: 这台手机自己的推送 token:其他设备都退出了,它们的推送登记停用,这一条留着。不带就一条都不留。
     push_token = serializers.CharField(max_length=255, required=False, allow_blank=True, default="")
+    #: 这部手机的面容/指纹登录凭据:带了且属于本账号的那一条在改密码后保留,其余全部失效(`password_changed`)。
+    device_credential = serializers.CharField(max_length=128, required=False, allow_blank=True, default="")
+
+
+class SoulDeviceLoginEnableRequestSerializer(serializers.Serializer):
+    password = serializers.CharField(required=False, allow_blank=True, default="", max_length=128, trim_whitespace=False)
+
+
+class SoulDeviceLoginIssuedSerializer(serializers.Serializer):
+    credential = serializers.CharField(help_text="不透明凭据,只此一次;App 放进要验证生物特征才能取出的安全存储。")
+
+
+class SoulDeviceLoginCredentialSerializer(serializers.Serializer):
+    credential = serializers.CharField(max_length=128)
+
+
+class SoulDeviceLoginRequestSerializer(serializers.Serializer):
+    soul_code = serializers.CharField(max_length=32)
+    credential = serializers.CharField(max_length=128)
+    #: 与密码登录同名同义:两步验证「30 天内不再询问」的设备令牌。
+    device_token = serializers.CharField(max_length=128, required=False, allow_blank=True)
+
+
+class SoulDeviceLoginRefusalSerializer(serializers.Serializer):
+    """`code`: device_login_revoked(401,带 `reason`:password_changed / password_reset_by_officer /
+    account_reincarnated / turned_off)、device_login_invalid(401)、rate_limited(429)。"""
+
+    detail = serializers.CharField()
+    code = serializers.CharField()
+    reason = serializers.CharField(required=False)
 
 
 class SoulErrorSerializer(serializers.Serializer):
@@ -138,6 +168,17 @@ class MeTenantSerializer(serializers.Serializer):
                                        help_text="殿司展示名,按语言:{zh-Hans, en, egy}(`Tenant.hall_names`)。")
     seal_glyphs = serializers.ListField(child=serializers.CharField(), read_only=True,
                                         help_text="匾上的印字(1–2 个);空 = 用文明默认字。")
+
+
+class SoulCredentialSlipSerializer(serializers.Serializer):
+    """交付单要印的东西。**没有密码。**"""
+
+    soul_name = serializers.CharField()
+    soul_code = serializers.CharField()
+    home_tenant = MeTenantSerializer()
+    expires_at = serializers.DateTimeField()
+    officer_name = serializers.CharField()
+    printed_at = serializers.DateTimeField()
 
 
 class SoulMfaRequiredSerializer(serializers.Serializer):

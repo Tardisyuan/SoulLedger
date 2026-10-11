@@ -80,6 +80,22 @@ def _ip_key(request):
     return f"soul_mfa_rate:ip:{_client_ip(request)}"
 
 
+def confirm_current_password(request, account, password):
+    """「已登录不等于是本人」:敏感动作前输当前密码。对了 → None;错了 / 满了 → 拒绝响应。
+    错的次数记进**密码登录的那两个计数**(同一灵魂编号 5 次 / 同一 IP 50 次,15 分钟):偷到登录状态的人在这里猜密码,
+    和在登录页猜吃同一份预算,满了答 429 `rate_limited`。两步验证开启向导与面容登录开启共用这一处。"""
+    ip_key, code_key = _rate_keys(_client_ip(request), account.soul.soul_code)
+    ip_attempts, code_attempts = cache.get(ip_key, 0), cache.get(code_key, 0)
+    if ip_attempts >= IP_ATTEMPTS or code_attempts >= CODE_ATTEMPTS:
+        return _refuse("rate_limited", status.HTTP_429_TOO_MANY_REQUESTS)
+    if not password or not request.user.check_password(password):
+        cache.set(ip_key, ip_attempts + 1, timeout=LOGIN_WINDOW_SECONDS)
+        cache.set(code_key, code_attempts + 1, timeout=LOGIN_WINDOW_SECONDS)
+        return _refuse("wrong_password", status.HTTP_400_BAD_REQUEST,
+                       remaining_attempts=max(0, CODE_ATTEMPTS - code_attempts - 1))
+    return None
+
+
 class SoulMfaVerifyView(APIView):
     """登录第二步。**限流**:同一账号 5 次不通过锁 15 分钟(记在账号上,换 IP、换待验证凭据都绕不过);
     另按 IP 记失败,15 分钟 50 次 —— 与密码登录同一组数字,挡一台机器拿很多凭据扫很多账号。"""
@@ -152,16 +168,9 @@ class MeMfaSetupView(SoulAPIView):
         满了答 429 `rate_limited`。"""
         body = SoulMfaSetupRequestSerializer(data=request.data)
         body.is_valid(raise_exception=True)
-        ip_key, code_key = _rate_keys(_client_ip(request), self.account.soul.soul_code)
-        ip_attempts, code_attempts = cache.get(ip_key, 0), cache.get(code_key, 0)
-        if ip_attempts >= IP_ATTEMPTS or code_attempts >= CODE_ATTEMPTS:
-            return _refuse("rate_limited", status.HTTP_429_TOO_MANY_REQUESTS)
-        password = body.validated_data["password"]
-        if not password or not request.user.check_password(password):
-            cache.set(ip_key, ip_attempts + 1, timeout=LOGIN_WINDOW_SECONDS)
-            cache.set(code_key, code_attempts + 1, timeout=LOGIN_WINDOW_SECONDS)
-            return _refuse("wrong_password", status.HTTP_400_BAD_REQUEST,
-                           remaining_attempts=max(0, CODE_ATTEMPTS - code_attempts - 1))
+        refusal = confirm_current_password(request, self.account, body.validated_data["password"])
+        if refusal is not None:
+            return refusal
         try:
             secret, url = mfa.begin_setup(self.account)
         except svc.SoulAccountError as exc:

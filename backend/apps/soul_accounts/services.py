@@ -25,6 +25,7 @@ from apps.soul_accounts.delivery import pick_delivery
 from apps.soul_accounts.models import (
     SECRET_BEARING_STATUSES,
     CredentialStatus,
+    DeviceLoginRevokeReason,
     InitialCredential,
     SoulAccount,
 )
@@ -185,6 +186,9 @@ def _issue_credential(account, soul):
     account.save(update_fields=["must_change_password", "initial_password_expires_at"])
     end_account_sessions(account)
     _void_mfa_devices(account)  # 重置密码不关两步验证,但「这部手机不再询问」要重新确认
+    from apps.soul_accounts import device_login
+
+    device_login.revoke_all(account, DeviceLoginRevokeReason.PASSWORD_RESET_BY_OFFICER)  # 面容/指纹登录同理
 
     delivery = pick_delivery(soul)
     credential = InitialCredential.objects.create(
@@ -311,6 +315,30 @@ def mark_delivered(credential_id, *, actor, request=None):
     raise SoulAccountError("只有已查看的待交付项可以标记为已交付。", "credential_not_revealed", 409)
 
 
+#: 交付单能印的状态。发送失败的行是 PENDING(`last_error` 有值),官员可不等重试、当面交。
+PRINTABLE_STATUSES = (CredentialStatus.PENDING, CredentialStatus.REVEALED, CredentialStatus.DELIVERED)
+
+
+def print_slip(credential_id, *, actor, request=None):
+    """交付单要印的内容 + 一条审计。**不改任何状态,不含密码**(单上留空格,官员当面写或口头说)。
+    过期 / 作废的单上有效期已不对:409。"""
+    credential = InitialCredential.objects.select_related("soul__home_tenant").get(pk=credential_id)
+    if credential.status == CredentialStatus.VOID:
+        raise SoulAccountError("该初始密码已作废,不能打印交付单;请重置。", "credential_void", 409)
+    if credential.expires_at <= timezone.now():
+        raise SoulAccountError("初始密码已过期,不能打印交付单;请重置。", "credential_expired", 409)
+    if credential.status not in PRINTABLE_STATUSES:
+        raise SoulAccountError("已经发送给灵魂的初始密码不需要交付单。", "credential_not_printable", 409)
+    now = timezone.now()
+    audit("EXECUTE", credential.soul, "打印初始密码交付单", actor=actor, request=request,
+          resource_id=credential.pk, changes={"action": "credentials.print_slip", "status": credential.status})
+    return {
+        "soul_name": credential.soul.name, "soul_code": credential.soul.soul_code,
+        "home_tenant": credential.soul.home_tenant, "expires_at": credential.expires_at,
+        "officer_name": (actor.display_name or actor.username), "printed_at": now,
+    }
+
+
 def retry_credential(credential_id, *, actor, request=None):
     credential = InitialCredential.objects.select_related("soul__tenant").get(pk=credential_id)
     if credential.status != CredentialStatus.PENDING:
@@ -378,7 +406,7 @@ def login(soul_code, password):
     return account, complete_login(account)
 
 
-def change_password(account, old_password, new_password, push_token=""):
+def change_password(account, old_password, new_password, push_token="", device_credential=""):
     from django.contrib.auth.password_validation import validate_password
 
     if initial_password_expired(account):
@@ -391,11 +419,13 @@ def change_password(account, old_password, new_password, push_token=""):
     validate_password(new_password, user)
     # 其他设备全部退出,这一台保持:调用者用返回的新令牌对替换手里的(新令牌带新的 `sv`)。
     # `push_token` 是这台手机自己的推送 token,留着;其余推送登记停用。
-    set_password_chosen_by_soul(account, new_password, keep_push_token=push_token)
+    # `device_credential` 同理:在这部手机上改的,这部手机的面容/指纹登录留着(其余照旧失效)。
+    set_password_chosen_by_soul(account, new_password, keep_push_token=push_token,
+                                keep_device_credential=device_credential)
     return issue_tokens(account)
 
 
-def set_password_chosen_by_soul(account, new_password, keep_push_token=""):
+def set_password_chosen_by_soul(account, new_password, keep_push_token="", keep_device_credential=""):
     """灵魂自己定的密码 —— 改初始密码与邮箱重置(`set_new_password`)共用。
     初始密码的生命周期到此结束:不再强制改密、不再过期;否则邮箱重置之后
     仍被要求「修改初始密码」,而初始密码已过期时新密码也登不进去。"""
@@ -410,6 +440,10 @@ def set_password_chosen_by_soul(account, new_password, keep_push_token=""):
         _void_open_credentials(account)
         end_account_sessions(account, keep_push_token=keep_push_token)
         _void_mfa_devices(account)  # 改密码不关两步验证,但「这部手机不再询问」全部作废
+        from apps.soul_accounts import device_login
+
+        device_login.revoke_all(account, DeviceLoginRevokeReason.PASSWORD_CHANGED,
+                                keep_credential=keep_device_credential)
 
 
 def end_account_sessions(account, keep_push_token=""):
@@ -465,6 +499,10 @@ def retire_account_for_rebirth(soul, ended_cycle):
     from apps.soul_accounts import mfa
 
     had_mfa = mfa.void_all(account)
+    # 面容/指纹登录的凭据标原因而不是删:登录页要告诉灵魂「你已转生」(`device_login.find` 跨世找得到)。
+    from apps.soul_accounts import device_login
+
+    device_login.revoke_all(account, DeviceLoginRevokeReason.ACCOUNT_REINCARNATED)
     # 同一事务里停用推送设备:停用的账号不再收到任何推送,回滚则一起回滚。
     from apps.soul_push.services import invalidate_account_devices
 
