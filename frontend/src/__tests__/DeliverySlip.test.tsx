@@ -19,7 +19,7 @@ jest.mock("@/src/contexts/I18nContext", () => ({
 const SLIP = {
   soul_name: "塞内布",
   soul_code: "QU33Q9FW5F",
-  home_tenant: { code: "eg", display_name: "Egyptian Afterlife", hall_names: { "zh-Hans": "杜阿特 · 第二殿" }, seal_glyphs: [] as string[] },
+  home_tenant: { code: "EG_DUAT", display_name: "Egyptian Afterlife", hall_names: { "zh-Hans": "杜阿特 · 第二殿" }, seal_glyphs: [] as string[] },
   expires_at: "2026-10-14T13:40:00Z",
   officer_name: "书吏阿尼",
   printed_at: "2026-10-11T13:52:00Z",
@@ -76,12 +76,13 @@ describe("DeliverySlip", () => {
       "QU3 3Q9F W5F",
       "dt(2026-10-14T13:40:00Z)",
       "书吏阿尼",
-      tZh("soul_accounts.credentials.slip.title"),
+      "登录交付单",
       "第 1 页 / 共 1 页",
     ]) {
       expect(text).toContain(piece);
     }
-    expect(slip.querySelector("[data-slip-code]")).toHaveTextContent("QU3 3Q9F W5F");
+    // 编号 3-4-3,每组一个 span(组间距是版面的,不是空格)。
+    expect([...slip.querySelectorAll("[data-slip-code] > span")].map((e) => e.textContent)).toEqual(["QU3", "3Q9F", "W5F"]);
     expect(baseElement.querySelectorAll("svg[data-qr]")).toHaveLength(1);
   });
 
@@ -92,7 +93,8 @@ describe("DeliverySlip", () => {
     expect(slip.querySelector("input, textarea")).toBeNull();
     // 「密码」只在空框的说明和存根的有效期那一行里出现,后面不跟任何值。
     const text = (slip.textContent ?? "")
-      .replace(tZh("soul_accounts.credentials.slip.password_box"), "")
+      .replace(tZh("soul_accounts.credentials.slip.password_box").split(" · ")[0], "")
+      .replace(tZh("soul_accounts.credentials.slip.password_box").split(" · ")[1], "")
       .replace(tZh("soul_accounts.credentials.slip.stub_until"), "")
       .replace(tZh("soul_accounts.credentials.slip.must_change"), "");
     expect(text).not.toMatch(/密码|password/i);
@@ -110,5 +112,84 @@ describe("SoulCode", () => {
     const el = screen.getByText("QU3 3Q9F W5F");
     expect(el).toHaveAttribute("aria-label", tZh("soul_app.login.id_aria", { spelled: "Q U 3，3 Q 9 F，W 5 F" }));
     expect(el).toHaveClass("font-mono");
+  });
+});
+
+describe("DeliverySlip by civilisation", () => {
+  const withCode = (code: string, seal_glyphs: string[] = []) => ({ ...SLIP, home_tenant: { ...SLIP.home_tenant, code, seal_glyphs } });
+  const CIVS = [
+    ["CN_DIYU", "cn"],
+    ["EG_DUAT", "eg"],
+    ["EU_HEAVEN_HELL", "eu"],
+    ["GR_HADES", "gr"],
+  ] as const;
+
+  it.each(CIVS)("%s draws its own emblem and none of the other three", (code, civ) => {
+    render(<DeliverySlip slip={withCode(code)} />);
+    const slip = screen.getByTestId("delivery-slip");
+    expect(slip.querySelectorAll(`[data-slip-emblem="${civ}"]`)).toHaveLength(1);
+    for (const other of ["cn", "eg", "eu", "gr"].filter((c) => c !== civ)) {
+      expect(slip.querySelector(`[data-slip-emblem="${other}"]`)).toBeNull();
+    }
+    expect(slip.querySelector("[data-slip-band]")).not.toBeNull();
+    expect(slip.querySelector("[data-slip-seal-slot] [data-testid='seal']")).toHaveAttribute("data-civ", civ);
+  });
+
+  it("puts the civilisation name over the hall name and again on the stub", () => {
+    render(<DeliverySlip slip={withCode("CN_DIYU")} />);
+    const slip = screen.getByTestId("delivery-slip");
+    expect(slip.querySelector("[data-slip-stub-hall]")).toHaveTextContent(`${tZh("plaque.realm.cn")} · 杜阿特 · 第二殿`);
+    expect(slip.querySelector("[data-slip-hall]")?.previousElementSibling).toHaveTextContent(tZh("plaque.realm.cn"));
+  });
+
+  it("draws the seal even when the hall has no seal glyphs of its own", () => {
+    render(<DeliverySlip slip={withCode("GR_HADES", [])} />);
+    expect(screen.getByTestId("seal")).toHaveTextContent("Μ");
+  });
+
+  it("is neutral for a hall outside the four: no emblem, no seal, a brand mark in the seal slot", () => {
+    render(<DeliverySlip slip={withCode("XX_NOWHERE")} />);
+    const slip = screen.getByTestId("delivery-slip");
+    expect(slip.querySelector("[data-slip-emblem]")).toBeNull();
+    expect(slip.querySelector("[data-testid='seal']")).toBeNull();
+    expect(slip.querySelector("[data-slip-seal-slot] [data-brand-mark]")).not.toBeNull();
+    expect(slip.querySelector("[data-slip-band]")).not.toBeNull();
+  });
+
+  it("carries the footer brand mark and the page label on every civ", () => {
+    render(<DeliverySlip slip={withCode("EU_HEAVEN_HELL")} />);
+    expect(screen.getByTestId("delivery-slip").querySelector("[data-slip-foot] [data-brand-mark]")).not.toBeNull();
+  });
+
+  it("is black by default; with colour only the band, frame, rules and seal take the civilisation's ink", () => {
+    const { rerender } = render(<DeliverySlip slip={withCode("CN_DIYU")} />);
+    const inks = () => [...screen.getByTestId("delivery-slip").querySelectorAll("[data-slip-ink]")].map((e) => e.getAttribute("data-slip-ink"));
+    expect(new Set(inks())).toEqual(new Set(["mono"]));
+    expect(screen.getByTestId("delivery-slip")).not.toHaveAttribute("data-slip-color");
+
+    rerender(<DeliverySlip slip={withCode("CN_DIYU")} color />);
+    const slip = screen.getByTestId("delivery-slip");
+    expect(new Set(inks())).toEqual(new Set(["cn"]));
+    // frame, two rules, seal slot — and nothing else, in particular not the QR or the number.
+    expect(inks()).toHaveLength(4);
+    expect(slip.querySelector("[data-slip-qr]")?.closest("[data-slip-ink]")).toBeNull();
+    expect(slip.querySelector("[data-slip-code]")?.closest("[data-slip-ink]")).toBeNull();
+    expect(slip.querySelector("[data-slip-password-box]")?.closest("[data-slip-ink]")).toBeNull();
+  });
+
+  it("encodes SL1:<number> in the QR whatever the colour", () => {
+    render(<DeliverySlip slip={withCode("CN_DIYU")} color />);
+    const svg = screen.getByTestId("delivery-slip").querySelector("svg[data-qr]") as SVGElement;
+    expect(svg).toHaveAttribute("width", "160px");
+    expect(svg.querySelector("path")).toHaveAttribute("fill", "black");
+    const m = qrMatrix("SL1:QU33Q9FW5F");
+    const d = svg.querySelector("path")?.getAttribute("d") ?? "";
+    expect(d.match(/M\d+ \d+h1v1h-1z/g)).toHaveLength(m.flat().filter(Boolean).length);
+  });
+
+  it("gives the two dividers' patterns different ids", () => {
+    render(<DeliverySlip slip={withCode("EG_DUAT")} />);
+    const ids = [...screen.getByTestId("delivery-slip").querySelectorAll("pattern")].map((p) => p.id);
+    expect(new Set(ids).size).toBe(ids.length);
   });
 });

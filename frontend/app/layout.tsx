@@ -7,6 +7,7 @@ import "@fontsource-variable/noto-sans-sc";
 import "@fontsource-variable/noto-serif-sc";
 import "./globals.css";
 import "./print.css";
+import "./print-slip-ink.css";
 import { fontVariables } from "./fonts";
 import { plaqueFontVariables } from "@/src/components/plaque/fonts";
 import { ToastProvider } from "@/src/contexts/ToastContext";
