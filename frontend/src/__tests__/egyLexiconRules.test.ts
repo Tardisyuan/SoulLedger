@@ -288,6 +288,8 @@ const TECHNICAL: Record<string, string[]> = {
   "permissions.config.overwrite.warning": ["{n}"],
   "permissions.config.overwrite.warning_own": ["{n}"],
   "permissions.config.overwrite.all_halls": ["{hall}"],
+  // 第二十批:登录页的「编号不用哪五个字符」—— 字符本身(0 O 1 I L),不是 egy 词。
+  "soul_app.login.bad_char_body": ["O", "I", "L"],
 };
 
 /** 空白切出的记号去掉两端标点(括号、引号、逗号、句点……),留下可与 TECHNICAL 比对的原形。 */
@@ -562,8 +564,12 @@ const ROOTS_BATCH17 = [
   "Mawy", //          更新
   "Sni", //           跳过
 ];
+/** 第二十批(Design,2026-10-11):Ra 光 —— 只用在扫码页的手电筒上(scan.torch / scan.torch_on)。 */
+const ROOTS_BATCH20 = [
+  "Ra", //            光
+];
 const LEXICON = new Set([
-  ...[...ROOTS, ...ROOTS_MOD, ...ROOTS_FIX, ...ROOTS_SPLIT, ...ROOTS_CLOSE, ...ROOTS_FINAL, ...ROOTS_LATE, ...ROOTS_APP, ...ROOTS_NINE, ...ROOTS_TEN, ...ROOTS_ELEVEN, ...ROOTS_TWELVE, ...ROOTS_BATCH15, ...ROOTS_BATCH16, ...ROOTS_BATCH17, ...PROPER_NAMES, ...PARTICLES].flatMap((e) => e.split(/ \/ | /)),
+  ...[...ROOTS,...ROOTS_MOD, ...ROOTS_FIX, ...ROOTS_SPLIT, ...ROOTS_CLOSE, ...ROOTS_FINAL, ...ROOTS_LATE, ...ROOTS_APP, ...ROOTS_NINE, ...ROOTS_TEN, ...ROOTS_ELEVEN, ...ROOTS_TWELVE, ...ROOTS_BATCH15, ...ROOTS_BATCH16, ...ROOTS_BATCH17, ...ROOTS_BATCH20, ...PROPER_NAMES, ...PARTICLES].flatMap((e) => e.split(/ \/ | /)),
   ...WHOLE_PHRASES,
 ]);
 

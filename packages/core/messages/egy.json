@@ -143,7 +143,7 @@
       "complete_failed": "Nen Iri Seth. Wehem Iri",
       "done_title": "Aq Sep Sen Wen Seth",
       "done_body": "Aq Khery: Sekhem, Er Khet Medu Ahet Em Kat Medu Ahet.",
-      "password_hint": "Sesh Sekhem-Ek Tepy: Maa Ba-Ek.",
+      "password_hint": "Sesh Sekhem-Ek: Maa Ba-Ek.",
       "password_wrong": "Sekhem Nen Maat",
       "password_locked": "Sep Menmen. Wehem Iri Er Khet."
     },
@@ -1950,7 +1950,7 @@
     "password_reason_numeric": "Sekhem: Nen Hesb Neb.",
     "password_reason_similar": "Sekhem Mi Ren Aq. Setep Ky.",
     "password_reason_invalid": "Sekhem Nen Smen. Setep Ky.",
-    "password_old_wrong": "Sekhem Tepy Nen Maat",
+    "password_old_wrong": "Sekhem-Ek Nen Maat",
     "profile_updated": "Djes Renpi Seth",
     "profile_update_failed": "Nen Renpi Djes",
     "avatar": "Tut",
@@ -2812,6 +2812,28 @@
         "pending": "Nen Sekhem Tepy Em Djeret",
         "pending_reason": "Ba Em Wat: Sekhem Hab Djes-Ef, Nen Dy",
         "filtered": "Nen Sesh Em Kheperu Pen"
+      },
+      "print_slip": "Sesh Djama Redi",
+      "reprint_slip": "Wehem Sesh Djama Redi",
+      "print_failed": "Nen Em Senb: Nen Sesh Djama Redi",
+      "slip": {
+        "title": "Medjat Ba · Djama Redi",
+        "soul": "Ba",
+        "soul_id": "Ren Hesb Ba",
+        "password_box": "Sekhem Tepy · Sab Sesh, Mi Djed",
+        "valid_until": "Wenen Er {{time}} (Unut 72)",
+        "must_change": "■ Aq Tepy: Smen Sekhem Mawy. Er Khet: Sekhem Tepy Hedj.",
+        "qr_hint": "Medjat Ba: Aq › «Maa Tut Medu»",
+        "officer": "Sab {{name}}",
+        "printed_at": "Sesh Djama Em {{time}}",
+        "personal": "Er Ba-Ek Wa. Nen Smen Tut, Nen Hab.",
+        "cut": "✂ Djama Hery: Er Ba. Djama Khery: Em Wesekhet.",
+        "stub": "Djama Smen · Em Wesekhet",
+        "stub_until": "Sekhem Tepy Wenen Er",
+        "stub_printed": "Sesh Djama",
+        "sign_soul": "Sesh Ren Ba · Hru",
+        "sign_officer": "Sesh Ren Sab",
+        "after_sign": "Er Khet: «Sesh Djeret» Em Medjat Sab."
       }
     },
     "reveal": {
@@ -3427,8 +3449,32 @@
       "submit": "Aq",
       "submitting": "Em Maa…",
       "required": "Sesh Ren Hesb Ba Hena Sekhem",
-      "soul_code_hint": "Sesh 10",
-      "verifying": "Em Maa Ren Hesb Ba Hena Sekhem. Nen Per Em Per Pen."
+      "soul_code_hint": "Ren Hesb Ba: Medu 10 · Em Djama Redi, Mi Maa Tut Medu",
+      "verifying": "Em Maa Ren Hesb Ba Hena Sekhem. Nen Per Em Per Pen.",
+      "scan": "Maa Tut Medu",
+      "scanned": "✓ Sesh Em Tut Medu Seth",
+      "bad_char": "! Ren Hesb Ba Nen Wen «{{c}}»",
+      "bad_char_body": "Ren Hesb Ba Nen Wen 0 O 1 I L. Maa Djama Redi Wehem.",
+      "bad_symbol": "! Ren Hesb Ba: Medu Wa",
+      "bad_paste": "! Medu Senn Nen Maat Er Ren Hesb Ba",
+      "id_aria": "Ren Hesb Ba {{spelled}}",
+      "sending": "Aq Djer…",
+      "network_body": "Medu-Ek Wenen Djer. Wehem Aq.",
+      "switch": "Aq Em Ba Ky",
+      "switch_title": "Aq Em Ba Ky?",
+      "switch_body": "Medjat Pen Nen Rekh Ren Hesb Ba {{id}} Djer; Aq Em {{bio}}: Khetem. Er Khet: Sesh Ren Hesb Ba, Mi Maa Tut Medu.",
+      "switch_ok": "Aq Em Ba Ky",
+      "use_password": "Sesh Sekhem",
+      "lapsed": {
+        "pw_changed": "Sekhem Mawy Em Ky Seth",
+        "pw_changed_body": "Sesh Sekhem Mawy. Er Khet: Wen Aq Em {{bio}} Mawy.",
+        "reset": "Sab Wesekhet: Sekhem-Ek Mawy Seth",
+        "reset_body": "Aq Em Sekhem Tepy Sab. Er Khet: Smen Sekhem Mawy.",
+        "reborn": "Ba-Ek Ankh Mawy: Aq Mawy",
+        "reborn_body": "Ren Hesb Ba Wenen. Aq Em Sekhem Tepy Ankh Pen.",
+        "bio_changed": "Aq Em {{bio}}: Khetem Seth",
+        "bio_changed_body": "{{bio}} Em Medjat Pen Mawy: Khetem. Sesh Sekhem, Wen Mawy."
+      }
     },
     "change_password": {
       "title": "Khemen Sekhem Tepy",
@@ -3624,7 +3670,7 @@
       "initial_password_expired": "Sekhem Tepy Mut. Dbh Sab Er Wehem Sekhem",
       "rate_limited": "Aq Menmen. Wehem Er Khet",
       "invalid_old_password": "Sekhem Tepy Nen Maat",
-      "password_unchanged": "Sekhem Renpi Nen Wa Hena Sekhem Tepy",
+      "password_unchanged": "Sekhem Renpi Nen Wa Hena Sekhem-Ek",
       "weak_password": "Sekhem Renpi Nen Wser. Setep Ky: Hesb Ky, Nen Rekh Neb.",
       "password_change_required": "Khemen Sekhem Tepy Er Tepy",
       "account_retired": "Aq Khetem",
@@ -4189,7 +4235,7 @@
         "why": "Rekh Ky Sekhem-Ek: Nen Medjat-Ek, Nen Aq.",
         "next": "Wenen Seth · Nemet Ky",
         "no_app_body": "Hehy «Authenticator» Em Medjat-Ek; Setep Wa. Wenen Seth: Nemet Ky.",
-        "password_hint": "Sesh Sekhem-Ek Tepy: Maa Ba-Ek."
+        "password_hint": "Sesh Sekhem-Ek: Maa Ba-Ek."
       },
       "bind": {
         "title": "Redi Er Kat Medu Ahet",
@@ -4264,6 +4310,41 @@
       },
       "copied": "Senn Seth",
       "wrong_password": "! Sekhem Nen Maat"
+    },
+    "scan": {
+      "title": "Maa Tut Medu Em Djama Redi",
+      "close": "Khetem Maa Tut Medu",
+      "hint": "Redi Tut Medu Em Hery",
+      "hint_sub": "Ren Hesb Ba: Sesh Em Djes-Ef. Sekhem: Sesh-Ek.",
+      "torch": "Ra",
+      "torch_on": "Ra · Wen",
+      "manual": "Sesh Ren Hesb Ba",
+      "invalid": "! Nen Tut Medu Djama Redi Medjat Ba",
+      "invalid_body": "Maa Tut Medu Em Djama Redi. Mi Sesh Ren Hesb Ba.",
+      "denied_title": "Nen Was Maa Tut",
+      "denied_body": "Maa Tut Medu: Was Er Medjat. Wen Em Djeret Medjat, Mi Sesh Ren Hesb Ba.",
+      "open_settings": "Wen Djeret Medjat ↗",
+      "privacy": "Maa Tut Medu Wa. Nen Smen Tut."
+    },
+    "bio": {
+      "face": "Djes-Ek",
+      "finger": "Djes-Ek",
+      "row": "Aq Em {{bio}}",
+      "row_sub": "Em Medjat Pen Wa",
+      "row_unavailable": "Nen Djes Em Medjat Pen",
+      "on": "Wen",
+      "off": "Khetem",
+      "button": "Aq Em {{bio}}",
+      "ask_title": "Aq Em {{bio}} Er Khet?",
+      "ask_body": "Em Medjat Pen Wa: Nen Sesh Sekhem. {{bio}} Neb Em Medjat: Aq. Medjat En Per: Nen Wen.",
+      "ask_note": "Khetem Er Khet Em «Smen › Senb Ren Aq».",
+      "ask_later": "Er Khet",
+      "ask_ok": "Wen",
+      "enable_title": "Wen Aq Em {{bio}}",
+      "enable_body": "Sesh Sekhem-Ek; Maa {{bio}}.",
+      "enable_next": "Nemet Ky",
+      "failed": "Nen Rekh {{bio}}. Sesh Sekhem.",
+      "retry": "Wehem Aq Em {{bio}}"
     }
   },
   "soul_push": {
