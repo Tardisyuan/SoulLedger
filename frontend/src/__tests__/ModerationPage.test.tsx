@@ -88,6 +88,8 @@ const post = (over: Record<string, unknown> = {}) => ({
   create_time: "2026-09-18T01:30:00Z",
   visibility: "PUBLIC",
   comment_count: 4,
+  pending_comment_count: 0,
+  hidden_comment_count: 0,
   reaction_counts: { LIKE: 5, LOVE: 12, RESPECT: 0, SYMPATHY: 0, ETERNAL_LIGHT: 0 },
   media: [],
   media_count: 0,
@@ -315,15 +317,16 @@ describe("举报 · the C-08 review layout", () => {
     expect(apiMock.item).toHaveBeenCalledWith("posts", "p1");
     expect(within(detail()).getByText(tZh("social_moderation.reason.ABUSE"))).toBeInTheDocument();
     expect(within(detail()).queryByText("ABUSE")).toBeNull();
-    // Text reactions, not emoji, in the soul app's words: 评 plus each of the five kinds with its
-    // own count (念 is LOVE, not the total 17); a kind at 0 is not drawn; no 「转」 — no reposts.
+    // Text reactions, not emoji, in the soul app's words: each of the five kinds with its own count
+    // (念 is LOVE, not the total 17); a kind at 0 is not drawn; no 「转」 — no reposts. The comment
+    // count is its own line (评论 N, split by moderation status), not part of this one.
     const counts = detail().querySelector("[data-reaction-counts]") as HTMLElement;
-    expect(counts).toHaveTextContent(/^评 2·喜 5·念 12$/);
+    expect(counts).toHaveTextContent(/^喜 5·念 12$/);
     expect(counts).not.toHaveTextContent("17");
     for (const absent of ["转", "敬", "悲", "长明灯", " 0"]) expect(counts).not.toHaveTextContent(absent);
   });
 
-  it("the detail draws every reaction kind that has a count, and none of those at 0 — 评 included", async () => {
+  it("the detail draws every reaction kind that has a count, and none of those at 0", async () => {
     asRole("social.moderate");
     apiMock.item.mockResolvedValue({
       data: post({
@@ -336,6 +339,28 @@ describe("举报 · the C-08 review layout", () => {
     const counts = detail().querySelector("[data-reaction-counts]") as HTMLElement;
     expect(counts).toHaveTextContent(/^喜 1·念 2·敬 3·悲 4·长明灯 5$/);
     expect(counts).not.toHaveTextContent("评");
+  });
+
+  it("the detail's comment line is 评论 N · 待审 N · 已隐藏 N, and leaves out 待审 / 已隐藏 at 0", async () => {
+    asRole("social.moderate");
+    apiMock.item.mockResolvedValue({
+      data: post({ id: "p1", content: "被举报的帖子全文，比摘录长", moderation_status: "PUBLISHED", comment_count: 5, pending_comment_count: 2, hidden_comment_count: 1 }),
+    });
+    renderPage();
+    await within(await screen.findByRole("region", { name: tZh("social_moderation.review.detail_label") })).findByText(/被举报的帖子全文/);
+    expect(detail().querySelector("[data-comment-counts]")).toHaveTextContent(/^评论 5·待审 2·已隐藏 1$/);
+  });
+
+  it.each([
+    [{ pending_comment_count: 2, hidden_comment_count: 0 }, /^评论 3·待审 2$/],
+    [{ pending_comment_count: 0, hidden_comment_count: 4 }, /^评论 3·已隐藏 4$/],
+    [{ pending_comment_count: 0, hidden_comment_count: 0 }, /^评论 3$/],
+  ])("a zero status segment is not drawn (%j)", async (over, shown) => {
+    asRole("social.moderate");
+    apiMock.item.mockResolvedValue({ data: post({ id: "p1", content: "被举报的帖子全文，比摘录长", moderation_status: "PUBLISHED", comment_count: 3, ...over }) });
+    renderPage();
+    await within(await screen.findByRole("region", { name: tZh("social_moderation.review.detail_label") })).findByText(/被举报的帖子全文/);
+    expect(detail().querySelector("[data-comment-counts]")).toHaveTextContent(shown);
   });
 
   it("H without a reason says so and sends nothing; with one it hides through the report", async () => {
@@ -748,6 +773,21 @@ describe("已处理 · E-08d", () => {
     expect(within(drawer).queryByText(tZh("social_moderation.handled.in_recycle_bin"))).toBeNull();
     fireEvent.click(within(drawer).getByRole("button", { name: tZh("social_moderation.handled.restore") }));
     await waitFor(() => expect(apiMock.act).toHaveBeenCalledWith("posts", "h1", "restore", undefined));
+  });
+
+  it("a HIDDEN post's drawer shows 评论 N · 待审 N · 已隐藏 N (zero segments left out); a comment's drawer has no such line", async () => {
+    asRole("social.moderate");
+    apiMock.handled.mockResolvedValue(page(handled));
+    apiMock.item.mockResolvedValue({
+      data: post({ id: "h1", content: "被隐藏的帖子全文", moderation_status: "HIDDEN", comment_count: 5, pending_comment_count: 2, hidden_comment_count: 0 }),
+    });
+    renderPage();
+    fireEvent.click(segment("handled"));
+    const row = (await screen.findByText("被隐藏的帖子")).closest("tr") as HTMLElement;
+    fireEvent.click(within(row).getByRole("button", { name: "王五" }));
+    const drawer = await screen.findByRole("dialog");
+    await within(drawer).findByText("被隐藏的帖子全文");
+    expect(drawer.querySelector("[data-comment-counts]")).toHaveTextContent(/^评论 5·待审 2$/);
   });
 
   it("改过正文的帖子:抽屉里直接写出「编辑于 时间」,不靠悬停;没改过的没有", async () => {

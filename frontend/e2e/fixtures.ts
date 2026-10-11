@@ -889,6 +889,8 @@ export const MODERATED_POSTS = [
     visibility: "PUBLIC",
     edited_at: null,
     comment_count: 0,
+    pending_comment_count: 0,
+    hidden_comment_count: 0,
     reaction_counts: { LIKE: 1, LOVE: 12, RESPECT: 0, SYMPATHY: 0, ETERNAL_LIGHT: 0 },
     media: [] as { id: string; url: string; width: number; height: number }[],
     media_count: 0,
