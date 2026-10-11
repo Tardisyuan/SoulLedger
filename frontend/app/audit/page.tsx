@@ -306,7 +306,7 @@ export default function AuditPage() {
                   阶梯上，收到最小的一格 `mt-1`(4px)。 */}
               <div className="font-mono text-xs text-[oklch(var(--color-ink-tertiary))] mt-1">{g.resourceDetail}</div>
               {changeActionLabels(g, t).map((label) => (
-                <div key={label} className="text-xs text-[oklch(var(--color-ink-secondary))] mt-1">{label}</div>
+                <div key={label} className="text-xs text-[oklch(var(--color-ink-muted))] mt-1">{label}</div>
               ))}
             </div>
           </TreeName>
