@@ -12,6 +12,9 @@ const post = (n: number, author: number) => ({
   author_username: author === TEST_USER.id ? "test_admin" : "merit",
   content: `第 ${n} 条`,
   visibility: "PUBLIC",
+  moderation_status: "PUBLISHED",
+  edited_at: n === 1 ? "2026-10-02T09:00:00Z" : null,
+  screening: null,
   comment_count: 0,
   reaction_count: 0,
   media: [],
@@ -35,6 +38,8 @@ test("作者改自己的帖子:只发改动的字段;别人的帖子没有编辑
   const cards = page.locator("[data-post-card]");
   await expect(cards).toHaveCount(2);
   await expect(cards.nth(1).getByRole("button", { name: "编辑" })).toHaveCount(0);
+  await expect(cards.nth(0).locator("[data-edited]")).toHaveText("已编辑");
+  await expect(cards.nth(1).locator("[data-edited]")).toHaveCount(0);
 
   await cards.nth(0).getByRole("button", { name: "编辑" }).click();
   const dialog = page.getByRole("dialog");

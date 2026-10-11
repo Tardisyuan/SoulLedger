@@ -11,6 +11,8 @@ import { fieldControl } from "@/src/components/ui/Field";
 import { cn } from "@/lib/utils";
 import { ReactionBar } from "./ReactionBar";
 import { Avatar } from "./Avatar";
+import { StatusBadge } from "@/src/components/ui/StatusBadge";
+import { MODERATION_TONES } from "@/src/components/moderation/shared";
 import type { Comment } from "@soulledger/core/api";
 
 /**
@@ -77,6 +79,13 @@ function CommentItem({ comment, parent, depth, onReply, children }: {
           <span className="font-mono text-xs tabular-nums text-[oklch(var(--color-ink-muted))]">
             {formatDate(comment.create_time)}
           </span>
+          {comment.moderation_status && comment.moderation_status !== "PUBLISHED" && (
+            <StatusBadge
+              namespace="social_moderation.moderation_status"
+              value={comment.moderation_status}
+              tone={MODERATION_TONES[comment.moderation_status] ?? "neutral"}
+            />
+          )}
         </div>
         <p className="whitespace-pre-wrap text-md font-normal text-[oklch(var(--color-ink))]">{comment.content}</p>
         <div className="flex flex-wrap items-center gap-3">

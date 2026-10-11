@@ -191,6 +191,16 @@ def reaction_kind_counts():
     }
 
 
+def visible_comment_count():
+    """已发布、未删除的评论数 —— 待审 / 隐藏的评论不能经计数泄露存在。灵魂端、官员端、审核后台
+    读的是同一个数(存储的 `Post.comment_count` 不随审核状态变,不再有读者)。"""
+    return Count(
+        "comments",
+        filter=Q(comments__moderation_status=ModerationStatus.PUBLISHED, comments__is_deleted=False),
+        distinct=True,
+    )
+
+
 def annotate_posts_for(viewer, qs):
     """列表要的计数(总数与五种各自的数)与「我的表态」。计数只数已发布、未删除的评论 —— 待审评论不能经计数泄露存在。
 
@@ -200,11 +210,7 @@ def annotate_posts_for(viewer, qs):
         # 图片随帖子一次取出(每页一条查询),`PostMedia.objects` 已排除软删除的。
         Prefetch("media", queryset=PostMedia.objects.order_by("position"), to_attr="live_media"),
     ).annotate(
-        visible_comment_count=Count(
-            "comments",
-            filter=Q(comments__moderation_status=ModerationStatus.PUBLISHED, comments__is_deleted=False),
-            distinct=True,
-        ),
+        visible_comment_count=visible_comment_count(),
         visible_reaction_count=Count("reactions", filter=Q(reactions__is_deleted=False), distinct=True),
         **reaction_kind_counts(),
         my_reaction=Subquery(
