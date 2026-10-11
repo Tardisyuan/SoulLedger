@@ -25,7 +25,7 @@ export default function Loading() {
         <div className="px-4 md:px-8 pt-8 pb-6">
           {/* h-10 对着 text-lg 的 32px × 1.2;h-6 对着 text-sm 副标题。 */}
           <div className="h-10 w-64 bg-[oklch(var(--color-hairline))]" />
-          <div className="h-6 w-96 bg-[oklch(var(--color-hairline))] mt-3" />
+          <div className="h-6 w-96 max-w-full bg-[oklch(var(--color-hairline))] mt-3" />
         </div>
       </header>
 
