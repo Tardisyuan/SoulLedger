@@ -107,7 +107,7 @@ MESSAGES = {
         "residence_approved": {"title": "Hemes Taui Ky Hesy", "body": "Hemes-Ek Em Taui Ky Hesy Seth. Wen Medjat Ba Er Maa."},
         "residence_started": {"title": "Hemes Tepy", "body": "Hemes-Ek Em Taui Ky Tepy Seth. Wen Medjat Ba Er Maa."},
         "residence_returned": {"title": "Hemes Khetem", "body": "Iyi-Ek Seth Er Nut-Ek. Wen Medjat Ba Er Maa."},
-        "chat_message": {"title": "Shemes Renpi", "body": "{{name}}: Shemes Renpi Er-Ek. Wen Medjat Ba Er Maa."},
+        "chat_message": {"title": "Shemes Mawy", "body": "{{name}}: Shemes Mawy Er-Ek. Wen Medjat Ba Er Maa."},
         "social_warned_post": {"title": "Sebayt Er Medu", "body": "Sebayt Er Medu-Ek: {{reason}}"},
         "social_warned_comment": {"title": "Sebayt Er Wesheb", "body": "Sebayt Er Wesheb-Ek: {{reason}}"},
         "social_warned_user": {"title": "Sebayt Er Aq", "body": "Sebayt Er Aq-Ek: {{reason}}"},

@@ -228,6 +228,11 @@
       "url": "https://www.npmjs.com/package/nprogress"
     },
     {
+      "name": "qrcode-generator",
+      "licence": "MIT",
+      "url": "https://www.npmjs.com/package/qrcode-generator"
+    },
+    {
       "name": "react",
       "licence": "MIT",
       "url": "https://www.npmjs.com/package/react"
@@ -310,6 +315,11 @@
       "url": "https://www.npmjs.com/package/expo"
     },
     {
+      "name": "expo-camera",
+      "licence": "MIT",
+      "url": "https://www.npmjs.com/package/expo-camera"
+    },
+    {
       "name": "expo-clipboard",
       "licence": "MIT",
       "url": "https://www.npmjs.com/package/expo-clipboard"
@@ -348,6 +358,11 @@
       "name": "expo-image-picker",
       "licence": "MIT",
       "url": "https://www.npmjs.com/package/expo-image-picker"
+    },
+    {
+      "name": "expo-local-authentication",
+      "licence": "MIT",
+      "url": "https://www.npmjs.com/package/expo-local-authentication"
     },
     {
       "name": "expo-network",
