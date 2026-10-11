@@ -388,7 +388,7 @@ describe("print the delivery slip", () => {
       mockI18n.t = realT;
     });
 
-    it("is off by default, remembers a tick on this computer, and the slip is printed in colour only after that", async () => {
+    it("is on by default, remembers being turned off on this computer, and the slip is printed in black only after that", async () => {
       asManager();
       soulAccountsApi.printSlip.mockResolvedValue({ data: SLIP });
       let colour: string | null = "unset";
@@ -397,25 +397,25 @@ describe("print the delivery slip", () => {
       });
       const row = await rows(credential({ id: "p" }));
       const box = screen.getByRole("checkbox", { name: "彩色点缀" });
-      expect(box).not.toBeChecked();
+      expect(box).toBeChecked();
 
       fireEvent.click(row("p").getByRole("button", { name: PRINT() }));
       await waitFor(() => expect(printSpy).toHaveBeenCalledTimes(1));
-      expect(colour).toBeNull();
+      expect(colour).toBe("");
 
       fireEvent.click(box);
-      expect(box).toBeChecked();
-      expect(window.localStorage.getItem("soulledger.slip.color")).toBe("1");
+      expect(box).not.toBeChecked();
+      expect(window.localStorage.getItem("soulledger.slip.color")).toBe("0");
       fireEvent.click(row("p").getByRole("button", { name: PRINT() }));
       await waitFor(() => expect(printSpy).toHaveBeenCalledTimes(2));
-      expect(colour).toBe("");
+      expect(colour).toBeNull();
     });
 
-    it("reads the remembered choice back on the next visit, and a storage that throws counts as off", async () => {
+    it("reads the remembered choice back on the next visit, and a storage that throws counts as the default: colour", async () => {
       asManager();
-      window.localStorage.setItem("soulledger.slip.color", "1");
+      window.localStorage.setItem("soulledger.slip.color", "0");
       await rows(credential({ id: "p" }));
-      await waitFor(() => expect(screen.getByRole("checkbox", { name: "彩色点缀" })).toBeChecked());
+      await waitFor(() => expect(screen.getByRole("checkbox", { name: "彩色点缀" })).not.toBeChecked());
 
       const get = jest.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
         throw new Error("blocked");
@@ -423,7 +423,7 @@ describe("print the delivery slip", () => {
       try {
         document.body.innerHTML = "";
         await rows(credential({ id: "q" }));
-        expect(screen.getByRole("checkbox", { name: "彩色点缀" })).not.toBeChecked();
+        expect(screen.getByRole("checkbox", { name: "彩色点缀" })).toBeChecked();
       } finally {
         get.mockRestore();
       }
