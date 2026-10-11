@@ -127,14 +127,18 @@ export function StateCard({ testID, tone, title, children }: { testID?: string; 
   );
 }
 
-/** What a non-idle step says, in the Design's words. `password` is the disable sheet's password mode. */
-export function StepNotice({ state, password }: { state: StepState; password?: boolean }) {
+/**
+ * What a non-idle step says, in the Design's words. `password` is the disable sheet's password mode;
+ * `recovery` is the sign-in step in recovery-code mode, where "the digits are wrong" would point at the
+ * authenticator (seen on the simulator, 2026-10-12) -- it says the recovery code is wrong or used.
+ */
+export function StepNotice({ state, password, recovery }: { state: StepState; password?: boolean; recovery?: boolean }) {
   const { t } = useI18n();
   const theme = useTheme();
   switch (state.kind) {
     case "wrong":
       return (
-        <StateCard testID="step-wrong" tone="neg" title={t(password ? "soul_app.mfa.wrong_password" : "soul_app.mfa.login.wrong")}>
+        <StateCard testID="step-wrong" tone="neg" title={password ? t("soul_app.mfa.wrong_password") : recovery ? `! ${t("mfa.verify.error_recovery_wrong")}` : t("soul_app.mfa.login.wrong")}>
           {state.left !== null ? t("soul_app.mfa.login.tries_left", { n: String(state.left) }) : null}
         </StateCard>
       );

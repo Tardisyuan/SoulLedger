@@ -739,6 +739,17 @@ describe("sign-in, second step", () => {
     await expectNothingKept(["7KQ4-m2xd"]);
   });
 
+  it("a wrong recovery code says so, not that the digits are wrong", async () => {
+    await toSecondStep({ [VERIFY]: { status: 400, data: { detail: "x", code: "wrong", remaining_attempts: 4 } } });
+    fireEvent.press(screen.getByTestId("use-recovery"));
+    fireEvent.changeText(screen.getByTestId("login-recovery"), "7KQ4-m2xd");
+    fireEvent.press(screen.getByTestId("login-verify"));
+    await screen.findByTestId("step-wrong");
+    expect(screen.getByText("! 恢复码不对，或已经用过")).toBeTruthy();
+    expect(screen.queryByText("! 数字不对")).toBeNull();
+    expect(screen.getByText("还可以再试 4 次。")).toBeTruthy();
+  });
+
   it("the way back to the six digits is there", async () => {
     await toSecondStep();
     fireEvent.press(screen.getByTestId("use-recovery"));
