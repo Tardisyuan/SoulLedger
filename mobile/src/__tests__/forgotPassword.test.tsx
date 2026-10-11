@@ -17,7 +17,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { I18nProvider } from "../i18n";
 import { RootNavigator, navigationRef } from "../navigation";
 import { installMobilePlatform, sessionStore } from "../platform";
-import { maskEmail, passwordStrength } from "../screens/forgotPassword";
+import { maskEmail } from "../screens/forgotPassword";
 import { SessionProvider } from "../session";
 import { stubApi, type Reply, resetLoginMemory } from "./stubApi";
 
@@ -100,14 +100,6 @@ describe("pure pieces", () => {
   it("masks the address to its first character and its domain", () => {
     expect(maskEmail("soul@example.com")).toBe("s***@example.com");
     expect(maskEmail("not-an-address")).toBe("not-an-address");
-  });
-
-  it("scores four segments: length 8, letters and digits, length 12, a symbol", () => {
-    expect(passwordStrength("")).toBe(0);
-    expect(passwordStrength("abcdefgh")).toBe(1);
-    expect(passwordStrength("abcdefg1")).toBe(2);
-    expect(passwordStrength("abcdefghijk1")).toBe(3);
-    expect(passwordStrength("abcdefghij-1")).toBe(4);
   });
 });
 
@@ -255,6 +247,13 @@ describe("step 2: the code and the new password", () => {
       expect(screen.queryByTestId("pw-rules-not_current")).toBeNull();
       expect(screen.getByTestId("pw-rules-note")).toBeTruthy();
       expect(matchMark()).toBe("○");
+    });
+
+    it("has no strength bar: the checklist and the server are the only judges (Design 第二十五批 三)", async () => {
+      await toCodeStep();
+      fireEvent.changeText(screen.getByTestId("forgot-new-password"), "abcdefghij-1");
+      expect(screen.queryByTestId("forgot-strength")).toBeNull();
+      expect(screen.queryByText(/强度/)).toBeNull();
     });
 
     it("ticks while typing, and never shows ! while the box is still being typed in", async () => {
