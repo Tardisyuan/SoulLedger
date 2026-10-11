@@ -15,7 +15,7 @@ import { soulLinks } from "../links";
 import { RootNavigator, navigationRef } from "../navigation";
 import { installMobilePlatform } from "../platform";
 import { SessionProvider, useSession } from "../session";
-import { PROFILE, life, stubApi } from "./stubApi";
+import { PROFILE, life, stubApi, resetLoginMemory } from "./stubApi";
 
 const mockPublish = jest.fn();
 const mockClear = jest.fn();
@@ -30,6 +30,7 @@ const secure = (SecureStore as unknown as { __store: Map<string, string> }).__st
 beforeEach(async () => {
   jest.clearAllMocks();
   installMobilePlatform();
+  resetLoginMemory();
   secure.clear();
   await AsyncStorage.clear();
 });

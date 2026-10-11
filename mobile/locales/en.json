@@ -1,7 +1,11 @@
 {
   "ios": {
     "CFBundleDisplayName": "SoulLedger",
-    "NSPhotoLibraryUsageDescription": "SoulLedger uses your photos only when you choose images to attach to a circle post."
+    "NSPhotoLibraryUsageDescription": "SoulLedger uses your photos only when you choose images to attach to a circle post.",
+    "NSCameraUsageDescription": "Used to scan the code on your slip.",
+    "NSFaceIDUsageDescription": "Sign in to Soul Ledger without a password."
   },
-  "android": { "app_name": "SoulLedger" }
+  "android": {
+    "app_name": "SoulLedger"
+  }
 }

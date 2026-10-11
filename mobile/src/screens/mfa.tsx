@@ -33,6 +33,7 @@ import { useSession } from "../session";
 import { Button, Input, Interp, Notice, Screen, ScreenError, Skeleton, Txt, useRemote, useTheme } from "../ui";
 import type { AppStackParams } from "./applications";
 import { ButtonPair, CheckRow, CoverRule, DigitField, Heading, MfaSheet, StepNotice, TextLink } from "./mfaParts";
+import { formatSoulCode } from "@soulledger/core/domain/soulCode";
 
 /**
  * Step ③ and the regenerated set: no way out but 「完成」. Returns `allowLeave()` -- call it before leaving on purpose.
@@ -130,7 +131,7 @@ function CodesPage({ codes, onDone, header, ownTop }: { codes: string[]; onDone:
     const shown = await shareRecoveryFile({
       header: tr("soul_app.mfa.codes.file_header"),
       soulCode,
-      soulCodeLine: `${tr("soul_app.login.soul_code")}: ${soulCode}`,
+      soulCodeLine: `${tr("soul_app.login.soul_code")}: ${formatSoulCode(soulCode)}`,
       codes,
       dialogTitle: tr("soul_app.mfa.codes.save_file"),
     });

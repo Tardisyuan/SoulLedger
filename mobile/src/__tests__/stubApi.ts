@@ -6,6 +6,11 @@
 import { soulHttp } from "@soulledger/core/api/soul";
 import { act, fireEvent, screen } from "@testing-library/react-native";
 import { AxiosError, type AxiosResponse, type InternalAxiosRequestConfig } from "axios";
+import * as LocalAuthentication from "expo-local-authentication";
+import * as SecureStore from "expo-secure-store";
+
+import { ACCOUNT_KEY, ASKED_PREFIX, BIO_KEY, resetColdStart } from "../deviceLogin";
+import { persistentStore } from "../platform";
 
 /**
  * Wait out a bottom-tab switch. After the (zero-length) transition, BottomTabView
@@ -72,7 +77,7 @@ export function stubApi(routes: Record<string, Reply | Promise<Reply> | (Reply |
 }
 
 export const PROFILE = {
-  soul_code: "SL-CN-000042",
+  soul_code: "QU33Q9FW5F",
   name: "张三",
   birth_name: "张三",
   civilization: "CHINESE",
@@ -114,4 +119,19 @@ export function application(overrides: Record<string, unknown> = {}) {
 
 export function life(cycle: number, overrides: Record<string, unknown> = {}) {
   return { cycle, records: [], judgments: [], dispositions: [], rebirth_applications: [], reincarnation: null, ...overrides };
+}
+
+/**
+ * What the sign-in page remembers (the last account, 面容 / 指纹 on, the question asked) lives in the platform's
+ * in-memory persistent cache, which `AsyncStorage.clear()` does not reach: a test that signed in leaves the next
+ * one looking at 「换一个账号」 instead of the empty form. Also a fresh process (cold start) and an un-enrolled phone.
+ */
+export function resetLoginMemory() {
+  for (const key of [ACCOUNT_KEY, BIO_KEY, `${ASKED_PREFIX}${PROFILE.soul_code}`]) persistentStore.remove(key);
+  resetColdStart();
+  const secure = SecureStore as unknown as { __guarded: Map<string, string>; __auth: { error: unknown; prompts: string[] } };
+  secure.__guarded.clear();
+  secure.__auth.error = null;
+  secure.__auth.prompts.length = 0;
+  Object.assign((LocalAuthentication as unknown as { __state: object }).__state, { hardware: true, enrolled: false, types: [2] });
 }

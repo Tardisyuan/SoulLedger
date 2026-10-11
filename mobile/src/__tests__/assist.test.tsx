@@ -22,7 +22,7 @@ import { I18nProvider } from "../i18n";
 import { RootNavigator } from "../navigation";
 import { installMobilePlatform, persistentStore } from "../platform";
 import { SessionProvider } from "../session";
-import { PROFILE, heldReply, life, stubApi } from "./stubApi";
+import { PROFILE, heldReply, life, stubApi, resetLoginMemory } from "./stubApi";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AccessibilityInfo, StyleSheet } from "react-native";
 import { motion, themeFor, v3, type Theme } from "../theme";
@@ -145,6 +145,7 @@ const hhmm = (iso: string) => {
 
 beforeEach(async () => {
   installMobilePlatform();
+  resetLoginMemory();
   await AsyncStorage.clear();
   persistentStore.remove(LOCALE_COOKIE);
   // The first-use notice is its own test; everywhere else it has been seen.

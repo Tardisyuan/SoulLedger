@@ -20,6 +20,7 @@ import {
   passwordResetErrorMessage,
   passwordResetRetryAfter,
   soulApi,
+  soulDeviceLoginFailure,
   soulErrorMessage,
   soulHttp,
   soulMfaFailure,
@@ -447,6 +448,62 @@ describe("two-step verification (soul)", () => {
       ["POST", "/me/mfa/confirm/", { code: "123456" }],
       ["POST", "/me/mfa/recovery-codes/", { method: "password", password: "pw" }],
       ["POST", "/me/mfa/disable/", { method: "password", password: "pw" }],
+    ]);
+  });
+});
+
+describe("面容 / 指纹 login", () => {
+  it("is a sign-in without a token: a revoked credential is a 401 that does NOT try to refresh or end a session", async () => {
+    storeSoulTokens({ access: "old", refresh: "R1" });
+    script({ "/soul-auth/device-login/": [{ status: 401, data: { detail: "x", code: "device_login_revoked", reason: "password_changed" } }] });
+    const error = await soulApi.deviceLogin({ soul_code: "S1", credential: "C" }).catch((e) => e);
+    expect(calls.map((c) => c.url)).toEqual(["/soul-auth/device-login/"]); // no refresh-and-replay
+    expect(onUnauthorized).not.toHaveBeenCalled();
+    expect(soulDeviceLoginFailure(error)).toEqual({ code: "revoked", reason: "password_changed" });
+  });
+
+  it("sends the number, the credential and -- only when there is one -- the 30-day device token", async () => {
+    script({ "/soul-auth/device-login/": [{ status: 200, data: { access: "A", refresh: "R" } }, { status: 200, data: { access: "A", refresh: "R" } }] });
+    await soulApi.deviceLogin({ soul_code: "S1", credential: "C" });
+    await soulApi.deviceLogin({ soul_code: "S1", credential: "C", device_token: "DEV" });
+    expect(calls.map((c) => c.body)).toEqual([
+      { soul_code: "S1", credential: "C" },
+      { soul_code: "S1", credential: "C", device_token: "DEV" },
+    ]);
+  });
+
+  it("tells the refusals apart by the body's code, and a missing answer as the network", async () => {
+    script({
+      "/soul-auth/device-login/": [
+        { status: 401, data: { code: "device_login_revoked" } },
+        { status: 401, data: { code: "device_login_invalid" } },
+        { status: 429, data: { code: "rate_limited" } },
+        "offline",
+        { status: 500, data: "boom" },
+      ],
+    });
+    const failures = [];
+    for (let i = 0; i < 5; i++) failures.push(soulDeviceLoginFailure(await soulApi.deviceLogin({ soul_code: "S1", credential: "C" }).catch((e) => e)));
+    expect(failures).toEqual([{ code: "revoked", reason: null }, { code: "invalid" }, { code: "rate_limited" }, { code: "network" }, { code: "other" }]);
+    expect(soulDeviceLoginFailure(new Error("x"))).toEqual({ code: "other" });
+  });
+
+  it("turning it on gives back the credential bare; turning it off sends it; a password change may carry it", async () => {
+    storeSoulTokens({ access: "A1", refresh: "R1" });
+    script({
+      "/me/device-login/": [{ status: 201, data: { credential: "C1" } }],
+      "/me/device-login/revoke/": [{ status: 204 }],
+      "/me/password/": [{ status: 200, data: { access: "A2", refresh: "R2" } }, { status: 200, data: { access: "A3", refresh: "R3" } }],
+    });
+    expect(await soulApi.enableDeviceLogin("pw")).toBe("C1");
+    await soulApi.revokeDeviceLogin("C1");
+    await soulApi.changePassword("old", "new", undefined, "C1");
+    await soulApi.changePassword("old", "new");
+    expect(calls.map((c) => c.body)).toEqual([
+      { password: "pw" },
+      { credential: "C1" },
+      { old_password: "old", new_password: "new", device_credential: "C1" },
+      { old_password: "old", new_password: "new" },
     ]);
   });
 });

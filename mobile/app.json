@@ -59,6 +59,20 @@
           "microphonePermission": false
         }
       ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "用来扫交付单上的二维码。",
+          "microphonePermission": false,
+          "recordAudioAndroid": false
+        }
+      ],
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "用来登录灵魂簿，不用输密码。"
+        }
+      ],
       "./plugins/withSceneLifecycle",
       ["./plugins/withAndroidShortcuts", { "app": "soul" }],
       ["./plugins/withAppIntents", { "app": "soul" }]
