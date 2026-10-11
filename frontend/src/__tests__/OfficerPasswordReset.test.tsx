@@ -152,14 +152,25 @@ describe("/reset-password", () => {
     expect(screen.getByRole("link", { name: "auth.reset_request_again" })).toHaveAttribute("href", "/forgot-password");
   });
 
-  it("a mismatch or a short password never reaches the server", async () => {
+  it("a mismatch or a short password never reaches the server; the checklist marks what is wrong", async () => {
     open("?uid=MQ&token=t");
     await screen.findByTestId("officer-reset-password-form");
     fill("N0t-Guessable!2026", "different-one-here");
-    expect(await screen.findByRole("alert")).toHaveTextContent("profile.password_mismatch");
+    expect(screen.getByTestId("password-rule-match")).toHaveAttribute("data-state", "bad");
+    expect(screen.getByTestId("password-rule-match")).toHaveTextContent("password_rules.match_bad");
     fill("short", "short");
-    expect(screen.getByRole("alert")).toHaveTextContent("profile.password_too_short");
+    expect(screen.getByTestId("password-rule-min_length")).toHaveAttribute("data-state", "bad");
+    expect(screen.getByTestId("password-rules-announce")).toHaveTextContent("password_rules.summary(1,password_rules.min_length)");
     expect(confirm).not.toHaveBeenCalled();
+  });
+
+  it("lists two rules and the note (no current-password rule), all unmarked on arrival", async () => {
+    open("?uid=MQ&token=t");
+    await screen.findByTestId("officer-reset-password-form");
+    expect(screen.queryByTestId("password-rule-not_current")).not.toBeInTheDocument();
+    const states = ["min_length", "not_digits", "note"].map((k) => screen.getByTestId(`password-rule-${k}`).getAttribute("data-state"));
+    expect(states).toEqual(["idle", "idle", "note"]);
+    expect(screen.queryByTestId("password-rules-announce")).not.toBeInTheDocument();
   });
 
   it("an expired link turns the page into the invalid-link state", async () => {
@@ -170,27 +181,56 @@ describe("/reset-password", () => {
     expect(await screen.findByTestId("officer-reset-invalid")).toBeInTheDocument();
   });
 
-  it("a weak password keeps the form and lists each reason by its code, not the server's English", async () => {
+  it("a weak password keeps the form and shows the common-password line, not the server's English or the old sentence", async () => {
     confirm.mockRejectedValue({
       response: {
         status: 400,
         data: {
           code: "weak_password",
           error: "This password is too common.",
-          new_password: [
-            { code: "password_too_common", message: "This password is too common." },
-            { code: "password_entirely_numeric", message: "This password is entirely numeric." },
-          ],
+          new_password: [{ code: "password_too_common", message: "This password is too common." }],
         },
       },
     });
     open("?uid=MQ&token=t");
     await screen.findByTestId("officer-reset-password-form");
-    fill("12345678", "12345678");
-    const alert = await screen.findByRole("alert");
-    expect(alert).toHaveTextContent("auth.reset_weak · profile.password_reason_common · profile.password_reason_numeric");
-    expect(alert).not.toHaveTextContent("This password");
+    fill("password-123", "password-123");
+    const common = await screen.findByTestId("password-rules-common");
+    expect(common).toHaveTextContent("password_rules.common_title");
+    expect(common).toHaveTextContent("password_rules.common_body");
+    expect(screen.queryByText(/auth\.reset_weak|This password|password_reason/)).not.toBeInTheDocument();
+    // the ticks stay: the mistake is not in them
+    for (const k of ["min_length", "not_digits"]) expect(screen.getByTestId(`password-rule-${k}`)).toHaveAttribute("data-state", "ok");
+    expect(screen.getByTestId("password-rule-match")).toHaveAttribute("data-state", "ok");
+    expect(screen.queryByTestId("password-rule-note")).not.toBeInTheDocument();
+    const field = screen.getByLabelText(/profile\.new_password/) as HTMLInputElement;
+    expect(field).toHaveAttribute("aria-invalid", "true");
+    expect(field).toHaveFocus();
+    expect(field.value).toBe("password-123");
+    expect(field.selectionStart).toBe(0);
+    expect(field.selectionEnd).toBe(12);
     expect(screen.getByTestId("officer-reset-password-form")).toBeInTheDocument();
+  });
+
+  it("typing never turns a rule into '!'; leaving the box does; fixing it ticks at once; a clean form submits", async () => {
+    confirm.mockResolvedValue({ data: { detail: "ok" } });
+    open("?uid=MQ&token=t");
+    await screen.findByTestId("officer-reset-password-form");
+    const field = screen.getByLabelText(/profile\.new_password/);
+    const rule = () => screen.getByTestId("password-rule-min_length");
+    fireEvent.change(field, { target: { value: "1234" } });
+    expect(rule()).toHaveAttribute("data-state", "idle");
+    expect(screen.getByTestId("password-rule-not_digits")).toHaveAttribute("data-state", "idle");
+    expect(screen.getByTestId("password-rules-list").textContent).not.toContain("!");
+    fireEvent.blur(field);
+    expect(rule()).toHaveAttribute("data-state", "bad");
+    fireEvent.change(field, { target: { value: "N0t-Guessable!2026" } });
+    expect(rule()).toHaveAttribute("data-state", "ok");
+    expect(field).not.toHaveAttribute("aria-invalid");
+    fireEvent.change(screen.getByLabelText(/profile\.confirm_password/), { target: { value: "N0t-Guessable!2026" } });
+    fireEvent.submit(screen.getByTestId("officer-reset-password-form"));
+    await screen.findByTestId("officer-reset-done");
+    expect(confirm).toHaveBeenCalledTimes(1);
   });
 });
 

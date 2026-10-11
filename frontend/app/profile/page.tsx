@@ -12,6 +12,7 @@ import { PageShell } from "@/src/components/ui/PageShell";
 import { Button } from "@/src/components/ui/Button";
 import { Badge } from "@/src/components/ui/Badge";
 import { TextField, fieldControl } from "@/src/components/ui/Field";
+import { PasswordRuleFields, usePasswordRules } from "@/src/components/auth/PasswordRules";
 import { MfaSection } from "@/src/components/profile/MfaSection";
 import { EmailVerificationRow } from "@/src/components/profile/EmailVerificationRow";
 import { cn } from "@/lib/utils";
@@ -23,14 +24,11 @@ export default function ProfilePage() {
 
   const [editingField, setEditingField] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
-  const [passwordForm, setPasswordForm] = useState({
-    oldPassword: "",
-    newPassword: "",
-    confirmPassword: "",
-  });
+  const [oldPassword, setOldPassword] = useState("");
+  const rules = usePasswordRules(oldPassword);
   const [showPasswordForm, setShowPasswordForm] = useState(false);
   // The server's refusal, shown under the field it is about (never the passwords themselves).
-  const [passwordErrors, setPasswordErrors] = useState<{ old: string | null; next: string | null }>({ old: null, next: null });
+  const [oldPasswordError, setOldPasswordError] = useState<string | null>(null);
 
   // Fetch latest profile
   const { data: profile, isLoading, isError, refetch } = useQuery({
@@ -67,18 +65,21 @@ export default function ProfilePage() {
       return res.data;
     },
     onSuccess: () => {
-      setPasswordForm({ oldPassword: "", newPassword: "", confirmPassword: "" });
+      setOldPassword("");
+      rules.reset();
       setShowPasswordForm(false);
-      setPasswordErrors({ old: null, next: null });
+      setOldPasswordError(null);
       // The change signed every other device out; this one already holds a fresh token pair.
       showToast(t("profile.password_changed_others_out"), "success");
     },
     onError: (err: unknown) => {
       const data = (err as { response?: { data?: { old_password?: unknown } } })?.response?.data;
-      const next = passwordReasonKeys(data).map((key) => t(key));
+      const refused = passwordReasonKeys(data).length > 0;
       const old = Array.isArray(data?.old_password) && data.old_password.length ? t("profile.password_old_wrong") : null;
-      if (!next.length && !old) showToast(t("profile.password_change_failed"), "error");
-      setPasswordErrors({ old, next: next.length ? next.join(" · ") : null });
+      if (!refused && !old) showToast(t("profile.password_change_failed"), "error");
+      setOldPasswordError(old);
+      // 服务器说「太常见 / 太像」:清单上的 ◇ 换成报错(password_rules.common_*),不再列 Django 的各条原因。
+      if (refused) rules.reject();
     },
   });
 
@@ -92,19 +93,9 @@ export default function ProfilePage() {
 
   const handlePasswordSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setPasswordErrors({ old: null, next: null });
-    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-      showToast(t("profile.password_mismatch"), "error");
-      return;
-    }
-    if (passwordForm.newPassword.length < 8) {
-      showToast(t("profile.password_too_short"), "error");
-      return;
-    }
-    changePasswordMutation.mutate({
-      oldPassword: passwordForm.oldPassword,
-      newPassword: passwordForm.newPassword,
-    });
+    setOldPasswordError(null);
+    if (!rules.check()) return;
+    changePasswordMutation.mutate({ oldPassword, newPassword: rules.next });
   };
 
   const role = profile?.role || user?.role || "";
@@ -234,31 +225,23 @@ export default function ProfilePage() {
             <Skeleton className="h-10 w-full" />
           </div>
         ) : showPasswordForm ? (
-          <form onSubmit={handlePasswordSubmit} className="max-w-[440px] space-y-4">
+          <form onSubmit={handlePasswordSubmit} noValidate className="max-w-[440px] min-[720px]:max-w-[720px] space-y-4">
             <TextField
               type="password"
+              autoComplete="current-password"
               label={t("profile.old_password")}
-              value={passwordForm.oldPassword}
-              onChange={(e) => setPasswordForm({ ...passwordForm, oldPassword: e.target.value })}
-              error={passwordErrors.old}
+              value={oldPassword}
+              onChange={(e) => setOldPassword(e.target.value)}
+              error={oldPasswordError}
+              className="min-[720px]:max-w-80"
               required
             />
-            <TextField
-              type="password"
-              label={t("profile.new_password")}
-              value={passwordForm.newPassword}
-              onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
-              error={passwordErrors.next}
-              minLength={8}
-              required
-            />
-            <TextField
-              type="password"
-              label={t("profile.confirm_password")}
-              value={passwordForm.confirmPassword}
-              onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
-              minLength={8}
-              required
+            <PasswordRuleFields
+              rules={rules}
+              idPrefix="profile-password"
+              newLabel={t("profile.new_password")}
+              confirmLabel={t("profile.confirm_password")}
+              wide
             />
             <div className="flex justify-end gap-2 border-t border-[oklch(var(--color-block))] pt-3">
               <Button
@@ -266,7 +249,9 @@ export default function ProfilePage() {
                 variant="secondary"
                 onClick={() => {
                   setShowPasswordForm(false);
-                  setPasswordForm({ oldPassword: "", newPassword: "", confirmPassword: "" });
+                  setOldPassword("");
+                  rules.reset();
+                  setOldPasswordError(null);
                 }}
               >
                 {t("common.cancel")}
