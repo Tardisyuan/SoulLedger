@@ -226,21 +226,17 @@ export function dispatchView(
 }
 
 /**
- * The reason a record was rejected / cancelled. The server does not keep it apart: `DispatchService.reject` /
- * `cancel_proposed` append "Rejection reason: ..." / "Cancellation reason: ..." after a blank line to `reason`.
- * The last marker wins; no marker (or an empty reason) is `null`, and the screen then draws no 理由 line.
+ * The reason a record was rejected / cancelled: the server keeps it apart in `decision_reason` (`reason` stays the
+ * proposer's own words). Blank is `null`, and the screen then draws no 理由 line. Only REJECTED / CANCELLED have one.
  */
-export function dispatchReasonOf(record: Pick<DispatchRecord, "status" | "reason">): string | null {
-  const marker = record.status === "REJECTED" ? "Rejection reason:" : record.status === "CANCELLED" ? "Cancellation reason:" : null;
-  if (!marker) return null;
-  const at = (record.reason ?? "").lastIndexOf(marker);
-  if (at < 0) return null;
-  return record.reason.slice(at + marker.length).trim() || null;
+export function dispatchReasonOf(record: Pick<DispatchRecord, "status" | "decision_reason">): string | null {
+  if (record.status !== "REJECTED" && record.status !== "CANCELLED") return null;
+  return (record.decision_reason ?? "").trim() || null;
 }
 
 /** The status line of a read-only dispatch: glyph + i18n key (+ the reason line's text when there is one). */
 export function dispatchStatusLine(
-  record: Pick<DispatchRecord, "status" | "reason">,
+  record: Pick<DispatchRecord, "status" | "decision_reason">,
   side: "sender" | "other"
 ): { glyph: string; key: string; reason: string | null } {
   const reason = dispatchReasonOf(record);

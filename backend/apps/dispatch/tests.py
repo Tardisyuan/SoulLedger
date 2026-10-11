@@ -304,7 +304,7 @@ class TestDispatchApproveReject:
             {"reason": "Too many souls"}, format="json",
         )
         rec.refresh_from_db()
-        assert "Too many souls" in rec.reason
+        assert rec.decision_reason == "Too many souls" and "Too many souls" not in rec.reason
 
     def test_reject_non_proposed_fails(self):
         rec = self._create_proposed()
@@ -443,7 +443,7 @@ class TestDispatchService:
         rec = DispatchService.reject(rec, self.user, "Nope")
         assert rec.status == DispatchStatus.REJECTED
         rec.refresh_from_db()
-        assert "Nope" in rec.reason
+        assert rec.decision_reason == "Nope" and rec.reason == "R" and rec.decided_by_id == self.user.pk
 
     def test_execute_transfers_soul(self):
         rec = DispatchService.propose(

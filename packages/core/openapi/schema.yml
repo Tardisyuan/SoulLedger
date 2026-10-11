@@ -21963,6 +21963,17 @@ components:
           format: date-time
           readOnly: true
           nullable: true
+        decided_by:
+          type: integer
+          readOnly: true
+          nullable: true
+        decided_by_name:
+          type: string
+          readOnly: true
+          nullable: true
+        decision_reason:
+          type: string
+          readOnly: true
         executed_at:
           type: string
           format: date-time
@@ -21984,6 +21995,9 @@ components:
       required:
       - create_time
       - decided_at
+      - decided_by
+      - decided_by_name
+      - decision_reason
       - dispatched_by
       - dispatched_by_name
       - executed_at
@@ -26955,6 +26969,14 @@ components:
           type: integer
           readOnly: true
           description: 已发布、未删除的评论数。
+        pending_comment_count:
+          type: integer
+          readOnly: true
+          description: 待审、未删除的评论数。
+        hidden_comment_count:
+          type: integer
+          readOnly: true
+          description: 已隐藏、未删除的评论数。
         reaction_counts:
           allOf:
           - $ref: '#/components/schemas/SoulReactionCounts'
@@ -26974,12 +26996,14 @@ components:
       - content
       - create_time
       - edited_at
+      - hidden_comment_count
       - id
       - media
       - media_count
       - moderation_reason
       - moderation_status
       - open_report_count
+      - pending_comment_count
       - reaction_counts
       - visibility
     ModerationAction:
@@ -29679,6 +29703,17 @@ components:
           format: date-time
           readOnly: true
           nullable: true
+        decided_by:
+          type: integer
+          readOnly: true
+          nullable: true
+        decided_by_name:
+          type: string
+          readOnly: true
+          nullable: true
+        decision_reason:
+          type: string
+          readOnly: true
         executed_at:
           type: string
           format: date-time

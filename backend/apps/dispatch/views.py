@@ -146,7 +146,7 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
         'destroy': ['dispatch.manage'],
     }
     queryset = DispatchRecord.objects.select_related(
-        "source_tenant", "target_tenant", "soul", "dispatched_by"
+        "source_tenant", "target_tenant", "soul", "dispatched_by", "decided_by"
     ).all()
     filterset_class = DispatchFilter
     search_fields = DispatchFilter.search_fields
@@ -177,7 +177,7 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
         from django.db.models import Q
 
         qs = DispatchRecord._base_manager.filter(is_deleted=False).select_related(
-            "source_tenant", "target_tenant", "soul", "dispatched_by"
+            "source_tenant", "target_tenant", "soul", "dispatched_by", "decided_by"
         )
         user = self.request.user
         if is_tenant_exempt(user):

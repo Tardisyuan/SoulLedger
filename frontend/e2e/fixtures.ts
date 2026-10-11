@@ -214,6 +214,9 @@ export const PROPOSED_DISPATCH_DETAIL_ONLY = {
   dispatched_by: "5",
   dispatched_by_name: "崔判官",
   decided_at: null,
+  decided_by: null,
+  decided_by_name: null,
+  decision_reason: "",
   create_time: "2026-08-10T02:00:00Z",
   update_time: "2026-08-10T02:00:00Z",
 };
@@ -886,6 +889,8 @@ export const MODERATED_POSTS = [
     visibility: "PUBLIC",
     edited_at: null,
     comment_count: 0,
+    pending_comment_count: 0,
+    hidden_comment_count: 0,
     reaction_counts: { LIKE: 1, LOVE: 12, RESPECT: 0, SYMPATHY: 0, ETERNAL_LIGHT: 0 },
     media: [] as { id: string; url: string; width: number; height: number }[],
     media_count: 0,
