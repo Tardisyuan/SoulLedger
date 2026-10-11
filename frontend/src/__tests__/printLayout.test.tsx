@@ -91,11 +91,51 @@ describe("app/print.css", () => {
   const printBlock = css.slice(css.indexOf("@media print"));
 
   it("hides the interactive elements, and nothing else interactive is left to print", () => {
-    const hidden = printBlock.slice(printBlock.indexOf("/* 交互件不印"), printBlock.indexOf("/* 折叠区"));
+    const hidden = printBlock.slice(printBlock.indexOf("/* 交互与导航不印"), printBlock.indexOf("/* 折叠区"));
     for (const sel of ["button", "input", "select", "textarea", '[role="tablist"]', "[data-print-hide]"]) {
       expect(hidden).toContain(`[data-print-doc] ${sel}`);
     }
     expect(hidden).toContain("display: none !important");
+  });
+
+  it("hides interaction and navigation by class, not element by element: roles, control labels, page-shell slots", () => {
+    const hidden = printBlock.slice(printBlock.indexOf("/* 交互与导航不印"), printBlock.indexOf("/* 折叠区"));
+    const rules = hidden.match(/display: none !important/g) ?? [];
+    expect(rules.length).toBeGreaterThan(0);
+    for (const sel of [
+      '[role="button"]',
+      '[role="switch"]',
+      '[role="checkbox"]',
+      '[role="radio"]',
+      "nav",
+      "label:has(input, select, textarea)", // 包着控件的标签:裁决键、开关
+      ":is(input, select, textarea) + label", // 复选框后面的标签
+      "[data-field]", // Field 壳:标签在控件前面,写评议
+      "[data-page-shell-back]", // ← 返回审判列表 / 返回灵魂列表
+      "[data-page-shell-actions]",
+      "[data-page-shell-tabs]",
+      "[data-page-shell-filters]",
+      "[data-page-shell-pagination]",
+      "[data-print-hide]",
+    ]) {
+      expect(hidden).toContain(`[data-print-doc] ${sel}`);
+    }
+  });
+
+  it("does not blanket-hide links or badges: the text of a case number, a clause code or a status badge still prints", () => {
+    const hidden = printBlock.slice(printBlock.indexOf("/* 交互与导航不印"), printBlock.indexOf("/* 折叠区"));
+    expect(hidden).not.toMatch(/\[data-print-doc\] a[\s,{[:]/);
+    expect(hidden).not.toMatch(/\[data-print-doc\] (span|li|p)[\s,{[:]/);
+    expect(hidden).not.toContain("badge");
+  });
+
+  it("lets a disclosure toggle print as the section's title (评议 · N is a button)", () => {
+    expect(printBlock).toMatch(/\[data-print-doc\] button\[data-print-title\]\s*\{\s*display: block !important/);
+  });
+
+  it("does not fill stroke-only drawings: the svg fill rule leaves fill=\"none\" alone", () => {
+    expect(printBlock).toContain('[data-print-doc] svg:not([fill="none"])');
+    expect(printBlock).not.toMatch(/\[data-print-doc\] svg \{/);
   });
 
   it("is black and white by system colour: no hex, rgb, hsl, oklch or named colour values", () => {

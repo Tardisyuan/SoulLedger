@@ -1324,7 +1324,7 @@
       "load_error": "Failed to load",
       "sync_ok": "In sync",
       "unbooked": "Not entered",
-      "resend_dispatch": "Dispatches to send again",
+      "resend_dispatch": "Dispatches to resend",
       "go_resend": "Handle →"
     },
     "civ_share": "Share",
@@ -5461,6 +5461,12 @@
     "landing": {
       "handled": "Already handled by {{name}}",
       "someone": "someone"
+    },
+    "dispatch_status": {
+      "waiting": "Waiting for the other hall to approve",
+      "approved": "Approved by the other hall",
+      "rejected": "Rejected by the other hall",
+      "reason": "Reason: {{reason}}"
     },
     "state": {
       "error_title": "Couldn't load",

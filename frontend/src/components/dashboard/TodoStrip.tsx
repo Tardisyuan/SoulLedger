@@ -14,7 +14,7 @@ import { MissingValue } from "@/src/components/ui/DomainValue";
 
 /**
  * 待办条 TodoStrip(Design A4):三格 —— 调派待批 / 审判队列 / 死亡同步异常;
- * 第四格「待重新发起的调拨」(2026-10-11 用户加,Design 未画 —— 待确认版式),只给持有 `judgment.execute` 的人。
+ * 第四格「待重发的调拨」(2026-10-11 用户加,Design 未画 —— 待确认版式),只给持有 `judgment.execute` 的人。
  *
  * - 有数据:数字 + 去处;数字大于 0 的格子是「待我处理」,左边 3px 匾色竖条(`RowMark`,
  *   与审判队列同一个记号)。死亡同步那格的数字后再跟一句 danger「! 未入簿」。
@@ -51,7 +51,7 @@ function TodoCell({
     <div
       data-todo=""
       data-todo-mine={mine ? "" : undefined}
-      className="relative flex min-h-20 items-center justify-between gap-4 bg-[oklch(var(--color-surface-1))] px-4 py-3"
+      className="relative flex min-h-20 min-w-0 flex-col items-start justify-center gap-1 bg-[oklch(var(--color-surface-1))] px-4 py-3 lg:flex-row lg:items-center lg:justify-between lg:gap-4"
     >
       {mine && <RowMark />}
       <div className="min-w-0">
@@ -59,7 +59,7 @@ function TodoCell({
         {query.isLoading ? (
           <Skeleton className="h-9 w-12" />
         ) : failed ? (
-          <div className="flex h-9 items-baseline gap-2">
+          <div className="flex min-h-9 flex-wrap items-baseline gap-x-2">
             <MissingValue kind="unrecorded" className="font-title text-xl text-[oklch(var(--color-ink-subtle))]" />
             <span role="alert" className="text-sm text-[oklch(var(--color-danger))]">
               <span aria-hidden="true">! </span>
@@ -67,7 +67,7 @@ function TodoCell({
             </span>
           </div>
         ) : (
-          <div className="flex items-baseline gap-2">
+          <div className="flex flex-wrap items-baseline gap-x-2">
             <span data-todo-count="" className="font-title text-xl text-[oklch(var(--color-ink))]">
               {groupDigits(count as number)}
             </span>
@@ -141,7 +141,7 @@ export function TodoStrip() {
   return (
     <div
       data-todo-strip=""
-      className="grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-px border border-[oklch(var(--color-line))] bg-[oklch(var(--color-line))]"
+      className="grid grid-cols-2 gap-px max-lg:[&>*:last-child:nth-child(odd)]:col-span-2 lg:grid-cols-[repeat(auto-fit,minmax(180px,1fr))] border border-[oklch(var(--color-line))] bg-[oklch(var(--color-line))]"
     >
       {canDispatch && (
         <TodoCell

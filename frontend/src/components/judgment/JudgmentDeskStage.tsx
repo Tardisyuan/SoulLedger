@@ -65,6 +65,7 @@ export function CivMotif() {
     <svg
       aria-hidden="true"
       data-testid="civ-motif"
+      data-print-hide=""
       viewBox="0 0 600 520"
       preserveAspectRatio="none"
       fill="none"

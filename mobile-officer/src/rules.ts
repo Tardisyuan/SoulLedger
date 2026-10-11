@@ -3,7 +3,7 @@
  * push lands, where "continue on desktop" points. Pure functions so a test can pin each.
  */
 import { passwordReasonKeys } from "@soulledger/core/api/auth";
-import { dispatchApi } from "@soulledger/core/api/dispatch";
+import { dispatchApi, type DispatchRecord } from "@soulledger/core/api/dispatch";
 import {
   decisionFailureOf,
   type DecisionFailureCode,
@@ -45,6 +45,16 @@ export const TODO_GROUPS: readonly { field: keyof Todo; kind: TodoKind; label: s
 
 export function isTodoKind(value: unknown): value is TodoKind {
   return typeof value === "string" && (TODO_KINDS as readonly string[]).includes(value);
+}
+
+/**
+ * What a link, push or notice can name: a waiting item, or a dispatch record (`dispatch`). A dispatch
+ * notice does not say which side of the record this hall is on, so it names the record and the screen
+ * reads the record to decide (`dispatchView`); `reassignment` is the receiver's actionable detail.
+ */
+export type ItemKind = TodoKind | "dispatch";
+export function isItemKind(value: unknown): value is ItemKind {
+  return value === "dispatch" || isTodoKind(value);
 }
 
 // ── decisions ──────────────────────────────────────────────────────────
@@ -168,7 +178,7 @@ export function loginFailureKey(error: unknown, step: "login" | "mfa"): string {
 
 export interface Landing {
   tab: "todo";
-  item?: { kind: TodoKind; id: string };
+  item?: { kind: ItemKind; id: string };
 }
 
 /**
@@ -180,7 +190,7 @@ export interface Landing {
 export function landingOf(data: unknown): Landing | null {
   if (!data || typeof data !== "object") return null;
   const { category, target } = data as { category?: unknown; target?: { kind?: unknown; id?: unknown } };
-  if (target && isTodoKind(target.kind) && typeof target.id === "string" && target.id !== "") {
+  if (target && isItemKind(target.kind) && typeof target.id === "string" && target.id !== "") {
     return { tab: "todo", item: { kind: target.kind, id: target.id } };
   }
   return category === "officer_todo" ? { tab: "todo" } : null;
@@ -193,8 +203,55 @@ export function landingOf(data: unknown): Landing | null {
  */
 export function noticeLanding(n: { related_resource?: string | null; related_id?: string | null }): Landing | null {
   // `SOUL_INBOX_ASSIGNED` (a letter was handed to me) names the inbox conversation.
-  const kind = n.related_resource === "workflow" ? "approval" : n.related_resource === "soul_inbox" ? "letter" : n.related_resource;
+  // The four dispatch notices (`DISPATCH_PROPOSED` / `APPROVED` / `REJECTED` / `CANCELLED`) name the record.
+  const kind =
+    n.related_resource === "workflow" ? "approval" : n.related_resource === "soul_inbox" ? "letter" : n.related_resource === "DispatchRecord" ? "dispatch" : n.related_resource;
   return landingOf({ target: { kind, id: n.related_id } });
+}
+
+// ── dispatch records (what a dispatch notice lands on) ─────────────────
+
+/**
+ * Which screen a dispatch record gets from THIS hall, decided by the record and not by the notice's type:
+ * the receiving hall with the proposal still open acts on it (the `reassignment` detail, 批准 / 驳回);
+ * everything else reads it. `side` is "sender" only when this hall proposed it -- that side is told about the
+ * other hall's answer ("对方…"); any other reader gets the plain status word.
+ */
+export function dispatchView(
+  record: Pick<DispatchRecord, "status" | "source_tenant_code" | "target_tenant_code">,
+  ownHall: string | null | undefined
+): { mode: "act" } | { mode: "read"; side: "sender" | "other" } {
+  if (ownHall && record.target_tenant_code === ownHall && record.status === "PROPOSED") return { mode: "act" };
+  return { mode: "read", side: ownHall && record.source_tenant_code === ownHall ? "sender" : "other" };
+}
+
+/**
+ * The reason a record was rejected / cancelled. The server does not keep it apart: `DispatchService.reject` /
+ * `cancel_proposed` append "Rejection reason: ..." / "Cancellation reason: ..." after a blank line to `reason`.
+ * The last marker wins; no marker (or an empty reason) is `null`, and the screen then draws no 理由 line.
+ */
+export function dispatchReasonOf(record: Pick<DispatchRecord, "status" | "reason">): string | null {
+  const marker = record.status === "REJECTED" ? "Rejection reason:" : record.status === "CANCELLED" ? "Cancellation reason:" : null;
+  if (!marker) return null;
+  const at = (record.reason ?? "").lastIndexOf(marker);
+  if (at < 0) return null;
+  return record.reason.slice(at + marker.length).trim() || null;
+}
+
+/** The status line of a read-only dispatch: glyph + i18n key (+ the reason line's text when there is one). */
+export function dispatchStatusLine(
+  record: Pick<DispatchRecord, "status" | "reason">,
+  side: "sender" | "other"
+): { glyph: string; key: string; reason: string | null } {
+  const reason = dispatchReasonOf(record);
+  if (side === "sender") {
+    if (record.status === "PROPOSED") return { glyph: "◐", key: "officer_app.dispatch_status.waiting", reason };
+    if (record.status === "APPROVED") return { glyph: "✓", key: "officer_app.dispatch_status.approved", reason };
+    if (record.status === "REJECTED") return { glyph: "✕", key: "officer_app.dispatch_status.rejected", reason };
+  }
+  // The same glyphs as the desk's detail (`app/dispatch/[id]/page.tsx`); 已取消 is its own word either way.
+  const glyph = { PROPOSED: "◐", APPROVED: "✓", REJECTED: "✕", EXECUTED: "→", RETURNED: "↩", CANCELLED: "○" }[record.status as string] ?? "?";
+  return { glyph, key: `dispatch.states.${record.status}`, reason };
 }
 
 /** The note on a detail whose item someone else already settled; `null` when it is still ours. */
@@ -307,8 +364,9 @@ export function mfaManageFailureKey(error: unknown, fallback: string): string {
 }
 
 /** The desk page for the same item. Pages that are lists (cooldown, rebirth) are the list itself. */
-export function deskPath(target: { kind: TodoKind | "judgment" | "soul"; id: string }): string {
+export function deskPath(target: { kind: ItemKind | "judgment" | "soul"; id: string }): string {
   switch (target.kind) {
+    case "dispatch":
     case "approval":
       return `/workflow/${target.id}`;
     case "reassignment":
