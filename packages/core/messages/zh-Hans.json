@@ -3041,6 +3041,7 @@
     "edit_discard_message": "已改动的内容不会保存。",
     "edit_discard_confirm": "放弃修改",
     "edit_keep": "继续编辑",
+    "edit_media_locked": "图片不能修改",
     "screening": {
       "masked": "已发布。部分内容已被替换。",
       "pending_review": "已发出,正在审核。审核通过前只有你看得到。",

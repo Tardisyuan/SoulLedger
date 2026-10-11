@@ -205,6 +205,11 @@ export function HandledSection() {
               <span className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">
                 {open.handled_at ? formatDateTime(open.handled_at) : ""}
               </span>
+              {item.data && "edited_at" in item.data && item.data.edited_at ? (
+                <span data-edited="" className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">
+                  {t("social.edited_at", { time: formatDateTime(item.data.edited_at) })}
+                </span>
+              ) : null}
             </div>
             <p className="whitespace-pre-wrap break-words font-serif text-md text-[oklch(var(--color-ink))]">
               {item.data?.content ?? open.excerpt}
