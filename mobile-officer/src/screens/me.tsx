@@ -2,8 +2,8 @@
 import { mfaApi } from "@soulledger/core/api/auth";
 import { SUPPORTED_LOCALES } from "@soulledger/core/config/locale";
 import Constants from "expo-constants";
-import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { View } from "react-native";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { type ScrollView, View } from "react-native";
 
 import { ActionButton, Row, Segmented } from "../kit";
 import { type ThemeChoice, usePrefs } from "../prefs";
@@ -19,6 +19,7 @@ export function MeTab({ onOpen }: { onOpen: (screen: AccountScreen) => void }) {
   const { state, signOut } = useSession();
   const { themeChoice, setThemeChoice } = usePrefs();
   const [asking, setAsking] = useState(false);
+  const scroll = useRef<ScrollView>(null);
   const user = state.status === "signedIn" ? state.user : null;
   const role = enumLabel("users.roles", user?.role);
   const load = useCallback(() => mfaApi.status().then((r) => r.data), []);
@@ -35,7 +36,7 @@ export function MeTab({ onOpen }: { onOpen: (screen: AccountScreen) => void }) {
   const version = Constants.expoConfig?.version ?? "";
 
   return (
-    <Screen testID="tab-me-screen" edges={["left", "right"]}>
+    <Screen testID="tab-me-screen" edges={["left", "right"]} scrollRef={scroll}>
       <View style={{ padding: space[5], gap: space[5] }}>
         <Block label={t("officer_app.me.profile")}>
           <Fact label={t("officer_app.me.name")} value={user.display_name || user.username} />
@@ -80,8 +81,9 @@ export function MeTab({ onOpen }: { onOpen: (screen: AccountScreen) => void }) {
         </Block>
 
         {asking ? (
-          // Replaces the button it was asked from, so the question opens where the finger just was instead of below the fold.
-          <View style={{ gap: space[3] }}>
+          // Replaces the button it was asked from. The question is taller than that button, so the page follows it down:
+          // on an iPhone 17 the two answers opened under the tab bar and had to be scrolled to (2026-10-11).
+          <View style={{ gap: space[3] }} onLayout={() => scroll.current?.scrollToEnd({ animated: true })}>
             <Notice tone="neutral">
               <Txt variant="caption">{t("officer_app.me.logout_title")}</Txt>
             </Notice>

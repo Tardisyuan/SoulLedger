@@ -125,7 +125,7 @@ export function LoginScreen({ hint }: { hint?: LoginHint | null } = {}) {
               value={code}
               onChangeText={setCode}
               mono
-              keyboardType={step.recovery ? "default" : "number-pad"}
+              keyboardType={step.recovery ? "ascii-capable" : "number-pad"}
               autoComplete="one-time-code"
               textContentType="oneTimeCode"
             />

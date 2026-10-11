@@ -126,7 +126,9 @@ export function initCrashReporting(dsn: string | undefined, app: CrashApp): bool
     Sentry.setTag("app", app);
     started = true;
     return true;
-  } catch {
+  } catch (error) {
+    // Reporting stays off, but say why: a swallowed failure here once read as a flaky test with no cause.
+    console.warn("crash reporting did not start:", error instanceof Error ? error.message : error);
     return false;
   }
 }

@@ -176,6 +176,7 @@ export function LoginSecondStep({
             mono
             autoCapitalize="none"
             autoCorrect={false}
+            keyboardType="ascii-capable"
             style={styles.recovery}
           />
         )}
