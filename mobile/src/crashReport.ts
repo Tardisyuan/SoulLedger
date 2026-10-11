@@ -128,7 +128,7 @@ export function initCrashReporting(dsn: string | undefined, app: CrashApp): bool
     return true;
   } catch (error) {
     // Reporting stays off, but say why: a swallowed failure here once read as a flaky test with no cause.
-    console.warn("crash reporting did not start:", error instanceof Error ? error.message : error);
+    console.warn("crash reporting did not start:", error);
     return false;
   }
 }

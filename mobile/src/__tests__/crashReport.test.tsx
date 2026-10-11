@@ -140,7 +140,7 @@ describe("initialisation", () => {
     // and never alone, and the hook runs jest with --silent, so the warning that names the cause was thrown away.
     const warn = jest.spyOn(console, "warn").mockImplementation(() => {});
     const started = initCrashReporting("https://k@o0.ingest.test/1", "officer");
-    expect({ started, why: warn.mock.calls.map((c) => c.join(" ")) }).toEqual({ started: true, why: [] });
+    expect({ started, why: warn.mock.calls.map((c) => c.map((x) => (x instanceof Error ? (x.stack ?? x.message) : String(x))).join(" ")) }).toEqual({ started: true, why: [] });
     warn.mockRestore();
     const opts = mockSdk.init.mock.calls[0][0];
     expect(opts).toMatchObject({ sendDefaultPii: false, tracesSampleRate: 0, attachScreenshot: false, attachViewHierarchy: false });
