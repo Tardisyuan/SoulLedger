@@ -66,6 +66,17 @@ describe("取消移交", () => {
     expect(done).toHaveBeenCalled();
   });
 
+  it("确认键是普通主按钮(不是红色,也没有「输入名称」那一格);触发键是次级", async () => {
+    // Design 第十九批 B:后果可以挽回(灵魂留在本殿、随时可重发),所以不用 danger,也不要输名称确认。
+    renderButton();
+    expect(trigger()?.className).toContain("border-[oklch(var(--color-line-strong))]");
+    fireEvent.click(trigger() as HTMLElement);
+    const confirm = await screen.findByRole("button", { name: tZh("dispatch.confirm_cancel") });
+    expect(confirm.className).toContain("bg-[oklch(var(--color-main))]");
+    expect(confirm.className).not.toContain("danger");
+    expect(screen.getAllByRole("textbox")).toHaveLength(1); // 只有「理由」
+  });
+
   it("对方已经批准(409 not_cancellable):说「对方已经处理了」,不说成功", async () => {
     dispatchApi.cancel.mockRejectedValue({ response: { status: 409, data: { code: "not_cancellable" } } });
     renderButton();

@@ -343,8 +343,8 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
               <div className="flex flex-wrap justify-end gap-2">
                 {isProposed && (
                   <>
-                    {/* 发起方撤回自己的提案(对方批准之前);不是本殿发起的、没有 dispatch.manage 时不渲染。 */}
-                    <CancelDispatchButton dispatch={dispatch} />
+                    {/* 发起方撤回自己的提案(对方批准之前),次级按钮、排在动作区最左(mr-auto 与右侧主动作隔开,免得和它们挨着误点);不是本殿发起的、没有 dispatch.manage 时不渲染。 */}
+                    <CancelDispatchButton dispatch={dispatch} triggerClassName="mr-auto" />
                     <RequirePermission permissions="dispatch.reject">
                       <Button type="button" variant="secondary" onClick={() => setShowRejectModal(true)}>
                         {t("dispatch.reject")}
