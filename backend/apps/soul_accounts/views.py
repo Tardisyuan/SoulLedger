@@ -40,6 +40,7 @@ from apps.soul_accounts.serializers import (
     ResetRequestSerializer,
     RevealedCredentialSerializer,
     SoulAccountSerializer,
+    SoulCredentialSlipSerializer,
     SoulErrorSerializer,
     SoulMfaResetRequestSerializer,
 )
@@ -155,6 +156,7 @@ class InitialCredentialViewSet(CodenameViewSetMixin, mixins.ListModelMixin, mixi
         "reveal": ["soul_account.manage"],
         "mark_delivered": ["soul_account.manage"],
         "retry": ["soul_account.manage"],
+        "print_slip": ["soul_account.manage"],
     }
     serializer_class = InitialCredentialSerializer
     queryset = InitialCredential.objects.all()
@@ -176,6 +178,20 @@ class InitialCredentialViewSet(CodenameViewSetMixin, mixins.ListModelMixin, mixi
             return _error(exc)
         response = Response({"soul_code": credential.soul.soul_code, "password": password,
                              "expires_at": credential.expires_at})
+        response["Cache-Control"] = "no-store"
+        return response
+
+    @extend_schema(request=None, responses={200: SoulCredentialSlipSerializer, 409: SoulErrorSerializer})
+    @action(detail=True, methods=["post"], url_path="print-slip")
+    def print_slip(self, request, pk=None):
+        """交付单要印的内容(灵魂名、编号、殿、有效期、官员、打印时间)+ 一条 `credentials.print_slip` 审计。
+        **绝不含密码,不改状态**;待交付 / 已查看 / 已交付可打,过期与作废 409。"""
+        credential = self.get_object()
+        try:
+            slip = svc.print_slip(credential.pk, actor=request.user, request=request)
+        except svc.SoulAccountError as exc:
+            return _error(exc)
+        response = Response(SoulCredentialSlipSerializer(slip).data)
         response["Cache-Control"] = "no-store"
         return response
 

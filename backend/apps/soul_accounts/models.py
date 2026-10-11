@@ -280,3 +280,25 @@ class SoulMfaDevice(models.Model):
     expires_at = models.DateTimeField()
     created_at = models.DateTimeField(auto_now_add=True)
     last_used_at = models.DateTimeField(null=True, blank=True)
+
+
+class DeviceLoginRevokeReason(models.TextChoices):
+    PASSWORD_CHANGED = "password_changed", "密码已在别处修改"
+    PASSWORD_RESET_BY_OFFICER = "password_reset_by_officer", "官员重置了密码"
+    ACCOUNT_REINCARNATED = "account_reincarnated", "转生换了新账号"
+    TURNED_OFF = "turned_off", "在这部手机上关闭"
+
+
+class SoulDeviceLogin(models.Model):
+    """「面容 / 指纹登录」的服务端一半(2026-10-11)。不存密码:开启时发这部手机一个不透明的随机凭据,
+    App 把它放进要验证生物特征才能取出的安全存储,以后用「编号 + 凭据」代替「编号 + 密码」。
+    这里只存 sha256(同 `SoulMfaDevice`)。吊销是软的(`revoked_at` + 原因),不是删行:
+    登录页要按原因告诉灵魂为什么面容登录失效。凭据挂在开启时的账号上;转生后旧账号的行被标
+    `account_reincarnated`,登录时按编号 + 凭据哈希在**同一灵魂的所有世**里找,于是旧凭据得到原因而不是「不认识」。"""
+
+    account = models.ForeignKey(SoulAccount, on_delete=models.CASCADE, related_name="device_logins")
+    credential_hash = models.CharField(max_length=64, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    last_used_at = models.DateTimeField(null=True, blank=True)
+    revoked_at = models.DateTimeField(null=True, blank=True)
+    revoked_reason = models.CharField(max_length=30, choices=DeviceLoginRevokeReason.choices, blank=True, default="")
