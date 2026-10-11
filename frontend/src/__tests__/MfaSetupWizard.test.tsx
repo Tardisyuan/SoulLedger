@@ -77,20 +77,42 @@ describe("MfaSetupWizard: the current password comes first", () => {
     expect(setup).not.toHaveBeenCalled();
   });
 
-  it("a wrong password is said under the box, the wizard stays on step 1 and no secret arrives", async () => {
+  it("step 1 reads: the explanation, a rule, the sentence, the box, then the button", () => {
+    renderWizard();
+    const nodes = [
+      screen.getByText("mfa.setup.step1_body"),
+      screen.getByTestId("mfa-password-divider"),
+      screen.getByTestId("mfa-password-hint"),
+      screen.getByLabelText(/mfa\.manage\.confirm_by_password/),
+      screen.getByTestId("mfa-start"),
+    ];
+    expect(screen.getByTestId("mfa-password-hint").textContent).toBe("mfa.setup.password_hint");
+    nodes.slice(1).forEach((n, i) => expect(nodes[i].compareDocumentPosition(n) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy());
+  });
+
+  it("a wrong password: danger box, the sentence under it, focus back in the box, still on step 1, no secret", async () => {
     setup.mockRejectedValueOnce({ response: { status: 400, data: { code: "wrong_password" } } });
     renderWizard();
     start("nope");
     expect(await screen.findByText("mfa.setup.password_wrong")).toBeTruthy();
+    const box = screen.getByLabelText(/mfa\.manage\.confirm_by_password/) as HTMLInputElement;
+    expect(box.getAttribute("aria-invalid")).toBe("true");
+    await waitFor(() => expect(document.activeElement).toBe(box));
     expect(wizard().getAttribute("data-step")).toBe("1");
     expect(screen.queryByTestId("mfa-manual-key")).toBeNull();
   });
 
-  it("a spent login budget is told as such", async () => {
+  it("a spent login budget: the sentence under the box, focus in it, and the button is off (typing does not turn it on)", async () => {
     setup.mockRejectedValueOnce({ response: { status: 429, data: { code: "login_locked", retry_after: 600 } } });
     renderWizard();
     start();
     expect(await screen.findByText("mfa.setup.password_locked")).toBeTruthy();
+    const box = screen.getByLabelText(/mfa\.manage\.confirm_by_password/) as HTMLInputElement;
+    await waitFor(() => expect(document.activeElement).toBe(box));
+    expect((screen.getByTestId("mfa-start") as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.change(box, { target: { value: "another" } });
+    expect(screen.getByText("mfa.setup.password_locked")).toBeTruthy();
+    expect((screen.getByTestId("mfa-start") as HTMLButtonElement).disabled).toBe(true);
     expect(wizard().getAttribute("data-step")).toBe("1");
   });
 

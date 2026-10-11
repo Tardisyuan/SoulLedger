@@ -18,7 +18,7 @@ import { soulApi, soulErrorMessage, soulMfaFailure, type SoulMfaStatus } from "@
 import { useNavigation, type NavigationProp } from "@react-navigation/native";
 import * as Clipboard from "expo-clipboard";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
-import { KeyboardAvoidingView, Linking, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { KeyboardAvoidingView, Linking, Pressable, ScrollView, StyleSheet, TextInput, View } from "react-native";
 
 import { Icon } from "../emblems";
 import { AppHeader } from "../chrome";
@@ -129,6 +129,7 @@ function CodesPage({ codes, onDone, header, ownTop }: { codes: string[]; onDone:
     setSharing(true);
     const shown = await shareRecoveryFile({
       header: tr("soul_app.mfa.codes.file_header"),
+      soulCode,
       soulCodeLine: `${tr("soul_app.login.soul_code")}: ${soulCode}`,
       codes,
       dialogTitle: tr("soul_app.mfa.codes.save_file"),
@@ -180,7 +181,15 @@ function Wizard({ onExit, onEnabled }: { onExit: () => void; onEnabled: () => vo
   const [setupFailed, setSetupFailed] = useState<{ key: string; params?: Record<string, string> } | null>(null);
   const [password, setPassword] = useState("");
   const [passwordError, setPasswordError] = useState<string | null>(null);
+  // The login budget is spent (429): the box says so and 「下一步」 stays off for the rest of this visit.
+  const [locked, setLocked] = useState(false);
   const [starting, setStarting] = useState(false);
+  // A refused password puts the cursor back in the box (第十九批): bumped on a refusal, read by the effect below.
+  const passwordRef = useRef<TextInput>(null);
+  const [refusals, setRefusals] = useState(0);
+  useEffect(() => {
+    if (refusals > 0) passwordRef.current?.focus();
+  }, [refusals]);
   const [openFailed, setOpenFailed] = useState(false);
   const [code, setCode] = useState("");
   const [bind, setBind] = useState<StepState>({ kind: "idle" });
@@ -199,7 +208,7 @@ function Wizard({ onExit, onEnabled }: { onExit: () => void; onEnabled: () => vo
   // 第一步「下一步」带着当前密码去要一把新密钥(已登录不等于是本人);要到了就不再要,往返不换码,也不再问密码。
   const start = async () => {
     if (setup) return setStep(2);
-    if (starting || password.length === 0) return;
+    if (starting || locked || password.length === 0) return;
     setStarting(true);
     setPasswordError(null);
     setSetupFailed(null);
@@ -211,9 +220,14 @@ function Wizard({ onExit, onEnabled }: { onExit: () => void; onEnabled: () => vo
       setStep(2);
     } catch (e) {
       const failure = soulMfaFailure(e);
-      if (failure.code === "wrong_password") setPasswordError(tr("soul_app.mfa.wrong_password"));
-      else if (failure.code === "rate_limited") setPasswordError(tr("soul_app.errors.rate_limited"));
-      else setSetupFailed(soulErrorMessage(e));
+      if (failure.code === "wrong_password") {
+        setPasswordError(tr("soul_app.mfa.wrong_password"));
+        setRefusals((n) => n + 1);
+      } else if (failure.code === "rate_limited") {
+        setPasswordError(tr("soul_app.errors.rate_limited"));
+        setLocked(true);
+        setRefusals((n) => n + 1);
+      } else setSetupFailed(soulErrorMessage(e));
     } finally {
       setStarting(false);
     }
@@ -287,22 +301,28 @@ function Wizard({ onExit, onEnabled }: { onExit: () => void; onEnabled: () => vo
                 </Txt>
               </View>
               {setup ? null : (
-                <Input
-                  testID="setup-password"
-                  label={tr("soul_app.login.password")}
-                  hint={tr("soul_app.mfa.intro.password_hint")}
-                  error={passwordError}
-                  value={password}
-                  onChangeText={(next) => {
-                    setPassword(next);
-                    setPasswordError(null);
-                  }}
-                  editable={!starting}
-                  secureTextEntry
-                  textContentType="password"
-                  autoComplete="current-password"
-                  secureToggle={{ show: tr("soul_app.common.show"), hide: tr("soul_app.common.hide") }}
-                />
+                <>
+                  <View testID="setup-divider" style={[styles.rule, { backgroundColor: t.hair }]} />
+                  <Txt testID="setup-password-hint" variant="body" tone="muted">
+                    {tr("soul_app.mfa.intro.password_hint")}
+                  </Txt>
+                  <Input
+                    inputRef={passwordRef}
+                    testID="setup-password"
+                    label={tr("soul_app.login.password")}
+                    error={passwordError}
+                    value={password}
+                    onChangeText={(next) => {
+                      setPassword(next);
+                      if (!locked) setPasswordError(null);
+                    }}
+                    editable={!starting}
+                    secureTextEntry
+                    textContentType="password"
+                    autoComplete="current-password"
+                    secureToggle={{ show: tr("soul_app.common.show"), hide: tr("soul_app.common.hide") }}
+                  />
+                </>
               )}
               {setupFailed ? (
                 <Notice tone="neg" testID="setup-failed">
@@ -374,7 +394,7 @@ function Wizard({ onExit, onEnabled }: { onExit: () => void; onEnabled: () => vo
             label={tr("soul_app.mfa.intro.next")}
             note={tr("soul_app.mfa.setup.exit_note")}
             onPress={() => void start()}
-            disabled={!setup && password.length === 0}
+            disabled={!setup && (locked || password.length === 0)}
             busy={starting}
           />
         ) : (
