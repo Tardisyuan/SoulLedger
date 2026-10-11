@@ -73,7 +73,9 @@ export function DeliverySlip({ slip, color = false }: { slip: CredentialSlip; co
 
         <div
           data-slip-white=""
-          style={abs(60, 38, { width: 686, height: 44, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 24 })}
+          // 酆都的匾两端各有一对回纹(x 16–28 与 718–730,框内坐标):文字区两侧各让出 12,否则「登录交付单」的末字压在回纹上
+          // (第一次导出的 PDF 上看到的;稿上的示例殿名短,没碰到)。
+          style={abs(60, 38, { width: 686, height: 44, boxSizing: "border-box", paddingInline: skin === "cn" ? 12 : 0, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 24 })}
         >
           <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
             <span style={EYEBROW}>{realm || " "}</span>

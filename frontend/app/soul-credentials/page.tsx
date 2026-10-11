@@ -72,13 +72,15 @@ function CredentialsPageContent() {
   const [revealing, setRevealing] = useState<InitialCredential | null>(null);
   // 只在调起打印的那一刻挂着;交付单不是页面的一部分,屏幕上也看不到它。
   const [slip, setSlip] = useState<CredentialSlip | null>(null);
-  // 彩色点缀:默认关,记在这台电脑上。读不到(隐私窗口、被禁用)当作关。
-  const [slipColor, setSlipColor] = useState(false);
+  // 文明色:**默认开**(用户 2026-10-11:四种文明的交付单要有颜色;Design 第二十四批原定默认关)。
+  // 只有这台电脑上明确关过才是黑白;读不到存储(隐私窗口、被禁用)按默认,即彩色。
+  // 黑白打印机上文明色会印成灰,匾额带上的白字仍读得出;要纯黑就关掉这一项。
+  const [slipColor, setSlipColor] = useState(true);
   useEffect(() => {
     try {
-      setSlipColor(localStorage.getItem(SLIP_COLOR_STORAGE) === "1");
+      setSlipColor(localStorage.getItem(SLIP_COLOR_STORAGE) !== "0");
     } catch {
-      /* 当作关 */
+      /* 按默认:彩色 */
     }
   }, []);
   const changeSlipColor = (on: boolean) => {
