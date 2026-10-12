@@ -77,7 +77,8 @@ SoulLedger 是一个可运行的全栈应用（Django + Next.js，外加一个 E
 | 问一问（助手） | 灵魂端与官员端的问答助手，同一服务层；管理页仅 ADMIN | `soul_assist/` |
 | 外部死亡登记 | API Key 鉴权的登记接口（单条或批量）、HMAC 签名 webhook | `death_sync/` |
 | 推送与通知 | 站内通知 + WebSocket；灵魂端 App 走 Expo 推送 | `notifications/`、`soul_push/` |
-| 两个前端 | 管理端 Web（Next.js 16）+ 灵魂端 App（Expo SDK 57 / React Native），共用 `packages/core` | `frontend/`、`mobile/` |
+| 账号与登录 | 灵魂账号随死亡登记开通，初始密码由官员交付（可打印按文明排版的登录交付单，带二维码）；灵魂端扫码填编号、记住账号、面容 / 指纹登录；官员与灵魂都可开两步验证（TOTP + 恢复码）；设新密码时逐条列出要求 | `soul_accounts/`、`authentication/` |
+| 三个前端 | 管理端 Web（Next.js 16）+ 灵魂端 App + 官员端 App（都是 Expo SDK 57 / React Native），共用 `packages/core` | `frontend/`、`mobile/`、`mobile-officer/` |
 
 ---
 
@@ -193,11 +194,16 @@ git checkout -- package-lock.json   # npm ci 会删掉锁文件里的 libc 字�
 npm run dev --workspace frontend   # 脚本内已固定 PORT=3333
 ```
 
-### 灵魂端 App
+### 灵魂端 App 与官员端 App
 
 ```bash
-npm run --workspace mobile android   # 或 ios —— 即 expo run:*,构建并安装 dev client
+npm run --workspace mobile android              # 灵魂端；或 ios —— 即 expo run:*,构建并安装 dev client
+npm run --workspace @soulledger/officer android # 官员端（`mobile-officer/`）
 ```
+
+官员端复用灵魂端的叶子模块（`mobile-officer/src/shared.ts`），所以改 `mobile/src` 可能连带影响它。
+改了 `app.json` 的 plugins（权限文案、新的原生模块）要先 `npx expo prebuild --platform ios|android --no-install`；
+iOS 构建、真机签名、连共享测试机的 Matrix 等只在设备上才现形的细节，见 [`CLAUDE.md`](CLAUDE.md) 的 Build & Test。
 
 改了原生依赖（如 `expo-image-picker`、`expo-image-manipulator`）之后要重新跑上面这条
 重建 dev client —— `expo start --clear` 只换 JS bundle，不会把新的原生模块装进已安装的 App。
@@ -316,7 +322,7 @@ bash scripts/install-hooks.sh  # 装 git 钩子，见「测试、门禁与 CI」
 
 | 前缀 | 应用 |
 |---|---|
-| `auth/`、`users/` | JWT 登录/刷新，用户管理，登录日志（`auth/login-logs/`，只读，仅 ADMIN） |
+| `auth/`、`users/` | JWT 登录/刷新，官员两步验证（`auth/mfa/`），用户管理，登录日志（`auth/login-logs/`，只读，仅 ADMIN） |
 | `recycle-bin/` | 回收站：软删除记录的查看、恢复与彻底删除 |
 | `souls/` | 灵魂 CRUD 与状态转换，更正结案（`{id}/correct_settlement/`，仅 SETTLED 灵魂，需 `soul.correct_settlement`） |
 | `ledger/` | 功过记录、余额、时间衰减、按文明的读数 |
@@ -330,7 +336,7 @@ bash scripts/install-hooks.sh  # 装 git 钩子，见「测试、门禁与 CI」
 | `social/`、`social-moderation/` | 帖子、评论、表态、关注、资料，以及内容处置 |
 | `sentence-plans/` | 受刑计划与加减项请求 |
 | `scheduler/` | 定时任务与执行记录（`runs/` 支持多状态、时间区间与搜索） |
-| `soul-accounts/`、`soul-auth/`、`me/` | 灵魂账号开通与凭据交付、灵魂端登录、灵魂自己的接口（含推送令牌、书信、助手、朋友圈） |
+| `soul-accounts/`、`soul-auth/`、`me/` | 灵魂账号开通与凭据交付（含打印交付单 `credentials/{id}/print-slip/`，不返回密码）、灵魂端登录（密码、两步验证 `mfa/verify/`、这部手机的凭据 `device-login/`）、灵魂自己的接口（含推送令牌、书信、助手、朋友圈、两步验证 `me/mfa/`、面容登录 `me/device-login/`） |
 | `chat/` | 书信：Matrix 凭据代签与 Synapse 的新消息回调 |
 | `assist/`、`assist-admin/` | 官员端助手；助手管理页（仅 ADMIN） |
 | `social-media/<uuid>/` | 朋友圈帖子图片的文件出口（签名地址，每次重查可见性） |
@@ -431,13 +437,14 @@ workspace 都是；2026-09-05 之前是裸 `eslint .`，只有 warning 时退出
 
 **CI 现在只有 `workflow_dispatch` 触发**——没有任何 push 或 PR 会自动跑它（GitHub Actions
 额度耗尽，`security.yml` 的周 cron 也一并关掉了）。所以「CI 是绿的」在这个仓库里目前不是
-一句自动成立的话，本地门禁才是。`.github/workflows/ci.yml` 定义了四个 job：
+一句自动成立的话，本地门禁才是。`.github/workflows/ci.yml` 定义了五个 job：
 
 | Job | 步骤 |
 |---|---|
 | **backend** | `makemigrations --check --dry-run`、`migrate`、`pytest`、`ruff check`、`pip-audit` |
 | **frontend** | `packages/core` 的 typecheck / lint / vitest，然后 `tsc --noEmit`、`eslint`、`next build`、`npm run test:coverage`、`npm audit` |
 | **mobile** | `mobile/` 的 typecheck / lint / test |
+| **officer** | `mobile-officer/` 的 typecheck / lint / test（它就地引用 `mobile/src` 的模块，所以单独一个 job） |
 | **e2e** | Playwright 矩阵：chromium / firefox / mobile-chrome 各一条腿，`fail-fast: false`，每条腿单独上传报告 artifact |
 
 后端 CI 跑在真实的 PostgreSQL 16 与 Redis 7 service container 上。`pip-audit`（扫
@@ -446,7 +453,7 @@ workspace 都是；2026-09-05 之前是裸 `eslint .`，只有 warning 时退出
 
 **本地门禁**：`bash scripts/install-hooks.sh` 装上钩子之后，pre-commit 对暂存的前端文件跑
 ESLint，pre-push 调用 [`scripts/run-gates.sh`](scripts/run-gates.sh)——按改动路径挑选
-后端 / 前端 / `packages/core` / `mobile` 的门禁，前端 jest 只跑受影响的测试，后端 pytest
+后端 / 前端 / `packages/core` / `mobile` / `mobile-officer` 的门禁，前端 jest 只跑受影响的测试，后端 pytest
 全跑。同一套门禁可以手动跑：
 
 ```bash
@@ -463,6 +470,7 @@ cd backend && .venv/bin/ruff check .
 cd frontend && npx tsc --noEmit && npm run lint && npm run test:coverage
 npm run --workspace packages/core typecheck && npm run --workspace packages/core lint && npm run --workspace packages/core test
 npm run --workspace mobile typecheck && npm run --workspace mobile lint && npm run --workspace mobile test
+npm run --workspace @soulledger/officer typecheck && npm run --workspace @soulledger/officer lint && npm run --workspace @soulledger/officer test
 cd frontend && npm run build && npx playwright test   # 三个 project；要先 build
 ```
 
@@ -538,6 +546,8 @@ frontend/
   e2e/              Playwright 用例
 mobile/             灵魂端 App（Expo SDK 57 / React Native）。平台无关的一切来自
   src/              packages/core，这里只有屏幕、导航与移动端的端口实现
+mobile-officer/     官员端 App（同一套 Expo）。待办、队列、查询、通知、回信；
+  src/              界面零件与主题经 shared.ts 取自 mobile/src
 config/synapse/     Synapse 的 homeserver 模板与房间策略模块（书信）
 nginx.conf          production 合并里 nginx 的主配置
 scripts/            启停/状态、门禁（run-gates.sh）、数据库备份恢复、git hooks
@@ -565,7 +575,7 @@ docs/               神话研究、工程文档、设计交付包——见 docs/
 ## 安全现状
 
 已实现：JWT 与 API Key 认证（官员、灵魂、外部系统三种凭据互不通用）、带数据与字段范围的
-RBAC、webhook secret 与 PII 载荷的 Fernet 加密、基于 Redis 的原子限流、webhook URL 的
+RBAC、官员与灵魂的两步验证（TOTP，密钥 Fernet 加密落库；恢复码一次一用）、webhook secret 与 PII 载荷的 Fernet 加密、基于 Redis 的原子限流、webhook URL 的
 SSRF 校验、CSP/HSTS/X-Frame-Options，以及写操作的审计轨迹。
 
 外部 API Key（`backend/apps/death_sync/`，管理页 `/death-sync/api-keys`）按能力分开授权：
@@ -578,6 +588,9 @@ Fernet 加密**依赖 `ENCRYPTION_KEY`**（`config/settings.py`）：`DEBUG=Fals
 拒绝启动；`DEBUG=True` 且未设置时只打一条 warning，`WebhookConfig.signing_secret` 与
 `DeathRegistrationRequest.source_payload` **明文落库**。开发环境看到那条 warning 时，
 库里的这两列就是明文。
+
+灵魂端的面容 / 指纹登录不存密码：服务端给这部手机发一个专用凭据，库里只有它的哈希；改密码、官员重置、转生都会吊销它，
+并把原因告诉登录页。登录交付单上的二维码只带灵魂编号（`SL1:<编号>`），不带密码。
 
 书信正文只在 Synapse，后端库与审计里都没有正文；它也不是端到端加密。问一问助手是仓库里唯一把灵魂的自由文本落库并发给
 第三方模型的地方（原文保存 30 天，审计里只有哈希）。

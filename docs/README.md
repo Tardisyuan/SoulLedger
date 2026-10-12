@@ -139,6 +139,10 @@ research material and feeds no tenant.
 | [ARCHITECTURE.md](ARCHITECTURE.md) | 已入库 | 架构概览 |
 | [ARCHITECTURE-soul-app-and-domain-split.md](ARCHITECTURE-soul-app-and-domain-split.md) | 已入库 | 灵魂端 App 与按业务域拆分的设计稿（2026-09-13 起）;文首决策记录是拍板结果,正文「现状」一节是当时的快照 |
 | [ARCHITECTURE-sentence-plan.md](ARCHITECTURE-sentence-plan.md) | 已入库 | 受刑计划(处置流程节点)设计稿与决策记录(2026-09-18/19 拍板),已落地为 `backend/apps/sentence_plan/` |
+| [ARCHITECTURE-soul-assist.md](ARCHITECTURE-soul-assist.md) | 已入库 | 灵魂端助手(问一问)设计稿与决策记录(2026-09-28 拍板),已落地 |
+| [ARCHITECTURE-assist-admin.md](ARCHITECTURE-assist-admin.md) | 已入库 | 助手管理页(阶段 1.5)计划稿(2026-09-29 拍板) |
+| [ARCHITECTURE-officer-assist.md](ARCHITECTURE-officer-assist.md) | 已入库 | 官员端助手(阶段 3)计划稿(2026-09-29 拍板) |
+| [ARCHITECTURE-tenant-sharding.md](ARCHITECTURE-tenant-sharding.md) | 已入库 | 租户分片方案。**规划稿,不实施**(2026-10-09 决定只出文档);4.1 说明多库守卫怎么跑 |
 | [CONVENTIONS-backend.md](CONVENTIONS-backend.md) | 已入库 | **后端开发准则**。每条规则标注了执法机制（ruff / 测试 / 钩子 / 「只是文字」），并列出文档间的矛盾与代码里现存的不一致 |
 | [CONVENTIONS-frontend.md](CONVENTIONS-frontend.md) | 已入库 | **前端开发准则与页面一致性**。设计 token、四文明主题、页面骨架、三态、显示契约；同样逐条标注执法机制 |
 | [CONVENTIONS.md](CONVENTIONS.md) | 已入库 | ~~前后端编码规约~~ **已被上面两份取代**（2026-09-06），停在 2026-08-14，保留作历史 |
@@ -204,6 +208,13 @@ history, not as a description of the code today.*
 > 这个包已经交付并被外部引用，请视为冻结内容——不要重排、重命名或改写其中的文件。
 > *This package has been delivered and is referenced externally. Treat it as
 > frozen: do not reorganise, rename, or rewrite anything inside it.*
+
+同一目录下还有两个**不在冻结范围内**、仍在增长的子目录(2026-10 起的 v3 界面改版):
+
+- [`v3-prompts/`](design-handoff/v3-prompts/) — 逐批发给 Design 的提示词与 Design 的回复(第一批至第二十七批),
+  以及埃及文词条的审定记录。**egy 的用词以这里的回复为准**,代码侧的词表守卫在
+  `frontend/src/__tests__/egyLexiconRules.test.ts`。
+- [`v3-pages/`](design-handoff/v3-pages/) — 从 Design 项目取回的画稿(`.dc.html`)与按稿落地后的实际样张。
 
 ---
 

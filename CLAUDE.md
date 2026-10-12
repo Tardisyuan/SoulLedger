@@ -476,6 +476,11 @@ mobile 300,E2E chromium 155 / firefox 155 / mobile-chrome 151,egyLexiconRules 28
 jest 250 suites / 4252,core vitest 18 文件 / 180(改到 core 时),mobile 616,官员端 244。E2E 这两天没有跑。
 `-n 4` 下真 PG 约 18 分钟(测试变多了,此前 13.5 分钟)。
 
+**2026-10-12 再测(`03fb1f2c`,读退出码):** 前端 jest **270 suites / 4526**,core vitest 22 文件 / 228,灵魂端 856,
+官员端 407,E2E chromium 234 / firefox 234 / mobile-chrome 227(这三项在 `fd69f56c` 之后的树上跑,其后只改了语言包与 App)。
+后端这两天只改了测试与文案:pre-push 的读文件测试 904 passed;全量 SQLite 与真 PostgreSQL 没有重跑,
+上一次是 `1e17a4aa` 的真 PG 含迁移 7020 passed / 1 failed(那一条是后端一处文案副本,随后修掉;修后没有重跑全量)。
+
 **事件日志(`EventService.log*`)是业务记录的一部分(2026-10-10 用户决定):**写 `SoulEvent` 失败,整笔业务回滚,
 调用方拿到原始异常。因此 **`log*` 必须写在它所描述的那笔业务的事务里面**,给人的通知和推送才放 `transaction.on_commit`。
 写在事务之后的 `log*` 在失败时业务已经提交、无从回滚;写在内层 `atomic` 里又被吞掉异常的,会静默回滚却报成功 ——
