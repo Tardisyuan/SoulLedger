@@ -261,6 +261,20 @@ describe("a soul's pictures in the thread (2026-10-10)", () => {
     expect(screen.queryByTestId("letter-image")).toBeNull();
   });
 
+  it("a broken picture can be retried: the thread is read again and the fresh address is shown", async () => {
+    mockMessages.mockResolvedValue({ data: [WITH_PICTURES[2]] });
+    await openThread();
+    fireEvent(screen.UNSAFE_getAllByType(Image)[0], "error");
+    await screen.findByTestId("letter-image-broken");
+    const before = mockMessages.mock.calls.length;
+    const fresh = { ...WITH_PICTURES[2], image: { ...WITH_PICTURES[2].image!, url: `${WITH_PICTURES[2].image!.url}?sig=fresh` } };
+    mockMessages.mockResolvedValue({ data: [fresh] });
+    fireEvent.press(screen.getByTestId("letter-image-broken"));
+    await screen.findByTestId("letter-image");
+    expect(mockMessages.mock.calls.length).toBe(before + 1);
+    expect(screen.queryByTestId("letter-image-broken")).toBeNull();
+  });
+
   it("a tap opens a black viewer on that picture, paged across the thread's pictures; a tap closes it; nothing saves", async () => {
     mockMessages.mockResolvedValue({ data: WITH_PICTURES });
     await openThread();
