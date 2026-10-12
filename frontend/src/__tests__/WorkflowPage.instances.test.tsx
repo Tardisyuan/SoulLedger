@@ -14,13 +14,16 @@
  * from — this file deliberately does not import the page itself, so the mocks
  * cannot be bypassed by an import landing first.
  */
-import { screen, fireEvent, within } from "@testing-library/react";
+import { screen, fireEvent, within, waitFor } from "@testing-library/react";
+
+jest.mock("@/src/lib/saveBlob", () => ({ saveBlob: jest.fn() }));
 
 import {
   backendTemplate,
   installWorkflowPageHarness,
   mockedTemplates,
   mockedWorkflows,
+  mockedWorkflowExport,
   mockT,
   renderPage,
 } from "./support/workflowPageHarness";
@@ -34,6 +37,32 @@ describe("WorkflowPage instances tab", () => {
     renderPage();
     fireEvent.click(await screen.findByText("workflow.instances"));
   }
+
+  // Design 第二十八批 W5:列表没有筛选条,「当前筛选」就是全部 —— 导出请求不带任何参数(尤其不带页码)。
+  it("exports the instance list with no filters and no page", async () => {
+    mockedWorkflows.mockResolvedValue({ data: { count: 3, results: [] } });
+    await openInstances();
+    const button = await screen.findByRole("button", { name: "common.export" });
+    expect(button).toBeEnabled();
+    fireEvent.click(button);
+    await waitFor(() => expect(mockedWorkflowExport).toHaveBeenCalledTimes(1));
+    expect(mockedWorkflowExport).toHaveBeenCalledWith();
+  });
+
+  it("greys the export out above 10,000 rows, and not at exactly 10,000", async () => {
+    mockedWorkflows.mockResolvedValue({ data: { count: 10_000, results: [] } });
+    await openInstances();
+    expect(await screen.findByRole("button", { name: "common.export" })).toBeEnabled();
+  });
+
+  it("greys the export out above 10,000 rows", async () => {
+    mockedWorkflows.mockResolvedValue({ data: { count: 10_001, results: [] } });
+    await openInstances();
+    const button = await screen.findByRole("button", { name: "common.export" });
+    expect(button).toBeDisabled();
+    fireEvent.click(button);
+    expect(mockedWorkflowExport).not.toHaveBeenCalled();
+  });
 
   it("shows an empty state when there are no workflow instances", async () => {
     await openInstances();

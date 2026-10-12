@@ -7,6 +7,9 @@ import { exportFileName } from "@/src/lib/exportFileName";
 import { saveBlob } from "@/src/lib/saveBlob";
 import { Button } from "@/src/components/ui/Button";
 
+/** 超过这个行数导出按钮置灰(Design 第二十八批 W5;后端上限更高,这里是界面的先行拦截)。 */
+export const EXPORT_DISABLE_ABOVE = 10_000;
+
 /**
  * 列表页的「导出」:下载当前列表(同一范围、同一筛选)的 CSV。后端是同一个读码名
  * (`dispatch.read` / `disposition.read` / `cross_judgment.read`),所以挂在页级门之内,
@@ -19,11 +22,14 @@ export function ExportCsvButton({
   page,
   hall,
   size = "md",
+  count,
 }: {
   fetchCsv: () => Promise<{ data: Blob }>;
   page: string;
   hall?: string;
   size?: "sm" | "md";
+  /** 当前筛选下的行数(列表已有的 `count`);超过 `EXPORT_DISABLE_ABOVE` 按钮置灰。 */
+  count?: number;
 }) {
   const { t } = useI18n();
   const { showToast } = useToast();
@@ -40,7 +46,7 @@ export function ExportCsvButton({
     }
   };
   return (
-    <Button type="button" variant="secondary" size={size} loading={busy} onClick={run}>
+    <Button type="button" variant="secondary" size={size} loading={busy} disabled={count !== undefined && count > EXPORT_DISABLE_ABOVE} onClick={run}>
       {t("common.export")}
     </Button>
   );

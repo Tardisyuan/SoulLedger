@@ -15,6 +15,7 @@ from rest_framework.filters import SearchFilter
 from rest_framework.response import Response
 
 from apps.core.archive import DeletionNotAllowedError
+from apps.core.exports import export_csv
 from apps.core.mixins import TenantCreateMixin, TenantQuerySetMixin
 from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.request_local import clear_current_user, set_current_request, set_current_user
@@ -263,6 +264,8 @@ class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSe
         'queue_counts': ['judgment.read'],
         # 殿筛选的选项:与队列同一个读。
         'courts': ['judgment.read'],
+        # 列表的 CSV:与列表同一个读。
+        'export': ['judgment.read'],
     }
     queryset = (
         Judgment.objects
@@ -285,6 +288,25 @@ class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSe
         if self.action == "retrieve":
             qs = qs.prefetch_related("evidence_admissions")
         return qs
+
+    @extend_schema(responses={(200, "text/csv"): OpenApiTypes.BINARY, 400: OpenApiTypes.OBJECT})
+    @action(detail=False, methods=["get"], url_path="export", pagination_class=None)
+    def export(self, request):
+        """导出当前筛选下的案卷 CSV:与列表同一租户划界、同一筛选与搜索、同一权限(judgment.read)。
+        列取自列表序列化器,所以字段权限照常生效;证据、判词细节、评议不在文件里。"""
+        return export_csv(
+            request,
+            qs=self.filter_queryset(self.get_queryset()),
+            serializer_class=JudgmentSerializer,
+            columns=[
+                ("Case ID", "id"), ("Case Number", "case_number"), ("Soul", "soul_name"),
+                ("Civilization", "civilization"), ("Judge", "judge_name"), ("Court", "court"),
+                ("Verdict", "verdict"), ("Final", "is_final"), ("Created At", "created_at"),
+                ("Concluded At", "concluded_at"),
+            ],
+            filename="judgments_export.csv",
+            resource="judgment",
+        )
 
     def get_serializer_class(self):
         # Detail only: the admitted balance walks the soul's ledger.

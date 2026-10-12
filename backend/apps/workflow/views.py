@@ -3,11 +3,13 @@ REST views for workflow app.
 """
 from django.db import transaction
 from django.db.models import Prefetch
+from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
+from apps.core.exports import export_csv
 from apps.core.mixins import TenantCreateMixin, TenantQuerySetMixin
 from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.tenant import scope_to_tenant
@@ -195,6 +197,8 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
         'approve_node': ['workflow.approve'],
         'stats': ['workflow.read'],
         'create_from_judgment': ['workflow.create'],
+        # 列表的 CSV:与列表同一个读。
+        'export': ['workflow.read'],
     }
     queryset = ApprovalWorkflow.objects.select_related(
         "soul", "soul__tenant", "tenant", "judgment", "current_node", "current_node__approver", "coordinating_realm", "template_version"
@@ -216,6 +220,25 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
         if self.action == "list":
             return ApprovalWorkflowListSerializer
         return ApprovalWorkflowSerializer
+
+    @extend_schema(responses={(200, "text/csv"): OpenApiTypes.BINARY, 400: OpenApiTypes.OBJECT})
+    @action(detail=False, methods=["get"], url_path="export", pagination_class=None)
+    def export(self, request):
+        """导出当前筛选下的审批流 CSV:与列表同一租户划界、同一筛选与搜索、同一权限(workflow.read)。
+        列取自列表序列化器。"""
+        return export_csv(
+            request,
+            qs=self.filter_queryset(self.get_queryset()),
+            serializer_class=ApprovalWorkflowListSerializer,
+            columns=[
+                ("Workflow ID", "id"), ("Name", "workflow_name"), ("Soul", "soul_name"),
+                ("Case Type", "case_type"), ("Priority", "priority"), ("Status", "status"),
+                ("Appeal", "is_appeal"), ("Cross Civilization", "cross_civilization"),
+                ("Created At", "created_at"), ("Completed At", "completed_at"),
+            ],
+            filename="workflows_export.csv",
+            resource="workflow",
+        )
 
     @action(detail=True, methods=["post"])
     def advance(self, request, pk=None):

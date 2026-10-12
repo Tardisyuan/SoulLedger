@@ -2627,6 +2627,13 @@
     "clear_all": "Fekh Neb",
     "clear_one": "Khet {{name}}"
   },
+  "list": {
+    "columns": {
+      "button": "Iwn · {{shown}}/{{total}}",
+      "pinned": "Nen Imen",
+      "reset": "Wehem Tepy"
+    }
+  },
   "death_sync": {
     "title": "Senb Mut",
     "subtitle": "Sesh Mut Ky: Aq Hena Kheperu Senb",

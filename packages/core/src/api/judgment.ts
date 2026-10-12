@@ -511,6 +511,9 @@ export const JUDGMENT_COMMENT_MAX = 2000;
 
 export const judgmentApi = {
   list: (params?: Record<string, string>) => api.get<PaginatedResponse<Judgment>>("/judgment/", { params }),
+  /** 与 `list` 同一组筛选 / 租户划界的 CSV,不分页(`JudgmentViewSet.export`);页码参数不要传。 */
+  exportCsv: (params?: Record<string, string>) =>
+    api.get<Blob>("/judgment/export/", { params, responseType: "blob" }),
   create: (data: object) => api.post<Judgment>("/judgment/", data),
   conclude: (id: string, data: ConcludeJudgmentPayload | object) => api.post<Judgment>(`/judgment/${id}/conclude/`, data),
   get: (id: string) => api.get<JudgmentDetail>(`/judgment/${id}/`),

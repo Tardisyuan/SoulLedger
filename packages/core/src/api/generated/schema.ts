@@ -3237,6 +3237,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/judgment/export/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description 导出当前筛选下的案卷 CSV:与列表同一租户划界、同一筛选与搜索、同一权限(judgment.read)。
+         *     列取自列表序列化器,所以字段权限照常生效;证据、判词细节、评议不在文件里。
+         */
+        get: operations["v1_judgment_export_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/judgment/next/": {
         parameters: {
             query?: never;
@@ -8752,6 +8772,26 @@ export interface paths {
         put?: never;
         /** @description Create a workflow instance from a judgment. */
         post: operations["v1_workflows_create_from_judgment_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workflows/export/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description 导出当前筛选下的审批流 CSV:与列表同一租户划界、同一筛选与搜索、同一权限(workflow.read)。
+         *     列取自列表序列化器。
+         */
+        get: operations["v1_workflows_export_retrieve"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -23480,6 +23520,35 @@ export interface operations {
             };
         };
     };
+    v1_judgment_export_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": string;
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
     v1_judgment_next_retrieve: {
         parameters: {
             query?: {
@@ -33367,6 +33436,35 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApprovalWorkflow"];
+                };
+            };
+        };
+    };
+    v1_workflows_export_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": string;
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
         };
