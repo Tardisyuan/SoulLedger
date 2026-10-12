@@ -6,7 +6,7 @@
  * on the identity band, the primary button and the current tab; states by glyph plus words.
  */
 import { useEffect, useState, type ReactNode } from "react";
-import { Animated, Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from "react-native";
+import { Animated, Pressable, ScrollView, StyleSheet, View, type StyleProp, type ViewStyle } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { HIGHLIGHT_ALPHA, HIGHLIGHT_MS } from "./rules";
@@ -252,6 +252,53 @@ export function Segmented<K extends string>({
   );
 }
 
+/**
+ * 多选标签 + 数量角标 (Design batch 28 O2): the filter bar of the web's Social / CooldownDesk, on
+ * the phone -- ONE row that scrolls sideways (never wraps), a hairline under it. Chips are 36 high
+ * with a 44 touch target (padding and `hitSlop`); a count of 0 is still shown and the chip stays on.
+ */
+export function FilterChips<K extends string>({
+  options,
+  selected,
+  onToggle,
+  testID,
+}: {
+  options: readonly { key: K; label: string; count: number }[];
+  selected: readonly K[];
+  onToggle: (key: K) => void;
+  testID?: string;
+}) {
+  const t = useTheme();
+  return (
+    <View style={{ borderBottomWidth: 1, borderBottomColor: t.hair }}>
+      <ScrollView testID={testID} horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
+        {options.map(({ key, label, count }) => {
+          const on = selected.includes(key);
+          return (
+            <Pressable
+              key={key}
+              testID={testID ? `${testID}-${key}` : undefined}
+              accessibilityRole="button"
+              accessibilityLabel={`${label} · ${count}`}
+              accessibilityState={{ selected: on }}
+              hitSlop={{ top: 4, bottom: 4 }}
+              onPress={() => onToggle(key)}
+              style={[styles.chip, { borderColor: on ? t.ink : t.hair2, backgroundColor: on ? t.ink : "transparent" }]}
+            >
+              <Txt variant="caption" style={{ color: on ? t.s0 : t.ink, fontFamily: on ? family.ui[500] : family.ui[400] }}>
+                {label}
+              </Txt>
+              <Txt variant="value" style={{ color: on ? t.s0 : t.inkMuted }}>
+                {count}
+              </Txt>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
+    </View>
+  );
+}
+
 // ── identity band & tab bar ────────────────────────────────────────────
 
 /**
@@ -373,6 +420,8 @@ const styles = StyleSheet.create({
   actionText: { letterSpacing: 0 },
   segmented: { flexDirection: "row", borderWidth: 1, marginHorizontal: GUTTER, marginVertical: space[3] },
   segment: { flex: 1, minHeight: 44, alignItems: "center", justifyContent: "center" },
+  chips: { flexDirection: "row", alignItems: "center", gap: space[2], paddingHorizontal: GUTTER, paddingVertical: space[2] },
+  chip: { height: 36, paddingHorizontal: space[3], borderWidth: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: space[2] },
   band: { height: 48, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: space[3], paddingHorizontal: GUTTER },
   bandHall: { flexShrink: 1 },
   bandName: { flexShrink: 1, opacity: 0.9 },
