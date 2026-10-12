@@ -2102,7 +2102,7 @@ localhost
 - 门禁、测试命令与已知陷阱：`CLAUDE.md`；一键脚本 `scripts/run-gates.sh`。
 - CI 只有手动触发：`.github/workflows/ci.yml`、`security.yml`。
 - 容器：`docker-compose.yml`（含 Synapse、celery、celery-beat）及 override／staging／production 三份。
-- 其他文档的位置：`README.md`、`CHANGELOG.md`（`[Unreleased]` 一段自述没有跟上）、`docs/README.md`。
+- 其他文档的位置：`README.md`、`CHANGELOG.md`（2026-08-30 至 2026-10-09 各段是 2026-10-12 按 `git log` 回头补写的）、`docs/README.md`。
 
 ---
 

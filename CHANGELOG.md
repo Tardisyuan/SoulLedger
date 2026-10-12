@@ -109,6 +109,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   待定清单清空
 
 ### Fixed
+- 事件日志写失败时整笔业务回滚(`SoulEvent` 写不进去,业务写入随之回滚);转生同步、工作流事件、转生申请状态都挪进
+  决定所在的事务;`REINCARNATION_COMPLETED` 接入 Web 客户端
 - 评议区拿到非数组响应时不再把整个审判页打成 500
 - 恢复码登录页输错时说的是恢复码,不再说「数字不对」
 - 审计明细里的动作名引用了不存在的颜色令牌,整条样式被浏览器丢掉
@@ -150,8 +152,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 安卓桌面快捷方式总打开默认页;iOS 27 上两个 App 都能启动(场景生命周期);`↗` 在 iOS 上不再画成彩色表情
 - 官员端 App 的转生标题、会签候选人与灵魂搜索不再显示原始枚举码;两个同号的 `authentication 0019` 迁移补了合并迁移
 - 官员端门禁点名了不存在的工作区,已改正;同日合并后的门禁红(CSV 导入、趋势、小倍数图)已清
-- 事件日志写失败时整笔业务回滚(`SoulEvent` 写不进去,业务写入随之回滚),转生同步、工作流事件、转生申请状态都挪进决定所在的事务;
-  `REINCARNATION_COMPLETED` 接入 Web 客户端(这几条的提交日期是 2026-10-10,落在下一段的时间范围内)
 
 ---
 
