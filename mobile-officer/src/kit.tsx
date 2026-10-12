@@ -252,6 +252,50 @@ export function Segmented<K extends string>({
   );
 }
 
+/**
+ * 多选标签 + 数量角标 (Design batch 28 O2): the filter bar of the web's Social / CooldownDesk, on
+ * the phone. Each chip is a toggle button, 44 high, and its count is part of its label. Wraps onto
+ * further lines at a large text size rather than scrolling sideways.
+ */
+export function FilterChips<K extends string>({
+  options,
+  selected,
+  onToggle,
+  testID,
+}: {
+  options: readonly { key: K; label: string; count: number }[];
+  selected: readonly K[];
+  onToggle: (key: K) => void;
+  testID?: string;
+}) {
+  const t = useTheme();
+  return (
+    <View testID={testID} style={styles.chips}>
+      {options.map(({ key, label, count }) => {
+        const on = selected.includes(key);
+        return (
+          <Pressable
+            key={key}
+            testID={testID ? `${testID}-${key}` : undefined}
+            accessibilityRole="button"
+            accessibilityLabel={`${label} · ${count}`}
+            accessibilityState={{ selected: on }}
+            onPress={() => onToggle(key)}
+            style={[styles.chip, { borderColor: on ? t.ink : t.inkSubtle, backgroundColor: on ? t.ink : "transparent" }]}
+          >
+            <Txt variant="caption" style={{ color: on ? t.s0 : t.ink }}>
+              {label}
+            </Txt>
+            <Txt variant="value" style={{ color: on ? t.s0 : t.inkMuted }}>
+              {count}
+            </Txt>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
 // ── identity band & tab bar ────────────────────────────────────────────
 
 /**
@@ -373,6 +417,8 @@ const styles = StyleSheet.create({
   actionText: { letterSpacing: 0 },
   segmented: { flexDirection: "row", borderWidth: 1, marginHorizontal: GUTTER, marginVertical: space[3] },
   segment: { flex: 1, minHeight: 44, alignItems: "center", justifyContent: "center" },
+  chips: { flexDirection: "row", flexWrap: "wrap", gap: space[2], paddingHorizontal: GUTTER, paddingBottom: space[3] },
+  chip: { minHeight: 44, minWidth: 44, paddingHorizontal: space[3], borderWidth: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: space[2] },
   band: { height: 48, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: space[3], paddingHorizontal: GUTTER },
   bandHall: { flexShrink: 1 },
   bandName: { flexShrink: 1, opacity: 0.9 },

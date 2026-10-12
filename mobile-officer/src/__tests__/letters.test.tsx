@@ -102,7 +102,8 @@ describe("the to-do group", () => {
     const { unmount } = renderOfficer(<TodoTab highlight={null} onOpen={() => {}} />);
     await screen.findByText("审批节点 · 1");
     expect(screen.queryByTestId("todo-group-letter")).toBeNull();
-    expect(screen.queryByText(/待回书信/)).toBeNull();
+    // The group's heading ("待回书信 · n"); the filter chip of the same name is a separate Text.
+    expect(screen.queryByText(/待回书信 ·/)).toBeNull();
     unmount();
     const { letters: _omitted, ...older } = { ...NONE, approvals: group([row("approval", "a1")]) };
     mockTodo.mockResolvedValue({ data: older });
