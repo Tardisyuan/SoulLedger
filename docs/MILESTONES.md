@@ -108,7 +108,7 @@ tenant、API层4处补上租户过滤或换掉用错的权限类。过程中额�
 > `_base_manager` 跨租户查重），其余在两个月里的其他改动中顺带修好。**不要按这三张表的
 > ⏳ 判断当前状态**——其中 #294（`task_prerun`/`task_postrun` 信号处理器）确实没有实现，
 > 但那是因为最终改用了「按租户扇出子任务 + 任务内 `set_current_tenant()`」的做法
-> （见 `apps/ledger/tasks.py`、`apps/judgment/tasks.py`、`apps/death_sync/tasks.py`）。
+> （见 `apps/ledger/tasks.py`、`apps/judgment/tasks.py`、`apps/death_sync/tasks.py`）。此后 `apps/scheduler/signals.py` 里确有一个 `task_prerun` 处理器，但它记的是定时任务的运行记录（`TaskRun`），不是租户上下文。
 
 #### Phase 1: Celery 基础设施 + CRITICAL 修复 (Day 1-3)
 | 任务 | Task | 优先级 | 状态 |
@@ -154,10 +154,21 @@ tenant、API层4处补上租户过滤或换掉用错的权限类。过程中额�
 
 | 任务 | 优先级 | 状态 | 依据 |
 |------|--------|------|------|
-| i18n 翻译文件 (中/英) | P1 | ✅ | `frontend/messages/{zh-Hans,en,egy}.json` 三份键集对齐 |
-| Profile 编辑 UI | P1 | ✅ | `src/components/social/ProfileEditModal.tsx`，由 `ProfileCard.tsx:83` 挂载 |
-| Delete post/comment UI | P1 | ✅ | `useDeletePost`/`useDeleteComment`（`src/hooks/useSocial.ts:85,130`），带确认弹窗 |
+| i18n 翻译文件 (中/英) | P1 | ✅ | `packages/core/messages/{zh-Hans,en,egy}.json` 三份键集对齐（2026-10-12 复核：目录已从 `frontend/` 搬到 `packages/core/`） |
+| Profile 编辑 UI | P1 | ✅ | `src/components/social/ProfileEditModal.tsx`，由 `ProfileCard.tsx` 挂载 |
+| Delete post/comment UI | P1 | ✅ | `useDeletePost`/`useDeleteComment`（现在在 `packages/core/src/hooks/useSocial.ts`），带确认弹窗 |
 | Social MenuButton permissions | P2 | ⏳ | `apps/menus/migrations/` 里 `/social` 只有 Menu 行，没有 MenuButton 行 |
+
+---
+
+## M16 之后（2026-10-12 加注）
+
+M16 之后的工作没有再按 M 编号立项，也没有回填到上面。现在代码里有、而本文件没有记录的，
+按目录能看到的有：灵魂端（`apps/soul_accounts`、`soul_push`、`chat`、`soul_assist`，
+对应 `/soul-auth/`、`/me/` 一带的路由）、官员端 App 的后端（`apps/officer_app`）、
+受刑计划（`apps/sentence_plan`）、定时任务（`apps/scheduler`）、两步验证（`/auth/mfa/`）、
+朋友圈审核（`/social-moderation/`）、三个移动/共享工作区（`mobile/`、`mobile-officer/`、`packages/core/`）
+和设计规范 v3。逐条变更见 [`CHANGELOG.md`](../CHANGELOG.md)，路由见 [`API.md`](API.md)。
 
 ---
 
@@ -180,7 +191,7 @@ tenant、API层4处补上租户过滤或换掉用错的权限类。过程中额�
 
 ---
 
-*更新日期: 2026-08-28（M15/M16 状态核实、M16 逐项取证）。M1–M14 各段仍是各自完成当时的
+*更新日期: 2026-08-28（M15/M16 状态核实、M16 逐项取证）；2026-10-12 修正 M16 表里已搬家的路径并加注 M16 之后。M1–M14 各段仍是各自完成当时的
 记录，未回填后续变更。*
 
 *本文件不是事实来源——落后于代码，且 M7/M8 的编号与 `docs/MILESTONE_M7.md`、

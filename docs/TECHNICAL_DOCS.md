@@ -9,16 +9,18 @@
   `mobile/` use the installed react 19.2.3 — see `CLAUDE.md`, Build & Test)
 - **Auth**: JWT (djangorestframework-simplejwt), plus API keys for Death Sync
 - **Task Queue**: Celery + Redis
+- **Clients**: the web app (`frontend/`), the soul-side app (`mobile/`) and the officer app
+  (`mobile-officer/`, Expo), all sharing `packages/core/` (API clients, hooks, WS clients, message bundles)
 
 Exact ranges are in `backend/requirements.txt` (pinned set: `requirements.lock`, which
 CI and the image install) and `frontend/package.json`; those files are the authority, not this one.
 
 ### Project Structure
 
-> **2026-09-26 note:** the app list below is a partial, older snapshot (it omits
+> **2026-10-12 note:** the app list below is a partial, older snapshot (it omits
 > `dispatch`, `notifications`, `org`, `death_sync`, `social`, `scheduler`,
-> `soul_accounts`, `soul_push`, `chat` and `sentence_plan`). The list is maintained in
-> `backend/config/settings.py:69-92` (24 local apps); `AGENTS.md` §6 has a current tree.
+> `soul_accounts`, `soul_push`, `chat`, `sentence_plan`, `soul_assist` and `officer_app`). The list is
+> `INSTALLED_APPS` in `backend/config/settings.py` (26 local apps); `AGENTS.md` §6 has a current tree.
 > `permissions/` has been removed from the tree here: `apps.permissions` was deleted on
 > 2026-09-03 (see `backend/AGENTS.md`); the live RBAC app is `perm/`.
 
@@ -49,7 +51,11 @@ CI and the image install) and `frontend/package.json`; those files are the autho
 │   │   ├── contexts/        # React contexts
 │   │   └── hooks/           # Custom hooks
 │   ├── e2e/                 # Playwright tests
-│   └── lib/                 # Utilities, API client
+│   └── lib/                 # Web utilities and the platform adapter (lib/platform/web.ts)
+├── packages/core/     Platform-independent layer: API clients (src/api), data hooks (src/hooks),
+│                      WS clients, i18n bundles (messages/), OpenAPI schema (openapi/schema.yml)
+├── mobile/            Soul-side app (Expo)
+├── mobile-officer/    Officer app (Expo)
 └── docs/              Documentation
 ```
 
@@ -57,7 +63,7 @@ CI and the image install) and `frontend/package.json`; those files are the autho
 
 ### RBAC Model
 - **Roles**: ADMIN, MODERATOR, JUDGE, GUARDIAN, VIEWER, SOUL
-  (`backend/apps/authentication/models.py:56-67`; SOUL is the soul-app account, never assignable)
+  (`UserRole` in `backend/apps/authentication/models.py`; SOUL is the soul-app account, never assignable; custom roles can also be created in `perm.Role`)
 - **Permissions**: Codename-based (e.g., `soul.create`, `menu.delete`)
 - **Data Scope**: Tenant-level data isolation
 - **Field Permissions**: Per-field visibility control
