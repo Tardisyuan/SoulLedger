@@ -36,8 +36,10 @@ Then `bash scripts/install-hooks.sh` once, so pre-commit / pre-push run.
 4. Run tests: `cd backend && .venv/bin/python -m pytest` / `cd frontend && npm run test:coverage`
    (the backend suite needs `DATABASE_URL` **and** `REDIS_URL` pointed at throwaway
    services first — see `CLAUDE.md`, Build & Test, for the exact invocation)
-5. Commit: `git commit -m "feat: description"`
-6. Push and create a Pull Request
+5. Commit as `type(scope): description` (format and type list: `CLAUDE.md`, section "Git")
+6. Run the push gates with `scripts/run-gates.sh` (what `pre-push` runs; see `CLAUDE.md`), then push and
+   create a Pull Request. CI (backend, frontend, mobile, officer and e2e jobs in `ci.yml`) is
+   `workflow_dispatch`-only, so nothing runs on its own — the local gates are the check
 
 ## Code Conventions
 
@@ -51,8 +53,9 @@ Then `bash scripts/install-hooks.sh` once, so pre-commit / pre-push run.
 ### Frontend (TypeScript/React)
 - Use `useI18n()` for all user-facing strings — no hardcoded text
 - Use `RequirePermission` for CRUD button gating
-- Use `PageShell` for page layouts (40 of 43 `page.tsx` do, by grep on 2026-09-26 —
-  the three that don't are `(auth)/login`, `judgment/queue` and `admin/stats`; `PageSection` is for
+- Use `PageShell` for page layouts (41 of 53 `page.tsx` do, by grep on 2026-10-12 —
+  the twelve that don't are the `(auth)/*` pages, `/`, `welcome`, `judgment/queue`, `admin/stats`,
+  `admin/assistant` (+ `usage`) and `audit/logins`; `PageSection` is for
   sub-blocks within a page. `TableSkeleton` has zero callers under `app/` —
   table loading goes through `<DataTable isLoading>`)
 - Colours have exactly one spelling: `text-[oklch(var(--color-ink))]`. The bare
@@ -82,6 +85,9 @@ there is no commit-msg hook — so three copies drifted silently. Now there is o
 - `mobile/` (the soul app, Expo) has three as well, run by `pre-push` on any `^mobile/`
   or `frontend/app/globals.css` change and by CI's `mobile` job: `npm run --workspace mobile typecheck | lint | test`
   (the last is jest + jest-expo)
+- `mobile-officer/` (the officer app, package `@soulledger/officer`) has the same three
+  (`npm run --workspace @soulledger/officer typecheck | lint | test`), run by CI's `officer` job. It imports
+  `mobile/src` leaf modules in place, so a change under `mobile/` can break it too
 - Frontend E2E: **`npm run build` first**, then
   `npx playwright test --project=chromium|firefox|mobile-chrome` — three
   projects, and CI's matrix runs all three. `webServer` serves the build
@@ -95,5 +101,5 @@ there is no commit-msg hook — so three copies drifted silently. Now there is o
 
 See `AGENTS.md` (§6 has the current project tree) and `docs/ARCHITECTURE.md` for an
 architecture overview. `docs/TECHNICAL_DOCS.md` is an older short summary; its app list
-lags `backend/config/settings.py`, which is the authority.
+lags `INSTALLED_APPS` in `backend/config/settings.py`, which is the authority.
 See `docs/API.md` for API documentation.
