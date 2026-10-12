@@ -88,7 +88,8 @@ affected rows with ⊘/△ and offers a one-click filter for them.
 | Ask (assistant) | A question-answering assistant for souls and for officers, one service layer; an ADMIN-only management page | `soul_assist/` |
 | External death registration | API-key-authenticated registration (single or batch), HMAC-signed webhooks | `death_sync/` |
 | Push and notifications | In-app notifications over WebSocket; Expo push for the soul app | `notifications/`, `soul_push/` |
-| Two front ends | Admin web (Next.js 16) + soul-side app (Expo SDK 57 / React Native), sharing `packages/core` | `frontend/`, `mobile/` |
+| Accounts and sign-in | A soul's account is provisioned with its death registration and the initial password is handed over by an officer (a printable sign-in slip laid out per civilization, with a QR code); the soul app scans the number, remembers the account and signs in by face / fingerprint; officers and souls can both turn on two-step verification (TOTP + recovery codes); every new-password form lists the rules and ticks them off | `soul_accounts/`, `authentication/` |
+| Three front ends | Admin web (Next.js 16) + the soul app + the officer app (both Expo SDK 57 / React Native), sharing `packages/core` | `frontend/`, `mobile/`, `mobile-officer/` |
 
 ---
 
@@ -223,11 +224,31 @@ git checkout -- package-lock.json   # npm ci strips the lockfile's libc fields; 
 npm run dev --workspace frontend   # already pins PORT=3333
 ```
 
-### Soul app
+### Soul app and officer app
 
 ```bash
-npm run --workspace mobile android   # or ios — that is expo run:*, which builds and installs the dev client
+npm run --workspace mobile android              # soul app; or ios — that is expo run:*, which builds and installs the dev client
+npm run --workspace @soulledger/officer android # officer app (`mobile-officer/`)
 ```
+
+The officer app imports the soul app's leaf modules in place (`mobile-officer/src/shared.ts`), so a change
+under `mobile/src` can affect it. After changing `app.json` plugins (permission strings, a new native
+module) run `npx expo prebuild --platform ios|android --no-install` first. The device-only details (iOS
+builds, signing for a real phone, reaching Matrix on the shared test box) are in [`CLAUDE.md`](CLAUDE.md), Build & Test.
+
+#### Two things left undone on purpose (decided 2026-10-10; do them before a real device)
+
+Both apps are wired for these; only the step that needs your own account is missing. Neither affects
+simulator work.
+
+1. **Push on a real device: register the Expo projects.** Neither `app.json` has `extra.eas.projectId`,
+   so on a real phone push is treated as unavailable (no crash, nothing arrives). Run `eas login`, then
+   `eas init` in `mobile/` and in `mobile-officer/`, and commit the two `app.json` changes. This only
+   registers the projects; it is not an EAS build. iOS push also needs a paid Apple developer account.
+2. **Crash reports: set the Sentry DSNs.** Without a DSN the SDK is never initialised. Create two React
+   Native projects on sentry.io, put `EXPO_PUBLIC_SENTRY_DSN_SOUL=<DSN>` in `mobile/.env` and
+   `EXPO_PUBLIC_SENTRY_DSN_OFFICER=<DSN>` in `mobile-officer/.env` (both gitignored), and rebuild the dev
+   clients. Uploading source maps at release time is not configured.
 
 After a native dependency changes (e.g. `expo-image-picker`, `expo-image-manipulator`),
 run that again to rebuild the dev client. `expo start --clear` only swaps the JS bundle;
@@ -321,7 +342,7 @@ tenant header. The boundary between the three is written up at the top of
 
 | Prefix | App |
 |---|---|
-| `auth/`, `users/` | JWT login/refresh, user management, login log (`auth/login-logs/`, read-only, ADMIN only) |
+| `auth/`, `users/` | JWT login/refresh, officer two-step verification (`auth/mfa/`), user management, login log (`auth/login-logs/`, read-only, ADMIN only) |
 | `recycle-bin/` | Recycle bin: list, restore and hard-delete soft-deleted records |
 | `souls/` | Soul CRUD plus state transitions, settlement correction (`{id}/correct_settlement/`, SETTLED souls only, needs `soul.correct_settlement`) |
 | `ledger/` | Merit/demerit records, balance, decay, per-civilization reading |
@@ -335,7 +356,7 @@ tenant header. The boundary between the three is written up at the top of
 | `social/`, `social-moderation/` | Posts, comments, reactions, follows, profiles, and content moderation |
 | `sentence-plans/` | Sentence plans and their amendment requests |
 | `scheduler/` | Scheduled jobs and run history (`runs/` takes several statuses, a time range and a search) |
-| `soul-accounts/`, `soul-auth/`, `me/` | Soul account provisioning and credential handover, soul-side login, a soul's own endpoints (push tokens, letters, assistant, circle) |
+| `soul-accounts/`, `soul-auth/`, `me/` | Soul account provisioning and credential handover (including the printable slip, `credentials/{id}/print-slip/`, which never returns the password), soul-side login (password, two-step `mfa/verify/`, this phone's credential `device-login/`), a soul's own endpoints (push tokens, letters, assistant, circle, two-step `me/mfa/`, face sign-in `me/device-login/`) |
 | `chat/` | Letters: Matrix credentials minted by the backend, and Synapse's new-message hook |
 | `assist/`, `assist-admin/` | The officer-side assistant; the assistant management page (ADMIN only) |
 | `social-media/<uuid>/` | File exit for circle post images (signed URL, visibility re-checked on every request) |
@@ -452,13 +473,14 @@ unwatched gap.
 **CI is now `workflow_dispatch` only** — no push or PR triggers it (GitHub Actions quota
 exhausted; `security.yml`'s weekly cron is off for the same reason). So "CI is green" is
 not a statement this repository makes automatically any more. The local gate is.
-`.github/workflows/ci.yml` defines four jobs:
+`.github/workflows/ci.yml` defines five jobs:
 
 | Job | Steps |
 |---|---|
 | **backend** | `makemigrations --check --dry-run`, `migrate`, `pytest`, `ruff check`, `pip-audit` |
 | **frontend** | `packages/core` typecheck / lint / vitest, then `tsc --noEmit`, `eslint`, `next build`, `npm run test:coverage`, `npm audit` |
 | **mobile** | `mobile/` typecheck / lint / test |
+| **officer** | `mobile-officer/` typecheck / lint / test (it imports `mobile/src` modules in place, hence its own job) |
 | **e2e** | Playwright matrix: one leg each for chromium / firefox / mobile-chrome, `fail-fast: false`, a separate report artifact per leg |
 
 Backend CI runs against real PostgreSQL 16 and Redis 7 service containers. Both
@@ -468,7 +490,7 @@ step in the workflow file before loosening anything.
 
 **Local gates.** After `bash scripts/install-hooks.sh`, pre-commit runs ESLint on staged
 frontend files and pre-push calls [`scripts/run-gates.sh`](scripts/run-gates.sh), which
-picks the backend / frontend / `packages/core` / `mobile` gates by changed path, runs
+picks the backend / frontend / `packages/core` / `mobile` / `mobile-officer` gates by changed path, runs
 frontend jest selectively, and runs backend pytest in full. The same gates run by hand:
 
 ```bash
@@ -485,6 +507,7 @@ cd backend && .venv/bin/ruff check .
 cd frontend && npx tsc --noEmit && npm run lint && npm run test:coverage
 npm run --workspace packages/core typecheck && npm run --workspace packages/core lint && npm run --workspace packages/core test
 npm run --workspace mobile typecheck && npm run --workspace mobile lint && npm run --workspace mobile test
+npm run --workspace @soulledger/officer typecheck && npm run --workspace @soulledger/officer lint && npm run --workspace @soulledger/officer test
 cd frontend && npm run build && npx playwright test   # all three projects; build first
 ```
 
@@ -568,6 +591,8 @@ frontend/
 mobile/             The soul app (Expo SDK 57 / React Native). Everything
   src/              platform-independent comes from packages/core; only screens,
                     navigation and the mobile ports live here
+mobile-officer/     The officer app (same Expo). To-do, queue, look-up, notices, replies;
+  src/              UI parts and theme come from mobile/src through shared.ts
 config/synapse/     Synapse homeserver template and the room-policy module (letters)
 nginx.conf          the nginx main config the production merge mounts
 scripts/            start/stop/status, gates (run-gates.sh), DB backup/restore, git hooks
@@ -604,7 +629,8 @@ the workflow, [`SECURITY.md`](SECURITY.md) the disclosure policy, and
 ## Security posture
 
 Implemented: JWT and API-key authentication (officer, soul and external credentials,
-none accepted in another's place), RBAC with data and field scoping, Fernet encryption
+none accepted in another's place), RBAC with data and field scoping, two-step verification
+for officers and souls (TOTP, the secret Fernet-encrypted at rest; single-use recovery codes), Fernet encryption
 for webhook secrets and PII payloads, atomic Redis rate limiting, SSRF validation on
 webhook URLs, CSP/HSTS/X-Frame-Options, and an audit trail on mutations.
 
@@ -621,6 +647,10 @@ with `DEBUG=False` and no key the process refuses to start; with `DEBUG=True`
 and no key it only warns, and `WebhookConfig.signing_secret` plus
 `DeathRegistrationRequest.source_payload` are **stored in plaintext**. If you see
 that warning in development, those two columns are plaintext.
+
+Face / fingerprint sign-in in the soul app stores no password: the server issues a credential for that
+phone and keeps only its hash; a password change, an officer reset or a rebirth revokes it and tells the
+sign-in page why. The QR code on the sign-in slip carries the soul number only (`SL1:<number>`), never a password.
 
 Letter bodies live only in Synapse — none in the backend database or the audit log — and letters are not end-to-end encrypted. The Ask assistant is
 the one place in the repository that stores a soul's free text and sends it to a
