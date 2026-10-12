@@ -21,6 +21,12 @@ Frontend:
 - React Query
 - TailwindCSS
 
+Shared and mobile:
+
+- `packages/core` — platform-independent API clients, hooks, WebSocket clients, message bundles
+  and the OpenAPI schema; consumed by the web app and both Expo apps
+- `mobile/` (soul-side app) and `mobile-officer/` (officer app)
+
 ---
 
 # Backend Structure
@@ -46,9 +52,14 @@ Core domains (directory names under `backend/apps/`):
 - authentication — User model, JWT, roles
 - tenants
 - org — organization chart
-- social
-- death_sync
+- social — posts, comments, reactions, follows; officer-side moderation
 - events
+- soul_accounts, soul_push, chat, soul_assist — the soul-side app: accounts and login,
+  push, letters (Matrix-backed), the assistant (the officer-side assistant and its admin page
+  live in `soul_assist` too)
+- officer_app — todo list and push tokens for the officer app
+- sentence_plan — sentence plans (see `docs/ARCHITECTURE-sentence-plan.md`)
+- scheduler — scheduled jobs and run records
 - core — shared viewsets/mixins, permissions, tenant scoping, WebSocket auth,
   health checks. NOT in `INSTALLED_APPS`.
 
@@ -56,7 +67,7 @@ Core domains (directory names under `backend/apps/`):
 authorization and was deleted on 2026-09-03 (`1b59ec4`) as the only model in
 the repo with prod=0 / test=0 / admin=0 readers; its table was dropped with
 it. This file listed it, and warned readers not to confuse it with `perm`,
-until 2026-09-06. The authoritative list is `config/settings.py:64-82`.
+until 2026-09-06. The authoritative list is `INSTALLED_APPS` in `config/settings.py`.
 
 `apps.core.middleware` also no longer exists — that module was deleted
 2026-08-28; the surviving middleware is
@@ -126,15 +137,17 @@ Main areas:
 - death-sync, notifications, audit
 - users, permissions, menus, organizations, tenants
 - social, profile
+- soul-credentials, soul-inbox, sentence-requests, rebirth-applications, moderation, scheduler, recycle-bin
 - dashboard, admin, welcome
 
 API Clients:
 
-frontend/lib/api — one typed module per backend app
+packages/core/src/api — one typed module per backend area (types come from
+`packages/core/openapi/schema.yml`)
 
 React Query:
 
-frontend/src/hooks
+packages/core/src/hooks — the data hooks; `frontend/src/hooks` holds only view-layer hooks
 
 Query Keys:
 

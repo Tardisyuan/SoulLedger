@@ -1,9 +1,11 @@
 # SoulLedger API Documentation
 
 > The authoritative API reference is generated from the code: OpenAPI schema at
-> `/api/schema/` and Swagger UI at `/api/docs/` (drf-spectacular). This file is a
-> hand-maintained quick index and can drift. When the two disagree, the generated
-> schema is right.
+> `/api/schema/` and Swagger UI at `/api/docs/` (drf-spectacular; both ADMIN-only,
+> same-origin session), and the committed copy `packages/core/openapi/schema.yml`.
+> The routes themselves are `backend/config/urls.py` plus each app's `urls.py`.
+> This file is a hand-maintained quick index and can drift. When they disagree, the
+> generated schema is right.
 
 ## Base URL
 ```
@@ -13,18 +15,29 @@ http://localhost:8000/api/v1
 Health checks sit outside the versioned prefix: `/health/` and `/health/detailed/`.
 
 ## Authentication
-All API endpoints require JWT authentication unless noted.
+All API endpoints require JWT authentication unless noted. There are two token
+families: **officers** (`/auth/`) and **souls** (`/soul-auth/`, used by the
+soul-side app); the prefix a route sits under says which one it takes.
 
 ```bash
-# Login
+# Officer login (also /auth/officer-login/)
 POST /auth/login/
 Body: { "username": "admin", "password": "..." }
 Response: { "access": "jwt...", "refresh": "jwt...", "user": {...} }
+# With two-step verification (MFA) on, the 200 is instead
+#   { "mfa_required": true, "pending_token": "..." }
+# and the second step is:
+POST /auth/mfa/verify/
+Body: { "pending_token": "...", "code": "123456" }   # or "recovery_code"; optional "remember_device"
 
 # Refresh
 POST /auth/refresh/
 Body: { "refresh": "jwt..." }
 ```
+
+Souls log in at `POST /soul-auth/login/` (same two-step shape: `POST
+/soul-auth/mfa/verify/`), refresh at `/soul-auth/refresh/`, and may sign in from a
+trusted device via `POST /soul-auth/device-login/` (revoke: `/soul-auth/device-login/revoke/`).
 
 ## Headers
 ```
@@ -32,7 +45,40 @@ Authorization: Bearer <access_token>
 Content-Type: application/json
 ```
 
-## Endpoints
+## Prefix index
+
+Every router below is mounted under `/api/v1/`; the "Endpoints" sections after this
+table list the common ones, the schema has the rest. Counts of paths per prefix are
+deliberately not kept here.
+
+| Prefix | Token | What it is |
+|--------|-------|------------|
+| `auth/` | officer | login / officer-login / refresh / logout / profile, password reset, email verification, two-step `auth/mfa/*` (verify, status, setup, confirm, complete, recovery-codes, disable), `login-logs/` |
+| `users/` | officer (ADMIN) | user management, `reset-mfa`, batch activate, CSV import/export |
+| `tenants/` | officer | halls (tenants): `{code}/`, `{code}/settings/`, `{code}/mfa-roles/`, `{code}/seal-glyphs/` |
+| `souls/` | officer | souls, records, `die`, `transition`, import/export, `batch-recycle` |
+| `judgment/` | officer | judgments, `statutes/`, queue, draft, precedents, citations |
+| `disposition/` | officer | dispositions (`execute`, `archive`, export) |
+| `ledger/` | officer | ledger balance / journal / stats (formerly `karma`) |
+| `reincarnation/` | officer | reincarnation records |
+| `realms/`, `actors/`, `events/` | officer | realms (+ `occupancy/`), mythology actors, soul event log |
+| `sentence-plans/` | officer | sentence plans, `cancel`, `requests/{id}/decide|withdraw`, node `retry-dispatch` |
+| `workflows/`, `nodes/`, `workflow/templates/` | officer | approval workflows, nodes, templates (these three sit directly under `/api/v1/`, no common prefix) |
+| `dispatch/` | officer | dispatch records and `cross-tenant-judgments/` |
+| `death-sync/` | API key (`register/`) / officer ADMIN | external death registration, API keys, webhooks, `health/` |
+| `perm/`, `menus/`, `audit-logs/`, `organizations/`, `notifications/`, `recycle-bin/` | officer | RBAC, menus, audit, organization tree, notifications, global recycle bin |
+| `scheduler/` | officer | `jobs/` (+ `{id}/run/`, `rebuild/`) and `runs/` |
+| `officer-app/` | officer | officer mobile app: `todo/`, `items/{kind}/{id}/` (+ `cosigners/`), `signer-candidates/`, `push-tokens/` |
+| `chat/` | officer | the 殿司 inbox: `inbox/`, `inbox-templates/`, `hooks/new-message/` (Matrix push hook: signature-checked, no token, not in the schema) |
+| `assist/` | officer | officer-side assistant: `/`, `conversations/` |
+| `assist-admin/` | officer (ADMIN) | assistant admin page: `config/*`, `halls/`, `eval/*`, `try/`, `usage/`, `corpus/`, `embedding/*` |
+| `social/` | officer | admin-side social CRUD (posts, comments, reactions, follows, profiles, `media/`) |
+| `social-moderation/` | officer (`social.moderate`) | `reports/`, `posts/`, `comments/`, `sensitive-words/`, `mutes/`, `handled/` |
+| `soul-accounts/` | officer | soul accounts, `credentials/` (+ `{id}/print-slip/`), `rebirth-applications/`, `cooldown-shortenings/`, `accounts/{id}/reset-mfa/` |
+| `soul-auth/` | none / soul | `login/`, `refresh/`, `logout/`, `mfa/verify/`, `device-login/` (+ `revoke/`) |
+| `me/` | soul | the soul's own data: `me/`, `password/`, `life/`, `past-lives/`, `sentence-plan/`, `rebirth-applications/`, `mfa/*`, `device-login/`, `push-tokens/`, `notification-settings/`, `notifications/`, `assist/`, `chat/*`, `social/*` |
+| `social-media/{id}/`, `chat-images/{id}/` | signed URL | file outlets for post images and letter images; visibility is re-checked on every request |
+| `app-version/` | none | client version check |
 
 ### Souls
 | Method | Endpoint | Description |
@@ -140,5 +186,4 @@ API access is controlled by permission codenames of the form
 
 The codename catalogue and the role→codename grants are moving; do not treat any
 list written here as current. The live sources are `backend/apps/perm/` (models,
-`checker.py`, and the seeding management commands) and
-`backend/docs/PERMISSION_COVERAGE_MATRIX.md`.
+`checker.py`, and the seeding management commands such as `sync_permissions`).

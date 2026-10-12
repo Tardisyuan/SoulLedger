@@ -8,6 +8,13 @@
 DC="docker compose -f docker-compose.yml -f docker-compose.production.yml"
 ```
 
+**根 `.env` 的变量不会自动进容器。** backend / celery / celery-beat 只收到 `docker-compose.yml` 里 `x-django-env`
+列出的那些(2026-10-12 核对:`DATABASE_URL`、`REDIS_URL`、`CELERY_*`、`SECRET_KEY`、`ALLOWED_HOSTS`、`ENCRYPTION_KEY`、
+`SENTRY_DSN`、`TRUSTED_PROXY_COUNT`、`DESK_URL`、`CORS_ALLOWED_ORIGINS`、`EMAIL_*`(不含 `EMAIL_TIMEOUT`)、
+`DEFAULT_FROM_EMAIL`、`SOUL_PUSH_ENABLED`、`EXPO_ACCESS_TOKEN`、`MEDIA_ROOT`、`MATRIX_*`)。下文提到的
+`PERM_IMPORT_OVERWRITE_ENABLED`、`SCHEDULER_*`、`AUDIT_LOG_RETENTION_DAYS`、`LOGIN_LOG_RETENTION_DAYS`、
+`EMAIL_TIMEOUT` 等不在其中:要改它们的默认值,得先把变量加进 `x-django-env`(清单见 `docs/DEPLOY.md`)。
+
 ## TLS 证书:首次签发(手动,一次)
 
 `certbot` 服务只负责续期。首签需要真实域名,不在 compose 里自动做。
@@ -64,7 +71,7 @@ DC="docker compose -f docker-compose.yml -f docker-compose.production.yml"
   页面手动运行。上线时:起 `celery`(worker)与**一个** `celery-beat`,backend 启动时的
   `setup_scheduled_tasks` 会把调度表补齐;之后在 `/scheduler` 确认各行已启用、`/health/detailed/`
   的 `scheduler` 字段不是 `"overdue"`。
-- 2026-09-26 新登记的三个维护任务(此前只能手动跑同名命令,命令仍保留):
+- 2026-09-26 新登记的维护任务(此前只能手动跑同名命令,命令仍保留;表里四行,含后来加的书信图片清理):
 
   | 任务 | 范围 | 默认 cron(UTC) | 作用 |
   |---|---|---|---|
@@ -123,11 +130,13 @@ DC="docker compose -f docker-compose.yml -f docker-compose.production.yml"
   `overwrite_disabled`,不碰任何行;合并导入与预演不受影响。有了跨殿的超级管理员角色之后再打开。
   接口响应里的 `overwrite_enabled` 告诉前端要不要显示「合并 / 覆盖」的选择。
 
-## 邮件(找回密码验证码)
+## 邮件(找回密码验证码、官员重置链接、邮箱验证)
 
-- 目前只有找回密码的验证码会发邮件。非 DEBUG 时走 SMTP,变量:`EMAIL_HOST`、`EMAIL_PORT`(默认 25)、
+- 发信的有三处:找回密码的验证码、官员密码重置邮件(`/auth/officer-reset/*`,链接用 `DESK_URL` 拼:
+  `DESK_URL` 落到默认的 `http://localhost:3000` 时链接指向收件人自己的电脑)、邮箱验证(`/auth/email/*`)。
+  非 DEBUG 时走 SMTP,变量:`EMAIL_HOST`、`EMAIL_PORT`(默认 25)、
   `EMAIL_HOST_USER`、`EMAIL_HOST_PASSWORD`、`EMAIL_USE_TLS` / `EMAIL_USE_SSL`、`EMAIL_TIMEOUT`(默认 10 秒)、
-  `DEFAULT_FROM_EMAIL`。
+  `DEFAULT_FROM_EMAIL`(其中除 `EMAIL_TIMEOUT` 外都在 `x-django-env` 里,见开头的传参说明)。
 - 没配 `EMAIL_HOST` 只在启动时告警,不拒绝启动。除找回密码外一切照常;找回密码接口无论发没发出去
   都回同一个响应(不让它变成「这个邮箱注册过没有」的探针),所以**发信失败不会在界面上显出来**,
   上线后要真发一次验证。
