@@ -5492,6 +5492,7 @@
       "empty_title": "Nen Iri-Ek Djer",
       "empty_body": "Wat Hesy, Hab-Ba Hena Dbh Mawy: Sedjem Sab.",
       "filter_clear": "Sehen Djes",
+      "filter_summary": "{{kinds}} · {{n}}",
       "groups": {
         "approvals": "Sekhet Wat Hesy",
         "reassignments": "Hab-Ba",
