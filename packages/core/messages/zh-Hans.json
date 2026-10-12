@@ -5493,8 +5493,9 @@
       },
       "empty_title": "此刻没有轮到你的事",
       "empty_body": "新的审批、移交和申请会推送给你。",
-      "filter_empty_title": "这几类里没有待办",
-      "filter_empty_body": "换一个类型，或清除筛选。",
+      "filter_summary": "{{kinds}} · {{n}} 条",
+      "filter_empty_title": "没有「{{kinds}}」待办",
+      "filter_empty_body": "换个类型看看，或清除筛选。",
       "filter_clear": "清除筛选"
     },
     "queue": {

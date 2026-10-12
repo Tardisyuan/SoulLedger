@@ -167,19 +167,16 @@ export function toneColor(t: Theme, tone: Tone): string {
 }
 
 /**
- * 第二十八批 S4: both apps follow the system text size, with no in-app setting. The cap is the
- * system's 3rd-largest step: iOS has twelve (seven Dynamic Type sizes, five accessibility ones),
- * so it is AX3, whose body size is 40pt against the default 17 -- 2.35. Android's own largest
- * scale is 2.0, so the cap never bites there. One number, applied to every text primitive below.
+ * 第二十八批 S4: both apps follow the system text size, with no in-app setting. The cap is
+ * Design's rule: the system's 3rd-largest step, "iOS AX3 / Android 200%" -- 2.35 on iOS (AX3 body
+ * 40pt against the default 17); Android's own largest scale is 2.0, so it never bites there.
+ *
+ * NOT implemented yet (Design batch 28 S4, needs a device pass): identifiers / times / amounts /
+ * status labels on one line, truncated with … and long-press to read in full; left-text +
+ * right-time rows stacking above 1.5x; the filter bar and identity band staying at the default
+ * size; printed / scanned content not scaling.
  */
 export const MAX_FONT_SCALE = 2.35;
-
-/**
- * Design's rule for the largest size: identifiers (the soul code), times and amounts stay on ONE
- * line -- they are all the mono `value` faces -- and shrink to fit rather than wrap or cut;
- * body text, titles and button labels may wrap. A caller can still pass its own `numberOfLines`.
- */
-const ONE_LINE_VARIANTS: readonly (keyof typeof TYPE)[] = ["value", "valueLg"];
 
 export function Txt({
   variant = "body",
@@ -188,11 +185,9 @@ export function Txt({
   ...rest
 }: TextProps & { variant?: keyof typeof TYPE; tone?: Tone }) {
   const t = useTheme();
-  const oneLine = ONE_LINE_VARIANTS.includes(variant);
   return (
     <Text
       maxFontSizeMultiplier={MAX_FONT_SCALE}
-      {...(oneLine ? { numberOfLines: 1, adjustsFontSizeToFit: true, minimumFontScale: 0.6 } : null)}
       {...rest}
       style={[TYPE[variant], { color: toneColor(t, tone) }, style]}
     />
@@ -1187,10 +1182,8 @@ export function Badge({ spec, label, raw, testID }: { spec: BadgeSpec; label: st
       ]}
     >
       <Text testID={testID ? `${testID}-glyph` : undefined} maxFontSizeMultiplier={MAX_FONT_SCALE} style={[styles.badgeText, styles.badgeGlyph, { color }]}>{spec.glyph}</Text>
-      {/* S4: a status label stays on one line at the largest size; only the raw member (below) wraps. */}
       <Text
         maxFontSizeMultiplier={MAX_FONT_SCALE}
-        {...(raw ? null : { numberOfLines: 1, adjustsFontSizeToFit: true, minimumFontScale: 0.6 })}
         style={[styles.badgeText, styles.shrink, { color }]}
       >
         {label}

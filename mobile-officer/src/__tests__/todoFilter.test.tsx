@@ -79,19 +79,46 @@ describe("the to-do type filter", () => {
     expect(await screen.findByTestId("todo-group-approval")).toBeTruthy();
   });
 
-  it("a choice with nothing in it shows the empty state with a clear action that restores the list", async () => {
+  it("a chosen kind shows a summary line (kinds joined with 、, then the rows shown) with a clear action; nothing chosen shows none", async () => {
+    mount();
+    await screen.findByTestId("todo-group-approval");
+    expect(screen.queryByTestId("todo-filter-summary")).toBeNull();
+    expect(screen.queryByTestId("todo-filter-clear")).toBeNull();
+    fireEvent.press(chip("approval"));
+    expect(screen.getByTestId("todo-filter-summary").props.children).toBe("审批节点 · 2 条");
+    fireEvent.press(chip("reassignment"));
+    expect(screen.getByTestId("todo-filter-summary").props.children).toBe("审批节点、移交 · 3 条");
+    fireEvent.press(screen.getByTestId("todo-filter-clear"));
+    expect(screen.queryByTestId("todo-filter-summary")).toBeNull();
+    expect(screen.getByTestId("todo-group-reassignment")).toBeTruthy();
+    expect(platform().persistent.get(TODO_FILTER_KEY)).toBeFalsy();
+  });
+
+  it("a chip whose count is 0 is shown and stays enabled", async () => {
+    mount();
+    await screen.findByTestId("todo-group-approval");
+    expect(chip("cooldown").props.accessibilityLabel).toBe("缩短冷却申请 · 0");
+    expect(chip("cooldown").props.accessibilityState).toEqual({ selected: false });
+    expect(chip("cooldown").props.accessibilityState.disabled).toBeUndefined();
+  });
+
+  it("a choice with nothing in it shows the filtered-empty state with the kinds in its title and a clear button that restores the list", async () => {
     mount();
     await screen.findByTestId("todo-group-approval");
     fireEvent.press(chip("cooldown"));
     expect(screen.getByTestId("state-empty")).toBeTruthy();
-    expect(screen.getByText("这几类里没有待办")).toBeTruthy();
+    expect(screen.getByText("没有「缩短冷却申请」待办")).toBeTruthy();
+    expect(screen.getByText("换个类型看看，或清除筛选。")).toBeTruthy();
+    expect(screen.queryByText("这几类里没有待办")).toBeNull();
+    expect(screen.queryByText("此刻没有轮到你的事")).toBeNull();
     expect(screen.queryByTestId("todo-group-approval")).toBeNull();
     // The chips stay, so the choice can be changed without clearing.
     expect(chip("cooldown").props.accessibilityState).toEqual({ selected: true });
 
-    fireEvent.press(screen.getByTestId("todo-filter-clear"));
+    fireEvent.press(screen.getByTestId("todo-filter-clear-empty"));
     expect(screen.getByTestId("todo-group-approval")).toBeTruthy();
     expect(screen.queryByTestId("state-empty")).toBeNull();
+    expect(screen.queryByTestId("todo-filter-summary")).toBeNull();
     expect(platform().persistent.get(TODO_FILTER_KEY)).toBeFalsy();
   });
 
@@ -101,5 +128,6 @@ describe("the to-do type filter", () => {
     expect(await screen.findByText("此刻没有轮到你的事")).toBeTruthy();
     expect(screen.queryByTestId("todo-filter")).toBeNull();
     expect(screen.queryByTestId("todo-filter-clear")).toBeNull();
+    expect(screen.queryByTestId("todo-filter-summary")).toBeNull();
   });
 });

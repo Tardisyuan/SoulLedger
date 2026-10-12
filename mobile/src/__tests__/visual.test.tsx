@@ -261,10 +261,8 @@ describe("long labels", () => {
     );
     expect(flat(screen.getByTestId("short")).flexDirection).toBe("row");
     expect(flat(screen.getByTestId("long")).flexDirection).toBe("column");
-    // A mono value is never shortened. Since 第二十八批 S4 it is also never wrapped: it stays on one line
-    // and shrinks to fit (`adjustsFontSizeToFit`) instead of being cut or broken across two.
-    expect(screen.getByText("2026-09-09 16:40").props.numberOfLines).toBe(1);
-    expect(screen.getByText("2026-09-09 16:40").props.adjustsFontSizeToFit).toBe(true);
+    // A mono value is never shortened.
+    expect(screen.getByText("2026-09-09 16:40").props.numberOfLines).toBeUndefined();
   });
 });
 

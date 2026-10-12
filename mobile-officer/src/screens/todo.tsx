@@ -2,7 +2,7 @@
 import { officerAppApi, type Todo, type TodoItem, type TodoKind } from "@soulledger/core/api/officer-app";
 import { platform } from "@soulledger/core/platform";
 import { useCallback, useEffect, useState } from "react";
-import { View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 
 import { FilterChips, Row, StateView, viewStateOf } from "../kit";
 import { TODO_GROUPS, isDenied, isTodoKind, todoTitle, type ItemKind } from "../rules";
@@ -15,7 +15,6 @@ export interface ItemRef {
   id: string;
 }
 
-/** A server that predates a group (an older build) does not send it: that group is empty, not an error. */
 /** 类型筛选 (Design batch 28 O2): the chosen kinds, on this phone. Nothing chosen = all. */
 export const TODO_FILTER_KEY = "officer_todo_filter";
 
@@ -28,6 +27,7 @@ function readFilter(): TodoKind[] {
   }
 }
 
+/** A server that predates a group (an older build) does not send it: that group is empty, not an error. */
 const countOf = (data: Todo, field: keyof Todo): number => data[field]?.count ?? 0;
 
 export function TodoTab({ onOpen, highlight }: { onOpen: (item: ItemRef) => void; highlight: ItemRef | null }) {
@@ -54,6 +54,8 @@ export function TodoTab({ onOpen, highlight }: { onOpen: (item: ItemRef) => void
     setChosen([]);
   };
   const shown = TODO_GROUPS.filter((g) => chosen.length === 0 || chosen.includes(g.kind));
+  const kinds = chosen.length === 0 ? "" : shown.map((g) => t(g.label)).join("、");
+  const rowsShown = data ? shown.reduce((sum, g) => sum + countOf(data, g.field), 0) : 0;
   const view = viewStateOf({ data, error }, (d) => TODO_GROUPS.every((g) => countOf(d, g.field) === 0), isDenied);
 
   return (
@@ -78,11 +80,21 @@ export function TodoTab({ onOpen, highlight }: { onOpen: (item: ItemRef) => void
             selected={chosen}
             onToggle={toggle}
           />
-          {shown.every((g) => countOf(data!, g.field) === 0) ? (
+          {chosen.length > 0 ? (
+            <View style={styles.summary}>
+              <Txt testID="todo-filter-summary" variant="body" tone="muted" style={styles.summaryText}>
+                {t("officer_app.todo.filter_summary", { kinds, n: String(rowsShown) })}
+              </Txt>
+              <Pressable testID="todo-filter-clear" accessibilityRole="button" accessibilityLabel={t("officer_app.todo.filter_clear")} hitSlop={{ left: 8, right: 8 }} onPress={clear} style={styles.summaryClear}>
+                <Txt variant="body">{t("officer_app.todo.filter_clear")}</Txt>
+              </Pressable>
+            </View>
+          ) : null}
+          {rowsShown === 0 ? (
             <>
-              <StateView state="empty" emptyTitle={t("officer_app.todo.filter_empty_title")} emptyBody={t("officer_app.todo.filter_empty_body")} />
+              <StateView state="empty" emptyTitle={t("officer_app.todo.filter_empty_title", { kinds })} emptyBody={t("officer_app.todo.filter_empty_body")} />
               <View style={{ paddingHorizontal: space[5] }}>
-                <Button testID="todo-filter-clear" kind="secondary" title={t("officer_app.todo.filter_clear")} onPress={clear} />
+                <Button testID="todo-filter-clear-empty" kind="secondary" title={t("officer_app.todo.filter_clear")} onPress={clear} />
               </View>
             </>
           ) : null}
@@ -124,3 +136,9 @@ function TodoRow({ item, highlight, onOpen }: { item: TodoItem; highlight: boole
     />
   );
 }
+
+const styles = StyleSheet.create({
+  summary: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: space[3], paddingHorizontal: space[5] },
+  summaryText: { flex: 1 },
+  summaryClear: { minHeight: 44, justifyContent: "center" },
+});
