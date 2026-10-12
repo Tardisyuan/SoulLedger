@@ -186,5 +186,4 @@ API access is controlled by permission codenames of the form
 
 The codename catalogue and the role→codename grants are moving; do not treat any
 list written here as current. The live sources are `backend/apps/perm/` (models,
-`checker.py`, and the seeding management commands) and
-`backend/docs/PERMISSION_COVERAGE_MATRIX.md`.
+`checker.py`, and the seeding management commands such as `sync_permissions`).
