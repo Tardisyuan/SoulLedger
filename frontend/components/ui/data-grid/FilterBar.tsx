@@ -28,6 +28,8 @@ export interface FilterBarProps {
   isFiltered: boolean
   onClearAll: () => void
   clearAllLabel: string
+  /** 右端的控件(列菜单)。 */
+  trailing?: React.ReactNode
   className?: string
 }
 
@@ -140,6 +142,7 @@ export function FilterBar({
   isFiltered,
   onClearAll,
   clearAllLabel,
+  trailing,
   className,
 }: FilterBarProps) {
   return (
@@ -172,6 +175,7 @@ export function FilterBar({
           {clearAllLabel}
         </button>
       )}
+      {trailing}
     </div>
   )
 }
