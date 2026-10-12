@@ -1,1 +1,4 @@
-[]
+[
+  "officer_app.todo.filter_empty_title",
+  "officer_app.todo.filter_empty_body"
+]
