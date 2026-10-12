@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><script src="./ds-base.js"></script></helmet>
+<div class="light" data-civ="cn" style="width:2100px;background:oklch(var(--color-canvas));color:oklch(var(--color-ink));font-family:var(--font-sans);font-size:13px;line-height:20px">
+<x-import component-from-global-scope="SoulLedger.SoulLedgerProvider" civ="cn" pathname="/souls" hint-size="2100px,1800px">
+<div style="padding:48px;display:flex;flex-direction:column;gap:56px">
+<header style="display:flex;flex-direction:column;gap:4px"><h1 style="margin:0;font-family:'Noto Serif SC',var(--font-serif);font-size:32px;line-height:40px;font-weight:600">第二十八批 · 第二批稿：小项</h1><span style="color:oklch(var(--color-ink-muted))">W1 列显示 · W3 通知类别 · O2 待办筛选 · S4 字号规则(不出设置页)</span></header>
+
+<section style="display:flex;flex-direction:column;gap:16px"><h2 style="margin:0;font-size:20px;line-height:28px;font-weight:600">W1 · 列的显示偏好</h2>
+<div style="display:flex;gap:40px;align-items:flex-start">
+<div data-screen-label="W1 列菜单" style="width:1000px;position:relative;height:480px;background:oklch(var(--color-surface-1));border:1px solid oklch(var(--color-line))">
+<div style="height:56px;display:flex;align-items:center;gap:8px;padding:0 16px;border-bottom:1px solid oklch(var(--color-line))"><span style="height:36px;padding:0 12px;display:flex;align-items:center;border:1px solid oklch(var(--color-line-strong));border-radius:4px">殿：全部 ▾</span><span style="height:36px;padding:0 12px;display:flex;align-items:center;border:1px solid oklch(var(--color-line-strong));border-radius:4px">状态：在审 ▾</span><span style="margin-left:auto;height:36px;padding:0 12px;display:flex;align-items:center;border:1px solid oklch(var(--color-line-strong));border-radius:4px">导出 CSV</span><span aria-expanded="true" style="height:36px;padding:0 12px;display:flex;align-items:center;gap:6px;border:1px solid oklch(var(--color-ink));border-radius:4px;font-weight:500">列 · 6/9 ▾</span></div>
+<div style="height:44px;display:grid;grid-template-columns:120px 140px 120px 1fr 140px 120px;align-items:center;gap:12px;padding:0 16px;border-bottom:1px solid oklch(var(--color-line-strong));font-weight:600"><span>编号</span><span>姓名</span><span>殿</span><span>功过</span><span>状态</span><span>到殿</span></div>
+<div style="height:48px;display:grid;grid-template-columns:120px 140px 120px 1fr 140px 120px;align-items:center;gap:12px;padding:0 16px;border-bottom:1px solid oklch(var(--color-line))"><span style="font-family:var(--font-mono)">S-104882</span><span>王守仁</span><span>第五殿</span><span>+42</span><span>在审</span><span style="font-family:var(--font-mono)">2026-10-01</span></div>
+<div role="menu" style="position:absolute;top:52px;right:16px;width:280px;background:oklch(var(--color-surface-1));border:1px solid oklch(var(--color-line-strong));border-radius:4px;box-shadow:0 12px 32px oklch(0 0 0 / .18);display:flex;flex-direction:column;padding:8px 0">
+<span style="padding:4px 16px 8px;font-size:12px;color:oklch(var(--color-ink-muted))">显示哪些列 · 只在这台浏览器上记住</span>
+<span style="height:40px;display:flex;align-items:center;gap:10px;padding:0 16px;color:oklch(var(--color-ink-muted))"><span style="width:16px">—</span>编号<span style="margin-left:auto;font-size:12px">不能隐藏</span></span>
+<span style="height:40px;display:flex;align-items:center;gap:10px;padding:0 16px;color:oklch(var(--color-ink-muted))"><span style="width:16px">—</span>姓名<span style="margin-left:auto;font-size:12px">不能隐藏</span></span>
+<span style="height:40px;display:flex;align-items:center;gap:10px;padding:0 16px"><span style="width:16px;font-weight:700">☑</span>殿</span>
+<span style="height:40px;display:flex;align-items:center;gap:10px;padding:0 16px"><span style="width:16px;font-weight:700">☑</span>功过</span>
+<span style="height:40px;display:flex;align-items:center;gap:10px;padding:0 16px"><span style="width:16px;font-weight:700">☑</span>状态</span>
+<span style="height:40px;display:flex;align-items:center;gap:10px;padding:0 16px"><span style="width:16px;font-weight:700">☑</span>到殿</span>
+<span style="height:40px;display:flex;align-items:center;gap:10px;padding:0 16px"><span style="width:16px">☐</span>文明</span>
+<span style="height:40px;display:flex;align-items:center;gap:10px;padding:0 16px"><span style="width:16px">☐</span>主审官</span>
+<span style="height:40px;display:flex;align-items:center;gap:10px;padding:0 16px"><span style="width:16px">☐</span>冷却到期</span>
+<span style="border-top:1px solid oklch(var(--color-line));margin-top:4px;height:44px;display:flex;align-items:center;padding:0 16px;font-weight:500">恢复默认</span>
+</div></div>
+<div style="width:560px;display:flex;flex-direction:column;gap:6px;padding:16px;border:1px dashed oklch(var(--color-line-strong))"><b>请定的答复</b><span>· 入口放在<b>筛选条右端</b>,排在「导出 CSV」后面。按钮上写已显示数「列 · 6/9」,隐藏了几列一眼就知道。不放在表头:表头横向滚动时会被滚走。</span><span>· <b>每个列表各记一份</b>,和筛选、排序存在同一处(这台浏览器)。全站共用一份行不通，各列表的列不一样。</span><span>· 不能隐藏：主键列(编号)+ 名称列。每个列表定义里标 <code>pinned</code>。行操作列不在菜单里。</span><span>· 导出 CSV <b>不受影响</b>,永远导出全部列。按钮文案不变。</span><span>· 393 宽：卡片排法下不出现这个按钮。</span><span>· 勾选时立刻生效，菜单不关;点空白或 Esc 关。</span></div>
+</div></section>
+
+<section style="display:flex;flex-direction:column;gap:16px"><h2 style="margin:0;font-size:20px;line-height:28px;font-weight:600">W3 · 个人中心 › 通知(替换原「邮件通知」)</h2>
+<div style="display:flex;gap:40px;align-items:flex-start">
+<section data-screen-label="W3 通知类别" style="width:720px;background:oklch(var(--color-surface-1));border:1px solid oklch(var(--color-line));border-radius:8px;padding:24px;display:flex;flex-direction:column;gap:16px">
+<h2 style="margin:0;font-family:'Noto Serif SC',var(--font-serif);font-weight:600;font-size:20px;line-height:28px">通知</h2>
+<div style="display:flex;flex-direction:column">
+<div style="height:40px;display:grid;grid-template-columns:minmax(0,1fr) 80px 80px;align-items:center;gap:12px;font-weight:600;color:oklch(var(--color-ink-muted))"><span>类别</span><span style="text-align:center">站内</span><span style="text-align:center">邮件</span></div>
+<sc-for list="{{ rows }}" as="r" hint-placeholder-count="8"><div style="min-height:56px;display:grid;grid-template-columns:minmax(0,1fr) 80px 80px;align-items:center;gap:12px;border-top:1px solid oklch(var(--color-line))"><span style="display:flex;flex-direction:column"><span style="font-weight:500">{{ r.name }}</span><span style="font-size:12px;color:oklch(var(--color-ink-muted))">{{ r.note }}</span></span><span style="text-align:center;font-size:16px">{{ r.site }}</span><span style="text-align:center;font-size:16px">{{ r.mail }}</span></div></sc-for>
+</div>
+<span style="font-size:12px;color:oklch(var(--color-ink-muted))">「必收」的不能关：账号安全、密码求助两类全收;审批超时的站内一列也必收。</span>
+</section>
+<div style="width:520px;display:flex;flex-direction:column;gap:6px;padding:16px;border:1px dashed oklch(var(--color-line-strong))"><b>请定的答复</b><span>· 放在<b>个人中心</b>,在左侧导航里把「邮件通知」改名为「通知」。通知页右上角加一个齿轮，直接跳到这一节，不另做弹层。</span><span>· 不能关(两列都锁):<b>账号安全</b>(新类别：别处登录、密码已改、两步验证变更、有人以你的身份查看)和<b>密码求助</b>(管理员收)。</span><span>· 「审批超时」的站内一列也锁：超时会影响时限，必须看得到;邮件可关。</span><span>· 移交合成一行，四个事件(提出 / 批准 / 驳回 / 取消)不再分开。</span><span>· 关掉站内通知后，事项仍出现在待办里，只是不再推送、不计角标。</span><span>· 原来的总开关去掉;想全关邮件，把邮件一列逐个关掉。</span></div>
+</div></section>
+
+<section style="display:flex;flex-direction:column;gap:16px"><h2 style="margin:0;font-size:20px;line-height:28px;font-weight:600">O2 · 官员 App 待办按类型筛选 · S4 字号规则</h2>
+<div style="display:flex;gap:40px;align-items:flex-start">
+<div data-screen-label="O2 待办筛选" style="width:393px;height:852px;overflow:hidden;display:flex;flex-direction:column;border-top:3px solid oklch(var(--color-main));background:oklch(var(--color-surface-1));font-size:15px;line-height:24px;box-shadow:0 0 0 1px oklch(var(--color-line))">
+<header style="height:56px;flex:none;display:flex;align-items:center;padding:0 16px;border-bottom:1px solid oklch(var(--color-line))"><h1 style="margin:0;font-weight:600;font-size:17px">待办</h1><span style="margin-left:auto;display:flex;border:1px solid oklch(var(--color-line-strong));font-size:13px"><span style="height:36px;padding:0 12px;display:flex;align-items:center;background:oklch(var(--color-ink));color:oklch(var(--color-surface-1))">我的</span><span style="height:36px;padding:0 12px;display:flex;align-items:center">全部</span></span></header>
+<div style="display:flex;gap:8px;padding:12px 16px;overflow:hidden;border-bottom:1px solid oklch(var(--color-line));font-size:13px">
+<span style="height:36px;padding:0 12px;flex:none;display:flex;align-items:center;gap:6px;border:1px solid oklch(var(--color-ink));background:oklch(var(--color-ink));color:oklch(var(--color-surface-1));font-weight:500">审批 <span style="font-family:var(--font-mono)">4</span></span>
+<span style="height:36px;padding:0 12px;flex:none;display:flex;align-items:center;gap:6px;border:1px solid oklch(var(--color-ink));background:oklch(var(--color-ink));color:oklch(var(--color-surface-1));font-weight:500">移交 <span style="font-family:var(--font-mono)">1</span></span>
+<span style="height:36px;padding:0 12px;flex:none;display:flex;align-items:center;gap:6px;border:1px solid oklch(var(--color-line-strong))">会签 <span style="font-family:var(--font-mono)">2</span></span>
+<span style="height:36px;padding:0 12px;flex:none;display:flex;align-items:center;gap:6px;border:1px solid oklch(var(--color-line-strong))">转生 <span style="font-family:var(--font-mono)">0</span></span>
+<span style="height:36px;padding:0 12px;flex:none;display:flex;align-items:center;gap:6px;border:1px solid oklch(var(--color-line-strong))">缩短冷却</span></div>
+<div style="padding:8px 16px;font-size:13px;color:oklch(var(--color-ink-muted));display:flex"><span>审批、移交 · 5 条</span><span role="button" style="margin-left:auto;color:oklch(var(--color-ink));font-weight:500">清除</span></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:0 32px;text-align:center"><span style="font-weight:600">没有「转生申请」待办</span><span style="font-size:13px;line-height:20px;color:oklch(var(--color-ink-muted))">换个类型看看，或清除筛选。</span><span role="button" style="margin-top:8px;height:44px;padding:0 20px;display:flex;align-items:center;border:1px solid oklch(var(--color-line-strong));font-weight:500">清除筛选</span><span style="margin-top:24px;font-size:12px;color:oklch(var(--color-ink-subtle))">↑ 只选「转生」时的空状态(示意，与上方选中态不同时出现)</span></div>
+</div>
+<div style="width:520px;display:flex;flex-direction:column;gap:6px;padding:16px;border:1px dashed oklch(var(--color-line-strong))"><b>O2 说明</b><span>· 筛选条在「我的 / 全部」下面，标签横向可滑。多选;都不选 = 全部。</span><span>· 角标是这个类型在当前分组(我的 / 全部)下的条数;0 照样显示，标签不置灰，还能点。</span><span>· 「缩短冷却」不写「申请」两字，免得横向放不下;详情页仍用全称。</span><span>· 选择记在这部手机上，下次打开保留。</span></div>
+<div data-screen-label="S4 字号规则" style="width:600px;display:flex;flex-direction:column;gap:10px;padding:16px;border:1px dashed oklch(var(--color-line-strong))"><b>S4 · 不做 App 内设置，跟随系统字号</b><span>两个 App 一起改。上限 = 系统第 3 大档(iOS AX3 / Android 200%),超过不再放大。</span><b>保持一行(超出用 … 截断，长按看全文)</b><span>编号、时间(<code>YYYY-MM-DD HH:MM</code>)、功过数值、状态标签、底部标签栏文字、顶栏标题。</span><b>允许换行</b><span>正文、列表行的主文字、按钮文案(按钮跟着变高，不缩字)、表单标签、错误提示、空状态。</span><b>改版式</b><span>· 列表行的「左主文字 + 右时间」超过 1.5 倍时改为上下两行，时间放在下行。</span><span>· 筛选条、身份带不放大，固定为系统默认档。</span><span>· 交付单、二维码等打印 / 扫码内容不跟随。</span></div>
+</div></section>
+</div>
+</x-import>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:2100,&quot;height&quot;:2200}}">
+class Component extends DCLogic {
+  renderVals() {
+    const L = '必收', on = '☑', off = '☐';
+    const rows = [
+      ['账号安全', '别处登录、密码已改、两步验证变更、有人以你的身份查看', L, L],
+      ['待审批', '有新的审批轮到你', on, on],
+      ['审批超时', '站内不能关，超时影响时限', L, off],
+      ['改派请求', '', on, off],
+      ['密码求助', '只有管理员收', L, L],
+      ['移交', '提出、批准、驳回、取消', on, on],
+      ['书信交接', '', on, off]
+    ].map(([name, note, site, mail]) => ({ name, note, site, mail }));
+    return { rows };
+  }
+}
+</script>
+</body>
+</html>
