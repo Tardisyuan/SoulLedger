@@ -25,7 +25,12 @@ export interface LetterImageRef {
 /** 图的最大宽度占线程内容宽度的比例(规格)。线程两侧各留 `space[5]`。 */
 export const LETTER_IMAGE_SHARE = 0.6;
 
-export function LetterImage({ image, onOpen }: { image: LetterImageRef; onOpen: () => void }) {
+/**
+ * `onReload` asks the thread for fresh addresses. A picture's address is signed for an hour
+ * (backend `chat/images.py::URL_TTL`); after that it fails for good unless the thread is read again.
+ * The caller keys this component by the address, so a new one starts over.
+ */
+export function LetterImage({ image, onOpen, onReload }: { image: LetterImageRef; onOpen: () => void; onReload?: () => void }) {
   const { t } = useI18n();
   const theme = useTheme();
   const { width: screen } = useWindowDimensions();
@@ -34,9 +39,16 @@ export function LetterImage({ image, onOpen }: { image: LetterImageRef; onOpen: 
   const label = t("soul_app.circle.media.image", { i: "1" });
   if (broken) {
     return (
-      <Txt testID="letter-image-broken" variant="caption" tone="muted">
-        {t("soul_app.circle.media.load_failed")}
-      </Txt>
+      <Pressable testID="letter-image-broken" accessibilityRole="button" disabled={!onReload} onPress={onReload} style={styles.broken}>
+        <Txt variant="caption" tone="muted">
+          {t("soul_app.circle.media.load_failed")}
+        </Txt>
+        {onReload ? (
+          <Txt variant="caption" style={styles.retry}>
+            {t("common.retry")}
+          </Txt>
+        ) : null}
+      </Pressable>
     );
   }
   return (
@@ -88,5 +100,7 @@ function Pages({ images, start, onClose }: { images: LetterImageRef[]; start: nu
 
 const styles = StyleSheet.create({
   fill: { width: "100%", height: "100%" },
+  broken: { minHeight: 44, flexDirection: "row", alignItems: "center", gap: space[2] },
+  retry: { textDecorationLine: "underline" },
   viewer: { flex: 1, backgroundColor: "#000000" },
 });

@@ -288,6 +288,28 @@ describe('API Client — @soulledger/core/api', () => {
       expect(axios.post).not.toHaveBeenCalled();
     });
 
+    /* 续期请求自己失败时:只有服务器明确拒绝这枚 refresh token 才结束会话。连不上 / 5xx / 429 说明不了
+       token 的好坏 —— 此前一律结束会话,官员端 App 在信号差的地方会被退回登录页(2026-10-13 只读检查)。 */
+    it.each([
+      ['no response (offline / timeout)', {}, false],
+      ['a 5xx', { response: { status: 503 } }, false],
+      ['a 429', { response: { status: 429 } }, false],
+      ['a 401 (the token is refused)', { response: { status: 401 } }, true],
+    ])('refresh fails with %s: session ended = %s', async (_name, rejection, ends) => {
+      const { webPlatform } = require('../../lib/platform/web');
+      const onUnauthorized = jest.spyOn(webPlatform, 'onUnauthorized').mockImplementation(() => {});
+      document.cookie = 'soulledger_refresh=still-mine; path=/';
+      (axios.post as jest.Mock).mockRejectedValueOnce(rejection);
+      try {
+        const error = { response: { status: 401 }, config: { _retry: false, url: '/souls/', headers: {} } };
+        await expect(applyResponseErrorInterceptor(error)).rejects.toBe(error);
+        expect(onUnauthorized).toHaveBeenCalledTimes(ends ? 1 : 0);
+        expect(document.cookie.includes('soulledger_refresh=still-mine')).toBe(!ends);
+      } finally {
+        onUnauthorized.mockRestore();
+      }
+    });
+
     it('should redirect to login when no refresh token exists', async () => {
       /* FL-20. This test used to assert only "no refresh was attempted" under
          this title, and the interceptor did not hand over to `onUnauthorized`

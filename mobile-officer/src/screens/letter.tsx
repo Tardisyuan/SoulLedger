@@ -160,6 +160,7 @@ export function LetterThread({
                 key={m.event_id}
                 message={m}
                 soulName={conversation.soul_name}
+                onReloadImages={() => void thread.reload()}
                 onOpenImage={(id) =>
                   setViewing(
                     Math.max(
@@ -276,10 +277,12 @@ function LetterLine({
   message,
   soulName,
   onOpenImage,
+  onReloadImages,
 }: {
   message: InboxMessage;
   soulName: string;
   onOpenImage: (id: string) => void;
+  onReloadImages: () => void;
 }) {
   const { t } = useI18n();
   const mine = message.from_officer;
@@ -308,8 +311,10 @@ function LetterLine({
       {message.image ? (
         // A picture is its own letter, without words ("[图片]" is only what an older reader shows).
         <LetterImage
+          key={message.image.url}
           image={message.image}
           onOpen={() => onOpenImage(message.image!.id)}
+          onReload={onReloadImages}
         />
       ) : (
         <Txt variant="body" style={{ textAlign: mine ? "right" : "left" }}>

@@ -11,12 +11,19 @@ export const OFFICER_SCHEME = "soulledger-officer";
 export type OfficerLink = { tab: TabKey; item?: Landing["item"] };
 const TABS: readonly TabKey[] = ["todo", "queue", "search", "notices", "me"];
 
+/**
+ * The id goes into an API path (`/chat/inbox/<id>/`, ...) with the officer's token attached, and `pathOf`
+ * has already percent-decoded it: `%2e%2e%2f...` must not be able to walk that request somewhere else.
+ * Anything that could end or leave a path segment is refused.
+ */
+const UNSAFE_ID = /[\/\\?#%\u0000-\u001f]|^\.{1,2}$/;
+
 export function parseOfficerLink(url: unknown): OfficerLink | null {
   const path = pathOf(url, OFFICER_SCHEME);
   if (!path) return null;
   const head = path[0]?.toLowerCase();
   if (path.length === 1 && (TABS as readonly string[]).includes(head)) return { tab: head as TabKey };
-  if (path.length === 3 && head === "item" && isItemKind(path[1])) return { tab: "todo", item: { kind: path[1], id: path[2] } };
+  if (path.length === 3 && head === "item" && isItemKind(path[1]) && path[2].length <= 64 && !UNSAFE_ID.test(path[2])) return { tab: "todo", item: { kind: path[1], id: path[2] } };
   return null;
 }
 

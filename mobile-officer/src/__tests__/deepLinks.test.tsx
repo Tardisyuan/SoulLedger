@@ -56,6 +56,13 @@ describe("parseOfficerLink", () => {
     "soulledger-officer://item/approval",
     "soulledger-officer://item/judgment/9",
     "soulledger-officer://item/approval/x/y",
+    // The id is decoded and then put in an API path: nothing that can leave its segment gets through.
+    "soulledger-officer://item/approval/%2e%2e%2fusers",
+    "soulledger-officer://item/approval/..",
+    "soulledger-officer://item/approval/a%3Fb",
+    "soulledger-officer://item/approval/a%23b",
+    "soulledger-officer://item/approval/a%5Cb",
+    "soulledger-officer://item/approval/a%25b",
     "soulledger://todo",
     "https://example.com/todo",
     null,

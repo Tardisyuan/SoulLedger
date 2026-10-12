@@ -222,6 +222,10 @@ function endSession(): void {
   platform().session.remove(ACCESS_TOKEN_KEY);
   platform().persistent.remove(ACCESS_TOKEN_KEY);
   platform().persistent.remove(REFRESH_TOKEN_KEY);
+  // The refresh token is read from `secure` (getRefreshToken). On web that is the same jar as `persistent`;
+  // on a phone it is the keychain, and the line above never reached it -- a still-valid refresh token stayed
+  // behind after the session was ended.
+  platform().secure.remove(REFRESH_TOKEN_KEY);
   platform().onUnauthorized();
 }
 
@@ -253,8 +257,12 @@ api.interceptors.response.use(
           const access = await refreshInFlight;
           error.config.headers.Authorization = `Bearer ${access}`;
           return api(error.config);
-        } catch {
-          endSession();
+        } catch (refreshError) {
+          // Only the server refusing the refresh token ends the session. No response at all (offline, timeout)
+          // or a 5xx says nothing about the token: ending the session there threw an officer on a bad
+          // connection back to sign-in. The original request is rejected below and can be retried.
+          const status = (refreshError as { response?: { status?: number } })?.response?.status;
+          if (status !== undefined && status >= 400 && status < 500 && status !== 429) endSession();
         }
       }
     }
