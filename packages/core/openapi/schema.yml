@@ -7247,6 +7247,31 @@ paths:
                 items:
                   $ref: '#/components/schemas/JudgmentCourt'
           description: ''
+  /api/v1/judgment/export/:
+    get:
+      operationId: v1_judgment_export_retrieve
+      description: |-
+        导出当前筛选下的案卷 CSV:与列表同一租户划界、同一筛选与搜索、同一权限(judgment.read)。
+        列取自列表序列化器,所以字段权限照常生效;证据、判词细节、评议不在文件里。
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
   /api/v1/judgment/next/:
     get:
       operationId: v1_judgment_next_retrieve
@@ -19052,6 +19077,31 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApprovalWorkflow'
+          description: ''
+  /api/v1/workflows/export/:
+    get:
+      operationId: v1_workflows_export_retrieve
+      description: |-
+        导出当前筛选下的审批流 CSV:与列表同一租户划界、同一筛选与搜索、同一权限(workflow.read)。
+        列取自列表序列化器。
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
           description: ''
 components:
   schemas:

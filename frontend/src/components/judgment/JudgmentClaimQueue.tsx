@@ -24,6 +24,8 @@ import { useToast } from "@/src/contexts/ToastContext";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { usePermissions } from "@/src/hooks/usePermissions";
 import { Button } from "@/src/components/ui/Button";
+import { ExportCsvButton } from "@/src/components/ExportCsvButton";
+import { useHall } from "@/src/components/plaque/useHall";
 import { ConfirmDialog } from "@/src/components/ui/Modal";
 import { Pagination } from "@/src/components/ui/Pagination";
 import { CaseNumber, DomainEnum, DomainNumber, MissingValue } from "@/src/components/ui/DomainValue";
@@ -182,6 +184,7 @@ export function JudgmentClaimQueue({ initialSearch = "", soul = "" }: { initialS
   const resetPages = () => setPages({ mine: 1, unclaimed: 1, others: 1, deferred: 1 });
 
   const counts = useJudgmentQueueCounts(filters);
+  const hall = useHall(t("plaque.office.trials"));
   const groupQueries = useQueries({
     queries: GROUPS.map((group) => {
       const params = { ...filters, group, page: String(pages[group]), ordering };
@@ -433,18 +436,26 @@ export function JudgmentClaimQueue({ initialSearch = "", soul = "" }: { initialS
             ))}
           </select>
         </label>
-        {canAssign && (
-          <Button
-            type="button"
-            size="md"
-            variant="secondary"
-            className="sm:ml-auto"
-            disabled={reassignIds.length === 0}
-            onClick={() => setDialog("reassign")}
-          >
-            {t("judgment.claim.reassign")}
-          </Button>
-        )}
+        {/* 右端:改派(有权限时)与导出。导出带上面这组筛选(不分组、不带页码),与四组计数的和同一口径。 */}
+        <div className="flex items-center gap-2 sm:ml-auto">
+          {canAssign && (
+            <Button
+              type="button"
+              size="md"
+              variant="secondary"
+              disabled={reassignIds.length === 0}
+              onClick={() => setDialog("reassign")}
+            >
+              {t("judgment.claim.reassign")}
+            </Button>
+          )}
+          <ExportCsvButton
+            fetchCsv={() => judgmentApi.exportCsv({ ...filters, has_verdict: "false" })}
+            page={t("judgment.title")}
+            hall={hall}
+            count={counts.data?.total}
+          />
+        </div>
       </div>
 
       {/* ── 批量条:只在有勾选时出现,吸在工具条下沿;出现时 translateY(8→0)+淡入 160ms。
