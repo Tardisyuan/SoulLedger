@@ -258,6 +258,26 @@ describe("/verify-email", () => {
     await waitFor(() => expect(screen.getByTestId("verify-email")).toHaveAttribute("data-phase", "invalid"));
     expect(verify).not.toHaveBeenCalled();
   });
+
+  // The token is not spent by a request that never reached a verdict, and it is already gone from the address bar:
+  // these must not read "link invalid", and Retry must send the same credential again.
+  it.each([
+    ["no response (network)", {}],
+    ["a 5xx", { response: { status: 502 } }],
+    ["a 429", { response: { status: 429 } }],
+  ])("%s is a retry state, not the invalid-link state", async (_name, rejection) => {
+    verify.mockReset();
+    verify.mockRejectedValueOnce(rejection).mockResolvedValueOnce({ data: { detail: "ok" } });
+    window.history.pushState({}, "", "/verify-email?uid=MQ&token=tok");
+    render(<VerifyEmailPage />);
+    await waitFor(() => expect(screen.getByTestId("verify-email")).toHaveAttribute("data-phase", "failed"));
+    expect(screen.queryByText("auth.verify_invalid")).not.toBeInTheDocument();
+    expect(window.location.search).toBe("");
+
+    fireEvent.click(screen.getByRole("button", { name: "common.retry" }));
+    await waitFor(() => expect(screen.getByTestId("verify-email")).toHaveAttribute("data-phase", "done"));
+    expect(verify.mock.calls).toEqual([[{ uid: "MQ", token: "tok" }], [{ uid: "MQ", token: "tok" }]]);
+  });
 });
 
 describe("profile · 邮箱验证 row", () => {
