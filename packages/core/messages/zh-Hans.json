@@ -2627,6 +2627,13 @@
     "clear_all": "清除全部",
     "clear_one": "清除「{{name}}」筛选"
   },
+  "list": {
+    "columns": {
+      "button": "列 · {{shown}}/{{total}}",
+      "pinned": "不能隐藏",
+      "reset": "恢复默认"
+    }
+  },
   "death_sync": {
     "title": "死亡同步",
     "subtitle": "外部死亡登记接入与同步状态",

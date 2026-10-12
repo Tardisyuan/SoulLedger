@@ -29,6 +29,8 @@ interface BaseColumnDef<T> {
   width?: string
   /** Extra `<td>` classes for one-off cases the type doesn't cover. */
   className?: string
+  /** 列菜单里不能隐藏的列(编号列、名称列;`ColumnMenu`)。 */
+  pinned?: boolean
   /**
    * Which of the three missing semantics an empty cell in this column means
    * (src/lib/domainDisplay.ts). "unrecorded" is the common case — the fact

@@ -52,6 +52,7 @@ const COLLECTED_FILES = [
   "Badge.test.tsx",
   "Button.test.tsx",
   "Collapse.test.tsx",
+  "ColumnMenu.test.tsx",
   "CommentThread.test.tsx",
   "CorpusInsertIntoDesk.test.tsx",
   "CorpusPage.test.tsx",
@@ -146,6 +147,7 @@ const COLLECTED_FILES = [
   "JudgmentComments.test.tsx",
   // 2026-09-25 审判台 / 审判队列 / 处置(规范 v1 第三类 A)。
   "JudgmentDesk.test.tsx",
+  "JudgmentListExport.test.tsx",
   "JudgmentListPage.test.tsx",
   "DispositionPage.sections.test.tsx",
   "hotkeys.test.tsx",
