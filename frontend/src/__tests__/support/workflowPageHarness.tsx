@@ -39,6 +39,7 @@ jest.mock("next/navigation", () => ({
 jest.mock("@soulledger/core/api", () => ({
   workflowApi: {
     list: jest.fn(),
+    exportCsv: jest.fn(),
     templates: { list: jest.fn(), get: jest.fn(), delete: jest.fn() },
   },
   menusApi: {
@@ -98,6 +99,7 @@ jest.mock("@/src/components/charts/LazyWorkflowEditor", () => ({
 }));
 
 export const mockedWorkflows = workflowApi.list as jest.Mock;
+export const mockedWorkflowExport = workflowApi.exportCsv as jest.Mock;
 export const mockedTemplates = workflowApi.templates.list as jest.Mock;
 export const mockedTemplateGet = workflowApi.templates.get as jest.Mock;
 export const mockedTemplateDelete = workflowApi.templates.delete as jest.Mock;
@@ -126,6 +128,7 @@ export function installWorkflowPageHarness() {
     mockSession.user = { role: "ADMIN" };
     mockT.mockImplementation((key: string) => key);
     mockedWorkflows.mockResolvedValue({ data: { results: [] } });
+    mockedWorkflowExport.mockResolvedValue({ data: new Blob(["id\n"]) });
     mockedTemplates.mockResolvedValue({ data: [] });
   });
 }

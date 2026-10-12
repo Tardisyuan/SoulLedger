@@ -21,6 +21,7 @@ import { Kbd } from "@/src/components/judgment/JudgmentDesk";
 import { useHotkeys } from "@/src/lib/hotkeys";
 import { VerdictBadge } from "@/src/components/ui/StatusBadge";
 import { TAB_BASE, TAB_OFF, TAB_ON } from "@/src/lib/tabClasses";
+import { ExportCsvButton } from "@/src/components/ExportCsvButton";
 import { JudgmentClaimQueue } from "@/src/components/judgment/JudgmentClaimQueue";
 
 /**
@@ -62,7 +63,8 @@ function SoulFilterChip({ soulId, onClear }: { soulId: string; onClear: () => vo
 
 function JudgmentQueuePageContent() {
   const { t, formatDate } = useI18n();
-  usePlaque({ hall: useHall(t("plaque.office.trials")) });
+  const hall = useHall(t("plaque.office.trials"));
+  usePlaque({ hall });
   const router = useRouter();
   // 全局搜索「查看全部 N 个案件 →」带来的 `?q=`:待审一面填进搜索框,已结案一面同样按它筛。
   const searchParams = useSearchParams();
@@ -82,15 +84,18 @@ function JudgmentQueuePageContent() {
   const [page, setPage] = useState(1);
   const [ordering, setOrdering] = useState("");
 
+  const listParams = (which: Tab) => {
+    const params: Record<string, string> = { has_verdict: which === "pending" ? "false" : "true" };
+    if (ordering) params.ordering = ordering;
+    if (q) params.search = q;
+    if (soul) params.soul = soul;
+    return params;
+  };
+  const exportParams = listParams("concluded");
   const listQuery = (which: Tab, p: number) => ({
     queryKey: ["judgments", which, p, ordering, q, soul],
     queryFn: async () => {
-      const params: Record<string, string> = { page: String(p) };
-      params.has_verdict = which === "pending" ? "false" : "true";
-      if (ordering) params.ordering = ordering;
-      if (q) params.search = q;
-      if (soul) params.soul = soul;
-      const res = await judgmentApi.list(params);
+      const res = await judgmentApi.list({ page: String(p), ...listParams(which) });
       return res.data;
     },
     // The pending tab is a shared worklist other officers are taking cases from.
@@ -160,6 +165,17 @@ function JudgmentQueuePageContent() {
       {pending ? (
         <JudgmentClaimQueue key={`${q}|${soul}`} initialSearch={q} soul={soul} />
       ) : (
+      <>
+      {/* 「已结案」没有筛选条;导出放在表上方右端,带当前的搜索 / 灵魂 / 排序(不带页码)。 */}
+      <div className="flex justify-end py-3">
+        <ExportCsvButton
+          size="sm"
+          fetchCsv={() => judgmentApi.exportCsv(exportParams)}
+          page={t("judgment.title")}
+          hall={hall}
+          count={judgmentData?.count}
+        />
+      </div>
       <DataTable<Judgment>
         linkedRows
         caption={t("judgment.title")}
@@ -226,6 +242,7 @@ function JudgmentQueuePageContent() {
         totalCount={judgmentData?.count}
         onPageChange={setPage}
       />
+      </>
       )}
     </PageShell>
   );

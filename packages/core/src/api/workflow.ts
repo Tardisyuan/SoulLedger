@@ -277,6 +277,9 @@ export function requiresReasonForSoul(caseType: string | null | undefined, verdi
 
 export const workflowApi = {
   list: (params?: Record<string, string>) => api.get<PaginatedResponse<ApprovalWorkflowListItem>>("/workflows/", { params }),
+  /** 与 `list` 同一组筛选 / 租户划界的 CSV,不分页(`ApprovalWorkflowViewSet.export`);页码参数不要传。 */
+  exportCsv: (params?: Record<string, string>) =>
+    api.get<Blob>("/workflows/export/", { params, responseType: "blob" }),
   get: (id: string) => api.get<ApprovalWorkflow>(`/workflows/${id}/`),
   create: (data: object) => api.post<ApprovalWorkflow>("/workflows/", data),
   advance: (id: string) => api.post<ApprovalWorkflow>(`/workflows/${id}/advance/`),

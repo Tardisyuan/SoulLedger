@@ -15,6 +15,7 @@ import { DomainEnum } from "@/src/components/ui/DomainValue";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { TAB_BASE, TAB_ON, TAB_OFF } from "@/src/lib/tabClasses";
 import { Button } from "@/src/components/ui/Button";
+import { ExportCsvButton } from "@/src/components/ExportCsvButton";
 import { EmptyState } from "@/src/components/ui/EmptyState";
 import { WorkflowInstanceList } from "@/src/components/workflow/page/WorkflowInstanceList";
 import { TemplateDetailModal } from "@/src/components/workflow/page/TemplateDetailModal";
@@ -459,7 +460,19 @@ export default function WorkflowPage() {
           isWorkflowsError ? (
             <QueryError onRetry={() => refetchWorkflows()} />
           ) : (
-            <WorkflowInstanceList workflows={workflows} isLoading={isWorkflowsLoading} />
+            <>
+              {/* 实例列表没有筛选条,「当前筛选」就是全部;导出放在列表上方右端。 */}
+              <div className="flex justify-end pb-3">
+                <ExportCsvButton
+                  size="sm"
+                  fetchCsv={() => workflowApi.exportCsv()}
+                  page={t("workflow.title")}
+                  hall={hall}
+                  count={workflowsData?.count}
+                />
+              </div>
+              <WorkflowInstanceList workflows={workflows} isLoading={isWorkflowsLoading} />
+            </>
           )
         )}
 
