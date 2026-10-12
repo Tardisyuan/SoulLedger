@@ -3138,7 +3138,13 @@
     "edit_discard_confirm": "Hedj Sesh Mawy",
     "edit_keep": "Sesh Mawy Djer",
     "edited": "Sesh Mawy Seth",
-    "edited_at": "Sesh Mawy Em {{time}}"
+    "edited_at": "Sesh Mawy Em {{time}}",
+    "screening": {
+      "masked": "Per Seth Er Neb. Medu Nedjes Iri Ky Seth.",
+      "pending_review": "Per Seth; Em Wedja. Er Hesy: Djes-Ek Wa Maa.",
+      "hidden": "Nen Shesep Em Maat Djes-Ef; Imen Seth."
+    },
+    "edit_media_locked": "Tut: Nen Sesh Mawy."
   },
   "tenants": {
     "active": "Em Iri",
@@ -4092,6 +4098,11 @@
           "too_many_pixels": "Tut Ky Er Pehwy",
           "too_many_pending": "Tut Em Smen Er Pehwy: Hab Medu Er Fekh Tut"
         }
+      },
+      "screening": {
+        "masked": "Per Seth Er Neb. Medu Nedjes Iri Ky Seth.",
+        "pending_review": "Per Seth; Em Wedja. Er Hesy: Djes-Ek Wa Maa.",
+        "hidden": "Nen Shesep Em Maat Djes-Ef; Imen Seth."
       }
     },
     "sentence": {
@@ -5661,6 +5672,12 @@
       "irreversible": "Er Khet Hab: Nen Sehen.",
       "unavailable": "Sesh Nen Wen Djer",
       "failed": "Nen Per Wesheb. Sesh-Ek Wenen Djer: Wehem Iri."
+    },
+    "dispatch_status": {
+      "waiting": "Per Ky: Nen Hesy Djer",
+      "approved": "Per Ky: Hesy Seth",
+      "rejected": "Per Ky: Khesef Seth",
+      "reason": "Khet: {{reason}}"
     }
   },
   "print": {
