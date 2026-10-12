@@ -15,7 +15,11 @@
 > `apps/souls/models.py::Civilization` 与 `TENANT_CIVILIZATION`。
 > 文末「待完成」清单同样是当时的，不要当成今天的 backlog 读——例如第一条
 > 「User CRUD API 实现」已由 `apps/authentication/views.py::UserViewSet`
-> （`ModelViewSet`）交付，清单却从未回来勾过。
+> （`ModelViewSet`）交付，清单却从未回来勾过。2026-10-12 逐条核对见文末。
+> 第 1 条的「修改文件」也已变：租户的 ContextVar 现在只在 `apps/tenants/managers.py`，
+> `apps/core/request_local.py` 只剩 `_user_var`，`apps/core/middleware.py` 不存在。
+> 第 5 条的 `require_api_permission` 已不在仓库里（`backend/apps`、`backend/tests` 全文无引用）；
+> 现行做法是 ViewSet 上的 `CodenameViewSetMixin`，见 `docs/API.md` 的 Permissions 一节。
 
 ---
 
@@ -139,7 +143,7 @@ class RolePermission(AuditUserFields):
 ## P2 - API 权限检查
 
 ### 5. API 权限装饰器
-**状态**: ✅ 完成
+**状态**: ❌ 已被取代（`require_api_permission` 不在仓库里；现行为 `CodenameViewSetMixin`）
 
 **已删除的文件**(原为):
 - ~~`apps/permissions/decorators.py`~~ —— 一个 3 行的透传,
@@ -260,10 +264,12 @@ const mutation = useMutation({
 
 ## 待完成 (建议后续迭代)
 
-- [ ] User CRUD API 实现
-- [ ] 密码管理 API (修改/重置)
-- [ ] Redis 权限缓存
-- [ ] 角色层级继承
-- [ ] 前端用户管理页面
-- [ ] Zod 表单验证
-- [ ] 骨架屏加载状态
+> 2026-10-12 逐条核对，下面的复选框已按现状勾过。
+
+- [x] User CRUD API 实现 —— `apps/authentication/views.py::UserViewSet`，挂在 `/api/v1/users/`
+- [x] 密码管理 API (修改/重置) —— `/auth/change-password/`、`/auth/reset-password/`、`/auth/set-new-password/`
+- [x] Redis 权限缓存 —— `apps/perm/cache.py`
+- [ ] 角色层级继承 —— `Role.parent` 字段在，但权限检查**不**读它（见 `apps/perm/models.py` 里的注释），有意如此
+- [x] 前端用户管理页面 —— `frontend/app/users/page.tsx`
+- [x] Zod 表单验证 —— `packages/core/src/validations/`
+- [x] 骨架屏加载状态 —— `frontend/components/ui/page-skeletons.tsx`

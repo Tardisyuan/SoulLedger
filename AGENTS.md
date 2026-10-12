@@ -10,7 +10,7 @@
 
 **权威是 `frontend/app/globals.css`。** 其次是 `frontend/eslint.config.mjs` 的七条
 design-system 规则（`type-scale` / `spacing-rhythm` / `dead-radius` / `no-page-shadow` /
-`no-raw-palette` / `no-hex-colour` / `no-styles-in-csstext`，`eslint.config.mjs:663-671`）。`DESIGN.md` 只解释决定，不定义数值 —— 它自己第 3 行就是这么写的。
+`no-raw-palette` / `no-hex-colour` / `no-styles-in-csstext`，在该文件末尾的 `rules` 块里）。`DESIGN.md` 只解释决定，不定义数值 —— 它自己第 3 行就是这么写的。
 
 完整规约见 **[`docs/CONVENTIONS-frontend.md`](docs/CONVENTIONS-frontend.md)**，那里每条
 都标了执法机制。下面只留新写代码时最容易踩的三条。
@@ -26,18 +26,21 @@ text-ink                                  ❌ 裸形
 Tailwind 4 把 `@theme` 变量提进 theme 层并从中生成 `.text-ink`，而 `:root` 里同名的
 变量存的是**裸 OKLCH 三元组**（`L C H`，`7db2c6e` 起；此前是 HSL），于是裸形生成非颜色值 —— **静默失效，不报错**。
 照旧文档写 `hsl(var(--color-ink))` 同样静默失效：得到 `hsl(0.97 0.0017 247.8)`，亮度被钳到 100%，是白字。
-`globals.css:5-39` 记录了这次事故：同一页面里 10 个写 `text-[oklch(var(--color-ink-subtle))]`
+`globals.css` 开头记录了这次事故：同一页面里 10 个写 `text-[oklch(var(--color-ink-subtle))]`
 的元素正常变暗，2 个写 `text-ink-subtle` 的以全亮度渲染，而 lint / tsc / build 全绿。
 `text-ink` 本身"看起来是对的"，因为它继承了 body 的 ink —— 失败是不可见的。
 
 执法：`src/__tests__/cssTokenReferenceContract.test.ts`。
 
-### 1.2 所有圆角是 0，这是刻意的
+### 1.2 圆角是 0，这是刻意的
 
-`globals.css:185-193` 里 8 个 shape radius 全为 `0`，只剩 `--radius-full`
-（`--radius-focus` 已随规范 v1 的方角焦点环删除，`e78e5d88`）。`rounded-full` 只准出现在
-`eslint.config.mjs:121-129` 的 `ROUND_ALLOW` 文件里（头像与转圈）。所以 `rounded` / `rounded-sm` / `-md` / `-lg` / `-xl` / `-2xl` / `-3xl`
+`globals.css` 里 `--radius-none` … `--radius-3xl` 全为 `0`；例外只有两种形状：胶囊
+`rounded-full`（9999px）与正圆 `rounded-circle`（50%），且只准出现在
+`eslint.config.mjs` 的 `ROUND_ALLOW` 文件里。所以 `rounded` / `rounded-sm` / `-md` / `-lg` / `-xl` / `-2xl` / `-3xl`
 **全是死类名**：不产生视觉差异，但会让读代码的人以为那里有圆角。
+规范 v3 另给了两个非零档 `--radius-control`（4px，输入框与小控件）与 `--radius-panel`（8px，弹层、抽屉、资料舱），
+按用途取名；表格、身份带、案卷仍是 0。新写代码圆角的取舍以 `globals.css` 里那段注释和
+`docs/CONVENTIONS-frontend.md` 为准。
 执法：eslint `design-system/dead-radius`（error）。
 
 ### 1.3 禁 Tailwind 原生调色板
@@ -48,15 +51,16 @@ token，浅色模式下失效或过淡。执法：eslint `design-system/no-raw-p
 
 ### 1.4 另外几条
 
-- **字号只有七档** `text-2xs` / `xs` / `sm` / `md` / `quote` / `lg` / `xl`
-  （11/12/13/16/20/22/28px，自带行高，`globals.css:162-177`；规范 v1，`16f4e149`）。
-  旧八档 `text-01`…`text-08`、`text-base`/`text-2xl` 之类与 `text-[11px]` 之类都是 error
-  （`design-system/type-scale`）。
-- **间距只有** 0.5/1/1.5/2/3/4/6/8/10/14 + 0/px/auto（`design-system/spacing-rhythm`，
-  `eslint.config.mjs:108`）。豁免表 `RHYTHM_EXEMPT` 为空（Badge 的 `py-0.5` 随刻度收进 0.5 而删除）。
+- **字号只有七档** `text-2xs` / `xs` / `sm` / `md` / `lg` / `xl` / `display`
+  （11/12/13/15/20/28/40px，自带行高，`globals.css` 的 `@theme`；规范 v2 A3）。`text-quote` 已并入
+  `font-serif text-md font-normal`。旧八档 `text-01`…`text-08`、`text-base`/`text-2xl` 之类与 `text-[11px]` 之类
+  都是 error（`design-system/type-scale`）。`display` 只给匾题字、登录页与律条语料页的展示数字（`DISPLAY_ALLOW` 守着）。
+- **间距只有** 0.5/1/2/3/4/6/8/12 + 0/px/auto（`RHYTHM_OK`，`design-system/spacing-rhythm`）。
+  v1 的 1.5 / 10 / 14 在遗留页面里记进了基线，逐页改版时还。豁免表 `RHYTHM_EXEMPT` 为空。
 - **页面内零阴影**：浮层用 `shadow-overlay`（`design-system/no-page-shadow`）。
-- **没有文明色**：`--color-civ-*` / `--civ-*` 与 `[data-civ]` 已在 `a2044b28` 撤销，
-  `src/__tests__/ledgerPaletteContract.test.ts` 断言它们既不声明也不被读取。
+- **文明只进匾色**：`--color-civ-*` 存在，但只被 `--color-main`（由 `<html data-civ>` 选）一处读取，
+  给匾、立柱当前项、印、行首色标、主按钮五处用；其余一切四文明共用。
+  `src/__tests__/ledgerPaletteContract.test.ts` 逐值对账并守这条边界。
 - **类名合并只用 `cn()`**（`lib/utils.ts`，它扩展了 tailwind-merge 认识七档字号）。
 
 ### 1.5 迁移基线是双向的
@@ -80,8 +84,8 @@ token，浅色模式下失效或过淡。执法：eslint `design-system/no-raw-p
 
 ### 必须使用 BaseModal（Base UI，不是 @headlessui）
 
-**`@headlessui/react` 已经不在依赖里。** 2026 年迁到了 `@base-ui/react`（`package.json:21`），
-理由写在 `src/components/ui/Modal.tsx:28-47`：headlessui 处于维护模式，没有命令面板与
+**`@headlessui/react` 已经不在依赖里。** 2026 年迁到了 `@base-ui/react`（`frontend/package.json`），
+理由写在 `src/components/ui/Modal.tsx` 的文件头注释里：headlessui 处于维护模式，没有命令面板与
 data-grid 相邻的原语，而这类控制台接下来就要用到它们；Base UI 是 shadcn/ui 自己在
 2026 年 7 月切过去的那一层。
 
@@ -101,13 +105,13 @@ import { BaseModal } from "@/src/components/ui/Modal";
 </BaseModal>
 ```
 
-**BaseModal 的 Dialog 结构**（五段 anatomy，见 `Modal.tsx:49-103`）：
+**BaseModal 的 Dialog 结构**（五段 anatomy，见 `Modal.tsx` 的 `BaseModal`）：
 ```tsx
 <Dialog.Root open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
   <Dialog.Portal>
     <Dialog.Backdrop className="fixed inset-0 z-dialog bg-black/60 …" />
-    <Dialog.Viewport className="fixed inset-0 z-dialog flex items-center justify-center overflow-y-auto p-4">
-      <Dialog.Popup className="flex max-h-[calc(100dvh-2rem)] w-full max-w-md flex-col …">
+    <Dialog.Viewport className="fixed inset-0 z-dialog flex items-end justify-center overflow-y-auto sm:items-center sm:p-4">
+      <Dialog.Popup className="flex max-h-[calc(100dvh-2rem)] w-full sm:max-w-[440px] flex-col …">
         {/* header shrink-0 / body min-h-0 flex-1 overflow-y-auto / footer shrink-0 */}
       </Dialog.Popup>
     </Dialog.Viewport>
@@ -116,7 +120,7 @@ import { BaseModal } from "@/src/components/ui/Modal";
 ```
 
 **重要**：
-- z 轴用 `z-dialog`（= 80，`globals.css:247`），**不是** `z-[10000]`
+- z 轴用 `z-dialog`（`--z-index-dialog`，= 70，`globals.css`），**不是** `z-[10000]`
 - 进出场动效走 Base UI 的 `data-starting-style` / `data-ending-style`，不是 `<Transition>`
 - **`max-h` + `flex flex-col` + 可滚动的 body 三者是一套，缺一不可。** 缺的后果只在小屏
   出现：面板没有高度上限时 `items-center` 会让它上下对称溢出，页脚连同提交按钮被挤出
@@ -131,7 +135,8 @@ import { BaseModal } from "@/src/components/ui/Modal";
 ```
 frontend/src/components/
 ├── ui/
-│   ├── Modal.tsx      ← BaseModal 弹窗基座；SoulCreateModal 也在这个文件里（`:121`）
+│   ├── Modal.tsx      ← BaseModal 弹窗基座；SoulCreateModal 也在这个文件里
+│   ├── Drawer.tsx     ← 抽屉；另有 Button / Field / Badge / PageShell 等基础组件
 │   └── Toast.tsx      ← Toast 通知
 ├── souls/
 │   └── SoulEditModal.tsx     ← 编辑灵魂弹窗
@@ -139,16 +144,16 @@ frontend/src/components/
     └── UserModal.tsx         ← 用户信息弹窗
 ```
 
-（2026-09-26 核对：此前列的 `souls/SoulCreateModal.tsx` 与 `components/UserModal.tsx` 两个路径不存在。）
+（`frontend/components/ui/` 是第三个源根，放 data-table / data-grid / page-section / skeleton。）
 
 ### Toast 规范
 
 使用 `ToastContext` 提供的方法。**参数是位置参数，不是对象**
-（`src/components/ui/Toast.tsx:131-135`）：
+（`src/components/ui/Toast.tsx` 的 `showToast`）：
 
 ```tsx
 const { showToast } = useToast();
-showToast("消息内容", "success");            // (message, type?, duration = 5000)
+showToast("消息内容", "success");            // (message, type?, duration = 4000)
 ```
 
 `packages/core` 里的 hook 不能 import 这个 —— 它们走平台端口 `notify(key, kind)`，
@@ -158,7 +163,7 @@ showToast("消息内容", "success");            // (message, type?, duration = 
 **mutation 的 toast 由 hook 负责，页面不要重复报。**
 
 `ToastContext` 的 default 与 provider value 是同一对模块级函数引用 —— 有没有 Provider
-行为逐字节相同（`ToastContext.tsx:21-36`）。它是穿着 context 外衣的模块单例，别指望
+行为逐字节相同（`src/contexts/ToastContext.tsx`）。它是穿着 context 外衣的模块单例，别指望
 用 Provider 去替换它做测试。
 
 ---
@@ -192,7 +197,7 @@ t("nav.greeting", { username: user.username })
 
 - 切换语言时页面不刷新
 - Footer 等装饰性内容（象形文字）只在对应语言选中时显示
-- 语言与主题切换收在页头用户菜单的弹层里（`src/components/layout/AppLayout.tsx:38`、`:282-291`），不单独占页头
+- 语言与主题切换收在页头用户菜单的弹层里（`src/components/layout/AppLayout.tsx`），不单独占页头
 
 ---
 
@@ -259,18 +264,18 @@ t("nav.greeting", { username: user.username })
 ### 后端
 
 1. `pytest`，**不是 `python manage.py test`**。Django 的 runner 只收集
-   `unittest.TestCase` 子类；实测 `backend/tests/` 里有 **774 个模块级
-   `def test_` 函数**对 **22 个 TestCase 类**，前者它一条都收不到。
+   `unittest.TestCase` 子类；`backend/tests/` 里模块级 `def test_` 函数远多于 TestCase 类
+   （2026-10-12 复数：`grep -rhE '^def test_' backend/tests | wc -l` 得 2569，
+   `grep -rhE '^class .*\(.*TestCase' backend/tests | wc -l` 得 22），前者它一条都收不到。
    照旧写法跑会得到一个绿色的、几乎什么都没验的结果。
-   （2026-09-26 复数：约 1780 个模块级 `def test_`，TestCase 类仍是 22 个；
-   `grep -rhE '^def test_' backend/tests | wc -l`。）
+   解释器是 `backend/.venv`（Python 3.11），不是 PATH 上的 `python`。
    完整命令（含必须隔离的 Redis）见 `CLAUDE.md` 的 Build & Test。
 2. 特别检查 `test_tenant_isolation.py` 全部通过
 3. 如有 model/serializer 修改，运行对应 migration
 
 ### packages/core（这份文件此前完全没提它）
 
-2026-09-02 起仓库是 npm workspaces：根 + `frontend/` + `packages/core/`（后来又加了 `mobile/`，见 `package.json:6-10`）。
+2026-09-02 起仓库是 npm workspaces：根 + `frontend/` + `packages/core/` + `mobile/` + `mobile-officer/`（见根 `package.json` 的 `workspaces`）。
 那个包是平台无关层，有**自己的三条门禁**，`.git/hooks/pre-push` 在任何
 `^packages/` 改动上全跑：
 
@@ -283,6 +288,17 @@ npm run --workspace packages/core test      # vitest，不是 jest
 `test` 抓的东西 `typecheck` 抓不到：`domBoundary.test.ts` 断言
 `@types/react` 漏进来的约 150 个 DOM 类型名（React 19.2 下；18.3 时是 146）保持不可解析 —— 它们是空接口，
 所以 `const el: HTMLElement = {}` 是能编译的。
+
+### mobile/ 与 mobile-officer/
+
+两个 Expo App 各有 `typecheck` / `lint` / `test` 三条（`npm run --workspace mobile …`、
+`npm run --workspace @soulledger/officer …`）；CI 里是 `mobile` 与 `officer` 两个 job，
+`mobile-officer` 原样引用 `mobile/src` 的叶子模块，所以改 `mobile/` 也会触发它。
+
+### 推送门禁
+
+pre-push 实际跑的是 `scripts/run-gates.sh`（jest 只跑受影响的，其余照旧全跑；`--full` 全跑），
+会话里可直接运行它。细节与数字见 `CLAUDE.md`。CI 只有 `workflow_dispatch` 手动触发。
 
 ### Git 提交规范
 
@@ -320,7 +336,7 @@ TanStack Query v5
 TypeScript
 ```
 
-仓库是 **npm workspaces**：根 + `frontend/` + `mobile/` + `packages/*`（`package.json:6-10`）。根上那份
+仓库是 **npm workspaces**：根 + `frontend/` + `mobile/` + `mobile-officer/` + `packages/*`（根 `package.json` 的 `workspaces`）。根上那份
 `package-lock.json` 是唯一锁文件，`cd frontend && npm ci` **不再可用**。装依赖的顺序
 （npm 11、`npm rebuild …`、还原锁文件）见 `CLAUDE.md` 的 Build & Test。
 
@@ -344,31 +360,34 @@ SoulLedger/
 ├── AGENTS.md          ← 本文件
 ├── package.json       ← workspaces 根;package-lock.json 也在这里
 ├── backend/
-│   ├── apps/              ← 24 个本地 app,见 config/settings.py:69-92
+│   ├── apps/              ← 26 个本地 app(config/settings.py 的 INSTALLED_APPS)
 │   │   ├── souls/         ← 灵魂 CRUD
 │   │   ├── tenants/       ← 多租户(TenantManager / 中间件)
-│   │   ├── authentication/ ← 登录/JWT
+│   │   ├── authentication/ ← 登录/JWT/两步验证
 │   │   ├── ledger/         ← 功德计算(旧名 karma,已重命名)
+│   │   ├── soul_accounts/ soul_push/ chat/ soul_assist/ social/ ← 灵魂端与助手、书信、朋友圈
+│   │   ├── officer_app/    ← 官员端 App 的待办与推送
 │   │   └── core/           ← 不在 INSTALLED_APPS,只装 mixin/middleware/permission
 │   ├── config/settings.py
 │   └── tests/             ← 后端测试分散在两处,另一处是 apps/*/tests.py
-├── packages/core/         ← 平台无关层:API 契约 / WS 客户端 / 领域配置 / 十六个数据 hook
-│   ├── src/platform/      ← 8 个宿主端口;tsconfig 不含 "dom",这是执法机制
+├── packages/core/         ← 平台无关层:API 契约 / WS 客户端 / 领域配置 / 二十个数据 hook
+│   ├── src/platform/      ← 宿主端口(PlatformAdapter);tsconfig 不含 "dom",这是执法机制
 │   ├── messages/          ← 三份语言包 zh-Hans / en / egy
 │   └── openapi/schema.yml ← 前端类型的来源,后端有门禁盯着它逐字节一致
 ├── frontend/
-│   ├── app/               ← Next.js 路由,43 个 page.tsx
+│   ├── app/               ← Next.js 路由,53 个 page.tsx
 │   │   └── globals.css    ← **设计 token 的权威**
 │   ├── src/
 │   │   ├── components/    ← UI 组件
 │   │   ├── contexts/      ← React Context
-│   │   ├── hooks/         ← 只剩视图层五个,数据 hook 在 packages/core
+│   │   ├── hooks/         ← 只放视图层 hook(8 个),数据 hook 在 packages/core
 │   │   └── __tests__/     ← 契约测试(它们才是真正的规范)
 │   ├── components/ui/     ← 第三个源根:data-table / data-grid / page-section / skeleton
 │   ├── lib/platform/web.ts ← 平台端口的 web 实现
 │   ├── proxy.ts           ← 路由守卫 + CSP(在 frontend/ 根,不在 src/;Next 16 前叫 middleware.ts)
 │   └── eslint.config.mjs  ← 七条 design-system 规则
 ├── mobile/                ← 灵魂端 App(Expo);门禁见 CLAUDE.md 的 Build & Test
+├── mobile-officer/        ← 官员端 App(Expo);CI 的 officer job 跑它
 └── scripts/
     ├── install-hooks.sh   ← 装 pre-commit / pre-push,clone 后必跑
     ├── run-gates.sh       ← pre-push 实际跑的门禁(jest 选择性),会话里也能直接跑
@@ -418,186 +437,12 @@ SoulLedger/
 
 ---
 
-## 8. 当前里程碑状态
+## 8. 里程碑与历史规划
 
-> **以下 §8–§10 为 2026-05 的历史记录，不是现状（2026-09-26 加注）。** M4–M7 早已交付；
-> 角色不止四种（`apps/authentication/models.py:56-67` 有六种，含 MODERATOR 与 SOUL）；
-> 目录树里的 `karma/`、`RouteGuard.tsx`、`useAuth.ts` 等路径已改名或不存在。现状以 `git log`、
-> 本文件 §1–§7 与 `backend/config/settings.py:69-92` 为准；里程碑见 `docs/MILESTONES.md`（同样落后于代码）。
+本文件此前在这里留着 2026-05 的 M4（RBAC / 菜单 / 路由守卫）分解、四角色权限矩阵与一棵目录树。
+它们早已交付并改名：内置角色有六个（`apps/authentication/models.py` 的 `UserRole`：
+ADMIN / MODERATOR / JUDGE / GUARDIAN / VIEWER / SOUL，另可有 `perm.Role` 里的自定义角色），
+`karma/` 现在是 `ledger/`，`RouteGuard.tsx` / `useAuth.ts` 不存在 —— 已整段删除，免得被当成现状读。
+现状以代码和提交历史为准；里程碑见 `docs/MILESTONES.md`（同样落后于代码），变更见 `CHANGELOG.md`。
 
-| 里程碑 | 状态 | 说明 |
-|--------|------|------|
-| M1 | ✅ 完成 | Django 项目结构，核心模型 |
-| M2 | ✅ 完成 | 认证、JWT、权限 |
-| M3 | ✅ 完成 | 多租户基础设施 |
-| M4 | 🔲 待开始 | **权限管理与菜单系统** |
-| M5 | 🔲 待开始 | 审判流程完整化 |
-| M6 | 🔲 待开始 | 轮回与功德系统 |
-| M7 | 🔲 待开始 | 事件溯源与审计日志 |
-
----
-
-## 9. M4 里程碑详细分解
-
-### M4.1 角色权限模型 (RBAC) — 参考 Snowy SaToken 设计
-
-**后端模型**：
-```python
-# 角色模型 (已存在于 User.role)
-ROLE_CHOICES = ["ADMIN", "JUDGE", "GUARDIAN", "VIEWER"]
-
-# 权限模型
-class Permission(BaseModel):
-    codename = CharField(max_length=100, unique=True)  # e.g. "soul.create"
-    name = CharField(max_length=200)                   # e.g. "创建灵魂"
-    category = CharField(max_length=50)                # e.g. "soul", "karma", "system"
-
-# 角色-权限关联
-class RolePermission(BaseModel):
-    role = CharField(max_length=20)  # ADMIN/JUDGE/GUARDIAN/VIEWER
-    permission = ForeignKey(Permission)
-```
-
-**权限矩阵**：
-
-| 权限 codename | ADMIN | JUDGE | GUARDIAN | VIEWER |
-|---------------|-------|-------|----------|--------|
-| soul.read | ✅ | ✅ | ✅ | ✅ |
-| soul.create | ✅ | ❌ | ❌ | ❌ |
-| soul.update | ✅ | ❌ | ✅ | ❌ |
-| soul.delete | ✅ | ❌ | ❌ | ❌ |
-| judgment.execute | ✅ | ✅ | ❌ | ❌ |
-| karma.manage | ✅ | ❌ | ❌ | ❌ |
-| reincarnation.manage | ✅ | ✅ | ✅ | ❌ |
-| system.settings | ✅ | ❌ | ❌ | ❌ |
-| user.manage | ✅ | ❌ | ❌ | ❌ |
-
-### M4.2 菜单管理 CRUD
-
-**菜单模型**：
-```python
-class Menu(BaseModel):
-    name = CharField(max_length=100)
-    path = CharField(max_length=200)        # e.g. "/souls"
-    icon = CharField(max_length=50, null)   # e.g. "user"
-    order = IntegerField(default=0)
-    parent = ForeignKey("self", null)      # 层级菜单
-    roles = JSONField(default=list)         # ["ADMIN", "GUARDIAN"]
-    is_active = BooleanField(default=True)
-```
-
-**菜单结构**（按角色动态渲染）：
-```
-├── 首页 /dashboard (ALL)
-├── 灵魂管理 /souls (ALL)
-│   ├── 灵魂列表 (ALL)
-│   ├── 创建灵魂 (ADMIN)
-│   └── 编辑灵魂 (ADMIN, GUARDIAN)
-├── 审判管理 /judgment (ADMIN, JUDGE)
-│   ├── 待审判队列 (JUDGE+)
-│   └── 审判历史 (ADMIN, JUDGE)
-├── 功德系统 /karma (ADMIN)
-│   ├── 功德记录 (ADMIN)
-│   └── 功德规则 (ADMIN)
-├── 轮回管理 /reincarnation (ADMIN, JUDGE, GUARDIAN)
-│   ├── 轮回队列 (GUARDIAN+)
-│   └── 轮回历史 (ALL)
-└── 系统设置 /settings (ADMIN)
-    ├── 用户管理 (ADMIN)
-    ├── 租户设置 (ADMIN)
-    └── 菜单配置 (ADMIN)
-```
-
-### M4.3 前端路由守卫增强
-
-**路由守卫** (`src/components/rbac/RouteGuard.tsx`):
-- 读取用户 role
-- 根据菜单 API 获取可访问菜单
-- 动态生成路由
-- 未授权访问 → 重定向 /403
-
-### M4.4 页面级权限控制
-
-```tsx
-// 权限组件
-const RequirePermission = ({ permissions: string[], children }) => {
-  const { user } = useAuth();
-  const hasPermission = permissions.some(p => user.permissions?.includes(p));
-  return hasPermission ? children : null;
-};
-
-// 使用示例
-<RequirePermission permissions={["soul.create"]}>
-  <button>创建灵魂</button>
-</RequirePermission>
-```
-
-### M4.5 操作日志审计
-
-```python
-class AuditLog(BaseModel):
-    tenant = ForeignKey(Tenant)
-    user = ForeignKey(User)
-    action = CharField(max_length=50)      # CREATE, UPDATE, DELETE, EXECUTE
-    resource = CharField(max_length=100)   # e.g. "soul", "judgment"
-    resource_id = CharField(max_length=100)
-    changes = JSONField(null)             # {"field": ["old", "new"]}
-    ip = GenericIPAddressField(null)
-    timestamp = DateTimeField(auto_now_add=True)
-```
-
----
-
-## 10. 系统架构（参考 Snowy 插件化设计）
-
-```
-跨文明灵魂管理系统/
-├── backend/
-│   ├── apps/
-│   │   ├── authentication/   # JWT 登录/登出/刷新
-│   │   ├── tenants/          # 多租户管理
-│   │   ├── souls/            # 灵魂 CRUD
-│   │   ├── actors/           # 角色管理
-│   │   ├── judgment/         # 审判流程
-│   │   ├── karma/            # 功德系统
-│   │   ├── reincarnation/    # 轮回管理
-│   │   ├── disposition/       # 灵魂处置
-│   │   ├── realms/           # 界域管理
-│   │   ├── events/           # 事件溯源
-│   │   ├── workflow/         # 工作流引擎
-│   │   ├── core/             # 公共模型/工具
-│   │   ├── menus/            # 菜单管理 ⭐ M4新增
-│   │   └── audit/            # 审计日志 ⭐ M4新增
-│   └── config/
-│       ├── settings.py
-│       └── urls.py
-├── frontend/
-│   ├── app/
-│   │   ├── (auth)/login/    # 登录页
-│   │   ├── souls/            # 灵魂管理
-│   │   ├── judgment/         # 审判管理
-│   │   ├── karma/            # 功德系统
-│   │   ├── reincarnation/    # 轮回管理
-│   │   ├── settings/         # 系统设置
-│   │   └── page.tsx          # 首页/Dashboard
-│   └── src/
-│       ├── components/
-│       │   ├── rbac/          # 权限组件 ⭐ M4新增
-│       │   │   ├── RouteGuard.tsx
-│       │   │   ├── RequirePermission.tsx
-│       │   │   └── PermissionDenied.tsx
-│       │   └── menus/        # 菜单组件 ⭐ M4新增
-│       ├── hooks/
-│       │   ├── useAuth.ts
-│       │   ├── usePermissions.ts  # M4新增
-│       │   └── useMenus.ts       # M4新增
-│       └── contexts/
-│           └── AuthContext.tsx
-└── scripts/
-    └── start-*.sh
-```
-
----
-
-*最后更新：2026-05-10*
-*维护者：Hermes Agent（根据瑞鸿的要求生成）*
+门禁、解释器与提交格式的唯一权威是 `CLAUDE.md`（含 `scripts/run-gates.sh`）。
