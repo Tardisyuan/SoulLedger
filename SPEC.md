@@ -1,15 +1,15 @@
 # SoulLedger 系统设计规格书
 
 > **版本：** 2.0（多租户重构版）
-> **更新日期：** 2026-05-09
-> **状态：** 设计中
+> **更新日期：** 2026-05-09（正文）；2026-10-12 补「现状对照」（读法说明与 §12），正文未改写
+> **状态：** 设计稿；多数已实现，实现与本文的分叉见下面的读法说明与 §12
 > **OpenSpec 追踪：** `openspec/changes/archive/multi-tenant-architecture/`
 > （2026-08-14 已归档——该提案的绝大部分早已实现，但任务清单从未被勾选过。
 > 归档头部有逐主题的现状核实与设计差异说明。）
 
-> **2026-08-28 追加的读法说明——本文是 2026-05-09 那一天的快照，不是现状。**
+> **读法说明（2026-08-28 起，2026-10-12 重核）——本文是 2026-05-09 那一天的快照，不是现状。**
 > 正文一律保留原样，因为改写一份带日期的设计稿只会毁掉它作为「当时是怎么想的」的
-> 价值。已知与代码分叉的地方，读之前先知道这些：
+> 价值。已知与代码分叉的地方，读之前先知道这些；**现在有什么、在哪里，看 §12**。
 >
 > - **租户是四个，不是三个。** §1.1／§1.2 以及全文每一处「三租户」枚举
 >   （§2 的架构图、§3 的 `Tenant.code` 说明、§5 的处置表、§7 的路由与 `tenantCode`、
@@ -25,12 +25,31 @@
 > - **条文语料在本文里根本不存在**，它是本文之后才有的东西：六个 corpus 共 172 条，
 >   外加一个声明为空的 `HELL_LAW`。以
 >   `backend/apps/actors/mythology/__init__.py::CORPUS_PROVENANCE` 为准。
-> - **CI 现在只有 `workflow_dispatch` 手动触发**，没有任何自动触发（Actions 额度耗尽）。
-- **`TenantManager` 不再自动过滤租户。** §2 的架构图、§9 验收表的「TenantManager ✅ 自动过滤
-  QuerySet」与 ADR-004 的「双重隔离」都是当时的设计；现在 `apps/tenants/managers.py` 只过滤
-  软删除，租户隔离**单层**、全在视图层 `apps/core/tenant.py::scope_to_tenant`，
-  由 `tests/test_tenant_scoping_contract.py` 的元测试钉住每个 ViewSet。隐式过滤被移除的原因见
-  `managers.py` 头部与 `docs/tenant-contextvar-investigation.md`（历史快照）。
+> - **CI 现在只有 `workflow_dispatch` 手动触发**（`.github/workflows/ci.yml`、`security.yml`），
+>   没有任何自动触发（Actions 额度耗尽）。
+> - **`TenantManager` 不再自动过滤租户。** §2 的架构图、§9 验收表的「TenantManager ✅ 自动过滤
+>   QuerySet」与 ADR-004 的「双重隔离」都是当时的设计；现在 `apps/tenants/managers.py` 只过滤
+>   软删除，租户隔离**单层**、全在视图层 `apps/core/tenant.py::scope_to_tenant`，
+>   由 `tests/test_tenant_scoping_contract.py` 的元测试钉住每个 ViewSet。隐式过滤被移除的原因见
+>   `managers.py` 头部与 `docs/tenant-contextvar-investigation.md`（历史快照）。
+> - **角色集合不同。** 现在是 `ADMIN / MODERATOR / JUDGE / GUARDIAN / VIEWER / SOUL`
+>   （`apps/authentication/models.py::UserRole`）。本文的 `SYS_ADMIN`、`TENANT_ADMIN`、
+>   `DISPATCH_JUDGE` 不存在；`ADMIN` 在 `apps/core/permissions.py::TenantPermission` 里直接放行、绕过租户检查，该层并不强制「只读」（ADR-008 是设计意图，未在这一层落成不变量）。
+>   权限是 codename + `DataScope` + `FieldPermission`（`apps/perm/`），不是 §6.X 的三张固定表。
+> - **外派（dispatch）是另一套模型。** §3.4 的 `Soul.dispatch_status` / `dispatched_to_tenant`、
+>   §3.12 的字段、§4.2／§4.4／§4.5 的 PENDING_DISPATCH／DISPATCHED／recall、§5.5 的投票与
+>   `check_judgment_timeouts`、§6.11 的端点与 §3.11 里的 `SOUL_RECALLED` 等事件，
+>   在代码里都不存在（`grep -rE "voting_deadline|check_judgment_timeouts|SOUL_RECALLED" backend/apps` 无命中）。
+>   现在的外派是**暂居**，不是迁籍：`Soul.home_tenant` 不变，`Soul.tenant` 暂时指向目标租户，
+>   `DispatchRecord.status` 为 `DRAFT → PROPOSED → APPROVED → EXECUTED → RETURNED`（另有 `REJECTED`、`CANCELLED`），
+>   端点在 `/api/v1/dispatch/records/`（含 `drafts`、`submit`、`approve`、`reject`、`cancel`、`execute`、`return-home`），
+>   联合审判在 `/api/v1/dispatch/cross-tenant-judgments/`。见 §12.3。
+> - **前端不是 `/{tenant}/...` 路由。** 没有 `[tenant]` 动态段；页面是扁平路由
+>   （`frontend/app/souls`、`dispatch`、`cross-judgments`、`admin/stats` 等），租户来自登录用户的 `user.tenant`（`frontend/src/contexts/TenantContext.tsx`）。
+>   §7.1、§7.2、§7.5 与 ADR-007 描述的是当时的设计。
+> - **没有 `/api/v1/stats/*`，也没有 `apps/stats`。** 统计在 `/api/v1/ledger/stats/{overview,trends,export}/`。
+> - **技术栈版本已变**，见 §1.4 的更新注记。§9 的里程碑表是 2026-05-09 的计划，状态列不是现状，
+>   以 `git log` 与 `docs/MILESTONES.md` 为准。
 
 ---
 
@@ -47,6 +66,7 @@
 9. [里程碑规划](#9-里程碑规划)
 10. [部署架构](#10-部署架构)
 11. [技术决策记录](#11-技术决策记录)
+12. [现状对照（2026-10-12）](#12-现状对照2026-10-12)
 
 ---
 
@@ -54,20 +74,21 @@
 
 ### 1.1 项目背景
 
-SoulLedger 是一个**多租户**跨文明灵魂管理系统。三个文明（Chinese Diyu / European Heaven-Hell / Egyptian Duat）各自作为独立租户运行，数据完全隔离，只有系统管理员（ADMIN）可以跨租户查看全局数据。
+SoulLedger 是一个**多租户**跨文明灵魂管理系统。三个文明（Chinese Diyu / European Heaven-Hell / Egyptian Duat；后来加入第四个，Greek Hades，见 §12.1）各自作为独立租户运行，数据完全隔离，只有系统管理员（ADMIN）可以跨租户查看全局数据。
 
 **核心原则：**
 - 每个文明的官员只看到自己租户的灵魂和审判数据
 - 灵魂的生命周期（创建→审判→处置→轮回）在自己租户内完成
 - 跨租户操作（如灵魂迁移）需要 ADMIN 介入
 
-### 1.2 三大租户
+### 1.2 三大租户（成稿时；现为四个，见 §12.1）
 
 | 租户代码 | 名称 | 体系 | 代表地域 | 审判者 |
 |---------|------|------|---------|--------|
 | CN_DIYU | 中国地府 | Diyu | 十八层地狱、十殿阎王 | 阎罗王、判官 |
 | EU_HEAVEN_HELL | 欧洲天堂地狱 | Heaven/Hell/Purgatory | 九层天堂、七层炼狱、九层地狱 | St. Peter、Hades、Satan |
 | EG_DUAT | 埃及冥界 | Duat | Aaru、Duat 深层 | Osiris、Anubis、Thoth |
+| GR_HADES | 希腊冥府（后加） | 柏拉图的冥府 | 岔路草原、福岛、塔耳塔罗斯 | 见 `seed_tenants` 与 `apps/actors/` |
 
 ### 1.3 核心业务流程
 
@@ -98,6 +119,11 @@ REINCARNATING（轮回中）
 | 异步任务 | Celery | 5.x |
 | 容器化 | Docker Compose | 2.x |
 | 测试 | pytest + Django TestCase | - |
+
+> **2026-10-12 更新注记：** 上表是成稿时的选型。现状（来源见括号）：Next.js 16、Tailwind CSS 4、
+> React 19.2.3（`frontend/package.json`）；Django 5.2、DRF 3.18、Celery 5.6、channels 4.3 + daphne、simplejwt（`backend/requirements.lock`）；
+> PostgreSQL 16 镜像为 `pgvector/pgvector:pg16`、Redis 7、另有 Matrix Synapse 容器（`docker-compose.yml`）；
+> 灵魂端与官员端 App 为 Expo SDK 57 / React Native（`mobile/`、`mobile-officer/`）；Node 版本钉在 `.nvmrc`。
 
 ---
 
@@ -334,6 +360,8 @@ Tenant ────────────────────────�
 
 ### 3.3 User（用户）
 
+> **现状（2026-10-12）：** 角色枚举是 `ADMIN / MODERATOR / JUDGE / GUARDIAN / VIEWER / SOUL`（`apps/authentication/models.py::UserRole`）；`SYS_ADMIN`、`TENANT_ADMIN`、`DISPATCH_JUDGE` 不存在。`SOUL` 是灵魂本人，不可分配，进不了官员接口。见 §12.2。下表保留成稿时的设计。
+
 || 字段 | 类型 | 说明 |
 |------|------|------|
 | id | UUID | 主键 |
@@ -361,6 +389,8 @@ Tenant ────────────────────────�
 > - `DISPATCH_JUDGE` 权限允许法官参与其他租户的联合审判
 
 ### 3.4 Soul（灵魂）
+
+> **现状（2026-10-12）：** `Soul` 没有 `dispatch_status`、`dispatched_to_tenant`；有 `home_tenant`（原属租户，调拨不改它）与 `tenant`（当前所在，暂居时指向目标租户）。日期是 `birth_year/month/day`、`death_year/month/day`，不是单个 date。`current_state` 另有 `SETTLED`（吸收态）。字段以 `backend/apps/souls/models.py` 为准。
 
 || 字段 | 类型 | 说明 |
 |------|------|------|
@@ -429,6 +459,8 @@ Tenant ────────────────────────�
 
 ### 3.7 Actor（角色/神祇）
 
+> **现状（2026-10-12）：** `Actor.role` 现为 `JUDGE / EXECUTOR / GUARDIAN / CONDUIT / OVERSEER`（`apps/actors/models.py::ActorRole`），不再有 `ADMIN`。
+
 || 字段 | 类型 | 说明 |
 |------|------|------|
 | id | UUID | 主键 |
@@ -442,6 +474,8 @@ Tenant ────────────────────────�
 | realm | FK(Realm) | 所属地域 |
 
 ### 3.8 Judgment（审判）
+
+> **现状（2026-10-12）：** `verdict` 另有 `draft_verdict`（草稿，不兼作已结案标记）；`judgment_method` 三个值与表一致。以 `backend/apps/judgment/models.py` 为准。
 
 || 字段 | 类型 | 说明 |
 |------|------|------|
@@ -520,6 +554,8 @@ Tenant ────────────────────────�
 
 ### 3.12 DispatchRecord（外派记录）
 
+> **现状（2026-10-12）：** 字段是 `source_tenant`、`target_tenant`、`soul`、`target_realm`、`dispatched_by`、`status`、`reason`、`decision_reason`、`decided_by`、`proposed_at`、`decided_at`、`executed_at`、`returned_at`，无 `cross_tenant_judgment` 外键；`status` 为 `DRAFT / PROPOSED / APPROVED / REJECTED / EXECUTED / RETURNED / CANCELLED`，转换表是 `DispatchRecord.VALID_TRANSITIONS`。语义是**暂居**而非迁籍。见 §12.3。
+
 > 记录灵魂被外派到其他租户进行惩罚执行的信息。
 
 || 字段 | 类型 | 说明 |
@@ -536,6 +572,8 @@ Tenant ────────────────────────�
 | status | enum | PENDING / IN_PROGRESS / COMPLETED / RETURNED |
 
 ### 3.13 CrossTenantJudgment（跨租户审判）
+
+> **现状（2026-10-12）：** 字段是 `title`、`description`、`initiating_tenant`、`status`（`PROPOSED / ACTIVE / CONCLUDED / CANCELLED`）、`concluded_at`、`conclusion_type`（`PASS` / `FAIL`）、一对一 `judgment`；参与者表带 `participant_tenant`、`participant_actor`、`role`（`ADVISOR / CO_JUDGE / CHAIRMAN`）、`joined_at` 与各自的量刑字段 `sentence_*`。**没有 `vote`、`voting_deadline`、自动弃权。**见 §12.3。
 
 > 记录跨租户联合审判会话。多个租户的法官共同参与对某一灵魂的审判。
 
@@ -599,6 +637,8 @@ Tenant ────────────────────────�
 
 ### 4.2 状态流转图（跨租户外派）
 
+> **现状（2026-10-12）：** `Soul.state` 里没有 `PENDING_DISPATCH` / `DISPATCHED`。外派状态只在 `DispatchRecord.status`；`execute` 时 `soul.tenant` 切到目标租户、`home_tenant` 不动（`DispatchService.execute`），暂居结束（`return-home` 或处置执行完毕）时回到 `home_tenant`。下图与 §4.3、§4.4 是成稿时的设计。
+
 当灵魂需要外派到其他租户执行惩罚时：
 
 ```
@@ -661,6 +701,8 @@ Soul.dispatched_to_tenant 非空时，灵魂处于外派流程：
 || COMPLETED | 外派惩罚完成，等待目标租户轮回 | REINCARNATING（在目标租户） |
 
 ### 4.5 灵魂召回机制（Recall）
+
+> **现状（2026-10-12）：** 没有 `recall` 动作与 `SOUL_RECALLED` 事件。现有的撤回路径是 `cancel`（PROPOSED／APPROVED 时）与 `return-home`（EXECUTED 后结束暂居）。
 
 **触发条件：** 来源租户 TENANT_ADMIN 可在以下条件召回已外派灵魂：
 - Soul.dispatch_status = DISPATCHED
@@ -851,6 +893,8 @@ judgment.conclude(verdict=PASSED/PURGATORY)?
 
 ### 5.5 联合审判（CrossTenantJudgment）
 
+> **现状（2026-10-12）：** 投票、截止时间、自动弃权与 `check_judgment_timeouts` 均未实现；联审在 PROPOSED 阶段由各方 `participate`、提交 `sentence`，发起方可 `order` 重排顺序，再由发起方 `activate`（PROPOSED → ACTIVE）开庭，最后 `conclude`。节点超时属于 `workflow/`（`apps/workflow/tasks.py::process_timeouts_for_tenant`），不是联审。
+
 当犯罪涉及多个租户时，可发起联合审判：
 
 - **发起方**：来源租户法官（source_tenant）
@@ -981,6 +1025,8 @@ def check_judgment_timeouts():
 
 ### 6.1 Auth
 
+> **现状（2026-10-12）：** 现有端点比下表多：`officer-login/`、`profile/preferences/`、`civilizations/`、`change-password/`、`reset-password/`、`set-new-password/`、`officer-reset/*`、`email/*`、`mfa/*`（两步验证），见 `backend/apps/authentication/urls.py`。灵魂有独立的 `/api/v1/soul-auth/`（login／refresh／logout／mfa／device-login）。令牌有效期读环境变量 `JWT_ACCESS_LIFETIME`（默认 30 分钟）、`JWT_REFRESH_LIFETIME`（默认 10080 分钟，即 7 天）。
+
 | 方法 | 端点 | 描述 | 认证 |
 |------|------|------|------|
 | POST | /api/v1/auth/login/ | 登录 | 否 |
@@ -1073,6 +1119,8 @@ def check_judgment_timeouts():
 
 ### 6.10 Stats（仅 ADMIN）
 
+> **现状（2026-10-12）：** 这三个端点不存在。统计在 `/api/v1/ledger/stats/overview/`、`trends/`、`export/`（`apps/ledger/urls.py`）；前端页面是 `frontend/app/admin/stats`。
+
 | 方法 | 端点 | 描述 |
 |------|------|------|
 | GET | /api/v1/stats/global/ | 全局统计（所有租户汇总） |
@@ -1080,6 +1128,8 @@ def check_judgment_timeouts():
 | GET | /api/v1/stats/realm-occupancy/ | 地域占用 |
 
 ### 6.11 Dispatch（跨租户外派）
+
+> **现状（2026-10-12）：** 路径是 `/api/v1/dispatch/records/`（草稿 `drafts/`、`{id}/draft/`、`{id}/submit/`，另有 `proposed/`、`history/`、`realm-options/`、`export/`，动作 `approve / reject / cancel / execute / return-home`），联合审判是 `/api/v1/dispatch/cross-tenant-judgments/`（`participate / seatable-actors / sentence / order / activate / conclude / export`）。没有 `propose/`、`recall/`、`status/`。请求体、响应示例与 §6.11.1 的权限列均为成稿时的设计，以 `/api/docs/` 为准。
 
 > 跨租户外派允许将灵魂从一个租户派遣到另一个租户执行惩罚。
 
@@ -1239,6 +1289,8 @@ PROPOSED → IN_REVIEW → APPROVED/REJECTED
 ---
 
 ## 6.X 权限模型
+
+> **现状（2026-10-12）：** 本节的角色与三张固定表不是现状：权限由 codename（`apps/perm/models.py`，角色默认值在 `ROLE_PERMISSIONS`）加 `DataScope`（行）与 `FieldPermission`（字段）构成，API 侧由 `CodenameViewSetMixin` 强制，前端 `RequirePermission` / `RequireButton` 只是外观。§6.X.5 的跨租户 JWT 读取只在设计里存在：`TenantMiddleware` 从访问令牌的 `tenant_code` 声明取 `request.tenant`，`TenantPermission` 再与用户当前租户核对。
 
 > 本节定义 SoulLedger 系统的细粒度权限控制体系，包括角色定义、三层权限粒度、外派特殊权限以及前后端实施方式。
 
@@ -1404,6 +1456,8 @@ Authorization: Bearer <JWT from tenant A>
 
 ### 7.1 路由结构
 
+> **现状（2026-10-12）：** 前端是扁平路由，没有 `[tenant]` 段；`frontend/app/` 下现有：`souls`、`dispatch`、`cross-judgments`、`judgment`、`disposition`、`realms`、`actors`、`workflow`、`dashboard`、`admin/stats`、`admin/assistant`、`soul-credentials`、`soul-inbox`、`moderation`、`social`、`scheduler`、`sentence-requests`、`rebirth-applications`、`permissions`、`users`、`tenants` 等。§7.2、§7.5 同理。
+
 ```
 /                           # 首页（三大租户入口卡片）
 /login                      # 登录页
@@ -1529,6 +1583,8 @@ GET /api/v1/stats/by-tenant/
 - 投票截止时间以倒计时形式显示
 
 ### 7.7 应用内通知（In-App Notifications）
+
+> **现状（2026-10-12）：** 模型名是 `UserNotification`，类型枚举是 `NotificationType`（`apps/notifications/models.py`），实时推送走 WebSocket（channels），灵魂端 App 另走 Expo 推送（`apps/soul_push/`）。下表的类型名是成稿时的设计。
 
 系统通过应用内通知（非 Email/推送）向用户传递重要事件：
 
@@ -1692,6 +1748,8 @@ ALTER TABLE souls_soul ADD CONSTRAINT fk_soul_tenant
 ---
 
 ## 9. 里程碑规划
+
+> **现状（2026-10-12）：** 本节是 2026-05-09 的计划，状态列（✅／🔲）不是现状：例如 M4–M8 标 🔲 的内容大多已做。权威记录是 `git log` 与 `docs/MILESTONES.md`；M1 的「12 个测试」「M3 的 57 个测试」是当时的数字，不再成立。
 
 ### Milestone 1 ✅ 已完成
 
@@ -1883,6 +1941,8 @@ localhost
 
 ### ADR-004：TenantMiddleware + TenantManager 双重隔离
 
+> **现状（2026-10-12）：** **已被推翻**：`TenantManager` 只过滤软删除，隔离单层、在视图层，见文首读法说明。
+
 **决策：** Middleware 注入 tenant context，Manager 自动过滤 QuerySet
 
 **理由：** Middleware 保证 request 层面有 tenant；Manager 保证 ORM 查询层面自动过滤，双重保证不漏数据。
@@ -1917,6 +1977,8 @@ localhost
 
 ### ADR-007：URL 路径含租户代码
 
+> **现状（2026-10-12）：** **已不是现状**：前端没有租户路径段，租户来自登录用户。保留作为当时的决策记录。
+
 **决策：** 前端路由使用 `/{tenant}/souls/` 而非 session/cookie 存储 tenant
 
 **理由：**
@@ -1930,6 +1992,8 @@ localhost
 - Header 传递 tenant：URL 不自包含，无法分享 → 不采用
 
 ### ADR-008：ADMIN 只读
+
+> **现状（2026-10-12）：** 设计意图；`TenantPermission` 对 ADMIN 直接放行，该层不强制只读，见文首读法说明。
 
 **决策：** ADMIN 角色只能查看全局统计，不能干预具体业务操作
 
@@ -1947,6 +2011,8 @@ localhost
 
 ### ADR-009：Dispatch API 独立设计
 
+> **现状（2026-10-12）：** 「独立 API」这一条成立（`/api/v1/dispatch/`）；`DISPATCH_JUDGE`、`IN_PROGRESS`／`COMPLETED` 状态不在代码里，状态机见 §12.3。
+
 **决策：** dispatch 相关功能独立 API（/dispatch/）而非扩展 disposition 端点
 
 **理由：**
@@ -1958,6 +2024,85 @@ localhost
 
 **替代方案：**
 - 扩展 POST /api/v1/disposition/{id}/execute/ 加 target_tenant 参数：职责混乱，权限模型复杂 → 不采用
+
+## 12. 现状对照（2026-10-12）
+
+> 本节是对上面成稿的**对照索引**，不是新设计。每条只给出代码里的位置，不复述细节；
+> 清单型内容（路由、端点、枚举、权限）以所指文件为准，这里不写总数，因为它们会变。
+
+### 12.1 四个文明与四个租户
+
+- 租户码：`CN_DIYU`、`EU_HEAVEN_HELL`、`EG_DUAT`、`GR_HADES`（`manage.py seed_tenants`）。
+  租户到文明的映射只在 `backend/apps/souls/models.py::TENANT_CIVILIZATION`。
+- 读数（账簿说的是什么）：`backend/apps/ledger/readings.py`；衰减规则：`backend/apps/ledger/services.py`。
+- 语料：`backend/apps/actors/mythology/__init__.py::CORPUS_PROVENANCE`。
+  六个有条文的 corpus 条数为 74 / 42 / 7 / 26 / 12 / 11，合计 172，另有声明为空的 `HELL_LAW`。
+- 生命周期状态另有 `SETTLED`（吸收态），更正结案可把 SETTLED 退回 DISPOSED 并单独记审计（`SoulState`）。
+
+### 12.2 后端应用（`backend/apps/`）
+
+`ls backend/apps` 是权威清单。成稿后新增或重做的：
+
+| 应用 | 作用 | 设计稿 |
+|---|---|---|
+| `ledger/` | 四文明读数、衰减、统计 | — |
+| `perm/`、`menus/`、`org/` | codename 权限、数据范围、字段权限；菜单；组织 | — |
+| `workflow/` | 可配置多节点审批流、模板、节点超时 | — |
+| `sentence_plan/` | 受刑计划：刑期节点、加减项请求 | `docs/ARCHITECTURE-sentence-plan.md` |
+| `scheduler/` | 定时任务注册表（`registry.py`）、按租户展开、第二个 beat 检测 | — |
+| `death_sync/` | 外部死亡登记（API Key，单条或批量）、HMAC 签名 webhook | — |
+| `soul_accounts/` | 灵魂账号随死亡登记开通；初始凭据交付；两步验证；面容／指纹登录凭据；转生申请 | `docs/ARCHITECTURE-soul-app-and-domain-split.md` |
+| `chat/` | 书信：Matrix / Synapse，后端代签凭据，新消息回调；不是端到端加密 | 同上 |
+| `social/` | 朋友圈（帖子、评论、表态、关注、图片）、举报与处置、敏感词、禁言 | — |
+| `soul_assist/` | 「问一问」助手，灵魂端与官员端共用服务层，ADMIN 管理页 | `docs/ARCHITECTURE-soul-assist.md`、`ARCHITECTURE-officer-assist.md`、`ARCHITECTURE-assist-admin.md` |
+| `soul_push/`、`officer_app/` | 灵魂端 Expo 推送；官员端 App 的待办与推送 | — |
+| `audit/`、`notifications/`、`events/` | 审计日志；通知（含 WebSocket）；事件日志与 `EventType` | — |
+
+- 角色与权限：见 §3.3 的现状注记；API 侧强制点是 `CodenameViewSetMixin`。
+- 两步验证：官员 `/api/v1/auth/mfa/*`，灵魂 `/api/v1/me/mfa/*` 与 `/api/v1/soul-auth/mfa/verify/`；
+  设备登录凭据 `/api/v1/soul-auth/device-login/`、`/api/v1/me/device-login/`（`soul_accounts/device_login*.py`）。
+- 登录交付单：官员端页面 `frontend/app/soul-credentials`，组件 `frontend/src/components/soul-accounts/DeliverySlip.tsx`，打印样式 `frontend/app/print-slip-ink.css`。
+- 设新密码时逐条列出要求：`frontend/src/components/auth/PasswordRules.tsx`，
+  与后端的一致性由 `frontend/src/__tests__/passwordRulesMatchBackend.test.ts` 守着。
+- 事件类型必须先登记进 `EventType`（`backend/apps/events/models.py`）；前端与语言包有镜像守卫，见 `CLAUDE.md`。
+
+### 12.3 外派（调拨）与联合审判
+
+- 外派是**暂居**：`Soul.home_tenant` 不变，`Soul.tenant` 暂指目标租户；`end_residence` 把它改回
+  （`backend/apps/dispatch/services.py::DispatchService.end_residence`）。
+- `DispatchRecord.status`：`DRAFT → PROPOSED → APPROVED → EXECUTED → RETURNED`，另有 `REJECTED`、`CANCELLED`；
+  转换表是 `DispatchRecord.VALID_TRANSITIONS`（`backend/apps/dispatch/models.py`）。
+  草稿只有发起人（与 ADMIN）看得见，不占 `unique_active_dispatch`，不通知任何人。
+- 取消：`cancel`（PROPOSED 或 APPROVED 时）；结束暂居：`return-home`。没有 `recall`。
+- 联合审判：`PROPOSED → ACTIVE → CONCLUDED`（或 `CANCELLED`），参与者各自提交量刑，由发起方 `conclude`；
+  联审可挂一份原属审判的受刑计划（`CrossTenantJudgment.judgment`）。
+- 分库约束与受刑计划对外派的使用：`docs/ARCHITECTURE-sentence-plan.md`、`docs/ARCHITECTURE-tenant-sharding.md`。
+
+### 12.4 前端与客户端
+
+| 客户端 | 目录 | 技术 |
+|---|---|---|
+| 管理端 Web | `frontend/` | Next.js 16、React 19.2.3、Tailwind 4、TanStack Query；端口 3333 |
+| 灵魂端 App | `mobile/` | Expo SDK 57 / React Native；dev-client，不能用 Expo Go |
+| 官员端 App | `mobile-officer/` | 同上 |
+| 共享层 | `packages/core/` | 平台无关：API 契约、两个 WebSocket 客户端、领域配置、校验、三份语言包（`messages/{zh-Hans,en,egy}.json`）、hooks；tsconfig 不含 `dom` |
+
+- 仓库是 npm workspaces，根 `package-lock.json` 是唯一锁文件，Node 版本见 `.nvmrc`。
+- 语言：`zh-Hans / en / egy`，语言包在 `packages/core/messages/`，不在 `frontend/messages/`。
+- 主题与 ThemeContext 在 `frontend/src/contexts/`；§7.X 的「可选功能」是否逐项实现未逐条核对。
+
+### 12.5 设计系统
+
+设计系统的权威是 `frontend/app/globals.css`；`DESIGN.md` 只写取舍的理由，不写数值（它自己也这么声明）。
+本文 §7.X 的主题色预设与设置抽屉是成稿时的设想，现行的 token 以 `globals.css` 为准；
+「v3」改版的范围与进度未在本节核对，见 `DESIGN.md` 与 `docs/design-handoff/`。
+
+### 12.6 质量门与运行
+
+- 门禁、测试命令与已知陷阱：`CLAUDE.md`；一键脚本 `scripts/run-gates.sh`。
+- CI 只有手动触发：`.github/workflows/ci.yml`、`security.yml`。
+- 容器：`docker-compose.yml`（含 Synapse、celery、celery-beat）及 override／staging／production 三份。
+- 其他文档的位置：`README.md`、`CHANGELOG.md`（`[Unreleased]` 一段自述没有跟上）、`docs/README.md`。
 
 ---
 
