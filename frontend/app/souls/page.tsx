@@ -9,6 +9,7 @@ import { usePermissions } from "@/src/hooks/usePermissions";
 import { SoulBatchBar, useSoulSelection } from "@/src/components/souls/SoulBatchBar";
 import { CIVILIZATION_OPTIONS } from "@soulledger/core/config/civilizations";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { readFilters, writeFilters } from "@/src/lib/rememberedFilters";
 import { usePlaque } from "@/src/components/plaque/Plaque";
 import { useHall } from "@/src/components/plaque/useHall";
 import { SoulCreateModal } from "@/src/components/ui/Modal";
@@ -57,6 +58,9 @@ function dateProblemMarker(soul: SoulListItem): { glyph: string; className: stri
 }
 
 /** `?q=` 是全局搜索「查看全部 N 个灵魂 →」带来的词,进页即填进搜索框。换词时整页重挂(key),筛选回到初始。 */
+const SOULS_FILTERS_KEY = "soulledger.souls.filters";
+const SOULS_FILTER_FIELDS = ["state", "civilization", "balanceMin", "balanceMax", "ordering"] as const;
+
 export default function SoulsPage() {
   // useSearchParams needs a Suspense boundary under the App Router build (as app/corpus/page.tsx).
   return (
@@ -95,6 +99,26 @@ function SoulsList({
   const [balanceMin, setBalanceMin] = useState("");
   const [balanceMax, setBalanceMax] = useState("");
   const [ordering, setOrdering] = useState("");
+  // The dropdown filters, the balance range and the sort are remembered in this browser. They come back on
+  // mount only when the address asked for nothing itself (`?q=` / `?state=` / `?import_batch=` win), and are
+  // written only after that first read, so the defaults never overwrite what was stored. Search text and the
+  // import batch are not remembered: they belong to one visit.
+  const restored = useRef(false);
+  useEffect(() => {
+    if (!initialQuery && !initialState && !initialBatch) {
+      const saved = readFilters(SOULS_FILTERS_KEY, SOULS_FILTER_FIELDS);
+      if (saved.state) setStateFilter(saved.state);
+      if (saved.civilization) setCivilizationFilter(saved.civilization);
+      if (saved.balanceMin) setBalanceMin(saved.balanceMin);
+      if (saved.balanceMax) setBalanceMax(saved.balanceMax);
+      if (saved.ordering) setOrdering(saved.ordering);
+    }
+    restored.current = true;
+  }, [initialQuery, initialState, initialBatch]);
+  useEffect(() => {
+    if (!restored.current) return;
+    writeFilters(SOULS_FILTERS_KEY, { state: stateFilter, civilization: civilizationFilter, balanceMin, balanceMax, ordering });
+  }, [stateFilter, civilizationFilter, balanceMin, balanceMax, ordering]);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [batch, setBatch] = useState(initialBatch);
