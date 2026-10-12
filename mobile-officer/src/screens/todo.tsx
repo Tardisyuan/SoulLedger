@@ -1,17 +1,30 @@
 /** 待办: the kinds of item waiting on this officer, grouped, each group titled with its count. */
-import { officerAppApi, type Todo, type TodoItem } from "@soulledger/core/api/officer-app";
-import { useCallback, useEffect } from "react";
-import { View } from "react-native";
+import { officerAppApi, type Todo, type TodoItem, type TodoKind } from "@soulledger/core/api/officer-app";
+import { platform } from "@soulledger/core/platform";
+import { useCallback, useEffect, useState } from "react";
+import { Pressable, StyleSheet, View } from "react-native";
 
-import { Row, StateView, viewStateOf } from "../kit";
+import { FilterChips, Row, StateView, viewStateOf } from "../kit";
 import { TODO_GROUPS, isDenied, isTodoKind, todoTitle, type ItemKind } from "../rules";
 import { useSession } from "../session";
-import { Screen, SectionLabel, Txt, publishVoiceNumber, space, useI18n, useRemote } from "../shared";
+import { Button, Screen, SectionLabel, Txt, publishVoiceNumber, space, useI18n, useRemote } from "../shared";
 import { formatWhen } from "../format";
 
 export interface ItemRef {
   kind: ItemKind;
   id: string;
+}
+
+/** 类型筛选 (Design batch 28 O2): the chosen kinds, on this phone. Nothing chosen = all. */
+export const TODO_FILTER_KEY = "officer_todo_filter";
+
+function readFilter(): TodoKind[] {
+  try {
+    const parsed: unknown = JSON.parse(platform().persistent.get(TODO_FILTER_KEY) ?? "[]");
+    return Array.isArray(parsed) ? parsed.filter(isTodoKind) : [];
+  } catch {
+    return [];
+  }
 }
 
 /** A server that predates a group (an older build) does not send it: that group is empty, not an error. */
@@ -28,6 +41,21 @@ export function TodoTab({ onOpen, highlight }: { onOpen: (item: ItemRef) => void
   useEffect(() => {
     if (data) publishVoiceNumber("todo", TODO_GROUPS.reduce((sum, g) => sum + countOf(data, g.field), 0));
   }, [data]);
+  const [chosen, setChosen] = useState<TodoKind[]>(readFilter);
+  const toggle = (kind: TodoKind) =>
+    setChosen((prev) => {
+      const next = prev.includes(kind) ? prev.filter((k) => k !== kind) : [...prev, kind];
+      if (next.length === 0) platform().persistent.remove(TODO_FILTER_KEY);
+      else platform().persistent.set(TODO_FILTER_KEY, JSON.stringify(next));
+      return next;
+    });
+  const clear = () => {
+    platform().persistent.remove(TODO_FILTER_KEY);
+    setChosen([]);
+  };
+  const shown = TODO_GROUPS.filter((g) => chosen.length === 0 || chosen.includes(g.kind));
+  const kinds = chosen.length === 0 ? "" : shown.map((g) => t(g.label)).join("、");
+  const rowsShown = data ? shown.reduce((sum, g) => sum + countOf(data, g.field), 0) : 0;
   const view = viewStateOf({ data, error }, (d) => TODO_GROUPS.every((g) => countOf(d, g.field) === 0), isDenied);
 
   return (
@@ -45,7 +73,32 @@ export function TodoTab({ onOpen, highlight }: { onOpen: (item: ItemRef) => void
           emptyBody={t("officer_app.todo.empty_body")}
         />
       ) : (
-        TODO_GROUPS.map(({ field, kind, label }) => {
+        <>
+          <FilterChips
+            testID="todo-filter"
+            options={TODO_GROUPS.map((g) => ({ key: g.kind, label: t(g.label), count: countOf(data!, g.field) }))}
+            selected={chosen}
+            onToggle={toggle}
+          />
+          {chosen.length > 0 ? (
+            <View style={styles.summary}>
+              <Txt testID="todo-filter-summary" variant="body" tone="muted" style={styles.summaryText}>
+                {t("officer_app.todo.filter_summary", { kinds, n: String(rowsShown) })}
+              </Txt>
+              <Pressable testID="todo-filter-clear" accessibilityRole="button" accessibilityLabel={t("officer_app.todo.filter_clear")} hitSlop={{ left: 8, right: 8 }} onPress={clear} style={styles.summaryClear}>
+                <Txt variant="body">{t("officer_app.todo.filter_clear")}</Txt>
+              </Pressable>
+            </View>
+          ) : null}
+          {rowsShown === 0 ? (
+            <>
+              <StateView state="empty" emptyTitle={t("officer_app.todo.filter_empty_title", { kinds })} emptyBody={t("officer_app.todo.filter_empty_body")} />
+              <View style={{ paddingHorizontal: space[5] }}>
+                <Button testID="todo-filter-clear-empty" kind="secondary" title={t("officer_app.todo.filter_clear")} onPress={clear} />
+              </View>
+            </>
+          ) : null}
+        {shown.map(({ field, kind, label }) => {
           const group = data![field];
           if (!group || group.count === 0) return null;
           return (
@@ -58,7 +111,8 @@ export function TodoTab({ onOpen, highlight }: { onOpen: (item: ItemRef) => void
               ))}
             </View>
           );
-        })
+        })}
+        </>
       )}
     </Screen>
   );
@@ -82,3 +136,9 @@ function TodoRow({ item, highlight, onOpen }: { item: TodoItem; highlight: boole
     />
   );
 }
+
+const styles = StyleSheet.create({
+  summary: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: space[3], paddingHorizontal: space[5] },
+  summaryText: { flex: 1 },
+  summaryClear: { minHeight: 44, justifyContent: "center" },
+});

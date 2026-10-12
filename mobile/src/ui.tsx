@@ -166,6 +166,18 @@ export function toneColor(t: Theme, tone: Tone): string {
   }
 }
 
+/**
+ * 第二十八批 S4: both apps follow the system text size, with no in-app setting. The cap is
+ * Design's rule: the system's 3rd-largest step, "iOS AX3 / Android 200%" -- 2.35 on iOS (AX3 body
+ * 40pt against the default 17); Android's own largest scale is 2.0, so it never bites there.
+ *
+ * NOT implemented yet (Design batch 28 S4, needs a device pass): identifiers / times / amounts /
+ * status labels on one line, truncated with … and long-press to read in full; left-text +
+ * right-time rows stacking above 1.5x; the filter bar and identity band staying at the default
+ * size; printed / scanned content not scaling.
+ */
+export const MAX_FONT_SCALE = 2.35;
+
 export function Txt({
   variant = "body",
   tone = "ink",
@@ -173,7 +185,13 @@ export function Txt({
   ...rest
 }: TextProps & { variant?: keyof typeof TYPE; tone?: Tone }) {
   const t = useTheme();
-  return <Text {...rest} style={[TYPE[variant], { color: toneColor(t, tone) }, style]} />;
+  return (
+    <Text
+      maxFontSizeMultiplier={MAX_FONT_SCALE}
+      {...rest}
+      style={[TYPE[variant], { color: toneColor(t, tone) }, style]}
+    />
+  );
 }
 
 /** v3 `.product-label`: a block's name, in `muted` — never ink, never a colour. */
@@ -921,7 +939,7 @@ export function Button({
         ]}
       >
         {busy ? <Loader size={20} /> : kind === "danger" ? <Icon name="close" size={14} color={look.ink} strokeWidth={1.6} /> : null}
-        <Text numberOfLines={2} style={[styles.buttonText, { color: look.ink }]}>
+        <Text numberOfLines={2} maxFontSizeMultiplier={MAX_FONT_SCALE} style={[styles.buttonText, { color: look.ink }]}>
           {title}
         </Text>
       </Pressable>
@@ -1065,8 +1083,8 @@ export function FailedLine({ text, onRetry, testID, retryTestID }: { text: strin
   const { t } = useI18n();
   return (
     <View accessibilityRole="alert" style={styles.failed}>
-      <Text style={[styles.failedText, { color: theme.neg }]}>✕</Text>
-      <Text testID={testID} style={[styles.failedText, styles.fill, { color: theme.neg }]}>
+      <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={[styles.failedText, { color: theme.neg }]}>✕</Text>
+      <Text testID={testID} maxFontSizeMultiplier={MAX_FONT_SCALE} style={[styles.failedText, styles.fill, { color: theme.neg }]}>
         {text}
       </Text>
       <SmallButton testID={retryTestID} title={t("soul_app.common.retry")} onPress={onRetry} />
@@ -1163,9 +1181,14 @@ export function Badge({ spec, label, raw, testID }: { spec: BadgeSpec; label: st
         { borderColor: t.inkSubtle, borderStyle: spec.border, backgroundColor: spec.pending ? t.s2 : "transparent" },
       ]}
     >
-      <Text testID={testID ? `${testID}-glyph` : undefined} style={[styles.badgeText, styles.badgeGlyph, { color }]}>{spec.glyph}</Text>
-      <Text style={[styles.badgeText, styles.shrink, { color }]}>{label}</Text>
-      {raw ? <Text style={[styles.badgeRaw, { color }]}>{raw}</Text> : null}
+      <Text testID={testID ? `${testID}-glyph` : undefined} maxFontSizeMultiplier={MAX_FONT_SCALE} style={[styles.badgeText, styles.badgeGlyph, { color }]}>{spec.glyph}</Text>
+      <Text
+        maxFontSizeMultiplier={MAX_FONT_SCALE}
+        style={[styles.badgeText, styles.shrink, { color }]}
+      >
+        {label}
+      </Text>
+      {raw ? <Text maxFontSizeMultiplier={MAX_FONT_SCALE} style={[styles.badgeRaw, { color }]}>{raw}</Text> : null}
     </View>
   );
 }
@@ -1211,6 +1234,7 @@ export function Quote({ text, tone = "neutral", testID }: { text: string; tone?:
     <View style={[styles.quote, compact && styles.quoteCompact, { borderLeftColor: line }]}>
       <Text
         testID={testID}
+        maxFontSizeMultiplier={MAX_FONT_SCALE}
         style={[styles.quoteText, { fontFamily: quoteFamily(text), color: tone === "rejection" ? t.ink : t.inkMuted }]}
       >
         {text}
