@@ -5492,7 +5492,10 @@
         "letters": "Letters to answer"
       },
       "empty_title": "Nothing waiting on you",
-      "empty_body": "New approvals, handovers and requests will be pushed to you."
+      "empty_body": "New approvals, handovers and requests will be pushed to you.",
+      "filter_empty_title": "Nothing waiting in these types",
+      "filter_empty_body": "Pick another type, or clear the filters.",
+      "filter_clear": "Clear filters"
     },
     "queue": {
       "mine": "Mine",
