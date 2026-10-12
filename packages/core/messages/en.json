@@ -2627,6 +2627,13 @@
     "clear_all": "Clear All",
     "clear_one": "Clear the {{name}} filter"
   },
+  "list": {
+    "columns": {
+      "button": "Columns · {{shown}}/{{total}}",
+      "pinned": "Always shown",
+      "reset": "Reset"
+    }
+  },
   "death_sync": {
     "title": "Death Sync",
     "subtitle": "External death registrations and sync status",

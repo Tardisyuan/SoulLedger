@@ -35,6 +35,8 @@ export interface DataGridSelection<T> {
 
 export interface DataGridProps<T> {
   columns: DataGridColumn<T>[]
+  /** 列菜单(`ColumnMenu` / `useColumnVisibility`)隐藏的列键;钉住的列(`pinned`)不受影响。不传 = 全部显示。 */
+  hiddenColumns?: ReadonlySet<string>
   data?: T[]
   keyExtractor: (item: T, index: number) => string
   caption: string
@@ -102,7 +104,8 @@ function SelectAllCheckbox({
  * the opt-in selection capability (§6).
  */
 export function DataGrid<T>({
-  columns,
+  columns: allColumns,
+  hiddenColumns,
   data,
   keyExtractor,
   caption,
@@ -126,6 +129,10 @@ export function DataGrid<T>({
   groupHeader,
   className,
 }: DataGridProps<T>) {
+  const columns = useMemo(
+    () => (hiddenColumns?.size ? allColumns.filter((c) => c.pinned || !hiddenColumns.has(c.key)) : allColumns),
+    [allColumns, hiddenColumns]
+  )
   // Row height is DataTable's; this is only the cell padding of the cells DataGrid renders.
   const cellPadding = 'px-4 py-3'
 

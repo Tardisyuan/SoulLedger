@@ -19,6 +19,7 @@ import { DomainEnum, DomainNumber, DomainText, MissingValue } from "@/src/compon
 import { isColumnUninformative, resolveEnumDisplay } from "@/src/lib/domainDisplay";
 import { PAGE_SIZE, soulsApi, type SoulListItem } from "@soulledger/core/api";
 import { cn, formatHistoricalDate } from "@/lib/utils";
+import { ColumnMenu, useColumnVisibility } from "@/components/ui/data-grid";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { Button } from "@/src/components/ui/Button";
 import { Badge } from "@/src/components/ui/Badge";
@@ -59,6 +60,8 @@ function dateProblemMarker(soul: SoulListItem): { glyph: string; className: stri
 
 /** `?q=` 是全局搜索「查看全部 N 个灵魂 →」带来的词,进页即填进搜索框。换词时整页重挂(key),筛选回到初始。 */
 const SOULS_FILTERS_KEY = "soulledger.souls.filters";
+/** 列菜单的偏好,记在本浏览器(`ColumnMenu`)。 */
+const SOULS_COLUMNS_KEY = "soulledger.souls.columns";
 const SOULS_FILTER_FIELDS = ["state", "civilization", "balanceMin", "balanceMax", "ordering"] as const;
 
 export default function SoulsPage() {
@@ -202,6 +205,18 @@ function SoulsList({
    */
   const showsDeathColumn = !isColumnUninformative(souls, (s) => Boolean(s.death_date));
 
+  /* 列菜单(Design 第二十八批 W1)。菜单里的列清单是固定五列:死亡列本页没有值时仍在菜单里,
+     只是不画(上面的 `showsDeathColumn`),这样「列 · 4/5」不随翻页跳动。名称列钉住。 */
+  const columnDefs = [
+    { key: "name", header: t("souls.name"), sortable: true, pinned: true },
+    { key: "civilization", header: t("souls.civilization") },
+    { key: "state", header: t("souls.state") },
+    { key: "karmic_balance", header: t("souls.balance"), sortable: true, align: "right" as const },
+    { key: "death", header: t("souls.death") },
+  ];
+  const columnVis = useColumnVisibility(SOULS_COLUMNS_KEY, columnDefs);
+  const showsColumn = (key: string) => columnVis.isVisible(key) && (key !== "death" || showsDeathColumn);
+
   const states = [
     { value: "", label: t("filter.all") },
     { value: "ALIVE", label: t("souls.states.ALIVE") },
@@ -342,6 +357,15 @@ function SoulsList({
               {t("souls.import.batch_chip")}
             </FilterChipToggle>
           )}
+          {/* 右端:列菜单(393 宽不出现,见 ColumnMenu)。 */}
+          <ColumnMenu
+            className="ml-auto"
+            columns={columnDefs}
+            visibility={columnVis}
+            buttonLabel={t("list.columns.button", { shown: String(columnVis.shown), total: String(columnVis.total) })}
+            pinnedLabel={t("list.columns.pinned")}
+            resetLabel={t("list.columns.reset")}
+          />
         </>
       }
     >
@@ -353,13 +377,7 @@ function SoulsList({
       <DataTable<SoulListItem>
         linkedRows
         caption={t("souls.title")}
-        columns={[
-          { key: "name", header: t("souls.name"), sortable: true },
-          { key: "civilization", header: t("souls.civilization") },
-          { key: "state", header: t("souls.state") },
-          { key: "karmic_balance", header: t("souls.balance"), sortable: true, align: "right" as const },
-          ...(showsDeathColumn ? [{ key: "death", header: t("souls.death") }] : []),
-        ]}
+        columns={columnDefs.filter((c) => showsColumn(c.key))}
         data={souls}
         /* The query's identity, so a page turn or a filter change re-baselines
            instead of flagging all twenty rows. `params` is what the queryKey is
@@ -418,9 +436,12 @@ function SoulsList({
                 </button>
               </span>
             </td>
+            {showsColumn("civilization") && (
             <td className="px-4 py-3 whitespace-nowrap text-[oklch(var(--color-ink-muted))]">
               <DomainEnum namespace="souls.civilizations" value={soul.civilization} />
             </td>
+            )}
+            {showsColumn("state") && (
             <td className="px-4 py-3 whitespace-nowrap">
               {/* 领域枚举徽章(补足 C15):ink 字 + ink3 框,审判中加 s2 底,不用状态色。
                   表在 src/lib/soulStateBadge.ts —— 它曾是这里与详情页两份逐字相同的拷贝。 */}
@@ -433,11 +454,13 @@ function SoulsList({
               </Badge>
               {soul.is_eval_identity && <EvalIdentityTag />}
             </td>
+            )}
             {/* §4.6: this column was `+0` on every row. A sign is only ever
                 attached to a value that has one, so a zero balance now
                 prints a bare neutral `0` — a recorded fact — while a soul
                 whose cosmology does not net merit against demerit gets the
                 "not applicable" dot, visibly different from both. */}
+            {showsColumn("karmic_balance") && (
             <td className="px-4 py-3 text-right whitespace-nowrap">
               {/* `?? 0` rendered a confident zero -- signed and toned -- for a
                   value the backend deliberately withholds. `SoulSerializer
@@ -455,7 +478,8 @@ function SoulsList({
                 <DomainNumber value={soul.karmic_balance} signed toned />
               )}
             </td>
-            {showsDeathColumn && (
+            )}
+            {showsColumn("death") && (
               /* 02 档：日期是元数据，不是正文。 */
               <td className="px-4 py-3 text-xs whitespace-nowrap text-[oklch(var(--color-ink-muted))]">
                 <DomainText value={formatHistoricalDate(soul.death_date, locale)} />
