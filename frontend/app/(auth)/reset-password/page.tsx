@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { authApi, type OfficerResetRefusal } from "@soulledger/core/api";
 import { useI18n } from "@/src/contexts/I18nContext";
@@ -30,7 +30,12 @@ export default function ResetPasswordPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // 严格模式下 effect 跑两遍:第一遍读到凭据并把地址栏抹掉,第二遍读到空参数就会把表单换成「链接无效」。
+  // 与 verify-email 同一个守卫。
+  const read = useRef(false);
   useEffect(() => {
+    if (read.current) return;
+    read.current = true;
     const params = new URLSearchParams(window.location.search);
     const uid = params.get("uid");
     const token = params.get("token");

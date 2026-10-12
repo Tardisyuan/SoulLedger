@@ -52,7 +52,8 @@ describe.each([
   });
 
   it("clean / absent: the plain success message, or nothing for a comment", async () => {
-    for (const s of ["clean", null, undefined]) {
+    // "quarantined" stands for an outcome this build has never heard of: no empty toast.
+    for (const s of ["clean", null, undefined, "quarantined"]) {
       mockNotify.mockClear();
       await run(s);
       if (cleanKey) expect(mockNotify).toHaveBeenCalledWith(cleanKey, "success");

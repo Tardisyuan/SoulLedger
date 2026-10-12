@@ -38,7 +38,10 @@ const SCREENING_MESSAGE = {
 } as const;
 
 function tellScreening(outcome: ScreeningOutcome | null | undefined, fallbackKey?: string) {
-  if (outcome && outcome !== "clean") notify(SCREENING_MESSAGE[outcome], "info");
+  // A value this build does not know (the server grew a fourth outcome) is treated as clean:
+  // the caller's own message, never an empty toast.
+  const key = outcome && outcome !== "clean" ? (SCREENING_MESSAGE as Record<string, string | undefined>)[outcome] : undefined;
+  if (key) notify(key, "info");
   else if (fallbackKey) notify(fallbackKey, "success");
 }
 
