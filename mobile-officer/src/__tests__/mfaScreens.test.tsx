@@ -169,7 +169,7 @@ describe("the wizard", () => {
     await toStep(3);
     fireEvent.changeText(screen.getByTestId("mfa-setup-code"), "000000");
     await press("mfa-confirm");
-    expect(await screen.findByText("! 动态码不对，检查手机时间是否准确")).toBeTruthy();
+    expect(await screen.findByText("动态码不对，检查手机时间是否准确")).toBeTruthy();
     expect(screen.getByTestId("mfa-setup-code").props.value).toBe("");
     expect(screen.queryByTestId("mfa-recovery-codes")).toBeNull();
   });
@@ -183,9 +183,9 @@ describe("the wizard", () => {
       await press("mfa-confirm");
       expect(await screen.findByText(text)).toBeTruthy();
     };
-    await attempt(httpError(400, { code: "expired" }), "! 动态码已过期");
-    await attempt(httpError(429, { code: "locked", retry_after: 60 }), "! 尝试次数过多，请稍后再试");
-    await attempt(new Error("Network Error"), "! 网络错误");
+    await attempt(httpError(400, { code: "expired" }), "动态码已过期");
+    await attempt(httpError(429, { code: "locked", retry_after: 60 }), "尝试次数过多，请稍后再试");
+    await attempt(new Error("Network Error"), "网络错误");
     expect(screen.queryByTestId("mfa-recovery-codes")).toBeNull();
   });
 
@@ -342,11 +342,11 @@ describe("the managed state", () => {
     fireEvent.press(await screen.findByTestId("mfa-regen"));
     fireEvent.changeText(screen.getByTestId("mfa-regen-code"), "123456");
     await press("mfa-regen-confirm");
-    expect(await screen.findByText("! 网络错误")).toBeTruthy();
+    expect(await screen.findByText("网络错误")).toBeTruthy();
     await press("mfa-regen-confirm");
-    expect(await screen.findByText("! 没能关闭，请检查动态码或密码")).toBeTruthy();
+    expect(await screen.findByText("没能关闭，请检查动态码或密码")).toBeTruthy();
     await press("mfa-regen-confirm");
-    expect(await screen.findByText("! 尝试次数过多，请稍后再试")).toBeTruthy();
+    expect(await screen.findByText("尝试次数过多，请稍后再试")).toBeTruthy();
     expect(screen.queryByTestId("mfa-codes-text")).toBeNull();
     expect(screen.getByTestId("mfa-regen-code")).toBeTruthy();
   });
@@ -376,7 +376,7 @@ describe("the managed state", () => {
     fireEvent.changeText(screen.getByTestId("mfa-disable-password"), "hunter2-secret");
     await press("mfa-disable-confirm");
     expect(mockApi.disable).toHaveBeenCalledWith({ method: "password", password: "hunter2-secret" });
-    expect(await screen.findByText("! 没能关闭，请检查动态码或密码")).toBeTruthy();
+    expect(await screen.findByText("没能关闭，请检查动态码或密码")).toBeTruthy();
     expect(screen.queryByText(/hunter2-secret/)).toBeNull();
     expect(session.setMfaEnabled).not.toHaveBeenCalled();
   });

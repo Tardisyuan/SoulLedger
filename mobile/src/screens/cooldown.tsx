@@ -176,7 +176,7 @@ export function CooldownShorteningBlock({ list, onChanged, landed }: { list: MeR
               inputWidth={96}
               suffix={<Txt variant="body">{t("soul_accounts.cooldown.day_unit")}</Txt>}
               invalid={wishFlagged}
-              error={wishFlagged ? `! ${t("soul_app.cooldown.desired_invalid", { max: String(Math.max(0, left - 1)) })}` : null}
+              error={wishFlagged ? t("soul_app.cooldown.desired_invalid", { max: String(Math.max(0, left - 1)) }) : null}
             />
             {error ? <Notice tone="neg">{t(error.key, error.params)}</Notice> : null}
             <Button

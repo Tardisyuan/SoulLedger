@@ -325,7 +325,7 @@ describe("a reply written offline", () => {
     await act(async () => {
       await flushOutbox();
     });
-    expect(screen.getByText("! 回信 · 李白 没有发出")).toBeTruthy();
+    expect(screen.getByText("回信 · 李白 没有发出")).toBeTruthy();
     expect(screen.getByTestId("outbox-reason-c-1").props.children).toBe(words);
     for (const a of ["view", "retry", "discard"]) expect(!!screen.queryByTestId(`outbox-${a}-c-1`)).toBe(actions.includes(a));
     expect(screen.queryByTestId("outbox-pending-c-1")).toBeNull();

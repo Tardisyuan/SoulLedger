@@ -101,7 +101,7 @@ export function ForgotPassword({ initial, onBack }: { initial: string; onBack: (
     <View testID="forgot-form" style={{ gap: space[4] }}>
       <Txt variant="title">{t("auth.forgot_password")}</Txt>
       <Txt variant="body" tone="muted">{t("auth.forgot_email_desc")}</Txt>
-      {failure ? <Notice tone="neg" testID="forgot-failure">{`! ${failure}`}</Notice> : null}
+      {failure ? <Notice tone="neg" testID="forgot-failure">{failure}</Notice> : null}
       <Input testID="forgot-identifier" label={t("auth.forgot_email_label")} value={identifier} onChangeText={setIdentifier} textContentType="username" autoComplete="username" autoCapitalize="none" autoCorrect={false} />
       <Button testID="forgot-submit" title={t("auth.forgot_email_submit")} busy={busy} disabled={!identifier.trim()} onPress={submit} />
       <ActionButton testID="forgot-back" kind="outline" title={t("auth.back_to_login")} onPress={onBack} />
@@ -147,8 +147,8 @@ export function ChangePasswordScreen({ onBack }: { onBack: () => void }) {
   return (
     <AccountFrame testID="password-screen" onBack={onBack} scrollRef={holdScroller}>
       <Txt variant="title">{t("profile.change_password")}</Txt>
-      {fail?.network ? <Notice tone="neg" testID="password-failure">{`! ${t("officer_app.login.reasons.network")}`}</Notice> : null}
-      {none ? <Notice tone="neg" testID="password-failure">{`! ${t("profile.password_change_failed")}`}</Notice> : null}
+      {fail?.network ? <Notice tone="neg" testID="password-failure">{t("officer_app.login.reasons.network")}</Notice> : null}
+      {none ? <Notice tone="neg" testID="password-failure">{t("profile.password_change_failed")}</Notice> : null}
       {fail?.other.length ? (
         <View testID="password-failure" style={{ gap: space[1] }}>
           {fail.other.map((line) => <FieldError key={line} text={line} />)}

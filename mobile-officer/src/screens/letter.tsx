@@ -239,13 +239,13 @@ export function LetterThread({
               <Txt variant="caption" tone="muted" testID="letter-queued">{`${t("officer_app.outbox.pending")} · ${t("officer_app.outbox.auto")}`}</Txt>
             ) : null}
             {outboxEntry?.state === "failed" && !failure ? (
-              <Notice tone="neg" testID="letter-outbox-failed">{`! ${t(`officer_app.outbox.${outboxEntry.reason ?? "retry"}`)}`}</Notice>
+              <Notice tone="neg" testID="letter-outbox-failed">{t(`officer_app.outbox.${outboxEntry.reason ?? "retry"}`)}</Notice>
             ) : null}
             {failure ? (
               <Notice
                 tone="neg"
                 testID="letter-failed"
-              >{`! ${t(failure)}`}</Notice>
+              >{t(failure)}</Notice>
             ) : null}
             <Txt variant="caption" tone="muted" testID="letter-irreversible">
               {t("officer_app.letter.irreversible")}

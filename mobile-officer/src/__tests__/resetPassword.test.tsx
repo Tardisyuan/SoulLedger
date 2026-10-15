@@ -216,7 +216,7 @@ describe("ResetPasswordScreen", () => {
     fill();
     await submit();
     expect(screen.getByTestId("reset-invalid")).toBeTruthy();
-    expect(screen.getByText("! 链接无效或已过期")).toBeTruthy();
+    expect(screen.getByText("链接无效或已过期")).toBeTruthy();
     expect(screen.queryByTestId("reset-submit")).toBeNull();
     expect(isRetiredResetLink(cred())).toBe(true);
     fireEvent.press(screen.getByTestId("reset-request-again"));
@@ -242,7 +242,7 @@ describe("ResetPasswordScreen", () => {
     const { onDone } = mount();
     fill();
     await submit();
-    expect(screen.getByTestId("reset-failure").props.children).toBe(`! ${line}`);
+    expect(screen.getByTestId("reset-failure").props.children).toBe(line);
     expect(screen.getByTestId("reset-submit")).toBeTruthy();
     expect(onDone).not.toHaveBeenCalled();
     expect(isRetiredResetLink(cred())).toBe(false);
