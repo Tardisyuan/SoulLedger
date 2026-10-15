@@ -2,7 +2,7 @@
  * `/users?username=<u>` —— 求助通知的「去用户页」落到那一个账号(第三类 F 组 2.6):
  * 服务端按用户名精确筛,那一行高亮;账号不存在时是普通的空结果。
  */
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import UsersPage from "@/app/users/page";
 import { usersApi, permApi } from "@soulledger/core/api";
@@ -78,4 +78,47 @@ it("without ?username nothing is located and no username goes to the server", as
   await screen.findByText("cuijue");
   expect(mockUsers).toHaveBeenCalledWith(expect.objectContaining({ username: undefined }));
   expect(container.querySelector("[data-located]")).toBeNull();
+});
+
+// ── 记住的筛选(2026-10-15) ─────────────────────────────────────────
+
+describe("UsersPage remembered filters", () => {
+  const KEY = "soulledger.users.filters";
+  const lastCall = () => mockUsers.mock.calls[mockUsers.mock.calls.length - 1][0];
+
+  beforeEach(() => {
+    mockQuery = "";
+    mockUsers.mockResolvedValue(page(row(3, "cuijue")));
+  });
+
+  it("stored role, MFA state and sort come back on mount and reach the request", async () => {
+    localStorage.setItem(KEY, JSON.stringify({ role: "JUDGE", mfa: "missing", ordering: "-username" }));
+    renderPage();
+    await screen.findByText("cuijue");
+    await waitFor(() => expect(lastCall()).toEqual(expect.objectContaining({ role: "JUDGE", mfa: "missing", ordering: "-username" })));
+  });
+
+  it("a ?username= in the address wins: nothing stored is applied", async () => {
+    mockQuery = "username=cuijue";
+    localStorage.setItem(KEY, JSON.stringify({ role: "JUDGE", mfa: "missing" }));
+    renderPage();
+    await screen.findByText("cuijue");
+    expect(mockUsers).toHaveBeenCalled();
+    for (const [params] of mockUsers.mock.calls) {
+      expect(params.role).toBeUndefined();
+      expect(params.mfa).toBeUndefined();
+    }
+  });
+
+  it("search text is not stored; the chosen MFA state is, and its × removes it", async () => {
+    renderPage();
+    await screen.findByText("cuijue");
+    fireEvent.change(screen.getByPlaceholderText("users.search_placeholder"), { target: { value: "cui" } });
+    fireEvent.change(screen.getByRole("combobox", { name: "mfa.admin.column" }), { target: { value: "enabled" } });
+    await waitFor(() => expect(JSON.parse(localStorage.getItem(KEY)!)).toEqual({ mfa: "enabled" }));
+    expect(localStorage.getItem(KEY)).not.toContain("cui\"");
+    // 「mfa」那一枚的 ×(两枚 × 同名,筛选生效的只有 mfa 这一枚)。
+    fireEvent.click(screen.getByRole("button", { name: "filter.clear_one" }));
+    await waitFor(() => expect(localStorage.getItem(KEY)).toBeNull());
+  });
 });

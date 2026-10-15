@@ -35,7 +35,10 @@ import { ScheduleEditorModal } from "@/src/components/scheduler/ScheduleEditorMo
 import { TaskRunsDrawer } from "@/src/components/scheduler/TaskRunsDrawer";
 import { RunHistoryPanel } from "@/src/components/scheduler/RunHistoryPanel";
 import { TAB_BASE, TAB_OFF, TAB_ON } from "@/src/lib/tabClasses";
+import { useRememberedFilters } from "@/src/lib/rememberedFilters";
 import { JOB_FILTERS, groupJobs, matchesFilter, type JobFilter } from "@/src/components/scheduler/schedulerView";
+
+const SCHEDULER_FILTERS_KEY = "soulledger.scheduler.filters";
 
 function SchedulerPageContent() {
   const { t } = useI18n();
@@ -57,6 +60,10 @@ function SchedulerPageContent() {
 
   const [tab, setTab] = useState<"jobs" | "history">("jobs");
   const [filter, setFilter] = useState<JobFilter>("all");
+  // 筛选签记在本浏览器;「全部」就是没有记。所在的页签(任务 / 历史)不记。
+  useRememberedFilters(SCHEDULER_FILTERS_KEY, ["filter"] as const, { filter: filter === "all" ? "" : filter }, (saved) => {
+    if (saved.filter && (JOB_FILTERS as readonly string[]).includes(saved.filter)) setFilter(saved.filter as JobFilter);
+  });
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [editing, setEditing] = useState<ScheduledJob | null>(null);
   const [confirmRun, setConfirmRun] = useState<ScheduledJob | null>(null);

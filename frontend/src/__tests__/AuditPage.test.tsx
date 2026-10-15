@@ -535,3 +535,93 @@ describe("AuditPage export", () => {
     expect(screen.queryByRole("button", { name: "audit.export" })).not.toBeInTheDocument();
   });
 });
+
+// ── 记住的筛选与列菜单(2026-10-15) ─────────────────────────────────
+
+describe("AuditPage remembered filters", () => {
+  const KEY = "soulledger.audit.filters";
+
+  it("a stored action and date range come back on mount and reach the query", async () => {
+    localStorage.setItem(KEY, JSON.stringify({ action: "LOGIN", datePreset: "7d" }));
+    renderPage();
+    await waitFor(() => expect(lastParams().action).toBe("LOGIN"));
+    expect(lastParams().start_date).toBeDefined();
+    expect((screen.getByRole("combobox", { name: "audit.filter_action" }) as HTMLSelectElement).value).toBe("LOGIN");
+    // 没存的维度保持默认。
+    expect(lastParams().resource).toBeUndefined();
+  });
+
+  it("choosing a filter stores it; clearing filters removes the stored value", async () => {
+    renderPage();
+    await screen.findByText("created a soul");
+    expect(localStorage.getItem(KEY)).toBeNull();
+    pickChip("audit.filter_action", "audit.actions.DELETE");
+    await waitFor(() => expect(JSON.parse(localStorage.getItem(KEY)!)).toEqual({ action: "DELETE" }));
+    fireEvent.click(screen.getByRole("button", { name: "audit.clear_filters" }));
+    await waitFor(() => expect(localStorage.getItem(KEY)).toBeNull());
+  });
+
+  it("search text is never stored", async () => {
+    renderPage();
+    await screen.findByText("created a soul");
+    fireEvent.change(screen.getByPlaceholderText("audit.search_placeholder"), { target: { value: "alice" } });
+    pickChip("audit.filter_resource", "Soul");
+    await waitFor(() => expect(localStorage.getItem(KEY)).not.toBeNull());
+    expect(localStorage.getItem(KEY)).not.toContain("alice");
+    expect(Object.keys(JSON.parse(localStorage.getItem(KEY)!))).toEqual(["resource"]);
+  });
+
+  it("the hall filter is not stored (it is invisible unless the hall list loads)", async () => {
+    renderPage();
+    await screen.findByText("created a soul");
+    await screen.findByRole("combobox", { name: "audit.filter_hall" });
+    pickChip("audit.filter_hall", "plaque.realm.cn");
+    await waitFor(() => expect(mockedList).toHaveBeenCalledTimes(2));
+    expect(localStorage.getItem(KEY)).toBeNull();
+  });
+});
+
+describe("AuditPage column menu", () => {
+  const COLS = "soulledger.audit.columns";
+  const headers = () => screen.queryAllByRole("columnheader").map((h) => h.textContent);
+
+  it("sits in the filter bar; the affected and ip columns are pinned and cannot be hidden", async () => {
+    renderPage();
+    await screen.findByText("created a soul");
+    fireEvent.click(screen.getByRole("button", { name: /^list\.columns\.button/ }));
+    for (const name of ["audit.affected", "audit.ip_address"]) {
+      const item = screen.getByRole("menuitemcheckbox", { name: new RegExp(name) });
+      expect(item).toBeDisabled();
+      fireEvent.click(item);
+    }
+    expect(headers().join("|")).toContain("audit.affected");
+    expect(headers().join("|")).toContain("audit.ip_address");
+    expect(screen.getByRole("menuitemcheckbox", { name: "audit.user" })).not.toBeDisabled();
+  });
+
+  it("hiding a column drops its header, persists, and survives a remount", async () => {
+    const { unmount } = renderPage();
+    await screen.findByText("created a soul");
+    expect(headers().join("|")).toContain("audit.user");
+    fireEvent.click(screen.getByRole("button", { name: /^list\.columns\.button/ }));
+    fireEvent.click(screen.getByRole("menuitemcheckbox", { name: "audit.user" }));
+    expect(headers().join("|")).not.toContain("audit.user");
+    expect(JSON.parse(localStorage.getItem(COLS)!)).toEqual({ hidden: "user" });
+    unmount();
+
+    renderPage();
+    await screen.findByText("created a soul");
+    expect(headers().join("|")).not.toContain("audit.user");
+    expect(headers().join("|")).toContain("audit.action");
+  });
+
+  it("the export request does not look at hidden columns", async () => {
+    (auditApi.exportCsv as jest.Mock).mockResolvedValue({ data: new Blob(["x"]) });
+    localStorage.setItem(COLS, JSON.stringify({ hidden: "user,action" }));
+    renderPage();
+    await screen.findByText("created a soul");
+    fireEvent.click(screen.getByRole("button", { name: "audit.export" }));
+    await waitFor(() => expect(auditApi.exportCsv).toHaveBeenCalledTimes(1));
+    expect(auditApi.exportCsv).toHaveBeenCalledWith({});
+  });
+});

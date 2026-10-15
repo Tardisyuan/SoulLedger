@@ -24,6 +24,7 @@ import { Button } from "@/src/components/ui/Button";
 import { Badge } from "@/src/components/ui/Badge";
 import { fieldControl } from "@/src/components/ui/Field";
 import { cn } from "@/lib/utils";
+import { useRememberedFilters } from "@/src/lib/rememberedFilters";
 import { FilterChipSelect } from "@/src/components/ui/FilterChip";
 import { EvalIdentityTag } from "@/src/components/assist-admin/parts";
 
@@ -33,6 +34,10 @@ import { EvalIdentityTag } from "@/src/components/assist-admin/parts";
  * 同时也违反「全站无阴影」。
  */
 const LOCATED_BG = "bg-[oklch(var(--color-surface-2))]";
+
+/** 角色、MFA 两个下拉和排序记在本浏览器;搜索框的字和 `?username=` 带来的账号属于一次到访,不记。 */
+const USERS_FILTERS_KEY = "soulledger.users.filters";
+const USERS_FILTER_FIELDS = ["role", "mfa", "ordering"] as const;
 
 export default function UsersPage() {
   // useSearchParams needs a Suspense boundary under the App Router build (as app/death-sync/page.tsx).
@@ -64,6 +69,17 @@ function UsersRoute() {
   // 批量启用 / 停用与设置角色同一道门:服务端 `user.manage`(只有管理员持有)。没有它就没有勾选列。
   const canManage = usePermissions().hasPermission("user.manage");
   const [mfaFilter, setMfaFilter] = useState("");
+  useRememberedFilters(
+    USERS_FILTERS_KEY,
+    USERS_FILTER_FIELDS,
+    { role: roleFilter, mfa: mfaFilter, ordering },
+    (saved) => {
+      if (saved.role) setRoleFilter(saved.role);
+      if (saved.mfa) setMfaFilter(saved.mfa);
+      if (saved.ordering) setOrdering(saved.ordering);
+    },
+    Boolean(located)
+  );
   const [resetMfaUser, setResetMfaUser] = useState<User | null>(null);
 
   // Fetch users list — params live in the queryKey, so filter/sort/page changes refetch on their own.

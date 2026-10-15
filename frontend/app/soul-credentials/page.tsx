@@ -14,6 +14,7 @@ import {
   useRetryCredential,
   useSoulCredentials,
 } from "@soulledger/core/hooks/useSoulAccounts";
+import { useRememberedFilters } from "@/src/lib/rememberedFilters";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { usePlaque } from "@/src/components/plaque/Plaque";
 import { useHall } from "@/src/components/plaque/useHall";
@@ -58,6 +59,10 @@ const SLIP_COLOR_STORAGE = "soulledger.slip.color";
 
 const ROW_GRID = "md:grid md:grid-cols-[minmax(0,2fr)_minmax(0,0.6fr)_minmax(0,2fr)_minmax(0,1.3fr)_10rem] md:items-center md:gap-4";
 
+/** 状态签记在本浏览器。 */
+const CREDENTIALS_FILTERS_KEY = "soulledger.soul-credentials.filters";
+const ALL = "all";
+
 function CredentialsPageContent() {
   const { t, formatDateTime } = useI18n();
   usePlaque({ hall: useHall(t("plaque.office.rules")) });
@@ -67,6 +72,11 @@ function CredentialsPageContent() {
   const canManage = hasPermission("soul_account.manage");
 
   const [status, setStatus] = useState<string>("PENDING");
+  // 默认是「待交付」,所以「全部」(空串)要有自己的记法,不然存不下来。
+  useRememberedFilters(CREDENTIALS_FILTERS_KEY, ["status"] as const, { status: status || ALL }, (saved) => {
+    const next = saved.status === ALL ? "" : saved.status;
+    if (next !== undefined && (CREDENTIAL_FILTERS as readonly string[]).includes(next)) setStatus(next);
+  });
   const [page, setPage] = useState(1);
   const [revealing, setRevealing] = useState<InitialCredential | null>(null);
   // 只在调起打印的那一刻挂着;交付单不是页面的一部分,屏幕上也看不到它。

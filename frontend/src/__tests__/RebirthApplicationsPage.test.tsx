@@ -254,3 +254,37 @@ describe("states", () => {
     expect(screen.queryByText("DRAGON")).toBeNull();
   });
 });
+
+// ── 记住的筛选(2026-10-15) ─────────────────────────────────────────
+
+describe("remembered status filter", () => {
+  const KEY = "soulledger.rebirth-applications.filters";
+  const allChip = () => screen.getByRole("button", { name: tZh("soul_accounts.rebirth.filters.all") });
+
+  it("a stored status comes back on mount and reaches the request", async () => {
+    as("GUARDIAN", "workflow.read");
+    localStorage.setItem(KEY, JSON.stringify({ status: "REJECTED" }));
+    renderPage();
+    await waitFor(() => expect(soulAccountsApi.rebirthApplications).toHaveBeenLastCalledWith({ status: "REJECTED", page: 1 }));
+    expect(screen.getByRole("button", { name: tZh("soul_accounts.rebirth_status.REJECTED") })).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("a stored status the page does not offer is ignored", async () => {
+    as("GUARDIAN", "workflow.read");
+    localStorage.setItem(KEY, JSON.stringify({ status: "NO_SUCH_STATUS" }));
+    renderPage();
+    await screen.findByText("张三");
+    expect(soulAccountsApi.rebirthApplications).toHaveBeenLastCalledWith({ status: undefined, page: 1 });
+  });
+
+  it("choosing a status stores it; 「全部」 removes it", async () => {
+    as("GUARDIAN", "workflow.read");
+    renderPage();
+    await screen.findByText("张三");
+    expect(localStorage.getItem(KEY)).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: tZh("soul_accounts.rebirth_status.APPROVED") }));
+    await waitFor(() => expect(JSON.parse(localStorage.getItem(KEY)!)).toEqual({ status: "APPROVED" }));
+    fireEvent.click(allChip());
+    await waitFor(() => expect(localStorage.getItem(KEY)).toBeNull());
+  });
+});

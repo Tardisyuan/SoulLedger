@@ -9,7 +9,7 @@ import { saveBlob } from "@/src/lib/saveBlob";
 import { usePlaque } from "@/src/components/plaque/Plaque";
 import { useHall } from "@/src/components/plaque/useHall";
 import { useTenant } from "@/src/contexts/TenantContext";
-import { DataGrid, parseOrdering, type DataGridColumn, type EnumValue } from "@/components/ui/data-grid";
+import { ColumnMenu, DataGrid, parseOrdering, useColumnVisibility, type DataGridColumn, type EnumValue } from "@/components/ui/data-grid";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { EmptyState } from "@/src/components/ui/EmptyState";
@@ -29,6 +29,7 @@ import { Button } from "@/src/components/ui/Button";
 import { cn } from "@/lib/utils";
 import { auditActionGlyph } from "@/src/lib/auditActionGlyph";
 import { civSkinOf } from "@/src/lib/civSkin";
+import { useRememberedFilters } from "@/src/lib/rememberedFilters";
 import { AuditTabs } from "@/src/components/audit/AuditTabs";
 
 const ACTION_OPTIONS = [
@@ -75,6 +76,13 @@ function describeAudit(description: string, t: (key: string, params?: Record<str
 }
 
 type DatePreset = "" | "7d" | "30d";
+
+/** 常驻的筛选记在本浏览器。搜索框的字不记(属于一次到访);「殿」不记:它只在全局管理员有清单时才画,
+    记下来会变成一个看不见却在生效的筛选。 */
+const AUDIT_FILTERS_KEY = "soulledger.audit.filters";
+const AUDIT_FILTER_FIELDS = ["action", "resource", "datePreset", "ordering"] as const;
+/** 列菜单的偏好,一个列表一份。 */
+const AUDIT_COLUMNS_KEY = "soulledger.audit.columns";
 
 /** One grid row: an event, the run it belongs to, and whether it leads that run. */
 interface AuditRow {
@@ -123,6 +131,17 @@ export default function AuditPage() {
   const [hallFilter, setHallFilter] = useState("");
   const [datePreset, setDatePreset] = useState<DatePreset>("");
   const [ordering, setOrdering] = useState("");
+  useRememberedFilters(
+    AUDIT_FILTERS_KEY,
+    AUDIT_FILTER_FIELDS,
+    { action: actionFilter, resource: resourceFilter, datePreset, ordering },
+    (saved) => {
+      if (saved.action) setActionFilter(saved.action);
+      if (saved.resource) setResourceFilter(saved.resource);
+      if (saved.datePreset === "7d" || saved.datePreset === "30d") setDatePreset(saved.datePreset);
+      if (saved.ordering) setOrdering(saved.ordering);
+    }
+  );
 
   // Presets are always "N days ago through now" — there is no end bound to
   // compute, so this only ever produces `dateFrom` (`end_date` was dead: the
@@ -278,6 +297,7 @@ export default function AuditPage() {
       type: "text",
       key: "affected",
       header: t("audit.affected"),
+      pinned: true,
       value: ({ group: g, run, lead }) => {
         const repeats = run.members.length;
         const open = expanded.has(run.key);
@@ -317,10 +337,13 @@ export default function AuditPage() {
       type: "identifier",
       key: "ip",
       header: t("audit.ip_address"),
+      pinned: true,
       width: "132px",
       value: (r) => r.group.ip,
     },
   ];
+
+  const columnVis = useColumnVisibility(AUDIT_COLUMNS_KEY, columns);
 
   const title = (
     <>
@@ -420,6 +443,14 @@ export default function AuditPage() {
               {t("audit.clear_filters")}
             </Button>
           )}
+          <ColumnMenu
+            className="ml-auto"
+            columns={columns.map((c) => ({ key: c.key, header: String(c.header), pinned: c.pinned }))}
+            visibility={columnVis}
+            buttonLabel={t("list.columns.button", { shown: String(columnVis.shown), total: String(columnVis.total) })}
+            pinnedLabel={t("list.columns.pinned")}
+            resetLabel={t("list.columns.reset")}
+          />
         </>
       }
     >
@@ -429,6 +460,7 @@ export default function AuditPage() {
       <DataGrid<AuditRow>
         caption={t("audit.title")}
         columns={columns}
+        hiddenColumns={columnVis.hidden}
         data={rows}
         groupHeader={(r, i) => {
           const day = localDayKey(r.group.time);
