@@ -17,6 +17,9 @@ import { BackHandler, Linking, Pressable, View, type ScrollView } from "react-na
 import { ActionButton } from "../kit";
 import { registeredToken } from "../push";
 import { adminHelpUrl, forgotFailureKey, passwordFailure, splitCommonReasons } from "../rules";
+import { passwordMinLength } from "@soulledger/core/domain/passwordRules";
+
+import { useSession } from "../session";
 import { Button, FieldError, Icon, Input, Notice, PasswordMatch, PasswordRules, Screen, Txt, space, useI18n, usePasswordForm, useTheme, useToast } from "../shared";
 
 /** A back row over a screen. `locked`: leaving is not allowed now (the Android back key is swallowed too). */
@@ -109,15 +112,21 @@ export function ForgotPassword({ initial, onBack }: { initial: string; onBack: (
   );
 }
 
-export function ChangePasswordScreen({ onBack }: { onBack: () => void }) {
+/**
+ * `required`: the password must be changed before anything else (first sign-in, an administrator's reset, aged out).
+ * The screen then has no way back -- only the change or signing out -- and says why in one line above the form.
+ */
+export function ChangePasswordScreen({ onBack, required }: { onBack: () => void; required?: boolean }) {
   const { t } = useI18n();
   const toast = useToast();
+  const { state, signOut, setPasswordChangeRequired } = useSession();
+  const minLength = passwordMinLength(state.status === "signedIn" ? state.user.role : undefined);
   const [oldPassword, setOld] = useState("");
   const [newPassword, setNew] = useState("");
   const [confirm, setConfirm] = useState("");
   const [busy, setBusy] = useState(false);
   const [fail, setFail] = useState<(ReturnType<typeof passwordFailure> & { common?: boolean }) | null>(null);
-  const { fields, holdScroller, holdSection, newJudged, confirmJudged, common: commonRejected, check, rejectCommon } = usePasswordForm({ old: oldPassword, next: newPassword, confirm });
+  const { fields, holdScroller, holdSection, newJudged, confirmJudged, common: commonRejected, check, rejectCommon } = usePasswordForm({ old: oldPassword, next: newPassword, confirm, minLength });
 
   const submit = () => {
     setFail(null);
@@ -130,6 +139,7 @@ export function ChangePasswordScreen({ onBack }: { onBack: () => void }) {
         () => {
           // The server signed every other device out; `changePassword` stored this device's new token pair.
           toast(t("profile.password_changed_others_out"), "success");
+          if (required) setPasswordChangeRequired(false);
           onBack();
         },
         (e: unknown) => {
@@ -145,8 +155,9 @@ export function ChangePasswordScreen({ onBack }: { onBack: () => void }) {
 
   const none = fail && !fail.network && !fail.common && !fail.old.length && !fail.next.length && !fail.other.length;
   return (
-    <AccountFrame testID="password-screen" onBack={onBack} scrollRef={holdScroller}>
+    <AccountFrame testID="password-screen" onBack={onBack} locked={required} scrollRef={holdScroller}>
       <Txt variant="title">{t("profile.change_password")}</Txt>
+      {required ? <Notice tone="neutral" testID="password-must-change"><Txt variant="caption">{t("profile.password_must_change")}</Txt></Notice> : null}
       {fail?.network ? <Notice tone="neg" testID="password-failure">{t("officer_app.login.reasons.network")}</Notice> : null}
       {none ? <Notice tone="neg" testID="password-failure">{t("profile.password_change_failed")}</Notice> : null}
       {fail?.other.length ? (
@@ -181,7 +192,7 @@ export function ChangePasswordScreen({ onBack }: { onBack: () => void }) {
           invalid={fields.next.invalid || !!fail?.next.length}
         />
         {fail?.next.map((key) => <FieldError key={key} testID="password-new-error" text={t(key)} />)}
-        <PasswordRules next={newPassword} old={oldPassword} judged={newJudged} common={commonRejected} />
+        <PasswordRules next={newPassword} old={oldPassword} judged={newJudged} common={commonRejected} minLength={minLength} />
       </View>
       <View style={{ gap: space[3] }}>
         <Input
@@ -198,6 +209,7 @@ export function ChangePasswordScreen({ onBack }: { onBack: () => void }) {
         <PasswordMatch next={newPassword} confirm={confirm} judged={confirmJudged} />
       </View>
       <Button testID="password-submit" title={t("common.save")} busy={busy} onPress={submit} />
+      {required ? <ActionButton testID="password-signout" kind="outline" title={t("officer_app.me.logout")} onPress={signOut} /> : null}
     </AccountFrame>
   );
 }

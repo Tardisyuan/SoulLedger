@@ -58,7 +58,19 @@ class OfficerJWTAuthentication(JWTAuthentication):
 
             if impersonation.is_impersonation(result[1]):
                 impersonation.enforce(request, *result)
+            else:
+                self._enforce_password_change(request, result[0])
         return result
+
+    @staticmethod
+    def _enforce_password_change(request, user):
+        """首次登录 / 管理员重置 / 超期:只放行改密码、退出、读资料,其余 403 `password_change_required`
+        (灵魂端 `SoulAPIView` 对 `must_change_password` 的同一个形状)。刷新令牌的接口不经过这里。"""
+        from apps.authentication.passwords import PASSWORD_CHANGE_ALLOWED, password_change_required
+
+        if (request.method, request.path) in PASSWORD_CHANGE_ALLOWED or not password_change_required(user):
+            return
+        raise PermissionDenied({"detail": "请先修改密码。", "code": "password_change_required"})
 
     def get_validated_token(self, raw_token):
         try:

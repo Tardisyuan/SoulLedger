@@ -16,6 +16,7 @@ The limits now run before the lookup, and there are two:
   itself — and rotating `X-Forwarded-For` does not reset it.
 """
 import pytest
+from django.core import mail
 from django.core.cache import cache
 
 URL = "/api/v1/auth/reset-password/"
@@ -135,4 +136,6 @@ class TestTheFlowStillWorks:
         assert _post(api_client, keys, UNKNOWN, "192.0.2.91").status_code == 200
         code = cache.get(f"pwd_reset:{KNOWN}")
         assert code is not None and len(code) == 6 and code.isdigit(), code
-        assert cache.get(f"pwd_reset:{UNKNOWN}") is None
+        # A code is stored for the unregistered address too (never mailed): see test_reset_code_oracle.
+        assert cache.get(f"pwd_reset:{UNKNOWN}") is not None
+        assert [m.to for m in mail.outbox] == [[KNOWN]]

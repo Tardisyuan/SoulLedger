@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { passwordRulesMet, passwordsMatch, ruleDisplay, unmetRules } from "../passwordRules";
+import { minLengthRuleKey, passwordMinLength, passwordRulesMet, passwordsMatch, ruleDisplay, unmetRules } from "../passwordRules";
 
 describe("passwordRulesMet", () => {
   it("nothing typed: nothing is met, and the third rule exists only when there is a current-password box", () => {
@@ -45,5 +45,21 @@ describe("the rest", () => {
     expect(unmetRules("12345678")).toEqual(["not_digits"]);
     expect(unmetRules("same-pass", "same-pass")).toEqual(["not_current"]);
     expect(unmetRules("good-pass-1", "old-pass")).toEqual([]);
+  });
+});
+
+describe("administrators need 12", () => {
+  it("the role picks the length and the wording of the first rule", () => {
+    expect(passwordMinLength("ADMIN")).toBe(12);
+    expect(["JUDGE", "VIEWER", undefined].map(passwordMinLength)).toEqual([8, 8, 8]);
+    expect(minLengthRuleKey(12)).toBe("password_rules.min_length_admin");
+    expect(minLengthRuleKey(8)).toBe("password_rules.min_length");
+  });
+
+  it("eleven is short for an administrator, twelve is not; both pass for the default", () => {
+    expect(passwordRulesMet("abcdefghijk", undefined, 12).min_length).toBe(false);
+    expect(passwordRulesMet("abcdefghijkl", undefined, 12).min_length).toBe(true);
+    expect(unmetRules("abcdefghij", undefined, 12)).toEqual(["min_length"]);
+    expect(unmetRules("abcdefghij")).toEqual([]);
   });
 });

@@ -9,6 +9,8 @@
  * ✓ 不用绿色(规范里没有成功色),靠符号和字重分;符号对读屏隐藏,每条的读法是「文字 + 状态后缀」。
  */
 import {
+  minLengthRuleKey,
+  PASSWORD_MIN_LENGTH,
   passwordRulesMet,
   passwordsMatch,
   ruleDisplay,
@@ -74,16 +76,19 @@ export function PasswordRules({
   judged,
   common,
   testID = "pw-rules",
+  minLength = PASSWORD_MIN_LENGTH,
 }: {
   next: string;
   old?: string;
   judged: boolean;
   common?: boolean;
   testID?: string;
+  /** Administrators need more (12); everyone else, and the soul App, 8. */
+  minLength?: number;
 }) {
   const { t } = useI18n();
   const theme = useTheme();
-  const met = passwordRulesMet(next, old);
+  const met = passwordRulesMet(next, old, minLength);
   return (
     <View style={styles.list}>
       {common ? (
@@ -93,7 +98,7 @@ export function PasswordRules({
         </View>
       ) : null}
       {RULE_ORDER.filter((rule) => rule in met).map((rule) => (
-        <Line key={rule} testID={`${testID}-${rule}`} display={ruleDisplay(!!met[rule], judged)} text={t(`password_rules.${rule}`)} />
+        <Line key={rule} testID={`${testID}-${rule}`} display={ruleDisplay(!!met[rule], judged)} text={t(rule === "min_length" ? minLengthRuleKey(minLength) : `password_rules.${rule}`)} />
       ))}
       {common ? null : (
         <View testID={`${testID}-note`} style={[styles.row, styles.note]}>
@@ -122,7 +127,7 @@ export function PasswordMatch({ next, confirm, judged, testID = "pw-match" }: { 
  * 会把整个 `form` 当成 ref 逐处报「渲染期间读 ref」(2026-10-11 实测,四个页面都是),解构后一条不报。
  * 输入框与滚动容器用 state 里的回调 ref 持有,不用 ref 对象,理由同上。
  */
-export function usePasswordForm({ old, next, confirm }: { old?: string; next: string; confirm: string }) {
+export function usePasswordForm({ old, next, confirm, minLength = PASSWORD_MIN_LENGTH }: { old?: string; next: string; confirm: string; minLength?: number }) {
   const { t, locale } = useI18n();
   const [newJudged, setNewJudged] = useState(false);
   const [confirmJudged, setConfirmJudged] = useState(false);
@@ -155,10 +160,10 @@ export function usePasswordForm({ old, next, confirm }: { old?: string; next: st
     return () => sub.remove();
   }, [newFocused, scrollToNew]);
 
-  const unmet = unmetRules(next, old);
+  const unmet = unmetRules(next, old, minLength);
   const mismatch = !passwordsMatch(next, confirm);
   const summary = (): string => {
-    const lines = [...unmet.map((rule) => t(`password_rules.${rule}`)), ...(mismatch ? [t("password_rules.match_bad")] : [])];
+    const lines = [...unmet.map((rule) => t(rule === "min_length" ? minLengthRuleKey(minLength) : `password_rules.${rule}`)), ...(mismatch ? [t("password_rules.match_bad")] : [])];
     return t("password_rules.summary", { n: String(lines.length), list: lines.join(locale === "en" ? ", " : "、") });
   };
   const announce = (text: string) => void AccessibilityInfo.announceForAccessibility(text);

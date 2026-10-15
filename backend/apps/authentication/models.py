@@ -181,6 +181,11 @@ class User(AuditUserFields, AbstractUser):
     # 改密码、邮箱重置密码时 +1,于是**所有旧令牌立刻作废**(HTTP 与 WebSocket 握手都比对),
     # 不必等 access 自然过期。不带 `sv` 的旧令牌按 0 算,上线不会让任何人掉线。
     session_version = models.PositiveIntegerField(default=0)
+    # 官员密码策略(2026-10-15):上一次设密码的时间(`passwords.set_officer_password` 写),
+    # 与「必须先改密码」标记 —— 管理员开通 / 重置密码时置真,本人改密码时清。
+    # 迁移给存量用户填迁移那一刻,上线时没有人因 `OFFICER_PASSWORD_MAX_AGE_DAYS` 而过期。
+    password_changed_at = models.DateTimeField(default=timezone.now)
+    must_change_password = models.BooleanField(default=False)
 
     # Declared first so it becomes _base_manager (used by refresh_from_db(),
     # etc) — keeps create_user/create_superuser and stays unfiltered so
@@ -212,6 +217,19 @@ class User(AuditUserFields, AbstractUser):
 
     def __str__(self):
         return f"{self.username} ({self.role})"
+
+
+class PasswordHistory(models.Model):
+    """官员用过的旧密码(只存哈希)。`passwords.set_officer_password` 在换掉旧哈希时写入,
+    并只保留最近 `PASSWORD_HISTORY_KEEP` 条;新密码不能与它们、也不能与当前密码相同。"""
+
+    user = models.ForeignKey("authentication.User", on_delete=models.CASCADE, related_name="password_history")
+    password_hash = models.CharField(max_length=255)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+        indexes = [models.Index(fields=["user", "-created_at"])]
 
 
 class LoginLog(AuditUserFields, models.Model):

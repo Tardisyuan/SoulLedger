@@ -7,6 +7,9 @@
 
 拒绝体是 `{"error", "code"}`(`rate_limited` 另带 `retry_after`),`code` 是契约。
 """
+import logging
+import threading
+
 from drf_spectacular.utils import extend_schema
 from rest_framework import serializers, status
 from rest_framework.decorators import api_view, authentication_classes, permission_classes, throttle_classes
@@ -20,6 +23,8 @@ from . import officer_reset
 from .officer_reset import ResetRefusedError
 from .serializers import PasswordReasonSerializer
 from .views import _rate_limited, _reset_refusal, _throttle_wait
+
+logger = logging.getLogger(__name__)
 
 OFFICER_RESET_ACCEPTED = {"detail": "如果账号存在且邮箱已验证,重置邮件已发送"}
 
@@ -58,6 +63,19 @@ def _refusal(exc: ResetRefusedError):
     return _reset_refusal(exc.message, exc.code, status.HTTP_400_BAD_REQUEST, **extra)
 
 
+def _run_reset_mail(*args):
+    from django.db import close_old_connections
+
+    from .tasks import send_officer_reset_mail
+
+    try:
+        send_officer_reset_mail.run(*args)
+    except Exception:
+        logger.error("officer password reset mail could not be sent", exc_info=False)
+    finally:
+        close_old_connections()
+
+
 @extend_schema(
     request=OfficerResetRequestSerializer,
     # 200 for an unknown / unverified / non-officer identifier too: one body for everything.
@@ -92,8 +110,9 @@ def officer_reset_request(request):
     try:
         send_officer_reset_mail.delay(*args)
     except Exception:
-        # Broker down: run it here, for every identifier alike (as `password_help_request`).
-        send_officer_reset_mail.run(*args)
+        # Broker down: do the work off the request thread, for every identifier alike. Running it
+        # inline made the response slower exactly when the account was eligible (a mail to send).
+        threading.Thread(target=_run_reset_mail, args=args, daemon=True).start()
     return Response(OFFICER_RESET_ACCEPTED)
 
 

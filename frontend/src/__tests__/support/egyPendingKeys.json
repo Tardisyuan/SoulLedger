@@ -37,5 +37,9 @@
   "audit.detail.no_changes",
   "audit.detail.field",
   "audit.detail.before",
-  "audit.detail.after"
+  "audit.detail.after",
+  "password_rules.min_length_admin",
+  "profile.password_reason_reused",
+  "profile.password_locked",
+  "profile.password_must_change"
 ]

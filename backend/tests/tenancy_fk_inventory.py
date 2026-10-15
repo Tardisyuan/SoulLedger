@@ -202,6 +202,7 @@ EDGES = {
     'authentication.MfaRememberedDevice.user->authentication.User': ('user-other', 'global identity: the owning account'),
     'authentication.SignInSession.user->authentication.User': ('user-other', 'global identity: the owning account (one row per signed-in device; read and ended only through request.user)'),
     'authentication.OfficerMfa.user->authentication.User': ('user-other', 'global identity: the owning account'),
+    'authentication.PasswordHistory.user->authentication.User': ('user-other', 'global identity: the owning account (hashes of its earlier passwords)'),
     'authentication.Impersonation.actor->authentication.User': ('user-other', 'global identity: the administrator who views'),
     'authentication.Impersonation.target->authentication.User': ('user-other', 'global identity: the account being viewed'),
     'chat.Conversation.assignee->authentication.User': ('user-other', 'global identity: officer the conversation is assigned to'),

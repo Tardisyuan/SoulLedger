@@ -13970,8 +13970,8 @@ export interface components {
          *     * `reset_code_wrong` - the code does not match
          *     * `reset_code_attempts_exceeded` - too many wrong codes; the code was deleted
          *     * `weak_password` - the password validators refused the new password
-         *     * `no_soul_account` - no soul account has this address
-         *     * `ambiguous_email` - several accounts share this address
+         *     * `no_soul_account` - no soul account has this address (no longer returned: answered as reset_code_wrong)
+         *     * `ambiguous_email` - several accounts share this address (no longer returned: answered as reset_code_wrong)
          * @enum {string}
          */
         PasswordResetRefusalCodeEnum: "rate_limited" | "reset_code_expired" | "reset_code_wrong" | "reset_code_attempts_exceeded" | "weak_password" | "no_soul_account" | "ambiguous_email";
@@ -14928,6 +14928,7 @@ export interface components {
             position?: string;
             readonly mfa_enabled?: boolean;
             readonly mfa_required?: boolean;
+            readonly password_change_required?: boolean;
         };
         /**
          * @description 分语言的类型按请求语言重渲染 title / message(见 `apps/notifications/messages.py`)。
@@ -17795,6 +17796,7 @@ export interface components {
             position?: string;
             readonly mfa_enabled: boolean;
             readonly mfa_required: boolean;
+            readonly password_change_required: boolean;
         };
         /**
          * @description `{"updated": N}` — what `batch_activate` and `batch_deactivate` return.
@@ -18033,6 +18035,7 @@ export interface components {
             readonly permissions: string[];
             readonly mfa_enabled: boolean;
             readonly mfa_required: boolean;
+            readonly password_change_required: boolean;
         };
         /**
          * @description * `PASSED` - Passed / Saved
