@@ -15,6 +15,7 @@ import re
 from datetime import timedelta
 
 from django.core.exceptions import ValidationError
+from django.db.models import Q
 from django.utils import timezone
 
 from .models import MfaRememberedDevice, SignInSession
@@ -127,13 +128,16 @@ def soul_lifetime() -> timedelta:
 
 
 def expired_devices(devices, *, user_field: str, lifetime: timedelta):
-    """推送设备里「登录已到期」的:登记后超过刷新令牌有效期没再登记,**且**这个用户没有任何未退出、
-    在有效期内活动过的登录(刷新会更新 `last_seen_at`,所以一直在用的人不受影响)。
-    推送登记没有记它属于哪个登录会话,所以同一用户另有一台设备仍在用时,这台闲置的要等整个用户都闲置才会被认出。
-    # ponytail: 要精确到设备,给登记加一个 sid 外键。"""
+    """推送设备里「登录已到期」的。
+
+    有会话关联的登记:**这台设备自己的会话**已退出,或超过刷新令牌有效期没活动(刷新会更新 `last_seen_at`)。
+    没有会话关联的老登记(过渡期,不回填,下次登录重新注册时补上):沿用按人判断 —— 登记后超过有效期没再登记,
+    **且**这个用户没有任何未退出、在有效期内活动过的登录。会话行被清理(SET_NULL)的登记也落在这一支。"""
     cutoff = timezone.now() - lifetime
     live = SignInSession.objects.filter(revoked_at__isnull=True, last_seen_at__gte=cutoff).values("user_id")
-    return devices.filter(last_seen_at__lt=cutoff).exclude(**{f"{user_field}__in": live})
+    own = Q(session__isnull=False) & (Q(session__revoked_at__isnull=False) | Q(session__last_seen_at__lt=cutoff))
+    legacy = Q(session__isnull=True, last_seen_at__lt=cutoff) & ~Q(**{f"{user_field}__in": live})
+    return devices.filter(own | legacy)
 
 
 def live_devices(devices, *, user_field: str, lifetime: timedelta):
@@ -164,8 +168,19 @@ def _blacklist_jtis(user, *, keep_jti: str | None, only=None) -> None:
         BlacklistedToken.objects.get_or_create(token=row)
 
 
+def _end_push(sessions) -> None:
+    """这些会话上注册的手机推送登记一并停用(锁屏不再收到)。"""
+    from apps.officer_app.models import OfficerPushDevice
+    from apps.soul_push.models import DeviceInvalidReason, PushDevice
+
+    OfficerPushDevice.objects.filter(session__in=sessions, is_active=True).update(is_active=False)
+    PushDevice.objects.filter(session__in=sessions, is_active=True).update(
+        is_active=False, invalid_reason=DeviceInvalidReason.UNREGISTERED)
+
+
 def revoke(session) -> None:
-    """退出一台:标记、拉黑当前刷新令牌、作废它的免两步验证。幂等。"""
+    """退出一台:标记、拉黑当前刷新令牌、作废它的免两步验证、停用它的推送登记。幂等。"""
+    _end_push([session.pk])
     if session.revoked_at is None:
         session.revoked_at = timezone.now()
         session.save(update_fields=["revoked_at"])
@@ -197,6 +212,7 @@ def revoke_all(user, *, keep=None) -> int:
     if keep is not None:
         rows = rows.exclude(pk=keep.pk)
     trust = list(rows.values_list("trust_hash", flat=True))
+    _end_push(list(rows.values_list("pk", flat=True)))
     count = rows.update(revoked_at=timezone.now())
     _revoke_trust(trust)
     return count

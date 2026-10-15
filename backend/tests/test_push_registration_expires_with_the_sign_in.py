@@ -96,3 +96,76 @@ def test_soul_registration_is_kept_while_the_sign_in_is_alive(cn_tenant, push_on
 
 def test_the_prune_is_registered_with_the_scheduler():
     assert registry.get("authentication.prune_expired_push_registrations") is not None
+
+
+# ── 按每台设备(有会话关联的登记) ─────────────────────────────────────────────
+# 没有会话关联的老登记走上面的按人判断(过渡期,不回填)。
+
+
+def _session(user, **kw):
+    return SignInSession.objects.create(user=user, **kw)
+
+
+def test_each_device_expires_on_its_own_session_even_when_the_user_has_another_live_one(officer, monkeypatch):
+    user, device = officer
+    old = _session(user)
+    SignInSession.objects.filter(pk=old.pk).update(last_seen_at=_ago(hours=25))
+    other = _session(user)  # 同一个人另一台设备还在用
+    push.register_device(user, OFFICER_TOKEN, "IOS", session=old)
+    live, _ = push.register_device(user, "ExponentPushToken[officer0000000000000y]", "IOS", session=other)
+    assert _officer_sends(user, monkeypatch) == 1
+    assert FakeSender.batches[0][0]["to"] == live.token
+    assert prune_expired_push_registrations()["officer"] == 1
+    device.refresh_from_db()
+    assert device.is_active is False
+
+
+def test_revoking_a_session_deactivates_the_registrations_made_under_it(officer):
+    from apps.authentication import signin_sessions
+
+    user, _ = officer
+    s1, s2 = _session(user), _session(user)
+    d1, _ = push.register_device(user, "ExponentPushToken[officer0000000000000s1]", "IOS", session=s1)
+    d2, _ = push.register_device(user, "ExponentPushToken[officer0000000000000s2]", "IOS", session=s2)
+    signin_sessions.revoke(s1)
+    d1.refresh_from_db()
+    d2.refresh_from_db()
+    assert (d1.is_active, d2.is_active) == (False, True)
+    signin_sessions.revoke_all(user)
+    d2.refresh_from_db()
+    assert d2.is_active is False
+
+
+def test_soul_revoke_deactivates_the_registration_of_that_session(cn_tenant, push_on):  # noqa: F811
+    from apps.authentication import signin_sessions
+
+    account, _client = ready_soul(cn_tenant, name="亡魂丁")
+    session = _session(account.user)
+    device, _ = services.register_device(account, TOKEN_A, "IOS", session=session)
+    signin_sessions.revoke(session)
+    device.refresh_from_db()
+    assert device.is_active is False
+
+
+def test_soul_device_expires_on_its_own_session(cn_tenant, push_on):  # noqa: F811
+    account, _client = ready_soul(cn_tenant, name="亡魂戊")
+    old = _session(account.user)
+    SignInSession.objects.filter(pk=old.pk).update(last_seen_at=timezone.now() - timedelta(days=8))
+    _session(account.user)
+    services.register_device(account, TOKEN_A, "IOS", session=old)
+    assert services._record(account, "JUDGMENT_CONCLUDED", "judgment", "judgment_result", "k-3", {}) == []
+    assert prune_expired_push_registrations()["soul"] == 1
+
+
+def test_register_endpoint_stores_the_sid_of_the_request_token(cn_tenant, push_on):  # noqa: F811
+    from rest_framework.test import APIClient
+
+    from apps.soul_accounts import services as svc
+
+    account, _client = ready_soul(cn_tenant, name="亡魂己")
+    session = _session(account.user)
+    client = APIClient()
+    client.credentials(HTTP_AUTHORIZATION=f"Bearer {svc.issue_tokens(account, session)['access']}")
+    resp = client.post("/api/v1/me/push-tokens/", {"token": TOKEN_A, "platform": "IOS"}, format="json")
+    assert resp.status_code == 201
+    assert PushDevice.objects.get(token=TOKEN_A).session_id == session.pk

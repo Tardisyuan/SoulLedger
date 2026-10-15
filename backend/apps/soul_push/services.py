@@ -317,7 +317,7 @@ def enqueue(delivery_ids):
 # ── 设备与偏好 ───────────────────────────────────────────────────────────
 
 
-def register_device(account, token, platform):
+def register_device(account, token, platform, session=None):
     """登记或认领一个 token。已属于别的账号的 token **转给这个账号** —— 旧账号从此收不到它。"""
     now = timezone.now()
     with transaction.atomic():
@@ -326,7 +326,7 @@ def register_device(account, token, platform):
             try:
                 with transaction.atomic():
                     device = PushDevice.objects.create(account=account, soul=account.soul, token=token,
-                                                       platform=platform, last_seen_at=now)
+                                                       platform=platform, session=session, last_seen_at=now)
                 return device, True
             except IntegrityError:  # 并发的同一 token 注册;退回认领路径
                 device = PushDevice.objects.select_for_update(of=("self",)).get(token=token)
@@ -334,6 +334,7 @@ def register_device(account, token, platform):
         device.soul = account.soul
         device.platform = platform
         device.is_active = True
+        device.session = session
         device.invalid_reason = ""
         device.last_seen_at = now
         device.save()

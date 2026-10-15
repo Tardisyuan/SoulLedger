@@ -12,6 +12,7 @@ from rest_framework import serializers, status
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 
+from apps.authentication.signin_sessions import session_of
 from apps.soul_accounts.me_views import SoulAPIView
 from apps.soul_accounts.serializers import SoulErrorSerializer
 from apps.soul_push import services
@@ -57,7 +58,7 @@ class MePushTokensView(SoulAPIView):
     def post(self, request):
         body = PushTokenRegisterSerializer(data=request.data)
         body.is_valid(raise_exception=True)
-        device, created = services.register_device(self.account, **body.validated_data)
+        device, created = services.register_device(self.account, session=session_of(request.auth), **body.validated_data)
         return Response(PushDeviceSerializer(device).data,
                         status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
 
