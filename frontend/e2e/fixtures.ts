@@ -1415,6 +1415,16 @@ export class ApiMock {
     // 据 · 先例 panel. After `:id/` for the same reason as `next/`.
     this.on("GET", "/judgment/queue-counts/", { mine: 0, unclaimed: 0, others: 0, deferred: 0, total: 0 });
     this.on("GET", "/judgment/:id/precedents/", []);
+    // 附件 (CaseAttachments): an object, not a page -- the default empty page would read as no `items`.
+    this.on("GET", "/judgment/:id/attachments/", {
+      items: [],
+      count: 0,
+      total_bytes: 0,
+      max_count: 30,
+      max_total_bytes: 100 * 1024 * 1024,
+      max_file_bytes: 20 * 1024 * 1024,
+      concluded: false,
+    });
     // 评议 (JudgmentComments, shown on every judgment page): JudgmentCommentSerializer, a plain list --
     // NOT paginated, so the default empty page would be an object where the page reads an array.
     this.on("GET", "/judgment/:id/comments/", []);
