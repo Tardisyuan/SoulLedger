@@ -34,7 +34,14 @@ export function notifyImpersonation(): void {
 
 /** 当前的代看状态;没有在看 → `null`。同一个存储值返回同一个对象(可放进 useSyncExternalStore)。 */
 export function getImpersonation(): ImpersonationState | null {
-  const raw = platform().session.get(IMPERSONATION_KEY);
+  // Storage can throw (private window, blocked site data): that reads as "not viewing as anyone", never as a
+  // crash of the layout that asks on every render.
+  let raw: string | null = null;
+  try {
+    raw = platform().session.get(IMPERSONATION_KEY);
+  } catch {
+    raw = null;
+  }
   if (raw === cache.raw) return cache.value;
   let value: ImpersonationState | null = null;
   try {

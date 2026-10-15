@@ -1623,6 +1623,10 @@ export class ApiMock {
     // 忘记密码: one body for every username, as the backend answers.
     this.on("POST", "/auth/password-help/", { detail: "请求已受理" });
     // Profile 「丁 · 两步验证」: not enabled, not required for this user.
+    // 个人中心「登录设备」(第二十八批 W2):这台一行。
+    this.on("GET", "/auth/sessions/", [
+      { id: "11111111-1111-4111-8111-111111111111", label: "macOS · Safari", method: "password", last_seen_at: "2026-10-15T09:00:00Z", current: true, trusted_until: null },
+    ]);
     this.on("GET", "/auth/mfa/status/", {
       enabled: false, required: false, confirmed_at: null, last_used_at: null, last_used_method: "", recovery_codes_remaining: 0,
     });

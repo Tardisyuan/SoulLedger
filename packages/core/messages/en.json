@@ -3379,7 +3379,8 @@
       "ledger_snapshot_balance_for_tenant": "Snapshot monthly balances",
       "ledger_snapshot_census_for_tenant": "Snapshot the daily soul census",
       "notifications_email_action_needed_for_tenant": "Email action-needed notifications",
-      "notifications_email_action_needed_global": "Email action-needed notifications (global admins)"
+      "notifications_email_action_needed_global": "Email action-needed notifications (global admins)",
+      "authentication_prune_soul_sign_ins": "Clear soul sign-in records and idle sessions older than 90 days"
     },
     "status": {
       "PENDING": "Queued",

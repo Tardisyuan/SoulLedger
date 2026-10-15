@@ -58,5 +58,6 @@
   "soul_app.security.stranger_body",
   "soul_app.biometric.app_lock",
   "soul_app.biometric.app_lock_hint",
-  "soul_app.lock.title"
+  "soul_app.lock.title",
+  "scheduler.jobs.authentication_prune_soul_sign_ins"
 ]
