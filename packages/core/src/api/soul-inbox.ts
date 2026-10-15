@@ -42,8 +42,13 @@ export const soulInboxApi = {
   folders: () => api.get<InboxFolderCounts>("/chat/inbox/folders/"),
   /** Newest first. 503 `chat_not_configured` / `chat_unavailable` when Synapse is off or down. */
   messages: (id: string) => api.get<InboxMessage[]>(`/chat/inbox/${id}/messages/`),
-  /** 409 `closed` once the soul has been reborn. Clears the caller's draft and marks the thread read. */
-  reply: (id: string, body: string) => api.post<Schemas["MessageSent"]>(`/chat/inbox/${id}/reply/`, { body }),
+  /**
+   * 409 `closed` once the soul has been reborn. Clears the caller's draft and marks the thread read.
+   * `txnId`: the same id sent again gets the first reply's event id back and sends nothing (a lost
+   * response, or the outbox picking the reply up again).
+   */
+  reply: (id: string, body: string, txnId?: string) =>
+    api.post<Schemas["MessageSent"]>(`/chat/inbox/${id}/reply/`, { body, ...(txnId ? { txn_id: txnId } : {}) }),
   markRead: (id: string) => api.post<InboxState>(`/chat/inbox/${id}/read/`),
   archive: (id: string) => api.post<InboxState>(`/chat/inbox/${id}/archive/`),
   unarchive: (id: string) => api.post<InboxState>(`/chat/inbox/${id}/unarchive/`),

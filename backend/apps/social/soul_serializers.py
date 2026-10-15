@@ -149,11 +149,19 @@ class SoulPostCreateSerializer(serializers.Serializer):
         child=serializers.UUIDField(), required=False, default=list, max_length=post_media.MAX_PER_POST,
         help_text="先经 POST /me/social/media/ 上传的图片 id,按显示顺序。",
     )
+    txn_id = serializers.RegexField(
+        r"^[A-Za-z0-9._~-]+$", max_length=64, required=False,
+        help_text="App 给这一次发帖的事务号;同一个号重发回第一次的那条,不再发第二条。",
+    )
 
 
 class SoulCommentCreateSerializer(serializers.Serializer):
     content = serializers.CharField(max_length=COMMENT_MAX, trim_whitespace=True)
     parent = serializers.UUIDField(required=False, allow_null=True)
+    txn_id = serializers.RegexField(
+        r"^[A-Za-z0-9._~-]+$", max_length=64, required=False,
+        help_text="App 给这一次评论的事务号;同一个号重发回第一次的那条,不再发第二条。",
+    )
 
 
 class SoulReactionRequestSerializer(serializers.Serializer):
