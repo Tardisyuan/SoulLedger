@@ -1,6 +1,6 @@
 /**
- * 官员邮件语言跟界面语言走(`useSyncEmailLocale`):界面语言变动时,邮件开着且记的语言不同才 PATCH
- * `email_locale`;首次渲染不发请求;邮件关着不改;egy 界面落到 en。
+ * 官员邮件语言跟界面语言走(`useSyncEmailLocale`):界面语言变动时,任一格邮件开着(锁定的恒开)且记的语言不同才 PATCH
+ * `email_locale`;首次渲染不发请求;读不到通知表时不改;egy 界面落到 en。
  */
 import { render, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -16,6 +16,9 @@ jest.mock("@/src/contexts/I18nContext", () => ({
 }));
 
 const { authApi } = require("@soulledger/core/api");
+
+// 服务端永远回整张表,锁定的邮件格恒为开;「全关」只会是缺这个字段的旧响应。
+const ALL_MAIL_ON = { account_security: { site: true, mail: true }, approval: { site: true, mail: false } };
 
 function Probe() {
   useSyncEmailLocale();
@@ -45,22 +48,22 @@ it("sends nothing on first render", () => {
 });
 
 it("moves email_locale to the new UI language when emails are on", async () => {
-  (authApi.preferences as jest.Mock).mockResolvedValue({ data: { email_notifications: true, email_locale: "zh-Hans" } });
+  (authApi.preferences as jest.Mock).mockResolvedValue({ data: { notifications: ALL_MAIL_ON, email_locale: "zh-Hans" } });
   mount().change("en");
   await waitFor(() => expect(authApi.updatePreferences).toHaveBeenCalledWith({ email_locale: "en" }));
 });
 
 it("maps egy to en", async () => {
-  (authApi.preferences as jest.Mock).mockResolvedValue({ data: { email_notifications: true, email_locale: "zh-Hans" } });
+  (authApi.preferences as jest.Mock).mockResolvedValue({ data: { notifications: ALL_MAIL_ON, email_locale: "zh-Hans" } });
   mount().change("egy");
   await waitFor(() => expect(authApi.updatePreferences).toHaveBeenCalledWith({ email_locale: "en" }));
 });
 
 it("leaves it alone when emails are off or the language already matches", async () => {
-  (authApi.preferences as jest.Mock).mockResolvedValue({ data: { email_notifications: false, email_locale: "zh-Hans" } });
+  (authApi.preferences as jest.Mock).mockResolvedValue({ data: { email_locale: "zh-Hans" } });
   mount().change("en");
   await waitFor(() => expect(authApi.preferences).toHaveBeenCalled());
-  (authApi.preferences as jest.Mock).mockResolvedValue({ data: { email_notifications: true, email_locale: "en" } });
+  (authApi.preferences as jest.Mock).mockResolvedValue({ data: { notifications: ALL_MAIL_ON, email_locale: "en" } });
   mockLocale = "zh-Hans";
   mount().change("en");
   await waitFor(() => expect(authApi.preferences).toHaveBeenCalledTimes(2));

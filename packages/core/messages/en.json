@@ -1955,8 +1955,31 @@
     "profile_update_failed": "Failed to update profile",
     "avatar": "Avatar",
     "load_failed": "Could not load the latest profile — the values below may be out of date",
-    "email_notifications": "Email notifications",
-    "email_notifications_note": "When on, what needs your action (pending approvals, approval timeouts, reassignment requests, password help) is also sent to your email.",
+    "notifications": {
+      "title": "Notifications",
+      "category_header": "Category",
+      "site": "In app",
+      "mail": "Email",
+      "locked": "Always on",
+      "settings": "Notification settings",
+      "footnote": "“Always on” can't be turned off: Account security and Password help are always delivered, and so is the in-app side of Approval timeouts.",
+      "categories": {
+        "account_security": "Account security",
+        "approval": "Pending approvals",
+        "approval_timeout": "Approval timeouts",
+        "reassign": "Reassignment requests",
+        "password_help": "Password help",
+        "dispatch": "Dispatches",
+        "letter_handoff": "Letter handoffs"
+      },
+      "notes": {
+        "account_security": "Sign-in elsewhere, password changed, two-step changes, someone viewing as you",
+        "approval": "A new approval is waiting on you",
+        "approval_timeout": "In-app can't be turned off: a timeout affects the deadline",
+        "password_help": "Only administrators receive these",
+        "dispatch": "Proposed, approved, rejected, cancelled"
+      }
+    },
     "email_notifications_no_address": "This account has no email address, so nothing is sent even when on.",
     "email_last_failure": "Last send failed: {{error}} ({{at}})",
     "email_verification": "Email verification",

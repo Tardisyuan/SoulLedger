@@ -1,4 +1,19 @@
 [
   "officer_app.todo.filter_empty_title",
-  "officer_app.todo.filter_empty_body"
+  "officer_app.todo.filter_empty_body",
+  "profile.notifications.category_header",
+  "profile.notifications.settings",
+  "profile.notifications.footnote",
+  "profile.notifications.categories.account_security",
+  "profile.notifications.categories.approval",
+  "profile.notifications.categories.approval_timeout",
+  "profile.notifications.categories.reassign",
+  "profile.notifications.categories.password_help",
+  "profile.notifications.categories.dispatch",
+  "profile.notifications.categories.letter_handoff",
+  "profile.notifications.notes.account_security",
+  "profile.notifications.notes.approval",
+  "profile.notifications.notes.approval_timeout",
+  "profile.notifications.notes.password_help",
+  "profile.notifications.notes.dispatch"
 ]

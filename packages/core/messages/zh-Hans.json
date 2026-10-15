@@ -1955,8 +1955,31 @@
     "profile_update_failed": "个人信息更新失败",
     "avatar": "头像",
     "load_failed": "无法获取最新资料，下面显示的可能是旧值",
-    "email_notifications": "邮件通知",
-    "email_notifications_note": "开启后，待你处理的事项（待审批、审批超时、改派请求、密码求助）会发到你的邮箱。",
+    "notifications": {
+      "title": "通知",
+      "category_header": "类别",
+      "site": "站内",
+      "mail": "邮件",
+      "locked": "必收",
+      "settings": "通知设置",
+      "footnote": "「必收」的不能关：账号安全、密码求助两类全收；审批超时的站内一列也必收。",
+      "categories": {
+        "account_security": "账号安全",
+        "approval": "待审批",
+        "approval_timeout": "审批超时",
+        "reassign": "改派请求",
+        "password_help": "密码求助",
+        "dispatch": "移交",
+        "letter_handoff": "书信交接"
+      },
+      "notes": {
+        "account_security": "别处登录、密码已改、两步验证变更、有人以你的身份查看",
+        "approval": "有新的审批轮到你",
+        "approval_timeout": "站内不能关，超时影响时限",
+        "password_help": "只有管理员收",
+        "dispatch": "提出、批准、驳回、取消"
+      }
+    },
     "email_notifications_no_address": "账号没有邮箱，开启后也不会发送。",
     "email_last_failure": "上次发送失败：{{error}}（{{at}}）",
     "email_verification": "邮箱验证",
