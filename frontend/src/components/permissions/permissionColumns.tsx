@@ -19,8 +19,8 @@ export function buildPermissionColumns({
   onDelete: (perm: Permission) => void;
 }): DataGridColumn<Permission>[] {
   return [
-    { type: "identifier", key: "codename", header: t("permissions.codename"), width: "220px", value: (perm) => perm.codename },
-    { type: "text", key: "name", header: t("permissions.name"), value: (perm) => perm.name },
+    { type: "identifier", key: "codename", header: t("permissions.codename"), pinned: true, width: "220px", value: (perm) => perm.codename },
+    { type: "text", key: "name", header: t("permissions.name"), pinned: true, value: (perm) => perm.name },
     {
       type: "enum",
       key: "category",
