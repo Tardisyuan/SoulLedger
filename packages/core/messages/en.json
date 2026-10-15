@@ -3416,6 +3416,7 @@
       "notifications_email_action_needed_for_tenant": "Email action-needed notifications",
       "notifications_email_action_needed_global": "Email action-needed notifications (global admins)",
       "authentication_prune_soul_sign_ins": "Clear soul sign-in records and idle sessions older than 90 days",
+      "authentication_prune_expired_push_registrations": "Deactivate push registrations whose sign-in has expired",
       "soul_accounts_prune_data_exports": "Delete expired data exports"
     },
     "status": {

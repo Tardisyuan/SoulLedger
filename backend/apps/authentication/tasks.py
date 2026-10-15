@@ -39,6 +39,25 @@ def prune_soul_sign_ins():
     return {"sign_in_logs": logs, "sessions": sessions}
 
 
+@shared_task(name="authentication.prune_expired_push_registrations")
+def prune_expired_push_registrations():
+    """登录已到期、又没人在那台手机上重新登录的推送登记:停用,锁屏不再收到。
+
+    官员端(24 小时刷新令牌)与灵魂端(`JWT_REFRESH_LIFETIME`)各按自己的有效期判;判定见
+    `signin_sessions.expired_devices`。发送路径同样跳过它们,所以这个任务只是把行收拾干净。"""
+    from apps.officer_app.models import OfficerPushDevice
+    from apps.soul_push.models import DeviceInvalidReason, PushDevice
+
+    from . import signin_sessions as ss
+
+    officer = ss.expired_devices(OfficerPushDevice.objects.filter(is_active=True), user_field="user_id",
+                                 lifetime=ss.officer_app_lifetime()).update(is_active=False)
+    soul = ss.expired_devices(PushDevice.objects.filter(is_active=True), user_field="account__user_id",
+                              lifetime=ss.soul_lifetime()).update(
+        is_active=False, invalid_reason=DeviceInvalidReason.UNREGISTERED)
+    return {"officer": officer, "soul": soul}
+
+
 #: Who hears about 「忘记密码」 in the account's own tenant: its administrators
 #: and its realm leads (殿主, `UserRole.MODERATOR`). See `notify_password_help`.
 PASSWORD_HELP_TENANT_ROLES = ("ADMIN", "MODERATOR")

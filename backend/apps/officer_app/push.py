@@ -18,6 +18,7 @@ from celery import shared_task
 from django.db import IntegrityError, transaction
 from django.utils import timezone
 
+from apps.authentication import signin_sessions
 from apps.officer_app import todo
 from apps.officer_app.models import OfficerPushDevice
 from apps.soul_push.expo import PushRequestError, PushTransientError, get_sender
@@ -78,7 +79,9 @@ def _locale(user):
 
 
 def send_to_user(user, sender=None, target=None):
-    devices = list(OfficerPushDevice.objects.filter(user=user, is_active=True))
+    devices = list(signin_sessions.live_devices(
+        OfficerPushDevice.objects.filter(user=user, is_active=True),
+        user_field="user_id", lifetime=signin_sessions.officer_app_lifetime()))
     if not devices:
         return 0
     n = todo.total(user)
