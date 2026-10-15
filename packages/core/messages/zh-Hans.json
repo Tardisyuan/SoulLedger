@@ -590,11 +590,13 @@
         "death_before_birth": "死亡早于出生",
         "implausible_lifespan": "寿命不合理",
         "duplicate_in_file": "与文件中前面的行重复",
-        "duplicate_existing": "与已有灵魂重复"
+        "duplicate_existing": "与已有灵魂重复",
+        "invalid_characters": "含有无法保存的字符"
       },
       "file_codes": {
         "file_too_large": "文件太大",
         "bad_encoding": "文件不是 UTF-8 编码",
+        "bad_encoding_gbk": "文件不是 UTF-8 编码(像是 GBK):请在 Excel 里另存为「CSV UTF-8」",
         "empty_file": "文件是空的",
         "no_rows": "文件里没有数据行",
         "duplicate_columns": "列名重复",
@@ -3417,7 +3419,8 @@
       "notifications_email_action_needed_global": "邮件提醒待处理通知(全局管理员)",
       "authentication_prune_soul_sign_ins": "清理 90 天前的灵魂登录记录与闲置会话",
       "authentication_prune_expired_push_registrations": "停用登录已到期的手机推送登记",
-      "soul_accounts_prune_data_exports": "清理过期的资料导出"
+      "soul_accounts_prune_data_exports": "清理过期的资料导出",
+      "core_prune_retained_data": "清理过期的运行数据(投递记录、已读通知、停用设备等)"
     },
     "status": {
       "PENDING": "排队中",

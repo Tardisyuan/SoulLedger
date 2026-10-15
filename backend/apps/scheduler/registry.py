@@ -124,7 +124,7 @@ REGISTRY: tuple[JobSpec, ...] = (
     # 同一条通道给 `tenant=None` 的全局管理员:他们没有租户,按租户那一行扫不到。GLOBAL,同样每 5 分钟。
     JobSpec("notifications.email_action_needed_global", GLOBAL, "*/5 * * * *", max_runtime=240),
     # 审计 / 登录日志留存(apps/audit/retention.py)。保留天数来自 AUDIT_LOG_RETENTION_DAYS /
-    # LOGIN_LOG_RETENTION_DAYS,默认 0 = 不清理(任务只记一行日志)。每天一次,分批删除。
+    # LOGIN_LOG_RETENTION_DAYS,默认 365 / 180 天,设 0 = 不清理(任务只记一行日志)。每天一次,分批删除。
     JobSpec("audit.prune_logs_for_tenant", TENANT, "20 4 * * *", max_runtime=3600),
     # ---- global jobs ---------------------------------------------------------
     # 同上,但处理不属于任何租户的行(审计 tenant=NULL;登录日志无用户或用户无租户)。
@@ -134,6 +134,10 @@ REGISTRY: tuple[JobSpec, ...] = (
     JobSpec("authentication.prune_soul_sign_ins", GLOBAL, "50 3 * * *", max_runtime=1800),
     # 登录已到期的手机推送登记停用(apps/authentication/tasks.py::prune_expired_push_registrations)。
     JobSpec("authentication.prune_expired_push_registrations", GLOBAL, "20 4 * * *", max_runtime=600),
+    # 运行数据留存(apps/core/retention.py):webhook 投递 90 天、已读站内通知 180 天、推送投递 90 天、停用设备 30 天、
+    # 过期的「记住此设备」行;各自的窗口是 settings 里的 *_RETENTION_DAYS,0 = 不清。不碰事件日志(业务记录)。
+    # GLOBAL:这些表没有租户列。每天一次,期限以天计。
+    JobSpec("core.prune_retained_data", GLOBAL, "25 4 * * *", max_runtime=1800),
     # 个人资料导出(apps/soul_accounts/data_export.py::prune_expired):文件只留 7 天,过期的删文件、行标 EXPIRED;
     # 顺手把停在排队 10 分钟以上的重新入队。GLOBAL:导出行没有租户列。每天一次,期限以天计。
     JobSpec("soul_accounts.prune_data_exports", GLOBAL, "10 4 * * *", max_runtime=1800),
