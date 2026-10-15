@@ -20,6 +20,7 @@ from apps.workflow.filters import WorkflowFilter
 from apps.workflow.models import ApprovalNode, ApprovalWorkflow, NodeStatus, WorkflowTemplate
 from apps.workflow.serializers import (
     ApprovalNodeSerializer,
+    ApprovalWorkflowExportSerializer,
     ApprovalWorkflowListSerializer,
     ApprovalWorkflowSerializer,
     ApproverPreviewSerializer,
@@ -226,15 +227,19 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
     def export(self, request):
         """导出当前筛选下的审批流 CSV:与列表同一租户划界、同一筛选与搜索、同一权限(workflow.read)。
         列取自列表序列化器。"""
+        # 一行一个实例(Design 第二十八批 W5):列表的字段加当前站、发起人、耗时,见 ApprovalWorkflowExportSerializer。
+        # (注释而非文档字符串:文档字符串会进 OpenAPI 描述,而这个接口的响应结构没变。)
         return export_csv(
             request,
-            qs=self.filter_queryset(self.get_queryset()),
-            serializer_class=ApprovalWorkflowListSerializer,
+            qs=self.filter_queryset(self.get_queryset()).select_related("create_user"),
+            serializer_class=ApprovalWorkflowExportSerializer,
             columns=[
                 ("Workflow ID", "id"), ("Name", "workflow_name"), ("Soul", "soul_name"),
                 ("Case Type", "case_type"), ("Priority", "priority"), ("Status", "status"),
+                ("Current Node", "current_node_name"), ("Initiator", "initiator"),
+                ("Started At", "created_at"), ("Completed At", "completed_at"),
+                ("Duration (min)", "duration_minutes"),
                 ("Appeal", "is_appeal"), ("Cross Civilization", "cross_civilization"),
-                ("Created At", "created_at"), ("Completed At", "completed_at"),
             ],
             filename="workflows_export.csv",
             resource="workflow",
