@@ -9,7 +9,7 @@ import uuid
 from django.conf import settings
 from django.db import models
 
-from apps.soul_push.models import PushPlatform
+from apps.soul_push.models import PushPlatform, PushStatus
 
 
 class OfficerPushDevice(models.Model):
@@ -27,3 +27,18 @@ class OfficerPushDevice(models.Model):
 
     class Meta:
         indexes = [models.Index(fields=["user", "is_active"])]
+
+
+class OfficerPushDelivery(models.Model):
+    """一张已交给 Expo 的 ticket,等回执。只为查「设备未注册」而留 —— 官员端没有通知历史列表。
+    状态沿用灵魂端的 `PushStatus`(SENT → DELIVERED / FAILED)。"""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    device = models.ForeignKey(OfficerPushDevice, on_delete=models.CASCADE, related_name="deliveries")
+    ticket_id = models.CharField(max_length=64)
+    status = models.CharField(max_length=10, choices=PushStatus.choices, default=PushStatus.SENT)
+    error = models.CharField(max_length=200, blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [models.Index(fields=["status", "created_at"])]

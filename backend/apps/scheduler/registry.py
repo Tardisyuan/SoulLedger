@@ -151,6 +151,8 @@ REGISTRY: tuple[JobSpec, ...] = (
     # (apps/soul_push/services.py)。
     # 每 5 分钟;回执只查发出满 15 分钟的,所以更密没有意义。锁 240s 同上一条的理由。
     JobSpec("soul_push.sweep", GLOBAL, "*/5 * * * *", max_runtime=240),
+    # 官员端推送的回执(apps/officer_app/push.py::check_receipts):同一节奏、同一理由;回执报设备未注册就停用该设备。
+    JobSpec("officer_app.check_receipts", GLOBAL, "*/5 * * * *", max_runtime=240),
     # 朋友圈孤儿图片(apps/social/media.py::cleanup_orphans):上传超过 24 小时仍未挂到帖子的行与文件,
     # 加上 private/post_media/ 下无主的文件。GLOBAL:孤儿图片没有帖子,也就没有租户(租户经帖子);
     # 无主文件连行都没有。每天一次,阈值 24 小时,所以更密没有意义。

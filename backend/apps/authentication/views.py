@@ -302,6 +302,11 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
         new_password = secrets.token_urlsafe(12)
         with transaction.atomic():
             set_officer_password(user, new_password, must_change=True)
+            # 旧密码的持有者(含已登录的设备)不能留着:与本人改密 / 邮箱重置同一套收尾。
+            end_sessions(user)
+            end_push_registrations(user)
+            _audit(user, "管理员重置官员密码,其所有设备已退出", request=request,
+                   changes={"password_reset": True, "sessions_revoked": True, "by": str(request.user.pk)})
         return Response({'password': new_password})
 
     def _batch_targets(self, user_ids):

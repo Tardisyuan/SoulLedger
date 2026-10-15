@@ -3441,6 +3441,7 @@
       "scheduler_check_overdue": "检测超时未跑的任务",
       "scheduler_prune_runs": "清理过期执行记录",
       "soul_push_sweep": "灵魂推送:重新入队与查回执",
+      "officer_app_check_receipts": "官员推送:查回执",
       "workflow_process_timeouts_for_tenant": "处理审批超时",
       "social_cleanup_orphan_post_media": "清理未发出的朋友圈图片",
       "chat_reconcile_inbox": "按 Synapse 校对殿司收件箱",
