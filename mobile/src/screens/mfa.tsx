@@ -173,7 +173,7 @@ function CodesPage({ codes, onDone, header, ownTop }: { codes: string[]; onDone:
 
 // ── the wizard ───────────────────────────────────────────────────────────
 
-function Wizard({ onExit, onEnabled }: { onExit: () => void; onEnabled: () => void }) {
+function Wizard({ onExit, onEnabled, onAlreadyOn }: { onExit: () => void; onEnabled: () => void; onAlreadyOn: () => void }) {
   const t = useTheme();
   const { t: tr } = useI18n();
   const toast = useToast();
@@ -259,7 +259,18 @@ function Wizard({ onExit, onEnabled }: { onExit: () => void; onEnabled: () => vo
       setBind({ kind: "idle" });
       setStep(3);
     } catch (e) {
-      setBind(stateOfFailure(soulMfaFailure(e)));
+      const failure = soulMfaFailure(e);
+      // The confirm may have gone through with its answer lost: a repeat is 409 `already_enabled` for ever, and
+      // the ten codes were shown nowhere. Ask the server; if it is on, say so and offer new codes (Manage).
+      if (failure.code === "already_enabled" || failure.code === "network" || failure.code === "other") {
+        const now = await soulApi.mfaStatus().catch(() => null);
+        if (now?.enabled) {
+          finished.current = true;
+          setBind({ kind: "idle" });
+          return onAlreadyOn();
+        }
+      }
+      setBind(stateOfFailure(failure));
     }
   };
 
@@ -505,7 +516,7 @@ function OwnerFields({
   );
 }
 
-function Manage({ status, onBack, onRegenerated, onDisabled }: { status: SoulMfaStatus; onBack: () => void; onRegenerated: (codes: string[]) => void; onDisabled: () => void }) {
+function Manage({ status, onBack, onRegenerated, onDisabled, codesLost }: { status: SoulMfaStatus; onBack: () => void; onRegenerated: (codes: string[]) => void; onDisabled: () => void; codesLost?: boolean }) {
   const t = useTheme();
   const { t: tr } = useI18n();
   const [asking, setAsking] = useState<Asking>(null);
@@ -559,6 +570,11 @@ function Manage({ status, onBack, onRegenerated, onDisabled }: { status: SoulMfa
     <Screen scroll={false} testID="mfa-manage">
       <AppHeader title={tr("officer_app.mfa.title")} onBack={onBack} />
       <ScrollView contentContainerStyle={styles.manage}>
+        {codesLost ? (
+          <Notice tone="neutral" testID="mfa-codes-lost">
+            {tr("soul_app.mfa.manage.codes_lost")}
+          </Notice>
+        ) : null}
         <View style={[styles.panel, { backgroundColor: t.s1, borderColor: t.hair }]}>
           <View testID="mfa-on" style={[styles.tag, { borderColor: t.ink }]}>
             <Txt style={styles.tagText}>{tr("soul_app.settings.mfa_on")}</Txt>
@@ -657,6 +673,7 @@ export function MfaScreen() {
   const status = useRemote(soulApi.mfaStatus);
   const [fresh, setFresh] = useState<string[] | null>(null);
   const [justEnabled, setJustEnabled] = useState(false);
+  const [codesLost, setCodesLost] = useState(false);
 
   const back = useCallback(() => {
     if (navigation.canGoBack()) navigation.goBack();
@@ -699,6 +716,11 @@ export function MfaScreen() {
           setJustEnabled(true);
           void status.reload();
         }}
+        onAlreadyOn={() => {
+          setJustEnabled(true);
+          setCodesLost(true);
+          void status.reload();
+        }}
       />
     );
   }
@@ -719,7 +741,11 @@ export function MfaScreen() {
     <Manage
       status={status.data}
       onBack={back}
-      onRegenerated={setFresh}
+      onRegenerated={(codes) => {
+        setCodesLost(false);
+        setFresh(codes);
+      }}
+      codesLost={codesLost}
       onDisabled={() => {
         // Off again: the settings row (re-read on focus) says 「○ 未开启」; the soul lands back there, not in the wizard.
         back();
