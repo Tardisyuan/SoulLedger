@@ -653,6 +653,8 @@ def officer_messages(conversation, officer, *, request=None, limit=50):
             "from_officer": from_officer,
             "sender_name": (message["officer"] or "殿司") if from_officer else names.get(message["sender"], ""),
             "officer_title": message.get("officer_title", "") if from_officer else "",
+            # 只给官员的信带:灵魂的信没有这个键,也不该有。
+            "txn_id": message.get("txn_id") if from_officer else None,
             "body": message["body"],
             "image": pictures.get(message["event_id"]),
             "timestamp": message["timestamp"],
@@ -663,6 +665,7 @@ def officer_messages(conversation, officer, *, request=None, limit=50):
 
 OFFICER = "io.soulledger.officer"
 OFFICER_TITLE = "io.soulledger.officer_title"
+TXN = "io.soulledger.txn"  # 官员回信的 txn_id:发件箱凭它认出「这条是我自己的」,不比正文
 
 
 def officer_title(officer):
@@ -674,7 +677,7 @@ def officer_title(officer):
     return (actor.title_zh or actor.title) if actor is not None else ""
 
 
-def officer_reply(conversation, officer, body, *, request=None):
+def officer_reply(conversation, officer, body, *, request=None, txn_id=None):
     """官员回复。以服务账号发出,事件里带上是谁回的(`io.soulledger.officer`)与他的职位
     (`io.soulledger.officer_title`)—— App 直接从 Matrix 读信,署名只能随事件走。"""
     if conversation.kind != ConversationKind.OFFICER_INBOX:
@@ -685,7 +688,8 @@ def officer_reply(conversation, officer, body, *, request=None):
     event_id = client.send_message(
         conversation.room_id, body,
         as_localpart=settings.MATRIX_SERVICE_LOCALPART,
-        extra={OFFICER: officer.get_full_name() or officer.username, OFFICER_TITLE: officer_title(officer)},
+        extra={OFFICER: officer.get_full_name() or officer.username, OFFICER_TITLE: officer_title(officer),
+               **({TXN: txn_id} if txn_id else {})},
     )
     conversation.last_message_at = timezone.now()
     conversation.last_from = HALL

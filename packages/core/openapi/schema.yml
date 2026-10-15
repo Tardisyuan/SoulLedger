@@ -24596,6 +24596,10 @@ components:
         officer_title:
           type: string
           description: 回信官员的职位(官员回信;灵魂的信为空)。
+        txn_id:
+          type: string
+          nullable: true
+          description: 官员回信发出时带的 `txn_id`;官员 App 的发件箱凭它认出自己的回信。灵魂的信与更早的回信为 null。
         body:
           type: string
         image:
@@ -24613,6 +24617,7 @@ components:
       - officer_title
       - sender_name
       - timestamp
+      - txn_id
     InboxOfficer:
       type: object
       description: 一位官员:经办人,或「标给同僚」弹层里的一个候选。

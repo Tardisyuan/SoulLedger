@@ -147,6 +147,8 @@ class InboxMessageSerializer(serializers.Serializer):
     from_officer = serializers.BooleanField()
     sender_name = serializers.CharField()
     officer_title = serializers.CharField(help_text="回信官员的职位(官员回信;灵魂的信为空)。")
+    txn_id = serializers.CharField(allow_null=True, help_text="官员回信发出时带的 `txn_id`;官员 App 的发件箱凭它认出自己的回信。"
+                                   "灵魂的信与更早的回信为 null。")
     body = serializers.CharField()
     image = ChatImageSerializer(allow_null=True, help_text="灵魂来信里的图片;`body` 此时是「[图片]」。没有为 null。")
     timestamp = serializers.IntegerField()
