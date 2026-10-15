@@ -38,5 +38,10 @@
   "audit.descriptions.impersonate_start",
   "audit.descriptions.impersonate_end",
   "official_notify.impersonation_started.title",
-  "official_notify.impersonation_started.body"
+  "official_notify.impersonation_started.body",
+  "officer_app.biometric.hint",
+  "officer_app.biometric.unavailable",
+  "officer_app.biometric.failed_reject",
+  "officer_app.biometric.setting",
+  "officer_app.biometric.failed"
 ]

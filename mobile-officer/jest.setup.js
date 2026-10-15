@@ -216,3 +216,15 @@ jest.mock("@gorhom/bottom-sheet", () => {
 // it here loads ui.tsx before a suite's own jest.mock of @react-navigation/native, and
 // the circle feed then fetched twice (2026-09-30, two suites red).
 jest.mock("./src/coldStart", () => ({ coldStart: { played: true }, ColdStart: () => null }));
+
+// The phone's own check (src/deviceCheck.ts). By default a phone with a passcode that recognises its owner;
+// `__state.level` 0 is no screen lock at all, `__state.success` false a cancelled or unrecognised check.
+jest.mock("expo-local-authentication", () => {
+  const state = { level: 1, success: true };
+  return {
+    __state: state,
+    SecurityLevel: { NONE: 0, SECRET: 1, BIOMETRIC_WEAK: 2, BIOMETRIC_STRONG: 3 },
+    getEnrolledLevelAsync: async () => state.level,
+    authenticateAsync: jest.fn(async () => (state.success ? { success: true } : { success: false, error: "user_cancel" })),
+  };
+});
