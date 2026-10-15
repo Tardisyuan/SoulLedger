@@ -152,9 +152,6 @@ export function UserModal({ isOpen, onClose, user }: UserModalProps) {
         last_name: formData.last_name,
         tenant: formData.tenant,
       };
-      if (formData.password) {
-        updateData.password = formData.password;
-      }
       updateMutation.mutate({ id: String(user.id), data: updateData });
     } else {
       createMutation.mutate(formData);
@@ -241,24 +238,23 @@ export function UserModal({ isOpen, onClose, user }: UserModalProps) {
           placeholder={t("users.email_placeholder") || "输入邮箱"}
         />
 
-        {/* 编辑时的「(可选)」走 `description` 而不是塞进 `label` —— `Field` 把
-            description 接进 `aria-describedby` 的链条里,而拼进 label 的话它会
-            变成字段名字的一部分,读屏每次聚焦都念一遍。 */}
-        <TextField
-          id={passwordId}
-          label={t("users.password") || "密码"}
-          description={isEditing ? (t("users.optional") || "可选") : undefined}
-          type="password"
-          required={!isEditing}
-          error={fieldErrors.password}
-          value={formData.password}
-          onChange={(e) => {
-            setFieldErrors(({ password: _drop, ...rest }) => rest);
-            setFormData({ ...formData, password: e.target.value });
-          }}
-          disabled={createMutation.isPending || updateMutation.isPending}
-          placeholder={isEditing ? (t("users.password_edit_placeholder") || "留空则不修改") : (t("users.password_placeholder") || "输入密码")}
-        />
+        {/* 密码只在创建时填:编辑不改密码(服务端会 400),要换密码走列表行的「重置密码」。 */}
+        {!isEditing && (
+          <TextField
+            id={passwordId}
+            label={t("users.password") || "密码"}
+            type="password"
+            required
+            error={fieldErrors.password}
+            value={formData.password}
+            onChange={(e) => {
+              setFieldErrors(({ password: _drop, ...rest }) => rest);
+              setFormData({ ...formData, password: e.target.value });
+            }}
+            disabled={createMutation.isPending}
+            placeholder={t("users.password_placeholder") || "输入密码"}
+          />
+        )}
 
         {/* 三个字段先前搬到了 `TextField`,另外三个没有 —— 于是同一张表单里
             两种标签写法(`text-2xs uppercase` 与 `text-xs`)、两套 focus 语义
