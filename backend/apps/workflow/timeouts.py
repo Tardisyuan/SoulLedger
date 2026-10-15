@@ -169,6 +169,7 @@ def _tell(workflow, node, action) -> None:
     WorkflowService.notify_designated(
         workflow,
         node,
+        category="approval_timeout",
         title=f"审批超时: {workflow.workflow_name}",
         message=(
             f"节点「{node.node_name}」已超过 {node.timeout_hours} 小时未处理"

@@ -20823,6 +20823,14 @@ components:
           type: string
       required:
       - detail
+    ChannelPrefs:
+      type: object
+      description: One category's two channels.
+      properties:
+        site:
+          type: boolean
+        mail:
+          type: boolean
     ChatError:
       type: object
       properties:
@@ -27338,6 +27346,25 @@ components:
           nullable: true
       required:
       - last_failure
+    NotificationPrefs:
+      type: object
+      description: '`preferences.notifications`: one `ChannelPrefsSerializer` per
+        category in `apps/notifications/categories.py`.'
+      properties:
+        account_security:
+          $ref: '#/components/schemas/ChannelPrefs'
+        approval:
+          $ref: '#/components/schemas/ChannelPrefs'
+        approval_timeout:
+          $ref: '#/components/schemas/ChannelPrefs'
+        reassign:
+          $ref: '#/components/schemas/ChannelPrefs'
+        password_help:
+          $ref: '#/components/schemas/ChannelPrefs'
+        dispatch:
+          $ref: '#/components/schemas/ChannelPrefs'
+        letter_handoff:
+          $ref: '#/components/schemas/ChannelPrefs'
     NotificationSettings:
       type: object
       properties:
@@ -31152,9 +31179,8 @@ components:
         onboarded:
           type: boolean
           default: false
-        email_notifications:
-          type: boolean
-          default: false
+        notifications:
+          $ref: '#/components/schemas/NotificationPrefs'
         email_locale:
           nullable: true
           oneOf:
@@ -37442,9 +37468,8 @@ components:
         onboarded:
           type: boolean
           default: false
-        email_notifications:
-          type: boolean
-          default: false
+        notifications:
+          $ref: '#/components/schemas/NotificationPrefs'
         email_locale:
           nullable: true
           oneOf:

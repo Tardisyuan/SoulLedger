@@ -28,6 +28,11 @@ REFRESH = "/api/v1/auth/refresh/"
 CIVS = "/api/v1/auth/civilizations/"
 HELP = "/api/v1/auth/password-help/"
 PREFS = "/api/v1/auth/profile/preferences/"
+#: A fresh account's notification table: site on, mail off, the two locked categories on both.
+DEFAULT_NOTIFICATIONS = {
+    c: {"site": True, "mail": c in ("account_security", "password_help")}
+    for c in ("account_security", "approval", "approval_timeout", "reassign", "password_help", "dispatch", "letter_handoff")
+}
 
 DEFAULT_REFRESH = timedelta(days=7)
 REMEMBERED_REFRESH = timedelta(days=30)
@@ -463,12 +468,12 @@ class TestPreferences:
         api_client.force_authenticate(judge_user)
         response = api_client.get(PREFS)
         assert response.status_code == 200
-        assert response.data == {"default_view": None, "onboarded": False, "email_notifications": False, "email_locale": None}
+        assert response.data == {"default_view": None, "onboarded": False, "notifications": DEFAULT_NOTIFICATIONS, "email_locale": None}
 
     @pytest.mark.parametrize("view", ["operator", "admin"])
     def test_patch_stores_and_get_reads_it_back(self, api_client, judge_user, view):
         api_client.force_authenticate(judge_user)
-        expected = {"default_view": view, "onboarded": False, "email_notifications": False, "email_locale": None}
+        expected = {"default_view": view, "onboarded": False, "notifications": DEFAULT_NOTIFICATIONS, "email_locale": None}
         assert api_client.patch(PREFS, {"default_view": view}, format="json").data == expected
         assert api_client.get(PREFS).data == expected
         judge_user.refresh_from_db()
@@ -489,7 +494,7 @@ class TestPreferences:
         judge_user.preferences = {"default_view": "admin"}
         judge_user.save(update_fields=["preferences"])
         api_client.force_authenticate(judge_user)
-        expected = {"default_view": "admin", "onboarded": True, "email_notifications": False, "email_locale": None}
+        expected = {"default_view": "admin", "onboarded": True, "notifications": DEFAULT_NOTIFICATIONS, "email_locale": None}
         assert api_client.patch(PREFS, {"onboarded": True}, format="json").data == expected
         assert api_client.get(PREFS).data == expected
         judge_user.refresh_from_db()
@@ -543,7 +548,7 @@ class TestPreferencesAreOnlyEverYourOwn:
         admin_user.preferences = {"default_view": "admin"}
         admin_user.save(update_fields=["preferences"])
         api_client.force_authenticate(judge_user)
-        assert api_client.get(PREFS).data == {"default_view": None, "onboarded": False, "email_notifications": False, "email_locale": None}
+        assert api_client.get(PREFS).data == {"default_view": None, "onboarded": False, "notifications": DEFAULT_NOTIFICATIONS, "email_locale": None}
 
     @pytest.mark.parametrize("field", ["user", "user_id", "id", "username"])
     def test_naming_another_user_in_the_body_is_refused(self, api_client, judge_user, admin_user, field):

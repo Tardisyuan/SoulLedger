@@ -4,13 +4,13 @@
 `ApprovalWorkflow` 的指派与 `timeouts.py` 的转交 / 提醒都写它)、改派请求、密码求助。
 结论类(审判结束、受刑节点)不发:站内看得到,邮箱里只会是噪音。
 
-谁收:本租户、在职、`preferences.email_notifications` 为真(默认关,`UserPreferencesSerializer`)
-且有邮箱的官员。没邮箱的跳过,不记录 —— 没有尝试就没有结果。
+谁收:本租户、在职、有邮箱、且这条通知的类别在「通知」表里邮件列为开的官员(`categories.wants`;锁定的格恒为开,
+没存过的格跟旧总开关)。没邮箱的跳过,不记录 —— 没有尝试就没有结果。
 发什么:标题与正文按收件人语言重渲染(`messages.render`,与站内读时一致),加一行「去站内处理」。
 **不带密钥**:这几种通知的 params 里只有用户名、灵魂名、殿名与计数;密码求助说的是「有人求助」,
 不含任何密码。标题 / 正文之外不附任何别的字段。
 每条通知最多一行 `NotificationEmail`(成功或失败),失败不重试。只看未读、且**晚于本人打开开关**
-(`preferences.email_opted_at`)的:不设 24 小时上限,worker 停了几天之后积压的照发;而事后才打开开关,
+(该类别的 `mail_since`,否则旧总开关的 `email_opted_at`)的:不设 24 小时上限,worker 停了几天之后积压的照发;而事后才打开开关,
 不会把旧通知翻出来发一遍。没有该字段时(迁移 0018 之外的极少数)退回 24 小时窗口。
 语言:界面语言只存在浏览器 cookie 里,服务端没有;前端在界面语言变动时同步 `email_locale`(见
 `frontend/src/components/layout/EmailLocaleSync.tsx`),发送时读它,没有则按所属文明。
@@ -52,53 +52,58 @@ def render_email(notification, locale):
     return subject, f"{body}\n{pack['act']}", title, body
 
 
-def _opted_since(user):
-    """这位官员打开邮件开关的时刻(`preferences.email_opted_at`,PATCH 偏好时写)。
-    迁移 authentication/0018 已给打开着开关的老账号补上迁移时刻;仍没有它的(迁移后才被直接写库的账号)
-    退回「24 小时内」,不把历史一次性倒出去。"""
+def _opted_since(user, category):
+    """这位官员打开这个类别邮件的时刻(`categories.mail_since`,PATCH 偏好时写;老账号用迁移 authentication/0018
+    补的 `email_opted_at`)。都没有的(从没存过、锁定的类别)退回「24 小时内」,不把历史一次性倒出去。"""
     from django.utils.dateparse import parse_datetime
 
-    stamp = parse_datetime((user.preferences or {}).get("email_opted_at") or "")
+    from apps.notifications.categories import mail_since
+
+    stamp = parse_datetime(mail_since(user, category) or "")
     return stamp or timezone.now() - WINDOW
 
 
-def _email_pending(recipients):
-    """给 `recipients` 里每位发他们**开关之后**产生、未读、还没有 `NotificationEmail` 行的待处理通知。
+def _email_pending(users):
+    """给 `users` 里每位发他们**开关之后**产生、未读、还没有 `NotificationEmail` 行、且类别邮件列为开的待处理通知。
     不再按「24 小时内」截断:worker 停了几天之后恢复,积压的照发(每条仍最多一封)。"""
     from apps.authentication.mail import send_neutral_mail
+    from apps.notifications.categories import category_of, wants
     from apps.notifications.models import NotificationEmail, UserNotification
 
     sent = failed = 0
-    for user in recipients:
-        pending = (
-            UserNotification.objects.filter(
-                user=user, notification_type__in=EMAILED_TYPES, is_read=False,
-                created_at__gte=_opted_since(user), email__isnull=True,
-            )
-            .select_related("user")
-            .order_by("created_at")
+    # ponytail: 关着邮件的人的未读旧通知每轮都被扫到再丢弃;量大了给这里加 created_at 下界。
+    pending = (
+        UserNotification.objects.filter(
+            user__in=users, notification_type__in=EMAILED_TYPES, is_read=False, email__isnull=True,
         )
-        for notification in pending:
-            locale = email_locale(notification.user)
-            subject, text, title, body = render_email(notification, locale)
-            try:
-                send_neutral_mail(
-                    subject, text, heading=title, rows=[], notes=[body, MESSAGES[locale]["act"]],
-                    to=[notification.user.email], locale=locale,
-                )
-            except Exception as exc:  # noqa: BLE001 — 一封失败不拦下一封;原因记在行上
-                NotificationEmail.objects.create(notification=notification, sent=False, error=str(exc)[:300])
-                failed += 1
-            else:
-                NotificationEmail.objects.create(notification=notification, sent=True)
-                sent += 1
+        .select_related("user")
+        .order_by("created_at")
+    )
+    for notification in pending:
+        user = notification.user
+        category = category_of(notification.notification_type, notification.params)
+        if not wants(user, category, "mail") or notification.created_at < _opted_since(user, category):
+            continue
+        locale = email_locale(user)
+        subject, text, title, body = render_email(notification, locale)
+        try:
+            send_neutral_mail(
+                subject, text, heading=title, rows=[], notes=[body, MESSAGES[locale]["act"]],
+                to=[user.email], locale=locale,
+            )
+        except Exception as exc:  # noqa: BLE001 — 一封失败不拦下一封;原因记在行上
+            NotificationEmail.objects.create(notification=notification, sent=False, error=str(exc)[:300])
+            failed += 1
+        else:
+            NotificationEmail.objects.create(notification=notification, sent=True)
+            sent += 1
     return sent, failed
 
 
-def _opted_in(**scope):
+def _recipients(**scope):
     from apps.authentication.models import User
 
-    return User.objects.filter(is_active=True, preferences__email_notifications=True, **scope).exclude(email="")
+    return User.objects.filter(is_active=True, **scope).exclude(email="")
 
 
 @shared_task(name="notifications.email_action_needed_for_tenant")
@@ -109,7 +114,7 @@ def email_action_needed_for_tenant(tenant_id: str):
     tenant = Tenant.objects.get(id=tenant_id)
     set_current_tenant(tenant)
     try:
-        sent, failed = _email_pending(_opted_in(tenant_id=tenant_id))
+        sent, failed = _email_pending(_recipients(tenant_id=tenant_id))
         return {"tenant": tenant.code, "sent": sent, "failed": failed}
     finally:
         clear_current_tenant()
@@ -118,5 +123,5 @@ def email_action_needed_for_tenant(tenant_id: str):
 @shared_task(name="notifications.email_action_needed_global")
 def email_action_needed_global():
     """全局管理员(`tenant=None`)不属于任何租户,按租户那一行永远扫不到他们:单独一行。"""
-    sent, failed = _email_pending(_opted_in(tenant__isnull=True))
+    sent, failed = _email_pending(_recipients(tenant__isnull=True))
     return {"tenant": None, "sent": sent, "failed": failed}
