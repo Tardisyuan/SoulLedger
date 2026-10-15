@@ -18,6 +18,10 @@ class OfficerPushDevice(models.Model):
     token = models.CharField(max_length=255, unique=True)
     platform = models.CharField(max_length=10, choices=PushPlatform.choices)
     is_active = models.BooleanField(default=True)
+    #: 注册时所在的登录会话(`sid`)。有它,到期 / 退出按**这台设备自己的会话**判;
+    #: 没有(这个字段上线前的老登记、或注册请求不带 `sid`)沿用按人判断,下次登录重新注册时自然补上,不回填。
+    session = models.ForeignKey("authentication.SignInSession", null=True, blank=True,
+                                on_delete=models.SET_NULL, related_name="officer_push_devices")
     last_seen_at = models.DateTimeField()
     created_at = models.DateTimeField(auto_now_add=True)
 

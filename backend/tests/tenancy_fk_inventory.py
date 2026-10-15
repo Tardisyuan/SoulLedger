@@ -140,6 +140,8 @@ EDGES = {
     'soul_assist.AssistMessage.conversation->soul_assist.AssistConversation': ('U->U', 'stays inside one global/child table family (no tenant column on either side)'),
     'soul_push.PushDelivery.account->soul_accounts.SoulAccount': ('U->U', 'stays inside one global/child table family (no tenant column on either side)'),
     'soul_push.PushDelivery.device->soul_push.PushDevice': ('U->U', 'stays inside one global/child table family (no tenant column on either side)'),
+    'soul_push.PushDevice.session->authentication.SignInSession': ('U->U', 'stays inside one global/child table family (no tenant column on either side)'),
+    'officer_app.OfficerPushDevice.session->authentication.SignInSession': ('U->U', 'stays inside one global/child table family (no tenant column on either side)'),
     'soul_push.PushDevice.account->soul_accounts.SoulAccount': ('U->U', 'stays inside one global/child table family (no tenant column on either side)'),
     'soul_push.PushPreference.account->soul_accounts.SoulAccount': ('U->U', 'stays inside one global/child table family (no tenant column on either side)'),
     'workflow.ApprovalNode.on_fail->workflow.ApprovalNode': ('U->U', 'stays inside one global/child table family (no tenant column on either side)'),
