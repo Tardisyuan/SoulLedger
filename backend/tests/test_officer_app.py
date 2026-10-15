@@ -303,6 +303,20 @@ def test_a_token_moves_to_the_officer_who_registers_it_last(cn_tenant, judge_use
     assert OfficerPushDevice.objects.get(token=TOKEN).is_active
 
 
+def test_the_previous_officer_gets_nothing_on_a_phone_another_officer_registered(cn_tenant, judge_user, push_on):  # noqa: F811
+    """被强制登出的官员(401,App 来不及注销)留下的登记,在下一位官员登记同一 token 时换主人:
+    两人手里各有一件待办,推送却只发给新主人 —— 旧官员的待办不会落在这部手机的锁屏上。"""
+    other = User.objects.create_user(username="j9", password="x", role="JUDGE", tenant=cn_tenant)
+    _plain_workflow(cn_tenant)
+    push.register_device(judge_user, TOKEN, "IOS")
+    push.register_device(other, TOKEN, "IOS")
+    assert push.send_to_user(judge_user, sender=FakeSender()) == 0
+    assert FakeSender.batches == []
+    assert push.send_to_user(other, sender=FakeSender()) == 1
+    assert [m["to"] for m in FakeSender.batches[0]] == [TOKEN]
+    assert OfficerPushDevice.objects.filter(user=judge_user).count() == 0
+
+
 def test_the_lock_screen_text_is_a_bare_count(cn_tenant, judge_user, push_on):  # noqa: F811
     _plain_workflow(cn_tenant, name="机密案由")
     _plain_workflow(cn_tenant, name="另一件")
