@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><script src="./ds-base.js"></script></helmet>
+<div class="light" data-civ="cn" style="width:2300px;background:oklch(var(--color-canvas));color:oklch(var(--color-ink));font-family:var(--font-sans);font-size:13px;line-height:20px">
+<x-import component-from-global-scope="SoulLedger.SoulLedgerProvider" civ="cn" pathname="/settings" hint-size="2300px,2400px">
+<div style="padding:48px;display:flex;flex-direction:column;gap:56px">
+<header style="display:flex;flex-direction:column;gap:4px"><h1 style="margin:0;font-family:'Noto Serif SC',var(--font-serif);font-size:32px;line-height:40px;font-weight:600">第二十八批 · 第三、四批稿：导出 / 帮助 / 附件 / 断网</h1><span style="color:oklch(var(--color-ink-muted))">S3 · S5 · W4 · O3(缩小范围)· W5 只给位置</span></header>
+
+<section style="display:flex;flex-direction:column;gap:16px"><h2 style="margin:0;font-size:20px;line-height:28px;font-weight:600">S3 · 个人数据导出</h2>
+<div style="display:flex;gap:40px;align-items:flex-start">
+<div data-screen-label="S3 申请" style="width:393px;height:852px;overflow:hidden;display:flex;flex-direction:column;border-top:3px solid oklch(var(--color-main));background:oklch(var(--color-surface-1));font-size:15px;line-height:24px;box-shadow:0 0 0 1px oklch(var(--color-line))">
+<header style="height:56px;flex:none;display:flex;align-items:center;gap:4px;padding:0 16px 0 4px;border-bottom:1px solid oklch(var(--color-line))"><span style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:20px">‹</span><h1 style="margin:0;font-weight:600;font-size:17px">导出我的资料</h1></header>
+<div style="padding:24px 16px;display:flex;flex-direction:column;gap:16px">
+<p style="margin:0;text-wrap:pretty">把本殿记下的、关于你的资料打包成一个文件。</p>
+<span style="font-weight:600">包含</span>
+<ul style="margin:0;padding:0 0 0 20px;display:flex;flex-direction:column;gap:4px"><li>基本资料与编号</li><li>功过记录</li><li>审判结果与评语(给你看过的部分)</li><li>书信与朋友圈(含图片)</li><li>最近 90 天的登录记录</li></ul>
+<span style="font-weight:600">不包含</span>
+<ul style="margin:0;padding:0 0 0 20px;display:flex;flex-direction:column;gap:4px;color:oklch(var(--color-ink-muted))"><li>官员之间的评议</li><li>别人发给你之外的书信</li></ul>
+<span style="font-size:13px;line-height:20px;color:oklch(var(--color-ink-muted));text-wrap:pretty">一般几分钟，资料多时最长一天。好了会通知你。文件 7 天内可以取。</span>
+<span role="button" style="height:56px;display:flex;align-items:center;justify-content:center;background:oklch(var(--color-main));color:oklch(var(--color-on-main));font-weight:500">输入密码并申请</span>
+</div></div>
+<div data-screen-label="S3 排队与完成" style="width:393px;height:852px;overflow:hidden;display:flex;flex-direction:column;border-top:3px solid oklch(var(--color-main));background:oklch(var(--color-surface-1));font-size:15px;line-height:24px;box-shadow:0 0 0 1px oklch(var(--color-line))">
+<header style="height:56px;flex:none;display:flex;align-items:center;gap:4px;padding:0 16px 0 4px;border-bottom:1px solid oklch(var(--color-line))"><span style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:20px">‹</span><h1 style="margin:0;font-weight:600;font-size:17px">导出我的资料</h1></header>
+<div style="padding:24px 16px;display:flex;flex-direction:column;gap:24px">
+<div style="display:flex;flex-direction:column;gap:8px;padding:16px;border:1px solid oklch(var(--color-line-strong))"><span style="font-weight:600">◐ 正在准备</span><span style="font-size:13px;line-height:20px;color:oklch(var(--color-ink-muted))">申请于 <span style="font-family:var(--font-mono)">2026-10-12 09:30</span>。可以离开这页，好了会通知你。</span></div>
+<span style="font-size:12px;color:oklch(var(--color-ink-subtle))">↓ 完成后</span>
+<div style="display:flex;flex-direction:column;gap:12px;padding:16px;border:1px solid oklch(var(--color-ink))"><span style="font-weight:600">✓ 已准备好</span><span style="font-size:13px;line-height:20px;color:oklch(var(--color-ink-muted))"><span style="font-family:var(--font-mono)">soulledger-S104882-20261012.zip</span> · 12.4 MB<br>可取到 <span style="font-family:var(--font-mono)">2026-10-19 09:41</span></span><span role="button" style="height:56px;display:flex;align-items:center;justify-content:center;background:oklch(var(--color-main));color:oklch(var(--color-on-main));font-weight:500">保存或发送…</span></div>
+<span style="font-size:13px;line-height:20px;color:oklch(var(--color-ink-muted))">「保存或发送…」打开系统分享面板。过期后要重新申请。一次只能有一份在准备。</span>
+</div></div>
+<div style="width:480px;display:flex;flex-direction:column;gap:6px;padding:16px;border:1px dashed oklch(var(--color-line-strong))"><b>请定的答复</b><span>· <b>排队生成</b>。图片多时立即生成会超时;排队后统一用「已准备好」通知。</span><span>· <b>先输密码</b>(开了面容登录的可以用面容)。导出包是整份个人资料，手机被借走时不能一点就拿走。</span><span>· 入口：设置 › 账号安全下面单独一节「我的资料」,只有这一行。</span><span>· 文件放在私有存储，签名链接 7 天;下载走 App 内，不发邮件链接。</span></div>
+</div></section>
+
+<section style="display:flex;flex-direction:column;gap:16px"><h2 style="margin:0;font-size:20px;line-height:28px;font-weight:600">S5 · 帮助与反馈</h2>
+<div style="display:flex;gap:40px;align-items:flex-start">
+<div data-screen-label="S5 帮助" style="width:393px;height:852px;overflow:hidden;display:flex;flex-direction:column;border-top:3px solid oklch(var(--color-main));background:oklch(var(--color-surface-1));font-size:15px;line-height:24px;box-shadow:0 0 0 1px oklch(var(--color-line))">
+<header style="height:56px;flex:none;display:flex;align-items:center;gap:4px;padding:0 16px 0 4px;border-bottom:1px solid oklch(var(--color-line))"><span style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:20px">‹</span><h1 style="margin:0;font-weight:600;font-size:17px">帮助</h1></header>
+<div style="display:flex;flex-direction:column;overflow:hidden">
+<sc-for list="{{ faq }}" as="g" hint-placeholder-count="3"><span style="padding:16px 16px 8px;font-size:13px;font-weight:600;color:oklch(var(--color-ink-muted))">{{ g.group }}</span><sc-for list="{{ g.items }}" as="q" hint-placeholder-count="2"><span style="min-height:52px;display:flex;align-items:center;padding:0 16px;border-top:1px solid oklch(var(--color-line))"><span style="flex:1">{{ q.q }}</span><span style="color:oklch(var(--color-ink-muted))">›</span></span></sc-for></sc-for>
+<div style="margin:16px;display:flex;flex-direction:column;gap:8px"><span style="font-size:13px;color:oklch(var(--color-ink-muted))">没找到答案？</span><span role="button" style="height:56px;display:flex;align-items:center;justify-content:center;border:1px solid oklch(var(--color-ink));font-weight:500">写给本殿</span></div>
+</div></div>
+<div data-screen-label="S5 反馈表单" style="width:393px;height:852px;overflow:hidden;display:flex;flex-direction:column;border-top:3px solid oklch(var(--color-main));background:oklch(var(--color-surface-1));font-size:15px;line-height:24px;box-shadow:0 0 0 1px oklch(var(--color-line))">
+<header style="height:56px;flex:none;display:flex;align-items:center;gap:4px;padding:0 16px 0 4px;border-bottom:1px solid oklch(var(--color-line))"><span style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:20px">‹</span><h1 style="margin:0;font-weight:600;font-size:17px">写给本殿</h1></header>
+<div style="padding:24px 16px;display:flex;flex-direction:column;gap:20px">
+<div style="display:flex;flex-direction:column;gap:8px"><span style="font-weight:500">关于什么</span><div style="display:flex;flex-wrap:wrap;gap:8px;font-size:13px"><span style="height:40px;padding:0 14px;display:flex;align-items:center;background:oklch(var(--color-ink));color:oklch(var(--color-surface-1))">登录与账号</span><span style="height:40px;padding:0 14px;display:flex;align-items:center;border:1px solid oklch(var(--color-line-strong))">我的记录有误</span><span style="height:40px;padding:0 14px;display:flex;align-items:center;border:1px solid oklch(var(--color-line-strong))">App 出了问题</span><span style="height:40px;padding:0 14px;display:flex;align-items:center;border:1px solid oklch(var(--color-line-strong))">其他</span></div></div>
+<label style="display:flex;flex-direction:column;gap:8px"><span style="font-weight:500">说说情况</span><span style="min-height:140px;box-sizing:border-box;padding:12px;border:1px solid oklch(var(--color-line-strong));background:oklch(var(--color-canvas));color:oklch(var(--color-ink-muted))">发生了什么、在哪一页</span></label>
+<div style="display:flex;flex-direction:column;gap:8px"><span style="font-weight:500">截图 <span style="font-weight:400;color:oklch(var(--color-ink-muted))">· 可选，最多 3 张</span></span><span role="button" style="width:88px;height:88px;display:flex;align-items:center;justify-content:center;border:1px dashed oklch(var(--color-line-strong));font-size:24px;color:oklch(var(--color-ink-muted))">＋</span></div>
+<span style="font-size:13px;line-height:20px;color:oklch(var(--color-ink-muted))">本殿官员会在书信里回你，和平常的书信在一处。</span>
+<span role="button" style="height:56px;display:flex;align-items:center;justify-content:center;background:oklch(var(--color-main));color:oklch(var(--color-on-main));font-weight:500">发出</span>
+</div></div>
+<div style="width:560px;display:flex;flex-direction:column;gap:6px;padding:16px;border:1px dashed oklch(var(--color-line-strong))"><b>S5 说明</b><span>· 入口：设置最下面一节「帮助与反馈」,一行「帮助」。反馈从帮助页底部进，不单独占一行：先看常见问题，再写。</span><span>· 「登录不了」那组在登录页也有入口(登录页底部「登录遇到问题」→ 只显示这一组)。</span><span>· 发出后：复用书信「已发出」的状态和发件箱(断网也能排队)。殿司收件箱里带「反馈 · 类别」标签。</span><span>· 回复走书信，灵魂不需要另学一个地方。</span><span>· 「我的记录有误」不是申诉通道：提交前一行灰字「对审判结果有异议，请走申诉。」(仅选这一类时出现)。</span></div>
+<div style="width:560px;display:flex;flex-direction:column;gap:10px;padding:16px;border:1px dashed oklch(var(--color-line-strong))"><b>常见问题 · 第一版答案</b>
+<span><b>登录不了</b>:先检查编号有没有输错。密码连续输错 5 次会锁 15 分钟，等一会儿再试。还是不行，点「忘记密码」。</span>
+<span><b>忘记密码</b>:在登录页点「忘记密码」,验证码会发到你登记的联系邮箱。没有登记邮箱的，请到本殿窗口办理，带上交付单。</span>
+<span><b>手机丢了</b>:用另一部手机登录，到「账号安全 › 登录设备与记录」让丢的那部退出，再改密码。开了两步验证的，用恢复码登录。恢复码也没有了，请到本殿窗口办理。</span>
+<span><b>交付单是什么</b>:你到殿时领的那张纸，上面有你的编号和第一次登录用的密码。第一次登录后，这个密码就不能再用了。交付单请收好，到窗口办事时要用。</span>
+<span><b>怎么联系本殿</b>:在这页底部点「写给本殿」,回复会出现在书信里。急事请到本殿窗口。</span></div>
+</div></section>
+
+<section style="display:flex;flex-direction:column;gap:16px"><h2 style="margin:0;font-size:20px;line-height:28px;font-weight:600">W4 · 案卷附件(Web)</h2>
+<div style="display:flex;gap:40px;align-items:flex-start">
+<section data-screen-label="W4 附件区" style="width:880px;background:oklch(var(--color-surface-1));border:1px solid oklch(var(--color-line));border-radius:8px;padding:24px;display:flex;flex-direction:column;gap:16px">
+<div style="display:flex;align-items:center;gap:12px"><h2 style="margin:0;font-family:'Noto Serif SC',var(--font-serif);font-weight:600;font-size:20px;line-height:28px">附件</h2><span style="color:oklch(var(--color-ink-muted))"><span style="font-family:var(--font-mono)">4</span> 个 · 共 <span style="font-family:var(--font-mono)">18.6 / 100 MB</span></span><span style="margin-left:auto"><x-import component-from-global-scope="SoulLedger.Button" variant="secondary" size="sm" type="button" hint-size="104px,44px">添加附件</x-import></span></div>
+<div style="height:72px;display:flex;align-items:center;justify-content:center;border:1px dashed oklch(var(--color-line-strong));color:oklch(var(--color-ink-muted))">拖到这里，或点「添加附件」· 图片或 PDF,单个不超过 20 MB</div>
+<div style="display:flex;flex-direction:column">
+<div style="min-height:64px;display:grid;grid-template-columns:48px minmax(0,1fr) 120px 150px 160px;align-items:center;gap:12px;border-top:1px solid oklch(var(--color-line))"><span style="width:48px;height:48px;display:flex;align-items:center;justify-content:center;border:1px solid oklch(var(--color-line));font-size:11px;font-family:var(--font-mono)">JPG</span><span style="display:flex;flex-direction:column"><span style="font-weight:500">现场照片-01.jpg</span><span style="font-size:12px;color:oklch(var(--color-ink-muted))">4.2 MB</span></span><span>崔判官</span><span style="font-family:var(--font-mono)">2026-10-12 10:02</span><span style="display:flex;gap:4px;justify-content:flex-end"><x-import component-from-global-scope="SoulLedger.Button" variant="ghost" size="sm" type="button" hint-size="56px,44px">下载</x-import><x-import component-from-global-scope="SoulLedger.Button" variant="ghost" size="sm" type="button" hint-size="56px,44px">删除</x-import></span></div>
+<div style="min-height:64px;display:grid;grid-template-columns:48px minmax(0,1fr) 120px 150px 160px;align-items:center;gap:12px;border-top:1px solid oklch(var(--color-line))"><span style="width:48px;height:48px;display:flex;align-items:center;justify-content:center;border:1px solid oklch(var(--color-line));font-size:11px;font-family:var(--font-mono)">PDF</span><span style="display:flex;flex-direction:column"><span style="font-weight:500">生前契约.pdf</span><span style="font-size:12px;color:oklch(var(--color-ink-muted))">14.4 MB · 6 页</span></span><span>孟婆</span><span style="font-family:var(--font-mono)">2026-10-11 16:30</span><span style="display:flex;gap:4px;justify-content:flex-end"><x-import component-from-global-scope="SoulLedger.Button" variant="ghost" size="sm" type="button" hint-size="56px,44px">下载</x-import></span></div>
+<div style="min-height:64px;display:grid;grid-template-columns:48px minmax(0,1fr) 270px 160px;align-items:center;gap:12px;border-top:1px solid oklch(var(--color-line))"><span style="width:48px;height:48px;display:flex;align-items:center;justify-content:center;border:1px solid oklch(var(--color-line));font-size:11px;font-family:var(--font-mono)">JPG</span><span style="display:flex;flex-direction:column;gap:6px"><span style="font-weight:500">现场照片-02.jpg</span><span style="height:4px;background:oklch(var(--color-line))"><span style="display:block;width:62%;height:4px;background:oklch(var(--color-ink))"></span></span></span><span style="color:oklch(var(--color-ink-muted))">正在上传 · 62%</span><span style="display:flex;justify-content:flex-end"><x-import component-from-global-scope="SoulLedger.Button" variant="ghost" size="sm" type="button" hint-size="56px,44px">取消</x-import></span></div>
+<div style="min-height:64px;display:grid;grid-template-columns:48px minmax(0,1fr) 270px 160px;align-items:center;gap:12px;border-top:1px solid oklch(var(--color-line));color:oklch(var(--color-danger))"><span style="width:48px;height:48px;display:flex;align-items:center;justify-content:center;border:1px solid oklch(var(--color-danger));font-weight:700">!</span><span style="display:flex;flex-direction:column"><span style="font-weight:600">口供录音.m4a</span><span style="font-size:12px">只能传图片或 PDF</span></span><span></span><span style="display:flex;justify-content:flex-end"><x-import component-from-global-scope="SoulLedger.Button" variant="ghost" size="sm" type="button" hint-size="56px,44px">移除</x-import></span></div>
+<div style="min-height:64px;display:grid;grid-template-columns:48px minmax(0,1fr) 270px 160px;align-items:center;gap:12px;border-top:1px solid oklch(var(--color-line));border-bottom:1px solid oklch(var(--color-line));color:oklch(var(--color-danger))"><span style="width:48px;height:48px;display:flex;align-items:center;justify-content:center;border:1px solid oklch(var(--color-danger));font-weight:700">!</span><span style="display:flex;flex-direction:column"><span style="font-weight:600">卷宗扫描.pdf</span><span style="font-size:12px">没传上去，网络断了</span></span><span></span><span style="display:flex;gap:4px;justify-content:flex-end"><x-import component-from-global-scope="SoulLedger.Button" variant="ghost" size="sm" type="button" hint-size="56px,44px">重试</x-import><x-import component-from-global-scope="SoulLedger.Button" variant="ghost" size="sm" type="button" hint-size="56px,44px">移除</x-import></span></div>
+</div>
+<span style="font-size:12px;color:oklch(var(--color-ink-muted))">超限的提示写在文件行上，不弹窗：「超过 20 MB」「这份案卷的附件已满 100 MB」。</span>
+</section>
+<div style="width:560px;display:flex;flex-direction:column;gap:6px;padding:16px;border:1px dashed oklch(var(--color-line-strong))"><b>请定的答复</b><span>· <b>位置</b>:案卷页「审判评语」下面、「评议区」上面，作为一节。审批页的附件区是同一个组件，放在「理由」之下。</span><span>· <b>类型</b>:只收图片(JPG / PNG / HEIC,HEIC 存为 JPG)和 PDF。</span><span>· <b>上限</b>:单个 20 MB,每份案卷合计 100 MB,最多 30 个。写法统一为「单个不超过 20 MB」「已满 100 MB」。</span><span>· <b>预览</b>:点行打开右侧抽屉;图片直接看，PDF 用浏览器内置阅读器。签名链接 10 分钟。</span><span>· <b>谁能删</b>:上传人，在案卷<b>结案前</b>。结案后谁都不能删，殿主、管理员也不行;要撤掉只能在评议区说明。删除要确认，审计记一条「删除附件」。</span><span>· <b>打印卷宗</b>:正文后加「附件清单」一页(名称、大小、上传人、时间),不嵌入原件。打印页脚写「附件原件见系统」。</span><span>· 灵魂端看不到案卷附件。</span></div>
+</div></section>
+
+<section style="display:flex;flex-direction:column;gap:16px"><h2 style="margin:0;font-size:20px;line-height:28px;font-weight:600">O3 · 官员 App 断网(读缓存 + 回信排队)</h2>
+<div style="display:flex;gap:40px;align-items:flex-start">
+<div data-screen-label="O3 断网列表" style="width:393px;height:852px;overflow:hidden;display:flex;flex-direction:column;border-top:3px solid oklch(var(--color-main));background:oklch(var(--color-surface-1));font-size:15px;line-height:24px;box-shadow:0 0 0 1px oklch(var(--color-line))">
+<header style="height:56px;flex:none;display:flex;align-items:center;padding:0 16px;border-bottom:1px solid oklch(var(--color-line))"><h1 style="margin:0;font-weight:600;font-size:17px">待办</h1></header>
+<div role="status" style="min-height:44px;display:flex;align-items:center;gap:8px;padding:8px 16px;background:oklch(var(--color-ink));color:oklch(var(--color-surface-1));font-size:13px;line-height:20px"><span style="font-weight:600">没有网络</span><span style="flex:1">显示的是 <span style="font-family:var(--font-mono)">09:41</span> 的内容</span></div>
+<sc-for list="{{ todos }}" as="t" hint-placeholder-count="4"><div style="min-height:72px;display:flex;flex-direction:column;justify-content:center;padding:8px 16px;border-bottom:1px solid oklch(var(--color-line))"><span style="display:flex;gap:8px"><span style="flex:1;font-weight:500">{{ t.title }}</span><span style="font-size:13px;font-family:var(--font-mono);color:oklch(var(--color-ink-muted))">{{ t.time }}</span></span><span style="font-size:13px;color:oklch(var(--color-ink-muted))">{{ t.sub }}</span></div></sc-for>
+<div style="min-height:72px;display:flex;flex-direction:column;justify-content:center;padding:8px 16px;border-bottom:1px solid oklch(var(--color-line));background:oklch(var(--color-canvas))"><span style="display:flex;gap:8px"><span style="flex:1;font-weight:500">回信 · 王守仁</span><span style="height:22px;padding:0 6px;display:inline-flex;align-items:center;border:1px dashed oklch(var(--color-ink));font-size:12px;font-weight:600">待发出</span></span><span style="font-size:13px;color:oklch(var(--color-ink-muted))">有网后自动发出</span></div>
+</div>
+<div data-screen-label="O3 断网详情" style="width:393px;height:852px;overflow:hidden;display:flex;flex-direction:column;border-top:3px solid oklch(var(--color-main));background:oklch(var(--color-surface-1));font-size:15px;line-height:24px;box-shadow:0 0 0 1px oklch(var(--color-line))">
+<header style="height:56px;flex:none;display:flex;align-items:center;gap:4px;padding:0 16px 0 4px;border-bottom:1px solid oklch(var(--color-line))"><span style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:20px">‹</span><h1 style="margin:0;font-weight:600;font-size:17px">审批 · S-104882</h1></header>
+<div role="status" style="min-height:44px;display:flex;align-items:center;gap:8px;padding:8px 16px;background:oklch(var(--color-ink));color:oklch(var(--color-surface-1));font-size:13px;line-height:20px"><span style="font-weight:600">没有网络</span><span style="flex:1">显示的是 <span style="font-family:var(--font-mono)">09:41</span> 的内容</span></div>
+<div style="flex:1;padding:16px;display:flex;flex-direction:column;gap:12px;color:oklch(var(--color-ink-muted))"><span>(案卷摘要照常显示，取自缓存;附件、图片没缓存的显示灰块「有网后显示」)</span></div>
+<div style="padding:16px;display:flex;flex-direction:column;gap:8px;border-top:1px solid oklch(var(--color-line))"><span style="font-size:13px;line-height:20px;color:oklch(var(--color-ink-muted));text-wrap:pretty">没有网络时不能批准或驳回：这期间案卷可能已经变了。</span><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><span aria-disabled="true" style="height:56px;display:flex;align-items:center;justify-content:center;border:1px solid oklch(var(--color-line));color:oklch(var(--color-ink-subtle))">驳回</span><span aria-disabled="true" style="height:56px;display:flex;align-items:center;justify-content:center;background:oklch(var(--color-line));color:oklch(var(--color-ink-subtle))">批准</span></div></div>
+</div>
+<div data-screen-label="O3 发出失败" style="width:393px;height:852px;overflow:hidden;display:flex;flex-direction:column;border-top:3px solid oklch(var(--color-main));background:oklch(var(--color-surface-1));font-size:15px;line-height:24px;box-shadow:0 0 0 1px oklch(var(--color-line))">
+<header style="height:56px;flex:none;display:flex;align-items:center;padding:0 16px;border-bottom:1px solid oklch(var(--color-line))"><h1 style="margin:0;font-weight:600;font-size:17px">待办</h1></header>
+<div role="status" style="min-height:44px;display:flex;align-items:center;gap:8px;padding:8px 16px;border-bottom:1px solid oklch(var(--color-line));font-size:13px;line-height:20px"><span style="font-weight:600">✓ 已恢复网络</span><span style="flex:1">发出了 2 封回信</span></div>
+<div style="min-height:88px;display:flex;flex-direction:column;justify-content:center;gap:4px;padding:8px 16px;border-bottom:1px solid oklch(var(--color-line));color:oklch(var(--color-danger))"><span style="display:flex;gap:8px"><span style="flex:1;font-weight:600">! 回信 · 李清照 没有发出</span></span><span style="font-size:13px;line-height:20px;text-wrap:pretty">这封书信已经由别的官员回过了。你写的内容还留着。</span><span style="display:flex;gap:16px;font-size:13px;font-weight:500;color:oklch(var(--color-ink))"><span role="button" style="height:44px;display:flex;align-items:center">看已有的回信</span><span role="button" style="height:44px;display:flex;align-items:center">删除我的草稿</span></span></div>
+<div style="padding:16px;display:flex;flex-direction:column;gap:6px;font-size:13px;line-height:20px;border:1px dashed oklch(var(--color-line-strong));margin:16px"><b>O3 说明</b><span>· 只有回信能离线排队，用灵魂 App 发件箱的同一套逻辑。</span><span>· 横条：断网时深色，恢复后变浅色「已恢复网络」,3 秒后收起;有失败时不收起。</span><span>· 缓存：待办、书信列表和最近打开的 20 份详情;退出登录时清空。</span><span>· 失败原因：「已经由别的官员回过了」「这封书信已经归档」「你已不在这一殿」;其余写「没有发出，稍后再试」+ 重试。</span><span>· 批准 / 驳回不允许离线，按钮置灰，上方写原因。</span></div>
+</div>
+</div></section>
+
+<section style="display:flex;flex-direction:column;gap:8px;max-width:900px;padding:16px;border:1px dashed oklch(var(--color-line-strong))"><h2 style="margin:0;font-size:20px;line-height:28px;font-weight:600">W5 · 案卷与审批流的导出(不出稿)</h2><span>· 案卷列表、审批流列表：「导出 CSV」放在筛选条右端，排在「列」按钮前面，和审计日志页一样。</span><span>· 按钮文案：<b>导出 CSV</b>;悬停提示 / 读屏：<b>按当前筛选导出,共 ⟨n⟩ 条</b>。超过 1 万条时按钮旁写「超过 1 万条，请缩小筛选」,按钮置灰。</span><span>· 审批流导出的是「实例」,一行一个实例(当前站、发起人、发起时间、状态、耗时),不展开每一站。</span></section>
+</div>
+</x-import>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:2300,&quot;height&quot;:3400}}">
+class Component extends DCLogic {
+  renderVals() {
+    const faq = [
+      { group: '登录与账号', items: [{ q: '登录不了' }, { q: '忘记密码' }, { q: '手机丢了' }] },
+      { group: '到殿须知', items: [{ q: '交付单是什么' }] },
+      { group: '联系', items: [{ q: '怎么联系本殿' }] }
+    ];
+    const todos = [
+      { title: '审批 · S-104882', time: '09:12', sub: '王守仁 · 第五殿' },
+      { title: '移交 · S-103417', time: '08:55', sub: '提往第七殿' },
+      { title: '会签 · S-102990', time: '昨天', sub: '李清照 · 第三殿' }
+    ];
+    return { faq, todos };
+  }
+}
+</script>
+</body>
+</html>
