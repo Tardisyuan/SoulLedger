@@ -801,3 +801,42 @@ describe("审判队列 · 世次 / 种类", () => {
     });
   });
 });
+
+describe("已结案 column menu", () => {
+  const COLS = "soulledger.judgment.columns";
+  const headers = () => screen.queryAllByRole("columnheader").map((h) => h.textContent);
+  const concludedRows = [row("k", "沈青梧", { verdict: "REINCARNATE", concluded_at: "2026-10-01T00:00:00Z" })];
+  const openConcluded = async () => {
+    judgmentApi.list.mockImplementation(async (params: Record<string, string>) => ({
+      data: { count: params.has_verdict === "false" ? 12 : 1, next: null, previous: null, results: params.has_verdict === "false" || params.group ? [] : concludedRows },
+    }));
+    const view = renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: /已结案/ }));
+    await screen.findByRole("link", { name: "沈青梧" });
+    return view;
+  };
+  const open = () => fireEvent.click(screen.getByRole("button", { name: /^列/ }));
+
+  it("the soul column is pinned; the rest can be hidden", async () => {
+    await openConcluded();
+    open();
+    const pinned = screen.getByRole("menuitemcheckbox", { name: tZh("judgment.soul_name") });
+    expect(pinned).toBeDisabled();
+    expect(pinned).toHaveAttribute("aria-disabled", "true");
+    expect(screen.getByRole("menuitemcheckbox", { name: tZh("judgment.court") })).not.toBeDisabled();
+    expect(screen.getByText(tZh("list.columns.hint"))).toBeInTheDocument();
+  });
+
+  it("hiding a column drops header and cells, persists, and survives a remount", async () => {
+    const { unmount } = await openConcluded();
+    expect(screen.getByText("第五殿 · 阎罗王")).toBeInTheDocument();
+    open();
+    fireEvent.click(screen.getByRole("menuitemcheckbox", { name: tZh("judgment.court") }));
+    expect(headers().join("|")).not.toContain(tZh("judgment.court"));
+    expect(screen.queryByText("第五殿 · 阎罗王")).toBeNull();
+    expect(JSON.parse(localStorage.getItem(COLS)!)).toEqual({ hidden: "court" });
+    unmount();
+    await openConcluded();
+    expect(screen.queryByText("第五殿 · 阎罗王")).toBeNull();
+  });
+});

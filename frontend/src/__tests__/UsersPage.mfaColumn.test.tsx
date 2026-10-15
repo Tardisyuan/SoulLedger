@@ -54,7 +54,7 @@ const ROWS = [
 
 function renderPage() {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
-  render(
+  return render(
     <QueryClientProvider client={qc}>
       <UsersPage />
     </QueryClientProvider>
@@ -139,5 +139,44 @@ describe("MfaResetDialog", () => {
     fireEvent.click(screen.getByTestId("mfa-reset-action"));
     await waitFor(() => expect(resetMfa).toHaveBeenCalledWith(1, "手机丢了"));
     await waitFor(() => expect(onClose).toHaveBeenCalled());
+  });
+});
+
+describe("UsersPage column menu", () => {
+  const COLS = "soulledger.users.columns";
+  const headers = () => screen.queryAllByRole("columnheader").map((h) => h.textContent);
+  const open = () => fireEvent.click(screen.getByRole("button", { name: /^list\.columns\.button/ }));
+
+  it("username and the action column are pinned; the rest can be hidden", async () => {
+    localStorage.clear();
+    renderPage();
+    await screen.findByText("on-user");
+    open();
+    for (const name of ["users.username", "users.actions"]) {
+      const item = screen.getByRole("menuitemcheckbox", { name });
+      expect(item).toBeDisabled();
+      expect(item).toHaveAttribute("aria-disabled", "true");
+      fireEvent.click(item);
+    }
+    expect(headers().join("|")).toContain("users.username");
+    expect(screen.getByRole("menuitemcheckbox", { name: "users.email" })).not.toBeDisabled();
+    expect(screen.getByText("list.columns.hint")).toBeInTheDocument();
+  });
+
+  it("hiding a column drops header and cells, persists, and survives a remount", async () => {
+    localStorage.clear();
+    const { unmount } = renderPage();
+    await screen.findByText("on-user");
+    expect(screen.getByText("on-user@x")).toBeInTheDocument();
+    open();
+    fireEvent.click(screen.getByRole("menuitemcheckbox", { name: "users.email" }));
+    expect(headers().join("|")).not.toContain("users.email");
+    expect(screen.queryByText("on-user@x")).toBeNull();
+    expect(JSON.parse(localStorage.getItem(COLS)!)).toEqual({ hidden: "email" });
+    unmount();
+    renderPage();
+    await screen.findByText("on-user");
+    expect(headers().join("|")).not.toContain("users.email");
+    expect(screen.queryByText("on-user@x")).toBeNull();
   });
 });

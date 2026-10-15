@@ -175,3 +175,19 @@ describe("列菜单", () => {
     expect(headers()).toEqual(["名称", "文明", "状态"]);
   });
 });
+
+describe("列菜单 · 读屏", () => {
+  it("钉住的项 aria-disabled=true 且带「不能隐藏」说明;每一项都有可访问名称;可隐藏的项不带 aria-disabled", () => {
+    render(<Harness />);
+    openMenu();
+    const pinned = screen.getByRole("menuitemcheckbox", { name: "名称" });
+    expect(pinned).toHaveAttribute("aria-disabled", "true");
+    expect(document.getElementById(pinned.getAttribute("aria-describedby")!)).toHaveTextContent("不能隐藏");
+    const free = screen.getByRole("menuitemcheckbox", { name: "文明" });
+    expect(free).not.toHaveAttribute("aria-disabled");
+    expect(free).not.toHaveAttribute("aria-describedby");
+    for (const item of screen.getAllByRole("menuitemcheckbox")) {
+      expect(item.getAttribute("aria-label")).toBeTruthy();
+    }
+  });
+});

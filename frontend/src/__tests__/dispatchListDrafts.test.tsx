@@ -4,7 +4,7 @@
  * views.py); here the row has to say 草稿 and reopen in the form, pre-filled,
  * rather than on the detail page — which has no action for a draft.
  */
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import DispatchPage from "@/app/dispatch/page";
 import { dispatchApi } from "@soulledger/core/api";
@@ -74,4 +74,44 @@ it("marks a draft 草稿 and links it back into the form; a proposal still opens
   // And only the draft is so marked.
   expect(screen.getAllByText("草稿")).toHaveLength(1);
   expect(screen.queryByRole("link", { name: /沈青梧/ })?.getAttribute("href")).not.toContain("draft=");
+});
+
+describe("dispatch column menu", () => {
+  const COLS = "soulledger.dispatch.columns";
+  const headers = () => screen.queryAllByRole("columnheader").map((h) => h.textContent);
+  const renderPage = async () => {
+    (dispatchApi.proposed as jest.Mock).mockResolvedValue({ data: { results: [{ ...base, id: "p9", status: "PROPOSED", soul: "s9", soul_name: "陆晚晴" }], count: 1 } });
+    (dispatchApi.history as jest.Mock).mockResolvedValue({ data: { results: [{ ...base, id: "h9", status: "PROPOSED", soul: "s8", soul_name: "沈青梧" }], count: 1 } });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const view = render(<QueryClientProvider client={client}><DispatchPage /></QueryClientProvider>);
+    await screen.findByRole("link", { name: /陆晚晴/ });
+    return view;
+  };
+  const open = () => fireEvent.click(screen.getByRole("button", { name: /^list\.columns\.button/ }));
+
+  it("the soul and cancel columns are pinned", async () => {
+    localStorage.clear();
+    await renderPage();
+    open();
+    for (const name of ["dispatch.soul", "dispatch.cancel_dispatch"]) {
+      const item = screen.getByRole("menuitemcheckbox", { name });
+      expect(item).toBeDisabled();
+      expect(item).toHaveAttribute("aria-disabled", "true");
+    }
+    expect(screen.getByRole("menuitemcheckbox", { name: "dispatch.status" })).not.toBeDisabled();
+  });
+
+  it("hiding a column drops it from both tables, persists, and survives a remount", async () => {
+    localStorage.clear();
+    const { unmount } = await renderPage();
+    expect(headers().filter((h) => h === "dispatch.status")).toHaveLength(2);
+    open();
+    fireEvent.click(screen.getByRole("menuitemcheckbox", { name: "dispatch.status" }));
+    expect(headers()).not.toContain("dispatch.status");
+    expect(JSON.parse(localStorage.getItem(COLS)!)).toEqual({ hidden: "status" });
+    unmount();
+    await renderPage();
+    expect(headers()).not.toContain("dispatch.status");
+    expect(headers()).toContain("dispatch.soul");
+  });
 });

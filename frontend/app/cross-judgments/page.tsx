@@ -9,7 +9,8 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { usePlaque } from "@/src/components/plaque/Plaque";
 import { useHall } from "@/src/components/plaque/useHall";
 import { PageSection } from "@/components/ui/page-section";
-import { DataTable, ROW_LINK } from "@/components/ui/data-table";
+import { DataTable, ROW_LINK, type DataTableColumn } from "@/components/ui/data-table";
+import { ColumnMenu, useColumnVisibility } from "@/components/ui/data-grid";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { type BadgeTone } from "@/src/components/ui/Badge";
@@ -46,6 +47,8 @@ const STATUS_TONES: Record<string, BadgeTone> = {
  * i18n coverage that did not exist. Both keys resolve; nothing changed on
  * screen. Three other files carry a comment diagnosing this exact shape.
  */
+const CROSS_COLUMNS_KEY = "soulledger.cross-judgments.columns";
+
 export default function CrossJudgmentsPage() {
   const { t } = useI18n();
   const hall = useHall(t("plaque.office.trials"));
@@ -66,6 +69,12 @@ export default function CrossJudgmentsPage() {
     enabled: !!user,
   });
   const judgments = pageData?.results ?? [];
+  const allColumns: DataTableColumn[] = [
+    { key: "title", header: t("crossJudgments.case_title"), pinned: true },
+    { key: "initiated_by", header: t("crossJudgments.initiated_by") },
+    { key: "status", header: t("crossJudgments.status_label") },
+  ];
+  const columnVis = useColumnVisibility(CROSS_COLUMNS_KEY, allColumns);
 
   return (
     <PageShell
@@ -81,9 +90,19 @@ export default function CrossJudgmentsPage() {
       <PageSection
         title={t("crossJudgments.list_title")}
         actions={
-          <RequirePermission permissions="cross_judgment.read">
-            <ExportCsvButton size="sm" fetchCsv={() => crossTenantJudgmentsApi.exportCsv()} page={t("crossJudgments.title")} hall={hall} />
-          </RequirePermission>
+          <div className="flex items-center gap-3">
+            <RequirePermission permissions="cross_judgment.read">
+              <ExportCsvButton size="sm" fetchCsv={() => crossTenantJudgmentsApi.exportCsv()} page={t("crossJudgments.title")} hall={hall} />
+            </RequirePermission>
+            <ColumnMenu
+              columns={allColumns.map((c) => ({ key: c.key, header: String(c.header), pinned: c.pinned }))}
+              visibility={columnVis}
+              buttonLabel={t("list.columns.button", { shown: String(columnVis.shown), total: String(columnVis.total) })}
+              pinnedLabel={t("list.columns.pinned")}
+              hintLabel={t("list.columns.hint")}
+              resetLabel={t("list.columns.reset")}
+            />
+          </div>
         }
       >
         {/* 账页表格(规范 v1 §2):整行点进 /cross-judgments/[id]。失败与空仍分开 ——
@@ -93,11 +112,7 @@ export default function CrossJudgmentsPage() {
         <DataTable<CrossTenantJudgmentListItem>
           linkedRows
           caption={t("crossJudgments.list_title")}
-          columns={[
-            { key: "title", header: t("crossJudgments.case_title") },
-            { key: "initiated_by", header: t("crossJudgments.initiated_by") },
-            { key: "status", header: t("crossJudgments.status_label") },
-          ]}
+          columns={allColumns.filter((c) => columnVis.isVisible(c.key))}
           data={judgments}
           isLoading={isLoading}
           isError={isError}
@@ -114,14 +129,14 @@ export default function CrossJudgmentsPage() {
                   {j.title}
                 </Link>
               </td>
-              <td className="px-3 py-2 text-xs whitespace-nowrap text-[oklch(var(--color-ink-muted))]">
+              {columnVis.isVisible("initiated_by") && <td className="px-3 py-2 text-xs whitespace-nowrap text-[oklch(var(--color-ink-muted))]">
                 {/* 展示名在前、代码在后(列表接口两样都给)。 */}
                 {j.initiating_tenant_display_name || j.initiating_tenant_code}
                 <span className="ml-2 font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">{j.initiating_tenant_code}</span>
-              </td>
-              <td className="px-3 py-2 whitespace-nowrap">
+              </td>}
+              {columnVis.isVisible("status") && <td className="px-3 py-2 whitespace-nowrap">
                 <StatusBadge namespace="crossJudgments.states" value={j.status} tone={STATUS_TONES[j.status] ?? "neutral"} />
-              </td>
+              </td>}
             </>
           )}
           page={page}

@@ -9,7 +9,8 @@ import { usePlaque } from "@/src/components/plaque/Plaque";
 import { useHall } from "@/src/components/plaque/useHall";
 import { judgmentApi, PAGE_SIZE, type Judgment } from "@soulledger/core/api";
 import { useSoul } from "@soulledger/core/hooks/useSouls";
-import { DataTable, parseOrdering, ROW_LINK } from "@/components/ui/data-table";
+import { DataTable, parseOrdering, ROW_LINK, type DataTableColumn } from "@/components/ui/data-table";
+import { ColumnMenu, useColumnVisibility } from "@/components/ui/data-grid";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
 import { filterChipClass } from "@/src/components/ui/FilterChip";
 import { DomainEnum, IdentifierChip, MissingValue } from "@/src/components/ui/DomainValue";
@@ -41,6 +42,9 @@ import { JudgmentClaimQueue } from "@/src/components/judgment/JudgmentClaimQueue
 type Tab = "pending" | "concluded";
 
 /** `?soul=` 只认合法的灵魂 id(UUID);别的值忽略,也不带进任何请求(后端对坏 UUID 回 400)。 */
+/** 列菜单的偏好(「已结案」那张表),一个列表一份。 */
+const JUDGMENT_COLUMNS_KEY = "soulledger.judgment.columns";
+
 const SOUL_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** 「灵魂：某某 ×」。名字取不到时显示编号(`IdentifierChip`),不把裸 id 当名字印。× 是单独的按钮,不嵌在别的按钮里。 */
@@ -117,6 +121,15 @@ function JudgmentQueuePageContent() {
   useHotkeys({ q: () => router.push("/judgment/queue") });
 
   const pending = tab === "pending";
+  // 只有「已结案」一面是按列排的表;「待审」是认领队列(卡片行),没有列可选。
+  const allColumns: DataTableColumn[] = [
+    { key: "soul_name", header: t("judgment.soul_name"), pinned: true },
+    { key: "civilization", header: t("judgment.civilization") },
+    { key: "court", header: t("judgment.court") },
+    { key: "verdict", header: t("judgment.verdict") },
+    { key: "created_at", header: t("judgment.created"), sortable: true, align: "right" },
+  ];
+  const columnVis = useColumnVisibility(JUDGMENT_COLUMNS_KEY, allColumns);
 
   return (
     <PageShell
@@ -167,7 +180,7 @@ function JudgmentQueuePageContent() {
       ) : (
       <>
       {/* 「已结案」没有筛选条;导出放在表上方右端,带当前的搜索 / 灵魂 / 排序(不带页码)。 */}
-      <div className="flex justify-end py-3">
+      <div className="flex items-center justify-end gap-3 py-3">
         <ExportCsvButton
           size="sm"
           fetchCsv={() => judgmentApi.exportCsv(exportParams)}
@@ -175,22 +188,19 @@ function JudgmentQueuePageContent() {
           hall={hall}
           count={judgmentData?.count}
         />
+        <ColumnMenu
+          columns={allColumns.map((c) => ({ key: c.key, header: String(c.header), pinned: c.pinned }))}
+          visibility={columnVis}
+          buttonLabel={t("list.columns.button", { shown: String(columnVis.shown), total: String(columnVis.total) })}
+          pinnedLabel={t("list.columns.pinned")}
+          hintLabel={t("list.columns.hint")}
+          resetLabel={t("list.columns.reset")}
+        />
       </div>
       <DataTable<Judgment>
         linkedRows
         caption={t("judgment.title")}
-        columns={[
-          { key: "soul_name", header: t("judgment.soul_name") },
-          { key: "civilization", header: t("judgment.civilization") },
-          { key: "court", header: t("judgment.court") },
-          { key: "verdict", header: t("judgment.verdict") },
-          {
-            key: "created_at",
-            header: t("judgment.created"),
-            sortable: true,
-            align: "right" as const,
-          },
-        ]}
+        columns={allColumns.filter((c) => columnVis.isVisible(c.key))}
         data={judgments}
         /* Tab, page and sort — the three things that make this a different
            question. A `JUDGMENT_CONCLUDED` pushed by another operator moves a
@@ -216,18 +226,18 @@ function JudgmentQueuePageContent() {
                   )}
                 </Link>
               </td>
-              <td className="px-3 text-xs text-[oklch(var(--color-ink-muted))] whitespace-nowrap">
+              {columnVis.isVisible("civilization") && <td className="px-3 text-xs text-[oklch(var(--color-ink-muted))] whitespace-nowrap">
                 <DomainEnum namespace="souls.civilizations" value={judgment.civilization} />
-              </td>
-              <td className="px-3 text-xs text-[oklch(var(--color-ink-muted))] whitespace-nowrap max-w-64 truncate" title={bench || undefined}>
+              </td>}
+              {columnVis.isVisible("court") && <td className="px-3 text-xs text-[oklch(var(--color-ink-muted))] whitespace-nowrap max-w-64 truncate" title={bench || undefined}>
                 {bench || <MissingValue kind="unrecorded" />}
-              </td>
-              <td className="px-3 whitespace-nowrap">
+              </td>}
+              {columnVis.isVisible("verdict") && <td className="px-3 whitespace-nowrap">
                 {judgment.verdict && <VerdictBadge verdict={judgment.verdict} />}
-              </td>
-              <td className="px-3 text-right font-mono text-xs tabular-nums text-[oklch(var(--color-ink-muted))] whitespace-nowrap">
+              </td>}
+              {columnVis.isVisible("created_at") && <td className="px-3 text-right font-mono text-xs tabular-nums text-[oklch(var(--color-ink-muted))] whitespace-nowrap">
                 {formatDate(judgment.concluded_at ?? judgment.created_at)}
-              </td>
+              </td>}
             </>
           );
         }}
