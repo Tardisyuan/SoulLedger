@@ -1969,7 +1969,14 @@
     "email_send_verification": "Hab Menf",
     "email_verification_sent": "Hab Seth. Maa Sesh.",
     "email_verification_failed": "Nen Hab. Wehem Iri Er Khet",
-    "email_verification_hint": "Smen Seth: Nen Rekh Sekhem, Wehem Sekhem Em Sesh Pen."
+    "email_verification_hint": "Smen Seth: Nen Rekh Sekhem, Wehem Sekhem Em Sesh Pen.",
+    "devices": {
+      "title": "Ikhet Aq",
+      "this": "Ikhet Pen",
+      "sign_out": "Per Em Ikhet Pen",
+      "sign_out_others": "Per Em Ikhet Ky Neb",
+      "confirm_title": "Per Em Ikhet Ky {{n}}?"
+    }
   },
   "notifications": {
     "title": "Sedjem Sab",
@@ -4382,6 +4389,11 @@
       "enable_next": "Nemet Ky",
       "failed": "Nen Rekh {{bio}}. Sesh Sekhem.",
       "retry": "Wehem Aq Em {{bio}}"
+    },
+    "security": {
+      "history": "Ikhet Hena Aq Pehwy",
+      "history_keep": "Aq Pehwy · Hru 90",
+      "failed": "Nen Aq {{n}} · Sekhem Nen Maa"
     }
   },
   "soul_push": {
