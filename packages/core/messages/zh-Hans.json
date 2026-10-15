@@ -3379,7 +3379,8 @@
       "ledger_snapshot_balance_for_tenant": "记余额月快照",
       "ledger_snapshot_census_for_tenant": "记灵魂普查日快照",
       "notifications_email_action_needed_for_tenant": "邮件提醒待处理通知",
-      "notifications_email_action_needed_global": "邮件提醒待处理通知(全局管理员)"
+      "notifications_email_action_needed_global": "邮件提醒待处理通知(全局管理员)",
+      "authentication_prune_soul_sign_ins": "清理 90 天前的灵魂登录记录与闲置会话"
     },
     "status": {
       "PENDING": "排队中",
