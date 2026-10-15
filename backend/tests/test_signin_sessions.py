@@ -229,6 +229,23 @@ class TestRevoke:
         assert len(_listing(a)) == 2
         assert AuditLog.objects.filter(resource="auth", description__startswith="官员退出登录设备").count() == 1
 
+    def test_signing_devices_out_closes_the_user_s_live_sockets(self, officer, monkeypatch):
+        """Without this a signed-out device keeps its open realtime socket until it reconnects by itself.
+        Closing all of the user's sockets (code 4002) lets this device reconnect with its valid token while the
+        signed-out one is refused at the handshake by `session_is_current`."""
+        import apps.events.realtime as realtime
+
+        closed = []
+        monkeypatch.setattr(realtime, "close_user_sockets", lambda user_id, min_version=None: closed.append(user_id))
+        a, b, _ = _login(), _login(), _login()
+        assert _revoke(a, signin_sessions.session_of(_token(b)).pk).status_code == 204
+        assert closed == [officer.pk]
+        assert _as(a).post(SESSIONS + "revoke-others/").status_code == 200
+        assert closed == [officer.pk, officer.pk]
+        # Refusing to sign out this device closes nothing.
+        assert _revoke(a, _listing(a)[0]["id"]).status_code == 400
+        assert closed == [officer.pk, officer.pk]
+
     def test_the_current_device_cannot_be_revoked_here(self, officer):
         a = _login()
         current = _listing(a)[0]["id"]
