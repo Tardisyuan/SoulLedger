@@ -24,7 +24,7 @@ import { useCurrentHall } from "./screens/letters";
 import { OutlineSeal } from "./seal";
 import { SessionContext } from "./session";
 import type { Theme } from "./theme";
-import { ThemeContext, Txt, enumText, shade, useLayout, useTheme } from "./ui";
+import { MAX_FONT_SCALE, ThemeContext, Txt, enumText, shade, useLayout, useTheme } from "./ui";
 
 /**
  * The theme for what sits ON a plaque: every ink is onPlaque (>= 4.5 on every 匾色,
@@ -218,6 +218,8 @@ export function PlaqueHeader({
 
 const TAB_ICONS: Record<string, IconName> = { Life: "ledger", Applications: "cycle", Letters: "letter", Circle: "circle" };
 
+const STACKED_TAB_LABEL_SCALE = 1.5;
+
 /**
  * 补足 B11: the current tab is a 2px 匾色 rule on top and its label in ink 600; the others
  * ink3. C14: the same width rule as the web's pillar (`pillarIsWide`, from core) — when
@@ -280,6 +282,9 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
               testID={`tab-${route.name}-label`}
               variant="label"
               numberOfLines={2}
+              // Stacked, four rows share the screen with the page: the label stops at 1.5x (12 → 18pt,
+              // still above the 17pt body of a default-size system) instead of the app's 2.35 cap.
+              maxFontSizeMultiplier={stack ? STACKED_TAB_LABEL_SCALE : MAX_FONT_SCALE}
               style={[styles.tabLabel, wide && styles.tabLabelWide, { color, fontFamily: family.ui[selected ? 600 : 400] }]}
             >
               {label}
@@ -304,7 +309,7 @@ const styles = StyleSheet.create({
   tab: { flex: 1, minHeight: 56, alignItems: "center", justifyContent: "center", gap: 4, paddingHorizontal: 4, paddingVertical: 8 },
   tabWide: { justifyContent: "flex-start" },
   tabsStacked: { flexDirection: "column", borderTopWidth: 1 },
-  tabRow: { minHeight: 80, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 12, borderBottomWidth: 1 },
+  tabRow: { minHeight: 48, paddingVertical: 4, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 12, borderBottomWidth: 1 },
   tabRuleSide: { position: "absolute", top: 0, bottom: 0, left: 0, width: 2 },
   tabRule: { position: "absolute", top: -1, left: "25%", right: "25%", height: 2 },
   tabIcon: { width: 24, height: 24, alignItems: "center", justifyContent: "center" },
