@@ -2615,6 +2615,36 @@ paths:
               schema:
                 $ref: '#/components/schemas/PasswordResetRefusal'
           description: ''
+  /api/v1/case-attachments/{attachment_id}/:
+    get:
+      operationId: v1_case_attachment_file
+      parameters:
+      - in: path
+        name: attachment_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: query
+        name: dl
+        schema:
+          type: integer
+        description: '1 = 作为下载(Content-Disposition: attachment)。'
+      - in: query
+        name: t
+        schema:
+          type: string
+        description: '`…/attachments/<aid>/link/` 给出的签名。'
+        required: true
+      tags:
+      - v1
+      security:
+      - {}
+      responses:
+        '200':
+          description: 图片(PNG / JPEG)或 PDF 文件。
+        '404':
+          description: 签名无效或过期,或查看者此刻看不见这份附件。
   /api/v1/chat-images/{image_id}/:
     get:
       operationId: v1_chat_image_file
@@ -6426,6 +6456,137 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Judgment'
+          description: ''
+  /api/v1/judgment/{id}/attachments/:
+    get:
+      operationId: v1_judgment_attachments_retrieve
+      description: |-
+        Judgment CRUD + conclude action.
+        Tenant-isolated via TenantPermission.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Judgment.
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CaseAttachmentList'
+          description: ''
+    post:
+      operationId: v1_judgment_attachments_create
+      description: |-
+        Judgment CRUD + conclude action.
+        Tenant-isolated via TenantPermission.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Judgment.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CaseAttachmentUpload'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CaseAttachment'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CaseAttachmentError'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CaseAttachmentError'
+          description: ''
+  /api/v1/judgment/{id}/attachments/{attachment_id}/:
+    delete:
+      operationId: v1_judgment_attachments_destroy
+      description: |-
+        Judgment CRUD + conclude action.
+        Tenant-isolated via TenantPermission.
+      parameters:
+      - in: path
+        name: attachment_id
+        schema:
+          type: string
+          pattern: ^[0-9a-fA-F-]{36}$
+        required: true
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Judgment.
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: 已删除。
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CaseAttachmentError'
+          description: ''
+  /api/v1/judgment/{id}/attachments/{attachment_id}/link/:
+    get:
+      operationId: v1_judgment_attachments_link_retrieve
+      description: |-
+        Judgment CRUD + conclude action.
+        Tenant-isolated via TenantPermission.
+      parameters:
+      - in: path
+        name: attachment_id
+        schema:
+          type: string
+          pattern: ^[0-9a-fA-F-]{36}$
+        required: true
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Judgment.
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CaseAttachmentLink'
           description: ''
   /api/v1/judgment/{id}/citations/:
     get:
@@ -20957,6 +21118,107 @@ components:
           - $ref: '#/components/schemas/BlankEnum'
         fallbacks:
           type: boolean
+    CaseAttachment:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          readOnly: true
+          description: 上传时的文件名,只用于显示与下载。
+        byte_size:
+          type: integer
+          readOnly: true
+        content_type:
+          type: string
+          readOnly: true
+        uploader:
+          type: integer
+          readOnly: true
+          nullable: true
+        uploader_name:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        can_delete:
+          type: boolean
+          description: 给界面决定要不要画「删除」;服务端在 DELETE 时仍然重判。
+          readOnly: true
+      required:
+      - byte_size
+      - can_delete
+      - content_type
+      - created_at
+      - id
+      - name
+      - uploader
+      - uploader_name
+    CaseAttachmentError:
+      type: object
+      properties:
+        detail:
+          type: string
+        code:
+          type: string
+          description: bad_type / too_large / case_full / too_many / concluded / not_uploader
+      required:
+      - code
+      - detail
+    CaseAttachmentLink:
+      type: object
+      properties:
+        url:
+          type: string
+          description: 站点根相对路径 `/api/v1/case-attachments/<id>/?t=…`,10 分钟有效。
+        name:
+          type: string
+        content_type:
+          type: string
+      required:
+      - content_type
+      - name
+      - url
+    CaseAttachmentList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CaseAttachment'
+        count:
+          type: integer
+        total_bytes:
+          type: integer
+        max_count:
+          type: integer
+        max_total_bytes:
+          type: integer
+        max_file_bytes:
+          type: integer
+        concluded:
+          type: boolean
+      required:
+      - concluded
+      - count
+      - items
+      - max_count
+      - max_file_bytes
+      - max_total_bytes
+      - total_bytes
+    CaseAttachmentUpload:
+      type: object
+      properties:
+        file:
+          type: string
+          format: uri
+      required:
+      - file
     CaseTypeEnum:
       enum:
       - ROUTINE

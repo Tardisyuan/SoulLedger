@@ -52,6 +52,7 @@ const COLLECTED_FILES = [
   "AuditPage.test.tsx",
   "Badge.test.tsx",
   "Button.test.tsx",
+  "CaseAttachments.test.tsx",
   "Collapse.test.tsx",
   "ColumnMenu.test.tsx",
   "CommentThread.test.tsx",

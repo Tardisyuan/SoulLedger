@@ -1,3 +1,4 @@
+import type { GenericAbortSignal } from "axios";
 import { api } from "./client";
 import type { components } from "./generated/schema";
 import type { LedgerSummary } from "./ledger";
@@ -509,6 +510,13 @@ export type JudgmentComment = components["schemas"]["JudgmentComment"];
 /** The server's cap on one comment's length. */
 export const JUDGMENT_COMMENT_MAX = 2000;
 
+/** 案卷附件(Design 第二十八批 W4)。上限在服务端;列表里也带着,界面以服务端给的为准。 */
+export type CaseAttachment = components["schemas"]["CaseAttachment"];
+export type CaseAttachmentList = components["schemas"]["CaseAttachmentList"];
+export type CaseAttachmentLink = components["schemas"]["CaseAttachmentLink"];
+/** 服务端拒绝的 `code`:bad_type / too_large 是 400,case_full / too_many 是 409,concluded / not_uploader 是删除的 403。 */
+export type CaseAttachmentErrorCode = "bad_type" | "too_large" | "case_full" | "too_many" | "concluded" | "not_uploader";
+
 export const judgmentApi = {
   list: (params?: Record<string, string>) => api.get<PaginatedResponse<Judgment>>("/judgment/", { params }),
   /** 与 `list` 同一组筛选 / 租户划界的 CSV,不分页(`JudgmentViewSet.export`);页码参数不要传。 */
@@ -547,6 +555,33 @@ export const judgmentApi = {
   /** 评议: oldest first. Anyone who can read the judgment can read and write them. */
   comments: (id: string) => api.get<JudgmentComment[]>(`/judgment/${id}/comments/`),
   addComment: (id: string, body: string) => api.post<JudgmentComment>(`/judgment/${id}/comments/`, { body }),
+  /** 案卷附件列表与用量。看:judgment.read。 */
+  attachments: (id: string) => api.get<CaseAttachmentList>(`/judgment/${id}/attachments/`).then((r) => r.data),
+  /**
+   * 传一个文件(judgment.execute)。`body` 是宿主造的 multipart(`FormData`,文件在 `file` 下);Content-Type 要显式写,
+   * 理由见 `socialApi.uploadAvatar`。`signal` 是宿主的 `AbortController.signal`:取消 = 中止这次请求。
+   * 400 `bad_type` / `too_large`,409 `case_full` / `too_many`。
+   */
+  uploadAttachment: (
+    id: string,
+    body: FormData,
+    opts?: { onProgress?: (fraction: number) => void; signal?: GenericAbortSignal },
+  ) =>
+    api
+      .post<CaseAttachment>(`/judgment/${id}/attachments/`, body, {
+        headers: { "Content-Type": "multipart/form-data" },
+        signal: opts?.signal,
+        onUploadProgress: opts?.onProgress
+          ? (e) => opts.onProgress?.(e.total ? Math.min(1, e.loaded / e.total) : 0)
+          : undefined,
+      })
+      .then((r) => r.data),
+  /** 删除:只有上传人、且案子未结案(否则 403 `concluded` / `not_uploader`);审计记一条「删除附件」。 */
+  deleteAttachment: (id: string, attachmentId: string) =>
+    api.delete(`/judgment/${id}/attachments/${attachmentId}/`).then(() => undefined),
+  /** 10 分钟有效的签名地址;预览与下载各取一次,不缓存。 */
+  attachmentLink: (id: string, attachmentId: string) =>
+    api.get<CaseAttachmentLink>(`/judgment/${id}/attachments/${attachmentId}/link/`).then((r) => r.data),
   cite: (id: string, statute: string, note = "") =>
     api.post<JudgmentCitation>(`/judgment/${id}/citations/`, { statute, note }),
   uncite: (id: string, statute: string) =>

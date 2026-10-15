@@ -23,7 +23,9 @@ from apps.core.tenant import scope_to_tenant
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
 from apps.disposition.destination import DestinationRefusedError, destination_options, inapplicable_destinations
 from apps.disposition.services import DispositionService
+from apps.judgment import attachments as _attachments  # noqa: F401  (注册 post_delete 收文件的接收器)
 from apps.judgment import claims
+from apps.judgment.attachment_views import CaseAttachmentActionsMixin
 from apps.judgment.claims import ClaimRefusedError
 from apps.judgment.models import Judgment, JudgmentComment, JudgmentKind, Statute, Verdict
 from apps.judgment.precedents import DEFAULT_LIMIT as DEFAULT_PRECEDENTS
@@ -183,7 +185,7 @@ def _enter_judgment_realm(soul, judgment):
     SoulPathService.enter(soul, judgment.realm, tenant_id=judgment.tenant_id)
 
 
-class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSetMixin, TenantCreateMixin, AuditUserViewSetMixin, viewsets.ModelViewSet):
+class JudgmentViewSet(CaseAttachmentActionsMixin, CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSetMixin, TenantCreateMixin, AuditUserViewSetMixin, viewsets.ModelViewSet):
     """
     Judgment CRUD + conclude action.
     Tenant-isolated via TenantPermission.
@@ -237,6 +239,12 @@ class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSe
         # 评议:能读这件案子的人就能看、能写 —— 它不改案子。
         'comments': ['judgment.read'],
         'add_comment': ['judgment.read'],
+        # 案卷附件:看与取签名地址是读;上传、删除是对案子动手(删除另外只许上传人、结案前,
+        # 规则在 attachments.ensure_can_delete,服务端重判)。
+        'attachments': ['judgment.read'],
+        'attachment_link': ['judgment.read'],
+        'add_attachment': ['judgment.execute'],
+        'delete_attachment': ['judgment.execute'],
         'cite_statute': ['judgment.execute'],
         'uncite': ['judgment.execute'],
         # Ruling evidence in or out and saving the verdict draft are part of

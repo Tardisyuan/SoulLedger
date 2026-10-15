@@ -2699,6 +2699,38 @@
       "hint": "Columns to show · remembered in this browser only"
     }
   },
+  "case": {
+    "attachments": {
+      "title": "Attachments",
+      "limit": "Images or PDF, up to 20 MB each",
+      "full": "This case already has 100 MB of attachments",
+      "failed_type": "Only images or PDF",
+      "add": "Add attachment",
+      "drop": "Drop files here, or choose “Add attachment”",
+      "summary": "{{count}} files · {{used}} / {{max}} MB",
+      "empty": "No attachments yet",
+      "uploading": "Uploading · {{pct}}%",
+      "too_large": "Over {{max}} MB",
+      "too_many": "At most {{max}} files",
+      "failed_network": "Not uploaded: the network dropped",
+      "failed_generic": "Not uploaded",
+      "download": "Download",
+      "remove": "Remove",
+      "delete_title": "Delete attachment",
+      "delete_body": "“{{name}}” can't be recovered once deleted; after the case is concluded attachments can no longer be deleted.",
+      "delete_failed": "Could not delete",
+      "delete_concluded": "The case is concluded; attachments can no longer be deleted.",
+      "preview_failed": "Could not open this attachment",
+      "open_tab": "Open in new tab",
+      "print_title": "List of attachments",
+      "print_footer": "Originals of the attachments are in the system",
+      "col_name": "Name",
+      "col_size": "Size",
+      "col_uploader": "Uploaded by",
+      "col_time": "Time",
+      "load_failed": "Attachments did not load"
+    }
+  },
   "death_sync": {
     "title": "Death Sync",
     "subtitle": "External death registrations and sync status",
