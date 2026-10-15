@@ -324,6 +324,22 @@ describe("the conversation's eight states", () => {
     expect(screen.getByTestId("relation").props.children).toBe("互关");
   });
 
+  it("the ⋯ menu opens the peer's circle profile or the account report, and not for a hall", () => {
+    openConversation(conv(), []);
+    mockNavigate.mockClear();
+    fireEvent.press(screen.getByTestId("chat-menu"));
+    fireEvent.press(screen.getByTestId("chat-menu-profile"));
+    expect(mockNavigate).toHaveBeenLastCalledWith("SoulProfile", { userId: 7 });
+    fireEvent.press(screen.getByTestId("chat-menu"));
+    fireEvent.press(screen.getByTestId("chat-menu-report"));
+    expect(mockNavigate).toHaveBeenLastCalledWith("CircleReport", { target: "USER", id: "7", preview: "吴长明" });
+  });
+
+  it("no ⋯ menu when the peer has no circle account", () => {
+    openConversation(conv({ peer_user: null }), []);
+    expect(screen.queryByTestId("chat-menu")).toBeNull();
+  });
+
   it("① not landed: no highlight at all", () => {
     openConversation(conv(), [msg("e2", PEER, "明天一起去等榜吧。", NOW - 60_000)]);
     expect(screen.queryByTestId("landing-highlight")).toBeNull();

@@ -26,6 +26,7 @@ import {
   Animated,
   FlatList,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   Pressable,
   StyleSheet,
@@ -43,7 +44,7 @@ import { CORNER, Icon } from "../emblems";
 import { family, quoteFamily } from "../fonts";
 import { useI18n } from "../i18n";
 import { formatStamp, TAG_GLYPH } from "../rules";
-import type { CivKey } from "../theme";
+import { radius, type CivKey } from "../theme";
 import { useToast } from "../feedback";
 import { Button, Interp, Loader, Notice, Skeleton, SmallButton, Txt, shade, useReducedMotion, useTheme } from "../ui";
 import type { AppStackParams } from "./applications";
@@ -252,7 +253,12 @@ export function ConversationScreen({ id, landed }: { id: string; landed?: boolea
             title={c.peer_name}
             muted={sealed}
             subtitle={sealed ? undefined : tr(c.mutual ? "soul_app.chat.badge.mutual" : "soul_app.chat.badge.not_mutual")}
-            right={sealed ? <Tag testID="closed-tag" text={tr("soul_app.chat.badge.closed")} tone="quiet" glyph={TAG_GLYPH.closed.glyph} /> : null}
+            right={
+              <View style={styles.rightSlot}>
+                {sealed ? <Tag testID="closed-tag" text={tr("soul_app.chat.badge.closed")} tone="quiet" glyph={TAG_GLYPH.closed.glyph} /> : null}
+                {c.peer_user != null ? <PeerMenu userId={c.peer_user} name={c.peer_name} /> : ANDROID ? null : <View style={styles.icon} />}
+              </View>
+            }
           />
         )}
       </PlaqueFrame>
@@ -395,6 +401,51 @@ function Header({ onBack, title, subtitle, muted, right }: { onBack: () => void;
       </View>
       {right ?? (ANDROID ? null : <View style={styles.icon} />)}
     </View>
+  );
+}
+
+/** The top-right ⋯ (Design 聊天 ①): 「看他的主页」 opens the circle profile, 「举报」 the circle's account report. */
+function PeerMenu({ userId, name }: { userId: number; name: string }) {
+  const t = useTheme();
+  const { t: tr } = useI18n();
+  const insets = useSafeAreaInsets();
+  const navigation = useNavigation<NavigationProp<AppStackParams>>();
+  const [open, setOpen] = useState(false);
+  const go = (fn: () => void) => () => {
+    setOpen(false);
+    fn();
+  };
+  return (
+    <>
+      <Pressable testID="chat-menu" accessibilityRole="button" accessibilityLabel={tr("soul_app.circle.post.more")} onPress={() => setOpen(true)} hitSlop={6} style={styles.icon}>
+        <Icon name="more" size={18} color={t.inkMuted} />
+      </Pressable>
+      <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
+        <View style={[styles.fill, { backgroundColor: t.scrim }]}>
+          <Pressable style={styles.fill} accessibilityRole="button" onPress={() => setOpen(false)} accessibilityLabel={tr("soul_app.common.cancel")} />
+          <View testID="chat-menu-sheet" accessibilityViewIsModal style={[styles.sheet, { backgroundColor: t.s1, borderTopColor: t.hair2, paddingBottom: 20 + insets.bottom }]}>
+            <Pressable testID="chat-menu-profile" accessibilityRole="button" onPress={go(() => navigation.navigate("SoulProfile", { userId }))} style={[styles.menuRow, { borderBottomColor: t.hair }]}>
+              <Txt variant="bodyLg">{tr("soul_app.chat.menu.profile")}</Txt>
+            </Pressable>
+            <Pressable
+              testID="chat-menu-report"
+              accessibilityRole="button"
+              onPress={go(() => navigation.navigate("CircleReport", { target: "USER", id: String(userId), preview: name }))}
+              style={[styles.menuRow, { borderBottomColor: t.hair }]}
+            >
+              <Txt variant="bodyLg" tone="neg">
+                {tr("soul_app.chat.menu.report")}
+              </Txt>
+            </Pressable>
+            <Pressable testID="chat-menu-cancel" accessibilityRole="button" onPress={() => setOpen(false)} style={styles.menuCancel}>
+              <Txt variant="body" tone="muted">
+                {tr("soul_app.common.cancel")}
+              </Txt>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
+    </>
   );
 }
 
@@ -763,6 +814,10 @@ const styles = StyleSheet.create({
   header: { minHeight: 52, flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 8 },
   icon: { width: ANDROID ? 48 : 44, height: ANDROID ? 48 : 44, alignItems: "center", justifyContent: "center" },
   subtitle: { fontSize: 11, lineHeight: 15 },
+  rightSlot: { flexDirection: "row", alignItems: "center" },
+  sheet: { borderTopWidth: 1, borderTopLeftRadius: radius.dialog, borderTopRightRadius: radius.dialog, overflow: "hidden" },
+  menuRow: { minHeight: 54, flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 20, borderBottomWidth: 1 },
+  menuCancel: { minHeight: 54, alignItems: "center", justifyContent: "center" },
   hallHeader: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, paddingRight: 16 },
   hallSub: { fontSize: 11, lineHeight: 17, marginTop: 2 },
   unavailable: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 16, paddingVertical: 8, borderBottomWidth: 1 },

@@ -25,6 +25,10 @@ describe("parseSoulLink", () => {
     ["soulledger://letters", "letters"],
     ["soulledger://assist/", "assist"],
     ["SoulLedger://Cooldown?from=siri", "cooldown"],
+    ["soulledger://circle", "circle"],
+    ["soulledger://sentence", "sentence"],
+    ["soulledger://export", "export"],
+    ["soulledger://help", "help"],
   ])("%s -> %s", (url, link) => expect(parseSoulLink(url)).toEqual({ page: link }));
 
   it.each([
