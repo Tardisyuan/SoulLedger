@@ -257,7 +257,7 @@ const styles = StyleSheet.create({
   form: { paddingVertical: 24, gap: 20 },
   group: { gap: 8 },
   chips: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  chip: { minHeight: 40, paddingHorizontal: 14, borderWidth: 1, justifyContent: "center" },
+  chip: { minHeight: 40, paddingHorizontal: 12, borderWidth: 1, justifyContent: "center" },
   shots: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   shot: { width: 88, height: 88, borderWidth: 1 },
   shotImage: { width: "100%", height: "100%" },
