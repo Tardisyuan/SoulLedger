@@ -1,7 +1,5 @@
 [
   "scheduler.jobs.authentication_prune_expired_push_registrations",
-  "social.avatar_upload_hint",
-  "soul_app.circle.media.errors.not_an_image",
   "soul_accounts.reveal.close_confirm_title",
   "soul_accounts.reveal.close_confirm_body",
   "soul_accounts.reveal.close_confirm",

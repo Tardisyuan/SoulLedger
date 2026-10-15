@@ -10,6 +10,9 @@ import { usePermissions } from "@/src/hooks/usePermissions";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { EmptyState } from "@/src/components/ui/EmptyState";
+import { QueryError } from "@/src/components/ui/PageError";
+import { IdentifierChip } from "@/src/components/ui/DomainValue";
+import axios from "axios";
 import { Button } from "@/src/components/ui/Button";
 import { LedgerHeading } from "@/src/components/souls/detail/SoulLedgerSections";
 
@@ -54,7 +57,7 @@ export default function AuditDetailPage() {
   const router = useRouter();
   const id = useParams().id as string;
 
-  const { data: log, isPending, isError } = useQuery({
+  const { data: log, isPending, isError, error, refetch } = useQuery({
     queryKey: ["audit", "detail", id],
     queryFn: async () => (await auditApi.get(id)).data,
     enabled: canReadAudit && !!id,
@@ -74,9 +77,11 @@ export default function AuditDetailPage() {
     );
   }
   if (isError) {
+    // Only a 404 is 「没有这条记录」; anything else (offline, 500) is a failure the reader can retry.
+    const missing = axios.isAxiosError(error) && error.response?.status === 404;
     return (
       <PageShell density="document" variant="page" title={t("audit.title")} backLink={backLink}>
-        <EmptyState title={t("audit.detail.not_found")} />
+        {missing ? <EmptyState title={t("audit.detail.not_found")} /> : <QueryError onRetry={() => void refetch()} />}
       </PageShell>
     );
   }
@@ -111,7 +116,7 @@ export default function AuditDetailPage() {
             <Row label={t("audit.detail.user_agent")}>{log.user_agent}</Row>
             {log.trace_id ? (
               <Row label={t("audit.detail.trace_id")}>
-                <span className="font-mono text-xs">{log.trace_id}</span>{" "}
+                <IdentifierChip id={log.trace_id} variant="inline" />{" "}
                 {/* The list reads `?trace=` and asks the endpoint for that request's rows only. */}
                 <Link
                   href={`/audit?trace=${encodeURIComponent(log.trace_id)}`}

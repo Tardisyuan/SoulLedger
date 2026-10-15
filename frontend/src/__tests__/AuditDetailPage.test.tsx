@@ -7,6 +7,7 @@ import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import AuditDetailPage from "@/app/audit/[id]/page";
 import { auditApi } from "@soulledger/core/api";
+import { AxiosError } from "axios";
 
 jest.mock("@soulledger/core/api", () => ({
   auditApi: { get: jest.fn() },
@@ -88,8 +89,20 @@ it("does not fetch without audit.read", async () => {
   expect(mockedGet).not.toHaveBeenCalled();
 });
 
-it("says so when the record cannot be loaded", async () => {
-  mockedGet.mockRejectedValue(new Error("404"));
+function httpError(status: number) {
+  return new AxiosError("request failed", String(status), undefined, undefined, { status } as never);
+}
+
+it("a 404 says the record is not there", async () => {
+  mockedGet.mockRejectedValue(httpError(404));
   renderPage();
   await screen.findByText("audit.detail.not_found");
+  expect(document.querySelector("[data-query-error]")).toBeNull();
+});
+
+it("any other failure is a retryable error, not 「没有这条记录」", async () => {
+  mockedGet.mockRejectedValue(httpError(500));
+  renderPage();
+  await waitFor(() => expect(document.querySelector("[data-query-error]")).not.toBeNull());
+  expect(screen.queryByText("audit.detail.not_found")).toBeNull();
 });
