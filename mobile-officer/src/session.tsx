@@ -16,6 +16,7 @@ import { authApi, isMfaRequired, mfaApi, type LoginResponse, type LoginUser } fr
 import { ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY, getRefreshToken, platform, setAccessToken, setRefreshToken } from "@soulledger/core/platform";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 
+import { clearDrafts } from "./drafts";
 import { hasRegisteredDevice, unregisterDevice } from "./push";
 import { hallChoiceOf } from "./rules";
 import { clearVoiceNumbers, setUnauthorizedHandler } from "./shared";
@@ -81,6 +82,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     setUnauthorizedHandler(() => {
       platform().persistent.remove(USER_KEY);
       clearVoiceNumbers();
+      clearDrafts();
       setState({ status: "signedOut" });
     });
     return () => setUnauthorizedHandler(() => {});
@@ -141,6 +143,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     setState({ status: "signedOut" });
     platform().persistent.remove(USER_KEY);
     clearVoiceNumbers();
+    clearDrafts();
     // `authApi.logout` reads the stored refresh token, so the tokens go only after it has been sent
     // -- and only if no quick sign-in in between has replaced them.
     const end = () => {
