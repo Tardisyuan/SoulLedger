@@ -698,6 +698,15 @@ class UserUpdateSerializer(serializers.ModelSerializer):
         user being edited, so keeping their own address is not a collision."""
         return validate_email_is_unclaimed(value, self.instance)
 
+    def to_internal_value(self, data):
+        # 这条路径不改密码:未知字段本来被静默丢掉,操作员以为改成了。
+        # 改密只走 `POST /users/{id}/reset_password/`(随机口令、首登必改、其余设备退出)。
+        if 'password' in data:
+            raise serializers.ValidationError(
+                {'password': 'Passwords are not changed here; use /users/{id}/reset_password/.'}
+            )
+        return super().to_internal_value(data)
+
     def validate_role(self, value):
         request = self.context.get('request')
         caller = getattr(request, 'user', None) if request is not None else None

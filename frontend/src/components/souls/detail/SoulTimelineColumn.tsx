@@ -1,6 +1,8 @@
 "use client";
 
 import type { Disposition, Judgment, LedgerSummary, Reincarnation, Soul, SoulEvent } from "@soulledger/core/api";
+import { useI18n } from "@/src/contexts/I18nContext";
+import { Button } from "@/src/components/ui/Button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SoulLifecycleTimeline } from "@/src/components/souls/SoulLifecycleTimeline";
 import { SoulLedgerSections } from "./SoulLedgerSections";
@@ -23,6 +25,10 @@ export function SoulTimelineColumn({
   dispositions,
   reincarnations,
   events,
+  hasMore = false,
+  loadingMore = false,
+  loadMoreFailed = false,
+  onLoadMore,
   birthDisplay,
   deathDisplay,
   onOpenJudgmentQueue,
@@ -34,10 +40,16 @@ export function SoulTimelineColumn({
   dispositions: Disposition[];
   reincarnations: Reincarnation[];
   events: SoulEvent[];
+  /** 还有没取到的更早记录(任一种):显示「加载更多」。 */
+  hasMore?: boolean;
+  loadingMore?: boolean;
+  loadMoreFailed?: boolean;
+  onLoadMore?: () => void;
   birthDisplay: string | null;
   deathDisplay: string | null;
   onOpenJudgmentQueue: (judgmentId: string) => void;
 }) {
+  const { t } = useI18n();
   if (loading) {
     return (
       <div className={`${PANEL} space-y-3 pt-6`}>
@@ -84,6 +96,16 @@ export function SoulTimelineColumn({
           // since been concluded, so a stale link is never a dead end.
           onOpenJudgmentQueue={onOpenJudgmentQueue}
         />
+        {hasMore && onLoadMore ? (
+          <div className="mt-4 flex items-center gap-3">
+            <Button type="button" variant="secondary" size="sm" data-testid="timeline-load-more" loading={loadingMore} onClick={onLoadMore}>
+              {t("souls.detail.load_more")}
+            </Button>
+            {loadMoreFailed ? (
+              <span role="alert" className="text-sm text-[oklch(var(--color-status-warning))]">{t("souls.detail.load_more_failed")}</span>
+            ) : null}
+          </div>
+        ) : null}
       </div>
     </>
   );

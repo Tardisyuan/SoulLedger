@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import { dispatchApi, type DispatchRecord } from "@soulledger/core/api";
+import { dispatchApi, tenantsApi, type DispatchRecord } from "@soulledger/core/api";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { usePlaque } from "@/src/components/plaque/Plaque";
@@ -14,7 +14,11 @@ import { PageShell } from "@/src/components/ui/PageShell";
 import { DataTable, ROW_LINK, type DataTableColumn } from "@/components/ui/data-table";
 import { ColumnMenu, useColumnVisibility, type ColumnVisibility } from "@/components/ui/data-grid";
 import { PAGE_SIZE } from "@soulledger/core/api/client";
-import { buttonVariants } from "@/src/components/ui/Button";
+import { Button, buttonVariants } from "@/src/components/ui/Button";
+import { fieldControl } from "@/src/components/ui/Field";
+import { FilterChipSelect } from "@/src/components/ui/FilterChip";
+import { useRememberedFilters } from "@/src/lib/rememberedFilters";
+import { cn } from "@/lib/utils";
 import { type BadgeTone } from "@/src/components/ui/Badge";
 import { StatusBadge } from "@/src/components/ui/StatusBadge";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
@@ -63,13 +67,57 @@ function DispatchPageContent() {
   const [proposedPage, setProposedPage] = useState(1);
   const [historyPage, setHistoryPage] = useState(1);
 
+  // 筛选栏(`DispatchFilter`):搜索(灵魂姓名 / 理由)、状态、来源 / 目标租户、发起日期范围;两张表同一套。
+  // 状态与两个租户记在本浏览器;搜索框的字和日期属于一次到访,不记。
+  const [search, setSearch] = useState("");
+  const [status, setStatus] = useState("");
+  const [sourceTenant, setSourceTenant] = useState("");
+  const [targetTenant, setTargetTenant] = useState("");
+  const [proposedFrom, setProposedFrom] = useState("");
+  const [proposedTo, setProposedTo] = useState("");
+  useRememberedFilters(
+    DISPATCH_FILTERS_KEY,
+    DISPATCH_FILTER_FIELDS,
+    { status, source_tenant: sourceTenant, target_tenant: targetTenant },
+    (saved) => {
+      if (saved.status) setStatus(saved.status);
+      if (saved.source_tenant) setSourceTenant(saved.source_tenant);
+      if (saved.target_tenant) setTargetTenant(saved.target_tenant);
+    }
+  );
+  const tenantsQuery = useQuery({
+    queryKey: ["dispatch", "filter-tenants"],
+    queryFn: async () => (await tenantsApi.list()).data.results,
+    enabled: !!user,
+    staleTime: 60_000,
+  });
+  const tenantOptions = [
+    { value: "", label: t("dispatch.filter.all_tenants") },
+    ...(tenantsQuery.data ?? []).map((x) => ({ value: String(x.id), label: x.display_name || x.code })),
+  ];
+  const filterParams: Record<string, string> = {};
+  if (search.trim()) filterParams.search = search.trim();
+  if (status) filterParams.status = status;
+  if (sourceTenant) filterParams.source_tenant = sourceTenant;
+  if (targetTenant) filterParams.target_tenant = targetTenant;
+  // 后端是 DateTimeFilter:截止日要到当天结束,否则当天发起的被排除。
+  if (proposedFrom) filterParams.proposed_after = proposedFrom;
+  if (proposedTo) filterParams.proposed_before = `${proposedTo} 23:59:59`;
+  const isFiltered = Object.keys(filterParams).length > 0;
+  const filterKey = JSON.stringify(filterParams);
+  const changeFilter = (apply: () => void) => {
+    apply();
+    setProposedPage(1);
+    setHistoryPage(1);
+  };
+
   const {
     data: proposedData, isLoading: loadingProposed,
     isPlaceholderData: proposedStale,
     isError: proposedError, refetch: refetchProposed,
   } = useQuery({
-    queryKey: ["dispatch", "proposed", proposedPage],
-    queryFn: () => dispatchApi.proposed({ page: String(proposedPage) }).then(r => r.data),
+    queryKey: ["dispatch", "proposed", proposedPage, filterKey],
+    queryFn: () => dispatchApi.proposed({ page: String(proposedPage), ...filterParams }).then(r => r.data),
     enabled: !!user,
     // Pushed: dispatch events invalidate ["dispatch"].
     staleTime: 0,
@@ -82,8 +130,8 @@ function DispatchPageContent() {
     isPlaceholderData: historyStale,
     isError: historyError, refetch: refetchHistory,
   } = useQuery({
-    queryKey: ["dispatch", "history", historyPage],
-    queryFn: () => dispatchApi.history({ page: String(historyPage) }).then(r => r.data),
+    queryKey: ["dispatch", "history", historyPage, filterKey],
+    queryFn: () => dispatchApi.history({ page: String(historyPage), ...filterParams }).then(r => r.data),
     enabled: !!user,
     staleTime: 0,
     placeholderData: (previous) => previous,
@@ -102,6 +150,82 @@ function DispatchPageContent() {
         </>
       }
       subtitle={t("dispatch.subtitle")}
+      filters={
+        <>
+          <input
+            type="text"
+            data-testid="dispatch-search"
+            placeholder={t("dispatch.filter.search")}
+            aria-label={t("dispatch.filter.search")}
+            value={search}
+            onChange={(e) => changeFilter(() => setSearch(e.target.value))}
+            className={cn(fieldControl({ size: "md" }), "flex-1 min-w-[200px]")}
+          />
+          <FilterChipSelect
+            label={t("dispatch.status")}
+            value={status}
+            options={[
+              { value: "", label: t("dispatch.filter.all_status") },
+              ...Object.keys(STATUS_TONES).map((v) => ({ value: v, label: t(`dispatch.states.${v}`) })),
+            ]}
+            clearLabel={t("filter.clear_one", { name: t("dispatch.status") })}
+            onChange={(v) => changeFilter(() => setStatus(v))}
+          />
+          <FilterChipSelect
+            label={t("dispatch.source_tenant")}
+            value={sourceTenant}
+            options={tenantOptions}
+            clearLabel={t("filter.clear_one", { name: t("dispatch.source_tenant") })}
+            onChange={(v) => changeFilter(() => setSourceTenant(v))}
+          />
+          <FilterChipSelect
+            label={t("dispatch.target_tenant")}
+            value={targetTenant}
+            options={tenantOptions}
+            clearLabel={t("filter.clear_one", { name: t("dispatch.target_tenant") })}
+            onChange={(v) => changeFilter(() => setTargetTenant(v))}
+          />
+          <input
+            type="date"
+            data-testid="dispatch-from"
+            aria-label={t("dispatch.filter.from")}
+            title={t("dispatch.filter.from")}
+            value={proposedFrom}
+            max={proposedTo || undefined}
+            onChange={(e) => changeFilter(() => setProposedFrom(e.target.value))}
+            className={fieldControl({ size: "md" })}
+          />
+          <input
+            type="date"
+            data-testid="dispatch-to"
+            aria-label={t("dispatch.filter.to")}
+            title={t("dispatch.filter.to")}
+            value={proposedTo}
+            min={proposedFrom || undefined}
+            onChange={(e) => changeFilter(() => setProposedTo(e.target.value))}
+            className={fieldControl({ size: "md" })}
+          />
+          {isFiltered ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() =>
+                changeFilter(() => {
+                  setSearch("");
+                  setStatus("");
+                  setSourceTenant("");
+                  setTargetTenant("");
+                  setProposedFrom("");
+                  setProposedTo("");
+                })
+              }
+            >
+              {t("dispatch.filter.clear")}
+            </Button>
+          ) : null}
+        </>
+      }
       actions={
         /* `buttonVariants` and not `<Button>`: this navigates, so it has to be
            an anchor. The skin is shared; the element is not. */
@@ -127,7 +251,7 @@ function DispatchPageContent() {
         title={t("dispatch.pending")}
         isRefreshing={proposedStale}
         className="mb-6"
-        actions={<ExportCsvButton size="sm" fetchCsv={() => dispatchApi.exportCsv({ section: "proposed" })} page={t("dispatch.title")} hall={hall} />}
+        actions={<ExportCsvButton size="sm" fetchCsv={() => dispatchApi.exportCsv({ section: "proposed", ...filterParams })} page={t("dispatch.title")} hall={hall} />}
       >
         <DispatchTable
           rows={proposed}
@@ -146,7 +270,7 @@ function DispatchPageContent() {
       <PageSection
         title={t("dispatch.history")}
         isRefreshing={historyStale}
-        actions={<ExportCsvButton size="sm" fetchCsv={() => dispatchApi.exportCsv({ section: "history" })} page={t("dispatch.title")} hall={hall} />}
+        actions={<ExportCsvButton size="sm" fetchCsv={() => dispatchApi.exportCsv({ section: "history", ...filterParams })} page={t("dispatch.title")} hall={hall} />}
       >
         <DispatchTable
           rows={history}
@@ -167,6 +291,8 @@ function DispatchPageContent() {
 }
 
 const DISPATCH_COLUMNS_KEY = "soulledger.dispatch.columns";
+const DISPATCH_FILTERS_KEY = "soulledger.dispatch.filters";
+const DISPATCH_FILTER_FIELDS = ["status", "source_tenant", "target_tenant"] as const;
 
 /** 两张表的列并集;灵魂列与行末的「取消移交」钉住(前者是这行是谁,后者是行上的操作)。 */
 function dispatchColumns(t: (key: string) => string): DataTableColumn[] {

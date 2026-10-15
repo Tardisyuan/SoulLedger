@@ -76,7 +76,8 @@ import {
   placementFromDraft,
   type Placement,
 } from "@/src/components/judgment/JudgmentPlacement";
-import { useCaseAttachments, useJudgmentNextAfter, useJudgmentPrevious } from "@soulledger/core/hooks/useJudgments";
+import { useCaseAttachments, useJudgmentNextAfter, useJudgmentPrevious, useUndeferJudgment } from "@soulledger/core/hooks/useJudgments";
+import { claimRefusalMessage } from "@/src/components/judgment/JudgmentClaimDialogs";
 import { usePlaque } from "@/src/components/plaque/Plaque";
 import { useHall } from "@/src/components/plaque/useHall";
 
@@ -343,6 +344,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
   }
 
   const canExecute = hasPermission("judgment.execute");
+  const undefer = useUndeferJudgment();
 
   /** 主按钮 / ⌘⏎:先进确认层,落判在层里。与落判同一道门:选了裁决才进。 */
   function openConfirm() {
@@ -838,6 +840,24 @@ export default function JudgmentDetailPage({ params }: PageProps) {
           {judgment.deferred_at && !isFinal && (
             <p data-testid="deferred-note" className="mb-4 border-l-3 border-[oklch(var(--color-warning))] pl-3 text-left text-sm text-[oklch(var(--color-ink-muted))]">
               {t("judgment.desk.deferred_note", { reason: judgment.defer_reason ?? "" })}
+              {canExecute && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  className="ml-3"
+                  data-testid="undefer"
+                  loading={undefer.isPending}
+                  onClick={() =>
+                    undefer.mutate(judgment.id, {
+                      onSuccess: () => showToast(t("judgment.claim.done_undefer"), "success"),
+                      onError: (err) => showToast(claimRefusalMessage(err, t), "error"),
+                    })
+                  }
+                >
+                  {t("judgment.claim.undefer")}
+                </Button>
+              )}
             </p>
           )}
           <h2 id={clausesId} className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))]">

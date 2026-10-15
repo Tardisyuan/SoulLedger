@@ -490,7 +490,8 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
 
         # _base_manager (unfiltered) dodges the contextvar issue but also
         # drops the soft-delete filter — exclude deleted records explicitly.
-        proposals = self._proposed_queryset(tenant)
+        # 与列表同一套筛选(`DispatchFilter`):页面的筛选栏对两张表都生效。
+        proposals = self.filter_queryset(self._proposed_queryset(tenant))
 
         page = self.paginate_queryset(proposals)
         if page is not None:
@@ -517,7 +518,7 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
 
         # _base_manager (unfiltered) dodges the contextvar issue but also
         # drops the soft-delete filter — exclude deleted records explicitly.
-        history = self._history_queryset(tenant, request.user)
+        history = self.filter_queryset(self._history_queryset(tenant, request.user))
 
         page = self.paginate_queryset(history)
         if page is not None:
