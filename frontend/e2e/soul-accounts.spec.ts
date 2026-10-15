@@ -66,7 +66,14 @@ test.describe("Pending initial passwords", () => {
     await page.mouse.click(5, 5);
     await expect(dialog.getByTestId("revealed-password")).toBeVisible();
 
+    // Nor may Esc: it asks first (A7), and 「返回」 keeps the password on screen.
+    await page.keyboard.press("Escape");
+    await expect(page.getByText("密码只显示这一次，确定关闭？", { exact: false })).toBeVisible();
+    await page.getByRole("button", { name: "返回" }).click();
+    await expect(dialog.getByTestId("revealed-password")).toBeVisible();
+
     await dialog.getByRole("button", { name: "我已记下，关闭" }).click();
+    await page.getByRole("button", { name: "确定关闭" }).click();
     await expect(page.getByRole("dialog")).toHaveCount(0);
     await expect(page.getByText(REVEALED_PASSWORD.password)).toHaveCount(0);
 
