@@ -101,6 +101,11 @@
       "url": "https://pypi.org/project/Pillow/"
     },
     {
+      "name": "pillow-heif",
+      "licence": "BSD-3-Clause",
+      "url": "https://pypi.org/project/pillow-heif/"
+    },
+    {
       "name": "psycopg2-binary",
       "licence": "LGPL with exceptions",
       "url": "https://pypi.org/project/psycopg2-binary/"

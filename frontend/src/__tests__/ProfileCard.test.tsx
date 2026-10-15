@@ -77,7 +77,7 @@ describe("ProfileCard edit profile UI", () => {
     expect(screen.getByDisplayValue("Existing bio")).toBeInTheDocument();
     const file = within(dialog).getByLabelText("social.avatar_upload_label");
     expect(file).toHaveAttribute("type", "file");
-    expect(file).toHaveAttribute("accept", "image/png,image/jpeg,image/webp");
+    expect(file).toHaveAttribute("accept", "image/png,image/jpeg,image/webp,image/heic,image/heif");
     expect(dialog.querySelector('input[type="url"]')).toBeNull();
     expect(screen.queryByDisplayValue(ownProfile.avatar as string)).not.toBeInTheDocument();
   });
