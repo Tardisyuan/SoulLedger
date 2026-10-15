@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 from django.conf import settings
 from rest_framework import serializers
 
-from apps.chat.models import Conversation, ConversationKind, InboxReplyTemplate
+from apps.chat.models import FEEDBACK_TAGS, Conversation, ConversationKind, InboxReplyTemplate
 
 
 class ChatSessionSerializer(serializers.Serializer):
@@ -115,6 +115,8 @@ class MessageSendSerializer(serializers.Serializer):
     # App 发件箱给每封信的事务号。同一个号重发,回的是第一次的 event_id,不再发第二条 ——
     # 见 `MeChatMessagesView`。可省:Web 不重发。
     txn_id = serializers.RegexField(r"^[A-Za-z0-9._~-]+$", max_length=64, required=False)
+    # 从「帮助与反馈」写给殿司的信带类别码(只收件箱接受,私聊 400);殿司收件箱列表显示「反馈 · 类别」。
+    feedback_tag = serializers.ChoiceField(choices=FEEDBACK_TAGS, required=False)
 
 
 class MessageSentSerializer(serializers.Serializer):
@@ -180,12 +182,14 @@ class OfficerInboxSerializer(serializers.ModelSerializer):
     archived = serializers.BooleanField(read_only=True, help_text="**调用者**归档了它。")
     assignee = InboxOfficerSerializer(read_only=True, allow_null=True,
                                       help_text="「标给同僚」的经办人,殿司共享;没有为 null。")
+    feedback_tag = serializers.CharField(read_only=True, help_text="从 App「帮助与反馈」来的信的类别码"
+                                         "(account / record / app / other),还没人回时才有;否则空串。")
 
     class Meta:
         model = Conversation
         fields = ["id", "soul", "soul_name", "soul_code", "tenant", "tenant_name", "hall_names",
                   "last_message_at", "last_soul_message_at", "last_from", "unread", "has_draft", "archived",
-                  "assignee", "assigned_at", "created_at", "closed_at"]
+                  "assignee", "assigned_at", "feedback_tag", "created_at", "closed_at"]
         read_only_fields = fields
 
 

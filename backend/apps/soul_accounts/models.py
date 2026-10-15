@@ -302,3 +302,49 @@ class SoulDeviceLogin(models.Model):
     last_used_at = models.DateTimeField(null=True, blank=True)
     revoked_at = models.DateTimeField(null=True, blank=True)
     revoked_reason = models.CharField(max_length=30, choices=DeviceLoginRevokeReason.choices, blank=True, default="")
+
+
+class DataExportStatus(models.TextChoices):
+    QUEUED = "QUEUED", "排队中"
+    RUNNING = "RUNNING", "正在生成"
+    READY = "READY", "已准备好"
+    FAILED = "FAILED", "生成失败"
+    EXPIRED = "EXPIRED", "已过期"
+
+
+#: 占着「一次只能有一份在准备」这个名额的状态。
+EXPORT_IN_PROGRESS = (DataExportStatus.QUEUED, DataExportStatus.RUNNING)
+
+
+class SoulDataExport(models.Model):
+    """「导出我的资料」(Design 第二十八批 S3)的一次申请,以及它生成出来的那个 zip。
+
+    **挂在账号上**(每一世一行,与别的账号数据同形);租户经 `soul__home_tenant`,不存 tenant 列。
+    **一次只有一份在准备**:部分唯一约束兜底,服务层另在账号行锁下给出可读的 409。
+    文件在私有存储 `private/exports/` 下(nginx 与 DEBUG 路由都不公开这个前缀),只经
+    `GET /api/v1/me/export/file/?t=<签名>` 出去,7 天后文件由定时任务清掉(行留着,标 EXPIRED)。
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    account = models.ForeignKey(SoulAccount, on_delete=models.CASCADE, related_name="data_exports")
+    # 冗余 soul:租户隔离按 `soul__home_tenant` 一跳(与 InitialCredential 同一理由)。
+    soul = models.ForeignKey("souls.Soul", on_delete=models.CASCADE, related_name="data_exports")
+    status = models.CharField(max_length=10, choices=DataExportStatus.choices, default=DataExportStatus.QUEUED)
+    requested_at = models.DateTimeField(auto_now_add=True)
+    finished_at = models.DateTimeField(null=True, blank=True)
+    expires_at = models.DateTimeField(null=True, blank=True)
+    file_name = models.CharField(max_length=80, blank=True, default="")
+    #: 默认存储里的名字(`private/exports/<id>.zip`);文件被清掉后为空。
+    file_path = models.CharField(max_length=200, blank=True, default="")
+    byte_size = models.PositiveBigIntegerField(null=True, blank=True)
+    error = models.CharField(max_length=200, blank=True, default="")
+
+    class Meta:
+        ordering = ["-requested_at"]
+        indexes = [models.Index(fields=["account", "requested_at"]), models.Index(fields=["status", "expires_at"])]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["account"], condition=Q(status__in=list(EXPORT_IN_PROGRESS)),
+                name="soul_data_export_one_in_progress",
+            ),
+        ]

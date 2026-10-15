@@ -21,6 +21,8 @@ class TodoItemSerializer(serializers.Serializer):
     node_name = serializers.CharField(required=False, help_text="仅审批节点:轮到的节点名。")
     soul_code = serializers.CharField(required=False, help_text="仅转生申请:此时 `title` 是灵魂名,灵魂码作副行。")
     is_appeal = serializers.BooleanField(required=False, help_text="仅转生申请:是否申诉(客户端据此选标题措辞)。")
+    feedback_tag = serializers.CharField(required=False, help_text="仅书信:从 App「帮助与反馈」来的信的类别码"
+                                         "(account / record / app / other);还没人回时才有。")
 
 
 class TodoGroupSerializer(serializers.Serializer):

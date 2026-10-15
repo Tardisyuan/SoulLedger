@@ -1,7 +1,7 @@
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
-from apps.soul_accounts import device_login_views, me_views, mfa_views, session_views
+from apps.soul_accounts import device_login_views, export_views, me_views, mfa_views, session_views
 from apps.soul_accounts.views import (
     InitialCredentialViewSet,
     OfficerCooldownShorteningViewSet,
@@ -46,6 +46,8 @@ me_urlpatterns = [
          name="me-sessions-revoke-others"),
     path("sessions/<uuid:session_id>/revoke/", session_views.MeSessionRevokeView.as_view(), name="me-session-revoke"),
     path("sign-ins/", session_views.MeSignInsView.as_view(), name="me-sign-ins"),
+    path("export/", export_views.MeExportView.as_view(), name="me-export"),
+    path("export/file/", export_views.MeExportFileView.as_view(), name="me-export-file"),
     path("life/", me_views.MeLifeView.as_view(), name="me-life"),
     path("past-lives/", me_views.MePastLivesView.as_view(), name="me-past-lives"),
     path("sentence-plan/", me_views.MeSentencePlanView.as_view(), name="me-sentence-plan"),

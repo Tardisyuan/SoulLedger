@@ -13,7 +13,13 @@ from rest_framework import serializers
 from apps.reincarnation.models import RebirthForm
 from apps.sentence_plan.soul_view import PLAN_STATES as SOUL_PLAN_STATES
 from apps.sentence_plan.soul_view import STATION_STATUSES as SOUL_STATION_STATUSES
-from apps.soul_accounts.models import CooldownShorteningRequest, InitialCredential, RebirthApplication, SoulAccount
+from apps.soul_accounts.models import (
+    CooldownShorteningRequest,
+    DataExportStatus,
+    InitialCredential,
+    RebirthApplication,
+    SoulAccount,
+)
 from apps.soul_accounts.services import email_not_synced as login_email_not_synced
 from apps.souls.fields import HistoricalDateField
 from apps.souls.models import Civilization
@@ -152,6 +158,29 @@ class SoulDeviceLoginRefusalSerializer(serializers.Serializer):
     detail = serializers.CharField()
     code = serializers.CharField()
     reason = serializers.CharField(required=False)
+
+
+class SoulDataExportRequestSerializer(serializers.Serializer):
+    """申请导出资料要先认出本人:当前密码,或开了面容登录的手机认过面容后取出的凭据(二选一,凭据优先)。"""
+
+    password = serializers.CharField(required=False, allow_blank=True, default="", max_length=128, trim_whitespace=False)
+    credential = serializers.CharField(required=False, allow_blank=True, default="", max_length=128)
+
+
+class SoulDataExportSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    status = serializers.ChoiceField(choices=DataExportStatus.choices,
+                                     help_text="READY 过了 `expires_at` 即读作 EXPIRED;FAILED 之后可以重新申请。")
+    requested_at = serializers.DateTimeField()
+    finished_at = serializers.DateTimeField(allow_null=True)
+    expires_at = serializers.DateTimeField(allow_null=True)
+    file_name = serializers.CharField(help_text="`soulledger-<编号>-<yyyymmdd>.zip`;生成之前为空。")
+    byte_size = serializers.IntegerField(allow_null=True)
+    download_url = serializers.CharField(allow_null=True, help_text="仅 READY:站点根相对路径,约 7 天有效,取时仍要灵魂令牌。")
+
+
+class SoulDataExportStateSerializer(serializers.Serializer):
+    export = SoulDataExportSerializer(allow_null=True, help_text="最近一次申请;从没申请过为 null。")
 
 
 class SoulErrorSerializer(serializers.Serializer):
