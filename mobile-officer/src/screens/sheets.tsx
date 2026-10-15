@@ -9,7 +9,7 @@ import { cosignRefusalOf, officerAppApi, type SignerCandidate, type TodoItemDeta
 import { useCallback, useState } from "react";
 import { View } from "react-native";
 
-import { decisionAllowed } from "../deviceCheck";
+import { decisionAllowed, useBioWord } from "../deviceCheck";
 import { ActionButton, Row, Segmented } from "../kit";
 import { decisionFailure, failureReasonKey, passVerdictsOf, reasonMissing, submitDecision, todoTitle, type FailureReason, type Verdict } from "../rules";
 import { Button, FieldError, Input, Notice, Sheet, Txt, space, useI18n, useRemote, useTheme, useToast } from "../shared";
@@ -41,6 +41,7 @@ export function DecisionSheet({
   onDone: () => void;
 }) {
   const { t } = useI18n();
+  const bio = useBioWord();
   const theme = useTheme();
   const [reason, setReason] = useState("");
   // The soul's wish pre-fills the days (editable, same rules); with none the field starts empty as before.
@@ -134,7 +135,7 @@ export function DecisionSheet({
           />
         ) : null}
         {failure ? <Notice tone="neg" testID="decision-failure">{`! ${t("officer_app.confirm.failed", { reason: t(failureReasonKey(failure)) })}`}</Notice> : null}
-        {unrecognised ? <Notice tone="neg" testID="decision-unrecognised">{`! ${t(verdict === "approve" ? "officer_app.biometric.failed" : "officer_app.biometric.failed_reject")}`}</Notice> : null}
+        {unrecognised ? <Notice tone="neg" testID="decision-unrecognised">{`! ${t(verdict === "approve" ? "officer_app.biometric.failed" : "officer_app.biometric.failed_reject", { bio: bio.start })}`}</Notice> : null}
         <View style={{ flexDirection: "row", gap: space[3] }}>
           <ActionButton testID="decision-cancel" kind="outline" title={t("soul_app.common.cancel")} onPress={onClose} />
           <ActionButton

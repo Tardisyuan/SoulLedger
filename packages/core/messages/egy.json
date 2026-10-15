@@ -1924,7 +1924,9 @@
     "descriptions": {
       "hall_settings": "Khemen Smen {{code}}",
       "hall_seal_glyphs": "Khemen Seth Medu Khetem {{code}}",
-      "hall_assistant_switch": "Khemen Wen-Khetem Hehy Medu {{code}}"
+      "hall_assistant_switch": "Khemen Wen-Khetem Hehy Medu {{code}}",
+      "impersonate_start": "Maa Em Ba {{name}} · Khet: {{reason}}",
+      "impersonate_end": "Maa Em Ba {{name}} · At {{minutes}} · Medjat {{pages}}"
     },
     "filter_hall": "Per Wesekhet",
     "all_halls": "Wesekhet Neb",
@@ -1961,7 +1963,26 @@
       "title": "Sedjem",
       "site": "Hena",
       "mail": "Shat",
-      "locked": "Nen Sedjer"
+      "locked": "Nen Sedjer",
+      "category_header": "Iru",
+      "settings": "Smen Sedjem",
+      "footnote": "«Nen Sedjer»: Nen Khetem. Sau Aq, Dbh Sekhem: Neb. Unut Khetem Wat Hesy: Hena Wa.",
+      "categories": {
+        "account_security": "Sau Aq",
+        "approval": "Wat Hesy",
+        "approval_timeout": "Unut Khetem Wat Hesy",
+        "reassign": "Dbh Hab Ky",
+        "password_help": "Dbh Sekhem",
+        "dispatch": "Hab-Ba",
+        "letter_handoff": "Redi Sesh"
+      },
+      "notes": {
+        "account_security": "Aq Em Ikhet Ky, Sekhem Khemen, Aq Sep Sen Khemen, Ky Maa Em Ba-Ek",
+        "approval": "Wat Hesy Mawy: Nen Iri-Ek Djer",
+        "approval_timeout": "Hena: Nen Khetem. Unut Khetem Khemen Ahet.",
+        "password_help": "Sab Hery Wa",
+        "dispatch": "Iri, Hesy, Khesef, Sehen"
+      }
     },
     "email_notifications_no_address": "Nen Djeret Em Aq: Nen Hab.",
     "email_last_failure": "Nen Hab Pehwy: {{error}} ({{at}})",
@@ -1977,7 +1998,19 @@
       "this": "Ikhet Pen",
       "sign_out": "Per Em Ikhet Pen",
       "sign_out_others": "Per Em Ikhet Ky Neb",
-      "confirm_title": "Per Em Ikhet Ky {{n}}?"
+      "confirm_title": "Per Em Ikhet Ky {{n}}?",
+      "mfa_until": "Nen Wehem Dbh Aq Sep Sen Er {{date}}",
+      "stranger": "Ikhet Nen Rekh: Per Em Ikhet Pen Tepy, Er Khet Khemen Sekhem-Ek.",
+      "intro": "Per Em Ikhet: Er Khet Aq Mawy. Khemen Sekhem: Per Em Ikhet Ky Neb; Ikhet Pen Nen.",
+      "count": "Ikhet {{n}}",
+      "in_use": "Em Aq Emu",
+      "sign_out_here": "Per Aq Em Hry",
+      "signed_out": "Per Aq Seth",
+      "confirm_body": "Ikhet Pen Nen Khemen. Ikhet Ky: «Nen Wehem Dbh Hru 30» Fekh Seth.",
+      "confirm_action": "Per Em Ikhet {{n}}",
+      "audit_note": "Sesh Aq Em Medew Maa.",
+      "load_failed": "Nen Ini Ikhet Aq",
+      "sign_out_failed": "Nen Per Aq. Wehem Iri."
     }
   },
   "notifications": {
@@ -2551,7 +2584,16 @@
       "body": "Maa Wa: Nen Iri Neb. At 30 Er Aa.",
       "notice": "{{name}} Sedjem: Ren-Ek Hena Khet Pen.",
       "banner": "Em Maa Em Ba {{name}}",
-      "exit": "Sehen Maa"
+      "exit": "Sehen Maa",
+      "title": "Maa Em Ba {{name}}",
+      "reason_label": "Khet",
+      "audit_note": "Iri Neb: Sesh Em Medew Maa.",
+      "start": "Wah Maa",
+      "failed": "Nen Wah Maa.",
+      "readonly": "Maa Wa",
+      "reason_line": "Khet: {{reason}}",
+      "remaining": "{{time}} Wenen",
+      "locked": "Em Maa: Nen Iri"
     }
   },
   "permission": {
@@ -3337,7 +3379,8 @@
       "notifications_email_action_needed_global": "Hab Sedjem Ba Em Smen Er Djeret · Sab Hery",
       "audit_prune_logs_for_tenant": "Khetem Medew Maa Hena Medew Aq Tepy",
       "audit_prune_untenanted_logs": "Khetem Medew Maa Hena Medew Aq Nen Per Hemes",
-      "chat_cleanup_unsent_images": "Fekh Tut Sesh Nen Hab"
+      "chat_cleanup_unsent_images": "Fekh Tut Sesh Nen Hab",
+      "authentication_prune_soul_sign_ins": "Khetem Aq Ba Hena Aq Nen Iri: Hru 90 Er Hry"
     },
     "status": {
       "PENDING": "Em Smen",
@@ -4404,7 +4447,26 @@
     "security": {
       "history": "Ikhet Hena Aq Pehwy",
       "history_keep": "Aq Pehwy · Hru 90",
-      "failed": "Nen Aq {{n}} · Sekhem Nen Maa"
+      "failed": "Nen Aq {{n}} · Sekhem Nen Maat",
+      "devices": "Ikhet",
+      "this_phone": "Medjat Pen",
+      "last_seen": "Pehwy {{time}}",
+      "sign_out": "Per Aq",
+      "sign_out_failed": "Nen Per Aq. Wehem Iri.",
+      "load_failed": "Nen Ini Ikhet Hena Aq Pehwy",
+      "no_records": "Nen Aq Pehwy Djer",
+      "method_recovery": "Medu Ankh Wehem",
+      "failed_mfa": "Nen Aq {{n}} · Medu Ahet Nen Maat",
+      "failed_face": "Nen Aq {{n}} · Nen Rekh {{bio}}",
+      "stranger_title": "Ikhet Er Aq Nen Rekh?",
+      "stranger_body": "Per Em Ikhet Nen Rekh Tepy, Er Khet Khemen Sekhem. Khemen Seth: Per Em Ikhet Neb; Medjat Pen Nen."
+    },
+    "biometric": {
+      "app_lock": "Iyi Er Medjat Ba: Wehem Aq Em Djes-Ek",
+      "app_lock_hint": "Iyi Er Khet At 5 Er Hry: Aq Em {{bio}} Tepy"
+    },
+    "lock": {
+      "title": "Khetem Seth"
     }
   },
   "soul_push": {
@@ -4565,6 +4627,10 @@
     "dispatch_cancelled": {
       "title": "Dbh Hab-Ba Sehen Seth Em Tepy Iri",
       "body": "{{source}}: Sehen Dbh Hab-Ba Ba «{{soul}}». Khet Sehen: {{reason}}"
+    },
+    "impersonation_started": {
+      "title": "Ky Maa Em Ba-Ek",
+      "body": "{{by}} Maa Em Ba-Ek (Maa Wa · At {{minutes}} Er Aa). Khet: {{reason}}. Iri Neb: Sesh Em Medew Maa."
     }
   },
   "social_moderation": {
@@ -5718,6 +5784,13 @@
       "approved": "Per Ky: Hesy Seth",
       "rejected": "Per Ky: Khesef Seth",
       "reason": "Khet: {{reason}}"
+    },
+    "biometric": {
+      "setting": "Hesy, Khesef: Aq Em {{bio}} Tepy",
+      "failed": "Nen Rekh {{bio}}; Nen Hesy Djer. Wehem Iri.",
+      "failed_reject": "Nen Rekh {{bio}}; Nen Khesef Djer. Wehem Iri.",
+      "hint": "Ky Em Medjat-Ek: Nen Wedja",
+      "unavailable": "Medjat Pen Nen Sekhem Djer: Nen Wen. Iri Sekhem Em Smen Ta Tepy."
     }
   },
   "print": {
