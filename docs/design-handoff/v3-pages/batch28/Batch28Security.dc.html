@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><script src="./ds-base.js"></script></helmet>
+<div class="light" data-civ="cn" style="width:2380px;background:oklch(var(--color-canvas));color:oklch(var(--color-ink));font-family:var(--font-sans);font-size:13px;line-height:20px">
+<x-import component-from-global-scope="SoulLedger.SoulLedgerProvider" civ="cn" pathname="/profile" hint-size="2380px,1900px">
+<div style="padding:48px;display:flex;flex-direction:column;gap:56px">
+<header style="display:flex;flex-direction:column;gap:4px"><h1 style="margin:0;font-family:'Noto Serif SC',var(--font-serif);font-size:32px;line-height:40px;font-weight:600">第二十八批 · 第一批稿:登录设备 / 模拟登录 / 生物识别确认</h1><span style="color:oklch(var(--color-ink-muted))">W2 + S1 同一套行版式 · W6 · O1 · S2 并入面容登录页</span></header>
+
+<section style="display:flex;flex-direction:column;gap:16px"><h2 style="margin:0;font-size:20px;line-height:28px;font-weight:600">W2 · 个人中心 › 登录设备(Web)</h2>
+<div style="display:flex;gap:40px;align-items:flex-start">
+<div data-screen-label="W2 登录设备" style="width:960px;display:grid;grid-template-columns:200px minmax(0,1fr);gap:32px;padding:24px;background:oklch(var(--color-canvas));border:1px solid oklch(var(--color-line))">
+<nav style="display:flex;flex-direction:column"><span style="height:44px;display:flex;align-items:center;padding:0 12px;color:oklch(var(--color-ink-muted))">基本信息</span><span style="height:44px;display:flex;align-items:center;padding:0 12px;color:oklch(var(--color-ink-muted))">密码</span><span style="height:44px;display:flex;align-items:center;padding:0 12px;color:oklch(var(--color-ink-muted))">通知</span><span style="height:44px;display:flex;align-items:center;padding:0 12px;color:oklch(var(--color-ink-muted))">两步验证</span><span aria-current="page" style="height:44px;display:flex;align-items:center;padding:0 12px;font-weight:500;box-shadow:inset 2px 0 0 oklch(var(--color-ink))">登录设备</span></nav>
+<section style="background:oklch(var(--color-surface-1));border:1px solid oklch(var(--color-line));border-radius:8px;padding:24px;display:flex;flex-direction:column;gap:16px">
+<div style="display:flex;align-items:center;gap:12px"><h2 style="margin:0;font-family:'Noto Serif SC',var(--font-serif);font-weight:600;font-size:20px;line-height:28px">登录设备</h2><span style="color:oklch(var(--color-ink-muted))">3 台</span><span style="margin-left:auto"><x-import component-from-global-scope="SoulLedger.Button" variant="secondary" size="sm" type="button" hint-size="136px,44px">退出其他全部</x-import></span></div>
+<p style="margin:0;color:oklch(var(--color-ink-muted));text-wrap:pretty">退出后，那台设备下次打开要重新登录。修改密码时，除这台外会全部退出。</p>
+<div style="display:flex;flex-direction:column">
+<div style="min-height:64px;display:grid;grid-template-columns:minmax(0,1fr) 160px 120px;align-items:center;gap:12px;border-top:1px solid oklch(var(--color-line))"><span style="display:flex;flex-direction:column"><span style="display:flex;gap:8px;align-items:center;font-weight:500">Windows · Edge<span style="height:20px;padding:0 6px;display:inline-flex;align-items:center;border:1px solid oklch(var(--color-ink));border-radius:4px;font-size:12px;font-weight:600">这台</span></span><span style="font-size:12px;color:oklch(var(--color-ink-muted))">免两步验证至 <span style="font-family:var(--font-mono)">2026-11-08</span></span></span><span style="font-family:var(--font-mono)">正在使用</span><span style="font-size:12px;color:oklch(var(--color-ink-muted))">在右上角退出</span></div>
+<div style="min-height:64px;display:grid;grid-template-columns:minmax(0,1fr) 160px 120px;align-items:center;gap:12px;border-top:1px solid oklch(var(--color-line))"><span style="display:flex;flex-direction:column"><span style="font-weight:500">macOS · Safari</span><span style="font-size:12px;color:oklch(var(--color-ink-muted))">免两步验证至 <span style="font-family:var(--font-mono)">2026-10-30</span></span></span><span style="font-family:var(--font-mono)">2026-10-12 09:14</span><x-import component-from-global-scope="SoulLedger.Button" variant="ghost" size="sm" type="button" hint-size="96px,44px">退出这台</x-import></div>
+<div style="min-height:64px;display:grid;grid-template-columns:minmax(0,1fr) 160px 120px;align-items:center;gap:12px;border-top:1px solid oklch(var(--color-line));border-bottom:1px solid oklch(var(--color-line))"><span style="display:flex;flex-direction:column"><span style="font-weight:500">官员 App · iPhone</span><span style="font-size:12px;color:oklch(var(--color-ink-muted))">面容登录</span></span><span style="font-family:var(--font-mono)">2026-10-11 22:40</span><x-import component-from-global-scope="SoulLedger.Button" variant="ghost" size="sm" type="button" hint-size="96px,44px">退出这台</x-import></div>
+</div>
+<span style="font-size:12px;color:oklch(var(--color-ink-muted))">不认识的设备：先退出它，再<a href="#" style="color:oklch(var(--color-ink));text-decoration:underline">修改密码</a>。登录记录见审计日志。</span>
+</section></div>
+<div style="display:flex;flex-direction:column;gap:24px;width:600px">
+<div role="dialog" data-screen-label="W2 退出其他全部" style="background:oklch(var(--color-surface-1));border-radius:8px;box-shadow:0 24px 64px oklch(0 0 0 / .25);display:flex;flex-direction:column">
+<div style="padding:20px 24px 8px"><h2 style="margin:0;font-family:'Noto Serif SC',var(--font-serif);font-weight:600;font-size:28px;line-height:36px">退出其他 2 台设备？</h2></div>
+<p style="margin:0;padding:0 24px;font-size:15px;line-height:24px">这台不受影响。那两台上的「30 天内不再询问」也一并作废。</p>
+<div style="padding:20px 24px 24px;display:flex;justify-content:flex-end;gap:8px"><x-import component-from-global-scope="SoulLedger.Button" variant="ghost" size="md" type="button" hint-size="72px,48px">取消</x-import><x-import component-from-global-scope="SoulLedger.Button" variant="primary" size="md" type="button" hint-size="120px,48px">退出 2 台</x-import></div></div>
+<div style="display:flex;flex-direction:column;gap:6px;padding:16px;border:1px dashed oklch(var(--color-line-strong))"><b>请定的答复</b><span>· 退出某一台、退出其他全部都<b>不再输密码</b>:只是让对方重新登录，没有不可逆的后果。确认弹层只用于「其他全部」,单台直接执行，行内显示「已退出」3 秒后移除。</span><span>· 「这台」不能在这里退出，行末写「在右上角退出」。</span><span>· 「30 天内不再询问」并进同一张表，作为行下的标签;退出即撤销。</span><span>· <b>不显示大致位置。</b>我们没有可靠的地理来源，猜错的位置比不显示更让人不安。</span><span>· 排序：这台 → 其余按上次活动倒序。超过 30 天没活动的会话自动失效，不列出。</span></div>
+</div></div></section>
+
+<section style="display:flex;flex-direction:column;gap:16px"><h2 style="margin:0;font-size:20px;line-height:28px;font-weight:600">S1 · 灵魂 App › 账号安全 › 登录设备 · S2 应用锁并入面容页</h2>
+<div style="display:flex;gap:40px;align-items:flex-start">
+<div data-screen-label="S1 账号安全" style="width:393px;height:852px;overflow:hidden;display:flex;flex-direction:column;border-top:3px solid oklch(var(--color-main));background:oklch(var(--color-surface-1));font-size:15px;line-height:24px;box-shadow:0 0 0 1px oklch(var(--color-line))">
+<header style="height:56px;flex:none;display:flex;align-items:center;gap:4px;padding:0 16px 0 4px;border-bottom:1px solid oklch(var(--color-line))"><span style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:20px">‹</span><h1 style="margin:0;font-weight:600;font-size:17px">账号安全</h1></header>
+<div style="display:flex;flex-direction:column;padding-top:16px">
+<span style="min-height:56px;display:flex;align-items:center;padding:0 16px;border-bottom:1px solid oklch(var(--color-line))"><span style="flex:1">修改密码</span><span style="color:oklch(var(--color-ink-muted))">›</span></span>
+<span style="min-height:56px;display:flex;align-items:center;padding:0 16px;border-bottom:1px solid oklch(var(--color-line))"><span style="flex:1">两步验证</span><span style="color:oklch(var(--color-ink-muted));margin-right:8px">已开启</span><span style="color:oklch(var(--color-ink-muted))">›</span></span>
+<span style="min-height:56px;display:flex;align-items:center;padding:0 16px;border-bottom:1px solid oklch(var(--color-line))"><span style="flex:1">面容登录</span><span style="color:oklch(var(--color-ink-muted));margin-right:8px">这部手机</span><span style="color:oklch(var(--color-ink-muted))">›</span></span>
+<span style="min-height:56px;display:flex;align-items:center;padding:0 16px;border-bottom:1px solid oklch(var(--color-line));background:oklch(var(--color-canvas))"><span style="flex:1;font-weight:500">登录设备与记录</span><span style="color:oklch(var(--color-ink-muted));margin-right:8px;font-family:var(--font-mono)">2</span><span style="color:oklch(var(--color-ink-muted))">›</span></span>
+</div></div>
+<div data-screen-label="S1 登录设备与记录" style="width:393px;height:852px;overflow:hidden;display:flex;flex-direction:column;border-top:3px solid oklch(var(--color-main));background:oklch(var(--color-surface-1));font-size:15px;line-height:24px;box-shadow:0 0 0 1px oklch(var(--color-line))">
+<header style="height:56px;flex:none;display:flex;align-items:center;gap:4px;padding:0 16px 0 4px;border-bottom:1px solid oklch(var(--color-line))"><span style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:20px">‹</span><h1 style="margin:0;font-weight:600;font-size:17px">登录设备与记录</h1></header>
+<div style="display:flex;flex-direction:column;gap:8px;padding:16px 0 0">
+<span style="padding:0 16px;font-size:13px;font-weight:600;color:oklch(var(--color-ink-muted))">设备</span>
+<div style="display:flex;flex-direction:column;border-top:1px solid oklch(var(--color-line))">
+<div style="min-height:64px;display:flex;align-items:center;gap:12px;padding:8px 16px;border-bottom:1px solid oklch(var(--color-line))"><span style="flex:1;display:flex;flex-direction:column"><span style="display:flex;gap:8px;align-items:center;font-weight:500">这部手机<span style="height:20px;padding:0 6px;display:inline-flex;align-items:center;border:1px solid oklch(var(--color-ink));font-size:12px;font-weight:600">这台</span></span><span style="font-size:13px;color:oklch(var(--color-ink-muted))">iPhone · 正在使用</span></span></div>
+<div style="min-height:64px;display:flex;align-items:center;gap:12px;padding:8px 4px 8px 16px;border-bottom:1px solid oklch(var(--color-line))"><span style="flex:1;display:flex;flex-direction:column"><span style="font-weight:500">Android 手机</span><span style="font-size:13px;color:oklch(var(--color-ink-muted))">上次 <span style="font-family:var(--font-mono)">2026-10-09 21:03</span></span></span><span role="button" style="height:44px;padding:0 12px;display:flex;align-items:center;font-weight:500">退出</span></div>
+</div>
+<span style="padding:16px 16px 0;font-size:13px;font-weight:600;color:oklch(var(--color-ink-muted))">最近登录 · 只保留 90 天</span>
+<div style="display:flex;flex-direction:column;border-top:1px solid oklch(var(--color-line));font-size:13px;line-height:20px">
+<div style="min-height:56px;display:grid;grid-template-columns:128px minmax(0,1fr);align-items:center;gap:8px;padding:0 16px;border-bottom:1px solid oklch(var(--color-line))"><span style="font-family:var(--font-mono)">2026-10-12 08:02</span><span>✓ 面容 · 这部手机</span></div>
+<div style="min-height:56px;display:grid;grid-template-columns:128px minmax(0,1fr);align-items:center;gap:8px;padding:0 16px;border-bottom:1px solid oklch(var(--color-line))"><span style="font-family:var(--font-mono)">2026-10-09 21:03</span><span>✓ 密码 · Android 手机</span></div>
+<div style="min-height:56px;display:grid;grid-template-columns:128px minmax(0,1fr);align-items:center;gap:8px;padding:0 16px;border-bottom:1px solid oklch(var(--color-line));color:oklch(var(--color-danger))"><span style="font-family:var(--font-mono)">2026-10-09 20:58</span><span style="font-weight:600">! 失败 3 次 · 密码不对</span></div>
+<div style="min-height:56px;display:grid;grid-template-columns:128px minmax(0,1fr);align-items:center;gap:8px;padding:0 16px;border-bottom:1px solid oklch(var(--color-line))"><span style="font-family:var(--font-mono)">2026-10-01 07:45</span><span>✓ 恢复码 · 这部手机</span></div>
+</div>
+<div style="margin:16px;padding:16px;display:flex;flex-direction:column;gap:12px;border:1px solid oklch(var(--color-line-strong))"><span style="font-weight:600">有不认识的设备或记录？</span><span style="font-size:13px;line-height:20px;color:oklch(var(--color-ink-muted));text-wrap:pretty">先让那台退出，再改密码。改完后，除这部手机外全部退出。</span><span role="button" style="height:48px;display:flex;align-items:center;justify-content:center;background:oklch(var(--color-main));color:oklch(var(--color-on-main));font-weight:500">修改密码</span></div>
+</div></div>
+<div data-screen-label="S2 面容登录(含应用锁)" style="width:393px;height:852px;overflow:hidden;display:flex;flex-direction:column;border-top:3px solid oklch(var(--color-main));background:oklch(var(--color-surface-1));font-size:15px;line-height:24px;box-shadow:0 0 0 1px oklch(var(--color-line))">
+<header style="height:56px;flex:none;display:flex;align-items:center;gap:4px;padding:0 16px 0 4px;border-bottom:1px solid oklch(var(--color-line))"><span style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:20px">‹</span><h1 style="margin:0;font-weight:600;font-size:17px">面容登录</h1></header>
+<div style="display:flex;flex-direction:column;padding-top:16px">
+<div style="min-height:72px;display:flex;align-items:center;gap:12px;padding:8px 16px;border-bottom:1px solid oklch(var(--color-line))"><span style="flex:1;display:flex;flex-direction:column"><span style="font-weight:500">用面容登录</span><span style="font-size:13px;line-height:20px;color:oklch(var(--color-ink-muted))">只在这部手机上</span></span><span aria-hidden="true" style="width:52px;height:32px;border-radius:16px;background:oklch(var(--color-ink));display:flex;align-items:center;justify-content:flex-end;padding:3px;box-sizing:border-box"><span style="width:26px;height:26px;border-radius:13px;background:oklch(var(--color-surface-1))"></span></span></div>
+<div style="min-height:72px;display:flex;align-items:center;gap:12px;padding:8px 16px;border-bottom:1px solid oklch(var(--color-line))"><span style="flex:1;display:flex;flex-direction:column"><span style="font-weight:500">切回 App 时也要验证</span><span style="font-size:13px;line-height:20px;color:oklch(var(--color-ink-muted));text-wrap:pretty">离开超过 5 分钟再回来，要先认一次面容</span></span><span aria-hidden="true" style="width:52px;height:32px;border-radius:16px;border:1px solid oklch(var(--color-line-strong));display:flex;align-items:center;padding:3px;box-sizing:border-box"><span style="width:24px;height:24px;border-radius:12px;background:oklch(var(--color-ink-muted))"></span></span></div>
+</div>
+<div style="margin:24px 16px 0;padding:16px;display:flex;flex-direction:column;gap:6px;border:1px dashed oklch(var(--color-line-strong));font-size:13px;line-height:20px"><b>S2 说明</b><span>· 第二个开关只在第一个开着时可用;关掉面容登录，它一起关。默认关。</span><span>· 超时固定 5 分钟，不给选项。</span><span>· 锁屏直接用面容登录那一屏(SoulLoginApp 面容态),标题改为「已锁定」;认不出 → 「输密码」,和登录页同一个退路。</span></div>
+</div>
+</div></section>
+
+<section style="display:flex;flex-direction:column;gap:16px"><h2 style="margin:0;font-size:20px;line-height:28px;font-weight:600">W6 · 以此人身份查看(只读)</h2>
+<div style="display:flex;gap:40px;align-items:flex-start">
+<div style="display:flex;flex-direction:column;gap:24px;width:600px">
+<div style="display:flex;align-items:center;gap:12px;padding:0 16px;height:56px;background:oklch(var(--color-surface-1));border:1px solid oklch(var(--color-line))"><span style="flex:1"><b>孟婆</b> · 第十殿 · 判官</span><x-import component-from-global-scope="SoulLedger.Button" variant="ghost" size="sm" type="button" hint-size="72px,44px">编辑</x-import><x-import component-from-global-scope="SoulLedger.Button" variant="ghost" size="sm" type="button" hint-size="128px,44px">以此人身份查看</x-import></div>
+<span style="font-size:12px;color:oklch(var(--color-ink-muted))">↑ 用户管理 › 用户行的更多操作。只有「系统管理员」看得到;对其他管理员这一项不出现。</span>
+<div role="dialog" data-screen-label="W6 确认" style="background:oklch(var(--color-surface-1));border-radius:8px;box-shadow:0 24px 64px oklch(0 0 0 / .25);display:flex;flex-direction:column">
+<div style="padding:20px 24px 8px;display:flex;flex-direction:column;gap:4px"><h2 style="margin:0;font-family:'Noto Serif SC',var(--font-serif);font-weight:600;font-size:28px;line-height:36px">以孟婆的身份查看</h2><span style="color:oklch(var(--color-ink-muted))">只能看，不能做任何操作。最长 30 分钟。</span></div>
+<div style="padding:8px 24px 0;display:flex;flex-direction:column;gap:12px"><label style="display:flex;flex-direction:column;gap:6px"><span style="font-weight:500">理由</span><span style="min-height:88px;box-sizing:border-box;padding:12px;border:1px solid oklch(var(--color-ink));border-radius:4px;background:oklch(var(--color-canvas));font-size:15px;line-height:24px">她说看不到「移交」菜单</span></label><span style="color:oklch(var(--color-ink-muted))">孟婆会收到通知，看到你的名字和这条理由。整个过程记进审计日志。</span></div>
+<div style="padding:20px 24px 24px;display:flex;justify-content:flex-end;gap:8px"><x-import component-from-global-scope="SoulLedger.Button" variant="ghost" size="md" type="button" hint-size="72px,48px">取消</x-import><x-import component-from-global-scope="SoulLedger.Button" variant="primary" size="md" type="button" hint-size="120px,48px">开始查看</x-import></div></div>
+</div>
+<div style="display:flex;flex-direction:column;gap:24px;width:1100px">
+<div data-screen-label="W6 顶部提示条" style="display:flex;flex-direction:column;border:1px solid oklch(var(--color-line))">
+<div role="status" style="height:48px;display:flex;align-items:center;gap:16px;padding:0 8px 0 16px;background:oklch(var(--color-warning));color:oklch(0.18 0 0);font-weight:500"><span style="font-weight:700">◐ 只读</span><span style="flex:1">正在以 <b>孟婆</b>(第十殿 · 判官)的身份查看 · 理由：她说看不到「移交」菜单</span><span style="font-family:var(--font-mono)">剩 26:41</span><span role="button" style="height:40px;padding:0 16px;display:flex;align-items:center;background:oklch(0.18 0 0);color:#fff">退出查看</span></div>
+<div style="height:200px;display:flex;align-items:center;justify-content:center;background:oklch(var(--color-surface-1));color:oklch(var(--color-ink-muted))">被查看者的界面(菜单、列表照常显示;所有按钮置灰，悬停提示「查看中，不能操作」)</div></div>
+<span style="font-size:12px;color:oklch(var(--color-ink-muted))">提示条固定在顶栏之上，不随页面滚动，不能收起。刷新、换页都保留。到时自动退出，回到用户管理。</span>
+<div data-screen-label="W6 审计行" style="display:flex;flex-direction:column;background:oklch(var(--color-surface-1));border:1px solid oklch(var(--color-line))">
+<div style="min-height:52px;display:grid;grid-template-columns:150px 120px 140px minmax(0,1fr);align-items:center;gap:12px;padding:0 16px;border-bottom:1px solid oklch(var(--color-line))"><span style="font-family:var(--font-mono)">2026-10-12 14:20</span><span>崔判官</span><span style="height:22px;padding:0 6px;display:inline-flex;align-items:center;justify-self:start;border:1px solid oklch(var(--color-ink));border-radius:4px;font-size:12px;font-weight:600">开始代看</span><span>以 孟婆 的身份查看 · 理由：她说看不到「移交」菜单</span></div>
+<div style="min-height:52px;display:grid;grid-template-columns:150px 120px 140px minmax(0,1fr);align-items:center;gap:12px;padding:0 16px"><span style="font-family:var(--font-mono)">2026-10-12 14:34</span><span>崔判官</span><span style="height:22px;padding:0 6px;display:inline-flex;align-items:center;justify-self:start;border:1px solid oklch(var(--color-line-strong));border-radius:4px;font-size:12px;font-weight:500">结束代看</span><span>以 孟婆 的身份查看 · 14 分钟 · 看过 6 个页面</span></div></div>
+<div style="display:flex;flex-direction:column;gap:6px;padding:16px;border:1px dashed oklch(var(--color-line-strong))"><b>请定的答复</b><span>· 只读。所有写操作在服务端拒绝，界面同时置灰。</span><span>· 只有系统管理员能发起;不能代看另一位系统管理员，也不能代看自己。</span><span>· 被代看的人收到站内通知 + 邮件，属安全类，不能关(见 W3)。</span><span>· 审计只记开始、结束和看过的页面数;代看期间不另记每次浏览。</span></div>
+</div></div></section>
+
+<section style="display:flex;flex-direction:column;gap:16px"><h2 style="margin:0;font-size:20px;line-height:28px;font-weight:600">O1 · 官员 App 批准 / 驳回前的面容确认</h2>
+<div style="display:flex;gap:40px;align-items:flex-start">
+<div data-screen-label="O1 验证没通过" style="width:393px;height:852px;overflow:hidden;position:relative;display:flex;flex-direction:column;border-top:3px solid oklch(var(--color-main));background:oklch(var(--color-surface-1));font-size:15px;line-height:24px;box-shadow:0 0 0 1px oklch(var(--color-line))">
+<div style="flex:1;background:oklch(0.12 0.005 135 / .6)"></div>
+<div role="dialog" style="position:absolute;left:0;right:0;bottom:0;background:oklch(var(--color-surface-1));display:flex;flex-direction:column;gap:16px;padding:24px 16px 32px">
+<h2 style="margin:0;font-family:'Noto Serif SC',var(--font-serif);font-weight:600;font-size:22px;line-height:30px">批准这份审批？</h2>
+<span style="color:oklch(var(--color-ink-muted))">批准后，案卷进入下一站。不能撤回。</span>
+<span style="min-height:72px;box-sizing:border-box;padding:12px;border:1px solid oklch(var(--color-line-strong));background:oklch(var(--color-canvas))">证据齐全</span>
+<span role="alert" style="display:flex;gap:8px;font-size:13px;line-height:20px;color:oklch(var(--color-danger));font-weight:600">! 没有认出面容，还没批准。再点一次确认重试。</span>
+<span role="button" style="height:56px;display:flex;align-items:center;justify-content:center;background:oklch(var(--color-main));color:oklch(var(--color-on-main));font-weight:500">确认批准</span>
+<span role="button" style="height:48px;display:flex;align-items:center;justify-content:center">取消</span></div></div>
+<div data-screen-label="O1 设置开关" style="width:393px;height:852px;overflow:hidden;display:flex;flex-direction:column;border-top:3px solid oklch(var(--color-main));background:oklch(var(--color-surface-1));font-size:15px;line-height:24px;box-shadow:0 0 0 1px oklch(var(--color-line))">
+<header style="height:56px;flex:none;display:flex;align-items:center;gap:4px;padding:0 16px 0 4px;border-bottom:1px solid oklch(var(--color-line))"><span style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:20px">‹</span><h1 style="margin:0;font-weight:600;font-size:17px">设置</h1></header>
+<div style="display:flex;flex-direction:column;padding-top:16px">
+<div style="min-height:72px;display:flex;align-items:center;gap:12px;padding:8px 16px;border-bottom:1px solid oklch(var(--color-line))"><span style="flex:1;display:flex;flex-direction:column"><span style="font-weight:500">批准、驳回前认面容</span><span style="font-size:13px;line-height:20px;color:oklch(var(--color-ink-muted))">别人拿到你的手机，也做不了决定</span></span><span aria-hidden="true" style="width:52px;height:32px;border-radius:16px;background:oklch(var(--color-ink));display:flex;align-items:center;justify-content:flex-end;padding:3px;box-sizing:border-box"><span style="width:26px;height:26px;border-radius:13px;background:oklch(var(--color-surface-1))"></span></span></div>
+<div style="min-height:72px;display:flex;align-items:center;gap:12px;padding:8px 16px;border-bottom:1px solid oklch(var(--color-line));color:oklch(var(--color-ink-muted))"><span style="flex:1;display:flex;flex-direction:column"><span style="font-weight:500">批准、驳回前认面容</span><span style="font-size:13px;line-height:20px;text-wrap:pretty">这部手机还没设锁屏密码，开不了。先在系统设置里设一个。</span></span><span aria-hidden="true" style="width:52px;height:32px;border-radius:16px;border:1px solid oklch(var(--color-line));opacity:.5"></span></div>
+<span style="padding:8px 16px;font-size:12px;color:oklch(var(--color-ink-muted))">↑ 第二行是手机没设锁屏时的样子</span>
+</div>
+<div style="margin:16px;padding:16px;display:flex;flex-direction:column;gap:6px;border:1px dashed oklch(var(--color-line-strong));font-size:13px;line-height:20px"><b>请定的答复</b><span>· 默认开(手机能用面容 / 指纹时)。</span><span>· 五类待办里的批准和驳回都要;写评语、会签意见不要。不区分可逆与否：官员记不住哪类可逆。</span><span>· 流程：点「确认」→ 系统验证 → 通过即提交。取消或没认出：弹层留着，理由不丢，按钮上方出现一行红字。</span><span>· 没录入面容：系统会退回到手机锁屏密码，App 不用另做。连锁屏密码都没有时，开关置灰(见上)。</span></div>
+</div></div></section>
+</div>
+</x-import>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:2380,&quot;height&quot;:3200}}"></script>
+</body>
+</html>
