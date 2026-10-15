@@ -103,3 +103,58 @@
 |---|---|---|
 | scheduler.jobs.authentication_prune_expired_push_registrations | 停用登录已到期的手机推送登记 | Deactivate push registrations whose sign-in has expired |
 | scheduler.jobs.audit_prune_retained_data | 清理过期的运行数据(投递记录、已读通知、停用设备等) | Prune expired operational data (delivery logs, read notices, inactive devices) |
+
+---
+
+## Design 回复(2026-10-16,`templates/soulledger-v3-pages/v3-batch33-reply.md`)
+
+41 条新增 + 2 条更新，没有新词根，已全部写入 `egy.json`。
+
+- `judgment.claim.stale_soon`:Design 不确定「滞留」的写法，建议若词表已有就换。词表里没有现成的「滞留」词，照 Design 给的 `Er Khet: Shesep Tepy`。
+- 技术词登记进词表守卫:HEIC、GBK、UTF、Excel(菜单名「CSV UTF-8」要用户照抄)、Ctrl;`shortcuts.single_keys_hint` 的 J / K 按键名豁免。
+
+| key | egy |
+|---|---|
+| social.avatar_upload_hint | PNG, JPEG, WebP, HEIC — 5 MB |
+| soul_app.circle.media.errors.not_an_image | PNG, JPEG, WebP Er HEIC Wa |
+| soul_app.circle.search.more | Maa Gem Ky |
+| soul_app.mfa.manage.codes_lost | Aq Sep Sen Wen Seth; Medu Ankh Wehem Nen Maa Em Sep Pen. Setep «Iri Wehem» Em Khery: Medu Wehem Mesut. Sau Seth. |
+| officer_app.list.more | Ini Ky |
+| officer_app.state.refresh_failed | Nen Wehem Maa — Medu Em Khery Nen Mawy |
+| officer_app.mfa.setup.abandon | Sehen, Per |
+| audit.detail.open | Maa |
+| audit.detail.not_found | Nen Gem Medew Pen |
+| audit.detail.resource | Khet |
+| audit.detail.user_agent | Kat Wen Aq |
+| audit.detail.trace_id | Hesb Dbh |
+| audit.detail.trace_filter | Medew Neb En Dbh Pen |
+| audit.detail.changes | Khemen |
+| audit.detail.no_changes | Nen Khemen Em Medew Pen |
+| audit.detail.field | Medu |
+| audit.detail.before | Tepy |
+| audit.detail.after | Mawy |
+| souls.import.row_codes.invalid_characters | Nen Menkh · Sesh Nen Smen |
+| souls.import.file_codes.bad_encoding_gbk | Nen Menkh · Nen UTF-8 (Mi GBK): Em Excel, Sau Mi «CSV UTF-8» |
+| soul_accounts.reveal.close_confirm_title | Maa Sekhem Sep Wa |
+| soul_accounts.reveal.close_confirm_body | Maa Sekhem Sep Wa. Khetem? Er Khet Khetem: Nen Maa Djer; Wehem Sekhem Er Sekhem Tepy Mawy. |
+| soul_accounts.reveal.close_confirm | Khetem |
+| soul_accounts.reveal.close_back | Er Hat |
+| soul_accounts.credentials.slip.reprint | Wehem Sesh |
+| password_rules.min_length_admin | Sesh 12 Er Hry (Sab Hery) |
+| profile.password_reason_reused | Sekhem Pen Iri Seth Tepy. Setep Mawy. |
+| profile.password_locked | Sep Menmen. Wehem Iri Er Khet. |
+| profile.password_must_change | Er Tepy: Khemen Sekhem-Ek. Er Khet Khemen: Iri Djer. |
+| shortcuts.title | Wat-Ha |
+| shortcuts.single_keys | Wat-Ha Sesh Wa |
+| shortcuts.single_keys_hint | Khetem: J, K, 1–4 (Sesh Wa Er Hesb Wa) Nen Iri. Esc, ↑ ↓ ← →, ⌘/Ctrl: Iri Djer. |
+| shortcuts.move_rows | Nehem Er Khet / Er Tepy |
+| shortcuts.select_row | Setep / Sehen Setep |
+| shortcuts.pick_verdict | Setep Wedja |
+| shortcuts.conclude | Khetem (Sep Tepy: Maa; Sep Sen: Hab) |
+| shortcuts.toggle_case | Wen / Khetem Sesh En Sep |
+| shortcuts.next_prev_case | Sep Em Khet / Sep Tepy |
+| workflow.filter_overdue | Unut Khetem Wa |
+| workflow.overdue_badge | Unut Khetem |
+| judgment.claim.stale_soon | Er Khet: Shesep Tepy |
+| scheduler.jobs.authentication_prune_expired_push_registrations | Khetem Sesh Sedjem Em Aq Mut |
+| scheduler.jobs.audit_prune_retained_data | Khetem Sesh Mut (Sesh Hab, Sedjem Maa Seth, Ikhet Khetem…) |

@@ -89,7 +89,7 @@ const offenders = (keys: string[], bad: Rule) =>
   keys.filter((k) => bad(EGY[k], k)).map((k) => `${k}: ${EGY[k]}`);
 
 /** 技术词原样引用(词表「技术词不转写」):缩写与角色码。 */
-const CAPS_ALLOWED = new Set(["IP", "PNG", "JPEG", "MB", "MODERATOR", "ID", "GLM", "JSON", "PDF", "CSV"]); // PDF / CSV: 文件格式名(第三十一批);JSON: 权限配置文件格式名(第十六批);GLM: 智谱的模型名,平台下拉(2026-09-30)
+const CAPS_ALLOWED = new Set(["IP", "PNG", "JPEG", "MB", "MODERATOR", "ID", "GLM", "JSON", "PDF", "CSV", "HEIC", "GBK", "UTF"]); // HEIC / GBK / UTF(-8): 图片格式与文件编码名(第三十三批);PDF / CSV: 文件格式名(第三十一批);JSON: 权限配置文件格式名(第十六批);GLM: 智谱的模型名,平台下拉(2026-09-30)
 
 /** 已确认改掉的英文残留。新发现一个,改掉之后加进来。 */
 const ENGLISH_RESIDUE = [
@@ -290,6 +290,8 @@ const TECHNICAL: Record<string, string[]> = {
   "permissions.config.overwrite.all_halls": ["{hall}"],
   // 第二十批:登录页的「编号不用哪五个字符」—— 字符本身(0 O 1 I L),不是 egy 词。
   "soul_app.login.bad_char_body": ["O", "I", "L"],
+  // 第三十三批:单字母快捷键开关的说明,J / K 是键名。
+  "shortcuts.single_keys_hint": ["J", "K"],
 };
 
 /** 空白切出的记号去掉两端标点(括号、引号、逗号、句点……),留下可与 TECHNICAL 比对的原形。 */
@@ -533,6 +535,8 @@ const PROPER_NAMES = [
   // 第十九批(Design):Authenticator 是去应用商店搜索的关键词 —— 译成 egy 就搜不到了,所以按专名原样登记。
   // 规则:凡是「要用户照抄去别处输入的词」才算专名;不是随手把英文词放进来的口子。
   "Authenticator",
+  // 第三十三批(Design):HEIC / GBK / UTF 是格式与编码名;Excel 的「CSV UTF-8」是要用户在 Excel 里找的菜单,Ctrl 是键名(同 Esc)。
+  "HEIC", "GBK", "UTF", "Excel", "Ctrl",
   // 同一条规则用于「供应商」区块的平台下拉(画布 provider-platforms,2026-09-30):厂商 / 产品名原样。
   "DeepSeek", "Qwen", "Kimi", "Doubao", "Gemini", "SiliconFlow", "OpenRouter", "Ollama",
 ];

@@ -590,7 +590,8 @@
         "death_before_birth": "Mut Tepy Er Mesut",
         "implausible_lifespan": "Ankh Nen Maat",
         "duplicate_in_file": "Sen Medu · Sesh",
-        "duplicate_existing": "Sen Medu · Medjat"
+        "duplicate_existing": "Sen Medu · Medjat",
+        "invalid_characters": "Nen Menkh · Sesh Nen Smen"
       },
       "file_codes": {
         "file_too_large": "Nen Menkh · Sesh Er Pehwy",
@@ -603,7 +604,8 @@
         "too_many_rows": "Nen Menkh · Khet Er Pehwy: {{max}}",
         "malformed_csv": "Nen Menkh · Sesh",
         "no_tenant": "Nen Taui Pen",
-        "unknown": "Nen Ini Seth"
+        "unknown": "Nen Ini Seth",
+        "bad_encoding_gbk": "Nen Menkh · Nen UTF-8 (Mi GBK): Em Excel, Sau Mi «CSV UTF-8»"
       }
     }
   },
@@ -1293,7 +1295,9 @@
       "ESCALATED": "Seshem Er Hery Seth",
       "TRAVERSED": "Shem Seth"
     },
-    "no_custom_templates": "Nen Pet-Sesh Djer"
+    "no_custom_templates": "Nen Pet-Sesh Djer",
+    "filter_overdue": "Unut Khetem Wa",
+    "overdue_badge": "Unut Khetem"
   },
   "dashboard": {
     "title": "Medjat Ba",
@@ -1794,7 +1798,8 @@
       },
       "col_merit_demerit": "Nefer / Isfet",
       "col_case_soul": "Ren Sep / Ba",
-      "col_cycle_kind": "Ankh / Iru"
+      "col_cycle_kind": "Ankh / Iru",
+      "stale_soon": "Er Khet: Shesep Tepy"
     },
     "admission": {
       "title": "Medu Maat · Shesep Maat",
@@ -1933,7 +1938,20 @@
     },
     "filter_hall": "Per Wesekhet",
     "all_halls": "Wesekhet Neb",
-    "resource_tenant": "Smen Wesekhet"
+    "resource_tenant": "Smen Wesekhet",
+    "detail": {
+      "open": "Maa",
+      "not_found": "Nen Gem Medew Pen",
+      "resource": "Khet",
+      "user_agent": "Kat Wen Aq",
+      "trace_id": "Hesb Dbh",
+      "trace_filter": "Medew Neb En Dbh Pen",
+      "changes": "Khemen",
+      "no_changes": "Nen Khemen Em Medew Pen",
+      "field": "Medu",
+      "before": "Tepy",
+      "after": "Mawy"
+    }
   },
   "profile": {
     "title": "Djes",
@@ -2014,7 +2032,10 @@
       "audit_note": "Sesh Aq Em Medew Maa.",
       "load_failed": "Nen Ini Ikhet Aq",
       "sign_out_failed": "Nen Per Aq. Wehem Iri."
-    }
+    },
+    "password_reason_reused": "Sekhem Pen Iri Seth Tepy. Setep Mawy.",
+    "password_locked": "Sep Menmen. Wehem Iri Er Khet.",
+    "password_must_change": "Er Tepy: Khemen Sekhem-Ek. Er Khet Khemen: Iri Djer."
   },
   "notifications": {
     "title": "Sedjem Sab",
@@ -2952,7 +2973,8 @@
         "qr_where": "Medjat Ba: Aq",
         "qr_action": "«Maa Tut Medu»",
         "officer_label": "Sab",
-        "printed_label": "Sesh Djama Em"
+        "printed_label": "Sesh Djama Em",
+        "reprint": "Wehem Sesh"
       },
       "print_mono": "Sesh Kem",
       "print_mono_hint": "Sesh Kem: Djama Kem, Medu Nefer."
@@ -2970,7 +2992,11 @@
       "close": "Sesh Seth, Khetem",
       "deliver_and_close": "Djeret Seth, Sesh, Khetem",
       "already_revealed": "Maa Seth Tepy (Sab Ky); Nen Maa Djer. Wehem Sekhem Em Per Ba",
-      "failed": "Nen Maa. Wehem Iri."
+      "failed": "Nen Maa. Wehem Iri.",
+      "close_confirm_title": "Maa Sekhem Sep Wa",
+      "close_confirm_body": "Maa Sekhem Sep Wa. Khetem? Er Khet Khetem: Nen Maa Djer; Wehem Sekhem Er Sekhem Tepy Mawy.",
+      "close_confirm": "Khetem",
+      "close_back": "Er Hat"
     },
     "account": {
       "title": "Aq Ba",
@@ -3202,7 +3228,7 @@
     "bio_label": "Medu Aha",
     "bio_placeholder": "Djed Aha Netjer...",
     "avatar_upload_label": "Tut",
-    "avatar_upload_hint": "PNG, JPEG, WebP — 5 MB",
+    "avatar_upload_hint": "PNG, JPEG, WebP, HEIC — 5 MB",
     "avatar_uploaded": "Iri Mawy Tut Seth",
     "avatar_upload_error": "Nen Iri Mawy Tut",
     "profile_updated": "Iri Mawy Djes Seth",
@@ -3416,7 +3442,9 @@
       "audit_prune_untenanted_logs": "Khetem Medew Maa Hena Medew Aq Nen Per Hemes",
       "chat_cleanup_unsent_images": "Fekh Tut Sesh Nen Hab",
       "authentication_prune_soul_sign_ins": "Khetem Aq Ba Hena Aq Nen Iri: Hru 90 Er Hry",
-      "soul_accounts_prune_data_exports": "Khetem Redi Per Djama Mut"
+      "soul_accounts_prune_data_exports": "Khetem Redi Per Djama Mut",
+      "authentication_prune_expired_push_registrations": "Khetem Sesh Sedjem Em Aq Mut",
+      "audit_prune_retained_data": "Khetem Sesh Mut (Sesh Hab, Sedjem Maa Seth, Ikhet Khetem…)"
     },
     "status": {
       "PENDING": "Em Smen",
@@ -4176,7 +4204,8 @@
         "by_code": "Ren Hesb Ba Mi",
         "count": "Ba {{n}}",
         "not_found": "Nen Gem",
-        "result_note": "Ren Hena Taui Wa."
+        "result_note": "Ren Hena Taui Wa.",
+        "more": "Maa Gem Ky"
       },
       "delete": {
         "action": "Fekh",
@@ -4205,7 +4234,7 @@
         "unreadable_some": "Tut {{n}} Nen Wen: Fekh",
         "expired": "Tut Nen Wenen: Wehem Ini Tut",
         "errors": {
-          "not_an_image": "PNG, JPEG Er WebP Wa",
+          "not_an_image": "PNG, JPEG, WebP Er HEIC Wa",
           "too_large": "Tut Er Pehwy 5 MB",
           "too_many_pixels": "Tut Ky Er Pehwy",
           "too_many_pending": "Tut Em Smen Er Pehwy: Hab Medu Er Fekh Tut"
@@ -4404,7 +4433,8 @@
         "regen": "Wehem Iri",
         "low": "Medu Ankh Wehem Khery {{n}}: Wehem Iri.",
         "disable": "Khetem Aq Sep Sen",
-        "new_phone": "Medjat Mawy: Khetem Em Medjat Tepy, Wen Em Medjat Mawy."
+        "new_phone": "Medjat Mawy: Khetem Em Medjat Tepy, Wen Em Medjat Mawy.",
+        "codes_lost": "Aq Sep Sen Wen Seth; Medu Ankh Wehem Nen Maa Em Sep Pen. Setep «Iri Wehem» Em Khery: Medu Wehem Mesut. Sau Seth."
       },
       "disable": {
         "title": "Khetem Aq Sep Sen?",
@@ -5819,7 +5849,8 @@
       "error_title": "Nen Ini",
       "error_body": "Maa Wat Hena Wehem Iri. Sesh Wen Nen Khemen.",
       "denied_title": "Nen Was",
-      "denied_body": "Netjer-Ek «{{role}}» Nen Maa {{area}}. Hehy Sab Hery En Wesekhet Pen."
+      "denied_body": "Netjer-Ek «{{role}}» Nen Maa {{area}}. Hehy Sab Hery En Wesekhet Pen.",
+      "refresh_failed": "Nen Wehem Maa — Medu Em Khery Nen Mawy"
     },
     "notices": {
       "empty_title": "Nen Sedjem Sab",
@@ -5891,7 +5922,8 @@
       "open_failed": "Nen Gem Kat Medu Ahet Er Wen. Sesh Medu Imen Khery Em Djeret.",
       "select_hint": "Djer Medu: Setep Hena Senn.",
       "setup": {
-        "done": "Iri Seth"
+        "done": "Iri Seth",
+        "abandon": "Sehen, Per"
       }
     },
     "update_required": {
@@ -5934,6 +5966,9 @@
       "retry": "Nen Hab. Wehem Iri Er Khet.",
       "view_existing": "Maa Wesheb Ky",
       "discard": "Fekh Sesh Tepy-I"
+    },
+    "list": {
+      "more": "Ini Ky"
     }
   },
   "print": {
@@ -5953,6 +5988,18 @@
     "common_body": "Rekh-Tw Pw, Mi Ren-Ek. Sesh Ky.",
     "state_ok": "Maat",
     "state_bad": "Nen Maat",
-    "summary": "Sekhem Mawy: {{n}} Nen Maat — {{list}}"
+    "summary": "Sekhem Mawy: {{n}} Nen Maat — {{list}}",
+    "min_length_admin": "Sesh 12 Er Hry (Sab Hery)"
+  },
+  "shortcuts": {
+    "title": "Wat-Ha",
+    "single_keys": "Wat-Ha Sesh Wa",
+    "single_keys_hint": "Khetem: J, K, 1–4 (Sesh Wa Er Hesb Wa) Nen Iri. Esc, ↑ ↓ ← →, ⌘/Ctrl: Iri Djer.",
+    "move_rows": "Nehem Er Khet / Er Tepy",
+    "select_row": "Setep / Sehen Setep",
+    "pick_verdict": "Setep Wedja",
+    "conclude": "Khetem (Sep Tepy: Maa; Sep Sen: Hab)",
+    "toggle_case": "Wen / Khetem Sesh En Sep",
+    "next_prev_case": "Sep Em Khet / Sep Tepy"
   }
 }
