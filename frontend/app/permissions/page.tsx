@@ -12,7 +12,7 @@ import { usePermissions } from "@/src/hooks/usePermissions";
 import { PageSection } from "@/components/ui/page-section";
 import { PermissionFormModal } from "@/src/components/permissions/PermissionFormModal";
 import { RoleFormModal } from "@/src/components/permissions/RoleFormModal";
-import { DataGrid } from "@/components/ui/data-grid";
+import { ColumnMenu, DataGrid, useColumnVisibility } from "@/components/ui/data-grid";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { Button } from "@/src/components/ui/Button";
@@ -48,6 +48,9 @@ export {
   findCountParadox,
 } from "@/src/components/permissions/matrixDiff";
 export type { GrantMap, RoleDiff } from "@/src/components/permissions/matrixDiff";
+
+/** 列菜单的偏好,一个列表一份(定义那一段)。矩阵的「只看差异」不记:它是当次比较的视图,不是列表的常驻筛选。 */
+const PERMISSIONS_COLUMNS_KEY = "soulledger.permissions.columns";
 
 export default function PermissionsPage() {
   const { t } = useI18n();
@@ -300,6 +303,8 @@ export default function PermissionsPage() {
     onDelete: (perm) => { setDeletingPerm(perm); setIsDeleteOpen(true); },
   });
 
+  const columnVis = useColumnVisibility(PERMISSIONS_COLUMNS_KEY, permissionColumns);
+
   const segments = [
     { value: "matrix" as const, label: t("permissions.segments.matrix") },
     { value: "roles" as const, label: t("permissions.segments.roles"), count: rolesQuery.data?.length },
@@ -463,14 +468,27 @@ export default function PermissionsPage() {
         )}
 
         {segment === "definitions" && (
+          <>
+          {/* 定义这一段没有筛选条:列菜单单独靠右一行(393 宽不出现,见 ColumnMenu)。 */}
+          <div className="mb-3 flex justify-end">
+            <ColumnMenu
+              columns={permissionColumns.map((c) => ({ key: c.key, header: String(c.header), pinned: c.pinned }))}
+              visibility={columnVis}
+              buttonLabel={t("list.columns.button", { shown: String(columnVis.shown), total: String(columnVis.total) })}
+              pinnedLabel={t("list.columns.pinned")}
+              resetLabel={t("list.columns.reset")}
+            />
+          </div>
           <DataGrid<Permission>
             caption={t("permissions.all_permissions")}
             columns={permissionColumns}
+            hiddenColumns={columnVis.hidden}
             data={permsQuery.data ?? []}
             isLoading={permsQuery.isLoading}
             isError={permsQuery.isError}
             keyExtractor={(perm) => String(perm.id)}
           />
+          </>
         )}
 
         {/* ── Create/Edit Permission Modals ── */}
