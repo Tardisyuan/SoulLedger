@@ -14,6 +14,7 @@ import { render, renderHook, screen, waitFor, act, fireEvent, within } from "@te
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { JudgmentQueueConsole } from "@/src/components/judgment/JudgmentQueueConsole";
 import { judgmentApi } from "@soulledger/core/api";
+import { setSingleKeyShortcuts } from "@/src/lib/hotkeys";
 import { isMinePending } from "@/src/components/judgment/RowMark";
 import { PlaqueProvider } from "@/src/components/plaque/Plaque";
 import { useCourtOffice, useHall } from "@/src/components/plaque/useHall";
@@ -347,6 +348,25 @@ describe("JudgmentQueueConsole", () => {
     // Still the same case, nothing sent: a "1" in a note is a note.
     expect(screen.getByText("第一位待判者")).toBeInTheDocument();
     expect(mockConclude).not.toHaveBeenCalled();
+  });
+
+  it("a focused checkbox is not typing: the digit still rules; with the single-key switch off it does not", async () => {
+    renderConsole();
+    await waitFor(() => expect(screen.getByText("第一位待判者")).toBeInTheDocument());
+    const checkbox = screen.getByRole("checkbox");
+    setSingleKeyShortcuts(false);
+    try {
+      await act(async () => {
+        fireEvent.keyDown(checkbox, { key: "1" });
+      });
+      expect(mockConclude).not.toHaveBeenCalled();
+    } finally {
+      setSingleKeyShortcuts(true);
+    }
+    await act(async () => {
+      fireEvent.keyDown(checkbox, { key: "1" });
+    });
+    expect(mockConclude).toHaveBeenCalledTimes(1);
   });
 
   it("sends the note and the workflow flag along with the verdict", async () => {

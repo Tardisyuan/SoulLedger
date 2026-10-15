@@ -7,7 +7,7 @@ import { classifySoulAccountError, useMarkCredentialDelivered } from "@soulledge
 import { soulAccountKeys } from "@soulledger/core/query_keys";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
-import { BaseModal } from "@/src/components/ui/Modal";
+import { BaseModal, ConfirmDialog } from "@/src/components/ui/Modal";
 import { Button } from "@/src/components/ui/Button";
 import { EmailNotSyncedNote } from "./EmailNotSyncedNote";
 import { failureKey, lifeNumber } from "./soulAccountsView";
@@ -32,8 +32,10 @@ interface Props {
  * the secret in the same transaction that returned it, and a second reveal is
  * a 409.
  *
- * The dialog ignores outside clicks once the password is on screen — a stray
- * click would destroy something that cannot be fetched again.
+ * Once the password is on screen the dialog ignores outside clicks, and Esc, the
+ * Esc button and 「关闭」 all go through a confirmation first — each would
+ * destroy something that cannot be fetched again. 「已交付并关闭」 is the one
+ * deliberate exit and does not ask.
  */
 export function RevealCredentialDialog({ credential, onClose }: Props) {
   const { t, formatDateTime } = useI18n();
@@ -42,6 +44,7 @@ export function RevealCredentialDialog({ credential, onClose }: Props) {
   const deliver = useMarkCredentialDelivered();
   const [revealing, setRevealing] = useState(false);
   const [secret, setSecret] = useState<RevealedCredential | null>(null);
+  const [confirmingClose, setConfirmingClose] = useState(false);
 
   const close = () => {
     setSecret(null);
@@ -115,7 +118,7 @@ export function RevealCredentialDialog({ credential, onClose }: Props) {
   return (
     <BaseModal
       isOpen
-      onClose={close}
+      onClose={() => setConfirmingClose(true)}
       dismissOnOutsideClick={false}
       title={t("soul_accounts.reveal.shown_title")}
       footer={
@@ -123,7 +126,7 @@ export function RevealCredentialDialog({ credential, onClose }: Props) {
           <Button type="button" variant="secondary" onClick={markDelivered} loading={deliver.isPending}>
             {t("soul_accounts.reveal.deliver_and_close")}
           </Button>
-          <Button type="button" variant="primary" onClick={close} disabled={deliver.isPending}>
+          <Button type="button" variant="primary" onClick={() => setConfirmingClose(true)} disabled={deliver.isPending}>
             {t("soul_accounts.reveal.close")}
           </Button>
         </div>
@@ -148,6 +151,17 @@ export function RevealCredentialDialog({ credential, onClose }: Props) {
         <Button type="button" size="sm" variant="secondary" onClick={() => void copy()}>
           {t("soul_accounts.reveal.copy")}
         </Button>
+        {/* 放在面板里面:挂在同一棵树下,Esc 才只关最上面的确认层。 */}
+        <ConfirmDialog
+          isOpen={confirmingClose}
+          title={t("soul_accounts.reveal.close_confirm_title")}
+          message={t("soul_accounts.reveal.close_confirm_body")}
+          confirmText={t("soul_accounts.reveal.close_confirm")}
+          cancelText={t("soul_accounts.reveal.close_back")}
+          variant="warning"
+          onConfirm={close}
+          onCancel={() => setConfirmingClose(false)}
+        />
       </div>
     </BaseModal>
   );

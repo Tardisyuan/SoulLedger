@@ -173,6 +173,24 @@ describe("审判队列", () => {
     await waitFor(() => expect(judgmentApi.claim).toHaveBeenCalledWith("b"));
   });
 
+  it("等满 27–30 天的行写「即将标记为滞留」(定时任务只打标记,不结案);更早的和已过 30 天的不写", async () => {
+    const aged = (days: number) => new Date(Date.now() - (days + 0.5) * 86_400_000).toISOString();
+    const rows = [
+      row("n", "Near", { created_at: aged(28) }),
+      row("y", "Young", { created_at: aged(10) }),
+      row("o", "Old", { created_at: aged(40) }),
+    ];
+    judgmentApi.list.mockImplementation(async (params: Record<string, string>) => {
+      const results = params.group === "unclaimed" ? rows : [];
+      return { data: { count: results.length, next: null, previous: null, results } };
+    });
+    renderPage();
+    await screen.findByRole("link", { name: "Near" });
+    expect(within(rowOf("Near")).getByTestId("stale-soon")).toHaveTextContent(tZh("judgment.claim.stale_soon"));
+    expect(within(rowOf("Young")).queryByTestId("stale-soon")).toBeNull();
+    expect(within(rowOf("Old")).queryByTestId("stale-soon")).toBeNull();
+  });
+
   it("v3「案号 / 灵魂」:名字下一行是整串案号,可复制,压在整行链接之上", async () => {
     renderPage();
     await screen.findByRole("link", { name: "沈青梧" });

@@ -22,6 +22,8 @@ export interface ApprovalWorkflowListItem {
   status: string;
   is_appeal: boolean;
   cross_civilization: boolean;
+  /** 当前节点已过它的超时时限(「已超时」徽标);服务端算,与 `?overdue=` 筛选同一口径。 */
+  is_overdue?: boolean;
   created_at: string;
   completed_at: string | null;
 }
