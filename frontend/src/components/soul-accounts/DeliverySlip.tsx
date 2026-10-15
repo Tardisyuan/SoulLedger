@@ -39,6 +39,17 @@ function slipTime(value: string): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+/** 时间戳印的是打印机所在浏览器的本地时区,没有标注读的人不知道是哪个钟;补一个短名(`GMT+8`),读不出来就不补。 */
+function slipZone(value: string): string {
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "";
+  try {
+    return new Intl.DateTimeFormat("en-US", { timeZoneName: "short" }).formatToParts(d).find((x) => x.type === "timeZoneName")?.value ?? "";
+  } catch {
+    return "";
+  }
+}
+
 /**
  * 登录交付单(第二十批 §三 F2;第二十四批第二稿按文明重做;第二十五批双语):A4 竖版一页,上联 110 mm 交给灵魂,剪切线,下面是存根。
  * 版面是 794 × 1123 px 的绝对定位稿(= 210 × 297 mm),坐标取自 `DeliverySlipCiv.dc.html`。
@@ -54,8 +65,11 @@ function slipTime(value: string): string {
  *
  * 屏幕上不显示、不占位;只在打印媒体下出现(`app/print.css` 的 `[data-print-slip]`)。挂在 `document.body` 上:
  * print.css 会把不属于文书的东西都收掉,交付单于是单独成页。打印前由调用方挂载、打印后卸载。
+ *
+ * `reprint`:交付之后的补印。须首登改密这句不一定还成立(灵魂可能已经登录改过了),补印的单子不印它,
+ * 在打印时间旁标「补印」。有效期仍是真的(过期的不给补印)。
  */
-export function DeliverySlip({ slip, texts, color = false }: { slip: CredentialSlip; texts: SlipBundles; color?: boolean }) {
+export function DeliverySlip({ slip, texts, color = false, reprint = false }: { slip: CredentialSlip; texts: SlipBundles; color?: boolean; reprint?: boolean }) {
   const { t, locale } = useI18n();
   const tenant = slip.home_tenant;
   const skin = civSkinOf(tenant.code) as SlipCiv;
@@ -68,6 +82,9 @@ export function DeliverySlip({ slip, texts, color = false }: { slip: CredentialS
   const code = formatSoulCode(slip.soul_code);
   const until = slipTime(slip.expires_at);
   const printedAt = slipTime(slip.printed_at);
+  const zone = slipZone(slip.expires_at);
+  const zoneTag = zone ? <span style={{ fontSize: 11, marginLeft: 4 }}>{zone}</span> : null;
+  const reprintTag = reprint ? <b style={{ marginLeft: 6, fontWeight: 600 }}>{t("soul_accounts.credentials.slip.reprint")}</b> : null;
   const hall = tenant.hall_names[own] || tenant.display_name;
   const deskHall = tenant.hall_names[locale] || tenant.display_name;
   const deskRealm = skin === "neutral" ? "" : t(`plaque.realm.${skin}`);
@@ -123,7 +140,7 @@ export function DeliverySlip({ slip, texts, color = false }: { slip: CredentialS
         <div style={abs(48, 108, { width: 460, height: skin === "eg" ? 276 : 284, ...COL })}>
           <div style={{ display: "grid", gridTemplateColumns: "112px minmax(0,1fr)", rowGap: 8, alignItems: "center" }}>
             {label("soul", true)}
-            <span style={{ fontWeight: 600, fontSize: 20, lineHeight: "28px", maxWidth: 290, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+            <span style={{ fontWeight: 600, fontSize: 20, lineHeight: "28px", maxWidth: 290, overflow: "hidden", overflowWrap: "anywhere", display: "-webkit-box", WebkitBoxOrient: "vertical", WebkitLineClamp: 2 }}>
               {slip.soul_name}
             </span>
             {label("soul_id", true)}
@@ -148,17 +165,20 @@ export function DeliverySlip({ slip, texts, color = false }: { slip: CredentialS
               <span data-slip-valid="" style={{ fontFamily: MONO, fontWeight: 600, fontSize: 15, lineHeight: "24px" }}>
                 {until}
               </span>
+              {zoneTag}
               <span style={{ fontSize: 12, lineHeight: "16px" }}>{hours}</span>
             </span>
           </div>
-          <div style={{ ...COL, marginTop: 10 }}>
-            <span style={{ fontSize: 13, lineHeight: "18px" }}>
-              <b>{p.must_change_head}</b>
-              {zh ? "" : " "}
-              {p.must_change_tail}
-            </span>
-            {bi && <span style={SUB_TEXT}>{MUST_CHANGE_EN}</span>}
-          </div>
+          {!reprint && (
+            <div style={{ ...COL, marginTop: 10 }}>
+              <span style={{ fontSize: 13, lineHeight: "18px" }}>
+                <b>{p.must_change_head}</b>
+                {zh ? "" : " "}
+                {p.must_change_tail}
+              </span>
+              {bi && <span style={SUB_TEXT}>{MUST_CHANGE_EN}</span>}
+            </div>
+          )}
           <div style={{ ...COL, marginTop: 6 }}>
             <span style={{ fontSize: 13, lineHeight: "18px", fontWeight: 600 }}>{p.personal}</span>
             {bi && <span style={{ ...SUB_TEXT, fontWeight: 600 }}>{e.personal}</span>}
@@ -178,6 +198,7 @@ export function DeliverySlip({ slip, texts, color = false }: { slip: CredentialS
               <span data-slip-printed="" style={{ fontFamily: MONO }}>
                 {printedAt}
               </span>
+              {reprintTag}
             </span>
           </div>
         </div>
@@ -234,10 +255,14 @@ export function DeliverySlip({ slip, texts, color = false }: { slip: CredentialS
             <dt>{s("soul_id")}</dt>
             <dd style={{ margin: 0, fontFamily: MONO, letterSpacing: ".06em" }}>{code}</dd>
             <dt>{s("stub_until")}</dt>
-            <dd style={{ margin: 0, fontFamily: MONO }}>{until}</dd>
+            <dd style={{ margin: 0, fontFamily: MONO }}>
+              {until}
+              {zoneTag}
+            </dd>
             <dt>{s("stub_printed")}</dt>
             <dd style={{ margin: 0 }}>
               {slip.officer_name} · <span style={{ fontFamily: MONO }}>{printedAt}</span>
+              {reprintTag}
             </dd>
           </dl>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 48, marginTop: 64 }}>

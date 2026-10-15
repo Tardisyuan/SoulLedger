@@ -193,6 +193,7 @@ describe("reveal: once, and gone when the dialog closes", () => {
     expect(JSON.stringify({ ...window.sessionStorage })).not.toContain(SECRET);
 
     fireEvent.click(screen.getByRole("button", { name: tZh("soul_accounts.reveal.close") }));
+    fireEvent.click(await screen.findByRole("button", { name: tZh("soul_accounts.reveal.close_confirm") }));
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     expect(screen.queryByText(SECRET)).toBeNull();
 
@@ -201,6 +202,29 @@ describe("reveal: once, and gone when the dialog closes", () => {
     expect(screen.queryByText(SECRET)).toBeNull();
     expect(screen.queryByTestId("revealed-password")).toBeNull();
     expect(soulAccountsApi.revealCredential).toHaveBeenCalledTimes(1);
+  });
+
+  it("while the password is on screen Esc, the Esc button and 「关闭」 only ask; the password stays until the operator confirms", async () => {
+    asManager();
+    soulAccountsApi.revealCredential.mockResolvedValue({ data: { soul_code: "ABCDEFGH23", password: SECRET, expires_at: FUTURE } });
+    renderPage();
+    const dialog = await openConfirm();
+    fireEvent.click(within(dialog).getByRole("button", { name: tZh("soul_accounts.reveal.confirm") }));
+    await screen.findByTestId("revealed-password");
+    const askButton = () => screen.queryByRole("button", { name: tZh("soul_accounts.reveal.close_confirm") });
+
+    for (const how of ["esc-key", "esc-button", "close-button"] as const) {
+      if (how === "esc-key") fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" });
+      else if (how === "esc-button") fireEvent.click(screen.getAllByRole("button", { name: tZh("common.close") })[0]);
+      else fireEvent.click(screen.getByRole("button", { name: tZh("soul_accounts.reveal.close") }));
+      await waitFor(() => expect(askButton()).not.toBeNull());
+      // Absence: the plaintext is still there, nothing was closed.
+      expect(screen.getByTestId("revealed-password")).toHaveTextContent(SECRET);
+      // 「返回」 keeps the password.
+      fireEvent.click(screen.getByRole("button", { name: tZh("soul_accounts.reveal.close_back") }));
+      await waitFor(() => expect(askButton()).toBeNull());
+      expect(screen.getByTestId("revealed-password")).toBeInTheDocument();
+    }
   });
 
   it("a second reveal (409) says it was already viewed and shows no password", async () => {
@@ -306,6 +330,9 @@ it("an unknown status renders as unrecognized with the raw member in title", asy
   expect(screen.queryByRole("button", { name: tZh("soul_accounts.credentials.actions.reveal") })).toBeNull();
 });
 
+/** 浏览器打完 / 取消打印后发 afterprint,交付单这时才卸载。 */
+const finishPrint = () => void window.dispatchEvent(new Event("afterprint"));
+
 describe("print the delivery slip", () => {
   const PRINT = () => tZh("soul_accounts.credentials.print_slip");
   const REPRINT = () => tZh("soul_accounts.credentials.reprint_slip");
@@ -319,7 +346,7 @@ describe("print the delivery slip", () => {
   };
   let printSpy: jest.SpyInstance;
   beforeEach(() => {
-    printSpy = jest.spyOn(window, "print").mockImplementation(() => undefined);
+    printSpy = jest.spyOn(window, "print").mockImplementation(finishPrint);
   });
   afterEach(() => printSpy.mockRestore());
 
@@ -362,6 +389,7 @@ describe("print the delivery slip", () => {
     let slipDuringPrint = "";
     printSpy.mockImplementation(() => {
       slipDuringPrint = document.querySelector('[data-testid="delivery-slip"]')?.textContent ?? "";
+      finishPrint();
     });
     const row = await rows(credential({ id: "p" }));
     fireEvent.click(row("p").getByRole("button", { name: PRINT() }));
@@ -376,6 +404,38 @@ describe("print the delivery slip", () => {
     await waitFor(() => expect(document.querySelector('[data-testid="delivery-slip"]')).toBeNull());
   });
 
+  it("keeps the slip mounted until afterprint (a non-blocking print() must not lose it), and ignores a second click meanwhile", async () => {
+    asManager();
+    soulAccountsApi.printSlip.mockResolvedValue({ data: SLIP });
+    printSpy.mockImplementation(() => undefined); // returns at once, the dialog is still open
+    const row = await rows(credential({ id: "p" }), credential({ id: "q" }));
+    fireEvent.click(row("p").getByRole("button", { name: PRINT() }));
+    await waitFor(() => expect(printSpy).toHaveBeenCalledTimes(1));
+    expect(document.querySelector('[data-testid="delivery-slip"]')).not.toBeNull();
+    // Every print button is off while one is on its way, so no audited print is swallowed.
+    expect(row("q").getByRole("button", { name: PRINT() })).toBeDisabled();
+    fireEvent.click(row("q").getByRole("button", { name: PRINT() }));
+    expect(soulAccountsApi.printSlip).toHaveBeenCalledTimes(1);
+    finishPrint();
+    await waitFor(() => expect(document.querySelector('[data-testid="delivery-slip"]')).toBeNull());
+    expect(row("q").getByRole("button", { name: PRINT() })).toBeEnabled();
+  });
+
+  it("a reprint after delivery is marked 补印 and does not claim the password must be changed", async () => {
+    asManager();
+    soulAccountsApi.printSlip.mockResolvedValue({ data: SLIP });
+    let text = "";
+    printSpy.mockImplementation(() => {
+      text = document.querySelector('[data-testid="delivery-slip"]')?.textContent ?? "";
+      finishPrint();
+    });
+    const row = await rows(credential({ id: "d", status: "DELIVERED" }));
+    fireEvent.click(row("d").getByRole("button", { name: REPRINT() }));
+    await waitFor(() => expect(printSpy).toHaveBeenCalledTimes(1));
+    expect(text).toContain(tZh("soul_accounts.credentials.slip.reprint"));
+    expect(text).not.toContain("首次登录");
+  });
+
   describe("black-and-white switch", () => {
     const MONO = () => tZh("soul_accounts.credentials.print_mono");
     const inkOf = (slipEl: Element | null) => slipEl?.querySelector("[data-slip-ink]")?.getAttribute("data-slip-ink");
@@ -386,6 +446,7 @@ describe("print the delivery slip", () => {
       let ink: string | null | undefined = "unset";
       printSpy.mockImplementation(() => {
         ink = inkOf(document.querySelector('[data-testid="delivery-slip"]'));
+        finishPrint();
       });
       const row = await rows(credential({ id: "p" }));
       const box = screen.getByRole("checkbox", { name: MONO() });
@@ -438,6 +499,7 @@ describe("print the delivery slip", () => {
     let upper = "";
     printSpy.mockImplementation(() => {
       upper = document.querySelector('[data-testid="delivery-slip"]')?.textContent ?? "";
+      finishPrint();
     });
     const row = await rows(credential({ id: "p" }));
     fireEvent.click(row("p").getByRole("button", { name: PRINT() }));

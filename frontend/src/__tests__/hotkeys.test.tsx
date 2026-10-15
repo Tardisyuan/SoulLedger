@@ -5,7 +5,14 @@
  * 每条都断言了反面 —— 只断「按了会触发」的测试,在一个什么键都接的实现上也是绿的。
  */
 import { fireEvent, render } from "@testing-library/react";
-import { hotkeyOf, isTypingTarget, useHotkeys } from "@/src/lib/hotkeys";
+import {
+  SINGLE_KEYS_STORAGE_KEY,
+  hotkeyOf,
+  isTypingTarget,
+  setSingleKeyShortcuts,
+  singleKeyShortcutsEnabled,
+  useHotkeys,
+} from "@/src/lib/hotkeys";
 
 function Harness({ handlers, enabled = true }: { handlers: Record<string, () => void>; enabled?: boolean }) {
   useHotkeys(handlers, enabled);
@@ -100,5 +107,41 @@ describe("hotkeyOf / isTypingTarget", () => {
     expect(isTypingTarget(make("input", "radio"))).toBe(false);
     expect(isTypingTarget(make("input", "checkbox"))).toBe(false);
     expect(isTypingTarget(make("button"))).toBe(false);
+  });
+});
+
+describe("single-key shortcuts switch (WCAG 2.1.4)", () => {
+  afterEach(() => localStorage.removeItem(SINGLE_KEYS_STORAGE_KEY));
+
+  it("off: single letters and digits stop, but ⌘⏎, Escape, arrows and ? keep working", () => {
+    const one = jest.fn();
+    const esc = jest.fn();
+    const arrow = jest.fn();
+    const help = jest.fn();
+    const submit = jest.fn();
+    render(<Harness handlers={{ "1": one, Escape: esc, ArrowDown: arrow, "?": help, "mod+Enter": submit }} />);
+    setSingleKeyShortcuts(false);
+    fireEvent.keyDown(document.body, { key: "1" });
+    expect(one).not.toHaveBeenCalled();
+    fireEvent.keyDown(document.body, { key: "Escape" });
+    fireEvent.keyDown(document.body, { key: "ArrowDown" });
+    fireEvent.keyDown(document.body, { key: "?" });
+    fireEvent.keyDown(document.body, { key: "Enter", metaKey: true });
+    expect([esc, arrow, help, submit].map((f) => f.mock.calls.length)).toEqual([1, 1, 1, 1]);
+    // And back on.
+    setSingleKeyShortcuts(true);
+    fireEvent.keyDown(document.body, { key: "1" });
+    expect(one).toHaveBeenCalledTimes(1);
+  });
+
+  it("a blocked storage means on", () => {
+    const get = jest.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+      throw new Error("blocked");
+    });
+    try {
+      expect(singleKeyShortcutsEnabled()).toBe(true);
+    } finally {
+      get.mockRestore();
+    }
   });
 });

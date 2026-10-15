@@ -1,6 +1,9 @@
 """
 Serializers for workflow app.
 """
+from datetime import timedelta
+
+from django.utils import timezone
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
@@ -9,6 +12,8 @@ from apps.core.tenant_fields import tenant_scoped
 from apps.workflow.models import (
     ApprovalNode,
     ApprovalWorkflow,
+    ApprovalWorkflowStatus,
+    NodeStatus,
     WorkflowTemplate,
     WorkflowTemplateVersion,
 )
@@ -655,6 +660,19 @@ class ApprovalWorkflowListSerializer(serializers.ModelSerializer):
     # show. One string per row is not the payload a list serializer exists to
     # avoid.
     soul_name = serializers.CharField(source="soul.name", read_only=True)
+    # 当前节点是否已过超时时限(「已超时」徽标);算法同 `WorkflowFilter.filter_overdue`,列表已 select_related 当前节点。
+    is_overdue = serializers.SerializerMethodField()
+
+    def get_is_overdue(self, obj) -> bool:
+        node = obj.current_node
+        return bool(
+            obj.status == ApprovalWorkflowStatus.IN_PROGRESS
+            and node is not None
+            and node.status == NodeStatus.PENDING
+            and node.timeout_hours
+            and node.activated_at is not None
+            and node.activated_at + timedelta(hours=node.timeout_hours) < timezone.now()
+        )
 
     class Meta:
         model = ApprovalWorkflow
@@ -668,6 +686,7 @@ class ApprovalWorkflowListSerializer(serializers.ModelSerializer):
             "status",
             "is_appeal",
             "cross_civilization",
+            "is_overdue",
             "created_at",
             "completed_at",
         ]

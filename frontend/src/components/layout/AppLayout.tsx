@@ -29,6 +29,7 @@ import { useWideViewport } from "@/src/hooks/useWideViewport";
 import { useRoomBeside } from "@/src/hooks/useRoomBeside";
 import { OfficerAssistEntry, OfficerAssistPanel } from "@/src/components/assist/OfficerAssist";
 import { useOfficerAssist } from "@/src/components/assist/useOfficerAssist";
+import { ShortcutHelp } from "@/src/components/layout/ShortcutHelp";
 import { useSyncEmailLocale } from "@/src/components/layout/EmailLocaleSync";
 import { ImpersonationBanner, IMPERSONATION_BANNER_HEIGHT } from "@/src/components/impersonation/ImpersonationBanner";
 import { useImpersonation } from "@/src/components/impersonation/useImpersonation";
@@ -342,6 +343,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       <BottomBar menus={menus} allMenuPaths={allMenuPaths} currentId={currentGroup} />
 
       <OfficerAssistPanel assist={assist} belowBanner={bannerShown} />
+      <ShortcutHelp />
 
       {/* 视口最顶、横跨立柱与面板;fixed,浮在内容上 —— 它在加载后一会儿才出现,在文档流里
           那 28px 的位移曾把按钮从指针下挪走(E2E 头像测试 16 次里 1 次点空)。 */}

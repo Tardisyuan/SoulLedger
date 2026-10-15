@@ -33,7 +33,7 @@ import { QueryError } from "@/src/components/ui/PageError";
 import { DeferDialog, ReassignDialog, claimRefusalMessage } from "@/src/components/judgment/JudgmentClaimDialogs";
 import { BATCH_BAR, ROW_HOVER, ROW_LINK, ROW_SELECTED } from "@/components/ui/data-table";
 import { ActionsMenu } from "@/components/ui/data-grid/ActionsMenu";
-import { useHotkeys } from "@/src/lib/hotkeys";
+import { useHotkeys, useShortcutHelp } from "@/src/lib/hotkeys";
 import { MOTION_DURATIONS, MOTION_EASINGS, prefersReducedMotion } from "@/lib/motion";
 import { animate } from "motion/react";
 import { verdictGlyph } from "@/src/lib/verdictGlyph";
@@ -78,6 +78,19 @@ const SEARCH_DEBOUNCE_MS = 300;
 const DAY_MS = 86_400_000;
 /** 等待超过这么多天的行,等待数改警示色(稿子里的 137 天 / 53 天)。 */
 const LONG_WAIT_DAYS = 30;
+/**
+ * 距 LONG_WAIT_DAYS 还剩 3 天内,行上提示「将被标记为滞留」。注意动词:`judgment.auto_conclude_stale`
+ * (`apps/judgment/tasks.py`,每日 01:00,阈值 30 天在 `scheduler/registry.py` 的 kwargs 里)只在判词备注里
+ * 追加一行滞留标记,**并不结案**,所以提示不能写「将自动结案」。过了 30 天标记已打,提示随之收掉。
+ */
+const STALE_WARN_DAYS = 3;
+const CLAIM_SHORTCUTS = [
+  { key: "J / K", label: "shortcuts.move_rows" },
+  { key: "X", label: "shortcuts.select_row" },
+  { key: "C", label: "judgment.queue.key_claim" },
+  { key: "S", label: "judgment.queue.key_defer" },
+  { key: "R", label: "judgment.queue.key_restore" },
+] as const;
 /** 认领时间只要到分(v3 写「14:12」);年份与秒在这一格里是噪音。 */
 const CLAIMED_AT_FORMAT: Intl.DateTimeFormatOptions = { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" };
 /** 「本次会话」延后:浏览器会话内有效,去审判台再回来还在;关掉标签页就没了。 */
@@ -329,6 +342,7 @@ export function JudgmentClaimQueue({ initialSearch = "", soul = "" }: { initialS
 
   const focusedRow = focused ? allRows.find((j) => j.id === focused) : undefined;
 
+  useShortcutHelp(CLAIM_SHORTCUTS);
   useHotkeys({
     j: () => move(1),
     k: () => move(-1),
@@ -675,6 +689,11 @@ export function JudgmentClaimQueue({ initialSearch = "", soul = "" }: { initialS
                         }`}
                       >
                         {t("judgment.waiting_days", { n: String(days) })}
+                        {days >= LONG_WAIT_DAYS - STALE_WARN_DAYS && days <= LONG_WAIT_DAYS && (
+                          <span className="block text-2xs font-sans text-[oklch(var(--color-warning))]" data-testid="stale-soon">
+                            {t("judgment.claim.stale_soon")}
+                          </span>
+                        )}
                       </td>
                       <td className="w-11 relative z-10 text-right">
                         <ActionsMenu
