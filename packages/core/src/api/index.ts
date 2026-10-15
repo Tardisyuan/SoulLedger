@@ -63,6 +63,16 @@ export {
 } from "./souls";
 
 // Users
+// 以此人身份查看(只读代看,W6)
+export {
+  getImpersonation,
+  subscribeImpersonation,
+  startImpersonation,
+  endImpersonation,
+  IMPERSONATION_MAX_MINUTES,
+  type ImpersonationState,
+} from "./impersonation";
+
 export { usersApi, type User, type UserMfaRef, type CreateUserInput, type UpdateUserInput, type UserFilters, type UserImportResult, type AssignRolesInput, type UserBatchUpdateResult, type PaginatedResponse } from "./users";
 
 // Judgment

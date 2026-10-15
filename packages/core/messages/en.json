@@ -1896,7 +1896,9 @@
       "PERMISSION_CHANGE": "Changed permissions",
       "BATCH_CREATE": "Batch created",
       "BATCH_UPDATE": "Batch updated",
-      "BATCH_DELETE": "Batch deleted"
+      "BATCH_DELETE": "Batch deleted",
+      "IMPERSONATE_START": "Started viewing as",
+      "IMPERSONATE_END": "Stopped viewing as"
     },
     "needs_audit_read": "Requires the audit.read permission",
     "repeat_expand": "expand",
@@ -1923,7 +1925,9 @@
     "descriptions": {
       "hall_settings": "Edited the settings of hall {{code}}",
       "hall_seal_glyphs": "Edited the seal glyphs of hall {{code}}",
-      "hall_assistant_switch": "Changed the Ask switch of hall {{code}}"
+      "hall_assistant_switch": "Changed the Ask switch of hall {{code}}",
+      "impersonate_start": "Viewing as {{name}} · Reason: {{reason}}",
+      "impersonate_end": "Viewed as {{name}} · {{minutes}} min · {{pages}} pages"
     },
     "filter_hall": "By hall",
     "all_halls": "All halls"
@@ -2500,7 +2504,25 @@
     "soul_count": "Soul Count",
     "no_realm_data": "No realm data available",
     "souls": "souls",
-    "on": "on"
+    "on": "on",
+    "users": {
+      "impersonate": "View as this user"
+    },
+    "impersonate": {
+      "body": "View only. You can't do anything. Up to 30 minutes.",
+      "notice": "{{name}} will be told, with your name and this reason.",
+      "banner": "Viewing as {{name}}",
+      "exit": "Stop viewing",
+      "title": "View as {{name}}",
+      "reason_label": "Reason",
+      "audit_note": "The whole session is recorded in the audit log.",
+      "start": "Start viewing",
+      "failed": "Could not start viewing.",
+      "readonly": "Read only",
+      "reason_line": "Reason: {{reason}}",
+      "remaining": "{{time}} left",
+      "locked": "Viewing: you can't act"
+    }
   },
   "welcome": {
     "quick_actions": "Quick Actions",
@@ -4561,6 +4583,10 @@
     "judgment_reassign_requested": {
       "title": "Reassignment requested",
       "body": "{{by}} asks for the case of {{soul}} to be reassigned"
+    },
+    "impersonation_started": {
+      "title": "Someone is viewing as you",
+      "body": "{{by}} is viewing the console as you (read only, up to {{minutes}} minutes). Reason: {{reason}}. The whole session is recorded in the audit log."
     }
   },
   "social_moderation": {

@@ -35,7 +35,26 @@ import { AuditTabs } from "@/src/components/audit/AuditTabs";
 const ACTION_OPTIONS = [
   "CREATE", "UPDATE", "DELETE", "LOGIN", "LOGOUT", "VIEW",
   "EXPORT", "IMPORT", "PERMISSION_CHANGE", "EXECUTE", "READ",
+  "IMPERSONATE_START", "IMPERSONATE_END",
 ];
+
+/** 代看的两行摘要从 `changes` 按界面语言现拼(库里存的描述是 zh 固定句式)。其它动作返回 null。 */
+function impersonationSummary(g: AuditGroup, t: (key: string, params?: Record<string, string>) => string): string | null {
+  const changes = g.entries[0]?.changes as Record<string, unknown> | null | undefined;
+  if (!changes) return null;
+  const name = String(changes.target_name ?? "");
+  if (g.action === "IMPERSONATE_START") {
+    return t("audit.descriptions.impersonate_start", { name, reason: String(changes.reason ?? "") });
+  }
+  if (g.action === "IMPERSONATE_END") {
+    return t("audit.descriptions.impersonate_end", {
+      name,
+      minutes: String(changes.minutes ?? 0),
+      pages: String(changes.pages ?? 0),
+    });
+  }
+  return null;
+}
 
 const RESOURCE_OPTIONS = [
   { value: "soul", label: "Soul" },
@@ -308,7 +327,7 @@ export default function AuditPage() {
           <TreeName depth={lead ? 0 : 1}>
             <div className="min-w-0">
               <div className="text-[oklch(var(--color-ink))]">
-                {g.descriptions.length > 0 ? g.descriptions.map((d) => describeAudit(d, t)).join(" · ") : g.resources.join(" + ")}
+                {impersonationSummary(g, t) ?? (g.descriptions.length > 0 ? g.descriptions.map((d) => describeAudit(d, t)).join(" · ") : g.resources.join(" + "))}
                 {lead && repeats > 1 && (
                   <button
                     type="button"

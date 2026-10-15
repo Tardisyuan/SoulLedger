@@ -1,6 +1,7 @@
 "use client";
 
 import { usePermissions } from "@/src/hooks/usePermissions";
+import { ViewingLock } from "@/src/components/impersonation/ViewingLock";
 
 interface RequireButtonProps {
   /** Permission codename(s) required to show the button */
@@ -48,7 +49,7 @@ export function RequireButton({
     if (!hasPermission(button.permission)) {
       return <>{fallback}</>;
     }
-    return <>{children}</>;
+    return <ViewingLock permissions={[button.permission]}>{children}</ViewingLock>;
   }
 
   // Direct permission check
@@ -59,7 +60,7 @@ export function RequireButton({
       : hasAnyPermission(permArray);
 
     if (!hasAccess) return <>{fallback}</>;
-    return <>{children}</>;
+    return <ViewingLock permissions={permArray}>{children}</ViewingLock>;
   }
 
   // No permission or code specified — FAIL CLOSED: hide by default

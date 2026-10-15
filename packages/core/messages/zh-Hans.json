@@ -1896,7 +1896,9 @@
       "PERMISSION_CHANGE": "权限变更",
       "BATCH_CREATE": "批量创建",
       "BATCH_UPDATE": "批量更新",
-      "BATCH_DELETE": "批量删除"
+      "BATCH_DELETE": "批量删除",
+      "IMPERSONATE_START": "开始代看",
+      "IMPERSONATE_END": "结束代看"
     },
     "needs_audit_read": "需要「查看审计日志」权限（audit.read）",
     "repeat_expand": "展开",
@@ -1923,7 +1925,9 @@
     "descriptions": {
       "hall_settings": "改了 {{code}} 殿的设置",
       "hall_seal_glyphs": "改了 {{code}} 殿的印字",
-      "hall_assistant_switch": "改了 {{code}} 殿的问一问开关"
+      "hall_assistant_switch": "改了 {{code}} 殿的问一问开关",
+      "impersonate_start": "以 {{name}} 的身份查看 · 理由：{{reason}}",
+      "impersonate_end": "以 {{name}} 的身份查看 · {{minutes}} 分钟 · 看过 {{pages}} 个页面"
     },
     "filter_hall": "按殿",
     "all_halls": "全部殿"
@@ -2500,7 +2504,25 @@
     "soul_count": "灵魂数量",
     "no_realm_data": "暂无领域数据",
     "souls": "灵魂",
-    "on": "于"
+    "on": "于",
+    "users": {
+      "impersonate": "以此人身份查看"
+    },
+    "impersonate": {
+      "body": "只能看，不能做任何操作。最长 30 分钟。",
+      "notice": "{{name}} 会收到通知，看到你的名字和这条理由。",
+      "banner": "正在以 {{name}} 的身份查看",
+      "exit": "退出查看",
+      "title": "以{{name}}的身份查看",
+      "reason_label": "理由",
+      "audit_note": "整个过程记进审计日志。",
+      "start": "开始查看",
+      "failed": "没能开始查看。",
+      "readonly": "只读",
+      "reason_line": "理由：{{reason}}",
+      "remaining": "剩 {{time}}",
+      "locked": "查看中，不能操作"
+    }
   },
   "welcome": {
     "quick_actions": "快捷操作",
@@ -4561,6 +4583,10 @@
     "judgment_reassign_requested": {
       "title": "请求改派",
       "body": "{{by}} 请求改派案件 {{soul}}"
+    },
+    "impersonation_started": {
+      "title": "有人在以你的身份查看",
+      "body": "{{by}} 正在以你的身份查看（只读，最长 {{minutes}} 分钟）。理由：{{reason}}。整个过程记进审计日志。"
     }
   },
   "social_moderation": {
