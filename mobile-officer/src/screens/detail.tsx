@@ -16,7 +16,7 @@ import { useCachedRemote } from "../readCache";
 import { ActionButton, RefreshFailed, StateView, viewStateOf } from "../kit";
 import { deskUrl, dispatchStatusLine, dispatchView, handledNotice, isDenied, todoTitle, type ItemKind, type Verdict } from "../rules";
 import { useSession } from "../session";
-import { Icon, Input, Notice, Screen, SectionLabel, Txt, space, useI18n, useOnline, useRemote, useTheme } from "../shared";
+import { Icon, Input, Notice, Screen, SectionLabel, SmallButton, Txt, space, useI18n, useOnline, useRemote, useTheme } from "../shared";
 import { LetterThread } from "./letter";
 import { CosignSheet, DecisionSheet, type CooldownFacts } from "./sheets";
 
@@ -235,7 +235,7 @@ function JudgmentDetail({ id }: { id: string }) {
         <Txt variant="caption" tone="muted">{[data.court, data.claimed_by_name].filter(Boolean).join(" · ")}</Txt>
         {!data.is_final ? <Txt variant="bodyLg">{`◇ ${t("officer_app.queue.desk_only")}`}</Txt> : null}
         <Txt variant="caption" tone="muted">{t("officer_app.queue.scope_note")}</Txt>
-        <JudgmentComments id={id} />
+        <JudgmentComments id={id} concludedAt={data.concluded_at} />
         <ContinueOnDesk target={{ kind: "judgment", id }} />
       </View>
     </Screen>
@@ -243,13 +243,21 @@ function JudgmentDetail({ id }: { id: string }) {
 }
 
 /** 写评议: read the others' comments and add one. A comment changes nothing about the case. */
-function JudgmentComments({ id }: { id: string }) {
+/** Like the desk: the latest 3 show, 「展开其余 N 条」 opens the rest, and 「结案后」 marks the first comment after the verdict. */
+const COMMENTS_SHOWN = 3;
+
+function JudgmentComments({ id, concludedAt }: { id: string; concludedAt?: string | null }) {
   const { t } = useI18n();
   const load = useCallback(() => judgmentApi.comments(id).then((r) => r.data), [id]);
   const { data, reload } = useRemote(load);
   const [body, setBody] = useState("");
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
+  const [showAll, setShowAll] = useState(false);
+  const all = data ?? [];
+  const shown = showAll ? all : all.slice(-COMMENTS_SHOWN);
+  const hidden = all.length - shown.length;
+  const firstAfter = concludedAt ? all.find((c) => c.created_at > concludedAt)?.id : undefined;
   const send = () => {
     const text = body.trim();
     if (text === "") return;
@@ -270,8 +278,10 @@ function JudgmentComments({ id }: { id: string }) {
       {data && data.length === 0 ? (
         <Txt variant="caption" tone="muted">{t("officer_app.comment.empty")}</Txt>
       ) : null}
-      {(data ?? []).map((c) => (
+      {hidden > 0 ? <SmallButton testID="comments-show-rest" title={t("officer_app.comment.show_rest", { n: String(hidden) })} onPress={() => setShowAll(true)} /> : null}
+      {shown.map((c) => (
         <View key={c.id} testID={`comment-${c.id}`} style={{ gap: space[1] }}>
+          {c.id === firstAfter ? <Txt testID="comments-after-close" variant="caption" tone="muted">{`— ${t("officer_app.comment.after_close")} —`}</Txt> : null}
           <Txt variant="caption" tone="muted">{`${c.author_name} · ${formatWhen(c.created_at)}`}</Txt>
           <Txt variant="body">{c.body}</Txt>
         </View>

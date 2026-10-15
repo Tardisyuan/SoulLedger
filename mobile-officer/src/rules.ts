@@ -179,6 +179,9 @@ export function loginFailureKey(error: unknown, step: "login" | "mfa"): string {
 export interface Landing {
   tab: "todo";
   item?: { kind: ItemKind; id: string };
+  /** A notice about a judgment / a soul opens that read-only detail (not a to-do item). */
+  judgment?: string;
+  soul?: string;
 }
 
 /**
@@ -204,10 +207,21 @@ export function landingOf(data: unknown): Landing | null {
 export function noticeLanding(n: { related_resource?: string | null; related_id?: string | null }): Landing | null {
   // `SOUL_INBOX_ASSIGNED` (a letter was handed to me) names the inbox conversation.
   // The four dispatch notices (`DISPATCH_PROPOSED` / `APPROVED` / `REJECTED` / `CANCELLED`) name the record.
+  // `judgment` (a reassign request to ADMINs, 判决完成) and `soul` (灵魂账号没开成, 退回受阻) name a Judgment / Soul id.
+  if (n.related_id && n.related_resource === "judgment") return { tab: "todo", judgment: n.related_id };
+  if (n.related_id && n.related_resource === "soul") return { tab: "todo", soul: n.related_id };
   const kind =
     n.related_resource === "workflow" ? "approval" : n.related_resource === "soul_inbox" ? "letter" : n.related_resource === "DispatchRecord" ? "dispatch" : n.related_resource;
   return landingOf({ target: { kind, id: n.related_id } });
 }
+
+/**
+ * Notices whose subject has no phone screen: 联审 (`CrossTenantJudgment`: its id is not a Judgment's), 受刑计划 nodes
+ * (`SentencePlan`), scheduler jobs, 代看 / 忘记密码求助 (`user`), assistant config. Their row says 「在电脑上查看」
+ * instead of being a tap that does nothing.
+ */
+const DESK_ONLY_NOTICES: readonly string[] = ["CrossTenantJudgment", "SentencePlan", "scheduler", "user", "assistant_config"];
+export const noticeIsDeskOnly = (n: { related_resource?: string | null }): boolean => !!n.related_resource && DESK_ONLY_NOTICES.includes(n.related_resource);
 
 // ── dispatch records (what a dispatch notice lands on) ─────────────────
 
