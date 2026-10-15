@@ -25,5 +25,20 @@
   "profile.devices.load_failed",
   "profile.devices.sign_out_failed",
   "profile.devices.mfa_until",
-  "profile.devices.stranger"
+  "profile.devices.stranger",
+  "soul_app.security.devices",
+  "soul_app.security.this_phone",
+  "soul_app.security.last_seen",
+  "soul_app.security.sign_out",
+  "soul_app.security.sign_out_failed",
+  "soul_app.security.load_failed",
+  "soul_app.security.no_records",
+  "soul_app.security.method_recovery",
+  "soul_app.security.failed_mfa",
+  "soul_app.security.failed_face",
+  "soul_app.security.stranger_title",
+  "soul_app.security.stranger_body",
+  "soul_app.biometric.app_lock",
+  "soul_app.biometric.app_lock_hint",
+  "soul_app.lock.title"
 ]
