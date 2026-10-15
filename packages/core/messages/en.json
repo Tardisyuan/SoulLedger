@@ -3217,7 +3217,7 @@
     "bio_label": "Bio",
     "bio_placeholder": "Tell others about yourself…",
     "avatar_upload_label": "Avatar",
-    "avatar_upload_hint": "PNG, JPEG or WebP, up to 5 MB",
+    "avatar_upload_hint": "PNG, JPEG, WebP or HEIC, up to 5 MB",
     "avatar_uploaded": "Avatar updated",
     "avatar_upload_error": "Failed to upload avatar",
     "profile_updated": "Profile updated",
@@ -4217,7 +4217,7 @@
         "unreadable_some": "{{n}} of the selected images could not be opened and were skipped",
         "expired": "An image has expired; add it again",
         "errors": {
-          "not_an_image": "Only PNG, JPEG or WebP images",
+          "not_an_image": "Only PNG, JPEG, WebP or HEIC images",
           "too_large": "Each image must be 5 MB or less",
           "too_many_pixels": "The image dimensions are too large",
           "too_many_pending": "Too many unposted images: post or remove some first"

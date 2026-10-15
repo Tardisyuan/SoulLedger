@@ -3,13 +3,13 @@ import type { CaseAttachmentErrorCode } from "@soulledger/core/api/judgment";
 /**
  * 案卷附件在浏览器这一侧的预检(Design 第二十八批 W4)。**只为早一点给出提示,不是闸门**:服务端按文件头的魔数
  * 判类型、按字节判大小(`apps/judgment/attachments.py`),这里认扩展名 / MIME 只会放过或拦下得更早,
- * 拦不下一个伪装的文件。HEIC 不收(服务端没有转 JPG 的依赖),提示同「只能传图片或 PDF」。
+ * 拦不下一个伪装的文件。HEIC / HEIF 也收(2026-10-15,服务端转成 JPG)。
  */
 const MB = 1024 * 1024;
-const ALLOWED = /\.(jpe?g|png|pdf)$/i;
+const ALLOWED = /\.(jpe?g|png|heic|heif|pdf)$/i;
 
 export function looksAllowed(file: { name: string; type: string }): boolean {
-  return ALLOWED.test(file.name) || ["image/jpeg", "image/png", "application/pdf"].includes(file.type);
+  return ALLOWED.test(file.name) || ["image/jpeg", "image/png", "image/heic", "image/heif", "application/pdf"].includes(file.type);
 }
 
 /** 一位小数的 MB(1 MB 以下写 KB):`4.2 MB`。 */
