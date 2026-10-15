@@ -2631,7 +2631,8 @@
     "columns": {
       "button": "Columns · {{shown}}/{{total}}",
       "pinned": "Always shown",
-      "reset": "Reset"
+      "reset": "Reset",
+      "hint": "Columns to show · remembered in this browser only"
     }
   },
   "death_sync": {

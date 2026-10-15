@@ -31,7 +31,7 @@ const columns: DataGridColumn<Row>[] = [
 const KEY = "soulledger.test.columns";
 const exportCsv = jest.fn().mockResolvedValue({ data: new Blob(["x"]) });
 
-function Harness() {
+function Harness({ hint }: { hint?: string } = {}) {
   const visibility = useColumnVisibility(KEY, columns);
   return (
     <>
@@ -41,6 +41,7 @@ function Harness() {
         buttonLabel={`列 · ${visibility.shown}/${visibility.total}`}
         pinnedLabel="不能隐藏"
         resetLabel="恢复默认"
+        hintLabel={hint}
       />
       <ExportCsvButton fetchCsv={() => exportCsv({ state: "x" })} page="灵魂" />
       <DataGrid<Row> columns={columns} hiddenColumns={visibility.hidden} data={rows} keyExtractor={(r) => r.id} caption="灵魂" />
@@ -82,6 +83,16 @@ describe("列菜单", () => {
     expect(headers()).toContain("名称");
     // 只有钉住的那一项标「不能隐藏」。
     expect(screen.getAllByText("不能隐藏")).toHaveLength(1);
+  });
+
+  it("菜单顶部的说明小字(第二十九批):给了就在菜单里显示,没给就没有", () => {
+    const { unmount } = render(<Harness hint="显示哪些列 · 只在这台浏览器上记住" />);
+    openMenu();
+    expect(within(screen.getByRole("menu")).getByText("显示哪些列 · 只在这台浏览器上记住")).toBeInTheDocument();
+    unmount();
+    render(<Harness />);
+    openMenu();
+    expect(within(screen.getByRole("menu")).queryByText(/只在这台浏览器上记住/)).toBeNull();
   });
 
   it("隐藏一列:表头与单元格都没了,计数变,偏好写进本浏览器;重挂后还在", () => {

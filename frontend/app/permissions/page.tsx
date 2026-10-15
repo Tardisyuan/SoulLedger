@@ -476,6 +476,7 @@ export default function PermissionsPage() {
               visibility={columnVis}
               buttonLabel={t("list.columns.button", { shown: String(columnVis.shown), total: String(columnVis.total) })}
               pinnedLabel={t("list.columns.pinned")}
+              hintLabel={t("list.columns.hint")}
               resetLabel={t("list.columns.reset")}
             />
           </div>

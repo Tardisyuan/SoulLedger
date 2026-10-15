@@ -105,10 +105,12 @@ export interface ColumnMenuProps {
   pinnedLabel: string
   /** `t("list.columns.reset")` */
   resetLabel: string
+  /** `t("list.columns.hint")` — muted line above the columns (Design batch 28 W1, copy batch 29) */
+  hintLabel?: string
   className?: string
 }
 
-export function ColumnMenu({ columns, visibility, buttonLabel, pinnedLabel, resetLabel, className }: ColumnMenuProps) {
+export function ColumnMenu({ columns, visibility, buttonLabel, pinnedLabel, resetLabel, hintLabel, className }: ColumnMenuProps) {
   const [pos, setPos] = useState<{ top: number; right: number } | null>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const { open, setOpen, close } = usePopupOpenState(triggerRef)
@@ -175,6 +177,9 @@ export function ColumnMenu({ columns, visibility, buttonLabel, pinnedLabel, rese
             style={{ position: 'fixed', top: pos.top, right: pos.right }}
             className="z-sidebar min-w-[220px] border border-[oklch(var(--color-ink))] bg-[oklch(var(--color-surface-1))] py-1"
           >
+            {hintLabel ? (
+              <p className="px-4 pb-2 pt-1 text-xs text-[oklch(var(--color-ink-muted))]">{hintLabel}</p>
+            ) : null}
             {columns.map((column, index) => {
               const checked = column.pinned || visibility.isVisible(column.key)
               return (

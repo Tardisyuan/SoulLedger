@@ -2631,7 +2631,8 @@
     "columns": {
       "button": "列 · {{shown}}/{{total}}",
       "pinned": "不能隐藏",
-      "reset": "恢复默认"
+      "reset": "恢复默认",
+      "hint": "显示哪些列 · 只在这台浏览器上记住"
     }
   },
   "death_sync": {
