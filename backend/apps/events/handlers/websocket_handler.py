@@ -29,6 +29,8 @@ class WebSocketHandler(DomainEventHandler):
     """
 
     def handle(self, envelope: EventEnvelope) -> None:
+        if envelope.payload.get("_suppressed"):  # NotificationHandler: the recipient switched this category off
+            return
         try:
             from asgiref.sync import async_to_sync
             from channels.layers import get_channel_layer

@@ -8,7 +8,6 @@ import time
 
 from django.contrib.auth import get_user_model
 from django.db import transaction
-from django.utils import timezone
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiResponse, PolymorphicProxySerializer, extend_schema
 from rest_framework import status, viewsets
@@ -42,6 +41,7 @@ from apps.core.schema import DetailResponseSerializer, ErrorResponseSerializer
 from apps.core.tenant import scope_to_tenant
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin
 from apps.events.realtime import close_user_sockets
+from apps.notifications import categories as notification_categories
 
 from .officer_reset import _audit
 from .passwords import end_push_registrations, end_sessions
@@ -1286,11 +1286,10 @@ def preferences_view(request):
         serializer = UserPreferencesSerializer(data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         before = user.preferences or {}
-        user.preferences = {**before, **serializer.validated_data}
-        if serializer.validated_data.get("email_notifications") and not before.get("email_notifications"):
-            # 邮件通道只发这一刻之后的通知(apps/notifications/tasks.py),不翻旧账。
-            user.preferences["email_opted_at"] = timezone.now().isoformat()
-            user.preferences.pop("email_opted_backfilled", None)  # 真实时刻,迁移 0018 的反向不该再删它
+        changes = dict(serializer.validated_data)
+        if "notifications" in changes:
+            changes["notifications"] = notification_categories.merge(user, changes["notifications"])
+        user.preferences = {**before, **changes}
         user.save(update_fields=["preferences"])
     return Response(UserPreferencesSerializer(_preferences_with_defaults(user)).data)
 
@@ -1298,7 +1297,9 @@ def preferences_view(request):
 def _preferences_with_defaults(user):
     """Every declared key present — the field's default where unset, else null — so a client reads one shape."""
     stored = user.preferences or {}
-    return {
+    out = {
         name: stored.get(name, None if field.default is empty else field.default)
         for name, field in UserPreferencesSerializer().fields.items()
     }
+    out["notifications"] = notification_categories.resolved(user)  # the whole table, locked cells on
+    return out

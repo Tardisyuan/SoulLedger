@@ -576,12 +576,14 @@ const ROOTS_BATCH23 = [
 /** 第二十八批(Design,2026-10-13,列菜单):Iwn「柱」,这里指表格的「列」。 */
 /** 第二十九批(2026-10-15):Redi(放下)多一个义项「粘贴」,只用在 soul_app.mfa.copied_clears。不是新词根。 */
 const ROOTS_BATCH28 = ["Iwn"];
+// 第二十八批第二批稿(W3 通知):Sedjer = 安睡,只用在 `Nen Sedjer`(必收);Shat = 书写的信件,指「邮件」。
+const ROOTS_BATCH28B = ["Sedjer", "Shat"];
 /**
  * 第二十七批(Design,2026-10-12):没有新词根。两个由已登记词组成的新组合,记在这里备查 ——
  * Iri Ky「替换」(敏感词被打码;不用 Imen,那是「隐藏」)、Per Ky「对方」(移交里的另一个殿)。
  */
 const LEXICON = new Set([
-  ...[...ROOTS,...ROOTS_MOD, ...ROOTS_FIX, ...ROOTS_SPLIT, ...ROOTS_CLOSE, ...ROOTS_FINAL, ...ROOTS_LATE, ...ROOTS_APP, ...ROOTS_NINE, ...ROOTS_TEN, ...ROOTS_ELEVEN, ...ROOTS_TWELVE, ...ROOTS_BATCH15, ...ROOTS_BATCH16, ...ROOTS_BATCH17, ...ROOTS_BATCH20, ...ROOTS_BATCH23, ...ROOTS_BATCH28, ...PROPER_NAMES, ...PARTICLES].flatMap((e) => e.split(/ \/ | /)),
+  ...[...ROOTS,...ROOTS_MOD, ...ROOTS_FIX, ...ROOTS_SPLIT, ...ROOTS_CLOSE, ...ROOTS_FINAL, ...ROOTS_LATE, ...ROOTS_APP, ...ROOTS_NINE, ...ROOTS_TEN, ...ROOTS_ELEVEN, ...ROOTS_TWELVE, ...ROOTS_BATCH15, ...ROOTS_BATCH16, ...ROOTS_BATCH17, ...ROOTS_BATCH20, ...ROOTS_BATCH23, ...ROOTS_BATCH28, ...ROOTS_BATCH28B, ...PROPER_NAMES, ...PARTICLES].flatMap((e) => e.split(/ \/ | /)),
   ...WHOLE_PHRASES,
 ]);
 

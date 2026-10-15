@@ -161,11 +161,38 @@ export interface UserPreferences {
   default_view: DefaultView | null;
   /** /welcome 的首次设置做完或跳过了。Unset reads as false. */
   onboarded: boolean;
-  /** Officer email channel (action-needed notifications, `apps/notifications/tasks.py`). Default off. */
-  email_notifications: boolean;
-  /** Language of those emails: set from the UI locale when the switch is turned on; null = by civilization. */
+  /** The whole 通知 table — every category, both channels; locked cells always `true`. */
+  notifications: NotificationPrefs;
+  /** Language of the e-mails: set from the UI locale when a mail cell is turned on; null = by civilization. */
   email_locale: "zh-Hans" | "en" | null;
 }
+
+/**
+ * 官员通知的类别,与后端 `apps/notifications/categories.py::CATEGORIES` 逐字同序
+ * (`tests/test_frontend_notification_categories_match_the_backend.py` 钉住)。
+ */
+export const NOTIFICATION_CATEGORIES = [
+  "account_security",
+  "approval",
+  "approval_timeout",
+  "reassign",
+  "password_help",
+  "dispatch",
+  "letter_handoff",
+] as const;
+export type NotificationCategory = (typeof NOTIFICATION_CATEGORIES)[number];
+export type NotificationChannel = "site" | "mail";
+export type NotificationPrefs = Record<NotificationCategory, Record<NotificationChannel, boolean>>;
+/** What PATCH takes: only the cells being changed. */
+export type NotificationPrefsPatch = {
+  [C in NotificationCategory]?: Partial<Record<NotificationChannel, boolean>>;
+};
+/** 不能关的格(服务端同样拒绝关掉它们;`LOCKED` in categories.py)。 */
+export const NOTIFICATION_LOCKED: Partial<Record<NotificationCategory, readonly NotificationChannel[]>> = {
+  account_security: ["site", "mail"],
+  password_help: ["site", "mail"],
+  approval_timeout: ["site"],
+};
 
 /** `{error, code}` of the officer e-mail reset / verification endpoints; branch on `code`. */
 export type OfficerResetRefusal = components["schemas"]["OfficerResetRefusal"];
@@ -237,7 +264,7 @@ export const authApi = {
   /** 邮件链接落在 /verify-email,令牌本身就是凭据。 */
   verifyEmail: (data: { uid: string; token: string }) => api.post<{ detail: string }>("/auth/email/verify/", data),
   preferences: () => api.get<UserPreferences>("/auth/profile/preferences/"),
-  updatePreferences: (data: Partial<UserPreferences>) =>
+  updatePreferences: (data: Partial<Omit<UserPreferences, "notifications">> & { notifications?: NotificationPrefsPatch }) =>
     api.patch<UserPreferences>("/auth/profile/preferences/", data),
   // 201 body is UserSerializer, not the login envelope — registering does not
   // hand back tokens (backend/apps/authentication/views.py:492).

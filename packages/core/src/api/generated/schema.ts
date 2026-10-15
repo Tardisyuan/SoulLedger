@@ -9640,6 +9640,11 @@ export interface components {
             access?: string;
             refresh?: string;
         };
+        /** @description One category's two channels. */
+        ChannelPrefs: {
+            site?: boolean;
+            mail?: boolean;
+        };
         ChatError: {
             detail: string;
             code: string;
@@ -12566,6 +12571,16 @@ export interface components {
         NotificationEmailStatus: {
             last_failure: components["schemas"]["NotificationEmailFailure"] | null;
         };
+        /** @description `preferences.notifications`: one `ChannelPrefsSerializer` per category in `apps/notifications/categories.py`. */
+        NotificationPrefs: {
+            account_security?: components["schemas"]["ChannelPrefs"];
+            approval?: components["schemas"]["ChannelPrefs"];
+            approval_timeout?: components["schemas"]["ChannelPrefs"];
+            reassign?: components["schemas"]["ChannelPrefs"];
+            password_help?: components["schemas"]["ChannelPrefs"];
+            dispatch?: components["schemas"]["ChannelPrefs"];
+            letter_handoff?: components["schemas"]["ChannelPrefs"];
+        };
         NotificationSettings: {
             /** @description 转生申请:提交确认、申诉确认、结果 */
             rebirth?: boolean;
@@ -14598,8 +14613,7 @@ export interface components {
             default_view?: (components["schemas"]["DefaultViewEnum"] | components["schemas"]["NullEnum"]) | null;
             /** @default false */
             onboarded: boolean;
-            /** @default false */
-            email_notifications: boolean;
+            notifications?: components["schemas"]["NotificationPrefs"];
             email_locale?: (components["schemas"]["EvalCaseLocaleEnum"] | components["schemas"]["NullEnum"]) | null;
         };
         /**
@@ -17509,8 +17523,7 @@ export interface components {
             default_view?: (components["schemas"]["DefaultViewEnum"] | components["schemas"]["NullEnum"]) | null;
             /** @default false */
             onboarded: boolean;
-            /** @default false */
-            email_notifications: boolean;
+            notifications?: components["schemas"]["NotificationPrefs"];
             email_locale?: (components["schemas"]["EvalCaseLocaleEnum"] | components["schemas"]["NullEnum"]) | null;
         };
         UserProfile: {
