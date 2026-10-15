@@ -192,6 +192,7 @@ const COLLECTED_FILES = [
   "TrendsPanel.test.tsx",
   "toastColourContract.test.ts",
   "OrganizationsPage.test.tsx",
+  "PasswordChangeRequired.test.tsx",
   "UserDeleteDialog.test.tsx",
   "UsersPage.impersonate.test.tsx",
   "UsersPage.locate.test.tsx",

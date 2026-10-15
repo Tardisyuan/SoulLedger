@@ -43,10 +43,10 @@ def _request(api_client, email, ip):
 
 @pytest.mark.django_db
 class TestResetRequest:
-    def test_an_officer_email_stores_no_code_and_sends_no_mail(self, api_client, accounts):
+    def test_an_officer_email_sends_no_mail(self, api_client, accounts):
+        # A code IS stored (so the answers match a soul's: see test_reset_code_oracle), but never mailed.
         res = _request(api_client, OFFICER_EMAIL, "198.51.100.1")
         assert res.status_code == 200
-        assert cache.get(f"pwd_reset:{OFFICER_EMAIL}") is None, "a code was stored for an officer"
         assert mail.outbox == [], "a reset mail was sent to an officer"
 
     @pytest.mark.parametrize("role", ["ADMIN", "MODERATOR", "GUARDIAN", "VIEWER"])
@@ -59,7 +59,6 @@ class TestResetRequest:
             role=role, tenant=cn_tenant,
         )
         _request(api_client, email, "198.51.100.2")
-        assert cache.get(f"pwd_reset:{email}") is None
         assert mail.outbox == []
 
     def test_a_soul_email_still_gets_its_code(self, api_client, accounts):
@@ -79,7 +78,6 @@ class TestResetRequest:
         # Presence alongside the equality: the soul did get a code, so the
         # identical bodies are hiding a real difference, not reporting none.
         assert cache.get(f"pwd_reset:{SOUL_EMAIL}")
-        assert cache.get(f"pwd_reset:{OFFICER_EMAIL}") is None
 
 
 @pytest.mark.django_db
@@ -92,7 +90,7 @@ class TestSetNewPassword:
             {"email": OFFICER_EMAIL, "code": "424242", "new_password": GOOD_PASSWORD},
             format="json",
         )
-        assert res.status_code == 404
+        assert res.status_code == 400 and res.data["code"] == "reset_code_wrong"
         officer.refresh_from_db()
         assert officer.check_password("OldPass!123")
         assert not officer.check_password(GOOD_PASSWORD)

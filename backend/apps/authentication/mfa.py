@@ -163,10 +163,20 @@ def audit(action, user, description, *, actor=None, request=None, changes=None):
 # ── 向导 ─────────────────────────────────────────────────────────────────────
 
 
+def _lock(mfa) -> OfficerMfa | None:
+    """Re-read the row under `SELECT ... FOR UPDATE`. Every path that reads then writes `last_step` /
+    `failed_attempts` / the recovery codes goes through this inside `transaction.atomic()`, as the soul side
+    does (`soul_accounts/mfa.py::_lock`): without it two parallel submissions both read the same counter
+    and both pass the replay check for one code, or spend one failed attempt between them. None = the row
+    was deleted meanwhile (disabled / reset)."""
+    return OfficerMfa.objects.select_for_update(of=("self",)).select_related("user").filter(pk=mfa.pk).first()
+
+
 def begin_setup(user) -> OfficerMfa:
     """新密钥,未确认。已开启的不走这里(视图答 409);上一次没走完的直接丢掉。"""
-    OfficerMfa.objects.filter(user=user, confirmed_at__isnull=True).delete()
-    return OfficerMfa.objects.create(user=user, secret=generate_secret())
+    with transaction.atomic():
+        OfficerMfa.objects.filter(user=user, confirmed_at__isnull=True).delete()
+        return OfficerMfa.objects.create(user=user, secret=generate_secret())
 
 
 def new_recovery_codes() -> list[tuple[str, str]]:
@@ -179,22 +189,27 @@ def new_recovery_codes() -> list[tuple[str, str]]:
 
 
 def _issue_recovery_codes(mfa) -> list[str]:
-    mfa.recovery_codes.all().delete()
-    pairs = new_recovery_codes()
-    for _, code_hash in pairs:
-        MfaRecoveryCode.objects.create(mfa=mfa, code_hash=code_hash)
+    with transaction.atomic():
+        mfa.recovery_codes.all().delete()
+        pairs = new_recovery_codes()
+        for _, code_hash in pairs:
+            MfaRecoveryCode.objects.create(mfa=mfa, code_hash=code_hash)
     return [shown for shown, _ in pairs]
 
 
 def confirm_setup(mfa, code) -> tuple[str, list[str]]:
     """第三步:验一次码。对了 → 记 verified_at、生成恢复码并返回明文(只此一次)。"""
-    outcome, step = classify_code(mfa.secret, code)
-    if outcome != "ok":
-        return outcome, []
-    mfa.verified_at = timezone.now()
-    mfa.last_step = step
-    mfa.save(update_fields=["verified_at", "last_step"])
-    return "ok", _issue_recovery_codes(mfa)
+    with transaction.atomic():
+        mfa = _lock(mfa)
+        if mfa is None or mfa.confirmed_at is not None:
+            return "wrong", []
+        outcome, step = classify_code(mfa.secret, code)
+        if outcome != "ok":
+            return outcome, []
+        mfa.verified_at = timezone.now()
+        mfa.last_step = step
+        mfa.save(update_fields=["verified_at", "last_step"])
+        return "ok", _issue_recovery_codes(mfa)
 
 
 def complete_setup(mfa, *, request=None) -> OfficerMfa:
@@ -272,7 +287,18 @@ def _count_failure(mfa, outcome, *, request=None) -> dict:
 
 
 def verify_login_code(mfa, *, code=None, recovery_code=None, request=None) -> dict:
-    """登录第二步的一次尝试。→ {"code": "ok", "method": …} 或 {"code": wrong|expired|locked, …}。"""
+    """登录第二步的一次尝试。→ {"code": "ok", "method": …} 或 {"code": wrong|expired|locked, …}。
+
+    整个读-判-写在一个事务里、行锁之下(`_lock`):并发的两次提交排队,于是同一个动态码只能通过一次,
+    错误计数也不会丢次数。"""
+    with transaction.atomic():
+        locked = _lock(mfa)
+        if locked is None:
+            return {"code": "wrong", "remaining_attempts": 0, "lock_minutes": MFA_LOCK_SECONDS // 60}
+        return _verify_locked(locked, code=code, recovery_code=recovery_code, request=request)
+
+
+def _verify_locked(mfa, *, code, recovery_code, request) -> dict:
     if _lock_remaining(mfa) > 0:
         return {"code": "locked", "retry_after": _lock_remaining(mfa)}
     now = timezone.now()
@@ -289,6 +315,13 @@ def verify_login_code(mfa, *, code=None, recovery_code=None, request=None) -> di
         return _count_failure(mfa, "wrong", request=request)
     outcome, step = classify_code(mfa.secret, code)
     if outcome == "ok" and mfa.last_step is not None and step <= mfa.last_step:
+        if mfa.last_used_at is None and step == mfa.last_step:
+            # The code that finished the setup wizard, typed again as the first sign-in. It is refused
+            # (a code is single-use) but it is not a guess: told as `expired` — wait for the next code —
+            # and not counted, so finishing setup never costs an attempt.
+            audit(AuditAction.LOGIN, mfa.user, "两步验证不通过(expired,配置向导刚用过的码,不计次)", request=request)
+            return {"code": "expired", "remaining_attempts": MFA_MAX_ATTEMPTS - mfa.failed_attempts,
+                    "lock_minutes": MFA_LOCK_SECONDS // 60}
         # A replay is reported as `expired` (the code really was used) but still counts toward the lock.
         return _count_failure(mfa, "expired", request=request)
     if outcome == "expired":
@@ -311,11 +344,15 @@ def confirm_owner(mfa, user, *, method, code="", password="", request=None) -> d
     → {"code": "ok"} 或 {"code": wrong|expired|locked|wrong_password, …}。"""
     if method == "totp":
         return verify_login_code(mfa, code=code or "", request=request)
-    if _lock_remaining(mfa) > 0:
-        return {"code": "locked", "retry_after": _lock_remaining(mfa)}
-    if not user.check_password(password or ""):
-        return _count_failure(mfa, "wrong_password", request=request)
-    return {"code": "ok"}
+    with transaction.atomic():
+        mfa = _lock(mfa)
+        if mfa is None:
+            return {"code": "wrong_password", "remaining_attempts": 0, "lock_minutes": MFA_LOCK_SECONDS // 60}
+        if _lock_remaining(mfa) > 0:
+            return {"code": "locked", "retry_after": _lock_remaining(mfa)}
+        if not user.check_password(password or ""):
+            return _count_failure(mfa, "wrong_password", request=request)
+        return {"code": "ok"}
 
 
 # ── 设备令牌 ───────────────────────────────────────────────────────────────────

@@ -3,6 +3,7 @@ Auth serializers: register, login, user profile.
 """
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError as DjangoValidationError
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 from rest_framework.exceptions import APIException
@@ -12,7 +13,7 @@ from rest_framework_simplejwt.settings import api_settings as simplejwt_settings
 
 from . import signin_sessions
 from .models import OfficerMfa
-from .passwords import weak_password_reasons
+from .passwords import RoleMinimumLengthValidator, password_change_required, weak_password_reasons
 from .tokens import RefreshToken
 
 User = get_user_model()
@@ -140,10 +141,16 @@ class UserWithTenantSerializer(serializers.ModelSerializer):
     # 两步验证(A12):`mfa_required` 是角色被殿设置要求(ADMIN 始终);不挡登录,前端据此挂常驻提示条。
     mfa_enabled = serializers.SerializerMethodField()
     mfa_required = serializers.SerializerMethodField()
+    # 密码须先改(首次登录 / 管理员重置 / 超期):登录照常成功,但除改密码外的接口 403 `password_change_required`。
+    password_change_required = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ["id", "username", "email", "role", "tenant", "display_name", "permissions", "mfa_enabled", "mfa_required"]
+        fields = ["id", "username", "email", "role", "tenant", "display_name", "permissions", "mfa_enabled", "mfa_required",
+                  "password_change_required"]
+
+    def get_password_change_required(self, obj) -> bool:
+        return password_change_required(obj)
 
     def get_mfa_enabled(self, obj) -> bool:
         from apps.authentication import mfa
@@ -489,13 +496,17 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ["id", "username", "email", "email_verified", "role", "tenant", "first_name", "last_name", "is_active", "display_name", "organization", "position", "mfa_enabled", "mfa_required"]
+        fields = ["id", "username", "email", "email_verified", "role", "tenant", "first_name", "last_name", "is_active", "display_name", "organization", "position", "mfa_enabled", "mfa_required", "password_change_required"]
         read_only_fields = ["id", "is_active", "username", "role"]
 
     #: 邮箱已验证(官员邮箱重置密码的前提);改邮箱即变回 false。见 `User.email_verified`。
     email_verified = serializers.BooleanField(read_only=True)
     mfa_enabled = serializers.SerializerMethodField()
     mfa_required = serializers.SerializerMethodField()
+    password_change_required = serializers.SerializerMethodField()
+
+    def get_password_change_required(self, obj) -> bool:
+        return password_change_required(obj)
 
     def get_mfa_enabled(self, obj) -> bool:
         from apps.authentication import mfa
@@ -658,10 +669,17 @@ class UserCreateSerializer(serializers.ModelSerializer):
                     {'role': 'Cannot assign a role more privileged than your own.'}
                 )
 
+        try:
+            RoleMinimumLengthValidator().validate(
+                attrs['password'], User(username=attrs.get('username', ''), role=attrs.get('role', 'VIEWER')))
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError({'password': [{'code': e.code, 'message': ' '.join(e.messages)}
+                                                            for e in exc.error_list]}) from None
         return attrs
 
     def create(self, validated_data):
-        return User.objects.create_user(**validated_data)
+        # An admin chose the password: the officer picks their own at first login.
+        return User.objects.create_user(**validated_data, must_change_password=True)
 
 
 class UserUpdateSerializer(serializers.ModelSerializer):
@@ -772,8 +790,8 @@ PASSWORD_RESET_REFUSAL_CODES = [
     ("reset_code_wrong", "the code does not match"),
     ("reset_code_attempts_exceeded", "too many wrong codes; the code was deleted"),
     ("weak_password", "the password validators refused the new password"),
-    ("no_soul_account", "no soul account has this address"),
-    ("ambiguous_email", "several accounts share this address"),
+    ("no_soul_account", "no soul account has this address (no longer returned: answered as reset_code_wrong)"),
+    ("ambiguous_email", "several accounts share this address (no longer returned: answered as reset_code_wrong)"),
 ]
 
 

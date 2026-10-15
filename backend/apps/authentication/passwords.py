@@ -9,9 +9,90 @@
 再把 `User.session_version` +1 —— 官员令牌带 `sv` 声明,比对不上的 access 立刻 401
 (`OfficerJWTAuthentication`、WebSocket 握手),不等 access 自然过期。
 """
+from datetime import timedelta
+
+from django.conf import settings
+from django.contrib.auth.hashers import check_password
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
+from django.db import transaction
 from django.db.models import F
+from django.utils import timezone
+
+#: 官员不能重复使用的最近几个密码(含当前这个):库里留 `PASSWORD_HISTORY_KEEP - 1` 条旧哈希 + 当前。
+PASSWORD_HISTORY_KEEP = 5
+#: 管理员(ADMIN)密码的最短长度;其余官员与灵魂是 Django 默认的 8。
+ADMIN_MIN_PASSWORD_LENGTH = 12
+#: 密码已过期 / 必须先改时,仍可访问的官员接口(其余一律 403 `password_change_required`)。
+PASSWORD_CHANGE_ALLOWED = frozenset({
+    ("POST", "/api/v1/auth/change-password/"), ("POST", "/api/v1/auth/logout/"), ("GET", "/api/v1/auth/profile/"),
+})
+
+
+def _is_officer(user) -> bool:
+    return getattr(user, "pk", None) is not None and getattr(user, "role", None) != "SOUL"
+
+
+class RoleMinimumLengthValidator:
+    """管理员的最短长度比普通官员长(12 对 8)。用户还没建出来(管理员开通)时按 `user` 的 role 判。"""
+
+    def validate(self, password, user=None):
+        if getattr(user, "role", None) == "ADMIN" and len(password) < ADMIN_MIN_PASSWORD_LENGTH:
+            raise DjangoValidationError(
+                f"This password is too short. It must contain at least {ADMIN_MIN_PASSWORD_LENGTH} characters.",
+                code="password_too_short",
+            )
+
+    def get_help_text(self):
+        return f"Administrators need at least {ADMIN_MIN_PASSWORD_LENGTH} characters."
+
+
+class PasswordHistoryValidator:
+    """新密码不能是官员当前的、也不能是最近用过的几个。灵魂账号与还没建出来的用户不查。"""
+
+    def validate(self, password, user=None):
+        if not _is_officer(user):
+            return
+        from .models import PasswordHistory
+
+        hashes = [user.password] + list(
+            PasswordHistory.objects.filter(user=user).values_list("password_hash", flat=True)[: PASSWORD_HISTORY_KEEP - 1]
+        )
+        if any(check_password(password, h) for h in hashes if h):
+            raise DjangoValidationError(
+                "This password was used recently. Choose one you have not used lately.", code="password_reused"
+            )
+
+    def get_help_text(self):
+        return "Your recent passwords cannot be reused."
+
+
+def set_officer_password(user, raw: str, *, must_change: bool = False) -> None:
+    """官员设新密码的唯一入口:旧哈希进历史(只留最近几条)、记 `password_changed_at`、
+    `must_change_password` 按调用方(本人改 → 假;管理员开通 / 重置 → 真)。调用方负责事务与其余 `save`;
+    这里保存 password / password_changed_at / must_change_password 三个字段。"""
+    from .models import PasswordHistory
+
+    with transaction.atomic():
+        old = user.password
+        user.set_password(raw)
+        user.password_changed_at = timezone.now()
+        user.must_change_password = must_change
+        user.save(update_fields=["password", "password_changed_at", "must_change_password"])
+        if _is_officer(user) and old:
+            PasswordHistory.objects.create(user=user, password_hash=old)
+            keep = list(PasswordHistory.objects.filter(user=user).values_list("pk", flat=True)[: PASSWORD_HISTORY_KEEP - 1])
+            PasswordHistory.objects.filter(user=user).exclude(pk__in=keep).delete()
+
+
+def password_change_required(user) -> bool:
+    """官员须先改密码:被标记(首次登录 / 管理员重置),或开了 `OFFICER_PASSWORD_MAX_AGE_DAYS` 且已超期。"""
+    if getattr(user, "role", None) == "SOUL":
+        return False
+    if user.must_change_password:
+        return True
+    days = getattr(settings, "OFFICER_PASSWORD_MAX_AGE_DAYS", 0)
+    return days > 0 and user.password_changed_at < timezone.now() - timedelta(days=days)
 
 
 def weak_password_reasons(password: str, user) -> list[dict]:

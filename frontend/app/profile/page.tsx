@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { authApi } from "@soulledger/core/api";
 import { passwordReasonKeys } from "@soulledger/core/api/auth";
+import { passwordMinLength } from "@soulledger/core/domain/passwordRules";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { showToast } from "@/src/components/ui/Toast";
@@ -23,12 +24,17 @@ export default function ProfilePage() {
   const { t } = useI18n();
   const { user, setUser } = useTenant();
   const queryClient = useQueryClient();
+  // 密码须先改(首次登录 / 管理员重置 / 超期):只剩改密码这一节,别的节要调的接口此刻都是 403。
+  const mustChange = user?.password_change_required === true;
 
   const [editingField, setEditingField] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
   const [oldPassword, setOldPassword] = useState("");
-  const rules = usePasswordRules(oldPassword);
-  const [showPasswordForm, setShowPasswordForm] = useState(false);
+  const rules = usePasswordRules(oldPassword, passwordMinLength(user?.role));
+  const [showPasswordForm, setShowPasswordForm] = useState(mustChange);
+  useEffect(() => {
+    if (mustChange) setShowPasswordForm(true);
+  }, [mustChange]);
   // The server's refusal, shown under the field it is about (never the passwords themselves).
   const [oldPasswordError, setOldPasswordError] = useState<string | null>(null);
 
@@ -40,6 +46,12 @@ export default function ProfilePage() {
       return res.data;
     },
   });
+
+  // The flag can be stale (the password was changed on another device): the server's profile is the truth.
+  const serverSaysChanged = profile?.password_change_required === false;
+  useEffect(() => {
+    if (mustChange && serverSaysChanged && user) setUser({ ...user, password_change_required: false });
+  }, [mustChange, serverSaysChanged, user, setUser]);
 
   // Update profile mutation
   const updateMutation = useMutation({
@@ -73,12 +85,16 @@ export default function ProfilePage() {
       setOldPasswordError(null);
       // The change signed every other device out; this one already holds a fresh token pair.
       showToast(t("profile.password_changed_others_out"), "success");
+      // The page then fills out again (the other sections were hidden only while the password was owed).
+      if (mustChange && user) setUser({ ...user, password_change_required: false });
     },
     onError: (err: unknown) => {
-      const data = (err as { response?: { data?: { old_password?: unknown } } })?.response?.data;
+      const response = (err as { response?: { status?: number; data?: { old_password?: unknown } } })?.response;
+      const data = response?.data;
       const refused = passwordReasonKeys(data).length > 0;
       const old = Array.isArray(data?.old_password) && data.old_password.length ? t("profile.password_old_wrong") : null;
-      if (!refused && !old) showToast(t("profile.password_change_failed"), "error");
+      if (response?.status === 429) showToast(t("profile.password_locked"), "error");
+      else if (!refused && !old) showToast(t("profile.password_change_failed"), "error");
       setOldPasswordError(old);
       // 服务器说「太常见 / 太像」:清单上的 ◇ 换成报错(password_rules.common_*),不再列 Django 的各条原因。
       if (refused) rules.reject();
@@ -130,6 +146,13 @@ export default function ProfilePage() {
         </div>
       )}
 
+      {mustChange ? (
+        <p role="alert" data-testid="password-must-change" className="mb-6 border-b border-t-2 border-b-[oklch(var(--color-line))] border-t-[oklch(var(--color-warning))] bg-[oklch(var(--color-warning-tint))] px-4 py-3 text-sm text-[oklch(var(--color-warning))]">
+          <span aria-hidden="true">! </span>
+          {t("profile.password_must_change")}
+        </p>
+      ) : null}
+
       {/* 规范 v1:区块标压线,行线代替卡片;标签在左,值在右,393 px 下同样两列。 */}
       <section className="mb-6">
         {/* v3 面板标题(与 `components/ui/page-section.tsx` 同一档);v2 节首的匾纹片段撤掉。 */}
@@ -177,7 +200,7 @@ export default function ProfilePage() {
           ))}
 
           {/* 只有已验证的邮箱收得到「忘记密码」的重置邮件。 */}
-          {!isLoading && <EmailVerificationRow hasEmail={email !== ""} verified={profile?.email_verified === true} />}
+          {!isLoading && !mustChange && <EmailVerificationRow hasEmail={email !== ""} verified={profile?.email_verified === true} />}
 
           <dt className={DT}>{t("profile.role")}</dt>
           <dd className={DD}>
@@ -246,18 +269,20 @@ export default function ProfilePage() {
               wide
             />
             <div className="flex justify-end gap-2 border-t border-[oklch(var(--color-block))] pt-3">
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => {
-                  setShowPasswordForm(false);
-                  setOldPassword("");
-                  rules.reset();
-                  setOldPasswordError(null);
-                }}
-              >
-                {t("common.cancel")}
-              </Button>
+              {mustChange ? null : (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => {
+                    setShowPasswordForm(false);
+                    setOldPassword("");
+                    rules.reset();
+                    setOldPasswordError(null);
+                  }}
+                >
+                  {t("common.cancel")}
+                </Button>
+              )}
               <Button
                 type="submit"
                 variant="primary"
@@ -273,6 +298,8 @@ export default function ProfilePage() {
         </div>
       </section>
 
+      {mustChange ? null : (
+      <>
       {/* 通知:类别 × 站内 / 邮件(apps/notifications/categories.py)。通知页右上角的齿轮跳到这里。 */}
       <section id={NOTIFICATION_PREFS_ANCHOR}>
         <h2 className="pt-6 text-lg text-[oklch(var(--color-ink))]">
@@ -301,6 +328,8 @@ export default function ProfilePage() {
           onChangePassword={() => setShowPasswordForm(true)}
         />
       </section>
+      </>
+      )}
     </PageShell>
   );
 }

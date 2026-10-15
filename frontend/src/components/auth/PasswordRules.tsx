@@ -1,7 +1,7 @@
 "use client";
 
 import { useId, useRef, useState } from "react";
-import { passwordRulesMet, passwordsMatch, ruleDisplay, unmetRules, type PasswordRule, type RuleDisplay } from "@soulledger/core/domain/passwordRules";
+import { minLengthRuleKey, PASSWORD_MIN_LENGTH, passwordRulesMet, passwordsMatch, ruleDisplay, unmetRules, type PasswordRule, type RuleDisplay } from "@soulledger/core/domain/passwordRules";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { Field, fieldControl } from "@/src/components/ui/Field";
 import { cn } from "@/lib/utils";
@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils";
  * - 服务器以「太常见 / 太像」拒绝(`reject()`):◇ 那行换成报错,前面各条仍是 ✓,框描红、焦点回新密码框并全选。
  * 输入时不用 live region;只在离开框、点保存、服务器拒绝这三个时刻用 `role="alert"` 播报。
  */
-export function usePasswordRules(current?: string) {
+export function usePasswordRules(current?: string, minLength = PASSWORD_MIN_LENGTH) {
   const { t } = useI18n();
   const [next, setNextValue] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -27,16 +27,17 @@ export function usePasswordRules(current?: string) {
   const nextRef = useRef<HTMLInputElement>(null);
   const confirmRef = useRef<HTMLInputElement>(null);
 
-  const unmet = unmetRules(next, current);
+  const unmet = unmetRules(next, current, minLength);
   const mismatch = !passwordsMatch(next, confirm);
 
+  const ruleKey = (rule: PasswordRule) => (rule === "min_length" ? minLengthRuleKey(minLength) : `password_rules.${rule}`);
   const summary = (rules: PasswordRule[], matchBad: boolean) => {
-    const list = [...rules.map((rule) => t(`password_rules.${rule}`)), ...(matchBad ? [t("password_rules.match")] : [])];
+    const list = [...rules.map((rule) => t(ruleKey(rule))), ...(matchBad ? [t("password_rules.match")] : [])];
     return t("password_rules.summary", { n: String(list.length), list: list.join(", ") });
   };
 
   return {
-    current, next, confirm, nextRef, confirmRef, announce, rejected,
+    current, minLength, next, confirm, nextRef, confirmRef, announce, rejected,
     judgedNext: nextLeft || submitted,
     judgedConfirm: confirmLeft || submitted,
     setNext: (value: string) => {
@@ -131,7 +132,7 @@ export function PasswordRuleFields({
   const { t } = useI18n();
   const listId = useId();
   const matchId = useId();
-  const met = passwordRulesMet(rules.next, rules.current);
+  const met = passwordRulesMet(rules.next, rules.current, rules.minLength);
   const matched = passwordsMatch(rules.next, rules.confirm);
   const matchState = ruleDisplay(matched, rules.judgedConfirm);
   const nextBad = rules.rejected || (rules.judgedNext && Object.values(met).some((ok) => !ok));
@@ -170,7 +171,7 @@ export function PasswordRuleFields({
         <ul id={listId} data-testid="password-rules-list" className="m-0 flex list-none flex-col gap-1 p-0">
           {order.filter((rule) => rule in met).map((rule) => (
             <Row key={rule} testId={`password-rule-${rule}`} state={ruleDisplay(Boolean(met[rule]), rules.judgedNext)}>
-              {t(`password_rules.${rule}`)}
+              {t(rule === "min_length" ? minLengthRuleKey(rules.minLength) : `password_rules.${rule}`)}
             </Row>
           ))}
           {rules.rejected ? null : <Row state="note" testId="password-rule-note">{t("password_rules.note")}</Row>}

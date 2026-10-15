@@ -273,7 +273,7 @@ class TestUserCreateSerializerRoleAndTenantGuard:
         serializer = UserCreateSerializer(
             data={
                 "username": "umc_cross_tenant_admin",
-                "password": "test12345",
+                "password": "test12345-admin",  # ADMIN passwords need 12+ characters
                 "role": "ADMIN",
                 "tenant": self.eg_tenant.id,
             },

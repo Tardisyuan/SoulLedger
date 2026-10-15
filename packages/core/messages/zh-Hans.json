@@ -1974,6 +1974,9 @@
     "password_reason_common": "这个密码太常见,请换一个",
     "password_reason_numeric": "密码不能全是数字",
     "password_reason_similar": "密码与用户名或个人信息太像,请换一个",
+    "password_reason_reused": "这个密码最近用过，请换一个新的",
+    "password_locked": "密码尝试过于频繁，请稍后再试",
+    "password_must_change": "请先修改密码，改好后才能继续使用。",
     "password_reason_invalid": "新密码不符合要求,请换一个更长、更不常见的密码",
     "password_old_wrong": "当前密码不正确",
     "profile_updated": "个人信息已更新",
@@ -5987,6 +5990,7 @@
   },
   "password_rules": {
     "min_length": "至少 8 位",
+    "min_length_admin": "至少 12 位（管理员）",
     "not_digits": "不只是数字",
     "not_current": "和当前密码不同",
     "match": "两次输入一致",

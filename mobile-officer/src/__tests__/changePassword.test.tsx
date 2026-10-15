@@ -209,3 +209,57 @@ it("我的 has the entry, and it opens the screen it names", async () => {
   fireEvent.press(screen.getByTestId("me-mfa"));
   expect(onOpen).toHaveBeenCalledWith("mfa");
 });
+
+describe("when the password must be changed first (first sign-in, an administrator's reset, aged out)", () => {
+  const OWING = { ...OFFICER, password_change_required: true };
+
+  it("says why, has no way back, and offers signing out", () => {
+    const session = sessionOf(OWING);
+    renderOfficer(<ChangePasswordScreen required onBack={() => {}} />, { session });
+    expect(screen.getByTestId("password-must-change")).toBeTruthy();
+    expect(screen.queryByTestId("password-screen-back")).toBeNull();
+    fireEvent.press(screen.getByTestId("password-signout"));
+    expect(session.signOut).toHaveBeenCalledTimes(1);
+  });
+
+  it("a successful change clears the flag", async () => {
+    mockChange.mockResolvedValue({ data: { detail: "ok" } });
+    const session = sessionOf(OWING);
+    renderOfficer(<ToastProvider><ChangePasswordScreen required onBack={() => {}} /></ToastProvider>, { session });
+    fillAll();
+    await submit();
+    expect(session.setPasswordChangeRequired).toHaveBeenCalledWith(false);
+  });
+
+  it("an ordinary visit from 我的 shows no such line and does not touch the flag", async () => {
+    mockChange.mockResolvedValue({ data: { detail: "ok" } });
+    const session = sessionOf(OFFICER);
+    renderOfficer(<ToastProvider><ChangePasswordScreen onBack={() => {}} /></ToastProvider>, { session });
+    expect(screen.queryByTestId("password-must-change")).toBeNull();
+    expect(screen.getByTestId("password-screen-back")).toBeTruthy();
+    fillAll();
+    await submit();
+    expect(session.setPasswordChangeRequired).not.toHaveBeenCalled();
+  });
+});
+
+describe("an administrator needs 12", () => {
+  const ADMIN = { ...OFFICER, role: "ADMIN" };
+
+  it("the first rule asks for 12 and eleven is not enough to send", async () => {
+    renderOfficer(<ChangePasswordScreen onBack={() => {}} />, { user: ADMIN });
+    expect(screen.getByText("至少 12 位（管理员）")).toBeTruthy();
+    fillAll("oldpw-123", "newpw-45678"); // 11
+    await submit();
+    expect(mockChange).not.toHaveBeenCalled();
+    fillAll("oldpw-123", "newpw-456789"); // 12
+    mockChange.mockResolvedValue({ data: { detail: "ok" } });
+    await submit();
+    expect(mockChange).toHaveBeenCalled();
+  });
+
+  it("a normal officer still needs 8", () => {
+    renderOfficer(<ChangePasswordScreen onBack={() => {}} />);
+    expect(screen.getByText("至少 8 位")).toBeTruthy();
+  });
+});
