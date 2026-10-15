@@ -59,7 +59,12 @@ class JWTAuthMiddleware(BaseMiddleware):
                     )
                     if user is None:
                         await self._reject(send, code=4001, reason=reason)
-                        return {"type": "websocket.close", "code": 4001}
+                        # Hand the consumer a *receive-side* disconnect so it runs its normal
+                        # teardown. This used to be `websocket.close` -- a send-side type the
+                        # consumer has no handler for: it raised ValueError, and cancelling its
+                        # pending channel-layer read sometimes hung (2026-10-16: a test worker
+                        # sat 30 min on BZPOPMIN).
+                        return {"type": "websocket.disconnect", "code": 4001}
                     scope["user"] = user
                     authenticated = True
                     # FORWARD the auth message; do not swallow it.
@@ -94,7 +99,7 @@ class JWTAuthMiddleware(BaseMiddleware):
 
                 # No auth token in first message
                 await self._reject(send, code=4001, reason="Token required as first message")
-                return {"type": "websocket.close", "code": 4001}
+                return {"type": "websocket.disconnect", "code": 4001}
 
             return message
 

@@ -186,6 +186,10 @@ class TestJWTAuthentication:
         except Exception:
             # Close frame received — expected behavior
             pass
+        finally:
+            # Without this the consumer keeps blocking on the channel layer's BZPOPMIN after the
+            # test returns, and teardown waits on it — 2026-10-16 one xdist worker sat there 30 min.
+            await communicator.disconnect()
 
     @pytest.mark.asyncio
     async def test_invalid_token_rejected(self):
