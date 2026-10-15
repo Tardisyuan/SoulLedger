@@ -924,6 +924,23 @@ describe("存为文件", () => {
     expect(files.size).toBe(0);
   });
 
+  it("on Android a shared file stays until the page's sweep (the receiver reads it after the sheet closes); a cancelled one goes now", async () => {
+    const { Platform } = jest.requireActual<typeof import("react-native")>("react-native");
+    const os = Platform.OS;
+    Object.defineProperty(Platform, "OS", { value: "android", configurable: true });
+    try {
+      expect(await shareRecoveryFile({ header: "H", soulCode: "S-1", soulCodeLine: "C", codes: CODES, dialogTitle: "T" })).toBe(true);
+      expect([...files.values()][0]).toContain(CODES[0]);
+      sweepRecoveryFiles();
+      expect(files.size).toBe(0);
+      sharing.shareAsync.mockRejectedValueOnce(new Error("cancelled"));
+      expect(await shareRecoveryFile({ header: "H", soulCode: "S-1", soulCodeLine: "C", codes: CODES, dialogTitle: "T" })).toBe(false);
+      expect(files.size).toBe(0);
+    } finally {
+      Object.defineProperty(Platform, "OS", { value: os, configurable: true });
+    }
+  });
+
   it("a file left behind (the app was killed while the sheet was up) is swept before the next, and on demand", async () => {
     files.set("file:///cache/soulledger-recovery-OLD1.txt", "old");
     files.set("file:///cache/unrelated.txt", "keep");
