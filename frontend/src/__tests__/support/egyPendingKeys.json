@@ -1,1 +1,8 @@
-["scheduler.jobs.authentication_prune_expired_push_registrations"]
+[
+  "scheduler.jobs.authentication_prune_expired_push_registrations",
+  "officer_app.list.more",
+  "officer_app.state.refresh_failed",
+  "soul_app.circle.search.more",
+  "soul_app.mfa.manage.codes_lost",
+  "officer_app.mfa.setup.abandon"
+]
