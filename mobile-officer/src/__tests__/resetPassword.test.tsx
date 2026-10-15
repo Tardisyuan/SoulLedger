@@ -26,7 +26,7 @@ jest.mock("@soulledger/core/api/officer-app", () => ({
   ...jest.requireActual("@soulledger/core/api/officer-app"),
   officerAppApi: { todo: (...a: unknown[]) => mockTodo(...a), item: jest.fn(), registerPush: jest.fn(), unregisterPush: jest.fn() },
 }));
-jest.mock("@soulledger/core/api/judgment", () => ({ judgmentApi: { list: jest.fn(async () => ({ data: { results: [] } })), claim: jest.fn() } }));
+jest.mock("@soulledger/core/api/judgment", () => ({ judgmentApi: { list: jest.fn(async () => ({ data: { results: [] } })), claim: jest.fn(), queueCounts: jest.fn(async () => ({ data: { mine: 0, unclaimed: 0, others: 0, deferred: 0 } })) } }));
 jest.mock("@soulledger/core/api/notifications", () => ({
   notificationsApi: { list: jest.fn(async () => ({ data: { results: [] } })), markRead: jest.fn(), markAllRead: jest.fn() },
 }));

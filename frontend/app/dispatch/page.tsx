@@ -93,7 +93,7 @@ function DispatchPageContent() {
   });
   const tenantOptions = [
     { value: "", label: t("dispatch.filter.all_tenants") },
-    ...(tenantsQuery.data ?? []).map((x) => ({ value: String(x.id), label: x.display_name || x.code })),
+    ...(tenantsQuery.data ?? []).map(({ id, display_name, code }) => ({ value: String(id), label: display_name || code })),
   ];
   const filterParams: Record<string, string> = {};
   if (search.trim()) filterParams.search = search.trim();

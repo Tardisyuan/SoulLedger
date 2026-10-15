@@ -71,8 +71,8 @@ it("marks a draft 草稿 and links it back into the form; a proposal still opens
   const draftRow = screen.getAllByRole("row").find((r) => r.querySelector('a[href="/dispatch/propose?draft=d1"]'));
   expect(draftRow).toBeDefined();
   expect(within(draftRow!).getByText("草稿")).toBeInTheDocument();
-  // And only the draft is so marked.
-  expect(screen.getAllByText("草稿")).toHaveLength(1);
+  // And only the draft is so marked (the status filter's 草稿 <option> is not a row).
+  expect(screen.getAllByText("草稿").filter((el) => el.tagName !== "OPTION")).toHaveLength(1);
   expect(screen.queryByRole("link", { name: /沈青梧/ })?.getAttribute("href")).not.toContain("draft=");
 });
 

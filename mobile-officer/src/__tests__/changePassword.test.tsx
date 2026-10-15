@@ -15,7 +15,7 @@ import { httpError, renderOfficer, sessionOf, OFFICER } from "./harness";
 const mockChange = jest.fn();
 jest.mock("@soulledger/core/api/auth", () => ({
   ...jest.requireActual("@soulledger/core/api/auth"),
-  authApi: { changePassword: (...a: unknown[]) => mockChange(...a) },
+  authApi: { changePassword: (...a: unknown[]) => mockChange(...a), profile: jest.fn(async () => ({ data: { email: "", email_verified: true } })) },
   mfaApi: { status: jest.fn(async () => ({ data: { enabled: true, required: true } })) },
 }));
 
