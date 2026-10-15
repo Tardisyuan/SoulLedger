@@ -13,6 +13,7 @@
  * platform's: access in memory, refresh in the secure store.
  */
 import { authApi, isMfaRequired, mfaApi, type LoginResponse, type LoginUser } from "@soulledger/core/api/auth";
+import { onPasswordChangeRequired } from "@soulledger/core/api/client";
 import { ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY, getRefreshToken, platform, setAccessToken, setRefreshToken } from "@soulledger/core/platform";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 
@@ -48,6 +49,8 @@ export interface Session {
   signOut: () => void;
   /** Two-step verification was turned on or off here: keep the cached profile (and so the banner) in step. */
   setMfaEnabled: (enabled: boolean) => void;
+  /** The password must be changed before anything else (first sign-in, an administrator's reset, aged out), or has just been. */
+  setPasswordChangeRequired: (required: boolean) => void;
 }
 
 export const SessionContext = createContext<Session | null>(null);
@@ -100,7 +103,14 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       ({ data: profile }) =>
         setState((prev) => {
           if (prev.status !== "signedIn") return prev;
-          const user = { ...prev.user, mfa_enabled: profile.mfa_enabled, mfa_required: profile.mfa_required, display_name: profile.display_name, role: profile.role };
+          const user = {
+            ...prev.user,
+            mfa_enabled: profile.mfa_enabled,
+            mfa_required: profile.mfa_required,
+            display_name: profile.display_name,
+            role: profile.role,
+            password_change_required: profile.password_change_required ?? prev.user.password_change_required,
+          };
           platform().persistent.set(USER_KEY, JSON.stringify(user));
           return { status: "signedIn", user };
         }),
@@ -175,7 +185,25 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const value = useMemo<Session>(() => ({ state, signIn, verifyMfa, signOut, setMfaEnabled }), [state, signIn, verifyMfa, signOut, setMfaEnabled]);
+  const setPasswordChangeRequired = useCallback((required: boolean) => {
+    setState((prev) => {
+      if (prev.status !== "signedIn" || !!prev.user.password_change_required === required) return prev;
+      const user = { ...prev.user, password_change_required: required };
+      platform().persistent.set(USER_KEY, JSON.stringify(user));
+      return { status: "signedIn", user };
+    });
+  }, []);
+
+  // A 403 `password_change_required` from any request (the password aged out while the app was open).
+  useEffect(() => {
+    onPasswordChangeRequired(() => setPasswordChangeRequired(true));
+    return () => onPasswordChangeRequired(null);
+  }, [setPasswordChangeRequired]);
+
+  const value = useMemo<Session>(
+    () => ({ state, signIn, verifyMfa, signOut, setMfaEnabled, setPasswordChangeRequired }),
+    [state, signIn, verifyMfa, signOut, setMfaEnabled, setPasswordChangeRequired]
+  );
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }
 

@@ -110,6 +110,15 @@ export function Shell({ onResetDone }: { onResetDone?: () => void } = {}) {
 
   if (state.status !== "signedIn") return null;
   const { user } = state;
+  // The password must be changed first: nothing but that screen (and signing out) until it is.
+  if (user.password_change_required) {
+    return (
+      <View testID="shell" style={{ flex: 1, backgroundColor: theme.s0 }}>
+        <IdentityBand hall={hallLabel(t, user.tenant) ?? t("officer_app.name")} name={user.display_name || user.username} />
+        <ChangePasswordScreen required onBack={() => {}} />
+      </View>
+    );
+  }
 
   return (
     <View testID="shell" style={{ flex: 1, backgroundColor: theme.s0 }}>

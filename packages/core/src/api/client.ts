@@ -230,10 +230,23 @@ function endSession(): void {
   platform().onUnauthorized();
 }
 
+let passwordChangeListener: (() => void) | null = null;
+
+/**
+ * The host's answer to a 403 `password_change_required` (first sign-in, an administrator's reset, or the password
+ * aged out while the session was open): it routes to its change-password page. One listener; `null` removes it.
+ */
+export function onPasswordChangeRequired(listener: (() => void) | null): void {
+  passwordChangeListener = listener;
+}
+
 // Handle 401 → redirect to login (skip for auth endpoints which handle their own errors)
 api.interceptors.response.use(
   (res) => res,
   async (error) => {
+    if (error.response?.status === 403 && error.response.data?.code === "password_change_required") {
+      passwordChangeListener?.();
+    }
     if (error.response?.status === 401 && !error.config._retry) {
       if (isAuthEndpoint(error.config.url)) {
         return Promise.reject(error);

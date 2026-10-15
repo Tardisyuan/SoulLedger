@@ -1,1 +1,7 @@
-["scheduler.jobs.authentication_prune_expired_push_registrations"]
+[
+  "scheduler.jobs.authentication_prune_expired_push_registrations",
+  "password_rules.min_length_admin",
+  "profile.password_reason_reused",
+  "profile.password_locked",
+  "profile.password_must_change"
+]

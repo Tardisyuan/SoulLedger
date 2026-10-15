@@ -47,6 +47,9 @@ export interface LoginUser {
    *  the shell shows a standing banner until `mfa_enabled`. Optional: a pre-A12 cached session has neither. */
   mfa_enabled?: boolean;
   mfa_required?: boolean;
+  /** 首次登录 / 管理员重置 / 密码超期:登录成功,但除改密码外的接口 403 `password_change_required`,
+   *  客户端把人带到改密码页。可选:旧缓存的会话里没有。 */
+  password_change_required?: boolean;
 }
 
 /** 200 body of POST /auth/login/ (backend/apps/authentication/serializers.py:94). */
@@ -140,6 +143,7 @@ export interface AuthProfile {
   position: string;
   mfa_enabled?: boolean;
   mfa_required?: boolean;
+  password_change_required?: boolean;
 }
 
 /**
@@ -349,6 +353,7 @@ const PASSWORD_REASON_KEYS: Record<string, string> = {
   password_too_common: "profile.password_reason_common",
   password_entirely_numeric: "profile.password_reason_numeric",
   password_too_similar: "profile.password_reason_similar",
+  password_reused: "profile.password_reason_reused",
 };
 
 export function passwordReasonKeys(body: unknown): string[] {
