@@ -5503,6 +5503,13 @@
     }
   },
   "officer_app": {
+    "biometric": {
+      "setting": "批准、驳回前认面容",
+      "hint": "别人拿到你的手机，也做不了决定",
+      "unavailable": "这部手机还没设锁屏密码，开不了。先在系统设置里设一个。",
+      "failed": "没有认出面容，还没批准。再点一次确认重试。",
+      "failed_reject": "没有认出面容，还没驳回。再点一次确认重试。"
+    },
     "update_required": {
       "body": "当前版本 {{version}} 低于本殿要求的最低版本 {{min}}。"
     },

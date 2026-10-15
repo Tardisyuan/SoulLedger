@@ -13,5 +13,10 @@
   "profile.notifications.notes.approval",
   "profile.notifications.notes.approval_timeout",
   "profile.notifications.notes.password_help",
-  "profile.notifications.notes.dispatch"
+  "profile.notifications.notes.dispatch",
+  "officer_app.biometric.hint",
+  "officer_app.biometric.unavailable",
+  "officer_app.biometric.failed_reject",
+  "officer_app.biometric.setting",
+  "officer_app.biometric.failed"
 ]

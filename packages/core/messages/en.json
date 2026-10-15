@@ -5503,6 +5503,13 @@
     }
   },
   "officer_app": {
+    "biometric": {
+      "setting": "Check face before approving or rejecting",
+      "hint": "Nobody else can decide with your phone in hand",
+      "unavailable": "This phone has no screen lock yet, so this can't be turned on. Set one in system settings first.",
+      "failed": "Face not recognised. Not approved yet. Tap Confirm to try again.",
+      "failed_reject": "Face not recognised. Not rejected yet. Tap Confirm to try again."
+    },
     "update_required": {
       "body": "Version {{version}} is below the minimum this hall requires, {{min}}."
     },

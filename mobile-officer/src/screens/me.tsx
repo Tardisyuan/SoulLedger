@@ -5,6 +5,7 @@ import Constants from "expo-constants";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { type ScrollView, View } from "react-native";
 
+import { canCheck, confirmWished, setConfirmWished } from "../deviceCheck";
 import { ActionButton, Row, Segmented } from "../kit";
 import { type ThemeChoice, usePrefs } from "../prefs";
 import { permission, registerDevice, requestPermission, unregisterDevice, hasRegisteredDevice, type Permission } from "../push";
@@ -75,6 +76,8 @@ export function MeTab({ onOpen }: { onOpen: (screen: AccountScreen) => void }) {
         </Block>
 
         <PushBlock />
+
+        <ConfirmBlock />
 
         <Block label={t("officer_app.me.about")}>
           <Txt variant="bodyLg">{`${t("officer_app.name")} · ${t("officer_app.me.version", { version })}`}</Txt>
@@ -167,6 +170,41 @@ function PushBlock() {
         right={<Txt variant="nav">{on ? "✓" : "○"}</Txt>}
       />
       {note ? <Notice tone="neutral">{note}</Notice> : null}
+    </Block>
+  );
+}
+
+/** 批准、驳回前认面容: a switch, on by default; greyed, with the way out, when the phone has no screen lock. */
+function ConfirmBlock() {
+  const { t } = useI18n();
+  const [possible, setPossible] = useState<boolean | null>(null);
+  const [on, setOn] = useState(confirmWished);
+
+  useEffect(() => {
+    let alive = true;
+    void canCheck().then((ok) => alive && setPossible(ok));
+    return () => {
+      alive = false;
+    };
+  }, []);
+  if (possible === null) return null;
+
+  const toggle = () => {
+    setConfirmWished(!on);
+    setOn(!on);
+  };
+  return (
+    <Block label={t("officer_app.biometric.setting")}>
+      <View style={{ opacity: possible ? 1 : 0.45 }}>
+        <Row
+          testID="me-confirm-bio"
+          minHeight={56}
+          title={t("officer_app.biometric.setting")}
+          lines={[possible ? t("officer_app.biometric.hint") : t("officer_app.biometric.unavailable")]}
+          onPress={possible ? toggle : undefined}
+          right={<Txt variant="nav">{possible && on ? "✓" : "○"}</Txt>}
+        />
+      </View>
     </Block>
   );
 }

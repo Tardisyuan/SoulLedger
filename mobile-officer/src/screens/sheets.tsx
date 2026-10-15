@@ -9,6 +9,7 @@ import { cosignRefusalOf, officerAppApi, type SignerCandidate, type TodoItemDeta
 import { useCallback, useState } from "react";
 import { View } from "react-native";
 
+import { decisionAllowed } from "../deviceCheck";
 import { ActionButton, Row, Segmented } from "../kit";
 import { decisionFailure, failureReasonKey, passVerdictsOf, reasonMissing, submitDecision, todoTitle, type FailureReason, type Verdict } from "../rules";
 import { Button, FieldError, Input, Notice, Sheet, Txt, space, useI18n, useRemote, useTheme, useToast } from "../shared";
@@ -47,6 +48,8 @@ export function DecisionSheet({
   const [flagged, setFlagged] = useState(false);
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<FailureReason | null>(null);
+  // The phone's own check was cancelled or did not recognise the officer: nothing was sent.
+  const [unrecognised, setUnrecognised] = useState(false);
   // A node that accepts several passing verdicts asks which one; with one, it is sent as is.
   const passChoices = detail.kind === "approval" || detail.kind === "rebirth" ? passVerdictsOf(detail) : [];
   const [passVerdict, setPassVerdict] = useState<string | null>(null);
@@ -67,10 +70,17 @@ export function DecisionSheet({
     }
     setBusy(true);
     setFailure(null);
-    submitDecision({ detail, verdict, reason, days: parsedDays ?? undefined, passVerdict: verdict === "approve" ? chosenPass : undefined })
-      .then(() => {
-        onDone();
-        onClose();
+    setUnrecognised(false);
+    decisionAllowed()
+      .then((allowed) => {
+        if (!allowed) {
+          setUnrecognised(true);
+          return;
+        }
+        return submitDecision({ detail, verdict, reason, days: parsedDays ?? undefined, passVerdict: verdict === "approve" ? chosenPass : undefined }).then(() => {
+          onDone();
+          onClose();
+        });
       })
       .catch((e: unknown) => setFailure(decisionFailure(e).reason))
       .finally(() => setBusy(false));
@@ -124,6 +134,7 @@ export function DecisionSheet({
           />
         ) : null}
         {failure ? <Notice tone="neg" testID="decision-failure">{`! ${t("officer_app.confirm.failed", { reason: t(failureReasonKey(failure)) })}`}</Notice> : null}
+        {unrecognised ? <Notice tone="neg" testID="decision-unrecognised">{`! ${t(verdict === "approve" ? "officer_app.biometric.failed" : "officer_app.biometric.failed_reject")}`}</Notice> : null}
         <View style={{ flexDirection: "row", gap: space[3] }}>
           <ActionButton testID="decision-cancel" kind="outline" title={t("soul_app.common.cancel")} onPress={onClose} />
           <ActionButton
