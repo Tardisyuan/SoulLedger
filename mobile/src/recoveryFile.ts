@@ -5,7 +5,10 @@
  *   it is written into the CACHE directory (not documents, not backed up), named `soulledger-recovery-<soul code>.txt`
  *   (not localised, no date, ASCII only: every system can save it), and holds one explanatory line, the soul code, and the codes --
  *   no name, no hall, nothing else about the soul;
- *   it is deleted the moment the sheet closes, whether the soul saved it, cancelled, or the sheet failed to open;
+ *   it is deleted the moment the sheet closes, whether the soul saved it, cancelled, or the sheet failed to open --
+ *   EXCEPT on Android after a share that went through: there the sheet closes before the receiving app has read the
+ *   file (seen on a Huawei TAS-AL00, 2026-10-15: 「中转站」 kept a 0-byte copy), so it stays until the codes page goes
+ *   away (the sweep below) or the next one is written;
  *   any file of this name left behind (the app was killed while the sheet was up) is swept before the next one is
  *   written and when the codes page goes away.
  *
@@ -14,6 +17,7 @@
  */
 import { File, Paths } from "expo-file-system";
 import * as Sharing from "expo-sharing";
+import { Platform } from "react-native";
 
 const PREFIX = "soulledger-recovery-";
 
@@ -56,18 +60,21 @@ export function sweepRecoveryFiles(): void {
 export async function shareRecoveryFile(opts: { header: string; soulCode: string; soulCodeLine: string; codes: string[]; dialogTitle: string }): Promise<boolean> {
   sweepRecoveryFiles();
   let file: File | null = null;
+  let shared = false;
   try {
     if (!(await Sharing.isAvailableAsync())) return false;
     file = new File(Paths.cache, recoveryFileName(opts.soulCode));
     file.create({ overwrite: true, intermediates: true });
     file.write(recoveryFileBody(opts.header, opts.soulCodeLine, opts.codes));
     await Sharing.shareAsync(file.uri, { mimeType: "text/plain", UTI: "public.plain-text", dialogTitle: opts.dialogTitle });
+    shared = true;
     return true;
   } catch {
     return false;
   } finally {
-    // Saved, cancelled or failed: the temporary copy goes.
-    if (file) {
+    // Cancelled or failed: the temporary copy goes now. Shared: on iOS too (the share is done by the time this
+    // resolves); on Android the receiver may still be reading, so the page's sweep takes it when it goes.
+    if (file && !(shared && Platform.OS === "android")) {
       try {
         file.delete();
       } catch {
