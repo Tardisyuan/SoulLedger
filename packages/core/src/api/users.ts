@@ -70,7 +70,6 @@ export interface UpdateUserInput {
   tenant_id?: number;
   organization?: number;
   position?: string;
-  password?: string;
 }
 
 /** POST /users/{id}/assign_roles/ —— 至少给一项。`extra_roles` 整表替换(`[]` 清空);不含 ADMIN / SOUL。 */
@@ -119,6 +118,9 @@ export const usersApi = {
   batchActivate: (userIds: string[]) => api.post<UserBatchUpdateResult>("/users/batch_activate/", { user_ids: userIds }),
   batchDeactivate: (userIds: string[]) => api.post<UserBatchUpdateResult>("/users/batch_deactivate/", { user_ids: userIds }),
   export: () => api.get<Blob>("/users/export_csv/", { responseType: "blob" }),
+  /** `user.manage`. 200 `{password}`: a random password, shown once; the officer must change it at next login and
+   *  every other session of theirs is ended. */
+  resetPassword: (id: string | number) => api.post<{ password: string }>(`/users/${id}/reset_password/`),
   /** ADMIN. Clears the authenticator, recovery codes and 「不再询问」 devices, revokes every refresh token;
    *  the reason is required and audited. 409 `not_enabled` on a row that has it off. */
   resetMfa: (id: string | number, reason: string) => api.post<{ detail: string }>(`/users/${id}/reset-mfa/`, { reason }),

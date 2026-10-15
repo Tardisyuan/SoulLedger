@@ -14,6 +14,8 @@ import { UserRolesDialog } from "@/src/components/users/UserRolesDialog";
 import { UserRoleChips } from "@/src/components/users/UserRoleChips";
 import { UserBatchBar, useUserSelection } from "@/src/components/users/UserBatchBar";
 import { MfaResetDialog } from "@/src/components/users/MfaResetDialog";
+import { PasswordResetDialog } from "@/src/components/users/PasswordResetDialog";
+import { ExportCsvButton } from "@/src/components/ExportCsvButton";
 import { ImpersonateDialog } from "@/src/components/impersonation/ImpersonateDialog";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { showToast } from "@/src/components/ui/Toast";
@@ -55,7 +57,8 @@ export default function UsersPage() {
 
 function UsersRoute() {
   const { t } = useI18n();
-  usePlaque({ hall: useHall(t("plaque.office.rules")) });
+  const hall = useHall(t("plaque.office.rules"));
+  usePlaque({ hall });
   const router = useRouter();
   // `?username=<u>`: the password-help notification's 「去用户页」 (第三类 F 组 2.6) lands on
   // exactly that account — an exact-match filter on the server, and the row highlighted.
@@ -89,6 +92,7 @@ function UsersRoute() {
     Boolean(located)
   );
   const [resetMfaUser, setResetMfaUser] = useState<User | null>(null);
+  const [resetPasswordUser, setResetPasswordUser] = useState<User | null>(null);
 
   // Fetch users list — params live in the queryKey, so filter/sort/page changes refetch on their own.
   const { data, isLoading, isError, refetch } = useQuery({
@@ -169,6 +173,8 @@ function UsersRoute() {
       }
       actions={
         <RequirePermission permissions="user.manage">
+          {/* 后端导出的是全部用户、不跟列表筛选走,所以不给 `count`(带数的写法会说「按当前筛选导出」)。 */}
+          <ExportCsvButton fetchCsv={() => usersApi.export()} page={t("users.title")} hall={hall} />
           <Button type="button" variant="secondary" onClick={() => setIsModalOpen(true)}>
             + {t("users.create_user")}
           </Button>
@@ -310,6 +316,14 @@ function UsersRoute() {
                     {t("common.edit")}
                   </Button>
                 </RequirePermission>
+                {/* 自己的密码走「修改密码」:重置会把自己也退出去。 */}
+                {user.id !== myId ? (
+                  <RequirePermission permissions="user.manage">
+                    <Button type="button" size="sm" variant="ghost" data-testid="password-reset-open" onClick={() => setResetPasswordUser(user)}>
+                      {t("users.reset_password.action")}
+                    </Button>
+                  </RequirePermission>
+                ) : null}
                 <RequirePermission permissions="user.manage">
                   <Button type="button" size="sm" variant="ghost" onClick={() => setRolesUser(user)}>
                     {t("users.edit_roles")}
@@ -381,6 +395,7 @@ function UsersRoute() {
       />
 
       {impersonateUser ? <ImpersonateDialog user={impersonateUser} onClose={() => setImpersonateUser(null)} /> : null}
+      {resetPasswordUser ? <PasswordResetDialog user={resetPasswordUser} onClose={() => setResetPasswordUser(null)} /> : null}
       {resetMfaUser ? <MfaResetDialog user={resetMfaUser} onClose={() => setResetMfaUser(null)} /> : null}
     </PageShell>
   );

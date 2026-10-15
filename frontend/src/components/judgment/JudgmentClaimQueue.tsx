@@ -18,6 +18,7 @@ import {
   useJudgmentCourts,
   useJudgmentQueueCounts,
   useReleaseJudgment,
+  useUndeferJudgment,
 } from "@soulledger/core/hooks/useJudgments";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
@@ -266,6 +267,7 @@ export function JudgmentClaimQueue({ initialSearch = "", soul = "" }: { initialS
 
   const claim = useClaimJudgment();
   const release = useReleaseJudgment();
+  const undefer = useUndeferJudgment();
   const batch = useBatchJudgments();
 
   const runBatch = (operation: JudgmentBatchOperation, extra: { to?: number; reason?: string } = {}) => {
@@ -310,6 +312,13 @@ export function JudgmentClaimQueue({ initialSearch = "", soul = "" }: { initialS
       },
     });
   };
+
+  /** 「恢复」:撤销服务端的暂缓(`undefer`),案子回到它按认领人所属的组。 */
+  const undeferOne = (id: string) =>
+    undefer.mutate(id, {
+      onSuccess: () => showToast(t("judgment.claim.done_undefer"), "success"),
+      onError: (err) => showToast(claimRefusalMessage(err, t), "error"),
+    });
 
   /** S 与「⋯ → 延后」:本次会话延后,只排到本组末尾,不写服务端。 */
   const deferForSession = (id: string) => {
@@ -704,6 +713,9 @@ export function JudgmentClaimQueue({ initialSearch = "", soul = "" }: { initialS
                               : []),
                             ...(canExecute && mine
                               ? [{ key: "release", label: t("judgment.claim.release"), onSelect: () => releaseOne(j.id), disabled: release.isPending }]
+                              : []),
+                            ...(canExecute && group === "deferred"
+                              ? [{ key: "undefer", label: t("judgment.claim.undefer"), onSelect: () => undeferOne(j.id), disabled: undefer.isPending }]
                               : []),
                             ...(group !== "deferred" && !laterThisSession
                               ? [{ key: "defer", label: t("judgment.queue.defer"), onSelect: () => deferForSession(j.id) }]

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter, useParams } from "next/navigation";
 import { useI18n } from "@/src/contexts/I18nContext";
@@ -10,6 +10,7 @@ import type { ToastType } from "@/src/components/ui/Toast";
 import {
   soulsApi,
   judgmentApi,
+  dispositionApi,
   reincarnationApi,
   eventsApi,
   Judgment,
@@ -31,6 +32,7 @@ import { SoulInfoCard } from "@/src/components/souls/detail/SoulInfoCard";
 import { SoulActionsCard } from "@/src/components/souls/detail/SoulActionsCard";
 import { SoulHeaderActions } from "@/src/components/souls/detail/SoulHeaderActions";
 import { SoulTimelineColumn } from "@/src/components/souls/detail/SoulTimelineColumn";
+import { useMorePages } from "@/src/components/souls/detail/useMorePages";
 import { SoulDeleteModal } from "@/src/components/souls/detail/SoulDeleteModal";
 import { CorrectSettlementDialog } from "@/src/components/souls/detail/CorrectSettlementDialog";
 import { SoulJudgmentHistory } from "@/src/components/souls/detail/SoulLedgerSections";
@@ -152,16 +154,17 @@ export default function SoulDetailPage() {
   const canReadJudgments = hasPermission("judgment.read");
   const judgmentsQuery = useJudgments({ soul: id }, { enabled: canReadJudgments });
   const dispositionsQuery = useDispositions({ soul: id });
+  // 键里的 "timeline" 不能省:这两条存的是整页响应(带 count),而 judgment/[id] 页用
+  // `[...soulKeys.all, "reincarnations", soulId]` 存的是数组 —— 同键不同形会互相读坏。
   const reincarnationsQuery = useQuery({
-    queryKey: [...soulKeys.all, "reincarnations", id],
-    queryFn: async (): Promise<Reincarnation[]> =>
-      (await reincarnationApi.list({ soul: id })).data.results,
+    queryKey: [...soulKeys.all, "reincarnations", "timeline", id],
+    queryFn: async () => (await reincarnationApi.list({ soul: id })).data,
     enabled: !!id,
     staleTime: 30_000,
   });
   const eventsQuery = useQuery({
-    queryKey: [...soulKeys.all, "events", id],
-    queryFn: async (): Promise<SoulEvent[]> => (await eventsApi.list({ soul: id })).data.results,
+    queryKey: [...soulKeys.all, "events", "timeline", id],
+    queryFn: async () => (await eventsApi.list({ soul: id })).data,
     enabled: !!id,
     staleTime: 30_000,
   });
@@ -170,10 +173,43 @@ export default function SoulDetailPage() {
   const accountChain = useSoulAccountChain(id, hasPermission("soul_account.read"));
   const ledger = ledgerQuery.data ?? null;
   const records = recordsQuery.data ?? NO_RECORDS;
-  const judgments = judgmentsQuery.data?.results ?? NO_JUDGMENTS;
-  const dispositions = dispositionsQuery.data?.results ?? NO_DISPOSITIONS;
-  const reincarnations = reincarnationsQuery.data ?? NO_REINCARNATIONS;
-  const events = eventsQuery.data ?? NO_EVENTS;
+  // 每种记录只取了第 1 页:「加载更多」把第 2..n 页接在后面,直到四种都取完 —— 不无声丢掉更早的记录。
+  const [extraPages, setExtraPages] = useState(0);
+  const moreJudgments = useMorePages(
+    [...judgmentKeys.all, "soul-timeline", id],
+    async (page) => (await judgmentApi.list({ soul: id, page: String(page) })).data,
+    extraPages,
+    canReadJudgments
+  );
+  const moreDispositions = useMorePages(
+    [...dispositionKeys.all, "soul-timeline", id],
+    async (page) => (await dispositionApi.list({ soul: id, page: String(page) })).data,
+    extraPages,
+    true
+  );
+  const moreReincarnations = useMorePages(
+    [...soulKeys.all, "reincarnations", "timeline", id],
+    async (page) => (await reincarnationApi.list({ soul: id, page: String(page) })).data,
+    extraPages,
+    true
+  );
+  const moreEvents = useMorePages(
+    [...soulKeys.all, "events", "timeline", id],
+    async (page) => (await eventsApi.list({ soul: id, page: String(page) })).data,
+    extraPages,
+    true
+  );
+  const judgments = useMemo(() => [...(judgmentsQuery.data?.results ?? NO_JUDGMENTS), ...moreJudgments.rows], [judgmentsQuery.data, moreJudgments.rows]);
+  const dispositions = useMemo(() => [...(dispositionsQuery.data?.results ?? NO_DISPOSITIONS), ...moreDispositions.rows], [dispositionsQuery.data, moreDispositions.rows]);
+  const reincarnations = useMemo(() => [...(reincarnationsQuery.data?.results ?? NO_REINCARNATIONS), ...moreReincarnations.rows], [reincarnationsQuery.data, moreReincarnations.rows]);
+  const events = useMemo(() => [...(eventsQuery.data?.results ?? NO_EVENTS), ...moreEvents.rows], [eventsQuery.data, moreEvents.rows]);
+  const loadedAll =
+    (!canReadJudgments || judgments.length >= (judgmentsQuery.data?.count ?? 0)) &&
+    dispositions.length >= (dispositionsQuery.data?.count ?? 0) &&
+    reincarnations.length >= (reincarnationsQuery.data?.count ?? 0) &&
+    events.length >= (eventsQuery.data?.count ?? 0);
+  const loadingMore = moreJudgments.loading || moreDispositions.loading || moreReincarnations.loading || moreEvents.loading;
+  const loadMoreFailed = moreJudgments.failed || moreDispositions.failed || moreReincarnations.failed || moreEvents.failed;
 
   // `isLoading`,不是 `isPending`:后者在 `enabled: false` 时也是 true,那会让
   // 一个没有 id 的路由永远停在骨架屏上。语义和原来那个 `loading` 一致 ——
@@ -644,6 +680,10 @@ export default function SoulDetailPage() {
             dispositions={dispositions}
             reincarnations={reincarnations}
             events={events}
+            hasMore={!loadedAll}
+            loadingMore={loadingMore}
+            loadMoreFailed={loadMoreFailed}
+            onLoadMore={() => setExtraPages((n) => n + 1)}
             birthDisplay={birthDisplay}
             deathDisplay={deathDisplay}
             onOpenJudgmentQueue={(judgmentId) => router.push(`/judgment/queue?at=${judgmentId}`)}

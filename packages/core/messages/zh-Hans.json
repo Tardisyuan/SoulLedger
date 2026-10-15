@@ -524,7 +524,9 @@
       },
       "case_open": "未结",
       "case_closed": "已结",
-      "case_all": "全部 {{n}} 场 ›"
+      "case_all": "全部 {{n}} 场 ›",
+      "load_more": "加载更多记录",
+      "load_more_failed": "部分记录没有加载出来，请再点一次"
     },
     "date_problem_filter": "仅看有问题的",
     "balance_not_applicable": "不适用 — 详见灵魂详情",
@@ -1799,7 +1801,9 @@
       },
       "col_merit_demerit": "功 / 过",
       "col_case_soul": "案号 / 灵魂",
-      "col_cycle_kind": "世次 / 种类"
+      "col_cycle_kind": "世次 / 种类",
+      "undefer": "恢复",
+      "done_undefer": "已恢复，案子回到队列"
     },
     "admission": {
       "title": "证据 · 采信",
@@ -2423,6 +2427,14 @@
       "target_unchosen": "未选",
       "pending_submit": "待提交",
       "not_yet": "未至"
+    },
+    "filter": {
+      "search": "搜索灵魂姓名或理由...",
+      "all_status": "所有状态",
+      "all_tenants": "所有租户",
+      "from": "发起日期（起）",
+      "to": "发起日期（止）",
+      "clear": "清除筛选"
     }
   },
   "crossJudgments": {
@@ -2529,6 +2541,23 @@
       "done": "已更新 {{n}} 个账号",
       "failed": "批量更新失败",
       "skipped_note": "管理员账号和你自己不在批量范围内。"
+    },
+    "reset_password": {
+      "action": "重置密码",
+      "confirm_title": "重置 {{name}} 的密码？",
+      "confirm_body": "将生成一个新的随机密码，旧密码立即作废，此人所有已登录的设备都会退出，下次登录必须自己改密码。新密码只显示一次。",
+      "confirm": "确认重置",
+      "failed": "重置失败，请重试",
+      "shown_title": "{{name}} 的新密码（仅此一次）",
+      "shown_warning": "关闭窗口后无法再次查看。请立即告知本人；首次登录须修改密码。",
+      "copy": "复制密码",
+      "copied": "已复制到剪贴板",
+      "copy_failed": "复制失败，请手动抄写",
+      "close": "我已记下，关闭",
+      "close_confirm_title": "密码只显示这一次",
+      "close_confirm_body": "密码只显示这一次，确定关闭？关闭后无法再次查看，需要重新重置才能拿到新密码。",
+      "close_confirm": "确定关闭",
+      "close_back": "返回"
     }
   },
   "settings": {
