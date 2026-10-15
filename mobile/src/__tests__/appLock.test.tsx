@@ -240,7 +240,9 @@ describe("the lock", () => {
     expect(screen.getByText("面容没认出，请输入密码。")).toBeTruthy();
     // another try works once the face is recognised
     bioMod.__state.recognised = true;
-    fireEvent.press(screen.getByTestId("app-lock-bio"));
+    // Inside an async act: the unlock resolves after an await, and a state change made there outside act is
+    // rendered whenever the scheduler gets to it (seconds under load) rather than before the next line.
+    await act(async () => void fireEvent.press(screen.getByTestId("app-lock-bio")));
     await waitFor(() => expect(screen.queryByTestId("app-lock")).toBeNull());
   });
 
