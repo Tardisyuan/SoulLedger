@@ -41,6 +41,12 @@
       ],
       "expo-secure-store",
       [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "批准或驳回前，用来确认是你本人。"
+        }
+      ],
+      [
         "expo-notifications",
         {
           "icon": "./assets/ic_stat_officer.png",
