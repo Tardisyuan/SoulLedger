@@ -222,9 +222,14 @@ def confirm_view(request):
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def complete_view(request):
-    """向导「完成」。没走过第三步(`verified_at` 空)不能完成。"""
+    """向导「完成」。没走过第三步(`verified_at` 空)不能完成。
+
+    幂等:已经开启(上一次「完成」成功而响应没回来)再点,回同样的状态 200,不再 409 到永远 ——
+    「完成」要的结果已经在了,手机上的第四步才有出路。"""
     row = mfa.OfficerMfa.objects.filter(user=request.user, confirmed_at__isnull=True, verified_at__isnull=False).first()
     if row is None:
+        if mfa.is_enabled(request.user):
+            return Response(mfa.status_of(request.user))
         return _refuse("not_verified", status.HTTP_409_CONFLICT)
     mfa.complete_setup(row, request=request)
     return Response(mfa.status_of(request.user))
