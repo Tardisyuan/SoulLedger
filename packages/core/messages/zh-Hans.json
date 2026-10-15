@@ -2699,6 +2699,38 @@
       "hint": "显示哪些列 · 只在这台浏览器上记住"
     }
   },
+  "case": {
+    "attachments": {
+      "title": "附件",
+      "limit": "图片或 PDF,单个不超过 20 MB",
+      "full": "这份案卷的附件已满 100 MB",
+      "failed_type": "只能传图片或 PDF",
+      "add": "添加附件",
+      "drop": "拖到这里，或点「添加附件」",
+      "summary": "{{count}} 个 · 共 {{used}} / {{max}} MB",
+      "empty": "还没有附件",
+      "uploading": "正在上传 · {{pct}}%",
+      "too_large": "超过 {{max}} MB",
+      "too_many": "最多 {{max}} 个",
+      "failed_network": "没传上去，网络断了",
+      "failed_generic": "没传上去",
+      "download": "下载",
+      "remove": "移除",
+      "delete_title": "删除附件",
+      "delete_body": "「{{name}}」删除后找不回来;结案后附件不能再删。",
+      "delete_failed": "没删掉",
+      "delete_concluded": "案子已结案，附件不能删除了。",
+      "preview_failed": "打不开这份附件",
+      "open_tab": "在新窗口打开",
+      "print_title": "附件清单",
+      "print_footer": "附件原件见系统",
+      "col_name": "名称",
+      "col_size": "大小",
+      "col_uploader": "上传人",
+      "col_time": "时间",
+      "load_failed": "附件没有加载出来"
+    }
+  },
   "death_sync": {
     "title": "死亡同步",
     "subtitle": "外部死亡登记接入与同步状态",
