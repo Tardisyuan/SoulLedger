@@ -6,7 +6,7 @@
 import { act, fireEvent, screen, waitFor } from "@testing-library/react-native";
 import { AccessibilityInfo } from "react-native";
 
-import { Row } from "../kit";
+import { RefreshFailed, Row } from "../kit";
 import { NoticesTab } from "../screens/notices";
 import { QueueTab } from "../screens/queue";
 import { TodoTab } from "../screens/todo";
@@ -163,6 +163,63 @@ describe("the other tabs have the same four states", () => {
     mockNotices.mockRejectedValue(httpError(500));
     renderOfficer(<NoticesTab onUnread={() => {}} />);
     expect(await screen.findByTestId("state-error")).toBeTruthy();
+  });
+});
+
+describe("lists the server pages (20 a page) show the rest on 「加载更多」", () => {
+  const judgment = (n: number) => ({ id: `j${n}`, case_number: `CN-${n}`, soul_name: `魂${n}`, court: "一殿", is_final: true });
+
+  it("judgments: page 2 is appended under page 1 and the button goes with the last page", async () => {
+    mockList.mockImplementation(async (params: { page?: string }) =>
+      params.page === "2" ? { data: { results: [judgment(21)], next: null } } : { data: { results: [judgment(1), judgment(2)], next: "http://x/?page=2" } }
+    );
+    renderOfficer(<QueueTab onOpen={() => {}} />);
+    expect(await screen.findByText("CN-1 · 魂1")).toBeTruthy();
+    fireEvent.press(screen.getByTestId("list-more"));
+    expect(await screen.findByText("CN-21 · 魂21")).toBeTruthy();
+    expect(screen.getByText("CN-2 · 魂2")).toBeTruthy();
+    expect(screen.queryByTestId("list-more")).toBeNull();
+    expect(mockList).toHaveBeenCalledWith({ group: "mine", page: "2" });
+  });
+
+  it("judgments: a list with no next page has no button, and switching tab drops the extra pages", async () => {
+    mockList.mockImplementation(async (params: { group: string; page?: string }) =>
+      params.page === "2"
+        ? { data: { results: [judgment(21)], next: null } }
+        : { data: { results: [judgment(params.group === "mine" ? 1 : 7)], next: params.group === "mine" ? "http://x/?page=2" : null } }
+    );
+    renderOfficer(<QueueTab onOpen={() => {}} />);
+    fireEvent.press(await screen.findByTestId("list-more"));
+    await screen.findByText("CN-21 · 魂21");
+    fireEvent.press(screen.getByTestId("queue-group-unclaimed"));
+    expect(await screen.findByText("CN-7 · 魂7")).toBeTruthy();
+    expect(screen.queryByText("CN-21 · 魂21")).toBeNull();
+    expect(screen.queryByTestId("list-more")).toBeNull();
+  });
+
+  it("notices: the same", async () => {
+    const notice = (id: number) => ({ id, title: `通知${id}`, message: "", is_read: true, created_at: "2026-10-09T01:00:00Z" });
+    mockNotices.mockImplementation(async (params?: { page?: string }) =>
+      params?.page === "2" ? { data: { results: [notice(21)], next: null } } : { data: { results: [notice(1)], next: "http://x/?page=2" } }
+    );
+    renderOfficer(<NoticesTab onUnread={() => {}} />);
+    fireEvent.press(await screen.findByTestId("list-more"));
+    expect(await screen.findByText("通知21")).toBeTruthy();
+    expect(screen.getByText("通知1")).toBeTruthy();
+  });
+});
+
+describe("a refresh that failed while the old list is on screen (A22)", () => {
+  it("says so and offers a retry; says nothing for no data, a 403, or no error", () => {
+    const retry = jest.fn();
+    renderOfficer(<RefreshFailed data={[1]} error={httpError(500)} onRetry={retry} />);
+    expect(screen.getByTestId("refresh-failed")).toBeTruthy();
+    screen.unmount();
+    for (const [data, error] of [[null, httpError(500)], [[1], httpError(403)], [[1], null]] as const) {
+      renderOfficer(<RefreshFailed data={data} error={error} onRetry={retry} />);
+      expect(screen.queryByTestId("refresh-failed")).toBeNull();
+      screen.unmount();
+    }
   });
 });
 

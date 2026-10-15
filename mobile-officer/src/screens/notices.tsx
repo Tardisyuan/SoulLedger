@@ -4,7 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 import { View } from "react-native";
 
 import { formatWhen } from "../format";
-import { Row, StateView, viewStateOf } from "../kit";
+import { RefreshFailed, Row, StateView, viewStateOf } from "../kit";
+import { MoreRow, useMoreRows } from "../paged";
 import { isDenied, noticeLanding, type Landing } from "../rules";
 import { useSession } from "../session";
 import { Screen, SmallButton, Txt, space, useI18n, useRemote } from "../shared";
@@ -13,8 +14,10 @@ export function NoticesTab({ onUnread, onLand }: { onUnread: (unread: boolean) =
   const { t } = useI18n();
   const { state } = useSession();
   const role = state.status === "signedIn" ? state.user.role : "";
-  const load = useCallback(() => notificationsApi.list().then((r) => r.data.results), []);
-  const { data, error, loading, reload } = useRemote(load);
+  const load = useCallback(() => notificationsApi.list().then((r) => r.data), []);
+  const { data: firstPage, error, loading, reload } = useRemote(load);
+  const fetchPage = useCallback((page: number) => notificationsApi.list({ page: String(page) }).then((r) => r.data), []);
+  const { rows: data, more } = useMoreRows(firstPage, fetchPage);
   // Marking is local first (the row turns ○ at once); a failure puts it back on the next reload.
   const [read, setRead] = useState<ReadonlySet<number>>(new Set());
   const view = viewStateOf({ data, error }, (rows) => rows.length === 0, isDenied);
@@ -45,6 +48,7 @@ export function NoticesTab({ onUnread, onLand }: { onUnread: (unread: boolean) =
         <Txt variant="title">{t("officer_app.tabs.notices")}</Txt>
         {data?.some(isUnread) ? <SmallButton testID="notices-mark-all" title={t("notifications.mark_all_read")} onPress={markAll} /> : null}
       </View>
+      <RefreshFailed data={data} error={error} onRetry={reload} />
       {view ? (
         <StateView
           state={view}
@@ -68,6 +72,7 @@ export function NoticesTab({ onUnread, onLand }: { onUnread: (unread: boolean) =
           />
         ))
       )}
+      <MoreRow more={more} />
     </Screen>
   );
 }

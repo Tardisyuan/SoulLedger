@@ -78,7 +78,7 @@ describe("the reply box", () => {
     await openThread();
     fireEvent.changeText(screen.getByTestId("letter-input"), "已发出");
     fireEvent.press(screen.getByTestId("letter-send"));
-    await waitFor(() => expect(mockReply).toHaveBeenCalledWith("c-1", "已发出"));
+    await waitFor(() => expect(mockReply).toHaveBeenCalledWith("c-1", "已发出", expect.any(String)));
     await waitFor(() => expect(screen.getByTestId("letter-input").props.value).toBe(""));
     expect(stored()).toBeNull();
     await act(async () => {

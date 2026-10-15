@@ -4188,7 +4188,8 @@
         "by_code": "Exact code match",
         "count": "{{n}} souls",
         "not_found": "Not found",
-        "result_note": "Results show only a name and civilization mark."
+        "result_note": "Results show only a name and civilization mark.",
+        "more": "Show more results"
       },
       "delete": {
         "action": "Delete",
@@ -4405,7 +4406,8 @@
         "regen": "Regenerate",
         "low": "Only {{n}} recovery codes left. Regenerate them before they run out.",
         "disable": "Turn off two-step verification",
-        "new_phone": "Changing phone: turn it off on the old phone first, then turn it on again on the new one."
+        "new_phone": "Changing phone: turn it off on the old phone first, then turn it on again on the new one.",
+        "codes_lost": "Two-step verification is on, but the recovery codes were not shown this time. Tap Regenerate below to get a new set, and keep it safe."
       },
       "disable": {
         "title": "Turn off two-step verification?",
@@ -5803,7 +5805,8 @@
       "error_title": "Couldn't load",
       "error_body": "Check your connection and retry. Open items aren't affected.",
       "denied_title": "No access",
-      "denied_body": "Your role {{role}} can't see {{area}}. Ask your hall admin if you need it."
+      "denied_body": "Your role {{role}} can't see {{area}}. Ask your hall admin if you need it.",
+      "refresh_failed": "Couldn't refresh. What's shown may be out of date."
     },
     "push": {
       "lock": "{{n}} items waiting on you"
@@ -5889,7 +5892,8 @@
         "other": "Couldn't verify. Try again later"
       },
       "setup": {
-        "done": "Done"
+        "done": "Done",
+        "abandon": "Give up setup and leave"
       }
     },
     "cosign": {
@@ -5935,6 +5939,9 @@
       "retry": "Not sent. Try again later.",
       "view_existing": "See the existing reply",
       "discard": "Delete my draft"
+    },
+    "list": {
+      "more": "Load more"
     }
   },
   "print": {

@@ -94,8 +94,10 @@ export function registeredToken(): string | undefined {
 export async function unregisterDevice(): Promise<void> {
   const token = platform().persistent.get(PUSH_TOKEN_KEY);
   if (!token) return;
-  platform().persistent.remove(PUSH_TOKEN_KEY);
+  // Ask first, forget after: a token wiped before the request leaves a failed one nothing to retry from
+  // (the server still stops it by itself once this device's sign-in session ends).
   await officerAppApi.unregisterPush(token).catch(() => {});
+  platform().persistent.remove(PUSH_TOKEN_KEY);
 }
 
 /** A notification arriving while the app is open still shows its banner (the text is the generic count). */
