@@ -13,5 +13,18 @@
   "profile.notifications.notes.approval",
   "profile.notifications.notes.approval_timeout",
   "profile.notifications.notes.password_help",
-  "profile.notifications.notes.dispatch"
+  "profile.notifications.notes.dispatch",
+  "admin.impersonate.title",
+  "admin.impersonate.reason_label",
+  "admin.impersonate.audit_note",
+  "admin.impersonate.start",
+  "admin.impersonate.failed",
+  "admin.impersonate.readonly",
+  "admin.impersonate.reason_line",
+  "admin.impersonate.remaining",
+  "admin.impersonate.locked",
+  "audit.descriptions.impersonate_start",
+  "audit.descriptions.impersonate_end",
+  "official_notify.impersonation_started.title",
+  "official_notify.impersonation_started.body"
 ]

@@ -1896,7 +1896,9 @@
       "PERMISSION_CHANGE": "Khemen Was",
       "BATCH_CREATE": "Iri Seth Neb",
       "BATCH_UPDATE": "Khemen Seth Neb",
-      "BATCH_DELETE": "Wehem Seth Neb"
+      "BATCH_DELETE": "Wehem Seth Neb",
+      "IMPERSONATE_START": "Maa Em Ba Ky · Wah",
+      "IMPERSONATE_END": "Maa Em Ba Ky · Sehen"
     },
     "needs_audit_read": "Sesen Was audit.read",
     "repeat_expand": "Wen",
@@ -2534,7 +2536,16 @@
     "on": "Em",
     "soul_count": "Ba Neb",
     "top_balance": "Ba Tepy Em Nefer Isfet",
-    "realm": "Ahet"
+    "realm": "Ahet",
+    "users": {
+      "impersonate": "Maa Em Ba Pen"
+    },
+    "impersonate": {
+      "body": "Maa Wa: Nen Iri Neb. At 30 Er Aa.",
+      "notice": "{{name}} Sedjem: Ren-Ek Hena Khet Pen.",
+      "banner": "Em Maa Em Ba {{name}}",
+      "exit": "Sehen Maa"
+    }
   },
   "permission": {
     "denied_message": "Nen Was-Ek Er Aat Pen, Nen Er Iri Aha Pen.",
