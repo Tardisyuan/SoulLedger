@@ -111,6 +111,36 @@ def visible(user):
         user=user, revoked_at__isnull=True, last_seen_at__gte=timezone.now() - timedelta(days=IDLE_DAYS))
 
 
+# ── 推送登记的登录是否已到期 ─────────────────────────────────────────────
+
+
+def officer_app_lifetime() -> timedelta:
+    from django.conf import settings
+
+    return timedelta(hours=settings.OFFICER_APP_REFRESH_LIFETIME_HOURS)
+
+
+def soul_lifetime() -> timedelta:
+    from django.conf import settings
+
+    return settings.SIMPLE_JWT["REFRESH_TOKEN_LIFETIME"]
+
+
+def expired_devices(devices, *, user_field: str, lifetime: timedelta):
+    """推送设备里「登录已到期」的:登记后超过刷新令牌有效期没再登记,**且**这个用户没有任何未退出、
+    在有效期内活动过的登录(刷新会更新 `last_seen_at`,所以一直在用的人不受影响)。
+    推送登记没有记它属于哪个登录会话,所以同一用户另有一台设备仍在用时,这台闲置的要等整个用户都闲置才会被认出。
+    # ponytail: 要精确到设备,给登记加一个 sid 外键。"""
+    cutoff = timezone.now() - lifetime
+    live = SignInSession.objects.filter(revoked_at__isnull=True, last_seen_at__gte=cutoff).values("user_id")
+    return devices.filter(last_seen_at__lt=cutoff).exclude(**{f"{user_field}__in": live})
+
+
+def live_devices(devices, *, user_field: str, lifetime: timedelta):
+    """`devices` 去掉登录已到期的 —— 发送路径用,清理任务还没跑时锁屏也不再收到。"""
+    return devices.exclude(pk__in=expired_devices(devices, user_field=user_field, lifetime=lifetime).values("pk"))
+
+
 # ── 退 ───────────────────────────────────────────────────────────────────
 
 

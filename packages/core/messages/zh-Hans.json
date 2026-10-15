@@ -3416,6 +3416,7 @@
       "notifications_email_action_needed_for_tenant": "邮件提醒待处理通知",
       "notifications_email_action_needed_global": "邮件提醒待处理通知(全局管理员)",
       "authentication_prune_soul_sign_ins": "清理 90 天前的灵魂登录记录与闲置会话",
+      "authentication_prune_expired_push_registrations": "停用登录已到期的手机推送登记",
       "soul_accounts_prune_data_exports": "清理过期的资料导出"
     },
     "status": {

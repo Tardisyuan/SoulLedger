@@ -27,6 +27,7 @@ from django.db import IntegrityError, transaction
 from django.db.models import Q
 from django.utils import timezone
 
+from apps.authentication import signin_sessions
 from apps.soul_push import messages
 from apps.soul_push.expo import (
     RECEIPT_BATCH,
@@ -282,7 +283,9 @@ def _record(account, event_type, category, kind, dedupe_key, data, params=None):
     title, body = title[:120], body[:300]  # 列宽(PushDelivery);警告理由最长 500
     data = {**data, "kind": kind}
     created_ids = []
-    devices = list(PushDevice.objects.filter(account=account, is_active=True))
+    devices = list(signin_sessions.live_devices(
+        PushDevice.objects.filter(account=account, is_active=True),
+        user_field="account__user_id", lifetime=signin_sessions.soul_lifetime()))
     if not devices:
         # 没有可推的设备:仍记一行历史(通知记录读它),标 NO_DEVICE,不入队 —— 返回的 id 只含要发送的。
         PushDelivery.objects.get_or_create(
