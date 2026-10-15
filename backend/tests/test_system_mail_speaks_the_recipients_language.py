@@ -91,7 +91,7 @@ def _provisioned(on_commit, code, email, locale=None):
 def _reset_mail(api_client, email):
     assert api_client.post("/api/v1/auth/reset-password/", {"email": email}, format="json").status_code == 200
     [message] = mail.outbox
-    return message, cache.get(f"pwd_reset:{email}")
+    return message, cache.get(f"pwd_reset:{email.lower()}")  # keys are lower-cased (addresses match case-insensitively)
 
 
 def _assert_credential(message, soul, locale):
