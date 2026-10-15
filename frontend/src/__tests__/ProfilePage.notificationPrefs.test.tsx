@@ -154,3 +154,15 @@ it("shows the last failed send, and says so when the account has no address", as
   expect(await screen.findByRole("status")).toHaveTextContent("profile.email_last_failure:smtp down|at(2026-10-08T01:02:03Z)");
   expect(screen.getByText("profile.email_notifications_no_address")).toBeInTheDocument();
 });
+
+it("has the single-key shortcuts switch, on by default, and turning it off is remembered in this browser", async () => {
+  localStorage.removeItem("soulledger_single_key_shortcuts");
+  renderPage();
+  const box = await screen.findByRole("checkbox", { name: /shortcuts.single_keys/ });
+  expect(box).toBeChecked();
+  fireEvent.click(box);
+  expect(box).not.toBeChecked();
+  expect(localStorage.getItem("soulledger_single_key_shortcuts")).toBe("off");
+  fireEvent.click(box);
+  expect(localStorage.getItem("soulledger_single_key_shortcuts")).toBeNull();
+});

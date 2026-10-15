@@ -19,6 +19,7 @@ import { DevicesSection } from "@/src/components/profile/DevicesSection";
 import { NotificationPreferences, NOTIFICATION_PREFS_ANCHOR } from "@/src/components/profile/NotificationPreferences";
 import { EmailVerificationRow } from "@/src/components/profile/EmailVerificationRow";
 import { cn } from "@/lib/utils";
+import { SingleKeyShortcutsToggle } from "@/src/components/layout/ShortcutHelp";
 
 export default function ProfilePage() {
   const { t } = useI18n();
@@ -327,6 +328,17 @@ export default function ProfilePage() {
         <DevicesSection
           onChangePassword={() => setShowPasswordForm(true)}
         />
+      </section>
+
+      {/* 单字母快捷键总开关(WCAG 2.1.4):全局 `?` 列表里也有同一个开关;状态只在本浏览器。 */}
+      <section>
+        <h2 className="pt-6 text-lg text-[oklch(var(--color-ink))]">
+          <span aria-hidden="true">己 · </span>
+          {t("shortcuts.title")}
+        </h2>
+        <div className="py-3">
+          <SingleKeyShortcutsToggle />
+        </div>
       </section>
       </>
       )}
