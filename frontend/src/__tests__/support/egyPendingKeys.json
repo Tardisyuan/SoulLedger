@@ -24,5 +24,9 @@
   "dispatch.filter.all_tenants",
   "dispatch.filter.from",
   "dispatch.filter.to",
-  "dispatch.filter.clear"
+  "dispatch.filter.clear",
+  "officer_app.me.email",
+  "officer_app.notices.on_desk",
+  "officer_app.queue.deferred",
+  "officer_app.queue.others"
 ]

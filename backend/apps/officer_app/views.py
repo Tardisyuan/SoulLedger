@@ -9,7 +9,7 @@ from django.contrib.auth import get_user_model
 from django.db import transaction
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework import status
-from rest_framework.exceptions import NotFound
+from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.permissions import BasePermission
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -52,10 +52,23 @@ class OfficerAppBaseView(APIView):
 
 
 class TodoView(OfficerAppBaseView):
-    @extend_schema(operation_id="officer_app_todo", responses=TodoSerializer)
+    @extend_schema(operation_id="officer_app_todo",
+                   parameters=[OpenApiParameter("kind", str, enum=list(todo.KINDS), description="只要这一组(加载更多)"),
+                               OpenApiParameter("offset", int, description="与 kind 同用:从第几条起,默认 0")],
+                   responses=TodoSerializer)
     def get(self, request):
-        """「待我处理」五组:审批节点 / 改派请求 / 缩短冷却申请 / 转生申请 / 待回书信,每组计数 + 前 10 条。"""
-        return Response(todo.build(request.user, request))
+        """「待我处理」五组:审批节点 / 改派请求 / 缩短冷却申请 / 转生申请 / 待回书信,每组计数 + 前 10 条。
+        带 `kind`(与 `offset`)时只回那一组 `{count, items}`,从第 offset 条起的 10 条。"""
+        kind = request.query_params.get("kind")
+        if not kind:
+            return Response(todo.build(request.user, request))
+        if kind not in todo.KINDS:
+            raise ValidationError({"kind": "unknown kind"})
+        try:
+            offset = max(0, int(request.query_params.get("offset", 0)))
+        except ValueError:
+            raise ValidationError({"offset": "not an integer"}) from None
+        return Response(todo.build(request.user, request, kind=kind, offset=offset))
 
 
 class TodoItemView(OfficerAppBaseView):

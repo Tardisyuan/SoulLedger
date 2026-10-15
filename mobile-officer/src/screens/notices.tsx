@@ -6,7 +6,7 @@ import { View } from "react-native";
 import { formatWhen } from "../format";
 import { RefreshFailed, Row, StateView, viewStateOf } from "../kit";
 import { MoreRow, useMoreRows } from "../paged";
-import { isDenied, noticeLanding, type Landing } from "../rules";
+import { isDenied, noticeIsDeskOnly, noticeLanding, type Landing } from "../rules";
 import { useSession } from "../session";
 import { Screen, SmallButton, Txt, space, useI18n, useRemote } from "../shared";
 
@@ -68,7 +68,7 @@ export function NoticesTab({ onUnread, onLand }: { onUnread: (unread: boolean) =
             strong={isUnread(n)}
             minHeight={88}
             title={n.title}
-            lines={[n.message, formatWhen(n.created_at)].filter(Boolean)}
+            lines={[n.message, formatWhen(n.created_at), noticeIsDeskOnly(n) ? t("officer_app.notices.on_desk") : ""].filter(Boolean)}
             onPress={() => open(n)}
           />
         ))

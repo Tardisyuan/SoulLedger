@@ -7,9 +7,10 @@
 import { isOfficerEmptyAnswer, officerAssistApi, officerAssistErrorCode } from "@soulledger/core/api/officer-assist";
 import { soulsApi, type SoulListItem } from "@soulledger/core/api/souls";
 import { useCallback, useRef, useState } from "react";
-import { View } from "react-native";
+import { AccessibilityInfo, View } from "react-native";
 
 import { Row, Segmented, StateView } from "../kit";
+import { MoreRow, useMoreRows, type Page } from "../paged";
 import { isDenied } from "../rules";
 import { useSession } from "../session";
 import { Button, Input, Notice, Screen, Txt, space, useI18n } from "../shared";
@@ -40,17 +41,20 @@ function SoulLookup({ onOpen }: { onOpen: (id: string) => void }) {
   const { state } = useSession();
   const role = state.status === "signedIn" ? state.user.role : "";
   const [text, setText] = useState("");
-  const [result, setResult] = useState<{ status: "idle" | "loading" | "error" | "denied" | "done"; rows: SoulListItem[] }>({ status: "idle", rows: [] });
+  const [result, setResult] = useState<{ status: "idle" | "loading" | "error" | "denied" | "done"; first: Page<SoulListItem> | null; query: string }>({ status: "idle", first: null, query: "" });
   const sent = useRef(0);
+  const { query } = result;
+  const fetchPage = useCallback((page: number) => soulsApi.list({ search: query, page }).then((r) => r.data), [query]);
+  const { rows, more } = useMoreRows(result.first, fetchPage);
 
   const search = useCallback(() => {
     const query = text.trim();
     if (!query) return;
     const mine = ++sent.current;
-    setResult({ status: "loading", rows: [] });
+    setResult({ status: "loading", first: null, query });
     soulsApi.list({ search: query }).then(
-      (r) => mine === sent.current && setResult({ status: "done", rows: r.data.results }),
-      (e: unknown) => mine === sent.current && setResult({ status: isDenied(e) ? "denied" : "error", rows: [] })
+      (r) => mine === sent.current && setResult({ status: "done", first: r.data, query }),
+      (e: unknown) => mine === sent.current && setResult({ status: isDenied(e) ? "denied" : "error", first: null, query })
     );
   }, [text]);
 
@@ -70,8 +74,9 @@ function SoulLookup({ onOpen }: { onOpen: (id: string) => void }) {
           {t("officer_app.search.read_only")}
         </Txt>
       </View>
-      {result.status === "idle" ? null : result.status === "done" && result.rows.length > 0 ? (
-        result.rows.map((soul) => (
+      {result.status === "idle" ? null : result.status === "done" && rows && rows.length > 0 ? (
+        <>
+          {rows.map((soul) => (
           <Row
             key={soul.id}
             testID={`soul-row-${soul.id}`}
@@ -81,7 +86,9 @@ function SoulLookup({ onOpen }: { onOpen: (id: string) => void }) {
             onPress={() => onOpen(soul.id)}
             right={<Txt tone="muted">›</Txt>}
           />
-        ))
+          ))}
+          <MoreRow more={more} />
+        </>
       ) : (
         <StateView
           state={result.status === "done" ? "empty" : result.status}
@@ -121,6 +128,8 @@ function Ask() {
         const reply = answer.answer.content;
         setLines((prev) => [...prev, { role: "user", text }, { role: "assistant", text: isOfficerEmptyAnswer(reply) ? t("officer_assist.cannot_answer") : reply }]);
         setQuestion("");
+        // The answer lands below the box; a screen reader is told it has (the desk's 「已回答」).
+        AccessibilityInfo.announceForAccessibility(t("officer_assist.answered"));
       })
       .catch((e: unknown) => {
         // The question stays in the box: "你的问题还在".

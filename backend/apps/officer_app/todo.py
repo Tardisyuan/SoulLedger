@@ -107,11 +107,18 @@ def _rebirth_facts(wf):
     return {"soul_code": wf.soul.soul_code, "is_appeal": wf.is_appeal}
 
 
-def _group(items):
-    return {"count": len(items), "items": items[:LIST_LIMIT]}
+def _group(items, offset=0):
+    return {"count": len(items), "items": items[offset:offset + LIST_LIMIT]}
 
 
-def build(user, request=None):
+# 响应里的字段名 ↔ kind(`build(..., kind=)` 与 `?kind=` 用 kind)
+FIELD_OF = {"approval": "approvals", "reassignment": "reassignments", "cooldown": "cooldowns",
+            "rebirth": "rebirths", "letter": "letters"}
+
+
+def build(user, request=None, kind=None, offset=0):
+    """五组各 `LIST_LIMIT` 条;`kind` + `offset` 只给那一组、从第 offset 条起(「加载更多」)。
+    整组本来就是整个算出来再切的,所以翻页不多一次查询,也不会因为条目增减而重复(客户端按 id 去重)。"""
     scope = scope_of(user, request)
     waiting = _waiting_workflows(scope)
     plain = [(wf, n) for wf, n in waiting if wf.case_type != CaseType.REBIRTH_APPLICATION]
@@ -140,8 +147,11 @@ def build(user, request=None):
         letters = [_item("letter", c.pk, c.soul_a.name, c.last_soul_message_at or c.created_at,
                          **({"feedback_tag": c.feedback_tag} if c.feedback_tag else {}))
                    for c in _letters(scope)]
-    return {"approvals": _group(approvals), "reassignments": _group(reassignments),
-            "cooldowns": _group(cooldowns), "rebirths": _group(rebirths), "letters": _group(letters)}
+    groups = {"approvals": approvals, "reassignments": reassignments, "cooldowns": cooldowns,
+              "rebirths": rebirths, "letters": letters}
+    if kind:
+        return _group(groups[FIELD_OF[kind]], offset)
+    return {field: _group(items) for field, items in groups.items()}
 
 
 def total(user) -> int:

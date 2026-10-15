@@ -1,10 +1,11 @@
 /** 待办: the kinds of item waiting on this officer, grouped, each group titled with its count. */
-import { officerAppApi, type Todo, type TodoItem, type TodoKind } from "@soulledger/core/api/officer-app";
+import { officerAppApi, type Todo, type TodoGroup, type TodoItem, type TodoKind } from "@soulledger/core/api/officer-app";
 import { platform } from "@soulledger/core/platform";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
 import { discardReply, retryReply, useOutbox, type OutboxEntry } from "../outbox";
+import { MoreRow, useMoreRows } from "../paged";
 import { useCachedRemote } from "../readCache";
 
 import { FilterChips, RefreshFailed, Row, StateView, viewStateOf } from "../kit";
@@ -106,20 +107,34 @@ export function TodoTab({ onOpen, highlight }: { onOpen: (item: ItemRef) => void
         {shown.map(({ field, kind, label }) => {
           const group = data![field];
           if (!group || group.count === 0) return null;
-          return (
-            <View key={kind} testID={`todo-group-${kind}`}>
-              <View style={{ paddingHorizontal: space[5], paddingVertical: space[3] }}>
-                <SectionLabel>{`${t(label)} · ${group.count}`}</SectionLabel>
-              </View>
-              {group.items.map((item) => (
-                <TodoRow key={`${item.kind}:${item.id}`} item={item} highlight={highlight?.kind === item.kind && highlight.id === item.id} onOpen={onOpen} />
-              ))}
-            </View>
-          );
+          return <TodoGroupRows key={kind} kind={kind} label={t(label)} group={group} highlight={highlight} onOpen={onOpen} />;
         })}
         </>
       )}
     </Screen>
+  );
+}
+
+/** One group: the server sends the first 10; 「加载更多」 asks for the next 10 of this group only. */
+function TodoGroupRows({ kind, label, group, highlight, onOpen }: { kind: TodoKind; label: string; group: TodoGroup; highlight: ItemRef | null; onOpen: (item: ItemRef) => void }) {
+  const size = group.items.length;
+  const first = useMemo(() => ({ results: group.items, next: size < group.count ? "more" : null }), [group, size]);
+  const fetchPage = useCallback(
+    (page: number) =>
+      officerAppApi.todoGroup(kind, (page - 1) * size).then((r) => ({ results: r.data.items, next: (page - 1) * size + r.data.items.length < r.data.count ? "more" : null })),
+    [kind, size]
+  );
+  const { rows, more } = useMoreRows(first, fetchPage);
+  return (
+    <View testID={`todo-group-${kind}`}>
+      <View style={{ paddingHorizontal: space[5], paddingVertical: space[3] }}>
+        <SectionLabel>{`${label} · ${group.count}`}</SectionLabel>
+      </View>
+      {rows!.map((item) => (
+        <TodoRow key={`${item.kind}:${item.id}`} item={item} highlight={highlight?.kind === item.kind && highlight.id === item.id} onOpen={onOpen} />
+      ))}
+      <MoreRow more={more} />
+    </View>
   );
 }
 

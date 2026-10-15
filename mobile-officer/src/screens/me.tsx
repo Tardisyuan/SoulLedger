@@ -1,5 +1,5 @@
 /** 我的: profile, two-step verification (opens its screen), change password, language, theme, push, about, sign out. */
-import { mfaApi } from "@soulledger/core/api/auth";
+import { authApi, mfaApi } from "@soulledger/core/api/auth";
 import { SUPPORTED_LOCALES } from "@soulledger/core/config/locale";
 import Constants from "expo-constants";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
@@ -11,9 +11,9 @@ import { type ThemeChoice, usePrefs } from "../prefs";
 import { permission, registerDevice, requestPermission, unregisterDevice, hasRegisteredDevice, type Permission } from "../push";
 import { hallLabel } from "../rules";
 import { needsMfaSetup, useSession } from "../session";
-import { Notice, Screen, SectionLabel, Txt, space, translate, useI18n, useRemote } from "../shared";
+import { Notice, Screen, SectionLabel, SmallButton, Txt, space, translate, useI18n, useRemote, useToast } from "../shared";
 
-export type AccountScreen = "password" | "mfa";
+export type AccountScreen = "password" | "mfa" | "devices";
 
 export function MeTab({ onOpen }: { onOpen: (screen: AccountScreen) => void }) {
   const { t, locale, setLocale, enumLabel } = useI18n();
@@ -25,6 +25,8 @@ export function MeTab({ onOpen }: { onOpen: (screen: AccountScreen) => void }) {
   const role = enumLabel("users.roles", user?.role);
   const load = useCallback(() => mfaApi.status().then((r) => r.data), []);
   const mfa = useRemote(load);
+  const loadProfile = useCallback(() => authApi.profile().then((r) => r.data), []);
+  const profile = useRemote(loadProfile);
   if (!user) return null;
 
   const mfaLine = mfa.data?.enabled
@@ -43,6 +45,7 @@ export function MeTab({ onOpen }: { onOpen: (screen: AccountScreen) => void }) {
           <Fact label={t("officer_app.me.name")} value={user.display_name || user.username} />
           <Fact label={t("officer_app.me.role")} value={role.state === "known" ? role.label : user.role} />
           <Fact label={t("officer_app.me.hall")} value={hallLabel(t, user.tenant) ?? ""} />
+          {profile.data?.email ? <EmailFact email={profile.data.email} verified={!!profile.data.email_verified} /> : null}
         </Block>
 
         <Block label={t("officer_app.me.mfa")}>
@@ -51,6 +54,10 @@ export function MeTab({ onOpen }: { onOpen: (screen: AccountScreen) => void }) {
 
         <Block label={t("profile.change_password")}>
           <Row testID="me-password" minHeight={56} title={t("profile.change_password")} onPress={() => onOpen("password")} right={<Txt variant="nav">›</Txt>} />
+        </Block>
+
+        <Block label={t("profile.devices.title")}>
+          <Row testID="me-devices" minHeight={56} title={t("profile.devices.title")} onPress={() => onOpen("devices")} right={<Txt variant="nav">›</Txt>} />
         </Block>
 
         <Block label={t("officer_app.me.language")}>
@@ -119,6 +126,36 @@ function Fact({ label, value }: { label: string; value: string }) {
         {label}
       </Txt>
       <Txt variant="bodyLg">{value}</Txt>
+    </View>
+  );
+}
+
+/** 邮箱 and whether it is verified; unverified gets 「发送验证邮件」 (5 an hour) and the one line why it matters. */
+function EmailFact({ email, verified }: { email: string; verified: boolean }) {
+  const { t } = useI18n();
+  const toast = useToast();
+  const [busy, setBusy] = useState(false);
+  const send = () => {
+    setBusy(true);
+    authApi
+      .sendEmailVerification()
+      .then(
+        () => toast(t("profile.email_verification_sent"), "success"),
+        (e: unknown) => toast(t((e as { response?: { status?: number } })?.response?.status === 429 ? "auth.rate_limited" : "profile.email_verification_failed"), "failure")
+      )
+      .finally(() => setBusy(false));
+  };
+  return (
+    <View testID="me-email" style={{ gap: space[2] }}>
+      <Fact label={t("officer_app.me.email")} value={`${email} · ${verified ? `✓ ${t("profile.email_verified")}` : `○ ${t("profile.email_unverified")}`}`} />
+      {verified ? null : (
+        <>
+          <Txt variant="caption" tone="muted">
+            {t("profile.email_verification_hint")}
+          </Txt>
+          <SmallButton testID="me-email-send" title={t("profile.email_send_verification")} onPress={busy ? undefined : send} />
+        </>
+      )}
     </View>
   );
 }
