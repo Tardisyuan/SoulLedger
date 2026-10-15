@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { auditApi, tenantsApi, PAGE_SIZE, type AuditLogEntry, type Tenant } from "@soulledger/core/api";
 import { useI18n } from "@/src/contexts/I18nContext";
@@ -150,6 +151,12 @@ export default function AuditPage() {
   const [hallFilter, setHallFilter] = useState("");
   const [datePreset, setDatePreset] = useState<DatePreset>("");
   const [ordering, setOrdering] = useState("");
+  // 详情页的「本次请求的全部记录」链接带 `?trace=`。不记进本浏览器(属于一次到访),也不用 useSearchParams
+  // (它要求 Suspense 边界):挂载后读一次地址栏。
+  const [traceFilter, setTraceFilter] = useState("");
+  useEffect(() => {
+    setTraceFilter(new URLSearchParams(window.location.search).get("trace") ?? "");
+  }, []);
   useRememberedFilters(
     AUDIT_FILTERS_KEY,
     AUDIT_FILTER_FIELDS,
@@ -181,6 +188,7 @@ export default function AuditPage() {
   if (hallFilter) filterParams.tenant = hallFilter;
   if (dateFrom) filterParams.start_date = dateFrom;
   if (ordering) filterParams.ordering = ordering;
+  if (traceFilter) filterParams.trace_id = traceFilter;
 
   const { showToast } = useToast();
   const [exporting, setExporting] = useState(false);
@@ -210,7 +218,7 @@ export default function AuditPage() {
   const { data, isLoading, isError, refetch } = useQuery({
     // `search` deliberately excluded — it filters the already-fetched page
     // client-side (see below) rather than triggering a new request per keystroke.
-    queryKey: ["audit", page, actionFilter, resourceFilter, hallFilter, datePreset, ordering],
+    queryKey: ["audit", page, actionFilter, resourceFilter, hallFilter, datePreset, ordering, traceFilter],
     queryFn: async () => {
       const res = await auditApi.list({ page: String(page), page_size: String(PAGE_SIZE), ...filterParams });
       return res.data;
@@ -270,13 +278,14 @@ export default function AuditPage() {
     });
 
   const totalPages = data ? Math.ceil(data.count / PAGE_SIZE) : 0;
-  const isFiltered = Boolean(actionFilter || resourceFilter || hallFilter || datePreset || search);
+  const isFiltered = Boolean(actionFilter || resourceFilter || hallFilter || datePreset || search || traceFilter);
   const clearFilters = () => {
     setActionFilter("");
     setResourceFilter("");
     setHallFilter("");
     setDatePreset("");
     setSearch("");
+    setTraceFilter("");
     setPage(1);
   };
 
@@ -344,6 +353,12 @@ export default function AuditPage() {
               {/* 02 档正是 ID / 时间戳 / 资源标识那一档。`mt-0.5`(2px) 不在节奏
                   阶梯上，收到最小的一格 `mt-1`(4px)。 */}
               <div className="font-mono text-xs text-[oklch(var(--color-ink-tertiary))] mt-1">{g.resourceDetail}</div>
+              <Link
+                href={`/audit/${g.entries[0].id}`}
+                className="text-xs text-[oklch(var(--color-accent-ink))] hover:underline"
+              >
+                {t("audit.detail.open")}
+              </Link>
               {changeActionLabels(g, t).map((label) => (
                 <div key={label} className="text-xs text-[oklch(var(--color-ink-muted))] mt-1">{label}</div>
               ))}

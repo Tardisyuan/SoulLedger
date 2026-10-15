@@ -1887,6 +1887,19 @@
     "date_7d": "Last 7 days",
     "date_30d": "Last 30 days",
     "events_from_writes": "{{count}} writes in this event",
+    "detail": {
+      "open": "Details",
+      "not_found": "Record not found",
+      "resource": "Resource",
+      "user_agent": "Client",
+      "trace_id": "Request ID",
+      "trace_filter": "Show all records of this request",
+      "changes": "Changes",
+      "no_changes": "This record has no changes",
+      "field": "Field",
+      "before": "Before",
+      "after": "After"
+    },
     "actions": {
       "CREATE": "Created",
       "UPDATE": "Updated",
@@ -3420,7 +3433,7 @@
       "authentication_prune_soul_sign_ins": "Clear soul sign-in records and idle sessions older than 90 days",
       "authentication_prune_expired_push_registrations": "Deactivate push registrations whose sign-in has expired",
       "soul_accounts_prune_data_exports": "Delete expired data exports",
-      "core_prune_retained_data": "Prune expired operational data (delivery logs, read notices, inactive devices)"
+      "audit_prune_retained_data": "Prune expired operational data (delivery logs, read notices, inactive devices)"
     },
     "status": {
       "PENDING": "Queued",
