@@ -121,7 +121,18 @@ describe("the identity band", () => {
   });
 });
 
+jest.mock("expo-clipboard", () => ({ setStringAsync: jest.fn(async () => true), getStringAsync: jest.fn(async () => "") }));
+
 describe("the copy-the-soul-code target", () => {
+  it("an ordinary copy keeps its own message, not the clears-in-60-s one", async () => {
+    await open();
+    fireEvent.press(screen.getByTestId("copy-soul-code"));
+    expect((await screen.findByTestId("toast")).props.children).toBe("灵魂编号已复制");
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, motion.bandCompact + 200));
+    });
+  });
+
   /** The target's own box: the code's line plus the padding around it (no `hitSlop`, which Android drops outside a parent). */
   const target = () => {
     const box = flat(screen.getByTestId("copy-soul-code")) as Record<string, number>;
