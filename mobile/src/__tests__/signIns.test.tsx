@@ -124,6 +124,27 @@ describe("设备", () => {
     expect(screen.getByTestId("device-s-ipad")).toBeTruthy();
   });
 
+  it("「退出其他全部」 asks first, then signs every other device out in one call; this phone stays", async () => {
+    const calls = signedIn({ "POST /me/sessions/revoke-others/": { status: 200, data: { revoked: 2 } } });
+    await openPage();
+    fireEvent.press(await screen.findByTestId("sign-out-others"));
+    // nothing is sent before the confirmation
+    expect(calls.filter((c) => c.url.includes("revoke-others"))).toHaveLength(0);
+    expect(within(screen.getByTestId("sign-out-others-sheet")).getByText("退出其他 2 台设备？")).toBeTruthy();
+    fireEvent.press(screen.getByTestId("sign-out-others-cancel"));
+    expect(calls.filter((c) => c.url.includes("revoke-others"))).toHaveLength(0);
+    fireEvent.press(screen.getByTestId("sign-out-others"));
+    fireEvent.press(screen.getByTestId("sign-out-others-confirm"));
+    await waitFor(() => expect(calls.filter((c) => c.url === "/me/sessions/revoke-others/")).toHaveLength(1));
+  });
+
+  it("no 「退出其他全部」 when this phone is the only device", async () => {
+    signedIn({ "GET /me/sessions/": { status: 200, data: [PHONE] } });
+    await openPage();
+    await screen.findByTestId("device-s-this");
+    expect(screen.queryByTestId("sign-out-others")).toBeNull();
+  });
+
   it("a refused 「退出」 keeps the row", async () => {
     signedIn({ "POST /me/sessions/s-android/revoke/": { status: 500 } });
     await openPage();

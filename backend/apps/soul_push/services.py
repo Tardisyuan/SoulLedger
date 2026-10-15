@@ -260,7 +260,7 @@ MFA_RESET_EVENT = "SOUL_MFA_RESET"
 
 def record_mfa_reset(account, officer_name):
     return _record(account, MFA_RESET_EVENT, None, "mfa_reset_by_officer",
-                   f"mfa-reset:{account.pk}:{timezone.now().timestamp()}"[:120], {},
+                   f"mfa-reset:{account.pk}:{timezone.now().timestamp()}"[:120], {"screen": "Mfa"},
                    params=lambda locale: {"name": officer_name})
 
 

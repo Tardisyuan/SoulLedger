@@ -240,6 +240,8 @@ export const soulApi = {
   signInSessions: () => soulHttp.get<SoulSignInSession[]>("/me/sessions/").then((r) => r.data),
   /** No password needed; the current one is refused 400 `current_session`. */
   revokeSignInSession: (id: string) => soulHttp.post<void>(`/me/sessions/${id}/revoke/`).then(() => undefined),
+  /** Every session but this one; 409 `session_unknown` when this token has none. */
+  revokeOtherSignInSessions: () => soulHttp.post<{ revoked: number }>("/me/sessions/revoke-others/").then((r) => r.data),
   /** The latest data-export request (`export`), which is `null` when the soul never asked. */
   dataExport: () => soulHttp.get<SoulDataExportState>("/me/export/").then((r) => r.data),
   /**
