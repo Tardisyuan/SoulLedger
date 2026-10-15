@@ -115,6 +115,14 @@ it("a push for the decision lands on the applications tab", () => {
   expect(navigate).toHaveBeenCalledWith("Tabs", { screen: "Applications", params: { landed: true } });
 });
 
+it("the push for an officer turning off two-step verification lands on that page", () => {
+  const landing = landingOf({ screen: "Mfa", kind: "mfa_reset_by_officer" });
+  expect(landing).toEqual({ screen: "Mfa" });
+  const navigate = jest.fn();
+  landOn(navigate as never, landing!);
+  expect(navigate).toHaveBeenCalledWith("Mfa");
+});
+
 it("after an approval the cooling-off line carries 「↑ 已提前」 beside the new date; before one it does not", async () => {
   stubApi({
     "/me/rebirth-applications/": {
