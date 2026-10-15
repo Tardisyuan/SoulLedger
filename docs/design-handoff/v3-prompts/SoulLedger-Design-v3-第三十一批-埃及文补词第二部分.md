@@ -170,3 +170,190 @@
 |---|---|---|
 | soul_push.export_ready | {'title': '资料已准备好', 'body': '你申请导出的资料已准备好，7 天内可取。打开灵魂簿保存。'} | {'title': 'Your data is ready', 'body': 'The data export you asked for is ready for 7 days. Open Soul Ledger to save it.'} |
 | scheduler.jobs.soul_accounts_prune_data_exports | 清理过期的资料导出 | Delete expired data exports |
+
+---
+
+## Design 回复(2026-10-15,原文在 Design 项目 `templates/soulledger-v3-pages/v3-batch31-reply.md`)
+
+落地时:`Ptr` 被词表守卫拦下，两条用了回复里给的替换写法(`q_slip` = `Djama Redi`,`body_placeholder` = `Kheper Hena Medjat`);`PDF`、`CSV` 加进技术词白名单。
+
+
+110 条都已给出 egy。**没有新词根**:第二十八批报的 `Khaa`、`Sehedj` 撤回，不登记，第二十八批的新词根只剩 `Ikhet`、`Iwn`、`Shat` 三个要登记。`Sedjer` 词表里已有(「暂缓」),「静音」请登记为它的新义项。`PDF`、`MB`、`CSV`、`App` 都照原样大写。
+
+## 一、两个被拦的词:撤回，改用现成写法
+
+| key | 原 | 改 | 理由 |
+|---|---|---|---|
+| soul_app.export.title | Khaa Djama-I | **Redi Per Djama-I** | 词表里已经有「导出」:`Redi Per`(`export` / `export_error: Nen Per Djama`)。没必要另起词根 |
+| soul_app.help.title | Sehedj | **Dbh Hena Wesheb** | 字面是「问与答」,这一页就是常见问题。不用 `Hehy Medu`:那是问答助手 |
+
+另：同一个意思，词表里有两套写法。
+- 列表的 CSV 导出用 `Bek Seth`(审计日志 `EXPORT`)。
+- 资料打包用 `Redi Per`。
+
+这次照这个分工写，不合并。
+
+## 二、案卷附件(Web)
+
+「附件」沿用第二十八批的 `Djama Hena`;「上传」= `Hab`(同图片上传 `Em Hab {{percent}}%`);「下载」= `Ini`。
+
+| key | egy |
+|---|---|
+| case.attachments.add | Redi Djama Hena |
+| case.attachments.drop | Redi Djama Dy, Er Khemen «Redi Djama Hena» |
+| case.attachments.summary | Djama {{count}} · {{used}} / {{max}} MB |
+| case.attachments.empty | Nen Djama Hena Djer |
+| case.attachments.uploading | Em Hab · {{pct}}% |
+| case.attachments.too_large | {{max}} MB Er Hry |
+| case.attachments.too_many | Djama {{max}} Er Pehwy |
+| case.attachments.failed_network | Nen Hab: Nen Em Senb |
+| case.attachments.failed_generic | Nen Hab |
+| case.attachments.download | Ini |
+| case.attachments.remove | Fekh |
+| case.attachments.delete_title | Fekh Djama Hena |
+| case.attachments.delete_body | «{{name}}»: Fekh, Nen Ankh Wehem. Sep Khetem: Nen Fekh Djama Hena. |
+| case.attachments.delete_failed | Nen Fekh |
+| case.attachments.delete_concluded | Sep Khetem Seth: Nen Fekh Djama Hena. |
+| case.attachments.preview_failed | Nen Wen Djama Pen |
+| case.attachments.open_tab | Wen Em Medjat Mawy |
+| case.attachments.print_title | Sesh Djama Hena |
+| case.attachments.print_footer | Djama Hena Tepy: Em Hemsu |
+| case.attachments.col_name | Ren |
+| case.attachments.col_size | Aa |
+| case.attachments.col_uploader | Hab Em |
+| case.attachments.col_time | Ahet |
+| case.attachments.load_failed | Nen Ini Djama Hena |
+| case.attachments.limit | Tut Er PDF · 20 MB Er Aa |
+| case.attachments.failed_type | Tut Er PDF Wa |
+
+`limit`、`failed_type` 沿用第二十八批的写法。`drop` 里的 `Khemen`(按)和「再点一次」那几句用的是同一个词。
+
+## 三、灵魂 App · 导出我的资料
+
+| key | egy |
+|---|---|
+| soul_app.export.title | Redi Per Djama-I |
+| soul_app.export.intro | Medu Neb Sesh Em Wesekhet Er-Ek: Djama Wa. |
+| soul_app.export.included | Em Djama |
+| soul_app.export.included_profile | Djes Hena Ren Hesb Ba |
+| soul_app.export.included_merit | Sesh Nefer Hena Isfet |
+| soul_app.export.included_judgments | Wedja Hena Medu Wedja (Maa-Ek Wa) |
+| soul_app.export.included_letters | Sesh Hena Medu (Tut Hena) |
+| soul_app.export.included_sign_ins | Aq Pehwy · Hru 90 |
+| soul_app.export.excluded | Nen Em Djama |
+| soul_app.export.excluded_deliberation | Medu Sab Em Sab |
+| soul_app.export.excluded_letters | Sesh Nen Er-Ek |
+| soul_app.export.timing | At Nedjes; Medu Aa: Hru Wa Er Aa. Iri Seth: Sedjem-Ek. Djama Wenen Hru 7. |
+| soul_app.export.request | Sesh Sekhem-Ek, Dbh |
+| soul_app.export.request_face | Aq Em {{bio}}, Dbh |
+| soul_app.export.requested_at | Dbh {{time}}. Per Em Medjat Pen; Iri Seth: Sedjem-Ek. |
+| soul_app.export.available_until | Wenen Er {{time}} |
+| soul_app.export.share_note | «Smen Er Per…»: Wen Wat Redi En Ta. Mut: Dbh Mawy. Djama Wa Em Iri. |
+| soul_app.export.expired | Djama Pen Mut. Dbh Mawy. |
+| soul_app.export.failed | Nen Iri. Dbh Mawy. |
+| soul_app.export.request_again | Dbh Mawy |
+| soul_app.export.sheet_title | Maa Djes-Ek Tepy |
+| soul_app.export.sheet_body | Djama Neb-Ek Redi Per. Sesh Sekhem-Ek: Maa Djes-Ek. |
+| soul_app.export.sheet_next | Dbh |
+| soul_app.export.working | Em Ini Djama… |
+| soul_app.export.share_failed | Nen Wen Wat Redi. Wehem Iri. |
+| soul_app.export.download_failed | Nen Ini Djama. Maa Senb, Wehem Iri. |
+| soul_app.export.load_failed | Nen Ini Kheperu Redi Per. |
+
+- 「书信」写 `Sesh`,「朋友圈的帖子」写 `Medu`(同 `POST: Medu`)。
+- 「确认是你」写 `Maa Djes-Ek`(同 `mfa.disable_body`)。
+- 「过期」写 `Mut`(同 `EXPIRED`)。
+- `sheet_body` 的「当前密码」只写 `Sekhem-Ek`,和第二十批 `bio.enable_body` 同理。
+- 「系统分享面板」= `Wat Redi En Ta`,「系统」照 `Smen Ta`。
+
+## 四、灵魂 App · 帮助
+
+「窗口」不另造词，写作「到本殿」(`Iyi Er Wesekhet`);「交付单」= `Djama Redi`;「联系邮箱」= `Wat Sesh`(灵魂 App 现用)。
+
+| key | egy |
+|---|---|
+| soul_app.help.title | Dbh Hena Wesheb |
+| soul_app.help.group_login | Aq Hena Ren Aq |
+| soul_app.help.group_visit | Er Tepy Iyi Er Wesekhet |
+| soul_app.help.group_contact | Sesh Er Wesekhet |
+| soul_app.help.not_found | Nen Gem Wesheb? |
+| soul_app.help.login_trouble | Nen Aq? |
+| soul_app.help.q_login | Nen Aq |
+| soul_app.help.a_login | Maa Ren Hesb Ba Tepy. Sekhem Nen Maat Sep 5: Aq Khetem At 15; Wehem Iri Er Khet. Nen Aq Djer: Khemen «Nen Rekh Sekhem». |
+| soul_app.help.q_forgot | Nen Rekh Sekhem |
+| soul_app.help.a_forgot | Em Aq: Khemen «Nen Rekh Sekhem»; Hesb Maa Hab Er Wat Sesh-Ek. Nen Wat Sesh: Iyi Er Wesekhet Hena Djama Redi. |
+| soul_app.help.q_phone | Nen Gem Medjat-I |
+| soul_app.help.a_phone | Aq Em Medjat Ky; «Sau Aq › Ikhet Hena Aq Pehwy»: Per Em Medjat Nen Gem, Er Khet Khemen Sekhem. Aq Sep Sen Wen: Aq Em Medu Ankh Wehem. Nen Medu Ankh Wehem: Iyi Er Wesekhet. |
+| soul_app.help.q_slip | Djama Redi: Ptr? |
+| soul_app.help.a_slip | Djama Shesep-Ek Em Iyi Er Wesekhet: Ren Hesb Ba Hena Sekhem Tepy. Er Khet Aq Tepy: Sekhem Tepy Nen Wenen. Sau Djama Redi: Iyi Er Wesekhet Hena-Ef. |
+| soul_app.help.q_contact | Sesh Er Wesekhet: Mi? |
+| soul_app.help.a_contact | Khemen «Sesh Er Wesekhet» Em Khery Medjat Pen; Wesheb Em Sesh-Ek. Medu Em Khet Seth: Iyi Er Wesekhet. |
+
+- 「账号安全」照第三十批写 `Sau Aq`,「锁 15 分钟」照 `error_locked`。
+- `q_slip` 里的 `Ptr`(什么)是**唯一一个要核对的词**:我在词表里没见到疑问词。如果守卫拦了，改成 **`Djama Redi`**(只写名词，问句交给版式)。
+- 「急事」= `Em Khet Seth`(同 `urgent`)。
+
+## 五、写给本殿(反馈)、设置分组、收件箱
+
+| key | egy |
+|---|---|
+| soul_app.feedback.kind_label | Iru |
+| soul_app.feedback.kind_account | Aq Hena Ren Aq |
+| soul_app.feedback.kind_record | Sesh-I Nen Maat |
+| soul_app.feedback.kind_app | Medjat Ba Nen Maat |
+| soul_app.feedback.kind_other | Ky |
+| soul_app.feedback.body_label | Medu-Ek |
+| soul_app.feedback.body_placeholder | Ptr Kheper? Em Medjat Ptr? |
+| soul_app.feedback.shots_label | Tut Medjat |
+| soul_app.feedback.shots_hint | Setep · Tut 3 Er Pehwy |
+| soul_app.feedback.shots_add | Redi Tut Medjat |
+| soul_app.feedback.shots_remove | Fekh Tut Pen |
+| soul_app.feedback.shots_limit | Tut 3 Er Pehwy |
+| soul_app.feedback.note | Sab Wesekhet Wesheb Em Sesh-Ek, Mi Sesh Ky. |
+| soul_app.feedback.appeal_hint | Wedja Nen Maat Er-Ek: Dbh Nehet. |
+| soul_app.feedback.send | Hab |
+| soul_app.feedback.failed | Nen Hab. Maa Senb, Wehem Iri. |
+| soul_app.feedback.see_letters | Maa Sesh |
+| soul_app.feedback.another | Sesh Ky |
+| soul_app.settings.group_data | Djama-I |
+| soul_app.settings.group_help | Dbh Hena Wesheb · Sesh Er Wesekhet |
+| soul_inbox.feedback.label | Sesh Er Wesekhet · {{category}} |
+| soul_inbox.feedback.tags.account | Aq Hena Ren Aq |
+| soul_inbox.feedback.tags.record | Sesh Nen Maat |
+| soul_inbox.feedback.tags.app | Medjat Ba Nen Maat |
+| soul_inbox.feedback.tags.other | Ky |
+
+- `body_placeholder` 也用了 `Ptr`。如果守卫拦了，改成 **`Kheper Hena Medjat`**。
+- 「截图」= `Tut Medjat`(页面的图);「可选」= `Setep`(同 `optional`)。
+- 收件箱标签里，灵魂写的「我的记录」改成「记录」(`Sesh Nen Maat`),因为官员读的时候不是「我」。
+
+## 六、官员 App · 断网与回信排队
+
+| key | egy |
+|---|---|
+| officer_app.offline.restored | Em Senb Mawy |
+| officer_app.offline.restored_sent | Em Senb Mawy · Wesheb {{n}} Hab Seth |
+| officer_app.offline.image_later | Em Senb: Maa |
+| officer_app.outbox.auto | Em Senb: Hab Djes-Ef |
+| officer_app.outbox.row | Wesheb · {{name}} |
+| officer_app.outbox.failed_title | Wesheb · {{name}}: Nen Hab |
+| officer_app.outbox.archived | Sesh Pen Nehem Er Per Sesh Seth. |
+| officer_app.outbox.left_hall | Nen Em Wesekhet Pen Djer. |
+| officer_app.outbox.retry | Nen Hab. Wehem Iri Er Khet. |
+| officer_app.outbox.view_existing | Maa Wesheb Ky |
+| officer_app.outbox.discard | Fekh Sesh Tepy-I |
+
+「归档」照 `archived_done`;「自动」= `Djes-Ef`(同 `AUTO_REJECT`);`left_hall` 的「不再」照 `Djer`。
+
+## 七、导出 CSV、推送、定时任务
+
+| key | egy |
+|---|---|
+| common.export_csv | Bek Seth CSV |
+| common.export_scope | Bek Seth Mi Setep · {{n}} |
+| common.export_too_many | 10 000 Er Hry: Setep Nedjes |
+| soul_push.export_ready | {'title': 'Djama-Ek Iri Seth', 'body': 'Redi Per Djama-Ek Iri Seth · Wenen Hru 7. Wen Medjat Ba, Sau.'} |
+| scheduler.jobs.soul_accounts_prune_data_exports | Khetem Redi Per Djama Mut |
+
+- `export_too_many` 的数字照 egy 现有写法，不加千分位逗号。
+- 推送这一条的 JSON 结构原样保留，只换了 title 和 body 的文字。
