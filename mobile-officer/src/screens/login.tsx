@@ -68,7 +68,7 @@ export function LoginScreen({ hint }: { hint?: LoginHint | null } = {}) {
         </View>
 
         {failure ? (
-          <Notice tone="neg" testID="login-failure">{`! ${failure}`}</Notice>
+          <Notice tone="neg" testID="login-failure">{failure}</Notice>
         ) : null}
 
         {step.name === "credentials" ? (

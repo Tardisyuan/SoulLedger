@@ -194,11 +194,11 @@ it("says network when there was no answer, and a plain failure when the server g
   renderOfficer(<ChangePasswordScreen onBack={() => {}} />);
   fillAll();
   await submit();
-  expect(screen.getByText("! 网络错误")).toBeTruthy();
+  expect(screen.getByText("网络错误")).toBeTruthy();
   mockChange.mockRejectedValueOnce(httpError(500, {}));
   await submit();
-  expect(screen.getByText("! 密码修改失败")).toBeTruthy();
-  expect(screen.queryByText("! 网络错误")).toBeNull();
+  expect(screen.getByText("密码修改失败")).toBeTruthy();
+  expect(screen.queryByText("网络错误")).toBeNull();
 });
 
 it("我的 has the entry, and it opens the screen it names", async () => {

@@ -196,7 +196,7 @@ describe("the optional 「希望缩短到几天」 field", () => {
     const calls = await open();
     fireEvent.changeText(screen.getByTestId("cooldown-shortening-desired"), "8");
     fireEvent.press(screen.getByTestId("submit-cooldown-shortening"));
-    expect(await screen.findByText("! 天数须是 0 到 7 的整数")).toBeTruthy();
+    expect(await screen.findByText("天数须是 0 到 7 的整数")).toBeTruthy();
     expect(calls.filter((c) => c.method === "POST")).toEqual([]);
     fireEvent.changeText(screen.getByTestId("cooldown-shortening-desired"), "0");
     fireEvent.press(screen.getByTestId("submit-cooldown-shortening"));
@@ -211,13 +211,13 @@ describe("the optional 「希望缩短到几天」 field", () => {
     // order on the form: reason, then days, then submit
     const order = screen.getAllByTestId(/^(cooldown-shortening-reason|cooldown-shortening-desired|submit-cooldown-shortening)$/).map((n) => n.props.testID);
     expect(order).toEqual(["cooldown-shortening-reason", "cooldown-shortening-desired", "submit-cooldown-shortening"]);
-    expect(screen.queryByText(/^! 天数须是/)).toBeNull();
+    expect(screen.queryByText(/^天数须是/)).toBeNull();
     fireEvent.changeText(field, "8");
     fireEvent.press(screen.getByTestId("submit-cooldown-shortening"));
-    expect(await screen.findByText("! 天数须是 0 到 7 的整数")).toBeTruthy();
+    expect(await screen.findByText("天数须是 0 到 7 的整数")).toBeTruthy();
     // typing again clears the flag
     fireEvent.changeText(field, "7");
-    expect(screen.queryByText(/^! 天数须是/)).toBeNull();
+    expect(screen.queryByText(/^天数须是/)).toBeNull();
   });
 });
 

@@ -157,7 +157,7 @@ function OutboxFailure({ entry, onOpen }: { entry: OutboxEntry; onOpen: (item: I
   const reason = entry.reason ?? "retry";
   return (
     <View testID={`outbox-failed-${entry.id}`} style={styles.failure}>
-      <Notice tone="neg">{`! ${t("officer_app.outbox.failed_title", { name: entry.name })}`}</Notice>
+      <Notice tone="neg">{t("officer_app.outbox.failed_title", { name: entry.name })}</Notice>
       <Txt testID={`outbox-reason-${entry.id}`} variant="body">
         {t(`officer_app.outbox.${reason}`)}
       </Txt>

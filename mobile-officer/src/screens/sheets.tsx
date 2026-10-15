@@ -121,7 +121,7 @@ export function DecisionSheet({
             keyboardType="number-pad"
             value={days}
             onChangeText={setDays}
-            error={flagged && daysInvalid ? `! ${t("officer_app.confirm.days_invalid")}` : null}
+            error={flagged && daysInvalid ? t("officer_app.confirm.days_invalid") : null}
           />
         ) : null}
         {verdict === "reject" ? (
@@ -131,11 +131,11 @@ export function DecisionSheet({
             multiline
             value={reason}
             onChangeText={setReason}
-            error={flagged && missingReason ? `! ${t("officer_app.confirm.reason_required")}` : null}
+            error={flagged && missingReason ? t("officer_app.confirm.reason_required") : null}
           />
         ) : null}
-        {failure ? <Notice tone="neg" testID="decision-failure">{`! ${t("officer_app.confirm.failed", { reason: t(failureReasonKey(failure)) })}`}</Notice> : null}
-        {unrecognised ? <Notice tone="neg" testID="decision-unrecognised">{`! ${t(verdict === "approve" ? "officer_app.biometric.failed" : "officer_app.biometric.failed_reject", { bio: bio.start })}`}</Notice> : null}
+        {failure ? <Notice tone="neg" testID="decision-failure">{t("officer_app.confirm.failed", { reason: t(failureReasonKey(failure)) })}</Notice> : null}
+        {unrecognised ? <Notice tone="neg" testID="decision-unrecognised">{t(verdict === "approve" ? "officer_app.biometric.failed" : "officer_app.biometric.failed_reject", { bio: bio.start })}</Notice> : null}
         <View style={{ flexDirection: "row", gap: space[3] }}>
           <ActionButton testID="decision-cancel" kind="outline" title={t("soul_app.common.cancel")} onPress={onClose} />
           <ActionButton
@@ -229,7 +229,7 @@ export function CosignSheet({
           />
         ))}
         <View style={{ paddingHorizontal: space[5], gap: space[3] }}>
-          {problem ? <Notice tone="neg" testID="cosign-problem">{`! ${problem}`}</Notice> : null}
+          {problem ? <Notice tone="neg" testID="cosign-problem">{problem}</Notice> : null}
           {unavailable ? (
             // 14j: the reason is the line right above the button; no promise, no date.
             <Txt variant="caption" tone="muted" testID="cosign-unavailable">{`◇ ${t("officer_app.cosign.unavailable")}`}</Txt>

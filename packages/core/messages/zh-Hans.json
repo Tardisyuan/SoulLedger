@@ -3574,7 +3574,8 @@
       "empty": "暂无",
       "language": "语言",
       "show": "显示",
-      "hide": "隐藏"
+      "hide": "隐藏",
+      "alert": "错误"
     },
     "login": {
       "title": "灵魂登录",

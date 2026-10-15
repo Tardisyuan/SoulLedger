@@ -125,7 +125,7 @@ it("says the password was wrong and stays on the form", async () => {
   await act(async () => {
     fireEvent.press(screen.getByTestId("login-submit"));
   });
-  expect(await screen.findByText("! 用户名或密码不对")).toBeTruthy();
+  expect(await screen.findByText("用户名或密码不对")).toBeTruthy();
   expect(screen.getByTestId("login-username")).toBeTruthy();
 });
 
@@ -162,12 +162,12 @@ it("忘记密码: 429 says rate limited, no answer says network, and the form st
   await act(async () => {
     fireEvent.press(screen.getByTestId("forgot-submit"));
   });
-  expect(await screen.findByText("! 请求过于频繁，请稍后再试")).toBeTruthy();
+  expect(await screen.findByText("请求过于频繁，请稍后再试")).toBeTruthy();
   mockRequestReset.mockRejectedValueOnce(Object.assign(new Error("Network Error"), {}));
   await act(async () => {
     fireEvent.press(screen.getByTestId("forgot-submit"));
   });
-  expect(await screen.findByText("! 网络错误")).toBeTruthy();
+  expect(await screen.findByText("网络错误")).toBeTruthy();
   expect(screen.queryByTestId("forgot-sent")).toBeNull();
   expect(screen.getByTestId("forgot-form")).toBeTruthy();
 });

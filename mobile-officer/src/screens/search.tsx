@@ -146,7 +146,7 @@ function Ask() {
           <Txt variant="bodyLg">{line.text}</Txt>
         </View>
       ))}
-      {failure ? <Notice tone="neg">{`! ${failure}`}</Notice> : null}
+      {failure ? <Notice tone="neg">{failure}</Notice> : null}
       <Input testID="ask-input" label={t("officer_app.search.ask")} placeholder={t("officer_assist.placeholder")} value={question} onChangeText={setQuestion} multiline />
       <Button testID="ask-send" title={t("officer_assist.send")} busy={busy} onPress={send} />
       <Txt variant="caption" tone="subtle">

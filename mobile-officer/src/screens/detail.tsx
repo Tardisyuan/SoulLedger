@@ -275,7 +275,7 @@ function JudgmentComments({ id }: { id: string }) {
         </View>
       ))}
       <Input testID="comment-input" label={t("officer_app.comment.write")} multiline maxLength={JUDGMENT_COMMENT_MAX} value={body} onChangeText={setBody} />
-      {failed ? <Notice tone="neg" testID="comment-failed">{`! ${t("officer_app.comment.failed")}`}</Notice> : null}
+      {failed ? <Notice tone="neg" testID="comment-failed">{t("officer_app.comment.failed")}</Notice> : null}
       <ActionButton testID="comment-send" kind="outline" busy={busy} title={t("officer_app.comment.send")} onPress={send} />
     </View>
   );

@@ -3568,7 +3568,8 @@
       "empty": "Nen Wenen",
       "language": "Medu Ta",
       "show": "Maa",
-      "hide": "Imen"
+      "hide": "Imen",
+      "alert": "Sethet"
     },
     "login": {
       "title": "Aq Ba",

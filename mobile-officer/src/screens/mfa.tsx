@@ -60,7 +60,7 @@ export function MfaScreen({ onBack, onLocked }: { onBack: () => void; onLocked?:
     }
     if (!status.data) {
       return status.error ? (
-        <Notice tone="neg" testID="mfa-load-failed" onRetry={() => void status.reload()}>{`! ${t("mfa.manage.load_failed")}`}</Notice>
+        <Notice tone="neg" testID="mfa-load-failed" onRetry={() => void status.reload()}>{t("mfa.manage.load_failed")}</Notice>
       ) : (
         <Txt variant="body" tone="muted">{t("soul_app.common.loading")}</Txt>
       );
@@ -236,7 +236,7 @@ function Enabled({ status, onChanged, onDisabled }: { status: MfaStatus; onChang
     <View testID="mfa-on" style={{ gap: space[4] }}>
       <Txt variant="bodyLg">{`✓ ${t("mfa.badge_on")}`}</Txt>
       <Txt testID="mfa-codes-left" variant="body">{`${t("mfa.manage.codes_left")} · ${t("mfa.manage.codes_left_value", { n: String(status.recovery_codes_remaining) })}`}</Txt>
-      {failure ? <Notice tone="neg" testID="mfa-failure">{`! ${failure}`}</Notice> : null}
+      {failure ? <Notice tone="neg" testID="mfa-failure">{failure}</Notice> : null}
 
       {asking === "regen" ? (
         <View style={{ gap: space[3] }}>
@@ -421,7 +421,7 @@ function Wizard({ onLeave, onEnabled, onLocked }: { onLeave: () => void; onEnabl
               />
             </>
           )}
-          {setupFailed ? <Notice tone="neg" testID="mfa-setup-failed">{`! ${setupFailed}`}</Notice> : null}
+          {setupFailed ? <Notice tone="neg" testID="mfa-setup-failed">{setupFailed}</Notice> : null}
         </View>
       ) : null}
 
@@ -430,7 +430,7 @@ function Wizard({ onLeave, onEnabled, onLocked }: { onLeave: () => void; onEnabl
           <Txt variant="title">{t("officer_app.mfa.setup_key_title")}</Txt>
           <Txt variant="body" tone="muted">{t("officer_app.mfa.setup_key_body")}</Txt>
           {setupFailed ? (
-            <Notice tone="neg" testID="mfa-setup-failed">{`! ${setupFailed}`}</Notice>
+            <Notice tone="neg" testID="mfa-setup-failed">{setupFailed}</Notice>
           ) : setup ? (
             <>
               <Txt variant="caption" tone="muted">{t("mfa.setup.manual_key")}</Txt>
@@ -452,7 +452,7 @@ function Wizard({ onLeave, onEnabled, onLocked }: { onLeave: () => void; onEnabl
         <View style={{ gap: space[3] }}>
           <Txt variant="title">{t("mfa.setup.step3_title")}</Txt>
           <Txt variant="body" tone="muted">{t("mfa.setup.step3_body")}</Txt>
-          {codeError ? <Notice tone="neg" testID="mfa-code-error">{`! ${codeError}`}</Notice> : null}
+          {codeError ? <Notice tone="neg" testID="mfa-code-error">{codeError}</Notice> : null}
           <Input
             testID="mfa-setup-code"
             label={t("mfa.verify.code_label")}

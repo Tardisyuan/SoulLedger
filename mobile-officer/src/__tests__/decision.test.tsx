@@ -89,7 +89,7 @@ describe("reject", () => {
     await openReject();
     fireEvent.changeText(screen.getByTestId("decision-reason"), "材料不全");
     fireEvent.press(screen.getByTestId("decision-confirm"));
-    expect(await screen.findByText("! 没能提交 · 他人已代签")).toBeTruthy();
+    expect(await screen.findByText("没能提交 · 他人已代签")).toBeTruthy();
     expect(screen.getByTestId("decision-reason").props.value).toBe("材料不全");
     expect(mockApproveNode).toHaveBeenCalledWith("wf-1", "node-1", { verdict: "REJECTED", notes: "材料不全", require_reason: true });
   });
@@ -101,7 +101,7 @@ describe("reject", () => {
     await act(async () => {
       fireEvent.press(screen.getByTestId("decision-confirm"));
     });
-    expect(await screen.findByText("! 没能提交 · 网络错误")).toBeTruthy();
+    expect(await screen.findByText("没能提交 · 网络错误")).toBeTruthy();
     expect(screen.getByTestId("decision-reason").props.value).toBe("先退回");
   });
 });

@@ -57,7 +57,7 @@ export function StateView({
   if (state === "error") {
     return (
       <View testID="state-error" style={styles.state}>
-        <Notice tone="neg">{`! ${tr("officer_app.state.error_title")}`}</Notice>
+        <Notice tone="neg">{tr("officer_app.state.error_title")}</Notice>
         <Txt variant="caption" tone="muted">
           {tr("officer_app.state.error_body")}
         </Txt>

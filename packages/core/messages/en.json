@@ -3574,7 +3574,8 @@
       "empty": "None",
       "language": "Language",
       "show": "Show",
-      "hide": "Hide"
+      "hide": "Hide",
+      "alert": "Error"
     },
     "login": {
       "title": "Soul sign-in",

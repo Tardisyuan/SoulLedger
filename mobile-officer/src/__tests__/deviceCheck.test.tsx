@@ -28,8 +28,8 @@ const auth = LocalAuthentication as unknown as { __state: { level: number; succe
 const authenticate = LocalAuthentication.authenticateAsync as jest.Mock;
 
 const detailOf = (kind: string) => ({ kind, id: "x-1", title: "案卷", created_at: "2026-10-09T01:00:00Z", actionable: true, state: "actionable", workflow_id: "wf-1", node_id: "n-1" }) as never;
-const FAILED_APPROVE = "! 没有认出面容，还没批准。再点一次确认重试。";
-const FAILED_REJECT = "! 没有认出面容，还没驳回。再点一次确认重试。";
+const FAILED_APPROVE = "没有认出面容，还没批准。再点一次确认重试。";
+const FAILED_REJECT = "没有认出面容，还没驳回。再点一次确认重试。";
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -84,6 +84,9 @@ describe("a check that does not pass", () => {
     const { onDone, onClose } = sheet("approval", "approve");
     fireEvent.press(screen.getByTestId("decision-confirm"));
     expect(await screen.findByText(FAILED_APPROVE)).toBeTruthy();
+    // Design 第三十二批: the ⚠ is the only error mark (no 「!」 in the text), so a screen reader must name it.
+    expect(screen.getByTestId("decision-unrecognised").props.children).toBe(FAILED_APPROVE);
+    expect(screen.getByLabelText("错误")).toBeTruthy();
     expect(mockSubmit).not.toHaveBeenCalled();
     expect(onDone).not.toHaveBeenCalled();
     expect(onClose).not.toHaveBeenCalled();

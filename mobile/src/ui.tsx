@@ -870,11 +870,20 @@ export function Input({
   );
 }
 
+/**
+ * The ⚠ before an error is its only "this is an error" mark (Design 第三十二批: no 「!」 in the text), so a screen
+ * reader must say it rather than skip it as decoration.
+ */
+function alertIconLabel(tr: (key: string) => string) {
+  return { accessible: true, accessibilityRole: "image" as const, accessibilityLabel: tr("soul_app.common.alert") };
+}
+
 export function FieldError({ text, testID }: { text: string; testID?: string }) {
   const t = useTheme();
+  const { t: tr } = useI18n();
   return (
     <View style={styles.iconRow} accessibilityRole="alert">
-      <View style={styles.iconNudge}>
+      <View style={styles.iconNudge} {...alertIconLabel(tr)}>
         <Icon name="alert" size={14} color={t.neg} />
       </View>
       <Txt testID={testID} variant="caption" tone="negInk" style={styles.fill}>
@@ -990,7 +999,7 @@ export function Notice({
       style={[styles.notice, { borderColor: neg ? t.negStrong : t.hair2, backgroundColor: neg ? t.negBg : t.s1 }]}
     >
       {neg ? (
-        <View style={styles.iconNudge}>
+        <View style={styles.iconNudge} {...alertIconLabel(tr)}>
           <Icon name="alert" size={15} color={t.neg} />
         </View>
       ) : null}

@@ -68,7 +68,7 @@ export function ResetPasswordScreen({
       <AccountFrame testID="reset-screen" onBack={onClose}>
         <Txt variant="title">{t("auth.reset_title")}</Txt>
         <View testID="reset-invalid" style={{ gap: space[3] }}>
-          <Notice tone="neg">{`! ${t("auth.reset_invalid")}`}</Notice>
+          <Notice tone="neg">{t("auth.reset_invalid")}</Notice>
           <Txt variant="body" tone="muted">{t("auth.reset_invalid_body")}</Txt>
         </View>
         {onRequestAgain ? <ActionButton testID="reset-request-again" kind="outline" title={t("auth.reset_request_again")} onPress={onRequestAgain} /> : null}
@@ -84,7 +84,7 @@ export function ResetPasswordScreen({
     <AccountFrame testID="reset-screen" onBack={onClose} scrollRef={holdScroller}>
       <Txt variant="title">{t("auth.reset_title")}</Txt>
       <Txt variant="body" tone="muted">{t("auth.reset_subtitle")}</Txt>
-      {notice ? <Notice tone="neg" testID="reset-failure">{`! ${t(notice)}`}</Notice> : null}
+      {notice ? <Notice tone="neg" testID="reset-failure">{t(notice)}</Notice> : null}
       <View ref={holdSection} collapsable={false} style={{ gap: space[3] }}>
         <Input
           testID="reset-new"
