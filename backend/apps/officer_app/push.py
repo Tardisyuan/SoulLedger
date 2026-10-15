@@ -97,7 +97,17 @@ def _locale(user):
     return "en" if (user.preferences or {}).get("email_locale") == "en" else "zh-Hans"
 
 
+#: 推送落到的条目 → 个人中心「通知」表的类别。按「站内」那一格(推送是站内通知的手机形态)。
+#: 没有 `target` 的推送(只有计数)不属于任何一类,照发。
+CATEGORY_OF_TARGET = {"approval": "approval", "rebirth": "approval", "cooldown": "approval",
+                      "reassignment": "dispatch", "letter": "letter_handoff"}
+
+
 def send_to_user(user, sender=None, target=None):
+    from apps.notifications.categories import wants
+
+    if target and not wants(user, CATEGORY_OF_TARGET.get(target["kind"]), "site"):
+        return 0
     devices = list(signin_sessions.live_devices(
         OfficerPushDevice.objects.filter(user=user, is_active=True),
         user_field="user_id", lifetime=signin_sessions.officer_app_lifetime()))

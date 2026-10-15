@@ -12,6 +12,7 @@ import {
   handledNotice,
   isDenied,
   landingOf,
+  noticeIsDeskOnly,
   noticeLanding,
   loginFailureKey,
   reasonMissing,
@@ -148,6 +149,11 @@ describe("where a tapped push lands", () => {
     expect(noticeLanding({ related_resource: "workflow", related_id: "wf-9" })).toEqual({ tab: "todo", item: { kind: "approval", id: "wf-9" } });
     expect(noticeLanding({ related_resource: "cooldown", related_id: "4" })).toEqual({ tab: "todo", item: { kind: "cooldown", id: "4" } });
     expect(noticeLanding({ related_resource: "scheduler", related_id: "5" })).toBeNull();
+    expect(noticeLanding({ related_resource: "judgment", related_id: "j1" })).toEqual({ tab: "todo", judgment: "j1" });
+    expect(noticeLanding({ related_resource: "soul", related_id: "s1" })).toEqual({ tab: "todo", soul: "s1" });
+    expect(noticeIsDeskOnly({ related_resource: "scheduler" })).toBe(true);
+    expect(noticeIsDeskOnly({ related_resource: "CrossTenantJudgment" })).toBe(true);
+    expect(noticeIsDeskOnly({ related_resource: "judgment" })).toBe(false);
     expect(noticeLanding({ related_resource: "workflow", related_id: null })).toBeNull();
     expect(noticeLanding({})).toBeNull();
   });

@@ -5775,6 +5775,8 @@
     "queue": {
       "mine": "Mine",
       "unclaimed": "Unclaimed",
+      "others": "With others",
+      "deferred": "Deferred",
       "empty_title": "No cases in hand",
       "empty_body": "Claim one from Unclaimed.",
       "desk_only": "Ready for verdict · use the desk",
@@ -5851,6 +5853,7 @@
       "lock": "{{n}} items waiting on you"
     },
     "me": {
+      "email": "Email",
       "push": "Push notifications",
       "profile": "Profile",
       "name": "Name",
@@ -5892,6 +5895,7 @@
       "letter": "Letter"
     },
     "notices": {
+      "on_desk": "View on the desk",
       "empty_title": "No notices",
       "empty_body": "New notices will appear here."
     },

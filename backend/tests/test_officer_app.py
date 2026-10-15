@@ -360,3 +360,33 @@ def test_soul_push_tables_are_untouched_by_officer_devices(judge_user):
 
     push.register_device(judge_user, TOKEN, "IOS")
     assert PushDevice.objects.count() == 0
+
+
+def test_a_category_muted_in_the_notification_table_is_not_pushed_to_the_phone(cn_tenant, judge_user, push_on):  # noqa: F811
+    wf, _ = _plain_workflow(cn_tenant)
+    push.register_device(judge_user, TOKEN, "IOS")
+    target = {"kind": "approval", "id": str(wf.pk)}
+    judge_user.preferences = {"notifications": {"approval": {"site": False}}}
+    judge_user.save(update_fields=["preferences"])
+    assert push.send_to_user(judge_user, sender=FakeSender(), target=target) == 0
+    assert FakeSender.batches == []
+    # 另一类没关,照发;没有 target 的纯计数推送不属于任何一类,也照发。
+    judge_user.preferences = {"notifications": {"dispatch": {"site": False}}}
+    judge_user.save(update_fields=["preferences"])
+    assert push.send_to_user(judge_user, sender=FakeSender(), target=target) == 1
+    judge_user.preferences = {"notifications": {"approval": {"site": False}}}
+    judge_user.save(update_fields=["preferences"])
+    assert push.send_to_user(judge_user, sender=FakeSender()) == 1
+
+
+def test_todo_group_pages_from_an_offset_and_reports_the_full_count(cn_tenant, judge_user):
+    for i in range(13):
+        _plain_workflow(cn_tenant, name=f"案{i}")
+    client = officer_client(judge_user)
+    first = client.get(TODO).data["approvals"]
+    assert first["count"] == 13 and len(first["items"]) == 10
+    more = client.get(TODO, {"kind": "approval", "offset": 10}).data
+    assert more["count"] == 13 and len(more["items"]) == 3
+    assert {i["id"] for i in first["items"]}.isdisjoint(i["id"] for i in more["items"])
+    assert client.get(TODO, {"kind": "nope"}).status_code == 400
+    assert client.get(TODO, {"kind": "approval", "offset": "x"}).status_code == 400

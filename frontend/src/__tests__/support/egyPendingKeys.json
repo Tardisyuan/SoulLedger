@@ -1,3 +1,7 @@
 [
+  "officer_app.me.email",
+  "officer_app.notices.on_desk",
+  "officer_app.queue.deferred",
+  "officer_app.queue.others",
   "scheduler.jobs.officer_app_check_receipts"
 ]
