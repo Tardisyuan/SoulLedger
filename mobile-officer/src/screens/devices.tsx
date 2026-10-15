@@ -5,8 +5,8 @@
  * words as the desk's 个人中心 (`profile.devices.*`).
  */
 import { sessionsApi, type SignInSession } from "@soulledger/core/api/auth";
-import { useCallback, useState } from "react";
-import { View } from "react-native";
+import { useCallback, useRef, useState } from "react";
+import { type ScrollView, View } from "react-native";
 
 import { formatWhen } from "../format";
 import { ActionButton, Row } from "../kit";
@@ -21,6 +21,7 @@ export function DevicesScreen({ onBack }: { onBack: () => void }) {
   const [gone, setGone] = useState<ReadonlySet<string>>(new Set());
   const [busy, setBusy] = useState<string | null>(null);
   const [asking, setAsking] = useState(false);
+  const scroll = useRef<ScrollView>(null);
   const rows = (data ?? []).filter((s) => !gone.has(s.id));
   const others = rows.filter((s) => !s.current);
 
@@ -44,7 +45,7 @@ export function DevicesScreen({ onBack }: { onBack: () => void }) {
     });
 
   return (
-    <AccountFrame testID="devices-screen" onBack={onBack}>
+    <AccountFrame testID="devices-screen" onBack={onBack} scrollRef={scroll}>
       <Txt variant="title">{t("profile.devices.title")}</Txt>
       <Txt variant="body" tone="muted">
         {t("profile.devices.intro")}
@@ -72,7 +73,8 @@ export function DevicesScreen({ onBack }: { onBack: () => void }) {
       ))}
       {others.length > 0 ? (
         asking ? (
-          <View style={{ gap: space[3] }}>
+          // The answers open at the foot of a long list, under the tab bar: bring them into view (as 我的 does).
+          <View style={{ gap: space[3] }} onLayout={() => scroll.current?.scrollToEnd({ animated: true })}>
             <Notice tone="neutral">
               <Txt variant="caption">{t("profile.devices.confirm_title", { n: String(others.length) })}</Txt>
             </Notice>
