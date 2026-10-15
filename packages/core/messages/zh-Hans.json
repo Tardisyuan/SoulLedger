@@ -5804,6 +5804,8 @@
     "queue": {
       "mine": "我手上",
       "unclaimed": "待认领",
+      "others": "他人手上",
+      "deferred": "暂缓",
       "empty_title": "手上没有案子",
       "empty_body": "到「待认领」里认领一件。",
       "desk_only": "待宣判 · 请在官员台",
@@ -5880,6 +5882,7 @@
       "lock": "有 {{n}} 件待你处理"
     },
     "me": {
+      "email": "邮箱",
       "push": "推送",
       "profile": "个人信息",
       "name": "姓名",
@@ -5921,6 +5924,7 @@
       "letter": "书信"
     },
     "notices": {
+      "on_desk": "在电脑上查看",
       "empty_title": "没有通知",
       "empty_body": "新的通知会出现在这里。"
     },

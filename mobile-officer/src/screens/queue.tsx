@@ -13,7 +13,9 @@ import { isDenied } from "../rules";
 import { useSession } from "../session";
 import { Screen, Txt, space, useI18n, useRemote, useToast } from "../shared";
 
-type Group = Extract<JudgmentQueueGroup, "mine" | "unclaimed">;
+/** 他人手上 / 暂缓 are read-only on the phone: no claim button, the row opens the case. */
+const GROUPS: readonly JudgmentQueueGroup[] = ["mine", "unclaimed", "others", "deferred"];
+type Group = JudgmentQueueGroup;
 
 export function QueueTab({ onOpen }: { onOpen: (id: string) => void }) {
   const { t } = useI18n();
@@ -27,12 +29,18 @@ export function QueueTab({ onOpen }: { onOpen: (id: string) => void }) {
   const fetchPage = useCallback((page: number) => judgmentApi.list({ group, page: String(page) }).then((r) => r.data), [group]);
   const { rows: data, more } = useMoreRows(firstPage, fetchPage);
   const view = viewStateOf({ data, error }, (rows) => rows.length === 0, isDenied);
+  // The four counts (a count that fails to load is simply not shown).
+  const loadCounts = useCallback(() => judgmentApi.queueCounts().then((r) => r.data), []);
+  const { data: counts, reload: reloadCounts } = useRemote(loadCounts);
 
   const claim = (row: Judgment) => {
     setClaiming(row.id);
     judgmentApi
       .claim(row.id)
-      .then(() => reload())
+      .then(() => {
+        reload();
+        reloadCounts();
+      })
       .catch(() => toast(t("officer_app.queue.claim_failed"), "failure"))
       .finally(() => setClaiming(null));
   };
@@ -45,10 +53,7 @@ export function QueueTab({ onOpen }: { onOpen: (id: string) => void }) {
         onChange={(next) => {
           setGroup(next);
         }}
-        options={[
-          { key: "mine", label: t("officer_app.queue.mine") },
-          { key: "unclaimed", label: t("officer_app.queue.unclaimed") },
-        ]}
+        options={GROUPS.map((key) => ({ key, label: counts ? `${t(`officer_app.queue.${key}`)} · ${counts[key]}` : t(`officer_app.queue.${key}`) }))}
       />
       <View style={{ paddingHorizontal: space[5], paddingBottom: space[3] }}>
         <Txt variant="caption" tone="muted">

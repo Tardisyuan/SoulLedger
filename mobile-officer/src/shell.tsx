@@ -16,6 +16,7 @@ import { listenForLandings, registerDevice } from "./push";
 import { HIGHLIGHT_MS, hallLabel, type Landing } from "./rules";
 import { Detail, type DetailTarget } from "./screens/detail";
 import { ChangePasswordScreen } from "./screens/account";
+import { DevicesScreen } from "./screens/devices";
 import { MeTab, type AccountScreen } from "./screens/me";
 import { MfaScreen } from "./screens/mfa";
 import { NoticesTab } from "./screens/notices";
@@ -45,6 +46,11 @@ export function Shell({ onResetDone }: { onResetDone?: () => void } = {}) {
   const [unread, setUnread] = useState(false);
 
   const land = useCallback((landing: Landing) => {
+    if (landing.judgment || landing.soul) {
+      setTab(landing.judgment ? "queue" : "search");
+      setDetail(landing.judgment ? { type: "judgment", id: landing.judgment } : { type: "soul", id: landing.soul! });
+      return;
+    }
     setTab("todo");
     setVersion((v) => v + 1);
     if (landing.item) {
@@ -134,6 +140,8 @@ export function Shell({ onResetDone }: { onResetDone?: () => void } = {}) {
           <MfaScreen onBack={() => setAccount(null)} onLocked={setLocked} />
         ) : account === "password" ? (
           <ChangePasswordScreen onBack={() => setAccount(null)} />
+        ) : account === "devices" ? (
+          <DevicesScreen onBack={() => setAccount(null)} />
         ) : detail ? (
           <Detail target={detail} onBack={close} onSettled={() => setVersion((v) => v + 1)} />
         ) : tab === "todo" ? (
