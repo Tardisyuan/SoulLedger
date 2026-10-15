@@ -26,7 +26,8 @@ import { GUTTER, Grow, SmallButton, Txt, useReducedMotionDurations, useTheme } f
 
 export { useOnline } from "./online";
 
-export function NetworkProvider({ children }: { children: ReactNode }) {
+/** `bar={false}`: publish the state only. The officer app draws its own banner (mobile-officer/src/offlineBanner.tsx). */
+export function NetworkProvider({ children, bar = true }: { children: ReactNode; bar?: boolean }) {
   const [online, setOnline] = useState<Online>({ offline: false, back: 0 });
   const wasOffline = useRef(false);
   const apply = useCallback((state: Network.NetworkState) => {
@@ -46,13 +47,13 @@ export function NetworkProvider({ children }: { children: ReactNode }) {
   // The bar takes the status-bar inset, so the screens under it must not take it again: a
   // native SafeAreaView measures itself and sees that alone; the headers read the context.
   const insets = useSafeAreaInsets();
-  const below = useMemo(() => (online.offline ? { ...insets, top: 0 } : insets), [insets, online.offline]);
+  const below = useMemo(() => (online.offline && bar ? { ...insets, top: 0 } : insets), [insets, online.offline, bar]);
   // One tree shape online and offline: a provider that came and went would remount every
   // screen under it — their state lost, their data fetched again.
   return (
     <OnlineContext.Provider value={online}>
       <View style={styles.fill}>
-        {online.offline ? <OfflineBar onRetry={() => void check()} /> : null}
+        {online.offline && bar ? <OfflineBar onRetry={() => void check()} /> : null}
         <View style={styles.fill}>
           <SafeAreaInsetsContext.Provider value={below}>{children}</SafeAreaInsetsContext.Provider>
         </View>
