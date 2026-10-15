@@ -118,6 +118,7 @@ class FakeMatrix:
         message = {"event_id": event_id, "sender": sender, "body": body,
                    "officer": (extra or {}).get("io.soulledger.officer", ""),
                    "officer_title": (extra or {}).get("io.soulledger.officer_title", ""),
+                   "txn_id": (extra or {}).get("io.soulledger.txn"),
                    "image": (extra or {}).get("io.soulledger.image"),
                    "grant": (extra or {}).get(GRANT_KEY),
                    "feedback": (extra or {}).get("io.soulledger.feedback"),

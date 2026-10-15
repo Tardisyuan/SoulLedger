@@ -132,8 +132,11 @@ async function run(): Promise<number> {
   for (const entry of outboxEntries().filter((e) => e.state === "queued")) {
     try {
       const { data: thread } = await soulInboxApi.messages(entry.id);
-      // After a send that may have gone through, our own words in the thread are not another officer's answer.
-      const ours = (m: { body: string }) => entry.tried === true && m.body.trim() === entry.text.trim();
+      // After a send that may have gone through, our own reply is in the thread: the server stamps every reply
+      // with the txn id it came with, so ours is exactly the message carrying this entry's txn. Never compare
+      // text (another officer may write the same words). A message without a txn id (older, or a lost stamp) is
+      // treated as someone else's: wrongly flagging "answered" is the safe direction, the officer just rereads.
+      const ours = (m: { txn_id?: string | null }) => !!entry.txn && m.txn_id === entry.txn;
       if (thread.some((m) => m.from_officer && !entry.seen.includes(m.event_id) && !ours(m))) {
         fail(entry.id, "answered");
         continue;
