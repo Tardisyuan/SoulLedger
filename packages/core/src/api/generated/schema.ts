@@ -4043,6 +4043,39 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/me/export/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["v1_me_export_retrieve"];
+        put?: never;
+        /** @description 申请。身份没认出来 → 400 `wrong_password`(错 5 次 429 `rate_limited`,与登录同一份预算)。 */
+        post: operations["v1_me_export_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/export/file/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["v1_me_export_file"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/me/life/": {
         parameters: {
             query?: never;
@@ -11194,6 +11227,14 @@ export interface components {
          * @enum {string}
          */
         FallbackReasonEnum: "connection" | "timeout" | "rate_limited" | "server_error" | "quota" | "circuit_open";
+        /**
+         * @description * `account` - 登录与账号
+         *     * `record` - 我的记录有误
+         *     * `app` - App 出了问题
+         *     * `other` - 其他
+         * @enum {string}
+         */
+        FeedbackTagEnum: "account" | "record" | "app" | "other";
         Follow: {
             /** Format: uuid */
             readonly id: string;
@@ -12665,6 +12706,7 @@ export interface components {
         MessageSend: {
             body: string;
             txn_id?: string;
+            feedback_tag?: components["schemas"]["FeedbackTagEnum"];
         };
         MessageSent: {
             event_id: string;
@@ -13017,6 +13059,8 @@ export interface components {
             readonly assignee: components["schemas"]["InboxOfficer"] | null;
             /** Format: date-time */
             readonly assigned_at: string | null;
+            /** @description 从 App「帮助与反馈」来的信的类别码(account / record / app / other),还没人回时才有;否则空串。 */
+            readonly feedback_tag: string;
             /** Format: date-time */
             readonly created_at: string;
             /** Format: date-time */
@@ -16664,6 +16708,51 @@ export interface components {
             /** Format: date-time */
             printed_at: string;
         };
+        SoulDataExport: {
+            /** Format: uuid */
+            id: string;
+            /**
+             * @description READY 过了 `expires_at` 即读作 EXPIRED;FAILED 之后可以重新申请。
+             *
+             *     * `QUEUED` - 排队中
+             *     * `RUNNING` - 正在生成
+             *     * `READY` - 已准备好
+             *     * `FAILED` - 生成失败
+             *     * `EXPIRED` - 已过期
+             */
+            status: components["schemas"]["SoulDataExportStatusEnum"];
+            /** Format: date-time */
+            requested_at: string;
+            /** Format: date-time */
+            finished_at: string | null;
+            /** Format: date-time */
+            expires_at: string | null;
+            /** @description `soulledger-<编号>-<yyyymmdd>.zip`;生成之前为空。 */
+            file_name: string;
+            byte_size: number | null;
+            /** @description 仅 READY:站点根相对路径,约 7 天有效,取时仍要灵魂令牌。 */
+            download_url: string | null;
+        };
+        /** @description 申请导出资料要先认出本人:当前密码,或开了面容登录的手机认过面容后取出的凭据(二选一,凭据优先)。 */
+        SoulDataExportRequest: {
+            /** @default  */
+            password: string;
+            /** @default  */
+            credential: string;
+        };
+        SoulDataExportState: {
+            /** @description 最近一次申请;从没申请过为 null。 */
+            export: components["schemas"]["SoulDataExport"] | null;
+        };
+        /**
+         * @description * `QUEUED` - 排队中
+         *     * `RUNNING` - 正在生成
+         *     * `READY` - 已准备好
+         *     * `FAILED` - 生成失败
+         *     * `EXPIRED` - 已过期
+         * @enum {string}
+         */
+        SoulDataExportStatusEnum: "QUEUED" | "RUNNING" | "READY" | "FAILED" | "EXPIRED";
         /**
          * @description The shape `_soul_level_date_problems` returns, for the schema only.
          *
@@ -17383,6 +17472,8 @@ export interface components {
             soul_code?: string;
             /** @description 仅转生申请:是否申诉(客户端据此选标题措辞)。 */
             is_appeal?: boolean;
+            /** @description 仅书信:从 App「帮助与反馈」来的信的类别码(account / record / app / other);还没人回时才有。 */
+            feedback_tag?: string;
         };
         /**
          * @description `state`:actionable / already_handled / deadline_passed / permission_changed
@@ -25188,6 +25279,110 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["SoulMfaRefusal"];
                 };
+            };
+        };
+    };
+    v1_me_export_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulDataExportState"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulError"];
+                };
+            };
+        };
+    };
+    v1_me_export_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["SoulDataExportRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["SoulDataExportRequest"];
+                "multipart/form-data": components["schemas"]["SoulDataExportRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulDataExport"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulMfaRefusal"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulError"];
+                };
+            };
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulMfaRefusal"];
+                };
+            };
+        };
+    };
+    v1_me_export_file: {
+        parameters: {
+            query: {
+                /** @description 状态里 `download_url` 的签名。 */
+                t: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 导出的 zip。 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 签名无效或过期、不是调用者自己的、文件已过期。 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

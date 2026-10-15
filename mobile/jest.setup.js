@@ -205,7 +205,17 @@ jest.mock("react-native-reanimated", () => require("react-native-reanimated/mock
 // `__share` 的实现可被测试改写(成功 / 取消 / 抛错),测试据此断言「面板关闭后文件已删」。
 jest.mock("expo-file-system", () => {
   const files = new Map();
+  // 导出我的资料 downloads: every call is recorded; `__download.fail` makes the next ones throw.
+  const downloads = [];
+  const download = { fail: false };
   class File {
+    static async downloadFileAsync(url, destination, options) {
+      downloads.push({ url, options, name: destination.name });
+      if (download.fail) throw new Error("download failed");
+      destination.create();
+      destination.write("zip-bytes");
+      return destination;
+    }
     constructor(dir, name) {
       this.name = name ?? String(dir).split("/").pop();
       this.uri = `file:///cache/${this.name}`;
@@ -224,7 +234,7 @@ jest.mock("expo-file-system", () => {
     }
   }
   const Paths = { cache: { uri: "file:///cache/", list: () => [...files.keys()].map((uri) => new File("", uri.split("/").pop())) } };
-  return { __esModule: true, File, Paths, __files: files };
+  return { __esModule: true, File, Paths, __files: files, __downloads: downloads, __download: download };
 });
 jest.mock("expo-sharing", () => ({
   __esModule: true,

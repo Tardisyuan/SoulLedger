@@ -189,6 +189,8 @@ KIND_CATEGORY = {
     "chat_message": "chat",
     # 官员关闭了灵魂的两步验证:安全通知,不给关(同警告)。
     "mfa_reset_by_officer": None,
+    # 个人资料导出好了(apps/soul_accounts/data_export.py):灵魂自己申请的结果,不给关 —— 文件只留 7 天。
+    "export_ready": None,
     # 没有「朋友圈」偏好类别:警告是殿司对灵魂说的话,不给关(2026-09-26 产品定:理由走推送)。
     # 按被举报的是什么分三种文案(2026-09-26 产品定):帖子 / 评论 / 账号。
     **{f"social_warned_{target}": None for target in ("post", "comment", "user")},
@@ -259,6 +261,16 @@ def record_mfa_reset(account, officer_name):
     return _record(account, MFA_RESET_EVENT, None, "mfa_reset_by_officer",
                    f"mfa-reset:{account.pk}:{timezone.now().timestamp()}"[:120], {},
                    params=lambda locale: {"name": officer_name})
+
+
+#: 「导出我的资料」好了(Design 第二十八批 S3)。**不经事件总线**(没有租户 webhook 该知道的事),也不进偏好:
+#: 灵魂申请了就要被告知,否则 7 天一过就白等。锁屏上不带文件名与大小。dedupe 用导出 id,重放不重推。
+EXPORT_READY_EVENT = "SOUL_EXPORT_READY"
+
+
+def record_export_ready(account, export):
+    return _record(account, EXPORT_READY_EVENT, None, "export_ready", f"export:{export.pk}"[:120],
+                   {"screen": "DataExport"})
 
 
 def _record(account, event_type, category, kind, dedupe_key, data, params=None):

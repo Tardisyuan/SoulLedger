@@ -644,7 +644,8 @@ describe("sign-in, second step", () => {
   it("the password alone gives no session: the app stays signed out and the password is not kept", async () => {
     await toSecondStep();
     expect(secure.get(REFRESH_TOKEN_KEY) || null).toBeNull();
-    expect(navigationRef.getRootState()?.routeNames).toEqual(["Login", "ForgotPassword", "MfaLost", "ScanCode"]);
+    // "Help": 登录遇到问题 (第二十八批 S5) is a signed-out screen by design; no session screen is mounted.
+    expect(navigationRef.getRootState()?.routeNames).toEqual(["Login", "ForgotPassword", "MfaLost", "ScanCode", "Help"]);
     expect(screen.getByText(/灵魂编号/)).toBeTruthy();
     expect(screen.getByText("QU3 3Q9F W5F")).toBeTruthy();
     expect(screen.getByText("输满 6 位自动提交。")).toBeTruthy();

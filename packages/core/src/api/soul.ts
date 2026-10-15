@@ -64,6 +64,10 @@ export type SoulMfaVerifyResponse = Schemas["SoulMfaVerifyResponse"];
 export type SoulMfaVerifyRequest = Omit<Schemas["SoulMfaVerifyRequest"], "remember_device"> & { remember_device?: boolean };
 export type SoulMfaDisableRequest = Schemas["SoulMfaDisableRequest"];
 export type SoulDeviceLoginRequest = Schemas["SoulDeviceLoginRequest"];
+/** 「导出我的资料」:最近一次申请。READY 才有 `download_url`;过了有效期读作 EXPIRED。 */
+export type SoulDataExport = Schemas["SoulDataExport"];
+export type SoulDataExportStatus = SoulDataExport["status"];
+export type SoulDataExportState = Schemas["SoulDataExportState"];
 
 export function isMfaRequired(outcome: SoulLoginOutcome): outcome is SoulMfaRequired {
   return "mfa_required" in outcome && outcome.mfa_required === true;
@@ -236,6 +240,14 @@ export const soulApi = {
   signInSessions: () => soulHttp.get<SoulSignInSession[]>("/me/sessions/").then((r) => r.data),
   /** No password needed; the current one is refused 400 `current_session`. */
   revokeSignInSession: (id: string) => soulHttp.post<void>(`/me/sessions/${id}/revoke/`).then(() => undefined),
+  /** The latest data-export request (`export`), which is `null` when the soul never asked. */
+  dataExport: () => soulHttp.get<SoulDataExportState>("/me/export/").then((r) => r.data),
+  /**
+   * Ask for the export. Proof of who is asking: the current `password`, or the `credential` the phone gave up after
+   * a face check. 400 `wrong_password`, 429 `rate_limited` (the password login's counters), 409 `export_in_progress`.
+   */
+  requestDataExport: (proof: { password: string } | { credential: string }) =>
+    soulHttp.post<SoulDataExport>("/me/export/", proof).then((r) => r.data),
   /** The last 90 days, newest first. */
   signInRecords: () => soulHttp.get<SoulSignInRecord[]>("/me/sign-ins/").then((r) => r.data),
   /**

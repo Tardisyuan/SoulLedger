@@ -3415,7 +3415,8 @@
       "ledger_snapshot_census_for_tenant": "记灵魂普查日快照",
       "notifications_email_action_needed_for_tenant": "邮件提醒待处理通知",
       "notifications_email_action_needed_global": "邮件提醒待处理通知(全局管理员)",
-      "authentication_prune_soul_sign_ins": "清理 90 天前的灵魂登录记录与闲置会话"
+      "authentication_prune_soul_sign_ins": "清理 90 天前的灵魂登录记录与闲置会话",
+      "soul_accounts_prune_data_exports": "清理过期的资料导出"
     },
     "status": {
       "PENDING": "排队中",
@@ -3935,7 +3936,9 @@
       "group_prefs": "偏好",
       "group_security": "账号安全",
       "mfa_off": "○ 未开启",
-      "mfa_on": "✓ 已开启"
+      "mfa_on": "✓ 已开启",
+      "group_data": "我的资料",
+      "group_help": "帮助与反馈"
     },
     "push": {
       "primer_title": "要不要在有结果时通知你？",
@@ -4502,6 +4505,77 @@
     },
     "lock": {
       "title": "已锁定"
+    },
+    "export": {
+      "title": "导出我的资料",
+      "queued": "正在准备",
+      "ready": "已准备好",
+      "share": "保存或发送…",
+      "intro": "把本殿记下的、关于你的资料打包成一个文件。",
+      "included": "包含",
+      "included_profile": "基本资料与编号",
+      "included_merit": "功过记录",
+      "included_judgments": "审判结果与评语(给你看过的部分)",
+      "included_letters": "书信与朋友圈(含图片)",
+      "included_sign_ins": "最近 90 天的登录记录",
+      "excluded": "不包含",
+      "excluded_deliberation": "官员之间的评议",
+      "excluded_letters": "别人发给你之外的书信",
+      "timing": "一般几分钟，资料多时最长一天。好了会通知你。文件 7 天内可以取。",
+      "request": "输入密码并申请",
+      "request_face": "用{{bio}}确认并申请",
+      "requested_at": "申请于 {{time}}。可以离开这页，好了会通知你。",
+      "available_until": "可取到 {{time}}",
+      "share_note": "「保存或发送…」打开系统分享面板。过期后要重新申请。一次只能有一份在准备。",
+      "expired": "这份资料已过期。需要的话重新申请。",
+      "failed": "这次没有做成。可以重新申请。",
+      "request_again": "重新申请",
+      "sheet_title": "先确认是你",
+      "sheet_body": "导出的是你的整份资料。请输入当前密码，确认是你本人。",
+      "sheet_next": "申请",
+      "working": "正在取文件…",
+      "share_failed": "没有打开分享面板。再试一次。",
+      "download_failed": "文件没有取下来。检查网络后再试。",
+      "load_failed": "资料导出的状态没有读到。"
+    },
+    "help": {
+      "title": "帮助",
+      "write": "写给本殿",
+      "group_login": "登录与账号",
+      "group_visit": "到殿须知",
+      "group_contact": "联系",
+      "not_found": "没找到答案？",
+      "login_trouble": "登录遇到问题",
+      "q_login": "登录不了",
+      "a_login": "先检查编号有没有输错。密码连续输错 5 次会锁 15 分钟，等一会儿再试。还是不行，点「忘记密码」。",
+      "q_forgot": "忘记密码",
+      "a_forgot": "在登录页点「忘记密码」,验证码会发到你登记的联系邮箱。没有登记邮箱的，请到本殿窗口办理，带上交付单。",
+      "q_phone": "手机丢了",
+      "a_phone": "用另一部手机登录，到「账号安全 › 登录设备与记录」让丢的那部退出，再改密码。开了两步验证的，用恢复码登录。恢复码也没有了，请到本殿窗口办理。",
+      "q_slip": "交付单是什么",
+      "a_slip": "你到殿时领的那张纸，上面有你的编号和第一次登录用的密码。第一次登录后，这个密码就不能再用了。交付单请收好，到窗口办事时要用。",
+      "q_contact": "怎么联系本殿",
+      "a_contact": "在这页底部点「写给本殿」,回复会出现在书信里。急事请到本殿窗口。"
+    },
+    "feedback": {
+      "kind_label": "关于什么",
+      "kind_account": "登录与账号",
+      "kind_record": "我的记录有误",
+      "kind_app": "App 出了问题",
+      "kind_other": "其他",
+      "body_label": "说说情况",
+      "body_placeholder": "发生了什么、在哪一页",
+      "shots_label": "截图",
+      "shots_hint": "可选，最多 3 张",
+      "shots_add": "添加截图",
+      "shots_remove": "移除这张截图",
+      "shots_limit": "最多 3 张",
+      "note": "本殿官员会在书信里回你，和平常的书信在一处。",
+      "appeal_hint": "对审判结果有异议，请走申诉。",
+      "send": "发出",
+      "failed": "没有发出去。检查网络后再试。",
+      "see_letters": "去看书信",
+      "another": "再写一封"
     }
   },
   "soul_push": {
@@ -4580,6 +4654,10 @@
     "mfa_reset_by_officer": {
       "title": "两步验证已关闭",
       "body": "本殿官员 {{name}} 已关闭你的两步验证"
+    },
+    "export_ready": {
+      "title": "资料已准备好",
+      "body": "你申请导出的资料已准备好，7 天内可取。打开灵魂簿保存。"
     }
   },
   "official_notify": {
@@ -4956,6 +5034,15 @@
       "assignee": "经办 · {{name}}",
       "unassign": "收回",
       "unassigned_done": "已收回"
+    },
+    "feedback": {
+      "label": "反馈 · {{category}}",
+      "tags": {
+        "account": "登录与账号",
+        "record": "我的记录有误",
+        "app": "App 出了问题",
+        "other": "其他"
+      }
     }
   },
   "sentence_plan": {

@@ -225,23 +225,37 @@ class SynapseClient:
         )
         return data["event_id"]
 
+    @staticmethod
+    def _row(event):
+        return {
+            "event_id": event["event_id"],
+            "sender": event["sender"],
+            "body": event.get("content", {}).get("body", ""),
+            "officer": event.get("content", {}).get("io.soulledger.officer", ""),
+            "officer_title": event.get("content", {}).get("io.soulledger.officer_title", ""),
+            "image": event.get("content", {}).get("io.soulledger.image"),
+            "timestamp": event["origin_server_ts"],
+        }
+
     def recent_messages(self, room_id, *, limit=50):
         """最近的消息,新的在前。官员收件箱读的就是这条;判断「对方回过话没有」也是。"""
         data = self._admin("GET", f"/_matrix/client/v3/rooms/{room_id}/messages",
                            params={"dir": "b", "limit": limit})
-        return [
-            {
-                "event_id": event["event_id"],
-                "sender": event["sender"],
-                "body": event.get("content", {}).get("body", ""),
-                "officer": event.get("content", {}).get("io.soulledger.officer", ""),
-                "officer_title": event.get("content", {}).get("io.soulledger.officer_title", ""),
-                "image": event.get("content", {}).get("io.soulledger.image"),
-                "timestamp": event["origin_server_ts"],
-            }
-            for event in data.get("chunk", [])
-            if event.get("type") == "m.room.message"
-        ]
+        return [self._row(event) for event in data.get("chunk", []) if event.get("type") == "m.room.message"]
+
+    def history(self, room_id, *, page=100, max_pages=500):
+        """整个房间的消息,**旧的在前**(「导出我的资料」读书信用)。按 `end` 令牌往回翻,翻到没有为止;
+        `max_pages` 是防一个坏房间让任务永远翻下去的上限,到了就停(得到的是最近的那些)。"""
+        rows, token = [], None
+        for _ in range(max_pages):
+            params = {"dir": "b", "limit": page, **({"from": token} if token else {})}
+            data = self._admin("GET", f"/_matrix/client/v3/rooms/{room_id}/messages", params=params)
+            chunk = data.get("chunk", [])
+            rows.extend(self._row(e) for e in chunk if e.get("type") == "m.room.message")
+            token = data.get("end")
+            if not chunk or not token:
+                break
+        return rows[::-1]
 
 
 def get_client():
