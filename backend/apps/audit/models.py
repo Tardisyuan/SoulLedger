@@ -21,6 +21,9 @@ class AuditAction(models.TextChoices):
     BATCH_CREATE = "BATCH_CREATE", "批量创建"
     BATCH_UPDATE = "BATCH_UPDATE", "批量更新"
     BATCH_DELETE = "BATCH_DELETE", "批量删除"
+    # 以此人身份查看(只读代看)的开始 / 结束,各一行。apps/authentication/impersonation.py
+    IMPERSONATE_START = "IMPERSONATE_START", "开始代看"
+    IMPERSONATE_END = "IMPERSONATE_END", "结束代看"
 
 
 class AuditLog(AuditUserFields, models.Model):

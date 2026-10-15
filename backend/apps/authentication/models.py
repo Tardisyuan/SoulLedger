@@ -339,3 +339,4 @@ class SignInSession(models.Model):
 
     def __str__(self):
         return f"{self.user_id} {self.label} {self.id}"
+from apps.authentication.impersonation_models import Impersonation  # noqa: E402,F401  (Django 只从 models 模块发现模型)

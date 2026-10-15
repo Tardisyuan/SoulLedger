@@ -162,6 +162,9 @@ class JWTAuthMiddleware(BaseMiddleware):
             user_id = token.get("user_id")
             if not user_id:
                 return None
+            # 代看令牌(只读 HTTP 用)不开实时连接:通知与事件推送是被看者本人的。
+            if "imp_id" in token:
+                return None
             from apps.authentication.models import User
             user = User.objects.select_related("rbac_role", "tenant").get(id=user_id)
             # HTTP enforces this and WebSocket did not.

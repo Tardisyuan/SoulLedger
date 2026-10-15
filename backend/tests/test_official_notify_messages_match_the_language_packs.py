@@ -9,6 +9,8 @@ from apps.notifications.models import NotificationType
 
 #: 主语是官员账号而不是灵魂的通知种类。
 ACCOUNT_KINDS = {"password_help_requested", "password_help_requested_moderator"}
+#: 主语是另一位官员(管理员代看,`{{by}}`)的种类。
+ACTOR_KINDS = {"impersonation_started"}
 
 EGY_PENDING = set(json.loads(
     (Path(__file__).resolve().parents[2] / "frontend" / "src" / "__tests__" / "support" / "egyPendingKeys.json")
@@ -36,7 +38,7 @@ def test_every_localized_type_is_a_real_type_with_text_in_every_locale():
         for kind, entry in pack.items():
             # 每条都点名主语 —— 灵魂,或(登录页「忘记密码」)官员账号;各自的其余占位符与发送方给的
             # params 对上(egy 与 zh 同键一致由前端测试守)。
-            subject = "{{username}}" if kind in ACCOUNT_KINDS else "{{soul}}"
+            subject = "{{by}}" if kind in ACTOR_KINDS else "{{username}}" if kind in ACCOUNT_KINDS else "{{soul}}"
             assert entry["title"] and subject in entry["body"], (locale, kind)
         assert "{{count}}" in pack["dispatch_return_blocked"]["body"], locale
         for kind in ("sentence_node_active", "sentence_node_done", "sentence_node_waiting", "sentence_node_refused"):

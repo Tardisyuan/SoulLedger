@@ -28,6 +28,7 @@ CATEGORY_BY_TYPE = {
     "WORKFLOW_ASSIGNED": "approval",
     "JUDGMENT_REASSIGN_REQUESTED": "reassign",
     "PASSWORD_HELP_REQUESTED": "password_help",
+    "IMPERSONATION_STARTED": "account_security",
     "DISPATCH_PROPOSED": "dispatch",
     "DISPATCH_APPROVED": "dispatch",
     "DISPATCH_REJECTED": "dispatch",

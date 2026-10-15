@@ -734,6 +734,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/impersonate/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 签发一张只读、最长 30 分钟、无刷新令牌的 access 令牌;被看的人收到通知,开始记一条审计。 */
+        post: operations["v1_auth_impersonate_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/impersonate/end/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description 用代看令牌调:结束那一次。用管理员自己的令牌调:结束他名下还开着的(令牌已过期时走这条)。
+         *     这是代看令牌唯一能 POST 的地方。
+         */
+        post: operations["v1_auth_impersonate_end_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/login/": {
         parameters: {
             query?: never;
@@ -8929,9 +8966,11 @@ export interface components {
          *     * `BATCH_CREATE` - 批量创建
          *     * `BATCH_UPDATE` - 批量更新
          *     * `BATCH_DELETE` - 批量删除
+         *     * `IMPERSONATE_START` - 开始代看
+         *     * `IMPERSONATE_END` - 结束代看
          * @enum {string}
          */
-        ActionEnum: "CREATE" | "UPDATE" | "DELETE" | "EXECUTE" | "READ" | "LOGIN" | "LOGOUT" | "VIEW" | "EXPORT" | "IMPORT" | "PERMISSION_CHANGE" | "BATCH_CREATE" | "BATCH_UPDATE" | "BATCH_DELETE";
+        ActionEnum: "CREATE" | "UPDATE" | "DELETE" | "EXECUTE" | "READ" | "LOGIN" | "LOGOUT" | "VIEW" | "EXPORT" | "IMPORT" | "PERMISSION_CHANGE" | "BATCH_CREATE" | "BATCH_UPDATE" | "BATCH_DELETE" | "IMPERSONATE_START" | "IMPERSONATE_END";
         Actor: {
             /** Format: uuid */
             readonly id: string;
@@ -11146,6 +11185,34 @@ export interface components {
             /** @description 帖子的图片张数(与举报队列同一条规则);评论为 0。 */
             media_count: number;
         };
+        ImpersonateEndResponse: {
+            ended: boolean;
+            minutes: number;
+            pages: number;
+        };
+        ImpersonateStart: {
+            user_id: number;
+            reason: string;
+        };
+        ImpersonateStartResponse: {
+            access: string;
+            impersonation_id: number;
+            /** Format: date-time */
+            started_at: string;
+            /** Format: date-time */
+            expires_at: string;
+            reason: string;
+            target: components["schemas"]["ImpersonationTarget"];
+        };
+        ImpersonationTarget: {
+            id: number;
+            name: string;
+            role: string;
+            tenant_code: string | null;
+            hall: {
+                [key: string]: string;
+            } | null;
+        };
         InboxAssign: {
             user_id: number;
         };
@@ -12732,9 +12799,10 @@ export interface components {
          *     * `SOUL_INBOX_ASSIGNED` - Soul Inbox Assigned
          *     * `JUDGMENT_REASSIGN_REQUESTED` - Judgment Reassign Requested
          *     * `DISPATCH_CANCELLED` - Dispatch Cancelled
+         *     * `IMPERSONATION_STARTED` - Impersonation Started
          * @enum {string}
          */
-        NotificationTypeEnum: "WORKFLOW_ASSIGNED" | "JUDGMENT_COMPLETED" | "SYSTEM" | "APPEAL_REQUIRED" | "REINCARNATION_COMPLETE" | "KARMIC_UPDATE" | "ROLE_ASSIGNED" | "DISPATCH_PROPOSED" | "DISPATCH_APPROVED" | "DISPATCH_REJECTED" | "CROSS_JUDGMENT_INVITED" | "JUDGMENT_CONCLUDED" | "DISPATCH_RETURN_BLOCKED" | "SENTENCE_NODE_ACTIVE" | "SENTENCE_NODE_DONE" | "SENTENCE_NODE_WAITING" | "SENTENCE_NODE_REFUSED" | "SENTENCE_PLAN_COMPLETED" | "CROSS_SENTENCE_SUBMITTED" | "SENTENCE_PLAN_AMENDED" | "SENTENCE_REQUEST_PENDING" | "SENTENCE_REQUEST_DECIDED" | "SENTENCE_PLAN_CANCELLED" | "PASSWORD_HELP_REQUESTED" | "SOUL_INBOX_ASSIGNED" | "JUDGMENT_REASSIGN_REQUESTED" | "DISPATCH_CANCELLED";
+        NotificationTypeEnum: "WORKFLOW_ASSIGNED" | "JUDGMENT_COMPLETED" | "SYSTEM" | "APPEAL_REQUIRED" | "REINCARNATION_COMPLETE" | "KARMIC_UPDATE" | "ROLE_ASSIGNED" | "DISPATCH_PROPOSED" | "DISPATCH_APPROVED" | "DISPATCH_REJECTED" | "CROSS_JUDGMENT_INVITED" | "JUDGMENT_CONCLUDED" | "DISPATCH_RETURN_BLOCKED" | "SENTENCE_NODE_ACTIVE" | "SENTENCE_NODE_DONE" | "SENTENCE_NODE_WAITING" | "SENTENCE_NODE_REFUSED" | "SENTENCE_PLAN_COMPLETED" | "CROSS_SENTENCE_SUBMITTED" | "SENTENCE_PLAN_AMENDED" | "SENTENCE_REQUEST_PENDING" | "SENTENCE_REQUEST_DECIDED" | "SENTENCE_PLAN_CANCELLED" | "PASSWORD_HELP_REQUESTED" | "SOUL_INBOX_ASSIGNED" | "JUDGMENT_REASSIGN_REQUESTED" | "DISPATCH_CANCELLED" | "IMPERSONATION_STARTED";
         /** @enum {unknown} */
         NullEnum: null;
         OfficerAssistAsk: {
@@ -19024,8 +19092,10 @@ export interface operations {
                  *     * `BATCH_CREATE` - 批量创建
                  *     * `BATCH_UPDATE` - 批量更新
                  *     * `BATCH_DELETE` - 批量删除
+                 *     * `IMPERSONATE_START` - 开始代看
+                 *     * `IMPERSONATE_END` - 结束代看
                  */
-                action?: "BATCH_CREATE" | "BATCH_DELETE" | "BATCH_UPDATE" | "CREATE" | "DELETE" | "EXECUTE" | "EXPORT" | "IMPORT" | "LOGIN" | "LOGOUT" | "PERMISSION_CHANGE" | "READ" | "UPDATE" | "VIEW";
+                action?: "BATCH_CREATE" | "BATCH_DELETE" | "BATCH_UPDATE" | "CREATE" | "DELETE" | "EXECUTE" | "EXPORT" | "IMPERSONATE_END" | "IMPERSONATE_START" | "IMPORT" | "LOGIN" | "LOGOUT" | "PERMISSION_CHANGE" | "READ" | "UPDATE" | "VIEW";
                 /** @description Which field to use when ordering the results. */
                 ordering?: string;
                 /** @description A page number within the paginated result set. */
@@ -19093,8 +19163,10 @@ export interface operations {
                  *     * `BATCH_CREATE` - 批量创建
                  *     * `BATCH_UPDATE` - 批量更新
                  *     * `BATCH_DELETE` - 批量删除
+                 *     * `IMPERSONATE_START` - 开始代看
+                 *     * `IMPERSONATE_END` - 结束代看
                  */
-                action?: "BATCH_CREATE" | "BATCH_DELETE" | "BATCH_UPDATE" | "CREATE" | "DELETE" | "EXECUTE" | "EXPORT" | "IMPORT" | "LOGIN" | "LOGOUT" | "PERMISSION_CHANGE" | "READ" | "UPDATE" | "VIEW";
+                action?: "BATCH_CREATE" | "BATCH_DELETE" | "BATCH_UPDATE" | "CREATE" | "DELETE" | "EXECUTE" | "EXPORT" | "IMPERSONATE_END" | "IMPERSONATE_START" | "IMPORT" | "LOGIN" | "LOGOUT" | "PERMISSION_CHANGE" | "READ" | "UPDATE" | "VIEW";
                 /** @description Which field to use when ordering the results. */
                 ordering?: string;
                 resource?: string;
@@ -19204,8 +19276,10 @@ export interface operations {
                  *     * `BATCH_CREATE` - 批量创建
                  *     * `BATCH_UPDATE` - 批量更新
                  *     * `BATCH_DELETE` - 批量删除
+                 *     * `IMPERSONATE_START` - 开始代看
+                 *     * `IMPERSONATE_END` - 结束代看
                  */
-                action?: "BATCH_CREATE" | "BATCH_DELETE" | "BATCH_UPDATE" | "CREATE" | "DELETE" | "EXECUTE" | "EXPORT" | "IMPORT" | "LOGIN" | "LOGOUT" | "PERMISSION_CHANGE" | "READ" | "UPDATE" | "VIEW";
+                action?: "BATCH_CREATE" | "BATCH_DELETE" | "BATCH_UPDATE" | "CREATE" | "DELETE" | "EXECUTE" | "EXPORT" | "IMPERSONATE_END" | "IMPERSONATE_START" | "IMPORT" | "LOGIN" | "LOGOUT" | "PERMISSION_CHANGE" | "READ" | "UPDATE" | "VIEW";
                 /** @description Which field to use when ordering the results. */
                 ordering?: string;
                 resource?: string;
@@ -19249,8 +19323,10 @@ export interface operations {
                  *     * `BATCH_CREATE` - 批量创建
                  *     * `BATCH_UPDATE` - 批量更新
                  *     * `BATCH_DELETE` - 批量删除
+                 *     * `IMPERSONATE_START` - 开始代看
+                 *     * `IMPERSONATE_END` - 结束代看
                  */
-                action?: "BATCH_CREATE" | "BATCH_DELETE" | "BATCH_UPDATE" | "CREATE" | "DELETE" | "EXECUTE" | "EXPORT" | "IMPORT" | "LOGIN" | "LOGOUT" | "PERMISSION_CHANGE" | "READ" | "UPDATE" | "VIEW";
+                action?: "BATCH_CREATE" | "BATCH_DELETE" | "BATCH_UPDATE" | "CREATE" | "DELETE" | "EXECUTE" | "EXPORT" | "IMPERSONATE_END" | "IMPERSONATE_START" | "IMPORT" | "LOGIN" | "LOGOUT" | "PERMISSION_CHANGE" | "READ" | "UPDATE" | "VIEW";
                 /** @description Which field to use when ordering the results. */
                 ordering?: string;
                 resource?: string;
@@ -19402,6 +19478,64 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["OfficerResetRefusal"];
+                };
+            };
+        };
+    };
+    v1_auth_impersonate_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ImpersonateStart"];
+                "application/x-www-form-urlencoded": components["schemas"]["ImpersonateStart"];
+                "multipart/form-data": components["schemas"]["ImpersonateStart"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImpersonateStartResponse"];
+                };
+            };
+            /** @description No response body */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No response body */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    v1_auth_impersonate_end_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImpersonateEndResponse"];
                 };
             };
         };

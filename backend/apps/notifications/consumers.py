@@ -230,7 +230,7 @@ class NotificationConsumer(AsyncWebsocketConsumer):
         try:
             token = AccessToken(token_str)
             user_id = token.get("user_id")
-            if not user_id:
+            if not user_id or "imp_id" in token:  # 代看令牌不开实时连接
                 return None
             from apps.authentication.models import User
             return User.objects.select_related("rbac_role", "tenant").get(id=user_id)

@@ -14,6 +14,8 @@ import { UserRolesDialog } from "@/src/components/users/UserRolesDialog";
 import { UserRoleChips } from "@/src/components/users/UserRoleChips";
 import { UserBatchBar, useUserSelection } from "@/src/components/users/UserBatchBar";
 import { MfaResetDialog } from "@/src/components/users/MfaResetDialog";
+import { ImpersonateDialog } from "@/src/components/impersonation/ImpersonateDialog";
+import { useTenant } from "@/src/contexts/TenantContext";
 import { showToast } from "@/src/components/ui/Toast";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { usePermissions } from "@/src/hooks/usePermissions";
@@ -67,7 +69,10 @@ function UsersRoute() {
   const [deleteUser, setDeleteUser] = useState<User | null>(null);
   const [rolesUser, setRolesUser] = useState<User | null>(null);
   // 批量启用 / 停用与设置角色同一道门:服务端 `user.manage`(只有管理员持有)。没有它就没有勾选列。
-  const canManage = usePermissions().hasPermission("user.manage");
+  const { hasPermission, isAdmin } = usePermissions();
+  const canManage = hasPermission("user.manage");
+  const myId = useTenant().user?.id;
+  const [impersonateUser, setImpersonateUser] = useState<User | null>(null);
   const [mfaFilter, setMfaFilter] = useState("");
   useRememberedFilters(
     USERS_FILTERS_KEY,
@@ -272,6 +277,18 @@ function UsersRoute() {
                     </Button>
                   </RequirePermission>
                 ) : null}
+                {/* 以此人身份查看(W6):只给系统管理员(ADMIN);另一位管理员、自己、停用与灵魂账号的行不出现。 */}
+                {isAdmin && user.role !== "ADMIN" && user.role !== "SOUL" && user.is_active && user.id !== myId ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    data-testid="impersonate-open"
+                    onClick={() => setImpersonateUser(user)}
+                  >
+                    {t("admin.users.impersonate")}
+                  </Button>
+                ) : null}
                 <RequirePermission permissions="user.manage">
                   <Button type="button" size="sm" variant="ghost" onClick={() => setEditingUser(user)}>
                     {t("common.edit")}
@@ -347,6 +364,7 @@ function UsersRoute() {
         onClose={() => setDeleteUser(null)}
       />
 
+      {impersonateUser ? <ImpersonateDialog user={impersonateUser} onClose={() => setImpersonateUser(null)} /> : null}
       {resetMfaUser ? <MfaResetDialog user={resetMfaUser} onClose={() => setResetMfaUser(null)} /> : null}
     </PageShell>
   );

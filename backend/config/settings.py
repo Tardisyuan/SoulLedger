@@ -249,6 +249,7 @@ CORS_ALLOW_HEADERS = [
     "origin",
     "user-agent",
     "x-requested-with",
+    "x-imp-page",  # 代看期间前端随请求带当前页面(apps/authentication/impersonation.py)
 ]
 
 # REST Framework
