@@ -31,7 +31,7 @@ function readFilter(): TodoKind[] {
 const countOf = (data: Todo, field: keyof Todo): number => data[field]?.count ?? 0;
 
 export function TodoTab({ onOpen, highlight }: { onOpen: (item: ItemRef) => void; highlight: ItemRef | null }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { state } = useSession();
   const role = state.status === "signedIn" ? state.user.role : "";
   // The shell gives this tab a new `key` whenever the list should ask again (back from a detail, a push).
@@ -54,7 +54,7 @@ export function TodoTab({ onOpen, highlight }: { onOpen: (item: ItemRef) => void
     setChosen([]);
   };
   const shown = TODO_GROUPS.filter((g) => chosen.length === 0 || chosen.includes(g.kind));
-  const kinds = chosen.length === 0 ? "" : shown.map((g) => t(g.label)).join("、");
+  const kinds = chosen.length === 0 ? "" : shown.map((g) => t(g.label)).join(locale === "zh-Hans" ? "、" : ", "); // Design batch 29: en / egy use ", "
   const rowsShown = data ? shown.reduce((sum, g) => sum + countOf(data, g.field), 0) : 0;
   const view = viewStateOf({ data, error }, (d) => TODO_GROUPS.every((g) => countOf(d, g.field) === 0), isDenied);
 

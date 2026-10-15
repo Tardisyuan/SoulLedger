@@ -2631,7 +2631,8 @@
     "columns": {
       "button": "Iwn · {{shown}}/{{total}}",
       "pinned": "Nen Imen",
-      "reset": "Wehem Tepy"
+      "reset": "Wehem Tepy",
+      "hint": "Iwn Maa · Smen Em Medjat Sab Pen Wa"
     }
   },
   "death_sync": {
@@ -5501,6 +5502,8 @@
       "empty_body": "Wat Hesy, Hab-Ba Hena Dbh Mawy: Sedjem Sab.",
       "filter_clear": "Sehen Djes",
       "filter_summary": "{{kinds}} · {{n}}",
+      "filter_empty_title": "Nen «{{kinds}}» Djer",
+      "filter_empty_body": "Setep Iru Ky, Er Sehen Setep.",
       "groups": {
         "approvals": "Sekhet Wat Hesy",
         "reassignments": "Hab-Ba",

@@ -475,46 +475,26 @@ describe("print the delivery slip", () => {
 
 // ── 记住的筛选(2026-10-15) ─────────────────────────────────────────
 
-describe("remembered status filter", () => {
-  const KEY = "soulledger.soul-credentials.filters";
+describe("status filter is not remembered", () => {
   const chip = (name: string) => screen.getByRole("button", { name: tZh(`soul_accounts.credentials.filters.${name}`) });
 
-  it("a stored status comes back on mount and reaches the request", async () => {
+  // A work list: every visit starts on 待交付, so an officer never misses a pending delivery because of a
+  // choice made last time. Nothing is written, and an old stored value from an earlier build is ignored.
+  it("always opens on 待交付, writes nothing, and ignores an old stored value", async () => {
     asManager();
-    localStorage.setItem(KEY, JSON.stringify({ status: "DELIVERED" }));
-    renderPage();
-    await waitFor(() => expect(soulAccountsApi.credentials).toHaveBeenLastCalledWith({ status: "DELIVERED", page: 1 }));
-    expect(chip("DELIVERED")).toHaveAttribute("aria-pressed", "true");
-    expect(chip("PENDING")).toHaveAttribute("aria-pressed", "false");
-  });
-
-  it("the default is 待交付, so 「全部」 has its own stored form and comes back as 全部", async () => {
-    asManager();
+    localStorage.setItem("soulledger.soul-credentials.filters", JSON.stringify({ status: "DELIVERED" }));
     const first = renderPage();
     await screen.findAllByText("张三");
+    expect(soulAccountsApi.credentials).toHaveBeenLastCalledWith({ status: "PENDING", page: 1 });
+    expect(chip("PENDING")).toHaveAttribute("aria-pressed", "true");
     fireEvent.click(chip("all"));
-    await waitFor(() => expect(JSON.parse(localStorage.getItem(KEY)!)).toEqual({ status: "all" }));
+    await waitFor(() => expect(soulAccountsApi.credentials).toHaveBeenLastCalledWith({ status: undefined, page: 1 }));
     first.unmount();
 
     renderPage();
-    await waitFor(() => expect(soulAccountsApi.credentials).toHaveBeenLastCalledWith({ status: undefined, page: 1 }));
-    expect(chip("all")).toHaveAttribute("aria-pressed", "true");
-    expect(chip("PENDING")).toHaveAttribute("aria-pressed", "false");
-  });
-
-  it("with nothing stored it opens on 待交付 and writes nothing; an unknown stored value is ignored", async () => {
-    asManager();
-    renderPage();
-    await screen.findAllByText("张三");
-    expect(soulAccountsApi.credentials).toHaveBeenLastCalledWith({ status: "PENDING", page: 1 });
-    expect(localStorage.getItem(KEY)).toBeNull();
-  });
-
-  it("an unknown stored value is ignored", async () => {
-    asManager();
-    localStorage.setItem(KEY, JSON.stringify({ status: "SHREDDED" }));
-    renderPage();
-    await screen.findAllByText("张三");
-    expect(soulAccountsApi.credentials).toHaveBeenLastCalledWith({ status: "PENDING", page: 1 });
+    await waitFor(() => expect(soulAccountsApi.credentials).toHaveBeenLastCalledWith({ status: "PENDING", page: 1 }));
+    expect(chip("all")).toHaveAttribute("aria-pressed", "false");
+    expect(JSON.parse(localStorage.getItem("soulledger.soul-credentials.filters")!)).toEqual({ status: "DELIVERED" });
   });
 });
+
