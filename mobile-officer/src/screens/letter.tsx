@@ -19,6 +19,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { KeyboardAvoidingView, Platform, View } from "react-native";
 
 import { clearDraft, flushDraft, readDraft, scheduleDraft } from "../drafts";
+import { enqueueReply, removeFromOutbox, useOutbox } from "../outbox";
+import { useCachedRemote } from "../readCache";
 import { formatWhen } from "../format";
 import { ActionButton, Row, StateView, viewStateOf } from "../kit";
 import {
@@ -40,6 +42,7 @@ import {
   Txt,
   space,
   useI18n,
+  useOnline,
   useRemote,
   useTheme,
   useToast,
@@ -64,7 +67,10 @@ export function LetterThread({
     ]);
     return { conversation: conversation.data, messages: messages.data };
   }, [id]);
-  const thread = useRemote(load);
+  const thread = useCachedRemote(`detail:letter:${id}`, load);
+  const { offline } = useOnline();
+  const outboxEntry = useOutbox().find((e) => e.id === id);
+  const queued = outboxEntry?.state === "queued";
   // A failed template list only hides the 模板 row; the letter can still be answered.
   const loadTemplates = useCallback(
     () => inboxTemplatesApi.list().then((r) => r.data),
@@ -89,6 +95,17 @@ export function LetterThread({
 
   const send = () => {
     if (sending.current || !replyReady(text)) return;
+    if (offline) {
+      // No network: the reply waits on this phone (outbox.ts) and the words stay in the draft.
+      flushDraft();
+      enqueueReply({
+        id,
+        name: thread.data?.conversation.soul_name ?? "",
+        text: text.trim(),
+        seen: (thread.data?.messages ?? []).filter((m) => m.from_officer).map((m) => m.event_id),
+      });
+      return;
+    }
     sending.current = true;
     setBusy(true);
     setFailure(null);
@@ -97,6 +114,7 @@ export function LetterThread({
       .then(() => {
         setText("");
         clearDraft(id);
+        removeFromOutbox(id);
         toast(t("soul_inbox.sent"), "success");
         void thread.reload();
         onSettled();
@@ -214,8 +232,15 @@ export function LetterThread({
               multiline
               maxLength={INBOX_REPLY_MAX}
               value={text}
+              editable={!queued}
               onChangeText={edit}
             />
+            {queued ? (
+              <Txt variant="caption" tone="muted" testID="letter-queued">{`${t("officer_app.outbox.pending")} · ${t("officer_app.outbox.auto")}`}</Txt>
+            ) : null}
+            {outboxEntry?.state === "failed" && !failure ? (
+              <Notice tone="neg" testID="letter-outbox-failed">{`! ${t(`officer_app.outbox.${outboxEntry.reason ?? "retry"}`)}`}</Notice>
+            ) : null}
             {failure ? (
               <Notice
                 tone="neg"
@@ -229,6 +254,7 @@ export function LetterThread({
               testID="letter-send"
               kind="primary"
               busy={busy}
+              disabled={queued}
               title={t("soul_inbox.send")}
               onPress={send}
             />
@@ -293,6 +319,7 @@ function LetterLine({
   onReloadImages: () => void;
 }) {
   const { t } = useI18n();
+  const { back } = useOnline(); // a picture that failed offline tries again once the network is back
   const mine = message.from_officer;
   const who = mine
     ? [
@@ -319,7 +346,7 @@ function LetterLine({
       {message.image ? (
         // A picture is its own letter, without words ("[图片]" is only what an older reader shows).
         <LetterImage
-          key={message.image.url}
+          key={`${message.image.url}:${back}`}
           image={message.image}
           onOpen={() => onOpenImage(message.image!.id)}
           onReload={onReloadImages}

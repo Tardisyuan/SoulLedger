@@ -4,10 +4,13 @@ import { platform } from "@soulledger/core/platform";
 import { useCallback, useEffect, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
+import { discardReply, retryReply, useOutbox, type OutboxEntry } from "../outbox";
+import { useCachedRemote } from "../readCache";
+
 import { FilterChips, Row, StateView, viewStateOf } from "../kit";
 import { TODO_GROUPS, isDenied, isTodoKind, todoTitle, type ItemKind } from "../rules";
 import { useSession } from "../session";
-import { Button, Screen, SectionLabel, Txt, publishVoiceNumber, space, useI18n, useRemote } from "../shared";
+import { Button, Notice, Screen, SectionLabel, SmallButton, Txt, publishVoiceNumber, space, useI18n, useTheme } from "../shared";
 import { formatWhen } from "../format";
 
 export interface ItemRef {
@@ -36,7 +39,7 @@ export function TodoTab({ onOpen, highlight }: { onOpen: (item: ItemRef) => void
   const role = state.status === "signedIn" ? state.user.role : "";
   // The shell gives this tab a new `key` whenever the list should ask again (back from a detail, a push).
   const load = useCallback(() => officerAppApi.todo().then((r) => r.data), []);
-  const { data, error, loading, reload } = useRemote(load);
+  const { data, error, loading, reload } = useCachedRemote("list:todo", load);
   // Siri's 「有几件待办」 speaks this total back (voiceCache.ts): a number and a time, never a case.
   useEffect(() => {
     if (data) publishVoiceNumber("todo", TODO_GROUPS.reduce((sum, g) => sum + countOf(data, g.field), 0));
@@ -63,6 +66,7 @@ export function TodoTab({ onOpen, highlight }: { onOpen: (item: ItemRef) => void
       <View style={{ padding: space[5] }}>
         <Txt variant="title">{t("officer_app.todo.title")}</Txt>
       </View>
+      <OutboxRows onOpen={onOpen} />
       {view ? (
         <StateView
           state={view}
@@ -118,6 +122,56 @@ export function TodoTab({ onOpen, highlight }: { onOpen: (item: ItemRef) => void
   );
 }
 
+/** 回信 queued offline: a row with the dashed 「待发出」 tag, or, when the send failed, why and what can be done. */
+function OutboxRows({ onOpen }: { onOpen: (item: ItemRef) => void }) {
+  const { t } = useI18n();
+  const theme = useTheme();
+  return (
+    <>
+      {useOutbox().map((entry) =>
+        entry.state === "queued" ? (
+          <Row
+            key={entry.id}
+            testID={`outbox-row-${entry.id}`}
+            glyph="◐"
+            strong
+            title={t("officer_app.outbox.row", { name: entry.name })}
+            lines={[t("officer_app.outbox.auto")]}
+            right={
+              <View testID={`outbox-pending-${entry.id}`} style={[styles.pending, { borderColor: theme.inkSubtle }]}>
+                <Txt variant="caption">{t("officer_app.outbox.pending")}</Txt>
+              </View>
+            }
+            onPress={() => onOpen({ kind: "letter", id: entry.id })}
+          />
+        ) : (
+          <OutboxFailure key={entry.id} entry={entry} onOpen={onOpen} />
+        ),
+      )}
+    </>
+  );
+}
+
+function OutboxFailure({ entry, onOpen }: { entry: OutboxEntry; onOpen: (item: ItemRef) => void }) {
+  const { t } = useI18n();
+  const reason = entry.reason ?? "retry";
+  return (
+    <View testID={`outbox-failed-${entry.id}`} style={styles.failure}>
+      <Notice tone="neg">{`! ${t("officer_app.outbox.failed_title", { name: entry.name })}`}</Notice>
+      <Txt testID={`outbox-reason-${entry.id}`} variant="body">
+        {t(`officer_app.outbox.${reason}`)}
+      </Txt>
+      <View style={styles.actions}>
+        {reason === "retry" ? <SmallButton testID={`outbox-retry-${entry.id}`} title={t("common.retry")} onPress={() => void retryReply(entry.id)} /> : null}
+        {reason === "answered" || reason === "archived" ? (
+          <SmallButton testID={`outbox-view-${entry.id}`} title={t("officer_app.outbox.view_existing")} onPress={() => onOpen({ kind: "letter", id: entry.id })} />
+        ) : null}
+        <SmallButton testID={`outbox-discard-${entry.id}`} title={t("officer_app.outbox.discard")} onPress={() => discardReply(entry.id)} />
+      </View>
+    </View>
+  );
+}
+
 function TodoRow({ item, highlight, onOpen }: { item: TodoItem; highlight: boolean; onOpen: (item: ItemRef) => void }) {
   const { t } = useI18n();
   const lines = [item.soul_code, item.node_name, formatWhen(item.created_at)].filter((x): x is string => !!x);
@@ -140,5 +194,8 @@ function TodoRow({ item, highlight, onOpen }: { item: TodoItem; highlight: boole
 const styles = StyleSheet.create({
   summary: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: space[3], paddingHorizontal: space[5] },
   summaryText: { flex: 1 },
+  pending: { borderWidth: 1, borderStyle: "dashed", paddingHorizontal: space[2], paddingVertical: 2 },
+  failure: { paddingHorizontal: space[5], paddingVertical: space[3], gap: space[2] },
+  actions: { flexDirection: "row", flexWrap: "wrap", gap: space[3] },
   summaryClear: { minHeight: 44, justifyContent: "center" },
 });
