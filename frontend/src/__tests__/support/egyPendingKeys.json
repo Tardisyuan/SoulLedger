@@ -1,1 +1,22 @@
-["scheduler.jobs.authentication_prune_expired_push_registrations","social.avatar_upload_hint","soul_app.circle.media.errors.not_an_image"]
+[
+  "scheduler.jobs.authentication_prune_expired_push_registrations",
+  "social.avatar_upload_hint",
+  "soul_app.circle.media.errors.not_an_image",
+  "soul_accounts.reveal.close_confirm_title",
+  "soul_accounts.reveal.close_confirm_body",
+  "soul_accounts.reveal.close_confirm",
+  "soul_accounts.reveal.close_back",
+  "soul_accounts.credentials.slip.reprint",
+  "workflow.filter_overdue",
+  "workflow.overdue_badge",
+  "judgment.claim.stale_soon",
+  "shortcuts.title",
+  "shortcuts.single_keys",
+  "shortcuts.single_keys_hint",
+  "shortcuts.move_rows",
+  "shortcuts.select_row",
+  "shortcuts.pick_verdict",
+  "shortcuts.conclude",
+  "shortcuts.toggle_case",
+  "shortcuts.next_prev_case"
+]

@@ -15,6 +15,7 @@ import { DomainEnum } from "@/src/components/ui/DomainValue";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { TAB_BASE, TAB_ON, TAB_OFF } from "@/src/lib/tabClasses";
 import { Button } from "@/src/components/ui/Button";
+import { filterChipClass } from "@/src/components/ui/FilterChip";
 import { ExportCsvButton } from "@/src/components/ExportCsvButton";
 import { EmptyState } from "@/src/components/ui/EmptyState";
 import { WorkflowInstanceList } from "@/src/components/workflow/page/WorkflowInstanceList";
@@ -50,15 +51,17 @@ export default function WorkflowPage() {
   // `isError` / `refetch` 拿出来:这个 tab 此前对「加载失败」和「一条都没有」
   // 渲染**同一段文案**(「暂无审批实例」)。两条 e2e 测试因此共用一个可观察量 ——
   // 一个让实例列表永久为空的变异会让两条都通过。
+  // 「只看已超时」:服务端按 `overdue=true` 筛(当前节点的 activated_at + timeout_hours 已过),不在前端猜。
+  const [overdueOnly, setOverdueOnly] = useState(false);
   const {
     data: workflowsData,
     isLoading: isWorkflowsLoading,
     isError: isWorkflowsError,
     refetch: refetchWorkflows,
   } = useQuery({
-    queryKey: ["workflows"],
+    queryKey: overdueOnly ? ["workflows", { overdue: true }] : ["workflows"],
     queryFn: async () => {
-      const res = await workflowApi.list();
+      const res = overdueOnly ? await workflowApi.list({ overdue: "true" }) : await workflowApi.list();
       return res.data;
     },
     // Pushed: workflow events invalidate `workflowKeys.all` (["workflows"]).
@@ -461,15 +464,26 @@ export default function WorkflowPage() {
             <QueryError onRetry={() => refetchWorkflows()} />
           ) : (
             <>
-              {/* 实例列表没有筛选条,「当前筛选」就是全部;导出放在列表上方右端。 */}
-              <div className="flex justify-end pb-3">
-                <ExportCsvButton
-                  size="sm"
-                  fetchCsv={() => workflowApi.exportCsv()}
-                  page={t("workflow.title")}
-                  hall={hall}
-                  count={workflowsData?.count}
-                />
+              {/* 一枚筛选签:只看已超时;导出跟着它走(「当前筛选」)。 */}
+              <div className="flex items-center gap-3 pb-3">
+                <button
+                  type="button"
+                  aria-pressed={overdueOnly}
+                  onClick={() => setOverdueOnly((v) => !v)}
+                  className={filterChipClass(overdueOnly)}
+                >
+                  {overdueOnly && <span aria-hidden="true">✓</span>}
+                  {t("workflow.filter_overdue")}
+                </button>
+                <div className="ml-auto flex justify-end">
+                  <ExportCsvButton
+                    size="sm"
+                    fetchCsv={() => (overdueOnly ? workflowApi.exportCsv({ overdue: "true" }) : workflowApi.exportCsv())}
+                    page={t("workflow.title")}
+                    hall={hall}
+                    count={workflowsData?.count}
+                  />
+                </div>
               </div>
               <WorkflowInstanceList workflows={workflows} isLoading={isWorkflowsLoading} />
             </>

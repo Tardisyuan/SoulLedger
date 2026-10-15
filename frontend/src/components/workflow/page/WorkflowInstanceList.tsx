@@ -83,6 +83,11 @@ export function WorkflowInstanceList({
                 >
                   <DomainEnum namespace="workflow.status" value={wf.status} />
                 </Badge>
+                {wf.is_overdue && (
+                  <Badge className="bg-[oklch(var(--color-status-warning)/0.1)] text-[oklch(var(--color-status-warning))]">
+                    {t("workflow.overdue_badge")}
+                  </Badge>
+                )}
                 {wf.is_appeal && (
                   <Badge className="bg-[oklch(var(--color-verdict-retry)/0.1)] text-[oklch(var(--color-verdict-retry))]">
                     {t("workflow.appeal_badge")}

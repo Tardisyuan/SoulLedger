@@ -135,6 +135,27 @@ describe("WorkflowPage instances tab", () => {
     expect(screen.getAllByText("workflow.appeal_badge")).toHaveLength(1);
   });
 
+  it("badges only the overdue instances, and the filter chip asks the server for overdue=true", async () => {
+    mockedWorkflows.mockResolvedValue({
+      data: {
+        results: [
+          { id: "w1", workflow_name: "OnTime", soul: "A", status: "IN_PROGRESS", is_appeal: false, is_overdue: false },
+          { id: "w2", workflow_name: "TooLate", soul: "B", status: "IN_PROGRESS", is_appeal: false, is_overdue: true },
+        ],
+      },
+    });
+    await openInstances();
+    await screen.findByText("OnTime");
+    expect(screen.getAllByText("workflow.overdue_badge")).toHaveLength(1);
+    expect(mockedWorkflows).toHaveBeenLastCalledWith();
+
+    const chip = screen.getByRole("button", { name: "workflow.filter_overdue" });
+    expect(chip).toHaveAttribute("aria-pressed", "false");
+    fireEvent.click(chip);
+    await waitFor(() => expect(mockedWorkflows).toHaveBeenLastCalledWith({ overdue: "true" }));
+    expect(screen.getByRole("button", { name: "workflow.filter_overdue" })).toHaveAttribute("aria-pressed", "true");
+  });
+
   /**
    * The row used to be a <div onClick={router.push}>, and the old version of
    * this test asserted `mockPush` — which a mouse click satisfies and a

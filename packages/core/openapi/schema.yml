@@ -19194,6 +19194,10 @@ paths:
         description: Which field to use when ordering the results.
         schema:
           type: string
+      - in: query
+        name: overdue
+        schema:
+          type: boolean
       - name: page
         required: false
         in: query
@@ -20326,6 +20330,9 @@ components:
           type: boolean
         cross_civilization:
           type: boolean
+        is_overdue:
+          type: boolean
+          readOnly: true
         created_at:
           type: string
           format: date-time
@@ -20337,6 +20344,7 @@ components:
       required:
       - created_at
       - id
+      - is_overdue
       - soul
       - soul_name
       - workflow_name

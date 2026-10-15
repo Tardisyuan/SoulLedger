@@ -73,7 +73,9 @@ function CredentialsPageContent() {
   const [page, setPage] = useState(1);
   const [revealing, setRevealing] = useState<InitialCredential | null>(null);
   // 只在调起打印的那一刻挂着;交付单不是页面的一部分,屏幕上也看不到它。
-  const [slip, setSlip] = useState<{ data: CredentialSlip; texts: SlipBundles } | null>(null);
+  const [slip, setSlip] = useState<{ data: CredentialSlip; texts: SlipBundles; reprint: boolean } | null>(null);
+  // 从点打印到交付单卸载:期间所有打印按钮不可点,每一次有审计的打印才都真的印出来(mutate 的回调只认最后一次)。
+  const [printing, setPrinting] = useState(false);
   // 黑白打印:默认不勾(= 彩色,用户 2026-10-11),记在这台电脑上;读不到存储(隐私窗口、被禁用)按默认。
   const [mono, setMono] = useState(false);
   useEffect(() => {
@@ -120,20 +122,33 @@ function CredentialsPageContent() {
 
   // 先让服务端写审计并给出内容;失败就不打印。成功后先把三种语言的词条加载好(交付单上联按文明印文字,不跟界面语言),
   // 再同步挂载交付单并调起浏览器打印(window.print 在多数浏览器里阻塞到对话框关闭),随后卸载。打印不改行的状态,不刷新列表。
-  const doPrint = (c: InitialCredential) =>
+  const doPrint = (c: InitialCredential) => {
+    if (printing) return;
+    setPrinting(true);
     printSlip.mutate(c.id, {
       onSuccess: async (data) => {
         try {
           const texts = await loadSlipBundles();
-          flushSync(() => setSlip({ data, texts }));
+          flushSync(() => setSlip({ data, texts, reprint: c.status === "DELIVERED" }));
         } catch {
           showToast(t("soul_accounts.credentials.print_failed"), "error");
+          setPrinting(false);
           return;
         }
+        // 不阻塞的浏览器里 print() 立刻返回,马上卸载会印出空页:等 afterprint 再卸;
+        // 个别浏览器不发这个事件,60 秒后兜底卸载,免得下一次 Ctrl+P 印出交付单。
+        const done = () => {
+          window.removeEventListener("afterprint", done);
+          clearTimeout(fallback);
+          setSlip(null);
+          setPrinting(false);
+        };
+        const fallback = setTimeout(done, 60_000);
+        window.addEventListener("afterprint", done);
         window.print();
-        setSlip(null);
       },
       onError: (error) => {
+        setPrinting(false);
         const key = failureKey(classifySoulAccountError(error), "");
         const detail = (error as { response?: { status?: number; data?: { detail?: unknown } } })?.response;
         showToast(
@@ -142,6 +157,7 @@ function CredentialsPageContent() {
         );
       },
     });
+  };
 
   const printButton = (c: InitialCredential, label: string, muted = false) => (
     <Button
@@ -150,6 +166,7 @@ function CredentialsPageContent() {
       variant="ghost"
       className={muted ? "text-[oklch(var(--color-ink-muted))]" : undefined}
       loading={printSlip.isPending && printSlip.variables === c.id}
+      disabled={printing}
       onClick={() => doPrint(c)}
     >
       <PrinterIcon />
@@ -334,7 +351,7 @@ function CredentialsPageContent() {
         </ul>
       </div>
 
-      {slip && <DeliverySlip slip={slip.data} texts={slip.texts} color={!mono} />}
+      {slip && <DeliverySlip slip={slip.data} texts={slip.texts} color={!mono} reprint={slip.reprint} />}
       {revealing && <RevealCredentialDialog key={revealing.id} credential={revealing} onClose={() => setRevealing(null)} />}
     </PageShell>
   );

@@ -1,6 +1,77 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useSyncExternalStore } from "react";
+
+/**
+ * 「单字母快捷键」总开关(WCAG 2.1.4):关掉后所有单个可打印字符的快捷键(1–4、J/K、S、W、C…)不再接;
+ * Esc、方向键、⌘⏎ 这类不是单字符的照旧。`?` 例外 —— 它打开快捷键列表,开关就在那里,关掉之后还得找得回来。
+ * 存在本浏览器的 localStorage(服务端偏好是另一条后端改动,这里不做)。
+ */
+export const SINGLE_KEYS_STORAGE_KEY = "soulledger_single_key_shortcuts";
+const listeners = new Set<() => void>();
+export function singleKeyShortcutsEnabled(): boolean {
+  try {
+    return localStorage.getItem(SINGLE_KEYS_STORAGE_KEY) !== "off";
+  } catch {
+    return true;
+  }
+}
+export function setSingleKeyShortcuts(on: boolean): void {
+  try {
+    if (on) localStorage.removeItem(SINGLE_KEYS_STORAGE_KEY);
+    else localStorage.setItem(SINGLE_KEYS_STORAGE_KEY, "off");
+  } catch {
+    // 存储被禁:本次会话内无处记,开关不生效,也不报错。
+  }
+  listeners.forEach((fn) => fn());
+}
+export function useSingleKeyShortcuts(): boolean {
+  return useSyncExternalStore(
+    (fn) => {
+      listeners.add(fn);
+      return () => void listeners.delete(fn);
+    },
+    singleKeyShortcutsEnabled,
+    () => true,
+  );
+}
+
+/** 页面登记自己的快捷键,全局 `?` 列给用户看。登记的是文案键(`label` 过 `t`),不是文字。 */
+export interface ShortcutRow {
+  key: string;
+  label: string;
+}
+const helpSources = new Map<symbol, readonly ShortcutRow[]>();
+const helpListeners = new Set<() => void>();
+let helpSnapshot: readonly ShortcutRow[] = [];
+function publishHelp() {
+  helpSnapshot = [...helpSources.values()].flat();
+  helpListeners.forEach((fn) => fn());
+}
+export function useShortcutHelp(rows: readonly ShortcutRow[], enabled = true) {
+  useEffect(() => {
+    if (!enabled) return;
+    const id = Symbol("shortcut-help");
+    helpSources.set(id, rows);
+    publishHelp();
+    return () => {
+      helpSources.delete(id);
+      publishHelp();
+    };
+    // rows 是模块级常量,登记一次即可。
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enabled]);
+}
+export function useRegisteredShortcuts(): readonly ShortcutRow[] {
+  return useSyncExternalStore(
+    (fn) => {
+      helpListeners.add(fn);
+      return () => void helpListeners.delete(fn);
+    },
+    () => helpSnapshot,
+    () => helpSnapshot,
+  );
+}
 
 /**
  * 页面级单键快捷键(规范 v1 第三类 A:审判台 1–4 / ⌘⏎,审判队列 Q)。
@@ -29,7 +100,9 @@ export function hotkeyOf(event: KeyboardEvent): string | null {
   if (mod && !event.altKey && !event.shiftKey && event.key === "Enter") return "mod+Enter";
   if (mod || event.altKey) return null;
   if (isTypingTarget(event.target)) return null;
-  return event.key.length === 1 ? event.key.toLowerCase() : event.key;
+  if (event.key.length !== 1) return event.key;
+  if (event.key !== "?" && !singleKeyShortcutsEnabled()) return null;
+  return event.key.toLowerCase();
 }
 
 /** `handlers` 的键是 `hotkeyOf` 的返回值:"1"、"q"、"mod+Enter"。`enabled=false` 时整组不挂。 */

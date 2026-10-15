@@ -1179,6 +1179,8 @@
     "template": "模板编辑器",
     "instances": "审批实例",
     "no_instances": "暂无审批实例",
+    "filter_overdue": "只看已超时",
+    "overdue_badge": "已超时",
     "detail": {
       "loading": "加载审批流程中...",
       "not_found": "审批流程未找到",
@@ -1761,6 +1763,7 @@
       "civilization_all": "文明 · 全部",
       "sort": "排序",
       "sort_oldest": "排序 · 等待最久",
+      "stale_soon": "即将标记为滞留",
       "sort_newest": "排序 · 最近入队",
       "reassign_search": "搜索判官",
       "reassign_count": "可改派 {{n}}",
@@ -2689,6 +2692,17 @@
     "footer_new_tab": "新标签页",
     "announce_group": "{{group}} {{n}} 条"
   },
+  "shortcuts": {
+    "title": "键盘快捷键",
+    "single_keys": "启用单字母快捷键",
+    "single_keys_hint": "关闭后，J、K、1–4 这类单个字母或数字键不再触发；Esc、方向键和 ⌘/Ctrl 组合键不受影响。",
+    "move_rows": "下移 / 上移一行",
+    "select_row": "选中 / 取消选中当前行",
+    "pick_verdict": "选择裁决",
+    "conclude": "落判（第一下确认，第二下提交）",
+    "toggle_case": "展开 / 收起全案",
+    "next_prev_case": "下一件 / 上一件"
+  },
   "filter": {
     "all": "全部",
     "clear_all": "清除全部",
@@ -2941,6 +2955,7 @@
         "sign_soul": "灵魂签收 · 日期",
         "sign_officer": "交付官员签名",
         "after_sign": "签收后请在官员台点「标记已交付」。",
+        "reprint": "补印",
         "system": "灵魂簿",
         "doc_title": "登录交付单",
         "password_label": "初始密码",
@@ -2969,6 +2984,10 @@
       "copy_failed": "复制失败，请手动抄写",
       "close": "我已记下，关闭",
       "deliver_and_close": "已交付，标记并关闭",
+      "close_confirm_title": "密码只显示这一次",
+      "close_confirm_body": "密码只显示这一次，确定关闭？关闭后无法再次查看，需要重置才能拿到新的初始密码。",
+      "close_confirm": "确定关闭",
+      "close_back": "返回",
       "already_revealed": "该密码已被查看过（可能是其他官员），不能再次查看；如需交付请到灵魂详情页重置",
       "failed": "查看失败，请重试"
     },

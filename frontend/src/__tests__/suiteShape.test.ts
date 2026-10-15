@@ -142,6 +142,7 @@ const COLLECTED_FILES = [
   "sealStamp.test.tsx",
   "selectionIsNotColourOnly.test.tsx",
   "SettingsDrawer.test.tsx",
+  "ShortcutHelp.test.tsx",
   "Skeleton.test.tsx",
   "SocialFeedPage.remembered.test.tsx",
   "SocialProfilePage.test.tsx",

@@ -53,7 +53,7 @@ import {
   MaterialDock,
   type DeskMaterial,
 } from "@/src/components/judgment/JudgmentDeskStage";
-import { useHotkeys } from "@/src/lib/hotkeys";
+import { useHotkeys, useShortcutHelp } from "@/src/lib/hotkeys";
 import { FROM_PARAM, sourceFrom, withFrom } from "@/src/lib/backSource";
 import { verdictGlyph } from "@/src/lib/verdictGlyph";
 import type { SentenceRequestChanges } from "@soulledger/core/api/sentence-plans";
@@ -174,6 +174,13 @@ const NO_LIVES: Reincarnation[] = [];
 interface PageProps {
   params: Promise<{ id: string }>;
 }
+
+const DESK_SHORTCUTS = [
+  { key: "1–4", label: "shortcuts.pick_verdict" },
+  { key: "⌘/Ctrl ⏎", label: "shortcuts.conclude" },
+  { key: "F", label: "shortcuts.toggle_case" },
+  { key: "J / K", label: "shortcuts.next_prev_case" },
+] as const;
 
 export default function JudgmentDetailPage({ params }: PageProps) {
   const { id } = use(params);
@@ -400,6 +407,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
      两下都过同一道门:持 judgment.execute、已选裁决、不在提交中。确认层开着时 1–4 不改裁决 ——
      层上写着的就是要落的那一个。 */
   const deskOpen = !!judgment && !judgment.is_final;
+  useShortcutHelp(DESK_SHORTCUTS, deskOpen);
   useHotkeys(
     {
       ...Object.fromEntries(
