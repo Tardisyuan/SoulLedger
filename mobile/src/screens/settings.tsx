@@ -71,7 +71,16 @@ function Heading({ children }: { children: string }) {
 function LanguageRow({ l, selected, busy, onPick }: { l: Locale; selected: boolean; busy: boolean; onPick: () => void }) {
   const theme = useTheme();
   const { t } = useI18n();
-  const { gutter } = useLayout();
+  const { gutter, stack } = useLayout();
+  // 「当前」 beside the text column beats it for width at large text and lands on the subtitle: stacked, it sits under the column instead.
+  const current =
+    selected && !busy ? (
+      <View testID={`language-${l}-current`} style={[styles.current, stack && styles.currentStacked, { borderColor: theme.ink }]}>
+        <Txt variant="label" style={styles.currentText}>
+          {t("soul_app.settings.current")}
+        </Txt>
+      </View>
+    ) : null;
   return (
     <Pressable
       testID={`language-${l}`}
@@ -86,20 +95,15 @@ function LanguageRow({ l, selected, busy, onPick }: { l: Locale; selected: boole
     >
       {/* 单选:墨色,不是强调色(第三类 F 组);v2 起是圆的(补足 A2),不再和复选框同形。 */}
       <RadioMark on={selected} />
-      <View style={styles.fill}>
+      <View testID={`language-${l}-text`} style={styles.fill}>
         <Txt variant="bodyLg">{selfName(l)}</Txt>
         <Txt variant="caption" tone="subtle">
           {translate(l, "soul_app.settings.language_note")}
         </Txt>
+        {stack ? current : null}
       </View>
       {busy ? <Loader testID="language-saving" size={20} /> : null}
-      {selected && !busy ? (
-        <View style={[styles.current, { borderColor: theme.ink }]}>
-          <Txt variant="label" style={styles.currentText}>
-            {t("soul_app.settings.current")}
-          </Txt>
-        </View>
-      ) : null}
+      {stack ? null : current}
     </Pressable>
   );
 }
@@ -538,7 +542,7 @@ export function NotificationPrimerScreen() {
 }
 
 const styles = StyleSheet.create({
-  fill: { flex: 1 },
+  fill: { flex: 1, minWidth: 0 },
   center: { textAlign: "center" },
   pressed: { opacity: 0.8 },
   heading: { paddingTop: 24, paddingBottom: 12 },
@@ -547,7 +551,8 @@ const styles = StyleSheet.create({
   group: { borderBottomWidth: 1 },
   row: { minHeight: 54, flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, borderBottomWidth: 1, borderLeftWidth: 2 },
   toggleStacked: { gap: 12, paddingVertical: 16, borderBottomWidth: 1 },
-  current: { borderWidth: 1, paddingHorizontal: 8, paddingVertical: 2 },
+  current: { borderWidth: 1, paddingHorizontal: 8, paddingVertical: 2, flexShrink: 0 },
+  currentStacked: { alignSelf: "flex-start", marginTop: 4 },
   currentText: { fontSize: 11, letterSpacing: 0.4 },
   saveLine: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 12, borderWidth: 1, borderLeftWidth: 2, paddingHorizontal: 12, paddingVertical: 12 },
   saveFailed: { marginTop: 12, borderWidth: 1, borderLeftWidth: 3, padding: 16, gap: 12 },

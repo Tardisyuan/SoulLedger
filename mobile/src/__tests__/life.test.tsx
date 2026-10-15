@@ -119,6 +119,25 @@ describe("the identity band", () => {
     expect(screen.getByTestId("identity-meta")).toBeTruthy();
     expect(flat(screen.getByTestId("plaque-seal")).width).toBe(64);
   });
+
+  it("at the largest text the code's target has no negative margin to push it past the clipped band, and the stacked tabs stay compact", async () => {
+    Object.assign(mockWindow, { fontScale: 2.35 });
+    await open();
+    const code = flat(screen.getByTestId("copy-soul-code"));
+    expect(code).toMatchObject({ minHeight: 44 });
+    expect(code.marginVertical).toBeUndefined();
+    expect(code.marginBottom).toBeUndefined();
+    expect(flat(screen.getByTestId("tab-Life"))).toMatchObject({ minHeight: 48, flexDirection: "row" });
+    expect(screen.getByTestId("tab-Life-label").props.maxFontSizeMultiplier).toBe(1.5);
+  });
+
+  it("at normal size the tab label keeps the app's text-size cap", async () => {
+    await open();
+    expect(screen.getByTestId("tab-Life-label").props.maxFontSizeMultiplier).toBe(2.35);
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, motion.bandCompact + 200));
+    });
+  });
 });
 
 jest.mock("expo-clipboard", () => ({ setStringAsync: jest.fn(async () => true), getStringAsync: jest.fn(async () => "") }));

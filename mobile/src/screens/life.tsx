@@ -370,7 +370,7 @@ function LifeBand({ me, compact, onAccount }: { me: MeProfile; compact: boolean;
               // the bottom of `bandText`. The 44pt target is the Pressable's own box instead:
               // padding grown, margins pulled back by the same, so nothing moves (`codeTarget*`).
               // Compact, mostly upward: the band clips (overflow hidden) 5pt under the code.
-              style={[styles.code, small ? styles.codeTargetSmall : styles.codeTarget]}
+              style={[styles.code, small ? styles.codeTargetSmall : stack ? styles.codeTargetStack : styles.codeTarget]}
             >
               <Txt variant="value" style={[styles.codeText, { color: on }]}>
                 {formatSoulCode(me.soul_code)}
@@ -925,6 +925,8 @@ const styles = StyleSheet.create({
   codeTarget: { paddingVertical: CODE_REACH / 2, marginVertical: -CODE_REACH / 2 },
   /** 16 + 23 + 5 = 44, kept inside the 48pt compact band (its code row ends 5pt above the edge). */
   codeTargetSmall: { paddingTop: CODE_REACH - CODE_FOOT_SMALL, paddingBottom: CODE_FOOT_SMALL, marginTop: -(CODE_REACH - CODE_FOOT_SMALL), marginBottom: -CODE_FOOT_SMALL },
+  /** Stacked the line is 16 × the text scale (≥ 27pt) and the band has no fixed height: no negative margins to push the box past the clipped edge, just a 44pt floor. */
+  codeTargetStack: { minHeight: 44 },
   codeText: { fontSize: 11, lineHeight: CODE_LINE, letterSpacing: 1.6, fontFamily: family.mono[500] },
   account: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
   /** v3 .life-now. */

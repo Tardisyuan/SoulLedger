@@ -35,7 +35,8 @@ const system = (Notifications as unknown as { __state: NotificationsDouble }).__
 const constants = Constants as unknown as { expoConfig: { extra: Record<string, unknown> } };
 const secure = (SecureStore as unknown as { __store: Map<string, string> }).__store;
 
-const APP_ID = "3f1c2a9e-1b2c-4d5e-8f90-a1b2c3d4e5f6";
+const flat = (el: { props: { style?: unknown } }) => StyleSheet.flatten(el.props.style as never) as Record<string, unknown>;
+const APP_ID ="3f1c2a9e-1b2c-4d5e-8f90-a1b2c3d4e5f6";
 const SETTINGS = { rebirth: true, judgment: true, residence: true, chat: true, locale: "zh-Hans" };
 const STATEMENT = "我这一世无甚大功，唯有在一九九八年的水里，把一个不认识的孩子推上了岸。";
 
@@ -101,6 +102,19 @@ describe("the settings page is the one place for language and sign-out", () => {
     for (const name of ["简体中文", "English", "Kemet"]) expect(screen.getByText(name)).toBeTruthy();
     expect(screen.queryByText("Egyptian")).toBeNull();
     await act(async () => {}); // the page's permission read settles before the test ends
+  });
+
+  it("at large text the 「当前」 badge sits under the language's text column, not beside it", async () => {
+    signedIn();
+    renderApp();
+    await screen.findByTestId("profile-card");
+    fireEvent.press(screen.getByTestId("header-account"));
+    await screen.findByTestId("settings");
+    const row = screen.getByTestId("language-zh-Hans");
+    expect(within(within(row).getByTestId("language-zh-Hans-text")).getByTestId("language-zh-Hans-current")).toBeTruthy();
+    expect(flat(within(row).getByTestId("language-zh-Hans-current"))).toMatchObject({ alignSelf: "flex-start", flexShrink: 0 });
+    expect(flat(within(row).getByTestId("language-zh-Hans-text"))).toMatchObject({ flex: 1, minWidth: 0 });
+    await act(async () => {});
   });
 
   it("the same icon is on 本世 and 转生 (朋友圈 has search and my page there instead, 1a)", async () => {
