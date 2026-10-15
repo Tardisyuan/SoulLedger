@@ -137,7 +137,7 @@ REGISTRY: tuple[JobSpec, ...] = (
     # 运行数据留存(apps/core/retention.py):webhook 投递 90 天、已读站内通知 180 天、推送投递 90 天、停用设备 30 天、
     # 过期的「记住此设备」行;各自的窗口是 settings 里的 *_RETENTION_DAYS,0 = 不清。不碰事件日志(业务记录)。
     # GLOBAL:这些表没有租户列。每天一次,期限以天计。
-    JobSpec("core.prune_retained_data", GLOBAL, "25 4 * * *", max_runtime=1800),
+    JobSpec("audit.prune_retained_data", GLOBAL, "25 4 * * *", max_runtime=1800),
     # 个人资料导出(apps/soul_accounts/data_export.py::prune_expired):文件只留 7 天,过期的删文件、行标 EXPIRED;
     # 顺手把停在排队 10 分钟以上的重新入队。GLOBAL:导出行没有租户列。每天一次,期限以天计。
     JobSpec("soul_accounts.prune_data_exports", GLOBAL, "10 4 * * *", max_runtime=1800),

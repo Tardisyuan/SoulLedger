@@ -1887,6 +1887,19 @@
     "date_7d": "近 7 天",
     "date_30d": "近 30 天",
     "events_from_writes": "本事件包含 {{count}} 条写入",
+    "detail": {
+      "open": "详情",
+      "not_found": "找不到这条记录",
+      "resource": "对象",
+      "user_agent": "客户端",
+      "trace_id": "请求编号",
+      "trace_filter": "看本次请求的全部记录",
+      "changes": "变更",
+      "no_changes": "这条记录没有变更内容",
+      "field": "字段",
+      "before": "原值",
+      "after": "新值"
+    },
     "actions": {
       "CREATE": "创建",
       "UPDATE": "更新",
@@ -3420,7 +3433,7 @@
       "authentication_prune_soul_sign_ins": "清理 90 天前的灵魂登录记录与闲置会话",
       "authentication_prune_expired_push_registrations": "停用登录已到期的手机推送登记",
       "soul_accounts_prune_data_exports": "清理过期的资料导出",
-      "core_prune_retained_data": "清理过期的运行数据(投递记录、已读通知、停用设备等)"
+      "audit_prune_retained_data": "清理过期的运行数据(投递记录、已读通知、停用设备等)"
     },
     "status": {
       "PENDING": "排队中",

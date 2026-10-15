@@ -97,7 +97,7 @@ def test_soul_events_are_never_touched(user):
 def test_the_job_is_registered_and_runnable():
     from apps.scheduler import registry
 
-    assert registry.get("core.prune_retained_data") is not None
-    from apps.core.tasks import prune_retained_data as task
+    assert registry.get("audit.prune_retained_data") is not None
+    from apps.audit.tasks import prune_retained_data as task
 
-    assert task.name == "core.prune_retained_data"
+    assert task.name == "audit.prune_retained_data"
