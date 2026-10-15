@@ -1988,7 +1988,26 @@
     "email_send_verification": "Send verification email",
     "email_verification_sent": "Verification email sent. Check your inbox.",
     "email_verification_failed": "Could not send. Try again later",
-    "email_verification_hint": "Once verified, this address can reset your password if you forget it."
+    "email_verification_hint": "Once verified, this address can reset your password if you forget it.",
+    "devices": {
+      "title": "Signed-in devices",
+      "this": "This device",
+      "sign_out": "Sign out this device",
+      "sign_out_others": "Sign out all others",
+      "confirm_title": "Sign out {{n}} other devices?",
+      "mfa_until": "No second step until {{date}}",
+      "stranger": "Don't recognise a device? Sign it out, then change your password.",
+      "intro": "A device you sign out has to sign in again next time. Changing your password signs out every device except this one.",
+      "count": "{{n}} devices",
+      "in_use": "In use now",
+      "sign_out_here": "Sign out at the top right",
+      "signed_out": "Signed out",
+      "confirm_body": "This device is not affected. \"Don't ask for 30 days\" is cancelled on the other devices too.",
+      "confirm_action": "Sign out {{n}}",
+      "audit_note": "Sign-in history is in the audit log.",
+      "load_failed": "Couldn't load your devices",
+      "sign_out_failed": "Couldn't sign out. Please try again."
+    }
   },
   "notifications": {
     "title": "Notifications",
@@ -4401,6 +4420,11 @@
       "enable_next": "Next",
       "failed": "{{bio}} not recognised. Enter your password.",
       "retry": "Try {{bio}} again"
+    },
+    "security": {
+      "history": "Devices and sign-ins",
+      "history_keep": "Recent sign-ins · kept for 90 days",
+      "failed": "Failed {{n}} times · wrong password"
     }
   },
   "soul_push": {

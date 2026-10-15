@@ -11,6 +11,8 @@ export { api, getApiBaseUrl, PAGE_SIZE } from "./client";
 export {
   authApi,
   mfaApi,
+  sessionsApi,
+  type SignInSession,
   isMfaRequired,
   type LoginOutcome,
   type MfaRequiredResponse,

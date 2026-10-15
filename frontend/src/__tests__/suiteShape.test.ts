@@ -62,6 +62,7 @@ const COLLECTED_FILES = [
   // 2026-10-11 登录交付单:二维码矩阵、单上内容无密码、编号 3-4-3。
   "DeliverySlip.test.tsx",
   "DeathSyncPage.pagination.test.tsx",
+  "DevicesSection.test.tsx",
   "DispositionPage.pagination.test.tsx",
   "DataTable.test.tsx",
   "EmptyState.test.tsx",
