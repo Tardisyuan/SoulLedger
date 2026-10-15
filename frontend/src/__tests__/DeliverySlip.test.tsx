@@ -121,6 +121,26 @@ describe("DeliverySlip", () => {
     expect(slip.textContent).not.toContain("dt(");
   });
 
+  it("names the time zone beside the times, lets a long soul name wrap to two lines, and a reprint drops the first-sign-in claim", () => {
+    const long = { ...SLIP, soul_name: "阿蒙霍特普·赛特纳赫特·拉美西斯·塞内布·伊西多拉" };
+    const { unmount } = renderSlip(long);
+    const slip = screen.getByTestId("delivery-slip");
+    const name = [...slip.querySelectorAll("span")].find((e) => e.textContent === long.soul_name && e.style.maxWidth === "290px") as HTMLElement;
+    expect(name.style.whiteSpace).toBe("");
+    expect(name.style.textOverflow).toBe("");
+    expect(name.style.webkitLineClamp || name.style.getPropertyValue("-webkit-line-clamp")).toBe("2");
+    const zone = new Intl.DateTimeFormat("en-US", { timeZoneName: "short" }).formatToParts(new Date(SLIP.expires_at)).find((p) => p.type === "timeZoneName")!.value;
+    expect(slip.querySelector("[data-slip-valid]")?.parentElement).toHaveTextContent(zone);
+    expect(slip.textContent).toContain("首次登录");
+    expect(slip.textContent).not.toContain(tDesk("soul_accounts.credentials.slip.reprint"));
+    unmount();
+
+    render(<DeliverySlip slip={SLIP} texts={TEXTS} reprint />);
+    const reprint = screen.getByTestId("delivery-slip").textContent ?? "";
+    expect(reprint).not.toContain("首次登录");
+    expect(reprint).toContain(tDesk("soul_accounts.credentials.slip.reprint"));
+  });
+
   it("has an empty box where the password goes, and no password value or field anywhere", () => {
     renderSlip();
     const slip = screen.getByTestId("delivery-slip");

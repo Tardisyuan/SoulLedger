@@ -9446,6 +9446,7 @@ export interface components {
             status?: components["schemas"]["ApprovalWorkflowStatusEnum"];
             is_appeal?: boolean;
             cross_civilization?: boolean;
+            readonly is_overdue: boolean;
             /** Format: date-time */
             readonly created_at: string;
             /** Format: date-time */
@@ -34114,6 +34115,7 @@ export interface operations {
                 created_before?: string;
                 /** @description Which field to use when ordering the results. */
                 ordering?: string;
+                overdue?: boolean;
                 /** @description A page number within the paginated result set. */
                 page?: number;
                 priority_max?: number;

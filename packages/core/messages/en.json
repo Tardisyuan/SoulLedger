@@ -1179,6 +1179,8 @@
     "template": "Templates",
     "instances": "Instances",
     "no_instances": "No workflow instances",
+    "filter_overdue": "Overdue only",
+    "overdue_badge": "Overdue",
     "detail": {
       "loading": "Loading workflow...",
       "not_found": "Workflow not found",
@@ -1761,6 +1763,7 @@
       "civilization_all": "Civilization · all",
       "sort": "Sort",
       "sort_oldest": "Sort · longest waiting",
+      "stale_soon": "Will be flagged as stale soon",
       "sort_newest": "Sort · newest first",
       "reassign_search": "Search judges",
       "reassign_count": "{{n}} can take it",
@@ -2689,6 +2692,17 @@
     "footer_new_tab": "new tab",
     "announce_group": "{{group}}: {{n}}"
   },
+  "shortcuts": {
+    "title": "Keyboard shortcuts",
+    "single_keys": "Single-key shortcuts",
+    "single_keys_hint": "When off, single letter or digit keys such as J, K and 1-4 do nothing; Esc, arrow keys and ⌘/Ctrl combinations still work.",
+    "move_rows": "Move down / up one row",
+    "select_row": "Select / unselect the current row",
+    "pick_verdict": "Choose a verdict",
+    "conclude": "Conclude (first press confirms, second submits)",
+    "toggle_case": "Expand / collapse the whole case",
+    "next_prev_case": "Next / previous case"
+  },
   "filter": {
     "all": "All",
     "clear_all": "Clear All",
@@ -2941,6 +2955,7 @@
         "sign_soul": "Soul's signature · date",
         "sign_officer": "Officer's signature",
         "after_sign": "After signing, tap Mark delivered on the desk.",
+        "reprint": "Reprint",
         "system": "Soul Ledger",
         "doc_title": "Sign-in slip",
         "password_label": "Initial password",
@@ -2969,6 +2984,10 @@
       "copy_failed": "Copy failed; write it down by hand",
       "close": "I have it, close",
       "deliver_and_close": "Delivered, mark and close",
+      "close_confirm_title": "The password is shown only once",
+      "close_confirm_body": "The password is shown only once. Close anyway? It cannot be viewed again; you would have to reset it to get a new initial password.",
+      "close_confirm": "Close anyway",
+      "close_back": "Go back",
       "already_revealed": "This password was already viewed (perhaps by another officer) and cannot be shown again; reset it on the soul's page to deliver",
       "failed": "Could not view the password; try again"
     },

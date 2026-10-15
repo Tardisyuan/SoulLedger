@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { isTypingTarget, useHotkeys } from "@/src/lib/hotkeys";
 import { useRouter } from "next/navigation";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { usePlaque } from "@/src/components/plaque/Plaque";
@@ -64,13 +65,6 @@ const VERDICTS: { code: VerdictCode; key: string }[] = [
   { code: "RETRY", key: "4" },
 ];
 
-
-function isTextEntry(target: EventTarget | null): boolean {
-  if (!(target instanceof HTMLElement)) return false;
-  if (target.isContentEditable) return true;
-  const tag = target.tagName;
-  return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
-}
 
 export function JudgmentQueueConsole({ at }: { at?: string }) {
   const { t } = useI18n();
@@ -180,114 +174,39 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
     );
   };
 
+  // 键位走 `useHotkeys`(`lib/hotkeys.ts`):它统一处理「别人已经答了这个键」(defaultPrevented)、
+  // 长按重复(repeat)、输入法组字、修饰键组合,以及焦点在文本框时不接单键 —— 这里不再自己写一份。
+  // 单选 / 复选框不算打字,所以焦点落在「同时发起审批流程」那个复选框上时 1–4 仍然接。
+  //
+  // 四个裁决键、`w`、`c`、`n` 都通向写操作,一起受 `canRule` 管;`s`(延后)只动本会话、`?` 是帮助,常开。
+  // `h` 与 `?` 同义:多数非美式键盘上 `?` 要按 Shift,找不到的帮助键等于没有。
+  const toggleKeys = () => setShowKeys((prev) => !prev);
+  useHotkeys({
+    ...(canRule ? Object.fromEntries(VERDICTS.map((v) => [v.key, () => rule(v.code)])) : {}),
+    ...(canRule
+      ? {
+          w: () => setCreateWorkflow((prev) => !prev),
+          c: claimCurrent,
+          n: () => document.getElementById("queue-notes")?.focus(),
+        }
+      : {}),
+    s: defer,
+    r: restoreDeferred,
+    "?": toggleKeys,
+    h: toggleKeys,
+    // 键盘映射开着时 Esc 先关它(此前 Esc 会直接离开整个队列)。
+    Escape: () => (showKeys ? setShowKeys(false) : leave()),
+  });
+  // 文本框里按 Esc:先失焦(`useHotkeys` 在打字时不接任何键,所以这一条单独留着)。
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
-      if (event.metaKey || event.ctrlKey || event.altKey) return;
-      // SOMEBODY ELSE ALREADY ANSWERED THIS KEY.
-      //
-      // This handler is on `window`, so it sees every keystroke in the app —
-      // including ones an overlay above it has already handled. React
-      // dispatches at the root container, so a handler that calls
-      // `preventDefault()` without `stopPropagation()` still lets this one
-      // run, and both do: `useDrawerA11y.ts:137-141` and
-      // `useRovingPopupKeys.ts:56-59`.
-      //
-      // What that cost, concretely:
-      //   - narrow viewport, the AppLayout mobile drawer open over the
-      //     console: Escape closed the drawer AND ran `leave()`;
-      //   - the keyboard map open (`?` / `h`): Escape left the queue instead
-      //     of closing the map.
-      //
-      // `defaultPrevented` is the one question that answers all of them
-      // without this handler having to know what else exists on the page.
-      if (event.defaultPrevented) return;
-      // AUTO-REPEAT IS NOT A SECOND DECISION. A held key fires `keydown` every
-      // ~30ms after the initial delay, and every one of the shortcuts below is
-      // a discrete command — there is no scroll or nudge here that repeating
-      // would serve. `1` held down for half a second was a dozen calls to
-      // `rule`, and `w` held down toggled the workflow checkbox to a value
-      // nobody chose.
-      //
-      // `useJudgmentQueue.submitVerdict` also refuses a second verdict for a
-      // case whose request is in flight, and that guard is the one that matters —
-      // it covers a genuine double press and a double-click too, which look
-      // identical from here. This line is the cheaper half: it stops the burst
-      // at the source rather than filtering it downstream, and it is the only
-      // one of the two that helps `w`, `s` and `?`.
-      if (event.repeat) return;
-
-      if (event.key === "Escape") {
-        if (isTextEntry(event.target)) {
-          (event.target as HTMLElement).blur();
-          return;
-        }
-        // The keyboard map is the nearest thing to an overlay this console
-        // owns, and it had no Escape of its own — so Escape over an open map
-        // left the whole queue. Closing it is what Escape means when
-        // something is open on top.
-        if (showKeys) {
-          event.preventDefault();
-          setShowKeys(false);
-          return;
-        }
-        event.preventDefault();
-        leave();
-        return;
-      }
-      if (isTextEntry(event.target)) return;
-
-      // The four decision keys, the workflow toggle and the notes key all
-      // feed a POST. Gated together: `w` on a checkbox that is not on screen
-      // is nothing. `s` (defer) and `?` stay live — deferring is
-      // session-local and writes nothing, and help is help.
-      const verdict = canRule ? VERDICTS.find((v) => v.key === event.key) : undefined;
-      if (verdict) {
-        event.preventDefault();
-        rule(verdict.code);
-        return;
-      }
-      if (!canRule && ["w", "n", "c"].includes(event.key.toLowerCase())) return;
-      switch (event.key.toLowerCase()) {
-        case "s":
-          event.preventDefault();
-          defer();
-          break;
-        case "w":
-          event.preventDefault();
-          setCreateWorkflow((prev) => !prev);
-          break;
-        case "c":
-          event.preventDefault();
-          claimCurrent();
-          break;
-        case "r":
-          event.preventDefault();
-          restoreDeferred();
-          break;
-        case "n":
-          // The notes textarea is the only text input on a keyboard-first
-          // surface, and it had no key — the operator had to reach for the
-          // mouse to add a note to a verdict they were about to file with a
-          // single keystroke. `isTextEntry` above means `n` stops being a
-          // shortcut the moment focus lands there, so typing "notes" works.
-          event.preventDefault();
-          document.getElementById("queue-notes")?.focus();
-          break;
-        case "?":
-        case "h":
-          // `h` as well as `?`. On most non-US layouts `?` needs Shift, so a
-          // help key that is itself awkward to press is a help key nobody
-          // finds. `h` is free here — no verdict claims it.
-          event.preventDefault();
-          setShowKeys((prev) => !prev);
-          break;
-        default:
-          break;
+      if (event.key === "Escape" && !event.defaultPrevented && !event.repeat && isTypingTarget(event.target)) {
+        (event.target as HTMLElement).blur();
       }
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [rule, defer, restoreDeferred, leave, canRule, showKeys, claimCurrent]);
+  }, []);
 
   // `progressText`, not `progressLabel`: "N of M" is a formatted count, not a
   // domain enum, and src/__tests__/domainDisplayContract.test.tsx reads any

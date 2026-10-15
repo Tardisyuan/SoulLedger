@@ -2,10 +2,29 @@
 Workflow FilterSet — filtering, search, and ordering for Workflow API.
 """
 import django_filters as filters
-from django.db.models import Q
+from django.db.models import DateTimeField, F, Func, Q
+from django.utils import timezone
 
 from apps.souls.models import Civilization
-from apps.workflow.models import ApprovalWorkflow, ApprovalWorkflowStatus
+from apps.workflow.models import ApprovalWorkflow, ApprovalWorkflowStatus, NodeStatus
+
+
+class _AddHours(Func):
+    """`timestamp + hours` computed by the database. Django cannot spell `int * timedelta` on SQLite
+    ("Invalid arguments for operator *"), so each vendor gets its own form. The PostgreSQL branch is not
+    exercised by the SQLite suite -- see the PG-only note in the test module."""
+
+    arity = 2
+    output_field = DateTimeField()
+    template = "(%(expressions)s)"
+
+    def as_sqlite(self, compiler, connection, **extra):
+        ts, hours = (compiler.compile(e) for e in self.get_source_expressions())
+        return f"strftime('%%Y-%%m-%%d %%H:%%M:%%f', {ts[0]}, '+' || {hours[0]} || ' hours')", [*ts[1], *hours[1]]
+
+    def as_sql(self, compiler, connection, **extra):
+        ts, hours = (compiler.compile(e) for e in self.get_source_expressions())
+        return f"({ts[0]} + {hours[0]} * INTERVAL '1 hour')", [*ts[1], *hours[1]]
 
 
 class WorkflowFilter(filters.FilterSet):
@@ -30,6 +49,9 @@ class WorkflowFilter(filters.FilterSet):
         choices=Civilization.choices, method="filter_civilization"
     )
     soul_name = filters.CharFilter(field_name="soul__name", lookup_expr="icontains")
+    # 「已超时」:进行中、当前节点还在等人、且它有超时时限并且已过。与 `timeouts.py` 的 `_due` 同一道时钟
+    # (`activated_at + timeout_hours`),但**不看 `timed_out_at`** —— 提醒类动作触发过之后节点仍在等,仍然是超时的。
+    overdue = filters.BooleanFilter(method="filter_overdue")
 
     # Date range filters
     created_after = filters.DateTimeFilter(field_name="created_at", lookup_expr="gte")
@@ -45,6 +67,20 @@ class WorkflowFilter(filters.FilterSet):
 
     search_fields = ["workflow_name", "soul__name", "case_type"]
     ordering_fields = ["created_at", "priority", "status", "workflow_name"]
+
+    def filter_overdue(self, queryset, name, value):
+        """`overdue=true` 只留已超时的,`overdue=false` 只留其余;全在 SQL 里算,不拉行进 Python。"""
+        if value is None:
+            return queryset
+        deadline = _AddHours(F("current_node__activated_at"), F("current_node__timeout_hours"))
+        late = Q(
+            status=ApprovalWorkflowStatus.IN_PROGRESS,
+            current_node__status=NodeStatus.PENDING,
+            current_node__timeout_hours__isnull=False,
+            current_node__activated_at__isnull=False,
+        )
+        overdue = queryset.filter(late).annotate(_deadline=deadline).filter(_deadline__lt=timezone.now())
+        return overdue if value else queryset.exclude(pk__in=overdue.values("pk"))
 
     def filter_civilization(self, queryset, name, value):
         """按灵魂所属租户筛文明。
