@@ -139,6 +139,15 @@ class TestUserManagementAPI:
         assert response.status_code == 200
         assert not response.data["is_active"]
 
+    def test_update_refuses_a_password_instead_of_silently_ignoring_it(self):
+        """PATCH /users/{id}/ with `password` is 400; the password is unchanged (it used to be dropped with a 200)."""
+        user = User.objects.create_user(username="nopwpatch", password="oldpass123", role="VIEWER", tenant=self.cn_tenant)
+        response = self.client.patch(f"/api/v1/users/{user.id}/", {"password": "newpass12345"}, format="json")
+        assert response.status_code == 400
+        assert "password" in response.data
+        user.refresh_from_db()
+        assert user.check_password("oldpass123")
+
     def test_reset_password(self):
         """POST /api/v1/users/{id}/reset_password/ returns 200 with new password."""
         user = User.objects.create_user(username="resetpwuser", password="oldpass123", role="VIEWER", tenant=self.cn_tenant)

@@ -524,7 +524,9 @@
       },
       "case_open": "Open",
       "case_closed": "Concluded",
-      "case_all": "All {{n}} ›"
+      "case_all": "All {{n}} ›",
+      "load_more": "Load more records",
+      "load_more_failed": "Some records did not load; try again"
     },
     "date_problem_filter": "Problems only",
     "balance_not_applicable": "Not applicable — see soul detail",
@@ -1799,7 +1801,9 @@
       },
       "col_merit_demerit": "Merit / demerit",
       "col_case_soul": "Case no. / Soul",
-      "col_cycle_kind": "Life / kind"
+      "col_cycle_kind": "Life / kind",
+      "undefer": "Restore",
+      "done_undefer": "Restored; the case is back in the queue"
     },
     "admission": {
       "title": "Evidence · admission",
@@ -2423,6 +2427,14 @@
       "target_unchosen": "not chosen",
       "pending_submit": "To submit",
       "not_yet": "Not yet"
+    },
+    "filter": {
+      "search": "Search soul name or reason...",
+      "all_status": "All statuses",
+      "all_tenants": "All tenants",
+      "from": "Proposed from",
+      "to": "Proposed to",
+      "clear": "Clear filters"
     }
   },
   "crossJudgments": {
@@ -2529,6 +2541,23 @@
       "done": "Updated {{n}} accounts",
       "failed": "Batch update failed",
       "skipped_note": "Administrator accounts and your own are left out of batches."
+    },
+    "reset_password": {
+      "action": "Reset password",
+      "confirm_title": "Reset the password for {{name}}?",
+      "confirm_body": "A new random password is generated. The old one stops working at once, every device this person is signed in on is signed out, and they must change the password at next sign-in. The new password is shown only once.",
+      "confirm": "Reset",
+      "failed": "Reset failed, please try again",
+      "shown_title": "New password for {{name}} (shown once)",
+      "shown_warning": "You cannot see it again after closing. Pass it on now; they must change it at first sign-in.",
+      "copy": "Copy password",
+      "copied": "Copied to clipboard",
+      "copy_failed": "Copy failed, please write it down",
+      "close": "I have noted it, close",
+      "close_confirm_title": "The password is shown only once",
+      "close_confirm_body": "The password is shown only once. Close anyway? You cannot see it again; you would have to reset it to get a new one.",
+      "close_confirm": "Close",
+      "close_back": "Back"
     }
   },
   "settings": {
