@@ -59,5 +59,19 @@
   "soul_app.biometric.app_lock",
   "soul_app.biometric.app_lock_hint",
   "soul_app.lock.title",
-  "scheduler.jobs.authentication_prune_soul_sign_ins"
+  "scheduler.jobs.authentication_prune_soul_sign_ins",
+  "officer_app.offline.restored",
+  "officer_app.offline.restored_sent",
+  "officer_app.offline.image_later",
+  "officer_app.outbox.auto",
+  "officer_app.outbox.row",
+  "officer_app.outbox.failed_title",
+  "officer_app.outbox.archived",
+  "officer_app.outbox.left_hall",
+  "officer_app.outbox.retry",
+  "officer_app.outbox.view_existing",
+  "officer_app.outbox.discard",
+  "common.export_csv",
+  "common.export_scope",
+  "common.export_too_many"
 ]

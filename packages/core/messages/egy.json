@@ -5718,6 +5718,14 @@
       "approved": "Per Ky: Hesy Seth",
       "rejected": "Per Ky: Khesef Seth",
       "reason": "Khet: {{reason}}"
+    },
+    "offline": {
+      "banner": "Nen Em Senb · Pehwy {{time}}",
+      "no_decide": "Nen Em Senb: Nen Hesy, Nen Khesef."
+    },
+    "outbox": {
+      "pending": "Nen Per Djer",
+      "answered": "Ky Wesheb Seth. Sesh-Ek Smen."
     }
   },
   "print": {
