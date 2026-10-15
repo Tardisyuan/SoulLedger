@@ -31,7 +31,7 @@ import { family, quoteFamily } from "../fonts";
 import { useI18n } from "../i18n";
 import { SessionContext } from "../session";
 import { radius } from "../theme";
-import { Button, Empty, Notice, RadioMark, Screen, SectionLabel, Skeleton, Txt, shade, useLayout, useReloadOnRefocus, useRemote, useTheme } from "../ui";
+import { Button, Empty, Notice, RadioMark, Screen, SectionLabel, Skeleton, SmallButton, Txt, shade, useLayout, useReloadOnRefocus, useRemote, useTheme } from "../ui";
 import type { AppStackParams } from "./applications";
 import { PagedFooter, PostList, useFailure, useFeed, usePaged } from "./circle";
 import { Glyph, Tag } from "./letters";
@@ -481,6 +481,9 @@ const cardKey = (r: { id: string }) => r.id;
 
 // ── search ─────────────────────────────────────────────────────────────
 
+/** The server's page size for search (`SEARCH_LIMIT`). */
+const SEARCH_PAGE = 20;
+
 /** A soul code is 10 letters and digits; anything else is a name. (Only for the label — the server decides.) */
 const looksLikeCode = (q: string) => /^[A-Z0-9]{10}$/i.test(q);
 
@@ -496,6 +499,27 @@ export function CircleSearchScreen() {
   const [rows, setRows] = useState<SoulSearchResult[] | null>(null);
   const [error, setError] = useState<unknown>(null);
   const ticket = useRef(0);
+  // The server answers a bare list of at most SEARCH_PAGE; a full one may have a next page.
+  const [pageNo, setPageNo] = useState(1);
+  const [full, setFull] = useState(false);
+  const [moreBusy, setMoreBusy] = useState(false);
+
+  const loadMore = async () => {
+    if (moreBusy || !rows) return;
+    const mine = ticket.current;
+    setMoreBusy(true);
+    try {
+      const res = await soulSocialApi.search(asked, pageNo + 1);
+      if (mine !== ticket.current) return;
+      setRows((prev) => [...(prev ?? []), ...res.filter((r) => !(prev ?? []).some((p) => p.user_id === r.user_id))]);
+      setPageNo(pageNo + 1);
+      setFull(res.length >= SEARCH_PAGE);
+    } catch (e) {
+      if (mine === ticket.current) setError(e);
+    } finally {
+      setMoreBusy(false);
+    }
+  };
 
   const search = async (typed: string) => {
     const query = typed.trim();
@@ -503,10 +527,15 @@ export function CircleSearchScreen() {
     setAsked(query);
     setRows(null);
     setError(null);
+    setPageNo(1);
+    setFull(false);
     if (!query) return;
     try {
       const res = await soulSocialApi.search(query);
-      if (mine === ticket.current) setRows(res);
+      if (mine === ticket.current) {
+        setRows(res);
+        setFull(res.length >= SEARCH_PAGE);
+      }
     } catch (e) {
       if (mine === ticket.current) setError(e);
     }
@@ -570,6 +599,11 @@ export function CircleSearchScreen() {
               <Icon name="chevron" size={12} color={t.inkSubtle} />
             </Pressable>
           ))}
+          {full ? (
+            <View style={styles.more}>
+              <SmallButton testID="search-more" title={tr("soul_app.circle.search.more")} onPress={() => void loadMore()} />
+            </View>
+          ) : null}
           <Txt variant="caption" tone="subtle" style={[styles.pad, { paddingHorizontal: gutter }]}>
             {tr("soul_app.circle.search.result_note")}
           </Txt>
@@ -688,6 +722,7 @@ export function ReportScreen({ target, id, preview }: { target: SoulReportTarget
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
+  more: { alignItems: "center", paddingVertical: 20 },
   center: { textAlign: "center" },
   stretch: { alignSelf: "stretch", marginTop: 12 },
   pad: { paddingVertical: 16 },

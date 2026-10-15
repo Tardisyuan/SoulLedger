@@ -7,7 +7,8 @@ import { judgmentApi, type Judgment, type JudgmentQueueGroup } from "@soulledger
 import { useCallback, useState } from "react";
 import { View } from "react-native";
 
-import { ActionButton, Row, Segmented, StateView, viewStateOf } from "../kit";
+import { ActionButton, RefreshFailed, Row, Segmented, StateView, viewStateOf } from "../kit";
+import { MoreRow, useMoreRows } from "../paged";
 import { isDenied } from "../rules";
 import { useSession } from "../session";
 import { Screen, Txt, space, useI18n, useRemote, useToast } from "../shared";
@@ -21,8 +22,10 @@ export function QueueTab({ onOpen }: { onOpen: (id: string) => void }) {
   const role = state.status === "signedIn" ? state.user.role : "";
   const [group, setGroup] = useState<Group>("mine");
   const [claiming, setClaiming] = useState<string | null>(null);
-  const load = useCallback(() => judgmentApi.list({ group }).then((r) => r.data.results), [group]);
-  const { data, error, loading, reload } = useRemote(load);
+  const load = useCallback(() => judgmentApi.list({ group }).then((r) => r.data), [group]);
+  const { data: firstPage, error, loading, reload } = useRemote(load);
+  const fetchPage = useCallback((page: number) => judgmentApi.list({ group, page: String(page) }).then((r) => r.data), [group]);
+  const { rows: data, more } = useMoreRows(firstPage, fetchPage);
   const view = viewStateOf({ data, error }, (rows) => rows.length === 0, isDenied);
 
   const claim = (row: Judgment) => {
@@ -52,6 +55,7 @@ export function QueueTab({ onOpen }: { onOpen: (id: string) => void }) {
           {t("officer_app.queue.scope_note")}
         </Txt>
       </View>
+      <RefreshFailed data={data} error={error} onRetry={reload} />
       {view ? (
         <StateView
           state={view}
@@ -88,6 +92,7 @@ export function QueueTab({ onOpen }: { onOpen: (id: string) => void }) {
           />
         ))
       )}
+      <MoreRow more={more} />
     </Screen>
   );
 }

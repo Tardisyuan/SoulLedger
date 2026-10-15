@@ -320,7 +320,7 @@ describe("a reply written offline", () => {
     saveDraft("c-1", "先答应下来");
     enqueueReply({ id: "c-1", name: "李白", text: "先答应下来", seen: [] });
     expect(await flushOutbox()).toBe(1);
-    expect(mockReply).toHaveBeenCalledWith("c-1", "先答应下来");
+    expect(mockReply).toHaveBeenCalledWith("c-1", "先答应下来", expect.any(String));
     expect(outboxEntries()).toEqual([]);
     expect(readDraft("c-1")).toBe("");
     expect(platform().persistent.get(OUTBOX_KEY)).toBeNull();
@@ -330,7 +330,7 @@ describe("a reply written offline", () => {
     await openThread(false);
     fireEvent.changeText(screen.getByTestId("letter-input"), "直接发");
     fireEvent.press(screen.getByTestId("letter-send"));
-    await waitFor(() => expect(mockReply).toHaveBeenCalledWith("c-1", "直接发"));
+    await waitFor(() => expect(mockReply).toHaveBeenCalledWith("c-1", "直接发", expect.any(String)));
     expect(outboxEntries()).toEqual([]);
   });
 

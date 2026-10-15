@@ -19,7 +19,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { KeyboardAvoidingView, Platform, View } from "react-native";
 
 import { clearDraft, flushDraft, readDraft, scheduleDraft } from "../drafts";
-import { enqueueReply, removeFromOutbox, useOutbox } from "../outbox";
+import { enqueueReply, newReplyTxn, removeFromOutbox, useOutbox } from "../outbox";
 import { useCachedRemote } from "../readCache";
 import { formatWhen } from "../format";
 import { ActionButton, Row, StateView, viewStateOf } from "../kit";
@@ -92,26 +92,35 @@ export function LetterThread({
   const [viewing, setViewing] = useState<number | null>(null);
   // Two quick taps must not make two replies: `busy` is state (a render behind), this is not.
   const sending = useRef(false);
+  // One id per reply: pressing 「发送」 again with the same words after a lost response sends the same id.
+  const attempt = useRef<{ text: string; txn: string; tried: boolean } | null>(null);
 
   const send = () => {
     if (sending.current || !replyReady(text)) return;
+    const words = text.trim();
+    if (attempt.current?.text !== words) attempt.current = { text: words, txn: newReplyTxn(), tried: false };
+    const { txn } = attempt.current;
     if (offline) {
       // No network: the reply waits on this phone (outbox.ts) and the words stay in the draft.
       flushDraft();
       enqueueReply({
         id,
         name: thread.data?.conversation.soul_name ?? "",
-        text: text.trim(),
+        text: words,
         seen: (thread.data?.messages ?? []).filter((m) => m.from_officer).map((m) => m.event_id),
+        txn,
+        tried: attempt.current.tried,
       });
       return;
     }
+    attempt.current.tried = true;
     sending.current = true;
     setBusy(true);
     setFailure(null);
     soulInboxApi
-      .reply(id, text.trim())
+      .reply(id, words, txn)
       .then(() => {
+        attempt.current = null;
         setText("");
         clearDraft(id);
         removeFromOutbox(id);

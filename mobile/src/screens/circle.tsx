@@ -574,6 +574,23 @@ const rowKey = (p: { id: string }) => p.id;
 
 // ── compose ────────────────────────────────────────────────────────────
 
+/**
+ * One id per write, kept while the same words are sent again: a response that never came back leaves the
+ * server holding the first send, and the repeat (same id) gets that one back instead of making a second.
+ */
+function useWriteTxn() {
+  const held = useRef<{ key: string; txn: string } | null>(null);
+  return {
+    txnFor: (key: string) => {
+      if (held.current?.key !== key) held.current = { key, txn: `sl${Date.now().toString(36)}.${Math.random().toString(36).slice(2, 10)}` };
+      return held.current.txn;
+    },
+    done: () => {
+      held.current = null;
+    },
+  };
+}
+
 export function ComposePostScreen() {
   const t = useTheme();
   const { t: tr } = useI18n();
@@ -586,6 +603,7 @@ export function ComposePostScreen() {
   const [busy, setBusy] = useState(false);
   const input = useRef<TextInput>(null);
   const toast = useToast();
+  const writeTxn = useWriteTxn();
   const uploads = useSoulMediaUploads<PickedImage>(uploadBody);
   // 一张失败的上传在它自己的格子里说,这里另报一次原因(大小、格式……)。
   const reported = useRef(new Set<string>());
@@ -627,7 +645,9 @@ export function ComposePostScreen() {
     if (busy || !uploads.ready || (!text.trim() && !uploads.mediaIds.length)) return;
     setBusy(true);
     try {
-      const post = await soulSocialApi.createPost(text.trim(), visibility, uploads.mediaIds);
+      const txn = writeTxn.txnFor(JSON.stringify([text.trim(), visibility, uploads.mediaIds]));
+      const post = await soulSocialApi.createPost(text.trim(), visibility, uploads.mediaIds, txn);
+      writeTxn.done();
       posted.current = true;
       uploads.clear();
       // 送审的由朋友圈顶上的「已发出,正在审核」横幅说;打码、隐藏没有别处说,这里补一条。
@@ -969,11 +989,13 @@ export function PostScreen({ id }: { id: string }) {
     void post.reload();
   };
   const toast = useToast();
+  const writeTxn = useWriteTxn();
   const send = async (text: string) => {
     if (sending || !text.trim()) return;
     setSending(true);
     try {
-      const sent = await soulSocialApi.comment(id, text.trim(), replyTo?.id);
+      const sent = await soulSocialApi.comment(id, text.trim(), replyTo?.id, writeTxn.txnFor(JSON.stringify([text.trim(), replyTo?.id ?? null])));
+      writeTxn.done();
       tellScreening(toast, tr, sent.screening);
       setDraft("");
       setReplyTo(null);

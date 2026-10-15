@@ -150,6 +150,33 @@ describe("the wizard", () => {
     expect(session.setMfaEnabled).not.toHaveBeenCalled();
   });
 
+  it("a 完成 whose answer was lost, while the server says it is on, finishes instead of failing for ever", async () => {
+    mockApi.complete.mockRejectedValue(new Error("Network Error"));
+    const session = sessionOf(OFFICER);
+    renderOfficer(<MfaScreen onBack={() => {}} />, { session });
+    await toStep(4);
+    mockApi.status.mockResolvedValue({ data: ON }); // asked after the failure
+    await press("mfa-saved");
+    await press("mfa-finish");
+    expect(await screen.findByTestId("mfa-done")).toBeTruthy();
+    expect(session.setMfaEnabled).toHaveBeenCalledWith(true);
+    expect(screen.queryByTestId("mfa-complete-error")).toBeNull();
+  });
+
+  it("a failed 完成 gives a way out of step 4, and leaving drops the unconfirmed secret", async () => {
+    mockApi.complete.mockRejectedValue(httpError(500));
+    const onBack = jest.fn();
+    renderOfficer(<MfaScreen onBack={onBack} />);
+    await toStep(4);
+    expect(screen.queryByTestId("mfa-abandon")).toBeNull(); // only after a failure
+    await press("mfa-saved");
+    await press("mfa-finish");
+    await screen.findByTestId("mfa-complete-error");
+    await press("mfa-abandon");
+    expect(screen.queryByTestId("mfa-wizard")).toBeNull();
+    expect(mockApi.cancelSetup).toHaveBeenCalled();
+  });
+
   it("leaving after the secret was issued drops it server-side; leaving before does not call", async () => {
     const view = renderOfficer(<MfaScreen onBack={() => {}} />);
     fireEvent.press(await screen.findByTestId("mfa-start"));

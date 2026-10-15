@@ -317,8 +317,26 @@ def enqueue(delivery_ids):
 # ── 设备与偏好 ───────────────────────────────────────────────────────────
 
 
+#: 一个账号同时有效的设备上限。超过时停用最久没露面的(一个人没有那么多部手机;
+#: 多出来的是 token 轮换或重装留下的死登记)。
+MAX_ACTIVE_DEVICES = 10
+
+
 def register_device(account, token, platform, session=None):
-    """登记或认领一个 token。已属于别的账号的 token **转给这个账号** —— 旧账号从此收不到它。"""
+    """登记或认领一个 token。已属于别的账号的 token **转给这个账号** —— 旧账号从此收不到它。
+    同一会话换了新 token(Expo 轮换)时,这个会话上旧的停用;账号的有效设备不超过 `MAX_ACTIVE_DEVICES`。"""
+    device, created = _register(account, token, platform, session)
+    stale = PushDevice.objects.filter(account=account, is_active=True).exclude(pk=device.pk)
+    if session is not None:
+        stale.filter(session=session).update(is_active=False, invalid_reason=DeviceInvalidReason.UNREGISTERED)
+    keep = list(PushDevice.objects.filter(account=account, is_active=True).order_by("-last_seen_at")
+                .values_list("pk", flat=True)[:MAX_ACTIVE_DEVICES])
+    PushDevice.objects.filter(account=account, is_active=True).exclude(pk__in=keep).update(
+        is_active=False, invalid_reason=DeviceInvalidReason.UNREGISTERED)
+    return device, created
+
+
+def _register(account, token, platform, session):
     now = timezone.now()
     with transaction.atomic():
         device = PushDevice.objects.select_for_update(of=("self",)).filter(token=token).first()
@@ -330,11 +348,13 @@ def register_device(account, token, platform, session=None):
                 return device, True
             except IntegrityError:  # 并发的同一 token 注册;退回认领路径
                 device = PushDevice.objects.select_for_update(of=("self",)).get(token=token)
+        previous_account = device.account_id
         device.account = account
         device.soul = account.soul
         device.platform = platform
         device.is_active = True
-        device.session = session
+        if session is not None or previous_account != account.pk:  # 不带 sid 的登记不抹掉已记下的会话
+            device.session = session
         device.invalid_reason = ""
         device.last_seen_at = now
         device.save()

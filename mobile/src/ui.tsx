@@ -1333,27 +1333,44 @@ export function Loader({ size = 28, testID }: { size?: number; testID?: string }
 
 // ── data ───────────────────────────────────────────────────────────────
 
-/** Loading / error / data for one request, with a `reload` for pull-to-refresh and retry. */
+/**
+ * Loading / error / data for one request, with a `reload` for pull-to-refresh and retry.
+ *
+ * A new `fetcher` (another id, another tab) is another request: the old data goes, and a response
+ * still on its way from the OLD fetcher is dropped (`seq`) rather than painted over the new one.
+ */
 export function useRemote<T>(fetcher: () => Promise<T>) {
   const [data, setData] = useState<T | null>(null);
   const [error, setError] = useState<unknown>(null);
   const [loading, setLoading] = useState(true);
-  const run = useCallback(
-    () =>
-      fetcher()
-        .then(
-          (value) => {
-            setData(value);
-            setError(null);
-          },
-          (e: unknown) => setError(e)
-        )
-        .finally(() => setLoading(false)),
-    [fetcher]
-  );
+  const seq = useRef(0);
+  const current = useRef(fetcher);
+  const run = useCallback(() => {
+    const mine = ++seq.current;
+    return fetcher()
+      .then(
+        (value) => {
+          if (mine !== seq.current) return;
+          setData(value);
+          setError(null);
+        },
+        (e: unknown) => {
+          if (mine === seq.current) setError(e);
+        }
+      )
+      .finally(() => {
+        if (mine === seq.current) setLoading(false);
+      });
+  }, [fetcher]);
   useEffect(() => {
+    if (current.current !== fetcher) {
+      current.current = fetcher;
+      setData(null);
+      setError(null);
+      setLoading(true);
+    }
     void run();
-  }, [run]);
+  }, [run, fetcher]);
   const reload = useCallback(() => {
     setLoading(true);
     return run();
