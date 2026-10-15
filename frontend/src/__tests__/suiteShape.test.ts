@@ -233,6 +233,7 @@ const COLLECTED_FILES = [
   "contextValueIdentity.test.tsx",
   "crossJudgmentActivate.test.tsx",
   "crossJudgmentDetailFetchBudget.test.tsx",
+  "crossJudgmentsColumnMenu.test.tsx",
   "dataGridToneContract.test.ts",
   "dangerButtonPlacement.test.ts",
   "dialogsAreNotHandRolled.test.ts",

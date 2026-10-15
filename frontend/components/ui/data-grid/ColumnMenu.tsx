@@ -191,6 +191,9 @@ export function ColumnMenu({ columns, visibility, buttonLabel, pinnedLabel, rese
                   type="button"
                   role="menuitemcheckbox"
                   aria-checked={checked}
+                  aria-label={column.header}
+                  aria-describedby={column.pinned ? `column-menu-pinned-${column.key}` : undefined}
+                  aria-disabled={column.pinned ? true : undefined}
                   tabIndex={-1}
                   disabled={column.pinned}
                   onClick={() => visibility.toggle(column.key)}
@@ -201,7 +204,7 @@ export function ColumnMenu({ columns, visibility, buttonLabel, pinnedLabel, rese
                   </span>
                   <span>{column.header}</span>
                   {column.pinned && (
-                    <span className="ml-auto pl-4 text-xs text-[oklch(var(--color-ink-subtle))]">{pinnedLabel}</span>
+                    <span id={`column-menu-pinned-${column.key}`} className="ml-auto pl-4 text-xs text-[oklch(var(--color-ink-subtle))]">{pinnedLabel}</span>
                   )}
                 </button>
               )

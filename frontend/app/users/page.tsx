@@ -19,7 +19,8 @@ import { useTenant } from "@/src/contexts/TenantContext";
 import { showToast } from "@/src/components/ui/Toast";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { usePermissions } from "@/src/hooks/usePermissions";
-import { DataTable, parseOrdering, type SortState } from "@/components/ui/data-table";
+import { DataTable, parseOrdering, type DataTableColumn, type SortState } from "@/components/ui/data-table";
+import { ColumnMenu, useColumnVisibility } from "@/components/ui/data-grid";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { Button } from "@/src/components/ui/Button";
@@ -39,6 +40,8 @@ const LOCATED_BG = "bg-[oklch(var(--color-surface-2))]";
 
 /** 角色、MFA 两个下拉和排序记在本浏览器;搜索框的字和 `?username=` 带来的账号属于一次到访,不记。 */
 const USERS_FILTERS_KEY = "soulledger.users.filters";
+/** 列菜单的偏好,一个列表一份。 */
+const USERS_COLUMNS_KEY = "soulledger.users.columns";
 const USERS_FILTER_FIELDS = ["role", "mfa", "ordering"] as const;
 
 export default function UsersPage() {
@@ -141,6 +144,18 @@ function UsersRoute() {
   const users = data?.results ?? [];
   const selection = useUserSelection(JSON.stringify({ page, search, roleFilter, ordering, located, mfaFilter }), users);
 
+  const allColumns: DataTableColumn[] = [
+    { key: "username", header: t("users.username"), sortable: true, pinned: true },
+    { key: "email", header: t("users.email"), sortable: true },
+    { key: "role", header: t("users.role"), sortable: true },
+    { key: "tenant", header: t("users.tenant") },
+    { key: "status", header: t("users.status") },
+    { key: "mfa", header: t("mfa.admin.column") },
+    { key: "actions", header: t("users.actions"), align: "right", srOnlyHeader: true, pinned: true },
+  ];
+  const columnVis = useColumnVisibility(USERS_COLUMNS_KEY, allColumns);
+  const show = (key: string) => columnVis.isVisible(key);
+
   return (
     /* `page` (1200px), up from the `max-w-6xl` (1152) this page picked for
        itself. Six columns, one of which is a three-button action group. */
@@ -208,6 +223,15 @@ function UsersRoute() {
               setPage(1);
             }}
           />
+          <ColumnMenu
+            className="ml-auto"
+            columns={allColumns.map((c) => ({ key: c.key, header: String(c.header), pinned: c.pinned }))}
+            visibility={columnVis}
+            buttonLabel={t("list.columns.button", { shown: String(columnVis.shown), total: String(columnVis.total) })}
+            pinnedLabel={t("list.columns.pinned")}
+            hintLabel={t("list.columns.hint")}
+            resetLabel={t("list.columns.reset")}
+          />
         </>
       }
     >
@@ -218,15 +242,7 @@ function UsersRoute() {
           (the judgment list) stay `comfortable`. */}
       <DataTable<User>
         caption={t("users.title")}
-        columns={[
-          { key: "username", header: t("users.username"), sortable: true },
-          { key: "email", header: t("users.email"), sortable: true },
-          { key: "role", header: t("users.role"), sortable: true },
-          { key: "tenant", header: t("users.tenant") },
-          { key: "status", header: t("users.status") },
-          { key: "mfa", header: t("mfa.admin.column") },
-          { key: "actions", header: t("users.actions"), align: "right", srOnlyHeader: true },
-        ]}
+        columns={allColumns.filter((c) => show(c.key))}
         data={users}
         selection={canManage ? selection.tableSelection : undefined}
         isLoading={isLoading}
@@ -244,30 +260,30 @@ function UsersRoute() {
             >
               {user.username}
             </td>
-            <td className={cn("px-4 py-3 text-[oklch(var(--color-ink-muted))]", user.username === located && LOCATED_BG)}>
+            {show("email") && <td className={cn("px-4 py-3 text-[oklch(var(--color-ink-muted))]", user.username === located && LOCATED_BG)}>
               {user.email}
-            </td>
-            <td className={cn("px-4 py-3", user.username === located && LOCATED_BG)}>
+            </td>}
+            {show("role") && <td className={cn("px-4 py-3", user.username === located && LOCATED_BG)}>
               {/* 规范 v1 §2「徽章 · 只有常态」:无底色,字与 1 px 边同色。角色是身份,
                   不是系统状态,所以不借反馈色 —— 一律中性,名字本身区分。 */}
               <UserRoleChips role={user.role} extraRoles={user.extra_roles} customLabelOf={customRoleLabel} />
-            </td>
-            <td className={cn("px-4 py-3 text-[oklch(var(--color-ink-muted))]", user.username === located && LOCATED_BG)}>
+            </td>}
+            {show("tenant") && <td className={cn("px-4 py-3 text-[oklch(var(--color-ink-muted))]", user.username === located && LOCATED_BG)}>
               {user.tenant?.display_name || user.tenant?.code || "-"}
-            </td>
-            <td className={cn("px-4 py-3", user.username === located && LOCATED_BG)}>
+            </td>}
+            {show("status") && <td className={cn("px-4 py-3", user.username === located && LOCATED_BG)}>
               {/* 状态 = 颜色 + 字形(规范 v1 §1.2),不只靠颜色。 */}
               <Badge tone={user.is_active ? "success" : "neutral"} glyph={user.is_active ? "✓" : "○"}>
                 {user.is_active ? t("users.active") : t("users.inactive")}
               </Badge>
               {user.is_eval_identity && <EvalIdentityTag />}
-            </td>
-            <td className={cn("px-4 py-3", user.username === located && LOCATED_BG)}>
+            </td>}
+            {show("mfa") && <td className={cn("px-4 py-3", user.username === located && LOCATED_BG)}>
               {/* 三态,字形 + 文字(A12):✓ 已开启 + 日期 / ○ 未开启 · 角色不要求 / ! 要求开启 · 未开启。 */}
               {user.mfa ? (
                 <MfaCell mfa={user.mfa} />
               ) : null}
-            </td>
+            </td>}
             <td className={cn("px-4 py-3 text-right", user.username === located && LOCATED_BG)}>
               <div className="flex items-center justify-end gap-1">
                 {user.mfa?.enabled ? (

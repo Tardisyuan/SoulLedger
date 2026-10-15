@@ -86,6 +86,8 @@ export interface DataTableColumn {
    * Omit for the one column that should absorb remaining space.
    */
   width?: string
+  /** 列菜单(`ColumnMenu`)里不能隐藏的列;DataTable 自己不读它,页面据此过滤 `columns`。 */
+  pinned?: boolean
 }
 
 /**

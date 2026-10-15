@@ -11,7 +11,8 @@ import { PageSection } from "@/components/ui/page-section";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
 import { MissingValue } from "@/src/components/ui/DomainValue";
 import { PageShell } from "@/src/components/ui/PageShell";
-import { DataTable, ROW_LINK } from "@/components/ui/data-table";
+import { DataTable, ROW_LINK, type DataTableColumn } from "@/components/ui/data-table";
+import { ColumnMenu, useColumnVisibility, type ColumnVisibility } from "@/components/ui/data-grid";
 import { PAGE_SIZE } from "@soulledger/core/api/client";
 import { buttonVariants } from "@/src/components/ui/Button";
 import { type BadgeTone } from "@/src/components/ui/Badge";
@@ -89,6 +90,8 @@ function DispatchPageContent() {
   });
   const history = historyData?.results ?? [];
 
+  const columnVis = useColumnVisibility(DISPATCH_COLUMNS_KEY, dispatchColumns(t));
+
   return (
     <PageShell
       variant="full"
@@ -102,9 +105,20 @@ function DispatchPageContent() {
       actions={
         /* `buttonVariants` and not `<Button>`: this navigates, so it has to be
            an anchor. The skin is shared; the element is not. */
-        <Link href="/dispatch/propose" className={buttonVariants({ variant: "primary" })}>
-          {t("dispatch.propose")}
-        </Link>
+        <div className="flex items-center gap-3">
+          {/* 两张表(待批、历史)共用一份列偏好;「取消移交」列只在历史一张里有。 */}
+          <ColumnMenu
+            columns={dispatchColumns(t).map((c) => ({ key: c.key, header: String(c.header), pinned: c.pinned }))}
+            visibility={columnVis}
+            buttonLabel={t("list.columns.button", { shown: String(columnVis.shown), total: String(columnVis.total) })}
+            pinnedLabel={t("list.columns.pinned")}
+            hintLabel={t("list.columns.hint")}
+            resetLabel={t("list.columns.reset")}
+          />
+          <Link href="/dispatch/propose" className={buttonVariants({ variant: "primary" })}>
+            {t("dispatch.propose")}
+          </Link>
+        </div>
       }
     >
       {/* 账页表格(规范 v1 §2):整行点进详情,不再是一叠卡片。加载、失败、空与分页交给
@@ -125,6 +139,7 @@ function DispatchPageContent() {
           count={proposedData?.count ?? 0}
           onPageChange={setProposedPage}
           caption={t("dispatch.pending")}
+          columnVis={columnVis}
         />
       </PageSection>
 
@@ -143,6 +158,7 @@ function DispatchPageContent() {
           count={historyData?.count ?? 0}
           onPageChange={setHistoryPage}
           caption={t("dispatch.history")}
+          columnVis={columnVis}
           cancelable
         />
       </PageSection>
@@ -150,8 +166,21 @@ function DispatchPageContent() {
   );
 }
 
+const DISPATCH_COLUMNS_KEY = "soulledger.dispatch.columns";
+
+/** 两张表的列并集;灵魂列与行末的「取消移交」钉住(前者是这行是谁,后者是行上的操作)。 */
+function dispatchColumns(t: (key: string) => string): DataTableColumn[] {
+  return [
+    { key: "soul", header: t("dispatch.soul"), pinned: true },
+    { key: "route", header: `${t("dispatch.source_tenant")} → ${t("dispatch.target_tenant")}` },
+    { key: "proposed_at", header: t("dispatch.proposed_at") },
+    { key: "status", header: t("dispatch.status") },
+    { key: "cancel", header: t("dispatch.cancel_dispatch"), pinned: true },
+  ];
+}
+
 function DispatchTable({
-  rows, isLoading, isError, onRetry, emptyMessage, page, count, onPageChange, caption, cancelable = false,
+  rows, isLoading, isError, onRetry, emptyMessage, page, count, onPageChange, caption, columnVis, cancelable = false,
 }: {
   rows: DispatchRecord[];
   isLoading: boolean;
@@ -162,6 +191,7 @@ function DispatchTable({
   count: number;
   onPageChange: (_page: number) => void;
   caption: string;
+  columnVis: ColumnVisibility;
   /** 「我方发起的」那一段:本殿发起、还没被批准的行末尾有「取消移交」。 */
   cancelable?: boolean;
 }) {
@@ -170,13 +200,7 @@ function DispatchTable({
     <DataTable<DispatchRecord>
       linkedRows
       caption={caption}
-      columns={[
-        { key: "soul", header: t("dispatch.soul") },
-        { key: "route", header: `${t("dispatch.source_tenant")} → ${t("dispatch.target_tenant")}` },
-        { key: "proposed_at", header: t("dispatch.proposed_at") },
-        { key: "status", header: t("dispatch.status") },
-        ...(cancelable ? [{ key: "cancel", header: t("dispatch.cancel_dispatch") }] : []),
-      ]}
+      columns={dispatchColumns(t).filter((c) => (cancelable || c.key !== "cancel") && columnVis.isVisible(c.key))}
       data={rows}
       isLoading={isLoading}
       isError={isError}
@@ -203,18 +227,18 @@ function DispatchTable({
               <p className="max-w-80 truncate text-xs font-normal text-[oklch(var(--color-ink-muted))]" title={d.reason}>{d.reason}</p>
             )}
           </td>
-          <td className="px-3 py-2 font-mono text-xs whitespace-nowrap text-[oklch(var(--color-ink-muted))]">
+          {columnVis.isVisible("route") && <td className="px-3 py-2 font-mono text-xs whitespace-nowrap text-[oklch(var(--color-ink-muted))]">
             {d.source_tenant_code} → {d.target_tenant_code ?? <MissingValue kind="unrecorded" />}
-          </td>
+          </td>}
           {/* `proposed_at` was in the response and unread, so the queue could
               not be triaged by age. Mono + tabular-nums so the timestamps line
               up digit for digit down the column. */}
-          <td className="px-3 py-2 font-mono text-xs tabular-nums whitespace-nowrap text-[oklch(var(--color-ink-subtle))]">
+          {columnVis.isVisible("proposed_at") && <td className="px-3 py-2 font-mono text-xs tabular-nums whitespace-nowrap text-[oklch(var(--color-ink-subtle))]">
             {d.proposed_at ? formatDateTime(d.proposed_at) : <MissingValue kind="unrecorded" />}
-          </td>
-          <td className="px-3 py-2 whitespace-nowrap">
+          </td>}
+          {columnVis.isVisible("status") && <td className="px-3 py-2 whitespace-nowrap">
             <StatusBadge namespace="dispatch.states" value={d.status} tone={STATUS_TONES[d.status] ?? "neutral"} />
-          </td>
+          </td>}
           {cancelable && (
             <td className="px-3 py-2 whitespace-nowrap">
               {/* 不满足条件时渲染空(整格留空):不是本殿的、已被处理的、没有 dispatch.manage 的都不出按钮。 */}
