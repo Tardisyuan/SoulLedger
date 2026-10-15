@@ -5,7 +5,7 @@ import Constants from "expo-constants";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { type ScrollView, View } from "react-native";
 
-import { canCheck, confirmWished, setConfirmWished } from "../deviceCheck";
+import { canCheck, confirmWished, setConfirmWished, useBioWord } from "../deviceCheck";
 import { ActionButton, Row, Segmented } from "../kit";
 import { type ThemeChoice, usePrefs } from "../prefs";
 import { permission, registerDevice, requestPermission, unregisterDevice, hasRegisteredDevice, type Permission } from "../push";
@@ -177,6 +177,7 @@ function PushBlock() {
 /** 批准、驳回前认面容: a switch, on by default; greyed, with the way out, when the phone has no screen lock. */
 function ConfirmBlock() {
   const { t } = useI18n();
+  const bio = useBioWord();
   const [possible, setPossible] = useState<boolean | null>(null);
   const [on, setOn] = useState(confirmWished);
 
@@ -194,12 +195,12 @@ function ConfirmBlock() {
     setOn(!on);
   };
   return (
-    <Block label={t("officer_app.biometric.setting")}>
+    <Block label={t("officer_app.biometric.setting", { bio: bio.inside })}>
       <View style={{ opacity: possible ? 1 : 0.45 }}>
         <Row
           testID="me-confirm-bio"
           minHeight={56}
-          title={t("officer_app.biometric.setting")}
+          title={t("officer_app.biometric.setting", { bio: bio.inside })}
           lines={[possible ? t("officer_app.biometric.hint") : t("officer_app.biometric.unavailable")]}
           onPress={possible ? toggle : undefined}
           right={<Txt variant="nav">{possible && on ? "✓" : "○"}</Txt>}

@@ -5,6 +5,9 @@
  */
 import { platform } from "@soulledger/core/platform";
 import * as LocalAuthentication from "expo-local-authentication";
+import { useEffect, useState } from "react";
+
+import { useI18n } from "./shared";
 
 export const CONFIRM_KEY = "officer_bio_confirm";
 
@@ -15,6 +18,27 @@ export async function canCheck(): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+/**
+ * `{{bio}}` for the O1 sentences (Design batch 30): 面容 on a phone with face recognition, otherwise 指纹 -- the soul
+ * app's own words (`soul_app.bio.face / finger`; egy has one word for both). In English the word is capitalised at
+ * the start of a sentence and lower-case inside one, so callers say which.
+ */
+export function useBioWord(): { start: string; inside: string } {
+  const { t, locale } = useI18n();
+  const [face, setFace] = useState(false);
+  useEffect(() => {
+    let live = true;
+    LocalAuthentication.supportedAuthenticationTypesAsync()
+      .then((types) => live && setFace(types.includes(LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION)))
+      .catch(() => undefined);
+    return () => {
+      live = false;
+    };
+  }, []);
+  const word = t(face ? "soul_app.bio.face" : "soul_app.bio.finger");
+  return { start: word, inside: locale === "en" ? word.toLowerCase() : word };
 }
 
 /** Stored only when turned off, so a missing value means on. */

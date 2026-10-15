@@ -117,3 +117,142 @@
 ## Design 回复
 
 (待填)
+
+---
+
+## Design 回复(2026-10-15,原文在 Design 项目 `v3-batch30-reply.md`)
+
+# 第三十批 · 第一部分 · Design 回复(2026-10-15)
+
+61 条都已给出 egy。**没有新词根**，没用已废止写法，`{{…}}` 都原样保留。
+
+## 一、改词的 7 条
+
+卡住的原因有两个。一是我把面容写成了 `Her`,可第二十批已经定下 egy 不区分面容和指纹，两种都写 `Djes-Ek`(见 `bio.face / bio.finger`)。二是另外几个词词表里没有，都换成了现成的说法。
+
+| key | egy(改) | 说明 |
+|---|---|---|
+| profile.devices.mfa_until | **Nen Wehem Dbh Aq Sep Sen Er {{date}}** | 照 `mfa.remember_device`(Nen Wehem Dbh)和 `Aq Sep Sen`(两步验证) |
+| profile.devices.stranger | **Ikhet Nen Rekh: Per Em Ikhet Pen Tepy, Er Khet Khemen Sekhem-Ek.** | 去掉 `Es`/`Ir`。「先…再…」用 `Tepy … Er Khet`,「修改密码」用 `Khemen Sekhem`(同 `password_changed`) |
+| soul_app.biometric.app_lock | **Iyi Er Medjat Ba: Wehem Aq Em Djes-Ek** | 「切回」= `Iyi Er`(同 `Iyi Er Tepy`) |
+| soul_app.biometric.app_lock_hint | **Iyi Er Khet At 5 Er Hry: Aq Em {{bio}} Tepy** | 照 `Aq Em {{bio}}`(pw_changed_body)。egy 下 `{{bio}}` 填 Djes-Ek |
+| soul_app.lock.title | **Khetem Seth** | 可以直接用。不能用 `Aq Khetem Seth`:那是「账号被锁」(登录错太多次) |
+| officer_app.biometric.setting | **Hesy, Khesef: Aq Em {{bio}} Tepy** | 见下方「官员 App 要不要用 {{bio}}」 |
+| officer_app.biometric.failed | **Nen Rekh {{bio}}; Nen Hesy Djer. Wehem Iri.** | 「重试」= `Wehem Iri`(全站通用) |
+
+**顺手更正一条已上线的:** `soul_app.security.failed` 我给的是 `Sekhem Nen Maa`,应为 **`Nen Aq {{n}} · Sekhem Nen Maat`**。`Nen Maa` 是「没看见」,守卫查不出这种错。
+
+### 官员 App 要不要用 {{bio}}:要
+
+道理和灵魂 App 一样。只有指纹的手机读到「没有认出面容」,会以为自己做错了什么。三条都改成带 `{{bio}}`:
+
+| key | zh | en | egy |
+|---|---|---|---|
+| officer_app.biometric.setting | 批准、驳回前验证{{bio}} | Check {{bio}} before approving or rejecting | Hesy, Khesef: Aq Em {{bio}} Tepy |
+| officer_app.biometric.failed | 没有认出{{bio}}，还没批准。再点一次确认重试。 | {{bio}} not recognised. Not approved yet. Tap Confirm to try again. | Nen Rekh {{bio}}; Nen Hesy Djer. Wehem Iri. |
+| officer_app.biometric.failed_reject | 没有认出{{bio}}，还没驳回。再点一次确认重试。 | {{bio}} not recognised. Not rejected yet. Tap Confirm to try again. | Nen Rekh {{bio}}; Nen Khesef Djer. Wehem Iri. |
+
+- zh 的「认面容」改成「验证{{bio}}」:「认指纹」读着别扭。
+- en 用灵魂 App 现成的 `bio` 取值：句首首字母大写，句中小写。
+- egy 里 `{{bio}}` 一律填 `Djes-Ek`,所以 egy 不受这次改动影响。
+
+---
+
+## 二、其余 54 条
+
+### 通知(W3)
+
+| key | egy |
+|---|---|
+| profile.notifications.category_header | Iru |
+| profile.notifications.settings | Smen Sedjem |
+| profile.notifications.footnote | «Nen Sedjer»: Nen Khetem. Sau Aq, Dbh Sekhem: Neb. Unut Khetem Wat Hesy: Hena Wa. |
+| …categories.account_security | Sau Aq |
+| …categories.approval | Wat Hesy |
+| …categories.approval_timeout | Unut Khetem Wat Hesy |
+| …categories.reassign | Dbh Hab Ky |
+| …categories.password_help | Dbh Sekhem |
+| …categories.dispatch | Hab-Ba |
+| …categories.letter_handoff | Redi Sesh |
+| …notes.account_security | Aq Em Ikhet Ky, Sekhem Khemen, Aq Sep Sen Khemen, Ky Maa Em Ba-Ek |
+| …notes.approval | Wat Hesy Mawy: Nen Iri-Ek Djer |
+| …notes.approval_timeout | Hena: Nen Khetem. Unut Khetem Khemen Ahet. |
+| …notes.password_help | Sab Hery Wa |
+| …notes.dispatch | Iri, Hesy, Khesef, Sehen |
+
+- 词的出处：`Sau`(保住)取自 `Sau Seth`,`Unut Khetem`(超时)取自工作流，`Dbh Hab Ky` 取自 `request_admin`,`Redi`(交给)取自 `Djama Redi`,`Sesh`(书信)取自 `letter: Hab Sesh`。
+- footnote 里的 `Hena Wa` 指「只站内」(`Hena` 即第二十八批的「站内」)。
+
+### 登录设备(W2)
+
+| key | egy |
+|---|---|
+| profile.devices.intro | Per Em Ikhet: Er Khet Aq Mawy. Khemen Sekhem: Per Em Ikhet Ky Neb; Ikhet Pen Nen. |
+| profile.devices.count | Ikhet {{n}} |
+| profile.devices.in_use | Em Aq Emu |
+| profile.devices.sign_out_here | Per Aq Em Hry |
+| profile.devices.signed_out | Per Aq Seth |
+| profile.devices.confirm_body | Ikhet Pen Nen Khemen. Ikhet Ky: «Nen Wehem Dbh Hru 30» Fekh Seth. |
+| profile.devices.confirm_action | Per Em Ikhet {{n}} |
+| profile.devices.audit_note | Sesh Aq Em Medew Maa. |
+| profile.devices.load_failed | Nen Ini Ikhet Aq |
+| profile.devices.sign_out_failed | Nen Per Aq. Wehem Iri. |
+
+- 「退出」有两种写法：退出账号用 `Per Aq`(同顶栏 `logout`),退出某台设备用 `Per Em Ikhet`(同第二十八批)。
+- `signed_out` 不能写 `Per Seth`,那是「已提交」。
+- `sign_out_here` 的 egy 不写「右」,只写「在上方」(`Em Hry`)。顶栏只有一个退出入口，不会找错。
+
+### 灵魂 App · 登录设备与记录(S1)
+
+| key | egy |
+|---|---|
+| soul_app.security.devices | Ikhet |
+| soul_app.security.this_phone | Medjat Pen |
+| soul_app.security.last_seen | Pehwy {{time}} |
+| soul_app.security.sign_out | Per Aq |
+| soul_app.security.sign_out_failed | Nen Per Aq. Wehem Iri. |
+| soul_app.security.load_failed | Nen Ini Ikhet Hena Aq Pehwy |
+| soul_app.security.no_records | Nen Aq Pehwy Djer |
+| soul_app.security.method_recovery | Medu Ankh Wehem |
+| soul_app.security.failed_mfa | Nen Aq {{n}} · Medu Ahet Nen Maat |
+| soul_app.security.failed_face | Nen Aq {{n}} · Nen Rekh {{bio}} |
+| soul_app.security.stranger_title | Ikhet Er Aq Nen Rekh? |
+| soul_app.security.stranger_body | Per Em Ikhet Nen Rekh Tepy, Er Khet Khemen Sekhem. Khemen Seth: Per Em Ikhet Neb; Medjat Pen Nen. |
+
+### 以此人身份查看(W6)
+
+| key | egy |
+|---|---|
+| admin.impersonate.title | Maa Em Ba {{name}} |
+| admin.impersonate.reason_label | Khet |
+| admin.impersonate.audit_note | Iri Neb: Sesh Em Medew Maa. |
+| admin.impersonate.start | Wah Maa |
+| admin.impersonate.failed | Nen Wah Maa. |
+| admin.impersonate.readonly | Maa Wa |
+| admin.impersonate.reason_line | Khet: {{reason}} |
+| admin.impersonate.remaining | {{time}} Wenen |
+| admin.impersonate.locked | Em Maa: Nen Iri |
+| audit.descriptions.impersonate_start | Maa Em Ba {{name}} · Khet: {{reason}} |
+| audit.descriptions.impersonate_end | Maa Em Ba {{name}} · At {{minutes}} · Medjat {{pages}} |
+| official_notify.impersonation_started.title | Ky Maa Em Ba-Ek |
+| official_notify.impersonation_started.body | {{by}} Maa Em Ba-Ek (Maa Wa · At {{minutes}} Er Aa). Khet: {{reason}}. Iri Neb: Sesh Em Medew Maa. |
+
+- 「剩」照 `hours_left` 写作 `… Wenen`。「页面」用 `Medjat`(同 `not_found`)。「最长」照第二十八批写作 `Er Aa`。
+
+### 官员 App · 认{{bio}}(O1)
+
+| key | egy |
+|---|---|
+| officer_app.biometric.hint | Ky Em Medjat-Ek: Nen Wedja |
+| officer_app.biometric.unavailable | Medjat Pen Nen Sekhem Djer: Nen Wen. Iri Sekhem Em Smen Ta Tepy. |
+| officer_app.biometric.failed_reject | Nen Rekh {{bio}}; Nen Khesef Djer. Wehem Iri. |
+
+「系统设置」写作 `Smen Ta`(同 `open_system_settings`)。
+
+### 定时任务
+
+| key | egy |
+|---|---|
+| scheduler.jobs.authentication_prune_soul_sign_ins | Khetem Aq Ba Hena Aq Nen Iri: Hru 90 Er Hry |
+
+照 `audit_prune_logs_for_tenant`(Khetem … Tepy)的写法。

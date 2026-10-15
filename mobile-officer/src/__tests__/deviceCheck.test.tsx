@@ -24,7 +24,7 @@ jest.mock("@soulledger/core/api/auth", () => ({
   mfaApi: { status: jest.fn(async () => ({ data: { enabled: true, required: true } })) },
 }));
 
-const auth = LocalAuthentication as unknown as { __state: { level: number; success: boolean } };
+const auth = LocalAuthentication as unknown as { __state: { level: number; success: boolean; types: number[] } };
 const authenticate = LocalAuthentication.authenticateAsync as jest.Mock;
 
 const detailOf = (kind: string) => ({ kind, id: "x-1", title: "案卷", created_at: "2026-10-09T01:00:00Z", actionable: true, state: "actionable", workflow_id: "wf-1", node_id: "n-1" }) as never;
@@ -35,6 +35,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   auth.__state.level = 1;
   auth.__state.success = true;
+  auth.__state.types = [2];
   platform().persistent.remove(CONFIRM_KEY);
   mockSubmit.mockResolvedValue(undefined);
 });
@@ -148,7 +149,7 @@ describe("the switch on 我的", () => {
   it("is on by default and remembers being turned off on this phone", async () => {
     renderOfficer(<MeTab onOpen={() => {}} />);
     const row = await screen.findByTestId("me-confirm-bio");
-    expect(screen.getAllByText("批准、驳回前认面容").length).toBeTruthy();
+    expect(screen.getAllByText("批准、驳回前验证面容").length).toBeTruthy();
     expect(screen.getByText("别人拿到你的手机，也做不了决定")).toBeTruthy();
     expect(row.props.accessibilityState.disabled).toBeFalsy();
     expect(row).toHaveTextContent(/✓/);
@@ -158,6 +159,13 @@ describe("the switch on 我的", () => {
     expect(platform().persistent.get(CONFIRM_KEY)).toBe("0");
     fireEvent.press(screen.getByTestId("me-confirm-bio"));
     expect(platform().persistent.get(CONFIRM_KEY)).toBeNull();
+  });
+
+  it("names the fingerprint on a phone without face recognition", async () => {
+    auth.__state.types = [1];
+    renderOfficer(<MeTab onOpen={() => {}} />);
+    expect((await screen.findAllByText("批准、驳回前验证指纹")).length).toBeTruthy();
+    expect(screen.queryByText("批准、驳回前验证面容")).toBeNull();
   });
 
   it("starts off when this phone was told so earlier", async () => {
