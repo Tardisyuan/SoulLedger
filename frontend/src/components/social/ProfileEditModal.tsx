@@ -119,13 +119,13 @@ export function ProfileEditModal({ isOpen, onClose, profile }: ProfileEditModalP
         <Field
           id={avatarId}
           label={t("social.avatar_upload_label") || "Avatar"}
-          description={t("social.avatar_upload_hint") || "PNG, JPEG or WebP, up to 5 MB"}
+          description={t("social.avatar_upload_hint") || "PNG, JPEG, WebP or HEIC, up to 5 MB"}
         >
           {(control) => (
             <input
               {...control}
               type="file"
-              accept="image/png,image/jpeg,image/webp"
+              accept="image/png,image/jpeg,image/webp,image/heic,image/heif"
               onChange={handleAvatarPicked}
               disabled={uploadMutation.isPending}
               aria-busy={uploadMutation.isPending || undefined}

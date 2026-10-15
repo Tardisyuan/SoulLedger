@@ -5,8 +5,7 @@
 (`apps/social/images.reencode`:魔数 + Pillow 解码 + 去 EXIF/GPS)。客户端说的文件名、Content-Type 一概不信:
 只看文件头的魔数,PDF 认 `%PDF-`,图片认 PNG / JPEG。
 
-**HEIC 不收**(2026-10-15):设计稿要「HEIC 存为 JPG」,而这需要 `pillow-heif`(不在 `requirements.lock`)。
-按任务约定不加依赖,HEIC 按「只能传图片或 PDF」拒绝;手机相册选图时系统通常已转成 JPEG。
+**HEIC 收,存成 JPG**(2026-10-15):`pillow-heif` 在 `SocialConfig.ready` 注册,`images.reencode` 负责转换。
 PDF 页数不取:压缩对象流里的页数无法廉价而可靠地数出,宁可不显示也不显示错的。
 
 **「结案」= `verdict` 非空或 `is_final`**(与 `claims.py` 判「已办结」同一条,`services.py` 结案时同时写下两者)。
@@ -82,7 +81,7 @@ def _prepare(uploaded_file):
     uploaded_file.seek(0)
     if head.startswith(b"%PDF-"):
         return uploaded_file, PDF_CONTENT_TYPE, "pdf"
-    if social_images.sniff_format(head) not in ("PNG", "JPEG"):  # WebP、HEIC、GIF……一律不收
+    if social_images.sniff_format(head) not in ("PNG", "JPEG", "HEIF"):  # WebP、GIF……不收
         raise _bad_type()
     try:
         image = social_images.reencode(uploaded_file, max_edge=MAX_EDGE, max_bytes=MAX_FILE_BYTES)
