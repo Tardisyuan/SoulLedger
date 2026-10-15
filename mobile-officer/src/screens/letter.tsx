@@ -15,9 +15,10 @@ import {
   soulInboxApi,
   type InboxMessage,
 } from "@soulledger/core/api/soul-inbox";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { KeyboardAvoidingView, Platform, View } from "react-native";
 
+import { clearDraft, flushDraft, readDraft, scheduleDraft } from "../drafts";
 import { formatWhen } from "../format";
 import { ActionButton, Row, StateView, viewStateOf } from "../kit";
 import {
@@ -70,7 +71,13 @@ export function LetterThread({
     [],
   );
   const templates = useRemote(loadTemplates);
-  const [text, setText] = useState("");
+  // The words survive leaving the screen and the OS killing the app (drafts.ts); a reply that went out clears them.
+  const [text, setText] = useState(() => readDraft(id));
+  const edit = (next: string) => {
+    setText(next);
+    scheduleDraft(id, next);
+  };
+  useEffect(() => flushDraft, []);
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
   const [picking, setPicking] = useState(false);
@@ -89,6 +96,7 @@ export function LetterThread({
       .reply(id, text.trim())
       .then(() => {
         setText("");
+        clearDraft(id);
         toast(t("soul_inbox.sent"), "success");
         void thread.reload();
         onSettled();
@@ -206,7 +214,7 @@ export function LetterThread({
               multiline
               maxLength={INBOX_REPLY_MAX}
               value={text}
-              onChangeText={setText}
+              onChangeText={edit}
             />
             {failure ? (
               <Notice
@@ -260,7 +268,7 @@ export function LetterThread({
                 title={tpl.title}
                 onPress={() => {
                   // Into the box, not out of the door: the officer reads it, edits it, and presses 发送.
-                  setText((current) => withTemplate(current, tpl.body, values));
+                  edit(withTemplate(text, tpl.body, values));
                   setPicking(false);
                 }}
               />
