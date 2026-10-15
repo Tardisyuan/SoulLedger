@@ -20,13 +20,19 @@ import { PUSH_TOKEN_KEY } from "../push";
 import { SessionProvider } from "../session";
 import { PROFILE, life, stubApi, type Reply, resetLoginMemory } from "./stubApi";
 
-jest.mock("expo-clipboard", () => ({ setStringAsync: jest.fn(async () => true) }));
+// A clipboard that holds one string, like the real one.
+let mockClipboard = "";
+jest.mock("expo-clipboard", () => ({
+  setStringAsync: jest.fn(async (s: string) => ((mockClipboard = s), true)),
+  getStringAsync: jest.fn(async () => mockClipboard),
+}));
 // The cache directory and the share sheet are doubles (jest.setup.js): `__files` is what the cache holds right now.
 const files = (jest.requireMock("expo-file-system") as { __files: Map<string, string> }).__files;
 const sharing = jest.requireMock("expo-sharing") as { isAvailableAsync: jest.Mock; shareAsync: jest.Mock };
 
 const secure = (SecureStore as unknown as { __store: Map<string, string> }).__store;
 
+const COPIED_CLEARS = "已复制。请在 60 秒内粘贴，之后会从剪贴板清除。";
 const SECRET = "JBSWY3DPEHPK3PXPQK7M2RTAJBSWY3DP";
 const OTPAUTH = `otpauth://totp/SoulLedger%3AQU33Q9FW5F?secret=${SECRET}&issuer=SoulLedger&algorithm=SHA1&digits=6&period=30`;
 const CODES = ["7kq4-m2xd", "p9tr-3hwe", "b6nc-qx8l", "v2jf-k7sa", "d4gm-r9up", "h8zt-5wqc", "l3xe-n6kb", "s7pv-2djr", "y5cw-h4mt", "f9aq-8eln"];
@@ -414,7 +420,37 @@ describe("the wizard", () => {
     await screen.findByTestId("recovery-codes");
     fireEvent.press(screen.getByTestId("codes-copy"));
     await waitFor(() => expect(Clipboard.setStringAsync).toHaveBeenCalledWith(CODES.join("\n")));
-    expect((await screen.findByTestId("toast")).props.children).toBe("已复制");
+    expect((await screen.findByTestId("toast")).props.children).toBe(COPIED_CLEARS);
+  });
+
+  it("the copied codes leave the clipboard 60 s later", async () => {
+    jest.useFakeTimers({ advanceTimers: true });
+    try {
+      await toBind({ "POST /me/mfa/confirm/": { status: 200, data: { recovery_codes: CODES } } });
+      fireEvent.changeText(screen.getByTestId("bind-code"), "482913");
+      fireEvent.press(screen.getByTestId("bind-next"));
+      await screen.findByTestId("recovery-codes");
+      fireEvent.press(screen.getByTestId("codes-copy"));
+      await waitFor(() => expect(mockClipboard).toBe(CODES.join("\n")));
+      await act(() => jest.advanceTimersByTimeAsync(60_000));
+      expect(mockClipboard).toBe("");
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it("the copied two-step key leaves the clipboard 60 s later", async () => {
+    jest.useFakeTimers({ advanceTimers: true });
+    try {
+      await toBind();
+      fireEvent.press(screen.getByTestId("copy-key"));
+      await waitFor(() => expect(mockClipboard).toBe(SECRET));
+      expect((await screen.findByTestId("toast")).props.children).toBe(COPIED_CLEARS);
+      await act(() => jest.advanceTimersByTimeAsync(60_000));
+      expect(mockClipboard).toBe("");
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   it("leaving at ② drops the unconfirmed secret; ✕ leaves without enabling", async () => {

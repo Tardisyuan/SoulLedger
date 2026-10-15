@@ -4340,6 +4340,7 @@
         "no_email": "A contact email cannot be used to turn off two-step verification."
       },
       "copied": "Copied",
+      "copied_clears": "Copied. Paste it within {{seconds}} seconds; after that it's cleared from the clipboard.",
       "wrong_password": "! That password is wrong"
     },
     "scan": {
