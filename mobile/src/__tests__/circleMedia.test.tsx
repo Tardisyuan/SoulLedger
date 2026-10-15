@@ -317,12 +317,16 @@ describe("composer", () => {
   });
 
   it("a failed upload blocks the post until it is retried or removed", async () => {
+    const announce = jest.spyOn(AccessibilityInfo, "announceForAccessibility");
     const calls = await openWith({
       "POST /me/social/media/": [{ status: 400, data: { detail: "too big", code: "too_large" } }, uploaded("u2"), uploaded("u3")],
     });
     fireEvent.changeText(screen.getByTestId("post-body"), "两张");
     await pick(1);
     await waitFor(() => expect(screen.getByTestId("upload-0-failed")).toBeTruthy());
+    expect(screen.getByTestId("upload-0-failed").props.accessibilityRole).toBe("alert");
+    expect(screen.getByTestId("upload-0-failed").props.accessibilityLiveRegion).toBe("polite");
+    expect(announce.mock.calls.filter(([s]) => s === "上传失败")).toHaveLength(1);
     expect(disabled()).toBe(true);
     expect(screen.getByTestId("post-submit-reason").props.children).toBe("有图片没传上去：重试或移除");
     expect(await screen.findByText("每张不超过 5 MB")).toBeTruthy(); // 原因:大小

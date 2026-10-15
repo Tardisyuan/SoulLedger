@@ -222,7 +222,7 @@ export function SoulProfileScreen({ userId }: { userId: number }) {
       </Screen>
       <Modal visible={menu} transparent animationType="fade" onRequestClose={() => setMenu(false)}>
         <View style={[styles.scrim, { backgroundColor: t.scrim }]}>
-          <Pressable style={styles.fill} onPress={() => setMenu(false)} accessibilityLabel={tr("soul_app.common.cancel")} />
+          <Pressable style={styles.fill} accessibilityRole="button" onPress={() => setMenu(false)} accessibilityLabel={tr("soul_app.common.cancel")} />
           <View testID="profile-menu" accessibilityViewIsModal style={[styles.sheet, { backgroundColor: t.s1, borderTopColor: t.hair2, paddingBottom: 20 + insets.bottom }]}>
             {chat.availability !== "not_configured" && p ? (
               <>

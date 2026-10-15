@@ -210,6 +210,7 @@ const COLLECTED_FILES = [
   "workflowTitle.test.ts",
   "workflowRoutingRoundTrip.test.ts",
   "a11yEngineBaseline.test.tsx",
+  "a11yRoundWeb.test.tsx",
   "accessTokenNeverBecomesACookie.test.ts",
   "api.test.ts",
   "arrowNotDoubled.test.ts",

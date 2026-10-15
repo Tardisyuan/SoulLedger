@@ -886,7 +886,7 @@ function DeleteSheet({ target, onClose, onDeleted }: { target: { kind: "post" | 
   return (
     <Modal visible={!!target} transparent animationType="fade" onRequestClose={close}>
       <View style={[styles.scrim, { backgroundColor: t.scrim }]}>
-        <Pressable style={styles.fill} onPress={close} accessibilityLabel={tr("soul_app.common.cancel")} />
+        <Pressable style={styles.fill} accessibilityRole="button" onPress={close} accessibilityLabel={tr("soul_app.common.cancel")} />
         {asking ? (
           <View testID="delete-confirm-sheet" accessibilityViewIsModal style={[styles.sheet, { backgroundColor: t.s1, borderTopColor: t.negStrong, paddingBottom: 24 + insets.bottom }]}>
             <Txt variant="title" style={styles.sheetTitle}>

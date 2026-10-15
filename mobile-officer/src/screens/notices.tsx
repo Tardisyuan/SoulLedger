@@ -60,6 +60,7 @@ export function NoticesTab({ onUnread, onLand }: { onUnread: (unread: boolean) =
             key={n.id}
             testID={`notice-${n.id}`}
             glyph={isUnread(n) ? "●" : "○"}
+            glyphLabel={isUnread(n) ? t("soul_inbox.unread") : undefined}
             strong={isUnread(n)}
             minHeight={88}
             title={n.title}

@@ -100,6 +100,7 @@ export function Row({
   title,
   lines = [],
   glyph,
+  glyphLabel,
   strong,
   onPress,
   right,
@@ -110,6 +111,8 @@ export function Row({
   title: string;
   lines?: string[];
   glyph?: string;
+  /** What the glyph means, when no other text on the row says it; without one the glyph is decoration and screen readers skip it. */
+  glyphLabel?: string;
   strong?: boolean;
   onPress?: () => void;
   right?: ReactNode;
@@ -128,7 +131,12 @@ export function Row({
     >
       {highlight ? <Highlight /> : null}
       {glyph ? (
-        <Txt variant="bodyLg" tone="muted" style={styles.glyph}>
+        <Txt
+          variant="bodyLg"
+          tone="muted"
+          style={styles.glyph}
+          {...(glyphLabel ? { accessibilityLabel: glyphLabel } : { accessibilityElementsHidden: true, importantForAccessibility: "no" as const })}
+        >
           {glyph}
         </Txt>
       ) : null}
@@ -421,7 +429,7 @@ const styles = StyleSheet.create({
   segmented: { flexDirection: "row", borderWidth: 1, marginHorizontal: GUTTER, marginVertical: space[3] },
   segment: { flex: 1, minHeight: 44, alignItems: "center", justifyContent: "center" },
   chips: { flexDirection: "row", alignItems: "center", gap: space[2], paddingHorizontal: GUTTER, paddingVertical: space[2] },
-  chip: { height: 36, paddingHorizontal: space[3], borderWidth: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: space[2] },
+  chip: { minHeight: 36, paddingHorizontal: space[3], borderWidth: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: space[2] },
   band: { height: 48, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: space[3], paddingHorizontal: GUTTER },
   bandHall: { flexShrink: 1 },
   bandName: { flexShrink: 1, opacity: 0.9 },

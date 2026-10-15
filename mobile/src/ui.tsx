@@ -893,6 +893,23 @@ export function FieldError({ text, testID }: { text: string; testID?: string }) 
   );
 }
 
+/** Says `text` once when the component mounts: `role=alert` alone is silent on iOS. */
+export function useAnnounceOnMount(text: string) {
+  useEffect(() => {
+    AccessibilityInfo.announceForAccessibility(text);
+  }, [text]);
+}
+
+/** A failure line with no ⚠ beside it (an overlay on an image): alert role, live region, and spoken once on mount. */
+export function AlertTxt({ children, ...rest }: Omit<Parameters<typeof Txt>[0], "children"> & { children: string }) {
+  useAnnounceOnMount(children);
+  return (
+    <Txt accessibilityRole="alert" accessibilityLiveRegion="polite" {...rest}>
+      {children}
+    </Txt>
+  );
+}
+
 // ── buttons ────────────────────────────────────────────────────────────
 
 export function Button({
