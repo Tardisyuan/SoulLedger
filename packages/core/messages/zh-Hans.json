@@ -642,7 +642,10 @@
     "dismiss": "知道了",
     "type_name_to_confirm": "输入「{{name}}」以确认",
     "export": "导出",
-    "export_failed": "导出失败"
+    "export_failed": "导出失败",
+    "export_csv": "导出 CSV",
+    "export_scope": "按当前筛选导出，共 {{n}} 条",
+    "export_too_many": "超过 1 万条，请缩小筛选"
   },
   "pagination": {
     "info": "第 {{page}} / {{total}} 页 ({{count}} 条记录)",
@@ -5791,6 +5794,25 @@
       "irreversible": "发出后不能撤回",
       "unavailable": "书信暂未开通",
       "failed": "没能发出。内容还在，请重试。"
+    },
+    "offline": {
+      "banner": "没有网络 · 显示的是 {{time}} 的内容",
+      "no_decide": "没有网络时不能批准或驳回：这期间案卷可能已经变了。",
+      "restored": "已恢复网络",
+      "restored_sent": "已恢复网络 · 发出了 {{n}} 封回信",
+      "image_later": "有网后显示"
+    },
+    "outbox": {
+      "pending": "待发出",
+      "auto": "有网后自动发出",
+      "row": "回信 · {{name}}",
+      "failed_title": "回信 · {{name}} 没有发出",
+      "answered": "这封书信已经由别的官员回过了。你写的内容还留着。",
+      "archived": "这封书信已经归档。",
+      "left_hall": "你已不在这一殿。",
+      "retry": "没有发出，稍后再试",
+      "view_existing": "看已有的回信",
+      "discard": "删除我的草稿"
     }
   },
   "print": {
