@@ -41,7 +41,7 @@ def prune_retained_data(*, now=None, batch_size: int = BATCH_SIZE) -> dict:
     from apps.authentication.models import MfaRememberedDevice
     from apps.events.models import EventWebhookDelivery, EventWebhookStatus
     from apps.notifications.models import NotificationEmail, UserNotification
-    from apps.officer_app.models import OfficerPushDevice
+    from apps.officer_app.models import OfficerPushDelivery, OfficerPushDevice
     from apps.soul_accounts.models import SoulMfaDevice
     from apps.soul_push.models import PushDelivery, PushDevice, PushStatus
 
@@ -66,14 +66,16 @@ def prune_retained_data(*, now=None, batch_size: int = BATCH_SIZE) -> dict:
     if c := cutoff("PUSH_DELIVERY_RETENTION_DAYS"):
         rows = PushDelivery.objects.filter(created_at__lt=c).exclude(status__in=(PushStatus.QUEUED, PushStatus.SENDING))
         result["push_deliveries"] = _purge(rows, batch_size)
+        result["officer_push_deliveries"] = _purge(OfficerPushDelivery.objects.filter(created_at__lt=c), batch_size)
 
     if c := cutoff("INACTIVE_PUSH_DEVICE_RETENTION_DAYS"):
         result["push_devices"] = _purge_with_children(
             PushDevice.objects.filter(is_active=False, last_seen_at__lt=c),
             lambda pks: [PushDelivery.objects.filter(device_id__in=pks)], batch_size,
         )
-        result["officer_push_devices"] = _purge(
-            OfficerPushDevice.objects.filter(is_active=False, last_seen_at__lt=c), batch_size
+        result["officer_push_devices"] = _purge_with_children(
+            OfficerPushDevice.objects.filter(is_active=False, last_seen_at__lt=c),
+            lambda pks: [OfficerPushDelivery.objects.filter(device_id__in=pks)], batch_size,
         )
 
     if c := cutoff("EXPIRED_MFA_DEVICE_GRACE_DAYS"):

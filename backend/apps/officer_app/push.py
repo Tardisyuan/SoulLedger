@@ -3,9 +3,10 @@
 锁屏上只写「有 N 件待你处理」—— 不含人名、案由、灵魂。点开后 App 自己取 `todo/`。
 发送端口复用灵魂端的 `get_sender()`(同一个 Expo 通道、同一个 `SOUL_PUSH_SENDER` 换法)。
 
-**为什么不走灵魂端的 PushDelivery 记录 / 回执 / 退避**:那一套服务「灵魂的通知历史」(App 里有个
+**为什么不走灵魂端的 PushDelivery 记录 / 退避**:那一套服务「灵魂的通知历史」(App 里有个
 历史列表读它),官员端没有这个列表 —— 官员台的通知中心读 `UserNotification`。所以这里只做
-一次尽力发送;Expo 报告设备未注册时停用该设备。celery 重试覆盖瞬时失败。
+一次尽力发送;Expo 报告设备未注册时停用该设备 —— 立即的 ticket 错误当场停用,
+ticket 成功的留一行 `OfficerPushDelivery`,`check_receipts` 满 15 分钟后查回执,同样停用。celery 重试覆盖瞬时失败。
 
 触发点(「有东西落进四组之一」):`WorkflowService.announce`(新节点轮到某人,含转生申请)、
 `DispatchService._notify_target_tenant`(调拨提案)、`rebirth.request_cooldown_shortening`
@@ -20,8 +21,10 @@ from django.utils import timezone
 
 from apps.authentication import signin_sessions
 from apps.officer_app import todo
-from apps.officer_app.models import OfficerPushDevice
-from apps.soul_push.expo import PushRequestError, PushTransientError, get_sender
+from apps.officer_app.models import OfficerPushDelivery, OfficerPushDevice
+from apps.soul_push.expo import RECEIPT_BATCH, PushRequestError, PushTransientError, get_sender
+from apps.soul_push.models import PushStatus
+from apps.soul_push.services import DEVICE_NOT_REGISTERED, RECEIPT_DELAY, RECEIPT_EXPIRY, enabled
 
 logger = logging.getLogger(__name__)
 
@@ -110,9 +113,54 @@ def send_to_user(user, sender=None, target=None):
                  "data": data, "sound": "default", "priority": "high"} for d in devices]
     tickets = sender.send(messages)
     for device, ticket in zip(devices, tickets, strict=True):
-        if isinstance(ticket, dict) and (ticket.get("details") or {}).get("error") == "DeviceNotRegistered":
+        ticket = ticket if isinstance(ticket, dict) else {}
+        if (ticket.get("details") or {}).get("error") == DEVICE_NOT_REGISTERED:
             OfficerPushDevice.objects.filter(pk=device.pk).update(is_active=False)
+        elif ticket.get("status") == "ok" and ticket.get("id"):
+            OfficerPushDelivery.objects.create(device=device, ticket_id=str(ticket["id"])[:64])
     return len(devices)
+
+
+def check_receipts(now=None, sender=None, limit=RECEIPT_BATCH):
+    """SENT 满 15 分钟的查回执(与灵魂端 `soul_push.services.check_receipts` 同一套规则);
+    回执报「设备未注册」就停用该官员设备。推送没启用时不查。"""
+    if not enabled():
+        return 0
+    now = now or timezone.now()
+    rows = list(OfficerPushDelivery.objects.filter(
+        status=PushStatus.SENT, created_at__lt=now - RECEIPT_DELAY).order_by("created_at")[:limit])
+    if not rows:
+        return 0
+    try:
+        receipts = (sender or get_sender()).receipts([row.ticket_id for row in rows])
+    except (PushTransientError, PushRequestError) as exc:
+        logger.warning("officer_app: 取回执失败 %s,下个周期再试", exc)
+        return 0
+    changed = []
+    for row in rows:
+        receipt = receipts.get(row.ticket_id)
+        if receipt is None:
+            if row.created_at < now - RECEIPT_EXPIRY:
+                row.status, row.error = PushStatus.EXPIRED, "回执已过期(24 小时内未取到)"
+                changed.append(row)
+            continue
+        changed.append(row)
+        if receipt.get("status") == "ok":
+            row.status = PushStatus.DELIVERED
+            continue
+        details = receipt.get("details") or {}
+        row.status = PushStatus.FAILED
+        row.error = (details.get("error") or receipt.get("message") or "回执报错")[:200]
+        if details.get("error") == DEVICE_NOT_REGISTERED:
+            OfficerPushDevice.objects.filter(pk=row.device_id).update(is_active=False)
+    OfficerPushDelivery.objects.bulk_update(changed, ["status", "error"])
+    return len(rows)
+
+
+@shared_task(name="officer_app.check_receipts")
+def check_receipts_task():
+    """登记在 apps/scheduler/registry.py,与 `soul_push.sweep` 同一节奏。"""
+    return check_receipts()
 
 
 @shared_task(name="officer_app.send_todo_push", bind=True, max_retries=3)
