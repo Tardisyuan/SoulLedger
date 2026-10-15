@@ -13,7 +13,7 @@ from apps.soul_push.messages import MESSAGES
 
 PACKS = Path(__file__).resolve().parents[2] / "packages" / "core" / "messages"
 EGY_PENDING_KINDS = {
-    key.split(".", 1)[1]
+    key.split(".")[1]
     for key in json.loads((Path(__file__).resolve().parents[2] / "frontend" / "src" / "__tests__" / "support"
                            / "egyPendingKeys.json").read_text(encoding="utf-8"))
     if key.startswith("soul_push.")

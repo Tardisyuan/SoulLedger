@@ -67,7 +67,7 @@ export function ExportCsvButton({
         {counted ? t("common.export_csv") : t("common.export")}
       </Button>
       {tooMany ? (
-        <span id={noteId} className="text-sm text-ink-muted">
+        <span id={noteId} className="text-sm text-[oklch(var(--color-ink-muted))]">
           {t("common.export_too_many")}
         </span>
       ) : null}

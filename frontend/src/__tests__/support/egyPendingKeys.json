@@ -105,7 +105,8 @@
   "soul_inbox.feedback.tags.record",
   "soul_inbox.feedback.tags.app",
   "soul_inbox.feedback.tags.other",
-  "soul_push.export_ready",
+  "soul_push.export_ready.body",
+  "soul_push.export_ready.title",
   "scheduler.jobs.soul_accounts_prune_data_exports",
   "soul_app.export.title",
   "soul_app.help.title"
