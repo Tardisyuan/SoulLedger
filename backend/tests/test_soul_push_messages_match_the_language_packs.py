@@ -47,10 +47,11 @@ def test_results_are_told_apart_but_each_rebirth_kind_has_its_own_text():
         assert len(texts) == 3, locale
 
 
-def test_a_pending_egy_kind_reads_as_zh_hans_and_a_translated_one_does_not():
+def test_a_pending_egy_kind_reads_as_zh_hans_and_a_translated_one_does_not(monkeypatch):
     """egy 缺的种类退回 zh-Hans(而不是 KeyError 让整条推送丢掉);egy 有的种类照用 egy。"""
-    from apps.soul_push.messages import render
+    from apps.soul_push import messages
 
-    assert "export_ready" in EGY_PENDING_KINDS
-    assert render("egy", "export_ready") == render("zh-Hans", "export_ready")
-    assert render("egy", "chat_message", name="甲") != render("zh-Hans", "chat_message", name="甲")
+    egy = {k: v for k, v in messages.MESSAGES["egy"].items() if k != "export_ready"}
+    monkeypatch.setitem(messages.MESSAGES, "egy", egy)
+    assert messages.render("egy", "export_ready") == messages.render("zh-Hans", "export_ready")
+    assert messages.render("egy", "chat_message", name="甲") != messages.render("zh-Hans", "chat_message", name="甲")

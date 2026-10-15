@@ -89,7 +89,7 @@ const offenders = (keys: string[], bad: Rule) =>
   keys.filter((k) => bad(EGY[k], k)).map((k) => `${k}: ${EGY[k]}`);
 
 /** 技术词原样引用(词表「技术词不转写」):缩写与角色码。 */
-const CAPS_ALLOWED = new Set(["IP", "PNG", "JPEG", "MB", "MODERATOR", "ID", "GLM", "JSON"]); // JSON: 权限配置文件格式名(第十六批);GLM: 智谱的模型名,平台下拉(2026-09-30)
+const CAPS_ALLOWED = new Set(["IP", "PNG", "JPEG", "MB", "MODERATOR", "ID", "GLM", "JSON", "PDF", "CSV"]); // PDF / CSV: 文件格式名(第三十一批);JSON: 权限配置文件格式名(第十六批);GLM: 智谱的模型名,平台下拉(2026-09-30)
 
 /** 已确认改掉的英文残留。新发现一个,改掉之后加进来。 */
 const ENGLISH_RESIDUE = [
@@ -429,7 +429,7 @@ const ROOTS_TEN = [
   "Bin", //         恶(形容) —— 三恶道 Wat Bin 3
   "It", //          父 / 上级 —— 父级 It,顶级 Tepy
   "Sa", //          安全 / 护 —— 只作「安全」
-  "Sedjer", //      延后 / 暂缓 / 休眠
+  "Sedjer", //      延后 / 暂缓 / 休眠 / 静音(第三十一批)
   "Menu", //        菜单(借词)
   "Kat", //         组件(技术)
   "Menf", //        令牌(技术)
@@ -527,7 +527,7 @@ const PROPER_NAMES = [
   // 第十五节(egy 第四节审定,v3,2026-10-02):三个专名原样引用(魔鬼审判 Wedja Apep、米诺斯之庭 Wesekhet Minos、冥界哈迪斯 Hades),
   // 一个新词根 Meh(满;将满 Er Meh);Enter / Esc 是键名原样保留(同 IP、PNG)。
   "Apep", "Minos", "Hades", "Meh", "Enter", "Esc",
-  "IP", "JPEG", "MB", "PNG", "WebP", "Webhook", "MODERATOR", "A", "N",
+  "IP", "JPEG", "MB", "PNG", "PDF", "CSV", "WebP", "Webhook", "MODERATOR", "A", "N",
   // 词表第十三节:厂商名原样引用(兼容写 Mi OpenAI),不再用 Iru Wa / Iru Sen(要看下拉顺序才读得懂)。
   "Anthropic", "OpenAI",
   // 第十九批(Design):Authenticator 是去应用商店搜索的关键词 —— 译成 egy 就搜不到了,所以按专名原样登记。
