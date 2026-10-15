@@ -8,6 +8,7 @@
 import { ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY, platform } from "@soulledger/core/platform";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react-native";
+import { AccessibilityInfo } from "react-native";
 import * as Sharing from "expo-sharing";
 import * as SecureStore from "expo-secure-store";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -293,10 +294,15 @@ describe("expired and failed", () => {
   });
 
   it("failed: says so and offers a new request", async () => {
+    const announce = jest.spyOn(AccessibilityInfo, "announceForAccessibility");
     signedIn({ "GET /me/export/": state(row({ status: "FAILED" })) });
     await openPage();
     await screen.findByTestId("export-failed");
     expect(screen.getByText("这次没有做成。可以重新申请。")).toBeTruthy();
+    // An alert with the labelled ⚠, spoken once when the state arrives (role=alert alone is silent on iOS).
+    expect(screen.UNSAFE_getAllByProps({ accessibilityRole: "alert" }).length).toBeGreaterThan(0);
+    expect(screen.UNSAFE_getAllByProps({ accessibilityLabel: "错误" }).length).toBeGreaterThan(0);
+    expect(announce.mock.calls.filter(([s]) => s === "这次没有做成。可以重新申请。")).toHaveLength(1);
     expect(screen.getByTestId("export-request")).toBeTruthy();
     expect(screen.queryByTestId("export-queued")).toBeNull();
   });

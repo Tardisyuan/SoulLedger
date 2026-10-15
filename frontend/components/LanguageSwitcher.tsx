@@ -2,6 +2,7 @@
 
 import { useI18n, LOCALE_LABELS, Locale } from "@/src/contexts/I18nContext";
 import { fieldControl } from "@/src/components/ui/Field";
+import { BCP47_FOR_LOCALE } from "@soulledger/core/config/locale";
 import { cn } from "@/lib/utils";
 
 /** 规范 v3:控件最小 44(`--control-h-sm`),皮与其余输入框同一套 `fieldControl`。此前是 py-1.5 的约 30 高、s2 底。 */
@@ -34,7 +35,7 @@ export function LanguageSwitcher() {
       className={SELECT}
     >
       {(Object.keys(LOCALE_LABELS) as Locale[]).map((loc) => (
-        <option key={loc} value={loc}>
+        <option key={loc} value={loc} lang={BCP47_FOR_LOCALE[loc]}>
           {LOCALE_LABELS[loc]}
         </option>
       ))}

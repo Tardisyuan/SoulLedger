@@ -149,6 +149,7 @@ export function AssistPanel() {
             style={{ height: insets.top + PAGE_PEEK }}
             onPress={assist.close}
             accessibilityLabel={tr("soul_app.assist.close")}
+            accessibilityRole="button"
           />
         )}
         <Animated.View testID="assist-sheet" style={[styles.fill, { transform: [{ translateY }] }]}>

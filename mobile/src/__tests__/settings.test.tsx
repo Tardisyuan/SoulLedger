@@ -97,6 +97,8 @@ describe("the settings page is the one place for language and sign-out", () => {
     expect(screen.getByTestId("logout")).toBeTruthy();
     expect(screen.getAllByRole("radio").map((r) => r.props.testID)).toEqual(["language-zh-Hans", "language-en", "language-egy"]);
     expect(screen.getByTestId("language-zh-Hans").props.accessibilityState).toEqual({ checked: true });
+    // Each row is read in its own language: Kemet's text is English, so it is read as `en`.
+    expect(["zh-Hans", "en", "egy"].map((l) => screen.getByTestId(`language-${l}`).props.accessibilityLanguage)).toEqual(["zh-Hans", "en", "en"]);
     // Each row names its language the way the login screen's buttons do (LOCALE_LABELS) —
     // the bundles' own `language_name` said "Egyptian" and "中文" while login said "Kemet" and "简体中文".
     for (const name of ["简体中文", "English", "Kemet"]) expect(screen.getByText(name)).toBeTruthy();
@@ -184,6 +186,9 @@ describe("switching language", () => {
     expect(failed.props.children).toBe(
       "Could not save this to your account. The interface is English now, but another device will show 简体中文."
     );
+    // The ⚠ is named and the row is an alert (FieldError), not a bare icon.
+    expect(screen.UNSAFE_getAllByProps({ accessibilityRole: "alert" }).length).toBeGreaterThan(0);
+    expect(screen.UNSAFE_getAllByProps({ accessibilityLabel: "Error" }).length).toBeGreaterThan(0);
     expect(screen.getByText("Settings")).toBeTruthy(); // not taken back
     fireEvent.press(screen.getByTestId("language-revert"));
     expect(await screen.findByText("设置")).toBeTruthy();

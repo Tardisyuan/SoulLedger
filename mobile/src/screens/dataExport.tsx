@@ -19,7 +19,7 @@ import { family } from "../fonts";
 import { useI18n } from "../i18n";
 import { stateOfFailure, type StepState } from "../mfa";
 import { formatStamp } from "../rules";
-import { Button, Input, Screen, SectionError, SectionLabel, Skeleton, Txt, useLayout, useReloadOnRefocus, useRemote, useTheme } from "../ui";
+import { Button, Input, Notice, Screen, SectionError, SectionLabel, Skeleton, Txt, useAnnounceOnMount, useLayout, useReloadOnRefocus, useRemote, useTheme } from "../ui";
 import { useBiometry } from "../useBiometry";
 import { ButtonPair, MfaSheet, StepNotice } from "./mfaParts";
 
@@ -124,6 +124,17 @@ function Card({ testID, strong, children }: { testID: string; strong?: boolean; 
     <View testID={testID} style={[styles.card, { borderColor: strong ? theme.ink : theme.inkSubtle }]}>
       {children}
     </View>
+  );
+}
+
+function ExportFailed() {
+  const { t } = useI18n();
+  const text = t("soul_app.export.failed");
+  useAnnounceOnMount(text);
+  return (
+    <Notice tone="neg" testID="export-failed">
+      {text}
+    </Notice>
   );
 }
 
@@ -237,9 +248,7 @@ export function DataExportScreen() {
             </Txt>
           ) : null}
           {exp?.status === "FAILED" ? (
-            <Txt testID="export-failed" variant="bodyLg" tone="negInk">
-              {t("soul_app.export.failed")}
-            </Txt>
+            <ExportFailed />
           ) : null}
           {!exp || exp.status === "EXPIRED" || exp.status === "FAILED" ? (
             <>

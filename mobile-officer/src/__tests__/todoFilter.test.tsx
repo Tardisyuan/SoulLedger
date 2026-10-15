@@ -1,5 +1,6 @@
 /** 待办按类型筛选 (Design batch 28 O2): multi-select chips with counts, remembered on this phone. */
 import { platform } from "@soulledger/core/platform";
+import { StyleSheet } from "react-native";
 import { fireEvent, screen } from "@testing-library/react-native";
 
 import { TODO_FILTER_KEY, TodoTab } from "../screens/todo";
@@ -31,6 +32,16 @@ beforeEach(() => {
 });
 
 describe("the to-do type filter", () => {
+  it("chips grow with large text (minHeight, not a fixed height), and a row's status glyph is not read aloud", async () => {
+    mount();
+    await screen.findByTestId("todo-group-approval");
+    const style = StyleSheet.flatten(chip("approval").props.style);
+    expect(style).toMatchObject({ minHeight: 36 });
+    expect(style.height).toBeUndefined();
+    const glyph = screen.getAllByText("◐", { includeHiddenElements: true })[0];
+    expect(glyph.props).toMatchObject({ accessibilityElementsHidden: true, importantForAccessibility: "no" });
+  });
+
   it("shows every group when nothing is chosen, with a count in each chip's label", async () => {
     mount();
     expect(await screen.findByTestId("todo-group-approval")).toBeTruthy();
