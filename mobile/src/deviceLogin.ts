@@ -99,6 +99,8 @@ export const bioEnabled = () => !!platform().persistent.get(BIO_KEY);
 /** The reason the system shows with its face / finger check. A system string, not in the language bundles (Design 第二十批 §四.4). */
 const PROMPT = "用来登录灵魂簿，不用输密码。";
 const prompt = () => PROMPT;
+/** Same kind of string, for 「导出我的资料」: the face / finger check stands in for the password there. */
+export const EXPORT_PROMPT = "用来确认是你本人，导出你的资料。";
 
 export type CredentialRead = { status: "ok"; credential: string } | { status: "cancelled" } | { status: "invalidated" } | { status: "failed" };
 
@@ -106,12 +108,12 @@ export type CredentialRead = { status: "ok"; credential: string } | { status: "c
  * Hands the credential over -- the system verifies the face / finger first. A key that is gone while the flag says
  * on (the phone's enrolled set changed) reads as `invalidated`.
  */
-export async function readCredential(): Promise<CredentialRead> {
+export async function readCredential(reason: string = prompt()): Promise<CredentialRead> {
   try {
     const credential = await SecureStore.getItemAsync(CREDENTIAL_KEY, {
       keychainService: SERVICE,
       requireAuthentication: true,
-      authenticationPrompt: prompt(),
+      authenticationPrompt: reason,
     });
     return credential ? { status: "ok", credential } : { status: "invalidated" };
   } catch (e) {
