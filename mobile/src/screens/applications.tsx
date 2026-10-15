@@ -72,6 +72,8 @@ export type AppStackParams = {
   About: undefined;
   /** 两步验证:关着是开启向导,开着是管理页。从设置页「账号安全」进。 */
   Mfa: undefined;
+  /** 登录设备与记录 (第二十八批 S1),从设置页「账号安全」进。 */
+  SignIns: undefined;
   NotificationPrimer: undefined;
   /** 通知记录:推送过的都在,从设置页进。 */
   NotificationHistory: undefined;
