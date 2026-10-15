@@ -85,7 +85,7 @@ function Themed() {
     <ThemeContext.Provider value={theme}>
       <BottomSheetModalProvider>
         <ToastProvider>
-          <NetworkProvider>
+          <NetworkProvider bar={false}>
             <StatusBar style={scheme === "dark" ? "light" : "dark"} />
             <Gate />
             <ColdStart booting={state.status === "booting"} />

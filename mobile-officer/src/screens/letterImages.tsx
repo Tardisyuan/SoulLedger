@@ -13,7 +13,7 @@ import { useState } from "react";
 import { Image, Modal, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { Txt, space, useI18n, useTheme } from "../shared";
+import { Txt, space, useI18n, useOnline, useTheme } from "../shared";
 
 export interface LetterImageRef {
   id: string;
@@ -35,8 +35,19 @@ export function LetterImage({ image, onOpen, onReload }: { image: LetterImageRef
   const theme = useTheme();
   const { width: screen } = useWindowDimensions();
   const [broken, setBroken] = useState(false);
+  const { offline } = useOnline();
   const width = Math.round(Math.max(0, screen - 2 * space[5]) * LETTER_IMAGE_SHARE);
   const label = t("soul_app.circle.media.image", { i: "1" });
+  if (broken && offline) {
+    // Pictures are not cached (readCache.ts): a grey block of the picture's own shape until the network is back.
+    return (
+      <View testID="letter-image-later" style={{ width, aspectRatio: image.width / image.height, backgroundColor: theme.s2, alignItems: "center", justifyContent: "center" }}>
+        <Txt variant="caption" tone="muted">
+          {t("officer_app.offline.image_later")}
+        </Txt>
+      </View>
+    );
+  }
   if (broken) {
     return (
       <Pressable testID="letter-image-broken" accessibilityRole="button" disabled={!onReload} onPress={onReload} style={styles.broken}>

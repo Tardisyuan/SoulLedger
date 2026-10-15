@@ -12,10 +12,11 @@ import { useCallback, useState } from "react";
 import { Pressable, Share, View } from "react-native";
 
 import { formatWhen } from "../format";
+import { useCachedRemote } from "../readCache";
 import { ActionButton, StateView, viewStateOf } from "../kit";
 import { deskUrl, dispatchStatusLine, dispatchView, handledNotice, isDenied, todoTitle, type ItemKind, type Verdict } from "../rules";
 import { useSession } from "../session";
-import { Icon, Input, Notice, Screen, SectionLabel, Txt, space, useI18n, useRemote, useTheme } from "../shared";
+import { Icon, Input, Notice, Screen, SectionLabel, Txt, space, useI18n, useOnline, useRemote, useTheme } from "../shared";
 import { LetterThread } from "./letter";
 import { CosignSheet, DecisionSheet, type CooldownFacts } from "./sheets";
 
@@ -74,7 +75,7 @@ function DispatchLanding({ id, onSettled }: { id: string; onSettled: () => void 
   const role = state.status === "signedIn" ? state.user.role : "";
   const ownHall = state.status === "signedIn" ? state.user.tenant?.code : null;
   const load = useCallback(() => dispatchApi.get(id).then((r) => r.data), [id]);
-  const { data, error, reload } = useRemote(load);
+  const { data, error, reload } = useCachedRemote(`detail:dispatch:${id}`, load);
   const view = viewStateOf({ data, error }, () => false, isDenied);
   if (view || !data) return <StateView state={view ?? "loading"} onRetry={reload} role={role} area={t("officer_app.areas.todo")} />;
   const mode = dispatchView(data, ownHall);
@@ -102,16 +103,25 @@ function TodoDetail({ kind, id, onSettled }: { kind: TodoKind; id: string; onSet
   const { t } = useI18n();
   const { state } = useSession();
   const role = state.status === "signedIn" ? state.user.role : "";
-  const load = useCallback(() => officerAppApi.item(kind, id).then((r) => r.data), [kind, id]);
-  const { data, error, reload } = useRemote(load);
-  const loadCooldown = useCallback(
-    (): Promise<CooldownFacts | null> =>
-      kind === "cooldown"
-        ? soulAccountsApi.cooldownShortening(id).then((r) => ({ reason: r.data.reason, remainingDays: r.data.remaining_days, approved: r.data.status === "APPROVED", desiredDays: r.data.desired_remaining_days ?? null }))
-        : Promise.resolve(null),
+  const { offline } = useOnline();
+  // The item and (for a cooldown) its facts are ONE cache entry, so the 20-detail cap counts details, not requests.
+  const load = useCallback(
+    async (): Promise<{ item: TodoItemDetail; cooldown: CooldownFacts | null }> => {
+      const facts =
+        kind === "cooldown"
+          ? soulAccountsApi.cooldownShortening(id).then(
+              (r): CooldownFacts => ({ reason: r.data.reason, remainingDays: r.data.remaining_days, approved: r.data.status === "APPROVED", desiredDays: r.data.desired_remaining_days ?? null }),
+              () => null
+            )
+          : Promise.resolve(null);
+      const [item, cooldown] = await Promise.all([officerAppApi.item(kind, id).then((r) => r.data), facts]);
+      return { item, cooldown };
+    },
     [kind, id]
   );
-  const cooldown = useRemote(loadCooldown);
+  const { data: loaded, error, reload } = useCachedRemote(`detail:${kind}:${id}`, load);
+  const data = loaded?.item ?? null;
+  const cooldown = { data: loaded?.cooldown ?? null };
   const [sheet, setSheet] = useState<Verdict | "cosign" | null>(null);
   // A new key per opening: a sheet opened again starts clean.
   const [opened, setOpened] = useState(0);
@@ -123,9 +133,8 @@ function TodoDetail({ kind, id, onSettled }: { kind: TodoKind; id: string; onSet
 
   const settled = () => {
     // The list behind this screen reloads; this item is asked again, and it answers "already handled".
+    // (The cooldown facts ride along in the same load.)
     void reload();
-    // The cooldown facts are read once; after an approval they are the request-time days until asked again.
-    cooldown.reload();
     onSettled();
   };
 
@@ -181,7 +190,7 @@ function TodoDetail({ kind, id, onSettled }: { kind: TodoKind; id: string; onSet
           <ContinueOnDesk target={{ kind, id }} />
         </View>
       </Screen>
-      {data.actionable ? <ActionBar kind={kind} onPick={pick} waitingOn={data.waiting_on_cosigner?.name ?? null} /> : null}
+      {data.actionable ? <ActionBar kind={kind} onPick={pick} waitingOn={data.waiting_on_cosigner?.name ?? null} offline={offline} /> : null}
       <DecisionSheet key={`decision-${opened}`} open={sheet === "approve" || sheet === "reject"} verdict={sheet === "reject" ? "reject" : "approve"} detail={data as TodoItemDetail} cooldown={cooldown.data} onClose={() => setSheet(null)} onDone={settled} />
       <CosignSheet key={`cosign-${opened}`} open={sheet === "cosign"} kind={kind} id={id} onClose={() => setSheet(null)} onDone={() => void reload()} />
     </View>
@@ -189,7 +198,7 @@ function TodoDetail({ kind, id, onSettled }: { kind: TodoKind; id: string; onSet
 }
 
 /** 加签 (secondary) · 驳回 (ink outline) · 批准 (primary): 44 high, square. 加签 only exists on a workflow node. */
-function ActionBar({ kind, onPick, waitingOn }: { kind: TodoKind; onPick: (next: Verdict | "cosign") => void; waitingOn: string | null }) {
+function ActionBar({ kind, onPick, waitingOn, offline }: { kind: TodoKind; onPick: (next: Verdict | "cosign") => void; waitingOn: string | null; offline: boolean }) {
   const { t } = useI18n();
   const theme = useTheme();
   // The added signer has not approved yet: 批准 is greyed and the sentence above says why (and is the
@@ -197,13 +206,14 @@ function ActionBar({ kind, onPick, waitingOn }: { kind: TodoKind; onPick: (next:
   const wait = waitingOn !== null ? t("officer_app.detail.wait_cosigner", { name: waitingOn }) : null;
   return (
     <View testID="action-bar" style={{ padding: space[4], gap: space[3], borderTopWidth: 1, borderTopColor: theme.hair, backgroundColor: theme.s1 }}>
+      {offline ? <Txt variant="caption" tone="muted" testID="detail-offline-reason">{`◇ ${t("officer_app.offline.no_decide")}`}</Txt> : null}
       {wait ? <Txt variant="caption" tone="muted" testID="detail-wait-cosigner">{`◇ ${wait}`}</Txt> : null}
       <View style={{ flexDirection: "row", gap: space[3] }}>
         {kind === "approval" || kind === "rebirth" ? (
-          <ActionButton testID="action-cosign" kind="outline" title={t("officer_app.detail.cosign")} onPress={() => onPick("cosign")} />
+          <ActionButton testID="action-cosign" kind="outline" title={t("officer_app.detail.cosign")} disabled={offline} onPress={() => onPick("cosign")} />
         ) : null}
-        <ActionButton testID="action-reject" kind="ink-outline" title={t("officer_app.detail.reject")} onPress={() => onPick("reject")} />
-        <ActionButton testID="action-approve" kind="primary" title={t("officer_app.detail.approve")} disabled={wait !== null} accessibilityHint={wait ?? undefined} onPress={() => onPick("approve")} />
+        <ActionButton testID="action-reject" kind="ink-outline" title={t("officer_app.detail.reject")} disabled={offline} accessibilityHint={offline ? t("officer_app.offline.no_decide") : undefined} onPress={() => onPick("reject")} />
+        <ActionButton testID="action-approve" kind="primary" title={t("officer_app.detail.approve")} disabled={offline || wait !== null} accessibilityHint={offline ? t("officer_app.offline.no_decide") : (wait ?? undefined)} onPress={() => onPick("approve")} />
       </View>
     </View>
   );

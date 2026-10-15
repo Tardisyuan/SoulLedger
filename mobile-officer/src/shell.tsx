@@ -11,6 +11,7 @@ import { BackHandler, StyleSheet, View } from "react-native";
 
 import { IdentityBand, StandingBanner, TabBar, type TabKey } from "./kit";
 import { isRetiredResetLink, officerLinks, resetLinks, type ResetLink } from "./links";
+import { OfflineBanner } from "./offlineBanner";
 import { listenForLandings, registerDevice } from "./push";
 import { HIGHLIGHT_MS, hallLabel, type Landing } from "./rules";
 import { Detail, type DetailTarget } from "./screens/detail";
@@ -118,6 +119,7 @@ export function Shell({ onResetDone }: { onResetDone?: () => void } = {}) {
           {t("mfa.banner.text")}
         </StandingBanner>
       ) : null}
+      <OfflineBanner />
       <View style={{ flex: 1 }}>
         {account === "mfa" ? (
           <MfaScreen onBack={() => setAccount(null)} onLocked={setLocked} />
