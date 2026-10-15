@@ -925,3 +925,47 @@ class JudgmentComment(AuditUserFields, models.Model):
 
     def __str__(self):
         return f"{self.judgment_id} comment by {self.author_id}"
+
+
+def _case_attachment_path(instance, filename):
+    # 文件名由 attachments.py 随机生成,客户端的文件名只存在 `name` 列里、从不落盘。
+    return f"private/case_attachments/{timezone.now():%Y/%m}/{filename}"
+
+
+class CaseAttachment(models.Model):
+    """案卷附件(2026-10-15,Design 第二十八批 W4):一份案卷上的一张图片或一份 PDF。
+
+    文件与朋友圈图片、书信图片同一条路:Django 默认存储的 `private/` 前缀(nginx 与 DEBUG 路由都不公开),
+    只经 `GET /api/v1/case-attachments/<id>/?t=<签名>` 出去,签名 10 分钟,每次取文件重算权限
+    (`apps/judgment/attachments.py::may_view`)。
+    租户:`tenant` 在上传时抄自案子(与 `JudgmentComment` 同一写法);读写都先经案子的租户划界。
+    `deleted_at` 非空 = 已删:文件真删,行留着给审计对账。结案后不能删(见 `attachments.delete`)。
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    judgment = models.ForeignKey(Judgment, on_delete=models.CASCADE, related_name="attachments")
+    tenant = models.ForeignKey(
+        "tenants.Tenant", on_delete=models.CASCADE, related_name="case_attachments", null=True,
+    )
+    uploader = models.ForeignKey(
+        "authentication.User", on_delete=models.SET_NULL, null=True, related_name="+",
+    )
+    name = models.CharField(max_length=255, help_text="上传时的文件名,只用于显示与下载。")
+    file = models.FileField(upload_to=_case_attachment_path, max_length=200)
+    byte_size = models.PositiveIntegerField()
+    content_type = models.CharField(max_length=20)
+    created_at = models.DateTimeField(auto_now_add=True)
+    deleted_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["created_at"]
+        indexes = [
+            models.Index(fields=["judgment", "deleted_at", "created_at"]),
+            models.Index(fields=["tenant", "created_at"]),
+        ]
+
+    all_objects = models.Manager()  # unfiltered; declared first so it's _base_manager
+    objects = TenantManager()
+
+    def __str__(self):
+        return f"{self.judgment_id} attachment {self.name}"
