@@ -233,6 +233,7 @@ class SynapseClient:
             "body": event.get("content", {}).get("body", ""),
             "officer": event.get("content", {}).get("io.soulledger.officer", ""),
             "officer_title": event.get("content", {}).get("io.soulledger.officer_title", ""),
+            "txn_id": event.get("content", {}).get("io.soulledger.txn"),
             "image": event.get("content", {}).get("io.soulledger.image"),
             "timestamp": event["origin_server_ts"],
         }
