@@ -9,7 +9,7 @@ import { AxiosError, type AxiosResponse, type InternalAxiosRequestConfig } from 
 import * as LocalAuthentication from "expo-local-authentication";
 import * as SecureStore from "expo-secure-store";
 
-import { ACCOUNT_KEY, ASKED_PREFIX, BIO_KEY, resetColdStart } from "../deviceLogin";
+import { ACCOUNT_KEY, APP_LOCK_KEY, ASKED_PREFIX, BIO_KEY, resetColdStart } from "../deviceLogin";
 import { persistentStore } from "../platform";
 
 /**
@@ -127,11 +127,11 @@ export function life(cycle: number, overrides: Record<string, unknown> = {}) {
  * one looking at 「换一个账号」 instead of the empty form. Also a fresh process (cold start) and an un-enrolled phone.
  */
 export function resetLoginMemory() {
-  for (const key of [ACCOUNT_KEY, BIO_KEY, `${ASKED_PREFIX}${PROFILE.soul_code}`]) persistentStore.remove(key);
+  for (const key of [ACCOUNT_KEY, BIO_KEY, APP_LOCK_KEY, `${ASKED_PREFIX}${PROFILE.soul_code}`]) persistentStore.remove(key);
   resetColdStart();
   const secure = SecureStore as unknown as { __guarded: Map<string, string>; __auth: { error: unknown; prompts: string[] } };
   secure.__guarded.clear();
   secure.__auth.error = null;
   secure.__auth.prompts.length = 0;
-  Object.assign((LocalAuthentication as unknown as { __state: object }).__state, { hardware: true, enrolled: false, types: [2] });
+  Object.assign((LocalAuthentication as unknown as { __state: object }).__state, { hardware: true, enrolled: false, types: [2], recognised: true, gate: null, prompts: [] });
 }

@@ -367,6 +367,9 @@ export function SettingsScreen() {
   // management page both come back here).
   const mfa = useRemote(soulApi.mfaStatus);
   useReloadOnRefocus(mfa.reload);
+  // The device count for 登录设备与记录; the sub-page's 「退出」 changes it, so it is read again on return.
+  const devices = useRemote(soulApi.signInSessions);
+  useReloadOnRefocus(devices.reload);
   // The last settings the SERVER confirmed; a toggle shows its new value at once and falls back on failure.
   const [settings, setSettings] = useState<NotificationSettings | null>(null);
   const shown = settings ?? remote.data;
@@ -431,6 +434,12 @@ export function SettingsScreen() {
           onPress={() => navigation.navigate("Mfa")}
         />
         <BioRow />
+        <NavRow
+          testID="open-sign-ins"
+          label={t("soul_app.security.history")}
+          state={devices.data ? String(devices.data.length) : null}
+          onPress={() => navigation.navigate("SignIns")}
+        />
       </View>
       <View style={[styles.rows, styles.gapTop, { borderTopColor: theme.hair }]}>
         <NavRow testID="open-about" label={t("about.title")} onPress={() => navigation.navigate("About")} />
