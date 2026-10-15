@@ -4340,6 +4340,7 @@
         "no_email": "Nen Khetem Aq Sep Sen Em Wat Sesh."
       },
       "copied": "Senn Seth",
+      "copied_clears": "Senn Seth. Redi Em Sekhet {{seconds}}; Em Khet Sehen Seth.",
       "wrong_password": "! Sekhem Nen Maat"
     },
     "scan": {

@@ -16,10 +16,10 @@
  */
 import { soulApi, soulErrorMessage, soulMfaFailure, type SoulMfaStatus } from "@soulledger/core/api/soul";
 import { useNavigation, type NavigationProp } from "@react-navigation/native";
-import * as Clipboard from "expo-clipboard";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { KeyboardAvoidingView, Linking, Pressable, ScrollView, StyleSheet, TextInput, View } from "react-native";
 
+import { CLEAR_AFTER_MS, copySecret } from "../copySecret";
 import { Icon } from "../emblems";
 import { AppHeader } from "../chrome";
 import { useToast } from "../feedback";
@@ -120,8 +120,8 @@ function CodesPage({ codes, onDone, header, ownTop }: { codes: string[]; onDone:
   const allowLeave = useCodesGuard(true);
 
   const copyAll = () =>
-    Clipboard.setStringAsync(codes.join("\n")).then(
-      () => toast(tr("soul_app.mfa.copied")),
+    copySecret(codes.join("\n")).then(
+      () => toast(tr("soul_app.mfa.copied_clears", { seconds: String(CLEAR_AFTER_MS / 1000) })),
       () => toast(tr("soul_app.life.code_copy_failed"), "failure")
     );
   const soulCode = state.status === "signedIn" ? state.profile.soul_code : "";
@@ -242,8 +242,8 @@ function Wizard({ onExit, onEnabled }: { onExit: () => void; onEnabled: () => vo
 
   const copyKey = () => {
     if (!setup) return;
-    void Clipboard.setStringAsync(setup.secret).then(
-      () => toast(tr("soul_app.mfa.copied")),
+    void copySecret(setup.secret).then(
+      () => toast(tr("soul_app.mfa.copied_clears", { seconds: String(CLEAR_AFTER_MS / 1000) })),
       () => toast(tr("soul_app.life.code_copy_failed"), "failure")
     );
   };
