@@ -134,6 +134,8 @@ export function CaseAttachments({ judgmentId, canWrite }: { judgmentId: string; 
   };
 
   const items = data?.items ?? [];
+  // 结案后不能再传(服务端同样拒):只剩下载与预览。
+  const writable = canWrite && !data?.concluded;
   return (
     <section data-testid="case-attachments" data-print-hide="" aria-labelledby={titleId} className="min-w-0 border-t border-[oklch(var(--color-line))] pt-3 flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-3">
@@ -143,15 +145,15 @@ export function CaseAttachments({ judgmentId, canWrite }: { judgmentId: string; 
             {t("case.attachments.summary", { count: String(data.count), used: megabytes(data.total_bytes), max: String(Math.round(data.max_total_bytes / 1048576)) })}
           </span>
         )}
-        {canWrite && (
+        {writable && (
           <span className="ml-auto">
             <Button type="button" variant="secondary" size="sm" onClick={() => input.current?.click()}>{t("case.attachments.add")}</Button>
           </span>
         )}
       </div>
-      {canWrite && (
+      {writable && (
         <>
-          <input ref={input} type="file" multiple hidden data-testid="attachments-input" accept="image/jpeg,image/png,application/pdf,.jpg,.jpeg,.png,.pdf"
+          <input ref={input} type="file" multiple hidden data-testid="attachments-input" accept="image/jpeg,image/png,application/pdf"
             onChange={(e) => { add(Array.from(e.target.files ?? [])); e.target.value = ""; }} />
           <div
             role="button"
