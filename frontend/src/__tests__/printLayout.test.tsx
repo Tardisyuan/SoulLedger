@@ -65,6 +65,26 @@ describe("PrintFrame", () => {
   });
 });
 
+describe("PrintFrame footer note (W4 案卷附件:「附件原件见系统」)", () => {
+  it("prints the note in the footer when given, and nothing there when not", () => {
+    const withNote = render(
+      <PrintFrame referenceLabel="案号" reference="CN-1" note="附件原件见系统">
+        <p>body</p>
+      </PrintFrame>
+    );
+    const note = withNote.container.querySelector("[data-print-foot] [data-print-note]");
+    expect(note?.textContent).toBe("附件原件见系统");
+    withNote.unmount();
+    const without = render(
+      <PrintFrame referenceLabel="案号" reference="CN-1">
+        <p>body</p>
+      </PrintFrame>
+    );
+    expect(without.container.querySelector("[data-print-note]")).toBeEmptyDOMElement();
+    expect(without.container.textContent).not.toContain("附件原件见系统");
+  });
+});
+
 describe("PrintFrame reference with an empty label", () => {
   it("prints the reference alone, with no leading space", () => {
     const { container } = render(
