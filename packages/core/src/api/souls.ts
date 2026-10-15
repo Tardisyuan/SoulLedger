@@ -259,6 +259,7 @@ export const SOUL_IMPORT_ROW_CODES = [
   "too_many_cells",
   "invalid_civilization",
   "civilization_mismatch",
+  "invalid_characters",
   "invalid_date",
   "death_before_birth",
   "implausible_lifespan",
@@ -270,6 +271,7 @@ export const SOUL_IMPORT_ROW_CODES = [
 export const SOUL_IMPORT_FILE_CODES = [
   "file_too_large",
   "bad_encoding",
+  "bad_encoding_gbk",
   "empty_file",
   "no_rows",
   "duplicate_columns",

@@ -414,23 +414,26 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
             return refused.response()
         if any(r.errors for r in results):
             return Response(importer.summarize(results), status=status.HTTP_422_UNPROCESSABLE_ENTITY)
-        with transaction.atomic():
-            batch = importer.create_souls(results, tenant)
-            AuditLog.objects.create(
-                tenant=tenant,
-                user=request.user,
-                action=AuditAction.IMPORT,
-                resource="soul",
-                resource_id=str(batch),
-                changes={
-                    "batch_id": str(batch),
-                    "created": len(results),
-                    "filename": request.data["file"].name[:200],
-                },
-                ip_address=get_client_ip(request) or "",
-                user_agent=request.META.get("HTTP_USER_AGENT", "")[:500],
-                description=f"CSV import of {len(results)} souls",
-            )
+        try:
+            with transaction.atomic():
+                batch = importer.create_souls(results, tenant)
+                AuditLog.objects.create(
+                    tenant=tenant,
+                    user=request.user,
+                    action=AuditAction.IMPORT,
+                    resource="soul",
+                    resource_id=str(batch),
+                    changes={
+                        "batch_id": str(batch),
+                        "created": len(results),
+                        "filename": request.data["file"].name[:200],
+                    },
+                    ip_address=get_client_ip(request) or "",
+                    user_agent=request.META.get("HTTP_USER_AGENT", "")[:500],
+                    description=f"CSV import of {len(results)} souls",
+                )
+        except importer.ImportConflictError as conflict:
+            return Response(importer.summarize(conflict.results), status=status.HTTP_422_UNPROCESSABLE_ENTITY)
         return Response({"created": len(results), "batch_id": batch}, status=status.HTTP_201_CREATED)
 
     @staticmethod
