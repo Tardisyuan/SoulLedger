@@ -26,7 +26,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Icon } from "../emblems";
 import { useI18n } from "../i18n";
-import { Txt, useLayout, useReducedMotion, useTheme } from "../ui";
+import { AlertTxt, Txt, useLayout, useReducedMotion, useTheme } from "../ui";
 
 const GAP = 3;
 /** 远端图载入时的淡入(只动透明度);减弱动态效果时为 0。与 ui.tsx 的 FadeIn 同一个时长。 */
@@ -279,9 +279,9 @@ export function ComposeMediaTray({ uploads, onAdd }: { uploads: Uploads; onAdd: 
               ) : null}
               {failed ? (
                 <View style={[styles.overlay, { backgroundColor: t.negBg }]}>
-                  <Txt testID={`upload-${i}-failed`} variant="caption" tone="negInk">
+                  <AlertTxt testID={`upload-${i}-failed`} variant="caption" tone="negInk">
                     {tr("soul_app.circle.media.failed")}
-                  </Txt>
+                  </AlertTxt>
                   <View style={styles.actions}>
                     <Pressable testID={`upload-${i}-retry`} accessibilityRole="button" onPress={() => uploads.retry(it.key)} hitSlop={11} style={[styles.action, { borderColor: t.hair2 }]}>
                       <Txt variant="label">{tr("soul_app.circle.media.retry")}</Txt>

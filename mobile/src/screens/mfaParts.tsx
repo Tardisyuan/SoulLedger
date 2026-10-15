@@ -206,7 +206,7 @@ export function MfaSheet({
     <Modal visible={open} transparent animationType={reduced ? "none" : "fade"} onRequestClose={onClose}>
       <KeyboardAvoidingView behavior="padding" style={styles.fill}>
         <View style={[styles.fill, { backgroundColor: t.scrim }]}>
-          <Pressable style={styles.fill} onPress={onClose} accessibilityLabel={closeLabel} />
+          <Pressable style={styles.fill} accessibilityRole="button" onPress={onClose} accessibilityLabel={closeLabel} />
           <View
             testID={testID}
             accessibilityViewIsModal

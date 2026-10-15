@@ -162,6 +162,7 @@ export function FilterBar({
             value={searchValue ?? ''}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder={searchPlaceholder}
+            aria-label={searchPlaceholder}
             className="flex-1 bg-transparent text-sm text-[oklch(var(--color-ink))] placeholder-[oklch(var(--color-ink-tertiary))] focus:outline-hidden"
           />
         </div>
