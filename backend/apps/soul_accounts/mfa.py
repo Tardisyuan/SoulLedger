@@ -38,10 +38,19 @@ class SoulMfaPendingToken(Token):
     lifetime = core.PENDING_TOKEN_LIFETIME
 
 
-def issue_pending(account) -> str:
+def issue_pending(account, method="password") -> str:
     token = SoulMfaPendingToken()
     token["soul_account_id"] = str(account.pk)
+    token["method"] = method  # 第一步用的办法:登录设备列表与「最近登录」据此显示是密码还是面容
     return str(token)
+
+
+def pending_method(raw) -> str:
+    """待验证凭据里记的第一步办法;读不出按密码。调用方已用 `account_from_pending` 验过它。"""
+    try:
+        return SoulMfaPendingToken(raw).get("method") or "password"
+    except Exception:  # noqa: BLE001 -- 已验过;这里只取一个标签
+        return "password"
 
 
 def account_from_pending(raw) -> SoulAccount | None:

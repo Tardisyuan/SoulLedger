@@ -360,7 +360,8 @@ def initial_password_expired(account) -> bool:
     )
 
 
-def issue_tokens(account):
+def issue_tokens(account, session=None):
+    """`session`(`SignInSession`)给了就把它的 `sid` 写进刷新令牌:这台设备的整条轮换血统共用它。"""
     from apps.soul_accounts.authentication import SoulRefreshToken
 
     refresh = SoulRefreshToken.for_user(account.user)
@@ -369,6 +370,10 @@ def issue_tokens(account):
     # 与官员令牌同一个 `sv`:账号的会话被「立刻结束」时 `session_version` +1,更早签发的 access 当场 401。
     # 缺省按 0 算(`session_is_current`),所以上线前签发的令牌不受影响。
     refresh["sv"] = account.user.session_version
+    if session is not None:
+        from apps.authentication import signin_sessions
+
+        signin_sessions.attach(refresh, session)
     return {"access": str(refresh.access_token), "refresh": str(refresh)}
 
 
@@ -393,10 +398,14 @@ def authenticate(soul_code, password):
     return account
 
 
-def complete_login(account):
-    """密码(以及开着两步验证时的第二步)都过了:记登录时间并发令牌。"""
+def complete_login(account, *, request=None, method="password", trust_hash=""):
+    """密码(以及开着两步验证时的第二步)都过了:记登录时间、建登录设备、发令牌。
+    `trust_hash`:这次登录用的「30 天内不再询问」设备令牌的 sha256(退出这台时一并作废)。"""
+    from apps.authentication import signin_sessions
+
     update_last_login(None, account.user)
-    return issue_tokens(account)
+    session = signin_sessions.start(account.user, request, method=method, trust_hash=trust_hash)
+    return issue_tokens(account, session)
 
 
 def login(soul_code, password):
@@ -406,7 +415,7 @@ def login(soul_code, password):
     return account, complete_login(account)
 
 
-def change_password(account, old_password, new_password, push_token="", device_credential=""):
+def change_password(account, old_password, new_password, push_token="", device_credential="", keep_session=None):
     from django.contrib.auth.password_validation import validate_password
 
     if initial_password_expired(account):
@@ -421,11 +430,12 @@ def change_password(account, old_password, new_password, push_token="", device_c
     # `push_token` 是这台手机自己的推送 token,留着;其余推送登记停用。
     # `device_credential` 同理:在这部手机上改的,这部手机的面容/指纹登录留着(其余照旧失效)。
     set_password_chosen_by_soul(account, new_password, keep_push_token=push_token,
-                                keep_device_credential=device_credential)
-    return issue_tokens(account)
+                                keep_device_credential=device_credential, keep_session=keep_session)
+    return issue_tokens(account, keep_session)
 
 
-def set_password_chosen_by_soul(account, new_password, keep_push_token="", keep_device_credential=""):
+def set_password_chosen_by_soul(account, new_password, keep_push_token="", keep_device_credential="",
+                                keep_session=None):
     """灵魂自己定的密码 —— 改初始密码与邮箱重置(`set_new_password`)共用。
     初始密码的生命周期到此结束:不再强制改密、不再过期;否则邮箱重置之后
     仍被要求「修改初始密码」,而初始密码已过期时新密码也登不进去。"""
@@ -438,7 +448,7 @@ def set_password_chosen_by_soul(account, new_password, keep_push_token="", keep_
         account.save(update_fields=["must_change_password", "initial_password_expires_at"])
         # 灵魂已经自己设了密码:还没交付的初始密码没有意义了,明文立即作废。
         _void_open_credentials(account)
-        end_account_sessions(account, keep_push_token=keep_push_token)
+        end_account_sessions(account, keep_push_token=keep_push_token, keep_session=keep_session)
         _void_mfa_devices(account)  # 改密码不关两步验证,但「这部手机不再询问」全部作废
         from apps.soul_accounts import device_login
 
@@ -446,14 +456,14 @@ def set_password_chosen_by_soul(account, new_password, keep_push_token="", keep_
                                 keep_credential=keep_device_credential)
 
 
-def end_account_sessions(account, keep_push_token=""):
+def end_account_sessions(account, keep_push_token="", keep_session=None):
     """这个灵魂账号此前签发的全部令牌作废(刷新令牌进黑名单 + `session_version` +1,access 当场失效),
     推送登记除 `keep_push_token` 外一律停用 —— 退出的设备不该再收到推送。与官员端同一套
     (`authentication.passwords.end_sessions`);调用方负责事务,之后给当前设备签的新令牌带新的 `sv`。"""
     from apps.authentication.passwords import end_sessions
     from apps.soul_push.models import DeviceInvalidReason, PushDevice
 
-    end_sessions(account.user)
+    end_sessions(account.user, keep_session=keep_session)
     rows = PushDevice.objects.filter(account=account, is_active=True)
     if keep_push_token:
         rows = rows.exclude(token=keep_push_token)

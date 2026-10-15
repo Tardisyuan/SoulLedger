@@ -23,11 +23,18 @@ def weak_password_reasons(password: str, user) -> list[dict]:
     return []
 
 
-def end_sessions(user) -> None:
-    """该官员此前签发的全部令牌作废。调用方负责事务;之后给当前设备签的新令牌带新的 `sv`。"""
+def end_sessions(user, keep_session=None) -> None:
+    """该官员此前签发的全部令牌作废。调用方负责事务;之后给当前设备签的新令牌带新的 `sv`。
+
+    「登录设备」表(`SignInSession`)同步:除 `keep_session`(改密码的这台,它拿带同一个 `sid` 的新令牌)
+    外全部标成已退出,它们的「30 天内不再询问」一并作废。官员与灵魂、改密码 / 邮箱重置 / 管理员重置 /
+    转世都经过这里,所以只在这一处同步。"""
     from apps.soul_accounts.services import _revoke_refresh_tokens
 
+    from . import signin_sessions
+
     _revoke_refresh_tokens(user)
+    signin_sessions.revoke_all(user, keep=keep_session)
     user.session_version = F("session_version") + 1
     user.save(update_fields=["session_version"])
     user.refresh_from_db(fields=["session_version"])

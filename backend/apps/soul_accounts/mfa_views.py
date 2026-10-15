@@ -135,9 +135,12 @@ class SoulMfaVerifyView(APIView):
             LoginLog.objects.create(user=account.user, username=username, status="FAILED", ip_address=ip,
                                     user_agent=agent, failure_reason=f"mfa_{outcome['code']}")
             return _refuse_outcome(outcome)
+        method = "recovery" if data.get("recovery_code") else mfa.pending_method(data["pending_token"])
+        device_token = mfa.remember_device(account) if data.get("remember_device") else ""
         LoginLog.objects.create(user=account.user, username=username, status="SUCCESS", ip_address=ip,
-                                user_agent=agent)
-        tokens = svc.complete_login(account)
+                                user_agent=agent, method=method)
+        tokens = svc.complete_login(account, request=request, method=method,
+                                    trust_hash=mfa.core._hash_device(device_token) if device_token else "")
         payload = {
             **tokens,
             "soul_code": account.soul.soul_code,
@@ -147,8 +150,8 @@ class SoulMfaVerifyView(APIView):
                 "created_at": account.created_at,
             },
         }
-        if data.get("remember_device"):
-            payload["device_token"] = mfa.remember_device(account)
+        if device_token:
+            payload["device_token"] = device_token
         return Response(payload)
 
 

@@ -4,7 +4,7 @@ Auth URL routes.
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
-from . import mfa_views, officer_reset_views
+from . import mfa_views, officer_reset_views, session_views
 from .views import (
     LoginLogViewSet,
     LoginView,
@@ -50,5 +50,9 @@ urlpatterns = [
     path("mfa/complete/", mfa_views.complete_view, name="mfa-complete"),
     path("mfa/recovery-codes/", mfa_views.recovery_codes_view, name="mfa-recovery-codes"),
     path("mfa/disable/", mfa_views.disable_view, name="mfa-disable"),
+    # 登录设备(Design 第二十八批 W2)。见 session_views.py。
+    path("sessions/", session_views.sessions_view, name="sessions"),
+    path("sessions/revoke-others/", session_views.revoke_other_sessions_view, name="sessions-revoke-others"),
+    path("sessions/<uuid:session_id>/revoke/", session_views.revoke_session_view, name="sessions-revoke"),
     path("", include(router.urls)),
 ]
