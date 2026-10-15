@@ -16,7 +16,7 @@ import { act, fireEvent, render, screen, waitFor, within } from "@testing-librar
 import { AxiosError, type AxiosResponse, type InternalAxiosRequestConfig } from "axios";
 import { Image } from "expo-image";
 import type { ReactNode } from "react";
-import { Dimensions, StyleSheet } from "react-native";
+import { AccessibilityInfo, Dimensions, StyleSheet } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { ChatContext, ChatProvider, OUTBOX_KEY, type Chat, type Outgoing, useChat } from "../chat";
@@ -334,8 +334,12 @@ describe("an image on its way", () => {
   });
 
   it("failed: '! 没能发出 · 重试' under the image, and the tap sends it again", () => {
+    const announce = jest.spyOn(AccessibilityInfo, "announceForAccessibility");
     const chat = open(conv(), [], { outbox: [outgoing({ state: "failed" })] });
     expect(screen.getByTestId("pending-image-error").props.children).toBe("! 没能发出");
+    expect(screen.getByRole("alert")).toBe(screen.getByTestId("pending-image-error"));
+    expect(screen.getByTestId("pending-image-error").props.accessibilityLiveRegion).toBe("polite");
+    expect(announce.mock.calls.filter(([s]) => s === "! 没能发出")).toHaveLength(1);
     expect(screen.queryByTestId("pending-image-mask")).toBeNull();
     const retry = screen.getByTestId("resend");
     expect(within(retry).getByText(" · 重试")).toBeTruthy();

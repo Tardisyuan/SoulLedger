@@ -14,7 +14,7 @@
  * account save never takes the interface back; it says so and offers both ways.
  */
 import { soulApi, type NotificationSettings } from "@soulledger/core/api/soul";
-import { LOCALE_LABELS, SUPPORTED_LOCALES, type Locale } from "@soulledger/core/config/locale";
+import { BCP47_FOR_LOCALE, LOCALE_LABELS, SUPPORTED_LOCALES, type Locale } from "@soulledger/core/config/locale";
 import { platform } from "@soulledger/core/platform";
 import { useFocusEffect, useNavigation, type NavigationProp } from "@react-navigation/native";
 import Constants from "expo-constants";
@@ -30,6 +30,7 @@ import {
   Block,
   Button,
   EnumValue,
+  FieldError,
   GUTTER,
   Hairline,
   Loader,
@@ -86,6 +87,8 @@ function LanguageRow({ l, selected, busy, onPick }: { l: Locale; selected: boole
       testID={`language-${l}`}
       accessibilityRole="radio"
       accessibilityState={{ checked: selected }}
+      // The row reads the language's own name and note, so it is read in that language (iOS; Android has no such prop).
+      accessibilityLanguage={BCP47_FOR_LOCALE[l]}
       onPress={onPick}
       style={({ pressed }) => [
         styles.row,
@@ -117,10 +120,7 @@ function SaveStatus({ save, onRetry, onRevert }: { save: Save; onRetry: () => vo
     return (
       <View style={[styles.saveFailed, { marginHorizontal: gutter, borderColor: theme.negStrong, backgroundColor: theme.negBg }]}>
         <View style={styles.saveRow}>
-          <Icon name="alert" size={15} color={theme.neg} />
-          <Txt testID="language-save-failed" variant="caption" tone="negInk" style={styles.fill}>
-            {t("soul_app.settings.save_failed", { current: selfName(save.to), previous: selfName(save.from) })}
-          </Txt>
+          <FieldError testID="language-save-failed" text={t("soul_app.settings.save_failed", { current: selfName(save.to), previous: selfName(save.from) })} />
         </View>
         <View style={styles.saveActions}>
           <Button testID="language-retry" kind="secondary" title={t("soul_app.common.retry")} onPress={onRetry} />

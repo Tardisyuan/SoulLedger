@@ -133,9 +133,10 @@ describe("the other tabs have the same four states", () => {
     mockNotices.mockResolvedValue({ data: { results: [{ id: 1, title: "新审批", message: "有一件待办", is_read: false, created_at: "2026-10-09T01:00:00Z" }] } });
     const onUnread = jest.fn();
     renderOfficer(<NoticesTab onUnread={onUnread} />);
-    expect(await screen.findByText("●")).toBeTruthy();
+    expect((await screen.findByText("●")).props.accessibilityLabel).toBe("未读"); // the only mark of "unread": spoken as a word
     fireEvent.press(screen.getByTestId("notice-1"));
-    expect(await screen.findByText("○")).toBeTruthy();
+    // Read: the ○ is decoration, so it is hidden from screen readers.
+    expect((await screen.findByText("○", { includeHiddenElements: true })).props.accessibilityElementsHidden).toBe(true);
     await waitFor(() => expect(onUnread).toHaveBeenLastCalledWith(false));
   });
 

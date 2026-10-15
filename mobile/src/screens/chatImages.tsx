@@ -25,7 +25,7 @@ import { bubbleStamp } from "../chatRules";
 import { Icon } from "../emblems";
 import { useI18n } from "../i18n";
 import { ON_PLAQUE } from "../theme";
-import { Loader, Txt, useTheme } from "../ui";
+import { AlertTxt, Loader, Txt, useTheme } from "../ui";
 
 /** 一次最多挑几张(规格;服务器按会话限制未发出的张数,同值)。 */
 export const CHAT_IMAGE_MAX = 4;
@@ -187,9 +187,9 @@ export function PendingImage({ o, progress, onResend }: { o: Outgoing; progress:
         </View>
         {failed ? (
           <View style={styles.failedRow}>
-            <Txt testID="pending-image-error" variant="label" tone="negInk" style={styles.metaText}>
+            <AlertTxt testID="pending-image-error" variant="label" tone="negInk" style={styles.metaText}>
               {`! ${tr("soul_app.chat.image.failed")}`}
-            </Txt>
+            </AlertTxt>
             {retryable(o) ? (
               <Pressable testID="resend" accessibilityRole="button" onPress={onResend} hitSlop={15}>
                 <Txt variant="label" tone="ink" style={[styles.metaText, styles.underline]}>

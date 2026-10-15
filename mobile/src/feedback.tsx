@@ -99,7 +99,7 @@ export function LogoutProvider({ children, onConfirm }: { children: ReactNode; o
       {children}
       <Modal visible={visible} transparent animationType={reduced ? "none" : "fade"} onRequestClose={cancel}>
         <View style={[styles.scrim, { backgroundColor: t.scrim }]}>
-          <Pressable style={styles.fill} onPress={cancel} accessibilityLabel={tr("soul_app.logout.cancel")} />
+          <Pressable style={styles.fill} accessibilityRole="button" onPress={cancel} accessibilityLabel={tr("soul_app.logout.cancel")} />
           <View
             testID="confirm-sheet"
             accessibilityViewIsModal
