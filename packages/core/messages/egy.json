@@ -4405,6 +4405,14 @@
       "history": "Ikhet Hena Aq Pehwy",
       "history_keep": "Aq Pehwy · Hru 90",
       "failed": "Nen Aq {{n}} · Sekhem Nen Maa"
+    },
+    "export": {
+      "queued": "Em Iri",
+      "ready": "Iri Seth",
+      "share": "Smen Er Per…"
+    },
+    "help": {
+      "write": "Sesh Er Wesekhet"
     }
   },
   "soul_push": {
