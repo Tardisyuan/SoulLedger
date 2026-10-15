@@ -22,6 +22,7 @@ MESSAGES = {
         "cross_sentence_submitted": {"title": "联审节点已填写", "body": "{{tenant}} 已填写灵魂「{{soul}}」受刑计划第 {{order}} 站的处置。"},
         "password_help_requested": {"title": "重设密码求助", "body": "有人在登录页以账号「{{username}}」请求重设密码。核实身份后，请到用户管理为其重置。"},
         "password_help_requested_moderator": {"title": "重设密码求助", "body": "有人在登录页以账号「{{username}}」请求重设密码。核实身份后，请联系管理员为其重置。"},
+        "impersonation_started": {"title": "有人在以你的身份查看", "body": "{{by}} 正在以你的身份查看（只读，最长 {{minutes}} 分钟）。理由：{{reason}}。整个过程记进审计日志。"},
         "soul_inbox_assigned": {"title": "来信交给你办", "body": "灵魂「{{soul}}」写给殿司的信已由 {{by}} 交给你办理。"},
         "judgment_reassign_requested": {"title": "请求改派", "body": "{{by}} 请求改派案件 {{soul}}"},
         "dispatch_proposed": {"title": "收到移交提案", "body": "{{source}} 提议把灵魂「{{soul}}」移交到你殿，等你批准。"},
@@ -47,6 +48,7 @@ MESSAGES = {
         "cross_sentence_submitted": {"title": "Joint sentence submitted", "body": "{{tenant}} has submitted stop {{order}} of the sentence plan of soul {{soul}}."},
         "password_help_requested": {"title": "Password reset help", "body": "Someone on the sign-in page asked for a password reset for account {{username}}. Once you have confirmed who is asking, reset it under User Management."},
         "password_help_requested_moderator": {"title": "Password reset help", "body": "Someone on the sign-in page asked for a password reset for account {{username}}. Once you have confirmed who is asking, ask an administrator to reset it."},
+        "impersonation_started": {"title": "Someone is viewing as you", "body": "{{by}} is viewing the console as you (read only, up to {{minutes}} minutes). Reason: {{reason}}. The whole session is recorded in the audit log."},
         "soul_inbox_assigned": {"title": "A letter handed to you", "body": "{{by}} handed you the letter soul {{soul}} wrote to the hall."},
         "judgment_reassign_requested": {"title": "Reassignment requested", "body": "{{by}} asks for the case of {{soul}} to be reassigned"},
         "dispatch_proposed": {"title": "Dispatch proposal received", "body": "{{source}} proposes to send soul {{soul}} to your hall. It awaits your approval."},
@@ -109,6 +111,7 @@ KIND_BY_TYPE = {
     "PASSWORD_HELP_REQUESTED": "password_help_requested",
     "SOUL_INBOX_ASSIGNED": "soul_inbox_assigned",
     "JUDGMENT_REASSIGN_REQUESTED": "judgment_reassign_requested",
+    "IMPERSONATION_STARTED": "impersonation_started",
 }
 
 

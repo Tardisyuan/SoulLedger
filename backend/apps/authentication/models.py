@@ -295,3 +295,6 @@ class MfaRememberedDevice(models.Model):
     expires_at = models.DateTimeField()
     created_at = models.DateTimeField(auto_now_add=True)
     last_used_at = models.DateTimeField(null=True, blank=True)
+
+
+from apps.authentication.impersonation_models import Impersonation  # noqa: E402,F401  (Django 只从 models 模块发现模型)

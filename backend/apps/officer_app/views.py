@@ -10,6 +10,7 @@ from django.db import transaction
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework import status
 from rest_framework.exceptions import NotFound
+from rest_framework.permissions import BasePermission
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -31,11 +32,22 @@ from apps.soul_accounts.authentication import OfficerJWTAuthentication
 User = get_user_model()
 
 
+class NotImpersonating(BasePermission):
+    """代看令牌(只读 HTTP 用,见 apps/authentication/impersonation.py)不进官员 App。"""
+
+    message = "代看令牌不能访问官员 App。"
+
+    def has_permission(self, request, view):
+        from apps.authentication.impersonation import is_impersonation
+
+        return not is_impersonation(request.auth)
+
+
 class OfficerAppBaseView(APIView):
     """只认官员令牌(灵魂令牌在认证层就被挡),并要求有租户。"""
 
     authentication_classes = [OfficerJWTAuthentication]
-    permission_classes = [TenantPermission]
+    permission_classes = [NotImpersonating, TenantPermission]
 
 
 class TodoView(OfficerAppBaseView):

@@ -48,6 +48,15 @@ def _parses_as(token_class, raw) -> bool:
 class OfficerJWTAuthentication(JWTAuthentication):
     """项目默认认证类(`REST_FRAMEWORK.DEFAULT_AUTHENTICATION_CLASSES`)。"""
 
+    def authenticate(self, request):
+        result = super().authenticate(request)
+        if result is not None:
+            from apps.authentication import impersonation
+
+            if impersonation.is_impersonation(result[1]):
+                impersonation.enforce(request, *result)
+        return result
+
     def get_validated_token(self, raw_token):
         try:
             return super().get_validated_token(raw_token)
