@@ -9,6 +9,7 @@ import { PostComposer } from "@/src/components/social/PostComposer";
 import { FollowPanel } from "@/src/components/social/FollowPanel";
 import { Modal } from "@/src/components/ui/Modal";
 import { Pagination } from "@/src/components/ui/Pagination";
+import { useRememberedFilters } from "@/src/lib/rememberedFilters";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
 import { PageShell } from "@/src/components/ui/PageShell";
@@ -20,9 +21,15 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 const TAB_KEYS = ["feed", "all"] as const;
 
+/** 看「关注的人」还是「全部」,记在本浏览器。 */
+const SOCIAL_FILTERS_KEY = "soulledger.social.filters";
+
 export default function SocialFeedPage() {
   const { t } = useI18n();
   const [tab, setTab] = useState<"feed" | "all">("feed");
+  useRememberedFilters(SOCIAL_FILTERS_KEY, ["tab"] as const, { tab: tab === "feed" ? "" : tab }, (saved) => {
+    if (saved.tab === "all") setTab("all");
+  });
   const [page, setPage] = useState(1);
   const [composing, setComposing] = useState(false);
 

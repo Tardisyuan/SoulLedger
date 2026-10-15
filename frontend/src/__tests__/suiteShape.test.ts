@@ -107,6 +107,8 @@ const COLLECTED_FILES = [
   "PermissionFormModal.test.tsx",
   "PermissionsMatrixCells.test.tsx",
   "PermissionsMatrixDiff.test.ts",
+  // 2026-10-15 列表页记住筛选 + 列菜单:/permissions 定义一段的列菜单、/social 的页签。
+  "PermissionsPage.columns.test.tsx",
   "PermissionsPage.roleRename.test.tsx",
   "PostCard.test.tsx",
   "PostComposer.test.tsx",
@@ -136,6 +138,7 @@ const COLLECTED_FILES = [
   "selectionIsNotColourOnly.test.tsx",
   "SettingsDrawer.test.tsx",
   "Skeleton.test.tsx",
+  "SocialFeedPage.remembered.test.tsx",
   "SocialProfilePage.test.tsx",
   "SoulAccountCard.test.tsx",
   "SoulCredentialsPage.test.tsx",

@@ -421,3 +421,38 @@ describe("NotificationsPage day groups", () => {
     expect(days[1].firstElementChild).toHaveTextContent("d(2026-01-01T10:00:00) · 1");
   });
 });
+
+// ── 记住的筛选(2026-10-15) ─────────────────────────────────────────
+
+describe("NotificationsPage remembered filter", () => {
+  const KEY = "soulledger.notifications.filters";
+
+  it("a stored 「只看未读」 comes back on mount and reaches the request", async () => {
+    localStorage.setItem(KEY, JSON.stringify({ filter: "unread" }));
+    renderPage();
+    await waitFor(() => expect(mockedList).toHaveBeenLastCalledWith({ is_read: "false" }));
+    expect(screen.getByRole("button", { name: /notifications\.unread/ })).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("with nothing stored the list opens on 全部 and writes nothing", async () => {
+    renderPage();
+    await screen.findByText("Verdict ready");
+    expect(mockedList).toHaveBeenLastCalledWith(undefined);
+    expect(localStorage.getItem(KEY)).toBeNull();
+  });
+
+  it("choosing 未读 stores it; going back to 全部 removes it", async () => {
+    renderPage();
+    fireEvent.click(await screen.findByText("notifications.unread"));
+    await waitFor(() => expect(JSON.parse(localStorage.getItem(KEY)!)).toEqual({ filter: "unread" }));
+    fireEvent.click(screen.getByRole("button", { name: "notifications.all" }));
+    await waitFor(() => expect(localStorage.getItem(KEY)).toBeNull());
+  });
+
+  it("a stored value that is not a known filter is ignored", async () => {
+    localStorage.setItem(KEY, JSON.stringify({ filter: "everything" }));
+    renderPage();
+    await screen.findByText("Verdict ready");
+    expect(mockedList).toHaveBeenLastCalledWith(undefined);
+  });
+});

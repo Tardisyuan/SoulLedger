@@ -7,6 +7,7 @@ import { RefreshCw } from "lucide-react";
 import { PAGE_SIZE, type OfficerRebirthApplication } from "@soulledger/core/api";
 import { soulAccountKeys } from "@soulledger/core/query_keys";
 import { useCooldownShorteningCounts, useRebirthApplications } from "@soulledger/core/hooks/useSoulAccounts";
+import { useRememberedFilters } from "@/src/lib/rememberedFilters";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { usePlaque } from "@/src/components/plaque/Plaque";
 import { useCourtOffice, useHall } from "@/src/components/plaque/useHall";
@@ -32,11 +33,17 @@ import { SoulCode } from "@/src/components/soul-accounts/SoulCode";
 // 按钮宽,两边的 fr 列于是按不同的余量分配,表头与数据错开(2026-09-25 截图里实测)。
 const ROW_GRID = "md:grid md:grid-cols-[minmax(0,2fr)_minmax(0,0.6fr)_minmax(0,1fr)_minmax(0,1.2fr)_minmax(0,1.3fr)_5rem] md:items-center md:gap-4";
 
+/** 状态签记在本浏览器;「全部」就是没有记。 */
+const REBIRTH_FILTERS_KEY = "soulledger.rebirth-applications.filters";
+
 function RebirthApplicationsContent({ tabs }: { tabs: ReactNode }) {
   const { t, formatDateTime } = useI18n();
   usePlaque({ hall: useHall(useCourtOffice()) });
   const queryClient = useQueryClient();
   const [status, setStatus] = useState("");
+  useRememberedFilters(REBIRTH_FILTERS_KEY, ["status"] as const, { status }, (saved) => {
+    if (saved.status && (REBIRTH_FILTERS as readonly string[]).includes(saved.status)) setStatus(saved.status);
+  });
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<OfficerRebirthApplication | null>(null);
 
