@@ -10,7 +10,8 @@
 PDF 页数不取:压缩对象流里的页数无法廉价而可靠地数出,宁可不显示也不显示错的。
 
 **「结案」= `verdict` 非空或 `is_final`**(与 `claims.py` 判「已办结」同一条,`services.py` 结案时同时写下两者)。
-上传不看结案:审批页的附件区在结案之后才有人用。**删除**才看:只有上传人、且案子未结案。
+**结案后上传、删除都不行**(2026-10-15 负责人定):上传在锁住案子行之后与上限同一处检查,403 `concluded`;
+删除另外只许上传人。
 """
 import uuid
 
@@ -99,6 +100,8 @@ def upload(user, judgment, uploaded_file):
     with transaction.atomic():
         # 锁案子行:两个并发上传不能同时通过「已满」检查。
         locked = Judgment.all_objects.select_for_update().get(pk=judgment.pk)
+        if is_concluded(locked):
+            raise AttachmentError("The case is concluded; attachments can no longer be added.", "concluded", 403)
         _check_room(locked, uploaded_file.size)
         content, content_type, ext = _prepare(uploaded_file)
         size = content.size

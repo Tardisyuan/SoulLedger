@@ -66,6 +66,37 @@ test("after conclusion the server marks nothing deletable, and no row grows a de
   expect(screen.queryByRole("button", { name: "common.delete" })).not.toBeInTheDocument();
 });
 
+test("add button and drop zone exist before conclusion and are gone after; download and preview stay", async () => {
+  api.attachments.mockResolvedValue(list([item("a")]));
+  const open = renderIt();
+  await screen.findByTestId("attachment-a");
+  expect(screen.getByRole("button", { name: "case.attachments.add" })).toBeInTheDocument();
+  expect(screen.getByTestId("attachments-drop")).toBeInTheDocument();
+  open.unmount();
+  api.attachments.mockResolvedValue(list([item("a")], { concluded: true }));
+  renderIt();
+  const row = await screen.findByTestId("attachment-a");
+  expect(screen.queryByRole("button", { name: "case.attachments.add" })).not.toBeInTheDocument();
+  expect(screen.queryByTestId("attachments-drop")).not.toBeInTheDocument();
+  expect(screen.queryByTestId("attachments-input")).not.toBeInTheDocument();
+  expect(within(row).getByRole("button", { name: "case.attachments.download" })).toBeInTheDocument();
+});
+
+test("the file input offers only JPEG, PNG and PDF, so phones convert HEIC themselves", async () => {
+  api.attachments.mockResolvedValue(list([]));
+  renderIt();
+  const input = await screen.findByTestId("attachments-input");
+  expect(input.getAttribute("accept")).toBe("image/jpeg,image/png,application/pdf");
+});
+
+test("a HEIC that arrives anyway (dragged from a Mac) is refused on its row before any upload", async () => {
+  api.attachments.mockResolvedValue(list([]));
+  renderIt();
+  fireEvent.drop(await screen.findByTestId("attachments-drop"), { dataTransfer: { files: [file("IMG_0001.HEIC", 1000, "image/heic")] } });
+  expect(await screen.findByTestId("upload-1")).toHaveTextContent("case.attachments.failed_type");
+  expect(api.uploadAttachment).not.toHaveBeenCalled();
+});
+
 test("without write permission there is no add button, no drop zone, no file input and no delete", async () => {
   api.attachments.mockResolvedValue(list([item("a")]));
   renderIt(false);

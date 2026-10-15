@@ -220,10 +220,14 @@ def test_after_conclusion_nobody_can_delete(cn_tenant, judge_user, moderator, ad
     assert body["concluded"] is True and body["items"][0]["can_delete"] is False
 
 
-def test_uploading_after_conclusion_is_still_allowed_for_the_approval_stage(cn_tenant, judge_user):
+@pytest.mark.parametrize("who", ["judge_user", "moderator", "admin_user"])
+def test_after_conclusion_nobody_can_upload(cn_tenant, judge_user, moderator, admin_user, who):
     case = _case(cn_tenant)
     _conclude(case)
-    assert _post(officer_client(judge_user), case, _pdf()).status_code == 201
+    user = {"judge_user": judge_user, "moderator": moderator, "admin_user": admin_user}[who]
+    res = _post(officer_client(user), case, _pdf())
+    assert res.status_code == 403 and res.data["code"] == "concluded"
+    assert CaseAttachment.all_objects.count() == 0
 
 
 # ── 签名地址 ─────────────────────────────────────────────────────────────
