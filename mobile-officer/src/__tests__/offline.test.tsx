@@ -106,6 +106,37 @@ describe("the banner", () => {
     expect(screen.getByText("没有网络 · 显示的是 09:41 的内容")).toBeTruthy();
   });
 
+  it("on a screen that got nothing (「没取到」) says only 没有网络, and going back names the list's time again", async () => {
+    jest.spyOn(Date, "now").mockReturnValue(NINE_FORTY_ONE);
+    mockTodo.mockResolvedValue({ data: TODO });
+    function Stack() {
+      const [open, setOpen] = useState(false);
+      return (
+        <>
+          <OfflineBanner />
+          <TodoTab highlight={null} onOpen={() => {}} />
+          <Pressable testID="toggle-detail" onPress={() => setOpen((v) => !v)} />
+          {open ? <Detail target={{ type: "todo", kind: "approval", id: "never-opened" }} onBack={() => {}} onSettled={jest.fn()} /> : null}
+        </>
+      );
+    }
+    renderOfficer(
+      <Net>
+        <Stack />
+      </Net>
+    );
+    await screen.findByTestId("todo-group-approval");
+    await goOffline();
+    expect(screen.getByText("没有网络 · 显示的是 09:41 的内容")).toBeTruthy();
+    // A detail never opened online: nothing in the cache, and offline nothing is asked for.
+    mockItem.mockRejectedValue(new Error("Network Error"));
+    fireEvent.press(screen.getByTestId("toggle-detail"));
+    await waitFor(() => expect(screen.getByText("没有网络")).toBeTruthy());
+    expect(screen.queryByText(/显示的是/)).toBeNull();
+    fireEvent.press(screen.getByTestId("toggle-detail"));
+    expect(await screen.findByText("没有网络 · 显示的是 09:41 的内容")).toBeTruthy();
+  });
+
   it("turns light with the count of replies sent, and folds away after 3 s", async () => {
     jest.useFakeTimers();
     try {

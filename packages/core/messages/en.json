@@ -5917,6 +5917,7 @@
     },
     "offline": {
       "banner": "Offline · showing content from {{time}}",
+      "banner_bare": "Offline",
       "no_decide": "You can't approve or reject offline: the case may have changed.",
       "restored": "Back online",
       "restored_sent": "Back online · {{n}} replies sent",

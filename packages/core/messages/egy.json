@@ -5917,6 +5917,7 @@
     },
     "offline": {
       "banner": "Nen Em Senb · Pehwy {{time}}",
+      "banner_bare": "Nen Em Senb",
       "no_decide": "Nen Em Senb: Nen Hesy, Nen Khesef.",
       "restored": "Em Senb Mawy",
       "restored_sent": "Em Senb Mawy · Wesheb {{n}} Hab Seth",

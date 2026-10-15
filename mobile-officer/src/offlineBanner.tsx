@@ -80,6 +80,6 @@ export function OfflineBanner() {
 function ContentTime() {
   const { t } = useI18n();
   const shownAt = useShownAt();
-  const [openedAt] = useState(() => Date.now());
-  return <>{t("officer_app.offline.banner", { time: hhmm(shownAt ?? openedAt) })}</>;
+  // Nothing fetched on the screen in front (「没取到」, or nothing loaded yet): say only that the network is gone.
+  return <>{shownAt === null ? t("officer_app.offline.banner_bare") : t("officer_app.offline.banner", { time: hhmm(shownAt) })}</>;
 }
