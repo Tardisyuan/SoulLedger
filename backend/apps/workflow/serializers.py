@@ -673,6 +673,34 @@ class ApprovalWorkflowListSerializer(serializers.ModelSerializer):
         ]
 
 
+class ApprovalWorkflowExportSerializer(ApprovalWorkflowListSerializer):
+    """The CSV row (one per instance, Design batch 28 W5): the list's fields plus the current step, who started it
+    and how long it took. Not a response schema -- only `export` uses it, through `export_csv`.
+
+    `duration_minutes` is empty while the instance is still running: a figure that moves with the minute the file
+    was exported is not a property of the instance.
+    """
+
+    current_node_name = serializers.SerializerMethodField()
+    initiator = serializers.SerializerMethodField()
+    duration_minutes = serializers.SerializerMethodField()
+
+    class Meta(ApprovalWorkflowListSerializer.Meta):
+        fields = ApprovalWorkflowListSerializer.Meta.fields + ["current_node_name", "initiator", "duration_minutes"]
+
+    def get_current_node_name(self, obj) -> str:
+        return obj.current_node.node_name if obj.current_node_id else ""
+
+    def get_initiator(self, obj) -> str:
+        user = obj.create_user
+        return (user.display_name or user.username) if user else ""
+
+    def get_duration_minutes(self, obj) -> int | None:
+        if obj.completed_at is None:
+            return None
+        return max(0, int((obj.completed_at - obj.created_at).total_seconds() // 60))
+
+
 #: 一个节点决定可以取的裁决。命名成常量是为了 ENUM_NAME_OVERRIDES 能指到它:
 #: approve_node 的请求体进了 OpenAPI 之后,这组选项与 judgment 的 Verdict 同名为 `verdict`。
 NODE_DECISION_VERDICTS = ["PASSED", "FAILED", "CONFIRMED", "REJECTED", "SKIPPED"]

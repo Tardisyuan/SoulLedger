@@ -58,7 +58,7 @@ function renderPage() {
     </QueryClientProvider>
   );
 }
-const exportButton = () => screen.findByRole("button", { name: "导出" });
+const exportButton = () => screen.findByRole("button", { name: /^按当前筛选导出，共 \d+ 条$/ });
 
 describe("审判队列导出", () => {
   it("待审:请求带当前搜索与灵魂,是未结案,不带页码、不带分组", async () => {
@@ -102,6 +102,37 @@ describe("审判队列导出", () => {
     concludedCount = 10_001;
     renderPage();
     fireEvent.click(await screen.findByRole("button", { name: /已结案/ }));
-    await waitFor(() => expect(screen.getByRole("button", { name: "导出" })).toBeDisabled());
+    await waitFor(() => expect(screen.getByRole("button", { name: /^按当前筛选导出，共 \d+ 条$/ })).toBeDisabled());
+  });
+});
+
+describe("导出按钮的文案与位置(W5)", () => {
+  it("待审:「导出 CSV」,提示与读屏名带行数,在筛选条右端那一组里、排在最后", async () => {
+    renderPage();
+    const button = await exportButton();
+    expect(button).toHaveTextContent("导出 CSV");
+    expect(button).toHaveAccessibleName("按当前筛选导出，共 12 条");
+    expect(button).toHaveAttribute("title", "按当前筛选导出，共 12 条");
+    expect(button.parentElement).toHaveClass("sm:ml-auto");
+    expect(button.parentElement?.lastElementChild).toBe(button);
+    expect(screen.queryByText("超过 1 万条，请缩小筛选")).not.toBeInTheDocument();
+  });
+
+  it("待审:超过 1 万条按钮置灰,旁边写原因并作为按钮的描述", async () => {
+    pendingTotal = 10_001;
+    renderPage();
+    const button = await screen.findByRole("button", { name: "按当前筛选导出，共 10001 条" });
+    await waitFor(() => expect(button).toBeDisabled());
+    const note = screen.getByText("超过 1 万条，请缩小筛选");
+    expect(note.previousElementSibling).toBe(button);
+    expect(button).toHaveAccessibleDescription("超过 1 万条，请缩小筛选");
+  });
+
+  it("已结案:按钮在表上方右端", async () => {
+    renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: /已结案/ }));
+    const button = await screen.findByRole("button", { name: "按当前筛选导出，共 148 条" });
+    expect(button).toHaveTextContent("导出 CSV");
+    expect(button.parentElement).toHaveClass("justify-end");
   });
 });

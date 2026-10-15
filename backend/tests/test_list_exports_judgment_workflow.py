@@ -7,9 +7,11 @@ scope from a missing one), and VIEWER, which holds neither codename.
 """
 import csv
 import io
+from datetime import timedelta
 
 import pytest
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
@@ -17,7 +19,7 @@ from apps.audit.models import AuditAction, AuditLog
 from apps.judgment.models import Judgment, Verdict
 from apps.souls.models import Soul, SoulState
 from apps.tenants.models import Tenant
-from apps.workflow.models import ApprovalWorkflow
+from apps.workflow.models import ApprovalNode, ApprovalWorkflow
 
 User = get_user_model()
 JUDGMENT = "/api/v1/judgment/export/"
@@ -113,6 +115,34 @@ def test_workflow_export_is_the_list_for_this_hall(world):
     assert "Flow Outsider" not in "".join(",".join(r) for r in rows)
     _, rows_c = _table(world["client_c"].get(WORKFLOW))
     assert [r[1] for r in rows_c] == ["Flow Outsider"]
+
+
+def test_workflow_export_is_one_row_per_instance_with_step_initiator_and_duration(world):
+    """Design batch 28 W5: current step, who started it, when, status, how long -- and no row per node."""
+    initiator = User.objects.get(username="jx_mod_a")
+    initiator.display_name = "=阎罗"
+    initiator.save()
+    wf = world["wf_a"]
+    node = ApprovalNode.objects.create(workflow=wf, node_name="第三殿复核", node_order=1)
+    ApprovalNode.objects.create(workflow=wf, node_name="第四殿", node_order=2)
+    started = timezone.now() - timedelta(hours=3)
+    ApprovalWorkflow.objects.filter(pk=wf.pk).update(current_node=node, create_user=initiator, created_at=started)
+    done = ApprovalWorkflow.objects.get(workflow_name="Flow A2")
+    ApprovalWorkflow.objects.filter(pk=done.pk).update(
+        status="COMPLETED", created_at=started, completed_at=started + timedelta(minutes=95)
+    )
+    header, rows = _table(world["client_a"].get(WORKFLOW))
+    col = {name: i for i, name in enumerate(header)}
+    assert len(rows) == 2  # two instances, though one has two nodes
+    running = next(r for r in rows if r[col["Name"]] == "Flow A")
+    assert running[col["Current Node"]] == "第三殿复核"
+    assert running[col["Initiator"]] == "'=阎罗"  # a name that starts with = is not a formula
+    assert running[col["Started At"]] != ""
+    assert running[col["Duration (min)"]] == ""  # still running: nothing that moves with the export time
+    finished = next(r for r in rows if r[col["Name"]] == "Flow A2")
+    assert finished[col["Duration (min)"]] == "95"
+    assert finished[col["Current Node"]] == "" and finished[col["Initiator"]] == ""
+    assert "Created At" not in header
 
 
 def test_workflow_export_applies_the_list_filters(world):
