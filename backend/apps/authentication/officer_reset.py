@@ -11,6 +11,7 @@
 - 重置成功:校验器 → 改密 → 吊销该用户全部刷新令牌 → 清「不再询问」设备令牌(**不关两步验证**,
   下次登录仍要动态码)→ 审计行 → 给本人发一封「密码已修改」。
 """
+import hashlib
 import logging
 from urllib.parse import quote
 
@@ -27,14 +28,21 @@ from apps.core.client_ip import get_client_ip
 
 from .mail import fill, send_neutral_mail
 from .models import MfaRememberedDevice, User, UserRole
-from .passwords import end_push_registrations, end_sessions, weak_password_reasons
+from .passwords import end_push_registrations, end_sessions, set_officer_password, weak_password_reasons
 
 logger = logging.getLogger(__name__)
 
-#: 同一账号每小时最多发几封重置信(超出静默不发,应答不变)。
+#: 同一账号、同一来源 IP 每小时最多发几封重置信(超出静默不发,应答不变)。
+#: 按「账号 + IP」记而不是只按账号:只按账号时,陌生人三次申请就把本人当小时的重置信用光
+#: (`OfficerPasswordResetThrottle` 每 IP 5 次/小时挡不住换 IP 的人)。现在陌生人只能用光**他自己那个 IP**的额度。
 MAX_MAILS_PER_ACCOUNT_PER_HOUR = 3
-#: 资料页「发送验证邮件」每小时几封。
+#: 账号总量的天花板(任何 IP 合计),只防有人换很多 IP 去灌本人的邮箱,远高于本人会用到的次数。
+MAX_MAILS_PER_ACCOUNT_TOTAL_PER_HOUR = 20
+#: 资料页「发送验证邮件」每人每小时几封。
 MAX_VERIFY_MAILS_PER_HOUR = 5
+#: 同一个收件地址每小时最多收几封验证信(不分是谁申请的):邮箱是本人在资料页随手可改的,
+#: 没有这一条,一个账号每小时能往别人的地址发 5 封,几个账号就是几倍。
+MAX_VERIFY_MAILS_PER_ADDRESS_PER_HOUR = 2
 _HOUR = 3600
 
 
@@ -155,16 +163,26 @@ def _audit(user, description, *, request=None, changes=None, ip=None, ua=""):
 # ── 申请重置(worker 里跑) ──────────────────────────────────────────────────
 
 
+def _take(key: str, limit: int) -> bool:
+    """One use of an hourly budget; False when it is spent. `add` + `incr` is atomic in Redis, where
+    `get` then `set(n + 1)` let parallel requests all read the same count."""
+    cache.add(key, 0, timeout=_HOUR)
+    try:
+        return cache.incr(key) <= limit
+    except ValueError:  # expired between the two calls
+        cache.add(key, 1, timeout=_HOUR)
+        return True
+
+
 def send_reset_mail_if_eligible(identifier: str, ip=None, ua="") -> bool:
     """查人、按账号限频、发信。任何一步不满足都**静默**返回 False —— 调用方的应答不变。"""
     user = find_officer(identifier)
     if not can_receive_reset(user):
         return False
-    key = f"officer_reset_mails:{user.pk}"
-    sent = cache.get(key, 0)
-    if sent >= MAX_MAILS_PER_ACCOUNT_PER_HOUR:
+    if not _take(f"officer_reset_mails:{user.pk}:{ip or '-'}", MAX_MAILS_PER_ACCOUNT_PER_HOUR):
         return False
-    cache.set(key, sent + 1, timeout=_HOUR)
+    if not _take(f"officer_reset_mails_total:{user.pk}", MAX_MAILS_PER_ACCOUNT_TOTAL_PER_HOUR):
+        return False
     try:
         _send(user, "reset", _link("/reset-password", user, reset_tokens))
     except Exception:
@@ -195,8 +213,7 @@ def confirm_reset(uid, token, new_password, *, request=None) -> User:
         raise ResetRefusedError("weak_password", " ".join(r["message"] for r in reasons), reasons)
 
     with transaction.atomic():
-        user.set_password(new_password)
-        user.save(update_fields=["password"])
+        set_officer_password(user, new_password)
         end_sessions(user)  # 刷新令牌进黑名单 + session_version +1:已签发的 access 也立刻失效
         end_push_registrations(user)  # 所有设备都退出了,推送登记一并删
         # 只清「不再询问」设备令牌,不碰 OfficerMfa:两步验证仍开着,下次登录照问动态码。
@@ -217,11 +234,11 @@ def send_verification(user) -> bool:
     """给资料页的邮箱发验证链接。已验证 / 无邮箱返回 False;超过频率抛 `ResetRefusedError('rate_limited')`。"""
     if not user.email or user.email_verified:
         return False
-    key = f"officer_verify_mails:{user.pk}"
-    sent = cache.get(key, 0)
-    if sent >= MAX_VERIFY_MAILS_PER_HOUR:
+    address = hashlib.sha256(user.email.strip().lower().encode()).hexdigest()
+    if not _take(f"officer_verify_mails:{user.pk}", MAX_VERIFY_MAILS_PER_HOUR) or not _take(
+        f"officer_verify_addr:{address}", MAX_VERIFY_MAILS_PER_ADDRESS_PER_HOUR
+    ):
         raise ResetRefusedError("rate_limited", "请求过于频繁，请稍后再试")
-    cache.set(key, sent + 1, timeout=_HOUR)
     _send(user, "verify", _link("/verify-email", user, verify_tokens))
     return True
 

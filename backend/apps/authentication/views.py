@@ -7,6 +7,7 @@ import secrets
 import time
 
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
 from django.db import transaction
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiResponse, PolymorphicProxySerializer, extend_schema
@@ -19,6 +20,7 @@ from rest_framework.decorators import (
     throttle_classes,
 )
 from rest_framework.exceptions import AuthenticationFailed
+from rest_framework.exceptions import ValidationError as DRFValidationError
 from rest_framework.fields import empty
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -45,7 +47,13 @@ from apps.notifications import categories as notification_categories
 
 from . import signin_sessions
 from .officer_reset import _audit
-from .passwords import end_push_registrations, end_sessions
+from .passwords import (
+    RoleMinimumLengthValidator,
+    end_push_registrations,
+    end_sessions,
+    set_officer_password,
+    weak_password_reasons,
+)
 from .serializers import (
     AssignRolesSerializer,
     ChangePasswordRefusalSerializer,
@@ -292,8 +300,8 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
         """重置用户密码，返回随机生成的新密码"""
         user = self.get_object()
         new_password = secrets.token_urlsafe(12)
-        user.set_password(new_password)
-        user.save(update_fields=['password'])
+        with transaction.atomic():
+            set_officer_password(user, new_password, must_change=True)
         return Response({'password': new_password})
 
     def _batch_targets(self, user_ids):
@@ -499,12 +507,19 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
                     errors.append(f"Row {i+2}: password is required")
                     continue
 
+                try:
+                    RoleMinimumLengthValidator().validate(password, User(username=username, role=role))
+                except ValidationError as exc:
+                    errors.append(f"Row {i+2}: {' '.join(exc.messages)}")
+                    continue
+
                 User.objects.create_user(
                     username=username,
                     email=email,
                     password=password,
                     role=role,
                     tenant=tenant,
+                    must_change_password=True,  # an admin chose it: the officer picks their own at first login
                 )
                 created += 1
             except Exception as e:
@@ -843,8 +858,26 @@ def change_password(request):
     carries a new `access` / `refresh` pair to swap in. No `refresh` -> this device is signed
     out as well and the response has no tokens.
     """
+    # A wrong current password spends the SAME budget as a wrong login password (`login_rate:{ip}`,
+    # 5 per 15 minutes): a stolen session must not get unlimited guesses at the password here.
+    ip = _get_client_ip(request)
+    rate_key, until_key = f"login_rate:{ip}", f"login_rate_until:{ip}"
+    attempts = cache.get(rate_key, 0)
+    if attempts >= LOGIN_MAX_ATTEMPTS:
+        until = cache.get(until_key)
+        retry_after = max(1, math.ceil(until - time.time())) if until else LOGIN_WINDOW_SECONDS
+        return Response(
+            {"error": "密码尝试过于频繁,请稍后再试", "code": "login_locked", "retry_after": retry_after},
+            status=status.HTTP_429_TOO_MANY_REQUESTS, headers={"Retry-After": str(retry_after)},
+        )
     serializer = ChangePasswordSerializer(data=request.data, context={"request": request})
-    serializer.is_valid(raise_exception=True)
+    try:
+        serializer.is_valid(raise_exception=True)
+    except DRFValidationError as exc:
+        if "old_password" in exc.detail:
+            cache.set(rate_key, attempts + 1, timeout=LOGIN_WINDOW_SECONDS)
+            cache.set(until_key, time.time() + LOGIN_WINDOW_SECONDS, timeout=LOGIN_WINDOW_SECONDS)
+        raise
 
     user = request.user
     current = None
@@ -863,8 +896,7 @@ def change_password(request):
         keep = signin_sessions.session_of(current) or signin_sessions.start(user, request, officer_app=bool(
             current.payload.get("officer_app")))
     with transaction.atomic():
-        user.set_password(serializer.validated_data["new_password"])
-        user.save(update_fields=["password"])
+        set_officer_password(user, serializer.validated_data["new_password"])
         end_sessions(user, keep_session=keep)
         end_push_registrations(user, keep_token=serializer.validated_data.get("token", ""))
         _audit(user, "官员修改密码,其他设备已退出", request=request,
@@ -959,11 +991,10 @@ def reset_password_request(request):
     serializer = ResetPasswordSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
 
-    email = serializer.validated_data["email"]
-
-    # Normalised, so a case variant is not a fresh bucket. The lookup below
-    # stays exact, as does the code's own key — `set_new_password` reads it
-    # back under the address as typed.
+    # Case-folded once, here and in `set_new_password`: the rate buckets, the code's own key
+    # and the lookup all agree, so `Soul@Example.com` neither dodges a limit nor silently
+    # gets no mail (the lookup below is `iexact`, as the unique index on `User.email` is).
+    email = serializer.validated_data["email"].strip().lower()
     rate_limit_key = f"pwd_reset_rate:{email.strip().lower()}"
     # When that window ends, as an epoch second — the counter's own TTL is not
     # readable through Django's cache API (as in `LoginView.post`).
@@ -1001,11 +1032,15 @@ def reset_password_request(request):
     # or page their administrator via `/auth/password-help/`. An officer's
     # address is therefore treated exactly like an unregistered one here — same statements, same body —
     # so this endpoint does not become an "is this an officer?" oracle either.
-    matches = list(User.objects.filter(email=email, role=SELF_RESET_ROLE)[:2])
+    matches = list(User.objects.filter(email__iexact=email, role=SELF_RESET_ROLE, is_active=True)[:2])
+    # A code is stored for EVERY address, registered or not (secure 6 digits, 5-minute TTL).
+    # `set_new_password` answers "expired" when no code is live and "wrong" when one is, and
+    # counts guesses against it; storing a code only for registered addresses made those two
+    # answers an account-existence oracle. An address with no single account gets a code
+    # nobody was ever sent, so every later answer is the same as for a real one.
+    code = f"{secrets.randbelow(900000) + 100000:06d}"
+    cache.set(f"pwd_reset:{email}", code, timeout=300)
     if len(matches) == 1:
-        # Generate secure 6-digit code, stored in the cache with a 5-minute TTL
-        code = f"{secrets.randbelow(900000) + 100000:06d}"
-        cache.set(f"pwd_reset:{email}", code, timeout=300)
 
         # BP-12: this was a comment, so no reset could ever be completed.
         # The code goes to the mailbox only — never the log, never the
@@ -1061,12 +1096,11 @@ def set_new_password(request):
     serializer = SetNewPasswordSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
 
-    email = serializer.validated_data["email"]
+    email = serializer.validated_data["email"].strip().lower()
     code = serializer.validated_data["code"]
     new_password = serializer.validated_data["new_password"]
 
     # Verify code from Redis
-    from django.core.cache import cache
     cached_code = cache.get(f"pwd_reset:{email}")
 
     if cached_code is None:
@@ -1086,9 +1120,18 @@ def set_new_password(request):
     # On the last allowed failure the CODE IS DELETED, not merely rejected.
     # Counting alone would leave a live code and let the attacker wait out the
     # counter; deleting forces a new request, which is itself rate-limited.
+    #
+    # The counter is bumped BEFORE the code is compared, with `cache.add` + `cache.incr`
+    # (atomic in Redis). Reading it, comparing, then writing `tries + 1` let N parallel
+    # guesses all read the same value and spend one try between them.
     attempts_key = f"pwd_reset_tries:{email}"
-    tries = cache.get(attempts_key, 0)
-    if tries >= MAX_RESET_CODE_ATTEMPTS:
+    cache.add(attempts_key, 0, timeout=300)  # `timeout` is the code's own TTL: the counter must outlive it
+    try:
+        tries = cache.incr(attempts_key)
+    except ValueError:  # expired between the two calls
+        cache.add(attempts_key, 1, timeout=300)
+        tries = 1
+    if tries > MAX_RESET_CODE_ATTEMPTS:
         cache.delete(f"pwd_reset:{email}")
         cache.delete(attempts_key)
         # No `retry_after`: there is nothing to wait for. The code is gone and
@@ -1097,17 +1140,16 @@ def set_new_password(request):
             "验证码错误次数过多,请重新获取", "reset_code_attempts_exceeded", status.HTTP_429_TOO_MANY_REQUESTS
         )
 
-    if cached_code != code:
-        # `timeout` matches the code's own TTL: the counter must outlive the
-        # code it guards, or a guesser could simply wait for the counter to
-        # expire while the code is still valid.
-        cache.set(attempts_key, tries + 1, timeout=300)
+    def wrong():
         # How many more checks this code will take: the App says 「还可以再试 N 次」.
         # Zero means the next submission, right or wrong, is `reset_code_attempts_exceeded`.
         return _reset_refusal(
             "验证码错误", "reset_code_wrong", status.HTTP_400_BAD_REQUEST,
-            attempts_left=MAX_RESET_CODE_ATTEMPTS - (tries + 1),
+            attempts_left=MAX_RESET_CODE_ATTEMPTS - tries,
         )
+
+    if not secrets.compare_digest(str(cached_code), code):
+        return wrong()
 
     # Correct code: the counter has no further job, and leaving it would let a
     # previous run's failures shorten the next legitimate reset.
@@ -1115,31 +1157,27 @@ def set_new_password(request):
 
     # Get user
     #
-    # `MultipleObjectsReturned` stays caught alongside `DoesNotExist` for the
-    # same reason as the count in reset_password_request above. Refusing
-    # is the only safe answer — with two accounts on one address there is no way
-    # to know whose password this code was meant to change, and picking `.first()`
-    # would hand one user's account to whoever else registered the address.
+    # A code exists for addresses with no single live soul account too (see
+    # `reset_password_request`), but nobody was ever sent it, so reaching here with one is a
+    # lucky guess at a six-digit number. It is answered as an ordinary wrong code — "no such
+    # account" / "ambiguous address" would turn that guess into the oracle the fake code closes.
     #
     # Restricted to soul accounts like `reset_password_request`: a code that
     # somehow exists for an officer's address (one issued before this rule,
     # or planted by anything else that writes the key) must not change an
     # officer's password.
-    try:
-        user = User.objects.get(email=email, role=SELF_RESET_ROLE)
-    except User.DoesNotExist:
-        return _reset_refusal("用户不存在", "no_soul_account", status.HTTP_404_NOT_FOUND)
-    except User.MultipleObjectsReturned:
-        return _reset_refusal(
-            "该邮箱对应多个账号,无法重置密码,请联系管理员", "ambiguous_email", status.HTTP_409_CONFLICT
-        )
+    users = list(User.objects.filter(email__iexact=email, role=SELF_RESET_ROLE, is_active=True)[:2])
+    if len(users) != 1:
+        return wrong()
+    user = users[0]
 
     # Validate password strength
-    from django.contrib.auth.password_validation import validate_password
-    try:
-        validate_password(new_password, user)
-    except Exception as e:
-        return _reset_refusal(str(e), "weak_password", status.HTTP_400_BAD_REQUEST)
+    reasons = weak_password_reasons(new_password, user)
+    if reasons:
+        return _reset_refusal(
+            " ".join(r["message"] for r in reasons), "weak_password", status.HTTP_400_BAD_REQUEST,
+            new_password=reasons,
+        )
 
     # Set new password — through the same path as a soul changing its initial
     # password, so the reset also ends the initial-password lifecycle: not
