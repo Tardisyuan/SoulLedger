@@ -407,7 +407,7 @@ class OfficerInboxViewSet(CodenameViewSetMixin, mixins.ListModelMixin, mixins.Re
             return Response({"event_id": sent}, status=status.HTTP_201_CREATED)
         try:
             event_id = svc.officer_reply(conversation, request.user, body.validated_data["body"],
-                                         request=request)
+                                         request=request, txn_id=txn_id)
         except svc.ChatError as exc:
             return _error(exc)
         except MatrixError as exc:

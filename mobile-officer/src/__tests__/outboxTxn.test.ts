@@ -16,7 +16,7 @@ jest.mock("@soulledger/core/api/soul-inbox", () => ({
   soulInboxApi: { messages: (...a: unknown[]) => mockMessages(...a), reply: (...a: unknown[]) => mockReply(...a) },
 }));
 
-const msg = (id: string, officer: boolean, body = "x") => ({ event_id: id, from_officer: officer, body, timestamp: 1, sender_name: "n", officer_title: "", image: null });
+const msg = (id: string, officer: boolean, body = "x", txn_id: string | null = null) => ({ event_id: id, from_officer: officer, body, timestamp: 1, sender_name: "n", officer_title: "", image: null, txn_id });
 const noAnswer = () => Object.assign(new Error("Network Error"), {});
 
 beforeEach(() => {
@@ -44,14 +44,29 @@ describe("the outbox's transaction id", () => {
     expect(mockReply).toHaveBeenCalledWith("c-1", "好", "or-from-screen");
   });
 
-  it("after a try, the officer message with our own words is not 'answered by someone else'", async () => {
+  it("after a try, the officer message carrying our txn id is not 'answered by someone else'", async () => {
     // The first attempt reached the server, the answer was lost; the thread now holds our reply.
     mockReply.mockRejectedValueOnce(noAnswer());
     enqueueReply({ id: "c-1", name: "李白", text: "好", seen: ["m1"] });
     await flushOutbox();
-    mockMessages.mockResolvedValue({ data: [msg("o1", true, "好"), msg("m1", false)] });
+    const txn = mockReply.mock.calls[0][2];
+    mockMessages.mockResolvedValue({ data: [msg("o1", true, "好", txn), msg("m1", false)] });
     expect(await flushOutbox()).toBe(1);
     expect(outboxEntry("c-1")).toBeUndefined();
+  });
+
+  it("another officer's identical words (other txn, or none) are 'answered' even after a try", async () => {
+    mockReply.mockRejectedValueOnce(noAnswer());
+    enqueueReply({ id: "c-1", name: "李白", text: "好", seen: ["m1"] });
+    await flushOutbox();
+    mockMessages.mockResolvedValue({ data: [msg("o9", true, "好", "someone-elses"), msg("m1", false)] });
+    expect(await flushOutbox()).toBe(0);
+    expect(outboxEntry("c-1")).toMatchObject({ state: "failed", reason: "answered" });
+    clearOutbox();
+    mockMessages.mockResolvedValue({ data: [msg("o9", true, "好"), msg("m1", false)] });
+    enqueueReply({ id: "c-1", name: "李白", text: "好", seen: ["m1"], txn: "t", tried: true });
+    expect(await flushOutbox()).toBe(0);
+    expect(outboxEntry("c-1")).toMatchObject({ state: "failed", reason: "answered" });
   });
 
   it("a different officer's words are still 'answered', before and after a try", async () => {

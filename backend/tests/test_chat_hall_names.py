@@ -119,3 +119,22 @@ def test_the_section_ten_hall_name_moves_only_the_old_value(cn_tenant, eu_tenant
     mig.forwards(live_apps, SCHEMA_EDITOR)
     assert Tenant.objects.get(pk=cn_tenant.pk).hall_name_egy == "运维改过的名字"
     assert Tenant.objects.get(pk=eu_tenant.pk).hall_name_egy == "Ta Hesmen"
+
+
+def test_an_officer_reply_carries_its_txn_id_and_the_thread_returns_it(cn_tenant, matrix):  # noqa: F811
+    """官员 App 的发件箱凭 txn_id 认出自己的回信。灵魂的信、没带 txn_id 的回信都是 None。
+    变异:`officer_reply` 不写 `io.soulledger.txn` → 事件与消息列表里都没有,红。"""
+    _hall(cn_tenant)
+    _, client = ready_soul(cn_tenant, name="甲")
+    inbox = client.post(CONVERSATIONS, {"kind": "OFFICER_INBOX"}, format="json").data
+    assert client.post(f"{CONVERSATIONS}{inbox['id']}/messages/", {"body": "我要申诉"}, format="json").status_code == 201
+    officer = officer_client(_officer(cn_tenant, first_name="崔珏", position="判官"))
+    url = f"{INBOX}{inbox['id']}/reply/"
+    assert officer.post(url, {"body": "已收", "txn_id": "r-1"}, format="json").status_code == 201
+    assert officer.post(url, {"body": "再说一句"}, format="json").status_code == 201
+
+    assert matrix.rooms[inbox["room_id"]]["messages"][-2]["txn_id"] == "r-1"
+    by_body = {r["body"]: r for r in officer.get(f"{INBOX}{inbox['id']}/messages/").data}
+    assert by_body["已收"]["txn_id"] == "r-1"
+    assert by_body["再说一句"]["txn_id"] is None
+    assert by_body["我要申诉"]["txn_id"] is None

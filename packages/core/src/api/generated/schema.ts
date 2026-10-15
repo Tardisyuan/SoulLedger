@@ -11416,6 +11416,8 @@ export interface components {
             sender_name: string;
             /** @description 回信官员的职位(官员回信;灵魂的信为空)。 */
             officer_title: string;
+            /** @description 官员回信发出时带的 `txn_id`;官员 App 的发件箱凭它认出自己的回信。灵魂的信与更早的回信为 null。 */
+            txn_id: string | null;
             body: string;
             /** @description 灵魂来信里的图片;`body` 此时是「[图片]」。没有为 null。 */
             image: components["schemas"]["ChatImage"] | null;
