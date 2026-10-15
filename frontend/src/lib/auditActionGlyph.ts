@@ -8,6 +8,8 @@ const GLYPH: Record<string, string> = {
   LOGOUT: "←",
   UPDATE: "✎",
   DELETE: "⌫",
+  IMPERSONATE_START: "◐",
+  IMPERSONATE_END: "◑",
 };
 
 export const auditActionGlyph = (action: string): string => GLYPH[action] ?? "•";

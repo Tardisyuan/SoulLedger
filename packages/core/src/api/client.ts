@@ -13,6 +13,7 @@ import {
 // Type-only import: erased at compile time, so this does not create a runtime
 // import cycle with users.ts (which imports `api` from here as a value).
 import type { PaginatedResponse } from "./users";
+import { getImpersonation } from "./impersonationState";
 
 /**
  * Where the API lives, resolved per call rather than captured at import.
@@ -235,6 +236,11 @@ api.interceptors.response.use(
   async (error) => {
     if (error.response?.status === 401 && !error.config._retry) {
       if (isAuthEndpoint(error.config.url)) {
+        return Promise.reject(error);
+      }
+      // 代看期间(只读,令牌比记录多活 60 秒)的 401 不刷新:刷新会把管理员的新 access 写进 access 位置,
+      // 悄悄结束代看;代看的收场只有一条路(`endImpersonation`)。
+      if (getImpersonation()) {
         return Promise.reject(error);
       }
 

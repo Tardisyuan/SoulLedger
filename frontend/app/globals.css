@@ -692,9 +692,12 @@
      裁决条、批量条)写 `bottom-(--bottom-bar)`,落在底栏上方而不是被它盖住。 */
   html {
     --bottom-bar: 0px;
+    /* 「以此人身份查看」固定条的高度(代看时 AppLayout 写成 2.5rem;平时 0)。它在工具条之上,
+       所以工具条、身份带、导航与页面里的吸顶条都再让出这一段。 */
+    --imp-h: 0px;
     /* 吸顶的工具条(52)+ 身份带此刻的高度(Plaque 写 `--identity-band`;没有身份带的页是 0)。
-       页面里吸顶的条写 `top-(--below-band)`。 */
-    --below-band: calc(var(--spacing) * 13 + var(--identity-band, 0px));
+       页面里吸顶的条写 `top-(--below-band)`。代看时再加上固定条的高度。 */
+    --below-band: calc(var(--spacing) * 13 + var(--identity-band, 0px) + var(--imp-h));
     /* AppLayout 内容槽位的最小高:视口减去吸顶的工具条 + 身份带,再减去窄屏的底栏(main 的
        `pb-14`)—— 内容短的页恰好一屏,不多出滚动。此前是 `100vh-2.5rem`,早于 v3 身份带,
        编辑器页因此多滚约 168px(用户 2026-10-02)。PageSpinner 填同一个槽位,用同一个值。 */

@@ -25,5 +25,18 @@
   "profile.devices.load_failed",
   "profile.devices.sign_out_failed",
   "profile.devices.mfa_until",
-  "profile.devices.stranger"
+  "profile.devices.stranger",
+  "admin.impersonate.title",
+  "admin.impersonate.reason_label",
+  "admin.impersonate.audit_note",
+  "admin.impersonate.start",
+  "admin.impersonate.failed",
+  "admin.impersonate.readonly",
+  "admin.impersonate.reason_line",
+  "admin.impersonate.remaining",
+  "admin.impersonate.locked",
+  "audit.descriptions.impersonate_start",
+  "audit.descriptions.impersonate_end",
+  "official_notify.impersonation_started.title",
+  "official_notify.impersonation_started.body"
 ]

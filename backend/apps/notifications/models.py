@@ -48,6 +48,8 @@ class NotificationType(models.TextChoices):
     JUDGMENT_REASSIGN_REQUESTED = "JUDGMENT_REASSIGN_REQUESTED", "Judgment Reassign Requested"
     # 发起方在对方批准前取消移交 → 执行地的官员(DispatchService.cancel_proposed)。文案键见 messages.py。
     DISPATCH_CANCELLED = "DISPATCH_CANCELLED", "Dispatch Cancelled"
+    # 管理员「以此人身份查看」→ 被看的人(apps/authentication/impersonation.py)。账号安全类,不能关。
+    IMPERSONATION_STARTED = "IMPERSONATION_STARTED", "Impersonation Started"
 
 
 class UserNotification(AuditUserFields, models.Model):

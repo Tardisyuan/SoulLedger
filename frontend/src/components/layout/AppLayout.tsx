@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useRef } from "react";
+import React, { useEffect, useState, useMemo, useRef } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -30,6 +30,8 @@ import { useRoomBeside } from "@/src/hooks/useRoomBeside";
 import { OfficerAssistEntry, OfficerAssistPanel } from "@/src/components/assist/OfficerAssist";
 import { useOfficerAssist } from "@/src/components/assist/useOfficerAssist";
 import { useSyncEmailLocale } from "@/src/components/layout/EmailLocaleSync";
+import { ImpersonationBanner, IMPERSONATION_BANNER_HEIGHT } from "@/src/components/impersonation/ImpersonationBanner";
+import { useImpersonation } from "@/src/components/impersonation/useImpersonation";
 
 /**
  * The shell, 规范 v3:左侧中性导航(`GlobalNav`,252 / 68)+ 内容栏。内容栏自上而下:
@@ -69,6 +71,15 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const assist = useOfficerAssist(wide);
   const bannerShown = useConnectionBannerShown();
   useSyncEmailLocale();
+  // 代看固定条在工具条之上:把它的高度写进 `--imp-h`(globals.css),吸顶的条都往下让。
+  const viewing = useImpersonation() !== null;
+  useEffect(() => {
+    if (!viewing) return;
+    document.documentElement.style.setProperty("--imp-h", IMPERSONATION_BANNER_HEIGHT);
+    return () => {
+      document.documentElement.style.removeProperty("--imp-h");
+    };
+  }, [viewing]);
 
   const handleLogout = async () => {
     try { await authApi.logout(); } catch (err) { console.error("Logout failed:", err); }
@@ -130,8 +141,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <LazyMotion features={domMax}>
+    <ImpersonationBanner />
     <div className="min-h-screen bg-[oklch(var(--color-canvas))] min-[769px]:grid min-[769px]:grid-cols-[auto_minmax(0,1fr)]">
-      <aside className="sticky top-0 hidden h-screen min-[769px]:block">
+      <aside className="sticky top-(--imp-h) hidden h-[calc(100vh-var(--imp-h))] min-[769px]:block">
         <GlobalNav
           menus={menus}
           allMenuPaths={allMenuPaths}
@@ -147,7 +159,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         {/* 问一问推开时(≥ 1024)面板是右侧通顶的一栏;工具条与匾都让出它的 420px。 */}
         <header
           data-testid="global-topbar"
-          className={`sticky top-0 z-masthead flex h-13 items-center justify-between gap-3 border-b border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] pl-4 ${
+          className={`sticky top-(--imp-h) z-masthead flex h-13 items-center justify-between gap-3 border-b border-[oklch(var(--color-line))] bg-[oklch(var(--color-surface-1))] pl-4 ${
             assist.pushed ? "pr-[436px]" : "pr-4"
           }`}
         >
@@ -306,7 +318,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
         {/* 身份带(规范 v3):吸在工具条下沿;页面滚动后自己收成 48px,只留印与殿名。
             z 与筛选栏同一层:两者不重叠 —— 筛选栏吸在 52 + 身份带此刻的高度(`--below-band`)。 */}
-        <div className={`sticky top-13 z-filters ${assist.pushed ? "pr-[420px]" : ""}`}>
+        <div className={`sticky top-[calc(var(--spacing)*13+var(--imp-h))] z-filters ${assist.pushed ? "pr-[420px]" : ""}`}>
           <Plaque title={title} meta={plaque?.meta} caseNumber={plaque?.caseNumber} caseRef={plaque?.caseRef} hall={plaque?.hall} collapsible short={shortBandFor(pathname)} />
         </div>
 

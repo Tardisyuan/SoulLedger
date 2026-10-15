@@ -1051,6 +1051,8 @@ paths:
           - DELETE
           - EXECUTE
           - EXPORT
+          - IMPERSONATE_END
+          - IMPERSONATE_START
           - IMPORT
           - LOGIN
           - LOGOUT
@@ -1073,6 +1075,8 @@ paths:
           * `BATCH_CREATE` - 批量创建
           * `BATCH_UPDATE` - 批量更新
           * `BATCH_DELETE` - 批量删除
+          * `IMPERSONATE_START` - 开始代看
+          * `IMPERSONATE_END` - 结束代看
       - name: ordering
         required: false
         in: query
@@ -1171,6 +1175,8 @@ paths:
           - DELETE
           - EXECUTE
           - EXPORT
+          - IMPERSONATE_END
+          - IMPERSONATE_START
           - IMPORT
           - LOGIN
           - LOGOUT
@@ -1193,6 +1199,8 @@ paths:
           * `BATCH_CREATE` - 批量创建
           * `BATCH_UPDATE` - 批量更新
           * `BATCH_DELETE` - 批量删除
+          * `IMPERSONATE_START` - 开始代看
+          * `IMPERSONATE_END` - 结束代看
       - name: ordering
         required: false
         in: query
@@ -1320,6 +1328,8 @@ paths:
           - DELETE
           - EXECUTE
           - EXPORT
+          - IMPERSONATE_END
+          - IMPERSONATE_START
           - IMPORT
           - LOGIN
           - LOGOUT
@@ -1342,6 +1352,8 @@ paths:
           * `BATCH_CREATE` - 批量创建
           * `BATCH_UPDATE` - 批量更新
           * `BATCH_DELETE` - 批量删除
+          * `IMPERSONATE_START` - 开始代看
+          * `IMPERSONATE_END` - 结束代看
       - name: ordering
         required: false
         in: query
@@ -1402,6 +1414,8 @@ paths:
           - DELETE
           - EXECUTE
           - EXPORT
+          - IMPERSONATE_END
+          - IMPERSONATE_START
           - IMPORT
           - LOGIN
           - LOGOUT
@@ -1424,6 +1438,8 @@ paths:
           * `BATCH_CREATE` - 批量创建
           * `BATCH_UPDATE` - 批量更新
           * `BATCH_DELETE` - 批量删除
+          * `IMPERSONATE_START` - 开始代看
+          * `IMPERSONATE_END` - 结束代看
       - name: ordering
         required: false
         in: query
@@ -1600,6 +1616,54 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/OfficerResetRefusal'
+          description: ''
+  /api/v1/auth/impersonate/:
+    post:
+      operationId: v1_auth_impersonate_create
+      description: 签发一张只读、最长 30 分钟、无刷新令牌的 access 令牌;被看的人收到通知,开始记一条审计。
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ImpersonateStart'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ImpersonateStart'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ImpersonateStart'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImpersonateStartResponse'
+          description: ''
+        '400':
+          description: No response body
+        '404':
+          description: No response body
+  /api/v1/auth/impersonate/end/:
+    post:
+      operationId: v1_auth_impersonate_end_create
+      description: |-
+        用代看令牌调:结束那一次。用管理员自己的令牌调:结束他名下还开着的(令牌已过期时走这条)。
+        这是代看令牌唯一能 POST 的地方。
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImpersonateEndResponse'
           description: ''
   /api/v1/auth/login/:
     post:
@@ -19291,6 +19355,8 @@ components:
       - BATCH_CREATE
       - BATCH_UPDATE
       - BATCH_DELETE
+      - IMPERSONATE_START
+      - IMPERSONATE_END
       type: string
       description: |-
         * `CREATE` - 创建
@@ -19307,6 +19373,8 @@ components:
         * `BATCH_CREATE` - 批量创建
         * `BATCH_UPDATE` - 批量更新
         * `BATCH_DELETE` - 批量删除
+        * `IMPERSONATE_START` - 开始代看
+        * `IMPERSONATE_END` - 结束代看
     Actor:
       type: object
       properties:
@@ -23982,6 +24050,77 @@ components:
       - post
       - reason
       - type
+    ImpersonateEndResponse:
+      type: object
+      properties:
+        ended:
+          type: boolean
+        minutes:
+          type: integer
+        pages:
+          type: integer
+      required:
+      - ended
+      - minutes
+      - pages
+    ImpersonateStart:
+      type: object
+      properties:
+        user_id:
+          type: integer
+        reason:
+          type: string
+          maxLength: 200
+      required:
+      - reason
+      - user_id
+    ImpersonateStartResponse:
+      type: object
+      properties:
+        access:
+          type: string
+        impersonation_id:
+          type: integer
+        started_at:
+          type: string
+          format: date-time
+        expires_at:
+          type: string
+          format: date-time
+        reason:
+          type: string
+        target:
+          $ref: '#/components/schemas/ImpersonationTarget'
+      required:
+      - access
+      - expires_at
+      - impersonation_id
+      - reason
+      - started_at
+      - target
+    ImpersonationTarget:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        role:
+          type: string
+        tenant_code:
+          type: string
+          nullable: true
+        hall:
+          type: object
+          additionalProperties:
+            type: string
+          nullable: true
+      required:
+      - hall
+      - id
+      - name
+      - role
+      - tenant_code
     InboxAssign:
       type: object
       properties:
@@ -27581,6 +27720,7 @@ components:
       - SOUL_INBOX_ASSIGNED
       - JUDGMENT_REASSIGN_REQUESTED
       - DISPATCH_CANCELLED
+      - IMPERSONATION_STARTED
       type: string
       description: |-
         * `WORKFLOW_ASSIGNED` - Workflow Assigned
@@ -27610,6 +27750,7 @@ components:
         * `SOUL_INBOX_ASSIGNED` - Soul Inbox Assigned
         * `JUDGMENT_REASSIGN_REQUESTED` - Judgment Reassign Requested
         * `DISPATCH_CANCELLED` - Dispatch Cancelled
+        * `IMPERSONATION_STARTED` - Impersonation Started
     NullEnum:
       enum:
       - null

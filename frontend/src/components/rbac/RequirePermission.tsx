@@ -1,6 +1,7 @@
 "use client";
 
 import { usePermissions } from "@/src/hooks/usePermissions";
+import { ViewingLock } from "@/src/components/impersonation/ViewingLock";
 
 interface RequirePermissionProps {
   permissions: string | string[];
@@ -24,7 +25,8 @@ export function RequirePermission({
     : hasAnyPermission(permArray);
 
   if (!hasAccess) return <>{fallback}</>;
-  return <>{children}</>;
+  // 代看(只读)期间写类控件置灰,见 ViewingLock。
+  return <ViewingLock permissions={permArray}>{children}</ViewingLock>;
 }
 
 /**
