@@ -252,7 +252,8 @@ test.describe("Critical path: cross-civilization dispatch approval", () => {
     await approveConfirm.getByRole("button", { name: "批准" }).click();
 
     await expect.poll(() => api.countOf("POST", `/dispatch/records/${PROPOSED_DISPATCH.id}/approve/`)).toBe(1);
-    await expect(page.getByText("已批准")).toBeVisible();
+    // The toast, not the status filter's 已批准 <option> on the list it routes back to.
+    await expect(page.locator(".toast-message").getByText("已批准")).toBeVisible();
     // approveMutation.onSuccess routes back to the list.
     await expect(page).toHaveURL(/\/dispatch$/);
   });
