@@ -160,6 +160,34 @@ describe("the lock", () => {
     expect(screen.getByTestId("profile-card")).toBeTruthy();
   });
 
+  it("while locked, Android's back key is swallowed; once unlocked it is released", async () => {
+    const { BackHandler } = jest.requireActual<typeof import("react-native")>("react-native");
+    const added = jest.spyOn(BackHandler, "addEventListener");
+    phone({ lock: true });
+    signedIn();
+    renderApp();
+    await screen.findByTestId("profile-card");
+    await background();
+    let recognise!: () => void;
+    bioMod.__state.gate = new Promise<void>((resolve) => (recognise = resolve));
+    const before = added.mock.calls.length;
+    await foreground(LOCK_AFTER_MS / 60_000);
+    await screen.findByTestId("app-lock");
+    // Only listeners added once the lock came up; navigation's own listener was there before.
+    const mine = added.mock.calls
+      .map((c, i) => ({ c, i }))
+      .slice(before)
+      .filter(({ c }) => c[0] === "hardwareBackPress");
+    expect(mine).toHaveLength(1);
+    expect((mine[0].c[1] as () => boolean)()).toBe(true);
+    const sub = added.mock.results[mine[0].i].value as { remove: () => void };
+    const remove = jest.spyOn(sub, "remove");
+    await act(async () => recognise());
+    await waitFor(() => expect(screen.queryByTestId("app-lock")).toBeNull());
+    expect(remove).toHaveBeenCalled();
+    added.mockRestore();
+  });
+
   it("does not lock on a brief switch: under five minutes the cover comes down and nothing is asked", async () => {
     phone({ lock: true });
     signedIn();

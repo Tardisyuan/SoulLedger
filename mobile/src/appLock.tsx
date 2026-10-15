@@ -11,7 +11,7 @@
 import { onSessionResume, onSessionSuspend } from "@soulledger/core/platform";
 import * as LocalAuthentication from "expo-local-authentication";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { BackHandler, Pressable, StyleSheet, View } from "react-native";
 
 import { BrandMark } from "./brandMarkView";
 import { appLockOn } from "./deviceLogin";
@@ -70,6 +70,13 @@ export function AppLock() {
       offResume();
     };
   }, [unlock]);
+
+  // Android's back key must not reach the screens under the lock (it would pop or close them unseen).
+  useEffect(() => {
+    if (phase !== "locked") return;
+    const sub = BackHandler.addEventListener("hardwareBackPress", () => true);
+    return () => sub.remove();
+  }, [phase]);
 
   if (phase === "off") return null;
   return (
