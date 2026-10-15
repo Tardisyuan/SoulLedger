@@ -57,6 +57,25 @@ export function useAddJudgmentComment(id: string) {
   });
 }
 
+/** 案卷附件与用量 — see `judgmentApi.attachments`. `enabled: false` for a caller without `judgment.read`. */
+export function useCaseAttachments(id: string, options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: judgmentKeys.attachments(id),
+    queryFn: () => judgmentApi.attachments(id),
+    enabled: !!id && (options?.enabled ?? true),
+    staleTime: 15_000,
+  });
+}
+
+/** 删除一份附件;成功后重取列表。失败(403 已结案 / 非上传人)由调用方在行上写出。 */
+export function useDeleteCaseAttachment(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (attachmentId: string) => judgmentApi.deleteAttachment(id, attachmentId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: judgmentKeys.attachments(id) }),
+  });
+}
+
 /** 「戊 · 发落」's options for one candidate verdict — see `judgmentApi.destinations`. */
 export function useJudgmentDestinations(id: string, verdict: JudgmentVerdict | null | undefined) {
   return useQuery({

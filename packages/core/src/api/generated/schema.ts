@@ -1277,6 +1277,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/case-attachments/{attachment_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["v1_case_attachment_file"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/chat-images/{image_id}/": {
         parameters: {
             query?: never;
@@ -2913,6 +2929,70 @@ export interface paths {
          *     deleted. See Judgment.can_delete.
          */
         post: operations["v1_judgment_archive_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/judgment/{id}/attachments/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description Judgment CRUD + conclude action.
+         *     Tenant-isolated via TenantPermission.
+         */
+        get: operations["v1_judgment_attachments_retrieve"];
+        put?: never;
+        /**
+         * @description Judgment CRUD + conclude action.
+         *     Tenant-isolated via TenantPermission.
+         */
+        post: operations["v1_judgment_attachments_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/judgment/{id}/attachments/{attachment_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * @description Judgment CRUD + conclude action.
+         *     Tenant-isolated via TenantPermission.
+         */
+        delete: operations["v1_judgment_attachments_destroy"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/judgment/{id}/attachments/{attachment_id}/link/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description Judgment CRUD + conclude action.
+         *     Tenant-isolated via TenantPermission.
+         */
+        get: operations["v1_judgment_attachments_link_retrieve"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -9742,6 +9822,44 @@ export interface components {
             model?: string;
             effort?: components["schemas"]["EffortEnum"] | components["schemas"]["BlankEnum"];
             fallbacks?: boolean;
+        };
+        CaseAttachment: {
+            /** Format: uuid */
+            readonly id: string;
+            /** @description 上传时的文件名,只用于显示与下载。 */
+            readonly name: string;
+            readonly byte_size: number;
+            readonly content_type: string;
+            readonly uploader: number | null;
+            readonly uploader_name: string;
+            /** Format: date-time */
+            readonly created_at: string;
+            /** @description 给界面决定要不要画「删除」;服务端在 DELETE 时仍然重判。 */
+            readonly can_delete: boolean;
+        };
+        CaseAttachmentError: {
+            detail: string;
+            /** @description bad_type / too_large / case_full / too_many / concluded / not_uploader */
+            code: string;
+        };
+        CaseAttachmentLink: {
+            /** @description 站点根相对路径 `/api/v1/case-attachments/<id>/?t=…`,10 分钟有效。 */
+            url: string;
+            name: string;
+            content_type: string;
+        };
+        CaseAttachmentList: {
+            items: components["schemas"]["CaseAttachment"][];
+            count: number;
+            total_bytes: number;
+            max_count: number;
+            max_total_bytes: number;
+            max_file_bytes: number;
+            concluded: boolean;
+        };
+        CaseAttachmentUpload: {
+            /** Format: uri */
+            file: string;
         };
         /**
          * @description * `ROUTINE` - 常规审判
@@ -20475,6 +20593,38 @@ export interface operations {
             };
         };
     };
+    v1_case_attachment_file: {
+        parameters: {
+            query: {
+                /** @description 1 = 作为下载(Content-Disposition: attachment)。 */
+                dl?: number;
+                /** @description `…/attachments/<aid>/link/` 给出的签名。 */
+                t: string;
+            };
+            header?: never;
+            path: {
+                attachment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 图片(PNG / JPEG)或 PDF 文件。 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 签名无效或过期,或查看者此刻看不见这份附件。 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     v1_chat_image_file: {
         parameters: {
             query: {
@@ -23179,6 +23329,123 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Judgment"];
+                };
+            };
+        };
+    };
+    v1_judgment_attachments_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this Judgment. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaseAttachmentList"];
+                };
+            };
+        };
+    };
+    v1_judgment_attachments_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this Judgment. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["CaseAttachmentUpload"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaseAttachment"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaseAttachmentError"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaseAttachmentError"];
+                };
+            };
+        };
+    };
+    v1_judgment_attachments_destroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                attachment_id: string;
+                /** @description A UUID string identifying this Judgment. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 已删除。 */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaseAttachmentError"];
+                };
+            };
+        };
+    };
+    v1_judgment_attachments_link_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                attachment_id: string;
+                /** @description A UUID string identifying this Judgment. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaseAttachmentLink"];
                 };
             };
         };

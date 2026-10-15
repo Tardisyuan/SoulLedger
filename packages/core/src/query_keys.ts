@@ -65,6 +65,8 @@ export const judgmentKeys = {
   previous: (at: string, skip: string[] = []) => [...judgmentKeys.all, "previous", { at, skip }] as const,
   /** 评议. Under `all`: the realtime layer's invalidate of the root reaches a colleague's new comment. */
   comments: (id: string) => [...judgmentKeys.all, "comments", id] as const,
+  /** 案卷附件。Under `all`: a colleague's upload or the case concluding (which locks deletion) reaches it. */
+  attachments: (id: string) => [...judgmentKeys.all, "attachments", id] as const,
   /** 「戊 · 发落」 options. Under `all`: a conclusion elsewhere changes occupancy. */
   destinations: (id: string, verdict: string) => [...judgmentKeys.all, "destinations", id, verdict] as const,
   /** The four queue groups' sizes. Under `all` so a claim's invalidate reaches it. */

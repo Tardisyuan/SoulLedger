@@ -570,12 +570,15 @@ describe("乙 · 功过:结案时的余额快照", () => {
     judgmentApi.get.mockResolvedValue({ data: concluded(352) });
     renderPage();
     const box = await screen.findByTestId("concluded-balance");
-    const rows = within(box).getAllByRole("term").map((dt) => [dt.textContent, dt.nextElementSibling?.textContent]);
-    expect(rows).toEqual([
-      [tZh("judgment.desk.balance_at_conclusion"), "+307"],
-      [tZh("judgment.desk.balance_now"), "+352"],
-      [tZh("judgment.desk.recorded_after", { n: "3" }), "+45"],
-    ]);
+    // 「其后登记 N 条」读的是账本记录,与余额框不同时到;等它到齐再断(此前靠渲染的先后碰巧同时到)。
+    await waitFor(() => {
+      const rows = within(box).getAllByRole("term").map((dt) => [dt.textContent, dt.nextElementSibling?.textContent]);
+      expect(rows).toEqual([
+        [tZh("judgment.desk.balance_at_conclusion"), "+307"],
+        [tZh("judgment.desk.balance_now"), "+352"],
+        [tZh("judgment.desk.recorded_after", { n: "3" }), "+45"],
+      ]);
+    });
     expect(within(box).getAllByRole("term")[0].parentElement?.className).toMatch(/border-double/);
     expect(screen.getByText(tZh("judgment.desk.concluded_on", { date: "06-01" }))).toBeInTheDocument();
   });
