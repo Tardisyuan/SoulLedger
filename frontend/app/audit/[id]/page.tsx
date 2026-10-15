@@ -93,7 +93,7 @@ export default function AuditDetailPage() {
       variant="page"
       backLink={backLink}
       title={isPending ? <Skeleton className="h-8 w-64" /> : t(`audit.actions.${log.action}`)}
-      subtitle={isPending ? <Skeleton className="h-4 w-32" /> : log.description}
+      subtitle={isPending ? undefined : log.description}
     >
       {isPending ? (
         <Skeleton className="h-40 w-full" />
