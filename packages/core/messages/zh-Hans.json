@@ -4340,6 +4340,7 @@
         "no_email": "联系邮箱不能用来关闭两步验证。"
       },
       "copied": "已复制",
+      "copied_clears": "已复制。请在 {{seconds}} 秒内粘贴，之后会从剪贴板清除。",
       "wrong_password": "! 密码不对"
     },
     "scan": {
