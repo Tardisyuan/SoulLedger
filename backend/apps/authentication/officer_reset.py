@@ -235,8 +235,9 @@ def send_verification(user) -> bool:
     if not user.email or user.email_verified:
         return False
     address = hashlib.sha256(user.email.strip().lower().encode()).hexdigest()
-    if not _take(f"officer_verify_mails:{user.pk}", MAX_VERIFY_MAILS_PER_HOUR) or not _take(
-        f"officer_verify_addr:{address}", MAX_VERIFY_MAILS_PER_ADDRESS_PER_HOUR
+    # The address first: a send it refuses must not spend the user's own budget (`and` short-circuits).
+    if not _take(f"officer_verify_addr:{address}", MAX_VERIFY_MAILS_PER_ADDRESS_PER_HOUR) or not _take(
+        f"officer_verify_mails:{user.pk}", MAX_VERIFY_MAILS_PER_HOUR
     ):
         raise ResetRefusedError("rate_limited", "请求过于频繁，请稍后再试")
     _send(user, "verify", _link("/verify-email", user, verify_tokens))

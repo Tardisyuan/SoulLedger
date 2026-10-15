@@ -163,13 +163,15 @@ def audit(action, user, description, *, actor=None, request=None, changes=None):
 # ── 向导 ─────────────────────────────────────────────────────────────────────
 
 
-def _lock(mfa) -> OfficerMfa | None:
+def _lock(mfa):
     """Re-read the row under `SELECT ... FOR UPDATE`. Every path that reads then writes `last_step` /
     `failed_attempts` / the recovery codes goes through this inside `transaction.atomic()`, as the soul side
     does (`soul_accounts/mfa.py::_lock`): without it two parallel submissions both read the same counter
     and both pass the replay check for one code, or spend one failed attempt between them. None = the row
     was deleted meanwhile (disabled / reset)."""
-    return OfficerMfa.objects.select_for_update(of=("self",)).select_related("user").filter(pk=mfa.pk).first()
+    # The row's own model: the soul side (`soul_accounts/mfa.py`) passes its `SoulMfa` rows through the same
+    # verify / confirm-owner kernel, already locked by its own `_lock`; re-reading them as `OfficerMfa` found nothing.
+    return type(mfa)._default_manager.select_for_update(of=("self",)).filter(pk=mfa.pk).first()
 
 
 def begin_setup(user) -> OfficerMfa:
