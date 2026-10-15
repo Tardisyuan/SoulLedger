@@ -74,6 +74,12 @@ export type AppStackParams = {
   Mfa: undefined;
   /** 登录设备与记录 (第二十八批 S1),从设置页「账号安全」进。 */
   SignIns: undefined;
+  /** 导出我的资料 (第二十八批 S3),从设置页「我的资料」进;完成的推送也落在这里。 */
+  DataExport: undefined;
+  /** 帮助 (S5)。`only: "login"`:登录页「登录遇到问题」的版本 —— 只有登录与账号那一组,没有「写给本殿」,未登录也能进。 */
+  Help: { only?: "login" } | undefined;
+  /** 写给本殿 (S5),从帮助页进:一封带类别的书信。 */
+  Feedback: undefined;
   NotificationPrimer: undefined;
   /** 通知记录:推送过的都在,从设置页进。 */
   NotificationHistory: undefined;

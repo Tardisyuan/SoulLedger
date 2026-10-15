@@ -441,8 +441,18 @@ export function SettingsScreen() {
           onPress={() => navigation.navigate("SignIns")}
         />
       </View>
+      {/* 第二十八批 S3: its own section under 账号安全, one row. */}
+      <GroupLabel testID="group-data">{t("soul_app.settings.group_data")}</GroupLabel>
+      <View style={[styles.rows, { borderTopColor: theme.hair }]}>
+        <NavRow testID="open-export" label={t("soul_app.export.title")} onPress={() => navigation.navigate("DataExport")} />
+      </View>
       <View style={[styles.rows, styles.gapTop, { borderTopColor: theme.hair }]}>
         <NavRow testID="open-about" label={t("about.title")} onPress={() => navigation.navigate("About")} />
+      </View>
+      {/* 第二十八批 S5: the bottom section, one row; feedback is reached from the help page, not from a row of its own. */}
+      <GroupLabel testID="group-help">{t("soul_app.settings.group_help")}</GroupLabel>
+      <View style={[styles.rows, { borderTopColor: theme.hair }]}>
+        <NavRow testID="open-help" label={t("soul_app.help.title")} onPress={() => navigation.navigate("Help")} />
       </View>
 
       <View style={[styles.end, { paddingHorizontal: gutter }]}>

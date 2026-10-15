@@ -98,7 +98,7 @@ function LapsedNotice({ lapse, bio }: { lapse: Lapse; bio: string }) {
 export function LoginScreen() {
   const theme = useTheme();
   const { t } = useI18n();
-  const navigation = useNavigation<NavigationProp<{ Login: LoginParams; ForgotPassword: undefined; ScanCode: undefined }>>();
+  const navigation = useNavigation<NavigationProp<{ Login: LoginParams; ForgotPassword: undefined; ScanCode: undefined; Help: { only: "login" } }>>();
   // Set by the 「忘记密码」 flow on its way back here. It says the reset worked; it does not sign in.
   const params = useRoute<RouteProp<{ Login: LoginParams }, "Login">>().params;
   const reset = params?.passwordReset === true;
@@ -398,6 +398,12 @@ export function LoginScreen() {
       </View>
       <View style={styles.fill} />
       <View style={[styles.footer, { borderTopColor: theme.hair }]}>
+        {/* 第二十八批 S5: the sign-in group of the help page, reachable signed out. */}
+        <Pressable testID="login-trouble" accessibilityRole="link" disabled={busy} onPress={() => navigation.navigate("Help", { only: "login" })} style={styles.trouble}>
+          <Txt variant="label" tone="muted" style={[styles.noSpacing, styles.underline]}>
+            {t("soul_app.help.login_trouble")}
+          </Txt>
+        </Pressable>
         <LanguageSwitch />
       </View>
       <SwitchAccountSheet
@@ -605,4 +611,5 @@ const styles = StyleSheet.create({
   switch: { minHeight: 44, minWidth: 44, justifyContent: "center", paddingHorizontal: 12 },
   retry: { marginTop: 12 },
   leftLink: { alignItems: "flex-start" },
+  trouble: { minHeight: 44, minWidth: 44, alignItems: "center", justifyContent: "center", marginBottom: 8 },
 });
