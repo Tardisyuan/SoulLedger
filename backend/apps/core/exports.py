@@ -66,8 +66,12 @@ def record_export(request, *, resource, rows):
     request's, else the caller's own (`force_authenticate` skips the middleware).
     """
     from apps.audit.models import AuditAction, AuditLog
+    from apps.authentication.impersonation import is_impersonation, refuse
     from apps.core.client_ip import get_client_ip
 
+    # 代看(只读)期间不导出:导出会以被看者的名义写审计行,也把数据带出系统。认证层按路径已拦,这里是所有 CSV 导出共用的第二道。
+    if is_impersonation(getattr(request, "auth", None)):
+        raise refuse("impersonation_read_only", "查看中，不能导出。")
     user =request.user if request.user.is_authenticated else None
     AuditLog.objects.create(
         tenant=getattr(request, "tenant", None) or getattr(user, "tenant", None),

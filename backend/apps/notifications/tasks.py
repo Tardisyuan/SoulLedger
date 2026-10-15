@@ -22,7 +22,7 @@ from datetime import timedelta
 from celery import shared_task
 from django.utils import timezone
 
-EMAILED_TYPES = ("WORKFLOW_ASSIGNED", "JUDGMENT_REASSIGN_REQUESTED", "PASSWORD_HELP_REQUESTED")
+EMAILED_TYPES = ("WORKFLOW_ASSIGNED", "JUDGMENT_REASSIGN_REQUESTED", "PASSWORD_HELP_REQUESTED", "IMPERSONATION_STARTED")
 WINDOW = timedelta(hours=24)
 
 MESSAGES = {

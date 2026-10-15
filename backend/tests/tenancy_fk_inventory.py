@@ -194,6 +194,8 @@ EDGES = {
     'authentication.LoginLog.user->authentication.User': ('user-other', 'global identity: the owning account'),
     'authentication.MfaRememberedDevice.user->authentication.User': ('user-other', 'global identity: the owning account'),
     'authentication.OfficerMfa.user->authentication.User': ('user-other', 'global identity: the owning account'),
+    'authentication.Impersonation.actor->authentication.User': ('user-other', 'global identity: the administrator who views'),
+    'authentication.Impersonation.target->authentication.User': ('user-other', 'global identity: the account being viewed'),
     'chat.Conversation.assignee->authentication.User': ('user-other', 'global identity: officer the conversation is assigned to'),
     'chat.InboxOfficerState.user->authentication.User': ('user-other', 'global identity: the owning account'),
     'chat.InboxReplyTemplate.created_by->authentication.User': ('user-other', 'global identity: creator'),

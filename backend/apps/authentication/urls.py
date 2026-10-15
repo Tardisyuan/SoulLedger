@@ -4,7 +4,7 @@ Auth URL routes.
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
-from . import mfa_views, officer_reset_views
+from . import impersonation_views, mfa_views, officer_reset_views
 from .views import (
     LoginLogViewSet,
     LoginView,
@@ -50,5 +50,8 @@ urlpatterns = [
     path("mfa/complete/", mfa_views.complete_view, name="mfa-complete"),
     path("mfa/recovery-codes/", mfa_views.recovery_codes_view, name="mfa-recovery-codes"),
     path("mfa/disable/", mfa_views.disable_view, name="mfa-disable"),
+    # 以此人身份查看(只读代看,W6)。见 impersonation.py。
+    path("impersonate/", impersonation_views.ImpersonateStartView.as_view(), name="impersonate-start"),
+    path("impersonate/end/", impersonation_views.ImpersonateEndView.as_view(), name="impersonate-end"),
     path("", include(router.urls)),
 ]
