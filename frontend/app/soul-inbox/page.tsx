@@ -40,6 +40,9 @@ import { AssignDialog } from "./AssignDialog";
 import { ROW_HOVER, ROW_SELECTED } from "@/components/ui/data-table";
 import { SoulCode } from "@/src/components/soul-accounts/SoulCode";
 
+/** 灵魂 App「帮助与反馈」来的信带的类别(backend `FEEDBACK_TAGS`)。列表上显示「反馈 · 类别」,直到有人回复;不认识的码不显示。 */
+const FEEDBACK_TAGS = ["account", "record", "app", "other"] as const;
+
 /*
  * 殿司收件箱:灵魂写给**当前所在**殿司的信(backend/apps/chat/views.py `OfficerInboxViewSet`)。
  * 读要 `soul_inbox.read`(整页),回复另要 `soul_inbox.reply`(没有就不给回复框、草稿与模板)。
@@ -757,6 +760,11 @@ function SoulInboxContent() {
                         </span>
                         <span className="mt-1 flex items-center gap-2">
                           <SoulCode code={r.soul_code} className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))]" />
+                          {FEEDBACK_TAGS.includes(r.feedback_tag as (typeof FEEDBACK_TAGS)[number]) && (
+                            <Badge tone="neutral" data-testid="feedback-tag">
+                              {t("soul_inbox.feedback.label", { category: t(`soul_inbox.feedback.tags.${r.feedback_tag}`) })}
+                            </Badge>
+                          )}
                           {r.has_draft && <span className="font-mono text-2xs text-[oklch(var(--color-ink-muted))]">{t("soul_inbox.folder.drafts")}</span>}
                           {r.closed_at && <Badge tone="neutral">{t("soul_inbox.closed")}</Badge>}
                         </span>

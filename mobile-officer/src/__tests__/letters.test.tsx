@@ -111,6 +111,22 @@ describe("the to-do group", () => {
     await screen.findByText("审批节点 · 1");
     expect(screen.queryByTestId("todo-group-letter")).toBeNull();
   });
+  it("a letter from the soul app's feedback form shows its category on the row, and an ordinary letter shows none", async () => {
+    mockTodo.mockResolvedValue({
+      data: { ...NONE, letters: group([{ ...row("letter", "c-1"), feedback_tag: "record" }, row("letter", "c-2"), { ...row("letter", "c-3"), feedback_tag: "app" }]) },
+    });
+    renderOfficer(<TodoTab highlight={null} onOpen={() => {}} />);
+    await screen.findByText("待回书信 · 3");
+    expect(within(screen.getByTestId("todo-row-letter-c-1")).getByText("反馈 · 我的记录有误")).toBeTruthy();
+    expect(within(screen.getByTestId("todo-row-letter-c-3")).getByText("反馈 · App 出了问题")).toBeTruthy();
+    expect(within(screen.getByTestId("todo-row-letter-c-2")).queryByText(/反馈/)).toBeNull();
+  });
+  it("a category it does not know shows nothing rather than a raw code", async () => {
+    mockTodo.mockResolvedValue({ data: { ...NONE, letters: group([{ ...row("letter", "c-1"), feedback_tag: "from-a-newer-server" }]) } });
+    renderOfficer(<TodoTab highlight={null} onOpen={() => {}} />);
+    await screen.findByText("待回书信 · 1");
+    expect(within(screen.getByTestId("todo-row-letter-c-1")).queryByText(/反馈|from-a-newer-server/)).toBeNull();
+  });
   it("a list of only letters is not the empty state", async () => {
     mockTodo.mockResolvedValue({ data: { ...NONE, letters: group([row("letter", "c-1")]) } });
     renderOfficer(<TodoTab highlight={null} onOpen={() => {}} />);

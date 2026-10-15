@@ -118,9 +118,19 @@ export function TodoTab({ onOpen, highlight }: { onOpen: (item: ItemRef) => void
   );
 }
 
+/** 帮助与反馈 (Design 第二十八批 S5): a letter that came from the soul app's feedback form carries one of four words. Only the tag. */
+const FEEDBACK_TAGS: Record<string, string> = {
+  account: "soul_inbox.feedback.tags.account",
+  record: "soul_inbox.feedback.tags.record",
+  app: "soul_inbox.feedback.tags.app",
+  other: "soul_inbox.feedback.tags.other",
+};
+
 function TodoRow({ item, highlight, onOpen }: { item: TodoItem; highlight: boolean; onOpen: (item: ItemRef) => void }) {
   const { t } = useI18n();
-  const lines = [item.soul_code, item.node_name, formatWhen(item.created_at)].filter((x): x is string => !!x);
+  const tagKey = item.feedback_tag ? FEEDBACK_TAGS[item.feedback_tag] : undefined;
+  const tag = tagKey ? t("soul_inbox.feedback.label", { category: t(tagKey) }) : null;
+  const lines = [tag, item.soul_code, item.node_name, formatWhen(item.created_at)].filter((x): x is string => !!x);
   return (
     <Row
       testID={`todo-row-${item.kind}-${item.id}`}
