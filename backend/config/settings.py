@@ -430,6 +430,17 @@ CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
 AUDIT_LOG_RETENTION_DAYS = int(os.getenv("AUDIT_LOG_RETENTION_DAYS", "365") or 0)
 LOGIN_LOG_RETENTION_DAYS = int(os.getenv("LOGIN_LOG_RETENTION_DAYS", "180") or 0)
 
+# apps.core retention (apps/core/retention.py), same convention: 0 = keep, empty = 0. Not pruned at all:
+# SoulEvent (the business record), unread notifications, soft-deleted business rows, uploaded files.
+EVENT_WEBHOOK_DELIVERY_RETENTION_DAYS = int(os.getenv("EVENT_WEBHOOK_DELIVERY_RETENTION_DAYS", "90") or 0)
+# Only READ notifications age out; unread ones stay until read.
+USER_NOTIFICATION_READ_RETENTION_DAYS = int(os.getenv("USER_NOTIFICATION_READ_RETENTION_DAYS", "180") or 0)
+PUSH_DELIVERY_RETENTION_DAYS = int(os.getenv("PUSH_DELIVERY_RETENTION_DAYS", "90") or 0)
+# Inactive PushDevice / OfficerPushDevice rows, counted from last_seen_at.
+INACTIVE_PUSH_DEVICE_RETENTION_DAYS = int(os.getenv("INACTIVE_PUSH_DEVICE_RETENTION_DAYS", "30") or 0)
+# "Remember this device" MFA rows (officer + soul), deleted this many days after they expired.
+EXPIRED_MFA_DEVICE_GRACE_DAYS = int(os.getenv("EXPIRED_MFA_DEVICE_GRACE_DAYS", "1") or 0)
+
 # apps.scheduler — TaskRun history and the "did it run" detection.
 # Retention: delete finished runs older than this many days ...
 SCHEDULER_RUN_RETENTION_DAYS = int(os.getenv("SCHEDULER_RUN_RETENTION_DAYS", "30"))

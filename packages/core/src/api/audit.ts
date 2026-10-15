@@ -35,8 +35,15 @@ export interface AuditLogEntry {
   user?: number | null;
 }
 
+/** AuditLogDetailSerializer: the list shape plus the acting user's own record. `tenant` is the user's hall code. */
+export interface AuditLogDetail extends AuditLogEntry {
+  user_details: { id: number; username: string; role: string | null; tenant: string | null } | null;
+  is_batch_operation: boolean;
+}
+
 export const auditApi = {
   list: (params?: Record<string, string>) => api.get<PaginatedResponse<AuditLogEntry>>("/audit-logs/", { params }),
+  get: (id: number | string) => api.get<AuditLogDetail>(`/audit-logs/${id}/`),
   /** 与 `list` 同一组筛选 / 租户划界的 CSV,不分页(`AuditLogViewSet.export`);页码参数不要传。 */
   exportCsv: (params?: Record<string, string>) =>
     api.get<Blob>("/audit-logs/export/", { params, responseType: "blob" }),

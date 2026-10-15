@@ -65,7 +65,8 @@ class AuditLogDetailSerializer(AuditLogSerializer):
                 "id": obj.user.id,
                 "username": obj.user.username,
                 "role": getattr(obj.user, 'role', None),
-                "tenant": obj.tenant.code if obj.tenant else None,
+                # The user's own hall, not the log's (a global admin acts in halls that are not theirs).
+                "tenant": obj.user.tenant.code if obj.user.tenant_id else None,
             }
         return None
 

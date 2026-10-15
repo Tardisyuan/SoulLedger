@@ -48,6 +48,7 @@ const COLLECTED_FILES = [
   "WebhooksPanel.test.tsx",
   "LoginLogPage.test.tsx",
   "AppLayout.test.tsx",
+  "AuditDetailPage.test.tsx",
   "AuditPage.impersonate.test.tsx",
   "AuditPage.test.tsx",
   "Badge.test.tsx",

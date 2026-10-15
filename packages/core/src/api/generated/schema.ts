@@ -19325,6 +19325,7 @@ export interface operations {
                 /** @description A search term. */
                 search?: string;
                 tenant?: string;
+                trace_id?: string;
                 user?: number;
             };
             header?: never;
@@ -19394,6 +19395,7 @@ export interface operations {
                 /** @description A search term. */
                 search?: string;
                 tenant?: string;
+                trace_id?: string;
                 user?: number;
             };
             header?: never;
@@ -19507,6 +19509,7 @@ export interface operations {
                 /** @description A search term. */
                 search?: string;
                 tenant?: string;
+                trace_id?: string;
                 user?: number;
             };
             header?: never;
@@ -19554,6 +19557,7 @@ export interface operations {
                 /** @description A search term. */
                 search?: string;
                 tenant?: string;
+                trace_id?: string;
                 user?: number;
             };
             header?: never;
