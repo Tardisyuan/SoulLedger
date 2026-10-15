@@ -30,6 +30,7 @@ from django.db.models.functions import Lower
 
 from apps.souls.dates import check_soul_dates, validate_historical_date
 from apps.souls.models import TENANT_CIVILIZATION, Civilization, Soul
+from apps.tenants.models import Tenant
 
 #: Most data rows one file may carry. A product limit, not a technical one: a larger
 #: register belongs in several files so each preview stays readable on screen.
@@ -54,6 +55,14 @@ class ImportFileError(Exception):
         super().__init__(code)
         self.code = code
         self.detail = detail
+
+
+class ImportConflictError(Exception):
+    """Rows turned into duplicates between validation and the write."""
+
+    def __init__(self, results):
+        super().__init__("import_conflict")
+        self.results = results
 
 
 @dataclass
@@ -94,7 +103,13 @@ def _read(data: bytes):
     try:
         text = data.decode("utf-8-sig")  # tolerates a BOM, rejects anything not UTF-8
     except UnicodeDecodeError as exc:
-        raise ImportFileError("bad_encoding") from exc
+        # Excel on Chinese Windows saves "CSV" as GBK. Not decoded here (GB18030 accepts almost any
+        # bytes, so a wrong guess would store mojibake); only named, so the client can say "save as UTF-8".
+        try:
+            data.decode("gb18030")
+        except UnicodeDecodeError:
+            raise ImportFileError("bad_encoding") from exc
+        raise ImportFileError("bad_encoding_gbk") from exc
     reader = csv.reader(io.StringIO(text, newline=""))
     try:
         header = next(reader, None)
@@ -110,7 +125,12 @@ def _read(data: bytes):
         if missing:
             raise ImportFileError("missing_columns", columns=missing)
         rows = []
-        for line_no, cells in enumerate(reader, start=2):
+        while True:
+            # A quoted field may hold newlines, so a record spans lines: report the line it starts on.
+            line_no = reader.line_num + 1
+            cells = next(reader, None)
+            if cells is None:
+                break
             if not any(c.strip() for c in cells):
                 continue  # blank line
             if len(rows) >= MAX_ROWS:
@@ -139,6 +159,9 @@ def validate_csv(data: bytes, tenant) -> list[RowResult]:
         for col in REQUIRED_COLUMNS:
             if not values[col]:
                 res.add(col, "required")
+        for col, cell in values.items():
+            if "\x00" in cell:  # PostgreSQL text cannot hold NUL: it passed preview and crashed commit
+                res.add(col, "invalid_characters")
         for col, limit in MAX_LENGTH.items():
             if len(values[col]) > limit:
                 res.add(col, "too_long")
@@ -147,7 +170,10 @@ def validate_csv(data: bytes, tenant) -> list[RowResult]:
         if civ:
             if civ not in Civilization.values:
                 res.add("civilization", "invalid_civilization")
-            elif civ != expected:  # no cross-tenant writes: the file may only name the importer's own
+            elif expected is not None and civ != expected:
+                # no cross-tenant writes: the file may only name the importer's own. A hall with no
+                # civilization mapping has no "own" to compare with (Soul.civilization is derived from the
+                # hall, never stored from the file), so every row would fail with no way to fix the file.
                 res.add("civilization", "civilization_mismatch")
 
         dates = {}
@@ -215,9 +241,18 @@ def summarize(results) -> dict:
 
 
 def create_souls(results, tenant) -> uuid.UUID:
-    """Create every row, all or nothing. The caller guarantees no row has errors."""
+    """Create every row, all or nothing. The caller guarantees no row has errors.
+
+    Raises ImportConflictError when a concurrent commit of the same file got there first: validation ran
+    before this transaction, so the duplicate check is repeated here under a lock on the hall row.
+    """
     batch = uuid.uuid4()
     with transaction.atomic():
+        # Serialises imports per hall (no-op on SQLite); the re-check then sees the other commit's souls.
+        Tenant.objects.select_for_update().get(pk=tenant.pk)
+        _flag_duplicates(results, tenant)
+        if any(r.errors for r in results):
+            raise ImportConflictError(results)
         for r in results:
             Soul.objects.create(tenant=tenant, import_batch=batch, **r.parsed)
     return batch

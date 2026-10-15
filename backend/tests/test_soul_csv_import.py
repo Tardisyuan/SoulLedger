@@ -288,3 +288,55 @@ def test_soul_create_is_required(world, url):
 @pytest.mark.parametrize("url", [PREVIEW, COMMIT])
 def test_anonymous_is_refused(world, url):
     assert _post(APIClient(), url, HEADER + _row()).status_code in (401, 403)
+
+
+# ── data round (2026-10-15) ───────────────────────────────────────────────
+
+def test_a_hall_without_a_civilization_mapping_can_still_import(world):
+    """`TENANT_CIVILIZATION.get(code)` is None for such a hall: every row used to fail `civilization_mismatch`
+    with nothing in the file able to fix it. The hall decides the soul's civilization, never the file."""
+    new_hall = Tenant.objects.create(code="XX_UNMAPPED", display_name="未配置殿")
+    user = User.objects.create_user(username="imp_unmapped", password="x", role="IMPORTER", tenant=new_hall)
+    client = _client_for(user, new_hall)
+    r = _post(client, COMMIT, HEADER + _row())
+    assert r.status_code == 201, r.content
+    assert Soul.all_objects.filter(name="甲魂", tenant=new_hall).exists()
+
+
+def test_a_mapped_hall_still_refuses_another_civilization(world):
+    r = _post(world["client"], PREVIEW, HEADER + _row(civilization="EGYPTIAN"))
+    assert _errors(r) == [{("civilization", "civilization_mismatch")}]
+
+
+def test_nul_characters_are_a_row_error_not_a_commit_crash(world):
+    r = _post(world["client"], PREVIEW, HEADER + _row(description="a\x00b"))
+    assert _errors(r) == [{("description", "invalid_characters")}]
+    assert _post(world["client"], COMMIT, HEADER + _row(name="甲\x00")).status_code == 422
+
+
+def test_a_commit_that_loses_the_race_is_refused_not_double_created(world, monkeypatch):
+    """Validation ran, then another commit of the same file landed: the repeat check inside the write refuses."""
+    real = importer.validate_csv
+
+    def validate_then_lose_race(data, tenant):
+        results = real(data, tenant)
+        Soul.objects.create(name="甲魂", tenant=tenant)  # the other commit
+        return results
+
+    monkeypatch.setattr(importer, "validate_csv", validate_then_lose_race)
+    r = _post(world["client"], COMMIT, HEADER + _row())
+    assert r.status_code == 422
+    assert r.data["rows"][0]["errors"] == [{"field": "name", "code": "duplicate_existing"}]
+    assert Soul.all_objects.filter(name="甲魂").count() == 1
+    assert not AuditLog.objects.filter(action=AuditAction.IMPORT).exists()
+
+
+def test_a_gbk_file_gets_its_own_hint(world):
+    r = _post(world["client"], PREVIEW, "name,civilization\n甲魂,CHINESE\n".encode("gbk"))
+    assert r.status_code == 400 and r.data["code"] == "bad_encoding_gbk"
+
+
+def test_row_numbers_are_physical_lines_even_when_a_field_has_newlines(world):
+    body = HEADER + _row(description="一行\n两行\n三行") + _row(name="")
+    r = _post(world["client"], PREVIEW, body)
+    assert [row["row"] for row in r.data["rows"]] == [2, 5]

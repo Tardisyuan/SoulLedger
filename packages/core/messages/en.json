@@ -590,11 +590,13 @@
         "death_before_birth": "Death is before birth",
         "implausible_lifespan": "Implausible lifespan",
         "duplicate_in_file": "Duplicate of an earlier row",
-        "duplicate_existing": "Already exists"
+        "duplicate_existing": "Already exists",
+        "invalid_characters": "Contains characters that cannot be saved"
       },
       "file_codes": {
         "file_too_large": "File is too large",
         "bad_encoding": "File is not UTF-8",
+        "bad_encoding_gbk": "File is not UTF-8 (looks like GBK): in Excel, save as \"CSV UTF-8\"",
         "empty_file": "File is empty",
         "no_rows": "File has no data rows",
         "duplicate_columns": "Duplicate column names",
@@ -1888,6 +1890,19 @@
     "date_7d": "Last 7 days",
     "date_30d": "Last 30 days",
     "events_from_writes": "{{count}} writes in this event",
+    "detail": {
+      "open": "Details",
+      "not_found": "Record not found",
+      "resource": "Resource",
+      "user_agent": "Client",
+      "trace_id": "Request ID",
+      "trace_filter": "Show all records of this request",
+      "changes": "Changes",
+      "no_changes": "This record has no changes",
+      "field": "Field",
+      "before": "Before",
+      "after": "After"
+    },
     "actions": {
       "CREATE": "Created",
       "UPDATE": "Updated",
@@ -3436,7 +3451,8 @@
       "notifications_email_action_needed_global": "Email action-needed notifications (global admins)",
       "authentication_prune_soul_sign_ins": "Clear soul sign-in records and idle sessions older than 90 days",
       "authentication_prune_expired_push_registrations": "Deactivate push registrations whose sign-in has expired",
-      "soul_accounts_prune_data_exports": "Delete expired data exports"
+      "soul_accounts_prune_data_exports": "Delete expired data exports",
+      "audit_prune_retained_data": "Prune expired operational data (delivery logs, read notices, inactive devices)"
     },
     "status": {
       "PENDING": "Queued",

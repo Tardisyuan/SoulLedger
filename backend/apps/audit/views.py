@@ -54,7 +54,7 @@ class AuditLogFilter(filters.FilterSet):
 
     class Meta:
         model = AuditLog
-        fields = ["user", "action", "resource", "resource_id"]
+        fields = ["user", "action", "resource", "resource_id", "trace_id"]
 
     def filter_tenant(self, queryset, name, value):
         from apps.tenants.models import Tenant
@@ -178,13 +178,18 @@ class AuditLogViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
         # A hall-bound ADMIN is scoped like everyone else here (admin_bypass off); only a
         # global admin (no hall) reads every hall.
         qs = scope_to_tenant(
-            AuditLog.objects.select_related("user", "tenant").all(), self.request,
+            AuditLog.objects.select_related("user__tenant", "tenant").all(), self.request,
             admin_bypass=is_global_admin(self.request.user),
         )
 
         # Apply query param filters
         user_id = self.request.query_params.get('user_id')
         if user_id:
+            try:
+                user_id = int(user_id)
+            except ValueError:
+                # `?user_id=abc` went straight into the filter and the ORM's ValueError was a 500.
+                raise ValidationError({"user_id": f"'{user_id}' is not an integer."}) from None
             qs = qs.filter(user_id=user_id)
 
         action_param = self.request.query_params.get('action')

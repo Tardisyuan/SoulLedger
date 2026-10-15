@@ -1108,6 +1108,10 @@ paths:
         schema:
           type: string
       - in: query
+        name: trace_id
+        schema:
+          type: string
+      - in: query
         name: user
         schema:
           type: integer
@@ -1223,6 +1227,10 @@ paths:
           type: string
       - in: query
         name: tenant
+        schema:
+          type: string
+      - in: query
+        name: trace_id
         schema:
           type: string
       - in: query
@@ -1379,6 +1387,10 @@ paths:
         schema:
           type: string
       - in: query
+        name: trace_id
+        schema:
+          type: string
+      - in: query
         name: user
         schema:
           type: integer
@@ -1470,6 +1482,10 @@ paths:
           type: string
           description: 请求追踪ID，关联同一HTTP请求内的多个操作
         required: true
+      - in: query
+        name: trace_id
+        schema:
+          type: string
       - in: query
         name: user
         schema:
