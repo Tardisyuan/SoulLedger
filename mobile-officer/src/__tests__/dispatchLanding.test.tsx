@@ -31,7 +31,7 @@ jest.mock("@soulledger/core/api/auth", () => ({
   ...jest.requireActual("@soulledger/core/api/auth"),
   mfaApi: { status: jest.fn(async () => ({ data: { enabled: true, required: true } })) },
 }));
-jest.mock("@soulledger/core/api/judgment", () => ({ judgmentApi: { list: jest.fn(async () => ({ data: { results: [] } })), claim: jest.fn() } }));
+jest.mock("@soulledger/core/api/judgment", () => ({ judgmentApi: { list: jest.fn(async () => ({ data: { results: [] } })), claim: jest.fn(), queueCounts: jest.fn(async () => ({ data: { mine: 0, unclaimed: 0, others: 0, deferred: 0 } })) } }));
 jest.mock("@soulledger/core/api/notifications", () => ({
   notificationsApi: { list: (...a: unknown[]) => mockNotices(...a), markRead: jest.fn(async () => ({})), markAllRead: jest.fn(async () => ({})) },
 }));

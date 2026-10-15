@@ -153,7 +153,7 @@ function EmailFact({ email, verified }: { email: string; verified: boolean }) {
           <Txt variant="caption" tone="muted">
             {t("profile.email_verification_hint")}
           </Txt>
-          <SmallButton testID="me-email-send" title={t("profile.email_send_verification")} onPress={busy ? undefined : send} />
+          <SmallButton testID="me-email-send" title={t("profile.email_send_verification")} onPress={() => { if (!busy) send(); }} />
         </>
       )}
     </View>
