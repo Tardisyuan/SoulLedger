@@ -18,6 +18,14 @@ egy 用到新词根请注明义项;已废止写法(`Seped` 等)词表守卫会�
 
 ---
 
-## Design 回复
+## Design 回复(2026-10-15,原文在 Design 项目 `v3-batch29-reply.md`,下面是用户转来的摘要)
 
-(待填)
+- `officer_app.todo.filter_empty_title` egy:`Nen «{{kinds}}» Djer`。en 与 egy 里 `{{kinds}}` 用 `, ` 连接(zh 仍用「、」)。
+- `officer_app.todo.filter_empty_body` egy:`Setep Iru Ky, Er Sehen Setep.`
+- `list.columns.hint`:zh 照稿「显示哪些列 · 只在这台浏览器上记住」;en `Columns to show · remembered in this browser only`;egy `Iwn Maa · Smen Em Medjat Sab Pen Wa`。
+- `soul_app.mfa.copied_clears`:值得告诉用户;用一条新的完整词条,不在「已复制」后拼半句;秒数用 `{{seconds}}`。
+  - zh「已复制。请在 {{seconds}} 秒内粘贴，之后会从剪贴板清除。」
+  - en「Copied. Paste it within {{seconds}} seconds; after that it's cleared from the clipboard.」
+  - egy `Senn Seth. Redi Em Sekhet {{seconds}}; Em Khet Sehen Seth.`
+  - 中文不写「清空剪贴板」(只在剪贴板里仍是那串码时才清);真正清除时不再弹提示。
+- 没有新词根。`Redi`(放下)借来表示「粘贴」:若词表要求一词一义,登记为新义项。
