@@ -1,3 +1,5 @@
+import { useEffect, useRef } from "react";
+
 /**
  * A list page's filters, remembered in this browser (2026-10-13): an officer who looks at the same slice of
  * the ledger every day should not rebuild it after every reload. Strings only, one flat object per page.
@@ -30,4 +32,28 @@ export function writeFilters(key: string, values: Record<string, string>): void 
   } catch {
     /* remembered filters are a convenience */
   }
+}
+
+/**
+ * `/souls` 的记忆套路(进页读一次、读完才写、地址带了筛选就不读)做成 hook,给其余列表页共用。
+ * `values` 只放「常驻」的值(下拉、开关、排序);搜索框的字和从别处带来的 id 不放,它们属于一次到访。
+ * `skip`:地址已经自己要了筛选时为 true,不读取。写在读之前声明,所以首次渲染的默认值不会盖掉已存的。
+ */
+export function useRememberedFilters<K extends string>(
+  key: string,
+  fields: readonly K[],
+  values: Record<K, string>,
+  restore: (saved: Partial<Record<K, string>>) => void,
+  skip = false
+): void {
+  const ready = useRef(false);
+  const serialized = JSON.stringify(values);
+  useEffect(() => {
+    if (ready.current) writeFilters(key, JSON.parse(serialized) as Record<string, string>);
+  }, [key, serialized]);
+  useEffect(() => {
+    if (!skip) restore(readFilters(key, fields));
+    ready.current = true;
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 只在挂载(或地址是否带筛选改变)时读一次
+  }, [key, skip]);
 }

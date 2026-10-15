@@ -472,3 +472,49 @@ describe("print the delivery slip", () => {
     expect(screen.queryByText("ABCDEFGH23")).toBeNull();
   });
 });
+
+// ── 记住的筛选(2026-10-15) ─────────────────────────────────────────
+
+describe("remembered status filter", () => {
+  const KEY = "soulledger.soul-credentials.filters";
+  const chip = (name: string) => screen.getByRole("button", { name: tZh(`soul_accounts.credentials.filters.${name}`) });
+
+  it("a stored status comes back on mount and reaches the request", async () => {
+    asManager();
+    localStorage.setItem(KEY, JSON.stringify({ status: "DELIVERED" }));
+    renderPage();
+    await waitFor(() => expect(soulAccountsApi.credentials).toHaveBeenLastCalledWith({ status: "DELIVERED", page: 1 }));
+    expect(chip("DELIVERED")).toHaveAttribute("aria-pressed", "true");
+    expect(chip("PENDING")).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("the default is 待交付, so 「全部」 has its own stored form and comes back as 全部", async () => {
+    asManager();
+    const first = renderPage();
+    await screen.findAllByText("张三");
+    fireEvent.click(chip("all"));
+    await waitFor(() => expect(JSON.parse(localStorage.getItem(KEY)!)).toEqual({ status: "all" }));
+    first.unmount();
+
+    renderPage();
+    await waitFor(() => expect(soulAccountsApi.credentials).toHaveBeenLastCalledWith({ status: undefined, page: 1 }));
+    expect(chip("all")).toHaveAttribute("aria-pressed", "true");
+    expect(chip("PENDING")).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("with nothing stored it opens on 待交付 and writes nothing; an unknown stored value is ignored", async () => {
+    asManager();
+    renderPage();
+    await screen.findAllByText("张三");
+    expect(soulAccountsApi.credentials).toHaveBeenLastCalledWith({ status: "PENDING", page: 1 });
+    expect(localStorage.getItem(KEY)).toBeNull();
+  });
+
+  it("an unknown stored value is ignored", async () => {
+    asManager();
+    localStorage.setItem(KEY, JSON.stringify({ status: "SHREDDED" }));
+    renderPage();
+    await screen.findAllByText("张三");
+    expect(soulAccountsApi.credentials).toHaveBeenLastCalledWith({ status: "PENDING", page: 1 });
+  });
+});

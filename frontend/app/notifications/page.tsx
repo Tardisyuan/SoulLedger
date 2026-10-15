@@ -21,10 +21,14 @@ import { EmptyState } from "@/src/components/ui/EmptyState";
 import { QueryError } from "@/src/components/ui/PageError";
 import { TAB_BASE, TAB_ON, TAB_OFF } from "@/src/lib/tabClasses";
 import { cn } from "@/lib/utils";
+import { useRememberedFilters } from "@/src/lib/rememberedFilters";
 import { ROW_HOVER } from "@/components/ui/data-table";
 import { NotificationBatchBar, NOTIFICATION_BATCH_MAX } from "@/src/components/notifications/NotificationBatchBar";
 
 type FilterType = "all" | "unread";
+
+/** 「只看未读」记在本浏览器;回到「全部」就把记的删掉。 */
+const NOTIFICATIONS_FILTERS_KEY = "soulledger.notifications.filters";
 
 /**
  * Notifications under their local calendar day, days in first-seen order (the
@@ -68,6 +72,9 @@ export default function NotificationsPage() {
   // User management is ADMIN only (`user.manage`); a realm lead's notice says to ask one instead.
   const canManageUsers = hasPermission("user.manage");
   const [filter, setFilter] = useState<FilterType>("all");
+  useRememberedFilters(NOTIFICATIONS_FILTERS_KEY, ["filter"] as const, { filter: filter === "all" ? "" : filter }, (saved) => {
+    if (saved.filter === "unread") setFilter("unread");
+  });
   // 勾选属于一次查询:和筛选一起存,筛选换了就当场读成空(同 `useSoulSelection`,不靠 effect)。
   const [selection, setSelection] = useState<{ key: FilterType; ids: Set<string> }>({ key: "all", ids: new Set() });
   if (selection.key !== filter) setSelection({ key: filter, ids: new Set() });

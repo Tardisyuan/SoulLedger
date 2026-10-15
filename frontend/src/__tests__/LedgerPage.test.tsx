@@ -15,6 +15,7 @@ import { ledgerApi } from "@soulledger/core/api";
 import { I18nProvider } from "@/src/contexts/I18nContext";
 import { currentMonth, runningBalances, shiftMonth, signed } from "@/src/lib/ledgerJournal";
 import { saveBlob } from "@/src/lib/saveBlob";
+import { tZh } from "./support/zhBundle";
 
 jest.mock("@soulledger/core/api", () => ({
   ledgerApi: { journal: jest.fn(), journalMonth: jest.fn(), exportJournal: jest.fn() },
@@ -275,5 +276,42 @@ describe("搜索与导出:同一组筛选", () => {
     await waitFor(() => expect(mockedExport).toHaveBeenCalled());
     await waitFor(() => expect(screen.getByRole("button", { name: "导出" })).not.toBeDisabled());
     expect(mockedSave).not.toHaveBeenCalled();
+  });
+});
+
+// ── 记住的筛选(2026-10-15) ─────────────────────────────────────────
+
+describe("remembered filters", () => {
+  const KEY = "soulledger.ledger.filters";
+  const civChip = () => screen.getByRole("combobox", { name: tZh("souls.filter_civilization") }) as HTMLSelectElement;
+  const lastParams = () => mockedJournal.mock.calls[mockedJournal.mock.calls.length - 1][0];
+
+  beforeEach(() => mockedJournal.mockResolvedValue({ data: JOURNAL }));
+
+  it("a stored civilization and category come back on mount and reach the request", async () => {
+    localStorage.setItem(KEY, JSON.stringify({ civilization: "EGYPTIAN", category: "CHARITY" }));
+    renderPage();
+    await waitFor(() => expect(lastParams()).toEqual({ month: currentMonth(), civilization: "EGYPTIAN", category: "CHARITY" }));
+    expect(civChip().value).toBe("EGYPTIAN");
+  });
+
+  it("neither the month (it defaults to this month) nor the search text is stored", async () => {
+    renderPage();
+    await screen.findByText("周慕云");
+    fireEvent.change(screen.getByRole("searchbox", { name: "灵魂姓名或 ID" }), { target: { value: "周" } });
+    fireEvent.click(screen.getByRole("button", { name: tZh("ledger.journal.month_prev") }));
+    fireEvent.change(civChip(), { target: { value: "CHINESE" } });
+    await waitFor(() => expect(JSON.parse(localStorage.getItem(KEY)!)).toEqual({ civilization: "CHINESE" }));
+    expect(localStorage.getItem(KEY)).not.toContain("周");
+    expect(localStorage.getItem(KEY)).not.toMatch(/\d{4}-\d{2}/);
+  });
+
+  it("the chip's × clears the value and removes it from storage", async () => {
+    localStorage.setItem(KEY, JSON.stringify({ civilization: "EGYPTIAN" }));
+    renderPage();
+    await waitFor(() => expect(civChip().value).toBe("EGYPTIAN"));
+    fireEvent.click(screen.getByRole("button", { name: tZh("filter.clear_one", { name: tZh("souls.filter_civilization") }) }));
+    await waitFor(() => expect(localStorage.getItem(KEY)).toBeNull());
+    expect(lastParams()).toEqual({ month: currentMonth() });
   });
 });
