@@ -43,6 +43,7 @@ UNIQUE_KEYS = {
     'authentication.OfficerMfa:user': ('PER_PARENT', "unique inside one parent row; holds across tenants only because the parent's pk is global and the rows live with the parent"),
     'chat.ChatIdentity:account': ('PER_PARENT', "unique inside one parent row; holds across tenants only because the parent's pk is global and the rows live with the parent"),
     'chat.Conversation:chat_one_open_direct_room_per_pair': ('PER_PARENT', "unique inside one parent row; holds across tenants only because the parent's pk is global and the rows live with the parent"),
+    'soul_accounts.SoulDataExport:soul_data_export_one_in_progress': ('PER_PARENT', "unique inside one parent row; holds across tenants only because the parent's pk is global and the rows live with the parent"),
     'chat.InboxOfficerState:chat_one_inbox_state_per_officer': ('PER_PARENT', "unique inside one parent row; holds across tenants only because the parent's pk is global and the rows live with the parent"),
     'dispatch.CrossTenantJudgment:judgment': ('PER_PARENT', "unique inside one parent row; holds across tenants only because the parent's pk is global and the rows live with the parent"),
     'dispatch.CrossTenantJudgmentParticipant:unique_cross_judgment_node_order': ('PER_PARENT', "unique inside one parent row; holds across tenants only because the parent's pk is global and the rows live with the parent"),

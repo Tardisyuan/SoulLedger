@@ -88,6 +88,7 @@ MESSAGES = {
             "title": "Ankh Er Taui Khesef",
             "body": "{{soul}}: Ankh Er Taui Khesef In Wedja {{count}}. Wedja Pehwy, Ankh Er Taui.",
         },
+        "impersonation_started": {"title": "Ky Maa Em Ba-Ek", "body": "{{by}} Maa Em Ba-Ek (Maa Wa · At {{minutes}} Er Aa). Khet: {{reason}}. Iri Neb: Sesh Em Medew Maa."},
     },
 }
 
