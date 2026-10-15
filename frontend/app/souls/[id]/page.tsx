@@ -179,25 +179,33 @@ export default function SoulDetailPage() {
     [...judgmentKeys.all, "soul-timeline", id],
     async (page) => (await judgmentApi.list({ soul: id, page: String(page) })).data,
     extraPages,
-    canReadJudgments
+    canReadJudgments,
+    judgmentsQuery.data?.count ?? 0,
+    judgmentsQuery.data?.results.length ?? 0
   );
   const moreDispositions = useMorePages(
     [...dispositionKeys.all, "soul-timeline", id],
     async (page) => (await dispositionApi.list({ soul: id, page: String(page) })).data,
     extraPages,
-    true
+    true,
+    dispositionsQuery.data?.count ?? 0,
+    dispositionsQuery.data?.results.length ?? 0
   );
   const moreReincarnations = useMorePages(
     [...soulKeys.all, "reincarnations", "timeline", id],
     async (page) => (await reincarnationApi.list({ soul: id, page: String(page) })).data,
     extraPages,
-    true
+    true,
+    reincarnationsQuery.data?.count ?? 0,
+    reincarnationsQuery.data?.results.length ?? 0
   );
   const moreEvents = useMorePages(
     [...soulKeys.all, "events", "timeline", id],
     async (page) => (await eventsApi.list({ soul: id, page: String(page) })).data,
     extraPages,
-    true
+    true,
+    eventsQuery.data?.count ?? 0,
+    eventsQuery.data?.results.length ?? 0
   );
   const judgments = useMemo(() => [...(judgmentsQuery.data?.results ?? NO_JUDGMENTS), ...moreJudgments.rows], [judgmentsQuery.data, moreJudgments.rows]);
   const dispositions = useMemo(() => [...(dispositionsQuery.data?.results ?? NO_DISPOSITIONS), ...moreDispositions.rows], [dispositionsQuery.data, moreDispositions.rows]);
