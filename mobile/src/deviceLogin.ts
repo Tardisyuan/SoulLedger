@@ -20,6 +20,8 @@ import { classifyCredentialError, type CredentialFailure } from "./loginRules";
 
 export const ACCOUNT_KEY = "soulledger.login.account";
 export { BIO_KEY };
+/** 切回 App 时也要验证 (第二十八批 S2): on this phone only, and only while 面容 / 指纹 login is on. */
+export const APP_LOCK_KEY = "soulledger.login.app_lock";
 export const ASKED_PREFIX = "soulledger.login.bio_asked.";
 const CREDENTIAL_KEY = "soulledger_device_login";
 const SERVICE = "soulledger.devicelogin";
@@ -138,9 +140,13 @@ export async function storeCredential(credential: string): Promise<void> {
   platform().persistent.set(BIO_KEY, (await readBiometry()).wordKey === "soul_app.bio.face" ? "face" : "finger");
 }
 
+/** The app locks on return from the background: the switch is on AND 面容 / 指纹 login still is (turning that off takes this down with it). */
+export const appLockOn = () => bioEnabled() && platform().persistent.get(APP_LOCK_KEY) === "1";
+
 /** Forget the credential and the flag on this phone. The server still holds its row until `revokeCredential`. */
 export function clearCredential(): void {
   platform().persistent.remove(BIO_KEY);
+  platform().persistent.remove(APP_LOCK_KEY);
   SecureStore.deleteItemAsync(CREDENTIAL_KEY, { keychainService: SERVICE }).catch(() => {});
 }
 

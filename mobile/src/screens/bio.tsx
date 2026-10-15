@@ -4,10 +4,11 @@
  * `auth.tsx`; the storage and the system calls are `deviceLogin.ts`; the decisions are `loginRules.ts`.
  */
 import { soulErrorMessage, soulMfaFailure } from "@soulledger/core/api/soul";
+import { platform } from "@soulledger/core/platform";
 import { useEffect, useRef, useState } from "react";
 import { Pressable, StyleSheet, TextInput, View } from "react-native";
 
-import { CredentialStoreError, bioEnabled, enableWithPassword, markAsked, revokeCredential, wasAsked } from "../deviceLogin";
+import { APP_LOCK_KEY, CredentialStoreError, bioEnabled, enableWithPassword, markAsked, revokeCredential, wasAsked } from "../deviceLogin";
 import { useToast } from "../feedback";
 import { family } from "../fonts";
 import { useI18n } from "../i18n";
@@ -101,6 +102,43 @@ export function EnableBioSheet({ open, word, onClose, onEnabled }: { open: boole
   );
 }
 
+/**
+ * 切回 App 时也要验证 (S2): the second switch of the 面容 / 指纹 login. Usable only while that is on; turning that off
+ * turns this off (`clearCredential` drops the key). Default off. The lock itself is `appLock.tsx`.
+ */
+function AppLockRow({ enabled, word }: { enabled: boolean; word: string }) {
+  const theme = useTheme();
+  const { t } = useI18n();
+  const { gutter } = useLayout();
+  // The phone's own record is the truth (turning 面容 login off removes the key); this only repaints after a press.
+  const [, repaint] = useState(0);
+  const on = enabled && platform().persistent.get(APP_LOCK_KEY) === "1";
+  const press = () => {
+    if (!enabled) return;
+    if (on) platform().persistent.remove(APP_LOCK_KEY);
+    else platform().persistent.set(APP_LOCK_KEY, "1");
+    repaint((n) => n + 1);
+  };
+  return (
+    <Pressable
+      testID="app-lock-row"
+      accessibilityRole="switch"
+      accessibilityState={{ checked: on, disabled: !enabled }}
+      disabled={!enabled}
+      onPress={press}
+      style={[styles.row, { paddingHorizontal: gutter, borderBottomColor: theme.hair }, !enabled && styles.dim]}
+    >
+      <View style={styles.fill}>
+        <Txt variant="bodyLg">{t("soul_app.biometric.app_lock")}</Txt>
+        <Txt testID="app-lock-sub" variant="caption" tone="muted">
+          {t("soul_app.biometric.app_lock_hint", { bio: word })}
+        </Txt>
+      </View>
+      <SwitchMark on={on} large />
+    </Pressable>
+  );
+}
+
 /** The third row of 账号安全: a switch, for this phone only. Off needs no password. */
 export function BioRow() {
   const theme = useTheme();
@@ -140,6 +178,7 @@ export function BioRow() {
         </Txt>
         <SwitchMark on={on} large />
       </Pressable>
+      <AppLockRow enabled={on} word={bio.word} />
       <EnableBioSheet open={asking} word={bio.word} onClose={() => setAsking(false)} onEnabled={() => setOn(true)} />
     </>
   );
