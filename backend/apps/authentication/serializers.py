@@ -892,6 +892,48 @@ class PasswordHelpRequestSerializer(serializers.Serializer):
 EMAIL_LOCALES = ("zh-Hans", "en")
 
 
+class _StrictSerializer(serializers.Serializer):
+    """Unknown keys are refused rather than dropped (a JSON column: a client that believes it saved should hear it did not)."""
+
+    def to_internal_value(self, data):
+        if isinstance(data, dict):
+            unknown = sorted(set(data) - set(self.fields))
+            if unknown:
+                raise serializers.ValidationError({key: ["Unknown preference."] for key in unknown})
+        return super().to_internal_value(data)
+
+
+class ChannelPrefsSerializer(_StrictSerializer):
+    """One category's two channels."""
+
+    site = serializers.BooleanField(required=False)
+    mail = serializers.BooleanField(required=False)
+
+
+class NotificationPrefsSerializer(_StrictSerializer):
+    """`preferences.notifications`: one `ChannelPrefsSerializer` per category in `apps/notifications/categories.py`."""
+
+    account_security = ChannelPrefsSerializer(required=False)
+    approval = ChannelPrefsSerializer(required=False)
+    approval_timeout = ChannelPrefsSerializer(required=False)
+    reassign = ChannelPrefsSerializer(required=False)
+    password_help = ChannelPrefsSerializer(required=False)
+    dispatch = ChannelPrefsSerializer(required=False)
+    letter_handoff = ChannelPrefsSerializer(required=False)
+
+    def validate(self, attrs):
+        from apps.notifications.categories import LOCKED
+
+        errors = {
+            category: {channel: ["Always on."] for channel in LOCKED.get(category, ()) if cell.get(channel) is False}
+            for category, cell in attrs.items()
+        }
+        errors = {c: e for c, e in errors.items() if e}
+        if errors:
+            raise serializers.ValidationError(errors)
+        return attrs
+
+
 class UserPreferencesSerializer(serializers.Serializer):
     """`User.preferences`, as the API reads and writes it.
 
@@ -908,9 +950,9 @@ class UserPreferencesSerializer(serializers.Serializer):
     #: /welcome 的首次设置做完或跳过了没有(`WelcomeSetup.tsx`)。Unset reads as false;
     #: `default` is only the read-side fallback — a partial PATCH never applies it.
     onboarded = serializers.BooleanField(required=False, default=False)
-    #: 官员邮件通道(apps/notifications/tasks.py):待你处理的站内通知再发一封到邮箱。
-    #: 默认关;开着而账号没有邮箱,什么也不发。
-    email_notifications = serializers.BooleanField(required=False, default=False)
+    #: 官员通知偏好:类别 × 站内 / 邮件(`apps/notifications/categories.py`)。读到的永远是整张表
+    #: (锁定的格恒为开);PATCH 只写给出的格,锁定的格不能关。取代了旧的 `email_notifications` 总开关。
+    notifications = NotificationPrefsSerializer(required=False)
     #: 邮件用哪种语言。官员没有别的存下来的语言偏好(见 apps/notifications/messages.py),
     #: 所以 /profile 开开关时把当时的界面语言记在这里;空则按所属文明(`mail_locale`)。
     #: 只有 zh-Hans 与 en:官员邮件文案只写了这两种(egy 界面落到 en)。

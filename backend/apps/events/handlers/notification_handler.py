@@ -60,6 +60,14 @@ class NotificationHandler(DomainEventHandler):
             logger.warning("NotificationHandler: user %s not found", user_id)
             return
 
+        # 官员在「通知」表里关了这个类别的站内通道:不写行(没有未读数、没有角标),也不推。
+        # 事项本身仍在待办里 —— 待办读业务表,不读这张通知表。锁定的格 `wants` 恒为真。
+        from apps.notifications.categories import category_of, wants
+
+        if not wants(user, category_of(notification_type, params), "site"):
+            payload["_suppressed"] = True  # WebSocketHandler 跟在后面,看到它就不推
+            return
+
         # Create the notification record
         notification = UserNotification.objects.create(
             user=user,

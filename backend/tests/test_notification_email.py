@@ -1,6 +1,6 @@
-"""官员邮件通道(apps/notifications/tasks.py)与它的偏好(`email_notifications`,默认关)。
+"""官员邮件通道(apps/notifications/tasks.py)与它的偏好(`notifications` 表;邮件列默认跟旧的 `email_notifications`)。
 
-只有开了开关、有邮箱、本租户的官员收到;没邮箱的跳过且不留行;发送失败记在行上并由
+只有该类别邮件列为开(锁定的恒为开)、有邮箱、本租户的官员收到;没邮箱的跳过且不留行;发送失败记在行上并由
 `/notifications/email-status/` 给 /profile 显示;语言按 `email_locale`,没有就按所属文明。
 """
 from datetime import timedelta
@@ -10,6 +10,7 @@ from django.core import mail
 from django.utils import timezone
 
 from apps.authentication.models import User
+from apps.notifications.categories import CATEGORIES
 from apps.notifications.models import NotificationEmail, UserNotification
 from apps.notifications.tasks import email_action_needed_for_tenant, email_action_needed_global
 from apps.tenants.managers import get_current_tenant
@@ -19,7 +20,16 @@ pytestmark = pytest.mark.django_db
 
 PREFS = "/api/v1/auth/profile/preferences/"
 STATUS = "/api/v1/notifications/email-status/"
-DEFAULTS = {"default_view": None, "onboarded": False, "email_notifications": False, "email_locale": None}
+def table(*, mail=False, **cells):
+    """The whole table as the API returns it: site on everywhere, mail = `mail` except the locked cells."""
+    out = {c: {"site": True, "mail": mail} for c in CATEGORIES}
+    for c in ("account_security", "password_help"):
+        out[c]["mail"] = True
+    out.update(cells)
+    return out
+
+
+DEFAULTS = {"default_view": None, "onboarded": False, "notifications": table(), "email_locale": None}
 
 
 def _officer(tenant, name, *, email=None, opted=True, locale=None, role="ADMIN"):
@@ -32,6 +42,11 @@ def _officer(tenant, name, *, email=None, opted=True, locale=None, role="ADMIN")
 
 
 def _notify(user, kind="PASSWORD_HELP_REQUESTED", **extra):
+    if kind == "JUDGMENT_REASSIGN_REQUESTED":  # 邮件列可关的那一类:用它区分开了 / 没开
+        return UserNotification.objects.create(
+            user=user, title="请求改派", message="a 请求改派案件 s", notification_type=kind,
+            params={"by": "a", "soul": "s"}, **extra,
+        )
     params = {"username": "lost-officer", "hall": None, "role": "JUDGE", "count_24h": 1}
     return UserNotification.objects.create(
         user=user, title="重设密码求助", message="有人在登录页以账号「lost-officer」请求重设密码。",
@@ -42,25 +57,25 @@ def _notify(user, kind="PASSWORD_HELP_REQUESTED", **extra):
 # ── 偏好 ─────────────────────────────────────────────────────────────────
 
 
-def test_the_preference_defaults_off_and_round_trips(api_client, judge_user):
+def test_the_table_defaults_follow_the_old_switch_and_round_trips(api_client, judge_user):
     api_client.force_authenticate(judge_user)
     assert api_client.get(PREFS).data == DEFAULTS
-    on = api_client.patch(PREFS, {"email_notifications": True, "email_locale": "en"}, format="json")
-    assert on.status_code == 200 and on.data == {**DEFAULTS, "email_notifications": True, "email_locale": "en"}
+    on = api_client.patch(PREFS, {"notifications": {"approval": {"mail": True}}, "email_locale": "en"}, format="json")
+    assert on.status_code == 200
+    assert on.data == {**DEFAULTS, "notifications": table(approval={"site": True, "mail": True}), "email_locale": "en"}
     judge_user.refresh_from_db()
-    stored = dict(judge_user.preferences)
-    opted_at = stored.pop("email_opted_at")  # 打开开关的时刻:邮件通道只发它之后的通知
-    assert stored == {"email_notifications": True, "email_locale": "en"}
-    assert "email_opted_at" not in on.data  # 内部字段,不出现在偏好的读写形状里
-    # 开着时再 PATCH(例如前端同步语言)不重置时刻;关了再开才重新记。
-    api_client.patch(PREFS, {"email_locale": "zh-Hans"}, format="json")
+    cell = dict(judge_user.preferences["notifications"]["approval"])
+    since = cell.pop("mail_since")  # 该格从关到开的时刻:邮件通道只发它之后的通知
+    assert cell == {"mail": True} and "mail_since" not in str(on.data)
+    # 逐格合并:再改另一格不动这一格,也不重置时刻;关了再开才重新记。
+    api_client.patch(PREFS, {"notifications": {"reassign": {"site": False}}}, format="json")
     judge_user.refresh_from_db()
-    assert judge_user.preferences["email_opted_at"] == opted_at
-    api_client.patch(PREFS, {"email_notifications": False}, format="json")
-    api_client.patch(PREFS, {"email_notifications": True}, format="json")
+    assert judge_user.preferences["notifications"]["approval"]["mail_since"] == since
+    assert judge_user.preferences["notifications"]["reassign"] == {"site": False}
+    api_client.patch(PREFS, {"notifications": {"approval": {"mail": False}}}, format="json")
+    api_client.patch(PREFS, {"notifications": {"approval": {"mail": True}}}, format="json")
     judge_user.refresh_from_db()
-    assert judge_user.preferences["email_opted_at"] > opted_at
-    assert api_client.patch(PREFS, {"email_notifications": False}, format="json").data["email_notifications"] is False
+    assert judge_user.preferences["notifications"]["approval"]["mail_since"] > since
     assert api_client.patch(PREFS, {"email_locale": "egy"}, format="json").status_code == 400
 
 
@@ -73,15 +88,15 @@ def test_only_opted_in_officers_with_an_address_in_this_tenant_are_emailed(cn_te
     no_address = _officer(cn_tenant, "noaddr", email="")
     elsewhere = _officer(eu_tenant, "eu")
     for user in (opted, off, no_address, elsewhere):
-        _notify(user)
+        _notify(user, kind="JUDGMENT_REASSIGN_REQUESTED")
     _notify(opted, kind="JUDGMENT_CONCLUDED")  # 结论类:不发
 
     result = email_action_needed_for_tenant(str(cn_tenant.pk))
 
     assert result == {"tenant": cn_tenant.code, "sent": 1, "failed": 0}
     assert [m.to for m in mail.outbox] == [["opted@example.com"]]
-    assert "重设密码求助" in mail.outbox[0].subject
-    assert "lost-officer" in mail.outbox[0].body and "待你处理" in mail.outbox[0].body
+    assert "请求改派" in mail.outbox[0].subject
+    assert "请求改派案件" in mail.outbox[0].body and "待你处理" in mail.outbox[0].body
     rows = NotificationEmail.objects.select_related("notification__user")
     assert [(r.notification.user.username, r.sent) for r in rows] == [("opted", True)]
     # 没邮箱的:跳过,不记录;别的租户的:这一轮不碰。
@@ -236,12 +251,12 @@ def test_backfill_stamps_only_opted_in_officers_without_a_moment_and_reverses_on
     assert real.preferences["email_opted_at"] == real_at  # 反向不碰自己打开的
 
 
-def test_turning_the_switch_on_again_replaces_a_backfilled_moment_and_drops_the_marker(api_client, cn_tenant):
+def test_turning_a_cell_on_gets_its_own_moment_over_a_backfilled_one(api_client, cn_tenant):
     user = _officer(cn_tenant, "again", opted=False)
     user.preferences = {"email_notifications": False, "email_opted_at": "2026-01-01T00:00:00+00:00",
                         "email_opted_backfilled": True}
     user.save(update_fields=["preferences"])
     api_client.force_authenticate(user)
-    assert api_client.patch(PREFS, {"email_notifications": True}, format="json").status_code == 200
+    assert api_client.patch(PREFS, {"notifications": {"reassign": {"mail": True}}}, format="json").status_code == 200
     user.refresh_from_db()
-    assert user.preferences["email_opted_at"] > "2026-01-01" and "email_opted_backfilled" not in user.preferences
+    assert user.preferences["notifications"]["reassign"]["mail_since"] > "2026-01-01"

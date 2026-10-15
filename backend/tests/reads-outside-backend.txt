@@ -32,6 +32,7 @@ tests/test_expired_jwt_rows_are_flushed_on_a_schedule.py .env.example docker-com
 tests/test_frontend_civilization_codes.py                        config packages
 tests/test_frontend_civilization_members.py                      config packages
 tests/test_frontend_event_types_track_the_backend.py             frontend packages
+tests/test_frontend_notification_categories_match_the_backend.py  packages
 tests/test_frontend_page_size.py                                 config frontend packages
 tests/test_frontend_permission_strings_are_real.py               frontend packages
 tests/test_frontend_role_labels.py                               frontend packages
