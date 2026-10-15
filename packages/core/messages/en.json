@@ -3415,7 +3415,8 @@
       "ledger_snapshot_census_for_tenant": "Snapshot the daily soul census",
       "notifications_email_action_needed_for_tenant": "Email action-needed notifications",
       "notifications_email_action_needed_global": "Email action-needed notifications (global admins)",
-      "authentication_prune_soul_sign_ins": "Clear soul sign-in records and idle sessions older than 90 days"
+      "authentication_prune_soul_sign_ins": "Clear soul sign-in records and idle sessions older than 90 days",
+      "soul_accounts_prune_data_exports": "Delete expired data exports"
     },
     "status": {
       "PENDING": "Queued",
@@ -3935,7 +3936,9 @@
       "group_prefs": "Preferences",
       "group_security": "Account security",
       "mfa_off": "○ Off",
-      "mfa_on": "✓ On"
+      "mfa_on": "✓ On",
+      "group_data": "My data",
+      "group_help": "Help and feedback"
     },
     "push": {
       "primer_title": "Tell you when there is a result?",
@@ -4502,6 +4505,77 @@
     },
     "lock": {
       "title": "Locked"
+    },
+    "export": {
+      "title": "Export my data",
+      "queued": "Preparing",
+      "ready": "Ready",
+      "share": "Save or send…",
+      "intro": "Pack what the hall has recorded about you into one file.",
+      "included": "Included",
+      "included_profile": "Basic profile and your number",
+      "included_merit": "Merit and demerit records",
+      "included_judgments": "Judgment results and comments (the parts you were shown)",
+      "included_letters": "Letters and circle posts (with images)",
+      "included_sign_ins": "Sign-ins from the last 90 days",
+      "excluded": "Not included",
+      "excluded_deliberation": "Officers' deliberation among themselves",
+      "excluded_letters": "Letters not addressed to you",
+      "timing": "Usually a few minutes; up to a day if there is a lot. You will be told when it is ready. The file can be fetched for 7 days.",
+      "request": "Enter your password and request",
+      "request_face": "Confirm with {{bio}} and request",
+      "requested_at": "Requested {{time}}. You can leave this page; you will be told when it is ready.",
+      "available_until": "Available until {{time}}",
+      "share_note": "“Save or send…” opens the system share sheet. After it expires you need to request again. Only one can be prepared at a time.",
+      "expired": "This file has expired. Request it again if you still need it.",
+      "failed": "That did not work. You can request it again.",
+      "request_again": "Request again",
+      "sheet_title": "Confirm it is you",
+      "sheet_body": "This exports your whole record. Enter your current password to confirm it is you.",
+      "sheet_next": "Request",
+      "working": "Fetching the file…",
+      "share_failed": "The share sheet did not open. Try again.",
+      "download_failed": "The file could not be fetched. Check your connection and try again.",
+      "load_failed": "Could not read the state of the export."
+    },
+    "help": {
+      "title": "Help",
+      "write": "Write to your hall",
+      "group_login": "Sign-in and account",
+      "group_visit": "Before you come to the hall",
+      "group_contact": "Contact",
+      "not_found": "Did not find an answer?",
+      "login_trouble": "Trouble signing in",
+      "q_login": "I cannot sign in",
+      "a_login": "First check that the number is right. After 5 wrong passwords in a row the account is locked for 15 minutes; wait and try again. If it still fails, tap “Forgot password”.",
+      "q_forgot": "I forgot my password",
+      "a_forgot": "On the sign-in page tap “Forgot password”; a code is sent to the contact e-mail you registered. If no e-mail is registered, come to the hall's counter and bring your delivery slip.",
+      "q_phone": "I lost my phone",
+      "a_phone": "Sign in on another phone, go to “Account security › Devices and sign-ins”, sign the lost phone out, then change your password. If two-step verification is on, sign in with a recovery code. If you have lost the recovery codes too, come to the hall's counter.",
+      "q_slip": "What is the delivery slip",
+      "a_slip": "The paper you were given when you arrived. It carries your number and the password for your first sign-in; after that first sign-in the password no longer works. Keep the slip: you need it at the counter.",
+      "q_contact": "How do I contact the hall",
+      "a_contact": "Tap “Write to your hall” at the bottom of this page; the reply appears in your letters. For anything urgent, come to the hall's counter."
+    },
+    "feedback": {
+      "kind_label": "What is it about",
+      "kind_account": "Sign-in and account",
+      "kind_record": "My record is wrong",
+      "kind_app": "Something is wrong with the app",
+      "kind_other": "Other",
+      "body_label": "Tell us what happened",
+      "body_placeholder": "What happened, and on which page",
+      "shots_label": "Screenshots",
+      "shots_hint": "Optional, up to 3",
+      "shots_add": "Add a screenshot",
+      "shots_remove": "Remove this screenshot",
+      "shots_limit": "Up to 3 screenshots",
+      "note": "Officers of your hall will reply in your letters, in the same place as your other letters.",
+      "appeal_hint": "To dispute a judgment, use an appeal.",
+      "send": "Send",
+      "failed": "It was not sent. Check your connection and try again.",
+      "see_letters": "See your letters",
+      "another": "Write another"
     }
   },
   "soul_push": {
@@ -4580,6 +4654,10 @@
     "mfa_reset_by_officer": {
       "title": "Two-step verification turned off",
       "body": "{{name}}, an officer of your hall, turned off your two-step verification"
+    },
+    "export_ready": {
+      "title": "Your data is ready",
+      "body": "The data export you asked for is ready for 7 days. Open Soul Ledger to save it."
     }
   },
   "official_notify": {
@@ -4956,6 +5034,15 @@
       "assignee": "With {{name}}",
       "unassign": "Take back",
       "unassigned_done": "Taken back"
+    },
+    "feedback": {
+      "label": "Feedback · {{category}}",
+      "tags": {
+        "account": "Sign-in and account",
+        "record": "My record is wrong",
+        "app": "Something is wrong with the app",
+        "other": "Other"
+      }
     }
   },
   "sentence_plan": {

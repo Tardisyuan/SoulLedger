@@ -137,7 +137,8 @@ def build(user, request=None):
     letters = []
     if check_permission(user, "soul_inbox.reply"):
         # 条目只带灵魂名与来信时刻;正文在 Synapse,不经这里。
-        letters = [_item("letter", c.pk, c.soul_a.name, c.last_soul_message_at or c.created_at)
+        letters = [_item("letter", c.pk, c.soul_a.name, c.last_soul_message_at or c.created_at,
+                         **({"feedback_tag": c.feedback_tag} if c.feedback_tag else {}))
                    for c in _letters(scope)]
     return {"approvals": _group(approvals), "reassignments": _group(reassignments),
             "cooldowns": _group(cooldowns), "rebirths": _group(rebirths), "letters": _group(letters)}

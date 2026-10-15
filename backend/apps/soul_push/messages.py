@@ -31,6 +31,7 @@ MESSAGES = {
         "social_warned_comment": {"title": "评论收到警告", "body": "你的评论收到警告：{{reason}}"},
         "social_warned_user": {"title": "账号收到警告", "body": "你的账号收到警告：{{reason}}"},
         "mfa_reset_by_officer": {"title": "两步验证已关闭", "body": "本殿官员 {{name}} 已关闭你的两步验证"},
+        "export_ready": {"title": "资料已准备好", "body": "你申请导出的资料已准备好，7 天内可取。打开灵魂簿保存。"},
     },
     "en": {
         "sentence_pardoned": {"title": "Remaining term pardoned", "body": "Part of your term was pardoned. Open Soul Ledger to see it."},
@@ -91,6 +92,10 @@ MESSAGES = {
             "title": "Two-step verification turned off",
             "body": "{{name}}, an officer of your hall, turned off your two-step verification",
         },
+        "export_ready": {
+            "title": "Your data is ready",
+            "body": "The data export you asked for is ready for 7 days. Open Soul Ledger to save it.",
+        },
     },
     "egy": {
         "sentence_pardoned": {"title": "Renpet Sepy Nedj Seth", "body": "Renpet-Ek Nedj Seth. Wen Medjat Ba Er Maa."},
@@ -119,7 +124,9 @@ MESSAGES = {
 def render(locale, kind, **params):
     """`params` 填 `{{占位符}}`(与语言包同一写法;chat_message 的 `name`、social_warned_* 的 `reason`)。"""
     pack = MESSAGES.get(locale) or MESSAGES[DEFAULT_LOCALE]
-    title, body = pack[kind]["title"], pack[kind]["body"]
+    # egy 可以缺 Design 还没给词的种类(`egyPendingKeys.json` 里的 `soul_push.<kind>`):读作 zh-Hans。
+    entry = pack.get(kind) or MESSAGES[DEFAULT_LOCALE][kind]
+    title, body = entry["title"], entry["body"]
     for key, value in params.items():
         title, body = title.replace(f"{{{{{key}}}}}", value), body.replace(f"{{{{{key}}}}}", value)
     return title, body

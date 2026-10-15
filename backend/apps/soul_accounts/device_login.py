@@ -32,6 +32,15 @@ def find(soul, raw) -> SoulDeviceLogin | None:
         credential_hash=digest, account__soul=soul).first()
 
 
+def holds(account, raw) -> bool:
+    """`raw` 是这个账号**尚有效**的一条面容 / 指纹登录凭据。敏感动作(导出资料)用它代替输密码:
+    凭据放在要验证生物特征才能取出的安全存储里,持有它 = 刚刚认过面容。"""
+    if not raw:
+        return False
+    return SoulDeviceLogin.objects.filter(account=account, credential_hash=_hash_device(raw),
+                                          revoked_at__isnull=True).exists()
+
+
 def revoke_all(account, reason, *, keep_credential="") -> int:
     """账号名下所有尚有效的凭据标 `reason`;`keep_credential`(明文)指向的那条留着。返回吊销条数。"""
     rows = SoulDeviceLogin.objects.filter(account=account, revoked_at__isnull=True)

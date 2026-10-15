@@ -115,6 +115,25 @@ it("refuses the page without soul_inbox.read and asks the API nothing", () => {
   expect(apiMock.list).not.toHaveBeenCalled();
 });
 
+it("a letter from the soul app's feedback form shows 「反馈 · 类别」 on its row; an ordinary one, and one with an unknown code, show none", async () => {
+  asRole("soul_inbox.read", "soul_inbox.reply");
+  apiMock.list.mockResolvedValue(
+    page([
+      conversation({ id: "c1", soul_name: "张三", feedback_tag: "record" }),
+      conversation({ id: "c2", soul_name: "李四", feedback_tag: "" }),
+      conversation({ id: "c3", soul_name: "王五", feedback_tag: "from-a-newer-server" }),
+    ])
+  );
+  renderPage();
+  const rows = (await screen.findAllByRole("button", { name: /张三|李四|王五/ })) as HTMLElement[];
+  const row = (name: string) => rows.find((r) => r.textContent?.includes(name)) as HTMLElement;
+  expect(within(row("张三")).getByTestId("feedback-tag")).toHaveTextContent(tZh("soul_inbox.feedback.label", { category: tZh("soul_inbox.feedback.tags.record") }));
+  expect(within(row("张三")).getByTestId("feedback-tag")).toHaveTextContent("反馈 · 我的记录有误");
+  expect(within(row("李四")).queryByTestId("feedback-tag")).toBeNull();
+  expect(within(row("王五")).queryByTestId("feedback-tag")).toBeNull();
+  expect(within(row("王五")).queryByText(/from-a-newer-server/)).toBeNull();
+});
+
 it("reads a thread oldest first, marking the hall's replies", async () => {
   asRole("soul_inbox.read", "soul_inbox.reply");
   renderPage();

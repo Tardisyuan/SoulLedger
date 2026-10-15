@@ -53,6 +53,9 @@ import { BioAsk } from "./screens/bio";
 import { ScanScreen } from "./screens/scan";
 import { MfaScreen } from "./screens/mfa";
 import { AboutScreen } from "./screens/about";
+import { DataExportScreen } from "./screens/dataExport";
+import { HelpScreen } from "./screens/help";
+import { FeedbackScreen } from "./screens/writeToHall";
 import { NotificationPrimerScreen, SettingsScreen } from "./screens/settings";
 import { PRIMER_SEEN_KEY, easProjectId, landOn, landingOf, permission, registerDevice, syncPushLocale, type Landing } from "./push";
 import { NotificationHistoryScreen } from "./screens/notificationHistory";
@@ -170,6 +173,10 @@ function ForgotPassword({ navigation }: NativeStackScreenProps<RootParams, "Forg
 
 function Detail({ route }: NativeStackScreenProps<AppStackParams, "ApplicationDetail">) {
   return <ApplicationDetailScreen id={route.params.id} landed={route.params.landed} />;
+}
+
+function Help({ route }: NativeStackScreenProps<AppStackParams, "Help">) {
+  return <HelpScreen only={route.params?.only} />;
 }
 
 function Conversation({ route }: NativeStackScreenProps<AppStackParams, "Conversation">) {
@@ -375,6 +382,14 @@ export function RootNavigator() {
             {/* 手机和恢复码都没有了: draws its own bar. Reached from the sign-in second step (hall and code come as params). */}
             <Stack.Screen name="MfaLost" component={MfaLostScreen} options={{ headerShown: false }} />
             <Stack.Screen name="ScanCode" component={ScanScreen} options={{ headerShown: false, animation: "slide_from_bottom" }} />
+            {/* 登录遇到问题: the help page with only 登录与账号 -- reached from the sign-in page, signed out. */}
+            <Stack.Screen
+              name="Help"
+              component={Help}
+              options={({ navigation }) => ({
+                header: () => <AppHeader title={t("soul_app.help.title")} onBack={navigation.goBack} />,
+              })}
+            />
           </>
         );
       } else if (state.status === "mustChangePassword") {
@@ -424,6 +439,27 @@ export function RootNavigator() {
               component={SignInsScreen}
               options={({ navigation }) => ({
                 header: () => <AppHeader title={t("soul_app.security.history")} onBack={navigation.goBack} />,
+              })}
+            />
+            <Stack.Screen
+              name="DataExport"
+              component={DataExportScreen}
+              options={({ navigation }) => ({
+                header: () => <AppHeader title={t("soul_app.export.title")} onBack={navigation.goBack} />,
+              })}
+            />
+            <Stack.Screen
+              name="Help"
+              component={Help}
+              options={({ navigation }) => ({
+                header: () => <AppHeader title={t("soul_app.help.title")} onBack={navigation.goBack} />,
+              })}
+            />
+            <Stack.Screen
+              name="Feedback"
+              component={FeedbackScreen}
+              options={({ navigation }) => ({
+                header: () => <AppHeader title={t("soul_app.help.write")} onBack={navigation.goBack} />,
               })}
             />
             <Stack.Screen

@@ -4473,6 +4473,14 @@
     },
     "lock": {
       "title": "Khetem Seth"
+    },
+    "export": {
+      "queued": "Em Iri",
+      "ready": "Iri Seth",
+      "share": "Smen Er Per…"
+    },
+    "help": {
+      "write": "Sesh Er Wesekhet"
     }
   },
   "soul_push": {

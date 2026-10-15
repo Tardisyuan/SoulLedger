@@ -17,6 +17,11 @@ import type { components } from "./generated/schema";
 type Schemas = components["schemas"];
 export type SoulConversation = Schemas["Conversation"];
 export type SoulChatSession = Schemas["ChatSession"];
+/**
+ * A letter from 「帮助与反馈」 carries one of four category codes; only the hall inbox takes it (the
+ * officers' list shows 「反馈 · 类别」 until someone replies). Backend `FEEDBACK_TAGS`.
+ */
+export type SoulFeedbackTag = NonNullable<Schemas["MessageSend"]["feedback_tag"]>;
 /** The circle's card: `user_id`, display name, avatar, `is_active`. Never the soul code. */
 export type SoulChatLookupResult = Schemas["SoulCard"];
 /** An uploaded, not yet sent letter image: its id and pixel size. */
@@ -107,9 +112,13 @@ export const soulChatApi = {
    * `txnId`: the same id sent again gets the first send's event id back and
    * nothing is posted twice (the backend remembers it for 7 days).
    */
-  send: (conversationId: string, body: string, txnId?: string) =>
+  send: (conversationId: string, body: string, txnId?: string, feedbackTag?: SoulFeedbackTag) =>
     soulHttp
-      .post<{ event_id: string }>(`/me/chat/conversations/${conversationId}/messages/`, txnId ? { body, txn_id: txnId } : { body })
+      .post<{ event_id: string }>(`/me/chat/conversations/${conversationId}/messages/`, {
+        body,
+        ...(txnId ? { txn_id: txnId } : {}),
+        ...(feedbackTag ? { feedback_tag: feedbackTag } : {}),
+      })
       .then((r) => r.data.event_id),
   /**
    * Letter images, two steps. `uploadImage`: one image per request (`body` is a multipart body the HOST

@@ -12,6 +12,12 @@ from apps.soul_push import services
 from apps.soul_push.messages import MESSAGES
 
 PACKS = Path(__file__).resolve().parents[2] / "packages" / "core" / "messages"
+EGY_PENDING_KINDS = {
+    key.split(".", 1)[1]
+    for key in json.loads((Path(__file__).resolve().parents[2] / "frontend" / "src" / "__tests__" / "support"
+                           / "egyPendingKeys.json").read_text(encoding="utf-8"))
+    if key.startswith("soul_push.")
+}
 
 
 @pytest.mark.parametrize("locale", ["zh-Hans", "en", "egy"])
@@ -27,9 +33,10 @@ def test_every_kind_the_rules_can_produce_has_text_in_every_locale():
             "disposition_executed", "residence_approved", "residence_started", "residence_returned",
             "sentence_waiting", "sentence_completed", "sentence_amended", "sentence_pardoned", "chat_message",
             "social_warned_post", "social_warned_comment", "social_warned_user",
-            "mfa_reset_by_officer"} == kinds
+            "mfa_reset_by_officer", "export_ready"} == kinds
     for locale, pack in MESSAGES.items():
-        assert set(pack) == kinds, locale
+        # egy 可以恰好缺 Design 还没给词的种类(egyPendingKeys.json 里的 `soul_push.<kind>`),别的不许缺。
+        assert set(pack) == kinds - (EGY_PENDING_KINDS if locale == "egy" else set()), locale
         assert all(entry["title"] and entry["body"] for entry in pack.values())
 
 
@@ -38,3 +45,12 @@ def test_results_are_told_apart_but_each_rebirth_kind_has_its_own_text():
     for locale, pack in MESSAGES.items():
         texts = {(pack[k]["title"], pack[k]["body"]) for k in services.REBIRTH_STATUS_KINDS.values()}
         assert len(texts) == 3, locale
+
+
+def test_a_pending_egy_kind_reads_as_zh_hans_and_a_translated_one_does_not():
+    """egy 缺的种类退回 zh-Hans(而不是 KeyError 让整条推送丢掉);egy 有的种类照用 egy。"""
+    from apps.soul_push.messages import render
+
+    assert "export_ready" in EGY_PENDING_KINDS
+    assert render("egy", "export_ready") == render("zh-Hans", "export_ready")
+    assert render("egy", "chat_message", name="甲") != render("zh-Hans", "chat_message", name="甲")

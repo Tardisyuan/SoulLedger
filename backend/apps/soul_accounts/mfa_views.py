@@ -23,7 +23,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.soul_accounts import mfa
+from apps.soul_accounts import device_login, mfa
 from apps.soul_accounts import services as svc
 from apps.soul_accounts.me_views import CODE_ATTEMPTS, IP_ATTEMPTS, LOGIN_WINDOW_SECONDS, SoulAPIView, _rate_keys
 from apps.soul_accounts.serializers import (
@@ -80,15 +80,17 @@ def _ip_key(request):
     return f"soul_mfa_rate:ip:{_client_ip(request)}"
 
 
-def confirm_current_password(request, account, password):
+def confirm_current_password(request, account, password, credential=""):
     """「已登录不等于是本人」:敏感动作前输当前密码。对了 → None;错了 / 满了 → 拒绝响应。
+    `credential`(开了面容登录的手机认过面容后取出的凭据)可代替密码,算同一份失败预算。
     错的次数记进**密码登录的那两个计数**(同一灵魂编号 5 次 / 同一 IP 50 次,15 分钟):偷到登录状态的人在这里猜密码,
     和在登录页猜吃同一份预算,满了答 429 `rate_limited`。两步验证开启向导与面容登录开启共用这一处。"""
     ip_key, code_key = _rate_keys(_client_ip(request), account.soul.soul_code)
     ip_attempts, code_attempts = cache.get(ip_key, 0), cache.get(code_key, 0)
     if ip_attempts >= IP_ATTEMPTS or code_attempts >= CODE_ATTEMPTS:
         return _refuse("rate_limited", status.HTTP_429_TOO_MANY_REQUESTS)
-    if not password or not request.user.check_password(password):
+    proven = device_login.holds(account, credential) if credential else bool(password) and request.user.check_password(password)
+    if not proven:
         cache.set(ip_key, ip_attempts + 1, timeout=LOGIN_WINDOW_SECONDS)
         cache.set(code_key, code_attempts + 1, timeout=LOGIN_WINDOW_SECONDS)
         return _refuse("wrong_password", status.HTTP_400_BAD_REQUEST,

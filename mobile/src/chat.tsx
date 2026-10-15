@@ -47,6 +47,7 @@ import {
   soulChatImageErrorCode,
   soulChatRetryAt,
   type SoulConversation,
+  type SoulFeedbackTag,
 } from "@soulledger/core/api/soul-chat";
 import {
   EMPTY_TIMELINE,
@@ -84,6 +85,8 @@ export interface Outgoing {
   roomId: string;
   /** Empty for an image: an image is its own message, never mixed with text. */
   body: string;
+  /** A letter from 「帮助与反馈」: its category rides along (and survives a restart with the rest of the item). */
+  feedbackTag?: SoulFeedbackTag;
   ts: number;
   state: "sending" | "sent" | "queued" | "failed";
   eventId?: string;
@@ -107,9 +110,10 @@ export interface Chat {
   reload: () => Promise<void>;
   /** Try Synapse again now (the retry button; also flushes the queue). */
   reconnect: () => void;
-  send: (c: SoulConversation, body: string) => void;
-  /** One message per image, in order; each uploads then sends, one at a time. */
-  sendImages: (c: SoulConversation, images: OutgoingImage[]) => void;
+  /** Returns the letter's txn id, so a screen can watch that one item in `outbox`. */
+  send: (c: SoulConversation, body: string, feedbackTag?: SoulFeedbackTag) => string;
+  /** One message per image, in order; each uploads then sends, one at a time. Returns their txn ids. */
+  sendImages: (c: SoulConversation, images: OutgoingImage[]) => string[];
   /** 0..1 while an image's file is going up, by txn id. Not persisted. */
   progress: Record<string, number>;
   resend: (txnId: string) => void;
@@ -138,8 +142,8 @@ const INERT: Chat = {
   refused: {},
   reload: async () => {},
   reconnect: noop,
-  send: noop,
-  sendImages: noop,
+  send: () => "",
+  sendImages: () => [],
   progress: {},
   resend: noop,
   loadOlder: async () => {},
@@ -374,7 +378,7 @@ export function ChatProvider({ account, children }: { account: string | null; ch
       try {
         const matrix = client.current;
         if (!sendsThroughBackend(c) && !matrix) throw new MatrixRequestError("not signed in to Synapse", "", null);
-        const eventId = sendsThroughBackend(c) ? await soulChatApi.send(c.id, o.body, o.txnId) : await matrix!.send(c.room_id, o.txnId, o.body);
+        const eventId = sendsThroughBackend(c) ? await soulChatApi.send(c.id, o.body, o.txnId, o.feedbackTag) : await matrix!.send(c.room_id, o.txnId, o.body);
         patch(o.txnId, { state: "sent", eventId });
         // The backend may have lifted the throttle, or moved the next request time.
         if (c.throttled) void reload();
@@ -507,17 +511,19 @@ export function ChatProvider({ account, children }: { account: string | null; ch
         wake.current();
         flush();
       },
-      send: (c, body) => {
+      send: (c, body, feedbackTag) => {
         const o: Outgoing = {
           txnId: newTxn(),
           conversationId: c.id,
           roomId: c.room_id,
           body,
+          ...(feedbackTag ? { feedbackTag } : {}),
           ts: Date.now(),
           state: availability === "ready" || sendsThroughBackend(c) ? "sending" : "queued",
         };
         setOutbox((all) => [...all, o]);
         if (o.state === "sending") void deliver(o);
+        return o.txnId;
       },
       sendImages: (c, images) => {
         const at = Date.now();
@@ -532,6 +538,7 @@ export function ChatProvider({ account, children }: { account: string | null; ch
         }));
         setOutbox((all) => [...all, ...items]);
         for (const o of items) void deliverImage(o);
+        return items.map((o) => o.txnId);
       },
       resend: (txnId) => {
         const o = outboxRef.current.find((x) => x.txnId === txnId);
