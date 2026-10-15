@@ -5275,7 +5275,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description 「待我处理」五组:审批节点 / 改派请求 / 缩短冷却申请 / 转生申请 / 待回书信,每组计数 + 前 10 条。 */
+        /**
+         * @description 「待我处理」五组:审批节点 / 改派请求 / 缩短冷却申请 / 转生申请 / 待回书信,每组计数 + 前 10 条。
+         *     带 `kind`(与 `offset`)时只回那一组 `{count, items}`,从第 offset 条起的 10 条。
+         */
         get: operations["officer_app_todo"];
         put?: never;
         post?: never;
@@ -28157,7 +28160,12 @@ export interface operations {
     };
     officer_app_todo: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description 只要这一组(加载更多) */
+                kind?: "approval" | "cooldown" | "letter" | "reassignment" | "rebirth";
+                /** @description 与 kind 同用:从第几条起,默认 0 */
+                offset?: number;
+            };
             header?: never;
             path?: never;
             cookie?: never;
