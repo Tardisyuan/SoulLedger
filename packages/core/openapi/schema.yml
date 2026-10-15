@@ -11565,7 +11565,26 @@ paths:
   /api/v1/officer-app/todo/:
     get:
       operationId: officer_app_todo
-      description: 「待我处理」五组:审批节点 / 改派请求 / 缩短冷却申请 / 转生申请 / 待回书信,每组计数 + 前 10 条。
+      description: |-
+        「待我处理」五组:审批节点 / 改派请求 / 缩短冷却申请 / 转生申请 / 待回书信,每组计数 + 前 10 条。
+        带 `kind`(与 `offset`)时只回那一组 `{count, items}`,从第 offset 条起的 10 条。
+      parameters:
+      - in: query
+        name: kind
+        schema:
+          type: string
+          enum:
+          - approval
+          - cooldown
+          - letter
+          - reassignment
+          - rebirth
+        description: 只要这一组(加载更多)
+      - in: query
+        name: offset
+        schema:
+          type: integer
+        description: 与 kind 同用:从第几条起,默认 0
       tags:
       - v1
       security:
