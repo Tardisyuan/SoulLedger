@@ -31,7 +31,7 @@ BODY = {"zh-Hans": "有 {n} 件待你处理", "en": "{n} items waiting on you"}
 CATEGORY = "officer_todo"
 
 
-def register_device(user, token, platform):
+def register_device(user, token, platform, session=None):
     now = timezone.now()
     with transaction.atomic():
         device = OfficerPushDevice.objects.select_for_update(of=("self",)).filter(token=token).first()
@@ -39,10 +39,11 @@ def register_device(user, token, platform):
             try:
                 with transaction.atomic():
                     return OfficerPushDevice.objects.create(user=user, token=token, platform=platform,
-                                                            last_seen_at=now), True
+                                                            session=session, last_seen_at=now), True
             except IntegrityError:
                 device = OfficerPushDevice.objects.select_for_update(of=("self",)).get(token=token)
         device.user, device.platform, device.is_active, device.last_seen_at = user, platform, True, now
+        device.session = session
         device.save()
     return device, False
 

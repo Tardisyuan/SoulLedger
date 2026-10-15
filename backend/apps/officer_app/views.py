@@ -14,6 +14,7 @@ from rest_framework.permissions import BasePermission
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.authentication.signin_sessions import session_of
 from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.officer_app import push, todo
 from apps.officer_app.serializers import (
@@ -157,7 +158,7 @@ class PushTokenView(OfficerAppBaseView):
     def post(self, request):
         body = OfficerPushTokenSerializer(data=request.data)
         body.is_valid(raise_exception=True)
-        _, created = push.register_device(request.user, **body.validated_data)
+        _, created = push.register_device(request.user, session=session_of(request.auth), **body.validated_data)
         return Response(status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
 
 
