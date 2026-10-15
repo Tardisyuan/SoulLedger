@@ -45,7 +45,17 @@ export function MeTab({ onOpen }: { onOpen: (screen: AccountScreen) => void }) {
           <Fact label={t("officer_app.me.name")} value={user.display_name || user.username} />
           <Fact label={t("officer_app.me.role")} value={role.state === "known" ? role.label : user.role} />
           <Fact label={t("officer_app.me.hall")} value={hallLabel(t, user.tenant) ?? ""} />
-          {profile.data?.email ? <EmailFact email={profile.data.email} verified={!!profile.data.email_verified} /> : null}
+          {profile.data?.email ? (
+            <EmailFact email={profile.data.email} verified={!!profile.data.email_verified} />
+          ) : profile.data ? (
+            // No address at all is the case that most needs saying: the reset mail has nowhere to go.
+            <View testID="me-email-none" style={{ gap: space[2] }}>
+              <Fact label={t("officer_app.me.email")} value="—" />
+              <Txt variant="caption" tone="muted">
+                {t("officer_app.me.email_none")}
+              </Txt>
+            </View>
+          ) : null}
         </Block>
 
         <Block label={t("officer_app.me.mfa")}>

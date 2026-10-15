@@ -5883,6 +5883,7 @@
     },
     "me": {
       "email": "Email",
+      "email_none": "No email on file: password-reset mail can't reach you. Ask an administrator to add one.",
       "push": "Push notifications",
       "profile": "Profile",
       "name": "Name",
