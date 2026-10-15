@@ -1,11 +1,14 @@
 """
 Custom user model for SoulLedger.
 """
+import uuid
+
 from django.contrib.auth.models import AbstractUser, UserManager
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Q
 from django.db.models.functions import Lower
+from django.utils import timezone
 
 from apps.core.models import AuditUserFields
 from apps.death_sync.fields import EncryptedCharField
@@ -230,6 +233,8 @@ class LoginLog(AuditUserFields, models.Model):
     ip_address = models.GenericIPAddressField(null=True)
     user_agent = models.CharField(max_length=500, blank=True)
     failure_reason = models.CharField(max_length=200, blank=True)
+    #: 成功登录用的办法(`SignInMethod`);灵魂端「最近登录」显示它。失败的行留空,按 `failure_reason` 推。
+    method = models.CharField(max_length=16, blank=True, default="")
     timestamp = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -295,3 +300,42 @@ class MfaRememberedDevice(models.Model):
     expires_at = models.DateTimeField()
     created_at = models.DateTimeField(auto_now_add=True)
     last_used_at = models.DateTimeField(null=True, blank=True)
+
+
+class SignInMethod(models.TextChoices):
+    PASSWORD = "password", "密码"
+    FACE = "face", "面容/指纹"
+    RECOVERY = "recovery", "恢复码"
+
+
+class SignInSession(models.Model):
+    """一台设备的一次登录 = 一条刷新令牌的「血统」。
+
+    SimpleJWT 每次刷新都轮换刷新令牌、把旧的拉黑,一台设备于是留下一串 `OutstandingToken`,
+    没有哪一条能代表「这台设备」。这一行在登录时建好,把 `id` 作为 `sid` 声明写进刷新令牌;
+    轮换会原样复制声明(`no_copy_claims` 里没有它),access 也带着,所以整条血统与每个 access
+    都认得自己属于哪台设备。官员与灵魂共用:灵魂账号也是一个 `User`。
+
+    退出一台 = `revoked_at` 有值(`session_is_current` 立刻拒掉它的 access、刷新被拒)+ 当前刷新令牌
+    进黑名单 + 它记着的「30 天内不再询问」设备作废。没有位置字段:没有可靠的地理来源。
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey("authentication.User", on_delete=models.CASCADE, related_name="sign_in_sessions")
+    #: 「macOS · Safari」「官员 App · iPhone」。登录时由 User-Agent 推出(`signin_sessions.label_for`)。
+    label = models.CharField(max_length=80, blank=True)
+    method = models.CharField(max_length=16, choices=SignInMethod.choices, default=SignInMethod.PASSWORD)
+    created_at = models.DateTimeField(auto_now_add=True)
+    last_seen_at = models.DateTimeField(default=timezone.now)
+    revoked_at = models.DateTimeField(null=True, blank=True)
+    #: 这条血统当前的刷新令牌 jti(每次刷新更新),退出时据此拉黑。
+    refresh_jti = models.CharField(max_length=255, blank=True)
+    #: 「30 天内不再询问」设备令牌的 sha256(官员的 `MfaRememberedDevice` 或灵魂的 `SoulMfaDevice`,
+    #: 两张表的 `token_hash` 都是这个值);不用外键,免得 authentication 反向依赖 soul_accounts。
+    trust_hash = models.CharField(max_length=64, blank=True)
+
+    class Meta:
+        indexes = [models.Index(fields=["user", "revoked_at", "last_seen_at"])]
+
+    def __str__(self):
+        return f"{self.user_id} {self.label} {self.id}"

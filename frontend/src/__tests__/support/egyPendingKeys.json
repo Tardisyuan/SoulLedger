@@ -13,5 +13,17 @@
   "profile.notifications.notes.approval",
   "profile.notifications.notes.approval_timeout",
   "profile.notifications.notes.password_help",
-  "profile.notifications.notes.dispatch"
+  "profile.notifications.notes.dispatch",
+  "profile.devices.intro",
+  "profile.devices.count",
+  "profile.devices.in_use",
+  "profile.devices.sign_out_here",
+  "profile.devices.signed_out",
+  "profile.devices.confirm_body",
+  "profile.devices.confirm_action",
+  "profile.devices.audit_note",
+  "profile.devices.load_failed",
+  "profile.devices.sign_out_failed",
+  "profile.devices.mfa_until",
+  "profile.devices.stranger"
 ]

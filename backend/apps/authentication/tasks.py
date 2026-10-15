@@ -18,6 +18,27 @@ def flush_expired_tokens():
     call_command("flushexpiredtokens")
 
 
+#: 灵魂端「最近登录」和登录设备只保留这么久(Design 第二十八批 S1);超过的每天清掉。
+SOUL_SIGN_IN_KEEP_DAYS = 90
+
+
+@shared_task(name="authentication.prune_soul_sign_ins")
+def prune_soul_sign_ins():
+    """删 90 天前的灵魂登录记录(`LoginLog` 里 `soul:` 开头的行)和早已不活动的登录设备行。
+
+    官员的 `LoginLog` 是审计的一部分,按 `LOGIN_LOG_RETENTION_DAYS` 另管(默认不清),这里不碰。
+    `_raw_delete` 同 `audit/retention.py`:LoginLog 是被审计的模型,逐行 delete 会为每一行再写一条审计。
+    """
+    from apps.audit.retention import _purge
+
+    from .models import LoginLog, SignInSession
+
+    cutoff = timezone.now() - timedelta(days=SOUL_SIGN_IN_KEEP_DAYS)
+    logs = _purge(LoginLog.all_objects.filter(timestamp__lt=cutoff, username__startswith="soul:"), 5000)
+    sessions = _purge(SignInSession.objects.filter(last_seen_at__lt=cutoff), 5000)
+    return {"sign_in_logs": logs, "sessions": sessions}
+
+
 #: Who hears about 「忘记密码」 in the account's own tenant: its administrators
 #: and its realm leads (殿主, `UserRole.MODERATOR`). See `notify_password_help`.
 PASSWORD_HELP_TENANT_ROLES = ("ADMIN", "MODERATOR")

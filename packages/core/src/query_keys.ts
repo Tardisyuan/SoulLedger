@@ -308,3 +308,6 @@ export const assistAdminKeys = {
   run: (id: number) => ["assist-admin", "eval-runs", id] as const,
   usage: (month: string | undefined) => ["assist-admin", "usage", month ?? "current"] as const,
 };
+
+/** 登录设备(个人中心)。 */
+export const signInSessionKeys = { all: ["auth", "sessions"] as const };

@@ -238,6 +238,21 @@ export interface OfficerLoginRequest {
 /** 409 body of POST /auth/officer-login/: the password fits officers in several halls. */
 export type HallChoiceBody = components["schemas"]["HallChoiceResponse"];
 
+/** One signed-in device (backend/apps/authentication/session_views.py). `current` = the device asking. */
+export type SignInSession = components["schemas"]["SignInSession"];
+
+/**
+ * 登录设备 (Design batch 28 W2). A user only ever sees and ends their own devices. Ending one needs no
+ * password and takes effect at once; ending the current one is refused 400 `current_session`
+ * (it signs out at the top right). `revokeOthers` answers 409 `session_unknown` for a token issued
+ * before this feature (no `sid`): sign in once more.
+ */
+export const sessionsApi = {
+  list: () => api.get<SignInSession[]>("/auth/sessions/"),
+  revoke: (id: string) => api.post<void>(`/auth/sessions/${id}/revoke/`),
+  revokeOthers: () => api.post<{ revoked: number }>("/auth/sessions/revoke-others/"),
+};
+
 export const authApi = {
   officerLogin: (data: OfficerLoginRequest) => api.post<LoginResponse>("/auth/officer-login/", data),
   login: (usernameOrData: string | LoginRequest, password?: string) => {

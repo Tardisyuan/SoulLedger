@@ -20,7 +20,7 @@ from rest_framework_simplejwt.exceptions import TokenError
 
 from apps.core.schema import DetailResponseSerializer
 
-from . import mfa
+from . import mfa, signin_sessions
 from .models import LoginLog, UserRole
 from .serializers import LoginResponseSerializer, issue_tokens
 from .views import _get_client_ip
@@ -140,9 +140,14 @@ def verify_view(request):
         return _refuse_outcome(outcome)
 
     LoginLog.objects.create(user=user, username=user.username, status="SUCCESS", ip_address=ip_address, user_agent=user_agent)
-    response = Response(issue_tokens(user, remember=bool(pending.get("remember")), officer_app=bool(pending.get("officer_app"))))
-    if data.get("remember_device"):
-        mfa.set_device_cookie(response, mfa.remember_device(user))
+    device = mfa.remember_device(user) if data.get("remember_device") else ""
+    session = signin_sessions.start(
+        user, request, method="recovery" if data.get("recovery_code") else "password",
+        officer_app=bool(pending.get("officer_app")), trust_hash=mfa._hash_device(device) if device else "")
+    response = Response(issue_tokens(user, remember=bool(pending.get("remember")),
+                                     officer_app=bool(pending.get("officer_app")), session=session))
+    if device:
+        mfa.set_device_cookie(response, device)
     return response
 
 

@@ -136,10 +136,12 @@ class SoulLoginView(APIView):
                                     user_agent=user_agent, failure_reason=exc.code)
             return _error(exc)
         return finish_first_step(account, soul_code, ip_key=ip_key, code_key=code_key, ip=ip,
-                                 user_agent=user_agent, device_token=body.validated_data.get("device_token"))
+                                 user_agent=user_agent, device_token=body.validated_data.get("device_token"),
+                                 request=request)
 
 
-def finish_first_step(account, soul_code, *, ip_key, code_key, ip, user_agent, device_token):
+def finish_first_step(account, soul_code, *, ip_key, code_key, ip, user_agent, device_token, request=None,
+                      method="password"):
     """第一步(密码或面容凭据)过了之后的共同尾巴:清编号计数;开着两步验证且手机不在免询问期内 →
     `mfa_required`,否则发令牌。**面容只代替密码,两步验证照常。**"""
     from apps.authentication.models import LoginLog
@@ -151,13 +153,15 @@ def finish_first_step(account, soul_code, *, ip_key, code_key, ip, user_agent, d
         # 第二步:第一步对了,令牌还不发。待验证凭据只开 /soul-auth/mfa/verify/ 这一扇门。
         # 殿名随之返回(此时已过第一步这一关),供「手机和恢复码都没有了」一屏使用。
         return Response({
-            "mfa_required": True, "pending_token": soul_mfa.issue_pending(account),
+            "mfa_required": True, "pending_token": soul_mfa.issue_pending(account, method),
             "soul_code": account.soul.soul_code,
             "home_tenant": MeTenantSerializer(account.soul.home_tenant).data,
         })
-    tokens = svc.complete_login(account)
+    # 这次登录靠「这部手机不再询问」跳过了第二步:会话记着那枚设备令牌,退出这台时一并作废。
+    tokens = svc.complete_login(account, request=request, method=method,
+                                trust_hash=soul_mfa.core._hash_device(device_token) if device_token else "")
     LoginLog.objects.create(user=account.user, username=f"soul:{soul_code}"[:150], status="SUCCESS",
-                            ip_address=ip, user_agent=user_agent)
+                            ip_address=ip, user_agent=user_agent, method=method)
     return Response({
         **tokens,
         "soul_code": account.soul.soul_code,
@@ -178,7 +182,9 @@ class SoulRefreshView(APIView):
     def post(self, request):
         from rest_framework_simplejwt.serializers import TokenRefreshSerializer
 
-        class _Serializer(TokenRefreshSerializer):
+        from apps.authentication.signin_sessions import SessionAwareRefreshMixin
+
+        class _Serializer(SessionAwareRefreshMixin, TokenRefreshSerializer):
             token_class = SoulRefreshToken
 
         body = _Serializer(data=request.data)
@@ -248,11 +254,16 @@ class MePasswordView(SoulAPIView):
 
         body = ChangePasswordRequestSerializer(data=request.data)
         body.is_valid(raise_exception=True)
+        from apps.authentication import signin_sessions
+
+        # 这台设备留着(其余退出):它的会话从 access 的 `sid` 认;老令牌没有 `sid`,就给它补一条。
+        keep = signin_sessions.session_of(request.auth) or signin_sessions.start(request.user, request)
         try:
             tokens = svc.change_password(self.account, body.validated_data["old_password"],
                                          body.validated_data["new_password"],
                                          push_token=body.validated_data["push_token"],
-                                         device_credential=body.validated_data["device_credential"])
+                                         device_credential=body.validated_data["device_credential"],
+                                         keep_session=keep)
         except svc.SoulAccountError as exc:
             return _error(exc)
         except ValidationError as exc:
