@@ -3217,7 +3217,7 @@
     "bio_label": "简介",
     "bio_placeholder": "介绍一下自己…",
     "avatar_upload_label": "头像",
-    "avatar_upload_hint": "PNG、JPEG 或 WebP,不超过 5 MB",
+    "avatar_upload_hint": "PNG、JPEG、WebP 或 HEIC,不超过 5 MB",
     "avatar_uploaded": "头像已更新",
     "avatar_upload_error": "头像上传失败",
     "profile_updated": "资料已更新",
@@ -4217,7 +4217,7 @@
         "unreadable_some": "有 {{n}} 张图片打不开，已跳过",
         "expired": "有图片已失效，请重新添加",
         "errors": {
-          "not_an_image": "只能上传 PNG、JPEG 或 WebP 图片",
+          "not_an_image": "只能上传 PNG、JPEG、WebP 或 HEIC 图片",
           "too_large": "每张不超过 5 MB",
           "too_many_pixels": "图片尺寸太大",
           "too_many_pending": "未发出的图片太多，先发帖或移除一些"

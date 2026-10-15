@@ -24,6 +24,7 @@ channels-redis>=4.0
 
 # Utils
 Pillow>=12.3.0
+pillow-heif>=1.8.0
 python-dotenv>=1.0
 sentry-sdk>=2.0
 

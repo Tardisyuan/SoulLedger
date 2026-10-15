@@ -19,4 +19,9 @@ class SocialConfig(AppConfig):
         register_bin_type("social_comment", Comment, "reference", lambda c: c.content[:50], DELETED_BY_OFFICER)
 
         # PostMedia 的 post_delete 接收器:行真被删时文件跟着删(apps/social/media.py)。
+        # HEIC / HEIF 解码器:进程启动注册一次,`images.reencode` 才打得开 iPhone 直传的 HEIC。
+        from pillow_heif import register_heif_opener
+
         from . import media  # noqa: F401
+
+        register_heif_opener()

@@ -153,7 +153,7 @@ export function CaseAttachments({ judgmentId, canWrite }: { judgmentId: string; 
       </div>
       {writable && (
         <>
-          <input ref={input} type="file" multiple hidden data-testid="attachments-input" accept="image/jpeg,image/png,application/pdf"
+          <input ref={input} type="file" multiple hidden data-testid="attachments-input" accept="image/jpeg,image/png,image/heic,image/heif,application/pdf"
             onChange={(e) => { add(Array.from(e.target.files ?? [])); e.target.value = ""; }} />
           <div
             role="button"
