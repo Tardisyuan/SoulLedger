@@ -129,7 +129,7 @@ pycparser==3.0
 pydantic==2.13.5
 pydantic-core==2.46.5
 pygments==2.20.0
-pyjwt==2.13.0
+pyjwt==2.15.1
 pyopenssl==26.4.0
 pytest==9.1.1
 pytest-asyncio==1.4.0
@@ -160,7 +160,7 @@ tzdata==2026.1
 tzlocal==5.4.4
 ujson==5.13.0
 uritemplate==4.2.0
-urllib3==2.7.0
+urllib3==2.8.0
 vine==5.1.0
 wcwidth==0.6.0
 zope-interface==8.5
