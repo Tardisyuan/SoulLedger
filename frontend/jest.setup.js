@@ -46,3 +46,13 @@ if (typeof globalThis.TextEncoder === 'undefined') {
 // `accessTokenNeverBecomesACookie.test.ts` — still configures it explicitly,
 // because there the adapter is the subject rather than the scenery.
 require('./lib/platform/web').installWebPlatform();
+
+// 列表页的筛选记在 localStorage(`rememberedFilters`)。不清的话,上一条测试选的筛选会在下一条
+// 测试挂载时被读回来,读起来像页面的默认值坏了。
+afterEach(() => {
+  try {
+    if (typeof localStorage !== 'undefined') localStorage.clear();
+  } catch {
+    /* 没有 localStorage 的环境 */
+  }
+});

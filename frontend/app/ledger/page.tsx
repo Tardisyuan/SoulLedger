@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { isMonthTooLarge, ledgerApi, type LedgerJournal, type LedgerJournalParams, type LedgerJournalRow } from "@soulledger/core/api";
 import { CIVILIZATION_OPTIONS } from "@soulledger/core/config/civilizations";
+import { useRememberedFilters } from "@/src/lib/rememberedFilters";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { usePlaque } from "@/src/components/plaque/Plaque";
@@ -55,6 +56,10 @@ const JOURNAL_COLS =
 /** B10:超过 500 行时表头吸顶(C15 表格细节)。 */
 const STICKY_AFTER = 500;
 
+/** 文明、类目两个下拉记在本浏览器;月份(默认当月)与搜索框的字属于一次到访,不记。 */
+const LEDGER_FILTERS_KEY = "soulledger.ledger.filters";
+const LEDGER_FILTER_FIELDS = ["civilization", "category"] as const;
+
 function LedgerPageContent() {
   const { t } = useI18n();
   usePlaque({ hall: useHall(t("plaque.office.records")) });
@@ -62,6 +67,15 @@ function LedgerPageContent() {
   const [month, setMonth] = useState(() => currentMonth());
   const [civilization, setCivilization] = useState("");
   const [category, setCategory] = useState("");
+  useRememberedFilters(
+    LEDGER_FILTERS_KEY,
+    LEDGER_FILTER_FIELDS,
+    { civilization, category },
+    (saved) => {
+      if (saved.civilization) setCivilization(saved.civilization);
+      if (saved.category) setCategory(saved.category);
+    }
+  );
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [exporting, setExporting] = useState(false);

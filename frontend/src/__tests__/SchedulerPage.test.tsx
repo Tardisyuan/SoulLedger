@@ -626,3 +626,44 @@ describe("the bundles cover every job the backend registers", () => {
     }
   });
 });
+
+// ── 记住的筛选(2026-10-15) ─────────────────────────────────────────
+
+describe("remembered job filter", () => {
+  const KEY = "soulledger.scheduler.filters";
+  const failing = job({ id: 7, consecutive_failures: 2 });
+  const ids = (container: HTMLElement) => [...container.querySelectorAll("[data-job-id]")].map((li) => li.getAttribute("data-job-id"));
+
+  it("a stored filter comes back on mount and narrows the list", async () => {
+    asAdmin();
+    localStorage.setItem(KEY, JSON.stringify({ filter: "failing" }));
+    schedulerApi.jobs.mockResolvedValue({ data: [job(), failing] });
+    const { container } = renderPage();
+    await waitFor(() => expect(ids(container)).toEqual(["7"]));
+    expect(screen.getByRole("button", { name: tZh("scheduler.filters.failing") })).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("with nothing stored every job shows and nothing is written; an unknown stored value is ignored", async () => {
+    asAdmin();
+    schedulerApi.jobs.mockResolvedValue({ data: [job(), failing] });
+    const first = renderPage();
+    await waitFor(() => expect(ids(first.container)).toHaveLength(2));
+    expect(localStorage.getItem(KEY)).toBeNull();
+    first.unmount();
+
+    localStorage.setItem(KEY, JSON.stringify({ filter: "bogus" }));
+    const second = renderPage();
+    await waitFor(() => expect(ids(second.container)).toHaveLength(2));
+  });
+
+  it("choosing a filter stores it; 「全部」 (the empty-result escape) removes it", async () => {
+    asAdmin();
+    renderPage();
+    await screen.findAllByText(tZh("scheduler.jobs.ledger_recalculate_tenant"));
+    fireEvent.click(screen.getByRole("button", { name: tZh("scheduler.filters.failing") }));
+    await waitFor(() => expect(JSON.parse(localStorage.getItem(KEY)!)).toEqual({ filter: "failing" }));
+    // 没有失败的任务:空结果里的「全部」按钮就是清除控件。
+    fireEvent.click(within(screen.getByText(tZh("scheduler.empty.no_match")).parentElement!).getByRole("button", { name: tZh("scheduler.filters.all") }));
+    await waitFor(() => expect(localStorage.getItem(KEY)).toBeNull());
+  });
+});
