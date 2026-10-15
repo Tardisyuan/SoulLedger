@@ -15,6 +15,8 @@ import {
   JudgmentSectionHead,
 } from "@/src/components/judgment/JudgmentGroundsPanel";
 import { JudgmentComments } from "@/src/components/judgment/JudgmentComments";
+import { CaseAttachments } from "@/src/components/judgment/CaseAttachments";
+import { CaseAttachmentsPrintList } from "@/src/components/judgment/CaseAttachmentsPrintList";
 import { JudgmentEvidenceColumn } from "@/src/components/judgment/JudgmentEvidenceColumn";
 import { JudgmentEvidenceAdmission } from "@/src/components/judgment/JudgmentEvidenceAdmission";
 import {
@@ -74,7 +76,7 @@ import {
   placementFromDraft,
   type Placement,
 } from "@/src/components/judgment/JudgmentPlacement";
-import { useJudgmentNextAfter, useJudgmentPrevious } from "@soulledger/core/hooks/useJudgments";
+import { useCaseAttachments, useJudgmentNextAfter, useJudgmentPrevious } from "@soulledger/core/hooks/useJudgments";
 import { usePlaque } from "@/src/components/plaque/Plaque";
 import { useHall } from "@/src/components/plaque/useHall";
 
@@ -198,6 +200,9 @@ export default function JudgmentDetailPage({ params }: PageProps) {
   const nextLink = useRef<HTMLAnchorElement>(null);
   const { user } = useTenant();
   const { hasPermission } = usePermissions();
+  // 案卷附件(W4):只为页脚那句「附件原件见系统」知道有没有附件;与区块里是同一个查询(react-query 合并请求)。
+  const canReadAttachments = hasPermission("judgment.read");
+  const hasAttachments = (useCaseAttachments(id, { enabled: canReadAttachments }).data?.count ?? 0) > 0;
   const createWorkflowId = useId();
   const notesId = useId();
   const clausesId = useId();
@@ -623,7 +628,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
     {!isFinal && <QueueBar judgmentId={judgment.id} canDefer={canExecute} />}
     {/* 语料页「插入审判台」带着 ?cite= 进来:确认后引用;并记下这是最后打开的未结案。 */}
     <CiteFromCorpus judgment={judgment} canCite={canEditGrounds} onCite={(statuteId) => citeMutation.mutate(statuteId)} />
-    <PrintFrame hall={hall} reference={judgment.case_number} referenceLabel={t("print.case_no")}>
+    <PrintFrame hall={hall} reference={judgment.case_number} referenceLabel={t("print.case_no")} note={hasAttachments ? t("case.attachments.print_footer") : undefined}>
     <PageShell
       density="document"
       variant="full"
@@ -1075,7 +1080,17 @@ export default function JudgmentDetailPage({ params }: PageProps) {
           />
         </div>
         {/* 评议:与资料舱同级的次要信息,默认收起;写不写只看 judgment.read(服务端同一码名),结案后照样可写。 */}
+        {/* 案卷附件(W4):评议区上面一节。两个 order-last 按 DOM 顺序排,所以放在评议之前。 */}
+        {canReadAttachments && (
+          <div className="min-w-0 md:col-span-2 xl:col-span-3 order-last">
+            <CaseAttachments judgmentId={id} canWrite={canExecute} />
+          </div>
+        )}
         <JudgmentComments id={id} canWrite={hasPermission("judgment.read")} concludedAt={judgment.concluded_at} />
+        {/* 打印时正文之后的「附件清单」一页;屏幕上不显示。 */}
+        <div className="min-w-0 md:col-span-2 xl:col-span-3 order-last">
+          <CaseAttachmentsPrintList judgmentId={id} enabled={canReadAttachments} />
+        </div>
       </div>
     </PageShell>
     </PrintFrame>

@@ -147,7 +147,8 @@ describe("加减项审判结案带改动(情况 1)", () => {
   it("改动里有一行没选界域:不进确认层、不结案,说明原因", async () => {
     renderPage();
     const section = await screen.findByTestId("amendment-plan-changes");
-    fireEvent.click(within(section).getByRole("button", { name: tZh("sentence_plan.file.add_stop") }));
+    // 计划是异步取来的,「再加一站」要等它到;此前靠渲染的先后碰巧已经到了。
+    fireEvent.click(await within(section).findByRole("button", { name: tZh("sentence_plan.file.add_stop") }));
     fireEvent.click((await screen.findAllByRole("radio")).find((r) => (r as HTMLInputElement).value === "PASSED")!);
     fireEvent.click(screen.getByRole("button", { name: tZh("judgment.desk.to_confirm") }));
     await waitFor(() =>

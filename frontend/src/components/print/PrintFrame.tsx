@@ -29,11 +29,14 @@ export function PrintFrame({
   hall,
   reference,
   referenceLabel,
+  note,
   children,
 }: {
   hall?: string;
   reference?: string | null;
   referenceLabel: string;
+  /** 页脚中间的一句说明(案卷有附件时:「附件原件见系统」);没有就不印。 */
+  note?: string;
   children: ReactNode;
 }) {
   const { t } = useI18n();
@@ -63,6 +66,7 @@ export function PrintFrame({
       <div data-print-foot="" aria-hidden="true">
         <div>
           <span data-print-reference="">{reference ? [referenceLabel, reference].filter(Boolean).join(" ") : ""}</span>
+          <span data-print-note="">{note}</span>
           {/* 右侧页码由 @page 边距盒承担(见 print.css);不支持的浏览器这一格留空。 */}
           <span />
         </div>

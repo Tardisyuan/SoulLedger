@@ -25,6 +25,7 @@ import { Button } from "@/src/components/ui/Button";
 import { Badge } from "@/src/components/ui/Badge";
 import { TextAreaField } from "@/src/components/ui/Field";
 import { Spinner } from "@/src/components/ui/Spinner";
+import { CaseAttachments } from "@/src/components/judgment/CaseAttachments";
 import { WorkflowInfoCard } from "@/src/components/workflow/detail/WorkflowInfoCard";
 import { WorkflowNodeHistory } from "@/src/components/workflow/detail/WorkflowNodeHistory";
 import { WorkflowLinearPreview } from "@/src/components/workflow/detail/WorkflowLinearPreview";
@@ -625,6 +626,14 @@ export default function WorkflowDetailPage() {
                   </div>
                 </RequirePermission>
               )}
+            </section>
+          )}
+
+          {/* 案卷附件(W4):与案卷页同一个组件、同一个案子,放在判决备注 / 理由之下。
+              没有关联案子的流程(没有 judgment)没有附件区;权限与案卷页一样看 judgment.*。 */}
+          {workflow.judgment && hasPermission("judgment.read") && (
+            <section className="px-6 py-4 bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-line))]">
+              <CaseAttachments judgmentId={workflow.judgment} canWrite={hasPermission("judgment.execute")} />
             </section>
           )}
 
