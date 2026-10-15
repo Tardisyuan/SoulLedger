@@ -10,6 +10,7 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.serializers import TokenRefreshSerializer as SimpleJWTTokenRefreshSerializer
 from rest_framework_simplejwt.settings import api_settings as simplejwt_settings
 
+from . import signin_sessions
 from .models import OfficerMfa
 from .passwords import weak_password_reasons
 from .tokens import RefreshToken
@@ -307,18 +308,26 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         from apps.authentication import mfa
 
         request = self.context.get("request")
-        if mfa.is_enabled(self.user) and not mfa.device_remembered(request, self.user):
+        remembered = mfa.is_enabled(self.user) and mfa.device_remembered(request, self.user)
+        if mfa.is_enabled(self.user) and not remembered:
             # 第二步:密码对了,令牌还不发。`remember` 随待验证令牌走,验码后照样生效。
             pending = mfa.PendingToken.for_user(self.user)
             pending["remember"] = bool(attrs.get("remember"))
             pending["officer_app"] = self.officer_app
             return {"mfa_required": True, "pending_token": str(pending), "username": self.user.username}
-        return issue_tokens(self.user, remember=bool(attrs.get("remember")), officer_app=self.officer_app)
+        # 靠「30 天内不再询问」cookie 跳过了第二步:会话记着那枚设备令牌,退出这台时一并作废。
+        trust = mfa._hash_device(request.COOKIES[mfa.DEVICE_COOKIE]) if remembered else ""
+        session = signin_sessions.start(self.user, request, officer_app=self.officer_app, trust_hash=trust)
+        return issue_tokens(self.user, remember=bool(attrs.get("remember")), officer_app=self.officer_app,
+                            session=session)
 
 
-def issue_tokens(user, *, remember: bool, officer_app: bool = False) -> dict:
-    """登录成功的那份响应:access / refresh / user。密码登录与两步验证第二步共用。"""
+def issue_tokens(user, *, remember: bool, officer_app: bool = False, session=None) -> dict:
+    """登录成功的那份响应:access / refresh / user。密码登录与两步验证第二步共用。
+    `session`(`SignInSession`)的 `sid` 写进刷新令牌,这台设备整条轮换血统共用它。"""
     refresh = CustomTokenObtainPairSerializer.get_token(user)
+    if session is not None:
+        signin_sessions.attach(refresh, session)
     if officer_app:
         refresh.for_officer_app()
     elif remember:
@@ -332,11 +341,13 @@ def issue_tokens(user, *, remember: bool, officer_app: bool = False) -> dict:
     return data
 
 
-def reissue_for_device(user, previous) -> dict:
+def reissue_for_device(user, previous, session=None) -> dict:
     """A new `{access, refresh}` for the device that held `previous` (its refresh token), after
     `end_sessions` bumped the user's `session_version`. The device keeps the lifetime it logged
     in with: the officer App's short one, or 「保持登录 30 天」."""
     refresh = CustomTokenObtainPairSerializer.get_token(user)
+    if session is not None:
+        signin_sessions.attach(refresh, session)
     if previous.payload.get("officer_app") is True:
         refresh.for_officer_app()
     elif previous.payload.get("remember") is True:
@@ -402,7 +413,7 @@ class OfficerTokenObtainPairSerializer(CustomTokenObtainPairSerializer):
         return self._finish(attrs)  # 2FA (feat/officer-2fa): same mfa_required + pending_token step as /auth/login/
 
 
-class TokenRefreshSerializer(SimpleJWTTokenRefreshSerializer):
+class TokenRefreshSerializer(signin_sessions.SessionAwareRefreshMixin, SimpleJWTTokenRefreshSerializer):
     """SimpleJWT's refresh, on this app's token class — the one whose
     `set_exp` honours the `remember` claim on rotation (see `tokens.py`).
     Same class name as SimpleJWT's so the schema component stays

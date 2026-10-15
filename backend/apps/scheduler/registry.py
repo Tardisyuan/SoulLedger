@@ -130,6 +130,8 @@ REGISTRY: tuple[JobSpec, ...] = (
     # 同上,但处理不属于任何租户的行(审计 tenant=NULL;登录日志无用户或用户无租户)。
     JobSpec("audit.prune_untenanted_logs", GLOBAL, "40 4 * * *", max_runtime=3600),
     JobSpec("authentication.flush_expired_tokens", GLOBAL, "30 3 * * *"),
+    # 灵魂登录记录与登录设备行只留 90 天(apps/authentication/tasks.py::prune_soul_sign_ins)。
+    JobSpec("authentication.prune_soul_sign_ins", GLOBAL, "50 3 * * *", max_runtime=1800),
     # Period 300s; lock TTL / LOST threshold 240s so a crashed run cannot make
     # the next tick SKIPPED.
     JobSpec(

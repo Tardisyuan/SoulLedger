@@ -34,7 +34,10 @@ class SoulRefreshToken(RefreshToken):
 
 def session_is_current(token, user) -> bool:
     """官员令牌的 `sv` 声明还等于用户当前的 `session_version`(缺省都按 0)。"""
-    return token.get("sv", 0) == getattr(user, "session_version", 0)
+    from apps.authentication.signin_sessions import is_revoked
+
+    # 另:这台设备在「登录设备」里被退出(`sid` 指向的会话已标 revoked),它的 access 也当场失效。
+    return token.get("sv", 0) == getattr(user, "session_version", 0) and not is_revoked(token)
 
 
 def _parses_as(token_class, raw) -> bool:

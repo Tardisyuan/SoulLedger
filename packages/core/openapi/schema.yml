@@ -2428,6 +2428,71 @@ paths:
               schema:
                 $ref: '#/components/schemas/PasswordResetRefusal'
           description: ''
+  /api/v1/auth/sessions/:
+    get:
+      operationId: v1_auth_sessions_list
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SignInSession'
+          description: ''
+  /api/v1/auth/sessions/{session_id}/revoke/:
+    post:
+      operationId: v1_auth_sessions_revoke_create
+      parameters:
+      - in: path
+        name: session_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionRefusal'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionRefusal'
+          description: ''
+  /api/v1/auth/sessions/revoke-others/:
+    post:
+      operationId: v1_auth_sessions_revoke_others_create
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RevokeOthersResponse'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionRefusal'
+          description: ''
   /api/v1/auth/set-new-password/:
     post:
       operationId: v1_auth_set_new_password_create
@@ -9041,6 +9106,111 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/MeSentencePlan'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulError'
+          description: ''
+  /api/v1/me/sessions/:
+    get:
+      operationId: v1_me_sessions_list
+      tags:
+      - v1
+      security:
+      - soulJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SignInSession'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulError'
+          description: ''
+  /api/v1/me/sessions/{session_id}/revoke/:
+    post:
+      operationId: v1_me_sessions_revoke_create
+      parameters:
+      - in: path
+        name: session_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - v1
+      security:
+      - soulJwtAuth: []
+      responses:
+        '204':
+          description: No response body
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionRefusal'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulError'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionRefusal'
+          description: ''
+  /api/v1/me/sessions/revoke-others/:
+    post:
+      operationId: v1_me_sessions_revoke_others_create
+      tags:
+      - v1
+      security:
+      - soulJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RevokeOthersResponse'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulError'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionRefusal'
+          description: ''
+  /api/v1/me/sign-ins/:
+    get:
+      operationId: v1_me_sign_ins_list
+      tags:
+      - v1
+      security:
+      - soulJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SignInRecord'
           description: ''
         '403':
           content:
@@ -33297,6 +33467,13 @@ components:
       - expires_at
       - password
       - soul_code
+    RevokeOthersResponse:
+      type: object
+      properties:
+        revoked:
+          type: integer
+      required:
+      - revoked
     Role:
       type: object
       properties:
@@ -34233,6 +34410,16 @@ components:
       - kind
       - repayment_multiple
       - wrongs
+    SessionRefusal:
+      type: object
+      properties:
+        detail:
+          type: string
+        code:
+          type: string
+      required:
+      - code
+      - detail
     SetNewPassword:
       type: object
       description: Serializer for setting new password via code.
@@ -34260,6 +34447,55 @@ components:
       description: |-
         * `error` - error
         * `warning` - warning
+    SignInRecord:
+      type: object
+      properties:
+        at:
+          type: string
+          format: date-time
+        ok:
+          type: boolean
+        method:
+          type: string
+        device:
+          type: string
+        count:
+          type: integer
+        reason:
+          type: string
+      required:
+      - at
+      - count
+      - device
+      - method
+      - ok
+      - reason
+    SignInSession:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        label:
+          type: string
+        method:
+          type: string
+        last_seen_at:
+          type: string
+          format: date-time
+        current:
+          type: boolean
+        trusted_until:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+      - current
+      - id
+      - label
+      - last_seen_at
+      - method
+      - trusted_until
     SignerCandidate:
       type: object
       properties:

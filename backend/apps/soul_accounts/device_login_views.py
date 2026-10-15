@@ -116,4 +116,5 @@ class SoulDeviceLoginView(APIView):
         row.last_used_at = timezone.now()
         row.save(update_fields=["last_used_at"])
         return finish_first_step(account, soul_code, ip_key=ip_key, code_key=code_key, ip=ip,
-                                 user_agent=user_agent, device_token=body.validated_data.get("device_token"))
+                                 user_agent=user_agent, device_token=body.validated_data.get("device_token"),
+                                 request=request, method="face")

@@ -193,6 +193,7 @@ EDGES = {
     'audit.AuditLog.user->authentication.User': ('user-other', 'global identity: the owning account'),
     'authentication.LoginLog.user->authentication.User': ('user-other', 'global identity: the owning account'),
     'authentication.MfaRememberedDevice.user->authentication.User': ('user-other', 'global identity: the owning account'),
+    'authentication.SignInSession.user->authentication.User': ('user-other', 'global identity: the owning account (one row per signed-in device; read and ended only through request.user)'),
     'authentication.OfficerMfa.user->authentication.User': ('user-other', 'global identity: the owning account'),
     'chat.Conversation.assignee->authentication.User': ('user-other', 'global identity: officer the conversation is assigned to'),
     'chat.InboxOfficerState.user->authentication.User': ('user-other', 'global identity: the owning account'),

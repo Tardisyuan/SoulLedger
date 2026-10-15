@@ -14,6 +14,7 @@ import { Badge } from "@/src/components/ui/Badge";
 import { TextField, fieldControl } from "@/src/components/ui/Field";
 import { PasswordRuleFields, usePasswordRules } from "@/src/components/auth/PasswordRules";
 import { MfaSection } from "@/src/components/profile/MfaSection";
+import { DevicesSection } from "@/src/components/profile/DevicesSection";
 import { NotificationPreferences, NOTIFICATION_PREFS_ANCHOR } from "@/src/components/profile/NotificationPreferences";
 import { EmailVerificationRow } from "@/src/components/profile/EmailVerificationRow";
 import { cn } from "@/lib/utils";
@@ -211,7 +212,7 @@ export default function ProfilePage() {
       </section>
 
       {/* Change Password Section */}
-      <section>
+      <section id="password-section">
         <h2 className="pt-6 text-lg text-[oklch(var(--color-ink))]">
           <span aria-hidden="true">乙 · </span>
           {t("profile.change_password")}
@@ -288,6 +289,17 @@ export default function ProfilePage() {
           {t("mfa.title")}
         </h2>
         <MfaSection />
+      </section>
+
+      {/* 登录设备(Design 第二十八批 W2):一台设备一行;「不认识的设备」的出路是改密码,所以带一个直达那一节的入口。 */}
+      <section>
+        <h2 className="pt-6 text-lg text-[oklch(var(--color-ink))]">
+          <span aria-hidden="true">戊 · </span>
+          {t("profile.devices.title")}
+        </h2>
+        <DevicesSection
+          onChangePassword={() => setShowPasswordForm(true)}
+        />
       </section>
     </PageShell>
   );
