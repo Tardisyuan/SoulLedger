@@ -7,7 +7,7 @@
 import { soulApi, type SoulSignInRecord, type SoulSignInSession } from "@soulledger/core/api/soul";
 import { useNavigation, type NavigationProp } from "@react-navigation/native";
 import { useCallback, useState } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { Modal, Pressable, StyleSheet, View } from "react-native";
 
 import { useToast } from "../feedback";
 import { family } from "../fonts";
@@ -94,6 +94,7 @@ export function SignInsScreen() {
   const records = useRemote(soulApi.signInRecords);
   const [gone, setGone] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState<string | null>(null);
+  const [asking, setAsking] = useState(false);
   const { reload: reloadDevices } = devices;
   const { reload: reloadRecords } = records;
   const reload = useCallback(() => {
@@ -111,8 +112,21 @@ export function SignInsScreen() {
     ).finally(() => setBusy(null));
   };
 
+  const signOutOthers = () => {
+    if (busy) return;
+    setBusy("others");
+    soulApi.revokeOtherSignInSessions().then(
+      () => {
+        setAsking(false);
+        void reload();
+      },
+      () => toast(t("soul_app.security.sign_out_failed"), "failure")
+    ).finally(() => setBusy(null));
+  };
+
   const rows = devices.data ? [...devices.data].sort((a, b) => Number(b.current) - Number(a.current)).filter((s) => !gone.has(s.id)) : null;
   const phone = devices.data?.find((s) => s.current)?.label;
+  const others = rows ? rows.filter((s) => !s.current).length : 0;
 
   return (
     <Screen testID="sign-ins" refreshing={(devices.loading || records.loading) && rows !== null} onRefresh={() => void reload()}>
@@ -120,7 +134,14 @@ export function SignInsScreen() {
         <SectionLabel>{t("soul_app.security.devices")}</SectionLabel>
       </View>
       {rows ? (
-        rows.map((s) => <DeviceRow key={s.id} session={s} busy={busy === s.id} onSignOut={() => signOut(s.id)} />)
+        <>
+          {rows.map((s) => <DeviceRow key={s.id} session={s} busy={busy === s.id} onSignOut={() => signOut(s.id)} />)}
+          {others > 0 ? (
+            <View style={{ paddingHorizontal: gutter, paddingTop: 12 }}>
+              <Button testID="sign-out-others" kind="secondary" title={t("profile.devices.sign_out_others")} onPress={() => setAsking(true)} />
+            </View>
+          ) : null}
+        </>
       ) : devices.error ? (
         <SectionError testID="devices-error" onRetry={() => void devices.reload()} />
       ) : (
@@ -155,6 +176,26 @@ export function SignInsScreen() {
         </Txt>
         <Button testID="sign-ins-change-password" title={t("profile.change_password")} onPress={() => navigation.navigate("AccountPassword")} />
       </View>
+      <Modal visible={asking} transparent animationType="fade" onRequestClose={() => setAsking(false)}>
+        <View style={[styles.scrim, { backgroundColor: theme.scrim }]}>
+          <View testID="sign-out-others-sheet" accessibilityViewIsModal style={[styles.sheet, { backgroundColor: theme.s1, borderTopColor: theme.negStrong }]}>
+            <Txt variant="bodyLg" style={styles.bold}>
+              {t("profile.devices.confirm_title", { n: String(others) })}
+            </Txt>
+            <Txt variant="caption" tone="muted">
+              {t("profile.devices.confirm_body")}
+            </Txt>
+            <Button
+              testID="sign-out-others-confirm"
+              kind="danger"
+              title={t("profile.devices.confirm_action", { n: String(others) })}
+              busy={busy === "others"}
+              onPress={signOutOthers}
+            />
+            <Button testID="sign-out-others-cancel" kind="secondary" title={t("soul_app.common.cancel")} onPress={() => setAsking(false)} />
+          </View>
+        </View>
+      </Modal>
     </Screen>
   );
 }
@@ -172,5 +213,7 @@ const styles = StyleSheet.create({
   record: { minHeight: 48, flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, borderBottomWidth: 1 },
   stamp: { fontSize: 12, letterSpacing: 0.4 },
   bold: { fontFamily: family.ui[600] },
+  scrim: { flex: 1, justifyContent: "flex-end" },
+  sheet: { borderTopWidth: 3, padding: 20, gap: 12 },
   stranger: { marginTop: 32, marginBottom: 32, borderWidth: 1, padding: 16, gap: 12 },
 });

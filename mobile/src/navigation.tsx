@@ -312,6 +312,10 @@ function LinkBridge({ signedIn, ready }: { signedIn: boolean; ready: number }) {
         // 问一问 with the question typed in, not sent: the soul reads it and presses send.
         if (link.question) setDraft?.(link.question);
       } else if (link.page === "letters" && !lettersOff) navigationRef.navigate("Tabs", { screen: "Letters" });
+      else if (link.page === "circle") navigationRef.navigate("Tabs", { screen: "Circle" });
+      else if (link.page === "sentence") navigationRef.navigate("Sentence");
+      else if (link.page === "export") navigationRef.navigate("DataExport");
+      else if (link.page === "help") navigationRef.navigate("Help");
       else landOn(navigationRef.navigate, { screen: link.page === "cooldown" ? "Applications" : "Life" });
     });
   }, [signedIn, ready, held, open, setDraft, lettersOff]);

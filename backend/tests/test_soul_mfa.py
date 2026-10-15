@@ -672,6 +672,8 @@ class TestOfficerReset:
         # 灵魂的通知记录里有这一条,带官员的名字。
         notice = PushDelivery.objects.get(account=soul, kind="mfa_reset_by_officer")
         assert (admin_user.display_name or admin_user.username) in notice.body
+        # 点这条推送要去两步验证页(手机端 landingOf 认 screen: Mfa)。
+        assert notice.data["screen"] == "Mfa"
 
     def test_the_notice_is_readable_after_login_in_the_history(self, soul, admin_user):
         _enable(soul)

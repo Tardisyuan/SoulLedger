@@ -148,6 +148,7 @@ export type Landing =
   | { screen: "Life" }
   | { screen: "Applications" }
   | { screen: "DataExport" }
+  | { screen: "Mfa" }
   | { screen: "Sentence"; landing: SentenceLanding };
 
 /**
@@ -166,6 +167,8 @@ export function landOn(navigate: NavigationProp<AppStackParams>["navigate"], lan
   else if (landing.screen === "Applications") navigate("Tabs", { screen: "Applications", params: { landed: true } });
   // 「资料已准备好」: the page that holds the share button.
   else if (landing.screen === "DataExport") navigate("DataExport");
+  // 官员替灵魂关了两步验证: the page that shows it is off (and turns it back on).
+  else if (landing.screen === "Mfa") navigate("Mfa");
   else navigate("Tabs", { screen: "Life" });
 }
 
@@ -182,7 +185,7 @@ export function landingOf(data: unknown): Landing | null {
   if (screen === "Conversation") return typeof conversation === "string" && ID.test(conversation) ? { screen, id: conversation } : null;
   // 缩短冷却申请的结果:状态在转生申请页的冷却块里。
   if (screen === "Applications") return { screen };
-  if (screen === "DataExport") return { screen };
+  if (screen === "DataExport" || screen === "Mfa") return { screen };
   if (screen === "Life") {
     // 受刑 1d: the four sentence pushes say `screen: Life` (an older app still lands there) and are
     // told apart by `kind`; `node_ids` names the stations to mark 「新」. A malformed id is dropped, not guessed at.
