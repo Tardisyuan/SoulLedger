@@ -42,6 +42,11 @@ def _set(api_client, code=CODE, password=GOOD_PASSWORD, email=EMAIL):
     )
 
 
+def _not_returned(body, code):
+    """`no_soul_account` / `ambiguous_email` stay declared (older Apps map them) but are no longer answered."""
+    assert body["code"] != code
+
+
 def _refusal(res, status, code):
     assert res.status_code == status, (res.status_code, res.data)
     assert res.data["code"] == code, res.data
@@ -88,17 +93,23 @@ class TestSetNewPasswordCodes:
             role="JUDGE", tenant=cn_tenant,
         )
         cache.set("pwd_reset:coded-officer@example.com", CODE, timeout=300)
-        _refusal(_set(api_client, email="coded-officer@example.com"), 404, "no_soul_account")
+        # Answered as an ordinary wrong code: "no such account" would be the oracle the fake codes close.
+        body = _refusal(_set(api_client, email="coded-officer@example.com"), 400, "reset_code_wrong")
+        _not_returned(body, "no_soul_account")
 
     def test_several_accounts_on_one_address_is_ambiguous_email(self, api_client, soul, monkeypatch):
         # A unique index now refuses the duplicate itself, so the row pair this
         # branch exists for can only be simulated.
-        def several(**kwargs):
-            raise views.User.MultipleObjectsReturned
+        class Two:
+            def __getitem__(self, _):
+                return [1, 2]
 
         cache.set(f"pwd_reset:{EMAIL}", CODE, timeout=300)
-        monkeypatch.setattr(views.User.objects, "get", several)
-        _refusal(_set(api_client), 409, "ambiguous_email")
+        monkeypatch.setattr(views.User.objects, "filter", lambda **kwargs: Two())
+        # Several accounts: no code was ever mailed, so a code that matches is a lucky guess,
+        # answered as a wrong one.
+        body = _refusal(_set(api_client), 400, "reset_code_wrong")
+        _not_returned(body, "ambiguous_email")
 
     def test_the_anonymous_throttle_is_rate_limited_with_retry_after(self, api_client, soul, monkeypatch):
         monkeypatch.setattr(AnonRateThrottle, "THROTTLE_RATES", {"anon": "2/minute"})

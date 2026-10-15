@@ -29929,8 +29929,8 @@ components:
         * `reset_code_wrong` - the code does not match
         * `reset_code_attempts_exceeded` - too many wrong codes; the code was deleted
         * `weak_password` - the password validators refused the new password
-        * `no_soul_account` - no soul account has this address
-        * `ambiguous_email` - several accounts share this address
+        * `no_soul_account` - no soul account has this address (no longer returned: answered as reset_code_wrong)
+        * `ambiguous_email` - several accounts share this address (no longer returned: answered as reset_code_wrong)
     PasswordResetResult:
       type: object
       description: |-
@@ -31788,6 +31788,9 @@ components:
           type: boolean
           readOnly: true
         mfa_required:
+          type: boolean
+          readOnly: true
+        password_change_required:
           type: boolean
           readOnly: true
     PatchedUserNotification:
@@ -37951,12 +37954,16 @@ components:
         mfa_required:
           type: boolean
           readOnly: true
+        password_change_required:
+          type: boolean
+          readOnly: true
       required:
       - email_verified
       - id
       - is_active
       - mfa_enabled
       - mfa_required
+      - password_change_required
       - role
       - tenant
       - username
@@ -38471,10 +38478,14 @@ components:
         mfa_required:
           type: boolean
           readOnly: true
+        password_change_required:
+          type: boolean
+          readOnly: true
       required:
       - id
       - mfa_enabled
       - mfa_required
+      - password_change_required
       - permissions
       - tenant
       - username

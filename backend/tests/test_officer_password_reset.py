@@ -115,10 +115,25 @@ class TestRequest:
         codes = [_ask(f"who{i}", ip="198.51.100.40").status_code for i in range(7)]
         assert codes[:5] == [200] * 5 and codes[5] == 429
 
-    def test_per_account_limit_is_silent(self, officer):
-        for i in range(5):
-            assert _ask("pw_officer", ip=f"198.51.100.{50 + i}").status_code == 200
+    def test_per_account_and_ip_limit_is_silent(self, officer):
+        for _ in range(5):
+            assert _ask("pw_officer", ip="198.51.100.50").status_code == 200
         assert len(mail.outbox) == officer_reset.MAX_MAILS_PER_ACCOUNT_PER_HOUR
+
+    def test_a_strangers_requests_do_not_use_up_the_owners_mails(self, officer):
+        """The budget is per account AND source address: a stranger spending his own does not
+        silence the owner asking from somewhere else."""
+        for _ in range(5):
+            _ask("pw_officer", ip="198.51.100.60")
+        mail.outbox.clear()
+        assert _ask("pw_officer", ip="198.51.100.61").status_code == 200
+        assert len(mail.outbox) == 1
+
+    def test_many_addresses_still_hit_the_account_ceiling(self, officer):
+        total = officer_reset.MAX_MAILS_PER_ACCOUNT_TOTAL_PER_HOUR
+        for i in range(total + 5):
+            _ask("pw_officer", ip=f"198.51.{i}.1")
+        assert len(mail.outbox) == total
 
     def test_mail_is_in_the_users_email_locale(self, officer):
         officer.preferences = {"email_locale": "en"}
@@ -126,9 +141,26 @@ class TestRequest:
         _ask("pw_officer")
         assert "Reset your password" in mail.outbox[0].subject
 
-    def test_broker_down_still_sends(self, officer):
-        with patch.object(tasks.send_officer_reset_mail, "delay", side_effect=ConnectionError("down")):
+    def test_broker_down_still_sends_but_off_the_request_thread(self, officer):
+        """The fallback used to run inline, so only an eligible account paid for the mail: a timing
+        oracle. It now starts a thread for every identifier alike and returns at once."""
+        started = []
+
+        class FakeThread:
+            def __init__(self, target, args, daemon):
+                started.append((target, args, daemon))
+
+            def start(self):
+                pass
+
+        with patch.object(tasks.send_officer_reset_mail, "delay", side_effect=ConnectionError("down")), \
+                patch("apps.authentication.officer_reset_views.threading.Thread", FakeThread):
             assert _ask("pw_officer").status_code == 200
+            assert _ask("nobody_at_all").status_code == 200
+        assert mail.outbox == [], "nothing may be sent on the request thread"
+        assert len(started) == 2 and all(daemon for _, _, daemon in started)
+        target, args, _ = started[0]
+        target(*args)  # what the thread would do
         assert len(mail.outbox) == 1
 
 
@@ -255,8 +287,16 @@ class TestVerification:
     def test_send_is_limited_per_hour_and_needs_login_and_an_email(self, officer):
         self._unverified(officer)
         client = self._client(officer)
-        statuses = [client.post(SEND_VERIFY).status_code for _ in range(6)]
-        assert statuses == [200] * 5 + [429]
+        # One address takes 2 a hour (whoever asks); a user takes 5 a hour across addresses.
+        statuses = [client.post(SEND_VERIFY).status_code for _ in range(3)]
+        assert statuses == [200] * officer_reset.MAX_VERIFY_MAILS_PER_ADDRESS_PER_HOUR + [429]
+        for i in range(3):
+            officer.email = f"elsewhere{i}@example.com"
+            officer.save(update_fields=["email"])
+            assert client.post(SEND_VERIFY).status_code == 200, i
+        officer.email = "elsewhere9@example.com"
+        officer.save(update_fields=["email"])
+        assert client.post(SEND_VERIFY).status_code == 429  # the user's own 5 are spent
         assert APIClient().post(SEND_VERIFY).status_code == 401
         officer.email = ""
         officer.save(update_fields=["email"])

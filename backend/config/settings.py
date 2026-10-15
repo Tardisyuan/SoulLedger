@@ -198,7 +198,14 @@ AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
     {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
+    # 官员专用(2026-10-15):管理员至少 12 位;不能重复最近 5 个密码。灵魂账号不受后者影响。
+    {"NAME": "apps.authentication.passwords.RoleMinimumLengthValidator"},
+    {"NAME": "apps.authentication.passwords.PasswordHistoryValidator"},
 ]
+
+# 官员密码最长使用天数。0 = 不过期(默认)。开了之后超期的官员仍能登录,但除改密码 / 退出 / 读资料外
+# 的接口一律 403 `password_change_required`,与灵魂端首次登录改密码同一个形状。
+OFFICER_PASSWORD_MAX_AGE_DAYS = int(os.environ.get("OFFICER_PASSWORD_MAX_AGE_DAYS", "0"))
 
 LANGUAGE_CODE = "en-us"
 TIME_ZONE = "UTC"
