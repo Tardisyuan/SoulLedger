@@ -7,7 +7,7 @@
 import { readFileSync } from "fs";
 import { join } from "path";
 
-import { PASSWORD_MIN_LENGTH } from "@soulledger/core/domain/passwordRules";
+import { ADMIN_PASSWORD_MIN_LENGTH, PASSWORD_MIN_LENGTH } from "@soulledger/core/domain/passwordRules";
 
 const settings = readFileSync(join(__dirname, "..", "..", "..", "backend", "config", "settings.py"), "utf8");
 const block = /AUTH_PASSWORD_VALIDATORS = \[([\s\S]*?)\n\]/.exec(settings)?.[1] ?? "";
@@ -26,5 +26,14 @@ describe("the password checklist describes the server's validators", () => {
     for (const name of ["NumericPasswordValidator", "CommonPasswordValidator", "UserAttributeSimilarityValidator"]) {
       expect(block).toContain(name);
     }
+  });
+});
+
+describe("the administrator's longer minimum", () => {
+  const passwords = readFileSync(join(__dirname, "..", "..", "..", "backend", "apps", "authentication", "passwords.py"), "utf8");
+
+  it("is the number the backend validator uses, and that validator is wired in", () => {
+    expect(passwords).toContain(`ADMIN_MIN_PASSWORD_LENGTH = ${ADMIN_PASSWORD_MIN_LENGTH}`);
+    expect(block).toContain("apps.authentication.passwords.RoleMinimumLengthValidator");
   });
 });

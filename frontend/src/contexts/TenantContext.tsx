@@ -10,6 +10,7 @@ import {
   type ReactNode,
 } from "react";
 import { permApi } from "@soulledger/core/api";
+import { onPasswordChangeRequired } from "@soulledger/core/api/client";
 import type { UserRole } from "@soulledger/core/api";
 import {
   ACCESS_TOKEN_KEY,
@@ -61,6 +62,8 @@ export interface AuthUser {
   /** 两步验证(A12)。Both optional: a pre-A12 cached envelope has neither, and absent reads as "no banner". */
   mfa_enabled?: boolean;
   mfa_required?: boolean;
+  /** 首次登录 / 管理员重置 / 密码超期:除改密码外的接口 403,`AppLayout` 把人带去个人中心改密码。 */
+  password_change_required?: boolean;
 }
 
 // Safe subset persisted to localStorage (no permissions)
@@ -126,6 +129,15 @@ export function TenantProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     document.documentElement.dataset.civ = civ;
   }, [civ]);
+
+  // Any 403 `password_change_required` (the password aged out mid-session, an administrator reset it) flips the flag;
+  // `AppLayout` then routes to the profile page.
+  useEffect(() => {
+    onPasswordChangeRequired(() =>
+      setUserState((prev) => (prev && !prev.password_change_required ? { ...prev, password_change_required: true } : prev))
+    );
+    return () => onPasswordChangeRequired(null);
+  }, []);
 
   // Hydrate from localStorage on mount (client-only)
   // Permissions are NOT loaded from localStorage for security - they must be fetched from server
