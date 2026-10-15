@@ -14,7 +14,7 @@
  * `clearDrafts()`: the next officer on the phone must not find the last one's cases.
  */
 import { platform } from "@soulledger/core/platform";
-import { useCallback, useEffect, useRef, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import { useOnline, useRemote } from "./shared";
 
@@ -77,6 +77,28 @@ function setShownAt(at: number | null): void {
   listeners.forEach((l) => l());
 }
 
+/**
+ * Each mounted screen that reads through the cache says what it shows: the time of its content, or null when
+ * it has none (a miss offline: 「没取到」). The banner names the one opened last -- the screen on top -- so a
+ * detail with nothing in it does not borrow the list's time underneath, and going back gives the list's back.
+ */
+const screens: { id: number; at: number | null }[] = [];
+let nextScreen = 0;
+
+function publishScreen(id: number, at: number | null): void {
+  const entry = screens.find((s) => s.id === id);
+  if (entry) entry.at = at;
+  else screens.push({ id, at });
+  setShownAt(screens[screens.length - 1].at);
+}
+
+function dropScreen(id: number): void {
+  const i = screens.findIndex((s) => s.id === id);
+  if (i < 0) return;
+  screens.splice(i, 1);
+  setShownAt(screens.length ? screens[screens.length - 1].at : null);
+}
+
 /** When the content on screen was last fetched (or cached): 「显示的是 HH:MM 的内容」. */
 export function useShownAt(): number | null {
   return useSyncExternalStore(
@@ -120,8 +142,12 @@ export function useCachedRemote<T>(key: string, fetcher: () => Promise<T>) {
     void reload();
   }, [back, reload]);
   const at = data?.at ?? null;
+  const [screen] = useState(() => ++nextScreen);
+  const missed = data === null && error != null;
   useEffect(() => {
-    if (at !== null) setShownAt(at);
-  }, [at]);
+    if (at !== null) publishScreen(screen, at);
+    else if (missed) publishScreen(screen, null);
+  }, [screen, at, missed]);
+  useEffect(() => () => dropScreen(screen), [screen]);
   return { data: data ? data.value : null, error, loading, reload, cached: data?.cached ?? false };
 }

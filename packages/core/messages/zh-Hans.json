@@ -5917,6 +5917,7 @@
     },
     "offline": {
       "banner": "没有网络 · 显示的是 {{time}} 的内容",
+      "banner_bare": "没有网络",
       "no_decide": "没有网络时不能批准或驳回：这期间案卷可能已经变了。",
       "restored": "已恢复网络",
       "restored_sent": "已恢复网络 · 发出了 {{n}} 封回信",
