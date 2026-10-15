@@ -130,7 +130,7 @@ describe("before any request", () => {
     await openPage();
     await screen.findByTestId("export-request");
     expect(screen.getByText("把本殿记下的、关于你的资料打包成一个文件。")).toBeTruthy();
-    const included = ["基本资料与编号", "功过记录", "审判结果与评语(给你看过的部分)", "书信与朋友圈(含图片)", "最近 90 天的登录记录"];
+    const included = ["基本资料与编号", "功过记录", "审判结果", "书信与朋友圈(含图片)", "最近 90 天的登录记录"];
     included.forEach((line, i) => expect(screen.getAllByTestId(/^included-/)[i]).toHaveTextContent(line));
     expect(screen.getAllByTestId(/^included-/)).toHaveLength(5);
     expect(screen.getAllByTestId(/^excluded-/).map((n) => n.props.children)).toEqual(["官员之间的评议", "别人发给你之外的书信"]);
