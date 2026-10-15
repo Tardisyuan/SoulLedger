@@ -1,9 +1,13 @@
 """上传图片的唯一一道检查与重编码 —— 头像与朋友圈帖子图片共用。
 
 **客户端说的一概不信**:扩展名、Content-Type、文件名都不看。先看文件头的魔数
-(`sniff_format`),只认 PNG / JPEG / WebP;再交给 Pillow **只用那一个格式的解码器**
+(`sniff_format`),只认 PNG / JPEG / WebP / HEIC;再交给 Pillow **只用那一个格式的解码器**
 完整解码。存下来的是解码后像素的重编码 —— 应用方向、去掉 EXIF(含 GPS)、
 ICC 与文本块 —— 不是客户端送来的字节。
+
+**HEIC / HEIF**(2026-10-15):按 `ftyp` 盒子的品牌认,由 `pillow-heif` 的解码器(`SocialConfig.ready`
+里注册一次)解码,**一律存成 JPEG**(`.jpg` / `image/jpeg`)。大小上限看的是**上传的字节**(HEIC 比同画质的
+JPEG 小,转出来的 JPEG 通常更大;案卷附件另在转换后再按存下来的大小查一次)。
 
 头像(`serializers.AvatarUploadSerializer`)在 2026-09-14 定下这套规则;帖子图片
 (`media.py`,2026-09-25)沿用同一个函数,只换边长上限。
@@ -19,8 +23,11 @@ MAX_BYTES = 5 * 1024 * 1024
 # 在解码任何像素之前按文件头判:100 KB 的 PNG 可以声称 50,000 x 50,000,加载时要几个 GB。
 MAX_PIXELS = 40_000_000
 #: Pillow 格式名 -> 存盘扩展名。
+#: "HEIF" 只在输入侧出现:输出一律转 JPEG,所以这两张表没有它。
 FORMATS = {"PNG": "png", "JPEG": "jpg", "WEBP": "webp"}
 CONTENT_TYPES = {"PNG": "image/png", "JPEG": "image/jpeg", "WEBP": "image/webp"}
+#: HEIF 容器里放 HEVC 的品牌(AVIF 的 avif/avis 不在内:没装它的解码器)。
+HEIF_BRANDS = {b"heic", b"heix", b"hevc", b"hevx", b"heim", b"heis", b"hevm", b"hevs", b"mif1", b"msf1"}
 
 
 class ImageRejectedError(ValueError):
@@ -32,13 +39,15 @@ class ImageRejectedError(ValueError):
 
 
 def sniff_format(head: bytes):
-    """按魔数认格式;不认得返回 None。只看前 12 字节。"""
+    """按魔数认格式(PNG / JPEG / WEBP / HEIF);不认得返回 None。只看前 12 字节。"""
     if head.startswith(b"\x89PNG\r\n\x1a\n"):
         return "PNG"
     if head.startswith(b"\xff\xd8\xff"):
         return "JPEG"
     if len(head) >= 12 and head[:4] == b"RIFF" and head[8:12] == b"WEBP":
         return "WEBP"
+    if len(head) >= 12 and head[4:8] == b"ftyp" and head[8:12] in HEIF_BRANDS:
+        return "HEIF"
     return None
 
 
@@ -66,7 +75,7 @@ def reencode(upload, *, max_edge, max_bytes=MAX_BYTES) -> Reencoded:
     """
     if upload.size > max_bytes:
         raise ImageRejectedError(f"Image must be at most {max_bytes // (1024 * 1024)} MB.", "too_large")
-    not_an_image = ImageRejectedError("Upload a PNG, JPEG or WebP image.", "not_an_image")
+    not_an_image = ImageRejectedError("Upload a PNG, JPEG, WebP or HEIC image.", "not_an_image")
     upload.seek(0)
     sniffed = sniff_format(upload.read(12))
     if sniffed is None:
@@ -80,14 +89,15 @@ def reencode(upload, *, max_edge, max_bytes=MAX_BYTES) -> Reencoded:
             img.load()  # 完整解码:截断或损坏的内容在这里失败
             out = ImageOps.exif_transpose(img)
             out.thumbnail((max_edge, max_edge))
-            if sniffed == "JPEG" and out.mode not in ("RGB", "L"):
+            target = "JPEG" if sniffed == "HEIF" else sniffed
+            if target == "JPEG" and out.mode not in ("RGB", "L"):
                 out = out.convert("RGB")
             out.info = {}  # 存盘前丢掉 exif / icc_profile / text
             buf = io.BytesIO()
-            out.save(buf, sniffed)
+            out.save(buf, target)
             width, height = out.size
     except (UnidentifiedImageError, Image.DecompressionBombError, OSError, SyntaxError, ValueError) as exc:
         if isinstance(exc, ImageRejectedError):
             raise
         raise not_an_image from None
-    return Reencoded(ContentFile(buf.getvalue()), sniffed, width, height)
+    return Reencoded(ContentFile(buf.getvalue()), target, width, height)

@@ -118,6 +118,7 @@ parso==0.8.6
 pexpect==4.9.0
 pgvector==0.4.2
 pillow==12.3.0
+pillow-heif==1.8.0
 pluggy==1.6.0
 prompt-toolkit==3.0.52
 psutil==7.2.2

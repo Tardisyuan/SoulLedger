@@ -80,7 +80,7 @@ def test_png_and_pdf_are_accepted_and_listed_with_usage(cn_tenant, judge_user):
 @pytest.mark.parametrize("name,payload,declared", [
     ("fake.png", b"MZ\x90\x00 not an image at all", "image/png"),          # 扩展名与声明都说图片,魔数不是
     ("audio.m4a", b"\x00\x00\x00\x18ftypM4A \x00\x00", "audio/mp4"),
-    ("photo.heic", b"\x00\x00\x00\x18ftypheic\x00\x00\x00\x00mif1heic", "image/heic"),  # HEIC 不收
+    ("photo.heic", b"\x00\x00\x00\x18ftypheic\x00\x00\x00\x00mif1heic", "image/heic"),  # ftyp heic 但不是真 HEIC:解码失败仍是 bad_type(真 HEIC 见 test_heic_upload.py)
     ("pic.webp", b"RIFF\x24\x00\x00\x00WEBPVP8 ", "image/webp"),
     ("real.pdf", b"<html>%PDF-</html>", "application/pdf"),                # 声称 PDF,头不是 %PDF-
 ])

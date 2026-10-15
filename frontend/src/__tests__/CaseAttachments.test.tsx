@@ -82,17 +82,17 @@ test("add button and drop zone exist before conclusion and are gone after; downl
   expect(within(row).getByRole("button", { name: "case.attachments.download" })).toBeInTheDocument();
 });
 
-test("the file input offers only JPEG, PNG and PDF, so phones convert HEIC themselves", async () => {
+test("the file input offers JPEG, PNG, HEIC/HEIF and PDF (the server converts HEIC to JPG)", async () => {
   api.attachments.mockResolvedValue(list([]));
   renderIt();
   const input = await screen.findByTestId("attachments-input");
-  expect(input.getAttribute("accept")).toBe("image/jpeg,image/png,application/pdf");
+  expect(input.getAttribute("accept")).toBe("image/jpeg,image/png,image/heic,image/heif,application/pdf");
 });
 
-test("a HEIC that arrives anyway (dragged from a Mac) is refused on its row before any upload", async () => {
+test("a type the server does not take (GIF) is refused on its row before any upload", async () => {
   api.attachments.mockResolvedValue(list([]));
   renderIt();
-  fireEvent.drop(await screen.findByTestId("attachments-drop"), { dataTransfer: { files: [file("IMG_0001.HEIC", 1000, "image/heic")] } });
+  fireEvent.drop(await screen.findByTestId("attachments-drop"), { dataTransfer: { files: [file("anim.gif", 1000, "image/gif")] } });
   expect(await screen.findByTestId("upload-1")).toHaveTextContent("case.attachments.failed_type");
   expect(api.uploadAttachment).not.toHaveBeenCalled();
 });
