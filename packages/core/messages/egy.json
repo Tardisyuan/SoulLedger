@@ -5797,6 +5797,14 @@
       "failed_reject": "Nen Rekh {{bio}}; Nen Khesef Djer. Wehem Iri.",
       "hint": "Ky Em Medjat-Ek: Nen Wedja",
       "unavailable": "Medjat Pen Nen Sekhem Djer: Nen Wen. Iri Sekhem Em Smen Ta Tepy."
+    },
+    "offline": {
+      "banner": "Nen Em Senb · Pehwy {{time}}",
+      "no_decide": "Nen Em Senb: Nen Hesy, Nen Khesef."
+    },
+    "outbox": {
+      "pending": "Nen Per Djer",
+      "answered": "Ky Wesheb Seth. Sesh-Ek Smen."
     }
   },
   "print": {

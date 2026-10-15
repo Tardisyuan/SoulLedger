@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { exportFileName } from "@/src/lib/exportFileName";
@@ -45,9 +45,32 @@ export function ExportCsvButton({
       setBusy(false);
     }
   };
+  // 列表页给了行数(`count`)就按第二十八批 W5 的写法:「导出 CSV」,悬停提示与读屏名是「按当前筛选导出,共 n 条」,
+  // 超过上限置灰、旁边写原因。没给行数的调用(分段列表、没有计数的页)保持原样「导出」。
+  const counted = count !== undefined;
+  const tooMany = counted && count > EXPORT_DISABLE_ABOVE;
+  const scope = counted ? t("common.export_scope", { n: String(count) }) : undefined;
+  const noteId = useId();
   return (
-    <Button type="button" variant="secondary" size={size} loading={busy} disabled={count !== undefined && count > EXPORT_DISABLE_ABOVE} onClick={run}>
-      {t("common.export")}
-    </Button>
+    <>
+      <Button
+        type="button"
+        variant="secondary"
+        size={size}
+        loading={busy}
+        disabled={tooMany}
+        onClick={run}
+        title={scope}
+        aria-label={scope}
+        aria-describedby={tooMany ? noteId : undefined}
+      >
+        {counted ? t("common.export_csv") : t("common.export")}
+      </Button>
+      {tooMany ? (
+        <span id={noteId} className="text-sm text-ink-muted">
+          {t("common.export_too_many")}
+        </span>
+      ) : null}
+    </>
   );
 }

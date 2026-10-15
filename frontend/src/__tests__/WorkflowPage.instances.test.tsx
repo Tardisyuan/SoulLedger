@@ -42,8 +42,13 @@ describe("WorkflowPage instances tab", () => {
   it("exports the instance list with no filters and no page", async () => {
     mockedWorkflows.mockResolvedValue({ data: { count: 3, results: [] } });
     await openInstances();
-    const button = await screen.findByRole("button", { name: "common.export" });
+    const button = await screen.findByRole("button", { name: "common.export_scope(3)" });
     expect(button).toBeEnabled();
+    expect(button).toHaveTextContent("common.export_csv");
+    expect(button).toHaveAttribute("title", "common.export_scope(3)");
+    expect(screen.queryByText("common.export_too_many")).not.toBeInTheDocument();
+    // 右端:装按钮的那一行靠右,在列表之前。
+    expect(button.parentElement).toHaveClass("justify-end");
     fireEvent.click(button);
     await waitFor(() => expect(mockedWorkflowExport).toHaveBeenCalledTimes(1));
     expect(mockedWorkflowExport).toHaveBeenCalledWith();
@@ -52,14 +57,17 @@ describe("WorkflowPage instances tab", () => {
   it("greys the export out above 10,000 rows, and not at exactly 10,000", async () => {
     mockedWorkflows.mockResolvedValue({ data: { count: 10_000, results: [] } });
     await openInstances();
-    expect(await screen.findByRole("button", { name: "common.export" })).toBeEnabled();
+    expect(await screen.findByRole("button", { name: "common.export_scope(10000)" })).toBeEnabled();
+    expect(screen.queryByText("common.export_too_many")).not.toBeInTheDocument();
   });
 
   it("greys the export out above 10,000 rows", async () => {
     mockedWorkflows.mockResolvedValue({ data: { count: 10_001, results: [] } });
     await openInstances();
-    const button = await screen.findByRole("button", { name: "common.export" });
+    const button = await screen.findByRole("button", { name: "common.export_scope(10001)" });
     expect(button).toBeDisabled();
+    expect(screen.getByText("common.export_too_many")).toBeInTheDocument();
+    expect(button).toHaveAccessibleDescription("common.export_too_many");
     fireEvent.click(button);
     expect(mockedWorkflowExport).not.toHaveBeenCalled();
   });
