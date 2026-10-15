@@ -120,6 +120,7 @@ class FakeMatrix:
                    "officer_title": (extra or {}).get("io.soulledger.officer_title", ""),
                    "image": (extra or {}).get("io.soulledger.image"),
                    "grant": (extra or {}).get(GRANT_KEY),
+                   "feedback": (extra or {}).get("io.soulledger.feedback"),
                    # 真 Synapse 的 origin_server_ts:墙钟毫秒。收件箱按它推「灵魂最后一封的时刻」
                    # (`services.reconcile_inbox`),与我们自己的 `timezone.now()` 比较 —— 1970 年的
                    # 假时刻会让那条比较永远不成立。
@@ -132,6 +133,10 @@ class FakeMatrix:
 
     def recent_messages(self, room_id, *, limit=50):
         return list(reversed(FakeMatrix.rooms[room_id]["messages"]))[:limit]
+
+    def history(self, room_id, *, page=100, max_pages=500):
+        """整个房间的消息,旧的在前(与 `SynapseClient.history` 同形;假的不分页)。"""
+        return list(FakeMatrix.rooms[room_id]["messages"])
 
     # ── 测试直接用:模拟某个灵魂拿自己的 token 在 Matrix 里发言(同样受 power level 约束)──
     @classmethod

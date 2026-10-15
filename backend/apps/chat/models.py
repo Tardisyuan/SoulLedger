@@ -23,6 +23,15 @@ class ConversationKind(models.TextChoices):
     OFFICER_INBOX = "OFFICER_INBOX", "官员收件箱"
 
 
+#: 反馈的四个类别(Design S5 的四枚标签)。值是英文码,官员端按语言显示词。
+FEEDBACK_TAGS = [
+    ("account", "登录与账号"),
+    ("record", "我的记录有误"),
+    ("app", "App 出了问题"),
+    ("other", "其他"),
+]
+
+
 class ChatIdentity(models.Model):
     """一个灵魂账号的 Matrix 用户。
 
@@ -115,6 +124,10 @@ class Conversation(models.Model):
         "authentication.User", on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
     )
     assigned_at = models.DateTimeField(null=True, blank=True)
+    #: 灵魂从 App「帮助与反馈」写来的信(Design 第二十八批 S5)带的类别,殿司收件箱的列表上显示为「反馈 · 类别」。
+    #: **只标最近一封还没人回的反馈**:官员回复时清空(`services.officer_reply`)。信本身还是一封普通的书信,
+    #: 类别只是一个词 —— 不是新的会话种类,官员照旧在书信里回。私聊不写。
+    feedback_tag = models.CharField(max_length=20, blank=True, default="", choices=FEEDBACK_TAGS)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

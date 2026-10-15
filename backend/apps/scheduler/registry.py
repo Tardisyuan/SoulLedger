@@ -132,6 +132,9 @@ REGISTRY: tuple[JobSpec, ...] = (
     JobSpec("authentication.flush_expired_tokens", GLOBAL, "30 3 * * *"),
     # 灵魂登录记录与登录设备行只留 90 天(apps/authentication/tasks.py::prune_soul_sign_ins)。
     JobSpec("authentication.prune_soul_sign_ins", GLOBAL, "50 3 * * *", max_runtime=1800),
+    # 个人资料导出(apps/soul_accounts/data_export.py::prune_expired):文件只留 7 天,过期的删文件、行标 EXPIRED;
+    # 顺手把停在排队 10 分钟以上的重新入队。GLOBAL:导出行没有租户列。每天一次,期限以天计。
+    JobSpec("soul_accounts.prune_data_exports", GLOBAL, "10 4 * * *", max_runtime=1800),
     # Period 300s; lock TTL / LOST threshold 240s so a crashed run cannot make
     # the next tick SKIPPED.
     JobSpec(

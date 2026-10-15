@@ -8556,6 +8556,88 @@ paths:
               schema:
                 $ref: '#/components/schemas/SoulMfaRefusal'
           description: ''
+  /api/v1/me/export/:
+    get:
+      operationId: v1_me_export_retrieve
+      tags:
+      - v1
+      security:
+      - soulJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulDataExportState'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulError'
+          description: ''
+    post:
+      operationId: v1_me_export_create
+      description: 申请。身份没认出来 → 400 `wrong_password`(错 5 次 429 `rate_limited`,与登录同一份预算)。
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SoulDataExportRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SoulDataExportRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SoulDataExportRequest'
+      security:
+      - soulJwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulDataExport'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulMfaRefusal'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulError'
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulMfaRefusal'
+          description: ''
+  /api/v1/me/export/file/:
+    get:
+      operationId: v1_me_export_file
+      parameters:
+      - in: query
+        name: t
+        schema:
+          type: string
+        description: 状态里 `download_url` 的签名。
+        required: true
+      tags:
+      - v1
+      security:
+      - soulJwtAuth: []
+      responses:
+        '200':
+          description: 导出的 zip。
+        '404':
+          description: 签名无效或过期、不是调用者自己的、文件已过期。
   /api/v1/me/life/:
     get:
       operationId: v1_me_life_retrieve
@@ -23830,6 +23912,18 @@ components:
         * `server_error` - server_error
         * `quota` - quota
         * `circuit_open` - circuit_open
+    FeedbackTagEnum:
+      enum:
+      - account
+      - record
+      - app
+      - other
+      type: string
+      description: |-
+        * `account` - 登录与账号
+        * `record` - 我的记录有误
+        * `app` - App 出了问题
+        * `other` - 其他
     Follow:
       type: object
       properties:
@@ -27223,6 +27317,8 @@ components:
           type: string
           maxLength: 64
           pattern: ^[A-Za-z0-9._~-]+$
+        feedback_tag:
+          $ref: '#/components/schemas/FeedbackTagEnum'
       required:
       - body
     MessageSent:
@@ -27997,6 +28093,10 @@ components:
           format: date-time
           readOnly: true
           nullable: true
+        feedback_tag:
+          type: string
+          readOnly: true
+          description: 从 App「帮助与反馈」来的信的类别码(account / record / app / other),还没人回时才有;否则空串。
         created_at:
           type: string
           format: date-time
@@ -28012,6 +28112,7 @@ components:
       - assignee
       - closed_at
       - created_at
+      - feedback_tag
       - hall_names
       - has_draft
       - id
@@ -35262,6 +35363,89 @@ components:
       - printed_at
       - soul_code
       - soul_name
+    SoulDataExport:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          allOf:
+          - $ref: '#/components/schemas/SoulDataExportStatusEnum'
+          description: |-
+            READY 过了 `expires_at` 即读作 EXPIRED;FAILED 之后可以重新申请。
+
+            * `QUEUED` - 排队中
+            * `RUNNING` - 正在生成
+            * `READY` - 已准备好
+            * `FAILED` - 生成失败
+            * `EXPIRED` - 已过期
+        requested_at:
+          type: string
+          format: date-time
+        finished_at:
+          type: string
+          format: date-time
+          nullable: true
+        expires_at:
+          type: string
+          format: date-time
+          nullable: true
+        file_name:
+          type: string
+          description: '`soulledger-<编号>-<yyyymmdd>.zip`;生成之前为空。'
+        byte_size:
+          type: integer
+          nullable: true
+        download_url:
+          type: string
+          nullable: true
+          description: 仅 READY:站点根相对路径,约 7 天有效,取时仍要灵魂令牌。
+      required:
+      - byte_size
+      - download_url
+      - expires_at
+      - file_name
+      - finished_at
+      - id
+      - requested_at
+      - status
+    SoulDataExportRequest:
+      type: object
+      description: 申请导出资料要先认出本人:当前密码,或开了面容登录的手机认过面容后取出的凭据(二选一,凭据优先)。
+      properties:
+        password:
+          type: string
+          default: ''
+          maxLength: 128
+        credential:
+          type: string
+          default: ''
+          maxLength: 128
+    SoulDataExportState:
+      type: object
+      properties:
+        export:
+          allOf:
+          - $ref: '#/components/schemas/SoulDataExport'
+          nullable: true
+          description: 最近一次申请;从没申请过为 null。
+      required:
+      - export
+    SoulDataExportStatusEnum:
+      enum:
+      - QUEUED
+      - RUNNING
+      - READY
+      - FAILED
+      - EXPIRED
+      type: string
+      description: |-
+        * `QUEUED` - 排队中
+        * `RUNNING` - 正在生成
+        * `READY` - 已准备好
+        * `FAILED` - 生成失败
+        * `EXPIRED` - 已过期
     SoulDateProblem:
       type: object
       description: |-
@@ -36879,6 +37063,9 @@ components:
         is_appeal:
           type: boolean
           description: 仅转生申请:是否申诉(客户端据此选标题措辞)。
+        feedback_tag:
+          type: string
+          description: 仅书信:从 App「帮助与反馈」来的信的类别码(account / record / app / other);还没人回时才有。
       required:
       - created_at
       - id

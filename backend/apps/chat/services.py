@@ -590,22 +590,36 @@ def open_officer_inbox(account, *, request=None):
     return conversation, True
 
 
-def send_inbox_message(account, conversation, body, *, request=None, image=None):
+#: 反馈信的类别随事件走(Matrix 事件里的自定义字段,官员读信时一并看得到;正文不变)。
+FEEDBACK_KEY = "io.soulledger.feedback"
+
+
+def send_inbox_message(account, conversation, body, *, request=None, image=None, feedback_tag=""):
     """灵魂在收件箱里发一条。没有 24 小时限制,也不受朋友圈禁言约束(待拍板:见报告)——
-    禁言的是灵魂之间的发言,给殿司写信(申诉、求助)不在其列。只能写给**当前所在**的殿司。"""
+    禁言的是灵魂之间的发言,给殿司写信(申诉、求助)不在其列。只能写给**当前所在**的殿司。
+
+    `feedback_tag`(Design 第二十八批 S5):这封信是从「帮助与反馈」写来的,带类别码;会话上记下它,
+    殿司收件箱的列表据此显示「反馈 · 类别」,直到有官员回复(`officer_reply`)。"""
     error = refusal(conversation, account)
     if error is not None:
         raise error
     identity = _live_identity(account)
     client = get_client()
+    extra = _image_extra(image) if image else {}
+    if feedback_tag:
+        extra[FEEDBACK_KEY] = feedback_tag
     event_id = client.send_message(conversation.room_id, body, as_localpart=identity.localpart,
-                                   extra=_image_extra(image) if image else None)
+                                   extra=extra or None)
     now = timezone.now()
     if image is not None:
         _mark_image_sent(image, event_id, now)
     conversation.last_message_at = conversation.last_soul_message_at = now
     conversation.last_from = SOUL
-    conversation.save(update_fields=["last_message_at", "last_soul_message_at", "last_from"])
+    fields = ["last_message_at", "last_soul_message_at", "last_from"]
+    if feedback_tag:
+        conversation.feedback_tag = feedback_tag
+        fields.append("feedback_tag")
+    conversation.save(update_fields=fields)
     inbox.unarchive_for_letter(conversation, now)
     inbox.push_to_assignee(conversation)
     audit("EXECUTE", conversation, f"致殿司:{conversation.tenant.display_name}",
@@ -675,7 +689,8 @@ def officer_reply(conversation, officer, body, *, request=None):
     )
     conversation.last_message_at = timezone.now()
     conversation.last_from = HALL
-    conversation.save(update_fields=["last_message_at", "last_from"])
+    conversation.feedback_tag = ""  # 反馈有人回了:列表上的「反馈 · 类别」到此为止
+    conversation.save(update_fields=["last_message_at", "last_from", "feedback_tag"])
     audit("EXECUTE", conversation, "殿司回复", actor=officer, request=request)
     return event_id
 

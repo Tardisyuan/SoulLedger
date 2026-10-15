@@ -188,9 +188,12 @@ class MeChatMessagesView(ChatView):
         txn_key = f"chat:txn:{account.pk}:{conversation.pk}:{txn_id}" if txn_id else None
         if txn_key and (sent := cache.get(txn_key)):
             return Response({"event_id": sent}, status=status.HTTP_201_CREATED)
+        tag = body.validated_data.get("feedback_tag", "")
         if conversation.kind == ConversationKind.OFFICER_INBOX:
             event_id = svc.send_inbox_message(account, conversation, body.validated_data["body"],
-                                              request=request)
+                                              request=request, feedback_tag=tag)
+        elif tag:
+            raise svc.ChatError("反馈只能写给殿司。", "feedback_to_hall_only", status=400)
         else:
             event_id = svc.send_direct_message(account, conversation, body.validated_data["body"],
                                                request=request)
