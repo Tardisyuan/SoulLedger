@@ -1,7 +1,7 @@
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
-from apps.soul_accounts import device_login_views, me_views, mfa_views
+from apps.soul_accounts import device_login_views, me_views, mfa_views, session_views
 from apps.soul_accounts.views import (
     InitialCredentialViewSet,
     OfficerCooldownShorteningViewSet,
@@ -41,6 +41,11 @@ me_urlpatterns = [
     path("mfa/recovery-codes/", mfa_views.MeMfaRecoveryCodesView.as_view(), name="me-mfa-recovery-codes"),
     path("mfa/disable/", mfa_views.MeMfaDisableView.as_view(), name="me-mfa-disable"),
     path("device-login/", device_login_views.MeDeviceLoginView.as_view(), name="me-device-login"),
+    path("sessions/", session_views.MeSessionsView.as_view(), name="me-sessions"),
+    path("sessions/revoke-others/", session_views.MeSessionsRevokeOthersView.as_view(),
+         name="me-sessions-revoke-others"),
+    path("sessions/<uuid:session_id>/revoke/", session_views.MeSessionRevokeView.as_view(), name="me-session-revoke"),
+    path("sign-ins/", session_views.MeSignInsView.as_view(), name="me-sign-ins"),
     path("life/", me_views.MeLifeView.as_view(), name="me-life"),
     path("past-lives/", me_views.MePastLivesView.as_view(), name="me-past-lives"),
     path("sentence-plan/", me_views.MeSentencePlanView.as_view(), name="me-sentence-plan"),
