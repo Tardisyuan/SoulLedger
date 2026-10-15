@@ -103,13 +103,13 @@ beforeEach(async () => {
 });
 
 describe("settings", () => {
-  it("has 我的资料 as its own section under 账号安全 with exactly one row, and 帮助与反馈 as the last section with exactly one row", async () => {
+  it("has 我的资料 as its own section under 账号安全 with exactly one row, and 帮助与反馈 as the last section: 帮助, then 关于", async () => {
     signedIn();
     await openSettings();
     await screen.findByTestId("push-toggles");
     await waitFor(() => expect(screen.getByTestId("open-mfa-state")).toBeTruthy());
     const tree = JSON.stringify(screen.toJSON());
-    const order = ["group-security", "open-sign-ins", "group-data", "open-export", "open-about", "group-help", "open-help"].map((id) => tree.indexOf(`"testID":"${id}"`));
+    const order = ["group-security", "open-sign-ins", "group-data", "open-export", "group-help", "open-help", "open-about"].map((id) => tree.indexOf(`"testID":"${id}"`));
     expect(order.every((i) => i >= 0)).toBe(true);
     expect([...order].sort((a, b) => a - b)).toEqual(order);
     expect(within(screen.getByTestId("group-data")).getByText("我的资料")).toBeTruthy();

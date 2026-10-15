@@ -123,7 +123,9 @@ export function LoginScreen({ hint }: { hint?: LoginHint | null } = {}) {
               testID="mfa-code"
               label={t(step.recovery ? "officer_app.mfa.recovery_label" : "officer_app.mfa.code_label")}
               value={code}
-              onChangeText={setCode}
+              // The six-digit code takes digits only and stops at six; a recovery code is typed as is.
+              onChangeText={(v) => setCode(step.recovery ? v : v.replace(/\D/g, "").slice(0, 6))}
+              maxLength={step.recovery ? undefined : 6}
               mono
               keyboardType={step.recovery ? "ascii-capable" : "number-pad"}
               autoComplete="one-time-code"

@@ -446,13 +446,12 @@ export function SettingsScreen() {
       <View style={[styles.rows, { borderTopColor: theme.hair }]}>
         <NavRow testID="open-export" label={t("soul_app.export.title")} onPress={() => navigation.navigate("DataExport")} />
       </View>
-      <View style={[styles.rows, styles.gapTop, { borderTopColor: theme.hair }]}>
-        <NavRow testID="open-about" label={t("about.title")} onPress={() => navigation.navigate("About")} />
-      </View>
-      {/* 第二十八批 S5: the bottom section, one row; feedback is reached from the help page, not from a row of its own. */}
+      {/* 第二十八批 S5: the bottom section; feedback is reached from the help page, not from a row of its own.
+          关于 sits in it, under 帮助: on its own it was an unlabelled block between two labelled ones (seen on the simulator 2026-10-15). */}
       <GroupLabel testID="group-help">{t("soul_app.settings.group_help")}</GroupLabel>
       <View style={[styles.rows, { borderTopColor: theme.hair }]}>
         <NavRow testID="open-help" label={t("soul_app.help.title")} onPress={() => navigation.navigate("Help")} />
+        <NavRow testID="open-about" label={t("about.title")} onPress={() => navigation.navigate("About")} />
       </View>
 
       <View style={[styles.end, { paddingHorizontal: gutter }]}>
@@ -561,7 +560,6 @@ const styles = StyleSheet.create({
   end: { paddingTop: 24, paddingBottom: 32, gap: 16, alignItems: "stretch" },
   groupLabel: { paddingTop: 24, paddingBottom: 8 },
   rows: { borderTopWidth: 1 },
-  gapTop: { marginTop: 24 },
   navRow: { minHeight: 56, flexDirection: "row", alignItems: "center", gap: 8, borderBottomWidth: 1 },
   logout: { alignSelf: "center", minWidth: 160 },
   version: { textAlign: "center", fontSize: 11 },

@@ -94,7 +94,9 @@ it("goes on to the code step on mfa_required, and verifies with the pending toke
   fireEvent.press(screen.getByTestId("login-submit"));
   expect(await screen.findByTestId("login-mfa")).toBeTruthy();
   expect(session().state.status).toBe("signedOut");
-  fireEvent.changeText(screen.getByTestId("mfa-code"), "123456");
+  // Digits only, and no more than six: a late keystroke or a pasted code with a space must not reach the server.
+  fireEvent.changeText(screen.getByTestId("mfa-code"), "12 345678");
+  expect(screen.getByTestId("mfa-code").props.value).toBe("123456");
   fireEvent.press(screen.getByTestId("mfa-submit"));
   await waitFor(() => expect(session().state.status).toBe("signedIn"));
   expect(mockVerify).toHaveBeenCalledWith({ pending_token: "P", code: "123456" });
