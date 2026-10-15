@@ -11,7 +11,7 @@ jest.mock("@soulledger/core/api", () => ({
     profile: jest.fn(),
     updateProfile: jest.fn(),
     changePassword: jest.fn(),
-    preferences: jest.fn().mockResolvedValue({ data: { email_notifications: false } }),
+    preferences: jest.fn().mockResolvedValue({ data: { notifications: {} } }),
     updatePreferences: jest.fn(),
   },
   notificationsApi: { emailStatus: jest.fn().mockResolvedValue({ data: { last_failure: null } }) },

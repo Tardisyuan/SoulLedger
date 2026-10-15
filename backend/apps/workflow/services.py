@@ -790,7 +790,7 @@ class WorkflowService:
         return qs.filter(is_active=True)
 
     @classmethod
-    def notify_designated(cls, workflow, node, *, title: str, message: str) -> int:
+    def notify_designated(cls, workflow, node, *, title: str, message: str, category: str | None = None) -> int:
         """Tell everyone `node` designates; return how many were told.
 
         Used by the timeout processor (reminders, escalations). Called after
@@ -807,6 +807,7 @@ class WorkflowService:
                 notification_type="WORKFLOW_ASSIGNED",
                 related_resource="workflow",
                 related_id=str(workflow.id),
+                params={"category": category} if category else None,  # 超时的转交 / 提醒走「审批超时」类
             )
             told += 1
         return told

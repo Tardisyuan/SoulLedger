@@ -1955,8 +1955,12 @@
     "profile_update_failed": "Nen Iri Mawy Djes",
     "avatar": "Tut",
     "load_failed": "Nen Ini Djes — Medu Em Khery Nen Mawy",
-    "email_notifications": "Sedjem Ba Em Djeret",
-    "email_notifications_note": "Wen: Khet Em Smen Er-Ek Hab Er Djeret-Ek.",
+    "notifications": {
+      "title": "Sedjem",
+      "site": "Hena",
+      "mail": "Shat",
+      "locked": "Nen Sedjer"
+    },
     "email_notifications_no_address": "Nen Djeret Em Aq: Nen Hab.",
     "email_last_failure": "Nen Hab Pehwy: {{error}} ({{at}})",
     "email_verification": "Smen Sesh",

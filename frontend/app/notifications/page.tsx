@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  Bell, FileText, Scale, AlertCircle, ArrowRightLeft, RefreshCw, TrendingUp, User,
+  Bell, FileText, Scale, Settings, AlertCircle, ArrowRightLeft, RefreshCw, TrendingUp, User,
   type LucideIcon
 } from "lucide-react";
 import { notificationKeys } from "@soulledger/core/query_keys";
@@ -199,17 +199,28 @@ export default function NotificationsPage() {
          —— 未读数仍在「未读」那一枚上,同一个数不必写两遍。 */
       title={t("notifications.title")}
       actions={
-        unreadCount > 0 ? (
-          // 次要按钮,不是主按钮:规范 v2 的主按钮(匾色实底)只给落判这一类决定(补足 B10)。
-          <Button
-            type="button"
-            variant="secondary"
-            loading={markAllReadMutation.isPending}
-            onClick={handleMarkAllRead}
+        <div className="flex items-center gap-2">
+          {unreadCount > 0 ? (
+            // 次要按钮,不是主按钮:规范 v2 的主按钮(匾色实底)只给落判这一类决定(补足 B10)。
+            <Button
+              type="button"
+              variant="secondary"
+              loading={markAllReadMutation.isPending}
+              onClick={handleMarkAllRead}
+            >
+              {markAllReadMutation.isPending ? t("notifications.loading") : t("notifications.mark_all_read")}
+            </Button>
+          ) : null}
+          {/* 齿轮:直接跳到个人中心「通知」那一节(Design 第二十八批 W3),不开弹层。 */}
+          <Link
+            href="/profile#notifications"
+            aria-label={t("profile.notifications.settings")}
+            title={t("profile.notifications.settings")}
+            className={cn(buttonVariants({ variant: "secondary" }), "w-(--control-h-md) px-0")}
           >
-            {markAllReadMutation.isPending ? t("notifications.loading") : t("notifications.mark_all_read")}
-          </Button>
-        ) : undefined
+            <Settings aria-hidden="true" className="size-4" />
+          </Link>
+        </div>
       }
       tabs={
         <>
