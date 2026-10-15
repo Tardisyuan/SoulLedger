@@ -358,19 +358,24 @@ function Wizard({ onLeave, onEnabled, onLocked }: { onLeave: () => void; onEnabl
       .finally(() => setBusy(false));
   };
 
+  const finish = () => {
+    finished.current = true;
+    setCodes([]);
+    setStep(STEPS + 1);
+    onEnabled();
+  };
+
   const complete = () => {
     setBusy(true);
     setCompleteError(null);
     mfaApi
       .complete()
-      .then(
-        () => {
-          finished.current = true;
-          setCodes([]);
-          setStep(STEPS + 1);
-          onEnabled();
-        },
-        (e: unknown) => setCompleteError(t(mfaManageFailureKey(e, "mfa.setup.complete_failed")))
+      .then(finish, (e: unknown) =>
+        // The answer may have been lost after the server said yes: ask before telling the officer it failed.
+        mfaApi
+          .status()
+          .then((r) => (r.data.enabled ? finish() : Promise.reject(e)))
+          .catch(() => setCompleteError(t(mfaManageFailureKey(e, "mfa.setup.complete_failed"))))
       )
       .finally(() => setBusy(false));
   };
@@ -476,6 +481,8 @@ function Wizard({ onLeave, onEnabled, onLocked }: { onLeave: () => void; onEnabl
           <RecoveryCodes codes={codes} />
           <ActionButton testID="mfa-saved" kind="outline" title={`${saved ? "✓" : "○"} ${t("mfa.setup.saved_check")}`} onPress={() => setSaved((v) => !v)} />
           {completeError ? <FieldError testID="mfa-complete-error" text={completeError} /> : null}
+          {/* Step 4 holds the back row; after a failure there must be a way out (the unconfirmed key is dropped on leaving). */}
+          {completeError ? <ActionButton testID="mfa-abandon" kind="outline" title={t("officer_app.mfa.setup.abandon")} onPress={onLeave} /> : null}
         </View>
       ) : null}
 

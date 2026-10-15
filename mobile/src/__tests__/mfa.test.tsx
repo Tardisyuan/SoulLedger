@@ -359,12 +359,30 @@ describe("the wizard", () => {
   });
 
   it("a network failure is told as one, not as a wrong number", async () => {
-    await toBind({ "POST /me/mfa/confirm/": "offline" });
+    // The status asked after the failure still says "off": it is a failure, not a lost answer.
+    await toBind({ "POST /me/mfa/confirm/": "offline", "GET /me/mfa/": { status: 200, data: OFF } });
     fireEvent.changeText(screen.getByTestId("bind-code"), "482913");
     fireEvent.press(screen.getByTestId("bind-next"));
     await screen.findByTestId("step-network");
     expect(screen.queryByTestId("bind-wrong")).toBeNull();
     expect(screen.getByTestId("bind-code").props.value).toBe("482913");
+  });
+
+  it("a confirm whose answer was lost: the repeat is 409 already_enabled, the server says it is on, and the soul is offered new codes", async () => {
+    await toBind({ "POST /me/mfa/confirm/": { status: 409, data: { detail: "x", code: "already_enabled" } } });
+    fireEvent.changeText(screen.getByTestId("bind-code"), "482913");
+    fireEvent.press(screen.getByTestId("bind-next"));
+    expect(await screen.findByTestId("mfa-codes-lost")).toBeTruthy();
+    expect(screen.getByTestId("mfa-regen")).toBeTruthy(); // the way to a new set is the ordinary one
+    expect(screen.queryByTestId("bind-wrong")).toBeNull();
+  });
+
+  it("a 409 while the server still says it is off is not hidden: it is told as a failure", async () => {
+    await toBind({ "POST /me/mfa/confirm/": { status: 409, data: { detail: "x", code: "already_enabled" } }, "GET /me/mfa/": { status: 200, data: OFF } });
+    fireEvent.changeText(screen.getByTestId("bind-code"), "482913");
+    fireEvent.press(screen.getByTestId("bind-next"));
+    await screen.findByTestId("step-other");
+    expect(screen.queryByTestId("mfa-codes-lost")).toBeNull();
   });
 
   it("③ shows the ten codes once; 完成 needs the box ticked; there is no way back", async () => {

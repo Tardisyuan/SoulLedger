@@ -289,7 +289,7 @@ describe("composer", () => {
 
     fireEvent.press(submit());
     await waitFor(() => expect(mockPopTo).toHaveBeenCalled());
-    expect(calls.find((c) => c.url === "/me/social/feed/")?.body).toEqual({ content: "桂花", visibility: "TENANT", media: ["u1", "u2"] });
+    expect(calls.find((c) => c.url === "/me/social/feed/")?.body).toEqual({ content: "桂花", visibility: "TENANT", media: ["u1", "u2"], txn_id: expect.any(String) });
     // 发出去的图属于帖子了:不删。
     expect(calls.filter((c) => c.method === "DELETE")).toEqual([]);
   });
@@ -363,7 +363,7 @@ describe("composer", () => {
     await waitFor(() => expect(disabled()).toBe(false));
     fireEvent.press(submit());
     await waitFor(() => expect(mockPopTo).toHaveBeenCalled());
-    expect(calls.find((c) => c.url === "/me/social/feed/")?.body).toEqual({ content: "", visibility: "TENANT", media: ["u1"] });
+    expect(calls.find((c) => c.url === "/me/social/feed/")?.body).toEqual({ content: "", visibility: "TENANT", media: ["u1"], txn_id: expect.any(String) });
   });
 
   it("offers only the room left: nine picked, no add tile; the picker is asked for the remainder", async () => {

@@ -48,9 +48,9 @@ export const soulSocialApi = {
    * 201 with `moderation_status`: PENDING when it hit the word list — show that, it is not visible yet.
    * `media`: ids from `uploadMedia`, in display order (at most 9). Text may be empty when there are images.
    */
-  createPost: (content: string, visibility: SoulPostVisibility = "TENANT", media: string[] = []) =>
+  createPost: (content: string, visibility: SoulPostVisibility = "TENANT", media: string[] = [], txnId?: string) =>
     soulHttp
-      .post<SoulPost>("/me/social/feed/", { content, visibility, ...(media.length ? { media } : {}) })
+      .post<SoulPost>("/me/social/feed/", { content, visibility, ...(media.length ? { media } : {}), ...(txnId ? { txn_id: txnId } : {}) })
       .then((r) => r.data),
   /**
    * Upload one image before posting. `body` is a multipart body the HOST builds
@@ -73,9 +73,9 @@ export const soulSocialApi = {
   deletePost: (id: string) => soulHttp.delete(`/me/social/posts/${id}/`).then(() => undefined),
   comments: (postId: string, page?: number) =>
     get<PaginatedSoulComments>(`/me/social/posts/${postId}/comments/`, { page }),
-  comment: (postId: string, content: string, parent?: string) =>
+  comment: (postId: string, content: string, parent?: string, txnId?: string) =>
     soulHttp
-      .post<SoulComment>(`/me/social/posts/${postId}/comments/`, { content, ...(parent ? { parent } : {}) })
+      .post<SoulComment>(`/me/social/posts/${postId}/comments/`, { content, ...(parent ? { parent } : {}), ...(txnId ? { txn_id: txnId } : {}) })
       .then((r) => r.data),
   deleteComment: (id: string) => soulHttp.delete(`/me/social/comments/${id}/`).then(() => undefined),
   /**
@@ -85,7 +85,8 @@ export const soulSocialApi = {
   react: (postId: string, reaction_type: SoulReactionType = "LIKE") =>
     soulHttp.post<SoulReactionState>(`/me/social/posts/${postId}/reaction/`, { reaction_type }).then((r) => r.data),
   /** Display name (contains) or soul code (exact). The code is never returned. */
-  search: (q: string) => get<SoulSearchResult[]>("/me/social/search/", { q }),
+  /** The server answers a bare list; a full page (20) may have a next one, ask for `page + 1` until one comes back short. */
+  search: (q: string, page = 1) => get<SoulSearchResult[]>("/me/social/search/", { q, ...(page > 1 ? { page } : {}) }),
   /**
    * Change this soul's circle display name. Refusals, all leaving the old name in place:
    * 400 `display_name_length` (2–20 after trim), 400 `display_name_sensitive` (never saved

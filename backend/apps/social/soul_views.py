@@ -8,6 +8,7 @@ test_every_me_route_is_a_soul_api_view` 走真实 URLconf 钉住这一点 ——
 所有查询都从 `request.user` 出发,URL 里不接受任何灵魂 id;**能看见什么由
 `apps/social/soul_circle.py` 一处决定**,本模块只负责把它接成 HTTP。
 """
+from django.core.cache import cache
 from django.db.models import Exists, OuterRef, Q
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import serializers
@@ -18,7 +19,7 @@ from rest_framework.response import Response
 from apps.social import media as post_media
 from apps.social import moderation as mod
 from apps.social import soul_circle as circle
-from apps.social.models import Follow, Post, ReportTargetType
+from apps.social.models import Comment, Follow, Post, ReportTargetType
 from apps.social.soul_serializers import (
     SoulCardSerializer,
     SoulCommentCreateSerializer,
@@ -41,6 +42,14 @@ from apps.social.soul_serializers import (
 from apps.soul_accounts.me_views import SoulAPIView
 
 SEARCH_LIMIT = 20
+
+# App 发帖 / 评论带的事务号:丢了响应的重发回第一次那条。与书信(`MeChatMessagesView`)同一个办法。
+# ponytail: 同一个号的两个请求**同时**到达仍可能各发一条;App 同一条不并发送。
+TXN_TTL_SECONDS = 7 * 24 * 3600
+
+
+def _txn_key(kind, user, txn_id):
+    return f"social:txn:{kind}:{user.pk}:{txn_id}" if txn_id else None
 
 
 def _page(child, name):
@@ -149,7 +158,17 @@ class MeSocialFeedView(SoulSocialView):
     def post(self, request):
         body = SoulPostCreateSerializer(data=request.data)
         body.is_valid(raise_exception=True)
-        post = circle.create_post(request.user, **body.validated_data)
+        data = dict(body.validated_data)
+        txn_key = _txn_key("post", request.user, data.pop("txn_id", None))
+        if txn_key and (hit := cache.get(txn_key)):
+            # 丢了响应的重发:回第一次那条(还在的话),不再发。
+            post = Post.objects.filter(pk=hit["id"], author=request.user, is_deleted=False).first()
+            if post is not None:
+                post.screening_outcome = hit["screening"]
+                return Response(self._one(post), status=201)
+        post = circle.create_post(request.user, **data)
+        if txn_key:
+            cache.set(txn_key, {"id": str(post.pk), "screening": getattr(post, "screening_outcome", None)}, TXN_TTL_SECONDS)
         return Response(self._one(post), status=201)
 
     def _one(self, post):
@@ -229,9 +248,19 @@ class MeSocialCommentsView(SoulSocialView):
     def post(self, request, post_id):
         body = SoulCommentCreateSerializer(data=request.data)
         body.is_valid(raise_exception=True)
-        comment = circle.create_comment(
-            request.user, post_id, body.validated_data["content"], body.validated_data.get("parent")
-        )
+        txn_key = _txn_key(f"comment:{post_id}", request.user, body.validated_data.get("txn_id"))
+        comment = None
+        if txn_key and (hit := cache.get(txn_key)):
+            comment = Comment.objects.filter(pk=hit["id"], author=request.user, post_id=post_id, is_deleted=False).first()
+            if comment is not None:
+                comment.screening_outcome = hit["screening"]
+        if comment is None:
+            comment = circle.create_comment(
+                request.user, post_id, body.validated_data["content"], body.validated_data.get("parent")
+            )
+            if txn_key:
+                cache.set(txn_key, {"id": str(comment.pk), "screening": getattr(comment, "screening_outcome", None)},
+                          TXN_TTL_SECONDS)
         return Response(SoulCommentSerializer(comment, context={"viewer": request.user}).data, status=201)
 
 
@@ -263,19 +292,25 @@ class MeSocialSearchView(SoulSocialView):
     """
 
     @extend_schema(
-        parameters=[OpenApiParameter("q", str, required=True, description="显示名(包含)或灵魂编号(精确)。")],
+        parameters=[
+            OpenApiParameter("q", str, required=True, description="显示名(包含)或灵魂编号(精确)。"),
+            OpenApiParameter("page", int, description="第几页,每页 SEARCH_LIMIT 条;满页就可能还有下一页。"),
+        ],
         responses={200: SoulSearchResultSerializer(many=True), **ERRORS},
     )
     def get(self, request):
         q = (request.query_params.get("q") or "").strip()
         if not q:
             return Response([])
+        page = int(request.query_params["page"]) if request.query_params.get("page", "").isdigit() else 1
+        page = max(page, 1)
         tenant = circle.civilization_of(request.user)
         rows = (
             circle.souls_in(tenant)
             .exclude(pk=request.user.pk)
             .filter(Q(display_name__icontains=q) | Q(soul_account__soul__soul_code__iexact=q.upper()))
-            .select_related("soul_account")[:SEARCH_LIMIT]
+            .select_related("soul_account")
+            .order_by("display_name", "pk")[(page - 1) * SEARCH_LIMIT:page * SEARCH_LIMIT]
         )
         following = set(
             Follow.objects.filter(follower=request.user, tenant=tenant, following__in=rows).values_list(

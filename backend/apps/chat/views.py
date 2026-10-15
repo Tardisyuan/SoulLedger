@@ -399,6 +399,12 @@ class OfficerInboxViewSet(CodenameViewSetMixin, mixins.ListModelMixin, mixins.Re
         conversation = self.get_object()
         body = OfficerReplySerializer(data=request.data)
         body.is_valid(raise_exception=True)
+        # 带 `txn_id` 的重发(手机丢了响应、或断网后续送)回第一次的 event_id,不再发第二条 ——
+        # 与灵魂端 `MeChatMessagesView` 同一个办法。键里有官员:两位官员的号碰巧相同也互不相干。
+        txn_id = body.validated_data.get("txn_id")
+        txn_key = f"chat:reply-txn:{request.user.pk}:{conversation.pk}:{txn_id}" if txn_id else None
+        if txn_key and (sent := cache.get(txn_key)):
+            return Response({"event_id": sent}, status=status.HTTP_201_CREATED)
         try:
             event_id = svc.officer_reply(conversation, request.user, body.validated_data["body"],
                                          request=request)
@@ -406,6 +412,8 @@ class OfficerInboxViewSet(CodenameViewSetMixin, mixins.ListModelMixin, mixins.Re
             return _error(exc)
         except MatrixError as exc:
             return _unavailable(exc)
+        if txn_key:
+            cache.set(txn_key, event_id, MeChatMessagesView.TXN_TTL_SECONDS)
         inbox.after_reply(conversation, request.user)
         return Response({"event_id": event_id}, status=status.HTTP_201_CREATED)
 

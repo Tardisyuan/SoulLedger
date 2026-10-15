@@ -9,7 +9,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { Animated, Pressable, ScrollView, StyleSheet, View, type StyleProp, type ViewStyle } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { HIGHLIGHT_ALPHA, HIGHLIGHT_MS } from "./rules";
+import { HIGHLIGHT_ALPHA, HIGHLIGHT_MS, isDenied } from "./rules";
 import { Button, GUTTER, Notice, Txt, family, space, useI18n, useReducedMotion, useTheme } from "./shared";
 
 // ── the four states ────────────────────────────────────────────────────
@@ -416,6 +416,23 @@ export function viewStateOf<T>(
   if (r.error && isDeniedError(r.error)) return "denied";
   if (r.data === null) return r.error ? "error" : "loading";
   return isEmpty(r.data) ? "empty" : null;
+}
+
+/**
+ * The other half of `viewStateOf`: a refresh that failed while the list from before is still on screen.
+ * The list stays; this says it may be out of date, with a way to try again. Nothing for a 403 (that is
+ * `denied`, which replaces the list) or when there is no data (that is `error`).
+ */
+export function RefreshFailed({ data, error, onRetry }: { data: unknown; error: unknown; onRetry: () => void }) {
+  const { t: tr } = useI18n();
+  if (data === null || !error || isDenied(error)) return null;
+  return (
+    <View style={{ paddingHorizontal: GUTTER, paddingBottom: space[3] }}>
+      <Notice tone="neg" onRetry={onRetry} testID="refresh-failed">
+        {tr("officer_app.state.refresh_failed")}
+      </Notice>
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({

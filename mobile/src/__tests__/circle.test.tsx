@@ -341,7 +341,7 @@ describe("posting", () => {
     await act(async () => {});
     fireEvent.press(screen.getByTestId("post-submit"));
     await waitFor(() => expect(mockPopTo).toHaveBeenCalled());
-    expect(calls.find((c) => c.method === "POST")?.body).toEqual({ content: "一九八三年那件事。", visibility: "FOLLOWERS" });
+    expect(calls.find((c) => c.method === "POST")?.body).toEqual({ content: "一九八三年那件事。", visibility: "FOLLOWERS", txn_id: expect.any(String) });
     expect(mockPopTo).toHaveBeenCalledWith("Tabs", { screen: "Circle", params: { pendingId: "new" } });
   });
 
@@ -448,7 +448,7 @@ describe("replying", () => {
     fireEvent.changeText(screen.getByTestId("comment-body"), "谢谢");
     fireEvent.press(screen.getByTestId("comment-send"));
     await waitFor(() => expect(sent(calls, "POST")).toHaveLength(1));
-    expect(sent(calls, "POST")[0].body).toEqual({ content: "谢谢", parent: "c1" });
+    expect(sent(calls, "POST")[0].body).toEqual({ content: "谢谢", parent: "c1", txn_id: expect.any(String) });
     await waitFor(() => expect(screen.queryByTestId("replying")).not.toBeOnTheScreen());
   });
 
@@ -477,6 +477,29 @@ describe("replying", () => {
     expect(screen.queryByTestId("toast")).toBeNull();
   });
 
+  it("a send whose answer never came is sent again with the same txn id; the next, different comment gets a new one", async () => {
+    const calls = stubApi({
+      "GET /me/social/posts/p1/": { status: 200, data: post() },
+      "/me/social/posts/p1/comments/": page([]),
+      "/me/social/status/": STATUS,
+      "POST /me/social/posts/p1/comments/": ["offline", { status: 201, data: comment("new") }, { status: 201, data: comment("new2") }],
+    });
+    wrap(<PostScreen id="p1" />);
+    fireEvent.changeText(await screen.findByTestId("comment-body"), "一句");
+    fireEvent.press(screen.getByTestId("comment-send"));
+    await waitFor(() => expect(sent(calls, "POST")).toHaveLength(1));
+    await act(async () => {});
+    fireEvent.press(screen.getByTestId("comment-send"));
+    await waitFor(() => expect(sent(calls, "POST")).toHaveLength(2));
+    const [first, again] = sent(calls, "POST").map((c) => (c.body as { txn_id: string }).txn_id);
+    expect(again).toBe(first);
+    await waitFor(() => expect(screen.getByTestId("comment-body").props.value).toBe(""));
+    fireEvent.changeText(screen.getByTestId("comment-body"), "一句");
+    fireEvent.press(screen.getByTestId("comment-send"));
+    await waitFor(() => expect(sent(calls, "POST")).toHaveLength(3));
+    expect((sent(calls, "POST")[2].body as { txn_id: string }).txn_id).not.toBe(first);
+  });
+
   it("cancelled, it is a plain comment again — no parent at all", async () => {
     const calls = open([comment("c1")]);
     fireEvent.press(await screen.findByTestId("comment-reply-c1"));
@@ -485,7 +508,7 @@ describe("replying", () => {
     fireEvent.changeText(screen.getByTestId("comment-body"), "一句");
     fireEvent.press(screen.getByTestId("comment-send"));
     await waitFor(() => expect(sent(calls, "POST")).toHaveLength(1));
-    expect(sent(calls, "POST")[0].body).toEqual({ content: "一句" });
+    expect(sent(calls, "POST")[0].body).toEqual({ content: "一句", txn_id: expect.any(String) });
   });
 
   it("a reply names whom it answers when that comment is loaded, and guesses nothing when it is not", async () => {

@@ -230,6 +230,8 @@ class InboxDraftSerializer(serializers.Serializer):
 
 class OfficerReplySerializer(serializers.Serializer):
     body = serializers.CharField(max_length=4000, trim_whitespace=True)
+    # 官员 App 发件箱给每条回复的事务号;同一个号重发回第一次的 event_id(见 `reply`)。可省:Web 不重发。
+    txn_id = serializers.RegexField(r"^[A-Za-z0-9._~-]+$", max_length=64, required=False)
 
 
 class ChatLookupSerializer(serializers.Serializer):

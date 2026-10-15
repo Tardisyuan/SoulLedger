@@ -7,7 +7,7 @@ import { Pressable, StyleSheet, View } from "react-native";
 import { discardReply, retryReply, useOutbox, type OutboxEntry } from "../outbox";
 import { useCachedRemote } from "../readCache";
 
-import { FilterChips, Row, StateView, viewStateOf } from "../kit";
+import { FilterChips, RefreshFailed, Row, StateView, viewStateOf } from "../kit";
 import { TODO_GROUPS, isDenied, isTodoKind, todoTitle, type ItemKind } from "../rules";
 import { useSession } from "../session";
 import { Button, Notice, Screen, SectionLabel, SmallButton, Txt, publishVoiceNumber, space, useI18n, useTheme } from "../shared";
@@ -67,6 +67,7 @@ export function TodoTab({ onOpen, highlight }: { onOpen: (item: ItemRef) => void
         <Txt variant="title">{t("officer_app.todo.title")}</Txt>
       </View>
       <OutboxRows onOpen={onOpen} />
+      <RefreshFailed data={data} error={error} onRetry={reload} />
       {view ? (
         <StateView
           state={view}

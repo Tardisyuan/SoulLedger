@@ -121,6 +121,23 @@ class TestSetupWizard:
         assert api_client.post("/api/v1/auth/mfa/setup/", {"password": "admin123"}, format="json").status_code == 409
         assert OfficerMfa.objects.get(user=admin_user).secret == secret
 
+    def test_a_repeated_finish_after_a_lost_response_is_200_and_audits_once(self, api_client, admin_user):
+        """「完成」成功而响应没回来,手机再点:回同样的状态,不是 409 到永远。
+        变异:去掉 `complete_view` 里 `is_enabled` 那一支 → 第二次 409,红。
+        没走过验码的人开着也没有的 MFA 仍是 409(下一条的前半)。"""
+        api_client.force_authenticate(admin_user)
+        secret = api_client.post("/api/v1/auth/mfa/setup/", {"password": "admin123"}, format="json").data["secret"]
+        api_client.post("/api/v1/auth/mfa/confirm/", {"code": _code(secret)}, format="json")
+        assert api_client.post("/api/v1/auth/mfa/complete/").status_code == 200
+        again = api_client.post("/api/v1/auth/mfa/complete/")
+        assert again.status_code == 200 and again.data["enabled"] is True
+        assert AuditLog.objects.filter(resource="mfa", resource_id=str(admin_user.pk), action="UPDATE",
+                                       changes={"mfa_enabled": [False, True]}).count() == 1
+
+    def test_finish_without_any_setup_is_still_409(self, api_client, admin_user):
+        api_client.force_authenticate(admin_user)
+        assert api_client.post("/api/v1/auth/mfa/complete/").status_code == 409
+
     def test_confirm_with_a_wrong_code_says_so(self, api_client, admin_user):
         api_client.force_authenticate(admin_user)
         api_client.post("/api/v1/auth/mfa/setup/", {"password": "admin123"}, format="json")

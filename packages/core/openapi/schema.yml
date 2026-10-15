@@ -1824,7 +1824,11 @@ paths:
   /api/v1/auth/mfa/complete/:
     post:
       operationId: v1_auth_mfa_complete_create
-      description: 向导「完成」。没走过第三步(`verified_at` 空)不能完成。
+      description: |-
+        向导「完成」。没走过第三步(`verified_at` 空)不能完成。
+
+        幂等:已经开启(上一次「完成」成功而响应没回来)再点,回同样的状态 200,不再 409 到永远 ——
+        「完成」要的结果已经在了,手机上的第四步才有出路。
       tags:
       - v1
       security:
@@ -10177,6 +10181,11 @@ paths:
         交出去。结果里也不回显编号(`SoulCardSerializer` 的字段白名单)—— 知道编号的人
         才找得到那个人,而找到了也拿不到更多。
       parameters:
+      - in: query
+        name: page
+        schema:
+          type: integer
+        description: 第几页,每页 SEARCH_LIMIT 条;满页就可能还有下一页。
       - in: query
         name: q
         schema:
@@ -28540,6 +28549,10 @@ components:
         body:
           type: string
           maxLength: 4000
+        txn_id:
+          type: string
+          maxLength: 64
+          pattern: ^[A-Za-z0-9._~-]+$
       required:
       - body
     OfficerResetConfirm:
@@ -35606,6 +35619,11 @@ components:
           type: string
           format: uuid
           nullable: true
+        txn_id:
+          type: string
+          description: App 给这一次评论的事务号;同一个号重发回第一次的那条,不再发第二条。
+          maxLength: 64
+          pattern: ^[A-Za-z0-9._~-]+$
       required:
       - content
     SoulCredentialSlip:
@@ -36371,6 +36389,11 @@ components:
             format: uuid
           description: 先经 POST /me/social/media/ 上传的图片 id,按显示顺序。
           maxItems: 9
+        txn_id:
+          type: string
+          description: App 给这一次发帖的事务号;同一个号重发回第一次的那条,不再发第二条。
+          maxLength: 64
+          pattern: ^[A-Za-z0-9._~-]+$
     SoulPostMediaUpload:
       type: object
       description: '`POST /me/social/media/` 的回应:还没挂到帖子上的一张图。发帖时把 `id` 放进 `media`。'

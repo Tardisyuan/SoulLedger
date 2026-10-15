@@ -33,6 +33,10 @@ export interface OutboxEntry {
   text: string;
   /** The officer messages (event ids) the thread had when this was queued. */
   seen: string[];
+  /** Sent with every attempt: the server answers a repeat with the first reply, so a lost response cannot post twice. */
+  txn?: string;
+  /** A send of this text may already have reached the server (set before the POST). Its own message is not "someone else answered". */
+  tried?: boolean;
   state: "queued" | "failed";
   reason?: OutboxReason;
 }
@@ -73,6 +77,9 @@ export function useOutbox(): OutboxEntry[] {
     outboxEntries,
   );
 }
+
+/** A fresh id for one reply (not one conversation): the server remembers it a week. */
+export const newReplyTxn = () => `or${Date.now().toString(36)}.${Math.random().toString(36).slice(2, 10)}`;
 
 export const outboxEntry = (id: string): OutboxEntry | undefined => outboxEntries().find((e) => e.id === id);
 
@@ -125,11 +132,15 @@ async function run(): Promise<number> {
   for (const entry of outboxEntries().filter((e) => e.state === "queued")) {
     try {
       const { data: thread } = await soulInboxApi.messages(entry.id);
-      if (thread.some((m) => m.from_officer && !entry.seen.includes(m.event_id))) {
+      // After a send that may have gone through, our own words in the thread are not another officer's answer.
+      const ours = (m: { body: string }) => entry.tried === true && m.body.trim() === entry.text.trim();
+      if (thread.some((m) => m.from_officer && !entry.seen.includes(m.event_id) && !ours(m))) {
         fail(entry.id, "answered");
         continue;
       }
-      await soulInboxApi.reply(entry.id, entry.text);
+      const txn = entry.txn ?? newReplyTxn();
+      commit(outboxEntries().map((e) => (e.id === entry.id ? { ...e, txn, tried: true } : e)));
+      await soulInboxApi.reply(entry.id, entry.text, txn);
       removeFromOutbox(entry.id);
       clearDraft(entry.id);
       sent += 1;

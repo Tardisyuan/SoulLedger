@@ -32,6 +32,17 @@ CATEGORY = "officer_todo"
 
 
 def register_device(user, token, platform, session=None):
+    """登记或认领一个 token。已属于别人的 token **转给这位官员**(同一部手机换人登录,旧人从此收不到它)。
+    同一个登录会话再登记一个**新** token(Expo 轮换了 token),这个会话上旧的那条停用 —— 否则每次轮换多留一条
+    死登记,直到 Expo 报「设备未注册」才清。"""
+    device, created = _register(user, token, platform, session)
+    if session is not None:
+        OfficerPushDevice.objects.filter(user=user, session=session, is_active=True).exclude(pk=device.pk).update(
+            is_active=False)
+    return device, created
+
+
+def _register(user, token, platform, session):
     now = timezone.now()
     with transaction.atomic():
         device = OfficerPushDevice.objects.select_for_update(of=("self",)).filter(token=token).first()
@@ -42,8 +53,12 @@ def register_device(user, token, platform, session=None):
                                                             session=session, last_seen_at=now), True
             except IntegrityError:
                 device = OfficerPushDevice.objects.select_for_update(of=("self",)).get(token=token)
+        previous_user = device.user_id
         device.user, device.platform, device.is_active, device.last_seen_at = user, platform, True, now
-        device.session = session
+        # 注册请求不带 `sid` 时不抹掉已记下的会话(那会让到期判断退回「按人」);但 token 换了主人,
+        # 旧主人的会话不能留在新主人的行上。
+        if session is not None or previous_user != user.pk:
+            device.session = session
         device.save()
     return device, False
 

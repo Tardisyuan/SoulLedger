@@ -871,7 +871,12 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description 向导「完成」。没走过第三步(`verified_at` 空)不能完成。 */
+        /**
+         * @description 向导「完成」。没走过第三步(`verified_at` 空)不能完成。
+         *
+         *     幂等:已经开启(上一次「完成」成功而响应没回来)再点,回同样的状态 200,不再 409 到永远 ——
+         *     「完成」要的结果已经在了,手机上的第四步才有出路。
+         */
         post: operations["v1_auth_mfa_complete_create"];
         delete?: never;
         options?: never;
@@ -13116,6 +13121,7 @@ export interface components {
         };
         OfficerReply: {
             body: string;
+            txn_id?: string;
         };
         OfficerResetConfirm: {
             uid: string;
@@ -16697,6 +16703,8 @@ export interface components {
             content: string;
             /** Format: uuid */
             parent?: string | null;
+            /** @description App 给这一次评论的事务号;同一个号重发回第一次的那条,不再发第二条。 */
+            txn_id?: string;
         };
         /** @description 交付单要印的东西。**没有密码。** */
         SoulCredentialSlip: {
@@ -17041,6 +17049,8 @@ export interface components {
             visibility: components["schemas"]["VisibilityEnum"];
             /** @description 先经 POST /me/social/media/ 上传的图片 id,按显示顺序。 */
             media?: string[];
+            /** @description App 给这一次发帖的事务号;同一个号重发回第一次的那条,不再发第二条。 */
+            txn_id?: string;
         };
         /** @description `POST /me/social/media/` 的回应:还没挂到帖子上的一张图。发帖时把 `id` 放进 `media`。 */
         SoulPostMediaUpload: {
@@ -26912,6 +26922,8 @@ export interface operations {
     v1_me_social_search_list: {
         parameters: {
             query: {
+                /** @description 第几页,每页 SEARCH_LIMIT 条;满页就可能还有下一页。 */
+                page?: number;
                 /** @description 显示名(包含)或灵魂编号(精确)。 */
                 q: string;
             };

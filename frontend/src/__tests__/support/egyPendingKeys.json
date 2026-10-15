@@ -18,5 +18,10 @@
   "shortcuts.pick_verdict",
   "shortcuts.conclude",
   "shortcuts.toggle_case",
-  "shortcuts.next_prev_case"
+  "shortcuts.next_prev_case",
+  "officer_app.list.more",
+  "officer_app.state.refresh_failed",
+  "soul_app.circle.search.more",
+  "soul_app.mfa.manage.codes_lost",
+  "officer_app.mfa.setup.abandon"
 ]

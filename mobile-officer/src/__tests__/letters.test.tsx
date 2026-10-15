@@ -177,7 +177,7 @@ describe("the thread", () => {
     const { onSettled } = await openThread();
     fireEvent.changeText(screen.getByTestId("letter-input"), "  稍候回复  ");
     fireEvent.press(screen.getByTestId("letter-send"));
-    await waitFor(() => expect(mockReply).toHaveBeenCalledWith("c-1", "稍候回复"));
+    await waitFor(() => expect(mockReply).toHaveBeenCalledWith("c-1", "稍候回复", expect.any(String)));
     await waitFor(() => expect(onSettled).toHaveBeenCalledTimes(1));
     await waitFor(() => expect(screen.getByTestId("letter-input").props.value).toBe(""));
     expect(mockMessages.mock.calls.length).toBeGreaterThan(1);

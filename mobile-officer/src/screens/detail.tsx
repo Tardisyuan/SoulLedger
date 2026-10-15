@@ -13,7 +13,7 @@ import { Pressable, Share, View } from "react-native";
 
 import { formatWhen } from "../format";
 import { useCachedRemote } from "../readCache";
-import { ActionButton, StateView, viewStateOf } from "../kit";
+import { ActionButton, RefreshFailed, StateView, viewStateOf } from "../kit";
 import { deskUrl, dispatchStatusLine, dispatchView, handledNotice, isDenied, todoTitle, type ItemKind, type Verdict } from "../rules";
 import { useSession } from "../session";
 import { Icon, Input, Notice, Screen, SectionLabel, Txt, space, useI18n, useOnline, useRemote, useTheme } from "../shared";
@@ -143,6 +143,7 @@ function TodoDetail({ kind, id, onSettled }: { kind: TodoKind; id: string; onSet
   return (
     <View style={{ flex: 1 }}>
       <Screen testID="todo-detail" edges={["left", "right"]}>
+        <RefreshFailed data={data} error={error} onRetry={reload} />
         <View style={{ padding: space[5], gap: space[4] }}>
           {note ? (
             <Notice tone="neutral" testID="detail-handled">
@@ -227,6 +228,7 @@ function JudgmentDetail({ id }: { id: string }) {
   if (view || !data) return <StateView state={view ?? "loading"} onRetry={reload} />;
   return (
     <Screen testID="judgment-detail" edges={["left", "right"]}>
+      <RefreshFailed data={data} error={error} onRetry={reload} />
       <View style={{ padding: space[5], gap: space[4] }}>
         <SectionLabel>{data.case_number}</SectionLabel>
         <Txt variant="title">{data.soul_name}</Txt>
@@ -299,6 +301,7 @@ function SoulDetail({ id }: { id: string }) {
   ];
   return (
     <Screen testID="soul-detail" edges={["left", "right"]}>
+      <RefreshFailed data={data} error={error} onRetry={reload} />
       <View style={{ padding: space[5], gap: space[4] }}>
         <Txt variant="title">{data.name}</Txt>
         {data.is_residing ? (

@@ -290,6 +290,18 @@ describe("search", () => {
     expect(mockNavigate).toHaveBeenCalledWith("SoulProfile", { userId: 5 });
   });
 
+  it("a full page offers 「显示更多结果」; the next page is appended; a short page ends it", async () => {
+    const rows = (from: number, n: number) => Array.from({ length: n }, (_, i) => ({ user_id: from + i, display_name: `魂${from + i}`, avatar: null, is_active: true, is_following: false }));
+    const calls = stubApi({ "/me/social/search/": [{ status: 200, data: rows(1, 20) }, { status: 200, data: rows(21, 3) }] });
+    wrap(<CircleSearchScreen />);
+    fireEvent(screen.getByTestId("search-input"), "submitEditing", { nativeEvent: { text: "魂" } });
+    fireEvent.press(await screen.findByTestId("search-more"));
+    expect(await screen.findByTestId("result-23")).toBeTruthy();
+    expect(screen.getByTestId("result-1")).toBeTruthy();
+    expect(screen.queryByTestId("search-more")).toBeNull();
+    expect(calls.filter((c) => c.url === "/me/social/search/").map((c) => c.params)).toEqual([{ q: "魂" }, { q: "魂", page: 2 }]);
+  });
+
   it("by name: a count; a miss: the one sentence", async () => {
     stubApi({ "/me/social/search/": [{ status: 200, data: [{ user_id: 5, display_name: "照微", avatar: null, is_active: true, is_following: false }] }, { status: 200, data: [] }] });
     wrap(<CircleSearchScreen />);
