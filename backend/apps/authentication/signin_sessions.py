@@ -141,13 +141,23 @@ def revoke(session) -> None:
         session.save(update_fields=["revoked_at"])
     _blacklist_jtis(session.user, keep_jti=None, only={session.refresh_jti} if session.refresh_jti else set())
     _revoke_trust([session.trust_hash])
+    _close_sockets(session.user_id)
 
 
 def revoke_others(user, keep) -> int:
     """除 `keep`(当前这台)外全部退出,含没有 `sid` 的老令牌。返回刚标记的行数。"""
     count = revoke_all(user, keep=keep)
     _blacklist_jtis(user, keep_jti=keep.refresh_jti if keep else None)
+    _close_sockets(user.pk)
     return count
+
+
+def _close_sockets(user_id) -> None:
+    """已连着的实时连接一并关(关闭码 4002 让客户端重连):这台带着有效令牌重连得上,被退出的那台在握手时
+    被 `session_is_current` 拒掉。不关的话,被退出的设备的 socket 要等它自己断开重连才失效。"""
+    from apps.events.realtime import close_user_sockets
+
+    close_user_sockets(user_id)
 
 
 def revoke_all(user, *, keep=None) -> int:
