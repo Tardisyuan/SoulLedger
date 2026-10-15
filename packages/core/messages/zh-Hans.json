@@ -4446,7 +4446,26 @@
     "security": {
       "history": "登录设备与记录",
       "history_keep": "最近登录 · 只保留 90 天",
-      "failed": "失败 {{n}} 次 · 密码不对"
+      "failed": "失败 {{n}} 次 · 密码不对",
+      "devices": "设备",
+      "this_phone": "这部手机",
+      "last_seen": "上次 {{time}}",
+      "sign_out": "退出",
+      "sign_out_failed": "退出失败，请重试",
+      "load_failed": "登录设备与记录加载失败",
+      "no_records": "还没有登录记录",
+      "method_recovery": "恢复码",
+      "failed_mfa": "失败 {{n}} 次 · 验证码不对",
+      "failed_face": "失败 {{n}} 次 · {{bio}}没认出",
+      "stranger_title": "有不认识的设备或记录？",
+      "stranger_body": "先让那台退出，再改密码。改完后，除这部手机外全部退出。"
+    },
+    "biometric": {
+      "app_lock": "切回 App 时也要验证",
+      "app_lock_hint": "离开超过 5 分钟再回来，要先认一次{{bio}}"
+    },
+    "lock": {
+      "title": "已锁定"
     }
   },
   "soul_push": {

@@ -93,13 +93,19 @@ jest.mock("expo-secure-store", () => {
 // The phone's face / finger. Not enrolled by default: a sign-in test must not meet the 「下次用面容登录？」 sheet
 // it did not ask for. A test that wants it sets `__state.enrolled`.
 jest.mock("expo-local-authentication", () => {
-  const state = { hardware: true, enrolled: false, types: [2] };
+  const state = { hardware: true, enrolled: false, types: [2], recognised: true, gate: null, prompts: [] };
   return {
     __state: state,
     AuthenticationType: { FINGERPRINT: 1, FACIAL_RECOGNITION: 2, IRIS: 3 },
     hasHardwareAsync: async () => state.hardware,
     isEnrolledAsync: async () => state.enrolled,
     supportedAuthenticationTypesAsync: async () => state.types,
+    // `authenticateAsync` (the app lock): `__state.recognised` is whether the face / finger matched; `prompts` records the reasons.
+    authenticateAsync: async (options) => {
+      state.prompts.push(options?.promptMessage);
+      if (state.gate) await state.gate; // a test holds the system prompt open by setting `gate`
+      return state.recognised ? { success: true } : { success: false, error: "user_cancel" };
+    },
   };
 });
 

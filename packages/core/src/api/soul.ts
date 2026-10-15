@@ -55,6 +55,9 @@ export type SoulTokenPair = Schemas["SoulTokenPair"];
 export type SoulLoginOutcome = Schemas["SoulLoginOutcome"];
 export type SoulMfaRequired = Schemas["SoulMfaRequired"];
 export type SoulMfaStatus = Schemas["SoulMfaStatus"];
+/** 登录设备与记录 (第二十八批 S1): `current` = the phone asking; `SignInRecord.count` > 1 = consecutive identical failures merged. */
+export type SoulSignInSession = Schemas["SignInSession"];
+export type SoulSignInRecord = Schemas["SignInRecord"];
 export type SoulMfaSetup = Schemas["SoulMfaSetupResponse"];
 export type SoulMfaVerifyResponse = Schemas["SoulMfaVerifyResponse"];
 /** `remember_device` defaults to false on the server (the generated type makes it required). */
@@ -229,6 +232,12 @@ export const soulApi = {
   mfaVerify: (body: SoulMfaVerifyRequest) =>
     soulHttp.post<SoulMfaVerifyResponse>("/soul-auth/mfa/verify/", body).then((r) => r.data),
   mfaStatus: () => soulHttp.get<SoulMfaStatus>("/me/mfa/").then((r) => r.data),
+  /** This phone first, then the rest by last activity. */
+  signInSessions: () => soulHttp.get<SoulSignInSession[]>("/me/sessions/").then((r) => r.data),
+  /** No password needed; the current one is refused 400 `current_session`. */
+  revokeSignInSession: (id: string) => soulHttp.post<void>(`/me/sessions/${id}/revoke/`).then(() => undefined),
+  /** The last 90 days, newest first. */
+  signInRecords: () => soulHttp.get<SoulSignInRecord[]>("/me/sign-ins/").then((r) => r.data),
   /**
    * Needs the CURRENT PASSWORD (being signed in is not being the owner): 400 `wrong_password` makes no secret, 429
    * `rate_limited` once the password login's own counters are spent. A new secret (the previous unconfirmed one is

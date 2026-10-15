@@ -4446,7 +4446,26 @@
     "security": {
       "history": "Devices and sign-ins",
       "history_keep": "Recent sign-ins · kept for 90 days",
-      "failed": "Failed {{n}} times · wrong password"
+      "failed": "Failed {{n}} times · wrong password",
+      "devices": "Devices",
+      "this_phone": "This phone",
+      "last_seen": "Last seen {{time}}",
+      "sign_out": "Sign out",
+      "sign_out_failed": "Couldn't sign out. Please try again.",
+      "load_failed": "Couldn't load devices and sign-ins",
+      "no_records": "No sign-ins yet",
+      "method_recovery": "Recovery code",
+      "failed_mfa": "Failed {{n}} times · wrong code",
+      "failed_face": "Failed {{n}} times · {{bio}} not recognised",
+      "stranger_title": "A device or record you don't recognise?",
+      "stranger_body": "Sign that device out first, then change your password. Changing it signs out everything except this phone."
+    },
+    "biometric": {
+      "app_lock": "Also verify when returning to the app",
+      "app_lock_hint": "After 5 minutes away, check your {{bio}} first"
+    },
+    "lock": {
+      "title": "Locked"
     }
   },
   "soul_push": {

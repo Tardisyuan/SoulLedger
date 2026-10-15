@@ -56,6 +56,8 @@ import { AboutScreen } from "./screens/about";
 import { NotificationPrimerScreen, SettingsScreen } from "./screens/settings";
 import { PRIMER_SEEN_KEY, easProjectId, landOn, landingOf, permission, registerDevice, syncPushLocale, type Landing } from "./push";
 import { NotificationHistoryScreen } from "./screens/notificationHistory";
+import { SignInsScreen } from "./screens/signIns";
+import { AppLock } from "./appLock";
 import { MyLifeScreen } from "./screens/life";
 import { SentenceScreen } from "./screens/sentence";
 import { CircleScreen, ComposePostScreen, PostScreen } from "./screens/circle";
@@ -321,6 +323,7 @@ function SignedInOverlays({ profile, scheme }: { profile: MeProfile; scheme: Col
   return (
     <>
       <Welcome profile={profile} scheme={scheme} onSettled={onSettled} />
+      <AppLock />
       <BioAsk soulCode={profile.soul_code} welcomePending={welcomeFrom(profile) !== null && settled !== key} />
     </>
   );
@@ -416,6 +419,13 @@ export function RootNavigator() {
             />
             {/* 两步验证: the wizard draws its own bar (✕ and 1 / 3); the management page draws the app's. */}
             <Stack.Screen name="Mfa" component={MfaScreen} options={{ headerShown: false }} />
+            <Stack.Screen
+              name="SignIns"
+              component={SignInsScreen}
+              options={({ navigation }) => ({
+                header: () => <AppHeader title={t("soul_app.security.history")} onBack={navigation.goBack} />,
+              })}
+            />
             <Stack.Screen
               name="NotificationHistory"
               component={NotificationHistoryScreen}
