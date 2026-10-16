@@ -523,7 +523,10 @@
       "case_closed": "Wedja Khetem",
       "case_all": "Wedja Neb {{n}} ›",
       "load_more": "Ini Medew Ky",
-      "load_more_failed": "Medew Ky Nen Ini. Wehem Khemen."
+      "load_more_failed": "Medew Ky Nen Ini. Wehem Khemen.",
+      "recalculate": "Wehem Hesb Nefer Isfet",
+      "recalculate_confirm": "Wehem Hesb Nefer Isfet {{name}} Em Sesh Neb?",
+      "recalculate_success": "Nefer Isfet Wehem Hesb Seth"
     },
     "balance_range": "Pehwy Nefer Isfet",
     "balance_max": "Er Pehwy",
@@ -2039,7 +2042,8 @@
     },
     "password_reason_reused": "Sekhem Pen Iri Seth Tepy. Setep Mawy.",
     "password_locked": "Sep Menmen. Wehem Iri Er Khet.",
-    "password_must_change": "Er Tepy: Khemen Sekhem-Ek. Er Khet Khemen: Iri Djer."
+    "password_must_change": "Er Tepy: Khemen Sekhem-Ek. Er Khet Khemen: Iri Djer.",
+    "display_name": "Ren"
   },
   "notifications": {
     "title": "Sedjem Sab",
@@ -2926,6 +2930,21 @@
           "ABANDONED": "Sehen Seth"
         }
       }
+    },
+    "error": {
+      "INTERNAL_ERROR": "Sethet",
+      "INVALID_TRANSITION": "Kheperu Nen Redi Er Wedja",
+      "SOUL_NOT_ALIVE": "Ba Nen Em Ankh",
+      "SOUL_NOT_FOUND": "Nen Gem Ba",
+      "VALIDATION_ERROR": "Sesh Mut Nen Maat"
+    },
+    "retry": {
+      "action": "Wehem Iri",
+      "confirm_title": "Wehem Iri Sesh Mut Pen?",
+      "confirm_message": "Iri Em Sesh Mut Tepy Wehem. Kheper Seth: Ba Er Wedja.",
+      "count": "Wehem Iri {{count}}/{{max}}",
+      "done": "Wehem Iri Seth · Ba Em Wedja",
+      "refused": "Sesh Mut Pen: Nen Wehem Iri. Wehem Ini Seth."
     }
   },
   "soul_accounts": {
@@ -4749,6 +4768,54 @@
     "export_ready": {
       "title": "Djama-Ek Iri Seth",
       "body": "Redi Per Djama-Ek Iri Seth · Wenen Hru 7. Wen Medjat Ba, Sau."
+    },
+    "content_approved_post": {
+      "title": "Medu-Ek Hesy Seth",
+      "body": "Medu-Ek Hesy Seth. Neb Maa."
+    },
+    "content_approved_comment": {
+      "title": "Wesheb-Ek Hesy Seth",
+      "body": "Wesheb-Ek Hesy Seth. Neb Maa."
+    },
+    "content_hidden_post": {
+      "title": "Medu-Ek Imen Seth",
+      "body": "Sab Wesekhet Imen Medu-Ek. Wen Medjat Ba Er Maa."
+    },
+    "content_hidden_post_reason": {
+      "title": "Medu-Ek Imen Seth",
+      "body": "Sab Wesekhet Imen Medu-Ek. Khet: {{reason}}"
+    },
+    "content_hidden_comment": {
+      "title": "Wesheb-Ek Imen Seth",
+      "body": "Sab Wesekhet Imen Wesheb-Ek. Wen Medjat Ba Er Maa."
+    },
+    "content_hidden_comment_reason": {
+      "title": "Wesheb-Ek Imen Seth",
+      "body": "Sab Wesekhet Imen Wesheb-Ek. Khet: {{reason}}"
+    },
+    "content_deleted_post": {
+      "title": "Medu-Ek Fekh Seth",
+      "body": "Sab Wesekhet Fekh Medu-Ek."
+    },
+    "content_deleted_post_reason": {
+      "title": "Medu-Ek Fekh Seth",
+      "body": "Sab Wesekhet Fekh Medu-Ek. Khet: {{reason}}"
+    },
+    "content_deleted_comment": {
+      "title": "Wesheb-Ek Fekh Seth",
+      "body": "Sab Wesekhet Fekh Wesheb-Ek."
+    },
+    "content_deleted_comment_reason": {
+      "title": "Wesheb-Ek Fekh Seth",
+      "body": "Sab Wesekhet Fekh Wesheb-Ek. Khet: {{reason}}"
+    },
+    "content_restored_post": {
+      "title": "Medu-Ek Wen Wehem",
+      "body": "Medu-Ek Wen Wehem Seth."
+    },
+    "content_restored_comment": {
+      "title": "Wesheb-Ek Wen Wehem",
+      "body": "Wesheb-Ek Wen Wehem Seth."
     }
   },
   "official_notify": {
@@ -4970,8 +5037,8 @@
       "rule_hit": "Gem · Medu Djeseru",
       "from": "Em {{name}}",
       "reaction_comment": "Wesheb",
-      "reason_label": "Khet (Imen, Hab: Sesen)",
-      "reason_required": "Imen, Hab: Khet Sesen",
+      "reason_label": "Medu Sab (Hab: Sesen)",
+      "reason_required": "Hab: Khet Sesen",
       "approve": "Menkh",
       "shortcuts": "J / K · A Menkh · H Imen · W Hab",
       "user_target_note": "Sedjem Er Ba: Nen Khet Er Imen. Iri Gerh / Menkh.",
@@ -4981,7 +5048,12 @@
       "media_label": "Tut",
       "media_caption": "Tut {{i}} · {{w}}×{{h}}",
       "media_load_failed": "Nen Ini Tut",
-      "held_for_words": "Medu Djeseru «{{word}}» Hena Ky ({{n}}): Nen Menkh Djer"
+      "held_for_words": "Medu Djeseru «{{word}}» Hena Ky ({{n}}): Nen Menkh Djer",
+      "mod_reason_label": "Khet Imen / Fekh · Ba Sedjem",
+      "mod_reason_placeholder": "Setep Khet",
+      "mod_reason_required": "Imen, Fekh: Setep Khet Tepy",
+      "other_note_label": "Khet Ky",
+      "other_note_required": "«Ky»: Sesh Khet"
     },
     "words": {
       "add_row": "Redi Medu Djeseru",
@@ -5987,7 +6059,8 @@
       "email_none": "Nen Wat Sesh: Nen Rekh Sekhem — Sesh Nen Hab Er-Ek. Dbh Sab Hery.",
       "notify_categories": "Iru Sedjem",
       "muted_count": "Sedjer · {{n}}",
-      "muted_none": "Sedjem Neb"
+      "muted_none": "Sedjem Neb",
+      "name_empty": "Ren Nen Shu"
     },
     "login": {
       "username": "Ren Aq",
