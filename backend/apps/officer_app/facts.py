@@ -92,6 +92,7 @@ def workflow_facts(wf, user, tenant, *, reason) -> dict:
     # 位置只数需要人决定的节点,「通知 / 结束」是自动经过的,不算一步。
     steps = [n for n in nodes if n.kind not in AUTOMATIC_KINDS]
     facts = {
+        "soul": {"name": wf.soul.name, "soul_code": wf.soul.soul_code},
         "requester": _name(wf.create_user),
         "requester_hall": hall_ref(wf.tenant),
         "requested_at": wf.created_at,
