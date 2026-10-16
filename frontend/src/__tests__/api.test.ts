@@ -310,6 +310,21 @@ describe('API Client — @soulledger/core/api', () => {
       }
     });
 
+    it('an ended session clears the cached user and leaves the two-step page where it is', () => {
+      /* 2026-10-16: the cached `soulledger_user` outlived a session the server had ended; on /login/verify the
+         401 from its permission fetch navigated to /login, every time -- no way in without clearing storage. */
+      const { webPlatform } = require('../../lib/platform/web');
+      window.history.pushState({}, '', '/login/verify');
+      localStorage.setItem('soulledger_user', JSON.stringify({ storedAt: Date.now(), user: { username: 'x' } }));
+      try {
+        webPlatform.onUnauthorized();
+        expect(localStorage.getItem('soulledger_user')).toBeNull();
+        expect(window.location.pathname).toBe('/login/verify');
+      } finally {
+        window.history.pushState({}, '', '/');
+      }
+    });
+
     it('should redirect to login when no refresh token exists', async () => {
       /* FL-20. This test used to assert only "no refresh was attempted" under
          this title, and the interceptor did not hand over to `onUnauthorized`

@@ -282,9 +282,19 @@ export const webPlatform: PlatformAdapter = {
     // The one line in the old `lib/api/client.ts` that assumed a browser with a
     // URL bar. A native client resets its navigator here instead.
     if (typeof window === "undefined") return;
-    // Already there: a 401 with no refresh token now lands here from /login
-    // too (FL-20), and navigating again would reload and re-fire it forever.
-    if (window.location.pathname === "/login") return;
+    // The cached user (TenantContext's `soulledger_user`) goes with the tokens. Left behind, the next page load
+    // restored a "signed-in" user whose session the server had ended (another device's 「退出其他全部」, a reset,
+    // a password change), fetched its permissions, got this 401 again -- and on /login/verify that bounced the
+    // operator back to /login on every attempt: no way in until the browser's storage was cleared by hand
+    // (2026-10-16, found in the browser).
+    try {
+      window.localStorage.removeItem("soulledger_user");
+    } catch {
+      // storage unavailable: nothing cached to clear
+    }
+    // Anywhere under /login (the form, the two-step page) the operator is already on the way in: navigating
+    // would reload, drop what they typed, and re-fire this. FL-20 covered /login alone; /login/verify was missed.
+    if (window.location.pathname === "/login" || window.location.pathname.startsWith("/login/")) return;
     window.location.href = "/login";
   },
 };
