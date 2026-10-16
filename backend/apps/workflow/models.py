@@ -117,12 +117,25 @@ class NodeType(models.TextChoices):
     EXECUTION = "EXECUTION", "执行"
 
 
+WORKFLOW_NUMBER_KEY = "WF"
+
+
+def format_workflow_number(seq: int) -> str:
+    """`WF-0582`。序号至少四位、不截断(第一万条是 `WF-10000`)。"""
+    return f"WF-{seq:04d}"
+
+
 class ApprovalWorkflow(AuditUserFields, models.Model):
     """
     Complete approval workflow instance for a judgment.
     Contains multiple ApprovalNodes representing each stage of approval.
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    # 审批编号(`WF-0582`,用户 2026-10-17):给人读、给人抄的名字,`id` 仍是 API 与路由的身份。
+    # 全局一个序列,不分殿:编号里没有殿的前缀,分殿发号会让跨殿列表里出现两个 `WF-0001`。
+    # 由 `save()` 从 `JudgmentCaseCounter` 的 `WF` 行发(与案号同一张计数表、同一种行锁),
+    # 所以每条创建路径都有号;永不改、永不复用。存量行由 workflow/0024 按 (created_at, id) 回填。
+    number = models.CharField(max_length=32, unique=True, editable=False)
 
     # Core relations
     judgment = models.OneToOneField(
@@ -250,7 +263,12 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
         without this a caller holding no transaction would keep the edit when the sync raised."""
         from django.db import transaction
 
+        from apps.judgment.models import JudgmentCaseCounter
+
         with transaction.atomic():
+            if self._state.adding and not self.number:
+                # 发号与写入同一个事务:写入失败,号跟着回滚,不留空号。
+                self.number = format_workflow_number(JudgmentCaseCounter.bump(WORKFLOW_NUMBER_KEY))
             super().save(*args, **kwargs)
 
     def get_next_node(self) -> "ApprovalNode | None":

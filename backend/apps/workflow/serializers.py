@@ -572,6 +572,7 @@ class ApprovalWorkflowSerializer(serializers.ModelSerializer):
         model = ApprovalWorkflow
         fields = [
             "id",
+            "number",
             "judgment",
             "judgment_verdict",
             "judgment_case_number",
@@ -681,6 +682,7 @@ class ApprovalWorkflowListSerializer(serializers.ModelSerializer):
         model = ApprovalWorkflow
         fields = [
             "id",
+            "number",
             "workflow_name",
             "soul",
             "soul_name",
