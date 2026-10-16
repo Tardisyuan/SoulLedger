@@ -5793,14 +5793,16 @@
         "reassignments": "Handovers",
         "cooldowns": "Cooling-off requests",
         "rebirths": "Rebirth applications",
-        "letters": "Letters to answer"
+        "letters": "Letters to answer",
+        "unassigned_letters": "Unassigned letters"
       },
       "empty_title": "Nothing waiting on you",
       "empty_body": "New approvals, handovers and requests will be pushed to you.",
       "filter_summary": "{{kinds}} · {{n}} items",
       "filter_empty_title": "No \"{{kinds}}\" items",
       "filter_empty_body": "Try another type, or clear the filters.",
-      "filter_clear": "Clear filters"
+      "filter_clear": "Clear filters",
+      "see_all": "All {{n}}"
     },
     "queue": {
       "mine": "Mine",
@@ -5830,7 +5832,24 @@
       "reject": "Reject",
       "approve": "Approve",
       "cosigner_pending": "Added signer · pending",
-      "wait_cosigner": "{{name}} signs first; then you can approve. If {{name}} rejects, this step is rejected."
+      "wait_cosigner": "{{name}} signs first; then you can approve. If {{name}} rejects, this step is rejected.",
+      "node": "Current step · {{n}} of {{total}}",
+      "requester": "Requested by",
+      "requested_at": "Requested",
+      "reason": "Reason",
+      "from": "From",
+      "to": "To",
+      "souls": "Souls · {{n}}",
+      "souls_more": "{{n}} more",
+      "cooldown_now": "{{n}} days left now",
+      "cooldown_asked": "Asks for {{n}} days left",
+      "history": "Earlier steps",
+      "history_more": "{{n}} more steps",
+      "history_yours": "You · your turn",
+      "attachments": "Attachments · {{n}}",
+      "open_system": "Opens in system viewer",
+      "attachment_offline": "Connect to open",
+      "attachment_failed": "Couldn't open this attachment"
     },
     "confirm": {
       "approve_title": "Approve this step?",
@@ -5860,7 +5879,19 @@
       "days_label": "Days to approve",
       "days_invalid": "Enter a whole number below the days left",
       "verdict_label": "Verdict to approve with",
-      "desired": "Requested: {{n}} days left"
+      "desired": "Requested: {{n}} days left",
+      "approve_effect": {
+        "approval": "Once approved, it goes to \"{{next}}\".",
+        "approval_last": "This is the last step. Approving ends the flow and the request takes effect.",
+        "dispatch": "Once approved, {{n}} souls move from {{from}} to {{to}}. This can't be undone once carried out.",
+        "reincarnation": "Once approved, {{name}} is scheduled for rebirth.",
+        "cooldown": "Once approved, {{name}}'s cooldown goes from {{from}} to {{to}} days left."
+      },
+      "reject_effect": {
+        "dispatch": "Once rejected, the {{n}} souls stay in {{from}}; the proposing hall reads your reason.",
+        "reincarnation": "Once rejected, {{name}} stays in this hall and reads your reason.",
+        "cooldown": "Once rejected, the cooldown stays: {{n}} days left."
+      }
     },
     "landing": {
       "handled": "Already handled by {{name}}",
@@ -5992,7 +6023,25 @@
     "letter": {
       "irreversible": "Cannot be undone once sent",
       "unavailable": "Letters are not available yet",
-      "failed": "Could not send. Your text is still here; try again."
+      "failed": "Could not send. Your text is still here; try again.",
+      "more": "More actions",
+      "assign": "Hand to someone else",
+      "unassign": "Put back",
+      "unassign_hint": "No longer mine; becomes unassigned",
+      "archive": "Archive",
+      "unarchive": "Unarchive",
+      "assign_title": "Hand to whom?",
+      "assign_hint": "Only officers who can reply to this letter are listed. Once handed over, it leaves your to-do.",
+      "assign_load": "{{n}} in hand",
+      "assign_confirm": "Hand to {{name}}",
+      "unassign_title": "Put this letter back?",
+      "unassign_body": "It becomes unassigned; any officer here who can reply may take it.",
+      "done_assigned": "Handed to {{name}}",
+      "done_unassigned": "Put back",
+      "done_unarchived": "Unarchived",
+      "archived_banner": "Archived · {{date}}",
+      "unassigned_tag": "Unassigned",
+      "take": "I'll take it"
     },
     "offline": {
       "banner": "Offline · showing content from {{time}}",
