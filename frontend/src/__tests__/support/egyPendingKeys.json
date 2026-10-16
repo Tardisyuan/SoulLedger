@@ -1,1 +1,6 @@
-[]
+[
+  "souls.detail.recalculate",
+  "souls.detail.recalculate_confirm",
+  "souls.detail.recalculate_failed",
+  "souls.detail.recalculate_success"
+]

@@ -324,6 +324,27 @@ export default function SoulDetailPage() {
     setIsConfirmOpen(true);
   }
 
+  // 重算功过(`POST /ledger/calculate/<id>/`):把 Soul 上存的功 / 过按全部事项重新算一遍。
+  // 页头的数读的就是 Soul 自己的 `merit_score` / `demerit_score`(SoulFigures),所以成功后标脏灵魂那一族。
+  function handleRecalculate() {
+    if (!soul) return;
+    setConfirmMessage(t("souls.detail.recalculate_confirm", { name: soul.name }));
+    setConfirmCallback(() => async () => {
+      setActionLoading("recalculate");
+      try {
+        await ledgerApi.recalculate(soul.id);
+        refreshSoulViews();
+        showToast(t("souls.detail.recalculate_success"), "success");
+      } catch {
+        // 后端的 404 / 403 文案是英文的 `message`,这里统一用自己的一句。
+        showToast(t("souls.detail.recalculate_failed"), "error");
+      } finally {
+        setActionLoading("");
+      }
+    });
+    setIsConfirmOpen(true);
+  }
+
   async function handleStartJudgment() {
     if (!soul) return;
     setActionLoading("judge");
@@ -591,6 +612,7 @@ export default function SoulDetailPage() {
       onEdit={() => setIsEditModalOpen(true)}
       onDelete={handleDeleteConfirm}
       onCorrectSettlement={canCorrectSettlement ? () => setIsCorrectSettlementOpen(true) : undefined}
+      onRecalculate={hasPermission("ledger.manage") ? handleRecalculate : undefined}
       isOverflowMenuOpen={isOverflowMenuOpen}
       setIsOverflowMenuOpen={setIsOverflowMenuOpen}
     />
