@@ -1321,7 +1321,38 @@
       "ESCALATED": "Escalated",
       "TRAVERSED": "Passed through"
     },
-    "no_custom_templates": "You have not saved any templates of your own yet."
+    "no_custom_templates": "You have not saved any templates of your own yet.",
+    "start": {
+      "action": "Start approval",
+      "menu": "Start approval…",
+      "title": "Start approval",
+      "soul": "Soul",
+      "soul_placeholder": "Search soul ID or name…",
+      "case_type_placeholder": "Choose a soul first",
+      "template_default": "Case type default · {{name}}",
+      "template_only": "Only one template applies: {{name}}",
+      "priority_template": "Template default",
+      "reason": "Reason · required, kept in the audit log",
+      "reason_placeholder": "Why start this without a judgment",
+      "reason_count": "{{n}}/1000",
+      "judgment": "Linked judgment · optional",
+      "judgment_none": "None",
+      "judgment_taken": "Has an approval",
+      "submit": "Start",
+      "done": "Approval started",
+      "errors": {
+        "duplicate": "This soul already has a \"{{type}}\" approval in progress ({{id}}). Only one per case type at a time.",
+        "duplicate_view": "View it",
+        "soul_not_found": "Soul not found, or not in this hall",
+        "template_invalid": "This template can't be used: it's from another hall, disabled, or doesn't match the soul's civilization",
+        "case_type_civ": "The {{civ}} civilization doesn't take this case type",
+        "judgment_mismatch": "This judgment isn't for this soul",
+        "judgment_taken": "This judgment already has an approval",
+        "reason_required": "Add a reason",
+        "forbidden": "You don't have permission to start approvals",
+        "failed": "Couldn't start, please try again"
+      }
+    }
   },
   "dashboard": {
     "title": "SoulLedger Statistics",

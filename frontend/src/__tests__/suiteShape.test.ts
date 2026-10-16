@@ -224,6 +224,8 @@ const COLLECTED_FILES = [
   "WorkflowEditor.test.tsx",
   "WorkflowPage.instances.test.tsx",
   "WorkflowPage.test.tsx",
+  // 2026-10-17 手动发起审批的弹层(W-11):依赖、模板三态、跟随模板、每种拒绝、成功跳转。
+  "StartWorkflowDialog.test.tsx",
   "workflowTitle.test.ts",
   "workflowRoutingRoundTrip.test.ts",
   "a11yEngineBaseline.test.tsx",

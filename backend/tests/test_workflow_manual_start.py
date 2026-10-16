@@ -267,3 +267,39 @@ def test_create_from_judgment_still_works(cn):
     assert workflow.judgment_id == judgment.pk
     assert workflow.nodes.count() > 0
     assert SoulEvent.objects.filter(soul=cn["soul"], event_type=EventType.WORKFLOW_CREATED).count() == 1
+
+
+# The two fields the start dialog reads (Design 第三十七批 W-11b): which judgments already carry a workflow (greyed
+# out, 「已有审批」), and which hall a template belongs to (a global admin's template list spans halls).
+
+
+@pytest.mark.django_db
+def test_a_judgment_row_names_the_workflow_it_already_has(cn):
+    taken = Judgment.objects.create(
+        soul=cn["soul"], civilization=Civilization.CHINESE, court="—",
+        verdict="PASSED", is_final=True, tenant=cn["tenant"],
+    )
+    free = Judgment.objects.create(
+        soul=cn["soul"], civilization=Civilization.CHINESE, court="—", tenant=cn["tenant"],
+    )
+    created = cn["moderator"].post(
+        "/api/v1/workflows/create_from_judgment/", {"judgment_id": str(taken.pk)}, format="json",
+    )
+    assert created.status_code == 201, created.data
+    response = cn["moderator"].get("/api/v1/judgment/", {"soul": str(cn["soul"].pk)})
+    assert response.status_code == 200, response.data
+    rows = {row["id"]: row for row in response.data["results"]}
+    assert rows[str(taken.pk)]["workflow"] == created.data["id"]
+    assert rows[str(free.pk)]["workflow"] is None
+
+
+@pytest.mark.django_db
+def test_a_template_list_row_names_its_tenant(cn):
+    template = WorkflowTemplate.objects.create(
+        name="带殿的模板", civilization=Civilization.CHINESE, case_type=CaseType.SPECIAL,
+        nodes_json=NODES, is_active=True, tenant=cn["tenant"],
+    )
+    response = cn["moderator"].get("/api/v1/workflow/templates/")
+    assert response.status_code == 200, response.data
+    row = next(r for r in response.data if r["id"] == str(template.pk))
+    assert row["tenant"] == cn["tenant"].pk
