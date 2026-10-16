@@ -10,6 +10,8 @@ import type { PaginatedResponse } from "./users";
  */
 export interface ApprovalWorkflowListItem {
   id: string;
+  /** 审批编号(`WF-0582`,全局一个序列,创建时发、永不改)。给人读的名字;`id` 仍是路由与 API 的身份。 */
+  number?: string;
   workflow_name: string;
   /** Primary key. Not a name -- see `soul_name`. */
   soul: string;

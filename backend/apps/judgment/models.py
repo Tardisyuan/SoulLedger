@@ -91,14 +91,21 @@ class JudgmentCaseCounter(models.Model):
     last = models.PositiveIntegerField(default=0)
 
     @classmethod
+    def bump(cls, key: str) -> int:
+        """把 `key` 这一行加一并返回新值。必须在写入编号的同一个事务里调:行锁握到提交,回滚则号一起回滚。
+
+        审批编号(`ApprovalWorkflow.number`,`WF-0582`)也从这里发,键是不带年份的 `WF`(案号的键都是
+        `<prefix>-<year>`,带连字符,碰不到它)。"""
+        cls.objects.get_or_create(key=key)
+        cls.objects.filter(key=key).update(last=F("last") + 1)
+        return cls.objects.get(key=key).last
+
+    @classmethod
     def next_number(cls, tenant) -> str:
         """发下一个号。必须在写入案子的同一个事务里调(`Judgment.save` 这样做)。"""
         prefix = case_number_prefix(tenant)
         year = timezone.localdate().year
-        key = f"{prefix}-{year}"
-        cls.objects.get_or_create(key=key)
-        cls.objects.filter(key=key).update(last=F("last") + 1)
-        return format_case_number(prefix, year, cls.objects.get(key=key).last)
+        return format_case_number(prefix, year, cls.bump(f"{prefix}-{year}"))
 
 
 class Judgment(ArchivableMixin, AuditUserFields, models.Model):
