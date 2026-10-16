@@ -115,7 +115,12 @@ export function LoginScreen() {
   const [lapse, setLapse] = useState<Lapse | null>(null);
   // The password box instead of the 面容 button: 「输入密码」 was tapped, or the system said no.
   const [wantPassword, setWantPassword] = useState(false);
-  const [bioFailed, setBioFailed] = useState(false);
+  // "locked": the system refused at once (too many tries) -- retrying now would change nothing on screen.
+  const [bioFailed, setBioFailed] = useState<false | "failed" | "locked">(false);
+  // Two misses on this page and the retry goes: the password is the way in from there (user, 2026-10-16). A lock
+  // from the system hides it at once -- retrying cannot work until the phone lifts it.
+  const [bioMisses, setBioMisses] = useState(0);
+  const offerBioRetry = bioFailed === "failed" && bioMisses < 2;
   const [switching, setSwitching] = useState(false);
   // Set when the password was right and the account has two-step verification on: the screen shows the second step.
   const [challenge, setChallenge] = useState<MfaChallenge | null>(null);
@@ -187,9 +192,10 @@ export function LoginScreen() {
     const read = await readCredential();
     if (read.status === "cancelled") return setBusy(false);
     if (read.status === "invalidated") return lapseTo("bio_changed", account.code);
-    if (read.status === "failed") {
+    if (read.status === "failed" || read.status === "locked") {
       setBusy(false);
-      setBioFailed(true);
+      setBioFailed(read.status);
+      setBioMisses((n) => n + 1);
       return;
     }
     try {
@@ -228,6 +234,7 @@ export function LoginScreen() {
     setLapse(null);
     setError(null);
     setBioFailed(false);
+    setBioMisses(0);
     setWantPassword(false);
     setScanned(false);
   };
@@ -317,7 +324,7 @@ export function LoginScreen() {
         ) : null}
         {bioFailed ? (
           <Txt testID="login-bio-failed" accessibilityRole="alert" style={[styles.gapTop, styles.noticeTitle]}>
-            {t("soul_app.bio.failed", { bio: bio.word })}
+            {t(bioFailed === "locked" ? "soul_app.bio.locked" : "soul_app.bio.failed", { bio: bio.word })}
           </Txt>
         ) : null}
         <View style={[styles.fields, busy && styles.dimmed]}>
@@ -384,7 +391,7 @@ export function LoginScreen() {
             disabled={!canSubmit && !busy}
           />
         )}
-        {bioFailed ? (
+        {offerBioRetry ? (
           <Button testID="login-bio-retry" kind="secondary" style={styles.retry} title={t("soul_app.bio.retry", { bio: bio.word })} onPress={() => void signInWithBio()} disabled={busy} />
         ) : null}
         {bioScreen ? (

@@ -628,6 +628,31 @@ describe("B2 · the sign-in page with 面容 on", () => {
     expect(calls.find((c) => c.url === "/soul-auth/device-login/")?.body).toEqual({ soul_code: CODE, credential: CRED });
   });
 
+  it("after two misses the face retry goes and only the password is left", async () => {
+    remembered({ bio: true });
+    secureMod.__auth.error = new Error("Authentication failed");
+    stubApi({ ...HOME });
+    await renderApp();
+    fireEvent.press(screen.getByTestId("login-bio"));
+    fireEvent.press(await screen.findByTestId("login-bio-retry"));
+    await waitFor(() => expect(secureMod.__auth.prompts).toHaveLength(2));
+    await waitFor(() => expect(screen.queryByTestId("login-bio-retry")).toBeNull());
+    expect(screen.getByTestId("login-bio-failed")).toHaveTextContent("面容没认出，请输入密码。");
+    expect(screen.getByTestId("login-password")).toBeTruthy();
+    secureMod.__auth.error = null;
+  });
+
+  it("a lock from the system says so and offers no retry", async () => {
+    remembered({ bio: true });
+    secureMod.__auth.error = { code: "ERR_AUTHENTICATION", message: "Could not Authenticate the user: Lockout. 操作过于频繁，请稍后再试" };
+    stubApi({ ...HOME });
+    await renderApp();
+    fireEvent.press(screen.getByTestId("login-bio"));
+    expect(await screen.findByTestId("login-bio-failed")).toHaveTextContent("面容试错太多次，系统暂时锁住了。请输入密码，或过一会儿再试。");
+    expect(screen.queryByTestId("login-bio-retry")).toBeNull();
+    secureMod.__auth.error = null;
+  });
+
   it("two-step verification still asks for its six digits, and the remembered phone's token goes along", async () => {
     remembered({ bio: true });
     rememberDevice(CODE, "device-token-30d");

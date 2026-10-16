@@ -102,7 +102,7 @@ const prompt = () => PROMPT;
 /** Same kind of string, for 「导出我的资料」: the face / finger check stands in for the password there. */
 export const EXPORT_PROMPT = "用来确认是你本人，导出你的资料。";
 
-export type CredentialRead = { status: "ok"; credential: string } | { status: "cancelled" } | { status: "invalidated" } | { status: "failed" };
+export type CredentialRead = { status: "ok"; credential: string } | { status: "cancelled" } | { status: "invalidated" } | { status: "locked" } | { status: "failed" };
 
 /**
  * Hands the credential over -- the system verifies the face / finger first. A key that is gone while the flag says

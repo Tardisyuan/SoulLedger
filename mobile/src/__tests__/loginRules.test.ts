@@ -88,6 +88,8 @@ describe("classifyCredentialError", () => {
     [{ code: "ERR_SECURESTORE", message: "Authentication was cancelled" }, "cancelled"],
     [new Error("KeyPermanentlyInvalidatedException: Key permanently invalidated"), "invalidated"],
     [new Error("The key is no longer usable after a biometric enrolment"), "invalidated"],
+    [{ code: "ERR_AUTHENTICATION", message: "Could not Authenticate the user: Lockout. 操作过于频繁，请稍后再试" }, "locked"],
+    [new Error("Too many attempts. Try again later."), "locked"],
     [new Error("Authentication failed"), "failed"],
     ["something else", "failed"],
     [null, "failed"],
