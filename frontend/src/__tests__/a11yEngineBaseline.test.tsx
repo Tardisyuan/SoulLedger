@@ -134,7 +134,7 @@ jest.mock("@/src/contexts/ToastContext", () => ({
 jest.mock("@soulledger/core/api", () => ({
   ...jest.requireActual("@soulledger/core/api"),
   notificationsApi: { list: jest.fn(), markRead: jest.fn(), markAllRead: jest.fn() },
-  auditApi: { list: jest.fn() },
+  auditApi: { list: jest.fn(), actions: jest.fn().mockResolvedValue({ data: [] }), resources: jest.fn().mockResolvedValue({ data: [] }) },
   ledgerApi: { statsOverview: jest.fn() },
   menusApi: { all: jest.fn(), list: jest.fn() },
   authApi: { preferences: jest.fn(), updatePreferences: jest.fn() },

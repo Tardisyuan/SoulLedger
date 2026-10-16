@@ -15,5 +15,11 @@
   "souls.events.SENTENCE_REQUEST_CREATED",
   "souls.events.SENTENCE_REQUEST_DECIDED",
   "souls.events.SENTENCE_PLAN_COMPLETED",
-  "souls.events.SENTENCE_PLAN_CANCELLED"
+  "souls.events.SENTENCE_PLAN_CANCELLED",
+  "audit.resources.soul",
+  "audit.resources.user",
+  "audit.resources.workflow",
+  "audit.resources.judgment",
+  "audit.resources.soulrecord",
+  "audit.resources.permission"
 ]

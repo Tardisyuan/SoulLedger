@@ -47,7 +47,17 @@ export const auditApi = {
   /** 与 `list` 同一组筛选 / 租户划界的 CSV,不分页(`AuditLogViewSet.export`);页码参数不要传。 */
   exportCsv: (params?: Record<string, string>) =>
     api.get<Blob>("/audit-logs/export/", { params, responseType: "blob" }),
+  /** Every `AuditAction` member. `label` is the model's fixed Chinese — display via `audit.actions.*`, not it. */
+  actions: () => api.get<AuditActionOption[]>("/audit-logs/actions/"),
+  /** The distinct `resource` strings in the caller's audit log (same hall scoping as `list`). */
+  resources: () => api.get<string[]>("/audit-logs/resources/"),
 };
+
+/** One row of `GET /audit-logs/actions/` (`AuditLogViewSet.actions`). */
+export interface AuditActionOption {
+  value: string;
+  label: string;
+}
 
 /** One row of `GET /auth/login-logs/` (ADMIN-only, `LoginLogViewSet`; this tenant's users). */
 export type LoginLogEntry = components["schemas"]["LoginLog"];

@@ -1976,7 +1976,15 @@
       "impersonate_end": "以 {{name}} 的身份查看 · {{minutes}} 分钟 · 看过 {{pages}} 个页面"
     },
     "filter_hall": "按殿",
-    "all_halls": "全部殿"
+    "all_halls": "全部殿",
+    "resources": {
+      "soul": "灵魂",
+      "user": "用户",
+      "workflow": "工作流",
+      "judgment": "审判",
+      "soulrecord": "功过记录",
+      "permission": "权限"
+    }
   },
   "profile": {
     "title": "个人中心",
