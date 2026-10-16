@@ -1,3 +1,26 @@
 [
-  "soul_app.bio.locked"
+  "soul_app.bio.locked",
+  "users.import.back",
+  "users.import.blocked",
+  "users.import.button",
+  "users.import.col_issue",
+  "users.import.col_name",
+  "users.import.col_username",
+  "users.import.commit",
+  "users.import.row_codes.email_invalid",
+  "users.import.row_codes.email_taken",
+  "users.import.row_codes.password_required",
+  "users.import.row_codes.password_weak",
+  "users.import.row_codes.role_invalid",
+  "users.import.row_codes.unknown",
+  "users.import.row_codes.username_required",
+  "users.import.row_codes.username_taken",
+  "users.import.step",
+  "users.import.steps.choose",
+  "users.import.steps.preview",
+  "users.import.steps.result",
+  "users.import.success",
+  "users.import.template_notes",
+  "users.import.title",
+  "users.import.view_users"
 ]

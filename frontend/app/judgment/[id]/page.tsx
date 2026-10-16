@@ -76,7 +76,8 @@ import {
   placementFromDraft,
   type Placement,
 } from "@/src/components/judgment/JudgmentPlacement";
-import { useCaseAttachments, useJudgmentNextAfter, useJudgmentPrevious, useUndeferJudgment } from "@soulledger/core/hooks/useJudgments";
+import { useArchiveJudgment, useCaseAttachments, useJudgmentNextAfter, useJudgmentPrevious, useUnarchiveJudgment, useUndeferJudgment } from "@soulledger/core/hooks/useJudgments";
+import { ArchiveBanner, ArchiveDialog } from "@/src/components/archive/ArchiveParts";
 import { claimRefusalMessage } from "@/src/components/judgment/JudgmentClaimDialogs";
 import { usePlaque } from "@/src/components/plaque/Plaque";
 import { useHall } from "@/src/components/plaque/useHall";
@@ -344,6 +345,9 @@ export default function JudgmentDetailPage({ params }: PageProps) {
   }
 
   const canExecute = hasPermission("judgment.execute");
+  const archiveMutation = useArchiveJudgment();
+  const unarchiveMutation = useUnarchiveJudgment();
+  const [archiveOpen, setArchiveOpen] = useState(false);
   const undefer = useUndeferJudgment();
 
   /** 主按钮 / ⌘⏎:先进确认层,落判在层里。与落判同一道门:选了裁决才进。 */
@@ -651,6 +655,12 @@ export default function JudgmentDetailPage({ params }: PageProps) {
       actions={
         previousId || nextId || isFinal ? (
           <span className="inline-flex items-center gap-4">
+            {/* 有裁决的审判不能删,只能归档(后端 `archive` 只收有裁决的)。 */}
+            {judgment.verdict && !judgment.is_archived && canExecute && (
+              <Button type="button" variant="secondary" size="sm" onClick={() => setArchiveOpen(true)}>
+                {t("records.archive.confirm")}
+              </Button>
+            )}
             {/* 判词(结案后的文书)可以打印;未结案的草稿不是文书,不给入口。 */}
             {isFinal && (
               <Button type="button" variant="secondary" size="sm" onClick={() => window.print()}>
@@ -673,6 +683,18 @@ export default function JudgmentDetailPage({ params }: PageProps) {
         ) : undefined
       }
     >
+      <ArchiveBanner
+        record={judgment}
+        onUnarchive={canExecute ? () => unarchiveMutation.mutate(id) : undefined}
+        pending={unarchiveMutation.isPending}
+      />
+      <ArchiveDialog
+        isOpen={archiveOpen}
+        name={judgment.case_number}
+        onClose={() => setArchiveOpen(false)}
+        onConfirm={(reason) => archiveMutation.mutate({ id, reason }, { onSuccess: () => setArchiveOpen(false) })}
+        isPending={archiveMutation.isPending}
+      />
       {/* 案卷导航(原型 `mobile-case-nav` / `tablet-draft-trigger`)。≤767 单栏:两个锚点,内容一直在文档流里。
           768–1279 两栏:「草稿与批注」是开关(v3 平板,2026-10-01 拍板),收起时草稿栏只是 hidden ——
           判词、发落、自动保存都还在。收着的时候有没存上的改动或 409 冲突,开关上挂 ◐ / !,不会悄悄漏掉。 */}
