@@ -4,6 +4,7 @@ REST serializers for Judgment app.
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
+from apps.core.archive import ARCHIVE_FIELDS, ArchiveSerializerMixin
 from apps.core.field_permissions import FieldPermissionMixin
 from apps.core.locale import locale_from_context
 from apps.core.tenant import is_tenant_exempt
@@ -25,7 +26,6 @@ from apps.ledger.serializers import LedgerSummarySerializer
 from apps.realms.models import Realm
 from apps.realms.serializers import RealmLocalizedSerializer
 from apps.reincarnation.serializers import ReincarnationSerializer
-from apps.core.archive import ARCHIVE_FIELDS, ArchiveSerializerMixin
 from apps.souls.models import Civilization, SoulState
 from apps.souls.serializers import SoulSerializer, _is_viewer
 

@@ -24,6 +24,7 @@ from types import SimpleNamespace
 
 from apps.core.tenant import scope_to_tenant
 from apps.dispatch.models import DispatchRecord, DispatchStatus
+from apps.officer_app import facts as item_facts
 from apps.perm.checker import check_permission
 from apps.perm.filters import DataScopeFilter
 from apps.soul_accounts.models import (
@@ -31,7 +32,6 @@ from apps.soul_accounts.models import (
     CooldownShorteningStatus,
     RebirthApplication,
 )
-from apps.officer_app import facts as item_facts
 from apps.workflow import cosign, decision_codes
 from apps.workflow.models import (
     ApprovalWorkflow,

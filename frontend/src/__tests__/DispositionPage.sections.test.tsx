@@ -177,7 +177,8 @@ describe("处置页按服务端分三段", () => {
     expect(within(expired).getByText(/^disposition\.expired_on:/)).toBeInTheDocument();
 
     for (const r of screen.getAllByTestId("disposition-running-row")) {
-      expect(within(r).queryByRole("button")).toBeNull();
+      // The row ⋯ (archive, Design batch 34) is the one button a running row has; nothing that acts on the sentence.
+      expect(within(r).queryAllByRole("button").filter((b) => b.getAttribute("aria-haspopup") !== "menu")).toEqual([]);
       expect(within(r).queryByRole("link", { name: "disposition.arrange_reincarnation" })).toBeNull();
     }
   });

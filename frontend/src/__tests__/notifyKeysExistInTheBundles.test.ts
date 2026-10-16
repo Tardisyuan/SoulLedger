@@ -237,6 +237,7 @@ describe("every key `notify` is given is a key the bundles have", () => {
       "packages/core/src/hooks/useDispositions.ts",
       "packages/core/src/hooks/useJudgmentQueue.ts",
       "packages/core/src/hooks/useJudgments.ts",
+      "packages/core/src/hooks/useOrganizations.ts",
       "packages/core/src/hooks/useReincarnation.ts",
       "packages/core/src/hooks/useSocial.ts",
       "packages/core/src/hooks/useSouls.ts",

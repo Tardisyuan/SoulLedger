@@ -4,7 +4,7 @@
  * The facts come from the server (`TodoItemDetail.facts`); an older server sends none and the screen shows only
  * what it showed before. The earlier steps are a vertical timeline; past 4 steps only 发起 and the last 2 show,
  * with one row 「还有 N 步」 that opens the middle. Attachments: a picture opens in the letter image viewer, a PDF in
- * the system (the row ends with ↗); offline a PDF row is greyed with 「联网后才能打开」; no attachments, no section.
+ * the system (the row ends with ↗︎); offline a PDF row is greyed with 「联网后才能打开」; no attachments, no section.
  */
 import type { FactAttachment, FactHistory, TodoFacts, TodoItemDetail } from "@soulledger/core/api/officer-app";
 import { mediaUrl } from "@soulledger/core/domain/postMedia";
@@ -208,7 +208,7 @@ function Attachments({ items }: { items: FactAttachment[] }) {
               <Txt variant="body" numberOfLines={1}>{a.name}</Txt>
               <Txt variant="caption" tone="muted">{second}</Txt>
             </View>
-            <Txt variant="nav">{pdf ? "↗" : "›"}</Txt>
+            <Txt variant="nav">{pdf ? "↗︎" : "›"}</Txt>
           </Pressable>
         );
       })}

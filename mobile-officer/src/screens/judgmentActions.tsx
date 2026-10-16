@@ -48,6 +48,9 @@ export function JudgmentActionBar({
     setOpened((n) => n + 1);
     setOverlay(next);
   };
+  // Each sheet clears only itself. The menu's dismissal lands after its close animation -- by then the next sheet
+  // (defer / reassign / release) is the overlay, and a blanket reset closed it the moment it opened.
+  const closeOnly = (name: Overlay) => () => setOverlay((current) => (current === name ? null : current));
   const more = judgmentMoreItems(state);
 
   const run = (call: () => Promise<unknown>, doneKey: string, after?: () => void) => {
@@ -121,7 +124,7 @@ export function JudgmentActionBar({
         </View>
       )}
 
-      <Sheet open={overlay === "menu"} onClose={() => setOverlay(null)} edge={theme.hair} closeLabel={t("soul_app.common.cancel")}>
+      <Sheet open={overlay === "menu"} onClose={closeOnly("menu")} edge={theme.hair} closeLabel={t("soul_app.common.cancel")}>
         <View testID="judgment-menu" style={{ padding: space[5] }}>
           {more.map((item) => (
             <Row key={item} testID={`judgment-menu-${item}`} minHeight={56} title={t(`officer_app.case.${item}`)} onPress={() => open(item)} />
@@ -136,7 +139,7 @@ export function JudgmentActionBar({
         body={t("officer_app.case.release_body")}
         confirmLabel={t("officer_app.case.release")}
         busy={busy}
-        onClose={() => setOverlay(null)}
+        onClose={closeOnly("release")}
         onConfirm={() => run(() => judgmentApi.release(data.id), "officer_app.case.done_released").catch(() => toast(t("officer_app.state.error_title"), "failure"))}
       />
       <ReasonSheet
@@ -144,7 +147,7 @@ export function JudgmentActionBar({
         open={overlay === "defer"}
         kind="defer"
         data={data}
-        onClose={() => setOverlay(null)}
+        onClose={closeOnly("defer")}
         onSubmit={(reason) => run(() => judgmentApi.defer(data.id, reason.trim()), "officer_app.case.done_deferred")}
       />
       <ReasonSheet
@@ -152,7 +155,7 @@ export function JudgmentActionBar({
         open={overlay === "request_reassign"}
         kind="request_reassign"
         data={data}
-        onClose={() => setOverlay(null)}
+        onClose={closeOnly("request_reassign")}
         onSubmit={(reason) =>
           run(() => judgmentApi.requestReassign(data.id, reason.trim()), "officer_app.case.done_reassign", onAsked).catch((e: unknown) => {
             // 10 分钟内已经请求过:服务端已经通知过了,界面按「已请求」处理。

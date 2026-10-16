@@ -119,11 +119,11 @@ class TestArchiveRoundTrip:
     """软删被拒(409 archivable)→ 归档 → 详情仍取得到并带横条字段 → 取消归档回到列表。"""
 
     def test_soul_archive_then_unarchive(self, admin_client, admin_user):
-        from apps.judgment.models import Judgment
-        from apps.souls.models import Civilization, Soul
+        from apps.judgment.models import Judgment, Verdict
+        from apps.souls.models import Soul
 
-        soul = Soul.objects.create(name="B34 Soul", civilization=Civilization.CHINESE, tenant=admin_user.tenant)
-        Judgment.objects.create(soul=soul, civilization=Civilization.CHINESE, verdict="HEAVEN")
+        soul = Soul.objects.create(name="B34 Soul", tenant=admin_user.tenant)
+        Judgment.objects.create(soul=soul, tenant=admin_user.tenant, verdict=Verdict.PASSED)
         refused = admin_client.delete(f"/api/v1/souls/{soul.pk}/")
         assert (refused.status_code, refused.data["archivable"]) == (409, True)
 
