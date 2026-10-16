@@ -22,7 +22,7 @@ type Dimension = "state" | "civilization";
 const LIFECYCLE = ["ALIVE", "JUDGING", "DISPOSED", "REINCARNATING", "SETTLED"];
 
 /** 两组分段开关(A14 §5):每段 44 高,选中项墨色实底;一组里恰有一个开着,所以是 aria-pressed 不是 role="tab"。 */
-function Segments<T extends string>({
+export function Segments<T extends string>({
   label,
   value,
   options,

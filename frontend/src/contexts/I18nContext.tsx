@@ -93,7 +93,7 @@ const INTL_LOCALE: Record<Locale, string> = {
   egy: "en",
 };
 
-function toIntlLocale(locale: Locale): string {
+export function toIntlLocale(locale: Locale): string {
   return INTL_LOCALE[locale];
 }
 

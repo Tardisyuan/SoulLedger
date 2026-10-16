@@ -1,1 +1,9 @@
-[]
+[
+  "audit.resources.datascope",
+  "audit.resources.fieldpermission",
+  "audit.resources.menu",
+  "audit.resources.menubutton",
+  "audit.resources.role",
+  "audit.resources.rolepermission",
+  "audit.resources.rowleveldatascope"
+]
