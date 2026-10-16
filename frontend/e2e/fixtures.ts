@@ -1403,6 +1403,9 @@ export class ApiMock {
     // ── Audit filter options ── (arrays, not the empty page BACKGROUND_PATHS would give)
     this.on("GET", "/audit-logs/actions/", [{ value: "CREATE", label: "创建" }, { value: "BATCH_DELETE", label: "批量删除" }]);
     this.on("GET", "/audit-logs/resources/", ["soul", "tenant"]);
+    // 权限变更时间线是数组，统计是一个对象 —— BACKGROUND_PATHS 的空分页两样都不是。
+    this.on("GET", "/audit-logs/timeline/", []);
+    this.on("GET", "/audit-logs/stats/", { action_distribution: [], top_resources: [], total_logs: 0 });
 
     // ── Judgment ──
     this.on("GET", "/judgment/", paginated([]));

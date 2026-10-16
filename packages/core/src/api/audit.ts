@@ -51,7 +51,23 @@ export const auditApi = {
   actions: () => api.get<AuditActionOption[]>("/audit-logs/actions/"),
   /** The distinct `resource` strings in the caller's audit log (same hall scoping as `list`). */
   resources: () => api.get<string[]>("/audit-logs/resources/"),
+  /** 权限变更时间线:不分页的数组,新的在前。默认只含八类权限资源;`resource` 是 icontains。 */
+  timeline: (params?: AuditTimelineParams) => api.get<AuditLogEntry[]>("/audit-logs/timeline/", { params }),
+  /** 不收参数:与列表同样按殿划界，不随列表的筛选变化。 */
+  stats: () => api.get<AuditStats>("/audit-logs/stats/"),
 };
+
+/** `GET /audit-logs/timeline/` 的查询参数。`limit` 默认 50,后端上限 500(`TIMELINE_MAX_LIMIT`)。 */
+export interface AuditTimelineParams {
+  resource?: string;
+  action?: string;
+  start_date?: string;
+  end_date?: string;
+  limit?: number;
+}
+
+/** `GET /audit-logs/stats/`(`AuditStatsSerializer`)。只列有记录的动作;`top_resources` 后端截到 20 行。 */
+export type AuditStats = components["schemas"]["AuditStats"];
 
 /** One row of `GET /audit-logs/actions/` (`AuditLogViewSet.actions`). */
 export interface AuditActionOption {
