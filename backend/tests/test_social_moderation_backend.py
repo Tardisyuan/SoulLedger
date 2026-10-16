@@ -1106,7 +1106,7 @@ def test_moderation_push_goes_to_the_author_only(
     the_post = post(post_author, "楼主的帖子", Visibility.PUBLIC)
     comment = Comment.objects.create(post=the_post, author=commenter.user, content="评论者的评论",
                                      tenant=the_post.tenant)
-    for letter, account in zip("xyz", (post_author, commenter, bystander)):
+    for letter, account in zip("xyz", (post_author, commenter, bystander), strict=True):
         _device(account, f"ExponentPushToken[{letter * 22}]")
 
     _moderate(comment, "HIDE", cn_moderator, django_capture_on_commit_callbacks)
