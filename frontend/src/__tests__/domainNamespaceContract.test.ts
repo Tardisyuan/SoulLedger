@@ -89,7 +89,10 @@ describe("每个 DomainEnum 命名空间在三份 bundle 里都存在", () => {
   });
 
   it.each([...NAMESPACES.keys()].sort())("%s", (ns) => {
-    for (const locale of LOCALES) {
+    // 整个命名空间都还在等 Design 的埃及文时,egy 里可以整块没有(下一条 it 照样按待补清单核对成员键)。
+    const zh = Object.keys((resolve(BUNDLES["zh-Hans"], ns) ?? {}) as object);
+    const allPending = zh.length > 0 && zh.every((k) => (egyPendingKeys as string[]).includes(`${ns}.${k}`));
+    for (const locale of LOCALES.filter((l) => !(l === "egy" && allPending))) {
       const node = resolve(BUNDLES[locale], ns);
       expect({ locale, ns, node }).toMatchObject({
         node: expect.any(Object),
