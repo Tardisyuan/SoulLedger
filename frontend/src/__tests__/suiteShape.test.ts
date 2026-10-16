@@ -45,6 +45,8 @@ const COLLECTED_FILES = [
   "apiEndpointContract.test.ts",
   // 2026-10-16 灵魂端客户端:失败分类与 401 换令牌。
   "soulClientErrors.test.ts",
+  // 2026-10-16 官员端审批 / 加签被拒的读法。
+  "officerDecisionErrors.test.ts",
   "ActorsPage.test.tsx",
   // 2026-10-04 外部接入与登录日志:/death-sync/api-keys 与 /audit/logins。
   "ApiKeysPanel.test.tsx",

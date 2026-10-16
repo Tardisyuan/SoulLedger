@@ -315,7 +315,8 @@ describe("举报 · the C-08 review layout", () => {
     const body = await within(detail()).findByText("被举报的帖子全文，比摘录长");
     expect(body.className).toContain("font-serif");
     expect(apiMock.item).toHaveBeenCalledWith("posts", "p1");
-    expect(within(detail()).getByText(tZh("social_moderation.reason.ABUSE"))).toBeInTheDocument();
+    // The hide/delete reason picker lists the same labels as <option>s; the report's own reason is the one outside it.
+    expect(within(detail()).getAllByText(tZh("social_moderation.reason.ABUSE")).filter((el) => el.tagName !== "OPTION")).toHaveLength(1);
     expect(within(detail()).queryByText("ABUSE")).toBeNull();
     // Text reactions, not emoji, in the soul app's words: each of the five kinds with its own count
     // (念 is LOVE, not the total 17); a kind at 0 is not drawn; no 「转」 — no reposts. The comment
