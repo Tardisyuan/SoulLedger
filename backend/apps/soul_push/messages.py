@@ -161,6 +161,18 @@ MESSAGES = {
         "social_warned_user": {"title": "Sebayt Er Aq", "body": "Sebayt Er Aq-Ek: {{reason}}"},
         "mfa_reset_by_officer": {"title": "Khetem Aq Sep Sen", "body": "Sab {{name}}: Khetem Aq Sep Sen-Ek Seth."},
          "export_ready": {"title": "Djama-Ek Iri Seth", "body": "Redi Per Djama-Ek Iri Seth · Wenen Hru 7. Wen Medjat Ba, Sau."},
+        "content_approved_comment": {"title": "Wesheb-Ek Hesy Seth", "body": "Wesheb-Ek Hesy Seth. Neb Maa."},
+        "content_approved_post": {"title": "Medu-Ek Hesy Seth", "body": "Medu-Ek Hesy Seth. Neb Maa."},
+        "content_deleted_comment": {"title": "Wesheb-Ek Fekh Seth", "body": "Sab Wesekhet Fekh Wesheb-Ek."},
+        "content_deleted_comment_reason": {"title": "Wesheb-Ek Fekh Seth", "body": "Sab Wesekhet Fekh Wesheb-Ek. Khet: {{reason}}"},
+        "content_deleted_post": {"title": "Medu-Ek Fekh Seth", "body": "Sab Wesekhet Fekh Medu-Ek."},
+        "content_deleted_post_reason": {"title": "Medu-Ek Fekh Seth", "body": "Sab Wesekhet Fekh Medu-Ek. Khet: {{reason}}"},
+        "content_hidden_comment": {"title": "Wesheb-Ek Imen Seth", "body": "Sab Wesekhet Imen Wesheb-Ek. Wen Medjat Ba Er Maa."},
+        "content_hidden_comment_reason": {"title": "Wesheb-Ek Imen Seth", "body": "Sab Wesekhet Imen Wesheb-Ek. Khet: {{reason}}"},
+        "content_hidden_post": {"title": "Medu-Ek Imen Seth", "body": "Sab Wesekhet Imen Medu-Ek. Wen Medjat Ba Er Maa."},
+        "content_hidden_post_reason": {"title": "Medu-Ek Imen Seth", "body": "Sab Wesekhet Imen Medu-Ek. Khet: {{reason}}"},
+        "content_restored_comment": {"title": "Wesheb-Ek Wen Wehem", "body": "Wesheb-Ek Wen Wehem Seth."},
+        "content_restored_post": {"title": "Medu-Ek Wen Wehem", "body": "Medu-Ek Wen Wehem Seth."},
     },
 }
 
