@@ -6072,6 +6072,12 @@ paths:
         schema:
           type: string
       - in: query
+        name: end_date
+        schema:
+          type: string
+          format: date
+        description: YYYY-MM-DD, inclusive, on create_time
+      - in: query
         name: event_type
         schema:
           type: string
@@ -6177,6 +6183,11 @@ paths:
           * `SENTENCE_PLAN_COMPLETED` - Sentence Plan Completed
           * `SENTENCE_PLAN_CANCELLED` - Sentence Plan Cancelled
           * `SCHEDULER_RUN_FAILED` - Scheduler Run Failed
+      - in: query
+        name: exclude_system
+        schema:
+          type: boolean
+        description: 1 hides events whose actor is empty or 'system'
       - name: ordering
         required: false
         in: query
@@ -6200,6 +6211,12 @@ paths:
         schema:
           type: string
           format: uuid
+      - in: query
+        name: start_date
+        schema:
+          type: string
+          format: date
+        description: YYYY-MM-DD, inclusive, on create_time
       tags:
       - v1
       security:
@@ -6252,6 +6269,193 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SoulEvent'
+          description: ''
+  /api/v1/events/actors/:
+    get:
+      operationId: v1_events_actors_list
+      description: 「全部操作人」下拉的选项:本殿出现过的非系统操作人,按名字排。
+      parameters:
+      - in: query
+        name: actor
+        schema:
+          type: string
+      - in: query
+        name: end_date
+        schema:
+          type: string
+          format: date
+        description: YYYY-MM-DD, inclusive, on create_time
+      - in: query
+        name: event_type
+        schema:
+          type: string
+          enum:
+          - COMMENT_CREATED
+          - COMMENT_DELETED
+          - COOLDOWN_SHORTENING_DECIDED
+          - DEATH_SYNC_PROCESSED
+          - DEATH_SYNC_RECEIVED
+          - DISPATCH_APPROVED
+          - DISPATCH_CREATED
+          - DISPATCH_EXECUTED
+          - DISPATCH_REJECTED
+          - DISPATCH_STATUS_CHANGED
+          - DISPOSITION_CREATED
+          - DISPOSITION_EXPIRED
+          - JUDGMENT_CONCLUDED
+          - JUDGMENT_INITIATED
+          - KARMA_RECALCULATED
+          - NOTIFICATION_CREATED
+          - POST_CREATED
+          - POST_DELETED
+          - POST_UPDATED
+          - REACTION_ADDED
+          - REACTION_REMOVED
+          - REBIRTH_APPLICATION_SUBMITTED
+          - REBIRTH_CROSS_CIV_DECIDED
+          - REBIRTH_STATUS_CHANGED
+          - RECORD_ADDED
+          - REINCARNATION_COMPLETED
+          - REINCARNATION_TRIGGERED
+          - SCHEDULER_RUN_FAILED
+          - SENTENCE_NODE_ACTIVATED
+          - SENTENCE_NODE_COMPLETED
+          - SENTENCE_NODE_REDISPATCHED
+          - SENTENCE_NODE_REFUSED
+          - SENTENCE_NODE_WAITING
+          - SENTENCE_PLAN_AMENDED
+          - SENTENCE_PLAN_CANCELLED
+          - SENTENCE_PLAN_COMPLETED
+          - SENTENCE_PLAN_CREATED
+          - SENTENCE_REQUEST_CREATED
+          - SENTENCE_REQUEST_DECIDED
+          - SETTLEMENT_CORRECTED
+          - SOUL_ACCOUNT_CREATED
+          - SOUL_ACCOUNT_RETIRED
+          - SOUL_CREATED
+          - STATE_CHANGED
+          - USER_FOLLOWED
+          - USER_UNFOLLOWED
+          - WORKFLOW_APPROVED
+          - WORKFLOW_ASSIGNED
+          - WORKFLOW_CREATED
+          - WORKFLOW_REJECTED
+        description: |-
+          * `SOUL_CREATED` - Soul Created
+          * `STATE_CHANGED` - State Changed
+          * `SETTLEMENT_CORRECTED` - Settlement Corrected
+          * `RECORD_ADDED` - Record Added
+          * `JUDGMENT_INITIATED` - Judgment Initiated
+          * `JUDGMENT_CONCLUDED` - Judgment Concluded
+          * `DISPOSITION_CREATED` - Disposition Created
+          * `DISPOSITION_EXPIRED` - Disposition Expired
+          * `REINCARNATION_TRIGGERED` - Reincarnation Triggered
+          * `REINCARNATION_COMPLETED` - Reincarnation Completed
+          * `KARMA_RECALCULATED` - Karma Recalculated
+          * `WORKFLOW_CREATED` - Workflow Created
+          * `WORKFLOW_ASSIGNED` - Workflow Assigned
+          * `WORKFLOW_APPROVED` - Workflow Approved
+          * `WORKFLOW_REJECTED` - Workflow Rejected
+          * `DISPATCH_CREATED` - Dispatch Created
+          * `DISPATCH_APPROVED` - Dispatch Approved
+          * `DISPATCH_REJECTED` - Dispatch Rejected
+          * `DISPATCH_EXECUTED` - Dispatch Executed
+          * `DISPATCH_STATUS_CHANGED` - Dispatch Status Changed
+          * `DEATH_SYNC_RECEIVED` - Death Sync Received
+          * `DEATH_SYNC_PROCESSED` - Death Sync Processed
+          * `POST_CREATED` - Post Created
+          * `POST_UPDATED` - Post Updated
+          * `POST_DELETED` - Post Deleted
+          * `COMMENT_CREATED` - Comment Created
+          * `COMMENT_DELETED` - Comment Deleted
+          * `REACTION_ADDED` - Reaction Added
+          * `REACTION_REMOVED` - Reaction Removed
+          * `USER_FOLLOWED` - User Followed
+          * `USER_UNFOLLOWED` - User Unfollowed
+          * `NOTIFICATION_CREATED` - Notification Created
+          * `SOUL_ACCOUNT_CREATED` - Soul Account Created
+          * `SOUL_ACCOUNT_RETIRED` - Soul Account Retired
+          * `REBIRTH_APPLICATION_SUBMITTED` - Rebirth Application Submitted
+          * `REBIRTH_STATUS_CHANGED` - Rebirth Status Changed
+          * `REBIRTH_CROSS_CIV_DECIDED` - Rebirth Cross Civ Decided
+          * `COOLDOWN_SHORTENING_DECIDED` - Cooldown Shortening Decided
+          * `SENTENCE_PLAN_CREATED` - Sentence Plan Created
+          * `SENTENCE_NODE_ACTIVATED` - Sentence Node Activated
+          * `SENTENCE_NODE_WAITING` - Sentence Node Waiting
+          * `SENTENCE_NODE_COMPLETED` - Sentence Node Completed
+          * `SENTENCE_NODE_REFUSED` - Sentence Node Refused
+          * `SENTENCE_NODE_REDISPATCHED` - Sentence Node Redispatched
+          * `SENTENCE_PLAN_AMENDED` - Sentence Plan Amended
+          * `SENTENCE_REQUEST_CREATED` - Sentence Request Created
+          * `SENTENCE_REQUEST_DECIDED` - Sentence Request Decided
+          * `SENTENCE_PLAN_COMPLETED` - Sentence Plan Completed
+          * `SENTENCE_PLAN_CANCELLED` - Sentence Plan Cancelled
+          * `SCHEDULER_RUN_FAILED` - Scheduler Run Failed
+      - in: query
+        name: exclude_system
+        schema:
+          type: boolean
+        description: 1 hides events whose actor is empty or 'system'
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      - in: query
+        name: soul
+        schema:
+          type: string
+          format: uuid
+      - in: query
+        name: start_date
+        schema:
+          type: string
+          format: date
+        description: YYYY-MM-DD, inclusive, on create_time
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - count
+                - results
+                properties:
+                  count:
+                    type: integer
+                    example: 123
+                  next:
+                    type: string
+                    nullable: true
+                    format: uri
+                    example: http://api.example.org/accounts/?page=4
+                  previous:
+                    type: string
+                    nullable: true
+                    format: uri
+                    example: http://api.example.org/accounts/?page=2
+                  results:
+                    type: array
+                    items:
+                      type: string
           description: ''
   /api/v1/judgment/:
     get:
