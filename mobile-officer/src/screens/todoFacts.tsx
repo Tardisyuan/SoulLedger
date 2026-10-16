@@ -7,15 +7,14 @@
  * the system (the row ends with ↗︎); offline a PDF row is greyed with 「联网后才能打开」; no attachments, no section.
  */
 import type { FactAttachment, FactHistory, TodoFacts, TodoItemDetail } from "@soulledger/core/api/officer-app";
-import { mediaUrl } from "@soulledger/core/domain/postMedia";
 import { useState } from "react";
-import { Linking, Pressable, View } from "react-native";
+import { Pressable, View } from "react-native";
 
+import { AttachmentList } from "../attachments";
 import { formatWhen } from "../format";
 import { hallLabel } from "../rules";
-import { SectionLabel, Txt, space, useI18n, useOnline, useTheme, useToast } from "../shared";
-import { historyView, isPdf, sizeText, soulsView } from "../todoFacts";
-import { LetterImageViewer } from "./letterImages";
+import { SectionLabel, Txt, space, useI18n, useTheme } from "../shared";
+import { historyView, soulsView } from "../todoFacts";
 
 type Hall = { code: string; display_name: string } | null | undefined;
 
@@ -171,48 +170,13 @@ function History({ steps }: { steps: FactHistory[] }) {
   );
 }
 
-/** 附件 · N: pictures open in the letter image viewer, a PDF goes to the system. Offline, a PDF row is greyed. */
+/** 附件 · N: the shared list (`../attachments`); this payload carries each signed url already. */
 function Attachments({ items }: { items: FactAttachment[] }) {
   const { t } = useI18n();
-  const theme = useTheme();
-  const toast = useToast();
-  const { offline } = useOnline();
-  const [viewing, setViewing] = useState<number | null>(null);
-  const images = items.filter((a) => !isPdf(a.content_type));
-  const gallery = images.map((a) => ({ id: a.id, url: a.url, width: 1, height: 1 }));
-  const open = (a: FactAttachment) => {
-    if (!isPdf(a.content_type)) {
-      setViewing(Math.max(0, images.findIndex((x) => x.id === a.id)));
-      return;
-    }
-    Linking.openURL(mediaUrl(a.url)).catch(() => toast(t("officer_app.detail.attachment_failed"), "failure"));
-  };
   return (
     <View testID="facts-attachments" style={{ gap: space[2] }}>
       <SectionLabel>{t("officer_app.detail.attachments", { n: String(items.length) })}</SectionLabel>
-      {items.map((a) => {
-        const pdf = isPdf(a.content_type);
-        const blocked = pdf && offline;
-        const second = [pdf ? "PDF" : "IMG", sizeText(a.byte_size), blocked ? t("officer_app.detail.attachment_offline") : pdf ? t("officer_app.detail.open_system") : null].filter(Boolean).join(" · ");
-        return (
-          <Pressable
-            key={a.id}
-            testID={`attachment-${a.id}`}
-            accessibilityRole="button"
-            accessibilityState={{ disabled: blocked }}
-            disabled={blocked}
-            onPress={() => open(a)}
-            style={{ minHeight: 56, flexDirection: "row", alignItems: "center", gap: space[3], borderBottomWidth: 1, borderBottomColor: theme.hair, opacity: blocked ? 0.5 : 1 }}
-          >
-            <View style={{ flex: 1, gap: space[1] }}>
-              <Txt variant="body" numberOfLines={1}>{a.name}</Txt>
-              <Txt variant="caption" tone="muted">{second}</Txt>
-            </View>
-            <Txt variant="nav">{pdf ? "↗︎" : "›"}</Txt>
-          </Pressable>
-        );
-      })}
-      <LetterImageViewer images={gallery} index={viewing} onClose={() => setViewing(null)} />
+      <AttachmentList items={items} />
     </View>
   );
 }
