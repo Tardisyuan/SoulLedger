@@ -2903,6 +2903,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/events/actors/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 「全部操作人」下拉的选项:本殿出现过的非系统操作人,按名字排。 */
+        get: operations["v1_events_actors_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/judgment/": {
         parameters: {
             query?: never;
@@ -23473,6 +23490,8 @@ export interface operations {
         parameters: {
             query?: {
                 actor?: string;
+                /** @description YYYY-MM-DD, inclusive, on create_time */
+                end_date?: string;
                 /**
                  * @description * `SOUL_CREATED` - Soul Created
                  *     * `STATE_CHANGED` - State Changed
@@ -23526,6 +23545,8 @@ export interface operations {
                  *     * `SCHEDULER_RUN_FAILED` - Scheduler Run Failed
                  */
                 event_type?: "COMMENT_CREATED" | "COMMENT_DELETED" | "COOLDOWN_SHORTENING_DECIDED" | "DEATH_SYNC_PROCESSED" | "DEATH_SYNC_RECEIVED" | "DISPATCH_APPROVED" | "DISPATCH_CREATED" | "DISPATCH_EXECUTED" | "DISPATCH_REJECTED" | "DISPATCH_STATUS_CHANGED" | "DISPOSITION_CREATED" | "DISPOSITION_EXPIRED" | "JUDGMENT_CONCLUDED" | "JUDGMENT_INITIATED" | "KARMA_RECALCULATED" | "NOTIFICATION_CREATED" | "POST_CREATED" | "POST_DELETED" | "POST_UPDATED" | "REACTION_ADDED" | "REACTION_REMOVED" | "REBIRTH_APPLICATION_SUBMITTED" | "REBIRTH_CROSS_CIV_DECIDED" | "REBIRTH_STATUS_CHANGED" | "RECORD_ADDED" | "REINCARNATION_COMPLETED" | "REINCARNATION_TRIGGERED" | "SCHEDULER_RUN_FAILED" | "SENTENCE_NODE_ACTIVATED" | "SENTENCE_NODE_COMPLETED" | "SENTENCE_NODE_REDISPATCHED" | "SENTENCE_NODE_REFUSED" | "SENTENCE_NODE_WAITING" | "SENTENCE_PLAN_AMENDED" | "SENTENCE_PLAN_CANCELLED" | "SENTENCE_PLAN_COMPLETED" | "SENTENCE_PLAN_CREATED" | "SENTENCE_REQUEST_CREATED" | "SENTENCE_REQUEST_DECIDED" | "SETTLEMENT_CORRECTED" | "SOUL_ACCOUNT_CREATED" | "SOUL_ACCOUNT_RETIRED" | "SOUL_CREATED" | "STATE_CHANGED" | "USER_FOLLOWED" | "USER_UNFOLLOWED" | "WORKFLOW_APPROVED" | "WORKFLOW_ASSIGNED" | "WORKFLOW_CREATED" | "WORKFLOW_REJECTED";
+                /** @description 1 hides events whose actor is empty or 'system' */
+                exclude_system?: boolean;
                 /** @description Which field to use when ordering the results. */
                 ordering?: string;
                 /** @description A page number within the paginated result set. */
@@ -23533,6 +23554,8 @@ export interface operations {
                 /** @description A search term. */
                 search?: string;
                 soul?: string;
+                /** @description YYYY-MM-DD, inclusive, on create_time */
+                start_date?: string;
             };
             header?: never;
             path?: never;
@@ -23568,6 +23591,107 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SoulEvent"];
+                };
+            };
+        };
+    };
+    v1_events_actors_list: {
+        parameters: {
+            query?: {
+                actor?: string;
+                /** @description YYYY-MM-DD, inclusive, on create_time */
+                end_date?: string;
+                /**
+                 * @description * `SOUL_CREATED` - Soul Created
+                 *     * `STATE_CHANGED` - State Changed
+                 *     * `SETTLEMENT_CORRECTED` - Settlement Corrected
+                 *     * `RECORD_ADDED` - Record Added
+                 *     * `JUDGMENT_INITIATED` - Judgment Initiated
+                 *     * `JUDGMENT_CONCLUDED` - Judgment Concluded
+                 *     * `DISPOSITION_CREATED` - Disposition Created
+                 *     * `DISPOSITION_EXPIRED` - Disposition Expired
+                 *     * `REINCARNATION_TRIGGERED` - Reincarnation Triggered
+                 *     * `REINCARNATION_COMPLETED` - Reincarnation Completed
+                 *     * `KARMA_RECALCULATED` - Karma Recalculated
+                 *     * `WORKFLOW_CREATED` - Workflow Created
+                 *     * `WORKFLOW_ASSIGNED` - Workflow Assigned
+                 *     * `WORKFLOW_APPROVED` - Workflow Approved
+                 *     * `WORKFLOW_REJECTED` - Workflow Rejected
+                 *     * `DISPATCH_CREATED` - Dispatch Created
+                 *     * `DISPATCH_APPROVED` - Dispatch Approved
+                 *     * `DISPATCH_REJECTED` - Dispatch Rejected
+                 *     * `DISPATCH_EXECUTED` - Dispatch Executed
+                 *     * `DISPATCH_STATUS_CHANGED` - Dispatch Status Changed
+                 *     * `DEATH_SYNC_RECEIVED` - Death Sync Received
+                 *     * `DEATH_SYNC_PROCESSED` - Death Sync Processed
+                 *     * `POST_CREATED` - Post Created
+                 *     * `POST_UPDATED` - Post Updated
+                 *     * `POST_DELETED` - Post Deleted
+                 *     * `COMMENT_CREATED` - Comment Created
+                 *     * `COMMENT_DELETED` - Comment Deleted
+                 *     * `REACTION_ADDED` - Reaction Added
+                 *     * `REACTION_REMOVED` - Reaction Removed
+                 *     * `USER_FOLLOWED` - User Followed
+                 *     * `USER_UNFOLLOWED` - User Unfollowed
+                 *     * `NOTIFICATION_CREATED` - Notification Created
+                 *     * `SOUL_ACCOUNT_CREATED` - Soul Account Created
+                 *     * `SOUL_ACCOUNT_RETIRED` - Soul Account Retired
+                 *     * `REBIRTH_APPLICATION_SUBMITTED` - Rebirth Application Submitted
+                 *     * `REBIRTH_STATUS_CHANGED` - Rebirth Status Changed
+                 *     * `REBIRTH_CROSS_CIV_DECIDED` - Rebirth Cross Civ Decided
+                 *     * `COOLDOWN_SHORTENING_DECIDED` - Cooldown Shortening Decided
+                 *     * `SENTENCE_PLAN_CREATED` - Sentence Plan Created
+                 *     * `SENTENCE_NODE_ACTIVATED` - Sentence Node Activated
+                 *     * `SENTENCE_NODE_WAITING` - Sentence Node Waiting
+                 *     * `SENTENCE_NODE_COMPLETED` - Sentence Node Completed
+                 *     * `SENTENCE_NODE_REFUSED` - Sentence Node Refused
+                 *     * `SENTENCE_NODE_REDISPATCHED` - Sentence Node Redispatched
+                 *     * `SENTENCE_PLAN_AMENDED` - Sentence Plan Amended
+                 *     * `SENTENCE_REQUEST_CREATED` - Sentence Request Created
+                 *     * `SENTENCE_REQUEST_DECIDED` - Sentence Request Decided
+                 *     * `SENTENCE_PLAN_COMPLETED` - Sentence Plan Completed
+                 *     * `SENTENCE_PLAN_CANCELLED` - Sentence Plan Cancelled
+                 *     * `SCHEDULER_RUN_FAILED` - Scheduler Run Failed
+                 */
+                event_type?: "COMMENT_CREATED" | "COMMENT_DELETED" | "COOLDOWN_SHORTENING_DECIDED" | "DEATH_SYNC_PROCESSED" | "DEATH_SYNC_RECEIVED" | "DISPATCH_APPROVED" | "DISPATCH_CREATED" | "DISPATCH_EXECUTED" | "DISPATCH_REJECTED" | "DISPATCH_STATUS_CHANGED" | "DISPOSITION_CREATED" | "DISPOSITION_EXPIRED" | "JUDGMENT_CONCLUDED" | "JUDGMENT_INITIATED" | "KARMA_RECALCULATED" | "NOTIFICATION_CREATED" | "POST_CREATED" | "POST_DELETED" | "POST_UPDATED" | "REACTION_ADDED" | "REACTION_REMOVED" | "REBIRTH_APPLICATION_SUBMITTED" | "REBIRTH_CROSS_CIV_DECIDED" | "REBIRTH_STATUS_CHANGED" | "RECORD_ADDED" | "REINCARNATION_COMPLETED" | "REINCARNATION_TRIGGERED" | "SCHEDULER_RUN_FAILED" | "SENTENCE_NODE_ACTIVATED" | "SENTENCE_NODE_COMPLETED" | "SENTENCE_NODE_REDISPATCHED" | "SENTENCE_NODE_REFUSED" | "SENTENCE_NODE_WAITING" | "SENTENCE_PLAN_AMENDED" | "SENTENCE_PLAN_CANCELLED" | "SENTENCE_PLAN_COMPLETED" | "SENTENCE_PLAN_CREATED" | "SENTENCE_REQUEST_CREATED" | "SENTENCE_REQUEST_DECIDED" | "SETTLEMENT_CORRECTED" | "SOUL_ACCOUNT_CREATED" | "SOUL_ACCOUNT_RETIRED" | "SOUL_CREATED" | "STATE_CHANGED" | "USER_FOLLOWED" | "USER_UNFOLLOWED" | "WORKFLOW_APPROVED" | "WORKFLOW_ASSIGNED" | "WORKFLOW_CREATED" | "WORKFLOW_REJECTED";
+                /** @description 1 hides events whose actor is empty or 'system' */
+                exclude_system?: boolean;
+                /** @description Which field to use when ordering the results. */
+                ordering?: string;
+                /** @description A page number within the paginated result set. */
+                page?: number;
+                /** @description A search term. */
+                search?: string;
+                soul?: string;
+                /** @description YYYY-MM-DD, inclusive, on create_time */
+                start_date?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example 123 */
+                        count: number;
+                        /**
+                         * Format: uri
+                         * @example http://api.example.org/accounts/?page=4
+                         */
+                        next?: string | null;
+                        /**
+                         * Format: uri
+                         * @example http://api.example.org/accounts/?page=2
+                         */
+                        previous?: string | null;
+                        results: string[];
+                    };
                 };
             };
         };
