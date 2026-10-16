@@ -4813,6 +4813,22 @@
     "content_restored_comment": {
       "title": "评论已恢复",
       "body": "你的评论已恢复显示。"
+    },
+    "content_hidden_post_reason": {
+      "title": "帖子已被隐藏",
+      "body": "你的帖子被殿司隐藏：{{reason}}"
+    },
+    "content_hidden_comment_reason": {
+      "title": "评论已被隐藏",
+      "body": "你的评论被殿司隐藏：{{reason}}"
+    },
+    "content_deleted_post_reason": {
+      "title": "帖子已被删除",
+      "body": "你的帖子被殿司删除：{{reason}}"
+    },
+    "content_deleted_comment_reason": {
+      "title": "评论已被删除",
+      "body": "你的评论被殿司删除：{{reason}}"
     }
   },
   "official_notify": {
@@ -5038,8 +5054,8 @@
       "rule_hit": "规则命中 · 敏感词",
       "from": "来自 {{name}}",
       "reaction_comment": "评",
-      "reason_label": "处理理由（隐藏与警告必填）",
-      "reason_required": "隐藏与警告必须写理由",
+      "reason_label": "处理备注（警告必填）",
+      "reason_required": "警告必须写理由",
       "approve": "放行",
       "shortcuts": "J / K 上下 · A 放行 · H 隐藏 · W 警告",
       "user_target_note": "举报对象是用户本人，没有可隐藏的内容；可以禁言或放行。",
@@ -5049,7 +5065,12 @@
       "media_label": "配图",
       "media_caption": "图 {{i}} · {{w}}×{{h}}",
       "media_load_failed": "图片加载失败",
-      "held_for_words": "因敏感词「{{word}}」等 {{n}} 个待审"
+      "held_for_words": "因敏感词「{{word}}」等 {{n}} 个待审",
+      "mod_reason_label": "隐藏 / 删除理由（会告诉作者）",
+      "mod_reason_placeholder": "选择理由",
+      "mod_reason_required": "隐藏或删除须先选理由",
+      "other_note_label": "其他理由",
+      "other_note_required": "选「其他」须写明理由"
     },
     "words": {
       "add_row": "新增敏感词",

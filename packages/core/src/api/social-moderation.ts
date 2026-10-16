@@ -22,6 +22,16 @@ export type HandledContent = Schemas["HandledContent"];
 export type SensitiveWordCategory = Schemas["SocialSensitiveWordCategoryEnum"];
 /** `social_moderation.word_action.<member>`. */
 export type SensitiveWordAction = Schemas["SocialSensitiveWordActionEnum"];
+/** Same list as a soul's report reasons; labels `social_moderation.reason.<member>`. */
+export type ModerationReason = Schemas["SocialReportReasonEnum"];
+/**
+ * Why an officer hid or deleted something — pushed to the author (2026-10-16).
+ * `reason_note` is required with OTHER (400 otherwise) and is then the text the author reads.
+ */
+export interface ModerationReasonInput {
+  reason_code: ModerationReason;
+  reason_note?: string;
+}
 export type ContentKind = "posts" | "comments";
 export type ContentAction = "approve" | "hide" | "restore" | "delete";
 
@@ -77,11 +87,12 @@ export const socialModerationApi = {
   reports: (params: ModerationFilters) =>
     api.get<PaginatedResponse<ModerationReport>>("/social-moderation/reports/", { params }),
   /** HIDE / DELETE act on the reported content; MUTE needs `mute_days`; 409 `already_resolved`. */
-  resolveReport: (id: string, resolution: ReportResolution, note = "", muteDays?: number) =>
+  resolveReport: (id: string, resolution: ReportResolution, note = "", muteDays?: number, why?: ModerationReasonInput) =>
     api.post<ModerationReport>(`/social-moderation/reports/${id}/resolve/`, {
       resolution,
       note,
       ...(muteDays ? { mute_days: muteDays } : {}),
+      ...why,
     }),
   /** Default (no `moderation_status`): PENDING only. */
   content: <K extends ContentKind>(kind: K, params: ModerationFilters) =>
@@ -97,8 +108,8 @@ export const socialModerationApi = {
   item: <K extends ContentKind>(kind: K, id: string) =>
     api.get<K extends "posts" ? ModeratedPost : ModeratedComment>(`/social-moderation/${kind}/${id}/`),
   /** 409 `invalid_transition` when the row's current status does not allow it. */
-  act: (kind: ContentKind, id: string, action: ContentAction, reason = "") =>
-    api.post(`/social-moderation/${kind}/${id}/${action}/`, { reason }),
+  act: (kind: ContentKind, id: string, action: ContentAction, reason = "", why?: ModerationReasonInput) =>
+    api.post(`/social-moderation/${kind}/${id}/${action}/`, { reason, ...why }),
   /** Each row carries `hits_30d` — hits over the last 30 days. */
   words: (params: { page?: number }) =>
     api.get<PaginatedResponse<SensitiveWord>>("/social-moderation/sensitive-words/", { params }),

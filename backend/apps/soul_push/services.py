@@ -199,6 +199,8 @@ KIND_CATEGORY = {
     # 与警告同一处境 —— 殿司对作者说的话,不给关。
     **{f"content_{outcome}_{target}": None
        for outcome in ("hidden", "deleted", "approved", "restored") for target in ("post", "comment")},
+    # 隐藏 / 删除时官员选了理由(2026-10-16 用户定):锁屏上带理由。通过 / 恢复不带理由,没有这一套。
+    **{f"content_{outcome}_{target}_reason": None for outcome in ("hidden", "deleted") for target in ("post", "comment")},
 }
 
 
@@ -264,21 +266,32 @@ CONTENT_MODERATED_EVENT = "SOCIAL_CONTENT_MODERATED"
 CONTENT_OUTCOMES = {"HIDE": "hidden", "DELETE": "deleted", "APPROVE": "approved", "RESTORE": "restored"}
 
 
-def record_content_moderated(user_id, target_type, target_id, action, post_id=None):
+def record_content_moderated(user_id, target_type, target_id, action, post_id=None, reason_code="", reason_note=""):
     """作者若是灵魂(有本世账号),记一条「你的帖子 / 评论被隐藏 / 删除 / 通过 / 恢复」;官员、已转世的:不记。
 
     `target_type` 是 POST / COMMENT。`post_id`:帖子本身,或评论所在的帖子 —— 点推送打开它;
     帖子已不在(被删的就是它,或评论所在的帖子已删)时为 None,落在「此生」。
-    dedupe 带时间戳:同一条内容可以先隐藏、再恢复、再隐藏,每次都要推。"""
+    dedupe 带时间戳:同一条内容可以先隐藏、再恢复、再隐藏,每次都要推。
+
+    `reason_code`(`ReportReason`)只对隐藏 / 删除有意义:有就换成 `content_*_reason`,`{{reason}}` 是
+    该语言的理由名;选「其他」(OTHER)时是官员写的 `reason_note` 原文。没有理由(老客户端)照旧。"""
     from apps.soul_accounts.models import SoulAccount
 
     account = SoulAccount.objects.filter(user_id=user_id, retired_at__isnull=True).first()
     if account is None:
         return []
     kind = f"content_{CONTENT_OUTCOMES[action]}_{target_type.lower()}"
+    params = None
+    if reason_code and action in ("HIDE", "DELETE"):
+        kind += "_reason"
+
+        def reason_params(locale):
+            return {"reason": reason_note if reason_code == "OTHER" else messages.reason_label(locale, reason_code)}
+        params = reason_params
     return _record(account, CONTENT_MODERATED_EVENT, None, kind,
                    f"moderated:{target_id}:{action}:{timezone.now().timestamp()}"[:120],
-                   {"screen": "CirclePost", "post_id": str(post_id)} if post_id else {"screen": "Life"})
+                   {"screen": "CirclePost", "post_id": str(post_id)} if post_id else {"screen": "Life"},
+                   params=params)
 
 
 #: 官员替灵魂关闭了两步验证(apps/soul_accounts/mfa.py::reset_by_officer)。**不经事件总线**,也不进偏好:

@@ -10,10 +10,10 @@ import { useToast } from "@/src/contexts/ToastContext";
 import { Button } from "@/src/components/ui/Button";
 import { Badge } from "@/src/components/ui/Badge";
 import { Drawer } from "@/src/components/ui/Drawer";
-import { MissingValue } from "@/src/components/ui/DomainValue";
+import { DomainEnum, MissingValue } from "@/src/components/ui/DomainValue";
 import { FilterChipSelect } from "@/src/components/ui/FilterChip";
 import { DataTable, ROW_LINK } from "@/components/ui/data-table";
-import { CommentCounts, useFailureToast } from "./shared";
+import { CommentCounts, MODERATION_REASONS, useFailureToast } from "./shared";
 
 const HANDLING_TONE = { HIDDEN: "warning", DELETED: "error" } as const;
 
@@ -38,6 +38,16 @@ export function rangeStart(range: Range, now = Date.now()): string | undefined {
  * bin, so the detail says 「在回收站」 and links there — a second restore path
  * here would be a second set of rules for the same act.
  */
+/**
+ * 理由:官员只选了预设理由(没写备注)时,服务端存的是代码本身(moderation.py::stored_reason)——
+ * 按 `social_moderation.reason` 翻译;别的(自由文本、`sensitive_word:<词>`)原样。
+ */
+function HandledReason({ reason }: { reason: string }) {
+  if (!reason) return <MissingValue kind="unrecorded" />;
+  if ((MODERATION_REASONS as string[]).includes(reason)) return <DomainEnum namespace="social_moderation.reason" value={reason} />;
+  return <>{reason}</>;
+}
+
 export function HandledSection() {
   const { t, formatDateTime } = useI18n();
   const { showToast } = useToast();
@@ -175,7 +185,7 @@ export function HandledSection() {
             <td className="px-3 py-2">
               <Badge tone={HANDLING_TONE[r.handling]}>{t(`social_moderation.handling.${r.handling}`)}</Badge>
             </td>
-            <td className="px-3 py-2 text-xs text-[oklch(var(--color-ink-muted))]">{r.reason || <MissingValue kind="unrecorded" />}</td>
+            <td className="px-3 py-2 text-xs text-[oklch(var(--color-ink-muted))]"><HandledReason reason={r.reason} /></td>
             <td className="px-3 py-2 text-xs text-[oklch(var(--color-ink-muted))]">{r.handled_by?.display_name ?? <MissingValue kind="unrecorded" />}</td>
             <td className="px-3 py-2 text-right font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">
               {r.handled_at ? formatDateTime(r.handled_at) : <MissingValue kind="unrecorded" />}
@@ -217,7 +227,7 @@ export function HandledSection() {
             {item.data && "comment_count" in item.data && <CommentCounts post={item.data} />}
             <dl className="grid grid-cols-[6rem_1fr] gap-x-3 gap-y-1 border-t border-[oklch(var(--color-block))] pt-3 text-sm">
               <dt className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">{t("social_moderation.fields.reason")}</dt>
-              <dd>{open.reason || <MissingValue kind="unrecorded" />}</dd>
+              <dd><HandledReason reason={open.reason} /></dd>
               <dt className="font-mono text-2xs text-[oklch(var(--color-ink-subtle))]">{t("social_moderation.handled.col_by")}</dt>
               <dd>{open.handled_by?.display_name ?? <MissingValue kind="unrecorded" />}</dd>
             </dl>

@@ -74,6 +74,12 @@ MODERATE = "social.moderate"
 ERRORS = {400: ModerationErrorSerializer, 403: ModerationErrorSerializer, 409: ModerationErrorSerializer}
 
 
+def reason_fields(body):
+    """`ModerationReasonFields` 校验过的理由代码与说明,原样交给 moderation.py。"""
+    return {"reason_code": body.validated_data.get("reason_code", ""),
+            "reason_note": body.validated_data.get("reason_note", "")}
+
+
 class ModerationViewSet(CodenameViewSetMixin, viewsets.GenericViewSet):
     """本后台每个 viewset 的公共外壳:一个码名、租户隔离、`SocialError` → HTTP。"""
 
@@ -137,6 +143,7 @@ class ReportViewSet(ModerationViewSet, mixins.ListModelMixin, mixins.RetrieveMod
             request=request,
             note=body.validated_data.get("note", ""),
             mute_days=body.validated_data.get("mute_days"),
+            **reason_fields(body),
         )
         return Response(ReportSerializer(row).data)
 
@@ -163,7 +170,8 @@ class ModeratedContentViewSet(ModerationViewSet, mixins.ListModelMixin, mixins.R
         body = ModerationActionSerializer(data=request.data)
         body.is_valid(raise_exception=True)
         row = mod.moderate_content(
-            self.get_object(), verb, actor=request.user, request=request, reason=body.validated_data.get("reason", "")
+            self.get_object(), verb, actor=request.user, request=request, reason=body.validated_data.get("reason", ""),
+            **reason_fields(body),
         )
         # 重读一遍:锁住的那一行没有列表的注解(举报数、表态数)。
         return Response(self.get_serializer(self.get_queryset().get(pk=row.pk)).data)
@@ -193,7 +201,7 @@ class ModeratedContentViewSet(ModerationViewSet, mixins.ListModelMixin, mixins.R
         body.is_valid(raise_exception=True)
         mod.moderate_content(
             self.get_object(), "DELETE", actor=request.user, request=request,
-            reason=body.validated_data.get("reason", ""),
+            reason=body.validated_data.get("reason", ""), **reason_fields(body),
         )
         return Response(status=204)
 
