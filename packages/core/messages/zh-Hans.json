@@ -16,7 +16,8 @@
     "theme_light": "切换到浅色模式",
     "theme_dark": "切换到深色模式",
     "mobile_menu": "导航菜单",
-    "more": "更多"
+    "more": "更多",
+    "soul_events": "灵魂事件"
   },
   "auth": {
     "login": "登录",
@@ -6302,5 +6303,33 @@
     "saved": "已保存",
     "deleted": "已删除",
     "failed": "没能保存，请重试"
+  },
+  "events": {
+    "col_time": "时间",
+    "col_soul": "灵魂",
+    "col_event": "事件",
+    "col_actor": "操作人",
+    "col_detail": "细节",
+    "search_soul": "搜索灵魂编号或姓名…",
+    "all_types": "全部事件",
+    "search_type": "搜索事件…",
+    "all_actors": "全部操作人",
+    "include_system": "含系统事件",
+    "actor_system": "系统",
+    "groups": {
+      "lifecycle": "灵魂生命周期",
+      "workflow": "审批",
+      "dispatch": "调拨",
+      "death_sync": "死亡同步",
+      "account": "灵魂账号与转生",
+      "punishment": "受刑计划"
+    },
+    "detail": {
+      "state": "{{from}} → {{to}} · {{reason}}",
+      "karma": "功 {{merit}} · 过 {{demerit}}"
+    },
+    "empty": "没有符合条件的事件",
+    "empty_all": "还没有事件",
+    "failed": "没能载入事件，请重试"
   }
 }

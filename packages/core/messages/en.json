@@ -16,7 +16,8 @@
     "theme_light": "Switch to light mode",
     "theme_dark": "Switch to dark mode",
     "mobile_menu": "Navigation menu",
-    "more": "More"
+    "more": "More",
+    "soul_events": "Soul events"
   },
   "auth": {
     "login": "Login",
@@ -6302,5 +6303,33 @@
     "saved": "Saved",
     "deleted": "Deleted",
     "failed": "Couldn't save, please try again"
+  },
+  "events": {
+    "col_time": "Time",
+    "col_soul": "Soul",
+    "col_event": "Event",
+    "col_actor": "By",
+    "col_detail": "Details",
+    "search_soul": "Search soul ID or name…",
+    "all_types": "All events",
+    "search_type": "Search events…",
+    "all_actors": "Anyone",
+    "include_system": "Include system events",
+    "actor_system": "System",
+    "groups": {
+      "lifecycle": "Soul lifecycle",
+      "workflow": "Approvals",
+      "dispatch": "Dispatch",
+      "death_sync": "Death sync",
+      "account": "Soul accounts & rebirth",
+      "punishment": "Punishment plans"
+    },
+    "detail": {
+      "state": "{{from}} → {{to}} · {{reason}}",
+      "karma": "Merit {{merit}} · Demerit {{demerit}}"
+    },
+    "empty": "No events match",
+    "empty_all": "No events yet",
+    "failed": "Couldn't load events, please try again"
   }
 }
