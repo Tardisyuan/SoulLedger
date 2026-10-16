@@ -114,7 +114,13 @@ export function classifyCredentialError(error: unknown): CredentialFailure {
 export const IOS_LOCKOUT_MS = 800;
 export function credentialReadFailure(error: unknown, elapsedMs: number, os: string): CredentialFailure {
   const failure = classifyCredentialError(error);
-  return failure === "failed" && os === "ios" && elapsedMs < IOS_LOCKOUT_MS ? "locked" : failure;
+  if (os !== "ios") return failure;
+  if (failure === "failed" && elapsedMs < IOS_LOCKOUT_MS) return "locked";
+  // After a miss, iOS's own sheet says 「面容未能识别」 and waits on 「再次尝试 / 取消」; 取消 comes back as a cancel,
+  // not a failure, so the page stayed silent and the soul tapped again into the next miss (iPhone, 2026-10-16:
+  // three silent rounds, then the lock). A cancel after the sheet was up is read as the miss it almost always is.
+  if (failure === "cancelled" && elapsedMs >= IOS_LOCKOUT_MS) return "failed";
+  return failure;
 }
 
 /** Where "面容 / 指纹 login is on" is kept on the phone: `face` or `finger`. Here, not in deviceLogin, so a module

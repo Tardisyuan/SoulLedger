@@ -90,6 +90,10 @@ describe("credentialReadFailure: an iOS lockout reads like a miss but comes back
     expect(credentialReadFailure(ios, 3000, "ios")).toBe("failed");
     expect(credentialReadFailure(ios, 40, "android")).toBe("failed");
   });
+  it("reads a cancel from iOS's own miss sheet (after a scan) as the miss", () => {
+    expect(credentialReadFailure(new Error("User canceled the operation."), 4000, "ios")).toBe("failed");
+    expect(credentialReadFailure(new Error("User canceled the operation."), 4000, "android")).toBe("cancelled");
+  });
   it("leaves a fast cancel or invalidation alone", () => {
     expect(credentialReadFailure(new Error("User canceled the operation."), 40, "ios")).toBe("cancelled");
     expect(credentialReadFailure(new Error("Key permanently invalidated"), 40, "ios")).toBe("invalidated");

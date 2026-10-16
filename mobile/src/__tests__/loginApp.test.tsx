@@ -599,6 +599,19 @@ describe("B2 · the sign-in page with 面容 on", () => {
     expect(within(screen.getByTestId("login-submit")).getByText("登录")).toBeTruthy();
   });
 
+  it("取消 on iOS's own 「面容未能识别」 sheet (after a scan) shows the miss, not a silent page", async () => {
+    remembered({ bio: true });
+    scanTakes(4000);
+    secureMod.__auth.error = new Error("User canceled the operation.");
+    stubApi({ ...HOME });
+    await renderApp();
+    fireEvent.press(screen.getByTestId("login-bio"));
+    expect(await screen.findByTestId("login-bio-failed")).toHaveTextContent("面容没认出，请输入密码。");
+    expect(screen.getByTestId("login-password")).toBeTruthy();
+    expect(screen.getByTestId("login-bio-retry")).toBeTruthy();
+    secureMod.__auth.error = null;
+  });
+
   it("walking away from the check stays on this page and does not open it again by itself", async () => {
     remembered({ bio: true, warm: false });
     secureMod.__auth.error = new Error("User canceled the operation.");
