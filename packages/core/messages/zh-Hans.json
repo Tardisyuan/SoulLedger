@@ -1219,7 +1219,7 @@
       "priority": "优先级",
       "normal": "普通",
       "urgent": "紧急",
-      "critical": "危急",
+      "critical": "特急",
       "created_at": "创建时间",
       "completed_at": "完成时间",
       "current_node": "当前节点",

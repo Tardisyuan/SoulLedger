@@ -67,7 +67,7 @@ export interface WorkflowTemplate {
   name: string;
   description: string;
   /**
-   * 本套程序默认的急缓：0=普通, 1=紧急, 2=危急。与
+   * 本套程序默认的急缓：0=普通, 1=紧急, 2=特急。与
    * `ApprovalWorkflow.priority` 同一把尺子，因为它就是那一列的默认值——
    * 存成 `WorkflowTemplate.priority` 之后，`WorkflowService.create_from_judgment`
    * 建流程时若调用方没有显式指定，就落到这个值。
