@@ -452,6 +452,16 @@ def moderate_content(obj, action, *, actor, request=None, reason=""):
             _close_reports(kind, row, ReportResolution(action), actor=actor, note=reason)
         publish_event("SOCIAL_CONTENT_MODERATED", row.tenant, [row.author_id],
                  {"target_type": kind, "target_id": str(row.pk), "action": action})
+        from apps.soul_push import services as push
+
+        # 点推送打开那条帖子(评论落在它所在的帖子);帖子已删就落「此生」。作者看得到自己被隐藏的帖子。
+        if kind == ReportTargetType.POST:
+            post_id = None if action == "DELETE" else row.pk
+        else:
+            post_id = None if row.post.is_deleted else row.post_id
+        ids = push.record_content_moderated(row.author_id, kind, row.pk, action, post_id=post_id)
+        if ids:
+            transaction.on_commit(lambda: push.enqueue(ids))
     if action != "DELETE":
         row.moderation_status = after
         for name, value in decided.items():

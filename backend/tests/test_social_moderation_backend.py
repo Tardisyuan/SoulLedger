@@ -993,3 +993,153 @@ def test_warn_on_another_civilizations_report_is_a_404(cn_tenant, eu_moderator):
     assert res.status_code == 404
     report.refresh_from_db()
     assert report.status == "OPEN"
+
+
+# ── 处置内容后推给作者(2026-10-16 用户定:隐藏 / 删除 / 先发后审通过 / 恢复,四种都推) ──────
+# CONTENT_ACTIONS 就是这四种,没有第五种「不推」的动作可测。
+
+#: 动作 → 处置前内容要处在的状态(APPROVE 只从送审出发,RESTORE 只从隐藏出发)。
+START = {"HIDE": ModerationStatus.PUBLISHED, "DELETE": ModerationStatus.PUBLISHED,
+         "APPROVE": ModerationStatus.PENDING, "RESTORE": ModerationStatus.HIDDEN}
+OUTCOME = {"HIDE": "hidden", "DELETE": "deleted", "APPROVE": "approved", "RESTORE": "restored"}
+MODERATED_TEXT = {
+    ("HIDE", "POST"): ("帖子已被隐藏", "你的帖子被殿司隐藏，打开灵魂簿查看。"),
+    ("HIDE", "COMMENT"): ("评论已被隐藏", "你的评论被殿司隐藏，打开灵魂簿查看。"),
+    ("DELETE", "POST"): ("帖子已被删除", "你的帖子被殿司删除。"),
+    ("DELETE", "COMMENT"): ("评论已被删除", "你的评论被殿司删除。"),
+    ("APPROVE", "POST"): ("帖子已通过审核", "你的帖子已通过审核，大家都看得到了。"),
+    ("APPROVE", "COMMENT"): ("评论已通过审核", "你的评论已通过审核，大家都看得到了。"),
+    ("RESTORE", "POST"): ("帖子已恢复", "你的帖子已恢复显示。"),
+    ("RESTORE", "COMMENT"): ("评论已恢复", "你的评论已恢复显示。"),
+}
+
+
+def _authored(tenant, target_type, status=ModerationStatus.PUBLISHED):
+    """灵魂 `author` 的一条帖子或评论(评论挂在 `author` 自己的帖子上),处在 `status`。返回 (author, row, 帖子)。"""
+    author, _ = soul(tenant, "作者")
+    the_post = post(author, "作者的帖子", Visibility.PUBLIC)
+    row = the_post if target_type == "POST" else Comment.objects.create(
+        post=the_post, author=author.user, content="作者的评论", tenant=the_post.tenant)
+    type(row).objects.filter(pk=row.pk).update(moderation_status=status)
+    row.refresh_from_db()
+    return author, row, the_post
+
+
+def _moderate(row, action, actor, capture):
+    with capture(execute=True):
+        mod.moderate_content(row, action, actor=actor, reason="处置")
+
+
+def _device(account, token=TOKEN_A):
+    from apps.soul_push.models import PushDevice
+
+    return PushDevice.objects.create(account=account, soul=account.soul, token=token, platform="IOS",
+                                     last_seen_at=timezone.now())
+
+
+@pytest.mark.parametrize("target_type", ["POST", "COMMENT"])
+@pytest.mark.parametrize("action", ["HIDE", "DELETE", "APPROVE", "RESTORE"])
+def test_moderating_content_pushes_the_author_what_happened_and_where_to_look(
+    cn_tenant, cn_moderator, django_capture_on_commit_callbacks, enqueued, action, target_type,  # noqa: F811
+):
+    """文案说清是帖子还是评论、发生了什么;点开落在那条帖子(评论 → 它所在的帖子),
+    被删的是帖子本身时没有帖子可开,落「此生」。"""
+    from apps.soul_push.models import PushDelivery
+
+    author, row, the_post = _authored(cn_tenant, target_type, START[action])
+    device = _device(author)
+
+    _moderate(row, action, cn_moderator, django_capture_on_commit_callbacks)
+
+    delivery = PushDelivery.objects.get()
+    kind = f"content_{OUTCOME[action]}_{target_type.lower()}"
+    assert (delivery.device, delivery.account, delivery.kind, delivery.event_type) == (
+        device, author, kind, "SOCIAL_CONTENT_MODERATED")
+    assert (delivery.title, delivery.body) == MODERATED_TEXT[(action, target_type)]
+    if action == "DELETE" and target_type == "POST":
+        assert delivery.data == {"screen": "Life", "kind": kind}
+    else:
+        assert delivery.data == {"screen": "CirclePost", "post_id": str(the_post.pk), "kind": kind}
+    assert enqueued == [[str(delivery.pk)]]
+
+
+@pytest.mark.parametrize("action", ["HIDE", "DELETE", "APPROVE", "RESTORE"])
+def test_a_comment_whose_post_is_gone_lands_on_the_life_page(
+    cn_tenant, cn_moderator, django_capture_on_commit_callbacks, enqueued, action,  # noqa: F811
+):
+    from apps.soul_push.models import PushDelivery
+
+    author, row, the_post = _authored(cn_tenant, "COMMENT", START[action])
+    Post.objects.filter(pk=the_post.pk).update(is_deleted=True, deleted_at=timezone.now())
+    _device(author)
+
+    _moderate(row, action, cn_moderator, django_capture_on_commit_callbacks)
+
+    assert PushDelivery.objects.get().data == {"screen": "Life", "kind": f"content_{OUTCOME[action]}_comment"}
+
+
+def test_moderation_push_is_in_english_for_an_english_soul(
+    cn_tenant, cn_moderator, django_capture_on_commit_callbacks, enqueued,  # noqa: F811
+):
+    from apps.soul_push.models import PushDelivery, PushPreference
+
+    author, row, _ = _authored(cn_tenant, "COMMENT")
+    _device(author)
+    PushPreference.objects.create(account=author, soul=author.soul, locale="en")
+
+    _moderate(row, "HIDE", cn_moderator, django_capture_on_commit_callbacks)
+
+    delivery = PushDelivery.objects.get()
+    assert (delivery.title, delivery.body) == (
+        "Your comment was hidden", "An officer hid your comment. Open Soul Ledger to see it.")
+
+
+def test_moderation_push_goes_to_the_author_only(
+    cn_tenant, cn_moderator, django_capture_on_commit_callbacks, enqueued,  # noqa: F811
+):
+    """评论被处置:推给评论的作者,不推给帖子的作者,也不推给别的灵魂。"""
+    from apps.soul_push.models import PushDelivery
+
+    post_author, _ = soul(cn_tenant, "楼主")
+    commenter, _ = soul(cn_tenant, "评论者")
+    bystander, _ = soul(cn_tenant, "路人")
+    the_post = post(post_author, "楼主的帖子", Visibility.PUBLIC)
+    comment = Comment.objects.create(post=the_post, author=commenter.user, content="评论者的评论",
+                                     tenant=the_post.tenant)
+    for letter, account in zip("xyz", (post_author, commenter, bystander)):
+        _device(account, f"ExponentPushToken[{letter * 22}]")
+
+    _moderate(comment, "HIDE", cn_moderator, django_capture_on_commit_callbacks)
+
+    assert list(PushDelivery.objects.values_list("account", flat=True)) == [commenter.pk]
+
+
+def test_an_officers_own_post_being_moderated_pushes_nobody(
+    cn_tenant, cn_moderator, django_capture_on_commit_callbacks, enqueued,  # noqa: F811
+):
+    """官员没有灵魂账号:处置照常成立,不记推送(与警告同一条)。"""
+    from apps.soul_push.models import PushDelivery
+
+    row = Post.objects.create(author=cn_moderator, content="官员的帖子", visibility=Visibility.PUBLIC,
+                              tenant=cn_tenant)
+    _moderate(row, "HIDE", cn_moderator, django_capture_on_commit_callbacks)
+
+    row.refresh_from_db()
+    assert row.moderation_status == ModerationStatus.HIDDEN
+    assert not PushDelivery.objects.exists() and enqueued == []
+
+
+def test_hide_restore_hide_pushes_each_time(
+    cn_tenant, cn_moderator, django_capture_on_commit_callbacks, enqueued,  # noqa: F811
+):
+    """同一条内容可以反复处置:每次都是新的一条推送,不被前一次去重吞掉。"""
+    from apps.soul_push.models import PushDelivery
+
+    author, row, _ = _authored(cn_tenant, "POST")
+    _device(author)
+    for action in ("HIDE", "RESTORE", "HIDE"):
+        _moderate(row, action, cn_moderator, django_capture_on_commit_callbacks)
+
+    assert list(PushDelivery.objects.order_by("created_at").values_list("kind", flat=True)) == [
+        "content_hidden_post", "content_restored_post", "content_hidden_post"]
+    assert len(enqueued) == 3

@@ -4760,6 +4760,38 @@
     "export_ready": {
       "title": "资料已准备好",
       "body": "你申请导出的资料已准备好，7 天内可取。打开灵魂簿保存。"
+    },
+    "content_hidden_post": {
+      "title": "帖子已被隐藏",
+      "body": "你的帖子被殿司隐藏，打开灵魂簿查看。"
+    },
+    "content_hidden_comment": {
+      "title": "评论已被隐藏",
+      "body": "你的评论被殿司隐藏，打开灵魂簿查看。"
+    },
+    "content_deleted_post": {
+      "title": "帖子已被删除",
+      "body": "你的帖子被殿司删除。"
+    },
+    "content_deleted_comment": {
+      "title": "评论已被删除",
+      "body": "你的评论被殿司删除。"
+    },
+    "content_approved_post": {
+      "title": "帖子已通过审核",
+      "body": "你的帖子已通过审核，大家都看得到了。"
+    },
+    "content_approved_comment": {
+      "title": "评论已通过审核",
+      "body": "你的评论已通过审核，大家都看得到了。"
+    },
+    "content_restored_post": {
+      "title": "帖子已恢复",
+      "body": "你的帖子已恢复显示。"
+    },
+    "content_restored_comment": {
+      "title": "评论已恢复",
+      "body": "你的评论已恢复显示。"
     }
   },
   "official_notify": {
