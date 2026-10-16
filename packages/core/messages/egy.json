@@ -2558,6 +2558,35 @@
       "close_confirm_body": "Maa Sekhem Sep Wa. Khetem? Er Khet Khetem: Nen Maa Djer; Wehem Sekhem Er Sekhem Mawy.",
       "close_confirm": "Khetem",
       "close_back": "Er Hat"
+    },
+    "import": {
+      "title": "Ini Sab",
+      "button": "Ini CSV",
+      "step": "{{n}} / 3 · {{label}}",
+      "steps": {
+        "choose": "Setep Djama",
+        "preview": "Maa",
+        "result": "Kheper"
+      },
+      "back": "Er Hat",
+      "col_username": "Ren Aq",
+      "col_name": "Ren",
+      "col_issue": "Nen Maat",
+      "blocked": "{{n}} Nen Maat: Nen Ini. Sesh Mawy Djama, Setep Wehem.",
+      "commit": "Ini Sab {{n}}",
+      "success": "Ini Sab {{n}} Seth. Aq Tepy: Smen Sekhem Mawy.",
+      "view_users": "Maa Sab",
+      "template_notes": "Djama: username · Em Tepy; password · Em Tepy — Sesh-Ek, Aq Tepy: Smen Sekhem Mawy; role · Setep (VIEWER); email, display_name · Setep.",
+      "row_codes": {
+        "username_required": "Nen Ren Aq",
+        "username_taken": "Ren Aq Em Ky, Mi Wehem Em Tepy",
+        "password_required": "Nen Sekhem",
+        "password_weak": "Sekhem Nen Maat",
+        "email_invalid": "Wat Sesh Nen Maat",
+        "email_taken": "Wat Sesh Em Ky, Mi Wehem Em Tepy",
+        "role_invalid": "Netjer Nen Rekh",
+        "unknown": "Nen Maa Pen"
+      }
     }
   },
   "settings": {
@@ -4806,6 +4835,10 @@
     "impersonation_started": {
       "title": "Ky Maa Em Ba-Ek",
       "body": "{{by}} Maa Em Ba-Ek (Maa Wa · At {{minutes}} Er Aa). Khet: {{reason}}. Iri Neb: Sesh Em Medew Maa."
+    },
+    "judgment_reassign_requested_with_reason": {
+      "title": "Dbh Hab Ky Seth",
+      "body": "{{by}}: Dbh Hab Ky · Sep {{soul}}. Khet: {{reason}}"
     }
   },
   "social_moderation": {
