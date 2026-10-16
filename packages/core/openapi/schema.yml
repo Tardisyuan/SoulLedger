@@ -24780,6 +24780,9 @@ components:
           type: string
         soul_code:
           type: string
+        id:
+          type: string
+          description: 灵魂 id:App 详情里点灵魂名打开灵魂详情(旧服务端没有)。
       required:
       - name
       - soul_code

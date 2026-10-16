@@ -67,3 +67,8 @@ def test_is_last_follows_pending_human_nodes_only():
     assert facts._is_last(_node(2, on_pass_id="x"), [done]) is False
     # 有条件分支:无从知道。
     assert facts._is_last(_node(2, branches=[{"when": []}]), [done]) is None
+
+
+def test_a_facts_soul_carries_its_id_for_the_apps_soul_link():
+    soul = SimpleNamespace(pk="5f0c", name="周阿满", soul_code="QU33Q9FW5F")
+    assert facts.soul_ref(soul) == {"id": "5f0c", "name": "周阿满", "soul_code": "QU33Q9FW5F"}
