@@ -859,10 +859,18 @@ class UserImportResultSerializer(serializers.Serializer):
     Schema-only. `errors` is truncated to the first 50 rows by the view, so an
     empty list means "no failures" but a 50-long list does **not** mean exactly
     fifty; `created` is the only exact figure in this body.
+
+    With `?dry_run=1` (the web import's preview step, batch 34) the same action answers the preview shape instead
+    -- `total` / `ok_count` / `error_count` / `rows`, nothing written. One action, two bodies, so every field is
+    optional here and the client picks by mode.
     """
 
-    created = serializers.IntegerField()
-    errors = serializers.ListField(child=serializers.CharField())
+    created = serializers.IntegerField(required=False)
+    errors = serializers.ListField(child=serializers.CharField(), required=False)
+    total = serializers.IntegerField(required=False)
+    ok_count = serializers.IntegerField(required=False)
+    error_count = serializers.IntegerField(required=False)
+    rows = serializers.ListField(child=serializers.DictField(), required=False)
 
 
 class UserRoleSerializer(serializers.Serializer):

@@ -17996,10 +17996,20 @@ export interface components {
          *     Schema-only. `errors` is truncated to the first 50 rows by the view, so an
          *     empty list means "no failures" but a 50-long list does **not** mean exactly
          *     fifty; `created` is the only exact figure in this body.
+         *
+         *     With `?dry_run=1` (the web import's preview step, batch 34) the same action answers the preview shape instead
+         *     -- `total` / `ok_count` / `error_count` / `rows`, nothing written. One action, two bodies, so every field is
+         *     optional here and the client picks by mode.
          */
         UserImportResult: {
-            created: number;
-            errors: string[];
+            created?: number;
+            errors?: string[];
+            total?: number;
+            ok_count?: number;
+            error_count?: number;
+            rows?: {
+                [key: string]: unknown;
+            }[];
         };
         /** @description User serializer for list/retrieve operations in user management API. */
         UserManagement: {
