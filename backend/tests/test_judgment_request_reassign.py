@@ -57,6 +57,14 @@ class TestRecipients:
         assert (note.title, note.message) == ("请求改派", "崔珏 请求改派案件 张三")
         assert (note.related_resource, note.related_id) == ("judgment", str(case.pk))
 
+    def test_a_reason_rides_with_the_notification_and_is_optional(self, admins):
+        """手机端必填理由并带上;网页不带,params 不多出 `reason`。"""
+        case = _case(admins.cn, name="张三")
+        assert _post(admins.clients["mod"], case, "request-reassign", {"reason": "本殿无人能接"}).status_code == 200
+        assert UserNotification.objects.filter(notification_type=TYPE).first().params["reason"] == "本殿无人能接"
+        too_long = _post(admins.clients["a"], _case(admins.cn), "request-reassign", {"reason": "x" * 501})
+        assert too_long.status_code == 400
+
     def test_no_admin_in_the_tenant_falls_back_to_the_global_admins(self, world):  # noqa: F811
         User.objects.create_user(username="rr_only_global", password="x", role="ADMIN", tenant=None)
         User.objects.create_user(username="rr_eu_only", password="x", role="ADMIN", tenant=world.eu)

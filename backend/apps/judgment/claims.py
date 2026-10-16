@@ -287,7 +287,7 @@ def assignable_officers(users, tenant_id, codename: str = "judgment.execute") ->
 REASSIGN_REQUEST_WINDOW_SECONDS = 600
 
 
-def request_reassign(judgment: Judgment, actor) -> list:
+def request_reassign(judgment: Judgment, actor, reason: str = "") -> list:
     """改派名单空了时,请 ADMIN 来改派:通知案子所在租户的在职 ADMIN;该租户没有就通知
     全局 ADMIN(tenant 为空,`scope_to_tenant` 唯一放行跨租户的角色)—— 与「忘记密码」
     求助同一条收件人退路(`apps/authentication/tasks.py::notify_password_help`)。
@@ -302,6 +302,9 @@ def request_reassign(judgment: Judgment, actor) -> list:
     admins = User.objects.filter(role="ADMIN", is_active=True).exclude(pk=actor.pk).order_by("pk")
     recipients = list(admins.filter(tenant_id=judgment.tenant_id)) or list(admins.filter(tenant__isnull=True))
     params = {"by": actor.display_name or actor.username, "soul": judgment.soul.name}
+    # 手机端的理由随通知存下(审批人读);文案模板不引用它,所以网页路径(不带理由)的文字不变。
+    if reason:
+        params["reason"] = reason
     title, body = messages.render(messages.DEFAULT_LOCALE, "judgment_reassign_requested", params)
     for admin in recipients:
         EventService.notify_user(
