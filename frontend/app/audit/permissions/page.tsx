@@ -105,7 +105,7 @@ function TimelineEntry({ log }: { log: AuditLogEntry }) {
         {more > 0 && (
           <span className="text-[oklch(var(--color-ink-muted))]">{t("audit.timeline.more_fields", { n: String(more) })} · </span>
         )}
-        <Link href={`/audit/${log.id}`} className="text-[oklch(var(--color-accent-ink))] hover:underline">
+        <Link href={`/audit/${log.id}`} className="text-[oklch(var(--color-accent-ink))] underline underline-offset-2">
           {t("audit.timeline.details")}
         </Link>
       </p>
@@ -193,7 +193,7 @@ export default function PermissionChangesPage() {
       <>
         {days.map((day) => (
           <section key={day.key} className="mb-4">
-            <h3 className="mb-2 text-sm font-semibold text-[oklch(var(--color-ink))]">
+            <h3 className="mb-2 text-sm font-medium text-[oklch(var(--color-ink))]">
               {formatDate(day.logs[0].timestamp, { year: "numeric", month: "long", day: "numeric", weekday: "short" })}
             </h3>
             <ol className="ml-1 border-l border-[oklch(var(--color-line))]">

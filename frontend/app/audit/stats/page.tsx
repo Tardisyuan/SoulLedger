@@ -85,7 +85,7 @@ export default function AuditStatsPage() {
         </p>
         <p className="mt-1 text-xs text-[oklch(var(--color-ink-muted))]">{t("audit.stats.scope_note")}</p>
 
-        <h3 className="mt-6 mb-2 text-sm font-semibold">{t("audit.stats.by_action")}</h3>
+        <h3 className="mt-6 mb-2 text-sm font-medium">{t("audit.stats.by_action")}</h3>
         <ul className="space-y-1">
           {actions.map((a) => (
             <li key={a.action} data-testid="stats-action" className="grid grid-cols-[8rem_1fr_4rem] items-center gap-3 text-sm">
@@ -99,7 +99,7 @@ export default function AuditStatsPage() {
           <p className="mt-2 text-xs text-[oklch(var(--color-ink-muted))]">{t("audit.stats.zero_actions", { n: String(zeroActions) })}</p>
         )}
 
-        <h3 className="mt-6 mb-2 text-sm font-semibold">{t("audit.stats.top_resources")}</h3>
+        <h3 className="mt-6 mb-2 text-sm font-medium">{t("audit.stats.top_resources")}</h3>
         <table className="w-full text-sm">
           <thead>
             <tr className="text-left text-xs text-[oklch(var(--color-ink-subtle))]">
