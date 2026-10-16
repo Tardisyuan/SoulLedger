@@ -28,16 +28,11 @@ import { FilterChipSelect } from "@/src/components/ui/FilterChip";
 import { fieldControl } from "@/src/components/ui/Field";
 import { Button } from "@/src/components/ui/Button";
 import { cn } from "@/lib/utils";
+import { resolveEnumDisplay } from "@/src/lib/domainDisplay";
 import { auditActionGlyph } from "@/src/lib/auditActionGlyph";
 import { civSkinOf } from "@/src/lib/civSkin";
 import { useRememberedFilters } from "@/src/lib/rememberedFilters";
 import { AuditTabs } from "@/src/components/audit/AuditTabs";
-
-const ACTION_OPTIONS = [
-  "CREATE", "UPDATE", "DELETE", "LOGIN", "LOGOUT", "VIEW",
-  "EXPORT", "IMPORT", "PERMISSION_CHANGE", "EXECUTE", "READ",
-  "IMPERSONATE_START", "IMPERSONATE_END",
-];
 
 /** 代看的两行摘要从 `changes` 按界面语言现拼(库里存的描述是 zh 固定句式)。其它动作返回 null。 */
 function impersonationSummary(g: AuditGroup, t: (key: string, params?: Record<string, string>) => string): string | null {
@@ -57,14 +52,15 @@ function impersonationSummary(g: AuditGroup, t: (key: string, params?: Record<st
   return null;
 }
 
-const RESOURCE_OPTIONS = [
-  { value: "soul", label: "Soul" },
-  { value: "user", label: "User" },
-  { value: "workflow", label: "Workflow" },
-  { value: "judgment", label: "Judgment" },
-  { value: "soulrecord", label: "Soul Record" },
-  { value: "permission", label: "Permission" },
-];
+/**
+ * 动作与资源的筛选项来自后端(`/audit-logs/actions/`、`/audit-logs/resources/`),不再手写:
+ * 手写的那份漏了 BATCH_*,资源只有六种。动作的中文名不用后端给的 `label`(模型里的固定中文),
+ * 走 `audit.actions.*`;资源是自由字符串,有词条的翻译,没有的原样显示(列表行里本来就这样显示)。
+ * 已选中的值(本浏览器记住的、或清单还没到)不在清单里时补进去,下拉才显示得出它。
+ */
+function withCurrent(values: readonly string[], current: string): string[] {
+  return current && !values.includes(current) ? [...values, current] : [...values];
+}
 
 /**
  * 殿的设置 / 印字 / 助手开关写的审计描述是英文固定句式 + 殿代码(存库原样,向后兼容);
@@ -202,6 +198,26 @@ export default function AuditPage() {
     } finally {
       setExporting(false);
     }
+  };
+
+  const { data: actionValues = [] } = useQuery({
+    queryKey: ["audit-actions"],
+    queryFn: async () => (await auditApi.actions()).data.map((a) => a.value),
+    enabled: canReadAudit,
+    staleTime: Infinity,
+  });
+  const { data: resourceValues = [] } = useQuery({
+    queryKey: ["audit-resources"],
+    queryFn: async () => (await auditApi.resources()).data,
+    enabled: canReadAudit,
+  });
+  const actionLabel = (action: string) => resolveEnumDisplay(t, "audit.actions", action).label ?? action;
+  const resourceLabel = (resource: string) => {
+    // 殿设置: the audit rows of editing a hall's settings themselves (resource=tenant). Distinct
+    // from the 「按殿」 dropdown below, which narrows ANY resource to one hall's rows.
+    if (resource === "tenant") return t("audit.resource_tenant");
+    const shown = resolveEnumDisplay(t, "audit.resources", resource);
+    return shown.state === "known" && shown.label ? shown.label : resource;
   };
 
   // 殿的清单。一个殿的名字按文明的冥界名写(同身份带),认不出文明才退回租户展示名。
@@ -431,7 +447,7 @@ export default function AuditPage() {
             value={actionFilter}
             options={[
               { value: "", label: t("audit.all_actions") },
-              ...ACTION_OPTIONS.map((a) => ({ value: a, label: t(`audit.actions.${a}`) })),
+              ...withCurrent(actionValues, actionFilter).map((a) => ({ value: a, label: actionLabel(a) })),
             ]}
             clearLabel={t("filter.clear_one", { name: t("audit.filter_action") })}
             onChange={(v) => { setActionFilter(v); setPage(1); }}
@@ -441,10 +457,7 @@ export default function AuditPage() {
             value={resourceFilter}
             options={[
               { value: "", label: t("audit.all_resources") },
-              ...RESOURCE_OPTIONS,
-              // 殿设置: the audit rows of editing a hall's settings themselves (resource=tenant). Distinct
-              // from the 「按殿」 dropdown below, which narrows ANY resource to one hall's rows.
-              { value: "tenant", label: t("audit.resource_tenant") },
+              ...withCurrent(resourceValues, resourceFilter).map((r) => ({ value: r, label: resourceLabel(r) })),
             ]}
             clearLabel={t("filter.clear_one", { name: t("audit.filter_resource") })}
             onChange={(v) => { setResourceFilter(v); setPage(1); }}

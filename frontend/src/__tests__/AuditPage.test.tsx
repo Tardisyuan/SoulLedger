@@ -20,7 +20,7 @@ import { saveBlob } from "@/src/lib/saveBlob";
 import { tZh } from "./support/zhBundle";
 
 jest.mock("@soulledger/core/api", () => ({
-  auditApi: { list: jest.fn(), exportCsv: jest.fn() },
+  auditApi: { list: jest.fn(), exportCsv: jest.fn(), actions: jest.fn(), resources: jest.fn() },
   tenantsApi: { list: jest.fn() },
   PAGE_SIZE: 20,
   menusApi: {
@@ -103,6 +103,13 @@ function pickChip(dimensionLabel: string, optionLabel: string) {
   fireEvent.change(select, { target: { value: option.value } });
 }
 
+/** Pick by option value, once the backend-fed options have arrived (the stub `t` gives labels no real word). */
+async function pickOption(dimensionLabel: string, value: string) {
+  const select = screen.getByRole("combobox", { name: dimensionLabel }) as HTMLSelectElement;
+  await waitFor(() => expect(select.querySelector(`option[value="${value}"]`)).not.toBeNull());
+  fireEvent.change(select, { target: { value } });
+}
+
 beforeEach(() => {
   jest.clearAllMocks();
   mockIsAdmin = true;
@@ -110,6 +117,11 @@ beforeEach(() => {
   mockPermissions = ["audit.read"];
   mockTenantCode = null;
   mockedList.mockResolvedValue({ data: { count: 1, results: [entry()] } });
+  // The filter options come from the backend now; `label` is the model's Chinese and must not be shown.
+  (auditApi.actions as jest.Mock).mockResolvedValue({
+    data: ["CREATE", "DELETE", "LOGIN", "BATCH_DELETE"].map((value) => ({ value, label: "模型中文" })),
+  });
+  (auditApi.resources as jest.Mock).mockResolvedValue({ data: ["soul", "tenant", "user"] });
   mockedTenants.mockResolvedValue({
     data: {
       results: [
@@ -220,7 +232,7 @@ describe("AuditPage request parameters", () => {
     renderPage();
     await waitFor(() => expect(mockedList).toHaveBeenCalled());
 
-    pickChip("audit.filter_action", "audit.actions.DELETE");
+    await pickOption("audit.filter_action", "DELETE");
 
     await waitFor(() => expect(lastParams().action).toBe("DELETE"));
   });
@@ -229,7 +241,7 @@ describe("AuditPage request parameters", () => {
     renderPage();
     await waitFor(() => expect(mockedList).toHaveBeenCalled());
 
-    pickChip("audit.filter_resource", "User");
+    await pickOption("audit.filter_resource", "user");
 
     await waitFor(() => expect(lastParams().resource).toBe("user"));
   });
@@ -238,9 +250,9 @@ describe("AuditPage request parameters", () => {
     renderPage();
     await waitFor(() => expect(mockedList).toHaveBeenCalled());
     const resource = screen.getByRole("combobox", { name: "audit.filter_resource" });
-    expect(within(resource).getByText("audit.resource_tenant")).toBeInTheDocument();
+    expect(await within(resource).findByText("audit.resource_tenant")).toBeInTheDocument();
 
-    pickChip("audit.filter_resource", "audit.resource_tenant");
+    await pickOption("audit.filter_resource", "tenant");
 
     await waitFor(() => expect(lastParams().resource).toBe("tenant"));
     expect(lastParams().tenant).toBeUndefined();
@@ -255,7 +267,7 @@ describe("AuditPage request parameters", () => {
   it("the hall dropdown and the 殿设置 resource compose: one hall's rows of hall-settings edits", async () => {
     renderPage();
     await waitFor(() => expect(mockedList).toHaveBeenCalled());
-    pickChip("audit.filter_resource", "audit.resource_tenant");
+    await pickOption("audit.filter_resource", "tenant");
     await waitFor(() => expect(lastParams().resource).toBe("tenant"));
     await screen.findByRole("combobox", { name: "audit.filter_hall" });
     pickChip("audit.filter_hall", "plaque.realm.eg");
@@ -375,7 +387,7 @@ describe("AuditPage filter clearing", () => {
     renderPage();
     await waitFor(() => expect(mockedList).toHaveBeenCalled());
 
-    pickChip("audit.filter_action", "audit.actions.DELETE");
+    await pickOption("audit.filter_action", "DELETE");
     fireEvent.change(screen.getByPlaceholderText("audit.search_placeholder"), { target: { value: "zz" } });
     await waitFor(() => expect(screen.getByText("audit.clear_filters")).toBeInTheDocument());
 
@@ -508,7 +520,7 @@ describe("AuditPage export", () => {
     exportCsv.mockResolvedValue({ data: "csv" });
     renderPage();
     await screen.findByText("created a soul");
-    pickChip("audit.filter_action", "audit.actions.DELETE");
+    await pickOption("audit.filter_action", "DELETE");
     fireEvent.change(screen.getByPlaceholderText("audit.search_placeholder"), { target: { value: "soul" } });
     fireEvent.click(screen.getByRole("button", { name: "audit.export" }));
 
@@ -555,7 +567,7 @@ describe("AuditPage remembered filters", () => {
     renderPage();
     await screen.findByText("created a soul");
     expect(localStorage.getItem(KEY)).toBeNull();
-    pickChip("audit.filter_action", "audit.actions.DELETE");
+    await pickOption("audit.filter_action", "DELETE");
     await waitFor(() => expect(JSON.parse(localStorage.getItem(KEY)!)).toEqual({ action: "DELETE" }));
     fireEvent.click(screen.getByRole("button", { name: "audit.clear_filters" }));
     await waitFor(() => expect(localStorage.getItem(KEY)).toBeNull());
@@ -565,7 +577,7 @@ describe("AuditPage remembered filters", () => {
     renderPage();
     await screen.findByText("created a soul");
     fireEvent.change(screen.getByPlaceholderText("audit.search_placeholder"), { target: { value: "alice" } });
-    pickChip("audit.filter_resource", "Soul");
+    await pickOption("audit.filter_resource", "soul");
     await waitFor(() => expect(localStorage.getItem(KEY)).not.toBeNull());
     expect(localStorage.getItem(KEY)).not.toContain("alice");
     expect(Object.keys(JSON.parse(localStorage.getItem(KEY)!))).toEqual(["resource"]);

@@ -1976,7 +1976,15 @@
       "impersonate_end": "Viewed as {{name}} · {{minutes}} min · {{pages}} pages"
     },
     "filter_hall": "By hall",
-    "all_halls": "All halls"
+    "all_halls": "All halls",
+    "resources": {
+      "soul": "Soul",
+      "user": "User",
+      "workflow": "Workflow",
+      "judgment": "Judgment",
+      "soulrecord": "Soul record",
+      "permission": "Permission"
+    }
   },
   "profile": {
     "title": "Personal Center",
