@@ -479,15 +479,14 @@ class UserSerializer(serializers.ModelSerializer):
     `role` and `tenant` were already locked. `organization` was not, and it is
     a foreign key with no tenant check: measured, a VIEWER could
     `PATCH /auth/profile/ {"organization": <an org belonging to tenant B>}`
-    and get 200. Nothing downstream widened that into data access
-    (`apps/perm/filters.py` never mentions `organization`, so `DataScopeFilter`
-    does not read it), which is why this is a write-integrity hole rather than
-    a privilege escalation — but "the field nobody reads today" is not a
-    permission model.
+    and get 200. A tenant check here closed that first.
 
-    Kept writable rather than made read-only: moving between the organizations
-    of one's own tenant is what this field is for. The scoping happens in
-    `validate_organization`.
+    Since 2026-10-16 (user decision) `organization` and `position` are read-only
+    here altogether: only an admin assigns them, through `UserUpdateSerializer`
+    (`PATCH /users/{id}/`). Sending either with a *different* value is a 400
+    naming the field (`to_internal_value`) — silently dropping it would read
+    as a saved change. The unchanged value is accepted, so a client echoing
+    back the profile it read is not refused.
     """
 
     #: Read-only, same shape as the login payload's `user.tenant` —
@@ -497,7 +496,7 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ["id", "username", "email", "email_verified", "role", "tenant", "first_name", "last_name", "is_active", "display_name", "organization", "position", "mfa_enabled", "mfa_required", "password_change_required"]
-        read_only_fields = ["id", "is_active", "username", "role"]
+        read_only_fields = ["id", "is_active", "username", "role", "organization", "position"]
 
     #: 邮箱已验证(官员邮箱重置密码的前提);改邮箱即变回 false。见 `User.email_verified`。
     email_verified = serializers.BooleanField(read_only=True)
@@ -534,30 +533,22 @@ class UserSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("显示名不能为空。")
         return value
 
-    def validate_organization(self, value):
-        """Refuse an organization belonging to somebody else's tenant.
-
-        `PrimaryKeyRelatedField` resolves the FK against the whole table — the
-        queryset it builds from the model field has no tenant contextvar and no
-        request. So the check has to be here, against the caller's own tenant,
-        and it has to read the tenant off the request rather than off
-        `self.instance` (a user with no tenant must not be able to claim one by
-        way of an organization).
-        """
-        if value is None:
-            return value
-        request = self.context.get("request")
-        user = getattr(request, "user", None)
-        tenant = getattr(request, "tenant", None) or getattr(user, "tenant", None)
-        if tenant is None:
-            raise serializers.ValidationError(
-                "无法确定当前租户,不能设置组织。"
-            )
-        if value.tenant_id != tenant.id:
-            raise serializers.ValidationError(
-                f"组织 {value.code} 属于另一个租户,不能挂到当前账号下。"
-            )
-        return value
+    def to_internal_value(self, data):
+        # 组织与职务只有管理员能改(用户 2026-10-16 定):值变了就 400 并点名字段,和
+        # `UserUpdateSerializer` 拒 `password` 同一个样子;原样回传不算改。
+        if self.instance is not None and hasattr(data, "get"):
+            current = {
+                "organization": self.instance.organization_id,
+                "position": self.instance.position,
+            }
+            changed = {
+                field: "Only an administrator can change this."
+                for field, now in current.items()
+                if field in data and str(data.get(field) or "") != str(now or "")
+            }
+            if changed:
+                raise serializers.ValidationError(changed)
+        return super().to_internal_value(data)
 
 
 # ---------------------------------------------------------------------------
