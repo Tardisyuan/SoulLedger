@@ -4848,6 +4848,10 @@
       "title": "Residence return blocked",
       "body": "Soul {{soul}} cannot return home while judgments stay open ({{count}}). It returns once they are concluded or withdrawn."
     },
+    "death_sync_retry_failed": {
+      "title": "Death registration retry failed",
+      "body": "Retry {{count}} of death registration {{reference}} failed again ({{reason}}). See the Death Sync page."
+    },
     "sentence_node_active": {
       "title": "Sentence stop begun",
       "body": "Soul {{soul}} has arrived. Stop {{order}} of its sentence plan begins in {{tenant}}."

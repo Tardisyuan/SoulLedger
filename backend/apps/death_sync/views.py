@@ -3,6 +3,7 @@ REST views for death_sync app.
 """
 import hashlib
 import json
+import logging
 
 from django.db import IntegrityError
 from drf_spectacular.utils import extend_schema
@@ -35,6 +36,53 @@ from apps.death_sync.serializers import (
 )
 from apps.death_sync.throttling import ApiKeyRateThrottle
 from apps.events.models import EventType, EventWebhookDelivery
+
+logger = logging.getLogger(__name__)
+
+
+def _escalate_failed_retry(request, record):
+    """A retry that did not end PROCESSED goes up (user decision 2026-10-16):
+    an error log, an audit row naming who retried, and an in-app notice to
+    this tenant's ADMINs. Only the error code travels -- the payload is
+    encrypted personal data, and `error_message` can quote it (a serializer
+    error echoes the value it refused, `str(e)` may too)."""
+    from apps.audit.models import AuditAction, AuditLog
+    from apps.authentication.models import User
+    from apps.core.client_ip import get_client_ip
+    from apps.notifications.messages import DEFAULT_LOCALE, render
+    from apps.notifications.models import NotificationType, notify_user
+
+    tenant = record.tenant
+    logger.error(
+        "death registration retry failed: registration=%s tenant=%s reason=%s retry_count=%s/%s",
+        record.pk, tenant.code, record.error_code, record.retry_count, record.max_retries,
+    )
+    AuditLog.objects.create(
+        tenant=tenant,
+        user=request.user,
+        action=AuditAction.EXECUTE,
+        resource="DeathRegistrationRequest",
+        resource_id=str(record.pk),
+        changes={"error_code": record.error_code, "retry_count": record.retry_count},
+        ip_address=get_client_ip(request) or "",
+        user_agent=request.META.get("HTTP_USER_AGENT", "")[:500],
+        description=f"death registration retry failed: {record.error_code}",
+    )
+    params = {
+        "reference": record.source_reference_id or str(record.pk),
+        "reason": record.error_code,
+        "count": record.retry_count,
+    }
+    title, message = render(DEFAULT_LOCALE, "death_sync_retry_failed", params)
+    for admin in User.objects.filter(role="ADMIN", tenant=tenant, is_active=True).order_by("pk"):
+        try:
+            notify_user(
+                admin, title=title, message=message,
+                notification_type=NotificationType.DEATH_SYNC_RETRY_FAILED,
+                related_resource="death_sync", related_id=str(record.pk), params=params,
+            )
+        except Exception:  # 失败已经记进日志和审计;通知发不出去也要留痕,不能吞掉
+            logger.exception("death sync retry-failed notice to admin %s failed", admin.pk)
 
 
 class ExternalApiKeyViewSet(AuditUserViewSetMixin, viewsets.ModelViewSet):
@@ -305,6 +353,8 @@ class DeathRegistrationReadViewSet(viewsets.ReadOnlyModelViewSet):
                 {"error": "Registration cannot be retried", "code": exc.code},
                 status=status.HTTP_409_CONFLICT,
             )
+        if result.status != DeathRegistrationStatus.PROCESSED:
+            _escalate_failed_retry(request, result)
         return Response(self.get_serializer(result).data)
 
     def get_queryset(self):

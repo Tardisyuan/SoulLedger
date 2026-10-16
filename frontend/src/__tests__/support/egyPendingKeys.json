@@ -12,6 +12,8 @@
   "death_sync.retry.refused",
   "death_sync.retry.still_failed",
   "officer_app.me.name_empty",
+  "official_notify.death_sync_retry_failed.body",
+  "official_notify.death_sync_retry_failed.title",
   "profile.display_name",
   "soul_push.content_approved_comment.body",
   "soul_push.content_approved_comment.title",

@@ -217,10 +217,10 @@ export function noticeLanding(n: { related_resource?: string | null; related_id?
 
 /**
  * Notices whose subject has no phone screen: 联审 (`CrossTenantJudgment`: its id is not a Judgment's), 受刑计划 nodes
- * (`SentencePlan`), scheduler jobs, 代看 / 忘记密码求助 (`user`), assistant config. Their row says 「在电脑上查看」
+ * (`SentencePlan`), scheduler jobs, 代看 / 忘记密码求助 (`user`), assistant config, 死亡登记重试失败 (`death_sync`). Their row says 「在电脑上查看」
  * instead of being a tap that does nothing.
  */
-const DESK_ONLY_NOTICES: readonly string[] = ["CrossTenantJudgment", "SentencePlan", "scheduler", "user", "assistant_config"];
+const DESK_ONLY_NOTICES: readonly string[] = ["CrossTenantJudgment", "SentencePlan", "scheduler", "user", "assistant_config", "death_sync"];
 export const noticeIsDeskOnly = (n: { related_resource?: string | null }): boolean => !!n.related_resource && DESK_ONLY_NOTICES.includes(n.related_resource);
 
 // ── dispatch records (what a dispatch notice lands on) ─────────────────

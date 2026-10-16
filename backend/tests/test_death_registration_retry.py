@@ -169,3 +169,81 @@ def test_another_tenants_row_is_not_found(setup, monkeypatch):
     reg.refresh_from_db()
     assert reg.retry_count == 0
     assert reg.status == DeathRegistrationStatus.FAILED
+
+
+# ── 重试仍失败要向上反馈(用户 2026-10-16 定):错误日志、审计行、通知本租户的 ADMIN ──
+
+def _escalations():
+    from apps.notifications.models import NotificationType, UserNotification
+
+    return UserNotification.objects.filter(notification_type=NotificationType.DEATH_SYNC_RETRY_FAILED)
+
+
+@pytest.mark.django_db
+def test_a_failed_retry_is_logged_audited_and_sent_to_this_tenants_admins_only(setup, monkeypatch, caplog):
+    import logging
+
+    from apps.audit.models import AuditLog
+
+    tenant, key, soul, admin = setup
+    reg = _internal_error_row(monkeypatch, tenant, key, soul)
+    second_admin = User.objects.create_user(username="dr_retry_admin2", password="x", role="ADMIN", tenant=tenant)
+    User.objects.create_user(username="dr_retry_viewer2", password="x", role="VIEWER", tenant=tenant)
+    other = Tenant.objects.get_or_create(code="DR_RETRY_ELSE", defaults={"display_name": "Else"})[0]
+    User.objects.create_user(username="dr_retry_else_admin", password="x", role="ADMIN", tenant=other)
+
+    def boom_again(*a, **kw):
+        raise RuntimeError("secret-name-in-error")
+
+    monkeypatch.setattr(Soul, "die", boom_again)
+    with caplog.at_level(logging.ERROR, logger="apps.death_sync.views"):
+        resp = _jwt_client(admin, tenant).post(_url(reg))
+
+    assert resp.status_code == 200
+    line = next(r.getMessage() for r in caplog.records if r.name == "apps.death_sync.views")
+    assert str(reg.id) in line and tenant.code in line and "INTERNAL_ERROR" in line and "retry_count=1/" in line
+    # 只带错误码,不带 error_message(它可能引用负载里的个人资料)。
+    assert "secret-name-in-error" not in line
+
+    audit = AuditLog.objects.get(resource="DeathRegistrationRequest", resource_id=str(reg.id), action="EXECUTE")
+    assert audit.user_id == admin.pk and audit.tenant_id == tenant.pk
+    assert audit.changes == {"error_code": "INTERNAL_ERROR", "retry_count": 1}
+
+    notes = _escalations()
+    # 本租户的两位 ADMIN;同租户的 VIEWER、别的租户的 ADMIN 都没有。
+    assert sorted(n.user_id for n in notes) == sorted([admin.pk, second_admin.pk])
+    note = notes.first()
+    assert note.related_resource == "death_sync" and note.related_id == str(reg.id)
+    assert note.params["reason"] == "INTERNAL_ERROR" and note.params["count"] == 1
+    assert "secret-name-in-error" not in note.message
+
+
+@pytest.mark.django_db
+def test_a_retry_whose_payload_no_longer_validates_is_escalated_too(setup, monkeypatch):
+    tenant, key, soul, admin = setup
+    reg = _internal_error_row(monkeypatch, tenant, key, soul)
+    reg.source_payload = {"soul_lookup": {}}  # 不再通过创建序列化器 → VALIDATION_ERROR
+    reg.save()
+
+    resp = _jwt_client(admin, tenant).post(_url(reg))
+
+    assert resp.status_code == 200
+    assert resp.data["error_code"] == "VALIDATION_ERROR"
+    assert [n.user_id for n in _escalations()] == [admin.pk]
+
+
+@pytest.mark.django_db
+def test_a_successful_retry_escalates_nothing(setup, monkeypatch, caplog):
+    import logging
+
+    from apps.audit.models import AuditLog
+
+    tenant, key, soul, admin = setup
+    reg = _internal_error_row(monkeypatch, tenant, key, soul)
+    with caplog.at_level(logging.ERROR, logger="apps.death_sync.views"):
+        resp = _jwt_client(admin, tenant).post(_url(reg))
+
+    assert resp.data["status"] == DeathRegistrationStatus.PROCESSED
+    assert not [r for r in caplog.records if r.name == "apps.death_sync.views"]
+    assert not _escalations().exists()
+    assert not AuditLog.objects.filter(resource="DeathRegistrationRequest", action="EXECUTE").exists()

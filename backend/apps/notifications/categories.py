@@ -53,6 +53,7 @@ CATEGORY_BY_TYPE = {
     "SENTENCE_REQUEST_PENDING": None,
     "SENTENCE_REQUEST_DECIDED": None,
     "SENTENCE_PLAN_CANCELLED": None,
+    "DEATH_SYNC_RETRY_FAILED": None,
 }
 
 #: 发送方可以在 `params["category"]` 里改选的类别(只限这里列的,与 `messages.VARIANTS` 同一个做法):
