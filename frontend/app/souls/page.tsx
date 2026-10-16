@@ -28,6 +28,7 @@ import { soulStateBadgeClass, soulStateGlyph } from "@/src/lib/soulStateBadge";
 import { FilterChipSelect, FilterChipToggle } from "@/src/components/ui/FilterChip";
 import { SoulPreviewDrawer } from "@/src/components/souls/SoulPreviewDrawer";
 import { SoulImportDialog } from "@/src/components/souls/SoulImportDialog";
+import { ExportCsvButton } from "@/src/components/ExportCsvButton";
 import { EvalIdentityTag } from "@/src/components/assist-admin/parts";
 
 /**
@@ -93,7 +94,8 @@ function SoulsList({
   initialBatch: string;
 }) {
   const { t, locale } = useI18n();
-  usePlaque({ hall: useHall(t("plaque.office.records")) });
+  const hall = useHall(t("plaque.office.records"));
+  usePlaque({ hall });
   const [page, setPage] = useState(1);
   const [stateFilter, setStateFilter] = useState(initialState);
   const [civilizationFilter, setCivilizationFilter] = useState("");
@@ -260,6 +262,14 @@ function SoulsList({
       variant="page"
       title={t("souls.title")}
       actions={
+        <>
+        {/* 带当前的筛选 / 搜索 / 排序,不带页码:文件是整份筛选结果,不是这一页。 */}
+        <ExportCsvButton
+          fetchCsv={() => soulsApi.exportCsv({ ...params, page: undefined })}
+          page={t("souls.title")}
+          hall={hall}
+          count={data?.count}
+        />
         <RequirePermission permissions="soul.create">
           <Button type="button" variant="secondary" onClick={() => setIsImportOpen(true)}>
             {t("souls.import.button")}
@@ -268,6 +278,7 @@ function SoulsList({
             + {t("souls.create")}
           </Button>
         </RequirePermission>
+        </>
       }
       filters={
         /* Filter bar: visible labels would crowd the row — and the sticky slot
