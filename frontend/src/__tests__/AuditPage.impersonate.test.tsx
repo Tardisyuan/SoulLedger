@@ -7,7 +7,7 @@ import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import AuditPage from "@/app/audit/page";
 import { auditApi } from "@soulledger/core/api";
-import { zh } from "./support/zhBundle";
+import { tZh, zh } from "./support/zhBundle";
 
 jest.mock("@soulledger/core/api", () => ({
   auditApi: {
@@ -28,7 +28,9 @@ jest.mock("@/src/contexts/TenantContext", () => ({
 }));
 jest.mock("@/src/contexts/I18nContext", () => ({
   useI18n: () => ({
-    t: (key: string, params?: Record<string, string>) => zh(key, params),
+    // Enum lookups probe a member's key and expect the key back on a miss (that is how an unknown member reads
+    // as 未识别); every other key must exist.
+    t: (key: string, params?: Record<string, string>) => (key.startsWith("audit.actions.") || key.startsWith("audit.resources.") ? tZh(key, params) : zh(key, params)),
     formatDateTime: (v: string) => v,
     formatDate: (v: string) => v,
     locale: "zh-Hans",

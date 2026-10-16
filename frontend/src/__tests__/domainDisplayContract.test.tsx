@@ -150,6 +150,8 @@ const CONVENTION_MODULES = [
  * entry names that place. Anything else must use the component.
  */
 const ENUM_STRING_CONTEXTS: Record<string, string> = {
+  [path.join("app", "audit", "page.tsx")]:
+    "The action and resource filters are <select> options, which hold text only; the option's value is the raw member, so it stays recoverable.",
   [path.join("app", "dashboard", "page.tsx")]:
     "State labels inside composed card / ledger labels (glyph + word) and rows that fall back to the API's own label; each carries title={state} by hand.",
   [path.join("src", "components", "dashboard", "TrendsPanel.tsx")]:
