@@ -2,7 +2,7 @@
  * The officer app's rules that are not pixels: what a decision sends, why one failed, where a
  * push lands, where "continue on desktop" points. Pure functions so a test can pin each.
  */
-import { passwordReasonKeys } from "@soulledger/core/api/auth";
+import { NOTIFICATION_CATEGORIES, NOTIFICATION_LOCKED, passwordReasonKeys, type NotificationCategory } from "@soulledger/core/api/auth";
 import { dispatchApi, type DispatchRecord } from "@soulledger/core/api/dispatch";
 import {
   decisionFailureOf,
@@ -465,4 +465,16 @@ export function judgmentMoreItems(state: JudgmentActionState): ("defer" | "reque
 /** 理由必填:只有空白也算没写。 */
 export function reasonBlank(reason: string): boolean {
   return reason.trim() === "";
+}
+
+// ── 通知类别(Design 第三十四批 O-06) ────────────────────────────────────
+
+/** 这个角色看得到的类别(密码求助只有管理员收),顺序同网页。 */
+export function visibleNotificationCategories(role: string | undefined): readonly NotificationCategory[] {
+  return NOTIFICATION_CATEGORIES.filter((c) => c !== "password_help" || role === "ADMIN");
+}
+
+/** 手机上的开关 = 网页的「站内」一列;「静音 N 类」数的是站内关着的类别。必收的永远不算。 */
+export function mutedCount(prefs: Partial<Record<NotificationCategory, { site?: boolean }>> | undefined, role: string | undefined): number {
+  return visibleNotificationCategories(role).filter((c) => !NOTIFICATION_LOCKED[c]?.includes("site") && prefs?.[c]?.site === false).length;
 }

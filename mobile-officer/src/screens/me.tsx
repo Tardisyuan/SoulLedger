@@ -9,11 +9,11 @@ import { canCheck, confirmWished, setConfirmWished, useBioWord } from "../device
 import { ActionButton, Row, Segmented } from "../kit";
 import { type ThemeChoice, usePrefs } from "../prefs";
 import { permission, registerDevice, requestPermission, unregisterDevice, hasRegisteredDevice, type Permission } from "../push";
-import { hallLabel } from "../rules";
+import { hallLabel, mutedCount } from "../rules";
 import { needsMfaSetup, useSession } from "../session";
 import { Notice, Screen, SectionLabel, SmallButton, Txt, space, translate, useI18n, useRemote, useToast } from "../shared";
 
-export type AccountScreen = "password" | "mfa" | "devices";
+export type AccountScreen = "password" | "mfa" | "devices" | "notify";
 
 export function MeTab({ onOpen }: { onOpen: (screen: AccountScreen) => void }) {
   const { t, locale, setLocale, enumLabel } = useI18n();
@@ -27,7 +27,10 @@ export function MeTab({ onOpen }: { onOpen: (screen: AccountScreen) => void }) {
   const mfa = useRemote(load);
   const loadProfile = useCallback(() => authApi.profile().then((r) => r.data), []);
   const profile = useRemote(loadProfile);
+  const loadPrefs = useCallback(() => authApi.preferences().then((r) => r.data), []);
+  const prefs = useRemote(loadPrefs);
   if (!user) return null;
+  const muted = mutedCount(prefs.data?.notifications, user.role);
 
   const mfaLine = mfa.data?.enabled
     ? t("officer_app.me.mfa_on")
@@ -93,6 +96,21 @@ export function MeTab({ onOpen }: { onOpen: (screen: AccountScreen) => void }) {
         </Block>
 
         <PushBlock />
+
+        <Block label={t("officer_app.me.notify_categories")}>
+          <Row
+            testID="me-notify"
+            minHeight={56}
+            title={t("officer_app.me.notify_categories")}
+            onPress={() => onOpen("notify")}
+            right={
+              <Txt variant="caption" tone="muted">
+                {prefs.data ? (muted > 0 ? t("officer_app.me.muted_count", { n: String(muted) }) : t("officer_app.me.muted_none")) : ""}
+                {"  ›"}
+              </Txt>
+            }
+          />
+        </Block>
 
         <ConfirmBlock />
 
