@@ -166,7 +166,7 @@ def test_a_soul_with_a_workflow_of_the_same_case_type_in_progress_is_409(cn):
     assert second.status_code == 409
     assert second.data["code"] == "workflow_in_progress"
     assert second.data["workflow"] == first.data["id"]
-    assert second.data["status"] == ApprovalWorkflowStatus.PENDING
+    assert second.data["status"] == first.data["status"]
     assert ApprovalWorkflow.objects.filter(soul=cn["soul"]).count() == 1
 
     # A finished one does not block a new one.

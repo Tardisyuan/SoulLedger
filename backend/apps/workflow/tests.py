@@ -21,6 +21,19 @@ from apps.tenants.models import Tenant
 User = get_user_model()
 TEMPLATES = "/api/v1/workflow/templates"
 WORKFLOWS = "/api/v1/workflows"
+
+
+def _create_wf(data):
+    """A workflow row as the tests need it. The generic `POST /workflows/` that these tests
+    used is closed (405, 2026-10-17); the row is made directly, in the soul's tenant."""
+    from types import SimpleNamespace
+
+    from apps.workflow.models import ApprovalWorkflow
+
+    fields = dict(data)
+    soul = Soul.objects.get(pk=fields.pop("soul"))
+    wf = ApprovalWorkflow.objects.create(tenant=soul.tenant, soul=soul, **fields)
+    return SimpleNamespace(status_code=status.HTTP_201_CREATED, data={"id": str(wf.pk)})
 NODES = "/api/v1/nodes"
 
 
@@ -144,32 +157,25 @@ class TestApprovalWorkflowCRUD:
         resp = self.client.get(f"{WORKFLOWS}/")
         assert resp.status_code == status.HTTP_200_OK
 
-    def test_create_workflow(self):
+    def test_generic_create_is_closed(self):
+        """`POST /workflows/` made rows with no template and no nodes; it is a 405 since 2026-10-17.
+        A workflow starts through `POST /workflows/start/` or from a concluded judgment."""
         resp = self.client.post(
             f"{WORKFLOWS}/",
             {"workflow_name": "New WF", "soul": str(self.soul.pk), "case_type": "ROUTINE"},
             format="json",
         )
-        assert resp.status_code == status.HTTP_201_CREATED
-        assert resp.data["workflow_name"] == "New WF"
+        assert resp.status_code == status.HTTP_405_METHOD_NOT_ALLOWED
 
     def test_retrieve_workflow(self):
-        resp = self.client.post(
-            f"{WORKFLOWS}/",
-            {"workflow_name": "Retrieve WF", "soul": str(self.soul.pk), "case_type": "ROUTINE"},
-            format="json",
-        )
+        resp = _create_wf({"workflow_name": "Retrieve WF", "soul": str(self.soul.pk), "case_type": "ROUTINE"})
         assert resp.status_code == status.HTTP_201_CREATED
         pk = resp.data["id"]
         resp = self.client.get(f"{WORKFLOWS}/{pk}/")
         assert resp.status_code == status.HTTP_200_OK
 
     def test_update_workflow(self):
-        resp = self.client.post(
-            f"{WORKFLOWS}/",
-            {"workflow_name": "Update WF", "soul": str(self.soul.pk), "case_type": "ROUTINE"},
-            format="json",
-        )
+        resp = _create_wf({"workflow_name": "Update WF", "soul": str(self.soul.pk), "case_type": "ROUTINE"})
         assert resp.status_code == status.HTTP_201_CREATED
         pk = resp.data["id"]
         resp = self.client.patch(
@@ -178,11 +184,7 @@ class TestApprovalWorkflowCRUD:
         assert resp.status_code == status.HTTP_200_OK
 
     def test_delete_workflow(self):
-        resp = self.client.post(
-            f"{WORKFLOWS}/",
-            {"workflow_name": "Delete WF", "soul": str(self.soul.pk), "case_type": "ROUTINE"},
-            format="json",
-        )
+        resp = _create_wf({"workflow_name": "Delete WF", "soul": str(self.soul.pk), "case_type": "ROUTINE"})
         assert resp.status_code == status.HTTP_201_CREATED
         pk = resp.data["id"]
         resp = self.client.delete(f"{WORKFLOWS}/{pk}/")
@@ -198,15 +200,7 @@ class TestApprovalWorkflowCRUD:
             code="AW_T2", defaults={"display_name": "Other"}
         )[0]
         other_soul = Soul.objects.create(name="Other Soul", tenant=other_tenant)
-        other_user = User.objects.create_user(
-            username="awother", password="test123", role="ADMIN", tenant=other_tenant,
-        )
-        other_client = _jwt_client(other_user, other_tenant)
-        other_client.post(
-            f"{WORKFLOWS}/",
-            {"workflow_name": "Other WF", "soul": str(other_soul.pk), "case_type": "ROUTINE"},
-            format="json",
-        )
+        _create_wf({"workflow_name": "Other WF", "soul": str(other_soul.pk), "case_type": "ROUTINE"})
         # Use a non-ADMIN user from our tenant to verify isolation. JUDGE, not
         # VIEWER: this test is about the tenant filter, and any role that
         # skips ADMIN's bypass proves it equally — but since
@@ -248,11 +242,7 @@ class TestWorkflowAdvance:
         self.client = _jwt_client(self.user, self.tenant)
 
     def test_advance_to_next_node(self):
-        resp = self.client.post(
-            f"{WORKFLOWS}/",
-            {"workflow_name": "Adv WF", "soul": str(self.soul.pk), "case_type": "ROUTINE"},
-            format="json",
-        )
+        resp = _create_wf({"workflow_name": "Adv WF", "soul": str(self.soul.pk), "case_type": "ROUTINE"})
         assert resp.status_code == status.HTTP_201_CREATED
         wf_pk = resp.data["id"]
         # Create nodes via API (ApprovalNodeViewSet)
@@ -275,11 +265,7 @@ class TestWorkflowAdvance:
         assert resp.status_code == status.HTTP_200_OK
 
     def test_advance_no_next_returns_400(self):
-        resp = self.client.post(
-            f"{WORKFLOWS}/",
-            {"workflow_name": "Done WF", "soul": str(self.soul.pk), "case_type": "ROUTINE"},
-            format="json",
-        )
+        resp = _create_wf({"workflow_name": "Done WF", "soul": str(self.soul.pk), "case_type": "ROUTINE"})
         assert resp.status_code == status.HTTP_201_CREATED
         wf_pk = resp.data["id"]
         # Create a single completed node — decided through the ORM.
@@ -331,11 +317,7 @@ class TestWorkflowApproveNode:
 
     def _create_workflow_with_nodes(self, node_statuses=None):
         """Create a workflow via API and add nodes via API."""
-        resp = self.client.post(
-            f"{WORKFLOWS}/",
-            {"workflow_name": "Appr WF", "soul": str(self.soul.pk), "case_type": "ROUTINE"},
-            format="json",
-        )
+        resp = _create_wf({"workflow_name": "Appr WF", "soul": str(self.soul.pk), "case_type": "ROUTINE"})
         assert resp.status_code == status.HTTP_201_CREATED
         wf_pk = resp.data["id"]
         if node_statuses is None:
@@ -488,14 +470,8 @@ class TestApproveNodeApproverIdentity:
 
     def _make_node(self, client, *, approver_type="ACTOR", approver_actor=None,
                    approver_role=""):
-        """Create a workflow + one PENDING node through the API."""
-        resp = client.post(
-            f"{WORKFLOWS}/",
-            {"workflow_name": "Identity WF", "soul": str(self.soul.pk),
-             "case_type": "ROUTINE"},
-            format="json",
-        )
-        assert resp.status_code == status.HTTP_201_CREATED, resp.data
+        """Create a workflow (directly; the generic create is closed) + one PENDING node through the API."""
+        resp = _create_wf({"workflow_name": "Identity WF", "soul": str(self.soul.pk), "case_type": "ROUTINE"})
         wf_pk = resp.data["id"]
 
         payload = {
@@ -788,11 +764,7 @@ class TestWorkflowStats:
         self.client = _jwt_client(self.user, self.tenant)
 
     def test_stats_returns_data(self):
-        resp = self.client.post(
-            f"{WORKFLOWS}/",
-            {"workflow_name": "Stats WF", "soul": str(self.soul.pk), "case_type": "ROUTINE"},
-            format="json",
-        )
+        resp = _create_wf({"workflow_name": "Stats WF", "soul": str(self.soul.pk), "case_type": "ROUTINE"})
         assert resp.status_code == status.HTTP_201_CREATED
         wf_pk = resp.data["id"]
         self.client.post(
@@ -831,11 +803,7 @@ class TestApprovalNodeCRUD:
         self.soul = Soul.objects.create(name="Node Soul", tenant=self.tenant)
         self.client = _jwt_client(self.user, self.tenant)
         # Create workflow via API
-        resp = self.client.post(
-            f"{WORKFLOWS}/",
-            {"workflow_name": "Node WF", "soul": str(self.soul.pk), "case_type": "ROUTINE"},
-            format="json",
-        )
+        resp = _create_wf({"workflow_name": "Node WF", "soul": str(self.soul.pk), "case_type": "ROUTINE"})
         assert resp.status_code == status.HTTP_201_CREATED
         self.wf_pk = resp.data["id"]
 
@@ -907,11 +875,7 @@ class TestApprovalNodeCRUD:
             username="an2other", password="test123", role="ADMIN", tenant=other_tenant,
         )
         other_client = _jwt_client(other_user, other_tenant)
-        other_wf_resp = other_client.post(
-            f"{WORKFLOWS}/",
-            {"workflow_name": "Other WF", "soul": str(other_soul.pk), "case_type": "ROUTINE"},
-            format="json",
-        )
+        other_wf_resp = _create_wf({"workflow_name": "Other WF", "soul": str(other_soul.pk), "case_type": "ROUTINE"})
         other_client.post(
             f"{NODES}/",
             {"workflow": other_wf_resp.data["id"], "node_name": "Foreign", "node_order": 1},
