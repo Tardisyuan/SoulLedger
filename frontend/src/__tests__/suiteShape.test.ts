@@ -41,6 +41,10 @@ import path from "node:path";
 // here, and removing one means removing a line here on purpose.
 const COLLECTED_FILES = [
   "AboutPage.test.tsx",
+  // 2026-10-16 core 每个 xxxApi 方法的路径都在后端 OpenAPI 里。
+  "apiEndpointContract.test.ts",
+  // 2026-10-16 灵魂端客户端:失败分类与 401 换令牌。
+  "soulClientErrors.test.ts",
   "ActorsPage.test.tsx",
   // 2026-10-04 外部接入与登录日志:/death-sync/api-keys 与 /audit/logins。
   "ApiKeysPanel.test.tsx",
