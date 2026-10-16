@@ -44,7 +44,7 @@ function PageHead({ withTabs }: { withTabs?: boolean }) {
             <div className={`h-10 w-64 ${BLOCK}`} />
             <div className={`ml-auto h-9 w-32 ${BLOCK}`} />
           </div>
-          <div className={`h-6 w-96 ${BLOCK} mt-3`} />
+          <div className={`h-6 w-96 max-w-full ${BLOCK} mt-3`} />
         </div>
       </header>
       {withTabs && (
