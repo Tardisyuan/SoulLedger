@@ -2017,7 +2017,14 @@
       "workflow": "Wat Hesy",
       "judgment": "Wedja",
       "soulrecord": "Sesh Nefer Hena Isfet",
-      "permission": "Was"
+      "permission": "Was",
+      "datascope": "Aat Khet",
+      "fieldpermission": "Was Iwn",
+      "menu": "Menu",
+      "menubutton": "Aha Menu",
+      "role": "Netjer",
+      "rolepermission": "Was Netjer",
+      "rowleveldatascope": "Aat Khet Em Sesh"
     },
     "timeline": {
       "all_resources": "Khet Was Neb",
