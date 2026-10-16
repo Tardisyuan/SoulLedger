@@ -11,7 +11,8 @@ import { View } from "react-native";
 
 import { decisionAllowed, useBioWord } from "../deviceCheck";
 import { ActionButton, Row, Segmented } from "../kit";
-import { decisionFailure, failureReasonKey, passVerdictsOf, reasonMissing, submitDecision, todoTitle, type FailureReason, type Verdict } from "../rules";
+import { decisionFailure, failureReasonKey, hallLabel, passVerdictsOf, reasonMissing, submitDecision, todoTitle, type FailureReason, type Verdict } from "../rules";
+import { effectLine, objectLines } from "../todoFacts";
 import { Button, FieldError, Input, Notice, Sheet, Txt, space, useI18n, useRemote, useTheme, useToast } from "../shared";
 
 export interface CooldownFacts {
@@ -64,6 +65,10 @@ export function DecisionSheet({
   const daysInvalid = needsDays && (parsedDays === null || (cooldown !== null && parsedDays >= cooldown.remainingDays));
   const missingReason = reasonMissing(verdict, reason);
 
+  const hall = (h: { code: string; display_name: string } | null | undefined) => hallLabel(t, h) ?? "";
+  const effect = effectLine(detail, verdict, hall, parsedDays ?? cooldown?.desiredDays ?? null);
+  const [objectTop, objectBottom] = objectLines({ ...detail, title: todoTitle(detail, t) }, hall, t);
+
   const confirm = () => {
     if (missingReason || daysInvalid) {
       setFlagged(true);
@@ -91,11 +96,17 @@ export function DecisionSheet({
     <Sheet open={open} onClose={onClose} edge={theme.hair} closeLabel={t("soul_app.common.cancel")}>
       <View testID={`sheet-${verdict}`} style={{ padding: space[5], gap: space[4] }}>
         <Txt variant="title">{t(verdict === "approve" ? "officer_app.confirm.approve_title" : "officer_app.confirm.reject_title")}</Txt>
-        <Txt variant="bodyLg">{todoTitle(detail, t)}</Txt>
-        <Txt variant="body" tone="muted">
-          {verdict === "approve"
-            ? t(`officer_app.confirm.approve_body.${detail.kind}`)
-            : t("officer_app.confirm.reject_body", { name: t("officer_app.confirm.requester") })}
+        {/* 对象: a bordered block (what, then who asked). 后果: one sentence under it. */}
+        <View testID="decision-object" style={{ borderWidth: 1, borderColor: theme.hair, padding: space[3], gap: space[1] }}>
+          <Txt variant="bodyLg">{objectTop}</Txt>
+          {objectBottom ? <Txt variant="caption" tone="muted">{objectBottom}</Txt> : null}
+        </View>
+        <Txt variant="body" tone="muted" testID="decision-effect">
+          {effect
+            ? t(`officer_app.confirm.${effect.key}`, effect.values)
+            : verdict === "approve"
+              ? t(`officer_app.confirm.approve_body.${detail.kind}`)
+              : t("officer_app.confirm.reject_body", { name: t("officer_app.confirm.requester") })}
         </Txt>
         {cooldown && detail.kind === "cooldown" ? (
           <Txt variant="caption" tone="muted">{`${cooldown.reason} · ${t("officer_app.confirm.remaining_days", { n: String(cooldown.remainingDays) })}`}</Txt>

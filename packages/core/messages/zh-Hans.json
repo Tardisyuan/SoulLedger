@@ -5793,14 +5793,16 @@
         "reassignments": "移交",
         "cooldowns": "缩短冷却申请",
         "rebirths": "转生申请",
-        "letters": "待回书信"
+        "letters": "待回书信",
+        "unassigned_letters": "未分配的书信"
       },
       "empty_title": "此刻没有轮到你的事",
       "empty_body": "新的审批、移交和申请会推送给你。",
       "filter_summary": "{{kinds}} · {{n}} 条",
       "filter_empty_title": "没有「{{kinds}}」待办",
       "filter_empty_body": "换个类型看看，或清除筛选。",
-      "filter_clear": "清除筛选"
+      "filter_clear": "清除筛选",
+      "see_all": "全部 {{n}} 封"
     },
     "queue": {
       "mine": "我手上",
@@ -5830,7 +5832,24 @@
       "reject": "驳回",
       "approve": "批准",
       "cosigner_pending": "加签 · 待批",
-      "wait_cosigner": "等{{name}}先批，你才能批。{{name}}驳回则这一节点驳回。"
+      "wait_cosigner": "等{{name}}先批，你才能批。{{name}}驳回则这一节点驳回。",
+      "node": "当前节点 · 第 {{n}} / {{total}} 步",
+      "requester": "发起",
+      "requested_at": "发起时间",
+      "reason": "事由",
+      "from": "从",
+      "to": "到",
+      "souls": "灵魂 · {{n}}",
+      "souls_more": "还有 {{n}} 个",
+      "cooldown_now": "现在剩 {{n}} 天",
+      "cooldown_asked": "申请剩 {{n}} 天",
+      "history": "前面几步",
+      "history_more": "还有 {{n}} 步",
+      "history_yours": "你 · 轮到你",
+      "attachments": "附件 · {{n}}",
+      "open_system": "用系统打开",
+      "attachment_offline": "联网后才能打开",
+      "attachment_failed": "打不开这个附件"
     },
     "confirm": {
       "approve_title": "批准这一签？",
@@ -5860,7 +5879,19 @@
       "days_label": "批准天数",
       "days_invalid": "天数要是整数，且小于剩余天数",
       "verdict_label": "批准用的裁决",
-      "desired": "申请希望：还剩 {{n}} 天"
+      "desired": "申请希望：还剩 {{n}} 天",
+      "approve_effect": {
+        "approval": "批准后交给「{{next}}」。",
+        "approval_last": "这是最后一步。批准后流程结束，申请生效。",
+        "dispatch": "批准后，{{n}} 个灵魂从{{from}}调往{{to}}，执行后不能撤回。",
+        "reincarnation": "批准后，{{name}}进入转生排期。",
+        "cooldown": "批准后，{{name}}的冷却从剩 {{from}} 天改为剩 {{to}} 天。"
+      },
+      "reject_effect": {
+        "dispatch": "驳回后，这 {{n}} 个灵魂留在{{from}}，发起方会读到理由。",
+        "reincarnation": "驳回后，{{name}}留在本殿，会读到理由。",
+        "cooldown": "驳回后冷却不变，还剩 {{n}} 天。"
+      }
     },
     "landing": {
       "handled": "已由{{name}}处理",
@@ -5992,7 +6023,25 @@
     "letter": {
       "irreversible": "发出后不能撤回",
       "unavailable": "书信暂未开通",
-      "failed": "没能发出。内容还在，请重试。"
+      "failed": "没能发出。内容还在，请重试。",
+      "more": "更多操作",
+      "assign": "转给别人",
+      "unassign": "放回",
+      "unassign_hint": "不再由我回，变成未分配",
+      "archive": "归档",
+      "unarchive": "取消归档",
+      "assign_title": "转给谁？",
+      "assign_hint": "只列能回这封信的官员。转出后，信从你的待办里移走。",
+      "assign_load": "手上 {{n}} 封",
+      "assign_confirm": "转给{{name}}",
+      "unassign_title": "放回这封信？",
+      "unassign_body": "放回后变成「未分配」，本殿能回信的官员都能接。",
+      "done_assigned": "已转给{{name}}",
+      "done_unassigned": "已放回",
+      "done_unarchived": "已取消归档",
+      "archived_banner": "已归档 · {{date}}",
+      "unassigned_tag": "未分配",
+      "take": "由我来回"
     },
     "offline": {
       "banner": "没有网络 · 显示的是 {{time}} 的内容",
