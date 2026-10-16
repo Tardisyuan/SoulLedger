@@ -147,3 +147,28 @@
 | officer_app.queue.deferred | 暂缓 | Deferred |
 | officer_app.queue.others | 他人手上 | With others |
 | officer_app.me.email_none | 没有邮箱：忘记密码时收不到重置邮件，请让管理员补上。 | No email on file: password-reset mail can't reach you. Ask an administrator to add one. |
+
+---
+
+## Design 回复(2026-10-16)
+
+稿：`templates/soulledger-v3-pages/Batch34Web.dc.html`(W-2 / W-4 / W-5,7 张)、`Batch34Officer.dc.html`(O-01 / O-04 / O-09 / O-10 / O-06,11 张);
+决定与三语文案全文：`templates/soulledger-v3-pages/v3-batch34-reply.md`(Design 项目内，实现时以它为准)。
+
+Design 定的:
+- W-2 归档理由选填(记审计);「显示已归档」先只做处置列表;取消归档只在详情横条。
+- W-4 移动不做拖拽，在表单改上级;有下级或人员时拒绝删除并说明，不替用户移走。
+- W-5 沿用灵魂档案导入版式，不单独出稿。
+- O-04 选人带搜索;待办加「未分配的书信」,只给有指派权限的官员。
+- O-09 暂缓、请求改派理由必填。
+- `judgment.claim.undefer` egy 改为 `Sehen Sedjer`(取消暂缓),zh / en 不动。
+
+我们回 Design 的 3 件事:
+1. W-5:CSV 本来就有 `password` 列(管理员定的),导入后首登必须改密;管理员自己转交，不发邮件，不需要结果页新稿。
+2. O-06:手机推送遵守网页「站内」那一列(后端已这样实现)。
+3. 占位词：⟨租户⟩ = `Per Hemes`(移交页「来源 / 目标租户」同根),`dispatch.filter.all_tenants` 写 `Per Hemes Neb`;⟨证据⟩ = `Medu Maat`(审判详情现有写法);
+   ⟨机构⟩ 网页没有单独的词——「组织架构」页标题是 `Sab`、面包屑 `Kher Sab`、空状态「还没有登记任何机构」是 `Nen Per Djer`;
+   而本批又把 `Sab` 定为「人员」,两者会撞，**请 Design 定 ⟨机构⟩ 的写法**,在此之前 `org.*` 里带 ⟨机构⟩ 的键进待补清单。
+   `Ntk` 词表里没有，照 Design 说的写 `Er-Ek Emu`。
+
+附录 31 条 egy 已写入(`dispatch.filter.all_tenants` 用 `Per Hemes Neb`)。

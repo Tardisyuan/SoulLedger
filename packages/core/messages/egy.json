@@ -521,7 +521,9 @@
       },
       "case_open": "Nen Khetem Djer",
       "case_closed": "Wedja Khetem",
-      "case_all": "Wedja Neb {{n}} ›"
+      "case_all": "Wedja Neb {{n}} ›",
+      "load_more": "Ini Medew Ky",
+      "load_more_failed": "Medew Ky Nen Ini. Wehem Khemen."
     },
     "balance_range": "Pehwy Nefer Isfet",
     "balance_max": "Er Pehwy",
@@ -1799,7 +1801,9 @@
       "col_merit_demerit": "Nefer / Isfet",
       "col_case_soul": "Ren Sep / Ba",
       "col_cycle_kind": "Ankh / Iru",
-      "stale_soon": "Er Khet: Shesep Tepy"
+      "stale_soon": "Er Khet: Shesep Tepy",
+      "undefer": "Sehen Sedjer",
+      "done_undefer": "Sehen Sedjer Seth · Sep Iyi Er Sepu Wedja"
     },
     "admission": {
       "title": "Medu Maat · Shesep Maat",
@@ -2423,7 +2427,15 @@
     "confirm_cancel": "Sehen Hab-Ba",
     "cancel_success": "Sehen Hab-Ba Seth",
     "cancel_error": "Nen Sehen Hab-Ba",
-    "cancel_not_cancellable": "Wesekhet Ky Iri Seth: Nen Sehen Hab-Ba Pen."
+    "cancel_not_cancellable": "Wesekhet Ky Iri Seth: Nen Sehen Hab-Ba Pen.",
+    "filter": {
+      "search": "Hehy Ren Ba Er Khet…",
+      "all_status": "Kheperu Neb",
+      "all_tenants": "Per Hemes Neb",
+      "from": "Ahet Dbh · Wah",
+      "to": "Ahet Dbh · Pehwy",
+      "clear": "Sehen Setep"
+    }
   },
   "crossJudgments": {
     "title": "Wedja Taui Ky",
@@ -2529,6 +2541,23 @@
       "done": "Kheperu Sesen Seth {{n}}",
       "failed": "Nen Sesen Kheperu",
       "skipped_note": "Sab Hery Hena Djes-Ek: Nen Em Iri Neb."
+    },
+    "reset_password": {
+      "action": "Wehem Sekhem",
+      "confirm_title": "Wehem Sekhem En {{name}}?",
+      "confirm_body": "Sekhem Mawy Iri; Sekhem-Ef Nen Wenen Emu. Per Em Ikhet Neb-Ef. Er Aq Mawy: Khemen Sekhem-Ef Er Tepy. Sekhem Mawy: Maa Sep Wa.",
+      "confirm": "Wehem Sekhem",
+      "failed": "Nen Wehem Sekhem. Wehem Iri.",
+      "shown_title": "Sekhem Mawy En {{name}} (Maa Sep Wa)",
+      "shown_warning": "Er Khet Khetem: Nen Maa Djer. Djed Er-Ef Emu; Er Aq Tepy: Khemen Sekhem-Ef.",
+      "copy": "Senn Sekhem",
+      "copied": "Senn Seth",
+      "copy_failed": "Nen Senn. Sesh Em Djeret.",
+      "close": "Smen-I Seth, Khetem",
+      "close_confirm_title": "Maa Sekhem Sep Wa",
+      "close_confirm_body": "Maa Sekhem Sep Wa. Khetem? Er Khet Khetem: Nen Maa Djer; Wehem Sekhem Er Sekhem Mawy.",
+      "close_confirm": "Khetem",
+      "close_back": "Er Hat"
     }
   },
   "settings": {
@@ -3444,7 +3473,8 @@
       "authentication_prune_soul_sign_ins": "Khetem Aq Ba Hena Aq Nen Iri: Hru 90 Er Hry",
       "soul_accounts_prune_data_exports": "Khetem Redi Per Djama Mut",
       "authentication_prune_expired_push_registrations": "Khetem Sesh Sedjem Em Aq Mut",
-      "audit_prune_retained_data": "Khetem Sesh Mut (Sesh Hab, Sedjem Maa Seth, Ikhet Khetem…)"
+      "audit_prune_retained_data": "Khetem Sesh Mut (Sesh Hab, Sedjem Maa Seth, Ikhet Khetem…)",
+      "officer_app_check_receipts": "Sedjem Sab: Ini Sesh Hab"
     },
     "status": {
       "PENDING": "Em Smen",
@@ -5773,7 +5803,9 @@
       "empty_body": "Shesep Wa Em «Nen Shesep Djer».",
       "desk_only": "Nen Djed Wedja Djer · Em Medjat Sab",
       "scope_note": "Em Medjat Ba: Shesep, Maa Hena Sesh Wesheb. Djed Wedja Hena Khetem: Em Medjat Sab.",
-      "claim_failed": "Nen Shesep-Ek"
+      "claim_failed": "Nen Shesep-Ek",
+      "deferred": "Sedjer",
+      "others": "Em Djeret Ky"
     },
     "search": {
       "souls": "Hehy Ba",
@@ -5854,7 +5886,8 @@
     },
     "notices": {
       "empty_title": "Nen Sedjem Sab",
-      "empty_body": "Sedjem Sab Mawy Em Dy."
+      "empty_body": "Sedjem Sab Mawy Em Dy.",
+      "on_desk": "Maa Em Medjat Sab"
     },
     "push": {
       "lock": "Nen Iri-Ek Djer: {{n}}"
@@ -5884,7 +5917,9 @@
       "version": "Hemet-Sesh {{version}}",
       "logout": "Per Aq",
       "logout_title": "Per Aq? Medjat Pen Nen Sedjem Sab Djer.",
-      "logout_ok": "Per Aq"
+      "logout_ok": "Per Aq",
+      "email": "Wat Sesh",
+      "email_none": "Nen Wat Sesh: Nen Rekh Sekhem — Sesh Nen Hab Er-Ek. Dbh Sab Hery."
     },
     "login": {
       "username": "Ren Aq",

@@ -173,6 +173,9 @@ const isSystemZh = (zh: string) => /系统|服务器|队列|连接/.test(zh);
  * 第四节把它们标为「沿用」。新增一条之前先确认它真是密码义。
  */
 const SEKHEM_PASSWORD_WITHOUT_THE_WORD = new Set([
+  // 第三十四批:重置密码窗口里的「确认重置」「重置失败」,中文省了「密码」,重置的就是密码。
+  "users.reset_password.confirm",
+  "users.reset_password.failed",
   "soul_accounts.credentials.reason.voided",
   "soul_accounts.credentials.actions.go_reset",
   "soul_accounts.account.pending_link",
