@@ -16,6 +16,7 @@ import { UserBatchBar, useUserSelection } from "@/src/components/users/UserBatch
 import { MfaResetDialog } from "@/src/components/users/MfaResetDialog";
 import { PasswordResetDialog } from "@/src/components/users/PasswordResetDialog";
 import { ExportCsvButton } from "@/src/components/ExportCsvButton";
+import { UserImportDialog } from "@/src/components/users/UserImportDialog";
 import { ImpersonateDialog } from "@/src/components/impersonation/ImpersonateDialog";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { showToast } from "@/src/components/ui/Toast";
@@ -63,7 +64,10 @@ function UsersRoute() {
   // `?username=<u>`: the password-help notification's 「去用户页」 (第三类 F 组 2.6) lands on
   // exactly that account — an exact-match filter on the server, and the row highlighted.
   // No such account → the normal empty result.
-  const located = useSearchParams().get("username") ?? "";
+  const searchParams = useSearchParams();
+  const located = searchParams.get("username") ?? "";
+  // `?organization=<id>`: 机构页「查看人员」落在这里,只列该机构的直属人员。
+  const organization = searchParams.get("organization") ?? "";
   const queryClient = useQueryClient();
 
   const [page, setPage] = useState(1);
@@ -71,6 +75,7 @@ function UsersRoute() {
   const [roleFilter, setRoleFilter] = useState("");
   const [ordering, setOrdering] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isImportOpen, setIsImportOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [deleteUser, setDeleteUser] = useState<User | null>(null);
   const [rolesUser, setRolesUser] = useState<User | null>(null);
@@ -96,7 +101,7 @@ function UsersRoute() {
 
   // Fetch users list — params live in the queryKey, so filter/sort/page changes refetch on their own.
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: userKeys.list({ page, search, role: roleFilter, ordering, username: located, mfa: mfaFilter }),
+    queryKey: userKeys.list({ page, search, role: roleFilter, ordering, username: located, mfa: mfaFilter, organization }),
     queryFn: async () => {
       const res = await usersApi.list({
         page,
@@ -105,6 +110,7 @@ function UsersRoute() {
         ordering: ordering || undefined,
         username: located || undefined,
         mfa: mfaFilter || undefined,
+        organization: organization || undefined,
       });
       return res.data;
     },
@@ -146,7 +152,7 @@ function UsersRoute() {
   });
 
   const users = data?.results ?? [];
-  const selection = useUserSelection(JSON.stringify({ page, search, roleFilter, ordering, located, mfaFilter }), users);
+  const selection = useUserSelection(JSON.stringify({ page, search, roleFilter, ordering, located, mfaFilter, organization }), users);
 
   const allColumns: DataTableColumn[] = [
     { key: "username", header: t("users.username"), sortable: true, pinned: true },
@@ -175,6 +181,9 @@ function UsersRoute() {
         <RequirePermission permissions="user.manage">
           {/* 后端导出的是全部用户、不跟列表筛选走,所以不给 `count`(带数的写法会说「按当前筛选导出」)。 */}
           <ExportCsvButton fetchCsv={() => usersApi.export()} page={t("users.title")} hall={hall} />
+          <Button type="button" variant="secondary" onClick={() => setIsImportOpen(true)}>
+            {t("users.import.button")}
+          </Button>
           <Button type="button" variant="secondary" onClick={() => setIsModalOpen(true)}>
             + {t("users.create_user")}
           </Button>
@@ -378,6 +387,7 @@ function UsersRoute() {
       <UserRolesDialog user={rolesUser} onClose={() => setRolesUser(null)} />
 
       {/* Create/Edit Modal */}
+      <UserImportDialog isOpen={isImportOpen} onClose={() => setIsImportOpen(false)} />
       <UserModal
         isOpen={isModalOpen || !!editingUser}
         onClose={() => {
