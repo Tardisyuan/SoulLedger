@@ -5,7 +5,7 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import type { BadgeTone } from "@/src/components/ui/Badge";
 import { DomainNumber } from "@/src/components/ui/DomainValue";
-import type { ModeratedPost } from "@soulledger/core/api/social-moderation";
+import type { ModeratedPost, ModerationReason } from "@soulledger/core/api/social-moderation";
 
 /**
  * Shared by the four /moderation segments (E 组 08 / 08b / 08c / 08d).
@@ -28,6 +28,14 @@ export const WORD_ACTION_TONES: Record<string, BadgeTone> = {
 
 /** 禁言天数的选项 —— 举报处置与「禁言…」共用。1–365,没有永久(产品决定;服务端同一上限)。 */
 export const MUTE_DAYS = [1, 3, 7, 30, 90, 365];
+
+/**
+ * 隐藏 / 删除时必选的理由(2026-10-16 用户定),推给作者。与灵魂举报同一份(backend `ReportReason`),
+ * 显示名 `social_moderation.reason.<code>`;OTHER 要再写一句,那句原样推给作者。
+ */
+export const MODERATION_REASONS: ModerationReason[] = ["SPAM", "ABUSE", "SEXUAL", "ILLEGAL", "OTHER"];
+/** 服务端 `reason_note` 的上限(moderation_serializers.ModerationReasonFields)。 */
+export const REASON_NOTE_MAX = 200;
 
 /** A server refusal in words: `{detail, code}` → `social_moderation.errors.<code>`. */
 export function useFailureToast() {

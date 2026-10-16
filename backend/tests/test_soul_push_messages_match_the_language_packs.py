@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 
 from apps.soul_push import services
-from apps.soul_push.messages import MESSAGES
+from apps.soul_push.messages import MESSAGES, REASON_LABELS
 
 PACKS = Path(__file__).resolve().parents[2] / "packages" / "core" / "messages"
 EGY_PENDING_KINDS = {
@@ -24,6 +24,8 @@ EGY_PENDING_KINDS = {
 def test_backend_copy_equals_the_language_pack(locale):
     pack = json.loads((PACKS / f"{locale}.json").read_text(encoding="utf-8"))
     assert pack["soul_push"] == MESSAGES[locale]
+    # 隐藏 / 删除推送里 `{{reason}}` 用的理由名,同一份 `social_moderation.reason`。
+    assert pack["social_moderation"]["reason"] == REASON_LABELS[locale]
 
 
 def test_every_kind_the_rules_can_produce_has_text_in_every_locale():
@@ -35,6 +37,8 @@ def test_every_kind_the_rules_can_produce_has_text_in_every_locale():
             "social_warned_post", "social_warned_comment", "social_warned_user",
             "mfa_reset_by_officer", "export_ready",
             *(f"content_{outcome}_{target}" for outcome in ("hidden", "deleted", "approved", "restored")
+              for target in ("post", "comment")),
+            *(f"content_{outcome}_{target}_reason" for outcome in ("hidden", "deleted")
               for target in ("post", "comment"))} == kinds
     for locale, pack in MESSAGES.items():
         # egy 可以恰好缺 Design 还没给词的种类(egyPendingKeys.json 里的 `soul_push.<kind>`),别的不许缺。
