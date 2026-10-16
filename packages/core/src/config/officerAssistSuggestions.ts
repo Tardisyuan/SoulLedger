@@ -1,6 +1,6 @@
-import type { BuiltinUserRole } from "@soulledger/core/api";
-import type { Locale } from "@soulledger/core/config/locale";
-import type { OfficerAssistScreen } from "@soulledger/core/api/officer-assist";
+import type { BuiltinUserRole } from "../api/auth";
+import type { Locale } from "./locale";
+import type { OfficerAssistScreen } from "../api/officer-assist";
 
 /**
  * Suggested questions, role × page — canvas 「灵魂簿 官员端 · 问一问」 1a, with the
@@ -13,6 +13,9 @@ import type { OfficerAssistScreen } from "@soulledger/core/api/officer-assist";
  * is sent verbatim as the question, so it is in the language the server
  * answers in — zh-Hans for a zh UI, English otherwise (egy included). A
  * bundle would invite an egy translation nobody can ask in.
+ *
+ * Here in core, not in the web, because the officer App asks with the same
+ * table (its five tabs map to `OFFICER_SCREENS`, mobile-officer/src/assist.tsx).
  *
  * Pages a role has no row for (GUARDIAN's inbox, anyone but ADMIN on the
  * scheduler, every other route) take that role's 「其他页」 pair. A custom role

@@ -12,7 +12,7 @@ import {
 } from "@soulledger/core/api/officer-assist";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { ConfirmDialog } from "@/src/components/ui/Modal";
-import { officerAssistSuggestions } from "./officerAssistSuggestions";
+import { officerAssistSuggestions } from "@soulledger/core/config/officerAssistSuggestions";
 import { StreamingText, WaitingDots } from "./StreamingText";
 import type { OfficerAssist } from "./useOfficerAssist";
 

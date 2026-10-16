@@ -224,7 +224,7 @@ export function ActionButton({
   );
 }
 
-/** A two-way (or n-way) switch: 「我手上 / 待认领」, 「查灵魂 / 问一问」. */
+/** A two-way (or n-way) switch: 「我手上 / 待认领」. */
 export function Segmented<K extends string>({
   options,
   value,

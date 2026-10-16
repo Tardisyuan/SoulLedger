@@ -6011,12 +6011,20 @@
     },
     "search": {
       "souls": "Hehy Ba",
-      "ask": "Hehy Medu",
       "placeholder": "Ren Er Ren Ta",
       "read_only": "Maa Wa. Khemen: Em Medjat Sab.",
       "no_souls_title": "Nen Gem Ba",
       "no_souls_body": "Khemen Ren, Er Sesh Ren Ta Neb.",
       "residing": "▲ {{where}} · Hemes"
+    },
+    "assist": {
+      "entry": "Hehy Medu",
+      "entry_label": "Hehy Medu · {{page}}",
+      "group_earlier": "Tepyu",
+      "time_today": "Hru Pen {{time}}",
+      "resumed": "Medew {{date}} · Em {{page}}",
+      "continue_placeholder": "Hehy Djer…",
+      "open_failed": "Nen Wen Medew Pen. Wehem Iri."
     },
     "detail": {
       "your_step": "Sekhet-Ek",

@@ -152,7 +152,7 @@ class OfficerAssistView(OfficerAssistBaseView):
         data = body.validated_data
         result = service.officer_answer(
             request, data["question"], data["screen"], locale=locale_from_request(request),
-            conversation_id=data.get("conversation_id"), stream=data.get("stream", False),
+            conversation_id=data.get("conversation_id"), new=data.get("new", False), stream=data.get("stream", False),
         )
         return _reply(request, result, data.get("stream", False))
 

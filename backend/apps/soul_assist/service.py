@@ -101,14 +101,18 @@ def _release_db():
         connection.close()
 
 
-def conversation_for(owner, screen, conversation_id=None):
-    """`owner` 是会话归属的过滤条件:灵魂 `{"account": a}`,官员 `{"user": u}`。评测开的会话不续。"""
+def conversation_for(owner, screen, conversation_id=None, new=False):
+    """`owner` 是会话归属的过滤条件:灵魂 `{"account": a}`,官员 `{"user": u}`。评测开的会话不续。
+    `new`:客户端明说要新会话(官员 App 的「新会话」),不按 30 分钟窗口续 —— 否则它显示空对话、
+    服务端却悄悄接在旧会话后面。"""
     owner = {**owner, "is_eval": False}
     if conversation_id is not None:
         found = AssistConversation.objects.filter(pk=conversation_id, **owner).first()
         if found is None:
             raise AssistError("会话不存在。", "not_found", 404)
         return found
+    if new:
+        return None
     # 没有可续的就返回 None:新会话在回答成功之后才建,失败的请求不留空会话。
     return (AssistConversation.objects.filter(**owner, screen=screen,
                                               last_active_at__gte=timezone.now() - CONTINUE_WINDOW)
@@ -185,13 +189,18 @@ def officer_asker(request, screen, lang):
                  empty_answer=OFFICER_EMPTY_ANSWER)
 
 
-def officer_answer(request, question, screen, *, locale, conversation_id=None, stream=False):
+def officer_answer(request, question, screen, *, locale, conversation_id=None, new=False, stream=False):
     if not officer_enabled_for(request):
         usage.record("officer", getattr(request, "tenant", None), "not_configured")
         raise AssistError("本殿尚未开通助手。", "assistant_not_configured", 503)
+    if conversation_id is not None:
+        # 接着问:上下文(事实头、检索)按这段会话原来的页面算,不按现在所在的页 —— 不然同一段对话
+        # 前后换了上下文(第三十九批 O-13 第 5 条)。找不到的会话照旧在 `conversation_for` 里答 404。
+        screen = (AssistConversation.objects.filter(pk=conversation_id, user=request.user, is_eval=False)
+                  .values_list("screen", flat=True).first() or screen)
     lang = corpus.corpus_locale(locale)
     return (session if stream else ask)(officer_asker(request, screen, lang), question, screen, lang=lang,
-                                        conversation_id=conversation_id, request=request)
+                                        conversation_id=conversation_id, new=new, request=request)
 
 
 def officer_delete_conversation(request, conversation_id):
@@ -199,18 +208,18 @@ def officer_delete_conversation(request, conversation_id):
             "assistant conversation deleted by the officer", request)
 
 
-def ask(asker, question, screen, *, lang, conversation_id=None, request=None, conn=None, is_eval=False):
+def ask(asker, question, screen, *, lang, conversation_id=None, new=False, request=None, conn=None, is_eval=False):
     """非流式:与流式同一条路(`session`),只是答完才一次返回 `(会话, 回答)`;失败抛 `AssistError`。
 
     `conn` 缺省是生效配置(连同备用与断路器);管理页评测传候选配置(只测这一套,不改用备用),
     并以 `is_eval` 开新会话、不计用量与月度上限。"""
-    *_, done = session(asker, question, screen, lang=lang, conversation_id=conversation_id, request=request,
-                       conn=conn, is_eval=is_eval, stream=False)
+    *_, done = session(asker, question, screen, lang=lang, conversation_id=conversation_id, new=new,
+                       request=request, conn=conn, is_eval=is_eval, stream=False)
     return done["conversation"], done["reply"]
 
 
-def session(asker, question, screen, *, lang, conversation_id=None, request=None, conn=None, is_eval=False,
-            stream=True):
+def session(asker, question, screen, *, lang, conversation_id=None, new=False, request=None, conn=None,
+            is_eval=False, stream=True):
     """一次问答,产出事件(`event` 为 meta / delta / done / error;docs/ARCHITECTURE-soul-assist.md §13)。
 
     - **meta 之前的失败都抛 `AssistError`**(忙、会话不存在):视图先取出 meta 才开始流式响应,
@@ -231,13 +240,13 @@ def session(asker, question, screen, *, lang, conversation_id=None, request=None
         usage.record(asker.side, asker.tenant, "busy", conn.model, is_eval=is_eval)
         raise
     try:
-        yield from _run(asker, question, screen, lang, conversation_id, request, conn, backup, is_eval, stream)
+        yield from _run(asker, question, screen, lang, conversation_id, new, request, conn, backup, is_eval, stream)
     finally:
         slot.__exit__()
 
 
-def _run(asker, question, screen, lang, conversation_id, request, conn, backup, is_eval, stream):
-    conversation = None if is_eval else conversation_for(asker.owner, screen, conversation_id)
+def _run(asker, question, screen, lang, conversation_id, new, request, conn, backup, is_eval, stream):
+    conversation = None if is_eval else conversation_for(asker.owner, screen, conversation_id, new)
     recent = [] if conversation is None else list(
         conversation.messages.order_by("-created_at", "-id")[:settings.ASSISTANT_HISTORY_TURNS])
     history = [Turn(m.role, m.content) for m in reversed(recent)] + [Turn("user", question)]
