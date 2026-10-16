@@ -13,6 +13,9 @@ VIEWER `PATCH /auth/profile/ {"organization": <B 租户的组织>}` → **200**�
 
 `PrimaryKeyRelatedField` 按整张表解析外键(它从模型字段建的 queryset 没有租户
 contextvar、也没有 request),所以校验只能写在序列化器里。
+
+2026-10-16(用户定):组织与职务在这条路径上整个只读,只有管理员能改 ——
+改了值就 400 点名字段,原样回传不拒。
 """
 import pytest
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -64,12 +67,9 @@ def test_another_tenants_organization_is_refused(api_client, viewer, two_tenants
 
 
 @pytest.mark.django_db
-def test_an_organization_in_ones_own_tenant_is_accepted(api_client, viewer, two_tenants):
-    """正对照。
-
-    没有它,一个把 `organization` 整个设成只读的实现同样满足上面那条 ——
-    而在自己租户的组织之间调动,正是这个字段存在的理由。
-    """
+def test_an_organization_in_ones_own_tenant_is_refused_too(api_client, viewer, two_tenants):
+    """2026-10-16 起(用户定)组织与职务只有管理员能改:自己租户里的组织也不行。
+    400 要点名字段,落库值不变。"""
     a, _, org_a, _ = two_tenants
     org_a2 = Organization.objects.create(
         name="A 组织二部", code="ORG_A2", category="CHINESE", level=0, tenant=a
@@ -77,9 +77,54 @@ def test_an_organization_in_ones_own_tenant_is_accepted(api_client, viewer, two_
     response = client_for(api_client, viewer).patch(
         PROFILE, {"organization": str(org_a2.pk)}, format="json"
     )
+    assert response.status_code == 400, response.data
+    assert "organization" in response.data
+    viewer.refresh_from_db()
+    assert viewer.organization_id == org_a.pk
+
+
+@pytest.mark.django_db
+def test_position_cannot_be_changed_by_oneself(api_client, viewer):
+    viewer.position = "判官"
+    viewer.save(update_fields=["position"])
+    response = client_for(api_client, viewer).patch(PROFILE, {"position": "阎罗"}, format="json")
+    assert response.status_code == 400, response.data
+    assert "position" in response.data
+    viewer.refresh_from_db()
+    assert viewer.position == "判官"
+
+
+@pytest.mark.django_db
+def test_echoing_the_current_values_back_is_not_a_change(api_client, viewer, two_tenants):
+    """客户端把读到的资料原样回传(连同组织、职务)不该被拒 —— 只拒「改了」。"""
+    _, _, org_a, _ = two_tenants
+    response = client_for(api_client, viewer).patch(
+        PROFILE,
+        {"organization": str(org_a.pk), "position": viewer.position, "first_name": "新"},
+        format="json",
+    )
+    assert response.status_code == 200, response.data
+    viewer.refresh_from_db()
+    assert viewer.first_name == "新"
+
+
+@pytest.mark.django_db
+def test_an_admin_can_still_set_both(api_client, viewer, two_tenants):
+    """管理员走 `PATCH /users/{id}/`(`UserUpdateSerializer`),不受上面的锁影响。"""
+    a, _, _, _ = two_tenants
+    org_a2 = Organization.objects.create(
+        name="A 组织二部", code="ORG_A2", category="CHINESE", level=0, tenant=a
+    )
+    admin = User.objects.create_user(username="org_admin", password="x", role="ADMIN", tenant=a)
+    response = client_for(api_client, admin).patch(
+        f"/api/v1/users/{viewer.pk}/",
+        {"organization": str(org_a2.pk), "position": "阎罗"},
+        format="json",
+    )
     assert response.status_code == 200, response.data
     viewer.refresh_from_db()
     assert viewer.organization_id == org_a2.pk
+    assert viewer.position == "阎罗"
 
 
 @pytest.mark.django_db
