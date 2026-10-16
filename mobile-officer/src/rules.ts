@@ -432,3 +432,37 @@ export function hallLabel(
   if (civ && Object.values(CIVILIZATION_SHORT_CODES).includes(civ)) return t(`plaque.realm.${civ}`);
   return tenant?.display_name ?? undefined;
 }
+
+// ── 审判详情的操作区(Design 第三十四批 O-09) ─────────────────────────────
+
+/**
+ * 六种状态,主按钮一次只有一个。`closed`(已结案)不画操作区。
+ * `reassignAsked`:本次已请求改派(服务端没有"已请求"这个状态,只有 10 分钟一次的限流,所以由本机记)。
+ * 「待宣判」按此处原有的口径:案子还不是 `is_final`,手机上只能到电脑上继续。
+ */
+export type JudgmentActionState = "unclaimed" | "mine" | "deferred" | "reassign" | "other" | "desk" | "closed";
+
+export function judgmentActionState(
+  j: { claimed_by?: number | null; deferred_at?: string | null; concluded_at?: string | null; is_final?: boolean },
+  me: number | null,
+  reassignAsked: boolean,
+): JudgmentActionState {
+  if (j.concluded_at) return "closed";
+  if (j.claimed_by == null) return "unclaimed";
+  if (j.claimed_by !== me) return "other";
+  if (j.deferred_at) return "deferred";
+  if (reassignAsked) return "reassign";
+  return j.is_final ? "mine" : "desk";
+}
+
+/** ⋯ 里有什么,按顺序(放回永远最后)。 */
+export function judgmentMoreItems(state: JudgmentActionState): ("defer" | "request_reassign" | "release")[] {
+  if (state === "mine" || state === "desk") return ["defer", "request_reassign", "release"];
+  if (state === "deferred" || state === "reassign") return ["release"];
+  return [];
+}
+
+/** 理由必填:只有空白也算没写。 */
+export function reasonBlank(reason: string): boolean {
+  return reason.trim() === "";
+}
