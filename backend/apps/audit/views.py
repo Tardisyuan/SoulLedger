@@ -364,9 +364,13 @@ class AuditLogViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
             'fieldpermission', 'rowleveldatascope', 'datascope', 'permission'
         ]
 
+        # Exact, not icontains (2026-10-17, 用户决定): `role` used to bring back every
+        # `rolepermission` row and `menu` every `menubutton` row, so the page had to
+        # re-filter what it got and its 「显示更多」 / 500-row cap counted rows it hid.
+        # The docstring above is left as is: it is copied into the committed OpenAPI schema.
         resource_filter = request.query_params.get('resource')
         if resource_filter:
-            qs = qs.filter(resource__icontains=resource_filter)
+            qs = qs.filter(resource=resource_filter)
         else:
             # Default: only permission-related resources
             qs = qs.filter(resource__in=permission_resources)

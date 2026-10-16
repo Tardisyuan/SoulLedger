@@ -51,7 +51,7 @@ export const auditApi = {
   actions: () => api.get<AuditActionOption[]>("/audit-logs/actions/"),
   /** The distinct `resource` strings in the caller's audit log (same hall scoping as `list`). */
   resources: () => api.get<string[]>("/audit-logs/resources/"),
-  /** 权限变更时间线:不分页的数组,新的在前。默认只含八类权限资源;`resource` 是 icontains。 */
+  /** 权限变更时间线:不分页的数组,新的在前。默认只含八类权限资源;`resource` 精确匹配。 */
   timeline: (params?: AuditTimelineParams) => api.get<AuditLogEntry[]>("/audit-logs/timeline/", { params }),
   /** 不收参数:与列表同样按殿划界，不随列表的筛选变化。 */
   stats: () => api.get<AuditStats>("/audit-logs/stats/"),
@@ -59,6 +59,7 @@ export const auditApi = {
 
 /** `GET /audit-logs/timeline/` 的查询参数。`limit` 默认 50,后端上限 500(`TIMELINE_MAX_LIMIT`)。 */
 export interface AuditTimelineParams {
+  /** 精确匹配一个资源(小写，如 `role`;2026-10-17 起，此前是 icontains)。不传时是八类权限资源。 */
   resource?: string;
   action?: string;
   start_date?: string;

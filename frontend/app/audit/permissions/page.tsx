@@ -155,10 +155,9 @@ export default function PermissionChangesPage() {
     enabled: canReadAudit,
     placeholderData: (previous) => previous,
   });
-  const returned = data?.length ?? 0;
-  // 后端的 `resource` 是 icontains:选「角色」也会拿回「角色权限」,选「菜单」也会拿回「菜单按钮」。
-  // 这里只留选中的那一类;「显示更多」和 cap_reached 仍按后端返回的条数算。
-  const logs = useMemo(() => (data ?? []).filter((log) => !resource || log.resource === resource), [data, resource]);
+  // 后端的 `resource` 是精确匹配(2026-10-17),返回的就是要画的:「显示更多」和 cap_reached 数的正是这些行。
+  const logs = useMemo(() => data ?? [], [data]);
+  const returned = logs.length;
   const days = useMemo(() => {
     const out: { key: string; logs: AuditLogEntry[] }[] = [];
     for (const log of logs) {
