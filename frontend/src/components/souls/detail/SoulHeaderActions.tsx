@@ -11,6 +11,7 @@ export function SoulHeaderActions({
   onEdit,
   onDelete,
   onCorrectSettlement,
+  onRecalculate,
   isOverflowMenuOpen,
   setIsOverflowMenuOpen,
 }: {
@@ -18,6 +19,8 @@ export function SoulHeaderActions({
   onDelete: () => void;
   /** 「更正结案」:只在页面判定可做时(持有 `soul.correct_settlement` 且灵魂是 SETTLED)才给;没给就没有这一项。 */
   onCorrectSettlement?: () => void;
+  /** 「重算功过」:只在持有 `ledger.manage` 时给(`LedgerRecalculateView` 要的码名);没给就没有这个按钮。 */
+  onRecalculate?: () => void;
   /* The open/closed flag stays owned by the page. It used to live there while
      this markup was inlined, and a menu left open across a data reload kept
      its state; hoisting the state in here would have quietly closed it. */
@@ -74,6 +77,11 @@ export function SoulHeaderActions({
 
   return (
     <div className="flex items-center gap-3">
+      {onRecalculate ? (
+        <Button type="button" variant="secondary" onClick={onRecalculate}>
+          {t("souls.detail.recalculate")}
+        </Button>
+      ) : null}
       <RequirePermission permissions="soul.update">
         <Button type="button" variant="secondary" onClick={onEdit}>
           {t("souls.detail.edit")}

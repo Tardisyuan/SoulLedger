@@ -164,6 +164,7 @@ const COLLECTED_FILES = [
   "SoulHeaderActions.test.tsx",
   "CorrectSettlementDialog.test.tsx",
   "SoulDetailPage.correctSettlement.test.tsx",
+  "SoulDetailPage.recalculate.test.tsx",
   "SoulDetailPage.cacheInvalidation.test.tsx",
   "SoulDetailPage.inheritance.test.tsx",
   "SoulDetailPage.caseRef.test.tsx",
