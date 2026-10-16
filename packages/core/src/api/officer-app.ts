@@ -17,6 +17,7 @@ export type OfficerPushToken = components["schemas"]["OfficerPushToken"];
 export type TodoFacts = components["schemas"]["TodoFacts"];
 export type FactHistory = components["schemas"]["FactHistory"];
 export type FactAttachment = components["schemas"]["FactAttachment"];
+export type FactSoul = components["schemas"]["FactSoul"];
 export type Cosigner = components["schemas"]["Cosigner"];
 
 /**

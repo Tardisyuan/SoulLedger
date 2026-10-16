@@ -6306,6 +6306,25 @@
     "notify": {
       "intro": "关掉的类别不推送到这部手机，也不在站内提醒。和网页个人中心是同一份设置；邮件在网页上设置。",
       "save_failed": "没存上，开关已复原"
+    },
+    "soul": {
+      "tabs": {
+        "identity": "身份",
+        "judgments": "审判",
+        "karma": "功过",
+        "fate": "去向",
+        "events": "事件"
+      },
+      "birth_name": "原名",
+      "karma_group": "第 {{n}} 世 · {{count}} 条",
+      "merit_short": "功",
+      "demerit_short": "过",
+      "source": "来源：{{source}}",
+      "shown_count": "已显示 {{shown}} / {{total}}",
+      "judgment_meta": "第 {{n}} 世 · {{verdict}} · {{status}}",
+      "current_stop": "◐ 现在在这一站",
+      "no_disposition": "还没有处置",
+      "open_label": "打开{{name}}的灵魂详情"
     }
   },
   "print": {

@@ -11369,6 +11369,8 @@ export interface components {
         FactSoul: {
             name: string;
             soul_code: string;
+            /** @description 灵魂 id:App 详情里点灵魂名打开灵魂详情(旧服务端没有)。 */
+            id?: string;
         };
         FailureRates: {
             /**
