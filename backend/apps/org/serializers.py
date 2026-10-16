@@ -23,3 +23,12 @@ class OrganizationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Organization
         fields = ["id", "name", "code", "category", "parent", "level", "sort", "tenant"]
+
+    def validate(self, attrs):
+        """A unit cannot sit under itself or under one of its own sub-units (the
+        move form greys them out; this is the server's own refusal)."""
+        parent = attrs.get("parent")
+        if self.instance is not None and parent is not None:
+            if parent.pk in {o.pk for o in self.instance.get_children_recursive()}:
+                raise serializers.ValidationError({"parent": "A unit cannot be moved under itself or its own sub-units."})
+        return attrs

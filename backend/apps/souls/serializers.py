@@ -7,6 +7,7 @@ from rest_framework import serializers
 from apps.core.field_permissions import FieldPermissionMixin
 from apps.souls.dates import ERROR, WARNING, check_record_date, check_soul_dates
 from apps.souls.fields import HistoricalDateField
+from apps.core.archive import ARCHIVE_FIELDS, ArchiveSerializerMixin
 from apps.souls.models import Soul, SoulState
 from apps.souls.record_models import SoulRecord
 
@@ -476,7 +477,7 @@ def _is_eval_soul(serializer, obj) -> bool:
     return obj.pk == tagged_ids(serializer.context)[0]
 
 
-class SoulSerializer(FieldPermissionMixin, serializers.ModelSerializer):
+class SoulSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serializers.ModelSerializer):
     """Soul detail. Field access is enforced in two layers, deliberately.
 
     The hardcoded VIEWER checks below are the floor. FieldPermissionMixin
@@ -542,9 +543,10 @@ class SoulSerializer(FieldPermissionMixin, serializers.ModelSerializer):
             "description", "merit_score", "demerit_score",
             "karmic_balance", "create_time", "update_time", "records",
             "date_problems", "life_index", "inherited_merit", "inherited_demerit", "is_eval_identity",
+            *ARCHIVE_FIELDS,
         ]
         read_only_fields = [
-            "id", "current_state", "merit_score", "demerit_score", "create_time", "update_time",
+            *ARCHIVE_FIELDS, "id", "current_state", "merit_score", "demerit_score", "create_time", "update_time",
             "inherited_merit", "inherited_demerit",
         ]
 

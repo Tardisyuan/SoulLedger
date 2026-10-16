@@ -1,6 +1,7 @@
 import { api } from "./client";
 import type { components } from "./generated/schema";
 import type { PaginatedResponse } from "./users";
+import type { ArchiveFields } from "./archive";
 
 type Schemas = components["schemas"];
 
@@ -25,7 +26,7 @@ export interface DispositionListParams {
   ordering?: "term_end" | "-term_end" | "created_at" | "-created_at" | "executed_at" | "-executed_at";
 }
 
-export interface Disposition {
+export interface Disposition extends ArchiveFields {
   id: string;
   soul: string;
   judgment: string;
@@ -71,5 +72,9 @@ export const dispositionApi = {
   /** 当前筛选下的 CSV(`DispositionViewSet.export`):与 `list` 同一组筛选参数;页码不要传。 */
   exportCsv: (params?: DispositionListParams) =>
     api.get<Blob>("/disposition/export/", { params, responseType: "blob" }),
+  delete: (id: string) => api.delete<void>(`/disposition/${id}/`),
+  /** 归档(`disposition.execute`):只收有结案判决的处置;理由选填。 */
+  archive: (id: string, reason = "") => api.post<Disposition>(`/disposition/${id}/archive/`, { reason }),
+  unarchive: (id: string) => api.post<Disposition>(`/disposition/${id}/unarchive/`),
   execute: (id: string, data?: object) => api.post<Disposition>(`/disposition/${id}/execute/`, data),
 };

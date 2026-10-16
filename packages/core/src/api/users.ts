@@ -1,3 +1,4 @@
+import axios from "axios";
 import { api } from "./client";
 
 /**
@@ -106,6 +107,34 @@ export interface UserImportResult {
   errors: string[];
 }
 
+/** One row of the import preview (`dry_run=1`); `errors[].code` are `users.import.row_codes.*`. Never carries the password. */
+export interface UserImportRow {
+  row: number;
+  status: "ok" | "error";
+  values: { username: string; display_name: string };
+  errors: { field: string; code: string }[];
+}
+
+/** 200 body of POST /users/import_csv/ with `dry_run=1`: nothing written. */
+export interface UserImportPreview {
+  total: number;
+  ok_count: number;
+  error_count: number;
+  rows: UserImportRow[];
+}
+
+/** 400 body: the file as a whole is unusable (`bad_encoding` / `empty_file` / `missing_columns`). */
+export interface UserImportFileError {
+  code: string;
+  columns?: string[];
+}
+
+export function userImportFileErrorOf(error: unknown): UserImportFileError | null {
+  if (!axios.isAxiosError(error) || error.response?.status !== 400) return null;
+  const data = error.response.data as Partial<UserImportFileError> | undefined;
+  return data && typeof data.code === "string" ? (data as UserImportFileError) : null;
+}
+
 export const usersApi = {
   list: (params?: Record<string, string | number | undefined>) => api.get<PaginatedResponse<User>>("/users/", { params }),
   get: (id: string) => api.get<User>(`/users/${id}/`),
@@ -124,6 +153,13 @@ export const usersApi = {
   /** ADMIN. Clears the authenticator, recovery codes and 「不再询问」 devices, revokes every refresh token;
    *  the reason is required and audited. 409 `not_enabled` on a row that has it off. */
   resetMfa: (id: string | number, reason: string) => api.post<{ detail: string }>(`/users/${id}/reset-mfa/`, { reason }),
+  /** The import's first step: same row checks as `import`, nothing written. */
+  importPreview: (data: FormData) => {
+    data.set("dry_run", "1");
+    return api.post<UserImportPreview>("/users/import_csv/", data, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+  },
   import: (data: FormData) => api.post<UserImportResult>("/users/import_csv/", data, {
     headers: { "Content-Type": "multipart/form-data" },
   }),

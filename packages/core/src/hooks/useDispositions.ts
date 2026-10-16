@@ -5,6 +5,30 @@ import { dispositionApi, type DispositionListParams } from "../api/index";
 import { notify } from "../platform/index";
 import { dispositionKeys } from "../query_keys";
 
+export function useArchiveDisposition() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason?: string }) => dispositionApi.archive(id, reason).then((r) => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: dispositionKeys.all });
+      notify("records.archive.done", "success");
+    },
+    onError: () => notify("records.archive.failed", "error"),
+  });
+}
+
+export function useUnarchiveDisposition() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => dispositionApi.unarchive(id).then((r) => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: dispositionKeys.all });
+      notify("records.archive.unarchived", "success");
+    },
+    onError: () => notify("records.archive.failed", "error"),
+  });
+}
+
 /**
  * One page of dispositions. Pass `section` for one of the three sections; the
  * response's `section_counts` are the totals of all three under the same

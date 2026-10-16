@@ -106,6 +106,7 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
         # destroy() below) — gated on the same codename as the delete it
         # stands in for, not a new one.
         'archive': ['soul.delete'],
+        'unarchive': ['soul.delete'],
         # The batch form of destroy — the same codename, not a new one.
         'batch_recycle': ['soul.delete'],
         # 批量条的「导出」:读了什么就导出什么,与列表同一个码名。
@@ -151,7 +152,9 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
         show_deleted = self.request.query_params.get('show_deleted', '').lower() in ('1', 'true', 'yes')
         if not show_deleted:
             qs = qs.filter(is_deleted=False)
-        qs = qs.filter(is_archived=False)
+        # 详情与取消归档要找得到已归档的灵魂(链接、搜索打开时详情页显示横条);列表不带。
+        if getattr(self, 'action', None) not in ('retrieve', 'unarchive'):
+            qs = qs.filter(is_archived=False)
         # Apply tenant isolation + DataScope filtering (equivalent to
         # DataScopeViewSetMixin, which this viewset cannot simply inherit
         # because of the soft-delete/archive/karma handling above and below).
@@ -460,6 +463,13 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
             )
         reason = request.data.get("reason", "")
         soul.archive(user=request.user, reason=reason)
+        return Response(SoulSerializer(soul).data)
+
+    @action(detail=True, methods=["post"])
+    def unarchive(self, request, pk=None):
+        """Undo archive(): the soul returns to the lists."""
+        soul = self.get_object()
+        soul.unarchive()
         return Response(SoulSerializer(soul).data)
 
     @action(detail=True, methods=["post"])

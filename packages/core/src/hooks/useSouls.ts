@@ -3,6 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { soulsApi, type SoulBatchRecycleRequest, type SoulInput } from "../api/index";
 import { soulBatchRecycleErrorOf } from "../api/souls";
+import { isArchivableConflict } from "../api/archive";
 import { notify } from "../platform/index";
 import { recycleBinKeys, soulKeys } from "../query_keys";
 
@@ -158,9 +159,37 @@ export function useDeleteSoul() {
       // confirmation already does ("移至回收站", never "删除").
       notify("souls.detail.delete_to_recycle_bin", "success");
     },
-    onError: () => {
+    onError: (error) => {
+      // 409 `archivable`: the page turns the confirm into the archive screen; a failure toast beside it would contradict it.
+      if (isArchivableConflict(error)) return;
       notify("souls.detail.error_delete", "error");
     },
+  });
+}
+
+/** POST /souls/{id}/archive/ — optional reason, kept in the audit log. */
+export function useArchiveSoul() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason?: string }) => soulsApi.archive(id, reason).then((r) => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: soulKeys.all });
+      notify("records.archive.done", "success");
+    },
+    onError: () => notify("records.archive.failed", "error"),
+  });
+}
+
+/** POST /souls/{id}/unarchive/ — the banner's 「取消归档」 is the only entry. */
+export function useUnarchiveSoul() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => soulsApi.unarchive(id).then((r) => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: soulKeys.all });
+      notify("records.archive.unarchived", "success");
+    },
+    onError: () => notify("records.archive.failed", "error"),
   });
 }
 

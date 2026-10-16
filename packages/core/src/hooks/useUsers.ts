@@ -28,3 +28,17 @@ export function useBatchSetUsersActive() {
     onSuccess: () => qc.invalidateQueries({ queryKey: userKeys.all }),
   });
 }
+
+/** Import step 1: the same row checks as the import, nothing written. 400 → `userImportFileErrorOf(error)`. */
+export function useUserImportPreview() {
+  return useMutation({ mutationFn: async (data: FormData) => (await usersApi.importPreview(data)).data });
+}
+
+/** Import step 2. The page only offers it once the preview has no error row. */
+export function useUserImportCommit() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: FormData) => (await usersApi.import(data)).data,
+    onSuccess: () => qc.invalidateQueries({ queryKey: userKeys.all }),
+  });
+}

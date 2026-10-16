@@ -2,7 +2,8 @@
 REST views for Organization app.
 """
 from drf_spectacular.utils import extend_schema
-from rest_framework import viewsets
+from django.db import transaction
+from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
@@ -80,3 +81,27 @@ class OrganizationViewSet(
         orgs = self.get_queryset()
         roots = orgs.filter(parent__isnull=True)
         return Response(OrganizationSerializer(roots, many=True).data)
+
+    def perform_update(self, serializer):
+        """`Organization.save()` only recomputes the unit's own `level`; a move
+        has to carry the whole subtree's depth with it."""
+        with transaction.atomic():
+            super().perform_update(serializer)
+            org = serializer.instance
+            for child in org.get_children_recursive()[1:]:
+                child.level = child.parent.level + 1
+                child.save(update_fields=["level"])
+
+    def destroy(self, request, *args, **kwargs):
+        """Refuse to delete a unit that still has sub-units or people, and say
+        how many -- `parent` is SET_NULL, so deleting would silently turn the
+        sub-units into roots and strip the people of their unit."""
+        org = self.get_object()
+        units = org.children.count()
+        people = org.users.exclude(role="SOUL").count()
+        if units or people:
+            return Response(
+                {"code": "not_empty", "error": "Move its sub-units and people first.", "units": units, "people": people},
+                status=status.HTTP_409_CONFLICT,
+            )
+        return super().destroy(request, *args, **kwargs)
