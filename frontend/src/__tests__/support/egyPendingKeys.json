@@ -1,1 +1,25 @@
-[]
+[
+  "souls.events.SOUL_ACCOUNT_CREATED",
+  "souls.events.SOUL_ACCOUNT_RETIRED",
+  "souls.events.REBIRTH_APPLICATION_SUBMITTED",
+  "souls.events.REBIRTH_STATUS_CHANGED",
+  "souls.events.REBIRTH_CROSS_CIV_DECIDED",
+  "souls.events.COOLDOWN_SHORTENING_DECIDED",
+  "souls.events.SENTENCE_PLAN_CREATED",
+  "souls.events.SENTENCE_NODE_ACTIVATED",
+  "souls.events.SENTENCE_NODE_WAITING",
+  "souls.events.SENTENCE_NODE_COMPLETED",
+  "souls.events.SENTENCE_NODE_REFUSED",
+  "souls.events.SENTENCE_NODE_REDISPATCHED",
+  "souls.events.SENTENCE_PLAN_AMENDED",
+  "souls.events.SENTENCE_REQUEST_CREATED",
+  "souls.events.SENTENCE_REQUEST_DECIDED",
+  "souls.events.SENTENCE_PLAN_COMPLETED",
+  "souls.events.SENTENCE_PLAN_CANCELLED",
+  "audit.resources.soul",
+  "audit.resources.user",
+  "audit.resources.workflow",
+  "audit.resources.judgment",
+  "audit.resources.soulrecord",
+  "audit.resources.permission"
+]

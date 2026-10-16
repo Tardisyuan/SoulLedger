@@ -207,8 +207,9 @@ READ_MATRIX = {
     # timeline) included. `stats` was the only protected action, and only
     # because someone hand-wrote a role check inside it.
     "/api/v1/audit-logs/": AUDIT_READ,
-    # apps/audit/views.py:136, hardcoded
-    "/api/v1/audit-logs/stats/": ADMIN_ONLY,
+    # Was ADMIN_ONLY through a hand-written role check inside `stats`; removed 2026-10-17, so it
+    # follows `audit.read` like the list it counts.
+    "/api/v1/audit-logs/stats/": AUDIT_READ,
     # ENFORCED (tranche 3): declares `notification.read`, held by all five
     # roles and the only codename NotificationViewSet resolves to. Does not
     # move, and proving it does not move is the reason the app was enforced

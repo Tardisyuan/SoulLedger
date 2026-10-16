@@ -1400,6 +1400,10 @@ export class ApiMock {
     this.on("GET", "/souls/:id/karma/", SOUL_LEDGER);
     this.on("GET", "/souls/:id/records/", []);
 
+    // ── Audit filter options ── (arrays, not the empty page BACKGROUND_PATHS would give)
+    this.on("GET", "/audit-logs/actions/", [{ value: "CREATE", label: "创建" }, { value: "BATCH_DELETE", label: "批量删除" }]);
+    this.on("GET", "/audit-logs/resources/", ["soul", "tenant"]);
+
     // ── Judgment ──
     this.on("GET", "/judgment/", paginated([]));
     this.on("POST", "/judgment/", { ...OPENED_JUDGMENT });

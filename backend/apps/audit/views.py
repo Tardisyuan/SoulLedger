@@ -9,7 +9,7 @@ from django.utils.dateparse import parse_date
 from django_filters import rest_framework as filters
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiResponse, extend_schema
-from rest_framework import status, viewsets
+from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.response import Response
@@ -309,18 +309,14 @@ class AuditLogViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
         """
         GET /api/v1/audit-logs/stats/
         Returns statistics about audit logs.
-        Requires ADMIN role.
+        Same `audit.read` gate and hall scoping as the list.
         """
-        if getattr(request.user, 'role', None) != 'ADMIN':
-            return Response(
-                {"error": "Admin access required"},
-                status=status.HTTP_403_FORBIDDEN
-            )
-
+        # A hand-written ADMIN-only check used to sit here, refusing a MODERATOR (who holds `audit.read`)
+        # the counts of rows they can already list. Removed 2026-10-17; the gate is `extra_permissions`.
         from django.db.models import Count
 
-        # The 403 above turns every non-ADMIN away; among ADMINs only the global one (no hall) counts
-        # every hall, a hall-bound ADMIN counts their own.
+        # Same scoping as the list: only the global admin (no hall) counts every hall; everyone else,
+        # hall-bound ADMIN included, counts their own hall.
         qs = _hall_scope(AuditLog.objects.all(), request)
 
         action_stats = (
