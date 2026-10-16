@@ -10,8 +10,7 @@ import {
   shouldAskBio,
   shouldAutoPrompt,
   logoutBody,
-  soulCodeStep,
-} from "../loginRules";
+  soulCodeStep, credentialReadFailure } from "../loginRules";
 
 describe("soulCodeStep: the box holds the raw characters; the step says what was typed", () => {
   it("appended text is the typing: upper-cased, separators skipped", () => {
@@ -80,6 +79,21 @@ describe("shouldAskBio: the question after the first sign-in", () => {
     ["already answered", { asked: true }],
     ["the welcome has not ended", { welcomePending: true }],
   ])("not when %s", (_name, over) => expect(shouldAskBio({ ...due, ...over })).toBe(false));
+});
+
+describe("credentialReadFailure: an iOS lockout reads like a miss but comes back at once", () => {
+  const ios = { code: "ERR_KEY_CHAIN", message: "KeyChainException: Authentication failed. Provided passphrase/PIN is incorrect or there is no user authentication method configured for this device." };
+  it("is locked when iOS answers without scanning", () => {
+    expect(credentialReadFailure(ios, 40, "ios")).toBe("locked");
+  });
+  it("is a miss when the scan took its time, or off iOS", () => {
+    expect(credentialReadFailure(ios, 3000, "ios")).toBe("failed");
+    expect(credentialReadFailure(ios, 40, "android")).toBe("failed");
+  });
+  it("leaves a fast cancel or invalidation alone", () => {
+    expect(credentialReadFailure(new Error("User canceled the operation."), 40, "ios")).toBe("cancelled");
+    expect(credentialReadFailure(new Error("Key permanently invalidated"), 40, "ios")).toBe("invalidated");
+  });
 });
 
 describe("classifyCredentialError", () => {

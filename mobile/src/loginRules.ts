@@ -105,6 +105,18 @@ export function classifyCredentialError(error: unknown): CredentialFailure {
   return "failed";
 }
 
+/**
+ * iOS gives a biometry lockout (too many misses; it lifts when the phone is unlocked with its passcode) the same
+ * text as an ordinary miss -- "Authentication failed. Provided passphrase/PIN is incorrect ..." (iPhone 15 Pro Max,
+ * 2026-10-16) -- but returns it at once, with no Face ID animation. A real miss takes the scan: seconds.
+ * ponytail: a timing threshold, not an API; if iOS ever answers a real miss this fast, ask LocalAuthentication.
+ */
+export const IOS_LOCKOUT_MS = 800;
+export function credentialReadFailure(error: unknown, elapsedMs: number, os: string): CredentialFailure {
+  const failure = classifyCredentialError(error);
+  return failure === "failed" && os === "ios" && elapsedMs < IOS_LOCKOUT_MS ? "locked" : failure;
+}
+
 /** Where "面容 / 指纹 login is on" is kept on the phone: `face` or `finger`. Here, not in deviceLogin, so a module
  *  the officer app shares (feedback) can read it without pulling in the native credential store. */
 export const BIO_KEY = "soulledger.login.bio";

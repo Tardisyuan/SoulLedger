@@ -15,8 +15,9 @@ import { BIO_KEY } from "./loginRules";
 import { platform } from "@soulledger/core/platform";
 import * as LocalAuthentication from "expo-local-authentication";
 import * as SecureStore from "expo-secure-store";
+import { Platform } from "react-native";
 
-import { classifyCredentialError, type CredentialFailure } from "./loginRules";
+import { classifyCredentialError, credentialReadFailure, type CredentialFailure } from "./loginRules";
 
 export const ACCOUNT_KEY = "soulledger.login.account";
 export { BIO_KEY };
@@ -109,6 +110,7 @@ export type CredentialRead = { status: "ok"; credential: string } | { status: "c
  * on (the phone's enrolled set changed) reads as `invalidated`.
  */
 export async function readCredential(reason: string = prompt()): Promise<CredentialRead> {
+  const started = Date.now();
   try {
     const credential = await SecureStore.getItemAsync(CREDENTIAL_KEY, {
       keychainService: SERVICE,
@@ -117,7 +119,7 @@ export async function readCredential(reason: string = prompt()): Promise<Credent
     });
     return credential ? { status: "ok", credential } : { status: "invalidated" };
   } catch (e) {
-    return { status: classifyCredentialError(e) };
+    return { status: credentialReadFailure(e, Date.now() - started, Platform.OS) };
   }
 }
 
