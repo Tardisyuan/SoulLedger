@@ -355,7 +355,7 @@ class DeathRegistrationReadViewSet(viewsets.ReadOnlyModelViewSet):
             )
         if result.status != DeathRegistrationStatus.PROCESSED:
             _escalate_failed_retry(request, result)
-        return Response(self.get_serializer(result).data)
+        return Response(DeathRegistrationRequestSerializer(result, context=self.get_serializer_context()).data)
 
     def get_queryset(self):
         # `admin_bypass=False`: an ADMIN sees their own tenant's registrations,
