@@ -20,6 +20,7 @@ import { MOCK_ACCESS_TOKEN, OPENED_JUDGMENT, SOULS, expect, test, setupAuthentic
 const ROUTES = [
   "/dashboard",
   "/souls",
+  "/events",
   "/judgment",
   "/ledger",
   "/workflow",

@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import type { Disposition, Judgment, LedgerSummary, Reincarnation, Soul, SoulEvent } from "@soulledger/core/api";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { Button } from "@/src/components/ui/Button";
@@ -7,6 +8,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { SoulLifecycleTimeline } from "@/src/components/souls/SoulLifecycleTimeline";
 import { SoulLedgerSections } from "./SoulLedgerSections";
 import { SoulLedgerProgress } from "./SoulLedgerProgress";
+
+/**
+ * 生命周期时间线的锚点。「灵魂事件」页(/events)的灵魂链接带 `#lifecycle`。
+ * 页面是取数后才渲染时间线的,浏览器自己的锚点滚动那一刻元素还不在,所以载入完成后补滚一次。
+ */
+export const LIFECYCLE_ANCHOR = "lifecycle";
 
 /** 中栏卷宗面板:v3 的 surface 面,上沿留给 `LedgerHeading` 自己的 pt-6。 */
 const PANEL = "min-w-0 bg-[oklch(var(--color-surface-1))] px-6 pb-6";
@@ -50,6 +57,12 @@ export function SoulTimelineColumn({
   onOpenJudgmentQueue: (judgmentId: string) => void;
 }) {
   const { t } = useI18n();
+  const ready = !loading && soul !== null;
+  useEffect(() => {
+    if (ready && window.location.hash === `#${LIFECYCLE_ANCHOR}`) {
+      document.getElementById(LIFECYCLE_ANCHOR)?.scrollIntoView();
+    }
+  }, [ready]);
   if (loading) {
     return (
       <div className={`${PANEL} space-y-3 pt-6`}>
@@ -81,7 +94,7 @@ export function SoulTimelineColumn({
           the open-in-queue action. The flat tables above are the
           ledger's per-kind view; this stays because it is the only place
           that bands records by life and offers the queue entry. */}
-      <div className={`${PANEL} pt-1`}>
+      <div id={LIFECYCLE_ANCHOR} className={`${PANEL} pt-1 scroll-mt-4`}>
         <SoulLifecycleTimeline
           soul={soul}
           judgments={judgments}

@@ -256,12 +256,26 @@ export function buildReincarnationMarkers(
 
 // ── System event rows — grouped, decoded, toggle-gated ─────────────────────
 
-export function groupSystemEvents(events: SoulEvent[]): { key: string; eventType: string; actor: string; date: string; items: SoulEvent[] }[] {
+/** 一个灵魂的时间线上:同一事件、同一操作人、同一时刻的相邻行合成 ×N。 */
+const sameSystemRun = (a: SoulEvent, b: SoulEvent) =>
+  a.event_type === b.event_type && a.actor === b.actor && a.create_time === b.create_time;
+
+/**
+ * 「灵魂事件」页(/events)的合并规则(第三十七批 W-13):同一灵魂、同一事件、相邻两行。
+ * 全殿页上相邻的行多半是不同的灵魂,跨灵魂合并会把人藏掉;同一灵魂的功过连算几次才折成 ×N。
+ */
+export const sameSoulAndEvent = (a: SoulEvent, b: SoulEvent) => a.soul === b.soul && a.event_type === b.event_type;
+
+/** Newest first; `items[0]` is the newest of a run, which is the one whose detail is shown. */
+export function groupSystemEvents(
+  events: SoulEvent[],
+  same: (a: SoulEvent, b: SoulEvent) => boolean = sameSystemRun
+): { key: string; eventType: string; actor: string; date: string; items: SoulEvent[] }[] {
   const sorted = [...events].sort((a, b) => toSortMs(b.create_time) - toSortMs(a.create_time));
   const groups: { key: string; eventType: string; actor: string; date: string; items: SoulEvent[] }[] = [];
   for (const e of sorted) {
     const last = groups[groups.length - 1];
-    if (last && last.eventType === e.event_type && last.actor === e.actor && last.date === e.create_time) {
+    if (last && same(last.items[last.items.length - 1], e)) {
       last.items.push(e);
     } else {
       groups.push({ key: e.id, eventType: e.event_type, actor: e.actor, date: e.create_time, items: [e] });
