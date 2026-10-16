@@ -7,9 +7,9 @@ import { JUDGMENT_COMMENT_MAX, judgmentApi } from "@soulledger/core/api/judgment
 import { dispatchApi } from "@soulledger/core/api/dispatch";
 import { officerAppApi, type TodoItemDetail, type TodoKind } from "@soulledger/core/api/officer-app";
 import { soulAccountsApi } from "@soulledger/core/api/soul-accounts";
-import { soulsApi, type Soul } from "@soulledger/core/api/souls";
-import { useCallback, useState } from "react";
-import { Pressable, Share, View } from "react-native";
+import { soulsApi, type Soul, type SoulRecordEntry } from "@soulledger/core/api/souls";
+import { useCallback, useRef, useState } from "react";
+import { Pressable, type ScrollView, Share, View } from "react-native";
 
 import { formatWhen } from "../format";
 import { useCachedRemote } from "../readCache";
@@ -18,6 +18,8 @@ import { deskUrl, dispatchStatusLine, dispatchView, handledNotice, isDenied, tod
 import { useSession } from "../session";
 import { Icon, Input, Notice, Screen, SectionLabel, SmallButton, Txt, space, useI18n, useOnline, useRemote, useTheme } from "../shared";
 import { LetterThread } from "./letter";
+import { JudgmentActionBar } from "./judgmentActions";
+import { EvidenceText, JudgmentCase } from "./judgmentCase";
 import { CosignSheet, DecisionSheet, type CooldownFacts } from "./sheets";
 
 export type DetailTarget =
@@ -222,23 +224,41 @@ function ActionBar({ kind, onPick, waitingOn, offline }: { kind: TodoKind; onPic
 
 function JudgmentDetail({ id }: { id: string }) {
   const { t } = useI18n();
+  const { state } = useSession();
+  const me = state.status === "signedIn" ? state.user.id : null;
   const load = useCallback(() => judgmentApi.get(id).then((r) => r.data), [id]);
   const { data, error, reload } = useRemote(load);
+  const scroll = useRef<ScrollView>(null);
+  const [asked, setAsked] = useState(false);
+  const [record, setRecord] = useState<SoulRecordEntry | null>(null);
   const view = viewStateOf({ data, error }, () => false, isDenied);
   if (view || !data) return <StateView state={view ?? "loading"} onRetry={reload} />;
+  if (record) return <EvidenceText record={record} onBack={() => setRecord(null)} />;
   return (
-    <Screen testID="judgment-detail" edges={["left", "right"]}>
-      <RefreshFailed data={data} error={error} onRetry={reload} />
-      <View style={{ padding: space[5], gap: space[4] }}>
-        <SectionLabel>{data.case_number}</SectionLabel>
-        <Txt variant="title">{data.soul_name}</Txt>
-        <Txt variant="caption" tone="muted">{[data.court, data.claimed_by_name].filter(Boolean).join(" · ")}</Txt>
-        {!data.is_final ? <Txt variant="bodyLg">{`◇ ${t("officer_app.queue.desk_only")}`}</Txt> : null}
-        <Txt variant="caption" tone="muted">{t("officer_app.queue.scope_note")}</Txt>
-        <JudgmentComments id={id} concludedAt={data.concluded_at} />
-        <ContinueOnDesk target={{ kind: "judgment", id }} />
-      </View>
-    </Screen>
+    <View style={{ flex: 1 }}>
+      <Screen testID="judgment-detail" edges={["left", "right"]} scrollRef={scroll}>
+        <RefreshFailed data={data} error={error} onRetry={reload} />
+        <View style={{ padding: space[5], gap: space[4] }}>
+          <SectionLabel>{data.case_number}</SectionLabel>
+          <Txt variant="title">{data.soul_name}</Txt>
+          <Txt variant="caption" tone="muted">{[data.court, data.claimed_by_name].filter(Boolean).join(" · ")}</Txt>
+          {!data.is_final ? <Txt variant="bodyLg">{`◇ ${t("officer_app.queue.desk_only")}`}</Txt> : null}
+          <JudgmentCase data={data} onOpenRecord={setRecord} />
+          <JudgmentComments id={id} concludedAt={data.concluded_at} readOnly={!!data.deferred_at && data.claimed_by === me} />
+          <Txt variant="caption" tone="muted">{t("officer_app.queue.scope_note")}</Txt>
+          <ContinueOnDesk target={{ kind: "judgment", id }} />
+        </View>
+      </Screen>
+      <JudgmentActionBar
+        data={data}
+        me={me}
+        reassignAsked={asked}
+        onAsked={() => setAsked(true)}
+        onChanged={() => void reload()}
+        onWrite={() => scroll.current?.scrollToEnd({ animated: true })}
+        onDesk={() => void Share.share({ message: deskUrl({ kind: "judgment", id }) }).catch(() => {})}
+      />
+    </View>
   );
 }
 
@@ -246,7 +266,7 @@ function JudgmentDetail({ id }: { id: string }) {
 /** Like the desk: the latest 3 show, 「展开其余 N 条」 opens the rest, and 「结案后」 marks the first comment after the verdict. */
 const COMMENTS_SHOWN = 3;
 
-function JudgmentComments({ id, concludedAt }: { id: string; concludedAt?: string | null }) {
+function JudgmentComments({ id, concludedAt, readOnly }: { id: string; concludedAt?: string | null; readOnly?: boolean }) {
   const { t } = useI18n();
   const load = useCallback(() => judgmentApi.comments(id).then((r) => r.data), [id]);
   const { data, reload } = useRemote(load);
@@ -286,9 +306,14 @@ function JudgmentComments({ id, concludedAt }: { id: string; concludedAt?: strin
           <Txt variant="body">{c.body}</Txt>
         </View>
       ))}
-      <Input testID="comment-input" label={t("officer_app.comment.write")} multiline maxLength={JUDGMENT_COMMENT_MAX} value={body} onChangeText={setBody} />
-      {failed ? <Notice tone="neg" testID="comment-failed">{t("officer_app.comment.failed")}</Notice> : null}
-      <ActionButton testID="comment-send" kind="outline" busy={busy} title={t("officer_app.comment.send")} onPress={send} />
+      {readOnly ? null : (
+        // 暂缓期间不能写评议(O-09);「恢复」之后回来。
+        <>
+          <Input testID="comment-input" label={t("officer_app.comment.write")} multiline maxLength={JUDGMENT_COMMENT_MAX} value={body} onChangeText={setBody} />
+          {failed ? <Notice tone="neg" testID="comment-failed">{t("officer_app.comment.failed")}</Notice> : null}
+          <ActionButton testID="comment-send" kind="outline" busy={busy} title={t("officer_app.comment.send")} onPress={send} />
+        </>
+      )}
     </View>
   );
 }
