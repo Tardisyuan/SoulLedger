@@ -23917,6 +23917,7 @@ components:
       - death-sync
       - dispatch
       - disposition
+      - events
       - judgment
       - ledger
       - menus
@@ -23957,6 +23958,7 @@ components:
         * `death-sync` - death-sync
         * `dispatch` - dispatch
         * `disposition` - disposition
+        * `events` - events
         * `judgment` - judgment
         * `ledger` - ledger
         * `menus` - menus
@@ -29350,6 +29352,7 @@ components:
       - death-sync
       - dispatch
       - disposition
+      - events
       - judgment
       - ledger
       - menus
@@ -29384,6 +29387,7 @@ components:
         * `death-sync` - death-sync
         * `dispatch` - dispatch
         * `disposition` - disposition
+        * `events` - events
         * `judgment` - judgment
         * `ledger` - ledger
         * `menus` - menus
