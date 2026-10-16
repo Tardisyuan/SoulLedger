@@ -94,6 +94,7 @@ MESSAGES = {
             "body": "{{soul}}: Ankh Er Taui Khesef In Wedja {{count}}. Wedja Pehwy, Ankh Er Taui.",
         },
         "impersonation_started": {"title": "Ky Maa Em Ba-Ek", "body": "{{by}} Maa Em Ba-Ek (Maa Wa · At {{minutes}} Er Aa). Khet: {{reason}}. Iri Neb: Sesh Em Medew Maa."},
+        "death_sync_retry_failed": {"title": "Sesh Mut: Nen Iri Wehem", "body": "Sesh Mut {{reference}}: Wehem Iri {{count}} · Nen Iri Wehem ({{reason}}). Maa Senb Mut."},
     },
 }
 
