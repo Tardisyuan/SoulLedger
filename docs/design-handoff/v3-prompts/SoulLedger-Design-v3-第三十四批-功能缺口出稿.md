@@ -109,8 +109,41 @@
 
 ---
 
-## 附：埃及文补一条
+## 附：埃及文补词(31 条)
+
+这两轮新上线的文案，zh-Hans / en 已在线上，请给 egy。`{{name}}` 原样保留。
+「租户」沿用移交页现有的「来源租户 / 目标租户」叫法。
 
 | key | zh | en |
 |---|---|---|
-| scheduler.jobs.officer_app_check_receipts | 官员推送：查回执 | Officer push: fetch receipts |
+| scheduler.jobs.officer_app_check_receipts | 官员推送:查回执 | Officer push: fetch receipts |
+| users.reset_password.action | 重置密码 | Reset password |
+| users.reset_password.confirm_title | 重置 {{name}} 的密码？ | Reset the password for {{name}}? |
+| users.reset_password.confirm_body | 将生成一个新的随机密码，旧密码立即作废，此人所有已登录的设备都会退出，下次登录必须自己改密码。新密码只显示一次。 | A new random password is generated. The old one stops working at once, every device this person is signed in on is signed out, and they must change the password at next sign-in. The new password is shown only once. |
+| users.reset_password.confirm | 确认重置 | Reset |
+| users.reset_password.failed | 重置失败，请重试 | Reset failed, please try again |
+| users.reset_password.shown_title | {{name}} 的新密码（仅此一次） | New password for {{name}} (shown once) |
+| users.reset_password.shown_warning | 关闭窗口后无法再次查看。请立即告知本人；首次登录须修改密码。 | You cannot see it again after closing. Pass it on now; they must change it at first sign-in. |
+| users.reset_password.copy | 复制密码 | Copy password |
+| users.reset_password.copied | 已复制到剪贴板 | Copied to clipboard |
+| users.reset_password.copy_failed | 复制失败，请手动抄写 | Copy failed, please write it down |
+| users.reset_password.close | 我已记下，关闭 | I have noted it, close |
+| users.reset_password.close_confirm_title | 密码只显示这一次 | The password is shown only once |
+| users.reset_password.close_confirm_body | 密码只显示这一次，确定关闭？关闭后无法再次查看，需要重新重置才能拿到新密码。 | The password is shown only once. Close anyway? You cannot see it again; you would have to reset it to get a new one. |
+| users.reset_password.close_confirm | 确定关闭 | Close |
+| users.reset_password.close_back | 返回 | Back |
+| judgment.claim.undefer | 恢复 | Restore |
+| judgment.claim.done_undefer | 已恢复，案子回到队列 | Restored; the case is back in the queue |
+| souls.detail.load_more | 加载更多记录 | Load more records |
+| souls.detail.load_more_failed | 部分记录没有加载出来，请再点一次 | Some records did not load; try again |
+| dispatch.filter.search | 搜索灵魂姓名或理由... | Search soul name or reason... |
+| dispatch.filter.all_status | 所有状态 | All statuses |
+| dispatch.filter.all_tenants | 所有租户 | All tenants |
+| dispatch.filter.from | 发起日期（起） | Proposed from |
+| dispatch.filter.to | 发起日期（止） | Proposed to |
+| dispatch.filter.clear | 清除筛选 | Clear filters |
+| officer_app.me.email | 邮箱 | Email |
+| officer_app.notices.on_desk | 在电脑上查看 | View on the desk |
+| officer_app.queue.deferred | 暂缓 | Deferred |
+| officer_app.queue.others | 他人手上 | With others |
+| officer_app.me.email_none | 没有邮箱：忘记密码时收不到重置邮件，请让管理员补上。 | No email on file: password-reset mail can't reach you. Ask an administrator to add one. |
