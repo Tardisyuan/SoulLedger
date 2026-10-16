@@ -262,7 +262,7 @@ export interface WorkflowTemplateInput {
   civilization: CivilizationOption;
   case_type: string;
   /**
-   * 本模板默认的急缓：0=普通, 1=紧急, 2=危急。对应后端
+   * 本模板默认的急缓：0=普通, 1=紧急, 2=特急。对应后端
    * `WorkflowTemplate.priority`，是 `ApprovalWorkflow.priority` 的默认值——
    * 建流程时调用方没有显式指定，就落到这个值。
    *
@@ -1295,7 +1295,7 @@ export default function WorkflowEditor({
   }, [templatePayload, publishMutation]);
 
   // 三档急缓的文案复用 `workflow.detail.*`——`app/workflow/[id]/page.tsx` 用同一
-  // 组键把 `ApprovalWorkflow.priority` 的 0/1/2 显示成普通/紧急/危急，三份 bundle
+  // 组键把 `ApprovalWorkflow.priority` 的 0/1/2 显示成普通/紧急/特急，三份 bundle
   // (en / zh-Hans / egy) 都已有这四个键。这里说的是同一根尺子的同一个刻度，新造一
   // 组平行文案会让同一个 1 在模板页和流程页读起来不一样。
 
@@ -1546,7 +1546,7 @@ export default function WorkflowEditor({
           </select>
         </label>
         {/* Priority as a 0 / 1 / 2 segment, v3 A1. A radio group, so arrow keys
-            move it and the screen reader hears 「普通 / 紧急 / 危急」 — the
+            move it and the screen reader hears 「普通 / 紧急 / 特急」 — the
             digit is what is drawn, the word is the accessible name. */}
         <div
           role="radiogroup"

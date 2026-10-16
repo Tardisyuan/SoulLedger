@@ -189,15 +189,15 @@ test.describe("Workflow editor toolbar", () => {
     // number. `toHaveCount(3)` is the absence half: a fourth tier would have to
     // be a deliberate edit here, because 0/1/2 is the whole of the model column.
     await expect(priority.getByRole("radio")).toHaveCount(3);
-    for (const [value, label] of [["0", "普通"], ["1", "紧急"], ["2", "危急"]]) {
+    for (const [value, label] of [["0", "普通"], ["1", "紧急"], ["2", "特急"]]) {
       await expect(priority.getByRole("radio", { name: label, exact: true })).toHaveText(value);
     }
 
     // A fresh editor opens at the column's own floor.
     await expect(priority.getByRole("radio", { checked: true })).toHaveText("0");
 
-    await page.getByLabel("模板名称", { exact: true }).filter({ visible: true }).fill("危急模板");
-    await priority.getByRole("radio", { name: "危急", exact: true }).click();
+    await page.getByLabel("模板名称", { exact: true }).filter({ visible: true }).fill("特急模板");
+    await priority.getByRole("radio", { name: "特急", exact: true }).click();
     await expect(priority.getByRole("radio", { checked: true })).toHaveText("2");
 
     await page.getByRole("button", { name: "存草稿", exact: true }).click();
@@ -209,7 +209,7 @@ test.describe("Workflow editor toolbar", () => {
     // regression would be visible, since DRF still coerces — and 2 is neither the default (0) nor the
     // value any preset carries (1), so it can only have come from the click.
     expect(body.priority).toBe(2);
-    expect(body.name).toBe("危急模板");
+    expect(body.name).toBe("特急模板");
 
     // The save really was the create path, not a silent no-op that left the
     // editor's other fields behind.
