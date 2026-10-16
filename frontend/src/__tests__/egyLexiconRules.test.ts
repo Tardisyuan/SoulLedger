@@ -89,7 +89,7 @@ const offenders = (keys: string[], bad: Rule) =>
   keys.filter((k) => bad(EGY[k], k)).map((k) => `${k}: ${EGY[k]}`);
 
 /** 技术词原样引用(词表「技术词不转写」):缩写与角色码。 */
-const CAPS_ALLOWED = new Set(["IP", "PNG", "JPEG", "MB", "MODERATOR", "ID", "GLM", "JSON", "PDF", "CSV", "HEIC", "GBK", "UTF"]); // HEIC / GBK / UTF(-8): 图片格式与文件编码名(第三十三批);PDF / CSV: 文件格式名(第三十一批);JSON: 权限配置文件格式名(第十六批);GLM: 智谱的模型名,平台下拉(2026-09-30)
+const CAPS_ALLOWED = new Set(["IP", "PNG", "JPEG", "MB", "MODERATOR", "ID", "GLM", "JSON", "PDF", "CSV", "HEIC", "GBK", "UTF", "VIEWER"]); // VIEWER: 用户导入模板里的角色字面值(第三十五批);HEIC / GBK / UTF(-8): 图片格式与文件编码名(第三十三批);PDF / CSV: 文件格式名(第三十一批);JSON: 权限配置文件格式名(第十六批);GLM: 智谱的模型名,平台下拉(2026-09-30)
 
 /** 已确认改掉的英文残留。新发现一个,改掉之后加进来。 */
 const ENGLISH_RESIDUE = [
@@ -174,6 +174,8 @@ const isSystemZh = (zh: string) => /系统|服务器|队列|连接/.test(zh);
  */
 const SEKHEM_PASSWORD_WITHOUT_THE_WORD = new Set([
   // 第三十四批:重置密码窗口里的「确认重置」「重置失败」,中文省了「密码」,重置的就是密码。
+  // 第三十五批:导入模板说明里 password 列写的是英文列名,中文没有「密码」二字,说的就是密码。
+  "users.import.template_notes",
   "users.reset_password.confirm",
   "users.reset_password.failed",
   "soul_accounts.credentials.reason.voided",
@@ -295,6 +297,8 @@ const TECHNICAL: Record<string, string[]> = {
   "soul_app.login.bad_char_body": ["O", "I", "L"],
   // 第三十三批:单字母快捷键开关的说明,J / K 是键名。
   "shortcuts.single_keys_hint": ["J", "K"],
+  // 第三十五批:用户导入模板说明里的 CSV 列名与角色值是文件里要照写的字面值,egy 不译(Design)。
+  "users.import.template_notes": ["username", "password", "role", "VIEWER", "email", "display_name"],
 };
 
 /** 空白切出的记号去掉两端标点(括号、引号、逗号、句点……),留下可与 TECHNICAL 比对的原形。 */

@@ -81,6 +81,7 @@ MESSAGES = {
         "password_help_requested_moderator": {"title": "Dbh · Wehem Sekhem", "body": "Wa Dbh Wehem Sekhem En Aq «{{username}}» Em Aq. Maa Tepy; Er Khet: Dbh Sab Hery Er Wehem Sekhem."},
         "soul_inbox_assigned": {"title": "Sesh Hab Er-Ek", "body": "{{soul}}: Sesh Hab In {{by}} Er-Ek."},
         "judgment_reassign_requested": {"title": "Dbh Hab Ky", "body": "{{by}}: Dbh Hab Ky Wedja En {{soul}}"},
+        "judgment_reassign_requested_with_reason": {"title": "Dbh Hab Ky Seth", "body": "{{by}}: Dbh Hab Ky · Sep {{soul}}. Khet: {{reason}}"},
         "dispatch_proposed": {"title": "Dbh Hab-Ba Iyi", "body": "{{source}}: Dbh Hab-Ba Ba «{{soul}}» Er Wesekhet-Ek. Er Hesy-Ek."},
         "dispatch_approved": {"title": "Dbh Hab-Ba Hesy Seth", "body": "{{target}}: Hesy Dbh Hab-Ba Ba «{{soul}}» Em Wesekhet-Ek."},
         "dispatch_rejected": {"title": "Dbh Hab-Ba Khesef Seth", "body": "{{target}}: Khesef Dbh Hab-Ba Ba «{{soul}}» Em Wesekhet-Ek. Khet Khesef: {{reason}}"},
