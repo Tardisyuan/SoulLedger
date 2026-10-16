@@ -1771,6 +1771,24 @@ export class ApiMock {
       body: { ...REBIRTH_APPLICATIONS[0], cross_civilization: call.body.cross_civilization },
     }));
     this.on("GET", "/workflows/:id/", REBIRTH_WORKFLOW);
+    // 手动发起审批(W-11)。登记在 `/workflows/:id/` 之后:后登记的先匹配,否则 `case-types` 会被当成一个 id。
+    this.on("GET", "/workflows/case-types/", [
+      { value: "ROUTINE", builtin: true },
+      { value: "APPEAL", builtin: true },
+      { value: "SPECIAL", builtin: false },
+    ]);
+    this.on("POST", "/workflows/start/", (call) => ({
+      status: 201,
+      body: {
+        ...REBIRTH_WORKFLOW,
+        id: "ffffffff-ffff-4fff-8fff-ffffffffff31",
+        workflow_name: "十殿审判流程",
+        case_type: (call.body.case_type as string | undefined) ?? "ROUTINE",
+        soul: call.body.soul,
+        priority: (call.body.priority as number | undefined) ?? 0,
+        notes: call.body.reason,
+      },
+    }));
 
     // ── Soul circle moderation (backend/apps/social/moderation_views.py) ──
     this.on("GET", "/social-moderation/reports/", paginated(MODERATION_REPORTS));

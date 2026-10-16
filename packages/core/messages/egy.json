@@ -1303,7 +1303,38 @@
     },
     "no_custom_templates": "Nen Pet-Sesh Djer",
     "filter_overdue": "Unut Khetem Wa",
-    "overdue_badge": "Unut Khetem"
+    "overdue_badge": "Unut Khetem",
+    "start": {
+      "action": "Iri Wat Hesy",
+      "menu": "Iri Wat Hesy…",
+      "title": "Iri Wat Hesy",
+      "soul": "Ba",
+      "soul_placeholder": "Hehy Ren Ba…",
+      "case_type_placeholder": "Setep Ba Tepy",
+      "template_default": "Tepy Pet Sep · {{name}}",
+      "template_only": "Pet-Sesh Wa: {{name}}",
+      "priority_template": "Mi Pet-Sesh",
+      "reason": "Khet · Nen Shu; Em Medew Maa",
+      "reason_placeholder": "Khet: Nen Wedja Tepy",
+      "reason_count": "{{n}}/1000",
+      "judgment": "Wedja Hena · Setep",
+      "judgment_none": "Nen Hena",
+      "judgment_taken": "Em Wat Hesy",
+      "submit": "Iri",
+      "done": "Wat Hesy Iri Seth",
+      "errors": {
+        "duplicate": "Ba Pen: Wat Hesy «{{type}}» Em Iri ({{id}}). Pet Sep Wa: Wat Wa.",
+        "duplicate_view": "Maa Wat Hesy",
+        "soul_not_found": "Nen Gem Ba Em Wesekhet Pen",
+        "template_invalid": "Pet-Sesh Pen Nen Maat: Wesekhet Ky, Nen Ankh, Ky Nen Taui Ba.",
+        "case_type_civ": "Taui «{{civ}}»: Nen Shesep Pet Sep Pen",
+        "judgment_mismatch": "Wedja Pen Nen Em Ba Pen",
+        "judgment_taken": "Wedja Pen: Wat Hesy Iri Seth",
+        "reason_required": "Sesh Khet",
+        "forbidden": "Nen Was Iri Wat Hesy",
+        "failed": "Nen Iri Wat Hesy. Wehem Iri."
+      }
+    }
   },
   "dashboard": {
     "title": "Medjat Ba",

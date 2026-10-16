@@ -24,6 +24,7 @@ import {
   mockedTemplates,
   mockedWorkflows,
   mockedWorkflowExport,
+  mockSession,
   mockT,
   renderPage,
 } from "./support/workflowPageHarness";
@@ -70,6 +71,23 @@ describe("WorkflowPage instances tab", () => {
     expect(button).toHaveAccessibleDescription("common.export_too_many");
     fireEvent.click(button);
     expect(mockedWorkflowExport).not.toHaveBeenCalled();
+  });
+
+  // W-11a:「发起审批」在实例页签右上角,只给持 `workflow.create` 的人。点了打开同一张发起弹层。
+  it("offers 发起审批 to a workflow.create holder and opens the dialog", async () => {
+    mockSession.user = { role: "JUDGE", permissions: ["workflow.read", "workflow.create"] };
+    await openInstances();
+    const start = await screen.findByRole("button", { name: "workflow.start.action" });
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    fireEvent.click(start);
+    expect(await screen.findByRole("dialog")).toHaveTextContent("workflow.start.title");
+  });
+
+  it("does not offer 发起审批 without workflow.create", async () => {
+    mockSession.user = { role: "JUDGE", permissions: ["workflow.read", "workflow.update", "workflow.delete"] };
+    await openInstances();
+    await screen.findByText("workflow.no_instances");
+    expect(screen.queryByRole("button", { name: "workflow.start.action" })).not.toBeInTheDocument();
   });
 
   it("shows an empty state when there are no workflow instances", async () => {

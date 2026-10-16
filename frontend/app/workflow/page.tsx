@@ -21,6 +21,7 @@ import { EmptyState } from "@/src/components/ui/EmptyState";
 import { WorkflowInstanceList } from "@/src/components/workflow/page/WorkflowInstanceList";
 import { TemplateDetailModal } from "@/src/components/workflow/page/TemplateDetailModal";
 import { DeleteTemplateModal } from "@/src/components/workflow/page/DeleteTemplateModal";
+import { StartWorkflowDialog } from "@/src/components/workflow/StartWorkflowDialog";
 import {
   TemplatePreview,
   backendPreviewModel,
@@ -53,6 +54,8 @@ export default function WorkflowPage() {
   // 一个让实例列表永久为空的变异会让两条都通过。
   // 「只看已超时」:服务端按 `overdue=true` 筛(当前节点的 activated_at + timeout_hours 已过),不在前端猜。
   const [overdueOnly, setOverdueOnly] = useState(false);
+  // 「发起审批」(W-11):实例页签右上角,持 `workflow.create` 才有。
+  const [startOpen, setStartOpen] = useState(false);
   const {
     data: workflowsData,
     isLoading: isWorkflowsLoading,
@@ -475,7 +478,7 @@ export default function WorkflowPage() {
                   {overdueOnly && <span aria-hidden="true">✓</span>}
                   {t("workflow.filter_overdue")}
                 </button>
-                <div className="ml-auto flex justify-end">
+                <div className="ml-auto flex items-center justify-end gap-3">
                   <ExportCsvButton
                     size="sm"
                     fetchCsv={() => (overdueOnly ? workflowApi.exportCsv({ overdue: "true" }) : workflowApi.exportCsv())}
@@ -483,6 +486,11 @@ export default function WorkflowPage() {
                     hall={hall}
                     count={workflowsData?.count}
                   />
+                  <RequirePermission permissions="workflow.create">
+                    <Button type="button" variant="primary" size="sm" onClick={() => setStartOpen(true)}>
+                      {t("workflow.start.action")}
+                    </Button>
+                  </RequirePermission>
                 </div>
               </div>
               <WorkflowInstanceList workflows={workflows} isLoading={isWorkflowsLoading} />
@@ -496,6 +504,8 @@ export default function WorkflowPage() {
           onClose={() => setViewModalOpen(false)}
           template={viewingTemplate}
         />
+
+        <StartWorkflowDialog isOpen={startOpen} onClose={() => setStartOpen(false)} />
 
         {/* 删除确认弹窗 */}
         <DeleteTemplateModal

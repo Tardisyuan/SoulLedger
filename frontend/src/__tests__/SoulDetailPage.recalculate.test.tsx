@@ -1,6 +1,6 @@
 /**
  * 「重算功过」(W-10):`POST /ledger/calculate/<id>/`,后端要码名 `ledger.manage`。
- * 页面只在持有这个码名时给按钮;点了先确认,确认后调 API,成功重取灵魂(页头的功 / 过读的是 Soul 自己的分)
+ * 页面只在持有这个码名时给这一项(在 ⋯ 菜单里,Design 第三十七批 W-11a);点了先确认,确认后调 API,成功重取灵魂(页头的功 / 过读的是 Soul 自己的分)
  * 并报一句成功;失败报一句失败,不报成功。
  *
  * 身份走 `useTenant` 的桩(真门跑起来),不桩 `RequirePermission`(suiteShape 禁止)。
@@ -87,7 +87,11 @@ function renderPage() {
   );
 }
 
-const findButton = () => screen.findByRole("button", { name: "souls.detail.recalculate" });
+/** 「重算功过」住在 ⋯ 菜单里:先开菜单,再找那一项。这组权限里没有 `soul.delete` —— 菜单照样出现。 */
+const findButton = async () => {
+  fireEvent.click(await screen.findByRole("button", { name: "更多操作" }));
+  return screen.findByRole("menuitem", { name: "souls.detail.recalculate" });
+};
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -122,10 +126,17 @@ describe("SoulDetailPage — 重算功过", () => {
     expect(mockToast).not.toHaveBeenCalledWith("souls.detail.recalculate_success", "success");
   });
 
-  it("不持 ledger.manage:没有这个按钮", async () => {
+  it("不持 ledger.manage:没有这一项(这组权限下连 ⋯ 都没有)", async () => {
     mockUser.permissions = ["soul.read", "soul.update"];
     renderPage();
     await screen.findByRole("button", { name: "souls.detail.edit" });
+    expect(screen.queryByRole("button", { name: "更多操作" })).not.toBeInTheDocument();
+    expect(screen.queryByText("souls.detail.recalculate")).not.toBeInTheDocument();
+  });
+
+  it("不再是页头上的独立按钮", async () => {
+    renderPage();
+    await screen.findByRole("button", { name: "更多操作" });
     expect(screen.queryByRole("button", { name: "souls.detail.recalculate" })).not.toBeInTheDocument();
   });
 });
