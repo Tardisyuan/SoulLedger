@@ -11566,7 +11566,7 @@ paths:
     get:
       operationId: officer_app_todo
       description: |-
-        「待我处理」五组:审批节点 / 改派请求 / 缩短冷却申请 / 转生申请 / 待回书信,每组计数 + 前 10 条。
+        「待我处理」六组:审批节点 / 改派请求 / 缩短冷却申请 / 转生申请 / 待回书信 / 未分配的书信,每组计数 + 前 10 条。
         带 `kind`(与 `offset`)时只回那一组 `{count, items}`,从第 offset 条起的 10 条。
       parameters:
       - in: query
@@ -11579,6 +11579,7 @@ paths:
           - letter
           - reassignment
           - rebirth
+          - unassigned_letter
         description: 只要这一组(加载更多)
       - in: query
         name: offset
@@ -24191,6 +24192,111 @@ components:
       - name
       - system_type
       - usage_count
+    FactAttachment:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        content_type:
+          type: string
+          description: image/png、image/jpeg 或 application/pdf。
+        byte_size:
+          type: integer
+        url:
+          type: string
+          description: 站点根相对路径,签名 10 分钟(`/api/v1/case-attachments/<id>/?t=…`)。
+      required:
+      - byte_size
+      - content_type
+      - id
+      - name
+      - url
+    FactHall:
+      type: object
+      properties:
+        code:
+          type: string
+        display_name:
+          type: string
+      required:
+      - code
+      - display_name
+    FactHistory:
+      type: object
+      properties:
+        kind:
+          $ref: '#/components/schemas/FactHistoryKindEnum'
+        name:
+          type: string
+        actor:
+          type: string
+          nullable: true
+        verdict:
+          type: string
+          description: '`workflow.verdicts.*` 的码;发起与当前节点为空。'
+        comment:
+          type: string
+        at:
+          type: string
+          format: date-time
+          nullable: true
+        mine:
+          type: boolean
+          description: 当前节点轮到调用者。
+      required:
+      - actor
+      - at
+      - comment
+      - kind
+      - mine
+      - name
+      - verdict
+    FactHistoryKindEnum:
+      enum:
+      - start
+      - decided
+      - current
+      type: string
+      description: |-
+        * `start` - start
+        * `decided` - decided
+        * `current` - current
+    FactNode:
+      type: object
+      properties:
+        name:
+          type: string
+        index:
+          type: integer
+          description: 第几步(只数需要人决定的节点)。
+        total:
+          type: integer
+        is_last:
+          type: boolean
+          nullable: true
+          description: 批准后流程是否结束。null = 有条件分支、无从判断:App 用通用的一句。
+        next_name:
+          type: string
+          nullable: true
+          description: 批准后交给的节点;最后一步或不确定时为 null。
+      required:
+      - index
+      - is_last
+      - name
+      - next_name
+      - total
+    FactSoul:
+      type: object
+      properties:
+        name:
+          type: string
+        soul_code:
+          type: string
+      required:
+      - name
+      - soul_code
     FailureRates:
       type: object
       properties:
@@ -37357,12 +37463,81 @@ components:
           allOf:
           - $ref: '#/components/schemas/TodoGroup'
           description: 待回书信:标给我、灵魂最后一封还没回的(最早在前)。需 `soul_inbox.reply`。
+        unassigned_letters:
+          allOf:
+          - $ref: '#/components/schemas/TodoGroup'
+          description: 未分配的书信:同一个「待回复」里还没人经办的(最早在前)。需 `soul_inbox.reply`;不计入角标与推送数。
       required:
       - approvals
       - cooldowns
       - letters
       - reassignments
       - rebirths
+      - unassigned_letters
+    TodoFacts:
+      type: object
+      description: O-01:批准前要看清的申请内容。按类给字段,没有的不出现。
+      properties:
+        node:
+          $ref: '#/components/schemas/FactNode'
+        requester:
+          type: string
+          nullable: true
+        requester_hall:
+          allOf:
+          - $ref: '#/components/schemas/FactHall'
+          nullable: true
+        requested_at:
+          type: string
+          format: date-time
+          nullable: true
+        deadline:
+          type: string
+          format: date-time
+          nullable: true
+          description: 当前节点的时限;没设为 null。
+        reason:
+          type: string
+        history:
+          type: array
+          items:
+            $ref: '#/components/schemas/FactHistory'
+        attachments:
+          type: array
+          items:
+            $ref: '#/components/schemas/FactAttachment'
+        from_hall:
+          allOf:
+          - $ref: '#/components/schemas/FactHall'
+          nullable: true
+        to_hall:
+          allOf:
+          - $ref: '#/components/schemas/FactHall'
+          nullable: true
+        souls:
+          type: array
+          items:
+            $ref: '#/components/schemas/FactSoul'
+        soul_count:
+          type: integer
+        soul:
+          $ref: '#/components/schemas/FactSoul'
+        cycle:
+          type: integer
+          description: 仅转生:第几世。
+        desired_form:
+          type: string
+          description: 仅转生:期望去向(`reincarnation.forms.*`)。
+        merit_balance:
+          type: integer
+          description: 仅转生:功过结余 = 功 − 过。
+        cooldown_now_days:
+          type: integer
+          description: 仅缩短冷却:现在还剩几天。
+        cooldown_asked_days:
+          type: integer
+          nullable: true
+          description: 仅缩短冷却:申请改成剩几天。
     TodoGroup:
       type: object
       properties:
@@ -37442,6 +37617,10 @@ components:
         is_appeal:
           type: boolean
           description: 仅转生申请:是否申诉(客户端据此选标题措辞)。
+        facts:
+          allOf:
+          - $ref: '#/components/schemas/TodoFacts'
+          description: 申请内容(O-01):节点、对象字段、事由、前面几步、附件。
         workflow_id:
           type: string
           description: 审批节点与转生申请:决定走 workflows/<id>/approve_node/。

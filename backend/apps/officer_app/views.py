@@ -57,7 +57,7 @@ class TodoView(OfficerAppBaseView):
                                OpenApiParameter("offset", int, description="与 kind 同用:从第几条起,默认 0")],
                    responses=TodoSerializer)
     def get(self, request):
-        """「待我处理」五组:审批节点 / 改派请求 / 缩短冷却申请 / 转生申请 / 待回书信,每组计数 + 前 10 条。
+        """「待我处理」六组:审批节点 / 改派请求 / 缩短冷却申请 / 转生申请 / 待回书信 / 未分配的书信,每组计数 + 前 10 条。
         带 `kind`(与 `offset`)时只回那一组 `{count, items}`,从第 offset 条起的 10 条。"""
         kind = request.query_params.get("kind")
         if not kind:
