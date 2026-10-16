@@ -17,6 +17,7 @@ import { HIGHLIGHT_MS, hallLabel, type Landing } from "./rules";
 import { Detail, type DetailTarget } from "./screens/detail";
 import { ChangePasswordScreen } from "./screens/account";
 import { DevicesScreen } from "./screens/devices";
+import { NotifyScreen } from "./screens/notify";
 import { MeTab, type AccountScreen } from "./screens/me";
 import { MfaScreen } from "./screens/mfa";
 import { NoticesTab } from "./screens/notices";
@@ -142,6 +143,8 @@ export function Shell({ onResetDone }: { onResetDone?: () => void } = {}) {
           <ChangePasswordScreen onBack={() => setAccount(null)} />
         ) : account === "devices" ? (
           <DevicesScreen onBack={() => setAccount(null)} />
+        ) : account === "notify" ? (
+          <NotifyScreen onBack={() => setAccount(null)} />
         ) : detail ? (
           <Detail target={detail} onBack={close} onSettled={() => setVersion((v) => v + 1)} />
         ) : tab === "todo" ? (

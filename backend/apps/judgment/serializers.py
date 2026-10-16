@@ -564,6 +564,13 @@ class QueueGroup:
     ]
 
 
+class JudgmentReassignRequestSerializer(serializers.Serializer):
+    """`POST /judgment/{id}/request-reassign/` 的输入。理由可省(网页不带);手机端必填后带上,
+    随通知的 `params["reason"]` 存下,供审批人读。长度同 `JudgmentDeferSerializer`(列宽 500)。"""
+
+    reason = serializers.CharField(max_length=500, required=False, allow_blank=True, trim_whitespace=True)
+
+
 class JudgmentDeferSerializer(serializers.Serializer):
     """`POST /judgment/{id}/defer/` 的输入。理由必填。
 

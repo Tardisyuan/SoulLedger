@@ -2,7 +2,7 @@
  * The officer app's rules that are not pixels: what a decision sends, why one failed, where a
  * push lands, where "continue on desktop" points. Pure functions so a test can pin each.
  */
-import { passwordReasonKeys } from "@soulledger/core/api/auth";
+import { NOTIFICATION_CATEGORIES, NOTIFICATION_LOCKED, passwordReasonKeys, type NotificationCategory } from "@soulledger/core/api/auth";
 import { dispatchApi, type DispatchRecord } from "@soulledger/core/api/dispatch";
 import {
   decisionFailureOf,
@@ -431,4 +431,50 @@ export function hallLabel(
   const civ = tenant?.code?.split("_")[0].toLowerCase();
   if (civ && Object.values(CIVILIZATION_SHORT_CODES).includes(civ)) return t(`plaque.realm.${civ}`);
   return tenant?.display_name ?? undefined;
+}
+
+// ── 审判详情的操作区(Design 第三十四批 O-09) ─────────────────────────────
+
+/**
+ * 六种状态,主按钮一次只有一个。`closed`(已结案)不画操作区。
+ * `reassignAsked`:本次已请求改派(服务端没有"已请求"这个状态,只有 10 分钟一次的限流,所以由本机记)。
+ * 「待宣判」按此处原有的口径:案子还不是 `is_final`,手机上只能到电脑上继续。
+ */
+export type JudgmentActionState = "unclaimed" | "mine" | "deferred" | "reassign" | "other" | "desk" | "closed";
+
+export function judgmentActionState(
+  j: { claimed_by?: number | null; deferred_at?: string | null; concluded_at?: string | null; is_final?: boolean },
+  me: number | null,
+  reassignAsked: boolean,
+): JudgmentActionState {
+  if (j.concluded_at) return "closed";
+  if (j.claimed_by == null) return "unclaimed";
+  if (j.claimed_by !== me) return "other";
+  if (j.deferred_at) return "deferred";
+  if (reassignAsked) return "reassign";
+  return j.is_final ? "mine" : "desk";
+}
+
+/** ⋯ 里有什么,按顺序(放回永远最后)。 */
+export function judgmentMoreItems(state: JudgmentActionState): ("defer" | "request_reassign" | "release")[] {
+  if (state === "mine" || state === "desk") return ["defer", "request_reassign", "release"];
+  if (state === "deferred" || state === "reassign") return ["release"];
+  return [];
+}
+
+/** 理由必填:只有空白也算没写。 */
+export function reasonBlank(reason: string): boolean {
+  return reason.trim() === "";
+}
+
+// ── 通知类别(Design 第三十四批 O-06) ────────────────────────────────────
+
+/** 这个角色看得到的类别(密码求助只有管理员收),顺序同网页。 */
+export function visibleNotificationCategories(role: string | undefined): readonly NotificationCategory[] {
+  return NOTIFICATION_CATEGORIES.filter((c) => c !== "password_help" || role === "ADMIN");
+}
+
+/** 手机上的开关 = 网页的「站内」一列;「静音 N 类」数的是站内关着的类别。必收的永远不算。 */
+export function mutedCount(prefs: Partial<Record<NotificationCategory, { site?: boolean }>> | undefined, role: string | undefined): number {
+  return visibleNotificationCategories(role).filter((c) => !NOTIFICATION_LOCKED[c]?.includes("site") && prefs?.[c]?.site === false).length;
 }
