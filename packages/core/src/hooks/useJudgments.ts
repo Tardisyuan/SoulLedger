@@ -270,3 +270,27 @@ export function useUndeferJudgment() {
 export function useBatchJudgments() {
   return useClaimMutation((payload: JudgmentBatchPayload) => judgmentApi.batch(payload));
 }
+
+export function useArchiveJudgment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason?: string }) => judgmentApi.archive(id, reason).then((r) => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: judgmentKeys.all });
+      notify("records.archive.done", "success");
+    },
+    onError: () => notify("records.archive.failed", "error"),
+  });
+}
+
+export function useUnarchiveJudgment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => judgmentApi.unarchive(id).then((r) => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: judgmentKeys.all });
+      notify("records.archive.unarchived", "success");
+    },
+    onError: () => notify("records.archive.failed", "error"),
+  });
+}

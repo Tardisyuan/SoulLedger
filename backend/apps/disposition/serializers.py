@@ -13,10 +13,11 @@ from apps.disposition.models import Disposition, DispositionSection
 from apps.judgment.models import Verdict
 from apps.souls.dates import ERROR, check_term_start, to_representation
 from apps.souls.fields import HistoricalDateField
+from apps.core.archive import ARCHIVE_FIELDS, ArchiveSerializerMixin
 from apps.souls.models import SoulState
 
 
-class DispositionSerializer(FieldPermissionMixin, serializers.ModelSerializer):
+class DispositionSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serializers.ModelSerializer):
     soul_name = serializers.CharField(source="soul.name", read_only=True)
     realm_code = serializers.CharField(source="destination_realm.realm_code", read_only=True)
     # `get_localized_name`, not `name_en`.
@@ -95,6 +96,7 @@ class DispositionSerializer(FieldPermissionMixin, serializers.ModelSerializer):
             "sentence_years", "term_start", "is_executed", "executed_at",
             "notes", "created_at", "sentence_node_id",
             "expired_at", "term_end", "section", "verdict", "soul_state", "soul_reborn",
+            *ARCHIVE_FIELDS,
         ]
         # This serializer had no `read_only_fields` at all. Measured
         # 2026-08-29, a MODERATOR could `PATCH {"is_executed": true,
@@ -111,7 +113,7 @@ class DispositionSerializer(FieldPermissionMixin, serializers.ModelSerializer):
         # was never written down. A shape that has been diagnosed once is worth
         # grepping for.
         read_only_fields = [
-            "id", "is_executed", "executed_at", "created_at", "sentence_node_id",
+            *ARCHIVE_FIELDS, "id", "is_executed", "executed_at", "created_at", "sentence_node_id",
             # 只由期满检查写(apps/disposition/expiry.py),理由同上面的 is_executed。
             "expired_at",
         ]

@@ -1,3 +1,4 @@
+import type { ArchiveFields } from "./archive";
 import type { GenericAbortSignal } from "axios";
 import { api } from "./client";
 import type { components } from "./generated/schema";
@@ -15,7 +16,7 @@ import type { PaginatedResponse } from "./users";
  * per-role from DB-configured rules, so everything past the identity fields
  * is optional in principle.
  */
-export interface Judgment {
+export interface Judgment extends ArchiveFields {
   id: string;
   /**
    * 案号:给人读、给人抄的编号(`CN-2026-0007` = 租户前缀-年-序号),开案时服务端发,永不改。
@@ -523,6 +524,10 @@ export const judgmentApi = {
   exportCsv: (params?: Record<string, string>) =>
     api.get<Blob>("/judgment/export/", { params, responseType: "blob" }),
   create: (data: object) => api.post<Judgment>("/judgment/", data),
+  delete: (id: string) => api.delete<void>(`/judgment/${id}/`),
+  /** 归档(`judgment.execute`):只收有裁决的审判;理由选填。 */
+  archive: (id: string, reason = "") => api.post<Judgment>(`/judgment/${id}/archive/`, { reason }),
+  unarchive: (id: string) => api.post<Judgment>(`/judgment/${id}/unarchive/`),
   conclude: (id: string, data: ConcludeJudgmentPayload | object) => api.post<Judgment>(`/judgment/${id}/conclude/`, data),
   get: (id: string) => api.get<JudgmentDetail>(`/judgment/${id}/`),
   /** Admit / not admit one ledger record as evidence. 409 once concluded. */

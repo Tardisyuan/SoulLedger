@@ -227,6 +227,7 @@ class JudgmentViewSet(CaseAttachmentActionsMixin, CodenameViewSetMixin, TenantQu
         'partial_update': ['judgment.execute'],
         'destroy': ['judgment.execute'],
         'archive': ['judgment.execute'],
+        'unarchive': ['judgment.execute'],
         # Reading the grounds is a read; entering or withdrawing one is an act
         # on the case, the same call `conclude` maps to. GET and POST share one
         # route (DRF `mapping`) but NOT one codename — declaring both on a
@@ -429,6 +430,13 @@ class JudgmentViewSet(CaseAttachmentActionsMixin, CodenameViewSetMixin, TenantQu
             )
         reason = request.data.get("reason", "")
         judgment.archive(user=request.user, reason=reason)
+        return Response(JudgmentSerializer(judgment).data)
+
+    @action(detail=True, methods=["post"])
+    def unarchive(self, request, pk=None):
+        """Undo archive(): the judgment returns to the lists."""
+        judgment = self.get_object()
+        judgment.unarchive()
         return Response(JudgmentSerializer(judgment).data)
 
     def _pending_queue(self):

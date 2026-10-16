@@ -99,6 +99,7 @@ class DispositionViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeVie
         'partial_update': ['disposition.execute'],
         'destroy': ['disposition.execute'],
         'archive': ['disposition.execute'],
+        'unarchive': ['disposition.execute'],
     }
     queryset = Disposition.objects.select_related(
         "soul", "soul__tenant", "destination_realm", "tenant", "judgment"
@@ -146,7 +147,8 @@ class DispositionViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeVie
         show_archived = self.request.query_params.get(
             "show_archived", ""
         ).lower() in ("1", "true", "yes")
-        if not show_archived:
+        # 详情与取消归档要找得到已归档的处置(链接打开时详情页显示横条)。
+        if not show_archived and getattr(self, 'action', None) not in ('retrieve', 'unarchive'):
             qs = qs.filter(is_archived=False)
         return qs
 
@@ -328,4 +330,11 @@ class DispositionViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeVie
             )
         reason = request.data.get("reason", "")
         disposition.archive(user=request.user, reason=reason)
+        return Response(DispositionSerializer(disposition).data)
+
+    @action(detail=True, methods=["post"])
+    def unarchive(self, request, pk=None):
+        """Undo archive(): the disposition returns to the lists."""
+        disposition = self.get_object()
+        disposition.unarchive()
         return Response(DispositionSerializer(disposition).data)

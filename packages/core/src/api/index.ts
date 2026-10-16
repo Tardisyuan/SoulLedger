@@ -75,7 +75,7 @@ export {
   type ImpersonationState,
 } from "./impersonation";
 
-export { usersApi, type User, type UserMfaRef, type CreateUserInput, type UpdateUserInput, type UserFilters, type UserImportResult, type AssignRolesInput, type UserBatchUpdateResult, type PaginatedResponse } from "./users";
+export { usersApi, type User, type UserMfaRef, type CreateUserInput, type UpdateUserInput, type UserFilters, type UserImportResult, type UserImportPreview, type UserImportRow, type UserImportFileError, userImportFileErrorOf, type AssignRolesInput, type UserBatchUpdateResult, type PaginatedResponse } from "./users";
 
 // Judgment
 export {
@@ -169,7 +169,7 @@ export { auditApi, loginLogsApi, type AuditLogDetail, type AuditLogEntry, type L
 export { tenantsApi, REBIRTH_COOLDOWN_SETTING, MFA_REQUIRED_ROLES_SETTING, type Tenant, type TenantSettingsPatch, type TenantMfaRoleRow } from "./tenants";
 
 // Organizations
-export { organizationsApi, type Organization } from "./organizations";
+export { organizationsApi, organizationNotEmptyOf, type Organization, type OrganizationInput, type OrganizationNotEmpty } from "./organizations";
 
 // Notifications
 export { notificationsApi, type Notification, type NotificationEmailStatus } from "./notifications";
@@ -261,3 +261,5 @@ export {
   type OfficerPushToken,
   type DecisionFailureCode,
 } from "./officer-app";
+
+export { isArchivableConflict, type ArchiveFields } from "./archive";
