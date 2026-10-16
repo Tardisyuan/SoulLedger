@@ -343,12 +343,12 @@ class DeathRegistrationReadViewSet(viewsets.ReadOnlyModelViewSet):
         409 with `code` NOT_FAILED / NOT_RETRYABLE / MAX_RETRIES otherwise.
         `get_object()` first, so another tenant's id is a 404 like a read.
         """
-        from apps.death_sync.services import DeathSyncService, RetryRefused
+        from apps.death_sync.services import DeathSyncService, RetryRefusedError
 
         registration = self.get_object()
         try:
             result = DeathSyncService.retry_failed(registration.pk, registration.tenant)
-        except RetryRefused as exc:
+        except RetryRefusedError as exc:
             return Response(
                 {"error": "Registration cannot be retried", "code": exc.code},
                 status=status.HTTP_409_CONFLICT,
