@@ -2558,6 +2558,35 @@
       "close_confirm_body": "The password is shown only once. Close anyway? You cannot see it again; you would have to reset it to get a new one.",
       "close_confirm": "Close",
       "close_back": "Back"
+    },
+    "import": {
+      "button": "Import CSV",
+      "title": "Import users",
+      "step": "{{n}} / 3 · {{label}}",
+      "steps": {
+        "choose": "Choose file",
+        "preview": "Preview",
+        "result": "Result"
+      },
+      "col_username": "Username",
+      "col_name": "Name",
+      "col_issue": "Issue",
+      "template_notes": "Template columns: username is required; password is required — you set it, and the person must change it at first login; role is optional (default VIEWER); email and display_name are optional.",
+      "back": "Back",
+      "commit": "Import {{n}} people",
+      "blocked": "{{n}} rows have problems; import is disabled. Fix the file and choose it again.",
+      "success": "Imported {{n}} people. They must change their password at first login.",
+      "view_users": "View users",
+      "row_codes": {
+        "username_required": "Username missing",
+        "email_invalid": "Email format is wrong",
+        "role_invalid": "Not a known role",
+        "username_taken": "Username is taken, or repeats an earlier row",
+        "email_taken": "Email belongs to another account, or repeats an earlier row",
+        "password_required": "Password missing",
+        "password_weak": "Password does not meet the rules",
+        "unknown": "This row could not be checked"
+      }
     }
   },
   "settings": {
@@ -6037,5 +6066,51 @@
     "state_ok": "met",
     "state_bad": "not met",
     "summary": "{{n}} requirements not met: {{list}}"
+  },
+  "records": {
+    "archive": {
+      "blocked_title": "Can't delete — archive instead",
+      "blocked_body": "\"{{name}}\" is linked to a judgment; deleting it would leave that judgment without a basis. Archiving hides it from lists, keeps the record, and can be undone any time.",
+      "action": "Archive instead…",
+      "title": "Archive \"{{name}}\"",
+      "read_only": "Archived records are read-only. Unarchive to edit.",
+      "reason": "Reason · optional, kept in the audit log",
+      "confirm": "Archive",
+      "done": "Archived",
+      "failed": "Couldn't archive, please try again",
+      "badge": "Archived",
+      "banner": "Archived by {{name}} on {{date}}",
+      "unarchive": "Unarchive",
+      "unarchived": "Unarchived",
+      "show_archived": "Show archived"
+    }
+  },
+  "org": {
+    "create": "＋ New unit",
+    "create_child": "New sub-unit",
+    "edit": "Edit",
+    "move": "Move to…",
+    "delete": "Delete",
+    "actions_label": "Actions for {{name}}",
+    "form": {
+      "title_create": "New unit",
+      "title_edit": "Edit unit",
+      "name": "Name",
+      "parent": "Parent unit",
+      "parent_hint": "Changing the parent moves the unit. Sub-units and people move with it.",
+      "save": "Save"
+    },
+    "delete_blocked_title": "\"{{name}}\" can't be deleted yet",
+    "delete_blocked_body": {
+      "both": "It still has {{units}} sub-units and {{people}} people. Move them to another unit first, then delete.",
+      "units": "It still has {{units}} sub-units. Move them to another unit first, then delete.",
+      "people": "It still has {{people}} people. Move them to another unit first, then delete."
+    },
+    "delete_blocked_people": "View people",
+    "delete_title": "Delete \"{{name}}\"?",
+    "delete_body": "This can't be undone.",
+    "saved": "Saved",
+    "deleted": "Deleted",
+    "failed": "Couldn't save, please try again"
   }
 }

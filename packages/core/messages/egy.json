@@ -6036,5 +6036,51 @@
     "conclude": "Khetem (Sep Tepy: Maa; Sep Sen: Hab)",
     "toggle_case": "Wen / Khetem Sesh En Sep",
     "next_prev_case": "Sep Em Khet / Sep Tepy"
+  },
+  "records": {
+    "archive": {
+      "blocked_title": "Nen Fekh · Nehem Er Per Sesh",
+      "blocked_body": "«{{name}}»: Wedja Hena-Ef. Fekh: Wedja Nen Khet. Nehem Er Per Sesh: Nen Maa Em Sepu; Medew Smen; Ini Em Per Sesh Er Ahet Neb.",
+      "action": "Nehem Er Per Sesh…",
+      "title": "Nehem «{{name}}» Er Per Sesh",
+      "read_only": "Em Per Sesh: Maa Wa. Sesh Mawy: Ini Em Per Sesh Tepy.",
+      "reason": "Khet · Setep; Em Medew Maa",
+      "confirm": "Nehem Er Per Sesh",
+      "done": "Nehem Er Per Sesh Seth",
+      "failed": "Nen Nehem. Wehem Iri.",
+      "badge": "Em Per Sesh",
+      "banner": "{{name}}: Nehem Er Per Sesh · {{date}}",
+      "unarchive": "Ini Em Per Sesh",
+      "unarchived": "Ini Em Per Sesh Seth",
+      "show_archived": "Maa Em Per Sesh"
+    }
+  },
+  "org": {
+    "create": "＋ Iri Per Mawy",
+    "create_child": "Iri Per Khery",
+    "edit": "Sesh Mawy",
+    "move": "Nehem Er…",
+    "delete": "Fekh",
+    "actions_label": "Iri · {{name}}",
+    "form": {
+      "title_create": "Iri Per Mawy",
+      "title_edit": "Sesh Mawy Per",
+      "name": "Ren",
+      "parent": "Per Hery",
+      "parent_hint": "Khemen Per Hery: Nehem. Per Khery Hena Sab Neb Nehem Hena-Ef.",
+      "save": "Smen"
+    },
+    "delete_blocked_title": "«{{name}}»: Nen Fekh Djer",
+    "delete_blocked_body": {
+      "both": "Per Khery {{units}} · Sab {{people}}. Nehem Er Per Ky Tepy, Er Khet Fekh.",
+      "units": "Per Khery {{units}}. Nehem Er Per Ky Tepy, Er Khet Fekh.",
+      "people": "Sab {{people}}. Nehem Er Per Ky Tepy, Er Khet Fekh."
+    },
+    "delete_blocked_people": "Maa Sab",
+    "delete_title": "Fekh «{{name}}»?",
+    "delete_body": "Nen Ankh Wehem.",
+    "saved": "Smen Seth",
+    "deleted": "Fekh Seth",
+    "failed": "Nen Smen. Wehem Iri."
   }
 }

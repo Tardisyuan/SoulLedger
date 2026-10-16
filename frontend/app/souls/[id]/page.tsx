@@ -20,7 +20,8 @@ import {
   SoulRecordEntry,
 } from "@soulledger/core/api";
 import { ledgerApi, type LedgerInheritance } from "@soulledger/core/api/ledger";
-import { useSoul, useSoulLedger, useDeleteSoul } from "@soulledger/core/hooks/useSouls";
+import { useSoul, useSoulLedger, useDeleteSoul, useArchiveSoul, useUnarchiveSoul } from "@soulledger/core/hooks/useSouls";
+import { isArchivableConflict } from "@soulledger/core/api";
 import { useJudgments } from "@soulledger/core/hooks/useJudgments";
 import { useSoulAccountChain } from "@soulledger/core/hooks/useSoulAccounts";
 import { useDispositions } from "@soulledger/core/hooks/useDispositions";
@@ -34,6 +35,7 @@ import { SoulHeaderActions } from "@/src/components/souls/detail/SoulHeaderActio
 import { SoulTimelineColumn } from "@/src/components/souls/detail/SoulTimelineColumn";
 import { useMorePages } from "@/src/components/souls/detail/useMorePages";
 import { SoulDeleteModal } from "@/src/components/souls/detail/SoulDeleteModal";
+import { ArchiveBanner, ArchiveDialog } from "@/src/components/archive/ArchiveParts";
 import { CorrectSettlementDialog } from "@/src/components/souls/detail/CorrectSettlementDialog";
 import { SoulJudgmentHistory } from "@/src/components/souls/detail/SoulLedgerSections";
 import { SoulLedgerTabs } from "@/src/components/souls/detail/SoulLedgerTabs";
@@ -112,6 +114,11 @@ export default function SoulDetailPage() {
   const [confirmCallback, setConfirmCallback] = useState<(() => void) | null>(null);
 
   const deleteSoulMutation = useDeleteSoul();
+  const archiveSoulMutation = useArchiveSoul();
+  const unarchiveSoulMutation = useUnarchiveSoul();
+  // 删除被 409 `archivable` 拒了:确认框换成「不能删、可以归档」;「改为归档…」再开归档对话框。
+  const [deleteBlocked, setDeleteBlocked] = useState(false);
+  const [isArchiveOpen, setIsArchiveOpen] = useState(false);
   const queryClient = useQueryClient();
 
   // ── 这一页的服务端状态 ────────────────────────────────────────────────
@@ -376,9 +383,23 @@ export default function SoulDetailPage() {
       await deleteSoulMutation.mutateAsync(soul.id);
       showToast(t("souls.detail.delete_success"), "success");
       router.push("/souls");
-    } catch {
-      // error handled by hook
+    } catch (error) {
+      // 其他失败由 hook 报;可归档的 409 在这里换屏。
+      if (isArchivableConflict(error)) setDeleteBlocked(true);
     }
+  }
+
+  function closeDeleteModal() {
+    setIsDeleteModalOpen(false);
+    setDeleteBlocked(false);
+  }
+
+  function handleArchive(reason: string) {
+    if (!soul) return;
+    archiveSoulMutation.mutate(
+      { id: soul.id, reason },
+      { onSuccess: () => { setIsArchiveOpen(false); closeDeleteModal(); } },
+    );
   }
 
   // 身份带:题「灵魂详情」(v3 `soul-product`;面包屑末段是原始 id)。灵魂不对应单个案子,右栏写
@@ -563,7 +584,9 @@ export default function SoulDetailPage() {
   // 更正结案:后端按码名 `soul.correct_settlement`(默认只有 ADMIN 持有)+ 只收 SETTLED;
   // 两条都不满足就连菜单项都没有,而不是点了再吃 400 / 403。
   const canCorrectSettlement = Boolean(soul && soul.current_state === "SETTLED" && hasPermission("soul.correct_settlement"));
-  const headerActions = !loading && soul && !readOnlyAway ? (
+  // 已归档的详情只读:编辑、删除、状态动作都不显示,取消归档只在顶部横条里。
+  const archived = Boolean(soul?.is_archived);
+  const headerActions = !loading && soul && !readOnlyAway && !archived ? (
     <SoulHeaderActions
       onEdit={() => setIsEditModalOpen(true)}
       onDelete={handleDeleteConfirm}
@@ -639,6 +662,14 @@ export default function SoulDetailPage() {
       actions={headerActions}
       aside={soul && !loading ? <SoulHeadingFigures soul={soul} /> : undefined}
     >
+      {soul && !loading && (
+        <ArchiveBanner
+          record={soul}
+          onUnarchive={hasPermission("soul.delete") ? () => unarchiveSoulMutation.mutate(soul.id) : undefined}
+          pending={unarchiveSoulMutation.isPending}
+        />
+      )}
+
       {/* 日期问题 —— 没有就什么都不画。放在最前:坏日期动摇下面每一份读数与每一条记录。 */}
       {!loading && soul && (
         <DateProblemsPanel
@@ -656,7 +687,7 @@ export default function SoulDetailPage() {
         <div className="order-1 min-w-0 space-y-4 lg:col-start-1 lg:row-start-1">
           <SoulInfoCard soul={soul} loading={loading} birthDisplay={birthDisplay} deathDisplay={deathDisplay} />
 
-          {!readOnlyAway && (
+          {!readOnlyAway && !archived && (
             <SoulActionsCard
               soul={soul}
               loading={loading}
@@ -742,9 +773,19 @@ export default function SoulDetailPage() {
 
       <SoulDeleteModal
         isOpen={isDeleteModalOpen}
-        onClose={() => setIsDeleteModalOpen(false)}
+        onClose={closeDeleteModal}
         onConfirm={handleDelete}
         isPending={deleteSoulMutation.isPending}
+        name={soul?.name ?? ""}
+        archivable={deleteBlocked}
+        onArchive={() => setIsArchiveOpen(true)}
+      />
+      <ArchiveDialog
+        isOpen={isArchiveOpen}
+        name={soul?.name ?? ""}
+        onClose={() => setIsArchiveOpen(false)}
+        onConfirm={handleArchive}
+        isPending={archiveSoulMutation.isPending}
       />
 
       {/* 更正结案写出一条 SETTLEMENT_CORRECTED 事件,所以成功后三族全标脏(`refreshSoulViews`),
