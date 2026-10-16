@@ -238,10 +238,11 @@ def record_chat_message(account, conversation, event_id, sender_name):
 SOCIAL_WARNED_EVENT = "SOCIAL_WARNED"
 
 
-def record_social_warning(user_id, report_id, target_type, reason):
+def record_social_warning(user_id, report_id, target_type, reason, post_id=None):
     """被警告的若是灵魂(有本世账号),给它记一条带理由的推送;官员、已转世的:不记;没有设备的照记一行历史(NO_DEVICE)。
 
-    `target_type` 是举报对象(POST / COMMENT / USER),决定锁屏说「帖子」「评论」还是「账号」。"""
+    `target_type` 是举报对象(POST / COMMENT / USER),决定锁屏说「帖子」「评论」还是「账号」。
+    `post_id`:帖子本身,或评论所在的帖子 —— 点推送打开它(作者看得到自己被隐藏的帖子);账号被举报时为 None,落在「此生」。"""
     from apps.soul_accounts.models import SoulAccount
 
     account = SoulAccount.objects.filter(user_id=user_id, retired_at__isnull=True).first()
@@ -249,7 +250,8 @@ def record_social_warning(user_id, report_id, target_type, reason):
         return []
     kind = f"social_warned_{target_type.lower()}"
     return _record(account, SOCIAL_WARNED_EVENT, None, kind, f"warn:{report_id}"[:120],
-                   {"screen": "Life"}, params=lambda locale: {"reason": reason})
+                   {"screen": "CirclePost", "post_id": str(post_id)} if post_id else {"screen": "Life"},
+                   params=lambda locale: {"reason": reason})
 
 
 #: 官员替灵魂关闭了两步验证(apps/soul_accounts/mfa.py::reset_by_officer)。**不经事件总线**,也不进偏好:
