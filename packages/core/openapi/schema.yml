@@ -25637,7 +25637,6 @@ components:
           type: string
           format: uuid
           readOnly: true
-          nullable: true
         is_archived:
           type: boolean
           readOnly: true
@@ -26185,7 +26184,6 @@ components:
           type: string
           format: uuid
           readOnly: true
-          nullable: true
         is_archived:
           type: boolean
           readOnly: true
@@ -31860,6 +31858,10 @@ components:
         realm_name:
           type: string
           nullable: true
+          readOnly: true
+        workflow:
+          type: string
+          format: uuid
           readOnly: true
         is_archived:
           type: boolean
