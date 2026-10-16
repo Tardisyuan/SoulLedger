@@ -90,6 +90,22 @@ describe("WorkflowPage instances tab", () => {
     expect(screen.queryByRole("button", { name: "workflow.start.action" })).not.toBeInTheDocument();
   });
 
+  it("shows the approval number (WF-0582) on the row, and nothing in its place when the API sends none", async () => {
+    mockedWorkflows.mockResolvedValue({
+      data: {
+        results: [
+          { id: "w1", number: "WF-0582", workflow_name: "Trial A", case_type: "ROUTINE", soul: "s1", soul_name: "Meng", status: "IN_PROGRESS", is_appeal: false },
+          { id: "w2", workflow_name: "Trial B", case_type: "ROUTINE", soul: "s2", soul_name: "Wang", status: "IN_PROGRESS", is_appeal: false },
+        ],
+      },
+    });
+    await openInstances();
+    await screen.findByText("Trial A");
+    const numbers = document.querySelectorAll("[data-workflow-number]");
+    expect([...numbers].map((n) => n.textContent)).toEqual(["WF-0582"]);
+    expect(screen.queryByText("undefined", { exact: false })).not.toBeInTheDocument();
+  });
+
   it("shows an empty state when there are no workflow instances", async () => {
     await openInstances();
 

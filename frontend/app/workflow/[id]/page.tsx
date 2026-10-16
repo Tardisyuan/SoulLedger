@@ -333,6 +333,12 @@ export default function WorkflowDetailPage() {
       backLink={backLink}
       actions={
         <div className="flex items-center gap-2">
+          {/* 审批编号(`WF-0582`):给人读、给人抄的名字;老后端没有这一列时不占位。 */}
+          {workflow.number ? (
+            <span data-workflow-number="" className="font-mono text-xs text-[oklch(var(--color-ink-muted))]">
+              {workflow.number}
+            </span>
+          ) : null}
           {statusBadge}
           {workflow.is_appeal && (
             <Badge className="text-[oklch(var(--color-verdict-retry))] border-[oklch(var(--color-verdict-retry))]" glyph="↺">

@@ -59,6 +59,11 @@ export function WorkflowInstanceList({
               <div>
                 <div className="text-sm font-medium text-[oklch(var(--color-ink))]">{workflowTitle(wf, t)}</div>
                 <div className="text-xs text-[oklch(var(--color-ink-muted))] mt-1">
+                  {wf.number ? (
+                    <>
+                      <span data-workflow-number="" className="font-mono">{wf.number}</span>{" · "}
+                    </>
+                  ) : null}
                   <DomainEnum namespace="workflow.case_types" value={wf.case_type} />{" · "}
                   {/* `wf.soul` is the primary key. This row used to print the
                       UUID as though it were the soul's name. */}

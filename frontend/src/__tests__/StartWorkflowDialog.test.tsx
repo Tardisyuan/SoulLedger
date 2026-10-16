@@ -327,4 +327,25 @@ describe("startWorkflowRefusal — 每个错误码对应哪句话、哪一格", 
     expect(r.viewId).toBe("w9");
     expect(r.field).toBe("case_type");
   });
+
+  it("duplicate 的编号写审批编号(WF-0582);没带编号的老后端才退回 uuid 前 8 位", () => {
+    const withNumber = refusal(409, {
+      code: "workflow_in_progress", workflow: "abcdef12-3456-4789-8abc-def012345678", number: "WF-0582", case_type: "ROUTINE",
+    });
+    expect(withNumber.message).toBe("workflow.start.errors.duplicate(常规审判,WF-0582)");
+    expect(withNumber.message).not.toContain("abcdef12");
+    // 跳转仍用 id:编号只给人读。
+    expect(withNumber.viewId).toBe("abcdef12-3456-4789-8abc-def012345678");
+  });
+});
+
+describe("StartWorkflowDialog — 审批编号", () => {
+  it("提示条里写 409 带回来的审批编号", async () => {
+    mockStart.mockRejectedValue({
+      response: { status: 409, data: { code: "workflow_in_progress", workflow: "w-uuid-0001", number: "WF-0582", case_type: "ROUTINE" } },
+    });
+    renderDialog();
+    await fillAndSubmit();
+    expect(await screen.findByText("workflow.start.errors.duplicate(常规审判,WF-0582)")).toBeInTheDocument();
+  });
 });
