@@ -216,6 +216,7 @@ EDGES = {
     'judgment.Judgment.archived_by->authentication.User': ('user-other', 'global identity: officer who archived it'),
     'judgment.Judgment.claimed_by->authentication.User': ('user-other', 'global identity: officer who claimed the case'),
     'judgment.Judgment.deferred_by->authentication.User': ('user-other', 'global identity: officer who deferred it'),
+    'judgment.Judgment.reassign_requested_by->authentication.User': ('user-other', 'global identity: officer who asked for a reassignment'),
     'notifications.UserNotification.user->authentication.User': ('user-other', 'global identity: the owning account'),
     'officer_app.OfficerPushDevice.user->authentication.User': ('user-other', 'global identity: the owning account'),
     'scheduler.TaskRun.triggered_by->authentication.User': ('user-other', 'global identity: who triggered the run'),

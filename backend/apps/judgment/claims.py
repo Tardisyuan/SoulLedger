@@ -111,6 +111,14 @@ def lock_for_conclude(pk, user) -> Judgment:
 # ---------------------------------------------------------------------------
 
 
+def _clear_reassign_request(judgment: Judgment) -> list[str]:
+    """认领人变了(认领 / 释放 / 改派),先前的「请管理员改派」就作废。返回要一并存的列。"""
+    judgment.reassign_requested_at = None
+    judgment.reassign_requested_by = None
+    judgment.reassign_reason = ""
+    return ["reassign_requested_at", "reassign_requested_by", "reassign_reason"]
+
+
 def _apply_claim(judgment: Judgment, user) -> None:
     _assert_pending(judgment)
     if judgment.claimed_by_id == user.pk:
@@ -121,7 +129,7 @@ def _apply_claim(judgment: Judgment, user) -> None:
         )
     judgment.claimed_by = user
     judgment.claimed_at = timezone.now()
-    _save(judgment, "claimed_by", "claimed_at")
+    _save(judgment, "claimed_by", "claimed_at", *_clear_reassign_request(judgment))
 
 
 def _apply_release(judgment: Judgment, user, may_override: bool) -> None:
@@ -131,7 +139,7 @@ def _apply_release(judgment: Judgment, user, may_override: bool) -> None:
     _assert_may_act_on(judgment, user, may_override)
     judgment.claimed_by = None
     judgment.claimed_at = None
-    _save(judgment, "claimed_by", "claimed_at")
+    _save(judgment, "claimed_by", "claimed_at", *_clear_reassign_request(judgment))
 
 
 def _apply_reassign(judgment: Judgment, target) -> None:
@@ -140,7 +148,7 @@ def _apply_reassign(judgment: Judgment, target) -> None:
         return
     judgment.claimed_by = target
     judgment.claimed_at = timezone.now()
-    _save(judgment, "claimed_by", "claimed_at")
+    _save(judgment, "claimed_by", "claimed_at", *_clear_reassign_request(judgment))
 
 
 def _apply_defer(judgment: Judgment, user, reason: str, may_override: bool) -> None:
@@ -302,10 +310,17 @@ def request_reassign(judgment: Judgment, actor, reason: str = "") -> list:
     admins = User.objects.filter(role="ADMIN", is_active=True).exclude(pk=actor.pk).order_by("pk")
     recipients = list(admins.filter(tenant_id=judgment.tenant_id)) or list(admins.filter(tenant__isnull=True))
     params = {"by": actor.display_name or actor.username, "soul": judgment.soul.name}
-    # 手机端的理由随通知存下(审批人读);文案模板不引用它,所以网页路径(不带理由)的文字不变。
+    # 有理由时用 `_with_reason` 那句(审批人读);没有理由(网页路径)与旧通知仍是原来的句子。
     if reason:
         params["reason"] = reason
-    title, body = messages.render(messages.DEFAULT_LOCALE, "judgment_reassign_requested", params)
+        params["kind"] = "judgment_reassign_requested_with_reason"
+    kind = params.get("kind", "judgment_reassign_requested")
+    # 持久标记:官员端重开也知道「已请求」;改派 / 释放 / 认领时清。
+    judgment.reassign_requested_at = timezone.now()
+    judgment.reassign_requested_by = actor
+    judgment.reassign_reason = reason[:500]
+    _save(judgment, "reassign_requested_at", "reassign_requested_by", "reassign_reason")
+    title, body = messages.render(messages.DEFAULT_LOCALE, kind, params)
     for admin in recipients:
         EventService.notify_user(
             admin, title=title, message=body, notification_type="JUDGMENT_REASSIGN_REQUESTED",

@@ -1,4 +1,6 @@
 [
+  "official_notify.judgment_reassign_requested_with_reason.body",
+  "official_notify.judgment_reassign_requested_with_reason.title",
   "users.import.back",
   "users.import.blocked",
   "users.import.button",

@@ -25122,6 +25122,8 @@ components:
         evidence_json: {}
         confession:
           type: string
+        summary:
+          type: string
         verdict:
           readOnly: true
           nullable: true
@@ -25209,6 +25211,18 @@ components:
           nullable: true
           readOnly: true
         defer_reason:
+          type: string
+          readOnly: true
+        reassign_requested_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        reassign_requested_by:
+          type: integer
+          readOnly: true
+          nullable: true
+        reassign_reason:
           type: string
           readOnly: true
         karmic_balance:
@@ -25302,6 +25316,9 @@ components:
       - kind
       - merit_score
       - realm_name
+      - reassign_reason
+      - reassign_requested_at
+      - reassign_requested_by
       - soul
       - soul_name
       - verdict
@@ -25647,6 +25664,8 @@ components:
         evidence_json: {}
         confession:
           type: string
+        summary:
+          type: string
         verdict:
           readOnly: true
           nullable: true
@@ -25734,6 +25753,18 @@ components:
           nullable: true
           readOnly: true
         defer_reason:
+          type: string
+          readOnly: true
+        reassign_requested_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        reassign_requested_by:
+          type: integer
+          readOnly: true
+          nullable: true
+        reassign_reason:
           type: string
           readOnly: true
         karmic_balance:
@@ -25838,6 +25869,9 @@ components:
       - kind
       - merit_score
       - realm_name
+      - reassign_reason
+      - reassign_requested_at
+      - reassign_requested_by
       - soul
       - soul_name
       - verdict
@@ -31289,6 +31323,8 @@ components:
         evidence_json: {}
         confession:
           type: string
+        summary:
+          type: string
         verdict:
           readOnly: true
           nullable: true
@@ -31376,6 +31412,18 @@ components:
           nullable: true
           readOnly: true
         defer_reason:
+          type: string
+          readOnly: true
+        reassign_requested_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        reassign_requested_by:
+          type: integer
+          readOnly: true
+          nullable: true
+        reassign_reason:
           type: string
           readOnly: true
         karmic_balance:

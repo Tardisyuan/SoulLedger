@@ -11626,6 +11626,7 @@ export interface components {
             realm_id?: string | null;
             evidence_json?: unknown;
             confession?: string;
+            summary?: string;
             readonly verdict: (components["schemas"]["VerdictEnum"] | components["schemas"]["NullEnum"]) | null;
             notes?: string;
             readonly citations: components["schemas"]["JudgmentCitation"][];
@@ -11654,6 +11655,10 @@ export interface components {
             readonly deferred_by: number | null;
             readonly deferred_by_name: string | null;
             readonly defer_reason: string;
+            /** Format: date-time */
+            readonly reassign_requested_at: string | null;
+            readonly reassign_requested_by: number | null;
+            readonly reassign_reason: string;
             /**
              * @description 功过相抵的净值 —— **只对中国的案子**,其他宇宙观是 null。
              *
@@ -11858,6 +11863,7 @@ export interface components {
             realm_id?: string | null;
             evidence_json?: unknown;
             confession?: string;
+            summary?: string;
             readonly verdict: (components["schemas"]["VerdictEnum"] | components["schemas"]["NullEnum"]) | null;
             notes?: string;
             readonly citations: components["schemas"]["JudgmentCitation"][];
@@ -11886,6 +11892,10 @@ export interface components {
             readonly deferred_by: number | null;
             readonly deferred_by_name: string | null;
             readonly defer_reason: string;
+            /** Format: date-time */
+            readonly reassign_requested_at: string | null;
+            readonly reassign_requested_by: number | null;
+            readonly reassign_reason: string;
             /**
              * @description 功过相抵的净值 —— **只对中国的案子**,其他宇宙观是 null。
              *
@@ -14610,6 +14620,7 @@ export interface components {
             realm_id?: string | null;
             evidence_json?: unknown;
             confession?: string;
+            summary?: string;
             readonly verdict?: (components["schemas"]["VerdictEnum"] | components["schemas"]["NullEnum"]) | null;
             notes?: string;
             readonly citations?: components["schemas"]["JudgmentCitation"][];
@@ -14638,6 +14649,10 @@ export interface components {
             readonly deferred_by?: number | null;
             readonly deferred_by_name?: string | null;
             readonly defer_reason?: string;
+            /** Format: date-time */
+            readonly reassign_requested_at?: string | null;
+            readonly reassign_requested_by?: number | null;
+            readonly reassign_reason?: string;
             /**
              * @description 功过相抵的净值 —— **只对中国的案子**,其他宇宙观是 null。
              *
