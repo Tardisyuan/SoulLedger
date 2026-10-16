@@ -189,6 +189,8 @@ export interface WorkflowTemplateListItem {
   node_count: number;
   /** The published version's number (0018); null for a template never published. */
   published_version?: number | null;
+  /** 所属租户(殿)的主键。全局管理员的列表跨殿,「发起审批」按灵魂的殿筛。 */
+  tenant?: number | null;
   /**
    * Present only on a locally-built preview object for a not-yet-saved
    * predefined template (see app/workflow/page.tsx). A template fetched from

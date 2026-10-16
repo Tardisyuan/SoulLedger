@@ -181,6 +181,9 @@ class JudgmentSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serialize
     validate_realm_id = tenant_scoped("realm")
     # 「戊 · 发落」草稿的界域;只读,只经 `draft/` 写。
     draft_destination_realm_id = serializers.UUIDField(read_only=True, allow_null=True)
+    # 这次审判挂着的审批(结案时「同时发起审批」或手动发起时关联);没有是 null。
+    # 「发起审批」(W-11)的关联审判下拉据此把已有审批的置灰。列表的 queryset 已 select_related。
+    workflow = serializers.PrimaryKeyRelatedField(source="approval_workflow", read_only=True)
 
     class Meta:
         model = Judgment
@@ -198,6 +201,7 @@ class JudgmentSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serialize
             "karmic_balance", "evidence_count",
             # 世次(`cycle`,0 是第一世,判决创建时盖章)与审判方式,都是模型上已有的列,此前没出线。
             "cycle", "judgment_method", "merit_score", "demerit_score", "realm_name",
+            "workflow",
             *ARCHIVE_FIELDS,
         ]
         # 草稿各列只读:只有 `draft/`(带版本前提)写它们,见 JudgmentDraftService。

@@ -37,6 +37,7 @@ import { useMorePages } from "@/src/components/souls/detail/useMorePages";
 import { SoulDeleteModal } from "@/src/components/souls/detail/SoulDeleteModal";
 import { ArchiveBanner, ArchiveDialog } from "@/src/components/archive/ArchiveParts";
 import { CorrectSettlementDialog } from "@/src/components/souls/detail/CorrectSettlementDialog";
+import { StartWorkflowDialog } from "@/src/components/workflow/StartWorkflowDialog";
 import { SoulJudgmentHistory } from "@/src/components/souls/detail/SoulLedgerSections";
 import { SoulLedgerTabs } from "@/src/components/souls/detail/SoulLedgerTabs";
 import { SoulBalance, SoulHeadingFigures, SoulMonogram } from "@/src/components/souls/detail/SoulFigures";
@@ -102,6 +103,8 @@ export default function SoulDetailPage() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isCorrectSettlementOpen, setIsCorrectSettlementOpen] = useState(false);
+  // 「发起审批…」(W-11):⋯ 菜单里,持 `workflow.create` 才有;弹层里灵魂已填好且锁定。
+  const [isStartWorkflowOpen, setIsStartWorkflowOpen] = useState(false);
   const [isOverflowMenuOpen, setIsOverflowMenuOpen] = useState(false);
   const { hasPermission } = usePermissions();
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
@@ -613,6 +616,7 @@ export default function SoulDetailPage() {
       onDelete={handleDeleteConfirm}
       onCorrectSettlement={canCorrectSettlement ? () => setIsCorrectSettlementOpen(true) : undefined}
       onRecalculate={hasPermission("ledger.manage") ? handleRecalculate : undefined}
+      onStartWorkflow={hasPermission("workflow.create") ? () => setIsStartWorkflowOpen(true) : undefined}
       isOverflowMenuOpen={isOverflowMenuOpen}
       setIsOverflowMenuOpen={setIsOverflowMenuOpen}
     />
@@ -818,6 +822,14 @@ export default function SoulDetailPage() {
           isOpen={isCorrectSettlementOpen}
           onClose={() => setIsCorrectSettlementOpen(false)}
           onCorrected={refreshSoulViews}
+        />
+      )}
+
+      {soul && (
+        <StartWorkflowDialog
+          isOpen={isStartWorkflowOpen}
+          onClose={() => setIsStartWorkflowOpen(false)}
+          lockedSoul={soul}
         />
       )}
 

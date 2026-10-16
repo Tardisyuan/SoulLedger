@@ -25,6 +25,8 @@ export interface Judgment extends ArchiveFields {
   case_number: string;
   soul: string;
   soul_name: string;
+  /** 这次审判挂着的审批 id;没有是 null。「发起审批」据此把已有审批的审判置灰。 */
+  workflow?: string | null;
   civilization: string;
   /** models.py:37 — the only nullable FK on the model. */
   judge: string | null;

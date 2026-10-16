@@ -30,16 +30,25 @@ jest.mock("@/src/contexts/I18nContext", () => ({
 
 // 真门禁,喂真权限清单 —— `suiteShape` 禁止把门本身桩掉,而且有道理:
 // 一个直通的桩会让门被删掉时什么都不红。
+// `mockHeld` 可改:「发起审批…」那组要看不持 `soul.delete` 的人。每条测试前复原。
+const mockHeld = new Set<string>();
+const DEFAULT_HELD = ["soul.update", "soul.delete"];
+beforeEach(() => {
+  mockHeld.clear();
+  DEFAULT_HELD.forEach((p) => mockHeld.add(p));
+});
+// 工厂在 import 时就跑(早于上面那行 const),所以只在调用时才读 `mockHeld`。
 jest.mock("@/src/hooks/usePermissions", () => {
-  const held = new Set(["soul.update", "soul.delete"]);
-  const has = (p: string) => held.has(p);
+  const has = (p: string) => mockHeld.has(p);
   return {
     usePermissions: () => ({
       hasPermission: has,
       hasAnyPermission: (l: string[]) => l.some(has),
       hasAllPermissions: (l: string[]) => l.every(has),
       isAdmin: false,
-      permissions: [...held],
+      get permissions() {
+        return [...mockHeld];
+      },
     }),
   };
 });
@@ -176,5 +185,81 @@ describe("SoulHeaderActions 的更正结案项", () => {
     expect(onCorrect).toHaveBeenCalledTimes(1);
     expect(focusedWhenCalled).toBe(trigger());
     expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * 「发起审批…」(W-11a)与「重算功过」都住在 ⋯ 里。页面只在持有 `workflow.create` / `ledger.manage` 时交来回调;
+ * 这里守:交了就有;只持 `workflow.create`、不持 `soul.delete` 的人也看得到 ⋯ 且没有删除;方向键按菜单次序走。
+ */
+describe("SoulHeaderActions 的发起审批与重算功过项", () => {
+  function HarnessWith(props: { onStartWorkflow?: () => void; onRecalculate?: () => void }) {
+    const [open, setOpen] = useState(false);
+    return (
+      <SoulHeaderActions
+        onEdit={jest.fn()}
+        onDelete={jest.fn()}
+        {...props}
+        isOverflowMenuOpen={open}
+        setIsOverflowMenuOpen={setOpen}
+      />
+    );
+  }
+
+  it("不持 soul.delete 但交了 onStartWorkflow:⋯ 在,菜单里只有发起审批", async () => {
+    mockHeld.delete("soul.delete");
+    mockHeld.add("workflow.create");
+    const onStart = jest.fn();
+    render(<HarnessWith onStartWorkflow={onStart} />);
+    await act(async () => {
+      fireEvent.click(trigger());
+    });
+    expect(screen.getAllByRole("menuitem")).toHaveLength(1);
+    expect(screen.getByRole("menuitem", { name: "workflow.start.menu" })).toHaveFocus();
+    expect(screen.queryByRole("menuitem", { name: "souls.detail.delete" })).not.toBeInTheDocument();
+    await act(async () => {
+      fireEvent.click(screen.getByRole("menuitem", { name: "workflow.start.menu" }));
+    });
+    expect(onStart).toHaveBeenCalledTimes(1);
+    expect(trigger()).toHaveFocus();
+  });
+
+  it("什么都没交、也不持 soul.delete:没有 ⋯", () => {
+    mockHeld.delete("soul.delete");
+    render(<HarnessWith />);
+    expect(screen.queryByRole("button", { name: "更多操作" })).not.toBeInTheDocument();
+  });
+
+  it("次序是 重算功过 · 发起审批… · 删除,方向键依次走", async () => {
+    mockHeld.add("ledger.manage");
+    mockHeld.add("workflow.create");
+    render(<HarnessWith onRecalculate={jest.fn()} onStartWorkflow={jest.fn()} />);
+    await act(async () => {
+      fireEvent.click(trigger());
+    });
+    const items = screen.getAllByRole("menuitem");
+    expect(items.map((el) => el.textContent)).toEqual([
+      "souls.detail.recalculate",
+      "workflow.start.menu",
+      "souls.detail.delete",
+    ]);
+    expect(items[0]).toHaveFocus();
+    await act(async () => {
+      fireEvent.keyDown(document, { key: "ArrowDown" });
+    });
+    expect(items[1]).toHaveFocus();
+    await act(async () => {
+      fireEvent.keyDown(document, { key: "ArrowDown" });
+    });
+    expect(items[2]).toHaveFocus();
+    await act(async () => {
+      fireEvent.keyDown(document, { key: "ArrowDown" });
+    });
+    expect(items[0]).toHaveFocus();
+  });
+
+  it("重算功过不再是页头上的按钮", () => {
+    render(<HarnessWith onRecalculate={jest.fn()} />);
+    expect(screen.queryByRole("button", { name: "souls.detail.recalculate" })).not.toBeInTheDocument();
   });
 });
