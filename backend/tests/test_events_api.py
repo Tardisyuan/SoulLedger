@@ -55,3 +55,29 @@ class TestSoulEventAPI:
         assert response.status_code == 200
         results = response.data.get("results", response.data) if isinstance(response.data, dict) else response.data
         assert len(results) >= 3
+
+
+@pytest.mark.django_db
+def test_every_offered_ordering_field_is_a_real_column():
+    """`?ordering=` with a whitelisted name that is not a column raised a FieldError (500)."""
+    from apps.events.views import SoulEventViewSet
+
+    columns = {f.name for f in SoulEvent._meta.get_fields()}
+    assert set(SoulEventViewSet.ordering_fields) <= columns
+
+
+@pytest.mark.django_db
+def test_ordering_by_each_offered_field_answers(api_client, admin_user, cn_tenant):
+    from rest_framework_simplejwt.tokens import RefreshToken
+
+    from apps.events.views import SoulEventViewSet
+
+    token = RefreshToken.for_user(admin_user)
+    if admin_user.tenant:
+        token["tenant_code"] = admin_user.tenant.code
+    api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {token.access_token}")
+    soul = Soul.objects.create(name="OrderSoul", tenant=cn_tenant)
+    SoulEvent.objects.create(soul=soul, tenant=cn_tenant, event_type=EventType.SOUL_CREATED, payload={})
+    for field in SoulEventViewSet.ordering_fields:
+        for key in (field, f"-{field}"):
+            assert api_client.get(f"/api/v1/events/?ordering={key}").status_code == 200, key

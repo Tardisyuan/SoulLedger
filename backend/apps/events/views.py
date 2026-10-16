@@ -50,6 +50,7 @@ class SoulEventViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, viewsets.Rea
     # `create_time`, not `created_at` — `SoulEvent` has no `created_at`.
     # DRF's OrderingFilter silently drops an unknown field, so
     # `?ordering=created_at` answered 200 and sorted by nothing: **a knob that
-    # returns success and does nothing**. `occurred_at` is the domain time and
-    # is worth offering beside the row's own.
-    ordering_fields = ["create_time", "occurred_at", "event_type"]
+    # returns success and does nothing**. `occurred_at` used to be listed here
+    # too, but `SoulEvent` has no such column either: the whitelist let it
+    # through to `order_by`, which raised (2026-10-17). Only real columns.
+    ordering_fields = ["create_time", "event_type"]
