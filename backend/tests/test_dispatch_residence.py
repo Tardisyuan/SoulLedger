@@ -675,6 +675,23 @@ def test_the_home_tenant_reads_the_residence_judgment_disposition_events_and_rec
     assert home.get(f"/api/v1/events/{executed[0].pk}/").status_code == 200
 
 
+def test_the_home_tenants_export_carries_the_residing_soul_like_its_list(cn, eu, away):
+    """`/souls/export/` 与列表同一范围:暂居在外的灵魂在原属的列表里，也在原属导出的文件里;
+    无关租户两处都没有。带 `ids`(批量条)与不带(列表页「导出 CSV」)两条路径都看。"""
+    soul = away["soul"]
+    home = officer_client(_officer("cn_judge", "JUDGE", cn))
+    assert str(soul.pk) in _ids(home.get("/api/v1/souls/"))
+    for params in ({}, {"ids": str(soul.pk)}):
+        exported = home.get("/api/v1/souls/export/", params)
+        assert exported.status_code == 200, params
+        assert str(soul.pk) in exported.content.decode(), params
+
+    other = officer_client(_officer("eu_judge", "JUDGE", eu))
+    assert str(soul.pk) not in _ids(other.get("/api/v1/souls/"))
+    for params in ({}, {"ids": str(soul.pk)}):
+        assert str(soul.pk) not in other.get("/api/v1/souls/export/", params).content.decode(), params
+
+
 def test_an_uninvolved_tenant_still_reads_nothing(eu, away):
     soul = away["soul"]
     other = officer_client(_officer("eu_judge", "JUDGE", eu))
