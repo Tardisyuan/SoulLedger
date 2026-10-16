@@ -287,6 +287,13 @@ export interface StartWorkflowBody {
   judgment?: string;
 }
 
+/** `GET /workflows/case-types/` 的一行。标签用语言包 `workflow.case_types.<value>`。
+ *  `builtin` = 有内置流程;false 时本殿若没有存好的模板，就是通用的单节点「审批节点」。 */
+export interface WorkflowCaseTypeOption {
+  value: string;
+  builtin: boolean;
+}
+
 export const workflowApi = {
   list: (params?: Record<string, string>) => api.get<PaginatedResponse<ApprovalWorkflowListItem>>("/workflows/", { params }),
   /** 与 `list` 同一组筛选 / 租户划界的 CSV,不分页(`ApprovalWorkflowViewSet.export`);页码参数不要传。 */
@@ -299,6 +306,9 @@ export const workflowApi = {
    * 通用的 `POST /workflows/` 已关闭(405):它只存一条没有节点的空行。
    */
   start: (body: StartWorkflowBody) => api.post<ApprovalWorkflow>("/workflows/start/", body),
+  /** 发起时可选的案件类型(`workflow.create` 码名)。`civilization` 与 `soul` 二选一。 */
+  caseTypes: (params: { civilization: string } | { soul: string }) =>
+    api.get<WorkflowCaseTypeOption[]>("/workflows/case-types/", { params }),
   advance: (id: string) => api.post<ApprovalWorkflow>(`/workflows/${id}/advance/`),
   /**
    * ApprovalWorkflowViewSet.escalate — 越级推进,`workflow.escalate` 码名。

@@ -765,6 +765,18 @@ class WorkflowStartSerializer(serializers.Serializer):
         return attrs
 
 
+class WorkflowCaseTypeSerializer(serializers.Serializer):
+    """One row of `GET /workflows/case-types/`: a case type the civilization admits.
+
+    `builtin` = a built-in flow exists for the pair (`WORKFLOW_TEMPLATES`). False means that, without a
+    stored template of the hall's own, the workflow gets the generic one-node 审批节点 flow
+    (`WorkflowService._generic_template`).
+    """
+
+    value = serializers.CharField()
+    builtin = serializers.BooleanField()
+
+
 class WorkflowAdvanceSerializer(serializers.Serializer):
     """Serializer for manually advancing workflow."""
 

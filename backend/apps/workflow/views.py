@@ -25,6 +25,7 @@ from apps.workflow.serializers import (
     ApprovalWorkflowListSerializer,
     ApprovalWorkflowSerializer,
     ApproverPreviewSerializer,
+    WorkflowCaseTypeSerializer,
     WorkflowNodeActionSerializer,
     WorkflowStartSerializer,
     WorkflowStatsSerializer,
@@ -201,6 +202,8 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
         'stats': ['workflow.read'],
         'create_from_judgment': ['workflow.create'],
         'start': ['workflow.create'],
+        # The choices for `start`, so the same people who may start.
+        'case_types': ['workflow.create'],
         # 列表的 CSV:与列表同一个读。
         'export': ['workflow.read'],
     }
@@ -232,6 +235,51 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
     @extend_schema(exclude=True)
     def create(self, request, *args, **kwargs):
         raise MethodNotAllowed(request.method, detail="Use POST /workflows/start/ or /workflows/create_from_judgment/.")
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter("civilization", str, required=False, description="文明代码;与 soul 二选一"),
+            OpenApiParameter("soul", str, required=False, description="灵魂 uuid,取其文明;与 civilization 二选一"),
+        ],
+        responses={200: WorkflowCaseTypeSerializer(many=True), 400: OpenApiTypes.OBJECT, 404: OpenApiTypes.OBJECT},
+    )
+    @action(detail=False, methods=["get"], url_path="case-types", pagination_class=None)
+    def case_types(self, request):
+        """The case types `start` accepts for a civilization (`VALID_CASE_TYPES_BY_CIVILIZATION`), in
+        `CaseType` declaration order. Labels are the client's (`workflow.case_types.*` in the language packs)."""
+        import uuid
+
+        from apps.souls.models import Soul
+        from apps.workflow.models import CaseType
+        from apps.workflow.templates import VALID_CASE_TYPES_BY_CIVILIZATION, WORKFLOW_TEMPLATES
+
+        civilization = request.query_params.get("civilization", "")
+        soul_id = request.query_params.get("soul", "")
+        if bool(civilization) == bool(soul_id):
+            return Response({"code": "civilization_or_soul", "error": "Give exactly one of civilization or soul"},
+                            status=status.HTTP_400_BAD_REQUEST)
+        if soul_id:
+            try:
+                uuid.UUID(soul_id)
+            except ValueError:
+                return Response({"code": "soul_not_found", "error": "Soul not found"},
+                                status=status.HTTP_404_NOT_FOUND)
+            # Same scoping as `start`: another tenant's soul is a 404.
+            soul = scope_to_tenant(Soul.objects.all(), request).filter(pk=soul_id).first()
+            if soul is None:
+                return Response({"code": "soul_not_found", "error": "Soul not found"},
+                                status=status.HTTP_404_NOT_FOUND)
+            civilization = soul.civilization
+        valid = VALID_CASE_TYPES_BY_CIVILIZATION.get(civilization)
+        if not valid:
+            return Response({"code": "unknown_civilization", "error": f"Unknown civilization '{civilization}'"},
+                            status=status.HTTP_400_BAD_REQUEST)
+        rows = [
+            {"value": c.value, "builtin": bool((WORKFLOW_TEMPLATES.get((civilization, c)) or {}).get("nodes"))}
+            for c in CaseType
+            if c in valid
+        ]
+        return Response(WorkflowCaseTypeSerializer(rows, many=True).data)
 
     @extend_schema(
         request=WorkflowStartSerializer,
@@ -312,8 +360,10 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
                 )
         except WorkflowInProgress as busy:
             return Response(
-                {"code": "workflow_in_progress", "error": "This soul already has a workflow in progress",
-                 "workflow": str(busy.workflow.pk), "status": busy.workflow.status},
+                {"code": "workflow_in_progress",
+                 "error": "This soul already has a workflow of this case type in progress",
+                 "workflow": str(busy.workflow.pk), "status": busy.workflow.status,
+                 "case_type": busy.workflow.case_type},
                 status=status.HTTP_409_CONFLICT,
             )
         except ValueError as e:
