@@ -1,16 +1,19 @@
 "use client";
 import { Suspense, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { useToast } from "@/src/contexts/ToastContext";
 import { usePlaque } from "@/src/components/plaque/Plaque";
 import { useHall } from "@/src/components/plaque/useHall";
 import { deathSyncApi, PAGE_SIZE, type DeathRegistration } from "@soulledger/core/api";
 import { DataTable } from "@/components/ui/data-table";
 import { PageSection } from "@/components/ui/page-section";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
-import { IdentifierChip, MissingValue } from "@/src/components/ui/DomainValue";
+import { DomainEnum, IdentifierChip, MissingValue } from "@/src/components/ui/DomainValue";
+import { Button } from "@/src/components/ui/Button";
+import { ConfirmDialog } from "@/src/components/ui/Modal";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { type BadgeTone } from "@/src/components/ui/Badge";
 import { StatusBadge } from "@/src/components/ui/StatusBadge";
@@ -36,6 +39,15 @@ const STATUS_TONES: Record<string, BadgeTone> = {
 };
 
 const STATUSES = Object.keys(STATUS_TONES);
+
+/**
+ * Only INTERNAL_ERROR is retried (user decision 2026-10-16): SOUL_NOT_FOUND,
+ * SOUL_NOT_ALIVE, INVALID_TRANSITION, VALIDATION_ERROR are answers about the
+ * data, and running them again gives the same answer. Same three checks the
+ * server makes before answering 409 (`DeathSyncService.retry_failed`).
+ */
+const canRetry = (reg: DeathRegistration) =>
+  reg.status === "FAILED" && reg.error_code === "INTERNAL_ERROR" && reg.retry_count < reg.max_retries;
 
 export default function DeathSyncPage() {
   // useSearchParams needs a Suspense boundary or the route opts out of static
@@ -77,6 +89,24 @@ function DeathSyncRoute() {
     queryFn: async () => (await deathSyncApi.summary()).data,
     enabled: !!user,
     staleTime: 0,
+  });
+
+  const { showToast } = useToast();
+  const queryClient = useQueryClient();
+  const [retrying, setRetrying] = useState<DeathRegistration | null>(null);
+  const retry = useMutation({
+    mutationFn: (id: string) => deathSyncApi.retry(id),
+    onSuccess: ({ data: row }) => {
+      if (row.status === "PROCESSED") showToast(t("death_sync.retry.done"), "success");
+      else showToast(t("death_sync.retry.still_failed", { reason: t(`death_sync.error.${row.error_code}`) }), "error");
+    },
+    // 409 = the row changed under us (another click, another admin, or the
+    // limit); the refetch below shows what it is now.
+    onError: () => showToast(t("death_sync.retry.refused"), "error"),
+    onSettled: () => {
+      setRetrying(null);
+      void queryClient.invalidateQueries({ queryKey: ["death-sync"] });
+    },
   });
 
   const setStatus = (next: string) => {
@@ -130,6 +160,7 @@ function DeathSyncRoute() {
             { key: "requested", header: t("death_sync.requested") },
             { key: "duration", header: t("death_sync.duration"), align: "right" },
             { key: "status", header: t("death_sync.status_label") },
+            { key: "actions", header: t("common.row_actions"), align: "right", srOnlyHeader: true },
           ]}
           data={registrations}
           isLoading={isLoading}
@@ -157,11 +188,22 @@ function DeathSyncRoute() {
                     variant="inline"
                   />
                 </p>
-                {reg.error_message && (
-                  <p className="max-w-80 whitespace-normal text-xs text-[oklch(var(--color-danger))]">
-                    {/* 补足 C15:出错是冷玫红「✕ 原因」。 */}
-                    <span aria-hidden="true">✕ </span>
-                    {reg.error_message}
+                {(reg.error_code || reg.error_message) && (
+                  <div className="max-w-80 whitespace-normal text-xs">
+                    {/* 补足 C15:出错是冷玫红「✕ 原因」。原因是译名,原码在 title 里;
+                        服务端的原文另起一行，失败无论能否重试都留在这里给管理员看。 */}
+                    <p className="text-[oklch(var(--color-danger))]">
+                      <span aria-hidden="true">✕ </span>
+                      <DomainEnum namespace="death_sync.error" value={reg.error_code} />
+                    </p>
+                    {reg.error_message && (
+                      <p className="text-[oklch(var(--color-ink-muted))]">{reg.error_message}</p>
+                    )}
+                  </div>
+                )}
+                {reg.retry_count > 0 && (
+                  <p className="text-xs text-[oklch(var(--color-ink-subtle))]">
+                    {t("death_sync.retry.count", { count: String(reg.retry_count), max: String(reg.max_retries) })}
                   </p>
                 )}
               </td>
@@ -176,12 +218,28 @@ function DeathSyncRoute() {
               <td className="px-3 py-2 whitespace-nowrap">
                 <StatusBadge namespace="death_sync.status" value={reg.status} tone={STATUS_TONES[reg.status] ?? "neutral"} />
               </td>
+              <td className="px-3 py-2 text-right whitespace-nowrap">
+                {canRetry(reg) && (
+                  <Button type="button" variant="ghost" size="sm" onClick={() => setRetrying(reg)}>
+                    {t("death_sync.retry.action")}
+                  </Button>
+                )}
+              </td>
             </>
           )}
           page={page}
           totalPages={Math.max(1, Math.ceil((data?.count ?? 0) / PAGE_SIZE))}
           totalCount={data?.count ?? 0}
           onPageChange={setPage}
+        />
+        <ConfirmDialog
+          isOpen={retrying !== null}
+          title={t("death_sync.retry.confirm_title")}
+          message={t("death_sync.retry.confirm_message")}
+          confirmText={t("death_sync.retry.action")}
+          confirmLoading={retry.isPending}
+          onConfirm={() => retrying && retry.mutate(retrying.id)}
+          onCancel={() => setRetrying(null)}
         />
       </PageSection>
     </PageShell>

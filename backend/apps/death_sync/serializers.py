@@ -35,7 +35,7 @@ class DeathRegistrationRequestSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'status', 'source_system', 'idempotency_key',
             'source_reference_id', 'soul', 'judgment',
-            'error_code', 'error_message', 'retry_count',
+            'error_code', 'error_message', 'retry_count', 'max_retries',
             'request_timestamp', 'processing_duration_ms',
         ]
         read_only_fields = fields
