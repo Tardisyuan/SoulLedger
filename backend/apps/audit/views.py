@@ -96,7 +96,12 @@ def _parse_date_param(params, name):
     raw = params.get(name)
     if not raw:
         return None
-    value = parse_date(raw)
+    # `parse_date` returns None for a malformed string but RAISES ValueError for a well-formed
+    # impossible one (`2026-13-40`): both are the caller's mistake, both are a 400.
+    try:
+        value = parse_date(raw)
+    except ValueError:
+        value = None
     if value is None:
         raise ValidationError({name: f"'{raw}' is not a date (expected YYYY-MM-DD)."})
     return value

@@ -292,7 +292,7 @@ def test_a_judgment_row_names_the_workflow_it_already_has(cn):
     response = cn["moderator"].get("/api/v1/judgment/", {"soul": str(cn["soul"].pk)})
     assert response.status_code == 200, response.data
     rows = {row["id"]: row for row in response.data["results"]}
-    assert rows[str(taken.pk)]["workflow"] == created.data["id"]
+    assert str(rows[str(taken.pk)]["workflow"]) == str(created.data["id"])
     assert rows[str(free.pk)]["workflow"] is None
 
 

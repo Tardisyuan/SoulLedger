@@ -89,8 +89,10 @@ def test_the_default_limit_is_still_fifty(moderator_client):
 @pytest.mark.django_db
 @pytest.mark.parametrize("path", [TIMELINE, LIST])
 @pytest.mark.parametrize("param", ["start_date", "end_date"])
-def test_a_garbage_date_is_a_400_not_a_500(moderator_client, path, param):
-    response = moderator_client.get(path, {param: "not-a-date"})
+@pytest.mark.parametrize("garbage", ["not-a-date", "2026-13-40"])
+def test_a_garbage_date_is_a_400_not_a_500(moderator_client, path, param, garbage):
+    # The second is well formed but impossible: `parse_date` raises ValueError for it instead of returning None.
+    response = moderator_client.get(path, {param: garbage})
     assert response.status_code == 400, (path, param, response.status_code, response.content[:200])
     assert param in str(response.data), response.data
 
