@@ -2284,7 +2284,7 @@
     }
   },
   "organization": {
-    "title": "Sab",
+    "title": "Per",
     "subtitle": "Iri Sab Em Taui Neb",
     "civilizations": {
       "CHINESE": "Duat Sherer",
@@ -3372,7 +3372,7 @@
       "menus": "Iri Menu",
       "audit": "Medew Maa",
       "tenants": "Iri Per Hemes",
-      "organizations": "Kher Sab",
+      "organizations": "Kher Per",
       "group_overview": "Maa Neb",
       "group_soul_ops": "Baku Ba",
       "group_workflow": "Wat Wedja",
@@ -4541,7 +4541,8 @@
       "enable_body": "Sesh Sekhem-Ek; Maa {{bio}}.",
       "enable_next": "Nemet Ky",
       "failed": "Nen Rekh {{bio}}. Sesh Sekhem.",
-      "retry": "Wehem Aq Em {{bio}}"
+      "retry": "Wehem Aq Em {{bio}}",
+      "locked": "{{bio}}: Wehem Iri Er Pehwy; Medjat Khetem-Ef Er Ahet. Sesh Sekhem-Ek, Mi Wehem Iri Er Khet."
     },
     "security": {
       "history": "Ikhet Hena Aq Pehwy",
