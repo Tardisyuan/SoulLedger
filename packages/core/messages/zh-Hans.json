@@ -2937,6 +2937,22 @@
           "ABANDONED": "已放弃"
         }
       }
+    },
+    "error": {
+      "SOUL_NOT_FOUND": "查无此魂",
+      "SOUL_NOT_ALIVE": "灵魂已不在阳世",
+      "INVALID_TRANSITION": "状态不允许转入审判",
+      "INTERNAL_ERROR": "系统内部错误",
+      "VALIDATION_ERROR": "登记内容不合格式"
+    },
+    "retry": {
+      "action": "重试",
+      "confirm_title": "重新处理这条登记？",
+      "confirm_message": "按原始登记内容再处理一次。成功后灵魂转入审判。",
+      "done": "已重新处理，灵魂已转入审判",
+      "still_failed": "重试后仍失败：{{reason}}",
+      "refused": "这条登记现在不能重试，列表已刷新",
+      "count": "已重试 {{count}}/{{max}} 次"
     }
   },
   "soul_accounts": {

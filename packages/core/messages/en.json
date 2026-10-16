@@ -2937,6 +2937,22 @@
           "ABANDONED": "Abandoned"
         }
       }
+    },
+    "error": {
+      "SOUL_NOT_FOUND": "No matching soul",
+      "SOUL_NOT_ALIVE": "Soul is no longer alive",
+      "INVALID_TRANSITION": "State does not allow judgment",
+      "INTERNAL_ERROR": "Internal error",
+      "VALIDATION_ERROR": "Invalid registration data"
+    },
+    "retry": {
+      "action": "Retry",
+      "confirm_title": "Process this registration again?",
+      "confirm_message": "Runs the original registration once more. On success the soul goes to judgment.",
+      "done": "Processed; the soul is now in judgment",
+      "still_failed": "Still failed after retry: {{reason}}",
+      "refused": "This registration can no longer be retried; list refreshed",
+      "count": "Retried {{count}}/{{max}}"
     }
   },
   "soul_accounts": {
