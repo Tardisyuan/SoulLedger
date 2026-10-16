@@ -32,6 +32,14 @@ MESSAGES = {
         "social_warned_user": {"title": "账号收到警告", "body": "你的账号收到警告：{{reason}}"},
         "mfa_reset_by_officer": {"title": "两步验证已关闭", "body": "本殿官员 {{name}} 已关闭你的两步验证"},
         "export_ready": {"title": "资料已准备好", "body": "你申请导出的资料已准备好，7 天内可取。打开灵魂簿保存。"},
+        "content_hidden_post": {"title": "帖子已被隐藏", "body": "你的帖子被殿司隐藏，打开灵魂簿查看。"},
+        "content_hidden_comment": {"title": "评论已被隐藏", "body": "你的评论被殿司隐藏，打开灵魂簿查看。"},
+        "content_deleted_post": {"title": "帖子已被删除", "body": "你的帖子被殿司删除。"},
+        "content_deleted_comment": {"title": "评论已被删除", "body": "你的评论被殿司删除。"},
+        "content_approved_post": {"title": "帖子已通过审核", "body": "你的帖子已通过审核，大家都看得到了。"},
+        "content_approved_comment": {"title": "评论已通过审核", "body": "你的评论已通过审核，大家都看得到了。"},
+        "content_restored_post": {"title": "帖子已恢复", "body": "你的帖子已恢复显示。"},
+        "content_restored_comment": {"title": "评论已恢复", "body": "你的评论已恢复显示。"},
     },
     "en": {
         "sentence_pardoned": {"title": "Remaining term pardoned", "body": "Part of your term was pardoned. Open Soul Ledger to see it."},
@@ -96,6 +104,26 @@ MESSAGES = {
             "title": "Your data is ready",
             "body": "The data export you asked for is ready for 7 days. Open Soul Ledger to save it.",
         },
+        "content_hidden_post": {
+            "title": "Your post was hidden",
+            "body": "An officer hid your post. Open Soul Ledger to see it.",
+        },
+        "content_hidden_comment": {
+            "title": "Your comment was hidden",
+            "body": "An officer hid your comment. Open Soul Ledger to see it.",
+        },
+        "content_deleted_post": {"title": "Your post was deleted", "body": "An officer deleted your post."},
+        "content_deleted_comment": {"title": "Your comment was deleted", "body": "An officer deleted your comment."},
+        "content_approved_post": {
+            "title": "Your post was approved",
+            "body": "Your post passed review and is now visible to everyone.",
+        },
+        "content_approved_comment": {
+            "title": "Your comment was approved",
+            "body": "Your comment passed review and is now visible to everyone.",
+        },
+        "content_restored_post": {"title": "Your post was restored", "body": "Your post is visible again."},
+        "content_restored_comment": {"title": "Your comment was restored", "body": "Your comment is visible again."},
     },
     "egy": {
         "sentence_pardoned": {"title": "Renpet Sepy Nedj Seth", "body": "Renpet-Ek Nedj Seth. Wen Medjat Ba Er Maa."},

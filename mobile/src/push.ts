@@ -145,6 +145,7 @@ export function installNotificationHandler(): void {
 export type Landing =
   | { screen: "ApplicationDetail"; id: string }
   | { screen: "Conversation"; id: string }
+  | { screen: "CirclePost"; id: string }
   | { screen: "Life" }
   | { screen: "Applications" }
   | { screen: "DataExport" }
@@ -159,6 +160,8 @@ export type Landing =
 export function landOn(navigate: NavigationProp<AppStackParams>["navigate"], landing: Landing): void {
   if (landing.screen === "ApplicationDetail") navigate("ApplicationDetail", { id: landing.id, landed: true });
   else if (landing.screen === "Conversation") navigate("Conversation", { id: landing.id, landed: true });
+  // 被殿司警告: the post it was about (a comment's post). The author sees their own post even when hidden.
+  else if (landing.screen === "CirclePost") navigate("CirclePost", { id: landing.id });
   // 受刑 1d: completion lands on the life page's section (the new 「可申请转生」 row is there); the rest on the full list.
   else if (landing.screen === "Sentence" && landing.landing.kind === "sentence_completed")
     navigate("Tabs", { screen: "Life", params: { sentenceLanding: landing.landing } });
@@ -178,11 +181,13 @@ const ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 /** Where a tapped notification lands, from its `data` — or `null`: just open the app. */
 export function landingOf(data: unknown): Landing | null {
   if (!data || typeof data !== "object") return null;
-  const { screen, application_id: id, conversation_id: conversation, kind, node_ids: nodes } = data as Record<string, unknown>;
+  const { screen, application_id: id, conversation_id: conversation, post_id: post, kind, node_ids: nodes } = data as Record<string, unknown>;
   if (screen === "ApplicationDetail") return typeof id === "string" && ID.test(id) ? { screen, id } : { screen: "Life" };
   // Reserved: the server sends no chat push yet (no Synapse → push path; see the round's report).
   // A malformed id opens the app and no more — a letter is not worth guessing at.
   if (screen === "Conversation") return typeof conversation === "string" && ID.test(conversation) ? { screen, id: conversation } : null;
+  // 被殿司警告: a malformed post id still lands on the life page, like an application's.
+  if (screen === "CirclePost") return typeof post === "string" && ID.test(post) ? { screen, id: post } : { screen: "Life" };
   // 缩短冷却申请的结果:状态在转生申请页的冷却块里。
   if (screen === "Applications") return { screen };
   if (screen === "DataExport" || screen === "Mfa") return { screen };
