@@ -2060,6 +2060,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/death-sync/registrations/{id}/retry/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Rerun a registration that failed with INTERNAL_ERROR (W-12).
+         *
+         *     409 with `code` NOT_FAILED / NOT_RETRYABLE / MAX_RETRIES otherwise.
+         *     `get_object()` first, so another tenant's id is a 404 like a read.
+         */
+        post: operations["v1_death_sync_registrations_retry_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/death-sync/registrations/summary/": {
         parameters: {
             query?: never;
@@ -21944,6 +21966,28 @@ export interface operations {
         };
     };
     v1_death_sync_registrations_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this Death Registration Request. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeathRegistrationRequest"];
+                };
+            };
+        };
+    };
+    v1_death_sync_registrations_retry_create: {
         parameters: {
             query?: never;
             header?: never;

@@ -4192,6 +4192,33 @@ paths:
               schema:
                 $ref: '#/components/schemas/DeathRegistrationRequest'
           description: ''
+  /api/v1/death-sync/registrations/{id}/retry/:
+    post:
+      operationId: v1_death_sync_registrations_retry_create
+      description: |-
+        Rerun a registration that failed with INTERNAL_ERROR (W-12).
+
+        409 with `code` NOT_FAILED / NOT_RETRYABLE / MAX_RETRIES otherwise.
+        `get_object()` first, so another tenant's id is a 404 like a read.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Death Registration Request.
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeathRegistrationRequest'
+          description: ''
   /api/v1/death-sync/registrations/summary/:
     get:
       operationId: v1_death_sync_registrations_summary_retrieve
