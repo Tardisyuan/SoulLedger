@@ -739,6 +739,32 @@ class WorkflowNodeActionSerializer(serializers.Serializer):
     )
 
 
+class WorkflowStartSerializer(serializers.Serializer):
+    """Body of `POST /workflows/start/` (W-11: 官员为任一灵魂手动发起审批).
+
+    Shape only. Which soul / template the caller may reach, and whether the
+    pair is valid for the soul's civilization, is the view's and the service's
+    job — those need the request's tenant.
+    """
+
+    soul = serializers.UUIDField()
+    # One of the two, not both: `case_type` resolves a template the way
+    # create_from_judgment does; `template` names a stored one directly.
+    case_type = serializers.CharField(required=False, max_length=50)
+    template = serializers.UUIDField(required=False)
+    # Absent = the template's own priority (see WorkflowService._resolve_priority).
+    priority = serializers.IntegerField(required=False, min_value=0, max_value=2)
+    reason = serializers.CharField(max_length=1000)  # trimmed by CharField; blank is refused
+    judgment = serializers.UUIDField(required=False)
+
+    def validate(self, attrs):
+        if bool(attrs.get("case_type")) == bool(attrs.get("template")):
+            raise serializers.ValidationError(
+                {"case_type": "Give exactly one of case_type or template."}, code="case_type_or_template"
+            )
+        return attrs
+
+
 class WorkflowAdvanceSerializer(serializers.Serializer):
     """Serializer for manually advancing workflow."""
 
