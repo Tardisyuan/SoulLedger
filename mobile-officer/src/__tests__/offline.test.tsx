@@ -288,10 +288,12 @@ describe("decisions offline", () => {
 });
 
 describe("a reply written offline", () => {
+  const back = jest.fn();
+  beforeEach(() => back.mockClear());
   const openThread = async (offline: boolean) => {
     renderOfficer(
       <Net start={{ offline, back: 0 }}>
-        <Detail target={{ type: "todo", kind: "letter", id: "c-1" }} onBack={() => {}} onSettled={jest.fn()} />
+        <Detail target={{ type: "todo", kind: "letter", id: "c-1" }} onBack={back} onSettled={jest.fn()} />
         <TodoTab highlight={null} onOpen={() => {}} />
       </Net>
     );
@@ -314,6 +316,21 @@ describe("a reply written offline", () => {
     expect(screen.getByText("回信 · 李白")).toBeTruthy();
     expect(screen.getByText("有网后自动发出")).toBeTruthy();
     expect(platform().persistent.get(OUTBOX_KEY)).toContain("先答应下来"); // survives a restart
+    expect(back).toHaveBeenCalledTimes(1); // queued is done as far as this screen goes: back to the list
+  });
+
+  it("sent on reconnect while the letter is open, the box empties instead of offering the same words again", async () => {
+    await openThread(false);
+    await goOffline();
+    fireEvent.changeText(screen.getByTestId("letter-input"), "先答应下来");
+    fireEvent.press(screen.getByTestId("letter-send"));
+    expect(screen.getByTestId("letter-queued")).toBeTruthy();
+    await act(async () => {
+      await flushOutbox();
+    });
+    expect(mockReply).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId("letter-input").props.value).toBe("");
+    expect(screen.queryByTestId("letter-queued")).toBeNull();
   });
 
   it("goes out on reconnect: the entry and the draft are gone", async () => {
@@ -332,6 +349,7 @@ describe("a reply written offline", () => {
     fireEvent.press(screen.getByTestId("letter-send"));
     await waitFor(() => expect(mockReply).toHaveBeenCalledWith("c-1", "直接发", expect.any(String)));
     expect(outboxEntries()).toEqual([]);
+    await waitFor(() => expect(back).toHaveBeenCalledTimes(1));
   });
 
   it("a request with no answer leaves it queued for the next return", async () => {

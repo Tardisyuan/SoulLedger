@@ -40,7 +40,7 @@ export function Detail({ target, onBack, onSettled }: { target: DetailTarget; on
         <Icon name="back" size={16} color={theme.ink} />
         <Txt variant="nav">{t("officer_app.back")}</Txt>
       </Pressable>
-      {target.type === "todo" && target.kind === "letter" ? <LetterThread key={target.id} id={target.id} onSettled={onSettled} /> : null}
+      {target.type === "todo" && target.kind === "letter" ? <LetterThread key={target.id} id={target.id} onSettled={onSettled} onDone={onBack} /> : null}
       {target.type === "todo" && target.kind === "dispatch" ? <DispatchLanding key={target.id} id={target.id} onSettled={onSettled} /> : null}
       {target.type === "todo" && target.kind !== "letter" && target.kind !== "dispatch" ? <TodoDetail kind={target.kind} id={target.id} onSettled={onSettled} /> : null}
       {target.type === "judgment" ? <JudgmentDetail id={target.id} /> : null}

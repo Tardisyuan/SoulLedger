@@ -51,9 +51,12 @@ import {
 export function LetterThread({
   id,
   onSettled,
+  onDone,
 }: {
   id: string;
   onSettled: () => void;
+  /** The reply has left this screen's hands (sent, or queued for the network): back to the list (user, 2026-10-16). */
+  onDone?: () => void;
 }) {
   const { t } = useI18n();
   const theme = useTheme();
@@ -94,6 +97,22 @@ export function LetterThread({
   const sending = useRef(false);
   // One id per reply: pressing 「发送」 again with the same words after a lost response sends the same id.
   const attempt = useRef<{ text: string; txn: string; tried: boolean } | null>(null);
+  // A queued reply that leaves the outbox went out (or was discarded): either way its words are gone from the draft,
+  // so the box empties and the thread reloads. Before this the words sat there, the button live again, after the
+  // reply had already been sent -- one more tap and the soul got it twice (Huawei, 2026-10-16).
+  const wasQueued = useRef(false);
+  useEffect(() => {
+    if (outboxEntry) {
+      wasQueued.current = true;
+      return;
+    }
+    if (!wasQueued.current) return;
+    wasQueued.current = false;
+    attempt.current = null;
+    setText("");
+    void thread.reload();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only the entry coming and going matters
+  }, [outboxEntry]);
 
   const send = () => {
     if (sending.current || !replyReady(text)) return;
@@ -111,6 +130,8 @@ export function LetterThread({
         txn,
         tried: attempt.current.tried,
       });
+      onSettled();
+      onDone?.();
       return;
     }
     attempt.current.tried = true;
@@ -127,6 +148,7 @@ export function LetterThread({
         toast(t("soul_inbox.sent"), "success");
         void thread.reload();
         onSettled();
+        onDone?.();
       })
       // The text stays; the key says why (closed / unavailable / try again) without quoting anything.
       .catch((e: unknown) => setFailure(replyFailureKey(e)))
