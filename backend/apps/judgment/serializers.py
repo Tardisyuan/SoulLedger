@@ -25,6 +25,7 @@ from apps.ledger.serializers import LedgerSummarySerializer
 from apps.realms.models import Realm
 from apps.realms.serializers import RealmLocalizedSerializer
 from apps.reincarnation.serializers import ReincarnationSerializer
+from apps.core.archive import ARCHIVE_FIELDS, ArchiveSerializerMixin
 from apps.souls.models import Civilization, SoulState
 from apps.souls.serializers import SoulSerializer, _is_viewer
 
@@ -139,7 +140,7 @@ class JudgmentCitationSerializer(serializers.ModelSerializer):
         }
 
 
-class JudgmentSerializer(FieldPermissionMixin, serializers.ModelSerializer):
+class JudgmentSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serializers.ModelSerializer):
     """A proceeding. Soul and judge are the requester's own (BD-01).
 
     `validate_soul` / `validate_judge` were declared on
@@ -196,12 +197,13 @@ class JudgmentSerializer(FieldPermissionMixin, serializers.ModelSerializer):
             "karmic_balance", "evidence_count",
             # 世次(`cycle`,0 是第一世,判决创建时盖章)与审判方式,都是模型上已有的列,此前没出线。
             "cycle", "judgment_method", "merit_score", "demerit_score", "realm_name",
+            *ARCHIVE_FIELDS,
         ]
         # 草稿各列只读:只有 `draft/`(带版本前提)写它们,见 JudgmentDraftService。
         # `kind` / `amends_plan_id` 只读:由服务端定(docs/ARCHITECTURE-sentence-plan.md §4),
         # 不由 POST 的 body 定 —— 灵魂有进行中的计划即 AMENDMENT;REOPEN 只由批准请求时开。
         read_only_fields = [
-            "civilization", "verdict", "is_final", "concluded_at", "kind", "amends_plan_id",
+            *ARCHIVE_FIELDS, "civilization", "verdict", "is_final", "concluded_at", "kind", "amends_plan_id",
             "draft_verdict", "draft_saved_at", "draft_version",
             "draft_destination_realm_id", "draft_term_years", "draft_eternal",
             "claimed_by", "claimed_at", "deferred_at", "deferred_by", "defer_reason",

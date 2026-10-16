@@ -7,8 +7,9 @@ delete for administrators after that. Domain records that participate in a
 judicial process — souls, judgments, dispositions — are different once a
 verdict exists: they are not deletable at all, only archivable. Archiving
 removes a record from normal lists without pretending the history it
-represents can be unwound; there is no restore-from-archive, because nothing
-was ever hidden from the record itself, only from the working views of it.
+represents can be unwound. Nothing was ever hidden from the record itself,
+only from the working views of it, so `unarchive()` (batch 34) only flips the
+flag back.
 
 `ArchivableMixin` is deliberately separate from `SoftDeleteMixin`
 (soft_delete.py) even though both models normally carry it too — archiving
@@ -19,6 +20,7 @@ below, which is what decides which).
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
+from rest_framework import serializers
 
 
 class ArchivedQuerySet(models.QuerySet):
@@ -60,6 +62,29 @@ class ArchivableMixin(models.Model):
             self.archived_by = user
         self.archive_reason = reason
         self.save(update_fields=['is_archived', 'archived_at', 'archived_by', 'archive_reason'])
+
+
+    def unarchive(self):
+        """Undo archive(): the record returns to normal lists. The archive
+        columns are cleared (the audit log keeps who archived and why)."""
+        self.is_archived = False
+        self.archived_at = None
+        self.archived_by = None
+        self.archive_reason = ""
+        self.save(update_fields=['is_archived', 'archived_at', 'archived_by', 'archive_reason'])
+
+
+class ArchiveSerializerMixin(serializers.Serializer):
+    """The four archive columns a detail page needs for its banner. Add
+    `ARCHIVE_FIELDS` to the subclass's Meta.fields."""
+    archived_by_name = serializers.SerializerMethodField()
+
+    def get_archived_by_name(self, obj) -> str | None:
+        user = obj.archived_by
+        return None if user is None else (user.display_name or user.username)
+
+
+ARCHIVE_FIELDS = ["is_archived", "archived_at", "archived_by_name", "archive_reason"]
 
 
 class DeletionNotAllowedError(Exception):

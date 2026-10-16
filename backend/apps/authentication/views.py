@@ -221,6 +221,11 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
         if username:
             qs = qs.filter(username=username)
 
+        # One organization's people (the org page's 「查看人员」); direct members only.
+        organization = params.get('organization', '').strip()
+        if organization.isdigit():
+            qs = qs.filter(organization_id=int(organization))
+
         # Filter by role
         role = params.get('role', '').strip()
         if role:
@@ -468,68 +473,101 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
         if not tenant:
             return Response({'error': 'No tenant found'}, status=status.HTTP_400_BAD_REQUEST)
 
-        decoded_file = file.read().decode('utf-8')
+        # `utf-8-sig`: the downloadable template starts with a BOM so Excel opens it as UTF-8.
+        try:
+            decoded_file = file.read().decode('utf-8-sig')
+        except UnicodeDecodeError:
+            return Response(
+                {'error': 'File is not UTF-8', 'code': 'bad_encoding'}, status=status.HTTP_400_BAD_REQUEST
+            )
         reader = csv.DictReader(io.StringIO(decoded_file))
+        if not reader.fieldnames:
+            return Response({'error': 'File is empty', 'code': 'empty_file'}, status=status.HTTP_400_BAD_REQUEST)
+        if 'username' not in reader.fieldnames:
+            return Response(
+                {'error': 'Missing column: username', 'code': 'missing_columns', 'columns': ['username']},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        # `dry_run=1`: the same row checks, nothing written -- the web import
+        # dialog's preview step (batch 34 W-5), shaped like the soul import's.
+        dry_run = str(request.data.get('dry_run', '')).lower() in ('1', 'true', 'yes')
         created = 0
         errors = []
+        rows = []
+        seen_usernames, seen_emails = set(), set()
 
         for i, row in enumerate(reader):
+            n = i + 2
+            username = (row.get('username') or '').strip()
+            email = (row.get('email') or '').strip()
+            display_name = (row.get('display_name') or '').strip()
+            role = (row.get('role') or 'VIEWER').strip().upper()
+            password = (row.get('password') or '').strip()
+            problems = []  # (field, code, message)
             try:
-                username = row.get('username', '').strip()
-                email = row.get('email', '').strip()
-                role = row.get('role', 'VIEWER').strip().upper()
-                password = row.get('password', '').strip()
-
                 if not username:
-                    errors.append(f"Row {i+2}: username is required")
-                    continue
-
-                # Validate email format
+                    problems.append(('username', 'username_required', 'username is required'))
                 if email:
                     try:
                         validate_email(email)
                     except ValidationError:
-                        errors.append(f"Row {i+2}: invalid email '{email}'")
-                        continue
-
-                if not is_assignable_role(role):
-                    errors.append(f"Row {i+2}: invalid role '{role}'")
-                    continue
-
-                if User.objects.filter(username=username, tenant=tenant).exists():
-                    errors.append(f"Row {i+2}: username '{username}' already exists")
-                    continue
-
-                # Same rule as every other write path (BP-04). Checked per row
-                # rather than once: rows are created as they are read, so the
-                # second of two rows carrying one address sees the first.
-                if email_already_registered(email):
-                    errors.append(f"Row {i+2}: email '{email}' already belongs to another account")
-                    continue
-
-                # Require password in CSV
-                if not password:
-                    errors.append(f"Row {i+2}: password is required")
-                    continue
-
-                try:
-                    RoleMinimumLengthValidator().validate(password, User(username=username, role=role))
-                except ValidationError as exc:
-                    errors.append(f"Row {i+2}: {' '.join(exc.messages)}")
-                    continue
-
-                User.objects.create_user(
-                    username=username,
-                    email=email,
-                    password=password,
-                    role=role,
-                    tenant=tenant,
-                    must_change_password=True,  # an admin chose it: the officer picks their own at first login
-                )
-                created += 1
+                        problems.append(('email', 'email_invalid', f"invalid email '{email}'"))
+                if not problems and not is_assignable_role(role):
+                    problems.append(('role', 'role_invalid', f"invalid role '{role}'"))
+                if not problems and (
+                    username in seen_usernames
+                    or User.objects.filter(username=username, tenant=tenant).exists()
+                ):
+                    problems.append(('username', 'username_taken', f"username '{username}' already exists"))
+                # Same rule as every other write path (BP-04). A row earlier in
+                # this file counts too: dry-run writes nothing, so the database
+                # alone cannot see the first of two rows carrying one address.
+                if not problems and email and (
+                    email.lower() in seen_emails or email_already_registered(email)
+                ):
+                    problems.append(('email', 'email_taken', f"email '{email}' already belongs to another account"))
+                if not problems and not password:
+                    problems.append(('password', 'password_required', 'password is required'))
+                if not problems:
+                    try:
+                        RoleMinimumLengthValidator().validate(password, User(username=username, role=role))
+                    except ValidationError as exc:
+                        problems.append(('password', 'password_weak', ' '.join(exc.messages)))
+                if not problems:
+                    seen_usernames.add(username)
+                    if email:
+                        seen_emails.add(email.lower())
+                    if not dry_run:
+                        User.objects.create_user(
+                            username=username,
+                            email=email,
+                            password=password,
+                            role=role,
+                            tenant=tenant,
+                            display_name=display_name,
+                            must_change_password=True,  # an admin chose it: the officer picks their own at first login
+                        )
+                        created += 1
             except Exception as e:
-                errors.append(f"Row {i+2}: {str(e)}")
+                problems.append(('', 'unknown', str(e)))
+            for _field, _code, message in problems:
+                errors.append(f"Row {n}: {message}")
+            if dry_run:
+                rows.append({
+                    'row': n,
+                    'status': 'error' if problems else 'ok',
+                    'values': {'username': username, 'display_name': display_name},
+                    'errors': [{'field': f, 'code': c} for f, c, _m in problems],
+                })
 
+        if dry_run:
+            bad = sum(1 for r in rows if r['status'] == 'error')
+            return Response({
+                'total': len(rows),
+                'ok_count': len(rows) - bad,
+                'error_count': bad,
+                'rows': rows,
+            })
         return Response({
             'created': created,
             'errors': errors[:50],

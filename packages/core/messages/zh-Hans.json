@@ -2558,6 +2558,35 @@
       "close_confirm_body": "密码只显示这一次，确定关闭？关闭后无法再次查看，需要重新重置才能拿到新密码。",
       "close_confirm": "确定关闭",
       "close_back": "返回"
+    },
+    "import": {
+      "button": "导入 CSV",
+      "title": "导入用户",
+      "step": "{{n}} / 3 · {{label}}",
+      "steps": {
+        "choose": "选文件",
+        "preview": "预览",
+        "result": "结果"
+      },
+      "col_username": "用户名",
+      "col_name": "姓名",
+      "col_issue": "问题",
+      "template_notes": "模板列说明：username 必填；password 必填，由你设定，对方第一次登录必须先改；role 选填，默认 VIEWER；email、display_name 选填。",
+      "back": "上一步",
+      "commit": "导入 {{n}} 人",
+      "blocked": "有 {{n}} 行有问题，导入被禁用。修正文件后重新选择。",
+      "success": "已导入 {{n}} 人。他们第一次登录必须先改密码。",
+      "view_users": "查看用户列表",
+      "row_codes": {
+        "username_required": "缺用户名",
+        "email_invalid": "邮箱格式不对",
+        "role_invalid": "不是已知的角色",
+        "username_taken": "用户名已被占用，或与文件前面的行重复",
+        "email_taken": "邮箱已属于另一个账号，或与文件前面的行重复",
+        "password_required": "缺密码",
+        "password_weak": "密码不符合规则",
+        "unknown": "这一行没能检查"
+      }
     }
   },
   "settings": {
@@ -6119,5 +6148,51 @@
     "state_ok": "已满足",
     "state_bad": "未满足",
     "summary": "新密码还有 {{n}} 条没满足：{{list}}"
+  },
+  "records": {
+    "archive": {
+      "blocked_title": "不能删除，可以归档",
+      "blocked_body": "「{{name}}」已有判决牵连，删除会让判决失去依据。归档后不在列表里出现，记录照样保留，随时可以取消归档。",
+      "action": "改为归档…",
+      "title": "归档「{{name}}」",
+      "read_only": "归档的记录只能看。要修改，先取消归档。",
+      "reason": "理由 · 选填，记入审计日志",
+      "confirm": "归档",
+      "done": "已归档",
+      "failed": "没能归档，请重试",
+      "badge": "已归档",
+      "banner": "{{date}} 由{{name}}归档",
+      "unarchive": "取消归档",
+      "unarchived": "已取消归档",
+      "show_archived": "显示已归档"
+    }
+  },
+  "org": {
+    "create": "＋ 新建机构",
+    "create_child": "新建下级机构",
+    "edit": "编辑",
+    "move": "移到…",
+    "delete": "删除",
+    "actions_label": "{{name}}的操作",
+    "form": {
+      "title_create": "新建机构",
+      "title_edit": "编辑机构",
+      "name": "名称",
+      "parent": "上级机构",
+      "parent_hint": "改上级就是移动。下级机构和人员跟着一起移。",
+      "save": "保存"
+    },
+    "delete_blocked_title": "「{{name}}」还不能删",
+    "delete_blocked_body": {
+      "both": "下面还有 {{units}} 个下级机构、{{people}} 名人员。先把他们移到别的机构，再删。",
+      "units": "下面还有 {{units}} 个下级机构。先把它们移到别的机构，再删。",
+      "people": "下面还有 {{people}} 名人员。先把他们移到别的机构，再删。"
+    },
+    "delete_blocked_people": "查看人员",
+    "delete_title": "删除「{{name}}」？",
+    "delete_body": "删除后不能恢复。",
+    "saved": "已保存",
+    "deleted": "已删除",
+    "failed": "没能保存，请重试"
   }
 }
