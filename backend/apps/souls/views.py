@@ -121,7 +121,8 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
     queryset = Soul.objects.select_related("tenant", "home_tenant").prefetch_related("records", "reincarnations").all()
     filterset_class = SoulFilter
     # 暂居只读例外(apps/core/tenant.py):原属租户读得到暂居在外的灵魂。只列 GET 动作。
-    residence_read_actions = ("list", "retrieve", "karma", "records", "path")
+    # `export` 与 `list` 同一范围:不纳入时，暂居在外的灵魂在列表里有、在导出的文件里没有。
+    residence_read_actions = ("list", "retrieve", "karma", "records", "path", "export")
     search_fields = SoulFilter.search_fields
     ordering_fields = SoulFilter.ordering_fields
 
