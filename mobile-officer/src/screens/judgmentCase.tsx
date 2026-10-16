@@ -78,7 +78,10 @@ export function JudgmentCase({ data, onOpenRecord }: { data: Judgment; onOpenRec
       {attachments.length > 0 ? (
         <View style={{ gap: space[2] }}>
           <SectionLabel>{t("officer_app.case.evidence_attachment", { n: String(attachments.length) })}</SectionLabel>
-          <AttachmentList judgmentId={data.id} items={attachments} />
+          <AttachmentList
+            items={attachments.map((a) => ({ ...a, meta: `${a.uploader_name} · ${formatWhen(a.created_at)}` }))}
+            resolve={(a) => judgmentApi.attachmentLink(data.id, a.id).then((link) => link.url)}
+          />
         </View>
       ) : null}
       {failed ? (
