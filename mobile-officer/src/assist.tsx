@@ -270,14 +270,18 @@ function History({ assist }: { assist: OfficerAssist }) {
   const [deleting, setDeleting] = useState(false);
   const [notice, setNotice] = useState<"delete_failed" | "open_failed" | null>(null);
 
-  const load = useCallback(() => {
-    setList({ status: "loading" });
+  // The first fetch starts from the initial "loading" state; a retry sets it again before fetching.
+  const fetchList = useCallback(() => {
     officerAssistApi.conversations().then(
       (rows) => setList({ status: "done", rows }),
       () => setList({ status: "error" })
     );
   }, []);
-  useEffect(load, [load]);
+  const load = useCallback(() => {
+    setList({ status: "loading" });
+    fetchList();
+  }, [fetchList]);
+  useEffect(fetchList, [fetchList]);
 
   const back = () => assist.setView("chat");
   const startNew = () => {
