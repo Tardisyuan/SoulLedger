@@ -14,24 +14,30 @@ import fs from "fs";
 import path from "path";
 
 import type { AxiosAdapter, AxiosInstance, InternalAxiosRequestConfig } from "axios";
-import yaml from "js-yaml";
 
 import { api } from "@soulledger/core/api/client";
 import { soulHttp } from "@soulledger/core/api/soul";
 
 const ROOT = path.resolve(__dirname, "..", "..", "..");
 const API_DIR = path.join(ROOT, "packages", "core", "src", "api");
-const SCHEMA = yaml.load(fs.readFileSync(path.join(ROOT, "packages", "core", "openapi", "schema.yml"), "utf8")) as {
-  paths: Record<string, Record<string, unknown>>;
-};
+// `manage.py spectacular` writes each path as a 2-space key and its operations as 4-space keys;
+// read those lines rather than pull in a YAML parser that isn't a declared dependency.
+const SCHEMA_PATHS: Record<string, string[]> = {};
+{
+  let current: string | null = null;
+  for (const line of fs.readFileSync(path.join(ROOT, "packages", "core", "openapi", "schema.yml"), "utf8").split("\n")) {
+    if (line === "components:") break;
+    const p = /^ {2}(\/\S*):$/.exec(line);
+    if (p) SCHEMA_PATHS[(current = p[1])] = [];
+    else if (current && /^ {4}(get|post|put|patch|delete):$/.test(line)) SCHEMA_PATHS[current].push(line.trim().slice(0, -1));
+  }
+}
 
 // Not the Django API: Synapse's client-server API, reached by its own axios instance.
 const SKIP_MODULES = new Set(["client.ts", "index.ts", "matrix.ts"]);
 
-const OPERATIONS = Object.entries(SCHEMA.paths).flatMap(([p, ops]) =>
-  Object.keys(ops)
-    .filter((m) => ["get", "post", "put", "patch", "delete"].includes(m))
-    .map((m) => ({ method: m, re: new RegExp(`^${p.replace(/\{[^}]+\}/g, "[^/]+")}$`), path: p })),
+const OPERATIONS = Object.entries(SCHEMA_PATHS).flatMap(([p, methods]) =>
+  methods.map((m) => ({ method: m, re: new RegExp(`^${p.replace(/\{[^}]+\}/g, "[^/]+")}$`), path: p })),
 );
 
 type Call = { method: string; url: string };
@@ -83,6 +89,11 @@ describe("core API methods ask for paths the backend serves", () => {
   it("every argument override names a method that exists", () => {
     const names = new Set(OBJECTS.flatMap((o) => o.methods.map(([m]) => `${o.name.split(":")[1]}.${m}`)));
     expect(Object.keys(ARGS).filter((k) => !names.has(k))).toEqual([]);
+  });
+
+  it("read the schema's operations (guard against a parser that matches nothing)", () => {
+    expect(OPERATIONS.length).toBeGreaterThan(300);
+    expect(SCHEMA_PATHS["/api/v1/me/mfa/"]).toEqual(expect.arrayContaining(["get"]));
   });
 
   it("found the API objects (guard against an empty sweep)", () => {
