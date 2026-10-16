@@ -35,7 +35,7 @@ export const ASSIST_TIMEOUT_MS = 25_000;
  */
 const SCREEN_SET: Record<OfficerAssistScreen, true> = {
   about: true, actors: true, admin: true, audit: true, corpus: true, "cross-judgments": true, dashboard: true,
-  "death-sync": true, dispatch: true, disposition: true, judgment: true, ledger: true, menus: true,
+  "death-sync": true, dispatch: true, disposition: true, events: true, judgment: true, ledger: true, menus: true,
   moderation: true, notifications: true, organizations: true, permissions: true, profile: true,
   realms: true, "rebirth-applications": true, "recycle-bin": true, scheduler: true,
   "sentence-requests": true, social: true, "soul-credentials": true, "soul-inbox": true, souls: true,
