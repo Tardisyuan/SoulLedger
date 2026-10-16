@@ -40,6 +40,8 @@ export const deathSyncApi = {
   registrations: (params: { page?: string; status?: string } = {}) =>
     api.get<PaginatedResponse<DeathRegistration>>("/death-sync/registrations/", { params }),
   summary: () => api.get<DeathRegistrationSummary>("/death-sync/registrations/summary/"),
+  /** Rerun a FAILED + INTERNAL_ERROR row on the same row; 409 with `code` for anything else. */
+  retry: (id: string) => api.post<DeathRegistration>(`/death-sync/registrations/${id}/retry/`),
   apiKeys: (params: { page?: string } = {}) =>
     api.get<PaginatedResponse<ExternalApiKey>>("/death-sync/api-keys/", { params }),
   createApiKey: (body: ExternalApiKeyCreate) => api.post<ExternalApiKey>("/death-sync/api-keys/", body),

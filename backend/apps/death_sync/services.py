@@ -17,6 +17,14 @@ from apps.souls.models import Soul, SoulState
 logger = logging.getLogger(__name__)
 
 
+class RetryRefused(Exception):
+    """A registration that may not be retried; `code` goes on the 409."""
+
+    def __init__(self, code):
+        super().__init__(code)
+        self.code = code
+
+
 class DeathSyncService:
     """
     Core service for processing inbound death registrations.
@@ -92,7 +100,6 @@ class DeathSyncService:
                 409 with the existing row, process_batch returns that row).
         """
         start_time = timezone.now()
-        lookup_data = payload.get("soul_lookup", {})
 
         # Create request record (for idempotency tracking)
         request_record = DeathRegistrationRequest(
@@ -105,6 +112,17 @@ class DeathSyncService:
             source_ip=source_ip,
             status=DeathRegistrationStatus.PENDING,
         )
+
+        return DeathSyncService._process(request_record, tenant, payload, start_time)
+
+    @staticmethod
+    def _process(request_record, tenant, payload, start_time):
+        """Look the soul up, call die(), and record the outcome on `request_record`.
+
+        Shared by `register_death` (a new, unsaved row) and `retry_failed`
+        (an existing FAILED row, already locked by the caller).
+        """
+        lookup_data = payload.get("soul_lookup", {})
 
         # The `except` used to sit INSIDE the atomic block. After the first
         # save() hit uniq_death_reg_idempotency the handler saved the same
@@ -187,8 +205,58 @@ class DeathSyncService:
             request_record.status = DeathRegistrationStatus.FAILED
             request_record.error_code = "INTERNAL_ERROR"
             request_record.error_message = str(e)
+            # die() may have set this before the failure; its row was rolled
+            # back with the atomic block, so keeping the id would point at nothing.
+            request_record.judgment = None
             request_record.save()
             return request_record
+
+    @staticmethod
+    def retry_failed(registration_id, tenant):
+        """Rerun a FAILED registration on its own row (admin action, W-12).
+
+        `register_death` cannot be called again: it inserts a new row, and the
+        idempotency key belongs to this one. The stored payload goes back
+        through the create serializer, because it was stored as JSON and
+        `death_date` has to be a date again.
+
+        Only INTERNAL_ERROR is retried (user decision 2026-10-16): the other
+        reasons (SOUL_NOT_FOUND, SOUL_NOT_ALIVE, INVALID_TRANSITION, ...) are
+        answers about the data, and running it again gives the same answer.
+
+        Raises:
+            RetryRefused: with `code`, when the row may not be retried.
+        """
+        from apps.death_sync.serializers import DeathRegistrationCreateSerializer
+
+        start_time = timezone.now()
+        with transaction.atomic():
+            # The lock is what stops two clicks from both running die(): the
+            # second waits here and then sees status != FAILED. SQLite ignores
+            # select_for_update, so no SQLite test can show this.
+            record = DeathRegistrationRequest.objects.select_for_update().get(
+                pk=registration_id, tenant=tenant
+            )
+            if record.status != DeathRegistrationStatus.FAILED:
+                raise RetryRefused("NOT_FAILED")
+            if record.error_code != "INTERNAL_ERROR":
+                raise RetryRefused("NOT_RETRYABLE")
+            if record.retry_count >= record.max_retries:
+                raise RetryRefused("MAX_RETRIES")
+
+            record.retry_count += 1
+            record.error_code = ""
+            record.error_message = ""
+            serializer = DeathRegistrationCreateSerializer(data=record.source_payload or {})
+            if not serializer.is_valid():
+                record.status = DeathRegistrationStatus.FAILED
+                record.error_code = "VALIDATION_ERROR"
+                record.error_message = str(serializer.errors)
+                record.save()
+                return record
+            # The inner atomic in _process is a savepoint here: a failure
+            # rolls back die() and keeps the lock and the retry_count bump.
+            return DeathSyncService._process(record, tenant, serializer.validated_data, start_time)
 
     @staticmethod
     def process_batch(tenant, api_key, registrations, source_ip=None):

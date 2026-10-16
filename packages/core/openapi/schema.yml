@@ -22622,6 +22622,9 @@ components:
         retry_count:
           type: integer
           readOnly: true
+        max_retries:
+          type: integer
+          readOnly: true
         request_timestamp:
           type: string
           format: date-time
@@ -22636,6 +22639,7 @@ components:
       - id
       - idempotency_key
       - judgment
+      - max_retries
       - processing_duration_ms
       - request_timestamp
       - retry_count
