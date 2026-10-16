@@ -97,6 +97,8 @@ export function SoulDetail({ id, onOpenJudgment, footer }: { id: string; onOpenJ
           <RefreshFailed data={data} error={error} onRetry={reload} />
           <SoulHeader soul={soul} code={code} />
         </View>
+        {/* The sticky wrapper is ScrollView's own (a column); the row lives one level down, or iOS stacks the tabs. */}
+        <View style={{ backgroundColor: theme.s1 }}>
         <View testID="soul-tabs" accessibilityRole="tablist" style={{ minHeight: 44, flexDirection: "row", borderBottomWidth: 1, borderBottomColor: theme.hair, backgroundColor: theme.s1 }}>
           {tabs.map((k) => (
             <Pressable
@@ -112,6 +114,7 @@ export function SoulDetail({ id, onOpenJudgment, footer }: { id: string; onOpenJ
               </Txt>
             </Pressable>
           ))}
+        </View>
         </View>
         <View>
           {tabs
