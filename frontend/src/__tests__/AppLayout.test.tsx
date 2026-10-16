@@ -142,6 +142,10 @@ describe("Breadcrumb", () => {
           "breadcrumb.home": "Dashboard",
           "breadcrumb.detail": "Detail",
           "breadcrumb.menu.cross_judgments": "Cross-civ Judgments",
+          "breadcrumb.menu.permissions": "Permissions & Roles",
+          "audit.tabs.permissions": "Permission changes",
+          "audit.tabs.stats": "Statistics",
+          "audit.tabs.logins": "Login log",
         };
         return map[key] ?? key;
       },
@@ -207,6 +211,19 @@ describe("Breadcrumb", () => {
     expect(screen.getByText("Cross-civ Judgments")).toBeInTheDocument();
     expect(screen.getByText("Detail")).toBeInTheDocument();
     expect(screen.queryByText("cross-judgments")).not.toBeInTheDocument();
+  });
+
+  it.each([
+    ["/audit/permissions", "Permission changes"],
+    ["/audit/stats", "Statistics"],
+    ["/audit/logins", "Login log"],
+  ])("%s reads its tab's name, not the raw segment or another page's (the /permissions page)", (path, name) => {
+    // 2026-10-17 browser check: the band read 「stats」 and, for /audit/permissions, 「权限与角色」.
+    mockPathname = path;
+    render(<Breadcrumb menus={menus} />);
+    expect(screen.getByText(name)).toBeInTheDocument();
+    expect(screen.queryByText(path.split("/").pop()!)).not.toBeInTheDocument();
+    expect(screen.queryByText("Permissions & Roles")).not.toBeInTheDocument();
   });
 
   it("an unknown segment still falls back to itself rather than to a key", () => {

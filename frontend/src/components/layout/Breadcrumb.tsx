@@ -17,6 +17,14 @@ import { menuGlossParts } from "@/src/lib/menuI18n";
  * 那不是搬家没搬干净，理由写在那一行上面。
  */
 /** 形如 42 或 uuid 的路径段，面包屑里显示为「详情」而不是原始 id。 */
+/** Routes named by their full path; the audit sub-pages take their tab's name (2026-10-17). */
+const PATH_LABELS: Record<string, string> = {
+  "/audit/logins": "audit.tabs.logins",
+  "/audit/permissions": "audit.tabs.permissions",
+  "/audit/stats": "audit.tabs.stats",
+  "/events": "nav.soul_events",
+};
+
 const ID_SEGMENT = /^(\d+|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-)/i;
 
 /**
@@ -76,10 +84,14 @@ export function useBreadcrumbs(menus: SidebarMenu[]): Crumb[] {
   // 路由段先查 breadcrumb.<段>，再查侧栏同名菜单项 breadcrumb.menu.<段>（- 换 _），
   // 最后才落回原始段：菜单树没加载或没收录该路由时（/judgment/<id> 的首段），
   // 此前显示的是英文原文 "judgment"。
-  const segmentLabel = (segment: string) =>
+  // A path whose last segment means something else alone (`/audit/permissions` is not the
+  // /permissions page) or that already has its own name elsewhere is looked up by its full path first.
+  const segmentLabel = (segment: string, path: string) =>
     ID_SEGMENT.test(segment)
       ? label("breadcrumb.detail", "详情")
-      : label(`breadcrumb.${segment}`, label(`breadcrumb.menu.${segment.replace(/-/g, "_")}`, segment));
+      : PATH_LABELS[path]
+        ? t(PATH_LABELS[path])
+        : label(`breadcrumb.${segment}`, label(`breadcrumb.menu.${segment.replace(/-/g, "_")}`, segment));
 
   const trail = matchTrail(menus, pathname);
   const crumbs: Crumb[] = [];
@@ -101,7 +113,7 @@ export function useBreadcrumbs(menus: SidebarMenu[]): Crumb[] {
       const rest = pathname.slice(matched.path.length).split("/").filter(Boolean);
       rest.forEach((segment, i) => {
         crumbs.push({
-          label: segmentLabel(segment),
+          label: segmentLabel(segment, `${matched.path}/${rest.slice(0, i + 1).join("/")}`),
           href:
             i < rest.length - 1
               ? linkable(`${matched.path}/${rest.slice(0, i + 1).join("/")}`)
@@ -116,7 +128,7 @@ export function useBreadcrumbs(menus: SidebarMenu[]): Crumb[] {
       .filter(Boolean)
       .forEach((segment, i, all) => {
         crumbs.push({
-          label: segmentLabel(segment),
+          label: segmentLabel(segment, `/${all.slice(0, i + 1).join("/")}`),
           href: i < all.length - 1 ? linkable(`/${all.slice(0, i + 1).join("/")}`) : undefined,
         });
       });
