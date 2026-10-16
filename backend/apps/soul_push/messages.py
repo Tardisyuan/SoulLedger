@@ -40,6 +40,11 @@ MESSAGES = {
         "content_approved_comment": {"title": "评论已通过审核", "body": "你的评论已通过审核，大家都看得到了。"},
         "content_restored_post": {"title": "帖子已恢复", "body": "你的帖子已恢复显示。"},
         "content_restored_comment": {"title": "评论已恢复", "body": "你的评论已恢复显示。"},
+        # 隐藏 / 删除时官员选了理由(2026-10-16 用户定):带理由的另一套;没选理由的老客户端仍用上面那套。
+        "content_hidden_post_reason": {"title": "帖子已被隐藏", "body": "你的帖子被殿司隐藏：{{reason}}"},
+        "content_hidden_comment_reason": {"title": "评论已被隐藏", "body": "你的评论被殿司隐藏：{{reason}}"},
+        "content_deleted_post_reason": {"title": "帖子已被删除", "body": "你的帖子被殿司删除：{{reason}}"},
+        "content_deleted_comment_reason": {"title": "评论已被删除", "body": "你的评论被殿司删除：{{reason}}"},
     },
     "en": {
         "sentence_pardoned": {"title": "Remaining term pardoned", "body": "Part of your term was pardoned. Open Soul Ledger to see it."},
@@ -124,6 +129,16 @@ MESSAGES = {
         },
         "content_restored_post": {"title": "Your post was restored", "body": "Your post is visible again."},
         "content_restored_comment": {"title": "Your comment was restored", "body": "Your comment is visible again."},
+        "content_hidden_post_reason": {"title": "Your post was hidden", "body": "An officer hid your post: {{reason}}"},
+        "content_hidden_comment_reason": {
+            "title": "Your comment was hidden",
+            "body": "An officer hid your comment: {{reason}}",
+        },
+        "content_deleted_post_reason": {"title": "Your post was deleted", "body": "An officer deleted your post: {{reason}}"},
+        "content_deleted_comment_reason": {
+            "title": "Your comment was deleted",
+            "body": "An officer deleted your comment: {{reason}}",
+        },
     },
     "egy": {
         "sentence_pardoned": {"title": "Renpet Sepy Nedj Seth", "body": "Renpet-Ek Nedj Seth. Wen Medjat Ba Er Maa."},
@@ -148,6 +163,20 @@ MESSAGES = {
          "export_ready": {"title": "Djama-Ek Iri Seth", "body": "Redi Per Djama-Ek Iri Seth · Wenen Hru 7. Wen Medjat Ba, Sau."},
     },
 }
+
+
+#: 处置理由的显示名,`content_*_reason` 的 `{{reason}}` 用(选「其他」时用官员写的那句,不查这里)。
+#: 权威是语言包 `social_moderation.reason`(与灵魂举报同一份 `ReportReason`);副本理由同 MESSAGES,
+#: 一致由同一个测试文件钉住。
+REASON_LABELS = {
+    "zh-Hans": {"SPAM": "垃圾信息", "ABUSE": "辱骂骚扰", "SEXUAL": "色情内容", "ILLEGAL": "违法有害", "OTHER": "其他"},
+    "en": {"SPAM": "Spam", "ABUSE": "Abuse", "SEXUAL": "Sexual content", "ILLEGAL": "Illegal or harmful", "OTHER": "Other"},
+    "egy": {"SPAM": "Medu Mehy", "ABUSE": "Medu Kher", "SEXUAL": "Khet Hemet", "ILLEGAL": "Betau", "OTHER": "Ky"},
+}
+
+
+def reason_label(locale, code):
+    return (REASON_LABELS.get(locale) or REASON_LABELS[DEFAULT_LOCALE]).get(code, code)
 
 
 def render(locale, kind, **params):

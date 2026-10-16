@@ -363,18 +363,67 @@ describe("举报 · the C-08 review layout", () => {
     expect(detail().querySelector("[data-comment-counts]")).toHaveTextContent(shown);
   });
 
-  it("H without a reason says so and sends nothing; with one it hides through the report", async () => {
+  it("H without a picked reason says so and sends nothing; with one it hides through the report", async () => {
     asRole("social.moderate");
     renderPage();
     await within(await screen.findByRole("region", { name: tZh("social_moderation.review.detail_label") })).findByText(/被举报的帖子全文/);
 
-    fireEvent.keyDown(document.body, { key: "h" });
-    expect(await screen.findByText(tZh("social_moderation.review.reason_required"))).toBeInTheDocument();
-    expect(apiMock.resolveReport).not.toHaveBeenCalled();
-
+    // 备注写了也不够:隐藏要的是推给作者的预设理由。
     fireEvent.change(screen.getByLabelText(tZh("social_moderation.review.reason_label")), { target: { value: "辱骂他人" } });
     fireEvent.keyDown(document.body, { key: "h" });
-    await waitFor(() => expect(apiMock.resolveReport).toHaveBeenCalledWith("r1", "HIDE", "辱骂他人", undefined));
+    expect(await screen.findByRole("alert")).toHaveTextContent(tZh("social_moderation.review.mod_reason_required"));
+    expect(apiMock.resolveReport).not.toHaveBeenCalled();
+
+    fireEvent.change(screen.getByLabelText(tZh("social_moderation.review.mod_reason_label")), { target: { value: "ABUSE" } });
+    expect(screen.queryByRole("alert")).toBeNull();
+    fireEvent.keyDown(document.body, { key: "h" });
+    await waitFor(() =>
+      expect(apiMock.resolveReport).toHaveBeenCalledWith("r1", "HIDE", "辱骂他人", undefined, { reason_code: "ABUSE" })
+    );
+  });
+
+  it("the reason select lists the report reasons; 其他 opens a field that must be filled", async () => {
+    asRole("social.moderate");
+    renderPage();
+    await within(await screen.findByRole("region", { name: tZh("social_moderation.review.detail_label") })).findByText(/被举报的帖子全文/);
+
+    const select = screen.getByLabelText(tZh("social_moderation.review.mod_reason_label"));
+    expect(within(select).getAllByRole("option").map((o) => o.textContent)).toEqual([
+      tZh("social_moderation.review.mod_reason_placeholder"),
+      ...["SPAM", "ABUSE", "SEXUAL", "ILLEGAL", "OTHER"].map((c) => tZh(`social_moderation.reason.${c}`)),
+    ]);
+    expect(screen.queryByLabelText(tZh("social_moderation.review.other_note_label"))).toBeNull();
+
+    fireEvent.change(select, { target: { value: "OTHER" } });
+    expect(screen.getByLabelText(tZh("social_moderation.review.other_note_label"))).toBeInTheDocument();
+    // 换回预设理由:「其他」的输入框收起;再选「其他」又出来。
+    fireEvent.change(select, { target: { value: "SPAM" } });
+    expect(screen.queryByLabelText(tZh("social_moderation.review.other_note_label"))).toBeNull();
+    fireEvent.change(select, { target: { value: "OTHER" } });
+    const other = screen.getByLabelText(tZh("social_moderation.review.other_note_label"));
+    fireEvent.keyDown(document.body, { key: "h" });
+    expect(await screen.findByRole("alert")).toHaveTextContent(tZh("social_moderation.review.other_note_required"));
+    expect(apiMock.resolveReport).not.toHaveBeenCalled();
+
+    fireEvent.change(other, { target: { value: "  冒充他人  " } });
+    fireEvent.keyDown(document.body, { key: "h" });
+    await waitFor(() =>
+      expect(apiMock.resolveReport).toHaveBeenCalledWith("r1", "HIDE", undefined, undefined, {
+        reason_code: "OTHER",
+        reason_note: "冒充他人",
+      })
+    );
+  });
+
+  it("a held-back post nobody reported hides with its reason through the content action", async () => {
+    asRole("social.moderate");
+    apiMock.reports.mockResolvedValue(page([]));
+    apiMock.content.mockImplementation(async (kind: string) => page(kind === "posts" ? [post()] : []));
+    renderPage();
+    await within(await screen.findByRole("region", { name: tZh("social_moderation.review.detail_label") })).findByText("命中敏感词的帖子全文");
+    fireEvent.change(screen.getByLabelText(tZh("social_moderation.review.mod_reason_label")), { target: { value: "SPAM" } });
+    fireEvent.keyDown(document.body, { key: "h" });
+    await waitFor(() => expect(apiMock.act).toHaveBeenCalledWith("posts", "p9", "hide", undefined, { reason_code: "SPAM" }));
   });
 
   it("W without a reason says so and sends nothing; with one it warns through the report", async () => {
@@ -392,7 +441,7 @@ describe("举报 · the C-08 review layout", () => {
 
     fireEvent.change(screen.getByLabelText(tZh("social_moderation.review.reason_label")), { target: { value: "注意言辞" } });
     fireEvent.keyDown(document.body, { key: "w" });
-    await waitFor(() => expect(apiMock.resolveReport).toHaveBeenCalledWith("r1", "WARN", "注意言辞", undefined));
+    await waitFor(() => expect(apiMock.resolveReport).toHaveBeenCalledWith("r1", "WARN", "注意言辞", undefined, undefined));
     expect(apiMock.resolveReport).toHaveBeenCalledTimes(1);
     expect(apiMock.act).not.toHaveBeenCalled();
   });
@@ -440,8 +489,8 @@ describe("举报 · the C-08 review layout", () => {
     // One row, not two.
     expect(within(list).getAllByRole("button")).toHaveLength(1);
     fireEvent.keyDown(document.body, { key: "a" });
-    await waitFor(() => expect(apiMock.act).toHaveBeenCalledWith("posts", "p1", "approve", undefined));
-    expect(apiMock.resolveReport).toHaveBeenCalledWith("r1", "DISMISS", undefined, undefined);
+    await waitFor(() => expect(apiMock.act).toHaveBeenCalledWith("posts", "p1", "approve", undefined, undefined));
+    expect(apiMock.resolveReport).toHaveBeenCalledWith("r1", "DISMISS", undefined, undefined, undefined);
   });
 
   it("a report against a user offers no hide or delete — there is no content to act on", async () => {
@@ -459,6 +508,12 @@ describe("举报 · the C-08 review layout", () => {
     asRole("social.moderate");
     renderPage();
     await within(await screen.findByRole("region", { name: tZh("social_moderation.review.detail_label") })).findByText(/被举报的帖子全文/);
+    // 没选理由:不开确认框,说缺什么。
+    fireEvent.click(screen.getByRole("button", { name: tZh("social_moderation.actions.delete") }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(tZh("social_moderation.review.mod_reason_required"));
+    expect(screen.queryByRole("alertdialog")).toBeNull();
+
+    fireEvent.change(screen.getByLabelText(tZh("social_moderation.review.mod_reason_label")), { target: { value: "ILLEGAL" } });
     fireEvent.click(screen.getByRole("button", { name: tZh("social_moderation.actions.delete") }));
     expect(apiMock.resolveReport).not.toHaveBeenCalled();
     const dialog = await screen.findByRole("alertdialog");
@@ -466,7 +521,9 @@ describe("举报 · the C-08 review layout", () => {
     // 官员删除进回收站(可撤回)→ 警示按钮(橙),不是次按钮、也不是实底红。
     expect(confirm.className).toContain("--color-warning");
     fireEvent.click(confirm);
-    await waitFor(() => expect(apiMock.resolveReport).toHaveBeenCalledWith("r1", "DELETE", undefined, undefined));
+    await waitFor(() =>
+      expect(apiMock.resolveReport).toHaveBeenCalledWith("r1", "DELETE", undefined, undefined, { reason_code: "ILLEGAL" })
+    );
   });
 
   it("a refusal says what the server's code means, not a generic failure", async () => {

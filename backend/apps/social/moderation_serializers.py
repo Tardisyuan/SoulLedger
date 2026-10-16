@@ -85,7 +85,21 @@ class ReportSerializer(serializers.ModelSerializer):
         return "DELETED" if content.is_deleted else content.moderation_status
 
 
-class ResolveReportSerializer(serializers.Serializer):
+class ModerationReasonFields(serializers.Serializer):
+    """隐藏 / 删除时官员选的理由(2026-10-16 用户定),推给作者。与灵魂举报同一份 `ReportReason`,
+    显示名在 i18n 包 `social_moderation.reason`。两项都可省 —— 只发自由文本的老客户端照旧;
+    选「其他」(OTHER)则 `reason_note` 必填,它就是推给作者的那句。"""
+
+    reason_code = serializers.ChoiceField(choices=ReportReason.choices, required=False, allow_blank=True, default="")
+    reason_note = serializers.CharField(max_length=200, required=False, allow_blank=True, default="")
+
+    def validate(self, attrs):
+        if attrs.get("reason_code") == ReportReason.OTHER and not attrs.get("reason_note"):
+            raise serializers.ValidationError({"reason_note": "选「其他」须写明理由。"})
+        return attrs
+
+
+class ResolveReportSerializer(ModerationReasonFields):
     resolution = serializers.ChoiceField(choices=ReportResolution.choices)
     note = serializers.CharField(max_length=500, required=False, allow_blank=True, default="")
     mute_days = serializers.IntegerField(required=False, allow_null=True, min_value=1, max_value=365)
@@ -150,7 +164,7 @@ class ModeratedCommentSerializer(ModeratedContentSerializer):
     post = serializers.UUIDField(source="post_id")
 
 
-class ModerationActionSerializer(serializers.Serializer):
+class ModerationActionSerializer(ModerationReasonFields):
     reason = serializers.CharField(max_length=500, required=False, allow_blank=True, default="")
 
 

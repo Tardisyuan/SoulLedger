@@ -5,6 +5,8 @@ import type {
   ContentKind,
   ModeratedComment,
   ModeratedPost,
+  ModerationReason,
+  ModerationReasonInput,
   ModerationReport,
   SensitiveWord,
 } from "@soulledger/core/api/social-moderation";
@@ -30,7 +32,15 @@ import { ListSkeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { REACTIONS } from "@/src/components/social/ReactionBar";
 import { MediaGrid } from "./MediaGrid";
-import { CommentCounts, MODERATION_TONES, MUTE_DAYS, isTyping, useFailureToast } from "./shared";
+import {
+  CommentCounts,
+  MODERATION_REASONS,
+  MODERATION_TONES,
+  MUTE_DAYS,
+  REASON_NOTE_MAX,
+  isTyping,
+  useFailureToast,
+} from "./shared";
 import { ROW_HOVER, ROW_SELECTED } from "@/components/ui/data-table";
 
 /**
@@ -50,6 +60,11 @@ import { ROW_HOVER, ROW_SELECTED } from "@/components/ui/data-table";
  * report to resolve: a rule hit nobody reported has no W. 删除 and 禁言 are not
  * on the canvas but are what the queue could already do, so they stay as the
  * quieter second row.
+ *
+ * H and 删除 need a reason picked from a preset list (2026-10-16): it is pushed
+ * to the author — the label in their language, or with 其他 the sentence the
+ * officer writes in the field that appears. The textarea stays the officer's
+ * note (required for W only); it is recorded, not pushed.
  */
 
 type PendingRow = ModeratedPost | ModeratedComment;
@@ -201,6 +216,9 @@ export function ReportsReview() {
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [reason, setReason] = useState("");
   const [reasonError, setReasonError] = useState(false);
+  const [modReason, setModReason] = useState<ModerationReason | "">("");
+  const [otherNote, setOtherNote] = useState("");
+  const [modReasonError, setModReasonError] = useState<"code" | "note" | null>(null);
   const [muteDays, setMuteDays] = useState(7);
   const [deleting, setDeleting] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -210,10 +228,17 @@ export function ReportsReview() {
   const index = Math.max(0, items.findIndex((i) => i.key === selectedKey));
   const selected = items[index] ?? null;
 
+  const clearModReason = () => {
+    setModReason("");
+    setOtherNote("");
+    setModReasonError(null);
+  };
+
   const select = (key: string) => {
     setSelectedKey(key);
     setReason("");
     setReasonError(false);
+    clearModReason();
   };
 
   const item = useModeratedItem(selected?.target?.kind ?? "posts", selected?.target && !selected.pending ? selected.target.id : null);
@@ -226,6 +251,7 @@ export function ReportsReview() {
       showToast(t("social_moderation.done"), "success");
       setReason("");
       setReasonError(false);
+      clearModReason();
     } catch (error) {
       fail(error);
     } finally {
@@ -247,19 +273,33 @@ export function ReportsReview() {
   };
 
   const canHide = Boolean(selected?.target);
+  /** The picked reason for H / 删除, or null after flagging what is missing. */
+  const pickedReason = (): ModerationReasonInput | null => {
+    if (!modReason) {
+      setModReasonError("code");
+      document.getElementById("review-mod-reason")?.focus();
+      return null;
+    }
+    if (modReason !== "OTHER") return { reason_code: modReason };
+    const note = otherNote.trim();
+    if (!note) {
+      setModReasonError("note");
+      document.getElementById("review-mod-other")?.focus();
+      return null;
+    }
+    return { reason_code: "OTHER", reason_note: note };
+  };
+
   const hide = () => {
     if (!selected || busy || !canHide) return;
-    const note = reason.trim();
-    if (!note) {
-      setReasonError(true);
-      document.getElementById("review-reason")?.focus();
-      return;
-    }
+    const why = pickedReason();
+    if (!why) return;
+    const note = reason.trim() || undefined;
     if (selected.report) {
-      void run([() => resolve.mutateAsync({ id: selected.report!.id, resolution: "HIDE", note })]);
+      void run([() => resolve.mutateAsync({ id: selected.report!.id, resolution: "HIDE", note, why })]);
     } else if (selected.pending) {
       const { kind, row } = selected.pending;
-      void run([() => moderate.mutateAsync({ kind, id: row.id, action: "hide", reason: note })]);
+      void run([() => moderate.mutateAsync({ kind, id: row.id, action: "hide", reason: note, why })]);
     }
   };
 
@@ -274,13 +314,22 @@ export function ReportsReview() {
     void run([() => resolve.mutateAsync({ id: selected.report!.id, resolution: "WARN", note })]);
   };
 
+  const askDelete = () => {
+    if (pickedReason()) setDeleting(true);
+  };
+
   const remove = () => {
     if (!selected) return;
+    const why = pickedReason();
+    if (!why) {
+      setDeleting(false);
+      return;
+    }
     const note = reason.trim() || undefined;
-    if (selected.report) void run([() => resolve.mutateAsync({ id: selected.report!.id, resolution: "DELETE", note })]);
+    if (selected.report) void run([() => resolve.mutateAsync({ id: selected.report!.id, resolution: "DELETE", note, why })]);
     else if (selected.pending) {
       const { kind, row } = selected.pending;
-      void run([() => moderate.mutateAsync({ kind, id: row.id, action: "delete", reason: note })]);
+      void run([() => moderate.mutateAsync({ kind, id: row.id, action: "delete", reason: note, why })]);
     }
   };
 
@@ -490,6 +539,63 @@ export function ReportsReview() {
           )}
 
           <div className="mt-6 border-t border-[oklch(var(--color-block))] pt-3">
+            {canHide && (
+              <div className="mb-3">
+                <label htmlFor="review-mod-reason" className="block text-xs text-[oklch(var(--color-ink-muted))]">
+                  {t("social_moderation.review.mod_reason_label")}
+                </label>
+                <select
+                  id="review-mod-reason"
+                  value={modReason}
+                  aria-invalid={modReasonError === "code" || undefined}
+                  aria-describedby={modReasonError ? "review-mod-reason-error" : undefined}
+                  onChange={(e) => {
+                    setModReason(e.target.value as ModerationReason);
+                    setModReasonError(null);
+                  }}
+                  className={cn(fieldControl({ size: "md", invalid: modReasonError === "code" }), "mt-1 w-full sm:w-auto")}
+                >
+                  <option value="" disabled>
+                    {t("social_moderation.review.mod_reason_placeholder")}
+                  </option>
+                  {MODERATION_REASONS.map((code) => (
+                    <option key={code} value={code}>
+                      {t(`social_moderation.reason.${code}`)}
+                    </option>
+                  ))}
+                </select>
+                {modReason === "OTHER" && (
+                  <>
+                    <label htmlFor="review-mod-other" className="mt-2 block text-xs text-[oklch(var(--color-ink-muted))]">
+                      {t("social_moderation.review.other_note_label")}
+                    </label>
+                    <input
+                      id="review-mod-other"
+                      type="text"
+                      maxLength={REASON_NOTE_MAX}
+                      value={otherNote}
+                      aria-invalid={modReasonError === "note" || undefined}
+                      aria-describedby={modReasonError ? "review-mod-reason-error" : undefined}
+                      onChange={(e) => {
+                        setOtherNote(e.target.value);
+                        if (e.target.value.trim()) setModReasonError(null);
+                      }}
+                      className={cn(fieldControl({ size: "md", invalid: modReasonError === "note" }), "mt-1 w-full")}
+                    />
+                  </>
+                )}
+                {modReasonError && (
+                  <p id="review-mod-reason-error" role="alert" className="mt-1 text-xs text-[oklch(var(--color-danger))]">
+                    <span aria-hidden="true">! </span>
+                    {t(
+                      modReasonError === "code"
+                        ? "social_moderation.review.mod_reason_required"
+                        : "social_moderation.review.other_note_required"
+                    )}
+                  </p>
+                )}
+              </div>
+            )}
             <label htmlFor="review-reason" className="block text-xs text-[oklch(var(--color-ink-muted))]">
               {t("social_moderation.review.reason_label")}
             </label>
@@ -530,7 +636,7 @@ export function ReportsReview() {
               )}
               <span className="flex-1" />
               {canHide && (
-                <Button type="button" variant="ghost" size="sm" onClick={() => setDeleting(true)} disabled={busy}>
+                <Button type="button" variant="ghost" size="sm" onClick={askDelete} disabled={busy}>
                   {t("social_moderation.actions.delete")}
                 </Button>
               )}

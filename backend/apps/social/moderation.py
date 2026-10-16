@@ -420,12 +420,26 @@ def _kind(obj):
     return ReportTargetType.POST if isinstance(obj, Post) else ReportTargetType.COMMENT
 
 
-def moderate_content(obj, action, *, actor, request=None, reason=""):
+def stored_reason(reason, reason_code="", reason_note=""):
+    """写进 `moderation_reason` / 删除理由 / 举报 `resolution_note` 的那句:官员写的自由文本优先,
+    其次「其他」的说明,最后是理由代码本身(`SPAM` …;Web 的「已处理」按 `social_moderation.reason` 翻译)。
+    代码与说明另外原样记进审计的 `changes`。"""
+    return reason or reason_note or reason_code
+
+
+def moderate_content(obj, action, *, actor, request=None, reason="", reason_code="", reason_note=""):
     """对一条帖子或评论执行 APPROVE / HIDE / RESTORE / DELETE。锁行后按最新状态判定转移。
 
     HIDE 与 DELETE 顺手关闭这条内容上 OPEN 的举报(处置结果记为同一动作)——
     否则举报队列里会留着一条「已经处理过」的待办。
+
+    `reason_code`(`ReportReason`)+ `reason_note`:隐藏 / 删除时官员选的理由(2026-10-16 用户定),
+    推给作者(`soul_push.record_content_moderated`);「其他」必须带说明 —— 在边界上校验
+    (moderation_serializers.ModerationReasonFields)。只发 `reason` 的老客户端照旧,推送不带理由。
     """
+    if action not in ("HIDE", "DELETE"):
+        reason_code = reason_note = ""  # 通过 / 恢复不带理由(用户定)
+    reason = stored_reason(reason, reason_code, reason_note)
     model = type(obj)
     kind = _kind(obj)
     with transaction.atomic():
@@ -446,7 +460,9 @@ def moderate_content(obj, action, *, actor, request=None, reason=""):
         audit(
             "DELETE" if action == "DELETE" else "UPDATE", row.tenant, row.pk,
             f"{kind} {action}" + (f":{reason}" if reason else ""),
-            actor=actor, request=request, changes={"moderation_status": [before, after], "kind": kind},
+            actor=actor, request=request,
+            changes={"moderation_status": [before, after], "kind": kind,
+                     **({"reason_code": reason_code, "reason_note": reason_note} if reason_code else {})},
         )
         if action in ("HIDE", "DELETE"):
             _close_reports(kind, row, ReportResolution(action), actor=actor, note=reason)
@@ -459,7 +475,8 @@ def moderate_content(obj, action, *, actor, request=None, reason=""):
             post_id = None if action == "DELETE" else row.pk
         else:
             post_id = None if row.post.is_deleted else row.post_id
-        ids = push.record_content_moderated(row.author_id, kind, row.pk, action, post_id=post_id)
+        ids = push.record_content_moderated(row.author_id, kind, row.pk, action, post_id=post_id,
+                                            reason_code=reason_code, reason_note=reason_note)
         if ids:
             transaction.on_commit(lambda: push.enqueue(ids))
     if action != "DELETE":
@@ -515,13 +532,20 @@ def lift_mute(mute, *, actor, request=None):
     return row
 
 
-def resolve_report(report, resolution, *, actor, request=None, note="", mute_days=None):
+def resolve_report(report, resolution, *, actor, request=None, note="", mute_days=None, reason_code="",
+                   reason_note=""):
     """HIDE / DELETE 作用于被举报的帖子或评论;MUTE 禁言 `target_user`;DISMISS 只关闭举报。
 
     WARN:内容不动、举报记为 DISMISSED,理由必填 —— 理由就是警告本身。`SOCIAL_WARNED` 只带 id
     (租户 webhook 收得到事件,理由不该出租户);理由经灵魂推送告诉 `target_user`
     (帖子 / 评论的作者,或被举报的用户),提交后才入队。
+
+    `reason_code` / `reason_note` 只给 HIDE / DELETE:原样交给 `moderate_content`(推送带理由)。
     """
+    if resolution in (ReportResolution.HIDE, ReportResolution.DELETE):
+        note = stored_reason(note, reason_code, reason_note)
+    else:
+        reason_code = reason_note = ""
     if resolution == ReportResolution.WARN and not note.strip():
         raise SocialError("警告作者须写理由。", "reason_required", 400)
     with transaction.atomic():
@@ -537,7 +561,8 @@ def resolve_report(report, resolution, *, actor, request=None, note="", mute_day
             if resolution == ReportResolution.HIDE and content.moderation_status == ModerationStatus.HIDDEN:
                 pass  # 已被隐藏(可能经另一条路径),只关闭举报
             elif not content.is_deleted:
-                moderate_content(content, resolution, actor=actor, request=request, reason=note)
+                moderate_content(content, resolution, actor=actor, request=request, reason=note,
+                                 reason_code=reason_code, reason_note=reason_note)
         elif resolution == ReportResolution.MUTE:
             if mute_days is None:
                 raise SocialError("禁言须给出天数。", "invalid_days", 400)

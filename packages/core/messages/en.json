@@ -4813,6 +4813,22 @@
     "content_restored_comment": {
       "title": "Your comment was restored",
       "body": "Your comment is visible again."
+    },
+    "content_hidden_post_reason": {
+      "title": "Your post was hidden",
+      "body": "An officer hid your post: {{reason}}"
+    },
+    "content_hidden_comment_reason": {
+      "title": "Your comment was hidden",
+      "body": "An officer hid your comment: {{reason}}"
+    },
+    "content_deleted_post_reason": {
+      "title": "Your post was deleted",
+      "body": "An officer deleted your post: {{reason}}"
+    },
+    "content_deleted_comment_reason": {
+      "title": "Your comment was deleted",
+      "body": "An officer deleted your comment: {{reason}}"
     }
   },
   "official_notify": {
@@ -5034,8 +5050,8 @@
       "rule_hit": "Rule hit · word list",
       "from": "from {{name}}",
       "reaction_comment": "Comments",
-      "reason_label": "Reason (required to hide or warn)",
-      "reason_required": "Hiding or warning needs a reason",
+      "reason_label": "Note (required to warn)",
+      "reason_required": "Warning needs a reason",
       "approve": "Let through",
       "shortcuts": "J / K move · A let through · H hide · W warn",
       "user_target_note": "The report is about the user, not a post: there is nothing to hide. Mute, or let it through.",
@@ -5045,7 +5061,12 @@
       "media_label": "Images",
       "media_caption": "Image {{i}} · {{w}}×{{h}}",
       "media_load_failed": "Could not load the image",
-      "held_for_words": "Held for review by the word “{{word}}” and others ({{n}} in all)"
+      "held_for_words": "Held for review by the word “{{word}}” and others ({{n}} in all)",
+      "mod_reason_label": "Reason to hide or delete (the author is told)",
+      "mod_reason_placeholder": "Choose a reason",
+      "mod_reason_required": "Choose a reason to hide or delete",
+      "other_note_label": "Other reason",
+      "other_note_required": "Write the reason for “Other”"
     },
     "words": {
       "add_row": "Add a word",

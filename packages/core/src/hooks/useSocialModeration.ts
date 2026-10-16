@@ -8,6 +8,7 @@ import {
   type HandledContent,
   type HandledFilters,
   type ModerationFilters,
+  type ModerationReasonInput,
   type MuteFilters,
   type NewSensitiveWord,
   type ReportResolution,
@@ -97,15 +98,39 @@ function useModerationWrite<TVars, TResult>(fn: (vars: TVars) => Promise<TResult
 
 export function useResolveReport() {
   return useModerationWrite(
-    async ({ id, resolution, note, muteDays }: { id: string; resolution: ReportResolution; note?: string; muteDays?: number }) =>
-      (await socialModerationApi.resolveReport(id, resolution, note, muteDays)).data
+    async ({
+      id,
+      resolution,
+      note,
+      muteDays,
+      why,
+    }: {
+      id: string;
+      resolution: ReportResolution;
+      note?: string;
+      muteDays?: number;
+      /** HIDE / DELETE: the reason pushed to the author. */
+      why?: ModerationReasonInput;
+    }) => (await socialModerationApi.resolveReport(id, resolution, note, muteDays, why)).data
   );
 }
 
 export function useModerateContent() {
   return useModerationWrite(
-    async ({ kind, id, action, reason }: { kind: ContentKind; id: string; action: ContentAction; reason?: string }) =>
-      (await socialModerationApi.act(kind, id, action, reason)).status
+    async ({
+      kind,
+      id,
+      action,
+      reason,
+      why,
+    }: {
+      kind: ContentKind;
+      id: string;
+      action: ContentAction;
+      reason?: string;
+      /** hide / delete: the reason pushed to the author. */
+      why?: ModerationReasonInput;
+    }) => (await socialModerationApi.act(kind, id, action, reason, why)).status
   );
 }
 
