@@ -51,10 +51,13 @@ export function MeTab({ onOpen }: { onOpen: (screen: AccountScreen) => void }) {
             title={t("officer_app.me.name")}
             onPress={() => onOpen("name")}
             right={
-              <Txt variant="bodyLg">
-                {user.display_name || user.username}
-                {"  ›"}
-              </Txt>
+              // A long name is cut to one line and never takes more than 60 % of the row, so 「姓名」 stays.
+              <View style={{ flexDirection: "row", alignItems: "center", flexShrink: 1, maxWidth: "60%" }}>
+                <Txt testID="me-name-value" variant="bodyLg" numberOfLines={1} style={{ flexShrink: 1 }}>
+                  {user.display_name || user.username}
+                </Txt>
+                <Txt variant="bodyLg">{"  ›"}</Txt>
+              </View>
             }
           />
           <Fact label={t("officer_app.me.role")} value={role.state === "known" ? role.label : user.role} />
