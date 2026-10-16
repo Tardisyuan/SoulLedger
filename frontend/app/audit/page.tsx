@@ -33,6 +33,7 @@ import { auditActionGlyph } from "@/src/lib/auditActionGlyph";
 import { civSkinOf } from "@/src/lib/civSkin";
 import { useRememberedFilters } from "@/src/lib/rememberedFilters";
 import { AuditTabs } from "@/src/components/audit/AuditTabs";
+import { auditResourceLabel, datePresetStart, type DatePreset } from "@/src/components/audit/auditLabels";
 
 /** 代看的两行摘要从 `changes` 按界面语言现拼(库里存的描述是 zh 固定句式)。其它动作返回 null。 */
 function impersonationSummary(g: AuditGroup, t: (key: string, params?: Record<string, string>) => string): string | null {
@@ -91,8 +92,6 @@ function describeAudit(description: string, t: (key: string, params?: Record<str
   return description;
 }
 
-type DatePreset = "" | "7d" | "30d";
-
 /** 常驻的筛选记在本浏览器。搜索框的字不记(属于一次到访);「殿」不记:它只在全局管理员有清单时才画,
     记下来会变成一个看不见却在生效的筛选。 */
 const AUDIT_FILTERS_KEY = "soulledger.audit.filters";
@@ -149,9 +148,14 @@ export default function AuditPage() {
   const [ordering, setOrdering] = useState("");
   // 详情页的「本次请求的全部记录」链接带 `?trace=`。不记进本浏览器(属于一次到访),也不用 useSearchParams
   // (它要求 Suspense 边界):挂载后读一次地址栏。
+  // 统计页「最常变动的资源」一行带 `?resource=`:同理挂载后读一次，并且这次不读本浏览器记住的筛选
+  // (否则记住的资源会盖掉它)。
   const [traceFilter, setTraceFilter] = useState("");
+  const urlResource = typeof window === "undefined" ? "" : new URLSearchParams(window.location.search).get("resource") ?? "";
   useEffect(() => {
-    setTraceFilter(new URLSearchParams(window.location.search).get("trace") ?? "");
+    const query = new URLSearchParams(window.location.search);
+    setTraceFilter(query.get("trace") ?? "");
+    if (query.get("resource")) setResourceFilter(query.get("resource") ?? "");
   }, []);
   useRememberedFilters(
     AUDIT_FILTERS_KEY,
@@ -162,19 +166,14 @@ export default function AuditPage() {
       if (saved.resource) setResourceFilter(saved.resource);
       if (saved.datePreset === "7d" || saved.datePreset === "30d") setDatePreset(saved.datePreset);
       if (saved.ordering) setOrdering(saved.ordering);
-    }
+    },
+    Boolean(urlResource)
   );
 
   // Presets are always "N days ago through now" — there is no end bound to
   // compute, so this only ever produces `dateFrom` (`end_date` was dead: the
   // corresponding value was hardcoded "" on every branch).
-  const dateFrom = useMemo(() => {
-    if (!datePreset) return "";
-    const days = datePreset === "7d" ? 7 : 30;
-    const from = new Date();
-    from.setDate(from.getDate() - days);
-    return from.toISOString().slice(0, 10);
-  }, [datePreset]);
+  const dateFrom = useMemo(() => datePresetStart(datePreset), [datePreset]);
 
   // 列表与导出共用的服务端筛选。`search` 不在其中:它只筛已取回的这一页(见下),
   // 所以导出的是这组筛选下的全部行,不受搜索框影响。
@@ -212,13 +211,7 @@ export default function AuditPage() {
     enabled: canReadAudit,
   });
   const actionLabel = (action: string) => resolveEnumDisplay(t, "audit.actions", action).label ?? action;
-  const resourceLabel = (resource: string) => {
-    // 殿设置: the audit rows of editing a hall's settings themselves (resource=tenant). Distinct
-    // from the 「按殿」 dropdown below, which narrows ANY resource to one hall's rows.
-    if (resource === "tenant") return t("audit.resource_tenant");
-    const shown = resolveEnumDisplay(t, "audit.resources", resource);
-    return shown.state === "known" && shown.label ? shown.label : resource;
-  };
+  const resourceLabel = (resource: string) => auditResourceLabel(t, resource);
 
   // 殿的清单。一个殿的名字按文明的冥界名写(同身份带),认不出文明才退回租户展示名。
   const { data: halls } = useQuery({

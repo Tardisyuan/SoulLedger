@@ -1952,7 +1952,9 @@
     "repeat_rule": "同一人、同一动作、同一类资源，前后相隔不超过 {{minutes}} 分钟的连续记录合为一行",
     "tabs": {
       "audit": "审计日志",
-      "logins": "登录日志"
+      "logins": "登录日志",
+      "permissions": "权限变更",
+      "stats": "统计"
     },
     "login_log": {
       "title": "登录日志",
@@ -1983,7 +1985,36 @@
       "workflow": "工作流",
       "judgment": "审判",
       "soulrecord": "功过记录",
-      "permission": "权限"
+      "permission": "权限",
+      "role": "角色",
+      "rolepermission": "角色权限",
+      "menu": "菜单",
+      "menubutton": "菜单按钮",
+      "fieldpermission": "字段权限",
+      "rowleveldatascope": "行级数据范围",
+      "datascope": "数据范围"
+    },
+    "timeline": {
+      "all_resources": "全部权限资源",
+      "more_fields": "另 {{n}} 项",
+      "details": "详情",
+      "show_more": "显示更多",
+      "cap_reached": "最多显示最近 500 条。缩小日期范围，看更早的。",
+      "empty": "这段时间没有权限变更",
+      "empty_all": "还没有权限变更",
+      "failed": "没能载入权限变更，请重试"
+    },
+    "stats": {
+      "scope_hall": "本殿全部历史 · 共 {{count}} 条",
+      "scope_all": "全部殿全部历史 · 共 {{count}} 条",
+      "scope_note": "统计不随日期、殿筛选变化。",
+      "by_action": "按动作",
+      "zero_actions": "另 {{n}} 种动作没有记录",
+      "top_resources": "最常变动的资源 · 前 20",
+      "col_resource": "资源",
+      "col_count": "条数",
+      "row_label": "查看「{{name}}」的审计日志",
+      "failed": "没能载入统计，请重试"
     }
   },
   "profile": {

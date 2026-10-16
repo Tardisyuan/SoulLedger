@@ -1952,7 +1952,9 @@
     "repeat_rule": "Consecutive entries by the same person, with the same action on the same kind of resource, at most {{minutes}} minutes apart, are merged into one row",
     "tabs": {
       "audit": "Audit log",
-      "logins": "Login log"
+      "logins": "Login log",
+      "permissions": "Permission changes",
+      "stats": "Statistics"
     },
     "login_log": {
       "title": "Login log",
@@ -1983,7 +1985,36 @@
       "workflow": "Workflow",
       "judgment": "Judgment",
       "soulrecord": "Soul record",
-      "permission": "Permission"
+      "permission": "Permission",
+      "role": "Role",
+      "rolepermission": "Role permission",
+      "menu": "Menu",
+      "menubutton": "Menu button",
+      "fieldpermission": "Field permission",
+      "rowleveldatascope": "Row-level data scope",
+      "datascope": "Data scope"
+    },
+    "timeline": {
+      "all_resources": "All permission resources",
+      "more_fields": "{{n}} more",
+      "details": "Details",
+      "show_more": "Show more",
+      "cap_reached": "Showing the latest 500. Narrow the dates to see earlier ones.",
+      "empty": "No permission changes in this period",
+      "empty_all": "No permission changes yet",
+      "failed": "Couldn't load permission changes, please try again"
+    },
+    "stats": {
+      "scope_hall": "All history for this hall · {{count}} entries",
+      "scope_all": "All halls, all history · {{count}} entries",
+      "scope_note": "These numbers don't follow date or hall filters.",
+      "by_action": "By action",
+      "zero_actions": "{{n}} other actions have no entries",
+      "top_resources": "Most-changed resources · top 20",
+      "col_resource": "Resource",
+      "col_count": "Entries",
+      "row_label": "View audit log for \"{{name}}\"",
+      "failed": "Couldn't load statistics, please try again"
     }
   },
   "profile": {
