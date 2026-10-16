@@ -18,6 +18,14 @@ import { QueryError } from "@/src/components/ui/PageError";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
 import { ROW_HOVER } from "@/components/ui/data-table";
+import { ActionsMenu } from "@/components/ui/data-grid/ActionsMenu";
+import { Button } from "@/src/components/ui/Button";
+import { usePermissions } from "@/src/hooks/usePermissions";
+import {
+  OrganizationDeleteDialog,
+  OrganizationFormDialog,
+  type OrganizationFormMode,
+} from "@/src/components/organizations/OrganizationDialogs";
 
 // organizationsApi.list() (lib/api/organizations.ts) doesn't forward a `page` param and
 // this page renders a parent/child tree (flattenTree/renderTable below), so a paged view would
@@ -87,6 +95,11 @@ function OrganizationsPageContent() {
   usePlaque({ hall: useHall(t("plaque.office.rules")) });
   const { user } = useTenant();
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  // 增删改(第三十四批 W-4):没有 `org.manage` 就没有任何入口。「查看人员」去用户页,只给管理员。
+  const { hasPermission, isAdmin } = usePermissions();
+  const canManage = hasPermission("org.manage");
+  const [formMode, setFormMode] = useState<OrganizationFormMode | null>(null);
+  const [deleting, setDeleting] = useState<Organization | null>(null);
 
   const { data: organizations = [], isLoading, isError, refetch } = useQuery({
     queryKey: ["organizations"],
@@ -115,6 +128,9 @@ function OrganizationsPageContent() {
         <tr className="h-(--control-h-sm) border-b-2 border-[oklch(var(--color-ink))]">
           <th scope="col" className="px-3 py-2 text-left font-normal">{t("menus.name")}</th>
           <th scope="col" className="px-3 py-2 text-left font-normal">{t("tenants.code")}</th>
+          {canManage && (
+            <th scope="col" className="w-11 px-3 py-2"><span className="sr-only">{t("common.row_actions")}</span></th>
+          )}
         </tr>
       </thead>
       <tbody>
@@ -136,6 +152,19 @@ function OrganizationsPageContent() {
               </TreeName>
             </td>
             <td className="px-3 py-2 font-mono text-xs text-[oklch(var(--color-ink-muted))]">{org.code}</td>
+            {canManage && (
+              <td className="w-11 px-3 py-2 text-right">
+                <ActionsMenu
+                  menuLabel={t("org.actions_label", { name: org.name })}
+                  items={[
+                    { key: "child", label: t("org.create_child"), onSelect: () => setFormMode({ kind: "create", parent: org }) },
+                    { key: "edit", label: t("org.edit"), onSelect: () => setFormMode({ kind: "edit", org }) },
+                    { key: "move", label: t("org.move"), onSelect: () => setFormMode({ kind: "move", org }) },
+                    { key: "delete", label: t("org.delete"), tone: "danger", onSelect: () => setDeleting(org) },
+                  ]}
+                />
+              </td>
+            )}
           </tr>
         ))}
       </tbody>
@@ -152,6 +181,13 @@ function OrganizationsPageContent() {
         </>
       }
       subtitle={t("organization.subtitle")}
+      actions={
+        canManage ? (
+          <Button type="button" variant="secondary" onClick={() => setFormMode({ kind: "create", parent: null })}>
+            {t("org.create")}
+          </Button>
+        ) : undefined
+      }
       isLoading={isLoading}
       skeleton={<OrganizationsSkeleton />}
     >
@@ -209,6 +245,8 @@ function OrganizationsPageContent() {
           );
         })}
       </div>
+      <OrganizationFormDialog mode={formMode} organizations={organizations} onClose={() => setFormMode(null)} />
+      <OrganizationDeleteDialog org={deleting} canViewPeople={isAdmin} onClose={() => setDeleting(null)} />
     </PageShell>
   );
 }

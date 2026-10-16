@@ -16,6 +16,11 @@ import { DomainEnum, DomainText, MissingValue } from "@/src/components/ui/Domain
 import { PageShell } from "@/src/components/ui/PageShell";
 import { Button, buttonVariants } from "@/src/components/ui/Button";
 import { ConfirmDialog } from "@/src/components/ui/Modal";
+import { FilterChipToggle } from "@/src/components/ui/FilterChip";
+import { ActionsMenu } from "@/components/ui/data-grid/ActionsMenu";
+import { ArchiveDialog } from "@/src/components/archive/ArchiveParts";
+import { useArchiveDisposition, useUnarchiveDisposition } from "@soulledger/core/hooks/useDispositions";
+import { usePermissions } from "@/src/hooks/usePermissions";
 import { EmptyState } from "@/src/components/ui/EmptyState";
 import { QueryError } from "@/src/components/ui/PageError";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
@@ -58,16 +63,26 @@ export default function DispositionPage() {
   const queryClient = useQueryClient();
   const [showExecuteModal, setShowExecuteModal] = useState<string | null>(null);
   const [now] = useState(() => Date.now());
+  // 「显示已归档」只在处置列表(后端 `show_archived` 只有它认)。已归档的行调灰一级,状态写「□ 已归档」。
+  const [showArchived, setShowArchived] = useState(false);
+  const [archiveTarget, setArchiveTarget] = useState<Disposition | null>(null);
+  const archiveMutation = useArchiveDisposition();
+  const unarchiveMutation = useUnarchiveDisposition();
+  const { hasPermission } = usePermissions();
+  const canArchive = hasPermission("disposition.execute");
   const [pages, setPages] = useState<Record<DispositionSection, number>>({ pending: 1, executing: 1, expired: 1 });
 
   // One query per section, each paged on its own. `dispositionKeys.list` sits under
   // `["dispositions"]`, which the execute mutation below invalidates.
-  const sectionQuery = (params: DispositionListParams) => ({
+  const sectionQuery = (base: DispositionListParams) => {
+    const params: DispositionListParams = showArchived ? { ...base, show_archived: "1" } : base;
+    return {
     queryKey: dispositionKeys.list(params),
     queryFn: () => dispositionApi.list(params).then((r) => r.data),
     enabled: !!user,
     placeholderData: <P,>(previous: P) => previous,
-  });
+    };
+  };
   const pendingQ = useQuery(sectionQuery({ section: "pending", page: String(pages.pending) }));
   // 期满近 → 远,服务端排:本页之外的行也在对的位置上。
   const executingQ = useQuery(sectionQuery({ section: "executing", ordering: "term_end", page: String(pages.executing) }));
@@ -92,6 +107,33 @@ export default function DispositionPage() {
     },
     onError: () => showToast(t("disposition.execute_error"), "error"),
   });
+
+  // 行尾 ⋯:有结案判决的处置可以「归档」(后端只收有结案判决的);已归档的行给「取消归档」。
+  const rowMenu = (d: Disposition) => {
+    if (!canArchive) return null;
+    if (d.is_archived) {
+      return (
+        <ActionsMenu
+          menuLabel={`${t("common.row_actions")} · ${d.soul_name || d.soul}`}
+          items={[{ key: "unarchive", label: t("records.archive.unarchive"), onSelect: () => unarchiveMutation.mutate(d.id) }]}
+        />
+      );
+    }
+    if (!d.verdict) return null;
+    return (
+      <ActionsMenu
+        menuLabel={`${t("common.row_actions")} · ${d.soul_name || d.soul}`}
+        items={[{ key: "archive", label: t("records.archive.confirm"), onSelect: () => setArchiveTarget(d) }]}
+      />
+    );
+  };
+  const archivedMark = (d: Disposition) =>
+    d.is_archived ? (
+      <span className="text-xs text-[oklch(var(--color-ink-muted))]">
+        <span aria-hidden="true">□ </span>
+        {t("records.archive.badge")}
+      </span>
+    ) : null;
 
   const soulLink = (d: Disposition) => (
     <Link href={`/souls/${d.soul}`} className="font-medium text-[oklch(var(--color-ink))] hover:underline">
@@ -148,6 +190,11 @@ export default function DispositionPage() {
         </>
       }
       subtitle={t("disposition.subtitle")}
+      filters={
+        <FilterChipToggle pressed={showArchived} onPressedChange={(v) => { setShowArchived(v); setPages({ pending: 1, executing: 1, expired: 1 }); }}>
+          {t("records.archive.show_archived")}
+        </FilterChipToggle>
+      }
       isLoading={isLoading}
       skeleton={<ListSkeleton count={5} />}
       // `isError ||`: a failed request yields no rows, and "the server is down"
@@ -164,14 +211,15 @@ export default function DispositionPage() {
       {/* ── 甲 · 待执行:判决列 + 行尾「执行」(规则 15 例外) ───────────── */}
       <Section {...sectionProps("pending")}>
         {pending.map((d) => (
-          <Row key={d.id} testId="disposition-pending-row" cols="md:grid-cols-[1.3fr_7rem_1.3fr_8rem_6rem_7rem]">
+          <Row key={d.id} archived={d.is_archived} testId="disposition-pending-row" cols="md:grid-cols-[1.3fr_7rem_1.3fr_8rem_6rem_7rem]">
             {soulLink(d)}
             <VerdictBadge verdict={d.verdict} />
             {realm(d)}
             <span className="text-[oklch(var(--color-ink-muted))]">{termLabel(termState(d, now), t)}</span>
             <span className="font-mono text-xs tabular-nums text-[oklch(var(--color-ink-subtle))]">{formatDate(d.created_at)}</span>
-            <span className="flex justify-end">
-              {d.is_eternal ? (
+            <span className="flex items-center justify-end gap-2">
+              {archivedMark(d)}
+              {d.is_archived ? null : d.is_eternal ? (
                 <span className="text-xs text-[oklch(var(--color-ink-muted))]">{t("disposition.eternal")}</span>
               ) : (
                 <RequirePermission permissions="disposition.execute">
@@ -180,6 +228,7 @@ export default function DispositionPage() {
                   </Button>
                 </RequirePermission>
               )}
+              {rowMenu(d)}
             </span>
           </Row>
         ))}
@@ -189,13 +238,17 @@ export default function DispositionPage() {
       {/* ── 乙 · 执行中:期限条,没有动作 ─────────────────────────────────── */}
       <Section {...sectionProps("executing")}>
         {running.map(({ d, term }) => (
-          <Row key={d.id} testId="disposition-running-row" cols="md:grid-cols-[1.3fr_1.1fr_2fr_8rem]">
+          <Row key={d.id} archived={d.is_archived} testId="disposition-running-row" cols="md:grid-cols-[1.3fr_1.1fr_2fr_8rem]">
             {soulLink(d)}
             {realm(d)}
             <TermBar term={term} />
-            <span className="text-right font-mono text-xs tabular-nums text-[oklch(var(--color-ink-muted))]">
-              {term.kind === "running" && term.fraction > 0.9 && <span aria-hidden="true">◐ </span>}
-              {term.kind === "running" ? t("disposition.days_left", { n: String(term.daysLeft) }) : termLabel(term, t)}
+            <span className="flex items-center justify-end gap-2 text-right font-mono text-xs tabular-nums text-[oklch(var(--color-ink-muted))]">
+              {archivedMark(d)}
+              <span>
+                {term.kind === "running" && term.fraction > 0.9 && <span aria-hidden="true">◐ </span>}
+                {term.kind === "running" ? t("disposition.days_left", { n: String(term.daysLeft) }) : termLabel(term, t)}
+              </span>
+              {rowMenu(d)}
             </span>
           </Row>
         ))}
@@ -207,17 +260,21 @@ export default function DispositionPage() {
         {expired.map((d) => {
           const end = formatHistoricalDate(d.term_end ?? null) ?? (d.expired_at ? formatDate(d.expired_at) : null);
           return (
-            <Row key={d.id} testId="disposition-expired-row" cols="md:grid-cols-[1.3fr_1.3fr_1fr_8rem]">
+            <Row key={d.id} archived={d.is_archived} testId="disposition-expired-row" cols="md:grid-cols-[1.3fr_1.3fr_1fr_8rem]">
               {soulLink(d)}
               {realm(d)}
               <span className="font-mono text-xs tabular-nums text-[oklch(var(--color-ink))]">
                 <span aria-hidden="true">◐ </span>
                 {end ? t("disposition.expired_on", { date: end }) : <MissingValue kind="unrecorded" />}
               </span>
-              <span className="flex justify-end">
-                <Link href={`/souls/${d.soul}`} className={buttonVariants({ variant: "primary", size: "sm" })}>
-                  {t("disposition.arrange_reincarnation")}
-                </Link>
+              <span className="flex items-center justify-end gap-2">
+                {archivedMark(d)}
+                {!d.is_archived && (
+                  <Link href={`/souls/${d.soul}`} className={buttonVariants({ variant: "primary", size: "sm" })}>
+                    {t("disposition.arrange_reincarnation")}
+                  </Link>
+                )}
+                {rowMenu(d)}
               </span>
             </Row>
           );
@@ -229,6 +286,15 @@ export default function DispositionPage() {
           dialog to leave dismissible by a stray Tab into the page behind it —
           hence ConfirmDialog (focus trap, Escape, focus return) and not a
           hand-rolled `fixed inset-0`. */}
+      <ArchiveDialog
+        isOpen={archiveTarget !== null}
+        name={archiveTarget?.soul_name || archiveTarget?.soul || ""}
+        onClose={() => setArchiveTarget(null)}
+        onConfirm={(reason) =>
+          archiveTarget && archiveMutation.mutate({ id: archiveTarget.id, reason }, { onSuccess: () => setArchiveTarget(null) })
+        }
+        isPending={archiveMutation.isPending}
+      />
       <ConfirmDialog
         isOpen={showExecuteModal !== null}
         title={t("disposition.confirm_execute")}
@@ -350,11 +416,12 @@ function Section({
 }
 
 /** 一行账:桌面按列,393 下单列堆叠;行高 36 / 52(规范 v1 §2 行高)。 */
-function Row({ cols, testId, children }: { cols: string; testId: string; children: ReactNode }) {
+function Row({ cols, testId, archived, children }: { cols: string; testId: string; archived?: boolean; children: ReactNode }) {
   return (
     <div
       data-testid={testId}
-      className={`grid grid-cols-1 ${cols} items-center gap-x-3 gap-y-1 min-h-(--table-row-h) py-1 border-b border-[oklch(var(--color-rule))] text-sm`}
+      data-archived={archived ? "" : undefined}
+      className={`grid grid-cols-1 ${cols} ${archived ? "text-[oklch(var(--color-ink-muted))]" : ""} items-center gap-x-3 gap-y-1 min-h-(--table-row-h) py-1 border-b border-[oklch(var(--color-rule))] text-sm`}
     >
       {children}
     </div>

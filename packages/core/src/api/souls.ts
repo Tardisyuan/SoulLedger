@@ -5,6 +5,7 @@ import type { LedgerSummary, StatuteSnapshot } from "./ledger";
 import type { HistoricalDate } from "../domain/dates";
 import type { CivilizationOption } from "@soulledger/core/config/civilizations";
 import type { components } from "./generated/schema";
+import type { ArchiveFields } from "./archive";
 
 type Schemas = components["schemas"];
 
@@ -105,7 +106,7 @@ interface SoulBase {
 export type SoulListItem = SoulBase & { has_date_warning: boolean; has_record_error: boolean };
 
 /** 200 body of GET /souls/{id}/ — SoulSerializer. */
-export interface Soul extends SoulBase {
+export interface Soul extends SoulBase, ArchiveFields {
   birth_name?: string;
   origin_location: string;
   description: string;
@@ -318,6 +319,9 @@ export const soulsApi = {
   create: (data: object) => api.post<Soul>("/souls/", data),
   update: (id: string, data: Partial<SoulInput>) => api.patch<Soul>(`/souls/${id}/`, data),
   delete: (id: string) => api.delete<void>(`/souls/${id}/`),
+  /** 归档(`soul.delete`):只收有结案判决的灵魂;理由选填,记入审计日志。 */
+  archive: (id: string, reason = "") => api.post<Soul>(`/souls/${id}/archive/`, { reason }),
+  unarchive: (id: string) => api.post<Soul>(`/souls/${id}/unarchive/`),
   // All or nothing — see SoulBatchRecycleError. Same codename as `delete`.
   batchRecycle: (data: SoulBatchRecycleRequest) =>
     api.post<SoulBatchRecycleResult>("/souls/batch-recycle/", data),
