@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { eventsApi, PAGE_SIZE } from "@soulledger/core/api";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { RequirePermission } from "@/src/components/rbac/RequirePermission";
+import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
 import { usePlaque } from "@/src/components/plaque/Plaque";
 import { useHall } from "@/src/components/plaque/useHall";
 import { DataGrid, type DataGridColumn } from "@/components/ui/data-grid";
@@ -35,6 +37,15 @@ import {
  * 排序只按时间倒序 —— 类型已经能筛,不出「按事件类型排」。每页 20 条。
  */
 export default function SoulEventsPage() {
+  // The sidebar hides the link without soul.read, but a typed URL still lands here.
+  return (
+    <RequirePermission permissions="soul.read" fallback={<PermissionDenied permission="soul.read" />}>
+      <SoulEventsContent />
+    </RequirePermission>
+  );
+}
+
+function SoulEventsContent() {
   const { t, formatDateTime } = useI18n();
   usePlaque({ hall: useHall(t("plaque.office.records")) });
 
