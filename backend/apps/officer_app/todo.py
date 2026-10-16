@@ -9,6 +9,7 @@
   判官「请管理员改派」(`judgment.claims.request_reassign`)只发一条通知,没有可查询的队列,不在此列。
 * 缩短冷却申请:`OfficerCooldownShorteningViewSet` 的范围(`soul__home_tenant`),状态 PENDING。
 
+* 未分配的书信(`unassigned_letters`,2026-10-16):同一个收件箱「待回复」里还没人经办的;不计入 `total()`。
 * 待回书信(`letters`):殿司收件箱里**标给我**、灵魂最后一封还没回、会话没关、我没归档的。就是官员台收件箱
   「待回复」文件夹(`inbox.folder_q("awaiting_reply")`)与「交给我的」(`Conversation.assignee`)的交集,同一个过滤,
   所以这里的数与官员台翻到底的条数是同一个数。最早来信的在前(先来先回)。只读我们库里的列与 `last_from`,
@@ -30,6 +31,7 @@ from apps.soul_accounts.models import (
     CooldownShorteningStatus,
     RebirthApplication,
 )
+from apps.officer_app import facts as item_facts
 from apps.workflow import cosign, decision_codes
 from apps.workflow.models import (
     ApprovalWorkflow,
@@ -40,7 +42,7 @@ from apps.workflow.models import (
 )
 
 LIST_LIMIT = 10
-KINDS = ("approval", "reassignment", "cooldown", "rebirth", "letter")
+KINDS = ("approval", "reassignment", "cooldown", "rebirth", "letter", "unassigned_letter")
 
 
 def scope_of(user, request=None):
@@ -51,7 +53,8 @@ def scope_of(user, request=None):
 
 
 def _workflows(scope):
-    qs = ApprovalWorkflow._base_manager.select_related("soul", "current_node", "current_node__approver")
+    qs = ApprovalWorkflow._base_manager.select_related(
+        "soul", "current_node", "current_node__approver", "create_user", "tenant", "judgment")
     return DataScopeFilter.filter_queryset(scope, scope_to_tenant(qs, scope), ApprovalWorkflow)
 
 
@@ -63,11 +66,12 @@ def _cooldowns(scope):
 def _dispatches(scope):
     tenant = getattr(scope, "tenant", None)
     qs = DispatchRecord._base_manager.filter(is_deleted=False, target_tenant=tenant) if tenant else DispatchRecord.objects.none()
-    return qs.select_related("soul")
+    return qs.select_related("soul", "source_tenant", "target_tenant", "dispatched_by")
 
 
-def _letters(scope):
-    """标给我、等我回的书信:收件箱「待回复」∩「交给我的」,最早来信在前。"""
+def _letters(scope, unassigned=False):
+    """标给我、等我回的书信:收件箱「待回复」∩「交给我的」,最早来信在前。
+    `unassigned`:改为还没有人经办的(`assignee` 为空)—— 「未分配的书信」组。"""
     from django.db.models import F
 
     from apps.chat import inbox
@@ -75,7 +79,8 @@ def _letters(scope):
 
     qs = Conversation.objects.filter(kind=ConversationKind.OFFICER_INBOX).select_related("soul_a")
     qs = inbox.annotate_for(scope_to_tenant(qs, scope), scope.user)
-    return qs.filter(inbox.folder_q("awaiting_reply"), assignee_id=scope.user.pk).order_by(
+    who = {"assignee__isnull": True} if unassigned else {"assignee_id": scope.user.pk}
+    return qs.filter(inbox.folder_q("awaiting_reply"), **who).order_by(
         F("last_soul_message_at").asc(nulls_last=True), "created_at")
 
 
@@ -113,7 +118,7 @@ def _group(items, offset=0):
 
 # 响应里的字段名 ↔ kind(`build(..., kind=)` 与 `?kind=` 用 kind)
 FIELD_OF = {"approval": "approvals", "reassignment": "reassignments", "cooldown": "cooldowns",
-            "rebirth": "rebirths", "letter": "letters"}
+            "rebirth": "rebirths", "letter": "letters", "unassigned_letter": "unassigned_letters"}
 
 
 def build(user, request=None, kind=None, offset=0):
@@ -147,15 +152,23 @@ def build(user, request=None, kind=None, offset=0):
         letters = [_item("letter", c.pk, c.soul_a.name, c.last_soul_message_at or c.created_at,
                          **({"feedback_tag": c.feedback_tag} if c.feedback_tag else {}))
                    for c in _letters(scope)]
+    # 未分配的书信(Design 第三十四批 O-04):同一个权限(标给自己 / 标给别人都要 `soul_inbox.reply`)。
+    # 不进 `total()`:它们还没轮到任何人,角标、推送与语音读数只数「轮到我」的。条目的 target 仍是 `letter`,
+    # 点开是同一个书信详情,只是底部换成「由我来回 / 转给别人」。
+    unassigned = []
+    if check_permission(user, "soul_inbox.reply"):
+        unassigned = [_item("letter", c.pk, c.soul_a.name, c.last_soul_message_at or c.created_at,
+                            **({"feedback_tag": c.feedback_tag} if c.feedback_tag else {}))
+                      for c in _letters(scope, unassigned=True)]
     groups = {"approvals": approvals, "reassignments": reassignments, "cooldowns": cooldowns,
-              "rebirths": rebirths, "letters": letters}
+              "rebirths": rebirths, "letters": letters, "unassigned_letters": unassigned}
     if kind:
         return _group(groups[FIELD_OF[kind]], offset)
     return {field: _group(items) for field, items in groups.items()}
 
 
 def total(user) -> int:
-    return sum(group["count"] for group in build(user).values())
+    return sum(group["count"] for field, group in build(user).items() if field != "unassigned_letters")
 
 
 # ── 单条详情 ─────────────────────────────────────────────────────────────
@@ -204,8 +217,13 @@ def detail(user, kind, pk, request=None):
         wf = workflow_for(scope, kind, pk)
         if wf is None:
             return None
+        facts = item_facts.workflow_facts(wf, user, scope.tenant, reason=wf.notes)
+        if kind == "rebirth":
+            app = RebirthApplication.objects.select_related("soul").get(pk=pk)
+            facts.update(item_facts.rebirth_facts(app))
+            facts["reason"] = app.appeal_statement if wf.is_appeal and app.appeal_statement else app.statement
         return {"kind": kind, "id": str(pk), "title": wf.soul.name if kind == "rebirth" else wf.workflow_name,
-                "workflow_id": str(wf.pk), "created_at": wf.created_at,
+                "workflow_id": str(wf.pk), "created_at": wf.created_at, "facts": facts,
                 **(_rebirth_facts(wf) if kind == "rebirth" else {}), **_workflow_state(wf, user)}
     if kind == "cooldown":
         row = _cooldowns(scope).filter(pk=pk).first()
@@ -215,6 +233,7 @@ def detail(user, kind, pk, request=None):
         ok = pending and check_permission(user, "workflow.approve")
         who = decision_codes.person(row.decided_by)
         return {"kind": kind, "id": str(row.pk), "title": row.soul.name, "created_at": row.created_at,
+                "facts": item_facts.cooldown_facts(row),
                 **_state(ok, "already_handled" if not pending else "permission_changed", who, row.decided_at)}
     if kind == "reassignment":
         row = _dispatches(scope).filter(pk=pk).first()
@@ -223,7 +242,7 @@ def detail(user, kind, pk, request=None):
         pending = row.status == DispatchStatus.PROPOSED
         ok = pending and check_permission(user, "dispatch.approve")
         return {"kind": kind, "id": str(row.pk), "title": row.soul.name if row.soul_id else "",
-                "created_at": row.proposed_at,
+                "created_at": row.proposed_at, "facts": item_facts.dispatch_facts(row),
                 # 调拨记录不存「谁决定的」,只有状态与时刻。
                 **_state(ok, "already_handled" if not pending else "permission_changed", None, row.decided_at)}
     return None

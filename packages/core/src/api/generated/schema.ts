@@ -5276,7 +5276,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * @description 「待我处理」五组:审批节点 / 改派请求 / 缩短冷却申请 / 转生申请 / 待回书信,每组计数 + 前 10 条。
+         * @description 「待我处理」六组:审批节点 / 改派请求 / 缩短冷却申请 / 转生申请 / 待回书信 / 未分配的书信,每组计数 + 前 10 条。
          *     带 `kind`(与 `offset`)时只回那一组 `{count, items}`,从第 offset 条起的 10 条。
          */
         get: operations["officer_app_todo"];
@@ -11208,6 +11208,52 @@ export interface components {
             readonly usage_count: number;
             /** raw key */
             readonly _raw_key: string;
+        };
+        FactAttachment: {
+            id: string;
+            name: string;
+            /** @description image/png、image/jpeg 或 application/pdf。 */
+            content_type: string;
+            byte_size: number;
+            /** @description 站点根相对路径,签名 10 分钟(`/api/v1/case-attachments/<id>/?t=…`)。 */
+            url: string;
+        };
+        FactHall: {
+            code: string;
+            display_name: string;
+        };
+        FactHistory: {
+            kind: components["schemas"]["FactHistoryKindEnum"];
+            name: string;
+            actor: string | null;
+            /** @description `workflow.verdicts.*` 的码;发起与当前节点为空。 */
+            verdict: string;
+            comment: string;
+            /** Format: date-time */
+            at: string | null;
+            /** @description 当前节点轮到调用者。 */
+            mine: boolean;
+        };
+        /**
+         * @description * `start` - start
+         *     * `decided` - decided
+         *     * `current` - current
+         * @enum {string}
+         */
+        FactHistoryKindEnum: "start" | "decided" | "current";
+        FactNode: {
+            name: string;
+            /** @description 第几步(只数需要人决定的节点)。 */
+            index: number;
+            total: number;
+            /** @description 批准后流程是否结束。null = 有条件分支、无从判断:App 用通用的一句。 */
+            is_last: boolean | null;
+            /** @description 批准后交给的节点;最后一步或不确定时为 null。 */
+            next_name: string | null;
+        };
+        FactSoul: {
+            name: string;
+            soul_code: string;
         };
         FailureRates: {
             /**
@@ -17470,6 +17516,39 @@ export interface components {
             rebirths: components["schemas"]["TodoGroup"];
             /** @description 待回书信:标给我、灵魂最后一封还没回的(最早在前)。需 `soul_inbox.reply`。 */
             letters: components["schemas"]["TodoGroup"];
+            /** @description 未分配的书信:同一个「待回复」里还没人经办的(最早在前)。需 `soul_inbox.reply`;不计入角标与推送数。 */
+            unassigned_letters: components["schemas"]["TodoGroup"];
+        };
+        /** @description O-01:批准前要看清的申请内容。按类给字段,没有的不出现。 */
+        TodoFacts: {
+            node?: components["schemas"]["FactNode"];
+            requester?: string | null;
+            requester_hall?: components["schemas"]["FactHall"] | null;
+            /** Format: date-time */
+            requested_at?: string | null;
+            /**
+             * Format: date-time
+             * @description 当前节点的时限;没设为 null。
+             */
+            deadline?: string | null;
+            reason?: string;
+            history?: components["schemas"]["FactHistory"][];
+            attachments?: components["schemas"]["FactAttachment"][];
+            from_hall?: components["schemas"]["FactHall"] | null;
+            to_hall?: components["schemas"]["FactHall"] | null;
+            souls?: components["schemas"]["FactSoul"][];
+            soul_count?: number;
+            soul?: components["schemas"]["FactSoul"];
+            /** @description 仅转生:第几世。 */
+            cycle?: number;
+            /** @description 仅转生:期望去向(`reincarnation.forms.*`)。 */
+            desired_form?: string;
+            /** @description 仅转生:功过结余 = 功 − 过。 */
+            merit_balance?: number;
+            /** @description 仅缩短冷却:现在还剩几天。 */
+            cooldown_now_days?: number;
+            /** @description 仅缩短冷却:申请改成剩几天。 */
+            cooldown_asked_days?: number | null;
         };
         TodoGroup: {
             count: number;
@@ -17512,6 +17591,8 @@ export interface components {
             soul_code?: string;
             /** @description 仅转生申请:是否申诉(客户端据此选标题措辞)。 */
             is_appeal?: boolean;
+            /** @description 申请内容(O-01):节点、对象字段、事由、前面几步、附件。 */
+            facts?: components["schemas"]["TodoFacts"];
             /** @description 审批节点与转生申请:决定走 workflows/<id>/approve_node/。 */
             workflow_id?: string;
             /** @description 待决的节点;决定时作为 node_id 传回。 */
@@ -28162,7 +28243,7 @@ export interface operations {
         parameters: {
             query?: {
                 /** @description 只要这一组(加载更多) */
-                kind?: "approval" | "cooldown" | "letter" | "reassignment" | "rebirth";
+                kind?: "approval" | "cooldown" | "letter" | "reassignment" | "rebirth" | "unassigned_letter";
                 /** @description 与 kind 同用:从第几条起,默认 0 */
                 offset?: number;
             };

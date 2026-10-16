@@ -36,6 +36,68 @@ class TodoSerializer(serializers.Serializer):
     cooldowns = TodoGroupSerializer()
     rebirths = TodoGroupSerializer()
     letters = TodoGroupSerializer(help_text="待回书信:标给我、灵魂最后一封还没回的(最早在前)。需 `soul_inbox.reply`。")
+    unassigned_letters = TodoGroupSerializer(
+        help_text="未分配的书信:同一个「待回复」里还没人经办的(最早在前)。需 `soul_inbox.reply`;不计入角标与推送数。")
+
+
+class FactHallSerializer(serializers.Serializer):
+    code = serializers.CharField()
+    display_name = serializers.CharField()
+
+
+class FactNodeSerializer(serializers.Serializer):
+    name = serializers.CharField()
+    index = serializers.IntegerField(help_text="第几步(只数需要人决定的节点)。")
+    total = serializers.IntegerField()
+    is_last = serializers.BooleanField(
+        allow_null=True, help_text="批准后流程是否结束。null = 有条件分支、无从判断:App 用通用的一句。")
+    next_name = serializers.CharField(allow_null=True, help_text="批准后交给的节点;最后一步或不确定时为 null。")
+
+
+class FactHistorySerializer(serializers.Serializer):
+    kind = serializers.ChoiceField(choices=["start", "decided", "current"])
+    name = serializers.CharField(allow_blank=True)
+    actor = serializers.CharField(allow_null=True)
+    verdict = serializers.CharField(allow_blank=True, help_text="`workflow.verdicts.*` 的码;发起与当前节点为空。")
+    comment = serializers.CharField(allow_blank=True)
+    at = serializers.DateTimeField(allow_null=True)
+    mine = serializers.BooleanField(help_text="当前节点轮到调用者。")
+
+
+class FactAttachmentSerializer(serializers.Serializer):
+    id = serializers.CharField()
+    name = serializers.CharField()
+    content_type = serializers.CharField(help_text="image/png、image/jpeg 或 application/pdf。")
+    byte_size = serializers.IntegerField()
+    url = serializers.CharField(help_text="站点根相对路径,签名 10 分钟(`/api/v1/case-attachments/<id>/?t=…`)。")
+
+
+class FactSoulSerializer(serializers.Serializer):
+    name = serializers.CharField()
+    soul_code = serializers.CharField()
+
+
+class TodoFactsSerializer(serializers.Serializer):
+    """O-01:批准前要看清的申请内容。按类给字段,没有的不出现。"""
+
+    node = FactNodeSerializer(required=False)
+    requester = serializers.CharField(required=False, allow_null=True)
+    requester_hall = FactHallSerializer(required=False, allow_null=True)
+    requested_at = serializers.DateTimeField(required=False, allow_null=True)
+    deadline = serializers.DateTimeField(required=False, allow_null=True, help_text="当前节点的时限;没设为 null。")
+    reason = serializers.CharField(required=False, allow_blank=True)
+    history = FactHistorySerializer(many=True, required=False)
+    attachments = FactAttachmentSerializer(many=True, required=False)
+    from_hall = FactHallSerializer(required=False, allow_null=True)
+    to_hall = FactHallSerializer(required=False, allow_null=True)
+    souls = FactSoulSerializer(many=True, required=False)
+    soul_count = serializers.IntegerField(required=False)
+    soul = FactSoulSerializer(required=False)
+    cycle = serializers.IntegerField(required=False, help_text="仅转生:第几世。")
+    desired_form = serializers.CharField(required=False, help_text="仅转生:期望去向(`reincarnation.forms.*`)。")
+    merit_balance = serializers.IntegerField(required=False, help_text="仅转生:功过结余 = 功 − 过。")
+    cooldown_now_days = serializers.IntegerField(required=False, help_text="仅缩短冷却:现在还剩几天。")
+    cooldown_asked_days = serializers.IntegerField(required=False, allow_null=True, help_text="仅缩短冷却:申请改成剩几天。")
 
 
 class HandledBySerializer(serializers.Serializer):
@@ -57,6 +119,7 @@ class TodoItemDetailSerializer(serializers.Serializer):
     handled_at = serializers.DateTimeField(allow_null=True)
     soul_code = serializers.CharField(required=False, help_text="仅转生申请:此时 `title` 是灵魂名,灵魂码作副行。")
     is_appeal = serializers.BooleanField(required=False, help_text="仅转生申请:是否申诉(客户端据此选标题措辞)。")
+    facts = TodoFactsSerializer(required=False, help_text="申请内容(O-01):节点、对象字段、事由、前面几步、附件。")
     workflow_id = serializers.CharField(required=False, help_text="审批节点与转生申请:决定走 workflows/<id>/approve_node/。")
     node_id = serializers.CharField(required=False, help_text="待决的节点;决定时作为 node_id 传回。")
     required_verdicts = serializers.ListField(
