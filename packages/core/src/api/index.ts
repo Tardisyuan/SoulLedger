@@ -163,7 +163,7 @@ export {
 export { menusApi, menuButtonsApi, type MenuItem, type MenuButton } from "./menus";
 
 // Audit
-export { auditApi, loginLogsApi, type AuditLogDetail, type AuditLogEntry, type LoginLogEntry, type LoginLogStatus } from "./audit";
+export { auditApi, loginLogsApi, type AuditActionOption, type AuditLogDetail, type AuditLogEntry, type LoginLogEntry, type LoginLogStatus } from "./audit";
 
 // Tenants
 export { tenantsApi, REBIRTH_COOLDOWN_SETTING, MFA_REQUIRED_ROLES_SETTING, type Tenant, type TenantSettingsPatch, type TenantMfaRoleRow } from "./tenants";
