@@ -18253,17 +18253,18 @@ paths:
     get:
       operationId: v1_souls_export_retrieve
       description: |-
-        批量条「导出」:所选灵魂的 CSV,一行一个。
+        所选灵魂(`ids`,批量条)或列表当前筛选下的全部灵魂(不带 `ids`,列表页「导出 CSV」)的 CSV。
 
         范围就是列表的范围 —— 行取自 `get_queryset()`(租户、DataScope、未删除、未归档),
-        所以一个够不着的 id 只是不在文件里,与它根本不存在答同一件事。自由文本格过 `csv_safe`。
+        所以一个够不着的 id 只是不在文件里,与它根本不存在答同一件事。不带 `ids` 时再过
+        `filter_queryset`,与列表同一组筛选、搜索与排序;超过 `EXPORT_MAX_ROWS` 行是 400,
+        不截断(`apps/core/exports.py`)。自由文本格过 `csv_safe`。
       parameters:
       - in: query
         name: ids
         schema:
           type: string
-        description: 逗号分隔的灵魂 id(UUID),至多 100 个
-        required: true
+        description: 逗号分隔的灵魂 id(UUID),至多 100 个;不传则导出列表当前筛选下的全部行
       tags:
       - v1
       security:
@@ -19419,32 +19420,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/PaginatedApprovalWorkflowListList'
           description: ''
-    post:
-      operationId: v1_workflows_create
-      description: ApprovalWorkflow CRUD + node actions.
-      tags:
-      - v1
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ApprovalWorkflow'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/ApprovalWorkflow'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/ApprovalWorkflow'
-        required: true
-      security:
-      - jwtAuth: []
-      responses:
-        '201':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApprovalWorkflow'
-          description: ''
   /api/v1/workflows/{id}/:
     get:
       operationId: v1_workflows_retrieve
@@ -19698,6 +19673,112 @@ paths:
               schema:
                 $ref: '#/components/schemas/WorkflowStats'
           description: ''
+  /api/v1/workflows/case-types/:
+    get:
+      operationId: v1_workflows_case_types_list
+      description: |-
+        The case types `start` accepts for a civilization (`VALID_CASE_TYPES_BY_CIVILIZATION`), in
+        `CaseType` declaration order. Labels are the client's (`workflow.case_types.*` in the language packs).
+      parameters:
+      - in: query
+        name: case_type
+        schema:
+          type: string
+      - in: query
+        name: civilization
+        schema:
+          type: string
+        description: 文明代码;与 soul 二选一
+      - in: query
+        name: created_after
+        schema:
+          type: string
+          format: date-time
+      - in: query
+        name: created_before
+        schema:
+          type: string
+          format: date-time
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - in: query
+        name: overdue
+        schema:
+          type: boolean
+      - in: query
+        name: priority_max
+        schema:
+          type: integer
+      - in: query
+        name: priority_min
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      - in: query
+        name: soul
+        schema:
+          type: string
+        description: 灵魂 uuid,取其文明;与 civilization 二选一
+      - in: query
+        name: soul_name
+        schema:
+          type: string
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - APPEAL
+          - APPROVED
+          - COMPLETED
+          - EXCEPTION
+          - IN_PROGRESS
+          - PENDING
+          - REJECTED
+        description: |-
+          * `PENDING` - 待审批
+          * `IN_PROGRESS` - 审批中
+          * `APPROVED` - 已批准
+          * `REJECTED` - 已拒绝
+          * `APPEAL` - 申诉中
+          * `EXCEPTION` - 异常处理
+          * `COMPLETED` - 流程完成
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WorkflowCaseType'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
   /api/v1/workflows/create_from_judgment/:
     post:
       operationId: v1_workflows_create_from_judgment_create
@@ -19744,6 +19825,57 @@ paths:
                 format: binary
           description: ''
         '400':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/v1/workflows/start/:
+    post:
+      operationId: v1_workflows_start_create
+      description: |-
+        Start an approval workflow for any soul, with a written reason (W-11).
+
+        Same template resolution, nodes and events as `create_from_judgment`; `judgment` is optional.
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkflowStart'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/WorkflowStart'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/WorkflowStart'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApprovalWorkflow'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+        '409':
           content:
             application/json:
               schema:
@@ -39148,6 +39280,22 @@ components:
       - create_time
       - id
       - url
+    WorkflowCaseType:
+      type: object
+      description: |-
+        One row of `GET /workflows/case-types/`: a case type the civilization admits.
+
+        `builtin` = a built-in flow exists for the pair (`WORKFLOW_TEMPLATES`). False means that, without a
+        stored template of the hall's own, the workflow gets the generic one-node 审批节点 flow
+        (`WorkflowService._generic_template`).
+      properties:
+        value:
+          type: string
+        builtin:
+          type: boolean
+      required:
+      - builtin
+      - value
     WorkflowNodeAction:
       type: object
       description: Serializer for node approval action.
@@ -39166,6 +39314,37 @@ components:
           maxLength: 2000
       required:
       - verdict
+    WorkflowStart:
+      type: object
+      description: |-
+        Body of `POST /workflows/start/` (W-11: 官员为任一灵魂手动发起审批).
+
+        Shape only. Which soul / template the caller may reach, and whether the
+        pair is valid for the soul's civilization, is the view's and the service's
+        job — those need the request's tenant.
+      properties:
+        soul:
+          type: string
+          format: uuid
+        case_type:
+          type: string
+          maxLength: 50
+        template:
+          type: string
+          format: uuid
+        priority:
+          type: integer
+          maximum: 2
+          minimum: 0
+        reason:
+          type: string
+          maxLength: 1000
+        judgment:
+          type: string
+          format: uuid
+      required:
+      - reason
+      - soul
     WorkflowStats:
       type: object
       description: |-

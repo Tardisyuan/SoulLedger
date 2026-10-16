@@ -8423,10 +8423,12 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * @description 批量条「导出」:所选灵魂的 CSV,一行一个。
+         * @description 所选灵魂(`ids`,批量条)或列表当前筛选下的全部灵魂(不带 `ids`,列表页「导出 CSV」)的 CSV。
          *
          *     范围就是列表的范围 —— 行取自 `get_queryset()`(租户、DataScope、未删除、未归档),
-         *     所以一个够不着的 id 只是不在文件里,与它根本不存在答同一件事。自由文本格过 `csv_safe`。
+         *     所以一个够不着的 id 只是不在文件里,与它根本不存在答同一件事。不带 `ids` 时再过
+         *     `filter_queryset`,与列表同一组筛选、搜索与排序;超过 `EXPORT_MAX_ROWS` 行是 400,
+         *     不截断(`apps/core/exports.py`)。自由文本格过 `csv_safe`。
          */
         get: operations["v1_souls_export_retrieve"];
         put?: never;
@@ -8967,8 +8969,7 @@ export interface paths {
         /** @description ApprovalWorkflow CRUD + node actions. */
         get: operations["v1_workflows_list"];
         put?: never;
-        /** @description ApprovalWorkflow CRUD + node actions. */
-        post: operations["v1_workflows_create"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -9082,6 +9083,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/workflows/case-types/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description The case types `start` accepts for a civilization (`VALID_CASE_TYPES_BY_CIVILIZATION`), in
+         *     `CaseType` declaration order. Labels are the client's (`workflow.case_types.*` in the language packs).
+         */
+        get: operations["v1_workflows_case_types_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/workflows/create_from_judgment/": {
         parameters: {
             query?: never;
@@ -9113,6 +9134,27 @@ export interface paths {
         get: operations["v1_workflows_export_retrieve"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workflows/start/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Start an approval workflow for any soul, with a written reason (W-11).
+         *
+         *     Same template resolution, nodes and events as `create_from_judgment`; `judgment` is optional.
+         */
+        post: operations["v1_workflows_start_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -18298,6 +18340,17 @@ export interface components {
             /** Format: date-time */
             readonly create_time: string;
         };
+        /**
+         * @description One row of `GET /workflows/case-types/`: a case type the civilization admits.
+         *
+         *     `builtin` = a built-in flow exists for the pair (`WORKFLOW_TEMPLATES`). False means that, without a
+         *     stored template of the hall's own, the workflow gets the generic one-node 审批节点 flow
+         *     (`WorkflowService._generic_template`).
+         */
+        WorkflowCaseType: {
+            value: string;
+            builtin: boolean;
+        };
         /** @description Serializer for node approval action. */
         WorkflowNodeAction: {
             verdict: components["schemas"]["NodeDecisionVerdictEnum"];
@@ -18307,6 +18360,24 @@ export interface components {
             require_reason: boolean;
             /** @default  */
             rejection_reason_for_soul: string;
+        };
+        /**
+         * @description Body of `POST /workflows/start/` (W-11: 官员为任一灵魂手动发起审批).
+         *
+         *     Shape only. Which soul / template the caller may reach, and whether the
+         *     pair is valid for the soul's civilization, is the view's and the service's
+         *     job — those need the request's tenant.
+         */
+        WorkflowStart: {
+            /** Format: uuid */
+            soul: string;
+            case_type?: string;
+            /** Format: uuid */
+            template?: string;
+            priority?: number;
+            reason: string;
+            /** Format: uuid */
+            judgment?: string;
         };
         /**
          * @description The dict `WorkflowService.get_workflow_stats` builds.
@@ -33571,9 +33642,9 @@ export interface operations {
     };
     v1_souls_export_retrieve: {
         parameters: {
-            query: {
-                /** @description 逗号分隔的灵魂 id(UUID),至多 100 个 */
-                ids: string;
+            query?: {
+                /** @description 逗号分隔的灵魂 id(UUID),至多 100 个;不传则导出列表当前筛选下的全部行 */
+                ids?: string;
             };
             header?: never;
             path?: never;
@@ -34500,31 +34571,6 @@ export interface operations {
             };
         };
     };
-    v1_workflows_create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ApprovalWorkflow"];
-                "application/x-www-form-urlencoded": components["schemas"]["ApprovalWorkflow"];
-                "multipart/form-data": components["schemas"]["ApprovalWorkflow"];
-            };
-        };
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApprovalWorkflow"];
-                };
-            };
-        };
-    };
     v1_workflows_retrieve: {
         parameters: {
             query?: never;
@@ -34730,6 +34776,71 @@ export interface operations {
             };
         };
     };
+    v1_workflows_case_types_list: {
+        parameters: {
+            query?: {
+                case_type?: string;
+                /** @description 文明代码;与 soul 二选一 */
+                civilization?: string;
+                created_after?: string;
+                created_before?: string;
+                /** @description Which field to use when ordering the results. */
+                ordering?: string;
+                overdue?: boolean;
+                priority_max?: number;
+                priority_min?: number;
+                /** @description A search term. */
+                search?: string;
+                /** @description 灵魂 uuid,取其文明;与 civilization 二选一 */
+                soul?: string;
+                soul_name?: string;
+                /**
+                 * @description * `PENDING` - 待审批
+                 *     * `IN_PROGRESS` - 审批中
+                 *     * `APPROVED` - 已批准
+                 *     * `REJECTED` - 已拒绝
+                 *     * `APPEAL` - 申诉中
+                 *     * `EXCEPTION` - 异常处理
+                 *     * `COMPLETED` - 流程完成
+                 */
+                status?: "APPEAL" | "APPROVED" | "COMPLETED" | "EXCEPTION" | "IN_PROGRESS" | "PENDING" | "REJECTED";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkflowCaseType"][];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
     v1_workflows_create_from_judgment_create: {
         parameters: {
             query?: never;
@@ -34773,6 +34884,61 @@ export interface operations {
                 };
             };
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    v1_workflows_start_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkflowStart"];
+                "application/x-www-form-urlencoded": components["schemas"]["WorkflowStart"];
+                "multipart/form-data": components["schemas"]["WorkflowStart"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApprovalWorkflow"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
