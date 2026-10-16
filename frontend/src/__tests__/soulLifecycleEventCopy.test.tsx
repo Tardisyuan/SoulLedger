@@ -28,6 +28,7 @@ import {
   makeSystemEventLabels,
 } from "@/src/components/souls/soulLifecycleRows";
 import type { SoulEvent } from "@soulledger/core/api/events";
+import { BACKEND_EVENT_TYPES } from "@/lib/events/event_registry";
 
 const MESSAGES_DIR = path.join(__dirname, "..", "..", "..", "packages", "core", "messages");
 const LOCALES = ["zh-Hans", "en", "egy"] as const;
@@ -182,6 +183,35 @@ describe("bundle parity", () => {
       for (const type of MIGRATED_EVENT_TYPES) {
         expect(keys.has(`souls.events.${type}`)).toBe(true);
       }
+    }
+  });
+
+  it("labels every event type a soul's timeline can hold, in zh-Hans and en", () => {
+    // Against the backend mirror, not a hand list: `test_frontend_event_types_track_the_backend.py`
+    // keeps BACKEND_EVENT_TYPES equal to EventType, so a new member reaches this test without
+    // anyone remembering it. Left out, each for a stated reason:
+    //   NOTIFICATION_CREATED / SCHEDULER_RUN_FAILED — no soul, never stored as a SoulEvent (models.py);
+    //   the nine social events — about posts and follows, nothing writes them onto a soul.
+    // egy is checked by the parity test above (pending keys read as zh-Hans).
+    const NOT_ON_A_SOUL_TIMELINE = new Set<string>([
+      "NOTIFICATION_CREATED",
+      "SCHEDULER_RUN_FAILED",
+      "POST_CREATED",
+      "POST_UPDATED",
+      "POST_DELETED",
+      "COMMENT_CREATED",
+      "COMMENT_DELETED",
+      "REACTION_ADDED",
+      "REACTION_REMOVED",
+      "USER_FOLLOWED",
+      "USER_UNFOLLOWED",
+    ]);
+    const stored = BACKEND_EVENT_TYPES.filter((type) => !NOT_ON_A_SOUL_TIMELINE.has(type));
+    expect(stored.length).toBeGreaterThan(30);
+    for (const locale of ["zh-Hans", "en"] as const) {
+      const keys = new Set(flatten(bundle(locale)));
+      const missing = stored.filter((type) => !keys.has(`souls.events.${type}`));
+      expect({ locale, missing }).toEqual({ locale, missing: [] });
     }
   });
 
