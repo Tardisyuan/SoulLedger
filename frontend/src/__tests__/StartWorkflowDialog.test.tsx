@@ -6,7 +6,9 @@
  * 每一种拒绝映射到哪句话、哪一格加粗,改了那一格提示就消失;只有 duplicate 带「去看那条」;
  * 理由为空不出提示条;成功跳到新审批并报 toast。
  *
- * `t` 回显键,带参数时写成 `key(值,值)`,所以断言里看得到插进去的是什么。
+ * `t` 回显键,带参数时写成 `key(值,值)`,所以断言里看得到插进去的是什么。枚举名(文明、案件类型)例外:
+ * `resolveEnumDisplay` 把「回显键」当作没译,会给出 `common.value.unrecognized`,所以这几个键给真译名 ——
+ * 断言因此也守住了「插进去的是译名,不是原值」。
  */
 import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -19,8 +21,13 @@ jest.mock("next/navigation", () => ({ useRouter: () => ({ push: mockPush }) }));
 const mockToast = jest.fn();
 jest.mock("@/src/contexts/ToastContext", () => ({ useToast: () => ({ showToast: mockToast }) }));
 
+const mockLabels: Record<string, string> = {
+  "souls.civilizations.CHINESE": "中国",
+  "workflow.case_types.ROUTINE": "常规审判",
+  "workflow.case_types.SPECIAL": "特案审判",
+};
 const mockT = (key: string, params?: Record<string, string>) =>
-  params ? `${key}(${Object.values(params).join(",")})` : key;
+  params ? `${key}(${Object.values(params).join(",")})` : (mockLabels[key] ?? key);
 jest.mock("@/src/contexts/I18nContext", () => ({
   ...jest.requireActual("@/src/contexts/I18nContext"),
   useI18n: () => ({ t: mockT, tf: (_k: string, f: string) => f, locale: "en", hydrated: true }),
@@ -111,7 +118,9 @@ describe("StartWorkflowDialog — 灵魂与依赖", () => {
     renderDialog();
     expect(screen.queryByRole("combobox", { name: /workflow\.start\.soul/ })).not.toBeInTheDocument();
     expect(screen.getByText("周阿满")).toBeInTheDocument();
-    expect(screen.getByText("souls.civilizations.CHINESE · plaque.office.court.cn")).toBeInTheDocument();
+    const placeText = document.querySelector("[data-soul-place]");
+    expect(placeText).toHaveTextContent("中国 · plaque.office.court.cn");
+    expect(within(placeText as HTMLElement).getByTitle("CHINESE")).toHaveTextContent("中国");
     await waitFor(() => expect(mockCaseTypes).toHaveBeenCalledWith({ soul: "soul-1" }));
   });
 
@@ -123,12 +132,12 @@ describe("StartWorkflowDialog — 灵魂与依赖", () => {
 
     fireEvent.change(screen.getByLabelText(/workflow\.start\.soul/), { target: { value: "周" } });
     await waitFor(() => expect(mockSoulsList).toHaveBeenCalledWith({ page: 1, search: "周" }));
-    const option = await screen.findByRole("option", { name: "周阿满 · souls.civilizations.CHINESE · plaque.office.court.cn" });
+    const option = await screen.findByRole("option", { name: "周阿满 · 中国 · plaque.office.court.cn" });
     fireEvent.click(option);
 
     await waitFor(() => expect(mockCaseTypes).toHaveBeenCalledWith({ soul: "soul-1" }));
     await waitFor(() => expect(caseTypeSelect()).toBeEnabled());
-    expect(within(caseTypeSelect()).getByRole("option", { name: "workflow.case_types.ROUTINE" })).toBeInTheDocument();
+    expect(within(caseTypeSelect()).getByRole("option", { name: "常规审判" })).toBeInTheDocument();
   });
 
   it("关联审判只列这个灵魂的;已有审批的置灰并标「已有审批」", async () => {
@@ -155,7 +164,7 @@ describe("StartWorkflowDialog — 模板", () => {
   it("没有可用的存好的模板:只写一行 template_only,名字是案件类型,不出下拉", async () => {
     renderDialog();
     await pickCaseType();
-    expect(screen.getByText("workflow.start.template_only(workflow.case_types.ROUTINE)")).toBeInTheDocument();
+    expect(screen.getByText("workflow.start.template_only(常规审判)")).toBeInTheDocument();
     expect(screen.queryByLabelText(/workflow\.detail\.template/)).not.toBeInTheDocument();
   });
 
@@ -256,7 +265,7 @@ describe("StartWorkflowDialog — 结果", () => {
     });
     const { onClose } = renderDialog();
     await fillAndSubmit();
-    const alert = await screen.findByText("workflow.start.errors.duplicate(workflow.case_types.ROUTINE,abcdef12)");
+    const alert = await screen.findByText("workflow.start.errors.duplicate(常规审判,abcdef12)");
     expect(reasonBox().value).toBe("复核");
     expect(caseTypeSelect().value).toBe("ROUTINE");
     expect(caseTypeSelect().closest("[data-field]")?.className).toContain("[&_select]:border-2");
@@ -306,7 +315,7 @@ describe("startWorkflowRefusal — 每个错误码对应哪句话、哪一格", 
 
   it("400 invalid_case_type → case_type_civ,插的是文明的名字(需要调用方给出灵魂的文明)", () => {
     const r = startWorkflowRefusal({ response: { status: 400, data: { code: "invalid_case_type" } } }, mockT, "CHINESE");
-    expect(r).toEqual({ message: "workflow.start.errors.case_type_civ(souls.civilizations.CHINESE)", field: "case_type" });
+    expect(r).toEqual({ message: "workflow.start.errors.case_type_civ(中国)", field: "case_type" });
   });
 
   it("没有响应(网络断了)→ failed", () => {
