@@ -10469,6 +10469,7 @@ export interface components {
             readonly error_code: string;
             readonly error_message: string;
             readonly retry_count: number;
+            readonly max_retries: number;
             /** Format: date-time */
             readonly request_timestamp: string;
             readonly processing_duration_ms: number | null;

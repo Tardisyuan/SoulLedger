@@ -4,13 +4,13 @@
  * status filter: it lives in `?status=`, so the dashboard's 「死亡同步异常」 cell
  * can link straight to it.
  */
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import DeathSyncPage from "@/app/death-sync/page";
 import { deathSyncApi } from "@soulledger/core/api";
 
 jest.mock("@soulledger/core/api", () => ({
-  deathSyncApi: { registrations: jest.fn(), summary: jest.fn() },
+  deathSyncApi: { registrations: jest.fn(), summary: jest.fn(), retry: jest.fn() },
   // The page derives `totalPages` from this; a mock without it is NaN pages.
   PAGE_SIZE: 20,
 }));
@@ -157,5 +157,78 @@ describe("death registration status filter", () => {
     await screen.findByText("Registry 101");
     await waitFor(() => expect(mockSummary).toHaveBeenCalled());
     expect(screen.queryByTestId("death-sync-anomalies")).not.toBeInTheDocument();
+  });
+});
+
+/*
+ * W-12 (user decision 2026-10-16): retry only for INTERNAL_ERROR, under the
+ * row's max_retries. Every other failure keeps no button but stays on screen:
+ * the reason as a translated enum (raw code in `title`) and the server's text.
+ */
+describe("death registration retry", () => {
+  const failed = (id: string, error_code: string, extra: Record<string, unknown> = {}) => ({
+    ...row(0),
+    id,
+    source_system: `Registry ${id}`,
+    status: "FAILED",
+    error_code,
+    error_message: `detail ${id}`,
+    retry_count: 0,
+    max_retries: 3,
+    ...extra,
+  });
+
+  function withRows(rows: unknown[]) {
+    mockGet.mockResolvedValue({ data: { count: rows.length, next: null, previous: null, results: rows } });
+  }
+
+  const rowOf = (name: string) => screen.getByText(name).closest("tr") as HTMLElement;
+
+  it("offers retry on INTERNAL_ERROR only, and shows the other failures' reason and detail", async () => {
+    withRows([
+      failed("a", "INTERNAL_ERROR"),
+      failed("b", "SOUL_NOT_FOUND"),
+      failed("c", "SOUL_NOT_ALIVE"),
+      failed("d", "INVALID_TRANSITION"),
+      failed("e", "INTERNAL_ERROR", { retry_count: 3 }),
+    ]);
+    renderPage();
+    await screen.findByText("Registry a");
+
+    expect(within(rowOf("Registry a")).getByRole("button", { name: "death_sync.retry.action" })).toBeInTheDocument();
+    for (const [id, code] of [["b", "SOUL_NOT_FOUND"], ["c", "SOUL_NOT_ALIVE"], ["d", "INVALID_TRANSITION"]]) {
+      const r = rowOf(`Registry ${id}`);
+      expect(within(r).queryByRole("button", { name: "death_sync.retry.action" })).toBeNull();
+      expect(within(r).getByTitle(code)).toBeInTheDocument();
+      expect(within(r).getByText(`detail ${id}`)).toBeInTheDocument();
+    }
+    // At the limit: no button, and the count says why.
+    const spent = rowOf("Registry e");
+    expect(within(spent).queryByRole("button", { name: "death_sync.retry.action" })).toBeNull();
+    expect(within(spent).getByText("death_sync.retry.count:3,3")).toBeInTheDocument();
+  });
+
+  it("no retry button on a row that did not fail", async () => {
+    withRows([{ ...row(1), error_code: "", retry_count: 0, max_retries: 3 }]);
+    renderPage();
+    await screen.findByText("Registry 1");
+    expect(screen.queryByRole("button", { name: "death_sync.retry.action" })).toBeNull();
+  });
+
+  it("confirms, then posts the retry for that row and refetches", async () => {
+    withRows([failed("a", "INTERNAL_ERROR")]);
+    (deathSyncApi.retry as jest.Mock).mockResolvedValue({ data: failed("a", "", { status: "PROCESSED" }) });
+    renderPage();
+    await screen.findByText("Registry a");
+    const calls = mockGet.mock.calls.length;
+
+    fireEvent.click(within(rowOf("Registry a")).getByRole("button", { name: "death_sync.retry.action" }));
+    const dialog = await screen.findByRole("alertdialog");
+    expect(deathSyncApi.retry).not.toHaveBeenCalled();
+    fireEvent.click(within(dialog).getByRole("button", { name: "death_sync.retry.action" }));
+
+    await waitFor(() => expect(deathSyncApi.retry).toHaveBeenCalledWith("a"));
+    expect(deathSyncApi.retry).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(mockGet.mock.calls.length).toBeGreaterThan(calls));
   });
 });

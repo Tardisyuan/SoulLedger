@@ -287,6 +287,26 @@ class DeathRegistrationReadViewSet(viewsets.ReadOnlyModelViewSet):
             "anomaly_count": self.get_queryset().filter(status=anomaly).count(),
         })
 
+    @extend_schema(request=None, responses=DeathRegistrationRequestSerializer)
+    @action(detail=True, methods=["post"])
+    def retry(self, request, pk=None):
+        """Rerun a registration that failed with INTERNAL_ERROR (W-12).
+
+        409 with `code` NOT_FAILED / NOT_RETRYABLE / MAX_RETRIES otherwise.
+        `get_object()` first, so another tenant's id is a 404 like a read.
+        """
+        from apps.death_sync.services import DeathSyncService, RetryRefused
+
+        registration = self.get_object()
+        try:
+            result = DeathSyncService.retry_failed(registration.pk, registration.tenant)
+        except RetryRefused as exc:
+            return Response(
+                {"error": "Registration cannot be retried", "code": exc.code},
+                status=status.HTTP_409_CONFLICT,
+            )
+        return Response(self.get_serializer(result).data)
+
     def get_queryset(self):
         # `admin_bypass=False`: an ADMIN sees their own tenant's registrations,
         # not everyone's. `apps/core/tenant.py` does name ADMIN as the globally
