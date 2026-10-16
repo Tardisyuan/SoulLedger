@@ -301,7 +301,24 @@
       "DISPATCH_EXECUTED": "Hab-Ba Iri Seth",
       "DISPATCH_STATUS_CHANGED": "Kheperu Hab-Ba Khemen",
       "DEATH_SYNC_RECEIVED": "Medu Mut Shesep",
-      "DEATH_SYNC_PROCESSED": "Medu Mut Iri Seth"
+      "DEATH_SYNC_PROCESSED": "Medu Mut Iri Seth",
+      "SOUL_ACCOUNT_CREATED": "Aq Ba Iri Seth",
+      "SOUL_ACCOUNT_RETIRED": "Aq Ba Khetem Seth",
+      "REBIRTH_APPLICATION_SUBMITTED": "Dbh Wehem Mesut Hab Seth",
+      "REBIRTH_STATUS_CHANGED": "Kheperu Dbh Wehem Mesut Khemen",
+      "REBIRTH_CROSS_CIV_DECIDED": "Wehem Mesut Taui Ky Wedja Seth",
+      "COOLDOWN_SHORTENING_DECIDED": "Khebi Ahet Qebeh Wedja Seth",
+      "SENTENCE_PLAN_CREATED": "Sesh Wetep Iri Seth",
+      "SENTENCE_NODE_ACTIVATED": "Sekhet Wetep Tepy Seth",
+      "SENTENCE_NODE_WAITING": "Sekhet Wetep · Ba Nen Iyi Djer",
+      "SENTENCE_NODE_COMPLETED": "Sekhet Wetep Khetem Seth",
+      "SENTENCE_NODE_REFUSED": "Hab-Ba Sekhet Wetep Khesef",
+      "SENTENCE_NODE_REDISPATCHED": "Wehem Hab-Ba Sekhet Wetep",
+      "SENTENCE_PLAN_AMENDED": "Sesh Wetep Khemen Seth",
+      "SENTENCE_REQUEST_CREATED": "Dbh Wetep Hab Seth",
+      "SENTENCE_REQUEST_DECIDED": "Dbh Wetep Wedja Seth",
+      "SENTENCE_PLAN_COMPLETED": "Sesh Wetep Khetem Seth",
+      "SENTENCE_PLAN_CANCELLED": "Sesh Wetep Sehen Seth"
     },
     "civilizations": {
       "CHINESE": "Sherer",
@@ -1959,6 +1976,14 @@
       "field": "Medu",
       "before": "Tepy",
       "after": "Mawy"
+    },
+    "resources": {
+      "soul": "Ba",
+      "user": "Remetj",
+      "workflow": "Wat Hesy",
+      "judgment": "Wedja",
+      "soulrecord": "Sesh Nefer Hena Isfet",
+      "permission": "Was"
     }
   },
   "profile": {
