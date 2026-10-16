@@ -6,11 +6,18 @@
  * the width once, right after navigating, and sometimes caught the skeleton.
  *
  * Rule: in a `loading.tsx`, a fixed width of 20rem (`w-80`) or more must carry `max-w-full`.
+ *
+ * 2026-10-16: the same flake came back. Most routes' `loading.tsx` only renders a shared skeleton from
+ * `components/ui/page-skeletons.tsx`, and that file's `h-6 w-96` bar had no cap — this guard never read it.
+ * The shared skeleton modules are now read too.
  */
 import { readFileSync, readdirSync, statSync } from "fs";
 import { join } from "path";
 
 const APP = join(__dirname, "..", "..", "app");
+const FRONTEND = join(__dirname, "..", "..");
+// What the loading.tsx files render; a bar here is on screen for the same frames.
+const SHARED = ["components/ui/page-skeletons.tsx", "components/ui/skeleton.tsx"].map((p) => join(FRONTEND, p));
 const WIDE = /\bw-(80|96|\[\d{3,}px\])(?![\w-])/;
 
 function loadingFiles(dir: string): string[] {
@@ -22,7 +29,7 @@ function loadingFiles(dir: string): string[] {
 }
 
 describe("loading screens fit a 393 px phone", () => {
-  const files = loadingFiles(APP);
+  const files = [...loadingFiles(APP), ...SHARED];
 
   it("finds the loading screens it is meant to read", () => {
     expect(files.length).toBeGreaterThan(10);
@@ -32,7 +39,7 @@ describe("loading screens fit a 393 px phone", () => {
     const offenders = files.flatMap((file) =>
       readFileSync(file, "utf8")
         .split("\n")
-        .map((line, i) => ({ line, where: `${file.slice(APP.length + 1)}:${i + 1}` }))
+        .map((line, i) => ({ line, where: `${file.slice(FRONTEND.length + 1)}:${i + 1}` }))
         .filter(({ line }) => /className=/.test(line) && WIDE.test(line) && !/\bmax-w-full\b/.test(line))
         .map(({ where }) => where),
     );
