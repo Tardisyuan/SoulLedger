@@ -141,6 +141,8 @@ class Judgment(ArchivableMixin, AuditUserFields, models.Model):
     )
     evidence_json = models.JSONField(default=dict)
     confession = models.TextField(blank=True)
+    # 案由:官员写的一两句案情概述(官员端「案由」一段读它)。**不是 `confession`**——后者是灵魂的供词。
+    summary = models.TextField(blank=True, default="")
     judgment_method = models.CharField(
         max_length=30,
         choices=JudgmentMethod.choices,
@@ -233,6 +235,17 @@ class Judgment(ArchivableMixin, AuditUserFields, models.Model):
         related_name="deferred_judgments",
     )
     defer_reason = models.CharField(max_length=500, blank=True, default="")
+    # 「请管理员改派」的持久标记(`claims.request_reassign` 写,改派 / 释放 / 认领时清)。
+    # 此前只有 10 分钟的限流缓存,官员端重开就忘了「已请求」。
+    reassign_requested_at = models.DateTimeField(null=True, blank=True)
+    reassign_requested_by = models.ForeignKey(
+        "authentication.User",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="reassign_requested_judgments",
+    )
+    reassign_reason = models.CharField(max_length=500, blank=True, default="")
 
     class Meta:
         ordering = ["-created_at"]

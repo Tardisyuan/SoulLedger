@@ -42,6 +42,13 @@ describe("judgmentActionState", () => {
     expect(judgmentActionState({ claimed_by: ME, is_final: true, deferred_at: "x" }, ME, true)).toBe("deferred");
   });
 
+  it("a request the server remembers shows as reassign after a reopen, with no local flag", () => {
+    const j = { claimed_by: ME, is_final: true, reassign_requested_at: "2026-10-16T00:00:00Z" };
+    expect(judgmentActionState(j, ME, false)).toBe("reassign");
+    expect(judgmentActionState({ ...j, deferred_at: "x" }, ME, false)).toBe("deferred");
+    expect(judgmentActionState({ ...j, reassign_requested_at: null }, ME, false)).toBe("mine");
+  });
+
   it("puts 放回 last, and offers nothing in the read-only states", () => {
     expect(judgmentMoreItems("mine")).toEqual(["defer", "request_reassign", "release"]);
     expect(judgmentMoreItems("deferred")).toEqual(["release"]);
