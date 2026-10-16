@@ -593,7 +593,7 @@ export interface paths {
         /**
          * @description GET /api/v1/audit-logs/stats/
          *     Returns statistics about audit logs.
-         *     Requires ADMIN role.
+         *     Same `audit.read` gate and hall scoping as the list.
          */
         get: operations["v1_audit_logs_stats_retrieve"];
         put?: never;

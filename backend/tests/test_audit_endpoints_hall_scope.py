@@ -72,10 +72,25 @@ def test_stats_global_admin_counts_every_hall_bound_admin_only_their_own(global_
     assert {r["action"] for r in body["action_distribution"]} == {"CREATE", "UPDATE"}
 
 
-def test_stats_stays_closed_to_non_admins(halls):
+def test_stats_is_open_to_a_moderator_and_counts_only_their_hall(halls):
+    """`stats` follows `audit.read` like the list (2026-10-17): a MODERATOR holds it, so 200 -- with the
+    same hall scoping as the list, so none of EG's rows are counted."""
     cn, _ = halls
     mod = _client(User.objects.create_user(username="m", password="x", role="MODERATOR", tenant=cn), cn)
-    assert mod.get(BASE + "stats/").status_code == 403
+    res = mod.get(BASE + "stats/")
+    assert res.status_code == 200, res.content
+    body = res.json()
+    assert body["total_logs"] == 2
+    assert {r["resource"] for r in body["top_resources"]} == {"soul", "role"}
+    assert {r["action"] for r in body["action_distribution"]} == {"CREATE", "UPDATE"}
+    assert "statute" not in res.content.decode()
+    assert "DELETE" not in res.content.decode()
+
+
+def test_stats_stays_closed_without_audit_read(halls):
+    cn, _ = halls
+    viewer = _client(User.objects.create_user(username="v", password="x", role="VIEWER", tenant=cn), cn)
+    assert viewer.get(BASE + "stats/").status_code == 403
 
 
 def test_timeline_global_admin_sees_every_hall_bound_admin_only_their_own(global_admin, bound_admin, halls):
