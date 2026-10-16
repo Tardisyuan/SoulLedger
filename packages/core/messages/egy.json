@@ -526,7 +526,8 @@
       "load_more_failed": "Medew Ky Nen Ini. Wehem Khemen.",
       "recalculate": "Wehem Hesb Nefer Isfet",
       "recalculate_confirm": "Wehem Hesb Nefer Isfet {{name}} Em Sesh Neb?",
-      "recalculate_success": "Nefer Isfet Wehem Hesb Seth"
+      "recalculate_success": "Nefer Isfet Wehem Hesb Seth",
+      "recalculate_failed": "Nen Hesb Wehem. Wehem Iri Er Khet."
     },
     "balance_range": "Pehwy Nefer Isfet",
     "balance_max": "Er Pehwy",
@@ -2944,7 +2945,8 @@
       "confirm_message": "Iri Em Sesh Mut Tepy Wehem. Kheper Seth: Ba Er Wedja.",
       "count": "Wehem Iri {{count}}/{{max}}",
       "done": "Wehem Iri Seth · Ba Em Wedja",
-      "refused": "Sesh Mut Pen: Nen Wehem Iri. Wehem Ini Seth."
+      "refused": "Sesh Mut Pen: Nen Wehem Iri. Wehem Ini Seth.",
+      "still_failed": "Nen Iri Wehem: {{reason}}"
     }
   },
   "soul_accounts": {
@@ -4906,6 +4908,10 @@
     "judgment_reassign_requested_with_reason": {
       "title": "Dbh Hab Ky Seth",
       "body": "{{by}}: Dbh Hab Ky · Sep {{soul}}. Khet: {{reason}}"
+    },
+    "death_sync_retry_failed": {
+      "title": "Sesh Mut: Nen Iri Wehem",
+      "body": "Sesh Mut {{reference}}: Wehem Iri {{count}} · Nen Iri Wehem ({{reason}}). Maa Senb Mut."
     }
   },
   "social_moderation": {
