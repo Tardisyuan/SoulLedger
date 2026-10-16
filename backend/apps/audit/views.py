@@ -345,7 +345,7 @@ class AuditLogViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
         权限变更时间线 — 查询权限相关操作的审计日志。
 
         Query params:
-            resource: 资源类型过滤 (Role, RolePermission, Menu, MenuButton, FieldPermission, RowLevelDataScope)
+            resource: 资源类型,精确匹配(小写,如 role、rolepermission、menu、menubutton);不传时取 8 类权限资源
             action: 操作类型过滤 (CREATE, UPDATE, DELETE, PERMISSION_CHANGE)
             start_date: 开始日期 (YYYY-MM-DD)
             end_date: 结束日期 (YYYY-MM-DD)
