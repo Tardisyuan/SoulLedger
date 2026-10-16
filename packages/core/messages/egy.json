@@ -5919,7 +5919,10 @@
       "logout_title": "Per Aq? Medjat Pen Nen Sedjem Sab Djer.",
       "logout_ok": "Per Aq",
       "email": "Wat Sesh",
-      "email_none": "Nen Wat Sesh: Nen Rekh Sekhem — Sesh Nen Hab Er-Ek. Dbh Sab Hery."
+      "email_none": "Nen Wat Sesh: Nen Rekh Sekhem — Sesh Nen Hab Er-Ek. Dbh Sab Hery.",
+      "notify_categories": "Iru Sedjem",
+      "muted_count": "Sedjer · {{n}}",
+      "muted_none": "Sedjem Neb"
     },
     "login": {
       "username": "Ren Aq",
@@ -6004,6 +6007,36 @@
     },
     "list": {
       "more": "Ini Ky"
+    },
+    "case": {
+      "release": "Redi Er Hat",
+      "defer": "Sedjer",
+      "request_reassign": "Dbh Hab Ky",
+      "release_title": "Redi Sep Pen Er Hat?",
+      "release_body": "Er Khet: Em «Nen Shesep Djer». Sesh Wesheb-Ek Smen.",
+      "defer_title": "Sedjer Sep Pen",
+      "defer_body": "Sep Wenen Em Djeret-Ek. «Sehen Sedjer»: Iyi Er Sepu Wedja.",
+      "defer_reason": "Khet Sedjer · Em Tepy; Sab Wesekhet Maa",
+      "defer_confirm": "Sedjer",
+      "reassign_body": "Nen Hesy Djer: Sep Wenen Em Djeret-Ek.",
+      "reassign_reason": "Khet · Em Tepy; Sab Hesy Maa",
+      "reassign_confirm": "Hab Dbh",
+      "reason_required": "Khet Em Tepy",
+      "deferred_banner": "Sedjer · {{date}} · Khet: {{reason}}",
+      "reassign_pending": "Dbh Hab Ky Seth · Nen Hesy Djer",
+      "with_other": "Em Djeret {{name}}. Maa Wa.",
+      "done_released": "Redi Er Hat Seth · Em «Nen Shesep Djer»",
+      "done_deferred": "Sedjer Seth",
+      "done_reassign": "Dbh Hab Seth",
+      "summary": "Khet Sep",
+      "summary_more": "Wen Neb",
+      "evidence": "Medu Maat · {{n}}",
+      "evidence_attachment": "Djama Hena {{n}}",
+      "load_failed": "Nen Ini Khet Sep"
+    },
+    "notify": {
+      "intro": "Iru Khetem: Nen Sedjem Er Medjat Pen, Nen Em Hena. Smen Wa Hena Medjat Sab; Shat: Em Medjat Sab.",
+      "save_failed": "Nen Smen · Iyi Er Tepy"
     }
   },
   "print": {
