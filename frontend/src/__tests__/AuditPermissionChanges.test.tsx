@@ -150,10 +150,8 @@ it("fewer rows than the limit: no 「显示更多」 and no cap note", async () 
   expect(screen.queryByText(tZh("audit.timeline.cap_reached"))).toBeNull();
 });
 
-it("filters: only the eight permission resources; picking one keeps only that exact resource", async () => {
-  auditApi.timeline.mockResolvedValue({
-    data: [log({ resource: "role", resource_id: "3" }), log({ resource: "rolepermission", resource_id: "41" })],
-  });
+it("filters: only the eight permission resources; the pick goes to the server as the exact resource", async () => {
+  auditApi.timeline.mockResolvedValue({ data: [log({ resource: "role", resource_id: "3" })] });
   renderRoute();
   await screen.findAllByTestId("timeline-entry");
   const select = screen.getByRole("combobox", { name: tZh("audit.filter_resource") }) as HTMLSelectElement;
@@ -162,10 +160,22 @@ it("filters: only the eight permission resources; picking one keeps only that ex
   ]);
   fireEvent.change(select, { target: { value: "role" } });
   await waitFor(() => expect(lastParams()).toEqual({ limit: 50, resource: "role" }));
-  // `resource` is icontains on the backend, so 角色权限 comes back too — and is not shown.
-  await waitFor(() => expect(screen.getAllByTestId("timeline-entry")).toHaveLength(1));
-  expect(screen.getByText("#3")).toBeInTheDocument();
-  expect(screen.queryByText("#41")).toBeNull();
+});
+
+it("draws exactly what the server returned: no client-side re-filter, so 「显示更多」 counts the rows shown", async () => {
+  // The backend matches `resource` exactly (2026-10-17). Whatever it returns is drawn — even a row whose
+  // resource is not the one picked — so the page cannot hide rows that 「显示更多」 / cap_reached counted.
+  auditApi.timeline.mockImplementation(async ({ resource }: { resource?: string }) => ({
+    data: resource
+      ? [...many(49), log({ resource: "rolepermission", resource_id: "41" })]
+      : [log({ resource: "role", resource_id: "3" })],
+  }));
+  renderRoute();
+  await screen.findAllByTestId("timeline-entry");
+  fireEvent.change(screen.getByRole("combobox", { name: tZh("audit.filter_resource") }), { target: { value: "role" } });
+  await waitFor(() => expect(screen.getAllByTestId("timeline-entry")).toHaveLength(50));
+  expect(screen.getAllByText("#41").length).toBeGreaterThan(0);
+  expect(screen.getByRole("button", { name: tZh("audit.timeline.show_more") })).toBeInTheDocument();
 });
 
 it("empty: 「还没有」 when the date is 全部, 「这段时间没有」 with a preset (which sends start_date)", async () => {

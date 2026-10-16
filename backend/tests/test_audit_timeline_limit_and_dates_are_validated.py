@@ -100,3 +100,25 @@ def test_a_garbage_date_is_a_400_not_a_500(moderator_client, path, param):
 def test_a_well_formed_date_still_filters(moderator_client, path):
     response = moderator_client.get(path, {"start_date": "2020-01-01", "end_date": "2099-12-31"})
     assert response.status_code == 200, response.content[:200]
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    "picked, neighbour",
+    [("role", "rolepermission"), ("menu", "menubutton"), ("datascope", "rowleveldatascope")],
+)
+def test_the_resource_filter_is_an_exact_match(moderator_client, picked, neighbour):
+    """`?resource=` 是精确匹配(2026-10-17):选「角色」不再带回「角色权限」,选「菜单」不再带回「菜单按钮」。
+    曾是 icontains,前端只好再筛一遍，于是「显示更多」与 500 条上限数的是看不见的行。"""
+    tenant = moderator_client.tenant
+    AuditLog.objects.bulk_create(
+        [
+            AuditLog(tenant=tenant, action=AuditAction.UPDATE, resource=picked, resource_id="1"),
+            AuditLog(tenant=tenant, action=AuditAction.UPDATE, resource=neighbour, resource_id="2"),
+        ]
+    )
+    response = moderator_client.get(TIMELINE, {"resource": picked})
+    assert response.status_code == 200, response.content[:200]
+    assert [r["resource"] for r in response.data] == [picked]
+    # Without `?resource=` the default eight still cover both.
+    assert {r["resource"] for r in moderator_client.get(TIMELINE).data} == {picked, neighbour}
