@@ -49,7 +49,11 @@ export function startWorkflowRefusal(error: unknown, t: Translate, civilization?
     if (code === "workflow_in_progress" && typeof data.workflow === "string") {
       const type = resolveEnumDisplay(t, "workflow.case_types", String(data.case_type ?? "")).label ?? "";
       return {
-        message: t("workflow.start.errors.duplicate", { type, id: data.workflow.slice(0, 8) }),
+        // 审批编号(`WF-0582`);老后端没带时退回 uuid 前 8 位。
+        message: t("workflow.start.errors.duplicate", {
+          type,
+          id: typeof data.number === "string" && data.number ? data.number : data.workflow.slice(0, 8),
+        }),
         field: "case_type",
         viewId: data.workflow,
       };

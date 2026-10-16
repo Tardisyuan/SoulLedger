@@ -362,7 +362,7 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
             return Response(
                 {"code": "workflow_in_progress",
                  "error": "This soul already has a workflow of this case type in progress",
-                 "workflow": str(busy.workflow.pk), "status": busy.workflow.status,
+                 "workflow": str(busy.workflow.pk), "number": busy.workflow.number, "status": busy.workflow.status,
                  "case_type": busy.workflow.case_type},
                 status=status.HTTP_409_CONFLICT,
             )
