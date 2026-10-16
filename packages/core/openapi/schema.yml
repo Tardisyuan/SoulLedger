@@ -5956,6 +5956,41 @@ paths:
               schema:
                 $ref: '#/components/schemas/Disposition'
           description: ''
+  /api/v1/disposition/{id}/unarchive/:
+    post:
+      operationId: v1_disposition_unarchive_create
+      description: 'Undo archive(): the disposition returns to the lists.'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Disposition.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Disposition'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Disposition'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Disposition'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Disposition'
+          description: ''
   /api/v1/disposition/export/:
     get:
       operationId: v1_disposition_export_retrieve
@@ -7400,6 +7435,41 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/JudgmentRateLimited'
+          description: ''
+  /api/v1/judgment/{id}/unarchive/:
+    post:
+      operationId: v1_judgment_unarchive_create
+      description: 'Undo archive(): the judgment returns to the lists.'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Judgment.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Judgment'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Judgment'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Judgment'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Judgment'
           description: ''
   /api/v1/judgment/{id}/undefer/:
     post:
@@ -11883,31 +11953,9 @@ paths:
     delete:
       operationId: v1_organizations_destroy
       description: |-
-        Organization CRUD.
-
-        Both blockers a previous pass on this file recorded — no codename family,
-        no `tenant` field — are resolved as of this change:
-
-        1. Gated now via `CodenameViewSetMixin`: reads (`list`/`retrieve`) resolve
-           to `org.read`, held by all five roles; writes (`create`/`update`/
-           `partial_update`/`destroy`) are remapped through `extra_permissions` to
-           `org.manage`, held by ADMIN and MODERATOR only. `CodenamePermission` is
-           added to `permission_classes` alongside `TenantPermission` — the two
-           answer different questions ("may this role do this at all" vs. "in this
-           tenant") and both must hold, same pairing as every other enforced
-           viewset.
-        2. `Organization` now carries a `tenant` FK (nullable, backfilled from
-           `category` through the civilization→tenant mapping that
-           `apps/souls/models.py::CIVILIZATION_TENANT` defines and
-           `apps/org/migrations/0004_backfill_organization_tenant.py` applies).
-           With the
-           field present, `TenantQuerySetMixin.get_queryset()`'s `hasattr` guard no
-           longer skips filtering, so non-ADMIN roles are scoped to their own
-           tenant's org tree like everywhere else. `TenantCreateMixin` is added so
-           new orgs are stamped with the creator's tenant on `create()` — same
-           pairing as JudgmentViewSet/WorkflowTemplateViewSet — otherwise a freshly
-           created org would land with `tenant=None` and be invisible to its own
-           creator's next `list()`.
+        Refuse to delete a unit that still has sub-units or people, and say
+        how many -- `parent` is SET_NULL, so deleting would silently turn the
+        sub-units into roots and strip the people of their unit.
       parameters:
       - in: path
         name: id
@@ -18067,6 +18115,41 @@ paths:
               schema:
                 $ref: '#/components/schemas/Soul'
           description: ''
+  /api/v1/souls/{id}/unarchive/:
+    post:
+      operationId: v1_souls_unarchive_create
+      description: 'Undo archive(): the soul returns to the lists.'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Soul.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Soul'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Soul'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Soul'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Soul'
+          description: ''
   /api/v1/souls/batch-recycle/:
     post:
       operationId: v1_souls_batch_recycle_create
@@ -22937,12 +23020,8 @@ components:
     Disposition:
       type: object
       description: |-
-        Serializer mixin that dynamically filters fields based on FieldPermission rules.
-
-        The mixin checks the user's role against FieldPermission entries for the model.
-        If no rules exist, all fields are visible and editable (default behavior).
-
-        Priority: specific (field_name) > wildcard (field_name="*")
+        The four archive columns a detail page needs for its banner. Add
+        `ARCHIVE_FIELDS` to the subclass's Meta.fields.
       properties:
         id:
           type: string
@@ -23067,11 +23146,30 @@ components:
           description: The soul has been reborn since the life this disposition belongs
             to.
           readOnly: true
+        is_archived:
+          type: boolean
+          readOnly: true
+        archived_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        archived_by_name:
+          type: string
+          nullable: true
+          readOnly: true
+        archive_reason:
+          type: string
+          readOnly: true
       required:
+      - archive_reason
+      - archived_at
+      - archived_by_name
       - created_at
       - executed_at
       - expired_at
       - id
+      - is_archived
       - is_executed
       - realm_code
       - realm_id
@@ -25154,8 +25252,26 @@ components:
           type: string
           nullable: true
           readOnly: true
+        is_archived:
+          type: boolean
+          readOnly: true
+        archived_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        archived_by_name:
+          type: string
+          nullable: true
+          readOnly: true
+        archive_reason:
+          type: string
+          readOnly: true
       required:
       - amends_plan_id
+      - archive_reason
+      - archived_at
+      - archived_by_name
       - case_number
       - citations
       - civilization
@@ -25178,6 +25294,7 @@ components:
       - draft_version
       - evidence_count
       - id
+      - is_archived
       - is_final
       - judge_name
       - judgment_method
@@ -25660,6 +25777,21 @@ components:
           type: string
           nullable: true
           readOnly: true
+        is_archived:
+          type: boolean
+          readOnly: true
+        archived_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        archived_by_name:
+          type: string
+          nullable: true
+          readOnly: true
+        archive_reason:
+          type: string
+          readOnly: true
         evidence_admissions:
           type: array
           items:
@@ -25672,6 +25804,9 @@ components:
       required:
       - admitted_balance
       - amends_plan_id
+      - archive_reason
+      - archived_at
+      - archived_by_name
       - case_number
       - citations
       - civilization
@@ -25695,6 +25830,7 @@ components:
       - evidence_admissions
       - evidence_count
       - id
+      - is_archived
       - is_final
       - judge_name
       - judgment_method
@@ -30812,12 +30948,8 @@ components:
     PatchedDisposition:
       type: object
       description: |-
-        Serializer mixin that dynamically filters fields based on FieldPermission rules.
-
-        The mixin checks the user's role against FieldPermission entries for the model.
-        If no rules exist, all fields are visible and editable (default behavior).
-
-        Priority: specific (field_name) > wildcard (field_name="*")
+        The four archive columns a detail page needs for its banner. Add
+        `ARCHIVE_FIELDS` to the subclass's Meta.fields.
       properties:
         id:
           type: string
@@ -30941,6 +31073,21 @@ components:
           type: boolean
           description: The soul has been reborn since the life this disposition belongs
             to.
+          readOnly: true
+        is_archived:
+          type: boolean
+          readOnly: true
+        archived_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        archived_by_name:
+          type: string
+          nullable: true
+          readOnly: true
+        archive_reason:
+          type: string
           readOnly: true
     PatchedEmbeddingUpdate:
       type: object
@@ -31271,6 +31418,21 @@ components:
         realm_name:
           type: string
           nullable: true
+          readOnly: true
+        is_archived:
+          type: boolean
+          readOnly: true
+        archived_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        archived_by_name:
+          type: string
+          nullable: true
+          readOnly: true
+        archive_reason:
+          type: string
           readOnly: true
     PatchedJudgmentDraftWrite:
       type: object
@@ -31717,6 +31879,21 @@ components:
           readOnly: true
         is_eval_identity:
           type: boolean
+          readOnly: true
+        is_archived:
+          type: boolean
+          readOnly: true
+        archived_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        archived_by_name:
+          type: string
+          nullable: true
+          readOnly: true
+        archive_reason:
+          type: string
           readOnly: true
     PatchedSoulDisplayNameRequest:
       type: object
@@ -35523,7 +35700,25 @@ components:
         is_eval_identity:
           type: boolean
           readOnly: true
+        is_archived:
+          type: boolean
+          readOnly: true
+        archived_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        archived_by_name:
+          type: string
+          nullable: true
+          readOnly: true
+        archive_reason:
+          type: string
+          readOnly: true
       required:
+      - archive_reason
+      - archived_at
+      - archived_by_name
       - civilization
       - create_time
       - current_state
@@ -35534,6 +35729,7 @@ components:
       - id
       - inherited_demerit
       - inherited_merit
+      - is_archived
       - is_eval_identity
       - is_residing
       - karmic_balance

@@ -36,7 +36,7 @@ export function soulsView<T>(souls: readonly T[], expanded: boolean, max = 2): {
 type HallRef = { code: string; display_name: string } | null | undefined;
 
 export interface EffectLine {
-  /** Language key under `officer_app.confirm.`. */
+  /** Language key under officer_app.confirm (the effect sentences). */
   key: string;
   values: Record<string, string>;
 }

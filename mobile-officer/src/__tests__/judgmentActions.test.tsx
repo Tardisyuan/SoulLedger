@@ -101,7 +101,8 @@ describe("JudgmentActionBar", () => {
 
   it("deferring with no reason flags the field and sends nothing; with one it sends it trimmed", async () => {
     mockDefer.mockResolvedValue({});
-    bar({ claimed_by: ME });
+    const changed = jest.fn();
+    bar({ claimed_by: ME }, { onChanged: changed });
     fireEvent.press(screen.getByTestId("judgment-more"));
     fireEvent.press(screen.getByTestId("judgment-menu-defer"));
     fireEvent.press(screen.getAllByTestId("judgment-sheet-confirm")[0]);
@@ -110,16 +111,21 @@ describe("JudgmentActionBar", () => {
     fireEvent.changeText(screen.getByTestId("judgment-reason"), "  等册页  ");
     fireEvent.press(screen.getAllByTestId("judgment-sheet-confirm")[0]);
     await waitFor(() => expect(mockDefer).toHaveBeenCalledWith("j-1", "等册页"));
+    await waitFor(() => expect(changed).toHaveBeenCalled());
+    await waitFor(() => expect(screen.getByTestId("judgment-more")).toBeTruthy()); // settled: busy is off again
   });
 
   it("release asks first and sends no reason", async () => {
     mockRelease.mockResolvedValue({});
-    bar({ claimed_by: ME });
+    const changed = jest.fn();
+    bar({ claimed_by: ME }, { onChanged: changed });
     fireEvent.press(screen.getByTestId("judgment-more"));
     fireEvent.press(screen.getByTestId("judgment-menu-release"));
     expect(mockRelease).not.toHaveBeenCalled();
     fireEvent.press(screen.getAllByTestId("judgment-sheet-confirm")[0]);
     await waitFor(() => expect(mockRelease).toHaveBeenCalledWith("j-1"));
+    await waitFor(() => expect(changed).toHaveBeenCalled());
+    await waitFor(() => expect(screen.getByTestId("judgment-more")).toBeTruthy());
   });
 
   it("a 429 on the reassign request is treated as already asked", async () => {

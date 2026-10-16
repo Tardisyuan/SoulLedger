@@ -2770,6 +2770,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/disposition/{id}/unarchive/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Undo archive(): the disposition returns to the lists. */
+        post: operations["v1_disposition_unarchive_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/disposition/export/": {
         parameters: {
             query?: never;
@@ -3307,6 +3324,23 @@ export interface paths {
          *     通知走 `claims.request_reassign`(既有的官员通知路径)。
          */
         post: operations["v1_judgment_request_reassign_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/judgment/{id}/unarchive/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Undo archive(): the judgment returns to the lists. */
+        post: operations["v1_judgment_unarchive_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -5423,31 +5457,9 @@ export interface paths {
         put: operations["v1_organizations_update"];
         post?: never;
         /**
-         * @description Organization CRUD.
-         *
-         *     Both blockers a previous pass on this file recorded — no codename family,
-         *     no `tenant` field — are resolved as of this change:
-         *
-         *     1. Gated now via `CodenameViewSetMixin`: reads (`list`/`retrieve`) resolve
-         *        to `org.read`, held by all five roles; writes (`create`/`update`/
-         *        `partial_update`/`destroy`) are remapped through `extra_permissions` to
-         *        `org.manage`, held by ADMIN and MODERATOR only. `CodenamePermission` is
-         *        added to `permission_classes` alongside `TenantPermission` — the two
-         *        answer different questions ("may this role do this at all" vs. "in this
-         *        tenant") and both must hold, same pairing as every other enforced
-         *        viewset.
-         *     2. `Organization` now carries a `tenant` FK (nullable, backfilled from
-         *        `category` through the civilization→tenant mapping that
-         *        `apps/souls/models.py::CIVILIZATION_TENANT` defines and
-         *        `apps/org/migrations/0004_backfill_organization_tenant.py` applies).
-         *        With the
-         *        field present, `TenantQuerySetMixin.get_queryset()`'s `hasattr` guard no
-         *        longer skips filtering, so non-ADMIN roles are scoped to their own
-         *        tenant's org tree like everywhere else. `TenantCreateMixin` is added so
-         *        new orgs are stamped with the creator's tenant on `create()` — same
-         *        pairing as JudgmentViewSet/WorkflowTemplateViewSet — otherwise a freshly
-         *        created org would land with `tenant=None` and be invisible to its own
-         *        creator's next `list()`.
+         * @description Refuse to delete a unit that still has sub-units or people, and say
+         *     how many -- `parent` is SET_NULL, so deleting would silently turn the
+         *     sub-units into roots and strip the people of their unit.
          */
         delete: operations["v1_organizations_destroy"];
         options?: never;
@@ -8313,6 +8325,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/souls/{id}/unarchive/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Undo archive(): the soul returns to the lists. */
+        post: operations["v1_souls_unarchive_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/souls/batch-recycle/": {
         parameters: {
             query?: never;
@@ -10638,12 +10667,8 @@ export interface components {
          */
         DispatchStatusEnum: "DRAFT" | "PROPOSED" | "APPROVED" | "REJECTED" | "EXECUTED" | "RETURNED" | "CANCELLED";
         /**
-         * @description Serializer mixin that dynamically filters fields based on FieldPermission rules.
-         *
-         *     The mixin checks the user's role against FieldPermission entries for the model.
-         *     If no rules exist, all fields are visible and editable (default behavior).
-         *
-         *     Priority: specific (field_name) > wildcard (field_name="*")
+         * @description The four archive columns a detail page needs for its banner. Add
+         *     `ARCHIVE_FIELDS` to the subclass's Meta.fields.
          */
         Disposition: {
             /** Format: uuid */
@@ -10690,6 +10715,11 @@ export interface components {
             readonly soul_state: components["schemas"]["CurrentStateEnum"];
             /** @description The soul has been reborn since the life this disposition belongs to. */
             readonly soul_reborn: boolean;
+            readonly is_archived: boolean;
+            /** Format: date-time */
+            readonly archived_at: string | null;
+            readonly archived_by_name: string | null;
+            readonly archive_reason: string;
         };
         /**
          * @description * `pending` - 待执行
@@ -11651,6 +11681,11 @@ export interface components {
             readonly merit_score: number;
             readonly demerit_score: number;
             readonly realm_name: string | null;
+            readonly is_archived: boolean;
+            /** Format: date-time */
+            readonly archived_at: string | null;
+            readonly archived_by_name: string | null;
+            readonly archive_reason: string;
         };
         /** @description `POST /judgment/batch/` 的输入。一个动作、至多 `BATCH_LIMIT` 个 id,全有或全无。 */
         JudgmentBatch: {
@@ -11878,6 +11913,11 @@ export interface components {
             readonly merit_score: number;
             readonly demerit_score: number;
             readonly realm_name: string | null;
+            readonly is_archived: boolean;
+            /** Format: date-time */
+            readonly archived_at: string | null;
+            readonly archived_by_name: string | null;
+            readonly archive_reason: string;
             readonly evidence_admissions: components["schemas"]["EvidenceAdmission"][];
             readonly admitted_balance: components["schemas"]["AdmittedBalance"];
         };
@@ -14420,12 +14460,8 @@ export interface components {
             readonly update_time?: string;
         };
         /**
-         * @description Serializer mixin that dynamically filters fields based on FieldPermission rules.
-         *
-         *     The mixin checks the user's role against FieldPermission entries for the model.
-         *     If no rules exist, all fields are visible and editable (default behavior).
-         *
-         *     Priority: specific (field_name) > wildcard (field_name="*")
+         * @description The four archive columns a detail page needs for its banner. Add
+         *     `ARCHIVE_FIELDS` to the subclass's Meta.fields.
          */
         PatchedDisposition: {
             /** Format: uuid */
@@ -14472,6 +14508,11 @@ export interface components {
             readonly soul_state?: components["schemas"]["CurrentStateEnum"];
             /** @description The soul has been reborn since the life this disposition belongs to. */
             readonly soul_reborn?: boolean;
+            readonly is_archived?: boolean;
+            /** Format: date-time */
+            readonly archived_at?: string | null;
+            readonly archived_by_name?: string | null;
+            readonly archive_reason?: string;
         };
         /** @description 一套向量配置;没给的键沿用当前生效值。`embedding_dims` 为 null = 模型原生维度(不截断)。 */
         PatchedEmbeddingUpdate: {
@@ -14624,6 +14665,11 @@ export interface components {
             readonly merit_score?: number;
             readonly demerit_score?: number;
             readonly realm_name?: string | null;
+            readonly is_archived?: boolean;
+            /** Format: date-time */
+            readonly archived_at?: string | null;
+            readonly archived_by_name?: string | null;
+            readonly archive_reason?: string;
         };
         /**
          * @description Input for `PATCH /judgment/{id}/draft/`. `version` is the
@@ -14846,6 +14892,11 @@ export interface components {
             readonly inherited_merit?: number;
             readonly inherited_demerit?: number;
             readonly is_eval_identity?: boolean;
+            readonly is_archived?: boolean;
+            /** Format: date-time */
+            readonly archived_at?: string | null;
+            readonly archived_by_name?: string | null;
+            readonly archive_reason?: string;
         };
         /** @description 长度、敏感词、重名在 `soul_circle.rename` 里判,各有自己的 `code`;这里只要一个字符串。 */
         PatchedSoulDisplayNameRequest: {
@@ -16665,6 +16716,11 @@ export interface components {
             readonly inherited_merit: number;
             readonly inherited_demerit: number;
             readonly is_eval_identity: boolean;
+            readonly is_archived: boolean;
+            /** Format: date-time */
+            readonly archived_at: string | null;
+            readonly archived_by_name: string | null;
+            readonly archive_reason: string;
         };
         SoulAccount: {
             /** Format: uuid */
@@ -23198,6 +23254,34 @@ export interface operations {
             };
         };
     };
+    v1_disposition_unarchive_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this Disposition. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Disposition"];
+                "application/x-www-form-urlencoded": components["schemas"]["Disposition"];
+                "multipart/form-data": components["schemas"]["Disposition"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Disposition"];
+                };
+            };
+        };
+    };
     v1_disposition_export_retrieve: {
         parameters: {
             query?: never;
@@ -24205,6 +24289,34 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["JudgmentRateLimited"];
+                };
+            };
+        };
+    };
+    v1_judgment_unarchive_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this Judgment. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Judgment"];
+                "application/x-www-form-urlencoded": components["schemas"]["Judgment"];
+                "multipart/form-data": components["schemas"]["Judgment"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Judgment"];
                 };
             };
         };
@@ -33274,6 +33386,34 @@ export interface operations {
         };
     };
     v1_souls_transition_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this Soul. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Soul"];
+                "application/x-www-form-urlencoded": components["schemas"]["Soul"];
+                "multipart/form-data": components["schemas"]["Soul"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Soul"];
+                };
+            };
+        };
+    };
+    v1_souls_unarchive_create: {
         parameters: {
             query?: never;
             header?: never;

@@ -4,10 +4,10 @@ REST serializers for Soul app.
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
+from apps.core.archive import ARCHIVE_FIELDS, ArchiveSerializerMixin
 from apps.core.field_permissions import FieldPermissionMixin
 from apps.souls.dates import ERROR, WARNING, check_record_date, check_soul_dates
 from apps.souls.fields import HistoricalDateField
-from apps.core.archive import ARCHIVE_FIELDS, ArchiveSerializerMixin
 from apps.souls.models import Soul, SoulState
 from apps.souls.record_models import SoulRecord
 

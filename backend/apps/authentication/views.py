@@ -490,7 +490,7 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
             )
         # `dry_run=1`: the same row checks, nothing written -- the web import
         # dialog's preview step (batch 34 W-5), shaped like the soul import's.
-        dry_run = str(request.data.get('dry_run', '')).lower() in ('1', 'true', 'yes')
+        dry_run = str(request.query_params.get('dry_run') or request.data.get('dry_run', '')).lower() in ('1', 'true', 'yes')
         created = 0
         errors = []
         rows = []

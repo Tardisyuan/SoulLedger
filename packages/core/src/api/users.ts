@@ -154,12 +154,11 @@ export const usersApi = {
    *  the reason is required and audited. 409 `not_enabled` on a row that has it off. */
   resetMfa: (id: string | number, reason: string) => api.post<{ detail: string }>(`/users/${id}/reset-mfa/`, { reason }),
   /** The import's first step: same row checks as `import`, nothing written. */
-  importPreview: (data: FormData) => {
-    data.set("dry_run", "1");
-    return api.post<UserImportPreview>("/users/import_csv/", data, {
+  // `dry_run` rides in the query: core has no DOM types, so the FormData it is handed can only be passed through.
+  importPreview: (data: FormData) =>
+    api.post<UserImportPreview>("/users/import_csv/?dry_run=1", data, {
       headers: { "Content-Type": "multipart/form-data" },
-    });
-  },
+    }),
   import: (data: FormData) => api.post<UserImportResult>("/users/import_csv/", data, {
     headers: { "Content-Type": "multipart/form-data" },
   }),

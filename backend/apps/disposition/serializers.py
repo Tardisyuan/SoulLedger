@@ -4,6 +4,7 @@ REST serializers for Disposition app.
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
+from apps.core.archive import ARCHIVE_FIELDS, ArchiveSerializerMixin
 from apps.core.field_permissions import FieldPermissionMixin
 from apps.core.locale import locale_from_context
 from apps.core.tenant import is_tenant_exempt
@@ -13,7 +14,6 @@ from apps.disposition.models import Disposition, DispositionSection
 from apps.judgment.models import Verdict
 from apps.souls.dates import ERROR, check_term_start, to_representation
 from apps.souls.fields import HistoricalDateField
-from apps.core.archive import ARCHIVE_FIELDS, ArchiveSerializerMixin
 from apps.souls.models import SoulState
 
 

@@ -37,8 +37,9 @@ export function ArchiveBanner({
         <p className="text-[oklch(var(--color-ink))]">
           <span aria-hidden="true">□ </span>
           {t("records.archive.banner", {
-            date: record.archived_at ? formatDate(record.archived_at) : "—",
-            name: record.archived_by_name || "—",
+            // Inside a sentence a dash cannot say which kind of missing it is; the words can.
+            date: record.archived_at ? formatDate(record.archived_at) : t("common.value.unrecorded"),
+            name: record.archived_by_name || t("common.value.unrecorded"),
           })}
         </p>
         {record.archive_reason ? (
