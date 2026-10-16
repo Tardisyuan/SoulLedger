@@ -1,5 +1,5 @@
 /** 通知类别(第三十四批 O-06):一个开关 = 网页的「站内」一列;点了就存,失败弹回。 */
-import { fireEvent, screen, waitFor, within } from "@testing-library/react-native";
+import { fireEvent, screen, waitFor } from "@testing-library/react-native";
 
 import { mutedCount, visibleNotificationCategories } from "../rules";
 import { NotifyScreen } from "../screens/notify";
@@ -48,7 +48,7 @@ describe("NotifyScreen", () => {
     renderOfficer(<NotifyScreen onBack={() => {}} />);
     fireEvent.press(await screen.findByTestId("notify-approval"));
     await waitFor(() => expect(mockUpdate).toHaveBeenCalled());
-    await waitFor(() => expect(within(screen.getByTestId("notify-approval")).getByText("✓")).toBeTruthy());
+    await waitFor(() => expect(screen.getByTestId("notify-switch-approval").props.accessibilityState).toEqual({ checked: true }));
   });
 
   it("does not make locked rows tappable", async () => {

@@ -32,6 +32,7 @@ export {
   Screen,
   SectionLabel,
   SmallButton,
+  SwitchMark,
   Txt,
   TYPE,
   ThemeContext,

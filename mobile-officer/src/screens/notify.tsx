@@ -11,7 +11,7 @@ import { View } from "react-native";
 import { Row } from "../kit";
 import { visibleNotificationCategories } from "../rules";
 import { useSession } from "../session";
-import { Notice, SmallButton, Txt, space, useI18n, useRemote, useToast } from "../shared";
+import { Notice, SmallButton, SwitchMark, Txt, space, useI18n, useRemote, useToast } from "../shared";
 import { AccountFrame } from "./account";
 
 /** 这几行带一句说明,同网页。 */
@@ -68,9 +68,15 @@ export function NotifyScreen({ onBack }: { onBack: () => void }) {
                 lines={WITH_NOTE.includes(c) ? [t(`profile.notifications.notes.${c}`)] : []}
                 onPress={locked ? undefined : () => toggle(c)}
                 right={
-                  <Txt variant="nav" accessibilityRole={locked ? undefined : "switch"} accessibilityState={locked ? undefined : { checked: on(c) }}>
-                    {locked ? t("profile.notifications.locked") : on(c) ? "✓" : "○"}
-                  </Txt>
+                  // A switch, not a ✓ (Design batch 35): ✓ means "selected" elsewhere in this app, and an off row
+                  // showed nothing at all -- no sign it could be turned on. Screen readers say on / off.
+                  locked ? (
+                    <Txt variant="nav">{t("profile.notifications.locked")}</Txt>
+                  ) : (
+                    <View testID={`notify-switch-${c}`} accessibilityRole="switch" accessibilityState={{ checked: on(c) }}>
+                      <SwitchMark on={on(c)} />
+                    </View>
+                  )
                 }
               />
             );
