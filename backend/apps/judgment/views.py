@@ -54,6 +54,7 @@ from apps.judgment.serializers import (
     JudgmentQueueCountsSerializer,
     JudgmentQueueCursorSerializer,
     JudgmentRateLimitedSerializer,
+    JudgmentReassignRequestSerializer,
     JudgmentReassignRequestResultSerializer,
     JudgmentReassignSerializer,
     JudgmentSerializer,
@@ -957,7 +958,7 @@ class JudgmentViewSet(CaseAttachmentActionsMixin, CodenameViewSetMixin, TenantQu
         return Response(AssignableOfficerSerializer(officers, many=True).data)
 
     @extend_schema(
-        request=None,
+        request=JudgmentReassignRequestSerializer,
         responses={200: JudgmentReassignRequestResultSerializer, 429: JudgmentRateLimitedSerializer},
     )
     @action(detail=True, methods=["post"], url_path="request-reassign")
@@ -974,6 +975,8 @@ class JudgmentViewSet(CaseAttachmentActionsMixin, CodenameViewSetMixin, TenantQu
         from django.core.cache import cache
 
         judgment = self.get_object()
+        body = JudgmentReassignRequestSerializer(data=request.data)
+        body.is_valid(raise_exception=True)
         key = f"judgment_reassign_request:{judgment.pk}:{request.user.pk}"
         until = time.time() + claims.REASSIGN_REQUEST_WINDOW_SECONDS
         # `add` is atomic: two clicks at once cannot both pass. The value is when the
@@ -987,7 +990,7 @@ class JudgmentViewSet(CaseAttachmentActionsMixin, CodenameViewSetMixin, TenantQu
                 status=status.HTTP_429_TOO_MANY_REQUESTS,
                 headers={"Retry-After": str(retry_after)},
             )
-        notified = claims.request_reassign(judgment, request.user)
+        notified = claims.request_reassign(judgment, request.user, reason=body.validated_data.get("reason", ""))
         return Response({"notified": len(notified)})
 
     @staticmethod

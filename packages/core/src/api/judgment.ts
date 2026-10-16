@@ -626,8 +626,8 @@ export const judgmentApi = {
    * 「请管理员改派」: notify the case tenant's ADMINs. Needs `judgment.execute` on the case.
    * Once per case per caller per 10 minutes; more is 429 `rate_limited` with `retry_after` (seconds).
    */
-  requestReassign: (id: string) =>
-    api.post<Schemas["JudgmentReassignRequestResult"]>(`/judgment/${id}/request-reassign/`),
+  requestReassign: (id: string, reason?: string) =>
+    api.post<Schemas["JudgmentReassignRequestResult"]>(`/judgment/${id}/request-reassign/`, reason ? { reason } : {}),
   defer: (id: string, reason: string) => api.post<Judgment>(`/judgment/${id}/defer/`, { reason }),
   undefer: (id: string) => api.post<Judgment>(`/judgment/${id}/undefer/`, {}),
   batch: (payload: JudgmentBatchPayload) => api.post<JudgmentBatchResult>("/judgment/batch/", payload),
