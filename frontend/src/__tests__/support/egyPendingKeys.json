@@ -21,5 +21,12 @@
   "audit.resources.workflow",
   "audit.resources.judgment",
   "audit.resources.soulrecord",
-  "audit.resources.permission"
+  "audit.resources.permission",
+  "audit.resources.role",
+  "audit.resources.rolepermission",
+  "audit.resources.menu",
+  "audit.resources.menubutton",
+  "audit.resources.fieldpermission",
+  "audit.resources.rowleveldatascope",
+  "audit.resources.datascope"
 ]

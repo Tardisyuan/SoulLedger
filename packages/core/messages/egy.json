@@ -1922,7 +1922,9 @@
     "repeat_rule": "Ren Wa, Iri Wa, Khet Wa: {{minutes}} At",
     "tabs": {
       "audit": "Medew Maa",
-      "logins": "Medew Aq"
+      "logins": "Medew Aq",
+      "permissions": "Medew Was",
+      "stats": "Hesb Medew"
     },
     "login_log": {
       "title": "Medew Aq",
@@ -1959,6 +1961,28 @@
       "field": "Medu",
       "before": "Tepy",
       "after": "Mawy"
+    },
+    "timeline": {
+      "all_resources": "Khet Was Neb",
+      "more_fields": "Ky {{n}}",
+      "details": "Maa Medu",
+      "show_more": "Ini Medew Ky",
+      "cap_reached": "Medew 500 Pehwy Wa. Setep Sepdet Nedjes Er Maa Medew Tepy.",
+      "empty": "Nen Medew Was Em Sepdet Pen",
+      "empty_all": "Nen Medew Was Djer",
+      "failed": "Nen Ini Medew Was. Wehem Iri."
+    },
+    "stats": {
+      "scope_hall": "Sepdet Neb · Wesekhet Pen · Hesb Neb {{count}}",
+      "scope_all": "Sepdet Neb · Wesekhet Neb · Hesb Neb {{count}}",
+      "scope_note": "Hesb Pen: Nen Setep Sepdet, Nen Setep Wesekhet.",
+      "by_action": "Per Aha Seth",
+      "zero_actions": "Aha Seth Ky {{n}}: Nen Medew",
+      "top_resources": "Khet Em Khet · Tepy 20",
+      "col_resource": "Khet",
+      "col_count": "Hesb",
+      "row_label": "Maa Medew Maa «{{name}}»",
+      "failed": "Nen Ini Hesb Medew. Wehem Iri."
     }
   },
   "profile": {

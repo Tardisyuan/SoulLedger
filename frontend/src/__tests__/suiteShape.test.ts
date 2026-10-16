@@ -57,6 +57,9 @@ const COLLECTED_FILES = [
   "AuditDetailPage.test.tsx",
   "AuditPage.impersonate.test.tsx",
   "AuditPage.test.tsx",
+  // 2026-10-17 第三十七批 W-9:审计的「权限变更」时间线与「统计」页签。
+  "AuditPermissionChanges.test.tsx",
+  "AuditStats.test.tsx",
   "Badge.test.tsx",
   "Button.test.tsx",
   "CaseAttachments.test.tsx",
