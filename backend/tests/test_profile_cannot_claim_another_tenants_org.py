@@ -128,6 +128,20 @@ def test_an_admin_can_still_set_both(api_client, viewer, two_tenants):
 
 
 @pytest.mark.django_db
+def test_an_admin_cannot_hang_a_user_under_another_tenants_organization(api_client, viewer, two_tenants):
+    """管理员那条路也只收被编辑者本租户的组织(用户 2026-10-16 定)。"""
+    a, _, org_a, org_b = two_tenants
+    admin = User.objects.create_user(username="org_admin_x", password="x", role="ADMIN", tenant=a)
+    response = client_for(api_client, admin).patch(
+        f"/api/v1/users/{viewer.pk}/", {"organization": str(org_b.pk)}, format="json"
+    )
+    assert response.status_code == 400, response.data
+    assert "organization" in response.data
+    viewer.refresh_from_db()
+    assert viewer.organization_id == org_a.pk
+
+
+@pytest.mark.django_db
 def test_role_and_tenant_stay_locked(api_client, viewer, two_tenants):
     """这两个本来就锁着。一起断言,是因为这次改的是同一个序列化器 ——
     收紧一个字段时把另外两个放开,是这类改动最容易出的事故。"""

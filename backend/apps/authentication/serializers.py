@@ -705,6 +705,22 @@ class UserUpdateSerializer(serializers.ModelSerializer):
             )
         return super().to_internal_value(data)
 
+    def validate_organization(self, value):
+        """The organization must be in the edited user's own tenant (user, 2026-10-16).
+
+        `PrimaryKeyRelatedField` resolves the FK against the whole table, and an
+        ADMIN reaches users of every tenant, so nothing else stops an admin from
+        hanging a user under another tenant's organization. Checked against the
+        user being edited, not the caller: the user's tenant does not change here.
+        """
+        if value is None or self.instance is None:
+            return value
+        if value.tenant_id != self.instance.tenant_id:
+            raise serializers.ValidationError(
+                f"组织 {value.code} 属于另一个租户,不能挂到这个账号下。"
+            )
+        return value
+
     def validate_role(self, value):
         request = self.context.get('request')
         caller = getattr(request, 'user', None) if request is not None else None
