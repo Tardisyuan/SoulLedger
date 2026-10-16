@@ -50,6 +50,8 @@ class NotificationType(models.TextChoices):
     DISPATCH_CANCELLED = "DISPATCH_CANCELLED", "Dispatch Cancelled"
     # 管理员「以此人身份查看」→ 被看的人(apps/authentication/impersonation.py)。账号安全类,不能关。
     IMPERSONATION_STARTED = "IMPERSONATION_STARTED", "Impersonation Started"
+    # 死亡登记重试仍失败 → 该租户的 ADMIN(apps/death_sync/views.py::_escalate_failed_retry)。
+    DEATH_SYNC_RETRY_FAILED = "DEATH_SYNC_RETRY_FAILED", "Death Sync Retry Failed"
 
 
 class UserNotification(AuditUserFields, models.Model):

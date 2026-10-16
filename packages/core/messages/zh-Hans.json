@@ -4848,6 +4848,10 @@
       "title": "暂居回归被拦下",
       "body": "灵魂「{{soul}}」的暂居回归被未结案审判拦下，共 {{count}} 件；结案或撤案后才能回归。"
     },
+    "death_sync_retry_failed": {
+      "title": "死亡登记重试仍失败",
+      "body": "死亡登记 {{reference}} 第 {{count}} 次重试仍失败（{{reason}}），请到死亡同步页查看。"
+    },
     "sentence_node_active": {
       "title": "受刑节点开始",
       "body": "灵魂「{{soul}}」已到达，受刑计划第 {{order}} 站在 {{tenant}} 开始执行。"

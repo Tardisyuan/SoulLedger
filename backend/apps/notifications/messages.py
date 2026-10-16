@@ -35,6 +35,7 @@ MESSAGES = {
             "title": "暂居回归被拦下",
             "body": "灵魂「{{soul}}」的暂居回归被未结案审判拦下，共 {{count}} 件；结案或撤案后才能回归。",
         },
+        "death_sync_retry_failed": {"title": "死亡登记重试仍失败", "body": "死亡登记 {{reference}} 第 {{count}} 次重试仍失败（{{reason}}），请到死亡同步页查看。"},
     },
     "en": {
         "sentence_plan_cancelled": {"title": "Sentence plan cancelled", "body": "The sentence plan of soul {{soul}} was cancelled. The rest of the sentence is waived and the plan counts as complete."},
@@ -65,6 +66,7 @@ MESSAGES = {
                 "It returns once they are concluded or withdrawn."
             ),
         },
+        "death_sync_retry_failed": {"title": "Death registration retry failed", "body": "Retry {{count}} of death registration {{reference}} failed again ({{reason}}). See the Death Sync page."},
     },
     "egy": {
         "sentence_plan_cancelled": {"title": "Wetep Sehen Seth", "body": "{{soul}}: Wetep Sehen Seth. Ky Wetep Nen; Wetep Neb Seth."},
@@ -116,6 +118,7 @@ KIND_BY_TYPE = {
     "SOUL_INBOX_ASSIGNED": "soul_inbox_assigned",
     "JUDGMENT_REASSIGN_REQUESTED": "judgment_reassign_requested",
     "IMPERSONATION_STARTED": "impersonation_started",
+    "DEATH_SYNC_RETRY_FAILED": "death_sync_retry_failed",
 }
 
 
