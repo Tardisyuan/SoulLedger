@@ -57,11 +57,10 @@ def test_an_existing_number_is_kept_on_save(cn_tenant):
 def test_a_create_that_fails_gives_its_number_back(cn_tenant):
     first = _bare(cn_tenant)
     soul = _soul(cn_tenant, "失败")
-    with pytest.raises(IntegrityError):
-        with transaction.atomic():
-            # 撞唯一约束:发号与写入同一个事务,号跟着回滚。
-            ApprovalWorkflow.objects.create(soul=soul, tenant=cn_tenant, workflow_name="dup", judgment=None,
-                                            number=first.number)
+    with pytest.raises(IntegrityError), transaction.atomic():
+        # 撞唯一约束:发号与写入同一个事务,号跟着回滚。
+        ApprovalWorkflow.objects.create(soul=soul, tenant=cn_tenant, workflow_name="dup", judgment=None,
+                                        number=first.number)
     assert _bare(cn_tenant).number == "WF-0002"
 
 
