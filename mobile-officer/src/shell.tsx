@@ -1,6 +1,7 @@
 /**
  * The signed-in shell: the identity band, the standing two-step-verification banner (when owed),
- * five tabs, and one detail screen over them.
+ * five tabs, and one detail screen over them. Each tab's top bar has 「问一问」; its conversation is
+ * held here, above the tabs, so a tab switch or closing the sheet does not lose it (assist.tsx).
  *
  * Navigation is a state, not a navigator: five tabs and one level of detail do not need a stack,
  * and a push landing is just "set the detail". A detail reached by a push remembers its item; going
@@ -9,6 +10,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { BackHandler, StyleSheet, View } from "react-native";
 
+import { AssistSheet, TabHead, useOfficerAssist } from "./assist";
 import { IdentityBand, StandingBanner, TabBar, type TabKey } from "./kit";
 import { isRetiredResetLink, officerLinks, resetLinks, type ResetLink } from "./links";
 import { OfflineBanner } from "./offlineBanner";
@@ -45,6 +47,7 @@ export function Shell({ onResetDone }: { onResetDone?: () => void } = {}) {
   const [landed, setLanded] = useState<ItemRef | null>(null);
   const [highlight, setHighlight] = useState<ItemRef | null>(null);
   const [unread, setUnread] = useState(false);
+  const assist = useOfficerAssist();
 
   const land = useCallback((landing: Landing) => {
     if (landing.judgment || landing.soul) {
@@ -136,6 +139,15 @@ export function Shell({ onResetDone }: { onResetDone?: () => void } = {}) {
         </StandingBanner>
       ) : null}
       <OfflineBanner />
+      {account || detail ? null : (
+        <TabHead
+          tab={tab}
+          onAsk={() => {
+            assist.setView("chat");
+            assist.setOpen(true);
+          }}
+        />
+      )}
       <View style={{ flex: 1 }}>
         {account === "mfa" ? (
           <MfaScreen onBack={() => setAccount(null)} onLocked={setLocked} />
@@ -171,6 +183,7 @@ export function Shell({ onResetDone }: { onResetDone?: () => void } = {}) {
           setTab(next);
         }}
       />
+      <AssistSheet assist={assist} tab={tab} />
       {resetLink && !locked ? (
         <View testID="reset-overlay" style={StyleSheet.absoluteFill}>
           <ResetPasswordScreen

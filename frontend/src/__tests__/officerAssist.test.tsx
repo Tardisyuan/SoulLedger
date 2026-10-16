@@ -15,7 +15,7 @@ import { api } from "@soulledger/core/api/client";
 import { OFFICER_EMPTY_ANSWER, OFFICER_SCREENS, officerAssistScreen } from "@soulledger/core/api/officer-assist";
 import { I18nProvider } from "@/src/contexts/I18nContext";
 import zh from "@soulledger/core/messages/zh-Hans.json";
-import { officerAssistSuggestions } from "@/src/components/assist/officerAssistSuggestions";
+import { officerAssistSuggestions } from "@soulledger/core/config/officerAssistSuggestions";
 import { installStreamFetch, refuse, type StreamAsk, type StreamEvent, type StreamScript } from "./support/assistStreamFetch";
 
 jest.mock("@/src/contexts/ThemeContext", () => ({
@@ -321,7 +321,7 @@ describe("suggested questions, role × page (1a)", () => {
     expect(within(panel).queryByText("待我审批的有几件？")).not.toBeInTheDocument();
     fireEvent.click(within(panel).getByRole("button", { name: /为什么我点不了审批？/ }));
     await waitFor(() => expect(asks).toHaveLength(1));
-    expect(asks[0].body).toEqual({ question: "为什么我点不了审批？", screen: "workflow", stream: true });
+    expect(asks[0].body).toEqual({ question: "为什么我点不了审批？", screen: "workflow", new: true, stream: true });
   });
 });
 
@@ -405,6 +405,8 @@ describe("the four notices (1f)", () => {
     expect(screen.getAllByTestId("officer-assist-ask-lead")).toHaveLength(1);
     // The second question continues the conversation the first answer opened.
     expect(asks[1].body.conversation_id).toBe(CONVERSATION_ID);
+    // Only a question with no thread says `new` (batch 39: no silent continuation behind an empty panel).
+    expect(asks[1].body.new).toBeUndefined();
   });
 
   it("the fixed empty answer the console recognizes is the backend's OFFICER_EMPTY_ANSWER, word for word", () => {

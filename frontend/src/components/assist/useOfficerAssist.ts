@@ -235,8 +235,10 @@ export function useOfficerAssist(wide: boolean) {
         }
         void queryClient.invalidateQueries({ queryKey: officerAssistKeys.all });
       };
+      // No thread id = what the panel shows is a new conversation (「新会话」, or no fresh one on
+      // `show`): `new` stops the server continuing a 30-minute one behind an empty panel (batch 39).
       officerAssistApi
-        .stream(webStreamFetch, { question, screen, conversation_id: thread.id ?? undefined }, controller, onEvent)
+        .stream(webStreamFetch, { question, screen, ...(thread.id ? { conversation_id: thread.id } : { new: true }) }, controller, onEvent)
         .then(finish, (error: unknown) => {
           if (waiting.current !== controller) return;
           const code = officerAssistErrorCode(error);

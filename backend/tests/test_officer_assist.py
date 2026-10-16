@@ -324,6 +324,36 @@ def test_conversations_are_isolated_per_officer_and_from_souls(cn_tenant, judge_
     assert [c["id"] for c in soul.get("/api/v1/me/assist/conversations/").data] == [soul_cid]
 
 
+def test_continuing_a_conversation_reads_the_context_of_the_page_it_was_asked_on(cn_tenant, judge_user):
+    """第三十九批 O-13 第 5 条:接着问时页面按会话原来的页面算,不按请求里的(App 现在所在的页签)。
+    变异:删掉 `officer_answer` 里按会话取 screen 的那段 → 第二问的事实头写 souls,红。"""
+    _enable(cn_tenant)
+    client = officer_client(judge_user)
+    cid = _ask(client, screen="judgment").data["conversation_id"]
+    response = _ask(client, "那这个呢?", screen="souls", conversation_id=cid)
+    assert response.status_code == 200, response.data
+    assert str(response.data["conversation_id"]) == str(cid)
+    facts = FakeProvider.calls[-1]["facts"]
+    assert "asked_from_screen=judgment" in facts and "asked_from_screen=souls" not in facts
+    assert AssistConversation.objects.get(pk=cid).screen == "judgment"
+
+
+def test_new_is_never_continued_from_the_thirty_minute_window(cn_tenant, judge_user):
+    """App 点「新会话」后的第一问带 `new`:不悄悄接到同一页面 30 分钟内的上次会话上(第三十九批)。
+    变异:`conversation_for` 里去掉 `if new: return None` → 第二问续上第一段,红。"""
+    _enable(cn_tenant)
+    client = officer_client(judge_user)
+    first = str(_ask(client, screen="judgment").data["conversation_id"])
+    # 对照:不带 `new` 时窗口照旧续(网页 A4 的服务端那一半不变)。
+    assert str(_ask(client, screen="judgment").data["conversation_id"]) == first
+    fresh = str(_ask(client, "新问题", screen="judgment", new=True).data["conversation_id"])
+    assert fresh != first
+    assert FakeProvider.calls[-1]["history"][:-1] == []  # 模型没看到上一段的任何一轮
+    assert AssistConversation.objects.filter(user=judge_user).count() == 2
+    # 带了会话 id 时 `new` 不起作用:续的就是那一段。
+    assert str(_ask(client, screen="judgment", conversation_id=first, new=True).data["conversation_id"]) == first
+
+
 def test_deleting_is_audited_and_hides_it(cn_tenant, judge_user):
     _enable(cn_tenant)
     client = officer_client(judge_user)

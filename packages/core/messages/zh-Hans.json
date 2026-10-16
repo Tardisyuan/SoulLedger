@@ -6018,12 +6018,20 @@
     "continue_on_desk": "在电脑上继续",
     "search": {
       "souls": "查灵魂",
-      "ask": "问一问",
       "placeholder": "名字或编号",
       "read_only": "只读。改动请在官员台进行。",
       "no_souls_title": "没有找到",
       "no_souls_body": "换个名字或编号再试。",
       "residing": "▲ {{where}} · 暂居"
+    },
+    "assist": {
+      "entry": "问一问",
+      "entry_label": "问一问 · 关于{{page}}",
+      "group_earlier": "更早",
+      "time_today": "今天 {{time}}",
+      "resumed": "{{date}} 的会话 · 在「{{page}}」问的",
+      "continue_placeholder": "接着问…",
+      "open_failed": "这段会话没能打开，请重试"
     },
     "detail": {
       "your_step": "轮到你的节点",

@@ -6018,12 +6018,20 @@
     "continue_on_desk": "Continue on desktop",
     "search": {
       "souls": "Souls",
-      "ask": "Ask",
       "placeholder": "Name or ID",
       "read_only": "Read-only. Make changes at the desk.",
       "no_souls_title": "Nothing found",
       "no_souls_body": "Try another name or ID.",
       "residing": "▲ {{where}} · Resident"
+    },
+    "assist": {
+      "entry": "Ask",
+      "entry_label": "Ask · about {{page}}",
+      "group_earlier": "Earlier",
+      "time_today": "Today {{time}}",
+      "resumed": "Conversation from {{date}} · asked on {{page}}",
+      "continue_placeholder": "Ask a follow-up…",
+      "open_failed": "Couldn't open this conversation, please try again"
     },
     "detail": {
       "your_step": "Your step",

@@ -19,6 +19,9 @@ class AssistAskSerializer(serializers.Serializer):
 class OfficerAssistAskSerializer(AssistAskSerializer):
     #: 官员端 Web 的路由段(`frontend/app/<段>/`);只作提示,不改变数据范围。
     screen = serializers.ChoiceField(choices=OFFICER_SCREENS)
+    #: 官员 App 点「新会话」后的第一问:不续「同一页面 30 分钟内」的上次会话(第三十九批 O-13)。
+    #: 带了 `conversation_id` 时不看它。
+    new = serializers.BooleanField(required=False, help_text="true = 开新会话,不续同一页面 30 分钟内的上次会话。")
 
 
 class AssistMessageSerializer(serializers.ModelSerializer):
