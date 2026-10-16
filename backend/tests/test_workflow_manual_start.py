@@ -155,7 +155,7 @@ def test_another_tenant_s_template_is_404(cn):
 
 
 @pytest.mark.django_db
-def test_a_soul_with_a_workflow_in_progress_is_409(cn):
+def test_a_soul_with_a_workflow_of_the_same_case_type_in_progress_is_409(cn):
     first = cn["moderator"].post(
         START, {"soul": str(cn["soul"].pk), "case_type": CaseType.ROUTINE, "reason": "第一次"}, format="json",
     )
@@ -166,6 +166,7 @@ def test_a_soul_with_a_workflow_in_progress_is_409(cn):
     assert second.status_code == 409
     assert second.data["code"] == "workflow_in_progress"
     assert second.data["workflow"] == first.data["id"]
+    assert second.data["status"] == ApprovalWorkflowStatus.PENDING
     assert ApprovalWorkflow.objects.filter(soul=cn["soul"]).count() == 1
 
     # A finished one does not block a new one.
@@ -174,6 +175,63 @@ def test_a_soul_with_a_workflow_in_progress_is_409(cn):
         START, {"soul": str(cn["soul"].pk), "case_type": CaseType.ROUTINE, "reason": "第三次"}, format="json",
     )
     assert third.status_code == 201, third.data
+
+
+@pytest.mark.django_db
+def test_a_different_case_type_in_progress_does_not_block(cn):
+    """User, 2026-10-17: only the same case type dedupes; different types coexist."""
+    first = cn["moderator"].post(
+        START, {"soul": str(cn["soul"].pk), "case_type": CaseType.ROUTINE, "reason": "例行"}, format="json",
+    )
+    assert first.status_code == 201, first.data
+    other = cn["moderator"].post(
+        START, {"soul": str(cn["soul"].pk), "case_type": CaseType.SPECIAL, "reason": "特案"}, format="json",
+    )
+    assert other.status_code == 201, other.data
+    assert set(ApprovalWorkflow.objects.filter(soul=cn["soul"]).values_list("case_type", flat=True)) == {
+        CaseType.ROUTINE, CaseType.SPECIAL,
+    }
+
+
+CASE_TYPES = "/api/v1/workflows/case-types/"
+
+
+@pytest.mark.django_db
+def test_case_types_by_civilization_are_the_validator_s_set(cn):
+    from apps.workflow.templates import VALID_CASE_TYPES_BY_CIVILIZATION, WORKFLOW_TEMPLATES
+
+    for civilization, valid in VALID_CASE_TYPES_BY_CIVILIZATION.items():
+        response = cn["moderator"].get(CASE_TYPES, {"civilization": civilization})
+        assert response.status_code == 200, response.data
+        assert {row["value"] for row in response.data} == {c.value for c in valid}
+        for row in response.data:
+            builtin = bool((WORKFLOW_TEMPLATES.get((civilization, row["value"])) or {}).get("nodes"))
+            assert row["builtin"] is builtin, (civilization, row)
+    # REBIRTH_APPLICATION is never offered: it is not started by hand.
+    chinese = cn["moderator"].get(CASE_TYPES, {"civilization": Civilization.CHINESE}).data
+    assert CaseType.REBIRTH_APPLICATION not in {row["value"] for row in chinese}
+    assert {row["value"]: row["builtin"] for row in chinese}[CaseType.ROUTINE] is True
+
+
+@pytest.mark.django_db
+def test_case_types_by_soul_use_the_soul_s_civilization(cn):
+    by_soul = cn["moderator"].get(CASE_TYPES, {"soul": str(cn["soul"].pk)})
+    by_civ = cn["moderator"].get(CASE_TYPES, {"civilization": Civilization.CHINESE})
+    assert by_soul.status_code == 200, by_soul.data
+    assert by_soul.data == by_civ.data
+
+
+@pytest.mark.django_db
+def test_case_types_refusals(cn):
+    foreign = Soul.objects.create(name="别殿之魂乙", tenant=_tenant(Civilization.EGYPTIAN))
+    assert cn["moderator"].get(CASE_TYPES, {"soul": str(foreign.pk)}).status_code == 404
+    assert cn["moderator"].get(CASE_TYPES, {"soul": "not-a-uuid"}).status_code == 404
+    assert cn["moderator"].get(CASE_TYPES).status_code == 400
+    assert cn["moderator"].get(CASE_TYPES, {"civilization": "ATLANTEAN"}).status_code == 400
+    both = cn["moderator"].get(CASE_TYPES, {"civilization": Civilization.CHINESE, "soul": str(cn["soul"].pk)})
+    assert both.status_code == 400
+    judge = _client("JUDGE", cn["tenant"], "w11_judge_ct")
+    assert judge.get(CASE_TYPES, {"civilization": Civilization.CHINESE}).status_code == 403
 
 
 @pytest.mark.django_db

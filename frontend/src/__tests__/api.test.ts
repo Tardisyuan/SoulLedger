@@ -560,6 +560,12 @@ describe('API Client — @soulledger/core/api', () => {
       expect(workflowApi.create).toBeUndefined();
     });
 
+    it('caseTypes() should GET /workflows/case-types/ with the params', () => {
+      mockInstance.get.mockResolvedValueOnce({ data: [] });
+      workflowApi.caseTypes({ soul: 's-1' });
+      expect(mockInstance.get).toHaveBeenCalledWith('/workflows/case-types/', { params: { soul: 's-1' } });
+    });
+
     it('advance() should POST /workflows/:id/advance/', () => {
       mockInstance.post.mockResolvedValueOnce({ data: {} });
       workflowApi.advance('wf-1');
