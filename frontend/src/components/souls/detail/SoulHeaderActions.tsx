@@ -76,7 +76,8 @@ export function SoulHeaderActions({
   });
 
   return (
-    <div className="flex items-center gap-3">
+    // Wraps at phone width: with 重算功过 the row is wider than 393 px.
+    <div className="flex flex-wrap items-center justify-end gap-3">
       {onRecalculate ? (
         <Button type="button" variant="secondary" onClick={onRecalculate}>
           {t("souls.detail.recalculate")}

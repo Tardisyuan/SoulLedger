@@ -33,16 +33,18 @@ test.describe("Circle moderation", () => {
     await expect(domainEnum(detail, "ABUSE")).toHaveText("辱骂骚扰");
     await expect(detail.getByText("ABUSE", { exact: true })).toHaveCount(0);
 
-    // H with an empty reason: refused on the page, nothing sent.
+    // H with no reason picked: refused on the page, nothing sent.
     await page.locator("body").press("h");
-    await expect(detail.getByRole("alert")).toContainText("隐藏与警告必须写理由");
+    await expect(detail.getByRole("alert")).toContainText("隐藏或删除须先选理由");
     expect(api.countOf("POST", "/social-moderation/reports/:id/resolve/")).toBe(0);
 
-    await detail.getByLabel("处理理由（隐藏与警告必填）").fill("辱骂他人");
+    // The reason is picked from the presets (the author is told it); the note is the officer's own record.
+    await detail.getByLabel("隐藏 / 删除理由（会告诉作者）").selectOption("ABUSE");
     await detail.getByRole("button", { name: /^隐藏/ }).click();
     await expect.poll(() => api.lastCall("POST", "/social-moderation/reports/:id/resolve/")?.body).toEqual({
       resolution: "HIDE",
-      note: "辱骂他人",
+      note: "",
+      reason_code: "ABUSE",
     });
   });
 
