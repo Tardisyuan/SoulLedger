@@ -92,10 +92,14 @@ export function shouldAskBio(o: { hasPassword: boolean; enrolled: boolean; enabl
  * Design needs: the soul walked away (stay on the page, do not ask again), the system said no (show the password
  * box), the key is gone because the phone's face / fingerprint set changed (E4).
  */
-export type CredentialFailure = "cancelled" | "invalidated" | "failed";
+export type CredentialFailure = "cancelled" | "invalidated" | "locked" | "failed";
 
 export function classifyCredentialError(error: unknown): CredentialFailure {
   const text = `${(error as { code?: unknown } | null)?.code ?? ""} ${(error as { message?: unknown } | null)?.message ?? String(error)}`;
+  // Too many tries: the system refuses at once, without a prompt, until it lifts the lock. Seen on a Huawei
+  // (Android 12, 2026-10-16): "Could not Authenticate the user: Lockout. 操作过于频繁，请稍后再试". Before "invalidated"
+  // because a permanent lockout's text can say "permanently" and the key is still good.
+  if (/lockout|too many attempts/i.test(text)) return "locked";
   if (/invalidat|permanently|enrol|key.{0,20}(not found|missing|unusable)/i.test(text)) return "invalidated";
   if (/cancel|dismiss|-128|user_cancel|negative button/i.test(text)) return "cancelled";
   return "failed";

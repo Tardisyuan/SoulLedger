@@ -4552,6 +4552,7 @@
       "enable_body": "先输入当前密码，再验证{{bio}}。",
       "enable_next": "下一步",
       "failed": "{{bio}}没认出，请输入密码。",
+      "locked": "{{bio}}试错太多次，系统暂时锁住了。请输入密码，或过一会儿再试。",
       "retry": "再用{{bio}}试一次"
     },
     "security": {

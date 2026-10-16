@@ -4552,6 +4552,7 @@
       "enable_body": "Enter your current password, then confirm your {{bio}}.",
       "enable_next": "Next",
       "failed": "{{bio}} not recognised. Enter your password.",
+      "locked": "Too many {{bio}} tries; the phone has locked it for now. Enter your password, or try again later.",
       "retry": "Try {{bio}} again"
     },
     "security": {
