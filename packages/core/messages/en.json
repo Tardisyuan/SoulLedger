@@ -5909,7 +5909,10 @@
       "version": "Version {{version}}",
       "logout": "Sign out",
       "logout_title": "Sign out? This device will stop receiving pushes.",
-      "logout_ok": "Sign out"
+      "logout_ok": "Sign out",
+      "notify_categories": "Notification types",
+      "muted_count": "{{n}} muted",
+      "muted_none": "All on"
     },
     "back": "Back",
     "areas": {
@@ -6016,6 +6019,36 @@
     },
     "list": {
       "more": "Load more"
+    },
+    "case": {
+      "release": "Release",
+      "defer": "Defer",
+      "request_reassign": "Ask to reassign",
+      "release_title": "Release this case?",
+      "release_body": "It goes back to Unclaimed. Your comments stay.",
+      "defer_title": "Defer this case",
+      "defer_body": "It stays with you. Tap Restore to put it back in the queue.",
+      "defer_reason": "Reason · required, visible to officers in this hall",
+      "defer_confirm": "Defer",
+      "reassign_body": "Until it's approved, the case stays with you.",
+      "reassign_reason": "Reason · required, the approver will read it",
+      "reassign_confirm": "Send request",
+      "reason_required": "A reason is required",
+      "deferred_banner": "Deferred · {{date}} · Reason: {{reason}}",
+      "reassign_pending": "Reassignment requested · awaiting approval",
+      "with_other": "With {{name}}. Read-only.",
+      "done_released": "Released; back in Unclaimed",
+      "done_deferred": "Deferred",
+      "done_reassign": "Request sent",
+      "summary": "Case summary",
+      "summary_more": "Show all",
+      "evidence": "Evidence · {{n}}",
+      "evidence_attachment": "Attachment {{n}}",
+      "load_failed": "The case details didn't load"
+    },
+    "notify": {
+      "intro": "Types you turn off aren't pushed to this phone or shown in the app. This is the same setting as your web profile; email is set on the web.",
+      "save_failed": "Not saved; switch restored"
     }
   },
   "print": {

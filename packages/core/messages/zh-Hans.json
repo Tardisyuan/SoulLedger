@@ -5909,7 +5909,10 @@
       "version": "版本 {{version}}",
       "logout": "退出登录",
       "logout_title": "退出登录？这台设备将不再收到推送。",
-      "logout_ok": "退出"
+      "logout_ok": "退出",
+      "notify_categories": "通知类别",
+      "muted_count": "静音 {{n}} 类",
+      "muted_none": "全部接收"
     },
     "back": "返回",
     "areas": {
@@ -6016,6 +6019,36 @@
     },
     "list": {
       "more": "加载更多"
+    },
+    "case": {
+      "release": "放回",
+      "defer": "暂缓",
+      "request_reassign": "请求改派",
+      "release_title": "放回这件案子？",
+      "release_body": "放回后回到「待认领」，你写的评议保留。",
+      "defer_title": "暂缓这件案子",
+      "defer_body": "暂缓后案子仍在你手上，点「恢复」回到队列。",
+      "defer_reason": "暂缓理由 · 必填，本殿官员能看到",
+      "defer_confirm": "确认暂缓",
+      "reassign_body": "批下来之前，案子还在你手上。",
+      "reassign_reason": "理由 · 必填，审批人会读到",
+      "reassign_confirm": "发出请求",
+      "reason_required": "必须写理由",
+      "deferred_banner": "暂缓 · {{date}} · 理由：{{reason}}",
+      "reassign_pending": "已请求改派 · 等审批",
+      "with_other": "在{{name}}手上。只能看。",
+      "done_released": "已放回，案子回到待认领",
+      "done_deferred": "已暂缓",
+      "done_reassign": "请求已发出",
+      "summary": "案由",
+      "summary_more": "展开全文",
+      "evidence": "证据 · {{n}}",
+      "evidence_attachment": "附件 {{n}}",
+      "load_failed": "案情没有加载出来"
+    },
+    "notify": {
+      "intro": "关掉的类别不推送到这部手机，也不在站内提醒。和网页个人中心是同一份设置；邮件在网页上设置。",
+      "save_failed": "没存上，开关已复原"
     }
   },
   "print": {
