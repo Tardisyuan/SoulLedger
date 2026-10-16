@@ -8,6 +8,7 @@ import { useSoul } from "@soulledger/core/hooks/useSouls";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { resolveEnumDisplay } from "@/src/lib/domainDisplay";
+import { DomainEnum } from "@/src/components/ui/DomainValue";
 import { civSkinOf } from "@/src/lib/civSkin";
 import { BaseModal } from "@/src/components/ui/Modal";
 import { Button } from "@/src/components/ui/Button";
@@ -58,13 +59,18 @@ export function startWorkflowRefusal(error: unknown, t: Translate, civilization?
   return failed;
 }
 
-/** 下拉里的「文明 · 殿」:殿名按灵魂所在租户的文明取(地府 第十殿 · 欧洲 米诺斯之庭 …),同身份带。 */
+/** 殿名按灵魂所在租户的文明取(地府 第十殿 · 欧洲 米诺斯之庭 …),同身份带。 */
+function courtOf(t: Translate, tenantCode: string | undefined) {
+  const civ = civSkinOf(tenantCode ?? null);
+  return t(`plaque.office.court.${civ === "neutral" ? "cn" : civ}`);
+}
+
+/** 搜索下拉里的「文明 · 殿」:`<option>` 只能放文字,所以是字符串。 */
 function useSoulPlace() {
   const { t } = useI18n();
   return (s: { civilization: string; tenant_code?: string }) => {
-    const civ = civSkinOf(s.tenant_code ?? null);
     const civLabel = resolveEnumDisplay(t, "souls.civilizations", s.civilization).label ?? "";
-    return `${civLabel} · ${t(`plaque.office.court.${civ === "neutral" ? "cn" : civ}`)}`;
+    return `${civLabel} · ${courtOf(t, s.tenant_code)}`;
   };
 }
 
@@ -265,7 +271,9 @@ export function StartWorkflowDialog({
               )}
             >
               {lockedSoul.name}
-              <span className="text-xs text-[oklch(var(--color-ink-muted))]">{place(lockedSoul)}</span>
+              <span data-soul-place="" className="text-xs text-[oklch(var(--color-ink-muted))]">
+                <DomainEnum namespace="souls.civilizations" value={lockedSoul.civilization} /> · {courtOf(t, lockedSoul.tenant_code)}
+              </span>
             </span>
           </div>
         ) : (

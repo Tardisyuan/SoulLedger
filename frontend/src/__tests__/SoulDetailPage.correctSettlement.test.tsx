@@ -120,7 +120,8 @@ describe("SoulDetailPage — 更正结案的门", () => {
     mockSoulsGet.mockResolvedValue({ data: soul("DISPOSED") });
     renderPage();
     await openMenu();
-    expect(screen.getAllByRole("menuitem")).toHaveLength(1);
+    // ADMIN 的 ⋯ 里还有 重算功过 / 发起审批…(W-11a),所以不数条数:删除在,更正结案不在。
+    expect(screen.getByRole("menuitem", { name: "souls.detail.delete" })).toBeInTheDocument();
     expect(correctItem()).not.toBeInTheDocument();
   });
 
