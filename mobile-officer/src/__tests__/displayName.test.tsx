@@ -30,6 +30,9 @@ it("我的 shows the name on a row that opens the edit screen", async () => {
   expect(await screen.findByText(/阎罗/)).toBeTruthy();
   fireEvent.press(screen.getByTestId("me-name"));
   expect(onOpen).toHaveBeenCalledWith("name");
+  // A long name is cut to one line (iPhone 17 simulator, 2026-10-16: 53 letters pushed 「姓名」 off the row).
+  expect(screen.getByTestId("me-name-value").props.numberOfLines).toBe(1);
+  expect(screen.getByText("姓名")).toBeTruthy();
 });
 
 it("starts from the current name and caps the field at the model's max_length", () => {
