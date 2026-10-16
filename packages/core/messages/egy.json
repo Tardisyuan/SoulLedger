@@ -6295,6 +6295,25 @@
     "notify": {
       "intro": "Iru Khetem: Nen Sedjem Er Medjat Pen, Nen Em Hena. Smen Wa Hena Medjat Sab; Shat: Em Medjat Sab.",
       "save_failed": "Nen Smen · Iyi Er Tepy"
+    },
+    "soul": {
+      "tabs": {
+        "identity": "Ren",
+        "judgments": "Wedja",
+        "karma": "Nefer Isfet",
+        "fate": "Wat",
+        "events": "Medew"
+      },
+      "birth_name": "Ren Mesut",
+      "karma_group": "Ankh {{n}} · Sep {{count}}",
+      "merit_short": "Nefer",
+      "demerit_short": "Isfet",
+      "source": "Em {{source}}",
+      "shown_count": "{{shown}} · Neb {{total}}",
+      "judgment_meta": "Ankh {{n}} · {{verdict}} · {{status}}",
+      "current_stop": "◐ Sekhet Pen",
+      "no_disposition": "Wetep Nen Iri Djer",
+      "open_label": "Wen Medjat Ba · {{name}}"
     }
   },
   "print": {
