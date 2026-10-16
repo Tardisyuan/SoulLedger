@@ -1,4 +1,6 @@
-"""`GET /api/v1/souls/export/?ids=…` — the /souls batch bar's 「导出」.
+"""`GET /api/v1/souls/export/?ids=…` — the /souls batch bar's 「导出」 — and, without
+`ids`, the list page's 「导出 CSV」: every soul the list's current filters, search and
+ordering match, unpaginated.
 
 Same scope as the list (`SoulViewSet.get_queryset`), same codename (`soul.read`).
 The cross-tenant caller is a custom role, not ADMIN: ADMIN is tenant-exempt, so
@@ -115,3 +117,57 @@ def test_bad_ids_are_a_400_not_a_file(world, ids):
     response = world["reader"].get(URL, {"ids": ids})
     assert response.status_code == 400
     assert "ids" in response.json()
+
+
+# --- without `ids`: the list's own filters, search and ordering ---
+
+
+@pytest.mark.django_db
+def test_without_ids_the_file_is_the_whole_scoped_list(world):
+    rows = _rows(world["reader"].get(URL))
+    assert sorted(r[0] for r in rows) == sorted(str(s.pk) for s in world["souls"])
+    assert "Sennedjem" not in {r[1] for r in rows}
+
+
+@pytest.mark.django_db
+def test_without_ids_a_filter_narrows_the_file(world):
+    a = world["souls"][0]
+    Soul.objects.filter(pk=a.pk).update(current_state=SoulState.JUDGING)
+    rows = _rows(world["reader"].get(URL, {"state": SoulState.JUDGING}))
+    assert [r[0] for r in rows] == [str(a.pk)]
+
+
+@pytest.mark.django_db
+def test_without_ids_search_narrows_the_file(world):
+    b = world["souls"][1]
+    rows = _rows(world["reader"].get(URL, {"search": "甲"}))
+    assert [r[0] for r in rows] == [str(b.pk)]
+
+
+@pytest.mark.django_db
+def test_without_ids_another_tenants_soul_never_matches(world):
+    assert _rows(world["reader"].get(URL, {"search": "Sennedjem"})) == []
+
+
+@pytest.mark.django_db
+def test_without_ids_the_lists_ordering_is_kept(world):
+    a = world["souls"][0]
+    rows = _rows(world["reader"].get(URL, {"ordering": "-merit_score"}))
+    assert rows[0][0] == str(a.pk)  # merit 5; the other two are 0
+
+
+@pytest.mark.django_db
+def test_without_ids_a_formula_name_is_neutralised(world):
+    rows = _rows(world["reader"].get(URL, {"search": "HYPERLINK"}))
+    assert len(rows) == 1 and rows[0][1].startswith("'=")
+
+
+@pytest.mark.django_db
+def test_without_ids_and_without_soul_read_it_is_refused(world):
+    assert world["blind"].get(URL).status_code == 403
+
+
+@pytest.mark.django_db
+def test_without_ids_more_rows_than_the_ceiling_is_a_400(world, monkeypatch):
+    monkeypatch.setattr("apps.souls.views.EXPORT_MAX_ROWS", 2)
+    assert world["reader"].get(URL).status_code == 400

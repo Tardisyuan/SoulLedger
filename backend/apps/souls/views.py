@@ -17,7 +17,7 @@ from rest_framework.response import Response
 
 from apps.core.archive import DeletionNotAllowedError
 from apps.core.csv_safe import csv_safe
-from apps.core.exports import record_export
+from apps.core.exports import EXPORT_MAX_ROWS, record_export
 from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.tenant import is_tenant_exempt, residence_read_allowed, scope_to_tenant
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
@@ -315,27 +315,35 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
     @extend_schema(
         parameters=[
             OpenApiParameter(
-                "ids", OpenApiTypes.STR, required=True,
-                description="逗号分隔的灵魂 id(UUID),至多 100 个",
+                "ids", OpenApiTypes.STR, required=False,
+                description="逗号分隔的灵魂 id(UUID),至多 100 个;不传则导出列表当前筛选下的全部行",
             ),
         ],
         responses={(200, "text/csv"): OpenApiTypes.BINARY, 400: OpenApiTypes.OBJECT},
     )
-    @action(detail=False, methods=["get"], url_path="export", pagination_class=None, filter_backends=[])
+    @action(detail=False, methods=["get"], url_path="export", pagination_class=None)
     def export(self, request):
-        """批量条「导出」:所选灵魂的 CSV,一行一个。
+        """所选灵魂(`ids`,批量条)或列表当前筛选下的全部灵魂(不带 `ids`,列表页「导出 CSV」)的 CSV。
 
         范围就是列表的范围 —— 行取自 `get_queryset()`(租户、DataScope、未删除、未归档),
-        所以一个够不着的 id 只是不在文件里,与它根本不存在答同一件事。自由文本格过 `csv_safe`。
+        所以一个够不着的 id 只是不在文件里,与它根本不存在答同一件事。不带 `ids` 时再过
+        `filter_queryset`,与列表同一组筛选、搜索与排序;超过 `EXPORT_MAX_ROWS` 行是 400,
+        不截断(`apps/core/exports.py`)。自由文本格过 `csv_safe`。
         """
-        raw = [part.strip() for part in request.query_params.get("ids", "").split(",") if part.strip()]
-        try:
-            ids = list(dict.fromkeys(uuid.UUID(part) for part in raw))
-        except ValueError:
-            ids = None
-        # 与 batch-recycle 同一上限:批量条一次至多勾选一页。
-        if not ids or len(ids) > SOUL_BATCH_RECYCLE_MAX:
-            raise ValidationError({"ids": [f"1-{SOUL_BATCH_RECYCLE_MAX} comma-separated soul UUIDs."]})
+        if "ids" not in request.query_params:
+            souls = self.filter_queryset(self.get_queryset())
+            if souls.count() > EXPORT_MAX_ROWS:
+                raise ValidationError({"detail": f"More than {EXPORT_MAX_ROWS} rows match; narrow the filters."})
+        else:
+            raw = [part.strip() for part in request.query_params.get("ids", "").split(",") if part.strip()]
+            try:
+                ids = list(dict.fromkeys(uuid.UUID(part) for part in raw))
+            except ValueError:
+                ids = None
+            # 与 batch-recycle 同一上限:批量条一次至多勾选一页。
+            if not ids or len(ids) > SOUL_BATCH_RECYCLE_MAX:
+                raise ValidationError({"ids": [f"1-{SOUL_BATCH_RECYCLE_MAX} comma-separated soul UUIDs."]})
+            souls = self.get_queryset().filter(pk__in=ids, is_deleted=False).order_by("name", "pk")
         from apps.ledger.views import _format_death_date
 
         response = HttpResponse(content_type="text/csv")
@@ -346,7 +354,8 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
             "Karmic Balance", "Death Date", "Created At",
         ])
         rows = 0
-        for soul in self.get_queryset().filter(pk__in=ids, is_deleted=False).order_by("name", "pk"):
+        # 文件里没有功过明细:不要列表为日期检查预取的 records / reincarnations(至多五万行)。
+        for soul in souls.prefetch_related(None):
             rows += 1
             writer.writerow([
                 str(soul.id),
