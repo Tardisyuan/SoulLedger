@@ -16,7 +16,7 @@ import {
   type InboxMessage,
 } from "@soulledger/core/api/soul-inbox";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { KeyboardAvoidingView, Platform, View } from "react-native";
+import { KeyboardAvoidingView, Platform, Pressable, View } from "react-native";
 
 import { clearDraft, flushDraft, readDraft, scheduleDraft } from "../drafts";
 import { enqueueReply, newReplyTxn, removeFromOutbox, useOutbox } from "../outbox";
@@ -32,6 +32,8 @@ import {
   withTemplate,
 } from "../rules";
 import { useSession } from "../session";
+import { isUnassigned, menuActions, type LetterAction } from "../letterActions";
+import { AssignSheet, LetterMenuSheet, TakeBar, UnassignSheet } from "./letterActions";
 import { LetterImage, LetterImageViewer } from "./letterImages";
 import {
   Input,
@@ -93,6 +95,10 @@ export function LetterThread({
   const frame = useRef<View>(null);
   const [top, setTop] = useState(0);
   const [viewing, setViewing] = useState<number | null>(null);
+  // O-04: the ⋯ menu and what it opens. `archivedAt` is when this officer archived it (the banner's date).
+  const [sheet, setSheet] = useState<"menu" | "assign" | "unassign" | null>(null);
+  const [acting, setActing] = useState(false);
+  const [archivedAt, setArchivedAt] = useState<string | null>(null);
   // Two quick taps must not make two replies: `busy` is state (a render behind), this is not.
   const sending = useRef(false);
   // One id per reply: pressing 「发送」 again with the same words after a lost response sends the same id.
@@ -158,6 +164,44 @@ export function LetterThread({
       });
   };
 
+  // An archived letter wears 「已归档 · 日期」; the date is in this officer's inbox state, not on the conversation.
+  const archived = thread.data?.conversation.archived ?? false;
+  useEffect(() => {
+    if (!archived || archivedAt) return;
+    soulInboxApi.draft(id).then((r) => setArchivedAt(r.data.archived_at ?? null), () => undefined);
+  }, [archived, archivedAt, id]);
+
+  /** Run one hand-over call; on success toast, refresh the thread and the list behind it. */
+  const act = (call: () => Promise<unknown>, done: string, leave = false) => {
+    setActing(true);
+    call()
+      .then(() => {
+        if (done) toast(done, "success");
+        onSettled();
+        if (leave) onDone?.();
+        else void thread.reload();
+      })
+      .catch(() => toast(t("officer_app.state.error_title"), "failure"))
+      .finally(() => {
+        setActing(false);
+        setSheet(null);
+      });
+  };
+  const pick = (action: LetterAction) => {
+    if (action === "assign" || action === "unassign") {
+      setSheet(action);
+      return;
+    }
+    if (action === "archive") {
+      setSheet(null);
+      // No confirm: the banner's 取消归档 is the way back.
+      act(() => soulInboxApi.archive(id).then((r) => setArchivedAt(r.data.archived_at ?? new Date().toISOString())), t("soul_inbox.archived_done"));
+      return;
+    }
+    setSheet(null);
+    act(() => soulInboxApi.unarchive(id).then(() => setArchivedAt(null)), t("officer_app.letter.done_unarchived"));
+  };
+
   if (thread.error && lettersUnavailable(thread.error)) {
     return (
       <Screen testID="letter-unavailable" edges={["left", "right"]}>
@@ -179,6 +223,11 @@ export function LetterThread({
 
   const { conversation, messages } = thread.data;
   const closed = conversation.closed_at != null;
+  // The server always sends `assignee` (null = nobody); only that explicit null is "unassigned".
+  const assigned = conversation.assignee !== null;
+  const flags = { archived: conversation.archived, closed, assigned };
+  const unassigned = isUnassigned(flags);
+  const meId = user?.id;
   const values = {
     soul_name: conversation.soul_name,
     hall_name: hallLabel(t, user?.tenant) ?? "",
@@ -204,9 +253,30 @@ export function LetterThread({
         // (iPhone 17, 2026-10-11).
         keyboardVerticalOffset={top}
       >
+        <View style={{ flexDirection: "row", alignItems: "center", paddingLeft: space[5], borderBottomWidth: 1, borderBottomColor: theme.hair }}>
+          <View style={{ flex: 1, paddingVertical: space[3], gap: space[1] }}>
+            <Txt variant="title">{conversation.soul_name}</Txt>
+            {unassigned ? <Txt variant="caption" tone="muted" testID="letter-unassigned-tag">{t("officer_app.letter.unassigned_tag")}</Txt> : null}
+          </View>
+          <Pressable
+            testID="letter-more"
+            accessibilityRole="button"
+            accessibilityLabel={t("officer_app.letter.more")}
+            onPress={() => setSheet("menu")}
+            style={{ width: 48, minHeight: 48, alignItems: "center", justifyContent: "center" }}
+          >
+            <Txt variant="title">⋯</Txt>
+          </Pressable>
+        </View>
+        {conversation.archived ? (
+          <View style={{ padding: space[4], gap: space[2] }}>
+            <Notice tone="neutral" testID="letter-archived">{`○ ${archivedAt ? t("officer_app.letter.archived_banner", { date: formatWhen(archivedAt) }) : t("soul_inbox.archived_done")}`}</Notice>
+            {/* The way back right where it was archived: 取消归档 is what 撤销 would do. */}
+            <SmallButton testID="letter-unarchive" title={t("officer_app.letter.unarchive")} onPress={() => pick("unarchive")} />
+          </View>
+        ) : null}
         <Screen edges={["left", "right"]}>
           <View style={{ padding: space[5], gap: space[4] }}>
-            <Txt variant="title">{conversation.soul_name}</Txt>
             {ordered.length === 0 ? (
               <Txt variant="caption" tone="muted">
                 {t("soul_inbox.no_messages")}
@@ -237,6 +307,13 @@ export function LetterThread({
               testID="letter-closed"
             >{`○ ${t("soul_inbox.closed")}`}</Notice>
           </View>
+        ) : unassigned ? (
+          // Nobody holds it: 由我来回 takes it (then the box appears), 转给别人 hands it on. No reply from here.
+          <TakeBar
+            busy={acting}
+            onAssign={() => setSheet("assign")}
+            onTake={() => meId !== undefined && act(() => soulInboxApi.assign(id, meId), "")}
+          />
         ) : (
           <View
             testID="letter-composer"
@@ -263,7 +340,7 @@ export function LetterThread({
               multiline
               maxLength={INBOX_REPLY_MAX}
               value={text}
-              editable={!queued}
+              editable={!queued && !conversation.archived}
               onChangeText={edit}
             />
             {queued ? (
@@ -285,12 +362,31 @@ export function LetterThread({
               testID="letter-send"
               kind="primary"
               busy={busy}
-              disabled={queued}
+              disabled={queued || conversation.archived}
               title={t("soul_inbox.send")}
               onPress={send}
             />
           </View>
         )}
+        <LetterMenuSheet open={sheet === "menu"} actions={menuActions(flags)} onPick={pick} onClose={() => setSheet(null)} />
+        <AssignSheet
+          key={`assign-${sheet === "assign"}`}
+          open={sheet === "assign"}
+          id={id}
+          selfId={meId}
+          onClose={() => setSheet(null)}
+          onAssigned={(name) => {
+            toast(t("officer_app.letter.done_assigned", { name }), "success");
+            onSettled();
+            onDone?.();
+          }}
+        />
+        <UnassignSheet
+          open={sheet === "unassign"}
+          busy={acting}
+          onClose={() => setSheet(null)}
+          onConfirm={() => act(() => soulInboxApi.unassign(id), t("officer_app.letter.done_unassigned"))}
+        />
         <LetterImageViewer
           images={gallery}
           index={viewing}
