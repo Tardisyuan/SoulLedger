@@ -1,15 +1,19 @@
 /**
  * Item details: a waiting item (with the decision bar), a judgment (claim / read) and a soul
- * (read-only), plus a letter thread (待回书信, `letter.tsx`). Each ends with 「在电脑上继续」, a link to the desk's same page that the officer can
+ * (read-only, `soulDetail.tsx`), plus a letter thread (待回书信, `letter.tsx`). Each ends with 「在电脑上继续」, a link to the desk's same page that the officer can
  * send to a computer.
+ *
+ * A soul's name in a waiting item or a judgment opens that soul over the detail, and a judgment row in the soul
+ * opens that judgment over it in turn: a small stack inside this one detail, 返回 pops it (the shell still has one
+ * level). The detail underneath stays mounted, so an open decision sheet or a typed comment is still there.
  */
 import { JUDGMENT_COMMENT_MAX, judgmentApi } from "@soulledger/core/api/judgment";
 import { dispatchApi } from "@soulledger/core/api/dispatch";
 import { officerAppApi, type TodoItemDetail, type TodoKind } from "@soulledger/core/api/officer-app";
 import { soulAccountsApi } from "@soulledger/core/api/soul-accounts";
-import { soulsApi, type Soul, type SoulRecordEntry } from "@soulledger/core/api/souls";
-import { useCallback, useRef, useState } from "react";
-import { Pressable, type ScrollView, Share, View } from "react-native";
+import type { SoulRecordEntry } from "@soulledger/core/api/souls";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { BackHandler, Pressable, type ScrollView, Share, View } from "react-native";
 
 import { formatWhen } from "../format";
 import { useCachedRemote } from "../readCache";
@@ -20,6 +24,7 @@ import { Icon, Input, Notice, Screen, SectionLabel, SmallButton, Txt, space, use
 import { LetterThread } from "./letter";
 import { JudgmentActionBar } from "./judgmentActions";
 import { EvidenceText, JudgmentCase } from "./judgmentCase";
+import { SoulDetail, SoulLink } from "./soulDetail";
 import { TodoFactsView } from "./todoFacts";
 import { CosignSheet, DecisionSheet, type CooldownFacts } from "./sheets";
 
@@ -28,26 +33,47 @@ export type DetailTarget =
   | { type: "judgment"; id: string }
   | { type: "soul"; id: string };
 
+type Over = Exclude<DetailTarget, { type: "todo" }>;
+
 export function Detail({ target, onBack, onSettled }: { target: DetailTarget; onBack: () => void; onSettled: () => void }) {
   const { t } = useI18n();
   const theme = useTheme();
+  const [stack, setStack] = useState<Over[]>([]);
+  const top = stack.length > 0 ? stack[stack.length - 1] : null;
+  const push = (next: Over) => setStack((s) => [...s, next]);
+  const back = () => (top ? setStack((s) => s.slice(0, -1)) : onBack());
+  useEffect(() => {
+    if (!top) return;
+    // Registered after the shell's, so it is asked first: the hardware back pops the stack before it closes the detail.
+    const sub = BackHandler.addEventListener("hardwareBackPress", () => {
+      setStack((s) => s.slice(0, -1));
+      return true;
+    });
+    return () => sub.remove();
+  }, [top]);
+  const openSoul = (id: string) => push({ type: "soul", id });
+  const openJudgment = (id: string) => push({ type: "judgment", id });
   return (
     <View testID="detail" style={{ flex: 1, backgroundColor: theme.s0 }}>
       <Pressable
         testID="detail-back"
         accessibilityRole="button"
         accessibilityLabel={t("officer_app.back")}
-        onPress={onBack}
+        onPress={back}
         style={{ minHeight: 48, flexDirection: "row", alignItems: "center", gap: space[2], paddingHorizontal: space[5], borderBottomWidth: 1, borderBottomColor: theme.hair }}
       >
         <Icon name="back" size={16} color={theme.ink} />
         <Txt variant="nav">{t("officer_app.back")}</Txt>
       </Pressable>
-      {target.type === "todo" && target.kind === "letter" ? <LetterThread key={target.id} id={target.id} onSettled={onSettled} onDone={onBack} /> : null}
-      {target.type === "todo" && target.kind === "dispatch" ? <DispatchLanding key={target.id} id={target.id} onSettled={onSettled} /> : null}
-      {target.type === "todo" && target.kind !== "letter" && target.kind !== "dispatch" ? <TodoDetail kind={target.kind} id={target.id} onSettled={onSettled} /> : null}
-      {target.type === "judgment" ? <JudgmentDetail id={target.id} /> : null}
-      {target.type === "soul" ? <SoulDetail id={target.id} /> : null}
+      <View style={top ? { display: "none" } : { flex: 1 }}>
+        {target.type === "todo" && target.kind === "letter" ? <LetterThread key={target.id} id={target.id} onSettled={onSettled} onDone={onBack} /> : null}
+        {target.type === "todo" && target.kind === "dispatch" ? <DispatchLanding key={target.id} id={target.id} onSettled={onSettled} onOpenSoul={openSoul} /> : null}
+        {target.type === "todo" && target.kind !== "letter" && target.kind !== "dispatch" ? <TodoDetail kind={target.kind} id={target.id} onSettled={onSettled} onOpenSoul={openSoul} /> : null}
+        {target.type === "judgment" ? <JudgmentDetail id={target.id} onOpenSoul={openSoul} /> : null}
+        {target.type === "soul" ? <SoulDetail id={target.id} onOpenJudgment={openJudgment} footer={<ContinueOnDesk target={{ kind: "soul", id: target.id }} />} /> : null}
+      </View>
+      {top?.type === "soul" ? <SoulDetail key={`over-${stack.length}`} id={top.id} onOpenJudgment={openJudgment} footer={<ContinueOnDesk target={{ kind: "soul", id: top.id }} />} /> : null}
+      {top?.type === "judgment" ? <JudgmentDetail key={`over-${stack.length}`} id={top.id} onOpenSoul={openSoul} /> : null}
     </View>
   );
 }
@@ -72,7 +98,7 @@ function ContinueOnDesk({ target }: { target: Parameters<typeof deskUrl>[0] }) {
  * (`dispatch/records/<id>/`, which lets both parties in); a record this officer cannot read is the same
  * denied / error state every other detail shows.
  */
-function DispatchLanding({ id, onSettled }: { id: string; onSettled: () => void }) {
+function DispatchLanding({ id, onSettled, onOpenSoul }: { id: string; onSettled: () => void; onOpenSoul: (id: string) => void }) {
   const { t } = useI18n();
   const { state } = useSession();
   const role = state.status === "signedIn" ? state.user.role : "";
@@ -82,7 +108,7 @@ function DispatchLanding({ id, onSettled }: { id: string; onSettled: () => void 
   const view = viewStateOf({ data, error }, () => false, isDenied);
   if (view || !data) return <StateView state={view ?? "loading"} onRetry={reload} role={role} area={t("officer_app.areas.todo")} />;
   const mode = dispatchView(data, ownHall);
-  if (mode.mode === "act") return <TodoDetail kind="reassignment" id={id} onSettled={onSettled} />;
+  if (mode.mode === "act") return <TodoDetail kind="reassignment" id={id} onSettled={onSettled} onOpenSoul={onOpenSoul} />;
   const line = dispatchStatusLine(data, mode.side);
   return (
     <Screen testID="dispatch-readonly" edges={["left", "right"]}>
@@ -102,7 +128,7 @@ function DispatchLanding({ id, onSettled }: { id: string; onSettled: () => void 
   );
 }
 
-function TodoDetail({ kind, id, onSettled }: { kind: TodoKind; id: string; onSettled: () => void }) {
+function TodoDetail({ kind, id, onSettled, onOpenSoul }: { kind: TodoKind; id: string; onSettled: () => void; onOpenSoul?: (id: string) => void }) {
   const { t } = useI18n();
   const { state } = useSession();
   const role = state.status === "signedIn" ? state.user.role : "";
@@ -168,7 +194,7 @@ function TodoDetail({ kind, id, onSettled }: { kind: TodoKind; id: string; onSet
           {data.actionable ? (
             <Txt variant="bodyLg" testID="detail-your-step">{`◐ ${t("officer_app.detail.your_step")}`}</Txt>
           ) : null}
-          <TodoFactsView detail={data} />
+          <TodoFactsView detail={data} onOpenSoul={onOpenSoul} />
           {cooldown.data && !data.facts ? (
             // An older server sends no `facts`: the cooldown request's own lines stand in for them.
             <View style={{ gap: space[2] }}>
@@ -225,7 +251,7 @@ function ActionBar({ kind, onPick, waitingOn, offline }: { kind: TodoKind; onPic
   );
 }
 
-function JudgmentDetail({ id }: { id: string }) {
+function JudgmentDetail({ id, onOpenSoul }: { id: string; onOpenSoul: (id: string) => void }) {
   const { t } = useI18n();
   const { state } = useSession();
   const me = state.status === "signedIn" ? state.user.id : null;
@@ -244,7 +270,7 @@ function JudgmentDetail({ id }: { id: string }) {
         <RefreshFailed data={data} error={error} onRetry={reload} />
         <View style={{ padding: space[5], gap: space[4] }}>
           <SectionLabel>{data.case_number}</SectionLabel>
-          <Txt variant="title">{data.soul_name}</Txt>
+          {data.soul ? <SoulLink testID="judgment-soul-link" variant="title" name={data.soul_name} onOpen={() => onOpenSoul(data.soul)} /> : <Txt variant="title">{data.soul_name}</Txt>}
           <Txt variant="caption" tone="muted">{[data.court, data.claimed_by_name].filter(Boolean).join(" · ")}</Txt>
           {!data.is_final ? <Txt variant="bodyLg">{`◇ ${t("officer_app.queue.desk_only")}`}</Txt> : null}
           <JudgmentCase data={data} onOpenRecord={setRecord} />
@@ -319,43 +345,5 @@ function JudgmentComments({ id, concludedAt, readOnly }: { id: string; concluded
         </>
       )}
     </View>
-  );
-}
-
-function dateText(d: { year: number; month?: number | null; day?: number | null } | null | undefined): string {
-  return d ? [d.year, d.month, d.day].filter((x) => x != null).join("-") : "—";
-}
-
-function SoulDetail({ id }: { id: string }) {
-  const { t } = useI18n();
-  const load = useCallback(() => soulsApi.get(id).then((r) => r.data), [id]);
-  const { data, error, reload } = useRemote<Soul>(load);
-  const view = viewStateOf({ data, error }, () => false, isDenied);
-  if (view || !data) return <StateView state={view ?? "loading"} onRetry={reload} />;
-  const facts: [string, string][] = [
-    [t("souls.state"), t(`souls.states.${data.current_state}`)],
-    [t("souls.civilization"), data.civilization],
-    [t("souls.detail.birth"), dateText(data.birth_date)],
-    [t("souls.detail.death"), dateText(data.death_date)],
-  ];
-  return (
-    <Screen testID="soul-detail" edges={["left", "right"]}>
-      <RefreshFailed data={data} error={error} onRetry={reload} />
-      <View style={{ padding: space[5], gap: space[4] }}>
-        <Txt variant="title">{data.name}</Txt>
-        {data.is_residing ? (
-          // Another civilization's temporary resident: named in words and a glyph, never in its colour.
-          <Txt variant="bodyLg" testID="soul-residing">{t("officer_app.search.residing", { where: data.home_tenant?.display_name ?? data.home_civilization ?? "" })}</Txt>
-        ) : null}
-        {facts.map(([label, value]) => (
-          <View key={label} style={{ gap: space[1] }}>
-            <Txt variant="caption" tone="muted">{label}</Txt>
-            <Txt variant="bodyLg">{value}</Txt>
-          </View>
-        ))}
-        <Txt variant="caption" tone="muted">{t("officer_app.search.read_only")}</Txt>
-        <ContinueOnDesk target={{ kind: "soul", id }} />
-      </View>
-    </Screen>
   );
 }

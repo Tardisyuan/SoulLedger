@@ -86,13 +86,18 @@ def attachments_of(judgment, user, tenant) -> list:
             for r in rows if case_attachments.may_view(user, r, getattr(tenant, "pk", None))]
 
 
+def soul_ref(soul) -> dict:
+    """事实里的灵魂:名字、编号,加 id —— App 详情里点灵魂名要打开灵魂详情(第三十九批 O-15)。"""
+    return {"id": str(soul.pk), "name": soul.name, "soul_code": soul.soul_code}
+
+
 def workflow_facts(wf, user, tenant, *, reason) -> dict:
     node = wf.current_node
     nodes = _nodes(wf)
     # 位置只数需要人决定的节点,「通知 / 结束」是自动经过的,不算一步。
     steps = [n for n in nodes if n.kind not in AUTOMATIC_KINDS]
     facts = {
-        "soul": {"name": wf.soul.name, "soul_code": wf.soul.soul_code},
+        "soul": soul_ref(wf.soul),
         "requester": _name(wf.create_user),
         "requester_hall": hall_ref(wf.tenant),
         "requested_at": wf.created_at,
@@ -115,7 +120,7 @@ def workflow_facts(wf, user, tenant, *, reason) -> dict:
 def rebirth_facts(app) -> dict:
     soul = app.soul
     return {
-        "soul": {"name": soul.name, "soul_code": soul.soul_code},
+        "soul": soul_ref(soul),
         "cycle": app.cycle,
         "desired_form": app.desired_form,
         "merit_balance": (soul.merit_score or 0) - (soul.demerit_score or 0),
@@ -123,7 +128,7 @@ def rebirth_facts(app) -> dict:
 
 
 def dispatch_facts(row) -> dict:
-    souls = [{"name": row.soul.name, "soul_code": row.soul.soul_code}] if row.soul_id else []
+    souls = [soul_ref(row.soul)] if row.soul_id else []
     return {
         "from_hall": hall_ref(row.source_tenant),
         "to_hall": hall_ref(row.target_tenant),
@@ -141,7 +146,7 @@ def cooldown_facts(row) -> dict:
 
     until = cooldown_until(row.application)
     return {
-        "soul": {"name": row.soul.name, "soul_code": row.soul.soul_code},
+        "soul": soul_ref(row.soul),
         "requested_at": row.created_at,
         "reason": row.reason,
         "cooldown_now_days": remaining_cooldown_days(until) if until else 0,

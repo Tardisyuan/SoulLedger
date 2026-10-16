@@ -6298,6 +6298,25 @@
     "notify": {
       "intro": "Types you turn off aren't pushed to this phone or shown in the app. This is the same setting as your web profile; email is set on the web.",
       "save_failed": "Not saved; switch restored"
+    },
+    "soul": {
+      "tabs": {
+        "identity": "Identity",
+        "judgments": "Judgments",
+        "karma": "Merit & demerit",
+        "fate": "Where next",
+        "events": "Events"
+      },
+      "birth_name": "Birth name",
+      "karma_group": "Life {{n}} · {{count}} entries",
+      "merit_short": "Merit",
+      "demerit_short": "Demerit",
+      "source": "Source: {{source}}",
+      "shown_count": "Showing {{shown}} of {{total}}",
+      "judgment_meta": "Life {{n}} · {{verdict}} · {{status}}",
+      "current_stop": "◐ Current stop",
+      "no_disposition": "No disposition yet",
+      "open_label": "Open {{name}}'s soul record"
     }
   },
   "print": {
