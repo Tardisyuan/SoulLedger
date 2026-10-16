@@ -22,7 +22,7 @@ from apps.workflow.node_shape import normalize_template_node
 logger = logging.getLogger(__name__)
 
 
-class WorkflowInProgress(Exception):
+class WorkflowInProgressError(Exception):
     """``start_workflow(exclusive=True)`` found a live workflow of the same case type on the soul; ``.workflow`` is it."""
 
     def __init__(self, workflow):
@@ -661,7 +661,7 @@ class WorkflowService:
         ``template`` is a ``stored_template(...)`` pair the caller already picked and checked; ``None``
         resolves one from ``(civilization, case_type, tenant)``.
 
-        ``exclusive`` refuses with ``WorkflowInProgress`` when the soul already has a workflow **of the same
+        ``exclusive`` refuses with ``WorkflowInProgressError`` when the soul already has a workflow **of the same
         case type** that is not in ``TERMINAL_WORKFLOW_STATUSES`` (user, 2026-10-17: different case types may
         run side by side, e.g. a SPECIAL review beside a pending REBIRTH_APPLICATION). The soul row is locked first, so two clicks serialise and the second
         sees the first's workflow. **SQLite ignores ``select_for_update``** — the suite cannot exercise this
@@ -670,7 +670,7 @@ class WorkflowService:
 
         Raises:
             ValueError: case_type not valid for the soul's civilization, or a node-less template.
-            WorkflowInProgress: ``exclusive`` and the soul already has a live workflow of this case type.
+            WorkflowInProgressError: ``exclusive`` and the soul already has a live workflow of this case type.
         """
         from apps.souls.models import Soul
         from apps.workflow.models import TERMINAL_WORKFLOW_STATUSES
@@ -695,7 +695,7 @@ class WorkflowService:
                     .first()
                 )
                 if live is not None:
-                    raise WorkflowInProgress(live)
+                    raise WorkflowInProgressError(live)
 
             workflow = ApprovalWorkflow.objects.create(
                 judgment=judgment,

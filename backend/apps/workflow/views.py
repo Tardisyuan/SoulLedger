@@ -33,7 +33,7 @@ from apps.workflow.serializers import (
     WorkflowTemplateSerializer,
     WorkflowTemplateVersionSerializer,
 )
-from apps.workflow.services import WorkflowInProgress, WorkflowService
+from apps.workflow.services import WorkflowInProgressError, WorkflowService
 
 
 class WorkflowTemplateViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, TenantQuerySetMixin, TenantCreateMixin, AuditUserViewSetMixin, viewsets.ModelViewSet):
@@ -358,7 +358,7 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
                     ip_address=request.META.get("REMOTE_ADDR"),
                     user_agent=request.META.get("HTTP_USER_AGENT", "")[:500],
                 )
-        except WorkflowInProgress as busy:
+        except WorkflowInProgressError as busy:
             return Response(
                 {"code": "workflow_in_progress",
                  "error": "This soul already has a workflow of this case type in progress",
