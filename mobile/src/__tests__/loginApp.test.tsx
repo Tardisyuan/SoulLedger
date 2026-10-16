@@ -89,6 +89,13 @@ function remembered({ bio = false, warm = true } = {}) {
 
 const refusal = (code: string, reason?: string) => ({ status: 401, data: { detail: "x", code, ...(reason ? { reason } : {}) } });
 
+/** A real Face ID miss takes the scan; an iOS lockout answers at once (`credentialReadFailure`). */
+function scanTakes(ms: number) {
+  let t = 0;
+  jest.spyOn(Date, "now").mockImplementation(() => (t += ms));
+}
+afterEach(() => (Date.now as jest.Mock & { mockRestore?: () => void }).mockRestore?.());
+
 describe("D · the number box", () => {
   it("is empty as three dotted groups, then groups what is typed: upper case, separators skipped, 3-4-3 by spacing", async () => {
     await renderApp();
@@ -614,6 +621,7 @@ describe("B2 · the sign-in page with 面容 on", () => {
 
   it("when the system says no, the password box comes up with 「面容没认出」 and a way to try the face again", async () => {
     remembered({ bio: true });
+    scanTakes(3000);
     secureMod.__auth.error = new Error("Authentication failed");
     const calls = stubApi({ "/soul-auth/device-login/": { status: 200, data: TOKENS }, ...HOME });
     await renderApp();
@@ -630,6 +638,7 @@ describe("B2 · the sign-in page with 面容 on", () => {
 
   it("after two misses the face retry goes and only the password is left", async () => {
     remembered({ bio: true });
+    scanTakes(3000);
     secureMod.__auth.error = new Error("Authentication failed");
     stubApi({ ...HOME });
     await renderApp();
@@ -639,6 +648,17 @@ describe("B2 · the sign-in page with 面容 on", () => {
     await waitFor(() => expect(screen.queryByTestId("login-bio-retry")).toBeNull());
     expect(screen.getByTestId("login-bio-failed")).toHaveTextContent("面容没认出，请输入密码。");
     expect(screen.getByTestId("login-password")).toBeTruthy();
+    secureMod.__auth.error = null;
+  });
+
+  it("an iOS lockout -- the same text as a miss, but back at once -- reads as the lock", async () => {
+    remembered({ bio: true });
+    secureMod.__auth.error = { code: "ERR_KEY_CHAIN", message: "KeyChainException: Authentication failed. Provided passphrase/PIN is incorrect or there is no user authentication method configured for this device." };
+    stubApi({ ...HOME });
+    await renderApp();
+    fireEvent.press(screen.getByTestId("login-bio"));
+    expect(await screen.findByTestId("login-bio-failed")).toHaveTextContent("面容试错太多次，系统暂时锁住了。请输入密码，或过一会儿再试。");
+    expect(screen.queryByTestId("login-bio-retry")).toBeNull();
     secureMod.__auth.error = null;
   });
 
