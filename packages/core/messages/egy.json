@@ -5786,8 +5786,10 @@
         "reassignments": "Hab-Ba",
         "cooldowns": "Dbh Khebi Ahet Qebeh",
         "rebirths": "Dbh Wehem Mesut",
-        "letters": "Sesh Er Wesheb"
-      }
+        "letters": "Sesh Er Wesheb",
+        "unassigned_letters": "Sesh Nen Redi Djer"
+      },
+      "see_all": "Neb · {{n}}"
     },
     "kinds": {
       "approval": "Sekhet Wat Hesy",
@@ -5823,7 +5825,24 @@
       "reject": "Khesef",
       "approve": "Hesy",
       "cosigner_pending": "Redi Sab Hena · Nen Hesy Djer",
-      "wait_cosigner": "Hesy {{name}} Tepy: Hesy-Ek Er Khet. Khesef {{name}}: Sekhet Pen Khesef."
+      "wait_cosigner": "Hesy {{name}} Tepy: Hesy-Ek Er Khet. Khesef {{name}}: Sekhet Pen Khesef.",
+      "node": "Sekhet Emu · {{n}} / {{total}}",
+      "requester": "Dbh Em",
+      "requested_at": "Ahet Dbh",
+      "reason": "Khet",
+      "from": "Em",
+      "to": "Er",
+      "souls": "Ba · {{n}}",
+      "souls_more": "Ba {{n}} Ky",
+      "cooldown_now": "Emu: Hru {{n}} Khery",
+      "cooldown_asked": "Dbh: Hru {{n}} Khery",
+      "history": "Sekhet Tepy",
+      "history_more": "Sekhet {{n}} Ky",
+      "history_yours": "Er-Ek Emu",
+      "attachments": "Djama Hena · {{n}}",
+      "open_system": "Wen Em Smen Ta",
+      "attachment_offline": "Em Senb: Wen",
+      "attachment_failed": "Nen Wen Djama Pen"
     },
     "cosign": {
       "search": "Hehy Ren Er Ren Aq",
@@ -5872,7 +5891,19 @@
         "other": "Per Hemsu Nen Shesep"
       },
       "desired": "Mer: Hru {{n}} Khery",
-      "remaining_after": "Er Khet Hesy: Hru {{n}} Khery"
+      "remaining_after": "Er Khet Hesy: Hru {{n}} Khery",
+      "approve_effect": {
+        "approval": "Hesy: Er «{{next}}».",
+        "approval_last": "Sekhet Pehwy. Hesy: Wat Hesy Khetem; Dbh Wenen.",
+        "dispatch": "Hesy: Ba {{n}} Hab-Ba Em {{from}} Er {{to}}. Er Khet Iri: Nen Sehen.",
+        "reincarnation": "Hesy: {{name}} Em Sepu Wehem Mesut.",
+        "cooldown": "Hesy: Ahet Qebeh {{name}} · Hru {{from}} → Hru {{to}} Khery."
+      },
+      "reject_effect": {
+        "dispatch": "Khesef: Ba {{n}} Wenen Em {{from}}; Per Ky Maa Khet.",
+        "reincarnation": "Khesef: {{name}} Wenen Em Wesekhet Pen; Maa Khet.",
+        "cooldown": "Khesef: Ahet Qebeh Nen Khemen · Hru {{n}} Khery."
+      }
     },
     "landing": {
       "handled": "Iri Seth Em {{name}}",
@@ -5968,7 +5999,25 @@
     "letter": {
       "irreversible": "Er Khet Hab: Nen Sehen.",
       "unavailable": "Sesh Nen Wen Djer",
-      "failed": "Nen Per Wesheb. Sesh-Ek Wenen Djer: Wehem Iri."
+      "failed": "Nen Per Wesheb. Sesh-Ek Wenen Djer: Wehem Iri.",
+      "more": "Iri Ky",
+      "assign": "Redi Er Sab Ky",
+      "unassign": "Redi Er Hat",
+      "unassign_hint": "Nen Er-I Djer · Nen Redi Djer",
+      "archive": "Nehem Er Per Sesh",
+      "unarchive": "Ini Em Per Sesh",
+      "assign_title": "Setep Sab",
+      "assign_hint": "Sab Wesheb Wa. Er Khet Redi: Sesh Per Em «Nen Iri-I Djer».",
+      "assign_load": "Sesh {{n}} Em Djeret",
+      "assign_confirm": "Redi Er {{name}}",
+      "unassign_title": "Redi Sesh Pen Er Hat?",
+      "unassign_body": "Er Khet: «Nen Redi Djer»; Sab Wesheb Neb Shesep.",
+      "done_assigned": "Redi Seth Er {{name}}",
+      "done_unassigned": "Redi Er Hat Seth",
+      "done_unarchived": "Ini Em Per Sesh Seth",
+      "archived_banner": "Em Per Sesh · {{date}}",
+      "unassigned_tag": "Nen Redi Djer",
+      "take": "Shesep"
     },
     "dispatch_status": {
       "waiting": "Per Ky: Nen Hesy Djer",
