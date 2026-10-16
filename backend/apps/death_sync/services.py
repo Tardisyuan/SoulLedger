@@ -17,7 +17,7 @@ from apps.souls.models import Soul, SoulState
 logger = logging.getLogger(__name__)
 
 
-class RetryRefused(Exception):
+class RetryRefusedError(Exception):
     """A registration that may not be retried; `code` goes on the 409."""
 
     def __init__(self, code):
@@ -225,7 +225,7 @@ class DeathSyncService:
         answers about the data, and running it again gives the same answer.
 
         Raises:
-            RetryRefused: with `code`, when the row may not be retried.
+            RetryRefusedError: with `code`, when the row may not be retried.
         """
         from apps.death_sync.serializers import DeathRegistrationCreateSerializer
 
@@ -238,11 +238,11 @@ class DeathSyncService:
                 pk=registration_id, tenant=tenant
             )
             if record.status != DeathRegistrationStatus.FAILED:
-                raise RetryRefused("NOT_FAILED")
+                raise RetryRefusedError("NOT_FAILED")
             if record.error_code != "INTERNAL_ERROR":
-                raise RetryRefused("NOT_RETRYABLE")
+                raise RetryRefusedError("NOT_RETRYABLE")
             if record.retry_count >= record.max_retries:
-                raise RetryRefused("MAX_RETRIES")
+                raise RetryRefusedError("MAX_RETRIES")
 
             record.retry_count += 1
             record.error_code = ""

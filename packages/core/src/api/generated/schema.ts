@@ -12980,7 +12980,16 @@ export interface components {
             readonly media: components["schemas"]["PostMedia"][];
             readonly media_count: number;
         };
+        /**
+         * @description 隐藏 / 删除时官员选的理由(2026-10-16 用户定),推给作者。与灵魂举报同一份 `ReportReason`,
+         *     显示名在 i18n 包 `social_moderation.reason`。两项都可省 —— 只发自由文本的老客户端照旧;
+         *     选「其他」(OTHER)则 `reason_note` 必填,它就是推给作者的那句。
+         */
         ModerationAction: {
+            /** @default  */
+            reason_code: components["schemas"]["SocialReportReasonEnum"] | components["schemas"]["BlankEnum"];
+            /** @default  */
+            reason_note: string;
             /** @default  */
             reason: string;
         };
@@ -15042,15 +15051,14 @@ export interface components {
          *     `role` and `tenant` were already locked. `organization` was not, and it is
          *     a foreign key with no tenant check: measured, a VIEWER could
          *     `PATCH /auth/profile/ {"organization": <an org belonging to tenant B>}`
-         *     and get 200. Nothing downstream widened that into data access
-         *     (`apps/perm/filters.py` never mentions `organization`, so `DataScopeFilter`
-         *     does not read it), which is why this is a write-integrity hole rather than
-         *     a privilege escalation — but "the field nobody reads today" is not a
-         *     permission model.
+         *     and get 200. A tenant check here closed that first.
          *
-         *     Kept writable rather than made read-only: moving between the organizations
-         *     of one's own tenant is what this field is for. The scoping happens in
-         *     `validate_organization`.
+         *     Since 2026-10-16 (user decision) `organization` and `position` are read-only
+         *     here altogether: only an admin assigns them, through `UserUpdateSerializer`
+         *     (`PATCH /users/{id}/`). Sending either with a *different* value is a 400
+         *     naming the field (`to_internal_value`) — silently dropping it would read
+         *     as a saved change. The unchanged value is accepted, so a client echoing
+         *     back the profile it read is not refused.
          */
         PatchedUser: {
             readonly id?: number;
@@ -15071,9 +15079,9 @@ export interface components {
             /** @description Display name shown in the navbar (e.g. 系统管理员) */
             display_name?: string;
             /** @description 所属组织：如 第一殿、冥王厅 */
-            organization?: number | null;
+            readonly organization?: number | null;
             /** @description 职位：如 第一殿殿主 */
-            position?: string;
+            readonly position?: string;
             readonly mfa_enabled?: boolean;
             readonly mfa_required?: boolean;
             readonly password_change_required?: boolean;
@@ -16152,7 +16160,16 @@ export interface components {
             contact_email?: string;
             contact_phone?: string;
         };
+        /**
+         * @description 隐藏 / 删除时官员选的理由(2026-10-16 用户定),推给作者。与灵魂举报同一份 `ReportReason`,
+         *     显示名在 i18n 包 `social_moderation.reason`。两项都可省 —— 只发自由文本的老客户端照旧;
+         *     选「其他」(OTHER)则 `reason_note` 必填,它就是推给作者的那句。
+         */
         ResolveReport: {
+            /** @default  */
+            reason_code: components["schemas"]["SocialReportReasonEnum"] | components["schemas"]["BlankEnum"];
+            /** @default  */
+            reason_note: string;
             resolution: components["schemas"]["SocialReportResolutionEnum"];
             /** @default  */
             note: string;
@@ -17950,15 +17967,14 @@ export interface components {
          *     `role` and `tenant` were already locked. `organization` was not, and it is
          *     a foreign key with no tenant check: measured, a VIEWER could
          *     `PATCH /auth/profile/ {"organization": <an org belonging to tenant B>}`
-         *     and get 200. Nothing downstream widened that into data access
-         *     (`apps/perm/filters.py` never mentions `organization`, so `DataScopeFilter`
-         *     does not read it), which is why this is a write-integrity hole rather than
-         *     a privilege escalation — but "the field nobody reads today" is not a
-         *     permission model.
+         *     and get 200. A tenant check here closed that first.
          *
-         *     Kept writable rather than made read-only: moving between the organizations
-         *     of one's own tenant is what this field is for. The scoping happens in
-         *     `validate_organization`.
+         *     Since 2026-10-16 (user decision) `organization` and `position` are read-only
+         *     here altogether: only an admin assigns them, through `UserUpdateSerializer`
+         *     (`PATCH /users/{id}/`). Sending either with a *different* value is a 400
+         *     naming the field (`to_internal_value`) — silently dropping it would read
+         *     as a saved change. The unchanged value is accepted, so a client echoing
+         *     back the profile it read is not refused.
          */
         User: {
             readonly id: number;
@@ -17979,9 +17995,9 @@ export interface components {
             /** @description Display name shown in the navbar (e.g. 系统管理员) */
             display_name?: string;
             /** @description 所属组织：如 第一殿、冥王厅 */
-            organization?: number | null;
+            readonly organization: number | null;
             /** @description 职位：如 第一殿殿主 */
-            position?: string;
+            readonly position: string;
             readonly mfa_enabled: boolean;
             readonly mfa_required: boolean;
             readonly password_change_required: boolean;
