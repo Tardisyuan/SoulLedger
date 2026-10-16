@@ -186,7 +186,7 @@ class JudgmentSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serialize
         model = Judgment
         fields = [
             "id", "case_number", "soul", "soul_name", "civilization", "judge", "judge_name",
-            "court", "realm_id", "evidence_json", "confession", "verdict", "notes",
+            "court", "realm_id", "evidence_json", "confession", "summary", "verdict", "notes",
             "citations",
             "is_final", "created_at", "concluded_at",
             "kind", "amends_plan_id",
@@ -194,6 +194,7 @@ class JudgmentSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serialize
             "draft_destination_realm_id", "draft_term_years", "draft_eternal",
             "claimed_by", "claimed_by_name", "claimed_at",
             "deferred_at", "deferred_by", "deferred_by_name", "defer_reason",
+            "reassign_requested_at", "reassign_requested_by", "reassign_reason",
             "karmic_balance", "evidence_count",
             # 世次(`cycle`,0 是第一世,判决创建时盖章)与审判方式,都是模型上已有的列,此前没出线。
             "cycle", "judgment_method", "merit_score", "demerit_score", "realm_name",
@@ -207,6 +208,7 @@ class JudgmentSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serialize
             "draft_verdict", "draft_saved_at", "draft_version",
             "draft_destination_realm_id", "draft_term_years", "draft_eternal",
             "claimed_by", "claimed_at", "deferred_at", "deferred_by", "defer_reason",
+            "reassign_requested_at", "reassign_requested_by", "reassign_reason",
             "cycle", "judgment_method",
         ]
 
@@ -216,7 +218,10 @@ class JudgmentSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serialize
     _DECIDED_BY_CONCLUDE = ("verdict", "is_final", "concluded_at")
     # 同理:认领与暂缓只经 claim / release / reassign / defer / undefer 写,那条路径在
     # 案子的行锁下检查「已被别人认领」。一个 PATCH 能写 `claimed_by`,就能绕过那把锁。
-    _WRITTEN_BY_CLAIM_ACTIONS = ("claimed_by", "claimed_at", "deferred_at", "deferred_by", "defer_reason")
+    _WRITTEN_BY_CLAIM_ACTIONS = (
+        "claimed_by", "claimed_at", "deferred_at", "deferred_by", "defer_reason",
+        "reassign_requested_at", "reassign_requested_by", "reassign_reason",
+    )
 
     @staticmethod
     def _user_name(user) -> str | None:

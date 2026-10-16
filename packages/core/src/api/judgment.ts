@@ -33,6 +33,8 @@ export interface Judgment extends ArchiveFields {
   court: string;
   evidence_json: Record<string, unknown>;
   confession: string;
+  /** 案由:官员写的案情概述(`summary`),不是灵魂的供词。blank = 空串。 */
+  summary?: string;
   verdict: "PASSED" | "FAILED" | "PURGATORY" | "RETRY" | null;
   notes: string;
   /**
@@ -79,6 +81,10 @@ export interface Judgment extends ArchiveFields {
   deferred_by_name?: string | null;
   /** Empty string when not deferred. */
   defer_reason?: string;
+  /** 「请管理员改派」的持久标记(只读;认领人变了就清)。 */
+  reassign_requested_at?: string | null;
+  reassign_requested_by?: number | null;
+  reassign_reason?: string;
   /**
    * merit − demerit, for CHINESE cases only; null for every other cosmology
    * (apps/ledger/readings.py). ABSENT — not null — for a VIEWER, the same
@@ -524,6 +530,8 @@ export const judgmentApi = {
   exportCsv: (params?: Record<string, string>) =>
     api.get<Blob>("/judgment/export/", { params, responseType: "blob" }),
   create: (data: object) => api.post<Judgment>("/judgment/", data),
+  /** 改案由(`summary`)等普通字段。`notes` 走 `saveDraft`,认领 / 暂缓走各自的动作。 */
+  update: (id: string, data: { summary?: string }) => api.patch<Judgment>(`/judgment/${id}/`, data),
   delete: (id: string) => api.delete<void>(`/judgment/${id}/`),
   /** 归档(`judgment.execute`):只收有裁决的审判;理由选填。 */
   archive: (id: string, reason = "") => api.post<Judgment>(`/judgment/${id}/archive/`, { reason }),

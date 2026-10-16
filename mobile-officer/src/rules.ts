@@ -437,13 +437,19 @@ export function hallLabel(
 
 /**
  * 六种状态,主按钮一次只有一个。`closed`(已结案)不画操作区。
- * `reassignAsked`:本次已请求改派(服务端没有"已请求"这个状态,只有 10 分钟一次的限流,所以由本机记)。
+ * `reassignAsked`:已请求改派 —— 主要读服务端的 `reassign_requested_at`(认领人变了服务端就清);`reassignAsked` 只补撞到 429 而标记已清的那种情形。
  * 「待宣判」按此处原有的口径:案子还不是 `is_final`,手机上只能到电脑上继续。
  */
 export type JudgmentActionState = "unclaimed" | "mine" | "deferred" | "reassign" | "other" | "desk" | "closed";
 
 export function judgmentActionState(
-  j: { claimed_by?: number | null; deferred_at?: string | null; concluded_at?: string | null; is_final?: boolean },
+  j: {
+    claimed_by?: number | null;
+    deferred_at?: string | null;
+    concluded_at?: string | null;
+    is_final?: boolean;
+    reassign_requested_at?: string | null;
+  },
   me: number | null,
   reassignAsked: boolean,
 ): JudgmentActionState {
@@ -451,7 +457,7 @@ export function judgmentActionState(
   if (j.claimed_by == null) return "unclaimed";
   if (j.claimed_by !== me) return "other";
   if (j.deferred_at) return "deferred";
-  if (reassignAsked) return "reassign";
+  if (reassignAsked || j.reassign_requested_at) return "reassign";
   return j.is_final ? "mine" : "desk";
 }
 

@@ -4843,6 +4843,10 @@
       "title": "Reassignment requested",
       "body": "{{by}} asks for the case of {{soul}} to be reassigned"
     },
+    "judgment_reassign_requested_with_reason": {
+      "title": "Reassignment requested",
+      "body": "{{by}} asks for the case of {{soul}} to be reassigned. Reason: {{reason}}"
+    },
     "impersonation_started": {
       "title": "Someone is viewing as you",
       "body": "{{by}} is viewing the console as you (read only, up to {{minutes}} minutes). Reason: {{reason}}. The whole session is recorded in the audit log."
