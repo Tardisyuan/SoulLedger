@@ -944,6 +944,28 @@ def test_warn_push_names_what_was_warned(
     assert (row.title, row.body) == WARN_TEXT[locale][target_type]
 
 
+@pytest.mark.parametrize("target_type", ["POST", "COMMENT", "USER"])
+def test_warn_push_opens_the_post_it_was_about(
+    cn_tenant, cn_moderator, django_capture_on_commit_callbacks, enqueued, target_type,  # noqa: F811
+):
+    """帖子 → 那条帖子;评论 → 它所在的帖子;账号 → 「此生」(没有帖子可开)。"""
+    from apps.soul_push.models import PushDelivery, PushDevice
+
+    author, report = _report_of(cn_tenant, target_type)
+    PushDevice.objects.create(account=author, soul=author.soul, token=TOKEN_A, platform="IOS",
+                              last_seen_at=timezone.now())
+    _resolve_warn(cn_moderator, report, "注意言辞", django_capture_on_commit_callbacks)
+
+    row = PushDelivery.objects.get()
+    kind = f"social_warned_{target_type.lower()}"
+    if target_type == "USER":
+        assert row.data == {"screen": "Life", "kind": kind}
+    else:
+        the_post = report.post if target_type == "POST" else report.comment.post
+        assert row.data == {"screen": "CirclePost", "post_id": str(the_post.pk), "kind": kind}
+    assert enqueued == [[str(row.pk)]]
+
+
 def test_warn_a_muted_soul_with_every_push_off_or_no_device_does_not_break_the_resolution(
     cn_tenant, cn_moderator, django_capture_on_commit_callbacks, enqueued,  # noqa: F811
 ):

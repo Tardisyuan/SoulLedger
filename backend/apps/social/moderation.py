@@ -539,7 +539,9 @@ def resolve_report(report, resolution, *, actor, request=None, note="", mute_day
             })
             from apps.soul_push import services as push
 
-            ids = push.record_social_warning(row.target_user_id, row.pk, row.target_type, note)
+            # 点推送打开被警告的那条帖子;评论落在它所在的帖子;被举报的是账号就没有帖子。
+            post_id = row.post_id or (row.comment.post_id if row.comment else None)
+            ids = push.record_social_warning(row.target_user_id, row.pk, row.target_type, note, post_id=post_id)
             if ids:
                 transaction.on_commit(lambda: push.enqueue(ids))
         dismissed = resolution in (ReportResolution.DISMISS, ReportResolution.WARN)
