@@ -18,6 +18,7 @@ import { deskUrl, dispatchStatusLine, dispatchView, handledNotice, isDenied, tod
 import { useSession } from "../session";
 import { Icon, Input, Notice, Screen, SectionLabel, SmallButton, Txt, space, useI18n, useOnline, useRemote, useTheme } from "../shared";
 import { LetterThread } from "./letter";
+import { TodoFactsView } from "./todoFacts";
 import { CosignSheet, DecisionSheet, type CooldownFacts } from "./sheets";
 
 export type DetailTarget =
@@ -165,7 +166,9 @@ function TodoDetail({ kind, id, onSettled }: { kind: TodoKind; id: string; onSet
           {data.actionable ? (
             <Txt variant="bodyLg" testID="detail-your-step">{`◐ ${t("officer_app.detail.your_step")}`}</Txt>
           ) : null}
-          {cooldown.data ? (
+          <TodoFactsView detail={data} />
+          {cooldown.data && !data.facts ? (
+            // An older server sends no `facts`: the cooldown request's own lines stand in for them.
             <View style={{ gap: space[2] }}>
               <Txt variant="body">{cooldown.data.reason}</Txt>
               <Txt variant="caption" tone="muted">

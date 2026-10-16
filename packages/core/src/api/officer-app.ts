@@ -14,6 +14,9 @@ export type Todo = components["schemas"]["Todo"];
 export type TodoItemDetail = components["schemas"]["TodoItemDetail"];
 export type SignerCandidate = components["schemas"]["SignerCandidate"];
 export type OfficerPushToken = components["schemas"]["OfficerPushToken"];
+export type TodoFacts = components["schemas"]["TodoFacts"];
+export type FactHistory = components["schemas"]["FactHistory"];
+export type FactAttachment = components["schemas"]["FactAttachment"];
 export type Cosigner = components["schemas"]["Cosigner"];
 
 /**
@@ -59,7 +62,7 @@ export function cosignRefusalOf(error: unknown): "not_allowed" | "not_eligible" 
 export const officerAppApi = {
   todo: () => api.get<Todo>("/officer-app/todo/"),
   /** 加载更多: one group from item `offset` on (10 a page), `{ count, items }`. */
-  todoGroup: (kind: TodoKind, offset: number) => api.get<TodoGroup>("/officer-app/todo/", { params: { kind, offset } }),
+  todoGroup: (kind: TodoKind | "unassigned_letter", offset: number) => api.get<TodoGroup>("/officer-app/todo/", { params: { kind, offset } }),
   item: (kind: TodoKind, id: string) => api.get<TodoItemDetail>(`/officer-app/items/${kind}/${id}/`),
   /** 加签候选人: same hall only. */
   signerCandidates: (q?: string) => api.get<SignerCandidate[]>("/officer-app/signer-candidates/", { params: q ? { q } : undefined }),
