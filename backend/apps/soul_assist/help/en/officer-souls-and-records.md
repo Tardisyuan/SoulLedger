@@ -1,6 +1,6 @@
 ---
 id: officer-souls-and-records
-screens: [souls, ledger, audit, admin, dashboard]
+screens: [souls, events, ledger, audit, admin, dashboard]
 audience: officer
 civilizations: []
 codes: []
