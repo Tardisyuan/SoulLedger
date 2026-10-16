@@ -51,6 +51,8 @@ export interface Session {
   setMfaEnabled: (enabled: boolean) => void;
   /** The password must be changed before anything else (first sign-in, an administrator's reset, aged out), or has just been. */
   setPasswordChangeRequired: (required: boolean) => void;
+  /** The officer renamed themself (「我的 › 姓名」): keep the cached profile in step. */
+  setDisplayName: (name: string) => void;
 }
 
 export const SessionContext = createContext<Session | null>(null);
@@ -194,6 +196,15 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const setDisplayName = useCallback((name: string) => {
+    setState((prev) => {
+      if (prev.status !== "signedIn") return prev;
+      const user = { ...prev.user, display_name: name };
+      platform().persistent.set(USER_KEY, JSON.stringify(user));
+      return { status: "signedIn", user };
+    });
+  }, []);
+
   // A 403 `password_change_required` from any request (the password aged out while the app was open).
   useEffect(() => {
     onPasswordChangeRequired(() => setPasswordChangeRequired(true));
@@ -201,8 +212,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, [setPasswordChangeRequired]);
 
   const value = useMemo<Session>(
-    () => ({ state, signIn, verifyMfa, signOut, setMfaEnabled, setPasswordChangeRequired }),
-    [state, signIn, verifyMfa, signOut, setMfaEnabled, setPasswordChangeRequired]
+    () => ({ state, signIn, verifyMfa, signOut, setMfaEnabled, setPasswordChangeRequired, setDisplayName }),
+    [state, signIn, verifyMfa, signOut, setMfaEnabled, setPasswordChangeRequired, setDisplayName]
   );
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }

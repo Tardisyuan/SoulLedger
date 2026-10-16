@@ -213,3 +213,53 @@ export function ChangePasswordScreen({ onBack, required }: { onBack: () => void;
     </AccountFrame>
   );
 }
+
+/** `User.display_name` is `CharField(max_length=100)` (backend/apps/authentication/models.py); the server refuses longer. */
+export const DISPLAY_NAME_MAX = 100;
+
+/** 我的 › 姓名: one field, `PATCH /auth/profile/ {display_name}`. Blank is refused here and by the server. */
+export function DisplayNameScreen({ onBack }: { onBack: () => void }) {
+  const { t } = useI18n();
+  const toast = useToast();
+  const { state, setDisplayName } = useSession();
+  const [name, setName] = useState(state.status === "signedIn" ? state.user.display_name : "");
+  const [busy, setBusy] = useState(false);
+  const [empty, setEmpty] = useState(false);
+
+  const submit = () => {
+    const trimmed = name.trim();
+    if (!trimmed) {
+      setEmpty(true);
+      return;
+    }
+    setEmpty(false);
+    setBusy(true);
+    authApi
+      .updateProfile({ display_name: trimmed })
+      .then(
+        (r) => {
+          setDisplayName(r.data.display_name);
+          toast(t("profile.profile_updated"), "success");
+          onBack();
+        },
+        () => toast(t("profile.profile_update_failed"), "failure")
+      )
+      .finally(() => setBusy(false));
+  };
+
+  return (
+    <AccountFrame testID="name-screen" onBack={onBack}>
+      <Txt variant="title">{t("officer_app.me.name")}</Txt>
+      <Input
+        testID="name-input"
+        label={t("officer_app.me.name")}
+        value={name}
+        onChangeText={setName}
+        maxLength={DISPLAY_NAME_MAX}
+        autoCorrect={false}
+        error={empty ? t("officer_app.me.name_empty") : null}
+      />
+      <Button testID="name-submit" title={t("common.save")} busy={busy} onPress={submit} />
+    </AccountFrame>
+  );
+}

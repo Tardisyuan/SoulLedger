@@ -56,7 +56,7 @@ export default function ProfilePage() {
 
   // Update profile mutation
   const updateMutation = useMutation({
-    mutationFn: async (data: { first_name?: string; last_name?: string; email?: string }) => {
+    mutationFn: async (data: { first_name?: string; last_name?: string; email?: string; display_name?: string }) => {
       const res = await authApi.updateProfile(data);
       return res.data;
     },
@@ -176,6 +176,8 @@ export default function ProfilePage() {
           {(
             [
               ["email", "email", t("profile.email"), profile?.email || user?.email || "", "w-48"],
+              // 显示名:导航栏与官员端「我的」显示的名字。空值不发(`handleEditSave`),后端也拒空。
+              ["display_name", "text", t("profile.display_name"), profile?.display_name || user?.display_name || "", "w-24"],
               ["first_name", "text", t("profile.first_name"), profile?.first_name || "", "w-24"],
               ["last_name", "text", t("profile.last_name"), profile?.last_name || "", "w-24"],
             ] as const

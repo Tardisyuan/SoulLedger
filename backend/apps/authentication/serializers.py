@@ -527,6 +527,13 @@ class UserSerializer(serializers.ModelSerializer):
         `email` was writable here with no check at all."""
         return validate_email_is_unclaimed(value, self.instance)
 
+    def validate_display_name(self, value):
+        """改名时不许改成空:导航栏与官员端「我的」把它当名字显示。只在请求带了这个字段时才走到这里
+        (`partial=True`);首尾空白已被 CharField 的 `trim_whitespace` 去掉,所以全是空格的也算空。"""
+        if not value:
+            raise serializers.ValidationError("显示名不能为空。")
+        return value
+
     def validate_organization(self, value):
         """Refuse an organization belonging to somebody else's tenant.
 

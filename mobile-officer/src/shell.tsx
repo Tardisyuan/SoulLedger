@@ -15,7 +15,7 @@ import { OfflineBanner } from "./offlineBanner";
 import { listenForLandings, registerDevice } from "./push";
 import { HIGHLIGHT_MS, hallLabel, type Landing } from "./rules";
 import { Detail, type DetailTarget } from "./screens/detail";
-import { ChangePasswordScreen } from "./screens/account";
+import { ChangePasswordScreen, DisplayNameScreen } from "./screens/account";
 import { DevicesScreen } from "./screens/devices";
 import { NotifyScreen } from "./screens/notify";
 import { MeTab, type AccountScreen } from "./screens/me";
@@ -141,6 +141,8 @@ export function Shell({ onResetDone }: { onResetDone?: () => void } = {}) {
           <MfaScreen onBack={() => setAccount(null)} onLocked={setLocked} />
         ) : account === "password" ? (
           <ChangePasswordScreen onBack={() => setAccount(null)} />
+        ) : account === "name" ? (
+          <DisplayNameScreen onBack={() => setAccount(null)} />
         ) : account === "devices" ? (
           <DevicesScreen onBack={() => setAccount(null)} />
         ) : account === "notify" ? (

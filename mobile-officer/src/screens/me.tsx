@@ -1,4 +1,4 @@
-/** 我的: profile, two-step verification (opens its screen), change password, language, theme, push, about, sign out. */
+/** 我的: profile (the name opens its edit screen), two-step verification (opens its screen), change password, language, theme, push, about, sign out. */
 import { authApi, mfaApi } from "@soulledger/core/api/auth";
 import { SUPPORTED_LOCALES } from "@soulledger/core/config/locale";
 import Constants from "expo-constants";
@@ -13,7 +13,7 @@ import { hallLabel, mutedCount } from "../rules";
 import { needsMfaSetup, useSession } from "../session";
 import { Notice, Screen, SectionLabel, SmallButton, Txt, space, translate, useI18n, useRemote, useToast } from "../shared";
 
-export type AccountScreen = "password" | "mfa" | "devices" | "notify";
+export type AccountScreen = "password" | "mfa" | "devices" | "notify" | "name";
 
 export function MeTab({ onOpen }: { onOpen: (screen: AccountScreen) => void }) {
   const { t, locale, setLocale, enumLabel } = useI18n();
@@ -45,7 +45,18 @@ export function MeTab({ onOpen }: { onOpen: (screen: AccountScreen) => void }) {
     <Screen testID="tab-me-screen" edges={["left", "right"]} scrollRef={scroll}>
       <View style={{ padding: space[5], gap: space[5] }}>
         <Block label={t("officer_app.me.profile")}>
-          <Fact label={t("officer_app.me.name")} value={user.display_name || user.username} />
+          <Row
+            testID="me-name"
+            minHeight={56}
+            title={t("officer_app.me.name")}
+            onPress={() => onOpen("name")}
+            right={
+              <Txt variant="bodyLg">
+                {user.display_name || user.username}
+                {"  ›"}
+              </Txt>
+            }
+          />
           <Fact label={t("officer_app.me.role")} value={role.state === "known" ? role.label : user.role} />
           <Fact label={t("officer_app.me.hall")} value={hallLabel(t, user.tenant) ?? ""} />
           {profile.data?.email ? (
