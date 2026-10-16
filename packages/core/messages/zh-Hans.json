@@ -1320,7 +1320,38 @@
       "ESCALATED": "已升级",
       "TRAVERSED": "已经过"
     },
-    "no_custom_templates": "你还没有保存过自己的模板。"
+    "no_custom_templates": "你还没有保存过自己的模板。",
+    "start": {
+      "action": "发起审批",
+      "menu": "发起审批…",
+      "title": "发起审批",
+      "soul": "灵魂",
+      "soul_placeholder": "搜索灵魂编号或姓名…",
+      "case_type_placeholder": "先选灵魂",
+      "template_default": "按案件类型默认 · {{name}}",
+      "template_only": "只有一个可用模板：{{name}}",
+      "priority_template": "跟随模板",
+      "reason": "理由 · 必填，记入审计日志",
+      "reason_placeholder": "为什么不经审判直接发起",
+      "reason_count": "{{n}}/1000",
+      "judgment": "关联审判 · 选填",
+      "judgment_none": "不关联",
+      "judgment_taken": "已有审批",
+      "submit": "发起",
+      "done": "已发起审批",
+      "errors": {
+        "duplicate": "这个灵魂已有一条「{{type}}」审批在进行中（{{id}}）。同一类型同时只能有一条。",
+        "duplicate_view": "去看那条",
+        "soul_not_found": "找不到这个灵魂，或它不在本殿",
+        "template_invalid": "这个模板不能用：不属于本殿、未启用，或与灵魂的文明不符",
+        "case_type_civ": "「{{civ}}」文明不受理这类案件",
+        "judgment_mismatch": "这次审判不属于这个灵魂",
+        "judgment_taken": "这次审判已经有审批了",
+        "reason_required": "写一句理由",
+        "forbidden": "你没有发起审批的权限",
+        "failed": "没能发起，请重试"
+      }
+    }
   },
   "dashboard": {
     "title": "灵魂账本统计",

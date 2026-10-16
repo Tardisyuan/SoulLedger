@@ -25429,6 +25429,11 @@ components:
           type: string
           nullable: true
           readOnly: true
+        workflow:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
         is_archived:
           type: boolean
           readOnly: true
@@ -25485,6 +25490,7 @@ components:
       - soul
       - soul_name
       - verdict
+      - workflow
     JudgmentBatch:
       type: object
       description: '`POST /judgment/batch/` 的输入。一个动作、至多 `BATCH_LIMIT` 个 id,全有或全无。'
@@ -25971,6 +25977,11 @@ components:
           type: string
           nullable: true
           readOnly: true
+        workflow:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
         is_archived:
           type: boolean
           readOnly: true
@@ -26038,6 +26049,7 @@ components:
       - soul
       - soul_name
       - verdict
+      - workflow
     JudgmentDraft:
       type: object
       description: 'The draft as stored: what a save returns, and what a 409 hands
@@ -39488,12 +39500,17 @@ components:
           type: integer
           nullable: true
           readOnly: true
+        tenant:
+          type: integer
+          readOnly: true
+          nullable: true
       required:
       - created_at
       - id
       - name
       - node_count
       - published_version
+      - tenant
     WorkflowTemplateNode:
       type: object
       description: |-

@@ -301,7 +301,10 @@ class WorkflowTemplateListSerializer(serializers.ModelSerializer):
             "created_at",
             "node_count",
             "published_version",
+            # 「发起审批」(W-11)的模板下拉只列灵魂所在殿的模板;全局管理员的列表跨殿,没有这一列分不出来。
+            "tenant",
         ]
+        read_only_fields = ["tenant"]
 
     def get_node_count(self, obj) -> int:
         return len(obj.nodes_json or [])

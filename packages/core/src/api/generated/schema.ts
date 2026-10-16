@@ -11751,6 +11751,8 @@ export interface components {
             readonly merit_score: number;
             readonly demerit_score: number;
             readonly realm_name: string | null;
+            /** Format: uuid */
+            readonly workflow: string | null;
             readonly is_archived: boolean;
             /** Format: date-time */
             readonly archived_at: string | null;
@@ -11988,6 +11990,8 @@ export interface components {
             readonly merit_score: number;
             readonly demerit_score: number;
             readonly realm_name: string | null;
+            /** Format: uuid */
+            readonly workflow: string | null;
             readonly is_archived: boolean;
             /** Format: date-time */
             readonly archived_at: string | null;
@@ -18455,6 +18459,7 @@ export interface components {
             readonly created_at: string;
             readonly node_count: number;
             readonly published_version: number | null;
+            readonly tenant: number | null;
         };
         /**
          * @description Serializer for a single template node.

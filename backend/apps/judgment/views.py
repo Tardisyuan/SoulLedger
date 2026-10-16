@@ -279,7 +279,7 @@ class JudgmentViewSet(CaseAttachmentActionsMixin, CodenameViewSetMixin, TenantQu
     }
     queryset = (
         Judgment.objects
-        .select_related("soul", "soul__tenant", "tenant", "judge", "claimed_by", "deferred_by", "realm")
+        .select_related("soul", "soul__tenant", "tenant", "judge", "claimed_by", "deferred_by", "realm", "approval_workflow")
         .prefetch_related("citations__statute", "citations__statute__source_actor")
         .all()
     )
