@@ -277,13 +277,28 @@ export function requiresReasonForSoul(caseType: string | null | undefined, verdi
   return caseType === REBIRTH_APPLICATION_CASE_TYPE && verdict !== "" && verdict !== "PASSED" && verdict !== "CONFIRMED";
 }
 
+export interface StartWorkflowBody {
+  soul: string;
+  case_type?: string;
+  template?: string;
+  /** 0 普通 / 1 紧急 / 2 特急;不传 = 模板的默认值 */
+  priority?: number;
+  reason: string;
+  judgment?: string;
+}
+
 export const workflowApi = {
   list: (params?: Record<string, string>) => api.get<PaginatedResponse<ApprovalWorkflowListItem>>("/workflows/", { params }),
   /** 与 `list` 同一组筛选 / 租户划界的 CSV,不分页(`ApprovalWorkflowViewSet.export`);页码参数不要传。 */
   exportCsv: (params?: Record<string, string>) =>
     api.get<Blob>("/workflows/export/", { params, responseType: "blob" }),
   get: (id: string) => api.get<ApprovalWorkflow>(`/workflows/${id}/`),
-  create: (data: object) => api.post<ApprovalWorkflow>("/workflows/", data),
+  /**
+   * ApprovalWorkflowViewSet.start — 为任一灵魂手动发起审批(W-11),`workflow.create` 码名。
+   * `case_type` 与 `template` 二选一;`reason` 必填。409 `workflow_in_progress` = 该灵魂已有进行中的审批。
+   * 通用的 `POST /workflows/` 已关闭(405):它只存一条没有节点的空行。
+   */
+  start: (body: StartWorkflowBody) => api.post<ApprovalWorkflow>("/workflows/start/", body),
   advance: (id: string) => api.post<ApprovalWorkflow>(`/workflows/${id}/advance/`),
   /**
    * ApprovalWorkflowViewSet.escalate — 越级推进,`workflow.escalate` 码名。

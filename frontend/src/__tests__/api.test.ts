@@ -552,6 +552,14 @@ describe('API Client — @soulledger/core/api', () => {
       expect(mockInstance.get).toHaveBeenCalledWith('/workflows/', { params: { status: 'PENDING' } });
     });
 
+    it('start() should POST /workflows/start/ with the body (W-11); there is no create()', () => {
+      mockInstance.post.mockResolvedValueOnce({ data: {} });
+      const body = { soul: 's-1', case_type: 'ROUTINE', reason: '家属申请' };
+      workflowApi.start(body);
+      expect(mockInstance.post).toHaveBeenCalledWith('/workflows/start/', body);
+      expect(workflowApi.create).toBeUndefined();
+    });
+
     it('advance() should POST /workflows/:id/advance/', () => {
       mockInstance.post.mockResolvedValueOnce({ data: {} });
       workflowApi.advance('wf-1');

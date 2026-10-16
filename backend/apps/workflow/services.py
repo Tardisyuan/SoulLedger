@@ -22,6 +22,14 @@ from apps.workflow.node_shape import normalize_template_node
 logger = logging.getLogger(__name__)
 
 
+class WorkflowInProgress(Exception):
+    """``start_workflow(exclusive=True)`` found a live workflow on the soul; ``.workflow`` is it."""
+
+    def __init__(self, workflow):
+        super().__init__(f"Soul already has workflow {workflow.pk} in status {workflow.status}")
+        self.workflow = workflow
+
+
 # 模板表住在 `apps/workflow/templates.py`,这里重导出。
 #
 # 它们本来就在这个文件里,占了前 461 行 —— 而这个文件是 1125 行,是仓库里最大的
@@ -319,18 +327,7 @@ class WorkflowService:
                     .first()
                 )
             if db_template and db_template.nodes_json:
-                # `version_id` is which published version `nodes_json` is a
-                # copy of (None for a row that predates versioning and was
-                # written through the ORM). The workflow records it; see
-                # `ApprovalWorkflow.template_version`.
-                return (
-                    {
-                        "name": db_template.name,
-                        "nodes": db_template.nodes_json,
-                        "version_id": db_template.published_version_id,
-                    },
-                    db_template.priority,
-                )
+                return cls.stored_template(db_template)
         except DatabaseError:
             logger.warning(
                 "Stored workflow template lookup failed for "
@@ -345,6 +342,23 @@ class WorkflowService:
             return template, None
 
         return cls._generic_template(civilization), None
+
+    @staticmethod
+    def stored_template(db_template: WorkflowTemplate) -> tuple[dict, int | None]:
+        """A stored template in the shape ``_resolve_template`` returns.
+
+        `version_id` is which published version `nodes_json` is a copy of
+        (None for a row that predates versioning and was written through the
+        ORM). The workflow records it; see `ApprovalWorkflow.template_version`.
+        """
+        return (
+            {
+                "name": db_template.name,
+                "nodes": db_template.nodes_json,
+                "version_id": db_template.published_version_id,
+            },
+            db_template.priority,
+        )
 
     @classmethod
     def _resolve_priority(
@@ -618,22 +632,70 @@ class WorkflowService:
             else:
                 case_type = CaseType.ROUTINE  # European default
 
-        # Validate case_type for civilization
+        # Validation, template, nodes and events: `start_workflow`.
+        return cls.start_workflow(
+            soul, case_type=case_type, tenant=judgment.tenant, judgment=judgment,
+            is_appeal=is_appeal, priority=priority,
+        )
+
+    @classmethod
+    def start_workflow(
+        cls,
+        soul,
+        *,
+        case_type: str,
+        tenant,
+        template: tuple[dict, int | None] | None = None,
+        judgment: Judgment | None = None,
+        is_appeal: bool = False,
+        priority: int | None = None,
+        notes: str = "",
+        exclusive: bool = False,
+    ) -> ApprovalWorkflow:
+        """Build a workflow for ``soul``: row, nodes, WORKFLOW_CREATED event, and the after-commit notification.
+
+        The one door both ``create_from_judgment`` and ``POST /workflows/start/`` (W-11, manual start for any
+        soul) go through, so the two cannot drift the way ``create_appeal_workflow`` once did (see
+        ``_resolve_template``).
+
+        ``template`` is a ``stored_template(...)`` pair the caller already picked and checked; ``None``
+        resolves one from ``(civilization, case_type, tenant)``.
+
+        ``exclusive`` refuses with ``WorkflowInProgress`` when the soul already has a workflow that is not in
+        ``TERMINAL_WORKFLOW_STATUSES``. The soul row is locked first, so two clicks serialise and the second
+        sees the first's workflow. **SQLite ignores ``select_for_update``** — the suite cannot exercise this
+        race; only a real PostgreSQL run can. The judgment path does not pass it: a concluded judgment has
+        always been allowed a workflow beside, say, a soul's pending rebirth application.
+
+        Raises:
+            ValueError: case_type not valid for the soul's civilization, or a node-less template.
+            WorkflowInProgress: ``exclusive`` and the soul already has a live workflow.
+        """
+        from apps.souls.models import Soul
+        from apps.workflow.models import TERMINAL_WORKFLOW_STATUSES
+
+        civilization = soul.civilization
         validation_error = cls.validate_civilization_case_type(civilization, case_type)
         if validation_error:
             raise ValueError(validation_error)
 
-        # Look up template: DB first, then the hardcoded table, then a generic
-        # one-node flow. `create_appeal_workflow` calls the same method — see
-        # `_resolve_template` for what the two doors used to do differently and
-        # what that cost.
-        template, template_priority = cls._resolve_template(
-            civilization, case_type, judgment.tenant
-        )
+        # DB first, then the hardcoded table, then a generic one-node flow — see `_resolve_template`.
+        if template is None:
+            template = cls._resolve_template(civilization, case_type, tenant)
+        template, template_priority = template
         priority = cls._resolve_priority(priority, template_priority, floor=0)
 
         with transaction.atomic():
-            # Create workflow
+            if exclusive:
+                Soul.objects.select_for_update().get(pk=soul.pk)
+                live = (
+                    ApprovalWorkflow.objects.filter(soul=soul)
+                    .exclude(status__in=TERMINAL_WORKFLOW_STATUSES)
+                    .first()
+                )
+                if live is not None:
+                    raise WorkflowInProgress(live)
+
             workflow = ApprovalWorkflow.objects.create(
                 judgment=judgment,
                 soul=soul,
@@ -642,7 +704,8 @@ class WorkflowService:
                 priority=priority,
                 status=ApprovalWorkflowStatus.PENDING,
                 is_appeal=is_appeal,
-                tenant=judgment.tenant,
+                notes=notes,
+                tenant=tenant,
                 template_version_id=template.get("version_id"),
             )
 

@@ -205,6 +205,23 @@ def _workflow_created():
     return run, persisted, "WORKFLOW_CREATED"
 
 
+def _workflow_started():
+    """A moderator starts a workflow by hand (W-11, workflow/views.py start): the event is in start_workflow's
+    transaction, which the view's audit-row transaction encloses."""
+    from apps.authentication.models import User
+    from apps.workflow.models import ApprovalWorkflow
+    from tests.soul_account_support import dead_soul, officer_client
+
+    tenant = _cn()
+    soul = dead_soul(tenant, name="手动发起灵魂")
+    moderator = User.objects.get_or_create(username="evlog_moderator",
+                                           defaults={"role": "MODERATOR", "tenant": tenant})[0]
+    return (lambda: officer_client(moderator).post("/api/v1/workflows/start/",
+                                                   {"soul": str(soul.pk), "case_type": "ROUTINE", "reason": "x"},
+                                                   format="json"),
+            lambda: ApprovalWorkflow.all_objects.filter(soul=soul).exists(), "WORKFLOW_CREATED")
+
+
 def _judge(username="evlog_judge"):
     from apps.authentication.models import User
 
@@ -411,6 +428,7 @@ PATHS = {
     "conclude/STATE_CHANGED": _conclude_original("STATE_CHANGED"),
     "conclude_amendment/JUDGMENT_CONCLUDED": _conclude_amendment,
     "conclude+workflow/WORKFLOW_CREATED": _workflow_created,
+    "workflow_start/WORKFLOW_CREATED": _workflow_started,
     "transition_to/STATE_CHANGED": _transition_standalone,
     "die/STATE_CHANGED": _die("STATE_CHANGED"),
     "die/SOUL_ACCOUNT_CREATED": _die("SOUL_ACCOUNT_CREATED"),

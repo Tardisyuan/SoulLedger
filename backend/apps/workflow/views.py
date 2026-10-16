@@ -7,6 +7,7 @@ from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import MethodNotAllowed
 from rest_framework.response import Response
 
 from apps.core.exports import export_csv
@@ -25,12 +26,13 @@ from apps.workflow.serializers import (
     ApprovalWorkflowSerializer,
     ApproverPreviewSerializer,
     WorkflowNodeActionSerializer,
+    WorkflowStartSerializer,
     WorkflowStatsSerializer,
     WorkflowTemplateListSerializer,
     WorkflowTemplateSerializer,
     WorkflowTemplateVersionSerializer,
 )
-from apps.workflow.services import WorkflowService
+from apps.workflow.services import WorkflowInProgress, WorkflowService
 
 
 class WorkflowTemplateViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, TenantQuerySetMixin, TenantCreateMixin, AuditUserViewSetMixin, viewsets.ModelViewSet):
@@ -198,6 +200,7 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
         'approve_node': ['workflow.approve'],
         'stats': ['workflow.read'],
         'create_from_judgment': ['workflow.create'],
+        'start': ['workflow.create'],
         # 列表的 CSV:与列表同一个读。
         'export': ['workflow.read'],
     }
@@ -221,6 +224,101 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
         if self.action == "list":
             return ApprovalWorkflowListSerializer
         return ApprovalWorkflowSerializer
+
+    # The generic create is closed (W-11). It saved a bare row — no template, no nodes, no event — which is
+    # the node-less workflow `_resolve_template` exists to make impossible: un-advanceable, un-approvable,
+    # un-escalatable. Nothing called it (`workflowApi.create` had no caller). A workflow is made by
+    # `start` or `create_from_judgment`, both through `WorkflowService.start_workflow`.
+    @extend_schema(exclude=True)
+    def create(self, request, *args, **kwargs):
+        raise MethodNotAllowed(request.method, detail="Use POST /workflows/start/ or /workflows/create_from_judgment/.")
+
+    @extend_schema(
+        request=WorkflowStartSerializer,
+        responses={201: ApprovalWorkflowSerializer, 400: OpenApiTypes.OBJECT, 404: OpenApiTypes.OBJECT,
+                   409: OpenApiTypes.OBJECT},
+    )
+    @action(detail=False, methods=["post"])
+    def start(self, request):
+        """Start an approval workflow for any soul, with a written reason (W-11).
+
+        Same template resolution, nodes and events as `create_from_judgment`; `judgment` is optional.
+        """
+        from apps.audit.models import AuditAction, AuditLog
+        from apps.judgment.models import Judgment
+        from apps.souls.models import Soul
+
+        body = WorkflowStartSerializer(data=request.data)
+        body.is_valid(raise_exception=True)
+        data = body.validated_data
+
+        # Another tenant's soul is a 404, not a 403: its existence is not this caller's to learn.
+        soul = scope_to_tenant(Soul.objects.all(), request).filter(pk=data["soul"]).first()
+        if soul is None:
+            return Response({"code": "soul_not_found", "error": "Soul not found"}, status=status.HTTP_404_NOT_FOUND)
+        tenant = soul.tenant
+
+        judgment = None
+        if data.get("judgment"):
+            judgment = Judgment.objects.filter(pk=data["judgment"], soul=soul).first()
+            if judgment is None:
+                return Response({"code": "judgment_not_found", "error": "Judgment not found for this soul"},
+                                status=status.HTTP_404_NOT_FOUND)
+            if hasattr(judgment, "approval_workflow"):
+                return Response({"code": "judgment_has_workflow", "error": "Workflow already exists for this judgment"},
+                                status=status.HTTP_409_CONFLICT)
+
+        template = None
+        case_type = data.get("case_type")
+        if data.get("template"):
+            # The soul's own tenant, active, with nodes, and for the soul's civilization. A template that fails
+            # any of these is "not found" for this soul — the editor shows which templates exist.
+            db_template = (
+                WorkflowTemplate.objects.filter(pk=data["template"], tenant=tenant, is_active=True,
+                                                civilization=soul.civilization)
+                .exclude(nodes_json=[])
+                .first()
+            )
+            if db_template is None:
+                return Response({"code": "template_not_found",
+                                 "error": "No active template with nodes for this soul's civilization"},
+                                status=status.HTTP_404_NOT_FOUND)
+            template = WorkflowService.stored_template(db_template)
+            case_type = db_template.case_type
+
+        reason = data["reason"]
+        try:
+            with transaction.atomic():
+                workflow = WorkflowService.start_workflow(
+                    soul, case_type=case_type, tenant=tenant, template=template, judgment=judgment,
+                    priority=data.get("priority"), notes=reason, exclusive=True,
+                )
+                AuditLog.objects.create(
+                    tenant=tenant,
+                    user=request.user if request.user.is_authenticated else None,
+                    action=AuditAction.CREATE,
+                    resource="workflow.start",
+                    resource_id=str(workflow.id),
+                    description=f"手动发起审批：{workflow.workflow_name} — {reason}"[:500],
+                    changes={
+                        "soul": str(soul.pk),
+                        "case_type": case_type,
+                        "template": str(data["template"]) if data.get("template") else None,
+                        "judgment": str(judgment.pk) if judgment else None,
+                        "reason": reason,
+                    },
+                    ip_address=request.META.get("REMOTE_ADDR"),
+                    user_agent=request.META.get("HTTP_USER_AGENT", "")[:500],
+                )
+        except WorkflowInProgress as busy:
+            return Response(
+                {"code": "workflow_in_progress", "error": "This soul already has a workflow in progress",
+                 "workflow": str(busy.workflow.pk), "status": busy.workflow.status},
+                status=status.HTTP_409_CONFLICT,
+            )
+        except ValueError as e:
+            return Response({"code": "invalid_case_type", "error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(ApprovalWorkflowSerializer(workflow).data, status=status.HTTP_201_CREATED)
 
     @extend_schema(responses={(200, "text/csv"): OpenApiTypes.BINARY, 400: OpenApiTypes.OBJECT})
     @action(detail=False, methods=["get"], url_path="export", pagination_class=None)
