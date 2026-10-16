@@ -195,6 +195,10 @@ KIND_CATEGORY = {
     # 没有「朋友圈」偏好类别:警告是殿司对灵魂说的话,不给关(2026-09-26 产品定:理由走推送)。
     # 按被举报的是什么分三种文案(2026-09-26 产品定):帖子 / 评论 / 账号。
     **{f"social_warned_{target}": None for target in ("post", "comment", "user")},
+    # 殿司处置了灵魂的帖子 / 评论(隐藏、删除、先发后审通过、恢复;2026-10-16 用户定四种都推):
+    # 与警告同一处境 —— 殿司对作者说的话,不给关。
+    **{f"content_{outcome}_{target}": None
+       for outcome in ("hidden", "deleted", "approved", "restored") for target in ("post", "comment")},
 }
 
 
@@ -238,10 +242,11 @@ def record_chat_message(account, conversation, event_id, sender_name):
 SOCIAL_WARNED_EVENT = "SOCIAL_WARNED"
 
 
-def record_social_warning(user_id, report_id, target_type, reason):
+def record_social_warning(user_id, report_id, target_type, reason, post_id=None):
     """被警告的若是灵魂(有本世账号),给它记一条带理由的推送;官员、已转世的:不记;没有设备的照记一行历史(NO_DEVICE)。
 
-    `target_type` 是举报对象(POST / COMMENT / USER),决定锁屏说「帖子」「评论」还是「账号」。"""
+    `target_type` 是举报对象(POST / COMMENT / USER),决定锁屏说「帖子」「评论」还是「账号」。
+    `post_id`:帖子本身,或评论所在的帖子 —— 点推送打开它(作者看得到自己被隐藏的帖子);账号被举报时为 None,落在「此生」。"""
     from apps.soul_accounts.models import SoulAccount
 
     account = SoulAccount.objects.filter(user_id=user_id, retired_at__isnull=True).first()
@@ -249,7 +254,31 @@ def record_social_warning(user_id, report_id, target_type, reason):
         return []
     kind = f"social_warned_{target_type.lower()}"
     return _record(account, SOCIAL_WARNED_EVENT, None, kind, f"warn:{report_id}"[:120],
-                   {"screen": "Life"}, params=lambda locale: {"reason": reason})
+                   {"screen": "CirclePost", "post_id": str(post_id)} if post_id else {"screen": "Life"},
+                   params=lambda locale: {"reason": reason})
+
+
+#: 官员处置帖子 / 评论(apps/social/moderation.py::moderate_content)。总线上另有 `SOCIAL_CONTENT_MODERATED`
+#: (给租户 webhook);推送与警告一样直接记,不经总线。
+CONTENT_MODERATED_EVENT = "SOCIAL_CONTENT_MODERATED"
+CONTENT_OUTCOMES = {"HIDE": "hidden", "DELETE": "deleted", "APPROVE": "approved", "RESTORE": "restored"}
+
+
+def record_content_moderated(user_id, target_type, target_id, action, post_id=None):
+    """作者若是灵魂(有本世账号),记一条「你的帖子 / 评论被隐藏 / 删除 / 通过 / 恢复」;官员、已转世的:不记。
+
+    `target_type` 是 POST / COMMENT。`post_id`:帖子本身,或评论所在的帖子 —— 点推送打开它;
+    帖子已不在(被删的就是它,或评论所在的帖子已删)时为 None,落在「此生」。
+    dedupe 带时间戳:同一条内容可以先隐藏、再恢复、再隐藏,每次都要推。"""
+    from apps.soul_accounts.models import SoulAccount
+
+    account = SoulAccount.objects.filter(user_id=user_id, retired_at__isnull=True).first()
+    if account is None:
+        return []
+    kind = f"content_{CONTENT_OUTCOMES[action]}_{target_type.lower()}"
+    return _record(account, CONTENT_MODERATED_EVENT, None, kind,
+                   f"moderated:{target_id}:{action}:{timezone.now().timestamp()}"[:120],
+                   {"screen": "CirclePost", "post_id": str(post_id)} if post_id else {"screen": "Life"})
 
 
 #: 官员替灵魂关闭了两步验证(apps/soul_accounts/mfa.py::reset_by_officer)。**不经事件总线**,也不进偏好:

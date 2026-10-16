@@ -123,6 +123,19 @@ it("the push for an officer turning off two-step verification lands on that page
   expect(navigate).toHaveBeenCalledWith("Mfa");
 });
 
+it("a warning push opens the post it was about; a malformed or missing post id lands on the life page", () => {
+  const POST = "7d3c1a2b-4e5f-4a6b-8c9d-0e1f2a3b4c5d";
+  const landing = landingOf({ screen: "CirclePost", post_id: POST, kind: "social_warned_comment" });
+  expect(landing).toEqual({ screen: "CirclePost", id: POST });
+  const navigate = jest.fn();
+  landOn(navigate as never, landing!);
+  expect(navigate).toHaveBeenCalledWith("CirclePost", { id: POST });
+  expect(landingOf({ screen: "CirclePost", post_id: "../../me/", kind: "social_warned_post" })).toEqual({ screen: "Life" });
+  expect(landingOf({ screen: "CirclePost", kind: "social_warned_post" })).toEqual({ screen: "Life" });
+  // An account warning has no post: the server says Life.
+  expect(landingOf({ screen: "Life", kind: "social_warned_user" })).toEqual({ screen: "Life" });
+});
+
 it("after an approval the cooling-off line carries 「↑ 已提前」 beside the new date; before one it does not", async () => {
   stubApi({
     "/me/rebirth-applications/": {

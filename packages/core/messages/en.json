@@ -4765,6 +4765,38 @@
     "export_ready": {
       "title": "Your data is ready",
       "body": "The data export you asked for is ready for 7 days. Open Soul Ledger to save it."
+    },
+    "content_hidden_post": {
+      "title": "Your post was hidden",
+      "body": "An officer hid your post. Open Soul Ledger to see it."
+    },
+    "content_hidden_comment": {
+      "title": "Your comment was hidden",
+      "body": "An officer hid your comment. Open Soul Ledger to see it."
+    },
+    "content_deleted_post": {
+      "title": "Your post was deleted",
+      "body": "An officer deleted your post."
+    },
+    "content_deleted_comment": {
+      "title": "Your comment was deleted",
+      "body": "An officer deleted your comment."
+    },
+    "content_approved_post": {
+      "title": "Your post was approved",
+      "body": "Your post passed review and is now visible to everyone."
+    },
+    "content_approved_comment": {
+      "title": "Your comment was approved",
+      "body": "Your comment passed review and is now visible to everyone."
+    },
+    "content_restored_post": {
+      "title": "Your post was restored",
+      "body": "Your post is visible again."
+    },
+    "content_restored_comment": {
+      "title": "Your comment was restored",
+      "body": "Your comment is visible again."
     }
   },
   "official_notify": {
