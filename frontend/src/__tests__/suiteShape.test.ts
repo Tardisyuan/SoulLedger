@@ -191,6 +191,7 @@ const COLLECTED_FILES = [
   "SoulReadingPanelFork.test.tsx",
   "SoulReadingPanelSentence.test.tsx",
   "SoulsBatchRecycle.test.tsx",
+  "SoulsListExport.test.tsx",
   "SoulsPreviewDrawer.test.tsx",
   "Spinner.test.tsx",
   "TenantContext.test.tsx",

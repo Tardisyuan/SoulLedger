@@ -328,6 +328,9 @@ export const soulsApi = {
   // The batch bar's 「导出」: a CSV of the selected souls, scoped like the list (`soul.read`).
   export: (ids: string[]) =>
     api.get<Blob>("/souls/export/", { params: { ids: ids.join(",") }, responseType: "blob" }),
+  /** 列表页「导出 CSV」:与 `list` 同一组筛选 / 搜索 / 排序 / 租户划界,不分页(同一个 `export` 动作,不带 `ids`);页码参数不要传。 */
+  exportCsv: (params?: Record<string, string | number | undefined>) =>
+    api.get<Blob>("/souls/export/", { params, responseType: "blob" }),
   // Bulk CSV import, two steps. `soul.create`. Preview writes nothing; commit is all or nothing
   // and re-validates the file itself (422 + preview body when any row has an error).
   importPreview: (data: FormData) =>
