@@ -57,6 +57,9 @@ const COLLECTED_FILES = [
   "AuditDetailPage.test.tsx",
   "AuditPage.impersonate.test.tsx",
   "AuditPage.test.tsx",
+  // 2026-10-17 第三十七批 W-13「灵魂事件」页 /events:筛选参数、×N、链接、事件分组守卫。
+  "SoulEventsPage.test.tsx",
+  "soulEventGroups.test.ts",
   "Badge.test.tsx",
   "Button.test.tsx",
   "CaseAttachments.test.tsx",

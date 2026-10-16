@@ -17,6 +17,8 @@ const LEAF_KEYS: Record<string, string> = {
   "/dashboard": "breadcrumb.menu.dashboard",
   "/admin/stats": "breadcrumb.menu.admin_stats",
   "/souls": "breadcrumb.menu.souls",
+  // backend/apps/menus/migrations/0023_b37_add_soul_events_menu.py(Design 给的键是 nav.soul_events)
+  "/events": "nav.soul_events",
   "/judgment": "breadcrumb.menu.judgment",
   "/corpus": "breadcrumb.menu.corpus",
   "/cross-judgments": "breadcrumb.menu.cross_judgments",

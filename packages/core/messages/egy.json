@@ -16,7 +16,8 @@
     "theme_light": "Khemen Er Hedj",
     "theme_dark": "Khemen Er Kem",
     "mobile_menu": "Wat Medu",
-    "more": "Ky"
+    "more": "Ky",
+    "soul_events": "Medew Ba"
   },
   "auth": {
     "login": "Aq",
@@ -6277,5 +6278,33 @@
     "saved": "Smen Seth",
     "deleted": "Fekh Seth",
     "failed": "Nen Smen. Wehem Iri."
+  },
+  "events": {
+    "col_time": "Sepdet",
+    "col_soul": "Ba",
+    "col_event": "Medew",
+    "col_actor": "Netjer",
+    "col_detail": "Maa Medu",
+    "search_soul": "Hehy Ren Ba…",
+    "all_types": "Medew Neb",
+    "search_type": "Hehy Medew…",
+    "all_actors": "Netjer Neb",
+    "include_system": "Hena Medew Hemsu",
+    "actor_system": "Hemsu",
+    "groups": {
+      "lifecycle": "Ankh Ba",
+      "workflow": "Wat Hesy",
+      "dispatch": "Hab-Ba",
+      "death_sync": "Senb Mut",
+      "account": "Aq Ba Hena Wehem Mesut",
+      "punishment": "Sesh Wetep"
+    },
+    "detail": {
+      "state": "{{from}} → {{to}} · {{reason}}",
+      "karma": "Nefer {{merit}} · Isfet {{demerit}}"
+    },
+    "empty": "Nen Medew Em Setep Pen",
+    "empty_all": "Nen Medew Djer",
+    "failed": "Nen Ini Medew. Wehem Iri."
   }
 }

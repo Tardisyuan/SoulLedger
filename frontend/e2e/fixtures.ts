@@ -1716,6 +1716,8 @@ export class ApiMock {
     this.on("GET", "/disposition/", paginated([]));
     this.on("GET", "/reincarnation/", paginated([]));
     this.on("GET", "/events/", paginated([]));
+    // 「灵魂事件」页(/events)的「全部操作人」下拉(第三十七批 W-13):一个裸数组,不分页。
+    this.on("GET", "/events/actors/", []);
     this.on("GET", "/organizations/", paginated([]));
     this.on("GET", "/dispatch/cross-tenant-judgments/", paginated([]));
     // Not a list endpoint: see SOUL_INHERITANCE. (The paragraph above still
