@@ -11769,7 +11769,7 @@ export interface components {
             readonly demerit_score: number;
             readonly realm_name: string | null;
             /** Format: uuid */
-            readonly workflow: string | null;
+            readonly workflow: string;
             readonly is_archived: boolean;
             /** Format: date-time */
             readonly archived_at: string | null;
@@ -12008,7 +12008,7 @@ export interface components {
             readonly demerit_score: number;
             readonly realm_name: string | null;
             /** Format: uuid */
-            readonly workflow: string | null;
+            readonly workflow: string;
             readonly is_archived: boolean;
             /** Format: date-time */
             readonly archived_at: string | null;
@@ -14776,6 +14776,8 @@ export interface components {
             readonly merit_score?: number;
             readonly demerit_score?: number;
             readonly realm_name?: string | null;
+            /** Format: uuid */
+            readonly workflow?: string;
             readonly is_archived?: boolean;
             /** Format: date-time */
             readonly archived_at?: string | null;

@@ -1,6 +1,8 @@
 """
 Tests for SoulEvent (Events) API endpoints.
 """
+from datetime import UTC
+
 import pytest
 
 from apps.events.models import EventType, SoulEvent
@@ -116,14 +118,14 @@ LIST = "/api/v1/events/?event_type=STATE_CHANGED"
 
 @pytest.mark.django_db
 def test_date_range_is_inclusive_on_both_ends(api_client, viewer_user, cn_tenant):
-    from datetime import datetime, timezone
+    from datetime import datetime
 
     _auth(api_client, viewer_user)
     soul = Soul.objects.create(name="RangeSoul", tenant=cn_tenant)
-    before = _event_at(soul, datetime(2026, 10, 9, 23, 59, tzinfo=timezone.utc))
-    first = _event_at(soul, datetime(2026, 10, 10, 0, 0, tzinfo=timezone.utc))
-    last = _event_at(soul, datetime(2026, 10, 12, 23, 59, tzinfo=timezone.utc))
-    after = _event_at(soul, datetime(2026, 10, 13, 0, 1, tzinfo=timezone.utc))
+    before = _event_at(soul, datetime(2026, 10, 9, 23, 59, tzinfo=UTC))
+    first = _event_at(soul, datetime(2026, 10, 10, 0, 0, tzinfo=UTC))
+    last = _event_at(soul, datetime(2026, 10, 12, 23, 59, tzinfo=UTC))
+    after = _event_at(soul, datetime(2026, 10, 13, 0, 1, tzinfo=UTC))
 
     got = _ids(api_client.get(f"{LIST}&start_date=2026-10-10&end_date=2026-10-12"))
     assert got == {str(first.pk), str(last.pk)}
