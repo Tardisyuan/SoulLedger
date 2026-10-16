@@ -1143,3 +1143,126 @@ def test_hide_restore_hide_pushes_each_time(
     assert list(PushDelivery.objects.order_by("created_at").values_list("kind", flat=True)) == [
         "content_hidden_post", "content_restored_post", "content_hidden_post"]
     assert len(enqueued) == 3
+
+
+# ── 隐藏 / 删除带理由(2026-10-16 用户定)───────────────────────────────────────
+
+
+@pytest.mark.parametrize("verb", ["hide", "delete"])
+@pytest.mark.parametrize("body", [
+    {"reason_code": "OTHER"},
+    {"reason_code": "OTHER", "reason_note": "   "},
+    {"reason_code": "NOT_A_REASON"},
+    {"reason_code": "SPAM", "reason_note": "长" * 201},
+])
+def test_a_bad_reason_is_a_400_and_changes_nothing(cn_tenant, cn_moderator, verb, body):
+    """「其他」必须写说明;不认识的代码、超长的说明都拒。拒了就什么都不动。"""
+    _, row, _ = _authored(cn_tenant, "POST")
+    res = officer_client(cn_moderator).post(f"{MODERATION}/posts/{row.pk}/{verb}/", body, format="json")
+    assert res.status_code == 400, res.content
+    row.refresh_from_db()
+    assert (row.moderation_status, row.is_deleted) == (ModerationStatus.PUBLISHED, False)
+    assert not AuditLog.objects.filter(resource="social_moderation", resource_id=str(row.pk)).exists()
+
+
+def test_resolving_a_report_with_other_and_no_note_is_a_400(cn_tenant, cn_moderator):
+    _, _, report = _reported_post(cn_tenant)
+    res = officer_client(cn_moderator).post(
+        f"{MODERATION}/reports/{report.pk}/resolve/", {"resolution": "HIDE", "reason_code": "OTHER"}, format="json")
+    assert res.status_code == 400, res.content
+    report.refresh_from_db()
+    assert report.status == "OPEN"
+
+
+def test_an_old_client_with_only_free_text_still_hides(cn_tenant, cn_moderator):
+    _, row, _ = _authored(cn_tenant, "POST")
+    res = officer_client(cn_moderator).post(f"{MODERATION}/posts/{row.pk}/hide/", {"reason": "旧客户端"}, format="json")
+    assert res.status_code == 200, res.content
+    row.refresh_from_db()
+    assert (row.moderation_status, row.moderation_reason) == (ModerationStatus.HIDDEN, "旧客户端")
+
+
+REASON_TEXT = {
+    ("HIDE", "POST"): ("帖子已被隐藏", "你的帖子被殿司隐藏：{}"),
+    ("HIDE", "COMMENT"): ("评论已被隐藏", "你的评论被殿司隐藏：{}"),
+    ("DELETE", "POST"): ("帖子已被删除", "你的帖子被殿司删除：{}"),
+    ("DELETE", "COMMENT"): ("评论已被删除", "你的评论被殿司删除：{}"),
+}
+
+
+@pytest.mark.parametrize("target_type", ["POST", "COMMENT"])
+@pytest.mark.parametrize("action", ["HIDE", "DELETE"])
+@pytest.mark.parametrize(("code", "note", "shown"), [("SPAM", "", "垃圾信息"), ("OTHER", "冒充他人", "冒充他人")])
+def test_hide_and_delete_push_the_reason(
+    cn_tenant, cn_moderator, django_capture_on_commit_callbacks, enqueued,  # noqa: F811
+    action, target_type, code, note, shown,
+):
+    """预设理由推它在作者语言里的名字;「其他」推官员写的那句。审计里记代码与说明。"""
+    from apps.soul_push.models import PushDelivery
+
+    author, row, _ = _authored(cn_tenant, target_type)
+    _device(author)
+    kind = "posts" if target_type == "POST" else "comments"
+    with django_capture_on_commit_callbacks(execute=True):
+        res = officer_client(cn_moderator).post(
+            f"{MODERATION}/{kind}/{row.pk}/{action.lower()}/", {"reason_code": code, "reason_note": note},
+            format="json")
+    assert res.status_code in (200, 204), res.content
+
+    delivery = PushDelivery.objects.get()
+    assert delivery.kind == f"content_{OUTCOME[action]}_{target_type.lower()}_reason"
+    title, body = REASON_TEXT[(action, target_type)]
+    assert (delivery.title, delivery.body) == (title, body.format(shown))
+    logged = AuditLog.objects.get(resource="social_moderation", resource_id=str(row.pk))
+    assert (logged.changes["reason_code"], logged.changes["reason_note"]) == (code, note)
+
+
+def test_the_reason_label_follows_the_authors_language(
+    cn_tenant, cn_moderator, django_capture_on_commit_callbacks, enqueued,  # noqa: F811
+):
+    from apps.soul_push.models import PushDelivery, PushPreference
+
+    author, row, _ = _authored(cn_tenant, "POST")
+    _device(author)
+    PushPreference.objects.create(account=author, soul=author.soul, locale="en")
+    with django_capture_on_commit_callbacks(execute=True):
+        mod.moderate_content(row, "HIDE", actor=cn_moderator, reason_code="ABUSE")
+
+    delivery = PushDelivery.objects.get()
+    assert (delivery.title, delivery.body) == ("Your post was hidden", "An officer hid your post: Abuse")
+    row.refresh_from_db()
+    assert row.moderation_reason == "ABUSE"  # 「已处理」按 social_moderation.reason 翻译
+
+
+@pytest.mark.parametrize("action", ["APPROVE", "RESTORE"])
+def test_approve_and_restore_never_carry_a_reason(
+    cn_tenant, cn_moderator, django_capture_on_commit_callbacks, enqueued, action,  # noqa: F811
+):
+    from apps.soul_push.models import PushDelivery
+
+    author, row, _ = _authored(cn_tenant, "POST", START[action])
+    _device(author)
+    with django_capture_on_commit_callbacks(execute=True):
+        mod.moderate_content(row, action, actor=cn_moderator, reason_code="OTHER", reason_note="不该出现")
+
+    delivery = PushDelivery.objects.get()
+    assert delivery.kind == f"content_{OUTCOME[action]}_post"
+    assert (delivery.title, delivery.body) == MODERATED_TEXT[(action, "POST")]
+    logged = AuditLog.objects.get(resource="social_moderation", resource_id=str(row.pk))
+    assert "reason_code" not in logged.changes
+
+
+def test_hiding_through_a_report_pushes_the_reason_too(
+    cn_tenant, cn_moderator, django_capture_on_commit_callbacks, enqueued,  # noqa: F811
+):
+    from apps.soul_push.models import PushDelivery
+
+    author, _, report = _reported_post(cn_tenant)
+    _device(author)
+    with django_capture_on_commit_callbacks(execute=True):
+        res = officer_client(cn_moderator).post(
+            f"{MODERATION}/reports/{report.pk}/resolve/", {"resolution": "HIDE", "reason_code": "SEXUAL"},
+            format="json")
+    assert res.status_code == 200, res.content
+    assert res.json()["resolution_note"] == "SEXUAL"
+    assert PushDelivery.objects.get().body == "你的帖子被殿司隐藏：色情内容"
