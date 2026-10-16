@@ -1,1 +1,17 @@
-[]
+[
+  "officer_app.soul.birth_name",
+  "officer_app.soul.current_stop",
+  "officer_app.soul.demerit_short",
+  "officer_app.soul.judgment_meta",
+  "officer_app.soul.karma_group",
+  "officer_app.soul.merit_short",
+  "officer_app.soul.no_disposition",
+  "officer_app.soul.open_label",
+  "officer_app.soul.shown_count",
+  "officer_app.soul.source",
+  "officer_app.soul.tabs.events",
+  "officer_app.soul.tabs.fate",
+  "officer_app.soul.tabs.identity",
+  "officer_app.soul.tabs.judgments",
+  "officer_app.soul.tabs.karma"
+]

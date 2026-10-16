@@ -75,6 +75,7 @@ class FactAttachmentSerializer(serializers.Serializer):
 class FactSoulSerializer(serializers.Serializer):
     name = serializers.CharField()
     soul_code = serializers.CharField()
+    id = serializers.CharField(required=False, help_text="灵魂 id:App 详情里点灵魂名打开灵魂详情(旧服务端没有)。")
 
 
 class TodoFactsSerializer(serializers.Serializer):

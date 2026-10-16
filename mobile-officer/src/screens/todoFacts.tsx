@@ -5,8 +5,9 @@
  * what it showed before. The earlier steps are a vertical timeline; past 4 steps only 发起 and the last 2 show,
  * with one row 「还有 N 步」 that opens the middle. Attachments: a picture opens in the letter image viewer, a PDF in
  * the system (the row ends with ↗︎); offline a PDF row is greyed with 「联网后才能打开」; no attachments, no section.
+ * A soul's name opens its detail (O-15, `SoulLink`) when the server sent the soul's id; its code beside it never does.
  */
-import type { FactAttachment, FactHistory, TodoFacts, TodoItemDetail } from "@soulledger/core/api/officer-app";
+import type { FactAttachment, FactHistory, FactSoul, TodoFacts, TodoItemDetail } from "@soulledger/core/api/officer-app";
 import { useState } from "react";
 import { Pressable, View } from "react-native";
 
@@ -15,10 +16,13 @@ import { formatWhen } from "../format";
 import { hallLabel } from "../rules";
 import { SectionLabel, Txt, space, useI18n, useTheme } from "../shared";
 import { historyView, soulsView } from "../todoFacts";
+import { SoulLink } from "./soulDetail";
+
+type OpenSoul = ((id: string) => void) | undefined;
 
 type Hall = { code: string; display_name: string } | null | undefined;
 
-export function TodoFactsView({ detail }: { detail: TodoItemDetail }) {
+export function TodoFactsView({ detail, onOpenSoul }: { detail: TodoItemDetail; onOpenSoul?: (id: string) => void }) {
   const { t } = useI18n();
   const f = detail.facts;
   if (!f) return null;
@@ -32,14 +36,14 @@ export function TodoFactsView({ detail }: { detail: TodoItemDetail }) {
         </View>
       ) : null}
       {detail.kind === "reassignment" ? <DispatchHeader f={f} hall={hall} /> : null}
-      <Fields detail={detail} f={f} hall={hall} />
+      <Fields detail={detail} f={f} hall={hall} onOpenSoul={onOpenSoul} />
       {f.reason ? (
         <View testID="facts-reason" style={{ gap: space[1] }}>
           <Txt variant="caption" tone="muted">{t("officer_app.detail.reason")}</Txt>
           <Txt variant="body">{f.reason}</Txt>
         </View>
       ) : null}
-      {detail.kind === "reassignment" ? <Souls f={f} /> : null}
+      {detail.kind === "reassignment" ? <Souls f={f} onOpenSoul={onOpenSoul} /> : null}
       {f.history && f.history.length > 0 ? <History steps={f.history} /> : null}
       {f.attachments && f.attachments.length > 0 ? <Attachments items={f.attachments} /> : null}
     </View>
@@ -69,13 +73,23 @@ function DispatchHeader({ f, hall }: { f: TodoFacts; hall: (h: Hall) => string }
   );
 }
 
-function Fields({ detail, f, hall }: { detail: TodoItemDetail; f: TodoFacts; hall: (h: Hall) => string }) {
+/** 名字 › (a link when it can be) · 编号 (never a link). An older server sends no id: plain text, as before. */
+function SoulName({ soul, onOpenSoul, variant = "bodyLg", testID }: { soul: FactSoul; onOpenSoul: OpenSoul; variant?: "bodyLg" | "body"; testID?: string }) {
+  if (!soul.id || !onOpenSoul) return <Txt variant={variant} testID={testID}>{`${soul.name} · ${soul.soul_code}`}</Txt>;
+  const id = soul.id;
+  return (
+    <View testID={testID} style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: space[2] }}>
+      <SoulLink testID="facts-soul-link" variant={variant} name={soul.name} onOpen={() => onOpenSoul(id)} />
+      <Txt variant={variant} tone="muted">{soul.soul_code}</Txt>
+    </View>
+  );
+}
+
+function Fields({ detail, f, hall, onOpenSoul }: { detail: TodoItemDetail; f: TodoFacts; hall: (h: Hall) => string; onOpenSoul: OpenSoul }) {
   const { t, enumLabel } = useI18n();
   const rows: { key: string; label: string; value: string }[] = [];
-  if (detail.kind === "approval" && f.soul) rows.push({ key: "soul", label: t("officer_app.detail.souls", { n: "1" }), value: `${f.soul.name} · ${f.soul.soul_code}` });
-  if (detail.kind === "cooldown" && f.soul) rows.push({ key: "soul", label: t("officer_app.detail.souls", { n: "1" }), value: `${f.soul.name} · ${f.soul.soul_code}` });
+  const soul = (detail.kind === "approval" || detail.kind === "cooldown" || detail.kind === "rebirth") && f.soul ? f.soul : null;
   if (detail.kind === "rebirth") {
-    if (f.soul) rows.push({ key: "soul", label: t("officer_app.detail.souls", { n: "1" }), value: `${f.soul.name} · ${f.soul.soul_code}` });
     if (f.cycle != null) rows.push({ key: "cycle", label: t("souls.detail.life_number", { n: String(f.cycle) }), value: "" });
     if (f.desired_form) {
       const d = enumLabel("reincarnation.forms", f.desired_form);
@@ -95,6 +109,12 @@ function Fields({ detail, f, hall }: { detail: TodoItemDetail; f: TodoFacts; hal
   }
   return (
     <>
+      {soul ? (
+        <View testID="facts-soul" style={{ gap: space[1] }}>
+          <Txt variant="caption" tone="muted">{t("officer_app.detail.souls", { n: "1" })}</Txt>
+          <SoulName soul={soul} onOpenSoul={onOpenSoul} />
+        </View>
+      ) : null}
       {rows.map((r) =>
         r.value === "" ? (
           // A label that already carries its number ("现在剩 {{n}} 天", "第 {{n}} 世") stands alone.
@@ -108,7 +128,7 @@ function Fields({ detail, f, hall }: { detail: TodoItemDetail; f: TodoFacts; hal
 }
 
 /** 灵魂 · N: the first 2, then 「还有 N 个 ›」 opens the rest. */
-function Souls({ f }: { f: TodoFacts }) {
+function Souls({ f, onOpenSoul }: { f: TodoFacts; onOpenSoul: OpenSoul }) {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const all = f.souls ?? [];
@@ -118,7 +138,7 @@ function Souls({ f }: { f: TodoFacts }) {
     <View testID="facts-souls" style={{ gap: space[2] }}>
       <SectionLabel>{t("officer_app.detail.souls", { n: String(f.soul_count ?? all.length) })}</SectionLabel>
       {shown.map((s) => (
-        <Txt key={s.soul_code} variant="body">{`${s.name} · ${s.soul_code}`}</Txt>
+        <SoulName key={s.soul_code} soul={s} onOpenSoul={onOpenSoul} variant="body" />
       ))}
       {more > 0 ? (
         <Pressable testID="facts-souls-more" accessibilityRole="button" onPress={() => setOpen(true)} style={{ minHeight: 44, justifyContent: "center" }}>
