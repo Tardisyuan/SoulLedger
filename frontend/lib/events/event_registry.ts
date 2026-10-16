@@ -268,6 +268,42 @@ export const BACKEND_EVENT_TYPES = [
   "SCHEDULER_RUN_FAILED",
 ] as const;
 
+type BackendEventType = (typeof BACKEND_EVENT_TYPES)[number];
+
+/**
+ * 「灵魂事件」页(/events)事件类型下拉的六个大类(第三十七批 W-13,组名 `events.groups.<key>`)。
+ * 只收会记在灵魂时间线上的类型;社交、通知、调度失败没有灵魂,不写 SoulEvent。
+ * `eventGroups.test.ts` 守着:时间线上的每个类型恰在一组里,组里没有后端没有的类型。
+ */
+export const SOUL_EVENT_GROUPS = {
+  lifecycle: [
+    "SOUL_CREATED", "STATE_CHANGED", "KARMA_RECALCULATED", "SETTLEMENT_CORRECTED", "RECORD_ADDED",
+    "JUDGMENT_INITIATED", "JUDGMENT_CONCLUDED", "DISPOSITION_CREATED", "DISPOSITION_EXPIRED",
+    "REINCARNATION_TRIGGERED", "REINCARNATION_COMPLETED",
+  ],
+  workflow: ["WORKFLOW_CREATED", "WORKFLOW_ASSIGNED", "WORKFLOW_APPROVED", "WORKFLOW_REJECTED"],
+  dispatch: ["DISPATCH_CREATED", "DISPATCH_APPROVED", "DISPATCH_REJECTED", "DISPATCH_EXECUTED", "DISPATCH_STATUS_CHANGED"],
+  death_sync: ["DEATH_SYNC_RECEIVED", "DEATH_SYNC_PROCESSED"],
+  account: [
+    "SOUL_ACCOUNT_CREATED", "SOUL_ACCOUNT_RETIRED", "REBIRTH_APPLICATION_SUBMITTED", "REBIRTH_STATUS_CHANGED",
+    "REBIRTH_CROSS_CIV_DECIDED", "COOLDOWN_SHORTENING_DECIDED",
+  ],
+  punishment: [
+    "SENTENCE_PLAN_CREATED", "SENTENCE_NODE_ACTIVATED", "SENTENCE_NODE_WAITING", "SENTENCE_NODE_COMPLETED",
+    "SENTENCE_NODE_REFUSED", "SENTENCE_NODE_REDISPATCHED", "SENTENCE_PLAN_AMENDED", "SENTENCE_REQUEST_CREATED",
+    "SENTENCE_REQUEST_DECIDED", "SENTENCE_PLAN_COMPLETED", "SENTENCE_PLAN_CANCELLED",
+  ],
+} as const satisfies Record<string, readonly BackendEventType[]>;
+
+export type SoulEventGroup = keyof typeof SOUL_EVENT_GROUPS;
+
+/**
+ * 系统做的事:actor 为空或 "system"(`EventService.log*` 不给 actor 时写的值)。
+ * 与后端 `apps/events/views.py::SYSTEM_ACTOR` 同一个定义 —— /events 不勾「含系统事件」时
+ * 请求带 `exclude_system=1` 由后端排除,这里只决定「操作人」列写不写「系统」。
+ */
+export const isSystemActor = (actor: string | null | undefined): boolean => !actor || actor === "system";
+
 /**
  * Events the backend publishes on the realtime bus by string, which are NOT
  * members of `apps.events.models.EventType` — so they cannot go in the array

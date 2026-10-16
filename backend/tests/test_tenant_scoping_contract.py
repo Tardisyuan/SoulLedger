@@ -148,9 +148,10 @@ RESIDENCE_READABLE: dict[str, tuple[tuple[str, ...], str]] = {
         "暂居地的处置,即「处置进展」:执行了没有、是否永久刑期决定灵魂何时回归。",
     ),
     "SoulEventViewSet": (
-        ("list", "retrieve"),
+        ("list", "retrieve", "actors"),
         "灵魂时间线。暂居地写的事件(调拨执行、回归被拦下 DISPATCH_RETURN_BLOCKED)"
-        "是原属租户跟进回归的唯一线索。",
+        "是原属租户跟进回归的唯一线索。actors 是 /events 页「操作人」下拉,"
+        "与 list 同一个范围,否则列表里出现的操作人下拉里选不到。",
     ),
 }
 

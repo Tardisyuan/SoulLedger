@@ -1,4 +1,4 @@
-"""menus/0021 + 0022:全新的库有完整的侧边栏;已有这些行的库零改动;回收站入口只给 ADMIN。
+"""menus/0021 + 0022 + 0023:全新的库有完整的侧边栏;已有这些行的库零改动;回收站入口只给 ADMIN;灵魂事件挂在灵魂业务下。
 
 0021 种下最早那 16 条菜单(此前只存在于早期手工建出来的库里,0009 只会改它们)。按 path 判断,
 已存在(含已软删除的)一行都不动。0022 加 `/recycle-bin`,roles = ["ADMIN"]、不写码名。
@@ -196,3 +196,30 @@ def test_0022_round_trip_adds_and_removes_the_recycle_bin_entry(migration_round_
         snapshot=_snapshot,
         check_forward=check_forward,
     )
+
+
+def test_0023_round_trip_adds_and_removes_the_soul_events_entry(migration_round_trip):
+    def check_forward(apps):
+        rows = _snapshot(apps)
+        assert rows["MENU:/events"] == {
+            "name": "灵魂事件", "order": 15, "visible": True,
+            "roles": ["ADMIN", "JUDGE", "GUARDIAN", "VIEWER"], "parent": "灵魂业务",
+        }
+
+    migration_round_trip(
+        before=("menus", "0022_add_recycle_bin_menu"),
+        after=("menus", "0023_b37_add_soul_events_menu"),
+        seed=_directories_and_a_customised_souls,
+        snapshot=_snapshot,
+        check_forward=check_forward,
+    )
+
+
+def test_the_soul_events_entry_sits_under_souls_for_every_officer(cn_tenant):
+    seeded_menus()
+    row = Menu.objects.get(path="/events", is_deleted=False)
+    assert (row.name, row.parent.name, row.permission, row.icon, row.order) == (
+        "灵魂事件", "灵魂业务", "soul.read", "Activity", 15,
+    )
+    for role in ("ADMIN", "JUDGE", "GUARDIAN", "VIEWER"):
+        assert "灵魂事件" in _seen_by(role, cn_tenant), role

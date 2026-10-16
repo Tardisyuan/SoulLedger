@@ -60,6 +60,9 @@ const COLLECTED_FILES = [
   // 2026-10-17 第三十七批 W-9:审计的「权限变更」时间线与「统计」页签。
   "AuditPermissionChanges.test.tsx",
   "AuditStats.test.tsx",
+  // 2026-10-17 第三十七批 W-13「灵魂事件」页 /events:筛选参数、×N、链接、事件分组守卫。
+  "SoulEventsPage.test.tsx",
+  "soulEventGroups.test.ts",
   "Badge.test.tsx",
   "Button.test.tsx",
   "CaseAttachments.test.tsx",
