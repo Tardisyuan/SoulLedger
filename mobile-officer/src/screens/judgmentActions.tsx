@@ -25,7 +25,7 @@ export function JudgmentActionBar({
 }: {
   data: Judgment;
   me: number | null;
-  /** 本次已请求改派(本机记,见 `judgmentActionState`)。 */
+  /** 已请求改派:服务端的 `reassign_requested_at`,或本次撞到 429(见 `judgmentActionState`)。 */
   reassignAsked: boolean;
   onAsked: () => void;
   /** 服务端接受了:调用方重新取案子。 */
@@ -157,7 +157,7 @@ export function JudgmentActionBar({
         data={data}
         onClose={closeOnly("request_reassign")}
         onSubmit={(reason) =>
-          run(() => judgmentApi.requestReassign(data.id, reason.trim()), "officer_app.case.done_reassign", onAsked).catch((e: unknown) => {
+          run(() => judgmentApi.requestReassign(data.id, reason.trim()), "officer_app.case.done_reassign").catch((e: unknown) => {
             // 10 分钟内已经请求过:服务端已经通知过了,界面按「已请求」处理。
             if ((e as { response?: { status?: number } })?.response?.status === 429) {
               setOverlay(null);

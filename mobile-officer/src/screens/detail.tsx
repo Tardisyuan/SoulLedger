@@ -232,6 +232,7 @@ function JudgmentDetail({ id }: { id: string }) {
   const load = useCallback(() => judgmentApi.get(id).then((r) => r.data), [id]);
   const { data, error, reload } = useRemote(load);
   const scroll = useRef<ScrollView>(null);
+  // 「已请求」以服务端的 `reassign_requested_at` 为准(`judgmentActionState` 读它);`asked` 只补一种情形:429(10 分钟内问过,但标记已随认领人变动清掉)。
   const [asked, setAsked] = useState(false);
   const [record, setRecord] = useState<SoulRecordEntry | null>(null);
   const view = viewStateOf({ data, error }, () => false, isDenied);

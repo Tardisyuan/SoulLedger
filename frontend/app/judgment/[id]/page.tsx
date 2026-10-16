@@ -557,6 +557,15 @@ export default function JudgmentDetailPage({ params }: PageProps) {
       label: t("judgment.detail.confession"),
       node: (
         <>
+          {/* 案由(`summary`):官员写的概述,与下面灵魂的供词是两回事。未结案且持 judgment.execute 才可改;其余只读,空则不画。 */}
+          {!isFinal && canExecute ? (
+            <CaseSummaryField id={id} value={judgment.summary ?? ""} />
+          ) : judgment.summary ? (
+            <div className="mb-4">
+              <p className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))]">{t("officer_app.case.summary")}</p>
+              <p className="mt-1 max-w-[72ch] whitespace-pre-wrap text-sm text-[oklch(var(--color-ink))]">{judgment.summary}</p>
+            </div>
+          ) : null}
           {/* SERIF = WORDS SOMEONE SAID. That contrast replaces the `italic` +
               curly quotes this paragraph used to carry: a confession in italic
               reads as an aside, and italic is then unavailable for what italic
@@ -1167,6 +1176,37 @@ function MetaRow({ label, children }: { label: string; children: ReactNode }) {
     <div className="grid grid-cols-[76px_1fr] items-baseline gap-3 py-2">
       <dt className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))]">{label}</dt>
       <dd className="text-sm text-[oklch(var(--color-ink))] min-w-0 wrap-break-word">{children}</dd>
+    </div>
+  );
+}
+
+/** 案由输入框:失焦时存(只在改动过时),存成后让详情与列表失效。 */
+function CaseSummaryField({ id, value }: { id: string; value: string }) {
+  const { t } = useI18n();
+  const { showToast } = useToast();
+  const queryClient = useQueryClient();
+  const fieldId = useId();
+  const [text, setText] = useState(value);
+  const save = useMutation({
+    mutationFn: (summary: string) => judgmentApi.update(id, { summary }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: judgmentKeys.all }),
+    onError: () => showToast(t("common.error"), "error"),
+  });
+  return (
+    <div className="mb-4">
+      <label htmlFor={fieldId} className="text-2xs uppercase text-[oklch(var(--color-ink-subtle))]">
+        {t("officer_app.case.summary")}
+      </label>
+      <textarea
+        id={fieldId}
+        value={text}
+        onChange={(event) => setText(event.target.value)}
+        onBlur={() => {
+          if (text !== value) save.mutate(text);
+        }}
+        rows={3}
+        className="block w-full mt-1 rounded-control border border-[oklch(var(--color-line-strong))] bg-[oklch(var(--color-surface-1))] px-3 py-2 text-sm text-[oklch(var(--color-ink))] transition-[border-color] duration-state focus-visible:border-[oklch(var(--color-ink))] resize-y"
+      />
     </div>
   );
 }

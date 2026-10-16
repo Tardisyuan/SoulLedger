@@ -129,3 +129,45 @@ class TestRateLimit:
         now = time.time()
         monkeypatch.setattr(time, "time", lambda: now + 400)
         assert 199 <= _ask(admins.clients["mod"], case).data["retry_after"] <= 200
+
+
+@pytest.mark.django_db
+class TestPersistentMarkerAndReason:
+    def test_asking_with_a_reason_persists_the_marker_and_the_with_reason_text(self, admins):
+        case = _case(admins.cn, name="张三")
+        assert _post(admins.clients["mod"], case, "request-reassign", {"reason": "本殿无人能接"}).status_code == 200
+        case.refresh_from_db()
+        assert case.reassign_requested_at is not None
+        assert case.reassign_requested_by_id == admins.users["mod"].pk
+        assert case.reassign_reason == "本殿无人能接"
+        note = UserNotification.objects.filter(notification_type=TYPE).first()
+        assert note.message.endswith("理由：本殿无人能接")
+
+    def test_without_a_reason_the_text_is_the_old_sentence(self, admins):
+        case = _case(admins.cn, name="张三")
+        _ask(admins.clients["mod"], case)
+        note = UserNotification.objects.filter(notification_type=TYPE).first()
+        assert "理由" not in note.message
+        case.refresh_from_db()
+        assert case.reassign_requested_at is not None and case.reassign_reason == ""
+
+    def test_the_marker_is_cleared_when_the_holder_changes(self, admins):
+        case = _case(admins.cn)
+        _post(admins.clients["mod"], case, "request-reassign", {"reason": "x"})
+        claims.reassign(case.pk, admins.users["a"])
+        case.refresh_from_db()
+        assert case.reassign_requested_at is None and case.reassign_requested_by_id is None
+        assert case.reassign_reason == ""
+
+    def test_the_marker_is_not_writable_through_the_plain_patch(self, admins):
+        case = _case(admins.cn)
+        response = admins.clients["mod"].patch(
+            f"/api/v1/judgment/{case.pk}/", {"reassign_reason": "forged"}, format="json"
+        )
+        assert response.status_code == 400
+
+    def test_the_case_summary_is_writable_and_read_back(self, admins):
+        case = _case(admins.cn)
+        response = admins.clients["mod"].patch(f"/api/v1/judgment/{case.pk}/", {"summary": "生前经商，账目不清"}, format="json")
+        assert response.status_code == 200, response.data
+        assert admins.clients["mod"].get(f"/api/v1/judgment/{case.pk}/").data["summary"] == "生前经商，账目不清"

@@ -4843,6 +4843,10 @@
       "title": "请求改派",
       "body": "{{by}} 请求改派案件 {{soul}}"
     },
+    "judgment_reassign_requested_with_reason": {
+      "title": "请求改派",
+      "body": "{{by}} 请求改派案件 {{soul}}。理由：{{reason}}"
+    },
     "impersonation_started": {
       "title": "有人在以你的身份查看",
       "body": "{{by}} 正在以你的身份查看（只读，最长 {{minutes}} 分钟）。理由：{{reason}}。整个过程记进审计日志。"

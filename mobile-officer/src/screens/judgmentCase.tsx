@@ -4,7 +4,7 @@
  * 证据 = 这个灵魂本世的功过记录(`souls/<id>/records/`,网页审判台「证据」栏的同一批):标题是记录的描述,
  * 来源标签用网页现有的 `souls.evidence_sources`,日期取事件日期、没有就取入簿时间。记录本身没有附件,
  * 所以每行都打开全文页(描述 + 来源说明);案卷附件(`judgment/<id>/attachments/`)单列在「附件」一段。
- * 案由 = `confession`:案子上没有单独的"案由"字段。
+ * 案由 = `summary`(官员写的概述,不是灵魂的供词 `confession`);空的不画。
  */
 import { judgmentApi, type Judgment } from "@soulledger/core/api/judgment";
 import { soulsApi, type SoulRecordEntry } from "@soulledger/core/api/souls";
@@ -40,7 +40,7 @@ export function JudgmentCase({ data, onOpenRecord }: { data: Judgment; onOpenRec
   const files = useRemote(loadFiles);
   const evidence = (records.data ?? []).filter((r) => r.cycle === (data.cycle ?? r.cycle));
   const attachments = files.data?.items ?? [];
-  const summary = (data.confession ?? "").trim();
+  const summary = (data.summary ?? "").trim();
   const failed = (records.error && !records.data) || (files.error && !files.data);
 
   return (

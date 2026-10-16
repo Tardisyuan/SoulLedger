@@ -25,6 +25,7 @@ MESSAGES = {
         "impersonation_started": {"title": "有人在以你的身份查看", "body": "{{by}} 正在以你的身份查看（只读，最长 {{minutes}} 分钟）。理由：{{reason}}。整个过程记进审计日志。"},
         "soul_inbox_assigned": {"title": "来信交给你办", "body": "灵魂「{{soul}}」写给殿司的信已由 {{by}} 交给你办理。"},
         "judgment_reassign_requested": {"title": "请求改派", "body": "{{by}} 请求改派案件 {{soul}}"},
+        "judgment_reassign_requested_with_reason": {"title": "请求改派", "body": "{{by}} 请求改派案件 {{soul}}。理由：{{reason}}"},
         "dispatch_proposed": {"title": "收到移交提案", "body": "{{source}} 提议把灵魂「{{soul}}」移交到你殿，等你批准。"},
         "dispatch_approved": {"title": "移交提案已批准", "body": "{{target}} 批准了你殿移交灵魂「{{soul}}」的提案。"},
         "dispatch_rejected": {"title": "移交提案被驳回", "body": "{{target}} 驳回了你殿移交灵魂「{{soul}}」的提案。理由：{{reason}}"},
@@ -51,6 +52,7 @@ MESSAGES = {
         "impersonation_started": {"title": "Someone is viewing as you", "body": "{{by}} is viewing the console as you (read only, up to {{minutes}} minutes). Reason: {{reason}}. The whole session is recorded in the audit log."},
         "soul_inbox_assigned": {"title": "A letter handed to you", "body": "{{by}} handed you the letter soul {{soul}} wrote to the hall."},
         "judgment_reassign_requested": {"title": "Reassignment requested", "body": "{{by}} asks for the case of {{soul}} to be reassigned"},
+        "judgment_reassign_requested_with_reason": {"title": "Reassignment requested", "body": "{{by}} asks for the case of {{soul}} to be reassigned. Reason: {{reason}}"},
         "dispatch_proposed": {"title": "Dispatch proposal received", "body": "{{source}} proposes to send soul {{soul}} to your hall. It awaits your approval."},
         "dispatch_approved": {"title": "Dispatch proposal approved", "body": "{{target}} approved your hall's proposal to send soul {{soul}}."},
         "dispatch_rejected": {"title": "Dispatch proposal rejected", "body": "{{target}} rejected your hall's proposal to send soul {{soul}}. Reason: {{reason}}"},
@@ -127,6 +129,8 @@ VARIANTS = {
     "password_help_requested": {"password_help_requested_moderator"},
     # 驳回没写理由时用无理由的句子(没有「理由：」后面空着的一行)。
     "dispatch_rejected": {"dispatch_rejected_bare"},
+    # 请求改派带了理由(手机端必填)就用带「理由」的句子;网页不带理由,旧通知也没有,仍是原句。
+    "judgment_reassign_requested": {"judgment_reassign_requested_with_reason"},
 }
 
 
