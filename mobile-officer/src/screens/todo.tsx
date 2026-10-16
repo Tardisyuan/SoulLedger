@@ -6,6 +6,7 @@ import { Pressable, StyleSheet, View } from "react-native";
 
 import { discardReply, retryReply, useOutbox, type OutboxEntry } from "../outbox";
 import { MoreRow, useMoreRows } from "../paged";
+import { unassignedShown } from "../todoFacts";
 import { useCachedRemote } from "../readCache";
 
 import { FilterChips, RefreshFailed, Row, StateView, viewStateOf } from "../kit";
@@ -59,8 +60,10 @@ export function TodoTab({ onOpen, highlight }: { onOpen: (item: ItemRef) => void
   };
   const shown = TODO_GROUPS.filter((g) => chosen.length === 0 || chosen.includes(g.kind));
   const kinds = chosen.length === 0 ? "" : shown.map((g) => t(g.label)).join(locale === "zh-Hans" ? "、" : ", "); // Design batch 29: en / egy use ", "
-  const rowsShown = data ? shown.reduce((sum, g) => sum + countOf(data, g.field), 0) : 0;
-  const view = viewStateOf({ data, error }, (d) => TODO_GROUPS.every((g) => countOf(d, g.field) === 0), isDenied);
+  // 未分配的书信 is not a filter chip (it is not "on me"): it shows when no filter is chosen.
+  const unassigned = data?.unassigned_letters ?? null;
+  const rowsShown = (data ? shown.reduce((sum, g) => sum + countOf(data, g.field), 0) : 0) + (chosen.length === 0 ? (unassigned?.count ?? 0) : 0);
+  const view = viewStateOf({ data, error }, (d) => TODO_GROUPS.every((g) => countOf(d, g.field) === 0) && (d.unassigned_letters?.count ?? 0) === 0, isDenied);
 
   return (
     <Screen testID="tab-todo-screen" edges={["left", "right"]} refreshing={loading && data !== null} onRefresh={reload}>
@@ -109,6 +112,7 @@ export function TodoTab({ onOpen, highlight }: { onOpen: (item: ItemRef) => void
           if (!group || group.count === 0) return null;
           return <TodoGroupRows key={kind} kind={kind} label={t(label)} group={group} highlight={highlight} onOpen={onOpen} />;
         })}
+        {chosen.length === 0 && unassigned && unassigned.count > 0 ? <UnassignedRows group={unassigned} highlight={highlight} onOpen={onOpen} /> : null}
         </>
       )}
     </Screen>
@@ -116,7 +120,7 @@ export function TodoTab({ onOpen, highlight }: { onOpen: (item: ItemRef) => void
 }
 
 /** One group: the server sends the first 10; 「加载更多」 asks for the next 10 of this group only. */
-function TodoGroupRows({ kind, label, group, highlight, onOpen }: { kind: TodoKind; label: string; group: TodoGroup; highlight: ItemRef | null; onOpen: (item: ItemRef) => void }) {
+function TodoGroupRows({ kind, label, group, highlight, onOpen }: { kind: TodoKind | "unassigned_letter"; label: string; group: TodoGroup; highlight: ItemRef | null; onOpen: (item: ItemRef) => void }) {
   const size = group.items.length;
   const first = useMemo(() => ({ results: group.items, next: size < group.count ? "more" : null }), [group, size]);
   const fetchPage = useCallback(
@@ -134,6 +138,29 @@ function TodoGroupRows({ kind, label, group, highlight, onOpen }: { kind: TodoKi
         <TodoRow key={`${item.kind}:${item.id}`} item={item} highlight={highlight?.kind === item.kind && highlight.id === item.id} onOpen={onOpen} />
       ))}
       <MoreRow more={more} />
+    </View>
+  );
+}
+
+/** 未分配的书信: 3 rows after 待回书信, 「全部 N 封」 opens the whole group (paged like the others). */
+function UnassignedRows({ group, highlight, onOpen }: { group: TodoGroup; highlight: ItemRef | null; onOpen: (item: ItemRef) => void }) {
+  const { t } = useI18n();
+  const [all, setAll] = useState(false);
+  const label = t("officer_app.todo.groups.unassigned_letters");
+  if (all) return <TodoGroupRows kind="unassigned_letter" label={label} group={group} highlight={highlight} onOpen={onOpen} />;
+  return (
+    <View testID="todo-group-unassigned_letter">
+      <View style={{ paddingHorizontal: space[5], paddingVertical: space[3] }}>
+        <SectionLabel>{`${label} · ${group.count}`}</SectionLabel>
+      </View>
+      {unassignedShown(group.items, false).map((item) => (
+        <TodoRow key={`${item.kind}:${item.id}`} item={item} highlight={highlight?.kind === item.kind && highlight.id === item.id} onOpen={onOpen} />
+      ))}
+      {group.count > 3 ? (
+        <View style={{ padding: space[5], alignItems: "center" }}>
+          <SmallButton testID="todo-unassigned-all" title={t("officer_app.todo.see_all", { n: String(group.count) })} onPress={() => setAll(true)} />
+        </View>
+      ) : null}
     </View>
   );
 }
