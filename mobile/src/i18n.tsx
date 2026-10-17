@@ -23,7 +23,9 @@ function lookup(bundle: unknown, key: string): string | undefined {
  * `resolveEnumDisplay` detects), and `{{name}}` placeholders are filled.
  */
 export function translate(locale: Locale, key: string, params?: Record<string, string>): string {
-  const value = lookup(BUNDLES[locale], key) ?? lookup(BUNDLES[DEFAULT_LOCALE], key);
+  // `count` picks the active bundle's `<key>_one` / `<key>_other` when it has them (en); other bundles use `<key>`.
+  const plural = params?.count !== undefined ? lookup(BUNDLES[locale], `${key}_${params.count === "1" ? "one" : "other"}`) : undefined;
+  const value = plural ?? lookup(BUNDLES[locale], key) ?? lookup(BUNDLES[DEFAULT_LOCALE], key);
   if (value === undefined) return key;
   // iOS draws a bare north-east arrow (U+2197) as a colour emoji. The sources' own arrows carry U+FE0E
   // (textPresentation.test.ts); the bundles' arrows get it here, once, so no screen has to remember

@@ -4908,11 +4908,20 @@
       "inbox_title": "Activity",
       "commented": "{{name}} commented on your post",
       "replied": "{{name}} replied to you",
-      "reacted_many": "{{name}} and {{n}} others reacted to your post",
-      "lamp_many": "{{name}} and {{n}} others lit a lamp on your post",
-      "followed_many": "{{name}} and {{n}} others followed you",
+      "reacted_many": "{{name}} and {{count}} others reacted to your post",
+      "lamp_many": "{{name}} and {{count}} others lit a lamp on your post",
+      "followed_many": "{{name}} and {{count}} others followed you",
       "inbox_retention": "Activity is kept for 90 days.",
-      "inbox_empty": "No activity yet"
+      "inbox_empty": "No activity yet",
+      "reacted_one": "{{name}} reacted to your post",
+      "reacted_many_one": "{{name}} and 1 other reacted to your post",
+      "reacted_many_other": "{{name}} and {{count}} others reacted to your post",
+      "lamp_one": "{{name}} lit a lamp on your post",
+      "lamp_many_one": "{{name}} and 1 other lit a lamp on your post",
+      "lamp_many_other": "{{name}} and {{count}} others lit a lamp on your post",
+      "followed_one": "{{name}} followed you",
+      "followed_many_one": "{{name}} and 1 other followed you",
+      "followed_many_other": "{{name}} and {{count}} others followed you"
     }
   },
   "soul_push": {
@@ -5645,7 +5654,7 @@
       "seat_actor_empty": "This civilization has no deity who can take a seat",
       "seat_actor_hint_judging": "A co-judge or chair must be a judge",
       "seat_actor_hint_advisor": "Any serving deity may sit as an advisor",
-      "view": "View the joint judgment"
+      "view": "View the cross-realm judgment"
     },
     "file": {
       "open": "File a request",
@@ -6675,9 +6684,10 @@
     "col_life": "Life",
     "life_value": "Life {{from}} → {{to}}",
     "col_form": "Form",
-    "col_to": "Going to",
+    "col_to": "To realm",
     "col_time": "Time",
     "total": "{{n}} records",
-    "empty": "No rebirths yet"
+    "empty": "No rebirths yet",
+    "all_forms": "All forms"
   }
 }

@@ -33,10 +33,17 @@ export function interactionStamp(iso: string, now: Date = new Date()): string {
 const SENTENCE: Record<SoulInteraction["kind"], string> = {
   COMMENT: "soul_app.social.commented",
   REPLY: "soul_app.social.replied",
-  REACTION: "soul_app.social.reacted_many",
-  LAMP: "soul_app.social.lamp_many",
-  FOLLOW: "soul_app.social.followed_many",
+  REACTION: "soul_app.social.reacted",
+  LAMP: "soul_app.social.lamp",
+  FOLLOW: "soul_app.social.followed",
 };
+
+/** One person: `<base>_one`. Several: `<base>_many` with `n` = everyone; `count` = everyone but the first (en: "and 1 other" / "and 3 others"). */
+function sentenceFor(kind: SoulInteraction["kind"], count: number): [string, Record<string, string>] {
+  const base = SENTENCE[kind];
+  if (kind === "COMMENT" || kind === "REPLY") return [base, { n: String(count) }];
+  return count === 1 ? [`${base}_one`, {}] : [`${base}_many`, { n: String(count), count: String(count - 1) }];
+}
 
 function Row({ row, onPress: open }: { row: SoulInteraction; onPress: () => void }) {
   const t = useTheme();
@@ -63,7 +70,7 @@ function Row({ row, onPress: open }: { row: SoulInteraction; onPress: () => void
       <View style={styles.fill}>
         <Interp
           variant="body"
-          text={tr(SENTENCE[row.kind], { n: String(row.count) })}
+          text={tr(...sentenceFor(row.kind, row.count))}
           parts={{ name: <Txt style={styles.name}>{row.actor.display_name}</Txt> }}
         />
         {row.excerpt ? (

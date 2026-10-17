@@ -9,7 +9,7 @@ import type { ReactNode } from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { ToastProvider } from "../feedback";
-import { I18nProvider } from "../i18n";
+import { I18nProvider, translate } from "../i18n";
 import { installMobilePlatform } from "../platform";
 import { PostScreen } from "../screens/circle";
 import { CircleInboxScreen, interactionStamp } from "../screens/circleInbox";
@@ -58,6 +58,7 @@ describe("互动消息", () => {
       "/me/social/interactions/": page([
         row({ id: "c", excerpt: "第九门我也排过，柱子是四十二根。" }),
         row({ id: "l", kind: "LAMP", actor: card(3, "阿尼"), count: 3, comment_id: null, excerpt: "今天在十二时门排到第九门…" }),
+        row({ id: "r1", kind: "REACTION", actor: card(5, "赫努"), count: 1, comment_id: null }),
         row({ id: "f", kind: "FOLLOW", actor: card(4, "美丽塔"), count: 2, post_id: null, comment_id: null, last_at: earlier.toISOString(), unread: false }),
       ]),
       "POST /me/social/interactions/read/": { status: 204 },
@@ -70,6 +71,9 @@ describe("互动消息", () => {
     expect(within(screen.getByTestId("interaction-c")).getByText("「第九门我也排过，柱子是四十二根。」")).toBeTruthy();
     expect(within(screen.getByTestId("interaction-l")).getByText(/等 3 人为你的帖子点了长明灯/)).toBeTruthy();
     expect(within(screen.getByTestId("interaction-f")).getByText(/等 2 人关注了你/)).toBeTruthy();
+    // 一个人用 _one 键,不写「等 1 人」。
+    expect(within(screen.getByTestId("interaction-r1")).getByText(/对你的帖子表态/)).toBeTruthy();
+    expect(within(screen.getByTestId("interaction-r1")).queryByText(/等 1 人/)).toBeNull();
     expect(screen.getByTestId("interaction-unread-c")).toBeTruthy();
     expect(screen.queryByTestId("interaction-unread-f")).toBeNull();
     expect(screen.getByTestId("circle-inbox-retention").props.children).toBe("只保留 90 天内的互动。");
@@ -149,5 +153,14 @@ describe("a post opened at a comment", () => {
     expect(screen.getAllByTestId("landing-wash")).toHaveLength(1);
     expect(within(screen.getByTestId("comments-list")).getByTestId("landing-wash")).toBeTruthy();
     expect(landed).toBeTruthy();
+  });
+});
+
+describe("互动消息 · 英文复数", () => {
+  it("counts the others, never the first: 2 people is 'and 1 other', 4 is 'and 3 others'", () => {
+    expect(translate("en", "soul_app.social.reacted_many", { name: "A", n: "2", count: "1" })).toBe("A and 1 other reacted to your post");
+    expect(translate("en", "soul_app.social.lamp_many", { name: "A", n: "4", count: "3" })).toBe("A and 3 others lit a lamp on your post");
+    // zh keeps the total in `n`.
+    expect(translate("zh-Hans", "soul_app.social.followed_many", { name: "A", n: "4", count: "3" })).toBe("A 等 4 人关注了你");
   });
 });
