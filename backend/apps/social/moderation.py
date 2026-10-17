@@ -479,6 +479,12 @@ def moderate_content(obj, action, *, actor, request=None, reason="", reason_code
                                             reason_code=reason_code, reason_note=reason_note)
         if ids:
             transaction.on_commit(lambda: push.enqueue(ids))
+        if action == "APPROVE" and kind == ReportTargetType.COMMENT:
+            # 先发后审的评论通过了:这时才算「评论了你 / 回复了你」(第四十批 S-a),发出时它谁也看不见。
+            from apps.social import interactions
+
+            row.moderation_status = after
+            interactions.record_comment(row)
     if action != "DELETE":
         row.moderation_status = after
         for name, value in decided.items():

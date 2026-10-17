@@ -40,5 +40,11 @@
   "judgment.stale.label",
   "judgment.stale.hint",
   "judgment.stale.filter_all",
-  "judgment.stale.filter_only"
+  "judgment.stale.filter_only",
+  "soul_app.settings.email_new",
+  "soul_app.settings.email_taken",
+  "soul_mail.email_code.title",
+  "soul_mail.email_changed.title",
+  "soul_mail.email_changed.note",
+  "soul_mail.email_changed.text"
 ]

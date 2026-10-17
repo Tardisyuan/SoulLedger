@@ -45,6 +45,7 @@ import {
   FadeIn,
   GUTTER,
   Hairline,
+  LandingWash,
   Screen,
   Section,
   SectionLabel,
@@ -61,7 +62,7 @@ import {
   useLayout,
   useTheme,
 } from "../ui";
-import type { AppStackParams, LifeParams } from "./applications";
+import type { AppStackParams, LifeFocus, LifeParams } from "./applications";
 import { useCurrentHall } from "./letters";
 import { SentenceSection, useSentencePlan, type SentenceLanding } from "./sentence";
 import { formatSoulCode, spellSoulCode } from "@soulledger/core/domain/soulCode";
@@ -162,8 +163,11 @@ export function LifeSections({
   lex,
   sentence,
   numbered,
+  focus,
 }: {
   life: MeLife;
+  /** The row a tapped push points at (第四十批 S-e): a judgment or a disposition, washed for two seconds. */
+  focus?: LifeFocus;
   /** v3: the current life's rows carry their ledger number (01–04 here; 05 受刑, 06 前世 are the caller's). */
   numbered?: boolean;
   /** 补足 B11: the current life's sentence section, fifth — after applications. Past lives have none. */
@@ -203,7 +207,7 @@ export function LifeSections({
       <Section title={tr(lexiconKey(lex, "judgments"))} count={count(life.judgments.length)} {...section("judgments")}>
         {life.judgments.length ? (
           life.judgments.map((j, i) => (
-            <View key={j.id}>
+            <LandingWash key={j.id} on={focus?.judgment === j.id} testID={`judgment-${j.id}`}>
               {i ? <Hairline style={styles.rule} /> : null}
               <DataRows>
                 <DataRow label={tr(lexiconKey(lex, "court"))}>{j.court || unrecorded}</DataRow>
@@ -215,7 +219,7 @@ export function LifeSections({
                 </DataRow>
                 <DataRow label={tr("soul_app.life.final")}>{tr(j.is_final ? "soul_app.detail.cross_yes" : "soul_app.detail.cross_no")}</DataRow>
               </DataRows>
-            </View>
+            </LandingWash>
           ))
         ) : (
           <Empty text={tr("soul_app.life.no_judgments")} />
@@ -224,7 +228,7 @@ export function LifeSections({
       <Section title={tr("soul_app.life.dispositions")} count={count(life.dispositions.length)} {...section("dispositions")}>
         {life.dispositions.length ? (
           life.dispositions.map((d, i) => (
-            <View key={d.id}>
+            <LandingWash key={d.id} on={focus?.disposition === d.id} testID={`disposition-${d.id}`}>
               {i ? <Hairline style={styles.rule} /> : null}
               <DataRows>
                 <DataRow label={tr("soul_app.life.realm")}>{d.destination_realm ? realmName(d.destination_realm, locale) : unrecorded}</DataRow>
@@ -239,7 +243,7 @@ export function LifeSections({
                   {tr(d.is_executed ? "soul_app.life.executed" : "soul_app.life.not_executed")}
                 </DataRow>
               </DataRows>
-            </View>
+            </LandingWash>
           ))
         ) : (
           <Empty text={tr("soul_app.life.no_dispositions")} />
@@ -397,22 +401,24 @@ function LifeBand({ me, compact, onAccount }: { me: MeProfile; compact: boolean;
  * Handoff 3b: the residence mark is a 1px DASHED box in ink-muted — never a colour block, so
  * it cannot be read as a state badge — shown only while is_residing. Under the band in v3.
  */
-function ResidenceNote({ me }: { me: MeProfile }) {
+function ResidenceNote({ me, landed }: { me: MeProfile; landed: boolean }) {
   const t = useTheme();
   const { t: tr, enumLabel } = useI18n();
   const { gutter } = useLayout();
   const civName = (civilization: string | null | undefined) => enumText(enumLabel("souls.civilizations", civilization), tr);
   return (
-    <View style={[styles.residenceWrap, { paddingHorizontal: gutter, borderBottomColor: t.hair }]}>
-      <View style={[styles.residenceBox, { borderColor: t.inkMuted }]}>
-        <Txt testID="residence" variant="label" tone="muted" style={styles.residence}>
-          {tr("soul_app.life.residing", { current: civName(me.civilization), home: civName(me.home_civilization) })}
+    <LandingWash on={landed} testID="residence-block">
+      <View style={[styles.residenceWrap, { paddingHorizontal: gutter, borderBottomColor: t.hair }]}>
+        <View style={[styles.residenceBox, { borderColor: t.inkMuted }]}>
+          <Txt testID="residence" variant="label" tone="muted" style={styles.residence}>
+            {tr("soul_app.life.residing", { current: civName(me.civilization), home: civName(me.home_civilization) })}
+          </Txt>
+        </View>
+        <Txt testID="residence-note" variant="caption" tone="subtle" style={styles.residenceNote}>
+          {tr("soul_app.life.residing_note")}
         </Txt>
       </View>
-      <Txt testID="residence-note" variant="caption" tone="subtle" style={styles.residenceNote}>
-        {tr("soul_app.life.residing_note")}
-      </Txt>
-    </View>
+    </LandingWash>
   );
 }
 
@@ -663,13 +669,16 @@ export function MyLifeScreen() {
   const { state, refreshProfile } = useSession();
   const navigation = useNavigation<NavigationProp<AppStackParams>>();
   // A sentence push landed here (受刑 1d): highlighted until the page is left, then forgotten —
-  // the param is the whole record, nothing is stored.
-  const landing = useRoute<RouteProp<{ Life: LifeParams }, "Life">>().params?.sentenceLanding;
+  // the param is the whole record, nothing is stored. A judgment / disposition / residence push (第四十批 S-e)
+  // names the row to wash; forgotten the same way.
+  const params = useRoute<RouteProp<{ Life: LifeParams }, "Life">>().params;
+  const landing = params?.sentenceLanding;
+  const focus = params?.lifeFocus;
   useFocusEffect(
     useCallback(() => {
-      if (!landing) return;
-      return () => (navigation.setParams as (p: LifeParams) => void)({ sentenceLanding: undefined });
-    }, [landing, navigation])
+      if (!landing && !focus) return;
+      return () => (navigation.setParams as (p: LifeParams) => void)({ sentenceLanding: undefined, lifeFocus: undefined });
+    }, [landing, focus, navigation])
   );
   const life = useRemote(soulApi.life);
   const residence = useResidence();
@@ -686,7 +695,12 @@ export function MyLifeScreen() {
   if (state.status !== "signedIn") return null;
   const me = state.profile;
   const planState = sentence.data?.state;
-  const open = lifeSectionsOpen(touched, planState);
+  // The section a push points into is open, whatever was last left folded.
+  const open = {
+    ...lifeSectionsOpen(touched, planState),
+    ...(focus?.judgment ? { judgments: true } : {}),
+    ...(focus?.disposition ? { dispositions: true } : {}),
+  };
   const toggle = (key: LifeSectionKey) => {
     const next = { ...touched, [key]: !open[key] };
     setTouched(next);
@@ -712,7 +726,7 @@ export function MyLifeScreen() {
         onScroll={(y) => setCompact((c) => (c ? y > BAND_OPEN_AT : y > BAND_COMPACT_AT))}
       >
         <Homecoming me={me} />
-        {residence.residing ? <ResidenceNote me={me} /> : null}
+        {residence.residing ? <ResidenceNote me={me} landed={!!focus?.residence} /> : null}
         <Now me={me} lex={residence.home} planState={planState} />
         <Balance me={me} lex={residence.home} />
         <Block>
@@ -739,6 +753,7 @@ export function MyLifeScreen() {
               life={life.data}
               lex={residence.home}
               numbered
+              focus={focus}
               open={open}
               onToggle={toggle}
               onOpenApplication={(id) => navigation.navigate("ApplicationDetail", { id })}

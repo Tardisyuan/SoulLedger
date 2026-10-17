@@ -4129,7 +4129,20 @@
       "mfa_off": "○ Nen Wen Djer",
       "mfa_on": "✓ Wen Seth",
       "group_data": "Djama-I",
-      "group_help": "Dbh Hena Wesheb · Sesh Er Wesekhet"
+      "group_help": "Dbh Hena Wesheb · Sesh Er Wesekhet",
+      "email": "Wat Sesh",
+      "email_hint": "Mi Nen Rekh Sekhem: Ip Hab Hena.",
+      "email_change": "Khemen",
+      "email_add": "Redi",
+      "email_none": "Nen Wat Sesh",
+      "email_code_sent": "Ip Hab Seth Er {{email}}",
+      "email_done": "Wat Sesh Khemen Seth",
+      "email_in_person": "Khemen Wat Sesh: Iyi Er Wesekhet Hena Djama Redi.",
+      "push_social": "Medu",
+      "push_comments": "Wesheb",
+      "push_review": "Wedja Medu",
+      "push_warning": "Hab Wesekhet",
+      "locked": "Nen Khetem"
     },
     "push": {
       "primer_title": "Sedjem Ba Er-Ek Em Wedja?",
@@ -4755,7 +4768,10 @@
       "q_slip": "Djama Redi",
       "a_slip": "Djama Shesep-Ek Em Iyi Er Wesekhet: Ren Hesb Ba Hena Sekhem Tepy. Er Khet Aq Tepy: Sekhem Tepy Nen Wenen. Sau Djama Redi: Iyi Er Wesekhet Hena-Ef.",
       "q_contact": "Sesh Er Wesekhet: Mi?",
-      "a_contact": "Khemen «Sesh Er Wesekhet» Em Khery Medjat Pen; Wesheb Em Sesh-Ek. Medu Em Khet Seth: Iyi Er Wesekhet."
+      "a_contact": "Khemen «Sesh Er Wesekhet» Em Khery Medjat Pen; Wesheb Em Sesh-Ek. Medu Em Khet Seth: Iyi Er Wesekhet.",
+      "in_person_title": "Iyi Er {{hall}} Hena Djama Redi",
+      "in_person_body": "Sesh Nen Wen Djer: Iyi Er Wesekhet.",
+      "unresolved": "Nen Wedja Djer"
     },
     "feedback": {
       "kind_label": "Iru",
@@ -4776,6 +4792,17 @@
       "failed": "Nen Hab. Maa Senb, Wehem Iri.",
       "see_letters": "Maa Sesh",
       "another": "Sesh Ky"
+    },
+    "social": {
+      "inbox": "Medu Hena",
+      "inbox_title": "Medu Hena",
+      "commented": "{{name}}: Wesheb · Medu-Ek",
+      "replied": "{{name}}: Wesheb Er-Ek",
+      "reacted_many": "{{name}} Hena {{n}}: Sehed · Medu-Ek",
+      "lamp_many": "{{name}} Hena {{n}}: Khabes Djet · Medu-Ek",
+      "followed_many": "{{name}} Hena {{n}}: Nehes-Ek",
+      "inbox_retention": "Smen Hru 90.",
+      "inbox_empty": "Nen Medu Hena Djer"
     }
   },
   "soul_push": {
@@ -4906,6 +4933,14 @@
     "content_restored_comment": {
       "title": "Wesheb-Ek Wen Wehem",
       "body": "Wesheb-Ek Wen Wehem Seth."
+    },
+    "comment": {
+      "title": "{{name}}: Wesheb · Medu-Ek",
+      "body": "{{text}}"
+    },
+    "reply": {
+      "title": "{{name}}: Wesheb Er Wesheb-Ek",
+      "body": "{{text}}"
     }
   },
   "official_notify": {

@@ -12,10 +12,12 @@ import { Pressable, StyleSheet, View } from "react-native";
 
 import { useChat } from "../chat";
 import { Icon } from "../emblems";
+import { family } from "../fonts";
 import { useI18n } from "../i18n";
 import { useSession } from "../session";
 import { Button, Screen, SectionLabel, Txt, useLayout, useTheme } from "../ui";
 import type { AppStackParams } from "./applications";
+import { useCurrentHall } from "./letters";
 
 /** [id, question key, answer key]. Written out so the copy harvest and the bundles' parity tests see every key. */
 type Faq = readonly [string, string, string];
@@ -63,6 +65,7 @@ function Question({ item }: { item: Faq }) {
 }
 
 export function HelpScreen({ only }: { only?: "login" }) {
+  const theme = useTheme();
   const { t } = useI18n();
   const { gutter } = useLayout();
   const { state } = useSession();
@@ -71,6 +74,11 @@ export function HelpScreen({ only }: { only?: "login" }) {
   const groups = GROUPS.filter((g) => !only || g.id === only);
   // Writing needs a signed-in soul and a hall to write to; the sign-in page's version has neither.
   const canWrite = !only && state.status === "signedIn" && chat.availability !== "not_configured";
+  // 第四十批 S-d: no letters here — say which hall to go to. The hall the soul is in NOW (a residing soul's is the
+  // one it resides in): that is where it can walk to. Design also shows the hall's address, hours and phone from
+  // the hall's settings; the halls have no such settings yet, so only the title and the sentence are drawn.
+  const inPerson = !only && state.status === "signedIn" && chat.availability === "not_configured";
+  const hall = useCurrentHall();
   return (
     <Screen testID="help">
       {groups.map((group) => (
@@ -91,6 +99,21 @@ export function HelpScreen({ only }: { only?: "login" }) {
           <Button testID="help-write" kind="secondary" title={t("soul_app.help.write")} onPress={() => navigation.navigate("Feedback")} />
         </View>
       ) : null}
+      {inPerson ? (
+        <View testID="help-in-person-block">
+          <View style={[styles.groupLabel, { paddingHorizontal: gutter }]}>
+            <SectionLabel>{t("soul_app.help.unresolved")}</SectionLabel>
+          </View>
+          <View testID="help-in-person" style={[styles.card, { marginHorizontal: gutter, borderColor: theme.hair, backgroundColor: theme.s1 }]}>
+            <Txt variant="bodyLg" style={styles.cardTitle}>
+              {t("soul_app.help.in_person_title", { hall })}
+            </Txt>
+            <Txt variant="bodyLg" tone="muted">
+              {t("soul_app.help.in_person_body")}
+            </Txt>
+          </View>
+        </View>
+      ) : null}
     </Screen>
   );
 }
@@ -102,4 +125,6 @@ const styles = StyleSheet.create({
   row: { minHeight: 52, flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 8 },
   answer: { paddingTop: 0, paddingBottom: 16 },
   write: { paddingVertical: 24, gap: 8 },
+  card: { borderWidth: 1, padding: 16, gap: 8, marginBottom: 24 },
+  cardTitle: { fontFamily: family.ui[600] },
 });

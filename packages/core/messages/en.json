@@ -4181,7 +4181,22 @@
       "mfa_off": "○ Off",
       "mfa_on": "✓ On",
       "group_data": "My data",
-      "group_help": "Help and feedback"
+      "group_help": "Help and feedback",
+      "email": "Contact email",
+      "email_hint": "Password reset codes are sent here.",
+      "email_change": "Change",
+      "email_add": "Add",
+      "email_none": "No contact email",
+      "email_new": "New email",
+      "email_code_sent": "Code sent to {{email}}",
+      "email_done": "Contact email changed",
+      "email_in_person": "To change your contact email, come to your hall with your delivery slip.",
+      "email_taken": "This email is already used by another account.",
+      "push_social": "Social",
+      "push_comments": "Comments and replies",
+      "push_review": "Review results",
+      "push_warning": "Hall warnings",
+      "locked": "Can't be turned off"
     },
     "push": {
       "primer_title": "Tell you when there is a result?",
@@ -4805,7 +4820,10 @@
       "q_slip": "What is the delivery slip",
       "a_slip": "The paper you were given when you arrived. It carries your number and the password for your first sign-in; after that first sign-in the password no longer works. Keep the slip: you need it at the counter.",
       "q_contact": "How do I contact the hall",
-      "a_contact": "Tap “Write to your hall” at the bottom of this page; the reply appears in your letters. For anything urgent, come to the hall's counter."
+      "a_contact": "Tap “Write to your hall” at the bottom of this page; the reply appears in your letters. For anything urgent, come to the hall's counter.",
+      "in_person_title": "Come to {{hall}} with your delivery slip",
+      "in_person_body": "Letters aren't open here yet, so please ask in person.",
+      "unresolved": "Still need help"
     },
     "feedback": {
       "kind_label": "What is it about",
@@ -4826,6 +4844,17 @@
       "failed": "It was not sent. Check your connection and try again.",
       "see_letters": "See your letters",
       "another": "Write another"
+    },
+    "social": {
+      "inbox": "Activity",
+      "inbox_title": "Activity",
+      "commented": "{{name}} commented on your post",
+      "replied": "{{name}} replied to you",
+      "reacted_many": "{{name}} and {{n}} others reacted to your post",
+      "lamp_many": "{{name}} and {{n}} others lit a lamp on your post",
+      "followed_many": "{{name}} and {{n}} others followed you",
+      "inbox_retention": "Activity is kept for 90 days.",
+      "inbox_empty": "No activity yet"
     }
   },
   "soul_push": {
@@ -4956,6 +4985,14 @@
     "content_deleted_comment_reason": {
       "title": "Your comment was deleted",
       "body": "An officer deleted your comment: {{reason}}"
+    },
+    "comment": {
+      "title": "{{name}} commented on your post",
+      "body": "{{text}}"
+    },
+    "reply": {
+      "title": "{{name}} replied to your comment",
+      "body": "{{text}}"
     }
   },
   "official_notify": {
@@ -5548,6 +5585,14 @@
       "note_change": "You must change the password at first sign-in.",
       "note_once": "This password is sent only once; if it expires or is lost, ask an officer of your civilization to reset it.",
       "text": "Your soul code: {{soul_code}}\nInitial password: {{password}}\nValid until {{expires_at}}. You must change the password at first sign-in.\nThis password is sent only once; if it expires or is lost, ask an officer of your civilization to reset it."
+    },
+    "email_code": {
+      "title": "Contact email code"
+    },
+    "email_changed": {
+      "title": "Contact email changed",
+      "note": "Codes now go to {{email}}. If this was not you, come to your hall as soon as you can.",
+      "text": "Your contact email was changed. Codes now go to {{email}}. If this was not you, come to your hall as soon as you can."
     }
   },
   "officer_assist": {

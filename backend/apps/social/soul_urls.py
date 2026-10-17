@@ -18,6 +18,8 @@ from apps.social.moderation_views import (
 
 me_social_urlpatterns = [
     path("status/", sv.MeSocialStatusView.as_view(), name="me-social-status"),
+    path("interactions/", sv.MeSocialInteractionsView.as_view(), name="me-social-interactions"),
+    path("interactions/read/", sv.MeSocialInteractionsReadView.as_view(), name="me-social-interactions-read"),
     path("feed/", sv.MeSocialFeedView.as_view(), name="me-social-feed"),
     path("media/", sv.MeSocialMediaView.as_view(), name="me-social-media"),
     path("media/<uuid:media_id>/", sv.MeSocialMediaItemView.as_view(), name="me-social-media-item"),

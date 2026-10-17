@@ -64,6 +64,8 @@ import { AppLock } from "./appLock";
 import { MyLifeScreen } from "./screens/life";
 import { SentenceScreen } from "./screens/sentence";
 import { CircleScreen, ComposePostScreen, PostScreen } from "./screens/circle";
+import { CircleInboxScreen, useUnreadInteractions } from "./screens/circleInbox";
+import { ContactEmailScreen } from "./screens/contactEmail";
 import { CircleSearchScreen, FollowListScreen, MyCircleScreen, ReportScreen, SoulProfileScreen } from "./screens/circlePeople";
 import { ConversationScreen } from "./screens/conversation";
 import { ANDROID, FindSoulScreen, LettersScreen } from "./screens/letters";
@@ -120,15 +122,7 @@ function MainTabs() {
               }}
             />
           ) : route.name === "Circle" ? (
-            // 1a: find people and my page; settings stay on the life tab.
-            <PlaqueHeader
-              title={t(TAB_TITLES[route.name])}
-              assist="circle"
-              action={[
-                { icon: "search", label: t("soul_app.circle.search.title"), testID: "circle-search-open", onPress: () => navigation.navigate("CircleSearch") },
-                { icon: "person", label: t("soul_app.circle.me.title"), testID: "circle-me", onPress: () => navigation.navigate("MyCircle") },
-              ]}
-            />
+            <CircleBar navigate={(name) => navigation.navigate(name)} />
           ) : (
             <PlaqueHeader
               title={t(TAB_TITLES[route.name])}
@@ -153,6 +147,33 @@ function MainTabs() {
       )}
       <Tabs.Screen name="Circle" component={CircleScreen} options={{ title: t("soul_app.circle.tab") }} />
     </Tabs.Navigator>
+  );
+}
+
+/**
+ * 朋友圈's bar (1a): find people and my page; settings stay on the life tab. 第四十批 S-a: 「互动」 at the right end,
+ * with the unread count — read again each time the tab is shown.
+ */
+function CircleBar({ navigate }: { navigate: (name: "CircleSearch" | "MyCircle" | "CircleInbox") => void }) {
+  const { t } = useI18n();
+  const unread = useUnreadInteractions();
+  return (
+    <PlaqueHeader
+      title={t(TAB_TITLES.Circle)}
+      assist="circle"
+      action={[
+        { icon: "search", label: t("soul_app.circle.search.title"), testID: "circle-search-open", onPress: () => navigate("CircleSearch") },
+        { icon: "person", label: t("soul_app.circle.me.title"), testID: "circle-me", onPress: () => navigate("MyCircle") },
+        {
+          icon: "circle",
+          text: t("soul_app.social.inbox"),
+          label: unread ? `${t("soul_app.social.inbox")} ${unread}` : t("soul_app.social.inbox"),
+          badge: unread ?? undefined,
+          testID: "circle-inbox-open",
+          onPress: () => navigate("CircleInbox"),
+        },
+      ]}
+    />
   );
 }
 
@@ -188,7 +209,7 @@ function Sentence({ route }: NativeStackScreenProps<AppStackParams, "Sentence">)
 }
 
 function CirclePost({ route }: NativeStackScreenProps<AppStackParams, "CirclePost">) {
-  return <PostScreen id={route.params.id} />;
+  return <PostScreen id={route.params.id} comment={route.params.comment} />;
 }
 
 function SoulProfile({ route }: NativeStackScreenProps<AppStackParams, "SoulProfile">) {
@@ -511,6 +532,20 @@ export function RootNavigator() {
               component={MyCircleScreen}
               options={({ navigation }) => ({
                 header: () => <AppHeader title={t("soul_app.circle.me.title")} onBack={navigation.goBack} />,
+              })}
+            />
+            <Stack.Screen
+              name="CircleInbox"
+              component={CircleInboxScreen}
+              options={({ navigation }) => ({
+                header: () => <AppHeader title={t("soul_app.social.inbox_title")} onBack={navigation.goBack} />,
+              })}
+            />
+            <Stack.Screen
+              name="ContactEmail"
+              component={ContactEmailScreen}
+              options={({ navigation }) => ({
+                header: () => <AppHeader title={t("soul_app.settings.email")} onBack={navigation.goBack} />,
               })}
             />
             <Stack.Screen

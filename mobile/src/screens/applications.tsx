@@ -53,8 +53,14 @@ import { CooldownShorteningBlock } from "./cooldown";
 import { useResidence } from "./life";
 import { SentenceBlocked, type SentenceLanding } from "./sentence";
 
-/** The life tab's params: a sentence push that landed on its section (受刑 1d). */
-export type LifeParams = { sentenceLanding?: SentenceLanding };
+/**
+ * Where on the life page a push landed (第四十批 S-e): a judgment's row, a disposition's row in 去向, or the
+ * 「暂居 · 原属」 block. Washed for two seconds; the param is forgotten when the page is left.
+ */
+export type LifeFocus = { judgment?: string; disposition?: string; residence?: boolean };
+
+/** The life tab's params: a sentence push that landed on its section (受刑 1d), or a row to wash (S-e). */
+export type LifeParams = { sentenceLanding?: SentenceLanding; lifeFocus?: LifeFocus };
 
 export type AppStackParams = {
   /**
@@ -89,8 +95,13 @@ export type AppStackParams = {
   Conversation: { id: string; landed?: boolean };
   FindSoul: undefined;
   ComposePost: undefined;
-  CirclePost: { id: string };
+  /** `comment`: opened from a comment / reply (push or 互动消息) — that comment is scrolled to and washed once. */
+  CirclePost: { id: string; comment?: string };
+  /** 互动消息 (第四十批 S-a): from the 「互动」 entry on the circle's bar. */
+  CircleInbox: undefined;
   SoulProfile: { userId: number };
+  /** 设置 › 账号安全 › 联系邮箱 (第四十批 S-b): add or change it. */
+  ContactEmail: undefined;
   MyCircle: undefined;
   CircleFollows: { relation: "following" | "followers" };
   CircleSearch: undefined;
