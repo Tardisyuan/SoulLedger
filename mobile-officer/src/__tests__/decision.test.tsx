@@ -228,7 +228,9 @@ describe("a rebirth's first review on the phone (O-b)", () => {
     mockItem.mockResolvedValue({ data: item });
     renderOfficer(<Detail target={{ type: "todo", kind: "rebirth", id: "ra-1" }} onBack={() => {}} onSettled={() => {}} />);
     await screen.findByTestId("todo-detail");
+    await act(async () => {}); // 两张底页随详情挂上就去取各自的东西(加签名单等);先等它们落定
     fireEvent.press(screen.getByTestId("action-approve"));
+    await act(async () => {});
   }
 
   it("says 不跨 above everything, and the button says so too; 在电脑上定 beside it", async () => {
@@ -242,6 +244,7 @@ describe("a rebirth's first review on the phone (O-b)", () => {
     fireEvent.press(screen.getByTestId("decision-confirm"));
     await waitFor(() => expect(mockApproveNode).toHaveBeenCalled());
     expect(mockDecideCross).toHaveBeenCalledWith("ra-1", false);
+    await act(async () => {}); // 底页收起、加签名单取回的更新
   });
 
   it("set to cross: no approval on the phone, only 在电脑上继续", async () => {
@@ -250,6 +253,7 @@ describe("a rebirth's first review on the phone (O-b)", () => {
     expect(screen.queryByTestId("decision-confirm")).toBeNull();
     expect(screen.getByTestId("decision-desk")).toBeTruthy();
     expect(screen.queryByText("⇄ 跨文明：不跨")).toBeNull();
+    await act(async () => {});
   });
 
   it("an ordinary approval has no cross line and the plain 批准 button", async () => {

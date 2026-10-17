@@ -4,7 +4,8 @@
  * the proposal still open -- not by the notice's type. Receiver + PROPOSED = the actionable detail; anything else =
  * the same layout read-only with one status line and no action bar. Each "has" is paired with a "has not".
  */
-import { fireEvent, screen, waitFor } from "@testing-library/react-native";
+import { act, fireEvent, screen, waitFor } from "@testing-library/react-native";
+import { clearReadCache } from "../readCache";
 
 import { parseOfficerLink } from "../links";
 import { dispatchReasonOf, dispatchStatusLine, dispatchView, noticeLanding } from "../rules";
@@ -59,6 +60,8 @@ async function openNotice(type: string) {
   renderOfficer(<Shell />);
   fireEvent.press(await screen.findByTestId("tab-notices"));
   fireEvent.press(await screen.findByTestId("notice-1"));
+  // 点开会标已读,壳层随即重问未读数;等它落定,不让那次 setState 落在测试之后。
+  await act(async () => {});
 }
 
 const noActions = () => {
@@ -67,6 +70,8 @@ const noActions = () => {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  // 详情走读缓存(离线时显示上次的);上一条测试缓存的记录会让「没有回应」显示旧数据而不是出错。
+  clearReadCache();
   mockItem.mockResolvedValue({
     data: { kind: "reassignment", id: "d1", title: "李白", created_at: "2026-10-09T01:00:00Z", actionable: true, state: "actionable", handled_by: null, handled_at: null },
   });
