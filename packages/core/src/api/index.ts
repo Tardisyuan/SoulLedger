@@ -160,7 +160,7 @@ export {
 } from "./perm";
 
 // Menus
-export { menusApi, menuButtonsApi, type MenuItem, type MenuButton } from "./menus";
+export { menusApi, menuButtonsApi, type MenuItem, type MenuButton, type MenuButtonConfig } from "./menus";
 
 // Audit
 export { auditApi, loginLogsApi, type AuditActionOption, type AuditLogDetail, type AuditLogEntry, type AuditStats, type AuditTimelineParams, type LoginLogEntry, type LoginLogStatus } from "./audit";

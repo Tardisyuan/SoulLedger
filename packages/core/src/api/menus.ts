@@ -65,7 +65,18 @@ export const menusApi = {
   delete: (id: number) => api.delete<void>(`/menus/${id}/`),
 };
 
+/** `/menus/buttons/config/` 的一行:某菜单(按 path)下某按钮(按 code)开着没有。不带权限码。 */
+export interface MenuButtonConfig {
+  id: number;
+  menu: number;
+  menu_path: string;
+  code: string;
+  is_active: boolean;
+}
+
 export const menuButtonsApi = {
+  /** 全部配置行,不分页、不按权限收窄(第四十批 W-b):没有那一行 = 按钮允许显示。 */
+  config: () => api.get<MenuButtonConfig[]>("/menus/buttons/config/"),
   // `menu_id`, which is the name `MenuButtonViewSet.get_queryset` reads
   // (backend/apps/menus/views.py). This sent `menu`; DRF ignores an unknown
   // query parameter, so the menu picker on /menus/buttons never narrowed the

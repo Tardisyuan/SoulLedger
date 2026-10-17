@@ -289,7 +289,9 @@ const COLLECTED_FILES = [
   "messageValuesAreNotTheirOwnKeys.test.ts",
   "proxyAuthGate.test.ts",
   "ledgerQuantityContract.test.tsx",
-  "MenuButtonsPage.editFailure.test.tsx",
+  // 2026-10-17 第四十批 W-b:配置页只列接上的按钮(取代 editFailure 那份:通用增改表单已拿掉);配置读法与关掉的按钮。
+  "MenuButtonsPage.test.tsx",
+  "menuButtonConfig.test.tsx",
   "MenuRowCells.test.tsx",
   "menuCacheRootsAreInvalidatedTogether.test.ts",
   "menuTranslationCoverage.test.ts",

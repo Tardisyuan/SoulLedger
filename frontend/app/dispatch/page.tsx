@@ -7,6 +7,7 @@ import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { usePlaque } from "@/src/components/plaque/Plaque";
 import { useCourtOffice, useHall } from "@/src/components/plaque/useHall";
+import { useMenuButtonConfig } from "@/src/hooks/useMenuButtonConfig";
 import { PageSection } from "@/components/ui/page-section";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
 import { MissingValue } from "@/src/components/ui/DomainValue";
@@ -51,6 +52,7 @@ function DispatchPageContent() {
   const { t } = useI18n();
   const hall = useHall(useCourtOffice());
   usePlaque({ hall });
+  const buttonOn = useMenuButtonConfig();
   const { user } = useTenant();
 
   // `isError` on both. The `= []` defaults mean a failed request lands on the
@@ -251,7 +253,7 @@ function DispatchPageContent() {
         title={t("dispatch.pending")}
         isRefreshing={proposedStale}
         className="mb-6"
-        actions={<ExportCsvButton size="sm" fetchCsv={() => dispatchApi.exportCsv({ section: "proposed", ...filterParams })} page={t("dispatch.title")} hall={hall} />}
+        actions={buttonOn("dispatch.export") ? <ExportCsvButton size="sm" fetchCsv={() => dispatchApi.exportCsv({ section: "proposed", ...filterParams })} page={t("dispatch.title")} hall={hall} /> : undefined}
       >
         <DispatchTable
           rows={proposed}
@@ -270,7 +272,7 @@ function DispatchPageContent() {
       <PageSection
         title={t("dispatch.history")}
         isRefreshing={historyStale}
-        actions={<ExportCsvButton size="sm" fetchCsv={() => dispatchApi.exportCsv({ section: "history", ...filterParams })} page={t("dispatch.title")} hall={hall} />}
+        actions={buttonOn("dispatch.export") ? <ExportCsvButton size="sm" fetchCsv={() => dispatchApi.exportCsv({ section: "history", ...filterParams })} page={t("dispatch.title")} hall={hall} /> : undefined}
       >
         <DispatchTable
           rows={history}

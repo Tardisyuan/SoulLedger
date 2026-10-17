@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
 import { useSouls } from "@soulledger/core/hooks/useSouls";
 import { usePermissions } from "@/src/hooks/usePermissions";
+import { useMenuButtonConfig } from "@/src/hooks/useMenuButtonConfig";
 import { SoulBatchBar, useSoulSelection } from "@/src/components/souls/SoulBatchBar";
 import { CIVILIZATION_OPTIONS } from "@soulledger/core/config/civilizations";
 import { useI18n } from "@/src/contexts/I18nContext";
@@ -172,6 +173,8 @@ function SoulsList({
   // operator can no longer see is not one they should be able to act on.
   const { hasPermission } = usePermissions();
   const canRecycle = hasPermission("soul.delete");
+  // 菜单按钮配置(第四十批 W-b):新建与导出另要配置允许;权限门照旧。
+  const buttonOn = useMenuButtonConfig();
   // 「移交…」打开发起移交表单,那一页要 `dispatch.manage`。
   const canDispatch = hasPermission("dispatch.manage");
   const selection = useSoulSelection(JSON.stringify(params), souls);
@@ -267,19 +270,23 @@ function SoulsList({
       actions={
         <>
         {/* 带当前的筛选 / 搜索 / 排序,不带页码:文件是整份筛选结果,不是这一页。 */}
-        <ExportCsvButton
-          fetchCsv={() => soulsApi.exportCsv({ ...params, page: undefined })}
-          page={t("souls.title")}
-          hall={hall}
-          count={data?.count}
-        />
+        {buttonOn("souls.export") && (
+          <ExportCsvButton
+            fetchCsv={() => soulsApi.exportCsv({ ...params, page: undefined })}
+            page={t("souls.title")}
+            hall={hall}
+            count={data?.count}
+          />
+        )}
         <RequirePermission permissions="soul.create">
           <Button type="button" variant="secondary" onClick={() => setIsImportOpen(true)}>
             {t("souls.import.button")}
           </Button>
-          <Button type="button" variant="primary" onClick={() => setIsCreateModalOpen(true)}>
-            + {t("souls.create")}
-          </Button>
+          {buttonOn("souls.create") && (
+            <Button type="button" variant="primary" onClick={() => setIsCreateModalOpen(true)}>
+              + {t("souls.create")}
+            </Button>
+          )}
         </RequirePermission>
         </>
       }

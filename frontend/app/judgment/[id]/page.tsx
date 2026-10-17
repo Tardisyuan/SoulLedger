@@ -59,6 +59,7 @@ import { verdictGlyph } from "@/src/lib/verdictGlyph";
 import type { SentenceRequestChanges } from "@soulledger/core/api/sentence-plans";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { usePermissions } from "@/src/hooks/usePermissions";
+import { useMenuButtonConfig } from "@/src/hooks/useMenuButtonConfig";
 import { AmendmentPlanChanges } from "@/src/components/sentence-plan/AmendmentPlanChanges";
 import {
   EMPTY_DRAFT,
@@ -363,6 +364,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
   }
 
   const canExecute = hasPermission("judgment.execute");
+  const buttonOn = useMenuButtonConfig();
   const archiveMutation = useArchiveJudgment();
   const unarchiveMutation = useUnarchiveJudgment();
   const [archiveOpen, setArchiveOpen] = useState(false);
@@ -684,7 +686,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
         previousId || nextId || isFinal ? (
           <span className="inline-flex items-center gap-4">
             {/* 有裁决的审判不能删,只能归档(后端 `archive` 只收有裁决的)。 */}
-            {judgment.verdict && !judgment.is_archived && canExecute && (
+            {judgment.verdict && !judgment.is_archived && canExecute && buttonOn("judgment.archive") && (
               <Button type="button" variant="secondary" size="sm" onClick={() => setArchiveOpen(true)}>
                 {t("records.archive.confirm")}
               </Button>
