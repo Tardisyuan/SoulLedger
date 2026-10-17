@@ -1,4 +1,8 @@
 [
+  "users.organization",
+  "users.organization_column",
+  "users.organization_none",
+  "users.position",
   "workflow.filter.all",
   "workflow.filter.civilization",
   "workflow.filter.clear",
