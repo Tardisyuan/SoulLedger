@@ -65,6 +65,12 @@ import { GUTTER_PT, motion, radius, space, themeFor, type Theme } from "./theme"
 
 // ── theme & motion ─────────────────────────────────────────────────────
 
+/**
+ * The TextInput an `Input` renders. `Sheet` swaps in @gorhom's `BottomSheetTextInput`: only that one tells the sheet
+ * which field has focus, and without it the sheet never lifts above the keyboard (reason fields were covered, 2026-10-17).
+ */
+export const FieldComponentContext = createContext<typeof TextInput>(TextInput);
+
 export const ThemeContext = createContext<Theme>(themeFor(null, "dark"));
 export const useTheme = () => useContext(ThemeContext);
 
@@ -861,6 +867,8 @@ export function Input({
   suffix?: ReactNode;
 }) {
   const t = useTheme();
+  const Field = useContext(FieldComponentContext);
+  const inSheet = Field !== TextInput;
   const [focused, setFocused] = useState(false);
   const [revealed, setRevealed] = useState(false);
   const bad = invalid || !!error;
@@ -899,7 +907,7 @@ export function Input({
         <View style={inputWidth ? { width: inputWidth } : undefined}>
           <FocusRing focused={focused && !off}>
             <View style={[styles.inputBox, box]}>
-              <TextInput
+              <Field
                 ref={inputRef}
                 accessibilityLabel={label}
                 placeholderTextColor={t.inkSubtle}
@@ -913,6 +921,9 @@ export function Input({
                 cursorColor={t.ink}
                 selectionHandleColor={t.ink}
                 selectionColor={Platform.OS === "ios" ? t.ink : undefined}
+                // A multiline field's return key only adds a line, so inside a sheet nothing could put the keyboard
+                // away: let return finish the field there.
+                {...(inSheet && multiline ? { submitBehavior: "blurAndSubmit" as const, returnKeyType: "done" as const } : null)}
                 {...rest}
                 secureTextEntry={secureToggle ? rest.secureTextEntry && !revealed : rest.secureTextEntry}
                 onFocus={(e) => {

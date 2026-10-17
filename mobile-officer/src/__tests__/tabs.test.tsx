@@ -203,6 +203,14 @@ describe("the other tabs have the same four states", () => {
     await waitFor(() => expect(onRead).toHaveBeenCalledTimes(1)); // the shell asks the server for the count again
   });
 
+  it("notices: no big 「通知」 title under the top bar; 全部已读 stays", async () => {
+    mockNotices.mockResolvedValue({ data: { results: [{ id: 1, title: "新审批", message: "有一件待办", is_read: false, created_at: "2026-10-09T01:00:00Z" }] } });
+    renderOfficer(<NoticesTab />);
+    await screen.findByTestId("notice-1");
+    expect(screen.queryByText("通知")).toBeNull();
+    expect(screen.getByTestId("notices-mark-all")).toBeTruthy();
+  });
+
   it("notices: a row that names an item lands on it (read or not); one that names nothing only marks read", async () => {
     mockNotices.mockResolvedValue({
       data: {

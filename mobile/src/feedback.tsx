@@ -8,13 +8,14 @@ import {
   ANIMATION_SOURCE,
   BottomSheetBackdrop,
   BottomSheetModal,
+  BottomSheetTextInput,
   BottomSheetView,
   useBottomSheetInternal,
   useBottomSheetTimingConfigs,
   useGestureEventsHandlersDefault,
   type BottomSheetBackdropProps,
 } from "@gorhom/bottom-sheet";
-import { Animated, BackHandler, Modal, Pressable, StyleSheet, View } from "react-native";
+import { Animated, BackHandler, Modal, Pressable, StyleSheet, TextInput, View } from "react-native";
 import { Easing } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -23,7 +24,7 @@ import { BIO_KEY, logoutBody } from "./loginRules";
 import { platform } from "@soulledger/core/platform";
 import { useI18n } from "./i18n";
 import { radius } from "./theme";
-import { Button, GUTTER, Txt, useReducedMotion, useReducedMotionDurations, useTheme } from "./ui";
+import { Button, FieldComponentContext, GUTTER, Txt, useReducedMotion, useReducedMotionDurations, useTheme } from "./ui";
 
 type ToastKind = "success" | "failure";
 type Show = (message: string, kind?: ToastKind) => void;
@@ -258,8 +259,16 @@ export function Sheet({ open, onClose, edge, closeLabel, children }: { open: boo
       backdropComponent={backdrop}
       backgroundStyle={{ backgroundColor: t.s1, borderRadius: 0, borderTopLeftRadius: radius.dialog, borderTopRightRadius: radius.dialog, borderTopWidth: 1, borderTopColor: edge }}
       handleIndicatorStyle={{ backgroundColor: t.hair2 }}
+      // The keyboard lifts the sheet with the focused field (its Inputs are BottomSheetTextInput, see
+      // FieldComponentContext); a drag on the sheet puts the keyboard away, and closing it puts the sheet back.
+      keyboardBehavior="interactive"
+      keyboardBlurBehavior="restore"
+      enableBlurKeyboardOnGesture
+      android_keyboardInputMode="adjustResize"
     >
-      <BottomSheetView>{children}</BottomSheetView>
+      <BottomSheetView>
+        <FieldComponentContext.Provider value={BottomSheetTextInput as typeof TextInput}>{children}</FieldComponentContext.Provider>
+      </BottomSheetView>
     </BottomSheetModal>
   );
 }
