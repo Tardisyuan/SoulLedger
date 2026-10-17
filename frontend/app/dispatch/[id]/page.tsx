@@ -9,6 +9,7 @@ import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { usePlaque } from "@/src/components/plaque/Plaque";
 import { useCourtOffice, useHall } from "@/src/components/plaque/useHall";
+import { useMenuButtonConfig } from "@/src/hooks/useMenuButtonConfig";
 import { useToast } from "@/src/contexts/ToastContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
@@ -88,6 +89,7 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
   const { t, formatDateTime } = useI18n();
   // 题字自己报:壳的默认是面包屑末段,在这一页是「详情」。
   usePlaque({ title: t("dispatch.detail_title"), hall: useHall(useCourtOffice()) });
+  const buttonOn = useMenuButtonConfig();
   const { user } = useTenant();
   const { showToast } = useToast();
   const router = useRouter();
@@ -354,12 +356,12 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
                   <>
                     {/* 发起方撤回自己的提案(对方批准之前),次级按钮、排在动作区最左(mr-auto 与右侧主动作隔开,免得和它们挨着误点);不是本殿发起的、没有 dispatch.manage 时不渲染。 */}
                     <CancelDispatchButton dispatch={dispatch} triggerClassName="mr-auto" />
-                    <RequirePermission permissions="dispatch.reject">
+                    {buttonOn("dispatch.reject") && <RequirePermission permissions="dispatch.reject">
                       <Button type="button" variant="secondary" onClick={() => setShowRejectModal(true)}>
                         {t("dispatch.reject")}
                       </Button>
-                    </RequirePermission>
-                    <RequirePermission permissions="dispatch.approve">
+                    </RequirePermission>}
+                    {buttonOn("dispatch.approve") && <RequirePermission permissions="dispatch.approve">
                       {/* Was `approveMutation.mutate()` fired straight from the click,
                           while reject and execute — on this same page — each opened a
                           confirmation. Approving is the cross-tenant handover: it is
@@ -373,7 +375,7 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
                       >
                         {t("dispatch.approve")}
                       </Button>
-                    </RequirePermission>
+                    </RequirePermission>}
                   </>
                 )}
                 {isApproved && (

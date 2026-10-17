@@ -24,6 +24,7 @@ const PATH_LABELS: Record<string, string> = {
   "/audit/stats": "audit.tabs.stats",
   "/events": "nav.soul_events",
   "/sentence-plans": "breadcrumb.menu.sentence_plans",
+  "/rebirths": "rebirths.title",
 };
 
 const ID_SEGMENT = /^(\d+|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-)/i;

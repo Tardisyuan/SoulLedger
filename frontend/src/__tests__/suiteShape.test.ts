@@ -167,6 +167,8 @@ const COLLECTED_FILES = [
   "SentencePlanForms.test.tsx",
   // 2026-10-17 审计第 8 条:受刑计划列表页 /sentence-plans。
   "SentencePlansPage.test.tsx",
+  // 2026-10-17 第四十批 W-c:转生登记簿(/rebirths)。
+  "RebirthsPage.test.tsx",
   "JudgmentAmendmentConclude.test.tsx",
   "JudgmentComments.test.tsx",
   // 2026-09-25 审判台 / 审判队列 / 处置(规范 v1 第三类 A)。
@@ -256,6 +258,8 @@ const COLLECTED_FILES = [
   "dispatchReturnHome.test.tsx",
   "contextValueIdentity.test.tsx",
   "crossJudgmentActivate.test.tsx",
+  // 2026-10-17 第四十批 W-a:跨域审判的结束 / 取消,原审判被它挡住时的提示。
+  "crossJudgmentEnd.test.tsx",
   "crossJudgmentDetailFetchBudget.test.tsx",
   "crossJudgmentsColumnMenu.test.tsx",
   "dataGridToneContract.test.ts",
@@ -285,7 +289,9 @@ const COLLECTED_FILES = [
   "messageValuesAreNotTheirOwnKeys.test.ts",
   "proxyAuthGate.test.ts",
   "ledgerQuantityContract.test.tsx",
-  "MenuButtonsPage.editFailure.test.tsx",
+  // 2026-10-17 第四十批 W-b:配置页只列接上的按钮(取代 editFailure 那份:通用增改表单已拿掉);配置读法与关掉的按钮。
+  "MenuButtonsPage.test.tsx",
+  "menuButtonConfig.test.tsx",
   "MenuRowCells.test.tsx",
   "menuCacheRootsAreInvalidatedTogether.test.ts",
   "menuTranslationCoverage.test.ts",

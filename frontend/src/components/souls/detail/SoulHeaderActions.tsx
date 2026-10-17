@@ -17,8 +17,10 @@ export function SoulHeaderActions({
   isOverflowMenuOpen,
   setIsOverflowMenuOpen,
 }: {
-  onEdit: () => void;
-  onDelete: () => void;
+  /** 「编辑」:页面在菜单按钮配置关掉它时不给(第四十批 W-b),权限门 `soul.update` 照旧在这里。 */
+  onEdit?: () => void;
+  /** 「删除」:同上,不给就没有这一项;给了仍要 `soul.delete`。 */
+  onDelete?: () => void;
   /** 「更正结案」:只在页面判定可做时(持有 `soul.correct_settlement` 且灵魂是 SETTLED)才给;没给就没有这一项。 */
   onCorrectSettlement?: () => void;
   /** 「重算功过」:只在持有 `ledger.manage` 时给(`LedgerRecalculateView` 要的码名);没给就没有这一项。 */
@@ -36,7 +38,7 @@ export function SoulHeaderActions({
   const { t, tf } = useI18n();
   // 删除仍按 `soul.delete`;菜单本身对持有其中任一项的人出现 —— 只能发起审批、不能删除的人也要看得到 ⋯。
   const { hasPermission } = usePermissions();
-  const canDelete = hasPermission("soul.delete");
+  const canDelete = hasPermission("soul.delete") && Boolean(onDelete);
 
   /**
    * The keyboard half of the `role="menu"` below — which was declared and not
@@ -93,19 +95,22 @@ export function SoulHeaderActions({
   });
   // 页面只在持有对应码名时才交来这些回调,所以门禁写成「任一」:码名与回调一一对应。
   const menuCodenames = [
-    "soul.delete",
+    ...(onDelete ? ["soul.delete"] : []),
     ...(onRecalculate ? ["ledger.manage"] : []),
     ...(onStartWorkflow ? ["workflow.create"] : []),
+    ...(onCorrectSettlement ? ["soul.correct_settlement"] : []),
   ];
   const itemClass = "w-full text-left px-3 py-1 text-sm hover:bg-[oklch(var(--color-surface-2))] transition-colors";
 
   return (
     <div className="flex flex-wrap items-center justify-end gap-3">
-      <RequirePermission permissions="soul.update">
-        <Button type="button" variant="secondary" onClick={onEdit}>
-          {t("souls.detail.edit")}
-        </Button>
-      </RequirePermission>
+      {onEdit && (
+        <RequirePermission permissions="soul.update">
+          <Button type="button" variant="secondary" onClick={onEdit}>
+            {t("souls.detail.edit")}
+          </Button>
+        </RequirePermission>
+      )}
       {/* 破坏性动作住在溢出菜单里,而不是紧挨编辑的一个足量红按钮
           (Stage 3 文档缺陷 #3)—— 删除既少见又后果重大,不该和日常的编辑
           分享同一份视觉权重。 */}
@@ -171,7 +176,7 @@ export function SoulHeaderActions({
                     role="menuitem"
                     onClick={() => {
                       close(true);
-                      onDelete();
+                      onDelete?.();
                     }}
                     /* 移入回收站可恢复(「系统设置 › 回收站」):可逆的风险动作用 warning,
                        danger-strong 只给不可逆的删除(规范 v3)。 */

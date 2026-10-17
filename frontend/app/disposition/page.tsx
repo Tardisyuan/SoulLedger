@@ -24,6 +24,7 @@ import { usePermissions } from "@/src/hooks/usePermissions";
 import { EmptyState } from "@/src/components/ui/EmptyState";
 import { QueryError } from "@/src/components/ui/PageError";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
+import { useMenuButtonConfig } from "@/src/hooks/useMenuButtonConfig";
 import { ExportCsvButton } from "@/src/components/ExportCsvButton";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
 import { formatHistoricalDate } from "@/lib/utils";
@@ -69,6 +70,8 @@ export default function DispositionPage() {
   const archiveMutation = useArchiveDisposition();
   const unarchiveMutation = useUnarchiveDisposition();
   const { hasPermission } = usePermissions();
+  // 菜单按钮配置(第四十批 W-b):归档(行尾 ⋯)与导出另要配置允许。取消归档不在配置里。
+  const buttonOn = useMenuButtonConfig();
   const canArchive = hasPermission("disposition.execute");
   const [pages, setPages] = useState<Record<DispositionSection, number>>({ pending: 1, executing: 1, expired: 1 });
 
@@ -119,7 +122,7 @@ export default function DispositionPage() {
         />
       );
     }
-    if (!d.verdict) return null;
+    if (!d.verdict || !buttonOn("disposition.archive")) return null;
     return (
       <ActionsMenu
         menuLabel={`${t("common.row_actions")} · ${d.soul_name || d.soul}`}
@@ -164,7 +167,7 @@ export default function DispositionPage() {
     expired: { section: "expired", soul_reborn: "false" },
   };
   const sectionProps = (section: DispositionSection) => ({
-    action: (
+    action: buttonOn("disposition.export") && (
       <RequirePermission permissions="disposition.read">
         <ExportCsvButton
           size="sm"

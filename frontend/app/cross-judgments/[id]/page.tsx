@@ -17,6 +17,7 @@ import { badgeVariants, type BadgeTone } from "@/src/components/ui/Badge";
 import { LedgerHeading } from "@/src/components/souls/detail/SoulLedgerSections";
 import { CrossJudgmentStops } from "@/src/components/cross-judgments/CrossJudgmentStops";
 import { CrossJudgmentSeatForm } from "@/src/components/cross-judgments/CrossJudgmentSeatForm";
+import { CrossJudgmentEndControls } from "@/src/components/cross-judgments/CrossJudgmentEndControls";
 
 /**
  * Case state → badge tone, the same table the list page carries.
@@ -48,7 +49,7 @@ const STATUS_GLYPH: Record<string, string> = {
 const CONCLUSION_GLYPH: Record<string, string> = { PASS: "✓", FAIL: "✕" };
 
 export default function CrossJudgmentDetailPage() {
-  const { t } = useI18n();
+  const { t, formatDate } = useI18n();
   // 题字自己报:壳的默认是面包屑末段,在详情页上那是原始 id。
   usePlaque({ title: t("crossJudgments.title"), hall: useHall(t("plaque.office.trials")) });
   const { user } = useTenant();
@@ -216,6 +217,8 @@ export default function CrossJudgmentDetailPage() {
                 {t("crossJudgments.activate")}
               </Button>
             )}
+            {/* 结束 / 取消(第四十批 W-a):只给召集人与发起殿的管理员,`can_end` 由服务端算。 */}
+            {judgment && <CrossJudgmentEndControls judgment={judgment} />}
             <span className={badgeVariants({ tone: STATUS_TONES[judgment?.status ?? ""] ?? "neutral" })}>
               <span aria-hidden="true">{STATUS_GLYPH[judgment?.status ?? ""] ?? "?"}</span>
               <DomainEnum namespace="crossJudgments.states" value={judgment?.status} />
@@ -239,6 +242,25 @@ export default function CrossJudgmentDetailPage() {
         <blockquote className="max-w-[72ch] mb-2 pl-3 border-l-2 border-[oklch(var(--color-ink))] font-serif text-md font-normal text-[oklch(var(--color-ink))] text-pretty">
           {judgment.description}
         </blockquote>
+      )}
+
+      {/* 结束 / 取消之后页头下写结果;结束说明全文跟在下面(第四十批 W-a)。 */}
+      {!loading && judgment?.status === "CONCLUDED" && judgment.ended_by_name && (
+        <div data-testid="cross-ended" className="mb-2 text-sm text-[oklch(var(--color-ink))]">
+          <p>
+            {t("crossJudgments.ended", {
+              conclusion: t(judgment.conclusion_type === "FAIL" ? "crossJudgments.end_fail" : "crossJudgments.end_pass"),
+              date: judgment.concluded_at ? formatDate(judgment.concluded_at) : "",
+              name: judgment.ended_by_name,
+            })}
+          </p>
+          {judgment.conclusion_note && <p className="mt-1 max-w-[72ch] whitespace-pre-line">{judgment.conclusion_note}</p>}
+        </div>
+      )}
+      {!loading && judgment?.status === "CANCELLED" && judgment.cancel_reason && (
+        <p data-testid="cross-cancelled" className="mb-2 text-sm text-[oklch(var(--color-ink-muted))]">
+          {t("crossJudgments.cancelled", { reason: judgment.cancel_reason })}
+        </p>
       )}
 
       {/* 规范 v1 详情页原型:两栏账页(393 px 折单栏),区块标压线,行线代替卡片。 */}

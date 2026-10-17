@@ -8,6 +8,7 @@ import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { usePlaque } from "@/src/components/plaque/Plaque";
 import { useHall } from "@/src/components/plaque/useHall";
+import { useMenuButtonConfig } from "@/src/hooks/useMenuButtonConfig";
 import { PageSection } from "@/components/ui/page-section";
 import { DataTable, ROW_LINK, type DataTableColumn } from "@/components/ui/data-table";
 import { ColumnMenu, useColumnVisibility } from "@/components/ui/data-grid";
@@ -57,6 +58,7 @@ export default function CrossJudgmentsPage() {
   const { t } = useI18n();
   const hall = useHall(t("plaque.office.trials"));
   usePlaque({ hall });
+  const buttonOn = useMenuButtonConfig();
   const { user } = useTenant();
 
   /**
@@ -108,9 +110,9 @@ export default function CrossJudgmentsPage() {
         title={t("crossJudgments.list_title")}
         actions={
           <div className="flex items-center gap-3">
-            <RequirePermission permissions="cross_judgment.read">
+            {buttonOn("crossJudgments.export") && <RequirePermission permissions="cross_judgment.read">
               <ExportCsvButton size="sm" fetchCsv={() => crossTenantJudgmentsApi.exportCsv(filterParams)} page={t("crossJudgments.title")} hall={hall} />
-            </RequirePermission>
+            </RequirePermission>}
             <ColumnMenu
               columns={allColumns.map((c) => ({ key: c.key, header: String(c.header), pinned: c.pinned }))}
               visibility={columnVis}

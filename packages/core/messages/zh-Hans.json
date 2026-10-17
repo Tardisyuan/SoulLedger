@@ -1949,7 +1949,10 @@
       "HEART_WEIGHING": "称心审判",
       "DIABOLICAL_TRIAL": "魔鬼审判"
     },
-    "case_number": "案号"
+    "case_number": "案号",
+    "close_blocked_title": "还有一场跨域审判没结束，暂时不能结案",
+    "close_blocked_body": "{{name}} · {{date}} 召集 · 已入席 {{joined}} / {{total}}。召集人结束或取消后，这里就能结案。",
+    "close_blocked_link": "去跨域审判 ›"
   },
   "audit": {
     "title": "审计日志",
@@ -2603,7 +2606,22 @@
       "side": "我方",
       "side_initiated": "我方发起",
       "side_participating": "我方参与"
-    }
+    },
+    "end": "结束跨域审判",
+    "end_conclusion": "结论",
+    "end_pass": "通过",
+    "end_fail": "不通过",
+    "end_note": "说明 · 必填，原审判页会显示",
+    "end_body": "结束后不能再入席、召集或改结论。原审判可以结案。",
+    "cancel": "取消跨域审判",
+    "cancel_title": "取消这场跨域审判？",
+    "cancel_body": "跨域审判不会有结论。席上的评议保留，只能看。原审判照常结案。",
+    "cancel_keep": "不取消",
+    "cancel_reason": "理由 · 必填",
+    "ended": "已结束 · {{conclusion}} · {{date}} · {{name}}",
+    "cancelled": "已取消 · 理由：{{reason}}",
+    "end_error": "没能结束，请重试",
+    "cancel_error": "没能取消，请重试"
   },
   "users": {
     "title": "用户管理",
@@ -2869,7 +2887,20 @@
     "update_error": "更新按钮失败",
     "delete_error": "删除按钮失败",
     "gates_note": "这个按钮只有一个可见性开关——「激活」。角色、侧边栏可见性、权限码推导的歧义，都属于它所在的父级菜单：",
-    "permission_mismatch_warning": "“{{codename}}” 不对应任何真实权限——此按钮将对所有非管理员角色静默隐藏"
+    "permission_mismatch_warning": "“{{codename}}” 不对应任何真实权限——此按钮将对所有非管理员角色静默隐藏",
+    "rule": "按钮要在这里打开，并且用户有对应权限，才会显示。这里关掉，有权限的人也看不到。",
+    "count": "{{menu}} · {{n}} 个按钮",
+    "col_show": "显示",
+    "col_where": "出现在",
+    "col_perm": "也需要权限",
+    "where": {
+      "list_top": "列表页右上",
+      "section_top": "列表每段右上",
+      "row_more": "列表行 ⋯",
+      "detail_header": "详情页页头",
+      "detail_more": "详情页 ⋯",
+      "detail_actions": "详情页操作区"
+    }
   },
   "error": {
     "title": "系统发生错误",
@@ -3599,7 +3630,8 @@
       "assistant_admin": "助手管理",
       "moderation": "朋友圈审核",
       "recycle_bin": "回收站",
-      "sentence_plans": "受刑计划"
+      "sentence_plans": "受刑计划",
+      "group_rebirth": "轮回"
     },
     "queue": "分诊队列",
     "about": "关于",
@@ -6631,5 +6663,17 @@
     "gone_title": "这条已经不在了",
     "gone_body": "可能已经删除，或者已经不在你能看的范围里。",
     "gone_back": "回到{{from}}"
+  },
+  "rebirths": {
+    "title": "转生登记簿",
+    "nav_disposition": "处置",
+    "col_soul": "灵魂",
+    "col_life": "第几世",
+    "life_value": "第 {{from}} → {{to}} 世",
+    "col_form": "转生形态",
+    "col_to": "去往",
+    "col_time": "时间",
+    "total": "共 {{n}} 条",
+    "empty": "还没有转生记录"
   }
 }

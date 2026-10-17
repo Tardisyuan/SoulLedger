@@ -1949,7 +1949,10 @@
       "HEART_WEIGHING": "Heart weighing",
       "DIABOLICAL_TRIAL": "Diabolical trial"
     },
-    "case_number": "Case no."
+    "case_number": "Case no.",
+    "close_blocked_title": "A cross-realm judgment is still open, so this can't be closed yet",
+    "close_blocked_body": "{{name}} · convened {{date}} · {{joined}} of {{total}} seated. Once it's ended or cancelled, you can close here.",
+    "close_blocked_link": "Go to cross-realm judgment ›"
   },
   "audit": {
     "title": "Audit Log",
@@ -2603,7 +2606,22 @@
       "side": "Our side",
       "side_initiated": "Initiated by us",
       "side_participating": "We take part"
-    }
+    },
+    "end": "End cross-realm judgment",
+    "end_conclusion": "Conclusion",
+    "end_pass": "Pass",
+    "end_fail": "Not pass",
+    "end_note": "Note · required, shown on the original judgment",
+    "end_body": "After this, no one can join, convene or change the conclusion. The original judgment can then be closed.",
+    "cancel": "Cancel cross-realm judgment",
+    "cancel_title": "Cancel this cross-realm judgment?",
+    "cancel_body": "There will be no conclusion. Seat comments stay, read-only. The original judgment closes as usual.",
+    "cancel_keep": "Keep it",
+    "cancel_reason": "Reason · required",
+    "ended": "Ended · {{conclusion}} · {{date}} · {{name}}",
+    "cancelled": "Cancelled · Reason: {{reason}}",
+    "end_error": "Couldn't end it. Try again.",
+    "cancel_error": "Couldn't cancel it. Try again."
   },
   "users": {
     "title": "User Management",
@@ -2869,7 +2887,20 @@
     "update_error": "Failed to update button",
     "delete_error": "Failed to delete button",
     "gates_note": "This button only has one visibility gate — Active. Roles, sidebar visibility, and the permission-codename ambiguity all live on the parent menu:",
-    "permission_mismatch_warning": "\"{{codename}}\" doesn't match a real permission — this button will be silently hidden from every non-ADMIN role"
+    "permission_mismatch_warning": "\"{{codename}}\" doesn't match a real permission — this button will be silently hidden from every non-ADMIN role",
+    "rule": "A button shows only if it's on here and the user has the permission. Off here means hidden even for users with permission.",
+    "count": "{{menu}} · {{n}} buttons",
+    "col_show": "Show",
+    "col_where": "Appears in",
+    "col_perm": "Also needs",
+    "where": {
+      "list_top": "List page, top right",
+      "section_top": "Each list section, top right",
+      "row_more": "List row ⋯",
+      "detail_header": "Detail page header",
+      "detail_more": "Detail page ⋯",
+      "detail_actions": "Detail page actions"
+    }
   },
   "error": {
     "title": "A system error occurred",
@@ -3599,7 +3630,8 @@
       "assistant_admin": "Assistant Admin",
       "moderation": "Circle Moderation",
       "recycle_bin": "Recycle Bin",
-      "sentence_plans": "Sentence Plans"
+      "sentence_plans": "Sentence Plans",
+      "group_rebirth": "Reincarnation"
     },
     "queue": "Triage queue",
     "about": "About",
@@ -6631,5 +6663,17 @@
     "gone_title": "This is no longer here",
     "gone_body": "It may have been deleted, or it's no longer something you can see.",
     "gone_back": "Back to {{from}}"
+  },
+  "rebirths": {
+    "title": "Rebirth register",
+    "nav_disposition": "Dispositions",
+    "col_soul": "Soul",
+    "col_life": "Life",
+    "life_value": "Life {{from}} → {{to}}",
+    "col_form": "Form",
+    "col_to": "Going to",
+    "col_time": "Time",
+    "total": "{{n}} records",
+    "empty": "No rebirths yet"
   }
 }

@@ -202,6 +202,17 @@ class CrossTenantJudgment(AuditUserFields, models.Model):
         blank=True,
         help_text="PASS or FAIL"
     )
+    # 结束 / 取消(第四十批 W-a):结束时的说明(原审判页也显示)、取消时的理由,以及是谁做的。
+    # 两个文本互斥:CONCLUDED 只写前者,CANCELLED 只写后者。
+    conclusion_note = models.TextField(blank=True, default="")
+    cancel_reason = models.TextField(blank=True, default="")
+    ended_by = models.ForeignKey(
+        "authentication.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="cross_judgments_ended",
+    )
     # 这场联审为哪份原属审判定受刑计划(docs/ARCHITECTURE-sentence-plan.md §2.1,Q1)。
     # 同租户(发起方就是原属),所以可以是外键。空 = 存量的那种不挂灵魂的会议,行为不变。
     judgment = models.OneToOneField(

@@ -13,6 +13,18 @@ class MenuButtonSerializer(serializers.ModelSerializer):
         fields = ["id", "name", "code", "permission", "order", "is_active"]
 
 
+class MenuButtonConfigSerializer(serializers.ModelSerializer):
+    """`/menus/buttons/config/` 的一行:哪个菜单下的哪个按钮开着没有(第四十批 W-b)。
+
+    只有键与开关,不带 `permission` —— 码名表不因为这个接口对所有角色敞开
+    (`button_access.py` 顶上记的那次泄露)。"""
+    menu_path = serializers.CharField(source="menu.path", read_only=True)
+
+    class Meta:
+        model = MenuButton
+        fields = ["id", "menu", "menu_path", "code", "is_active"]
+
+
 class MenuTreeSerializer(serializers.ModelSerializer):
     """Recursive tree serializer — includes children and buttons filtered by user permissions."""
     children = serializers.SerializerMethodField()
