@@ -792,6 +792,35 @@ describe("队列页:认领 · 改派 · 我认领的", () => {
     await waitFor(() => expect(within(panel).getAllByTestId("queue-mine-row")).toHaveLength(2));
     expect(within(panel).getAllByTestId("queue-mine-row")[0]).toHaveTextContent("第一位待判者");
   });
+
+  // 审计 1017 #16:认领超过一页时,「再载入」接着取下一页;最后一页取完按钮就没了。
+  it("「我认领的」超过一页:再载入取第 2 页并接在后面,取完不再有按钮", async () => {
+    mockList.mockImplementation((params: Record<string, string>) =>
+      Promise.resolve({
+        data:
+          params.page === "2"
+            ? { count: 2, next: null, previous: "p1", results: [mine(NEXT_JUDGMENT)] }
+            : { count: 2, next: "p2", previous: null, results: [mine(JUDGMENT)] },
+      })
+    );
+    renderConsole();
+    const panel = await screen.findByTestId("queue-mine");
+    await waitFor(() => expect(within(panel).getAllByTestId("queue-mine-row")).toHaveLength(1));
+    expect(mockList).toHaveBeenCalledWith({ group: "mine", ordering: "created_at" });
+
+    fireEvent.click(within(panel).getByTestId("queue-mine-more"));
+    await waitFor(() => expect(within(panel).getAllByTestId("queue-mine-row")).toHaveLength(2));
+    expect(mockList).toHaveBeenCalledWith({ group: "mine", ordering: "created_at", page: "2" });
+    expect(within(panel).queryByTestId("queue-mine-more")).toBeNull();
+  });
+
+  it("「我认领的」一页装得下:没有再载入", async () => {
+    mockList.mockResolvedValue({ data: { count: 1, next: null, previous: null, results: [mine(JUDGMENT)] } });
+    renderConsole();
+    const panel = await screen.findByTestId("queue-mine");
+    await waitFor(() => expect(within(panel).getAllByTestId("queue-mine-row")).toHaveLength(1));
+    expect(within(panel).queryByTestId("queue-mine-more")).toBeNull();
+  });
 });
 
 describe("行首色标只表示「待我处理」(B12)", () => {

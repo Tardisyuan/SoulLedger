@@ -1867,7 +1867,8 @@
       "col_case_soul": "案号 / 灵魂",
       "col_cycle_kind": "世次 / 种类",
       "undefer": "恢复",
-      "done_undefer": "已恢复，案子回到队列"
+      "done_undefer": "已恢复，案子回到队列",
+      "load_more": "再载入（还有 {{n}} 件）"
     },
     "admission": {
       "title": "证据 · 采信",

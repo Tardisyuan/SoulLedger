@@ -1867,7 +1867,8 @@
       "col_case_soul": "Case no. / Soul",
       "col_cycle_kind": "Life / kind",
       "undefer": "Restore",
-      "done_undefer": "Restored; the case is back in the queue"
+      "done_undefer": "Restored; the case is back in the queue",
+      "load_more": "Load more ({{n}} left)"
     },
     "admission": {
       "title": "Evidence · admission",
