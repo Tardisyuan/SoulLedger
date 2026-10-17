@@ -88,6 +88,12 @@ export interface Judgment extends ArchiveFields {
   reassign_requested_by?: number | null;
   reassign_reason?: string;
   /**
+   * 滞留:未结案且 30 天无进展时由定时任务 `judgment.auto_conclude_stale` 盖章(只读;
+   * **不结案**)。案子下一次有进展(认领、暂缓、改派、写草稿、结案……)就清回 null。
+   * 列表用 `?stale=true|false` 筛。
+   */
+  stale_since?: string | null;
+  /**
    * merit − demerit, for CHINESE cases only; null for every other cosmology
    * (apps/ledger/readings.py). ABSENT — not null — for a VIEWER, the same
    * floor `SoulSerializer` keeps.
@@ -176,6 +182,8 @@ export interface JudgmentQueueCountsParams {
   search?: string;
   /** Soul id (the list's `?soul=`). */
   soul?: string;
+  /** `"true"` 只数滞留的(`stale_since` 非空),`"false"` 不数它们。 */
+  stale?: string;
 }
 
 export type JudgmentBatchOperation = "claim" | "reassign" | "defer";

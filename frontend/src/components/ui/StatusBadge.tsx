@@ -2,6 +2,7 @@
 
 import { Badge, type BadgeTone } from "@/src/components/ui/Badge";
 import { DomainEnum } from "@/src/components/ui/DomainValue";
+import { useI18n } from "@/src/contexts/I18nContext";
 import { soulStateBadgeClass, soulStateGlyph } from "@/src/lib/soulStateBadge";
 import { verdictBadgeClass, verdictGlyph } from "@/src/lib/verdictGlyph";
 
@@ -55,6 +56,22 @@ export function SoulStateBadge({ state, className }: { state: string | null | un
   return (
     <Badge glyph={soulStateGlyph(state)} className={`${soulStateBadgeClass(state)} ${className ?? ""}`} data-soul-state-badge={state ?? ""}>
       <DomainEnum namespace="souls.states" value={state} />
+    </Badge>
+  );
+}
+
+/**
+ * 滞留徽章:判决的 `stale_since` 非空(未结案且 30 天无进展,定时任务盖章,**不结案**)。
+ * 流程状态,走 warning 的「颜色 + 字形」;「30 天无进展」放在 `title` 与读屏文字里。
+ * 审判列表的待审一面与审判台的案情栏画这一个。
+ */
+export function StaleBadge({ className }: { className?: string }) {
+  const { t } = useI18n();
+  const hint = t("judgment.stale.hint");
+  return (
+    <Badge tone="warning" glyph={TONE_GLYPH.warning} className={`${STATUS_BADGE_BORDER} ${className ?? ""}`} title={hint} data-stale-badge="">
+      {t("judgment.stale.label")}
+      <span className="sr-only"> · {hint}</span>
     </Badge>
   );
 }

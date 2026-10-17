@@ -134,6 +134,21 @@ describe("the other tabs have the same four states", () => {
     expect(await screen.findByText("◇ 待宣判 · 请在官员台")).toBeTruthy();
   });
 
+  it("judgments: a stale row says 滞留 and why; a fresh one says nothing", async () => {
+    mockList.mockResolvedValue({
+      data: {
+        results: [
+          { id: "j1", case_number: "CN-1", soul_name: "李白", court: "一殿", is_final: false, stale_since: "2026-10-01T01:00:00Z" },
+          { id: "j2", case_number: "CN-2", soul_name: "杜甫", court: "一殿", is_final: false, stale_since: null },
+        ],
+      },
+    });
+    renderOfficer(<QueueTab onOpen={() => {}} />);
+    const stale = await screen.findByTestId("queue-row-j1");
+    expect(within(stale).getByText("◐ 滞留 · 30 天无进展")).toBeTruthy();
+    expect(within(screen.getByTestId("queue-row-j2")).queryByText(/滞留/)).toBeNull();
+  });
+
   const UNCLAIMED = { data: { results: [{ id: "j9", case_number: "CN-9", soul_name: "王九", court: "一殿", is_final: true }] } };
 
   it("judgments: 认领 that someone beat us to (409) asks the list and the counts again", async () => {

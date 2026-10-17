@@ -117,6 +117,8 @@ class JudgmentFilter(filters.FilterSet):
     # 引用了这条律条的判决(语料页「被引用」清单)。与 `StatuteViewSet` 的
     # `citation_count` 同一口径:存活的引用行,落在调用者看得见的判决上。
     statute = filters.UUIDFilter(method="filter_statute")
+    # 滞留(`stale_since` 非空,定时任务盖的章)。`?stale=true` 只要滞留的,`false` 排除它们。
+    stale = filters.BooleanFilter(field_name="stale_since", lookup_expr="isnull", exclude=True)
 
     class Meta:
         model = Judgment
