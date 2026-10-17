@@ -17,6 +17,9 @@ import { NameConfirmDialog } from "@/src/components/admin/NameConfirmDialog";
 import { EmptyState } from "@/src/components/ui/EmptyState";
 import { badgeVariants } from "@/src/components/ui/Badge";
 import { ActionsMenu } from "@/components/ui/data-grid/ActionsMenu";
+import { FilterChipSelect } from "@/src/components/ui/FilterChip";
+import { fieldControl } from "@/src/components/ui/Field";
+import { cn } from "@/lib/utils";
 
 /**
  * Global recycle bin (Stage 4 §4.7) — one screen listing soft-deleted
@@ -39,7 +42,23 @@ export default function RecycleBinPage() {
     queryKey: ["recycle-bin"],
     queryFn: async () => (await recycleBinApi.list()).data,
   });
-  const entries = data?.results ?? [];
+  const all = data?.results ?? [];
+  // 原位置是文明时格子里印的是本地化的名字,搜索也要认它(「地府」),不只认代码。
+  const locationName = (e: RecycleBinEntry) =>
+    e.location?.kind === "civilization" ? resolveEnumDisplay(t, "souls.civilizations", e.location.value).label : null;
+  // 类型与搜索都在本地筛:`GET /recycle-bin/` 一次返回全部条目(不分页,`recycle_bin_views.py` 的 list),
+  // 再请求一次只会拿回同一份。搜索看条目名、删除理由、删除人与原位置(代码与本地化的名字)。
+  const [typeFilter, setTypeFilter] = useState("");
+  const [search, setSearch] = useState("");
+  const needle = search.trim().toLowerCase();
+  const entries = all.filter(
+    (e) =>
+      (!typeFilter || e.entity_type === typeFilter) &&
+      (!needle ||
+        [e.label, e.delete_reason, e.deleted_by, e.location?.value, locationName(e)].some((v) => v?.toLowerCase().includes(needle)))
+  );
+  const types = [...new Set(all.map((e) => e.entity_type))];
+  const isFiltered = !!typeFilter || !!needle;
 
   const restoreMutation = useMutation({
     mutationFn: (cascadeId: string) => recycleBinApi.restore(cascadeId),
@@ -106,6 +125,29 @@ export default function RecycleBinPage() {
         title={t("recycle_bin.title")}
         variant="page"
         subtitle={t("recycle_bin.intro")}
+        filters={
+          <>
+            <input
+              type="search"
+              data-testid="bin-search"
+              placeholder={t("recycle_bin.search")}
+              aria-label={t("recycle_bin.search")}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className={cn(fieldControl({ size: "md" }), "flex-1 min-w-[200px]")}
+            />
+            <FilterChipSelect
+              label={t("recycle_bin.col_type")}
+              value={typeFilter}
+              options={[
+                { value: "", label: t("recycle_bin.all_types") },
+                ...types.map((v) => ({ value: v, label: entityLabel(v) })),
+              ]}
+              clearLabel={t("filter.clear_one", { name: t("recycle_bin.col_type") })}
+              onChange={setTypeFilter}
+            />
+          </>
+        }
       >
         {/* `compact` (~36px rows) because this page is scan-and-find: the operator
           is looking for a row, not deciding on each one. Decision surfaces
@@ -122,11 +164,11 @@ export default function RecycleBinPage() {
             { key: "action", header: t("recycle_bin.col_action"), align: "right", srOnlyHeader: true },
           ]}
           data={entries}
-          /* Constant: this table has no filters, no sort and no pagination, so
-             every change to it is a restore or a hard delete — the two moments
-             where a row leaving the screen is the entire feedback the operator
-             gets. */
-          transitionKey="recycle-bin"
+          /* No sort and no pagination; the two local filters are part of the key so
+             narrowing the list reads as a new question, while a restore or a hard
+             delete — a row leaving the screen, the entire feedback the operator
+             gets — still animates under an unchanged key. */
+          transitionKey={`recycle-bin|${typeFilter}|${needle}`}
           isLoading={isLoading}
           isError={Boolean(error)}
           keyExtractor={(entry) => `${entry.entity_type}-${entry.id}`}
@@ -242,7 +284,7 @@ export default function RecycleBinPage() {
               </td>
             </>
           )}
-          emptyMessage={t("recycle_bin.empty")}
+          emptyMessage={isFiltered && all.length > 0 ? t("recycle_bin.no_match") : t("recycle_bin.empty")}
         />
 
         {/* 彻底删除是这个应用里最不可撤回的动作,所以走「输入名称以确认」(规范 v2 A1):
