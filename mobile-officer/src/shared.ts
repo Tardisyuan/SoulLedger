@@ -37,6 +37,7 @@ export {
   TYPE,
   ThemeContext,
   GUTTER,
+  GoneState,
   useReducedMotion,
   useReducedMotionDurations,
   useRemote,
