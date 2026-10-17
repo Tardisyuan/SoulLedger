@@ -10,6 +10,7 @@ import { useCallback, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
 import { Icon } from "../emblems";
+import { landingGoneKey, useGone } from "../gone";
 import { useI18n } from "../i18n";
 import { landOn, landingOf } from "../push";
 import { formatStamp } from "../rules";
@@ -25,7 +26,9 @@ function Row({ item, last }: { item: PushHistoryItem; last: boolean }) {
   const { gutter } = useLayout();
   const navigation = useNavigation<NavigationProp<AppStackParams>>();
   const landing = landingOf(item.data);
-  const open = landing ? () => landOn(navigation.navigate, landing) : undefined;
+  // O-c: what it points at turned out to be gone -- greyed, and it opens nothing.
+  const gone = useGone().has(landingGoneKey(landing) ?? "");
+  const open = landing && !gone ? () => landOn(navigation.navigate, landing) : undefined;
   const body = (
     <>
       <View style={styles.fill}>
@@ -46,11 +49,11 @@ function Row({ item, last }: { item: PushHistoryItem; last: boolean }) {
           ) : null}
         </View>
       </View>
-      {landing ? <Icon name="chevron" size={14} color={theme.inkSubtle} /> : null}
+      {open ? <Icon name="chevron" size={14} color={theme.inkSubtle} /> : null}
     </>
   );
-  const style = [styles.row, { paddingHorizontal: gutter, borderBottomColor: theme.hair }, last && styles.last];
-  return landing ? (
+  const style = [styles.row, { paddingHorizontal: gutter, borderBottomColor: theme.hair }, last && styles.last, gone && styles.gone];
+  return open ? (
     <Pressable
       testID={`notification-${item.id}`}
       accessibilityRole="button"
@@ -133,6 +136,7 @@ export function NotificationHistoryScreen() {
 }
 
 const styles = StyleSheet.create({
+  gone: { opacity: 0.45 },
   fill: { flex: 1 },
   pressed: { opacity: 0.8 },
   row: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 16, borderBottomWidth: 1 },

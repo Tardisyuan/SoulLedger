@@ -14,6 +14,7 @@ import { useEffect, useRef } from "react";
 import { Pressable, SectionList, StyleSheet, View } from "react-native";
 
 import { family } from "../fonts";
+import { useGone } from "../gone";
 import { useI18n } from "../i18n";
 import { Empty, Interp, Notice, OneLine, Screen, Skeleton, Txt, useLayout, useRemote, useReloadOnRefocus, useTheme } from "../ui";
 import type { AppStackParams } from "./applications";
@@ -37,17 +38,22 @@ const SENTENCE: Record<SoulInteraction["kind"], string> = {
   FOLLOW: "soul_app.social.followed_many",
 };
 
-function Row({ row, onPress }: { row: SoulInteraction; onPress: () => void }) {
+function Row({ row, onPress: open }: { row: SoulInteraction; onPress: () => void }) {
   const t = useTheme();
   const { t: tr } = useI18n();
   const { gutter } = useLayout();
   const comment = row.kind === "COMMENT" || row.kind === "REPLY";
+  // O-c: the post it opens turned out to be gone -- greyed, and it opens nothing. A follow opens a soul, never gone here.
+  const gone = useGone().has(row.kind !== "FOLLOW" && row.post_id ? `post:${row.post_id}` : "");
+  const onPress = gone ? undefined : open;
   return (
     <Pressable
       testID={`interaction-${row.id}`}
-      accessibilityRole="button"
+      accessibilityRole={onPress ? "button" : undefined}
+      accessibilityState={gone ? { disabled: true } : undefined}
+      disabled={!onPress}
       onPress={onPress}
-      style={({ pressed }) => [styles.row, { paddingHorizontal: gutter, borderTopColor: t.hair, backgroundColor: t.s1 }, pressed && styles.pressed]}
+      style={({ pressed }) => [styles.row, { paddingHorizontal: gutter, borderTopColor: t.hair, backgroundColor: t.s1 }, pressed && styles.pressed, gone && styles.gone]}
     >
       <View style={styles.dotCol}>
         {row.unread ? (
@@ -164,6 +170,7 @@ export function useUnreadInteractions(): string | null {
 }
 
 const styles = StyleSheet.create({
+  gone: { opacity: 0.45 },
   fill: { flex: 1, minWidth: 0 },
   pressed: { opacity: 0.8 },
   pad: { paddingVertical: 16 },

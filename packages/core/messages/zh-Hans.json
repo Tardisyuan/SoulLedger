@@ -4065,8 +4065,7 @@
       "first_rejection_reason": "首次驳回理由",
       "appeal_rejection_reason": "申诉驳回理由",
       "not_recorded": "未记录",
-      "new_result": "新结果",
-      "gone": "这份申请已不存在。"
+      "new_result": "新结果"
     },
     "errors": {
       "invalid_credentials": "灵魂编号或密码错误",
@@ -4388,8 +4387,7 @@
         "hidden": "已隐藏 · 他人不可见",
         "hidden_note": "这条被殿司隐藏，只有你还看得到。",
         "comments": "评论 {{n}}",
-        "more": "更多",
-        "gone": "这条帖子已不存在。"
+        "more": "更多"
       },
       "screening": {
         "masked": "已发布。部分内容已被替换。",

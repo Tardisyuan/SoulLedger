@@ -11,7 +11,7 @@ import { Animated, Pressable, ScrollView, StyleSheet, View, type StyleProp, type
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { HIGHLIGHT_ALPHA, HIGHLIGHT_MS, isDenied } from "./rules";
-import { Button, GUTTER, Notice, Txt, family, space, useI18n, useReducedMotion, useTheme } from "./shared";
+import { Button, GUTTER, GoneState, Notice, Txt, family, space, useI18n, useReducedMotion, useTheme } from "./shared";
 
 // ── the four states ────────────────────────────────────────────────────
 
@@ -34,23 +34,12 @@ export function detailStateOf<T>(r: { data: T | null; error: unknown }): ViewSta
   return viewStateOf(r, () => false, () => false);
 }
 
-/** 「这条已经不在了」: a hollow dashed circle (not the error's solid mark), two lines, the way back. */
+/** 「这条已经不在了」: the shared `GoneState`, with the way back from `GoneContext`. */
 function GoneView() {
-  const t = useTheme();
-  const { t: tr } = useI18n();
   const gone = useContext(GoneContext);
   const onGone = gone?.onGone;
   useEffect(() => onGone?.(), [onGone]);
-  return (
-    <View testID="state-gone" style={styles.state}>
-      <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={[styles.goneMark, { borderColor: t.inkSubtle }]} />
-      <Txt variant="title" accessibilityRole="header">{tr("state.gone_title")}</Txt>
-      <Txt variant="body" tone="muted">
-        {tr("state.gone_body")}
-      </Txt>
-      {gone ? <Button testID="state-gone-back" kind="secondary" title={tr("state.gone_back", { from: gone.from })} onPress={gone.onBack} /> : null}
-    </View>
-  );
+  return <GoneState testID="state-gone" style={styles.state} from={gone?.from} onBack={gone?.onBack} />;
 }
 
 /** Five 72-high skeleton rows; `accessibilityState.busy` is the app's `aria-busy`. */
@@ -481,7 +470,6 @@ export function RefreshFailed({ data, error, onRetry }: { data: unknown; error: 
 const styles = StyleSheet.create({
   skeletonRow: { height: 72, justifyContent: "center", gap: space[3], paddingHorizontal: GUTTER, borderBottomWidth: 1 },
   state: { padding: GUTTER, gap: space[4] },
-  goneMark: { width: 40, height: 40, borderRadius: 20, borderWidth: 1.5, borderStyle: "dashed" },
   row: { flexDirection: "row", alignItems: "center", gap: space[3], paddingHorizontal: GUTTER, paddingVertical: space[3], borderBottomWidth: 1 },
   glyph: { width: 20, textAlign: "center", fontFamily: family.glyph },
   rowText: { flex: 1, gap: space[1] },

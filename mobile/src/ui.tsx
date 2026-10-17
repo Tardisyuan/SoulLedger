@@ -720,6 +720,30 @@ export function Empty({ text, testID }: { text: string; testID?: string }) {
 }
 
 /**
+ * 「这条已经不在了」(Design 第四十批 O-c, both apps): what a detail showed is deleted or no longer this account's
+ * to see (`fetchFailureOf` = `gone`). A hollow dashed circle (not the error's solid mark), two lines, and
+ * 「回到{from}」 when the screen knows where it came from. Nothing to retry, so no retry.
+ */
+export function GoneState({ from, onBack, testID, style }: { from?: string; onBack?: () => void; testID?: string; style?: StyleProp<ViewStyle> }) {
+  const t = useTheme();
+  const { t: tr } = useI18n();
+  return (
+    <View testID={testID} style={[styles.gone, style]}>
+      <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={[styles.goneMark, { borderColor: t.inkSubtle }]} />
+      <Txt variant="title" accessibilityRole="header">
+        {tr("state.gone_title")}
+      </Txt>
+      <Txt variant="body" tone="muted">
+        {tr("state.gone_body")}
+      </Txt>
+      {from && onBack ? (
+        <Button testID={testID ? `${testID}-back` : undefined} kind="secondary" title={tr("state.gone_back", { from })} onPress={onBack} />
+      ) : null}
+    </View>
+  );
+}
+
+/**
  * 文明气质 1e: the civilization's illustration over a WHOLE-PAGE empty state —
  * 书信, 朋友圈, 申请 (and the no-rebirth variant of 申请). One drawing per
  * civilization for all three; which page it is, the language bundle says. An
@@ -1497,6 +1521,8 @@ export const styles = StyleSheet.create({
   ledgerPlusOpen: { transform: [{ rotate: "45deg" }] },
   ledgerBody: { marginHorizontal: space[3], marginBottom: space[3], paddingHorizontal: space[4], paddingVertical: space[3], borderLeftWidth: 3 },
   empty: { alignItems: "center", gap: space[2], paddingVertical: space[4] },
+  gone: { gap: space[4] },
+  goneMark: { width: 40, height: 40, borderRadius: 20, borderWidth: 1.5, borderStyle: "dashed" },
   emptyArt: { alignSelf: "center", marginBottom: space[2] },
   divider: { flexDirection: "row", alignItems: "center", gap: space[3] },
   field: { gap: space[2] },
