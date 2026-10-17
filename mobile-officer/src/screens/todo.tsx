@@ -210,7 +210,7 @@ function OutboxRows({ onOpen }: { onOpen: (item: ItemRef) => void }) {
             lines={[t("officer_app.outbox.auto")]}
             right={
               <View testID={`outbox-pending-${entry.id}`} style={[styles.pending, { borderColor: theme.inkSubtle }]}>
-                <Txt variant="caption">{t("officer_app.outbox.pending")}</Txt>
+                <Txt variant="caption" numberOfLines={1}>{t("officer_app.outbox.pending")}</Txt>
               </View>
             }
             onPress={() => onOpen({ kind: "letter", id: entry.id })}
@@ -259,7 +259,8 @@ function TodoRow({ item, highlight, gone, onOpen }: { item: TodoItem; highlight:
   // 受刑计划变更: which kind of request (加项 / 减项 · 重开审判), in the desk's words.
   const requestKind = (item as TodoItemExtra).request_kind;
   const request = requestKind ? t(`sentence_plan.request_kinds.${requestKind}`) : null;
-  const lines = [tag, request, item.soul_code, item.node_name, formatWhen(item.created_at)].filter((x): x is string => !!x);
+  // S4: every line here is a label, an identifier or a time -- one line each, long-press for the whole.
+  const lines = [tag, request, item.soul_code, item.node_name, formatWhen(item.created_at)].filter((x): x is string => !!x).map((one) => ({ one }));
   return (
     <Row
       testID={`todo-row-${item.kind}-${item.id}`}

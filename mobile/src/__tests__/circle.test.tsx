@@ -14,6 +14,7 @@ import { State, type PanGesture } from "react-native-gesture-handler";
 import { fireGestureHandler, getByGestureTestId } from "react-native-gesture-handler/jest-utils";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
+import { clearGone } from "../gone";
 import { I18nProvider } from "../i18n";
 import { ToastProvider } from "../feedback";
 import { installMobilePlatform } from "../platform";
@@ -80,6 +81,7 @@ beforeEach(() => {
   mockSetOptions.mockReset();
   mockGoBack.mockReset();
   mockParams = undefined;
+  clearGone();
 });
 
 describe("feed", () => {
@@ -375,23 +377,59 @@ function comment(id: string, over: Record<string, unknown> = {}) {
 const MINE = { user_id: 1, display_name: "我", avatar: null, is_active: true };
 const sent = (calls: { method: string; url: string; body: unknown }[], method: string) => calls.filter((c) => c.method === method);
 
-describe("a post that no longer exists (audit 2026-10-17 #8)", () => {
-  it("404 says so, with no retry; any other failure keeps the retry", async () => {
+describe("a post that no longer exists (audit 2026-10-17 #8, 第四十批 O-c)", () => {
+  it("404 says so, with no retry, and 「回到…」 goes back; any other failure keeps the retry", async () => {
     stubApi({
       "GET /me/social/posts/p1/": { status: 404, data: { detail: "Not found." } },
       "/me/social/posts/p1/comments/": { status: 404, data: { detail: "Not found." } },
       "/me/social/status/": STATUS,
     });
     wrap(<PostScreen id="p1" />);
-    expect(await screen.findByTestId("post-gone")).toHaveTextContent("这条帖子已不存在。");
+    expect(await screen.findByTestId("post-gone")).toHaveTextContent("这条已经不在了");
+    expect(screen.getByText("可能已经删除，或者已经不在你能看的范围里。")).toBeTruthy();
     expect(screen.queryByTestId("post-error")).toBeNull();
     expect(screen.queryByText("重试")).toBeNull();
+    // No route under it here (the navigation is mocked): the post's own list, 朋友圈.
+    fireEvent.press(screen.getByTestId("post-gone-back"));
+    expect(screen.getByText("回到朋友圈")).toBeTruthy();
+    expect(mockGoBack).toHaveBeenCalledTimes(1);
 
     screen.unmount();
     stubApi({ "GET /me/social/posts/p1/": "offline", "/me/social/posts/p1/comments/": "offline", "/me/social/status/": STATUS });
     wrap(<PostScreen id="p1" />);
     expect(await screen.findByTestId("post-error")).toBeTruthy();
     expect(screen.queryByTestId("post-gone")).toBeNull();
+  });
+
+  it("403 is gone too: not 「没有权限」, which would say it still exists", async () => {
+    stubApi({
+      "GET /me/social/posts/p1/": { status: 403, data: { detail: "Forbidden." } },
+      "/me/social/posts/p1/comments/": { status: 403, data: { detail: "Forbidden." } },
+      "/me/social/status/": STATUS,
+    });
+    wrap(<PostScreen id="p1" />);
+    expect(await screen.findByTestId("post-gone")).toHaveTextContent("这条已经不在了");
+  });
+
+  it("back on the feed, the card it came from is greyed and opens nothing; the others still open", async () => {
+    stubApi({
+      "GET /me/social/posts/p1/": { status: 404, data: { detail: "Not found." } },
+      "/me/social/posts/p1/comments/": { status: 404, data: { detail: "Not found." } },
+      "/me/social/status/": STATUS,
+      "/me/social/feed/": page([post(), post({ id: "p2" })]),
+    });
+    wrap(<PostScreen id="p1" />);
+    await screen.findByTestId("post-gone");
+    screen.unmount();
+
+    wrap(<CircleScreen />);
+    const card = await screen.findByTestId("post-p1");
+    expect(StyleSheet.flatten(card.props.style)).toMatchObject({ opacity: 0.45 });
+    fireEvent.press(card);
+    expect(mockNavigate).not.toHaveBeenCalled();
+    fireEvent.press(screen.getByTestId("post-p2"));
+    expect(mockNavigate).toHaveBeenCalledWith("CirclePost", { id: "p2" });
+    expect(StyleSheet.flatten(screen.getByTestId("post-p2").props.style)).not.toMatchObject({ opacity: 0.45 });
   });
 });
 

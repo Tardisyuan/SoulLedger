@@ -8,7 +8,7 @@ import { useState } from "react";
 import { Linking, Pressable, View } from "react-native";
 
 import { LetterImageViewer } from "./screens/letterImages";
-import { Txt, space, useI18n, useOnline, useTheme, useToast } from "./shared";
+import { OneLine, Txt, space, useI18n, useOnline, useTheme, useToast } from "./shared";
 import { isPdf, sizeText } from "./todoFacts";
 
 export type AttachmentItem = {
@@ -72,7 +72,7 @@ export function AttachmentList({ items, resolve }: { items: readonly AttachmentI
           >
             <View style={{ flex: 1, gap: space[1] }}>
               <Txt variant="body" numberOfLines={1}>{a.name}</Txt>
-              <Txt variant="caption" tone="muted">{second}</Txt>
+              <OneLine variant="caption" tone="muted" onPress={blocked ? undefined : () => open(a)}>{second}</OneLine>
             </View>
             <Txt variant="nav">{pdf ? "↗︎" : "›"}</Txt>
           </Pressable>

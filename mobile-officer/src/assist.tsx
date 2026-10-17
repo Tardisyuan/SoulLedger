@@ -24,7 +24,7 @@ import { AccessibilityInfo, Pressable, ScrollView, StyleSheet, View, useWindowDi
 
 import { ActionButton, type TabKey } from "./kit";
 import { useSession } from "./session";
-import { Button, Input, Loader, Notice, SectionLabel, Sheet, Txt, space, useI18n, useTheme } from "./shared";
+import { Button, Input, Loader, Notice, OneLine, SectionLabel, Sheet, Txt, space, useI18n, useTheme } from "./shared";
 
 /**
  * Each tab as a page the backend knows (`OFFICER_SCREENS`). 待办 → `workflow`: its first and main
@@ -288,13 +288,11 @@ function Chat({ assist, tab, onClose }: { assist: OfficerAssist; tab: TabKey; on
         {failure ? <Notice tone="neg" testID="ask-failure">{failure}</Notice> : null}
       </ScrollView>
       <View style={styles.composer}>
-        {/* The sheet's title already says 问一问: the field's label is for screen readers only (Design 第四十批 第四节 1).
-            The shared Input has no hidden-label option yet (it lives in mobile/, not touched here), so the visible
-            label is empty and the words ride on the TextInput itself. */}
+        {/* The sheet's title already says 问一问: the field's label is for screen readers only (Design 第四十批 第四节 1). */}
         <Input
           testID="ask-input"
-          label=""
-          accessibilityLabel={t("officer_assist.title")}
+          label={t("officer_assist.title")}
+          labelHidden
           placeholder={t(resumed ? "officer_app.assist.continue_placeholder" : "officer_assist.placeholder")}
           value={draft}
           onChangeText={setDraft}
@@ -393,7 +391,7 @@ function History({ assist }: { assist: OfficerAssist }) {
     return (
       <View key={c.id} testID={`assist-row-${c.id}`} style={[styles.historyRow, { borderBottomColor: theme.hair }]}>
         <Pressable accessibilityRole="button" onPress={() => openOne(c.id)} style={[styles.grow, { gap: space[1], paddingVertical: space[3] }]}>
-          <Txt variant="caption" tone="muted">{`${pageName(c.screen)} · ${when}`}</Txt>
+          <OneLine variant="caption" tone="muted" onPress={() => openOne(c.id)}>{`${pageName(c.screen)} · ${when}`}</OneLine>
           <Txt variant="body" numberOfLines={2}>
             {c.first_question}
           </Txt>

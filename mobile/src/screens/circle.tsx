@@ -14,7 +14,8 @@
  *
  * Profiles, my page, search and report are in ./circlePeople.
  */
-import { soulErrorCode, soulErrorMessage, soulErrorStatus } from "@soulledger/core/api/soul";
+import { fetchFailureOf } from "@soulledger/core/api/client";
+import { soulErrorCode, soulErrorMessage } from "@soulledger/core/api/soul";
 import {
   soulSocialApi,
   type SoulComment,
@@ -35,13 +36,13 @@ import { AppHeader } from "../chrome";
 import { useCommittedSend } from "../composing";
 import { Icon } from "../emblems";
 import { Sheet, useToast } from "../feedback";
+import { GoneScreen, useGone } from "../gone";
 import { quoteFamily } from "../fonts";
 import { useI18n } from "../i18n";
 import { formatStamp, TAG_GLYPH } from "../rules";
 import { radius } from "../theme";
 import {
   Button,
-  Empty,
   Interp,
   LandingWash,
   Notice,
@@ -201,7 +202,21 @@ export function MutedLock({ until, testID = "muted-lock" }: { until: string | nu
   );
 }
 
-export function PostCard({ post, onPress, onAuthor, full }: { post: SoulPost; onPress?: () => void; onAuthor?: () => void; full?: boolean }) {
+/** `gone`: the post turned out to be gone when opened (O-c) -- greyed, and the card opens nothing. */
+export function PostCard({
+  post,
+  onPress: open,
+  onAuthor,
+  full,
+  gone,
+}: {
+  post: SoulPost;
+  onPress?: () => void;
+  onAuthor?: () => void;
+  full?: boolean;
+  gone?: boolean;
+}) {
+  const onPress = gone ? undefined : open;
   const t = useTheme();
   const { t: tr } = useI18n();
   const { gutter } = useLayout();
@@ -270,7 +285,7 @@ export function PostCard({ post, onPress, onAuthor, full }: { post: SoulPost; on
       </View>
     </>
   );
-  const style = [styles.card, { paddingHorizontal: gutter, borderBottomColor: t.hair }];
+  const style = [styles.card, { paddingHorizontal: gutter, borderBottomColor: t.hair }, gone && styles.gone];
   return onPress ? (
     <Pressable testID={`post-${post.id}`} accessibilityRole="button" onPress={onPress} style={({ pressed }) => [style, pressed && { backgroundColor: t.s1 }]}>
       {body}
@@ -425,6 +440,7 @@ export function PostList({
   const { t: tr } = useI18n();
   const { gutter } = useLayout();
   const navigation = useNavigation<Nav>();
+  const gone = useGone();
   const pull = usePullRefresh(refreshing, onRefresh);
   return (
     <View style={styles.fill}>
@@ -433,7 +449,10 @@ export function PostList({
         testID={testID}
         data={feed.posts ?? []}
         keyExtractor={rowKey}
-        renderItem={({ item: p }) => <PostCard post={p} onPress={() => navigation.navigate("CirclePost", { id: p.id })} onAuthor={noop} />}
+        extraData={gone}
+        renderItem={({ item: p }) => (
+          <PostCard post={p} gone={gone.has(`post:${p.id}`)} onPress={() => navigation.navigate("CirclePost", { id: p.id })} onAuthor={noop} />
+        )}
         ListHeaderComponent={header}
         ListEmptyComponent={
           feed.posts ? null : (
@@ -473,6 +492,7 @@ export function CircleScreen() {
   const { t: tr } = useI18n();
   const { gutter } = useLayout();
   const navigation = useNavigation<Nav>();
+  const gone = useGone();
   const route = useRoute<RouteProp<{ Circle: { pendingId?: string } | undefined }, "Circle">>();
   const [following, setFollowing] = useState(true);
   const feed = useFeed({ following });
@@ -560,8 +580,14 @@ export function CircleScreen() {
         testID="circle-list"
         data={feed.posts ?? []}
         keyExtractor={rowKey}
+        extraData={gone}
         renderItem={({ item: p }) => (
-          <PostCard post={p} onPress={() => navigation.navigate("CirclePost", { id: p.id })} onAuthor={() => openSoul(p.author, p.is_mine)} />
+          <PostCard
+            post={p}
+            gone={gone.has(`post:${p.id}`)}
+            onPress={() => navigation.navigate("CirclePost", { id: p.id })}
+            onAuthor={() => openSoul(p.author, p.is_mine)}
+          />
         )}
         ListHeaderComponent={header}
         ListEmptyComponent={empty}
@@ -1050,8 +1076,8 @@ export function PostScreen({ id, comment }: { id: string; comment?: string }) {
       <Screen scroll={false} edges={["left", "right"]}>
         <View style={[styles.pad, { paddingHorizontal: gutter }]}>
           {/* Deleted by its author or taken down (e.g. opened from a notification): a retry would never succeed. */}
-          {soulErrorStatus(post.error) === 404 ? (
-            <Empty testID="post-gone" text={tr("soul_app.circle.post.gone")} />
+          {fetchFailureOf(post.error) === "gone" ? (
+            <GoneScreen testID="post-gone" goneKey={`post:${id}`} fallback="soul_app.circle.tab" />
           ) : (
             <Notice tone="neg" onRetry={() => void post.reload()} testID="post-error">
               {tr(soulErrorMessage(post.error).key, soulErrorMessage(post.error).params)}
@@ -1184,6 +1210,7 @@ export function PostScreen({ id, comment }: { id: string; comment?: string }) {
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
+  gone: { opacity: 0.45 },
   center: { textAlign: "center" },
   noSpacing: { letterSpacing: 0 },
   pad: { paddingVertical: 24 },

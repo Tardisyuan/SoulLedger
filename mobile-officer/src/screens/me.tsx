@@ -11,7 +11,7 @@ import { type ThemeChoice, usePrefs } from "../prefs";
 import { permission, registerDevice, requestPermission, unregisterDevice, hasRegisteredDevice, type Permission } from "../push";
 import { hallLabel, mutedCount } from "../rules";
 import { needsMfaSetup, useSession } from "../session";
-import { Notice, Screen, SectionLabel, SmallButton, Txt, space, translate, useI18n, useRemote, useToast } from "../shared";
+import { Notice, OneLine, Screen, SectionLabel, SmallButton, Txt, space, translate, useI18n, useRemote, useToast } from "../shared";
 
 export type AccountScreen = "password" | "mfa" | "devices" | "notify" | "name";
 
@@ -53,9 +53,10 @@ export function MeTab({ onOpen }: { onOpen: (screen: AccountScreen) => void }) {
             right={
               // A long name is cut to one line and never takes more than 60 % of the row, so 「姓名」 stays.
               <View style={{ flexDirection: "row", alignItems: "center", flexShrink: 1, maxWidth: "60%" }}>
-                <Txt testID="me-name-value" variant="bodyLg" numberOfLines={1} style={{ flexShrink: 1 }}>
+                {/* S4: one line, long-press for the whole name; the row's press rides on it (a long press takes the touch). */}
+                <OneLine testID="me-name-value" variant="bodyLg" style={{ flexShrink: 1 }} onPress={() => onOpen("name")}>
                   {user.display_name || user.username}
-                </Txt>
+                </OneLine>
                 <Txt variant="bodyLg">{"  ›"}</Txt>
               </View>
             }
@@ -117,12 +118,8 @@ export function MeTab({ onOpen }: { onOpen: (screen: AccountScreen) => void }) {
             minHeight={56}
             title={t("officer_app.me.notify_categories")}
             onPress={() => onOpen("notify")}
-            right={
-              <Txt variant="caption" tone="muted">
-                {prefs.data ? (muted > 0 ? t("officer_app.me.muted_count", { n: String(muted) }) : t("officer_app.me.muted_none")) : ""}
-                {"  ›"}
-              </Txt>
-            }
+            value={prefs.data ? (muted > 0 ? t("officer_app.me.muted_count", { n: String(muted) }) : t("officer_app.me.muted_none")) : undefined}
+            right={<Txt variant="nav">›</Txt>}
           />
         </Block>
 

@@ -4,6 +4,7 @@ import { useState, type ReactNode } from "react";
 import { StyleSheet } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
+import { clearGone } from "../gone";
 import { I18nProvider } from "../i18n";
 import { installMobilePlatform } from "../platform";
 import { ApplicationDetailScreen, ApplicationsScreen } from "../screens/applications";
@@ -29,6 +30,7 @@ function wrap(children: ReactNode) {
 beforeEach(() => {
   installMobilePlatform();
   mockNavigate.mockReset();
+  clearGone();
 });
 
 /** The section as the life page holds it: closed until toggled (the page owns which sections are open). */
@@ -148,11 +150,34 @@ describe("application detail", () => {
     expect(StyleSheet.flatten(screen.getByTestId("status-badge-slot").props.style)).toMatchObject({ flexShrink: 0 });
   });
 
-  it("a 404 says the application no longer exists, with no retry (audit 2026-10-17 #8)", async () => {
+  it("a 404 says it is no longer there, with no retry and the way back (audit 2026-10-17 #8, 第四十批 O-c)", async () => {
     stubApi({ "/me/rebirth-applications/a1/": { status: 404, data: { detail: "Not found." } } });
     wrap(<ApplicationDetailScreen id="a1" />);
-    expect(await screen.findByTestId("application-gone")).toHaveTextContent("这份申请已不存在。");
+    expect(await screen.findByTestId("application-gone")).toHaveTextContent("这条已经不在了");
+    expect(screen.getByTestId("application-gone-back")).toHaveTextContent("回到转生申请");
     expect(screen.queryByText("重试")).toBeNull();
+    expect(screen.queryByText("这份申请已不存在。")).toBeNull();
+  });
+
+  it("back on the list, that application's row is greyed and opens nothing", async () => {
+    stubApi({
+      "/me/rebirth-applications/a1/": { status: 404, data: { detail: "Not found." } },
+      "/me/rebirth-applications/": {
+        status: 200,
+        data: { can_apply: false, reason: "application_open", cooldown_until: null, results: [application(), application({ id: "a2" })] },
+      },
+    });
+    wrap(<ApplicationDetailScreen id="a1" />);
+    await screen.findByTestId("application-gone");
+    screen.unmount();
+
+    wrap(<ApplicationsScreen />);
+    const row = await screen.findByTestId("open-a1");
+    expect(row.props.accessibilityState).toMatchObject({ disabled: true });
+    fireEvent.press(row);
+    expect(mockNavigate).not.toHaveBeenCalled();
+    fireEvent.press(screen.getByTestId("open-a2"));
+    expect(mockNavigate).toHaveBeenCalledWith("ApplicationDetail", { id: "a2" });
   });
 
   it("offers the appeal only when can_appeal, and shows the rejection reason", async () => {

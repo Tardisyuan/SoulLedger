@@ -108,7 +108,7 @@ export function LoginScreen({ hint }: { hint?: LoginHint | null } = {}) {
             <Txt variant="body" tone="muted">{t("officer_app.login.hall_body")}</Txt>
             <View>
               {step.halls.map((hall) => (
-                <Row key={hall.code} testID={`hall-${hall.code}`} minHeight={64} strong title={hall.display_name} lines={[hall.code]} onPress={busy ? undefined : () => void submit(hall.code)} />
+                <Row key={hall.code} testID={`hall-${hall.code}`} minHeight={64} strong title={hall.display_name} lines={[{ one: hall.code }]} onPress={busy ? undefined : () => void submit(hall.code)} />
               ))}
             </View>
             <ActionButton kind="outline" title={t("soul_app.common.cancel")} onPress={() => { setStep({ name: "credentials" }); setFailure(null); }} />

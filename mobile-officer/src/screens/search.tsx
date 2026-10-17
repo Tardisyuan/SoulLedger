@@ -107,7 +107,7 @@ function SoulLookup({ onOpen, onOpenJudgment }: { onOpen: (id: string) => void; 
             testID={`soul-row-${soul.id}`}
             strong
             title={soul.name}
-            lines={[stateLabel(enumLabel("souls.states", soul.current_state), soul.current_state)]}
+            lines={[{ one: stateLabel(enumLabel("souls.states", soul.current_state), soul.current_state) }]}
             onPress={() => onOpen(soul.id)}
             right={<Txt tone="muted">›</Txt>}
           />

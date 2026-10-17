@@ -4,18 +4,19 @@ import {
   soulApi,
   soulCodeMessage,
   soulErrorMessage,
-  soulErrorStatus,
   type DesiredRebirthForm,
   type MeRebirthApplication,
   type MeRebirthApplicationList,
   type SoulErrorMessage,
 } from "@soulledger/core/api/soul";
+import { fetchFailureOf } from "@soulledger/core/api/client";
 import { useNavigation, type NavigationProp } from "@react-navigation/native";
 import { useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import { Animated, Pressable, StyleSheet, View } from "react-native";
 
 import { Icon } from "../emblems";
 import { useToast } from "../feedback";
+import { GoneScreen, useGone } from "../gone";
 import { useI18n } from "../i18n";
 import { APPLICATION_BADGES, buildFlow, formatStamp, lexiconKey, wasAppealed, type FlowStep } from "../rules";
 import { SessionContext } from "../session";
@@ -26,7 +27,6 @@ import {
   Button,
   DataRow,
   DataRows,
-  Empty,
   EnumBadge,
   EnumValue,
   FadeIn,
@@ -200,22 +200,26 @@ export function EligibilityCard({
   );
 }
 
-function ApplicationRow({ a, onOpen }: { a: MeRebirthApplication; onOpen: () => void }) {
+/** `gone`: its detail turned out to be gone (O-c) -- greyed, and it opens nothing. */
+function ApplicationRow({ a, onOpen, gone }: { a: MeRebirthApplication; onOpen: () => void; gone?: boolean }) {
   const theme = useTheme();
   const { gutter } = useLayout();
+  const press = gone ? undefined : onOpen;
   return (
     <Pressable
       testID={`open-${a.id}`}
-      accessibilityRole="button"
-      onPress={onOpen}
-      style={({ pressed }) => [styles.appRow, { paddingHorizontal: gutter, borderBottomColor: theme.hair }, pressed && styles.pressed]}
+      accessibilityRole={press ? "button" : undefined}
+      accessibilityState={gone ? { disabled: true } : undefined}
+      disabled={!press}
+      onPress={press}
+      style={({ pressed }) => [styles.appRow, { paddingHorizontal: gutter, borderBottomColor: theme.hair }, pressed && styles.pressed, gone && styles.gone]}
     >
       <View style={styles.fill}>
         <EnumBadge namespace="soul_app.status" table={APPLICATION_BADGES} value={a.status} />
         <View style={styles.gap10}>
           <EnumValue namespace="reincarnation.forms" value={a.desired_form} tone="ink" variant="bodyLg" />
         </View>
-        <OneLine variant="value" tone="subtle" style={styles.gap4} onPress={onOpen}>
+        <OneLine variant="value" tone="subtle" style={styles.gap4} onPress={press}>
           {formatStamp(a.created_at) ?? ""}
         </OneLine>
       </View>
@@ -259,6 +263,7 @@ function ResidenceNote() {
 export function ApplicationsScreen({ landed }: { landed?: boolean } = {}) {
   const { t } = useI18n();
   const navigation = useNavigation<NavigationProp<AppStackParams>>();
+  const gone = useGone();
   const list = useRemote(soulApi.applications);
   useReloadOnRefocus(list.reload);
   // Siri's 「冷却还剩几天」 reads this number back (voiceCache.ts). Every fresh fetch re-stamps it.
@@ -295,7 +300,12 @@ export function ApplicationsScreen({ landed }: { landed?: boolean } = {}) {
             )
           ) : null}
           {list.data.results.map((a) => (
-            <ApplicationRow key={a.id} a={a} onOpen={() => navigation.navigate("ApplicationDetail", { id: a.id })} />
+            <ApplicationRow
+              key={a.id}
+              a={a}
+              gone={gone.has(`application:${a.id}`)}
+              onOpen={() => navigation.navigate("ApplicationDetail", { id: a.id })}
+            />
           ))}
         </FadeIn>
       )}
@@ -529,8 +539,8 @@ export function ApplicationDetailScreen({ id, landed }: { id: string; landed?: b
     return (
       <Screen scroll={false}>
         {/* Gone (withdrawn, or not this soul's): retrying would never succeed. */}
-        {soulErrorStatus(app.error) === 404 ? (
-          <Empty testID="application-gone" text={t("soul_app.detail.gone")} />
+        {fetchFailureOf(app.error) === "gone" ? (
+          <GoneScreen testID="application-gone" goneKey={`application:${id}`} fallback="soul_app.tabs.applications" />
         ) : (
           <ScreenError error={soulErrorMessage(app.error)} onRetry={app.reload} />
         )}
@@ -710,6 +720,7 @@ export function ApplicationDetailScreen({ id, landed }: { id: string; landed?: b
 const styles = StyleSheet.create({
   fill: { flex: 1 },
   pressed: { opacity: 0.8 },
+  gone: { opacity: 0.45 },
   gap4: { marginTop: 4 },
   gap10: { marginTop: 12 },
   /** A11 panel: radius 8 (`radius.dialog`), 16 inside, 12 between the eligibility items. */

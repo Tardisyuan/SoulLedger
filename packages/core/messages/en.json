@@ -4065,8 +4065,7 @@
       "first_rejection_reason": "First rejection",
       "appeal_rejection_reason": "Appeal rejected because",
       "not_recorded": "Not recorded",
-      "new_result": "New result",
-      "gone": "This application no longer exists."
+      "new_result": "New result"
     },
     "errors": {
       "invalid_credentials": "Wrong soul code or password",
@@ -4388,8 +4387,7 @@
         "hidden": "Hidden · others cannot see it",
         "hidden_note": "The hall hid this; only you can still see it.",
         "comments": "{{n}} comments",
-        "more": "More",
-        "gone": "This post no longer exists."
+        "more": "More"
       },
       "screening": {
         "masked": "Published. Some of the text was replaced.",
