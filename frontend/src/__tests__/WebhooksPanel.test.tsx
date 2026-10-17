@@ -30,6 +30,8 @@ jest.mock("@soulledger/core/api", () => ({
     updateWebhook: jest.fn(),
     disableWebhook: jest.fn(),
     webhookDeliveries: jest.fn(),
+    testWebhook: jest.fn(),
+    redeliverWebhook: jest.fn(),
   },
 }));
 const { deathSyncApi } = jest.requireMock("@soulledger/core/api") as { deathSyncApi: Record<string, jest.Mock> };
@@ -277,5 +279,45 @@ describe("deliveries", () => {
     fireEvent.click(screen.getByRole("button", { name: tZh("death_sync.webhooks.all_deliveries") }));
     await screen.findByText(tZh("death_sync.webhooks.deliveries"), { selector: "h2, h3" });
     expect(deathSyncApi.webhookDeliveries).toHaveBeenLastCalledWith({ page: "1" });
+  });
+});
+
+describe("test event and redeliver (审计 2026-10-17 第 14 条)", () => {
+  it("发测试事件 is on active rows only, POSTs for that webhook, and narrows the log to it", async () => {
+    deathSyncApi.testWebhook.mockResolvedValue({ data: delivery({ id: "d9", event_type: "WEBHOOK_TEST", status: "PENDING" }) });
+    renderRoute();
+    await screen.findByText("市立医院");
+    const rowOf = (text: string) => screen.getAllByRole("row").find((r) => within(r).queryByText(text))!;
+    const label = tZh("death_sync.webhooks.send_test");
+    // 停用的那一行没有这个按钮。
+    expect(within(rowOf("https://hooks.example.org/old")).queryByRole("button", { name: label })).toBeNull();
+    deathSyncApi.webhookDeliveries.mockResolvedValue(
+      page([delivery({ id: "d9", event_type: "WEBHOOK_TEST", status: "PENDING", attempt: 0, response_status: null, error: "" })])
+    );
+    fireEvent.click(within(rowOf("市立医院")).getByRole("button", { name: label }));
+    await waitFor(() => expect(deathSyncApi.testWebhook).toHaveBeenCalledWith("w1"));
+    expect(mockShowToast).toHaveBeenCalledWith(tZh("death_sync.webhooks.test_sent"), "success");
+    await waitFor(() => expect(deathSyncApi.webhookDeliveries).toHaveBeenCalledWith({ page: "1", webhook: "w1" }));
+    // 测试事件不是 EventType:按它自己的词显示,不露出 WEBHOOK_TEST。
+    expect(await screen.findByText(tZh("death_sync.webhooks.test_event"))).toBeInTheDocument();
+  });
+
+  it("重投 shows on failed rows only; a still-retrying row is refused with its own message", async () => {
+    deathSyncApi.redeliverWebhook.mockRejectedValueOnce({ response: { status: 409, data: { code: "not_finished" } } });
+    renderRoute();
+    await screen.findByText("RuntimeError: HTTP 502");
+    const label = tZh("death_sync.webhooks.redeliver");
+    expect(screen.getAllByRole("button", { name: label })).toHaveLength(1); // 成功的那一行没有
+    fireEvent.click(screen.getByRole("button", { name: label }));
+    await waitFor(() => expect(deathSyncApi.redeliverWebhook).toHaveBeenCalledWith("d1"));
+    await waitFor(() =>
+      expect(mockShowToast).toHaveBeenCalledWith(tZh("death_sync.webhooks.redeliver_not_finished"), "error")
+    );
+
+    deathSyncApi.redeliverWebhook.mockResolvedValueOnce({ data: delivery({ id: "d10", status: "PENDING" }) });
+    const calls = deathSyncApi.webhookDeliveries.mock.calls.length;
+    fireEvent.click(screen.getByRole("button", { name: label }));
+    await waitFor(() => expect(mockShowToast).toHaveBeenCalledWith(tZh("death_sync.webhooks.redelivered"), "success"));
+    await waitFor(() => expect(deathSyncApi.webhookDeliveries.mock.calls.length).toBeGreaterThan(calls));
   });
 });

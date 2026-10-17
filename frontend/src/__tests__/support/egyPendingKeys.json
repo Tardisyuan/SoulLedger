@@ -74,5 +74,14 @@
   "crossJudgments.filter.side_participating",
   "death_sync.filter.search",
   "death_sync.filter.from",
-  "death_sync.filter.to"
+  "death_sync.filter.to",
+  "death_sync.webhooks.send_test",
+  "death_sync.webhooks.test_sent",
+  "death_sync.webhooks.test_failed",
+  "death_sync.webhooks.inactive",
+  "death_sync.webhooks.test_event",
+  "death_sync.webhooks.redeliver",
+  "death_sync.webhooks.redelivered",
+  "death_sync.webhooks.redeliver_not_finished",
+  "death_sync.webhooks.redeliver_failed"
 ]

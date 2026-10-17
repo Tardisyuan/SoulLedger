@@ -3070,7 +3070,16 @@
           "FAILED": "Failed",
           "ABANDONED": "Abandoned"
         }
-      }
+      },
+      "send_test": "Send test event",
+      "test_sent": "Test event queued; see the delivery log below",
+      "test_failed": "Could not send the test event",
+      "inactive": "This webhook is disabled",
+      "test_event": "Test event",
+      "redeliver": "Redeliver",
+      "redelivered": "Queued for delivery again",
+      "redeliver_not_finished": "This delivery is still being retried; redeliver once it has given up",
+      "redeliver_failed": "Could not redeliver"
     },
     "error": {
       "SOUL_NOT_FOUND": "No matching soul",

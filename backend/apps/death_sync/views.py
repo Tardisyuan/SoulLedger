@@ -517,13 +517,54 @@ class AdminWebhookViewSet(
         """
         return Response(EventType.values)
 
+    @extend_schema(request=None, responses={201: EventWebhookDeliverySerializer, 409: OpenApiTypes.OBJECT})
+    @action(detail=True, methods=["post"], url_path="test")
+    def send_test(self, request, pk=None):
+        """发一条测试事件(`WEBHOOK_TEST`)到这个端点(审计 2026-10-17 第 14 条)。
+
+        走与真事件同一条路:写一行投递记录、提交后入队、worker 签名发出、失败照常重试。不看订阅的事件清单 ——
+        测的是「这个地址收得到、验得过签名」。停用的 webhook 409 `webhook_inactive`。
+        """
+        webhook = self.get_object()
+        if not webhook.is_active:
+            return Response({"error": "Webhook is disabled", "code": "webhook_inactive"},
+                            status=status.HTTP_409_CONFLICT)
+        delivery = _record_and_enqueue(
+            webhook, domain="webhook", event_type=WEBHOOK_TEST_EVENT,
+            payload_json={
+                "event_type": WEBHOOK_TEST_EVENT, "domain": "webhook",
+                "tenant_code": webhook.tenant.code if webhook.tenant_id else None,
+                "actor": "system", "payload": {"test": True, "webhook_id": str(webhook.pk)},
+            },
+        )
+        return Response(EventWebhookDeliverySerializer(delivery, context=self.get_serializer_context()).data,
+                        status=status.HTTP_201_CREATED)
+
+
+#: 「发测试事件」的事件名。不是 `EventType` 的成员:没有业务发布它,订阅清单里也不出现。
+WEBHOOK_TEST_EVENT = "WEBHOOK_TEST"
+
+
+def _record_and_enqueue(webhook, *, domain, event_type, payload_json):
+    """手动发起的一条投递:与 `WebhookHandler` 同样先写行、提交后入队(入队失败留在 PENDING,兜底任务会捡)。"""
+    from django.db import transaction
+
+    from apps.events.handlers.webhook_handler import WebhookHandler
+
+    delivery = EventWebhookDelivery.objects.create(
+        webhook=webhook, tenant_id=webhook.tenant_id, domain=domain, event_type=event_type, payload_json=payload_json,
+    )
+    transaction.on_commit(lambda: WebhookHandler._enqueue([str(delivery.id)]))
+    return delivery
+
 
 class AdminWebhookDeliveryViewSet(viewsets.ReadOnlyModelViewSet):
     """`EventWebhookDelivery` rows for this tenant's webhooks (JWT, ADMIN only).
 
     Newest first (model ordering), paginated, filterable by `webhook`,
     `status` and `event_type`. Read-only: a delivery's status is written by
-    the worker (`apps/events/tasks.py`) and by nothing else.
+    the worker (`apps/events/tasks.py`) and by nothing else — `redeliver`
+    writes a new row and leaves the old one as it was.
 
     Scoped through `webhook__tenant` rather than the row's own nullable
     `tenant`: the webhook is the thing an operator manages, and a row whose
@@ -537,6 +578,34 @@ class AdminWebhookDeliveryViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         return scope_to_tenant(super().get_queryset(), self.request, field="webhook__tenant")
+
+    @extend_schema(request=None, responses={201: EventWebhookDeliverySerializer, 409: OpenApiTypes.OBJECT})
+    @action(detail=True, methods=["post"])
+    def redeliver(self, request, pk=None):
+        """把一条失败的投递再发一次(审计 2026-10-17 第 14 条)。
+
+        新写一行(同一份 payload 快照,与原来的事件名),原行原样留着当记录 —— 不改写它的次数与错误。
+        只收**不会再自动重试**的行:ABANDONED,或 FAILED 且次数已到上限(`attempt_ceiling`);
+        还在重试的 409 `not_finished`(再发一份就是重复投递),成功或待发的同样 409。
+        webhook 已停用 409 `webhook_inactive`。
+        """
+        from apps.events.models import EventWebhookStatus
+        from apps.events.tasks import attempt_ceiling
+
+        original = self.get_object()
+        webhook = original.webhook
+        if not webhook.is_active:
+            return Response({"error": "Webhook is disabled", "code": "webhook_inactive"},
+                            status=status.HTTP_409_CONFLICT)
+        finished = original.status == EventWebhookStatus.ABANDONED or (
+            original.status == EventWebhookStatus.FAILED and original.attempt >= attempt_ceiling(webhook))
+        if not finished:
+            return Response({"error": "Delivery is not a finished failure", "code": "not_finished"},
+                            status=status.HTTP_409_CONFLICT)
+        delivery = _record_and_enqueue(
+            webhook, domain=original.domain, event_type=original.event_type, payload_json=original.payload_json,
+        )
+        return Response(self.get_serializer(delivery).data, status=status.HTTP_201_CREATED)
 
 
 class DeathSyncHealthView(APIView):

@@ -3070,7 +3070,16 @@
           "FAILED": "失败",
           "ABANDONED": "已放弃"
         }
-      }
+      },
+      "send_test": "发测试事件",
+      "test_sent": "测试事件已排入投递，结果见下方投递记录",
+      "test_failed": "测试事件没能发起",
+      "inactive": "这个 Webhook 已停用",
+      "test_event": "测试事件",
+      "redeliver": "重投",
+      "redelivered": "已重新排入投递",
+      "redeliver_not_finished": "这条投递还在自动重试，等它放弃后再重投",
+      "redeliver_failed": "重投没能发起"
     },
     "error": {
       "SOUL_NOT_FOUND": "查无此魂",
