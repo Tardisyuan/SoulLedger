@@ -67,5 +67,9 @@
   "sentence_plan.filter.search",
   "sentence_plan.filter.status",
   "sentence_plan.filter.awaiting_redispatch",
-  "sentence_plan.filter.pending_request"
+  "sentence_plan.filter.pending_request",
+  "crossJudgments.filter.search",
+  "crossJudgments.filter.side",
+  "crossJudgments.filter.side_initiated",
+  "crossJudgments.filter.side_participating"
 ]

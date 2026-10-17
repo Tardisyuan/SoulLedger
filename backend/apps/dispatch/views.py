@@ -15,7 +15,7 @@ from apps.core.permissions import CodenamePermission
 from apps.core.request_local import clear_current_user, set_current_request, set_current_user
 from apps.core.tenant import is_tenant_exempt
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
-from apps.dispatch.filters import DispatchFilter
+from apps.dispatch.filters import CrossTenantJudgmentFilter, DispatchFilter
 from apps.dispatch.models import (
     CrossTenantJudgment,
     CrossTenantJudgmentParticipant,
@@ -717,7 +717,8 @@ class CrossTenantJudgmentViewSet(AuditUserViewSetMixin, CodenameViewSetMixin,
         "initiating_tenant"
     ).prefetch_related(_participants_with_names()).all()
     serializer_class = CrossTenantJudgmentSerializer
-    filterset_class = None  # Cross-tenant queries use Q-filter expansion, not standard filtering
+    # 行的范围由 `get_queryset` 的 Q 展开定(发起方或参与方);筛选只在那之内再分(状态 / 我方发起或参与 / 标题)。
+    filterset_class = CrossTenantJudgmentFilter
     ordering_fields = ["create_time", "status"]
     # pagination_class = None  # Removed: paginate to prevent large payloads
 

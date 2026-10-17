@@ -2591,7 +2591,13 @@
     "case_title": "标题",
     "status_label": "状态",
     "original_judgment": "原审判",
-    "original_soul": "灵魂"
+    "original_soul": "灵魂",
+    "filter": {
+      "search": "搜索标题",
+      "side": "我方",
+      "side_initiated": "我方发起",
+      "side_participating": "我方参与"
+    }
   },
   "users": {
     "title": "用户管理",
