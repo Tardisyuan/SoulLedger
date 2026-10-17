@@ -223,3 +223,29 @@ def test_the_soul_events_entry_sits_under_souls_for_every_officer(cn_tenant):
     )
     for role in ("ADMIN", "JUDGE", "GUARDIAN", "VIEWER"):
         assert "灵魂事件" in _seen_by(role, cn_tenant), role
+
+
+def test_0024_round_trip_adds_and_removes_the_sentence_plans_entry(migration_round_trip):
+    def check_forward(apps):
+        rows = _snapshot(apps)
+        assert rows["MENU:/sentence-plans"] == {
+            "name": "受刑计划", "order": 34, "visible": True, "roles": ["ADMIN", "JUDGE"], "parent": "灵魂业务",
+        }
+
+    migration_round_trip(
+        before=("menus", "0023_b37_add_soul_events_menu"),
+        after=("menus", "0024_add_sentence_plans_menu"),
+        seed=_directories_and_a_customised_souls,
+        snapshot=_snapshot,
+        check_forward=check_forward,
+    )
+
+
+def test_the_sentence_plans_entry_is_for_whoever_reads_judgments(cn_tenant):
+    seeded_menus()
+    row = Menu.objects.get(path="/sentence-plans", is_deleted=False)
+    assert (row.name, row.parent.name, row.permission, row.icon, row.order) == (
+        "受刑计划", "灵魂业务", "judgment.read", "ListChecks", 34,
+    )
+    assert "受刑计划" in _seen_by("JUDGE", cn_tenant)
+    assert "受刑计划" not in _seen_by("VIEWER", cn_tenant)

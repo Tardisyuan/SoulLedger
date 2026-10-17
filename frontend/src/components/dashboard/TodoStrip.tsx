@@ -129,19 +129,15 @@ export function TodoStrip() {
     enabled: canDeathSync,
     staleTime: 60_000,
   });
-  // 被拒 / 取消后等着重新发起的调拨:口径在服务端(`?awaiting_redispatch=true`,本殿是原属的计划),
-  // 按钮在灵魂详情的受刑计划卡上,故链接落到第一份计划的灵魂;办完一份,下一份顶上来。
+  // 被拒 / 取消后等着重新发起的调拨:口径在服务端(`?awaiting_redispatch=true`,本殿是原属的计划)。
+  // 链接落到受刑计划列表的同一个筛选(此前只能链到第一份计划的灵魂,其余找不到);按钮在各灵魂的计划卡上。
   const canResend = hasPermission("judgment.execute");
   const resendQ = useQuery({
     queryKey: ["dashboard", "todo", "redispatch"],
-    queryFn: async () => {
-      const { data } = await sentencePlansApi.list({ awaiting_redispatch: true, page: 1 });
-      return { count: data.count, soul: data.results[0]?.soul ?? "" };
-    },
+    queryFn: async () => (await sentencePlansApi.list({ awaiting_redispatch: true, page: 1 })).data.count,
     enabled: canResend,
     staleTime: 60_000,
   });
-  const resendCountQ = { ...resendQ, data: resendQ.data?.count } as UseQueryResult<number>;
   const viewing = useImpersonation() !== null;
   const canApprove = hasPermission("workflow.approve") && !viewing;
   const canLetters = hasPermission("soul_inbox.reply") && !viewing;
@@ -207,8 +203,8 @@ export function TodoStrip() {
       {canResend && (
         <TodoCell
           label={t("dashboard.todo.resend_dispatch")}
-          query={resendCountQ}
-          href={`/souls/${resendQ.data?.soul ?? ""}`}
+          query={resendQ}
+          href="/sentence-plans?awaiting_redispatch=true"
           linkText={t("dashboard.todo.go_resend")}
           clearText={t("dashboard.todo.none")}
         />
