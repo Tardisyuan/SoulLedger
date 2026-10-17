@@ -273,6 +273,8 @@ function JudgmentDetail({ id, onOpenSoul }: { id: string; onOpenSoul: (id: strin
           {data.soul ? <SoulLink testID="judgment-soul-link" variant="title" name={data.soul_name} onOpen={() => onOpenSoul(data.soul)} /> : <Txt variant="title">{data.soul_name}</Txt>}
           <Txt variant="caption" tone="muted">{[data.court, data.claimed_by_name].filter(Boolean).join(" · ")}</Txt>
           {!data.is_final ? <Txt variant="bodyLg">{`◇ ${t("officer_app.queue.desk_only")}`}</Txt> : null}
+          {/* 滞留(`stale_since`,定时任务盖章,不结案):与队列行同一句「◐ 滞留 · 30 天无进展」。 */}
+          {data.stale_since ? <Txt variant="bodyLg" testID="judgment-stale">{`◐ ${t("judgment.stale.label")} · ${t("judgment.stale.hint")}`}</Txt> : null}
           <JudgmentCase data={data} onOpenRecord={setRecord} />
           <JudgmentComments id={id} concludedAt={data.concluded_at} readOnly={!!data.deferred_at && data.claimed_by === me} />
           <Txt variant="caption" tone="muted">{t("officer_app.queue.scope_note")}</Txt>
