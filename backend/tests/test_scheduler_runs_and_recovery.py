@@ -386,7 +386,9 @@ def test_failure_alerts_once_on_the_success_to_failure_edge_and_resets_on_succes
     assert job.consecutive_failures == 3
     assert job.last_alerted_at is not None
     assert inbox.count() == before + 1
-    assert "Scheduled task failed: tests.scheduler_boom" in inbox.latest("created_at").title
+    latest = inbox.latest("created_at")
+    assert latest.title == "定时任务失败" and "tests.scheduler_boom" in latest.message
+    assert latest.params["kind"] == "scheduled_task_failed"
 
     # Recovery: a SUCCESS postrun on this job resets the counter, silently.
     TaskRun.objects.create(job=job, task_name=job.job_key, celery_task_id="rec", status=RunStatus.RUNNING, started_at=timezone.now())
@@ -508,7 +510,7 @@ def test_overdue_alerts_once_per_episode(db, admin_user):
     assert services.alert_overdue(now) == 1
     assert services.alert_overdue(now) == 0
     assert inbox.count() == before + 1
-    assert "did not run: tests.scheduler_ok" in inbox.latest("created_at").title
+    assert "tests.scheduler_ok" in inbox.latest("created_at").message
 
     TaskRun.objects.create(job=job, task_name=job.job_key, celery_task_id="r", status=RunStatus.SUCCESS, queued_at=now)
     services.alert_overdue(now)

@@ -412,7 +412,7 @@ def test_a_rebirth_workflow_notice_names_the_application_not_the_workflow(
     UserNotification.objects.filter(user=judge_user).delete()
 
     EventService.notify_workflow_assigned(judge_user, wf)
-    WorkflowService.notify_designated(wf, wf.current_node, title="催办", message="m")
+    WorkflowService.notify_designated(wf, wf.current_node, kind="workflow_timeout_reminder", hours=1)
     EventService.notify_workflow_assigned(judge_user, plain)
 
     rows = UserNotification.objects.filter(user=judge_user, notification_type="WORKFLOW_ASSIGNED")

@@ -217,14 +217,19 @@ class EventService:
     @staticmethod
     def notify_workflow_assigned(user, workflow, actor: str = "system") -> None:
         """Publish a workflow-assigned notification via EventBus."""
+        from apps.notifications import messages
         from apps.workflow.services import WorkflowService
 
+        # 存 zh-Hans 与 params,读时按请求语言重渲染(apps/notifications/messages.py)。
+        params = {"soul": workflow.soul.name, "workflow": workflow.workflow_name}
+        title, body = messages.render(messages.DEFAULT_LOCALE, "workflow_assigned", params)
         EventService.notify_user(
             user=user,
-            title=f"Workflow Assigned: {workflow.workflow_name}",
-            message=f"You have been assigned to workflow '{workflow.workflow_name}'.",
+            title=title,
+            message=body,
             notification_type="WORKFLOW_ASSIGNED",
             **WorkflowService.notice_target(workflow),
+            params=params,
         )
 
     @staticmethod

@@ -36,5 +36,21 @@
   "workflow.filter.clear",
   "workflow.filter.from",
   "workflow.filter.search",
-  "workflow.filter.to"
+  "workflow.filter.to",
+  "official_notify.workflow_assigned.title",
+  "official_notify.workflow_assigned.body",
+  "official_notify.workflow_node_passed.title",
+  "official_notify.workflow_node_passed.body",
+  "official_notify.workflow_timeout_reminder.title",
+  "official_notify.workflow_timeout_reminder.body",
+  "official_notify.workflow_timeout_escalated.title",
+  "official_notify.workflow_timeout_escalated.body",
+  "official_notify.cross_judgment_concluded.title",
+  "official_notify.cross_judgment_concluded.body",
+  "official_notify.cross_judgment_concluded_fail.title",
+  "official_notify.cross_judgment_concluded_fail.body",
+  "official_notify.scheduled_task_failed.title",
+  "official_notify.scheduled_task_failed.body",
+  "official_notify.scheduled_task_overdue.title",
+  "official_notify.scheduled_task_overdue.body"
 ]

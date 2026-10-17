@@ -863,14 +863,22 @@ class WorkflowService:
         return qs.filter(is_active=True)
 
     @classmethod
-    def notify_designated(cls, workflow, node, *, title: str, message: str, category: str | None = None) -> int:
+    def notify_designated(cls, workflow, node, *, kind: str, category: str | None = None, **extra) -> int:
         """Tell everyone `node` designates; return how many were told.
 
         Used by the timeout processor (reminders, escalations). Called after
         commit, never inside `complete_node`'s lock — same rule as `announce`.
+        `kind` is a variant of `workflow_assigned` in apps/notifications/messages.py;
+        `extra` fills its placeholders beyond soul / workflow / node.
         """
         from apps.events.services import EventService
+        from apps.notifications import messages
 
+        params = {"soul": workflow.soul.name, "workflow": workflow.workflow_name, "node": node.node_name,
+                  **extra, "kind": kind}
+        if category:
+            params["category"] = category  # 超时的转交 / 提醒走「审批超时」类
+        title, message = messages.render(messages.DEFAULT_LOCALE, kind, params)
         told = 0
         target = cls.notice_target(workflow)
         for user in cls.designated_users(node, workflow.tenant_id):
@@ -880,7 +888,7 @@ class WorkflowService:
                 message=message,
                 notification_type="WORKFLOW_ASSIGNED",
                 **target,
-                params={"category": category} if category else None,  # 超时的转交 / 提醒走「审批超时」类
+                params=params,
             )
             told += 1
         return told
