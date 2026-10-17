@@ -270,6 +270,10 @@ def test_history_comes_fifty_at_a_time_newest_first_with_a_before_cursor(cn_tena
     assert [str(c["id"]) for c in rest] == newest_first[2:]
     assert client.get(LIST, {"before": "nope"}).status_code == 400
     assert client.get(LIST, {"before": "00000000-0000-0000-0000-000000000000"}).status_code == 404
+    # `limit=1`: the App's "latest one" lookup on reopening the drawer; clamped to [1, page], junk is 400.
+    assert [str(c["id"]) for c in client.get(LIST, {"limit": 1}).data] == newest_first[:1]
+    assert len(client.get(LIST, {"limit": 99}).data) == 2 and len(client.get(LIST, {"limit": 0}).data) == 1
+    assert client.get(LIST, {"limit": "x"}).status_code == 400
 
 
 def test_another_accounts_conversation_is_404_everywhere(cn_tenant):
