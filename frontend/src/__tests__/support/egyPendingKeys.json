@@ -97,5 +97,11 @@
   "crossJudgments.cancel_reason",
   "crossJudgments.end_error",
   "crossJudgments.cancel_error",
-  "breadcrumb.menu.group_rebirth"
+  "breadcrumb.menu.group_rebirth",
+  "menu_buttons.where.list_top",
+  "menu_buttons.where.section_top",
+  "menu_buttons.where.row_more",
+  "menu_buttons.where.detail_header",
+  "menu_buttons.where.detail_more",
+  "menu_buttons.where.detail_actions"
 ]

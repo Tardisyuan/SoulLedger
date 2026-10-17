@@ -2721,7 +2721,12 @@
     "update_error": "Nen Khemen Aha",
     "delete_error": "Nen Fekh Aha",
     "gates_note": "Aha Pen: Wen-Khetem Wa, «Ankh». Netjer, Maa Em Gesu Menu, Ren Was Ini Em Wat Nen Smen — Em It-Ef:",
-    "permission_mismatch_warning": "«{{codename}}» Nen Gem Was Maat — Aha Pen Imen Djes-Ef Em Netjer Neb Nen Sab Hery"
+    "permission_mismatch_warning": "«{{codename}}» Nen Gem Was Maat — Aha Pen Imen Djes-Ef Em Netjer Neb Nen Sab Hery",
+    "rule": "Wen Hena Hena Was: Aha Maa. Khetem Hena: Nen Maa.",
+    "count": "{{menu}} · Aha Menu {{n}}",
+    "col_show": "Wen",
+    "col_where": "Em",
+    "col_perm": "Was"
   },
   "error": {
     "title": "Sethet",

@@ -15,6 +15,7 @@ from .access import menu_is_visible_to, visible_menus
 from .button_access import visible_buttons
 from .models import Menu, MenuButton
 from .serializers import (
+    MenuButtonConfigSerializer,
     MenuButtonCreateUpdateSerializer,
     MenuButtonSerializer,
     MenuCreateUpdateSerializer,
@@ -252,6 +253,7 @@ class MenuButtonViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.Mo
         "update": ["menu.manage"],
         "partial_update": ["menu.manage"],
         "destroy": ["menu.manage"],
+        "config": ["menu.read"],
     }
     queryset = MenuButton.objects.select_related("menu").all()
     serializer_class = MenuButtonSerializer
@@ -289,4 +291,16 @@ class MenuButtonViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.Mo
         if menu_id:
             qs = qs.filter(menu_id=menu_id)
         return qs
+
+    @extend_schema(responses=MenuButtonConfigSerializer(many=True))
+    @action(detail=False, methods=["get"], url_path="config", pagination_class=None, filter_backends=[])
+    def config(self, request):
+        """菜单按钮配置的生效集合(第四十批 W-b):每一行 = 某菜单(按 path)下某按钮(按 code)开着没有。
+
+        页面上的关键按钮「权限码允许 **且** 这里允许」才显示;这里没有那一行 = 允许(存量部署不丢按钮)。
+        所以要的是**全部**行,不按 `visible_buttons` 收窄:收窄会把一条「关」的行藏起来,
+        前端读成「没有配置 = 显示」。不带 `permission` 字段(见 `MenuButtonConfigSerializer`)。
+        """
+        rows = MenuButton.objects.select_related("menu").filter(menu__is_deleted=False).order_by("menu_id", "order", "id")
+        return Response(MenuButtonConfigSerializer(rows, many=True).data)
 

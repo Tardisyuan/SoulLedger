@@ -48,6 +48,7 @@ import { SoulAccountCard } from "@/src/components/soul-accounts/SoulAccountCard"
 import { SentencePlanCard } from "@/src/components/sentence-plan/SentencePlanCard";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { usePermissions } from "@/src/hooks/usePermissions";
+import { useMenuButtonConfig } from "@/src/hooks/useMenuButtonConfig";
 import { DomainEnum, IdentifierChip } from "@/src/components/ui/DomainValue";
 import { resolveEnumDisplay } from "@/src/lib/domainDisplay";
 import { ConfirmDialog } from "@/src/components/ui/Modal";
@@ -450,6 +451,8 @@ export default function SoulDetailPage() {
           }
         : undefined;
   usePlaque({ title: t("plaque.soul"), hall, caseRef });
+  // 菜单按钮配置(第四十批 W-b):编辑与删除另要配置允许。在下面的提前返回之前取(hook 顺序)。
+  const buttonOn = useMenuButtonConfig();
 
   // Error state - only show when we have actual data fetch error, not during initial load
   if (error && !soul) {
@@ -612,8 +615,9 @@ export default function SoulDetailPage() {
   const archived = Boolean(soul?.is_archived);
   const headerActions = !loading && soul && !readOnlyAway && !archived ? (
     <SoulHeaderActions
-      onEdit={() => setIsEditModalOpen(true)}
-      onDelete={handleDeleteConfirm}
+      /* 菜单按钮配置关掉的就不交给它;权限门在组件里照旧。 */
+      onEdit={buttonOn("souls.edit") ? () => setIsEditModalOpen(true) : undefined}
+      onDelete={buttonOn("souls.delete") ? handleDeleteConfirm : undefined}
       onCorrectSettlement={canCorrectSettlement ? () => setIsCorrectSettlementOpen(true) : undefined}
       onRecalculate={hasPermission("ledger.manage") ? handleRecalculate : undefined}
       onStartWorkflow={hasPermission("workflow.create") ? () => setIsStartWorkflowOpen(true) : undefined}

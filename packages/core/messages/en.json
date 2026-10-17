@@ -2887,7 +2887,20 @@
     "update_error": "Failed to update button",
     "delete_error": "Failed to delete button",
     "gates_note": "This button only has one visibility gate — Active. Roles, sidebar visibility, and the permission-codename ambiguity all live on the parent menu:",
-    "permission_mismatch_warning": "\"{{codename}}\" doesn't match a real permission — this button will be silently hidden from every non-ADMIN role"
+    "permission_mismatch_warning": "\"{{codename}}\" doesn't match a real permission — this button will be silently hidden from every non-ADMIN role",
+    "rule": "A button shows only if it's on here and the user has the permission. Off here means hidden even for users with permission.",
+    "count": "{{menu}} · {{n}} buttons",
+    "col_show": "Show",
+    "col_where": "Appears in",
+    "col_perm": "Also needs",
+    "where": {
+      "list_top": "List page, top right",
+      "section_top": "Each list section, top right",
+      "row_more": "List row ⋯",
+      "detail_header": "Detail page header",
+      "detail_more": "Detail page ⋯",
+      "detail_actions": "Detail page actions"
+    }
   },
   "error": {
     "title": "A system error occurred",

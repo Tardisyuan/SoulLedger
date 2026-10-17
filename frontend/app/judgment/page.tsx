@@ -7,6 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { usePlaque } from "@/src/components/plaque/Plaque";
 import { useHall } from "@/src/components/plaque/useHall";
+import { useMenuButtonConfig } from "@/src/hooks/useMenuButtonConfig";
 import { judgmentApi, PAGE_SIZE, type Judgment } from "@soulledger/core/api";
 import { useSoul } from "@soulledger/core/hooks/useSouls";
 import { DataTable, parseOrdering, ROW_LINK, type DataTableColumn } from "@/components/ui/data-table";
@@ -69,6 +70,7 @@ function JudgmentQueuePageContent() {
   const { t, formatDate } = useI18n();
   const hall = useHall(t("plaque.office.trials"));
   usePlaque({ hall });
+  const buttonOn = useMenuButtonConfig();
   const router = useRouter();
   // 全局搜索「查看全部 N 个案件 →」带来的 `?q=`:待审一面填进搜索框,已结案一面同样按它筛。
   const searchParams = useSearchParams();
@@ -181,13 +183,15 @@ function JudgmentQueuePageContent() {
       <>
       {/* 「已结案」没有筛选条;导出放在表上方右端,带当前的搜索 / 灵魂 / 排序(不带页码)。 */}
       <div className="flex items-center justify-end gap-3 py-3">
-        <ExportCsvButton
-          size="sm"
-          fetchCsv={() => judgmentApi.exportCsv(exportParams)}
-          page={t("judgment.title")}
-          hall={hall}
-          count={judgmentData?.count}
-        />
+        {buttonOn("judgment.export") && (
+          <ExportCsvButton
+            size="sm"
+            fetchCsv={() => judgmentApi.exportCsv(exportParams)}
+            page={t("judgment.title")}
+            hall={hall}
+            count={judgmentData?.count}
+          />
+        )}
         <ColumnMenu
           columns={allColumns.map((c) => ({ key: c.key, header: String(c.header), pinned: c.pinned }))}
           visibility={columnVis}
