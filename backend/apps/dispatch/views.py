@@ -992,14 +992,11 @@ class CrossTenantJudgmentViewSet(AuditUserViewSetMixin, CodenameViewSetMixin,
         """
         judgment = self.get_object()
 
-        # Verify user's tenant is involved (initiating or a participant)
-        request_tenant = getattr(request, 'tenant', None)
-        if not request_tenant:
-            return Response({"error": "Tenant context required"}, status=status.HTTP_403_FORBIDDEN)
-        is_initiating = judgment.initiating_tenant_id == request_tenant.pk
-        is_participant = judgment.participants.filter(participant_tenant=request_tenant).exists()
-        if not is_initiating and not is_participant:
-            return Response({"error": "Not authorized to conclude this judgment"}, status=status.HTTP_403_FORBIDDEN)
+        # 结束与取消同一道:召集人,或发起殿的 ADMIN / 殿主。参与方入席表态,不替召集人收场。
+        if not CrossTenantJudgmentService.can_end(judgment, request.user, getattr(request, "tenant", None)):
+            return Response(
+                {"error": "Only the convener or this hall's admin may conclude"}, status=status.HTTP_403_FORBIDDEN
+            )
 
         serializer = CrossTenantJudgmentConcludeSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)

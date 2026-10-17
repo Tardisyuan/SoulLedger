@@ -46,6 +46,7 @@ MESSAGES = {
         "workflow_timeout_escalated": {"title": "审批超时", "body": "灵魂「{{soul}}」的审批流「{{workflow}}」在「{{node}}」已超过 {{hours}} 小时未处理，已转交给你。"},
         "cross_judgment_concluded": {"title": "跨域审判已结案", "body": "跨域审判「{{title}}」已结案，结论：通过。"},
         "cross_judgment_concluded_fail": {"title": "跨域审判已结案", "body": "跨域审判「{{title}}」已结案，结论：否决。"},
+        "cross_judgment_cancelled": {"title": "跨域审判已取消", "body": "跨域审判「{{title}}」已取消。理由：{{reason}}"},
         "scheduled_task_failed": {"title": "定时任务失败", "body": "定时任务「{{task}}」执行失败：{{error}}"},
         "scheduled_task_overdue": {"title": "定时任务没有运行", "body": "定时任务「{{task}}」应在 {{expected_at}} 运行，至今没有运行记录。"},
     },
@@ -89,6 +90,7 @@ MESSAGES = {
         "workflow_timeout_escalated": {"title": "Approval overdue", "body": "Step {{node}} of the approval flow {{workflow}} of soul {{soul}} has waited over {{hours}} hours and has been passed to you."},
         "cross_judgment_concluded": {"title": "Cross-realm judgment concluded", "body": "The cross-realm judgment {{title}} has concluded: passed."},
         "cross_judgment_concluded_fail": {"title": "Cross-realm judgment concluded", "body": "The cross-realm judgment {{title}} has concluded: rejected."},
+        "cross_judgment_cancelled": {"title": "Cross-realm judgment cancelled", "body": "The cross-realm judgment {{title}} was cancelled. Reason: {{reason}}"},
         "scheduled_task_failed": {"title": "Scheduled task failed", "body": "Scheduled task {{task}} failed: {{error}}"},
         "scheduled_task_overdue": {"title": "Scheduled task did not run", "body": "Scheduled task {{task}} was due at {{expected_at}}; no run has been recorded since."},
     },
@@ -169,7 +171,7 @@ VARIANTS = {
     "judgment_reassign_requested": {"judgment_reassign_requested_with_reason"},
     # 同一个 WORKFLOW_ASSIGNED 还用于知会节点经过、超时提醒 / 转交(`params["category"]` 另管通知类别)。
     "workflow_assigned": {"workflow_node_passed", "workflow_timeout_reminder", "workflow_timeout_escalated"},
-    "cross_judgment_concluded": {"cross_judgment_concluded_fail"},
+    "cross_judgment_concluded": {"cross_judgment_concluded_fail", "cross_judgment_cancelled"},
     # 替别人做的四件事共用一个类型(JUDGMENT_CLAIM_CHANGED),各自一句(apps/judgment/claims.py::_tell_holder)。
     "judgment_reassigned_away": {"judgment_released_for_you", "judgment_deferred_for_you", "judgment_undeferred_for_you"},
 }

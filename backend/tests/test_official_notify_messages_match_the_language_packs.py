@@ -14,7 +14,7 @@ ACTOR_KINDS = {"impersonation_started"}
 #: 主语是一条死亡登记(灵魂可能根本没查到,负载又是加密的个人资料):点名它的来源编号。
 REGISTRATION_KINDS = {"death_sync_retry_failed"}
 #: 主语是一场跨域审判(它的标题)。
-CROSS_JUDGMENT_KINDS = {"cross_judgment_concluded", "cross_judgment_concluded_fail"}
+CROSS_JUDGMENT_KINDS = {"cross_judgment_concluded", "cross_judgment_concluded_fail", "cross_judgment_cancelled"}
 #: 主语是一个定时任务。
 TASK_KINDS = SYSTEM_KINDS
 
