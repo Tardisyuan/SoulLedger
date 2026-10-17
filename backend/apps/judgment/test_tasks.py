@@ -7,11 +7,14 @@ pattern exists — same M15 fix, same shape of test.
 from datetime import timedelta
 from unittest.mock import patch
 
+import importlib
+
 import pytest
 from django.utils import timezone
 
 from apps.judgment.models import Judgment
 from apps.judgment.tasks import (
+    STALE_MARKER,
     auto_conclude_stale_judgments,
     auto_conclude_stale_judgments_for_tenant,
 )
@@ -56,24 +59,25 @@ class TestAutoConcludeStaleForTenantIsolation:
         self.judgment_b = Judgment.objects.create(
             soul=self.soul_b, tenant=self.tenant_b, civilization="EUROPEAN", is_final=False,
         )
-        Judgment.objects.filter(pk=self.judgment_a.pk).update(created_at=stale_created)
-        Judgment.objects.filter(pk=self.judgment_b.pk).update(created_at=stale_created)
+        Judgment.objects.filter(pk=self.judgment_a.pk).update(created_at=stale_created, update_time=stale_created)
+        Judgment.objects.filter(pk=self.judgment_b.pk).update(created_at=stale_created, update_time=stale_created)
 
     def test_only_flags_judgments_belonging_to_the_given_tenant(self):
         result = auto_conclude_stale_judgments_for_tenant(str(self.tenant_a.id), days_threshold=30)
 
         self.judgment_a.refresh_from_db()
         self.judgment_b.refresh_from_db()
-        assert "Flagged as stale" in self.judgment_a.notes
-        assert "Flagged as stale" not in (self.judgment_b.notes or "")
+        assert self.judgment_a.stale_since is not None
+        assert self.judgment_b.stale_since is None
         assert result["flagged"] == 1
         assert result["tenant"] == self.tenant_a.code
 
 
 @pytest.mark.django_db
 class TestStaleFlagIsWrittenOnce:
-    """BD-14 / PQ-02: re-running the task must not append a second flag line,
-    and the rows are written in bulk rather than one `.save()` per judgment."""
+    """BD-14 / PQ-02: re-running the task must not re-stamp a flagged row, the
+    flag is a column (notes, status and verdict untouched), and the rows are
+    written in bulk rather than one `.save()` per judgment."""
 
     @pytest.fixture(autouse=True)
     def setup(self, db):
@@ -84,17 +88,36 @@ class TestStaleFlagIsWrittenOnce:
             soul = Soul.objects.create(name=f"Once {i}", tenant=self.tenant, birth_year=1900, death_year=1950)
             j = Judgment.objects.create(soul=soul, tenant=self.tenant, civilization="EUROPEAN", is_final=False, notes="kept")
             self.judgments.append(j)
-        Judgment.objects.filter(tenant=self.tenant).update(created_at=stale_created)
+        Judgment.objects.filter(tenant=self.tenant).update(created_at=stale_created, update_time=stale_created)
 
-    def test_second_run_adds_no_second_flag(self):
+    def test_second_run_does_not_restamp(self):
         first = auto_conclude_stale_judgments_for_tenant(str(self.tenant.id), days_threshold=30)
+        stamps = {j.pk: Judgment.objects.get(pk=j.pk).stale_since for j in self.judgments}
         second = auto_conclude_stale_judgments_for_tenant(str(self.tenant.id), days_threshold=30)
         assert first["flagged"] == 3
         assert second["flagged"] == 0
         for j in self.judgments:
             j.refresh_from_db()
-            assert j.notes.startswith("kept"), "the existing notes were overwritten"
-            assert j.notes.count("[SYSTEM] Flagged as stale") == 1, j.notes
+            assert j.stale_since is not None and j.stale_since == stamps[j.pk]
+
+    def test_flag_is_the_column_and_nothing_else_moves(self):
+        auto_conclude_stale_judgments_for_tenant(str(self.tenant.id), days_threshold=30)
+        for j in self.judgments:
+            j.refresh_from_db()
+            assert j.stale_since is not None
+            assert j.notes == "kept", "the flag must not be written into notes any more"
+            assert STALE_MARKER not in j.notes
+            # 用户 2026-10-17:滞留只是标记,永不自动结案。
+            assert j.verdict is None
+            assert j.is_final is False
+            assert j.concluded_at is None
+            assert j.update_time < timezone.now() - timedelta(days=30), "flagging is not activity"
+
+    def test_a_case_touched_recently_is_not_stale_however_old(self):
+        Judgment.objects.filter(pk=self.judgments[0].pk).update(update_time=timezone.now())
+        result = auto_conclude_stale_judgments_for_tenant(str(self.tenant.id), days_threshold=30)
+        assert result["flagged"] == 2
+        assert Judgment.objects.get(pk=self.judgments[0].pk).stale_since is None
 
     def test_rows_are_not_saved_one_by_one(self, django_assert_max_num_queries):
         # Measured with these 3 rows: per-row `.save()` was 11 queries (tenant,
@@ -103,3 +126,71 @@ class TestStaleFlagIsWrittenOnce:
         # does not grow with the row count.
         with django_assert_max_num_queries(5):
             auto_conclude_stale_judgments_for_tenant(str(self.tenant.id), days_threshold=30)
+
+
+@pytest.mark.django_db
+class TestStaleClearsOnActivity:
+    """`stale_since` 在案子下一次有进展时清掉:任何 `Judgment.save()`(含只给
+    `update_fields` 的认领那组写法)与判词草稿的自动保存(它不走 `save()`)。"""
+
+    @pytest.fixture(autouse=True)
+    def setup(self, db):
+        self.tenant = Tenant.objects.create(code="JDG_CLEAR", display_name="Clear")
+        soul = Soul.objects.create(name="Clear", tenant=self.tenant, birth_year=1900, death_year=1950)
+        self.judgment = Judgment.objects.create(soul=soul, tenant=self.tenant, civilization="EUROPEAN")
+        Judgment.objects.filter(pk=self.judgment.pk).update(stale_since=timezone.now())
+        self.judgment.refresh_from_db()
+        assert self.judgment.stale_since is not None
+
+    def test_a_full_save_clears_it(self):
+        self.judgment.court = "Hall"
+        self.judgment.save()
+        assert Judgment.objects.get(pk=self.judgment.pk).stale_since is None
+
+    def test_a_save_with_update_fields_clears_it_in_the_database(self):
+        self.judgment.court = "Hall"
+        self.judgment.save(update_fields=["court"])
+        assert Judgment.objects.get(pk=self.judgment.pk).stale_since is None
+
+    def test_a_draft_autosave_clears_it(self):
+        from apps.judgment.services import JudgmentDraftService
+
+        JudgmentDraftService.save(self.judgment, self.judgment.draft_version, {"notes": "draft"})
+        assert Judgment.objects.get(pk=self.judgment.pk).stale_since is None
+
+    def test_the_flagging_task_itself_does_not_clear_it(self):
+        other = Judgment.objects.get(pk=self.judgment.pk)
+        Judgment.objects.filter(pk=other.pk).update(
+            created_at=timezone.now() - timedelta(days=60), update_time=timezone.now() - timedelta(days=60),
+        )
+        auto_conclude_stale_judgments_for_tenant(str(self.tenant.id), days_threshold=30)
+        assert Judgment.objects.get(pk=self.judgment.pk).stale_since is not None
+
+
+class TestMigrationStripsTheOldMarker:
+    """judgment/0037 的纯函数部分:删掉标记行、读出时刻。数据库那半是两行 `.update()`。"""
+
+    migration = importlib.import_module("apps.judgment.migrations.0037_judgment_stale_since")
+
+    def test_marker_line_is_removed_and_its_time_read(self):
+        notes = f"kept\n{STALE_MARKER} on 2026-09-01T03:00:00+00:00"
+        stripped, stamp = self.migration.strip_marker(notes)
+        assert stripped == "kept"
+        assert stamp is not None and stamp.isoformat() == "2026-09-01T03:00:00+00:00"
+
+    def test_every_marker_line_goes_and_the_first_time_wins(self):
+        notes = (
+            f"a\n{STALE_MARKER} on 2026-08-01T00:00:00+00:00\nb"
+            f"\n{STALE_MARKER} on 2026-09-01T00:00:00+00:00"
+        )
+        stripped, stamp = self.migration.strip_marker(notes)
+        assert stripped == "a\nb"
+        assert stamp.month == 8
+
+    def test_a_marker_without_a_readable_time_gives_none(self):
+        stripped, stamp = self.migration.strip_marker(f"{STALE_MARKER}")
+        assert stripped == ""
+        assert stamp is None
+
+    def test_the_migration_and_the_task_share_one_literal(self):
+        assert self.migration.MARKER == STALE_MARKER

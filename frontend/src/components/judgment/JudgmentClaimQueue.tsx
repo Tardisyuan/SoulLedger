@@ -30,6 +30,7 @@ import { useHall } from "@/src/components/plaque/useHall";
 import { ConfirmDialog } from "@/src/components/ui/Modal";
 import { Pagination } from "@/src/components/ui/Pagination";
 import { CaseNumber, DomainEnum, DomainNumber, MissingValue } from "@/src/components/ui/DomainValue";
+import { StaleBadge } from "@/src/components/ui/StatusBadge";
 import { QueryError } from "@/src/components/ui/PageError";
 import { DeferDialog, ReassignDialog, claimRefusalMessage } from "@/src/components/judgment/JudgmentClaimDialogs";
 import { BATCH_BAR, ROW_HOVER, ROW_LINK, ROW_SELECTED } from "@/components/ui/data-table";
@@ -81,8 +82,9 @@ const DAY_MS = 86_400_000;
 const LONG_WAIT_DAYS = 30;
 /**
  * 距 LONG_WAIT_DAYS 还剩 3 天内,行上提示「将被标记为滞留」。注意动词:`judgment.auto_conclude_stale`
- * (`apps/judgment/tasks.py`,每日 01:00,阈值 30 天在 `scheduler/registry.py` 的 kwargs 里)只在判词备注里
- * 追加一行滞留标记,**并不结案**,所以提示不能写「将自动结案」。过了 30 天标记已打,提示随之收掉。
+ * (`apps/judgment/tasks.py`,每日 01:00,阈值 30 天在 `scheduler/registry.py` 的 kwargs 里)只给判决盖
+ * `stale_since`,**并不结案**,所以提示不能写「将自动结案」。标记已打的行显示「滞留」徽章,提示随之收掉。
+ * 这里按等待天数(`created_at`)估;任务看的是最后一次进展(`update_time`),办过的案子会晚些才标。
  */
 const STALE_WARN_DAYS = 3;
 const CLAIM_SHORTCUTS = [
@@ -154,6 +156,8 @@ export function JudgmentClaimQueue({ initialSearch = "", soul = "" }: { initialS
   const [search, setSearch] = useState(initialSearch);
   const [court, setCourt] = useState("");
   const [civilization, setCivilization] = useState("");
+  /** 滞留筛选:"" 全部,"true" 只看滞留(`?stale=`,列表、四组计数、导出同一口径)。 */
+  const [stale, setStale] = useState("");
   const [ordering, setOrdering] = useState<QueueOrdering>("created_at");
   const [mineOnly, setMineOnly] = useState(false);
   const [pages, setPages] = useState<Record<JudgmentQueueGroup, number>>({ mine: 1, unclaimed: 1, others: 1, deferred: 1 });
@@ -191,6 +195,7 @@ export function JudgmentClaimQueue({ initialSearch = "", soul = "" }: { initialS
   if (soul) filters.soul = soul;
   if (court) filters.court = court;
   if (civilization) filters.civilization = civilization;
+  if (stale) filters.stale = stale;
   /* 文明的选项:ADMIN 看得到全部文明;其余角色只列自己租户的那一个(后端按租户收窄,
      列别的文明只会给出一个永远为空的选项)。 */
   const ownCivilization = user?.tenant?.code ? TENANT_CODE_TO_CIVILIZATION[user.tenant.code] : undefined;
@@ -443,6 +448,21 @@ export function JudgmentClaimQueue({ initialSearch = "", soul = "" }: { initialS
           </select>
         </label>
         <label>
+          <span className="sr-only">{t("judgment.stale.label")}</span>
+          <select
+            value={stale}
+            onChange={(e) => {
+              setStale(e.target.value);
+              resetPages();
+            }}
+            className={SELECT_CLASS}
+            data-testid="stale-filter"
+          >
+            <option value="">{t("judgment.stale.filter_all")}</option>
+            <option value="true">{t("judgment.stale.filter_only")}</option>
+          </select>
+        </label>
+        <label>
           <span className="sr-only">{t("judgment.claim.sort")}</span>
           <select
             value={ordering}
@@ -620,6 +640,7 @@ export function JudgmentClaimQueue({ initialSearch = "", soul = "" }: { initialS
                           </span>
                           {" · "}
                           <DomainEnum namespace="souls.civilizations" value={j.civilization} />
+                          {j.stale_since && <StaleBadge className="ml-2" />}
                         </span>
                       </td>
                       <td className="px-2 text-xs text-[oklch(var(--color-ink-muted))] whitespace-nowrap max-w-48 truncate max-md:hidden" title={[j.court, j.judge_name].filter(Boolean).join(" · ") || undefined}>
@@ -698,7 +719,7 @@ export function JudgmentClaimQueue({ initialSearch = "", soul = "" }: { initialS
                         }`}
                       >
                         {t("judgment.waiting_days", { n: String(days) })}
-                        {days >= LONG_WAIT_DAYS - STALE_WARN_DAYS && days <= LONG_WAIT_DAYS && (
+                        {!j.stale_since && days >= LONG_WAIT_DAYS - STALE_WARN_DAYS && days <= LONG_WAIT_DAYS && (
                           <span className="block text-2xs font-sans text-[oklch(var(--color-warning))]" data-testid="stale-soon">
                             {t("judgment.claim.stale_soon")}
                           </span>

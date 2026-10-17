@@ -7,6 +7,7 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { usePlaque } from "@/src/components/plaque/Plaque";
 import { useHall } from "@/src/components/plaque/useHall";
 import { EnumBadge } from "@/components/ui/data-grid";
+import { StaleBadge } from "@/src/components/ui/StatusBadge";
 import { DomainEnum } from "@/src/components/ui/DomainValue";
 import { useJudgmentQueue, type VerdictCode } from "@soulledger/core/hooks/useJudgmentQueue";
 import { useClaimJudgment, useReassignJudgment } from "@soulledger/core/hooks/useJudgments";
@@ -413,7 +414,7 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
             >
               <div className="min-w-0 space-y-4">
                 <SoulIdentityPanel soul={cursor.soul} />
-                <CaseFactsPanel court={judgment.court} confession={judgment.confession} />
+                <CaseFactsPanel court={judgment.court} confession={judgment.confession} stale={Boolean(judgment.stale_since)} />
                 <RealmOptionsPanel realms={cursor.realm_options} />
               </div>
               <div className="min-w-0 space-y-4">
@@ -530,7 +531,7 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
   );
 }
 
-function CaseFactsPanel({ court, confession }: { court: string; confession: string }) {
+function CaseFactsPanel({ court, confession, stale }: { court: string; confession: string; stale: boolean }) {
   const { t } = useI18n();
   return (
     <section aria-labelledby="queue-case-heading" className="border border-[oklch(var(--color-hairline))] bg-[oklch(var(--color-surface-1))] p-4">
@@ -544,6 +545,7 @@ function CaseFactsPanel({ court, confession }: { court: string; confession: stri
         ) : (
           <span className="text-sm text-[oklch(var(--color-ink-tertiary))]">{t("judgment.queue.not_recorded")}</span>
         )}
+        {stale && <StaleBadge />}
       </div>
       {/* 忏悔在自己的框里滚,而不是把它下面的东西推走。
        *

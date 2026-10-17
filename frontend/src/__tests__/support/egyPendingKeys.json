@@ -36,5 +36,9 @@
   "workflow.filter.clear",
   "workflow.filter.from",
   "workflow.filter.search",
-  "workflow.filter.to"
+  "workflow.filter.to",
+  "judgment.stale.label",
+  "judgment.stale.hint",
+  "judgment.stale.filter_all",
+  "judgment.stale.filter_only"
 ]

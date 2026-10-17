@@ -191,6 +191,35 @@ describe("审判队列", () => {
     expect(within(rowOf("Old")).queryByTestId("stale-soon")).toBeNull();
   });
 
+  it("`stale_since` 非空的行挂「滞留」徽章(title 是「30 天无进展」),不再写「即将标记」;其余行没有", async () => {
+    const aged = (days: number) => new Date(Date.now() - (days + 0.5) * 86_400_000).toISOString();
+    const rows = [
+      row("s", "Stuck", { created_at: aged(28), stale_since: aged(1) }),
+      row("f", "Fresh", { stale_since: null }),
+    ];
+    judgmentApi.list.mockImplementation(async (params: Record<string, string>) => {
+      const results = params.group === "unclaimed" ? rows : [];
+      return { data: { count: results.length, next: null, previous: null, results } };
+    });
+    renderPage();
+    await screen.findByRole("link", { name: "Stuck" });
+    const badge = rowOf("Stuck").querySelector("[data-stale-badge]") as HTMLElement;
+    expect(badge).toHaveTextContent(tZh("judgment.stale.label"));
+    expect(badge).toHaveAttribute("title", tZh("judgment.stale.hint"));
+    expect(within(rowOf("Stuck")).queryByTestId("stale-soon")).toBeNull();
+    expect(rowOf("Fresh").querySelector("[data-stale-badge]")).toBeNull();
+  });
+
+  it("滞留筛选:选「只看滞留」后,列表与四组计数都带 `stale=true`", async () => {
+    renderPage();
+    await screen.findByRole("link", { name: "沈青梧" });
+    fireEvent.change(screen.getByTestId("stale-filter"), { target: { value: "true" } });
+    await waitFor(() =>
+      expect(judgmentApi.list).toHaveBeenCalledWith(expect.objectContaining({ stale: "true", group: "unclaimed" })),
+    );
+    await waitFor(() => expect(judgmentApi.queueCounts).toHaveBeenCalledWith(expect.objectContaining({ stale: "true" })));
+  });
+
   it("v3「案号 / 灵魂」:名字下一行是整串案号,可复制,压在整行链接之上", async () => {
     renderPage();
     await screen.findByRole("link", { name: "沈青梧" });

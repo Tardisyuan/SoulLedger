@@ -6,6 +6,8 @@ from datetime import timedelta
 from celery import shared_task
 from django.utils import timezone
 
+# 旧的标记方式:往 `notes` 末尾追加这一行。现在只有 judgment/0037 读它(把存量行迁到
+# `stale_since` 并删掉这一行);留在这里是为了那份迁移与测试有同一个字面量。
 STALE_MARKER = "[SYSTEM] Flagged as stale"
 STALE_CHUNK = 500
 
@@ -15,8 +17,11 @@ def _flush_stale(chunk):
     from apps.audit.signals import create_batch_audit_log
     from apps.judgment.models import Judgment
 
-    Judgment.objects.bulk_update(chunk, ["notes"])
-    create_batch_audit_log(AuditAction.BATCH_UPDATE, chunk, {"field": "notes", "reason": "stale judgment flag"})
+    # bulk_update 不走 `Judgment.save()`:既不会在这里把刚盖的章清掉,也不碰 `update_time`。
+    Judgment.objects.bulk_update(chunk, ["stale_since"])
+    create_batch_audit_log(
+        AuditAction.BATCH_UPDATE, chunk, {"field": "stale_since", "reason": "stale judgment flag"},
+    )
     return len(chunk)
 
 
@@ -46,8 +51,9 @@ def auto_conclude_stale_judgments(days_threshold: int = 30):
 def auto_conclude_stale_judgments_for_tenant(tenant_id: str, days_threshold: int = 30):
     """
     Flag stale pending judgments for exactly one tenant.
-    Pending judgments older than days_threshold without a judge or verdict
-    are flagged (not auto-concluded, just logged).
+    Pending judgments with no write for days_threshold get `stale_since`
+    stamped — never concluded, never touched otherwise (user decision
+    2026-10-17). `Judgment.save()` clears the stamp on the next activity.
     """
     from apps.judgment.models import Judgment
     from apps.tenants.managers import clear_current_tenant, set_current_tenant
@@ -57,30 +63,32 @@ def auto_conclude_stale_judgments_for_tenant(tenant_id: str, days_threshold: int
     # Not load-bearing for the query below — that's the explicit tenant_id=
     # filter two lines down. TenantManager no longer consumes this
     # contextvar for filtering (see apps/tenants/managers.py); it's set
-    # here purely so apps.audit.signals can attribute the notes.save()
+    # here purely so apps.audit.signals can attribute the batch audit rows
     # below to this tenant instead of leaving it tenant-less, the same way
     # apps.tenants.middleware does per-request for HTTP.
     set_current_tenant(tenant)
     try:
         now = timezone.now()
         threshold = now - timedelta(days=days_threshold)
-        # `.exclude(marker)`: this runs on a schedule, and without it every run
-        # appended another flag line to every judgment still stale (BD-14).
+        # 「无进展」读 `update_time`(每次 `save()` 刷新),不只读 `created_at`:否则一件
+        # 老案子被认领、标记随之清掉,下一次跑又会立刻标回去。`stale_since__isnull`
+        # 让已标的不再重盖(BD-14 是同一件事的旧形:每跑一次往 notes 多追加一行)。
         stale_judgments = Judgment.objects.filter(
             tenant_id=tenant_id,
             is_final=False,
             verdict__isnull=True,
             created_at__lt=threshold,
-        ).exclude(notes__contains=STALE_MARKER).only("id", "notes")
+            update_time__lt=threshold,
+            stale_since__isnull=True,
+        ).only("id", "stale_since")
 
         # Chunked bulk_update instead of one `.save()` per row (PQ-02). That
         # also skips the per-row post_save audit rows, so each chunk gets one
         # batch audit row instead — same attribution, via the contextvar above.
-        stamp = f"\n{STALE_MARKER} on {now.isoformat()}"
         flagged = 0
         chunk = []
         for judgment in stale_judgments.iterator(chunk_size=STALE_CHUNK):
-            judgment.notes = (judgment.notes or "") + stamp
+            judgment.stale_since = now
             chunk.append(judgment)
             if len(chunk) == STALE_CHUNK:
                 flagged += _flush_stale(chunk)
