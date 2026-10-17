@@ -108,7 +108,8 @@ def test_payload_fields_never_reach_the_push(cn_tenant, enqueued):  # noqa: F811
     # 灵魂端 App 显示「打开灵魂簿查看理由」—— 理由本身不在推送里。
     assert "P-REJECTION" not in json.dumps(rows, ensure_ascii=False)
     assert "P-" not in json.dumps(rows, ensure_ascii=False)
-    assert all(set(r["data"]) <= {"screen", "application_id", "kind"} for r in rows)
+    # judgment_id:落地高亮那一件审判(第四十批 S-e);是 id,不是内容。
+    assert all(set(r["data"]) <= {"screen", "application_id", "judgment_id", "kind"} for r in rows)
 
 
 def test_what_is_and_is_not_pushed(cn_tenant, enqueued):  # noqa: F811

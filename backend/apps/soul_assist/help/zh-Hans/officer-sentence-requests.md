@@ -1,6 +1,6 @@
 ---
 id: officer-sentence-requests
-screens: [sentence-requests, disposition]
+screens: [sentence-requests, sentence-plans, disposition]
 audience: officer
 civilizations: []
 codes: []

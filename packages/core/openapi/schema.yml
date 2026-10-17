@@ -4841,6 +4841,45 @@ paths:
               schema:
                 $ref: '#/components/schemas/CrossTenantJudgment'
           description: ''
+  /api/v1/dispatch/cross-tenant-judgments/{id}/cancel/:
+    post:
+      operationId: v1_dispatch_cross_tenant_judgments_cancel_create
+      description: |-
+        取消会审(第四十批 W-a):理由必填;召集人或发起殿的管理员(`CrossTenantJudgmentService.can_end`)。
+
+        PROPOSED / ACTIVE → CANCELLED,不会有结论;席上各站保留、只读。原审判随后照常结案
+        (`check_cross_judgment` 不再挡)。已结束 / 已取消答 409。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Cross-Tenant Judgment.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CrossTenantJudgmentCancel'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CrossTenantJudgmentCancel'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CrossTenantJudgmentCancel'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CrossTenantJudgment'
+          description: ''
   /api/v1/dispatch/cross-tenant-judgments/{id}/conclude/:
     post:
       operationId: v1_dispatch_cross_tenant_judgments_conclude_create
@@ -11586,6 +11625,28 @@ paths:
       responses:
         '204':
           description: No response body
+  /api/v1/menus/buttons/config/:
+    get:
+      operationId: v1_menus_buttons_config_list
+      description: |-
+        菜单按钮配置的生效集合(第四十批 W-b):每一行 = 某菜单(按 path)下某按钮(按 code)开着没有。
+
+        页面上的关键按钮「权限码允许 **且** 这里允许」才显示;这里没有那一行 = 允许(存量部署不丢按钮)。
+        所以要的是**全部**行,不按 `visible_buttons` 收窄:收窄会把一条「关」的行藏起来,
+        前端读成「没有配置 = 显示」。不带 `permission` 字段(见 `MenuButtonConfigSerializer`)。
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MenuButtonConfig'
+          description: ''
   /api/v1/menus/list-public/:
     get:
       operationId: v1_menus_list_public_list
@@ -23225,6 +23286,19 @@ components:
           readOnly: true
           nullable: true
           description: PASS or FAIL
+        conclusion_note:
+          type: string
+          readOnly: true
+        cancel_reason:
+          type: string
+          readOnly: true
+        ended_by_name:
+          type: string
+          nullable: true
+          readOnly: true
+        can_end:
+          type: boolean
+          readOnly: true
         judgment:
           type: string
           format: uuid
@@ -23243,10 +23317,14 @@ components:
           format: date-time
           readOnly: true
       required:
+      - can_end
+      - cancel_reason
       - concluded_at
+      - conclusion_note
       - conclusion_type
       - create_time
       - description
+      - ended_by_name
       - id
       - initiating_tenant
       - initiating_tenant_code
@@ -23255,6 +23333,15 @@ components:
       - status
       - title
       - update_time
+    CrossTenantJudgmentCancel:
+      type: object
+      description: 取消会审:理由必填。
+      properties:
+        reason:
+          type: string
+          maxLength: 1000
+      required:
+      - reason
     CrossTenantJudgmentList:
       type: object
       description: Lightweight serializer for listing cross-tenant judgments.
@@ -24450,8 +24537,10 @@ components:
       - profile
       - realms
       - rebirth-applications
+      - rebirths
       - recycle-bin
       - scheduler
+      - sentence-plans
       - sentence-requests
       - social
       - soul-credentials
@@ -24491,8 +24580,10 @@ components:
         * `profile` - profile
         * `realms` - realms
         * `rebirth-applications` - rebirth-applications
+        * `rebirths` - rebirths
         * `recycle-bin` - recycle-bin
         * `scheduler` - scheduler
+        * `sentence-plans` - sentence-plans
         * `sentence-requests` - sentence-requests
         * `social` - social
         * `soul-credentials` - soul-credentials
@@ -28729,6 +28820,33 @@ components:
       - id
       - name
       - permission
+    MenuButtonConfig:
+      type: object
+      description: |-
+        `/menus/buttons/config/` 的一行:哪个菜单下的哪个按钮开着没有(第四十批 W-b)。
+
+        只有键与开关,不带 `permission` —— 码名表不因为这个接口对所有角色敞开
+        (`button_access.py` 顶上记的那次泄露)。
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        menu:
+          type: integer
+        menu_path:
+          type: string
+          readOnly: true
+        code:
+          type: string
+          description: 按钮编码，如 add/edit/delete/export
+          maxLength: 50
+        is_active:
+          type: boolean
+      required:
+      - code
+      - id
+      - menu
+      - menu_path
     MenuButtonCreateUpdate:
       type: object
       properties:
@@ -29938,8 +30056,10 @@ components:
       - profile
       - realms
       - rebirth-applications
+      - rebirths
       - recycle-bin
       - scheduler
+      - sentence-plans
       - sentence-requests
       - social
       - soul-credentials
@@ -29973,8 +30093,10 @@ components:
         * `profile` - profile
         * `realms` - realms
         * `rebirth-applications` - rebirth-applications
+        * `rebirths` - rebirths
         * `recycle-bin` - recycle-bin
         * `scheduler` - scheduler
+        * `sentence-plans` - sentence-plans
         * `sentence-requests` - sentence-requests
         * `social` - social
         * `soul-credentials` - soul-credentials
@@ -31817,6 +31939,19 @@ components:
           readOnly: true
           nullable: true
           description: PASS or FAIL
+        conclusion_note:
+          type: string
+          readOnly: true
+        cancel_reason:
+          type: string
+          readOnly: true
+        ended_by_name:
+          type: string
+          nullable: true
+          readOnly: true
+        can_end:
+          type: boolean
+          readOnly: true
         judgment:
           type: string
           format: uuid
@@ -32725,6 +32860,10 @@ components:
         soul_name:
           type: string
           readOnly: true
+        soul_code:
+          type: string
+          readOnly: true
+          nullable: true
         disposition:
           type: string
           format: uuid
@@ -35193,6 +35332,10 @@ components:
         soul_name:
           type: string
           readOnly: true
+        soul_code:
+          type: string
+          readOnly: true
+          nullable: true
         disposition:
           type: string
           format: uuid
@@ -35223,6 +35366,7 @@ components:
       - id
       - reincarnated_at
       - soul
+      - soul_code
       - soul_name
       - target_realm
     Report:
