@@ -229,6 +229,31 @@ describe("notification events", () => {
     expect(showToast).toHaveBeenCalledWith("Judgment", "info", 5000);
   });
 
+  it("toasts in the reader's language when the push carries per-locale text, else the stored text", () => {
+    const body = (extra: object) => ({
+      domain: "notification",
+      event: "NOTIFICATION_CREATED",
+      notification: { id: 1, title: "存下来的标题", message: "存下来的正文", notification_type: "SYSTEM", is_read: false, created_at: "", user_id: 1, ...extra },
+    }) as EventPayload;
+    const i18n = { "zh-Hans": { title: "审批超时", message: "请处理" }, en: { title: "Approval overdue", message: "Please handle it" } };
+    const { ctx, showToast } = makeContext();
+
+    document.cookie = "soulledger-locale=en; path=/";
+    dispatchEvent(body({ i18n }), ctx);
+    expect(showToast).toHaveBeenLastCalledWith("Approval overdue: Please handle it", "info", 5000);
+
+    // A locale missing from `i18n`: the stored text, not a blank toast.
+    document.cookie = "soulledger-locale=egy; path=/";
+    dispatchEvent(body({ i18n }), ctx);
+    expect(showToast).toHaveBeenLastCalledWith("存下来的标题: 存下来的正文", "info", 5000);
+
+    // An old notification has no `i18n` at all.
+    document.cookie = "soulledger-locale=en; path=/";
+    dispatchEvent(body({}), ctx);
+    expect(showToast).toHaveBeenLastCalledWith("存下来的标题: 存下来的正文", "info", 5000);
+    document.cookie = "soulledger-locale=; path=/; max-age=0";
+  });
+
   it("does not toast at all when the frame carries no notification body", () => {
     const { ctx, showToast } = makeContext();
 

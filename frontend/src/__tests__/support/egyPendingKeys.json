@@ -1,4 +1,26 @@
 [
   "official_notify.cross_judgment_cancelled.title",
-  "official_notify.cross_judgment_cancelled.body"
+  "official_notify.cross_judgment_cancelled.body",
+  "official_notify.soul_account_provisioning_failed.title",
+  "official_notify.soul_account_provisioning_failed.body",
+  "official_notify.rebirth_status_under_review.title",
+  "official_notify.rebirth_status_under_review.body",
+  "official_notify.rebirth_status_rejected.title",
+  "official_notify.rebirth_status_rejected.body",
+  "official_notify.rebirth_status_appealing.title",
+  "official_notify.rebirth_status_appealing.body",
+  "official_notify.rebirth_status_appeal_rejected.title",
+  "official_notify.rebirth_status_appeal_rejected.body",
+  "official_notify.rebirth_status_approved.title",
+  "official_notify.rebirth_status_approved.body",
+  "official_notify.cooldown_decided_approved.title",
+  "official_notify.cooldown_decided_approved.body",
+  "official_notify.cooldown_decided_rejected.title",
+  "official_notify.cooldown_decided_rejected.body",
+  "official_notify.assistant_cap_warning.title",
+  "official_notify.assistant_cap_warning.body",
+  "official_notify.assistant_cap_closed.title",
+  "official_notify.assistant_cap_closed.body",
+  "official_notify.assistant_reopened.title",
+  "official_notify.assistant_reopened.body"
 ]

@@ -16,7 +16,9 @@ REGISTRATION_KINDS = {"death_sync_retry_failed"}
 #: 主语是一场跨域审判(它的标题)。
 CROSS_JUDGMENT_KINDS = {"cross_judgment_concluded", "cross_judgment_concluded_fail", "cross_judgment_cancelled"}
 #: 主语是一个定时任务。
-TASK_KINDS = SYSTEM_KINDS
+TASK_KINDS = {"scheduled_task_failed", "scheduled_task_overdue"}
+#: 没有单独的主语:给灵魂本人的转生申请 / 缩短冷却结果(状态已在句子里),和助手花费上限的提醒。
+SUBJECTLESS_KINDS = SYSTEM_KINDS - TASK_KINDS - {"soul_account_provisioning_failed"}
 
 EGY_PENDING = set(json.loads(
     (Path(__file__).resolve().parents[2] / "frontend" / "src" / "__tests__" / "support" / "egyPendingKeys.json")
@@ -49,7 +51,7 @@ def test_every_localized_type_is_a_real_type_with_text_in_every_locale():
                 else "{{reference}}" if kind in REGISTRATION_KINDS else "{{title}}" if kind in CROSS_JUDGMENT_KINDS
                 else "{{task}}" if kind in TASK_KINDS else "{{soul}}"
             )
-            assert entry["title"] and subject in entry["body"], (locale, kind)
+            assert entry["title"] and (kind in SUBJECTLESS_KINDS or subject in entry["body"]), (locale, kind)
         assert "{{count}}" in pack["dispatch_return_blocked"]["body"], locale
         for kind in ("sentence_node_active", "sentence_node_done", "sentence_node_waiting", "sentence_node_refused"):
             assert "{{order}}" in pack[kind]["body"] and "{{tenant}}" in pack[kind]["body"], (locale, kind)
