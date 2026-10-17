@@ -6013,7 +6013,8 @@
       "desk_only": "Ready for verdict · use the desk",
       "scope_note": "On the phone you can claim, read and comment. Verdicts and seals are done at the desk.",
       "claim": "Claim",
-      "claim_failed": "Couldn't claim"
+      "claim_failed": "Couldn't claim",
+      "claim_taken": "Someone else claimed it first"
     },
     "continue_on_desk": "Continue on desktop",
     "search": {
@@ -6220,7 +6221,8 @@
       "unavailable": "Adding a signer isn't possible right now; you can only look at the candidates.",
       "added": "Signer added. Your approval counts once they have signed.",
       "not_eligible": "This person can't be added (an active officer of this hall who may approve).",
-      "duplicate": "Already a co-signer, or already able to decide this step alone."
+      "duplicate": "Already a co-signer, or already able to decide this step alone.",
+      "more": "More ({{n}} more)"
     },
     "comment": {
       "title": "Comments",
@@ -6229,7 +6231,8 @@
       "send": "Post",
       "failed": "Couldn't post the comment. Try again later.",
       "show_rest": "Show {{n}} more",
-      "after_close": "After closing"
+      "after_close": "After closing",
+      "load_failed": "Couldn't load comments"
     },
     "letter": {
       "irreversible": "Cannot be undone once sent",
@@ -6252,7 +6255,9 @@
       "done_unarchived": "Unarchived",
       "archived_banner": "Archived · {{date}}",
       "unassigned_tag": "Unassigned",
-      "take": "I'll take it"
+      "take": "I'll take it",
+      "earlier": "Earlier letters",
+      "earlier_failed": "Couldn't load earlier letters"
     },
     "offline": {
       "banner": "Offline · showing content from {{time}}",
@@ -6275,7 +6280,8 @@
       "discard": "Delete my draft"
     },
     "list": {
-      "more": "Load more"
+      "more": "Load more",
+      "more_failed": "Couldn't load more"
     },
     "case": {
       "release": "Release",

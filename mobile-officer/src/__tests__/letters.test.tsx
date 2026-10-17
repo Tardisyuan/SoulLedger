@@ -17,6 +17,7 @@ const mockGet = jest.fn();
 const mockMessages = jest.fn();
 const mockReply = jest.fn();
 const mockTemplates = jest.fn();
+const mockMarkRead = jest.fn();
 jest.mock("@soulledger/core/api/officer-app", () => ({
   ...jest.requireActual("@soulledger/core/api/officer-app"),
   officerAppApi: { todo: (...a: unknown[]) => mockTodo(...a), registerPush: jest.fn(), unregisterPush: jest.fn() },
@@ -27,6 +28,7 @@ jest.mock("@soulledger/core/api/soul-inbox", () => ({
     get: (...a: unknown[]) => mockGet(...a),
     messages: (...a: unknown[]) => mockMessages(...a),
     reply: (...a: unknown[]) => mockReply(...a),
+    markRead: (...a: unknown[]) => mockMarkRead(...a),
   },
   inboxTemplatesApi: { list: (...a: unknown[]) => mockTemplates(...a) },
 }));
@@ -56,6 +58,7 @@ beforeEach(() => {
   mockGet.mockResolvedValue({ data: CONVO });
   mockMessages.mockResolvedValue({ data: MESSAGES });
   mockTemplates.mockResolvedValue({ data: [TEMPLATE] });
+  mockMarkRead.mockResolvedValue({ data: {} });
 });
 
 describe("rules", () => {
@@ -150,6 +153,37 @@ describe("the thread", () => {
     // Author and time on one line.
     expect(screen.getByText(/^崔珏 · 判官 · \d{4}-\d{2}-\d{2} \d{2}:\d{2}$/)).toBeTruthy();
     expect(screen.getByText(/^李白 · \d{4}-\d{2}-\d{2} \d{2}:\d{2}$/)).toBeTruthy();
+  });
+
+  it("opening it marks it read, once", async () => {
+    await openThread();
+    await waitFor(() => expect(mockMarkRead).toHaveBeenCalledWith("c-1"));
+    expect(mockMarkRead).toHaveBeenCalledTimes(1);
+  });
+
+  it("a full page offers 「更早的信」, which puts the older page above, oldest first; a short page has no button", async () => {
+    const letter = (n: number) => ({ event_id: `e${n}`, from_officer: false, sender_name: "李白", officer_title: "", body: `信${n}`, image: null, timestamp: Date.UTC(2026, 9, 9, 0, n) });
+    // Newest first: e100 … e51 is the first page; e50 … e49 is what came before.
+    const page = Array.from({ length: 50 }, (_, i) => letter(100 - i));
+    mockMessages.mockImplementation(async (_id: string, before?: string) => (before === "e51" ? { data: [letter(50), letter(49)] } : { data: page }));
+    await openThread();
+    fireEvent.press(await screen.findByTestId("letter-earlier"));
+    expect(await screen.findByText("信49")).toBeTruthy();
+    expect(mockMessages).toHaveBeenLastCalledWith("c-1", "e51");
+    const ids = screen.root.findAll((n) => typeof n.props.testID === "string" && /^letter-soul-/.test(n.props.testID)).map((n) => n.props.testID);
+    expect([...new Set(ids)].slice(0, 3)).toEqual(["letter-soul-e49", "letter-soul-e50", "letter-soul-e51"]);
+    expect(screen.queryByTestId("letter-earlier")).toBeNull();
+  });
+
+  it("a failed 「更早」 says so above the letters and can be tried again", async () => {
+    const page = Array.from({ length: 50 }, (_, i) => ({ ...MESSAGES[1], event_id: `e${100 - i}`, body: `信${100 - i}` }));
+    mockMessages.mockImplementation(async (_id: string, before?: string) => {
+      if (before) throw new Error("Network Error");
+      return { data: page };
+    });
+    await openThread();
+    fireEvent.press(await screen.findByTestId("letter-earlier"));
+    expect(await screen.findByTestId("letter-earlier-failed")).toBeTruthy();
   });
 
   it("says 发出后不能撤回 above 发送, and asks nothing after it", async () => {

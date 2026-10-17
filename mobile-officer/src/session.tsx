@@ -223,3 +223,9 @@ export function useSession(): Session {
   if (!value) throw new Error("useSession outside SessionProvider");
   return value;
 }
+
+/** Whether the signed-in officer holds `code` (the server re-checks; this only hides what would be a 403). */
+export function useCan(code: string): boolean {
+  const { state } = useSession();
+  return state.status === "signedIn" && !!state.user.permissions?.includes(code);
+}

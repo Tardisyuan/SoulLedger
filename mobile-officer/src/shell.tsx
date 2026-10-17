@@ -8,13 +8,14 @@
  * back to the list washes that row for 1.2 s (kit.tsx `Highlight`; none under reduce-motion).
  */
 import { useCallback, useEffect, useState } from "react";
-import { BackHandler, StyleSheet, View } from "react-native";
+import { notificationsApi } from "@soulledger/core/api/notifications";
+import { AppState, BackHandler, StyleSheet, View } from "react-native";
 
 import { AssistSheet, TabHead, useOfficerAssist } from "./assist";
 import { IdentityBand, StandingBanner, TabBar, type TabKey } from "./kit";
 import { isRetiredResetLink, officerLinks, resetLinks, type ResetLink } from "./links";
 import { OfflineBanner } from "./offlineBanner";
-import { listenForLandings, registerDevice } from "./push";
+import { listenForArrivals, listenForLandings, registerDevice } from "./push";
 import { HIGHLIGHT_MS, hallLabel, type Landing } from "./rules";
 import { Detail, type DetailTarget } from "./screens/detail";
 import { ChangePasswordScreen, DisplayNameScreen } from "./screens/account";
@@ -42,7 +43,7 @@ export function Shell({ onResetDone }: { onResetDone?: () => void } = {}) {
   // 我的's two sub-screens, drawn over the tabs like a detail (not a tab, so no tab-bar entry).
   const [account, setAccount] = useState<AccountScreen | null>(null);
   const [locked, setLocked] = useState(false);
-  // Bumped whenever a list should ask again: after a detail closes, after a push.
+  // Bumped whenever a list should ask again: after a detail closes, after a push (tapped or arrived), back in the foreground.
   const [version, setVersion] = useState(0);
   const [landed, setLanded] = useState<ItemRef | null>(null);
   const [highlight, setHighlight] = useState<ItemRef | null>(null);
@@ -68,6 +69,32 @@ export function Shell({ onResetDone }: { onResetDone?: () => void } = {}) {
     void registerDevice();
     return listenForLandings(land);
   }, [land]);
+
+  // The lists ask again when the app comes back to the foreground and when a push arrives while it is open:
+  // the same bump a closed detail gives them (待办 / 审判 / 通知 remount on `version`).
+  useEffect(() => {
+    const bump = () => setVersion((v) => v + 1);
+    const stop = listenForArrivals(bump);
+    let previous = AppState.currentState;
+    const sub = AppState.addEventListener("change", (next) => {
+      if (next === "active" && previous !== "active") bump();
+      previous = next;
+    });
+    return () => {
+      stop();
+      sub.remove();
+    };
+  }, []);
+
+  // 通知's ● is the server's unread count, not what the tab has loaded: asked at start and on every bump
+  // (push, foreground, a detail closed, a notice marked read). A count that fails keeps the mark it had.
+  const countUnread = useCallback(() => {
+    notificationsApi
+      .list({ is_read: "false" })
+      .then((r) => setUnread((r.data.count ?? r.data.results.length) > 0))
+      .catch(() => {});
+  }, []);
+  useEffect(() => countUnread(), [version, countUnread]);
 
   useEffect(
     // A link held while signed out (or before this mounted) arrives here first. Same landing as a push.
@@ -168,7 +195,7 @@ export function Shell({ onResetDone }: { onResetDone?: () => void } = {}) {
         ) : tab === "search" ? (
           <SearchTab onOpenSoul={(id) => setDetail({ type: "soul", id })} />
         ) : tab === "notices" ? (
-          <NoticesTab onUnread={setUnread} onLand={land} />
+          <NoticesTab key={version} onRead={countUnread} onLand={land} />
         ) : (
           <MeTab onOpen={setAccount} />
         )}

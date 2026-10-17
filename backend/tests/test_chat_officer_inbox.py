@@ -117,6 +117,26 @@ def test_officer_reads_and_replies_through_the_backend(cn_tenant, matrix):  # no
         assert "已收到" not in row.description and "我想申诉" not in row.description
 
 
+def test_before_pages_to_the_letters_older_than_one(cn_tenant, matrix):  # noqa: F811
+    """「更早」:`?before=<event_id>` 只给比它更早的,新的在前;不在房间里的 id 是 400,不是 503。"""
+    _, client = ready_soul(cn_tenant, name="甲")
+    data = _write_to_hall(client, "第一封")
+    for body in ("第二封", "第三封"):
+        assert client.post(f"/api/v1/me/chat/conversations/{data['id']}/messages/", {"body": body},
+                           format="json").status_code == 201
+    api = officer_client(_moderator(cn_tenant, "cn_mod"))
+    url = f"{INBOX}{data['id']}/messages/"
+    newest = api.get(url).data
+    assert [m["body"] for m in newest] == ["第三封", "第二封", "第一封"]
+
+    older = api.get(url, {"before": newest[1]["event_id"]})
+    assert older.status_code == 200
+    assert [m["body"] for m in older.data] == ["第一封"]
+    assert api.get(url, {"before": newest[2]["event_id"]}).data == []
+    missing = api.get(url, {"before": "$nope"})
+    assert missing.status_code == 400 and missing.data["code"] == "bad_before"
+
+
 def test_inbox_permission_codes(cn_tenant, matrix):  # noqa: F811
     """VIEWER 没有 soul_inbox.read;JUDGE 同样没有。reply 另要 soul_inbox.reply。
     变异:把 `extra_permissions["reply"]` 改成 `["soul_inbox.read"]`,再收回某角色的 reply → 红。"""

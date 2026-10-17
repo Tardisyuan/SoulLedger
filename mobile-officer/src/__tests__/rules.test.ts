@@ -148,6 +148,8 @@ describe("where a tapped push lands", () => {
   it("a notification row lands like a push: a workflow is an approval, anything unnamed stays put", () => {
     expect(noticeLanding({ related_resource: "workflow", related_id: "wf-9" })).toEqual({ tab: "todo", item: { kind: "approval", id: "wf-9" } });
     expect(noticeLanding({ related_resource: "cooldown", related_id: "4" })).toEqual({ tab: "todo", item: { kind: "cooldown", id: "4" } });
+    // A rebirth workflow's notice names the application -- what the rebirth item is keyed by, not the workflow (that was a 404).
+    expect(noticeLanding({ related_resource: "rebirth_application", related_id: "ra-3" })).toEqual({ tab: "todo", item: { kind: "rebirth", id: "ra-3" } });
     expect(noticeLanding({ related_resource: "scheduler", related_id: "5" })).toBeNull();
     expect(noticeLanding({ related_resource: "judgment", related_id: "j1" })).toEqual({ tab: "todo", judgment: "j1" });
     expect(noticeLanding({ related_resource: "soul", related_id: "s1" })).toEqual({ tab: "todo", soul: "s1" });

@@ -1,1 +1,8 @@
-[]
+[
+  "officer_app.comment.load_failed",
+  "officer_app.cosign.more",
+  "officer_app.letter.earlier",
+  "officer_app.letter.earlier_failed",
+  "officer_app.list.more_failed",
+  "officer_app.queue.claim_taken"
+]

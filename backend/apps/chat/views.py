@@ -312,9 +312,15 @@ class OfficerInboxViewSet(CodenameViewSetMixin, mixins.ListModelMixin, mixins.Re
     @action(detail=True, methods=["get"], pagination_class=None)
     def messages(self, request, pk=None):
         conversation = self.get_object()
+        # `?before=<event_id>`:比这封更早的一页(App 的「更早」)。它进 Synapse 的路径,在 matrix.py 里转义。
+        before = request.query_params.get("before") or None
+        if before is not None and len(before) > 255:
+            return Response({"detail": "before 太长。", "code": "bad_before"}, status=status.HTTP_400_BAD_REQUEST)
         try:
-            rows = svc.officer_messages(conversation, request.user, request=request)
+            rows = svc.officer_messages(conversation, request.user, request=request, before=before)
         except MatrixError as exc:
+            if before is not None and getattr(exc, "status", None) == 404:
+                return Response({"detail": "没有这封信。", "code": "bad_before"}, status=status.HTTP_400_BAD_REQUEST)
             return _unavailable(exc)
         return Response(InboxMessageSerializer(rows, many=True).data)
 
