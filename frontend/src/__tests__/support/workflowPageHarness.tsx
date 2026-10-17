@@ -34,6 +34,7 @@ export const mockPush = jest.fn();
 
 jest.mock("next/navigation", () => ({
   useRouter: () => ({ push: mockPush }),
+  useSearchParams: () => null,
 }));
 
 jest.mock("@soulledger/core/api", () => ({

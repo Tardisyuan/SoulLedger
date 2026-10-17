@@ -35,6 +35,8 @@ export interface SentencePlanFilters {
   pending_request?: boolean;
   /** `true`: plans of this hall whose refused / cancelled dispatch awaits being sent again. */
   awaiting_redispatch?: boolean;
+  /** Soul name, contains (`SentencePlanViewSet.search_fields`) — the /sentence-plans list. */
+  search?: string;
   page?: number;
 }
 

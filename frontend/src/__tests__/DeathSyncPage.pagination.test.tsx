@@ -10,7 +10,7 @@ import DeathSyncPage from "@/app/death-sync/page";
 import { deathSyncApi } from "@soulledger/core/api";
 
 jest.mock("@soulledger/core/api", () => ({
-  deathSyncApi: { registrations: jest.fn(), summary: jest.fn(), retry: jest.fn() },
+  deathSyncApi: { registrations: jest.fn(), summary: jest.fn(), retry: jest.fn(), exportCsv: jest.fn() },
   // The page derives `totalPages` from this; a mock without it is NaN pages.
   PAGE_SIZE: 20,
 }));
@@ -31,6 +31,8 @@ const mockTenant = {
 jest.mock("@/src/contexts/TenantContext", () => ({
   useTenant: () => mockTenant,
 }));
+
+jest.mock("@/src/lib/saveBlob", () => ({ saveBlob: jest.fn() }));
 
 jest.mock("@/src/components/layout/MenuGloss", () => ({
   MenuGloss: () => null,
@@ -230,5 +232,22 @@ describe("death registration retry", () => {
     await waitFor(() => expect(deathSyncApi.retry).toHaveBeenCalledWith("a"));
     expect(deathSyncApi.retry).toHaveBeenCalledTimes(1);
     await waitFor(() => expect(mockGet.mock.calls.length).toBeGreaterThan(calls));
+  });
+});
+
+describe("search, received dates and export (审计 2026-10-17 第 12 条)", () => {
+  it("sends the server's filter names, back on page 1, and the export carries the same filters", async () => {
+    mockSearch = new URLSearchParams("status=FAILED");
+    (deathSyncApi.exportCsv as jest.Mock).mockResolvedValue({ data: new Blob(["a"]) });
+    renderPage();
+    await screen.findByText("Registry 101");
+    fireEvent.change(screen.getByTestId("death-sync-search"), { target: { value: "REF-1" } });
+    fireEvent.change(screen.getByTestId("death-sync-from"), { target: { value: "2026-09-01" } });
+    fireEvent.change(screen.getByTestId("death-sync-to"), { target: { value: "2026-09-30" } });
+    const filters = { status: "FAILED", search: "REF-1", received_after: "2026-09-01", received_before: "2026-09-30" };
+    await waitFor(() => expect(mockGet).toHaveBeenLastCalledWith({ page: "1", ...filters }));
+
+    fireEvent.click(screen.getByRole("button", { name: "common.export_scope:45" }));
+    await waitFor(() => expect(deathSyncApi.exportCsv).toHaveBeenCalledWith(filters));
   });
 });

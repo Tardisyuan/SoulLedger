@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { Suspense, useState, type ReactNode } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query";
 import { RefreshCw } from "lucide-react";
@@ -186,8 +187,20 @@ function RebirthApplicationsContent({ tabs }: { tabs: ReactNode }) {
 const TABS = ["applications", "shortenings"] as const;
 
 export default function RebirthApplicationsPage() {
+  // `useSearchParams` 要在 Suspense 里(静态预渲染时它会挂起)。
+  return (
+    <Suspense fallback={null}>
+      <RebirthApplicationsTabs />
+    </Suspense>
+  );
+}
+
+function RebirthApplicationsTabs() {
   const { t } = useI18n();
-  const [tab, setTab] = useState<(typeof TABS)[number]>("applications");
+  // `?tab=shortenings`:首页待办条「缩短冷却待批」带来的。
+  const [tab, setTab] = useState<(typeof TABS)[number]>(
+    useSearchParams()?.get("tab") === "shortenings" ? "shortenings" : "applications"
+  );
   const { hasPermission } = usePermissions();
   // 「缩短冷却申请」页签后的待决定数(A11):与筛选签共用同一条 counts 查询。
   const pending = useCooldownShorteningCounts(hasPermission("workflow.read")).data?.PENDING;

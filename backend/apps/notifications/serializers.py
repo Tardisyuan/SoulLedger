@@ -46,7 +46,10 @@ class _LocalizedMixin:
         kind = messages.kind_for(instance.notification_type, instance.params)
         locale = locale_from_context(self.context)
         if kind and instance.params and locale in messages.MESSAGES:
-            data["title"], data["message"] = messages.render(locale, kind, instance.params)
+            title, body = messages.render(locale, kind, instance.params)
+            # 类型后来才分语言的旧行(如超时提醒只存了 `category`)缺参数:照原文返回,不露出 `{{soul}}`。
+            if "{{" not in title + body:
+                data["title"], data["message"] = title, body
         return data
 
 

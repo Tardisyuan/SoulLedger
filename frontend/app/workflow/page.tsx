@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { Suspense, useState, useMemo } from "react";
+import { useSearchParams } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { workflowApi, type ApprovalWorkflow, type ApprovalNode } from "@soulledger/core/api";
 import { useI18n } from "@/src/contexts/I18nContext";
@@ -34,6 +35,15 @@ import type {
 } from "@/src/components/workflow/page/types";
 
 export default function WorkflowPage() {
+  // `useSearchParams` 要在 Suspense 里(静态预渲染时它会挂起)。
+  return (
+    <Suspense fallback={null}>
+      <WorkflowPageContent />
+    </Suspense>
+  );
+}
+
+function WorkflowPageContent() {
   const { t } = useI18n();
   const { showToast } = useToast();
 
@@ -107,7 +117,10 @@ export default function WorkflowPage() {
     { key: "editor", label: t("workflow.editor.title") },
     { key: "instances", label: t("workflow.instances") },
   ] as const;
-  const [tab, setTab] = useState<"existing" | "editor" | "instances">("existing");
+  // `?tab=instances`:首页待办条「审批待我处理」带来的,直接落在实例列表。
+  const [tab, setTab] = useState<"existing" | "editor" | "instances">(
+    useSearchParams()?.get("tab") === "instances" ? "instances" : "existing"
+  );
 
   // 身份带(A1):编辑器页签题「审批流编辑器」,右栏「模板名 · 已发布 vN」。版本取模板列表里
   // 那一行的 `published_version`;「草稿 N 处改动」只有编辑器内部知道,这里不写。其他页签退回面包屑。

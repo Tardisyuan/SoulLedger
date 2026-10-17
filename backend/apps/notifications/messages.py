@@ -36,6 +36,14 @@ MESSAGES = {
             "body": "灵魂「{{soul}}」的暂居回归被未结案审判拦下，共 {{count}} 件；结案或撤案后才能回归。",
         },
         "death_sync_retry_failed": {"title": "死亡登记重试仍失败", "body": "死亡登记 {{reference}} 第 {{count}} 次重试仍失败（{{reason}}），请到死亡同步页查看。"},
+        "workflow_assigned": {"title": "审批待你处理", "body": "灵魂「{{soul}}」的审批流「{{workflow}}」轮到你处理。"},
+        "workflow_node_passed": {"title": "流程通知", "body": "灵魂「{{soul}}」的审批流「{{workflow}}」经过「{{node}}」。"},
+        "workflow_timeout_reminder": {"title": "审批超时", "body": "灵魂「{{soul}}」的审批流「{{workflow}}」在「{{node}}」已超过 {{hours}} 小时未处理，请尽快处理。"},
+        "workflow_timeout_escalated": {"title": "审批超时", "body": "灵魂「{{soul}}」的审批流「{{workflow}}」在「{{node}}」已超过 {{hours}} 小时未处理，已转交给你。"},
+        "cross_judgment_concluded": {"title": "跨域审判已结案", "body": "跨域审判「{{title}}」已结案，结论：通过。"},
+        "cross_judgment_concluded_fail": {"title": "跨域审判已结案", "body": "跨域审判「{{title}}」已结案，结论：否决。"},
+        "scheduled_task_failed": {"title": "定时任务失败", "body": "定时任务「{{task}}」执行失败：{{error}}"},
+        "scheduled_task_overdue": {"title": "定时任务没有运行", "body": "定时任务「{{task}}」应在 {{expected_at}} 运行，至今没有运行记录。"},
     },
     "en": {
         "sentence_plan_cancelled": {"title": "Sentence plan cancelled", "body": "The sentence plan of soul {{soul}} was cancelled. The rest of the sentence is waived and the plan counts as complete."},
@@ -67,6 +75,14 @@ MESSAGES = {
             ),
         },
         "death_sync_retry_failed": {"title": "Death registration retry failed", "body": "Retry {{count}} of death registration {{reference}} failed again ({{reason}}). See the Death Sync page."},
+        "workflow_assigned": {"title": "Approval waiting on you", "body": "The approval flow {{workflow}} of soul {{soul}} is waiting on you."},
+        "workflow_node_passed": {"title": "Approval flow update", "body": "The approval flow {{workflow}} of soul {{soul}} has passed {{node}}."},
+        "workflow_timeout_reminder": {"title": "Approval overdue", "body": "Step {{node}} of the approval flow {{workflow}} of soul {{soul}} has waited over {{hours}} hours. Please handle it soon."},
+        "workflow_timeout_escalated": {"title": "Approval overdue", "body": "Step {{node}} of the approval flow {{workflow}} of soul {{soul}} has waited over {{hours}} hours and has been passed to you."},
+        "cross_judgment_concluded": {"title": "Cross-tenant judgment concluded", "body": "The cross-tenant judgment {{title}} has concluded: passed."},
+        "cross_judgment_concluded_fail": {"title": "Cross-tenant judgment concluded", "body": "The cross-tenant judgment {{title}} has concluded: rejected."},
+        "scheduled_task_failed": {"title": "Scheduled task failed", "body": "Scheduled task {{task}} failed: {{error}}"},
+        "scheduled_task_overdue": {"title": "Scheduled task did not run", "body": "Scheduled task {{task}} was due at {{expected_at}}; no run has been recorded since."},
     },
     "egy": {
         "sentence_plan_cancelled": {"title": "Wetep Sehen Seth", "body": "{{soul}}: Wetep Sehen Seth. Ky Wetep Nen; Wetep Neb Seth."},
@@ -120,7 +136,13 @@ KIND_BY_TYPE = {
     "JUDGMENT_REASSIGN_REQUESTED": "judgment_reassign_requested",
     "IMPERSONATION_STARTED": "impersonation_started",
     "DEATH_SYNC_RETRY_FAILED": "death_sync_retry_failed",
+    "WORKFLOW_ASSIGNED": "workflow_assigned",
+    "JUDGMENT_CONCLUDED": "cross_judgment_concluded",
 }
+
+#: `SYSTEM` 类型没有自己的文案键(它是各种运维消息的兜底类型);发送方把下面之一写进 `params["kind"]`
+#: 才按语言渲染,别的 SYSTEM 行照存下来的原文返回。
+SYSTEM_KINDS = {"scheduled_task_failed", "scheduled_task_overdue"}
 
 
 #: Per-recipient variants of a type's kind. A sender picks one by writing its
@@ -136,6 +158,9 @@ VARIANTS = {
     "dispatch_rejected": {"dispatch_rejected_bare"},
     # 请求改派带了理由(手机端必填)就用带「理由」的句子;网页不带理由,旧通知也没有,仍是原句。
     "judgment_reassign_requested": {"judgment_reassign_requested_with_reason"},
+    # 同一个 WORKFLOW_ASSIGNED 还用于知会节点经过、超时提醒 / 转交(`params["category"]` 另管通知类别)。
+    "workflow_assigned": {"workflow_node_passed", "workflow_timeout_reminder", "workflow_timeout_escalated"},
+    "cross_judgment_concluded": {"cross_judgment_concluded_fail"},
 }
 
 
@@ -144,6 +169,8 @@ def kind_for(notification_type, params):
     variant its `params` name when that variant belongs to that kind."""
     kind = KIND_BY_TYPE.get(notification_type)
     variant = (params or {}).get("kind")
+    if notification_type == "SYSTEM":
+        return variant if variant in SYSTEM_KINDS else None
     return variant if variant in VARIANTS.get(kind, ()) else kind
 
 

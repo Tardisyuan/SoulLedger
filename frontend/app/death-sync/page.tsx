@@ -19,6 +19,9 @@ import { type BadgeTone } from "@/src/components/ui/Badge";
 import { StatusBadge } from "@/src/components/ui/StatusBadge";
 import { FilterChipSelect } from "@/src/components/ui/FilterChip";
 import { DeathSyncTabs } from "@/src/components/death-sync/DeathSyncTabs";
+import { ExportCsvButton } from "@/src/components/ExportCsvButton";
+import { fieldControl } from "@/src/components/ui/Field";
+import { cn } from "@/lib/utils";
 
 /**
  * Sync status → badge tone. 规范 v1:徽章无底色,颜色之外配一枚字形(`StatusBadge`)。
@@ -61,7 +64,8 @@ export default function DeathSyncPage() {
 
 function DeathSyncRoute() {
   const { t, formatDateTime } = useI18n();
-  usePlaque({ hall: useHall(t("plaque.office.records")) });
+  const hall = useHall(t("plaque.office.records"));
+  usePlaque({ hall });
   const { user } = useTenant();
   const router = useRouter();
   const pathname = usePathname();
@@ -73,10 +77,24 @@ function DeathSyncRoute() {
   // ReadOnlyModelViewSet and paginates at PAGE_SIZE; this read one page and
   // offered no way to the rest (FL-09). Same shape as `app/dispatch/page.tsx`.
   const [page, setPage] = useState(1);
+  // 其余筛选(审计 2026-10-17 第 12 条,`DeathRegistrationFilter`):灵魂姓名 / 来源编号 / 幂等键、收到的日期起止。
+  // 只属于这一次到访,不进 URL;导出带同一组(加上状态)。
+  const [search, setSearch] = useState("");
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+  const filterParams: Record<string, string> = {};
+  if (status) filterParams.status = status;
+  if (search.trim()) filterParams.search = search.trim();
+  if (from) filterParams.received_after = from;
+  if (to) filterParams.received_before = to;
+  const isFiltered = Object.keys(filterParams).length > 0;
+  const changeFilter = (apply: () => void) => {
+    apply();
+    setPage(1);
+  };
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ["death-sync", "registrations", page, status],
-    queryFn: async () =>
-      (await deathSyncApi.registrations({ page: String(page), ...(status ? { status } : {}) })).data,
+    queryKey: ["death-sync", "registrations", page, filterParams],
+    queryFn: async () => (await deathSyncApi.registrations({ page: String(page), ...filterParams })).data,
     enabled: !!user,
     // Pushed: death-sync events invalidate ["death-sync"].
     staleTime: 0,
@@ -139,6 +157,35 @@ function DeathSyncRoute() {
             clearLabel={t("filter.clear_one", { name: t("death_sync.status_label") })}
             onChange={setStatus}
           />
+          <input
+            type="text"
+            data-testid="death-sync-search"
+            placeholder={t("death_sync.filter.search")}
+            aria-label={t("death_sync.filter.search")}
+            value={search}
+            onChange={(e) => changeFilter(() => setSearch(e.target.value))}
+            className={cn(fieldControl({ size: "md" }), "flex-1 min-w-[200px]")}
+          />
+          <input
+            type="date"
+            data-testid="death-sync-from"
+            aria-label={t("death_sync.filter.from")}
+            title={t("death_sync.filter.from")}
+            value={from}
+            max={to || undefined}
+            onChange={(e) => changeFilter(() => setFrom(e.target.value))}
+            className={fieldControl({ size: "md" })}
+          />
+          <input
+            type="date"
+            data-testid="death-sync-to"
+            aria-label={t("death_sync.filter.to")}
+            title={t("death_sync.filter.to")}
+            value={to}
+            min={from || undefined}
+            onChange={(e) => changeFilter(() => setTo(e.target.value))}
+            className={fieldControl({ size: "md" })}
+          />
           {summary.data && summary.data.anomaly_count > 0 && (
             <button
               type="button"
@@ -150,6 +197,15 @@ function DeathSyncRoute() {
               {t("death_sync.anomaly_count", { count: String(summary.data.anomaly_count) })}
             </button>
           )}
+          <div className="ml-auto">
+            <ExportCsvButton
+              size="sm"
+              fetchCsv={() => deathSyncApi.exportCsv(filterParams)}
+              page={t("death_sync.title")}
+              hall={hall}
+              count={data?.count}
+            />
+          </div>
         </div>
         {/* 账页表格(规范 v1 §2)。没有详情路由,所以不是整行链接。
             失败与空仍分开:DataTable 的失败行是「! 加载失败」+ 重试。 */}
@@ -168,8 +224,15 @@ function DeathSyncRoute() {
           onRetry={() => refetch()}
           emptyMessage={t("death_sync.no_registrations")}
           /* 空状态给一条出路(补足 C15):按状态筛空了,就给「清除筛选」。 */
-          isFiltered={Boolean(status)}
-          onClearFilters={() => setStatus("")}
+          isFiltered={isFiltered}
+          onClearFilters={() => {
+            changeFilter(() => {
+              setSearch("");
+              setFrom("");
+              setTo("");
+            });
+            setStatus("");
+          }}
           keyExtractor={(reg) => String(reg.id)}
           renderRow={(reg) => (
             <>

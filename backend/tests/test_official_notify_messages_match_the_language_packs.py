@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from apps.notifications.messages import KIND_BY_TYPE, MESSAGES, VARIANTS
+from apps.notifications.messages import KIND_BY_TYPE, MESSAGES, SYSTEM_KINDS, VARIANTS
 from apps.notifications.models import NotificationType
 
 #: 主语是官员账号而不是灵魂的通知种类。
@@ -13,6 +13,10 @@ ACCOUNT_KINDS = {"password_help_requested", "password_help_requested_moderator"}
 ACTOR_KINDS = {"impersonation_started"}
 #: 主语是一条死亡登记(灵魂可能根本没查到,负载又是加密的个人资料):点名它的来源编号。
 REGISTRATION_KINDS = {"death_sync_retry_failed"}
+#: 主语是一场跨域审判(它的标题)。
+CROSS_JUDGMENT_KINDS = {"cross_judgment_concluded", "cross_judgment_concluded_fail"}
+#: 主语是一个定时任务。
+TASK_KINDS = SYSTEM_KINDS
 
 EGY_PENDING = set(json.loads(
     (Path(__file__).resolve().parents[2] / "frontend" / "src" / "__tests__" / "support" / "egyPendingKeys.json")
@@ -32,7 +36,7 @@ def test_every_localized_type_is_a_real_type_with_text_in_every_locale():
     assert set(KIND_BY_TYPE) <= set(NotificationType.values)
     for locale, pack in MESSAGES.items():
         variants = set().union(*VARIANTS.values())
-        expected = set(KIND_BY_TYPE.values()) | variants
+        expected = set(KIND_BY_TYPE.values()) | variants | SYSTEM_KINDS
         if locale == "egy":  # egy may lack exactly the kinds Design has not worded yet (egyPendingKeys.json)
             # The pending file lists leaf keys (`official_notify.<kind>.title`), as the jest parity test reads it.
             expected -= {k for k in expected if f"official_notify.{k}.title" in EGY_PENDING}
@@ -42,7 +46,8 @@ def test_every_localized_type_is_a_real_type_with_text_in_every_locale():
             # params 对上(egy 与 zh 同键一致由前端测试守)。
             subject = (
                 "{{by}}" if kind in ACTOR_KINDS else "{{username}}" if kind in ACCOUNT_KINDS
-                else "{{reference}}" if kind in REGISTRATION_KINDS else "{{soul}}"
+                else "{{reference}}" if kind in REGISTRATION_KINDS else "{{title}}" if kind in CROSS_JUDGMENT_KINDS
+                else "{{task}}" if kind in TASK_KINDS else "{{soul}}"
             )
             assert entry["title"] and subject in entry["body"], (locale, kind)
         assert "{{count}}" in pack["dispatch_return_blocked"]["body"], locale

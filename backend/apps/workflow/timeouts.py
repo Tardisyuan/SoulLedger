@@ -170,9 +170,6 @@ def _tell(workflow, node, action) -> None:
         workflow,
         node,
         category="approval_timeout",
-        title=f"审批超时: {workflow.workflow_name}",
-        message=(
-            f"节点「{node.node_name}」已超过 {node.timeout_hours} 小时未处理"
-            + ("，已转交给你。" if action == TimeoutAction.ESCALATE else "，请尽快处理。")
-        ),
+        kind="workflow_timeout_escalated" if action == TimeoutAction.ESCALATE else "workflow_timeout_reminder",
+        hours=node.timeout_hours,
     )
