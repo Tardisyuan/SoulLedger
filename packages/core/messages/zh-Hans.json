@@ -5186,6 +5186,10 @@
       "title": "跨域审判已结案",
       "body": "跨域审判「{{title}}」已结案，结论：否决。"
     },
+    "cross_judgment_cancelled": {
+      "title": "跨域审判已取消",
+      "body": "跨域审判「{{title}}」已取消。理由：{{reason}}"
+    },
     "scheduled_task_failed": {
       "title": "定时任务失败",
       "body": "定时任务「{{task}}」执行失败：{{error}}"

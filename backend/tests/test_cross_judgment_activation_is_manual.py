@@ -56,7 +56,7 @@ def bench(db):
     cn_judge = User.objects.create_user(username="cj_cn_judge", password="x", role="JUDGE", tenant=cn)
     eu_judge = User.objects.create_user(username="cj_eu_judge", password="x", role="JUDGE", tenant=eu)
     judgment = CrossTenantJudgment.objects.create(
-        title="Joint", description="d", initiating_tenant=cn, tenant=cn,
+        title="Joint", description="d", initiating_tenant=cn, tenant=cn, create_user=cn_judge,
     )
     return {
         "cn": cn, "eu": eu, "eg": eg,

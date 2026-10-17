@@ -57,6 +57,8 @@
   "official_notify.cross_judgment_concluded.body",
   "official_notify.cross_judgment_concluded_fail.title",
   "official_notify.cross_judgment_concluded_fail.body",
+  "official_notify.cross_judgment_cancelled.title",
+  "official_notify.cross_judgment_cancelled.body",
   "official_notify.scheduled_task_failed.title",
   "official_notify.scheduled_task_failed.body",
   "official_notify.scheduled_task_overdue.title",
