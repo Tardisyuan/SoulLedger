@@ -1,7 +1,7 @@
 /**
  * 第二十八批 S4: both apps follow the system text size, capped at the system's 3rd-largest step.
- * Only the cap is implemented; the one-line / reflow rules are not (see the note at `MAX_FONT_SCALE`),
- * so the absence tests below make a later change deliberate.
+ * The one-line rule is opt-in per field (`OneLine`, the badge label; see layout.test.tsx), not a
+ * default of the mono faces — the absence tests below keep it that way.
  */
 import { render, screen } from "@testing-library/react-native";
 
@@ -25,7 +25,7 @@ describe("S4 text size", () => {
     expect(props("body").allowFontScaling).not.toBe(false);
   });
 
-  it("the mono value faces and status labels do not set a line count or shrink-to-fit by default", () => {
+  it("the mono value faces do not set a line count by default; nothing shrinks to fit", () => {
     render(
       <>
         <Txt testID="code" variant="value">SL-0001</Txt>
@@ -33,8 +33,10 @@ describe("S4 text size", () => {
         <Badge spec={{ glyph: "●", border: "solid" }} label="待处理" />
       </>
     );
+    for (const p of [props("code"), props("amount")]) expect(p.numberOfLines).toBeUndefined();
+    // S4: a status label keeps to one line.
+    expect(screen.getByText("待处理").props.numberOfLines).toBe(1);
     for (const p of [props("code"), props("amount"), screen.getByText("待处理").props]) {
-      expect(p.numberOfLines).toBeUndefined();
       expect(p.adjustsFontSizeToFit).toBeUndefined();
       expect(p.minimumFontScale).toBeUndefined();
       expect(p.maxFontSizeMultiplier).toBe(2.35);
