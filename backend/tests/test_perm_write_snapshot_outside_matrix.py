@@ -358,8 +358,9 @@ CTJ_CREATE = _denied("GUARDIAN", "VIEWER")(201)
 CTJ_PATCH = _denied("GUARDIAN", "VIEWER")(200)
 CTJ_DELETE = _denied("GUARDIAN", "VIEWER")(204)
 CTJ_PARTICIPATE = _denied("GUARDIAN", "VIEWER")(200)
-# 结束与取消同一道:召集人或发起殿 ADMIN / 殿主;夹具的会审没有召集人,JUDGE 只是参与者,403。
-CTJ_CONCLUDE = _denied("GUARDIAN", "VIEWER", "JUDGE")(200)
+# 结束与取消同一道:召集人或发起殿 ADMIN / 殿主。这张表只量权限码,所以下面的测试让每个角色自己当召集人 ——
+# 「不是召集人」的 403 是状态规则,测在 tests/test_cross_judgment_cancel.py。
+CTJ_CONCLUDE = _denied("GUARDIAN", "VIEWER")(200)
 
 # ── notifications: 0 codes moved ─────────────────────────────────────────────
 # notification.read is held by every role and is the only codename any action
@@ -904,9 +905,10 @@ def test_cross_tenant_judgment_conclude(role_clients, snapshot_tenants, role):
     """dispatch.manage. JUDGE and VIEWER can no longer record a cross-realm tribunal's verdict."""
     from apps.dispatch.models import CrossTenantJudgment, JudgmentStatus
 
-    clients, _ = role_clients
+    clients, users = role_clients
     home, _o = snapshot_tenants
     judgment = _cross_tenant_judgment(home, status=JudgmentStatus.ACTIVE)
+    CrossTenantJudgment.objects.filter(pk=judgment.pk).update(create_user=users[role])  # 召集人:只剩权限码在起作用
     response = clients[role].post(
         f"/api/v1/dispatch/cross-tenant-judgments/{judgment.id}/conclude/",
         {"conclusion_type": "PASS"},
