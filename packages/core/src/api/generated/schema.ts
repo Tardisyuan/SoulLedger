@@ -25847,6 +25847,8 @@ export interface operations {
             query?: {
                 /** @description 上一页最后一条会话的 id;给了就只列比它更早的。 */
                 before?: string;
+                /** @description 一次最多给几条(1 到一页的大小);重开抽屉只要最新的一条时给 1。 */
+                limit?: number;
             };
             header?: never;
             path?: never;
