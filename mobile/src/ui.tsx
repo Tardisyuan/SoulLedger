@@ -71,6 +71,8 @@ import { GUTTER_PT, motion, radius, space, themeFor, type Theme } from "./theme"
  * which field has focus, and without it the sheet never lifts above the keyboard (reason fields were covered, 2026-10-17).
  */
 export const InSheetContext = createContext(false);
+/** Inside a `Sheet`: bring a focused field (and ~one button below it) above the keyboard. */
+export const SheetRevealContext = createContext<((field: TextInput | null) => void) | null>(null);
 
 export const ThemeContext = createContext<Theme>(themeFor(null, "dark"));
 export const useTheme = () => useContext(ThemeContext);
@@ -869,6 +871,7 @@ export function Input({
 }) {
   const t = useTheme();
   const inSheet = useContext(InSheetContext);
+  const revealInSheet = useContext(SheetRevealContext);
   const Field = inSheet ? (BottomSheetTextInput as unknown as typeof TextInput) : TextInput;
   const [focused, setFocused] = useState(false);
   const [revealed, setRevealed] = useState(false);
@@ -929,6 +932,7 @@ export function Input({
                 secureTextEntry={secureToggle ? rest.secureTextEntry && !revealed : rest.secureTextEntry}
                 onFocus={(e) => {
                   setFocused(true);
+                  revealInSheet?.(e.currentTarget as unknown as TextInput);
                   onFocus?.(e);
                 }}
                 onBlur={(e) => {

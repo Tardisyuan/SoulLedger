@@ -14,7 +14,7 @@ import {
   useGestureEventsHandlersDefault,
   type BottomSheetBackdropProps,
 } from "@gorhom/bottom-sheet";
-import { Animated, BackHandler, Modal, Pressable, StyleSheet, View } from "react-native";
+import { Animated, BackHandler, Dimensions, Keyboard, Modal, Pressable, StyleSheet, View, type ScrollView, type TextInput } from "react-native";
 import { Easing } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -23,7 +23,7 @@ import { BIO_KEY, logoutBody } from "./loginRules";
 import { platform } from "@soulledger/core/platform";
 import { useI18n } from "./i18n";
 import { radius } from "./theme";
-import { Button, InSheetContext, GUTTER, Txt, useReducedMotion, useReducedMotionDurations, useTheme } from "./ui";
+import { Button, InSheetContext, SheetRevealContext, GUTTER, Txt, useReducedMotion, useReducedMotionDurations, useTheme } from "./ui";
 
 type ToastKind = "success" | "failure";
 type Show = (message: string, kind?: ToastKind) => void;
@@ -236,6 +236,44 @@ export function Sheet({ open, onClose, edge, closeLabel, children }: { open: boo
     return () => sub.remove();
   }, [open, onClose]);
   const sheetInsets = useSafeAreaInsets();
+  // The sheet is already as tall as the screen when its content is long (改派: six people, a reason, 确认), so the
+  // keyboard cannot lift it: instead the content gets the keyboard's height as room at the bottom, and a focused
+  // field is scrolled until it and about one button under it sit above the keyboard (2026-10-17 simulator).
+  const scrollRef = useRef<ScrollView>(null);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const pending = useRef<TextInput | null>(null);
+  const BELOW_FIELD = 80;
+  const offset = useRef(0);
+  const scrollToField = useCallback((field: TextInput | null, height: number) => {
+    if (!field || !height) return;
+    field.measureInWindow((_x, y, _w, h) => {
+      const keyboardTop = Dimensions.get("window").height - height;
+      const overlap = y + h + BELOW_FIELD - keyboardTop;
+      if (overlap > 0) scrollRef.current?.scrollTo({ y: offset.current + overlap, animated: true });
+    });
+  }, []);
+  useEffect(() => {
+    const show = Keyboard.addListener("keyboardDidShow", (e) => {
+      const height = e.endCoordinates.height;
+      setKeyboardHeight(height);
+      scrollToField(pending.current, height);
+    });
+    const hide = Keyboard.addListener("keyboardDidHide", () => {
+      setKeyboardHeight(0);
+      pending.current = null;
+    });
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, [scrollToField]);
+  const reveal = useCallback(
+    (field: TextInput | null) => {
+      pending.current = field;
+      if (keyboardHeight) scrollToField(field, keyboardHeight);
+    },
+    [keyboardHeight, scrollToField]
+  );
   const backdrop = useCallback(
     (props: BottomSheetBackdropProps) => (
       <BottomSheetBackdrop
@@ -269,8 +307,17 @@ export function Sheet({ open, onClose, edge, closeLabel, children }: { open: boo
       // running off the bottom, and the sheet stops under the status bar (2026-10-17 simulator: 确认 was unreachable).
       topInset={sheetInsets.top}
     >
-      <BottomSheetScrollView keyboardShouldPersistTaps="handled">
-        <InSheetContext.Provider value>{children}</InSheetContext.Provider>
+      <BottomSheetScrollView
+        ref={scrollRef as never}
+        keyboardShouldPersistTaps="handled"
+        onScroll={(e) => {
+          offset.current = e.nativeEvent.contentOffset.y;
+        }}
+        contentContainerStyle={{ paddingBottom: keyboardHeight }}
+      >
+        <InSheetContext.Provider value>
+          <SheetRevealContext.Provider value={reveal}>{children}</SheetRevealContext.Provider>
+        </InSheetContext.Provider>
       </BottomSheetScrollView>
     </BottomSheetModal>
   );
