@@ -49,8 +49,14 @@ export function Shell({ onResetDone }: { onResetDone?: () => void } = {}) {
   const [highlight, setHighlight] = useState<ItemRef | null>(null);
   const [unread, setUnread] = useState(false);
   const assist = useOfficerAssist();
+  // O-c: the tab a detail was opened from (a notice lands on 待办 / 审判 / 查询, but 「回到…」 means 通知), and the
+  // rows whose detail turned out to be gone -- greyed in the lists until the app restarts.
+  const [origin, setOrigin] = useState<TabKey>("todo");
+  const [gone, setGone] = useState<ReadonlySet<string>>(new Set());
+  const markGone = useCallback((key: string) => setGone((prev) => (prev.has(key) ? prev : new Set(prev).add(key))), []);
 
-  const land = useCallback((landing: Landing) => {
+  const land = useCallback((landing: Landing, from?: TabKey) => {
+    setOrigin(from ?? (landing.judgment ? "queue" : landing.soul ? "search" : "todo"));
     if (landing.judgment || landing.soul) {
       setTab(landing.judgment ? "queue" : "search");
       setDetail(landing.judgment ? { type: "judgment", id: landing.judgment } : { type: "soul", id: landing.soul! });
@@ -103,6 +109,7 @@ export function Shell({ onResetDone }: { onResetDone?: () => void } = {}) {
         setVersion((v) => v + 1);
         if (link.item) {
           setTab("todo");
+          setOrigin("todo");
           setLanded(link.item);
           setDetail({ type: "todo", ...link.item });
         } else {
@@ -187,15 +194,28 @@ export function Shell({ onResetDone }: { onResetDone?: () => void } = {}) {
         ) : account === "notify" ? (
           <NotifyScreen onBack={() => setAccount(null)} />
         ) : detail ? (
-          <Detail target={detail} onBack={close} onSettled={() => setVersion((v) => v + 1)} />
+          <Detail
+            target={detail}
+            from={t(`officer_app.tabs.${origin}`)}
+            onBack={close}
+            onLeave={() => {
+              close();
+              setTab(origin);
+            }}
+            onSettled={() => setVersion((v) => v + 1)}
+            onGone={markGone}
+          />
         ) : tab === "todo" ? (
-          <TodoTab key={version} highlight={highlight} onOpen={(item) => setDetail({ type: "todo", ...item })} />
+          <TodoTab key={version} highlight={highlight} gone={gone} onOpen={(item) => { setOrigin("todo"); setDetail({ type: "todo", ...item }); }} />
         ) : tab === "queue" ? (
-          <QueueTab key={version} onOpen={(id) => setDetail({ type: "judgment", id })} />
+          <QueueTab key={version} gone={gone} onOpen={(id) => { setOrigin("queue"); setDetail({ type: "judgment", id }); }} />
         ) : tab === "search" ? (
-          <SearchTab onOpenSoul={(id) => setDetail({ type: "soul", id })} />
+          <SearchTab
+            onOpenSoul={(id) => { setOrigin("search"); setDetail({ type: "soul", id }); }}
+            onOpenJudgment={(id) => { setOrigin("search"); setDetail({ type: "judgment", id }); }}
+          />
         ) : tab === "notices" ? (
-          <NoticesTab key={version} onRead={countUnread} onLand={land} />
+          <NoticesTab key={version} gone={gone} onRead={countUnread} onLand={(landing) => land(landing, "notices")} />
         ) : (
           <MeTab onOpen={setAccount} />
         )}

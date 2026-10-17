@@ -35,6 +35,10 @@ MESSAGES = {
             "title": "暂居回归被拦下",
             "body": "灵魂「{{soul}}」的暂居回归被未结案审判拦下，共 {{count}} 件；结案或撤案后才能回归。",
         },
+        "judgment_reassigned_away": {"title": "案件已改派", "body": "{{by}} 把你手上的案件 {{soul}} 改派给了 {{to}}。理由：{{reason}}"},
+        "judgment_released_for_you": {"title": "案件已被放回", "body": "{{by}} 替你放回了案件 {{soul}}，它回到了待认领。理由：{{reason}}"},
+        "judgment_deferred_for_you": {"title": "案件已暂缓", "body": "{{by}} 暂缓了你手上的案件 {{soul}}。理由：{{reason}}"},
+        "judgment_undeferred_for_you": {"title": "案件已取消暂缓", "body": "{{by}} 取消了你手上案件 {{soul}} 的暂缓。理由：{{reason}}"},
         "death_sync_retry_failed": {"title": "死亡登记重试仍失败", "body": "死亡登记 {{reference}} 第 {{count}} 次重试仍失败（{{reason}}），请到死亡同步页查看。"},
         "workflow_assigned": {"title": "审批待你处理", "body": "灵魂「{{soul}}」的审批流「{{workflow}}」轮到你处理。"},
         "workflow_node_passed": {"title": "流程通知", "body": "灵魂「{{soul}}」的审批流「{{workflow}}」经过「{{node}}」。"},
@@ -74,6 +78,10 @@ MESSAGES = {
                 "It returns once they are concluded or withdrawn."
             ),
         },
+        "judgment_reassigned_away": {"title": "Case reassigned", "body": "{{by}} reassigned your case of {{soul}} to {{to}}. Reason: {{reason}}"},
+        "judgment_released_for_you": {"title": "Case released", "body": "{{by}} released your case of {{soul}}; it is unclaimed again. Reason: {{reason}}"},
+        "judgment_deferred_for_you": {"title": "Case deferred", "body": "{{by}} deferred your case of {{soul}}. Reason: {{reason}}"},
+        "judgment_undeferred_for_you": {"title": "Case no longer deferred", "body": "{{by}} lifted the deferral on your case of {{soul}}. Reason: {{reason}}"},
         "death_sync_retry_failed": {"title": "Death registration retry failed", "body": "Retry {{count}} of death registration {{reference}} failed again ({{reason}}). See the Death Sync page."},
         "workflow_assigned": {"title": "Approval waiting on you", "body": "The approval flow {{workflow}} of soul {{soul}} is waiting on you."},
         "workflow_node_passed": {"title": "Approval flow update", "body": "The approval flow {{workflow}} of soul {{soul}} has passed {{node}}."},
@@ -138,6 +146,7 @@ KIND_BY_TYPE = {
     "DEATH_SYNC_RETRY_FAILED": "death_sync_retry_failed",
     "WORKFLOW_ASSIGNED": "workflow_assigned",
     "JUDGMENT_CONCLUDED": "cross_judgment_concluded",
+    "JUDGMENT_CLAIM_CHANGED": "judgment_reassigned_away",
 }
 
 #: `SYSTEM` 类型没有自己的文案键(它是各种运维消息的兜底类型);发送方把下面之一写进 `params["kind"]`
@@ -161,6 +170,8 @@ VARIANTS = {
     # 同一个 WORKFLOW_ASSIGNED 还用于知会节点经过、超时提醒 / 转交(`params["category"]` 另管通知类别)。
     "workflow_assigned": {"workflow_node_passed", "workflow_timeout_reminder", "workflow_timeout_escalated"},
     "cross_judgment_concluded": {"cross_judgment_concluded_fail"},
+    # 替别人做的四件事共用一个类型(JUDGMENT_CLAIM_CHANGED),各自一句(apps/judgment/claims.py::_tell_holder)。
+    "judgment_reassigned_away": {"judgment_released_for_you", "judgment_deferred_for_you", "judgment_undeferred_for_you"},
 }
 
 

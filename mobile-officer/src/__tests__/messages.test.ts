@@ -34,7 +34,7 @@ const SRC = join(__dirname, "..");
 const CODE = [...sources(SRC), join(SRC, "..", "App.tsx")].map((p) => readFileSync(p, "utf8")).join("\n");
 
 describe("the keys the code asks for", () => {
-  const written = [...CODE.matchAll(/["'`]((?:officer_app|officer_assist|soul_app|souls|notifications)\.[\w.${}]*)["'`]/g)].map((m) => m[1]);
+  const written = [...CODE.matchAll(/["'`]((?:officer_app|officer_assist|soul_app|souls|notifications|state)\.[\w.${}]*)["'`]/g)].map((m) => m[1]);
 
   it("finds the keys at all (the scan is not silently empty)", () => {
     expect(written.length).toBeGreaterThan(60);

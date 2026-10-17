@@ -86,6 +86,7 @@ export interface Judgment extends ArchiveFields {
   /** 「请管理员改派」的持久标记(只读;认领人变了就清)。 */
   reassign_requested_at?: string | null;
   reassign_requested_by?: number | null;
+  reassign_requested_by_name?: string | null;
   reassign_reason?: string;
   /**
    * 滞留:未结案且 30 天无进展时由定时任务 `judgment.auto_conclude_stale` 盖章(只读;
@@ -634,9 +635,11 @@ export const judgmentApi = {
       params: { candidate_verdict: verdict },
     }),
   claim: (id: string) => api.post<Judgment>(`/judgment/${id}/claim/`, {}),
-  release: (id: string) => api.post<Judgment>(`/judgment/${id}/release/`, {}),
-  /** Needs `judgment.assign` (ADMIN, MODERATOR). `to` is a User pk in the case's tenant. */
-  reassign: (id: string, to: number) => api.post<Judgment>(`/judgment/${id}/reassign/`, { to }),
+  /** `reason`: releasing someone else's claim (needs `judgment.assign`) -- it reaches them with the notice. */
+  release: (id: string, reason?: string) => api.post<Judgment>(`/judgment/${id}/release/`, reason ? { reason } : {}),
+  /** Needs `judgment.assign` (ADMIN, MODERATOR). `to` is a User pk in the case's tenant; the previous holder is told, with `reason`. */
+  reassign: (id: string, to: number, reason?: string) =>
+    api.post<Judgment>(`/judgment/${id}/reassign/`, reason ? { to, reason } : { to }),
   /**
    * Who these cases may be reassigned to — the same rule `reassign` enforces. Needs
    * `judgment.assign`, not `user.manage`: this is the reassign picker's list.
@@ -654,7 +657,7 @@ export const judgmentApi = {
   requestReassign: (id: string, reason?: string) =>
     api.post<Schemas["JudgmentReassignRequestResult"]>(`/judgment/${id}/request-reassign/`, reason ? { reason } : {}),
   defer: (id: string, reason: string) => api.post<Judgment>(`/judgment/${id}/defer/`, { reason }),
-  undefer: (id: string) => api.post<Judgment>(`/judgment/${id}/undefer/`, {}),
+  undefer: (id: string, reason?: string) => api.post<Judgment>(`/judgment/${id}/undefer/`, reason ? { reason } : {}),
   batch: (payload: JudgmentBatchPayload) => api.post<JudgmentBatchResult>("/judgment/batch/", payload),
   queueCounts: (params?: JudgmentQueueCountsParams) =>
     api.get<JudgmentQueueCounts>("/judgment/queue-counts/", { params }),

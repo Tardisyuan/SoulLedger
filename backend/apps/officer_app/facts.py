@@ -138,6 +138,8 @@ def dispatch_facts(row) -> dict:
         "reason": row.reason,
         "souls": souls,
         "soul_count": len(souls),
+        # O-f:批准后接收方殿还要在电脑上执行,详情据此写「◐ 等接收方执行」。
+        "status": row.status,
     }
 
 

@@ -10,7 +10,7 @@ import { View } from "react-native";
 import { ActionButton, RefreshFailed, Row, Segmented, StateView, viewStateOf } from "../kit";
 import { MoreRow, useMoreRows } from "../paged";
 import { useCachedRemote } from "../readCache";
-import { isDenied } from "../rules";
+import { goneKey, isDenied } from "../rules";
 import { useCan, useSession } from "../session";
 import { Screen, Txt, space, useI18n, useOnline, useRemote, useToast } from "../shared";
 
@@ -18,7 +18,8 @@ import { Screen, Txt, space, useI18n, useOnline, useRemote, useToast } from "../
 const GROUPS: readonly JudgmentQueueGroup[] = ["mine", "unclaimed", "others", "deferred"];
 type Group = JudgmentQueueGroup;
 
-export function QueueTab({ onOpen }: { onOpen: (id: string) => void }) {
+/** `gone`: cases whose detail turned out to be gone (O-c), greyed and not pressable. */
+export function QueueTab({ onOpen, gone }: { onOpen: (id: string) => void; gone?: ReadonlySet<string> }) {
   const { t } = useI18n();
   const toast = useToast();
   const { state } = useSession();
@@ -95,6 +96,7 @@ export function QueueTab({ onOpen }: { onOpen: (id: string) => void }) {
               ...(row.stale_since ? [`◐ ${t("judgment.stale.label")} · ${t("judgment.stale.hint")}`] : []),
             ].filter(Boolean)}
             onPress={() => onOpen(row.id)}
+            gone={!!gone?.has(goneKey({ type: "judgment", id: row.id }))}
             right={
               group === "unclaimed" && canClaim ? (
                 <View style={{ width: 88 }}>

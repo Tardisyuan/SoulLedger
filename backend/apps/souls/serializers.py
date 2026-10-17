@@ -533,11 +533,14 @@ class SoulSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serializers.M
     # both lists.
     date_problems = serializers.SerializerMethodField()
     is_eval_identity = serializers.SerializerMethodField()
+    # 灵魂编号是灵魂的标识,不是账号数据(Design 第四十批 第四节 4):不论调用者有没有 `soul_account.read`
+    # 都给,审判官在官员端灵魂详情的页头要看到它。还没开过号的灵魂是 null。
+    soul_code = serializers.CharField(read_only=True, allow_null=True)
 
     class Meta:
         model = Soul
         fields = [
-            "id", "name", "current_state", "tenant_code", "tenant", "civilization",
+            "id", "name", "soul_code", "current_state", "tenant_code", "tenant", "civilization",
             "home_tenant", "home_civilization", "is_residing",
             "birth_date", "death_date", "origin_location", "birth_name",
             "description", "merit_score", "demerit_score",

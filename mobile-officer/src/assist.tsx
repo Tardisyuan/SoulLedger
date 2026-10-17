@@ -39,13 +39,57 @@ export const TAB_SCREEN: Record<TabKey, OfficerAssistScreen> = {
   me: "profile",
 };
 
-/** A conversation's page by the App's tab names; one asked on another web page is 「其他页」. */
+/**
+ * The web pages a conversation can have been asked on, by the web sidebar's own keys (`frontend/src/lib/menuI18n.ts`),
+ * so a conversation from the desk reads 「审批流程」 there and here alike (Design 第四十批 第四节 7). Pages without a
+ * sidebar entry (欢迎页, 关于, 管理 …) have none.
+ */
+export const WEB_PAGE_KEYS: Partial<Record<OfficerAssistScreen, string>> = {
+  dashboard: "breadcrumb.menu.dashboard",
+  souls: "breadcrumb.menu.souls",
+  events: "nav.soul_events",
+  judgment: "breadcrumb.menu.judgment",
+  corpus: "breadcrumb.menu.corpus",
+  "cross-judgments": "breadcrumb.menu.cross_judgments",
+  ledger: "breadcrumb.menu.ledger",
+  disposition: "breadcrumb.menu.disposition",
+  workflow: "breadcrumb.menu.workflow",
+  dispatch: "breadcrumb.menu.dispatch",
+  "death-sync": "breadcrumb.menu.death_sync",
+  realms: "breadcrumb.menu.realms",
+  actors: "breadcrumb.menu.actors",
+  social: "breadcrumb.menu.social",
+  users: "breadcrumb.menu.users",
+  permissions: "breadcrumb.menu.permissions",
+  menus: "breadcrumb.menu.menus",
+  audit: "breadcrumb.menu.audit",
+  tenants: "breadcrumb.menu.tenants",
+  organizations: "breadcrumb.menu.organizations",
+  scheduler: "breadcrumb.menu.scheduler",
+  "soul-credentials": "breadcrumb.menu.soul_credentials",
+  "rebirth-applications": "breadcrumb.menu.rebirth_applications",
+  "soul-inbox": "breadcrumb.menu.soul_inbox",
+  "sentence-requests": "breadcrumb.menu.sentence_requests",
+  moderation: "breadcrumb.menu.moderation",
+  "recycle-bin": "breadcrumb.menu.recycle_bin",
+};
+
+/**
+ * A conversation's page. The five pages the App's own tabs ask on keep the tab names (待办 / 审判 / 查询 / 通知 / 我的);
+ * any other page was the desk's and keeps the desk's name; 「其他页」 only when even that is missing.
+ * (A conversation does not record which client asked, so a desk conversation on one of those five pages reads
+ * as the tab -- the two cannot be told apart.)
+ */
+export function pageNameOf(screen: OfficerAssistScreen, t: (key: string) => string): string {
+  const tab = (Object.keys(TAB_SCREEN) as TabKey[]).find((k) => TAB_SCREEN[k] === screen);
+  if (tab) return t(`officer_app.tabs.${tab}`);
+  const web = WEB_PAGE_KEYS[screen];
+  return web ? t(web) : t("officer_assist.page_other");
+}
+
 function usePageName() {
   const { t } = useI18n();
-  return (screen: OfficerAssistScreen) => {
-    const tab = (Object.keys(TAB_SCREEN) as TabKey[]).find((k) => TAB_SCREEN[k] === screen);
-    return tab ? t(`officer_app.tabs.${tab}`) : t("officer_assist.page_other");
-  };
+  return (screen: OfficerAssistScreen) => pageNameOf(screen, t);
 }
 
 interface Line {
@@ -244,9 +288,13 @@ function Chat({ assist, tab, onClose }: { assist: OfficerAssist; tab: TabKey; on
         {failure ? <Notice tone="neg" testID="ask-failure">{failure}</Notice> : null}
       </ScrollView>
       <View style={styles.composer}>
+        {/* The sheet's title already says 问一问: the field's label is for screen readers only (Design 第四十批 第四节 1).
+            The shared Input has no hidden-label option yet (it lives in mobile/, not touched here), so the visible
+            label is empty and the words ride on the TextInput itself. */}
         <Input
           testID="ask-input"
-          label={t("officer_assist.title")}
+          label=""
+          accessibilityLabel={t("officer_assist.title")}
           placeholder={t(resumed ? "officer_app.assist.continue_placeholder" : "officer_assist.placeholder")}
           value={draft}
           onChangeText={setDraft}

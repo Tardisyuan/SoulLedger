@@ -1,16 +1,16 @@
 /** 待办: the kinds of item waiting on this officer, grouped, each group titled with its count. */
-import { officerAppApi, type Todo, type TodoGroup, type TodoItem, type TodoKind } from "@soulledger/core/api/officer-app";
+import { officerAppApi, type Todo, type TodoGroup, type TodoItem, type TodoItemExtra, type TodoKind } from "@soulledger/core/api/officer-app";
 import { platform } from "@soulledger/core/platform";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { Pressable, Share, StyleSheet, View } from "react-native";
 
 import { discardReply, retryReply, useOutbox, type OutboxEntry } from "../outbox";
 import { MoreRow, useMoreRows } from "../paged";
 import { unassignedShown } from "../todoFacts";
 import { useCachedRemote } from "../readCache";
 
-import { FilterChips, RefreshFailed, Row, StateView, viewStateOf } from "../kit";
-import { TODO_GROUPS, isDenied, isTodoKind, todoTitle, type ItemKind } from "../rules";
+import { ActionButton, FilterChips, RefreshFailed, Row, StateView, viewStateOf } from "../kit";
+import { TODO_GROUPS, VIEW_ONLY_KINDS, deskUrl, goneKey, isDenied, isTodoKind, todoTitle, type ItemKind } from "../rules";
 import { useSession } from "../session";
 import { Button, Notice, Screen, SectionLabel, SmallButton, Txt, publishVoiceNumber, space, useI18n, useTheme } from "../shared";
 import { formatWhen } from "../format";
@@ -35,7 +35,8 @@ function readFilter(): TodoKind[] {
 /** A server that predates a group (an older build) does not send it: that group is empty, not an error. */
 const countOf = (data: Todo, field: keyof Todo): number => data[field]?.count ?? 0;
 
-export function TodoTab({ onOpen, highlight }: { onOpen: (item: ItemRef) => void; highlight: ItemRef | null }) {
+/** `gone`: rows whose detail turned out to be gone (O-c), greyed and not pressable -- keyed by `goneKey`. */
+export function TodoTab({ onOpen, highlight, gone }: { onOpen: (item: ItemRef) => void; highlight: ItemRef | null; gone?: ReadonlySet<string> }) {
   const { t, locale } = useI18n();
   const { state } = useSession();
   const role = state.status === "signedIn" ? state.user.role : "";
@@ -66,10 +67,8 @@ export function TodoTab({ onOpen, highlight }: { onOpen: (item: ItemRef) => void
   const view = viewStateOf({ data, error }, (d) => TODO_GROUPS.every((g) => countOf(d, g.field) === 0) && (d.unassigned_letters?.count ?? 0) === 0, isDenied);
 
   return (
+    // No big title (Design 第四十批 第四节 5): the top bar already says 待办, as on the other four tabs.
     <Screen testID="tab-todo-screen" edges={["left", "right"]} refreshing={loading && data !== null} onRefresh={reload}>
-      <View style={{ padding: space[5] }}>
-        <Txt variant="title">{t("officer_app.todo.title")}</Txt>
-      </View>
       <OutboxRows onOpen={onOpen} />
       <RefreshFailed data={data} error={error} onRetry={reload} />
       {view ? (
@@ -110,17 +109,36 @@ export function TodoTab({ onOpen, highlight }: { onOpen: (item: ItemRef) => void
         {shown.map(({ field, kind, label }) => {
           const group = data![field];
           if (!group || group.count === 0) return null;
-          return <TodoGroupRows key={kind} kind={kind} label={t(label)} group={group} highlight={highlight} onOpen={onOpen} />;
+          return <TodoGroupRows key={kind} kind={kind} label={t(label)} group={group} highlight={highlight} gone={gone} onOpen={onOpen} />;
         })}
-        {chosen.length === 0 && unassigned && unassigned.count > 0 ? <UnassignedRows group={unassigned} highlight={highlight} onOpen={onOpen} /> : null}
+        {chosen.length === 0 && unassigned && unassigned.count > 0 ? <UnassignedRows group={unassigned} highlight={highlight} gone={gone} onOpen={onOpen} /> : null}
         </>
       )}
     </Screen>
   );
 }
 
-/** One group: the server sends the first 10; 「加载更多」 asks for the next 10 of this group only. */
-function TodoGroupRows({ kind, label, group, highlight, onOpen }: { kind: TodoKind | "unassigned_letter"; label: string; group: TodoGroup; highlight: ItemRef | null; onOpen: (item: ItemRef) => void }) {
+/**
+ * One group: the server sends the first 10; 「加载更多」 asks for the next 10 of this group only.
+ * A view-only group (受刑计划变更, O-f) has rows that open nothing and one bar under them: 「在电脑上处理」.
+ */
+function TodoGroupRows({
+  kind,
+  label,
+  group,
+  highlight,
+  gone,
+  onOpen,
+}: {
+  kind: TodoKind | "unassigned_letter";
+  label: string;
+  group: TodoGroup;
+  highlight: ItemRef | null;
+  gone?: ReadonlySet<string>;
+  onOpen: (item: ItemRef) => void;
+}) {
+  const { t } = useI18n();
+  const viewOnly = (VIEW_ONLY_KINDS as readonly string[]).includes(kind);
   const size = group.items.length;
   const first = useMemo(() => ({ results: group.items, next: size < group.count ? "more" : null }), [group, size]);
   const fetchPage = useCallback(
@@ -135,26 +153,36 @@ function TodoGroupRows({ kind, label, group, highlight, onOpen }: { kind: TodoKi
         <SectionLabel>{`${label} · ${group.count}`}</SectionLabel>
       </View>
       {rows!.map((item) => (
-        <TodoRow key={`${item.kind}:${item.id}`} item={item} highlight={highlight?.kind === item.kind && highlight.id === item.id} onOpen={onOpen} />
+        <TodoRow key={`${item.kind}:${item.id}`} item={item} highlight={highlight?.kind === item.kind && highlight.id === item.id} gone={gone} onOpen={viewOnly ? undefined : onOpen} />
       ))}
       <MoreRow more={more} state={moreState} />
+      {viewOnly ? (
+        <View style={{ paddingHorizontal: space[5], paddingVertical: space[3] }}>
+          <ActionButton
+            testID={`todo-desk-${kind}`}
+            kind="outline"
+            title={t("officer_app.todo.on_desk_only")}
+            onPress={() => void Share.share({ message: deskUrl({ kind: "sentence_change", id: "" }) }).catch(() => {})}
+          />
+        </View>
+      ) : null}
     </View>
   );
 }
 
 /** 未分配的书信: 3 rows after 待回书信, 「全部 N 封」 opens the whole group (paged like the others). */
-function UnassignedRows({ group, highlight, onOpen }: { group: TodoGroup; highlight: ItemRef | null; onOpen: (item: ItemRef) => void }) {
+function UnassignedRows({ group, highlight, gone, onOpen }: { group: TodoGroup; highlight: ItemRef | null; gone?: ReadonlySet<string>; onOpen: (item: ItemRef) => void }) {
   const { t } = useI18n();
   const [all, setAll] = useState(false);
   const label = t("officer_app.todo.groups.unassigned_letters");
-  if (all) return <TodoGroupRows kind="unassigned_letter" label={label} group={group} highlight={highlight} onOpen={onOpen} />;
+  if (all) return <TodoGroupRows kind="unassigned_letter" label={label} group={group} highlight={highlight} gone={gone} onOpen={onOpen} />;
   return (
     <View testID="todo-group-unassigned_letter">
       <View style={{ paddingHorizontal: space[5], paddingVertical: space[3] }}>
         <SectionLabel>{`${label} · ${group.count}`}</SectionLabel>
       </View>
       {unassignedShown(group.items, false).map((item) => (
-        <TodoRow key={`${item.kind}:${item.id}`} item={item} highlight={highlight?.kind === item.kind && highlight.id === item.id} onOpen={onOpen} />
+        <TodoRow key={`${item.kind}:${item.id}`} item={item} highlight={highlight?.kind === item.kind && highlight.id === item.id} gone={gone} onOpen={onOpen} />
       ))}
       {group.count > 3 ? (
         <View style={{ padding: space[5], alignItems: "center" }}>
@@ -223,11 +251,15 @@ const FEEDBACK_TAGS: Record<string, string> = {
   other: "soul_inbox.feedback.tags.other",
 };
 
-function TodoRow({ item, highlight, onOpen }: { item: TodoItem; highlight: boolean; onOpen: (item: ItemRef) => void }) {
+/** `onOpen` absent: a view-only row (no ›, nothing to press). */
+function TodoRow({ item, highlight, gone, onOpen }: { item: TodoItem; highlight: boolean; gone?: ReadonlySet<string>; onOpen?: (item: ItemRef) => void }) {
   const { t } = useI18n();
   const tagKey = item.feedback_tag ? FEEDBACK_TAGS[item.feedback_tag] : undefined;
   const tag = tagKey ? t("soul_inbox.feedback.label", { category: t(tagKey) }) : null;
-  const lines = [tag, item.soul_code, item.node_name, formatWhen(item.created_at)].filter((x): x is string => !!x);
+  // 受刑计划变更: which kind of request (加项 / 减项 · 重开审判), in the desk's words.
+  const requestKind = (item as TodoItemExtra).request_kind;
+  const request = requestKind ? t(`sentence_plan.request_kinds.${requestKind}`) : null;
+  const lines = [tag, request, item.soul_code, item.node_name, formatWhen(item.created_at)].filter((x): x is string => !!x);
   return (
     <Row
       testID={`todo-row-${item.kind}-${item.id}`}
@@ -236,10 +268,15 @@ function TodoRow({ item, highlight, onOpen }: { item: TodoItem; highlight: boole
       title={todoTitle(item, t) || t(`officer_app.kinds.${item.kind}`)}
       lines={lines}
       highlight={highlight}
-      right={<Txt tone="muted">›</Txt>}
-      onPress={() => {
-        if (isTodoKind(item.target.kind)) onOpen({ kind: item.target.kind, id: item.target.id });
-      }}
+      gone={gone?.has(goneKey({ type: "todo", kind: item.target.kind, id: item.target.id }))}
+      right={onOpen ? <Txt tone="muted">›</Txt> : undefined}
+      onPress={
+        onOpen
+          ? () => {
+              if (isTodoKind(item.target.kind)) onOpen({ kind: item.target.kind, id: item.target.id });
+            }
+          : undefined
+      }
     />
   );
 }

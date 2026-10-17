@@ -8,6 +8,7 @@ import {
   decisionFailureOf,
   type DecisionFailureCode,
   type Todo,
+  type TodoFacts,
   type TodoItemDetail,
   type TodoKind,
 } from "@soulledger/core/api/officer-app";
@@ -16,7 +17,10 @@ import { INBOX_REPLY_MAX, renderTemplate } from "@soulledger/core/api/soul-inbox
 import { workflowApi } from "@soulledger/core/api/workflow";
 import { CIVILIZATION_SHORT_CODES } from "@soulledger/core/config/civilizations";
 
-export const TODO_KINDS: readonly TodoKind[] = ["approval", "reassignment", "cooldown", "rebirth", "letter"];
+export const TODO_KINDS: readonly TodoKind[] = ["approval", "reassignment", "cooldown", "rebirth", "letter", "sentence_change"];
+
+/** Kinds that are only read on the phone (Design 第四十批 O-f): no detail, the group's bar says 「在电脑上处理」. */
+export const VIEW_ONLY_KINDS: readonly TodoKind[] = ["sentence_change"];
 
 /**
  * 转生申请的标题:后端给的是灵魂名,「转生申请 · 名」(申诉:「转生申请申诉 · 名」)在这里按语言包拼。
@@ -34,6 +38,8 @@ export function todoTitle(item: { kind: string; title: string; is_appeal?: boole
  * proposed`), and it is counted with the rest everywhere the to-do total is read.
  * 待回书信 (`letters`): letters assigned to me that the soul wrote last -- the desk inbox's 待回复 and
  * 交给我的 together. It is counted with the rest, and drawn only when it has something.
+ * 受刑计划变更 (`sentence_changes`, Design 第四十批 O-f): requests awaiting this hall's original judge. Read-only
+ * here and never pushed, but counted with the rest (the server's `total()` counts it too).
  */
 export const TODO_GROUPS: readonly { field: keyof Todo; kind: TodoKind; label: string }[] = [
   { field: "approvals", kind: "approval", label: "officer_app.todo.groups.approvals" },
@@ -41,6 +47,7 @@ export const TODO_GROUPS: readonly { field: keyof Todo; kind: TodoKind; label: s
   { field: "cooldowns", kind: "cooldown", label: "officer_app.todo.groups.cooldowns" },
   { field: "rebirths", kind: "rebirth", label: "officer_app.todo.groups.rebirths" },
   { field: "letters", kind: "letter", label: "officer_app.todo.groups.letters" },
+  { field: "sentence_changes", kind: "sentence_change", label: "officer_app.todo.group_sentence_change" },
 ];
 
 export function isTodoKind(value: unknown): value is TodoKind {
@@ -94,6 +101,20 @@ export interface DecisionInput {
   days?: number;
 }
 
+/**
+ * 转生初审的批准底页(Design 第四十批 O-b),不加开关:
+ * `no` = 初审(第一步、不是申诉)且没定成跨 —— 底页写「跨文明：不跨，批准后不能改」,按钮「批准 · 不跨」;
+ * `desk` = 已定为跨文明 —— 手机上不给批准,只有「在电脑上继续」;`null` = 不是这件事(别的种类或后面的步骤)。
+ * The application carries no wished-for civilization of its own (only `desired_form`), so "the wish is another
+ * civilization" is read as the flag already set to cross.
+ */
+export function rebirthCross(detail: Pick<TodoItemDetail, "kind" | "facts" | "is_appeal">): "no" | "desk" | null {
+  if (detail.kind !== "rebirth") return null;
+  const facts = detail.facts as TodoFacts | undefined;
+  if (facts?.cross_civilization === true) return "desk";
+  return !detail.is_appeal && (facts?.node?.index ?? 1) === 1 ? "no" : null;
+}
+
 /** A reject without a reason is refused HERE, before any request; the screen marks it on confirm. */
 export function reasonMissing(verdict: Verdict, reason: string): boolean {
   return verdict === "reject" && reason.trim() === "";
@@ -109,6 +130,13 @@ export async function submitDecision({ detail, verdict, reason, days, passVerdic
   if (verdict === "reject" && note === "") throw new Error("reason_required");
   if (detail.kind === "approval" || detail.kind === "rebirth") {
     if (!detail.workflow_id || !detail.node_id) throw new Error("no_node");
+    // O-b: approving the first review on the phone settles 跨文明 as 「不跨」 -- written first, so the record says so.
+    // 409 = the first review is already past (the flag is no longer this step's to set): approve as before.
+    if (verdict === "approve" && rebirthCross(detail) === "no" && (detail.facts as TodoFacts | undefined)?.cross_civilization == null) {
+      await soulAccountsApi.decideCrossCivilization(detail.id, false).catch((e: unknown) => {
+        if ((e as { response?: { status?: number } })?.response?.status !== 409) throw e;
+      });
+    }
     await workflowApi.approveNode(detail.workflow_id, detail.node_id, {
       verdict: verdict === "approve" ? (passVerdict ?? passVerdictsOf(detail)[0]) : refuseVerdictOf(detail),
       notes: note,
@@ -217,6 +245,21 @@ export function noticeLanding(n: { related_resource?: string | null; related_id?
 }
 
 /**
+ * What a detail and the list row that opened it both answer to, so a detail found gone (Design 第四十批 O-c)
+ * can grey that row out once the officer is back: a to-do row, a notice that lands there, a queue row.
+ */
+export type GoneTarget = { type: "todo"; kind: string; id: string } | { type: "judgment" | "soul"; id: string };
+export function goneKey(target: GoneTarget): string {
+  return target.type === "todo" ? `${target.kind}:${target.id}` : `${target.type}:${target.id}`;
+}
+export function landingGoneKey(landing: Landing | null): string | null {
+  if (!landing) return null;
+  if (landing.judgment) return goneKey({ type: "judgment", id: landing.judgment });
+  if (landing.soul) return goneKey({ type: "soul", id: landing.soul });
+  return landing.item ? goneKey({ type: "todo", ...landing.item }) : null;
+}
+
+/**
  * Notices whose subject has no phone screen: 联审 (`CrossTenantJudgment`: its id is not a Judgment's), 受刑计划 nodes
  * (`SentencePlan`), scheduler jobs, 代看 / 忘记密码求助 (`user`), assistant config, 死亡登记重试失败 (`death_sync`). Their row says 「在电脑上查看」
  * instead of being a tap that does nothing.
@@ -260,6 +303,8 @@ export function dispatchStatusLine(
     if (record.status === "APPROVED") return { glyph: "✓", key: "officer_app.dispatch_status.approved", reason };
     if (record.status === "REJECTED") return { glyph: "✕", key: "officer_app.dispatch_status.rejected", reason };
   }
+  // Approved is not done: the receiving hall still executes it on the desk (Design 第四十批 O-f). The words carry their own ◐.
+  if (record.status === "APPROVED") return { glyph: "", key: "officer_app.dispatch.awaiting_receiver", reason };
   // The same glyphs as the desk's detail (`app/dispatch/[id]/page.tsx`); 已取消 is its own word either way.
   const glyph = { PROPOSED: "◐", APPROVED: "✓", REJECTED: "✕", EXECUTED: "→", RETURNED: "↩", CANCELLED: "○" }[record.status as string] ?? "?";
   return { glyph, key: `dispatch.states.${record.status}`, reason };
@@ -396,6 +441,8 @@ export function deskPath(target: { kind: ItemKind | "judgment" | "soul"; id: str
       return "/rebirth-applications";
     case "letter":
       return "/soul-inbox";
+    case "sentence_change":
+      return "/sentence-requests";
     case "judgment":
       return `/judgment/${target.id}`;
     case "soul":
@@ -467,6 +514,46 @@ export function judgmentMoreItems(state: JudgmentActionState): ("defer" | "reque
   if (state === "mine" || state === "desk") return ["defer", "request_reassign", "release"];
   if (state === "deferred" || state === "reassign") return ["release"];
   return [];
+}
+
+/**
+ * 别人手上的案子,本殿管理员(持 `judgment.assign`)的 ⋯(Design 第四十批 O-a),按顺序:
+ * 改派给… · 替{name}放回 · 暂缓 / (已暂缓时)取消暂缓。四项都要理由,原经办人收到通知(服务端发)。
+ */
+export type AdminAction = "reassign_to" | "release_for" | "defer" | "undefer";
+
+export function judgmentAdminItems(
+  j: { claimed_by?: number | null; deferred_at?: string | null; concluded_at?: string | null },
+  me: number | null,
+  canAssign: boolean,
+): AdminAction[] {
+  if (!canAssign || j.concluded_at || j.claimed_by == null || j.claimed_by === me) return [];
+  return ["reassign_to", "release_for", j.deferred_at ? "undefer" : "defer"];
+}
+
+/**
+ * 改派的选人名单:现经办人不在里面;按手上件数从少到多(同数按名字);`q` 按名字筛。
+ * `counts`:每一行都有件数才显示那一列 —— 取不到就整列不显示,不写 0。
+ */
+export function reassignCandidates<T extends { id: number; display_name: string; username: string; in_hand?: number | null }>(
+  officers: readonly T[],
+  holder: number | null | undefined,
+  q: string,
+): { rows: T[]; counts: boolean } {
+  const needle = q.trim().toLowerCase();
+  const name = (o: T) => o.display_name || o.username;
+  const rows = officers
+    .filter((o) => o.id !== holder && (needle === "" || name(o).toLowerCase().includes(needle) || o.username.toLowerCase().includes(needle)))
+    .sort((a, b) => (a.in_hand ?? 0) - (b.in_hand ?? 0) || name(a).localeCompare(name(b)));
+  return { rows, counts: officers.length > 0 && officers.every((o) => typeof o.in_hand === "number") };
+}
+
+/**
+ * 查询框里像一个完整案号(`CN-2026-0042`:前缀 1–8 位字母数字、年份、至少四位序号,同 `format_case_number`)时,
+ * 结果顶上多一组「案件」(Design 第四十批 O-d)。不自动跳转。
+ */
+export function looksLikeCaseNumber(q: string): boolean {
+  return /^[A-Za-z0-9]{1,8}-\d{4}-\d{4,}$/.test(q.trim());
 }
 
 /** 理由必填:只有空白也算没写。 */

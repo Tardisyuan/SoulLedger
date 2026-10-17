@@ -21,6 +21,7 @@ class TodoItemSerializer(serializers.Serializer):
     node_name = serializers.CharField(required=False, help_text="仅审批节点:轮到的节点名。")
     soul_code = serializers.CharField(required=False, help_text="仅转生申请:此时 `title` 是灵魂名,灵魂码作副行。")
     is_appeal = serializers.BooleanField(required=False, help_text="仅转生申请:是否申诉(客户端据此选标题措辞)。")
+    request_kind = serializers.CharField(required=False, help_text="仅受刑计划变更:AMEND / REOPEN(`sentence_plan.request_kinds.*`)。")
     feedback_tag = serializers.CharField(required=False, help_text="仅书信:从 App「帮助与反馈」来的信的类别码"
                                          "(account / record / app / other);还没人回时才有。")
 
@@ -35,6 +36,8 @@ class TodoSerializer(serializers.Serializer):
     reassignments = TodoGroupSerializer()
     cooldowns = TodoGroupSerializer()
     rebirths = TodoGroupSerializer()
+    sentence_changes = TodoGroupSerializer(
+        help_text="受刑计划变更请求:本殿是原属、等原审判官决定的(最早在前)。需 `judgment.execute`;只看,不推送,计入角标。")
     letters = TodoGroupSerializer(help_text="待回书信:标给我、灵魂最后一封还没回的(最早在前)。需 `soul_inbox.reply`。")
     unassigned_letters = TodoGroupSerializer(
         help_text="未分配的书信:同一个「待回复」里还没人经办的(最早在前)。需 `soul_inbox.reply`;不计入角标与推送数。")
@@ -97,6 +100,9 @@ class TodoFactsSerializer(serializers.Serializer):
     cycle = serializers.IntegerField(required=False, help_text="仅转生:第几世。")
     desired_form = serializers.CharField(required=False, help_text="仅转生:期望去向(`reincarnation.forms.*`)。")
     merit_balance = serializers.IntegerField(required=False, help_text="仅转生:功过结余 = 功 − 过。")
+    cross_civilization = serializers.BooleanField(
+        required=False, allow_null=True, help_text="仅转生:是否跨文明;null = 初审还没定(批准即按「不跨」)。")
+    status = serializers.CharField(required=False, help_text="仅调拨:记录此刻的状态(PROPOSED / APPROVED / …)。")
     cooldown_now_days = serializers.IntegerField(required=False, help_text="仅缩短冷却:现在还剩几天。")
     cooldown_asked_days = serializers.IntegerField(required=False, allow_null=True, help_text="仅缩短冷却:申请改成剩几天。")
 
