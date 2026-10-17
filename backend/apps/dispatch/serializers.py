@@ -1,9 +1,10 @@
 """
 Serializers for dispatch app.
 """
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
-from apps.dispatch.models import CrossTenantJudgment, CrossTenantJudgmentParticipant, DispatchRecord
+from apps.dispatch.models import CrossTenantJudgment, CrossTenantJudgmentParticipant, DispatchRecord, JudgmentStatus
 from apps.judgment.models import Judgment
 
 #: A proposal's reason is what the target tenant decides on. Counted in
@@ -374,6 +375,10 @@ class CrossTenantJudgmentSerializer(serializers.ModelSerializer):
         queryset=Judgment.all_objects.filter(is_deleted=False),
         required=False, allow_null=True,
     )
+    # 结束 / 取消(第四十批 W-a)。`ended_by_name`:页头「已结束 · 结论 · 日期 · 名字」;
+    # `can_end`:这位请求者能不能结束 / 取消(`CrossTenantJudgmentService.can_end`),页面据此给入口。
+    ended_by_name = serializers.SerializerMethodField()
+    can_end = serializers.SerializerMethodField()
 
     class Meta:
         model = CrossTenantJudgment
@@ -387,6 +392,10 @@ class CrossTenantJudgmentSerializer(serializers.ModelSerializer):
             "status",
             "concluded_at",
             "conclusion_type",
+            "conclusion_note",
+            "cancel_reason",
+            "ended_by_name",
+            "can_end",
             "judgment",
             "participants",
             "create_time",
@@ -397,6 +406,8 @@ class CrossTenantJudgmentSerializer(serializers.ModelSerializer):
             "status",
             "conclusion_type",
             "concluded_at",
+            "conclusion_note",
+            "cancel_reason",
             # Who opened the judgment is decided by who is making the request,
             # not by what they put in the body. It was writable, and
             # `perform_create` only pinned `tenant` -- so a JUDGE in tenant B
@@ -443,6 +454,22 @@ class CrossTenantJudgmentSerializer(serializers.ModelSerializer):
                     for field in blocked
                 })
         return attrs
+
+    @extend_schema_field(serializers.CharField(allow_null=True))
+    def get_ended_by_name(self, obj):
+        user = obj.ended_by
+        if user is None:
+            return None
+        return user.display_name or user.username
+
+    @extend_schema_field(serializers.BooleanField())
+    def get_can_end(self, obj):
+        from apps.dispatch.services import CrossTenantJudgmentService
+
+        request = self.context.get("request")
+        if request is None or obj.status not in (JudgmentStatus.PROPOSED, JudgmentStatus.ACTIVE):
+            return False
+        return CrossTenantJudgmentService.can_end(obj, request.user, getattr(request, "tenant", None))
 
     def validate_judgment(self, value):
         """挂的必须是发起方**自己的、还没结案的原审判**,且灵魂的原属就是发起方。
@@ -544,6 +571,13 @@ class CrossTenantJudgmentOrderSerializer(serializers.Serializer):
 class CrossTenantJudgmentConcludeSerializer(serializers.Serializer):
     """Serializer for concluding a cross-tenant judgment."""
     conclusion_type = serializers.ChoiceField(choices=["PASS", "FAIL"])
+    # 网页弹层必填;接口上可省(存量调用方只送结论)。
+    note = serializers.CharField(required=False, allow_blank=True, max_length=1000, trim_whitespace=True)
+
+
+class CrossTenantJudgmentCancelSerializer(serializers.Serializer):
+    """取消会审:理由必填。"""
+    reason = serializers.CharField(max_length=1000, trim_whitespace=True)
 
 
 class SeatableActorSerializer(serializers.Serializer):

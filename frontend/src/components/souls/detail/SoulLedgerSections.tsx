@@ -137,6 +137,12 @@ export function SoulJudgmentHistory({ judgments }: { judgments: Judgment[] }) {
 }
 
 /**
+ * 一次转生在灵魂详情上的锚点。转生登记簿(/rebirths)的行链到 `/souls/<id>#reincarnation-<id>`:
+ * 那一行是 `:target`,高亮 2 秒(`row-changed`);滚动由 `SoulTimelineColumn` 在载入后补(行是取数后才画的)。
+ */
+export const rebirthAnchor = (id: string) => `reincarnation-${id}`;
+
+/**
  * 处置 / 轮回 / 事件日志 —— 三张平账,行线代替卡片,条目按时间倒序。
  * 审判搬进了账页的「全部审判」标签(`SoulJudgmentHistory`)。
  */
@@ -204,7 +210,7 @@ export function SoulLedgerSections({
         </p>
       ) : (
         byNewest(reincarnations, (r) => r.reincarnated_at).map((r) => (
-          <div key={r.id} className={ROW} data-testid="ledger-reincarnation-row">
+          <div key={r.id} id={rebirthAnchor(r.id)} className={`${ROW} scroll-mt-4 target:animate-row-changed`} data-testid="ledger-reincarnation-row">
             <span className={TIME}>{formatDate(r.reincarnated_at)}</span>
             <span title={r.new_identity || undefined} className={`${CELL} truncate`}>{r.new_identity || <MissingValue kind="unrecorded" />}</span>
             <span className={CELL}>

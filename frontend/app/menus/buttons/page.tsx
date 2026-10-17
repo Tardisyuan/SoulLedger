@@ -1,325 +1,127 @@
 "use client";
 
-import { useId, useMemo, useState } from "react";
-import Link from "next/link";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { menuButtonsApi, menusApi, permApi, PAGE_SIZE, type MenuButton, type MenuItem, type PaginatedResponse, type Permission } from "@soulledger/core/api";
+import { useMemo } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { menuButtonsApi, menusApi, type MenuItem } from "@soulledger/core/api";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { usePlaque } from "@/src/components/plaque/Plaque";
 import { useHall } from "@/src/components/plaque/useHall";
 import { useToast } from "@/src/contexts/ToastContext";
-import { Modal } from "@/src/components/ui/Modal";
-import { RequirePermission } from "@/src/components/rbac/RequirePermission";
-import { DataTable } from "@/components/ui/data-table";
+import { usePermissions } from "@/src/hooks/usePermissions";
+import { MENU_BUTTON_CONFIG_KEY } from "@/src/hooks/useMenuButtonConfig";
+import { findMenuByPath } from "@/src/lib/menuI18n";
+import { WIRED_BUTTONS, buttonKey, type WiredButton } from "@/src/lib/menuButtons";
+import type { SidebarMenu } from "@/src/hooks/useSidebarMenus";
 import { PageShell } from "@/src/components/ui/PageShell";
-import { Button } from "@/src/components/ui/Button";
-import { Badge } from "@/src/components/ui/Badge";
-import { SelectField, TextField } from "@/src/components/ui/Field";
-import { FilterChipSelect } from "@/src/components/ui/FilterChip";
+import { QueryError } from "@/src/components/ui/PageError";
+import { ListSkeleton } from "@/components/ui/skeleton";
 
+/**
+ * 菜单按钮配置(第四十批 W-b)。只列真正接上的关键按钮(`WIRED_BUTTONS`),按菜单分组,一行一个:
+ * 显示开关 · 按钮 · 出现在 · 也需要的权限码。按钮要这里开着、并且用户持有权限码,才会显示。
+ *
+ * 开关读写 `MenuButton` 行(菜单 path + code 为键)。没有那一行 = 开着;第一次关掉时才建行,
+ * 之后只改 `is_active`。被关掉的按钮在页面上不留任何痕迹 —— 查原因就来这一页。
+ * 只有持 `menu.manage` 的人能拨开关(后端同一个码);其余人只看。
+ */
 export default function MenuButtonsPage() {
   const { t } = useI18n();
   usePlaque({ hall: useHall(t("plaque.office.rules")) });
   const { showToast } = useToast();
+  const { hasPermission } = usePermissions();
+  const canManage = hasPermission("menu.manage");
   const queryClient = useQueryClient();
-  const [selectedMenuId, setSelectedMenuId] = useState<number | undefined>();
-  const [page, setPage] = useState(1);
-
-  // Unique prefix so field ids never collide across multiple Modal instances.
-  const formId = useId();
-  const nameId = `${formId}-name`;
-  const codeId = `${formId}-code`;
-  const permissionId = `${formId}-permission`;
-  const bindMenuId = `${formId}-bind-menu`;
-  const orderId = `${formId}-order`;
-  const isActiveId = `${formId}-is-active`;
 
   const { data: menus = [] } = useQuery<MenuItem[]>({
     queryKey: ["menus-all"],
-    queryFn: async () => {
-      const res = await menusApi.all();
-      return res.data;
-    },
+    queryFn: async () => (await menusApi.all()).data,
   });
-
-  const { data, isLoading, isError } = useQuery({
-    queryKey: ["menu-buttons", selectedMenuId, page],
-    queryFn: async () => {
-      const res = await menuButtonsApi.list(selectedMenuId, page);
-      return res.data;
-    },
+  const config = useQuery({
+    queryKey: MENU_BUTTON_CONFIG_KEY,
+    queryFn: async () => (await menuButtonsApi.config()).data,
   });
-  const buttons = data?.results ?? [];
-  const totalPages = data ? Math.ceil(data.count / PAGE_SIZE) : 0;
-
-  // GET /perm/permissions/ — a MenuButton's `permission` is required and, unlike
-  // Menu.permission, is already live: MenuTreeSerializer/MenuSerializer.get_buttons()
-  // filters buttons through user_has_permission(user, button.permission) for every
-  // non-ADMIN request. A codename that doesn't exist doesn't error — it just makes
-  // user_has_permission return False for everyone, silently hiding the button from
-  // every non-ADMIN role. Checked here so that failure mode is visible at edit time.
-  const { data: allPermissions = [], isSuccess: permissionsLoaded } = useQuery<Permission[]>({
-    queryKey: ["permissions-for-menu-button-codename-check"],
-    queryFn: async () => (await permApi.list()).data,
-  });
-  const realCodenames = useMemo(
-    () => new Set(allPermissions.map((p) => p.codename)),
-    [allPermissions]
+  const rows = useMemo(
+    () => new Map((config.data ?? []).map((row) => [buttonKey(row.menu_path, row.code), row])),
+    [config.data]
   );
 
-  const createMutation = useMutation({
-    mutationFn: (data: Partial<MenuButton>) => menuButtonsApi.create(data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["menu-buttons"] }),
-    onError: () => showToast(t("menu_buttons.create_error") || "Failed to create button", "error"),
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: (id: number) => menuButtonsApi.delete(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["menu-buttons"] }),
-    onError: () => showToast(t("menu_buttons.delete_error") || "Failed to delete button", "error"),
-  });
-
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [editingButton, setEditingButton] = useState<MenuButton | null>(null);
-
-  // The edit path had no mutation: `await menuButtonsApi.update(...)` inline in
-  // the submit handler, so a refused save was an unhandled rejection — no
-  // toast, no invalidation, the modal left open with nothing said (FL-08).
-  // Create and delete on this same form had mutations; `app/menus/page.tsx`
-  // already closed the identical gap. `MenuButtonsPage.editFailure.test.tsx`.
-  const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: Partial<MenuButton> }) =>
-      menuButtonsApi.update(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["menu-buttons"] });
-      setEditingButton(null);
+  const toggle = useMutation({
+    mutationFn: async (button: WiredButton) => {
+      const row = rows.get(buttonKey(button.menu, button.code));
+      if (row) return menuButtonsApi.update(row.id, { is_active: !row.is_active });
+      // 没有行 = 开着;关掉时建一行。
+      const menu = findMenuByPath(menus as SidebarMenu[], button.menu);
+      if (!menu) throw new Error(`no menu at ${button.menu}`);
+      return menuButtonsApi.create({
+        menu: menu.id,
+        name: t(button.label),
+        code: button.code,
+        permission: button.permission,
+        is_active: false,
+      });
     },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["menu-buttons"] }),
     onError: () => showToast(t("menu_buttons.update_error"), "error"),
   });
-  const [form, setForm] = useState({
-    name: "",
-    code: "",
-    permission: "",
-    order: 0,
-    is_active: true,
-    menu: null as number | null,
-  });
 
-  const openCreate = () => {
-    setForm({ name: "", code: "", permission: "", order: 0, is_active: true, menu: selectedMenuId ?? null });
-    setIsCreateModalOpen(true);
-  };
-
-  const openEdit = (btn: MenuButton) => {
-    setForm({
-      name: btn.name,
-      code: btn.code,
-      permission: btn.permission,
-      order: btn.order,
-      is_active: btn.is_active,
-      menu: null,
-    });
-    setEditingButton(btn);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (editingButton) {
-      updateMutation.mutate({ id: editingButton.id, data: form });
-    } else {
-      await createMutation.mutateAsync(form);
-      setIsCreateModalOpen(false);
-    }
-  };
+  const groups = useMemo(() => {
+    const byMenu = new Map<string, WiredButton[]>();
+    for (const b of WIRED_BUTTONS) byMenu.set(b.menu, [...(byMenu.get(b.menu) ?? []), b]);
+    return [...byMenu.entries()];
+  }, []);
 
   return (
-    /* `page` (1200px), up from `max-w-5xl` (1024). */
-    <PageShell
-      variant="page"
-      title={t("menu_buttons.title")}
-      /* MenuButton only carries one of the menu editor's five visibility gates
-         (is_active) — roles, `visible`, the permission/derivation ambiguity and
-         menu_type all live on the parent Menu, not here. That is a standing
-         fact about this page, which is what `subtitle` is for; it used to be a
-         `text-xs` paragraph floating above the table. */
-      subtitle={
-        <>
-          {t("menu_buttons.gates_note")}{" "}
-          <Link href="/menus" className="text-[oklch(var(--color-accent-ink))] hover:underline">
-            {t("menus.title")}
-          </Link>
-        </>
-      }
-      actions={
-        <RequirePermission permissions="menu.manage">
-          <Button type="button" variant="secondary" onClick={openCreate}>
-            + {t("menu_buttons.create")}
-          </Button>
-        </RequirePermission>
-      }
-      filters={
-        /* This select was sitting in the title bar next to the create button,
-           where it read as a page action rather than as what it is — the one
-           filter this list has. It belongs in the sticky slot with every other
-           page's filters, as a filter chip (规范 v1 §2). */
-        <FilterChipSelect
-          label={t("menu_buttons.filter_by_menu")}
-          value={selectedMenuId === undefined ? "" : String(selectedMenuId)}
-          options={[
-            { value: "", label: t("menu_buttons.all_menus") },
-            ...menus.map((m) => ({ value: String(m.id), label: m.name })),
-          ]}
-          clearLabel={t("filter.clear_one", { name: t("menu_buttons.filter_by_menu") })}
-          onChange={(v) => {
-            setSelectedMenuId(v ? Number(v) : undefined);
-            setPage(1);
-          }}
-        />
-      }
-    >
-      {/* No `pagination` slot — DataTable renders its own <Pagination>
-          (components/ui/data-table.tsx:288) from the four props at the end. */}
-      <DataTable<MenuButton>
-        caption={t("menu_buttons.title")}
-        columns={[
-          { key: "name", header: t("menu_buttons.name") },
-          { key: "code", header: t("menu_buttons.code") },
-          { key: "permission", header: t("menu_buttons.permission") },
-          { key: "order", header: t("menus.order"), align: "right" },
-          { key: "status", header: t("menus.status") },
-          { key: "action", header: t("menus.action"), align: "right", srOnlyHeader: true },
-        ]}
-        data={buttons}
-        isLoading={isLoading}
-        isError={isError}
-        keyExtractor={(btn) => String(btn.id)}
-        renderRow={(btn) => (
-          <>
-            <td className="px-4 py-3 font-medium text-[oklch(var(--color-ink))]">{btn.name}</td>
-            {/* Codenames are identifiers, which is what the 02 step is for. */}
-            <td className="px-4 py-3 text-xs font-mono text-[oklch(var(--color-ink-muted))]">{btn.code}</td>
-            <td className="px-4 py-3 text-xs font-mono text-[oklch(var(--color-ink-muted))]">{btn.permission}</td>
-            <td className="px-4 py-3 text-right font-mono text-[oklch(var(--color-ink-muted))]">{btn.order}</td>
-            <td className="px-4 py-3">
-              {/* is_active IS a system state — the gate is either in force or
-                  it is not — so this one legitimately takes a Badge tone
-                  rather than a domain palette. */}
-              <Badge tone={btn.is_active ? "success" : "neutral"} glyph={btn.is_active ? "✓" : "○"}>
-                {btn.is_active ? t("menus.active") : t("menus.inactive")}
-              </Badge>
-            </td>
-            <td className="px-4 py-3 text-right">
-              {/* See app/permissions/page.tsx: inline siblings concatenate
-                  their labels in the accessibility tree and on copy. */}
-              <div className="flex justify-end gap-1">
-                <RequirePermission permissions="menu.manage">
-                  <Button type="button" size="sm" variant="ghost" onClick={() => openEdit(btn)}>
-                    {t("menus.edit")}
-                  </Button>
-                </RequirePermission>
-                <RequirePermission permissions="menu.manage">
-                  {/* 幽灵按钮,不上红(同用户页):v3 的红只给系统出错与不可撤回删除里那个确认键。 */}
-                  <Button type="button" size="sm" variant="ghost" onClick={() => deleteMutation.mutate(btn.id)}>
-                    {t("menus.delete")}
-                  </Button>
-                </RequirePermission>
-              </div>
-            </td>
-          </>
-        )}
-        emptyMessage={t("menu_buttons.no_buttons")}
-        page={page}
-        totalPages={totalPages}
-        totalCount={data?.count}
-        onPageChange={setPage}
-      />
-
-      <Modal
-        isOpen={isCreateModalOpen || editingButton !== null}
-        onClose={() => { setIsCreateModalOpen(false); setEditingButton(null); }}
-        title={editingButton ? t("menu_buttons.edit") : t("menu_buttons.create")}
-      >
-        {/* Every control below was a hand-written `label` + `input` pair with
-            the same 42-signature class string this pass exists to remove; they
-            are `TextField` / `SelectField` now, which also brings the wiring
-            those pairs never had — `aria-required` on the control, and
-            `aria-describedby` pointing at the help text. */}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <TextField
-            id={nameId}
-            label={t("menu_buttons.name")}
-            value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
-            required
-          />
-          <TextField
-            id={codeId}
-            label={t("menu_buttons.code")}
-            value={form.code}
-            onChange={(e) => setForm({ ...form, code: e.target.value })}
-            required
-            placeholder={t("menu_buttons.code_placeholder")}
-          />
-          <div className="flex flex-col gap-1">
-            <TextField
-              id={permissionId}
-              label={t("menu_buttons.permission")}
-              value={form.permission}
-              onChange={(e) => setForm({ ...form, permission: e.target.value })}
-              required
-              placeholder={t("menu_buttons.permission_placeholder")}
-            />
-            {/* Not `error`: an unknown codename is a warning, not a rejection —
-                the form still submits, and a red field would say otherwise. */}
-            {permissionsLoaded && form.permission.trim() && !realCodenames.has(form.permission.trim()) && (
-              <p className="text-xs text-[oklch(var(--color-status-warning))]">
-                {t("menu_buttons.permission_mismatch_warning", { codename: form.permission.trim() })}
-              </p>
-            )}
-          </div>
-          {!editingButton && (
-            <SelectField
-              id={bindMenuId}
-              label={t("menu_buttons.bind_menu")}
-              value={form.menu ?? ""}
-              onChange={(e) => setForm({ ...form, menu: e.target.value ? Number(e.target.value) : null })}
-              required
-              options={[
-                { value: "", label: t("menu_buttons.select_menu") },
-                ...menus.map((m) => ({ value: String(m.id), label: m.name })),
-              ]}
-            />
-          )}
-          <TextField
-            id={orderId}
-            label={t("menus.order")}
-            type="number"
-            value={form.order}
-            onChange={(e) => setForm({ ...form, order: Number(e.target.value) })}
-          />
-          <div className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              id={isActiveId}
-              checked={form.is_active}
-              onChange={(e) => setForm({ ...form, is_active: e.target.checked })}
-            />
-            <label htmlFor={isActiveId} className="text-sm text-[oklch(var(--color-ink))]">{t("menus.active")}</label>
-          </div>
-          <div className="flex justify-end gap-3 pt-2">
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => { setIsCreateModalOpen(false); setEditingButton(null); }}
-            >
-              {t("common.cancel")}
-            </Button>
-            <Button type="submit" variant="primary">
-              {editingButton ? t("menus.save") : t("menu_buttons.create")}
-            </Button>
-          </div>
-        </form>
-      </Modal>
+    <PageShell variant="page" title={t("menu_buttons.title")} subtitle={t("menu_buttons.rule")}>
+      {config.isLoading ? (
+        <ListSkeleton count={3} />
+      ) : config.isError ? (
+        <QueryError onRetry={() => config.refetch()} />
+      ) : (
+        <div className="space-y-3">
+          {groups.map(([path, buttons]) => {
+            const menuName = findMenuByPath(menus as SidebarMenu[], path)?.name ?? path;
+            return (
+              <details key={path} open className="border-t border-[oklch(var(--color-block))]" data-testid={`menu-buttons-${path}`}>
+                <summary className="cursor-pointer py-2 text-sm font-medium text-[oklch(var(--color-ink))]">
+                  {t("menu_buttons.count", { menu: menuName, n: String(buttons.length) })}
+                </summary>
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-left text-2xs text-[oklch(var(--color-ink-subtle))]">
+                      <th scope="col" className="w-16 px-3 py-1 font-normal">{t("menu_buttons.col_show")}</th>
+                      <th scope="col" className="px-3 py-1 font-normal">{t("menu_buttons.name")}</th>
+                      <th scope="col" className="px-3 py-1 font-normal">{t("menu_buttons.col_where")}</th>
+                      <th scope="col" className="px-3 py-1 font-normal">{t("menu_buttons.col_perm")}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {buttons.map((b) => {
+                      const on = rows.get(buttonKey(b.menu, b.code))?.is_active ?? true;
+                      return (
+                        <tr key={b.id} className="border-t border-[oklch(var(--color-rule))]">
+                          <td className="px-3 py-2">
+                            <input
+                              type="checkbox"
+                              checked={on}
+                              disabled={!canManage || toggle.isPending}
+                              onChange={() => toggle.mutate(b)}
+                              aria-label={`${t(b.label)} · ${t("menu_buttons.col_show")}`}
+                            />
+                          </td>
+                          <td className="px-3 py-2 text-[oklch(var(--color-ink))]">{t(b.label)}</td>
+                          <td className="px-3 py-2 text-[oklch(var(--color-ink-muted))]">{t(b.where)}</td>
+                          {/* 码名是标识符,等宽。 */}
+                          <td className="px-3 py-2 font-mono text-xs text-[oklch(var(--color-ink-muted))]">{b.permission}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </details>
+            );
+          })}
+        </div>
+      )}
     </PageShell>
   );
 }
