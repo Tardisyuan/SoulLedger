@@ -1352,6 +1352,14 @@
         "forbidden": "You don't have permission to start approvals",
         "failed": "Couldn't start, please try again"
       }
+    },
+    "filter": {
+      "search": "Search workflow, soul or case type",
+      "all": "All",
+      "civilization": "Civilization",
+      "from": "Created from",
+      "to": "Created to",
+      "clear": "Clear filters"
     }
   },
   "dashboard": {
