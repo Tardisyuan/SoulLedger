@@ -5206,6 +5206,50 @@
     "scheduled_task_overdue": {
       "title": "Scheduled task did not run",
       "body": "Scheduled task {{task}} was due at {{expected_at}}; no run has been recorded since."
+    },
+    "soul_account_provisioning_failed": {
+      "title": "Soul account could not be opened",
+      "body": "Soul {{soul}} is registered as dead, but its soul account was not opened. Run backfill_soul_accounts to open it."
+    },
+    "rebirth_status_under_review": {
+      "title": "Rebirth application update",
+      "body": "Your rebirth application is under review."
+    },
+    "rebirth_status_rejected": {
+      "title": "Rebirth application update",
+      "body": "Your rebirth application was rejected."
+    },
+    "rebirth_status_appealing": {
+      "title": "Rebirth application update",
+      "body": "Your rebirth application is under appeal."
+    },
+    "rebirth_status_appeal_rejected": {
+      "title": "Rebirth application update",
+      "body": "The appeal on your rebirth application was rejected."
+    },
+    "rebirth_status_approved": {
+      "title": "Rebirth application update",
+      "body": "Your rebirth application was approved."
+    },
+    "cooldown_decided_approved": {
+      "title": "Cooldown shortening decided",
+      "body": "Your request to shorten the cooldown was approved."
+    },
+    "cooldown_decided_rejected": {
+      "title": "Cooldown shortening decided",
+      "body": "Your request to shorten the cooldown was rejected."
+    },
+    "assistant_cap_warning": {
+      "title": "Assistant spend at 80% of this month's cap",
+      "body": "Estimated spend this month is {{spent}} against a cap of {{cap}}. The assistant switches off at the cap; the month rolls over on the 1st at 8:00 Beijing time."
+    },
+    "assistant_cap_closed": {
+      "title": "Assistant switched off: monthly cap reached",
+      "body": "Estimated spend this month, {{spent}}, has reached the cap of {{cap}}, and the assistant master switch is off. It switches back on by itself on the 1st at 8:00 Beijing time, or raise the cap on the Assistant admin page and switch it on by hand."
+    },
+    "assistant_reopened": {
+      "title": "Assistant switched back on: new month",
+      "body": "The assistant was switched off last month when spend reached the cap. It is back on for the new month (the month rolls over on the 1st at 8:00 Beijing time)."
     }
   },
   "social_moderation": {

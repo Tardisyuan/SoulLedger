@@ -98,6 +98,14 @@ class NotificationHandler(DomainEventHandler):
         else:
             payload["id"] = notification.id
 
+        # 实时提示框按读的人的语言显示:库里只有 zh-Hans 与 params,而频道组不知道每个连接用什么语言,
+        # 所以把各语言的渲染一起带上,前端按当前语言取(缺了就用上面的 title / message)。
+        from apps.notifications import messages
+
+        i18n = messages.render_all(notification_type, params)
+        if i18n:
+            notif_data["i18n"] = i18n
+
         # WebSocket delivery is NOT done here — the EventBus registry also has
         # WebSocketHandler registered for the "notification" domain, so the WS
         # push happens automatically via the registry dispatch.  Pushing

@@ -49,6 +49,17 @@ MESSAGES = {
         "cross_judgment_cancelled": {"title": "跨域审判已取消", "body": "跨域审判「{{title}}」已取消。理由：{{reason}}"},
         "scheduled_task_failed": {"title": "定时任务失败", "body": "定时任务「{{task}}」执行失败：{{error}}"},
         "scheduled_task_overdue": {"title": "定时任务没有运行", "body": "定时任务「{{task}}」应在 {{expected_at}} 运行，至今没有运行记录。"},
+        "soul_account_provisioning_failed": {"title": "灵魂账号开通失败", "body": "灵魂「{{soul}}」已登记死亡,但灵魂账号没有开成。请运行 backfill_soul_accounts 补开。"},
+        "rebirth_status_under_review": {"title": "转生申请状态更新", "body": "您的转生申请状态:审批中。"},
+        "rebirth_status_rejected": {"title": "转生申请状态更新", "body": "您的转生申请状态:已驳回。"},
+        "rebirth_status_appealing": {"title": "转生申请状态更新", "body": "您的转生申请状态:申诉中。"},
+        "rebirth_status_appeal_rejected": {"title": "转生申请状态更新", "body": "您的转生申请状态:申诉被驳回。"},
+        "rebirth_status_approved": {"title": "转生申请状态更新", "body": "您的转生申请状态:已批准。"},
+        "cooldown_decided_approved": {"title": "缩短冷却申请有了结果", "body": "您的缩短冷却申请:已批准。"},
+        "cooldown_decided_rejected": {"title": "缩短冷却申请有了结果", "body": "您的缩短冷却申请:已驳回。"},
+        "assistant_cap_warning": {"title": "助手本月花费已到上限的 80%", "body": "本月估算花费 {{spent}},上限 {{cap}}。到上限时助手会自动关闭;每月 1 日早上 8 点(北京时间)换月。"},
+        "assistant_cap_closed": {"title": "助手已自动关闭:本月花费到达上限", "body": "本月估算花费 {{spent}} 已到上限 {{cap}},助手总开关已自动关闭。次月 1 日早上 8 点(北京时间)会自动重开;也可以到「助手管理」页调高上限后手动打开。"},
+        "assistant_reopened": {"title": "助手已自动重开:新的一个月", "body": "上个月助手因花费到达上限被自动关闭,本月已自动重开(每月 1 日早上 8 点北京时间换月)。"},
     },
     "en": {
         "sentence_plan_cancelled": {"title": "Sentence plan cancelled", "body": "The sentence plan of soul {{soul}} was cancelled. The rest of the sentence is waived and the plan counts as complete."},
@@ -93,6 +104,17 @@ MESSAGES = {
         "cross_judgment_cancelled": {"title": "Cross-realm judgment cancelled", "body": "The cross-realm judgment {{title}} was cancelled. Reason: {{reason}}"},
         "scheduled_task_failed": {"title": "Scheduled task failed", "body": "Scheduled task {{task}} failed: {{error}}"},
         "scheduled_task_overdue": {"title": "Scheduled task did not run", "body": "Scheduled task {{task}} was due at {{expected_at}}; no run has been recorded since."},
+        "soul_account_provisioning_failed": {"title": "Soul account could not be opened", "body": "Soul {{soul}} is registered as dead, but its soul account was not opened. Run backfill_soul_accounts to open it."},
+        "rebirth_status_under_review": {"title": "Rebirth application update", "body": "Your rebirth application is under review."},
+        "rebirth_status_rejected": {"title": "Rebirth application update", "body": "Your rebirth application was rejected."},
+        "rebirth_status_appealing": {"title": "Rebirth application update", "body": "Your rebirth application is under appeal."},
+        "rebirth_status_appeal_rejected": {"title": "Rebirth application update", "body": "The appeal on your rebirth application was rejected."},
+        "rebirth_status_approved": {"title": "Rebirth application update", "body": "Your rebirth application was approved."},
+        "cooldown_decided_approved": {"title": "Cooldown shortening decided", "body": "Your request to shorten the cooldown was approved."},
+        "cooldown_decided_rejected": {"title": "Cooldown shortening decided", "body": "Your request to shorten the cooldown was rejected."},
+        "assistant_cap_warning": {"title": "Assistant spend at 80% of this month's cap", "body": "Estimated spend this month is {{spent}} against a cap of {{cap}}. The assistant switches off at the cap; the month rolls over on the 1st at 8:00 Beijing time."},
+        "assistant_cap_closed": {"title": "Assistant switched off: monthly cap reached", "body": "Estimated spend this month, {{spent}}, has reached the cap of {{cap}}, and the assistant master switch is off. It switches back on by itself on the 1st at 8:00 Beijing time, or raise the cap on the Assistant admin page and switch it on by hand."},
+        "assistant_reopened": {"title": "Assistant switched back on: new month", "body": "The assistant was switched off last month when spend reached the cap. It is back on for the new month (the month rolls over on the 1st at 8:00 Beijing time)."},
     },
     "egy": {
         "password_help_requested": {"title": "Dbh · Wehem Sekhem", "body": "Wa Dbh Wehem Sekhem En Aq «{{username}}» Em Aq. Maa Tepy; Er Khet: Wehem Sekhem Em Iri Remetj."},
@@ -162,7 +184,15 @@ KIND_BY_TYPE = {
 
 #: `SYSTEM` 类型没有自己的文案键(它是各种运维消息的兜底类型);发送方把下面之一写进 `params["kind"]`
 #: 才按语言渲染,别的 SYSTEM 行照存下来的原文返回。
-SYSTEM_KINDS = {"scheduled_task_failed", "scheduled_task_overdue"}
+SYSTEM_KINDS = {
+    "scheduled_task_failed", "scheduled_task_overdue", "soul_account_provisioning_failed",
+    # 给灵魂的转生申请 / 缩短冷却结果,一种状态一句(`apps/soul_accounts/rebirth.py`)。
+    "rebirth_status_under_review", "rebirth_status_rejected", "rebirth_status_appealing",
+    "rebirth_status_appeal_rejected", "rebirth_status_approved",
+    "cooldown_decided_approved", "cooldown_decided_rejected",
+    # 助手花费上限的三种提醒(`apps/soul_assist/usage.py`)。
+    "assistant_cap_warning", "assistant_cap_closed", "assistant_reopened",
+}
 
 
 #: Per-recipient variants of a type's kind. A sender picks one by writing its
@@ -204,3 +234,19 @@ def render(locale, kind, params):
     for name, value in params.items():
         body = body.replace("{{" + name + "}}", str(value))
     return entry["title"], body
+
+
+def render_all(notification_type, params):
+    """`{locale: {"title", "message"}}` for every locale with copy for this row, or None when the row has no
+    kind / params or the params leave a `{{…}}` unfilled (an old row). The WebSocket push uses it: the channel
+    group does not know each socket's language, so the client picks its own."""
+    kind = kind_for(notification_type, params)
+    if not kind or not params:
+        return None
+    out = {}
+    for locale in MESSAGES:
+        title, body = render(locale, kind, params)
+        if "{{" in title + body:
+            return None
+        out[locale] = {"title": title, "message": body}
+    return out

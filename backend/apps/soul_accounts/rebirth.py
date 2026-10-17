@@ -416,10 +416,16 @@ def decide_cooldown_shortening(request_id, user, *, approve: bool, approved_days
             "request_id": str(shortening.pk), "application_id": str(shortening.application_id),
             "status": shortening.status, "decided_by": user.username,
         })
+    from apps.notifications import messages
+
+    # 存 zh-Hans 与 params,读时按请求语言重渲染(apps/notifications/messages.py)。
+    params = {"kind": f"cooldown_decided_{shortening.status.lower()}"}
+    title, body = messages.render(messages.DEFAULT_LOCALE, params["kind"], params)
     EventService.notify_user(
         user=shortening.account.user,
-        title="缩短冷却申请有了结果",
-        message=f"您的缩短冷却申请:{shortening.get_status_display()}。",
+        title=title,
+        message=body,
+        params=params,
         notification_type="SYSTEM",
         related_resource="cooldown_shortening",
         related_id=str(shortening.pk),
@@ -491,10 +497,15 @@ def _notify_status_change(application):
     """Tell the soul. Best-effort, after the transaction."""
     from apps.events.services import EventService
 
+    from apps.notifications import messages
+
+    params = {"kind": f"rebirth_status_{application.status.lower()}"}
+    title, body = messages.render(messages.DEFAULT_LOCALE, params["kind"], params)
     EventService.notify_user(
         user=application.account.user,
-        title="转生申请状态更新",
-        message=f"您的转生申请状态:{application.get_status_display()}。",
+        title=title,
+        message=body,
+        params=params,
         notification_type="SYSTEM",
         related_resource="rebirth_application",
         related_id=str(application.pk),
