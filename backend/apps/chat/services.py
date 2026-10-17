@@ -627,10 +627,11 @@ def send_inbox_message(account, conversation, body, *, request=None, image=None,
     return event_id
 
 
-def officer_messages(conversation, officer, *, request=None, limit=50):
+def officer_messages(conversation, officer, *, request=None, limit=50, before=None):
     """会话正文。**不落我们的库** —— 每次从 Synapse 读。官员读信本身记一条审计(不含正文)。
 
     `sender` 换成可读的名字:服务账号 = 殿司(带回复人),灵魂 = 朋友圈显示名。
+    `before`(一条信的 event_id):只取比它更早的一页(「更早」)。旧的一页不拿来对 `last_from` —— 那只看最新的。
     """
     client = get_client()
     names = {
@@ -640,8 +641,11 @@ def officer_messages(conversation, officer, *, request=None, limit=50):
         )
     }
     rows = []
-    timeline = client.recent_messages(conversation.room_id, limit=limit)
-    reconcile_inbox(conversation, timeline, client.service_user)
+    if before:
+        timeline = client.messages_before(conversation.room_id, before, limit=limit)
+    else:
+        timeline = client.recent_messages(conversation.room_id, limit=limit)
+        reconcile_inbox(conversation, timeline, client.service_user)
     from apps.chat import images
 
     pictures = images.officer_views(conversation, officer, timeline, client.service_user,

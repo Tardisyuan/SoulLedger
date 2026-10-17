@@ -390,3 +390,34 @@ def test_todo_group_pages_from_an_offset_and_reports_the_full_count(cn_tenant, j
     assert {i["id"] for i in first["items"]}.isdisjoint(i["id"] for i in more["items"])
     assert client.get(TODO, {"kind": "nope"}).status_code == 400
     assert client.get(TODO, {"kind": "approval", "offset": "x"}).status_code == 400
+
+
+def test_a_rebirth_workflow_notice_names_the_application_not_the_workflow(
+        cn_tenant, judge_user, django_capture_on_commit_callbacks):
+    """官员端 App 的转生条目按申请 id 取;通知若带审批流 id,点开就是 404。普通审批照旧带审批流 id。"""
+    from apps.events.event_bus import configure_default_handlers
+    from apps.events.services import EventService
+    from apps.notifications.models import UserNotification
+    from apps.soul_accounts.models import RebirthApplication
+    from apps.workflow.services import WorkflowService
+
+    configure_default_handlers()
+    account, soul_client = rebirth_ready_soul(cn_tenant, name="转生丙")
+    with django_capture_on_commit_callbacks(execute=True):
+        assert soul_client.post("/api/v1/me/rebirth-applications/", {"desired_form": "HUMAN"}, format="json")\
+            .status_code == 201
+    app = RebirthApplication.objects.get(soul=account.soul)
+    wf = ApprovalWorkflow._base_manager.get(pk=app.workflow_id)
+    plain, _ = _plain_workflow(cn_tenant)
+    UserNotification.objects.filter(user=judge_user).delete()
+
+    EventService.notify_workflow_assigned(judge_user, wf)
+    WorkflowService.notify_designated(wf, wf.current_node, title="催办", message="m")
+    EventService.notify_workflow_assigned(judge_user, plain)
+
+    rows = UserNotification.objects.filter(user=judge_user, notification_type="WORKFLOW_ASSIGNED")
+    rebirth_rows = rows.filter(related_resource="rebirth_application")
+    assert rebirth_rows.count() >= 1
+    assert set(rebirth_rows.values_list("related_id", flat=True)) == {str(app.pk)}
+    assert not rows.filter(related_id=str(wf.pk)).exists()
+    assert rows.filter(related_resource="workflow", related_id=str(plain.pk)).count() == 1

@@ -6,14 +6,18 @@
  * failure puts a Notice inside the sheet and KEEPS what was typed.
  */
 import { cosignRefusalOf, officerAppApi, type SignerCandidate, type TodoItemDetail, type TodoKind } from "@soulledger/core/api/officer-app";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { View } from "react-native";
 
 import { decisionAllowed, useBioWord } from "../deviceCheck";
 import { ActionButton, Row, Segmented } from "../kit";
 import { decisionFailure, failureReasonKey, hallLabel, passVerdictsOf, reasonMissing, submitDecision, todoTitle, type FailureReason, type Verdict } from "../rules";
 import { effectLine, objectLines } from "../todoFacts";
-import { Button, FieldError, Input, Notice, Sheet, Txt, space, useI18n, useRemote, useTheme, useToast } from "../shared";
+import { Button, FieldError, Input, Notice, Sheet, SmallButton, Txt, space, useI18n, useRemote, useTheme, useToast } from "../shared";
+import { PEOPLE_SHOWN } from "./letterActions";
+
+/** How long the 加签 search waits after the last keystroke before it asks the server. */
+const SEARCH_PAUSE_MS = 300;
 
 export interface CooldownFacts {
   reason: string;
@@ -191,7 +195,16 @@ export function CosignSheet({
   const [busy, setBusy] = useState(false);
   const [unavailable, setUnavailable] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
-  const load = useRemote<SignerCandidate[]>(useCandidates(q, open));
+  // The search asks the server: once the typing pauses, not on every character.
+  const [asked, setAsked] = useState("");
+  useEffect(() => {
+    if (q === asked) return;
+    const timer = setTimeout(() => setAsked(q), SEARCH_PAUSE_MS);
+    return () => clearTimeout(timer);
+  }, [q, asked]);
+  const [all, setAll] = useState(false);
+  const load = useRemote<SignerCandidate[]>(useCandidates(asked, open));
+  const people = load.data ?? [];
 
   const confirm = () => {
     if (picked === null) return;
@@ -222,12 +235,12 @@ export function CosignSheet({
           <Input testID="cosign-search" label={t("officer_app.cosign.search")} value={q} onChangeText={setQ} />
           {load.error ? <FieldError text={t("officer_app.state.error_title")} /> : null}
         </View>
-        {(load.data ?? []).length === 0 && !load.loading && !load.error ? (
+        {people.length === 0 && !load.loading && !load.error ? (
           <Txt variant="caption" tone="muted" style={{ paddingHorizontal: space[5] }}>
             {t("officer_app.cosign.empty")}
           </Txt>
         ) : null}
-        {(load.data ?? []).slice(0, 6).map((person) => (
+        {(all ? people : people.slice(0, PEOPLE_SHOWN)).map((person) => (
           <Row
             key={person.id}
             testID={`cosign-${person.id}`}
@@ -239,6 +252,11 @@ export function CosignSheet({
             onPress={() => setPicked(person.id)}
           />
         ))}
+        {!all && people.length > PEOPLE_SHOWN ? (
+          <View style={{ paddingHorizontal: space[5], alignItems: "flex-start" }}>
+            <SmallButton testID="cosign-more" title={t("officer_app.cosign.more", { n: String(people.length - PEOPLE_SHOWN) })} onPress={() => setAll(true)} />
+          </View>
+        ) : null}
         <View style={{ paddingHorizontal: space[5], gap: space[3] }}>
           {problem ? <Notice tone="neg" testID="cosign-problem">{problem}</Notice> : null}
           {unavailable ? (

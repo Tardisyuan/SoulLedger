@@ -3,7 +3,7 @@
  * the pushed row's highlight and its absence under reduce-motion, and the locked-down parts of the
  * shell (the band shows the hall; the two-step banner stays until it is set up).
  */
-import { act, fireEvent, screen, waitFor } from "@testing-library/react-native";
+import { act, fireEvent, screen, waitFor, within } from "@testing-library/react-native";
 import { AccessibilityInfo } from "react-native";
 
 import { RefreshFailed, Row } from "../kit";
@@ -24,7 +24,11 @@ jest.mock("@soulledger/core/api/auth", () => ({
   ...jest.requireActual("@soulledger/core/api/auth"),
   mfaApi: { status: jest.fn(async () => ({ data: { enabled: false, required: true } })) },
 }));
-jest.mock("@soulledger/core/api/judgment", () => ({ judgmentApi: { list: (...a: unknown[]) => mockList(...a), claim: jest.fn(), queueCounts: jest.fn(async () => ({ data: { mine: 0, unclaimed: 0, others: 0, deferred: 0 } })) } }));
+const mockClaim = jest.fn();
+const mockCounts = jest.fn();
+jest.mock("@soulledger/core/api/judgment", () => ({
+  judgmentApi: { list: (...a: unknown[]) => mockList(...a), claim: (...a: unknown[]) => mockClaim(...a), queueCounts: (...a: unknown[]) => mockCounts(...a) },
+}));
 jest.mock("@soulledger/core/api/notifications", () => ({
   notificationsApi: { list: (...a: unknown[]) => mockNotices(...a), markRead: jest.fn(async () => ({})), markAllRead: jest.fn(async () => ({})) },
 }));
@@ -39,6 +43,7 @@ beforeEach(() => {
   mockTodo.mockResolvedValue({ data: TODO });
   mockList.mockResolvedValue({ data: { results: [] } });
   mockNotices.mockResolvedValue({ data: { results: [] } });
+  mockCounts.mockResolvedValue({ data: { mine: 0, unclaimed: 0, others: 0, deferred: 0 } });
 });
 
 describe("the to-do tab", () => {
@@ -129,15 +134,52 @@ describe("the other tabs have the same four states", () => {
     expect(await screen.findByText("◇ 待宣判 · 请在官员台")).toBeTruthy();
   });
 
+  const UNCLAIMED = { data: { results: [{ id: "j9", case_number: "CN-9", soul_name: "王九", court: "一殿", is_final: true }] } };
+
+  it("judgments: 认领 that someone beat us to (409) asks the list and the counts again", async () => {
+    mockList.mockResolvedValue(UNCLAIMED);
+    mockClaim.mockRejectedValue(httpError(409));
+    renderOfficer(<QueueTab onOpen={() => {}} />);
+    fireEvent.press(await screen.findByTestId("queue-group-unclaimed"));
+    fireEvent.press(await screen.findByTestId("queue-claim-j9"));
+    await waitFor(() => expect(mockCounts).toHaveBeenCalledTimes(2));
+    expect(mockList.mock.calls.filter(([p]) => (p as { group: string }).group === "unclaimed").length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("judgments: no 认领 button without judgment.execute (it would 403)", async () => {
+    mockList.mockResolvedValue(UNCLAIMED);
+    renderOfficer(<QueueTab onOpen={() => {}} />, { user: { ...OFFICER, permissions: ["judgment.read"] } });
+    fireEvent.press(await screen.findByTestId("queue-group-unclaimed"));
+    await screen.findByText("CN-9 · 王九");
+    expect(screen.queryByTestId("queue-claim-j9")).toBeNull();
+  });
+
+  it("「加载更多」 that fails says so under the list, and 重试 asks again", async () => {
+    let fail = true;
+    mockList.mockImplementation(async (params: { page?: string }) => {
+      if (params.page === "2") {
+        if (fail) throw new Error("Network Error");
+        return { data: { results: [], next: null } };
+      }
+      return { data: { results: UNCLAIMED.data.results, next: "http://x/?page=2" } };
+    });
+    renderOfficer(<QueueTab onOpen={() => {}} />);
+    fireEvent.press(await screen.findByTestId("list-more"));
+    expect(await screen.findByTestId("list-more-failed")).toBeTruthy();
+    fail = false;
+    fireEvent.press(screen.getByText("重试"));
+    await waitFor(() => expect(screen.queryByTestId("list-more-failed")).toBeNull());
+  });
+
   it("notices: unread is ● and bold, and tapping marks it read (○)", async () => {
     mockNotices.mockResolvedValue({ data: { results: [{ id: 1, title: "新审批", message: "有一件待办", is_read: false, created_at: "2026-10-09T01:00:00Z" }] } });
-    const onUnread = jest.fn();
-    renderOfficer(<NoticesTab onUnread={onUnread} />);
+    const onRead = jest.fn();
+    renderOfficer(<NoticesTab onRead={onRead} />);
     expect((await screen.findByText("●")).props.accessibilityLabel).toBe("未读"); // the only mark of "unread": spoken as a word
     fireEvent.press(screen.getByTestId("notice-1"));
     // Read: the ○ is decoration, so it is hidden from screen readers.
     expect((await screen.findByText("○", { includeHiddenElements: true })).props.accessibilityElementsHidden).toBe(true);
-    await waitFor(() => expect(onUnread).toHaveBeenLastCalledWith(false));
+    await waitFor(() => expect(onRead).toHaveBeenCalledTimes(1)); // the shell asks the server for the count again
   });
 
   it("notices: a row that names an item lands on it (read or not); one that names nothing only marks read", async () => {
@@ -150,7 +192,7 @@ describe("the other tabs have the same four states", () => {
       },
     });
     const onLand = jest.fn();
-    renderOfficer(<NoticesTab onUnread={() => {}} onLand={onLand} />);
+    renderOfficer(<NoticesTab onLand={onLand} />);
     fireEvent.press(await screen.findByTestId("notice-1"));
     expect(onLand).toHaveBeenCalledWith({ tab: "todo", item: { kind: "approval", id: "wf-9" } });
     fireEvent.press(screen.getByTestId("notice-2"));
@@ -162,7 +204,7 @@ describe("the other tabs have the same four states", () => {
 
   it("notices: error", async () => {
     mockNotices.mockRejectedValue(httpError(500));
-    renderOfficer(<NoticesTab onUnread={() => {}} />);
+    renderOfficer(<NoticesTab />);
     expect(await screen.findByTestId("state-error")).toBeTruthy();
   });
 });
@@ -203,7 +245,7 @@ describe("lists the server pages (20 a page) show the rest on 「加载更多」
     mockNotices.mockImplementation(async (params?: { page?: string }) =>
       params?.page === "2" ? { data: { results: [notice(21)], next: null } } : { data: { results: [notice(1)], next: "http://x/?page=2" } }
     );
-    renderOfficer(<NoticesTab onUnread={() => {}} />);
+    renderOfficer(<NoticesTab />);
     fireEvent.press(await screen.findByTestId("list-more"));
     expect(await screen.findByText("通知21")).toBeTruthy();
     expect(screen.getByText("通知1")).toBeTruthy();
@@ -268,5 +310,27 @@ describe("the shell", () => {
     fireEvent.press(screen.getByTestId("tab-me"));
     await act(async () => {}); // let the Me tab's own loads land before the test ends
     expect(screen.getByTestId("mfa-banner")).toBeTruthy();
+  });
+
+  it("marks 通知 ● from the server's unread count, without the tab ever being opened", async () => {
+    mockNotices.mockImplementation(async (params?: { is_read?: string }) =>
+      params?.is_read === "false" ? { data: { count: 3, results: [] } } : { data: { results: [] } }
+    );
+    renderOfficer(<Shell />);
+    await waitFor(() => expect(within(screen.getByTestId("tab-notices")).getByText("●")).toBeTruthy());
+    expect(mockNotices).toHaveBeenCalledWith({ is_read: "false" });
+  });
+
+  it("a push that arrives while the app is open asks the lists and the unread count again", async () => {
+    const { __state } = jest.requireMock("expo-notifications") as { __state: { receivedListeners: Set<() => void> } };
+    renderOfficer(<Shell />);
+    await screen.findByText("转生配额审批");
+    const todoCalls = mockTodo.mock.calls.length;
+    const countCalls = mockNotices.mock.calls.length;
+    await act(async () => {
+      __state.receivedListeners.forEach((l) => l());
+    });
+    await waitFor(() => expect(mockTodo.mock.calls.length).toBeGreaterThan(todoCalls));
+    expect(mockNotices.mock.calls.length).toBeGreaterThan(countCalls);
   });
 });

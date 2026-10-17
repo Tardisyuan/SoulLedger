@@ -107,6 +107,12 @@ export function installNotificationHandler(): void {
   });
 }
 
+/** Calls `onArrive` for every notification that arrives while the app is in the foreground (not tapped yet). */
+export function listenForArrivals(onArrive: () => void): () => void {
+  const sub = Notifications.addNotificationReceivedListener(() => onArrive());
+  return () => sub.remove();
+}
+
 /**
  * Calls `onLand` for a tapped notification: one that opened the app (the last response) and every
  * later one. A response whose payload names nowhere is ignored.

@@ -210,8 +210,9 @@ export function noticeLanding(n: { related_resource?: string | null; related_id?
   // `judgment` (a reassign request to ADMINs, 判决完成) and `soul` (灵魂账号没开成, 退回受阻) name a Judgment / Soul id.
   if (n.related_id && n.related_resource === "judgment") return { tab: "todo", judgment: n.related_id };
   if (n.related_id && n.related_resource === "soul") return { tab: "todo", soul: n.related_id };
-  const kind =
-    n.related_resource === "workflow" ? "approval" : n.related_resource === "soul_inbox" ? "letter" : n.related_resource === "DispatchRecord" ? "dispatch" : n.related_resource;
+  // A rebirth application's workflow notice names the application (`rebirth_application`): the rebirth item's own id.
+  const map: Record<string, string> = { workflow: "approval", rebirth_application: "rebirth", soul_inbox: "letter", DispatchRecord: "dispatch" };
+  const kind = (n.related_resource && map[n.related_resource]) || n.related_resource;
   return landingOf({ target: { kind, id: n.related_id } });
 }
 

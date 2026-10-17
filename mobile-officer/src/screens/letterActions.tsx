@@ -13,7 +13,10 @@ import { View } from "react-native";
 
 import { ActionButton, Row } from "../kit";
 import { assignableOthers } from "../letterActions";
-import { Button, FieldError, Input, Notice, Sheet, Txt, space, useI18n, useRemote, useTheme } from "../shared";
+import { Button, FieldError, Input, Notice, Sheet, SmallButton, Txt, space, useI18n, useRemote, useTheme } from "../shared";
+
+/** How many people a picker lists before 「更多」 (here and in the 加签 sheet). */
+export const PEOPLE_SHOWN = 6;
 
 /** The ⋯ sheet. Which rows exist is decided by the caller from the thread's state (`menuActions`). */
 export function LetterMenuSheet({
@@ -70,6 +73,8 @@ export function AssignSheet({
   const [picked, setPicked] = useState<InboxOfficer | null>(null);
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState(false);
+  // The first PEOPLE_SHOWN, then 「更多」 shows the rest (the search narrows them too).
+  const [all, setAll] = useState(false);
   const load = useRemote<InboxOfficer[]>(useCallback(() => (open ? soulInboxApi.assignable(id).then((r) => r.data) : Promise.resolve([] as InboxOfficer[])), [id, open]));
   const people = useMemo(() => assignableOthers(load.data ?? [], selfId, q), [load.data, selfId, q]);
 
@@ -101,7 +106,7 @@ export function AssignSheet({
             {t("officer_app.cosign.empty")}
           </Txt>
         ) : null}
-        {people.slice(0, 6).map((person) => {
+        {(all ? people : people.slice(0, PEOPLE_SHOWN)).map((person) => {
           const load_ = (person as { load?: number | null }).load;
           return (
             <Row
@@ -116,6 +121,11 @@ export function AssignSheet({
             />
           );
         })}
+        {!all && people.length > PEOPLE_SHOWN ? (
+          <View style={{ paddingHorizontal: space[5], alignItems: "flex-start" }}>
+            <SmallButton testID="assign-more" title={t("officer_app.cosign.more", { n: String(people.length - PEOPLE_SHOWN) })} onPress={() => setAll(true)} />
+          </View>
+        ) : null}
         <View style={{ paddingHorizontal: space[5], gap: space[3] }}>
           {problem ? <Notice tone="neg" testID="assign-problem">{t("officer_app.state.error_title")}</Notice> : null}
           <Button
@@ -150,13 +160,14 @@ export function UnassignSheet({ open, busy, onConfirm, onClose }: { open: boolea
 }
 
 /** What an unassigned letter wears in place of the reply box: 转给别人 (outline) and 由我来回 (primary). */
-export function TakeBar({ busy, onTake, onAssign }: { busy: boolean; onTake: () => void; onAssign: () => void }) {
+export function TakeBar({ busy, offline = false, onTake, onAssign }: { busy: boolean; offline?: boolean; onTake: () => void; onAssign: () => void }) {
   const { t } = useI18n();
   const theme = useTheme();
+  const hint = offline ? t("officer_app.offline.banner_bare") : undefined;
   return (
     <View testID="letter-take-bar" style={{ padding: space[4], flexDirection: "row", gap: space[3], borderTopWidth: 1, borderTopColor: theme.hair, backgroundColor: theme.s1 }}>
-      <ActionButton testID="letter-assign" kind="outline" title={t("officer_app.letter.assign")} onPress={onAssign} />
-      <ActionButton testID="letter-take" kind="primary" busy={busy} title={t("officer_app.letter.take")} onPress={onTake} />
+      <ActionButton testID="letter-assign" kind="outline" disabled={offline} accessibilityHint={hint} title={t("officer_app.letter.assign")} onPress={onAssign} />
+      <ActionButton testID="letter-take" kind="primary" busy={busy} disabled={offline} accessibilityHint={hint} title={t("officer_app.letter.take")} onPress={onTake} />
     </View>
   );
 }

@@ -40,8 +40,14 @@ export const soulInboxApi = {
   get: (id: string) => api.get<InboxConversation>(`/chat/inbox/${id}/`),
   /** Totals per folder, the same filter as `list` — so a count is what paging to the end gives. */
   folders: () => api.get<InboxFolderCounts>("/chat/inbox/folders/"),
-  /** Newest first. 503 `chat_not_configured` / `chat_unavailable` when Synapse is off or down. */
-  messages: (id: string) => api.get<InboxMessage[]>(`/chat/inbox/${id}/messages/`),
+  /**
+   * Newest first, at most 50. 503 `chat_not_configured` / `chat_unavailable` when Synapse is off or down.
+   * `before` (a letter's `event_id`): the page older than that letter (「更早」); 400 `bad_before` if it is not in the room.
+   */
+  messages: (id: string, before?: string) =>
+    before
+      ? api.get<InboxMessage[]>(`/chat/inbox/${id}/messages/`, { params: { before } })
+      : api.get<InboxMessage[]>(`/chat/inbox/${id}/messages/`),
   /**
    * 409 `closed` once the soul has been reborn. Clears the caller's draft and marks the thread read.
    * `txnId`: the same id sent again gets the first reply's event id back and sends nothing (a lost

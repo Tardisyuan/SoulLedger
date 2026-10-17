@@ -37,6 +37,7 @@ import { AssignSheet, LetterMenuSheet, TakeBar, UnassignSheet } from "./letterAc
 import { LetterImage, LetterImageViewer } from "./letterImages";
 import {
   Input,
+  Loader,
   Notice,
   Screen,
   Sheet,
@@ -49,6 +50,9 @@ import {
   useTheme,
   useToast,
 } from "../shared";
+
+/** What `GET …/messages/` sends at most per page (`officer_messages`' limit): a full page means there may be more. */
+const LETTER_PAGE = 50;
 
 export function LetterThread({
   id,
@@ -74,6 +78,33 @@ export function LetterThread({
   }, [id]);
   const thread = useCachedRemote(`detail:letter:${id}`, load);
   const { offline } = useOnline();
+  // Opening the letter is reading it: once per opening, when the thread came from the server (not the cache).
+  // Without this a letter read and archived on the phone was still unread at the desk.
+  const marked = useRef(false);
+  useEffect(() => {
+    if (marked.current || !thread.data || thread.cached) return;
+    marked.current = true;
+    void soulInboxApi.markRead(id).catch(() => undefined);
+  }, [id, thread.data, thread.cached]);
+  // 「更早」: the server sends the newest LETTER_PAGE; older pages hang under them until the thread reloads.
+  const [earlier, setEarlier] = useState<{ base: unknown; rows: InboxMessage[]; more: boolean; state: "busy" | "failed" | null }>({
+    base: null,
+    rows: [],
+    more: false,
+    state: null,
+  });
+  const older = earlier.base === thread.data ? earlier : { base: thread.data, rows: [] as InboxMessage[], more: (thread.data?.messages.length ?? 0) >= LETTER_PAGE, state: null };
+  const loadEarlier = () => {
+    const base = thread.data;
+    const all = [...(base?.messages ?? []), ...older.rows];
+    const oldest = all[all.length - 1];
+    if (!base || !oldest || older.state === "busy") return;
+    setEarlier({ ...older, state: "busy" });
+    soulInboxApi
+      .messages(id, oldest.event_id)
+      .then((r) => setEarlier({ base, rows: [...older.rows, ...r.data], more: r.data.length >= LETTER_PAGE, state: null }))
+      .catch(() => setEarlier({ ...older, state: "failed" }));
+  };
   const outboxEntry = useOutbox().find((e) => e.id === id);
   const queued = outboxEntry?.state === "queued";
   // A failed template list only hides the 模板 row; the letter can still be answered.
@@ -232,8 +263,8 @@ export function LetterThread({
     soul_name: conversation.soul_name,
     hall_name: hallLabel(t, user?.tenant) ?? "",
   };
-  // The server sends the newest first; the screen reads from the top down.
-  const ordered = [...messages].reverse();
+  // The server sends the newest first; the screen reads from the top down. Earlier pages are older still.
+  const ordered = [...messages, ...older.rows].reverse();
   // The viewer pages through every picture in the thread, oldest first.
   const gallery = ordered.flatMap((m) => (m.image ? [m.image] : []));
 
@@ -262,8 +293,12 @@ export function LetterThread({
             testID="letter-more"
             accessibilityRole="button"
             accessibilityLabel={t("officer_app.letter.more")}
+            // 转出 / 放回 / 归档 all go to the server: offline the menu is shut, and says why.
+            accessibilityHint={offline ? t("officer_app.offline.banner_bare") : undefined}
+            accessibilityState={{ disabled: offline }}
+            disabled={offline}
             onPress={() => setSheet("menu")}
-            style={{ width: 48, minHeight: 48, alignItems: "center", justifyContent: "center" }}
+            style={{ width: 48, minHeight: 48, alignItems: "center", justifyContent: "center", opacity: offline ? 0.4 : 1 }}
           >
             <Txt variant="title">⋯</Txt>
           </Pressable>
@@ -272,11 +307,24 @@ export function LetterThread({
           <View style={{ padding: space[4], gap: space[2] }}>
             <Notice tone="neutral" testID="letter-archived">{`○ ${archivedAt ? t("officer_app.letter.archived_banner", { date: formatWhen(archivedAt) }) : t("soul_inbox.archived_done")}`}</Notice>
             {/* The way back right where it was archived: 取消归档 is what 撤销 would do. */}
-            <SmallButton testID="letter-unarchive" title={t("officer_app.letter.unarchive")} onPress={() => pick("unarchive")} />
+            {offline ? null : <SmallButton testID="letter-unarchive" title={t("officer_app.letter.unarchive")} onPress={() => pick("unarchive")} />}
           </View>
         ) : null}
         <Screen edges={["left", "right"]}>
           <View style={{ padding: space[5], gap: space[4] }}>
+            {older.more && older.state === "failed" ? (
+              <Notice tone="neg" onRetry={loadEarlier} testID="letter-earlier-failed">
+                {t("officer_app.letter.earlier_failed")}
+              </Notice>
+            ) : older.more ? (
+              <View style={{ alignItems: "center" }}>
+                {older.state === "busy" ? (
+                  <Loader size={20} testID="letter-earlier-busy" />
+                ) : (
+                  <SmallButton testID="letter-earlier" title={t("officer_app.letter.earlier")} onPress={loadEarlier} />
+                )}
+              </View>
+            ) : null}
             {ordered.length === 0 ? (
               <Txt variant="caption" tone="muted">
                 {t("soul_inbox.no_messages")}
@@ -311,6 +359,7 @@ export function LetterThread({
           // Nobody holds it: 由我来回 takes it (then the box appears), 转给别人 hands it on. No reply from here.
           <TakeBar
             busy={acting}
+            offline={offline}
             onAssign={() => setSheet("assign")}
             onTake={() => meId !== undefined && act(() => soulInboxApi.assign(id, meId), "")}
           />

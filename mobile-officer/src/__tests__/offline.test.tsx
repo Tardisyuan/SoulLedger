@@ -33,6 +33,7 @@ jest.mock("@soulledger/core/api/soul-inbox", () => ({
     get: (...a: unknown[]) => mockConvo(...a),
     messages: (...a: unknown[]) => mockMessages(...a),
     reply: (...a: unknown[]) => mockReply(...a),
+    markRead: async () => ({ data: {} }),
   },
   inboxTemplatesApi: { list: jest.fn(async () => ({ data: [] })) },
 }));
