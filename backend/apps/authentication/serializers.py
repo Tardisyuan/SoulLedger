@@ -621,6 +621,15 @@ class UserManagementSerializer(serializers.ModelSerializer):
         return None
 
 
+def organization_in_tenant(organization, tenant_id):
+    """An organization may only hang under an account of its own tenant (shared by user create and update)."""
+    if organization.tenant_id != tenant_id:
+        raise serializers.ValidationError(
+            f"组织 {organization.code} 属于另一个租户,不能挂到这个账号下。"
+        )
+    return organization
+
+
 class UserCreateSerializer(serializers.ModelSerializer):
     """User serializer for creation with password handling.
 
@@ -666,6 +675,14 @@ class UserCreateSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError(
                     {'role': 'Cannot assign a role more privileged than your own.'}
                 )
+
+        organization = attrs.get('organization')
+        if organization is not None:
+            tenant = attrs.get('tenant')
+            try:
+                organization_in_tenant(organization, getattr(tenant, 'pk', None))
+            except serializers.ValidationError as exc:
+                raise serializers.ValidationError({'organization': exc.detail}) from None
 
         try:
             RoleMinimumLengthValidator().validate(
@@ -715,11 +732,7 @@ class UserUpdateSerializer(serializers.ModelSerializer):
         """
         if value is None or self.instance is None:
             return value
-        if value.tenant_id != self.instance.tenant_id:
-            raise serializers.ValidationError(
-                f"组织 {value.code} 属于另一个租户,不能挂到这个账号下。"
-            )
-        return value
+        return organization_in_tenant(value, self.instance.tenant_id)
 
     def validate_role(self, value):
         request = self.context.get('request')

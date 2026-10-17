@@ -497,7 +497,7 @@ describe("history (1f)", () => {
 });
 
 describe("history and continuing (audit 2026-10-17 #3, user decision 2026-10-17)", () => {
-  it("opening the drawer fetches no history; a question with no conversation goes out with new: true", async () => {
+  it("opening the drawer pulls no history (only the latest one, limit=1); a question with no conversation goes out with new: true", async () => {
     const first = await openAndAsk(reply("好的。"));
     expect(first.body).toMatchObject({ new: true });
     expect(first.body).not.toHaveProperty("conversation_id");
@@ -511,13 +511,36 @@ describe("history and continuing (audit 2026-10-17 #3, user decision 2026-10-17)
     expect(asks[1].body).not.toHaveProperty("new");
   });
 
+  it("after a restart, the latest conversation for this page within 30 minutes is resumed; an older or other-page one is not", async () => {
+    const mine = (screenName: string, ageMs: number) => {
+      const at = new Date(Date.now() - ageMs).toISOString();
+      return { ...conversation("r1", "续上的问题"), screen: screenName, created_at: at, last_active_at: at };
+    };
+    stubApi({ [LIST]: { status: 200, data: [mine("applications", 5 * 60 * 1000)] } });
+    const first = renderDrawer();
+    fireEvent.press(screen.getByTestId("assist-entry"));
+    expect(await screen.findByText("续上的问题")).toBeTruthy();
+    expect(screen.queryByTestId("assist-empty")).toBeNull();
+    first.unmount();
+    for (const old of [mine("applications", 31 * 60 * 1000), mine("sentence", 60 * 1000)]) {
+      stubApi({ [LIST]: { status: 200, data: [old] } });
+      const again = renderDrawer();
+      fireEvent.press(screen.getByTestId("assist-entry"));
+      await screen.findByTestId("assist-empty");
+      await act(async () => {});
+      expect(screen.queryByText("续上的问题")).toBeNull();
+      again.unmount();
+    }
+  });
+
   it("「更多」 after a full page asks for the ones before its last row, and appends them", async () => {
     const full = Array.from({ length: 50 }, (_, n) => conversation(`c${n}`, `问${n}`));
-    const calls = stubApi({ [LIST]: [{ status: 200, data: full }, { status: 200, data: [conversation("old", "最早的一问")] }] });
+    const calls = stubApi({ [LIST]: [{ status: 200, data: [] }, { status: 200, data: full }, { status: 200, data: [conversation("old", "最早的一问")] }] });
     renderDrawer();
     fireEvent.press(screen.getByTestId("assist-entry"));
     await screen.findByTestId("assist-empty");
-    expect(calls.filter((c) => c.url === "/me/assist/conversations/")).toHaveLength(0);
+    // Opening asks for the latest one only -- not the list.
+    expect(calls.filter((c) => c.url === "/me/assist/conversations/").map((c) => c.params)).toEqual([{ limit: 1 }]);
     await act(async () => {
       fireEvent.press(screen.getByTestId("assist-history"));
     });
@@ -525,7 +548,7 @@ describe("history and continuing (audit 2026-10-17 #3, user decision 2026-10-17)
     await act(async () => {
       fireEvent.press(await screen.findByTestId("assist-history-more"));
     });
-    expect(calls.filter((c) => c.url === "/me/assist/conversations/").map((c) => c.params)).toEqual([undefined, { before: "c49" }]);
+    expect(calls.filter((c) => c.url === "/me/assist/conversations/").map((c) => c.params)).toEqual([{ limit: 1 }, undefined, { before: "c49" }]);
     expect(screen.getByTestId("assist-row-c0")).toBeTruthy();
     expect(screen.getByTestId("assist-row-old")).toBeTruthy();
     expect(screen.queryByTestId("assist-history-more")).toBeNull();
