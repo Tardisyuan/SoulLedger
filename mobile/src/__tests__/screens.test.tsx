@@ -153,7 +153,7 @@ describe("application detail", () => {
   it("a 404 says it is no longer there, with no retry and the way back (audit 2026-10-17 #8, 第四十批 O-c)", async () => {
     stubApi({ "/me/rebirth-applications/a1/": { status: 404, data: { detail: "Not found." } } });
     wrap(<ApplicationDetailScreen id="a1" />);
-    expect(await screen.findByTestId("application-gone")).toHaveTextContent("这条已经不在了");
+    expect(await screen.findByTestId("application-gone")).toHaveTextContent(/^这条已经不在了/);
     expect(screen.getByTestId("application-gone-back")).toHaveTextContent("回到转生申请");
     expect(screen.queryByText("重试")).toBeNull();
     expect(screen.queryByText("这份申请已不存在。")).toBeNull();

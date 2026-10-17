@@ -451,7 +451,7 @@ export function PostList({
         keyExtractor={rowKey}
         extraData={gone}
         renderItem={({ item: p }) => (
-          <PostCard post={p} gone={gone.has(`post:${p.id}`)} onPress={() => navigation.navigate("CirclePost", { id: p.id })} onAuthor={noop} />
+          <PostCard post={p} gone={gone.has(`post:${p.id}`)} onPress={gone.has(`post:${p.id}`) ? undefined : () => navigation.navigate("CirclePost", { id: p.id })} onAuthor={noop} />
         )}
         ListHeaderComponent={header}
         ListEmptyComponent={
@@ -585,7 +585,7 @@ export function CircleScreen() {
           <PostCard
             post={p}
             gone={gone.has(`post:${p.id}`)}
-            onPress={() => navigation.navigate("CirclePost", { id: p.id })}
+            onPress={gone.has(`post:${p.id}`) ? undefined : () => navigation.navigate("CirclePost", { id: p.id })}
             onAuthor={() => openSoul(p.author, p.is_mine)}
           />
         )}
