@@ -7,7 +7,14 @@ from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from apps.social import media as post_media
-from apps.social.models import ModerationStatus, ReactionType, ReportReason, ReportTargetType, Visibility
+from apps.social.models import (
+    InteractionKind,
+    ModerationStatus,
+    ReactionType,
+    ReportReason,
+    ReportTargetType,
+    Visibility,
+)
 
 #: `moderation.Screening.outcome` 的取值(接口里的 `screening`)。
 SCREENING_OUTCOMES = ("clean", "masked", "pending_review", "hidden")
@@ -209,6 +216,39 @@ class SoulSocialStatusSerializer(serializers.Serializer):
     can_write = serializers.BooleanField()
     muted_until = serializers.DateTimeField(allow_null=True)
     reports_remaining = serializers.IntegerField()
+    unread_interactions = serializers.IntegerField(help_text="「互动」的未读行数(第四十批 S-a)")
+
+
+INTERACTION_EXCERPT = 120
+
+
+class SoulInteractionSerializer(serializers.Serializer):
+    """「互动消息」的一行。`actor` 是这一行的第一个人,`count` 是这一行里的人数(评论 / 回复总是 1)。
+    `excerpt`:评论 / 回复是那条评论的开头,表态 / 长明灯是我那篇帖子的开头;已删除、未发布的给空串。"""
+    id = serializers.UUIDField()
+    kind = serializers.ChoiceField(choices=InteractionKind.choices)
+    actor = SoulCardSerializer()
+    count = serializers.SerializerMethodField()
+    post_id = serializers.UUIDField(allow_null=True)
+    comment_id = serializers.UUIDField(allow_null=True)
+    excerpt = serializers.SerializerMethodField()
+    last_at = serializers.DateTimeField()
+    unread = serializers.SerializerMethodField()
+
+    def get_count(self, row) -> int:
+        return max(len(row.actor_ids), 1)
+
+    def get_unread(self, row) -> bool:
+        return row.read_at is None
+
+    def get_excerpt(self, row) -> str:
+        target = row.comment if row.comment_id else row.post
+        if target is None or target.is_deleted:
+            return ""
+        # 我自己的帖子被隐藏了我仍看得见(朋友圈同一条);别人的评论只在已发布时露出。
+        if row.comment_id and target.moderation_status != ModerationStatus.PUBLISHED:
+            return ""
+        return target.content[:INTERACTION_EXCERPT]
 
 
 class SoulSocialErrorSerializer(serializers.Serializer):

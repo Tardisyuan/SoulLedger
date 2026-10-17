@@ -197,7 +197,7 @@ function Toggle({
 }: {
   testID: string;
   title: string;
-  note: string;
+  note?: string;
   value: boolean;
   onChange: (next: boolean) => void;
 }) {
@@ -218,9 +218,11 @@ function Toggle({
     >
       <View style={stack ? undefined : styles.fill}>
         <Txt variant="bodyLg">{title}</Txt>
-        <Txt variant="caption" tone="subtle">
-          {note}
-        </Txt>
+        {note ? (
+          <Txt variant="caption" tone="subtle">
+            {note}
+          </Txt>
+        ) : null}
       </View>
       {/* Handoff 3c: square, like everything else — the knob's side and the ink fill (补足 A1) say "on". */}
       <SwitchMark on={value} large={stack} />
@@ -228,13 +230,22 @@ function Toggle({
   );
 }
 
-type Category = "rebirth" | "judgment" | "residence" | "chat";
+type Category = "rebirth" | "judgment" | "residence" | "chat" | "social_comments" | "social_review";
 const CATEGORIES: { key: Category; icon: IconName }[] = [
   { key: "rebirth", icon: "cycle" },
   { key: "judgment", icon: "ledger" },
   { key: "residence", icon: "info" },
   // New letters: a soul's message, a reply from the hall (`chat_message`, lands on the Conversation).
   { key: "chat", icon: "letter" },
+];
+
+/**
+ * 第四十批 S-c: the circle's own group under 推送 — comments and replies, review results. Hall warnings are listed
+ * too but cannot be turned off (the server never files them under a category).
+ */
+const SOCIAL_CATEGORIES: { key: Category; title: string }[] = [
+  { key: "social_comments", title: "soul_app.settings.push_comments" },
+  { key: "social_review", title: "soul_app.settings.push_review" },
 ];
 
 /** The system permission, re-read whenever this page is shown or the app comes back from the system settings. */
@@ -294,6 +305,37 @@ function Notifications({ settings, onChange }: { settings: NotificationSettings;
             onChange={(next) => onChange({ [key]: next })}
           />
         ))}
+        <View style={{ paddingHorizontal: gutter }}>
+          <Heading>{t("soul_app.settings.push_social")}</Heading>
+        </View>
+        {SOCIAL_CATEGORIES.map(({ key, title }) => (
+          <Toggle
+            key={key}
+            testID={`toggle-${key}`}
+            title={t(title)}
+            value={settings[key] ?? true}
+            onChange={(next) => onChange({ [key]: next })}
+          />
+        ))}
+        {/* 殿司警告: always on — shown so the soul knows it exists, as a state, not a switch. */}
+        <View
+          testID="toggle-warning-locked"
+          accessible
+          accessibilityRole="switch"
+          accessibilityLabel={t("soul_app.settings.push_warning")}
+          accessibilityState={{ checked: true, disabled: true }}
+          style={[styles.row, { paddingHorizontal: gutter, borderBottomColor: theme.hair, borderLeftColor: "transparent" }]}
+        >
+          <View style={styles.fill}>
+            <Txt variant="bodyLg">{t("soul_app.settings.push_warning")}</Txt>
+            <Txt variant="caption" tone="subtle">
+              {t("soul_app.settings.locked")}
+            </Txt>
+          </View>
+          <View style={styles.dimmed}>
+            <SwitchMark on />
+          </View>
+        </View>
       </View>
       <Txt variant="caption" tone="subtle" style={[styles.foot, { paddingHorizontal: gutter }]}>
         {t("soul_app.settings.lock_screen")}
@@ -344,6 +386,58 @@ function NavRow({ testID, label, state, bold, onPress }: { testID: string; label
       ) : null}
       <Icon name="chevron" size={14} color={theme.inkSubtle} />
     </Pressable>
+  );
+}
+
+/**
+ * 联系邮箱 (第四十批 S-b): the address masked (first two, ***, the whole domain), 「更改 ›」 or 「添加 ›」, and under it
+ * what the address is for. A hall that does it at the counter: no action, and the line under it says where to go.
+ */
+function EmailRow() {
+  const theme = useTheme();
+  const { t } = useI18n();
+  const { gutter } = useLayout();
+  const navigation = useNavigation<NavigationProp<AppStackParams>>();
+  const email = useRemote(soulApi.contactEmail);
+  useReloadOnRefocus(email.reload);
+  const d = email.data;
+  if (!d) return null;
+  const action = d.can_change ? t(d.email_masked ? "soul_app.settings.email_change" : "soul_app.settings.email_add") : null;
+  const body = (
+    <>
+      <View style={styles.fill}>
+        <Txt variant="bodyLg">{t("soul_app.settings.email")}</Txt>
+        <Txt testID="email-masked" variant={d.email_masked ? "value" : "caption"} tone="muted">
+          {d.email_masked || t("soul_app.settings.email_none")}
+        </Txt>
+      </View>
+      {action ? (
+        <Txt testID="email-action" variant="body">
+          {`${action} ›`}
+        </Txt>
+      ) : null}
+    </>
+  );
+  return (
+    <>
+      {action ? (
+        <Pressable
+          testID="open-contact-email"
+          accessibilityRole="button"
+          onPress={() => navigation.navigate("ContactEmail")}
+          style={({ pressed }) => [styles.emailRow, { paddingHorizontal: gutter, borderBottomColor: theme.hair }, pressed && styles.pressed]}
+        >
+          {body}
+        </Pressable>
+      ) : (
+        <View testID="open-contact-email" style={[styles.emailRow, { paddingHorizontal: gutter, borderBottomColor: theme.hair }]}>
+          {body}
+        </View>
+      )}
+      <Txt testID="email-hint" variant="caption" tone="subtle" style={[styles.emailHint, { paddingHorizontal: gutter }]}>
+        {t(d.can_change ? "soul_app.settings.email_hint" : "soul_app.settings.email_in_person")}
+      </Txt>
+    </>
   );
 }
 
@@ -444,6 +538,7 @@ export function SettingsScreen() {
           state={devices.data ? String(devices.data.length) : null}
           onPress={() => navigation.navigate("SignIns")}
         />
+        <EmailRow />
       </View>
       {/* 第二十八批 S3: its own section under 账号安全, one row. */}
       <GroupLabel testID="group-data">{t("soul_app.settings.group_data")}</GroupLabel>
@@ -566,6 +661,8 @@ const styles = StyleSheet.create({
   groupLabel: { paddingTop: 24, paddingBottom: 8 },
   rows: { borderTopWidth: 1 },
   navRow: { minHeight: 56, flexDirection: "row", alignItems: "center", gap: 8, borderBottomWidth: 1 },
+  emailRow: { minHeight: 64, flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 8, borderBottomWidth: 1 },
+  emailHint: { paddingTop: 6, paddingBottom: 4 },
   logout: { alignSelf: "center", minWidth: 160 },
   version: { textAlign: "center", fontSize: 11 },
   primerHead: { alignItems: "center", gap: 12, paddingTop: 32, paddingBottom: 24, borderBottomWidth: 1 },

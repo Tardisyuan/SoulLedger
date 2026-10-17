@@ -117,7 +117,9 @@ def rule_for(event_type, payload, account):
         return ("rebirth", kind, f"cooldown-shortening:{request_id}:{payload['status']}", {"screen": "Applications"})
     if event_type == "JUDGMENT_CONCLUDED":
         judgment_id = payload.get("judgment_id")
-        return ("judgment", "judgment_result", f"judgment:{judgment_id}", {"screen": "Life"}) if judgment_id else None
+        # `judgment_id`:落地时高亮本世「审判」里那一件(第四十批 S-e)。
+        return ("judgment", "judgment_result", f"judgment:{judgment_id}",
+                {"screen": "Life", "judgment_id": str(judgment_id)}) if judgment_id else None
     if event_type == "STATE_CHANGED" and payload.get("action") in RESIDENCE_ACTIONS:
         action = payload["action"]
         # 调拨记录 id 是这次暂居的业务主键;回归时记录可能不存在(数据修正过的灵魂,dispatch_id=None),
@@ -152,7 +154,12 @@ def _sentence_rule(event_type, payload):
         node_id = payload.get("node_id")
         if not node_id or payload.get("status") not in DISPOSITION_DONE_NODE_STATUSES:
             return None
-        return ("judgment", "disposition_executed", f"node:{node_id}:done", life)
+        # 落地时高亮「去向」里那一次处置(第四十批 S-e):节点建处置时记下了它的 id;没有(老节点)就只落到本世。
+        from apps.sentence_plan.models import SentenceNode
+
+        disposition_id = SentenceNode.objects.filter(pk=node_id).values_list("disposition_id", flat=True).first()
+        data = {**life, "disposition_id": str(disposition_id)} if disposition_id else life
+        return ("judgment", "disposition_executed", f"node:{node_id}:done", data)
     if event_type == "SENTENCE_NODE_WAITING":
         node_id = payload.get("node_id")
         return ("residence", "sentence_waiting", f"node:{node_id}:waiting", {**life, "node_ids": [node_id]}) \
@@ -192,15 +199,19 @@ KIND_CATEGORY = {
     "mfa_reset_by_officer": None,
     # 个人资料导出好了(apps/soul_accounts/data_export.py):灵魂自己申请的结果,不给关 —— 文件只留 7 天。
     "export_ready": None,
-    # 没有「朋友圈」偏好类别:警告是殿司对灵魂说的话,不给关(2026-09-26 产品定:理由走推送)。
+    # 警告是殿司对灵魂说的话,不给关(2026-09-26 产品定:理由走推送;第四十批 S-c 设置里显示「不能关」)。
     # 按被举报的是什么分三种文案(2026-09-26 产品定):帖子 / 评论 / 账号。
     **{f"social_warned_{target}": None for target in ("post", "comment", "user")},
-    # 殿司处置了灵魂的帖子 / 评论(隐藏、删除、先发后审通过、恢复;2026-10-16 用户定四种都推):
-    # 与警告同一处境 —— 殿司对作者说的话,不给关。
-    **{f"content_{outcome}_{target}": None
+    # 殿司处置了灵魂的帖子 / 评论(隐藏、删除、先发后审通过、恢复;2026-10-16 用户定四种都推)。
+    # 第四十批 S-c:归「朋友圈 › 审核结果」,可以关(此前与警告一样不给关)。
+    **{f"content_{outcome}_{target}": "social_review"
        for outcome in ("hidden", "deleted", "approved", "restored") for target in ("post", "comment")},
     # 隐藏 / 删除时官员选了理由(2026-10-16 用户定):锁屏上带理由。通过 / 恢复不带理由,没有这一套。
-    **{f"content_{outcome}_{target}_reason": None for outcome in ("hidden", "deleted") for target in ("post", "comment")},
+    **{f"content_{outcome}_{target}_reason": "social_review"
+       for outcome in ("hidden", "deleted") for target in ("post", "comment")},
+    # 第四十批 S-a:别人评论了我的帖子 / 回复了我的评论(朋友圈 › 评论和回复)。
+    "comment": "social_comments",
+    "reply": "social_comments",
 }
 
 
@@ -288,10 +299,30 @@ def record_content_moderated(user_id, target_type, target_id, action, post_id=No
         def reason_params(locale):
             return {"reason": reason_note if reason_code == "OTHER" else messages.reason_label(locale, reason_code)}
         params = reason_params
-    return _record(account, CONTENT_MODERATED_EVENT, None, kind,
+    return _record(account, CONTENT_MODERATED_EVENT, "social_review", kind,
                    f"moderated:{target_id}:{action}:{timezone.now().timestamp()}"[:120],
                    {"screen": "CirclePost", "post_id": str(post_id)} if post_id else {"screen": "Life"},
                    params=params)
+
+
+#: 朋友圈里别人评论了我的帖子 / 回复了我的评论(第四十批 S-a,`apps/social/interactions.py::record_comment`)。
+#: **不经事件总线**(总线上的 `SOCIAL_COMMENTED` 只带 id,给租户 webhook)。锁屏上是谁 + 评论的开头;
+#: 点开落在那篇帖子并高亮这条评论。dedupe 用评论 id:一条评论对一个人只推一次。
+SOCIAL_COMMENT_EVENT = "SOCIAL_COMMENTED"
+COMMENT_EXCERPT = 80
+
+
+def record_social_comment(user_id, kind, comment, actor_name):
+    """`kind` 是 `comment` / `reply`。偏好关了「评论和回复」就不写(发送前 `_claim` 还会再核对一次)。"""
+    from apps.soul_accounts.models import SoulAccount
+
+    account = SoulAccount.objects.filter(user_id=user_id, retired_at__isnull=True).first()
+    if account is None:
+        return []
+    excerpt = comment.content[:COMMENT_EXCERPT]
+    return _record(account, SOCIAL_COMMENT_EVENT, "social_comments", kind, f"{kind}:{comment.pk}"[:120],
+                   {"screen": "CirclePost", "post_id": str(comment.post_id), "comment_id": str(comment.pk)},
+                   params=lambda locale: {"name": actor_name, "text": excerpt})
 
 
 #: 官员替灵魂关闭了两步验证(apps/soul_accounts/mfa.py::reset_by_officer)。**不经事件总线**,也不进偏好:
@@ -344,6 +375,16 @@ def _record(account, event_type, category, kind, dedupe_key, data, params=None):
         if created:
             created_ids.append(str(delivery.pk))
     return created_ids
+
+
+def enqueue_on_commit(delivery_ids):
+    """事务提交后入队(与 `handler.py` 同一个形状):回滚了,行不存在,也不入队。"""
+    if not delivery_ids:
+        return
+    if transaction.get_connection().in_atomic_block:
+        transaction.on_commit(lambda: enqueue(delivery_ids))
+    else:
+        enqueue(delivery_ids)
 
 
 def enqueue(delivery_ids):

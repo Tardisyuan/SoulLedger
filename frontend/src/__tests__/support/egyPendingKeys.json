@@ -9,5 +9,11 @@
   "officer_app.letter.earlier",
   "officer_app.letter.earlier_failed",
   "officer_app.list.more_failed",
-  "officer_app.queue.claim_taken"
+  "officer_app.queue.claim_taken",
+  "soul_app.settings.email_new",
+  "soul_app.settings.email_taken",
+  "soul_mail.email_code.title",
+  "soul_mail.email_changed.title",
+  "soul_mail.email_changed.note",
+  "soul_mail.email_changed.text"
 ]

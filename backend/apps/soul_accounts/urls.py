@@ -1,7 +1,7 @@
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
-from apps.soul_accounts import device_login_views, export_views, me_views, mfa_views, session_views
+from apps.soul_accounts import contact_email, device_login_views, export_views, me_views, mfa_views, session_views
 from apps.soul_accounts.views import (
     InitialCredentialViewSet,
     OfficerCooldownShorteningViewSet,
@@ -35,6 +35,9 @@ me_urlpatterns = [
     path("", me_views.MeView.as_view(), name="me"),
     path("password/", me_views.MePasswordView.as_view(), name="me-password"),
     path("welcomed/", me_views.MeWelcomedView.as_view(), name="me-welcomed"),
+    path("contact-email/", contact_email.MeContactEmailView.as_view(), name="me-contact-email"),
+    path("contact-email/verify/", contact_email.MeContactEmailVerifyView.as_view(), name="me-contact-email-verify"),
+    path("contact-email/confirm/", contact_email.MeContactEmailConfirmView.as_view(), name="me-contact-email-confirm"),
     path("mfa/", mfa_views.MeMfaStatusView.as_view(), name="me-mfa"),
     path("mfa/setup/", mfa_views.MeMfaSetupView.as_view(), name="me-mfa-setup"),
     path("mfa/confirm/", mfa_views.MeMfaConfirmView.as_view(), name="me-mfa-confirm"),

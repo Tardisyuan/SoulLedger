@@ -42,6 +42,7 @@ def prune_retained_data(*, now=None, batch_size: int = BATCH_SIZE) -> dict:
     from apps.events.models import EventWebhookDelivery, EventWebhookStatus
     from apps.notifications.models import NotificationEmail, UserNotification
     from apps.officer_app.models import OfficerPushDelivery, OfficerPushDevice
+    from apps.social.models import SocialInteraction
     from apps.soul_accounts.models import SoulMfaDevice
     from apps.soul_push.models import PushDelivery, PushDevice, PushStatus
 
@@ -77,6 +78,11 @@ def prune_retained_data(*, now=None, batch_size: int = BATCH_SIZE) -> dict:
             OfficerPushDevice.objects.filter(is_active=False, last_seen_at__lt=c),
             lambda pks: [OfficerPushDelivery.objects.filter(device_id__in=pks)], batch_size,
         )
+
+    # 朋友圈「互动消息」:窗口不是设置,是产品文案(「只保留 90 天内的互动」,第四十批 S-a)—— 改它要连文案一起改。
+    # 有 tenant 列,但按年龄删与租户无关,同样是全局的一次扫。
+    rows = SocialInteraction.objects.filter(last_at__lt=now - timedelta(days=SocialInteraction.RETENTION_DAYS))
+    result["social_interactions"] = _purge(rows, batch_size)
 
     if c := cutoff("EXPIRED_MFA_DEVICE_GRACE_DAYS"):
         result["mfa_remembered_devices"] = _purge(MfaRememberedDevice.objects.filter(expires_at__lt=c), batch_size)

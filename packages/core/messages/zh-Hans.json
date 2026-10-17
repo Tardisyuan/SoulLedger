@@ -4147,7 +4147,22 @@
       "mfa_off": "○ 未开启",
       "mfa_on": "✓ 已开启",
       "group_data": "我的资料",
-      "group_help": "帮助与反馈"
+      "group_help": "帮助与反馈",
+      "email": "联系邮箱",
+      "email_hint": "忘记密码时，验证码发到这里。",
+      "email_change": "更改",
+      "email_add": "添加",
+      "email_none": "没有联系邮箱",
+      "email_new": "新邮箱",
+      "email_code_sent": "验证码已发到 {{email}}",
+      "email_done": "联系邮箱已改",
+      "email_in_person": "要改联系邮箱，请到本殿，带上交付单。",
+      "email_taken": "这个邮箱已被其他账号使用。",
+      "push_social": "朋友圈",
+      "push_comments": "评论和回复",
+      "push_review": "审核结果",
+      "push_warning": "殿司警告",
+      "locked": "不能关"
     },
     "push": {
       "primer_title": "要不要在有结果时通知你？",
@@ -4771,7 +4786,10 @@
       "q_slip": "交付单是什么",
       "a_slip": "你到殿时领的那张纸，上面有你的编号和第一次登录用的密码。第一次登录后，这个密码就不能再用了。交付单请收好，到窗口办事时要用。",
       "q_contact": "怎么联系本殿",
-      "a_contact": "在这页底部点「写给本殿」,回复会出现在书信里。急事请到本殿窗口。"
+      "a_contact": "在这页底部点「写给本殿」,回复会出现在书信里。急事请到本殿窗口。",
+      "in_person_title": "请到{{hall}},带上交付单",
+      "in_person_body": "本殿还没开通书信，问题要到殿里当面办。",
+      "unresolved": "还是没解决"
     },
     "feedback": {
       "kind_label": "关于什么",
@@ -4792,6 +4810,17 @@
       "failed": "没有发出去。检查网络后再试。",
       "see_letters": "去看书信",
       "another": "再写一封"
+    },
+    "social": {
+      "inbox": "互动",
+      "inbox_title": "互动消息",
+      "commented": "{{name}} 评论了你的帖子",
+      "replied": "{{name}} 回复了你",
+      "reacted_many": "{{name}} 等 {{n}} 人对你的帖子表态",
+      "lamp_many": "{{name}} 等 {{n}} 人为你的帖子点了长明灯",
+      "followed_many": "{{name}} 等 {{n}} 人关注了你",
+      "inbox_retention": "只保留 90 天内的互动。",
+      "inbox_empty": "还没有互动"
     }
   },
   "soul_push": {
@@ -4922,6 +4951,14 @@
     "content_deleted_comment_reason": {
       "title": "评论已被删除",
       "body": "你的评论被殿司删除：{{reason}}"
+    },
+    "comment": {
+      "title": "{{name}} 评论了你的帖子",
+      "body": "{{text}}"
+    },
+    "reply": {
+      "title": "{{name}} 回复了你的评论",
+      "body": "{{text}}"
     }
   },
   "official_notify": {
@@ -5513,6 +5550,14 @@
       "note_change": "首次登录后须修改密码。",
       "note_once": "该密码只发送这一次;过期或遗失请联系所属文明的官员重置。",
       "text": "您的灵魂编号:{{soul_code}}\n初始密码:{{password}}\n有效期至 {{expires_at}}。首次登录后须修改密码。\n该密码只发送这一次;过期或遗失请联系所属文明的官员重置。"
+    },
+    "email_code": {
+      "title": "联系邮箱验证码"
+    },
+    "email_changed": {
+      "title": "联系邮箱已改",
+      "note": "以后的验证码发到 {{email}}。如非本人操作，请尽快到本殿。",
+      "text": "联系邮箱已改。以后的验证码发到 {{email}}。如非本人操作，请尽快到本殿。"
     }
   },
   "officer_assist": {

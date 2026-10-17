@@ -663,6 +663,34 @@ export function Grow({ ms, children }: { ms: number; children: ReactNode }) {
   );
 }
 
+/** How long a push's landing keeps its ground (第四十批 S-e: 「同其他推送的 2 秒底色」): held, then faded. */
+const LANDING_HOLD_MS = 1600;
+const LANDING_FADE_MS = 400;
+
+/**
+ * The row a tapped push points at (a comment, a judgment, a disposition, the residence block): ink at 6%
+ * behind it for two seconds, then gone. Not scrolled, not moved. Under reduce-motion it is not drawn.
+ */
+export function LandingWash({ on, children, testID }: { on: boolean; children: ReactNode; testID?: string }) {
+  const t = useTheme();
+  const reduced = useReducedMotion();
+  const [opacity] = useState(() => new Animated.Value(1));
+  useEffect(() => {
+    if (!on || reduced) return;
+    const timer = setTimeout(() => Animated.timing(opacity, { toValue: 0, duration: LANDING_FADE_MS, useNativeDriver: true }).start(), LANDING_HOLD_MS);
+    return () => clearTimeout(timer);
+  }, [on, reduced, opacity]);
+  return (
+    <View testID={testID}>
+      {on && !reduced ? (
+        // 6% ink as an 8-digit hex (the theme's ink is `#RRGGBB`): the life rows already sit on s1.
+        <Animated.View testID="landing-wash" pointerEvents="none" style={[StyleSheet.absoluteFill, { opacity, backgroundColor: `${t.ink}0F` }]} />
+      ) : null}
+      {children}
+    </View>
+  );
+}
+
 /** "Has not happened" — a short rule and a sentence, never a blank. */
 export function Empty({ text, testID }: { text: string; testID?: string }) {
   const t = useTheme();

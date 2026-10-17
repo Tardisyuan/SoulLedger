@@ -56,6 +56,10 @@ export interface HeaderAction {
   testID: string;
   /** iOS "new": a 44pt square framed in onPlaque. */
   framed?: boolean;
+  /** A word instead of the icon (朋友圈 「互动」, 第四十批 S-a); `label` stays the accessible name. */
+  text?: string;
+  /** A count on the action's top right (unread 互动); absent or empty: none. */
+  badge?: string;
 }
 
 /**
@@ -77,9 +81,22 @@ function BarEnd({ action, onAccount, assist }: { action?: HeaderAction | HeaderA
             accessibilityRole="button"
             accessibilityLabel={a.label}
             onPress={a.onPress}
-            style={({ pressed }) => [styles.icon, a.framed && { borderWidth: 1, borderColor: t.ink }, pressed && { backgroundColor: t.s2 }]}
+            style={({ pressed }) => [styles.icon, a.text ? styles.textAction : null, a.framed && { borderWidth: 1, borderColor: t.ink }, pressed && { backgroundColor: t.s2 }]}
           >
-            <Icon name={a.icon} size={18} color={t.ink} strokeWidth={1.4} />
+            {a.text ? (
+              <Txt variant="label" tone="ink">
+                {a.text}
+              </Txt>
+            ) : (
+              <Icon name={a.icon} size={18} color={t.ink} strokeWidth={1.4} />
+            )}
+            {a.badge ? (
+              <View testID={`${a.testID}-badge`} style={[styles.actionBadge, { backgroundColor: t.ink }]}>
+                <Txt variant="label" style={[styles.actionBadgeText, { color: t.s0 }]}>
+                  {a.badge}
+                </Txt>
+              </View>
+            ) : null}
           </Pressable>
         ))}
       </>
@@ -300,6 +317,9 @@ const styles = StyleSheet.create({
   bar: { minHeight: 52, flexDirection: "row", alignItems: "center", paddingHorizontal: 4 },
   barCompact: { minHeight: 48, paddingHorizontal: 2 },
   icon: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
+  textAction: { width: undefined, minWidth: 44, paddingHorizontal: 8 },
+  actionBadge: { position: "absolute", top: 4, right: 0, minWidth: 16, height: 16, paddingHorizontal: 4, alignItems: "center", justifyContent: "center" },
+  actionBadgeText: { fontSize: 10, lineHeight: 14, letterSpacing: 0 },
   title: { flex: 1, paddingHorizontal: 4 },
   /** 补足 A3: 20 / 28 — the simplified plaque's title. */
   barTitle: { fontSize: 20, lineHeight: 28, letterSpacing: 0 },
