@@ -51,7 +51,7 @@ def test_cross_judgment_conclusion_names_its_result(judge_user):
     passed = _row(judge_user, "JUDGMENT_CONCLUDED", {"title": "冥河之案"})
     failed = _row(judge_user, "JUDGMENT_CONCLUDED", {"title": "冥河之案", "kind": "cross_judgment_concluded_fail"})
     assert _read(passed, "zh-Hans")[1] == "跨域审判「冥河之案」已结案，结论：通过。"
-    assert _read(failed, "en")[1] == "The cross-tenant judgment 冥河之案 has concluded: rejected."
+    assert _read(failed, "en")[1] == "The cross-realm judgment 冥河之案 has concluded: rejected."
 
 
 def test_system_rows_render_only_the_kinds_listed_for_system(judge_user):
