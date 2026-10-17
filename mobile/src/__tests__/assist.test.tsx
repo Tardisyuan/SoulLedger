@@ -496,6 +496,43 @@ describe("history (1f)", () => {
   });
 });
 
+describe("history and continuing (audit 2026-10-17 #3, user decision 2026-10-17)", () => {
+  it("opening the drawer fetches no history; a question with no conversation goes out with new: true", async () => {
+    const first = await openAndAsk(reply("好的。"));
+    expect(first.body).toMatchObject({ new: true });
+    expect(first.body).not.toHaveProperty("conversation_id");
+    // Within the thread the id is sent, never `new`.
+    scripts.push(reply("还是好的。"));
+    fireEvent.changeText(screen.getByTestId("assist-input"), "那多久？");
+    await act(async () => {
+      fireEvent.press(screen.getByTestId("assist-send"));
+    });
+    expect(asks[1].body).toMatchObject({ conversation_id: CONVERSATION });
+    expect(asks[1].body).not.toHaveProperty("new");
+  });
+
+  it("「更多」 after a full page asks for the ones before its last row, and appends them", async () => {
+    const full = Array.from({ length: 50 }, (_, n) => conversation(`c${n}`, `问${n}`));
+    const calls = stubApi({ [LIST]: [{ status: 200, data: full }, { status: 200, data: [conversation("old", "最早的一问")] }] });
+    renderDrawer();
+    fireEvent.press(screen.getByTestId("assist-entry"));
+    await screen.findByTestId("assist-empty");
+    expect(calls.filter((c) => c.url === "/me/assist/conversations/")).toHaveLength(0);
+    await act(async () => {
+      fireEvent.press(screen.getByTestId("assist-history"));
+    });
+    expect(screen.queryByText("会话保存 30 天，期满自动删除。")).toBeNull();
+    await act(async () => {
+      fireEvent.press(await screen.findByTestId("assist-history-more"));
+    });
+    expect(calls.filter((c) => c.url === "/me/assist/conversations/").map((c) => c.params)).toEqual([undefined, { before: "c49" }]);
+    expect(screen.getByTestId("assist-row-c0")).toBeTruthy();
+    expect(screen.getByTestId("assist-row-old")).toBeTruthy();
+    expect(screen.queryByTestId("assist-history-more")).toBeNull();
+    expect(screen.getByText("会话保存 30 天，期满自动删除。")).toBeTruthy();
+  });
+});
+
 describe("first use (1h)", () => {
   it("replaces the empty state once per account; the retention item makes no 'improve answers' claim", async () => {
     persistentStore.remove(assistAckKey(PROFILE as never));

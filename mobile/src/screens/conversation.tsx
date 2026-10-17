@@ -149,6 +149,18 @@ export function ConversationScreen({ id, landed }: { id: string; landed?: boolea
     };
   }, [mode?.kind]);
 
+  // Not in the list yet — a push for a letter newer than the last sync (audit 2026-10-17 #10):
+  // ask for the list once, with the skeleton up, before saying it is closed.
+  const missing = !c && !!chat.conversations && chat.availability !== "not_configured";
+  const { reload } = chat;
+  const asked = useRef<string | null>(null);
+  const [rechecked, setRechecked] = useState<string | null>(null);
+  useEffect(() => {
+    if (!missing || asked.current === id) return;
+    asked.current = id;
+    void reload().then(() => setRechecked(id));
+  }, [missing, id, reload]);
+
   const goHall = async () => {
     try {
       const inbox = await chat.openInbox();
@@ -169,7 +181,7 @@ export function ConversationScreen({ id, landed }: { id: string; landed?: boolea
             <Notice tone="neutral" testID="chat-not-configured">
               {tr("soul_app.chat.not_configured")}
             </Notice>
-          ) : chat.conversations ? (
+          ) : chat.conversations && rechecked === id ? (
             <Notice tone="neutral" testID="conversation-gone">
               {tr("soul_app.chat.errors.closed")}
             </Notice>

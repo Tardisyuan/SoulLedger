@@ -151,15 +151,20 @@ def soul_asker(account, screen, lang):
                  run_tool=lambda name: tools.run(name, account), civilization=soul.home_civilization)
 
 
-def answer(account, question, screen, *, locale, conversation_id=None, request=None, stream=False):
+def answer(account, question, screen, *, locale, conversation_id=None, new=False, request=None, stream=False):
     """非流式返回 `(会话, 回答)`;`stream=True` 返回 `session` 的事件生成器(开关在这里就查,不等迭代)。"""
     if not enabled_for(account):
         soul = account.soul
         usage.record("soul", soul.home_tenant or soul.tenant, "not_configured")
         raise AssistError("本殿尚未开通助手。", "assistant_not_configured", 503)
+    if conversation_id is not None:
+        # 与 `officer_answer` 同一条:接着问时上下文(事实头、检索)按会话原来的页面算。
+        # 找不到的会话照旧在 `conversation_for` 里答 404。
+        screen = (AssistConversation.objects.filter(pk=conversation_id, account=account, is_eval=False)
+                  .values_list("screen", flat=True).first() or screen)
     lang = corpus.corpus_locale(locale)
     return (session if stream else ask)(soul_asker(account, screen, lang), question, screen, lang=lang,
-                                        conversation_id=conversation_id, request=request)
+                                        conversation_id=conversation_id, new=new, request=request)
 
 
 def officer_enabled_for(request) -> bool:

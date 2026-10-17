@@ -26,6 +26,9 @@ export type AssistConversation = Schemas["AssistConversation"];
 export type AssistAnswer = Schemas["AssistAnswer"];
 export type AssistAsk = Schemas["AssistAsk"];
 
+/** `SOUL_HISTORY_PAGE` in apps/soul_assist/views.py: a full page may have more behind it. */
+export const SOUL_ASSIST_HISTORY_PAGE = 50;
+
 /** Canvas 1e: past this the App stops waiting and offers a retry with the question kept. */
 export const ASSIST_TIMEOUT_MS = 25_000;
 
@@ -87,8 +90,14 @@ export const soulAssistApi = {
       onEvent,
       refresh: () => soulHttp.get("/me/assist/conversations/"),
     }),
-  /** Newest first, each with its messages in order. */
-  conversations: () => soulHttp.get<AssistConversation[]>("/me/assist/conversations/").then((r) => r.data),
+  /**
+   * Newest first, each with its messages in order — at most `SOUL_ASSIST_HISTORY_PAGE`. `before`: the last
+   * id of the page already shown, for the next one; a page shorter than that is the end.
+   */
+  conversations: (before?: string) =>
+    soulHttp
+      .get<AssistConversation[]>("/me/assist/conversations/", { params: before ? { before } : undefined })
+      .then((r) => r.data),
   /** 204; someone else's (or a gone one) is 404 `not_found`. */
   deleteConversation: (id: string) =>
     soulHttp.delete(`/me/assist/conversations/${id}/`).then(() => undefined),

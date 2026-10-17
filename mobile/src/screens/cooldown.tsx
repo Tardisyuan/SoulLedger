@@ -126,6 +126,12 @@ export function CooldownShorteningBlock({ list, onChanged, landed }: { list: MeR
             />
           </StatusLine>
         ) : null}
+        {row?.status === "APPROVED" && row.approved_days != null ? (
+          // How many days the officer left — the end date alone does not say how much was taken off.
+          <Txt testID="cooldown-shortening-approved-days" variant="body" tone="muted" style={styles.noteLine}>
+            {t("soul_app.cooldown.approved_days", { n: String(row.approved_days) })}
+          </Txt>
+        ) : null}
         {row?.status === "REJECTED" ? (
           <>
             <StatusLine glyph="✕">
@@ -179,13 +185,26 @@ export function CooldownShorteningBlock({ list, onChanged, landed }: { list: MeR
               error={wishFlagged ? t("soul_app.cooldown.desired_invalid", { max: String(Math.max(0, left - 1)) }) : null}
             />
             {error ? <Notice tone="neg">{t(error.key, error.params)}</Notice> : null}
-            <Button
-              testID="submit-cooldown-shortening"
-              title={t(busy ? "soul_app.applications.submitting" : "soul_app.cooldown.submit")}
-              onPress={submit}
-              busy={busy}
-              style={styles.submit}
-            />
+            <View style={styles.actions}>
+              {/* Collapses back to the entry; what was typed stays for the next opening. */}
+              <Button
+                testID="cancel-cooldown-shortening"
+                kind="secondary"
+                title={t("soul_app.common.cancel")}
+                onPress={() => {
+                  setOpen(false);
+                  setError(null);
+                  setWishFlagged(false);
+                }}
+                disabled={busy}
+              />
+              <Button
+                testID="submit-cooldown-shortening"
+                title={t(busy ? "soul_app.applications.submitting" : "soul_app.cooldown.submit")}
+                onPress={submit}
+                busy={busy}
+              />
+            </View>
           </View>
         ) : null}
       </View>
@@ -204,7 +223,7 @@ const styles = StyleSheet.create({
   entry: { gap: space[2] },
   entryButton: { alignSelf: "flex-start" },
   form: { gap: space[3] },
-  submit: { alignSelf: "flex-end" },
+  actions: { flexDirection: "row", justifyContent: "flex-end", gap: space[2] },
   /** 8pt beyond the block on every side (A11). */
   wash: { position: "absolute", top: -space[2], left: -space[2], right: -space[2], bottom: -space[2], borderRadius: radius.control },
 });

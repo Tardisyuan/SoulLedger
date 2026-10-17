@@ -9639,6 +9639,8 @@ export interface components {
             conversation_id?: string | null;
             /** @description true = 以 Server-Sent Events 逐段返回(text/event-stream,事件见 AssistStreamEvent);缺省 false = 答完一次返回 JSON。进门的错误(未开通、限流、忙、会话不存在)两种都答 JSON 与状态码。 */
             stream?: boolean;
+            /** @description true = 开新会话,不续同一页面 30 分钟内的上次会话。 */
+            new?: boolean;
         };
         AssistConversation: {
             /** Format: uuid */
@@ -25322,7 +25324,10 @@ export interface operations {
     };
     v1_me_assist_conversations_list: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description 上一页最后一条会话的 id;给了就只列比它更早的。 */
+                before?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -25337,7 +25342,23 @@ export interface operations {
                     "application/json": components["schemas"]["AssistConversation"][];
                 };
             };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistError"];
+                };
+            };
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistError"];
+                };
+            };
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

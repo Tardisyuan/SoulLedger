@@ -4003,7 +4003,8 @@
       "first_rejection_reason": "First rejection",
       "appeal_rejection_reason": "Appeal rejected because",
       "not_recorded": "Not recorded",
-      "new_result": "New result"
+      "new_result": "New result",
+      "gone": "This application no longer exists."
     },
     "errors": {
       "invalid_credentials": "Wrong soul code or password",
@@ -4206,7 +4207,8 @@
         "not_found": "Not found.",
         "from_circle": "From the circle",
         "circle_hint": "Only souls of your civilization who follow you or whom you follow.",
-        "write": "Write"
+        "write": "Write",
+        "circle_error": "Couldn't load your circle."
       },
       "compose": {
         "placeholder": "Say something…",
@@ -4309,7 +4311,8 @@
         "hidden": "Hidden · others cannot see it",
         "hidden_note": "The hall hid this; only you can still see it.",
         "comments": "{{n}} comments",
-        "more": "More"
+        "more": "More",
+        "gone": "This post no longer exists."
       },
       "screening": {
         "masked": "Published. Some of the text was replaced.",
@@ -4543,7 +4546,8 @@
       "stopped": "Stopped",
       "interrupted": "Answer interrupted",
       "answering_aria": "Answering",
-      "jump_latest": "↓ Latest"
+      "jump_latest": "↓ Latest",
+      "history_more": "Older conversations"
     },
     "history": {
       "title": "Notification history",
@@ -4565,7 +4569,8 @@
       "brought_forward": "Brought forward",
       "desired_label": "Days you hope remain (optional)",
       "desired_hint": "{{n}} days left now. Enter 0 to hope for an immediate end; leave blank to let the officer decide.",
-      "desired_invalid": "Enter a whole number from 0 to {{max}}"
+      "desired_invalid": "Enter a whole number from 0 to {{max}}",
+      "approved_days": "{{n}} days left when approved"
     },
     "mfa": {
       "setup": {
