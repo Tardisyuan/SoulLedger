@@ -385,7 +385,7 @@ describe("a post that no longer exists (audit 2026-10-17 #8, 第四十批 O-c)",
       "/me/social/status/": STATUS,
     });
     wrap(<PostScreen id="p1" />);
-    expect(await screen.findByTestId("post-gone")).toHaveTextContent("这条已经不在了");
+    expect(await screen.findByTestId("post-gone")).toHaveTextContent(/^这条已经不在了/);
     expect(screen.getByText("可能已经删除，或者已经不在你能看的范围里。")).toBeTruthy();
     expect(screen.queryByTestId("post-error")).toBeNull();
     expect(screen.queryByText("重试")).toBeNull();
@@ -408,7 +408,7 @@ describe("a post that no longer exists (audit 2026-10-17 #8, 第四十批 O-c)",
       "/me/social/status/": STATUS,
     });
     wrap(<PostScreen id="p1" />);
-    expect(await screen.findByTestId("post-gone")).toHaveTextContent("这条已经不在了");
+    expect(await screen.findByTestId("post-gone")).toHaveTextContent(/^这条已经不在了/);
   });
 
   it("back on the feed, the card it came from is greyed and opens nothing; the others still open", async () => {

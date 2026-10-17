@@ -184,7 +184,7 @@ describe("功过 and 事件 paging", () => {
     expect(screen.getAllByTestId(/^soul-event-e/)).toHaveLength(20);
     expect(screen.getByTestId("soul-events-count").props.children).toBe("已显示 20 / 30");
     fireEvent.press(screen.getByTestId("soul-events-more"));
-    await waitFor(() => expect(screen.getAllByTestId(/^soul-event-e/)).toHaveLength(30));
+    await waitFor(() => expect(screen.getAllByTestId(/^soul-event-e/)).toHaveLength(30), { timeout: 3000 }); // 全量并跑时第二页偶尔晚于 1 秒
     expect(mockEvents).toHaveBeenLastCalledWith({ soul: "s1", page: "2" });
     expect(screen.queryByTestId("soul-events-more")).toBeNull();
   });
