@@ -18,7 +18,9 @@ for (const [w, h] of [[1440, 900], [393, 852]] as const) {
   for (const path of ["/recycle-bin", "/audit"]) {
     test(`${path} at ${w}×${h} is one viewport tall`, async ({ page }) => {
       await page.setViewportSize({ width: w, height: h });
-      await setupAuthenticatedPage(page);
+      const api = await setupAuthenticatedPage(page);
+      // 「空回收站」:默认夹具里有一条(别的用例要用),这里按注释给它一个空的 —— 有条目时还有筛选条,页面就不短了。
+      api.on("GET", "/recycle-bin/", { results: [], count: 0 });
       await page.goto(path);
       await expect(page.getByTestId("plaque")).toBeVisible();
       await page.waitForLoadState("networkidle").catch(() => {});

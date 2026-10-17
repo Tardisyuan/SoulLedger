@@ -135,11 +135,11 @@ test.describe("Sentence plan", () => {
     });
 
     await page.goto(`/judgment/${OPENED_JUDGMENT.id}`);
-    await page.getByRole("button", { name: "开联审" }).click();
+    await page.getByRole("button", { name: "开跨域审判" }).click();
     const dialog = page.getByRole("dialog");
     await dialog.getByLabel("标题").fill("张三联审");
     await dialog.getByLabel("说明").fill("定外地各站");
-    await dialog.getByRole("button", { name: "开联审" }).click();
+    await dialog.getByRole("button", { name: "开跨域审判" }).click();
 
     await expect
       .poll(() => api.lastCall("POST", "/dispatch/cross-tenant-judgments/")?.body)

@@ -28,7 +28,7 @@ export function useMenuButtonConfig(): (id: WiredButtonId) => boolean {
     enabled: !!user,
   });
   const off = useMemo(
-    () => new Set((data ?? []).filter((row) => !row.is_active).map((row) => buttonKey(row.menu_path, row.code))),
+    () => new Set((Array.isArray(data) ? data : []).filter((row) => !row.is_active).map((row) => buttonKey(row.menu_path, row.code))),
     [data]
   );
   return useCallback(

@@ -1421,6 +1421,14 @@ export class ApiMock {
     // The /judgment page's four group headers (JudgmentQueueCounts) and the desk's
     // 据 · 先例 panel. After `:id/` for the same reason as `next/`.
     this.on("GET", "/judgment/queue-counts/", { mine: 0, unclaimed: 0, others: 0, deferred: 0, total: 0 });
+    // 首页待办条的五格(审计 1017 #7):一次 `/officer-app/todo/`,每组 {count, items}。
+    const emptyGroup = { count: 0, items: [] };
+    this.on("GET", "/officer-app/todo/", {
+      approvals: emptyGroup, reassignments: emptyGroup, cooldowns: emptyGroup, rebirths: emptyGroup,
+      letters: emptyGroup, unassigned_letters: emptyGroup, sentence_changes: emptyGroup,
+    });
+    // 菜单按钮配置(第四十批 W-b):一个数组,不是分页;没有行 = 全部允许。
+    this.on("GET", "/menus/buttons/config/", []);
     this.on("GET", "/judgment/:id/precedents/", []);
     // 附件 (CaseAttachments): an object, not a page -- the default empty page would read as no `items`.
     this.on("GET", "/judgment/:id/attachments/", {
