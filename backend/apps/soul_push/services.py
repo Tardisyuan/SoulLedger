@@ -20,6 +20,7 @@
 同一**事件**被发布两次不会重推 —— 那由 `(dedupe_key, device)` 唯一约束挡。
 """
 import logging
+import uuid
 from datetime import timedelta
 
 from django.conf import settings
@@ -157,7 +158,13 @@ def _sentence_rule(event_type, payload):
         # 落地时高亮「去向」里那一次处置(第四十批 S-e):节点建处置时记下了它的 id;没有(老节点)就只落到本世。
         from apps.sentence_plan.models import SentenceNode
 
-        disposition_id = SentenceNode.objects.filter(pk=node_id).values_list("disposition_id", flat=True).first()
+        # 先验成 UUID 再查:非法的 id 在 PostgreSQL 上会让整个事务中止,而推送失败不能连累业务。
+        try:
+            node_pk = uuid.UUID(str(node_id))
+        except ValueError:
+            node_pk = None
+        disposition_id = node_pk and SentenceNode.objects.filter(pk=node_pk).values_list(
+            "disposition_id", flat=True).first()
         data = {**life, "disposition_id": str(disposition_id)} if disposition_id else life
         return ("judgment", "disposition_executed", f"node:{node_id}:done", data)
     if event_type == "SENTENCE_NODE_WAITING":
