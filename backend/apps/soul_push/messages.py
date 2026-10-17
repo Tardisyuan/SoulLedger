@@ -45,6 +45,9 @@ MESSAGES = {
         "content_hidden_comment_reason": {"title": "评论已被隐藏", "body": "你的评论被殿司隐藏：{{reason}}"},
         "content_deleted_post_reason": {"title": "帖子已被删除", "body": "你的帖子被殿司删除：{{reason}}"},
         "content_deleted_comment_reason": {"title": "评论已被删除", "body": "你的评论被殿司删除：{{reason}}"},
+        # 第四十批 S-a:标题是 Design 的原文;正文是评论的开头(`{{text}}`,不再加字)。
+        "comment": {"title": "{{name}} 评论了你的帖子", "body": "{{text}}"},
+        "reply": {"title": "{{name}} 回复了你的评论", "body": "{{text}}"},
     },
     "en": {
         "sentence_pardoned": {"title": "Remaining term pardoned", "body": "Part of your term was pardoned. Open Soul Ledger to see it."},
@@ -139,6 +142,8 @@ MESSAGES = {
             "title": "Your comment was deleted",
             "body": "An officer deleted your comment: {{reason}}",
         },
+        "comment": {"title": "{{name}} commented on your post", "body": "{{text}}"},
+        "reply": {"title": "{{name}} replied to your comment", "body": "{{text}}"},
     },
     "egy": {
         "sentence_pardoned": {"title": "Renpet Sepy Nedj Seth", "body": "Renpet-Ek Nedj Seth. Wen Medjat Ba Er Maa."},
@@ -173,6 +178,8 @@ MESSAGES = {
         "content_hidden_post_reason": {"title": "Medu-Ek Imen Seth", "body": "Sab Wesekhet Imen Medu-Ek. Khet: {{reason}}"},
         "content_restored_comment": {"title": "Wesheb-Ek Wen Wehem", "body": "Wesheb-Ek Wen Wehem Seth."},
         "content_restored_post": {"title": "Medu-Ek Wen Wehem", "body": "Medu-Ek Wen Wehem Seth."},
+        "comment": {"title": "{{name}}: Wesheb · Medu-Ek", "body": "{{text}}"},
+        "reply": {"title": "{{name}}: Wesheb Er Wesheb-Ek", "body": "{{text}}"},
     },
 }
 

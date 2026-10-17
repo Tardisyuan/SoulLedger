@@ -37,6 +37,13 @@ MESSAGES = {
             "note": "5 分钟内有效。如非本人操作,请忽略本邮件。",
             "text": "您的验证码: {{code}}\n5 分钟内有效。如非本人操作,请忽略本邮件。",
         },
+        # 第四十批 S-b:改联系邮箱。验证码那封借用 reset_code 的标签、说明与正文,只换标题。
+        "email_code": {"title": "联系邮箱验证码"},
+        "email_changed": {
+            "title": "联系邮箱已改",
+            "note": "以后的验证码发到 {{email}}。如非本人操作，请尽快到本殿。",
+            "text": "联系邮箱已改。以后的验证码发到 {{email}}。如非本人操作，请尽快到本殿。",
+        },
         "credential": {
             "title": "灵魂账号",
             "soul_code_label": "灵魂编号",
@@ -57,6 +64,12 @@ MESSAGES = {
             "code_label": "Code",
             "note": "Valid for 5 minutes. If you did not ask for this, ignore this email.",
             "text": "Your code: {{code}}\nValid for 5 minutes. If you did not ask for this, ignore this email.",
+        },
+        "email_code": {"title": "Contact email code"},
+        "email_changed": {
+            "title": "Contact email changed",
+            "note": "Codes now go to {{email}}. If this was not you, come to your hall as soon as you can.",
+            "text": "Your contact email was changed. Codes now go to {{email}}. If this was not you, come to your hall as soon as you can.",
         },
         "credential": {
             "title": "Soul account",
@@ -97,6 +110,11 @@ MESSAGES = {
         },
     },
 }
+
+
+def pack(locale, kind):
+    """一封信的文案。egy 可以缺 Design 还没给词的那几封(`egyPendingKeys.json` 里的 `soul_mail.*`):读作 zh-Hans。"""
+    return MESSAGES.get(locale, {}).get(kind) or MESSAGES[DEFAULT_LOCALE][kind]
 
 
 def fill(template, **params):

@@ -16,6 +16,7 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
 
+from apps.social import interactions
 from apps.social import media as post_media
 from apps.social import moderation as mod
 from apps.social import soul_circle as circle
@@ -26,6 +27,7 @@ from apps.social.soul_serializers import (
     SoulCommentSerializer,
     SoulDisplayNameRequestSerializer,
     SoulFollowStateSerializer,
+    SoulInteractionSerializer,
     SoulPostCreateSerializer,
     SoulPostMediaUploadSerializer,
     SoulPostSerializer,
@@ -76,6 +78,7 @@ def _page(child, name):
 PaginatedSoulPosts = _page(SoulPostSerializer, "PaginatedSoulPosts")
 PaginatedSoulComments = _page(SoulCommentSerializer, "PaginatedSoulComments")
 PaginatedSoulCards = _page(SoulRelationCardSerializer, "PaginatedSoulCards")
+PaginatedSoulInteractions = _page(SoulInteractionSerializer, "PaginatedSoulInteractions")
 
 ERRORS = {403: SoulSocialErrorSerializer, 404: SoulSocialErrorSerializer, 409: SoulSocialErrorSerializer}
 BAD_REQUEST = {400: SoulSocialErrorSerializer}
@@ -120,9 +123,30 @@ class MeSocialStatusView(SoulSocialView):
                     "can_write": mute is None and circle.is_current_soul(request.user),
                     "muted_until": mute.until if mute else None,
                     "reports_remaining": mod.reports_remaining(request.user),
+                    "unread_interactions": interactions.unread_count(request.user),
                 }
             ).data
         )
+
+
+# ── 互动消息(第四十批 S-a)────────────────────────────────────────────────
+
+
+class MeSocialInteractionsView(SoulSocialView):
+    """别人评论 / 回复 / 表态 / 点长明灯 / 关注我的记录,新的在前,只给保留窗口(90 天)内的。
+    只读:标已读是 `read/` 那一个动作 —— App 打开这一页就调它,未读点留到离开为止(列表是打开时取的)。"""
+
+    @extend_schema(operation_id="v1_me_social_interactions", responses={200: PaginatedSoulInteractions, **ERRORS})
+    def get(self, request):
+        return self.paginate(interactions.inbox(request.user), SoulInteractionSerializer)
+
+
+class MeSocialInteractionsReadView(SoulSocialView):
+    @extend_schema(operation_id="v1_me_social_interactions_read", request=None, responses={204: None, **ERRORS})
+    def post(self, request):
+        """全部标已读。禁言期间也可以:读的是自己的收件箱,不写朋友圈。"""
+        interactions.mark_all_read(request.user)
+        return Response(status=204)
 
 
 # ── 动态流与帖子 ──────────────────────────────────────────────────────────

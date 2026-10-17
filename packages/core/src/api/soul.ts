@@ -98,6 +98,8 @@ export type PushDevice = Schemas["PushDevice"];
 export type PushPlatform = Schemas["PushPlatformEnum"];
 export type NotificationSettings = Schemas["NotificationSettings"];
 export type NotificationSettingsPatch = Schemas["PatchedNotificationSettings"];
+/** 设置 › 账号安全 › 联系邮箱(第四十批 S-b):打码的地址、本殿是否允许自己改、要不要 6 位数字。 */
+export type ContactEmailStatus = Schemas["ContactEmailStatus"];
 /** One push the soul was sent, every status included (`/me/notifications/`); `data` is the tap target (`landingOf`). */
 export type PushHistoryItem = Schemas["PushHistoryItem"];
 export type PaginatedPushHistory = Schemas["PaginatedPushHistory"];
@@ -270,6 +272,19 @@ export const soulApi = {
     soulHttp.post<Schemas["SoulMfaRecoveryCodes"]>("/me/mfa/recovery-codes/", body).then((r) => r.data.recovery_codes),
   mfaDisable: (body: SoulMfaDisableRequest) =>
     soulHttp.post<SoulMfaStatus>("/me/mfa/disable/", body).then((r) => r.data),
+  /**
+   * 改联系邮箱(第四十批 S-b),三步:当前密码(开了两步验证再带 `code`)→ 新邮箱(验证码发到新邮箱)→ 验证码。
+   * Refusals carry `code`: email_in_person (403, every step: the hall does it in person), wrong_password /
+   * rate_limited / mfa_required / wrong / expired / locked (verify), proof_required / email_unchanged (start),
+   * reset_code_wrong (+ attempts_left) / reset_code_expired / reset_code_attempts_exceeded / email_taken (confirm).
+   */
+  contactEmail: () => soulHttp.get<ContactEmailStatus>("/me/contact-email/").then((r) => r.data),
+  contactEmailVerify: (password: string, code?: string) =>
+    soulHttp.post("/me/contact-email/verify/", { password, ...(code ? { code } : {}) }).then(() => undefined),
+  contactEmailStart: (email: string) =>
+    soulHttp.post<Schemas["ContactEmailSent"]>("/me/contact-email/", { email }).then((r) => r.data),
+  contactEmailConfirm: (code: string) =>
+    soulHttp.post<ContactEmailStatus>("/me/contact-email/confirm/", { code }).then((r) => r.data),
   /** Best effort: the server answers 204 whatever the token's state. */
   logout: (refresh: string) => soulHttp.post("/soul-auth/logout/", { refresh }),
   /** 200 is a NEW token pair; the old refresh token is dead the moment this returns. */

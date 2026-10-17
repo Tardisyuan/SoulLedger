@@ -592,6 +592,62 @@ class SocialMute(models.Model):
         indexes = [models.Index(fields=["user", "until"])]
 
 
+class InteractionKind(models.TextChoices):
+    """「互动消息」的五种(Design 第四十批 S-a)。评论、回复一条一行,并推送;其余只进站内、按天合并。"""
+    COMMENT = "COMMENT", "Commented on my post"
+    REPLY = "REPLY", "Replied to my comment"
+    REACTION = "REACTION", "Reacted to my post"
+    LAMP = "LAMP", "Lit an eternal lamp on my post"
+    FOLLOW = "FOLLOW", "Followed me"
+
+
+#: 同一帖同一天合并成一行的两种;关注按天合并(不挂帖子)。
+MERGED_POST_KINDS = (InteractionKind.REACTION, InteractionKind.LAMP)
+
+
+class SocialInteraction(models.Model):
+    """灵魂「互动消息」里的一行。写入只经 `apps/social/interactions.py`。
+
+    `actor` 是这一行的**第一个人**(「{{name}} 等 n 人」的 name,点关注那一行进的是他的主页);
+    `actor_ids` 是这一行里所有人的 user id(去重),n = 它的长度。合并的键是 (收件人, 种类, 帖子, 日):
+    同一个人一天里反复点、取消、再点,只算一次。新的人加进已读的行,这一行回到未读。
+
+    只保留 `RETENTION_DAYS` 天(`apps/core/retention.py` 按 `last_at` 删;列表也只读这个窗口)。
+    挂在 User(某一世的账号)上,与朋友圈内容随账号同一规则。
+    """
+    RETENTION_DAYS = 90
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    tenant = models.ForeignKey("tenants.Tenant", on_delete=models.CASCADE, related_name="social_interactions")
+    recipient = models.ForeignKey("authentication.User", on_delete=models.CASCADE, related_name="social_interactions")
+    actor = models.ForeignKey("authentication.User", on_delete=models.CASCADE, related_name="+")
+    kind = models.CharField(max_length=10, choices=InteractionKind.choices)
+    post = models.ForeignKey(Post, null=True, blank=True, on_delete=models.CASCADE, related_name="+")
+    comment = models.ForeignKey(Comment, null=True, blank=True, on_delete=models.CASCADE, related_name="+")
+    actor_ids = models.JSONField(default=list)
+    day = models.DateField()
+    last_at = models.DateTimeField()
+    read_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-last_at"]
+        indexes = [
+            models.Index(fields=["recipient", "last_at"], name="social_soci_recipie_b40a01_idx"),
+            models.Index(fields=["last_at"], name="social_soci_last_at_b40a02_idx"),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["recipient", "kind", "post", "day"], condition=Q(kind__in=["REACTION", "LAMP"]),
+                name="social_interaction_one_row_per_post_day",
+            ),
+            models.UniqueConstraint(
+                fields=["recipient", "kind", "day"], condition=Q(kind="FOLLOW"),
+                name="social_interaction_one_follow_row_per_day",
+            ),
+        ]
+
+
 #: Deleted by someone other than the author: an officer's moderation DELETE.
 #: The author's own delete (soul app, or the web social views) is not a
 #: moderation decision — it is not in「已处理」and not in the recycle bin.

@@ -119,6 +119,24 @@ describe("the settings page is the one place for language and sign-out", () => {
     await act(async () => {});
   });
 
+  it("第四十批 S-a: 朋友圈's bar ends with 「互动」 and its unread count, and opens 互动消息", async () => {
+    signedIn({
+      "/me/social/feed/": { status: 200, data: { count: 0, next: null, previous: null, results: [] } },
+      "/me/social/status/": { status: 200, data: { user_id: 1, can_write: true, muted_until: null, reports_remaining: 5, unread_interactions: 3 } },
+      "/me/social/interactions/": { status: 200, data: { count: 0, next: null, previous: null, results: [] } },
+      "POST /me/social/interactions/read/": { status: 204 },
+    });
+    renderApp();
+    await screen.findByTestId("profile-card");
+    await pressTab("tab-Circle");
+    const entry = await screen.findByTestId("circle-inbox-open");
+    expect(within(entry).getByText("互动")).toBeTruthy();
+    expect(within(await screen.findByTestId("circle-inbox-open-badge")).getByText("3")).toBeTruthy();
+    fireEvent.press(entry);
+    await screen.findByTestId("circle-inbox-empty");
+    expect(route()?.name).toBe("CircleInbox");
+  });
+
   it("the same icon is on 本世 and 转生 (朋友圈 has search and my page there instead, 1a)", async () => {
     signedIn({
       "/me/past-lives/": { status: 200, data: [] },
@@ -317,6 +335,95 @@ describe("notification settings", () => {
     expect(screen.getByTestId("toggle-chat").props.accessibilityState).toEqual({ checked: false });
   });
 
+  it("第四十批 S-c: 朋友圈 has its two switches, each writing back only its own field; hall warnings say 不能关 and do nothing", async () => {
+    const calls = signedIn({
+      "GET /me/notification-settings/": { status: 200, data: { ...SETTINGS, social_comments: true, social_review: true } },
+      "PATCH /me/notification-settings/": { status: 200, data: { ...SETTINGS, social_comments: false, social_review: true } },
+    });
+    renderApp();
+    await screen.findByTestId("profile-card");
+    fireEvent.press(screen.getByTestId("header-account"));
+    const comments = await screen.findByTestId("toggle-social_comments");
+    expect(within(comments).getByText("评论和回复")).toBeTruthy();
+    expect(within(screen.getByTestId("toggle-social_review")).getByText("审核结果")).toBeTruthy();
+    expect(within(screen.getByTestId("push-toggles")).getByText("朋友圈")).toBeTruthy();
+    fireEvent.press(comments);
+    await waitFor(() => expect(calls.filter((c) => c.method === "PATCH").map((c) => c.body)).toEqual([{ social_comments: false }]));
+    const warning = screen.getByTestId("toggle-warning-locked");
+    expect(within(warning).getByText("殿司警告")).toBeTruthy();
+    expect(within(warning).getByText("不能关")).toBeTruthy();
+    expect(warning.props.accessibilityState).toEqual({ checked: true, disabled: true });
+    fireEvent.press(warning);
+    expect(calls.filter((c) => c.method === "PATCH")).toHaveLength(1);
+  });
+
+  it("第四十批 S-b: 账号安全 shows the masked contact email with 更改 and what it is for", async () => {
+    signedIn({
+      "GET /me/mfa/": { status: 200, data: { enabled: false } },
+      "GET /me/sessions/": { status: 200, data: [] },
+      "GET /me/contact-email/": { status: 200, data: { email_masked: "zh***@lingyun.cn", can_change: true, mfa_enabled: false } },
+    });
+    renderApp();
+    await screen.findByTestId("profile-card");
+    fireEvent.press(screen.getByTestId("header-account"));
+    expect((await screen.findByTestId("email-masked")).props.children).toBe("zh***@lingyun.cn");
+    expect(screen.getByTestId("email-action").props.children).toBe("更改 ›");
+    expect(screen.getByTestId("email-hint").props.children).toBe("忘记密码时，验证码发到这里。");
+  });
+
+  it("第四十批 S-b: a hall that does not allow it has no 更改, and says to come in with the slip", async () => {
+    signedIn({
+      "GET /me/mfa/": { status: 200, data: { enabled: false } },
+      "GET /me/sessions/": { status: 200, data: [] },
+      "GET /me/contact-email/": { status: 200, data: { email_masked: "", can_change: false, mfa_enabled: false } },
+    });
+    renderApp();
+    await screen.findByTestId("profile-card");
+    fireEvent.press(screen.getByTestId("header-account"));
+    expect((await screen.findByTestId("email-masked")).props.children).toBe("没有联系邮箱");
+    expect(screen.queryByTestId("email-action")).toBeNull();
+    expect(screen.getByTestId("email-hint").props.children).toBe("要改联系邮箱，请到本殿，带上交付单。");
+  });
+
+  it("第四十批 S-b: password → new address → the code sent there → done", async () => {
+    const calls = signedIn({
+      "GET /me/mfa/": { status: 200, data: { enabled: false } },
+      "GET /me/sessions/": { status: 200, data: [] },
+      "GET /me/contact-email/": { status: 200, data: { email_masked: "zh***@lingyun.cn", can_change: true, mfa_enabled: false } },
+      "POST /me/contact-email/verify/": [{ status: 400, data: { detail: "密码不对。", code: "wrong_password", remaining_attempts: 4 } }, { status: 204 }],
+      "POST /me/contact-email/": { status: 202, data: { sent_to: "new@example.org" } },
+      "POST /me/contact-email/confirm/": [
+        { status: 400, data: { detail: "验证码错误", code: "reset_code_wrong", attempts_left: 4 } },
+        { status: 200, data: { email_masked: "ne***@example.org", can_change: true, mfa_enabled: false } },
+      ],
+    });
+    renderApp();
+    await screen.findByTestId("profile-card");
+    fireEvent.press(screen.getByTestId("header-account"));
+    fireEvent.press(await screen.findByTestId("open-contact-email"));
+    fireEvent.changeText(await screen.findByTestId("contact-email-password"), "wrong");
+    fireEvent.press(screen.getByTestId("contact-email-next"));
+    expect(await screen.findByText("! 密码不对")).toBeTruthy();
+    fireEvent.changeText(screen.getByTestId("contact-email-password"), "right");
+    fireEvent.press(screen.getByTestId("contact-email-next"));
+    fireEvent.changeText(await screen.findByTestId("contact-email-new"), " new@example.org ");
+    fireEvent.press(screen.getByTestId("contact-email-send"));
+    expect((await screen.findByTestId("contact-email-sent")).props.children).toBe("验证码已发到 new@example.org");
+    fireEvent.changeText(screen.getByTestId("contact-email-code"), "111111");
+    fireEvent.press(screen.getByTestId("contact-email-confirm"));
+    expect((await screen.findByTestId("contact-email-code-error")).props.children).toBe("验证码不对 还可以再试 4 次。");
+    fireEvent.changeText(screen.getByTestId("contact-email-code"), "123456");
+    fireEvent.press(screen.getByTestId("contact-email-confirm"));
+    expect((await screen.findByTestId("toast")).props.children).toBe("联系邮箱已改");
+    expect(calls.filter((c) => c.method === "POST" && c.url.startsWith("/me/contact-email/")).map((c) => c.body)).toEqual([
+      { password: "wrong" },
+      { password: "right" },
+      { email: "new@example.org" },
+      { code: "111111" },
+      { code: "123456" },
+    ]);
+  });
+
   it("system permission denied: the page says so, links to system settings, and the switches dim but still work", async () => {
     system.status = "denied";
     const calls = signedIn({ "PATCH /me/notification-settings/": { status: 200, data: { ...SETTINGS, rebirth: false } } });
@@ -389,7 +496,8 @@ describe("notification settings", () => {
 describe("tapping a notification", () => {
   it("landingOf routes by screen alone; an unknown kind with a known screen still lands, junk lands nowhere", () => {
     expect(landingOf({ screen: "ApplicationDetail", application_id: APP_ID, kind: "rebirth_rejected" })).toEqual({ screen: "ApplicationDetail", id: APP_ID });
-    expect(landingOf({ screen: "Life", kind: "residence_approved" })).toEqual({ screen: "Life" });
+    // 第四十批 S-e: the residence block is washed.
+    expect(landingOf({ screen: "Life", kind: "residence_approved" })).toEqual({ screen: "Life", focus: { residence: true } });
     // The backend's `chat_message` (a new letter, or the hall's reply) lands on that conversation.
     expect(landingOf({ screen: "Conversation", conversation_id: APP_ID, kind: "chat_message" })).toEqual({ screen: "Conversation", id: APP_ID });
     expect(landingOf({ screen: "ApplicationDetail", application_id: "../../me/" })).toEqual({ screen: "Life" });
@@ -398,6 +506,29 @@ describe("tapping a notification", () => {
     expect(landingOf({ kind: "rebirth_approved" })).toBeNull();
     expect(landingOf(null)).toBeNull();
     expect(landingOf("ApplicationDetail")).toBeNull();
+  });
+
+  it("第四十批: a comment push names its comment; judgment / disposition pushes name their row; junk ids are dropped", () => {
+    const COMMENT = "22222222-2222-4222-8222-222222222222";
+    expect(landingOf({ screen: "CirclePost", post_id: APP_ID, comment_id: COMMENT, kind: "comment" })).toEqual({ screen: "CirclePost", id: APP_ID, comment: COMMENT });
+    expect(landingOf({ screen: "CirclePost", post_id: APP_ID, comment_id: "../x", kind: "reply" })).toEqual({ screen: "CirclePost", id: APP_ID });
+    expect(landingOf({ screen: "Life", judgment_id: APP_ID, kind: "judgment_result" })).toEqual({ screen: "Life", focus: { judgment: APP_ID } });
+    expect(landingOf({ screen: "Life", disposition_id: APP_ID, kind: "disposition_executed" })).toEqual({ screen: "Life", focus: { disposition: APP_ID } });
+    expect(landingOf({ screen: "Life", judgment_id: "nope", kind: "judgment_result" })).toEqual({ screen: "Life" });
+    // Returning ends the residence: no block to wash.
+    expect(landingOf({ screen: "Life", kind: "residence_returned" })).toEqual({ screen: "Life" });
+  });
+
+  it("a judgment push washes that judgment's row on the life page, and only that one", async () => {
+    const OTHER = "33333333-3333-4333-8333-333333333333";
+    const judgment = (id: string) => ({ id, court: "第五殿", judge: null, verdict: null, is_final: false });
+    signedIn({ "/me/life/": { status: 200, data: life(1, { judgments: [judgment(APP_ID), judgment(OTHER)] }) } });
+    renderApp();
+    await screen.findByTestId("profile-card");
+    tap({ screen: "Life", judgment_id: APP_ID, kind: "judgment_result" });
+    await waitFor(() => expect(route()).toMatchObject({ name: "Life", params: { lifeFocus: { judgment: APP_ID } } }));
+    expect(within(await screen.findByTestId(`judgment-${APP_ID}`)).getByTestId("landing-wash")).toBeTruthy();
+    expect(within(screen.getByTestId(`judgment-${OTHER}`)).queryByTestId("landing-wash")).toBeNull();
   });
 
   it("opens the application it names, with the landing highlight", async () => {

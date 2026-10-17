@@ -28,6 +28,7 @@ from django.db import transaction
 from django.db.models import Count, OuterRef, Prefetch, Q, Subquery
 from django.utils import timezone
 
+from apps.social import interactions
 from apps.social.models import (
     Comment,
     Follow,
@@ -342,6 +343,7 @@ def create_comment(author, post_id, content, parent_id=None):
             recipients = {post.author_id, parent.author_id if parent else None} - {author.pk}
             publish_event("SOCIAL_COMMENTED", tenant, sorted(r for r in recipients if r),
                      {"post_id": str(post.pk), "comment_id": str(comment.pk), "actor_user_id": author.pk})
+            interactions.record_comment(comment)
     comment.screening_outcome = screening.outcome
     return comment
 
@@ -380,6 +382,8 @@ def toggle_reaction(user, post_id, reaction_type):
         if before is not None and before.reaction_type == ReactionType.ETERNAL_LIGHT:
             raise SocialError("长明灯已点,不可取消或更改。", "eternal_light_locked", 409)
         ReactionService.add_reaction(user=user, reaction_type=reaction_type, post=post, tenant=tenant)
+        if before is None or before.reaction_type != reaction_type:
+            interactions.record_reaction(user, post, reaction_type)
     if before is not None and before.reaction_type == reaction_type:
         return ReactionState(False, None)
     return ReactionState(True, reaction_type)
@@ -392,9 +396,11 @@ def follow(user, target_id):
     target = souls_in(tenant).exclude(pk=user.pk).filter(pk=target_id).first()
     if target is None:
         raise _not_found()
-    _, created = FollowService.follow(user, target, tenant)
-    if created:
-        publish_event("SOCIAL_FOLLOWED", tenant, [target.pk], {"follower_user_id": user.pk})
+    with transaction.atomic():
+        _, created = FollowService.follow(user, target, tenant)
+        if created:
+            publish_event("SOCIAL_FOLLOWED", tenant, [target.pk], {"follower_user_id": user.pk})
+            interactions.record_follow(user, target, tenant)
     return target
 
 

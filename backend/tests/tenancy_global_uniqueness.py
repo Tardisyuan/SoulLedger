@@ -71,6 +71,8 @@ UNIQUE_KEYS = {
     'social.Report:social_report_one_open_per_user': ('PER_PARENT', "unique inside one parent row; holds across tenants only because the parent's pk is global and the rows live with the parent"),
     'social.ReportEntry:social_report_entry_once_per_reporter': ('PER_PARENT', "unique inside one parent row; holds across tenants only because the parent's pk is global and the rows live with the parent"),
     'social.SensitiveWordDailyHit:social_sensitive_word_hit_one_row_per_day': ('PER_PARENT', "unique inside one parent row; holds across tenants only because the parent's pk is global and the rows live with the parent"),
+    'social.SocialInteraction:social_interaction_one_follow_row_per_day': ('PER_PARENT', 'one merged follow row per recipient per day'),
+    'social.SocialInteraction:social_interaction_one_row_per_post_day': ('PER_PARENT', 'one merged reaction / lamp row per recipient, post and day'),
     'social.UserProfile:user': ('PER_PARENT', "unique inside one parent row; holds across tenants only because the parent's pk is global and the rows live with the parent"),
     'soul_accounts.CooldownShorteningRequest:application': ('PER_PARENT', "unique inside one parent row; holds across tenants only because the parent's pk is global and the rows live with the parent"),
     'soul_accounts.CooldownShorteningRequest:cooldown_shortening_one_pending_per_soul': ('PER_PARENT', "unique inside one parent row; holds across tenants only because the parent's pk is global and the rows live with the parent"),

@@ -4104,6 +4104,56 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/me/contact-email/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["v1_me_contact_email_retrieve"];
+        put?: never;
+        /** @description 要先过 `verify/`(10 分钟内)。同一账号 5 分钟内最多发 3 次;再发一次,上一个码作废。 */
+        post: operations["v1_me_contact_email_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/contact-email/confirm/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["v1_me_contact_email_confirm_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/contact-email/verify/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 当前密码(与开两步验证同一个闸、同一份失败预算);开了两步验证的再要 6 位数字(同一把锁)。 */
+        post: operations["v1_me_contact_email_verify_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/me/device-login/": {
         parameters: {
             query?: never;
@@ -4597,6 +4647,43 @@ export interface paths {
         get: operations["v1_me_social_following"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/social/interactions/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description 别人评论 / 回复 / 表态 / 点长明灯 / 关注我的记录,新的在前,只给保留窗口(90 天)内的。
+         *     只读:标已读是 `read/` 那一个动作 —— App 打开这一页就调它,未读点留到离开为止(列表是打开时取的)。
+         */
+        get: operations["v1_me_social_interactions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/social/interactions/read/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 全部标已读。禁言期间也可以:读的是自己的收件箱,不写朋友圈。 */
+        post: operations["v1_me_social_interactions_read"];
         delete?: never;
         options?: never;
         head?: never;
@@ -10269,6 +10356,37 @@ export interface components {
             provider: string;
             model: string;
         };
+        ContactEmailConfirm: {
+            code: string;
+        };
+        /**
+         * @description `code` ∈ email_in_person / wrong_password / rate_limited / mfa_required / wrong / expired / locked /
+         *     proof_required / email_unchanged / reset_code_expired / reset_code_wrong / reset_code_attempts_exceeded / email_taken。
+         */
+        ContactEmailRefusal: {
+            detail: string;
+            code: string;
+        };
+        ContactEmailSent: {
+            /** Format: email */
+            sent_to: string;
+        };
+        ContactEmailStart: {
+            /** Format: email */
+            email: string;
+        };
+        ContactEmailStatus: {
+            /** @description 打码的联系邮箱;没有登记时为空串 */
+            email_masked: string;
+            /** @description 本殿是否允许灵魂自己改 */
+            can_change: boolean;
+            /** @description 改之前要不要再输 6 位数字 */
+            mfa_enabled: boolean;
+        };
+        ContactEmailVerify: {
+            password: string;
+            code?: string;
+        };
         Conversation: {
             /** Format: uuid */
             readonly id: string;
@@ -13147,6 +13265,10 @@ export interface components {
             residence?: boolean;
             /** @description 新书信:私聊的新消息、殿司的回信 */
             chat?: boolean;
+            /** @description 朋友圈:别人评论了我的帖子、回复了我的评论 */
+            social_comments?: boolean;
+            /** @description 朋友圈:我的帖子 / 评论的审核结果(隐藏、删除、通过、恢复) */
+            social_review?: boolean;
             locale?: components["schemas"]["PushLocaleEnum"];
         };
         /**
@@ -14013,6 +14135,12 @@ export interface components {
             previous?: string | null;
             results: components["schemas"]["SoulEvent"][];
         };
+        PaginatedSoulInteractions: {
+            count: number;
+            next: string | null;
+            previous: string | null;
+            results: components["schemas"]["SoulInteraction"][];
+        };
         PaginatedSoulListList: {
             /** @example 123 */
             count: number;
@@ -14849,6 +14977,10 @@ export interface components {
             residence?: boolean;
             /** @description 新书信:私聊的新消息、殿司的回信 */
             chat?: boolean;
+            /** @description 朋友圈:别人评论了我的帖子、回复了我的评论 */
+            social_comments?: boolean;
+            /** @description 朋友圈:我的帖子 / 评论的审核结果(隐藏、删除、通过、恢复) */
+            social_review?: boolean;
             locale?: components["schemas"]["PushLocaleEnum"];
         };
         PatchedOrganization: {
@@ -17128,6 +17260,34 @@ export interface components {
             /** Format: uri */
             file: string;
         };
+        /**
+         * @description 「互动消息」的一行。`actor` 是这一行的第一个人,`count` 是这一行里的人数(评论 / 回复总是 1)。
+         *     `excerpt`:评论 / 回复是那条评论的开头,表态 / 长明灯是我那篇帖子的开头;已删除、未发布的给空串。
+         */
+        SoulInteraction: {
+            /** Format: uuid */
+            id: string;
+            kind: components["schemas"]["SoulInteractionKindEnum"];
+            actor: components["schemas"]["SoulCard"];
+            readonly count: number;
+            /** Format: uuid */
+            post_id: string | null;
+            /** Format: uuid */
+            comment_id: string | null;
+            readonly excerpt: string;
+            /** Format: date-time */
+            last_at: string;
+            readonly unread: boolean;
+        };
+        /**
+         * @description * `COMMENT` - Commented on my post
+         *     * `REPLY` - Replied to my comment
+         *     * `REACTION` - Reacted to my post
+         *     * `LAMP` - Lit an eternal lamp on my post
+         *     * `FOLLOW` - Followed me
+         * @enum {string}
+         */
+        SoulInteractionKindEnum: "COMMENT" | "REPLY" | "REACTION" | "LAMP" | "FOLLOW";
         /** @description Lightweight serializer for list views. */
         SoulList: {
             /** Format: uuid */
@@ -17504,6 +17664,8 @@ export interface components {
             /** Format: date-time */
             muted_until: string | null;
             reports_remaining: number;
+            /** @description 「互动」的未读行数(第四十批 S-a) */
+            unread_interactions: number;
         };
         /**
          * @description `label` is the raw state member today, same value as `state` — the
@@ -25792,6 +25954,195 @@ export interface operations {
             };
         };
     };
+    v1_me_contact_email_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactEmailStatus"];
+                };
+            };
+        };
+    };
+    v1_me_contact_email_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContactEmailStart"];
+                "application/x-www-form-urlencoded": components["schemas"]["ContactEmailStart"];
+                "multipart/form-data": components["schemas"]["ContactEmailStart"];
+            };
+        };
+        responses: {
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactEmailSent"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactEmailRefusal"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactEmailRefusal"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactEmailRefusal"];
+                };
+            };
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactEmailRefusal"];
+                };
+            };
+        };
+    };
+    v1_me_contact_email_confirm_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContactEmailConfirm"];
+                "application/x-www-form-urlencoded": components["schemas"]["ContactEmailConfirm"];
+                "multipart/form-data": components["schemas"]["ContactEmailConfirm"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactEmailStatus"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactEmailRefusal"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactEmailRefusal"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactEmailRefusal"];
+                };
+            };
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactEmailRefusal"];
+                };
+            };
+        };
+    };
+    v1_me_contact_email_verify_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContactEmailVerify"];
+                "application/x-www-form-urlencoded": components["schemas"]["ContactEmailVerify"];
+                "multipart/form-data": components["schemas"]["ContactEmailVerify"];
+            };
+        };
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactEmailRefusal"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactEmailRefusal"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactEmailRefusal"];
+                };
+            };
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactEmailRefusal"];
+                };
+            };
+        };
+    };
     v1_me_device_login_create: {
         parameters: {
             query?: never;
@@ -26988,6 +27339,91 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["PaginatedSoulCards"];
                 };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulSocialError"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulSocialError"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulSocialError"];
+                };
+            };
+        };
+    };
+    v1_me_social_interactions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedSoulInteractions"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulSocialError"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulSocialError"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoulSocialError"];
+                };
+            };
+        };
+    };
+    v1_me_social_interactions_read: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             403: {
                 headers: {
