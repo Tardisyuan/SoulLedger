@@ -5492,7 +5492,7 @@
       "seat_actor_empty": "该文明没有可入席的神祇",
       "seat_actor_hint_judging": "联合审判官与主持只能由判官担任",
       "seat_actor_hint_advisor": "顾问可由任一在任神祇担任",
-      "view": "查看联审"
+      "view": "查看跨域审判"
     },
     "file": {
       "open": "提出请求",
