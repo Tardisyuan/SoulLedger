@@ -54,6 +54,7 @@ import {
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Reanimated, { Easing as REasing, FadeOut, Keyframe } from "react-native-reanimated";
 import { SafeAreaView, type Edge } from "react-native-safe-area-context";
+import { notify } from "@soulledger/core/platform";
 
 import { Emblem, Hero, Icon, LedgerUnreachable } from "./emblems";
 import { family, quoteFamily } from "./fonts";
@@ -172,10 +173,10 @@ export function toneColor(t: Theme, tone: Tone): string {
  * Design's rule: the system's 3rd-largest step, "iOS AX3 / Android 200%" -- 2.35 on iOS (AX3 body
  * 40pt against the default 17); Android's own largest scale is 2.0, so it never bites there.
  *
- * NOT implemented yet (Design batch 28 S4, needs a device pass): identifiers / times / amounts /
- * status labels on one line, truncated with … and long-press to read in full; left-text +
- * right-time rows stacking above 1.5x; the filter bar and identity band staying at the default
- * size; printed / scanned content not scaling.
+ * Identifiers / times / amounts / status labels on one line with … and long-press to read in
+ * full: `OneLine` below (and `Badge`). Left-text + right-time rows stacking above 1.5×:
+ * `Layout.twoLine`. NOT implemented yet (needs a device pass): the filter bar and identity band
+ * staying at the default size; printed / scanned content not scaling.
  */
 export const MAX_FONT_SCALE = 2.35;
 
@@ -192,6 +193,20 @@ export function Txt({
       {...rest}
       style={[TYPE[variant], { color: toneColor(t, tone) }, style]}
     />
+  );
+}
+
+/**
+ * S4: a value that keeps to one line at any text size — an identifier, a time, an amount, a
+ * name in a row. Cut with …; a long press reads it in full (the platform toast / alert). A
+ * press handler on a Text takes the touch from the row around it, so a row that is itself
+ * pressable passes its `onPress` here too.
+ */
+export function OneLine({ children, ...rest }: Omit<Parameters<typeof Txt>[0], "children"> & { children: string }) {
+  return (
+    <Txt numberOfLines={1} ellipsizeMode="tail" onLongPress={() => notify({ text: children }, "info")} {...rest}>
+      {children}
+    </Txt>
   );
 }
 
@@ -1155,7 +1170,8 @@ export function DataRows({ children, style }: { children: ReactNode; style?: Sty
 
 /**
  * Label and value. A label longer than 18 characters (EN / egy) puts the value
- * on its own line instead of squeezing both. A mono value is never shortened.
+ * on its own line instead of squeezing both. A mono value (a time, a code) keeps to one
+ * line (S4): cut with …, long-press for all of it.
  */
 export function DataRow({
   label,
@@ -1174,6 +1190,10 @@ export function DataRow({
   const value =
     isValidElement(children) && typeof (children as ReactElement).type !== "string" ? (
       children
+    ) : mono && typeof children === "string" ? (
+      <OneLine variant="value" tone="muted" style={!stacked && styles.fill}>
+        {children}
+      </OneLine>
     ) : (
       <Txt variant={mono ? "value" : "body"} tone="muted" style={!stacked && styles.fill}>
         {children}
@@ -1237,8 +1257,11 @@ export function Badge({ spec, label, raw, testID }: { spec: BadgeSpec; label: st
       ]}
     >
       <Text testID={testID ? `${testID}-glyph` : undefined} maxFontSizeMultiplier={MAX_FONT_SCALE} style={[styles.badgeText, styles.badgeGlyph, { color }]}>{spec.glyph}</Text>
+      {/* S4: a status label keeps to one line. No long-press here: the pill sits inside
+          pressable rows, and the accessibility label already carries the whole word. */}
       <Text
         maxFontSizeMultiplier={MAX_FONT_SCALE}
+        numberOfLines={1}
         style={[styles.badgeText, styles.shrink, { color }]}
       >
         {label}

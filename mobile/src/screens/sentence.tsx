@@ -30,6 +30,7 @@ import {
   Empty,
   FailedLine,
   GUTTER,
+  OneLine,
   Screen,
   ScreenError,
   Section,
@@ -159,7 +160,7 @@ function Span({ station }: { station: MeSentenceStation }) {
   if (!station.started_on) return null;
   return (
     <Row label={t("soul_app.sentence.span")}>
-      <Txt variant="value" tone="muted">{`${station.started_on} — ${station.ends_on ?? ""}`}</Txt>
+      <OneLine variant="value" tone="muted">{`${station.started_on} — ${station.ends_on ?? ""}`}</OneLine>
     </Row>
   );
 }
@@ -199,9 +200,9 @@ function StationDetail({ station, fresh, landing }: { station: MeSentenceStation
       <CivLine station={station} />
       <View style={styles.rows}>
         <Row label={t("soul_app.sentence.term")}>
-          <Txt variant="value" tone="muted">
+          <OneLine variant="value" tone="muted">
             {termText(station, t)}
-          </Txt>
+          </OneLine>
         </Row>
         <Span station={station} />
       </View>
@@ -430,7 +431,7 @@ function StationRow({ station, next, plan, landing }: { station: MeSentenceStati
 export function SentenceScreen({ landing }: { landing?: SentenceLanding }) {
   const theme = useTheme();
   const { t } = useI18n();
-  const { gutter } = useLayout();
+  const { gutter, twoLine } = useLayout();
   const remote = useRemote(soulApi.sentencePlan);
   const residence = useResidenceNames();
   const plan = remote.data;
@@ -466,20 +467,21 @@ export function SentenceScreen({ landing }: { landing?: SentenceLanding }) {
             </View>
           ) : null}
           <Banner plan={plan} />
-          <View style={[styles.summary, { paddingHorizontal: gutter, borderBottomColor: theme.hair }]}>
+          {/* S4: above 1.5× text, where the soul is now goes under the total, not beside it. */}
+          <View style={[styles.summary, twoLine && styles.summaryTwoLine, { paddingHorizontal: gutter, borderBottomColor: theme.hair }]}>
             <Txt testID="sentence-total" variant="label" tone="subtle">
               {t("soul_app.sentence.total_stations", { total: String(plan.stations.length) })}
             </Txt>
-            <View style={styles.fill} />
+            {twoLine ? null : <View style={styles.fill} />}
             {plan.state !== "eternal" && current ? (
-              <>
-                <Txt variant="value" tone="muted">
+              <View testID="sentence-summary-now" style={styles.summaryNow}>
+                <OneLine variant="value" tone="muted">
                   {t("soul_app.sentence.progress", { cur: String(current.n), total: String(plan.stations.length) })}
-                </Txt>
-                <Txt variant="caption" tone="subtle">
+                </OneLine>
+                <OneLine variant="caption" tone="subtle">
                   {t(STATUS_KEY[current.status])}
-                </Txt>
-              </>
+                </OneLine>
+              </View>
             ) : null}
           </View>
           <View style={{ padding: gutter }}>
@@ -525,9 +527,9 @@ export function SentenceBlocked() {
             {`${current.realm ? realmName(current.realm, locale) : t("common.value.unrecorded")} · ${underworld(current.civilization)}`}
           </Txt>
           {current.ends_on ? (
-            <Txt testID="sentence-blocked-until" variant="value" tone="subtle">
+            <OneLine testID="sentence-blocked-until" variant="value" tone="subtle">
               {t("soul_app.sentence.until", { date: current.ends_on })}
-            </Txt>
+            </OneLine>
           ) : null}
         </View>
       ) : null}
@@ -562,6 +564,8 @@ const styles = StyleSheet.create({
   strike: { textDecorationLine: "line-through" },
   banner: { paddingHorizontal: GUTTER, paddingVertical: 16, borderBottomWidth: 1, borderLeftWidth: 3, gap: 8 },
   summary: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 16, borderBottomWidth: 1 },
+  summaryTwoLine: { flexDirection: "column", alignItems: "flex-start", gap: 4 },
+  summaryNow: { flexDirection: "row", alignItems: "center", gap: 12, flexShrink: 1 },
   stationRow: { flexDirection: "row", gap: 16 },
   rail: { width: 13, alignItems: "center" },
   nodeNudge: { marginTop: 4 },

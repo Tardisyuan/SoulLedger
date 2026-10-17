@@ -142,6 +142,12 @@ describe("layoutFor (handoff 2f-四)", () => {
     expect(layoutFor(393, 1.69)).toMatchObject({ grow: true, stack: false });
     expect(layoutFor(393, 1.7)).toMatchObject({ grow: true, stack: true });
   });
+
+  it("S4: text ≥ 1.5× puts a row's time on its own line; 1.49× does not", () => {
+    expect(layoutFor(393, 1.49)).toMatchObject({ grow: true, twoLine: false, stack: false });
+    expect(layoutFor(393, 1.5)).toMatchObject({ grow: true, twoLine: true, stack: false });
+    expect(layoutFor(393, 1.7)).toMatchObject({ twoLine: true, stack: true });
+  });
 });
 
 describe("formatStamp", () => {

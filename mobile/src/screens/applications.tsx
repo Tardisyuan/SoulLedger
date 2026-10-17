@@ -34,6 +34,7 @@ import {
   Input,
   Interp,
   Notice,
+  OneLine,
   PageEmptyArt,
   Quote,
   RadioMark,
@@ -214,9 +215,9 @@ function ApplicationRow({ a, onOpen }: { a: MeRebirthApplication; onOpen: () => 
         <View style={styles.gap10}>
           <EnumValue namespace="reincarnation.forms" value={a.desired_form} tone="ink" variant="bodyLg" />
         </View>
-        <Txt variant="value" tone="subtle" style={styles.gap4}>
-          {formatStamp(a.created_at)}
-        </Txt>
+        <OneLine variant="value" tone="subtle" style={styles.gap4} onPress={onOpen}>
+          {formatStamp(a.created_at) ?? ""}
+        </OneLine>
       </View>
       <Icon name="chevron" size={15} color={theme.inkSubtle} />
     </Pressable>
@@ -325,9 +326,9 @@ function FormCard({ form, selected, onPick }: { form: DesiredRebirthForm; select
         {/* 320pt: the enum member moves under the name (handoff 2c). */}
         <View style={compact ? undefined : styles.formName}>
           <Txt variant="bodyLg">{t(`reincarnation.forms.${form}`)}</Txt>
-          <Txt variant="value" tone="subtle" style={styles.formCode}>
+          <OneLine variant="value" tone="subtle" style={styles.formCode} onPress={onPick}>
             {form}
-          </Txt>
+          </OneLine>
         </View>
         <Txt variant="caption" tone="subtle">
           {t(`soul_app.form_notes.${form}`)}
@@ -463,9 +464,9 @@ function Flow({ steps }: { steps: FlowStep[] }) {
                 {name}
               </Txt>
               {step.at ? (
-                <Txt variant="value" tone="subtle" style={styles.stepWhen}>
-                  {formatStamp(step.at)}
-                </Txt>
+                <OneLine variant="value" tone="subtle" style={styles.stepWhen}>
+                  {formatStamp(step.at) ?? ""}
+                </OneLine>
               ) : null}
               {sub ? (
                 <Txt variant="caption" tone="subtle" style={styles.stepWhen}>
@@ -637,9 +638,9 @@ export function ApplicationDetailScreen({ id, landed }: { id: string; landed?: b
           <Block style={{ backgroundColor: theme.s1 }} testID="first-rejection">
             <View style={styles.headingRow}>
               <SectionLabel>{t("soul_app.detail.first_rejection_reason")}</SectionLabel>
-              <Txt testID="first-rejection-at" variant="value" tone="subtle" style={styles.meta}>
+              <OneLine testID="first-rejection-at" variant="value" tone="subtle" style={styles.meta}>
                 {formatStamp(a.first_decided_at) ?? unrecorded}
-              </Txt>
+              </OneLine>
             </View>
             {a.first_rejection_reason ? (
               <Quote testID="first-rejection-reason" text={a.first_rejection_reason} tone="rejection" />
@@ -658,9 +659,9 @@ export function ApplicationDetailScreen({ id, landed }: { id: string; landed?: b
                 {t(a.status === "APPEAL_REJECTED" ? "soul_app.detail.appeal_rejection_reason" : "soul_app.detail.rejection_reason")}
               </SectionLabel>
               {a.decided_at ? (
-                <Txt variant="value" tone="subtle" style={styles.meta}>
-                  {formatStamp(a.decided_at)}
-                </Txt>
+                <OneLine variant="value" tone="subtle" style={styles.meta}>
+                  {formatStamp(a.decided_at) ?? ""}
+                </OneLine>
               ) : null}
             </View>
             <Quote text={reason} tone="rejection" />

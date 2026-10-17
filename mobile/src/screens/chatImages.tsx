@@ -25,7 +25,7 @@ import { bubbleStamp } from "../chatRules";
 import { Icon } from "../emblems";
 import { useI18n } from "../i18n";
 import { ON_PLAQUE } from "../theme";
-import { AlertTxt, Loader, Txt, useTheme } from "../ui";
+import { AlertTxt, Loader, OneLine, Txt, useTheme } from "../ui";
 
 /** 一次最多挑几张(规格;服务器按会话限制未发出的张数,同值)。 */
 export const CHAT_IMAGE_MAX = 4;
@@ -123,9 +123,9 @@ export function ChatImageMessage({ image, mine, ts, now, onOpen, receipt }: { im
       <View testID="chat-image-message" style={mine ? styles.endAligned : undefined}>
         <Picture image={image} width={width} onPress={onOpen} testID="chat-image" />
         <View style={[styles.meta, mine && styles.metaMine]}>
-          <Txt variant="value" tone="subtle" style={styles.metaTime}>
+          <OneLine variant="value" tone="subtle" style={styles.metaTime}>
             {bubbleStamp(ts, now)}
-          </Txt>
+          </OneLine>
           {receipt ? (
             <Txt variant="label" tone="subtle" style={styles.metaText}>
               {receipt}

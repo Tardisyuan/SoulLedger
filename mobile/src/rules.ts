@@ -267,6 +267,8 @@ export function termServed(startedOn: string | null | undefined, endsOn: string 
 
 export const COMPACT_WIDTH = 340;
 export const GROW_FONT_SCALE = 1.3;
+/** 第二十八批 S4: above 1.5× a list row's "text left, time right" becomes two lines. */
+export const TWO_LINE_FONT_SCALE = 1.5;
 export const STACK_FONT_SCALE = 1.7;
 
 export interface Layout {
@@ -274,15 +276,23 @@ export interface Layout {
   compact: boolean;
   /** ≥ 1.3× text: badges wrap, heights are minimums. */
   grow: boolean;
+  /** ≥ 1.5× text: "text left, time / value right" rows put the time on its own line, below the text. */
+  twoLine: boolean;
   /** ≥ 1.7× text: tab bar, scores, password reveal and languages go vertical; the flow drops its rail. */
   stack: boolean;
   gutter: number;
 }
 
-/** Handoff 2f-四: three thresholds, one decision. */
+/** Handoff 2f-四 (and S4's 1.5×): the thresholds, one decision. */
 export function layoutFor(width: number, fontScale: number): Layout {
   const compact = width <= COMPACT_WIDTH;
-  return { compact, grow: fontScale >= GROW_FONT_SCALE, stack: fontScale >= STACK_FONT_SCALE, gutter: compact ? 16 : 20 };
+  return {
+    compact,
+    grow: fontScale >= GROW_FONT_SCALE,
+    twoLine: fontScale >= TWO_LINE_FONT_SCALE,
+    stack: fontScale >= STACK_FONT_SCALE,
+    gutter: compact ? 16 : 20,
+  };
 }
 
 // ── dates ──────────────────────────────────────────────────────────────

@@ -46,7 +46,7 @@ import { useI18n } from "../i18n";
 import { formatStamp, TAG_GLYPH } from "../rules";
 import { radius, type CivKey } from "../theme";
 import { useToast } from "../feedback";
-import { Button, Interp, Loader, Notice, Skeleton, SmallButton, Txt, shade, useReducedMotion, useTheme } from "../ui";
+import { Button, Interp, Loader, Notice, OneLine, Skeleton, SmallButton, Txt, shade, useReducedMotion, useTheme } from "../ui";
 import type { AppStackParams } from "./applications";
 import { useNow } from "./auth";
 import { CHAT_IMAGE_MAX, ChatImageMessage, ChatImageViewer, ImageButton, PendingImage } from "./chatImages";
@@ -590,9 +590,9 @@ function Bubble({ m, mine, read, landed, now }: { m: ChatMessage; mine?: boolean
         ) : null}
         <Body text={m.body} />
         <View style={[styles.meta, mine && styles.metaMine]}>
-          <Txt variant="value" tone="subtle" style={styles.metaTime}>
+          <OneLine variant="value" tone="subtle" style={styles.metaTime}>
             {bubbleStamp(m.ts, now)}
-          </Txt>
+          </OneLine>
           {mine ? (
             <Txt testID={read ? "receipt-read" : "receipt-sent"} variant="label" tone="subtle" style={styles.metaText}>
               {tr(read ? "soul_app.chat.receipt.read" : "soul_app.chat.receipt.sent")}
@@ -664,9 +664,9 @@ function OfficerBubble({ m, hall, sealed, now }: { m: ChatMessage; hall: string;
           <Txt style={[styles.bylineText, { color: sealed ? t.inkSubtle : t.ink }]}>{byline}</Txt>
         </View>
         <Txt style={[styles.officerBody, { fontFamily: quoteFamily(m.body), color: sealed ? t.inkMuted : t.ink }]}>{m.body}</Txt>
-        <Txt variant="value" tone="subtle" style={[styles.metaTime, styles.officerTime]}>
+        <OneLine variant="value" tone="subtle" style={[styles.metaTime, styles.officerTime]}>
           {bubbleStamp(m.ts, now)}
-        </Txt>
+        </OneLine>
       </View>
     </View>
   );
