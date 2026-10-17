@@ -201,6 +201,7 @@ EDGES = {
     'workflow.WorkflowTemplate.tenant->tenants.Tenant': ('tenantcol', 'templates are per hall'),
     'judgment.CaseAttachment.uploader->authentication.User': ('user-other', 'global identity: who uploaded the file'),
     'judgment.JudgmentComment.author->authentication.User': ('user-other', 'global identity: who wrote the comment'),
+    'dispatch.CrossTenantJudgment.ended_by->authentication.User': ('user-other', 'global identity: who ended or cancelled the joint bench'),
     'audit.AuditLog.user->authentication.User': ('user-other', 'global identity: the owning account'),
     'authentication.LoginLog.user->authentication.User': ('user-other', 'global identity: the owning account'),
     'authentication.MfaRememberedDevice.user->authentication.User': ('user-other', 'global identity: the owning account'),

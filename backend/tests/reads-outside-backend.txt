@@ -37,6 +37,7 @@ tests/test_frontend_page_size.py                                 config frontend
 tests/test_frontend_permission_strings_are_real.py               frontend packages
 tests/test_frontend_role_labels.py                               frontend packages
 tests/test_frontend_statute_enums.py                             packages
+tests/test_menu_seed_first_sixteen.py                            *
 tests/test_no_second_copy_of_the_civilization_map.py             *
 tests/test_officer_assist_corpus.py                              frontend
 tests/test_officer_letter_push.py                                config
