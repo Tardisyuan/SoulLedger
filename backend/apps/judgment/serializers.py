@@ -363,9 +363,13 @@ class JudgmentDetailSerializer(JudgmentSerializer):
     the list must not do once per row."""
     evidence_admissions = EvidenceAdmissionSerializer(many=True, read_only=True)
     admitted_balance = serializers.SerializerMethodField()
+    # 挂在这份审判上的跨域审判(`CrossTenantJudgment.judgment` 一对一的反向),没有就是 null。
+    # 审判页据此把「开联审」换成去那场联审的链接 —— 此前它照样显示,点了才被服务端拒(审计 1017 #10)。
+    # 反向访问在没有时抛的 RelatedObjectDoesNotExist 也是 AttributeError,`allow_null` 让它读作 null。
+    cross_judgment_id = serializers.UUIDField(source="cross_judgment.pk", read_only=True, allow_null=True)
 
     class Meta(JudgmentSerializer.Meta):
-        fields = [*JudgmentSerializer.Meta.fields, "evidence_admissions", "admitted_balance"]
+        fields = [*JudgmentSerializer.Meta.fields, "evidence_admissions", "admitted_balance", "cross_judgment_id"]
 
     @extend_schema_field(AdmittedBalanceSerializer)
     def get_admitted_balance(self, obj):

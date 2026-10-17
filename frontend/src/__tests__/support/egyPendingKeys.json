@@ -1,4 +1,6 @@
 [
+  "crossJudgments.original_judgment",
+  "crossJudgments.original_soul",
   "notifications.open_assistant",
   "notifications.open_cross_judgment",
   "notifications.open_death_sync",
@@ -9,6 +11,7 @@
   "notifications.open_sentence_requests",
   "notifications.open_soul",
   "notifications.open_workflow",
+  "sentence_plan.cross.view",
   "users.organization",
   "users.organization_column",
   "users.organization_none",

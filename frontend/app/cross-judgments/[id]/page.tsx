@@ -1,7 +1,9 @@
 "use client";
 import { useParams, useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { crossTenantJudgmentsApi } from "@soulledger/core/api";
+import Link from "next/link";
+import { crossTenantJudgmentsApi, judgmentApi } from "@soulledger/core/api";
+import { judgmentKeys } from "@soulledger/core/query_keys";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { usePlaque } from "@/src/components/plaque/Plaque";
@@ -133,6 +135,18 @@ export default function CrossJudgmentDetailPage() {
     user.tenant.code === judgment.initiating_tenant_code &&
     judgment.participants.length > 0;
 
+  /* 原审判与灵魂(审计 1017 #10):联审挂着一份原属审判(`judgment`),它在发起方租户里 ——
+     外地入席的人读不到它,所以只给发起方(与 ADMIN)取、只给他们画。灵魂的 id 与名字取自那份审判,
+     与审判详情页同一把缓存键。 */
+  const isHome =
+    !!judgment && (user?.role === "ADMIN" || (!!user?.tenant?.code && user.tenant.code === judgment.initiating_tenant_code));
+  const originId = isHome ? judgment?.judgment ?? null : null;
+  const { data: origin } = useQuery({
+    queryKey: judgmentKeys.detail(originId ?? ""),
+    queryFn: () => judgmentApi.get(originId!).then((res) => res.data),
+    enabled: !!originId,
+  });
+
   /* The back control is a <Button variant="ghost">, not a bare `←`: it calls
      router.back() rather than navigating to a known route, so it is a control
      and not a link, and PageShell's own note asks for one of the two. */
@@ -168,6 +182,22 @@ export default function CrossJudgmentDetailPage() {
             {/* 展示名,不是 `initiating_tenant`:那是租户主键(IDENTIFIER_POLICY 第 4 条),
                 `initiating_tenant_display_name` 是 2026-09-24 为这一格加的。 */}
             {t("crossJudgments.initiated_by")}: {judgment?.initiating_tenant_display_name || judgment?.initiating_tenant_code}
+            {originId && (
+              <span data-testid="cross-origin">
+                {" · "}
+                <Link href={`/judgment/${originId}`} className="underline underline-offset-2">
+                  {t("crossJudgments.original_judgment")}
+                </Link>
+                {origin?.soul && (
+                  <>
+                    {" · "}
+                    <Link href={`/souls/${origin.soul}`} className="underline underline-offset-2">
+                      {origin.soul_name || t("crossJudgments.original_soul")}
+                    </Link>
+                  </>
+                )}
+              </span>
+            )}
           </>
         )
       }

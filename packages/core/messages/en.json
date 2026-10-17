@@ -2578,7 +2578,9 @@
       "FAIL": "Rejected"
     },
     "case_title": "Title",
-    "status_label": "Status"
+    "status_label": "Status",
+    "original_judgment": "Original judgment",
+    "original_soul": "Soul"
   },
   "users": {
     "title": "User Management",
@@ -5480,7 +5482,8 @@
       "seat_actor_none": "Not specified yet",
       "seat_actor_empty": "This civilization has no deity who can take a seat",
       "seat_actor_hint_judging": "A co-judge or chair must be a judge",
-      "seat_actor_hint_advisor": "Any serving deity may sit as an advisor"
+      "seat_actor_hint_advisor": "Any serving deity may sit as an advisor",
+      "view": "View the joint judgment"
     },
     "file": {
       "open": "File a request",
