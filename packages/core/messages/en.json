@@ -5210,7 +5210,7 @@
     },
     "soul_account_provisioning_failed": {
       "title": "Soul account could not be opened",
-      "body": "Soul {{soul}} is registered as dead, but its soul account was not opened. Run backfill_soul_accounts to open it."
+      "body": "Soul {{soul}} is registered as dead, but its soul account was not opened. Run {{command}} to open it."
     },
     "rebirth_status_under_review": {
       "title": "Rebirth application update",

@@ -620,7 +620,7 @@ def _tell_officers_provisioning_failed(soul):
         from apps.events.services import EventService
         from apps.notifications import messages
 
-        params = {"kind": "soul_account_provisioning_failed", "soul": soul_name}
+        params = {"kind": "soul_account_provisioning_failed", "soul": soul_name, "command": "backfill_soul_accounts"}
         title, body = messages.render(messages.DEFAULT_LOCALE, params["kind"], params)
         for user in User.objects.filter(pk__in=recipient_ids, is_active=True).select_related("tenant").order_by("pk"):
             EventService.notify_user(

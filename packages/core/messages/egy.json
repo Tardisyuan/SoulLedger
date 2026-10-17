@@ -2745,7 +2745,8 @@
     "organization": "Kher Sab",
     "organization_column": "Kher Sab · Ren Iri",
     "organization_none": "Nen Kher Sab",
-    "position": "Ren Iri"
+    "position": "Ren Iri",
+    "tenant_pick": "Setep Per Hemes"
   },
   "settings": {
     "title": "Smen",
@@ -5191,6 +5192,54 @@
     "workflow_timeout_reminder": {
       "title": "Wat Hesy: Unut Khetem",
       "body": "{{soul}} · Wat Hesy «{{workflow}}» · «{{node}}»: Unut {{hours}}, Nen Iri. Iri Em Khet Seth."
+    },
+    "assistant_cap_closed": {
+      "title": "Hehy Medu Khetem Seth: Hesb Abed Er Pehwy",
+      "body": "Hesb Tepy Abed Pen: {{spent}} · Er Pehwy {{cap}}. Wen-Khetem Neb Khetem Seth. Abed Mawy: Hru 1, Unut 8 — Wen Djes-Ef. Er: Khemen Er Pehwy Em Smen Hehy Medu, Wen Em Djeret."
+    },
+    "assistant_cap_warning": {
+      "title": "Hehy Medu: Hesb Abed Pen 80% Er Pehwy",
+      "body": "Hesb Tepy Abed Pen: {{spent}} · Er Pehwy {{cap}}. Er Pehwy: Khetem Djes-Ef. Abed Mawy: Hru 1, Unut 8."
+    },
+    "assistant_reopened": {
+      "title": "Hehy Medu Wen Wehem Seth: Abed Mawy",
+      "body": "Abed Tepy: Hesb Er Pehwy, Hehy Medu Khetem Djes-Ef. Abed Pen: Wen Wehem Seth (Abed Mawy: Hru 1, Unut 8)."
+    },
+    "cooldown_decided_approved": {
+      "title": "Dbh Khebi Ahet Qebeh · Wedja Mawy",
+      "body": "Dbh Khebi Ahet Qebeh-Ek: Hesy Seth."
+    },
+    "cooldown_decided_rejected": {
+      "title": "Dbh Khebi Ahet Qebeh · Wedja Mawy",
+      "body": "Dbh Khebi Ahet Qebeh-Ek: Khesef Seth."
+    },
+    "cross_judgment_cancelled": {
+      "title": "Wedja Ta Ky Sehen Seth",
+      "body": "Wedja Ta Ky «{{title}}» Sehen Seth. Khet: {{reason}}"
+    },
+    "rebirth_status_under_review": {
+      "title": "Dbh Wehem Mesut · Kheperu Mawy",
+      "body": "Dbh Wehem Mesut-Ek: Em Wedja."
+    },
+    "rebirth_status_approved": {
+      "title": "Dbh Wehem Mesut · Kheperu Mawy",
+      "body": "Dbh Wehem Mesut-Ek: Hesy Seth."
+    },
+    "rebirth_status_rejected": {
+      "title": "Dbh Wehem Mesut · Kheperu Mawy",
+      "body": "Dbh Wehem Mesut-Ek: Khesef Seth."
+    },
+    "rebirth_status_appealing": {
+      "title": "Dbh Wehem Mesut · Kheperu Mawy",
+      "body": "Dbh Wehem Mesut-Ek: Em Nehet."
+    },
+    "rebirth_status_appeal_rejected": {
+      "title": "Dbh Wehem Mesut · Kheperu Mawy",
+      "body": "Dbh Wehem Mesut-Ek: Nehet Khesef Seth."
+    },
+    "soul_account_provisioning_failed": {
+      "title": "Aq Ba Nen Iri",
+      "body": "{{soul}}: Sesh Mut Seth; Aq Ba Nen Iri. Iri {{command}}: Aq Ba Iri."
     }
   },
   "social_moderation": {
