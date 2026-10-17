@@ -8845,6 +8845,11 @@ paths:
           type: string
           format: uuid
         description: 上一页最后一条会话的 id;给了就只列比它更早的。
+      - in: query
+        name: limit
+        schema:
+          type: integer
+        description: 一次最多给几条(1 到一页的大小);重开抽屉只要最新的一条时给 1。
       tags:
       - v1
       security:
