@@ -316,6 +316,12 @@ function LinkBridge({ signedIn, ready }: { signedIn: boolean; ready: number }) {
       else if (link.page === "sentence") navigationRef.navigate("Sentence");
       else if (link.page === "export") navigationRef.navigate("DataExport");
       else if (link.page === "help") navigationRef.navigate("Help");
+      else if (link.page === "settings") navigationRef.navigate("Settings");
+      else if (link.page === "notifications") navigationRef.navigate("NotificationHistory");
+      else if (link.page === "applications") navigationRef.navigate("Tabs", { screen: "Applications" });
+      else if (link.page === "post" && link.id) navigationRef.navigate("CirclePost", { id: link.id });
+      else if (link.page === "conversation" && link.id && !lettersOff) navigationRef.navigate("Conversation", { id: link.id });
+      // `cooldown` goes through `landOn`, which passes `landed`: the shortening block is washed once.
       else landOn(navigationRef.navigate, { screen: link.page === "cooldown" ? "Applications" : "Life" });
     });
   }, [signedIn, ready, held, open, setDraft, lettersOff]);

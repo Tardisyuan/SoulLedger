@@ -14,7 +14,7 @@
  *
  * Profiles, my page, search and report are in ./circlePeople.
  */
-import { soulErrorCode, soulErrorMessage } from "@soulledger/core/api/soul";
+import { soulErrorCode, soulErrorMessage, soulErrorStatus } from "@soulledger/core/api/soul";
 import {
   soulSocialApi,
   type SoulComment,
@@ -41,6 +41,7 @@ import { formatStamp, TAG_GLYPH } from "../rules";
 import { radius } from "../theme";
 import {
   Button,
+  Empty,
   Interp,
   Notice,
   PageEmptyArt,
@@ -1023,9 +1024,14 @@ export function PostScreen({ id }: { id: string }) {
     return (
       <Screen scroll={false} edges={["left", "right"]}>
         <View style={[styles.pad, { paddingHorizontal: gutter }]}>
-          <Notice tone="neg" onRetry={() => void post.reload()} testID="post-error">
-            {tr(soulErrorMessage(post.error).key, soulErrorMessage(post.error).params)}
-          </Notice>
+          {/* Deleted by its author or taken down (e.g. opened from a notification): a retry would never succeed. */}
+          {soulErrorStatus(post.error) === 404 ? (
+            <Empty testID="post-gone" text={tr("soul_app.circle.post.gone")} />
+          ) : (
+            <Notice tone="neg" onRetry={() => void post.reload()} testID="post-error">
+              {tr(soulErrorMessage(post.error).key, soulErrorMessage(post.error).params)}
+            </Notice>
+          )}
         </View>
       </Screen>
     );

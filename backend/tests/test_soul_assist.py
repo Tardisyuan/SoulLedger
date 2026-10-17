@@ -223,6 +223,55 @@ def test_same_screen_within_the_window_continues_otherwise_a_new_conversation(cn
     assert _ask(client).data["conversation_id"] != first
 
 
+def test_continuing_reads_the_context_of_the_page_the_conversation_was_asked_on(cn_tenant):
+    """与官员端(第三十九批 O-13)同一条:接着问时页面按会话原来的页面算,不按 App 现在所在的页。
+    变异:删掉 `service.answer` 里按会话取 screen 的那段 → 第二问的事实头写 sentence,红。"""
+    _enable(cn_tenant)
+    _, client = ready_soul(cn_tenant)
+    cid = _ask(client, screen="applications").data["conversation_id"]
+    response = _ask(client, "那这个呢?", screen="sentence", conversation_id=cid)
+    assert response.status_code == 200, response.data
+    assert str(response.data["conversation_id"]) == str(cid)
+    facts = FakeProvider.calls[-1]["facts"]
+    assert "asked_from_screen=applications" in facts and "asked_from_screen=sentence" not in facts
+    assert AssistConversation.objects.get(pk=cid).screen == "applications"
+
+
+def test_new_is_never_continued_from_the_thirty_minute_window(cn_tenant):
+    """灵魂 App 开新会话时带 `new`:不悄悄接到同一页面 30 分钟内的上次会话上(2026-10-17 用户决定)。
+    变异:`AssistAskSerializer` 去掉 `new`,或 `MeAssistView` 不把它传下去 → 第二问续上第一段,红。"""
+    _enable(cn_tenant)
+    account, client = ready_soul(cn_tenant)
+    first = str(_ask(client).data["conversation_id"])
+    assert str(_ask(client).data["conversation_id"]) == first  # 对照:不带 `new` 时窗口照旧续
+    fresh = str(_ask(client, "新问题", new=True).data["conversation_id"])
+    assert fresh != first
+    assert FakeProvider.calls[-1]["history"][:-1] == []
+    assert AssistConversation.objects.filter(account=account).count() == 2
+    assert str(_ask(client, conversation_id=first, new=True).data["conversation_id"]) == first
+
+
+def test_history_comes_fifty_at_a_time_newest_first_with_a_before_cursor(cn_tenant, monkeypatch):
+    """审计 2026-10-17 #3:历史不再全量返回。变异:去掉切片 → 第一页 3 条,红;
+    锚点条件写成 `__lte` → 第二页重复锚点那条,红。"""
+    from apps.soul_assist import views
+
+    monkeypatch.setattr(views, "SOUL_HISTORY_PAGE", 2)
+    _enable(cn_tenant)
+    account, client = ready_soul(cn_tenant)
+    ids = [str(_ask(client, f"问{n}", new=True).data["conversation_id"]) for n in range(3)]
+    # 同一时刻的两条:靠 id 分先后,不重不漏。
+    same = timezone.now() - timedelta(hours=1)
+    AssistConversation.objects.filter(pk__in=ids[:2]).update(last_active_at=same)
+    newest_first = [ids[2], *sorted(ids[:2], reverse=True)]
+    page = client.get(LIST).data
+    assert [str(c["id"]) for c in page] == newest_first[:2]
+    rest = client.get(LIST, {"before": page[-1]["id"]}).data
+    assert [str(c["id"]) for c in rest] == newest_first[2:]
+    assert client.get(LIST, {"before": "nope"}).status_code == 400
+    assert client.get(LIST, {"before": "00000000-0000-0000-0000-000000000000"}).status_code == 404
+
+
 def test_another_accounts_conversation_is_404_everywhere(cn_tenant):
     _enable(cn_tenant)
     _, a = ready_soul(cn_tenant, name="甲")

@@ -25,6 +25,7 @@ import {
   soulAssistApi,
   soulAssistErrorCode,
   soulAssistRetryAt,
+  SOUL_ASSIST_HISTORY_PAGE,
   type AssistConversation,
   type AssistMessage,
   type AssistScreen,
@@ -37,7 +38,13 @@ import { AccessibilityInfo, Pressable, StyleSheet, Text, View } from "react-nati
 import { useI18n } from "./i18n";
 import { useTheme } from "./ui";
 
-/** Decision A4: the same page within 30 minutes continues the last conversation. */
+/**
+ * Decision A4: the same page within 30 minutes continues the last conversation — the one this
+ * session already holds. The drawer no longer fetches history to find it (audit 2026-10-17 #3:
+ * every open pulled every conversation); after a restart the soul starts fresh and finds the old
+ * one in history. A question with no conversation id goes out with `new: true`, so the server
+ * never continues one the drawer is not showing (2026-10-17 user decision, as the officer App).
+ */
 export const ASSIST_CONTINUE_MS = 30 * 60 * 1000;
 
 /**
@@ -96,7 +103,10 @@ export interface Assist {
   acked: boolean;
   ack: () => void;
   history: AssistConversation[] | null;
+  /** The last history page was full: 「更多」 may find older ones. */
+  historyMore: boolean;
   loadHistory: () => void;
+  loadMoreHistory: () => void;
   openConversation: (c: AssistConversation) => void;
   startNew: () => void;
   remove: (id: string) => Promise<void>;
@@ -128,6 +138,7 @@ export function AssistProvider({
   const [failure, setFailure] = useState<AssistFailure | null>(null);
   const [draft, setDraft] = useState("");
   const [history, setHistory] = useState<AssistConversation[] | null>(null);
+  const [historyMore, setHistoryMore] = useState(false);
   const [retryable, setRetryable] = useState<number | null>(null);
   const ackKey = profile ? assistAckKey(profile) : null;
   const [ackedFor, setAckedFor] = useState<string | null>(null);
@@ -147,6 +158,7 @@ export function AssistProvider({
     setFailure(null);
     setDraft("");
     setHistory(null);
+    setHistoryMore(false);
     setRetryable(null);
   }
   useEffect(
@@ -157,10 +169,11 @@ export function AssistProvider({
     [ackKey]
   );
 
-  const fetchHistory = useCallback(async () => {
-    const list = await soulAssistApi.conversations();
-    setHistory(list);
-    return list;
+  /** `before`: the last id shown — the next page is appended; without it the list starts over. */
+  const fetchHistory = useCallback(async (before?: string) => {
+    const page = await soulAssistApi.conversations(before);
+    setHistory((h) => (before ? [...(h ?? []), ...page] : page));
+    setHistoryMore(page.length >= SOUL_ASSIST_HISTORY_PAGE);
   }, []);
 
   const open = useCallback(
@@ -169,17 +182,14 @@ export function AssistProvider({
       // An answer on its way, or the not-open notice: keep what the drawer was showing.
       if (waiting.current || failure?.kind === "not_configured") return;
       setFailure(null);
-      setThread({ id: null, screen, messages: null });
-      // A 30-minute-fresh conversation from this page is continued (A4) — including
-      // one whose answer arrived after a cancel (1e: reopening shows it).
-      fetchHistory()
-        .then((list) => {
-          const recent = list.find((c) => c.screen === screen && Date.now() - Date.parse(c.last_active_at) < ASSIST_CONTINUE_MS);
-          setThread({ id: recent?.id ?? null, screen, messages: recent?.messages ?? [] });
-        })
-        .catch(() => setThread({ id: null, screen, messages: [] }));
+      // A4: this page's conversation, still within 30 minutes of its last message, is continued.
+      setThread((th) => {
+        const last = th.messages?.[th.messages.length - 1]?.created_at;
+        const fresh = th.id !== null && th.screen === screen && !!last && Date.now() - Date.parse(last) < ASSIST_CONTINUE_MS;
+        return fresh ? th : { id: null, screen, messages: [] };
+      });
     },
-    [failure, fetchHistory]
+    [failure]
   );
 
   const close = useCallback(() => {
@@ -241,7 +251,7 @@ export function AssistProvider({
         }
       };
       soulAssistApi
-        .stream(streamFetch, { question, screen, conversation_id: id ?? undefined }, controller, onEvent)
+        .stream(streamFetch, id ? { question, screen, conversation_id: id } : { question, screen, new: true }, controller, onEvent)
         .then(finish, (error: unknown) => {
           if (waiting.current !== controller) return;
           const code = soulAssistErrorCode(error);
@@ -304,7 +314,13 @@ export function AssistProvider({
         setAckedFor(ackKey);
       },
       history,
+      historyMore,
       loadHistory: () => void fetchHistory().catch(() => setHistory((h) => h ?? [])),
+      // A failed 「更多」 leaves the list as it was, the button still there to press again.
+      loadMoreHistory: () => {
+        const last = history?.[history.length - 1];
+        if (last) void fetchHistory(last.id).catch(() => undefined);
+      },
       openConversation: (c) => {
         setFailure(null);
         setRetryable(null);

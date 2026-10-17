@@ -4,6 +4,7 @@ import {
   soulApi,
   soulCodeMessage,
   soulErrorMessage,
+  soulErrorStatus,
   type DesiredRebirthForm,
   type MeRebirthApplication,
   type MeRebirthApplicationList,
@@ -25,6 +26,7 @@ import {
   Button,
   DataRow,
   DataRows,
+  Empty,
   EnumBadge,
   EnumValue,
   FadeIn,
@@ -514,7 +516,12 @@ export function ApplicationDetailScreen({ id, landed }: { id: string; landed?: b
   if (app.error && !app.data) {
     return (
       <Screen scroll={false}>
-        <ScreenError error={soulErrorMessage(app.error)} onRetry={app.reload} />
+        {/* Gone (withdrawn, or not this soul's): retrying would never succeed. */}
+        {soulErrorStatus(app.error) === 404 ? (
+          <Empty testID="application-gone" text={t("soul_app.detail.gone")} />
+        ) : (
+          <ScreenError error={soulErrorMessage(app.error)} onRetry={app.reload} />
+        )}
       </Screen>
     );
   }

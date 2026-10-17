@@ -13,7 +13,7 @@
  */
 import { soulErrorCode } from "@soulledger/core/api/soul";
 import { soulChatApi, soulChatErrorMessage, type SoulChatLookupResult, type SoulConversation } from "@soulledger/core/api/soul-chat";
-import { soulSocialApi, type SoulCard } from "@soulledger/core/api/soul-social";
+import { soulSocialApi, type PaginatedSoulCards, type SoulCard } from "@soulledger/core/api/soul-social";
 import { useNavigation, type NavigationProp } from "@react-navigation/native";
 import { useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import { FlatList, Platform, Pressable, StyleSheet, TextInput, View } from "react-native";
@@ -351,6 +351,17 @@ export function LettersScreen() {
 
 const conversationKey = (c: SoulConversation) => c.id;
 
+/** Follow the `next` links to the end. ponytail: 50 pages (1,000 souls) cap, a guard against a server that never says "last". */
+async function everyPage(load: (page: number) => Promise<PaginatedSoulCards>): Promise<SoulCard[]> {
+  const all: SoulCard[] = [];
+  for (let page = 1; page <= 50; page++) {
+    const r = await load(page);
+    all.push(...r.results);
+    if (!r.next) break;
+  }
+  return all;
+}
+
 // ── find ───────────────────────────────────────────────────────────────
 
 type Lookup = { state: "idle" } | { state: "busy" } | { state: "found"; card: SoulChatLookupResult } | { state: "not_found" } | { state: "error"; key: string; params?: Record<string, string> };
@@ -362,26 +373,30 @@ export function FindSoulScreen() {
   const navigation = useNavigation<NavigationProp<AppStackParams>>();
   const [code, setCode] = useState("");
   const [lookup, setLookup] = useState<Lookup>({ state: "idle" });
-  const [circle, setCircle] = useState<{ card: SoulCard; mutual: boolean }[] | null>(null);
+  // "error": the circle failed to load — said so, with a retry, rather than shown as an empty circle.
+  const [circle, setCircle] = useState<{ card: SoulCard; mutual: boolean }[] | null | "error">(null);
+  const [circleTry, setCircleTry] = useState(0);
   const [opening, setOpening] = useState<number | null>(null);
 
   useEffect(() => {
     let alive = true;
-    Promise.all([soulSocialApi.following(), soulSocialApi.followers()])
+    // Every page of both lists: a soul followed on page 2 is still in the circle, and still mutual.
+    Promise.all([everyPage(soulSocialApi.following), everyPage(soulSocialApi.followers)])
       .then(([following, followers]) => {
         if (!alive) return;
-        const back = new Set(followers.results.map((c) => c.user_id));
+        const back = new Set(followers.map((c) => c.user_id));
+        const out = new Set(following.map((c) => c.user_id));
         const seen = new Set<number>();
-        const rows = [...following.results, ...followers.results]
+        const rows = [...following, ...followers]
           .filter((c) => c.is_active && !seen.has(c.user_id) && seen.add(c.user_id))
-          .map((card) => ({ card, mutual: back.has(card.user_id) && following.results.some((f) => f.user_id === card.user_id) }));
+          .map((card) => ({ card, mutual: back.has(card.user_id) && out.has(card.user_id) }));
         setCircle(rows);
       })
-      .catch(() => alive && setCircle([]));
+      .catch(() => alive && setCircle("error"));
     return () => {
       alive = false;
     };
-  }, []);
+  }, [circleTry]);
 
   // `typed`: the submit event's own text — the `code` in this closure can be a keystroke behind.
   const find = async (typed = code) => {
@@ -469,6 +484,13 @@ export function FindSoulScreen() {
         </Txt>
         {circle === null ? (
           <Skeleton lines={2} />
+        ) : circle === "error" ? (
+          <Notice tone="neutral" onRetry={() => {
+              setCircle(null);
+              setCircleTry((n) => n + 1);
+            }} testID="circle-error">
+            {tr("soul_app.chat.find.circle_error")}
+          </Notice>
         ) : (
           <View style={[styles.circle, { backgroundColor: t.hair }]}>
             {circle.map(({ card, mutual }) => (

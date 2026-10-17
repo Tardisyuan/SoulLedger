@@ -30,7 +30,7 @@ import { Icon } from "./emblems";
 import { quoteFamily } from "./fonts";
 import { useI18n } from "./i18n";
 import { useCurrentHall } from "./screens/letters";
-import { Button, Skeleton, Txt, useLayout, useReducedMotion, useReducedMotionDurations, useTheme } from "./ui";
+import { Button, Skeleton, SmallButton, Txt, useLayout, useReducedMotion, useReducedMotionDurations, useTheme } from "./ui";
 
 /** Canvas 1a 一: the page's header stays visible above the sheet. */
 const PAGE_PEEK = 56;
@@ -722,7 +722,9 @@ function History({ assist, onOpened }: { assist: Assist; onOpened: () => void })
             </Pressable>
           </View>
         ))}
-        {list && list.length > 0 ? (
+        {assist.historyMore ? (
+          <SmallButton testID="assist-history-more" title={tr("soul_app.assist.history_more")} onPress={assist.loadMoreHistory} />
+        ) : list && list.length > 0 ? (
           <Txt variant="label" tone="subtle">
             {tr("soul_app.assist.history_end")}
           </Txt>

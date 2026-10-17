@@ -490,6 +490,20 @@ describe("the conversation's eight states", () => {
   });
 });
 
+describe("a conversation not in the list yet (audit 2026-10-17 #10)", () => {
+  it("asks for the list once, with a skeleton, and only then says it is closed", async () => {
+    let answer!: () => void;
+    const reload = jest.fn(() => new Promise<void>((resolve) => (answer = resolve)));
+    wrap(chatState({ conversations: [], reload }), <ConversationScreen id="c-new" landed />);
+    expect(screen.queryByTestId("conversation-gone")).toBeNull();
+    await waitFor(() => expect(reload).toHaveBeenCalledTimes(1));
+    expect(screen.queryByTestId("conversation-gone")).toBeNull();
+    await act(async () => answer());
+    expect(screen.getByTestId("conversation-gone")).toBeTruthy();
+    expect(reload).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe("the thread is an inverted FlatList: newest at the bottom, older pages read on reaching the top", () => {
   const MINUTE = 60_000;
   /** n letters a minute apart, all on one day, the newest at NOW; alternating sender. */
@@ -729,6 +743,40 @@ describe("find someone by code", () => {
     expectTag("circle-tag-1", "互关", "⇄");
     expect(screen.getByTestId("circle-tag-2").props.accessibilityLabel).toBe("已关注");
     expect(screen.queryByTestId("circle-tag-2-glyph", { includeHiddenElements: true })).toBeNull();
+  });
+
+  it("the circle reads every page of both lists; mutual is judged across pages (audit 2026-10-17 #2)", async () => {
+    const card = (user_id: number, display_name: string) => ({ user_id, display_name, is_active: true });
+    const calls = stubApi({
+      "/me/social/following/": [
+        { status: 200, data: { results: [card(1, "周芸")], next: "?page=2" } },
+        { status: 200, data: { results: [card(2, "吴长明")], next: null } },
+      ],
+      "/me/social/followers/": [
+        { status: 200, data: { results: [card(3, "许南")], next: "?page=2" } },
+        { status: 200, data: { results: [card(2, "吴长明")], next: null } },
+      ],
+    });
+    wrap(chatState(), <FindSoulScreen />);
+    await screen.findByTestId("circle-tag-3");
+    expect(calls.filter((c) => c.url === "/me/social/following/").map((c) => c.params?.page)).toEqual([1, 2]);
+    expect(calls.filter((c) => c.url === "/me/social/followers/").map((c) => c.params?.page)).toEqual([1, 2]);
+    // 吴长明: followed on page 2, following back on page 2 — mutual. 周芸 only one way.
+    expectTag("circle-tag-2", "互关", "⇄");
+    expect(screen.getByTestId("circle-tag-1").props.accessibilityLabel).toBe("已关注");
+  });
+
+  it("a circle that failed to load says so with a retry, not as an empty circle", async () => {
+    stubApi({
+      "/me/social/following/": ["offline", { status: 200, data: { results: [{ user_id: 1, display_name: "周芸", is_active: true }] } }],
+      "/me/social/followers/": { status: 200, data: { results: [] } },
+    });
+    wrap(chatState(), <FindSoulScreen />);
+    expect(await screen.findByTestId("circle-error")).toBeTruthy();
+    expect(screen.getByText("没能读到你的圈子。")).toBeTruthy();
+    await act(async () => fireEvent.press(screen.getByText("重试")));
+    expect(await screen.findByTestId("circle-1")).toBeTruthy();
+    expect(screen.queryByTestId("circle-error")).toBeNull();
   });
 
   it("a hit writes to them: the code goes upper-cased in the body, and 写信 opens the conversation", async () => {

@@ -29,7 +29,19 @@ describe("parseSoulLink", () => {
     ["soulledger://sentence", "sentence"],
     ["soulledger://export", "export"],
     ["soulledger://help", "help"],
+    ["soulledger://applications", "applications"],
+    ["soulledger://settings", "settings"],
+    ["soulledger://notifications", "notifications"],
   ])("%s -> %s", (url, link) => expect(parseSoulLink(url)).toEqual({ page: link }));
+
+  it("post/<id> and conversation/<id> carry a UUID, lower-cased; without one, or with junk, nothing", () => {
+    const id = "3F2504E0-4F89-11D3-9A0C-0305E82C3301";
+    expect(parseSoulLink(`soulledger://post/${id}`)).toEqual({ page: "post", id: id.toLowerCase() });
+    expect(parseSoulLink(`soulledger://conversation/${id}?from=share`)).toEqual({ page: "conversation", id: id.toLowerCase() });
+    for (const url of ["soulledger://post", "soulledger://post/12", `soulledger://post/${id}/more`, "soulledger://conversation/x", `soulledger://settings/${id}`]) {
+      expect(parseSoulLink(url)).toBeNull();
+    }
+  });
 
   it.each([
     "soulledger://",
@@ -259,6 +271,15 @@ describe("landing", () => {
     await waitFor(() => expect(navigationRef.getCurrentRoute()?.name).toBe("Applications"));
     await screen.findByTestId("tab-Applications");
     await act(async () => {});
+  });
+
+  it("post/<id> opens that post (audit 2026-10-17 #12)", async () => {
+    signedIn();
+    renderApp();
+    await screen.findByTestId("profile-card");
+    await act(async () => soulLinks.push("soulledger://post/3f2504e0-4f89-11d3-9a0c-0305e82c3301"));
+    await waitFor(() => expect(navigationRef.getCurrentRoute()?.name).toBe("CirclePost"));
+    expect(navigationRef.getCurrentRoute()?.params).toEqual({ id: "3f2504e0-4f89-11d3-9a0c-0305e82c3301" });
   });
 
   it("an unknown link changes nothing", async () => {

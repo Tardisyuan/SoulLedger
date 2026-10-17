@@ -7,11 +7,13 @@
   `request.user` 出发。不要求额外权限码:能登录即能问,数据由工具按权限码把关。
 """
 import math
+import uuid
 from datetime import timedelta
 
-from django.db.models import Prefetch
+from django.db.models import Prefetch, Q
 from django.utils import timezone
-from drf_spectacular.utils import OpenApiResponse, extend_schema
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework import status, throttling
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -114,16 +116,39 @@ class MeAssistView(AssistView):
         data = body.validated_data
         result = service.answer(
             self.account, data["question"], data["screen"], locale=locale_from_request(request),
-            conversation_id=data.get("conversation_id"), request=request, stream=data.get("stream", False),
+            conversation_id=data.get("conversation_id"), new=data.get("new", False), request=request,
+            stream=data.get("stream", False),
         )
         return _reply(request, result, data.get("stream", False))
 
 
+#: 灵魂历史一次给的会话数,新的在前;更早的用 `?before=<上一页最后一条的 id>` 接着取。
+#: 此前全量返回、每条连同全部消息(审计 2026-10-17 #3):用得越久越慢。仍是裸列表,
+#: 不满一页就是到底了。
+SOUL_HISTORY_PAGE = 50
+
+
 class MeAssistConversationsView(AssistView):
-    @extend_schema(responses={200: AssistConversationSerializer(many=True), 403: AssistErrorSerializer})
+    @extend_schema(
+        parameters=[OpenApiParameter("before", OpenApiTypes.UUID,
+                                     description="上一页最后一条会话的 id;给了就只列比它更早的。")],
+        responses={200: AssistConversationSerializer(many=True), 400: AssistErrorSerializer,
+                   403: AssistErrorSerializer, 404: AssistErrorSerializer})
     def get(self, request):
-        rows = (AssistConversation.objects.filter(account=self.account, is_eval=False)
-                .prefetch_related(Prefetch("messages", queryset=AssistMessage.objects.order_by("created_at", "id"))))
+        rows = AssistConversation.objects.filter(account=self.account, is_eval=False).order_by("-last_active_at", "-id")
+        raw = request.query_params.get("before")
+        if raw:
+            try:
+                before = uuid.UUID(raw)
+            except ValueError:
+                raise service.AssistError("before 不是会话 id。", "invalid", 400) from None
+            at = rows.filter(pk=before).values_list("last_active_at", flat=True).first()
+            if at is None:
+                raise service.AssistError("会话不存在。", "not_found", 404)
+            # (时间, id) 严格在锚点之后:同一时刻的两条不会一条重复、一条漏掉。
+            rows = rows.filter(Q(last_active_at__lt=at) | Q(last_active_at=at, pk__lt=before))
+        rows = rows[:SOUL_HISTORY_PAGE].prefetch_related(
+            Prefetch("messages", queryset=AssistMessage.objects.order_by("created_at", "id")))
         return Response(AssistConversationSerializer(rows, many=True).data)
 
 

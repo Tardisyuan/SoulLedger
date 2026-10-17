@@ -148,6 +148,13 @@ describe("application detail", () => {
     expect(StyleSheet.flatten(screen.getByTestId("status-badge-slot").props.style)).toMatchObject({ flexShrink: 0 });
   });
 
+  it("a 404 says the application no longer exists, with no retry (audit 2026-10-17 #8)", async () => {
+    stubApi({ "/me/rebirth-applications/a1/": { status: 404, data: { detail: "Not found." } } });
+    wrap(<ApplicationDetailScreen id="a1" />);
+    expect(await screen.findByTestId("application-gone")).toHaveTextContent("这份申请已不存在。");
+    expect(screen.queryByText("重试")).toBeNull();
+  });
+
   it("offers the appeal only when can_appeal, and shows the rejection reason", async () => {
     const calls = stubApi({
       "GET /me/rebirth-applications/a1/": [
