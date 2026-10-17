@@ -20,7 +20,7 @@ import { formatWhen } from "../format";
 import { ActionButton, LoadingRows, RefreshFailed, Row, StateView, detailStateOf } from "../kit";
 import { MoreRow, useMoreRows, type Page } from "../paged";
 import { useSession } from "../session";
-import { GUTTER, Notice, SectionLabel, Txt, space, useI18n, useRemote, useTheme } from "../shared";
+import { GUTTER, Notice, OneLine, SectionLabel, Txt, space, useI18n, useRemote, useTheme } from "../shared";
 import { SOUL_PAGE, deedScore, eventDetail, karmaView, planStops, signed, soulTabs, type SoulTab } from "../soulView";
 
 const NO_PERMISSIONS: string[] = [];
@@ -293,7 +293,7 @@ function JudgmentsTab({ soulId, onOpen }: { soulId: string; onOpen: (id: string)
           testID={`soul-judgment-${j.id}`}
           minHeight={64}
           title={[j.case_number, j.court].filter(Boolean).join(" · ")}
-          lines={[t("officer_app.soul.judgment_meta", { n: String((j.cycle ?? 0) + 1), verdict: verdict(j), status: t(j.is_final ? "souls.detail.case_closed" : "souls.detail.case_open") })]}
+          lines={[{ one: t("officer_app.soul.judgment_meta", { n: String((j.cycle ?? 0) + 1), verdict: verdict(j), status: t(j.is_final ? "souls.detail.case_closed" : "souls.detail.case_open") }) }]}
           onPress={() => onOpen(j.id)}
           right={<Txt tone="muted">›</Txt>}
         />
@@ -351,14 +351,14 @@ function KarmaTab({ soulId }: { soulId: string }) {
             return (
               <View key={r.id} testID={`soul-karma-row-${r.id}`} style={{ flexDirection: "row", gap: space[3], paddingHorizontal: GUTTER, paddingVertical: space[3], borderBottomWidth: 1, borderBottomColor: theme.hair }}>
                 <View style={{ width: 56 }}>
-                  <Txt variant="value" style={{ fontSize: 15 }}>{deedScore(r)}</Txt>
+                  <OneLine variant="value" style={{ fontSize: 15 }}>{deedScore(r)}</OneLine>
                   <Txt variant="caption" tone="muted">{t(r.record_type === "DEMERIT" ? "officer_app.soul.demerit_short" : "officer_app.soul.merit_short")}</Txt>
                 </View>
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <Txt variant="body" numberOfLines={2}>{r.description}</Txt>
-                  <Txt variant="caption" tone="muted">
+                  <OneLine variant="caption" tone="muted">
                     {[when, source ? t("officer_app.soul.source", { source: source.state === "known" ? source.label : r.evidence_source! }) : null].filter(Boolean).join(" · ")}
-                  </Txt>
+                  </OneLine>
                 </View>
               </View>
             );
@@ -407,11 +407,13 @@ function FateTab({ soulId, dispositions, reincarnations }: { soulId: string; dis
               minHeight={64}
               title={x.realm_name || label("realms.names", x.realm_code)}
               lines={[
-                [
-                  x.is_eternal ? t("disposition.term_eternal") : x.sentence_years != null ? t("sentence_plan.years", { years: String(x.sentence_years) }) : t("disposition.term_unrecorded"),
-                  t(x.is_executed ? "disposition.executed" : "disposition.section_pending"),
-                  formatWhen(x.executed_at ?? x.created_at),
-                ].join(" · "),
+                {
+                  one: [
+                    x.is_eternal ? t("disposition.term_eternal") : x.sentence_years != null ? t("sentence_plan.years", { years: String(x.sentence_years) }) : t("disposition.term_unrecorded"),
+                    t(x.is_executed ? "disposition.executed" : "disposition.section_pending"),
+                    formatWhen(x.executed_at ?? x.created_at),
+                  ].join(" · "),
+                },
               ]}
             />
           ))}
@@ -430,7 +432,7 @@ function FateTab({ soulId, dispositions, reincarnations }: { soulId: string; dis
               testID={`soul-reincarnation-${x.id}`}
               minHeight={64}
               title={x.new_identity}
-              lines={[[t("souls.detail.generation", { n: String(x.cycle_count + 1) }), label("reincarnation.forms", x.rebirth_form), formatWhen(x.reincarnated_at)].join(" · ")]}
+              lines={[{ one: [t("souls.detail.generation", { n: String(x.cycle_count + 1) }), label("reincarnation.forms", x.rebirth_form), formatWhen(x.reincarnated_at)].join(" · ") }]}
             />
           ))}
           <MoreRow more={r.more} state={r.moreState} />
@@ -462,7 +464,7 @@ function EventsTab({ soulId }: { soulId: string }) {
             testID={`soul-event-${e.id}`}
             minHeight={64}
             title={type.state === "known" ? type.label : e.event_type}
-            lines={[`${formatWhen(e.create_time)} · ${actor}`, ...(detail ? [detail] : [])]}
+            lines={[{ one: `${formatWhen(e.create_time)} · ${actor}` }, ...(detail ? [detail] : [])]}
           />
         );
       })}

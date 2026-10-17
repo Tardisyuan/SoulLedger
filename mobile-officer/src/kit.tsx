@@ -11,7 +11,7 @@ import { Animated, Pressable, ScrollView, StyleSheet, View, type StyleProp, type
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { HIGHLIGHT_ALPHA, HIGHLIGHT_MS, isDenied } from "./rules";
-import { Button, GUTTER, GoneState, Notice, Txt, family, space, useI18n, useReducedMotion, useTheme } from "./shared";
+import { Button, GUTTER, GoneState, Notice, OneLine, Txt, family, space, useI18n, useLayout, useReducedMotion, useTheme } from "./shared";
 
 // ── the four states ────────────────────────────────────────────────────
 
@@ -119,13 +119,23 @@ export function StateView({
 // ── rows ───────────────────────────────────────────────────────────────
 
 /**
+ * A line under a row's title. `{ one }` (Design 第二十八批 S4, as in the soul app): an identifier, a time, an amount
+ * or a status keeps to one line at any text size, cut with …, and a long press reads it in full.
+ */
+export type RowLine = string | { one: string };
+
+/**
  * A list row: at least `minHeight` (56 / 64 / 72 / 88), the title bold when `strong`, a state glyph
  * and words on the first line. `highlight` lays `ink / .07` over the row and fades it out over
  * 1.2 s -- not at all when the system asks for reduced motion.
+ *
+ * `value`: a short value at the right (a count, a time), one line; at ≥ 1.5× text (S4) "text left, value right"
+ * becomes two lines -- the value moves under the title. `right` (a ›, a ✓, a button) stays where it is.
  */
 export function Row({
   title,
   lines = [],
+  value,
   glyph,
   glyphLabel,
   strong,
@@ -139,7 +149,8 @@ export function Row({
   /** What it opens is no longer there (O-c): the row is greyed and does nothing. */
   gone?: boolean;
   title: string;
-  lines?: string[];
+  lines?: RowLine[];
+  value?: string;
   glyph?: string;
   /** What the glyph means, when no other text on the row says it; without one the glyph is decoration and screen readers skip it. */
   glyphLabel?: string;
@@ -151,7 +162,14 @@ export function Row({
   testID?: string;
 }) {
   const t = useTheme();
+  const { twoLine } = useLayout();
   const press = gone ? undefined : onPress;
+  // A Text with a long press takes the touch from the row around it, so the row's press goes on it too.
+  const valueText = value ? (
+    <OneLine testID={testID ? `${testID}-value` : undefined} variant="body" tone="muted" onPress={press} style={twoLine ? undefined : styles.rowValue}>
+      {value}
+    </OneLine>
+  ) : null;
   return (
     <Pressable
       testID={testID}
@@ -172,16 +190,25 @@ export function Row({
           {glyph}
         </Txt>
       ) : null}
-      <View style={styles.rowText}>
+      {/* Named only on a row with a value (where the value goes is what a test asks); lists count rows by testID prefix. */}
+      <View testID={testID && value ? `${testID}-text` : undefined} style={styles.rowText}>
         <Txt variant="section" style={strong ? undefined : { fontFamily: family.ui[500] }}>
           {title}
         </Txt>
-        {lines.map((line, i) => (
-          <Txt key={i} variant="caption" tone="muted">
-            {line}
-          </Txt>
-        ))}
+        {lines.map((line, i) =>
+          typeof line === "string" ? (
+            <Txt key={i} variant="caption" tone="muted">
+              {line}
+            </Txt>
+          ) : (
+            <OneLine key={i} variant="caption" tone="muted" onPress={press}>
+              {line.one}
+            </OneLine>
+          )
+        )}
+        {twoLine ? valueText : null}
       </View>
+      {twoLine ? null : valueText}
       {right}
     </Pressable>
   );
@@ -473,6 +500,7 @@ const styles = StyleSheet.create({
   row: { flexDirection: "row", alignItems: "center", gap: space[3], paddingHorizontal: GUTTER, paddingVertical: space[3], borderBottomWidth: 1 },
   glyph: { width: 20, textAlign: "center", fontFamily: family.glyph },
   rowText: { flex: 1, gap: space[1] },
+  rowValue: { flexShrink: 1, maxWidth: "60%" },
   action: { flex: 1, minHeight: 44, borderWidth: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: space[3] },
   actionText: { letterSpacing: 0 },
   segmented: { flexDirection: "row", borderWidth: 1, marginHorizontal: GUTTER, marginVertical: space[3] },

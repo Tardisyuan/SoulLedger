@@ -36,6 +36,8 @@ export {
   Txt,
   TYPE,
   ThemeContext,
+  OneLine,
+  useLayout,
   GUTTER,
   GoneState,
   useReducedMotion,
