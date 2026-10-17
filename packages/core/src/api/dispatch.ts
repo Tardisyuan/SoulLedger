@@ -88,6 +88,14 @@ export interface CrossTenantJudgment extends CrossTenantJudgmentListItem {
   participants: CrossTenantJudgmentParticipant[];
   create_time: string;
   update_time: string;
+  /** 结束时的说明(第四十批 W-a;原审判页也显示)。存量行为空串。 */
+  conclusion_note?: string;
+  /** 取消时的理由;没取消为空串。 */
+  cancel_reason?: string;
+  /** 结束或取消它的人的显示名;还在进行为 null。 */
+  ended_by_name?: string | null;
+  /** 这位请求者能不能结束 / 取消(召集人或发起殿的管理员,且还在进行)。 */
+  can_end?: boolean;
 }
 
 export interface CrossTenantJudgmentParticipant {
@@ -264,6 +272,10 @@ export const crossTenantJudgmentsApi = {
    *  400 when a filled eternal stop would not be last (Q5). */
   order: (id: string, participants: string[]) =>
     api.post<CrossTenantJudgment>(`/dispatch/cross-tenant-judgments/${id}/order/`, { participants }),
-  conclude: (id: string, data: { conclusion_type: string }) =>
+  /** `note`:结束说明,≤ 1000 字;网页弹层必填,接口上可省。 */
+  conclude: (id: string, data: { conclusion_type: string; note?: string }) =>
     api.post<CrossTenantJudgment>(`/dispatch/cross-tenant-judgments/${id}/conclude/`, data),
+  /** 召集人或发起殿的管理员取消(理由必填)。403 别人;409 `not_cancellable` 已结束 / 已取消。 */
+  cancel: (id: string, reason: string) =>
+    api.post<CrossTenantJudgment>(`/dispatch/cross-tenant-judgments/${id}/cancel/`, { reason }),
 };

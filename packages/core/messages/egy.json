@@ -1924,7 +1924,10 @@
       "HEART_WEIGHING": "Fai Ib",
       "DIABOLICAL_TRIAL": "Wedja Apep"
     },
-    "case_number": "Ren Sep"
+    "case_number": "Ren Sep",
+    "close_blocked_title": "Wedja Ta Ky Nen Khetem Djer: Nen Khetem Wedja",
+    "close_blocked_body": "{{name}} · {{date}} · {{joined}} / {{total}}. Khetem Er Sehen: Khetem Wedja Hena.",
+    "close_blocked_link": "Er Wedja Ta Ky ›"
   },
   "audit": {
     "title": "Medew Maa",
@@ -2560,7 +2563,19 @@
       "FAIL": "Khesef"
     },
     "case_title": "Ren",
-    "status_label": "Kheperu"
+    "status_label": "Kheperu",
+    "end": "Khetem Wedja Ta Ky",
+    "end_conclusion": "Wedja",
+    "end_pass": "Hesy",
+    "end_fail": "Nen Hesy",
+    "end_note": "Khet · Em Tepy; Maa Em Wedja Tepy",
+    "end_body": "Er Khet: Nen Ak, Nen Dem, Nen Khemen Wedja. Wedja Tepy Khetem.",
+    "cancel": "Sehen Wedja Ta Ky",
+    "cancel_title": "Sehen Wedja Ta Ky Pen?",
+    "cancel_body": "Nen Wedja. Sesh Wesheb Smen · Maa Wa. Wedja Tepy Khetem Mi Pa.",
+    "cancel_keep": "Nen Sehen",
+    "ended": "Khetem Seth · {{conclusion}} · {{date}} · {{name}}",
+    "cancelled": "Sehen Seth. Khet: {{reason}}"
   },
   "users": {
     "title": "Iri Netjeru",

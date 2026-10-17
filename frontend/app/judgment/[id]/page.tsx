@@ -4,7 +4,7 @@ import { use, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { judgmentApi, soulsApi } from "@soulledger/core/api";
+import { crossTenantJudgmentsApi, judgmentApi, soulsApi } from "@soulledger/core/api";
 import { judgmentKeys, soulKeys } from "@soulledger/core/query_keys";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
@@ -68,6 +68,7 @@ import {
 } from "@/src/components/sentence-plan/PlanChangesEditor";
 import { REFUSAL_CODES } from "@/src/components/sentence-plan/sentencePlanDisplay";
 import { OpenCrossJudgment } from "@/src/components/cross-judgments/OpenCrossJudgment";
+import { CrossJudgmentBlockedNotice, isCrossJudgmentOpen } from "@/src/components/judgment/CrossJudgmentBlockedNotice";
 import {
   EMPTY_PLACEMENT,
   JudgmentPlacement,
@@ -235,6 +236,18 @@ export default function JudgmentDetailPage({ params }: PageProps) {
     enabled: !!judgment?.soul,
   });
 
+  /* 挂着的跨域审判(第四十批 W-a):载入时就看它结束没有 —— 没结束,结案按钮置灰、上面一句为什么。
+     与跨域审判详情页同一把缓存键。原审判在发起方(原属)这边,读得到。 */
+  const crossId = judgment?.cross_judgment_id ?? null;
+  const { data: cross } = useQuery({
+    queryKey: ["cross-judgments", "detail", crossId],
+    queryFn: () => crossTenantJudgmentsApi.get(crossId!).then((res) => res.data),
+    enabled: !!crossId && !judgment?.is_final,
+  });
+  const crossBlocked = isCrossJudgmentOpen(cross);
+  /** 提交时才被 409 `cross_judgment_open` 挡下(并发):确认层里换成同一句话。 */
+  const [crossRefused, setCrossRefused] = useState(false);
+
   const concludeMutation = useMutation({
     mutationFn: (payload: ConcludeJudgmentPayload) => judgmentApi.conclude(id, payload),
     /* THE PAGE STAYS. It used to `router.push("/judgment")` here.
@@ -266,6 +279,11 @@ export default function JudgmentDetailPage({ params }: PageProps) {
         setConfirming(false); // 拒绝写在 戊 那一节里,确认层盖着它就看不见
         setDraftOpen(true); // 平板上 戊 收着的话,也一并展开
         queryClient.invalidateQueries({ queryKey: [...judgmentKeys.all, "destinations", id] });
+        return;
+      }
+      if (code === "cross_judgment_open" && crossId) {
+        setCrossRefused(true);
+        queryClient.invalidateQueries({ queryKey: ["cross-judgments", "detail", crossId] });
         return;
       }
       if (code && (REFUSAL_CODES as readonly string[]).includes(code)) {
@@ -362,6 +380,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
       return;
     }
     concludeMutation.reset(); // 每次进层从头来:上一次的结果(含被拒)不属于这一次
+    setCrossRefused(false);
     setConfirming(true);
   }
 
@@ -420,7 +439,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
         VERDICTS.map((member, i) => [String(i + 1), () => { if (!confirming) chooseVerdict(member); }])
       ),
       "mod+Enter": () => {
-        if (!canExecute || !selectedVerdict || concludeMutation.isPending) return;
+        if (!canExecute || !selectedVerdict || concludeMutation.isPending || crossBlocked || crossRefused) return;
         if (confirming) handleConclude();
         else openConfirm();
       },
@@ -998,6 +1017,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
           {/* ── 进入盖印确认:落判在确认层里,不在这里 ─────────────────────── */}
           {!isFinal && (
             <div data-print-hide="" className="mt-6 flex flex-col items-center gap-2">
+              {crossBlocked && crossId && <CrossJudgmentBlockedNotice crossId={crossId} cross={cross} />}
               <RequirePermission permissions="judgment.execute">
                 <Button
                   type="button"
@@ -1005,7 +1025,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
                   size="lg"
                   className={`gap-2 ${fullCase ? "w-full" : "min-w-60"}`}
                   onClick={openConfirm}
-                  disabled={!selectedVerdict}
+                  disabled={!selectedVerdict || crossBlocked}
                 >
                   {t("judgment.desk.to_confirm")}
                   <Kbd>⌘⏎</Kbd>
@@ -1175,6 +1195,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
         done={concludeMutation.isSuccess}
         stampKey={stamp}
         onConfirm={handleConclude}
+        refusal={crossRefused && crossId ? <CrossJudgmentBlockedNotice crossId={crossId} cross={cross} /> : undefined}
       />
     ) : null}
     </>

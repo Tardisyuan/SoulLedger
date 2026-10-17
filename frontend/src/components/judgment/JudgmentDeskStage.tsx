@@ -269,6 +269,7 @@ export function JudgmentConfirmLayer({
   done,
   stampKey,
   onConfirm,
+  refusal,
 }: {
   open: boolean;
   onClose: () => void;
@@ -279,6 +280,8 @@ export function JudgmentConfirmLayer({
   done: boolean;
   stampKey: number;
   onConfirm: () => void;
+  /** 提交被挡下时的那句话(如还有跨域审判没结束);给了就放在盖印键上面,盖印键置灰。 */
+  refusal?: ReactNode;
 }) {
   const { t } = useI18n();
   const code = verdict as Verdict;
@@ -344,7 +347,8 @@ export function JudgmentConfirmLayer({
                     </span>
                   </span>
                 </div>
-                <Button type="button" variant="primary" size="lg" className="mt-8 w-full gap-2" loading={pending} onClick={onConfirm} ref={stampRef}>
+                {refusal && <div className="mt-8">{refusal}</div>}
+                <Button type="button" variant="primary" size="lg" className="mt-8 w-full gap-2" loading={pending} onClick={onConfirm} ref={stampRef} disabled={!!refusal}>
                   {pending
                     ? t("judgment.detail.concluding")
                     : withWorkflow

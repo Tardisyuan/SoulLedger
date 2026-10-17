@@ -1949,7 +1949,10 @@
       "HEART_WEIGHING": "Heart weighing",
       "DIABOLICAL_TRIAL": "Diabolical trial"
     },
-    "case_number": "Case no."
+    "case_number": "Case no.",
+    "close_blocked_title": "A cross-realm judgment is still open, so this can't be closed yet",
+    "close_blocked_body": "{{name}} · convened {{date}} · {{joined}} of {{total}} seated. Once it's ended or cancelled, you can close here.",
+    "close_blocked_link": "Go to cross-realm judgment ›"
   },
   "audit": {
     "title": "Audit Log",
@@ -2603,7 +2606,22 @@
       "side": "Our side",
       "side_initiated": "Initiated by us",
       "side_participating": "We take part"
-    }
+    },
+    "end": "End cross-realm judgment",
+    "end_conclusion": "Conclusion",
+    "end_pass": "Pass",
+    "end_fail": "Not pass",
+    "end_note": "Note · required, shown on the original judgment",
+    "end_body": "After this, no one can join, convene or change the conclusion. The original judgment can then be closed.",
+    "cancel": "Cancel cross-realm judgment",
+    "cancel_title": "Cancel this cross-realm judgment?",
+    "cancel_body": "There will be no conclusion. Seat comments stay, read-only. The original judgment closes as usual.",
+    "cancel_keep": "Keep it",
+    "cancel_reason": "Reason · required",
+    "ended": "Ended · {{conclusion}} · {{date}} · {{name}}",
+    "cancelled": "Cancelled · Reason: {{reason}}",
+    "end_error": "Couldn't end it. Try again.",
+    "cancel_error": "Couldn't cancel it. Try again."
   },
   "users": {
     "title": "User Management",
