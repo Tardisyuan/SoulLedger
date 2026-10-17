@@ -51,6 +51,7 @@ import {
   type ViewStyle,
   useWindowDimensions,
 } from "react-native";
+import { BottomSheetTextInput } from "@gorhom/bottom-sheet";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Reanimated, { Easing as REasing, FadeOut, Keyframe } from "react-native-reanimated";
 import { SafeAreaView, type Edge } from "react-native-safe-area-context";
@@ -66,10 +67,10 @@ import { GUTTER_PT, motion, radius, space, themeFor, type Theme } from "./theme"
 // ── theme & motion ─────────────────────────────────────────────────────
 
 /**
- * The TextInput an `Input` renders. `Sheet` swaps in @gorhom's `BottomSheetTextInput`: only that one tells the sheet
+ * Inside a `Sheet`, an `Input` renders @gorhom's `BottomSheetTextInput`: only that one tells the sheet
  * which field has focus, and without it the sheet never lifts above the keyboard (reason fields were covered, 2026-10-17).
  */
-export const FieldComponentContext = createContext<typeof TextInput>(TextInput);
+export const InSheetContext = createContext(false);
 
 export const ThemeContext = createContext<Theme>(themeFor(null, "dark"));
 export const useTheme = () => useContext(ThemeContext);
@@ -867,8 +868,8 @@ export function Input({
   suffix?: ReactNode;
 }) {
   const t = useTheme();
-  const Field = useContext(FieldComponentContext);
-  const inSheet = Field !== TextInput;
+  const inSheet = useContext(InSheetContext);
+  const Field = inSheet ? (BottomSheetTextInput as unknown as typeof TextInput) : TextInput;
   const [focused, setFocused] = useState(false);
   const [revealed, setRevealed] = useState(false);
   const bad = invalid || !!error;
