@@ -1,4 +1,4 @@
-"""menus/0021 + 0022 + 0023:全新的库有完整的侧边栏;已有这些行的库零改动;回收站入口只给 ADMIN;灵魂事件挂在灵魂业务下。
+"""menus/0021 + 0022 + 0023 (+ 0025「轮回」一组):全新的库有完整的侧边栏;已有这些行的库零改动;回收站入口只给 ADMIN;灵魂事件挂在灵魂业务下。
 
 0021 种下最早那 16 条菜单(此前只存在于早期手工建出来的库里,0009 只会改它们)。按 path 判断,
 已存在(含已软删除的)一行都不动。0022 加 `/recycle-bin`,roles = ["ADMIN"]、不写码名。
@@ -249,3 +249,33 @@ def test_the_sentence_plans_entry_is_for_whoever_reads_judgments(cn_tenant):
     )
     assert "受刑计划" in _seen_by("JUDGE", cn_tenant)
     assert "受刑计划" not in _seen_by("VIEWER", cn_tenant)
+
+
+def test_0025_round_trip_groups_rebirths_and_comes_back_out(migration_round_trip):
+    def check_forward(apps):
+        rows = _snapshot(apps)
+        assert rows["DIRECTORY:轮回"]["parent"] is None
+        assert rows["MENU:/rebirths"] == {
+            "name": "转生登记簿", "order": 20, "visible": True,
+            "roles": ["ADMIN", "JUDGE", "GUARDIAN", "VIEWER"], "parent": "轮回",
+        }
+
+    migration_round_trip(
+        before=("menus", "0024_add_sentence_plans_menu"),
+        after=("menus", "0025_rebirth_group_and_register"),
+        seed=_directories_and_a_customised_souls,
+        snapshot=_snapshot,
+        check_forward=check_forward,
+    )
+
+
+def test_the_rebirth_group_holds_dispositions_and_the_register(cn_tenant):
+    """第四十批 W-c:侧栏「轮回」是一组 —— 处置(原 /disposition)· 转生登记簿。"""
+    seeded_menus()
+    disposition = Menu.objects.get(path="/disposition", is_deleted=False)
+    register = Menu.objects.get(path="/rebirths", is_deleted=False)
+    assert (disposition.name, disposition.parent.name, disposition.order) == ("处置", "轮回", 10)
+    assert (register.name, register.parent.name, register.permission) == ("转生登记簿", "轮回", "reincarnation.read")
+    assert register.parent.parent is None and register.parent.menu_type == "DIRECTORY"
+    for role in ("ADMIN", "JUDGE", "GUARDIAN", "VIEWER"):
+        assert {"处置", "转生登记簿"} <= _seen_by(role, cn_tenant), role

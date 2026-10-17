@@ -30,7 +30,9 @@ const LEAF_KEYS: Record<string, string> = {
   // Management": 0011 argues at length that 功過格 is a net-value ledger, not
   // Buddhist karma, and the old wording was the word it was moving away from.
   "/ledger": "breadcrumb.menu.ledger",
-  "/disposition": "breadcrumb.menu.disposition",
+  // backend/apps/menus/migrations/0025_rebirth_group_and_register.py:「轮回」一组下改名「处置」
+  "/disposition": "rebirths.nav_disposition",
+  "/rebirths": "rebirths.title",
   "/workflow": "breadcrumb.menu.workflow",
   "/dispatch": "breadcrumb.menu.dispatch",
   "/death-sync": "breadcrumb.menu.death_sync",
@@ -70,6 +72,7 @@ const DIRECTORY_KEYS: Record<string, string> = {
   "流程协作": "breadcrumb.menu.group_workflow",
   "组织与领域": "breadcrumb.menu.group_org_realm",
   "社交": "breadcrumb.menu.group_social",
+  "轮回": "breadcrumb.menu.group_rebirth",
   "系统设置": "breadcrumb.menu.group_settings",
 };
 

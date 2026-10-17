@@ -3617,7 +3617,8 @@
       "assistant_admin": "助手管理",
       "moderation": "朋友圈审核",
       "recycle_bin": "回收站",
-      "sentence_plans": "受刑计划"
+      "sentence_plans": "受刑计划",
+      "group_rebirth": "轮回"
     },
     "queue": "分诊队列",
     "about": "关于",
@@ -6598,5 +6599,17 @@
     "empty": "没有符合条件的事件",
     "empty_all": "还没有事件",
     "failed": "没能载入事件，请重试"
+  },
+  "rebirths": {
+    "title": "转生登记簿",
+    "nav_disposition": "处置",
+    "col_soul": "灵魂",
+    "col_life": "第几世",
+    "life_value": "第 {{from}} → {{to}} 世",
+    "col_form": "转生形态",
+    "col_to": "去往",
+    "col_time": "时间",
+    "total": "共 {{n}} 条",
+    "empty": "还没有转生记录"
   }
 }

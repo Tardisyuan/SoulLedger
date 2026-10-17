@@ -167,6 +167,8 @@ const COLLECTED_FILES = [
   "SentencePlanForms.test.tsx",
   // 2026-10-17 审计第 8 条:受刑计划列表页 /sentence-plans。
   "SentencePlansPage.test.tsx",
+  // 2026-10-17 第四十批 W-c:转生登记簿(/rebirths)。
+  "RebirthsPage.test.tsx",
   "JudgmentAmendmentConclude.test.tsx",
   "JudgmentComments.test.tsx",
   // 2026-09-25 审判台 / 审判队列 / 处置(规范 v1 第三类 A)。

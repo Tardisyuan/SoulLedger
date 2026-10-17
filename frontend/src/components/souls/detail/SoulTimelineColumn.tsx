@@ -62,6 +62,10 @@ export function SoulTimelineColumn({
     if (ready && window.location.hash === `#${LIFECYCLE_ANCHOR}`) {
       document.getElementById(LIFECYCLE_ANCHOR)?.scrollIntoView();
     }
+    // 转生登记簿带来的 `#reincarnation-<id>`:同一个理由,那一行也是载入后才在。
+    if (ready && window.location.hash.startsWith("#reincarnation-")) {
+      document.getElementById(window.location.hash.slice(1))?.scrollIntoView({ block: "center" });
+    }
   }, [ready]);
   if (loading) {
     return (
