@@ -15,6 +15,7 @@
 import type { SoulErrorMessage } from "@soulledger/core/api/soul";
 import type { EnumDisplay } from "@soulledger/core/domain/enumDisplay";
 import { useFocusEffect } from "@react-navigation/native";
+import * as Notifications from "expo-notifications";
 import {
   Fragment,
   createContext,
@@ -1393,6 +1394,15 @@ export function useReloadOnRefocus(reload: () => unknown) {
         return;
       }
       void reload();
+    }, [reload])
+  );
+  // A push arriving while this page is in front (audit 2026-10-17 #9): its banner is about
+  // something that just changed — 「申请已批准」 over the applications page that still says
+  // pending. Subscribed only while focused, so a page behind it does not refetch.
+  useFocusEffect(
+    useCallback(() => {
+      const sub = Notifications.addNotificationReceivedListener(() => void reload());
+      return () => sub.remove();
     }, [reload])
   );
   useReloadOnReconnect(reload);

@@ -375,6 +375,26 @@ function comment(id: string, over: Record<string, unknown> = {}) {
 const MINE = { user_id: 1, display_name: "我", avatar: null, is_active: true };
 const sent = (calls: { method: string; url: string; body: unknown }[], method: string) => calls.filter((c) => c.method === method);
 
+describe("a post that no longer exists (audit 2026-10-17 #8)", () => {
+  it("404 says so, with no retry; any other failure keeps the retry", async () => {
+    stubApi({
+      "GET /me/social/posts/p1/": { status: 404, data: { detail: "Not found." } },
+      "/me/social/posts/p1/comments/": { status: 404, data: { detail: "Not found." } },
+      "/me/social/status/": STATUS,
+    });
+    wrap(<PostScreen id="p1" />);
+    expect(await screen.findByTestId("post-gone")).toHaveTextContent("这条帖子已不存在。");
+    expect(screen.queryByTestId("post-error")).toBeNull();
+    expect(screen.queryByText("重试")).toBeNull();
+
+    screen.unmount();
+    stubApi({ "GET /me/social/posts/p1/": "offline", "/me/social/posts/p1/comments/": "offline", "/me/social/status/": STATUS });
+    wrap(<PostScreen id="p1" />);
+    expect(await screen.findByTestId("post-error")).toBeTruthy();
+    expect(screen.queryByTestId("post-gone")).toBeNull();
+  });
+});
+
 describe("deleting my own", () => {
   it("post: ⋯ → 删除 → asked again → only then DELETE, and back to the list", async () => {
     const calls = stubApi({
