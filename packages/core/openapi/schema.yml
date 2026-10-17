@@ -19198,7 +19198,7 @@ paths:
   /api/v1/tenants/{code}/settings/:
     patch:
       operationId: v1_tenants_settings_partial_update
-      description: 殿的设置:说明、调拨开关、三语殿名、转生冷却天数。只收已知字段,`settings` 里别的键不动。
+      description: 殿的设置:说明、调拨开关、三语殿名、转生冷却天数、到殿办理三项、灵魂自己改邮箱的开关。只收已知字段,`settings` 里别的键不动。
       parameters:
       - in: path
         name: code
@@ -28696,11 +28696,19 @@ components:
             type: string
           readOnly: true
           description: 匾上的印字(1–2 个);空 = 用文明默认字。
+        visit:
+          type: object
+          additionalProperties:
+            type: string
+          readOnly: true
+          description: 到殿办理:{address, hours, phone},没填的是空串(`Tenant.settings`;书信没开时
+            App 帮助页显示)。
       required:
       - code
       - display_name
       - hall_names
       - seal_glyphs
+      - visit
     MeWelcomed:
       type: object
       properties:
@@ -33282,6 +33290,17 @@ components:
           items:
             type: string
             maxLength: 20
+        visit_address:
+          type: string
+          maxLength: 80
+        visit_hours:
+          type: string
+          maxLength: 40
+        visit_phone:
+          type: string
+          maxLength: 40
+        soul_contact_email_self_service:
+          type: boolean
     PatchedUser:
       type: object
       description: |-
@@ -38879,6 +38898,10 @@ components:
           type: string
           description: 殿司展示名(egy)
           maxLength: 80
+        letters_on:
+          type: boolean
+          readOnly: true
+          description: 书信是否开着(服务器级 `MATRIX_ENABLED`)。
         created_at:
           type: string
           format: date-time
@@ -38889,6 +38912,7 @@ components:
       - created_at
       - display_name
       - id
+      - letters_on
       - seal_glyphs
     TenantMfaRoleRow:
       type: object
