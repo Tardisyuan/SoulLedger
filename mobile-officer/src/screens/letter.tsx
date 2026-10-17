@@ -22,16 +22,15 @@ import { clearDraft, flushDraft, readDraft, scheduleDraft } from "../drafts";
 import { enqueueReply, newReplyTxn, removeFromOutbox, useOutbox } from "../outbox";
 import { useCachedRemote } from "../readCache";
 import { formatWhen } from "../format";
-import { ActionButton, Row, StateView, viewStateOf } from "../kit";
+import { ActionButton, Row, StateView, detailStateOf } from "../kit";
 import {
   hallLabel,
-  isDenied,
   lettersUnavailable,
   replyFailureKey,
   replyReady,
   withTemplate,
 } from "../rules";
-import { useSession } from "../session";
+import { useCan, useSession } from "../session";
 import { isUnassigned, menuActions, type LetterAction } from "../letterActions";
 import { AssignSheet, LetterMenuSheet, TakeBar, UnassignSheet } from "./letterActions";
 import { LetterImage, LetterImageViewer } from "./letterImages";
@@ -78,6 +77,8 @@ export function LetterThread({
   }, [id]);
   const thread = useCachedRemote(`detail:letter:${id}`, load);
   const { offline } = useOnline();
+  // 「转给我」: handing a letter on is `soul_inbox.reply` on the server (`assign`), the same code as answering it.
+  const canHandOn = useCan("soul_inbox.reply");
   // Opening the letter is reading it: once per opening, when the thread came from the server (not the cache).
   // Without this a letter read and archived on the phone was still unread at the desk.
   const marked = useRef(false);
@@ -244,11 +245,7 @@ export function LetterThread({
       </Screen>
     );
   }
-  const view = viewStateOf(
-    { data: thread.data, error: thread.error },
-    () => false,
-    isDenied,
-  );
+  const view = detailStateOf({ data: thread.data, error: thread.error });
   if (view || !thread.data)
     return <StateView state={view ?? "loading"} onRetry={thread.reload} />;
 
@@ -259,6 +256,9 @@ export function LetterThread({
   const flags = { archived: conversation.archived, closed, assigned };
   const unassigned = isUnassigned(flags);
   const meId = user?.id;
+  // O-e: someone else holds it -- the box gives way to one line saying so (not greyed, no confirm: a greyed box reads as
+  // stuck, a confirm does not stop two people answering). Who may hand letters on gets 「转给我」, the same assign call.
+  const othersLetter = conversation.assignee != null && conversation.assignee.user_id !== meId;
   const values = {
     soul_name: conversation.soul_name,
     hall_name: hallLabel(t, user?.tenant) ?? "",
@@ -287,7 +287,9 @@ export function LetterThread({
         <View style={{ flexDirection: "row", alignItems: "center", paddingLeft: space[5], borderBottomWidth: 1, borderBottomColor: theme.hair }}>
           <View style={{ flex: 1, paddingVertical: space[3], gap: space[1] }}>
             <Txt variant="title">{conversation.soul_name}</Txt>
-            {unassigned ? <Txt variant="caption" tone="muted" testID="letter-unassigned-tag">{t("officer_app.letter.unassigned_tag")}</Txt> : null}
+            <Txt variant="caption" tone="muted" testID="letter-handler">
+              {conversation.assignee ? t("officer_app.letter.handler", { name: conversation.assignee.display_name }) : t("officer_app.letter.handler_none")}
+            </Txt>
           </View>
           <Pressable
             testID="letter-more"
@@ -363,6 +365,21 @@ export function LetterThread({
             onAssign={() => setSheet("assign")}
             onTake={() => meId !== undefined && act(() => soulInboxApi.assign(id, meId), "")}
           />
+        ) : othersLetter && !conversation.archived ? (
+          <View testID="letter-not-yours" style={{ padding: space[4], gap: space[3], borderTopWidth: 1, borderTopColor: theme.hair, backgroundColor: theme.s1 }}>
+            <Txt variant="body" tone="muted">{t("officer_app.letter.not_yours", { name: conversation.assignee?.display_name ?? "" })}</Txt>
+            {canHandOn && meId !== undefined ? (
+              <ActionButton
+                testID="letter-assign-to-me"
+                kind="outline"
+                busy={acting}
+                disabled={offline}
+                accessibilityHint={offline ? t("officer_app.offline.banner_bare") : undefined}
+                title={t("officer_app.letter.assign_to_me")}
+                onPress={() => act(() => soulInboxApi.assign(id, meId), "")}
+              />
+            ) : null}
+          </View>
         ) : (
           <View
             testID="letter-composer"

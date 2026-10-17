@@ -40,5 +40,13 @@
   "judgment.stale.label",
   "judgment.stale.hint",
   "judgment.stale.filter_all",
-  "judgment.stale.filter_only"
+  "judgment.stale.filter_only",
+  "official_notify.judgment_reassigned_away.title",
+  "official_notify.judgment_reassigned_away.body",
+  "official_notify.judgment_released_for_you.title",
+  "official_notify.judgment_released_for_you.body",
+  "official_notify.judgment_deferred_for_you.title",
+  "official_notify.judgment_deferred_for_you.body",
+  "official_notify.judgment_undeferred_for_you.title",
+  "official_notify.judgment_undeferred_for_you.body"
 ]

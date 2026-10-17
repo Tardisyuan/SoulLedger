@@ -6,6 +6,8 @@
  */
 import { act, fireEvent, screen, waitFor, within } from "@testing-library/react-native";
 
+import { WEB_PAGE_KEYS, pageNameOf } from "../assist";
+import { translate } from "../shared";
 import { Shell } from "../shell";
 import { renderOfficer } from "./harness";
 
@@ -255,5 +257,34 @@ describe("a conversation opened from history", () => {
     expect(await screen.findByText("这段会话没能打开，请重试")).toBeTruthy();
     fireEvent.press(screen.getByTestId("assist-back"));
     expect(screen.getByTestId("assist-suggestions")).toBeTruthy();
+  });
+});
+
+// ── Design 第四十批 第四节 1 / 7 ─────────────────────────────────────────
+
+describe("history names a desk conversation by the desk's own page", () => {
+  const zh = (key: string) => translate("zh-Hans", key);
+  it("the App's five pages keep the tab names; a desk page keeps the desk sidebar's name; 其他页 only as the fallback", () => {
+    expect(pageNameOf("judgment", zh)).toBe("审判");
+    expect(pageNameOf("dispatch", zh)).toBe("调度管理");
+    expect(pageNameOf("cross-judgments", zh)).toBe("跨域审判");
+    expect(pageNameOf("rebirth-applications", zh)).toBe("转生申请");
+    expect(pageNameOf("about", zh)).toBe("其他页");
+    expect(pageNameOf("other", zh)).toBe("其他页");
+  });
+
+  it("every desk key it names exists in zh and en", () => {
+    for (const key of Object.values(WEB_PAGE_KEYS)) {
+      for (const locale of ["zh-Hans", "en"] as const) expect(translate(locale, key!)).not.toBe(key);
+    }
+  });
+});
+
+describe("the ask box's label is for screen readers only", () => {
+  it("carries 问一问 as its accessibility label and shows no label of its own", async () => {
+    renderOfficer(<Shell />);
+    await openSheet();
+    const input = await screen.findByTestId("ask-input");
+    expect(input.props.accessibilityLabel).toBe("问一问");
   });
 });

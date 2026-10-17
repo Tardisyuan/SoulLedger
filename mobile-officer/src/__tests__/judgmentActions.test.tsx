@@ -11,6 +11,8 @@ const mockRelease = jest.fn();
 const mockDefer = jest.fn();
 const mockUndefer = jest.fn();
 const mockAsk = jest.fn();
+const mockReassign = jest.fn();
+const mockOfficers = jest.fn();
 jest.mock("@soulledger/core/api/judgment", () => ({
   ...jest.requireActual("@soulledger/core/api/judgment"),
   judgmentApi: {
@@ -19,6 +21,8 @@ jest.mock("@soulledger/core/api/judgment", () => ({
     defer: (...a: unknown[]) => mockDefer(...a),
     undefer: (...a: unknown[]) => mockUndefer(...a),
     requestReassign: (...a: unknown[]) => mockAsk(...a),
+    reassign: (...a: unknown[]) => mockReassign(...a),
+    assignableOfficers: (...a: unknown[]) => mockOfficers(...a),
   },
 }));
 
@@ -160,5 +164,91 @@ describe("JudgmentActionBar", () => {
     fireEvent.press(screen.getAllByTestId("judgment-sheet-confirm")[0]);
     await waitFor(() => expect(asked).toHaveBeenCalled());
     expect(mockAsk).toHaveBeenCalledWith("j-1", "本殿无人能接");
+  });
+});
+
+// ── Design 第四十批 O-a:别人手上的案子,本殿管理员的 ⋯ ─────────────────────
+
+describe("an admin on a case someone else holds", () => {
+  const ADMIN = { ...OFFICER, role: "ADMIN", permissions: ["judgment.execute", "judgment.assign"] };
+  const OFFICERS = [
+    { id: 9, display_name: "钟判官", username: "zhong", role: "JUDGE", in_hand: 1 },
+    { id: 3, display_name: "韩判官", username: "han", role: "JUDGE", in_hand: 7 },
+    { id: 4, display_name: "陆判官", username: "lu", role: "JUDGE", in_hand: 2 },
+  ];
+
+  it("says whose it is and offers 改派给… · 替他放回 · 暂缓; no 改派给… button without a request", () => {
+    bar({ claimed_by: 9 }, {}, ADMIN);
+    expect(screen.getByTestId("judgment-admin-context").props.children).toBe("○ 在钟判官手上 · 你是本殿管理员");
+    expect(screen.queryByTestId("judgment-with-other")).toBeNull();
+    expect(screen.queryByTestId("judgment-reassign-to")).toBeNull();
+    fireEvent.press(screen.getByTestId("judgment-more"));
+    expect(screen.getByTestId("judgment-menu-reassign_to")).toBeTruthy();
+    expect(screen.getByTestId("judgment-menu-release_for")).toBeTruthy();
+    expect(screen.getByTestId("judgment-menu-defer")).toBeTruthy();
+    expect(screen.queryByTestId("judgment-menu-undefer")).toBeNull();
+  });
+
+  it("a request to reassign makes 改派给… the main button", () => {
+    bar({ claimed_by: 9, reassign_requested_at: "2026-10-17T01:40:00Z", reassign_reason: "轮值" }, {}, ADMIN);
+    expect(screen.getByTestId("judgment-reassign-to")).toBeTruthy();
+  });
+
+  it("a deferred one offers 取消暂缓 instead, and it needs a reason that reaches the holder", async () => {
+    mockUndefer.mockResolvedValue({});
+    bar({ claimed_by: 9, deferred_at: "2026-10-16T00:00:00Z" }, {}, ADMIN);
+    fireEvent.press(screen.getByTestId("judgment-more"));
+    expect(screen.queryByTestId("judgment-menu-defer")).toBeNull();
+    fireEvent.press(screen.getByTestId("judgment-menu-undefer"));
+    expect(await screen.findByText("理由 · 必填，钟判官会收到")).toBeTruthy();
+    fireEvent.press(screen.getAllByTestId("judgment-sheet-confirm")[0]);
+    expect(mockUndefer).not.toHaveBeenCalled();
+    fireEvent.changeText(screen.getByTestId("judgment-reason"), " 证据到了 ");
+    fireEvent.press(screen.getAllByTestId("judgment-sheet-confirm")[0]);
+    await waitFor(() => expect(mockUndefer).toHaveBeenCalledWith("j-1", "证据到了"));
+  });
+
+  it("替他放回 sends the reason", async () => {
+    mockRelease.mockResolvedValue({});
+    bar({ claimed_by: 9 }, {}, ADMIN);
+    fireEvent.press(screen.getByTestId("judgment-more"));
+    fireEvent.press(screen.getByTestId("judgment-menu-release_for"));
+    fireEvent.changeText(await screen.findByTestId("judgment-reason"), "请假");
+    fireEvent.press(screen.getAllByTestId("judgment-sheet-confirm")[0]);
+    await waitFor(() => expect(mockRelease).toHaveBeenCalledWith("j-1", "请假"));
+  });
+
+  it("the picker: no holder, fewest cases first, a reason before it sends", async () => {
+    mockOfficers.mockResolvedValue({ data: OFFICERS });
+    mockReassign.mockResolvedValue({});
+    const changed = jest.fn();
+    bar({ claimed_by: 9, reassign_requested_at: "2026-10-17T01:40:00Z" }, { onChanged: changed }, ADMIN);
+    fireEvent.press(screen.getByTestId("judgment-reassign-to"));
+    await screen.findByTestId("reassign-4");
+    expect(screen.queryByTestId("reassign-9")).toBeNull();
+    expect(screen.getByText("手上 2 件")).toBeTruthy();
+    fireEvent.press(screen.getByTestId("reassign-4"));
+    fireEvent.press(screen.getByTestId("reassign-confirm"));
+    expect(mockReassign).not.toHaveBeenCalled();
+    expect(await screen.findByText("必须写理由")).toBeTruthy();
+    fireEvent.changeText(screen.getByTestId("reassign-reason"), "下周轮值");
+    fireEvent.press(screen.getByTestId("reassign-confirm"));
+    await waitFor(() => expect(mockReassign).toHaveBeenCalledWith("j-1", 4, "下周轮值"));
+    await waitFor(() => expect(changed).toHaveBeenCalled());
+  });
+
+  it("counts that are not there are not shown as 0", async () => {
+    mockOfficers.mockResolvedValue({ data: OFFICERS.map(({ in_hand: _n, ...o }) => o) });
+    bar({ claimed_by: 9, reassign_requested_at: "2026-10-17T01:40:00Z" }, {}, ADMIN);
+    fireEvent.press(screen.getByTestId("judgment-reassign-to"));
+    await screen.findByTestId("reassign-4");
+    expect(screen.queryByText(/手上/)).toBeNull();
+  });
+
+  it("a judge (no judgment.assign) still only reads someone else's case", () => {
+    bar({ claimed_by: 9, reassign_requested_at: "2026-10-17T01:40:00Z" });
+    expect(screen.getByTestId("judgment-with-other")).toBeTruthy();
+    expect(screen.queryByTestId("judgment-more")).toBeNull();
+    expect(screen.queryByTestId("judgment-reassign-to")).toBeNull();
   });
 });

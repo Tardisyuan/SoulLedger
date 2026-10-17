@@ -7,12 +7,15 @@ import { formatWhen } from "../format";
 import { RefreshFailed, Row, StateView, viewStateOf } from "../kit";
 import { MoreRow, useMoreRows } from "../paged";
 import { useCachedRemote } from "../readCache";
-import { isDenied, noticeIsDeskOnly, noticeLanding, type Landing } from "../rules";
+import { isDenied, landingGoneKey, noticeIsDeskOnly, noticeLanding, type Landing } from "../rules";
 import { useSession } from "../session";
 import { Screen, SmallButton, Txt, space, useI18n } from "../shared";
 
-/** `onRead`: a mark reached the server, or the list was pulled -- the shell asks for the unread count again (the tab bar's ●). */
-export function NoticesTab({ onRead, onLand }: { onRead?: () => void; onLand?: (landing: Landing) => void }) {
+/**
+ * `onRead`: a mark reached the server, or the list was pulled -- the shell asks for the unread count again (the tab bar's ●).
+ * `gone`: notices whose item turned out to be gone (O-c) -- greyed, and they no longer open anything.
+ */
+export function NoticesTab({ onRead, onLand, gone }: { onRead?: () => void; onLand?: (landing: Landing) => void; gone?: ReadonlySet<string> }) {
   const { t } = useI18n();
   const { state } = useSession();
   const role = state.status === "signedIn" ? state.user.role : "";
@@ -74,6 +77,7 @@ export function NoticesTab({ onRead, onLand }: { onRead?: () => void; onLand?: (
             minHeight={88}
             title={n.title}
             lines={[n.message, formatWhen(n.created_at), noticeIsDeskOnly(n) ? t("officer_app.notices.on_desk") : ""].filter(Boolean)}
+            gone={!!gone?.has(landingGoneKey(noticeLanding(n)) ?? "")}
             onPress={() => open(n)}
           />
         ))

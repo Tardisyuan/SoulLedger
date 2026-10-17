@@ -35,6 +35,10 @@ MESSAGES = {
             "title": "暂居回归被拦下",
             "body": "灵魂「{{soul}}」的暂居回归被未结案审判拦下，共 {{count}} 件；结案或撤案后才能回归。",
         },
+        "judgment_reassigned_away": {"title": "案件已改派", "body": "{{by}} 把你手上的案件 {{soul}} 改派给了 {{to}}。理由：{{reason}}"},
+        "judgment_released_for_you": {"title": "案件已被放回", "body": "{{by}} 替你放回了案件 {{soul}}，它回到了待认领。理由：{{reason}}"},
+        "judgment_deferred_for_you": {"title": "案件已暂缓", "body": "{{by}} 暂缓了你手上的案件 {{soul}}。理由：{{reason}}"},
+        "judgment_undeferred_for_you": {"title": "案件已取消暂缓", "body": "{{by}} 取消了你手上案件 {{soul}} 的暂缓。理由：{{reason}}"},
         "death_sync_retry_failed": {"title": "死亡登记重试仍失败", "body": "死亡登记 {{reference}} 第 {{count}} 次重试仍失败（{{reason}}），请到死亡同步页查看。"},
     },
     "en": {
@@ -66,6 +70,10 @@ MESSAGES = {
                 "It returns once they are concluded or withdrawn."
             ),
         },
+        "judgment_reassigned_away": {"title": "Case reassigned", "body": "{{by}} reassigned your case of {{soul}} to {{to}}. Reason: {{reason}}"},
+        "judgment_released_for_you": {"title": "Case released", "body": "{{by}} released your case of {{soul}}; it is unclaimed again. Reason: {{reason}}"},
+        "judgment_deferred_for_you": {"title": "Case deferred", "body": "{{by}} deferred your case of {{soul}}. Reason: {{reason}}"},
+        "judgment_undeferred_for_you": {"title": "Case no longer deferred", "body": "{{by}} lifted the deferral on your case of {{soul}}. Reason: {{reason}}"},
         "death_sync_retry_failed": {"title": "Death registration retry failed", "body": "Retry {{count}} of death registration {{reference}} failed again ({{reason}}). See the Death Sync page."},
     },
     "egy": {
@@ -120,6 +128,7 @@ KIND_BY_TYPE = {
     "JUDGMENT_REASSIGN_REQUESTED": "judgment_reassign_requested",
     "IMPERSONATION_STARTED": "impersonation_started",
     "DEATH_SYNC_RETRY_FAILED": "death_sync_retry_failed",
+    "JUDGMENT_CLAIM_CHANGED": "judgment_reassigned_away",
 }
 
 
@@ -136,6 +145,8 @@ VARIANTS = {
     "dispatch_rejected": {"dispatch_rejected_bare"},
     # 请求改派带了理由(手机端必填)就用带「理由」的句子;网页不带理由,旧通知也没有,仍是原句。
     "judgment_reassign_requested": {"judgment_reassign_requested_with_reason"},
+    # 替别人做的四件事共用一个类型(JUDGMENT_CLAIM_CHANGED),各自一句(apps/judgment/claims.py::_tell_holder)。
+    "judgment_reassigned_away": {"judgment_released_for_you", "judgment_deferred_for_you", "judgment_undeferred_for_you"},
 }
 
 

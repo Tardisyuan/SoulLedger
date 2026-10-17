@@ -185,18 +185,24 @@ def claim(pk, user) -> Judgment:
     return judgment
 
 
-def release(pk, user, *, may_override: bool) -> Judgment:
+def release(pk, user, *, may_override: bool, reason: str = "") -> Judgment:
     with transaction.atomic():
         judgment = _lock(pk)
+        holder = judgment.claimed_by_id
         _apply_release(judgment, user, may_override)
+        _tell_holder(judgment, holder, user, "judgment_released_for_you", reason)
     return judgment
 
 
-def reassign(pk, target) -> Judgment:
+def reassign(pk, target, *, actor=None, reason: str = "") -> Judgment:
     with transaction.atomic():
         judgment = _lock(pk)
         assert_assignable(target, judgment.tenant_id)
+        holder = judgment.claimed_by_id
         _apply_reassign(judgment, target)
+        if holder != target.pk:
+            _tell_holder(judgment, holder, actor, "judgment_reassigned_away", reason,
+                         to=target.display_name or target.username)
     return judgment
 
 
@@ -204,14 +210,43 @@ def defer(pk, user, reason: str, *, may_override: bool) -> Judgment:
     with transaction.atomic():
         judgment = _lock(pk)
         _apply_defer(judgment, user, reason, may_override)
+        _tell_holder(judgment, judgment.claimed_by_id, user, "judgment_deferred_for_you", reason)
     return judgment
 
 
-def undefer(pk, user, *, may_override: bool) -> Judgment:
+def undefer(pk, user, *, may_override: bool, reason: str = "") -> Judgment:
     with transaction.atomic():
         judgment = _lock(pk)
         _apply_undefer(judgment, user, may_override)
+        _tell_holder(judgment, judgment.claimed_by_id, user, "judgment_undeferred_for_you", reason)
     return judgment
+
+
+def _tell_holder(judgment: Judgment, holder_id, actor, kind: str, reason: str = "", **extra) -> None:
+    """替别人放回 / 改派 / 暂缓 / 取消暂缓(Design 第四十批 O-a):原经办人收到一条站内通知,带理由。
+    自己对自己手上的案子做的不发;没有经办人的也不发。**提交之后才发**(通知失败不回滚动作)。
+    理由手机端必填;网页的改派 / 放回不带理由,通知里写「—」。"""
+    if holder_id is None or actor is None or holder_id == actor.pk:
+        return
+    params = {"by": actor.display_name or actor.username, "soul": judgment.soul.name,
+              "reason": reason.strip() or "—", "kind": kind, **extra}
+    judgment_id = str(judgment.pk)
+
+    def send():
+        from apps.authentication.models import User
+        from apps.events.services import EventService
+        from apps.notifications import messages
+
+        holder = User.objects.filter(pk=holder_id, is_active=True).first()
+        if holder is None:
+            return
+        title, body = messages.render(messages.DEFAULT_LOCALE, kind, params)
+        EventService.notify_user(
+            holder, title=title, message=body, notification_type="JUDGMENT_CLAIM_CHANGED",
+            related_resource="judgment", related_id=judgment_id, params=params,
+        )
+
+    transaction.on_commit(send)
 
 
 def batch(pks, operation: str, user, *, target=None, reason: str = "", may_override: bool = False) -> list[Judgment]:

@@ -112,6 +112,8 @@ export type SoulListItem = SoulBase & {
 
 /** 200 body of GET /souls/{id}/ — SoulSerializer. */
 export interface Soul extends SoulBase, ArchiveFields {
+  /** 灵魂编号(登录名);还没开过号是 null。不论调用者有没有账号权限都给。 */
+  soul_code?: string | null;
   birth_name?: string;
   origin_location: string;
   description: string;
