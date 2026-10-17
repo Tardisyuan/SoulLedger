@@ -780,7 +780,10 @@
     },
     "col_location": "Original location",
     "col_deleted_by": "Deleted by",
-    "restore_missing_roles": "Cannot restore: this workflow template names roles that no longer exist ({{roles}}). Restore or recreate them first."
+    "restore_missing_roles": "Cannot restore: this workflow template names roles that no longer exist ({{roles}}). Restore or recreate them first.",
+    "search": "Search name, reason, deleted by or location",
+    "all_types": "All types",
+    "no_match": "Nothing matches these filters"
   },
   "permissions": {
     "title": "Permission Management",
@@ -1352,6 +1355,14 @@
         "forbidden": "You don't have permission to start approvals",
         "failed": "Couldn't start, please try again"
       }
+    },
+    "filter": {
+      "search": "Search workflow, soul or case type",
+      "all": "All",
+      "civilization": "Civilization",
+      "from": "Created from",
+      "to": "Created to",
+      "clear": "Clear filters"
     }
   },
   "dashboard": {
@@ -1856,7 +1867,8 @@
       "col_case_soul": "Case no. / Soul",
       "col_cycle_kind": "Life / kind",
       "undefer": "Restore",
-      "done_undefer": "Restored; the case is back in the queue"
+      "done_undefer": "Restored; the case is back in the queue",
+      "load_more": "Load more ({{n}} left)"
     },
     "admission": {
       "title": "Evidence · admission",
@@ -2160,7 +2172,17 @@
     "batch_deleted": "Deleted {{count}}",
     "batch_delete_error": "Failed to delete",
     "batch_delete_title": "Delete {{n}} notifications?",
-    "batch_delete_message": "They disappear from your inbox. This does not affect anyone else's notifications."
+    "batch_delete_message": "They disappear from your inbox. This does not affect anyone else's notifications.",
+    "open_workflow": "Open the approval",
+    "open_cross_judgment": "Open the cross-realm judgment",
+    "open_soul": "Open the soul",
+    "open_sentence_plan": "Open the sentence plan",
+    "open_sentence_requests": "Open sentence requests",
+    "open_letter": "Open the letter",
+    "open_death_sync": "Open death sync",
+    "open_scheduler": "Open scheduled tasks",
+    "open_assistant": "Open assistant admin",
+    "open_failed": "Could not open: the record is gone"
   },
   "realms": {
     "title": "Realms",
@@ -2560,7 +2582,9 @@
       "FAIL": "Rejected"
     },
     "case_title": "Title",
-    "status_label": "Status"
+    "status_label": "Status",
+    "original_judgment": "Original judgment",
+    "original_soul": "Soul"
   },
   "users": {
     "title": "User Management",
@@ -2680,7 +2704,11 @@
         "password_weak": "Password does not meet the rules",
         "unknown": "This row could not be checked"
       }
-    }
+    },
+    "organization": "Organization",
+    "organization_none": "No organization",
+    "organization_column": "Organization · Position",
+    "position": "Position"
   },
   "settings": {
     "title": "Settings",
@@ -5463,7 +5491,8 @@
       "seat_actor_none": "Not specified yet",
       "seat_actor_empty": "This civilization has no deity who can take a seat",
       "seat_actor_hint_judging": "A co-judge or chair must be a judge",
-      "seat_actor_hint_advisor": "Any serving deity may sit as an advisor"
+      "seat_actor_hint_advisor": "Any serving deity may sit as an advisor",
+      "view": "View the joint judgment"
     },
     "file": {
       "open": "File a request",

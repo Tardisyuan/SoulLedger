@@ -12023,6 +12023,8 @@ export interface components {
             readonly archive_reason: string;
             readonly evidence_admissions: components["schemas"]["EvidenceAdmission"][];
             readonly admitted_balance: components["schemas"]["AdmittedBalance"];
+            /** Format: uuid */
+            readonly cross_judgment_id: string | null;
         };
         /** @description The draft as stored: what a save returns, and what a 409 hands back. */
         JudgmentDraft: {
@@ -17155,6 +17157,7 @@ export interface components {
             readonly has_date_warning: boolean;
             readonly has_record_error: boolean;
             readonly is_eval_identity: boolean;
+            readonly is_archived: boolean;
         };
         SoulLoginOutcome: components["schemas"]["SoulLoginResponse"] | components["schemas"]["SoulMfaRequired"];
         SoulLoginRequest: {

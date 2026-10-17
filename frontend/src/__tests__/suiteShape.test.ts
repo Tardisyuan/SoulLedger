@@ -208,6 +208,8 @@ const COLLECTED_FILES = [
   "OrganizationsPage.test.tsx",
   "PasswordChangeRequired.test.tsx",
   "UserDeleteDialog.test.tsx",
+  // 2026-10-17 审计 1017 #3:编辑用户时设所属机构(只列同租户)与职务。
+  "UserModal.organization.test.tsx",
   "UsersPage.impersonate.test.tsx",
   "UsersPage.locate.test.tsx",
   // 2026-10-09 多角色:角色签、设置角色对话框、批量启用 / 停用、非管理员什么都看不到。
@@ -285,6 +287,8 @@ const COLLECTED_FILES = [
   "MenuRowCells.test.tsx",
   "menuCacheRootsAreInvalidatedTogether.test.ts",
   "menuTranslationCoverage.test.ts",
+  // 2026-10-17 审计 1017 #5:通知点进哪一页;后端每个 related_resource 都要有去处或写明不跳。
+  "notificationTarget.test.tsx",
   "notifyKeysExistInTheBundles.test.ts",
   "notifyPortCarriesTheToast.test.ts",
   "officerAssist.test.tsx",

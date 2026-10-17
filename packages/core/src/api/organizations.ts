@@ -18,6 +18,8 @@ export interface Organization {
   parent: number | null;
   level: number;
   sort: number;
+  /** Owning tenant's id (read-only, stamped on create). An ADMIN's list spans every tenant. */
+  tenant?: number | null;
   /** Assembled client-side by buildTree; never sent by the API. */
   children?: Organization[];
 }
@@ -50,6 +52,15 @@ export const organizationsApi = {
   update: (id: number, data: Partial<OrganizationInput>) => api.patch<Organization>(`/organizations/${id}/`, data),
   delete: (id: number) => api.delete<void>(`/organizations/${id}/`),
   list: () => api.get<PaginatedResponse<Organization>>("/organizations/"),
+  /** Every page, concatenated (page size is fixed at 20 and `?page_size=` is ignored) — for pickers that show the whole tree. */
+  all: async (): Promise<Organization[]> => {
+    const all: Organization[] = [];
+    for (let page = 1; ; page += 1) {
+      const { data } = await api.get<PaginatedResponse<Organization>>("/organizations/", { params: { page } });
+      all.push(...data.results);
+      if (!data.next) return all;
+    }
+  },
   get: (id: number) => api.get<Organization>(`/organizations/${id}/`),
   // Bare array of root nodes — the action returns the serializer data
   // directly (backend/apps/org/views.py:25) and does not nest children.

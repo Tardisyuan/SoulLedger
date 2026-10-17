@@ -159,6 +159,7 @@ function UsersRoute() {
     { key: "email", header: t("users.email"), sortable: true },
     { key: "role", header: t("users.role"), sortable: true },
     { key: "tenant", header: t("users.tenant") },
+    { key: "organization", header: t("users.organization_column") },
     { key: "status", header: t("users.status") },
     { key: "mfa", header: t("mfa.admin.column") },
     { key: "actions", header: t("users.actions"), align: "right", srOnlyHeader: true, pinned: true },
@@ -285,6 +286,10 @@ function UsersRoute() {
             </td>}
             {show("tenant") && <td className={cn("px-4 py-3 text-[oklch(var(--color-ink-muted))]", user.username === located && LOCATED_BG)}>
               {user.tenant?.display_name || user.tenant?.code || "-"}
+            </td>}
+            {/* 机构与职务只由管理员在编辑弹层里设(`PATCH /users/{id}/`);此前列表上没有,机构页的「查看人员」因此总是空的也没人看得出。 */}
+            {show("organization") && <td data-testid="user-organization" className={cn("px-4 py-3 text-[oklch(var(--color-ink-muted))]", user.username === located && LOCATED_BG)}>
+              {[user.organization?.name, user.position].filter(Boolean).join(" · ") || "-"}
             </td>}
             {show("status") && <td className={cn("px-4 py-3", user.username === located && LOCATED_BG)}>
               {/* 状态 = 颜色 + 字形(规范 v1 §1.2),不只靠颜色。 */}

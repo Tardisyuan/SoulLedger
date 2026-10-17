@@ -39,7 +39,7 @@ describe("WorkflowPage instances tab", () => {
     fireEvent.click(await screen.findByText("workflow.instances"));
   }
 
-  // Design 第二十八批 W5:列表没有筛选条,「当前筛选」就是全部 —— 导出请求不带任何参数(尤其不带页码)。
+  // Design 第二十八批 W5:没有筛选时「当前筛选」就是全部 —— 导出请求不带任何参数(尤其不带页码)。
   it("exports the instance list with no filters and no page", async () => {
     mockedWorkflows.mockResolvedValue({ data: { count: 3, results: [] } });
     await openInstances();
@@ -52,7 +52,7 @@ describe("WorkflowPage instances tab", () => {
     expect(button.parentElement).toHaveClass("justify-end");
     fireEvent.click(button);
     await waitFor(() => expect(mockedWorkflowExport).toHaveBeenCalledTimes(1));
-    expect(mockedWorkflowExport).toHaveBeenCalledWith();
+    expect(mockedWorkflowExport).toHaveBeenCalledWith({});
   });
 
   it("greys the export out above 10,000 rows, and not at exactly 10,000", async () => {
@@ -181,13 +181,68 @@ describe("WorkflowPage instances tab", () => {
     await openInstances();
     await screen.findByText("OnTime");
     expect(screen.getAllByText("workflow.overdue_badge")).toHaveLength(1);
-    expect(mockedWorkflows).toHaveBeenLastCalledWith();
+    expect(mockedWorkflows).toHaveBeenLastCalledWith({ page: "1" });
 
     const chip = screen.getByRole("button", { name: "workflow.filter_overdue" });
     expect(chip).toHaveAttribute("aria-pressed", "false");
     fireEvent.click(chip);
-    await waitFor(() => expect(mockedWorkflows).toHaveBeenLastCalledWith({ overdue: "true" }));
+    await waitFor(() => expect(mockedWorkflows).toHaveBeenLastCalledWith({ page: "1", overdue: "true" }));
     expect(screen.getByRole("button", { name: "workflow.filter_overdue" })).toHaveAttribute("aria-pressed", "true");
+  });
+
+  // 审计 1017 #2:此前只取第一页、只有「已超时」一枚签。筛选参数名必须是 `WorkflowFilter` 认的那几个。
+  it("sends every filter the backend filterset knows, and exports with the same filters and no page", async () => {
+    mockedWorkflows.mockResolvedValue({ data: { count: 1, results: [] } });
+    await openInstances();
+    await waitFor(() => expect(mockedWorkflows).toHaveBeenLastCalledWith({ page: "1" }));
+
+    fireEvent.change(screen.getByTestId("workflow-search"), { target: { value: " 孟 " } });
+    fireEvent.change(screen.getByRole("combobox", { name: "workflow.detail.status" }), { target: { value: "IN_PROGRESS" } });
+    fireEvent.change(screen.getByRole("combobox", { name: "workflow.detail.case_type" }), { target: { value: "APPEAL" } });
+    fireEvent.change(screen.getByRole("combobox", { name: "workflow.filter.civilization" }), { target: { value: "GREEK" } });
+    fireEvent.change(screen.getByRole("combobox", { name: "workflow.detail.priority" }), { target: { value: "2" } });
+    fireEvent.change(screen.getByTestId("workflow-from"), { target: { value: "2026-10-01" } });
+    fireEvent.change(screen.getByTestId("workflow-to"), { target: { value: "2026-10-17" } });
+
+    const expected = {
+      search: "孟",
+      status: "IN_PROGRESS",
+      case_type: "APPEAL",
+      civilization: "GREEK",
+      priority_min: "2",
+      priority_max: "2",
+      created_after: "2026-10-01",
+      created_before: "2026-10-17 23:59:59",
+    };
+    await waitFor(() => expect(mockedWorkflows).toHaveBeenLastCalledWith({ page: "1", ...expected }));
+
+    fireEvent.click(screen.getByRole("button", { name: /common.export_scope/ }));
+    await waitFor(() => expect(mockedWorkflowExport).toHaveBeenCalledWith(expected));
+
+    // 清除筛选回到无参数;「已超时」不归它管,也没被按下。
+    fireEvent.click(screen.getByRole("button", { name: "workflow.filter.clear" }));
+    await waitFor(() => expect(mockedWorkflows).toHaveBeenLastCalledWith({ page: "1" }));
+    expect(screen.queryByRole("button", { name: "workflow.filter.clear" })).not.toBeInTheDocument();
+  });
+
+  it("pages past the first 20, and a filter change goes back to page 1", async () => {
+    mockedWorkflows.mockResolvedValue({
+      data: { count: 45, results: [{ id: "w1", workflow_name: "One", soul: "A", status: "COMPLETED", is_appeal: false }] },
+    });
+    await openInstances();
+    await screen.findByText("One");
+    fireEvent.click(screen.getByRole("button", { name: /common.next/ }));
+    await waitFor(() => expect(mockedWorkflows).toHaveBeenLastCalledWith({ page: "2" }));
+
+    fireEvent.change(screen.getByRole("combobox", { name: "workflow.detail.status" }), { target: { value: "PENDING" } });
+    await waitFor(() => expect(mockedWorkflows).toHaveBeenLastCalledWith({ page: "1", status: "PENDING" }));
+  });
+
+  it("has no pagination when everything fits on one page", async () => {
+    mockedWorkflows.mockResolvedValue({ data: { count: 20, results: [] } });
+    await openInstances();
+    await screen.findByText("workflow.no_instances");
+    expect(screen.queryByRole("button", { name: /common.next/ })).not.toBeInTheDocument();
   });
 
   /**

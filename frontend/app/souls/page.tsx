@@ -128,6 +128,8 @@ function SoulsList({
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [batch, setBatch] = useState(initialBatch);
   const [problemsOnly, setProblemsOnly] = useState(false);
+  // 「显示已归档」:同处置页的开关(后端 `show_archived`)。不记在浏览器里 —— 归档的灵魂只在要找它时才看。
+  const [showArchived, setShowArchived] = useState(false);
   // The previewed row's id, not its index: a background refetch can reorder
   // the page, and the drawer must keep showing the soul it was opened on.
   const [previewId, setPreviewId] = useState<string | null>(null);
@@ -159,6 +161,7 @@ function SoulsList({
   if (ordering) params.ordering = ordering;
   if (problemsOnly) params.has_date_problem = "true";
   if (batch) params.import_batch = batch;
+  if (showArchived) params.show_archived = "1";
 
   // TanStack Query — automatic caching, background refetch, loading/error states.
   // Params live in the queryKey, so filter/sort/page changes refetch on their own.
@@ -357,6 +360,15 @@ function SoulsList({
               <span className="font-mono text-[oklch(var(--color-ink-subtle))]">{problemCountQuery.data}</span>
             )}
           </FilterChipToggle>
+          <FilterChipToggle
+            pressed={showArchived}
+            onPressedChange={(next) => {
+              setShowArchived(next);
+              setPage(1);
+            }}
+          >
+            {t("records.archive.show_archived")}
+          </FilterChipToggle>
           {batch && (
             <FilterChipToggle
               pressed
@@ -465,6 +477,12 @@ function SoulsList({
                 {resolveEnumDisplay(t, "souls.states", soul.current_state).label ?? t("common.value.unrecorded")}
               </Badge>
               {soul.is_eval_identity && <EvalIdentityTag />}
+              {soul.is_archived && (
+                <span data-testid="soul-archived" className="ml-2 text-xs text-[oklch(var(--color-ink-muted))]">
+                  <span aria-hidden="true">□ </span>
+                  {t("records.archive.badge")}
+                </span>
+              )}
             </td>
             )}
             {/* §4.6: this column was `+0` on every row. A sign is only ever

@@ -82,6 +82,20 @@ def test_a_cancelled_bench_does_not_hold_the_conclusion(cn, eg):
     assert [n.order for n in SentencePlan.all_objects.get(soul=soul).nodes.all()] == [1]
 
 
+def test_the_judgment_detail_names_the_bench_hung_on_it(cn):
+    """审计 1017 #10:审判详情带 `cross_judgment_id`(一对一的反向),审判页据此不再给「开联审」;没挂时是 null。"""
+    _soul, case = plan.open_case(cn)
+    client = officer_client(plan.officer("cn_judge", "JUDGE", cn))
+    first = client.get(f"/api/v1/judgment/{case.pk}/")
+    assert first.status_code == 200, first.data
+    assert first.data["cross_judgment_id"] is None
+
+    cj = CrossTenantJudgmentService.create("联审", "d", cn, None)
+    cj.judgment = case
+    cj.save(update_fields=["judgment"])
+    assert client.get(f"/api/v1/judgment/{case.pk}/").data["cross_judgment_id"] == str(cj.pk)
+
+
 @pytest.mark.parametrize("convened", [False, True])
 def test_an_unfinished_bench_refuses_the_conclusion_with_409_and_writes_nothing(cn, eg, convened):
     """Q17:挂着的联审 PROPOSED / ACTIVE → 409 `cross_judgment_open`;裁决、处置、计划、灵魂状态都不动。"""

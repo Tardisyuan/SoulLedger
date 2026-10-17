@@ -180,3 +180,24 @@ describe("UsersPage column menu", () => {
     expect(screen.queryByText("on-user@x")).toBeNull();
   });
 });
+
+// 审计 1017 #3:机构 · 职务一列。两项都没有时是「-」,不是空格。
+describe("UsersPage · 机构 column", () => {
+  it("shows organization · position, and a dash when neither is set", async () => {
+    list.mockResolvedValue({
+      data: {
+        count: 2,
+        results: [
+          { ...ROWS[0], organization: { id: 11, code: "D1", name: "第一殿" }, position: "判官" },
+          { ...ROWS[1], organization: null, position: "" },
+        ],
+      },
+    });
+    renderPage();
+    const withOrg = (await screen.findByText("on-user")).closest("tr")!;
+    expect(screen.getAllByRole("columnheader").map((h) => h.textContent)).toContain("users.organization_column");
+    expect(within(withOrg).getByTestId("user-organization")).toHaveTextContent("第一殿 · 判官");
+    const without = screen.getByText("off-user").closest("tr")!;
+    expect(within(without).getByTestId("user-organization").textContent).toBe("-");
+  });
+});

@@ -30,7 +30,7 @@ import { PrintFrame } from "@/src/components/print/PrintFrame";
 import { PageSpinner } from "@/src/components/ui/Spinner";
 import { EmptyState } from "@/src/components/ui/EmptyState";
 import { QueryError } from "@/src/components/ui/PageError";
-import { Button } from "@/src/components/ui/Button";
+import { Button, buttonVariants } from "@/src/components/ui/Button";
 import { Badge } from "@/src/components/ui/Badge";
 import { reincarnationApi, type ConcludeJudgmentPayload, type Reincarnation } from "@soulledger/core/api";
 import { SoulReadingPanel } from "@/src/components/souls/SoulReadingPanel";
@@ -1123,7 +1123,18 @@ export default function JudgmentDetailPage({ params }: PageProps) {
                   </span>
                 </label>
               </div>
-              {canOpenCross && <OpenCrossJudgment judgmentId={judgment.id} soulName={soulName} />}
+              {/* 已挂着联审就不再给「开联审」(一份审判只能有一场,服务端会拒),换成去那一场的链接,谁都看得到。 */}
+              {judgment.cross_judgment_id ? (
+                <Link
+                  href={`/cross-judgments/${judgment.cross_judgment_id}`}
+                  data-testid="judgment-cross-link"
+                  className={`${buttonVariants({ variant: "secondary", size: "sm" })} self-start`}
+                >
+                  {t("sentence_plan.cross.view")}
+                </Link>
+              ) : (
+                canOpenCross && <OpenCrossJudgment judgmentId={judgment.id} soulName={soulName} />
+              )}
             </div>
           )}
         </section>

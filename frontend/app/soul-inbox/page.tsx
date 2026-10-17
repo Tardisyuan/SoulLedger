@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode, type RefObject } from "react";
+import { Suspense, useCallback, useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode, type RefObject } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { RefreshCw } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 import { judgmentApi, type Statute } from "@soulledger/core/api";
-import { renderTemplate, type InboxConversation, type InboxFolder, type InboxListParams, type InboxMessage } from "@soulledger/core/api/soul-inbox";
+import { renderTemplate, soulInboxApi, type InboxConversation, type InboxFolder, type InboxListParams, type InboxMessage } from "@soulledger/core/api/soul-inbox";
 import { judgmentKeys, soulInboxKeys } from "@soulledger/core/query_keys";
 import { mediaUrl } from "@soulledger/core/domain/postMedia";
 import {
@@ -627,13 +628,22 @@ function SoulInboxContent() {
   const queryClient = useQueryClient();
   const [folder, setFolder] = useState<FolderKey>("all");
   const [page, setPage] = useState(1);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  // `?c=<会话 id>`:通知「打开来信」带来的,一进来就打开那一封(收件箱没有逐封的路由)。
+  const opening = useSearchParams()?.get("c") || null;
+  const [selectedId, setSelectedId] = useState<string | null>(opening);
   const counts = useInboxFolders();
   const list = useInboxConversations({ page, ...paramsOf(folder) });
   const rows = list.data?.results ?? [];
   const count = list.data?.count ?? 0;
   const totalPages = Math.max(1, Math.ceil(count / PAGE_SIZE));
-  const selected = rows.find((r) => r.id === selectedId) ?? null;
+  const listed = rows.find((r) => r.id === selectedId);
+  // 那一封不在当前文件夹的这一页上(归档了、或在后面几页):单取一次。
+  const single = useQuery({
+    queryKey: [...soulInboxKeys.all, "conversation", selectedId],
+    queryFn: async () => (await soulInboxApi.get(selectedId!)).data,
+    enabled: !!selectedId && !!list.data && !listed,
+  });
+  const selected = listed ?? (single.data?.id === selectedId ? single.data : null);
   const n = counts.data;
 
   const choose = (key: FolderKey) => {
@@ -799,7 +809,10 @@ function SoulInboxContent() {
 export default function SoulInboxPage() {
   return (
     <RequirePermission permissions="soul_inbox.read" fallback={<PermissionDenied />}>
-      <SoulInboxContent />
+      {/* `useSearchParams` 要在 Suspense 里(静态预渲染时它会挂起)。 */}
+      <Suspense fallback={<ListSkeleton count={3} />}>
+        <SoulInboxContent />
+      </Suspense>
     </RequirePermission>
   );
 }
