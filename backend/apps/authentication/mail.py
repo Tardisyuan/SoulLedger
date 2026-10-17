@@ -108,6 +108,12 @@ MESSAGES = {
                 "Sekhem Pen: Hab Sep 1 Wa. Wenen Khetem Seth Ky Nen Gem: Sab En Per-Ek Wehem Sekhem."
             ),
         },
+        "email_code": {"title": "Wat Sesh · Hesb Maa"},
+        "email_changed": {
+            "title": "Wat Sesh Khemen Seth",
+            "note": "Hesb Maa Er Khet: Er {{email}}. Nen Djes: Iyi Er Wesekhet Em Khet Seth.",
+            "text": "Wat Sesh Khemen Seth. Hesb Maa Er Khet: Er {{email}}. Nen Djes: Iyi Er Wesekhet Em Khet Seth.",
+        },
     },
 }
 
