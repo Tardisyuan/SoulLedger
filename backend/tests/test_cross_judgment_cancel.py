@@ -2,6 +2,7 @@
 
 * 取消:理由必填;只有召集人(建会审的人)或发起殿的管理员(ADMIN / 殿主);已结束 / 已取消答 409。
 * 取消后席上各站只读(`sentence/` 拒收),原审判照常结案(`check_cross_judgment` 不挡)。
+* 结束:与取消同一道权限(参与方 403);取消会通知席上各方(含理由)。
 * 结束:说明随结论记下;详情的 `can_end` 只对能做的人为 true,结束后对谁都是 false。
 """
 import pytest
@@ -127,3 +128,38 @@ def test_the_end_note_is_kept(bench):
     assert resp.data["ended_by_name"] == "cj_convener"
     assert resp.data["cancel_reason"] == ""
     assert _cancel(bench["convener"], cj).status_code == 409
+
+
+def test_a_participant_cannot_conclude(bench):
+    cj = bench["cj"]
+    assert bench["convener"].post(f"{CJ}{cj.pk}/activate/", {}, format="json").status_code == 200
+    for who in ("participant", "colleague"):
+        resp = bench[who].post(f"{CJ}{cj.pk}/conclude/", {"conclusion_type": "PASS"}, format="json")
+        assert resp.status_code == 403, resp.data
+    cj.refresh_from_db()
+    assert cj.status == JudgmentStatus.ACTIVE
+
+
+def test_the_halls_admin_can_conclude(bench):
+    cj = bench["cj"]
+    assert bench["convener"].post(f"{CJ}{cj.pk}/activate/", {}, format="json").status_code == 200
+    resp = bench["moderator"].post(f"{CJ}{cj.pk}/conclude/", {"conclusion_type": "PASS"}, format="json")
+    assert resp.status_code == 200, resp.data
+
+
+def test_cancelling_tells_the_seated_tenants_with_the_reason(bench, django_capture_on_commit_callbacks):
+    from apps.notifications.models import UserNotification
+
+    with django_capture_on_commit_callbacks(execute=True):
+        assert _cancel(bench["convener"], bench["cj"], {"reason": "原审判已撤回"}).status_code == 200
+    row = UserNotification.objects.get(user__username="cj_eg_judge", notification_type="JUDGMENT_CONCLUDED")
+    assert "三殿会审" in row.message and "原审判已撤回" in row.message
+    assert row.params["kind"] == "cross_judgment_cancelled"
+
+
+def test_a_refused_cancel_tells_no_one(bench, django_capture_on_commit_callbacks):
+    from apps.notifications.models import UserNotification
+
+    with django_capture_on_commit_callbacks(execute=True):
+        assert _cancel(bench["participant"], bench["cj"]).status_code == 403
+    assert not UserNotification.objects.filter(notification_type="JUDGMENT_CONCLUDED").exists()

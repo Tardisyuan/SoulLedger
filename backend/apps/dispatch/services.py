@@ -1002,6 +1002,34 @@ class CrossTenantJudgmentService:
         return judgment
 
     @staticmethod
+    def _notify_participants(judgment, params):
+        """结案 / 取消都通知席上各方租户的在职账号(经事件总线,事务提交后发)。
+        存 zh-Hans 与 params,读时按请求语言重渲染(apps/notifications/messages.py)。"""
+        from apps.authentication.models import User
+        from apps.notifications import messages
+
+        tenants = [p.participant_tenant for p in judgment.participants.all()]
+        title, message = messages.render(messages.DEFAULT_LOCALE, messages.kind_for("JUDGMENT_CONCLUDED", params), params)
+        judgment_id = str(judgment.id)
+
+        def send():
+            from apps.events.services import EventService
+
+            for tenant in tenants:
+                for user in User.objects.filter(tenant=tenant, is_active=True):
+                    EventService.notify_user(
+                        user,
+                        title=title,
+                        message=message,
+                        notification_type="JUDGMENT_CONCLUDED",
+                        related_resource="CrossTenantJudgment",
+                        related_id=judgment_id,
+                        params=params,
+                    )
+
+        _after_commit(send)
+
+    @staticmethod
     @transaction.atomic
     def conclude(judgment, conclusion_type, conclude_by, note=""):
         """
@@ -1026,34 +1054,10 @@ class CrossTenantJudgmentService:
         ):
             raise ValueError(f"Cannot conclude judgment in status: {judgment.status}")
 
-        # Notify all participants, through the bus for the same reason.
-        from apps.authentication.models import User
-        from apps.notifications import messages
-
-        tenants = [p.participant_tenant for p in judgment.participants.all()]
-        # 存 zh-Hans 与 params,读时按请求语言重渲染(apps/notifications/messages.py)。
         params = {"title": judgment.title}
         if conclusion_type == "FAIL":
             params["kind"] = "cross_judgment_concluded_fail"
-        title, message = messages.render(messages.DEFAULT_LOCALE, messages.kind_for("JUDGMENT_CONCLUDED", params), params)
-        judgment_id = str(judgment.id)
-
-        def send():
-            from apps.events.services import EventService
-
-            for tenant in tenants:
-                for user in User.objects.filter(tenant=tenant, is_active=True):
-                    EventService.notify_user(
-                        user,
-                        title=title,
-                        message=message,
-                        notification_type="JUDGMENT_CONCLUDED",
-                        related_resource="CrossTenantJudgment",
-                        related_id=judgment_id,
-                        params=params,
-                    )
-
-        _after_commit(send)
+        CrossTenantJudgmentService._notify_participants(judgment, params)
 
         return judgment
 
@@ -1061,7 +1065,7 @@ class CrossTenantJudgmentService:
     def can_end(judgment, user, request_tenant=None):
         """结束 / 取消会审的人(第四十批 W-a):召集人(建这场会审的人),或发起殿的管理员
         (ADMIN / 殿主 MODERATOR,令牌上的租户就是发起方;全局 ADMIN 没有租户也算)。
-        参与方不在内 —— 他们入席表态,不替召集人收场。"""
+        参与方不在内 —— 他们入席表态,不替召集人收场。结束与取消共用这一道。"""
         if user is None or not getattr(user, "is_authenticated", False):
             return False
         if judgment.create_user_id is not None and judgment.create_user_id == user.pk:
@@ -1087,4 +1091,7 @@ class CrossTenantJudgmentService:
             JudgmentStatus.CANCELLED, cancel_reason=reason, ended_by=_decider(cancelled_by),
         ):
             raise ValueError(f"Cannot cancel judgment in status: {judgment.status}")
+        CrossTenantJudgmentService._notify_participants(
+            judgment, {"title": judgment.title, "reason": reason, "kind": "cross_judgment_cancelled"},
+        )
         return judgment
