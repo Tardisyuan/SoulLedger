@@ -1404,7 +1404,7 @@
       "cooldowns": "缩短冷却待批",
       "letters": "待我回的书信",
       "unassigned_letters": "未分配的书信",
-      "sentence_requests": "受刑请求",
+      "sentence_requests": "受刑请求待批",
       "reports": "举报待处理"
     },
     "civ_share": "占比",
@@ -4912,7 +4912,10 @@
       "lamp_many": "{{name}} 等 {{n}} 人为你的帖子点了长明灯",
       "followed_many": "{{name}} 等 {{n}} 人关注了你",
       "inbox_retention": "只保留 90 天内的互动。",
-      "inbox_empty": "还没有互动"
+      "inbox_empty": "还没有互动",
+      "reacted_one": "{{name}} 对你的帖子表态",
+      "lamp_one": "{{name}} 为你的帖子点了长明灯",
+      "followed_one": "{{name}} 关注了你"
     }
   },
   "soul_push": {
@@ -6675,9 +6678,10 @@
     "col_life": "第几世",
     "life_value": "第 {{from}} → {{to}} 世",
     "col_form": "转生形态",
-    "col_to": "去往",
+    "col_to": "去往界域",
     "col_time": "时间",
     "total": "共 {{n}} 条",
-    "empty": "还没有转生记录"
+    "empty": "还没有转生记录",
+    "all_forms": "全部形态"
   }
 }

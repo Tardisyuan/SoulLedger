@@ -71,7 +71,7 @@ function RebirthsContent() {
           label={t("rebirths.col_form")}
           value={form}
           options={[
-            { value: "", label: t("filter.all") },
+            { value: "", label: t("rebirths.all_forms") },
             ...SIX_PATHS.map((f) => ({ value: f, label: t(`reincarnation.forms.${f}`) })),
           ]}
           clearLabel={t("filter.clear_one", { name: t("rebirths.col_form") })}
