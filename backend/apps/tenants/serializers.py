@@ -3,7 +3,7 @@ import unicodedata
 from rest_framework import serializers
 
 from apps.souls.models import Civilization
-from apps.tenants.models import REBIRTH_COOLDOWN_SETTING, Tenant
+from apps.tenants.models import REBIRTH_COOLDOWN_SETTING, SELF_SERVICE_SETTING, VISIT_SETTINGS, Tenant
 
 
 def _one_char(test):
@@ -43,6 +43,12 @@ def validate_seal_glyphs(civilization, glyphs):
 class TenantSerializer(serializers.ModelSerializer):
     civilization = serializers.CharField(read_only=True)
     seal_glyphs = serializers.ListField(child=serializers.CharField(), read_only=True)
+    letters_on = serializers.SerializerMethodField(help_text="书信是否开着(服务器级 `MATRIX_ENABLED`)。")
+
+    def get_letters_on(self, obj) -> bool:
+        from django.conf import settings
+
+        return bool(settings.MATRIX_ENABLED)
 
     class Meta:
         model = Tenant
@@ -60,6 +66,7 @@ class TenantSerializer(serializers.ModelSerializer):
             "hall_name",
             "hall_name_en",
             "hall_name_egy",
+            "letters_on",
             "created_at",
         ]
         read_only_fields = ["id", "code", "created_at"]
@@ -77,11 +84,17 @@ class TenantSettingsSerializer(serializers.ModelSerializer):
     soul_rebirth_cooldown_days = serializers.IntegerField(min_value=0, max_value=365, required=False, allow_null=True)
     # 两步验证(A12):要求开启的角色名;ADMIN 始终要求,写进来也原样留着。只认可持有的角色名。
     mfa_required_roles = serializers.ListField(child=serializers.CharField(max_length=20), required=False)
+    # 到殿办理(第四十一批 H-a):书信没开时灵魂 App 帮助页显示。选填;去首尾空格后为空 = 没填,删掉这个键。
+    visit_address = serializers.CharField(max_length=VISIT_SETTINGS["visit_address"], required=False, allow_blank=True)
+    visit_hours = serializers.CharField(max_length=VISIT_SETTINGS["visit_hours"], required=False, allow_blank=True)
+    visit_phone = serializers.CharField(max_length=VISIT_SETTINGS["visit_phone"], required=False, allow_blank=True)
+    # 灵魂能不能自己改联系邮箱(缺省 = 开)。只管**开始**一次改动,在途的照常完成(contact_email.py)。
+    soul_contact_email_self_service = serializers.BooleanField(required=False)
 
     class Meta:
         model = Tenant
         fields = ["description", "dispatch_enabled", "hall_name", "hall_name_en", "hall_name_egy",
-                  "soul_rebirth_cooldown_days", "mfa_required_roles"]
+                  "soul_rebirth_cooldown_days", "mfa_required_roles", *VISIT_SETTINGS, SELF_SERVICE_SETTING]
 
     def validate_mfa_required_roles(self, value):
         from apps.authentication.models import is_assignable_role
@@ -96,6 +109,15 @@ class TenantSettingsSerializer(serializers.ModelSerializer):
             from apps.authentication.mfa import MFA_REQUIRED_ROLES_SETTING
 
             instance.settings = {**(instance.settings or {}), MFA_REQUIRED_ROLES_SETTING: validated_data.pop("mfa_required_roles")}
+        for key in VISIT_SETTINGS:
+            if key in validated_data:
+                value = validated_data.pop(key).strip()
+                merged = {k: v for k, v in (instance.settings or {}).items() if k != key}
+                if value:
+                    merged[key] = value
+                instance.settings = merged
+        if SELF_SERVICE_SETTING in validated_data:
+            instance.settings = {**(instance.settings or {}), SELF_SERVICE_SETTING: validated_data.pop(SELF_SERVICE_SETTING)}
         if "soul_rebirth_cooldown_days" in validated_data:
             days = validated_data.pop("soul_rebirth_cooldown_days")
             merged = {k: v for k, v in (instance.settings or {}).items() if k != REBIRTH_COOLDOWN_SETTING}

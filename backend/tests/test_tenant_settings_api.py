@@ -8,7 +8,7 @@ from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.soul_accounts.rebirth import cooldown_days
-from apps.tenants.models import REBIRTH_COOLDOWN_SETTING
+from apps.tenants.models import REBIRTH_COOLDOWN_SETTING, SELF_SERVICE_SETTING
 
 pytestmark = pytest.mark.django_db
 
@@ -127,3 +127,26 @@ def test_the_list_carries_the_hall_names_so_the_form_can_start_from_them(judge_u
     assert resp.status_code == 200
     row = next(r for r in resp.data["results"] if r["code"] == cn_tenant.code)
     assert row["hall_name_en"] == "The Fifth Court"
+
+
+def test_visit_fields_are_trimmed_and_an_empty_one_removes_the_key(admin_user, cn_tenant):
+    cn_tenant.settings = {"assistant_enabled": True, "visit_phone": "010-1"}
+    cn_tenant.save()
+    resp = _patch(admin_user, cn_tenant, {"visit_address": "  第五殿正门  ", "visit_hours": "9:00-17:00", "visit_phone": "   "})
+    assert resp.status_code == 200, resp.data
+    cn_tenant.refresh_from_db()
+    assert cn_tenant.settings == {"assistant_enabled": True, "visit_address": "第五殿正门", "visit_hours": "9:00-17:00"}
+
+
+def test_visit_fields_have_length_limits(admin_user, cn_tenant):
+    for key, limit in (("visit_address", 80), ("visit_hours", 40), ("visit_phone", 40)):
+        assert _patch(admin_user, cn_tenant, {key: "x" * limit}).status_code == 200
+        assert _patch(admin_user, cn_tenant, {key: "x" * (limit + 1)}).status_code == 400
+
+
+def test_the_soul_email_switch_is_editable_and_keeps_other_keys(admin_user, cn_tenant):
+    cn_tenant.settings = {"assistant_enabled": True}
+    cn_tenant.save()
+    assert _patch(admin_user, cn_tenant, {SELF_SERVICE_SETTING: False}).status_code == 200
+    cn_tenant.refresh_from_db()
+    assert cn_tenant.settings == {"assistant_enabled": True, SELF_SERVICE_SETTING: False}

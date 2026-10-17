@@ -101,6 +101,10 @@ describe("TenantSettingsDialog", () => {
       description: "旧说明",
       dispatch_enabled: false,
       soul_rebirth_cooldown_days: 7,
+      visit_address: "",
+      visit_hours: "",
+      visit_phone: "",
+      soul_contact_email_self_service: true,
     });
     // 断言「没有」:整份 settings 不出门,assistant_enabled 不在请求里。
     expect(patch).not.toHaveProperty("settings");
@@ -154,5 +158,49 @@ describe("TenantSettingsDialog", () => {
     update.mockRejectedValueOnce({ response: { status: 500, data: {} } });
     save();
     await waitFor(() => expect(mockShowToast).toHaveBeenCalledWith("tenants.settings.save_failed", "error"));
+  });
+});
+
+describe("到殿办理 / 灵魂账号 (第四十一批 H-a)", () => {
+  it("fills the three visit lines from settings and sends them trimmed", async () => {
+    update.mockResolvedValue({ data: tenant() });
+    renderDialog(tenant({ settings: { visit_address: "正门" } }));
+    const address = screen.getByLabelText(/hall_settings\.visit\.address/);
+    expect(address).toHaveValue("正门");
+    expect(address).toHaveAttribute("maxlength", "80");
+    expect(screen.getByLabelText(/hall_settings\.visit\.hours/)).toHaveAttribute("maxlength", "40");
+    expect(screen.getByLabelText(/hall_settings\.visit\.phone/)).toHaveAttribute("maxlength", "40");
+    fireEvent.change(address, { target: { value: "  东门  " } });
+    save();
+    await waitFor(() => expect(update).toHaveBeenCalledTimes(1));
+    expect(update.mock.calls[0][1]).toMatchObject({ visit_address: "东门", visit_hours: "", visit_phone: "" });
+  });
+
+  it("shows the letters_on line only when letters are on", () => {
+    renderDialog(tenant({ letters_on: true }));
+    expect(screen.getByText("hall_settings.visit.letters_on")).toBeInTheDocument();
+  });
+
+  it("has no letters_on line when letters are off", () => {
+    renderDialog(tenant({ letters_on: false }));
+    expect(screen.queryByText("hall_settings.visit.letters_on")).toBeNull();
+  });
+
+  it("the email switch defaults on, only an explicit false turns it off, and both explanation lines always show", async () => {
+    update.mockResolvedValue({ data: tenant() });
+    renderDialog(tenant({ settings: { soul_contact_email_self_service: false } }));
+    const box = screen.getByLabelText("hall_settings.soul_email_self");
+    expect(box).not.toBeChecked();
+    expect(screen.getByText("hall_settings.soul_email_on")).toBeInTheDocument();
+    expect(screen.getByText("hall_settings.soul_email_off")).toBeInTheDocument();
+    fireEvent.click(box);
+    save();
+    await waitFor(() => expect(update).toHaveBeenCalledTimes(1));
+    expect(update.mock.calls[0][1]).toMatchObject({ soul_contact_email_self_service: true });
+  });
+
+  it("a tenant with no such key starts with the switch on", () => {
+    renderDialog(tenant());
+    expect(screen.getByLabelText("hall_settings.soul_email_self")).toBeChecked();
   });
 });

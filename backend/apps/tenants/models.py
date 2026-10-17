@@ -7,6 +7,13 @@ from apps.core.models import AuditUserFields
 #: 常量放在这里是因为两边都能 import 这个模块而不绕圈。
 REBIRTH_COOLDOWN_SETTING = "soul_rebirth_cooldown_days"
 
+#: `Tenant.settings` 里「灵魂能不能自己改联系邮箱」的开关;缺省 = 开,只有明确的 False 才关
+#: (`apps/soul_accounts/contact_email.py::self_service` 读,`TenantSettingsSerializer` 写)。
+SELF_SERVICE_SETTING = "soul_contact_email_self_service"
+
+#: 「到殿办理」三项(书信没开时灵魂 App 帮助页显示):`settings` 键 → 最大长度。选填,去空格后为空 = 没填(不存键)。
+VISIT_SETTINGS = {"visit_address": 80, "visit_hours": 40, "visit_phone": 40}
+
 
 class Tenant(AuditUserFields, models.Model):
     """A tenant represents a civilization's afterlife system (Chinese Diyu, European Heaven-Hell, Egyptian Duat)."""

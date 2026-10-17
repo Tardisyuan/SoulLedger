@@ -10,7 +10,7 @@ from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.audit.models import AuditLog
-from apps.tenants.models import REBIRTH_COOLDOWN_SETTING
+from apps.tenants.models import REBIRTH_COOLDOWN_SETTING, SELF_SERVICE_SETTING
 
 pytestmark = pytest.mark.django_db(transaction=True)
 
@@ -160,3 +160,17 @@ def test_other_saves_still_get_their_generic_row(cn_tenant, eu_tenant):
     cn_tenant.save()
     rows = AuditLog.objects.filter(resource="tenant", action="UPDATE")
     assert sorted(r.resource_id for r in rows) == sorted([str(eu_tenant.pk), str(cn_tenant.pk)])
+
+
+def test_visit_fields_and_the_email_switch_are_audited_old_to_new(admin_user, cn_tenant):
+    cn_tenant.settings = {"visit_phone": "010-1"}
+    cn_tenant.save()
+    AuditLog.objects.all().delete()
+    resp = _patch(admin_user, cn_tenant, "settings", {"visit_address": " 正门 ", "visit_phone": " ", SELF_SERVICE_SETTING: False})
+    assert resp.status_code == 200, resp.data
+    (row,) = _rows()
+    assert row.changes == {
+        "visit_address": [None, "正门"],
+        "visit_phone": ["010-1", None],
+        SELF_SERVICE_SETTING: [True, False],
+    }

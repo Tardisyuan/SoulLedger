@@ -166,7 +166,7 @@ export { menusApi, menuButtonsApi, type MenuItem, type MenuButton, type MenuButt
 export { auditApi, loginLogsApi, type AuditActionOption, type AuditLogDetail, type AuditLogEntry, type AuditStats, type AuditTimelineParams, type LoginLogEntry, type LoginLogStatus } from "./audit";
 
 // Tenants
-export { tenantsApi, REBIRTH_COOLDOWN_SETTING, MFA_REQUIRED_ROLES_SETTING, type Tenant, type TenantSettingsPatch, type TenantMfaRoleRow } from "./tenants";
+export { tenantsApi, REBIRTH_COOLDOWN_SETTING, MFA_REQUIRED_ROLES_SETTING, SOUL_EMAIL_SELF_SERVICE_SETTING, VISIT_SETTING_LIMITS, type Tenant, type TenantSettingsPatch, type TenantMfaRoleRow } from "./tenants";
 
 // Organizations
 export { organizationsApi, organizationNotEmptyOf, type Organization, type OrganizationInput, type OrganizationNotEmpty } from "./organizations";

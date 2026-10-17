@@ -4881,6 +4881,9 @@
       "a_contact": "Tap “Write to your hall” at the bottom of this page; the reply appears in your letters. For anything urgent, come to the hall's counter.",
       "in_person_title": "Come to {{hall}} with your delivery slip",
       "in_person_body": "Letters aren't open here yet, so please ask in person.",
+      "address": "Address",
+      "hours": "Opening hours",
+      "phone": "Phone",
       "unresolved": "Still need help"
     },
     "feedback": {
@@ -6686,5 +6689,20 @@
     "total": "{{n}} records",
     "empty": "No rebirths yet",
     "all_forms": "All forms"
+  },
+  "hall_settings": {
+    "visit": {
+      "title": "In-person visits",
+      "hint": "Shown on the soul app's help page when letters are off here. Empty fields are hidden.",
+      "address": "Address",
+      "hours": "Opening hours",
+      "phone": "Phone",
+      "optional": "Optional",
+      "letters_on": "Letters are on · souls don't see these now."
+    },
+    "soul_accounts": "Soul accounts",
+    "soul_email_self": "Let souls change their own contact email",
+    "soul_email_on": "On: souls change it in the app after entering their password. The code goes to the new address; the old one gets a notice.",
+    "soul_email_off": "Off: the app says to come to the hall with the delivery slip; an officer changes it in the soul account."
   }
 }

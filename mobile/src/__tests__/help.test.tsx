@@ -161,3 +161,38 @@ describe("第四十批 S-d: no letters here", () => {
     expect(screen.queryByTestId("help-write")).toBeNull();
   });
 });
+
+describe("第四十一批 H-a: the hall's visit lines", () => {
+  const open = async (tenant: Record<string, unknown>) => {
+    secure.set(REFRESH_TOKEN_KEY, "R");
+    stubApi({
+      "/me/": { status: 200, data: { ...PROFILE, tenant: { ...PROFILE.tenant, ...tenant } } },
+      "/me/life/": { status: 200, data: life(1) },
+      "/me/chat/session/": { status: 503, data: { code: "chat_not_configured" } },
+      "GET /me/notification-settings/": { status: 200, data: SETTINGS },
+      "GET /me/mfa/": { status: 200, data: { enabled: false } },
+      "GET /me/sessions/": { status: 200, data: [] },
+    });
+    renderApp();
+    await screen.findByTestId("profile-card");
+    fireEvent.press(screen.getByTestId("header-account"));
+    await screen.findByTestId("settings");
+    fireEvent.press(await screen.findByTestId("open-help"));
+    return screen.findByTestId("help-in-person-block");
+  };
+
+  it("shows the filled lines under the title and skips the empty ones", async () => {
+    const block = await open({ visit: { address: "第十殿正门", hours: "", phone: "010-1234" } });
+    expect(within(block).getByText("地址 · 第十殿正门")).toBeTruthy();
+    expect(within(block).getByText("电话 · 010-1234")).toBeTruthy();
+    expect(within(block).queryByTestId("help-visit-hours")).toBeNull();
+  });
+
+  it("draws no lines when the hall filled none", async () => {
+    const block = await open({ visit: { address: "", hours: "  ", phone: "" } });
+    expect(within(block).queryByTestId("help-visit-address")).toBeNull();
+    expect(within(block).queryByTestId("help-visit-hours")).toBeNull();
+    expect(within(block).queryByTestId("help-visit-phone")).toBeNull();
+  });
+});
+
