@@ -1,9 +1,10 @@
 /**
  * The read cache (Design batch 28 O3): what the officer last saw, so a dropped network still shows it.
  *
- * WHAT IS KEPT. The to-do list (`list:todo`, which carries the letters group) and the DETAIL_KEEP most
- * recently opened details (`detail:<kind>:<id>`: approval / dispatch / rebirth / cooldown / letter
- * threads). One JSON value in the persistent store. Pictures are NOT kept: a picture that cannot load
+ * WHAT IS KEPT. The to-do list (`list:todo`, which carries the letters group), the judgment queue's
+ * first page per group (`list:queue:<group>`), the first page of 通知 (`list:notices`), and the
+ * DETAIL_KEEP most recently opened details (`detail:<kind>:<id>`: approval / dispatch / rebirth /
+ * cooldown / letter threads / judgments; a judgment's comments are not kept). One JSON value in the persistent store. Pictures are NOT kept: a picture that cannot load
  * offline is a grey block (letterImages.tsx).
  *
  * WHEN IT IS USED. Offline -- or when a request dies without any answer from the server -- and only

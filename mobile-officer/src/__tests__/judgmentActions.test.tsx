@@ -4,7 +4,7 @@ import { fireEvent, screen, waitFor } from "@testing-library/react-native";
 import { judgmentActionState, judgmentMoreItems, reasonBlank } from "../rules";
 import { JudgmentActionBar } from "../screens/judgmentActions";
 import { summaryFolds } from "../screens/judgmentCase";
-import { renderOfficer } from "./harness";
+import { OFFICER, renderOfficer } from "./harness";
 
 const mockClaim = jest.fn();
 const mockRelease = jest.fn();
@@ -64,7 +64,7 @@ describe("judgmentActionState", () => {
   });
 });
 
-function bar(over: object, handlers: Partial<{ onChanged: () => void; onAsked: () => void }> = {}) {
+function bar(over: object, handlers: Partial<{ onChanged: () => void; onAsked: () => void }> = {}, user = OFFICER) {
   renderOfficer(
     <JudgmentActionBar
       data={{ ...(BASE as object), ...over } as never}
@@ -74,7 +74,8 @@ function bar(over: object, handlers: Partial<{ onChanged: () => void; onAsked: (
       onChanged={handlers.onChanged ?? (() => {})}
       onWrite={() => {}}
       onDesk={() => {}}
-    />
+    />,
+    { user }
   );
 }
 
@@ -89,6 +90,20 @@ describe("JudgmentActionBar", () => {
     fireEvent.press(screen.getByTestId("judgment-claim"));
     await waitFor(() => expect(mockClaim).toHaveBeenCalledWith("j-1"));
     await waitFor(() => expect(changed).toHaveBeenCalled());
+  });
+
+  it("without judgment.execute: no 认领 / 恢复 / ⋯ (they would 403); 写评议 or 在电脑上继续 stands in", () => {
+    const reader = { ...OFFICER, permissions: ["judgment.read"] };
+    bar({}, {}, reader);
+    expect(screen.queryByTestId("judgment-claim")).toBeNull();
+    expect(screen.getByTestId("judgment-write")).toBeTruthy();
+    screen.unmount();
+    bar({ claimed_by: ME }, {}, reader);
+    expect(screen.queryByTestId("judgment-more")).toBeNull();
+    screen.unmount();
+    bar({ claimed_by: ME, deferred_at: "2026-10-16T00:00:00Z" }, {}, reader);
+    expect(screen.queryByTestId("judgment-undefer")).toBeNull();
+    expect(screen.getByTestId("judgment-desk")).toBeTruthy();
   });
 
   it("someone else's: a read-only line and no button", () => {

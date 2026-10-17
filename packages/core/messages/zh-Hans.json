@@ -6013,7 +6013,8 @@
       "desk_only": "待宣判 · 请在官员台",
       "scope_note": "手机上可以认领、查看、写评议。宣判和盖印请在官员台完成。",
       "claim": "认领",
-      "claim_failed": "没能认领"
+      "claim_failed": "没能认领",
+      "claim_taken": "已被别人认领"
     },
     "continue_on_desk": "在电脑上继续",
     "search": {
@@ -6220,7 +6221,8 @@
       "unavailable": "现在不能加签，只能查看候选人。",
       "added": "已加签。对方签完后，你的批准才生效。",
       "not_eligible": "这个人不能被加签（要是本殿、有审批权限的在职官员）。",
-      "duplicate": "已经是加签人，或本来就能单独决定这一步。"
+      "duplicate": "已经是加签人，或本来就能单独决定这一步。",
+      "more": "更多（还有 {{n}} 人）"
     },
     "comment": {
       "title": "评议",
@@ -6229,7 +6231,8 @@
       "send": "发表",
       "failed": "没能发表评议，稍后再试。",
       "show_rest": "展开其余 {{n}} 条",
-      "after_close": "结案后"
+      "after_close": "结案后",
+      "load_failed": "没取到评议"
     },
     "letter": {
       "irreversible": "发出后不能撤回",
@@ -6252,7 +6255,9 @@
       "done_unarchived": "已取消归档",
       "archived_banner": "已归档 · {{date}}",
       "unassigned_tag": "未分配",
-      "take": "由我来回"
+      "take": "由我来回",
+      "earlier": "更早的信",
+      "earlier_failed": "没取到更早的信"
     },
     "offline": {
       "banner": "没有网络 · 显示的是 {{time}} 的内容",
@@ -6275,7 +6280,8 @@
       "discard": "删除我的草稿"
     },
     "list": {
-      "more": "加载更多"
+      "more": "加载更多",
+      "more_failed": "没能加载更多"
     },
     "case": {
       "release": "放回",

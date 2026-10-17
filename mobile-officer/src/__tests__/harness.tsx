@@ -15,7 +15,8 @@ export const OFFICER: LoginUser = {
   email: "yama@example.com",
   role: "JUDGE",
   display_name: "阎罗",
-  permissions: ["workflow.approve"],
+  // A JUDGE holds judgment.execute (claim / release / defer); without it those buttons are hidden.
+  permissions: ["workflow.approve", "judgment.execute"],
   // What the API really sends: the code and the database's English display name.
   tenant: { code: "CN_DIYU", display_name: "Chinese Afterlife", civilization: "CHINESE_UNDERWORLD" },
   mfa_enabled: true,

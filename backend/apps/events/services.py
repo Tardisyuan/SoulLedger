@@ -217,13 +217,14 @@ class EventService:
     @staticmethod
     def notify_workflow_assigned(user, workflow, actor: str = "system") -> None:
         """Publish a workflow-assigned notification via EventBus."""
+        from apps.workflow.services import WorkflowService
+
         EventService.notify_user(
             user=user,
             title=f"Workflow Assigned: {workflow.workflow_name}",
             message=f"You have been assigned to workflow '{workflow.workflow_name}'.",
             notification_type="WORKFLOW_ASSIGNED",
-            related_resource="workflow",
-            related_id=str(workflow.id),
+            **WorkflowService.notice_target(workflow),
         )
 
     @staticmethod

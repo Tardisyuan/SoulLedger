@@ -25,6 +25,7 @@ import logging
 import secrets
 import time
 import uuid
+from urllib.parse import quote
 
 import jwt
 import requests
@@ -242,6 +243,18 @@ class SynapseClient:
         """最近的消息,新的在前。官员收件箱读的就是这条;判断「对方回过话没有」也是。"""
         data = self._admin("GET", f"/_matrix/client/v3/rooms/{room_id}/messages",
                            params={"dir": "b", "limit": limit})
+        return [self._row(event) for event in data.get("chunk", []) if event.get("type") == "m.room.message"]
+
+    def messages_before(self, room_id, event_id, *, limit=50):
+        """`event_id` 之前(更早)的一页消息,新的在前 —— 官员收件箱的「更早」。先用 `/context` 拿到这条之前的
+        分页令牌,再从那里往回翻一页。这条事件不在房间里(Synapse 404)就抛 MatrixError,与读不到同样处理。"""
+        ctx = self._admin("GET", f"/_matrix/client/v3/rooms/{room_id}/context/{quote(event_id, safe='')}",
+                          params={"limit": 0})
+        token = ctx.get("start")
+        if not token:
+            return []
+        data = self._admin("GET", f"/_matrix/client/v3/rooms/{room_id}/messages",
+                           params={"dir": "b", "limit": limit, "from": token})
         return [self._row(event) for event in data.get("chunk", []) if event.get("type") == "m.room.message"]
 
     def history(self, room_id, *, page=100, max_pages=500):

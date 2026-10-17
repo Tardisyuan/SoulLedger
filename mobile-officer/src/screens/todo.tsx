@@ -128,7 +128,7 @@ function TodoGroupRows({ kind, label, group, highlight, onOpen }: { kind: TodoKi
       officerAppApi.todoGroup(kind, (page - 1) * size).then((r) => ({ results: r.data.items, next: (page - 1) * size + r.data.items.length < r.data.count ? "more" : null })),
     [kind, size]
   );
-  const { rows, more } = useMoreRows(first, fetchPage);
+  const { rows, more, moreState } = useMoreRows(first, fetchPage);
   return (
     <View testID={`todo-group-${kind}`}>
       <View style={{ paddingHorizontal: space[5], paddingVertical: space[3] }}>
@@ -137,7 +137,7 @@ function TodoGroupRows({ kind, label, group, highlight, onOpen }: { kind: TodoKi
       {rows!.map((item) => (
         <TodoRow key={`${item.kind}:${item.id}`} item={item} highlight={highlight?.kind === item.kind && highlight.id === item.id} onOpen={onOpen} />
       ))}
-      <MoreRow more={more} />
+      <MoreRow more={more} state={moreState} />
     </View>
   );
 }

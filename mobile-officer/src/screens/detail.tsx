@@ -256,7 +256,7 @@ function JudgmentDetail({ id, onOpenSoul }: { id: string; onOpenSoul: (id: strin
   const { state } = useSession();
   const me = state.status === "signedIn" ? state.user.id : null;
   const load = useCallback(() => judgmentApi.get(id).then((r) => r.data), [id]);
-  const { data, error, reload } = useRemote(load);
+  const { data, error, reload } = useCachedRemote(`detail:judgment:${id}`, load);
   const scroll = useRef<ScrollView>(null);
   // 「已请求」以服务端的 `reassign_requested_at` 为准(`judgmentActionState` 读它);`asked` 只补一种情形:429(10 分钟内问过,但标记已随认领人变动清掉)。
   const [asked, setAsked] = useState(false);
@@ -298,8 +298,9 @@ const COMMENTS_SHOWN = 3;
 
 function JudgmentComments({ id, concludedAt, readOnly }: { id: string; concludedAt?: string | null; readOnly?: boolean }) {
   const { t } = useI18n();
+  const { offline } = useOnline();
   const load = useCallback(() => judgmentApi.comments(id).then((r) => r.data), [id]);
-  const { data, reload } = useRemote(load);
+  const { data, error, reload } = useRemote(load);
   const [body, setBody] = useState("");
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -328,6 +329,11 @@ function JudgmentComments({ id, concludedAt, readOnly }: { id: string; concluded
       {data && data.length === 0 ? (
         <Txt variant="caption" tone="muted">{t("officer_app.comment.empty")}</Txt>
       ) : null}
+      {data === null && error ? (
+        <Notice tone="neg" onRetry={() => void reload()} testID="comments-failed">
+          {t("officer_app.comment.load_failed")}
+        </Notice>
+      ) : null}
       {hidden > 0 ? <SmallButton testID="comments-show-rest" title={t("officer_app.comment.show_rest", { n: String(hidden) })} onPress={() => setShowAll(true)} /> : null}
       {shown.map((c) => (
         <View key={c.id} testID={`comment-${c.id}`} style={{ gap: space[1] }}>
@@ -341,7 +347,15 @@ function JudgmentComments({ id, concludedAt, readOnly }: { id: string; concluded
         <>
           <Input testID="comment-input" label={t("officer_app.comment.write")} multiline maxLength={JUDGMENT_COMMENT_MAX} value={body} onChangeText={setBody} />
           {failed ? <Notice tone="neg" testID="comment-failed">{t("officer_app.comment.failed")}</Notice> : null}
-          <ActionButton testID="comment-send" kind="outline" busy={busy} title={t("officer_app.comment.send")} onPress={send} />
+          <ActionButton
+            testID="comment-send"
+            kind="outline"
+            busy={busy}
+            disabled={offline}
+            accessibilityHint={offline ? t("officer_app.offline.banner_bare") : undefined}
+            title={t("officer_app.comment.send")}
+            onPress={send}
+          />
         </>
       )}
     </View>
