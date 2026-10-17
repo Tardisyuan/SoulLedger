@@ -14,7 +14,7 @@ import { Pressable, View } from "react-native";
 import { AttachmentList } from "../attachments";
 import { formatWhen } from "../format";
 import { hallLabel } from "../rules";
-import { SectionLabel, Txt, space, useI18n, useTheme } from "../shared";
+import { OneLine, SectionLabel, Txt, space, useI18n, useTheme } from "../shared";
 import { historyView, soulsView } from "../todoFacts";
 import { SoulLink } from "./soulDetail";
 
@@ -50,11 +50,12 @@ export function TodoFactsView({ detail, onOpenSoul }: { detail: TodoItemDetail; 
   );
 }
 
-function Field({ label, value, testID }: { label: string; value: string; testID?: string }) {
+/** `one`: a time or an amount -- one line at any text size, long-press for the whole (S4). */
+function Field({ label, value, testID, one }: { label: string; value: string; testID?: string; one?: boolean }) {
   return (
     <View testID={testID} style={{ gap: space[1] }}>
       <Txt variant="caption" tone="muted">{label}</Txt>
-      <Txt variant="bodyLg">{value}</Txt>
+      {one ? <OneLine variant="bodyLg">{value}</OneLine> : <Txt variant="bodyLg">{value}</Txt>}
     </View>
   );
 }
@@ -75,12 +76,12 @@ function DispatchHeader({ f, hall }: { f: TodoFacts; hall: (h: Hall) => string }
 
 /** 名字 › (a link when it can be) · 编号 (never a link). An older server sends no id: plain text, as before. */
 function SoulName({ soul, onOpenSoul, variant = "bodyLg", testID }: { soul: FactSoul; onOpenSoul: OpenSoul; variant?: "bodyLg" | "body"; testID?: string }) {
-  if (!soul.id || !onOpenSoul) return <Txt variant={variant} testID={testID}>{`${soul.name} · ${soul.soul_code}`}</Txt>;
+  if (!soul.id || !onOpenSoul) return <OneLine variant={variant} testID={testID}>{`${soul.name} · ${soul.soul_code}`}</OneLine>;
   const id = soul.id;
   return (
     <View testID={testID} style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: space[2] }}>
       <SoulLink testID="facts-soul-link" variant={variant} name={soul.name} onOpen={() => onOpenSoul(id)} />
-      <Txt variant={variant} tone="muted">{soul.soul_code}</Txt>
+      <OneLine variant={variant} tone="muted">{soul.soul_code}</OneLine>
     </View>
   );
 }
@@ -120,7 +121,7 @@ function Fields({ detail, f, hall, onOpenSoul }: { detail: TodoItemDetail; f: To
           // A label that already carries its number ("现在剩 {{n}} 天", "第 {{n}} 世") stands alone.
           <Txt key={r.key} variant="bodyLg" testID={`facts-${r.key}`}>{r.label}</Txt>
         ) : (
-          <Field key={r.key} testID={`facts-${r.key}`} label={r.label} value={r.value} />
+          <Field key={r.key} testID={`facts-${r.key}`} label={r.label} value={r.value} one={r.key === "at" || r.key === "merit"} />
         )
       )}
     </>

@@ -136,7 +136,7 @@ export function PeoplePickerSheet({
             minHeight={56}
             strong={picked?.id === person.id}
             title={person.name}
-            lines={person.line ? [person.line] : []}
+            lines={person.line ? [{ one: person.line }] : []}
             right={<Txt variant="nav">{picked?.id === person.id ? "✓" : "○"}</Txt>}
             onPress={() => setPicked(person)}
           />

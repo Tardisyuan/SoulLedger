@@ -20,7 +20,7 @@ import { useCachedRemote } from "../readCache";
 import { ActionButton, GoneContext, RefreshFailed, StateView, detailStateOf } from "../kit";
 import { deskUrl, dispatchStatusLine, dispatchView, goneKey, handledNotice, todoTitle, type ItemKind, type Verdict } from "../rules";
 import { useCan, useSession } from "../session";
-import { Icon, Input, Notice, Screen, SectionLabel, SmallButton, Txt, space, useI18n, useOnline, useRemote, useTheme } from "../shared";
+import { Icon, Input, Notice, OneLine, Screen, SectionLabel, SmallButton, Txt, space, useI18n, useOnline, useRemote, useTheme } from "../shared";
 import { LetterThread } from "./letter";
 import { JudgmentActionBar } from "./judgmentActions";
 import { EvidenceText, JudgmentCase } from "./judgmentCase";
@@ -142,9 +142,9 @@ function DispatchLanding({ id, onSettled, onOpenSoul }: { id: string; onSettled:
       <View style={{ padding: space[5], gap: space[4] }}>
         <SectionLabel>{t("officer_app.kinds.reassignment")}</SectionLabel>
         <Txt variant="title">{data.soul_name ?? ""}</Txt>
-        <Txt variant="caption" tone="muted">
+        <OneLine variant="caption" tone="muted">
           {formatWhen(data.proposed_at)}
-        </Txt>
+        </OneLine>
         <View style={{ gap: space[1] }}>
           <Txt variant="bodyLg" testID="dispatch-status">{[line.glyph, t(line.key)].filter(Boolean).join(" ")}</Txt>
           {line.reason ? <Txt variant="body" testID="dispatch-status-reason">{t("officer_app.dispatch_status.reason", { reason: line.reason })}</Txt> : null}
@@ -211,13 +211,13 @@ function TodoDetail({ kind, id, onSettled, onOpenSoul }: { kind: TodoKind; id: s
           <SectionLabel>{t(`officer_app.kinds.${kind}`)}</SectionLabel>
           <Txt variant="title">{todoTitle(data, t)}</Txt>
           {data.soul_code ? (
-            <Txt variant="caption" tone="muted" testID="detail-soul-code">
+            <OneLine variant="caption" tone="muted" testID="detail-soul-code">
               {data.soul_code}
-            </Txt>
+            </OneLine>
           ) : null}
-          <Txt variant="caption" tone="muted">
+          <OneLine variant="caption" tone="muted">
             {formatWhen(data.created_at)}
-          </Txt>
+          </OneLine>
           {data.actionable ? (
             <Txt variant="bodyLg" testID="detail-your-step">{`◐ ${t("officer_app.detail.your_step")}`}</Txt>
           ) : null}
@@ -381,7 +381,7 @@ function JudgmentComments({ id, concludedAt, readOnly }: { id: string; concluded
       {shown.map((c) => (
         <View key={c.id} testID={`comment-${c.id}`} style={{ gap: space[1] }}>
           {c.id === firstAfter ? <Txt testID="comments-after-close" variant="caption" tone="muted">{`— ${t("officer_app.comment.after_close")} —`}</Txt> : null}
-          <Txt variant="caption" tone="muted">{`${c.author_name} · ${formatWhen(c.created_at)}`}</Txt>
+          <OneLine variant="caption" tone="muted">{`${c.author_name} · ${formatWhen(c.created_at)}`}</OneLine>
           <Txt variant="body">{c.body}</Txt>
         </View>
       ))}

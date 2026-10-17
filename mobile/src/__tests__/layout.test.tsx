@@ -60,6 +60,12 @@ describe("200% text", () => {
     expect(flat(screen.getByTestId("pw-reveal"))).toMatchObject({ minHeight: 60, borderWidth: 1 });
   });
 
+  it("labelHidden keeps the label for screen readers and draws no label row", () => {
+    wrap(<Input testID="ask" label="问一问" labelHidden value="" />);
+    expect(screen.getByTestId("ask").props.accessibilityLabel).toBe("问一问");
+    expect(screen.queryByText("问一问")).toBeNull();
+  });
+
   it("at normal size the reveal sits inside the field's right edge", () => {
     wrap(<Input testID="pw" label="密码" value="" secureTextEntry secureToggle={{ show: "显示", hide: "隐藏" }} />);
     expect(flat(screen.getByTestId("pw-reveal"))).toMatchObject({ width: 52, borderLeftWidth: 1 });

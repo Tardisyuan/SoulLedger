@@ -63,7 +63,7 @@ export function DevicesScreen({ onBack }: { onBack: () => void }) {
           minHeight={64}
           strong={s.current}
           title={s.current ? `${s.label} · ${t("profile.devices.this")}` : s.label}
-          lines={[s.current ? t("profile.devices.in_use") : formatWhen(s.last_seen_at)]}
+          lines={[{ one: s.current ? t("profile.devices.in_use") : formatWhen(s.last_seen_at) }]}
           right={
             s.current ? undefined : (
               <SmallButton testID={`device-signout-${s.id}`} title={t("profile.devices.sign_out")} onPress={() => signOut(s)} />

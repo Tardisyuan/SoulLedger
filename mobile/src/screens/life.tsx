@@ -12,6 +12,7 @@ import { AskGlyph, useAssist } from "../assist";
 import { BandPattern, Emblem, Icon, StageMotif } from "../emblems";
 import { family, titleFamily } from "../fonts";
 import { useToast } from "../feedback";
+import { useGone } from "../gone";
 import { useI18n } from "../i18n";
 import {
   APPLICATION_BADGES,
@@ -182,6 +183,7 @@ export function LifeSections({
 }) {
   const t = useTheme();
   const { t: tr, locale } = useI18n();
+  const gone = useGone();
   const unrecorded = tr("common.value.unrecorded");
   const count = (n: number) => (n ? String(n) : tr("soul_app.common.empty"));
   const section = (key: SectionKey) => ({
@@ -254,29 +256,32 @@ export function LifeSections({
         {life.rebirth_applications.length ? (
           <View style={styles.apps}>
             {life.rebirth_applications.map((a) => {
+              // O-c: an application whose detail turned out to be gone is greyed and opens nothing, like a sealed one.
+              const dead = gone.has(`application:${a.id}`);
+              const opens = onOpenApplication && !sealed && !dead;
               const summary = (
                 <>
                   <View style={[styles.fill, styles.appSummary]}>
                     <EnumBadge namespace="soul_app.status" table={APPLICATION_BADGES} value={a.status} />
                     <EnumValue namespace="reincarnation.forms" value={a.desired_form} tone="ink" variant="bodyLg" />
-                    <OneLine variant="value" tone="subtle" onPress={onOpenApplication && !sealed ? () => onOpenApplication(a.id) : undefined}>
+                    <OneLine variant="value" tone="subtle" onPress={opens ? () => onOpenApplication?.(a.id) : undefined}>
                       {formatStamp(a.created_at) ?? unrecorded}
                     </OneLine>
                   </View>
-                  {onOpenApplication ? (
+                  {onOpenApplication && !dead ? (
                     <Txt variant="caption" tone="ink" style={styles.link}>
                       {`${tr("soul_app.applications.view")} →`}
                     </Txt>
                   ) : null}
                 </>
               );
-              const box = [styles.appCard, { backgroundColor: t.s1, borderColor: t.hair }];
-              return onOpenApplication && !sealed ? (
+              const box = [styles.appCard, { backgroundColor: t.s1, borderColor: t.hair }, dead && styles.gone];
+              return opens ? (
                 <Pressable
                   key={a.id}
                   testID={`life-open-${a.id}`}
                   accessibilityRole="button"
-                  onPress={() => onOpenApplication(a.id)}
+                  onPress={() => onOpenApplication?.(a.id)}
                   style={({ pressed }) => [...box, pressed && styles.pressed]}
                 >
                   {summary}
@@ -908,6 +913,7 @@ export function PastLivesSection({
 }
 
 const styles = StyleSheet.create({
+  gone: { opacity: 0.45 },
   fill: { flex: 1 },
   shrink: { flexShrink: 1 },
   pressed: { opacity: 0.8 },
