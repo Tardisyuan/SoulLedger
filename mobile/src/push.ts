@@ -21,7 +21,7 @@ import { Platform } from "react-native";
 
 import type { NavigationProp } from "@react-navigation/native";
 
-import type { AppStackParams } from "./screens/applications";
+import type { AppStackParams, LifeFocus } from "./screens/applications";
 import { SENTENCE_PUSH_KINDS, type SentenceLanding, type SentencePushKind } from "./screens/sentence";
 
 /** The Expo token this device last registered — what sign-out must unregister. */
@@ -145,8 +145,8 @@ export function installNotificationHandler(): void {
 export type Landing =
   | { screen: "ApplicationDetail"; id: string }
   | { screen: "Conversation"; id: string }
-  | { screen: "CirclePost"; id: string }
-  | { screen: "Life" }
+  | { screen: "CirclePost"; id: string; comment?: string }
+  | { screen: "Life"; focus?: LifeFocus }
   | { screen: "Applications" }
   | { screen: "DataExport" }
   | { screen: "Mfa" }
@@ -161,7 +161,8 @@ export function landOn(navigate: NavigationProp<AppStackParams>["navigate"], lan
   if (landing.screen === "ApplicationDetail") navigate("ApplicationDetail", { id: landing.id, landed: true });
   else if (landing.screen === "Conversation") navigate("Conversation", { id: landing.id, landed: true });
   // 被殿司警告: the post it was about (a comment's post). The author sees their own post even when hidden.
-  else if (landing.screen === "CirclePost") navigate("CirclePost", { id: landing.id });
+  // A comment / reply (第四十批 S-a): the post, scrolled to that comment and washed.
+  else if (landing.screen === "CirclePost") navigate("CirclePost", landing.comment ? { id: landing.id, comment: landing.comment } : { id: landing.id });
   // 受刑 1d: completion lands on the life page's section (the new 「可申请转生」 row is there); the rest on the full list.
   else if (landing.screen === "Sentence" && landing.landing.kind === "sentence_completed")
     navigate("Tabs", { screen: "Life", params: { sentenceLanding: landing.landing } });
@@ -172,8 +173,13 @@ export function landOn(navigate: NavigationProp<AppStackParams>["navigate"], lan
   else if (landing.screen === "DataExport") navigate("DataExport");
   // 官员替灵魂关了两步验证: the page that shows it is off (and turns it back on).
   else if (landing.screen === "Mfa") navigate("Mfa");
+  // 第四十批 S-e: a judgment's result, a disposition carried out, a residence — that row on the life page, washed.
+  else if (landing.screen === "Life" && landing.focus) navigate("Tabs", { screen: "Life", params: { lifeFocus: landing.focus } });
   else navigate("Tabs", { screen: "Life" });
 }
+
+/** The residence pushes land on the 「暂居 · 原属」 block (第四十批 S-e); returning ends it, so there is none to wash. */
+const RESIDENCE_KINDS: readonly unknown[] = ["residence_approved", "residence_started"];
 
 /** An application id as the server sends it (a UUID); anything else is not navigated to. */
 const ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -181,13 +187,27 @@ const ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 /** Where a tapped notification lands, from its `data` — or `null`: just open the app. */
 export function landingOf(data: unknown): Landing | null {
   if (!data || typeof data !== "object") return null;
-  const { screen, application_id: id, conversation_id: conversation, post_id: post, kind, node_ids: nodes } = data as Record<string, unknown>;
+  const {
+    screen,
+    application_id: id,
+    conversation_id: conversation,
+    post_id: post,
+    comment_id: comment,
+    judgment_id: judgment,
+    disposition_id: disposition,
+    kind,
+    node_ids: nodes,
+  } = data as Record<string, unknown>;
   if (screen === "ApplicationDetail") return typeof id === "string" && ID.test(id) ? { screen, id } : { screen: "Life" };
   // Reserved: the server sends no chat push yet (no Synapse → push path; see the round's report).
   // A malformed id opens the app and no more — a letter is not worth guessing at.
   if (screen === "Conversation") return typeof conversation === "string" && ID.test(conversation) ? { screen, id: conversation } : null;
   // 被殿司警告: a malformed post id still lands on the life page, like an application's.
-  if (screen === "CirclePost") return typeof post === "string" && ID.test(post) ? { screen, id: post } : { screen: "Life" };
+  // A comment / reply names its comment too; a malformed one still opens the post, just without the wash.
+  if (screen === "CirclePost") {
+    if (typeof post !== "string" || !ID.test(post)) return { screen: "Life" };
+    return typeof comment === "string" && ID.test(comment) ? { screen, id: post, comment } : { screen, id: post };
+  }
   // 缩短冷却申请的结果:状态在转生申请页的冷却块里。
   if (screen === "Applications") return { screen };
   if (screen === "DataExport" || screen === "Mfa") return { screen };
@@ -198,7 +218,12 @@ export function landingOf(data: unknown): Landing | null {
       const nodeIds = Array.isArray(nodes) ? nodes.filter((n): n is string => typeof n === "string" && ID.test(n)) : [];
       return { screen: "Sentence", landing: { kind: kind as SentencePushKind, nodeIds } };
     }
-    return { screen };
+    const focus: LifeFocus = {
+      ...(typeof judgment === "string" && ID.test(judgment) ? { judgment } : {}),
+      ...(typeof disposition === "string" && ID.test(disposition) ? { disposition } : {}),
+      ...(RESIDENCE_KINDS.includes(kind) ? { residence: true } : {}),
+    };
+    return Object.keys(focus).length ? { screen, focus } : { screen };
   }
   return null;
 }

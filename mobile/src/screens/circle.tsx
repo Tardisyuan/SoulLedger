@@ -43,6 +43,7 @@ import {
   Button,
   Empty,
   Interp,
+  LandingWash,
   Notice,
   PageEmptyArt,
   RadioMark,
@@ -53,6 +54,7 @@ import {
   Txt,
   useLayout,
   usePullRefresh,
+  useReducedMotion,
   useReloadOnRefocus,
   useRemote,
   useTheme,
@@ -938,7 +940,12 @@ function DeleteSheet({ target, onClose, onDeleted }: { target: { kind: "post" | 
   );
 }
 
-export function PostScreen({ id }: { id: string }) {
+/**
+ * One post and its comments. `comment` (第四十批 S-a: a comment / reply push, or a row of 互动消息): that comment is
+ * scrolled to and washed for two seconds — pages are read on until it turns up (comments run oldest first, so a new
+ * one is usually on the last page); one that is gone is simply not found, and the post shows as it is.
+ */
+export function PostScreen({ id, comment }: { id: string; comment?: string }) {
   const t = useTheme();
   const { t: tr } = useI18n();
   const { gutter } = useLayout();
@@ -955,6 +962,19 @@ export function PostScreen({ id }: { id: string }) {
   const navigation = useNavigation<Nav>();
   const openSoul = useOpenSoul();
   const p = post.data;
+  const listRef = useRef<FlatList<SoulComment>>(null);
+  const reduced = useReducedMotion();
+  const landedAt = comment ? (comments.rows ?? []).findIndex((c) => c.id === comment) : -1;
+  const scrolled = useRef(false);
+  const { more: moreComments, loading: commentsLoading } = comments;
+  useEffect(() => {
+    if (!comment || scrolled.current || !comments.rows) return;
+    if (landedAt >= 0) {
+      scrolled.current = true;
+      listRef.current?.scrollToIndex({ index: landedAt, viewPosition: 0.3, animated: !reduced });
+    } else if (moreComments && !commentsLoading) moreComments();
+    else if (!moreComments) scrolled.current = true; // every page read: it is gone
+  }, [comment, landedAt, comments.rows, moreComments, commentsLoading, reduced]);
 
   // The title bar's "⋯" (1d): delete on my own post, report on anyone else's.
   useEffect(() => {
@@ -1048,26 +1068,34 @@ export function PostScreen({ id }: { id: string }) {
       <Screen scroll={false} edges={["left", "right"]} testID="circle-post">
         {pull.frame(
         <FlatList
+          ref={listRef}
           testID="comments-list"
           data={p ? (comments.rows ?? []) : []}
           keyExtractor={rowKey}
+          // Rows are not all measured yet: land near it, the second try (after layout) lands on it.
+          onScrollToIndexFailed={(info) => {
+            listRef.current?.scrollToOffset({ offset: info.averageItemLength * info.index, animated: false });
+            setTimeout(() => listRef.current?.scrollToIndex({ index: info.index, viewPosition: 0.3, animated: false }), 50);
+          }}
           renderItem={({ item: c }) => (
-            <CommentRow
-              c={c}
-              parent={c.parent ? byId.get(c.parent) : undefined}
-              onAuthor={() => openSoul(c.author, c.is_mine)}
-              onMore={() =>
-                c.is_mine ? setDeleting({ kind: "comment", id: c.id }) : navigation.navigate("CircleReport", { target: "COMMENT", id: c.id, preview: c.content })
-              }
-              onReply={
-                canWrite && c.moderation_status === "PUBLISHED"
-                  ? () => {
-                      setReplyTo(c);
-                      input.current?.focus();
-                    }
-                  : undefined
-              }
-            />
+            <LandingWash on={c.id === comment}>
+              <CommentRow
+                c={c}
+                parent={c.parent ? byId.get(c.parent) : undefined}
+                onAuthor={() => openSoul(c.author, c.is_mine)}
+                onMore={() =>
+                  c.is_mine ? setDeleting({ kind: "comment", id: c.id }) : navigation.navigate("CircleReport", { target: "COMMENT", id: c.id, preview: c.content })
+                }
+                onReply={
+                  canWrite && c.moderation_status === "PUBLISHED"
+                    ? () => {
+                        setReplyTo(c);
+                        input.current?.focus();
+                      }
+                    : undefined
+                }
+              />
+            </LandingWash>
           )}
           ListHeaderComponent={
             !p ? (

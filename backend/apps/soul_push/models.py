@@ -71,6 +71,9 @@ class PushPreference(models.Model):
     judgment = models.BooleanField(default=True, help_text="审判结论与处置执行")
     residence = models.BooleanField(default=True, help_text="暂居开始 / 回归(依赖 feat/dispatch-residence)")
     chat = models.BooleanField(default=True, help_text="新书信:私聊的新消息、殿司的回信")
+    # 第四十批 S-c「朋友圈」一组。殿司警告不在这里:不给关。
+    social_comments = models.BooleanField(default=True, help_text="朋友圈:别人评论了我的帖子、回复了我的评论")
+    social_review = models.BooleanField(default=True, help_text="朋友圈:我的帖子 / 评论的审核结果(隐藏、删除、通过、恢复)")
     locale = models.CharField(max_length=10, choices=PushLocale.choices, default=PushLocale.ZH_HANS)
     updated_at = models.DateTimeField(auto_now=True)
 

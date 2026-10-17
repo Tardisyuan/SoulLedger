@@ -9030,6 +9030,167 @@ paths:
               schema:
                 $ref: '#/components/schemas/ChatError'
           description: ''
+  /api/v1/me/contact-email/:
+    get:
+      operationId: v1_me_contact_email_retrieve
+      tags:
+      - v1
+      security:
+      - soulJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContactEmailStatus'
+          description: ''
+    post:
+      operationId: v1_me_contact_email_create
+      description: 要先过 `verify/`(10 分钟内)。同一账号 5 分钟内最多发 3 次;再发一次,上一个码作废。
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContactEmailStart'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ContactEmailStart'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ContactEmailStart'
+        required: true
+      security:
+      - soulJwtAuth: []
+      responses:
+        '202':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContactEmailSent'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContactEmailRefusal'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContactEmailRefusal'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContactEmailRefusal'
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContactEmailRefusal'
+          description: ''
+  /api/v1/me/contact-email/confirm/:
+    post:
+      operationId: v1_me_contact_email_confirm_create
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContactEmailConfirm'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ContactEmailConfirm'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ContactEmailConfirm'
+        required: true
+      security:
+      - soulJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContactEmailStatus'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContactEmailRefusal'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContactEmailRefusal'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContactEmailRefusal'
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContactEmailRefusal'
+          description: ''
+  /api/v1/me/contact-email/verify/:
+    post:
+      operationId: v1_me_contact_email_verify_create
+      description: 当前密码(与开两步验证同一个闸、同一份失败预算);开了两步验证的再要 6 位数字(同一把锁)。
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContactEmailVerify'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ContactEmailVerify'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ContactEmailVerify'
+        required: true
+      security:
+      - soulJwtAuth: []
+      responses:
+        '204':
+          description: No response body
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContactEmailRefusal'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContactEmailRefusal'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContactEmailRefusal'
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContactEmailRefusal'
+          description: ''
   /api/v1/me/device-login/:
     post:
       operationId: v1_me_device_login_create
@@ -10073,6 +10234,70 @@ paths:
               schema:
                 $ref: '#/components/schemas/PaginatedSoulCards'
           description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulSocialError'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulSocialError'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulSocialError'
+          description: ''
+  /api/v1/me/social/interactions/:
+    get:
+      operationId: v1_me_social_interactions
+      description: |-
+        别人评论 / 回复 / 表态 / 点长明灯 / 关注我的记录,新的在前,只给保留窗口(90 天)内的。
+        只读:标已读是 `read/` 那一个动作 —— App 打开这一页就调它,未读点留到离开为止(列表是打开时取的)。
+      tags:
+      - v1
+      security:
+      - soulJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedSoulInteractions'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulSocialError'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulSocialError'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoulSocialError'
+          description: ''
+  /api/v1/me/social/interactions/read/:
+    post:
+      operationId: v1_me_social_interactions_read
+      description: 全部标已读。禁言期间也可以:读的是自己的收件箱,不写朋友圈。
+      tags:
+      - v1
+      security:
+      - soulJwtAuth: []
+      responses:
+        '204':
+          description: No response body
         '403':
           content:
             application/json:
@@ -22372,6 +22597,70 @@ components:
       - provider
       - tokens
       - tools
+    ContactEmailConfirm:
+      type: object
+      properties:
+        code:
+          type: string
+          maxLength: 6
+      required:
+      - code
+    ContactEmailRefusal:
+      type: object
+      description: |-
+        `code` ∈ email_in_person / wrong_password / rate_limited / mfa_required / wrong / expired / locked /
+        proof_required / email_unchanged / reset_code_expired / reset_code_wrong / reset_code_attempts_exceeded / email_taken。
+      properties:
+        detail:
+          type: string
+        code:
+          type: string
+      required:
+      - code
+      - detail
+    ContactEmailSent:
+      type: object
+      properties:
+        sent_to:
+          type: string
+          format: email
+      required:
+      - sent_to
+    ContactEmailStart:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 254
+      required:
+      - email
+    ContactEmailStatus:
+      type: object
+      properties:
+        email_masked:
+          type: string
+          description: 打码的联系邮箱;没有登记时为空串
+        can_change:
+          type: boolean
+          description: 本殿是否允许灵魂自己改
+        mfa_enabled:
+          type: boolean
+          description: 改之前要不要再输 6 位数字
+      required:
+      - can_change
+      - email_masked
+      - mfa_enabled
+    ContactEmailVerify:
+      type: object
+      properties:
+        password:
+          type: string
+        code:
+          type: string
+          maxLength: 6
+      required:
+      - password
     Conversation:
       type: object
       properties:
@@ -28825,6 +29114,12 @@ components:
         chat:
           type: boolean
           description: 新书信:私聊的新消息、殿司的回信
+        social_comments:
+          type: boolean
+          description: 朋友圈:别人评论了我的帖子、回复了我的评论
+        social_review:
+          type: boolean
+          description: 朋友圈:我的帖子 / 评论的审核结果(隐藏、删除、通过、恢复)
         locale:
           $ref: '#/components/schemas/PushLocaleEnum'
     NotificationTypeEnum:
@@ -30432,6 +30727,26 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/SoulEvent'
+    PaginatedSoulInteractions:
+      type: object
+      properties:
+        count:
+          type: integer
+        next:
+          type: string
+          nullable: true
+        previous:
+          type: string
+          nullable: true
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/SoulInteraction'
+      required:
+      - count
+      - next
+      - previous
+      - results
     PaginatedSoulListList:
       type: object
       required:
@@ -32024,6 +32339,12 @@ components:
         chat:
           type: boolean
           description: 新书信:私聊的新消息、殿司的回信
+        social_comments:
+          type: boolean
+          description: 朋友圈:别人评论了我的帖子、回复了我的评论
+        social_review:
+          type: boolean
+          description: 朋友圈:我的帖子 / 评论的审核结果(隐藏、删除、通过、恢复)
         locale:
           $ref: '#/components/schemas/PushLocaleEnum'
     PatchedOrganization:
@@ -36836,6 +37157,63 @@ components:
           format: uri
       required:
       - file
+    SoulInteraction:
+      type: object
+      description: |-
+        「互动消息」的一行。`actor` 是这一行的第一个人,`count` 是这一行里的人数(评论 / 回复总是 1)。
+        `excerpt`:评论 / 回复是那条评论的开头,表态 / 长明灯是我那篇帖子的开头;已删除、未发布的给空串。
+      properties:
+        id:
+          type: string
+          format: uuid
+        kind:
+          $ref: '#/components/schemas/SoulInteractionKindEnum'
+        actor:
+          $ref: '#/components/schemas/SoulCard'
+        count:
+          type: integer
+          readOnly: true
+        post_id:
+          type: string
+          format: uuid
+          nullable: true
+        comment_id:
+          type: string
+          format: uuid
+          nullable: true
+        excerpt:
+          type: string
+          readOnly: true
+        last_at:
+          type: string
+          format: date-time
+        unread:
+          type: boolean
+          readOnly: true
+      required:
+      - actor
+      - comment_id
+      - count
+      - excerpt
+      - id
+      - kind
+      - last_at
+      - post_id
+      - unread
+    SoulInteractionKindEnum:
+      enum:
+      - COMMENT
+      - REPLY
+      - REACTION
+      - LAMP
+      - FOLLOW
+      type: string
+      description: |-
+        * `COMMENT` - Commented on my post
+        * `REPLY` - Replied to my comment
+        * `REACTION` - Reacted to my post
+        * `LAMP` - Lit an eternal lamp on my post
+        * `FOLLOW` - Followed me
     SoulList:
       type: object
       description: Lightweight serializer for list views.
@@ -37689,10 +38067,14 @@ components:
           nullable: true
         reports_remaining:
           type: integer
+        unread_interactions:
+          type: integer
+          description: 「互动」的未读行数(第四十批 S-a)
       required:
       - can_write
       - muted_until
       - reports_remaining
+      - unread_interactions
       - user_id
     SoulStateDistribution:
       type: object

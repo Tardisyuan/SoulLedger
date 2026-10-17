@@ -136,3 +136,28 @@ describe("from settings, signed in", () => {
     expect(screen.getByTestId("feedback-send")).toBeTruthy();
   });
 });
+
+describe("第四十批 S-d: no letters here", () => {
+  it("says which hall to go to (the hall the soul is in now), with no write button", async () => {
+    secure.set(REFRESH_TOKEN_KEY, "R");
+    const hall_names = { "zh-Hans": "酆都第十殿", en: "The Tenth Court", egy: "Yanluo Wesekhet" };
+    stubApi({
+      "/me/": { status: 200, data: { ...PROFILE, tenant: { ...PROFILE.tenant, hall_names } } },
+      "/me/life/": { status: 200, data: life(1) },
+      "/me/chat/session/": { status: 503, data: { code: "chat_not_configured" } },
+      "GET /me/notification-settings/": { status: 200, data: SETTINGS },
+      "GET /me/mfa/": { status: 200, data: { enabled: false } },
+      "GET /me/sessions/": { status: 200, data: [] },
+    });
+    renderApp();
+    await screen.findByTestId("profile-card");
+    fireEvent.press(screen.getByTestId("header-account"));
+    await screen.findByTestId("settings");
+    fireEvent.press(await screen.findByTestId("open-help"));
+    const block = await screen.findByTestId("help-in-person-block");
+    expect(within(block).getByText("还是没解决")).toBeTruthy();
+    expect(within(block).getByText("请到酆都第十殿,带上交付单")).toBeTruthy();
+    expect(within(block).getByText("本殿还没开通书信，问题要到殿里当面办。")).toBeTruthy();
+    expect(screen.queryByTestId("help-write")).toBeNull();
+  });
+});

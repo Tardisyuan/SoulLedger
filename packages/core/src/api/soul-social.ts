@@ -28,6 +28,10 @@ export type SoulReportReason = Schemas["SoulReportRequest"]["reason"];
 export type PaginatedSoulPosts = Schemas["PaginatedSoulPosts"];
 export type PaginatedSoulComments = Schemas["PaginatedSoulComments"];
 export type PaginatedSoulCards = Schemas["PaginatedSoulCards"];
+/** 「互动消息」的一行(第四十批 S-a):`actor` 是这一行的第一个人,`count` 是这一行的人数。 */
+export type SoulInteraction = Schemas["SoulInteraction"];
+export type SoulInteractionKind = Schemas["SoulInteractionKindEnum"];
+export type PaginatedSoulInteractions = Schemas["PaginatedSoulInteractions"];
 export type { PostMedia } from "../domain/postMedia";
 export type SoulPostMediaUpload = Schemas["SoulPostMediaUpload"];
 
@@ -36,8 +40,12 @@ export { SOUL_POST_MEDIA_MAX, mediaGridColumns, mediaUrl } from "../domain/postM
 const get = <T>(url: string, params?: object) => soulHttp.get<T>(url, { params }).then((r) => r.data);
 
 export const soulSocialApi = {
-  /** Ask first: `can_write` false while muted; `reports_remaining` of the 24 h allowance. */
+  /** Ask first: `can_write` false while muted; `reports_remaining` of the 24 h allowance; `unread_interactions` for 「互动」. */
   status: () => get<SoulSocialStatus>("/me/social/status/"),
+  /** 别人评论 / 回复 / 表态 / 点长明灯 / 关注我的记录,新的在前,90 天内。只读:标已读是 `readInteractions`。 */
+  interactions: (page?: number) => get<PaginatedSoulInteractions>("/me/social/interactions/", { page }),
+  /** 打开「互动消息」即全部已读。 */
+  readInteractions: () => soulHttp.post("/me/social/interactions/read/").then(() => undefined),
   /**
    * This civilization + followed. `author` narrows it to one soul's posts (profile page);
    * `following` to its own posts and the souls it follows.
