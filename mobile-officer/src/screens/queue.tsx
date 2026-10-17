@@ -88,7 +88,12 @@ export function QueueTab({ onOpen }: { onOpen: (id: string) => void }) {
             strong
             glyph="§"
             title={`${row.case_number} · ${row.soul_name}`}
-            lines={[row.court, ...(group === "mine" && !row.is_final ? [`◇ ${t("officer_app.queue.desk_only")}`] : [])].filter(Boolean)}
+            lines={[
+              row.court,
+              ...(group === "mine" && !row.is_final ? [`◇ ${t("officer_app.queue.desk_only")}`] : []),
+              // 滞留:定时任务盖的章(30 天无进展,不结案);下一次进展就清掉。
+              ...(row.stale_since ? [`◐ ${t("judgment.stale.label")} · ${t("judgment.stale.hint")}`] : []),
+            ].filter(Boolean)}
             onPress={() => onOpen(row.id)}
             right={
               group === "unclaimed" && canClaim ? (

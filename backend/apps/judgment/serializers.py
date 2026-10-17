@@ -198,6 +198,7 @@ class JudgmentSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serialize
             "claimed_by", "claimed_by_name", "claimed_at",
             "deferred_at", "deferred_by", "deferred_by_name", "defer_reason",
             "reassign_requested_at", "reassign_requested_by", "reassign_reason",
+            "stale_since",
             "karmic_balance", "evidence_count",
             # 世次(`cycle`,0 是第一世,判决创建时盖章)与审判方式,都是模型上已有的列,此前没出线。
             "cycle", "judgment_method", "merit_score", "demerit_score", "realm_name",
@@ -213,6 +214,7 @@ class JudgmentSerializer(ArchiveSerializerMixin, FieldPermissionMixin, serialize
             "draft_destination_realm_id", "draft_term_years", "draft_eternal",
             "claimed_by", "claimed_at", "deferred_at", "deferred_by", "defer_reason",
             "reassign_requested_at", "reassign_requested_by", "reassign_reason",
+            "stale_since",
             "cycle", "judgment_method",
         ]
 

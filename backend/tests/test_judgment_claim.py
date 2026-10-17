@@ -824,3 +824,42 @@ class TestV3RowFields:
             return len(ctx.captured_queries)
 
         assert list_queries(2) == list_queries(8)
+
+
+# ---------------------------------------------------------------------------
+# 滞留(`stale_since`,定时任务盖章,下一次进展清掉)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.django_db
+class TestStale:
+    def _stale(self, case):
+        from django.utils import timezone
+
+        Judgment.all_objects.filter(pk=case.pk).update(stale_since=timezone.now())
+        return case
+
+    def test_list_filter_splits_stale_from_fresh_and_combines_with_group(self, world):
+        stale = self._stale(_case(world.cn, name="滞留"))
+        fresh = _case(world.cn, name="新案")
+        client = world.clients["a"]
+        assert _ids(client.get(BASE, {"stale": "true"})) == {str(stale.pk)}
+        assert _ids(client.get(BASE, {"stale": "false"})) == {str(fresh.pk)}
+        assert _ids(client.get(BASE, {"stale": "true", "group": "unclaimed"})) == {str(stale.pk)}
+
+    def test_the_field_is_on_list_and_detail(self, world):
+        stale = self._stale(_case(world.cn))
+        client = world.clients["a"]
+        assert _row(client, stale)["stale_since"] is not None
+        assert client.get(f"{BASE}{stale.pk}/").data["stale_since"] is not None
+
+    def test_the_field_is_read_only(self):
+        # 不能用 PATCH 验:任何 save() 都会把它清掉,写进去的值本来就留不下。直接查声明。
+        from apps.judgment.serializers import JudgmentSerializer
+
+        assert "stale_since" in JudgmentSerializer.Meta.read_only_fields
+
+    def test_claiming_clears_it(self, world):
+        stale = self._stale(_case(world.cn))
+        assert _post(world.clients["a"], stale, "claim").status_code == 200
+        assert _fresh(stale).stale_since is None

@@ -454,7 +454,8 @@ class JudgmentDraftService:
             raise DraftConflictError(current)
 
         now = timezone.now()
-        values = dict(changes, draft_saved_at=now, update_time=now,
+        # 写判词草稿也是进展:这里不走 `Judgment.save()`,所以滞留标记要在这里一并清掉。
+        values = dict(changes, draft_saved_at=now, update_time=now, stale_since=None,
                       draft_version=F("draft_version") + 1, version=F("version") + 1)
         user = get_current_user()
         if user is not None and user.is_authenticated:

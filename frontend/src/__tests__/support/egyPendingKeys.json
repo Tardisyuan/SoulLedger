@@ -9,5 +9,9 @@
   "officer_app.letter.earlier",
   "officer_app.letter.earlier_failed",
   "officer_app.list.more_failed",
-  "officer_app.queue.claim_taken"
+  "officer_app.queue.claim_taken",
+  "judgment.stale.label",
+  "judgment.stale.hint",
+  "judgment.stale.filter_all",
+  "judgment.stale.filter_only"
 ]

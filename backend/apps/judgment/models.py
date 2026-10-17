@@ -253,6 +253,12 @@ class Judgment(ArchivableMixin, AuditUserFields, models.Model):
         related_name="reassign_requested_judgments",
     )
     reassign_reason = models.CharField(max_length=500, blank=True, default="")
+    # 滞留:未结案且 30 天无进展。只由定时任务 `judgment.auto_conclude_stale` 用
+    # bulk_update 盖章(**不结案**,用户 2026-10-17 决定),此前是往 `notes` 末尾追加一行
+    # `[SYSTEM] Flagged as stale`(存量行由 judgment/0037 迁过来)。案子之后**任何一次**
+    # `save()`(结案、认领 / 释放 / 改派 / 暂缓、PATCH、草稿)都算有了进展,在下面的
+    # `save()` 里清掉;下一次是否再标,看 `update_time` 是否又过了 30 天。
+    stale_since = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ["-created_at"]
@@ -275,6 +281,12 @@ class Judgment(ArchivableMixin, AuditUserFields, models.Model):
         # 与 SoulRecord.save 同一写法。
         if self._state.adding and self.cycle == 0 and self.soul_id is not None:
             self.cycle = self.soul.life_index
+        # 任何一次写入都是「有进展」,滞留标记随之清掉(见 `stale_since`)。只给了
+        # `update_fields` 的写(认领那组)也要把这一列带上,否则清的只是内存里的值。
+        if not self._state.adding and self.stale_since is not None:
+            self.stale_since = None
+            if kwargs.get("update_fields") is not None:
+                kwargs["update_fields"] = [*kwargs["update_fields"], "stale_since"]
         if self._state.adding and not self.case_number:
             # 发号与写入在同一个事务里:写入失败,号跟着回滚,不留空号。
             with transaction.atomic():

@@ -1765,6 +1765,12 @@
       "draft_unsaved": "有未保存的改动",
       "draft_conflict": "草稿冲突待处理"
     },
+    "stale": {
+      "label": "滞留",
+      "hint": "30 天无进展",
+      "filter_all": "滞留 · 全部",
+      "filter_only": "只看滞留"
+    },
     "claim": {
       "groups": {
         "mine": "我认领",
@@ -3599,7 +3605,7 @@
     },
     "jobs": {
       "ledger_recalculate_tenant": "重算功过格",
-      "judgment_auto_conclude_stale_for_tenant": "自动结案久悬审判",
+      "judgment_auto_conclude_stale_for_tenant": "标记滞留审判",
       "disposition_expire_due_for_tenant": "处置期满检查",
       "death_sync_cleanup_old_requests_for_tenant": "清理过期死亡登记请求",
       "authentication_flush_expired_tokens": "清理过期令牌",
