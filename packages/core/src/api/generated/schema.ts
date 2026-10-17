@@ -8791,7 +8791,7 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /** @description 殿的设置:说明、调拨开关、三语殿名、转生冷却天数。只收已知字段,`settings` 里别的键不动。 */
+        /** @description 殿的设置:说明、调拨开关、三语殿名、转生冷却天数、到殿办理三项、灵魂自己改邮箱的开关。只收已知字段,`settings` 里别的键不动。 */
         patch: operations["v1_tenants_settings_partial_update"];
         trace?: never;
     };
@@ -13057,6 +13057,10 @@ export interface components {
             };
             /** @description 匾上的印字(1–2 个);空 = 用文明默认字。 */
             readonly seal_glyphs: string[];
+            /** @description 到殿办理:{address, hours, phone},没填的是空串(`Tenant.settings`;书信没开时 App 帮助页显示)。 */
+            readonly visit: {
+                [key: string]: string;
+            };
         };
         MeWelcomed: {
             welcomed_civilizations: components["schemas"]["CivilizationEnum"][];
@@ -15416,6 +15420,10 @@ export interface components {
             hall_name_egy?: string;
             soul_rebirth_cooldown_days?: number | null;
             mfa_required_roles?: string[];
+            visit_address?: string;
+            visit_hours?: string;
+            visit_phone?: string;
+            soul_contact_email_self_service?: boolean;
         };
         /**
          * @description The serializer behind `PATCH /auth/profile/` — what a user may change
@@ -17998,6 +18006,8 @@ export interface components {
             hall_name_en?: string;
             /** @description 殿司展示名(egy) */
             hall_name_egy?: string;
+            /** @description 书信是否开着(服务器级 `MATRIX_ENABLED`)。 */
+            readonly letters_on: boolean;
             /** Format: date-time */
             readonly created_at: string;
         };
