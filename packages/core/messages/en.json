@@ -3087,6 +3087,11 @@
       "still_failed": "Still failed after retry: {{reason}}",
       "refused": "This registration can no longer be retried; list refreshed",
       "count": "Retried {{count}}/{{max}}"
+    },
+    "filter": {
+      "search": "Soul name / source reference / idempotency key",
+      "from": "Received from",
+      "to": "Received to"
     }
   },
   "soul_accounts": {

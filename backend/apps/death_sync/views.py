@@ -5,7 +5,9 @@ import hashlib
 import json
 import logging
 
+import django_filters
 from django.db import IntegrityError
+from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema
 from rest_framework import mixins, serializers, status, viewsets
 from rest_framework.decorators import action
@@ -38,6 +40,33 @@ from apps.death_sync.throttling import ApiKeyRateThrottle
 from apps.events.models import EventType, EventWebhookDelivery
 
 logger = logging.getLogger(__name__)
+
+
+class DeathRegistrationFilter(django_filters.FilterSet):
+    """`/death-sync` 登记列表的筛选(审计 2026-10-17 第 12 条)。
+
+    `status` 仍是 ChoiceFilter(未知状态 400,不是一页空);`search` 查灵魂姓名、来源编号、幂等键;
+    `received_after` / `received_before` 是收到的日期(YYYY-MM-DD,两端都含)。
+    """
+
+    status = django_filters.ChoiceFilter(choices=DeathRegistrationStatus.choices)
+    search = django_filters.CharFilter(method="filter_search")
+    received_after = django_filters.DateFilter(field_name="request_timestamp", lookup_expr="date__gte")
+    received_before = django_filters.DateFilter(field_name="request_timestamp", lookup_expr="date__lte")
+
+    class Meta:
+        model = DeathRegistrationRequest
+        fields = ["status"]
+
+    def filter_search(self, queryset, name, value):
+        from django.db.models import Q
+
+        value = value.strip()
+        if not value:
+            return queryset
+        return queryset.filter(
+            Q(soul__name__icontains=value) | Q(source_reference_id__icontains=value) | Q(idempotency_key=value)
+        )
 
 
 def _escalate_failed_retry(request, record):
@@ -315,9 +344,29 @@ class DeathRegistrationReadViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsAuthenticated, IsAdminPermission, TenantPermission]
     queryset = DeathRegistrationRequest.objects.all()
     serializer_class = DeathRegistrationRequestSerializer
-    # `?status=FAILED`. django-filter builds a ChoiceFilter from the model's
-    # choices, so an unknown status is a 400, not a silently empty page.
-    filterset_fields = ["status"]
+    # `?status=FAILED` is a ChoiceFilter, so an unknown status is a 400, not a
+    # silently empty page. Search and received-date range: `DeathRegistrationFilter`.
+    filterset_class = DeathRegistrationFilter
+
+    @extend_schema(responses={(200, "text/csv"): OpenApiTypes.BINARY, 400: OpenApiTypes.OBJECT})
+    @action(detail=False, methods=["get"], url_path="export", pagination_class=None)
+    def export(self, request):
+        """这一页看得见的登记(同一组筛选)的 CSV,列取自列表序列化器。同类列表的导出写法(`apps/core/exports.py`)。"""
+        from apps.core.exports import export_csv
+
+        return export_csv(
+            request,
+            qs=self.filter_queryset(self.get_queryset()).order_by("-request_timestamp"),
+            serializer_class=DeathRegistrationRequestSerializer,
+            columns=[
+                ("Registration ID", "id"), ("Status", "status"), ("Source System", "source_system"),
+                ("Source Reference", "source_reference_id"), ("Idempotency Key", "idempotency_key"),
+                ("Soul ID", "soul"), ("Error Code", "error_code"), ("Error Message", "error_message"),
+                ("Retry Count", "retry_count"), ("Received At", "request_timestamp"),
+            ],
+            filename="death_registrations_export.csv",
+            resource="death_registration",
+        )
 
     @extend_schema(responses=DeathRegistrationSummarySerializer)
     @action(detail=False, methods=["get"])

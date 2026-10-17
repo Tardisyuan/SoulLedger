@@ -36,9 +36,21 @@ export type AdminWebhookUpdate = Partial<Pick<AdminWebhook, "url" | "events" | "
 export type WebhookDelivery = components["schemas"]["EventWebhookDelivery"];
 export type WebhookDeliveryStatus = WebhookDelivery["status"];
 
+/** `DeathRegistrationFilter`: status; `search` = soul name / source reference (contains) or the idempotency key;
+ *  `received_after` / `received_before` = YYYY-MM-DD, both inclusive. */
+export interface DeathRegistrationFilters {
+  status?: string;
+  search?: string;
+  received_after?: string;
+  received_before?: string;
+}
+
 export const deathSyncApi = {
-  registrations: (params: { page?: string; status?: string } = {}) =>
+  registrations: (params: { page?: string } & DeathRegistrationFilters = {}) =>
     api.get<PaginatedResponse<DeathRegistration>>("/death-sync/registrations/", { params }),
+  /** CSV of the rows the list shows under the same filters (no page). */
+  exportCsv: (params: DeathRegistrationFilters = {}) =>
+    api.get<Blob>("/death-sync/registrations/export/", { params, responseType: "blob" }),
   summary: () => api.get<DeathRegistrationSummary>("/death-sync/registrations/summary/"),
   /** Rerun a FAILED + INTERNAL_ERROR row on the same row; 409 with `code` for anything else. */
   retry: (id: string) => api.post<DeathRegistration>(`/death-sync/registrations/${id}/retry/`),
