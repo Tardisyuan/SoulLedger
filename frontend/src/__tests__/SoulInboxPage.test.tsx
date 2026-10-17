@@ -17,7 +17,7 @@ jest.mock("@soulledger/core/api/soul-inbox", () => ({
   soulInboxApi: {
     list: jest.fn(), folders: jest.fn(), messages: jest.fn(), reply: jest.fn(), markRead: jest.fn(),
     archive: jest.fn(), unarchive: jest.fn(), draft: jest.fn(), saveDraft: jest.fn(), clearDraft: jest.fn(),
-    assign: jest.fn(), unassign: jest.fn(), assignable: jest.fn(),
+    assign: jest.fn(), unassign: jest.fn(), assignable: jest.fn(), get: jest.fn(),
   },
   inboxTemplatesApi: { list: jest.fn(), create: jest.fn(), update: jest.fn(), remove: jest.fn() },
 }));
@@ -30,6 +30,9 @@ jest.mock("@soulledger/core/api", () => ({
   ...jest.requireActual("@soulledger/core/api"),
   judgmentApi: { statutes: jest.fn() },
 }));
+// 通知「打开来信」带来的 `?c=`(审计 1017 #5)。默认没有。
+let mockSearch = new URLSearchParams();
+jest.mock("next/navigation", () => ({ useSearchParams: () => mockSearch }));
 const { judgmentApi: judgmentMock } = jest.requireMock("@soulledger/core/api") as {
   judgmentApi: Record<string, jest.Mock>;
 };
@@ -94,6 +97,7 @@ async function openThread() {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockSearch = new URLSearchParams();
   apiMock.list.mockResolvedValue(page([conversation()]));
   apiMock.messages.mockResolvedValue({ data: MESSAGES });
   apiMock.reply.mockResolvedValue({ data: { event_id: "$3" } });
@@ -595,5 +599,24 @@ describe("images in a soul's letter (2026-10-10)", () => {
     expect(form.querySelector('input[type="file"]')).toBeNull();
     expect(thread.querySelector('input[type="file"]')).toBeNull();
     expect(within(form).queryByRole("button", { name: /图|image|photo|上传|upload/i })).toBeNull();
+  });
+});
+
+describe("?c= from a notification's 「打开来信」", () => {
+  it("opens that conversation straight away when it is on the first page, without fetching it again", async () => {
+    asRole("soul_inbox.read", "soul_inbox.reply");
+    mockSearch = new URLSearchParams("c=c1");
+    renderPage();
+    expect(await screen.findByRole("region", { name: tZh("soul_inbox.thread_label", { name: "张三" }) })).toBeInTheDocument();
+    expect(apiMock.get).not.toHaveBeenCalled();
+  });
+
+  it("fetches the conversation by id when it is not in the list (archived, or further back)", async () => {
+    asRole("soul_inbox.read", "soul_inbox.reply");
+    mockSearch = new URLSearchParams("c=c9");
+    apiMock.get.mockResolvedValue({ data: conversation({ id: "c9", soul_name: "赵六", archived: true }) });
+    renderPage();
+    expect(await screen.findByRole("region", { name: tZh("soul_inbox.thread_label", { name: "赵六" }) })).toBeInTheDocument();
+    expect(apiMock.get).toHaveBeenCalledWith("c9");
   });
 });

@@ -2168,7 +2168,17 @@
     "batch_deleted": "Deleted {{count}}",
     "batch_delete_error": "Failed to delete",
     "batch_delete_title": "Delete {{n}} notifications?",
-    "batch_delete_message": "They disappear from your inbox. This does not affect anyone else's notifications."
+    "batch_delete_message": "They disappear from your inbox. This does not affect anyone else's notifications.",
+    "open_workflow": "Open the approval",
+    "open_cross_judgment": "Open the cross-realm judgment",
+    "open_soul": "Open the soul",
+    "open_sentence_plan": "Open the sentence plan",
+    "open_sentence_requests": "Open sentence requests",
+    "open_letter": "Open the letter",
+    "open_death_sync": "Open death sync",
+    "open_scheduler": "Open scheduled tasks",
+    "open_assistant": "Open assistant admin",
+    "open_failed": "Could not open: the record is gone"
   },
   "realms": {
     "title": "Realms",

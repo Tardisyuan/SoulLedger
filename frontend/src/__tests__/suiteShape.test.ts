@@ -287,6 +287,8 @@ const COLLECTED_FILES = [
   "MenuRowCells.test.tsx",
   "menuCacheRootsAreInvalidatedTogether.test.ts",
   "menuTranslationCoverage.test.ts",
+  // 2026-10-17 审计 1017 #5:通知点进哪一页;后端每个 related_resource 都要有去处或写明不跳。
+  "notificationTarget.test.tsx",
   "notifyKeysExistInTheBundles.test.ts",
   "notifyPortCarriesTheToast.test.ts",
   "officerAssist.test.tsx",

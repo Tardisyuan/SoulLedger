@@ -2168,7 +2168,17 @@
     "batch_deleted": "已删除 {{count}} 条",
     "batch_delete_error": "删除失败",
     "batch_delete_title": "删除所选的 {{n}} 条通知?",
-    "batch_delete_message": "删除后将从你的收件箱消失,不影响别人的通知。"
+    "batch_delete_message": "删除后将从你的收件箱消失,不影响别人的通知。",
+    "open_workflow": "打开审批",
+    "open_cross_judgment": "打开跨域审判",
+    "open_soul": "打开灵魂",
+    "open_sentence_plan": "打开受刑计划",
+    "open_sentence_requests": "去受刑请求",
+    "open_letter": "打开来信",
+    "open_death_sync": "去死亡同步",
+    "open_scheduler": "去定时任务",
+    "open_assistant": "去助手管理",
+    "open_failed": "打不开：找不到这条记录了"
   },
   "realms": {
     "title": "地域",

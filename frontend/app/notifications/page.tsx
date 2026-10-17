@@ -24,6 +24,7 @@ import { cn } from "@/lib/utils";
 import { useRememberedFilters } from "@/src/lib/rememberedFilters";
 import { ROW_HOVER } from "@/components/ui/data-table";
 import { NotificationBatchBar, NOTIFICATION_BATCH_MAX } from "@/src/components/notifications/NotificationBatchBar";
+import { NotificationTargetLink } from "@/src/components/notifications/NotificationTarget";
 
 type FilterType = "all" | "unread";
 
@@ -424,27 +425,8 @@ export default function NotificationsPage() {
                   </>
                 )}
 
-                {/* 「请管理员改派」(第三类 F 组 2.7):通知挂着案子,直接去那件案子改派。 */}
-                {notification.notification_type === "JUDGMENT_REASSIGN_REQUESTED" && notification.related_id && (
-                  <Link
-                    href={`/judgment/${notification.related_id}`}
-                    className={cn(buttonVariants({ variant: "secondary", size: "sm" }), "mt-2 mr-2")}
-                  >
-                    {t("notifications.open_case")}
-                  </Link>
-                )}
-
-                {/* 调度通知(提案 / 批准 / 驳回 / 取消):直接去那次移交的详情。 */}
-                {notification.related_resource === "DispatchRecord" &&
-                  notification.related_id &&
-                  notification.notification_type?.startsWith("DISPATCH_") && (
-                    <Link
-                      href={`/dispatch/${notification.related_id}`}
-                      className={cn(buttonVariants({ variant: "secondary", size: "sm" }), "mt-2 mr-2")}
-                    >
-                      {t("notifications.open_dispatch")}
-                    </Link>
-                  )}
+                {/* 「打开 …」:改派请求、调度、审批、联审、受刑计划、来信……去哪一页只在 NotificationTarget 里决定。 */}
+                <NotificationTargetLink notification={notification} />
 
                 {/* Actions */}
                 {!notification.is_read && !notification.request_context && (
