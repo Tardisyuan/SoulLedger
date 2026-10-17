@@ -19,6 +19,11 @@ logger = logging.getLogger(__name__)
 MAX_ATTEMPTS = 5
 
 
+def attempt_ceiling(webhook) -> int:
+    """这个端点的一条投递最多试几次。`AdminWebhookDeliveryViewSet.redeliver` 用同一个数判「不会再自动重试了」。"""
+    return min(getattr(webhook, "max_retries", MAX_ATTEMPTS) or MAX_ATTEMPTS, MAX_ATTEMPTS)
+
+
 def _sign(secret: str, payload: bytes) -> str:
     return "sha256=" + hmac.new(secret.encode(), payload, hashlib.sha256).hexdigest()
 
@@ -44,8 +49,7 @@ def deliver_event_webhook(self, delivery_id):
         return
 
     webhook = delivery.webhook
-    ceiling = min(getattr(webhook, "max_retries", MAX_ATTEMPTS) or MAX_ATTEMPTS,
-                  MAX_ATTEMPTS)
+    ceiling = attempt_ceiling(webhook)
     if delivery.attempt >= ceiling:
         delivery.status = EventWebhookStatus.ABANDONED
         delivery.error = f"放弃:已试 {delivery.attempt} 次,上限 {ceiling}"

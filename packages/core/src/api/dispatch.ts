@@ -218,8 +218,10 @@ export type SeatableActor = components["schemas"]["SeatableActor"];
 
 export const crossTenantJudgmentsApi = {
   list: (params?: Record<string, string>) => api.get<PaginatedResponse<CrossTenantJudgmentListItem>>("/dispatch/cross-tenant-judgments/", { params }),
-  /** CSV of the list: only the columns the list shows this hall (`cross_judgment.read`). */
-  exportCsv: () => api.get<Blob>("/dispatch/cross-tenant-judgments/export/", { responseType: "blob" }),
+  /** CSV of the list: only the columns the list shows this hall (`cross_judgment.read`). Takes the list's filters
+   *  (`status`, `side` = initiated | participating, `search` on the title). */
+  exportCsv: (params?: Record<string, string>) =>
+    api.get<Blob>("/dispatch/cross-tenant-judgments/export/", { params, responseType: "blob" }),
   get: (id: string) => api.get<CrossTenantJudgment>(`/dispatch/cross-tenant-judgments/${id}/`),
   /** `judgment`: the home tenant's own open ORIGINAL case this bench sets the stops for (fixed once given). */
   create: (data: { title: string; description: string; judgment?: string }) =>

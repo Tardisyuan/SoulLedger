@@ -1398,7 +1398,14 @@
       "sync_ok": "In sync",
       "unbooked": "Not entered",
       "resend_dispatch": "Dispatches to resend",
-      "go_resend": "Handle →"
+      "go_resend": "Handle →",
+      "approvals": "Approvals waiting on you",
+      "rebirths": "Rebirth applications to decide",
+      "cooldowns": "Cooldown requests to decide",
+      "letters": "Letters awaiting your reply",
+      "unassigned_letters": "Unassigned letters",
+      "sentence_requests": "Sentence plan requests",
+      "reports": "Reports to review"
     },
     "civ_share": "Share",
     "civ_empty": "No souls yet · register one",
@@ -2590,7 +2597,13 @@
     "case_title": "Title",
     "status_label": "Status",
     "original_judgment": "Original judgment",
-    "original_soul": "Soul"
+    "original_soul": "Soul",
+    "filter": {
+      "search": "Search title",
+      "side": "Our side",
+      "side_initiated": "Initiated by us",
+      "side_participating": "We take part"
+    }
   },
   "users": {
     "title": "User Management",
@@ -3063,7 +3076,16 @@
           "FAILED": "Failed",
           "ABANDONED": "Abandoned"
         }
-      }
+      },
+      "send_test": "Send test event",
+      "test_sent": "Test event queued; see the delivery log below",
+      "test_failed": "Could not send the test event",
+      "inactive": "This webhook is disabled",
+      "test_event": "Test event",
+      "redeliver": "Redeliver",
+      "redelivered": "Queued for delivery again",
+      "redeliver_not_finished": "This delivery is still being retried; redeliver once it has given up",
+      "redeliver_failed": "Could not redeliver"
     },
     "error": {
       "SOUL_NOT_FOUND": "No matching soul",
@@ -3080,6 +3102,11 @@
       "still_failed": "Still failed after retry: {{reason}}",
       "refused": "This registration can no longer be retried; list refreshed",
       "count": "Retried {{count}}/{{max}}"
+    },
+    "filter": {
+      "search": "Soul name / source reference / idempotency key",
+      "from": "Received from",
+      "to": "Received to"
     }
   },
   "soul_accounts": {
@@ -3571,7 +3598,8 @@
       "sentence_requests": "Sentence Requests",
       "assistant_admin": "Assistant Admin",
       "moderation": "Circle Moderation",
-      "recycle_bin": "Recycle Bin"
+      "recycle_bin": "Recycle Bin",
+      "sentence_plans": "Sentence Plans"
     },
     "queue": "Triage queue",
     "about": "About",
@@ -5087,6 +5115,38 @@
     "impersonation_started": {
       "title": "Someone is viewing as you",
       "body": "{{by}} is viewing the console as you (read only, up to {{minutes}} minutes). Reason: {{reason}}. The whole session is recorded in the audit log."
+    },
+    "workflow_assigned": {
+      "title": "Approval waiting on you",
+      "body": "The approval flow {{workflow}} of soul {{soul}} is waiting on you."
+    },
+    "workflow_node_passed": {
+      "title": "Approval flow update",
+      "body": "The approval flow {{workflow}} of soul {{soul}} has passed {{node}}."
+    },
+    "workflow_timeout_reminder": {
+      "title": "Approval overdue",
+      "body": "Step {{node}} of the approval flow {{workflow}} of soul {{soul}} has waited over {{hours}} hours. Please handle it soon."
+    },
+    "workflow_timeout_escalated": {
+      "title": "Approval overdue",
+      "body": "Step {{node}} of the approval flow {{workflow}} of soul {{soul}} has waited over {{hours}} hours and has been passed to you."
+    },
+    "cross_judgment_concluded": {
+      "title": "Cross-tenant judgment concluded",
+      "body": "The cross-tenant judgment {{title}} has concluded: passed."
+    },
+    "cross_judgment_concluded_fail": {
+      "title": "Cross-tenant judgment concluded",
+      "body": "The cross-tenant judgment {{title}} has concluded: rejected."
+    },
+    "scheduled_task_failed": {
+      "title": "Scheduled task failed",
+      "body": "Scheduled task {{task}} failed: {{error}}"
+    },
+    "scheduled_task_overdue": {
+      "title": "Scheduled task did not run",
+      "body": "Scheduled task {{task}} was due at {{expected_at}}; no run has been recorded since."
     }
   },
   "social_moderation": {
@@ -5564,7 +5624,16 @@
     "last_refusal_rejected": "The last dispatch was refused by the destination: {{reason}}",
     "last_refusal_rejected_bare": "The last dispatch was refused by the destination",
     "last_refusal_cancelled": "The last dispatch was cancelled",
-    "last_refusal_redispatched": "Sent again {{n}} time(s)"
+    "last_refusal_redispatched": "Sent again {{n}} time(s)",
+    "list_title": "Sentence plans",
+    "list_subtitle": "Plans this civilization owns or holds a stop of",
+    "list_empty": "No sentence plans match",
+    "filter": {
+      "search": "Search soul name",
+      "status": "Status",
+      "awaiting_redispatch": "Dispatch to resend",
+      "pending_request": "Request pending"
+    }
   },
   "seal": {
     "aria": "Seal of {{court}}"

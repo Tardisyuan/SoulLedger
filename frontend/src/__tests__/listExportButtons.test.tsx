@@ -95,12 +95,26 @@ describe("/dispatch", () => {
 });
 
 describe("/cross-judgments", () => {
-  it("offers the export to a reader and sends no parameters", async () => {
+  it("offers the export to a reader and sends the list's filters (none by default)", async () => {
     mockPermissions = ["cross_judgment.read"];
     renderWith(<CrossJudgmentsPage />);
     fireEvent.click(await screen.findByRole("button", { name: "common.export" }));
-    await waitFor(() => expect(crossTenantJudgmentsApi.exportCsv).toHaveBeenCalledWith());
+    await waitFor(() => expect(crossTenantJudgmentsApi.exportCsv).toHaveBeenCalledWith({}));
     expect(saveBlob).toHaveBeenCalledWith(csv.data, expect.stringMatching(/^crossJudgments\.title-plaque\.office\.trials-\d{8}-\d{4}\.csv$/));
+  });
+
+  it("filters by status and by our side, and the export carries the same filters", async () => {
+    mockPermissions = ["cross_judgment.read"];
+    renderWith(<CrossJudgmentsPage />);
+    fireEvent.change(await screen.findByRole("combobox", { name: "crossJudgments.filter.side" }), {
+      target: { value: "participating" },
+    });
+    fireEvent.change(screen.getByRole("combobox", { name: "crossJudgments.status_label" }), { target: { value: "ACTIVE" } });
+    await waitFor(() =>
+      expect(crossTenantJudgmentsApi.list).toHaveBeenLastCalledWith({ page: "1", side: "participating", status: "ACTIVE" })
+    );
+    fireEvent.click(screen.getByRole("button", { name: "common.export" }));
+    await waitFor(() => expect(crossTenantJudgmentsApi.exportCsv).toHaveBeenCalledWith({ side: "participating", status: "ACTIVE" }));
   });
 
   it("offers nothing to someone without cross_judgment.read", async () => {

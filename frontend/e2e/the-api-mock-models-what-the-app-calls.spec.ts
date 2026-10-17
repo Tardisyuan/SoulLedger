@@ -39,6 +39,7 @@ const ROUTES = [
   "/scheduler",
   "/soul-credentials",
   "/rebirth-applications",
+  "/sentence-plans",
   // Detail pages: the judgment page's 评议 list went unmodelled for a whole round because only list routes were here.
   `/judgment/${OPENED_JUDGMENT.id}`,
   `/souls/${SOULS[0].id}`,

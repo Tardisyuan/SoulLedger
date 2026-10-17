@@ -116,6 +116,8 @@ class SentencePlanViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
     queryset = SentencePlan.objects.all()
     serializer_class = SentencePlanSerializer
     filterset_class = SentencePlanFilter
+    #: Web「受刑计划」列表(/sentence-plans)的搜索框:灵魂姓名。
+    search_fields = ["soul__name"]
     ordering_fields = ["create_time", "completed_at"]
 
     def get_queryset(self):

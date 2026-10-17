@@ -1398,7 +1398,14 @@
       "sync_ok": "同步正常",
       "unbooked": "未入簿",
       "resend_dispatch": "待重发的调拨",
-      "go_resend": "去处理 →"
+      "go_resend": "去处理 →",
+      "approvals": "审批待我处理",
+      "rebirths": "转生申请待批",
+      "cooldowns": "缩短冷却待批",
+      "letters": "待我回的书信",
+      "unassigned_letters": "未分配的书信",
+      "sentence_requests": "受刑请求",
+      "reports": "举报待处理"
     },
     "civ_share": "占比",
     "civ_empty": "尚未入册 · 去登记",
@@ -2590,7 +2597,13 @@
     "case_title": "标题",
     "status_label": "状态",
     "original_judgment": "原审判",
-    "original_soul": "灵魂"
+    "original_soul": "灵魂",
+    "filter": {
+      "search": "搜索标题",
+      "side": "我方",
+      "side_initiated": "我方发起",
+      "side_participating": "我方参与"
+    }
   },
   "users": {
     "title": "用户管理",
@@ -3063,7 +3076,16 @@
           "FAILED": "失败",
           "ABANDONED": "已放弃"
         }
-      }
+      },
+      "send_test": "发测试事件",
+      "test_sent": "测试事件已排入投递，结果见下方投递记录",
+      "test_failed": "测试事件没能发起",
+      "inactive": "这个 Webhook 已停用",
+      "test_event": "测试事件",
+      "redeliver": "重投",
+      "redelivered": "已重新排入投递",
+      "redeliver_not_finished": "这条投递还在自动重试，等它放弃后再重投",
+      "redeliver_failed": "重投没能发起"
     },
     "error": {
       "SOUL_NOT_FOUND": "查无此魂",
@@ -3080,6 +3102,11 @@
       "still_failed": "重试后仍失败：{{reason}}",
       "refused": "这条登记现在不能重试，列表已刷新",
       "count": "已重试 {{count}}/{{max}} 次"
+    },
+    "filter": {
+      "search": "灵魂姓名 / 来源编号 / 幂等键",
+      "from": "收到日期起",
+      "to": "收到日期止"
     }
   },
   "soul_accounts": {
@@ -3571,7 +3598,8 @@
       "sentence_requests": "受刑请求",
       "assistant_admin": "助手管理",
       "moderation": "朋友圈审核",
-      "recycle_bin": "回收站"
+      "recycle_bin": "回收站",
+      "sentence_plans": "受刑计划"
     },
     "queue": "分诊队列",
     "about": "关于",
@@ -5087,6 +5115,38 @@
     "impersonation_started": {
       "title": "有人在以你的身份查看",
       "body": "{{by}} 正在以你的身份查看（只读，最长 {{minutes}} 分钟）。理由：{{reason}}。整个过程记进审计日志。"
+    },
+    "workflow_assigned": {
+      "title": "审批待你处理",
+      "body": "灵魂「{{soul}}」的审批流「{{workflow}}」轮到你处理。"
+    },
+    "workflow_node_passed": {
+      "title": "流程通知",
+      "body": "灵魂「{{soul}}」的审批流「{{workflow}}」经过「{{node}}」。"
+    },
+    "workflow_timeout_reminder": {
+      "title": "审批超时",
+      "body": "灵魂「{{soul}}」的审批流「{{workflow}}」在「{{node}}」已超过 {{hours}} 小时未处理，请尽快处理。"
+    },
+    "workflow_timeout_escalated": {
+      "title": "审批超时",
+      "body": "灵魂「{{soul}}」的审批流「{{workflow}}」在「{{node}}」已超过 {{hours}} 小时未处理，已转交给你。"
+    },
+    "cross_judgment_concluded": {
+      "title": "跨域审判已结案",
+      "body": "跨域审判「{{title}}」已结案，结论：通过。"
+    },
+    "cross_judgment_concluded_fail": {
+      "title": "跨域审判已结案",
+      "body": "跨域审判「{{title}}」已结案，结论：否决。"
+    },
+    "scheduled_task_failed": {
+      "title": "定时任务失败",
+      "body": "定时任务「{{task}}」执行失败：{{error}}"
+    },
+    "scheduled_task_overdue": {
+      "title": "定时任务没有运行",
+      "body": "定时任务「{{task}}」应在 {{expected_at}} 运行，至今没有运行记录。"
     }
   },
   "social_moderation": {
@@ -5564,7 +5624,16 @@
     "last_refusal_rejected": "上次调拨被执行地拒绝：{{reason}}",
     "last_refusal_rejected_bare": "上次调拨被执行地拒绝",
     "last_refusal_cancelled": "上次调拨已被取消",
-    "last_refusal_redispatched": "已重发 {{n}} 次"
+    "last_refusal_redispatched": "已重发 {{n}} 次",
+    "list_title": "受刑计划",
+    "list_subtitle": "本文明是原属、或有一站在本文明的受刑计划",
+    "list_empty": "没有符合条件的受刑计划",
+    "filter": {
+      "search": "搜索灵魂姓名",
+      "status": "状态",
+      "awaiting_redispatch": "待重发的调拨",
+      "pending_request": "有待决定的请求"
+    }
   },
   "seal": {
     "aria": "{{court}}之印"

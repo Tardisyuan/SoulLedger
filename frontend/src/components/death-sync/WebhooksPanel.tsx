@@ -24,6 +24,10 @@ import type { BadgeTone } from "@/src/components/ui/Badge";
 
 const WEBHOOKS_QUERY = ["death-sync", "webhooks"] as const;
 const DELIVERIES_QUERY = ["death-sync", "webhook-deliveries"] as const;
+/** The server's refusal code on a 409 (`webhook_inactive`, `not_finished`), or undefined. */
+const refusalCode = (error: unknown) => (error as { response?: { data?: { code?: string } } })?.response?.data?.code;
+/** The event name of a 「发测试事件」 delivery (`apps/death_sync/views.py::WEBHOOK_TEST_EVENT`); not an `EventType`. */
+const TEST_EVENT = "WEBHOOK_TEST";
 const DELIVERY_TONE: Record<WebhookDeliveryStatus, BadgeTone> = {
   PENDING: "neutral",
   SUCCESS: "success",
@@ -70,6 +74,20 @@ export function WebhooksPanel() {
       void invalidate();
     },
     onError: () => showToast(t("death_sync.webhooks.disable_failed"), "error"),
+  });
+  // 「发测试事件」(审计 2026-10-17 第 14 条):排一条 WEBHOOK_TEST 投递,然后把下方的投递记录切到这个端点。
+  const sendTest = useMutation({
+    mutationFn: (hook: AdminWebhook) => deathSyncApi.testWebhook(hook.id),
+    onSuccess: (_res, hook) => {
+      showToast(t("death_sync.webhooks.test_sent"), "success");
+      setDeliveriesFor(hook);
+      void queryClient.invalidateQueries({ queryKey: DELIVERIES_QUERY });
+    },
+    onError: (error) =>
+      showToast(
+        refusalCode(error) === "webhook_inactive" ? t("death_sync.webhooks.inactive") : t("death_sync.webhooks.test_failed"),
+        "error"
+      ),
   });
   const enable = useMutation({
     mutationFn: (id: string) => deathSyncApi.updateWebhook(id, { is_active: true }),
@@ -124,6 +142,17 @@ export function WebhooksPanel() {
                 <Button type="button" variant="ghost" size="sm" onClick={() => setDeliveriesFor(hook)}>
                   {t("death_sync.webhooks.deliveries")}
                 </Button>
+                {hook.is_active && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    loading={sendTest.isPending && sendTest.variables?.id === hook.id}
+                    onClick={() => sendTest.mutate(hook)}
+                  >
+                    {t("death_sync.webhooks.send_test")}
+                  </Button>
+                )}
                 <Button type="button" variant="ghost" size="sm" onClick={() => setEditing(hook)}>
                   {t("common.edit")}
                 </Button>
@@ -321,7 +350,28 @@ function SecretDialog({ webhook, onClose }: { webhook: AdminWebhook; onClose: ()
 
 function DeliveriesSection({ webhook, onClear }: { webhook: AdminWebhook | null; onClear: () => void }) {
   const { t, formatDateTime } = useI18n();
+  const { showToast } = useToast();
+  const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
+  // 「重投」:失败的投递再发一次,新写一行,原行留着。还在自动重试的,服务端 409 `not_finished`。
+  const redeliver = useMutation({
+    mutationFn: (id: string) => deathSyncApi.redeliverWebhook(id),
+    onSuccess: () => {
+      showToast(t("death_sync.webhooks.redelivered"), "success");
+      void queryClient.invalidateQueries({ queryKey: DELIVERIES_QUERY });
+    },
+    onError: (error) => {
+      const code = refusalCode(error);
+      showToast(
+        code === "not_finished"
+          ? t("death_sync.webhooks.redeliver_not_finished")
+          : code === "webhook_inactive"
+            ? t("death_sync.webhooks.inactive")
+            : t("death_sync.webhooks.redeliver_failed"),
+        "error"
+      );
+    },
+  });
   const params = { page: String(page), ...(webhook ? { webhook: webhook.id } : {}) };
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: [...DELIVERIES_QUERY, webhook?.id ?? "all", page],
@@ -350,6 +400,7 @@ function DeliveriesSection({ webhook, onClear }: { webhook: AdminWebhook | null;
           { key: "attempt", header: t("death_sync.webhooks.delivery.attempt"), align: "right" },
           { key: "response", header: t("death_sync.webhooks.delivery.response"), align: "right" },
           { key: "error", header: t("death_sync.webhooks.delivery.error") },
+          { key: "actions", header: t("common.row_actions"), align: "right", srOnlyHeader: true },
         ]}
         data={rows}
         isLoading={isLoading}
@@ -365,7 +416,11 @@ function DeliveriesSection({ webhook, onClear }: { webhook: AdminWebhook | null;
               {formatDateTime(row.create_time)}
             </td>
             <td className="px-3 py-2 text-xs">
-              <DomainEnum namespace="souls.events" value={row.event_type} />
+              {row.event_type === TEST_EVENT ? (
+                t("death_sync.webhooks.test_event")
+              ) : (
+                <DomainEnum namespace="souls.events" value={row.event_type} />
+              )}
             </td>
             <td className="px-3 py-2 font-mono text-xs break-all text-[oklch(var(--color-ink-muted))]">{row.webhook_url}</td>
             <td className="px-3 py-2 whitespace-nowrap">
@@ -377,6 +432,19 @@ function DeliveriesSection({ webhook, onClear }: { webhook: AdminWebhook | null;
             </td>
             <td className="px-3 py-2 text-xs break-all text-[oklch(var(--color-ink-muted))]">
               {row.error || <MissingValue kind="inapplicable" />}
+            </td>
+            <td className="px-3 py-2 text-right whitespace-nowrap">
+              {(row.status === "FAILED" || row.status === "ABANDONED") && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  loading={redeliver.isPending && redeliver.variables === row.id}
+                  onClick={() => redeliver.mutate(row.id)}
+                >
+                  {t("death_sync.webhooks.redeliver")}
+                </Button>
+              )}
             </td>
           </>
         )}

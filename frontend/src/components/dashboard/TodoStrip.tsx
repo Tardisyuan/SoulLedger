@@ -3,8 +3,10 @@
 import Link from "next/link";
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { useI18n } from "@/src/contexts/I18nContext";
-import { deathSyncApi, dispatchApi, judgmentApi } from "@soulledger/core/api";
+import { deathSyncApi, dispatchApi, judgmentApi, officerAppApi } from "@soulledger/core/api";
 import { sentencePlansApi } from "@soulledger/core/api/sentence-plans";
+import { socialModerationApi } from "@soulledger/core/api/social-moderation";
+import { useImpersonation } from "@/src/components/impersonation/useImpersonation";
 import { usePermissions } from "@/src/hooks/usePermissions";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/src/components/ui/Button";
@@ -20,6 +22,11 @@ import { MissingValue } from "@/src/components/ui/DomainValue";
  *   与审判队列同一个记号)。死亡同步那格的数字后再跟一句 danger「! 未入簿」。
  * - 没有数据:照常写 0,格子不隐藏,右侧换成「✓ 已清空」(同步那格「✓ 同步正常」),没有竖条。
  * - 单格加载失败:数字位「—」+「! 加载失败」,右侧「重试」只重取这一格;其他格照常。
+ *
+ * 其后七格(2026-10-17 用户加,Design 未画,沿用同一格式):审批待我处理 / 转生申请 / 缩短冷却 / 待我回的书信 /
+ * 未分配的书信 —— 一次 `/officer-app/todo/`(官员端 App「待我处理」同一个数,服务端逐组按权限给空),
+ * 受刑请求(`sentence-plans/?pending_request=true`,收件箱页同一个过滤)、社区举报(默认只数 OPEN,与审核页同一个 key)。
+ * 管理员「以此人身份查看」时 `/officer-app/` 一律 403,那五格不显示。
  *
  * 每格的数取自它链接过去那一页自己读的接口,两边不会对不上:
  * `/dispatch/records/proposed/` 是审批收件箱(`target_tenant=<caller>`),`/judgment/next/`
@@ -122,22 +129,44 @@ export function TodoStrip() {
     enabled: canDeathSync,
     staleTime: 60_000,
   });
-  // 被拒 / 取消后等着重新发起的调拨:口径在服务端(`?awaiting_redispatch=true`,本殿是原属的计划),
-  // 按钮在灵魂详情的受刑计划卡上,故链接落到第一份计划的灵魂;办完一份,下一份顶上来。
+  // 被拒 / 取消后等着重新发起的调拨:口径在服务端(`?awaiting_redispatch=true`,本殿是原属的计划)。
+  // 链接落到受刑计划列表的同一个筛选(此前只能链到第一份计划的灵魂,其余找不到);按钮在各灵魂的计划卡上。
   const canResend = hasPermission("judgment.execute");
   const resendQ = useQuery({
     queryKey: ["dashboard", "todo", "redispatch"],
-    queryFn: async () => {
-      const { data } = await sentencePlansApi.list({ awaiting_redispatch: true, page: 1 });
-      return { count: data.count, soul: data.results[0]?.soul ?? "" };
-    },
+    queryFn: async () => (await sentencePlansApi.list({ awaiting_redispatch: true, page: 1 })).data.count,
     enabled: canResend,
     staleTime: 60_000,
   });
-  const resendCountQ = { ...resendQ, data: resendQ.data?.count } as UseQueryResult<number>;
+  const viewing = useImpersonation() !== null;
+  const canApprove = hasPermission("workflow.approve") && !viewing;
+  const canLetters = hasPermission("soul_inbox.reply") && !viewing;
+  const officerQ = useQuery({
+    queryKey: ["dashboard", "todo", "officer"],
+    queryFn: async () => (await officerAppApi.todo()).data,
+    enabled: canApprove || canLetters,
+    staleTime: 60_000,
+  });
+  const officerCount = (group: "approvals" | "rebirths" | "cooldowns" | "letters" | "unassigned_letters") =>
+    ({ ...officerQ, data: officerQ.data?.[group].count }) as UseQueryResult<number>;
+  const canSentenceRequests = hasPermission("judgment.execute");
+  const sentenceRequestQ = useQuery({
+    queryKey: ["dashboard", "todo", "sentence-requests"],
+    queryFn: async () => (await sentencePlansApi.list({ pending_request: true, page: 1 })).data.count,
+    enabled: canSentenceRequests,
+    staleTime: 60_000,
+  });
+  const canModerate = hasPermission("social.moderate");
+  const reportsQ = useQuery({
+    queryKey: ["dashboard", "todo", "reports"],
+    queryFn: async () => (await socialModerationApi.reports({})).data.count,
+    enabled: canModerate,
+    staleTime: 60_000,
+  });
   // The cell reads a number; the link also needs the status the server counted.
   const deathCountQ = { ...deathSyncQ, data: deathSyncQ.data?.anomaly_count } as UseQueryResult<number>;
-  if (!canDispatch && !canJudge && !canDeathSync && !canResend) return null;
+  if (!canDispatch && !canJudge && !canDeathSync && !canResend && !canApprove && !canLetters && !canSentenceRequests && !canModerate)
+    return null;
   return (
     <div
       data-todo-strip=""
@@ -174,9 +203,70 @@ export function TodoStrip() {
       {canResend && (
         <TodoCell
           label={t("dashboard.todo.resend_dispatch")}
-          query={resendCountQ}
-          href={`/souls/${resendQ.data?.soul ?? ""}`}
+          query={resendQ}
+          href="/sentence-plans?awaiting_redispatch=true"
           linkText={t("dashboard.todo.go_resend")}
+          clearText={t("dashboard.todo.none")}
+        />
+      )}
+      {canApprove && (
+        <>
+          <TodoCell
+            label={t("dashboard.todo.approvals")}
+            query={officerCount("approvals")}
+            href="/workflow?tab=instances"
+            linkText={t("dashboard.todo.go_approve")}
+            clearText={t("dashboard.todo.none")}
+          />
+          <TodoCell
+            label={t("dashboard.todo.rebirths")}
+            query={officerCount("rebirths")}
+            href="/rebirth-applications"
+            linkText={t("dashboard.todo.go_approve")}
+            clearText={t("dashboard.todo.none")}
+          />
+          <TodoCell
+            label={t("dashboard.todo.cooldowns")}
+            query={officerCount("cooldowns")}
+            href="/rebirth-applications?tab=shortenings"
+            linkText={t("dashboard.todo.go_approve")}
+            clearText={t("dashboard.todo.none")}
+          />
+        </>
+      )}
+      {canLetters && (
+        <>
+          <TodoCell
+            label={t("dashboard.todo.letters")}
+            query={officerCount("letters")}
+            href="/soul-inbox?folder=assigned_to_me"
+            linkText={t("dashboard.todo.go_resend")}
+            clearText={t("dashboard.todo.none")}
+          />
+          <TodoCell
+            label={t("dashboard.todo.unassigned_letters")}
+            query={officerCount("unassigned_letters")}
+            href="/soul-inbox?folder=awaiting_reply"
+            linkText={t("dashboard.todo.go_view")}
+            clearText={t("dashboard.todo.none")}
+          />
+        </>
+      )}
+      {canSentenceRequests && (
+        <TodoCell
+          label={t("dashboard.todo.sentence_requests")}
+          query={sentenceRequestQ}
+          href="/sentence-requests"
+          linkText={t("dashboard.todo.go_resend")}
+          clearText={t("dashboard.todo.none")}
+        />
+      )}
+      {canModerate && (
+        <TodoCell
+          label={t("dashboard.todo.reports")}
+          query={reportsQ}
+          href="/moderation"
+          linkText={t("dashboard.todo.go_view")}
           clearText={t("dashboard.todo.none")}
         />
       )}

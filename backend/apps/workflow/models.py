@@ -570,11 +570,7 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
     def _send_notify_node(self, node: "ApprovalNode") -> None:
         from apps.workflow.services import WorkflowService
 
-        WorkflowService.notify_designated(
-            self, node,
-            title=f"流程通知: {self.workflow_name}",
-            message=f"「{self.soul.name}」的审批流经过「{node.node_name}」。",
-        )
+        WorkflowService.notify_designated(self, node, kind="workflow_node_passed")
 
     def _make_current(self, node: "ApprovalNode", now) -> None:
         """Point the flow at `node` and start its timeout clock.
