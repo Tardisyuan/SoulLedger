@@ -288,13 +288,11 @@ function Chat({ assist, tab, onClose }: { assist: OfficerAssist; tab: TabKey; on
         {failure ? <Notice tone="neg" testID="ask-failure">{failure}</Notice> : null}
       </ScrollView>
       <View style={styles.composer}>
-        {/* The sheet's title already says 问一问: the field's label is for screen readers only (Design 第四十批 第四节 1).
-            The shared Input has no hidden-label option yet (it lives in mobile/, not touched here), so the visible
-            label is empty and the words ride on the TextInput itself. */}
+        {/* The sheet's title already says 问一问: the field's label is for screen readers only (Design 第四十批 第四节 1). */}
         <Input
           testID="ask-input"
-          label=""
-          accessibilityLabel={t("officer_assist.title")}
+          label={t("officer_assist.title")}
+          labelHidden
           placeholder={t(resumed ? "officer_app.assist.continue_placeholder" : "officer_assist.placeholder")}
           value={draft}
           onChangeText={setDraft}

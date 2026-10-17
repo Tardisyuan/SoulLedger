@@ -802,6 +802,7 @@ export function SwitchMark({ on, large }: { on: boolean; large?: boolean }) {
 
 export function Input({
   label,
+  labelHidden,
   labelAside,
   hint,
   error,
@@ -820,6 +821,8 @@ export function Input({
   /** The field's TextInput, for a screen that puts the cursor back after a refusal. */
   inputRef?: Ref<TextInput>;
   label: string;
+  /** The label is for screen readers only (a sheet whose title already names the field): no visible row, no row height. */
+  labelHidden?: boolean;
   /** Beside the label, at its right: a link (「忘记密码」) or a live value (a countdown). */
   labelAside?: ReactNode;
   hint?: string;
@@ -860,12 +863,14 @@ export function Input({
   ) : null;
   return (
     <View style={styles.field}>
-      <View style={styles.labelRow}>
-        <Txt variant="label" tone="muted" style={styles.shrink}>
-          {label}
-        </Txt>
-        {labelAside}
-      </View>
+      {labelHidden ? null : (
+        <View style={styles.labelRow}>
+          <Txt variant="label" tone="muted" style={styles.shrink}>
+            {label}
+          </Txt>
+          {labelAside}
+        </View>
+      )}
       <View style={inputWidth || suffix ? styles.inlineRow : undefined}>
         <View style={inputWidth ? { width: inputWidth } : undefined}>
           <FocusRing focused={focused && !off}>
