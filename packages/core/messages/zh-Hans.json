@@ -1949,7 +1949,10 @@
       "HEART_WEIGHING": "称心审判",
       "DIABOLICAL_TRIAL": "魔鬼审判"
     },
-    "case_number": "案号"
+    "case_number": "案号",
+    "close_blocked_title": "还有一场跨域审判没结束，暂时不能结案",
+    "close_blocked_body": "{{name}} · {{date}} 召集 · 已入席 {{joined}} / {{total}}。召集人结束或取消后，这里就能结案。",
+    "close_blocked_link": "去跨域审判 ›"
   },
   "audit": {
     "title": "审计日志",
@@ -2603,7 +2606,22 @@
       "side": "我方",
       "side_initiated": "我方发起",
       "side_participating": "我方参与"
-    }
+    },
+    "end": "结束跨域审判",
+    "end_conclusion": "结论",
+    "end_pass": "通过",
+    "end_fail": "不通过",
+    "end_note": "说明 · 必填，原审判页会显示",
+    "end_body": "结束后不能再入席、召集或改结论。原审判可以结案。",
+    "cancel": "取消跨域审判",
+    "cancel_title": "取消这场跨域审判？",
+    "cancel_body": "跨域审判不会有结论。席上的评议保留，只能看。原审判照常结案。",
+    "cancel_keep": "不取消",
+    "cancel_reason": "理由 · 必填",
+    "ended": "已结束 · {{conclusion}} · {{date}} · {{name}}",
+    "cancelled": "已取消 · 理由：{{reason}}",
+    "end_error": "没能结束，请重试",
+    "cancel_error": "没能取消，请重试"
   },
   "users": {
     "title": "用户管理",

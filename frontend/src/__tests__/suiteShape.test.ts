@@ -256,6 +256,8 @@ const COLLECTED_FILES = [
   "dispatchReturnHome.test.tsx",
   "contextValueIdentity.test.tsx",
   "crossJudgmentActivate.test.tsx",
+  // 2026-10-17 第四十批 W-a:跨域审判的结束 / 取消,原审判被它挡住时的提示。
+  "crossJudgmentEnd.test.tsx",
   "crossJudgmentDetailFetchBudget.test.tsx",
   "crossJudgmentsColumnMenu.test.tsx",
   "dataGridToneContract.test.ts",

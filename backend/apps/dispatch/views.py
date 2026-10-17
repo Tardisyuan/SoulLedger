@@ -26,6 +26,7 @@ from apps.dispatch.models import (
 )
 from apps.dispatch.permissions import CrossJudgmentPartyPermission, DispatchPartyPermission
 from apps.dispatch.serializers import (
+    CrossTenantJudgmentCancelSerializer,
     CrossTenantJudgmentConcludeSerializer,
     CrossTenantJudgmentListSerializer,
     CrossTenantJudgmentOrderSerializer,
@@ -705,6 +706,7 @@ class CrossTenantJudgmentViewSet(AuditUserViewSetMixin, CodenameViewSetMixin,
         'participate': ['cross_judgment.create'],
         'activate': ['cross_judgment.create'],
         'conclude': ['cross_judgment.create'],
+        'cancel': ['cross_judgment.create'],
         'sentence': ['cross_judgment.create'],
         'seatable_actors': ['cross_judgment.create'],
         'order': ['cross_judgment.create'],
@@ -1006,8 +1008,29 @@ class CrossTenantJudgmentViewSet(AuditUserViewSetMixin, CodenameViewSetMixin,
 
         try:
             judgment = CrossTenantJudgmentService.conclude(
-                judgment, conclusion_type, request.user
+                judgment, conclusion_type, request.user, note=serializer.validated_data.get("note", ""),
             )
-            return Response(CrossTenantJudgmentSerializer(judgment).data)
+            return Response(CrossTenantJudgmentSerializer(judgment, context={"request": request}).data)
         except ValueError as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    @extend_schema(request=CrossTenantJudgmentCancelSerializer, responses=CrossTenantJudgmentSerializer)
+    @action(detail=True, methods=["post"])
+    def cancel(self, request, pk=None):
+        """取消会审(第四十批 W-a):理由必填;召集人或发起殿的管理员(`CrossTenantJudgmentService.can_end`)。
+
+        PROPOSED / ACTIVE → CANCELLED,不会有结论;席上各站保留、只读。原审判随后照常结案
+        (`check_cross_judgment` 不再挡)。已结束 / 已取消答 409。
+        """
+        judgment = self.get_object()
+        if not CrossTenantJudgmentService.can_end(judgment, request.user, getattr(request, "tenant", None)):
+            return Response(
+                {"error": "Only the convener or this hall's admin may cancel"}, status=status.HTTP_403_FORBIDDEN
+            )
+        serializer = CrossTenantJudgmentCancelSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            judgment = CrossTenantJudgmentService.cancel(judgment, serializer.validated_data["reason"], request.user)
+        except ValueError as e:
+            return Response({"error": str(e), "code": "not_cancellable"}, status=status.HTTP_409_CONFLICT)
+        return Response(CrossTenantJudgmentSerializer(judgment, context={"request": request}).data)

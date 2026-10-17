@@ -1003,7 +1003,7 @@ class CrossTenantJudgmentService:
 
     @staticmethod
     @transaction.atomic
-    def conclude(judgment, conclusion_type, conclude_by):
+    def conclude(judgment, conclusion_type, conclude_by, note=""):
         """
         Conclude a cross-tenant judgment.
 
@@ -1011,6 +1011,7 @@ class CrossTenantJudgmentService:
             judgment: CrossTenantJudgment to conclude
             conclusion_type: PASS or FAIL
             conclude_by: User concluding the judgment
+            note: 结束说明(网页弹层必填;原审判页显示)
 
         Returns:
             CrossTenantJudgment: Updated judgment
@@ -1019,7 +1020,10 @@ class CrossTenantJudgmentService:
         errors = CrossTenantJudgmentService.check_bench_sentences(judgment)
         if errors:
             raise ValueError("; ".join(errors))
-        if not judgment.transition_to(JudgmentStatus.CONCLUDED, concluded_at=timezone.now(), conclusion_type=conclusion_type):
+        if not judgment.transition_to(
+            JudgmentStatus.CONCLUDED, concluded_at=timezone.now(), conclusion_type=conclusion_type,
+            conclusion_note=note or "", ended_by=_decider(conclude_by),
+        ):
             raise ValueError(f"Cannot conclude judgment in status: {judgment.status}")
 
         # Notify all participants, through the bus for the same reason.
@@ -1052,4 +1056,36 @@ class CrossTenantJudgmentService:
 
         _after_commit(send)
 
+        return judgment
+
+    @staticmethod
+    def can_end(judgment, user, request_tenant=None):
+        """结束 / 取消会审的人(第四十批 W-a):召集人(建这场会审的人),或发起殿的管理员
+        (ADMIN / 殿主 MODERATOR,令牌上的租户就是发起方;全局 ADMIN 没有租户也算)。
+        参与方不在内 —— 他们入席表态,不替召集人收场。"""
+        if user is None or not getattr(user, "is_authenticated", False):
+            return False
+        if judgment.create_user_id is not None and judgment.create_user_id == user.pk:
+            return True
+        role = getattr(user, "role", None)
+        if role not in ("ADMIN", "MODERATOR"):
+            return False
+        tenant = request_tenant or getattr(user, "tenant", None)
+        if tenant is None:
+            return role == "ADMIN"
+        return tenant.pk == judgment.initiating_tenant_id
+
+    @staticmethod
+    @transaction.atomic
+    def cancel(judgment, reason, cancelled_by):
+        """取消会审:PROPOSED / ACTIVE → CANCELLED,不会有结论。
+
+        席上已填的各站(`sentence_*`)原样保留;`submit_sentence` 只收 PROPOSED / ACTIVE,
+        所以之后只能看。原审判结案时 `SentencePlanService.check_cross_judgment` 把 CANCELLED
+        当作没挂(不挡、不抄节点)。理由必填,由调用方校验。
+        """
+        if not judgment.transition_to(
+            JudgmentStatus.CANCELLED, cancel_reason=reason, ended_by=_decider(cancelled_by),
+        ):
+            raise ValueError(f"Cannot cancel judgment in status: {judgment.status}")
         return judgment
