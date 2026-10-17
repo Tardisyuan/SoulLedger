@@ -4904,7 +4904,10 @@
       "inbox_empty": "Nen Medu Hena Djer",
       "reacted_one": "{{name}}: Sehed · Medu-Ek",
       "lamp_one": "{{name}}: Wen Khabes Djet · Medu-Ek",
-      "followed_one": "{{name}}: Nehes-Ek"
+      "followed_one": "{{name}}: Nehes-Ek",
+      "reacted_two": "{{name}} · Ba {{n}}: Sehed · Medu-Ek",
+      "lamp_two": "{{name}} · Ba {{n}}: Wen Khabes Djet · Medu-Ek",
+      "followed_two": "{{name}} · Ba {{n}}: Nehes-Ek"
     }
   },
   "soul_push": {

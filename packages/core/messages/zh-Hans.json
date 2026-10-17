@@ -1881,7 +1881,7 @@
       "col_cycle_kind": "世次 / 种类",
       "undefer": "恢复",
       "done_undefer": "已恢复，案子回到队列",
-      "load_more": "再载入（还有 {{n}} 件）"
+      "load_more": "更多（还有 {{n}} 件）"
     },
     "admission": {
       "title": "证据 · 采信",
@@ -4915,7 +4915,10 @@
       "inbox_empty": "还没有互动",
       "reacted_one": "{{name}} 对你的帖子表态",
       "lamp_one": "{{name}} 为你的帖子点了长明灯",
-      "followed_one": "{{name}} 关注了你"
+      "followed_one": "{{name}} 关注了你",
+      "reacted_two": "{{name}} 等 {{n}} 人对你的帖子表态",
+      "lamp_two": "{{name}} 等 {{n}} 人为你的帖子点了长明灯",
+      "followed_two": "{{name}} 等 {{n}} 人关注了你"
     }
   },
   "soul_push": {

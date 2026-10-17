@@ -1881,7 +1881,7 @@
       "col_cycle_kind": "Life / kind",
       "undefer": "Restore",
       "done_undefer": "Restored; the case is back in the queue",
-      "load_more": "Load more ({{n}} left)"
+      "load_more": "More ({{n}} left)"
     },
     "admission": {
       "title": "Evidence · admission",
@@ -4908,20 +4908,17 @@
       "inbox_title": "Activity",
       "commented": "{{name}} commented on your post",
       "replied": "{{name}} replied to you",
-      "reacted_many": "{{name}} and {{count}} others reacted to your post",
-      "lamp_many": "{{name}} and {{count}} others lit a lamp on your post",
-      "followed_many": "{{name}} and {{count}} others followed you",
+      "reacted_many": "{{name}} and {{n}} others reacted to your post",
+      "lamp_many": "{{name}} and {{n}} others lit a lamp on your post",
+      "followed_many": "{{name}} and {{n}} others followed you",
       "inbox_retention": "Activity is kept for 90 days.",
       "inbox_empty": "No activity yet",
       "reacted_one": "{{name}} reacted to your post",
-      "reacted_many_one": "{{name}} and 1 other reacted to your post",
-      "reacted_many_other": "{{name}} and {{count}} others reacted to your post",
       "lamp_one": "{{name}} lit a lamp on your post",
-      "lamp_many_one": "{{name}} and 1 other lit a lamp on your post",
-      "lamp_many_other": "{{name}} and {{count}} others lit a lamp on your post",
       "followed_one": "{{name}} followed you",
-      "followed_many_one": "{{name}} and 1 other followed you",
-      "followed_many_other": "{{name}} and {{count}} others followed you"
+      "reacted_two": "{{name}} and {{n}} other reacted to your post",
+      "lamp_two": "{{name}} and {{n}} other lit a lamp on your post",
+      "followed_two": "{{name}} and {{n}} other followed you"
     }
   },
   "soul_push": {

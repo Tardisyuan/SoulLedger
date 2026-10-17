@@ -30,24 +30,35 @@ export function interactionStamp(iso: string, now: Date = new Date()): string {
 }
 
 /** The row's sentence, with `{{name}}` left for the bold name. `n` is everyone on the row, the first one included. */
-const SENTENCE: Record<SoulInteraction["kind"], string> = {
+const SENTENCE: Record<"COMMENT" | "REPLY", string> = {
   COMMENT: "soul_app.social.commented",
   REPLY: "soul_app.social.replied",
-  REACTION: "soul_app.social.reacted",
-  LAMP: "soul_app.social.lamp",
-  FOLLOW: "soul_app.social.followed",
+};
+/** Merged rows: one person, two, or more (Design 第四十一批). `[one, two, many]`. */
+const MERGED: Record<"REACTION" | "LAMP" | "FOLLOW", [string, string, string]> = {
+  REACTION: ["soul_app.social.reacted_one", "soul_app.social.reacted_two", "soul_app.social.reacted_many"],
+  LAMP: ["soul_app.social.lamp_one", "soul_app.social.lamp_two", "soul_app.social.lamp_many"],
+  FOLLOW: ["soul_app.social.followed_one", "soul_app.social.followed_two", "soul_app.social.followed_many"],
 };
 
-/** One person: `<base>_one`. Several: `<base>_many` with `n` = everyone; `count` = everyone but the first (en: "and 1 other" / "and 3 others"). */
-function sentenceFor(kind: SoulInteraction["kind"], count: number): [string, Record<string, string>] {
-  const base = SENTENCE[kind];
-  if (kind === "COMMENT" || kind === "REPLY") return [base, { n: String(count) }];
-  return count === 1 ? [`${base}_one`, {}] : [`${base}_many`, { n: String(count), count: String(count - 1) }];
+/**
+ * zh / egy count everyone (「某某等 3 人」); en counts the others ("and 2 others"), so en gets `n − 1`.
+ * Two people has its own key because en says "1 other", not "1 others". Same `{{n}}` in all three bundles.
+ */
+export function mergedSentence(kind: keyof typeof MERGED, count: number, locale: string): [string, Record<string, string>] {
+  const [one, two, many] = MERGED[kind];
+  if (count <= 1) return [one, {}];
+  return [count === 2 ? two : many, { n: String(locale === "en" ? count - 1 : count) }];
+}
+
+function sentenceFor(kind: SoulInteraction["kind"], count: number, locale: string): [string, Record<string, string>] {
+  if (kind === "COMMENT" || kind === "REPLY") return [SENTENCE[kind], { n: String(count) }];
+  return mergedSentence(kind, count, locale);
 }
 
 function Row({ row, onPress: open }: { row: SoulInteraction; onPress: () => void }) {
   const t = useTheme();
-  const { t: tr } = useI18n();
+  const { t: tr, locale } = useI18n();
   const { gutter } = useLayout();
   const comment = row.kind === "COMMENT" || row.kind === "REPLY";
   // O-c: the post it opens turned out to be gone -- greyed, and it opens nothing. A follow opens a soul, never gone here.
@@ -70,7 +81,7 @@ function Row({ row, onPress: open }: { row: SoulInteraction; onPress: () => void
       <View style={styles.fill}>
         <Interp
           variant="body"
-          text={tr(...sentenceFor(row.kind, row.count))}
+          text={tr(...sentenceFor(row.kind, row.count, locale))}
           parts={{ name: <Txt style={styles.name}>{row.actor.display_name}</Txt> }}
         />
         {row.excerpt ? (

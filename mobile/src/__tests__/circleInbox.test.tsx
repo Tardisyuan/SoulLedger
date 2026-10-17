@@ -12,7 +12,7 @@ import { ToastProvider } from "../feedback";
 import { I18nProvider, translate } from "../i18n";
 import { installMobilePlatform } from "../platform";
 import { PostScreen } from "../screens/circle";
-import { CircleInboxScreen, interactionStamp } from "../screens/circleInbox";
+import { CircleInboxScreen, interactionStamp, mergedSentence } from "../screens/circleInbox";
 import { stubApi } from "./stubApi";
 
 const mockNavigate = jest.fn();
@@ -156,11 +156,19 @@ describe("a post opened at a comment", () => {
   });
 });
 
-describe("互动消息 · 英文复数", () => {
-  it("counts the others, never the first: 2 people is 'and 1 other', 4 is 'and 3 others'", () => {
-    expect(translate("en", "soul_app.social.reacted_many", { name: "A", n: "2", count: "1" })).toBe("A and 1 other reacted to your post");
-    expect(translate("en", "soul_app.social.lamp_many", { name: "A", n: "4", count: "3" })).toBe("A and 3 others lit a lamp on your post");
-    // zh keeps the total in `n`.
-    expect(translate("zh-Hans", "soul_app.social.followed_many", { name: "A", n: "4", count: "3" })).toBe("A 等 4 人关注了你");
+describe("互动消息 · 合并行的人数", () => {
+  const say = (locale: "en" | "zh-Hans", kind: "REACTION" | "LAMP" | "FOLLOW", n: number) => {
+    const [key, params] = mergedSentence(kind, n, locale);
+    return translate(locale, key, { ...params, name: "A" });
+  };
+  it("en counts the others: 2 people is 'and 1 other', 4 is 'and 3 others'; one person names only them", () => {
+    expect(say("en", "REACTION", 1)).toBe("A reacted to your post");
+    expect(say("en", "REACTION", 2)).toBe("A and 1 other reacted to your post");
+    expect(say("en", "LAMP", 4)).toBe("A and 3 others lit a lamp on your post");
+  });
+  it("zh counts everyone, and one person is not 「等 1 人」", () => {
+    expect(say("zh-Hans", "FOLLOW", 4)).toBe("A 等 4 人关注了你");
+    expect(say("zh-Hans", "FOLLOW", 2)).toBe("A 等 2 人关注了你");
+    expect(say("zh-Hans", "FOLLOW", 1)).toBe("A 关注了你");
   });
 });

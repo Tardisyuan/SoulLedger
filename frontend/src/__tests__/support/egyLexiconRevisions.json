@@ -159,7 +159,7 @@
   "scheduler.fields.next_run": "Iri Em Khet",
   "scheduler.fields.enabled": "Wen",
   "scheduler.jobs.ledger_recalculate_tenant": "Wehem Hesb Sesh Nefer Isfet",
-  "scheduler.jobs.judgment_auto_conclude_stale_for_tenant": "Khetem Wedja Tepy Djes-Ef",
+  "scheduler.jobs.judgment_auto_conclude_stale_for_tenant": "Sesh Wedja Nen Shem",
   "scheduler.jobs.death_sync_cleanup_old_requests_for_tenant": "Khetem Dbh Mut Tepy",
   "scheduler.jobs.authentication_flush_expired_tokens": "Khetem Menf Mut",
   "scheduler.jobs.events_retry_pending_webhooks": "Wehem Hab Webhook Em Smen",
