@@ -130,6 +130,8 @@ export type AssignableOfficer = Schemas["AssignableOfficer"];
 export interface JudgmentDetail extends Judgment {
   evidence_admissions: EvidenceAdmission[];
   admitted_balance: AdmittedBalance;
+  /** The joint judgment hung on this one (one-to-one), or null. Detail only. */
+  cross_judgment_id?: string | null;
 }
 
 export interface EvidenceRulingPayload {

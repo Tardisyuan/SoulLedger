@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { crossTenantJudgmentsApi } from "@soulledger/core/api";
+import { judgmentKeys } from "@soulledger/core/query_keys";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { Button } from "@/src/components/ui/Button";
@@ -23,7 +24,8 @@ function errorText(error: unknown): string | null {
  *
  * 按钮给谁由审判页判(原属、`cross_judgment.create`、ORIGINAL、未结案);服务端
  * `CrossTenantJudgmentSerializer.validate_judgment` 再判一次,并拒绝「这份审判已有联审」——
- * 那句英文原样显示,因为它没有码。建好后去联审详情页请各方入席。
+ * 那句英文原样显示,因为它没有码;审判页看 `cross_judgment_id`,已有联审时不再画这个按钮,
+ * 所以只在并发(两人同时开)时才会见到。建好后去联审详情页请各方入席。
  */
 export function OpenCrossJudgment({ judgmentId, soulName }: { judgmentId: string; soulName: string }) {
   const { t } = useI18n();
@@ -43,6 +45,8 @@ export function OpenCrossJudgment({ judgmentId, soulName }: { judgmentId: string
       setOpen(false);
       showToast(t("sentence_plan.cross.opened"), "success");
       queryClient.invalidateQueries({ queryKey: ["cross-judgments"] });
+      // 审判详情的 `cross_judgment_id` 变了:回到审判页时「开联审」要已换成链接。
+      queryClient.invalidateQueries({ queryKey: judgmentKeys.detail(judgmentId) });
       router.push(`/cross-judgments/${created.id}`);
     },
     onError: (error) => showToast(errorText(error) ?? t("sentence_plan.cross.open_error"), "error"),

@@ -2578,7 +2578,9 @@
       "FAIL": "否决"
     },
     "case_title": "标题",
-    "status_label": "状态"
+    "status_label": "状态",
+    "original_judgment": "原审判",
+    "original_soul": "灵魂"
   },
   "users": {
     "title": "用户管理",
@@ -5480,7 +5482,8 @@
       "seat_actor_none": "暂不指定",
       "seat_actor_empty": "该文明没有可入席的神祇",
       "seat_actor_hint_judging": "联合审判官与主持只能由判官担任",
-      "seat_actor_hint_advisor": "顾问可由任一在任神祇担任"
+      "seat_actor_hint_advisor": "顾问可由任一在任神祇担任",
+      "view": "查看联审"
     },
     "file": {
       "open": "提出请求",

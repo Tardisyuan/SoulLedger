@@ -12021,6 +12021,8 @@ export interface components {
             readonly archive_reason: string;
             readonly evidence_admissions: components["schemas"]["EvidenceAdmission"][];
             readonly admitted_balance: components["schemas"]["AdmittedBalance"];
+            /** Format: uuid */
+            readonly cross_judgment_id: string | null;
         };
         /** @description The draft as stored: what a save returns, and what a 409 hands back. */
         JudgmentDraft: {
