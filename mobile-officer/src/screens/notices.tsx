@@ -9,7 +9,7 @@ import { MoreRow, useMoreRows } from "../paged";
 import { useCachedRemote } from "../readCache";
 import { isDenied, landingGoneKey, noticeIsDeskOnly, noticeLanding, type Landing } from "../rules";
 import { useSession } from "../session";
-import { Screen, SmallButton, Txt, space, useI18n } from "../shared";
+import { Screen, SmallButton, space, useI18n } from "../shared";
 
 /**
  * `onRead`: a mark reached the server, or the list was pulled -- the shell asks for the unread count again (the tab bar's ●).
@@ -52,10 +52,12 @@ export function NoticesTab({ onRead, onLand, gone }: { onRead?: () => void; onLa
         return reload();
       }}
     >
-      <View style={{ padding: space[5], flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-        <Txt variant="title">{t("officer_app.tabs.notices")}</Txt>
-        {data?.some(isUnread) ? <SmallButton testID="notices-mark-all" title={t("notifications.mark_all_read")} onPress={markAll} /> : null}
-      </View>
+      {/* No big title (as on 待办): the top bar already says 通知. 全部已读 stays, right-aligned. */}
+      {data?.some(isUnread) ? (
+        <View style={{ paddingHorizontal: space[5], paddingTop: space[3], flexDirection: "row", justifyContent: "flex-end" }}>
+          <SmallButton testID="notices-mark-all" title={t("notifications.mark_all_read")} onPress={markAll} />
+        </View>
+      ) : null}
       <RefreshFailed data={data} error={error} onRetry={reload} />
       {view ? (
         <StateView
