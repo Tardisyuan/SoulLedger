@@ -3,7 +3,7 @@
  * 一个页签载入失败只坏那一个、已归档 / 暂居的页头,以及从待办详情、审判详情点灵魂名进来。
  */
 import type { LoginUser } from "@soulledger/core/api/auth";
-import { fireEvent, screen, waitFor, within } from "@testing-library/react-native";
+import { act, fireEvent, screen, waitFor, within } from "@testing-library/react-native";
 
 import { Detail } from "../screens/detail";
 import { karmaView, planStops, signed, soulTabs } from "../soulView";
@@ -183,8 +183,16 @@ describe("功过 and 事件 paging", () => {
     await screen.findByTestId("soul-events");
     expect(screen.getAllByTestId(/^soul-event-e/)).toHaveLength(20);
     expect(screen.getByTestId("soul-events-count").props.children).toBe("已显示 20 / 30");
-    fireEvent.press(screen.getByTestId("soul-events-more"));
-    await waitFor(() => expect(screen.getAllByTestId(/^soul-event-e/)).toHaveLength(30), { timeout: 3000 }); // 全量并跑时第二页偶尔晚于 1 秒
+    // 第一页若在第二页回来之前又取了一次(换了对象),多出的页按设计丢掉;全量并跑时偶尔撞上。
+    // 先等取数落定再点;仍被丢就再点一次 —— 这里验的是「第二页来自接口、计数跟着变」,不是那次竞争。
+    await act(async () => {});
+    await waitFor(
+      () => {
+        if (screen.queryByTestId("soul-events-more")) fireEvent.press(screen.getByTestId("soul-events-more"));
+        expect(screen.getAllByTestId(/^soul-event-e/)).toHaveLength(30);
+      },
+      { timeout: 3000 }
+    );
     expect(mockEvents).toHaveBeenLastCalledWith({ soul: "s1", page: "2" });
     expect(screen.queryByTestId("soul-events-more")).toBeNull();
   });
