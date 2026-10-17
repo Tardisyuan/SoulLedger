@@ -17,6 +17,10 @@ import { type BadgeTone } from "@/src/components/ui/Badge";
 import { StatusBadge } from "@/src/components/ui/StatusBadge";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { ExportCsvButton } from "@/src/components/ExportCsvButton";
+import { Button } from "@/src/components/ui/Button";
+import { fieldControl } from "@/src/components/ui/Field";
+import { FilterChipSelect } from "@/src/components/ui/FilterChip";
+import { cn } from "@/lib/utils";
 
 /**
  * Case state → badge tone.
@@ -62,9 +66,22 @@ export default function CrossJudgmentsPage() {
    * with nothing on screen saying so.
    */
   const [page, setPage] = useState(1);
+  // 筛选(审计 2026-10-17 第 11 条,`CrossTenantJudgmentFilter`):标题搜索、状态、我方发起 / 我方参与。导出带同一组。
+  const [search, setSearch] = useState("");
+  const [status, setStatus] = useState("");
+  const [side, setSide] = useState("");
+  const filterParams: Record<string, string> = {};
+  if (search.trim()) filterParams.search = search.trim();
+  if (status) filterParams.status = status;
+  if (side) filterParams.side = side;
+  const isFiltered = Object.keys(filterParams).length > 0;
+  const change = (apply: () => void) => {
+    apply();
+    setPage(1);
+  };
   const { data: pageData, isLoading, isError, isPlaceholderData, refetch } = useQuery({
-    queryKey: ["cross-judgments", page],
-    queryFn: () => crossTenantJudgmentsApi.list({ page: String(page) }).then(r => r.data),
+    queryKey: ["cross-judgments", page, filterParams],
+    queryFn: () => crossTenantJudgmentsApi.list({ page: String(page), ...filterParams }).then(r => r.data),
     placeholderData: (previous) => previous,
     enabled: !!user,
   });
@@ -92,7 +109,7 @@ export default function CrossJudgmentsPage() {
         actions={
           <div className="flex items-center gap-3">
             <RequirePermission permissions="cross_judgment.read">
-              <ExportCsvButton size="sm" fetchCsv={() => crossTenantJudgmentsApi.exportCsv()} page={t("crossJudgments.title")} hall={hall} />
+              <ExportCsvButton size="sm" fetchCsv={() => crossTenantJudgmentsApi.exportCsv(filterParams)} page={t("crossJudgments.title")} hall={hall} />
             </RequirePermission>
             <ColumnMenu
               columns={allColumns.map((c) => ({ key: c.key, header: String(c.header), pinned: c.pinned }))}
@@ -105,6 +122,43 @@ export default function CrossJudgmentsPage() {
           </div>
         }
       >
+        <div className="flex flex-wrap items-center gap-3 pb-3">
+          <input
+            type="text"
+            data-testid="cross-judgment-search"
+            placeholder={t("crossJudgments.filter.search")}
+            aria-label={t("crossJudgments.filter.search")}
+            value={search}
+            onChange={(e) => change(() => setSearch(e.target.value))}
+            className={cn(fieldControl({ size: "md" }), "flex-1 min-w-[200px]")}
+          />
+          <FilterChipSelect
+            label={t("crossJudgments.status_label")}
+            value={status}
+            options={[
+              { value: "", label: t("filter.all") },
+              ...Object.keys(STATUS_TONES).map((s) => ({ value: s, label: t(`crossJudgments.states.${s}`) })),
+            ]}
+            clearLabel={t("filter.clear_one", { name: t("crossJudgments.status_label") })}
+            onChange={(v) => change(() => setStatus(v))}
+          />
+          <FilterChipSelect
+            label={t("crossJudgments.filter.side")}
+            value={side}
+            options={[
+              { value: "", label: t("filter.all") },
+              { value: "initiated", label: t("crossJudgments.filter.side_initiated") },
+              { value: "participating", label: t("crossJudgments.filter.side_participating") },
+            ]}
+            clearLabel={t("filter.clear_one", { name: t("crossJudgments.filter.side") })}
+            onChange={(v) => change(() => setSide(v))}
+          />
+          {isFiltered && (
+            <Button type="button" variant="ghost" size="sm" onClick={() => change(() => { setSearch(""); setStatus(""); setSide(""); })}>
+              {t("filter.clear_all")}
+            </Button>
+          )}
+        </div>
         {/* 账页表格(规范 v1 §2):整行点进 /cross-judgments/[id]。失败与空仍分开 ——
             DataTable 的失败行是「! 加载失败」+ 重试,不会落到「暂无」。
             `placeholderData` 让翻页时 `isLoading` 不再为真,所以翻页中的那一段交给

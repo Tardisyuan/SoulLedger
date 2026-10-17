@@ -2591,7 +2591,13 @@
     "case_title": "Title",
     "status_label": "Status",
     "original_judgment": "Original judgment",
-    "original_soul": "Soul"
+    "original_soul": "Soul",
+    "filter": {
+      "search": "Search title",
+      "side": "Our side",
+      "side_initiated": "Initiated by us",
+      "side_participating": "We take part"
+    }
   },
   "users": {
     "title": "User Management",
