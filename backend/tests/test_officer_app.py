@@ -151,7 +151,7 @@ def test_todo_lists_the_kinds_scoped_to_the_hall_and_the_role(cn_tenant, eu_tena
 
     viewer = User.objects.create_user(username="v", password="x", role="VIEWER", tenant=cn_tenant)
     empty = officer_client(viewer).get(TODO).data
-    assert [g["count"] for g in empty.values()] == [0, 0, 0, 0, 0, 0]  # 六组(含「未分配的书信」,第三十四批)
+    assert [g["count"] for g in empty.values()] == [0] * 7  # 七组(含「未分配的书信」第三十四批、「受刑计划变更」第四十批)
 
 
 def test_rebirth_item_title_is_the_soul_name_with_the_code_beside_it(cn_tenant, judge_user,
