@@ -340,7 +340,7 @@ export function UserModal({ isOpen, onClose, user }: UserModalProps) {
             disabled={createMutation.isPending}
             options={[
               { value: "", label: t("users.tenant_pick") },
-              ...tenantChoices.map((x) => ({ value: String(x.id), label: x.display_name || x.code })),
+              ...tenantChoices.map(({ id, display_name, code }) => ({ value: String(id), label: display_name || code })),
             ]}
           />
         )}
