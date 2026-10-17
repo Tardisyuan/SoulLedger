@@ -70,6 +70,13 @@ export const deathSyncApi = {
   /** Disable = `is_active: false`; there is no DELETE route, the row and its deliveries stay. */
   disableWebhook: (id: string) =>
     api.patch<AdminWebhook>(`/death-sync/admin-webhooks/${id}/`, { is_active: false }),
+  /** Queue one `WEBHOOK_TEST` delivery to this endpoint (same signing and retries as a real event).
+   *  201 = the new delivery row; 409 `webhook_inactive`. */
+  testWebhook: (id: string) => api.post<WebhookDelivery>(`/death-sync/admin-webhooks/${id}/test/`),
   webhookDeliveries: (params: { page?: string; webhook?: string; status?: string } = {}) =>
     api.get<PaginatedResponse<WebhookDelivery>>("/death-sync/webhook-deliveries/", { params }),
+  /** Send a finished failure (ABANDONED, or FAILED at its retry ceiling) again as a new row; the old row stays.
+   *  409 `not_finished` (still retrying, or not a failure) / `webhook_inactive`. */
+  redeliverWebhook: (deliveryId: string) =>
+    api.post<WebhookDelivery>(`/death-sync/webhook-deliveries/${deliveryId}/redeliver/`),
 };
