@@ -83,7 +83,7 @@ def test_profile_is_exactly_the_whitelist(reborn_soul, cn_tenant):
     data = soul_client(account).get("/api/v1/me/").data
     assert set(data) == PROFILE_KEYS
     assert set(data["account"]) == ACCOUNT_KEYS
-    assert set(data["tenant"]) == {"code", "display_name", "hall_names", "seal_glyphs"}
+    assert set(data["tenant"]) == {"code", "display_name", "hall_names", "seal_glyphs", "visit"}
     assert data["soul_code"] == soul.soul_code and data["account"]["cycle"] == 1
     raw = json.dumps(data, ensure_ascii=False, default=str)
     for absent in ("hidden@example.com", "官员写的描述", "contact", "description", "baptism"):
@@ -163,3 +163,11 @@ def test_a_record_shows_its_statute_code_and_life_stage_but_never_its_evidence_s
     raw = str(data)
     for absent in ("证人笔录-机密", "WITNESS", "正文-不外露", "出处-不外露", "body-hidden"):
         assert absent not in raw
+
+
+def test_profile_tenant_carries_the_hall_visit_lines_unset_ones_empty(reborn_soul, cn_tenant):
+    cn_tenant.settings = {**(cn_tenant.settings or {}), "visit_address": "第五殿正门", "visit_phone": "010-1"}
+    cn_tenant.save()
+    _, account = reborn_soul
+    data = soul_client(account).get("/api/v1/me/").data
+    assert data["tenant"]["visit"] == {"address": "第五殿正门", "hours": "", "phone": "010-1"}

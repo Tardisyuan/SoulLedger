@@ -23,6 +23,7 @@ from apps.soul_accounts.models import (
 from apps.soul_accounts.services import email_not_synced as login_email_not_synced
 from apps.souls.fields import HistoricalDateField
 from apps.souls.models import Civilization
+from apps.tenants.models import VISIT_SETTINGS
 
 # ── 灵魂端 ───────────────────────────────────────────────────────────────
 
@@ -197,6 +198,12 @@ class MeTenantSerializer(serializers.Serializer):
                                        help_text="殿司展示名,按语言:{zh-Hans, en, egy}(`Tenant.hall_names`)。")
     seal_glyphs = serializers.ListField(child=serializers.CharField(), read_only=True,
                                         help_text="匾上的印字(1–2 个);空 = 用文明默认字。")
+    visit = serializers.SerializerMethodField(
+        help_text="到殿办理:{address, hours, phone},没填的是空串(`Tenant.settings`;书信没开时 App 帮助页显示)。")
+
+    def get_visit(self, obj) -> dict[str, str]:
+        settings = obj.settings or {}
+        return {k.removeprefix("visit_"): str(settings.get(k) or "") for k in VISIT_SETTINGS}
 
 
 class SoulCredentialSlipSerializer(serializers.Serializer):

@@ -19,11 +19,17 @@ export interface Tenant {
   hall_name?: string;
   hall_name_en?: string;
   hall_name_egy?: string;
+  /** 书信是否开着(服务器级,`MATRIX_ENABLED`);只读。关着时灵魂 App 帮助页才显示「到殿办理」三项。 */
+  letters_on?: boolean;
   created_at?: string;
 }
 
 /** `settings` 里转生冷却天数的键名 —— 与 `apps/tenants/models.py::REBIRTH_COOLDOWN_SETTING` 同一个字符串。 */
 export const REBIRTH_COOLDOWN_SETTING = "soul_rebirth_cooldown_days";
+/** `settings` 里「灵魂能不能自己改联系邮箱」的键名(缺省 = 开)—— 与 `apps/tenants/models.py::SELF_SERVICE_SETTING` 同一个字符串。 */
+export const SOUL_EMAIL_SELF_SERVICE_SETTING = "soul_contact_email_self_service";
+/** 「到殿办理」三项的键名与最大长度 —— 与 `apps/tenants/models.py::VISIT_SETTINGS` 同一份。 */
+export const VISIT_SETTING_LIMITS = { visit_address: 80, visit_hours: 40, visit_phone: 40 } as const;
 /** `settings` 里「要求开启两步验证的角色」的键名 —— 与 `apps/authentication/mfa.py::MFA_REQUIRED_ROLES_SETTING` 同一个字符串。 */
 export const MFA_REQUIRED_ROLES_SETTING = "mfa_required_roles";
 
@@ -44,6 +50,11 @@ export interface TenantSettingsPatch {
   soul_rebirth_cooldown_days?: number | null;
   /** Role names that must use two-step verification. ADMIN is required whether or not it is listed. */
   mfa_required_roles?: string[];
+  /** 到殿办理三项:选填,去首尾空格后为空 = 没填。 */
+  visit_address?: string;
+  visit_hours?: string;
+  visit_phone?: string;
+  soul_contact_email_self_service?: boolean;
 }
 
 export const tenantsApi = {

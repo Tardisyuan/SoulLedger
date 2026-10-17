@@ -4881,6 +4881,9 @@
       "a_contact": "在这页底部点「写给本殿」,回复会出现在书信里。急事请到本殿窗口。",
       "in_person_title": "请到{{hall}},带上交付单",
       "in_person_body": "本殿还没开通书信，问题要到殿里当面办。",
+      "address": "地址",
+      "hours": "办理时间",
+      "phone": "电话",
       "unresolved": "还是没解决"
     },
     "feedback": {
@@ -6686,5 +6689,20 @@
     "total": "共 {{n}} 条",
     "empty": "还没有转生记录",
     "all_forms": "全部形态"
+  },
+  "hall_settings": {
+    "visit": {
+      "title": "到殿办理",
+      "hint": "本殿没开书信时，灵魂 App 帮助页显示这三项。没填的不显示。",
+      "address": "地址",
+      "hours": "办理时间",
+      "phone": "电话",
+      "optional": "选填",
+      "letters_on": "书信已开 · 灵魂现在看不到这三项。"
+    },
+    "soul_accounts": "灵魂账号",
+    "soul_email_self": "允许灵魂自己改联系邮箱",
+    "soul_email_on": "开：灵魂在 App 里输密码后自己改，验证码发到新邮箱，旧邮箱收到通知。",
+    "soul_email_off": "关：App 里显示「要改联系邮箱，请到本殿，带上交付单」,由官员在灵魂账号里改。"
   }
 }

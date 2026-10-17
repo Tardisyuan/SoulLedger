@@ -10,7 +10,8 @@ views.py::reset_password_request`)的同一组上限:5 分钟内最多发 3 次,
 状态都在缓存里,按账号分键;不落库。
 
 本殿不允许自己改(`Tenant.settings["soul_contact_email_self_service"] is False`,看**原属**殿 —— 账号归原属殿管)
-时,改的三步都答 403 `email_in_person`,App 写「要改联系邮箱，请到本殿，带上交付单。」
+时,**开始**这一步(验密码)答 403 `email_in_person`;已经验过密码、已经发出验证码的,照常往下走
+(关开关不打断在途的改动,2026-10-17)。开始之后的两步(填新邮箱、确认验证码)不再看开关,App 写「要改联系邮箱，请到本殿，带上交付单。」
 地址被别的账号占着(`User.email` 在未删除的行里唯一):确认那一步答 409 `email_taken` —— 到这一步的人已经证明
 收得到这个邮箱的信,告诉他「被占了」不是一个探测口。
 """
@@ -31,10 +32,10 @@ from apps.soul_accounts import mfa
 from apps.soul_accounts import services as svc
 from apps.soul_accounts.me_views import SoulAPIView
 from apps.soul_accounts.mfa_views import _refuse_outcome, confirm_current_password
+from apps.tenants.models import SELF_SERVICE_SETTING  # 写入端 TenantSettingsSerializer 用同一个常量
 
 logger = logging.getLogger(__name__)
 
-SELF_SERVICE_SETTING = "soul_contact_email_self_service"
 PROOF_SECONDS = 600
 CODE_SECONDS = 300
 
@@ -137,8 +138,6 @@ class MeContactEmailView(SoulAPIView):
     def post(self, request):
         """要先过 `verify/`(10 分钟内)。同一账号 5 分钟内最多发 3 次;再发一次,上一个码作废。"""
         account = self.account
-        if not self_service(account):
-            return _in_person()
         keys = _keys(account)
         if not cache.get(keys["proof"]):
             return _refuse("proof_required", status.HTTP_403_FORBIDDEN, "请先输入密码。")
@@ -164,7 +163,7 @@ class MeContactEmailVerifyView(SoulAPIView):
     def post(self, request):
         """当前密码(与开两步验证同一个闸、同一份失败预算);开了两步验证的再要 6 位数字(同一把锁)。"""
         account = self.account
-        if not self_service(account):
+        if not self_service(account):  # 唯一的闸:开始一次改动。往后两步不看开关,在途的照常完成
             return _in_person()
         body = ContactEmailVerifySerializer(data=request.data)
         body.is_valid(raise_exception=True)
@@ -188,8 +187,6 @@ class MeContactEmailConfirmView(SoulAPIView):
         from apps.authentication.models import User
 
         account = self.account
-        if not self_service(account):
-            return _in_person()
         body = ContactEmailConfirmSerializer(data=request.data)
         body.is_valid(raise_exception=True)
         keys = _keys(account)

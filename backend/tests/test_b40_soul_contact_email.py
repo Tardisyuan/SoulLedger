@@ -1,7 +1,7 @@
 """第四十批 S-b:灵魂自己改联系邮箱。
 
 密码(开了两步验证再加 6 位数字)→ 新邮箱 → 验证码发到新邮箱 → 完成,并通知旧邮箱;不验证旧邮箱。
-本殿不允许自己改时三步都答 `email_in_person`。
+本殿不允许自己改时,开始(验密码)答 `email_in_person`;在途的照常完成。
 """
 import re
 
@@ -116,11 +116,17 @@ def test_an_address_held_by_another_account_is_refused_after_the_code(cn_tenant)
     assert account.soul.contact_email == "zhangsan@lingyun.cn"
 
 
-def test_a_hall_that_does_not_allow_it_refuses_every_step(cn_tenant):
+def test_a_hall_that_does_not_allow_it_refuses_only_the_start(cn_tenant):
+    """开关只管**开始**(验密码);已验过密码、已发出验证码的在途改动,关了开关也照常完成(2026-10-17)。"""
+    _, client = _soul(cn_tenant)
+    assert client.post(f"{URL}verify/", {"password": PASSWORD}, format="json").status_code == 204
+    assert client.post(URL, {"email": "new.box@example.org"}, format="json").status_code == 202
+    code = _code_in_last_mail()
+
     cn_tenant.settings = {**(cn_tenant.settings or {}), SELF_SERVICE_SETTING: False}
     cn_tenant.save(update_fields=["settings"])
-    _, client = _soul(cn_tenant)
+
     assert client.get(URL).json()["can_change"] is False
-    for path, body in ((f"{URL}verify/", {"password": PASSWORD}), (URL, {"email": "a@b.org"}), (f"{URL}confirm/", {"code": "123456"})):
-        res = client.post(path, body, format="json")
-        assert res.status_code == 403 and res.json()["code"] == "email_in_person"
+    assert client.post(f"{URL}confirm/", {"code": code}, format="json").status_code == 200
+    res = client.post(f"{URL}verify/", {"password": PASSWORD}, format="json")
+    assert res.status_code == 403 and res.json()["code"] == "email_in_person"

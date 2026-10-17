@@ -9,7 +9,7 @@ from apps.core.client_ip import get_client_ip
 from apps.core.permissions import IsAdminPermission, TenantPermission
 from apps.core.tenant import scope_to_tenant
 from apps.core.viewsets import CodenameViewSetMixin
-from apps.tenants.models import REBIRTH_COOLDOWN_SETTING, Tenant
+from apps.tenants.models import REBIRTH_COOLDOWN_SETTING, SELF_SERVICE_SETTING, VISIT_SETTINGS, Tenant
 from apps.tenants.serializers import (
     TenantMfaRoleRowSerializer,
     TenantSealGlyphsSerializer,
@@ -24,6 +24,9 @@ _AUDITED_FIELDS = ("description", "dispatch_enabled", "hall_name", "hall_name_en
 def _snapshot(tenant):
     snap = {f: getattr(tenant, f) for f in _AUDITED_FIELDS}
     snap["soul_rebirth_cooldown_days"] = (tenant.settings or {}).get(REBIRTH_COOLDOWN_SETTING)
+    for key in VISIT_SETTINGS:  # 没填 = None(存的是去空格后的值,空的不存键)
+        snap[key] = (tenant.settings or {}).get(key)
+    snap[SELF_SERVICE_SETTING] = (tenant.settings or {}).get(SELF_SERVICE_SETTING) is not False  # 缺省 = 开
     snap["seal_glyphs"] = list(tenant.seal_glyphs or [])
     return snap
 
@@ -119,7 +122,7 @@ class TenantViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
     @action(detail=True, methods=["patch"], url_path="settings",
             permission_classes=[TenantPermission, IsAdminPermission])
     def hall_settings(self, request, code=None):
-        """殿的设置:说明、调拨开关、三语殿名、转生冷却天数。只收已知字段,`settings` 里别的键不动。"""
+        """殿的设置:说明、调拨开关、三语殿名、转生冷却天数、到殿办理三项、灵魂自己改邮箱的开关。只收已知字段,`settings` 里别的键不动。"""
         tenant = self.get_object()
         serializer = TenantSettingsSerializer(tenant, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)

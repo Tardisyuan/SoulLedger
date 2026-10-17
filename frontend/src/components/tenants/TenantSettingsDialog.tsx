@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { tenantsApi, REBIRTH_COOLDOWN_SETTING, type Tenant, type TenantMfaRoleRow, type TenantSettingsPatch } from "@soulledger/core/api";
+import { tenantsApi, REBIRTH_COOLDOWN_SETTING, SOUL_EMAIL_SELF_SERVICE_SETTING, VISIT_SETTING_LIMITS, type Tenant, type TenantMfaRoleRow, type TenantSettingsPatch } from "@soulledger/core/api";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { userKeys } from "@soulledger/core/query_keys";
@@ -11,7 +11,7 @@ import { Button } from "@/src/components/ui/Button";
 import { TextAreaField, TextField } from "@/src/components/ui/Field";
 
 type FieldName = keyof TenantSettingsPatch;
-const FIELDS: FieldName[] = ["hall_name", "hall_name_en", "hall_name_egy", "description", "dispatch_enabled", "soul_rebirth_cooldown_days", "mfa_required_roles"];
+const FIELDS: FieldName[] = ["hall_name", "hall_name_en", "hall_name_egy", "description", "dispatch_enabled", "soul_rebirth_cooldown_days", "mfa_required_roles", "visit_address", "visit_hours", "visit_phone"];
 
 /** DRF 的 400 按字段给 `{field: [msg, …]}`;只认已知字段,每个摊平成一句。别的形状返回空表。 */
 export function tenantSettingsErrors(error: unknown): Partial<Record<FieldName, string>> {
@@ -56,6 +56,11 @@ export function TenantSettingsDialog({ tenant, onClose }: { tenant: Tenant; onCl
     description: tenant.description ?? "",
     dispatch_enabled: Boolean(tenant.dispatch_enabled),
     cooldown: typeof initialCooldown === "number" ? String(initialCooldown) : "",
+    visit_address: String(tenant.settings?.visit_address ?? ""),
+    visit_hours: String(tenant.settings?.visit_hours ?? ""),
+    visit_phone: String(tenant.settings?.visit_phone ?? ""),
+    // 缺省 = 开:只有明确的 false 才是关(与后端 `self_service` 同一条规则)。
+    soulEmailSelf: tenant.settings?.[SOUL_EMAIL_SELF_SERVICE_SETTING] !== false,
   });
   const [errors, setErrors] = useState<Partial<Record<FieldName, string>>>({});
   // 安全 · 两步验证(A12):每角色一行,开关写 `mfa_required_roles`。行从 /tenants/{code}/mfa-roles/ 来;
@@ -102,6 +107,10 @@ export function TenantSettingsDialog({ tenant, onClose }: { tenant: Tenant; onCl
       description: form.description.trim(),
       dispatch_enabled: form.dispatch_enabled,
       soul_rebirth_cooldown_days: days,
+      visit_address: form.visit_address.trim(),
+      visit_hours: form.visit_hours.trim(),
+      visit_phone: form.visit_phone.trim(),
+      soul_contact_email_self_service: form.soulEmailSelf,
       ...(requiredRoles ? { mfa_required_roles: [...requiredRoles].sort() } : {}),
     });
   };
@@ -177,6 +186,48 @@ export function TenantSettingsDialog({ tenant, onClose }: { tenant: Tenant; onCl
         {errors.dispatch_enabled ? (
           <p role="alert" className="text-xs text-[oklch(var(--color-danger))]">{errors.dispatch_enabled}</p>
         ) : null}
+
+        {/* 到殿办理 (第四十一批 H-a): 书信没开时灵魂 App 帮助页显示;三项选填,没填的不显示。 */}
+        <section className="flex flex-col gap-3 border-t border-[oklch(var(--color-block))] pt-6" data-testid="tenant-visit">
+          <h3 className="m-0 font-[family-name:var(--font-title)] text-lg text-[oklch(var(--color-ink))]">{t("hall_settings.visit.title")}</h3>
+          <p className="m-0 text-xs text-[oklch(var(--color-ink-muted))]">{t("hall_settings.visit.hint")}</p>
+          {tenant.letters_on ? (
+            <p className="m-0 text-xs text-[oklch(var(--color-ink-muted))]" data-testid="tenant-visit-letters-on">{t("hall_settings.visit.letters_on")}</p>
+          ) : null}
+          {(
+            [
+              ["visit_address", "hall_settings.visit.address"],
+              ["visit_hours", "hall_settings.visit.hours"],
+              ["visit_phone", "hall_settings.visit.phone"],
+            ] as const
+          ).map(([key, label]) => (
+            <TextField
+              key={key}
+              label={`${t(label)} · ${t("hall_settings.visit.optional")}`}
+              error={errors[key]}
+              value={form[key]}
+              onChange={(e) => set(key, e.target.value)}
+              maxLength={VISIT_SETTING_LIMITS[key]}
+              disabled={save.isPending}
+            />
+          ))}
+        </section>
+
+        {/* 灵魂账号: 两行说明一直显示,不随开关切换。关开关只拦下新开始的改动,在途的照常完成。 */}
+        <section className="flex flex-col gap-3 border-t border-[oklch(var(--color-block))] pt-6" data-testid="tenant-soul-accounts">
+          <h3 className="m-0 font-[family-name:var(--font-title)] text-lg text-[oklch(var(--color-ink))]">{t("hall_settings.soul_accounts")}</h3>
+          <label className="flex items-center gap-2 text-sm text-[oklch(var(--color-ink))]">
+            <input
+              type="checkbox"
+              checked={form.soulEmailSelf}
+              onChange={(e) => set("soulEmailSelf", e.target.checked)}
+              disabled={save.isPending}
+            />
+            {t("hall_settings.soul_email_self")}
+          </label>
+          <p className="m-0 text-xs text-[oklch(var(--color-ink-muted))]">{t("hall_settings.soul_email_on")}</p>
+          <p className="m-0 text-xs text-[oklch(var(--color-ink-muted))]">{t("hall_settings.soul_email_off")}</p>
+        </section>
 
         {/* 安全 (A14 §4): the group sits at the bottom behind a 1px rule and its own title; a tab
             only when security settings reach two groups. */}

@@ -4870,6 +4870,9 @@
       "a_contact": "Khemen «Sesh Er Wesekhet» Em Khery Medjat Pen; Wesheb Em Sesh-Ek. Medu Em Khet Seth: Iyi Er Wesekhet.",
       "in_person_title": "Iyi Er {{hall}} Hena Djama Redi",
       "in_person_body": "Sesh Nen Wen Djer: Iyi Er Wesekhet.",
+      "address": "Wat Wesekhet",
+      "hours": "Unut",
+      "phone": "Wat Medu",
       "unresolved": "Nen Wedja Djer"
     },
     "feedback": {
@@ -6682,5 +6685,20 @@
     "total": "Neb {{n}}",
     "empty": "Wehem Mesut Nen Iri Djer",
     "all_forms": "Kheperu Neb"
+  },
+  "hall_settings": {
+    "visit": {
+      "title": "Iyi Er Wesekhet",
+      "hint": "Shemes Nen Wen: Maa Em Medjat Ba. Nen Sesh: Nen Maa.",
+      "address": "Wat Wesekhet",
+      "hours": "Unut",
+      "phone": "Wat Medu",
+      "optional": "Nen Em Tepy",
+      "letters_on": "Shemes Wen Seth · Ba Nen Maa Emu."
+    },
+    "soul_accounts": "Aq En Ba",
+    "soul_email_self": "Ba Khemen Wat Sesh Djes-Ef",
+    "soul_email_on": "Wen: Ba Sesh Sekhem, Khemen Djes-Ef. Hesb Maa Er Wat Sesh Mawy; Wat Sesh Tepy: Sedjem.",
+    "soul_email_off": "Khetem: Iyi Er Wesekhet Hena Djama Redi. Sab Khemen Em Aq En Ba."
   }
 }

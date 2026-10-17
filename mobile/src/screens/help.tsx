@@ -76,9 +76,12 @@ export function HelpScreen({ only }: { only?: "login" }) {
   const canWrite = !only && state.status === "signedIn" && chat.availability !== "not_configured";
   // 第四十批 S-d: no letters here — say which hall to go to. The hall the soul is in NOW (a residing soul's is the
   // one it resides in): that is where it can walk to. Design also shows the hall's address, hours and phone from
-  // the hall's settings; the halls have no such settings yet, so only the title and the sentence are drawn.
+  // the hall's settings (`tenant.visit`, 第四十一批 H-a); empty ones are skipped.
   const inPerson = !only && state.status === "signedIn" && chat.availability === "not_configured";
   const hall = useCurrentHall();
+  // The profile's `tenant` is where the soul is NOW, so a residing soul gets the residence hall's lines.
+  // (`visit` is not in the generated schema until the next OpenAPI regeneration.)
+  const visit = (state.status === "signedIn" ? (state.profile.tenant as { visit?: Record<string, string> }).visit : undefined) ?? {};
   return (
     <Screen testID="help">
       {groups.map((group) => (
@@ -111,6 +114,21 @@ export function HelpScreen({ only }: { only?: "login" }) {
             <Txt variant="bodyLg" tone="muted">
               {t("soul_app.help.in_person_body")}
             </Txt>
+            {(
+              [
+                ["address", "soul_app.help.address"],
+                ["hours", "soul_app.help.hours"],
+                ["phone", "soul_app.help.phone"],
+              ] as const
+            ).map(([k, label]) =>
+              visit[k]?.trim() ? (
+                <Txt key={k} testID={`help-visit-${k}`} variant="bodyLg">
+                  {t(label)}
+                  {" · "}
+                  {visit[k]}
+                </Txt>
+              ) : null,
+            )}
           </View>
         </View>
       ) : null}
