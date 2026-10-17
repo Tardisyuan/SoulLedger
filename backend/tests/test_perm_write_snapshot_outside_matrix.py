@@ -358,7 +358,8 @@ CTJ_CREATE = _denied("GUARDIAN", "VIEWER")(201)
 CTJ_PATCH = _denied("GUARDIAN", "VIEWER")(200)
 CTJ_DELETE = _denied("GUARDIAN", "VIEWER")(204)
 CTJ_PARTICIPATE = _denied("GUARDIAN", "VIEWER")(200)
-CTJ_CONCLUDE = _denied("GUARDIAN", "VIEWER")(200)
+# 结束与取消同一道:召集人或发起殿 ADMIN / 殿主;夹具的会审没有召集人,JUDGE 只是参与者,403。
+CTJ_CONCLUDE = _denied("GUARDIAN", "VIEWER", "JUDGE")(200)
 
 # ── notifications: 0 codes moved ─────────────────────────────────────────────
 # notification.read is held by every role and is the only codename any action

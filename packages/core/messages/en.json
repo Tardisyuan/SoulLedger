@@ -5186,6 +5186,10 @@
       "title": "Cross-realm judgment concluded",
       "body": "The cross-realm judgment {{title}} has concluded: rejected."
     },
+    "cross_judgment_cancelled": {
+      "title": "Cross-realm judgment cancelled",
+      "body": "The cross-realm judgment {{title}} was cancelled. Reason: {{reason}}"
+    },
     "scheduled_task_failed": {
       "title": "Scheduled task failed",
       "body": "Scheduled task {{task}} failed: {{error}}"

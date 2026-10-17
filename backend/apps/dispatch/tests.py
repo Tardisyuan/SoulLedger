@@ -684,15 +684,15 @@ class TestCrossTenantJudgmentConclude:
         assert jug.status == JudgmentStatus.CONCLUDED
         assert jug.conclusion_type == "PASS"
 
-    def test_participant_tenant_can_conclude(self):
+    def test_participant_tenant_cannot_conclude(self):
         jug = self._create_active_judgment()
         resp = self.client_b.post(
             f"{BASE}/cross-tenant-judgments/{jug.pk}/conclude/",
             {"conclusion_type": "FAIL"}, format="json",
         )
-        assert resp.status_code == status.HTTP_200_OK
+        assert resp.status_code == status.HTTP_403_FORBIDDEN
         jug.refresh_from_db()
-        assert jug.conclusion_type == "FAIL"
+        assert jug.status == JudgmentStatus.ACTIVE
 
     def test_conclude_sets_concluded_at(self):
         jug = self._create_active_judgment()
