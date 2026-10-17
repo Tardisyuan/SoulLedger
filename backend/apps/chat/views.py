@@ -17,7 +17,7 @@ from django.conf import settings
 from django.core.cache import cache
 from django.db.models import F, Q
 from django.utils import timezone
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import mixins, serializers, status, throttling, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny
@@ -308,7 +308,9 @@ class OfficerInboxViewSet(CodenameViewSetMixin, mixins.ListModelMixin, mixins.Re
     def folders(self, request):
         return Response(inbox.counts(self.get_queryset()))
 
-    @extend_schema(responses={200: InboxMessageSerializer(many=True), 503: ChatErrorSerializer})
+    @extend_schema(parameters=[OpenApiParameter("before", str, description="比这封更早的一页(event_id)")],
+                   responses={200: InboxMessageSerializer(many=True), 400: ChatErrorSerializer,
+                              503: ChatErrorSerializer})
     @action(detail=True, methods=["get"], pagination_class=None)
     def messages(self, request, pk=None):
         conversation = self.get_object()
