@@ -912,9 +912,10 @@ def _me_tenant(code):
     """/me 的租户:殿司展示名没填时三语都退回 display_name(`Tenant.hall_names`)。"""
     name = f"{code} 名"
     # seal_glyphs:v2「朱印」给 /me 的租户加的印文(未设 = 空,App 退回默认印文)。
+    # visit:第四十一批「到殿办理」三项,没填是空串;暂居时就是暂居殿的。
     return {
         "code": code, "display_name": name, "hall_names": {"zh-Hans": name, "en": name, "egy": name},
-        "seal_glyphs": [],
+        "seal_glyphs": [], "visit": {"address": "", "hours": "", "phone": ""},
     }
 
 

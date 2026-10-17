@@ -496,7 +496,6 @@ def _log_status_change(application, old_status):
 def _notify_status_change(application):
     """Tell the soul. Best-effort, after the transaction."""
     from apps.events.services import EventService
-
     from apps.notifications import messages
 
     params = {"kind": f"rebirth_status_{application.status.lower()}"}
